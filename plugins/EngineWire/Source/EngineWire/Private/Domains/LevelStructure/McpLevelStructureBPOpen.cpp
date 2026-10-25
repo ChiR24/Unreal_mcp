@@ -82,6 +82,13 @@ bool HandleOpenLevelBlueprint(
     ResponseJson->SetBoolField(TEXT("openedEditor"), bOpenedEditor);
     ResponseJson->SetBoolField(TEXT("headlessSafeMode"), !bCanOpenEditorUi);
 
+    // An editor that did not open still answered "Opened Level Blueprint".
+    if (bCanOpenEditorUi && !bOpenedEditor)
+    {
+        Subsystem->SendAutomationResponse(Socket, RequestId, false, FString::Printf(TEXT("The Level Blueprint of %s exists, but "
+            "its editor did not open."), *World->GetMapName()), ResponseJson, TEXT("EDITOR_NOT_OPENED"));
+        return true;
+    }
     FString Message = bCanOpenEditorUi
         ? FString::Printf(TEXT("Opened Level Blueprint for: %s"), *World->GetMapName())
         : FString::Printf(TEXT("Verified Level Blueprint for: %s (headless editor UI skipped)"), *World->GetMapName());

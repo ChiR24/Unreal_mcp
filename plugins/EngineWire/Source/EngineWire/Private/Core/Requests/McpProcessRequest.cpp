@@ -2,7 +2,9 @@
 #include "Dom/JsonObject.h"
 #include "HAL/PlatformTime.h"
 #include "Core/Module/EngineWireGlobals.h"
+#include "Core/Requests/McpUndoLedger.h"
 #include "Core/Security/McpPrequeueGate.h"
+#include "Domains/ControlActor/Placement/McpChangeWatch.h"
 #include "Foundation/BridgeHelpers/McpHelpers.h"
 #include "Foundation/McpTelemetryRegistry.h"
 #include "EngineWireSubsystem.h"
@@ -10,6 +12,8 @@
 #include "Misc/ScopeExit.h"
 #include "Misc/ScopeLock.h"
 #include "Framework/Application/SlateApplication.h" // active-modal pre-flight (Slate is an editor dep)
+#include "Foundation/HandlerUtils/McpHandlerUtils.h"
+#include "Widgets/SWindow.h"
 #include "Foundation/McpScreenshotResample.h" // McpShaderJobsRemaining
 
 // Publish the currently-executing automation action, when it started and its last progress, so a reader off the
@@ -144,10 +148,15 @@ void UEngineWireSubsystem::ProcessAutomationRequest(
            TEXT("ProcessAutomationRequest: refusing dispatch while a modal window is active "
                 "RequestId=%s action='%s'"),
            *RequestId, *Action);
-    SendAutomationError(
-        RequestingSocket, RequestId,
-        TEXT("Editor is waiting on a modal dialog; automation is paused until it is dismissed."),
-        TEXT("EDITOR_MODAL_ACTIVE"));
+    // Named, so the caller can say which dialog to close (the queued requests get the same answer from the modal tick).
+    const FString DialogTitle = FSlateApplication::Get().GetActiveModalWindow()->GetTitle().ToString();
+    TSharedPtr<FJsonObject> ModalResult = McpHandlerUtils::CreateResultObject();
+    ModalResult->SetStringField(TEXT("modalWindowTitle"), DialogTitle);
+    SendAutomationResponse(
+        RequestingSocket, RequestId, false,
+        FString::Printf(TEXT("The editor is waiting on the dialog '%s'; nothing ran. Close that dialog in the editor, then send the same call again."),
+                        *DialogTitle),
+        ModalResult, TEXT("EDITOR_MODAL_ACTIVE"));
     return;
   }
 
@@ -180,6 +189,8 @@ void UEngineWireSubsystem::ProcessAutomationRequest(
 
   {
     ON_SCOPE_EXIT {
+      // A reply held while the handler's transaction was open goes now, with every capture still running.
+      McpUndoLedger::Flush();
       // =====================================================================
       // End Error Capture and check for captured errors
       // =====================================================================
@@ -206,6 +217,8 @@ void UEngineWireSubsystem::ProcessAutomationRequest(
         // engine error.
       }
 
+      McpChangeWatch::End();
+      McpUndoLedger::End();
       bProcessingAutomationRequest = false;
       EngineWire::SetInFlightAction(FString(), FString()); // clear the in-flight action on every exit path
       CurrentRequestOrigin = ERequestOrigin::WebSocket;
@@ -242,6 +255,10 @@ void UEngineWireSubsystem::ProcessAutomationRequest(
     // responses stay aligned with the Unreal log.
     BeginErrorCapture();
     bErrorCaptureStarted = true;
+    // Whatever actors the handler spawns, moves or redraws are checked when it replies (McpChangeWatch::AddWarnings),
+    // and the undo steps it leaves are read from the transaction buffer (McpUndoLedger::Describe).
+    McpChangeWatch::Begin(RequestId);
+    McpUndoLedger::Begin(RequestId);
 
     // Map this requestId to the requesting socket so responses can be
     // delivered reliably

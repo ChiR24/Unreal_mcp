@@ -40,9 +40,11 @@ bool UEngineWireSubsystem::HandleCreateVirtualBone(
         return true;
     }
 
-    if (VirtualBoneName.IsEmpty())
+    // The engine names a virtual bone "VB <name>" and the skeleton editor strips those three characters from every
+    // one it shows (a shorter name failed its check). The default here was "VB_...", without the space.
+    if (!VirtualBoneName.IsEmpty() && !VirtualBoneName.StartsWith(TEXT("VB ")))
     {
-        VirtualBoneName = FString::Printf(TEXT("VB_%s_to_%s"), *SourceBone, *TargetBone);
+        VirtualBoneName = VirtualBoneNameHelpers::AddVirtualBonePrefix(VirtualBoneName);
     }
 
     // AddNewVirtualBone does not check that the bones exist; a dangling
@@ -79,13 +81,12 @@ bool UEngineWireSubsystem::HandleCreateVirtualBone(
         NewVirtualBoneName = FName(*VirtualBoneName);
     }
 
-    SaveIfRequested(Skeleton, Payload);
-
     TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
     Result->SetStringField(TEXT("virtualBoneName"), NewVirtualBoneName.ToString());
     Result->SetStringField(TEXT("sourceBone"), SourceBone);
     Result->SetStringField(TEXT("targetBone"), TargetBone);
     Result->SetStringField(TEXT("skeletonPath"), Skeleton->GetPathName());
+    SaveAndReport(Skeleton, Payload, Result);
 
     SendAutomationResponse(RequestingSocket, RequestId, true,
         FString::Printf(TEXT("Virtual bone '%s' created"), *NewVirtualBoneName.ToString()), Result);
@@ -119,16 +120,18 @@ bool UEngineWireSubsystem::HandleRenameBone(
     const FName BoneFName(*BoneName);
     if (Skeleton->GetVirtualBones().ContainsByPredicate([&BoneFName](const FVirtualBone& VB) { return VB.VirtualBoneName == BoneFName; }))
     {
-        Skeleton->RenameVirtualBone(FName(*BoneName), FName(*NewBoneName));
-        SaveIfRequested(Skeleton, Payload);
+        const FString NewVirtualName = NewBoneName.StartsWith(TEXT("VB ")) ? NewBoneName : VirtualBoneNameHelpers::AddVirtualBonePrefix(NewBoneName);
+        Skeleton->Modify();
+        Skeleton->RenameVirtualBone(FName(*BoneName), FName(*NewVirtualName));
 
         TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
         Result->SetStringField(TEXT("oldName"), BoneName);
-        Result->SetStringField(TEXT("newName"), NewBoneName);
+        Result->SetStringField(TEXT("newName"), NewVirtualName);
         Result->SetBoolField(TEXT("isVirtualBone"), true);
+        SaveAndReport(Skeleton, Payload, Result);
 
         SendAutomationResponse(RequestingSocket, RequestId, true,
-            FString::Printf(TEXT("Virtual bone renamed from '%s' to '%s'"), *BoneName, *NewBoneName), Result);
+            FString::Printf(TEXT("Virtual bone renamed from '%s' to '%s'"), *BoneName, *NewVirtualName), Result);
         return true;
     }
 
@@ -217,12 +220,12 @@ bool UEngineWireSubsystem::HandleDeleteVirtualBone(
     TArray<FName> BonesToRemove;
     BonesToRemove.Add(FName(*VirtualBoneName));
     Skeleton->RemoveVirtualBones(BonesToRemove);
-    McpSafeAssetSave(Skeleton);
 
     TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
     Result->SetStringField(TEXT("skeletonPath"), SkeletonPath);
     Result->SetStringField(TEXT("virtualBoneName"), VirtualBoneName);
     Result->SetNumberField(TEXT("remainingVirtualBones"), Skeleton->GetVirtualBones().Num());
+    SaveAndReport(Skeleton, Payload, Result);
 
     SendAutomationResponse(RequestingSocket, RequestId, true,
         FString::Printf(TEXT("Virtual bone '%s' deleted"), *VirtualBoneName), Result);

@@ -64,6 +64,10 @@ FString ResolvePath(const TSharedPtr<FJsonObject> &Payload);
 ULevelSequence *LoadOrReply(UEngineWireSubsystem *Subsystem, const FString &RequestId,
                             TSharedPtr<FMcpBridgeWebSocket> Socket, const TSharedPtr<FJsonObject> &Payload,
                             const TCHAR *Action, UMovieScene *&OutMovieScene);
+// The reply for a trackName FindTrackByName did not resolve: TRACK_NOT_FOUND, or AMBIGUOUS_TRACK naming the tracks
+// it fits (Ambiguous, as FindTrackByName lists them).
+void ReplyTrackMiss(UEngineWireSubsystem *Subsystem, const FString &RequestId, TSharedPtr<FMcpBridgeWebSocket> Socket,
+                    const FString &TrackName, const FString &Ambiguous);
 // A new LevelSequence asset Folder/Name made by the editor's LevelSequenceFactoryNew; null when
 // the factory is unavailable or AssetTools refuses.
 ULevelSequence *CreateSequenceAsset(const FString &Name, const FString &Folder);
@@ -89,44 +93,53 @@ inline FString GetBindingLabel(UMovieScene *MovieScene, const FGuid &Guid) {
   return Parent.IsEmpty() || Parent == Name ? Name : Parent + TEXT("/") + Name;
 }
 
-// First track whose name (or, optionally, display name) contains TrackName: the
-// movie scene tracks first, then the tracks of every binding whose name contains
-// BindingFilter (all bindings when the filter is empty).
+// The track TrackName names among the movie scene tracks and the tracks of every binding whose name contains
+// BindingFilter (all bindings when the filter is empty): its own name (unique), else (when bMatchDisplayName) its
+// display name, else a part of either, so Transform_1 never lands on Transform_10. A step several tracks fit names
+// none of them: the first one met was taken, so "Transform" with two actors bound muted whichever came first.
+// OutAmbiguous, when given, then lists them.
 inline UMovieSceneTrack *FindTrackByName(UMovieScene *MovieScene, const FString &TrackName,
                                          bool bMatchDisplayName = false,
-                                         const FString &BindingFilter = FString()) {
-  auto Matches = [&](UMovieSceneTrack *Track) {
-    return Track && (Track->GetName().Contains(TrackName) ||
-                     (bMatchDisplayName && Track->GetDisplayName().ToString().Contains(TrackName)));
-  };
-  for (UMovieSceneTrack *Track : MCP_GET_MOVIESCENE_TRACKS(MovieScene)) {
-    if (Matches(Track)) {
-      return Track;
-    }
-  }
+                                         const FString &BindingFilter = FString(),
+                                         FString *OutAmbiguous = nullptr) {
   // The camera cut track is stored in its OWN UMovieScene member, not in the
   // Tracks array, so every lookup that walked only those two collections was
   // blind to it: removing, muting, soloing or locking a camera cut answered
   // TRACK_NOT_FOUND for a track the readback had just listed.
-  if (UMovieSceneTrack *CameraCutTrack = MovieScene->GetCameraCutTrack()) {
-    if (Matches(CameraCutTrack)) {
-      return CameraCutTrack;
+  TArray<UMovieSceneTrack *> Tracks(MCP_GET_MOVIESCENE_TRACKS(MovieScene));
+  Tracks.Add(MovieScene->GetCameraCutTrack());
+  for (const FMovieSceneBinding &Binding : const_cast<const UMovieScene *>(MovieScene)->GetBindings()) {
+    if (BindingFilter.IsEmpty() || GetBindingName(MovieScene, Binding.GetObjectGuid()).Contains(BindingFilter)) {
+      Tracks.Append(MCP_GET_BINDING_TRACKS(Binding));
     }
   }
-  for (const FMovieSceneBinding &Binding : const_cast<const UMovieScene *>(MovieScene)->GetBindings()) {
-    if (!BindingFilter.IsEmpty() && !GetBindingName(MovieScene, Binding.GetObjectGuid()).Contains(BindingFilter)) {
-      continue;
-    }
-    for (UMovieSceneTrack *Track : MCP_GET_BINDING_TRACKS(Binding)) {
-      if (Matches(Track)) {
-        return Track;
+  for (int32 Step = 0; Step < 3; ++Step) {
+    TArray<UMovieSceneTrack *> Found;
+    for (UMovieSceneTrack *Track : Tracks) {
+      const FString Name = Track ? Track->GetName() : FString();
+      const FString Display = Track && bMatchDisplayName ? Track->GetDisplayName().ToString() : FString();
+      if (Track && (Step == 0   ? Name.Equals(TrackName, ESearchCase::IgnoreCase)
+                    : Step == 1 ? !Display.IsEmpty() && Display.Equals(TrackName, ESearchCase::IgnoreCase)
+                                : Name.Contains(TrackName) || (!Display.IsEmpty() && Display.Contains(TrackName)))) {
+        Found.Add(Track);
       }
+    }
+    if (Found.Num() == 1) {
+      return Found[0];
+    }
+    for (int32 Index = 0; OutAmbiguous && Index < Found.Num(); ++Index) {
+      *OutAmbiguous += FString::Printf(TEXT("%s%s (%s)"), Index ? TEXT(", ") : TEXT(""), *Found[Index]->GetName(),
+                                       *Found[Index]->GetDisplayName().ToString());
+    }
+    if (Found.Num() > 1) {
+      return nullptr;
     }
   }
   return nullptr;
 }
 
-// Every track whose name contains TrackName (all tracks when it is empty),
+// Every track whose name or display name contains TrackName (all tracks when it is empty; only those it names
+// whole, when any),
 // under the same name rule as FindTrackByName so a name that works for
 // remove_track works for the key actions too. The movie scene tracks and the
 // camera cut track are included only when no BindingId is given: a caller who
@@ -137,7 +150,8 @@ inline void CollectTracksByName(UMovieScene *MovieScene, const FString &TrackNam
                                 const FString &BindingId,
                                 TArray<UMovieSceneTrack *> &Out) {
   auto Matches = [&](UMovieSceneTrack *Track) {
-    return Track && (TrackName.IsEmpty() || Track->GetName().Contains(TrackName));
+    return Track && (TrackName.IsEmpty() || Track->GetName().Contains(TrackName) ||
+                     Track->GetDisplayName().ToString().Contains(TrackName));
   };
   FGuid WantedBinding;
   const bool bHasBinding = !BindingId.IsEmpty();
@@ -165,6 +179,14 @@ inline void CollectTracksByName(UMovieScene *MovieScene, const FString &TrackNam
         Out.Add(Track);
       }
     }
+  }
+  // A whole name keeps only the tracks of that name: Transform_1 swept up Transform_10 to _19 as well.
+  auto Whole = [&TrackName](UMovieSceneTrack *Track) {
+    return Track->GetName().Equals(TrackName, ESearchCase::IgnoreCase) ||
+           Track->GetDisplayName().ToString().Equals(TrackName, ESearchCase::IgnoreCase);
+  };
+  if (!TrackName.IsEmpty() && Out.ContainsByPredicate(Whole)) {
+    Out.RemoveAll([&Whole](UMovieSceneTrack *Track) { return !Whole(Track); });
   }
 }
 

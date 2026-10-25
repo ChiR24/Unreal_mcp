@@ -98,6 +98,30 @@ const testCases = [
     ],
   },
   {
+    scenario: 'ENUM: get_enum shows the new name and keeps the internal one',
+    toolName: 'manage_asset',
+    arguments: {
+      action: 'get_enum',
+      enumPath: '${captured:enumPath}',
+    },
+    expected: 'success',
+    assertions: [
+      { path: 'structuredContent.result.values.0.displayName', equals: 'Crimson', label: 'shown name changed' },
+      { path: 'structuredContent.result.values.0.name', equals: 'Red', label: 'internal name kept for stored values' },
+    ],
+  },
+  {
+    scenario: 'ENUM ERROR: add_enum_value refuses a name the enum has',
+    toolName: 'manage_asset',
+    arguments: {
+      action: 'add_enum_value',
+      enumPath: '${captured:enumPath}',
+      valueName: 'Crimson',
+      save: false,
+    },
+    expected: 'error|VALUE_EXISTS',
+  },
+  {
     scenario: 'ENUM: set_enum_value_metadata (Green)',
     toolName: 'manage_asset',
     arguments: {

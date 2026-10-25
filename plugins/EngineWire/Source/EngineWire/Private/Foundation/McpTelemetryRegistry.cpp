@@ -107,10 +107,10 @@ void FMcpTelemetryRegistry::BeginRequest(const FString& RequestId, const FString
 	{
 		// An unterminated request must not grow the map without bound. Dropping
 		// the oldest loses one sample; keeping it would leak for the session.
-		for (auto It = InFlight.CreateIterator(); It; ++It)
+		auto First = InFlight.CreateIterator();
+		if (First)
 		{
-			It.RemoveCurrent();
-			break;
+			First.RemoveCurrent();
 		}
 	}
 

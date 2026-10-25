@@ -153,10 +153,20 @@ FString McpGamePausedWarning(const UWorld *World) {
 // Keys pressed while the player's pawn stood perfectly still never reached it:
 // a title or pause menu was up, or the game had locked its input. The samples
 // alone read like a level that blocks the way, so the reply says it.
-FString McpIgnoredInputsWarning(const AActor *Actor, int32 InputCount, int32 SampleCount, const FBox &Extent) {
+FString McpIgnoredInputsWarning(const AActor *Actor, const TArray<FMcpMotionInput> &Inputs, int32 SampleCount,
+                                const FBox &Extent) {
   const APawn *Pawn = Cast<APawn>(Actor);
-  if (InputCount == 0 || SampleCount < 2 || !Pawn || !Pawn->IsPlayerControlled() || Extent.GetSize().GetMax() > 1.0) {
+  if (Inputs.Num() == 0 || SampleCount < 2 || !Pawn || !Pawn->IsPlayerControlled() || Extent.GetSize().GetMax() > 1.0) {
     return FString();
+  }
+  // As each key went down: a pressed menu button can close its menu, taking the focus away before the run ends.
+  const FMcpMotionInput *Taken = Inputs.FindByPredicate([](const FMcpMotionInput &Input) { return !Input.Focused.IsEmpty(); });
+  if (Taken) {
+    return FString::Printf(TEXT("keys were pressed but the player's pawn never moved: %s held keyboard focus when %s "
+                                "went down, so the keys went to it first (a focused button takes Space and Enter as a "
+                                "press). If it belongs to a title or pause menu, press its button with "
+                                "control_editor.simulate_input type \"widget_click\", then run again."),
+                           *Taken->Focused, *Taken->Key);
   }
   return TEXT("keys were pressed but the player's pawn never moved, so the game did not act on them: a menu or pause "
               "screen on top (control_editor.simulate_input type \"widget_list\" names its buttons, type \"widget_click\" "
@@ -193,6 +203,7 @@ FString McpSlowFrameWarning(double GameSeconds, int32 Frames) {
 void McpApplyMotionInputs(TArray<FMcpMotionInput> &Inputs, double Elapsed, bool bRunEnded) {
   for (FMcpMotionInput &Input : Inputs) {
     if (!bRunEnded && Input.DownAt < 0.0 && Elapsed >= Input.At) {
+      Input.Focused = FocusedPieWidgetForMcp();
       McpSendMotionKey(Input.Key, true);
       Input.DownAt = Elapsed;
       Input.DownFrame = GFrameCounter;

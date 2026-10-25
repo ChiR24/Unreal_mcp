@@ -43,6 +43,17 @@ bool UEngineWireSubsystem::HandleGeometryAction(
             Payload->SetStringField(TEXT("actorName"), TargetActor);
         }
     }
+    // An axis other than X, Y or Z fell back to each action's default axis without a word.
+    FString Axis;
+    if (Payload->TryGetStringField(TEXT("axis"), Axis) && !Axis.IsEmpty() && !Axis.Equals(TEXT("X"), ESearchCase::IgnoreCase) &&
+        !Axis.Equals(TEXT("Y"), ESearchCase::IgnoreCase) && !Axis.Equals(TEXT("Z"), ESearchCase::IgnoreCase))
+    {
+        SendAutomationError(RequestingSocket, RequestId, FString::Printf(TEXT("axis must be X, Y or Z, got '%s'. Nothing was changed."), *Axis),
+                            TEXT("INVALID_ARGUMENT"));
+        return true;
+    }
+    // Every edit of a placed dynamic mesh is one editor undo step; none of these edits could be undone before.
+    const FMcpGeometryUndoScope Undo(Payload);
 
     // Primitives
     if (SubAction == TEXT("create_box")) return HandleCreateBox(this, RequestId, Payload, RequestingSocket);
@@ -63,7 +74,10 @@ bool UEngineWireSubsystem::HandleGeometryAction(
     if (SubAction == TEXT("revolve")) return HandleRevolve(this, RequestId, Payload, RequestingSocket);
     if (SubAction == TEXT("create_procedural_mesh")) return HandleCreateProceduralMesh(this, RequestId, Payload, RequestingSocket);
     if (SubAction == TEXT("append_triangle")) return HandleAppendTriangle(this, RequestId, Payload, RequestingSocket);
-    if (SubAction == TEXT("append_polygons")) return HandleAppendPolygons(this, RequestId, Payload, RequestingSocket);
+    if (SubAction == TEXT("append_mesh")) return HandleAppendMesh(this, RequestId, Payload, RequestingSocket);
+    if (SubAction == TEXT("delete_triangles")) return HandleDeleteTriangles(this, RequestId, Payload, RequestingSocket);
+    if (SubAction == TEXT("append_polygons") || SubAction == TEXT("append_cuboids") || SubAction == TEXT("append_loft"))
+        return HandleAppendPolygons(this, RequestId, Payload, RequestingSocket, SubAction);
 
     // Booleans
     if (SubAction == TEXT("boolean_union")) return HandleBooleanUnion(this, RequestId, Payload, RequestingSocket);

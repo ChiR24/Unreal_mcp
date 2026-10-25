@@ -118,12 +118,17 @@ bool AuthorRecipeFile(UEngineWireSubsystem& Bridge, const FString& RequestId, co
                       UBlueprint* Blueprint, const FString& Domain, const FString& Name,
                       const TMap<FString, TSharedPtr<FJsonValue>>& Values, const TSharedPtr<FJsonObject>& Result);
 
+/** The variableType ("Class:<path>") for a recipe's class variable Name that will hold Value: the class the Blueprint's
+ *  Name already holds when Value derives from it, else Base. A recipe never retypes a variable, so a variable typed to
+ *  the first value's own class refused a later run with an unrelated one (VARIABLE_TYPE_CONFLICT). */
+FString ClassVariableType(const UBlueprint* Blueprint, const TCHAR* Name, const UClass* Value, const UClass* Base);
+
 /** "MCP behaviour: <Tag> #<NodeGuid>": the NodeComment that marks Node as owned by Tag.
  *  A pasted copy gets a new guid, so it no longer matches and is never removed. */
 FString OwnerTag(const FString& Tag, const UEdGraphNode& Node);
 
 /** Every node the behaviour Tag owns; FindOwned(BP, Tag).Num() > 0 means it is installed. */
-TArray<UEdGraphNode*> FindOwned(UBlueprint* Blueprint, const FString& Tag);
+TArray<UEdGraphNode*> FindOwned(const UBlueprint* Blueprint, const FString& Tag);
 
 /** The one input-asset resolver every caller shares; creates what is missing.
  *  InOutActionPath empty: <BlueprintFolder>/Input/IA_<Tag> (Digital), created or reused.

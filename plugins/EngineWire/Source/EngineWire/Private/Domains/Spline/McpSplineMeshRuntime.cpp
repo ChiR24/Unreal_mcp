@@ -4,6 +4,7 @@
 #include "Foundation/BridgeHelpers/McpHelpers.h"
 #include "EngineWireSubsystem.h"
 #include "Foundation/HandlerUtils/McpHandlerUtils.h"
+#include "Foundation/McpScopedEditorTransaction.h"
 
 #include "Components/SplineMeshComponent.h"
 #include "Editor.h"
@@ -51,6 +52,8 @@ bool HandleSetSplineMeshMaterial(
         return true;
     }
 
+    FMcpScopedEditorTransaction Transaction(FText::FromString(TEXT("Set Spline Mesh Material")), EMcpMutationDurability::EditorStateOnly,
+                                            {TargetComp});
     TargetComp->SetMaterial(MaterialIndex, Material);
     Actor->MarkPackageDirty();
 

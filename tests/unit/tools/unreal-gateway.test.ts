@@ -15,13 +15,15 @@ describe('unreal gateway public list', () => {
 // capability (`capability`/`parentTool`/`action`), not a parent tool (`name`).
 describe('unreal gateway search', () => {
     it('browses the whole canonical catalog when the query is empty', () => {
-        // Folded families carry longer summaries, so 25 rows no longer fit the
-        // default byte budget; 20 do, and the page still reports the full total.
+        // Rich summaries mean a full page may not fit the default byte budget: rows drop from
+        // the end, the page says so, and it still reports the full total.
         const result = searchGatewayCatalog({ limit: 20 }) as Record<string, unknown>;
         expect(result.success).toBe(true);
         expect(result.operation).toBe('search');
         const results = result.results as Array<Record<string, unknown>>;
-        expect(results.length).toBe(20);
+        expect(results.length).toBeGreaterThan(0);
+        expect(results.length).toBeLessThanOrEqual(20);
+        if (results.length < 20) expect(result.truncationReason).toBe('byte-budget');
         expect(result.total).toBe(ALL_CAPABILITY_RECORD_COUNT);
         expect(result.hasMore).toBe(true);
     });

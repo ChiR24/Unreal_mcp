@@ -1,8 +1,8 @@
 /**
  * Source contracts for `server/discover` on the native /mcp transport (MCP 2026-07-28 discovery, issue #614). It is
- * answered without a session or protocol-version header, like initialize, and lists only the versions initialize
- * negotiates, so a 2026-07-28 client falls back to the handshake. The capability-token check before session
- * validation still applies to it. The C++ cannot run here.
+ * answered without a session or protocol-version header, like initialize, and lists the version a request can name
+ * in its _meta (2026-07-28), as the TypeScript SDK does; initialize negotiates the older ones. The capability-token
+ * check before session validation still applies to it. The C++ cannot run here.
  */
 
 import { readFileSync } from 'node:fs';
@@ -23,8 +23,10 @@ describe('native server/discover', () => {
     expect(connection.indexOf('bTokenRequired')).toBeLessThan(connection.indexOf('const bool bSessionless'));
   });
 
-  it('answers with the negotiable versions, the initialize capabilities and identity, and cache hints', () => {
-    expect(discovery).toContain('for (const FString& Version : McpSupportedProtocolVersions())');
+  it('answers with the per-request versions, the initialize capabilities and identity, and cache hints', () => {
+    // As the TypeScript SDK answers: only what a request can name in its _meta; initialize negotiates the rest.
+    expect(discovery).toContain('TArray<TSharedPtr<FJsonValue>> Versions = {MakeShared<FJsonValueString>(McpModern::Version)};');
+    expect(discovery).not.toContain('for (const FString& Version : McpSupportedProtocolVersions())');
     expect(discovery).toContain('Meta->SetObjectField(TEXT("io.modelcontextprotocol/serverInfo"), DescribeServer(Result));');
     expect(discovery).toContain('Result->SetObjectField(TEXT("serverInfo"), DescribeServer(Result));');
     expect(discovery).toContain('Result->SetStringField(TEXT("cacheScope"), TEXT("public"));');

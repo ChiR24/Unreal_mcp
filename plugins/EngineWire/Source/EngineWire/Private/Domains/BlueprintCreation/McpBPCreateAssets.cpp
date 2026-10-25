@@ -5,6 +5,7 @@
 #include "AssetRegistry/AssetRegistryModule.h"
 #include "AssetToolsModule.h"
 #include "Engine/Blueprint.h"
+#include "Factories/BlueprintFactory.h"
 #include "Foundation/BridgeHelpers/McpHelpers.h"
 #include "Foundation/HandlerUtils/McpHandlerUtils.h"
 #include "EngineWireSubsystem.h"
@@ -34,8 +35,22 @@ bool RespondIfBlueprintExists(UEngineWireSubsystem *Self,
   }
 
   NormalizedPath = NormalizeBlueprintPath(Blueprint, NormalizedPath);
+  // Whatever parent it had, the Blueprint already there answered success: asked for a Character, a caller got the
+  // Actor Blueprint at that path and built on it.
+  FString Unused;
+  const UBlueprintFactory *Wanted = Context.ParentClassSpec.IsEmpty() && Context.BlueprintTypeSpec.IsEmpty()
+      ? nullptr : Cast<UBlueprintFactory>(CreateBlueprintFactory(Context, Unused));
+  if (Wanted && Wanted->ParentClass && Blueprint->ParentClass != Wanted->ParentClass) {
+    Self->SendAutomationResponse(Context.RequestingSocket, Context.RequestId, false,
+        FString::Printf(TEXT("%s already exists with parent class %s, not %s; give the new Blueprint another name. Nothing "
+                             "was changed."), *NormalizedPath, *GetNameSafe(Blueprint->ParentClass), *Wanted->ParentClass->GetName()),
+        nullptr, TEXT("ASSET_ALREADY_EXISTS"));
+    return true;
+  }
   const TSharedPtr<FJsonObject> ResultPayload =
       BuildBlueprintResult(Blueprint, NormalizedPath);
+  ResultPayload->SetBoolField(TEXT("alreadyExists"), true);
+  McpHandlerUtils::MarkNoAssetsChanged(ResultPayload);
   Self->SendAutomationResponse(Context.RequestingSocket, Context.RequestId, true,
                           TEXT("Blueprint already exists"), ResultPayload,
                           FString());
@@ -101,27 +116,25 @@ bool ExecuteBlueprintCreation(UEngineWireSubsystem *Self,
           TEXT("AssetRegistry"));
   AssetRegistryModule.AssetCreated(CreatedBlueprint);
 
+  // Saved before the reply, which answered saved: true and then saved.
+  const bool bSaved = SaveLoadedAssetThrottled(CreatedBlueprint, true);
+  ScanPathSynchronous(CreatedBlueprint->GetOutermost()->GetName());
   const TSharedPtr<FJsonObject> ResultPayload =
       BuildBlueprintResult(CreatedBlueprint, NormalizedPath);
+  ResultPayload->SetBoolField(TEXT("saved"), bSaved);
   FString Message = TEXT("Blueprint created");
-  if (AppliedProperties.Num() + FailedProperties.Num() > 0) {
+  // Each list only when it names something: every create that set its properties carried "failedProperties": [].
+  if (AppliedProperties.Num() > 0) {
     ResultPayload->SetArrayField(TEXT("appliedProperties"), McpHandlerUtils::ToJsonStringArray(AppliedProperties));
-    ResultPayload->SetArrayField(TEXT("failedProperties"), McpHandlerUtils::ToJsonStringArray(FailedProperties));
   }
   if (FailedProperties.Num() > 0) {
+    ResultPayload->SetArrayField(TEXT("failedProperties"), McpHandlerUtils::ToJsonStringArray(FailedProperties));
     // The asset exists either way, so the create stands; what was not set is named, not hidden.
     Message = FString::Printf(TEXT("Blueprint created; %d of its properties were not set: %s"),
                               FailedProperties.Num(), *FString::Join(FailedProperties, TEXT("; ")));
   }
   Self->SendAutomationResponse(Context.RequestingSocket, Context.RequestId, true,
                                Message, ResultPayload, FString());
-
-  TWeakObjectPtr<UBlueprint> WeakCreatedBlueprint = CreatedBlueprint;
-  if (WeakCreatedBlueprint.IsValid()) {
-    UBlueprint *Blueprint = WeakCreatedBlueprint.Get();
-    SaveLoadedAssetThrottled(Blueprint, true);
-    ScanPathSynchronous(Blueprint->GetOutermost()->GetName());
-  }
 
   UE_LOG(LogEngineWireSubsystem, Log,
          TEXT("HandleBlueprintCreate EXIT: RequestId=%s created successfully"),

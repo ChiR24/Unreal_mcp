@@ -1,7 +1,29 @@
 #include "Core/Compatibility/McpVersionCompatibility.h"
 #include "Domains/Sequence/McpSeqEditorSupport.h"
+#include "Foundation/McpScopedEditorTransaction.h"
+#include "Sections/MovieSceneSkeletalAnimationSection.h"
 
 namespace {
+// An animation section's speed when it is a fixed one: from 5.5 a section can also warp time (a loop, a clamp, a curve).
+double ClipPlayRate(const UMovieSceneSkeletalAnimationSection *Clip, bool &bOutFixed) {
+#if ENGINE_MAJOR_VERSION > 5 || (ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 5)
+  bOutFixed = Clip->Params.PlayRate.GetType() == EMovieSceneTimeWarpType::FixedPlayRate;
+  return bOutFixed ? Clip->Params.PlayRate.AsFixedPlayRate() : 1.0;
+#else
+  bOutFixed = true;
+  return Clip->Params.PlayRate;
+#endif
+}
+
+void SetClipPlayRate(UMovieSceneSkeletalAnimationSection *Clip, double Rate) {
+#if ENGINE_MAJOR_VERSION > 5 || (ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 5)
+  Clip->Params.PlayRate = FMovieSceneTimeWarpVariant(Rate);
+#else
+  Clip->Params.PlayRate = static_cast<float>(Rate);
+#endif
+  Clip->PreviousPlayRate = static_cast<float>(Rate);
+}
+
 // The payload's sequence and its trackName track; replies and returns null on a miss.
 UMovieSceneTrack *LoadTrackOrReply(UEngineWireSubsystem *Self, const FString &RequestId,
                                    TSharedPtr<FMcpBridgeWebSocket> Socket,
@@ -10,11 +32,12 @@ UMovieSceneTrack *LoadTrackOrReply(UEngineWireSubsystem *Self, const FString &Re
   OutSequence = McpSequence::LoadOrReply(Self, RequestId, Socket, Payload, Action, OutMovieScene);
   if (!OutSequence)
     return nullptr;
-  UMovieSceneTrack *Track =
-      FindTrackByName(OutMovieScene, GetJsonStringField(Payload, TEXT("trackName")));
+  // The display name too: add_track names a track by it, and that name answered TRACK_NOT_FOUND here.
+  const FString TrackName = GetJsonStringField(Payload, TEXT("trackName"));
+  FString Ambiguous;
+  UMovieSceneTrack *Track = FindTrackByName(OutMovieScene, TrackName, true, FString(), &Ambiguous);
   if (!Track)
-    Self->SendAutomationResponse(Socket, RequestId, false, TEXT("Track not found"), nullptr,
-                                 TEXT("TRACK_NOT_FOUND"));
+    McpSequence::ReplyTrackMiss(Self, RequestId, Socket, TrackName, Ambiguous);
   return Track;
 }
 }
@@ -28,8 +51,11 @@ bool UEngineWireSubsystem::HandleSequenceSetTrackMuted(
   if (!Track)
     return true;
   const bool bMuted = GetJsonBoolField(Payload, TEXT("muted"), true);
+  // One undo step; the Modify that followed the change recorded nothing to undo to.
+  FMcpScopedEditorTransaction Transaction(FText::FromString(TEXT("Mute Sequence Track")),
+                                          EMcpMutationDurability::EditorStateOnly, {Sequence, MovieScene, Track});
   Track->SetEvalDisabled(bMuted);
-  MovieScene->Modify();
+  Sequence->MarkPackageDirty();
   TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
   Resp->SetStringField(TEXT("trackName"), Track->GetName());
   Resp->SetBoolField(TEXT("muted"), bMuted);
@@ -50,12 +76,15 @@ bool UEngineWireSubsystem::HandleSequenceSetTrackSolo(
   TArray<UMovieSceneTrack *> AllTracks;
   CollectTracksByName(MovieScene, FString(), FString(), AllTracks);
   int32 DisabledOtherTrackCount = 0;
+  FMcpScopedEditorTransaction Transaction(FText::FromString(TEXT("Solo Sequence Track")),
+                                          EMcpMutationDurability::EditorStateOnly, {Sequence, MovieScene});
   for (UMovieSceneTrack *Track : AllTracks) {
     const bool bDisableTrack = bSolo && Track != SoloTrack;
+    Track->Modify();
     Track->SetEvalDisabled(bDisableTrack);
     DisabledOtherTrackCount += bDisableTrack ? 1 : 0;
   }
-  MovieScene->Modify();
+  Sequence->MarkPackageDirty();
 
   TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
   Resp->SetStringField(TEXT("trackName"), SoloTrack->GetName());
@@ -79,12 +108,14 @@ bool UEngineWireSubsystem::HandleSequenceSetTrackLocked(
   if (!Track)
     return true;
   const bool bLocked = GetJsonBoolField(Payload, TEXT("locked"), true);
+  FMcpScopedEditorTransaction Transaction(FText::FromString(TEXT("Lock Sequence Track")),
+                                          EMcpMutationDurability::EditorStateOnly, {Sequence, MovieScene});
   for (UMovieSceneSection *Section : Track->GetAllSections()) {
     if (Section) {
       Section->SetIsLocked(bLocked);
     }
   }
-  MovieScene->Modify();
+  Sequence->MarkPackageDirty();
 
   TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
   Resp->SetStringField(TEXT("trackName"), Track->GetName());
@@ -120,10 +151,38 @@ bool UEngineWireSubsystem::HandleSequenceSetSection(
     return FFrameRate::TransformTime(FFrameTime::FromDecimal(Frames), MovieScene->GetDisplayRate(),
                                      MovieScene->GetTickResolution()).RoundToFrame();
   };
-  double Start = 0.0, End = 0.0, EaseIn = 0.0, EaseOut = 0.0;
+  double Start = 0.0, End = 0.0, EaseIn = 0.0, EaseOut = 0.0, Rate = 0.0;
   const bool bStart = Payload->TryGetNumberField(TEXT("startFrame"), Start);
   const bool bEnd = Payload->TryGetNumberField(TEXT("endFrame"), End);
+  const bool bRate = Payload->TryGetNumberField(TEXT("playRate"), Rate);
+  UMovieSceneSkeletalAnimationSection *Clip = Cast<UMovieSceneSkeletalAnimationSection>(Section);
+  if (bRate && (!Clip || !(Rate > 0.0 && Rate <= 100.0))) {
+    SendAutomationResponse(Socket, RequestId, false,
+                           Clip ? TEXT("playRate is above 0 and at most 100 (2 plays the clip twice as fast)")
+                                : TEXT("playRate is for an animation section; this one plays no animation"),
+                           nullptr, TEXT("INVALID_ARGUMENT"));
+    return true;
+  }
   TRange<FFrameNumber> Range = Section->GetRange();
+  bool bFixedRate = false;
+  const double OldRate = Clip ? ClipPlayRate(Clip, bFixedRate) : 1.0;
+  // A loop, clamp or curve time warp is more than a rate: a fixed playRate written over it changed the frames played.
+  if (bRate && !bFixedRate) {
+    SendAutomationResponse(Socket, RequestId, false,
+                           TEXT("This clip's play rate is a time warp (a loop, clamp or curve), not one rate; edit it in "
+                                "Sequencer, or remove the warp before setting playRate."),
+                           nullptr, TEXT("INVALID_ARGUMENT"));
+    return true;
+  }
+  // The clip keeps the frames it plays, as the Sequencer's play rate does: twice the rate, half the section. An
+  // endFrame given wins, and a time warp that is not a fixed rate leaves the length alone. Setting the rate as a
+  // property instead left the section one tick long.
+  // A frozen clip (rate 0) plays no frames to keep, so its length stays: scaled by 0 it became one tick.
+  if (bRate && !bEnd && bFixedRate && OldRate > 0.0 && Range.HasLowerBound() && Range.HasUpperBound()) {
+    const FFrameNumber Low = Range.GetLowerBoundValue();
+    const double Length = static_cast<double>((Range.GetUpperBoundValue() - Low).Value);
+    Range.SetUpperBound(TRangeBound<FFrameNumber>::Exclusive(Low + FFrameNumber(FMath::Max(1, static_cast<int32>(FMath::RoundToDouble(Length * OldRate / Rate))))));
+  }
   if (bStart)
     Range.SetLowerBound(TRangeBound<FFrameNumber>::Inclusive(Ticks(Start)));
   if (bEnd)
@@ -134,8 +193,10 @@ bool UEngineWireSubsystem::HandleSequenceSetSection(
     return true;
   }
   Section->Modify();
-  if (bStart || bEnd)
+  if (bStart || bEnd || bRate)
     Section->SetRange(Range);
+  if (bRate)
+    SetClipPlayRate(Clip, Rate);
   if (Payload->TryGetNumberField(TEXT("easeInFrames"), EaseIn)) {
     Section->Easing.bManualEaseIn = EaseIn > 0.0;
     Section->Easing.ManualEaseInDuration = Ticks(FMath::Max(EaseIn, 0.0)).Value;
@@ -149,6 +210,10 @@ bool UEngineWireSubsystem::HandleSequenceSetSection(
   TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
   Resp->SetStringField(TEXT("trackName"), Track->GetName());
   Resp->SetNumberField(TEXT("sectionIndex"), static_cast<int32>(Index));
+  if (Clip) {
+    bool bFixed = false;
+    Resp->SetNumberField(TEXT("playRate"), ClipPlayRate(Clip, bFixed));
+  }
   SendAutomationResponse(Socket, RequestId, true, TEXT("Section updated"), Resp);
   return true;
 }
@@ -162,13 +227,11 @@ bool UEngineWireSubsystem::HandleSequenceRemoveTrack(
   if (!Track)
     return true;
   const FString RemovedTrackName = Track->GetName();
-  // Modify() has to precede the mutation or the transaction records the
-  // post-change state and undo cannot bring the track back. MarkPackageDirty
-  // is what makes the removal reach disk at all: without it the editor never
-  // even offers to save, so a restart resurrected every removed track --
-  // the same defect sequence_remove_actor already documents.
-  Sequence->Modify();
-  MovieScene->Modify();
+  // The Modify() calls recorded nothing: no transaction was open, so undo could not bring the track back.
+  // The scope opens one and captures both before the change. MarkPackageDirty is what makes the removal
+  // reach disk at all: without it the editor never offered to save, and a restart resurrected the track.
+  FMcpScopedEditorTransaction Transaction(FText::FromString(TEXT("Remove Sequence Track")),
+                                          EMcpMutationDurability::EditorStateOnly, {Sequence, MovieScene});
   // RemoveTrack only searches the Tracks array, so it silently fails on the
   // camera cut track, which lives in its own member and needs its own call.
   if (Track == MovieScene->GetCameraCutTrack()) {

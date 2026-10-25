@@ -22,7 +22,7 @@ TSharedPtr<FJsonObject> BuildBlueprintResult(UBlueprint *Blueprint,
   ResultPayload->SetStringField(TEXT("blueprintPath"), NormalizedPath);
   ResultPayload->SetStringField(TEXT("path"), NormalizedPath);
   ResultPayload->SetStringField(TEXT("assetPath"), Blueprint->GetPathName());
-  ResultPayload->SetBoolField(TEXT("saved"), true);
+  ResultPayload->SetStringField(TEXT("parentClass"), Blueprint->ParentClass ? Blueprint->ParentClass->GetPathName() : FString());
   McpHandlerUtils::AddVerification(ResultPayload, Blueprint);
   return ResultPayload;
 }

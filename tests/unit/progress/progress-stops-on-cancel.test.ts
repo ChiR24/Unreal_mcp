@@ -104,6 +104,8 @@ describe('Task 44 — a cancelled request stops receiving progress', () => {
         gate.release();
         await settle();
         expect(progressFrames(ctx.frames)).toHaveLength(1);
+        // The SDK owns notifications/cancelled: a handler of our own replaced it, so the call still answered.
+        expect(ctx.frames.some((frame) => (frame as { id?: unknown }).id === 2)).toBe(false);
     });
 
     it('does not silence a CONCURRENT request when one is cancelled', async () => {

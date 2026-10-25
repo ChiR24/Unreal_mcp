@@ -68,6 +68,10 @@ const testCases = [
     expected: 'success', timeoutMs: 30000,
     assertions: [{ path: 'structuredContent.result.collision', equals: 'box', label: 'box collision' }],
   },
+  // A second bake to the same path replaces that static mesh in place and says so; an asset of another class there
+  // was a fatal NewObject over it, and is refused before anything is made.
+  { scenario: 'CONVERT: a bake to its own earlier path replaces that mesh', toolName: 'manage_geometry', arguments: { action: 'convert_to_static_mesh', actorName: SINGLE, outputPath: `Game/GeneratedMeshes/DM_ConvSingle_${ts}` }, expected: 'success', timeoutMs: 30000, assertions: [{ path: 'structuredContent.result.replaced', equals: true, label: 'the reply says it replaced the mesh' }] },
+  { scenario: 'CONVERT: a bake to a path a material holds is refused', toolName: 'manage_geometry', arguments: { action: 'convert_to_static_mesh', actorName: SINGLE, outputPath: '/Engine/BasicShapes/BasicShapeMaterial' }, expected: 'error|ASSET_EXISTS' },
 
   { scenario: 'Setup: bake the pair into one static mesh', toolName: 'manage_geometry', arguments: { action: 'convert_to_static_mesh', actorName: PAIR, outputPath: `Game/GeneratedMeshes/DM_ConvPair_${ts}` }, expected: 'success', timeoutMs: 30000 },
 

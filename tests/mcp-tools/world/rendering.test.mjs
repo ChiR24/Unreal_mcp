@@ -137,7 +137,7 @@ function createRenderingHappyCases(ctx) {
   return [
     createNamedActionCase('RT: configure ray traced shadows', 'configure_ray_traced_shadows', {
       enabled: true,
-      settings: { SamplesPerPixel: 1, ShadowDistance: 20000 }
+      settings: { SamplesPerPixel: 1 }
     }, {
       expected: successExpected('unsupported', 'not available'),
       assertions: [{ path: 'structuredContent.result.subAction', equals: 'configure_ray_traced_shadows', label: 'ray traced shadows response names subAction' }]
@@ -222,10 +222,16 @@ function createRenderingHappyCases(ctx) {
 
     createNamedActionCase('Lightmass: configure lightmass settings', 'configure_lightmass_settings', {
       settings: { StaticLightingLevelScale: 0.5, NumIndirectLightingBounces: 2 }
-    }),
+    }, { assertions: [{ path: 'structuredContent.result.undo.undoable', equals: true, label: 'the World Settings edit is one undo step' }] }),
     createNamedActionCase('Lightmass: build lighting quality', 'build_lighting_quality', {
       quality: 'Preview'
     }, { timeoutMs: 120000 }),
+    // A level that forces no precomputed lighting answered success with skipped: true.
+    { scenario: 'Lightmass: force no precomputed lighting', toolName: 'inspect', arguments: { action: 'set_property', actorName: 'WorldSettings', propertyName: 'bForceNoPrecomputedLighting', value: true, markDirty: false }, expected: 'success' },
+    createNamedActionCase('Lightmass: build lighting refuses a level that forces no precomputed lighting', 'build_lighting_quality', {
+      quality: 'Preview'
+    }, { expected: 'error|PRECOMPUTED_LIGHTING_DISABLED' }),
+    { scenario: 'Lightmass: allow precomputed lighting again', toolName: 'inspect', arguments: { action: 'set_property', actorName: 'WorldSettings', propertyName: 'bForceNoPrecomputedLighting', value: false, markDirty: false }, expected: 'success' },
     createNamedActionCase('Lightmass: configure indirect lighting cache', 'configure_indirect_lighting_cache', {
       actorName: ctx.targetActor,
       settings: { IndirectLightingCacheQuality: 'ILCQ_Volume' }
@@ -233,7 +239,7 @@ function createRenderingHappyCases(ctx) {
     createNamedActionCase('Lightmass: switch the indirect lighting cache off', 'configure_indirect_lighting_cache', {
       actorName: ctx.targetActor,
       enabled: false
-    }, { assertions: [{ path: 'structuredContent.result.appliedSettings', includes: 'IndirectLightingCacheQuality', label: 'enabled drives the cache quality' }] }),
+    }, { assertions: [{ path: 'structuredContent.result.appliedSettings', includes: 'IndirectLightingCacheQuality', label: 'enabled drives the cache quality' }, { path: 'structuredContent.result.undo.undoable', equals: true, label: 'the cache change is one undo step' }] }),
     createNamedActionCase('Lightmass: create lightmass volume through build environment', 'create_lightmass_volume', {
       name: ctx.lightingLightmassVolume,
       location: { x: -500, y: 0, z: 250 },
@@ -355,10 +361,17 @@ function createRenderingHappyCases(ctx) {
       actorName: ctx.postProcessVolume,
       settings: { FilmSlope: 0.88, FilmToe: 0.55, FilmShoulder: 0.26 }
     }),
+    // It set r.TonemapperFilm, gone from the engine, and answered applied; Linear now turns the tone curve off.
     createNamedActionCase('Post Process: set tonemapper type', 'set_tonemapper_type', {
       actorName: ctx.postProcessVolume,
-      method: 'Filmic'
+      method: 'Linear'
+    }, {
+      assertions: [{ path: 'structuredContent.result.appliedSettings.0', equals: 'ToneCurveAmount', label: 'Linear turns the tone curve off on the volume' }]
     }),
+    createNamedActionCase('Post Process: refuse an unknown tonemapper type', 'set_tonemapper_type', {
+      actorName: ctx.postProcessVolume,
+      method: 'ACES'
+    }, { expected: errorExpected('not a tonemapper') }),
     createNamedActionCase('Post Process: configure bloom', 'configure_bloom', {
       actorName: ctx.postProcessVolume,
       settings: { BloomSizeScale: 4 },
@@ -378,6 +391,10 @@ function createRenderingHappyCases(ctx) {
       enabled: true,
       settings: { LensFlareIntensity: 1.1, LensFlareThreshold: 8 }
     }),
+    createNamedActionCase('Post Process: lens flare enabled puts the intensity back', 'configure_lens_flare', {
+      actorName: ctx.postProcessVolume,
+      enabled: true
+    }, { assertions: [{ path: 'structuredContent.result.appliedSettings', includes: 'LensFlareIntensity', label: 'enabled true writes the intensity' }] }),
     createNamedActionCase('Post Process: configure DOF', 'configure_dof', {
       actorName: ctx.postProcessVolume,
       enabled: true,
@@ -386,7 +403,23 @@ function createRenderingHappyCases(ctx) {
     createNamedActionCase('Post Process: set DOF method', 'set_dof_method', {
       actorName: ctx.postProcessVolume,
       method: 'CinematicDOF'
-    }),
+    }, { assertions: [{ path: 'structuredContent.result.appliedSettings', includes: 'bMobileHQGaussian', label: 'the method is the mobile Gaussian switch' }] }),
+    createNamedActionCase('Post Process: set DOF method Gaussian', 'set_dof_method', {
+      actorName: ctx.postProcessVolume,
+      method: 'Gaussian'
+    }, { assertions: [{ path: 'structuredContent.result.appliedSettings', includes: 'bMobileHQGaussian', label: 'Gaussian turns the mobile high quality Gaussian on' }] }),
+    createNamedActionCase('Post Process: refuse a motion blur amount past the engine limit', 'set_motion_blur_amount', {
+      actorName: ctx.postProcessVolume,
+      amount: 50
+    }, { expected: errorExpected('must be between') }),
+    createNamedActionCase('Post Process: refuse an exposure method the engine does not have', 'set_exposure_method', {
+      actorName: ctx.postProcessVolume,
+      method: 'Recovery'
+    }, { expected: errorExpected('unknown method') }),
+    createNamedActionCase('Post Process: refuse a volume name no volume has', 'set_focal_distance', {
+      actorName: `${ctx.postProcessVolume}_Missing`,
+      distance: 300
+    }, { expected: errorExpected('no postprocessvolume is named') }),
     createNamedActionCase('Post Process: set focal distance', 'set_focal_distance', {
       actorName: ctx.postProcessVolume,
       distance: 650
@@ -556,6 +589,10 @@ function createRenderingAdversarialCases(ctx) {
       enabled: true,
       settings: { SamplesPerPixel: 1000000000 }
     }, { expected: errorExpected('invalid') }),
+    // A key the action does not read was dropped without a word and the call answered applied.
+    createNamedActionCase('Adversarial: reject a ray-traced shadow setting the action does not read', 'configure_ray_traced_shadows', {
+      settings: { SamplesPerPixel: 2, ShadowDistance: 20000 }
+    }, { expected: errorExpected('does not read settings ShadowDistance') }),
     createNamedActionCase('Adversarial: reject oversized ray-traced GI bounces', 'configure_ray_traced_gi', {
       enabled: true,
       settings: { SamplesPerPixel: 1, MaxBounces: 1000000000 }
@@ -656,6 +693,10 @@ function createRenderingAdversarialCases(ctx) {
     }, { expected: errorExpected('invalid') }),
     createNamedActionCase('Adversarial: reject a post-process call that sets nothing', 'set_bloom_threshold', {
       actorName: ctx.postProcessVolume
+    }, { expected: errorExpected('missing required parameter') }),
+    createNamedActionCase('Adversarial: reject a blend-only call to a value variant', 'configure_lens_flare', {
+      actorName: ctx.postProcessVolume,
+      blendWeight: 1
     }, { expected: errorExpected('no_setting_supplied') }),
     createNamedActionCase('Adversarial: reject oversized reflection capture resolution', 'configure_reflection_capture_resolution', {
       actorName: ctx.sphereCapture,

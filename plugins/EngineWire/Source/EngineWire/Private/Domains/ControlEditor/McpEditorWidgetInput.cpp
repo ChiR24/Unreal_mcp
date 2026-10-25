@@ -4,6 +4,7 @@
 #include "Blueprint/WidgetTree.h"
 #include "Components/Button.h"
 #include "Components/CheckBox.h"
+#include "Components/PanelWidget.h"
 #include "Components/Slider.h"
 #include "Components/TextBlock.h"
 #include "UObject/UObjectIterator.h"
@@ -70,15 +71,29 @@ bool ListLiveWidgetsForMcp(const TSharedPtr<FJsonObject> &Resp,
   TArray<TSharedPtr<FJsonValue>> Owners;
   for (UUserWidget *Owner : LiveUserWidgetsForMcp()) {
     TArray<TSharedPtr<FJsonValue>> Children;
-    Owner->WidgetTree->ForEachWidget([&Children](UWidget *Child) {
+    TArray<FString> Texts;
+    Owner->WidgetTree->ForEachWidget([&Children, &Texts](UWidget *Child) {
       if (Child && IsDrivableWidgetForMcp(Child)) {
         Children.Add(MakeShared<FJsonValueObject>(DescribeWidgetForMcp(Child)));
+      } else if (const UTextBlock *Text = Cast<UTextBlock>(Child)) {
+        // What the player reads that is no button's label: a list built at runtime showed as rows with nothing in them.
+        if (Text->IsVisible() && !Cast<UButton>(Text->GetParent()) && !Text->GetText().IsEmpty() && Texts.Num() < 20) {
+          Texts.Add(Text->GetText().ToString());
+        }
       }
     });
     TSharedPtr<FJsonObject> Entry = MakeShared<FJsonObject>();
     Entry->SetStringField(TEXT("userWidget"), OwnerLabelForMcp(Owner));
     Entry->SetStringField(TEXT("object"), Owner->GetName());
     Entry->SetBoolField(TEXT("inViewport"), Owner->IsInViewport());
+    // A widget made at runtime and added to another's panel, such as a list row, is shown inside that widget.
+    const UPanelWidget *Panel = Owner->IsInViewport() ? nullptr : Owner->GetParent();
+    if (const UUserWidget *Outer = Panel ? Panel->GetTypedOuter<UUserWidget>() : nullptr) {
+      Entry->SetStringField(TEXT("in"), Outer->GetName() + TEXT(".") + Panel->GetName());
+    }
+    if (Texts.Num() > 0) {
+      Entry->SetArrayField(TEXT("texts"), McpHandlerUtils::ToJsonStringArray(Texts));
+    }
     Entry->SetArrayField(TEXT("children"), Children);
     Owners.Add(MakeShared<FJsonValueObject>(Entry));
   }
@@ -191,7 +206,10 @@ void WarnWhenPieWindowMinimizedForMcp(const TSharedPtr<FJsonObject> &Resp) {
   if (Viewport) {
     Window = Viewport->GetWindow();
   }
-  if (Window.IsValid() && Window->IsWindowMinimized()) {
+  // Once per play session: a caller pressing through a menu read the same paragraph on every click.
+  static TWeakObjectPtr<UWorld> WarnedWorld;
+  if (Window.IsValid() && Window->IsWindowMinimized() && WarnedWorld.Get() != PlayWorld) {
+    WarnedWorld = PlayWorld;
     TArray<TSharedPtr<FJsonValue>> Warnings;
     Warnings.Add(MakeShared<FJsonValueString>(
         TEXT("The window showing Play In Editor is minimized, so its widgets are not painted and do not tick: "
@@ -206,7 +224,8 @@ void WarnWhenPieWindowMinimizedForMcp(const TSharedPtr<FJsonObject> &Resp) {
 // and the arrows move focus between buttons; only what it leaves bubbles up to the viewport and the game. Keys
 // sent straight to the viewport client never reached a focused UMG button. Only while a widget inside the PIE
 // viewport holds focus: otherwise Slate would hand the key to whatever editor panel has focus.
-bool RouteKeyToFocusedPieWidgetForMcp(const FKey &Key, const EInputEvent InputEvent, bool &bOutHandled) {
+bool RouteKeyToFocusedPieWidgetForMcp(const FKey &Key, const EInputEvent InputEvent, bool &bOutHandled,
+                                      FString &OutNote) {
   UWorld *PlayWorld = GEditor ? GEditor->PlayWorld.Get() : nullptr;
   UGameViewportClient *Viewport = PlayWorld ? PlayWorld->GetGameViewport() : nullptr;
   const TSharedPtr<SViewport> ViewportWidget = Viewport ? Viewport->GetGameViewportWidget() : nullptr;
@@ -214,9 +233,37 @@ bool RouteKeyToFocusedPieWidgetForMcp(const FKey &Key, const EInputEvent InputEv
   if (!ViewportWidget.IsValid() || !SlateApp.HasUserFocusedDescendants(ViewportWidget.ToSharedRef(), 0)) {
     return false;
   }
+  // Named before the key lands: a pressed button can close its menu and take the focus with it.
+  const FString Focused = FocusedPieWidgetForMcp();
+  if (!Focused.IsEmpty()) {
+    OutNote = FString::Printf(TEXT(". It went to %s first, the widget holding keyboard focus, as a real key does (a "
+                                   "focused button takes Space and Enter as a press), so the game's own controls may "
+                                   "not have seen it"),
+                              *Focused);
+  }
   const FKeyEvent KeyEvent(Key, FModifierKeysState(), 0, false, 0, 0);
   bOutHandled = InputEvent == IE_Released ? SlateApp.ProcessKeyUpEvent(KeyEvent) : SlateApp.ProcessKeyDownEvent(KeyEvent);
   return true;
+}
+
+// A title screen left up with its Play button focused took every jump key as a press, and the replies only said
+// the pawn never moved.
+FString FocusedPieWidgetForMcp() {
+  for (UUserWidget *Owner : LiveUserWidgetsForMcp()) {
+    if (Owner->HasKeyboardFocus()) {
+      return OwnerLabelForMcp(Owner);
+    }
+    FString Found;
+    Owner->WidgetTree->ForEachWidget([&](UWidget *Child) {
+      if (Found.IsEmpty() && Child && Child->HasKeyboardFocus()) {
+        Found = OwnerLabelForMcp(Owner) + TEXT(".") + Child->GetName();
+      }
+    });
+    if (!Found.IsEmpty()) {
+      return Found;
+    }
+  }
+  return FString();
 }
 
 bool SimulateLiveWidgetInputForMcp(const FString &InputType,

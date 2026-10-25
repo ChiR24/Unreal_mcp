@@ -11,6 +11,15 @@ import { schema } from '../shared/record-presets.js';
 const ASSET_PATH = str('Canonical /Game asset path.');
 const OK = schema({ success: bool('Operation succeeded.'), details: { type: 'object', 'x-unreal-reflection-boundary': true, description: 'Operation details.' } }, ['success']);
 
+const BULK_DELETE_OUT = schema({
+  success: bool('False when nothing was deleted: every asset is used by others (ASSETS_REFERENCED), none of the paths exists (NO_VALID_ASSETS), or something loaded still holds them (BULK_DELETE_FAILED).'),
+  deleted: arr('The paths actually gone after the delete (an empty folder replies an empty list).'),
+  requested: num('Assets found to delete, the kept ones included.'),
+  remaining: arr('Paths the engine left on disk although they were not referenced.'),
+  referenced: arrObj('Assets kept because others use them, each {path, referencedBy: the packages that use it}.'),
+  details: { type: 'object', 'x-unreal-reflection-boundary': true, description: 'Operation details.' },
+}, ['success']);
+
 const MESH_MATERIAL_ENTRY: JsonObject = {
   type: 'object',
   properties: {
@@ -38,9 +47,22 @@ const MESH_MATERIALS_OUT = schema({
   details: { type: 'object', 'x-unreal-reflection-boundary': true, description: 'Operation details.' },
 }, ['success']);
 
+const NANITE_OUT = schema({
+  success: bool('Operation succeeded.'),
+  meshPath: str('The mesh changed (assetPath).'),
+  meshName: str('Its asset name.'),
+  naniteEnabled: bool('Nanite is on, read back from the mesh.'),
+  trianglePercent: num('Percent of its triangles Nanite keeps, read back from the mesh.'),
+  rebuilt: bool('Its render data was rebuilt.'),
+  saved: bool('It was saved.'),
+  materialsFlagged: arr('Materials of the mesh, and those its placed copies in the open level override its slots with (from UE 5.8, material instances too), that lacked the Nanite usage flag: it is set and they are saved, since the editor sets a missing one only when it next draws the mesh, never saves it, and a packaged game draws that surface without it. Absent when none lacked it.'),
+  meshes: arrObj('With assetPaths: one row per mesh, {assetPath, naniteEnabled, trianglePercent, materialsFlagged} for one rebuilt and saved, or {assetPath, error} for one that is not a static mesh, holds a translucent material, is outside the allowed paths or could not be saved; any error fails the call (NANITE_PARTIAL) with the other meshes done.'),
+  details: { type: 'object', 'x-unreal-reflection-boundary': true, description: 'Operation details.' },
+}, ['success']);
+
 export const ASSET_ADVANCED_RECORDS: readonly RecordSpec[] = [
-  r('create_render_target', 'asset', 'Create a render target texture asset.',
-    schema({ name: str('Render target name.'), packagePath: str('Package path (default /Game/Textures).'), renderTargetPath: str('Full asset path, e.g. /Game/RenderTargets/RT_Capture; replaces name and packagePath.'), width: num('Width in pixels.'), height: num('Height in pixels.'), format: str('Pixel format.'), save: bool('Save after creation. Defaults to true.') }, [], ['name', 'renderTargetPath']),
+  r('create_render_target', 'asset', 'Create a Texture Render Target 2D asset for a scene capture or a Blueprint to draw into: width and height (default 1024, at most 8192), format (default RGBA8), saved unless save is false (saved says whether it was written). A render target already at that path is kept as it is and answered with alreadyExists and its own size; another asset there is ASSET_ALREADY_EXISTS.',
+    schema({ name: str('Render target name.'), packagePath: str('Package path (default /Game/Textures).'), renderTargetPath: str('Full asset path, e.g. /Game/RenderTargets/RT_Capture; replaces name and packagePath.'), width: num('Width in pixels (default 1024; 1 to 8192).'), height: num('Height in pixels (default 1024; 1 to 8192).'), format: str('Render target format (default RGBA8): an ETextureRenderTargetFormat name such as R8, RG8, RGBA8, RGBA8_SRGB, R16f, RGBA16f, RGBA32f or RGB10A2, with or without RTF_; FloatRGBA and A2B10G10R10 are accepted too. Another name is refused.'), save: bool('Save after creation. Defaults to true.') }, [], ['name', 'renderTargetPath']),
     OK, WRITE, WRITE_POLICY, MEDIUM,
     { dispatchAction: 'manage_texture',
       topics: ['make render target'],
@@ -54,7 +76,7 @@ export const ASSET_ADVANCED_RECORDS: readonly RecordSpec[] = [
       ],
       examples: [ex('Create a 1024x1024 HDR render target', { name: 'RT_SceneCapture', packagePath: '/Game/RenderTargets', width: 1024, height: 1024, format: 'RTF_RGBA16f', save: true }, { success: true })] }
   ),
-  r('generate_lods', 'asset', 'Generate LOD levels for a static mesh asset.',
+  r('generate_lods', 'asset', 'Give one or several static mesh assets lodCount LODs in all (default 4, 1 to 50, LOD 0 included): each LOD keeps half the triangles of the one before (50%, 25%, ...), LODs past the count and the hand-tuned settings of the others are replaced, and each mesh is rebuilt and saved. Engine meshes are not changed: they are listed under engineContentPaths (ENGINE_CONTENT when nothing else was given), so duplicate one into /Game first. The reply counts processed out of requested and lists notFoundPaths and notMeshPaths; in a headless editor the build is skipped and each mesh is only checked.',
     schema({ assetPath: ASSET_PATH, assetPaths: ASSET_PATHS, lodCount: num('Number of LOD levels to generate (1-50, default 4).') }, [], ['assetPath', 'assetPaths']),
     OK, { ...WRITE, longRunning: true }, WRITE_POLICY, HIGH,
     { whenToUse: ['One or several static meshes need LOD levels generated so distant copies render cheaper.'],
@@ -184,14 +206,15 @@ export const ASSET_ADVANCED_RECORDS: readonly RecordSpec[] = [
       whenNotToUse: ['The individual nodes of a material and their connections are needed (use material.get_material_info).'],
       examples: [ex('Read instruction counts for a material', { assetPath: '/Game/Materials/M_Base' }, { success: true })] }
   ),
-  r('nanite_rebuild_mesh', 'asset', 'Turn Nanite on for a static mesh asset and set the share of its triangles Nanite keeps; the mesh is rebuilt and saved, and the reply reads naniteEnabled and trianglePercent back from it.',
-    schema({ assetPath: str('Static mesh asset path.'), trianglePercent: num('Percent of the source triangles Nanite keeps, 0-100 (default 100).') }, ['assetPath']),
-    OK, { ...WRITE, longRunning: true }, WRITE_POLICY, HIGH,
+  r('nanite_rebuild_mesh', 'asset', 'Turn Nanite on for a static mesh asset, or several in one call (assetPaths), and set the share of its triangles Nanite keeps; each mesh is rebuilt and saved, and the reply reads naniteEnabled and trianglePercent back from it.',
+    schema({ assetPath: str('Static mesh asset path.'), assetPaths: arr('Several static meshes, each turned on, rebuilt and saved in this one call (a whole imported pack, or every heavy mesh get_stats statsKind=frame lists); one mesh that fails does not stop the others.'), trianglePercent: num('Percent of the source triangles Nanite keeps, 0-100 (default 100).') }, [], ['assetPath', 'assetPaths']),
+    NANITE_OUT, { ...WRITE, longRunning: true }, WRITE_POLICY, HIGH,
     { dispatchAction: 'manage_render',
-      whenToUse: ['A static mesh needs Nanite enabled, or the percentage of triangles Nanite keeps changed.'],
+      whenToUse: ['A static mesh needs Nanite enabled, or the percentage of triangles Nanite keeps changed.', 'Several meshes need Nanite: assetPaths does them all under one consent.'],
       whenNotToUse: [
         'A dynamic mesh must be baked into a new Nanite static mesh asset (use manage_geometry.convert_to_nanite).',
         'Plain LOD levels are wanted for a mesh that will not use Nanite (use asset.process_asset with process=lods).',
+        'The mesh has a translucent material slot (glass): Nanite draws only opaque and masked materials, so the call leaves such a mesh as it is (NANITE_UNSUPPORTED_MATERIAL).',
       ],
       examples: [ex('Rebuild Nanite data after a mesh edit', { assetPath: '/Game/Meshes/SM_Rock' }, { success: true })] }
   ),
@@ -213,21 +236,21 @@ export const ASSET_ADVANCED_RECORDS: readonly RecordSpec[] = [
       whenNotToUse: ['One asset or one folder gets a new name (use asset.rename).'],
       examples: [ex('Re-prefix every mesh in a folder', { folderPath: '/Game/Meshes', searchText: 'Mesh_', replaceText: 'SM_', checkoutFiles: true }, { success: true })] }
   ),
-  r('bulk_delete', 'asset', 'Delete multiple assets by folder or explicit paths.',
-    schema({ folderPath: str('Folder path for bulk operation.'), assetPaths: arr('Explicit asset paths to delete.'), fixupRedirectors: bool('Default true. After a delete that removed something, resolve the redirectors that already exist in the folders the assets were deleted from, subfolders included: their referencers are re-pointed and re-saved, then the redirectors nothing points at any more are removed. Deleting creates no redirectors, so this only cleans older ones.') }, [], ['assetPaths', 'folderPath']),
-    OK, DESTRUCTIVE, DESTRUCTIVE_POLICY, HIGH,
+  r('bulk_delete', 'asset', 'Delete every asset under folderPath (subfolders included; the folders stay) or the listed assetPaths, then resolve old redirectors there. An asset something outside the delete still uses is kept and listed in referenced with what uses it; deleted lists the paths actually gone.',
+    schema({ folderPath: str('Folder whose assets are deleted, subfolders included; the folders themselves stay. Used when assetPaths is absent; only assets the registry has already indexed are found.'), assetPaths: arr('Assets to delete (/Game paths); one that does not exist is skipped.'), fixupRedirectors: bool('Default true. After a delete that removed something, resolve the redirectors that already exist in the folders the assets were deleted from, subfolders included: their referencers are re-pointed and re-saved, then the redirectors nothing points at any more are removed. Deleting creates no redirectors, so this only cleans older ones.') }, [], ['assetPaths', 'folderPath']),
+    BULK_DELETE_OUT, DESTRUCTIVE, DESTRUCTIVE_POLICY, HIGH,
     { dispatchAction: 'bulk_delete',
       whenToUse: [
         'Every asset under a folder, or a long list of assets, must be deleted in one call.',
         'Old redirectors in the folders the assets are deleted from must be resolved in the same call (on by default).',
       ],
       whenNotToUse: [
-        'Assets that other assets still use must be kept, with the blocked ones reported (use asset.delete).',
+        'An asset others still use must go anyway, breaking what uses it (use asset.delete with force).',
         'The folder itself must be removed as well as its assets (use asset.delete with the folder path).',
       ],
       examples: [ex('Delete two obsolete assets and clean redirectors', { assetPaths: ['/Game/MCPTest/OldA', '/Game/MCPTest/OldB'], fixupRedirectors: true }, { success: true })] }
   ),
-  r('source_control_checkout', 'asset', 'Check out assets in source control.',
+  r('source_control_checkout', 'asset', 'Check out assets (paths, or assetPath) in the enabled revision-control provider so they can be edited and submitted. Paths that name no asset in the project are skipped and listed (skipped); none left is NO_VALID_ASSETS, and source control off is SOURCE_CONTROL_DISABLED (turn it on with sourceControlOp=enable). The reply gives checkedOut and assets.',
     schema({ assetPath: ASSET_PATH, paths: arr('Asset paths to check out.') }, []),
     OK, WRITE, WRITE_POLICY, MEDIUM,
     { dispatchAction: 'source_control_checkout',
@@ -235,7 +258,7 @@ export const ASSET_ADVANCED_RECORDS: readonly RecordSpec[] = [
       whenNotToUse: ['The checked-out or modified state of assets is wanted (use asset.query_asset for source control state).'],
       examples: [ex('Check out two materials before editing', { paths: ['/Game/Materials/M_Base', '/Game/Materials/M_Trim'] }, { success: true })] }
   ),
-  r('source_control_submit', 'asset', 'Submit checked-out assets to source control.',
+  r('source_control_submit', 'asset', 'Submit (check in) saved assets (paths, or assetPath) to the enabled provider with description as the change description. Paths that name no asset are skipped and listed (skipped); none left is NO_VALID_ASSETS, a provider refusal SUBMIT_FAILED, and source control off SOURCE_CONTROL_DISABLED. The reply gives submitted.',
     schema({ assetPath: ASSET_PATH, paths: arr('Asset paths to submit.'), description: str('Submit description.') }, ['description']),
     OK, WRITE, WRITE_POLICY, MEDIUM,
     { dispatchAction: 'source_control_submit',
@@ -250,7 +273,7 @@ export const ASSET_ADVANCED_RECORDS: readonly RecordSpec[] = [
   // handlers were written, but no record ever published it, so the only way to
   // put a project under revision control was the editor's own login dialog --
   // the one thing an automation caller cannot reach.
-  r('source_control_enable', 'asset', 'Enable revision control and select the provider (Git, Perforce, Subversion...).',
+  r('source_control_enable', 'asset', 'Turn revision control on with the provider named (Git, Perforce or Subversion, as the editor registers it), switching from another provider that is on; with that provider already on, or none named while one is on, it reports the current provider. A provider whose plugin is off or that cannot connect (Git needs a repository at the project root: sourceControlOp=init) is SOURCE_CONTROL_ENABLE_FAILED.',
     schema({ provider: str('Provider name as the editor registers it, e.g. Git or Perforce. Omit to report the current provider without changing it.') }, []),
     OK, WRITE, WRITE_POLICY, MEDIUM,
     { dispatchAction: 'source_control_enable',
@@ -258,7 +281,7 @@ export const ASSET_ADVANCED_RECORDS: readonly RecordSpec[] = [
       whenNotToUse: ['Only the state of particular assets is wanted (use asset.query_asset for source control state).'],
       examples: [ex('Point the editor at the Git provider', { provider: 'Git' }, { success: true, provider: 'Git' })] }
   ),
-  r('source_control_init', 'asset', 'Create a repository for this project, write an Unreal .gitignore, make the first commit and select the Git provider.',
+  r('source_control_init', 'asset', 'Put the project under Git: create a repository at the project root when there is none, write an Unreal .gitignore when there is none (Binaries, Intermediate, Saved, DerivedDataCache), stage everything, make the first commit (description, default "Initial commit") and turn the Git provider on. userName and userEmail go to the repository config only and cannot hold quotes or control characters. The reply gives committed, commit (short hash), provider and steps (each git command with its exit code and output); a failing step answers GIT_INIT_FAILED, GIT_ADD_FAILED or GIT_COMMIT_FAILED.',
     schema({ description: str('First commit message. Defaults to "Initial commit".'), userName: str('Commit author name, written to the repository config only.'), userEmail: str('Commit author email, written to the repository config only.') }, []),
     OK, { ...WRITE, longRunning: true }, WRITE_POLICY, HIGH,
     { dispatchAction: 'source_control_init',
@@ -266,7 +289,7 @@ export const ASSET_ADVANCED_RECORDS: readonly RecordSpec[] = [
       whenNotToUse: ['A Perforce or Subversion provider is wanted; init builds only a Git repository (select the provider with sourceControlOp=enable).'],
       examples: [ex('Put a fresh project under revision control', { description: 'Initial commit', userName: 'Dev', userEmail: 'dev@example.com' }, { success: true, committed: true })] }
   ),
-  r('source_control_commit_all', 'asset', 'Stage every change in the project and commit it as a snapshot.',
+  r('source_control_commit_all', 'asset', 'Stage every change in the project (git add -A, honouring .gitignore) and commit it with description as the message; a clean tree answers success with alreadyClean true and committed false. Needs a repository (NO_REPOSITORY: sourceControlOp=init). userName and userEmail, when sent, go to the repository config and cannot hold quotes or control characters. The reply gives committed, commit and steps.',
     schema({ description: str('Commit message.'), userName: str('Commit author name, written to the repository config only.'), userEmail: str('Commit author email, written to the repository config only.') }, ['description']),
     OK, { ...WRITE, longRunning: true }, WRITE_POLICY, HIGH,
     { dispatchAction: 'source_control_commit_all',

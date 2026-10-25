@@ -62,41 +62,55 @@ bool HandleSetAIMovement(UEngineWireSubsystem* Self, const FString& RequestId, c
     if (!MovementComp)
     {
         Self->SendAutomationError(RequestingSocket, RequestId,
-            TEXT("No CharacterMovementComponent found in blueprint"), TEXT("COMPONENT_NOT_FOUND"));
+            TEXT("No CharacterMovementComponent found in the Blueprint; set_ai_movement needs a Character Blueprint."), TEXT("COMPONENT_NOT_FOUND"));
         return true;
     }
 
+    // A value of 0 (an AI that stands still) used to be dropped like a missing one, a negative one too, and a
+    // call that set nothing was saved and answered success.
+    static const TCHAR* const NumberFields[] = {TEXT("maxWalkSpeed"), TEXT("maxAcceleration"), TEXT("brakingDeceleration"),
+        TEXT("rotationRate"), TEXT("avoidanceWeight"), TEXT("maxFlySpeed"), TEXT("jumpZVelocity")};
+    bool bAnyField = Payload->HasField(TEXT("useAccelerationForPaths")) || Payload->HasField(TEXT("orientRotationToMovement"))
+        || Payload->HasField(TEXT("useRVOAvoidance"));
+    for (const TCHAR* Field : NumberFields)
+    {
+        double Value = 0.0;
+        if (!Payload->TryGetNumberField(Field, Value))
+        {
+            continue;
+        }
+        bAnyField = true;
+        if (Value < 0.0)
+        {
+            Self->SendAutomationError(RequestingSocket, RequestId, FString::Printf(TEXT("%s must be 0 or more. Nothing was changed."), Field), TEXT("INVALID_ARGUMENT"));
+            return true;
+        }
+    }
+    if (!bAnyField)
+    {
+        Self->SendAutomationError(RequestingSocket, RequestId, TEXT("Nothing to set: send maxWalkSpeed, maxAcceleration, brakingDeceleration, rotationRate, "
+            "avoidanceWeight, maxFlySpeed, jumpZVelocity, useAccelerationForPaths, orientRotationToMovement or useRVOAvoidance."), TEXT("INVALID_ARGUMENT"));
+        return true;
+    }
+
+    MovementComp->Modify();
     TArray<FString> PropertiesSet;
-
-    // Walking speed
-    float MaxWalkSpeed = GetJsonNumberField(Payload, TEXT("maxWalkSpeed"), -1.0f);
-    if (MaxWalkSpeed > 0.0f)
+    const auto SetNumber = [&](const TCHAR* Field, float& Target, const TCHAR* Name)
     {
-        MovementComp->MaxWalkSpeed = MaxWalkSpeed;
-        PropertiesSet.Add(TEXT("MaxWalkSpeed"));
-    }
-
-    // Max acceleration
-    float MaxAcceleration = GetJsonNumberField(Payload, TEXT("maxAcceleration"), -1.0f);
-    if (MaxAcceleration > 0.0f)
+        double Value = 0.0;
+        if (Payload->TryGetNumberField(Field, Value))
+        {
+            Target = static_cast<float>(Value);
+            PropertiesSet.Add(Name);
+        }
+    };
+    SetNumber(TEXT("maxWalkSpeed"), MovementComp->MaxWalkSpeed, TEXT("MaxWalkSpeed"));
+    SetNumber(TEXT("maxAcceleration"), MovementComp->MaxAcceleration, TEXT("MaxAcceleration"));
+    SetNumber(TEXT("brakingDeceleration"), MovementComp->BrakingDecelerationWalking, TEXT("BrakingDecelerationWalking"));
+    double RotationRate = 0.0;
+    if (Payload->TryGetNumberField(TEXT("rotationRate"), RotationRate))
     {
-        MovementComp->MaxAcceleration = MaxAcceleration;
-        PropertiesSet.Add(TEXT("MaxAcceleration"));
-    }
-
-    // Braking deceleration walking
-    float BrakingDeceleration = GetJsonNumberField(Payload, TEXT("brakingDeceleration"), -1.0f);
-    if (BrakingDeceleration > 0.0f)
-    {
-        MovementComp->BrakingDecelerationWalking = BrakingDeceleration;
-        PropertiesSet.Add(TEXT("BrakingDecelerationWalking"));
-    }
-
-    // Rotation rate
-    float RotationRate = GetJsonNumberField(Payload, TEXT("rotationRate"), -1.0f);
-    if (RotationRate > 0.0f)
-    {
-        MovementComp->RotationRate = FRotator(0.0f, RotationRate, 0.0f);
+        MovementComp->RotationRate.Yaw = RotationRate;
         PropertiesSet.Add(TEXT("RotationRate"));
     }
 
@@ -126,35 +140,16 @@ bool HandleSetAIMovement(UEngineWireSubsystem* Self, const FString& RequestId, c
         PropertiesSet.Add(TEXT("bUseRVOAvoidance"));
     }
 
-    // Avoidance weight
-    float AvoidanceWeight = GetJsonNumberField(Payload, TEXT("avoidanceWeight"), -1.0f);
-    if (AvoidanceWeight >= 0.0f)
-    {
-        MovementComp->AvoidanceWeight = AvoidanceWeight;
-        PropertiesSet.Add(TEXT("AvoidanceWeight"));
-    }
-
-    // Max fly speed (for flying AI)
-    float MaxFlySpeed = GetJsonNumberField(Payload, TEXT("maxFlySpeed"), -1.0f);
-    if (MaxFlySpeed > 0.0f)
-    {
-        MovementComp->MaxFlySpeed = MaxFlySpeed;
-        PropertiesSet.Add(TEXT("MaxFlySpeed"));
-    }
-
-    // Jump Z velocity
-    float JumpZVelocity = GetJsonNumberField(Payload, TEXT("jumpZVelocity"), -1.0f);
-    if (JumpZVelocity > 0.0f)
-    {
-        MovementComp->JumpZVelocity = JumpZVelocity;
-        PropertiesSet.Add(TEXT("JumpZVelocity"));
-    }
+    SetNumber(TEXT("avoidanceWeight"), MovementComp->AvoidanceWeight, TEXT("AvoidanceWeight"));
+    SetNumber(TEXT("maxFlySpeed"), MovementComp->MaxFlySpeed, TEXT("MaxFlySpeed"));
+    SetNumber(TEXT("jumpZVelocity"), MovementComp->JumpZVelocity, TEXT("JumpZVelocity"));
 
     FBlueprintEditorUtils::MarkBlueprintAsModified(Blueprint);
-    McpSafeAssetSave(Blueprint);
 
     TSharedPtr<FJsonObject> MovementResult = McpHandlerUtils::CreateResultObject();
     MovementResult->SetStringField(TEXT("blueprintPath"), BlueprintPath);
+    MovementResult->SetBoolField(TEXT("saved"), McpSafeAssetSave(Blueprint));
+    McpHandlerUtils::AddVerification(MovementResult, Blueprint);
 
     TArray<TSharedPtr<FJsonValue>> PropsArray;
     for (const FString& Prop : PropertiesSet)

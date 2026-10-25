@@ -2,6 +2,7 @@
 
 #include "Foundation/BridgeHelpers/McpHelpers.h"
 #include "Foundation/HandlerUtils/McpHandlerUtils.h"
+#include "Foundation/Render/McpConsoleVariableWrite.h"
 
 #include "HAL/IConsoleManager.h"
 #include "UObject/UnrealType.h"
@@ -50,6 +51,27 @@ inline bool ApplyJsonSettings(
     {
         return true;
     }
+    // The engine's hard limits (ClampMin/ClampMax), which its Details panel holds every value to, checked before
+    // anything is written: a motion blur amount of 50 or an f-stop of 0.5 was written and answered applied.
+    for (const TPair<FString, TSharedPtr<FJsonValue>> Pair : Settings->Values)
+    {
+        FProperty* Property = StructType->FindPropertyByName(FName(*Pair.Key));
+        double Number = 0.0;
+        if (Property && Property->IsA<FNumericProperty>() && Pair.Value.IsValid() && Pair.Value->Type == EJson::Number &&
+            Pair.Value->TryGetNumber(Number))
+        {
+            const FString Min = Property->GetMetaData(TEXT("ClampMin"));
+            const FString Max = Property->GetMetaData(TEXT("ClampMax"));
+            if ((!Min.IsEmpty() && Number < FCString::Atod(*Min)) || (!Max.IsEmpty() && Number > FCString::Atod(*Max)))
+            {
+                const FString Range = Min.IsEmpty() ? TEXT("at most ") + Max
+                                    : Max.IsEmpty() ? TEXT("at least ") + Min
+                                                    : FString::Printf(TEXT("between %s and %s"), *Min, *Max);
+                OutError = FString::Printf(TEXT("%s must be %s, the engine's limit; got %g"), *Pair.Key, *Range, Number);
+                return false;
+            }
+        }
+    }
     const int32 AppliedBefore = OutApplied.Num();
     TArray<FString> Unknown;
     for (const TPair<FString, TSharedPtr<FJsonValue>> Pair : Settings->Values)
@@ -70,6 +92,12 @@ inline bool ApplyJsonSettings(
         {
             FBoolProperty* Override = CastField<FBoolProperty>(
                 StructType->FindPropertyByName(FName(*(TEXT("bOverride_") + Pair.Key))));
+            // bMobileHQGaussian's flag is bOverride_MobileHQGaussian: a b-prefixed field kept its override off, so the
+            // value it was given never applied.
+            if (!Override && Pair.Key.Len() > 1 && Pair.Key[0] == TEXT('b') && FChar::IsUpper(Pair.Key[1]))
+            {
+                Override = CastField<FBoolProperty>(StructType->FindPropertyByName(FName(*(TEXT("bOverride_") + Pair.Key.Mid(1)))));
+            }
             if (Override)
             {
                 Override->SetPropertyValue_InContainer(Target, true);
@@ -110,10 +138,15 @@ inline bool SetConsoleVariable(
     IConsoleVariable* Variable = IConsoleManager::Get().FindConsoleVariable(*Name);
     if (!Variable)
     {
-        OutUnsupported.Add(Name);
+        OutUnsupported.Add(Name + TEXT(" (not in this engine version)"));
         return false;
     }
-    Variable->Set(*Value, ECVF_SetByCode);
+    const FString NotTaken = McpSetConsoleVariable(*Variable, Value);
+    if (!NotTaken.IsEmpty())
+    {
+        OutUnsupported.Add(FString::Printf(TEXT("%s (%s)"), *Name, *NotTaken));
+        return false;
+    }
     OutApplied.Add(Name);
     return true;
 }

@@ -12,12 +12,8 @@ bool JsonNumberOrStringToDouble(const TSharedPtr<FJsonValue>& ValueField, double
         OutValue = ValueField->AsNumber();
         return true;
     }
-    if (ValueField->Type == EJson::String)
-    {
-        OutValue = FCString::Atod(*ValueField->AsString());
-        return true;
-    }
-    return false;
+    // A string must read as a number: Atod alone turned "abc" into 0.
+    return ValueField->Type == EJson::String && LexTryParseString(OutValue, *ValueField->AsString().TrimStartAndEnd());
 }
 
 bool DoubleToInt64(const double Value, int64& OutValue)
@@ -180,13 +176,13 @@ bool ApplyJsonValueToProperty(void* TargetContainer, FProperty* Property, const 
     double NumberValue = 0.0;
     if (FFloatProperty* FloatProp = CastField<FFloatProperty>(Property))
     {
-        if (!JsonNumberOrStringToDouble(ValueField, NumberValue)) { OutError = TEXT("Unsupported JSON type for float property"); return false; }
+        if (!JsonNumberOrStringToDouble(ValueField, NumberValue)) { OutError = TEXT("Float property requires a number"); return false; }
         FloatProp->SetPropertyValue_InContainer(TargetContainer, static_cast<float>(NumberValue));
         return true;
     }
     if (FDoubleProperty* DoubleProp = CastField<FDoubleProperty>(Property))
     {
-        if (!JsonNumberOrStringToDouble(ValueField, NumberValue)) { OutError = TEXT("Unsupported JSON type for double property"); return false; }
+        if (!JsonNumberOrStringToDouble(ValueField, NumberValue)) { OutError = TEXT("Double property requires a number"); return false; }
         DoubleProp->SetPropertyValue_InContainer(TargetContainer, NumberValue);
         return true;
     }

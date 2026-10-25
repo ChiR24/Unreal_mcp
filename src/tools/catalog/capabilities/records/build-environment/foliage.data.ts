@@ -38,7 +38,7 @@ export const FOLIAGE_RECORDS: readonly CapabilityRecordSource[] = [
   }),
   buildRecord({
     id: 'build_environment.add_foliage_instances', action: 'add_foliage_instances', family: F,
-    summary: 'Add explicit foliage instances: full transforms, or bare locations varied by minScale/maxScale/randomYaw.',
+    summary: 'Add explicit foliage instances: full transforms, or bare locations varied by minScale/maxScale/randomYaw. One undo step removes them all; the reply\'s undo block says so.',
     whenToUse: WU, whenNotToUse: ['Random scatter via paint_foliage is sufficient.'],
     inputProps: { foliageType: P.foliageType, foliageTypePath: P.foliageTypePath,
       meshPath: { ...P.meshPath, description: 'StaticMesh to place when no foliage type is named; its /Game/Foliage/Auto_<mesh> type is made once and reused.' },
@@ -51,7 +51,7 @@ export const FOLIAGE_RECORDS: readonly CapabilityRecordSource[] = [
   buildRecord({
     id: 'build_environment.get_foliage_instances', action: 'get_foliage_instances', family: F,
     topics: ['count per type', 'vegetation count', 'positions and scale', 'count trees', 'how many trees'],
-    summary: 'Count foliage instances in the level, in total and per foliage type (byType), and list their positions; one type also returns rotation and scale ({x, y, z}: the whole scale, so a non-uniform one shows). The summary flag drops the list; limit caps it.',
+    summary: 'Count foliage instances in the level, across every foliage actor (each loaded sublevel and World Partition cell keeps its own; foliageActors counts them), in total and per foliage type (byType), and list their positions; one type also returns rotation and scale ({x, y, z}: the whole scale, so a non-uniform one shows). The summary flag drops the list; limit caps it.',
     whenToUse: ['Existing foliage instances must be inspected.', 'What foliage a level holds must be counted before removing it (summary).'],
     whenNotToUse: ['Foliage should be removed rather than inspected.'],
     inputProps: {
@@ -64,7 +64,7 @@ export const FOLIAGE_RECORDS: readonly CapabilityRecordSource[] = [
   }),
   buildRecord({
     id: 'build_environment.remove_foliage', action: 'remove_foliage', family: F,
-    summary: 'Remove foliage: every instance of a type, all foliage, or only the instances inside an area box (or several boxes with areas).',
+    summary: 'Remove foliage from every foliage actor in the level (each loaded sublevel and World Partition cell keeps its own): every instance of foliageType, every type (removeAll true), or only the instances inside an area box or several (areas, each {min, max}; with foliageType, that type only). A whole type also leaves the level\'s foliage list. One undo step; instancesRemoved counts what went (0 when nothing matched), an unknown type is FOLIAGE_TYPE_NOT_FOUND, and a box without min and max removes nothing.',
     whenToUse: WU, whenNotToUse: ['Foliage should be hidden rather than removed.'],
     inputProps: { foliageType: P.foliageType, foliageTypePath: P.foliageTypePath, removeAll: P.removeAll, area: P.area, areas: AREAS },
     effect: 'destructive', latency: 'interactive', resources: 'low',
@@ -72,7 +72,7 @@ export const FOLIAGE_RECORDS: readonly CapabilityRecordSource[] = [
   }),
   buildRecord({
     id: 'build_environment.paint_foliage', action: 'paint_foliage', family: F,
-    summary: 'Paint foliage over a brush disc (location + radius) or a box area: count instances dropped onto the ground, each with a random scale and yaw.',
+    summary: 'Paint foliage over a brush disc (location + radius) or a box area: count instances dropped onto the ground, each with a random scale and yaw. One undo step removes the whole stroke; NO_SURFACE (no ground below any point) adds nothing.',
     whenToUse: WU, whenNotToUse: ['Explicit transforms should be used via add_foliage_instances.'],
     inputProps: { foliageType: P.foliageType, foliageTypePath: P.foliageTypePath,
       locations: P.locations, position: P.position, location: P.location, radius: P.radius,
@@ -163,12 +163,12 @@ export const FOLIAGE_RECORDS: readonly CapabilityRecordSource[] = [
   }),
   buildRecord({
     id: 'build_environment.create_procedural_foliage', action: 'create_procedural_foliage', family: F,
-    summary: 'Create a procedural foliage volume with seeded scatter; fails when the simulation places nothing.',
+    summary: 'Scatter foliage over an area in one call: make a Procedural Foliage Spawner (and one foliage type per foliageTypes entry) in path, place a Procedural Foliage Volume over bounds (a box of size, default 1000 on each axis, centred on location) and run the simulation as the Resimulate button does, which traces the instances onto the landscape, static mesh and BSP surfaces inside the volume. A mesh that does not load (MESH_NOT_FOUND) or an empty foliageTypes is refused before anything is created; a run that places no instance is NOTHING_SPAWNED (the assets and volume stay).',
     whenToUse: ['Large-area procedural foliage scatter is needed.'],
     whenNotToUse: ['Manual foliage placement is sufficient.'],
     inputProps: { name: P.name, volumeName: { ...P.volumeName, description: 'Label of the procedural foliage volume (name is accepted too).' },
       path: { ...P.path, description: 'Folder for the spawner and its foliage type assets (default /Game/ProceduralFoliage).' },
-      foliageTypes: P.foliageTypes, bounds: P.bounds, seed: P.seed, tileSize: P.tileSize },
+      foliageTypes: { ...P.foliageTypes, description: 'At least one {meshPath, density}: the static mesh to scatter and its density, the seeds per 10 m x 10 m the simulation starts from (default 10). Its steps then spread, age and thin them (instances keep a collision radius apart), so the count placed differs; get_foliage_instances reads it.' }, bounds: { ...P.bounds, description: 'The area {location, size}: a box of size (default 1000 on each axis) centred on location (default the origin); it must enclose a surface to place on.' }, seed: { ...P.seed, description: 'Random seed of the scatter (default 12345); the same seed gives the same placement.' }, tileSize: { ...P.tileSize, description: 'Side of one simulated tile in world units (default 1000); the scatter repeats 10 unique tiles across the area.' } },
     effect: 'write', latency: 'interactive', resources: 'medium',
     dispatchAction: 'create_procedural_foliage',
     exampleInput: { action: 'create_procedural_foliage', name: 'PFV_1', foliageTypes: [{ meshPath: '/Game/Meshes/SM_Bush', density: 0.5 }] },

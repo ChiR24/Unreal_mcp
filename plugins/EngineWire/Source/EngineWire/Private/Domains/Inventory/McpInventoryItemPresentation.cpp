@@ -22,9 +22,18 @@ bool HandleInventoryItemPresentationActions(UEngineWireSubsystem& Bridge, const 
       return true;
     }
 
-    bool bStackable = GetJsonBoolField(Payload, TEXT("stackable"), true);
-    int32 MaxStackSize = static_cast<int32>(GetJsonNumberField(Payload, TEXT("maxStackSize"), 99));
-    bool bUniqueItems = GetJsonBoolField(Payload, TEXT("uniqueItems"), false);
+    // Only the fields sent are written: an omitted one used to be reset to stackable, 99 or not unique.
+    const bool bHasStackable = Payload->HasField(TEXT("stackable"));
+    const bool bHasMax = Payload->HasField(TEXT("maxStackSize"));
+    const bool bHasUnique = Payload->HasField(TEXT("uniqueItems"));
+    const bool bStackable = GetJsonBoolField(Payload, TEXT("stackable"), true);
+    const int32 MaxStackSize = static_cast<int32>(GetJsonNumberField(Payload, TEXT("maxStackSize"), 99));
+    const bool bUniqueItems = GetJsonBoolField(Payload, TEXT("uniqueItems"), false);
+    if ((!bHasStackable && !bHasMax && !bHasUnique) || (bHasMax && MaxStackSize < 1)) {
+      Bridge.SendAutomationError(RequestingSocket, RequestId,
+          TEXT("Send stackable, maxStackSize (1 or more) or uniqueItems; nothing was changed."), TEXT("INVALID_ARGUMENT"));
+      return true;
+    }
 
     TArray<FString> ModifiedProps;
 
@@ -32,7 +41,7 @@ bool HandleInventoryItemPresentationActions(UEngineWireSubsystem& Bridge, const 
     if (!StackableProp) {
       StackableProp = ItemAsset->GetClass()->FindPropertyByName(TEXT("Stackable"));
     }
-    if (StackableProp) {
+    if (StackableProp && bHasStackable) {
       TSharedPtr<FJsonValue> BoolVal = MakeShared<FJsonValueBoolean>(bStackable);
       FString ApplyError;
       if (ApplyJsonValueToProperty(ItemAsset, StackableProp, BoolVal, ApplyError)) {
@@ -44,7 +53,7 @@ bool HandleInventoryItemPresentationActions(UEngineWireSubsystem& Bridge, const 
     if (!MaxStackProp) {
       MaxStackProp = ItemAsset->GetClass()->FindPropertyByName(TEXT("StackLimit"));
     }
-    if (MaxStackProp) {
+    if (MaxStackProp && bHasMax) {
       TSharedPtr<FJsonValue> IntVal = MakeShared<FJsonValueNumber>(static_cast<double>(MaxStackSize));
       FString ApplyError;
       if (ApplyJsonValueToProperty(ItemAsset, MaxStackProp, IntVal, ApplyError)) {
@@ -53,7 +62,7 @@ bool HandleInventoryItemPresentationActions(UEngineWireSubsystem& Bridge, const 
     }
 
     FProperty* UniqueProp = ItemAsset->GetClass()->FindPropertyByName(TEXT("bUniqueItem"));
-    if (UniqueProp) {
+    if (UniqueProp && bHasUnique) {
       TSharedPtr<FJsonValue> BoolVal = MakeShared<FJsonValueBoolean>(bUniqueItems);
       FString ApplyError;
       if (ApplyJsonValueToProperty(ItemAsset, UniqueProp, BoolVal, ApplyError)) {
@@ -63,12 +72,18 @@ bool HandleInventoryItemPresentationActions(UEngineWireSubsystem& Bridge, const 
 
     if (ModifiedProps.Num() == 0) {
       if (UMcpGenericDataAsset* GenericItem = Cast<UMcpGenericDataAsset>(ItemAsset)) {
-        GenericItem->Properties.Add(TEXT("bStackable"), bStackable ? TEXT("true") : TEXT("false"));
-        GenericItem->Properties.Add(TEXT("MaxStackSize"), FString::FromInt(MaxStackSize));
-        GenericItem->Properties.Add(TEXT("bUniqueItem"), bUniqueItems ? TEXT("true") : TEXT("false"));
-        ModifiedProps.Add(TEXT("Properties.bStackable"));
-        ModifiedProps.Add(TEXT("Properties.MaxStackSize"));
-        ModifiedProps.Add(TEXT("Properties.bUniqueItem"));
+        if (bHasStackable) {
+          GenericItem->Properties.Add(TEXT("bStackable"), bStackable ? TEXT("true") : TEXT("false"));
+          ModifiedProps.Add(TEXT("Properties.bStackable"));
+        }
+        if (bHasMax) {
+          GenericItem->Properties.Add(TEXT("MaxStackSize"), FString::FromInt(MaxStackSize));
+          ModifiedProps.Add(TEXT("Properties.MaxStackSize"));
+        }
+        if (bHasUnique) {
+          GenericItem->Properties.Add(TEXT("bUniqueItem"), bUniqueItems ? TEXT("true") : TEXT("false"));
+          ModifiedProps.Add(TEXT("Properties.bUniqueItem"));
+        }
       }
     }
 
@@ -82,15 +97,20 @@ bool HandleInventoryItemPresentationActions(UEngineWireSubsystem& Bridge, const 
     }
     ItemAsset->MarkPackageDirty();
 
-    if (GetJsonBoolField(Payload, TEXT("save"), true)) {
-      McpSafeAssetSave(ItemAsset);
-    }
+    const bool bSaved = GetJsonBoolField(Payload, TEXT("save"), true) && McpSafeAssetSave(ItemAsset);
 
     TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
+    Result->SetBoolField(TEXT("saved"), bSaved);
     Result->SetStringField(TEXT("itemPath"), ItemPath);
-    Result->SetBoolField(TEXT("stackable"), bStackable);
-    Result->SetNumberField(TEXT("maxStackSize"), MaxStackSize);
-    Result->SetBoolField(TEXT("uniqueItems"), bUniqueItems);
+    if (bHasStackable) {
+      Result->SetBoolField(TEXT("stackable"), bStackable);
+    }
+    if (bHasMax) {
+      Result->SetNumberField(TEXT("maxStackSize"), MaxStackSize);
+    }
+    if (bHasUnique) {
+      Result->SetBoolField(TEXT("uniqueItems"), bUniqueItems);
+    }
 
     TArray<TSharedPtr<FJsonValue>> ModArr;
     for (const FString& Prop : ModifiedProps) {
@@ -99,6 +119,7 @@ bool HandleInventoryItemPresentationActions(UEngineWireSubsystem& Bridge, const 
     Result->SetArrayField(TEXT("modifiedProperties"), ModArr);
     Result->SetBoolField(TEXT("configured"), true);
 
+    McpHandlerUtils::AddVerification(Result, ItemAsset);
     Bridge.SendAutomationResponse(RequestingSocket, RequestId, true,
                            TEXT("Item stacking configured"), Result);
     return true;
@@ -124,6 +145,10 @@ bool HandleInventoryItemPresentationActions(UEngineWireSubsystem& Bridge, const 
       return true;
     }
 
+    // An empty iconPath clears the icon; any other must name an asset (it used to be stored unchecked).
+    if (!IconPath.IsEmpty() && !RequireReferencedAsset(Bridge, RequestId, RequestingSocket, IconPath, TEXT("iconPath"))) {
+      return true;
+    }
     bool bIconSet = false;
     FString IconPropertyName;
     FString RejectedProperty;
@@ -180,16 +205,16 @@ bool HandleInventoryItemPresentationActions(UEngineWireSubsystem& Bridge, const 
 
     ItemAsset->MarkPackageDirty();
 
-    if (GetJsonBoolField(Payload, TEXT("save"), true)) {
-      McpSafeAssetSave(ItemAsset);
-    }
+    const bool bSaved = GetJsonBoolField(Payload, TEXT("save"), true) && McpSafeAssetSave(ItemAsset);
 
     TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
+    Result->SetBoolField(TEXT("saved"), bSaved);
     Result->SetStringField(TEXT("itemPath"), ItemPath);
     Result->SetStringField(TEXT("iconPath"), IconPath);
     Result->SetBoolField(TEXT("iconSet"), true);
     Result->SetStringField(TEXT("propertyModified"), IconPropertyName);
 
+    McpHandlerUtils::AddVerification(Result, ItemAsset);
     Bridge.SendAutomationResponse(RequestingSocket, RequestId, true,
                            TEXT("Item icon configured"), Result);
     return true;

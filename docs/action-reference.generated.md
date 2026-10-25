@@ -4,7 +4,7 @@
 
 # Action reference
 
-Catalog revision: `16f60cf04e47786f`
+Catalog revision: `29113592e885d640`
 
 Both transports expose exactly ONE public MCP tool, `unreal`, with the four
 operations `search` / `describe` / `execute` / `configure`. The parent tools
@@ -13,7 +13,7 @@ by `tools/list` and a direct `tools/call` on one returns a
 `DIRECT_TOOL_CALL_REMOVED` receipt rather than executing
 (`src/server/gateway/direct-call-migration.ts`).
 
-The catalog declares 416 capabilities across
+The catalog declares 417 capabilities across
 23 internal parent tools.
 Every row is derived from the capability record that the gateway actually
 validates against, so `execute` cannot accept an action this table omits.
@@ -37,17 +37,17 @@ validates against, so `execute` cannot accept an action this table omits.
 | Parent tool | Capabilities | read | write | destructive | Domains |
 | --- | --- | --- | --- | --- | --- |
 | `animation_physics` | 31 | 5 | 24 | 2 | animation physics |
-| `build_environment` | 40 | 5 | 32 | 3 | environment |
+| `build_environment` | 40 | 4 | 33 | 3 | environment |
 | `control_actor` | 25 | 8 | 15 | 2 | actor |
 | `control_editor` | 24 | 9 | 12 | 3 | editor |
-| `inspect` | 21 | 16 | 4 | 1 | inspect |
+| `inspect` | 22 | 17 | 4 | 1 | inspect |
 | `manage_ai` | 16 | 2 | 14 | 0 | manage ai |
 | `manage_asset` | 47 | 10 | 32 | 5 | asset, datatable, enum, material, struct, texture |
 | `manage_audio` | 14 | 3 | 11 | 0 | audio |
 | `manage_blueprint` | 32 | 7 | 19 | 6 | blueprint, widget |
 | `manage_character` | 10 | 2 | 8 | 0 | manage character |
 | `manage_combat` | 6 | 1 | 5 | 0 | manage combat |
-| `manage_effect` | 13 | 2 | 10 | 1 | manage effect |
+| `manage_effect` | 13 | 2 | 9 | 2 | manage effect |
 | `manage_gas` | 6 | 1 | 5 | 0 | manage gas |
 | `manage_geometry` | 16 | 2 | 14 | 0 | world |
 | `manage_interaction` | 3 | 1 | 2 | 0 | manage interaction |
@@ -62,7 +62,7 @@ validates against, so `execute` cannot accept an action this table omits.
 
 ## Capabilities requiring consent
 
-64 of 416 capabilities require consent.
+65 of 417 capabilities require consent.
 
 | Capability | Tool | Action | Effect | Consent |
 | --- | --- | --- | --- | --- |
@@ -102,6 +102,7 @@ validates against, so `execute` cannot accept an action this table omits.
 | `enum.delete_enum` | `manage_asset` | `delete_enum` | destructive | elevated |
 | `enum.edit_enum` | `manage_asset` | `create_enum` | write | explicit |
 | `inspect.delete_object` | `inspect` | `control_actor` | destructive | explicit |
+| `manage_effect.cleanup` | `manage_effect` | `cleanup` | destructive | explicit |
 | `manage_effect.remove_niagara_node` | `manage_effect` | `remove_niagara_node` | destructive | explicit |
 | `manage_level.delete` | `manage_level` | `delete_level` | destructive | explicit |
 | `manage_level_structure.remove_volume` | `manage_level_structure` | `remove_volume` | destructive | explicit |
@@ -175,7 +176,7 @@ validates against, so `execute` cannot accept an action this table omits.
 | `asset.export_mesh` | `manage_asset` | `export_mesh` | read | read | none | `manage_asset.export_mesh` |
 | `asset.import` | `manage_asset` | `import` | write | write | explicit | `manage_asset.import` |
 | `asset.import_marketplace_asset` | `manage_asset` | `add_fab_asset_to_project` | write | write | explicit | `manage_asset.import_marketplace_asset` `manage_asset.add_fab_asset_to_project` `manage_asset.cancel_fab_import` `manage_asset.download_fab_asset` `manage_asset.import_megascans_asset` |
-| `asset.inspect_asset` | `manage_asset` | `get_metadata` | read | read | none | `manage_asset.inspect_asset` `manage_asset.get_metadata` `manage_asset.get_dependencies` `manage_asset.get_asset_graph` `manage_asset.validate` `manage_asset.generate_report` |
+| `asset.inspect_asset` | `manage_asset` | `get_metadata` | read | read | none | `manage_asset.inspect_asset` `manage_asset.get_metadata` `manage_asset.get_dependencies` `manage_asset.get_asset_graph` `manage_asset.validate` `manage_asset.generate_report` `manage_asset.diff_asset` |
 | `asset.list` | `manage_asset` | `list` | read | read | none | `manage_asset.list` `manage_asset.list_content_sources` `manage_asset.list_instances` |
 | `asset.maintain_content` | `manage_asset` | `bulk_rename` | write | write | explicit | `manage_asset.maintain_content` `manage_asset.bulk_rename` `manage_asset.fixup_redirectors` `manage_asset.refresh_blueprints` `manage_asset.migrate_assets` |
 | `asset.move` | `manage_asset` | `move` | write | write | explicit | `manage_asset.move` `manage_asset.move_asset` |
@@ -186,7 +187,7 @@ validates against, so `execute` cannot accept an action this table omits.
 | `asset.rename` | `manage_asset` | `rename` | write | write | explicit | `manage_asset.rename` `manage_asset.rename_asset` |
 | `asset.set_metadata` | `manage_asset` | `set_metadata` | write | write | explicit | `manage_asset.set_metadata` `manage_asset.set_tags` |
 | `asset.source_control` | `manage_asset` | `source_control_checkout` | write | write | explicit | `manage_asset.source_control` `manage_asset.source_control_checkout` `manage_asset.source_control_submit` `manage_asset.source_control_enable` `manage_asset.source_control_init` `manage_asset.source_control_commit_all` |
-| `blueprint.add_behaviour` | `manage_blueprint` | `add_health` | write | write | none | `manage_blueprint.add_behaviour` `manage_blueprint.add_health` `manage_blueprint.add_damage_on_touch` `manage_blueprint.add_pickup` `manage_blueprint.add_sprint` `manage_blueprint.add_shoot` `manage_blueprint.add_chase` `manage_blueprint.add_patrol` `manage_blueprint.add_controls` `manage_blueprint.add_respawn` `manage_blueprint.add_goal` `manage_blueprint.add_launch_pad` `manage_blueprint.add_teleporter` `manage_blueprint.add_spawner` `manage_blueprint.add_dash` `manage_blueprint.add_health_hud` `manage_blueprint.add_counter_hud` `manage_blueprint.add_game_over` |
+| `blueprint.add_behaviour` | `manage_blueprint` | `add_health` | write | write | none | `manage_blueprint.add_behaviour` `manage_blueprint.add_health` `manage_blueprint.add_damage_on_touch` `manage_blueprint.add_pickup` `manage_blueprint.add_sprint` `manage_blueprint.add_shoot` `manage_blueprint.add_chase` `manage_blueprint.add_patrol` `manage_blueprint.add_turret` `manage_blueprint.add_stomp` `manage_blueprint.add_explosive` `manage_blueprint.add_moving_platform` `manage_blueprint.add_controls` `manage_blueprint.add_respawn` `manage_blueprint.add_goal` `manage_blueprint.add_launch_pad` `manage_blueprint.add_teleporter` `manage_blueprint.add_falling_platform` `manage_blueprint.add_countdown` `manage_blueprint.add_spawner` `manage_blueprint.add_dash` `manage_blueprint.add_health_hud` `manage_blueprint.add_counter_hud` `manage_blueprint.add_hint` `manage_blueprint.add_game_over` |
 | `blueprint.add_content_widget` | `manage_blueprint` | `add_text_block` | write | write | none | `manage_blueprint.add_content_widget` `manage_blueprint.add_text_block` `manage_blueprint.add_rich_text_block` `manage_blueprint.add_image` `manage_blueprint.add_button` `manage_blueprint.add_check_box` `manage_blueprint.add_combo_box` `manage_blueprint.add_slider` `manage_blueprint.add_spin_box` `manage_blueprint.add_progress_bar` `manage_blueprint.add_text_input` `manage_blueprint.add_list_view` `manage_blueprint.add_tree_view` `manage_blueprint.add_widget_component` |
 | `blueprint.add_function` | `manage_blueprint` | `add_function` | write | write | none | `manage_blueprint.add_function` `manage_blueprint.add_event` |
 | `blueprint.add_game_widget` | `manage_blueprint` | `add_health_bar` | write | write | none | `manage_blueprint.add_game_widget` `manage_blueprint.add_health_bar` `manage_blueprint.add_ammo_counter` `manage_blueprint.add_crosshair` `manage_blueprint.add_minimap` `manage_blueprint.add_compass` `manage_blueprint.add_damage_indicator` `manage_blueprint.add_interaction_prompt` `manage_blueprint.add_objective_tracker` `manage_blueprint.add_quest_tracker` |
@@ -209,7 +210,7 @@ validates against, so `execute` cannot accept an action this table omits.
 | `blueprint.get_widget_animation` | `manage_blueprint` | `get_widget_animation` | read | read | none | `manage_blueprint.get_widget_animation` |
 | `blueprint.get_widget_info` | `manage_blueprint` | `get_widget_info` | read | read | none | `manage_blueprint.get_widget_info` `manage_blueprint.get_widget_slot_info` |
 | `blueprint.implement_interface` | `manage_blueprint` | `implement_interface` | write | write | none | `manage_blueprint.implement_interface` |
-| `blueprint.inspect_graph` | `manage_blueprint` | `get_graph_details` | read | read | none | `manage_blueprint.inspect_graph` `manage_blueprint.get_graph_details` `manage_blueprint.get_node_details` `manage_blueprint.get_pin_details` `manage_blueprint.list_node_types` |
+| `blueprint.inspect_graph` | `manage_blueprint` | `get_graph_details` | read | read | none | `manage_blueprint.inspect_graph` `manage_blueprint.get_graph_details` `manage_blueprint.get_node_details` `manage_blueprint.get_pin_details` `manage_blueprint.list_node_types` `manage_blueprint.find_functions` |
 | `blueprint.preview_widget` | `manage_blueprint` | `preview_widget` | read | read | none | `manage_blueprint.preview_widget` |
 | `blueprint.probe_handle` | `manage_blueprint` | `probe_handle` | read | read | none | `manage_blueprint.probe_handle` |
 | `blueprint.remove_function` | `manage_blueprint` | `remove_function` | destructive | destructive | explicit | `manage_blueprint.remove_function` `manage_blueprint.remove_event` |
@@ -247,7 +248,7 @@ validates against, so `execute` cannot accept an action this table omits.
 | `build_environment.delete` | `build_environment` | `delete` | destructive | destructive | explicit | `build_environment.delete` |
 | `build_environment.edit_landscape` | `build_environment` | `paint_landscape` | write | write | none | `build_environment.edit_landscape` `build_environment.paint_landscape` `build_environment.paint_landscape_layer` `build_environment.import_heightmap` `build_environment.configure_landscape_lod` `build_environment.configure_landscape_material` `build_environment.configure_landscape_splines` `build_environment.generate_lods` |
 | `build_environment.edit_spline` | `build_environment` | `add_spline_point` | write | write | none | `build_environment.edit_spline` `build_environment.add_spline_point` `build_environment.set_spline_point_position` `build_environment.set_spline_point_rotation` `build_environment.set_spline_point_scale` `build_environment.set_spline_point_tangents` `build_environment.set_spline_type` |
-| `build_environment.export_heightmap` | `build_environment` | `export_heightmap` | read | read | none | `build_environment.export_heightmap` |
+| `build_environment.export_heightmap` | `build_environment` | `export_heightmap` | write | write | none | `build_environment.export_heightmap` |
 | `build_environment.export_snapshot` | `build_environment` | `export_snapshot` | read | read | none | `build_environment.export_snapshot` |
 | `build_environment.get_foliage_instances` | `build_environment` | `get_foliage_instances` | read | read | none | `build_environment.get_foliage_instances` |
 | `build_environment.get_splines_info` | `build_environment` | `get_splines_info` | read | read | none | `build_environment.get_splines_info` |
@@ -306,7 +307,7 @@ validates against, so `execute` cannot accept an action this table omits.
 | `control_editor.set_viewport_resolution` | `control_editor` | `console_command` | read | read | none | `control_editor.set_viewport_resolution` |
 | `control_editor.simulate_input` | `control_editor` | `simulate_input` | write | write | none | `control_editor.simulate_input` |
 | `control_editor.start_recording` | `control_editor` | `start_recording` | write | write | none | `control_editor.start_recording` `control_editor.stop_recording` |
-| `control_editor.undo` | `control_editor` | `undo` | write | write | none | `control_editor.undo` `control_editor.redo` |
+| `control_editor.undo` | `control_editor` | `undo` | write | write | none | `control_editor.undo` `control_editor.redo` `control_editor.restore_point` |
 | `datatable.delete_data_table_row` | `manage_asset` | `delete_data_table_row` | destructive | destructive | elevated | `manage_asset.delete_data_table_row` `manage_asset.clear_data_table_rows` |
 | `datatable.edit_data_table` | `manage_asset` | `create_data_table` | write | write | explicit | `manage_asset.edit_data_table` `manage_asset.create_data_table` `manage_asset.create_row_struct` `manage_asset.add_data_table_row` `manage_asset.update_data_table_row` `manage_asset.import_data_table_rows` `manage_asset.set_data_table_row_struct` `manage_asset.set_struct_as_row_struct` |
 | `datatable.inspect_data_table` | `manage_asset` | `get_data_table_row` | read | read | none | `manage_asset.inspect_data_table` `manage_asset.get_data_table_row` `manage_asset.list_data_table_rows` `manage_asset.get_row_struct` |
@@ -319,13 +320,14 @@ validates against, so `execute` cannot accept an action this table omits.
 | `inspect.create_snapshot` | `inspect` | `control_actor` | write | write | none | `inspect.create_snapshot` `inspect.restore_snapshot` |
 | `inspect.delete_object` | `inspect` | `control_actor` | destructive | destructive | explicit | `inspect.delete_object` |
 | `inspect.describe_view` | `inspect` | `describe_view` | read | read | none | `inspect.describe_view` |
+| `inspect.explain` | `inspect` | `explain_collision` | read | read | none | `inspect.explain` `inspect.explain_collision` `inspect.explain_visible` `inspect.explain_input` `inspect.explain_widget` `inspect.explain_audible` `inspect.explain_lit` |
 | `inspect.find_by_class` | `inspect` | `find_by_class` | read | read | none | `inspect.find_by_class` |
 | `inspect.get_blueprint_details` | `inspect` | `blueprint_get` | read | read | none | `inspect.get_blueprint_details` |
 | `inspect.get_component_details` | `inspect` | `control_actor` | read | read | none | `inspect.get_component_details` `inspect.get_component_property` |
 | `inspect.get_components` | `inspect` | `get_components` | read | read | none | `inspect.get_components` |
-| `inspect.get_editor_state` | `inspect` | `get_selected_actors` | read | read | none | `inspect.get_editor_state` `inspect.get_selected_actors` `inspect.get_viewport_info` `inspect.get_world_settings` `inspect.get_project_settings` `inspect.get_editor_settings` |
+| `inspect.get_editor_state` | `inspect` | `get_selected_actors` | read | read | none | `inspect.get_editor_state` `inspect.get_selected_actors` `inspect.get_viewport_info` `inspect.get_world_settings` `inspect.get_project_settings` `inspect.get_editor_settings` `inspect.get_editor_focus` |
 | `inspect.get_property` | `inspect` | `get_property` | read | read | none | `inspect.get_property` |
-| `inspect.get_stats` | `inspect` | `get_performance_stats` | read | read | none | `inspect.get_stats` `inspect.get_performance_stats` `inspect.get_memory_stats` `inspect.get_scene_stats` |
+| `inspect.get_stats` | `inspect` | `get_performance_stats` | read | read | none | `inspect.get_stats` `inspect.get_performance_stats` `inspect.get_memory_stats` `inspect.get_scene_stats` `inspect.get_frame_cost` |
 | `inspect.inspect_class` | `inspect` | `inspect_class` | read | read | none | `inspect.inspect_class` `inspect.inspect_struct` `inspect.inspect_cdo` |
 | `inspect.inspect_object` | `inspect` | `inspect_object` | read | read | none | `inspect.inspect_object` `inspect.get_actor_details` `inspect.get_level_details` `inspect.get_material_details` `inspect.get_mesh_details` `inspect.get_texture_details` |
 | `inspect.query_object` | `inspect` | `control_actor` | read | read | none | `inspect.query_object` `inspect.list_objects` `inspect.find_by_tag` `inspect.get_metadata` `inspect.get_bounding_box` `inspect.export` |
@@ -384,10 +386,10 @@ validates against, so `execute` cannot accept an action this table omits.
 | `manage_effect.add_niagara_data_interface` | `manage_effect` | `add_static_mesh_data_interface` | write | write | none | `manage_effect.add_niagara_data_interface` `manage_effect.add_static_mesh_data_interface` `manage_effect.add_skeletal_mesh_data_interface` `manage_effect.add_spline_data_interface` `manage_effect.add_collision_query_data_interface` `manage_effect.add_audio_spectrum_data_interface` |
 | `manage_effect.add_niagara_module` | `manage_effect` | `add_niagara_module` | write | write | none | `manage_effect.add_niagara_module` `manage_effect.add_spawn_rate_module` `manage_effect.add_spawn_burst_module` `manage_effect.add_spawn_per_unit_module` `manage_effect.add_initialize_particle_module` `manage_effect.add_velocity_module` `manage_effect.add_acceleration_module` `manage_effect.add_force_module` `manage_effect.add_color_module` `manage_effect.add_size_module` `manage_effect.add_collision_module` `manage_effect.add_kill_particles_module` `manage_effect.add_camera_offset_module` `manage_effect.add_particle_state_module` `manage_effect.add_sprite_renderer_module` `manage_effect.add_mesh_renderer_module` `manage_effect.add_ribbon_renderer_module` `manage_effect.add_light_renderer_module` `manage_effect.add_simulation_stage` `manage_effect.add_event_generator` `manage_effect.add_event_receiver` |
 | `manage_effect.advance_simulation` | `manage_effect` | `advance_simulation` | write | write | none | `manage_effect.advance_simulation` |
-| `manage_effect.cleanup` | `manage_effect` | `cleanup` | write | write | none | `manage_effect.cleanup` `manage_effect.clear_debug_shapes` |
+| `manage_effect.cleanup` | `manage_effect` | `cleanup` | destructive | destructive | explicit | `manage_effect.cleanup` |
 | `manage_effect.create_dynamic_light` | `manage_effect` | `create_dynamic_light` | write | write | none | `manage_effect.create_dynamic_light` |
 | `manage_effect.create_effect` | `manage_effect` | `create_niagara_system` | write | write | none | `manage_effect.create_effect` `manage_effect.create_niagara_system` `manage_effect.create_niagara_emitter` `manage_effect.create_niagara_ribbon` `manage_effect.create_particle_trail` `manage_effect.create_impact_effect` `manage_effect.create_environment_effect` `manage_effect.create_volumetric_fog` `manage_effect.niagara` `manage_effect.particle` |
-| `manage_effect.debug_shape` | `manage_effect` | `debug_shape` | write | write | none | `manage_effect.debug_shape` |
+| `manage_effect.debug_shape` | `manage_effect` | `debug_shape` | write | write | none | `manage_effect.debug_shape` `manage_effect.clear_debug_shapes` |
 | `manage_effect.edit_niagara_system` | `manage_effect` | `add_emitter_to_system` | write | write | none | `manage_effect.edit_niagara_system` `manage_effect.add_emitter_to_system` `manage_effect.add_user_parameter` `manage_effect.bind_parameter_to_source` `manage_effect.set_parameter_value` `manage_effect.set_niagara_parameter` `manage_effect.set_niagara_dynamic_input` `manage_effect.set_emitter_properties` `manage_effect.enable_gpu_simulation` `manage_effect.connect_niagara_pins` |
 | `manage_effect.get_niagara_info` | `manage_effect` | `get_niagara_info` | read | read | none | `manage_effect.get_niagara_info` `manage_effect.validate_niagara_system` |
 | `manage_effect.list_debug_shapes` | `manage_effect` | `list_debug_shapes` | read | read | none | `manage_effect.list_debug_shapes` |
@@ -407,7 +409,7 @@ validates against, so `execute` cannot accept an action this table omits.
 | `manage_geometry.convert_to_static_mesh` | `manage_geometry` | `convert_to_static_mesh` | write | write | none | `manage_geometry.convert_to_static_mesh` |
 | `manage_geometry.create_primitive` | `manage_geometry` | `create_box` | write | write | none | `manage_geometry.create_primitive` `manage_geometry.create_box` `manage_geometry.create_sphere` `manage_geometry.create_cylinder` `manage_geometry.create_cone` `manage_geometry.create_capsule` `manage_geometry.create_plane` `manage_geometry.create_disc` `manage_geometry.create_ring` `manage_geometry.create_torus` `manage_geometry.create_pipe` `manage_geometry.create_arch` `manage_geometry.create_ramp` `manage_geometry.create_stairs` `manage_geometry.create_spiral_stairs` `manage_geometry.create_sdf` |
 | `manage_geometry.deform_mesh` | `manage_geometry` | `bend` | write | write | none | `manage_geometry.deform_mesh` `manage_geometry.bend` `manage_geometry.twist` `manage_geometry.taper` `manage_geometry.stretch` `manage_geometry.spherify` `manage_geometry.cylindrify` `manage_geometry.smooth` `manage_geometry.relax` `manage_geometry.noise_deform` `manage_geometry.lattice_deform` `manage_geometry.displace_by_texture` |
-| `manage_geometry.edit_dynamic_mesh` | `manage_geometry` | `create_procedural_mesh` | write | write | none | `manage_geometry.edit_dynamic_mesh` `manage_geometry.create_procedural_mesh` `manage_geometry.append_vertex` `manage_geometry.append_triangle` `manage_geometry.append_polygons` `manage_geometry.set_vertex_position` `manage_geometry.set_vertex_color` `manage_geometry.bake_vertex_colors` `manage_geometry.set_material_id` `manage_geometry.set_uvs` `manage_geometry.split_normals` `manage_geometry.translate_mesh` `manage_geometry.difference` |
+| `manage_geometry.edit_dynamic_mesh` | `manage_geometry` | `create_procedural_mesh` | write | write | none | `manage_geometry.edit_dynamic_mesh` `manage_geometry.create_procedural_mesh` `manage_geometry.append_vertex` `manage_geometry.append_triangle` `manage_geometry.append_polygons` `manage_geometry.append_cuboids` `manage_geometry.append_loft` `manage_geometry.append_mesh` `manage_geometry.delete_triangles` `manage_geometry.set_vertex_position` `manage_geometry.set_vertex_color` `manage_geometry.bake_vertex_colors` `manage_geometry.set_material_id` `manage_geometry.set_uvs` `manage_geometry.split_normals` `manage_geometry.translate_mesh` `manage_geometry.difference` |
 | `manage_geometry.edit_uvs` | `manage_geometry` | `auto_uv` | write | write | none | `manage_geometry.edit_uvs` `manage_geometry.auto_uv` `manage_geometry.unwrap_uv` `manage_geometry.project_uv` `manage_geometry.pack_uv_islands` `manage_geometry.transform_uvs` |
 | `manage_geometry.get_mesh_info` | `manage_geometry` | `get_mesh_info` | read | read | none | `manage_geometry.get_mesh_info` |
 | `manage_geometry.get_vertex_position` | `manage_geometry` | `get_vertex_position` | read | read | none | `manage_geometry.get_vertex_position` |
@@ -444,7 +446,7 @@ validates against, so `execute` cannot accept an action this table omits.
 | `manage_level_structure.configure_level_streaming` | `manage_level_structure` | `configure_level_streaming` | write | write | none | `manage_level_structure.configure_level_streaming` `manage_level_structure.set_streaming_distance` `manage_level_structure.enable_world_partition` `manage_level_structure.configure_grid_size` `manage_level_structure.configure_hlod_layer` `manage_level_structure.assign_actor_to_data_layer` |
 | `manage_level_structure.create_level_structure` | `manage_level_structure` | `create_level` | write | write | none | `manage_level_structure.create_level_structure` `manage_level_structure.create_level` `manage_level_structure.create_sublevel` `manage_level_structure.create_level_instance` `manage_level_structure.create_packed_level_actor` `manage_level_structure.create_data_layer` `manage_level_structure.create_minimap_volume` |
 | `manage_level_structure.create_volume` | `manage_level_structure` | `create_volume` | write | write | none | `manage_level_structure.create_volume` `manage_level_structure.create_trigger_volume` `manage_level_structure.add_trigger_volume` `manage_level_structure.create_trigger_box` `manage_level_structure.create_trigger_sphere` `manage_level_structure.create_trigger_capsule` `manage_level_structure.create_blocking_volume` `manage_level_structure.add_blocking_volume` `manage_level_structure.create_kill_z_volume` `manage_level_structure.add_kill_z_volume` `manage_level_structure.create_pain_causing_volume` `manage_level_structure.create_physics_volume` `manage_level_structure.add_physics_volume` `manage_level_structure.create_audio_volume` `manage_level_structure.create_reverb_volume` `manage_level_structure.create_cull_distance_volume` `manage_level_structure.add_cull_distance_volume` `manage_level_structure.create_precomputed_visibility_volume` `manage_level_structure.create_lightmass_importance_volume` `manage_level_structure.create_nav_mesh_bounds_volume` `manage_level_structure.create_nav_modifier_volume` `manage_level_structure.create_camera_blocking_volume` `manage_level_structure.create_post_process_volume` `manage_level_structure.add_post_process_volume` |
-| `manage_level_structure.edit_level_blueprint` | `manage_level_structure` | `open_level_blueprint` | write | write | none | `manage_level_structure.edit_level_blueprint` `manage_level_structure.open_level_blueprint` `manage_level_structure.add_level_blueprint_node` `manage_level_structure.connect_level_blueprint_nodes` `manage_level_structure.remove_level_blueprint_node` |
+| `manage_level_structure.edit_level_blueprint` | `manage_level_structure` | `open_level_blueprint` | write | write | none | `manage_level_structure.edit_level_blueprint` `manage_level_structure.open_level_blueprint` `manage_level_structure.add_level_blueprint_node` `manage_level_structure.connect_level_blueprint_nodes` `manage_level_structure.remove_level_blueprint_node` `manage_level_structure.set_level_blueprint_pin_default` |
 | `manage_level_structure.get_level_structure_info` | `manage_level_structure` | `get_level_structure_info` | read | read | none | `manage_level_structure.get_level_structure_info` |
 | `manage_level_structure.get_volumes_info` | `manage_level_structure` | `get_volumes_info` | read | read | none | `manage_level_structure.get_volumes_info` |
 | `manage_level_structure.remove_volume` | `manage_level_structure` | `remove_volume` | destructive | destructive | explicit | `manage_level_structure.remove_volume` |
@@ -507,8 +509,8 @@ validates against, so `execute` cannot accept an action this table omits.
 | `sequence.get_properties` | `manage_sequence` | `get_properties` | read | read | none | `manage_sequence.get_properties` `manage_sequence.get_bindings` `manage_sequence.list_tracks` `manage_sequence.list_track_keys` `manage_sequence.list_track_types` `manage_sequence.list` `manage_sequence.open` |
 | `sequence.media.create_media_asset` | `manage_sequence` | `create_media_source` | write | write | none | `manage_sequence.create_media_asset` `manage_sequence.create_media_source` `manage_sequence.create_media_player` `manage_sequence.create_media_playlist` `manage_sequence.create_media_texture` `manage_sequence.create_media_sound_component` |
 | `sequence.media.play_media` | `manage_sequence` | `play_media` | write | write | none | `manage_sequence.play_media` `manage_sequence.pause_media` `manage_sequence.seek_media` |
-| `sequence.mrq.configure_render_job` | `manage_sequence` | `configure_output_settings` | write | write | none | `manage_sequence.configure_render_job` `manage_sequence.configure_output_settings` `manage_sequence.configure_anti_aliasing` `manage_sequence.add_render_pass` `manage_sequence.configure_burn_ins` `manage_sequence.configure_console_variables` |
-| `sequence.mrq.create_render_job` | `manage_sequence` | `create_render_job` | write | write | none | `manage_sequence.create_render_job` `manage_sequence.queue_render` `manage_sequence.start_render` `manage_sequence.remove_render_job` |
+| `sequence.mrq.configure_render_job` | `manage_sequence` | `configure_output_settings` | write | write | none | `manage_sequence.configure_render_job` `manage_sequence.configure_output_settings` `manage_sequence.configure_anti_aliasing` `manage_sequence.add_render_pass` `manage_sequence.configure_burn_ins` `manage_sequence.configure_console_variables` `manage_sequence.configure_render_camera` |
+| `sequence.mrq.create_render_job` | `manage_sequence` | `create_render_job` | write | write | none | `manage_sequence.create_render_job` `manage_sequence.queue_render` `manage_sequence.start_render` `manage_sequence.cancel_render` `manage_sequence.remove_render_job` |
 | `sequence.play` | `manage_sequence` | `play` | write | write | none | `manage_sequence.play` `manage_sequence.pause` `manage_sequence.stop` |
 | `sequence.replay.configure_demo_settings` | `manage_sequence` | `configure_demo_settings` | write | write | none | `manage_sequence.configure_demo_settings` `manage_sequence.configure_killcam_duration` |
 | `sequence.replay.play_demo` | `manage_sequence` | `play_demo` | write | write | none | `manage_sequence.play_demo` `manage_sequence.pause_demo` `manage_sequence.seek_demo` `manage_sequence.set_demo_playback_speed` `manage_sequence.start_demo_recording` `manage_sequence.stop_demo_recording` `manage_sequence.start_killcam` |

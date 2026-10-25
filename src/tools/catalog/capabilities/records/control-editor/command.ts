@@ -250,7 +250,7 @@ export const COMMAND_RECORDS: readonly CapabilityRecordSource[] = [
   buildCoreRecord({
     parentTool: 'control_editor', action: 'set_preferences', domain: D, family: F,
     editorStates: ANY_EDITOR_STATE,
-    summary: 'Set editor preferences for a category. Distinct from system_control set_project_setting.',
+    summary: 'Set editor preferences, preferences {name: value} in a category: a key naming a console variable is set as the console sets it and read back; any other is a property of the category\'s settings class (EditorPerformanceSettings, LevelEditorPlaySettings, LevelEditorViewportSettings and the like, the U prefix and Settings suffix optional), written through the property\'s own text import, saved to the settings ini and applied at once; LevelEditor RealtimeAudio mutes or unmutes editor audio. Keys that did not apply are listed under failed with why, and the call answers PREFERENCES_PARTIALLY_APPLIED or PREFERENCES_NOT_APPLIED. This plugin\'s own settings are refused. Distinct from system_control set_project_setting.',
     whenToUse: ['Editor preferences must be configured for a category.'],
     whenNotToUse: ['Project settings are needed (use system_control set_project_setting).'],
     inputProps: { category: P.category, preferences: P.preferences },

@@ -3,6 +3,7 @@
 #include "CoreMinimal.h"
 #include "Dom/JsonObject.h"
 #include "Foundation/BridgeHelpers/Blueprints/McpBPSoundCheck.h"
+#include "Foundation/BridgeHelpers/Blueprints/McpBPGraphChecks.h"
 
 #include "Engine/Blueprint.h"
 #include "Engine/BlueprintGeneratedClass.h"
@@ -122,15 +123,52 @@ inline bool McpCompileBlueprintWithDiagnostics(
     // Why is the comment above: the same 230 characters on nearly every graph edit's reply only repeated it.
     if (bUndoBufferReset) {
       Out->SetBoolField(TEXT("undoBufferReset"), true);
+      // An undo step the edit recorded went with the buffer: an `undo` block still saying undoable true beside this
+      // flag told the caller to undo something that no longer exists.
+      if (Out->HasTypedField<EJson::Object>(TEXT("undo"))) {
+        const TSharedPtr<FJsonObject> Undo = MakeShared<FJsonObject>();
+        Undo->SetBoolField(TEXT("undoable"), false);
+        Undo->SetStringField(TEXT("reasonCode"), TEXT("UNDO_CLEARED_BY_COMPILE"));
+        Undo->SetStringField(TEXT("reason"),
+                             TEXT("The compile after this edit cleared the editor's undo history: a Blueprint the undo "
+                                  "history holds would keep its preview or play world alive and crash the editor at "
+                                  "the next full garbage collection."));
+        Out->SetObjectField(TEXT("undo"), Undo);
+      }
     }
     Out->SetBoolField(TEXT("compiled"), bCompiled);
     Out->SetStringField(TEXT("compilerStatus"),
                         McpBlueprintStatusName(Blueprint->Status));
     Out->SetNumberField(TEXT("errorCount"), Results.NumErrors);
     Out->SetNumberField(TEXT("warningCount"), Results.NumWarnings);
+    const int32 FirstCheck = Diagnostics.Num();
     McpAddSoundNodeWarnings(Blueprint, Diagnostics, MaxDiagnostics);
+    McpAddStaleReadWarnings(Blueprint, Diagnostics, MaxDiagnostics);
+    McpAddRandomReadWarnings(Blueprint, Diagnostics, MaxDiagnostics);
+    McpAddTimerNameWarnings(Blueprint, Diagnostics, MaxDiagnostics);
+    McpAddLoopLatentWarnings(Blueprint, Diagnostics, MaxDiagnostics);
+    McpAddTickRestartWarnings(Blueprint, Diagnostics, MaxDiagnostics);
+    McpAddWaitRereadWarnings(Blueprint, Diagnostics, MaxDiagnostics);
     if (Diagnostics.Num() > 0) {
       Out->SetArrayField(TEXT("diagnostics"), Diagnostics);
+    }
+    // These checks find what the compiler accepts, so a reply that only says it compiled reads as all is well: the
+    // receipt carries the result's warnings. The compiler's own warnings go with them: "DoesSaveGameExist was
+    // pruned because its Exec pin is not connected" (a node that never runs) sat only in diagnostics.
+    TArray<TSharedPtr<FJsonValue>> Warnings;
+    const TArray<TSharedPtr<FJsonValue>> *Existing = nullptr;
+    if (Out->TryGetArrayField(TEXT("warnings"), Existing) && Existing) {
+      Warnings = *Existing;
+    }
+    const int32 Before = Warnings.Num();
+    for (int32 Index = 0; Index < Diagnostics.Num(); ++Index) {
+      const TSharedPtr<FJsonObject> Entry = Diagnostics[Index]->AsObject();
+      if (Index >= FirstCheck || Entry->GetStringField(TEXT("severity")) == TEXT("warning")) {
+        Warnings.Add(MakeShared<FJsonValueString>(Entry->GetStringField(TEXT("message"))));
+      }
+    }
+    if (Warnings.Num() > Before) {
+      Out->SetArrayField(TEXT("warnings"), Warnings);
     }
   }
   return bCompiled;

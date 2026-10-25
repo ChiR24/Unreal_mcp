@@ -1,9 +1,12 @@
-// add_health, add_damage_on_touch, add_pickup, add_sprint, add_shoot, add_chase, add_patrol, add_launch_pad,
-// add_teleporter, add_goal, add_spawner and add_dash
+// add_health, add_damage_on_touch, add_pickup, add_sprint, add_shoot, add_chase, add_patrol, add_turret, add_stomp,
+// add_explosive,
+// add_launch_pad, add_teleporter, add_falling_platform, add_moving_platform, add_countdown, add_goal, add_spawner and
+// add_dash
 // (blueprint.add_behaviour): gameplay logic written into an Actor Blueprint from a recipe (Resources/Recipes/Gameplay and
 // Character, chosen by McpBPBehaviourPlans.cpp) through McpBlueprintBehaviour::Author, so the Blueprint holds plain engine
 // nodes. Each was a hand-built graph of ten to forty nodes and pins to get right.
 #include "Domains/Blueprint/McpBPActionContext.h"
+#include "Foundation/BridgeHelpers/Blueprints/McpBPAssetLoad.h"
 #include "Domains/Blueprint/Gameplay/McpBPBehaviourPlans.h"
 #include "Domains/BlueprintGraph/Behaviour/McpBPBehaviour.h"
 #include "Foundation/BridgeHelpers/Responses/McpJsonFields.h"
@@ -40,8 +43,10 @@ bool HandleBlueprintAddBehaviour(const FBlueprintActionContext &Context) {
   MCP_BLUEPRINT_ACTION_LOCALS(Context);
   static const TCHAR *const Actions[] = {TEXT("add_health"), TEXT("add_damage_on_touch"), TEXT("add_pickup"),
                                          TEXT("add_sprint"), TEXT("add_shoot"), TEXT("add_chase"), TEXT("add_patrol"),
-                                         TEXT("add_launch_pad"), TEXT("add_teleporter"), TEXT("add_goal"),
-                                         TEXT("add_spawner"), TEXT("add_dash")};
+                                         TEXT("add_turret"), TEXT("add_stomp"), TEXT("add_explosive"), TEXT("add_launch_pad"),
+                                         TEXT("add_teleporter"),
+                                         TEXT("add_falling_platform"), TEXT("add_moving_platform"), TEXT("add_countdown"),
+                                         TEXT("add_goal"), TEXT("add_spawner"), TEXT("add_dash")};
   const TCHAR *Matched = nullptr;
   for (const TCHAR *Each : Actions) {
     Matched = Matched ? Matched : (ActionMatchesPattern(Each) ? Each : nullptr);

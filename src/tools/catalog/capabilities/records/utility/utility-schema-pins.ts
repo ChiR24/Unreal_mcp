@@ -64,7 +64,7 @@ export const OBJECT_FIELDS = new Set(['properties', 'settings', 'voiceSettings',
 export const VECTOR_FIELDS = new Set(['location', 'rotation', 'size']);
 
 /** Field names whose JSON-Schema type is `array`. */
-export const ARRAY_FIELDS = new Set(['states', 'sessions', 'players', 'mappings', 'targetVoices']);
+export const ARRAY_FIELDS = new Set(['states', 'sessions', 'players', 'mappings', 'targetVoices', 'inputs']);
 
 /**
  * Real descriptions for fields whose bare names read as placeholder text.
@@ -103,7 +103,7 @@ export const FIELD_DESCRIPTIONS: Readonly<Record<string, string>> = {
   fadeTime: 'Fade duration in seconds.',
   fadeType: 'Fade curve type (FadeTo, FadeIn, FadeOut).',
   falloffDistance: 'Distance over which attenuation falls off, in centimetres.',
-  falloffMode: 'Attenuation falloff mode.',
+  falloffMode: 'Attenuation falloff curve: Linear (the default), Logarithmic, Inverse or NaturalSound.',
   innerRadius: 'Inner radius of full volume, in centimetres: a Box shape takes it as its half-size on every axis, a Capsule as its radius (half height at least that), a Sphere or Cone as its radius.',
   inputName: 'Graph input name.',
   inputType: 'Graph input data type (Float, Int32, Bool, String, Trigger, Audio).',
@@ -187,7 +187,7 @@ export const FIELD_DESCRIPTIONS: Readonly<Record<string, string>> = {
   midGain: 'Linear gain of EQ band 1 (0 to 4).',
   pitchAdjuster: 'Pitch multiplier applied by the mix modifier.',
   plurality: 'Grammatical number of the voice: Singular or Plural (default Singular).',
-  replace: 'Replace the context mapping of the same speaker instead of adding another (default false).',
+  replace: 'Swap the context this speaker already has with these same listeners (its sound and key format) instead of refusing with CONTEXT_EXISTS (default false).',
   soundWavePath: 'Canonical /Game SoundWave asset spoken in this context.',
   spatialize: 'Whether the sound is spatialized (default true).',
   spokenText: 'Transcript of the spoken line.',
@@ -240,6 +240,7 @@ export const FIELD_DESCRIPTIONS: Readonly<Record<string, string>> = {
   rpcType: 'Rpc type.',
   reliable: 'Reliable.',
   withValidation: 'With validation.',
+  inputs: 'RPC parameters, each {name, type}.',
   ownerActorName: 'Owner actor name.',
   isAutonomousProxy: 'Whether autonomous proxy applies.',
   netCullDistanceSquared: 'Net cull distance squared.',

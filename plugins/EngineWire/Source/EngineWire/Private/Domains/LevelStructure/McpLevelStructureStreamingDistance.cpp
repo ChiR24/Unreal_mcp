@@ -1,6 +1,7 @@
 #include "Domains/LevelStructure/McpLevelStructureActions.h"
 #include "Foundation/HandlerUtils/McpHandlerUtilsTransforms.h"
 #include "Domains/LevelStructure/McpLevelStructureEditorWorld.h"
+#include "Domains/Volume/McpVolumeGeometry.h"
 
 #include "Engine/LevelStreaming.h"
 #include "Engine/LevelStreamingDynamic.h"
@@ -42,6 +43,17 @@ bool HandleSetStreamingDistance(
     FString StreamingUsage = GetJsonStringField(Payload, TEXT("streamingUsage"), TEXT("LoadingAndVisibility"));
     FVector VolumeLocation = ExtractVectorField(Payload, TEXT("volumeLocation"), FVector::ZeroVector);
     bool bCreateVolume = GetJsonBoolField(Payload, TEXT("createVolume"), true);
+
+    // An unknown usage became LoadingAndVisibility without a word; checked before anything is spawned.
+    const int64 Usage = StaticEnum<EStreamingVolumeUsage>()->GetValueByNameString(TEXT("SVB_") + StreamingUsage);
+    if (bCreateVolume && (Usage < 0 || Usage >= SVB_MAX || StreamingDistance <= 0.0))
+    {
+        Subsystem->SendAutomationResponse(Socket, RequestId, false, StreamingDistance <= 0.0
+            ? FString(TEXT("streamingDistance must be greater than 0. Nothing was created."))
+            : FString::Printf(TEXT("streamingUsage '%s' is not one: use Loading, LoadingAndVisibility, VisibilityBlockingOnLoad, "
+                "BlockingOnLoad or LoadingNotVisible. Nothing was created."), *StreamingUsage), nullptr, TEXT("INVALID_ARGUMENT"));
+        return true;
+    }
 
     UWorld* World = GetEditorWorld();
     if (!World)
@@ -110,21 +122,19 @@ bool HandleSetStreamingDistance(
 
     NewVolume->SetActorLabel(FString::Printf(TEXT("StreamingVolume_%s"), *LevelName));
 
-    // "Loading", "BlockingOnLoad", ... name SVB_<usage>; anything else is LoadingAndVisibility.
-    const int64 Usage = StaticEnum<EStreamingVolumeUsage>()->GetValueByNameString(TEXT("SVB_") + StreamingUsage);
-    NewVolume->StreamingUsage = Usage >= 0 && Usage < SVB_MAX ? static_cast<EStreamingVolumeUsage>(Usage)
-                                                              : EStreamingVolumeUsage::SVB_LoadingAndVisibility;
+    NewVolume->StreamingUsage = static_cast<EStreamingVolumeUsage>(Usage);
 
-    // Scale the volume to match the streaming distance (brush default is ~200 units cube)
-    // We scale to create a sphere-like volume with radius = StreamingDistance
-    FVector DesiredScale = FVector(StreamingDistance / 100.0); // Brush is ~200 units, half = 100
-    NewVolume->SetActorScale3D(DesiredScale);
+    // A spawned volume has no brush: scaling it left bounds of zero, a volume no viewer is ever inside, so the level
+    // never streamed by distance. A box reaching streamingDistance from location on each axis.
+    VolumeHelpers::CreateBoxBrushForVolume(NewVolume, FVector(StreamingDistance));
 
+    // As the Details panel does: the change event updates each streaming volume's list of levels, which Play reads.
+    // Without it the volume streamed nothing until the level was saved and loaded again.
+    FoundLevel->Modify();
     FoundLevel->EditorStreamingVolumes.AddUnique(NewVolume);
-
-    // Note: UpdateStreamingLevelsRefs() is not exported/available in all UE versions
-    // The association via EditorStreamingVolumes is sufficient - refs update on save
-    UE_LOG(LogMcpLevelStructureHandlers, Verbose, TEXT("Streaming volume created - refs will update on save"));
+    FPropertyChangedEvent VolumesChanged(FindFProperty<FProperty>(ULevelStreaming::StaticClass(),
+        GET_MEMBER_NAME_CHECKED(ULevelStreaming, EditorStreamingVolumes)), EPropertyChangeType::ArrayAdd);
+    FoundLevel->PostEditChangeProperty(VolumesChanged);
 
     FoundLevel->MarkPackageDirty();
     World->MarkPackageDirty();
@@ -134,7 +144,7 @@ bool HandleSetStreamingDistance(
     ResponseJson->SetStringField(TEXT("levelName"), LevelName);
     ResponseJson->SetStringField(TEXT("volumeName"), NewVolume->GetActorLabel());
     ResponseJson->SetNumberField(TEXT("streamingDistance"), StreamingDistance);
-    ResponseJson->SetStringField(TEXT("streamingUsage"), StreamingUsage);
+    ResponseJson->SetStringField(TEXT("streamingUsage"), StaticEnum<EStreamingVolumeUsage>()->GetNameStringByValue(Usage).RightChop(4));
 
     ResponseJson->SetObjectField(TEXT("volumeLocation"), McpHandlerUtils::VectorToJson(VolumeLocation));
 

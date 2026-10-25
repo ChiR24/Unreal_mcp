@@ -6,7 +6,7 @@ import type { RecordSpec } from './builder.js';
 import { arr, arrObj, bool, boundedLimit, boundedPagination, DESTRUCTIVE, DESTRUCTIVE_POLICY, ex, HIGH, LOW, MEDIUM, NON_IDEMPOTENT, num, READ, READ_POLICY, r, str, WRITE, WRITE_POLICY } from './builder.js';
 import { schema } from '../shared/record-presets.js';
 
-const SOURCE_PATH = str('Source filesystem path for import.');
+const SOURCE_PATH = str('File to import, inside the project folder: relative to it (Saved/Imports/Crate.fbx) or absolute under it; any other path is refused.');
 const DEST_PATH = str('Destination /Game asset path.');
 
 const PAGINATED_OUTPUT = schema({
@@ -36,6 +36,24 @@ const IMPORT_OUTPUT = schema({
 }, ['success']);
 const OK_OUTPUT = schema({ success: bool('Operation succeeded.'), details: { type: 'object', 'x-unreal-reflection-boundary': true, description: 'Operation details.' } }, ['success']);
 
+// duplicate and duplicate_asset: one handler (McpAssetImportDuplicate.cpp), one asset or a whole folder.
+const DUPLICATE_INPUT = schema({
+  sourcePath: str('The asset to copy (a /Game package or object path), or a folder: every asset under it is copied, sub-folders kept.'),
+  destinationPath: str('Where the copy goes: a folder (one that exists, or ending in /) where it keeps the source name or takes newName, a full asset path, or a bare name, which lands beside the source.'),
+  newName: str('Name for the copy: in the destinationPath folder, or beside the source when destinationPath is left out.'),
+}, ['sourcePath'], ['destinationPath', 'newName']);
+const DUPLICATE_OUTPUT = schema({
+  success: bool('Operation succeeded.'),
+  assetPath: str('One asset: the copy.'),
+  saved: bool('One asset: whether the copy was saved (an unsaved copy is gone after the editor restarts).'),
+  sourcePath: str('Folder: the folder copied.'),
+  destinationPath: str('Folder: where the copies went.'),
+  assetCount: num('Folder: the assets found under it, as far as the asset registry has indexed them.'),
+  duplicatedCount: num('Folder: how many were copied; fewer than assetCount means some destinations were taken.'),
+  savedCount: num('Folder: how many copies were saved.'),
+  details: { type: 'object', 'x-unreal-reflection-boundary': true, description: 'Operation details.' },
+}, ['success']);
+
 export const ASSET_LIFECYCLE_RECORDS: readonly RecordSpec[] = [
   r('list', 'asset', 'List assets under a /Game path with bounded pagination and opaque cursor continuation.',
     schema({
@@ -48,14 +66,14 @@ export const ASSET_LIFECYCLE_RECORDS: readonly RecordSpec[] = [
       depth: num('Maximum recursion depth.'),
       includeTags: bool('When true, include asset tags in the listing response.'),
       includeMetadata: bool('When true, include the file size and modification date of each asset.'),
-      filter: str('Substring filter. Listing assets: a case-insensitive match on the asset name. Listing content sources: a case-sensitive match on the source id and, for plugins, the category.')
+      filter: str('Substring filter. Listing assets: a case-insensitive match on the asset name, and on the own name of each folder listed. Listing content sources: a case-sensitive match on the source id and, for plugins, the category.')
     }, ['path']),
     PAGINATED_OUTPUT, READ, READ_POLICY, MEDIUM,
     { topics: ['list assets', 'browse folder', 'content browser', 'assets in folder', 'directory listing', 'folder contents'], dispatchAction: 'list', examples: [ex('List first page', { path: '/Game' }, { success: true, assets: [], hasMore: false, nextCursor: null })] }
   ),
 
-  r('import', 'asset', 'Import an asset from a filesystem source into the project content hierarchy.',
-    schema({ sourcePath: SOURCE_PATH, destinationPath: str('The folder the asset goes in, e.g. /Game/Imports (it keeps the source file\'s name), or an object path such as /Game/Chars/SK_Hero.SK_Hero to name it.'), overwrite: bool('Replace an asset already sitting at the destination. Needed for an FBX animation import, which otherwise refuses rather than let the editor reimport the old asset with its own stored settings.'), save: bool('Save the imported asset. Defaults to true; pass false to keep it in memory only.'), importAnimations: bool('Import animation takes from an FBX. Off by default, which imports mesh only.'), skeletonPath: str('Existing skeleton, e.g. /Game/Chars/SK_Hero_Skeleton. Alone it imports the FBX\'s animation take ALONE against it (implies importAnimations); with importMesh it binds the imported skeletal mesh to it instead, so the mesh shares that skeleton\'s animations.'), importMesh: bool('With skeletonPath: import the skeletal mesh onto that skeleton (its takes too when importAnimations) instead of the take alone.'), createPhysicsAsset: bool('Skeletal mesh: make a physics asset for it (default true); false makes none.'), physicsAssetPath: str('Skeletal mesh: an existing physics asset to use instead of making one.'), importMorphTargets: bool('Skeletal mesh: import its morph targets (blend shapes).') }, ['sourcePath', 'destinationPath']),
+  r('import', 'asset', 'Import a file inside the project folder (sourcePath, relative to the project or absolute under it; a path outside is SECURITY_VIOLATION, a missing file SOURCE_NOT_FOUND) as an asset at destinationPath: a folder keeps the file name, an object path names it. An asset already there is replaced only with overwrite (DESTINATION_OCCUPIED otherwise): a plain file replaces it in place, keeping what points at it, while an FBX with skeleton or animation options deletes it first (REPLACE_FAILED while something still uses it). skeletonPath imports an FBX animation take onto that skeleton, or with importMesh binds the imported skeletal mesh to it. The reply names assetPath (the mesh when the file holds one), alsoImported (its takes, materials and textures) and saved (default true).',
+    schema({ sourcePath: SOURCE_PATH, destinationPath: str('The folder the asset goes in, e.g. /Game/Imports (it keeps the source file\'s name), or an object path such as /Game/Chars/SK_Hero.SK_Hero to name it.'), overwrite: bool('Replace an asset already at the destination; without it the import is refused with DESTINATION_OCCUPIED. A plain file replaces it in place; an FBX with skeleton or animation options deletes it first, so the old asset is not reimported with its own stored settings.'), save: bool('Save the imported asset. Defaults to true; pass false to keep it in memory only.'), importAnimations: bool('Import animation takes from an FBX. Off by default, which imports mesh only.'), skeletonPath: str('Existing skeleton, e.g. /Game/Chars/SK_Hero_Skeleton. Alone it imports the FBX\'s animation take ALONE against it (implies importAnimations); with importMesh it binds the imported skeletal mesh to it instead, so the mesh shares that skeleton\'s animations.'), importMesh: bool('With skeletonPath: import the skeletal mesh onto that skeleton (its takes too when importAnimations) instead of the take alone.'), createPhysicsAsset: bool('Skeletal mesh: make a physics asset for it (default true); false makes none.'), physicsAssetPath: str('Skeletal mesh: an existing physics asset to use instead of making one.'), importMorphTargets: bool('Skeletal mesh: import its morph targets (blend shapes).') }, ['sourcePath', 'destinationPath']),
     IMPORT_OUTPUT, WRITE, WRITE_POLICY, MEDIUM,
     { aliases: ['asset.import_asset'], topics: ['import fbx', 'import file', 'import mesh', 'import texture', 'import obj', 'import png', 'import wav', 'import sound file', 'import audio file', 'bring file into project', 'import animation', 'import mocap', 'fbx animation', 'import anim sequence', 'import mp3', 'import 3d model', 'add file to project', 'import image', 'import skeletal mesh', 'import character model', 'import onto existing skeleton', 'share a skeleton'],
       whenToUse: [
@@ -70,9 +88,8 @@ export const ASSET_LIFECYCLE_RECORDS: readonly RecordSpec[] = [
       examples: [ex('Import FBX', { sourcePath: '/tmp/mesh.fbx', destinationPath: '/Game/Imports/Mesh' }, { success: true }), ex('Import a mocap take onto an existing skeleton', { sourcePath: '/Game/../Imports/Mocap.fbx', destinationPath: '/Game/Anims/A_Mocap', importAnimations: true, skeletonPath: '/Game/Chars/SK_Hero_Skeleton' }, { success: true }), ex('Import a character onto an existing skeleton', { sourcePath: '/Game/../Imports/Hero.fbx', destinationPath: '/Game/Chars/SK_Hero.SK_Hero', skeletonPath: '/Game/Chars/SK_Mannequin_Skeleton', importMesh: true, createPhysicsAsset: false }, { success: true, assetPath: '/Game/Chars/SK_Hero', skeleton: '/Game/Chars/SK_Mannequin_Skeleton.SK_Mannequin_Skeleton', physicsAsset: '', bones: 68, morphTargets: 0 })] }
   ),
 
-  r('duplicate', 'asset', 'Duplicate an existing asset to a new path.',
-    schema({ sourcePath: str('Source /Game asset path.'), destinationPath: DEST_PATH, newName: str('New asset name.') }, ['sourcePath']),
-    OK_OUTPUT, WRITE, WRITE_POLICY, MEDIUM,
+  r('duplicate', 'asset', 'Copy an asset, or a whole folder with its sub-folders, to a new path or name, and save the copies.',
+    DUPLICATE_INPUT, DUPLICATE_OUTPUT, WRITE, WRITE_POLICY, MEDIUM,
     { topics: ['copy asset', 'clone asset', 'copy material', 'copy texture', 'duplicate material', 'duplicate blueprint', 'duplicate data table', 'make copy of asset', 'copy asset to another folder'],
       whenToUse: [
         'An asset needs a copy to edit safely while the original stays unchanged.',
@@ -85,8 +102,7 @@ export const ASSET_LIFECYCLE_RECORDS: readonly RecordSpec[] = [
       examples: [ex('Duplicate a material', { sourcePath: '/Game/Materials/M_Base', destinationPath: '/Game/Materials', newName: 'M_Base_Variant' }, { success: true })] }
   ),
   r('duplicate_asset', 'asset', 'Long-form alias for duplicate.',
-    schema({ sourcePath: str('Source /Game asset path.'), destinationPath: DEST_PATH, newName: str('New asset name.') }, ['sourcePath']),
-    OK_OUTPUT, WRITE, WRITE_POLICY, MEDIUM,
+    DUPLICATE_INPUT, DUPLICATE_OUTPUT, WRITE, WRITE_POLICY, MEDIUM,
     { 
       examples: [ex('Duplicate via the long-form alias', { sourcePath: '/Game/Materials/M_Base', destinationPath: '/Game/Materials', newName: 'M_Base_Variant' }, { success: true })] }
   ),
@@ -157,8 +173,8 @@ export const ASSET_LIFECYCLE_RECORDS: readonly RecordSpec[] = [
       examples: [ex('Delete several assets in one call', { paths: ['/Game/MCPTest/DisposableA', '/Game/MCPTest/DisposableB'] }, { success: true })] }
   ),
 
-  r('create_folder', 'asset', 'Create a new content-browser folder under a /Game path.',
-    schema({ path: str('Folder path (must start with /).') }, ['path']),
+  r('create_folder', 'asset', 'Create a Content Browser folder at path (under /Game or another allowed root); one that exists already answers success with alreadyExisted true. An empty folder may be gone after an editor restart until an asset is saved in it.',
+    schema({ path: str('Folder path, e.g. /Game/Art/Props; a path outside the allowed roots is refused (INVALID_PATH).') }, ['path']),
     OK_OUTPUT, WRITE, WRITE_POLICY, LOW,
     { topics: ['make folder', 'new folder', 'create directory'],
       whenToUse: [

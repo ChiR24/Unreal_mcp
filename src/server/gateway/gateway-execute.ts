@@ -23,13 +23,17 @@ import { capabilityIndex } from './gateway-capability-index.js';
 import { resolveDispatchAction } from './gateway-dispatch-by.js';
 import { checkStaticRequest } from './gateway-execute-static-check.js';
 import { executeErrorEnvelope, executeSuccessEnvelope, refuseWithTarget } from './gateway-execute-envelope.js';
-import { dispatchAndValidate, type GatewayContext } from './gateway-execute-dispatch.js';
+import { dispatchAndValidate, MAX_EXECUTION_RESULT_CHARS, pageOwner, publishResult, type GatewayContext } from './gateway-execute-dispatch.js';
+import { nextPage } from './gateway-result-pages.js';
+import { askThroughClient } from './gateway-execute-consent.js';
 import { checkConsentAuthorization, checkExpectedCatalogRevision, checkScopeAuthorization, matchedFoldedGrant } from './gateway-execute-policy.js';
 import { ConsentGrantSchema, type ConsentGrant } from '../../tools/catalog/capabilities/semantic/authorization.js';
 import { buildReceiptContext, type GatewayReceiptContext } from './gateway-receipt-context.js';
 import { noteTaskDone, noteTaskRunning } from './gateway-task-results.js';
 import type { CapabilityRecord } from '../../tools/catalog/capabilities/model.js';
+import { loopStreak, noteOutcome, repeatedFailureMessage, REPEATED_FAILURE_CODE } from './gateway-loop-guard.js';
 import {
+  canonicalFingerprint,
   conflictMessage,
   IDEMPOTENCY_CONFLICT_CODE,
   LOCAL_PRINCIPAL,
@@ -101,7 +105,36 @@ export async function executeGatewayCall(
   const scopeFailure = checkScopeAuthorization(target, authority);
   if (scopeFailure !== undefined) return refuseWithTarget(target, scopeFailure, receiptContext);
 
-  let consentGrant: ConsentGrant | undefined;
+  // A page cursor reads on through a result too large for one reply (gateway-result-pages.ts). Nothing runs again:
+  // scope still holds for every page, but consent was the first call's and is not asked twice.
+  const pageCursor = options === undefined ? undefined : getString(options, 'pageCursor');
+  if (pageCursor !== undefined) {
+    const next = nextPage(pageCursor, pageOwner(target.record, checked.params, context), MAX_EXECUTION_RESULT_CHARS);
+    if (typeof next !== 'string') return publishResult(target, next.result, checked.params, options, receiptContext, checked.unread, next.page);
+    return refuseWithTarget(target, {
+      errorCode: next,
+      message: next === 'PAGE_CURSOR_EXPIRED'
+        ? 'The page cursor has expired or was never issued: run the call again without pageCursor for a fresh first page.'
+        : 'The page cursor belongs to another call: send the same capability and params as the call that returned it.',
+      nextCall: buildNextCall({ operation: 'describe', tool: target.record.routing.parentTool, action: target.legacy.action })
+    }, receiptContext);
+  }
+
+  // A call that already failed the same way LOOP_LIMIT times in a row is not run again (gateway-loop-guard.ts).
+  // Before consent, so nobody is asked to approve a call that is then refused.
+  const principal = authority?.profile ?? LOCAL_PRINCIPAL;
+  const fingerprint = canonicalFingerprint(target.record.id, checked.params);
+  const streak = loopStreak(principal, fingerprint);
+  if (streak !== undefined) {
+    return refuseWithTarget(target, {
+      errorCode: REPEATED_FAILURE_CODE,
+      message: repeatedFailureMessage(streak),
+      nextCall: buildNextCall({ operation: 'describe', tool: target.record.routing.parentTool, action: target.legacy.action })
+    }, receiptContext);
+  }
+
+  // A grant the user gave through the client also carries the nonce the plugin burns once.
+  let consentGrant: (ConsentGrant & { readonly nonce?: string }) | undefined;
   if (args.consent !== undefined) {
     const parsedConsent = ConsentGrantSchema.safeParse(args.consent);
     if (!parsedConsent.success) {
@@ -114,7 +147,25 @@ export async function executeGatewayCall(
     consentGrant = parsedConsent.data;
   }
   const consentFailure = checkConsentAuthorization(target, authority, consentGrant);
-  if (consentFailure !== undefined) return refuseWithTarget(target, consentFailure, receiptContext);
+  if (consentFailure !== undefined) {
+    // A 2026-07-28 client that can elicit asks its user (gateway-execute-consent.ts); their yes is the grant. Scope
+    // was checked first, so nobody is asked about a call they could not make.
+    const asked = consentGrant === undefined
+      ? await askThroughClient(
+        context.consent,
+        target.record.id,
+        target.record.policy.consent === 'elevated' ? 'elevated' : 'explicit',
+        `${target.record.routing.parentTool}.${target.legacy.action}`,
+        checked.params
+      )
+      : undefined;
+    if (asked?.kind === 'ask') return asked.result;
+    if (asked?.kind !== 'yes') {
+      // Not after the user said no: describe's grant would run what they just refused.
+      return refuseWithTarget(target, asked?.kind === 'no' ? { ...consentFailure, message: asked.message, nextCall: undefined } : consentFailure, receiptContext);
+    }
+    consentGrant = { capability: target.record.id, acknowledge: asked.acknowledge, nonce: asked.nonce };
+  }
 
   // A grant naming a folded old pair authorized that pair's operation; the
   // resolved dispatch target must agree with it, or a grant for one sibling
@@ -145,6 +196,7 @@ export async function executeGatewayCall(
       expectedRevisions: checked.expectedRevisions,
       timeoutMs: checked.timeoutMs
     }, checked.unread);
+    noteOutcome(principal, fingerprint, receipt);
     // A plugin from another release can lack the action or read its params
     // differently, so every failed dispatch names the mismatch until the pair agrees.
     const versionMismatch = receipt.success === true ? undefined : context.tools.automationBridge?.getVersionMismatch?.();
@@ -156,7 +208,7 @@ export async function executeGatewayCall(
   const settled = runWithIdempotency(
       {
         capabilityId: target.record.id,
-        principal: authority?.profile ?? LOCAL_PRINCIPAL,
+        principal,
         params: checked.params,
         idempotencyKey: receiptContext.idempotencyId
       },

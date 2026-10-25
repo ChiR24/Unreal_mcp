@@ -36,6 +36,14 @@ bool CreateCaptureActor(
     }
     if (AActor* Existing = FindRenderActor(Name))
     {
+        if (!Existing->IsA<TActor>())
+        {
+            Subsystem->SendAutomationError(Socket, RequestId,
+                FString::Printf(TEXT("An actor named %s already exists and is a %s, not a %s; pick another name. Nothing was created."),
+                    *Name, *Existing->GetClass()->GetName(), *TActor::StaticClass()->GetName()),
+                TEXT("NAME_TAKEN"));
+            return true;
+        }
         TSharedPtr<FJsonObject> Result = MakeRenderResult(SubAction);
         Result->SetBoolField(TEXT("alreadyExists"), true);
         McpHandlerUtils::AddVerification(Result, Existing);
@@ -154,11 +162,16 @@ bool HandleRenderSceneCaptureAction(
         return false;
     }
 
+    UObject* CaptureComponent = Capture2D ? static_cast<UObject*>(Capture2D) : static_cast<UObject*>(CaptureCube);
+    // The settings below change the placed actor; without Modify its level was not marked changed and a save missed them.
+    if (SubAction != TEXT("capture_scene"))
+    {
+        CaptureComponent->Modify();
+    }
     if (SubAction == TEXT("configure_capture_source"))
     {
         FString Error;
-        if (!ApplyCaptureSource(Capture2D ? static_cast<UObject*>(Capture2D) : static_cast<UObject*>(CaptureCube),
-                GetJsonStringField(Payload, TEXT("captureSource")), Error))
+        if (!ApplyCaptureSource(CaptureComponent, GetJsonStringField(Payload, TEXT("captureSource")), Error))
         {
             Subsystem->SendAutomationError(RequestingSocket, RequestId, Error, TEXT("INVALID_SETTING"));
             return true;
@@ -182,9 +195,10 @@ bool HandleRenderSceneCaptureAction(
     }
     else if (SubAction == TEXT("configure_capture_resolution"))
     {
-        int32 Resolution = 512;
+        // No default: a call without resolution resized the render target to 512 and said it was asked for.
+        int32 Resolution = 0;
         FString Error;
-        if (!ReadBoundedIntField(Payload, TEXT("resolution"), 512, 1, 4096, Resolution, Error))
+        if (!ReadBoundedIntField(Payload, TEXT("resolution"), 0, 1, 4096, Resolution, Error))
         {
             Subsystem->SendAutomationError(RequestingSocket, RequestId, Error, TEXT("INVALID_ARGUMENT"));
             return true;
@@ -205,6 +219,9 @@ bool HandleRenderSceneCaptureAction(
                 TEXT("RENDER_TARGET_NOT_ASSIGNED"));
             return true;
         }
+        // The render target asset is what changes (every capture drawing into it), so it is what undo must restore.
+        FMcpScopedEditorTransaction Transaction(FText::FromString(TEXT("Resize Capture Target")),
+                                                EMcpMutationDurability::EditorStateOnly, {Capture2D->TextureTarget.Get()});
         Capture2D->TextureTarget->ResizeTarget(Resolution, Resolution);
     }
     else if (SubAction == TEXT("capture_scene"))
@@ -235,7 +252,7 @@ bool HandleRenderSceneCaptureAction(
     Result->SetBoolField(TEXT("captured"), false);
     if (SubAction == TEXT("configure_capture_resolution"))
     {
-        Result->SetNumberField(TEXT("resolution"), GetJsonIntField(Payload, TEXT("resolution"), 512));
+        Result->SetNumberField(TEXT("resolution"), Capture2D->TextureTarget->SizeX);
     }
     if (SubAction == TEXT("capture_scene"))
     {

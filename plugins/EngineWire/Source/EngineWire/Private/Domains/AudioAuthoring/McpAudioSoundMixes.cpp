@@ -23,10 +23,11 @@ TSharedPtr<FJsonObject> HandleSoundMixActions(const FString& SubAction, const TS
 			return McpHandlerUtils::BuildErrorResponse(TEXT("INVALID_ASSET_PATH"), PathError);
 		}
 
-		UPackage* Package = CreatePackage(*PackagePath);
+		FString CreateError, CreateCode;
+		UPackage* Package = McpCreatePackageForNewAsset(PackagePath, CreateError, CreateCode);
 		if (!Package)
 		{
-			return McpHandlerUtils::BuildErrorResponse(TEXT("PACKAGE_ERROR"), TEXT("Failed to create package"));
+			return McpHandlerUtils::BuildErrorResponse(CreateCode, CreateError);
 		}
 
 		USoundMixFactory* Factory = NewObject<USoundMixFactory>();
@@ -36,8 +37,9 @@ TSharedPtr<FJsonObject> HandleSoundMixActions(const FString& SubAction, const TS
 			return McpHandlerUtils::BuildErrorResponse(TEXT("CREATE_FAILED"), TEXT("Failed to create SoundMix"));
 		}
 
-		SaveAudioAsset(NewMix, bSave);
+		Response->SetBoolField(TEXT("saved"), SaveAudioAsset(NewMix, bSave));
 		Response->SetStringField(TEXT("assetPath"), NewMix->GetPathName());
+		Response->SetStringField(TEXT("message"), FString::Printf(TEXT("SoundMix '%s' created"), *NewMix->GetName()));
 		McpHandlerUtils::AddVerification(Response, NewMix);
 		Response->SetBoolField(TEXT("success"), true);
 		return Response;
@@ -47,9 +49,6 @@ TSharedPtr<FJsonObject> HandleSoundMixActions(const FString& SubAction, const TS
 	{
 		FString AssetPath = NormalizeAudioPath(GetJsonStringField(Params, TEXT("assetPath"), TEXT("")));
 		FString SoundClassPath = GetJsonStringField(Params, TEXT("soundClassPath"), TEXT(""));
-		float VolumeAdjust = static_cast<float>(GetJsonNumberField(Params, TEXT("volumeAdjuster"), 1.0));
-		float PitchAdjust = static_cast<float>(GetJsonNumberField(Params, TEXT("pitchAdjuster"), 1.0));
-		bool bApplyToChildren = GetJsonBoolField(Params, TEXT("applyToChildren"), true);
 		bool bSave = GetJsonBoolField(Params, TEXT("save"), true);
 
 		USoundMix* Mix = LoadSoundMixFromPath(AssetPath);
@@ -64,24 +63,35 @@ TSharedPtr<FJsonObject> HandleSoundMixActions(const FString& SubAction, const TS
 			return McpHandlerUtils::BuildErrorResponse(TEXT("CLASS_NOT_FOUND"), FString::Printf(TEXT("Could not load SoundClass: %s"), *SoundClassPath));
 		}
 
-		FSoundClassAdjuster Adjuster;
-		Adjuster.SoundClassObject = SoundClass;
-		Adjuster.VolumeAdjuster = VolumeAdjust;
-		Adjuster.PitchAdjuster = PitchAdjust;
-		Adjuster.bApplyToChildren = bApplyToChildren;
-		Mix->SoundClassEffects.Add(Adjuster);
+		// One adjuster per class: a second call for the class stacked a second adjuster on it. It edits the one there
+		// instead, keeping what it is not sent; a new one starts at volume and pitch 1, applying to child classes.
+		Mix->Modify();
+		FSoundClassAdjuster* Adjuster = Mix->SoundClassEffects.FindByPredicate([SoundClass](const FSoundClassAdjuster& Entry) { return Entry.SoundClassObject == SoundClass; });
+		const bool bReplaced = Adjuster != nullptr;
+		if (!Adjuster)
+		{
+			Adjuster = &Mix->SoundClassEffects.AddDefaulted_GetRef();
+			Adjuster->SoundClassObject = SoundClass;
+			Adjuster->bApplyToChildren = true;
+		}
+		if (Params->HasField(TEXT("volumeAdjuster"))) { Adjuster->VolumeAdjuster = static_cast<float>(GetJsonNumberField(Params, TEXT("volumeAdjuster"))); }
+		if (Params->HasField(TEXT("pitchAdjuster"))) { Adjuster->PitchAdjuster = static_cast<float>(GetJsonNumberField(Params, TEXT("pitchAdjuster"))); }
+		if (Params->HasField(TEXT("applyToChildren"))) { Adjuster->bApplyToChildren = GetJsonBoolField(Params, TEXT("applyToChildren"), true); }
 		// A class adjuster has no fade of its own: the fade times belong to the mix. They were read and dropped.
 		if (Params->HasField(TEXT("fadeInTime"))) { Mix->FadeInTime = static_cast<float>(GetJsonNumberField(Params, TEXT("fadeInTime"))); }
 		if (Params->HasField(TEXT("fadeOutTime"))) { Mix->FadeOutTime = static_cast<float>(GetJsonNumberField(Params, TEXT("fadeOutTime"))); }
-		SaveAudioAsset(Mix, bSave);
+		Response->SetBoolField(TEXT("saved"), SaveAudioAsset(Mix, bSave));
 		Response->SetNumberField(TEXT("fadeInTime"), Mix->FadeInTime);
 		Response->SetNumberField(TEXT("fadeOutTime"), Mix->FadeOutTime);
 
-		Response->SetStringField(TEXT("soundClassPath"), SoundClassPath);
-		Response->SetNumberField(TEXT("volumeAdjuster"), VolumeAdjust);
-		Response->SetNumberField(TEXT("pitchAdjuster"), PitchAdjust);
-		Response->SetBoolField(TEXT("applyToChildren"), bApplyToChildren);
+		Response->SetStringField(TEXT("soundClassPath"), SoundClass->GetPathName());
+		Response->SetBoolField(TEXT("replaced"), bReplaced);
+		Response->SetNumberField(TEXT("volumeAdjuster"), Adjuster->VolumeAdjuster);
+		Response->SetNumberField(TEXT("pitchAdjuster"), Adjuster->PitchAdjuster);
+		Response->SetBoolField(TEXT("applyToChildren"), Adjuster->bApplyToChildren != 0);
 		Response->SetNumberField(TEXT("modifierCount"), Mix->SoundClassEffects.Num());
+		Response->SetStringField(TEXT("message"), FString::Printf(TEXT("Modifier for %s %s %s"), *SoundClass->GetName(),
+			bReplaced ? TEXT("updated on") : TEXT("added to"), *Mix->GetName()));
 		McpHandlerUtils::AddVerification(Response, Mix);
 		Response->SetBoolField(TEXT("success"), true);
 		return Response;

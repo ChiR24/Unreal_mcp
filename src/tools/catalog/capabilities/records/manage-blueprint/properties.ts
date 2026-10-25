@@ -40,7 +40,7 @@ export const P = {
   // Variables
   variableName: S('Variable name to add, remove, rename, or modify.'),
   variableType: S('Variable type, any case. Basic: Boolean, Byte, Integer, Int64, Float, Double, String, Name, Text, Vector, Vector2D, Vector4, Rotator, Transform, Color, LinearColor. References: Object or Class (any UObject), or Object:<class>, Class:<class>, SoftObject:<class>, SoftClass:<class> with a class name or path (Actor, /Script/UMG.Widget, /Game/Blueprints/BP_Door); a bare class name or path is an object reference to that class. Structs: struct:<path> (struct:/Game/Data/F_Item), a /Script path (/Script/Engine.HitResult) or a struct name (HitResult). Enums: enum:<object path> (enum:/Script/Engine.ECollisionChannel, enum:/Game/Enums/E_State.E_State). Containers: Array<T>, Set<T> or Map<Key,Value> (also Array:T, Set:T, Map:Key,Value); a map key is Byte, Integer, Int64, Name, String or an enum. Example: Array<Object:/Script/UMG.Widget>. An unknown spelling is refused with TYPE_RESOLUTION_FAILED and the reason.'),
-  defaultValue: { description: 'Default value for the variable or property.' },
+  defaultValue: { description: 'Default value for the variable, in the form get_property reads back: a number, string or bool, {"x": 0, "y": 0, "z": 100} for a Vector, an array for an Array or Set, and a JSON object of key: value for a Map ({"Apple": 3}). A value its type cannot take is refused with DEFAULT_NOT_APPLIED and the variable is not added.' },
   oldName: S('Current variable name before renaming.'),
   category: S('Category folder for the variable.'),
   isReplicated: B('Whether the variable is replicated.'),
@@ -62,11 +62,11 @@ export const P = {
   },
   // Graph
   graphName: S('Target graph name (Event Graph, Construction Script, etc.).'),
-  nodeType: S('The node to create: CallFunction (memberName, plus memberClass for a function of another class), Event (eventName: BeginPlay, Tick), CustomEvent (customEventName), VariableGet or VariableSet (memberName), Cast (targetClass), InputAxisEvent (inputAxisName), Branch, Sequence, Select, Switch, SwitchOnInt, SwitchOnEnum, SwitchOnString, DoOnce, DoN, FlipFlop, Gate, MultiGate, ForLoop, ForEachLoop, WhileLoop (each also WithBreak), MakeArray, MakeStruct and BreakStruct (structPath), SpawnActorFromClass, GetAllActorsOfClass, Self, CallDelegate (memberName: an event dispatcher, memberClass: another class\'s), BindEvent (the same, plus eventName: a Bind Event node and a custom event with the dispatcher\'s inputs wired to it, eventNodeGuid in the reply),Timeline (timelineName; edit_timeline keys its tracks), Reroute, Comment, MathExpression (its formula goes in set_node_property Expression) (a Switch on Int is made with only Default: wire a case by its number, from "$id.0", "$id.1"..., and the case pin is added; a Sequence or a commutative math node grows its inputs the same way); a common function by name (PrintString, Delay, SetActorLocation, GetPlayerPawn, GetActorOfClass, IsValid, PlaySound2D); or a K2Node class name that inspect_graph info=node_types lists. In an Animation Blueprint\'s AnimGraph or a state\'s graph (graphName), any animation node by class: AnimGraphNode_TwoBoneIK, TwoBoneIK or Two Bone IK (info=node_types with filter IK lists them; animation_physics configure_anim_graph_node set_value sets its settings); a node the graph cannot hold is refused (NODE_NOT_ALLOWED_IN_GRAPH). For create_struct_make_break_nodes: make or break.'),
+  nodeType: S('The node to create: CallFunction (memberName, plus memberClass for a function of another class), Event (eventName: BeginPlay, Tick), CustomEvent (customEventName), VariableGet or VariableSet (memberName), Cast (targetClass), InputAxisEvent (inputAxisName), Branch, Sequence, Select, Switch, SwitchOnInt, SwitchOnEnum (enumPath: one exec output per value, named after it), SwitchOnString, DoOnce, DoN, FlipFlop, Gate, MultiGate, ForLoop, ForEachLoop, WhileLoop (each also WithBreak), MakeArray, GetArrayItem (an array\'s Get: pins Array, Dimension 1 for the index, Output), MakeStruct and BreakStruct (structPath), SpawnActorFromClass, GetAllActorsOfClass, Self, CallDelegate (memberName: an event dispatcher, memberClass: another class\'s), BindEvent (the same, plus eventName: a Bind Event node and a custom event with the dispatcher\'s inputs wired to it, eventNodeGuid in the reply),Timeline (timelineName; edit_timeline keys its tracks), Reroute, Comment, MathExpression (its formula goes in set_node_property Expression) (a Switch on Int is made with only Default: wire a case by its number, from "$id.0", "$id.1"..., and the case pin is added; a Sequence or a commutative math node grows its inputs the same way); a common function by name (PrintString, Delay, SetActorLocation, GetPlayerPawn, GetActorOfClass, IsValid, PlaySound2D); or a K2Node class name that inspect_graph info=node_types lists. In an Animation Blueprint\'s AnimGraph or a state\'s graph (graphName), any animation node by class: AnimGraphNode_TwoBoneIK, TwoBoneIK or Two Bone IK (info=node_types with filter IK lists them; animation_physics configure_anim_graph_node set_value sets its settings); a node the graph cannot hold is refused (NODE_NOT_ALLOWED_IN_GRAPH). For create_struct_make_break_nodes: make or break.'),
   nodeId: S('Id of an existing node: the nodeGuid edit_graph returned when it made the node, or a nodeId inspect_graph lists.'),
   nodeName: S('Human-readable node name.'),
-  memberName: S('Member (function/variable/event) name the node represents.'),
-  memberClass: S('Member class (function, variable, event, etc.).'),
+  memberName: S('The function, variable or event the node uses (PrintString, GetGameTimeInSeconds). A function whose name is not known: inspect_graph info functions finds it by what it does. A variable Blueprints cannot read, or for VariableSet write (not Blueprint-visible, read-only), is refused with VARIABLE_NOT_ACCESSIBLE.'),
+  memberClass: S('The class that declares the function (KismetMathLibrary, Character, or a Blueprint path); inspect_graph info functions names it. Omitted: the Blueprint itself and the common libraries are searched.'),
   targetClass: S(
     'Target class for a node that carries one: a Cast target, a CreateWidget or '
       + 'SpawnActor class, the subsystem a Get Subsystem node returns, or the class '
@@ -90,8 +90,8 @@ export const P = {
   fromPinName: S('Source pin name for a pin connection.'),
   toNodeId: S('Target node identifier for a pin connection.'),
   toPinName: S('Target pin name for a pin connection.'),
-  posX: N('X coordinate for node placement.'),
-  posY: N('Y coordinate for node placement.'),
+  posX: N('X position of the new node in the graph (default 0, the origin). add_node and create_node move a node given no position right past any node at the origin, and refuse a given spot another node covers (NODE_OVERLAP, with a suggestedPosition).'),
+  posY: N('Y position of the new node in the graph (default 0).'),
   includePins: B('When true, graph details include per-node pins and links.'),
   structPath: S('Blueprint Struct asset path (UserDefinedStruct or native UScriptStruct).'),
   // Functions / events
@@ -249,7 +249,7 @@ export const P = {
   maxVisibleObjectives: N('Rows the objective tracker shows (1-12, default 3); longer items lists are cut to this.'),
   mapSize: N('Minimap width and height in pixels (default 220).'),
   fadeTime: N('Seconds of the fade: the damage flash (default 0.6) or the loading screen FadeIn animation (0 makes none).'),
-  buttons: { type: 'array', items: S('Button label.'), description: 'Menu button labels, top to bottom; each becomes <Label>Button.' },
+  buttons: { type: 'array', items: S('Button label.'), description: 'Button labels, top to bottom: a menu\'s buttons, or a dialog\'s responses (at most 6, in place of responseCount); each becomes <Label>Button.' },
   settingsType: { type: 'string', enum: ['all', 'graphics', 'audio', 'controls'], description: 'Which settings sections the menu holds (default all).' },
   includeProgressBar: B('Whether the loading screen has a progress bar (default true).'),
   elements: {
@@ -258,11 +258,17 @@ export const P = {
     description: 'HUD pieces the new HUD starts with (default health_bar, crosshair, ammo_counter; [] for an empty canvas).',
   },
   showSpeakerName: B('Whether the dialog shows the speaker name line (default true).'),
-  responseCount: N('Response buttons under the dialog line (0-6, default 3).'),
+  responseCount: N('Placeholder response buttons under the dialog line when buttons names none (0-6, default 3).'),
   columns: N('Grid columns: inventory 1-12 (default 6), shop 1-8 (default 4).'),
   rows: N('Inventory grid rows (1-12, default 4).'),
   segmentCount: N('Radial menu segments (2-12, default 8).'),
-  itemCount: N('Shop item cards (1-48, default 8).'),
+  itemCount: N('Placeholder shop item cards when items names none (1-48, default 8).'),
+  shopItems: {
+    type: 'array',
+    items: { type: 'object', properties: { name: S('Item name shown on its card.'), price: N('Price shown on its card.') }, required: ['name', 'price'], additionalProperties: false },
+    description: 'Shop items in order (1-48, in place of itemCount): each card shows its name and price, and its button is Item_<n>_Buy, n counting from 1.',
+  },
+  currency: S('Currency name in the shop header, shown as "<currency>: 0" (default Gold).'),
   entries: {
     type: 'array',
     items: { type: 'object', properties: { title: S('Role or section, such as Music.'), name: S('Name credited.') }, required: ['title', 'name'], additionalProperties: false },

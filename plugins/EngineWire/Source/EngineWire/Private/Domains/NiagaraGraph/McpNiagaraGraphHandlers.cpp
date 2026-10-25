@@ -76,7 +76,7 @@ bool UEngineWireSubsystem::HandleNiagaraGraphAction(
     UNiagaraScript* TargetScript = nullptr;
 
     // Spawn script by default; scriptType "Update" selects the update script.
-    const bool bUpdateScript = GetJsonStringField(Payload, TEXT("scriptType")) == TEXT("Update");
+    const bool bUpdateScript = GetJsonStringField(Payload, TEXT("scriptType")).Equals(TEXT("Update"), ESearchCase::IgnoreCase);
     if (EmitterName.IsEmpty())
     {
         TargetScript = bUpdateScript ? System->GetSystemUpdateScript() : System->GetSystemSpawnScript();
@@ -168,14 +168,21 @@ bool UEngineWireSubsystem::HandleNiagaraGraphAction(
         }
 
         const int32 StackIndex = McpNiagaraModuleOrder::DependencyInsertIndex(*ModuleScript, *OutputNode);
+#if MCP_HAS_NIAGARA_STACK_GRAPH_UTILITIES
         UNiagaraNodeFunctionCall* FuncNode =
             FNiagaraStackGraphUtilities::AddScriptModuleToStack(
                 ModuleScript, *OutputNode, StackIndex);
+        const TCHAR* FailMessage = TEXT("Failed to add module to the Niagara stack.");
+        const TCHAR* FailCode = TEXT("CREATE_FAILED");
+#else
+        // UE 5.0 declares AddScriptModuleToStack without exporting it, so a plugin cannot call it there.
+        UNiagaraNodeFunctionCall* FuncNode = nullptr;
+        const TCHAR* FailMessage = TEXT("Adding a module to a Niagara stack needs UE 5.1 or later; this editor is UE 5.0.");
+        const TCHAR* FailCode = TEXT("NOT_SUPPORTED");
+#endif
         if (!FuncNode || !FuncNode->NodeGuid.IsValid())
         {
-            SendAutomationError(RequestingSocket, RequestId,
-                TEXT("Failed to add module to the Niagara stack."),
-                TEXT("CREATE_FAILED"));
+            SendAutomationError(RequestingSocket, RequestId, FailMessage, FailCode);
             return true;
         }
         TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();

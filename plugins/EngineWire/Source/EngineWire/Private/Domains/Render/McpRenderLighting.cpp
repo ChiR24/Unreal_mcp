@@ -5,6 +5,7 @@
 
 #include "Domains/Lighting/McpLightingPrivate.h"
 #include "EngineWireSubsystem.h"
+#include "Foundation/McpScopedEditorTransaction.h"
 
 #include "Components/LightComponent.h"
 #include "Components/PrimitiveComponent.h"
@@ -62,10 +63,10 @@ bool HandleRenderLightingAction(
         TArray<FString> Applied;
         TArray<FString> Unsupported;
         FString Error;
-        // Modify() has to precede the write: called afterwards it snapshots the
-        // already-changed struct, so undo restored nothing. And without a dirty
+        // A Modify() with no transaction open recorded nothing, so undo restored nothing. And without a dirty
         // package the edit was in-memory only while the reply said "configured".
-        WorldSettings->Modify();
+        FMcpScopedEditorTransaction Transaction(FText::FromString(TEXT("Configure Lightmass Settings")),
+                                                EMcpMutationDurability::EditorStateOnly, {WorldSettings});
         if (!ApplyJsonSettings(
                 &WorldSettings->LightmassSettings,
                 FLightmassWorldInfoSettings::StaticStruct(),
@@ -82,6 +83,7 @@ bool HandleRenderLightingAction(
         TSharedPtr<FJsonObject> Result = MakeRenderResult(SubAction);
         AddStringArray(Result, TEXT("appliedSettings"), Applied);
         AddStringArray(Result, TEXT("unsupportedSettings"), Unsupported);
+        Transaction.DescribeInto(Result);
         Subsystem->SendAutomationResponse(
             RequestingSocket, RequestId, true, TEXT("Lightmass settings configured."), Result);
         return true;
@@ -115,6 +117,9 @@ bool HandleRenderLightingAction(
                 RequestingSocket, RequestId, TEXT("Actor has no light component."), TEXT("COMPONENT_NOT_FOUND"));
             return true;
         }
+        // Set with no Modify, the change was not even unsaved: a save left it out and a close dropped it.
+        FMcpScopedEditorTransaction Transaction(FText::FromString(TEXT("Set Light Channel")), EMcpMutationDurability::EditorStateOnly,
+                                                {Light});
         FLightingChannels Channels = Light->LightingChannels;
         SetLightChannels(Channels, ChannelList, GetJsonBoolField(Payload, TEXT("enabled"), true));
         Light->SetLightingChannels(Channels.bChannel0, Channels.bChannel1, Channels.bChannel2);
@@ -143,6 +148,13 @@ bool HandleRenderLightingAction(
         {
             return true;
         }
+        TArray<UObject*> Targets;
+        for (UPrimitiveComponent* Component : Components)
+        {
+            Targets.Add(Component);
+        }
+        FMcpScopedEditorTransaction Transaction(FText::FromString(TEXT("Set Actor Light Channel")),
+                                                EMcpMutationDurability::EditorStateOnly, Targets);
         for (UPrimitiveComponent* Component : Components)
         {
             FLightingChannels Channels = Component->LightingChannels;
@@ -174,11 +186,18 @@ bool HandleRenderLightingAction(
                 TEXT("Pass enabled, or settings naming primitive component properties."), TEXT("NO_SETTING_SUPPLIED"));
             return true;
         }
+        // The components were never in a transaction, so undo left the cache as set.
+        TArray<UObject*> Targets;
+        for (UPrimitiveComponent* Component : Components)
+        {
+            Targets.Add(Component);
+        }
+        FMcpScopedEditorTransaction Transaction(FText::FromString(TEXT("Configure Indirect Lighting Cache")),
+                                                EMcpMutationDurability::EditorStateOnly, Targets);
         for (UPrimitiveComponent* Component : Components)
         {
             if (bHasEnabled)
             {
-                Component->Modify();
                 Component->IndirectLightingCacheQuality = Payload->GetBoolField(TEXT("enabled")) ? ILCQ_Point : ILCQ_Off;
                 Applied.AddUnique(TEXT("IndirectLightingCacheQuality"));
             }
@@ -200,6 +219,7 @@ bool HandleRenderLightingAction(
         Result->SetNumberField(TEXT("componentCount"), Components.Num());
         AddStringArray(Result, TEXT("appliedSettings"), Applied);
         AddStringArray(Result, TEXT("unsupportedSettings"), Unsupported);
+        Transaction.DescribeInto(Result);
         McpHandlerUtils::AddVerification(Result, Actor);
         Subsystem->SendAutomationResponse(
             RequestingSocket, RequestId, true, TEXT("Indirect lighting cache configured."), Result);

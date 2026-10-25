@@ -1,6 +1,7 @@
 #include "Domains/Blueprint/Gameplay/McpBPHudFlow.h"
 
 #include "Domains/Blueprint/McpBPActionContext.h"
+#include "Foundation/BridgeHelpers/Blueprints/McpBPAssetLoad.h"
 #include "Domains/BlueprintGraph/Behaviour/McpBPBehaviour.h"
 #include "Core/Requests/McpResponseCaptureRegistry.h"
 #include "Domains/WidgetAuthoring/Support/McpWidgetBPLoading.h"
@@ -36,7 +37,8 @@ bool HasElement(const UWidgetBlueprint *Widget, const FString &Name, const UClas
 }
 } // namespace
 
-UBlueprint *LoadPawnBlueprint(const FBlueprintActionContext &Context, const TCHAR *What, FString &OutPath) {
+UBlueprint *LoadScreenBlueprint(const FBlueprintActionContext &Context, const TCHAR *What, FString &OutPath,
+                                const UClass *Base) {
   MCP_BLUEPRINT_ACTION_LOCALS(Context);
   const FString Path = ResolveBlueprintRequestedPath();
   FString Normalized, Error;
@@ -46,10 +48,11 @@ UBlueprint *LoadPawnBlueprint(const FBlueprintActionContext &Context, const TCHA
     McpSafeCompileBlueprint(Blueprint); // a variable added since the last compile is not on the class yet
   }
   const UClass *Class = Blueprint ? Blueprint->GeneratedClass.Get() : nullptr;
-  if (!Class || !Class->IsChildOf(APawn::StaticClass())) {
+  if (!Class || !Class->IsChildOf(Base ? Base : APawn::StaticClass())) {
     Bridge.SendAutomationResponse(
         RequestingSocket, RequestId, false,
         !Blueprint ? (Error.IsEmpty() ? FString(TEXT("blueprintPath must name a Blueprint")) : Error)
+        : Base     ? FString::Printf(TEXT("%s needs an Actor Blueprint"), What)
                    : FString::Printf(TEXT("%s on screen needs a Pawn or Character Blueprint (the player controlling it sees it)"), What),
         nullptr, Blueprint ? TEXT("INVALID_ARGUMENT") : TEXT("BLUEPRINT_NOT_FOUND"));
     return nullptr;

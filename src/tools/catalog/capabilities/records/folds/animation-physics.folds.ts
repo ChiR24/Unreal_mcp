@@ -3,10 +3,10 @@ import { byName } from '../shared/fold-spec.js';
 import type { FoldSpec } from '../shared/fold-types.js';
 
 export const ANIMATION_PHYSICS_FOLDS: readonly FoldSpec[] = [
-  { primary: 'play_montage', summary: 'Play an animation montage on an actor.', members: ['play_anim_montage'] },
+  { primary: 'play_montage', summary: 'Play an animation montage on a placed skeletal actor (the playing one while Play In Editor runs): Montage_Play through its Anim Instance at playRate, or the montage as a single-node animation when the mesh has none, which switches that component\'s animation mode. The reply gives playMode and montageLength; outside play the actor does not tick, so nothing moves, playing is false and a warning says so.', members: ['play_anim_montage'] },
   {
     primary: 'setup_ragdoll', topics: ['go limp', 'make body go limp', 'make character go limp'], selector: 'ragdoll',
-    summary: 'Set up ragdoll physics on an actor, or activate/deactivate an existing ragdoll.',
+    summary: 'Make a skeletal actor go limp in the running game (Play or Simulate), chosen by ragdoll. setup switches every physics body of its skeletal mesh to simulate, assigning physicsAssetPath first when given; activate turns that on or off (activate, default true). A mesh with no physics asset is refused (NO_PHYSICS_ASSET), and ragdollActive reads back whether it now simulates. A Character keeps its capsule and movement running, so stop those as well for a body that falls.',
     members: { setup: 'setup_ragdoll', activate: 'activate_ragdoll' },
   },
   {
@@ -28,7 +28,7 @@ export const ANIMATION_PHYSICS_FOLDS: readonly FoldSpec[] = [
   },
   {
     primary: 'edit_montage', selector: 'edit',
-    summary: 'Edit an animation montage: notifies, sections, slots, section links, blend-in/out times and section timing.',
+    summary: 'Edit an animation montage, chosen by edit; each change is saved unless save is false (saved). add_montage_section adds a section at startTime (a name already there is SECTION_EXISTS) and set_section_timing moves one; link_sections makes fromSection play into toSection (SECTION_NOT_FOUND lists the sections); add_montage_slot adds an animation of a skeleton the montage takes as a segment of a slot, refused where it would overlap one already there, and grows the montage to fit; add_montage_notify adds a notify of notifyClass, or a named notify event, at a time within the montage; set_blend_in and set_blend_out set blendTime and blendOption, refusing a call with neither.',
     topics: ['montage section', 'montage slot', 'montage notify', 'blend in', 'blend out', 'link sections', 'blend in time'],
     members: byName(['add_montage_notify', 'add_montage_section', 'add_montage_slot', 'link_sections', 'set_blend_in', 'set_blend_out', 'set_section_timing']),
   },
@@ -41,31 +41,31 @@ export const ANIMATION_PHYSICS_FOLDS: readonly FoldSpec[] = [
   },
   {
     primary: 'edit_blend_space', selector: 'edit',
-    summary: 'Edit a blend space: add samples, set axis and interpolation settings, force a rebuild.',
+    summary: 'Edit a Blend Space or Aim Offset (assetPath), chosen by edit. add_sample places animationPath at sampleValue (a number on a 1D blend space, {x, y} on a 2D one; the axis range grows to fit) and returns sampleIndex; a position another sample holds, or an animation of another skeleton or additive type, is refused (SAMPLE_REJECTED). set_axis_settings changes one axis (Horizontal, the default, or Vertical; a 1D blend space has Horizontal only): only the axisName, minValue, maxValue and gridDivisions sent change, minValue stays below maxValue, and the reply gives the axis as it now is. set_interpolation_settings sets input smoothing on every axis and the sample weight speed, only the fields sent. rebuild drops invalid samples, rebuilds the grid and recompiles the Animation Blueprints that use it (compileReferencers, default true), listing any that fail. Saved unless save is false (saved).',
     topics: ['blend space sample', 'blend space axis', 'interpolation settings', 'rebuild blend space'],
     members: { add_sample: 'add_blend_sample', set_axis_settings: 'set_axis_settings', set_interpolation_settings: 'set_interpolation_settings', rebuild: 'force_rebuild_blend_space' },
   },
   {
     primary: 'configure_anim_graph_node', selector: 'edit',
-    summary: 'Configure an AnimGraph node: add a layered-blend-per-bone node or set a node property value.',
+    summary: 'Change an Animation Blueprint\'s AnimGraph, chosen by edit. add_layered_blend_per_bone adds a Layered Blend Per Bone node that layers each blend pose over the bones its branch filters name (a bone not on the skeleton is BONE_NOT_FOUND) and names the node for wiring. set_value sets a node setting (Alpha, PlayRate, bLoopAnimation, NodeComment) or the animation an asset player plays, by node name or nodeId, and reads it back; NODE_NOT_FOUND lists the nodes and AMBIGUOUS_NODE the matches. Both save unless save is false.',
     topics: ['layered blend per bone', 'anim graph node value', 'blend upper body only'],
     members: { add_layered_blend_per_bone: 'add_layered_blend_per_bone', set_value: 'set_anim_graph_node_value' },
   },
   {
     primary: 'edit_skeleton', selector: 'edit',
-    summary: 'Edit a skeleton: add, rename or reparent bones, set bone transforms, add virtual bones.',
+    summary: 'Edit a skeleton (skeletonPath), chosen by edit. add_bone adds boneName under parentBoneName (needed once the skeleton has bones; a taken name is BONE_EXISTS) at location, rotation and scale relative to the parent. set_bone_parent moves boneName, with its children, under parentBoneName, where it keeps its place in the reference pose: its own descendants are refused, and the parent it already has changes nothing (changed false). Both change the skeleton asset only; the skeletal meshes on it keep their own bones. set_bone_transform rewrites boneName in the reference pose of the skeletal mesh (skeletalMeshPath, or the skeleton\'s preview mesh), only the location, rotation or scale sent. create_virtual_bone adds a virtual bone from sourceBoneName to targetBoneName named boneName, or VB <source>_<target>; the engine\'s VB prefix is added when missing. rename_bone renames virtual bones only; a real bone takes a reimport of the mesh (OPERATION_NOT_SUPPORTED). Saved unless save is false (saved).',
     topics: ['add bone', 'rename bone', 'bone parent', 'bone transform', 'virtual bone'],
     members: byName(['add_bone', 'rename_bone', 'set_bone_parent', 'set_bone_transform', 'create_virtual_bone']),
   },
   {
     primary: 'configure_socket', selector: 'socketOp',
-    summary: 'Configure a skeleton socket: upsert its attachment and offsets, or strictly add, create or modify one.',
+    summary: 'Sockets on a skeleton (skeletonPath; a skeletal mesh path uses its skeleton), chosen by socketOp; each change is saved unless save is false (saved). create (add) puts socketName on attachBoneName, which both require, at relativeLocation, relativeRotation and relativeScale (default zero, zero and one); a bone the skeleton lacks is BONE_NOT_FOUND and a taken name SOCKET_EXISTS. configure (modify) changes an existing socket: attachBoneName moves it, and relativeLocation, relativeRotation and relativeScale replace only the parts given; a missing socket is SOCKET_NOT_FOUND and a call naming nothing to change is refused.',
     topics: ['skeleton socket', 'add socket', 'modify socket', 'create socket'],
     members: { configure: 'configure_socket', add: 'add_socket', create: 'create_socket', modify: 'modify_socket' },
   },
   {
     primary: 'edit_physics_asset', selector: 'edit',
-    summary: 'Create a physics asset or edit its bodies and constraints, and assign it to a skeletal mesh.',
+    summary: 'Create a physics asset or edit it, chosen by edit; each change is saved unless save is false (saved). create builds bodies and joints from skeletalMeshPath as the editor\'s Create Physics Asset does, at outputPath (or name in path; default <mesh>_PhysicsAsset beside the mesh): geomType Capsule (default), Box, Sphere, TaperedCapsule (cloth only), SingleConvexHull or MultiConvexHull, any other name refused; bones shorter than minBoneSize get no body unless bodyForAll; createConstraints joins the bodies; assignToMesh (default false) makes the mesh use it; a build that makes no body is refused (BODY_GENERATION_FAILED). add_body gives boneName a Capsule (default), Sphere or Box shape sized by radius and length or width, depth and height, placed by center and rotation; a bone that already has a body gets the shape added to it (created false), and a bone the skeleton lacks is BONE_NOT_FOUND. configure_body (modify_body) sets mass (kg, above 0, as the body\'s mass override), linearDamping, angularDamping, collisionEnabled and simulatePhysics (true simulates with the ragdoll, false is Kinematic and follows the animation), and refuses a call that sets none of them. add_constraint joins bodyA and bodyB with a joint Limited to 45 degrees on every axis (both bodies must exist, BODY_NOT_FOUND; a second joint on the pair is CONSTRAINT_EXISTS); set_constraint changes the pair\'s joint or makes one; configure_constraint_limits sets swing1, swing2 and twist angles and motions from limits. assign makes skeletalMeshPath (or meshPath) use physicsAssetPath and saves the mesh.',
     topics: ['physics asset', 'physics body', 'physics constraint', 'constraint limits', 'assign physics asset', 'skeleton physics', 'preview physics', 'add collision to bones', 'assign physics asset to mesh'],
     members: {
       create: 'create_physics_asset', add_body: 'add_physics_body', configure_body: 'configure_physics_body', modify_body: 'modify_physics_body',
@@ -87,10 +87,10 @@ export const ANIMATION_PHYSICS_FOLDS: readonly FoldSpec[] = [
   },
   {
     primary: 'bind_cloth_to_skeletal_mesh', topics: ['add cloth simulation'], selector: 'clothOp',
-    summary: 'Bind or assign a cloth asset to a skeletal mesh section.',
+    summary: 'Bind a cloth asset to a skeletal mesh section so that section simulates as cloth, chosen by clothOp. bind takes a cloth asset already on the mesh (clothAssetName, as availableClothAssets lists them); assign also takes clothAssetPath and adds that asset to the mesh first. meshLodIndex, sectionIndex and assetLodIndex (default 0 each) pick where; a LOD or section that does not exist is BIND_FAILED, and naming no asset lists the candidates (CLOTH_ASSET_REQUIRED). Saved unless save is false (saved).',
     members: { bind: 'bind_cloth_to_skeletal_mesh', assign: 'assign_cloth_asset_to_mesh' },
   },
-  { primary: 'create_animation_blueprint', summary: 'Create an Animation Blueprint for a skeleton.', members: ['create_anim_blueprint', 'create_animation_bp'] },
+  { primary: 'create_animation_blueprint', summary: 'Create an Animation Blueprint named name in path (default /Game/Blueprints) for the skeleton at skeletonPath, or the one skeletalMeshPath is built on (SKELETON_NOT_FOUND when that does not load; without either it has no skeleton), from parentClass (default AnimInstance; a class that is no AnimInstance is INVALID_PARENT_CLASS). An Animation Blueprint already there is kept and answered with existingAsset; any other asset there is ASSET_TYPE_MISMATCH and is left alone. It is compiled and saved unless save is false (saved).', members: ['create_anim_blueprint', 'create_animation_bp'] },
   {
     primary: 'setup_ik', selector: 'kind',
     summary: 'Set up IK: create an IK rig or IK retargeter, a Control Rig for IK solvers, or set which source chain drives each target chain of a retargeter.',
@@ -99,7 +99,7 @@ export const ANIMATION_PHYSICS_FOLDS: readonly FoldSpec[] = [
   },
   {
     primary: 'get_skeleton_info', selector: 'info',
-    summary: 'Read skeleton data: summary, bones, sockets, virtual bones, bone transforms, morph targets, physics asset and bodies.',
+    summary: 'Read a skeleton, skeletal mesh or Physics Asset, chosen by info (a skeletal mesh path reads its skeleton, or its assigned Physics Asset). skeleton gives counts of bones, virtual bones and sockets; bones lists every bone in hierarchy order with index, parent and reference-pose location, the names other calls take (layer filters, sockets, IK, physics bodies); sockets lists each socket with its bone and offset; virtual_bones lists virtual bones with source and target; bone_transform reads one bone\'s reference-pose transform and parent; morph_targets lists a mesh\'s morph targets and their delta counts; physics_asset reads a Physics Asset\'s bodies (the shapes in each) and constraints; physics_bodies lists only the body names. A path that does not load is SKELETON_NOT_FOUND or MESH_NOT_FOUND, a bone the skeleton lacks BONE_NOT_FOUND.',
     topics: ['skeleton info', 'list bones', 'list sockets', 'bone transform', 'morph targets', 'physics bodies', 'virtual bones', 'check skeleton bones'],
     members: {
       skeleton: 'get_skeleton_info', bones: 'list_bones', sockets: 'list_sockets', virtual_bones: 'list_virtual_bones',
@@ -108,7 +108,7 @@ export const ANIMATION_PHYSICS_FOLDS: readonly FoldSpec[] = [
   },
   {
     primary: 'remove_skeleton_element', selector: 'element',
-    summary: 'Remove a bone, socket or physics body from a skeleton or physics asset.',
+    summary: 'Remove part of a skeleton or physics asset, chosen by element. bone removes boneName from the skeleton: with removeChildren its whole branch goes, otherwise its children move up to its parent and keep their place in the reference pose; the only root a skeleton has is refused. socket removes socketName from the skeleton (a socket defined on a mesh is not found here). physics_body removes the body of boneName from physicsAssetPath together with every constraint that uses it. A missing bone, socket or body is refused. Saved unless save is false (saved).',
     topics: ['remove bone', 'remove socket', 'remove physics body'],
     members: { bone: 'remove_bone', socket: 'remove_socket', physics_body: 'remove_physics_body' },
   },

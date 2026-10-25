@@ -86,7 +86,8 @@ inline USkeletalMesh *McpFindMeshForSkeleton(USkeleton *Skeleton) {
 inline UIKRigDefinition *McpBuildIKRig(USkeletalMesh *Mesh,
                                        const FString &PackagePath,
                                        const FString &AssetName,
-                                       FString &OutError) {
+                                       FString &OutError, bool bSave = true,
+                                       bool *bOutSaved = nullptr) {
   if (Mesh == nullptr) {
     OutError = TEXT("No skeletal mesh to build an IK Rig from");
     return nullptr;
@@ -116,7 +117,11 @@ inline UIKRigDefinition *McpBuildIKRig(USkeletalMesh *Mesh,
   Rig->MarkPackageDirty();
   // Saved here so create_ik_rig and setup_retargeting both persist what they
   // report; a rig that only exists in memory is gone with the editor session.
-  McpSafeOperations::McpSafeAssetSave(Rig);
+  // create_ik_rig's save false left it in memory only in name: it was saved.
+  const bool bSaved = bSave && McpSafeOperations::McpSafeAssetSave(Rig);
+  if (bOutSaved) {
+    *bOutSaved = bSaved;
+  }
   return Rig;
 }
 

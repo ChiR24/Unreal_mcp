@@ -22,6 +22,9 @@ import { resolveDispatchAction } from './gateway-dispatch-by.js';
 import { buildNextCall } from './gateway-guidance.js';
 import { executeSuccessEnvelope, refuseWithTarget } from './gateway-execute-envelope.js';
 import type { GatewayReceiptContext } from './gateway-receipt-context.js';
+import type { ConsentChannel } from './gateway-execute-consent.js';
+import { firstPage, type PageInfo, type PageOwner } from './gateway-result-pages.js';
+import { canonicalFingerprint, LOCAL_PRINCIPAL } from './gateway-execute-idempotency.js';
 
 export const MAX_EXECUTION_RESULT_CHARS = 100_000;
 
@@ -46,6 +49,8 @@ export type GatewayContext = {
   tools: ITools;
   logger: Logger;
   ensureConnected: () => Promise<boolean>;
+  /** What the tools/call request says about asking its user for consent (MCP 2026-07-28); absent elsewhere. */
+  consent?: ConsentChannel;
 };
 
 // The declared output contract describes the capability payload, not the
@@ -124,6 +129,18 @@ function pieWorldWarnings(record: CapabilityRecord, result: unknown): readonly s
       ? ['The game is paused (a title screen, a pause menu or control_editor pause): nothing it moves or simulates advances until play resumes (control_editor resume with unpauseGame).']
       : []),
   ];
+}
+
+// A handler's own warnings (a graph check's finding, a step that succeeded with a caveat) sat in
+// data.details.warnings, where no receipt check looks; the HTTP door lifts them (McpCollectResultWarnings).
+function resultWarnings(result: unknown): readonly string[] {
+  const found = new Set<string>();
+  for (let level: unknown = result; isRecord(level); level = level.details) {
+    const warnings = level.warnings;
+    if (!Array.isArray(warnings)) continue;
+    for (const warning of warnings) if (typeof warning === 'string' && warning.length > 0) found.add(warning);
+  }
+  return [...found];
 }
 
 const HANDLER_CODE = /^[A-Z][A-Z0-9_]{0,63}$/;
@@ -290,6 +307,9 @@ export async function dispatchAndValidate(
   }
 
   if (oversized) {
+    // One top-level array that carries the size goes out a page at a time instead (gateway-result-pages.ts).
+    const paged = isRecord(result) ? firstPage(result, resultCharBudget(result), pageOwner(record, params, context)) : undefined;
+    if (paged !== undefined) return publishResult(target, paged.result, params, options, receiptContext, unread, paged.page);
     const resultChars = serialized?.length ?? 0;
     return refuseWithTarget(target, {
       errorCode: 'RESULT_TOO_LARGE',
@@ -298,7 +318,29 @@ export async function dispatchAndValidate(
       ...narrowingGuidance(record, target)
     }, receiptContext);
   }
+  return publishResult(target, result, params, options, receiptContext, unread);
+}
 
+/** Who may read the rest of a paged result: this principal, for this capability and these params. */
+export function pageOwner(record: CapabilityRecord, params: Record<string, unknown>, context: GatewayContext): PageOwner {
+  return {
+    principal: context.tools.automationBridge?.getAuthority?.()?.profile ?? LOCAL_PRINCIPAL,
+    capabilityId: record.id,
+    fingerprint: canonicalFingerprint(record.id, params)
+  };
+}
+
+/** The success envelope for a handler result, or one page of it, held to the declared output schema. */
+export function publishResult(
+  target: ExecuteTarget,
+  result: unknown,
+  params: Record<string, unknown>,
+  options: Record<string, unknown> | undefined,
+  receiptContext: GatewayReceiptContext,
+  unread: readonly string[] = [],
+  page?: PageInfo
+): Record<string, unknown> {
+  const record = target.record;
   const canonicalOutput = projectCanonicalOutput(result, record.schemas.output);
   const violation = validateAgainstCapabilitySchema(canonicalOutput, record.schemas.output);
   if (violation !== undefined) {
@@ -317,6 +359,17 @@ export async function dispatchAndValidate(
     resolvedFromAlias: target.resolvedFromAlias,
     migratedFrom: target.migratedFrom,
     options,
-    warnings: [...pieWorldWarnings(record, result), ...unread]
+    warnings: [...new Set([...pieWorldWarnings(record, result), ...unread, ...resultWarnings(result)])],
+    ...(page === undefined ? {} : {
+      page: page.cursor === undefined ? page : {
+        ...page,
+        // The same call with the cursor reads the next page; params are checked against the first call's.
+        nextCall: {
+          ...buildNextCall({ operation: 'execute', tool: record.routing.parentTool, action: target.legacy.action }),
+          params,
+          options: { pageCursor: page.cursor }
+        }
+      }
+    })
   }, receiptContext);
 }

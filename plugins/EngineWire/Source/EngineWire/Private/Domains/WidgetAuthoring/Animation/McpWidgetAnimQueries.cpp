@@ -223,9 +223,10 @@ bool HandleWidgetAuthoringAnimationQueries(
         }
 
         WidgetBP->Animations.Remove(Animation);
-        WidgetAuthoringHelpers::MarkWidgetBlueprintModifiedAndSave(WidgetBP);
+        const bool bSaved = WidgetAuthoringHelpers::MarkWidgetBlueprintModifiedAndSave(WidgetBP);
 
         ResultJson->SetBoolField(TEXT("success"), true);
+        ResultJson->SetBoolField(TEXT("saved"), bSaved);
         ResultJson->SetStringField(TEXT("widgetPath"), WidgetPath);
         ResultJson->SetStringField(TEXT("deletedAnimation"), AnimationName);
         ResultJson->SetNumberField(TEXT("remainingAnimations"), WidgetBP->Animations.Num());

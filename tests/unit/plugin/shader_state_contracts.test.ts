@@ -64,7 +64,7 @@ describe('shader compile state: counted through the engine, waited for off the g
     expect(add).toContain('Resp->SetNumberField(TEXT("shadersCompiling"), Jobs);');
     expect(add).toMatch(/TryGetObjectField\(TEXT\("shaderWait"\), Waited\)[\s\S]*?Resp->SetObjectField\(TEXT\("shaderWait"\), \*Waited\);/u);
     expect(add).toMatch(/if \(Jobs > 0\) \{[\s\S]*?TryGetArrayField\(TEXT\("warnings"\), Existing\)[\s\S]*?Warnings = \*Existing;[\s\S]*?Warnings\.Add\([\s\S]*?Resp->SetArrayField\(TEXT\("warnings"\), Warnings\);/u);
-    expect(add).toContain('Retry with waitForShaders');
+    expect(add).toContain('waitForShaders true');
   });
 });
 

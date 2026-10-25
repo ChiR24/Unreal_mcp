@@ -33,6 +33,8 @@ const testCases = [
   // === ACTION: create (requires name + path/blueprintPath) ===
   { scenario: 'ACTION: create', toolName: 'manage_blueprint', arguments: { action: 'create', name: `BP_Create_${ts}`, savePath: TEST_FOLDER, blueprintType: 'Actor', properties: { bReplicates: true } }, expected: 'success|already exists', assertions: [{ path: 'structuredContent.result.appliedProperties.0', equals: 'bReplicates', label: 'the property that was set is listed' }] },
   { scenario: 'ACTION: create names a property it could not set', toolName: 'manage_blueprint', arguments: { action: 'create', name: `BP_CreateBadProp_${ts}`, savePath: TEST_FOLDER, blueprintType: 'Actor', properties: { NoSuchProperty: 1 } }, expected: 'success', assertions: [{ path: 'structuredContent.result.failedProperties.0', includes: 'NoSuchProperty', label: 'the miss is named, not dropped' }] },
+  { scenario: 'ACTION: create answers a Blueprint already at the path', toolName: 'manage_blueprint', arguments: { action: 'create', name: `BP_Create_${ts}`, savePath: TEST_FOLDER, blueprintType: 'Actor' }, expected: 'success', assertions: [{ path: 'structuredContent.result.alreadyExists', equals: true, label: 'the existing Blueprint is answered, not rebuilt' }] },
+  { scenario: 'ERROR: create refuses a Blueprint already at the path with another parent', toolName: 'manage_blueprint', arguments: { action: 'create', name: `BP_Create_${ts}`, savePath: TEST_FOLDER, parentClass: '/Script/Engine.Character' }, expected: 'error|ASSET_ALREADY_EXISTS' },
   // A dotted name reaches a component of the class defaults, by property name or by the component's object name.
   { scenario: 'ACTION: create sets component members through dotted names', toolName: 'manage_blueprint', arguments: { action: 'create', name: `BP_CreateDotted_${ts}`, savePath: TEST_FOLDER, parentClass: '/Script/Engine.Character', properties: { 'CollisionCylinder.CapsuleRadius': 30, 'CharacterMovement.MaxWalkSpeed': 420 } }, expected: 'success', assertions: [{ path: 'structuredContent.result.appliedProperties', length: 2, label: 'both component members were set' }] },
 
@@ -83,6 +85,8 @@ const testCases = [
 
   // The class and attach parameters are declared for every variant that reads them: the top-level add modify_scs promotes, and both
   // adds (which share one handler), so none of these calls draws a receipt warning that the parameter "was not used".
+  // A trigger under a base flattened to (1.6, 1.6, 0.1) is stretched the same way in the world; the edit says so.
+  { scenario: 'CONFIG: modify_scs says a part takes the uneven scale of the part it is attached to', toolName: 'manage_blueprint', arguments: { action: 'modify_scs', blueprintPath: BP_PATH, operations: [{ type: 'add_component', componentName: 'TestFlatBase', componentClass: 'StaticMeshComponent', meshPath: ENGINE_CUBE_MESH, transform: { location: { x: 0, y: 0, z: -300 }, scale: { x: 1.6, y: 1.6, z: 0.1 } } }, { type: 'add_component', componentName: 'TestFlatTrigger', componentClass: 'BoxComponent', attachTo: 'TestFlatBase', transform: { location: { x: 0, y: 0, z: 400 } } }], compile: true, save: true }, expected: 'success', assertions: [{ path: 'structuredContent.result.warnings.0', includes: 'scaled unevenly', label: 'the part under the flattened base is named' }] },
   { scenario: 'CONFIG: modify_scs one component at the top level is an add when it names componentClass, attached under attachTo', toolName: 'manage_blueprint', arguments: { action: 'modify_scs', blueprintPath: BP_PATH, componentName: 'TestClassTop', componentClass: 'StaticMeshComponent', attachTo: 'DefaultSceneRoot', meshPath: ENGINE_CUBE_MESH, compile: true, save: true }, expected: 'success', assertions: [{ path: 'structuredContent.result.operations.0.attachedTo', equals: 'DefaultSceneRoot', label: 'attachTo reached the add the payload became' }] },
   { scenario: 'ADD: add_scs_component names its class as componentType and its parent as attachTo', toolName: 'manage_blueprint', arguments: { action: 'add_scs_component', blueprintPath: BP_PATH, componentType: 'SceneComponent', componentName: 'TestTypeAttachSCS', attachTo: 'DefaultSceneRoot' }, expected: 'success|already exists' },
   { scenario: 'ADD: add_component names its parent as parentComponent', toolName: 'manage_blueprint', arguments: { action: 'add_component', blueprintPath: BP_PATH, componentClass: 'SceneComponent', componentName: 'TestParentAdd', parentComponent: 'DefaultSceneRoot' }, expected: 'success|already exists' },
@@ -97,6 +101,8 @@ const testCases = [
 
   // === ADD: add_scs_component with mesh/material assignment ===
   { scenario: 'ADD: add_scs_component with mesh material', toolName: 'manage_blueprint', arguments: { action: 'add_scs_component', blueprintPath: BP_PATH, componentClass: 'StaticMeshComponent', componentName: 'TestStaticMeshSCSComp', parentComponent: 'DefaultSceneRoot', meshPath: ENGINE_CUBE_MESH, materialPath: ENGINE_BASIC_MATERIAL }, expected: 'success|already exists', assertions: [{ path: 'structuredContent.result.mesh_applied', equals: true, label: 'SCS static mesh assignment applied' }, { path: 'structuredContent.result.material_applied', equals: true, label: 'SCS material assignment applied' }] },
+  { scenario: 'ERROR: add_scs_component refuses a mesh that does not load', toolName: 'manage_blueprint', arguments: { action: 'add_scs_component', blueprintPath: BP_PATH, componentClass: 'StaticMeshComponent', componentName: 'TestMissingMeshComp', meshPath: '/Game/MCPTest/NoSuchMesh' }, expected: 'error|ASSET_NOT_FOUND' },
+  { scenario: 'ERROR: add_scs_component refuses a mesh for a component that shows none', toolName: 'manage_blueprint', arguments: { action: 'add_scs_component', blueprintPath: BP_PATH, componentClass: 'PointLightComponent', componentName: 'TestLightWithMesh', meshPath: ENGINE_CUBE_MESH }, expected: 'error|INVALID_ARGUMENT' },
 
   // === DELETE: remove_scs_component (blueprintPath + componentName) ===
   { scenario: 'DELETE: remove_scs_component', toolName: 'manage_blueprint', arguments: { action: 'remove_scs_component', blueprintPath: BP_PATH, componentName: 'TestSCSComp' }, expected: 'success|not found' },
@@ -211,10 +217,17 @@ const testCases = [
   // === CREATE: create_node variants with specialized metadata ===
   { scenario: 'CREATE: create_node call function metadata', toolName: 'manage_blueprint', arguments: { action: 'create_node', blueprintPath: BP_PATH, nodeType: 'CallFunction', memberName: 'PrintString', memberClass: 'KismetSystemLibrary', graphName: 'EventGraph', posX: -40, posY: 120 }, expected: 'success|already exists' },
   { scenario: 'CREATE: create_node cast target class', toolName: 'manage_blueprint', arguments: { action: 'create_node', blueprintPath: BP_PATH, nodeType: 'Cast', targetClass: 'Actor', graphName: 'EventGraph', posX: 160, posY: 120 }, expected: 'success|already exists' },
+  // A placed actor's reference belongs in a level Blueprint; in an Actor Blueprint it used to come out an unbound "Unknown" node.
+  { scenario: 'CREATE: create_node refuses an actor reference outside a level Blueprint', toolName: 'manage_blueprint', arguments: { action: 'create_node', blueprintPath: BP_PATH, nodeType: 'K2Node_Literal', actorName: 'AnyPlacedActor', graphName: 'EventGraph', posX: 400, posY: 120 }, expected: 'error|INVALID_ARGUMENT' },
+  // A setter of a read-only property used to be made and broke the next compile.
+  { scenario: 'CREATE: create_node refuses a setter of a read-only property', toolName: 'manage_blueprint', arguments: { action: 'create_node', blueprintPath: BP_PATH, nodeType: 'VariableSet', memberName: 'PointLightComponent', memberClass: 'PointLight', graphName: 'EventGraph', posX: 400, posY: 320 }, expected: 'error|VARIABLE_NOT_ACCESSIBLE' },
   { scenario: 'CREATE: create_node call function by functionName', toolName: 'manage_blueprint', arguments: { action: 'create_node', blueprintPath: BP_PATH, nodeType: 'CallFunction', functionName: 'PrintString', memberClass: 'KismetSystemLibrary', graphName: 'EventGraph', posX: 1160, posY: 120 }, expected: 'success' },
   { scenario: 'CREATE: create_node pure cast', toolName: 'manage_blueprint', arguments: { action: 'create_node', blueprintPath: BP_PATH, nodeType: 'Cast', targetClass: 'Pawn', pure: true, graphName: 'EventGraph', posX: 1360, posY: 120 }, expected: 'success' },
   { scenario: 'CREATE: create_node MakeStruct with structPath has the struct pins', toolName: 'manage_blueprint', arguments: { action: 'create_node', blueprintPath: BP_PATH, nodeType: 'MakeStruct', structPath: '/Script/CoreUObject.Vector', graphName: 'EventGraph', posX: 1560, posY: 120 }, expected: 'success' },
   { scenario: 'ERROR: create_node MakeStruct without structPath is refused', toolName: 'manage_blueprint', arguments: { action: 'create_node', blueprintPath: BP_PATH, nodeType: 'MakeStruct', graphName: 'EventGraph', posX: 1760, posY: 120 }, expected: 'error|INVALID_ARGUMENT' },
+  { scenario: 'CREATE: create_node SwitchOnEnum with enumPath has a case per value', toolName: 'manage_blueprint', arguments: { action: 'create_node', blueprintPath: BP_PATH, nodeType: 'SwitchOnEnum', enumPath: '/Script/Engine.ECollisionChannel', graphName: 'EventGraph', posX: 1960, posY: 120 }, expected: 'success' },
+  { scenario: 'ERROR: create_node SwitchOnEnum without enumPath is refused', toolName: 'manage_blueprint', arguments: { action: 'create_node', blueprintPath: BP_PATH, nodeType: 'SwitchOnEnum', graphName: 'EventGraph', posX: 2160, posY: 120 }, expected: 'error|INVALID_ARGUMENT' },
+  { scenario: 'CREATE: create_node CallFunction takes the title the editor shows (GetActorTransform)', toolName: 'manage_blueprint', arguments: { action: 'create_node', blueprintPath: BP_PATH, nodeType: 'CallFunction', memberName: 'GetActorTransform', graphName: 'EventGraph', posX: 2360, posY: 120 }, expected: 'success' },
   { scenario: 'ADD: add_node cast with targetClass', toolName: 'manage_blueprint', arguments: { action: 'add_node', blueprintPath: BP_PATH, nodeType: 'Cast', targetClass: 'Actor', graphName: 'EventGraph', posX: 1560, posY: 120 }, expected: 'success' },
   // A timeline keyed first, then the node that plays it: the node shows a pin per track.
   { scenario: 'ADD: edit_timeline makes a keyed timeline', toolName: 'manage_blueprint', arguments: { action: 'edit_timeline', blueprintPath: BP_PATH, timelineName: 'TL_Test', length: 2, useLastKeyframe: false, autoPlay: false, loop: true, ignoreTimeDilation: false, tracks: [{ name: 'Alpha', type: 'float', interpolation: 'linear', keys: [{ time: 0, value: 0 }, { time: 2, value: 1 }] }, { name: 'Offset', type: 'vector', keys: [{ time: 0, value: { x: 0, y: 0, z: 0 } }, { time: 2, value: { x: 0, y: 0, z: 100 } }] }, { name: 'Tint', type: 'color', keys: [{ time: 0, value: { r: 1, g: 0, b: 0 } }] }, { name: 'Halfway', type: 'event', keys: [{ time: 1 }] }] }, expected: 'success', assertions: [{ path: 'structuredContent.result.created', equals: true, label: 'the timeline was made' }, { path: 'structuredContent.result.tracks', length: 4, label: 'every track was added' }] },
@@ -231,7 +244,7 @@ const testCases = [
   { scenario: 'VERIFY: the timeline keeps its keys after the undone batch', toolName: 'manage_blueprint', arguments: { action: 'edit_timeline', blueprintPath: BP_PATH, timelineName: 'TL_Kept' }, expected: 'success', assertions: [{ path: 'structuredContent.result.created', equals: false, label: 'not made again' }, { path: 'structuredContent.result.tracks.0.keys', equals: 2, label: 'its keys are there' }] },
 
   // === Gameplay behaviours written into the Blueprint: each must compile on every engine version ===
-  { scenario: 'ADD: add_behaviour health', toolName: 'manage_blueprint', arguments: { action: 'add_behaviour', behaviour: 'health', blueprintPath: BP_PATH, maxHealth: 50, destroyOnDeath: true }, expected: 'success', assertions: [{ path: 'structuredContent.result.compiled', equals: true, label: 'the Blueprint compiles with it' }, { path: 'structuredContent.result.functions.0', equals: 'Heal', label: 'Heal is callable' }] },
+  { scenario: 'ADD: add_behaviour health', toolName: 'manage_blueprint', arguments: { action: 'add_behaviour', behaviour: 'health', blueprintPath: BP_PATH, maxHealth: 50, destroyOnDeath: true, invulnerableTime: 0.5 }, expected: 'success', assertions: [{ path: 'structuredContent.result.compiled', equals: true, label: 'the Blueprint compiles with it' }, { path: 'structuredContent.result.functions.0', equals: 'Heal', label: 'Heal is callable' }] },
   { scenario: 'ADD: add_behaviour damage on touch', toolName: 'manage_blueprint', arguments: { action: 'add_behaviour', behaviour: 'damage_on_touch', blueprintPath: BP_PATH, damage: 15 }, expected: 'success', assertions: [{ path: 'structuredContent.result.compiled', equals: true, label: 'the Blueprint compiles with it' }] },
   { scenario: 'ADD: add_behaviour pickup that heals', toolName: 'manage_blueprint', arguments: { action: 'add_behaviour', behaviour: 'pickup', blueprintPath: BP_PATH, heal: 25, soundPath: '/Engine/EditorSounds/Notifications/CompileSuccess_Cue' }, expected: 'success', assertions: [{ path: 'structuredContent.result.compiled', equals: true, label: 'the Blueprint compiles with it' }] },
   { scenario: 'ADD: add_behaviour pickup that counts', toolName: 'manage_blueprint', arguments: { action: 'add_behaviour', behaviour: 'pickup', blueprintPath: BP_PATH, collectorClass: BP_PATH, variableName: 'SpawnPower', amount: 2 }, expected: 'success', assertions: [{ path: 'structuredContent.result.compiled', equals: true, label: 'the Blueprint compiles with it' }] },
@@ -277,6 +290,24 @@ const testCases = [
   { scenario: 'ADD: add_behaviour game_over shows a game over and restarts the level', toolName: 'manage_blueprint', arguments: { action: 'add_behaviour', behaviour: 'game_over', blueprintPath: `${TEST_FOLDER}/BP_GameOverPawn_${ts}`, message: 'YOU DIED', restartDelay: 4 }, expected: 'success', assertions: [{ path: 'structuredContent.result.compiled', equals: true, label: 'the pawn compiles with its game over' }, { path: 'structuredContent.result.widgetPath', equals: `${TEST_FOLDER}/UI/WBP_GameOver`, label: 'the game over screen is made next to it' }, { path: 'structuredContent.result.functions.0', equals: 'RestartLevel', label: 'RestartLevel is callable' }, { path: 'structuredContent.result.warningCount', equals: 0, label: 'no node was pruned off the exec chain (GetCurrentLevelName has exec pins)' }] },
   { scenario: 'ADD: add_behaviour game_over again with its screen and text named', toolName: 'manage_blueprint', arguments: { action: 'add_behaviour', behaviour: 'game_over', blueprintPath: `${TEST_FOLDER}/BP_GameOverPawn_${ts}`, widgetPath: `${TEST_FOLDER}/UI/WBP_GameOver`, textName: 'GameOver_Text', restartDelay: 0 }, expected: 'success', assertions: [{ path: 'structuredContent.result.compiled', equals: true, label: 'the re-run compiles' }] },
   { scenario: 'ERROR: add_behaviour game_over refuses a pawn that respawns when it dies', toolName: 'manage_blueprint', arguments: { action: 'add_behaviour', behaviour: 'game_over', blueprintPath: `${TEST_FOLDER}/BP_CreateDotted_${ts}` }, expected: 'error|respawns' },
+  { scenario: 'ADD: add_behaviour damage_on_touch with knockback', toolName: 'manage_blueprint', arguments: { action: 'add_behaviour', behaviour: 'damage_on_touch', blueprintPath: BP_PATH, damage: 15, knockback: 600 }, expected: 'success', assertions: [{ path: 'structuredContent.result.compiled', equals: true, label: 'the actor compiles with its knockback' }] },
+  { scenario: 'ADD: add_behaviour countdown gives the pawn a time limit', toolName: 'manage_blueprint', arguments: { action: 'add_behaviour', behaviour: 'countdown', blueprintPath: `${TEST_FOLDER}/BP_GameOverPawn_${ts}`, seconds: 30, killAtZero: true }, expected: 'success', assertions: [{ path: 'structuredContent.result.compiled', equals: true, label: 'the pawn compiles with its countdown' }, { path: 'structuredContent.result.dispatchers.0', equals: 'OnTimeUp', label: 'OnTimeUp can be bound' }] },
+  { scenario: 'ERROR: add_behaviour countdown needs at least a second', toolName: 'manage_blueprint', arguments: { action: 'add_behaviour', behaviour: 'countdown', blueprintPath: `${TEST_FOLDER}/BP_GameOverPawn_${ts}`, seconds: 0 }, expected: 'error|seconds' },
+  { scenario: 'ADD: add_behaviour turret makes an actor fire at the player', toolName: 'manage_blueprint', arguments: { action: 'add_behaviour', behaviour: 'turret', blueprintPath: BP_PATH, projectileClass: '/Script/Engine.Actor', projectileSpeed: 2000, fireRate: 30, range: 1500 }, expected: 'success', assertions: [{ path: 'structuredContent.result.compiled', equals: true, label: 'the actor compiles with its turret' }, { path: 'structuredContent.result.warningCount', equals: 0, label: 'every node is on the exec chain' }] },
+  { scenario: 'ADD: add_behaviour turret again with another projectile class', toolName: 'manage_blueprint', arguments: { action: 'add_behaviour', behaviour: 'turret', blueprintPath: BP_PATH, projectileClass: '/Script/Engine.StaticMeshActor' }, expected: 'success', assertions: [{ path: 'structuredContent.result.variables.0.status', equals: 'redefaulted', label: 'ProjectileClass takes the new class' }] },
+  { scenario: 'ERROR: add_behaviour turret needs a range above 0', toolName: 'manage_blueprint', arguments: { action: 'add_behaviour', behaviour: 'turret', blueprintPath: BP_PATH, projectileClass: '/Script/Engine.Actor', range: 0 }, expected: 'error|range' },
+  { scenario: 'ERROR: add_behaviour turret needs an actor class to shoot', toolName: 'manage_blueprint', arguments: { action: 'add_behaviour', behaviour: 'turret', blueprintPath: BP_PATH, projectileClass: '/Script/Engine.StaticMesh' }, expected: 'error|not an actor class' },
+  { scenario: 'ADD: add_behaviour falling_platform makes an actor drop under a pawn', toolName: 'manage_blueprint', arguments: { action: 'add_behaviour', behaviour: 'falling_platform', blueprintPath: BP_PATH, fallDelay: 0.8, respawnTime: 4 }, expected: 'success', assertions: [{ path: 'structuredContent.result.compiled', equals: true, label: 'the actor compiles with its fall' }, { path: 'structuredContent.result.functions.0', equals: 'PlatformFall', label: 'PlatformFall is callable' }, { path: 'structuredContent.result.warningCount', equals: 0, label: 'every node is on the exec chain' }] },
+  { scenario: 'ERROR: add_behaviour falling_platform needs a delay of 0 or more', toolName: 'manage_blueprint', arguments: { action: 'add_behaviour', behaviour: 'falling_platform', blueprintPath: BP_PATH, fallDelay: -1 }, expected: 'error|fallDelay' },
+  { scenario: 'ADD: add_behaviour moving_platform makes an actor travel a route', toolName: 'manage_blueprint', arguments: { action: 'add_behaviour', behaviour: 'moving_platform', blueprintPath: BP_PATH, points: [[0, 0, 300], [0, 0, 0]], speed: 250, waitTime: 1.5 }, expected: 'success', assertions: [{ path: 'structuredContent.result.compiled', equals: true, label: 'the actor compiles with its route' }, { path: 'structuredContent.result.warningCount', equals: 0, label: 'every node is on the exec chain' }] },
+  { scenario: 'ERROR: add_behaviour moving_platform needs a speed above 0', toolName: 'manage_blueprint', arguments: { action: 'add_behaviour', behaviour: 'moving_platform', blueprintPath: BP_PATH, speed: 0 }, expected: 'error|speed' },
+  { scenario: 'ADD: add_behaviour stomp takes over the damage on touch', toolName: 'manage_blueprint', arguments: { action: 'add_behaviour', behaviour: 'stomp', blueprintPath: BP_PATH, bounceSpeed: 700, sideDamage: 15 }, expected: 'success', assertions: [{ path: 'structuredContent.result.compiled', equals: true, label: 'the actor compiles with its stomp' }, { path: 'structuredContent.result.replaced.0', equals: 'DamageOnTouch', label: 'the damage on touch is taken over' }, { path: 'structuredContent.result.warningCount', equals: 0, label: 'every node is on the exec chain' }] },
+  { scenario: 'ERROR: add_behaviour stomp needs a bounce above 0', toolName: 'manage_blueprint', arguments: { action: 'add_behaviour', behaviour: 'stomp', blueprintPath: BP_PATH, bounceSpeed: 0 }, expected: 'error|bounceSpeed' },
+  { scenario: 'ADD: add_behaviour hint shows a message while the player is in the area', toolName: 'manage_blueprint', arguments: { action: 'add_behaviour', behaviour: 'hint', blueprintPath: BP_PATH, message: 'Press Space to jump', hideAfter: 3 }, expected: 'success', assertions: [{ path: 'structuredContent.result.compiled', equals: true, label: 'the actor compiles with its hint' }, { path: 'structuredContent.result.widgetPath', equals: `${TEST_FOLDER}/UI/WBP_Hint`, label: 'the hint widget is made next to it' }, { path: 'structuredContent.result.functions.0', equals: 'HideHint', label: 'HideHint is callable' }, { path: 'structuredContent.result.warningCount', equals: 0, label: 'every node is on the exec chain' }] },
+  { scenario: 'ADD: add_behaviour hint again with its widget and text named', toolName: 'manage_blueprint', arguments: { action: 'add_behaviour', behaviour: 'hint', blueprintPath: BP_PATH, message: 'Mind the gap', widgetPath: `${TEST_FOLDER}/UI/WBP_Hint`, textName: 'Hint_Text' }, expected: 'success', assertions: [{ path: 'structuredContent.result.compiled', equals: true, label: 'the re-run compiles' }] },
+  { scenario: 'ERROR: add_behaviour hint needs a message', toolName: 'manage_blueprint', arguments: { action: 'add_behaviour', behaviour: 'hint', blueprintPath: BP_PATH, message: ' ' }, expected: 'error|message' },
+  { scenario: 'ADD: add_behaviour explosive makes an actor with health blow up when it dies', toolName: 'manage_blueprint', arguments: { action: 'add_behaviour', behaviour: 'explosive', blueprintPath: BP_PATH, explosionDamage: 80, explosionRadius: 500 }, expected: 'success', assertions: [{ path: 'structuredContent.result.compiled', equals: true, label: 'the actor compiles with its blast' }, { path: 'structuredContent.result.warningCount', equals: 0, label: 'every node is on the exec chain' }] },
+  { scenario: 'ERROR: add_behaviour explosive needs a Niagara system for its effect', toolName: 'manage_blueprint', arguments: { action: 'add_behaviour', behaviour: 'explosive', blueprintPath: BP_PATH, effectPath: '/Engine/BasicShapes/Cube' }, expected: 'error|Niagara' },
   { scenario: 'ERROR: add_behaviour respawn needs a pawn', toolName: 'manage_blueprint', arguments: { action: 'add_behaviour', behaviour: 'respawn', blueprintPath: BP_PATH }, expected: 'error|Pawn' },
   { scenario: 'CREATE: GetAllActorsOfClass takes targetClass as the class it looks for', toolName: 'manage_blueprint', arguments: { action: 'create_node', blueprintPath: BP_PATH, nodeType: 'CallFunction', memberName: 'GetAllActorsOfClass', memberClass: 'GameplayStatics', targetClass: 'Pawn', graphName: 'EventGraph', posX: 0, posY: 2400 }, expected: 'success' },
   { scenario: 'CREATE: create_node takes a function by the name the editor shows (AddLocalRotation is K2_AddLocalRotation)', toolName: 'manage_blueprint', arguments: { action: 'create_node', blueprintPath: BP_PATH, nodeType: 'CallFunction', memberName: 'AddLocalRotation', memberClass: 'SceneComponent', graphName: 'EventGraph', posX: 1440, posY: 2400 }, expected: 'success' },
@@ -348,6 +379,9 @@ const testCases = [
   // === INFO: list_node_types (no blueprint needed) ===
   { scenario: 'INFO: list_node_types', toolName: 'manage_blueprint', arguments: { action: 'list_node_types' }, expected: 'success' },
   { scenario: 'INFO: list_node_types filter finds an animation node class', toolName: 'manage_blueprint', arguments: { action: 'list_node_types', filter: 'TwoBoneIK' }, expected: 'success', assertions: [{ path: 'structuredContent.result.count', gte: 1, label: 'AnimGraphNode_TwoBoneIK is listed' }] },
+  { scenario: 'INFO: find_functions finds a function by what it does', toolName: 'manage_blueprint', arguments: { action: 'find_functions', words: 'game time' }, expected: 'success', assertions: [{ path: 'structuredContent.result.functions.0.memberName', equals: 'GetGameTimeInSeconds', label: 'the game clock comes first' }, { path: 'structuredContent.result.functions.0.memberClass', equals: '/Script/Engine.KismetSystemLibrary', label: 'with the class create_node takes' }] },
+  { scenario: 'INFO: find_functions lists what a class can call on itself', toolName: 'manage_blueprint', arguments: { action: 'find_functions', words: 'jump', memberClass: 'Character' }, expected: 'success', assertions: [{ path: 'structuredContent.result.functions.0.target', equals: 'Character', label: 'a Character function' }] },
+  { scenario: 'ERROR: find_functions needs words', toolName: 'manage_blueprint', arguments: { action: 'find_functions', words: 'the a' }, expected: 'error|words' },
 
   // === CONFIG: set_pin_default_value (blueprintPath + nodeGuid + pinName + value) ===
   // Uses the real nodeId captured from the first Sequence node.
@@ -369,6 +403,173 @@ const testCases = [
     { edit: 'create_node', id: 'print', nodeType: 'CallFunction', memberName: 'PrintString', pinDefaults: { InString: 'batched' } },
     { edit: 'connect_pins', from: '$delay.then', to: '$print.execute' },
   ] }, expected: 'success', assertions: [{ path: 'structuredContent.result.succeeded', equals: 3, label: 'build_graph ran all three steps' }, { path: 'structuredContent.receipt.handles.0.kind', equals: 'asset', label: 'the receipt names the Blueprint the batch edited' }, { path: 'structuredContent.receipt.changes', length: 1, label: 'and lists it once as changed' }] },
+
+  // === BATCH: dryRun checks a batch and runs none of it ===
+  { scenario: 'BATCH: build_graph dryRun checks every step and runs none', toolName: 'manage_blueprint', arguments: { action: 'build_graph', blueprintPath: BP_PATH, graphName: 'EventGraph', dryRun: true, operations: [
+    { edit: 'add_variable', variableName: 'DryRunOnly', variableType: 'int' },
+    { edit: 'create_node', id: 'dryGet', nodeType: 'VariableGet', memberName: 'DryRunOnly' },
+    { edit: 'create_node', id: 'dryPrint', nodeType: 'CallFunction', memberName: 'PrintString' },
+    { edit: 'connect_pins', from: '$dryGet.DryRunOnly', to: '$dryPrint.InString' },
+  ] }, expected: 'success', assertions: [{ path: 'structuredContent.result.dryRun', equals: true, label: 'nothing ran' }, { path: 'structuredContent.result.checked', equals: 4, label: 'every step was checked' }, { path: 'structuredContent.result.wouldCreate', equals: 2, label: 'the two nodes it would make' }] },
+  { scenario: 'ERROR: the dryRun added no variable, so a real step reading it is refused', toolName: 'manage_blueprint', arguments: { action: 'build_graph', blueprintPath: BP_PATH, graphName: 'EventGraph', operations: [{ edit: 'create_node', nodeType: 'VariableGet', memberName: 'DryRunOnly' }] }, expected: 'error|DryRunOnly', assertions: [{ path: 'structuredContent.errorCode', equals: 'VARIABLE_NOT_FOUND', label: 'the variable the dry run named does not exist' }] },
+  { scenario: 'ERROR: build_graph dryRun names every $id no earlier step defines at once', toolName: 'manage_blueprint', arguments: { action: 'build_graph', blueprintPath: BP_PATH, graphName: 'EventGraph', dryRun: true, operations: [
+    { edit: 'create_node', id: 'gate', nodeType: 'Branch' },
+    { edit: 'connect_pins', from: '$missingA.then', to: '$gate.execute' },
+    { edit: 'connect_pins', from: '$gate.then', to: '$missingB.execute' },
+  ] }, expected: 'error|2 step(s) would fail', assertions: [{ path: 'structuredContent.errorCode', equals: 'INVALID_OPERATION', label: 'an id no earlier step defines' }, { path: 'structuredContent.message', includes: 'first operations[1]', label: 'both found in one reply, the first named' }] },
+
+  // === BATCH: a link between nodes of a function made in the same batch needs no graphName ===
+  { scenario: 'BATCH: build_graph links a new function body without naming its graph', toolName: 'manage_blueprint', arguments: { action: 'build_graph', blueprintPath: BP_PATH, graphName: 'EventGraph', operations: [
+    { edit: 'add_function', id: 'fn', functionName: 'SayReady' },
+    { edit: 'create_node', id: 'say', graphName: 'SayReady', nodeType: 'CallFunction', memberName: 'PrintString', pinDefaults: { InString: 'ready' } },
+    { edit: 'connect_pins', from: '$fn.then', to: '$say.execute' },
+  ] }, expected: 'success', assertions: [{ path: 'structuredContent.result.succeeded', equals: 3, label: 'the link was made in the function graph' }] },
+
+  // === BATCH: graphs the compiler accepts that misbehave are named with the fix, each on its own Blueprint ===
+  { scenario: 'ADD: create a Blueprint for the stale value check', toolName: 'manage_blueprint', arguments: { action: 'create', name: `BP_StaleCheck_${ts}`, savePath: TEST_FOLDER, parentClass: '/Script/Engine.Actor' }, expected: 'success' },
+  { scenario: 'BATCH: build_graph warns about a value worked on twice', toolName: 'manage_blueprint', arguments: { action: 'build_graph', blueprintPath: `${TEST_FOLDER}/BP_StaleCheck_${ts}`, graphName: 'EventGraph', operations: [
+    { edit: 'add_variable', variableName: 'StaleCount', variableType: 'int' },
+    { edit: 'create_node', id: 'go', nodeType: 'CustomEvent', customEventName: 'CountUp' },
+    { edit: 'create_node', id: 'get', nodeType: 'VariableGet', memberName: 'StaleCount' },
+    { edit: 'create_node', id: 'add', nodeType: 'CallFunction', memberName: 'Add_IntInt', memberClass: 'KismetMathLibrary', pinDefaults: { B: 1 } },
+    { edit: 'create_node', id: 'set', nodeType: 'VariableSet', memberName: 'StaleCount' },
+    { edit: 'create_node', id: 'show', nodeType: 'CallFunction', memberName: 'Conv_IntToString', memberClass: 'KismetStringLibrary' },
+    { edit: 'create_node', id: 'print', nodeType: 'CallFunction', memberName: 'PrintString' },
+    { edit: 'connect_pins', from: '$get.StaleCount', to: '$add.A' },
+    { edit: 'connect_pins', from: '$add.ReturnValue', to: '$set.StaleCount' },
+    { edit: 'connect_pins', from: '$go.then', to: '$set.execute' },
+    { edit: 'connect_pins', from: '$add.ReturnValue', to: '$show.InInt' },
+    { edit: 'connect_pins', from: '$show.ReturnValue', to: '$print.InString' },
+    { edit: 'connect_pins', from: '$set.then', to: '$print.execute' },
+  ] }, expected: 'success', assertions: [{ path: 'structuredContent.receipt.warnings.0', includes: 'Output_Get', label: 'the receipt names the Set node pin to read instead' }] },
+  { scenario: 'ADD: create a Blueprint for the random value check', toolName: 'manage_blueprint', arguments: { action: 'create', name: `BP_RandomCheck_${ts}`, savePath: TEST_FOLDER, parentClass: '/Script/Engine.Actor' }, expected: 'success' },
+  { scenario: 'BATCH: build_graph warns about one random value read twice', toolName: 'manage_blueprint', arguments: { action: 'build_graph', blueprintPath: `${TEST_FOLDER}/BP_RandomCheck_${ts}`, graphName: 'EventGraph', operations: [
+    { edit: 'add_variable', variableName: 'Roll', variableType: 'int' },
+    { edit: 'create_node', id: 'go', nodeType: 'CustomEvent', customEventName: 'RollDie' },
+    { edit: 'create_node', id: 'pick', nodeType: 'CallFunction', memberName: 'RandomInteger', memberClass: 'KismetMathLibrary', pinDefaults: { Max: 6 } },
+    { edit: 'create_node', id: 'set', nodeType: 'VariableSet', memberName: 'Roll' },
+    { edit: 'create_node', id: 'show', nodeType: 'CallFunction', memberName: 'Conv_IntToString', memberClass: 'KismetStringLibrary' },
+    { edit: 'create_node', id: 'print', nodeType: 'CallFunction', memberName: 'PrintString' },
+    { edit: 'connect_pins', from: '$go.then', to: '$set.execute' },
+    { edit: 'connect_pins', from: '$pick.ReturnValue', to: '$set.Roll' },
+    { edit: 'connect_pins', from: '$pick.ReturnValue', to: '$show.InInt' },
+    { edit: 'connect_pins', from: '$show.ReturnValue', to: '$print.InString' },
+    { edit: 'connect_pins', from: '$set.then', to: '$print.execute' },
+  ] }, expected: 'success', assertions: [{ path: 'structuredContent.receipt.warnings.0', includes: 'store it with a Set node first', label: 'the receipt says each reader gets its own random value' }] },
+  { scenario: 'ADD: create a Blueprint for the timer name check', toolName: 'manage_blueprint', arguments: { action: 'create', name: `BP_TimerCheck_${ts}`, savePath: TEST_FOLDER, parentClass: '/Script/Engine.Actor' }, expected: 'success' },
+  { scenario: 'BATCH: build_graph warns about a timer that names nothing', toolName: 'manage_blueprint', arguments: { action: 'build_graph', blueprintPath: `${TEST_FOLDER}/BP_TimerCheck_${ts}`, graphName: 'EventGraph', operations: [
+    { edit: 'create_node', id: 'go', nodeType: 'CustomEvent', customEventName: 'StartTicking' },
+    { edit: 'create_node', id: 'tick', nodeType: 'CustomEvent', customEventName: 'Tick_Once' },
+    { edit: 'create_node', id: 'timer', nodeType: 'CallFunction', memberName: 'K2_SetTimer', memberClass: 'KismetSystemLibrary', pinDefaults: { FunctionName: 'TickOnce', Time: 1, bLooping: true } },
+    { edit: 'connect_pins', from: '$go.then', to: '$timer.execute' },
+  ] }, expected: 'success', assertions: [{ path: 'structuredContent.receipt.warnings.0', includes: 'never runs', label: 'the receipt says the misnamed timer never runs' }] },
+  { scenario: 'ADD: create a Blueprint for the in-place change check', toolName: 'manage_blueprint', arguments: { action: 'create', name: `BP_MapCheck_${ts}`, savePath: TEST_FOLDER, parentClass: '/Script/Engine.Actor' }, expected: 'success' },
+  { scenario: 'BATCH: build_graph warns about a map changed in place and read again', toolName: 'manage_blueprint', arguments: { action: 'build_graph', blueprintPath: `${TEST_FOLDER}/BP_MapCheck_${ts}`, graphName: 'EventGraph', operations: [
+    { edit: 'add_variable', variableName: 'Items', variableType: 'Map<Name,Integer>' },
+    { edit: 'create_node', id: 'evt', nodeType: 'CustomEvent', customEventName: 'AddItem', parameters: [{ name: 'ItemName', type: 'name' }, { name: 'Count', type: 'int' }] },
+    { edit: 'create_node', id: 'items', nodeType: 'VariableGet', memberName: 'Items' },
+    { edit: 'create_node', id: 'find', nodeType: 'CallFunction', memberName: 'Map_Find', memberClass: '/Script/Engine.BlueprintMapLibrary' },
+    { edit: 'create_node', id: 'sum', nodeType: 'CallFunction', memberName: 'Add_IntInt', memberClass: 'KismetMathLibrary' },
+    { edit: 'create_node', id: 'put', nodeType: 'CallFunction', memberName: 'Map_Add', memberClass: '/Script/Engine.BlueprintMapLibrary' },
+    { edit: 'create_node', id: 'show', nodeType: 'CallFunction', memberName: 'Conv_IntToString', memberClass: 'KismetStringLibrary' },
+    { edit: 'create_node', id: 'print', nodeType: 'CallFunction', memberName: 'PrintString' },
+    { edit: 'connect_pins', from: '$items.Items', to: '$find.TargetMap' },
+    { edit: 'connect_pins', from: '$evt.ItemName', to: '$find.Key' },
+    { edit: 'connect_pins', from: '$find.Value', to: '$sum.A' },
+    { edit: 'connect_pins', from: '$evt.Count', to: '$sum.B' },
+    { edit: 'connect_pins', from: '$evt.then', to: '$put.execute' },
+    { edit: 'connect_pins', from: '$items.Items', to: '$put.TargetMap' },
+    { edit: 'connect_pins', from: '$evt.ItemName', to: '$put.Key' },
+    { edit: 'connect_pins', from: '$sum.ReturnValue', to: '$put.Value' },
+    { edit: 'connect_pins', from: '$sum.ReturnValue', to: '$show.InInt' },
+    { edit: 'connect_pins', from: '$show.ReturnValue', to: '$print.InString' },
+    { edit: 'connect_pins', from: '$put.then', to: '$print.execute' },
+  ] }, expected: 'success', assertions: [{ path: 'structuredContent.receipt.warnings.0', includes: 'changes Items in place', label: 'the receipt names the node that changes the map in place' }] },
+  { scenario: 'ADD: create a Blueprint for the loop wait check', toolName: 'manage_blueprint', arguments: { action: 'create', name: `BP_LoopCheck_${ts}`, savePath: TEST_FOLDER, parentClass: '/Script/Engine.Actor' }, expected: 'success' },
+  { scenario: 'BATCH: build_graph warns about a delay inside a loop body', toolName: 'manage_blueprint', arguments: { action: 'build_graph', blueprintPath: `${TEST_FOLDER}/BP_LoopCheck_${ts}`, graphName: 'EventGraph', operations: [
+    { edit: 'create_node', id: 'go', nodeType: 'CustomEvent', customEventName: 'SpawnWave' },
+    { edit: 'create_node', id: 'loop', nodeType: 'ForLoop', pinDefaults: { FirstIndex: 1, LastIndex: 3 } },
+    { edit: 'create_node', id: 'wait', nodeType: 'CallFunction', memberName: 'Delay', memberClass: 'KismetSystemLibrary', pinDefaults: { Duration: 1 } },
+    { edit: 'create_node', id: 'print', nodeType: 'CallFunction', memberName: 'PrintString' },
+    { edit: 'connect_pins', from: '$go.then', to: '$loop.execute' },
+    { edit: 'connect_pins', from: '$loop.LoopBody', to: '$wait.execute' },
+    { edit: 'connect_pins', from: '$wait.then', to: '$print.execute' },
+  ] }, expected: 'success', assertions: [{ path: 'structuredContent.receipt.warnings.0', includes: 'waits inside the loop body', label: 'the receipt says the delay in the loop waits once' }] },
+  { scenario: 'ADD: create a Blueprint for the every-frame timer check', toolName: 'manage_blueprint', arguments: { action: 'create', name: `BP_TickCheck_${ts}`, savePath: TEST_FOLDER, parentClass: '/Script/Engine.Actor' }, expected: 'success' },
+  { scenario: 'BATCH: build_graph warns about a timer set on every frame', toolName: 'manage_blueprint', arguments: { action: 'build_graph', blueprintPath: `${TEST_FOLDER}/BP_TickCheck_${ts}`, graphName: 'EventGraph', operations: [
+    { edit: 'create_node', id: 'tick', nodeType: 'Event', eventName: 'Tick' },
+    { edit: 'create_node', id: 'done', nodeType: 'CustomEvent', customEventName: 'Fired' },
+    { edit: 'create_node', id: 'timer', nodeType: 'CallFunction', memberName: 'K2_SetTimerDelegate', memberClass: 'KismetSystemLibrary', pinDefaults: { Time: 1 } },
+    { edit: 'connect_pins', from: '$tick.then', to: '$timer.execute' },
+    { edit: 'connect_pins', from: '$done.OutputDelegate', to: '$timer.Delegate' },
+  ] }, expected: 'success', assertions: [{ path: 'structuredContent.receipt.warnings.0', includes: 'runs on every frame', label: 'the receipt says the timer starts over every frame' }] },
+  // An event's own value read after a wait holds whatever its latest run wrote; a variable set before the wait does not.
+  { scenario: 'ADD: create a Blueprint for the value-after-a-wait check', toolName: 'manage_blueprint', arguments: { action: 'create', name: `BP_WaitCheck_${ts}`, savePath: TEST_FOLDER, parentClass: '/Script/Engine.Actor' }, expected: 'success' },
+  { scenario: 'BATCH: build_graph warns about an overlap value read after a delay', toolName: 'manage_blueprint', arguments: { action: 'build_graph', blueprintPath: `${TEST_FOLDER}/BP_WaitCheck_${ts}`, graphName: 'EventGraph', operations: [
+    { edit: 'create_node', id: 'hit', nodeType: 'Event', eventName: 'ActorBeginOverlap' },
+    { edit: 'create_node', id: 'wait', nodeType: 'CallFunction', memberName: 'Delay', memberClass: 'KismetSystemLibrary', pinDefaults: { Duration: 1 } },
+    { edit: 'create_node', id: 'kill', nodeType: 'CallFunction', memberName: 'K2_DestroyActor', memberClass: 'Actor' },
+    { edit: 'connect_pins', from: '$hit.then', to: '$wait.execute' },
+    { edit: 'connect_pins', from: '$wait.then', to: '$kill.execute' },
+    { edit: 'connect_pins', from: '$hit.OtherActor', to: '$kill.self' },
+  ] }, expected: 'success', assertions: [{ path: 'structuredContent.receipt.warnings.0', includes: 'after the wait', label: 'the receipt says the overlapping actor is read after the wait' }] },
+  { scenario: 'ADD: create a Blueprint that stores the value before the wait', toolName: 'manage_blueprint', arguments: { action: 'create', name: `BP_WaitStore_${ts}`, savePath: TEST_FOLDER, parentClass: '/Script/Engine.Actor' }, expected: 'success' },
+  { scenario: 'BATCH: build_graph warns about a variable every run sets before the delay', toolName: 'manage_blueprint', arguments: { action: 'build_graph', blueprintPath: `${TEST_FOLDER}/BP_WaitStore_${ts}`, graphName: 'EventGraph', operations: [
+    { edit: 'add_variable', variableName: 'Target', variableType: 'Actor' },
+    { edit: 'create_node', id: 'hit', nodeType: 'Event', eventName: 'ActorBeginOverlap' },
+    { edit: 'create_node', id: 'keep', nodeType: 'VariableSet', memberName: 'Target' },
+    { edit: 'create_node', id: 'wait', nodeType: 'CallFunction', memberName: 'Delay', memberClass: 'KismetSystemLibrary', pinDefaults: { Duration: 1 } },
+    { edit: 'create_node', id: 'target', nodeType: 'VariableGet', memberName: 'Target' },
+    { edit: 'create_node', id: 'kill', nodeType: 'CallFunction', memberName: 'K2_DestroyActor', memberClass: 'Actor' },
+    { edit: 'connect_pins', from: '$hit.then', to: '$keep.execute' },
+    { edit: 'connect_pins', from: '$hit.OtherActor', to: '$keep.Target' },
+    { edit: 'connect_pins', from: '$keep.then', to: '$wait.execute' },
+    { edit: 'connect_pins', from: '$wait.then', to: '$kill.execute' },
+    { edit: 'connect_pins', from: '$target.Target', to: '$kill.self' },
+  ] }, expected: 'success', assertions: [{ path: 'structuredContent.receipt.warnings.0', includes: 'reads Target after the wait', label: 'a variable every run sets is written again by the next run too' }] },
+  { scenario: 'ADD: create a Blueprint that writes the value only in the run that starts the wait', toolName: 'manage_blueprint', arguments: { action: 'create', name: `BP_WaitGate_${ts}`, savePath: TEST_FOLDER, parentClass: '/Script/Engine.Actor' }, expected: 'success' },
+  { scenario: 'BATCH: build_graph does not warn when a flag keeps later runs from writing the value', toolName: 'manage_blueprint', arguments: { action: 'build_graph', blueprintPath: `${TEST_FOLDER}/BP_WaitGate_${ts}`, graphName: 'EventGraph', operations: [
+    { edit: 'add_variable', variableName: 'Target', variableType: 'Actor' },
+    { edit: 'add_variable', variableName: 'bBusy', variableType: 'bool' },
+    { edit: 'create_node', id: 'hit', nodeType: 'Event', eventName: 'ActorBeginOverlap' },
+    { edit: 'create_node', id: 'busy', nodeType: 'VariableGet', memberName: 'bBusy' },
+    { edit: 'create_node', id: 'gate', nodeType: 'Branch' },
+    { edit: 'create_node', id: 'lock', nodeType: 'VariableSet', memberName: 'bBusy', pinDefaults: { bBusy: true } },
+    { edit: 'create_node', id: 'keep', nodeType: 'VariableSet', memberName: 'Target' },
+    { edit: 'create_node', id: 'wait', nodeType: 'CallFunction', memberName: 'Delay', memberClass: 'KismetSystemLibrary', pinDefaults: { Duration: 1 } },
+    { edit: 'create_node', id: 'target', nodeType: 'VariableGet', memberName: 'Target' },
+    { edit: 'create_node', id: 'kill', nodeType: 'CallFunction', memberName: 'K2_DestroyActor', memberClass: 'Actor' },
+    { edit: 'connect_pins', from: '$hit.then', to: '$gate.execute' },
+    { edit: 'connect_pins', from: '$busy.bBusy', to: '$gate.Condition' },
+    { edit: 'connect_pins', from: '$gate.else', to: '$lock.execute' },
+    { edit: 'connect_pins', from: '$lock.then', to: '$keep.execute' },
+    { edit: 'connect_pins', from: '$hit.OtherActor', to: '$keep.Target' },
+    { edit: 'connect_pins', from: '$keep.then', to: '$wait.execute' },
+    { edit: 'connect_pins', from: '$wait.then', to: '$kill.execute' },
+    { edit: 'connect_pins', from: '$target.Target', to: '$kill.self' },
+  ] }, expected: 'success', assertions: [{ path: 'structuredContent.receipt.warnings', exists: false, label: 'only the run that starts the wait writes Target, so nothing is raised' }] },
+  // A Set wired to a spawned copy writes the copy's variable: reading this one's after it is no second step.
+  { scenario: 'ADD: create a Blueprint that copies a value into a spawned copy', toolName: 'manage_blueprint', arguments: { action: 'create', name: `BP_CopyCheck_${ts}`, savePath: TEST_FOLDER, parentClass: '/Script/Engine.Actor' }, expected: 'success' },
+  { scenario: 'BATCH: build_graph does not warn when the Set writes a spawned copy', toolName: 'manage_blueprint', arguments: { action: 'build_graph', blueprintPath: `${TEST_FOLDER}/BP_CopyCheck_${ts}`, graphName: 'EventGraph', operations: [
+    { edit: 'add_variable', variableName: 'HomeX', variableType: 'int' },
+    { edit: 'create_node', id: 'go', nodeType: 'CustomEvent', customEventName: 'Split' },
+    { edit: 'create_node', id: 'where', nodeType: 'CallFunction', memberName: 'GetTransform', memberClass: 'Actor' },
+    { edit: 'create_node', id: 'spawn', nodeType: 'SpawnActorFromClass', targetClass: `${TEST_FOLDER}/BP_CopyCheck_${ts}.BP_CopyCheck_${ts}_C` },
+    { edit: 'create_node', id: 'get', nodeType: 'VariableGet', memberName: 'HomeX' },
+    { edit: 'create_node', id: 'copy', nodeType: 'VariableSet', memberName: 'HomeX' },
+    { edit: 'create_node', id: 'show', nodeType: 'CallFunction', memberName: 'Conv_IntToString', memberClass: 'KismetStringLibrary' },
+    { edit: 'create_node', id: 'print', nodeType: 'CallFunction', memberName: 'PrintString' },
+    { edit: 'connect_pins', from: '$go.then', to: '$spawn.execute' },
+    { edit: 'connect_pins', from: '$where.ReturnValue', to: '$spawn.SpawnTransform' },
+    { edit: 'connect_pins', from: '$spawn.then', to: '$copy.execute' },
+    { edit: 'connect_pins', from: '$spawn.ReturnValue', to: '$copy.self' },
+    { edit: 'connect_pins', from: '$get.HomeX', to: '$copy.HomeX' },
+    { edit: 'connect_pins', from: '$get.HomeX', to: '$show.InInt' },
+    { edit: 'connect_pins', from: '$show.ReturnValue', to: '$print.InString' },
+    { edit: 'connect_pins', from: '$copy.then', to: '$print.execute' },
+  ] }, expected: 'success', assertions: [{ path: 'structuredContent.receipt.warnings', exists: false, label: "the Set writes the copy's HomeX, so the Print reads this one's unchanged" }] },
+  // An audit: every Blueprint under the folder compiled in one call, the flagged ones listed with their diagnostics.
+  { scenario: 'ACTION: compile a folder lists the Blueprints the checks flag', toolName: 'manage_blueprint', arguments: { action: 'compile', folder: TEST_FOLDER }, expected: 'success', assertions: [{ path: 'structuredContent.result.flaggedCount', gte: 3, label: 'the loop, timer and wait checks flag their Blueprints' }, { path: 'structuredContent.result.compiledCount', gte: 5, label: 'every Blueprint under the folder is compiled' }] },
 
   // === BATCH: "$entry" addresses the Construction Script's entry node without a lookup ===
   { scenario: 'BATCH: build_graph from the construction script entry', toolName: 'manage_blueprint', arguments: { action: 'build_graph', blueprintPath: BP_PATH, graphName: 'UserConstructionScript', operations: [
@@ -649,6 +850,8 @@ const testCases = [
     arguments: { action, name: `WBP_Tpl${stem}_${ts}`, path: TEST_FOLDER, ...extra },
     expected: 'success',
   }));
+  screenCases.push({ scenario: 'SCREEN: create_shop_ui with its own items, prices and currency', toolName: 'manage_blueprint', arguments: { action: 'create_shop_ui', name: `WBP_TplWares_${ts}`, path: TEST_FOLDER, currency: 'Coins', items: [{ name: 'Sword', price: 250 }, { name: 'Shield', price: 180 }] }, expected: 'success', assertions: [{ path: 'structuredContent.result.buttons', length: 3, label: 'a Buy button per item, and Close' }, { path: 'structuredContent.result.buttons.1', equals: 'Item_2_Buy', label: 'the buttons count the items in order' }] });
+  screenCases.push({ scenario: 'SCREEN: create_dialog_widget with its own line and choices', toolName: 'manage_blueprint', arguments: { action: 'create_dialog_widget', name: `WBP_TplChoice_${ts}`, path: TEST_FOLDER, text: 'Open the gate?', buttons: ['Yes', 'No'] }, expected: 'success', assertions: [{ path: 'structuredContent.result.buttons.0', equals: 'YesButton', label: 'each response is named after its label' }, { path: 'structuredContent.result.buttons', length: 2, label: 'one button per label' }] });
 
   testCases.push(
     // === SETUP ===

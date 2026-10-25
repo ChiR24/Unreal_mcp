@@ -55,7 +55,7 @@ export const COMPONENT_RECORDS: readonly CapabilityRecordSource[] = [
     action: 'remove_component',
     domain: DOMAIN,
     family: FAMILY_COMPONENT,
-    summary: 'Remove a named component from an actor.',
+    summary: 'Remove a component that was added to this actor (add_component, or by hand in the editor), by its exact name, in one undo step, leaving the level unsaved. A near miss is refused with COMPONENT_NOT_FOUND naming the closest component; a component of the actor class or its Blueprint, or the root, is refused with COMPONENT_NOT_REMOVABLE (a Blueprint one comes out with edit_scs).',
     whenToUse: ['A component must be permanently detached and removed from an actor.'],
     whenNotToUse: ['The component should only be reconfigured (use set_component_property).'],
     inputProps: { actorName: P.actorName, componentName: P.componentName },

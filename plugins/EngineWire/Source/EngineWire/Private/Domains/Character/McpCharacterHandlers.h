@@ -3,6 +3,7 @@
 #include "CoreMinimal.h"
 #include "Core/Compatibility/McpVersionCompatibility.h"
 #include "EngineWireSubsystem.h"
+#include "Foundation/BridgeHelpers/Blueprints/McpBPCompileError.h"
 #include "Foundation/BridgeHelpers/McpHelpers.h"
 #include "Core/Module/EngineWireGlobals.h"
 #include "Foundation/HandlerUtils/McpHandlerUtils.h"
@@ -45,10 +46,18 @@ UBlueprint* LoadCharacterBlueprint(UEngineWireSubsystem* Self, const FString& Re
 
 // Compiles (so added variables are usable, dogfood #39) and saves one configure_* edit.
 // Every configure call used to compile only, answer "configured", and lose the change
-// when the editor closed. False once the SAVE_FAILED error has been sent.
+// when the editor closed. False once the COMPILE_FAILED or SAVE_FAILED error has been sent;
+// a Blueprint that does not compile is not saved (it was, and the reply said configured).
 inline bool CommitCharacterEdit(UEngineWireSubsystem* Self, const FString& RequestId, UBlueprint* Blueprint, FCharacterSocket Socket)
 {
-    McpSafeCompileBlueprint(Blueprint);
+    FString CompileError;
+    if (!McpCompileBlueprintWithError(Blueprint, CompileError))
+    {
+        Self->SendAutomationError(Socket, RequestId, FString::Printf(TEXT("%s was changed in the editor but does not compile, so "
+            "it was NOT saved: %s"), *Blueprint->GetPathName(), CompileError.IsEmpty() ? TEXT("the compiler gave no reason") : *CompileError),
+            TEXT("COMPILE_FAILED"));
+        return false;
+    }
     if (McpSafeAssetSave(Blueprint))
     {
         return true;

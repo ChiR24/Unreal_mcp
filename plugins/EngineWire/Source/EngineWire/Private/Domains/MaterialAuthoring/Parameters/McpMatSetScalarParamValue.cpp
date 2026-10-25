@@ -7,8 +7,13 @@ bool HandleSetScalarParameterValue(UEngineWireSubsystem* Bridge, const FString& 
   if (SubAction != TEXT("set_scalar_parameter_value")) {
     return false;
   }
+  // A missing value used to write 0 and report success (set_material_parameter does not require one).
   double Value = 0.0;
-  Payload->TryGetNumberField(TEXT("value"), Value);
+  if (!Payload->TryGetNumberField(TEXT("value"), Value)) {
+    Bridge->SendAutomationError(Socket, RequestId,
+        TEXT("'value' must be a number for a scalar parameter; a colour goes to a vector parameter."), TEXT("INVALID_ARGUMENT"));
+    return true;
+  }
   FParameterValueWriter Writer;
   Writer.Kind = TEXT("Scalar");
   Writer.Type = EMaterialParameterType::Scalar;

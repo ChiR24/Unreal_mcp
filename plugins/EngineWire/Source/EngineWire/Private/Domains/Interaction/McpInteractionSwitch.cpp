@@ -10,6 +10,15 @@ bool HandleSwitchAction(
     TSharedPtr<FMcpBridgeWebSocket> RequestingSocket)
 {
     const FString SwitchType = GetJsonStringField(Payload, TEXT("switchType"), TEXT("button"));
+    // Any other name became a toggle switch, stored and echoed as given.
+    if ((SubAction == TEXT("create_switch_actor") || SubAction == TEXT("configure_switch_properties")) &&
+        !SwitchType.Equals(TEXT("button"), ESearchCase::IgnoreCase) && !SwitchType.Equals(TEXT("lever"), ESearchCase::IgnoreCase) &&
+        !SwitchType.Equals(TEXT("pressure_plate"), ESearchCase::IgnoreCase))
+    {
+        Subsystem->SendAutomationError(RequestingSocket, RequestId, FString::Printf(TEXT("switchType must be button, lever or "
+            "pressure_plate, got '%s'. Nothing was changed."), *SwitchType), TEXT("INVALID_ARGUMENT"));
+        return true;
+    }
     if (SubAction == TEXT("create_switch_actor"))
     {
         UBlueprint* SwitchBP = CreateInteractableBlueprint(Subsystem, RequestId, RequestingSocket, Payload, TEXT("/Game/Interactables"), TEXT("switch"), {

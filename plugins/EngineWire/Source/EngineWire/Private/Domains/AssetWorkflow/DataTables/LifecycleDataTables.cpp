@@ -155,7 +155,8 @@ bool HandleDataTableAction(
         OutResult = McpHandlerUtils::CreateResultObject();
         OutResult->SetBoolField(TEXT("created"), true);
         OutResult->SetStringField(TEXT("assetPath"), PackageName + TEXT(".") + SanitizedName);
-        OutResult->SetStringField(TEXT("rowStructPath"), RowStructPath);
+        // The struct the table holds, as set_row_struct reports it, not the spelling the request used.
+        OutResult->SetStringField(TEXT("rowStructPath"), RowStruct->GetPathName());
         OutResult->SetBoolField(TEXT("hasRowStruct"), true);
         OutResult->SetBoolField(TEXT("saved"), bSaved);
         McpHandlerUtils::AddVerification(OutResult, Table);

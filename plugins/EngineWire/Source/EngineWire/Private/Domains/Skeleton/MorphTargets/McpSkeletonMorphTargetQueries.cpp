@@ -23,7 +23,6 @@ bool UEngineWireSubsystem::HandleSetMorphTargetValue(
     FString ActorName = GetJsonStringField(Payload, TEXT("actorName"));
     FString MorphTargetName = GetJsonStringField(Payload, TEXT("morphTargetName"));
     double Value = GetJsonNumberField(Payload, TEXT("value"), 0.0);
-    bool bAddMissing = GetJsonBoolField(Payload, TEXT("addMissing"), false);
 
     if (ActorName.IsEmpty() || MorphTargetName.IsEmpty())
     {
@@ -72,25 +71,24 @@ bool UEngineWireSubsystem::HandleSetMorphTargetValue(
     // UE 5.0: Use SkeletalMesh property directly
     USkeletalMesh* SkelMesh = SkelMeshComp->SkeletalMesh;
 #endif
-    if (SkelMesh)
+    // A weight for a morph the mesh lacks shows nothing; addMissing set one anyway and answered that it was set.
+    if (!SkelMesh || !SkelMesh->FindMorphTarget(FName(*MorphTargetName)))
     {
-        const bool bHasMorphTarget = SkelMesh->FindMorphTarget(FName(*MorphTargetName)) != nullptr;
-
-        if (!bHasMorphTarget && !bAddMissing)
-        {
-            SendAutomationError(RequestingSocket, RequestId,
-                FString::Printf(TEXT("Morph target '%s' not found on mesh"), *MorphTargetName),
-                TEXT("MORPH_TARGET_NOT_FOUND"));
-            return true;
-        }
+        SendAutomationError(RequestingSocket, RequestId,
+            SkelMesh ? FString::Printf(TEXT("Morph target '%s' not found on %s"), *MorphTargetName, *SkelMesh->GetName())
+                     : FString::Printf(TEXT("%s has no skeletal mesh"), *ActorName),
+            TEXT("MORPH_TARGET_NOT_FOUND"));
+        return true;
     }
 
     SkelMeshComp->SetMorphTarget(FName(*MorphTargetName), static_cast<float>(Value));
 
+    // The weight the component holds; a weight of 0 removes the morph's entry.
+    const float* Held = SkelMeshComp->GetMorphTargetCurves().Find(FName(*MorphTargetName));
     TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
     Result->SetStringField(TEXT("actorName"), ActorName);
     Result->SetStringField(TEXT("morphTargetName"), MorphTargetName);
-    Result->SetNumberField(TEXT("value"), Value);
+    Result->SetNumberField(TEXT("value"), Held ? *Held : 0.0f);
 
     TArray<TSharedPtr<FJsonValue>> ActiveMorphs;
     const TMap<FName, float>& MorphCurves = SkelMeshComp->GetMorphTargetCurves();
@@ -106,8 +104,9 @@ bool UEngineWireSubsystem::HandleSetMorphTargetValue(
     }
     Result->SetArrayField(TEXT("activeMorphTargets"), ActiveMorphs);
 
-    SendAutomationResponse(RequestingSocket, RequestId, true,
-        FString::Printf(TEXT("Morph target '%s' set to %.3f"), *MorphTargetName, Value), Result);
+    SendAutomationResponse(RequestingSocket, RequestId, true, Held
+        ? FString::Printf(TEXT("Morph target '%s' set to %.3f on the placed component (not saved with the level)"), *MorphTargetName, *Held)
+        : FString::Printf(TEXT("Morph target '%s' cleared"), *MorphTargetName), Result);
     return true;
 }
 

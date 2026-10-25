@@ -105,6 +105,28 @@ FString FMcpJsonRpc::BuildResponse(const TSharedPtr<FJsonValue>& Id, const TShar
 	return JsonToString(Root);
 }
 
+FString FMcpJsonRpc::BuildRateLimitError(const TSharedPtr<FJsonValue>& Id, const FString& Message, int32 RetryAfterSeconds)
+{
+	if (RetryAfterSeconds <= 0)
+	{
+		return BuildError(Id, ErrorRateLimited, Message);
+	}
+	TSharedPtr<FJsonObject> Data = MakeShared<FJsonObject>();
+	Data->SetStringField(TEXT("errorCode"), TEXT("RATE_LIMITED"));
+	Data->SetNumberField(TEXT("retryAfterSeconds"), RetryAfterSeconds);
+	return BuildError(Id, ErrorRateLimited, Message, Data);
+}
+
+TMap<FString, FString> FMcpJsonRpc::RetryAfterHeader(int32 RetryAfterSeconds)
+{
+	TMap<FString, FString> Headers;
+	if (RetryAfterSeconds > 0)
+	{
+		Headers.Add(TEXT("Retry-After"), FString::FromInt(RetryAfterSeconds));
+	}
+	return Headers;
+}
+
 FString FMcpJsonRpc::BuildError(const TSharedPtr<FJsonValue>& Id, int32 Code,
 	const FString& Message, const TSharedPtr<FJsonObject>& Data)
 {

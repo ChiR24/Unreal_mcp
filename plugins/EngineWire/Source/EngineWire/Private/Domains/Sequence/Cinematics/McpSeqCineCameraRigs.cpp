@@ -5,6 +5,7 @@
 
 #include "Foundation/BridgeHelpers/McpHelpers.h"
 #include "Foundation/Reflection/McpPropertyReflection.h"
+#include "Foundation/McpScopedEditorTransaction.h"
 
 namespace McpSequenceCinematics {
 namespace {
@@ -27,6 +28,13 @@ bool ConfigureRig(const TSharedPtr<FJsonObject> &Params, const TCHAR *Action,
         TEXT("The resolved actor does not match the requested camera rig class"),
         TEXT("RIG_CLASS_MISMATCH"));
     return true;
+  }
+  // Modify() ran after the writes with no transaction open, so undo restored nothing; the spawn and the
+  // settings are one undo step now.
+  FMcpScopedEditorTransaction Transaction(FText::FromString(bRail ? TEXT("Configure Camera Rail") : TEXT("Configure Camera Crane")),
+                                          EMcpMutationDurability::EditorStateOnly, TArray<UObject *>());
+  if (Actor) {
+    Actor->Modify();
   }
   if (!Actor) {
     Actor = SpawnActorInActiveWorld<AActor>(
@@ -58,8 +66,9 @@ bool ConfigureRig(const TSharedPtr<FJsonObject> &Params, const TCHAR *Action,
                            TEXT("INVALID_ARGUMENT"));
     return true;
   }
-  Actor->Modify();
   OutResult = MakeResult(true, Action, TEXT("Camera rig configured"));
+  OutResult->SetBoolField(TEXT("spawned"), bSpawned);
+  Transaction.DescribeInto(OutResult);
   OutResult->SetStringField(TEXT("actorName"), McpActorRef(Actor));
   OutResult->SetStringField(TEXT("actorPath"), Actor->GetPathName());
   TArray<TSharedPtr<FJsonValue>> AppliedValues;

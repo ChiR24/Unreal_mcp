@@ -112,6 +112,8 @@ const testCases = [
   { scenario: 'ACTION: quadrangulate groups triangle pairs', toolName: 'manage_geometry', arguments: { action: 'quadrangulate', actorName: 'Testplane', respectUVSeams: true, respectHardNormals: false }, expected: 'success', assertions: [{ path: 'structuredContent.result.quadsFormed', gte: 1, label: 'at least one quad PolyGroup' }] },
   { scenario: 'ACTION: quadrangulate a missing actor is refused', toolName: 'manage_geometry', arguments: { action: 'quadrangulate', actorName: `NoSuchMesh_${ts}` }, expected: 'error|ACTOR_NOT_FOUND' },
   { scenario: 'ACTION: bend', toolName: 'manage_geometry', arguments: {"action": "bend", "actorName": EDIT_ACTOR}, expected: 'success' },
+  { scenario: 'ERROR: bend refuses an axis that is not X, Y or Z', toolName: 'manage_geometry', arguments: { action: 'bend', actorName: EDIT_ACTOR, axis: 'Q' }, expected: 'error|axis must be' },
+  { scenario: 'ERROR: smooth refuses a strength of 0', toolName: 'manage_geometry', arguments: { action: 'smooth', actorName: EDIT_ACTOR, strength: 0 }, expected: 'error|iterations must be at least 1' },
   { scenario: 'ACTION: twist', toolName: 'manage_geometry', arguments: {"action": "twist", "actorName": EDIT_ACTOR}, expected: 'success' },
   { scenario: 'ACTION: taper', toolName: 'manage_geometry', arguments: {"action": "taper", "actorName": EDIT_ACTOR}, expected: 'success' },
   { scenario: 'ACTION: noise_deform', toolName: 'manage_geometry', arguments: {"action": "noise_deform", "actorName": EDIT_ACTOR}, expected: 'success' },
@@ -142,6 +144,8 @@ const testCases = [
   // === ACTION ===
   { scenario: 'ACTION: auto_uv', toolName: 'manage_geometry', arguments: {"action": "auto_uv", "actorName": EDIT_ACTOR}, expected: 'success' },
   { scenario: 'ACTION: project_uv', toolName: 'manage_geometry', arguments: {"action": "project_uv", "actorName": EDIT_ACTOR, "uvChannel": 0}, expected: 'success' },
+  { scenario: 'ACTION: project_uv tiles a texture every metre', toolName: 'manage_geometry', arguments: {"action": "project_uv", "actorName": EDIT_ACTOR, "uvChannel": 0, "tileSize": 100}, expected: 'success', assertions: [{ path: 'structuredContent.result.projectionSize.0', equals: 100, label: 'one repeat per 100 cm' }] },
+  { scenario: 'ERROR: project_uv refuses a tileSize of 0', toolName: 'manage_geometry', arguments: {"action": "project_uv", "actorName": EDIT_ACTOR, "tileSize": 0}, expected: 'error' },
   { scenario: 'ACTION: transform_uvs', toolName: 'manage_geometry', arguments: {"action": "transform_uvs", "actorName": EDIT_ACTOR, "uvChannel": 0, "uvOffset": {"u": 0.1, "v": 0.2}, "uvScale": {"u": 1.1, "v": 0.9}, "rotation": 15}, expected: 'success' },
   { scenario: 'Reset: cleanup geometry actors', toolName: 'control_actor', arguments: { action: 'delete_by_tag', tag: 'GeoTest' }, expected: 'success|not found' },
   { scenario: 'ACTION: unwrap_uv', toolName: 'manage_geometry', arguments: {"action": "unwrap_uv", "actorName": EDIT_ACTOR, "uvChannel": 0}, expected: 'success' },

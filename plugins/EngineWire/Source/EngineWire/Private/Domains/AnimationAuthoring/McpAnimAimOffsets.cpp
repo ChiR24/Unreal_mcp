@@ -18,6 +18,11 @@ TSharedPtr<FJsonObject> HandleAimOffsetActions(const FString& SubAction, const T
     }
 
     USkeleton* Skeleton = nullptr;
+    // The engine's factory makes nothing without a skeleton, so the call failed late with an empty package left behind.
+    if (SkeletonPath.IsEmpty())
+    {
+        ANIM_ERROR_RESPONSE(TEXT("skeletonPath is required: an aim offset is made for one skeleton"), TEXT("MISSING_SKELETON"));
+    }
     if (!SkeletonPath.IsEmpty())
     {
         Skeleton = LoadSkeletonFromPathAnim(SkeletonPath);
@@ -29,10 +34,11 @@ TSharedPtr<FJsonObject> HandleAimOffsetActions(const FString& SubAction, const T
 
     // Create package and asset directly to avoid UI dialogs
         FString PackagePath = Path / Name;
-        UPackage* Package = CreatePackage(*PackagePath);
+        FString CreateError, CreateCode;
+        UPackage* Package = McpCreatePackageForNewAsset(PackagePath, CreateError, CreateCode);
         if (!Package)
         {
-            ANIM_ERROR_RESPONSE(TEXT("Failed to create package"), TEXT("PACKAGE_ERROR"));
+            ANIM_ERROR_RESPONSE(CreateError, CreateCode);
         }
 
         UBlendSpaceFactoryNew* Factory = NewObject<UBlendSpaceFactoryNew>();
@@ -46,13 +52,19 @@ TSharedPtr<FJsonObject> HandleAimOffsetActions(const FString& SubAction, const T
             ANIM_ERROR_RESPONSE(TEXT("Failed to create aim offset"), TEXT("CREATE_FAILED"));
         }
 
-        // Configure default aim offset axes (Yaw and Pitch)
-        // Note: In UE 5.7+, GetBlendParameter returns const ref
-        // The factory should have set reasonable defaults, just trigger update
+        // The engine's factory leaves both axes at None, 0 to 100 (an aim offset made in the editor too), so samples
+        // added at a yaw and pitch fell outside them. Yaw -180 to 180 and Pitch -90 to 90, as aim offsets use.
+        if (!McpSetBlendSpaceAxis(NewAimOffset, 0, TEXT("Yaw"), -180.f, 180.f) ||
+            !McpSetBlendSpaceAxis(NewAimOffset, 1, TEXT("Pitch"), -90.f, 90.f))
+        {
+            ANIM_ERROR_RESPONSE(TEXT("The aim offset was created but its axes could not be set"), TEXT("AXIS_SETUP_FAILED"));
+        }
         NewAimOffset->PostEditChange();
         NewAimOffset->MarkPackageDirty();
+        // Read back after PostEditChange, so the reply shows the ranges the asset kept.
+        Response->SetArrayField(TEXT("axes"), McpBlendSpaceAxesJson(NewAimOffset, 2));
 
-        SaveAnimAsset(NewAimOffset, bSave);
+        SaveAnimAssetAndReport(NewAimOffset, bSave, Response);
 
         FString FullPath = Path / Name;
         Response->SetStringField(TEXT("assetPath"), FullPath);

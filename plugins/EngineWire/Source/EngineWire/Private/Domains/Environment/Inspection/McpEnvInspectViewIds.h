@@ -5,6 +5,7 @@
 class AActor;
 class FEditorViewportClient;
 class FJsonObject;
+class FJsonValue;
 
 // The level viewport's hit proxy map holds, per pixel, the id of what was drawn there (what a click selects by).
 // describe_view counts it per actor; capture_passes paints it as an id image.
@@ -42,4 +43,20 @@ inline double McpViewRound(double Value, double Scale)
 // under it). The level editor keeps the horizontal field of view fixed (MaintainXFOV), so ViewFOV is horizontal.
 TSharedPtr<FJsonObject> McpDescribeUnseenActor(AActor *Actor, const FEditorViewportClient &Client, const FIntPoint &Size,
                                                const TArray<FColor> &Ids, TMap<uint32, FMcpViewProxy> &Proxies);
+
+// describe_view's coveredBy for a named actor in view: the nearer actors drawn over at least 5% of its box (up to three,
+// by share of the box), the same measure hiddenBy takes for one that is not seen.
+TArray<TSharedPtr<FJsonValue>> McpCoveringActors(AActor *Actor, const FEditorViewportClient &Client, const FIntPoint &Size,
+                                                 const TArray<FColor> &Ids, TMap<uint32, FMcpViewProxy> &Proxies);
+
+// describe_view points: per normalized {x, y}, what is drawn at that pixel (drawn, actorName) and what the line from
+// the camera through it hits first against Visibility collision (hit: location, normal, distance, actorName,
+// componentName). False with OutError for a malformed point or an orthographic viewport.
+bool McpDescribeViewPoints(const FEditorViewportClient &Client, const FIntPoint &Size, const TArray<FColor> &Ids,
+                           TMap<uint32, FMcpViewProxy> &Proxies, const TArray<TSharedPtr<FJsonValue>> &Points,
+                           TArray<TSharedPtr<FJsonValue>> &OutRows, FString &OutError);
+
+// describe_view labels: the frame, at most 960 px wide, with each box drawn and numbered from 1 in list order; a
+// base64 PNG.
+FString McpLabelledViewPng(const TArray<FColor> &Colors, const FIntPoint &Size, const TArray<FIntRect> &Boxes);
 } // namespace McpEnvironmentHandlers

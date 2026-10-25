@@ -3,6 +3,7 @@
 // Declares SanitizeProjectRelativePath, used below. Included directly rather
 // than relied upon transitively so this header resolves in any unity-build blob.
 #include "Foundation/BridgeHelpers/Security/McpProjectPaths.h"
+#include "Foundation/BridgeHelpers/Blueprints/McpBPPaths.h"
 #include "ObjectTools.h"
 
 static inline bool IsValidAssetPath(const FString &Path) {
@@ -73,4 +74,26 @@ static inline bool ValidateAssetCreationPath(
   }
 
   return true;
+}
+
+// The package for a NEW asset at PackagePath (/Game/Folder/Name), or null with OutError and OutCode when that is not
+// possible: ASSET_ALREADY_EXISTS when an asset already lives there, PACKAGE_ERROR when the package cannot be made.
+// CreatePackage hands back an existing package, and the NewObject or factory call after it rebuilt that asset in
+// place (everything in it lost once saved) or, for another class, brought the editor down.
+static inline UPackage *McpCreatePackageForNewAsset(const FString &PackagePath, FString &OutError, FString &OutCode)
+{
+  const UPackage *Loaded = FindPackage(nullptr, *PackagePath);
+  if (McpAssetExists(PackagePath) || (Loaded && Loaded->FindAssetInPackage()))
+  {
+    OutError = FString::Printf(TEXT("%s already exists; pick another name or folder, or change that asset instead. Nothing was created."), *PackagePath);
+    OutCode = TEXT("ASSET_ALREADY_EXISTS");
+    return nullptr;
+  }
+  UPackage *Package = CreatePackage(*PackagePath);
+  if (!Package)
+  {
+    OutError = FString::Printf(TEXT("Could not create the package %s."), *PackagePath);
+    OutCode = TEXT("PACKAGE_ERROR");
+  }
+  return Package;
 }

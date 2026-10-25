@@ -6,16 +6,23 @@ bool UEngineWireSubsystem::HandleSequenceSetViewRange(
     const FString &RequestId, const TSharedPtr<FJsonObject> &Payload,
     TSharedPtr<FMcpBridgeWebSocket> Socket) {
   double Start = 0;
-  double End = 10;
-  Payload->TryGetNumberField(TEXT("start"), Start);
-  Payload->TryGetNumberField(TEXT("end"), End);
+  double End = 0;
+  // Both are seconds; a missing one defaulted (0 to 10 s) and the reply said the range was set.
+  if (!Payload->TryGetNumberField(TEXT("start"), Start) || !Payload->TryGetNumberField(TEXT("end"), End) || End <= Start) {
+    SendAutomationResponse(Socket, RequestId, false, TEXT("start and end are required, in seconds, with end after start"),
+                           nullptr, TEXT("INVALID_ARGUMENT"));
+    return true;
+  }
   UMovieScene *MovieScene = nullptr;
   if (!McpSequence::LoadOrReply(this, RequestId, Socket, Payload, TEXT("set_view_range"), MovieScene)) {
     return true;
   }
-  MovieScene->SetViewRange(Start, End);
   MovieScene->Modify();
-  SendAutomationResponse(Socket, RequestId, true, TEXT("View range set"), nullptr);
+  MovieScene->SetViewRange(Start, End);
+  TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
+  Resp->SetNumberField(TEXT("start"), Start);
+  Resp->SetNumberField(TEXT("end"), End);
+  SendAutomationResponse(Socket, RequestId, true, FString::Printf(TEXT("View range %g to %g s"), Start, End), Resp);
   return true;
 }
 
@@ -34,6 +41,12 @@ bool HandleSetWorkRange(UEngineWireSubsystem *Subsystem,
   double Start = 0.0, End = 0.0;
   LocalPayload->TryGetNumberField(TEXT("start"), Start);
   LocalPayload->TryGetNumberField(TEXT("end"), End);
+  if (End <= Start) {
+    Subsystem->SendAutomationResponse(RequestingSocket, RequestId, false,
+                                      TEXT("start and end are seconds, with end after start"), nullptr,
+                                      TEXT("INVALID_ARGUMENT"));
+    return true;
+  }
 
   FFrameRate TickResolution = MovieScene->GetTickResolution();
   FFrameNumber StartFrame;
@@ -49,6 +62,8 @@ bool HandleSetWorkRange(UEngineWireSubsystem *Subsystem,
     return true;
   }
 
+  // Before the change, so undo restores the old range.
+  MovieScene->Modify();
   MovieScene->SetWorkingRange(Start, End);
 
   // If the requested end lies beyond the current playback end, extend the
@@ -56,18 +71,22 @@ bool HandleSetWorkRange(UEngineWireSubsystem *Subsystem,
   // off at runtime, so a work range that reveals them must widen playback too
   // (observed: keyframes at frames beyond the default playback end never played).
   TRange<FFrameNumber> PlaybackRange = MovieScene->GetPlaybackRange();
-  if (PlaybackRange.HasUpperBound() && EndFrame > PlaybackRange.GetUpperBoundValue())
+  const bool bPlaybackExtended = PlaybackRange.HasUpperBound() && EndFrame > PlaybackRange.GetUpperBoundValue();
+  if (bPlaybackExtended)
   {
     // Upper bound is exclusive: EndFrame + 1 keeps a key on EndFrame playable.
     MovieScene->SetPlaybackRange(
         TRange<FFrameNumber>(PlaybackRange.GetLowerBoundValue(), EndFrame + 1));
   }
 
-  MovieScene->Modify();
-
+  // Display-rate frames, the unit the timeline shows; the tick-resolution numbers were thousands of times larger.
+  const FFrameRate DisplayRate = MovieScene->GetDisplayRate();
   TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
-  Resp->SetNumberField(TEXT("startFrame"), StartFrame.Value);
-  Resp->SetNumberField(TEXT("endFrame"), EndFrame.Value);
+  Resp->SetNumberField(TEXT("start"), Start);
+  Resp->SetNumberField(TEXT("end"), End);
+  Resp->SetNumberField(TEXT("startFrame"), FFrameRate::TransformTime(FFrameTime(StartFrame), TickResolution, DisplayRate).FloorToFrame().Value);
+  Resp->SetNumberField(TEXT("endFrame"), FFrameRate::TransformTime(FFrameTime(EndFrame), TickResolution, DisplayRate).FloorToFrame().Value);
+  Resp->SetBoolField(TEXT("playbackExtended"), bPlaybackExtended);
   Resp->SetStringField(TEXT("sequencePath"), SeqPath);
   Subsystem->SendAutomationResponse(RequestingSocket, RequestId, true,
                                     TEXT("Work range set successfully"), Resp,

@@ -6,19 +6,21 @@ import { createCapabilityRecord } from '../../../parser.js';
 import { MANAGE_AI_UNFOLDED_SOURCES as MANAGE_AI_SOURCES } from './records.js';
 
 /**
- * The 86 parameters the parameter-combination audit reported as
+ * The parameters the parameter-combination audit reported as
  * `extraParameters` for manage_ai: names exercised by the manage_ai test suites
  * that the compact-parent stub had stopped declaring. Every one must be back on
- * at least one action, and on an action whose handler actually reads it.
+ * at least one action, and on an action whose handler actually reads it. There
+ * were 86; focusActorName is retired, since set_focus reads focusPlayer or
+ * focusTag (a class asset cannot name a level actor).
  */
-const UNDECLARED_86 = [
+const RESTORED_PARAMS = [
   'agentHeight', 'agentMaxSlope', 'agentRadius', 'agentStepHeight', 'areaClass', 'areaCost',
   'bCreateBoxObstacle', 'baseObjectClass', 'behaviorTreePath', 'blackboardPath',
   'broadcastInterval', 'broadcastRadius', 'cellHeight', 'cellSize', 'childNodeId', 'comment',
   'componentName', 'compositeType', 'configPath', 'contextType', 'controllerPath', 'damageConfig',
   'decoratorType', 'definitionPath', 'direction', 'disabledAreaClass', 'dominantSense',
   'enableDamage', 'enableHearing', 'enableSight', 'enabled', 'enabledAreaClass', 'endPoint',
-  'failsafeExtent', 'focusActorName', 'fromState', 'generatorSettings', 'generatorType',
+  'failsafeExtent', 'fromState', 'generatorSettings', 'generatorType',
   'hearingConfig', 'hearingRange', 'isInstanceSynced', 'keyName', 'keyType', 'linkEnabled',
   'linkType', 'location', 'loseSightRadius', 'maxSimplificationError', 'mergeRegionSize',
   'minRegionArea', 'nodeClass', 'nodeId', 'nodeType', 'obstacleAreaClass', 'obstacleExtent',
@@ -56,9 +58,9 @@ describe('manage_ai capability records', () => {
     }
   });
 
-  it('restores all 86 previously undeclared parameters across the parent union', () => {
+  it('restores every previously undeclared parameter across the parent union', () => {
     const union = new Set(records.flatMap(propsOf));
-    const stillMissing = UNDECLARED_86.filter((name) => !union.has(name));
+    const stillMissing = RESTORED_PARAMS.filter((name) => !union.has(name));
     expect(stillMissing).toEqual([]);
   });
 
@@ -101,7 +103,8 @@ describe('manage_ai capability records', () => {
     // ai-utility-actions.ts blueprintPath guard is ever reached.
     expect(propsFor('create_nav_link_proxy')).not.toContain('blueprintPath');
     expect(propsFor('create_nav_link_proxy')).toContain('startPoint');
-    expect(requiredFor('create_nav_link_proxy')).toEqual([]);
+    // The handler refuses a link without them (MISSING_PARAM), so the schema says so up front.
+    expect(requiredFor('create_nav_link_proxy')).toEqual(['endPoint', 'location', 'startPoint']);
   });
 
   it('declares every action as an editor-state operation', () => {

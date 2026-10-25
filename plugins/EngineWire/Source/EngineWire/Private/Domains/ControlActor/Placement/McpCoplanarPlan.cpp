@@ -101,6 +101,16 @@ TMap<AActor*, FMcpCoplanarPlan> PlanCoplanarPass(const TArray<FMcpCoplanarHit>& 
         Sides.Add(bColoured ? Axis * 2 + (Hit.Normal[Axis] > 0.0 ? 1 : 0) : INDEX_NONE);
     }
     const TMap<FMcpFaceKey, bool> Moves = McpCoplanarColour(Hits, Sides);
+    // A piece laid across several neighbours (a carpet over floor tiles, a sticker over two panels) lies inside their
+    // faces together though inside none alone, and went back under them: a face's overlaps are summed over its pairs.
+    TMap<FMcpFaceKey, double> Covered;
+    for (int32 Index = 0; Index < Hits.Num(); ++Index)
+    {
+        if (Sides[Index] != INDEX_NONE)
+        {
+            Covered.FindOrAdd(FMcpFaceKey(Hits[Index].Actor, Sides[Index])) += Hits[Index].OverlapU * Hits[Index].OverlapV;
+        }
+    }
     TMap<AActor*, FMcpCoplanarPlan> Plans;
     for (int32 Index = 0; Index < Hits.Num(); ++Index)
     {
@@ -113,7 +123,8 @@ TMap<AActor*, FMcpCoplanarPlan> PlanCoplanarPass(const TArray<FMcpCoplanarHit>& 
         }
         // The smaller piece comes forward when it lies wholly inside the other face and goes back when it is only
         // partly inside; when the colouring keeps it, the other piece moves the opposite way instead.
-        const bool bApplied = Hit.FaceArea > 0.0 && Hit.OverlapU * Hit.OverlapV >= 0.95 * Hit.FaceArea;
+        const double Overlap = Sides[Index] != INDEX_NONE ? Covered.FindRef(FMcpFaceKey(Hit.Actor, Sides[Index])) : Hit.OverlapU * Hit.OverlapV;
+        const bool bApplied = Hit.FaceArea > 0.0 && Overlap >= 0.95 * Hit.FaceArea;
         double Shift = bApplied ? Distance : -Distance; // along the face's own direction
         AActor* Mover = Hit.Actor;
         AActor* Still = Hit.OtherActor;

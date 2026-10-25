@@ -14,11 +14,11 @@ bool HandleInventoryLootTableActions(UEngineWireSubsystem& Bridge, const FString
       return true;
     }
 
-    UPackage* Package = CreateInventoryAssetPackage(Path, Name);
+    FString PackageError;
+    FString PackageCode;
+    UPackage* Package = CreateInventoryAssetPackage(Path, Name, PackageError, PackageCode);
     if (!Package) {
-      Bridge.SendAutomationError(RequestingSocket, RequestId,
-                          TEXT("Failed to create package"),
-                          TEXT("PACKAGE_CREATE_FAILED"));
+      Bridge.SendAutomationError(RequestingSocket, RequestId, PackageError, PackageCode);
       return true;
     }
 
@@ -30,11 +30,10 @@ bool HandleInventoryLootTableActions(UEngineWireSubsystem& Bridge, const FString
       LootTableAsset->MarkPackageDirty();
       FAssetRegistryModule::AssetCreated(LootTableAsset);
 
-      if (GetJsonBoolField(Payload, TEXT("save"), true)) {
-        McpSafeAssetSave(LootTableAsset);
-      }
+      const bool bSaved = GetJsonBoolField(Payload, TEXT("save"), true) && McpSafeAssetSave(LootTableAsset);
 
       TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
+      Result->SetBoolField(TEXT("saved"), bSaved);
       Result->SetStringField(TEXT("lootTablePath"), Package->GetName());
       Result->SetStringField(TEXT("assetPath"), Package->GetName() + TEXT(".") + FPackageName::GetShortName(Package->GetName())); // dogfood #55: consistent object path
       Bridge.SendAutomationResponse(RequestingSocket, RequestId, true,
@@ -52,7 +51,8 @@ bool HandleInventoryLootTableActions(UEngineWireSubsystem& Bridge, const FString
     FString ItemPath = GetJsonStringField(Payload, TEXT("itemPath"));
     double Weight = GetJsonNumberField(Payload, TEXT("lootWeight"), 1.0);
     int32 MinQuantity = static_cast<int32>(GetJsonNumberField(Payload, TEXT("minQuantity"), 1));
-    int32 MaxQuantity = static_cast<int32>(GetJsonNumberField(Payload, TEXT("maxQuantity"), 1));
+    // Without maxQuantity the range is just minQuantity; a minQuantity of 3 used to pair with the default max of 1.
+    int32 MaxQuantity = static_cast<int32>(GetJsonNumberField(Payload, TEXT("maxQuantity"), FMath::Max(1, MinQuantity)));
 
     if (LootTablePath.IsEmpty() || ItemPath.IsEmpty()) {
       Bridge.SendAutomationError(
@@ -73,6 +73,16 @@ bool HandleInventoryLootTableActions(UEngineWireSubsystem& Bridge, const FString
       return true;
     }
 
+    if (Weight < 0.0 || MinQuantity < 0 || MaxQuantity < MinQuantity) {
+      Bridge.SendAutomationError(RequestingSocket, RequestId,
+          FString::Printf(TEXT("lootWeight must be 0 or more, and minQuantity 0 or more and at most maxQuantity (got %s, %d to %d); nothing was changed."),
+                          *FString::SanitizeFloat(Weight), MinQuantity, MaxQuantity),
+          TEXT("INVALID_ARGUMENT"));
+      return true;
+    }
+    if (!RequireReferencedAsset(Bridge, RequestId, RequestingSocket, ItemPath, TEXT("itemPath"))) {
+      return true;
+    }
     // Entries live in the generic asset's property map (LootEntry_<n> = "ItemPath=...;Weight=...").
     // n is one past the highest existing suffix: the map size repeats a live key after a removal.
     const int32 EntryIndex = NextIndexedPropertyIndex(LootTable->Properties, TEXT("LootEntry_"));
@@ -82,11 +92,10 @@ bool HandleInventoryLootTableActions(UEngineWireSubsystem& Bridge, const FString
 
     LootTable->MarkPackageDirty();
 
-    if (GetJsonBoolField(Payload, TEXT("save"), true)) {
-      McpSafeAssetSave(LootTable);
-    }
+    const bool bSaved = GetJsonBoolField(Payload, TEXT("save"), true) && McpSafeAssetSave(LootTable);
 
     TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
+    Result->SetBoolField(TEXT("saved"), bSaved);
     Result->SetStringField(TEXT("lootTablePath"), LootTablePath);
     Result->SetStringField(TEXT("itemPath"), ItemPath);
     Result->SetNumberField(TEXT("weight"), Weight);
@@ -95,6 +104,7 @@ bool HandleInventoryLootTableActions(UEngineWireSubsystem& Bridge, const FString
     Result->SetNumberField(TEXT("entryIndex"), EntryIndex);
     Result->SetBoolField(TEXT("added"), true);
     Result->SetStringField(TEXT("storage"), TEXT("Properties"));
+    McpHandlerUtils::AddVerification(Result, LootTable);
     Bridge.SendAutomationResponse(RequestingSocket, RequestId, true,
                            TEXT("Loot entry added"), Result);
     return true;
@@ -133,6 +143,7 @@ bool HandleInventoryLootTableActions(UEngineWireSubsystem& Bridge, const FString
 
     bool bEntryRemoved = false;
     int32 RemovedIndex = -1;
+    int32 RemovedCount = 0;
 
     // Entries live in the Properties map (LootEntry_<n> = "ItemPath=...;Weight=...");
     // match by index key or by the ItemPath fragment.
@@ -151,6 +162,10 @@ bool HandleInventoryLootTableActions(UEngineWireSubsystem& Bridge, const FString
           KeysToRemove.Add(Pair.Key);
         }
       }
+      RemovedCount = KeysToRemove.Num();
+      if (RemovedCount > 0) {
+        LootTable->Modify();
+      }
       for (const FString& Key : KeysToRemove) {
         LootTable->Properties.Remove(Key);
         bEntryRemoved = true;
@@ -164,6 +179,7 @@ bool HandleInventoryLootTableActions(UEngineWireSubsystem& Bridge, const FString
     Result->SetStringField(TEXT("lootTablePath"), LootTablePath);
     Result->SetNumberField(TEXT("removedIndex"), RemovedIndex);
     Result->SetBoolField(TEXT("removed"), bEntryRemoved);
+    Result->SetNumberField(TEXT("removedCount"), RemovedCount);
 
     if (!bEntryRemoved) {
       // Reporting success here hid a no-op (dogfood #51).
@@ -176,11 +192,9 @@ bool HandleInventoryLootTableActions(UEngineWireSubsystem& Bridge, const FString
     }
 
     LootTable->MarkPackageDirty();
+    Result->SetBoolField(TEXT("saved"), GetJsonBoolField(Payload, TEXT("save"), true) && McpSafeAssetSave(LootTable));
 
-    if (GetJsonBoolField(Payload, TEXT("save"), true)) {
-      McpSafeAssetSave(LootTable);
-    }
-
+    McpHandlerUtils::AddVerification(Result, LootTable);
     Bridge.SendAutomationResponse(RequestingSocket, RequestId, true,
                            TEXT("Loot entry removed"), Result);
     return true;

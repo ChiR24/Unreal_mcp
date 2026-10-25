@@ -8,12 +8,15 @@
 #include "Core/Errors/McpRequestErrorDevice.h"
 #include "Foundation/Diagnostics/McpDiagnosticsSnapshot.h"
 #include "Foundation/Diagnostics/McpWorldTickTimer.h"
+#include "Domains/ControlEditor/Checkpoint/McpEditorCheckpoint.h"
 #include "Domains/ControlEditor/McpEditorSupport.h"
 #include "Domains/ControlEditor/McpEditorScreenshotSupport.h"
 #include "Domains/Log/McpLogHistory.h"
+#include "Domains/Log/McpScriptErrors.h"
 #include "Domains/SystemControl/McpSystemPrivate.h"
 #include "Foundation/McpLiveStateRevisionTracker.h"
 #include "Foundation/McpReadinessState.h"
+#include "Framework/Application/SlateApplication.h"
 #include "Misc/Parse.h"
 
 void UEngineWireSubsystem::Initialize(FSubsystemCollectionBase& Collection)
@@ -37,6 +40,7 @@ void UEngineWireSubsystem::Initialize(FSubsystemCollectionBase& Collection)
     FMcpDiagnosticsSnapshot::Get().InitializeFromGameThread();
     FMcpDiagnosticsSnapshot::Get().RotateOnStartup();
     FMcpLogHistory::Get().Register();
+    FMcpScriptErrors::Get().Watch(true);
     McpSystemControlHandlers::McpWatchMaterialUsage(true);
 
     UE_LOG(
@@ -83,6 +87,11 @@ void UEngineWireSubsystem::Initialize(FSubsystemCollectionBase& Collection)
     TickHandle = FTSTicker::GetCoreTicker().AddTicker(
         FTickerDelegate::CreateUObject(this, &UEngineWireSubsystem::Tick),
         0.0f);
+    // The ticker above stops while a modal dialog runs its own loop; this answers what queues meanwhile.
+    if (FSlateApplication::IsInitialized())
+    {
+        FSlateApplication::Get().GetOnModalLoopTickEvent().AddUObject(this, &UEngineWireSubsystem::OnModalLoopTick);
+    }
 
     // -McpStartMinimized: a launch for an automated session sat in the foreground, rendering flat out, until a caller
     // could minimize it over the bridge. The editor adds its main window hidden and shows it, maximized, at the end of
@@ -134,10 +143,17 @@ void UEngineWireSubsystem::Initialize(FSubsystemCollectionBase& Collection)
 
 void UEngineWireSubsystem::Deinitialize()
 {
+    // First: Live Coding unloads this module routinely, and a binding left behind would call into unmapped code.
+    if (FSlateApplication::IsInitialized())
+    {
+        FSlateApplication::Get().GetOnModalLoopTickEvent().RemoveAll(this);
+    }
     FMcpReadinessState::Get().Reset();
     McpWorldTickTimer::Stop();
     StopAcceptingAutomationRequests();
     McpStopLiveStateTracking();
+    // An open restore point holds lambdas on engine delegates that outlive this module.
+    McpEditorCheckpoint::Shutdown();
     // Enhanced Input holds live on the core ticker, which outlives this module.
     // Live Coding unloads the module routinely, so a hold left registered would
     // tick into code that is no longer mapped.
@@ -192,6 +208,7 @@ void UEngineWireSubsystem::Deinitialize()
 
     FMcpDiagnosticsSnapshot::Get().PersistCurrent();
     FMcpLogHistory::Get().Unregister();
+    FMcpScriptErrors::Get().Watch(false);
     McpSystemControlHandlers::McpWatchMaterialUsage(false);
 
     Super::Deinitialize();

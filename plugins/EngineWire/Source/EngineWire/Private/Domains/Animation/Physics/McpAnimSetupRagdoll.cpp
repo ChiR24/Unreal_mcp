@@ -64,7 +64,21 @@ bool UEngineWireSubsystem::HandleSetupRagdoll(
                           TEXT("ASSET_NOT_FOUND"));
       return true;
     }
+    if (!PieWorld) {
+      SkelMeshComp->Modify();
+    }
     SkelMeshComp->SetPhysicsAsset(RagdollAsset, true);
+  }
+  // Without a physics asset the mesh has no bodies to simulate, so it never went limp while the reply said done.
+  if (bActivate && !SkelMeshComp->GetPhysicsAsset()) {
+    SendAutomationError(RequestingSocket, RequestId,
+                        FString::Printf(TEXT("%s's skeletal mesh has no physics asset, so it has no bodies to go limp; pass physicsAssetPath (or give the mesh one)."), *ActorName),
+                        TEXT("NO_PHYSICS_ASSET"));
+    return true;
+  }
+  // In the editor this is the placed actor's own setting: it starts the game simulating (limp from the first frame).
+  if (!PieWorld) {
+    SkelMeshComp->Modify();
   }
   if (bActivate) {
     SkelMeshComp->SetSimulatePhysics(true);

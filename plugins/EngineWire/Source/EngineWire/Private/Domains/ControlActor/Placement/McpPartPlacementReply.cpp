@@ -3,7 +3,9 @@
 #include "Foundation/BridgeHelpers/Blueprints/McpBPAssetLoad.h"
 
 #include "AssetRegistry/AssetRegistryModule.h"
+#include "Components/SceneComponent.h"
 #include "Engine/Blueprint.h"
+#include "GameFramework/Actor.h"
 #include "Engine/StaticMesh.h"
 #include "Misc/PackageName.h"
 #include "Modules/ModuleManager.h"
@@ -32,6 +34,31 @@ TSharedPtr<FJsonObject> IssueToJson(const FPartIssue& Issue)
     return Object;
 }
 
+void NoteInheritedScale(AActor* Actor, const TSet<FString>& Focus, TArray<FString>& OutNotes)
+{
+    TInlineComponentArray<USceneComponent*> Components(Actor);
+    for (const USceneComponent* Component : Components)
+    {
+        const USceneComponent* Parent = Component ? Component->GetAttachParent() : nullptr;
+        if (!Parent || !Focus.Contains(Component->GetName()) || Component->IsUsingAbsoluteScale())
+        {
+            continue;
+        }
+        // A trigger box of extent 70x70x40 under a base flattened to (1.6, 1.6, 0.1) was 112x112x4 in the world, and
+        // its 40 cm offset 4 cm: the reply only said the plate beside it was buried.
+        const FVector Inherited = Parent->GetComponentScale();
+        if (Inherited.GetAbsMax() <= Inherited.GetAbsMin() * 1.05)
+        {
+            continue;
+        }
+        OutNotes.Add(FString::Printf(
+            TEXT("'%s' is attached to '%s', which is scaled unevenly (%g, %g, %g), so it takes that scale too: its "
+                 "size and offsets are stretched the same way in the world. Attach it to an unscaled part "
+                 "(DefaultSceneRoot) to keep its own size."),
+            *Component->GetName(), *Parent->GetName(), Inherited.X, Inherited.Y, Inherited.Z));
+    }
+}
+
 int32 AppendPartWarnings(UBlueprint* Blueprint, const TSet<FString>& Focus, const TSharedPtr<FJsonObject>& Result)
 {
     if (!Blueprint || !Result.IsValid())
@@ -39,7 +66,7 @@ int32 AppendPartWarnings(UBlueprint* Blueprint, const TSet<FString>& Focus, cons
         return 0;
     }
     const FPartAudit Audit = AuditBlueprintParts(Blueprint, Focus);
-    if (Audit.Issues.Num() == 0)
+    if (Audit.Issues.Num() == 0 && Audit.Notes.Num() == 0)
     {
         return 0;
     }
@@ -55,7 +82,14 @@ int32 AppendPartWarnings(UBlueprint* Blueprint, const TSet<FString>& Focus, cons
         Entries.Add(MakeShared<FJsonValueObject>(IssueToJson(Audit.Issues[Index])));
         Warnings.Add(MakeShared<FJsonValueString>(Audit.Issues[Index].Issue));
     }
-    Result->SetArrayField(TEXT("partWarnings"), Entries);
+    for (const FString& Note : Audit.Notes)
+    {
+        Warnings.Add(MakeShared<FJsonValueString>(Note));
+    }
+    if (Entries.Num() > 0)
+    {
+        Result->SetArrayField(TEXT("partWarnings"), Entries);
+    }
     Result->SetArrayField(TEXT("warnings"), Warnings);
     return Audit.Issues.Num();
 }

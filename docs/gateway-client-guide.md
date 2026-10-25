@@ -170,6 +170,17 @@ that action's exact contract: `inputSchema` lists only the parameters the action
 declares, never the parent tool's union. Only the `{ tool }` summary is still a
 legacy view, which is why it also carries `browse`.
 
+### A clear first hit can skip describe
+
+When search's first row is clear (the runner-up scores at most 90% of it) and
+needs no consent, it also carries `signature` and `executeCall`. `signature`
+holds the `required` parameters' types (or values), an `oneOf` group, a
+family's `selector` (`name`, `values`, `default`) and one `example`;
+`executeCall` is the execute call describe would hand over. Fill `params` from
+the signature and send `executeCall`, or describe first for the full contract.
+Both doors apply the same rule, and `tests/eval/confident-hit.test.ts` holds it
+to 95% precision on both.
+
 ### Folded families
 
 Most capabilities are **families**: one record advertising one action whose
@@ -187,6 +198,10 @@ catalog used to call `create_noise_texture`. Nothing was retired:
   defaults it to that member (`manage_asset.list` without `kind` still lists
   assets). A family under a new name requires the selector; `describe` shows
   it as required with its enum.
+- The selector parameter's description lists every variant with what it does,
+  its defaults, replies and refusals included, one line each as
+  `value: summary`; a sibling action named there appears as the selector value
+  to send (`setting=vsync`).
 - A consent grant may name the capability by its canonical id, an alias, or a
   folded `tool.action` pair; `describe` always returns the canonical grant.
 
@@ -232,6 +247,18 @@ Rules the resolver enforces:
 - Unknown selectors return `UNKNOWN_CAPABILITY` / `UNKNOWN_TOOL` /
   `UNKNOWN_ACTION`, each with `suggestions` and an executable `nextCall`.
 
+### A success can carry warnings
+
+A successful receipt's `warnings` name what the call left wrong. Every request
+that spawns, moves or re-meshes editor-level actors, whichever capability did
+it, has those actors checked in the plugin before it replies
+(`McpChangeWatch`): one now sunk, floating, intersecting another or sharing a
+face plane with one (z-fighting), a mesh slot on the engine's default grid
+material, a text still reading "Text", a copy pasted onto its original. Play
+In Editor caveats and engine warnings logged during the call land there too.
+A reply sent after its handler returned (a long-running task) carries no
+placement checks; `control_actor audit_placement` sweeps the whole level.
+
 ## Deprecation and removal behavior
 
 Three distinct removal behaviors exist. They are not interchangeable.
@@ -263,8 +290,14 @@ wrapper flattened (top-level keys win) and the control fields `action`,
 | `UNKNOWN_CAPABILITY`, `UNKNOWN_TOOL`, `UNKNOWN_ACTION` | selector lookup |
 | `UNDECLARED_PARAMETER`, `MISSING_REQUIRED_PARAMETER`, `INVALID_PARAMETER_VALUE` | schema validation |
 | `NOT_CONNECTED` | the editor is unreachable |
-| `UNREAL_EXECUTION_ERROR` (or the handler's own code), `OUTPUT_SCHEMA_VIOLATION`, `RESULT_TOO_LARGE` | dispatch and output validation |
+| `UNREAL_EXECUTION_ERROR` (or the handler's own code), `OUTPUT_SCHEMA_VIOLATION`, `RESULT_TOO_LARGE` | dispatch and output validation; a result over 100k chars whose size is one top-level list comes in pages instead, each reply's `page.nextCall` reading the next |
+| `PAGE_CURSOR_EXPIRED`, `PAGE_CURSOR_MISMATCH` | `options.pageCursor` unread for 5 minutes or never issued; or sent with another capability or params |
 | `DIRECT_TOOL_CALL_REMOVED` | a `tools/call` on a non-`unreal` name |
 
 Authorization refusal codes are shared verbatim with the plugin and are
 documented in [`security-and-receipts.md`](security-and-receipts.md).
+
+A request past the native transport's per-client rate limit (the plugin settings
+`MaxClientRequestsPerMinute` and `MaxClientToolCallsPerMinute`) is answered with
+JSON-RPC error `-32000`, `data.errorCode` `RATE_LIMITED` and `data.retryAfterSeconds`,
+and a `Retry-After` header.

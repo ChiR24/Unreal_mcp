@@ -4,6 +4,7 @@
 #include "EdGraph/EdGraph.h"
 #include "EdGraph/EdGraphNode.h"
 #include "EdGraph/EdGraphPin.h"
+#include "EdGraph/EdGraphSchema.h"
 #include "Engine/Level.h"
 #include "Engine/LevelScriptBlueprint.h"
 #include "Engine/World.h"
@@ -40,51 +41,18 @@ bool HandleConnectLevelBlueprintNodes(
         return true;
     }
 
-    UWorld* World = GetEditorWorld();
-    if (!World)
-    {
-        Subsystem->SendAutomationResponse(Socket, RequestId, false,
-            TEXT("No editor world available"), nullptr);
-        return true;
-    }
-
     // Same levelPath honoring as add_node: connect must act on the named level,
     // never on whatever level happens to be open.
-    FString ConnectLevelError;
-    ULevel* CurrentLevel = ResolveTargetLevelForBlueprintRequest(World, Payload, ConnectLevelError);
-    ULevelScriptBlueprint* LevelBP = CurrentLevel ? CurrentLevel->GetLevelScriptBlueprint(false) : nullptr;
-    if (!LevelBP)
+    ULevel* CurrentLevel = nullptr;
+    ULevelScriptBlueprint* LevelBP = nullptr;
+    UEdGraph* EventGraph = nullptr;
+    if (!ResolveLevelBlueprintGraph(Subsystem, RequestId, Socket, Payload, /*bCreate=*/false, CurrentLevel, LevelBP, EventGraph))
     {
-        Subsystem->SendAutomationResponse(Socket, RequestId, false,
-            ConnectLevelError.IsEmpty() ? TEXT("Level Blueprint not available") : ConnectLevelError,
-            nullptr, TEXT("LEVEL_NOT_OPEN"));
         return true;
     }
 
-    UEdGraph* EventGraph = FBlueprintEditorUtils::FindEventGraph(LevelBP);
-    if (!EventGraph)
-    {
-        Subsystem->SendAutomationResponse(Socket, RequestId, false,
-            TEXT("Event graph not found"), nullptr);
-        return true;
-    }
-
-    // Find source and target nodes
-    UEdGraphNode* SourceNode = nullptr;
-    UEdGraphNode* TargetNode = nullptr;
-
-    for (UEdGraphNode* Node : EventGraph->Nodes)
-    {
-        FString NodeTitle = Node->GetNodeTitle(ENodeTitleType::FullTitle).ToString();
-        if (NodeTitle.Contains(SourceNodeName) || Node->GetName().Contains(SourceNodeName))
-        {
-            SourceNode = Node;
-        }
-        if (NodeTitle.Contains(TargetNodeName) || Node->GetName().Contains(TargetNodeName))
-        {
-            TargetNode = Node;
-        }
-    }
+    UEdGraphNode* SourceNode = FindLevelBlueprintNode(EventGraph, SourceNodeName);
+    UEdGraphNode* TargetNode = FindLevelBlueprintNode(EventGraph, TargetNodeName);
 
     if (!SourceNode || !TargetNode)
     {
@@ -140,14 +108,17 @@ bool HandleConnectLevelBlueprintNodes(
         return true;
     }
 
-    SourcePin->MakeLinkTo(TargetPin);
-    const bool bConnected = SourcePin->LinkedTo.Contains(TargetPin);
+    // MakeLinkTo skipped the schema, so any two pins linked (exec into data, a float into an object) and the level
+    // Blueprint stopped compiling; the schema checks types and puts in the conversion node a cast needs.
+    const UEdGraphSchema* Schema = EventGraph->GetSchema();
+    const FPinConnectionResponse Response = Schema ? Schema->CanCreateConnection(SourcePin, TargetPin) : FPinConnectionResponse();
+    const bool bConnected = Schema && Response.Response != CONNECT_RESPONSE_DISALLOW && Schema->TryCreateConnection(SourcePin, TargetPin);
     if (!bConnected)
     {
         Subsystem->SendAutomationResponse(Socket, RequestId, false,
-            FString::Printf(
-                TEXT("Connection refused by the graph schema: %s.%s -> %s.%s (incompatible pin types or directions)."),
-                *SourceNodeName, *SourcePinName, *TargetNodeName, *TargetPinName),
+            FString::Printf(TEXT("Connection refused by the graph schema: %s.%s -> %s.%s (%s). Nothing was linked."),
+                *SourceNodeName, *SourcePinName, *TargetNodeName, *TargetPinName,
+                Response.Message.IsEmpty() ? TEXT("incompatible pin types or directions") : *Response.Message.ToString()),
             nullptr, TEXT("CONNECTION_REFUSED"));
         return true;
     }

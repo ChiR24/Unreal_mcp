@@ -21,75 +21,91 @@ bool FCombatActionContext::HandleWeaponEquipment() const
             return true;
         }
 
-        // Parse attachment slots and create actual SceneComponent attach points
-        const TArray<TSharedPtr<FJsonValue>>* AttachmentSlotsArray;
-        TArray<FString> SlotNames;
-        TArray<FString> CreatedComponents;
-        TArray<TSharedPtr<FJsonValue>> SlotObjects;
-
-        if (Payload->TryGetArrayField(TEXT("attachmentSlots"), AttachmentSlotsArray))
+        // Every slot is read before anything changes. A call with no slot, or only nameless ones, used to compile,
+        // save and answer success with nothing made; socketName and allowedTypes were echoed and applied nowhere.
+        struct FSlot
         {
-            USimpleConstructionScript* SCS = Blueprint->SimpleConstructionScript;
-            if (SCS)
+            FString Name;
+            FString Socket;
+            TArray<FString> Types;
+        };
+        TArray<FSlot> Slots;
+        const TArray<TSharedPtr<FJsonValue>>* AttachmentSlotsArray = nullptr;
+        if (Payload->TryGetArrayField(TEXT("attachmentSlots"), AttachmentSlotsArray) && AttachmentSlotsArray)
+        {
+            for (int32 Index = 0; Index < AttachmentSlotsArray->Num(); ++Index)
             {
-                for (const auto& SlotValue : *AttachmentSlotsArray)
+                const TSharedPtr<FJsonValue>& SlotValue = (*AttachmentSlotsArray)[Index];
+                FSlot Slot;
+                if (SlotValue.IsValid() && SlotValue->Type == EJson::Object)
                 {
-                    if (SlotValue->Type == EJson::Object)
+                    const TSharedPtr<FJsonObject> SlotObj = SlotValue->AsObject();
+                    Slot.Name = GetJsonStringField(SlotObj, TEXT("slotName")).TrimStartAndEnd();
+                    Slot.Socket = GetJsonStringField(SlotObj, TEXT("socketName")).TrimStartAndEnd();
+                    const TArray<TSharedPtr<FJsonValue>>* Types = nullptr;
+                    if (SlotObj->TryGetArrayField(TEXT("allowedTypes"), Types) && Types)
                     {
-                        auto SlotObj = SlotValue->AsObject();
-                        FString SlotName = GetJsonStringField(SlotObj, TEXT("slotName"));
-                        FString SlotType = GetJsonStringField(SlotObj, TEXT("slotType"), TEXT("Optic"));
-
-                        if (!SlotName.IsEmpty())
+                        for (const TSharedPtr<FJsonValue>& Type : *Types)
                         {
-                            SlotNames.Add(SlotName);
-                            TSharedPtr<FJsonObject> SlotOut = MakeShared<FJsonObject>();
-                            SlotOut->SetStringField(TEXT("slotName"), SlotName);
-                            SlotOut->SetStringField(TEXT("socketName"), GetJsonStringField(SlotObj, TEXT("socketName"), SlotName + TEXT("Socket")));
-                            const TArray<TSharedPtr<FJsonValue>>* AllowedTypes = nullptr;
-                            TArray<TSharedPtr<FJsonValue>> AllowedOut;
-                            if (SlotObj->TryGetArrayField(TEXT("allowedTypes"), AllowedTypes) && AllowedTypes)
-                            {
-                                AllowedOut = *AllowedTypes;
-                            }
-                            else
-                            {
-                                AllowedOut.Add(MakeShared<FJsonValueString>(SlotType));
-                            }
-                            SlotOut->SetArrayField(TEXT("allowedTypes"), AllowedOut);
-                            SlotObjects.Add(MakeShared<FJsonValueObject>(SlotOut));
-
-                            FString ComponentName = FString::Printf(TEXT("AttachPoint_%s"), *SlotName);
-                            USceneComponent* AttachPoint = GetOrCreateSCSComponent<USceneComponent>(Blueprint, ComponentName, TEXT("WeaponMesh"));
-                            if (AttachPoint)
-                            {
-                                CreatedComponents.Add(ComponentName);
-                            }
-                        }
-                    }
-                    else if (SlotValue->Type == EJson::String)
-                    {
-                        // Simple string slot name
-                        FString SlotName = SlotValue->AsString();
-                        if (!SlotName.IsEmpty())
-                        {
-                            SlotNames.Add(SlotName);
-                            TSharedPtr<FJsonObject> SlotOut = MakeShared<FJsonObject>();
-                            SlotOut->SetStringField(TEXT("slotName"), SlotName);
-                            SlotOut->SetStringField(TEXT("socketName"), SlotName + TEXT("Socket"));
-                            SlotOut->SetArrayField(TEXT("allowedTypes"), TArray<TSharedPtr<FJsonValue>>());
-                            SlotObjects.Add(MakeShared<FJsonValueObject>(SlotOut));
-
-                            FString ComponentName = FString::Printf(TEXT("AttachPoint_%s"), *SlotName);
-                            USceneComponent* AttachPoint = GetOrCreateSCSComponent<USceneComponent>(Blueprint, ComponentName, TEXT("WeaponMesh"));
-                            if (AttachPoint)
-                            {
-                                CreatedComponents.Add(ComponentName);
-                            }
+                            Slot.Types.Add(Type->AsString());
                         }
                     }
                 }
+                else if (SlotValue.IsValid() && SlotValue->Type == EJson::String)
+                {
+                    Slot.Name = SlotValue->AsString().TrimStartAndEnd();
+                }
+                if (Slot.Name.IsEmpty())
+                {
+                    SendAutomationError(RequestingSocket, RequestId, FString::Printf(TEXT("attachmentSlots[%d] has no slotName; nothing was changed."), Index), TEXT("INVALID_ARGUMENT"));
+                    return true;
+                }
+                Slots.Add(Slot);
             }
+        }
+        USimpleConstructionScript* SCS = Blueprint->SimpleConstructionScript;
+        if (Slots.Num() == 0 || !SCS)
+        {
+            SendAutomationError(RequestingSocket, RequestId, TEXT("attachmentSlots needs at least one slot, each {slotName, socketName, allowedTypes}; nothing was changed."), TEXT("INVALID_ARGUMENT"));
+            return true;
+        }
+
+        const USCS_Node* MeshNode = SCS->FindSCSNode(TEXT("WeaponMesh"));
+        const UStaticMeshComponent* MeshTemplate = MeshNode ? Cast<UStaticMeshComponent>(MeshNode->ComponentTemplate) : nullptr;
+        const UStaticMesh* WeaponMeshAsset = MeshTemplate ? MeshTemplate->GetStaticMesh() : nullptr;
+        TArray<FString> CreatedComponents;
+        TArray<TSharedPtr<FJsonValue>> SlotObjects;
+        for (const FSlot& Slot : Slots)
+        {
+            // An attach point under WeaponMesh, on socketName when one is given. allowedTypes are added to its component
+            // tags, which the game reads with ComponentHasTag or GetComponentsByTag.
+            const FString ComponentName = FString::Printf(TEXT("AttachPoint_%s"), *Slot.Name);
+            USceneComponent* AttachPoint = GetOrCreateSCSComponent<USceneComponent>(Blueprint, ComponentName, TEXT("WeaponMesh"));
+            USCS_Node* PointNode = SCS->FindSCSNode(FName(*ComponentName));
+            if (!AttachPoint || !PointNode)
+            {
+                continue;
+            }
+            if (!Slot.Socket.IsEmpty())
+            {
+                PointNode->AttachToName = FName(*Slot.Socket);
+            }
+            TArray<TSharedPtr<FJsonValue>> TypesOut;
+            for (const FString& Type : Slot.Types)
+            {
+                AttachPoint->ComponentTags.AddUnique(FName(*Type));
+                TypesOut.Add(MakeShared<FJsonValueString>(Type));
+            }
+            CreatedComponents.Add(ComponentName);
+            TSharedPtr<FJsonObject> SlotOut = MakeShared<FJsonObject>();
+            SlotOut->SetStringField(TEXT("slotName"), Slot.Name);
+            SlotOut->SetStringField(TEXT("socketName"), Slot.Socket);
+            if (!Slot.Socket.IsEmpty())
+            {
+                SlotOut->SetBoolField(TEXT("socketFound"), WeaponMeshAsset && WeaponMeshAsset->FindSocket(FName(*Slot.Socket)));
+            }
+            SlotOut->SetArrayField(TEXT("allowedTypes"), TypesOut);
+            SlotObjects.Add(MakeShared<FJsonValueObject>(SlotOut));
         }
 
         FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(Blueprint);

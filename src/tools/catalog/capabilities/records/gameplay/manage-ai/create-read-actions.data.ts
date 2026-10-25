@@ -16,7 +16,7 @@ const createProps = { name: A.name, path: A.path };
 
 export const AI_CREATE_READ_RECORDS: readonly CapabilityRecordSource[] = [
   aiRecord({
-    action: 'create', summary: 'Create a Behavior Tree through the graph compatibility route.',
+    action: 'create', summary: 'Create a Behavior Tree named name in savePath (default /Game; a path without a leading slash goes under /Game) with its editor graph, saved (saved). An asset already at the path is refused (ASSET_ALREADY_EXISTS).',
     use: 'A caller uses the short create verb with savePath.',
     avoid: 'Use create_behavior_tree for the asset-level route.',
     props: { name: A.name, savePath: A.savePath }, required: ['name'], plugins: BT,
@@ -25,7 +25,7 @@ export const AI_CREATE_READ_RECORDS: readonly CapabilityRecordSource[] = [
   }),
   aiRecord({
     topics: ['ai controller', 'aicontroller', 'npc controller', 'enemy ai', 'add enemy ai'],
-    action: 'create_ai_controller', summary: 'Create an AIController Blueprint asset.',
+    action: 'create_ai_controller', summary: 'Create an AI Controller Blueprint (parent AIController) at path/name (path default /Game/AI/Controllers) and save it; an asset already there is refused. A pawn uses it through its AIControllerClass with Auto Possess AI; saved in the reply says whether it reached disk.',
     use: 'A pawn needs a dedicated AIController asset.',
     avoid: 'Use manage_blueprint for a general Blueprint.',
     props: createProps, required: ['name'],
@@ -34,7 +34,7 @@ export const AI_CREATE_READ_RECORDS: readonly CapabilityRecordSource[] = [
   }),
   aiRecord({
     topics: ['behavior tree', 'bt asset', 'ai behavior', 'new behavior tree'],
-    action: 'create_behavior_tree', summary: 'Create a Behavior Tree asset.',
+    action: 'create_behavior_tree', summary: 'Create a Behavior Tree asset named name in path (default /Game/AI/BehaviorTrees; savePath when path is absent), saved (saved); an asset already at the path is refused (ASSET_ALREADY_EXISTS). It has no root yet: the first add_composite_node becomes the root.',
     use: 'An AI needs a new Behavior Tree asset.',
     avoid: 'Use create for the graph compatibility route.',
     props: createProps, required: ['name'], plugins: BT,
@@ -42,26 +42,29 @@ export const AI_CREATE_READ_RECORDS: readonly CapabilityRecordSource[] = [
     example: { name: 'BT_Enemy', path: '/Game/AI' }, result: 'Behavior Tree created',
   }),
   aiRecord({
-    action: 'create_blackboard', summary: 'Create a Blackboard asset through the compatibility route.',
+    action: 'create_blackboard', summary: 'Create a Blackboard asset named name in path (default /Game/AI/Blackboards), saved (saved). A Blackboard already there is kept as it is (alreadyExisted true); another kind of asset at the path is refused (ASSET_ALREADY_EXISTS).',
     use: 'A caller uses the short create_blackboard verb.',
     avoid: 'Use create_blackboard_asset for the canonical route.',
     props: createProps, required: ['name'], plugins: BT,
     out: {
       blackboardPath: A.blackboardPath,
-      alreadyExisted: { type: 'boolean', description: 'Whether the Blackboard already existed and was reused.' },
+      alreadyExisted: { type: 'boolean', description: 'Whether a Blackboard was already at the path; it is kept as it was.' },
     },
     example: { name: 'BB_Enemy', path: '/Game/AI' }, result: 'Blackboard created',
   }),
   aiRecord({
-    action: 'create_blackboard_asset', summary: 'Create a Blackboard data asset.',
+    action: 'create_blackboard_asset', summary: 'Create a Blackboard asset named name in path (default /Game/AI/Blackboards), saved (saved). A Blackboard already there is kept as it is (alreadyExisted true); another kind of asset at the path is refused (ASSET_ALREADY_EXISTS).',
     use: 'A Behavior Tree needs a backing Blackboard asset.',
     avoid: 'Use add_blackboard_key to populate it.',
     props: createProps, required: ['name'], plugins: BT,
-    out: { blackboardPath: A.blackboardPath },
+    out: {
+      blackboardPath: A.blackboardPath,
+      alreadyExisted: { type: 'boolean', description: 'Whether a Blackboard was already at the path; it is kept as it was.' },
+    },
     example: { name: 'BB_Enemy', path: '/Game/AI' }, result: 'Blackboard created',
   }),
   aiRecord({
-    action: 'create_eqs_query', summary: 'Create an Environment Query asset.',
+    action: 'create_eqs_query', summary: 'Create an Environment Query asset named name in path (default /Game/AI/EQS), saved (saved); an asset already at the path is refused (ASSET_ALREADY_EXISTS). It has no items until add_eqs_generator gives it a generator.',
     use: 'An AI needs a spatial query asset.',
     avoid: 'Use add_eqs_generator to give the query an item set.',
     props: createProps, required: ['name'], plugins: EQS,
@@ -69,7 +72,7 @@ export const AI_CREATE_READ_RECORDS: readonly CapabilityRecordSource[] = [
     example: { name: 'EQS_Cover', path: '/Game/AI' }, result: 'Environment Query created',
   }),
   aiRecord({
-    action: 'create_mass_entity_config', summary: 'Create a Mass Entity configuration asset.',
+    action: 'create_mass_entity_config', summary: 'Create a Mass entity config asset named name in path (default /Game/AI/Mass), saved, with no traits yet; an asset already at the path is refused (ASSET_ALREADY_EXISTS).',
     use: 'Crowd simulation needs an entity config asset.',
     avoid: 'Use configure_mass_entity to edit an existing config.',
     props: createProps, required: ['name'], plugins: MASS_AI,
@@ -77,13 +80,14 @@ export const AI_CREATE_READ_RECORDS: readonly CapabilityRecordSource[] = [
     example: { name: 'MEC_Crowd', path: '/Game/AI/Mass' }, result: 'Mass entity config created',
   }),
   aiRecord({
-    action: 'create_nav_link_proxy', summary: 'Create a NavLinkProxy actor in the editor world.',
+    action: 'create_nav_link_proxy', summary: 'Place a NavLinkProxy at location (and rotation) whose point link joins startPoint and endPoint, relative to the actor, in direction (BothWays by default, LeftToRight or RightToLeft), so agents path across a gap, drop or jump the navmesh does not connect; each end needs navmesh under it. Labelled actorName (an actor already under it is refused, NAME_TAKEN), else its own unique name; one undo step, the level left unsaved. The reply gives the link type, its endpoints and direction.',
     use: 'A level needs an authored navigation link between two points.',
     avoid: 'Use create_smart_link for a state-switching link.',
     props: {
       actorName: A.actorName, location: N.location, rotation: A.rotation,
       startPoint: N.startPoint, endPoint: N.endPoint, direction: N.direction,
     },
+    required: ['location', 'startPoint', 'endPoint'],
     out: { actorName: A.actorName },
     example: { actorName: 'NavLinkProxy_0', location: { x: 0, y: 0, z: 100 } },
     result: 'NavLinkProxy created',
@@ -105,19 +109,20 @@ export const AI_CREATE_READ_RECORDS: readonly CapabilityRecordSource[] = [
     result: 'Nav modifier component added',
   }),
   aiRecord({
-    action: 'create_smart_link', summary: 'Create a smart navigation link.',
+    action: 'create_smart_link', summary: 'Place a NavLinkProxy at location whose smart link alone (no point link beside it) joins startPoint and endPoint, relative to the actor, in direction (default BothWays): a link that can be switched on and off and change its navigation area (configure_smart_link_behavior); reacting when an agent reaches it needs a Blueprint child of NavLinkProxy (its Receive Smart Link Reached event). Labelled actorName (an actor already under it is refused, NAME_TAKEN); one undo step, the level left unsaved.',
     use: 'A level needs a navigation link that can toggle its area class.',
     avoid: 'Use create_nav_link_proxy for a static link.',
     props: {
       actorName: A.actorName, location: N.location, rotation: A.rotation,
       startPoint: N.startPoint, endPoint: N.endPoint, direction: N.direction,
     },
+    required: ['location', 'startPoint', 'endPoint'],
     out: { actorName: A.actorName },
     example: { actorName: 'SmartLink_0', location: { x: 0, y: 200, z: 100 } },
     result: 'Smart link created',
   }),
   aiRecord({
-    action: 'create_smart_object_definition', summary: 'Create a Smart Object definition.',
+    action: 'create_smart_object_definition', summary: 'Create a Smart Object definition asset named name in path (default /Game/AI/SmartObjects), saved, with no slots yet (add_smart_object_slot); an asset already at the path is refused (ASSET_ALREADY_EXISTS).',
     use: 'An interactable needs a Smart Object definition asset.',
     avoid: 'Use add_smart_object_slot to add interaction slots.',
     props: createProps, required: ['name'], plugins: SMART_OBJECTS,
@@ -125,10 +130,10 @@ export const AI_CREATE_READ_RECORDS: readonly CapabilityRecordSource[] = [
     example: { name: 'SO_Bench', path: '/Game/AI' }, result: 'Smart Object definition created',
   }),
   aiRecord({
-    action: 'create_state_tree', summary: 'Create a StateTree asset.',
+    action: 'create_state_tree', summary: 'Create a State Tree asset named name in path (default /Game/AI/StateTrees) with a Root state and a schema, compiled and saved: schema component (default; a StateTreeComponent on any actor runs it), ai (a StateTreeAIComponent on an AI controller, UE 5.4+) or the class path of another schema. component and ai come from the GameplayStateTree plugin and are refused while it is off (SCHEMA_NOT_AVAILABLE); an asset already at the path is refused (ASSET_ALREADY_EXISTS). compiled says whether the tree compiled, with compileMessages.',
     use: 'An AI needs a StateTree instead of a Behavior Tree.',
     avoid: 'Use create_behavior_tree for Behavior Tree logic.',
-    props: createProps, required: ['name'], plugins: STATE_TREE,
+    props: { ...createProps, schema: A.schema }, required: ['name'], plugins: STATE_TREE,
     out: { assetPath: A.assetPath },
     example: { name: 'ST_Enemy', path: '/Game/AI' }, result: 'StateTree created',
   }),
@@ -170,13 +175,13 @@ export const AI_CREATE_READ_RECORDS: readonly CapabilityRecordSource[] = [
     example: { controllerPath: '/Game/AI/AIC_Enemy' }, result: 'AI info read',
   }),
   aiRecord({
-    action: 'get_blackboard_value', summary: 'Read a Blackboard key value.',
+    action: 'get_blackboard_value', summary: 'Read a Blackboard key: its type, whether it is instance-synced, and its default (value and valueAvailable; valueNumber or valueBool for number and Bool keys). Defaults exist from UE 5.4 for Bool, Int, Float, Vector, Rotator, Name and String keys and from 5.5 for Enum, Object and Class keys; a vector or rotator never set has none. A key a parent Blackboard holds is answered KEY_IN_PARENT, naming the parent to read.',
     use: 'A caller needs the authored default of a Blackboard key.',
     avoid: 'Use set_blackboard_value to change it.',
     props: { blackboardPath: A.blackboardPath, keyName: A.keyName },
     required: ['blackboardPath', 'keyName'], effect: 'read', plugins: BT,
     out: {
-      valueAvailable: { type: 'boolean', description: 'Whether the typed default value was available to read (false on UE 5.0-5.4).' },
+      valueAvailable: { type: 'boolean', description: 'Whether the key holds a default to read: false before UE 5.4, for Enum, Object and Class keys before 5.5, and for a vector or rotator never set.' },
       value: A.value,
     },
     example: { blackboardPath: '/Game/AI/BB_Enemy', keyName: 'TargetActor' },

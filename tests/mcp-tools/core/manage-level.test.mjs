@@ -47,11 +47,16 @@ const testCases = [
   { scenario: 'ERROR: add_sublevel refuses a parentLevel that is not open', toolName: 'manage_level', arguments: { action: 'add_sublevel', subLevelPath: SUB_LEVEL, parentLevel: SAVE_AS_LEVEL }, expected: 'error|PARENT_LEVEL_NOT_LOADED' },
   { scenario: 'ADD: add_sublevel via levelPath alias', toolName: 'manage_level', arguments: { action: 'add_sublevel', levelPath: SUB_LEVEL, streamingMethod: 'AlwaysLoaded' }, expected: 'success|already exists' },
   { scenario: 'ACTION: load with streaming adds a sub-level', toolName: 'manage_level', arguments: { action: 'load', levelPath: SUB_LEVEL, streaming: true }, expected: 'success|already exists' },
+  // Any other method used to become Blueprint while the reply echoed the one asked for.
+  { scenario: 'ERROR: add_sublevel refuses a streamingMethod it does not have', toolName: 'manage_level', arguments: { action: 'add_sublevel', subLevelPath: SUB_LEVEL, streamingMethod: 'Kismet' }, expected: 'error|INVALID_PARAMETER_VALUE' },
 
   // === STREAMING ===
-  { scenario: 'ACTION: stream', toolName: 'manage_level', arguments: { action: 'stream', levelPath: SUB_LEVEL, shouldBeLoaded: true, shouldBeVisible: true }, expected: 'success|already loaded' },
-  { scenario: 'ACTION: unload', toolName: 'manage_level', arguments: { action: 'unload', levelPath: SUB_LEVEL }, expected: 'success|not loaded' },
-  { scenario: 'ACTION: unload_level alias', toolName: 'manage_level', arguments: { action: 'unload_level', levelPath: SUB_LEVEL }, expected: 'success|not loaded' },
+  // The editor world ignores streaming state: stream and unload show and hide the sublevel there (they replied
+  // "updated" and changed nothing), and unload says it kept the level loaded.
+  { scenario: 'ACTION: stream', toolName: 'manage_level', arguments: { action: 'stream', levelPath: SUB_LEVEL, shouldBeLoaded: true, shouldBeVisible: true }, expected: 'success|already loaded', assertions: [{ path: 'structuredContent.result.world', equals: 'editor', label: 'no Play session, so the editor world' }, { path: 'structuredContent.result.visible', equals: true, label: 'the sublevel is drawn' }] },
+  { scenario: 'ACTION: unload', toolName: 'manage_level', arguments: { action: 'unload', levelPath: SUB_LEVEL }, expected: 'success|not loaded', assertions: [{ path: 'structuredContent.result.visible', equals: false, label: 'it is hidden' }, { path: 'structuredContent.result.loaded', equals: true, label: 'the editor keeps it loaded, and the reply warns' }] },
+  { scenario: 'ACTION: unload_level alias', toolName: 'manage_level', arguments: { action: 'unload_level', levelName: `LevelSub_${ts}` }, expected: 'success|not loaded', assertions: [{ path: 'structuredContent.result.levelPath', equals: SUB_LEVEL, label: 'the name after the last slash finds it' }] },
+  { scenario: 'ERROR: stream refuses a level that is not a sublevel', toolName: 'manage_level', arguments: { action: 'stream', levelPath: `${TEST_FOLDER}/NoSuchSub_${ts}` }, expected: 'error|STREAMING_LEVEL_NOT_FOUND' },
 
   // === LIGHTING ===
   { scenario: 'CREATE: create_light', toolName: 'manage_level', arguments: { action: 'create_light', lightType: 'Point', name: `LevelLight_${ts}`, location: { x: 150, y: 0, z: 250 }, rotation: { pitch: -20, yaw: 0, roll: 0 }, intensity: 1500, color: [1, 0.85, 0.6, 1] }, expected: 'success|already exists' },

@@ -52,6 +52,17 @@ UBlueprint* LoadCharacterBlueprint(UEngineWireSubsystem* Self, const FString& Re
     {
         Self->SendAutomationError(Socket, RequestId,
             FString::Printf(TEXT("Blueprint not found: %s"), *BlueprintPath), TEXT("NOT_FOUND"));
+        return nullptr;
+    }
+    // Every character action edits the Character defaults: on another Blueprint the movement, jump, rotation, mesh
+    // and camera edits wrote nothing, then compiled, saved and answered "configured".
+    const ACharacter* CharacterDefaults = Blueprint->GeneratedClass ? Cast<ACharacter>(Blueprint->GeneratedClass->GetDefaultObject()) : nullptr;
+    if (!CharacterDefaults || !CharacterDefaults->GetCharacterMovement())
+    {
+        Self->SendAutomationError(Socket, RequestId, FString::Printf(TEXT("%s is not a Character Blueprint with a CharacterMovement "
+            "component (its parent is %s); nothing was changed."), *BlueprintPath, Blueprint->ParentClass ? *Blueprint->ParentClass->GetName() : TEXT("none")),
+            TEXT("NOT_A_CHARACTER"));
+        return nullptr;
     }
     return Blueprint;
 }

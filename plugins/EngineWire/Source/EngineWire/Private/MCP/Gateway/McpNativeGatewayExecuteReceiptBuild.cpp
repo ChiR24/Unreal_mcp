@@ -120,19 +120,31 @@ TSharedPtr<FJsonObject> McpBuildGatewayExecuteReceipt(
 	}
 
 	int64 SerializedChars = 0;
+	TSharedPtr<FJsonObject> Published = Result;
+	TSharedPtr<FJsonObject> PageBlock;
 	if (McpSerializedResultExceeds(Result, ResultCharBudget, &SerializedChars))
 	{
-		FMcpSemanticError TooLarge = McpOutputError(TEXT("RESULT_TOO_LARGE"),
-			FString::Printf(TEXT("Result exceeded the gateway safety limit (%lld chars). Narrow the request with one of this capability's own filter parameters, then retry."), SerializedChars));
-		TooLarge.bHasResultChars = true;
-		TooLarge.ResultChars = SerializedChars;
-		return McpBuildErrorReceipt(CapabilityId, TooLarge, Context, NarrowingGuidance(CapabilityId));
+		// One top-level array that carries the size goes out a page at a time instead (McpNativeResultPages.cpp); a
+		// payload reporting a failure is never paged.
+		bool bPayloadOk = true;
+		Result->TryGetBoolField(TEXT("success"), bPayloadOk);
+		FMcpResultPage Paged;
+		if (!bPayloadOk || !Context.PageOwner.IsValid() || !McpFirstResultPage(Result, ResultCharBudget, *Context.PageOwner, Paged))
+		{
+			FMcpSemanticError TooLarge = McpOutputError(TEXT("RESULT_TOO_LARGE"),
+				FString::Printf(TEXT("Result exceeded the gateway safety limit (%lld chars). Narrow the request with one of this capability's own filter parameters, then retry."), SerializedChars));
+			TooLarge.bHasResultChars = true;
+			TooLarge.ResultChars = SerializedChars;
+			return McpBuildErrorReceipt(CapabilityId, TooLarge, Context, NarrowingGuidance(CapabilityId));
+		}
+		Published = Paged.Result;
+		PageBlock = Paged.Page;
 	}
 
 	TSharedPtr<FJsonObject> WithVerdict = MakeShared<FJsonObject>();
-	if (Result.IsValid())
+	if (Published.IsValid())
 	{
-		WithVerdict->Values = Result->Values;
+		WithVerdict->Values = Published->Values;
 	}
 	// A handler that answers success:false inside its payload has failed even
 	// when the completion frame said otherwise; surface it as an error like the
@@ -175,8 +187,15 @@ TSharedPtr<FJsonObject> McpBuildGatewayExecuteReceipt(
 	const TSharedPtr<FJsonObject> Canonical =
 		McpProjectCanonicalOutput(WithVerdict, OutputSchema);
 	const TSharedPtr<FJsonObject> OutputError = ValidateGatewayExecuteOutput(
-		CapabilityId, OutputSchema, Canonical, Result, Context);
-	return OutputError.IsValid()
-		? OutputError
-		: McpBuildSuccessReceipt(CapabilityId, Canonical, Context, Result, Message);
+		CapabilityId, OutputSchema, Canonical, Published, Context);
+	if (OutputError.IsValid())
+	{
+		return OutputError;
+	}
+	const TSharedPtr<FJsonObject> Receipt = McpBuildSuccessReceipt(CapabilityId, Canonical, Context, Published, Message);
+	if (PageBlock.IsValid())
+	{
+		Receipt->SetObjectField(TEXT("page"), PageBlock);
+	}
+	return Receipt;
 }

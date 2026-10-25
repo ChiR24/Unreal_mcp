@@ -24,7 +24,7 @@ struct FRegisterGeneratedParentTools
 			{TEXT("manage_combat"), TEXT("Create weapons with hitscan/projectile firing, configure damage types, hitboxes, reload, and melee combat (combos, parry, block)."), TEXT("gameplay")},
 			{TEXT("manage_effect"), TEXT("Niagara particle systems, VFX, debug shapes, and GPU simulations. Create systems, emitters, modules, and control particle effects."), TEXT("gameplay")},
 			{TEXT("manage_gas"), TEXT("Create Gameplay Abilities, Effects, Attribute Sets, and Gameplay Cues for ability systems."), TEXT("gameplay")},
-			{TEXT("manage_geometry"), TEXT("Create procedural meshes using Geometry Script: booleans, deformers, UVs, collision, and LOD generation."), TEXT("world")},
+			{TEXT("manage_geometry"), TEXT("Create procedural meshes using Geometry Script: booleans, deformers, UVs, collision, and LOD generation. Each edit of a placed dynamic mesh is one undo step."), TEXT("world")},
 			{TEXT("manage_interaction"), TEXT("Create interactive objects: doors, switches, chests, levers. Set up destructible meshes and trigger volumes."), TEXT("gameplay")},
 			{TEXT("manage_inventory"), TEXT("Create item data assets, inventory components, world pickups, loot tables, and crafting recipes."), TEXT("gameplay")},
 			{TEXT("manage_level"), TEXT("Load/save levels, configure streaming, and build lighting."), TEXT("core")},

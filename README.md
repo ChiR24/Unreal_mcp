@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="https://raw.githubusercontent.com/wiki/ChiR24/Unreal_mcp/assets/banner.svg" alt="EngineWire: let any AI assistant work inside the Unreal Editor" width="100%">
+  <img src="Public/banner.svg" alt="EngineWire: let any AI assistant work inside the Unreal Editor" width="100%">
 </p>
 
 <h1 align="center">EngineWire</h1>
@@ -26,6 +26,7 @@
 </p>
 
 <p align="center">
+  <a href="https://enginewire.dev"><b>🌐 enginewire.dev</b></a> &nbsp;·&nbsp;
   <a href="https://github.com/ChiR24/Unreal_mcp/wiki/Quick-Start"><b>🚀 Quick Start</b></a> &nbsp;·&nbsp;
   <a href="https://github.com/ChiR24/Unreal_mcp/wiki"><b>📖 Wiki</b></a> &nbsp;·&nbsp;
   <a href="https://github.com/ChiR24/Unreal_mcp/releases"><b>📦 Releases</b></a> &nbsp;·&nbsp;
@@ -93,7 +94,7 @@ Nearly 400 capabilities in all, behind a single MCP tool. The assistant finds th
 ## How it works
 
 <p align="center">
-  <img src="https://raw.githubusercontent.com/wiki/ChiR24/Unreal_mcp/assets/diagrams/architecture.svg" alt="Architecture: an AI client reaches the EngineWire plugin inside the Unreal Editor either over Streamable HTTP on port 3000 (Route A) or through the Node.js server over stdio and a WebSocket on port 8090 (Route B); the plugin drives the editor APIs on the game thread" width="100%">
+  <img src="Public/architecture.svg" alt="Architecture: an AI client reaches the EngineWire plugin inside the Unreal Editor either over Streamable HTTP on port 3000 (Route A) or through the Node.js server over stdio and a WebSocket on port 8090 (Route B); the plugin drives the editor APIs on the game thread" width="100%">
 </p>
 
 The **EngineWire** plugin runs inside the editor and does all the work, on the editor's game thread. Clients reach it in one of two ways, and both expose the same single tool, `unreal`:
@@ -136,7 +137,7 @@ Build the plugin once on a machine with the engine and a compiler, then hand out
 node scripts/package-plugin.mjs "C:/Program Files/Epic Games/UE_5.7"
 ```
 
-This writes `build/EngineWire-v<version>-UE5.7-<Platform>.zip`, where `<version>` is the `package.json` version (currently `0.6.0-beta-e`). Unzip it into `YourProject/Plugins/`. Binaries only work with the engine minor and platform they were built for: a 5.6 build won't load in 5.5, 5.7 or 5.8.
+This writes `build/EngineWire-v<version>-UE5.7-<Platform>.zip`, where `<version>` is the `package.json` version (currently `0.6.0-beta-f`). Unzip it into `YourProject/Plugins/`. Binaries only work with the engine minor and platform they were built for: a 5.6 build won't load in 5.5, 5.7 or 5.8.
 
 </details>
 
@@ -234,7 +235,7 @@ Both routes expose exactly **one** MCP tool, `unreal`, with four operations. Onl
 | `configure` | Enables or disables groups of internal tools; never touches the editor |
 
 <p align="center">
-  <img src="https://raw.githubusercontent.com/wiki/ChiR24/Unreal_mcp/assets/diagrams/gateway.svg" alt="The gateway flow: search with a query returns rows with a nextCall; describe with tool and action returns the contract; execute with params, and consent when needed, returns data and a receipt listing changes, handles and warnings" width="100%">
+  <img src="Public/gateway.svg" alt="The gateway flow: search with a query returns rows with a nextCall; describe with tool and action returns the contract; execute with params, and consent when needed, returns data and a receipt listing changes, handles and warnings" width="100%">
 </p>
 
 A typical exchange:
@@ -268,7 +269,7 @@ The single `unreal` tool is permanent on both routes; there is no opt-out and no
 
 ### Protocol versions
 
-Both routes negotiate the MCP protocol version at `initialize`. The native `/mcp` transport supports `2025-11-25` (latest), `2025-06-18` and `2025-03-26`; the stdio server also accepts the legacy `2024-11-05` and `2024-10-07`. An unsupported `MCP-Protocol-Version` header on the native route gets HTTP 400. Both also answer `server/discover` without a session, listing those versions, so a client on the newer 2026-07-28 revision falls back to `initialize`. Details: [docs/protocol.md](https://github.com/ChiR24/Unreal_mcp/blob/dev/docs/protocol.md).
+Both routes negotiate the MCP protocol version at `initialize`. The native `/mcp` transport supports `2025-11-25` (latest), `2025-06-18` and `2025-03-26`; the stdio server also accepts the legacy `2024-11-05` and `2024-10-07`. An unsupported `MCP-Protocol-Version` header on the native route gets HTTP 400. Both also serve MCP 2026-07-28 per request, with no `initialize` or session, and answer `server/discover` with it. Details: [docs/protocol.md](https://github.com/ChiR24/Unreal_mcp/blob/dev/docs/protocol.md).
 
 <details>
 <summary><b>The 23 internal tools behind <code>unreal</code></b></summary>

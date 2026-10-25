@@ -1,6 +1,9 @@
 #include "Domains/LevelStructure/McpLevelStructureActions.h"
 #include "Domains/LevelStructure/McpLevelStructureEditorWorld.h"
 
+#include "Domains/BlueprintGraph/McpBPGraphPrivate.h"
+#include "Foundation/BridgeHelpers/Blueprints/McpBPActorBinding.h"
+#include "K2Node_ActorBoundEvent.h"
 #include "EdGraph/EdGraph.h"
 #include "EdGraph/EdGraphNode.h"
 #include "EdGraph/EdGraphPin.h"
@@ -56,41 +59,16 @@ bool HandleAddLevelBlueprintNode(
         return true;
     }
 
-    UWorld* World = GetEditorWorld();
-    if (!World)
-    {
-        Subsystem->SendAutomationResponse(Socket, RequestId, false,
-            TEXT("No editor world available"), nullptr);
-        return true;
-    }
-
     // Honor levelPath: edit the level the caller named, not whatever level is
     // open. A transient /Temp/ level is refused because its blueprint cannot be
     // saved (previously such a call reported success and silently discarded the
-    // node — see ResolveTargetLevelForBlueprintRequest).
-    FString TargetLevelError;
-    ULevel* CurrentLevel = ResolveTargetLevelForBlueprintRequest(World, Payload, TargetLevelError);
-    if (!CurrentLevel)
+    // node — see ResolveTargetLevelForBlueprintRequest). Adding the first node
+    // creates the level Blueprint.
+    ULevel* CurrentLevel = nullptr;
+    ULevelScriptBlueprint* LevelBP = nullptr;
+    UEdGraph* EventGraph = nullptr;
+    if (!ResolveLevelBlueprintGraph(Subsystem, RequestId, Socket, Payload, /*bCreate=*/true, CurrentLevel, LevelBP, EventGraph))
     {
-        Subsystem->SendAutomationResponse(Socket, RequestId, false,
-            TargetLevelError, nullptr, TEXT("LEVEL_NOT_OPEN"));
-        return true;
-    }
-
-    // Pass false to allow creation of Level Blueprint if it doesn't exist
-    ULevelScriptBlueprint* LevelBP = CurrentLevel->GetLevelScriptBlueprint(false);
-    if (!LevelBP)
-    {
-        Subsystem->SendAutomationResponse(Socket, RequestId, false,
-            TEXT("Failed to get or create Level Blueprint"), nullptr);
-        return true;
-    }
-
-    UEdGraph* EventGraph = FBlueprintEditorUtils::FindEventGraph(LevelBP);
-    if (!EventGraph)
-    {
-        Subsystem->SendAutomationResponse(Socket, RequestId, false,
-            TEXT("Failed to find event graph in Level Blueprint"), nullptr);
         return true;
     }
 
@@ -106,15 +84,35 @@ bool HandleAddLevelBlueprintNode(
         NodeClassObj = FindObject<UClass>(nullptr, *Candidate);
         TriedPaths += TEXT(", ") + Candidate;
     }
+    // The catalog create_node uses also takes a name without its K2Node_ prefix (ActorBoundEvent) or a friendly one
+    // (Literal), and refuses a node this graph cannot hold (an animation node) instead of placing it.
+    if (!NodeClassObj)
+    {
+        NodeClassObj = McpBlueprintGraphHandlers::FindNodeClassByName(NodeClass);
+        TriedPaths += TEXT(", the node catalog");
+    }
+    // Only for a graph node: it reads the class default as one, which check()s on any other class (nodeClass "Actor").
+    const FString Mismatch = NodeClassObj && NodeClassObj->IsChildOf(UK2Node::StaticClass())
+        ? McpBlueprintGraphHandlers::DescribeGraphMismatch(NodeClassObj, EventGraph) : FString();
+    if (!Mismatch.IsEmpty())
+    {
+        Subsystem->SendAutomationResponse(Socket, RequestId, false, Mismatch, nullptr, TEXT("NODE_NOT_ALLOWED_IN_GRAPH"));
+        return true;
+    }
 
     FString CreatedNodeName;
+    bool bStructural = false;
     if (NodeClassObj && NodeClassObj->IsChildOf(UK2Node::StaticClass()))
     {
         UK2Node* NewNode = NewObject<UK2Node>(EventGraph, NodeClassObj);
         FString AliasError;
-        if (NewNode && !ApplyLevelBlueprintNodeAlias(NewNode, AliasEventName, AliasFunctionName, AliasError))
+        FString AliasCode;
+        const FString MemberClass = GetJsonStringField(Payload, TEXT("memberClass"), TEXT(""));
+        // Every refusal below drops the node it made, so no orphan stays in the graph to take a later node's name.
+        if (NewNode && !ApplyLevelBlueprintNodeAlias(NewNode, AliasEventName, AliasFunctionName, MemberClass, AliasError, AliasCode))
         {
-            Subsystem->SendAutomationResponse(Socket, RequestId, false, AliasError, nullptr, TEXT("NOT_SUPPORTED"));
+            NewNode->MarkAsGarbage();
+            Subsystem->SendAutomationResponse(Socket, RequestId, false, AliasError, nullptr, AliasCode);
             return true;
         }
         // An unbound call node compiles as "Could not find a function named None" and breaks the level blueprint.
@@ -122,6 +120,7 @@ bool HandleAddLevelBlueprintNode(
         {
             if (!CallNode->GetTargetFunction())
             {
+                NewNode->MarkAsGarbage();
                 Subsystem->SendAutomationResponse(Socket, RequestId, false,
                     TEXT("K2Node_CallFunction needs a function: pass the function name as nodeClass (PrintString, Delay, ...) or functionName"),
                     nullptr, TEXT("INVALID_ARGUMENT"));
@@ -141,6 +140,24 @@ bool HandleAddLevelBlueprintNode(
                 }
             }
             NewNode->CreateNewGuid();
+            // After the rename: a bound event's function name carries the node name. Before the pins: they come
+            // from the actor's class, the event's signature or the variable's property. eventName binds nothing
+            // else here: BeginPlay, Tick and the other events are nodeClass aliases, and an ignored eventName left
+            // an unbound event node.
+            const FString EventName = GetJsonStringField(Payload, TEXT("eventName"), TEXT(""));
+            FString BindError = TEXT("eventName applies to a K2Node_ActorBoundEvent only; pass BeginPlay, Tick and the "
+                                     "other events as nodeClass (EventBeginPlay, EventTick).");
+            FString BindCode = TEXT("INVALID_ARGUMENT");
+            if ((!EventName.IsEmpty() && !NewNode->IsA<UK2Node_ActorBoundEvent>()) ||
+                !McpBindLevelActorNode(NewNode, CurrentLevel, GetJsonStringField(Payload, TEXT("actorName"), TEXT("")),
+                                       EventName, BindError, BindCode) ||
+                !BindLevelBlueprintVariableNode(NewNode, LevelBP, GetJsonStringField(Payload, TEXT("memberName"), TEXT("")),
+                                                MemberClass, BindError, BindCode))
+            {
+                NewNode->MarkAsGarbage();
+                Subsystem->SendAutomationResponse(Socket, RequestId, false, BindError, nullptr, BindCode);
+                return true;
+            }
             // ROOT-CAUSE FIX: allocate pins BEFORE PostPlacedNewNode(). Node families
             // such as UK2Node_SpawnActorFromClass read checked pin accessors inside
             // PostPlacedNewNode() (GetScaleMethodPin() => FindPinChecked()), which
@@ -180,6 +197,7 @@ bool HandleAddLevelBlueprintNode(
             }
             EventGraph->AddNode(NewNode, true, false);
             CreatedNodeName = NewNode->GetName();
+            bStructural = NewNode->NodeCausesStructuralBlueprintChange();
         }
     }
 
@@ -203,7 +221,16 @@ bool HandleAddLevelBlueprintNode(
         return true;
     }
 
-    FBlueprintEditorUtils::MarkBlueprintAsModified(LevelBP);
+    // An event node adds a function to the class, as the editor's own placement marks it; a plain mark left the
+    // skeleton class without it until something else recompiled the level blueprint.
+    if (bStructural)
+    {
+        FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(LevelBP);
+    }
+    else
+    {
+        FBlueprintEditorUtils::MarkBlueprintAsModified(LevelBP);
+    }
 
     TSharedPtr<FJsonObject> ResponseJson = McpHandlerUtils::CreateResultObject();
     McpHandlerUtils::AddVerification(ResponseJson, LevelBP);
@@ -213,6 +240,9 @@ bool HandleAddLevelBlueprintNode(
     {
         ResponseJson->SetStringField(TEXT("nodeTitle"), CreatedGraphNode->GetNodeTitle(ENodeTitleType::FullTitle).ToString());
         ResponseJson->SetStringField(TEXT("nodeId"), CreatedGraphNode->NodeGuid.ToString());
+        // The names connect_level_blueprint_nodes takes (a bound event's OtherActor, an actor reference's output), in
+        // the shape blueprint.edit_graph answers with.
+        ResponseJson->SetStringField(TEXT("pins"), McpDescribeNodePins(CreatedGraphNode));
     }
     ResponseJson->SetNumberField(TEXT("posX"), PosX);
     ResponseJson->SetNumberField(TEXT("posY"), PosY);

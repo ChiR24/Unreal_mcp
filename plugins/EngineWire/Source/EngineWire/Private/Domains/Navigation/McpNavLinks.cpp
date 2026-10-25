@@ -1,7 +1,75 @@
 #include "Domains/Navigation/McpNavPrivate.h"
+#include "Foundation/HandlerUtils/McpHandlerUtilsTransforms.h"
+#include "Foundation/McpScopedEditorTransaction.h"
 
 namespace McpNavigationHandlers
 {
+FNavLinkEnds ReadNavLinkEnds(ANavLinkProxy* NavLink)
+{
+    FNavLinkEnds Ends;
+    UNavLinkCustomComponent* SmartComp = NavLink->GetSmartLinkComp();
+    const FVector* Start = NavLinkCustomField<FVector>(SmartComp, TEXT("LinkRelativeStart"));
+    const FVector* End = NavLinkCustomField<FVector>(SmartComp, TEXT("LinkRelativeEnd"));
+    const TEnumAsByte<ENavLinkDirection::Type>* Direction = NavLinkCustomField<TEnumAsByte<ENavLinkDirection::Type>>(SmartComp, TEXT("LinkDirection"));
+    if (NavLink->bSmartLinkIsRelevant && Start && End && Direction)
+    {
+        Ends.Start = *Start;
+        Ends.End = *End;
+        Ends.Direction = Direction->GetValue();
+    }
+    else if (NavLink->PointLinks.Num() > 0)
+    {
+        Ends.Start = NavLink->PointLinks[0].Left;
+        Ends.End = NavLink->PointLinks[0].Right;
+        Ends.Direction = NavLink->PointLinks[0].Direction;
+    }
+    return Ends;
+}
+
+void ApplyNavLink(ANavLinkProxy* NavLink, bool bSmart, const FNavLinkEnds& Ends)
+{
+    UNavLinkCustomComponent* SmartComp = NavLink->GetSmartLinkComp();
+    NavLink->bSmartLinkIsRelevant = bSmart && SmartComp;
+    if (NavLink->bSmartLinkIsRelevant)
+    {
+        NavLink->PointLinks.Reset();
+        SmartComp->SetLinkData(Ends.Start, Ends.End, Ends.Direction);
+    }
+    else
+    {
+        if (NavLink->PointLinks.Num() == 0)
+        {
+            FNavigationLink Link;
+            Link.SetAreaClass(UNavArea_Default::StaticClass());
+            NavLink->PointLinks.Add(Link);
+        }
+        NavLink->PointLinks[0].Left = Ends.Start;
+        NavLink->PointLinks[0].Right = Ends.End;
+        NavLink->PointLinks[0].Direction = Ends.Direction;
+    }
+    if (SmartComp)
+    {
+        SmartComp->SetNavigationRelevancy(NavLink->bSmartLinkIsRelevant);
+    }
+}
+
+void DescribeNavLink(ANavLinkProxy* NavLink, TSharedPtr<FJsonObject>& Result)
+{
+    const FNavLinkEnds Ends = ReadNavLinkEnds(NavLink);
+    const TCHAR* Directions[] = {TEXT("BothWays"), TEXT("LeftToRight"), TEXT("RightToLeft")};
+    Result->SetStringField(TEXT("actorName"), McpActorRef(NavLink));
+    Result->SetStringField(TEXT("linkType"), NavLink->bSmartLinkIsRelevant ? TEXT("smart") : TEXT("simple"));
+    Result->SetNumberField(TEXT("pointLinkCount"), NavLink->PointLinks.Num());
+    Result->SetObjectField(TEXT("startPoint"), McpHandlerUtils::VectorToJson(Ends.Start));
+    Result->SetObjectField(TEXT("endPoint"), McpHandlerUtils::VectorToJson(Ends.End));
+    Result->SetStringField(TEXT("direction"), Directions[FMath::Clamp(static_cast<int32>(Ends.Direction), 0, 2)]);
+    if (!NavLink->bSmartLinkIsRelevant && NavLink->PointLinks.Num() > 0)
+    {
+        Result->SetNumberField(TEXT("snapRadius"), NavLink->PointLinks[0].SnapRadius);
+    }
+    McpHandlerUtils::AddVerification(Result, NavLink);
+}
+
 ANavLinkProxy* ResolveNavLinkOrReply(
     UEngineWireSubsystem* Self,
     const FString& RequestId,
@@ -42,84 +110,63 @@ bool SpawnNavLink(
     TSharedPtr<FMcpBridgeWebSocket> Socket,
     bool bSmart)
 {
+    const auto Fail = [&](const FString& Message, const TCHAR* Code)
+    {
+        Self->SendAutomationResponse(Socket, RequestId, false, Message, nullptr, Code);
+        return true;
+    };
     const TCHAR* Action = bSmart ? TEXT("create_smart_link") : TEXT("create_nav_link_proxy");
-    FString ActorName = GetJsonStringField(Payload, TEXT("actorName"), bSmart ? TEXT("SmartNavLink") : TEXT("NavLinkProxy"));
-    FVector Location = ExtractVectorField(Payload, TEXT("location"), FVector::ZeroVector);
-    FRotator Rotation = ExtractRotatorField(Payload, TEXT("rotation"), FRotator::ZeroRotator);
-    FVector StartPoint = ExtractVectorField(Payload, TEXT("startPoint"), FVector(-100, 0, 0));
-    FVector EndPoint = ExtractVectorField(Payload, TEXT("endPoint"), FVector(100, 0, 0));
-
+    const FString ActorName = GetJsonStringField(Payload, TEXT("actorName"));
+    FNavLinkEnds Ends;
+    Ends.Start = ExtractVectorField(Payload, TEXT("startPoint"), FVector::ZeroVector);
+    Ends.End = ExtractVectorField(Payload, TEXT("endPoint"), FVector::ZeroVector);
+    UWorld* World = GEditor ? GEditor->GetEditorWorldContext().World() : nullptr;
     if (!Payload->HasField(TEXT("location")))
     {
-        Self->SendAutomationResponse(Socket, RequestId, false,
-            FString::Printf(TEXT("location is required for %s"), Action), nullptr, TEXT("MISSING_PARAM"));
-        return true;
+        return Fail(FString::Printf(TEXT("location is required for %s"), Action), TEXT("MISSING_PARAM"));
     }
     if (!Payload->HasField(TEXT("startPoint")) || !Payload->HasField(TEXT("endPoint")))
     {
-        Self->SendAutomationResponse(Socket, RequestId, false,
-            FString::Printf(TEXT("startPoint and endPoint are required for %s to define the navigation link"), Action), nullptr, TEXT("MISSING_PARAM"));
-        return true;
+        return Fail(FString::Printf(TEXT("startPoint and endPoint are required for %s to define the navigation link"), Action), TEXT("MISSING_PARAM"));
     }
-    if (!IsValidActorName(ActorName))
+    if (!ActorName.IsEmpty() && !IsValidActorName(ActorName))
     {
-        Self->SendAutomationResponse(Socket, RequestId, false,
-            TEXT("Invalid actorName: must not contain path traversal (..), slashes, or drive letters"), nullptr, TEXT("SECURITY_VIOLATION"));
-        return true;
+        return Fail(TEXT("Invalid actorName: must not contain path traversal (..), slashes, or drive letters"), TEXT("SECURITY_VIOLATION"));
     }
-
-    UWorld* World = GEditor ? GEditor->GetEditorWorldContext().World() : nullptr;
+    if (!ReadNavLinkDirection(Payload, Ends.Direction))
+    {
+        return Fail(TEXT("direction must be BothWays, LeftToRight or RightToLeft."), TEXT("INVALID_ARGUMENT"));
+    }
     if (!World)
     {
-        Self->SendAutomationResponse(Socket, RequestId, false, TEXT("No editor world available"), nullptr, TEXT("NO_WORLD"));
-        return true;
+        return Fail(TEXT("No editor world available"), TEXT("NO_WORLD"));
+    }
+    // A second actor under one label left every later call by that name on whichever came first.
+    if (!ActorName.IsEmpty() && FindActorByNameInWorldForMcp(World, ActorName, true))
+    {
+        return Fail(FString::Printf(TEXT("An actor named %s is already in the level; pick another actorName. Nothing was created."), *ActorName), TEXT("NAME_TAKEN"));
     }
 
+    FMcpScopedEditorTransaction Transaction(FText::FromString(TEXT("Create Nav Link")), EMcpMutationDurability::EditorStateOnly, TArray<UObject*>());
     FActorSpawnParameters SpawnParams;
-    SpawnParams.Name = *ActorName;
-    SpawnParams.NameMode = FActorSpawnParameters::ESpawnActorNameMode::Requested;
     SpawnParams.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
-
-    ANavLinkProxy* NavLink = World->SpawnActor<ANavLinkProxy>(Location, Rotation, SpawnParams);
+    ANavLinkProxy* NavLink = World->SpawnActor<ANavLinkProxy>(ExtractVectorField(Payload, TEXT("location"), FVector::ZeroVector),
+        ExtractRotatorField(Payload, TEXT("rotation"), FRotator::ZeroRotator), SpawnParams);
     if (!NavLink)
     {
-        Self->SendAutomationResponse(Socket, RequestId, false, TEXT("Failed to spawn NavLinkProxy"), nullptr, TEXT("SPAWN_FAILED"));
-        return true;
+        return Fail(TEXT("Failed to spawn NavLinkProxy"), TEXT("SPAWN_FAILED"));
     }
-
-    NavLink->SetActorLabel(*ActorName);
-    const ENavLinkDirection::Type Direction = ParseNavLinkDirection(GetJsonStringField(Payload, TEXT("direction"), TEXT("BothWays")));
-    if (bSmart)
-    {
-        NavLink->bSmartLinkIsRelevant = true;
-        if (UNavLinkCustomComponent* SmartComp = NavLink->GetSmartLinkComp())
-        {
-            SmartComp->SetLinkData(StartPoint, EndPoint, Direction);
-            SmartComp->SetEnabled(true);
-        }
-    }
-    else
-    {
-        FNavigationLink NewLink;
-        NewLink.Left = StartPoint;
-        NewLink.Right = EndPoint;
-        NewLink.Direction = Direction;
-        NavLink->PointLinks.Add(NewLink);
-    }
-    World->MarkPackageDirty();
+    NavLink->SetActorLabel(ActorName.IsEmpty() ? NavLink->GetName() : ActorName);
+    ApplyNavLink(NavLink, bSmart, Ends);
+    FNavigationSystem::UpdateActorData(*NavLink);
+    NavLink->MarkPackageDirty();
 
     TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
-    Result->SetStringField(TEXT("actorName"), McpActorRef(NavLink));
+    DescribeNavLink(NavLink, Result);
     Result->SetStringField(TEXT("actorPath"), NavLink->GetPathName());
-    if (bSmart)
-    {
-        Result->SetBoolField(TEXT("bSmartLinkIsRelevant"), true);
-    }
-    McpHandlerUtils::AddVerification(Result, NavLink);
-
+    Transaction.DescribeInto(Result);
     Self->SendAutomationResponse(Socket, RequestId, true,
-        bSmart ? FString::Printf(TEXT("Smart NavLink '%s' created"), *ActorName)
-               : FString::Printf(TEXT("NavLinkProxy '%s' created"), *ActorName), Result);
+        FString::Printf(TEXT("%s '%s' created"), bSmart ? TEXT("Smart nav link") : TEXT("NavLinkProxy"), *McpActorRef(NavLink)), Result);
     return true;
 }
 
@@ -143,89 +190,44 @@ bool HandleConfigureNavLink(
     {
         return true;
     }
-    UWorld* World = NavLink->GetWorld();
-    const FString ActorName = GetJsonStringField(Payload, TEXT("actorName"));
-
-    bool bModified = false;
-    if (Payload->HasField(TEXT("startPoint")) || Payload->HasField(TEXT("endPoint")))
+    // direction and snapRadius were read only beside a start or end point, so a call with either alone changed nothing.
+    FNavLinkEnds Ends = ReadNavLinkEnds(NavLink);
+    const bool bSnap = Payload->HasField(TEXT("snapRadius"));
+    FString Error;
+    if (!bSnap && !Payload->HasField(TEXT("startPoint")) && !Payload->HasField(TEXT("endPoint")) && !Payload->HasField(TEXT("direction")))
     {
-        if (NavLink->PointLinks.Num() == 0)
-        {
-            NavLink->PointLinks.Add(FNavigationLink());
-        }
-
-        FNavigationLink& Link = NavLink->PointLinks[0];
-        if (Payload->HasField(TEXT("startPoint")))
-        {
-            Link.Left = ExtractVectorField(Payload, TEXT("startPoint"), FVector::ZeroVector);
-            bModified = true;
-        }
-        if (Payload->HasField(TEXT("endPoint")))
-        {
-            Link.Right = ExtractVectorField(Payload, TEXT("endPoint"), FVector::ZeroVector);
-            bModified = true;
-        }
-        if (Payload->HasField(TEXT("direction")))
-        {
-            Link.Direction = ParseNavLinkDirection(GetJsonStringField(Payload, TEXT("direction"), TEXT("BothWays")));
-            bModified = true;
-        }
-        if (Payload->HasField(TEXT("snapRadius")))
-        {
-            Link.SnapRadius = GetJsonNumberField(Payload, TEXT("snapRadius"), 30.0f);
-            bModified = true;
-        }
+        Error = TEXT("Nothing to set: send startPoint, endPoint, direction or snapRadius.");
     }
-
-    if (bModified)
+    else if (Payload->HasField(TEXT("direction")) && !ReadNavLinkDirection(Payload, Ends.Direction))
     {
-        World->MarkPackageDirty();
+        Error = TEXT("direction must be BothWays, LeftToRight or RightToLeft.");
     }
-
-    TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
-    Result->SetStringField(TEXT("actorName"), ActorName);
-    Result->SetBoolField(TEXT("modified"), bModified);
-    McpHandlerUtils::AddVerification(Result, NavLink);
-
-    Self->SendAutomationResponse(Socket, RequestId, true, TEXT("NavLink configured"), Result);
-    return true;
-}
-
-bool HandleSetNavLinkType(
-    UEngineWireSubsystem* Self,
-    const FString& RequestId,
-    const TSharedPtr<FJsonObject>& Payload,
-    TSharedPtr<FMcpBridgeWebSocket> Socket)
-{
-    ANavLinkProxy* NavLink = ResolveNavLinkOrReply(Self, RequestId, Payload, Socket);
-    if (!NavLink)
+    else if (bSnap && NavLink->bSmartLinkIsRelevant)
     {
+        Error = TEXT("snapRadius belongs to point links, and this proxy uses its smart link; set_nav_link_type simple first.");
+    }
+    if (!Error.IsEmpty())
+    {
+        Self->SendAutomationResponse(Socket, RequestId, false, Error, nullptr, TEXT("INVALID_ARGUMENT"));
         return true;
     }
-    UWorld* World = NavLink->GetWorld();
-    const FString ActorName = GetJsonStringField(Payload, TEXT("actorName"));
-    const FString LinkType = GetJsonStringField(Payload, TEXT("linkType"), TEXT("simple"));
 
-    bool bSmartLink = (LinkType == TEXT("smart"));
-    NavLink->bSmartLinkIsRelevant = bSmartLink;
-    if (bSmartLink)
+    FMcpScopedEditorTransaction Transaction(FText::FromString(TEXT("Configure Nav Link")), EMcpMutationDurability::EditorStateOnly,
+        {NavLink, NavLink->GetSmartLinkComp()});
+    Ends.Start = ExtractVectorField(Payload, TEXT("startPoint"), Ends.Start);
+    Ends.End = ExtractVectorField(Payload, TEXT("endPoint"), Ends.End);
+    ApplyNavLink(NavLink, NavLink->bSmartLinkIsRelevant, Ends);
+    if (bSnap)
     {
-        UNavLinkCustomComponent* SmartComp = NavLink->GetSmartLinkComp();
-        if (SmartComp)
-        {
-            SmartComp->SetEnabled(true);
-        }
+        NavLink->PointLinks[0].SnapRadius = static_cast<float>(GetJsonNumberField(Payload, TEXT("snapRadius"), 30.0));
     }
-    World->MarkPackageDirty();
+    FNavigationSystem::UpdateActorData(*NavLink);
+    NavLink->MarkPackageDirty();
 
     TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
-    Result->SetStringField(TEXT("actorName"), ActorName);
-    Result->SetStringField(TEXT("linkType"), LinkType);
-    Result->SetBoolField(TEXT("bSmartLinkIsRelevant"), NavLink->bSmartLinkIsRelevant);
-    McpHandlerUtils::AddVerification(Result, NavLink);
-
-    Self->SendAutomationResponse(Socket, RequestId, true,
-        FString::Printf(TEXT("NavLink type set to %s"), *LinkType), Result);
+    DescribeNavLink(NavLink, Result);
+    Transaction.DescribeInto(Result);
+    Self->SendAutomationResponse(Socket, RequestId, true, TEXT("NavLink configured"), Result);
     return true;
 }
 }

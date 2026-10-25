@@ -7,6 +7,8 @@ class UBlueprint;
 
 class FSCSHandlers {
 public:
+  // Whether FinalizeBlueprintSCSChange saves; a dispatcher holds it to the payload's save for the call (TGuardValue).
+  static bool bSaveScsChanges;
   static void FinalizeBlueprintSCSChange(UBlueprint *Blueprint,
                                          bool &bOutCompiled, bool &bOutSaved);
 

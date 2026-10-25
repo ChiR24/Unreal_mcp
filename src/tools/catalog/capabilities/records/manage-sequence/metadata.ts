@@ -39,7 +39,7 @@ export const METADATA_RECORDS: readonly CapabilityRecordSource[] = [
   }),
   buildRecord({
     id: 'sequence.set_metadata', action: 'set_metadata', family: F, domain: D,
-    summary: 'Write metadata key-value pairs to a Level Sequence asset and save it.',
+    summary: 'Write metadata tags to a Level Sequence asset\'s package (metadata object, or one key with value) and save it; values are kept as text, and only strings, numbers and booleans are written. The reply lists the keys set and the whole stored map; saved says whether the save worked.',
     whenToUse: ['Sequence asset metadata must be written.'],
     whenNotToUse: ['The target is not a /Game asset path.'],
     inputProps: { path: P.path, metadata: P.metadata, key: { type: 'string', description: 'Single metadata key to write (paired with value).' }, value: { type: ['string', 'number', 'boolean'], description: 'Value written under key.' } },

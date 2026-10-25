@@ -1,4 +1,5 @@
 #include "Domains/Environment/McpEnvShared.h"
+#include "Domains/Log/McpScriptErrors.h"
 
 namespace McpEnvironmentHandlers {
 
@@ -102,11 +103,13 @@ bool HandleInspectRuntimeReportAction(
                     Label.Equals(ActorName, ESearchCase::IgnoreCase) ||
                     Name.Equals(ActorName, ESearchCase::IgnoreCase) ||
                     Actor->GetPathName().Equals(ActorName, ESearchCase::IgnoreCase);
+                // A path matches only whole: every actor's path holds its level's name, so a filter naming the
+                // level (Probe in L_Probe) matched them all.
                 const bool bMatchesFilter = Filter.IsEmpty() ||
                     Label.Contains(Filter) ||
                     Name.Contains(Filter) ||
                     Actor->GetClass()->GetName().Contains(Filter) ||
-                    Actor->GetPathName().Contains(Filter);
+                    Actor->GetPathName().Equals(Filter, ESearchCase::IgnoreCase);
                 if (bMatchesActor && bMatchesFilter)
                 {
                     if (ActorsArray.Num() < MaxReportedActors)
@@ -183,6 +186,13 @@ bool HandleInspectRuntimeReportAction(
                     CameraJson->SetNumberField(TEXT("fov"), CameraManager->GetFOVAngle());
                     Report->SetObjectField(TEXT("playerCameraManager"), CameraJson);
                 }
+            }
+
+            // Blueprint runtime errors of this play session, or of the last one until the next play starts.
+            const TArray<TSharedPtr<FJsonValue>> ScriptErrors = FMcpScriptErrors::Get().ToJson();
+            if (ScriptErrors.Num() > 0)
+            {
+                Report->SetArrayField(TEXT("scriptErrors"), ScriptErrors);
             }
 
             Bridge.SendAutomationResponse(RequestingSocket, RequestId, true,

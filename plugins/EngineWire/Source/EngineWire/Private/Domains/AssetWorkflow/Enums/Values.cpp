@@ -15,19 +15,13 @@ static TArray<TPair<FName, int64>> GetEnumDisplayNamePairs(UUserDefinedEnum* Enu
     return Result;
 }
 
-static bool MatchesEnumShortName(const FName& StoredName, const FString& RequestedName)
+// A value name the enum already has, by internal or display name, refused: two entries of one name broke the enum.
+static bool RefuseTakenValueName(UUserDefinedEnum* Enum, const FString& Name, int32 ExceptIndex, TSharedPtr<FJsonObject>& OutResult)
 {
-    FString Str = StoredName.ToString();
-    if (Str == RequestedName) return true;
-    int32 Pos = Str.Find(TEXT("::"), ESearchCase::CaseSensitive);
-    return (Pos != INDEX_NONE && Str.Mid(Pos + 2) == RequestedName);
-}
-
-static FString ExtractEnumShortName(const FName& EnumFName)
-{
-    FString Str = EnumFName.ToString();
-    int32 Pos = Str.Find(TEXT("::"), ESearchCase::CaseSensitive);
-    return (Pos != INDEX_NONE) ? Str.Mid(Pos + 2) : Str;
+    const int32 Taken = McpFindEnumValue(Enum, Name);
+    if (Taken == INDEX_NONE || Taken == ExceptIndex) { return false; }
+    SetEnumResultFields(OutResult, false, FString::Printf(TEXT("The enum already has a value named '%s'."), *Name), TEXT("VALUE_EXISTS"));
+    return true;
 }
 
 bool HandleEnumValueActions(
@@ -43,6 +37,7 @@ bool HandleEnumValueActions(
 
         FString ValueName = GetJsonStringField(Params, TEXT("valueName"));
         if (ValueName.IsEmpty()) { SetEnumResultFields(OutResult, false, TEXT("Missing required parameter: valueName"), TEXT("MISSING_PARAMETER")); return true; }
+        if (RefuseTakenValueName(Enum, ValueName, INDEX_NONE, OutResult)) { return true; }
 
         Enum->Modify();
         TArray<TPair<FName, int64>> Names = GetEnumDisplayNamePairs(Enum);
@@ -69,25 +64,23 @@ bool HandleEnumValueActions(
         FString ValueName = GetJsonStringField(Params, TEXT("valueName"));
         if (ValueName.IsEmpty()) { SetEnumResultFields(OutResult, false, TEXT("Missing required parameter: valueName"), TEXT("MISSING_PARAMETER")); return true; }
 
-        Enum->Modify();
-        TArray<TPair<FName, int64>> Names = GetEnumDisplayNamePairs(Enum);
-        const int32 Removed = Names.RemoveAll([&ValueName](const TPair<FName, int64>& Pair)
-        {
-            return MatchesEnumShortName(Pair.Key, ValueName);
-        });
-        if (Removed == 0)
+        // The engine's own remove renumbers the later values AND remaps every loaded object and graph pin
+        // holding them, by name (FEnumEditorUtils::BroadcastChanges). Renumbering by hand left a stored
+        // value reading as whichever entry now sat at its number.
+        const int32 Index = McpFindEnumValue(Enum, ValueName);
+        if (Index == INDEX_NONE)
         {
             SetEnumResultFields(OutResult, false, FString::Printf(TEXT("Enum value '%s' not found."), *ValueName), TEXT("NOT_FOUND"));
             return true;
         }
-        for (int32 i = 0; i < Names.Num(); ++i) { Names[i].Value = i; }
-        MCP_SET_ENUMS(Enum, Names, Enum->GetCppForm());
+        const int32 Before = GetEnumDisplayNamePairs(Enum).Num();
+        FEnumEditorUtils::RemoveEnumeratorFromUserDefinedEnum(Enum, Index);
         FinalizeEnum(Enum, EnumSaveRequested(Params));
 
         TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
         Result->SetStringField(TEXT("valueName"), ValueName);
         Result->SetBoolField(TEXT("removed"), true);
-        Result->SetNumberField(TEXT("valueCount"), Names.Num());
+        Result->SetNumberField(TEXT("valueCount"), Before - 1);
         OutResult = Result;
         return true;
     }
@@ -102,30 +95,27 @@ bool HandleEnumValueActions(
         FString NewValueName = GetJsonStringField(Params, TEXT("newValueName"));
         if (ValueName.IsEmpty() || NewValueName.IsEmpty()) { SetEnumResultFields(OutResult, false, TEXT("Missing required parameter: valueName or newValueName"), TEXT("MISSING_PARAMETER")); return true; }
 
-        Enum->Modify();
-        TArray<TPair<FName, int64>> Names = GetEnumDisplayNamePairs(Enum);
-        const FString NewFullName = Enum->GenerateFullEnumName(*NewValueName);
-        bool bFound = false;
-        for (TPair<FName, int64>& Pair : Names)
-        {
-            if (MatchesEnumShortName(Pair.Key, ValueName))
-            {
-                Pair.Key = *NewFullName;
-                bFound = true;
-                break;
-            }
-        }
-        if (!bFound)
+        const int32 Index = McpFindEnumValue(Enum, ValueName);
+        if (Index == INDEX_NONE)
         {
             SetEnumResultFields(OutResult, false, FString::Printf(TEXT("Enum value '%s' not found."), *ValueName), TEXT("NOT_FOUND"));
             return true;
         }
-        for (int32 i = 0; i < Names.Num(); ++i) { Names[i].Value = i; }
-        MCP_SET_ENUMS(Enum, Names, Enum->GetCppForm());
+        if (RefuseTakenValueName(Enum, NewValueName, Index, OutResult)) { return true; }
+
+        // The display name, as the enum editor renames: stored values (defaults, pins, table cells) name the entry by
+        // its internal name, so renaming that left every one of them reading as nothing.
+        Enum->Modify();
+        if (!FEnumEditorUtils::SetEnumeratorDisplayName(Enum, Index, FText::FromString(NewValueName)))
+        {
+            SetEnumResultFields(OutResult, false, FString::Printf(TEXT("'%s' is not a valid enum value name."), *NewValueName), TEXT("INVALID_ARGUMENT"));
+            return true;
+        }
         FinalizeEnum(Enum, EnumSaveRequested(Params));
 
         TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
         Result->SetStringField(TEXT("valueName"), NewValueName);
+        Result->SetStringField(TEXT("internalName"), Enum->GetNameStringByIndex(Index));
         OutResult = Result;
         return true;
     }
@@ -139,31 +129,25 @@ bool HandleEnumValueActions(
         const TArray<TSharedPtr<FJsonValue>>* OrderArr = nullptr;
         if (!Params->TryGetArrayField(TEXT("order"), OrderArr) || !OrderArr) { SetEnumResultFields(OutResult, false, TEXT("Missing required parameter: order"), TEXT("MISSING_PARAMETER")); return true; }
 
-        TArray<FString> RequestedOrder;
-        for (const TSharedPtr<FJsonValue>& V : *OrderArr) { RequestedOrder.Add(V->AsString()); }
-
-        Enum->Modify();
-        TArray<TPair<FName, int64>> OldNames = GetEnumDisplayNamePairs(Enum);
-        TArray<TPair<FName, int64>> Current = OldNames;
-
-        TArray<TPair<FName, int64>> NewNames;
-        for (const FString& Req : RequestedOrder)
+        const TArray<TPair<FName, int64>> Current = GetEnumDisplayNamePairs(Enum);
+        TArray<int32> Order;
+        for (const TSharedPtr<FJsonValue>& V : *OrderArr)
         {
-            bool bMatched = false;
-            for (const TPair<FName, int64>& Pair : Current)
-            {
-                if (MatchesEnumShortName(Pair.Key, Req)) { NewNames.Add(Pair); bMatched = true; break; }
-            }
-            if (!bMatched)
+            const FString Req = V->AsString();
+            const int32 Index = McpFindEnumValue(Enum, Req);
+            if (Index == INDEX_NONE)
             {
                 SetEnumResultFields(OutResult, false, FString::Printf(TEXT("Enum value '%s' in order is not a value of this enum; nothing was reordered."), *Req), TEXT("NOT_FOUND"));
                 return true;
             }
+            Order.AddUnique(Index);
         }
+        TArray<TPair<FName, int64>> NewNames;
+        for (const int32 Index : Order) { NewNames.Add(Current[Index]); }
 
         if (NewNames.Num() != Current.Num())
         {
-            SetEnumResultFields(OutResult, false, TEXT("reorder_enum_values must list every current value; partial lists are rejected to avoid dropping values"));
+            SetEnumResultFields(OutResult, false, TEXT("reorder_enum_values must list every current value once; partial lists are rejected to avoid dropping values"));
             return true;
         }
 
@@ -181,8 +165,14 @@ bool HandleEnumValueActions(
             return true;
         }
 
-        for (int32 i = 0; i < NewNames.Num(); ++i) { NewNames[i].Value = i; }
-        MCP_SET_ENUMS(Enum, NewNames, Enum->GetCppForm());
+        // One engine move per misplaced value: each move remaps the loaded objects and pins holding the moved
+        // values by name, where renumbering by hand changed what every stored value meant.
+        for (int32 Target = 0; Target < NewNames.Num(); ++Target)
+        {
+            const int32 From = GetEnumDisplayNamePairs(Enum).IndexOfByPredicate(
+                [&NewNames, Target](const TPair<FName, int64>& Pair) { return Pair.Key == NewNames[Target].Key; });
+            if (From != Target) { FEnumEditorUtils::MoveEnumeratorInUserDefinedEnum(Enum, From, Target); }
+        }
         FinalizeEnum(Enum, EnumSaveRequested(Params));
 
         TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
@@ -202,82 +192,26 @@ bool HandleEnumValueActions(
         FString Key = GetJsonStringField(Params, TEXT("key"));
         FString Value = GetJsonStringField(Params, TEXT("value"));
         if (ValueName.IsEmpty() || Key.IsEmpty()) { SetEnumResultFields(OutResult, false, TEXT("Missing required parameter: valueName or key"), TEXT("MISSING_PARAMETER")); return true; }
+        const int32 Index = McpFindEnumValue(Enum, ValueName);
+        if (Index == INDEX_NONE)
+        {
+            SetEnumResultFields(OutResult, false, FString::Printf(TEXT("Enum value '%s' not found."), *ValueName), TEXT("NOT_FOUND"));
+            return true;
+        }
 
-        const FString MetaKey = FString::Printf(TEXT("Value_%s_%s"), *ValueName, *Key);
-        Enum->SetMetaData(*MetaKey, *Value);
+        // On the entry itself (<name>.<key>, as UEnum keeps a ToolTip): a Value_<name>_<key> key on the enum was read
+        // by nothing, and a name the enum lacks was answered as set.
+        Enum->Modify();
+        Enum->SetMetaData(*Key, *Value, Index);
         FinalizeEnum(Enum, EnumSaveRequested(Params));
 
         TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
         Result->SetStringField(TEXT("valueName"), ValueName);
-        Result->SetStringField(TEXT("value"), Value);
+        Result->SetStringField(TEXT("key"), Key);
+        Result->SetStringField(TEXT("value"), Enum->GetMetaData(*Key, Index));
         OutResult = Result;
         return true;
     }
 
-    if (Action == TEXT("split_enum"))
-    {
-        bool bHandled = false;
-        UUserDefinedEnum* Enum = RequireEnum(Params, OutResult, bHandled);
-        if (bHandled) { return true; }
-
-        FString NewName = GetJsonStringField(Params, TEXT("newEnumName"));
-        if (NewName.IsEmpty()) { SetEnumResultFields(OutResult, false, TEXT("Missing required parameter: newEnumName"), TEXT("MISSING_PARAMETER")); return true; }
-
-        // The new enum takes either the named `values` or every value from
-        // position `index` on (the declared index used to be ignored).
-        const TArray<TSharedPtr<FJsonValue>>* ValuesArr = nullptr;
-        const bool bHasValues = Params->TryGetArrayField(TEXT("values"), ValuesArr) && ValuesArr;
-        const bool bHasIndex = Params->HasField(TEXT("index"));
-        const int32 SplitIndex = static_cast<int32>(GetJsonNumberField(Params, TEXT("index"), 0.0));
-        if (bHasValues == bHasIndex)
-        {
-            SetEnumResultFields(OutResult, false, TEXT("Pass values (names to copy) or index (copy every value from that position on), not both."), bHasValues ? TEXT("INVALID_ARGUMENT") : TEXT("MISSING_PARAMETER"));
-            return true;
-        }
-        TArray<FString> KeepNames;
-        if (bHasValues) { for (const TSharedPtr<FJsonValue>& V : *ValuesArr) { KeepNames.Add(V->AsString()); } }
-
-        TArray<TPair<FName, int64>> Current = GetEnumDisplayNamePairs(Enum);
-        TArray<FString> KeepShortNames;
-        for (int32 i = 0; i < Current.Num(); ++i)
-        {
-            FString Short = ExtractEnumShortName(Current[i].Key);
-            if (bHasValues ? KeepNames.Contains(Short) : i >= SplitIndex) { KeepShortNames.Add(Short); }
-        }
-        if (KeepShortNames.Num() == 0) { SetEnumResultFields(OutResult, false, TEXT("No matching values to split")); return true; }
-
-        FString Path = GetJsonStringField(Params, TEXT("path"), TEXT("/Game/Enums"));
-        FString PathError;
-        FString SanitizedName = SanitizeAssetName(NewName);
-        FString PackageName;
-        if (!ValidateAssetCreationPath(Path, SanitizedName, PackageName, PathError)) { SetEnumResultFields(OutResult, false, PathError); return true; }
-
-        UPackage* Package = CreatePackage(*PackageName);
-        if (!Package) { SetEnumResultFields(OutResult, false, TEXT("Failed to create package")); return true; }
-
-        UUserDefinedEnum* NewEnum = Cast<UUserDefinedEnum>(FEnumEditorUtils::CreateUserDefinedEnum(Package, FName(*SanitizedName), RF_Public | RF_Standalone));
-        if (!NewEnum) { SetEnumResultFields(OutResult, false, TEXT("Failed to create split enum")); return true; }
-
-        TArray<TPair<FName, int64>> NewNames;
-        for (int32 i = 0; i < KeepShortNames.Num(); ++i)
-        {
-            NewNames.Emplace(*NewEnum->GenerateFullEnumName(*KeepShortNames[i]), static_cast<int64>(i));
-        }
-        MCP_SET_ENUMS(NewEnum, NewNames, NewEnum->GetCppForm());
-        FinalizeEnum(NewEnum, EnumSaveRequested(Params));
-        FAssetRegistryModule::AssetCreated(NewEnum);
-
-        TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
-        Result->SetStringField(TEXT("enumPath"), PackageName + TEXT(".") + SanitizedName);
-        Result->SetStringField(TEXT("enumName"), SanitizedName);
-        Result->SetNumberField(TEXT("valueCount"), KeepShortNames.Num());
-        Result->SetStringField(TEXT("sourceEnumPath"), GetJsonStringField(Params, TEXT("enumPath")));
-        Result->SetBoolField(TEXT("sourceEnumModified"), false);
-        Result->SetStringField(TEXT("message"), TEXT("split_enum copies the listed values into a new enum; the source enum is left unchanged"));
-        OutResult = Result;
-        return true;
-    }
-
-    return false;
+    return HandleEnumSplit(Action, Params, OutResult);
 }
-

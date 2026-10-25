@@ -25,31 +25,31 @@ const SELECTION_OUTPUT = { trianglesSelected: TRIANGLES_SELECTED };
 export const GEOMETRY_OPERATIONS_RECORDS: readonly CapabilityRecordSource[] = [
   buildWorldRecord({
     parentTool: 'manage_geometry', action: 'boolean_union', plugins: PLUGIN,
-    family: F, summary: 'Boolean union of two dynamic mesh actors.', whenToUse: ['Two meshes must be merged via union.'], whenNotToUse: ['A subtraction is needed; use boolean_subtract.'],
+    family: F, summary: 'Union of two placed dynamic mesh actors: toolActor\'s volume joins targetActor\'s mesh, in place and in world space. keepTool (default true) keeps the tool actor, false deletes it once the union worked; a union that leaves nothing is EMPTY_RESULT with the target unchanged.', whenToUse: ['Two meshes must be merged via union.'], whenNotToUse: ['A subtraction is needed; use boolean_subtract.'],
     inputProps: { targetActor: P.targetActor, toolActor: P.toolActor, keepTool: P.keepTool }, required: ['targetActor', 'toolActor'], effect: 'write', costLatency: 'interactive', costResources: 'medium',
     exampleInput: { action: 'boolean_union', targetActor: 'DM_A', toolActor: 'DM_B' },
   }),
   buildWorldRecord({
     parentTool: 'manage_geometry', action: 'boolean_subtract', plugins: PLUGIN,
-    family: F, summary: 'Boolean subtract a tool mesh from a target mesh.', whenToUse: ['A tool mesh must be cut out of a target.'], whenNotToUse: ['A union is needed; use boolean_union.'],
+    family: F, summary: 'Cut toolActor\'s volume out of targetActor\'s dynamic mesh, in place and in world space (a hole, a doorway). A tool that does not cross the target\'s surface is NO_EFFECT and one that empties it EMPTY_RESULT, both leaving the target as it was and the tool in place to move; keepTool (default true) false deletes the tool once the cut worked.', whenToUse: ['A tool mesh must be cut out of a target.'], whenNotToUse: ['A union is needed; use boolean_union.'],
     inputProps: { targetActor: P.targetActor, toolActor: P.toolActor, keepTool: P.keepTool }, required: ['targetActor', 'toolActor'], effect: 'write', costLatency: 'interactive', costResources: 'medium',
     exampleInput: { action: 'boolean_subtract', targetActor: 'DM_A', toolActor: 'DM_B' },
   }),
   buildWorldRecord({
     parentTool: 'manage_geometry', action: 'boolean_intersection', plugins: PLUGIN,
-    family: F, summary: 'Boolean intersection of two dynamic mesh actors.', whenToUse: ['The overlapping volume of two meshes is needed.'], whenNotToUse: ['A union is needed; use boolean_union.'],
+    family: F, summary: 'Keep only where two placed dynamic mesh actors overlap: targetActor\'s mesh becomes the shared volume, in place and in world space. Meshes that do not overlap are EMPTY_RESULT with the target unchanged; keepTool (default true) false deletes toolActor once it worked.', whenToUse: ['The overlapping volume of two meshes is needed.'], whenNotToUse: ['A union is needed; use boolean_union.'],
     inputProps: { targetActor: P.targetActor, toolActor: P.toolActor, keepTool: P.keepTool }, required: ['targetActor', 'toolActor'], effect: 'write', costLatency: 'interactive', costResources: 'medium',
     exampleInput: { action: 'boolean_intersection', targetActor: 'DM_A', toolActor: 'DM_B' },
   }),
   buildWorldRecord({
     parentTool: 'manage_geometry', action: 'boolean_trim', plugins: PLUGIN,
-    family: F, summary: 'Trim a target mesh by a trim actor (keep inside/outside).', whenToUse: ['A mesh must be trimmed against a volume.'], whenNotToUse: ['A full boolean is needed; use boolean_subtract.'],
+    family: F, summary: 'Trim a dynamic mesh actor by another one, trimActorName, kept in place: keepInside false (default) cuts away what lies inside it, true keeps only that part. Refused like a subtract or intersection when nothing would change or nothing would be left.', whenToUse: ['A mesh must be trimmed against a volume.'], whenNotToUse: ['A full boolean is needed; use boolean_subtract.'],
     inputProps: { actorName: P.actorName, targetActor: P.targetActor, trimActorName: P.trimActorName, keepInside: P.keepInside }, required: ['trimActorName'], requiredOneOf: ['actorName', 'targetActor'], effect: 'write', costLatency: 'interactive', costResources: 'medium',
     exampleInput: { action: 'boolean_trim', targetActor: 'DM_A', trimActorName: 'Trim_01' },
   }),
   buildWorldRecord({
     parentTool: 'manage_geometry', action: 'self_union', plugins: PLUGIN,
-    family: F, summary: 'Self-union overlapping triangles of a dynamic mesh.', whenToUse: ['A self-intersecting mesh must be resolved.'], whenNotToUse: ['A boolean against another mesh is needed.'],
+    family: F, summary: 'Resolve a dynamic mesh that overlaps itself (after an append or array): the overlapping shells are unioned into one surface, holes filled and flaps trimmed; trianglesBefore and trianglesAfter come back.', whenToUse: ['A self-intersecting mesh must be resolved.'], whenNotToUse: ['A boolean against another mesh is needed.'],
     inputProps: { actorName: P.actorName, targetActor: P.targetActor }, required: [], requiredOneOf: ['actorName', 'targetActor'], effect: 'write', costLatency: 'interactive', costResources: 'low',
     exampleInput: { action: 'self_union', targetActor: 'DM_A' },
   }),

@@ -77,12 +77,16 @@ bool BuildAudioCreationPath(const FString& Directory, const FString& Name, FStri
 
 bool SaveAudioAsset(UObject* Asset, bool bShouldSave)
 {
-	if (!bShouldSave || !Asset)
+	if (!Asset)
 	{
 		return true;
 	}
-
+	// save false keeps the edit as an unsaved change: unmarked, it was in no save list and went with the editor.
 	Asset->MarkPackageDirty();
+	if (!bShouldSave)
+	{
+		return true;
+	}
 	FAssetRegistryModule::AssetCreated(Asset);
 	// Dirtying the package is not saving it. This returned true after marking
 	// the asset dirty and registering it, so every `save: true` across the
@@ -151,8 +155,10 @@ USoundEffectSourcePreset* CreateSourceEffectPresetByType(const FString& EffectTy
 
 	if (PresetClass)
 	{
-		FName PresetName = MakeUniqueObjectName(GetTransientPackage(), PresetClass, FName(*EffectType));
-		return Cast<USoundEffectSourcePreset>(NewObject<UObject>(GetTransientPackage(), PresetClass, PresetName));
+		// In Outer's package and named after it, so the preset is an asset of its own; it was made in the transient
+		// package, and the chain saved a reference to an object gone on reload.
+		const FName PresetName = Outer->IsA<UPackage>() ? FName(*FPackageName::GetShortName(Outer->GetName())) : MakeUniqueObjectName(Outer, PresetClass, FName(*EffectType));
+		return Cast<USoundEffectSourcePreset>(NewObject<UObject>(Outer, PresetClass, PresetName, RF_Public | RF_Standalone));
 	}
 	return nullptr;
 }

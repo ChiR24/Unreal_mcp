@@ -4,6 +4,7 @@
 #include "AssetRegistry/AssetRegistryModule.h"
 #include "Engine/SkeletalMesh.h"
 #include "Foundation/BridgeHelpers/Security/McpProjectPaths.h"
+#include "Foundation/BridgeHelpers/Assets/McpAssetCreation.h"
 #include "Safety/McpSafeOperations.h"
 #include "EngineWireSubsystem.h"
 #include "Transport/WebSocket/McpBridgeWebSocket.h"
@@ -19,8 +20,9 @@ using namespace McpSkeletonHandlers;
 
 namespace
 {
-// Optional overrides on top of the editor's "Create Physics Asset" defaults.
-void ApplyCreateParams(const TSharedPtr<FJsonObject>& Payload, FPhysAssetCreateParams& Params, FString& OutGeomType)
+// Optional overrides on top of the editor's "Create Physics Asset" defaults. False for a geomType it does not know,
+// which (TaperedCapsule among them) built capsules without a word.
+bool ApplyCreateParams(const TSharedPtr<FJsonObject>& Payload, FPhysAssetCreateParams& Params, FString& OutGeomType)
 {
     Params.MinBoneSize = static_cast<float>(GetJsonNumberField(Payload, TEXT("minBoneSize"), Params.MinBoneSize));
     Params.bCreateConstraints = GetJsonBoolField(Payload, TEXT("createConstraints"), Params.bCreateConstraints);
@@ -47,15 +49,25 @@ void ApplyCreateParams(const TSharedPtr<FJsonObject>& Payload, FPhysAssetCreateP
     {
         Params.GeomType = EFG_MultiConvexHull;
     }
+    else if (GeomType == TEXT("taperedcapsule") || GeomType == TEXT("tapered_capsule"))
+    {
+        Params.GeomType = EFG_TaperedCapsule;
+    }
+    else if (!GeomType.IsEmpty())
+    {
+        return false;
+    }
 
     switch (Params.GeomType.GetValue())
     {
         case EFG_Box: OutGeomType = TEXT("Box"); break;
         case EFG_Sphere: OutGeomType = TEXT("Sphere"); break;
+        case EFG_TaperedCapsule: OutGeomType = TEXT("TaperedCapsule"); break;
         case EFG_SingleConvexHull: OutGeomType = TEXT("SingleConvexHull"); break;
         case EFG_MultiConvexHull: OutGeomType = TEXT("MultiConvexHull"); break;
         default: OutGeomType = TEXT("Capsule"); break;
     }
+    return true;
 }
 } // namespace
 
@@ -81,6 +93,15 @@ bool UEngineWireSubsystem::HandleCreatePhysicsAsset(
     if (!SkeletalMesh)
     {
         SendAutomationError(RequestingSocket, RequestId, Error, TEXT("MESH_NOT_FOUND"));
+        return true;
+    }
+    FPhysAssetCreateParams Params;
+    FString GeomTypeName;
+    if (!ApplyCreateParams(Payload, Params, GeomTypeName))
+    {
+        SendAutomationError(RequestingSocket, RequestId, FString::Printf(TEXT("geomType '%s' is not a body shape; use Capsule (the default), "
+            "Box, Sphere, TaperedCapsule, SingleConvexHull or MultiConvexHull. Nothing was created."), *GetJsonStringField(Payload, TEXT("geomType"))),
+            TEXT("INVALID_ARGUMENT"));
         return true;
     }
 
@@ -113,10 +134,11 @@ bool UEngineWireSubsystem::HandleCreatePhysicsAsset(
     const FString AssetName = FPaths::GetBaseFilename(SanitizedOutputPath);
     const FString FullPackagePath = PackagePath / AssetName;
 
-    UPackage* Package = CreatePackage(*FullPackagePath);
+    FString PackageError, PackageCode;
+    UPackage* Package = McpCreatePackageForNewAsset(FullPackagePath, PackageError, PackageCode);
     if (!Package)
     {
-        SendAutomationError(RequestingSocket, RequestId, TEXT("Failed to create package"), TEXT("PACKAGE_ERROR"));
+        SendAutomationError(RequestingSocket, RequestId, PackageError, PackageCode);
         return true;
     }
 
@@ -130,9 +152,6 @@ bool UEngineWireSubsystem::HandleCreatePhysicsAsset(
     // Generate bodies and constraints the way the editor's Create Physics
     // Asset dialog does; an empty asset satisfied nothing (dogfood #98).
     const bool bAssignToMesh = GetJsonBoolField(Payload, TEXT("assignToMesh"), false);
-    FPhysAssetCreateParams Params;
-    FString GeomTypeName;
-    ApplyCreateParams(Payload, Params, GeomTypeName);
     FText CreateError;
     const bool bGenerated = FPhysicsAssetUtils::CreateFromSkeletalMesh(PhysicsAsset, SkeletalMesh, Params, CreateError, bAssignToMesh);
     if (!bGenerated || PhysicsAsset->SkeletalBodySetups.Num() == 0)
@@ -153,7 +172,6 @@ bool UEngineWireSubsystem::HandleCreatePhysicsAsset(
     PhysicsAsset->UpdateBoundsBodiesArray();
     FAssetRegistryModule::AssetCreated(PhysicsAsset);
     Package->MarkPackageDirty();
-    SaveIfRequested(PhysicsAsset, Payload);
     if (bAssignToMesh)
     {
         SaveIfRequested(SkeletalMesh, Payload);
@@ -168,7 +186,7 @@ bool UEngineWireSubsystem::HandleCreatePhysicsAsset(
     Result->SetStringField(TEXT("geomType"), GeomTypeName);
     Result->SetNumberField(TEXT("minBoneSize"), Params.MinBoneSize);
     Result->SetBoolField(TEXT("assignedToMesh"), bAssignToMesh);
-    McpHandlerUtils::AddVerification(Result, PhysicsAsset);
+    SaveAndReport(PhysicsAsset, Payload, Result);
 
     SendAutomationResponse(RequestingSocket, RequestId, true,
         FString::Printf(TEXT("Physics asset created with %d bodies and %d constraints"),
@@ -211,14 +229,15 @@ bool UEngineWireSubsystem::HandleSetPhysicsAsset(
         return true;
     }
 
+    Mesh->Modify();
     Mesh->SetPhysicsAsset(PhysAsset);
     Mesh->MarkPackageDirty();
-    McpSafeAssetSave(Mesh);
 
     TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
     Result->SetStringField(TEXT("skeletalMeshPath"), SkeletalMeshPath);
     Result->SetStringField(TEXT("physicsAssetPath"), PhysicsAssetPath);
     Result->SetStringField(TEXT("physicsAssetName"), PhysAsset->GetName());
+    SaveAndReport(Mesh, Payload, Result);
 
     SendAutomationResponse(RequestingSocket, RequestId, true,
         FString::Printf(TEXT("Physics asset '%s' assigned to skeletal mesh"), *PhysAsset->GetName()), Result);

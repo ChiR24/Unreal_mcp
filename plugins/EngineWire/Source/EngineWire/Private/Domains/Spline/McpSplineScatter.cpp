@@ -4,6 +4,7 @@
 #include "Foundation/BridgeHelpers/McpHelpers.h"
 #include "EngineWireSubsystem.h"
 #include "Foundation/HandlerUtils/McpHandlerUtils.h"
+#include "Foundation/McpScopedEditorTransaction.h"
 
 #include "Components/StaticMeshComponent.h"
 #include "Editor.h"
@@ -94,6 +95,10 @@ bool HandleScatterMeshesAlongSpline(
     float SplineLength = SplineComp->GetSplineLength();
     int32 MeshCount = FMath::FloorToInt(SplineLength / Spacing);
     TArray<FString> CreatedMeshes;
+    // The scattered parts were added outside any transaction: undo left them in the level, and the reply's placement
+    // checks, which watch what a call modifies, never saw them.
+    FMcpScopedEditorTransaction Transaction(FText::FromString(TEXT("Scatter Meshes Along Spline")),
+                                            EMcpMutationDurability::EditorStateOnly, {Actor});
 
     for (int32 i = 0; i <= MeshCount; i++)
     {
@@ -113,7 +118,7 @@ bool HandleScatterMeshesAlongSpline(
             Rotation.Yaw += FMath::FRandRange(static_cast<float>(-RotationRange), static_cast<float>(RotationRange));
         }
 
-        UStaticMeshComponent* MeshComp = NewObject<UStaticMeshComponent>(Actor);
+        UStaticMeshComponent* MeshComp = NewObject<UStaticMeshComponent>(Actor, NAME_None, RF_Transactional);
         if (MeshComp)
         {
             MeshComp->SetStaticMesh(Mesh);
@@ -133,6 +138,7 @@ bool HandleScatterMeshesAlongSpline(
     Actor->MarkPackageDirty();
 
     TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
+    Transaction.DescribeInto(Result);
     Result->SetNumberField(TEXT("meshesCreated"), CreatedMeshes.Num());
     Result->SetNumberField(TEXT("splineLength"), SplineLength);
     Result->SetNumberField(TEXT("spacing"), Spacing);

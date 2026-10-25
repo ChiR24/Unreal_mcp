@@ -1,6 +1,6 @@
 // Parity gate for the unread-variant-parameter warning. unreadVariantParams in
 // src/server/gateway/gateway-dispatch-by.ts and McpUnreadVariantParams in
-// plugins/.../Private/MCP/Execute/McpNativeGatewayValidation.cpp must word the warning identically and
+// plugins/.../Private/MCP/Execute/Request/McpFoldVariantRules.cpp must word the warning identically and
 // read the caller's own parameter names (before declared defaults), and the native warning must travel
 // from validation through the SSE connection into the receipt. The native side has no unit harness, so
 // its source is read as text.
@@ -17,7 +17,7 @@ describe('a parameter only other variants read: both doors warn the same way', (
   it('words the warning identically', () => {
     expect(read('src/server/gateway/gateway-dispatch-by.ts'))
       .toContain("`${name} is read only when ${dispatchBy.param} is ${owners.join(' or ')}; this ${dispatchBy.param}=${selected} call did not use it.`");
-    expect(read(`${MCP}/Execute/McpNativeGatewayValidation.cpp`))
+    expect(read(`${MCP}/Execute/Request/McpFoldVariantRules.cpp`))
       .toContain('TEXT("%s is read only when %s is %s; this %s=%s call did not use it.")');
   });
 

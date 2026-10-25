@@ -128,6 +128,29 @@
 #define MCP_HAS_IKRETARGETER_CONTROLLER 0
 #endif
 
+#if MCP_HAS_IKRETARGETER && MCP_HAS_IKRETARGETER_CONTROLLER && ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION <= 1
+#include "UObject/UnrealType.h"
+// Before UE 5.2 no controller call assigns a retargeter's target rig (5.0's SetTargetIKRig only remaps the chains,
+// 5.1 has no target setter) and UIKRetargeter keeps the rig and its preview mesh private. So both are written
+// through their UPROPERTYs, what the details panel edits, and the chains remap, as 5.2's SetIKRig does.
+// MCP_IKRETARGETER_SET_TARGET_IKRIG calls this on 5.0 and 5.1.
+inline void McpSetRetargetTargetRig(UIKRetargeterController* Controller, UIKRigDefinition* Rig)
+{
+    UIKRetargeter* Asset = Controller->GetAsset();
+    auto SetObject = [Asset](const TCHAR* Name, UObject* Value)
+    {
+        if (FObjectPropertyBase* Prop = FindFProperty<FObjectPropertyBase>(UIKRetargeter::StaticClass(), Name))
+        {
+            Prop->SetObjectPropertyValue_InContainer(Asset, Value);
+        }
+    };
+    SetObject(TEXT("TargetIKRigAsset"), Rig);
+    SetObject(TEXT("TargetPreviewMesh"), Rig ? Rig->GetPreviewMesh() : nullptr);
+    Controller->CleanChainMapping();
+    Controller->AutoMapChains();
+}
+#endif
+
 // Animation Blueprint Graph
 #include "AnimationGraph.h"
 #include "AnimGraphNode_StateMachine.h"
@@ -175,6 +198,54 @@ USkeleton* LoadSkeletonFromPathAnim(const FString& SkeletonPath);
 USkeletalMesh* LoadSkeletalMeshFromPathAnim(const FString& MeshPath);
 UAnimSequence* LoadAnimSequenceFromPath(const FString& AnimPath);
 bool SaveAnimAsset(UObject* Asset, bool bShouldSave);
+// SaveAnimAsset, then saved in Response: whether the edit reached disk (false for save false, which leaves it unsaved).
+inline void SaveAnimAssetAndReport(UObject* Asset, bool bSave, const TSharedPtr<FJsonObject>& Response)
+{
+    const bool bSaved = SaveAnimAsset(Asset, bSave) && bSave;
+    Response->SetBoolField(TEXT("saved"), bSaved);
+}
+// Axis Index (0 horizontal, 1 vertical) of a blend space; BlendParameters is protected, so through reflection.
+inline bool McpSetBlendSpaceAxis(UBlendSpace* BlendSpace, int32 Index, const FString& Name, float Min, float Max)
+{
+    FProperty* Prop = BlendSpace ? UBlendSpace::StaticClass()->FindPropertyByName(TEXT("BlendParameters")) : nullptr;
+    FBlendParameter* Axes = Prop ? Prop->ContainerPtrToValuePtr<FBlendParameter>(BlendSpace) : nullptr;
+    if (!Axes)
+    {
+        return false;
+    }
+    BlendSpace->Modify();
+    Axes[Index].DisplayName = Name;
+    Axes[Index].Min = Min;
+    Axes[Index].Max = Max;
+    Axes[Index].GridNum = 4;
+    return true;
+}
+// The first AxisCount axes of a blend space as it holds them: axisName, minValue, maxValue, gridDivisions.
+inline TArray<TSharedPtr<FJsonValue>> McpBlendSpaceAxesJson(const UBlendSpace* BlendSpace, int32 AxisCount)
+{
+    TArray<TSharedPtr<FJsonValue>> Out;
+    for (int32 Index = 0; Index < AxisCount; ++Index)
+    {
+        const FBlendParameter& Axis = BlendSpace->GetBlendParameter(Index);
+        TSharedPtr<FJsonObject> Row = MakeShared<FJsonObject>();
+        Row->SetStringField(TEXT("axisName"), Axis.DisplayName);
+        Row->SetNumberField(TEXT("minValue"), Axis.Min);
+        Row->SetNumberField(TEXT("maxValue"), Axis.Max);
+        Row->SetNumberField(TEXT("gridDivisions"), Axis.GridNum);
+        Out.Add(MakeShared<FJsonValueObject>(Row));
+    }
+    return Out;
+}
+// The montage's section names, comma-separated, for a refusal that names what exists.
+inline FString McpMontageSectionNames(const UAnimMontage* Montage)
+{
+    TArray<FString> Names;
+    for (const FCompositeSection& Section : Montage->CompositeSections)
+    {
+        Names.Add(Section.SectionName.ToString());
+    }
+    return FString::Join(Names, TEXT(", "));
+}
 // analyze_animation (Analysis/McpAnimAnalysis.cpp): a sequence's root path, foot contacts, loop
 // seam and rotation spikes, sampled from its own frames.
 TSharedPtr<FJsonObject> HandleAnalyzeAnimation(const TSharedPtr<FJsonObject>& Params, TSharedPtr<FJsonObject> Response);

@@ -54,13 +54,16 @@ export const RETRIEVAL_FUNCTION_WORDS: ReadonlySet<string> = Object.freeze(new S
   'a', 'an', 'the', 'this', 'that', 'these', 'those', 'of', 'in', 'on', 'at',
   'to', 'for', 'from', 'by', 'with', 'into', 'onto', 'and', 'or', 'but', 'it',
   'its', 'is', 'are', 'be', 'as', 'all', 'every', 'any', 'some', 'my', 'our',
-  'their', 'his', 'her', 'you', 'me', 'we', 'i', 'please', 'then', 'so',
+  'their', 'his', 'her', 'own', 'you', 'me', 'we', 'i', 'please', 'then', 'so',
   // Interrogatives and auxiliaries: a question ('what is the current level',
   // 'how do i spawn an actor') carries the same content words as the imperative.
   'what', 'which', 'how', 'where', 'who', 'when', 'why', 'do', 'does', 'did',
   'can', 'could', 'should', 'would', 'will', 'want', 'need',
   // A yes/no check ('check if actors are floating') carries the same content words as the request without it.
   'if', 'whether',
+  // What an apostrophe leaves behind: "the level's gravity" and "doesn't open" split into level + s and doesn + t,
+  // and a lone s or t that no record names kept every such request from a full match.
+  's', 't',
 ]));
 
 /**
@@ -106,7 +109,7 @@ export const RETRIEVAL_SCORE_CONSTANTS = Object.freeze({
   readIntentBonus: 80,
   deleteIntentBonus: 14,
   fullCoverageBonus: 100,
-  phraseTopicBonus: 50,
+  phraseTopicBonus: 65,
   minimumRelevanceScore: 0.01,
   confidenceSaturation: 40,
   confidenceSaturationWeight: 0.85,

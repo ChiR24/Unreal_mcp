@@ -10,7 +10,12 @@ import { DOMAIN, P } from './properties.js';
 const FAMILY_TAGS = 'tags';
 const FAMILY_FIND = 'find';
 
-const FIND_OUTPUT = { actors: P.actors, count: P.count };
+// Every find lists the first limit matches; a cut list says how many matched in all.
+const FIND_CUT = {
+  totalCount: { type: 'number', description: 'Present only when limit cut the list: how many actors matched in all.' },
+  truncated: { type: 'boolean', description: 'True when limit cut the list short; totalCount says how many matched.' },
+};
+const FIND_OUTPUT = { actors: P.actors, count: P.count, ...FIND_CUT };
 // With no match, labels equal to the query once case, separators and leading zeros are ignored.
 const FIND_BY_NAME_OUTPUT = {
   ...FIND_OUTPUT,
@@ -41,11 +46,20 @@ const FIND_BY_ASSET_OUTPUT = {
     description: 'Matched actors, each with the components that matched.',
   },
   count: P.count,
-  totalCount: { type: 'number', description: 'Present only when limit cut the list: how many actors matched in all.' },
-  truncated: { type: 'boolean', description: 'True when limit cut the list short; totalCount says how many matched.' },
+  ...FIND_CUT,
   worldSearched: { type: 'string', description: 'The world searched: the Play-In-Editor world while a session runs, else the editor world.' },
 };
 const FIND_LIMIT = { type: 'number', minimum: 1, maximum: 1000, description: 'Most actors to return (1-1000, default 200); a longer match list is cut and reports truncated and totalCount.' };
+
+// add_tag's reply, which inspect.add_tag (the same handler) answers with too.
+export const TAG_OUT = {
+  actorName: { type: 'string', description: 'One actor: the actor tagged.' },
+  tag: { type: 'string', description: 'The tag added.' },
+  wasPresent: { type: 'boolean', description: 'One actor: whether it already had the tag; it is kept once.' },
+  taggedCount: { type: 'number', description: 'actorNames: how many actors were tagged.' },
+  affectedActors: { type: 'array', items: { type: 'string' }, description: 'actorNames: the actors tagged.' },
+  missing: { type: 'array', items: { type: 'string' }, description: 'actorNames: the names that matched no actor.' },
+};
 
 export const SEARCH_RECORDS: readonly CapabilityRecordSource[] = [
   buildCoreRecord({
@@ -54,12 +68,12 @@ export const SEARCH_RECORDS: readonly CapabilityRecordSource[] = [
     domain: DOMAIN,
     family: FAMILY_TAGS,
     topics: ['tag actor', 'actor tag', 'label actor'],
-    summary: 'Add a gameplay tag to an actor, or to many actors at once with actorNames.',
+    summary: 'Add a tag to an actor, or with actorNames to many actors in one call and one undo step; their level is left unsaved. A tag already there is kept once (wasPresent). actorNames that match nothing come back in missing, and ACTOR_NOT_FOUND answers when none matched. Tags drive find_by_tag, delete_by_tag and the Actor Has Tag node; mcp.placement.ok makes the placement checks skip the actor.',
     whenToUse: [
       'An actor must be tagged for later lookup or grouping.',
       'Many deliberate compositions must be marked mcp.placement.ok for audit_placement in one call.',
     ],
-    whenNotToUse: ['The tag is already present (idempotent re-add is a no-op).'],
+    whenNotToUse: ['The tag should come off; use remove_tag.'],
     inputProps: {
       actorName: P.actorName,
       actorNames: { type: 'array', items: { type: 'string' }, description: 'Several actors to tag in one call and one undo step, in place of actorName; names not found are listed back under missing, and the actors tagged under affectedActors (which the receipt lists as changes, with an actor handle each).' },
@@ -67,6 +81,7 @@ export const SEARCH_RECORDS: readonly CapabilityRecordSource[] = [
     },
     required: ['tag'],
     requiredOneOf: ['actorName', 'actorNames'],
+    outputProps: TAG_OUT,
     effect: 'write',
     behavior: { idempotency: 'idempotent' },
     exampleInput: { action: 'add_tag', actorName: 'Cube1', tag: 'Pickup' },
@@ -95,7 +110,7 @@ export const SEARCH_RECORDS: readonly CapabilityRecordSource[] = [
     family: FAMILY_TAGS,
     // Only a spawn could file an actor, so a level built call by call stayed one flat outliner list.
     topics: ['move actor to folder', 'outliner folder', 'organize actors', 'organise outliner', 'put actors in a folder', 'group actors in outliner', 'actor folder'],
-    summary: 'Move placed actors into an outliner folder (one actor, or many with actorNames), or back to the root.',
+    summary: 'Move placed actors into an outliner folder path such as Level/Signs (made when missing), or back to the root with folder "": one actor by actorName, or many with actorNames, as one undo step. Names that match no actor are listed under missing while the rest move; none matching is ACTOR_NOT_FOUND.',
     whenToUse: ['Actors already in the level must be filed under an outliner folder; a spawn takes folder only when it places the actor.'],
     whenNotToUse: ['Actors must be grouped for lookup or deletion (use add_tag; delete_by_tag removes them).'],
     inputProps: {
@@ -123,10 +138,10 @@ export const SEARCH_RECORDS: readonly CapabilityRecordSource[] = [
     action: 'find_by_tag',
     domain: DOMAIN,
     family: FAMILY_TAGS,
-    summary: 'Find all actors in the level matching a gameplay tag.',
+    summary: 'Find the actors in the level whose Tags list holds a tag (the whole tag, case-insensitive), each with name, path and class: the first limit of them (default 200), with truncated and totalCount when more match. The Play-In-Editor world is searched while a session runs.',
     whenToUse: ['Actors sharing a tag must be located.'],
     whenNotToUse: ['A specific actor name is known (use find_by_name).'],
-    inputProps: { tag: P.tag },
+    inputProps: { tag: P.tag, limit: FIND_LIMIT },
     required: [],
     outputProps: FIND_OUTPUT,
     outputRequired: [],
@@ -142,7 +157,7 @@ export const SEARCH_RECORDS: readonly CapabilityRecordSource[] = [
     summary: 'Alias of find_by_tag. The bridge dispatches both names to the same handler.',
     whenToUse: ['Preferred when callers use the explicit find_actors_by_tag verb.'],
     whenNotToUse: ['Use find_by_tag to avoid alias normalization.'],
-    inputProps: { tag: P.tag },
+    inputProps: { tag: P.tag, limit: FIND_LIMIT },
     required: [],
     outputProps: FIND_OUTPUT,
     outputRequired: [],
@@ -156,10 +171,10 @@ export const SEARCH_RECORDS: readonly CapabilityRecordSource[] = [
     domain: DOMAIN,
     family: FAMILY_FIND,
     topics: ['find actor', 'lookup actor by name', 'search actor', 'get actor by name'],
-    summary: 'Find actors in the level whose name matches a query string.',
+    summary: 'Find the actors in the level whose label, object name or path contains a query (case-insensitive; a full object path is cut to its actor name), each with label, name, path and class: the first limit (default 200), with truncated and totalCount when more match. With no match, similar offers labels that match once case, separators and leading zeros are ignored.',
     whenToUse: ['One or more actors must be located by name or substring.'],
     whenNotToUse: ['Actors should be located by tag (use find_by_tag).'],
-    inputProps: { name: P.name },
+    inputProps: { name: P.name, limit: FIND_LIMIT },
     required: ['name'],
     outputProps: FIND_BY_NAME_OUTPUT,
     outputRequired: [],
@@ -175,7 +190,7 @@ export const SEARCH_RECORDS: readonly CapabilityRecordSource[] = [
     summary: 'Alias of find_by_name. The bridge dispatches both names to the same handler.',
     whenToUse: ['Preferred when callers use the explicit find_actors_by_name verb.'],
     whenNotToUse: ['Use find_by_name to avoid alias normalization.'],
-    inputProps: { name: P.name },
+    inputProps: { name: P.name, limit: FIND_LIMIT },
     required: ['name'],
     outputProps: FIND_BY_NAME_OUTPUT,
     outputRequired: [],
@@ -189,10 +204,10 @@ export const SEARCH_RECORDS: readonly CapabilityRecordSource[] = [
     domain: DOMAIN,
     family: FAMILY_FIND,
     topics: ['actors of class', 'find actors by type', 'all actors of type'],
-    summary: 'Find all actors in the level matching a Unreal class name or path.',
+    summary: 'Find the actors in the level of a class or any subclass of it (a short native name such as PointLight, /Script/Engine.PointLight, or a Blueprint asset path), each with name and path: the first limit (default 200), with truncated and totalCount when more match. A class that resolves to nothing is refused with CLASS_NOT_FOUND, naming assets of that name.',
     whenToUse: ['All instances of a class must be located.'],
     whenNotToUse: ['A tag-based lookup is more appropriate (use find_by_tag).'],
-    inputProps: { className: P.className, class: { type: 'string', description: 'Unreal class name or path (alias of className).' }, classPath: { type: 'string', description: 'Unreal class path (e.g. /Script/Engine.PointLight or /Game/Enemies/BP_Enemy) of the actors to find (alias of className).' } },
+    inputProps: { className: P.className, class: { type: 'string', description: 'Unreal class name or path (alias of className).' }, classPath: { type: 'string', description: 'Unreal class path (e.g. /Script/Engine.PointLight or /Game/Enemies/BP_Enemy) of the actors to find (alias of className).' }, limit: FIND_LIMIT },
     required: [],
     requiredOneOf: ['className', 'class', 'classPath'],
     outputProps: FIND_OUTPUT,
@@ -209,7 +224,7 @@ export const SEARCH_RECORDS: readonly CapabilityRecordSource[] = [
     summary: 'Alias of find_by_class. The bridge dispatches both names to the same handler.',
     whenToUse: ['Preferred when callers use the explicit find_actors_by_class verb.'],
     whenNotToUse: ['Use find_by_class to avoid alias normalization.'],
-    inputProps: { className: P.className, class: { type: 'string', description: 'Unreal class name or path (alias of className).' }, classPath: { type: 'string', description: 'Unreal class path (e.g. /Script/Engine.PointLight or /Game/Enemies/BP_Enemy) of the actors to find (alias of className).' } },
+    inputProps: { className: P.className, class: { type: 'string', description: 'Unreal class name or path (alias of className).' }, classPath: { type: 'string', description: 'Unreal class path (e.g. /Script/Engine.PointLight or /Game/Enemies/BP_Enemy) of the actors to find (alias of className).' }, limit: FIND_LIMIT },
     required: [],
     requiredOneOf: ['className', 'class', 'classPath'],
     outputProps: FIND_OUTPUT,
@@ -279,24 +294,26 @@ export const SEARCH_RECORDS: readonly CapabilityRecordSource[] = [
     action: 'audit_placement',
     domain: DOMAIN,
     family: FAMILY_FIND,
-    topics: ['placement problems', 'overlapping actors', 'sunk actors', 'floating actors', 'tilted actors', 'upside down actors', 'level audit', 'intersecting geometry', 'z-fighting', 'flickering surfaces', 'coplanar faces', 'texture flicker', 'check for floating actors', 'actors that overlap', 'sunk parts', 'parts buried in each other', 'legs inside the body', 'feet below the capsule', 'driver clipping through seat', 'blueprint part overlap'],
-    summary: 'Sweep every actor in the level and report the ones that interpenetrate another actor, sit sunk below the surface under them, float above it, lean off vertical, or have a face in the same plane as another surface (z-fighting flicker); or, with blueprintPath, the mesh parts of one actor Blueprint that are buried in each other or sunk below its capsule.',
+    topics: ['placement problems', 'overlapping actors', 'find which actors overlap each other', 'sunk actors', 'floating actors', 'tilted actors', 'upside down actors', 'level audit', 'intersecting geometry', 'z-fighting', 'flickering surfaces', 'coplanar faces', 'texture flicker', 'check for floating actors', 'actors that overlap', 'sunk parts', 'parts buried in each other', 'legs inside the body', 'feet below the capsule', 'driver clipping through seat', 'blueprint part overlap', 'find slop in the level', 'unfinished content', 'default grid material', 'placeholder text', 'two copies in the same place'],
+    summary: 'Sweep every actor in the level and report the ones that interpenetrate another actor, sit sunk below the surface under them, float above it, lean off vertical, or have a face in the same plane as another surface (z-fighting flicker), and the unfinished content they show (a slot on the engine\'s default grid material, a text still reading "Text", a copy pasted onto the original); or, with blueprintPath, the mesh parts of one actor Blueprint that are buried in each other or sunk below its capsule.',
     whenToUse: [
       'A level was assembled programmatically and needs checking before anyone looks at it.',
       'Actors appear to clip through each other, stand in the ground, or lie on their side.',
       'A placement pass should be verified without flying the viewport around to eyeball it.',
+      'Judging what was already in the level, or what an import, a merge or a script outside the MCP left: a call\'s own warnings cover only the actors that call changed.',
+      'A level must be checked for slop before anyone plays it: default_material, placeholder_text and duplicate name what was left unfinished.',
       'Surfaces flicker, or another material shows through in ragged patches (z-fighting): the coplanar face pairs responsible are listed under coplanarFaces, with the direction to push each one; control_actor fix_coplanar fixes them all in one call.',
       'A character, vehicle or prop is assembled from mesh components in a Blueprint (a driver in a seat, legs on a body): blueprintPath checks every part against every other on their real triangles and against the capsule bottom, so a leg sunk into the seat or a foot through the floor is named with its depth.',
     ],
     whenNotToUse: [
-      'One actor was just moved; spawn and set_transform already return placementWarning for it.',
+      'Checking only what one call just did: every call that spawns, moves, duplicates or re-meshes actors already runs these checks on the actors it changed (spawn and set_transform answer placementWarning; every other call lists what it finds in its reply\'s warnings).',
       'A finding is a deliberate composition (a keep bedding its towers into its platform, an island meant to hang in the air, a signpost leaning by design): tag that actor mcp.placement.ok with control_actor.add_tag and it drops out of the sweep entirely -- as tilt subject, and as both subject and target for overlap -- rather than being re-reported every time. Coplanar faces are still reported for tagged actors, because they flicker whatever the intent.',
     ],
     inputProps: {
       nameFilter: { type: 'string', description: 'Only examine actors whose label or object name contains this text (an actor that shares its label with another is reported by object name, e.g. StaticMeshActor_75). Omit to sweep the whole level.' },
       limit: { type: 'number', description: 'Maximum problem entries to return (1-200, default 25). Entries come worst-first, so a small limit still shows the placements that matter; flagged is always the true total.' },
       minSeverity: { type: 'number', description: 'Drop findings whose severity (worst penetration, ground error, tilt displacement, or the side of the largest z-fighting patch, in world units) is below this. Use it to skip cosmetic grazes on a large level.' },
-      kinds: { type: 'array', items: { type: 'string', enum: ['sunk', 'floating', 'overlapping', 'unsupported', 'tilted', 'coplanar'] }, description: 'Report only these problem kinds, e.g. ["coplanar"] to list z-fighting alone in a platformer full of platforms that float on purpose. An actor whose worst problem is another kind still counts for coplanar when it has coplanarFaces. An actor whose bounds touch or overlap another actor\'s vertical face (a window band on a hall, an awning on a facade) is mounted, never floating or unsupported. Omit for every kind.' },
+      kinds: { type: 'array', items: { type: 'string', enum: ['sunk', 'floating', 'overlapping', 'unsupported', 'tilted', 'coplanar', 'default_material', 'placeholder_text', 'duplicate'] }, description: 'Report only these problem kinds, e.g. ["coplanar"] to list z-fighting alone in a platformer full of platforms that float on purpose. default_material: a visible mesh slot drawing the engine\'s default grid (no material, or one made from it). placeholder_text: a text render still reading the engine default "Text" (give it its label, or an empty text when a script writes it in play). duplicate: an actor that is a copy of another in the same place with the same meshes, drawn twice. An actor whose worst problem is another kind still counts for these, as for coplanar, when its contentIssues hold them. An actor whose worst problem is another kind still counts for coplanar when it has coplanarFaces. An actor whose bounds touch or overlap another actor\'s vertical face (a window band on a hall, an awning on a facade) is mounted, never floating or unsupported. Two faces pointing down with something solid right below them (pieces lying on a floor) are not reported as coplanar: no camera sees them. Omit for every kind.' },
       maxTilt: { type: 'number', description: 'Degrees off vertical an actor may lean before it is reported as tilted (1-90, default 30). Lean is the angle between the up vector of the actor and world up, so yaw never counts and a fully inverted actor reads 180. Raise it for a level whose props are deliberately strewn about; lower it to catch subtler leans.' },
       blueprintPath: { type: 'string', description: 'Audit the mesh parts of this actor Blueprint instead of the level: a preview instance (the level is untouched) has every visible static mesh part measured against every other and against its ground (a Character\'s capsule bottom). problems[] then lists componentName, kind (buried: inside otherComponent; sunk: below the ground), depth and severity in cm, insideShare and the issue; minSeverity is the tolerance (default 0.5 cm), and kinds, nameFilter and maxTilt are refused (INVALID_ARGUMENT). A part tagged mcp.placement.ok in its ComponentTags is a deliberate embed (an eyeball in its socket) and is left out; mcp.placement.ok:<component> accepts the embed in that one part only and keeps every other check. Blueprint component edits report the same for the parts they touch, as partWarnings.' },
     },
@@ -307,13 +324,13 @@ export const SEARCH_RECORDS: readonly CapabilityRecordSource[] = [
       returned: { type: 'number', description: 'Entries included in problems[].' },
       byKind: {
         type: 'object',
-        description: 'Count of flagged actors per problem kind: sunk, floating, overlapping, unsupported, tilted, coplanar.',
+        description: 'Count of flagged actors per problem kind: sunk, floating, overlapping, unsupported, tilted, coplanar, default_material, placeholder_text, duplicate.',
         additionalProperties: true,
         'x-unreal-reflection-boundary': true,
       },
       problems: {
         type: 'array',
-        description: 'Findings worst-first: actorName, kind, severity in world units, the issue in words, suggestedZ when a resting height can be computed, overlappingActors when it intersects others (up to 8, each with actorName, actorClass and penetrationDepth), and coplanarFaces when faces z-fight: one entry per pair with direction (the axis both faces point along, e.g. -Y), component, otherActor, otherComponent, gap and overlapU x overlapV. Fix a pair by moving the face about 2 units along direction (this piece shows) or against it (the other shows, right for a piece sunk into it, such as a ramp in the floor), by moving or scaling the actor.',
+        description: 'Findings worst-first: actorName, kind, severity in world units, the issue in words, suggestedZ when a resting height can be computed, overlappingActors when it intersects others (up to 8, each with actorName, actorClass and penetrationDepth), and coplanarFaces when faces z-fight: one entry per pair with direction (the axis both faces point along, e.g. -Y), component, otherActor, otherComponent, gap and overlapU x overlapV. Fix a pair by moving the face about 2 units along direction (this piece shows) or against it (the other shows, right for a piece sunk into it, such as a ramp in the floor), by moving or scaling the actor. contentIssues lists the unfinished content it shows: kind (default_material, placeholder_text, duplicate), component and the issue; their severity is the size in cm of what shows them.',
         items: { type: 'object', additionalProperties: true, 'x-unreal-reflection-boundary': true },
         'x-unreal-reflection-boundary': true,
       },

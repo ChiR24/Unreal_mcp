@@ -4,6 +4,7 @@
 #include "Containers/StringConv.h"
 #include "Foundation/Diagnostics/McpDiagnosticsSnapshotFileNames.h"
 #include "Foundation/Diagnostics/McpDiagnosticsSnapshotSchema.h"
+#include "HAL/FileManager.h"
 #include "HAL/PlatformFileManager.h"
 #include "HAL/PlatformProcess.h"
 #include "EngineWireLog.h"
@@ -224,14 +225,16 @@ bool FMcpDiagnosticsSnapshot::EnsureDiagnosticsDirectory() const
 
 bool FMcpDiagnosticsSnapshot::WriteFileAtomic(const FString& TargetName, const FString& TempName, const FString& Content) const
 {
-	IPlatformFile& PlatformFile = FPlatformFileManager::Get().GetPlatformFile();
 	const FString TempPath = FPaths::Combine(DiagnosticsRoot(), TempName);
 	const FString TargetPath = FPaths::Combine(DiagnosticsRoot(), TargetName);
 	if (!FFileHelper::SaveStringToFile(Content, *TempPath, FFileHelper::EEncodingOptions::ForceUTF8WithoutBOM))
 	{
 		return false;
 	}
-	return PlatformFile.MoveFile(*TargetPath, *TempPath);
+	// IPlatformFile::MoveFile is a plain MoveFileW on Windows and refuses an existing target, so every rewrite of
+	// a record after the first failed and left the temp beside a stale file. A crash between the replace and the
+	// move leaves only the temp, which RecoverTempFor restores at the next start.
+	return IFileManager::Get().Move(*TargetPath, *TempPath, /*Replace=*/true);
 }
 
 

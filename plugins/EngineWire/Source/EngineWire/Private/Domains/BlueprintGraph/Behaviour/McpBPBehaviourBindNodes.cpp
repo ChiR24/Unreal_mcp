@@ -79,14 +79,16 @@ bool CreateBindEventNode(FActionContext& Context, float X, float Y)
     Creator.Finalize();
     FString OverlapMessage;
     TSharedPtr<FJsonObject> OverlapDetails;
-    if (McpGraphLayout::RefuseOverlappingNode(Context.TargetGraph, Bind, X, Y, OverlapMessage, OverlapDetails))
+    if (McpGraphLayout::RefuseOverlappingNode(Context.TargetGraph, Bind, X, Y, OverlapMessage, OverlapDetails,
+                                              McpGraphLayout::NamesNoPosition(Context.Payload)))
     {
         Context.SendErrorWithDetails(OverlapMessage, TEXT("NODE_OVERLAP"), OverlapDetails);
         return true;
     }
+    // Under the bind node where it ended up: a call that named no position moves it off what it overlapped.
     UK2Node_CustomEvent* Event = UK2Node_CustomEvent::CreateFromFunction(
-        PlaceBoundEvent(Context.TargetGraph, *Bind, X, Y), Context.TargetGraph, EventName, Dispatcher->SignatureFunction,
-        /*bSelectNewNode=*/false);
+        PlaceBoundEvent(Context.TargetGraph, *Bind, Bind->NodePosX, Y), Context.TargetGraph, EventName,
+        Dispatcher->SignatureFunction, /*bSelectNewNode=*/false);
     UEdGraphPin* EventDelegate = Event ? Event->FindPin(UK2Node_Event::DelegateOutputName) : nullptr;
     UEdGraphPin* BindDelegate = Bind->GetDelegatePin();
     if (!EventDelegate || !BindDelegate || !Context.TargetGraph->GetSchema()->TryCreateConnection(EventDelegate, BindDelegate))

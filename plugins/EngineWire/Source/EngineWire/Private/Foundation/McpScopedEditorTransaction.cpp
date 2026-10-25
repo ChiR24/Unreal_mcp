@@ -120,8 +120,14 @@ FMcpScopedEditorTransaction::FMcpScopedEditorTransaction(
 		return;
 	}
 
-	for (const UObject* Object : InObjects)
+	for (UObject* Object : InObjects)
 	{
+		// An asset editor makes the asset it opens transactional (FEditableSkeleton does it for a skeleton). An asset
+		// created without the flag, as EngineWire's own creates were, refused undo on every later edit.
+		if (Object && Object->IsAsset())
+		{
+			Object->SetFlags(RF_Transactional);
+		}
 		if (!Object || !Object->HasAnyFlags(RF_Transactional))
 		{
 			OpenState = EMcpTransactionState::RefusedNonTransactionalObject;

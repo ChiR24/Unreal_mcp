@@ -98,10 +98,11 @@ TSharedPtr<FJsonObject> HandleControlRigActions(const FString& SubAction, const 
         const FString FullPackageName = Path / Name;
 
         // Create the package
-        UPackage* Package = CreatePackage(*FullPackageName);
+        FString CreateError, CreateCode;
+        UPackage* Package = McpCreatePackageForNewAsset(FullPackageName, CreateError, CreateCode);
         if (!Package)
         {
-            ANIM_ERROR_RESPONSE(FString::Printf(TEXT("Failed to create package: %s"), *FullPackageName), TEXT("PACKAGE_CREATE_FAILED"));
+            ANIM_ERROR_RESPONSE(CreateError, CreateCode);
         }
 
         Package->FullyLoad();

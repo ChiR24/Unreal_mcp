@@ -97,7 +97,15 @@ function compactDetail(detail: Json, reply: Json): Json | undefined {
   if (same(out.success, reply.success)) delete out.success;
   if (same(out.message, reply.message)) delete out.message;
   if (same(out.error, reply.message) || same(out.error, reply.errorCode)) delete out.error;
-  if (isRecord(out.error) && same(out.error.message, reply.message) && same(out.error.code, reply.errorCode)) delete out.error;
+  // The handler's own details (the unsaved packages, the offending parameter) sit in this object too: only the
+  // repeats go.
+  if (isRecord(out.error)) {
+    const error = { ...out.error };
+    if (same(error.message, reply.message)) delete error.message;
+    if (same(error.code, reply.errorCode)) delete error.code;
+    if (Object.keys(error).length > 0) out.error = error;
+    else delete out.error;
+  }
   if (isRecord(out.data) && Object.keys(out.data).length === 0) delete out.data;
   if (isRecord(out.result)) {
     const inner = compactDetail(out.result, reply);

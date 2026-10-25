@@ -23,7 +23,16 @@ UStaticMesh* ResolveLodMesh(UEngineWireSubsystem* Self, const FString& RequestId
         {
             if (It->GetActorLabel() != ActorName && It->GetName() != ActorName) continue;
             const UStaticMeshComponent* Component = It->FindComponentByClass<UStaticMeshComponent>();
-            if (UStaticMesh* Mesh = Component ? Component->GetStaticMesh() : nullptr) return Mesh;
+            UStaticMesh* Mesh = Component ? Component->GetStaticMesh() : nullptr;
+            if (!Mesh) continue;
+            // Engine meshes are shared by every project on this engine and by the editor itself (the basic shapes):
+            // a change here was saved into the engine's own content.
+            if (Mesh->GetOutermost()->GetName().StartsWith(TEXT("/Engine/")))
+            {
+                Self->SendAutomationError(Socket, RequestId, FString::Printf(TEXT("%s draws the engine mesh %s, which is not changed: duplicate it into /Game, assign the copy, and set the LODs of the copy"), *ActorName, *Mesh->GetPathName()), TEXT("ENGINE_CONTENT"));
+                return nullptr;
+            }
+            return Mesh;
         }
     }
     Self->SendAutomationError(Socket, RequestId, TEXT("targetActor/actorName did not resolve to a StaticMeshComponent with a static mesh asset (LOD settings apply to static mesh assets, not dynamic meshes)"), TEXT("INVALID_ARGUMENT"));
@@ -48,11 +57,13 @@ bool HandleGenerateLODsGeometry(UEngineWireSubsystem* Self, const FString& Reque
     // /Game/GeneratedMeshes).
     FString TargetPath;
     FString PathError;
-    if (!ResolveConversionAssetPath(Payload, ActorName + TEXT("_LOD"), TargetPath, PathError))
+    FString PathCode;
+    if (!ResolveConversionAssetPath(Payload, ActorName + TEXT("_LOD"), TargetPath, PathError, PathCode))
     {
-        Self->SendAutomationError(Socket, RequestId, PathError, TEXT("INVALID_PATH"));
+        Self->SendAutomationError(Socket, RequestId, PathError, PathCode);
         return true;
     }
+    const bool bReplacing = McpAssetExists(TargetPath);
     FGeometryScriptCreateNewStaticMeshAssetOptions AssetOptions;
     AssetOptions.bEnableRecomputeNormals = true;
     AssetOptions.bEnableRecomputeTangents = true;
@@ -69,6 +80,7 @@ bool HandleGenerateLODsGeometry(UEngineWireSubsystem* Self, const FString& Reque
 
     TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
     Result->SetStringField(TEXT("assetPath"), TargetPath);
+    Result->SetBoolField(TEXT("replaced"), bReplacing);
     Result->SetNumberField(TEXT("lodCount"), LODCount);
     Result->SetNumberField(TEXT("triangles"), StaticMesh->GetNumTriangles(0));
 
@@ -85,6 +97,11 @@ bool HandleSetLODSettings(UEngineWireSubsystem* Self, const FString& RequestId,
     double TrianglePercent = GetJsonNumberField(Payload, TEXT("trianglePercent"), 100.0 - GetJsonNumberField(Payload, TEXT("reductionPercent"), 50.0));
     bool bRecomputeNormals = GetJsonBoolField(Payload, TEXT("recomputeNormals"), false);
     bool bRecomputeTangents = GetJsonBoolField(Payload, TEXT("recomputeTangents"), false);
+    if (!FMath::IsFinite(TrianglePercent) || TrianglePercent <= 0.0 || TrianglePercent > 100.0)
+    {
+        Self->SendAutomationError(Socket, RequestId, TEXT("trianglePercent must be above 0 and at most 100 (reductionPercent at least 0 and below 100)"), TEXT("INVALID_ARGUMENT"));
+        return true;
+    }
 
     UStaticMesh* StaticMesh = ResolveLodMesh(Self, RequestId, Payload, Socket);
     if (!StaticMesh) return true;
@@ -109,10 +126,11 @@ bool HandleSetLODSettings(UEngineWireSubsystem* Self, const FString& RequestId,
     // Rebuild
     StaticMesh->Build();
     StaticMesh->PostEditChange();
-    McpSafeAssetSave(StaticMesh);
+    const bool bSaved = McpSafeAssetSave(StaticMesh);
 
     TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
     Result->SetStringField(TEXT("assetPath"), SafePath);
+    Result->SetBoolField(TEXT("saved"), bSaved);
     Result->SetNumberField(TEXT("lodIndex"), LODIndex);
     Result->SetNumberField(TEXT("trianglePercent"), TrianglePercent);
 
@@ -172,10 +190,11 @@ bool HandleSetLODScreenSizes(UEngineWireSubsystem* Self, const FString& RequestI
     }
 
     StaticMesh->PostEditChange();
-    McpSafeAssetSave(StaticMesh);
+    const bool bSaved = McpSafeAssetSave(StaticMesh);
 
     TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
     Result->SetStringField(TEXT("assetPath"), SafePath);
+    Result->SetBoolField(TEXT("saved"), bSaved);
     Result->SetNumberField(TEXT("lodCount"), NumLODs);
     Result->SetNumberField(TEXT("screenSizesSet"), ScreenSizesApplied);
 

@@ -47,9 +47,20 @@ bool HandleGASAbilityPolicies(const FGASRequestContext& Context, const FString& 
             return true;
         }
 
-        // The property is protected, so it is set by name through reflection.
-        SetAbilityPropertyValue(AbilityCDO, FName(TEXT("NetExecutionPolicy")), TEnumAsByte<EGameplayAbilityNetExecutionPolicy::Type>(NetPolicy));
-        if (!CommitGASBlueprintEdit(Context, Blueprint, TEXT("Activation policy")))
+        // The property is protected, so it is set by name through reflection. A class without it, or a value the
+        // recompiled class lost, answered "Activation policy set" all the same.
+        const TEnumAsByte<EGameplayAbilityNetExecutionPolicy::Type> Wanted(NetPolicy);
+        if (!SetAbilityPropertyValue(AbilityCDO, FName(TEXT("NetExecutionPolicy")), Wanted))
+        {
+            Bridge->SendAutomationError(RequestingSocket, RequestId,
+                TEXT("This ability class has no NetExecutionPolicy property. Nothing was changed."), TEXT("PROPERTY_NOT_FOUND"));
+            return true;
+        }
+        if (!CommitGASBlueprintEdit(Context, Blueprint, TEXT("Activation policy"), [&]
+            {
+                TEnumAsByte<EGameplayAbilityNetExecutionPolicy::Type> Held;
+                return ReadCompiledAbilityValue(Blueprint, FName(TEXT("NetExecutionPolicy")), Held) && Held == Wanted;
+            }))
         {
             return true;
         }
@@ -90,15 +101,25 @@ bool HandleGASAbilityPolicies(const FGASRequestContext& Context, const FString& 
             return true;
         }
 
-        SetAbilityPropertyValue(AbilityCDO, FName(TEXT("InstancingPolicy")), TEnumAsByte<EGameplayAbilityInstancingPolicy::Type>(InstPolicy));
-        if (!CommitGASBlueprintEdit(Context, Blueprint, TEXT("Instancing policy")))
+        const TEnumAsByte<EGameplayAbilityInstancingPolicy::Type> Wanted(InstPolicy);
+        if (!SetAbilityPropertyValue(AbilityCDO, FName(TEXT("InstancingPolicy")), Wanted))
+        {
+            Bridge->SendAutomationError(RequestingSocket, RequestId,
+                TEXT("This ability class has no InstancingPolicy property. Nothing was changed."), TEXT("PROPERTY_NOT_FOUND"));
+            return true;
+        }
+        if (!CommitGASBlueprintEdit(Context, Blueprint, TEXT("Instancing policy"), [&]
+            {
+                TEnumAsByte<EGameplayAbilityInstancingPolicy::Type> Held;
+                return ReadCompiledAbilityValue(Blueprint, FName(TEXT("InstancingPolicy")), Held) && Held == Wanted;
+            }))
         {
             return true;
         }
 
         TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
         Result->SetStringField(TEXT("blueprintPath"), BlueprintPath);
-        Result->SetStringField(TEXT("policy"), GASEnumName(InstPolicy));
+        Result->SetStringField(TEXT("instancingPolicy"), GASEnumName(InstPolicy));
         Bridge->SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Instancing policy set"), Result);
         return true;
     }

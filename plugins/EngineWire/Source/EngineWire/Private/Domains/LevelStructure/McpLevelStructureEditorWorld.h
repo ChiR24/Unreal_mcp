@@ -6,7 +6,10 @@
 
 class FMcpBridgeWebSocket;
 class UClass;
+class UEdGraph;
+class UEdGraphNode;
 class ULevel;
+class ULevelScriptBlueprint;
 class ULevelStreaming;
 class UEngineWireSubsystem;
 class UWorld;
@@ -54,4 +57,20 @@ ULevelStreaming* FindOrAddStreamingLevel(UWorld* World, const FString& LevelName
 ULevel* ResolveTargetLevelForBlueprintRequest(
     UWorld* World, const TSharedPtr<FJsonObject>& Payload, FString& OutError,
     bool bAllowTransient = false);
+
+// The level a level-blueprint edit targets (above), its level Blueprint and that Blueprint's event graph; replies and
+// returns false when one is missing. bCreate makes the level Blueprint when the level has none yet (adding a node
+// does); an edit of nodes that must already exist never creates one.
+bool ResolveLevelBlueprintGraph(
+    UEngineWireSubsystem* Subsystem, const FString& RequestId, TSharedPtr<FMcpBridgeWebSocket> Socket,
+    const TSharedPtr<FJsonObject>& Payload, bool bCreate, ULevel*& OutLevel, ULevelScriptBlueprint*& OutBlueprint,
+    UEdGraph*& OutGraph);
+
+// Whether Wanted is Node's name, nodeId (guid) or title (the full title, its first line as the node shows it, or the
+// list title), any case.
+bool IsLevelBlueprintNodeNamed(UEdGraphNode* Node, const FString& Wanted);
+
+// The node of Graph that Wanted names (above), else the last one whose name or title contains it (connect_nodes takes
+// a part of a title); an exact match always wins.
+UEdGraphNode* FindLevelBlueprintNode(UEdGraph* Graph, const FString& Wanted);
 }

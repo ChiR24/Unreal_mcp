@@ -73,7 +73,11 @@ const costSchema = z.strictObject({
 const dispatchBySchema = z.strictObject({
   param: z.string().min(1),
   actions: z.record(z.string().min(1), LegacyActionNameSchema),
-  declaredBy: z.record(z.string().min(1), z.array(z.string().min(1)).min(1)).optional()
+  declaredBy: z.record(z.string().min(1), z.array(z.string().min(1)).min(1)).optional(),
+  requires: z.record(z.string().min(1), z.strictObject({
+    required: z.array(z.string().min(1)).min(1).optional(),
+    oneOf: z.array(z.string().min(1)).min(1).optional()
+  })).optional()
 });
 
 const isCanonicalParent = (tool: string): boolean => {

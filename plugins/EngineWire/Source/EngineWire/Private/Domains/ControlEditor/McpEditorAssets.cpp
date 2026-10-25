@@ -2,6 +2,7 @@
 #include "Foundation/BridgeHelpers/Blueprints/McpBPPaths.h"
 #include "Foundation/McpCompensationReceipt.h"
 #include "Misc/PackageName.h"
+#include "Safety/McpSafeOperationsRenderGuard.h"
 
 bool UEngineWireSubsystem::HandleControlEditorOpenAsset(
     const FString &RequestId, const TSharedPtr<FJsonObject> &Payload,
@@ -142,6 +143,10 @@ bool UEngineWireSubsystem::HandleControlEditorCloseAsset(
 bool UEngineWireSubsystem::HandleControlEditorSaveAll(
     const FString &RequestId, const TSharedPtr<FJsonObject> &Payload,
     TSharedPtr<FMcpBridgeWebSocket> Socket) {
+  if (McpMovieRenderRunning()) {
+    SendAutomationError(Socket, RequestId, McpMovieRenderRunningMessage(), TEXT("RENDER_IN_PROGRESS"));
+    return true;
+  }
   TArray<UPackage*> DirtyWorldPackages;
   TArray<UPackage*> DirtyContentPackages;
   FEditorFileUtils::GetDirtyWorldPackages(DirtyWorldPackages);

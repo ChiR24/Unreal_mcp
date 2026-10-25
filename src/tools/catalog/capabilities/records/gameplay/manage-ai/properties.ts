@@ -31,12 +31,12 @@ const DECORATOR_TYPES = [
 
 const EQS_GENERATOR_TYPES = [
   'ActorsOfClass', 'CurrentLocation', 'Donut', 'OnCircle',
-  'PathingGrid', 'SimpleGrid', 'Composite', 'Custom',
+  'PathingGrid', 'SimpleGrid', 'Composite',
 ] as const;
 
 const EQS_TEST_TYPES = [
   'Distance', 'Dot', 'GameplayTags', 'Overlap', 'Pathfinding',
-  'PathfindingBatch', 'Project', 'Random', 'Trace', 'Custom',
+  'PathfindingBatch', 'Project', 'Random', 'Trace',
 ] as const;
 
 export const AI = {
@@ -65,14 +65,15 @@ export const AI = {
   componentName: str('Name of the component to add.'),
 
   // --- blackboard ---
-  keyName: str('Blackboard key name.'),
+  keyName: str('Blackboard key name, matched in any case.'),
   keyType: pick('Blackboard key data type.',
     ['Bool', 'Int', 'Float', 'Vector', 'Rotator', 'Object', 'Class', 'Enum', 'Name', 'String']),
-  baseObjectClass: str('Base class filter for Object/Class blackboard keys.'),
-  isInstanceSynced: bool('Sync key across instances.'),
+  baseObjectClass: str('Class an Object key holds or a Class key names, as a class path or name (e.g. /Script/Engine.Actor); Object and Class keys only. Without it the key is based on Object, which actor-only key filters such as the MoveTo target skip.'),
+  enumType: str('Enum an Enum key holds, by path (/Game/Enums/E_State, /Script/Engine.ECollisionChannel); Enum keys only. Without it the key has no enumerators to hold.'),
+  isInstanceSynced: bool('Share the value of the key across every Blackboard component using this asset, so a value one AI sets reaches them all.'),
 
   // --- behavior tree nodes ---
-  compositeType: pick('Composite node type.', ['Selector', 'Sequence', 'Parallel', 'SimpleParallel']),
+  compositeType: pick('Composite node type: Selector, Sequence, or SimpleParallel (Parallel is the same).', ['Selector', 'Sequence', 'Parallel', 'SimpleParallel']),
   taskType: pick('Task node type.', TASK_TYPES),
   decoratorType: pick('Decorator node type.', DECORATOR_TYPES),
   serviceType: pick('Service node type.', ['DefaultFocus', 'RunEQS', 'Custom']),
@@ -88,18 +89,21 @@ export const AI = {
 
   // --- environment query system ---
   generatorType: pick('EQS generator type.', EQS_GENERATOR_TYPES),
-  contextType: pick('EQS context type.',
-    ['Querier', 'Item', 'EnvQueryContext_BlueprintBase', 'Custom']),
+  contextType: pick('Querier (the AI running the query), Item (each item being tested), or Custom with contextClass.',
+    ['Querier', 'Item', 'Custom']),
+  contextClass: str('Context class for contextType Custom: a Blueprint based on EnvQueryContext_BlueprintBase, or a context class path.'),
+  contextProperty: str('Context property of the generator or test to set (SearchCenter, GenerateAround, DistanceTo, Context); default the first one it has.'),
+  optionIndex: num('Option whose generator takes the context when no testIndex is sent (default 0).'),
   testType: pick('EQS test type.', EQS_TEST_TYPES),
-  testIndex: num('Index of the test to configure.'),
-  generatorSettings: closed('Generator-specific settings.', {
-    searchRadius: N, searchCenter: S, actorClass: S, gridSize: N,
+  testIndex: num('Test index counted across all options of the query, in the order the tests were added (the testIndex add_eqs_test returned).'),
+  generatorSettings: closed('Settings the generator reads, refused when it does not: ActorsOfClass searchRadius (also keeps items inside it) and actorClass; SimpleGrid and PathingGrid gridSize (half the grid side) and spacesBetween; OnCircle searchRadius or outerRadius (the circle radius) and spacesBetween; Donut innerRadius and outerRadius. Where a generator centers is set with add_eqs_context.', {
+    searchRadius: N, actorClass: S, gridSize: N,
     spacesBetween: N, innerRadius: N, outerRadius: N,
   }),
   testSettings: closed('Test scoring and filter settings.', {
-    scoringEquation: { type: 'string', enum: ['Linear', 'Square', 'InverseLinear', 'Constant'] },
+    scoringEquation: { type: 'string', enum: ['Linear', 'Square', 'InverseLinear', 'SquareRoot', 'Constant'] },
     clampMin: N, clampMax: N,
-    filterType: { type: 'string', enum: ['Minimum', 'Maximum', 'Range'] },
+    filterType: { type: 'string', enum: ['Minimum', 'Maximum', 'Range', 'Match'] },
     floatMin: N, floatMax: N,
   }),
 
@@ -111,10 +115,10 @@ export const AI = {
       { enemies: B, neutrals: B, friendlies: B }),
   }),
   hearingConfig: closed('AI hearing sense configuration.', {
-    hearingRange: N, loSHearingRange: N, detectFriendly: B, maxAge: N,
+    hearingRange: N, detectFriendly: B, maxAge: N,
   }),
   damageConfig: closed('AI damage sense configuration.', { maxAge: N }),
-  teamId: num('Team ID for perception affiliation (0=Neutral, 1=Player, 2=Enemy, ...).'),
+  teamId: num('Team id to store, 0 to 254 (255 means no team).'),
   dominantSense: pick('Dominant sense for perception prioritization.',
     ['Sight', 'Hearing', 'Damage', 'Touch', 'None']),
   enableSight: bool('Enable the sight sense.'),
@@ -124,12 +128,14 @@ export const AI = {
   loseSightRadius: num('Radius at which sight is lost.'),
   peripheralVisionAngle: num('Peripheral vision half-angle in degrees.'),
   hearingRange: num('Hearing range in world units.'),
-  focusActorName: str('Actor the controller should focus on.'),
+  focusPlayer: bool('Focus the pawn of player 0, picked up again when it spawns late or respawns.'),
+  focusTag: str('Focus the first actor carrying this tag (mark the target with control_actor add_tag).'),
 
   // --- state tree ---
   parentStateName: str('Parent state name for the added state.'),
-  stateType: str('State kind for the added state.'),
-  triggerType: str('Transition trigger kind.'),
+  stateType: str('State (default), Group, Linked, LinkedAsset (UE 5.4+) or Subtree.'),
+  triggerType: str('OnStateCompleted (default), OnStateSucceeded, OnStateFailed, OnTick, OnEvent (needs an event tag) or OnDelegate (newer engines).'),
+  schema: str('What runs the tree: component (default, a StateTreeComponent on any actor), ai (a StateTreeAIComponent on an AI controller, UE 5.4+), or the class path of another State Tree schema (a UStateTreeSchema subclass, such as /Script/MassAIBehavior.MassStateTreeSchema for Mass entities).'),
 
   // --- smart objects / mass ---
   slotIndex: num('Index of the slot to configure.'),

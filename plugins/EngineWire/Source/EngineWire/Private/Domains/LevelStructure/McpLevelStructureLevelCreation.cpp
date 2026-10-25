@@ -250,7 +250,8 @@ bool HandleCreateLevel(
     ResponseJson->SetBoolField(TEXT("saved"), bSave && bSaveSucceeded);
     if (bCreateWorldPartition && !bWorldPartitionActuallyEnabled)
     {
-        ResponseJson->SetStringField(TEXT("worldPartitionNote"), TEXT("World Partition must be enabled via editor UI or project settings for new levels"));
+        // A note field sat in details, so a level made without the World Partition asked for read as done.
+        ResponseJson->SetArrayField(TEXT("warnings"), McpHandlerUtils::ToJsonStringArray({TEXT("World Partition was asked for but could not be created, so the level was made without it (worldPartitionEnabled false); enable it on the open level with manage_level_structure enable_world_partition.")}));
     }
 
     // If save was requested but failed, report error

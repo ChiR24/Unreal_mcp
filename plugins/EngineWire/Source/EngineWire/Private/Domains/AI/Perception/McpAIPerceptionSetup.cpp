@@ -1,4 +1,5 @@
 #include "Domains/AI/McpAIContext.h"
+#include "Domains/AI/Perception/McpAIPerceptionConfigs.h"
 
 #include "EditorAssetLibrary.h"
 #include "Engine/Blueprint.h"
@@ -91,6 +92,26 @@ bool ConfigurePerception(UEngineWireSubsystem* Self, const FString& RequestId, c
             FString::Printf(TEXT("Blueprint not found: %s"), *ControllerPath), TEXT("NOT_FOUND"));
         return true;
     }
+    // An unknown dominant sense was echoed back as if applied.
+    const FString DominantSense = GetJsonStringField(Payload, TEXT("dominantSense"));
+    static const TMap<FString, UClass*> Senses = {
+        {TEXT("Sight"), UAISense_Sight::StaticClass()},
+        {TEXT("Hearing"), UAISense_Hearing::StaticClass()},
+        {TEXT("Damage"), UAISense_Damage::StaticClass()},
+        {TEXT("Touch"), UAISense_Touch::StaticClass()},
+        {TEXT("None"), nullptr}};
+    UClass* const* DominantClass = DominantSense.IsEmpty() ? nullptr : Senses.Find(DominantSense);
+    if (!DominantSense.IsEmpty() && !DominantClass)
+    {
+        Self->SendAutomationError(RequestingSocket, RequestId, TEXT("dominantSense must be Sight, Hearing, Damage, Touch or None."), TEXT("INVALID_ARGUMENT"));
+        return true;
+    }
+    if (!DominantClass && !GetJsonBoolField(Payload, TEXT("enableSight")) && !GetJsonBoolField(Payload, TEXT("enableHearing"))
+        && !GetJsonBoolField(Payload, TEXT("enableDamage")))
+    {
+        Self->SendAutomationError(RequestingSocket, RequestId, TEXT("Nothing to set: send enableSight, enableHearing, enableDamage or dominantSense."), TEXT("INVALID_ARGUMENT"));
+        return true;
+    }
     bool bCreatedNew = false;
     UAIPerceptionComponent* PerceptionComp =
         FindOrCreatePerceptionComponent(Self, RequestId, RequestingSocket, ControllerBP, &bCreatedNew);
@@ -99,55 +120,41 @@ bool ConfigurePerception(UEngineWireSubsystem* Self, const FString& RequestId, c
         return true;
     }
 
+    // A sense already set up keeps the settings this call does not send; each call used to replace it with defaults.
     TArray<TSharedPtr<FJsonValue>> SensesConfigured;
+    bool bSenseCreated = false;
+    PerceptionComp->Modify();
     if (GetJsonBoolField(Payload, TEXT("enableSight")))
     {
-        const float SightRadius = GetJsonNumberField(Payload, TEXT("sightRadius"), 3000.0f);
-        UAISenseConfig_Sight* SightConfig = NewObject<UAISenseConfig_Sight>(PerceptionComp);
-        SightConfig->SightRadius = SightRadius;
-        SightConfig->LoseSightRadius = GetJsonNumberField(Payload, TEXT("loseSightRadius"), SightRadius + 500.0f);
-        SightConfig->PeripheralVisionAngleDegrees = GetJsonNumberField(Payload, TEXT("peripheralVisionAngle"), 90.0f);
-        SightConfig->DetectionByAffiliation.bDetectEnemies = true;
-        SightConfig->DetectionByAffiliation.bDetectNeutrals = true;
-        SightConfig->DetectionByAffiliation.bDetectFriendlies = false;
-        SightConfig->SetMaxAge(5.0f);
+        UAISenseConfig_Sight* SightConfig = FindOrAddSenseConfig<UAISenseConfig_Sight>(PerceptionComp, bSenseCreated);
+        ApplySightSettings(SightConfig, MergedSenseSettings(Payload, TEXT("sightConfig")), bSenseCreated);
         PerceptionComp->ConfigureSense(*SightConfig);
         SensesConfigured.Add(MakeShared<FJsonValueString>(TEXT("Sight")));
     }
     if (GetJsonBoolField(Payload, TEXT("enableHearing")))
     {
-        UAISenseConfig_Hearing* HearingConfig = NewObject<UAISenseConfig_Hearing>(PerceptionComp);
-        HearingConfig->HearingRange = GetJsonNumberField(Payload, TEXT("hearingRange"), 3000.0f);
-        HearingConfig->DetectionByAffiliation.bDetectEnemies = true;
-        HearingConfig->DetectionByAffiliation.bDetectNeutrals = true;
-        HearingConfig->DetectionByAffiliation.bDetectFriendlies = false;
-        HearingConfig->SetMaxAge(5.0f);
+        UAISenseConfig_Hearing* HearingConfig = FindOrAddSenseConfig<UAISenseConfig_Hearing>(PerceptionComp, bSenseCreated);
+        ApplyHearingSettings(HearingConfig, MergedSenseSettings(Payload, TEXT("hearingConfig")), bSenseCreated);
         PerceptionComp->ConfigureSense(*HearingConfig);
         SensesConfigured.Add(MakeShared<FJsonValueString>(TEXT("Hearing")));
     }
     if (GetJsonBoolField(Payload, TEXT("enableDamage")))
     {
-        UAISenseConfig_Damage* DamageConfig = NewObject<UAISenseConfig_Damage>(PerceptionComp);
-        DamageConfig->SetMaxAge(10.0f);
+        UAISenseConfig_Damage* DamageConfig = FindOrAddSenseConfig<UAISenseConfig_Damage>(PerceptionComp, bSenseCreated);
+        if (bSenseCreated)
+        {
+            DamageConfig->SetMaxAge(10.0f);
+        }
         PerceptionComp->ConfigureSense(*DamageConfig);
         SensesConfigured.Add(MakeShared<FJsonValueString>(TEXT("Damage")));
     }
 
-    const FString DominantSense = GetJsonStringField(Payload, TEXT("dominantSense"));
-    static const TMap<FString, UClass*> Senses = {
-        {TEXT("Sight"), UAISense_Sight::StaticClass()},
-        {TEXT("Hearing"), UAISense_Hearing::StaticClass()},
-        {TEXT("Damage"), UAISense_Damage::StaticClass()},
-        {TEXT("Touch"), UAISense_Touch::StaticClass()},
-        {TEXT("None"), nullptr}};
-    // Touch and None were advertised but fell through, echoed back as if applied.
-    if (UClass* const* Sense = Senses.Find(DominantSense))
+    if (DominantClass)
     {
-        PerceptionComp->SetDominantSense(*Sense);
+        PerceptionComp->SetDominantSense(*DominantClass);
     }
 
     FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(ControllerBP);
-    McpSafeAssetSave(ControllerBP);
 
     TSharedPtr<FJsonObject> PerceptionResult = McpHandlerUtils::CreateResultObject();
     PerceptionResult->SetStringField(TEXT("controllerPath"), ControllerPath);
@@ -157,6 +164,8 @@ bool ConfigurePerception(UEngineWireSubsystem* Self, const FString& RequestId, c
     {
         PerceptionResult->SetStringField(TEXT("dominantSense"), DominantSense);
     }
+    PerceptionResult->SetBoolField(TEXT("saved"), McpSafeAssetSave(ControllerBP));
+    McpHandlerUtils::AddVerification(PerceptionResult, ControllerBP);
     Self->SendAutomationResponse(RequestingSocket, RequestId, true, SuccessMessage, PerceptionResult);
     return true;
 }

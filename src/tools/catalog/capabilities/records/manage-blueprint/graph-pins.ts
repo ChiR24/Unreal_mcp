@@ -20,8 +20,10 @@ export const GRAPH_PINS_RECORDS: readonly CapabilityRecordSource[] = [
     summary: 'Connect two graph pins (exec or data) by nodeGuid and pin name. A pin the editor adds on demand is added: a Sequence\'s then_2, a Make Array\'s [2], a Switch on Int\'s case 7 (a new switch has only Default).',
     whenToUse: ['An exec or data link between two existing nodes must be created.'],
     whenNotToUse: ['Links must be broken (use break_pin_links).'],
-    inputProps: { blueprintPath: P.blueprintPath, graphName: P.graphName, fromNodeId: P.fromNodeId, fromPinName: P.fromPinName, toNodeId: P.toNodeId, toPinName: P.toPinName, sourceNode: P.sourceNode, targetNode: P.targetNode, sourcePin: P.sourcePin, targetPin: P.targetPin },
-    required: ['blueprintPath', 'fromNodeId', 'fromPinName', 'toNodeId', 'toPinName'],
+    // Each endpoint is also read under its alias (sourceNode, sourcePin, targetNode, targetPin), which one
+    // requiredOneOf group cannot express, so the four are checked by the handler (NODE_NOT_FOUND names the end that missed).
+    inputProps: { blueprintPath: P.blueprintPath, graphName: P.graphName, fromNodeId: { ...P.fromNodeId, description: 'Node the wire leaves (its nodeGuid, an 8+ hex prefix of it, or its node name); required, or send sourceNode.' }, fromPinName: { ...P.fromPinName, description: 'Output pin it leaves from; required, or send sourcePin.' }, toNodeId: { ...P.toNodeId, description: 'Node the wire enters; required, or send targetNode.' }, toPinName: { ...P.toPinName, description: 'Input pin it enters; required, or send targetPin.' }, sourceNode: P.sourceNode, targetNode: P.targetNode, sourcePin: { ...P.sourcePin, description: 'Output pin name accepted in place of fromPinName.' }, targetPin: { ...P.targetPin, description: 'Input pin name accepted in place of toPinName.' } },
+    required: ['blueprintPath'],
     // The handler already reported which pins it resolved and whether the asset
     // was saved, but the default closed output schema stripped all of it, so a
     // successful link was indistinguishable from a no-op: "Pin connection
@@ -58,6 +60,10 @@ export const GRAPH_PINS_RECORDS: readonly CapabilityRecordSource[] = [
     whenToUse: ['All links from a specific pin must be removed (disconnect or unlink a wire).'],
     whenNotToUse: ['A single link should be redirected (use connect_pins after breaking).'],
     inputProps: { blueprintPath: P.blueprintPath, graphName: P.graphName, nodeId: P.nodeId, pinName: P.pinName, nodeGuid: P.nodeGuid },
+    outputProps: {
+      brokenLinks: { type: 'number', description: 'How many wires of the pin were broken (0 when it had none, and nothing changed).' },
+      disconnectedFrom: { type: 'array', items: { type: 'string' }, description: 'The pins it was wired to, each as nodeGuid.pinName.' },
+    },
     required: ['blueprintPath', 'pinName'],
     requiredOneOf: ['nodeId', 'nodeGuid'],
     effect: 'destructive',
@@ -127,7 +133,7 @@ export const GRAPH_PINS_RECORDS: readonly CapabilityRecordSource[] = [
     family: FAMILY,
     domain: DOMAIN,
     topics: ['arrange nodes', 'tidy graph', 'clean up graph layout', 'move nodes next to each other', 'layout nodes'],
-    summary: 'Tidy a graph: move the listed nodes beside the nodes they are wired to (right of what runs them, below-left of what reads them), each to the nearest free slot; the nodes left out stay put and anchor them.',
+    summary: 'Tidy a graph: move the listed nodes beside the nodes they are wired to (right of what runs them, below-left of what reads them), each to the nearest free slot; the nodes left out stay put and anchor them. An unknown nodeId is refused before anything moves. The Blueprint then compiles and is saved; that compile clears the editor\'s undo history whenever the history holds the Blueprint (undoBufferReset, and undo.undoable false with UNDO_CLEARED_BY_COMPILE), so the move usually cannot be undone: run arrange_nodes again or set positions back with set_node_property.',
     whenToUse: ['Nodes of a chain sit far from each other or from the event they hang off, and should be laid out beside what they are wired to.'],
     whenNotToUse: ['One node must go to an exact position (use set_node_property with NodePosX and NodePosY).', 'Every listed node is wired only to other listed nodes: nothing anchors them, so none moves; leave the head of the chain (its event) out of nodeIds.'],
     inputProps: {
@@ -138,6 +144,7 @@ export const GRAPH_PINS_RECORDS: readonly CapabilityRecordSource[] = [
     outputProps: {
       moved: { type: 'array', items: { type: 'object', additionalProperties: true, 'x-unreal-reflection-boundary': true }, description: 'Each node that moved: nodeId, nodeTitle and its new x and y.' },
       unmoved: { type: 'array', items: { type: 'string' }, description: 'Ids of listed nodes that stayed where they were: wired to no node left in place, or no free slot near one.' },
+      alreadyInPlace: { type: 'array', items: { type: 'string' }, description: 'Ids of listed nodes already beside what they are wired to: nothing moved them, so there is nothing to undo for them.' },
     },
     outputRequired: [],
     effect: 'write',

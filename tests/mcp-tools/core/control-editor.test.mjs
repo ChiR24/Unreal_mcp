@@ -29,6 +29,10 @@ const testCases = [
   { scenario: 'ACTION: possess', toolName: 'control_editor', arguments: { action: 'possess', actorName: PIE_PAWN }, expected: 'success|NOT_IN_PIE' },
   // The reply leaves while a held key is still down, so it names the pawn to read once the key is released.
   { scenario: 'ACTION: apply_damage hits an actor in the running game', toolName: 'manage_combat', arguments: { action: 'apply_damage', actorName: PIE_PAWN, damage: 10, causerName: FOCUS_ACTOR, damageType: '/Script/Engine.DamageType' }, expected: 'success', assertions: [{ path: 'structuredContent.result.damageApplied', equals: 10, label: 'the pawn took the hit' }] },
+  // One impulse, not a one-frame force (60000 used to move a crate 0 cm): the reply says what it moved and how fast.
+  { scenario: 'ACTION: apply_force pushes a body in the running game', toolName: 'control_actor', arguments: { action: 'apply_force', actorName: FOCUS_ACTOR, force: [0, 0, 30000] }, expected: 'success', assertions: [{ path: 'structuredContent.result.massKg', gte: 1, label: 'the mass pushed is named' }, { path: 'structuredContent.result.velocityChange.2', gte: 1, label: 'with the upward speed the push gave it' }] },
+  // While a game runs, x and y are pixels of its viewport: a point outside it (or a viewport with no size) is refused.
+  { scenario: 'ERROR: simulate_input mouse_move outside the game viewport', toolName: 'control_editor', arguments: { action: 'simulate_input', type: 'mouse_move', x: -5, y: -5 }, expected: 'error' },
   { scenario: 'ACTION: simulate_input in PIE names the pawn the key drives', toolName: 'control_editor', arguments: { action: 'simulate_input', type: 'key_tap', key: 'W' }, expected: 'success', assertions: [{ path: 'structuredContent.result.pawn', equals: PIE_PAWN, label: 'the possessed pawn is named' }] },
   // The game draws its view target's camera until the player is ejected: there is no free camera to move, and the refusal names the fix.
   { scenario: 'ERROR: set_camera while the player is not ejected', toolName: 'control_editor', arguments: { action: 'set_camera', location: cameraLocation, rotation: cameraRotation }, expected: 'error|PIE_VIEW_NOT_EJECTED' },
@@ -43,7 +47,8 @@ const testCases = [
   { scenario: 'ACTION: start_recording', toolName: 'control_editor', arguments: { action: 'start_recording', name: `Recording_${ts}` }, expected: 'success' },
   { scenario: 'PLAYBACK: stop_recording', toolName: 'control_editor', arguments: { action: 'stop_recording' }, expected: 'success' },
   { scenario: 'OPTIONAL: start_recording with durationSeconds and frameRate', toolName: 'control_editor', arguments: { action: 'start_recording', name: `Recording_Opt_${ts}`, durationSeconds: 1, frameRate: 30 }, expected: 'success' },
-  { scenario: 'PLAYBACK: stop_recording after optional capture', toolName: 'control_editor', arguments: { action: 'stop_recording' }, expected: 'success' },
+  // durationSeconds 1 may already have stopped it, and stop_recording then says nothing records.
+  { scenario: 'PLAYBACK: stop_recording after optional capture', toolName: 'control_editor', arguments: { action: 'stop_recording' }, expected: 'success|no replay is recording' },
   { scenario: 'PLAYBACK: pause', toolName: 'control_editor', arguments: { action: 'pause' }, expected: 'success' },
   // A pawn teleported into a paused game floats where it was put; the reply and its receipt say why.
   { scenario: 'VERIFY: a world edit while paused says nothing will move', toolName: 'control_actor', arguments: { action: 'set_transform', actorName: PIE_PAWN, location: { x: 180, y: 0, z: 400 } }, expected: 'success', assertions: [{ path: 'structuredContent.result.details.gamePaused', equals: true, label: 'the reply flags the paused play world' }, { path: 'structuredContent.receipt.warnings.1', includes: 'The game is paused', label: 'and the receipt says nothing will move' }] },
@@ -73,6 +78,10 @@ const testCases = [
   { scenario: 'CONFIG: set_viewport_camera', toolName: 'control_editor', arguments: { action: 'set_viewport_camera', location: { x: 340, y: -280, z: 220 }, rotation: cameraRotation }, expected: 'success' },
   { scenario: 'CONFIG: set_camera_fov', toolName: 'control_editor', arguments: { action: 'set_camera_fov', fov: 85 }, expected: 'success' },
   { scenario: 'CONFIG: set_view_mode', toolName: 'control_editor', arguments: { action: 'set_view_mode', viewMode: 'Lit' }, expected: 'success' },
+  // Only ten names were known; any engine view mode now resolves by its display name, and an unknown one is refused.
+  { scenario: 'CONFIG: set_view_mode by display name', toolName: 'control_editor', arguments: { action: 'set_view_mode', viewMode: 'Player Collision' }, expected: 'success', assertions: [{ path: 'structuredContent.result.viewMode', equals: 'CollisionPawn', label: 'the display name finds the engine view mode' }] },
+  { scenario: 'ERROR: set_view_mode with an unknown name', toolName: 'control_editor', arguments: { action: 'set_view_mode', viewMode: 'Sepia' }, expected: 'error|is not a view mode' },
+  { scenario: 'CONFIG: set_view_mode back to Lit', toolName: 'control_editor', arguments: { action: 'set_view_mode', viewMode: 'Lit' }, expected: 'success' },
   { scenario: 'CONFIG: set_viewport_resolution', toolName: 'control_editor', arguments: { action: 'set_viewport_resolution', width: 1280, height: 720 }, expected: 'success' },
   { scenario: 'CONFIG: set_viewport_realtime', toolName: 'control_editor', arguments: { action: 'set_viewport_realtime', realtime: false }, expected: 'success' },
 
@@ -91,6 +100,7 @@ const testCases = [
   { scenario: 'OPTIONAL: keepFile false with returnBase64 false is refused', toolName: 'control_editor', arguments: { action: 'screenshot', mode: 'editor_viewport', keepFile: false, returnBase64: false }, expected: 'error|INVALID_ARGUMENT' },
   // A replay records the running game, so outside PIE there is nothing to record.
   { scenario: 'ERROR: start_recording outside PIE', toolName: 'control_editor', arguments: { action: 'start_recording', name: `Recording_NoPie_${ts}` }, expected: 'error|NO_ACTIVE_SESSION' },
+  { scenario: 'ERROR: stop_recording with nothing recording', toolName: 'control_editor', arguments: { action: 'stop_recording' }, expected: 'error|NOT_RECORDING' },
 
   // === BOOKMARKS / PREFERENCES / ASSETS ===
   { scenario: 'CREATE: create_bookmark', toolName: 'control_editor', arguments: { action: 'create_bookmark', id: 0 }, expected: 'success' },
@@ -130,6 +140,12 @@ const testCases = [
   { scenario: 'CONFIG: set_game_view', toolName: 'control_editor', arguments: { action: 'set_game_view', enabled: false }, expected: 'success' },
   { scenario: 'ACTION: undo', toolName: 'control_editor', arguments: { action: 'undo' }, expected: 'success' },
   { scenario: 'ACTION: redo', toolName: 'control_editor', arguments: { action: 'redo' }, expected: 'success' },
+  { scenario: 'ERROR: restore point rollback with none open', toolName: 'control_editor', arguments: { action: 'restore_point', op: 'rollback' }, expected: 'error|NO_RESTORE_POINT' },
+  { scenario: 'ACTION: restore point begin', toolName: 'control_editor', arguments: { action: 'restore_point', op: 'begin', label: 'integration' }, expected: 'success' },
+  { scenario: 'ERROR: a second restore point while one is open', toolName: 'control_editor', arguments: { action: 'restore_point', op: 'begin' }, expected: 'error|RESTORE_POINT_OPEN' },
+  { scenario: 'ACTION: restore point status names it', toolName: 'control_editor', arguments: { action: 'restore_point', op: 'status' }, expected: 'success', assertions: [{ path: 'structuredContent.result.label', equals: 'integration', label: 'the open restore point is the one begun' }] },
+  { scenario: 'ACTION: restore point rollback with nothing since', toolName: 'control_editor', arguments: { action: 'restore_point', op: 'rollback' }, expected: 'success' },
+  { scenario: 'ACTION: restore point end', toolName: 'control_editor', arguments: { action: 'restore_point', op: 'end' }, expected: 'success' },
   { scenario: 'ACTION: save_all', toolName: 'control_editor', arguments: { action: 'save_all' }, expected: 'success' },
   // A listed path that is not dirty saves nothing and still succeeds.
   { scenario: 'ACTION: save_all assetPaths', toolName: 'control_editor', arguments: { action: 'save_all', assetPaths: ['/Game/NoSuchAsset'] }, expected: 'success' },

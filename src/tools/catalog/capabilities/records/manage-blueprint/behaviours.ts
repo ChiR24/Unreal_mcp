@@ -1,6 +1,6 @@
 /**
  * Gameplay behaviours written into an Actor Blueprint from the plugin's recipe files
- * (McpBlueprintBehaviour::Author): health, damage on touch, pickups, sprint, shooting, chasing, patrolling, player controls, respawning, a goal, a launch pad, a teleporter, a spawner, a dash, a health bar and counters on screen, and a game over. Folded
+ * (McpBlueprintBehaviour::Author): health, damage on touch, pickups, sprint, shooting, chasing, patrolling, a turret, a stomp, an explosive, a moving platform, player controls, respawning, a goal, a launch pad, a teleporter, a falling platform, a time limit, a spawner, a dash, a health bar and counters on screen, a hint on screen, and a game over. Folded
  * into blueprint.add_behaviour (selector behaviour). Every one is all or nothing,
  * re-runnable (a second run replaces the first), compiled and saved.
  */
@@ -19,7 +19,7 @@ const BEHAVIOUR_OUTPUT = {
   dispatchers: { type: 'array', items: { type: 'string' }, description: 'Event dispatchers it added, which other logic can bind.' },
 } as const;
 
-const SOUND_PATH = { type: 'string', description: 'Sound asset played at the actor: where a pickup was collected, a goal when the player reaches it, a pad on each launch, or where a teleported pawn arrives.' } as const;
+const SOUND_PATH = { type: 'string', description: 'Sound asset played at the actor: where a pickup was collected, a goal when the player reaches it, a pad on each launch, where a teleported pawn arrives, or an explosive blows up.' } as const;
 const COOLDOWN = { type: 'number', description: 'Seconds before it works again: before a Character can dash again, or before a teleporter takes a pawn after one arrived on it (default 1).' } as const;
 
 // A folded family keeps one description per shared parameter, so the key-driven behaviours share these texts.
@@ -28,18 +28,28 @@ const INPUT_ACTION = { type: 'string', description: 'An Input Action to use inst
 const MAPPING_CONTEXT = { type: 'string', description: 'The Input Mapping Context its keys go in (the project\'s own); default the one the pawn already registers, else /Game/Input/IMC_MCP.' } as const;
 
 // The HUD behaviours share these: a folded family keeps one description per shared parameter and output.
-const WIDGET_PATH = { type: 'string', description: 'A Widget Blueprint to show instead of the one made next to the Blueprint under UI/ (WBP_HealthBar, WBP_<variable>Counter, WBP_GameOver). One without the bar or the text gets it: the health bar HUD piece (add_game_widget), a text at the top right, or a full-screen shade with the message.' } as const;
-const TEXT_NAME = { type: 'string', description: 'The TextBlock in the widget that the behaviour writes: the count of counter_hud (default <variable>Counter) or the message of game_over (default GameOver_Text). A text named here must already be in the widget.' } as const;
+const WIDGET_PATH = { type: 'string', description: 'A Widget Blueprint to show instead of the one made next to the Blueprint under UI/ (WBP_HealthBar, WBP_<variable>Counter, WBP_GameOver, WBP_Hint). One without the bar or the text gets it: the health bar HUD piece (add_game_widget), a text at the top right, a full-screen shade with the message, or a dark box at the bottom with the hint.' } as const;
+const TEXT_NAME = { type: 'string', description: 'The TextBlock in the widget that the behaviour writes: the count of counter_hud (default <variable>Counter), or the message of game_over (default GameOver_Text) or of a hint (default Hint_Text). A text named here must already be in the widget.' } as const;
+const MESSAGE = { type: 'string', description: 'The text shown: a game over\'s message (default GAME OVER), or the hint itself (required for hint).' } as const;
 const HUD_OUTPUT = {
   ...BEHAVIOUR_OUTPUT,
   widgetPath: { type: 'string', description: 'The Widget Blueprint shown.' },
   createdAssets: { type: 'array', items: { type: 'string' }, description: 'The Widget Blueprint this call made; it stays if the Blueprint is rolled back.' },
 } as const;
 
+// Shoot and turret share these: a folded family keeps one description per shared parameter.
+const PROJECTILE_CLASS = { type: 'string', description: 'The projectile it shoots: a Blueprint path (/Game/Weapons/BP_Fireball) or class path.' } as const;
+const PROJECTILE_SPEED = { type: 'number', description: 'Launch speed, units per second (default 3000).' } as const;
+const FIRE_RATE = { type: 'number', description: 'Most shots a minute (default 300 for shoot, 60 for turret).' } as const;
+
 // Chase and patrol share these: a pawn patrols and chases with one behaviour, and both read the same variables.
 const CHASE_RANGE = { type: 'number', description: 'Distance within which the pawn chases the player, in units: chase defaults to 2000, and a patrol chases only when given one (default 0, or the range of a chase it takes over).' } as const;
 const STOP_DISTANCE = { type: 'number', description: 'How close it gets to the player before it stops, in units (default 100).' } as const;
-const USE_PATHFINDING = { type: 'boolean', description: 'Follow the navigation mesh (default true; the level needs a Nav Mesh Bounds Volume); false heads straight for the player or the next point.' } as const;
+// Patrol and moving platform share these: a folded family keeps one description per shared parameter.
+const ROUTE_POINTS = { type: 'array', items: { type: 'array', items: { type: 'number' }, minItems: 3, maxItems: 3 }, description: 'The route: [x, y, z] offsets from where the actor starts, in world axes, visited in turn and looped (default [[500, 0, 0], [0, 0, 0]], back and forth). Each placed copy keeps its own route (PatrolPoints or PlatformPoints is instance editable).' } as const;
+const WAIT_TIME = { type: 'number', description: 'Seconds it waits at each point (default 1).' } as const;
+const REPLACED = { type: 'array', items: { type: 'string' }, description: 'Behaviours this one took over and removed first: a patrol takes over a chase (Chase), a stomp a damage on touch (DamageOnTouch).' } as const;
+const USE_PATHFINDING = { type: 'boolean', description: 'Follow the navigation mesh (default true; the level needs a NavMeshBoundsVolume, from manage_level_structure create_volume); false heads straight for the player or the next point.' } as const;
 
 const OVERLAP_NOTE = 'It fires on overlap, so the actor needs a component that overlaps pawns (a sphere or box with the Trigger or OverlapAllDynamic profile).';
 
@@ -49,7 +59,7 @@ export const BEHAVIOURS_RECORDS: readonly CapabilityRecordSource[] = [
     action: 'add_health',
     family: FAMILY,
     domain: DOMAIN,
-    topics: ['health', 'take damage', 'player health', 'enemy health', 'die when health is zero'],
+    topics: ['health', 'take damage', 'player health', 'enemy health', 'die when health is zero', 'invincible after getting hit'],
     summary: 'Give an actor health: Health and MaxHealth variables, damage from any source (ApplyDamage, a pain causing volume, a projectile) lowers it and negative damage heals, a Heal function, OnHealthChanged and OnDied dispatchers, and optional destroy on death.',
     whenToUse: ['A player, enemy or breakable object must take damage and die; behaviour health_hud shows it on screen.'],
     whenNotToUse: ['The project uses the Gameplay Ability System for attributes (use manage_gas).'],
@@ -57,6 +67,7 @@ export const BEHAVIOURS_RECORDS: readonly CapabilityRecordSource[] = [
       blueprintPath: P.blueprintPath,
       maxHealth: { type: 'number', description: 'Starting and largest health (default 100).' },
       destroyOnDeath: { type: 'boolean', description: 'Destroy the actor when its health reaches 0 (default false; OnDied fires either way).' },
+      invulnerableTime: { type: 'number', description: 'Seconds after a hit during which further damage is ignored, so one touch costs one hit (default 0, none); heals still count.' },
     },
     required: ['blueprintPath'],
     outputProps: BEHAVIOUR_OUTPUT,
@@ -72,13 +83,14 @@ export const BEHAVIOURS_RECORDS: readonly CapabilityRecordSource[] = [
     action: 'add_damage_on_touch',
     family: FAMILY,
     domain: DOMAIN,
-    topics: ['damage on touch', 'hazard', 'spikes', 'spike trap'],
-    summary: `Make an actor damage whatever touches it: ApplyDamage with TouchDamage on each overlap, which an actor with health loses (a negative amount heals). ${OVERLAP_NOTE}`,
+    topics: ['damage on touch', 'hazard', 'spikes', 'spike trap', 'spikes kill the player', 'hurts the player on contact', 'knockback', 'knock the player back'],
+    summary: `Make an actor damage whatever touches it: ApplyDamage with TouchDamage on each overlap, which an actor with health loses (a negative amount heals); with knockback a touching Character is also launched away from it. ${OVERLAP_NOTE}`,
     whenToUse: ['Spikes, lava, an enemy body or a fire must hurt what touches it.'],
     whenNotToUse: ['A whole area must hurt or kill (use manage_level_structure create_volume with a pain causing or kill Z volume).'],
     inputProps: {
       blueprintPath: P.blueprintPath,
       damage: { type: 'number', description: 'Damage on each touch (default 10; negative heals).' },
+      knockback: { type: 'number', description: 'Speed a touching Character is launched away from the actor at, in units per second (default 0, none).' },
     },
     required: ['blueprintPath'],
     outputProps: BEHAVIOUR_OUTPUT,
@@ -151,9 +163,9 @@ export const BEHAVIOURS_RECORDS: readonly CapabilityRecordSource[] = [
     whenNotToUse: ['A weapon actor the pawn holds must do the shooting (use manage_combat configure_projectile for its Fire function).'],
     inputProps: {
       blueprintPath: P.blueprintPath,
-      projectileClass: { type: 'string', description: 'The projectile it shoots: a Blueprint path (/Game/Weapons/BP_Fireball) or class path.' },
-      projectileSpeed: { type: 'number', description: 'Launch speed, units per second (default 3000).' },
-      fireRate: { type: 'number', description: 'Most shots a minute (default 300).' },
+      projectileClass: PROJECTILE_CLASS,
+      projectileSpeed: PROJECTILE_SPEED,
+      fireRate: FIRE_RATE,
       key: KEY,
       inputActionPath: INPUT_ACTION,
       mappingContextPath: MAPPING_CONTEXT,
@@ -174,7 +186,7 @@ export const BEHAVIOURS_RECORDS: readonly CapabilityRecordSource[] = [
     domain: DOMAIN,
     topics: ['chase the player', 'enemy chases the player', 'enemy follows the player', 'follow the player'],
     summary: 'Make a pawn chase the player: every quarter second, while the player is within chaseRange, its AI controller moves it toward the player and stops stopDistance away; out of range it stops. The pawn is set to be possessed by an AI controller when placed or spawned.',
-    whenToUse: ['An enemy or creature must run after the player; with usePathfinding (default) the level needs a Nav Mesh Bounds Volume (manage_ai configure_navigation), without it the pawn heads straight for the player.'],
+    whenToUse: ['An enemy or creature must run after the player; with usePathfinding (default) the level needs a NavMeshBoundsVolume (manage_level_structure create_volume), without it the pawn heads straight for the player.'],
     whenNotToUse: ['The pawn walks a route too (behaviour patrol, which chases with chaseRange; chase refuses a pawn that patrols).', 'Senses, cover or decisions beyond chasing (use manage_ai with a Behavior Tree or State Tree).'],
     inputProps: {
       blueprintPath: P.blueprintPath,
@@ -196,20 +208,20 @@ export const BEHAVIOURS_RECORDS: readonly CapabilityRecordSource[] = [
     action: 'add_patrol',
     family: FAMILY,
     domain: DOMAIN,
-    topics: ['patrol', 'enemy patrol', 'patrol between points', 'guard patrol', 'patrol route', 'walk back and forth', 'patrol and chase the player', 'waypoints', 'walk between waypoints'],
+    topics: ['patrol', 'enemy patrol', 'patrol between points', 'guard patrol', 'patrol route', 'walk back and forth', 'patrol and chase the player', 'waypoints', 'walk between waypoints', 'enemy follows a path', 'guard an area', 'npc walks around'],
     summary: 'Make a pawn patrol: its AI controller walks it to each of points in turn (offsets from where it starts), it waits waitTime at each and the route loops; with chaseRange it chases the player who comes that close and goes back to its route after. A chase the pawn already has is taken over. The pawn is set to be possessed by an AI controller when placed or spawned.',
     whenToUse: ['An enemy or guard must walk a route, and may chase the player who comes close.'],
     whenNotToUse: ['Senses, cover or decisions beyond walking a route and chasing (use manage_ai with a Behavior Tree or State Tree).'],
     inputProps: {
       blueprintPath: P.blueprintPath,
-      points: { type: 'array', items: { type: 'array', items: { type: 'number' }, minItems: 3, maxItems: 3 }, description: 'The route: [x, y, z] offsets from where the pawn starts, in world axes, walked in turn and looped (default [[500, 0, 0], [0, 0, 0]], back and forth). Each placed pawn walks its own copy (PatrolPoints is instance editable).' },
-      waitTime: { type: 'number', description: 'Seconds it waits at each point (default 1).' },
+      points: ROUTE_POINTS,
+      waitTime: WAIT_TIME,
       chaseRange: CHASE_RANGE,
       stopDistance: STOP_DISTANCE,
       usePathfinding: USE_PATHFINDING,
     },
     required: ['blueprintPath'],
-    outputProps: { ...BEHAVIOUR_OUTPUT, replaced: { type: 'array', items: { type: 'string' }, description: 'Behaviours this one took over and removed first (Chase).' } },
+    outputProps: { ...BEHAVIOUR_OUTPUT, replaced: REPLACED },
     effect: 'write',
     behavior: { idempotency: 'idempotent' },
     latency: 'interactive',
@@ -218,11 +230,108 @@ export const BEHAVIOURS_RECORDS: readonly CapabilityRecordSource[] = [
     exampleInput: { action: 'add_patrol', blueprintPath: '/Game/Blueprints/BP_Guard', points: [[600, 0, 0], [600, 400, 0], [0, 0, 0]], chaseRange: 1200 },
   }),
   buildRecord({
+    id: 'blueprint.add_moving_platform',
+    action: 'add_moving_platform',
+    family: FAMILY,
+    domain: DOMAIN,
+    topics: ['moving platform', 'elevator', 'lift', 'platform that moves back and forth', 'platform that moves up and down'],
+    summary: 'Make an actor a moving platform or an elevator: it travels to each of points in turn (offsets from where it starts) at speed, waits waitTime at each, and loops; a Character standing on it rides along. Its root must be movable (a Blueprint made with manage_blueprint create is).',
+    whenToUse: ['A platform, lift or elevator must travel a route by itself, every placed copy of a Blueprint alike (each copy keeps its own PlatformPoints).'],
+    whenNotToUse: ['One placed actor must spin or travel (control_actor edit_component with a RotatingMovement or InterpToMovement component).', 'A pawn must walk a route (behaviour patrol).'],
+    inputProps: {
+      blueprintPath: P.blueprintPath,
+      points: ROUTE_POINTS,
+      speed: { type: 'number', description: 'Units per second it travels between points (default 200).' },
+      waitTime: WAIT_TIME,
+    },
+    required: ['blueprintPath'],
+    outputProps: BEHAVIOUR_OUTPUT,
+    effect: 'write',
+    behavior: { idempotency: 'idempotent' },
+    latency: 'interactive',
+    resources: 'medium',
+    plugins: BP_PLUGINS,
+    exampleInput: { action: 'add_moving_platform', blueprintPath: '/Game/Blueprints/BP_Lift', points: [[0, 0, 400], [0, 0, 0]], speed: 250, waitTime: 2 },
+  }),
+  buildRecord({
+    id: 'blueprint.add_stomp',
+    action: 'add_stomp',
+    family: FAMILY,
+    domain: DOMAIN,
+    topics: ['stomp', 'jump on enemies', 'enemy dies when jumped on', 'jump on enemies to kill them', 'bounce off enemies'],
+    summary: 'Make an enemy the player defeats by landing on it: a player-controlled Character that lands on top of the actor bounces up at bounceSpeed and the actor dies (with the health behaviour it takes damage enough to die, else it is destroyed); one that bumps it from the side or below takes sideDamage, at most once a second.',
+    whenToUse: ['A platformer enemy must die when the player jumps on it, and hurt the player who walks into it. A damage_on_touch the actor has is taken over (it would hurt the stomping player too); its damage becomes sideDamage when none is given.'],
+    whenNotToUse: ['A hazard must hurt whatever touches it, from above too (behaviour damage_on_touch).'],
+    inputProps: {
+      blueprintPath: P.blueprintPath,
+      bounceSpeed: { type: 'number', description: 'Upward speed the stomping Character bounces off at, units per second (default 600).' },
+      sideDamage: { type: 'number', description: 'Damage to a player Character that bumps it from the side or below, at most once a second (default 0, none, or the damage of a damage_on_touch it takes over).' },
+    },
+    required: ['blueprintPath'],
+    outputProps: { ...BEHAVIOUR_OUTPUT, replaced: REPLACED },
+    effect: 'write',
+    behavior: { idempotency: 'idempotent' },
+    latency: 'interactive',
+    resources: 'medium',
+    plugins: BP_PLUGINS,
+    exampleInput: { action: 'add_stomp', blueprintPath: '/Game/Blueprints/BP_Walker', sideDamage: 20 },
+  }),
+  buildRecord({
+    id: 'blueprint.add_explosive',
+    action: 'add_explosive',
+    family: FAMILY,
+    domain: DOMAIN,
+    topics: ['explosive barrel', 'explosion', 'blow up', 'barrel that explodes', 'explode when destroyed', 'chain reaction'],
+    summary: 'Make an actor with health explode when it dies: every actor within explosionRadius with a clear line to it takes up to explosionDamage (less with distance), effectPath plays and soundPath sounds at the spot, and the actor is gone. An explosive the blast kills explodes in turn.',
+    whenToUse: ['A barrel, crate or mine must blow up when shot or hit, hurting what stands near; it needs the health behaviour, so damage from any source sets it off.'],
+    whenNotToUse: ['Damage must happen on touch (behaviour damage_on_touch).'],
+    inputProps: {
+      blueprintPath: P.blueprintPath,
+      explosionDamage: { type: 'number', description: 'Damage at the centre of the blast, less toward its edge (default 50).' },
+      explosionRadius: { type: 'number', description: 'Radius of the blast in units (default 400); walls between it and an actor shield that actor.' },
+      effectPath: { type: 'string', description: 'A Niagara system played at the blast (none by default).' },
+      soundPath: SOUND_PATH,
+    },
+    required: ['blueprintPath'],
+    outputProps: BEHAVIOUR_OUTPUT,
+    effect: 'write',
+    behavior: { idempotency: 'idempotent' },
+    latency: 'interactive',
+    resources: 'medium',
+    plugins: BP_PLUGINS,
+    exampleInput: { action: 'add_explosive', blueprintPath: '/Game/Blueprints/BP_Barrel', explosionDamage: 80, explosionRadius: 500 },
+  }),
+  buildRecord({
+    id: 'blueprint.add_turret',
+    action: 'add_turret',
+    family: FAMILY,
+    domain: DOMAIN,
+    topics: ['turret', 'enemy turret', 'sentry gun', 'tower that shoots the player', 'cannon that fires at the player', 'enemy shoots at the player'],
+    summary: 'Make an actor a turret: every frame, while the player is within range, it turns about its vertical axis to face the player and fires projectileClass at them at projectileSpeed, at most fireRate shots a minute; each projectile is owned by the actor, so it never hits it. Nothing checks line of sight: a wall between them stops the shots.',
+    whenToUse: ['A tower, cannon or enemy must shoot at the player who comes close; a projectile from manage_combat create_combat_asset damages what it hits. With behaviour chase too, a pawn runs at the player and shoots.'],
+    whenNotToUse: ['The player shoots with a key (behaviour shoot).'],
+    inputProps: {
+      blueprintPath: P.blueprintPath,
+      projectileClass: PROJECTILE_CLASS,
+      projectileSpeed: PROJECTILE_SPEED,
+      fireRate: FIRE_RATE,
+      range: { type: 'number', description: 'Distance within which it turns to the player and fires, in units (default 2000).' },
+    },
+    required: ['blueprintPath', 'projectileClass'],
+    outputProps: BEHAVIOUR_OUTPUT,
+    effect: 'write',
+    behavior: { idempotency: 'idempotent' },
+    latency: 'interactive',
+    resources: 'medium',
+    plugins: BP_PLUGINS,
+    exampleInput: { action: 'add_turret', blueprintPath: '/Game/Blueprints/BP_Turret', projectileClass: '/Game/Weapons/BP_Fireball', range: 1500 },
+  }),
+  buildRecord({
     id: 'blueprint.add_controls',
     action: 'add_controls',
     family: FAMILY,
     domain: DOMAIN,
-    topics: ['player controls', 'wasd movement', 'move with wasd', 'make the character move', 'character controls', 'mouse look', 'gamepad controls', 'jump key', 'make the character jump', 'third person controls', 'first person controls', 'make the character playable'],
+    topics: ['player controls', 'wasd movement', 'move with wasd', 'make the character move', 'character controls', 'mouse look', 'gamepad controls', 'jump key', 'make the character jump', 'third person controls', 'first person controls', 'make my character playable'],
     summary: 'Give a Character the controls a player steers it with: WASD or the left stick walk it relative to where the controller faces, the mouse or the right stick turn the view, and the jump key jumps (held longer, higher). It makes IA_Move and IA_Look (Axis2D) and IA_Jump next to the Blueprint, maps the keys and registers the context when the character is possessed.',
     whenToUse: ['A Character made with manage_character create_character_blueprint (or any Character without input) must be playable: it has no input until this runs.'],
     whenNotToUse: ['Only one key or action must be added (use manage_networking configure_input for the asset and blueprint edit_graph for its node).'],
@@ -336,6 +445,52 @@ export const BEHAVIOURS_RECORDS: readonly CapabilityRecordSource[] = [
     exampleInput: { action: 'add_teleporter', blueprintPath: '/Game/Blueprints/BP_Teleporter', cooldown: 1 },
   }),
   buildRecord({
+    id: 'blueprint.add_falling_platform',
+    action: 'add_falling_platform',
+    family: FAMILY,
+    domain: DOMAIN,
+    topics: ['falling platform', 'crumbling platform', 'platform falls when stepped on', 'collapsing floor', 'platform that drops'],
+    summary: 'Make an actor a falling platform: the first pawn that lands on top of it starts it shaking, fallDelay seconds later it drops with gravity, and respawnTime seconds after the drop began it is back in place and ready again. A bump from the side or below does not set it off. The actor must block pawns, and its root must be movable (a Blueprint made with manage_blueprint create is).',
+    whenToUse: ['A ledge or bridge must give way under the player a moment after they land on it.'],
+    whenNotToUse: ['A platform must keep moving on its own (add an InterpToMovement component with its control points).'],
+    inputProps: {
+      blueprintPath: P.blueprintPath,
+      fallDelay: { type: 'number', description: 'Seconds it shakes before it drops (default 0.5).' },
+      respawnTime: { type: 'number', description: 'Seconds after it starts to drop until it is back in place (default 3); 0 never: it is destroyed 5 seconds into its fall.' },
+    },
+    required: ['blueprintPath'],
+    outputProps: BEHAVIOUR_OUTPUT,
+    effect: 'write',
+    behavior: { idempotency: 'idempotent' },
+    latency: 'interactive',
+    resources: 'medium',
+    plugins: BP_PLUGINS,
+    exampleInput: { action: 'add_falling_platform', blueprintPath: '/Game/Blueprints/BP_CrumblingLedge', fallDelay: 0.8, respawnTime: 4 },
+  }),
+  buildRecord({
+    id: 'blueprint.add_countdown',
+    action: 'add_countdown',
+    family: FAMILY,
+    domain: DOMAIN,
+    topics: ['countdown', 'countdown timer', 'time limit', 'level timer', 'timer runs out', 'race against the clock'],
+    summary: 'Give an actor a time limit: at BeginPlay TimeLeft starts at seconds and drops by one every second; at zero OnTimeUp fires and, with killAtZero, the actor takes damage enough to die, so a pawn with the health behaviour dies and its game over or respawn follows. Show the time with behaviour counter_hud variableName TimeLeft.',
+    whenToUse: ['A level or a run must be finished within a time limit.'],
+    whenNotToUse: ['Something must happen once after a delay (edit_graph with a Delay or a timer node).'],
+    inputProps: {
+      blueprintPath: P.blueprintPath,
+      seconds: { type: 'number', description: 'The time limit in whole seconds (default 60).' },
+      killAtZero: { type: 'boolean', description: 'Kill the actor when the time is up (default true; it needs the health behaviour to die). False only fires OnTimeUp.' },
+    },
+    required: ['blueprintPath'],
+    outputProps: BEHAVIOUR_OUTPUT,
+    effect: 'write',
+    behavior: { idempotency: 'idempotent' },
+    latency: 'interactive',
+    resources: 'medium',
+    plugins: BP_PLUGINS,
+    exampleInput: { action: 'add_countdown', blueprintPath: '/Game/Blueprints/BP_Player', seconds: 90 },
+  }),
+  buildRecord({
     id: 'blueprint.add_spawner',
     action: 'add_spawner',
     family: FAMILY,
@@ -435,6 +590,31 @@ export const BEHAVIOURS_RECORDS: readonly CapabilityRecordSource[] = [
     exampleInput: { action: 'add_counter_hud', blueprintPath: '/Game/Blueprints/BP_Player', variableName: 'Coins' },
   }),
   buildRecord({
+    id: 'blueprint.add_hint',
+    action: 'add_hint',
+    family: FAMILY,
+    domain: DOMAIN,
+    topics: ['hint', 'tutorial hint', 'show a message on screen', 'show text on screen', 'sign that shows text', 'message when the player walks up'],
+    summary: `Show a message on the player's screen while the player is in the actor's area: when a locally controlled pawn starts to overlap the actor, a widget shows message at the bottom of that player's view, and it goes when the pawn leaves, or hideAfter seconds later. Each placed copy can say its own text (HintMessage is instance editable). ${OVERLAP_NOTE}`,
+    whenToUse: ['A sign, a tutorial area or a talking spot must tell the player something (Press Space to jump).'],
+    whenNotToUse: ['A value such as coins or a timer must stay on screen (behaviour counter_hud).'],
+    inputProps: {
+      blueprintPath: P.blueprintPath,
+      message: MESSAGE,
+      hideAfter: { type: 'number', description: 'Seconds the hint stays once shown (default 0: while the pawn stays in the area).' },
+      widgetPath: WIDGET_PATH,
+      textName: TEXT_NAME,
+    },
+    required: ['blueprintPath', 'message'],
+    outputProps: HUD_OUTPUT,
+    effect: 'write',
+    behavior: { idempotency: 'idempotent' },
+    latency: 'interactive',
+    resources: 'medium',
+    plugins: BP_PLUGINS,
+    exampleInput: { action: 'add_hint', blueprintPath: '/Game/Blueprints/BP_Sign', message: 'Press Space to jump' },
+  }),
+  buildRecord({
     id: 'blueprint.add_game_over',
     action: 'add_game_over',
     family: FAMILY,
@@ -445,7 +625,7 @@ export const BEHAVIOURS_RECORDS: readonly CapabilityRecordSource[] = [
     whenNotToUse: ['The player must come back where it died or at a checkpoint (behaviour respawn; a pawn that respawns when it dies is refused here).'],
     inputProps: {
       blueprintPath: P.blueprintPath,
-      message: { type: 'string', description: 'The text shown (default GAME OVER).' },
+      message: MESSAGE,
       restartDelay: { type: 'number', description: 'Seconds before the level opens again (default 3); 0 never restarts it.' },
       widgetPath: WIDGET_PATH,
       textName: TEXT_NAME,

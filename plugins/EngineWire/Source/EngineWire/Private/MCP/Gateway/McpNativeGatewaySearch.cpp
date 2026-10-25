@@ -5,6 +5,7 @@
 #include "MCP/Gateway/McpNativeGatewayCapabilityStore.h"
 #include "MCP/Gateway/McpNativeGatewayGuidance.h"
 #include "MCP/Gateway/McpNativeGatewaySearchMatch.h"
+#include "MCP/Execute/Request/McpFoldVariantRules.h"
 
 namespace
 {
@@ -24,6 +25,79 @@ TSharedPtr<FJsonObject> GuidedFilterError(
 	Error->SetArrayField(TEXT("suggestions"), GatewayStringArray(GatewayClosestMatches(Target, Candidates, 3)));
 	Error->SetObjectField(TEXT("nextCall"), GatewayBuildNextCall(TEXT("search"), FString(), FString(), FString()));
 	return Error;
+}
+
+// A required parameter's type, or its values joined by '|'.
+FString SearchSigType(const TSharedPtr<FJsonObject>& Properties, const FString& Name)
+{
+	const TSharedPtr<FJsonObject>* Schema = nullptr;
+	if (!Properties.IsValid() || !Properties->TryGetObjectField(Name, Schema) || !Schema) return TEXT("unknown");
+	const TArray<TSharedPtr<FJsonValue>>* Values = nullptr;
+	if ((*Schema)->TryGetArrayField(TEXT("enum"), Values) && Values)
+	{
+		TArray<FString> Names;
+		for (const TSharedPtr<FJsonValue>& Value : *Values) Names.Add(Value.IsValid() ? Value->AsString() : FString());
+		return FString::Join(Names, TEXT("|"));
+	}
+	FString Type;
+	return (*Schema)->TryGetStringField(TEXT("type"), Type) ? Type : FString(TEXT("unknown"));
+}
+
+// What a clear first hit needs to run without describe: each required parameter's type, an at-least-one-of group, a
+// family's variant selector, and one example with the variant its action name pins (capabilitySignature in TS).
+TSharedPtr<FJsonObject> SearchSignature(const FMcpCapabilityRecord& Record)
+{
+	auto IsControl = [](const FString& Name) { return Name.Equals(TEXT("action"), ESearchCase::CaseSensitive) || Name.Equals(TEXT("subAction"), ESearchCase::CaseSensitive); };
+	const TSharedPtr<FJsonObject> Input = Record.InputSchema.IsValid() ? Record.InputSchema : MakeShared<FJsonObject>();
+	const TSharedPtr<FJsonObject>* PropsPtr = nullptr;
+	const TSharedPtr<FJsonObject> Properties = Input->TryGetObjectField(TEXT("properties"), PropsPtr) && PropsPtr ? *PropsPtr : nullptr;
+	auto Required = MakeShared<FJsonObject>();
+	const TArray<TSharedPtr<FJsonValue>>* Names = nullptr;
+	if (Input->TryGetArrayField(TEXT("required"), Names) && Names)
+	{
+		for (const TSharedPtr<FJsonValue>& Value : *Names)
+		{
+			const FString Name = Value.IsValid() ? Value->AsString() : FString();
+			if (!IsControl(Name) && !Name.Equals(Record.DispatchBySelector, ESearchCase::CaseSensitive)) Required->SetStringField(Name, SearchSigType(Properties, Name));
+		}
+	}
+	auto Signature = MakeShared<FJsonObject>();
+	Signature->SetObjectField(TEXT("required"), Required);
+	const TArray<TSharedPtr<FJsonValue>>* OneOf = nullptr;
+	if (Input->TryGetArrayField(TEXT("requiredOneOf"), OneOf) && OneOf) Signature->SetArrayField(TEXT("oneOf"), *OneOf);
+	const TSharedPtr<FJsonObject> VariantRequired = McpVariantRequired(Record);
+	if (VariantRequired.IsValid()) Signature->SetObjectField(TEXT("variantRequired"), VariantRequired);
+	if (!Record.DispatchBySelector.IsEmpty())
+	{
+		auto Selector = MakeShared<FJsonObject>();
+		Selector->SetStringField(TEXT("name"), Record.DispatchBySelector);
+		const TSharedPtr<FJsonObject>* Schema = nullptr;
+		const bool bSchema = Properties.IsValid() && Properties->TryGetObjectField(Record.DispatchBySelector, Schema) && Schema;
+		const TArray<TSharedPtr<FJsonValue>>* Values = nullptr;
+		Selector->SetArrayField(TEXT("values"), bSchema && (*Schema)->TryGetArrayField(TEXT("enum"), Values) && Values
+			? *Values : TArray<TSharedPtr<FJsonValue>>());
+		if (bSchema && (*Schema)->HasField(TEXT("default"))) Selector->SetField(TEXT("default"), (*Schema)->TryGetField(TEXT("default")));
+		Signature->SetObjectField(TEXT("selector"), Selector);
+	}
+	// The example's own call: the pins its action name implies, then its params, without the gateway-level controls.
+	auto Example = MakeShared<FJsonObject>();
+	const TSharedPtr<FJsonObject>* ExampleInput = nullptr;
+	if (Record.Examples.Num() > 0 && Record.Examples[0].IsValid() && Record.Examples[0]->Type == EJson::Object &&
+		Record.Examples[0]->AsObject()->TryGetObjectField(TEXT("input"), ExampleInput) && ExampleInput)
+	{
+		FString Action;
+		(*ExampleInput)->TryGetStringField(TEXT("action"), Action);
+		const FMcpLegacyPair* Pinned = Record.LegacyPairs.FindByPredicate(
+			[&Action](const FMcpLegacyPair& Pair) { return Pair.IsFolded() && Pair.Action.Equals(Action, ESearchCase::CaseSensitive); });
+		if (Pinned) Example->Values = Pinned->FoldedPins->Values;
+		for (const auto& Field : (*ExampleInput)->Values)
+		{
+			const FString Key(Field.Key.Len(), *Field.Key);  // 5.8 keys are not FString
+			if (!IsControl(Key)) Example->SetField(Key, Field.Value);
+		}
+	}
+	Signature->SetObjectField(TEXT("example"), Example);
+	return Signature;
 }
 }
 
@@ -123,6 +197,14 @@ TSharedPtr<FJsonObject> McpGatewaySearchCapabilities(
 		return L.Record->Id.Compare(R.Record->Id, ESearchCase::CaseSensitive) < 0;
 	});
 
+	// A clear first hit that needs no consent carries its signature and the execute call, so a caller can skip
+	// describe (withSignature in gateway-search.ts); consent still needs describe's grant.
+	FString TopConsent;
+	const bool bConfident = !Query.IsEmpty() && Offset == 0 && Scored.Num() > 0 && Scored[0].Score > 0 &&
+		(Scored.Num() == 1 || Scored[1].Score * 100 <= Scored[0].Score * McpSearchConfidentRatioPercent) &&
+		Scored[0].Record->Policy.IsValid() && Scored[0].Record->Policy->TryGetStringField(TEXT("consent"), TopConsent) &&
+		TopConsent.Equals(TEXT("none"), ESearchCase::CaseSensitive) && IsToolEnabled(Scored[0].Record->Parent);
+
 	const int32 Total = Scored.Num();
 	TArray<TSharedPtr<FJsonValue>> Results;
 	const int32 Budget = Input.MaxBytes > 0 ? FMath::Clamp(Input.MaxBytes, 512, 262144) : McpMaxResultBytes;
@@ -143,9 +225,20 @@ TSharedPtr<FJsonObject> McpGatewaySearchCapabilities(
 		View->SetStringField(TEXT("parent"), Entry.Record->Parent);
 		View->SetNumberField(TEXT("score"), Entry.Score);
 		View->SetStringField(TEXT("summary"), Entry.Record->Summary);
+		if (Index == 0 && bConfident)
+		{
+			View->SetObjectField(TEXT("signature"), SearchSignature(*Entry.Record));
+			// The execute call describe hands over (CapabilityContract in McpNativeGatewayDescribe.cpp).
+			const TSharedPtr<FJsonObject> Execute = GatewayBuildNextCall(
+				TEXT("execute"), Entry.Record->Parent, McpCapabilityPublicAction(*Entry.Record), FString());
+			Execute->SetStringField(TEXT("capability"), Entry.Record->Id);
+			Execute->SetObjectField(TEXT("params"), MakeShared<FJsonObject>());
+			View->SetObjectField(TEXT("executeCall"), Execute);
+		}
 
+		// A row is a reply, not a fingerprint: a confident hit's signature example (playRate 1.25) failed the whole search.
 		FString Rendered;
-		if (!McpCanonicalJsonObject(View, Rendered))
+		if (!McpCanonicalJsonObject(View, Rendered, /*bAllowFractions=*/true))
 		{
 			return GatewayError(TEXT("search"), TEXT("CAPABILITY_RENDER_FAILED"),
 				FString::Printf(TEXT("Capability '%s' could not be rendered deterministically."), *Entry.Record->Id));
@@ -167,8 +260,9 @@ TSharedPtr<FJsonObject> McpGatewaySearchCapabilities(
 	Out->SetStringField(TEXT("catalogRevision"), Revision);
 	Out->SetBoolField(TEXT("hasMore"), bHasMore);
 	Out->SetNumberField(TEXT("limit"), Limit);
-	Out->SetStringField(TEXT("message"),
-		TEXT("Results are capability-level and bounded. Call describe with the exact capability before execute."));
+	Out->SetStringField(TEXT("message"), bConfident && Results.Num() > 0
+		? TEXT("The first result carries signature and executeCall: fill params from the signature and send executeCall, or describe it first for the full contract.")
+		: TEXT("Results are capability-level and bounded. Call describe with the exact capability before execute."));
 	Out->SetNumberField(TEXT("offset"), Offset);
 	Out->SetStringField(TEXT("operation"), TEXT("search"));
 	Out->SetStringField(TEXT("query"), Input.Query);
@@ -183,7 +277,7 @@ TSharedPtr<FJsonObject> McpGatewaySearchCapabilities(
 	{
 		Out->SetStringField(TEXT("message"), Query.IsEmpty()
 			? FString(TEXT("No capability matches these filters. Remove a filter, or call describe with no selector to browse."))
-			: FString::Printf(TEXT("No capability matched '%s'. Use 2-4 plain words naming the verb and the object (e.g. 'spawn actor'), drop any filter, or call describe with no selector to browse."), *Query));
+			: FString::Printf(TEXT("No capability matched '%s'. Use 2-4 plain words naming the verb and the object (e.g. 'spawn actor'), drop any filter, or call describe with no selector to browse. Game logic no capability makes in one call is built as a Blueprint graph: search 'blueprint logic'."), *Query));
 		Out->SetObjectField(TEXT("nextCall"), GatewayBuildNextCall(TEXT("describe"), FString(), FString(), FString()));
 	}
 	if (Input.bHasDomain) Out->SetStringField(TEXT("domain"), Input.Domain);

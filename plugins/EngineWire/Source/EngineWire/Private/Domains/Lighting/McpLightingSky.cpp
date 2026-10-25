@@ -5,6 +5,7 @@
 #include "Foundation/BridgeHelpers/McpHelpers.h"
 #include "EngineWireSubsystem.h"
 #include "Foundation/HandlerUtils/McpHandlerUtils.h"
+#include "Foundation/McpScopedEditorTransaction.h"
 #include "Components/SkyLightComponent.h"
 #include "Dom/JsonObject.h"
 #include "Engine/SkyLight.h"
@@ -20,27 +21,9 @@ bool HandleSpawnSkyLight(
     const TSharedPtr<FJsonObject>& Payload,
     TSharedPtr<FMcpBridgeWebSocket> RequestingSocket)
 {
-    FVector Location(0.0f, 0.0f, 500.0f);
-    const TSharedPtr<FJsonObject>* LocPtr;
-    if (Payload->TryGetObjectField(TEXT("location"), LocPtr))
-    {
-        Location.X = GetJsonNumberField((*LocPtr), TEXT("x"));
-        Location.Y = GetJsonNumberField((*LocPtr), TEXT("y"));
-        Location.Z = GetJsonNumberField((*LocPtr), TEXT("z"));
-    }
-    else
-    {
-        UE_LOG(LogEngineWireSubsystem, Log, TEXT("spawn_sky_light: No location provided, using default (0, 0, 500)"));
-    }
-
-    FRotator Rotation = FRotator::ZeroRotator;
-    const TSharedPtr<FJsonObject>* RotPtr;
-    if (Payload->TryGetObjectField(TEXT("rotation"), RotPtr))
-    {
-        Rotation.Pitch = GetJsonNumberField((*RotPtr), TEXT("pitch"));
-        Rotation.Yaw = GetJsonNumberField((*RotPtr), TEXT("yaw"));
-        Rotation.Roll = GetJsonNumberField((*RotPtr), TEXT("roll"));
-    }
+    // Either vector spelling: a location sent as an array was dropped for the default.
+    const FVector Location = ExtractVectorField(Payload, TEXT("location"), FVector(0.0, 0.0, 500.0));
+    const FRotator Rotation = ExtractRotatorField(Payload, TEXT("rotation"), FRotator::ZeroRotator);
 
     // cubemapPath alone selects the specified-cubemap source: it used to apply only under an
     // undeclared sourceType, so a declared cubemap was never set. A bad path fails before spawning.
@@ -59,6 +42,13 @@ bool HandleSpawnSkyLight(
         }
     }
 
+    // One undo step for the spawn and its settings. During Play the sky light goes into the running game, whose
+    // objects never reach the undo buffer, so no step is opened there.
+    TOptional<FMcpScopedEditorTransaction> Transaction;
+    if (GEditor && !GEditor->PlayWorld)
+    {
+        Transaction.Emplace(FText::FromString(TEXT("Spawn Sky Light")), EMcpMutationDurability::EditorStateOnly, TArray<UObject*>());
+    }
     AActor* SkyLight = SpawnActorInActiveWorld<AActor>(ASkyLight::StaticClass(), Location, Rotation);
     if (!SkyLight)
     {
@@ -98,6 +88,10 @@ bool HandleSpawnSkyLight(
     Resp->SetBoolField(TEXT("success"), true);
     Resp->SetStringField(TEXT("actorName"), McpActorRef(SkyLight));
     McpHandlerUtils::AddVerification(Resp, SkyLight);
+    if (Transaction.IsSet())
+    {
+        Transaction->DescribeInto(Resp);
+    }
     Subsystem.SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("SkyLight spawned"), Resp);
     return true;
 }
@@ -109,14 +103,12 @@ bool HandleEnsureSingleSkyLight(
     TSharedPtr<FMcpBridgeWebSocket> RequestingSocket,
     UEditorActorSubsystem* ActorSS)
 {
-    TArray<AActor*> AllActors = ActorSS->GetAllLevelActors();
-    TArray<AActor*> SkyLights;
-    for (AActor* Actor : AllActors)
+    // The level's actors are not listed during Play, so a second sky light was spawned into the running game.
+    if (GEditor && GEditor->PlayWorld)
     {
-        if (Actor && Actor->IsA<ASkyLight>())
-        {
-            SkyLights.Add(Actor);
-        }
+        Subsystem.SendAutomationError(RequestingSocket, RequestId,
+            TEXT("ensure_single_sky_light works on the edited level; stop Play first"), TEXT("PIE_ACTIVE"));
+        return true;
     }
 
     FString TargetName;
@@ -126,63 +118,90 @@ bool HandleEnsureSingleSkyLight(
         TargetName = TEXT("SkyLight");
     }
 
-    int32 RemovedCount = 0;
-    AActor* KeptActor = nullptr;
-    for (AActor* SkyLight : SkyLights)
+    TArray<AActor*> SkyLights;
+    for (AActor* Actor : ActorSS->GetAllLevelActors())
     {
-        if (SkyLight->GetActorLabel() == TargetName && !TargetName.IsEmpty())
+        if (Actor && Actor->IsA<ASkyLight>())
         {
-            KeptActor = SkyLight;
-            break;
+            SkyLights.Add(Actor);
         }
     }
 
-    for (AActor* SkyLight : SkyLights)
+    // Removing the extra sky lights deletes actors, which is the destructive delete's work, with its consent: this
+    // write destroyed every other sky light without either. It names the one to keep and the ones to delete.
+    if (SkyLights.Num() > 1)
     {
-        if (SkyLight == KeptActor)
+        AActor* Keep = SkyLights[0];
+        for (AActor* SkyLight : SkyLights)
         {
-            continue;
-        }
-        if (!KeptActor)
-        {
-            KeptActor = SkyLight;
-            if (!TargetName.IsEmpty())
+            if (SkyLight->GetActorLabel() == TargetName)
             {
-                SkyLight->SetActorLabel(TargetName);
+                Keep = SkyLight;
+                break;
             }
         }
-        else
+        TArray<FString> Others;
+        for (AActor* SkyLight : SkyLights)
         {
-            ActorSS->DestroyActor(SkyLight);
-            RemovedCount++;
+            if (SkyLight != Keep)
+            {
+                Others.Add(McpActorRef(SkyLight));
+            }
+        }
+        TSharedPtr<FJsonObject> Details = McpHandlerUtils::CreateResultObject();
+        Details->SetStringField(TEXT("keep"), McpActorRef(Keep));
+        Details->SetArrayField(TEXT("remove"), McpHandlerUtils::ToJsonStringArray(Others));
+        Subsystem.SendAutomationResponse(RequestingSocket, RequestId, false,
+            FString::Printf(TEXT("The level has %d sky lights, and their light adds up. Delete all but %s with control_actor delete (actorNames: %s), then call this again."),
+                SkyLights.Num(), *McpActorRef(Keep), *FString::Join(Others, TEXT(", "))),
+            Details, TEXT("MULTIPLE_SKY_LIGHTS"));
+        return true;
+    }
+
+    AActor* Kept = SkyLights.Num() == 1 ? SkyLights[0] : nullptr;
+    const bool bSpawned = Kept == nullptr;
+    const bool bRelabelled = Kept && Kept->GetActorLabel() != TargetName;
+    // Only a spawn or a relabel opens an undo step: capturing the sky light when nothing changes dirtied the level.
+    TOptional<FMcpScopedEditorTransaction> Transaction;
+    if (bSpawned || bRelabelled)
+    {
+        Transaction.Emplace(FText::FromString(TEXT("Ensure Single Sky Light")), EMcpMutationDurability::EditorStateOnly,
+                            Kept ? TArray<UObject*>{Kept} : TArray<UObject*>());
+    }
+    if (bSpawned)
+    {
+        Kept = SpawnActorInActiveWorld<AActor>(ASkyLight::StaticClass(), FVector::ZeroVector, FRotator::ZeroRotator, TargetName);
+        if (!Kept)
+        {
+            Subsystem.SendAutomationError(RequestingSocket, RequestId, TEXT("Failed to spawn SkyLight"), TEXT("SPAWN_FAILED"));
+            return true;
         }
     }
-
-    if (!KeptActor)
+    else if (bRelabelled)
     {
-        KeptActor = SpawnActorInActiveWorld<AActor>(
-            ASkyLight::StaticClass(), FVector::ZeroVector, FRotator::ZeroRotator, TargetName);
+        Kept->SetActorLabel(TargetName);
     }
 
-    if (KeptActor)
+    bool bRecapture;
+    if (Payload->TryGetBoolField(TEXT("recapture"), bRecapture) && bRecapture)
     {
-        bool bRecapture;
-        if (Payload->TryGetBoolField(TEXT("recapture"), bRecapture) && bRecapture)
+        if (USkyLightComponent* Comp = Kept->FindComponentByClass<USkyLightComponent>())
         {
-            if (USkyLightComponent* Comp = KeptActor->FindComponentByClass<USkyLightComponent>())
-            {
-                Comp->RecaptureSky();
-            }
+            Comp->RecaptureSky();
         }
     }
 
     TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
-    Resp->SetNumberField(TEXT("removed"), RemovedCount);
-    if (KeptActor)
+    Resp->SetStringField(TEXT("actorName"), McpActorRef(Kept));
+    Resp->SetBoolField(TEXT("spawned"), bSpawned);
+    Resp->SetBoolField(TEXT("relabelled"), bRelabelled);
+    McpHandlerUtils::AddVerification(Resp, Kept);
+    if (Transaction.IsSet())
     {
-        McpHandlerUtils::AddVerification(Resp, KeptActor);
+        Transaction->DescribeInto(Resp);
     }
-    Subsystem.SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Ensured single SkyLight"), Resp);
+    Subsystem.SendAutomationResponse(RequestingSocket, RequestId, true,
+        bSpawned ? TEXT("The level had no sky light; one was spawned") : TEXT("The level has one sky light"), Resp);
     return true;
 }
 

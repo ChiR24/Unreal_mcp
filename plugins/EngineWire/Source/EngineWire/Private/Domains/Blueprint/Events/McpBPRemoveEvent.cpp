@@ -2,6 +2,7 @@
 #include "Domains/BlueprintGraph/McpBPGraphCompatibility.h"
 #include "Foundation/BridgeHelpers/Assets/McpAssetSaveRegistry.h"
 #include "Foundation/BridgeHelpers/Blueprints/McpBPAssetLoad.h"
+#include "Foundation/BridgeHelpers/Blueprints/McpBPCallers.h"
 #include "Foundation/BridgeHelpers/Blueprints/McpBPCompileHelpers.h"
 #include "Foundation/BridgeHelpers/Blueprints/McpBPPaths.h"
 #include "Foundation/HandlerUtils/McpHandlerUtils.h"
@@ -119,6 +120,22 @@ bool HandleBlueprintRemoveEvent(const FBlueprintActionContext &Context) {
               NodesToRemove.Add(CustomEvent);
             }
           }
+        }
+        // A custom event still called would leave each call calling nothing, and the Blueprint stopped compiling.
+        TArray<FString> Callers;
+        for (UEdGraphNode *Node : NodesToRemove) {
+          if (const UK2Node_CustomEvent *Custom = Cast<UK2Node_CustomEvent>(Node)) {
+            Callers.Append(McpBlueprintCallersOf(RemoveBlueprint, Custom->CustomFunctionName));
+          }
+        }
+        if (Callers.Num() > 0) {
+          TSharedPtr<FJsonObject> Refusal = McpHandlerUtils::CreateResultObject();
+          Refusal->SetArrayField(TEXT("callers"), McpHandlerUtils::ToJsonStringArray(Callers));
+          Bridge.SendAutomationResponse(RequestingSocket, RequestId, false,
+              FString::Printf(TEXT("%s is still called %d time(s): %s. Delete those call nodes first (manage_blueprint delete_node), then remove it."),
+                              *EventName, Callers.Num(), *FString::Join(Callers, TEXT(", "))),
+              Refusal, TEXT("EVENT_IN_USE"));
+          return true;
         }
         if (NodesToRemove.Num() > 0) {
           RemoveGraph->Modify();

@@ -205,7 +205,7 @@ bool HandleInspectStatsAction(
             // throttle flag so a consumer can tell a real stall from an idle
             // editor instead of reading `fps` as a performance verdict.
             const double BusiestThreadMs = FMath::Max(
-                FMath::Max(GameThreadMs, RenderThreadMs), GPUFrameMs);
+                FMath::Max(GameThreadMs, RenderThreadMs), FMath::Max(RHIThreadMs, GPUFrameMs));
             Resp->SetNumberField(TEXT("busiestThreadMs"), BusiestThreadMs);
             Resp->SetNumberField(TEXT("threadTimeDerivedFps"),
                                  BusiestThreadMs > 0.0 ? 1000.0 / BusiestThreadMs : 0.0);

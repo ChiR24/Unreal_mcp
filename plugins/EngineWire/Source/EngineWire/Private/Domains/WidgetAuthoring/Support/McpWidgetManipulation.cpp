@@ -2,6 +2,7 @@
 #include "Core/Compatibility/McpVersionCompatibility.h"
 #include "Domains/WidgetAuthoring/Support/McpWidgetBPLoading.h"
 #include "Domains/WidgetAuthoring/Support/McpWidgetTreeMutation.h"
+#include "Domains/WidgetAuthoring/Support/McpWidgetValidate.h"
 
 #include "Blueprint/WidgetTree.h"
 #include "Components/CanvasPanelSlot.h"
@@ -123,6 +124,16 @@ bool HandleWidgetAuthoringManipulation(
             Subsystem.SendAutomationError(RequestingSocket, RequestId, FString::Printf(TEXT("A widget named '%s' already exists"), *NewName), TEXT("ALREADY_EXISTS"));
             return true;
         }
+        // The add paths refuse a name a member of the class already holds; a rename did not, so a widget renamed to
+        // DisplayLabel (a UWidget property) answered success and the Widget Blueprint stopped compiling.
+        const FString NameConflict = McpWidgetNameConflict(WidgetBP, FName(*NewName), TargetWidget->GetClass());
+        if (!NameConflict.IsEmpty())
+        {
+            Subsystem.SendAutomationError(RequestingSocket, RequestId, FString::Printf(
+                TEXT("Nothing was renamed: %s. Pick another newName, e.g. '%s'."), *NameConflict,
+                *McpFreeWidgetName(WidgetBP, FName(*NewName), TargetWidget->GetClass())), TEXT("NAME_CONFLICT"));
+            return true;
+        }
         const FName OldFName(*OldName);
         const FName NewFName(*NewName);
         WidgetBP->Modify();
@@ -140,6 +151,7 @@ bool HandleWidgetAuthoringManipulation(
         {
             FBlueprintEditorUtils::ReplaceVariableReferences(WidgetBP, OldFName, NewFName);
         }
+        const int32 AnimationBindings = WidgetAuthoringHelpers::McpRenameWidgetReferences(WidgetBP, OldFName, NewFName);
         WidgetAuthoringHelpers::MarkWidgetBlueprintModifiedAndSave(WidgetBP);
         // The renamed variable widget has no property under its new name until a compile.
         WidgetAuthoringHelpers::RefreshWidgetBlueprintClass(WidgetBP);
@@ -148,6 +160,7 @@ bool HandleWidgetAuthoringManipulation(
         ResultJson->SetStringField(TEXT("widgetPath"), WidgetPath);
         ResultJson->SetStringField(TEXT("oldName"), OldName);
         ResultJson->SetStringField(TEXT("newName"), NewName);
+        ResultJson->SetNumberField(TEXT("animationBindingsRenamed"), AnimationBindings);
 
         Subsystem.SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Renamed widget"), ResultJson);
         return true;

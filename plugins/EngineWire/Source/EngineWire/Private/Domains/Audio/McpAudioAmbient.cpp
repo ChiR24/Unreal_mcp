@@ -1,5 +1,6 @@
 #include "Core/Compatibility/McpVersionCompatibility.h"
 #include "Domains/Audio/McpAudioPrivate.h"
+#include "Foundation/McpScopedEditorTransaction.h"
 
 namespace McpAudioHandlers
 {
@@ -53,6 +54,9 @@ bool HandleAmbientActions(
     UAudioComponent *AudioComp = nullptr;
     FActorSpawnParameters SpawnParams;
     SpawnParams.ObjectFlags = RF_Transactional;
+    // The flag alone recorded nothing: without an open transaction the spawn could not be undone.
+    FMcpScopedEditorTransaction Transaction(FText::FromString(TEXT("Create Ambient Sound")), EMcpMutationDurability::EditorStateOnly,
+                                            TArray<UObject*>());
     AAmbientSound* AmbientActor = World->SpawnActor<AAmbientSound>(AAmbientSound::StaticClass(), Location, FRotator::ZeroRotator, SpawnParams);
     if (AmbientActor)
     {
@@ -84,9 +88,13 @@ bool HandleAmbientActions(
 
       TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
       Resp->SetStringField(TEXT("componentName"), AudioComp->GetName());
-      if (AmbientActor) { Resp->SetStringField(TEXT("actorName"), McpActorRef(AmbientActor)); } // contract output
+      // contract output; the actor a failed AmbientSound spawn fell back to went unnamed.
+      if (AActor* Owner = AmbientActor ? AmbientActor : AudioComp->GetOwner()) { Resp->SetStringField(TEXT("actorName"), McpActorRef(Owner)); }
       McpHandlerUtils::AddVerification(Resp, Sound);
+      // The sound is used, not changed: the receipt listed it as a change.
+      McpHandlerUtils::MarkNoAssetsChanged(Resp);
       AddComponentVerification(Resp, AudioComp);
+      Transaction.DescribeInto(Resp);
       Self->SendAutomationResponse(RequestingSocket, RequestId, true,
                              TEXT("Ambient sound created"), Resp);
     } else {

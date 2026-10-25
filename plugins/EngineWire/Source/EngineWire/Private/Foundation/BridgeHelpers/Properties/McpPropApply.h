@@ -50,6 +50,12 @@ static inline bool ApplyJsonValueToProperty(void *TargetContainer, FProperty *Pr
   if (!OutError.IsEmpty()) {
     return false;
   }
+  if (ApplyJsonMapOrSetValueToProperty(TargetContainer, Property, ValueField, OutError)) {
+    return true;
+  }
+  if (!OutError.IsEmpty()) {
+    return false;
+  }
   OutError = TEXT("Unsupported property type for JSON assignment");
   return false;
 }

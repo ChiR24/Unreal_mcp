@@ -1,4 +1,5 @@
 #include "Domains/MaterialAuthoring/McpMatPrivate.h"
+#include "Foundation/McpScopedEditorTransaction.h"
 
 namespace McpMaterialAuthoringHandlers
 {
@@ -47,12 +48,17 @@ bool HandleSetNodePosition(UEngineWireSubsystem* Bridge, const FString& RequestI
     return true;
   }
 
-  Expr->Modify();
-  Expr->MaterialExpressionEditorX = static_cast<int32>(PosX);
-  Expr->MaterialExpressionEditorY = static_cast<int32>(PosY);
-  FINALIZE_HOST();
-
-  TSharedPtr<FJsonObject> Result = McpMaterialHostResult(HostOuter);
+  TSharedPtr<FJsonObject> Result;
+  {
+    // One undo step: Modify() with no transaction open recorded nothing, so a move could not be undone.
+    const FMcpScopedEditorTransaction Transaction(FText::FromString(TEXT("Move Material Node")),
+                                                  EMcpMutationDurability::EditorStateOnly, {Expr});
+    Expr->MaterialExpressionEditorX = static_cast<int32>(PosX);
+    Expr->MaterialExpressionEditorY = static_cast<int32>(PosY);
+    FINALIZE_HOST();
+    Result = McpMaterialHostResult(HostOuter);
+    Transaction.DescribeInto(Result);
+  }
   Result->SetStringField(TEXT("nodeId"), MCP_NODE_ID(Expr));
   const FString PlacementWarning =
       AddMaterialNodePlacementFields(Result, Material, Expr);

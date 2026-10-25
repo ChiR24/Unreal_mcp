@@ -51,12 +51,13 @@ bool CollectMaps(const TSharedPtr<FJsonObject>& Payload, FString& OutMaps, FStri
 }
 
 FString BuildCommandLine(const FString& ProjectPath, const FString& Platform, const FString& Configuration,
-                         const FString& ArchiveDir, const FString& Maps, bool bPak, bool bBuild)
+                         const FString& ArchiveDir, const FString& Maps, const FString& Target, bool bPak, bool bBuild)
 {
 	FString Line = FString::Printf(
 		TEXT("-ScriptsForProject=\"%s\" BuildCookRun -project=\"%s\" -noP4 -utf8output -nocompileeditor "
 		     "-cook -stage -archive -archivedirectory=\"%s\" -package -targetplatform=%s -clientconfig=%s"),
 		*ProjectPath, *ProjectPath, *ArchiveDir, *Platform, *Configuration);
+	if (!Target.IsEmpty()) { Line += FString::Printf(TEXT(" -target=%s"), *Target); }
 	if (bBuild) { Line += TEXT(" -build"); }
 	if (bPak) { Line += TEXT(" -pak"); }
 	if (!Maps.IsEmpty()) { Line += FString::Printf(TEXT(" -map=%s"), *Maps); }
@@ -125,7 +126,19 @@ bool HandlePackageProject(UEngineWireSubsystem* Self, const FString& RequestId,
 	bool bBuild = true;
 	Payload->TryGetBoolField(TEXT("build"), bBuild);
 
-	const FString CommandLine = BuildCommandLine(ProjectPath, Platform, Configuration, ArchiveDir, Maps, bPak, bBuild);
+	// The launcher, the binaries and an Android package take the game target's name, not the project's.
+	FString Target, TargetFile, TargetError, TargetCode;
+	bool bTargetCreated = false;
+	Payload->TryGetStringField(TEXT("executableName"), Target);
+	Target.TrimStartAndEndInline();
+	if (!Target.IsEmpty() && !McpEnsureGameTarget(Target, TargetFile, bTargetCreated, TargetError, TargetCode))
+	{
+		Self->SendAutomationError(RequestingSocket, RequestId, TargetError, TargetCode);
+		return true;
+	}
+
+	const FString CommandLine =
+		BuildCommandLine(ProjectPath, Platform, Configuration, ArchiveDir, Maps, Target, bPak, bBuild);
 	const FString JobId = FGuid::NewGuid().ToString(EGuidFormats::DigitsWithHyphens);
 
 	McpPackageJobs::FJob Job;
@@ -159,6 +172,12 @@ bool HandlePackageProject(UEngineWireSubsystem* Self, const FString& RequestId,
 	Result->SetStringField(TEXT("configuration"), Configuration);
 	Result->SetStringField(TEXT("archiveDirectory"), ArchiveDir);
 	Result->SetStringField(TEXT("commandLine"), CommandLine);
+	if (!Target.IsEmpty())
+	{
+		Result->SetStringField(TEXT("executableName"), Target);
+		Result->SetStringField(TEXT("targetFile"), TargetFile);
+		Result->SetBoolField(TEXT("targetCreated"), bTargetCreated);
+	}
 	Self->SendAutomationResponse(RequestingSocket, RequestId, true,
 		TEXT("Packaging started. It runs for many minutes; poll package_status with this jobId."),
 		Result);
@@ -211,7 +230,7 @@ bool HandlePackageStatus(UEngineWireSubsystem* Self, const FString& RequestId,
 		FPaths::ConvertRelativePathToFull(FPaths::Combine(FPaths::ProjectDir(), TEXT("Saved/Logs"))));
 	if (Job->bLaunch)
 	{
-		AppendLaunchStatus(Job->GameLogPath, Job->ExitCode, Job->Result == TEXT("ExitedEarly"), Result);
+		AppendLaunchStatus(*Job, Result);
 	}
 	Self->SendAutomationResponse(RequestingSocket, RequestId, true,
 		FString::Printf(TEXT("%s %s %s."), Job->bLaunch ? TEXT("Build run") : TEXT("Packaging job"), *JobId,

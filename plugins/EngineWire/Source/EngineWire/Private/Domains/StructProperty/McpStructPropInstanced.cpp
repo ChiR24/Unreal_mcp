@@ -2,7 +2,7 @@
 #include "Dom/JsonObject.h"
 #include "UObject/UnrealType.h"
 #include "Core/Compatibility/McpVersionCompatibility.h"
-#include MCP_INSTANCED_STRUCT_HEADER
+#include "Foundation/Reflection/McpInstancedStructView.h"
 #include "Foundation/Reflection/McpPropertyReflection.h"
 #include "Safety/McpSafeOperationsAssetSave.h"
 
@@ -13,31 +13,75 @@
 // driven through the generic reflection layer (McpPropertyReflection) and, on
 // write, persisted only via the safe save wrapper (McpSafeAssetSave). This shard
 // never touches the raw package save API directly.
+//
+// Before UE 5.5 FInstancedStruct belongs to the Experimental StructUtils module,
+// which the plugin does not link. So this file calls none of its members: it
+// reads the value through FMcpInstancedStructView and works through the type's
+// UScriptStruct, whose struct ops (construct, destroy, copy, text import) the
+// owning module registers when it loads - and a property of the type exists only
+// once that module is loaded.
 // =============================================================================
 
 namespace McpStructProperty
 {
 
-// Locate an FInstancedStruct-typed property by name on the given object.
-static FProperty* FindInstancedStructProperty(UObject* Object, const FString& PropertyName)
+// Locate an FInstancedStruct-typed property by name on the given object, by the
+// type's name and package (StructUtils before 5.5, CoreUObject from 5.5) rather
+// than FInstancedStruct::StaticStruct().
+static FStructProperty* FindInstancedStructProperty(UObject* Object, const FString& PropertyName)
 {
     if (!Object || PropertyName.IsEmpty())
     {
         return nullptr;
     }
 
-    FProperty* Prop = Object->GetClass()->FindPropertyByName(*PropertyName);
-    if (!Prop || !Prop->IsA<FStructProperty>())
+    FStructProperty* StructProp = CastField<FStructProperty>(Object->GetClass()->FindPropertyByName(*PropertyName));
+    if (!StructProp || !StructProp->Struct || StructProp->Struct->GetFName() != FName(TEXT("InstancedStruct")))
     {
         return nullptr;
     }
+    const FString Package = StructProp->Struct->GetOutermost()->GetName();
+    return Package == TEXT("/Script/StructUtils") || Package == TEXT("/Script/CoreUObject") ? StructProp : nullptr;
+}
 
-    FStructProperty* StructProp = CastField<FStructProperty>(Prop);
-    if (StructProp->Struct && StructProp->Struct == FInstancedStruct::StaticStruct())
+// An FInstancedStruct value of the property's type, constructed and destroyed by
+// that type's struct ops.
+struct FScratchInstance
+{
+    const UScriptStruct* Type;
+    uint8* Memory;
+
+    explicit FScratchInstance(const UScriptStruct* InType)
+        : Type(InType)
+        , Memory(static_cast<uint8*>(FMemory::Malloc(FMath::Max(1, InType->GetStructureSize()), InType->GetMinAlignment())))
     {
-        return Prop;
+        Type->InitializeStruct(Memory);
     }
-    return nullptr;
+
+    ~FScratchInstance()
+    {
+        Type->DestroyStruct(Memory);
+        FMemory::Free(Memory);
+    }
+
+    uint8* Inner() const
+    {
+        return FMcpInstancedStructView(*reinterpret_cast<const FInstancedStruct*>(Memory)).Memory;
+    }
+};
+
+// Point an FInstancedStruct value at a default Target through the type's own
+// text import, "/Script/Pkg.Name()": the format its copy and paste use in every
+// UE 5 version (read a struct path, then that struct's text).
+static bool InitializeInstanceAs(FStructProperty* Prop, void* Value, UScriptStruct* Target, UObject* Owner)
+{
+    const FString Text = Target->GetPathName() + TEXT("()");
+#if ENGINE_MAJOR_VERSION > 5 || ENGINE_MINOR_VERSION >= 1
+    const bool bImported = Prop->ImportText_Direct(*Text, Value, Owner, PPF_None) != nullptr;
+#else
+    const bool bImported = Prop->ImportText(*Text, Value, PPF_None, Owner) != nullptr;
+#endif
+    return bImported && FMcpInstancedStructView(*reinterpret_cast<const FInstancedStruct*>(Value)).Type == Target;
 }
 
 // Build a throwaway FStructProperty bound to the inner script struct so the
@@ -108,8 +152,8 @@ bool HandleStructPropertyAction(
 
     if (Action.Equals(TEXT("get_instanced_struct_property"), ESearchCase::IgnoreCase))
     {
-        FProperty* Prop = FindInstancedStructProperty(Asset, PropertyName);
-        if (!Prop)
+        FStructProperty* StructProp = FindInstancedStructProperty(Asset, PropertyName);
+        if (!StructProp)
         {
             OutResult->SetBoolField(TEXT("success"), false);
             OutResult->SetStringField(TEXT("error"), TEXT("INVALID_OPERATION"));
@@ -118,9 +162,8 @@ bool HandleStructPropertyAction(
             return true;
         }
 
-        FStructProperty* StructProp = CastField<FStructProperty>(Prop);
-        FInstancedStruct* Inst = StructProp->ContainerPtrToValuePtr<FInstancedStruct>(Asset);
-        const UScriptStruct* InnerStruct = Inst->GetScriptStruct();
+        const FMcpInstancedStructView Inst(*StructProp->ContainerPtrToValuePtr<FInstancedStruct>(Asset));
+        const UScriptStruct* InnerStruct = Inst.Type;
         if (!InnerStruct)
         {
             OutResult->SetBoolField(TEXT("success"), false);
@@ -130,7 +173,7 @@ bool HandleStructPropertyAction(
             return true;
         }
 
-        const uint8* Memory = Inst->GetMemory();
+        const uint8* Memory = Inst.Memory;
 
         TSharedPtr<FJsonObject> Value = MakeShared<FJsonObject>();
         Value->SetStringField(TEXT("structType"), InnerStruct->GetName());
@@ -150,8 +193,8 @@ bool HandleStructPropertyAction(
 
     if (Action.Equals(TEXT("set_instanced_struct_property"), ESearchCase::IgnoreCase))
     {
-        FProperty* Prop = FindInstancedStructProperty(Asset, PropertyName);
-        if (!Prop)
+        FStructProperty* StructProp = FindInstancedStructProperty(Asset, PropertyName);
+        if (!StructProp)
         {
             OutResult->SetBoolField(TEXT("success"), false);
             OutResult->SetStringField(TEXT("error"), TEXT("INVALID_OPERATION"));
@@ -188,34 +231,36 @@ bool HandleStructPropertyAction(
             return true;
         }
 
-        FStructProperty* StructProp = CastField<FStructProperty>(Prop);
-        FInstancedStruct* Inst = StructProp->ContainerPtrToValuePtr<FInstancedStruct>(Asset);
+        if (Values.IsValid() && Values->Type != EJson::Object)
+        {
+            OutResult->SetBoolField(TEXT("success"), false);
+            OutResult->SetStringField(TEXT("error"), TEXT("INVALID_OPERATION"));
+            OutResult->SetStringField(TEXT("message"),
+                TEXT("structValues must be a JSON object of fieldName -> value"));
+            return true;
+        }
+
+        // Build the new value in a scratch instance and validate structValues there
+        // BEFORE touching the live FInstancedStruct (issue #struct-ecosystem [23]):
+        // the JSON object goes through the shared reflection importer
+        // (McpPropertyReflection::ApplyJsonValueToProperty) bound to the scratch's
+        // inner struct memory, so a malformed payload never mutates the asset.
+        FScratchInstance Scratch(StructProp->Struct);
+        if (!InitializeInstanceAs(StructProp, Scratch.Memory, TargetStruct, Asset))
+        {
+            OutResult->SetBoolField(TEXT("success"), false);
+            OutResult->SetStringField(TEXT("error"), TEXT("OPERATION_FAILED"));
+            OutResult->SetStringField(TEXT("message"),
+                FString::Printf(TEXT("Could not make an instance of %s"), *TargetStruct->GetPathName()));
+            return true;
+        }
 
         if (Values.IsValid())
         {
-            // Validate against a throwaway instance BEFORE touching the live
-            // FInstancedStruct (issue #struct-ecosystem [23]). Route the JSON
-            // object through the shared reflection importer
-            // (McpPropertyReflection::ApplyJsonValueToProperty) bound to scratch
-            // struct memory via a temporary FStructProperty, so a malformed
-            // structValues payload never mutates the in-memory asset. Only after
-            // validation succeeds do we commit the instance via MoveTemp.
-            if (Values->Type != EJson::Object)
-            {
-                OutResult->SetBoolField(TEXT("success"), false);
-                OutResult->SetStringField(TEXT("error"), TEXT("INVALID_OPERATION"));
-                OutResult->SetStringField(TEXT("message"),
-                    TEXT("structValues must be a JSON object of fieldName -> value"));
-                return true;
-            }
-
-            FInstancedStruct Scratch;
-            Scratch.InitializeAs(TargetStruct);
-
             FStructProperty* InnerProp = MakeInnerStructProperty(TargetStruct);
             FString ImportError;
             const bool bImported = McpPropertyReflection::ApplyJsonValueToProperty(
-                Scratch.GetMutableMemory(), InnerProp, Values, ImportError);
+                Scratch.Inner(), InnerProp, Values, ImportError);
             delete InnerProp;
 
             if (!bImported)
@@ -226,16 +271,11 @@ bool HandleStructPropertyAction(
                     FString::Printf(TEXT("Failed to apply structValues: %s"), *ImportError));
                 return true;
             }
+        }
 
-            // Validation passed: commit the validated instance into the live
-            // property. MoveTemp transfers ownership without re-applying JSON, so
-            // the asset is left unchanged when validation above fails.
-            *Inst = MoveTemp(Scratch);
-        }
-        else
-        {
-            Inst->InitializeAs(TargetStruct);
-        }
+        // Validation passed: commit through the type's own copy (a deep copy of
+        // the inner struct), so the asset is left unchanged when anything above fails.
+        StructProp->Struct->CopyScriptStruct(StructProp->ContainerPtrToValuePtr<void>(Asset), Scratch.Memory);
 
         // Optional persistence opt-out, default true. The read used to sit
         // behind `if (!bSave)` on a bSave that was always true, so save=false

@@ -50,6 +50,25 @@ static UNiagaraComponent* FindLifecycleComponent(AActor* Actor, const FString& A
     return nullptr;
 }
 
+// Which lookup missed: the refusal said only "Niagara system not found".
+static FString LifecycleMiss(const AActor* Actor, const FString& ActorName, const FString& AssetPath)
+{
+    if (ActorName.IsEmpty() && AssetPath.IsEmpty())
+    {
+        return TEXT("Name the effect: actorName, or assetPath (the Niagara system it plays).");
+    }
+    if (!Actor && !ActorName.IsEmpty())
+    {
+        return FString::Printf(TEXT("No actor '%s' in the %s."), *ActorName, GEditor && GEditor->PlayWorld ? TEXT("running game") : TEXT("level"));
+    }
+    if (!AssetPath.IsEmpty())
+    {
+        return FString::Printf(TEXT("No Niagara component plays %s %s."), *AssetPath,
+            Actor ? *FString::Printf(TEXT("on '%s'"), *ActorName) : TEXT("in the level"));
+    }
+    return FString::Printf(TEXT("'%s' has no Niagara component."), *ActorName);
+}
+
 bool HandleNiagaraLifecycleAction(
     const FEffectActionContext& Context,
     const FString& LowerSubAction)
@@ -94,7 +113,7 @@ bool HandleNiagaraLifecycleAction(
         {
             Context.Bridge.SendAutomationResponse(
                 Context.Socket, Context.RequestId, false,
-                TEXT("Niagara system not found."), nullptr,
+                LifecycleMiss(Actor, SystemName, AssetPath), nullptr,
                 TEXT("SYSTEM_NOT_FOUND"));
         }
         return true;
@@ -117,7 +136,7 @@ bool HandleNiagaraLifecycleAction(
         {
             Context.Bridge.SendAutomationResponse(
                 Context.Socket, Context.RequestId, false,
-                TEXT("Niagara system not found."), nullptr,
+                LifecycleMiss(Actor, SystemName, AssetPath), nullptr,
                 TEXT("SYSTEM_NOT_FOUND"));
         }
         return true;
@@ -178,7 +197,7 @@ bool HandleNiagaraLifecycleAction(
         {
             Context.Bridge.SendAutomationResponse(
                 Context.Socket, Context.RequestId, false,
-                TEXT("Niagara system not found."), nullptr,
+                LifecycleMiss(Actor, SystemName, AssetPath), nullptr,
                 TEXT("SYSTEM_NOT_FOUND"));
         }
         return true;

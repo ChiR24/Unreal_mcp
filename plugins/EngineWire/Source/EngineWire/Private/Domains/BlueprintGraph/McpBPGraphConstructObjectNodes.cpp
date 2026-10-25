@@ -99,7 +99,8 @@ bool TryCreateConstructObjectNode(
     {
         FString OverlapMessage;
         TSharedPtr<FJsonObject> OverlapDetails;
-        if (McpGraphLayout::RefuseOverlappingNode(Context.TargetGraph, NewNode, X, Y, OverlapMessage, OverlapDetails))
+        if (McpGraphLayout::RefuseOverlappingNode(Context.TargetGraph, NewNode, X, Y, OverlapMessage, OverlapDetails,
+                                                  McpGraphLayout::NamesNoPosition(Context.Payload)))
         {
             Context.SendErrorWithDetails(OverlapMessage, TEXT("NODE_OVERLAP"), OverlapDetails);
             return true;

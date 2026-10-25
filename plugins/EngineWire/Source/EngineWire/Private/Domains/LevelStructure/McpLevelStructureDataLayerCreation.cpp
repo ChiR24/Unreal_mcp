@@ -12,6 +12,7 @@
 #include "Foundation/HandlerUtils/McpHandlerUtils.h"
 #include "Modules/ModuleManager.h"
 #include "UObject/Package.h"
+#include "UObject/StructOnScope.h"
 #if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 1
 #include "WorldPartition/DataLayer/DataLayerAsset.h"
 #include "WorldPartition/DataLayer/DataLayerInstance.h"
@@ -88,6 +89,14 @@ bool HandleCreateDataLayer(
     bool bIsInitiallyLoaded = GetJsonBoolField(Payload, TEXT("bIsInitiallyLoaded"), true);
     FString DataLayerType = GetJsonStringField(Payload, TEXT("dataLayerType"), TEXT("Runtime"));
     bool bIsPrivate = GetJsonBoolField(Payload, TEXT("bIsPrivate"), false);
+    // Anything but an exact "Runtime" (even "runtime") made an Editor layer, which never streams in the game.
+    const bool bRuntime = DataLayerType.Equals(TEXT("Runtime"), ESearchCase::IgnoreCase);
+    if (!bRuntime && !DataLayerType.Equals(TEXT("Editor"), ESearchCase::IgnoreCase))
+    {
+        Subsystem->SendAutomationResponse(Socket, RequestId, false, FString::Printf(TEXT("dataLayerType '%s' is not one: use Runtime "
+            "(streams in the game) or Editor (organises the editor only). Nothing was created."), *DataLayerType), nullptr, TEXT("INVALID_ARGUMENT"));
+        return true;
+    }
 #if !(ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 3)
     if (bIsPrivate)
     {
@@ -122,11 +131,12 @@ bool HandleCreateDataLayer(
         FullAssetPath = TEXT("/Game/") + FullAssetPath;
     }
 
-    UPackage* AssetPackage = CreatePackage(*FullAssetPath);
+    FString CreateError, CreateCode;
+    UPackage* AssetPackage = McpCreatePackageForNewAsset(FullAssetPath, CreateError, CreateCode);
     if (!AssetPackage)
     {
         Subsystem->SendAutomationResponse(Socket, RequestId, false,
-            FString::Printf(TEXT("Failed to create package for DataLayerAsset at: %s"), *FullAssetPath), nullptr, TEXT("PACKAGE_CREATION_FAILED"));
+            CreateError, nullptr, CreateCode);
         return true;
     }
 
@@ -138,14 +148,7 @@ bool HandleCreateDataLayer(
         return true;
     }
 
-    if (DataLayerType == TEXT("Runtime"))
-    {
-        NewDataLayerAsset->SetType(EDataLayerType::Runtime);
-    }
-    else
-    {
-        NewDataLayerAsset->SetType(EDataLayerType::Editor);
-    }
+    NewDataLayerAsset->SetType(bRuntime ? EDataLayerType::Runtime : EDataLayerType::Editor);
 
     AssetPackage->MarkPackageDirty();
     FAssetRegistryModule::AssetCreated(NewDataLayerAsset);
@@ -153,7 +156,23 @@ bool HandleCreateDataLayer(
     McpSafeAssetSave(NewDataLayerAsset);
 
     // Step 2: Create a UDataLayerInstance using the asset
+#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION == 1
+    // 5.1 does not export FDataLayerCreationParameters (DATALAYEREDITOR_API arrives in 5.2), so its out-of-line
+    // constructor cannot be called from this module. The struct is made through its reflection instead, which runs
+    // that constructor inside DataLayerEditor.
+    const UScriptStruct* CreationParamsType = FindObject<UScriptStruct>(nullptr, TEXT("/Script/DataLayerEditor.DataLayerCreationParameters"));
+    if (!CreationParamsType)
+    {
+        Subsystem->SendAutomationResponse(Socket, RequestId, false,
+            FString::Printf(TEXT("Created DataLayerAsset '%s' but the engine has no DataLayerCreationParameters type to create its "
+                "DataLayerInstance with. The asset exists at: %s"), *DataLayerName, *FullAssetPath), nullptr, TEXT("DATA_LAYER_INSTANCE_FAILED"));
+        return true;
+    }
+    FStructOnScope CreationParamsScope(CreationParamsType);
+    FDataLayerCreationParameters& CreationParams = *reinterpret_cast<FDataLayerCreationParameters*>(CreationParamsScope.GetStructMemory());
+#else
     FDataLayerCreationParameters CreationParams;
+#endif
     CreationParams.DataLayerAsset = NewDataLayerAsset;
     CreationParams.WorldDataLayers = World->GetWorldDataLayers();
 #if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 3
@@ -165,7 +184,7 @@ bool HandleCreateDataLayer(
     {
         Subsystem->SendAutomationResponse(Socket, RequestId, false,
             FString::Printf(TEXT("Created DataLayerAsset '%s' but failed to create DataLayerInstance. The asset exists at: %s"),
-                *DataLayerName, *FullAssetPath), nullptr);
+                *DataLayerName, *FullAssetPath), nullptr, TEXT("DATA_LAYER_INSTANCE_FAILED"));
         return true;
     }
 
@@ -178,7 +197,7 @@ bool HandleCreateDataLayer(
     McpHandlerUtils::AddVerification(ResponseJson, NewDataLayerAsset);
     ResponseJson->SetStringField(TEXT("dataLayerName"), DataLayerName);
     ResponseJson->SetStringField(TEXT("dataLayerAssetPath"), FullAssetPath);
-    ResponseJson->SetStringField(TEXT("dataLayerType"), DataLayerType);
+    ResponseJson->SetStringField(TEXT("dataLayerType"), bRuntime ? TEXT("Runtime") : TEXT("Editor"));
     ResponseJson->SetBoolField(TEXT("initiallyVisible"), bIsInitiallyVisible);
     ResponseJson->SetBoolField(TEXT("initiallyLoaded"), bIsInitiallyLoaded);
     ResponseJson->SetBoolField(TEXT("isPrivate"), bIsPrivate);

@@ -5,6 +5,8 @@
 #include "Foundation/BridgeHelpers/McpHelpers.h"
 #include "EngineWireSubsystem.h"
 #include "Foundation/HandlerUtils/McpHandlerUtils.h"
+#include "Foundation/McpScopedEditorTransaction.h"
+#include "Foundation/Render/McpConsoleVariableWrite.h"
 #include "Components/ExponentialHeightFogComponent.h"
 #include "Components/LightComponent.h"
 #include "Dom/JsonObject.h"
@@ -22,6 +24,16 @@ bool HandleSetupVolumetricFog(
     TSharedPtr<FMcpBridgeWebSocket> RequestingSocket,
     UEditorActorSubsystem* ActorSS)
 {
+    // Checked before a fog actor can be spawned for a call that sets nothing.
+    if (!Payload->HasField(TEXT("enabled")) && !Payload->HasField(TEXT("viewDistance")))
+    {
+        Subsystem.SendAutomationError(RequestingSocket, RequestId, TEXT("Nothing to set: pass enabled or viewDistance."),
+                                      TEXT("NO_SETTING_SUPPLIED"));
+        return true;
+    }
+    // One undo step, a fog actor spawned for it included; it wrote outside any transaction.
+    FMcpScopedEditorTransaction Transaction(FText::FromString(TEXT("Set Volumetric Fog")), EMcpMutationDurability::EditorStateOnly,
+                                            TArray<UObject*>());
     AExponentialHeightFog* FogActor = nullptr;
     for (AActor* Actor : ActorSS->GetAllLevelActors())
     {
@@ -51,25 +63,31 @@ bool HandleSetupVolumetricFog(
     // `enabled` was hard-coded true here while the TS handler ran
     // `r.VolumetricFog 0` first for enabled:false, so disabling fog turned the
     // cvar off and the component flag straight back on.
-    bool bEnabled = true;
-    Payload->TryGetBoolField(TEXT("enabled"), bEnabled);
-
+    // Left out, enabled read as true and switched volumetric fog on for a call that only set viewDistance.
     UExponentialHeightFogComponent* FogComp = FogActor->GetComponent();
-    FogComp->bEnableVolumetricFog = bEnabled;
-
+    FogComp->Modify();
+    bool bEnabled = FogComp->bEnableVolumetricFog;
+    if (Payload->TryGetBoolField(TEXT("enabled"), bEnabled))
+    {
+        FogComp->bEnableVolumetricFog = bEnabled;
+    }
     double Distance;
     if (Payload->TryGetNumberField(TEXT("viewDistance"), Distance))
     {
         FogComp->VolumetricFogDistance = static_cast<float>(Distance);
     }
+    FogComp->MarkRenderStateDirty();
+    FogActor->MarkPackageDirty();
 
     TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
     Resp->SetBoolField(TEXT("success"), true);
     Resp->SetStringField(TEXT("actorName"), McpActorRef(FogActor));
-    Resp->SetBoolField(TEXT("enabled"), bEnabled);
+    Resp->SetBoolField(TEXT("enabled"), FogComp->bEnableVolumetricFog);
+    Resp->SetNumberField(TEXT("viewDistance"), FogComp->VolumetricFogDistance);
+    Transaction.DescribeInto(Resp);
     McpHandlerUtils::AddVerification(Resp, FogActor);
     Subsystem.SendAutomationResponse(RequestingSocket, RequestId, true,
-        bEnabled ? TEXT("Volumetric fog enabled") : TEXT("Volumetric fog disabled"), Resp);
+        FogComp->bEnableVolumetricFog ? TEXT("Volumetric fog enabled") : TEXT("Volumetric fog disabled"), Resp);
     return true;
 }
 
@@ -101,12 +119,19 @@ bool HandleConfigureShadows(
     TArray<TSharedPtr<FJsonValue>> Applied;
     // shadowQuality, shadowDistance, contactShadows and rayTracedShadows were declared and
     // never applied (rayTracedShadows only returned a note). Each drives its engine-wide cvar.
-    auto SetCVar = [&Applied](const TCHAR* CVarName, const FString& Value, const TCHAR* Key)
+    // Set as the console does and read back: one a higher-priority source held was listed as applied.
+    TArray<FString> NotSet;
+    auto SetCVar = [&Applied, &NotSet](const TCHAR* CVarName, const FString& Value, const TCHAR* Key)
     {
-        if (IConsoleVariable* CVar = IConsoleManager::Get().FindConsoleVariable(CVarName))
+        IConsoleVariable* CVar = IConsoleManager::Get().FindConsoleVariable(CVarName);
+        const FString NotTaken = CVar ? McpSetConsoleVariable(*CVar, Value) : FString(TEXT("not in this engine version"));
+        if (NotTaken.IsEmpty())
         {
-            CVar->Set(*Value);
             Applied.Add(MakeShared<FJsonValueString>(Key));
+        }
+        else
+        {
+            NotSet.Add(FString::Printf(TEXT("%s (%s %s)"), Key, CVarName, *NotTaken));
         }
     };
     FString ShadowQuality;
@@ -144,12 +169,7 @@ bool HandleConfigureShadows(
     bool bVirtual = false;
     if (ReadBool(TEXT("virtualShadowMaps"), bVirtual))
     {
-        if (IConsoleVariable* CVar = IConsoleManager::Get().FindConsoleVariable(TEXT("r.Shadow.Virtual.Enable")))
-        {
-            CVar->Set(bVirtual ? 1 : 0);
-            Resp->SetBoolField(TEXT("virtualShadowMaps"), bVirtual);
-            Applied.Add(MakeShared<FJsonValueString>(TEXT("virtualShadowMaps")));
-        }
+        SetCVar(TEXT("r.Shadow.Virtual.Enable"), bVirtual ? TEXT("1") : TEXT("0"), TEXT("virtualShadowMaps"));
     }
 
     FString ActorName;
@@ -194,16 +214,24 @@ bool HandleConfigureShadows(
 
     if (Applied.Num() == 0)
     {
-        Subsystem.SendAutomationError(RequestingSocket, RequestId,
-            TEXT("No shadow settings supplied. Pass shadowQuality, shadowDistance, contactShadows, rayTracedShadows or virtualShadowMaps, or actorName plus one of castShadows, shadowBias, shadowSlopeBias or shadowResolutionScale (top level or inside `settings`)."),
-            TEXT("INVALID_ARGUMENT"));
+        Subsystem.SendAutomationError(RequestingSocket, RequestId, NotSet.Num() > 0
+            ? FString::Printf(TEXT("No shadow setting took: %s."), *FString::Join(NotSet, TEXT("; ")))
+            : FString(TEXT("No shadow settings supplied. Pass shadowQuality, shadowDistance, contactShadows, rayTracedShadows or virtualShadowMaps, or actorName plus one of castShadows, shadowBias, shadowSlopeBias or shadowResolutionScale (top level or inside `settings`).")),
+            NotSet.Num() > 0 ? TEXT("CVAR_UNAVAILABLE") : TEXT("INVALID_ARGUMENT"));
         return true;
     }
 
     Resp->SetBoolField(TEXT("success"), true);
     Resp->SetArrayField(TEXT("appliedSettings"), Applied);
+    TArray<TSharedPtr<FJsonValue>> NotSetJson;
+    for (const FString& Entry : NotSet)
+    {
+        NotSetJson.Add(MakeShared<FJsonValueString>(Entry));
+    }
+    Resp->SetArrayField(TEXT("notSet"), NotSetJson);
     Subsystem.SendAutomationResponse(RequestingSocket, RequestId, true,
-        FString::Printf(TEXT("Shadows configured (%d setting(s) applied)"), Applied.Num()), Resp);
+        FString::Printf(TEXT("Shadows configured (%d setting(s) applied)%s"), Applied.Num(),
+                        NotSet.Num() > 0 ? *(TEXT("; not set: ") + FString::Join(NotSet, TEXT("; "))) : TEXT("")), Resp);
     return true;
 }
 

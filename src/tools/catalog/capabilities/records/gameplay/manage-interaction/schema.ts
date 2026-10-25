@@ -45,7 +45,7 @@ export const NP: PropertyMap = {
   requiresKey: bool('Whether opening requires a key.'),
   doorPath: str('Canonical /Game door actor Blueprint asset path.'),
   locked: bool('Whether the interactable starts locked.'),
-  switchType: str('Switch type (button, lever, or pressure_plate).'),
+  switchType: { type: 'string', enum: ['button', 'lever', 'pressure_plate'], description: 'button (the default) or lever flip on each press; pressure_plate is on only while stood on.' },
   switchPath: str('Canonical /Game switch actor Blueprint asset path.'),
   canToggle: bool('Whether the switch can toggle back off.'),
   resetTime: num('Switch reset delay in seconds.'),

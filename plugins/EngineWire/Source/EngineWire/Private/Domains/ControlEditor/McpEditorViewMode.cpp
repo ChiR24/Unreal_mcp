@@ -1,89 +1,55 @@
 #include "Domains/ControlEditor/McpEditorSupport.h"
+#include "Editor/EditorPerformanceSettings.h"
+#include "Misc/App.h"
 
 #include "Camera/PlayerCameraManager.h"
 #include "Engine/GameViewportClient.h"
 #include "GameFramework/PlayerController.h"
 #include "ShowFlags.h"
 
+// Any engine view mode by its enum name without VMI_ (PathTracing, CollisionPawn, VisualizeNanite) or its display name
+// ("Path Tracing"), spaces, underscores and case ignored. Ten names were known; the rest went to a console command the
+// editor does not run, so a path-traced or collision view could not be shown.
+static bool FindViewModeByName(const FString &Name, EViewModeIndex &OutMode, FString &OutName) {
+  const auto Squash = [](const FString &Text) { return Text.Replace(TEXT(" "), TEXT("")).Replace(TEXT("_"), TEXT("")); };
+  const FString Wanted = Squash(Name);
+  const UEnum *Enum = StaticEnum<EViewModeIndex>();
+  for (int32 Index = 0; Enum && Index < Enum->NumEnums() - 1; ++Index) {
+    if (Enum->HasMetaData(TEXT("Hidden"), Index) || Enum->GetValueByIndex(Index) == VMI_Unknown) {
+      continue;
+    }
+    const FString Short = Enum->GetNameStringByIndex(Index).RightChop(4);
+    if (!Wanted.IsEmpty() && (Squash(Short).Equals(Wanted, ESearchCase::IgnoreCase) ||
+                              Squash(Enum->GetDisplayNameTextByIndex(Index).ToString()).Equals(Wanted, ESearchCase::IgnoreCase))) {
+      OutMode = static_cast<EViewModeIndex>(Enum->GetValueByIndex(Index));
+      OutName = Short;
+      return true;
+    }
+  }
+  return false;
+}
+
 bool UEngineWireSubsystem::HandleControlEditorSetViewMode(
     const FString &RequestId, const TSharedPtr<FJsonObject> &Payload,
     TSharedPtr<FMcpBridgeWebSocket> Socket) {
   FString Mode;
   Payload->TryGetStringField(TEXT("viewMode"), Mode);
-  FString LowerMode = Mode.ToLower();
-  FString Chosen;
   EViewModeIndex ViewModeIndex = VMI_Lit;
-  bool bHasNativeViewMode = true;
-  if (LowerMode == TEXT("lit"))
-  {
-    Chosen = TEXT("Lit");
-    ViewModeIndex = VMI_Lit;
-  }
-  else if (LowerMode == TEXT("unlit"))
-  {
-    Chosen = TEXT("Unlit");
-    ViewModeIndex = VMI_Unlit;
-  }
-  else if (LowerMode == TEXT("wireframe"))
-  {
-    Chosen = TEXT("Wireframe");
-    ViewModeIndex = VMI_Wireframe;
-  }
-  else if (LowerMode == TEXT("detaillighting"))
-  {
-    Chosen = TEXT("DetailLighting");
-    ViewModeIndex = VMI_Lit_DetailLighting;
-  }
-  else if (LowerMode == TEXT("lightingonly"))
-  {
-    Chosen = TEXT("LightingOnly");
-    ViewModeIndex = VMI_LightingOnly;
-  }
-  else if (LowerMode == TEXT("lightcomplexity"))
-  {
-    Chosen = TEXT("LightComplexity");
-    ViewModeIndex = VMI_LightComplexity;
-  }
-  else if (LowerMode == TEXT("shadercomplexity"))
-  {
-    Chosen = TEXT("ShaderComplexity");
-    ViewModeIndex = VMI_ShaderComplexity;
-  }
-  else if (LowerMode == TEXT("lightmapdensity"))
-  {
-    Chosen = TEXT("LightmapDensity");
-    ViewModeIndex = VMI_LightmapDensity;
-  }
-  else if (LowerMode == TEXT("stationarylightoverlap"))
-  {
-    Chosen = TEXT("StationaryLightOverlap");
-    ViewModeIndex = VMI_StationaryLightOverlap;
-  }
-  else if (LowerMode == TEXT("reflectionoverride"))
-  {
-    Chosen = TEXT("ReflectionOverride");
-    ViewModeIndex = VMI_ReflectionOverride;
-  }
-  else if (IsSafeConsoleArgumentToken(Mode))
-  {
-    Chosen = Mode;
-    bHasNativeViewMode = false;
-  }
-  else {
+  FString Chosen;
+  if (!FindViewModeByName(Mode, ViewModeIndex, Chosen)) {
     SendStandardErrorResponse(this, Socket, RequestId, TEXT("INVALID_ARGUMENT"),
-                              TEXT("Invalid viewMode"), nullptr);
+                              FString::Printf(TEXT("'%s' is not a view mode. Common ones: Lit, Unlit, Wireframe, DetailLighting, "
+                                  "LightingOnly, LightComplexity, ShaderComplexity, LightmapDensity, CollisionPawn, CollisionVisibility, "
+                                  "LODColoration, PathTracing, VisualizeNanite, VisualizeLumen; any view mode of this engine version works "
+                                  "by its enum or display name."), *Mode), nullptr);
     return true;
   }
 
   // While the player plays, the game viewport is the one on screen, so the mode goes there. The level viewport hidden
   // behind it took the mode before, and the reply said it was set while the game looked the same.
   if (GEditor->PlayWorld && !GetEjectedPieViewportClientForMcp() && GEditor->GameViewport) {
-    if (bHasNativeViewMode) {
-      GEditor->GameViewport->ViewModeIndex = ViewModeIndex;
-      ApplyViewMode(ViewModeIndex, /*bPerspective=*/true, GEditor->GameViewport->EngineShowFlags);
-    } else {
-      GEditor->GameViewport->ConsoleCommand(FString::Printf(TEXT("viewmode %s"), *Chosen));
-    }
+    GEditor->GameViewport->ViewModeIndex = ViewModeIndex;
+    ApplyViewMode(ViewModeIndex, /*bPerspective=*/true, GEditor->GameViewport->EngineShowFlags);
     TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
     Resp->SetBoolField(TEXT("success"), true);
     Resp->SetStringField(TEXT("viewMode"), Chosen);
@@ -92,32 +58,19 @@ bool UEngineWireSubsystem::HandleControlEditorSetViewMode(
     return true;
   }
 
-  if (bHasNativeViewMode) {
-    if (FEditorViewportClient* ViewportClient = GetActiveEditorViewportClientForMcp()) {
-      ViewportClient->SetViewMode(ViewModeIndex);
-      ViewportClient->Invalidate();
-
-      TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
-      Resp->SetBoolField(TEXT("success"), true);
-      Resp->SetStringField(TEXT("viewMode"), Chosen);
-      Resp->SetStringField(TEXT("method"), TEXT("viewport_client"));
-      SendAutomationResponse(Socket, RequestId, true, TEXT("View mode set"), Resp,
-                             FString());
-      return true;
-    }
-  }
-
-  const FString Cmd = FString::Printf(TEXT("viewmode %s"), *Chosen);
-  if (GEditor->Exec(nullptr, *Cmd)) {
-    TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
-    Resp->SetBoolField(TEXT("success"), true);
-    Resp->SetStringField(TEXT("viewMode"), Chosen);
-    SendAutomationResponse(Socket, RequestId, true, TEXT("View mode set"), Resp,
-                           FString());
+  FEditorViewportClient *ViewportClient = GetActiveEditorViewportClientForMcp();
+  if (!ViewportClient) {
+    SendStandardErrorResponse(this, Socket, RequestId, TEXT("NO_VIEWPORT"),
+                              TEXT("No level viewport is open to show a view mode in."), nullptr);
     return true;
   }
-  SendStandardErrorResponse(this, Socket, RequestId, TEXT("EXEC_FAILED"),
-                              TEXT("View mode command failed"), nullptr);
+  ViewportClient->SetViewMode(ViewModeIndex);
+  ViewportClient->Invalidate();
+  TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
+  Resp->SetBoolField(TEXT("success"), true);
+  Resp->SetStringField(TEXT("viewMode"), Chosen);
+  Resp->SetStringField(TEXT("method"), TEXT("viewport_client"));
+  SendAutomationResponse(Socket, RequestId, true, TEXT("View mode set"), Resp, FString());
   return true;
 }
 
@@ -191,14 +144,31 @@ bool UEngineWireSubsystem::HandleControlEditorSetViewportRealtime(
   if (ActiveViewport.IsValid()) {
     FEditorViewportClient& ViewportClient = ActiveViewport->GetAssetViewportClient();
     ViewportClient.SetRealtime(bRealtime);
+    // Another system's override wins over the setting: the reply said enabled while every capture still found the
+    // viewport not realtime. This request's own override goes on top of it, taken off again by the next call. Not the
+    // background one: the editor re-adds that on every tick while it is in the background with "Use Less CPU when in
+    // Background" on, so no override outlasts the frame and the reply says what holds it instead.
+    static const FText McpOverride = NSLOCTEXT("EngineWire", "McpRealtimeOverride", "EngineWire request");
+    ViewportClient.RemoveRealtimeOverride(McpOverride, false);
+    const UEditorPerformanceSettings *Performance = GetDefault<UEditorPerformanceSettings>();
+    const bool bBackgroundHold = bRealtime && !FApp::HasFocus() && Performance && Performance->bThrottleCPUWhenNotForeground;
+    FString Held;
+    if (ViewportClient.IsRealtime() != bRealtime) {
+      Held = ViewportClient.GetRealtimeOverrideMessage().ToString();
+      if (!bBackgroundHold) ViewportClient.AddRealtimeOverride(bRealtime, McpOverride);
+    }
+    const bool bReached = !bBackgroundHold && ViewportClient.IsRealtime();
 
     TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
     Resp->SetBoolField(TEXT("success"), true);
-    Resp->SetBoolField(TEXT("realtime"), bRealtime);
-    Resp->SetStringField(TEXT("message"), bRealtime ? TEXT("Viewport realtime enabled") : TEXT("Viewport realtime disabled"));
+    Resp->SetBoolField(TEXT("realtime"), bReached);
+    if (!Held.IsEmpty()) Resp->SetStringField(bBackgroundHold ? TEXT("heldBy") : TEXT("overrode"), Held);
+    const TCHAR *Message = bBackgroundHold
+        ? TEXT("Realtime is set, but the editor is in the background with Use Less CPU when in Background on, which holds every viewport off realtime until the editor is in front: control_editor configure_editor setting=window unthrottle lifts it for this session.")
+        : bReached ? TEXT("Viewport realtime enabled") : TEXT("Viewport realtime disabled");
+    Resp->SetStringField(TEXT("message"), Message);
 
-    SendAutomationResponse(Socket, RequestId, true,
-                           TEXT("Viewport realtime updated"), Resp, FString());
+    SendAutomationResponse(Socket, RequestId, true, Message, Resp, FString());
     return true;
   }
 

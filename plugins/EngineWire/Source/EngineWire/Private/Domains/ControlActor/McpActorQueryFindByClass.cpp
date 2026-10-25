@@ -97,9 +97,13 @@ bool UEngineWireSubsystem::HandleControlActorFindByClass(
     }
   }
 
+  const int32 Total = McpCapFindRows(Payload, ActorsArray, Data);
   Data->SetArrayField(TEXT("actors"), ActorsArray);
   Data->SetNumberField(TEXT("count"), ActorsArray.Num());
   SendStandardSuccessResponse(this, Socket, RequestId,
-                              FString::Printf(TEXT("Found %d actors"), ActorsArray.Num()), Data);
+                              Total > ActorsArray.Num()
+                                  ? FString::Printf(TEXT("Found %d actors; the first %d are listed"), Total, ActorsArray.Num())
+                                  : FString::Printf(TEXT("Found %d actors"), Total),
+                              Data);
   return true;
 }

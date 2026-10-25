@@ -62,7 +62,11 @@ bool HandleCreateMetaHuman(UEngineWireSubsystem* Self, const FString& RequestId,
         return true;
     }
 
-    McpSafeAssetSave(Created);
+    const bool bSaved = McpSafeAssetSave(Created);
+    if (!bSaved)
+    {
+        Created->MarkPackageDirty(); // unsaved, so save_all saves it
+    }
 
     FString CoreDataDetail;
     const bool bCoreData = IsCoreDataInstalled(CoreDataDetail);
@@ -71,6 +75,13 @@ bool HandleCreateMetaHuman(UEngineWireSubsystem* Self, const FString& RequestId,
     Result->SetStringField(TEXT("characterPath"), FullPath);
     Result->SetStringField(TEXT("name"), Name);
     Result->SetBoolField(TEXT("created"), true);
+    Result->SetBoolField(TEXT("saved"), bSaved);
+    if (!bSaved)
+    {
+        TArray<TSharedPtr<FJsonValue>> Warnings;
+        Warnings.Add(MakeShared<FJsonValueString>(TEXT("Created in memory only: the save failed, so it is lost when the editor closes unless control_editor save_all saves it.")));
+        Result->SetArrayField(TEXT("warnings"), Warnings);
+    }
     Result->SetBoolField(TEXT("coreDataInstalled"), bCoreData);
     if (!bCoreData)
     {

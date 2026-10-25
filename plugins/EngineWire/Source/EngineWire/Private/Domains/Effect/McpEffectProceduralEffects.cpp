@@ -2,6 +2,8 @@
 
 #include "Domains/Effect/McpEffectPrivate.h"
 
+#include "Foundation/McpScopedEditorTransaction.h"
+
 #include "Editor.h"
 #include "Components/ExponentialHeightFogComponent.h"
 #include "Engine/ExponentialHeightFog.h"
@@ -54,16 +56,29 @@ bool HandleCleanup(const FEffectActionContext& Context, bool bIsCreateEffect)
             TEXT("EDITOR_ACTOR_SUBSYSTEM_MISSING"));
         return true;
     }
-    TArray<FString> Removed;
+    // The editor actor subsystem lists nothing while a game plays, so this answered removed=0 as if done.
+    if (GEditor->PlayWorld)
+    {
+        Context.Bridge.SendAutomationResponse(Context.Socket, Context.RequestId, false,
+            TEXT("Stop Play In Editor first: cleanup deletes actors from the level being edited"), nullptr, TEXT("PIE_ACTIVE"));
+        return true;
+    }
+    TArray<UObject*> Matches;
     for (AActor* Actor : ActorSubsystem->GetAllLevelActors())
     {
-        if (!Actor)
+        if (Actor && !Actor->GetActorLabel().IsEmpty() && Actor->GetActorLabel().StartsWith(Filter, ESearchCase::IgnoreCase))
         {
-            continue;
+            Matches.Add(Actor);
         }
+    }
+    // One undo step for the whole sweep: each DestroyActor opened its own.
+    FMcpScopedEditorTransaction Transaction(FText::FromString(TEXT("Clean Up Actors")), EMcpMutationDurability::EditorStateOnly, Matches);
+    TArray<FString> Removed;
+    for (UObject* Object : Matches)
+    {
+        AActor* Actor = CastChecked<AActor>(Object);
         const FString Label = Actor->GetActorLabel();
-        if (!Label.IsEmpty() && Label.StartsWith(Filter, ESearchCase::IgnoreCase) &&
-            ActorSubsystem->DestroyActor(Actor))
+        if (ActorSubsystem->DestroyActor(Actor))
         {
             Removed.Add(Label);
         }

@@ -9,6 +9,7 @@
 #include "Foundation/BridgeHelpers/McpHelpers.h"
 #include "EngineWireSubsystem.h"
 #include "Foundation/HandlerUtils/McpHandlerUtils.h"
+#include "Foundation/McpScopedEditorTransaction.h"
 
 bool UEngineWireSubsystem::HandleSetLandscapeMaterial(
     const FString &RequestId, const FString &Action,
@@ -58,16 +59,21 @@ bool UEngineWireSubsystem::HandleSetLandscapeMaterial(
     return true;
   }
 
+  FMcpScopedEditorTransaction Transaction(FText::FromString(TEXT("Set Landscape Material")),
+                                          EMcpMutationDurability::EditorStateOnly, TArray<UObject*>{Landscape});
+  Landscape->Modify();
   Landscape->LandscapeMaterial = Mat;
   Landscape->PostEditChange();
   TSharedPtr<FJsonObject> Resp =
       McpHandlerUtils::CreateResultObject();
+  Transaction.DescribeInto(Resp);
   Resp->SetBoolField(TEXT("success"), true);
   Resp->SetStringField(TEXT("landscapePath"),
                        Landscape->GetPackage()->GetPathName());
   Resp->SetStringField(TEXT("landscapeName"),
                        Landscape->GetActorLabel());
   Resp->SetStringField(TEXT("materialPath"), MaterialPath);
+  McpHandlerUtils::AddVerification(Resp, Landscape);
   SendAutomationResponse(
       RequestingSocket, RequestId, true,
       TEXT("Landscape material set"), Resp, FString());

@@ -32,9 +32,11 @@ TSharedPtr<FJsonObject> HandleAdjustCurves(const TSharedPtr<FJsonObject>& Params
 
     FString AssetPath;
     FString Error;
-    UTexture2D* Texture = LoadSourceTexture(GetJsonStringField(Params, TEXT("assetPath")), TEXT("assetPath"), AssetPath, Error, /*bConvertToBGRA8=*/true);
+    FString ErrorCode;
+    UTexture2D* Texture = LoadSourceTexture(GetJsonStringField(Params, TEXT("assetPath")), TEXT("assetPath"), AssetPath, Error, /*bConvertToBGRA8=*/true, &ErrorCode);
     if (!Texture)
     {
+        if (!ErrorCode.IsEmpty()) { Response->SetStringField(TEXT("errorCode"), ErrorCode); }
         TEXTURE_ERROR_RESPONSE(Error);
     }
 
@@ -58,7 +60,7 @@ TSharedPtr<FJsonObject> HandleAdjustCurves(const TSharedPtr<FJsonObject>& Params
     Texture->Source.UnlockMip(0);
     Texture->UpdateResource();
     Texture->MarkPackageDirty();
-    if (GetJsonBoolField(Params, TEXT("save"), true)) McpSafeAssetSave(Texture);
+    Response->SetBoolField(TEXT("saved"), GetJsonBoolField(Params, TEXT("save"), true) && McpSafeAssetSave(Texture));
 
     Response->SetBoolField(TEXT("success"), true);
     Response->SetStringField(TEXT("message"), TEXT("Curve adjustment applied"));

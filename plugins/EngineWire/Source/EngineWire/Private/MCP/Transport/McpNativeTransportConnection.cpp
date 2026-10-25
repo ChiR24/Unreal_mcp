@@ -1,6 +1,7 @@
 #include "MCP/Transport/McpNativeTransportPrivate.h"
 
 #include "MCP/Execute/McpNativeGatewayAuthorization.h"
+#include "MCP/Protocol/McpModernRequest.h"
 #include "Foundation/BridgeHelpers/Security/McpCapToken.h"
 
 void FMcpNativeTransport::HandleConnection(FSocket* ClientSocket)
@@ -170,6 +171,13 @@ void FMcpNativeTransport::HandleConnection(FSocket* ClientSocket)
 		return;
 	}
 
+	// A 2026-07-28 request names its version in _meta and has no session: served apart, after the token check.
+	if (McpModern::IsModern(Rpc.Params))
+	{
+		HandleModernRequest(ClientSocket, HttpReq, Rpc);
+		return;
+	}
+
 	if (Rpc.bIsNotification && Rpc.Method == TEXT("initialize"))
 	{
 		SendAndClose(ClientSocket, 400, TEXT("application/json"), FMcpJsonRpc::BuildError(MakeShared<FJsonValueNull>(), FMcpJsonRpc::ErrorInvalidRequest, TEXT("initialize must include an id")), {}, HttpReq.Origin);
@@ -192,14 +200,14 @@ void FMcpNativeTransport::HandleConnection(FSocket* ClientSocket)
 			return;
 		}
 		FString RateLimitError;
+		int32 RetryAfter = 0;
 		if (!ConsumeSessionRequestBudget(
 				HttpReq.SessionId, Rpc.Method == TEXT("tools/call"),
-				RateLimitError))
+				RateLimitError, &RetryAfter))
 		{
-			const FString ErrorBody = FMcpJsonRpc::BuildError(
-				Rpc.Id, FMcpJsonRpc::ErrorRateLimited, RateLimitError);
-			SendAndClose(ClientSocket, 429, TEXT("application/json"), ErrorBody, {},
-				HttpReq.Origin);
+			SendAndClose(ClientSocket, 429, TEXT("application/json"),
+				FMcpJsonRpc::BuildRateLimitError(Rpc.Id, RateLimitError, RetryAfter),
+				FMcpJsonRpc::RetryAfterHeader(RetryAfter), HttpReq.Origin);
 			return;
 		}
 	}

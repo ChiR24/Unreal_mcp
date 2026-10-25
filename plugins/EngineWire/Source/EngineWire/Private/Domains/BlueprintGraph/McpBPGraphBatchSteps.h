@@ -41,6 +41,22 @@ FMcpCapturedResponse RunPlacedStep(const FActionContext& Parent, FBatchState& St
                                    const TSharedPtr<FJsonObject>& Payload, const FString& Edit,
                                    const FString& StepId, FString& OutPins);
 
+/** The payload one step is sent (McpBPGraphBatchCheck.cpp): the batch's shared fields under the step's own, with
+ *  from/to "$id.Pin" shorthand expanded. */
+TSharedPtr<FJsonObject> BuildStepPayload(const TSharedPtr<FJsonObject>& Batch, const TSharedPtr<FJsonObject>& Step,
+                                         const FString& Edit);
+
+/** Replaces each "$id" node reference in Payload with what State knows for it; false, with OutError listing the
+ *  ids defined so far, for one no earlier step defined. */
+bool ResolveStepAliases(const FBatchState& State, const TSharedPtr<FJsonObject>& Payload, FString& OutError);
+
+/** Runs PrecheckSteps and sends its refusal (marked dryRun when bDryRun); true when the batch may go on. */
+bool PassesPrecheck(const FActionContext& Context, const TArray<TSharedPtr<FJsonValue>>& Steps, bool bDryRun);
+
+/** dryRun, after the pre-check passed: resolves every "$id" against the steps before it and looks up every node named
+ *  by guid, runs nothing, and replies with every problem found (or the steps checked and the nodes it would create). */
+bool AnswerDryRun(const FActionContext& Context, const TArray<TSharedPtr<FJsonValue>>& Steps);
+
 /** Synchronous, non-destructive edits only; the member steps are among them. */
 bool IsBatchableEdit(const FString& Edit);
 

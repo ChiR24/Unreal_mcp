@@ -153,7 +153,6 @@ FClothBindOutcome RunClothBinding(const TSharedPtr<FJsonObject>& Payload, bool b
     }
     Mesh->PostEditChange();
     Mesh->MarkPackageDirty();
-    SaveIfRequested(Mesh, Payload);
 
     Outcome.bSuccess = true;
     Outcome.Result->SetStringField(TEXT("clothAssetName"), ClothAsset->GetName());
@@ -162,7 +161,7 @@ FClothBindOutcome RunClothBinding(const TSharedPtr<FJsonObject>& Payload, bool b
     Outcome.Result->SetNumberField(TEXT("sectionIndex"), SectionIndex);
     Outcome.Result->SetNumberField(TEXT("assetLodIndex"), AssetLodIndex);
     Outcome.Result->SetBoolField(TEXT("bound"), true);
-    McpHandlerUtils::AddVerification(Outcome.Result, Mesh);
+    SaveAndReport(Mesh, Payload, Outcome.Result);
     Outcome.Message = FString::Printf(TEXT("Cloth asset '%s' bound to %s LOD %d section %d"),
         *ClothAsset->GetName(), *Mesh->GetName(), MeshLodIndex, SectionIndex);
     return Outcome;

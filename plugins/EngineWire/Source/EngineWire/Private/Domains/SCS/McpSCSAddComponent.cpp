@@ -179,6 +179,28 @@ TSharedPtr<FJsonObject> FSCSHandlers::AddSCSComponent(
                         *ComponentName));
     return Result;
   }
+  // A meshPath or materialPath that did not load, or a class that cannot show it, still added the component and
+  // answered success with mesh_applied false: an empty component the caller took for a mesh. Both refuse first.
+  const bool bStaticMeshClass = CompClass->IsChildOf(UStaticMeshComponent::StaticClass());
+  const bool bSkeletalMeshClass = CompClass->IsChildOf(USkeletalMeshComponent::StaticClass());
+  UObject *MeshAsset = MeshPath.IsEmpty() ? nullptr
+      : bStaticMeshClass ? static_cast<UObject *>(LoadObject<UStaticMesh>(nullptr, *MeshPath))
+      : bSkeletalMeshClass ? static_cast<UObject *>(LoadObject<USkeletalMesh>(nullptr, *MeshPath)) : nullptr;
+  UMaterialInterface *MaterialAsset = !MaterialPath.IsEmpty() && CompClass->IsChildOf(UPrimitiveComponent::StaticClass())
+      ? LoadObject<UMaterialInterface>(nullptr, *MaterialPath) : nullptr;
+  if ((!MeshPath.IsEmpty() && !MeshAsset) || (!MaterialPath.IsEmpty() && !MaterialAsset)) {
+    const bool bMesh = !MeshPath.IsEmpty() && !MeshAsset;
+    const bool bCanHold = bMesh ? (bStaticMeshClass || bSkeletalMeshClass) : CompClass->IsChildOf(UPrimitiveComponent::StaticClass());
+    Result->SetBoolField(TEXT("success"), false);
+    Result->SetStringField(TEXT("error"), bCanHold
+        ? FString::Printf(TEXT("%s %s does not load as a %s; nothing was added."), bMesh ? TEXT("meshPath") : TEXT("materialPath"),
+              bMesh ? *MeshPath : *MaterialPath, bMesh ? (bStaticMeshClass ? TEXT("static mesh") : TEXT("skeletal mesh")) : TEXT("material"))
+        : FString::Printf(TEXT("%s shows no %s; send %s only for a %s. Nothing was added."), *CompClass->GetName(),
+              bMesh ? TEXT("mesh") : TEXT("material"), bMesh ? TEXT("meshPath") : TEXT("materialPath"),
+              bMesh ? TEXT("StaticMeshComponent or SkeletalMeshComponent") : TEXT("primitive component")));
+    Result->SetStringField(TEXT("errorCode"), bCanHold ? TEXT("ASSET_NOT_FOUND") : TEXT("INVALID_ARGUMENT"));
+    return Result;
+  }
 
   USCS_Node *NewNode = SCS->CreateNode(CompClass, FName(*ComponentName));
   if (!NewNode) {
@@ -201,34 +223,21 @@ TSharedPtr<FJsonObject> FSCSHandlers::AddSCSComponent(
   }
 
   bool bMeshApplied = false;
-  if (!MeshPath.IsEmpty() && NewNode->ComponentTemplate) {
-    if (UStaticMeshComponent *SMC =
-            Cast<UStaticMeshComponent>(NewNode->ComponentTemplate)) {
-      UStaticMesh *Mesh = LoadObject<UStaticMesh>(nullptr, *MeshPath);
-      if (Mesh) {
-        SMC->SetStaticMesh(Mesh);
-        bMeshApplied = true;
-      }
-    } else if (USkeletalMeshComponent *SkMC =
-                   Cast<USkeletalMeshComponent>(NewNode->ComponentTemplate)) {
-      USkeletalMesh *Mesh = LoadObject<USkeletalMesh>(nullptr, *MeshPath);
-      if (Mesh) {
-        SkMC->SetSkeletalMesh(Mesh, true);
-        bMeshApplied = true;
-      }
+  if (MeshAsset && NewNode->ComponentTemplate) {
+    if (UStaticMeshComponent *SMC = Cast<UStaticMeshComponent>(NewNode->ComponentTemplate)) {
+      SMC->SetStaticMesh(Cast<UStaticMesh>(MeshAsset));
+      bMeshApplied = true;
+    } else if (USkeletalMeshComponent *SkMC = Cast<USkeletalMeshComponent>(NewNode->ComponentTemplate)) {
+      SkMC->SetSkeletalMesh(Cast<USkeletalMesh>(MeshAsset), true);
+      bMeshApplied = true;
     }
   }
 
   bool bMaterialApplied = false;
-  if (!MaterialPath.IsEmpty() && NewNode->ComponentTemplate) {
-    if (UPrimitiveComponent *PC =
-            Cast<UPrimitiveComponent>(NewNode->ComponentTemplate)) {
-      UMaterialInterface *Mat =
-          LoadObject<UMaterialInterface>(nullptr, *MaterialPath);
-      if (Mat) {
-        PC->SetMaterial(0, Mat);
-        bMaterialApplied = true;
-      }
+  if (MaterialAsset && NewNode->ComponentTemplate) {
+    if (UPrimitiveComponent *PC = Cast<UPrimitiveComponent>(NewNode->ComponentTemplate)) {
+      PC->SetMaterial(0, MaterialAsset);
+      bMaterialApplied = true;
     }
   }
 

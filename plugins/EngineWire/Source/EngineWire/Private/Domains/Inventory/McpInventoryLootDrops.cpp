@@ -24,17 +24,31 @@ bool HandleInventoryLootDropActions(UEngineWireSubsystem& Bridge, const FString&
       return true;
     }
 
-    // Get custom tiers from payload or use defaults
+    // A malformed tier used to be skipped, and a list of nothing but those became the five default tiers.
     TArray<TPair<FString, double>> Tiers;
     const TArray<TSharedPtr<FJsonValue>>* TiersArr = nullptr;
     if (Payload->TryGetArrayField(TEXT("tiers"), TiersArr) && TiersArr) {
-      for (const auto& TierVal : *TiersArr) {
+      if (TiersArr->Num() == 0) {
+        Bridge.SendAutomationError(RequestingSocket, RequestId,
+            TEXT("tiers is empty; omit it for the five default tiers. Nothing was changed."), TEXT("INVALID_ARGUMENT"));
+        return true;
+      }
+      for (int32 Index = 0; Index < TiersArr->Num(); ++Index) {
         const TSharedPtr<FJsonObject>* TierObj = nullptr;
-        if (TierVal->TryGetObject(TierObj) && TierObj && (*TierObj).IsValid()) {
-          FString TierName = GetJsonStringField((*TierObj), TEXT("name"));
-          double TierWeight = GetJsonNumberField((*TierObj), TEXT("dropWeight"));
-          Tiers.Add(TPair<FString, double>(TierName, TierWeight));
+        const bool bObject = (*TiersArr)[Index].IsValid() && (*TiersArr)[Index]->TryGetObject(TierObj) && TierObj && (*TierObj).IsValid();
+        const FString TierName = bObject ? GetJsonStringField(*TierObj, TEXT("name")).TrimStartAndEnd() : FString();
+        double TierWeight = -1.0;
+        if (bObject) {
+          (*TierObj)->TryGetNumberField(TEXT("dropWeight"), TierWeight);
         }
+        // The tiers are stored as Name=Weight pairs joined by commas, so neither character can be in a name.
+        if (TierName.IsEmpty() || TierName.Contains(TEXT(",")) || TierName.Contains(TEXT("=")) || TierWeight < 0.0) {
+          Bridge.SendAutomationError(RequestingSocket, RequestId,
+              FString::Printf(TEXT("tiers[%d] needs a name without commas or equals signs and a dropWeight of 0 or more; nothing was changed."), Index),
+              TEXT("INVALID_ARGUMENT"));
+          return true;
+        }
+        Tiers.Add(TPair<FString, double>(TierName, TierWeight));
       }
     }
 
@@ -58,11 +72,10 @@ bool HandleInventoryLootDropActions(UEngineWireSubsystem& Bridge, const FString&
     LootTable->Properties.Add(TEXT("QualityTiers"), FString::Join(Encoded, TEXT(",")));
     LootTable->MarkPackageDirty();
 
-    if (GetJsonBoolField(Payload, TEXT("save"), true)) {
-      McpSafeAssetSave(LootTable);
-    }
+    const bool bSaved = GetJsonBoolField(Payload, TEXT("save"), true) && McpSafeAssetSave(LootTable);
 
     TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
+    Result->SetBoolField(TEXT("saved"), bSaved);
     Result->SetStringField(TEXT("lootTablePath"), LootTablePath);
 
     TArray<TSharedPtr<FJsonValue>> ConfiguredTiers;
@@ -77,6 +90,7 @@ bool HandleInventoryLootDropActions(UEngineWireSubsystem& Bridge, const FString&
     Result->SetBoolField(TEXT("configured"), true);
 
 
+    McpHandlerUtils::AddVerification(Result, LootTable);
     Bridge.SendAutomationResponse(RequestingSocket, RequestId, true,
                            TEXT("Quality tiers configured"), Result);
     return true;

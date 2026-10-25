@@ -6,11 +6,11 @@ Direct plugin MCP implementation for Streamable HTTP/SSE at `/mcp`. This subtree
 | Area | Responsibility |
 |------|----------------|
 | `DynamicTools/` (7) | Enabled state, categories, protected tools; `McpTaskResults` keeps the calls that answered "still running" for `manage_tools get_task_result` |
-| `Execute/` (24) | Native execute pipeline: request parse, folded pins, schema validation, receipts |
+| `Execute/` (25, at cap) | Native execute pipeline: request parse, folded pins, schema validation, receipts, result pages (`McpNativeResultPages`) |
 | `Gateway/` (25, at cap) | Native gateway mirror of the TS engine: catalog, capability store, describe, search, guidance, folding (`McpNativeGatewayFolding`: legacy pairs, pins, `dispatchBy`) |
 | `Generated/` (24) | **ALL GENERATED** capability shards (`npm run registry:generate`). Never hand-edit |
 | `Primitives/` (7) | Prompts, completions, resource revision |
-| `Protocol/` (4) | JSON-RPC parse/build helpers and MCP tool-result envelopes |
+| `Protocol/` (13) | JSON-RPC parse/build helpers, MCP tool-result envelopes, and the 2026-07-28 request path (`McpModernRequest`, `McpModernConsent`, and `McpNativeTransportModern.cpp`, transport members kept here because `Transport/` is full) |
 | `Registry/` (5) | Canonical-name gate, `FMcpToolDefinition` (name/description/category), `McpSchemaBuilder`, cached schemas |
 | `Resources/` (8) | `ue://` resource catalog and readers |
 | `Routing/` (7) | Consolidated parent-tool action routing helpers |
@@ -62,7 +62,9 @@ manage_ai, manage_inventory, manage_interaction, manage_networking, manage_level
 The native transport supports **exactly the three modern MCP versions**:
 `2025-11-25` (latest), `2025-06-18`, and `2025-03-26` (see `McpSupportedProtocolVersions` in `Transport/McpNativeTransportPrivate.h`). At `initialize` it echoes the highest mutually supported version, or the latest for an unknown well-formed request. A post-initialize request that omits the `MCP-Protocol-Version` header is accepted; only a present-but-unsupported value is refused (HTTP 400).
 
-- **The native surface deliberately does NOT implement the later `2026-07-28` release-candidate version.** That RC is fictional for this codebase and is explicitly excluded from `McpSupportedProtocolVersions`; the contract test asserts it never appears as a listed/implemented version.
+- **`2026-07-28` is served per request, beside them** (`Protocol/McpNativeTransportModern.cpp`; it stays out of `McpSupportedProtocolVersions`, which is the initialize set). A request whose `_meta` names it skips initialize and sessions: `HandleModernRequest` checks the version (`-32022`, HTTP 400), the `MCP-Protocol-Version`/`Mcp-Method`/`Mcp-Name` headers against the body (`-32020`, HTTP 400, base64 sentinel decoded), then serves it on one implicit session per principal (salted id, never sent) so the rate limits, pending-call caps and principal checks apply unchanged. `McpModern::FScope` marks the transport thread for the synchronous part: `SendHttpResponse` stamps `resultType` and the `ttlMs`/`cacheScope` hints, `StreamToolCall` copies `bModern`/`bTasks` onto the connection for the streamed result. Unknown methods (ping, logging/setLevel, initialize included) answer 404 `-32601`.
+- **Consent through the client** (`Protocol/McpModernConsent.cpp`): when the gate refuses only for a missing grant and the client declared form elicitation, the call answers `input_required` with a yes/no form and an HMAC-signed `requestState` (per-run key, principal, `McpCanonicalFingerprint` of the call, 10-minute expiry, nonce). A verified yes becomes the grant describe would mint, its nonce single-use through `FMcpConsentLedger`; a no refuses without the describe nextCall.
+- **Tasks extension**: with `io.modelcontextprotocol/tasks` declared, a call still open at 27 s answers a `resultType: "task"` handle; `tasks/get` reads `TaskResults` (the stored tool result once done), `tasks/cancel` stops only a call still waiting in the queue (cancelled after the answer is sent), `tasks/update` refuses (no task waits for input).
 - **Asymmetry with the TS SDK**: the TypeScript stdio server negotiates through the MCP SDK's `SUPPORTED_PROTOCOL_VERSIONS`, which also accepts two older legacy versions (`2024-11-05` and `2024-10-07`). The native `/mcp` transport is intentionally stricter (modern versions only), so a client pinned to a legacy version will negotiate with the TS surface but not the native surface.
 
 ## GATEWAY DISCOVERY

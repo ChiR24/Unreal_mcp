@@ -81,6 +81,13 @@ bool HandleCreateMediaSoundComponent(UEngineWireSubsystem *Subsystem,
     ComponentName =
         FString::Printf(TEXT("MediaSound_%s"), *Player->GetName());
   }
+  // NewObject over a component of that name (a second call for the same player) collided with it; refuse instead.
+  if (FindObject<UObject>(Actor, *ComponentName)) {
+    SendMediaError(Subsystem, Socket, RequestId, TEXT("NAME_TAKEN"),
+                   FString::Printf(TEXT("%s already has a component named %s; pick another componentName. Nothing was added."),
+                                   *Actor->GetActorLabel(), *ComponentName));
+    return true;
+  }
   Actor->Modify();
   UActorComponent *Component = NewObject<UActorComponent>(
       Actor, ComponentClass, FName(*ComponentName), RF_Transactional);

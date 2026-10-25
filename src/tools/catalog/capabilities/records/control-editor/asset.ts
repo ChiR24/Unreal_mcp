@@ -68,8 +68,8 @@ export const ASSET_RECORDS: readonly CapabilityRecordSource[] = [
   buildCoreRecord({
     parentTool: 'control_editor', action: 'open_asset', domain: D, family: F,
     topics: ['open blueprint editor', 'open asset editor', 'open in editor'],
-    summary: 'Open an asset in the appropriate editor by asset path.',
-    whenToUse: ['An asset must be opened for editing or inspection.'],
+    summary: 'Open an asset\'s editor (a Blueprint, a material, a widget, a sequence) by asset path, loading the asset first; it must be known to the asset registry (ASSET_NOT_FOUND). Under -NullRHI it loads the asset and opens no window, and says so.',
+    whenToUse: ['An asset must be opened for the user to look at or edit by hand, or so focus reads what is open.'],
     whenNotToUse: ['The asset is already open.'],
     inputProps: { assetPath: P.assetPath },
     required: ['assetPath'],
@@ -91,7 +91,7 @@ export const ASSET_RECORDS: readonly CapabilityRecordSource[] = [
   buildCoreRecord({
     parentTool: 'control_editor', action: 'open_level', domain: D, family: F,
     topics: ['open map', 'open level asset'],
-    summary: 'Open a level by asset path, loading it as the current level.',
+    summary: 'Open a level from disk by its path (/Game/Maps/Demo; an object path such as /Game/Maps/Demo.Demo, or a bare name read as /Game/<name>, works too), replacing the open level: Play In Editor is stopped and asset editors close. Unsaved levels are refused, never saved (DIRTY_PACKAGES); the reply waits for the level to settle (settledSeconds).',
     whenToUse: ['A different level must be loaded into the editor.'],
     whenNotToUse: ['The level is already loaded.',
       'Open levels have unsaved changes: opening another level would drop them, so the call is refused with DIRTY_PACKAGES, listing them in unsavedPackages. Save first (manage_level save), or use manage_level load, which takes saveDirtyPackages or discardUnsaved.'],
@@ -119,9 +119,10 @@ export const ASSET_RECORDS: readonly CapabilityRecordSource[] = [
   buildCoreRecord({
     parentTool: 'control_editor', action: 'save_all', domain: D, family: F,
     topics: ['save all', 'save everything', 'save dirty packages', 'save project', 'save assets', 'save asset', 'save one asset'],
-    summary: 'Save all dirty assets and levels in the editor, or only the ones listed in assetPaths.',
+    summary: 'Save every level and asset with unsaved changes, or only the packages named in assetPaths (the other dirty ones stay unsaved and are listed in leftDirtyPackages). Temporary packages are skipped; one that fails to save (read-only, not checked out) is listed in failedPackages and fails the call with SAVE_FAILED while the rest stay written. Refused during a Movie Render Queue render (RENDER_IN_PROGRESS). Not undoable.',
     whenToUse: ['All unsaved changes must be persisted.', 'Only the assets this task changed should be saved (assetPaths), leaving other unsaved work alone.'],
-    whenNotToUse: ['Nothing has changed since the last save.'],
+    whenNotToUse: ['Nothing has changed since the last save.',
+      'A Movie Render Queue render is running: its sequence is in a temporary state until the job ends, so the save is refused with RENDER_IN_PROGRESS.'],
     inputProps: {
       // Saving everything also wrote out unrelated work someone had open, and the
       // contract pointed at a per-asset save that did not exist.

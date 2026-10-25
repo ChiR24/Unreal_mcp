@@ -14,13 +14,12 @@ bool HandleInventoryDataAssetActions(UEngineWireSubsystem& Bridge, const FString
       return true;
     }
 
-    FString PathError;
+    FString PackageError;
+    FString PackageCode;
     FString SanitizedName = SanitizeAssetName(Name);
-    UPackage* Package = CreateValidatedInventoryAssetPackage(Path, SanitizedName, PathError);
+    UPackage* Package = CreateInventoryAssetPackage(Path, SanitizedName, PackageError, PackageCode);
     if (!Package) {
-      Bridge.SendAutomationError(RequestingSocket, RequestId,
-                          PathError.IsEmpty() ? TEXT("Failed to create package") : PathError,
-                          TEXT("PACKAGE_CREATE_FAILED"));
+      Bridge.SendAutomationError(RequestingSocket, RequestId, PackageError, PackageCode);
       return true;
     }
 
@@ -32,11 +31,10 @@ bool HandleInventoryDataAssetActions(UEngineWireSubsystem& Bridge, const FString
       ItemAsset->MarkPackageDirty();
       FAssetRegistryModule::AssetCreated(ItemAsset);
 
-      if (GetJsonBoolField(Payload, TEXT("save"), true)) {
-        McpSafeAssetSave(ItemAsset);
-      }
+      const bool bSaved = GetJsonBoolField(Payload, TEXT("save"), true) && McpSafeAssetSave(ItemAsset);
 
       TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
+      Result->SetBoolField(TEXT("saved"), bSaved);
       Result->SetStringField(TEXT("assetName"), SanitizedName);
       McpHandlerUtils::AddVerification(Result, ItemAsset);
       Bridge.SendAutomationResponse(RequestingSocket, RequestId, true,
@@ -74,6 +72,14 @@ bool HandleInventoryDataAssetActions(UEngineWireSubsystem& Bridge, const FString
     const TSharedPtr<FJsonObject>* PropertiesObj = nullptr;
     TArray<FString> ModifiedProperties;
     TArray<FString> FailedProperties;
+    // No properties used to answer success with modified:false after saving the untouched asset.
+    if (!Payload->TryGetObjectField(TEXT("properties"), PropertiesObj) || !PropertiesObj || !(*PropertiesObj).IsValid() ||
+        (*PropertiesObj)->Values.Num() == 0) {
+      Bridge.SendAutomationError(RequestingSocket, RequestId,
+          TEXT("properties is required: an object of field names and values, such as {\"Weight\": 0.5}. Nothing was changed."),
+          TEXT("INVALID_ARGUMENT"));
+      return true;
+    }
 
     if (Payload->TryGetObjectField(TEXT("properties"), PropertiesObj) && PropertiesObj && (*PropertiesObj).IsValid()) {
       // Iterate through all properties in the JSON and apply them via reflection
@@ -114,13 +120,14 @@ bool HandleInventoryDataAssetActions(UEngineWireSubsystem& Bridge, const FString
       }
     }
 
-    ItemAsset->MarkPackageDirty();
-
-    if (GetJsonBoolField(Payload, TEXT("save"), true)) {
-      McpSafeAssetSave(ItemAsset);
+    bool bSaved = false;
+    if (ModifiedProperties.Num() > 0) {
+      ItemAsset->MarkPackageDirty();
+      bSaved = GetJsonBoolField(Payload, TEXT("save"), true) && McpSafeAssetSave(ItemAsset);
     }
 
     TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
+    Result->SetBoolField(TEXT("saved"), bSaved);
     Result->SetBoolField(TEXT("modified"), ModifiedProperties.Num() > 0);
     Result->SetNumberField(TEXT("propertiesModified"), ModifiedProperties.Num());
     McpHandlerUtils::AddVerification(Result, ItemAsset);

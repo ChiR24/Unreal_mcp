@@ -15,7 +15,7 @@ const STEP_DILATION = { type: 'number', description: 'The game speed the steps r
 export const TIMING_RECORDS: readonly CapabilityRecordSource[] = [
   buildCoreRecord({
     parentTool: 'control_editor', action: 'set_game_speed', domain: D, family: F,
-    summary: 'Set the speed of the running game (PIE time dilation), for slow motion while testing.',
+    summary: 'Set the speed of the running game (Play In Editor time dilation, above 0 and up to 20; 1 is normal), for slow motion while testing. The reply gives speed, the dilation the world holds after the game clamps it, and timeDilation, the effective one. Refused when Play In Editor is not running (NO_ACTIVE_SESSION).',
     whenToUse: ['Game speed must be changed for testing, e.g. slowed down to observe a short-lived actor.'],
     whenNotToUse: ['PIE is not running (start it with control_editor play first).'],
     inputProps: { speed: P.speed },
@@ -37,7 +37,7 @@ export const TIMING_RECORDS: readonly CapabilityRecordSource[] = [
   }),
   buildCoreRecord({
     parentTool: 'control_editor', action: 'step_frame', domain: D, family: F,
-    summary: 'Advance the PIE simulation by one or more frames, each at the current game speed (slow motion makes each step shorter; timeDilation says so).',
+    summary: 'Advance the PIE simulation by one or more frames, each at the current game speed (slow motion makes each step shorter; timeDilation says so). The warnings say what the game logged during the steps, and a Blueprint runtime error names the node, graph and Blueprint that raised it.',
     whenToUse: ['The simulation must advance a fixed number of frames.'],
     whenNotToUse: ['Real-time simulation is preferred.'],
     inputProps: { steps: P.steps },

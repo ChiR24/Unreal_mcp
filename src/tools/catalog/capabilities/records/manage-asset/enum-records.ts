@@ -6,7 +6,7 @@ import { arr, bool, DESTRUCTIVE, DESTRUCTIVE_POLICY, ex, LOW, MEDIUM, NON_IDEMPO
 import { schema } from '../shared/record-presets.js';
 
 const ENUM_PATH = str('Asset path of the UserDefinedEnum (e.g. /Game/Enums/E_MyEnum).');
-const VALUE_NAME = str('Enum value (entry) name.');
+const VALUE_NAME = str('Enum value (entry), by its internal name or the name the editor shows (get_enum lists both as name and displayName).');
 const SAVE = bool('Persist the enum asset to disk. Defaults to true; pass false to keep the change in memory only.');
 const OK = schema({ success: bool('Operation succeeded.'), details: { type: 'object', 'x-unreal-reflection-boundary': true, description: 'Operation details.' } }, ['success']);
 
@@ -14,13 +14,13 @@ const E = '/Game/Enums/E_WeaponType';
 const DONE = { success: true };
 
 export const ENUM_RECORDS: readonly RecordSpec[] = [
-  r('create_enum', 'enum', 'Create a new UserDefinedEnum asset.', schema({ name: str('Enum name.'), path: str('Package path.'), enumPath: ENUM_PATH, values: arr('Initial enum value names.'), save: SAVE }, [], ['name', 'enumPath']), OK, WRITE, WRITE_POLICY, MEDIUM,
+  r('create_enum', 'enum', 'Create a new UserDefinedEnum asset.', schema({ name: str('Enum name.'), path: str('Package path (default /Game/Enums).'), enumPath: ENUM_PATH, values: arr('create: the initial value names in order, as strings or { name } objects (a name given twice is refused and nothing is made). split: the values to copy into the new enum, by internal or shown name.'), save: SAVE }, [], ['name', 'enumPath']), OK, WRITE, WRITE_POLICY, MEDIUM,
     { examples: [ex('Create a weapon-type enum', { name: 'E_WeaponType', path: '/Game/Enums', values: ['Melee', 'Ranged', 'Thrown'] }, DONE)],
       whenToUse: ['A new Blueprint enum is needed for a fixed set of named choices; pass values for its entries. It is saved unless save is false.'],
       whenNotToUse: ['A group of typed fields is needed rather than a list of names (use struct.edit_struct).'] }),
   r('delete_enum', 'enum', 'Delete a UserDefinedEnum asset.', schema({ enumPath: ENUM_PATH }, ['enumPath']), OK, { ...DESTRUCTIVE, longRunning: false }, DESTRUCTIVE_POLICY, LOW,
     { examples: [ex('Delete an obsolete enum', { enumPath: '/Game/Enums/E_Deprecated' }, DONE)],
-      whenToUse: ['An obsolete enum asset must be deleted from the project; a blocked delete is reported as DELETE_FAILED.'],
+      whenToUse: ['An obsolete enum asset must be deleted from the project; while anything still uses it the delete is refused (DELETE_FAILED) and referencedBy names what does.'],
       whenNotToUse: ['Assets that still use the enum must be found first (use asset.inspect_asset with lookup=dependencies and referencers=true).', 'The enum should be renamed or moved, not deleted (use asset.rename).'] }),
   r('get_enum', 'enum', 'Read a Blueprint enum (UserDefinedEnum): every entry with its name and numeric value, plus the value count.', schema({ enumPath: ENUM_PATH }, ['enumPath']), OK, READ, READ_POLICY, LOW,
     { topics: ['entry names and values', 'list entries', 'show enum values'], examples: [ex('Read an enum\'s values', { enumPath: E }, DONE)],
@@ -32,17 +32,17 @@ export const ENUM_RECORDS: readonly RecordSpec[] = [
       whenNotToUse: ['The existing entries must only be read (use enum.get_enum).'] }),
   r('remove_enum_value', 'enum', 'Remove a value from a UserDefinedEnum.', schema({ enumPath: ENUM_PATH, valueName: VALUE_NAME, save: SAVE }, ['enumPath', 'valueName']), OK, { ...DESTRUCTIVE, longRunning: false }, DESTRUCTIVE_POLICY, LOW,
     { examples: [ex('Remove an unused weapon type', { enumPath: E, valueName: 'Thrown' }, DONE)],
-      whenToUse: ['One entry must be dropped from an enum; the entries after it are renumbered.'],
+      whenToUse: ['One entry must be dropped from an enum. The entries after it move up one, as in the enum editor: loaded Blueprints and assets holding them keep their entries (remapped by name), graph pins set to the dropped entry are reset to the first one, and nodes that list the entries are rebuilt.'],
       whenNotToUse: ['An entry only needs a new name (use enum.edit_enum).'] }),
-  r('rename_enum_value', 'enum', 'Rename a value in a UserDefinedEnum.', schema({ enumPath: ENUM_PATH, valueName: VALUE_NAME, newValueName: str('New enum value name.'), save: SAVE }, ['enumPath', 'valueName', 'newValueName']), OK, NON_IDEMPOTENT, WRITE_POLICY, LOW,
+  r('rename_enum_value', 'enum', 'Rename a value in a UserDefinedEnum.', schema({ enumPath: ENUM_PATH, valueName: VALUE_NAME, newValueName: str('New name the editor shows; the internal name stored values hold stays.'), save: SAVE }, ['enumPath', 'valueName', 'newValueName']), OK, NON_IDEMPOTENT, WRITE_POLICY, LOW,
     { examples: [ex('Rename Ranged to Firearm', { enumPath: E, valueName: 'Ranged', newValueName: 'Firearm' }, DONE)],
       whenToUse: ['An enum entry needs a new name while keeping its place in the order.'],
       whenNotToUse: ['An entry must be dropped, not renamed (use enum.delete_enum with deleteScope=value).'] }),
-  r('reorder_enum_values', 'enum', 'Reorder values in a UserDefinedEnum.', schema({ enumPath: ENUM_PATH, order: arr('Desired value name order.'), save: SAVE }, ['enumPath', 'order']), OK, WRITE, WRITE_POLICY, LOW,
+  r('reorder_enum_values', 'enum', 'Reorder values in a UserDefinedEnum.', schema({ enumPath: ENUM_PATH, order: arr('Every value once, in the new order, by internal or shown name; a partial list is refused.'), save: SAVE }, ['enumPath', 'order']), OK, WRITE, WRITE_POLICY, LOW,
     { examples: [ex('Put ranged weapons first', { enumPath: E, order: ['Ranged', 'Melee', 'Thrown'] }, DONE)],
-      whenToUse: ['The order of entries must change; the order list must name every current value and numeric values follow the new order.'],
+      whenToUse: ['The order of entries must change; the order list must name every current value and numeric values follow the new order, while loaded Blueprints and assets holding the entries keep them (remapped by name, as the enum editor does).'],
       whenNotToUse: ['The current order must be checked before reordering (use enum.get_enum).'] }),
-  r('set_enum_value_metadata', 'enum', 'Set metadata (tooltip, etc.) on an enum value.', schema({ enumPath: ENUM_PATH, valueName: VALUE_NAME, key: str('Metadata key.'), value: { description: 'Metadata value.' }, save: SAVE }, ['enumPath', 'valueName', 'key']), OK, WRITE, WRITE_POLICY, LOW,
+  r('set_enum_value_metadata', 'enum', 'Set metadata (tooltip, etc.) on an enum value.', schema({ enumPath: ENUM_PATH, valueName: VALUE_NAME, key: str('Metadata key on the entry, such as ToolTip.'), value: { description: 'Metadata value (text).' }, save: SAVE }, ['enumPath', 'valueName', 'key']), OK, WRITE, WRITE_POLICY, LOW,
     { examples: [ex('Document a value with a tooltip', { enumPath: E, valueName: 'Melee', key: 'ToolTip', value: 'Close-quarters weapon.' }, DONE)],
       whenToUse: ['A metadata key such as ToolTip must be stored against one enum entry.'],
       whenNotToUse: ['Metadata for a struct field is wanted (use struct.edit_struct).'] }),

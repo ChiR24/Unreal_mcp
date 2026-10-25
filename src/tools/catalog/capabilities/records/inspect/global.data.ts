@@ -109,6 +109,31 @@ export const GLOBAL_RECORDS: readonly CapabilityRecordSource[] = [
     exampleOutput: { success: true, message: 'Selected actors', actors: [] },
     outputProps: { actors: { type: 'array', items: { type: 'object', additionalProperties: true, 'x-unreal-reflection-boundary': true }, description: 'Selected actor info objects.' } },
   }),
+  // A model asked to fix "this node" or "what I have open" could not tell what that was.
+  buildCoreRecord({
+    parentTool: 'inspect', action: 'get_editor_focus', dispatchAction: 'get_editor_focus', domain: D, family: 'global',
+    topics: ['what is open', 'what the user is looking at', 'open asset editors', 'current blueprint', 'selected nodes', 'focused graph', 'this node', 'recent errors', 'editor focus'],
+    summary: 'Read what the user is working on: the open asset editors (most recently used first), each open Blueprint editor\'s graph in front and its selected nodes (title and nodeId), the selected actors, the distinct warnings and errors of the last minute, and the Blueprint runtime errors of the last play session.',
+    whenToUse: ['A request names something the user has in front of them ("this node", "the Blueprint I have open", "fix that error") and it must be resolved to an asset, a graph or a node.', 'Work should start from the editor state the user left (the selected nodes, the open editors).'],
+    whenNotToUse: ['Only the selected actors are needed (use editorState selected_actors).', 'The whole log is wanted (use the log read).'],
+    inputProps: {},
+    required: [],
+    effect: 'read',
+    exampleInput: { action: 'get_editor_focus' },
+    exampleOutput: {
+      success: true, message: '2 asset editor(s) open; BP_Door has 1 node selected in EventGraph.',
+      openEditors: [{ asset: '/Game/Blueprints/BP_Door', editor: 'BlueprintEditor' }, { asset: '/Game/Materials/M_Wood', editor: 'MaterialEditor' }],
+      blueprints: [{ blueprint: '/Game/Blueprints/BP_Door', graph: 'EventGraph', selectedNodes: [{ title: 'Set Actor Location', nodeId: '1C2B7F7A4B4E1F0D9E1A2B3C4D5E6F70', class: 'K2Node_CallFunction' }] }],
+      selectedActors: ['Door_01'], recentWarnings: [], scriptErrors: [],
+    },
+    outputProps: {
+      openEditors: { type: 'array', items: { type: 'object', additionalProperties: true, 'x-unreal-reflection-boundary': true }, description: 'Each asset open in an editor, most recently used first: asset (its path) and editor (BlueprintEditor, MaterialEditor, ...).' },
+      blueprints: { type: 'array', items: { type: 'object', additionalProperties: true, 'x-unreal-reflection-boundary': true }, description: 'Each open Blueprint editor, most recently used first: blueprint (path), graph (the graph whose editor last had keyboard focus; absent until one has) and selectedNodes [{title, nodeId, class}]; nodeId is what the graph tools take.' },
+      selectedActors: { type: 'array', items: { type: 'string' }, description: 'Labels of the actors selected in the level (at most 50).' },
+      recentWarnings: { type: 'array', items: { type: 'string' }, description: 'The distinct warnings and errors logged in the last minute ("3x Category: message"), at most 10, a Blueprint runtime error first with the node that raised it.' },
+      scriptErrors: { type: 'array', items: { type: 'object', additionalProperties: true, 'x-unreal-reflection-boundary': true }, description: 'The Blueprint runtime errors of the last play session, as runtime_report lists them (message, node, nodeId, graph, blueprintPath, count).' },
+    },
+  }),
 ];
 
 export const EDITOR_SETTINGS_RECORD: CapabilityRecordSource = buildCoreRecord({

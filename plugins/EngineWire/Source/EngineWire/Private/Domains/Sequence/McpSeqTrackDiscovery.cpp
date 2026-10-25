@@ -1,5 +1,6 @@
 #include "Core/Compatibility/McpVersionCompatibility.h"
 #include "Domains/Sequence/McpSeqEditorSupport.h"
+#include "Sections/MovieSceneSkeletalAnimationSection.h"
 #include "Tracks/MovieSceneCameraCutTrack.h"
 
 namespace McpSequenceTracks {
@@ -45,6 +46,17 @@ bool HandleListTracks(UEngineWireSubsystem *Subsystem,
       TrackObj->SetStringField(TEXT("bindingGuid"), Binding->GetObjectGuid().ToString());
     }
     TrackObj->SetNumberField(TEXT("sectionCount"), Track->GetAllSections().Num());
+    // Mute and solo had nothing to read them back with.
+    TrackObj->SetBoolField(TEXT("muted"), Track->IsEvalDisabled());
+    // Which clip plays where read only through info=keys or a property read of each section.
+    TArray<FString> Clips;
+    for (const UMovieSceneSection *Section : Track->GetAllSections()) {
+      const UMovieSceneSkeletalAnimationSection *Clip = Cast<UMovieSceneSkeletalAnimationSection>(Section);
+      if (Clip && Clip->Params.Animation)
+        Clips.AddUnique(Clip->Params.Animation->GetPathName());
+    }
+    if (Clips.Num() > 0)
+      TrackObj->SetArrayField(TEXT("animations"), McpHandlerUtils::ToJsonStringArray(Clips));
     TrackObj->SetBoolField(TEXT("isCameraCut"), Track->IsA<UMovieSceneCameraCutTrack>());
     TracksArray.Add(MakeShared<FJsonValueObject>(TrackObj));
   };

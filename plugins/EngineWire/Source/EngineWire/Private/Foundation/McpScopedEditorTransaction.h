@@ -16,7 +16,8 @@
 // Three further checks run before a transaction is opened, because a transaction
 // that records nothing is the same lie in a different shape:
 //   * GEditor->Trans must exist (no buffer, no undo).
-//   * Every captured object must carry RF_Transactional.
+//   * Every captured object must carry RF_Transactional. An asset is given it first, as an asset editor gives the
+//     asset it opens; any other object without it is refused.
 //   * Modify() must actually return true for every captured object; UObject::
 //     Modify() reports whether the object reached the transaction buffer, and a
 //     false there means undo cannot restore that object. The transaction is

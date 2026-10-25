@@ -6,12 +6,18 @@
 #include "Foundation/HandlerUtils/McpHandlerUtils.h"
 
 #include "Engine/Blueprint.h"
+#include "Engine/Level.h"
 
 namespace McpBlueprintHandlers {
 bool HandleBlueprintCompile(const FBlueprintActionContext &Context) {
   MCP_BLUEPRINT_ACTION_LOCALS(Context);
   if (ActionMatchesPattern(TEXT("compile"))) {
     FString Path = ResolveBlueprintRequestedPath();
+    FString Folder;
+    if (Path.IsEmpty() && LocalPayload->TryGetStringField(TEXT("folder"), Folder)) {
+      McpCompileBlueprintFolder(Context, Folder);
+      return true;
+    }
     if (Path.IsEmpty()) {
       Bridge.SendAutomationResponse(
           RequestingSocket, RequestId, false,
@@ -47,7 +53,9 @@ bool HandleBlueprintCompile(const FBlueprintActionContext &Context) {
     bool bSaveSkipped = false;
     if (bSaveAfterCompile) {
       if (bCompiled) {
-        bSaved = SaveLoadedAssetThrottled(BP);
+        // A level Blueprint is saved with its level: the asset saver never writes a level's package.
+        ULevel *Level = Cast<ULevel>(BP->GetOuter());
+        bSaved = Level ? McpSafeLevelSave(Level, BP->GetOutermost()->GetName()) : SaveLoadedAssetThrottled(BP);
       } else {
         // Don't persist a blueprint that just failed to compile.
         bSaveSkipped = true;

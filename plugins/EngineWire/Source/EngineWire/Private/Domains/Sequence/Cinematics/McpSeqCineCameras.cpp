@@ -5,6 +5,7 @@
 
 #include "Foundation/BridgeHelpers/McpHelpers.h"
 #include "Foundation/Reflection/McpPropertyReflection.h"
+#include "Foundation/McpScopedEditorTransaction.h"
 
 namespace McpSequenceCinematics {
 namespace {
@@ -70,6 +71,7 @@ int32 ApplyCameraSettings(AActor *Actor, const TSharedPtr<FJsonObject> &Params,
     Result->SetArrayField(TEXT("appliedProperties"), TArray<TSharedPtr<FJsonValue>>());
     return INDEX_NONE;
   }
+  Camera->Modify();
   ApplyNumberAliases(Camera, Params, TEXT("currentFocalLength"),
                      TEXT("focalLength"), TEXT("lens"),
                      TEXT("CurrentFocalLength"), Applied);
@@ -85,6 +87,20 @@ int32 ApplyCameraSettings(AActor *Actor, const TSharedPtr<FJsonObject> &Params,
   TArray<TSharedPtr<FJsonValue>> Values;
   for (const FString &Name : Applied) Values.Add(MakeShared<FJsonValueString>(Name));
   Result->SetArrayField(TEXT("appliedProperties"), Values);
+  if (Applied.Num() > 0) {
+    // As the details panel does: the lens re-derives its field of view and clamps to the lens and filmback limits,
+    // so the reply reads back what the camera kept (a focal length past the lens's range came back as asked).
+    Camera->PostEditChange();
+    TSharedPtr<FJsonObject> Kept = MakeShared<FJsonObject>();
+    for (const FString &Name : Applied) {
+      void *Container = nullptr;
+      FString Error;
+      const FNumericProperty *Numeric = CastField<FNumericProperty>(ResolveNestedPropertyPath(Camera, *Name, Container, Error));
+      if (Numeric && Container)
+        Kept->SetNumberField(Name, Numeric->GetFloatingPointPropertyValue(Numeric->ContainerPtrToValuePtr<void>(Container)));
+    }
+    Result->SetObjectField(TEXT("values"), Kept);
+  }
   return Applied.Num();
 }
 
@@ -173,6 +189,9 @@ bool HandleConfigureCameraSettings(const TSharedPtr<FJsonObject> &Params,
   }
   OutResult = MakeResult(true, TEXT("configure_camera_settings"),
                          TEXT("Camera settings configured"));
+  // Modify() ran after the writes with no transaction open, so undo restored nothing.
+  FMcpScopedEditorTransaction Transaction(FText::FromString(TEXT("Configure Camera Settings")),
+                                          EMcpMutationDurability::EditorStateOnly, TArray<UObject *>());
   const int32 AppliedCount = ApplyCameraSettings(Actor, Params, OutResult);
   if (AppliedCount == INDEX_NONE) {
     OutResult = MakeResult(false, TEXT("configure_camera_settings"),
@@ -186,7 +205,7 @@ bool HandleConfigureCameraSettings(const TSharedPtr<FJsonObject> &Params,
                            TEXT("INVALID_ARGUMENT"));
     return true;
   }
-  Actor->Modify();
+  Transaction.DescribeInto(OutResult);
   McpHandlerUtils::AddVerification(OutResult, Actor);
   return true;
 #endif

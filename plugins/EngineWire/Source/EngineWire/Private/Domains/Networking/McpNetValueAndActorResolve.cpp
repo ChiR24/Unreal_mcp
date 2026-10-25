@@ -1,5 +1,7 @@
 #include "Domains/Networking/McpNetPrivate.h"
 
+#include "Kismet2/Kismet2NameValidators.h"
+
 namespace McpNetworkingHandlers
 {
 UBlueprint* LoadBlueprintOrReply(FNetworkingActionContext& Context, const FString& BlueprintPath)
@@ -21,7 +23,15 @@ bool SaveBlueprintAndReply(FNetworkingActionContext& Context, UBlueprint* Bluepr
 {
     Blueprint->Modify();
     FBlueprintEditorUtils::MarkBlueprintAsModified(Blueprint);
-    McpSafeAssetSave(Blueprint);
+    // A Blueprint that could not be written answered success, with only saved false to tell.
+    if (!McpSafeAssetSave(Blueprint))
+    {
+        Context.Bridge.SendAutomationError(Context.RequestingSocket, Context.RequestId, FString::Printf(TEXT("%s in this editor "
+            "session, but %s could NOT be written to disk (file may be read-only or held by source control)."), *Detail,
+            *Blueprint->GetPathName()), TEXT("SAVE_FAILED"));
+        return true;
+    }
+    Context.ResultJson->SetBoolField(TEXT("saved"), true);
     Context.ResultJson->SetBoolField(TEXT("success"), true);
     Context.ResultJson->SetStringField(TEXT("message"), Detail);
     McpHandlerUtils::AddVerification(Context.ResultJson, Blueprint);
@@ -34,6 +44,39 @@ UBlueprint* LoadBlueprintFromPath(const FString& BlueprintPath)
     FString Normalized;
     FString Error;
     return LoadBlueprintAsset(BlueprintPath, Normalized, Error);
+}
+
+UEdGraph* FindFunctionGraph(UBlueprint* Blueprint, const FName Name)
+{
+    for (UEdGraph* Graph : Blueprint->FunctionGraphs)
+    {
+        if (Graph && Graph->GetFName() == Name)
+        {
+            return Graph;
+        }
+    }
+    return nullptr;
+}
+
+bool CheckFreeMemberNameOrReply(FNetworkingActionContext& Context, UBlueprint* Blueprint, const FString& Name, const TCHAR* Field)
+{
+    const EValidatorResult Check = FKismetNameValidator(Blueprint).IsValid(Name);
+    if (Check == EValidatorResult::Ok)
+    {
+        return true;
+    }
+    const bool bTaken = Check == EValidatorResult::AlreadyInUse || Check == EValidatorResult::ExistingName || Check == EValidatorResult::LocallyInUse;
+    if (bTaken)
+    {
+        Context.Bridge.SendAutomationError(Context.RequestingSocket, Context.RequestId,
+            FString::Printf(TEXT("%s '%s' is already a function, variable, event or other member of %s (or of its parent class); pick another name. Nothing was changed."), Field, *Name, *Blueprint->GetName()),
+            TEXT("NAME_TAKEN"));
+        return false;
+    }
+    Context.Bridge.SendAutomationError(Context.RequestingSocket, Context.RequestId,
+        FString::Printf(TEXT("%s '%s' is not a valid member name (empty, too long, or holding characters a Blueprint name cannot). Nothing was changed."), Field, *Name),
+        TEXT("INVALID_ARGUMENT"));
+    return false;
 }
 
 void ReplyInvalidEnum(FNetworkingActionContext& Context, const TCHAR* Field, const FString& Value, const FString& ValidNames)

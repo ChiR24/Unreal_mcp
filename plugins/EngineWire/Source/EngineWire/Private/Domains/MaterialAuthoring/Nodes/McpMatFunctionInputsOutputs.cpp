@@ -44,31 +44,42 @@ bool HandleFunctionInputsOutputs(UEngineWireSubsystem* Bridge, const FString& Re
       return true;
     }
 
+    const bool bInput = SubAction == TEXT("add_function_input");
+    // A name the function already has fails its compile ("used more than once"), so it is refused here.
+    for (UMaterialExpression *Existing : MCP_GET_FUNCTION_EXPRESSIONS(Func)) {
+      const UMaterialExpressionFunctionInput *In = Cast<UMaterialExpressionFunctionInput>(Existing);
+      const UMaterialExpressionFunctionOutput *Out = Cast<UMaterialExpressionFunctionOutput>(Existing);
+      if ((bInput && In && In->InputName == FName(*InputName)) || (!bInput && Out && Out->OutputName == FName(*InputName))) {
+        Bridge->SendAutomationError(Socket, RequestId,
+            FString::Printf(TEXT("The function already has an %s named '%s'."), bInput ? TEXT("input") : TEXT("output"), *InputName),
+            TEXT("NAME_TAKEN"));
+        return true;
+      }
+    }
+
     UMaterialExpression *NewExpr = nullptr;
-    if (SubAction == TEXT("add_function_input")) {
+    if (bInput) {
+      // An unknown type became a Vector3 without a word; empty still means Vector3.
+      static const TMap<FString, EFunctionInputType> Types = {
+          {TEXT("Scalar"), FunctionInput_Scalar}, {TEXT("Float1"), FunctionInput_Scalar},
+          {TEXT("Vector2"), FunctionInput_Vector2}, {TEXT("Float2"), FunctionInput_Vector2},
+          {TEXT("Vector3"), FunctionInput_Vector3}, {TEXT("Float3"), FunctionInput_Vector3},
+          {TEXT("Vector4"), FunctionInput_Vector4}, {TEXT("Float4"), FunctionInput_Vector4},
+          {TEXT("Texture2D"), FunctionInput_Texture2D}, {TEXT("TextureCube"), FunctionInput_TextureCube},
+          {TEXT("Bool"), FunctionInput_StaticBool}, {TEXT("MaterialAttributes"), FunctionInput_MaterialAttributes}};
+      const EFunctionInputType *Type = InputType.IsEmpty() ? nullptr : Types.Find(InputType);
+      if (!InputType.IsEmpty() && !Type) {
+        Bridge->SendAutomationError(Socket, RequestId,
+            FString::Printf(TEXT("Unknown inputType '%s'. Use Scalar, Vector2, Vector3, Vector4, Texture2D, TextureCube, Bool or MaterialAttributes."), *InputType),
+            TEXT("INVALID_ARGUMENT"));
+        return true;
+      }
       UMaterialExpressionFunctionInput *Input =
           NewObject<UMaterialExpressionFunctionInput>(
               Func, UMaterialExpressionFunctionInput::StaticClass(), NAME_None,
               RF_Transactional);
       Input->InputName = FName(*InputName);
-      if (InputType == TEXT("Float1") || InputType == TEXT("Scalar"))
-        Input->InputType = EFunctionInputType::FunctionInput_Scalar;
-      else if (InputType == TEXT("Float2") || InputType == TEXT("Vector2"))
-        Input->InputType = EFunctionInputType::FunctionInput_Vector2;
-      else if (InputType == TEXT("Float3") || InputType == TEXT("Vector3"))
-        Input->InputType = EFunctionInputType::FunctionInput_Vector3;
-      else if (InputType == TEXT("Float4") || InputType == TEXT("Vector4"))
-        Input->InputType = EFunctionInputType::FunctionInput_Vector4;
-      else if (InputType == TEXT("Texture2D"))
-        Input->InputType = EFunctionInputType::FunctionInput_Texture2D;
-      else if (InputType == TEXT("TextureCube"))
-        Input->InputType = EFunctionInputType::FunctionInput_TextureCube;
-      else if (InputType == TEXT("Bool"))
-        Input->InputType = EFunctionInputType::FunctionInput_StaticBool;
-      else if (InputType == TEXT("MaterialAttributes"))
-        Input->InputType = EFunctionInputType::FunctionInput_MaterialAttributes;
-      else
-        Input->InputType = EFunctionInputType::FunctionInput_Vector3;
+      Input->InputType = Type ? *Type : FunctionInput_Vector3;
       NewExpr = Input;
     } else {
       UMaterialExpressionFunctionOutput *Output =
@@ -85,14 +96,13 @@ bool HandleFunctionInputsOutputs(UEngineWireSubsystem* Bridge, const FString& Re
     AddExpressionToContainer(nullptr, Func, NewExpr);
     McpFinishMaterialEdit(RequestId, Func);
 
-    TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
+    TSharedPtr<FJsonObject> Result = McpMaterialHostResult(Func);
     Result->SetStringField(TEXT("nodeId"),
                            MCP_NODE_ID(NewExpr));
     Bridge->SendAutomationResponse(
         Socket, RequestId, true,
         FString::Printf(TEXT("Function %s '%s' added."),
-                        SubAction == TEXT("add_function_input") ? TEXT("input")
-                                                                 : TEXT("output"),
+                        bInput ? TEXT("input") : TEXT("output"),
                         *InputName),
         Result);
     return true;

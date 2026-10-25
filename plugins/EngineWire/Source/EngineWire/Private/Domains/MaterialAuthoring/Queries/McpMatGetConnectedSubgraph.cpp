@@ -1,4 +1,5 @@
 #include "Domains/MaterialAuthoring/McpMatPrivate.h"
+#include "Materials/MaterialExpressionCustomOutput.h"
 
 namespace McpMaterialAuthoringHandlers
 {
@@ -22,10 +23,13 @@ bool HandleGetConnectedSubgraph(UEngineWireSubsystem* Bridge, const FString& Req
         ? MCP_GET_MATERIAL_EXPRESSIONS(Material)
         : MCP_GET_FUNCTION_EXPRESSIONS(Function);
 
-    TMultiMap<UMaterialExpression*, UMaterialExpression*> Adj;
+    // Adj is both ways (a node's island); Reads only from a node to the nodes feeding it. Reaching an output
+    // walked Adj, so a node that only read a live one, its own result wired to nothing, counted as connected
+    // and a dead branch never listed as orphaned.
+    TMultiMap<UMaterialExpression*, UMaterialExpression*> Adj, Reads;
     for (UMaterialExpression *Expr : AllExpr) {
       ForEachExpressionInput(Expr, [&](FExpressionInput &Input, const FString &) {
-        if (Input.Expression) { Adj.Add(Input.Expression, Expr); Adj.Add(Expr, Input.Expression); }
+        if (Input.Expression) { Adj.Add(Input.Expression, Expr); Adj.Add(Expr, Input.Expression); Reads.Add(Expr, Input.Expression); }
       });
     }
 
@@ -37,20 +41,20 @@ bool HandleGetConnectedSubgraph(UEngineWireSubsystem* Bridge, const FString& Req
         if (Input.Expression) { OutputConnected.Add(Input.Expression); FloodQueue.Add(Input.Expression); }
       };
       ForEachMainMaterialInput(Material, SeedMain);
-    } else {
-      // For MF, seed from FunctionOutput nodes
-      for (UMaterialExpression *Expr : AllExpr) {
-        if (Cast<UMaterialExpressionFunctionOutput>(Expr)) {
-          OutputConnected.Add(Expr);
-          FloodQueue.Add(Expr);
-        }
+    }
+    // A function's outputs, and a custom output (a vertex interpolator, the water output), are outputs that
+    // nothing reads.
+    for (UMaterialExpression *Expr : AllExpr) {
+      if (Cast<UMaterialExpressionFunctionOutput>(Expr) || Cast<UMaterialExpressionCustomOutput>(Expr)) {
+        OutputConnected.Add(Expr);
+        FloodQueue.Add(Expr);
       }
     }
     int32 FIdx = 0;
     while (FIdx < FloodQueue.Num()) {
       UMaterialExpression *Cur = FloodQueue[FIdx++];
       TArray<UMaterialExpression*> Neighbors;
-      Adj.MultiFind(Cur, Neighbors);
+      Reads.MultiFind(Cur, Neighbors);
       for (UMaterialExpression *N : Neighbors) {
         if (!OutputConnected.Contains(N)) {
           OutputConnected.Add(N);

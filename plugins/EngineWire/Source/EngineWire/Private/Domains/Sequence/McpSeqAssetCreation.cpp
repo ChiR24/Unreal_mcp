@@ -54,8 +54,19 @@ bool UEngineWireSubsystem::HandleSequenceCreate(
   // result to schema-declared names, so it must be present on every success.
   TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
   Resp->SetStringField(TEXT("sequencePath"), FullPath);
+  // A level sequence already there is kept and answered as found; any other asset there was answered the same way.
   if (McpAssetExists(FullPath)) {
+    UObject *Existing = McpLoadAsset(FullPath);
+    if (!Cast<ULevelSequence>(Existing)) {
+      SendAutomationResponse(Socket, RequestId, false,
+          FString::Printf(TEXT("%s already holds a %s, not a level sequence"), *FullPath,
+                          Existing ? *Existing->GetClass()->GetName() : TEXT("asset")),
+          nullptr, TEXT("ASSET_ALREADY_EXISTS"));
+      return true;
+    }
     VerifyAssetExists(Resp, FullPath);
+    Resp->SetBoolField(TEXT("alreadyExists"), true);
+    McpHandlerUtils::MarkNoAssetsChanged(Resp);
     SendAutomationResponse(Socket, RequestId, true, TEXT("Sequence already exists"), Resp, FString());
     return true;
   }
@@ -67,7 +78,7 @@ bool UEngineWireSubsystem::HandleSequenceCreate(
         nullptr, TEXT("CREATE_ASSET_FAILED"));
     return true;
   }
-  McpSafeAssetSave(NewSequence);
+  Resp->SetBoolField(TEXT("saved"), McpSafeAssetSave(NewSequence));
   GCurrentSequencePath = FullPath;
   McpHandlerUtils::AddVerification(Resp, NewSequence);
   SendAutomationResponse(Socket, RequestId, true, TEXT("Sequence created"), Resp, FString());
@@ -79,32 +90,20 @@ bool UEngineWireSubsystem::HandleSequenceOpen(
     TSharedPtr<FMcpBridgeWebSocket> Socket) {
   TSharedPtr<FJsonObject> LocalPayload =
       Payload.IsValid() ? Payload : McpHandlerUtils::CreateResultObject();
-  FString SeqPath = ResolveSequencePath(LocalPayload);
-  if (SeqPath.IsEmpty()) {
-    SendAutomationResponse(Socket, RequestId, false,
-                           TEXT("sequence_open requires a sequence path"),
-                           nullptr, TEXT("INVALID_SEQUENCE"));
+  UMovieScene *MovieScene = nullptr;
+  ULevelSequence *Sequence = McpSequence::LoadOrReply(this, RequestId, Socket, LocalPayload, TEXT("open"), MovieScene);
+  if (!Sequence) {
     return true;
   }
-
+  // Any asset at the path was opened in its own editor, and an editor that did not open still answered "opened".
+  UAssetEditorSubsystem *AssetEditorSS = GEditor ? GEditor->GetEditorSubsystem<UAssetEditorSubsystem>() : nullptr;
+  if (!AssetEditorSS || !AssetEditorSS->OpenEditorForAsset(Sequence)) {
+    SendAutomationResponse(Socket, RequestId, false, TEXT("Sequencer did not open for this sequence"), nullptr,
+                           TEXT("EDITOR_NOT_OPEN"));
+    return true;
+  }
   TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
-  UObject *SeqObj = McpLoadAsset(SeqPath);
-  if (!SeqObj) {
-    SendAutomationResponse(Socket, RequestId, false,
-                                      TEXT("Sequence not found"), nullptr,
-                                      TEXT("INVALID_SEQUENCE"));
-    return true;
-  }
-
-  if (GEditor) {
-    if (UAssetEditorSubsystem *AssetEditorSS =
-            GEditor->GetEditorSubsystem<UAssetEditorSubsystem>()) {
-      AssetEditorSS->OpenEditorForAsset(SeqObj);
-    }
-  }
-  Resp->SetStringField(TEXT("sequencePath"), SeqPath);
-  Resp->SetStringField(TEXT("message"), TEXT("Sequence opened (asset editor)"));
-  SendAutomationResponse(Socket, RequestId, true,
-                                    TEXT("Sequence opened"), Resp, FString());
+  Resp->SetStringField(TEXT("sequencePath"), Sequence->GetPathName());
+  SendAutomationResponse(Socket, RequestId, true, TEXT("Sequence opened in Sequencer"), Resp, FString());
   return true;
 }

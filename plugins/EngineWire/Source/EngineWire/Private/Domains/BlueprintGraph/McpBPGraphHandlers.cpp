@@ -49,7 +49,20 @@ static UFunction* FindCallableNamed(UClass* Class, const FString& Name)
         return Function;
     }
     UFunction* Twin = Class->FindFunctionByName(*(TEXT("K2_") + Name));
-    return Twin ? Twin : Function;
+    if (Twin || Function)
+    {
+        return Twin ? Twin : Function;
+    }
+    // The title the editor shows, spaces aside: GetActorTransform is GetTransform, and failed FUNCTION_NOT_FOUND.
+    for (TFieldIterator<UFunction> It(Class); It; ++It)
+    {
+        if (It->HasAnyFunctionFlags(FUNC_BlueprintCallable) && It->HasMetaData(TEXT("DisplayName")) &&
+            It->GetMetaData(TEXT("DisplayName")).Replace(TEXT(" "), TEXT("")).Equals(Name, ESearchCase::IgnoreCase))
+        {
+            return *It;
+        }
+    }
+    return nullptr;
 }
 
 UFunction* ResolveGraphCallFunction(UBlueprint* Blueprint, const FString& MemberName,
@@ -141,7 +154,8 @@ FString DescribeMissingFunction(UBlueprint* Blueprint, const FString& MemberName
     {
         Hint = SuggestMemberFix(Libraries[Index], MemberName);
     }
-    return FString::Printf(TEXT("Function '%s' not found.%s"), *MemberName, *Hint);
+    return FString::Printf(TEXT("Function '%s' not found.%s To find a function by what it does: inspect_graph info "
+                                "functions, words saying what the node should do."), *MemberName, *Hint);
 }
 
 // The name may be exactly right and live on another class: a function library
@@ -216,7 +230,8 @@ bool UEngineWireSubsystem::HandleBlueprintGraphAction(
         return true;
     }
 
-    if (McpBlueprintGraphHandlers::HandleListNodeTypes(Context))
+    if (McpBlueprintGraphHandlers::HandleListNodeTypes(Context) ||
+        McpBlueprintGraphHandlers::HandleFindFunctions(Context))
     {
         return true;
     }

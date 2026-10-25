@@ -21,7 +21,7 @@ export const LIGHT_PROPERTY_KEYS = [
 
 /** What build_environment.create_light says it does, in search and in describe. */
 export const LIGHT_SUMMARY =
-  'Create a light actor: point, spot, directional, rect or sky (or any light class), with intensity, color and, in properties, shadow, radius and cone settings.';
+  'Create a light actor in the level being edited: point, spot, directional, rect or sky (or any light class), at location (default 0, 0, 300), made Movable, with intensity, color and, in properties, shadow, radius and cone settings. The reply lists what was applied, refused (a setting this kind of light lacks) or adjusted; the spawn is one undo step and the level is left unsaved. During Play it still goes into the edited level, not the running game.';
 
 export const LIGHT_WHEN_TO_USE: readonly string[] = [
   'A point, spot, directional, rect or sky light must be added to the level being edited, with its intensity, color or shadow settings.',

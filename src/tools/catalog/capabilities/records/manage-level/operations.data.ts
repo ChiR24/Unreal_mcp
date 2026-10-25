@@ -16,6 +16,14 @@ const UNSAVED_OUT = {
   unsavedPackageCount: { type: 'number', description: 'How many packages have unsaved changes.' },
 };
 
+// add_sublevel's reply, which load with streaming:true answers with too.
+export const ADD_SUBLEVEL_OUT = {
+  subLevelPath: { type: 'string', description: 'The sublevel package that was added, or was already there.' },
+  world: { type: 'string', description: 'Name of the open level it belongs to.' },
+  streamingMethod: { type: 'string', enum: ['Blueprint', 'AlwaysLoaded'], description: 'How it streams: the method asked for, or for alreadyExists the one it already had.' },
+  alreadyExists: { type: 'boolean', description: 'True when it was already a sublevel of the open level; nothing was added.' },
+};
+
 export const OPERATIONS_RECORDS: readonly CapabilityRecordSource[] = [
   ...OPERATIONS_POWER_RECORDS,
   buildCoreRecord({
@@ -81,9 +89,9 @@ export const OPERATIONS_RECORDS: readonly CapabilityRecordSource[] = [
   buildCoreRecord({
     parentTool: 'manage_level', action: 'add_sublevel', topics: ['add streaming level'], dispatchAction: 'add_sublevel',
     domain: D, family: 'sublevel',
-    summary: 'Add a sub-level as a streaming child of the level open in the editor.',
-    whenToUse: ['A streaming child level must be associated with a parent.'],
-    whenNotToUse: ['The sub-level should be streamed independently; use stream.'],
+    summary: 'Add an existing level map to the level open in the editor as a streaming sublevel, loaded and shown in the editor at once. streamingMethod Blueprint (the default) is not loaded when the game starts until something streams it in (stream during Play, or a Load Stream Level node); AlwaysLoaded loads with the open level. A sublevel already there answers alreadyExists with the method it streams with. The add is not undoable and leaves the open level unsaved: save it to keep the sublevel, or load the level again with discardUnsaved to drop it (and every other unsaved change). Refusals: PARENT_LEVEL_NOT_LOADED (parentLevel is not the open level), PACKAGE_NOT_FOUND or FILE_NOT_FOUND (no such map; nothing is left behind).',
+    whenToUse: ['An existing level map must become a sublevel of the open level.'],
+    whenNotToUse: ['The sublevel is already added and should be streamed in or out, or shown or hidden; use stream.', 'A new empty level is needed first; use create_level.'],
     // `sublevelPath` used to sit here beside `subLevelPath` as a case-variant
     // alias. UE hashes and compares FString case-insensitively, so the native
     // surface could only ever advertise one of the pair: the alias worked over
@@ -94,11 +102,14 @@ export const OPERATIONS_RECORDS: readonly CapabilityRecordSource[] = [
     // only differed by case. `levelPath` remains for callers who want a second
     // spelling; it cannot collide.
     inputProps: {
-      subLevelPath: P.subLevelPath, levelPath: P.levelPath,
-      parentLevel: P.parentLevel, streamingMethod: P.streamingMethod,
+      subLevelPath: { ...P.subLevelPath, description: 'The level map to add, by /Game package path (an object path or .umap name is cut to the package); it must exist.' },
+      levelPath: { ...P.levelPath, description: 'Alias of subLevelPath, read when subLevelPath is absent.' },
+      parentLevel: P.parentLevel,
+      streamingMethod: { ...P.streamingMethod, enum: ['Blueprint', 'AlwaysLoaded'], description: 'Blueprint (default): the game streams it in and out, and it starts unloaded. AlwaysLoaded: loaded whenever the open level is.' },
     },
     required: [],
     requiredOneOf: ['subLevelPath', 'levelPath'],
+    outputProps: ADD_SUBLEVEL_OUT,
     effect: 'write', costLatency: 'interactive',
     exampleInput: { action: 'add_sublevel', subLevelPath: '/Game/Maps/Sub01', parentLevel: '/Game/Maps/Demo' },
   }),

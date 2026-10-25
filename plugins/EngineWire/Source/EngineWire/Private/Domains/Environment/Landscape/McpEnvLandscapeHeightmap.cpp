@@ -1,4 +1,5 @@
 #include "Domains/Environment/McpEnvShared.h"
+#include "Domains/Landscape/McpLandscapeLookup.h"
 
 namespace McpEnvironmentHandlers {
 
@@ -76,7 +77,8 @@ bool McpExportLandscapeHeightmap(const TSharedPtr<FJsonObject> &Payload, TShared
     Resp->SetNumberField(TEXT("width"), SizeX);
     Resp->SetNumberField(TEXT("height"), SizeY);
     Resp->SetNumberField(TEXT("sampleCount"), Heights.Num());
-    McpHandlerUtils::AddVerification(Resp, Landscape);
+    // An export only reads the landscape: naming the actor listed it as changed. What changed is the file.
+    Resp->SetArrayField(TEXT("modifiedPaths"), TArray<TSharedPtr<FJsonValue>>{MakeShared<FJsonValueString>(SafePath)});
     OutMessage = TEXT("Landscape heightmap exported");
     return true;
 }
@@ -94,7 +96,7 @@ bool McpImportLandscapeHeightmap(const TSharedPtr<FJsonObject> &Payload, TShared
     FString HeightmapPath;
     if (!Payload->TryGetStringField(TEXT("heightmapPath"), HeightmapPath) || HeightmapPath.IsEmpty())
     {
-        OutMessage = TEXT("heightmapPath required for import_heightmap when heightData is not provided");
+        OutMessage = TEXT("heightmapPath is required: a raw 16-bit heightmap file, project-relative (Saved/Heightmaps/terrain.raw)");
         OutErrorCode = TEXT("INVALID_ARGUMENT");
         return false;
     }
@@ -168,7 +170,9 @@ bool McpImportLandscapeHeightmap(const TSharedPtr<FJsonObject> &Payload, TShared
     bool bSkipFlush = false;
     Payload->TryGetBoolField(TEXT("skipFlush"), bSkipFlush);
 
-    FLandscapeEditDataInterface LandscapeEdit(LandscapeInfo, false);
+    // Without a layer and the upload (false), the import never drew or collided and the next layer merge undid it.
+    const McpLandscapeHandlers::FMcpLandscapeEditScope Edit(Landscape, TEXT("Import Landscape Heightmap"), bSkipFlush);
+    FLandscapeEditDataInterface LandscapeEdit(LandscapeInfo);
     LandscapeEdit.SetHeightData(MinX, MinY, MaxX, MaxY, Heights.GetData(), SizeX, bUpdateNormals);
     if (!bSkipFlush)
     {
@@ -182,6 +186,7 @@ bool McpImportLandscapeHeightmap(const TSharedPtr<FJsonObject> &Payload, TShared
     Resp->SetNumberField(TEXT("height"), SizeY);
     Resp->SetNumberField(TEXT("sampleCount"), SampleCount);
     Resp->SetBoolField(TEXT("flushSkipped"), bSkipFlush);
+    Edit.DescribeInto(Resp);
     McpHandlerUtils::AddVerification(Resp, Landscape);
     OutMessage = TEXT("Landscape heightmap imported");
     return true;

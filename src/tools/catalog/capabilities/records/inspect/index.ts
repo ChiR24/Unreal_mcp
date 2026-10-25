@@ -4,6 +4,7 @@
 import { type CapabilityRecordSource } from '../../model.js';
 
 import { COMPONENT_ACTOR_RECORDS } from './component-actor.data.js';
+import { EXPLAIN_RECORDS } from './explain.data.js';
 import { EDITOR_SETTINGS_RECORD, GLOBAL_RECORDS } from './global.data.js';
 import { RUNTIME_RECORDS } from './runtime.data.js';
 import { STATS_RECORDS } from './stats.data.js';
@@ -22,6 +23,7 @@ export const INSPECT_UNFOLDED_SOURCES: readonly CapabilityRecordSource[] = [
   ...RUNTIME_RECORDS,
   ...GLOBAL_RECORDS,
   ...STATS_RECORDS,
+  ...EXPLAIN_RECORDS,
   EDITOR_SETTINGS_RECORD,
 ];
 

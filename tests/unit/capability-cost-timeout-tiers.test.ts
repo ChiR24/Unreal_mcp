@@ -167,4 +167,11 @@ describe('Task 45 capability-cost timeout tiers', () => {
 
     expect(timeoutFor('inspect', 'inspect_object')).toBe(777);
   });
+
+  // A render allowed an hour was cancelled by the transport's own 20-minute tier, or by a caller's options.timeoutMs.
+  it('gives start_render at least its renderTimeoutMs plus the cancel wait, whatever the tier or the caller asks', async () => {
+    const { tools, timeoutFor } = createRecordingTools();
+    await executeAutomationRequest(tools, 'manage_sequence', { action: 'start_render', renderTimeoutMs: 3_600_000 }, { timeoutMs: 600_000 });
+    expect(timeoutFor('manage_sequence', 'start_render')).toBe(3_635_000);
+  });
 });

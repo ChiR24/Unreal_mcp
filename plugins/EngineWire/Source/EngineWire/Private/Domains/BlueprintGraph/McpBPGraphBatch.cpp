@@ -177,18 +177,15 @@ bool RunGraphBatch(FActionContext& Context, int32 MaxSteps, bool bCompile)
         return true;
     }
 
-    int32 BadIndex = INDEX_NONE;
-    FString BadCode;
-    const FString Precheck = PrecheckSteps(Context, *Steps, BadIndex, BadCode);
-    if (!Precheck.IsEmpty())
+    // Only build_graph itself dry-runs: the recipes that author through this batch (bCompile false) never do.
+    const bool bDryRun = bCompile && GetJsonBoolField(Context.Payload, TEXT("dryRun"), false);
+    if (!PassesPrecheck(Context, *Steps, bDryRun))
     {
-        TSharedPtr<FJsonObject> Details = McpHandlerUtils::CreateResultObject();
-        Details->SetNumberField(TEXT("succeeded"), 0);
-        Details->SetNumberField(TEXT("failedIndex"), BadIndex);
-        Context.SendErrorWithDetails(FString::Printf(
-            TEXT("build_graph checked every step before running any: operations[%d] would fail. %s "
-                 "Nothing was applied."), BadIndex, *Precheck), BadCode, Details);
         return true;
+    }
+    if (bDryRun)
+    {
+        return AnswerDryRun(Context, *Steps);
     }
 
     // Author (bCompile false) takes its own snapshot and puts the Blueprint back itself.
@@ -280,8 +277,11 @@ bool RunGraphBatch(FActionContext& Context, int32 MaxSteps, bool bCompile)
     FString FirstError;
     const bool bCompiled = McpCompileBlueprintWithDiagnostics(Context.Blueprint, Result, FirstError, 12);
     Result->SetBoolField(TEXT("saved"), SaveLoadedAssetThrottled(Context.Blueprint));
+    // A compile with warnings said only "the blueprint compiles" over a node the compiler pruned, which never runs.
+    const FString Warned = Result->HasField(TEXT("warnings")) ? FString(TEXT(", with warnings (see the receipt's warnings)"))
+                                                              : FString();
     Context.SendResponse(bCompiled
-        ? FString::Printf(TEXT("Ran %d graph operations; the blueprint compiles."), Results.Num())
+        ? FString::Printf(TEXT("Ran %d graph operations; the blueprint compiles%s."), Results.Num(), *Warned)
         : FString::Printf(TEXT("Ran %d graph operations. WARNING: the blueprint does not compile: %s"),
                           Results.Num(), FirstError.IsEmpty() ? TEXT("no compiler message") : *FirstError),
         Result);

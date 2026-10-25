@@ -91,15 +91,32 @@ void SendConsoleResult(
     TArray<FString>& Unsupported,
     TSharedPtr<FMcpBridgeWebSocket> Socket)
 {
+    // Nothing taking answered success ("settings not available"), so a missing variable read as configured.
+    if (Applied.Num() == 0)
+    {
+        Subsystem->SendAutomationError(Socket, RequestId, FString::Printf(TEXT("Settings not available: no console variable took: %s. "
+            "Nothing was changed."), *FString::Join(Unsupported, TEXT("; "))), TEXT("CVAR_UNAVAILABLE"));
+        return;
+    }
     TSharedPtr<FJsonObject> Result = MakeRenderResult(SubAction);
-    Result->SetBoolField(TEXT("supported"), Applied.Num() > 0);
+    Result->SetBoolField(TEXT("supported"), true);
     AddStringArray(Result, TEXT("appliedCVars"), Applied);
     AddStringArray(Result, TEXT("unsupportedCVars"), Unsupported);
-    Subsystem->SendAutomationResponse(
-        Socket,
-        RequestId,
-        true,
-        Applied.Num() > 0 ? TEXT("Render console settings applied.") : TEXT("Render console settings not available."),
+    // r.RayTracing is fixed at startup: with it off, every ray-traced setting is stored and draws nothing.
+    const IConsoleVariable* RayTracing = IConsoleManager::Get().FindConsoleVariable(TEXT("r.RayTracing"));
+    const bool bRayTracing = RayTracing && RayTracing->GetInt() != 0;
+    Result->SetBoolField(TEXT("rayTracingEnabled"), bRayTracing);
+    if (!bRayTracing)
+    {
+        TArray<TSharedPtr<FJsonValue>> Warnings;
+        Warnings.Add(MakeShared<FJsonValueString>(TEXT("Hardware ray tracing is off for this project (r.RayTracing 0): these settings "
+            "are stored but draw nothing until Support Hardware Ray Tracing is on (Project Settings > Rendering), the editor "
+            "restarts, and the GPU supports it.")));
+        Result->SetArrayField(TEXT("warnings"), Warnings);
+    }
+    Subsystem->SendAutomationResponse(Socket, RequestId, true,
+        FString::Printf(TEXT("Set %s%s"), *FString::Join(Applied, TEXT(", ")),
+                        Unsupported.Num() > 0 ? *(TEXT("; not set: ") + FString::Join(Unsupported, TEXT("; "))) : TEXT("")),
         Result);
 }
 }
@@ -149,6 +166,33 @@ bool HandleRenderConsoleAction(
     }
 
     const TSharedPtr<FJsonObject> Settings = GetSettingsObject(Payload);
+    // A settings key the action does not read was dropped without a word, so {"Samples": 8} answered applied.
+    TArray<FString> Known;
+    for (const FNumberCVar& Number : ConsoleAction->Numbers)
+    {
+        if (!Number.bTopLevel)
+        {
+            Known.Add(Number.Field);
+        }
+    }
+    TArray<FString> Unknown;
+    if (Settings.IsValid())
+    {
+        for (const TPair<FString, TSharedPtr<FJsonValue>> Pair : Settings->Values)
+        {
+            if (!Known.ContainsByPredicate([&Pair](const FString& Field) { return Field.Equals(Pair.Key, ESearchCase::IgnoreCase); }))
+            {
+                Unknown.Add(Pair.Key);
+            }
+        }
+    }
+    if (Unknown.Num() > 0)
+    {
+        Subsystem->SendAutomationError(RequestingSocket, RequestId, FString::Printf(TEXT("%s does not read settings %s; it reads %s. "
+            "Nothing was changed."), *SubAction, *FString::Join(Unknown, TEXT(", ")), *FString::Join(Known, TEXT(", "))),
+            TEXT("INVALID_ARGUMENT"));
+        return true;
+    }
     TArray<FBoundedConsoleSetting> Values;
     for (const FNumberCVar& Number : ConsoleAction->Numbers)
     {

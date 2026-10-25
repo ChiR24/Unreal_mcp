@@ -107,7 +107,9 @@ bool UEngineWireSubsystem::HandleSculptLandscape(
   int32 SizeY = MaxY - MinY + 1;
   TArray<uint16> HeightData;
   HeightData.SetNumZeroed(SizeX * SizeY);
-  FLandscapeEditDataInterface LandscapeEdit(LandscapeInfo, false);
+  // Without a layer and the upload (false), the drawn landscape and its collision kept the old shape.
+  const McpLandscapeHandlers::FMcpLandscapeEditScope Edit(Landscape, TEXT("Sculpt Landscape"), bSkipFlush);
+  FLandscapeEditDataInterface LandscapeEdit(LandscapeInfo);
   LandscapeEdit.GetHeightData(MinX, MinY, MaxX, MaxY,
                               HeightData.GetData(), 0);
 
@@ -178,6 +180,8 @@ bool UEngineWireSubsystem::HandleSculptLandscape(
   Resp->SetStringField(TEXT("toolMode"), ToolMode);
   Resp->SetNumberField(TEXT("modifiedVertices"), ModifiedVertices);
   Resp->SetNumberField(TEXT("brushVertices"), HeightData.Num());
+  Edit.DescribeInto(Resp);
+  McpHandlerUtils::AddVerification(Resp, Landscape);
   SendAutomationResponse(RequestingSocket, RequestId,
                                     true,
                                     TEXT("Landscape sculpted"),

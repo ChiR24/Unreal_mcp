@@ -12,11 +12,8 @@
 #include "EngineWireSubsystem.h"
 #include "Transport/WebSocket/McpBridgeWebSocket.h"
 #include "Foundation/HandlerUtils/McpHandlerUtils.h"
-#include "Subsystems/AssetEditorSubsystem.h"
 #include "UObject/Package.h"
 #include "WidgetBlueprint.h"
-#include "Widgets/Notifications/SNotificationList.h"
-#include "Framework/Notifications/NotificationManager.h"
 
 namespace WidgetAuthoringHandlers
 {
@@ -55,11 +52,8 @@ bool HandleWidgetAuthoringCreation(
         UClass* ParentUClass = UUserWidget::StaticClass();
         if (!ParentClass.Equals(TEXT("UserWidget"), ESearchCase::IgnoreCase))
         {
-#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 1
-            ParentUClass = FindFirstObject<UClass>(*ParentClass, EFindFirstObjectOptions::None);
-#else
+            // FindFirstObject (5.1+) found only a loaded class by name, not a Widget Blueprint path to parent on.
             ParentUClass = ResolveClassByName(ParentClass);
-#endif
             if (!ParentUClass)
             {
                 ParentUClass = LoadClass<UUserWidget>(nullptr, *ParentClass);
@@ -105,73 +99,6 @@ bool HandleWidgetAuthoringCreation(
         return true;
     }
 
-    if (SubAction.Equals(TEXT("show_widget"), ESearchCase::IgnoreCase))
-    {
-        FString WidgetPath = GetJsonStringField(Payload, TEXT("widgetPath"));
-        FString WidgetId = GetJsonStringField(Payload, TEXT("widgetId"));
-        FString Message = GetJsonStringField(Payload, TEXT("message"));
-
-        if (WidgetId.Equals(TEXT("notification"), ESearchCase::IgnoreCase))
-        {
-            FString NotificationText = Message.IsEmpty() ? TEXT("Notification") : Message;
-
-            FNotificationInfo Info(FText::FromString(NotificationText));
-            Info.ExpireDuration = 3.0f;
-            Info.bUseLargeFont = true;
-
-            FSlateNotificationManager::Get().AddNotification(Info);
-
-            ResultJson->SetBoolField(TEXT("success"), true);
-            ResultJson->SetStringField(TEXT("message"), TEXT("Notification shown"));
-            ResultJson->SetStringField(TEXT("widgetId"), WidgetId);
-
-            Subsystem.SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Notification shown"), ResultJson);
-            return true;
-        }
-
-        FString EffectivePath = WidgetPath.IsEmpty() ? GetJsonStringField(Payload, TEXT("name")) : WidgetPath;
-        if (EffectivePath.IsEmpty())
-        {
-            Subsystem.SendAutomationError(RequestingSocket, RequestId,
-                TEXT("Missing required parameter: widgetPath or name"), TEXT("MISSING_PARAMETER"));
-            return true;
-        }
-
-        // SECURITY: Validate widget path
-        FString SanitizedPath = SanitizeProjectRelativePath(EffectivePath);
-        if (SanitizedPath.IsEmpty())
-        {
-            Subsystem.SendAutomationError(RequestingSocket, RequestId,
-                McpPathRefusalMessage(TEXT("widgetPath"), EffectivePath),
-                TEXT("SECURITY_VIOLATION"));
-            return true;
-        }
-        EffectivePath = SanitizedPath;
-
-        UWidgetBlueprint* WidgetBP = LoadWidgetBlueprint(EffectivePath);
-        if (!WidgetBP)
-        {
-            Subsystem.SendAutomationError(RequestingSocket, RequestId,
-                FString::Printf(TEXT("Widget blueprint not found: %s"), *EffectivePath),
-                TEXT("NOT_FOUND"));
-            return true;
-        }
-
-        // Note: Actually showing the widget in viewport requires PIE (Play In Editor)
-        if (GEditor)
-        {
-            GEditor->GetEditorSubsystem<UAssetEditorSubsystem>()->OpenEditorForAsset(WidgetBP);
-        }
-
-        ResultJson->SetBoolField(TEXT("success"), true);
-        ResultJson->SetStringField(TEXT("message"), FString::Printf(TEXT("Widget opened: %s"), *EffectivePath));
-        ResultJson->SetStringField(TEXT("widgetPath"), EffectivePath);
-
-        Subsystem.SendAutomationResponse(RequestingSocket, RequestId, true,
-            FString::Printf(TEXT("Widget opened: %s"), *EffectivePath), ResultJson);
-        return true;
-    }
-
     if (SubAction.Equals(TEXT("set_widget_parent_class"), ESearchCase::IgnoreCase))
     {
         FString WidgetPath = GetJsonStringField(Payload, TEXT("widgetPath"));
@@ -207,24 +134,34 @@ bool HandleWidgetAuthoringCreation(
             return true;
         }
 
-        // Find parent class
-        // Note: FindFirstObject was introduced in UE 5.1
-#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 1
-        UClass* NewParentClass = FindFirstObject<UClass>(*ParentClass, EFindFirstObjectOptions::None);
-#else
+        // From 5.1 this found only a class already loaded, by name, so a Widget Blueprint path (the record's own example)
+        // was INVALID_CLASS; ResolveClassByName loads a class or Blueprint path in every version.
         UClass* NewParentClass = ResolveClassByName(ParentClass);
-#endif
         if (!NewParentClass || !NewParentClass->IsChildOf(UUserWidget::StaticClass()))
         {
-            Subsystem.SendAutomationError(RequestingSocket, RequestId, TEXT("Parent class not found or invalid"), TEXT("INVALID_CLASS"));
+            Subsystem.SendAutomationError(RequestingSocket, RequestId, FString::Printf(TEXT("parentClass %s is not a UserWidget class or Widget Blueprint that loads. Nothing was changed."), *ParentClass), TEXT("INVALID_CLASS"));
+            return true;
+        }
+        // This widget, or one deriving from it, as its parent made the class its own ancestor.
+        if (WidgetBP->GeneratedClass && NewParentClass->IsChildOf(WidgetBP->GeneratedClass))
+        {
+            Subsystem.SendAutomationError(RequestingSocket, RequestId, FString::Printf(TEXT("%s is %s itself or derives from it; a class cannot be its own parent. Nothing was changed."),
+                *NewParentClass->GetName(), *WidgetBP->GetName()), TEXT("CYCLIC_PARENT"));
             return true;
         }
 
-        // Set parent class
+        // As the editor's Reparent does: nodes refreshed and the class compiled against its new parent, then saved.
+        const FString PreviousParent = WidgetBP->ParentClass ? WidgetBP->ParentClass->GetPathName() : FString();
+        WidgetBP->Modify();
         WidgetBP->ParentClass = NewParentClass;
-        WidgetAuthoringHelpers::MarkWidgetBlueprintModifiedAndSave(WidgetBP);
+        FBlueprintEditorUtils::RefreshAllNodes(WidgetBP);
+        WidgetAuthoringHelpers::RefreshWidgetBlueprintClass(WidgetBP);
+        ResultJson->SetBoolField(TEXT("saved"), WidgetAuthoringHelpers::MarkWidgetBlueprintModifiedAndSave(WidgetBP));
 
         ResultJson->SetBoolField(TEXT("success"), true);
+        ResultJson->SetStringField(TEXT("widgetPath"), WidgetPath);
+        ResultJson->SetStringField(TEXT("parentClass"), NewParentClass->GetPathName());
+        ResultJson->SetStringField(TEXT("previousParentClass"), PreviousParent);
         ResultJson->SetStringField(TEXT("message"), FString::Printf(TEXT("Set parent class to: %s"), *ParentClass));
 
         Subsystem.SendAutomationResponse(RequestingSocket, RequestId, true,

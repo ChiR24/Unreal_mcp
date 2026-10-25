@@ -8,6 +8,8 @@ import { arr, arrObj, BLEND_MODE, bool, ex, LOW, MATERIAL_DOMAIN, num, READ, REA
 import { schema } from '../shared/record-presets.js';
 
 const MAT = str('Material /Game asset path.');
+// The property setters also take a material instance, whose value becomes an override of its parent.
+const MAT_OR_INSTANCE = str('Material or material instance /Game asset path; an instance takes the value as an override of its parent (every property but the domain).');
 const MATFN = str('Material function /Game asset path.');
 const MINST = str('Material instance /Game asset path.');
 // The other spelling of the path a read takes (see the header): declared so the folded info/compile
@@ -18,7 +20,7 @@ const SAVE = bool('Save the asset afterwards. Defaults to true; pass false to ke
 // A material info read can narrow its output: which sections, and which nodes' connections.
 const INFO_FILTERS = {
   filter: str('Which sections to return: parameters, expressions, connections, or all (default).'),
-  nodeId: str('Only report connections touching this node.'),
+  nodeId: str('A node, by the id the graph lists: material and function report only the connections touching it; node_details, node_properties and node_connections describe it; node_chain and subgraph start from it (node_chain also takes it as startNodeId; subgraph needs it unless orphansOnly is true).'),
   nodeIds: arr('Only report connections touching these nodes.'),
 };
 const OK = schema({ success: bool('Operation succeeded.'), details: { type: 'object', 'x-unreal-reflection-boundary': true, description: 'Operation details.' } }, ['success']);
@@ -62,17 +64,17 @@ const MF = '/Game/Materials/Functions/MF_HeightBlend';
 const DONE = { success: true };
 
 export const MATERIAL_PARAMS_RECORDS: readonly RecordSpec[] = [
-  r('set_blend_mode', 'material', 'Set the blend mode of a material.', schema({ assetPath: MAT, blendMode: BLEND_MODE, save: SAVE }, ['assetPath', 'blendMode']), OK, WRITE, WRITE_POLICY, LOW,
+  r('set_blend_mode', 'material', 'Set the blend mode of a material.', schema({ assetPath: MAT_OR_INSTANCE, blendMode: BLEND_MODE, save: SAVE }, ['assetPath', 'blendMode']), OK, WRITE, WRITE_POLICY, LOW,
     { whenToUse: ['A material must become translucent, cut out (Masked) or additive instead of Opaque.'],
-      whenNotToUse: ['The target is a material instance; only a base material can be edited here (find it with material.get_material_info).', 'A new material is being created with the blend mode already known (use material.create_material with blendMode).'],
+      whenNotToUse: ['Only a parameter of a material instance must change (use material.set_material_parameter).', 'A new material is being created with the blend mode already known (use material.create_material with blendMode).'],
       examples: [ex('Switch a material to masked blending', { assetPath: M, blendMode: 'Masked' }, DONE)] }),
-  r('set_shading_model', 'material', 'Set the shading model of a material.', schema({ assetPath: MAT, shadingModel: SHADING_MODEL, save: SAVE }, ['assetPath', 'shadingModel']), OK, WRITE, WRITE_POLICY, LOW,
+  r('set_shading_model', 'material', 'Set the shading model of a material.', schema({ assetPath: MAT_OR_INSTANCE, shadingModel: SHADING_MODEL, save: SAVE }, ['assetPath', 'shadingModel']), OK, WRITE, WRITE_POLICY, LOW,
     { whenToUse: ['A surface needs a different shading model, such as DefaultLit, Unlit, Subsurface, ClearCoat or Hair.'],
-      whenNotToUse: ['The target is a material instance; only a base material can be edited here (find it with material.get_material_info).', 'A new material is being created with the shading model already known (use material.create_material with shadingModel).'],
+      whenNotToUse: ['Only a parameter of a material instance must change (use material.set_material_parameter).', 'A new material is being created with the shading model already known (use material.create_material with shadingModel).'],
       examples: [ex('Use the default lit shading model', { assetPath: M, shadingModel: 'DefaultLit' }, DONE)] }),
   r('set_material_domain', 'material', 'Set the material domain of a material.', schema({ assetPath: MAT, materialDomain: MATERIAL_DOMAIN, save: SAVE }, ['assetPath', 'materialDomain']), OK, WRITE, WRITE_POLICY, LOW,
     { whenToUse: ['A material must change domain, for example between Surface, DeferredDecal, PostProcess and UI.'],
-      whenNotToUse: ['The target is a material instance; only a base material can be edited here (find it with material.get_material_info).', 'A new material is being created with the domain already known (use material.create_material with materialDomain).'],
+      whenNotToUse: ['The target is a material instance: the domain belongs to its parent material (find it with material.get_material_info).', 'A new material is being created with the domain already known (use material.create_material with materialDomain).'],
       examples: [ex('Keep a material in the surface domain', { assetPath: M, materialDomain: 'Surface' }, DONE)] }),
   r('compile_material', 'material', 'Compile a material and report its compile errors.', schema({ assetPath: MAT, materialPath: MAT_ALIAS, save: SAVE }, [], ['assetPath', 'materialPath']), COMPILE_OK, WRITE, WRITE_POLICY, LOW,
     { whenToUse: ['The compile errors of an edited graph must be read; a material that fails to compile renders as the default material.', 'Graph edits left the asset unsaved, so it must be compiled and saved.'],
@@ -82,15 +84,15 @@ export const MATERIAL_PARAMS_RECORDS: readonly RecordSpec[] = [
     { whenToUse: ['An existing material must be understood before editing: node ids, parameter names, wiring, domain and blend mode, or the parent and overrides of an instance.'],
       whenNotToUse: ['Shading model, sampler counts or the instances of a parent are wanted (use asset.query_asset lookup=material_stats or asset.list kind=material_instances).'],
       examples: [ex('Read a material\'s configuration', { assetPath: M }, { success: true, assetType: 'Material', nodeCount: 4, domain: 'Surface', blendMode: 'Opaque', twoSided: false })] }),
-  r('set_two_sided', 'material', 'Set the two-sided flag on a material.', schema({ assetPath: MAT, value: bool('Two-sided value: true renders both faces, false only the front.'), save: SAVE }, ['assetPath', 'value']), OK, WRITE, WRITE_POLICY, LOW,
+  r('set_two_sided', 'material', 'Set the two-sided flag on a material.', schema({ assetPath: MAT_OR_INSTANCE, value: bool('Two-sided value: true renders both faces, false only the front.'), save: SAVE }, ['assetPath', 'value']), OK, WRITE, WRITE_POLICY, LOW,
     { whenToUse: ['Both faces of a mesh must render, as with leaves, cloth or thin sheets.'],
-      whenNotToUse: ['The target is a material instance; only a base material can be edited here (find it with material.get_material_info).'],
+      whenNotToUse: ['Only a parameter of a material instance must change (use material.set_material_parameter).'],
       examples: [ex('Render a material from both sides', { assetPath: M, value: true }, DONE)] }),
-  r('add_function_input', 'material', 'Add a function input to a material function.', schema({ assetPath: MATFN, inputName: str('Input name.'), inputType: str('Input type.'), x: num('Node X position (preferred spelling; posX is the fallback).'), y: num('Node Y position (preferred spelling; posY is the fallback).') }, ['assetPath', 'inputName']), OK, WRITE, WRITE_POLICY, LOW,
+  r('add_function_input', 'material', 'Add a function input to a material function.', schema({ assetPath: MATFN, inputName: str('Name of the new pin: an input (input) or output (output); a name the function already has is NAME_TAKEN.'), inputType: str('input only: Scalar, Vector2, Vector3 (default), Vector4, Texture2D, TextureCube, Bool or MaterialAttributes (Float1 to Float4 work too); another type is refused. An output takes the type of what is wired into it.'), x: num('Node X position (preferred spelling; posX is the fallback).'), y: num('Node Y position (preferred spelling; posY is the fallback).') }, ['assetPath', 'inputName']), OK, WRITE, WRITE_POLICY, LOW,
     { whenToUse: ['A material function needs an input pin (scalar, vector, Texture2D, TextureCube, Bool or MaterialAttributes) that callers wire into.'],
       whenNotToUse: ['The asset is a base material; only material functions take input or output pins (a material result goes to Main with material.connect_nodes).', 'The function does not exist yet (use material.create_material with kind=function).'],
       examples: [ex('Add a scalar height input', { assetPath: MF, inputName: 'Height', inputType: 'Scalar', x: -400, y: 0 }, DONE)] }),
-  r('add_function_output', 'material', 'Add a function output to a material function.', schema({ assetPath: MATFN, inputName: str('Output name.'), inputType: str('Output type.'), x: num('Node X position (preferred spelling; posX is the fallback).'), y: num('Node Y position (preferred spelling; posY is the fallback).') }, ['assetPath', 'inputName']), OK, WRITE, WRITE_POLICY, LOW,
+  r('add_function_output', 'material', 'Add a function output to a material function.', schema({ assetPath: MATFN, inputName: str('Output name.'), x: num('Node X position (preferred spelling; posX is the fallback).'), y: num('Node Y position (preferred spelling; posY is the fallback).') }, ['assetPath', 'inputName']), OK, WRITE, WRITE_POLICY, LOW,
     { whenToUse: ['A material function needs a named result pin so a graph can wire its result out.'],
       whenNotToUse: ['The asset is a base material; only material functions take input or output pins (a material result goes to Main with material.connect_nodes).', 'The function does not exist yet (use material.create_material with kind=function).'],
       examples: [ex('Add the blended result output', { assetPath: MF, inputName: 'Result', inputType: 'Scalar', x: 400, y: 0 }, DONE)] }),
@@ -102,15 +104,15 @@ export const MATERIAL_PARAMS_RECORDS: readonly RecordSpec[] = [
     { whenToUse: ['A material function must be understood before calling or editing it: its inputs, outputs, description and library exposure.'],
       whenNotToUse: ['The materials that call the function must be found (use asset.inspect_asset with lookup=dependencies and referencers=true).'],
       examples: [ex('Read a function\'s inputs and outputs', { assetPath: MF }, DONE)] }),
-  r('set_scalar_parameter_value', 'material', 'Set a scalar parameter value on a material instance.', schema({ assetPath: MINST, parameterName: str('Parameter name.'), value: num('Scalar value.'), save: SAVE }, ['assetPath', 'parameterName', 'value']), OK, WRITE, WRITE_POLICY, LOW,
+  r('set_scalar_parameter_value', 'material', 'Set a scalar parameter to value (a number): on a material instance an override of its parent (a name the parent does not publish is PARAMETER_NOT_FOUND, listing those it does), on a base material the parameter node\'s default (refused while the material is open in its editor). Saved unless save is false (saved).', schema({ assetPath: MINST, parameterName: str('Parameter name.'), value: num('Scalar value.'), save: SAVE }, ['assetPath', 'parameterName', 'value']), OK, WRITE, WRITE_POLICY, LOW,
     { whenToUse: ['A float parameter such as roughness, opacity or a speed must change on an instance or as a base material default.'],
       whenNotToUse: ['The parameter is not on the base material yet (add it there with asset.edit_material_instance edit=add_parameter or material.add_material_node).'],
       examples: [ex('Override roughness on an instance', { assetPath: MI, parameterName: 'Roughness', value: 0.8 }, DONE)] }),
-  r('set_vector_parameter_value', 'material', 'Set a vector parameter value on a material instance.', schema({ assetPath: MINST, parameterName: str('Parameter name.'), value: { description: 'Vector value.' }, save: SAVE }, ['assetPath', 'parameterName', 'value']), OK, WRITE, WRITE_POLICY, LOW,
+  r('set_vector_parameter_value', 'material', 'Set a vector (colour) parameter to value, {r, g, b, a} or [r, g, b, a]: on a material instance an override of its parent (a name the parent does not publish is PARAMETER_NOT_FOUND, listing those it does), on a base material the parameter node\'s default (refused while the material is open in its editor). Saved unless save is false (saved).', schema({ assetPath: MINST, parameterName: str('Parameter name.'), value: { description: 'Vector value.' }, save: SAVE }, ['assetPath', 'parameterName', 'value']), OK, WRITE, WRITE_POLICY, LOW,
     { whenToUse: ['A color or vector parameter such as a tint must change; value takes an rgba object or an array of at least three numbers.'],
       whenNotToUse: ['The parameter is not on the base material yet (add it there with asset.edit_material_instance edit=add_parameter or material.add_material_node).'],
       examples: [ex('Tint an instance rust-orange', { assetPath: MI, parameterName: 'BaseTint', value: [0.55, 0.27, 0.1, 1] }, DONE)] }),
-  r('set_texture_parameter_value', 'material', 'Set a texture parameter value on a material instance.', schema({ assetPath: MINST, parameterName: str('Parameter name.'), texturePath: str('Texture /Game path.'), save: SAVE }, ['assetPath', 'parameterName', 'texturePath']), OK, WRITE, WRITE_POLICY, LOW,
+  r('set_texture_parameter_value', 'material', 'Set a texture parameter to the texture at texturePath: on a material instance an override of its parent (a name the parent does not publish is PARAMETER_NOT_FOUND, listing those it does), on a base material the parameter node\'s default (refused while the material is open in its editor). Saved unless save is false (saved).', schema({ assetPath: MINST, parameterName: str('Parameter name.'), texturePath: str('Texture /Game path.'), save: SAVE }, ['assetPath', 'parameterName', 'texturePath']), OK, WRITE, WRITE_POLICY, LOW,
     { whenToUse: ['A texture parameter must point at a different texture asset (texturePath).'],
       whenNotToUse: ['The parameter is not on the base material yet (add it there with asset.edit_material_instance edit=add_parameter or material.add_material_node).', 'The texture asset itself needs other compression or LOD settings (use texture.configure_texture).'],
       examples: [ex('Swap the base colour texture', { assetPath: MI, parameterName: 'BaseColor', texturePath: '/Game/Textures/T_Rust' }, DONE)] }),
@@ -118,8 +120,8 @@ export const MATERIAL_PARAMS_RECORDS: readonly RecordSpec[] = [
     { whenToUse: ['A landscape weight layer needs its layer info asset, with hardness, physical material and weight-blend option, so it can be painted.'],
       whenNotToUse: ['The material needs a layer blend node that lists the layers (use material.configure_layer_blend).', 'The landscape must be painted with the layer (use build_environment.edit_landscape with edit=paint_landscape_layer).'],
       examples: [ex('Add a grass weight-blended layer', { materialPath: '/Game/Materials/Landscape/M_Landscape', layerName: 'Grass' }, DONE)] }),
-  r('configure_layer_blend', 'material', 'Configure layer blend settings on a landscape material.', schema({ materialPath: MAT, layers: arrObj('Layer blend definitions.'), blendType: str('Blend type.'), x: num('Node X position of the layer blend node.'), y: num('Node Y position of the layer blend node.'), save: SAVE }, ['materialPath']), OK, WRITE, WRITE_POLICY, LOW,
+  r('configure_layer_blend', 'material', 'Add a Landscape Layer Blend node to a landscape material, listing the paint layers in order (layers; the first previews at full weight), each with its blend: weight, height or alpha. Every call adds a new node, at x, y (default 0, 0); wire its output with connect_nodes (blendNodeId). An unknown blend type is refused. The material recompiles and is saved unless save is false (saved).', schema({ materialPath: MAT, layers: arrObj('The paint layers, in order, each { name } or { name, blendType } to give that layer its own blend.'), blendType: str('Blend for the layers that do not name one: LB_WeightBlend (default), LB_HeightBlend or LB_AlphaBlend (Weight, Height or Alpha work too).'), x: num('Node X position of the layer blend node.'), y: num('Node Y position of the layer blend node.'), save: SAVE }, ['materialPath', 'layers']), OK, WRITE, WRITE_POLICY, LOW,
     { whenToUse: ['A landscape material needs a Landscape Layer Blend node listing its paint layers, each with a weight, height or alpha blend.', 'All named layers must be added to one blend node in one call (layers takes [{name, blendType}] or plain names).'],
       whenNotToUse: ['Layer info assets for the layers must be created (use material.add_material_node with nodeKind=landscape_layer).', 'A finished material must be assigned to a landscape (use build_environment.sculpt with sculptOp=material).'],
-      examples: [ex('Weight-blend the landscape layers', { materialPath: '/Game/Materials/Landscape/M_Landscape', blendType: 'LB_WeightBlend' }, DONE)] })
+      examples: [ex('Weight-blend the landscape layers', { materialPath: '/Game/Materials/Landscape/M_Landscape', layers: [{ name: 'Grass' }, { name: 'Rock' }, { name: 'Snow', blendType: 'LB_HeightBlend' }], blendType: 'LB_WeightBlend' }, DONE)] })
 ];

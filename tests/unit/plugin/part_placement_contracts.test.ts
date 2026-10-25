@@ -66,6 +66,21 @@ describe('Blueprint parts that sink are named', () => {
     expect(audit).toContain('Component->GetStaticMesh() == Mesh');
   });
 
+  // A trigger box of extent 70x70x40 put under a base flattened to (1.6, 1.6, 0.1) was 112x112x4 in the world, and
+  // neither the edit nor get_components said so.
+  it('says when a part it touched takes an uneven scale from its parent, and get_components shows the world scale', () => {
+    const reply = code('Domains/ControlActor/Placement/McpPartPlacementReply.cpp');
+    expect(audit).toContain('NoteInheritedScale(Actor, Focus, Audit.Notes);');
+    expect(reply).toContain('const FVector Inherited = Parent->GetComponentScale();');
+    expect(reply).toContain('Inherited.GetAbsMax() <= Inherited.GetAbsMin() * 1.05');
+    expect(reply).toContain('Component->IsUsingAbsoluteScale()');
+    expect(reply).toContain('Warnings.Add(MakeShared<FJsonValueString>(Note));');
+    expect(code('Domains/Blueprint/Components/McpBPModifyScsFinalize.cpp')).toContain('State.LocalWarnings.Append(Parts.Notes);');
+    const components = code('Domains/ControlActor/McpActorComponents.cpp');
+    expect(components).toContain('!Found->HasAnyFlags(RF_ClassDefaultObject) && !SceneComp->GetComponentScale().Equals(Scale, 1e-3)');
+    expect(components).toContain('TEXT("worldScale")');
+  });
+
   it('answers audit_placement with blueprintPath before sweeping the level', () => {
     const handler = code('Domains/ControlActor/McpActorPlacementAudit.cpp');
     const branch = handler.indexOf('McpPartPlacement::BuildBlueprintAuditReply(');

@@ -6,7 +6,8 @@
 #include "EditorViewportClient.h"
 #include "GameFramework/Actor.h"
 
-// describe_view's answer for an actor the caller named that drew no pixel. Split from McpEnvInspectViewContents.cpp.
+// describe_view's answers about what is drawn over a named actor: why one that drew no pixel is not seen, and what
+// covers part of one that is. Split from McpEnvInspectViewContents.cpp.
 namespace McpEnvironmentHandlers {
 namespace {
 // The box of what the game draws. The sprite the editor gives an actor with only a scene root is editor-only and
@@ -24,13 +25,13 @@ FBox McpDrawnBounds(const AActor &Actor)
     }
     return Box.IsValid ? Box : Actor.GetComponentsBoundingBox(true);
 }
-} // namespace
 
-TSharedPtr<FJsonObject> McpDescribeUnseenActor(AActor *Actor, const FEditorViewportClient &Client, const FIntPoint &Size,
-                                               const TArray<FColor> &Ids, TMap<uint32, FMcpViewProxy> &Proxies)
+// The actors drawn over the box Actor's bounds project to, by share of that box: up to three, each at least MinShare
+// percent, leaving out Actor itself, actors centred farther than it and the ground under it. False when the box lies
+// outside the frame; OutInFrame is the percent of the box inside it.
+bool McpNearerCovers(AActor *Actor, const FEditorViewportClient &Client, const FIntPoint &Size, const TArray<FColor> &Ids,
+                     TMap<uint32, FMcpViewProxy> &Proxies, double MinShare, double &OutInFrame, TArray<TSharedPtr<FJsonValue>> &OutCovers)
 {
-    const TSharedPtr<FJsonObject> Row = MakeShared<FJsonObject>();
-    Row->SetStringField(TEXT("name"), Actor->GetActorLabel());
     const FBox Bounds = McpDrawnBounds(*Actor);
     const FMatrix Axes = FRotationMatrix(Client.GetViewRotation());
     const double TanX = FMath::Tan(FMath::DegreesToRadians(Client.ViewFOV * 0.5));
@@ -50,13 +51,11 @@ TSharedPtr<FJsonObject> McpDescribeUnseenActor(AActor *Actor, const FEditorViewp
     const FBox2D Frame(FVector2D::ZeroVector, FVector2D(Size.X, Size.Y));
     if (!Screen.bIsValid || !Screen.Intersect(Frame))
     {
-        Row->SetStringField(TEXT("reason"), TEXT("outside the frame"));
-        return Row;
+        return false;
     }
     // What is drawn over the box the bounds project to, by share of the box: the frontmost id per pixel.
     const FBox2D Box = Screen.Overlap(Frame);
-    const double InFrame = McpViewRound(100.0 * Box.GetArea() / FMath::Max(Screen.GetArea(), 1.0), 10.0);
-    Row->SetNumberField(TEXT("inFrame"), InFrame);
+    OutInFrame = McpViewRound(100.0 * Box.GetArea() / FMath::Max(Screen.GetArea(), 1.0), 10.0);
     TMap<AActor *, int64> Covers;
     int64 Total = 0;
     for (int32 Y = FMath::FloorToInt(Box.Min.Y); Y < FMath::Min(FMath::CeilToInt(Box.Max.Y), Size.Y); Y += McpViewStride)
@@ -71,6 +70,7 @@ TSharedPtr<FJsonObject> McpDescribeUnseenActor(AActor *Actor, const FEditorViewp
         }
     }
     Covers.Remove(nullptr);
+    Covers.Remove(Actor);
     TArray<TPair<AActor *, int64>> Sorted;
     for (const TPair<AActor *, int64> &Cover : Covers)
     {
@@ -82,9 +82,13 @@ TSharedPtr<FJsonObject> McpDescribeUnseenActor(AActor *Actor, const FEditorViewp
     // over (a floor block 5 m thick).
     const FVector Middle = Bounds.GetCenter();
     const double Depth = FVector::DotProduct(Middle - Client.GetViewLocation(), Axes.GetScaledAxis(EAxis::X));
-    TArray<TSharedPtr<FJsonValue>> HiddenBy;
-    for (int32 Index = 0; Index < Sorted.Num() && HiddenBy.Num() < 3; ++Index)
+    for (int32 Index = 0; Index < Sorted.Num() && OutCovers.Num() < 3; ++Index)
     {
+        const double Share = McpViewRound(100.0 * Sorted[Index].Value / FMath::Max<int64>(Total, 1), 10.0);
+        if (Share < MinShare)
+        {
+            break;
+        }
         const FBox Other = McpDrawnBounds(*Sorted[Index].Key);
         const bool bUnder = Middle.X >= Other.Min.X && Middle.X <= Other.Max.X && Middle.Y >= Other.Min.Y && Middle.Y <= Other.Max.Y;
         const bool bGround = Other.Max.Z < Middle.Z && (bUnder || Other.GetSize().Z < 0.25 * Bounds.GetSize().Z);
@@ -95,13 +99,40 @@ TSharedPtr<FJsonObject> McpDescribeUnseenActor(AActor *Actor, const FEditorViewp
         }
         const TSharedPtr<FJsonObject> Cover = MakeShared<FJsonObject>();
         Cover->SetStringField(TEXT("name"), Sorted[Index].Key->GetActorLabel());
-        Cover->SetNumberField(TEXT("share"), McpViewRound(100.0 * Sorted[Index].Value / FMath::Max<int64>(Total, 1), 10.0));
-        HiddenBy.Add(MakeShared<FJsonValueObject>(Cover));
+        Cover->SetNumberField(TEXT("share"), Share);
+        OutCovers.Add(MakeShared<FJsonValueObject>(Cover));
     }
+    return true;
+}
+} // namespace
+
+TSharedPtr<FJsonObject> McpDescribeUnseenActor(AActor *Actor, const FEditorViewportClient &Client, const FIntPoint &Size,
+                                               const TArray<FColor> &Ids, TMap<uint32, FMcpViewProxy> &Proxies)
+{
+    const TSharedPtr<FJsonObject> Row = MakeShared<FJsonObject>();
+    Row->SetStringField(TEXT("name"), Actor->GetActorLabel());
+    double InFrame = 0.0;
+    TArray<TSharedPtr<FJsonValue>> HiddenBy;
+    if (!McpNearerCovers(Actor, Client, Size, Ids, Proxies, 0.0, InFrame, HiddenBy))
+    {
+        Row->SetStringField(TEXT("reason"), TEXT("outside the frame"));
+        return Row;
+    }
+    Row->SetNumberField(TEXT("inFrame"), InFrame);
     Row->SetStringField(TEXT("reason"), InFrame < 50.0 ? TEXT("at the edge of the frame, mostly outside it")
         : HiddenBy.Num() > 0 ? TEXT("hidden behind what is drawn over its box")
         : TEXT("not drawn, and nothing nearer is drawn over its box (hidden in game, or smaller than the sampling)"));
     Row->SetArrayField(TEXT("hiddenBy"), HiddenBy);
     return Row;
+}
+
+// A sign half behind a row of blocks still drew pixels, so the row read as seen and nothing named what covered it.
+TArray<TSharedPtr<FJsonValue>> McpCoveringActors(AActor *Actor, const FEditorViewportClient &Client, const FIntPoint &Size,
+                                                 const TArray<FColor> &Ids, TMap<uint32, FMcpViewProxy> &Proxies)
+{
+    double InFrame = 0.0;
+    TArray<TSharedPtr<FJsonValue>> Covers;
+    McpNearerCovers(Actor, Client, Size, Ids, Proxies, 5.0, InFrame, Covers);
+    return Covers;
 }
 } // namespace McpEnvironmentHandlers

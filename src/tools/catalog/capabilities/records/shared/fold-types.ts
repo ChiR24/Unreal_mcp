@@ -29,6 +29,8 @@ export type FoldSpec = {
   readonly whenNotToUse?: readonly string[];
   /** Caller phrasings, appended after the primary action name. */
   readonly topics?: readonly string[];
+  /** The member action whose example the record shows; default the primary member, else the first. */
+  readonly exampleFrom?: string;
   /** selector value -> old action; or, for an alias fold, the old actions. */
   readonly members: Readonly<Record<string, string>> | readonly string[];
   /**

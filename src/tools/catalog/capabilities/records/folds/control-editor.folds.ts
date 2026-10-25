@@ -18,7 +18,7 @@ export const CONTROL_EDITOR_FOLDS: readonly FoldSpec[] = [
   },
   {
     primary: 'start_recording', selector: 'control',
-    summary: 'Start or stop an editor gameplay recording.',
+    summary: 'Record the running Play In Editor game as a replay (control start, the default: DemoRec, written by default under Saved/Demos; frameRate and durationSeconds), or stop it (stop; NOT_RECORDING when nothing records). Refused without a running game (NO_ACTIVE_SESSION). For playback, seeking or a killcam, use the sequence demo actions.',
     members: { start: 'start_recording', stop: 'stop_recording' },
   },
   {
@@ -30,11 +30,11 @@ export const CONTROL_EDITOR_FOLDS: readonly FoldSpec[] = [
   },
   {
     primary: 'configure_viewport', selector: 'setting',
-    summary: 'Configure the editor viewport: view mode, editor mode, game view, immersive mode, realtime, show or hide stats.',
+    summary: 'Change what the editor viewport shows, chosen by setting: view_mode (any engine view mode by name: Lit, Unlit, Wireframe, LightingOnly, ShaderComplexity, CollisionPawn, PathTracing and the rest; the running game\'s view while Play runs), editor_mode (activate a mode such as EM_Landscape, EM_Foliage or EM_Default, checked active), game_view (hide editor icons), immersive_mode (the viewport fills its window), realtime (keep effects and animated materials moving), show_stats or hide_stats (stat overlays: FPS and Unit by default; hide_stats with no stat hides them all). Each answers with the state it reads back; with no level viewport open, NO_VIEWPORT.',
     topics: ['view mode', 'editor mode', 'game view', 'immersive mode', 'realtime viewport', 'viewport stats', 'show stats'],
     members: { view_mode: 'set_view_mode', editor_mode: 'set_editor_mode', game_view: 'set_game_view', immersive_mode: 'set_immersive_mode', realtime: 'set_viewport_realtime', show_stats: 'show_stats', hide_stats: 'hide_stats' },
   },
-  { primary: 'console_command', summary: 'Run a validated console command in the editor.', members: ['execute_command'] },
+  { primary: 'console_command', summary: 'Run one console command against the editor world, or through the first player while Play In Editor runs, and return what it printed (output, at most 4096 characters). A command the engine does not recognise fails (EXEC_FAILED); one holding ;, |, &&, a backtick or several lines, or a blocked name (quit, exit, py, crash and the like), is refused (COMMAND_BLOCKED). Success means the engine ran it, not that it had the effect wanted.', members: ['execute_command'] },
   {
     primary: 'configure_editor', selector: 'setting',
     summary: 'Open an editor tab, set editor preferences, or restore or minimize the main editor window without focus (restoring unthrottles Play In Editor).',
@@ -47,8 +47,8 @@ export const CONTROL_EDITOR_FOLDS: readonly FoldSpec[] = [
   },
   {
     primary: 'undo', selector: 'history',
-    summary: 'Undo or redo the last editor transaction; the reply names the transaction, or says there was none.',
-    topics: ['undo', 'redo', 'transaction history'],
-    members: { undo: 'undo', redo: 'redo' },
+    summary: 'Undo or redo the last editor transaction (the reply names it, or says there was none), or roll back to a restore point, undoing only what this server changed since.',
+    topics: ['undo', 'redo', 'transaction history', 'restore point', 'rollback'],
+    members: { undo: 'undo', redo: 'redo', restore_point: 'restore_point' },
   },
 ];

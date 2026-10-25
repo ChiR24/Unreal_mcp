@@ -18,8 +18,10 @@ bool UEngineWireSubsystem::HandleSequenceAddCamera(
 
   TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
   UObject *SeqObj = McpLoadAsset(SeqPath);
-  if (!SeqObj) {
-    SendAutomationResponse(Socket, RequestId, false, TEXT("Sequence not found"),
+  // Another kind of asset at the path used to get a camera spawned into the level and a "bound" success with no binding.
+  if (!Cast<ULevelSequence>(SeqObj) || !Cast<ULevelSequence>(SeqObj)->GetMovieScene()) {
+    SendAutomationResponse(Socket, RequestId, false,
+                           SeqObj ? TEXT("The asset at the path is not a Level Sequence; nothing was added.") : TEXT("Sequence not found"),
                            nullptr, TEXT("INVALID_SEQUENCE"));
     return true;
   }
@@ -61,15 +63,18 @@ bool UEngineWireSubsystem::HandleSequenceAddCamera(
         CameraClass, FVector::ZeroVector, FRotator::ZeroRotator,
         CameraLabel);
     if (Spawned) {
-      if (ULevelSequence *LevelSeq = Cast<ULevelSequence>(SeqObj)) {
-        if (UMovieScene *MovieScene = LevelSeq->GetMovieScene()) {
-          const FGuid BindingGuid = McpSequenceCinematics::ResolveOrCreateBinding(LevelSeq, Spawned);
-          if (BindingGuid.IsValid()) {
-            LevelSeq->MarkPackageDirty();
-            Resp->SetStringField(TEXT("bindingGuid"), BindingGuid.ToString());
-          }
-        }
+      ULevelSequence *LevelSeq = Cast<ULevelSequence>(SeqObj);
+      const FGuid BindingGuid = McpSequenceCinematics::ResolveOrCreateBinding(LevelSeq, Spawned);
+      // An unbound camera stayed in the level behind a success; it goes again and the call fails.
+      if (!BindingGuid.IsValid()) {
+        GEditor->GetEditorSubsystem<UEditorActorSubsystem>()->DestroyActor(Spawned);
+        SendAutomationResponse(Socket, RequestId, false,
+                               TEXT("The camera could not be bound to the sequence; nothing was added."), nullptr,
+                               TEXT("BIND_FAILED"));
+        return true;
       }
+      LevelSeq->MarkPackageDirty();
+      Resp->SetStringField(TEXT("bindingGuid"), BindingGuid.ToString());
 
       Resp->SetBoolField(TEXT("success"), true);
       Resp->SetStringField(TEXT("actorLabel"), Spawned->GetActorLabel());
@@ -227,6 +232,5 @@ bool UEngineWireSubsystem::HandleSequenceAddActors(
   SendAutomationResponse(
       Socket, RequestId, false, TEXT("EditorActorSubsystem not available"),
       nullptr, TEXT("EDITOR_ACTOR_SUBSYSTEM_MISSING"));
-  return true;
   return true;
 }

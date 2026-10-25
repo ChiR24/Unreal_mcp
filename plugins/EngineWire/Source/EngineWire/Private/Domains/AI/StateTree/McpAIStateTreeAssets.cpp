@@ -47,52 +47,28 @@ bool HandleCreateStateTree(UEngineWireSubsystem* Self, const FString& RequestId,
         return true;
     }
 
-    // Create the package and asset
-    FString FullPath = Path / Name;
-    UPackage* Package = CreatePackage(*FullPath);
-    if (!Package)
-    {
-        Self->SendAutomationError(RequestingSocket, RequestId,
-            FString::Printf(TEXT("Failed to create package: %s"), *FullPath), TEXT("CREATION_FAILED"));
-        return true;
-    }
-
-    UStateTree* StateTree = NewObject<UStateTree>(Package, *Name, RF_Public | RF_Standalone);
+    FString Error;
+    FString Code;
+    UClass* SchemaClass = McpFindStateTreeSchemaClass(GetJsonStringField(Payload, TEXT("schema")), Error, Code);
+    // CreatePackage and NewObject rebuilt an asset already at the path, or crashed on another class.
+    UStateTree* StateTree = SchemaClass ? CreateAIAssetInPackage<UStateTree>(Path, Name, TEXT("State Tree"), Error, Code) : nullptr;
     if (!StateTree)
     {
-        Package->MarkAsGarbage();  // Prevent orphaned package leak
-        Self->SendAutomationError(RequestingSocket, RequestId, TEXT("Failed to create StateTree asset"), TEXT("CREATION_FAILED"));
+        Self->SendAutomationError(RequestingSocket, RequestId, Error, Code);
         return true;
     }
 
-    // Create and attach EditorData
     UStateTreeEditorData* EditorData = NewObject<UStateTreeEditorData>(StateTree, TEXT("EditorData"), RF_Transactional);
-    if (!EditorData)
-    {
-        StateTree->ConditionalBeginDestroy();  // Clean up StateTree before marking package as garbage
-        Package->MarkAsGarbage();  // Prevent orphaned package leak
-        Self->SendAutomationError(RequestingSocket, RequestId, TEXT("Failed to create StateTree EditorData"), TEXT("CREATION_FAILED"));
-        return true;
-    }
     StateTree->EditorData = EditorData;
-
-    // Assign schema based on type
-#if MCP_STATE_TREE_COMPONENT_SCHEMA_AVAILABLE
-    EditorData->Schema = NewObject<UStateTreeComponentSchema>(EditorData);
-#else
-    // UE 5.7+ or schema not available - skip schema assignment
-    // The StateTree will use a default schema or require manual configuration
-#endif
-    // Add a default root state
+    EditorData->Schema = NewObject<UStateTreeSchema>(EditorData, SchemaClass);
     UStateTreeState& RootState = EditorData->AddRootState();
     RootState.Name = FName(TEXT("Root"));
+    McpCompileStateTreeInto(StateTree, Result);
 
-    // Save the asset
-    McpSafeAssetSave(StateTree);
-
-    Result->SetStringField(TEXT("stateTreePath"), FullPath);
+    Result->SetStringField(TEXT("stateTreePath"), StateTree->GetOutermost()->GetName());
     Result->SetStringField(TEXT("rootStateName"), TEXT("Root"));
-    Result->SetStringField(TEXT("message"), TEXT("State Tree created with root state"));
+    Result->SetStringField(TEXT("schema"), SchemaClass->GetName());
+    Result->SetBoolField(TEXT("saved"), McpSafeAssetSave(StateTree));
     McpHandlerUtils::AddVerification(Result, StateTree);
     Self->SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("State Tree created"), Result);
 #else
@@ -143,21 +119,38 @@ bool HandleAddStateTreeState(UEngineWireSubsystem* Self, const FString& RequestI
             FString::Printf(TEXT("Parent state '%s' not found"), *ParentStateName), TEXT("NOT_FOUND"));
         return true;
     }
+    // States are found by name everywhere here, so a second state of one name could never be reached.
+    if (McpFindStateTreeState(EditorData, StateName))
+    {
+        Self->SendAutomationError(RequestingSocket, RequestId,
+            FString::Printf(TEXT("The State Tree already has a state named %s; pick another name. Nothing was added."), *StateName), TEXT("NAME_TAKEN"));
+        return true;
+    }
 
-    // Any EStateTreeStateType this engine has (LinkedAsset is 5.4+), case ignored; State otherwise.
-    const int64 TypeValue = StaticEnum<EStateTreeStateType>()->GetValueByNameString(StateType);
-    const EStateTreeStateType Type = TypeValue == INDEX_NONE ? EStateTreeStateType::State : static_cast<EStateTreeStateType>(TypeValue);
+    // Any EStateTreeStateType this engine has (LinkedAsset is 5.4+), case ignored; an unknown one used to become State.
+    const UEnum* TypeEnum = StaticEnum<EStateTreeStateType>();
+    const int64 TypeValue = TypeEnum->GetValueByNameString(StateType);
+    if (TypeValue == INDEX_NONE)
+    {
+        TArray<FString> TypeNames;
+        for (int32 Index = 0; Index < TypeEnum->NumEnums() - 1; ++Index)
+        {
+            TypeNames.Add(TypeEnum->GetNameStringByIndex(Index));
+        }
+        Self->SendAutomationError(RequestingSocket, RequestId, FString::Printf(TEXT("stateType must be one of %s."),
+            *FString::Join(TypeNames, TEXT(", "))), TEXT("INVALID_ARGUMENT"));
+        return true;
+    }
 
-    // Add the child state
-    UStateTreeState& NewState = ParentState->AddChildState(FName(*StateName), Type);
-
-    // Save
-    McpSafeAssetSave(StateTree);
+    EditorData->Modify();
+    ParentState->Modify();
+    ParentState->AddChildState(FName(*StateName), static_cast<EStateTreeStateType>(TypeValue));
+    McpCompileStateTreeInto(StateTree, Result);
 
     Result->SetStringField(TEXT("stateName"), StateName);
-    Result->SetStringField(TEXT("parentState"), ParentStateName);
-    Result->SetStringField(TEXT("stateType"), StateType);
-    Result->SetStringField(TEXT("message"), TEXT("State added to StateTree"));
+    Result->SetStringField(TEXT("parentState"), ParentState->Name.ToString());
+    Result->SetStringField(TEXT("stateType"), TypeEnum->GetNameStringByValue(TypeValue));
+    Result->SetBoolField(TEXT("saved"), McpSafeAssetSave(StateTree));
     McpHandlerUtils::AddVerification(Result, StateTree);
     Self->SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("State added"), Result);
 #else

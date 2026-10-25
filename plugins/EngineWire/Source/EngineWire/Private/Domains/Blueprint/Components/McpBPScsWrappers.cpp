@@ -6,6 +6,7 @@
 namespace McpBlueprintHandlers {
 bool HandleBlueprintScsWrappers(const FBlueprintActionContext &Context) {
   MCP_BLUEPRINT_ACTION_LOCALS(Context);
+  TGuardValue<bool> SaveScope(FSCSHandlers::bSaveScsChanges, GetJsonBoolField(Payload, TEXT("save"), true));
   auto SafeGetStr = [](const TSharedPtr<FJsonObject> &Object,
                        const FString &FieldName) {
     FString Value;

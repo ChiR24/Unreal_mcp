@@ -1,241 +1,83 @@
 #include "Domains/AI/McpAIContext.h"
+#include "Domains/AI/Blackboard/McpAIBlackboardDefaults.h"
 
-#include "BehaviorTree/Blackboard/BlackboardKeyType_Bool.h"
-#include "BehaviorTree/Blackboard/BlackboardKeyType_Float.h"
-#include "BehaviorTree/Blackboard/BlackboardKeyType_Int.h"
-#include "BehaviorTree/Blackboard/BlackboardKeyType_Name.h"
-#include "BehaviorTree/Blackboard/BlackboardKeyType_Rotator.h"
-#include "BehaviorTree/Blackboard/BlackboardKeyType_String.h"
-#include "BehaviorTree/Blackboard/BlackboardKeyType_Vector.h"
 #include "BehaviorTree/BlackboardData.h"
 
 namespace McpAIHandlers
 {
+// Implements the "set_blackboard_value" action: the key's default, which every Blackboard made from the asset starts with.
+// A type without one, an empty value or a value of the wrong kind used to answer success with valueSet false, saved anyway.
 bool HandleSetBlackboardValue(UEngineWireSubsystem* Self, const FString& RequestId, const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> RequestingSocket)
 {
-    FString BBPath = GetJsonStringField(Payload, TEXT("blackboardPath"));
-    if (BBPath.IsEmpty())
+    FString Error;
+    FString Code;
+    UBlackboardData* Blackboard = LoadEditableBlackboard(Payload, Error, Code);
+    FBlackboardEntry* Key = Blackboard ? FindOwnBlackboardKey(Blackboard, GetJsonStringField(Payload, TEXT("keyName")), Error, Code) : nullptr;
+    const TSharedPtr<FJsonValue> Value = Payload->TryGetField(TEXT("value"));
+    if (Key && !Key->KeyType)
     {
-        Self->SendAutomationError(RequestingSocket, RequestId, TEXT("Missing blackboardPath"), TEXT("INVALID_ARGUMENT"));
+        Error = FString::Printf(TEXT("Key '%s' has no type to hold a value."), *Key->EntryName.ToString());
+        Code = TEXT("INVALID_TARGET");
+        Key = nullptr;
+    }
+    else if (Key && (!Value.IsValid() || Value->IsNull()))
+    {
+        Error = TEXT("value is required: the default the key starts with in every Blackboard made from this asset.");
+        Code = TEXT("INVALID_ARGUMENT");
+        Key = nullptr;
+    }
+    if (!Key || !WriteBlackboardKeyDefault(Key->KeyType, Value, Error, Code))
+    {
+        Self->SendAutomationError(RequestingSocket, RequestId, Error, Code);
         return true;
     }
+    NotifyBlackboardKeysChanged(Blackboard);
 
-    FString KeyName = GetJsonStringField(Payload, TEXT("keyName"));
-    if (KeyName.IsEmpty())
-    {
-        Self->SendAutomationError(RequestingSocket, RequestId, TEXT("Missing keyName"), TEXT("INVALID_ARGUMENT"));
-        return true;
-    }
-
-    UBlackboardData* BBData = LoadObject<UBlackboardData>(nullptr, *BBPath);
-    if (!BBData)
-    {
-        Self->SendAutomationError(RequestingSocket, RequestId,
-            FString::Printf(TEXT("Blackboard not found: %s"), *BBPath), TEXT("NOT_FOUND"));
-        return true;
-    }
-
-    // Find the key and set its value
-    bool bKeyFound = false;
-    bool bValueSet = false;
-    FString ValueStr = GetJsonStringField(Payload, TEXT("value"));
-
-    for (FBlackboardEntry& Key : BBData->Keys)
-    {
-        if (Key.EntryName.ToString() == KeyName)
-        {
-            bKeyFound = true;
-
-            // Set the default value based on key type
-            // Note: DefaultValue properties on BlackboardKeyType are only available in UE 5.5+
-#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 5
-            if (Key.KeyType && !ValueStr.IsEmpty())
-            {
-                if (UBlackboardKeyType_Bool* BoolKey = Cast<UBlackboardKeyType_Bool>(Key.KeyType))
-                {
-                    BoolKey->bDefaultValue = ValueStr.ToLower() == TEXT("true") || ValueStr == TEXT("1");
-                    bValueSet = true;
-                }
-                else if (UBlackboardKeyType_Int* IntKey = Cast<UBlackboardKeyType_Int>(Key.KeyType))
-                {
-                    IntKey->DefaultValue = FCString::Atoi(*ValueStr);
-                    bValueSet = true;
-                }
-                else if (UBlackboardKeyType_Float* FloatKey = Cast<UBlackboardKeyType_Float>(Key.KeyType))
-                {
-                    FloatKey->DefaultValue = FCString::Atof(*ValueStr);
-                    bValueSet = true;
-                }
-                else if (UBlackboardKeyType_Vector* VectorKey = Cast<UBlackboardKeyType_Vector>(Key.KeyType))
-                {
-                    VectorKey->DefaultValue.InitFromString(ValueStr);
-                    VectorKey->bUseDefaultValue = true;
-                    bValueSet = true;
-                }
-                else if (UBlackboardKeyType_Rotator* RotatorKey = Cast<UBlackboardKeyType_Rotator>(Key.KeyType))
-                {
-                    RotatorKey->DefaultValue.InitFromString(ValueStr);
-                    RotatorKey->bUseDefaultValue = true;
-                    bValueSet = true;
-                }
-                else if (UBlackboardKeyType_Name* NameKey = Cast<UBlackboardKeyType_Name>(Key.KeyType))
-                {
-                    NameKey->DefaultValue = FName(*ValueStr);
-                    bValueSet = true;
-                }
-                else if (UBlackboardKeyType_String* StringKey = Cast<UBlackboardKeyType_String>(Key.KeyType))
-                {
-                    StringKey->DefaultValue = ValueStr;
-                    bValueSet = true;
-                }
-                else
-                {
-                    // Unsupported key type - note in response
-                    bValueSet = false;
-                }
-            }
-#else
-            // UE 5.0-5.4: DefaultValue properties not available on BlackboardKeyType
-            // Value setting requires UE 5.5+
-            bValueSet = false;
-#endif
-            break;
-        }
-    }
-
-    if (!bKeyFound)
-    {
-        Self->SendAutomationError(RequestingSocket, RequestId,
-            FString::Printf(TEXT("Key '%s' not found in blackboard"), *KeyName), TEXT("KEY_NOT_FOUND"));
-        return true;
-    }
-
-    McpSafeAssetSave(BBData);
-
-    TSharedPtr<FJsonObject> SetResult = McpHandlerUtils::CreateResultObject();
-    SetResult->SetStringField(TEXT("blackboardPath"), BBPath);
-    SetResult->SetStringField(TEXT("keyName"), KeyName);
-    SetResult->SetStringField(TEXT("value"), ValueStr);
-    SetResult->SetBoolField(TEXT("valueSet"), bValueSet);
-
-#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 5
-    Self->SendAutomationResponse(RequestingSocket, RequestId, true,
-        bValueSet ? TEXT("Blackboard value set") : TEXT("Key found but value not set (unsupported type)"), SetResult);
-#else
-    Self->SendAutomationResponse(RequestingSocket, RequestId, true,
-        TEXT("Key found. Note: set_blackboard_value requires UE 5.5+ for value setting."), SetResult);
-#endif
+    FString Stored;
+    ReadBlackboardKeyDefault(Key->KeyType, Stored);
+    TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
+    Result->SetStringField(TEXT("blackboardPath"), Blackboard->GetPathName());
+    Result->SetStringField(TEXT("keyName"), Key->EntryName.ToString());
+    Result->SetStringField(TEXT("keyType"), Key->KeyType->GetClass()->GetName().Replace(TEXT("BlackboardKeyType_"), TEXT("")));
+    Result->SetStringField(TEXT("value"), Stored);
+    Result->SetBoolField(TEXT("saved"), McpSafeAssetSave(Blackboard));
+    McpHandlerUtils::AddVerification(Result, Blackboard);
+    Self->SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Blackboard key default set"), Result);
     return true;
 }
 
 // Implements the "get_blackboard_value" action.
 bool HandleGetBlackboardValue(UEngineWireSubsystem* Self, const FString& RequestId, const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> RequestingSocket)
 {
-    FString BBPath = GetJsonStringField(Payload, TEXT("blackboardPath"));
-    if (BBPath.IsEmpty())
+    const FString BBPath = GetJsonStringField(Payload, TEXT("blackboardPath"));
+    UBlackboardData* BBData = BBPath.IsEmpty() ? nullptr : LoadObject<UBlackboardData>(nullptr, *BBPath);
+    FString Error = BBPath.IsEmpty() ? FString(TEXT("blackboardPath is required")) : FString::Printf(TEXT("Blackboard not found: %s"), *BBPath);
+    FString Code = BBPath.IsEmpty() ? TEXT("INVALID_ARGUMENT") : TEXT("NOT_FOUND");
+    const FBlackboardEntry* Key = BBData ? FindOwnBlackboardKey(BBData, GetJsonStringField(Payload, TEXT("keyName")), Error, Code) : nullptr;
+    if (!Key)
     {
-        Self->SendAutomationError(RequestingSocket, RequestId, TEXT("Missing blackboardPath"), TEXT("INVALID_ARGUMENT"));
+        Self->SendAutomationError(RequestingSocket, RequestId, Error, Code);
         return true;
     }
 
-    FString KeyName = GetJsonStringField(Payload, TEXT("keyName"));
-    if (KeyName.IsEmpty())
-    {
-        Self->SendAutomationError(RequestingSocket, RequestId, TEXT("Missing keyName"), TEXT("INVALID_ARGUMENT"));
-        return true;
-    }
-
-    UBlackboardData* BBData = LoadObject<UBlackboardData>(nullptr, *BBPath);
-    if (!BBData)
-    {
-        Self->SendAutomationError(RequestingSocket, RequestId,
-            FString::Printf(TEXT("Blackboard not found: %s"), *BBPath), TEXT("NOT_FOUND"));
-        return true;
-    }
-
-    // Find the key
-    bool bKeyFound = false;
-    FString KeyType = TEXT("Unknown");
-    bool bInstanceSynced = false;
+    const FString KeyType = Key->KeyType ? Key->KeyType->GetClass()->GetName() : TEXT("Unknown");
     FString ValueStr;
-    bool bValueAvailable = false;
-
-    for (const FBlackboardEntry& Key : BBData->Keys)
-    {
-        if (Key.EntryName.ToString() == KeyName)
-        {
-            bKeyFound = true;
-            bInstanceSynced = Key.bInstanceSynced;
-            if (Key.KeyType)
-            {
-                KeyType = Key.KeyType->GetClass()->GetName();
-            }
-#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 5
-            if (Key.KeyType)
-            {
-                if (const UBlackboardKeyType_Bool* BoolKey = Cast<UBlackboardKeyType_Bool>(Key.KeyType))
-                {
-                    ValueStr = BoolKey->bDefaultValue ? TEXT("true") : TEXT("false");
-                    bValueAvailable = true;
-                }
-                else if (const UBlackboardKeyType_Int* IntKey = Cast<UBlackboardKeyType_Int>(Key.KeyType))
-                {
-                    ValueStr = FString::FromInt(IntKey->DefaultValue);
-                    bValueAvailable = true;
-                }
-                else if (const UBlackboardKeyType_Float* FloatKey = Cast<UBlackboardKeyType_Float>(Key.KeyType))
-                {
-                    ValueStr = FString::SanitizeFloat(FloatKey->DefaultValue);
-                    bValueAvailable = true;
-                }
-                else if (const UBlackboardKeyType_Vector* VectorKey = Cast<UBlackboardKeyType_Vector>(Key.KeyType))
-                {
-                    ValueStr = VectorKey->DefaultValue.ToString();
-                    bValueAvailable = true;
-                }
-                else if (const UBlackboardKeyType_Rotator* RotatorKey = Cast<UBlackboardKeyType_Rotator>(Key.KeyType))
-                {
-                    ValueStr = RotatorKey->DefaultValue.ToString();
-                    bValueAvailable = true;
-                }
-                else if (const UBlackboardKeyType_Name* NameKey = Cast<UBlackboardKeyType_Name>(Key.KeyType))
-                {
-                    ValueStr = NameKey->DefaultValue.ToString();
-                    bValueAvailable = true;
-                }
-                else if (const UBlackboardKeyType_String* StringKey = Cast<UBlackboardKeyType_String>(Key.KeyType))
-                {
-                    ValueStr = StringKey->DefaultValue;
-                    bValueAvailable = true;
-                }
-            }
-#endif
-            break;
-        }
-    }
-
-    if (!bKeyFound)
-    {
-        Self->SendAutomationError(RequestingSocket, RequestId,
-            FString::Printf(TEXT("Key '%s' not found in blackboard"), *KeyName), TEXT("KEY_NOT_FOUND"));
-        return true;
-    }
-
+    const bool bValueAvailable = Key->KeyType && ReadBlackboardKeyDefault(Key->KeyType, ValueStr);
     TSharedPtr<FJsonObject> GetResult = McpHandlerUtils::CreateResultObject();
     GetResult->SetStringField(TEXT("blackboardPath"), BBPath);
-    GetResult->SetStringField(TEXT("keyName"), KeyName);
+    GetResult->SetStringField(TEXT("keyName"), Key->EntryName.ToString());
     GetResult->SetStringField(TEXT("keyType"), KeyType);
-    GetResult->SetBoolField(TEXT("instanceSynced"), bInstanceSynced);
+    GetResult->SetBoolField(TEXT("instanceSynced"), Key->bInstanceSynced);
     GetResult->SetBoolField(TEXT("valueAvailable"), bValueAvailable);
     if (bValueAvailable)
     {
         GetResult->SetStringField(TEXT("value"), ValueStr);
         // Typed companions so callers need not parse the text (dogfood #65).
-        if (KeyType.Contains(TEXT("Float")) || KeyType.Contains(TEXT("Int")))
+        if (KeyType.EndsWith(TEXT("_Float")) || KeyType.EndsWith(TEXT("_Int")))
         {
             GetResult->SetNumberField(TEXT("valueNumber"), FCString::Atod(*ValueStr));
         }
-        else if (KeyType.Contains(TEXT("Bool")))
+        else if (KeyType.EndsWith(TEXT("_Bool")))
         {
             GetResult->SetBoolField(TEXT("valueBool"), ValueStr.ToBool());
         }

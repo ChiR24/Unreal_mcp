@@ -2,6 +2,37 @@
 #include "Foundation/BridgeHelpers/Blueprints/McpBPPaths.h"
 #include "Domains/Sequence/McpSeqEditorSupport.h"
 #include "Domains/Sequence/Metadata/McpSeqMetadata.h"
+#include "Domains/AssetWorkflow/Operations/McpAssetBulkSelection.h"
+#include "Domains/Sequence/McpSeqPathSecurity.h"
+
+// The level sequence a duplicate or rename moves, to DestinationPath under /Game. Anything else is refused here: an
+// unwritable path (a copy into, or a rename out of, engine content went through), a missing or non-sequence source,
+// and a taken destination, which used to fail as a bare OPERATION_FAILED.
+static ULevelSequence *McpResolveSequenceMove(UEngineWireSubsystem *Self, TSharedPtr<FMcpBridgeWebSocket> Socket,
+                                              const FString &RequestId, const FString &SourcePath,
+                                              const FString &DestinationPath, bool bSourceWritable) {
+  FString Resolved, Error;
+  if ((bSourceWritable && !McpSequencePathSecurity::ValidateWritableAssetPath(SourcePath, Resolved, Error)) ||
+      !McpSequencePathSecurity::ValidateWritableAssetPath(DestinationPath, Resolved, Error)) {
+    Self->SendAutomationResponse(Socket, RequestId, false, Error, nullptr, TEXT("SEQUENCE_PATH_NOT_WRITABLE"));
+    return nullptr;
+  }
+  UObject *Source = McpLoadAsset(SourcePath);
+  ULevelSequence *Sequence = Cast<ULevelSequence>(Source);
+  if (!Sequence) {
+    Self->SendAutomationResponse(Socket, RequestId, false,
+        Source ? FString::Printf(TEXT("%s is a %s, not a level sequence"), *SourcePath, *Source->GetClass()->GetName())
+               : FString::Printf(TEXT("Source sequence not found: %s"), *SourcePath),
+        nullptr, TEXT("INVALID_SEQUENCE"));
+    return nullptr;
+  }
+  if (McpAssetExists(DestinationPath)) {
+    Self->SendAutomationResponse(Socket, RequestId, false, FString::Printf(TEXT("An asset already exists at %s"), *DestinationPath),
+                                 nullptr, TEXT("ASSET_ALREADY_EXISTS"));
+    return nullptr;
+  }
+  return Sequence;
+}
 
 bool UEngineWireSubsystem::HandleSequenceList(
     const FString &RequestId, const TSharedPtr<FJsonObject> &Payload,
@@ -107,20 +138,16 @@ bool UEngineWireSubsystem::HandleSequenceDuplicate(
     DestinationPath = DestinationPath / FPaths::GetBaseFilename(SourcePath);
   }
 
-  UObject *SourceSeq = McpLoadAsset(SourcePath);
-  if (!SourceSeq) {
-    SendAutomationResponse(
-        Socket, RequestId, false,
-        FString::Printf(TEXT("Source sequence not found: %s"), *SourcePath),
-        nullptr, TEXT("INVALID_SEQUENCE"));
+  if (!McpResolveSequenceMove(this, Socket, RequestId, SourcePath, DestinationPath, false)) {
     return true;
   }
   UObject *DuplicatedSeq =
       UEditorAssetLibrary::DuplicateAsset(SourcePath, DestinationPath);
   if (DuplicatedSeq) {
     // Saved like a created sequence: the copy lived only in memory and an editor exit lost it.
-    McpSafeAssetSave(DuplicatedSeq);
+    const bool bSaved = McpSafeAssetSave(DuplicatedSeq);
     TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
+    Resp->SetBoolField(TEXT("saved"), bSaved);
     Resp->SetStringField(TEXT("sourcePath"), SourcePath);
     Resp->SetStringField(TEXT("destinationPath"), DestinationPath);
     Resp->SetStringField(TEXT("duplicatedPath"), DuplicatedSeq->GetPathName());
@@ -157,10 +184,18 @@ bool UEngineWireSubsystem::HandleSequenceRename(
     NewName = FString::Printf(TEXT("%s/%s"), *ParentPath, *NewName);
   }
 
+  if (!McpResolveSequenceMove(this, Socket, RequestId, Path, NewName, true)) {
+    return true;
+  }
   if (UEditorAssetLibrary::RenameAsset(Path, NewName)) {
     TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
     Resp->SetStringField(TEXT("oldPath"), Path);
     Resp->SetStringField(TEXT("newName"), NewName);
+    // The renamed asset, which the receipt names: the reply carried only the two paths.
+    Resp->SetStringField(TEXT("sequencePath"), NewName);
+    if (UObject *Renamed = McpLoadAsset(NewName)) {
+      McpHandlerUtils::AddVerification(Resp, Renamed);
+    }
     SendAutomationResponse(Socket, RequestId, true,
                            TEXT("Sequence renamed successfully"), Resp,
                            FString());
@@ -195,6 +230,19 @@ bool UEngineWireSubsystem::HandleSequenceDelete(
     return true;
   }
 
+  // UEditorAssetLibrary::DeleteAsset is a force delete: it never checked what plays the sequence (a Level
+  // Sequence Actor kept a broken reference) and may clear the undo history. Refuse while anything uses it.
+  const FString Package = FPackageName::ObjectPathToPackageName(Path);
+  const TArray<FString> Users = McpOutsideReferencers(Package, {Package});
+  if (Users.Num() > 0) {
+    TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
+    Resp->SetArrayField(TEXT("referencedBy"), McpHandlerUtils::ToJsonStringArray(Users));
+    SendAutomationResponse(Socket, RequestId, false,
+                           FString::Printf(TEXT("Sequence %s is still used by %d asset(s) (referencedBy): remove those uses first, or delete it anyway with manage_asset delete and force."),
+                                           *Path, Users.Num()),
+                           Resp, TEXT("SEQUENCE_IN_USE"));
+    return true;
+  }
   if (UEditorAssetLibrary::DeleteAsset(Path)) {
     TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
     Resp->SetStringField(TEXT("deletedPath"), Path);

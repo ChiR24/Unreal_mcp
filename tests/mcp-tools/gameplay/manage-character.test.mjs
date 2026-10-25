@@ -51,7 +51,10 @@ const testCases = [
   { scenario: 'CONFIG: configure_movement_speeds', toolName: 'manage_character', arguments: { action: 'configure_movement_speeds', blueprintPath: '${captured:blueprintPath}', runSpeed: 420, crouchSpeed: 180, swimSpeed: 320, flySpeed: 500, acceleration: 1400, deceleration: 1600, groundFriction: 7, jumpHeight: 650 }, expected: 'success', assertions: [{ path: 'structuredContent.result.runSpeedApplied', equals: true, label: 'runSpeed applied when walkSpeed omitted' }, { path: 'structuredContent.result.walkSpeed', equals: 420, label: 'runSpeed maps to max walk speed' }] },
   { scenario: 'CONFIG: configure_jump', toolName: 'manage_character', arguments: { action: 'configure_jump', blueprintPath: '${captured:blueprintPath}', jumpHeight: 650, airControl: 0.45, gravityScale: 1.1, fallingLateralFriction: 0.15, maxJumpCount: 2, jumpHoldTime: 0.25 }, expected: 'success' },
   { scenario: 'CONFIG: configure_rotation', toolName: 'manage_character', arguments: { action: 'configure_rotation', blueprintPath: '${captured:blueprintPath}', orientToMovement: true, useControllerRotationYaw: false, useControllerRotationPitch: false, useControllerRotationRoll: false, rotationRate: 540 }, expected: 'success' },
-  { scenario: 'CONFIG: configure_nav_movement', toolName: 'manage_character', arguments: { action: 'configure_nav_movement', blueprintPath: '${captured:blueprintPath}', navAgentRadius: 42, navAgentHeight: 192, avoidanceEnabled: true }, expected: 'success' },
+  { scenario: 'CONFIG: configure_nav_movement', toolName: 'manage_character', arguments: { action: 'configure_nav_movement', blueprintPath: '${captured:blueprintPath}', navAgentRadius: 42, navAgentHeight: 192, avoidanceEnabled: true }, expected: 'success', assertions: [
+    { path: 'structuredContent.result.navAgentRadius', equals: 42, label: 'nav agent radius read back' },
+    { path: 'structuredContent.result.navAgentFollowsCapsule', equals: false, label: 'a sent size stops the capsule copy' },
+  ] },
 
   // === ADVANCED MOVEMENT ===
 
@@ -65,6 +68,7 @@ const testCases = [
   // === WRONG TARGET (BB-012) ===
   // A non-Character blueprint (the anim blueprint's AnimInstance parent chain)
   // must be rejected by the prerequisite gate with zero mutation.
+  { scenario: 'WRONG TARGET: configure_jump on an Animation Blueprint is refused', toolName: 'manage_character', arguments: { action: 'configure_jump', blueprintPath: '${captured:animBlueprintPath}', jumpHeight: 700 }, expected: 'error|NOT_A_CHARACTER' },
 
   // === INFO ===
   { scenario: 'INFO: get_character_info', toolName: 'manage_character', arguments: { action: 'get_character_info', blueprintPath: '${captured:blueprintPath}' }, expected: 'success', assertions: [
@@ -77,6 +81,7 @@ const testCases = [
   // === MOVEMENT SHORTCUTS ===
   { scenario: 'ACTION: setup_movement', toolName: 'manage_character', arguments: { action: 'setup_movement', blueprintPath: '${captured:blueprintPath}', walkSpeed: 500, acceleration: 1500 }, expected: 'success' },
   { scenario: 'CONFIG: set_walk_speed', toolName: 'manage_character', arguments: { action: 'set_walk_speed', blueprintPath: '${captured:blueprintPath}', walkSpeed: 520 }, expected: 'success', assertions: [{ path: 'structuredContent.result.walkSpeed', equals: 520, label: 'walk speed applied' }] },
+  { scenario: 'ERROR: set_walk_speed refuses a negative speed', toolName: 'manage_character', arguments: { action: 'set_walk_speed', blueprintPath: '${captured:blueprintPath}', walkSpeed: -5 }, expected: 'error|cannot be negative' },
   { scenario: 'CONFIG: set_jump_height', toolName: 'manage_character', arguments: { action: 'set_jump_height', blueprintPath: '${captured:blueprintPath}', jumpHeight: 700 }, expected: 'success', assertions: [{ path: 'structuredContent.result.jumpHeight', equals: 700, label: 'jump height applied' }] },
   { scenario: 'CONFIG: set_gravity_scale', toolName: 'manage_character', arguments: { action: 'set_gravity_scale', blueprintPath: '${captured:blueprintPath}', gravityScale: 0.9 }, expected: 'success', assertions: [{ path: 'structuredContent.result.gravityScale', equals: 0.9, label: 'gravity scale applied' }] },
   { scenario: 'CONFIG: set_ground_friction', toolName: 'manage_character', arguments: { action: 'set_ground_friction', blueprintPath: '${captured:blueprintPath}', groundFriction: 5.5 }, expected: 'success', assertions: [{ path: 'structuredContent.result.groundFriction', equals: 5.5, label: 'ground friction applied' }] },

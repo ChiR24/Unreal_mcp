@@ -1,4 +1,5 @@
 #include "Domains/AI/McpAIContext.h"
+#include "Domains/AI/Perception/McpAIPerceptionConfigs.h"
 
 #include "AIController.h"
 #include "BehaviorTree/BehaviorTree.h"
@@ -48,8 +49,9 @@ void CollectComponentTemplates(UClass* GeneratedClass, UObject* CDO, TArray<UAct
     }
 }
 
-// Perception presence, the component carrying it and the sense classes its
-// SensesConfig array holds (read by reflection: the array is protected).
+// Perception presence, the component carrying it (by its variable name, not the _GEN_VARIABLE template name) and each
+// sense in its SensesConfig array (read by reflection: the array is protected), with the settings under the names the
+// configure actions take.
 void DescribePerception(const TArray<UActorComponent*>& Components, const TSharedPtr<FJsonObject>& Result)
 {
     UAIPerceptionComponent* PerceptionComponent = nullptr;
@@ -67,7 +69,9 @@ void DescribePerception(const TArray<UActorComponent*>& Components, const TShare
     Perception->SetBoolField(TEXT("present"), PerceptionComponent != nullptr);
     if (PerceptionComponent)
     {
-        Perception->SetStringField(TEXT("componentName"), PerceptionComponent->GetName());
+        FString ComponentName = PerceptionComponent->GetName();
+        ComponentName.RemoveFromEnd(USimpleConstructionScript::ComponentTemplateNameSuffix);
+        Perception->SetStringField(TEXT("componentName"), ComponentName);
         FArrayProperty* SensesProp = FindFProperty<FArrayProperty>(UAIPerceptionComponent::StaticClass(), TEXT("SensesConfig"));
         FObjectPropertyBase* Inner = SensesProp ? CastField<FObjectPropertyBase>(SensesProp->Inner) : nullptr;
         if (SensesProp && Inner)
@@ -84,6 +88,7 @@ void DescribePerception(const TArray<UActorComponent*>& Components, const TShare
                 Sense->SetStringField(TEXT("configClass"), Config->GetClass()->GetName());
                 UClass* SenseClass = Config->GetSenseImplementation();
                 Sense->SetStringField(TEXT("senseClass"), SenseClass ? SenseClass->GetName() : TEXT("None"));
+                AddSenseSettings(Config, Sense);
                 Senses.Add(MakeShared<FJsonValueObject>(Sense));
             }
         }
@@ -99,6 +104,12 @@ void DescribeTeam(UClass* GeneratedClass, UObject* CDO, const TSharedPtr<FJsonOb
     if (const AAIController* Controller = Cast<AAIController>(CDO))
     {
         Result->SetNumberField(TEXT("teamId"), Controller->GetGenericTeamId().GetId());
+        // set_perception_team stores the team in this variable; the engine team above stays 255 until C++ applies it.
+        // Read from the class default: the variable's default text is not kept once the Blueprint compiles.
+        if (const FIntProperty* TeamVariable = FindFProperty<FIntProperty>(GeneratedClass, TEXT("GenericTeamId")))
+        {
+            Result->SetNumberField(TEXT("teamIdVariable"), TeamVariable->GetPropertyValue_InContainer(CDO));
+        }
         return;
     }
     for (TFieldIterator<FStructProperty> It(GeneratedClass); It; ++It)

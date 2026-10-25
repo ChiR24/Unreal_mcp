@@ -1,5 +1,6 @@
 #include "Core/Compatibility/McpVersionCompatibility.h"
 #include "Domains/Foliage/McpFoliagePrivate.h"
+#include "Foundation/McpScopedEditorTransaction.h"
 
 bool UEngineWireSubsystem::HandlePaintFoliage(
     const FString &RequestId, const FString &Action,
@@ -111,7 +112,7 @@ bool UEngineWireSubsystem::HandlePaintFoliage(
   const double BottomZ = FMath::Min(AreaMin.Z, AreaMax.Z);
   const FCollisionQueryParams TraceParams(SCENE_QUERY_STAT(McpPaintFoliage), true);
   int32 SkippedNoSurface = 0;
-  TArray<FVector> PlacedLocations;
+  TArray<FFoliageInstance> Placed;
   for (const FVector &Point : Locations) {
     FFoliageInstance Instance;
     Instance.Location = Point;
@@ -133,11 +134,9 @@ bool UEngineWireSubsystem::HandlePaintFoliage(
     }
     Instance.DrawScale3D = FVector3f(Stream.FRandRange(FMath::Min(MinScale, MaxScale), FMath::Max(MinScale, MaxScale)));
     Instance.ZOffset = 0.0f;
-
-    McpFoliageHandlers::AddFoliageInstance(IFA, FoliageType, Instance);
-    PlacedLocations.Add(Instance.Location);
+    Placed.Add(Instance);
   }
-  if (PlacedLocations.Num() == 0) {
+  if (Placed.Num() == 0) {
     SendAutomationError(RequestingSocket, RequestId,
         FString::Printf(TEXT("No static surface below any of the %d points (searched 500 above each point's z to 1000 below the lowest). Raise area.max.z / the location z above the ground, or pass snapToSurface:false to place at the given z."),
                         Locations.Num()),
@@ -145,12 +144,19 @@ bool UEngineWireSubsystem::HandlePaintFoliage(
     return true;
   }
 
-  IFA->Modify();
+  // One undo step, opened once every point is known to land: the actor is recorded before any instance is added.
+  // Modify() after the adds recorded the state with the new instances already in it, so undo kept them.
+  const FMcpScopedEditorTransaction Transaction(FText::FromString(TEXT("Paint Foliage")),
+                                                EMcpMutationDurability::EditorStateOnly, {IFA});
+  for (const FFoliageInstance &Instance : Placed) {
+    McpFoliageHandlers::AddFoliageInstance(IFA, FoliageType, Instance);
+  }
 
   TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
+  Transaction.DescribeInto(Resp);
   Resp->SetBoolField(TEXT("success"), true);
   Resp->SetStringField(TEXT("foliageTypePath"), FoliageTypePath);
-  Resp->SetNumberField(TEXT("instancesPlaced"), PlacedLocations.Num());
+  Resp->SetNumberField(TEXT("instancesPlaced"), Placed.Num());
   Resp->SetNumberField(TEXT("brushRadius"), BrushRadius);
   Resp->SetNumberField(TEXT("requestedPoints"), Locations.Num());
   Resp->SetBoolField(TEXT("snappedToSurface"), bSnap);

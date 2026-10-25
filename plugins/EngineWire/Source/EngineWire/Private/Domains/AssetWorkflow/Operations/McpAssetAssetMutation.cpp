@@ -3,6 +3,7 @@
 #include "EngineWireSubsystem.h"
 #include "Core/Module/EngineWireGlobals.h"
 #include "Domains/AssetWorkflow/Rename/McpAssetRenameGuard.h"
+#include "Domains/AssetWorkflow/Operations/McpAssetBulkSelection.h"
 #include "Misc/PackageName.h"
 #include "Foundation/BridgeHelpers/McpHelpers.h"
 #include "Foundation/HandlerUtils/McpHandlerUtils.h"
@@ -185,18 +186,7 @@ bool UEngineWireSubsystem::HandleDeleteAssets(
     if (!Safe.IsEmpty()) { DeleteSet.Add(FPackageName::ObjectPathToPackageName(Safe)); }
   }
   const auto OutsideReferencers = [&DeleteSet](const FString &PackageName) {
-    TArray<FAssetIdentifier> Refs;
-    FAssetRegistryModule::GetRegistry().GetReferencers(FAssetIdentifier(FName(*PackageName)), Refs,
-                                                       UE::AssetRegistry::EDependencyCategory::Package);
-    TArray<FString> Outside;
-    for (const FAssetIdentifier &Ref : Refs) {
-      const FString RefPackage = Ref.PackageName.ToString();
-      const bool bDeletedToo = DeleteSet.ContainsByPredicate([&RefPackage](const FString &D) {
-        return RefPackage == D || RefPackage.StartsWith(D + TEXT("/"));
-      });
-      if (!RefPackage.IsEmpty() && !bDeletedToo) { Outside.AddUnique(RefPackage); }
-    }
-    return Outside;
+    return McpOutsideReferencers(PackageName, DeleteSet);
   };
 
   int32 PathIndex = -1;

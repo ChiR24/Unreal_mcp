@@ -6,6 +6,7 @@
 
 import type {
   CapabilityRecordSource,
+  CapabilityVariantRequirement,
   Draft202012ObjectSchema,
   JsonObject,
   JsonValue,
@@ -18,7 +19,7 @@ import {
   LegacyToolNameSchema,
 } from '../../identifiers.js';
 import type { FoldSpec, MemberEntry } from './fold-types.js';
-import { unique } from './fold-support.js';
+import { sameJson, unique } from './fold-support.js';
 import { intersectRequired, mergeProperties } from './fold-widen.js';
 
 const LATENCY_RANK: Readonly<Record<string, number>> = { instant: 0, interactive: 1, 'long-running': 2 };
@@ -57,6 +58,29 @@ function declaredBy(
   });
   const distinct = Object.entries(owners).filter(([, values]) => values.length < variants);
   return distinct.length === 0 ? undefined : Object.fromEntries(distinct);
+}
+
+// What each member action's own record requires beyond the union schema, which
+// keeps only what every member requires: 592 variants lost a requirement, so a
+// draw without location passed the gateway and failed in the engine.
+function requires(
+  entries: readonly MemberEntry[],
+  members: readonly CapabilityRecordSource[],
+  folded: Draft202012ObjectSchema,
+): Record<string, CapabilityVariantRequirement> | undefined {
+  const out: Record<string, CapabilityVariantRequirement> = {};
+  entries.forEach((entry, index) => {
+    const input = members[index]?.schemas.input;
+    if (input === undefined) return;
+    const required = input.required.filter((name) => name !== 'action' && !folded.required.includes(name));
+    const oneOf = input.requiredOneOf !== undefined && !sameJson(input.requiredOneOf, folded.requiredOneOf)
+      ? input.requiredOneOf
+      : undefined;
+    if (required.length > 0 || oneOf !== undefined) {
+      out[entry.action] = { ...(required.length > 0 ? { required } : {}), ...(oneOf === undefined ? {} : { oneOf: [...oneOf] }) };
+    }
+  });
+  return Object.keys(out).length === 0 ? undefined : out;
 }
 
 function objectSchema(
@@ -103,12 +127,23 @@ export function buildFolded(
   };
   if (selector !== undefined) {
     const label = spec.primary.replace(/_/g, ' ');
+    // Each variant's own summary, under the selector describe shows: once folded, the members' summaries reached no
+    // caller, so what a variant does, its defaults and refusals included, went unsaid. A sibling's action name in
+    // one becomes the selector value a caller sends: only an underscored name, which is never prose. A one-word one
+    // is also a word ("the toolbar pause", "the undo history" read "control=pause", "history=undo"), and its old
+    // name stays callable.
+    const asSelector = (text: string): string => selected.filter((entry) => entry.action.includes('_')).reduce((line, entry) =>
+      line.replace(new RegExp(`(^|[^A-Za-z0-9_])${entry.action}(?=[^A-Za-z0-9_]|$)`, 'g'), `$1${selector}=${entry.value}`), text);
+    const variantGuide = selected.flatMap((entry) => {
+      const summary = members[entries.indexOf(entry)]?.discovery.summary;
+      return summary === undefined || summary === spec.summary ? [] : [`\n${entry.value}: ${asSelector(summary)}`];
+    });
     inputProperties[selector] = {
       type: 'string',
       enum: selected.map((entry) => entry.value),
-      description: primaryValue === undefined
+      description: (primaryValue === undefined
         ? `Which ${label} variant to run.`
-        : `Which ${label} variant to run; omit for '${primaryValue}'.`,
+        : `Which ${label} variant to run; omit for '${primaryValue}'.`) + variantGuide.join(''),
       ...(primaryValue === undefined ? {} : { default: primaryValue }),
     };
   }
@@ -181,8 +216,11 @@ export function buildFolded(
     ? first.behavior.idempotency
     : 'non-idempotent';
 
-  const example = base.examples[0];
-  const exampleValue = primaryValue ?? selected[0]?.value;
+  // A family's most capable variant teaches the most: edit_graph showed one add_node, never a batch.
+  const exampleIndex = spec.exampleFrom === undefined ? -1 : entries.findIndex((entry) => entry.action === spec.exampleFrom);
+  if (spec.exampleFrom !== undefined && exampleIndex < 0) throw new Error(`${context}: exampleFrom '${spec.exampleFrom}' is not a member`);
+  const example = (members[exampleIndex] ?? base).examples[0];
+  const exampleValue = exampleIndex >= 0 ? entries[exampleIndex]?.value : primaryValue ?? selected[0]?.value;
   const exampleInput: JsonObject = {
     ...(example?.input ?? {}),
     action: spec.primary,
@@ -190,6 +228,7 @@ export function buildFolded(
   };
 
   const owners = selector === undefined ? undefined : declaredBy(entries, members);
+  const variantRequires = selector === undefined ? undefined : requires(entries, members, input);
 
   return {
     id,
@@ -227,6 +266,7 @@ export function buildFolded(
             param: selector,
             actions: Object.fromEntries(selected.map((entry) => [entry.value, LegacyActionNameSchema.parse(entry.action)])),
             ...(owners === undefined ? {} : { declaredBy: owners }),
+            ...(variantRequires === undefined ? {} : { requires: variantRequires }),
           },
         }),
     },

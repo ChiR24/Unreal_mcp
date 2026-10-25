@@ -94,6 +94,7 @@ bool UEngineWireSubsystem::HandleControlActorFindByName(
   }
 
   TSharedPtr<FJsonObject> Data = McpHandlerUtils::CreateResultObject();
+  const int32 Total = McpCapFindRows(Payload, Matches, Data);
   Data->SetNumberField(TEXT("count"), Matches.Num());
   Data->SetArrayField(TEXT("actors"), Matches);
   Data->SetStringField(TEXT("query"), Query);
@@ -102,7 +103,9 @@ bool UEngineWireSubsystem::HandleControlActorFindByName(
   // "Bug1" found nothing among Bug_01..Bug_10, and the empty list read as "there are no bugs".
   // With no match, names equal to the query once case, separators and leading zeros are
   // ignored ("bug1" in "Bug_01") are offered under similar.
-  FString Message = TEXT("Actor query executed");
+  FString Message = Total > Matches.Num()
+      ? FString::Printf(TEXT("Found %d actors matching '%s'; the first %d are listed"), Total, *Query, Matches.Num())
+      : FString::Printf(TEXT("Found %d actors matching '%s'"), Total, *Query);
   if (Matches.Num() == 0) {
     const auto Loose = [](const FString &In) {
       FString Out;

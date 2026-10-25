@@ -15,14 +15,34 @@ bool UEngineWireSubsystem::HandleControlActorApplyForce(
                               TEXT("Actor not found"), nullptr);
     return true;
   }
-
-  UPrimitiveComponent *Prim =
-      Found->FindComponentByClass<UPrimitiveComponent>();
-  if (!Prim) {
-    if (UStaticMeshComponent *SMC =
-            Found->FindComponentByClass<UStaticMeshComponent>())
-      Prim = SMC;
+  // The editor world never steps physics: a push there moved nothing and left the placed actor
+  // simulating, a level change nobody asked for.
+  const UWorld *World = Found->GetWorld();
+  if (!World || (World->WorldType != EWorldType::PIE && World->WorldType != EWorldType::Game)) {
+    SendStandardErrorResponse(
+        this, Socket, RequestId, TEXT("NOT_SIMULATING"),
+        TEXT("Physics runs only while the game plays: the editor world never steps it, so a push here "
+             "would move nothing. Start play (control_editor play) and push the running game's copy; to "
+             "make an actor fall or tumble from the start, set bSimulatePhysics on its mesh component "
+             "(control_actor edit_component)."),
+        nullptr);
+    return true;
   }
+
+  // The body to push: the root when it is one, else a part that simulates, else the first mesh (the
+  // first primitive could be a trigger box).
+  UPrimitiveComponent *Prim = Cast<UPrimitiveComponent>(Found->GetRootComponent());
+  if (!Prim) {
+    TInlineComponentArray<UPrimitiveComponent *> Parts(Found);
+    for (UPrimitiveComponent *Part : Parts) {
+      if (Part && Part->IsSimulatingPhysics()) {
+        Prim = Part;
+        break;
+      }
+    }
+  }
+  Prim = Prim ? Prim : Found->FindComponentByClass<UMeshComponent>();
+  Prim = Prim ? Prim : Found->FindComponentByClass<UPrimitiveComponent>();
 
   if (!Prim) {
     SendStandardErrorResponse(this, Socket, RequestId, TEXT("NO_COMPONENT"),
@@ -57,24 +77,23 @@ bool UEngineWireSubsystem::HandleControlActorApplyForce(
 
   if (!Prim->IsSimulatingPhysics()) {
     Prim->SetSimulatePhysics(true);
-    // Must recreate physics state for the body to be properly initialized in
-    // Editor
-    Prim->RecreatePhysicsState();
   }
 
-  Prim->AddForce(ForceVector);
+  // One impulse, not a force: a force lasts one frame, so 60000 moved a crate 0 cm while the reply
+  // said it was applied.
+  Prim->AddImpulse(ForceVector);
   Prim->WakeAllRigidBodies();
-  Prim->MarkRenderStateDirty();
 
   const bool bIsSimulating = Prim->IsSimulatingPhysics();
+  const float Mass = Prim->GetMass();
 
   TSharedPtr<FJsonObject> Data = McpHandlerUtils::CreateResultObject();
   Data->SetBoolField(TEXT("simulating"), bIsSimulating);
-  TArray<TSharedPtr<FJsonValue>> Applied;
-  Applied.Add(MakeShared<FJsonValueNumber>(ForceVector.X));
-  Applied.Add(MakeShared<FJsonValueNumber>(ForceVector.Y));
-  Applied.Add(MakeShared<FJsonValueNumber>(ForceVector.Z));
-  Data->SetArrayField(TEXT("applied"), Applied);
+  Data->SetArrayField(TEXT("applied"), McpHandlerUtils::VectorToJsonArray(ForceVector));
+  if (Mass > KINDA_SMALL_NUMBER) {
+    Data->SetNumberField(TEXT("massKg"), McpHandlerUtils::ReadableDouble(Mass));
+    Data->SetArrayField(TEXT("velocityChange"), McpHandlerUtils::VectorToJsonArray(ForceVector / Mass));
+  }
   Data->SetStringField(TEXT("actorName"), McpActorRef(Found));
 
   if (!bIsSimulating) {
@@ -91,7 +110,12 @@ bool UEngineWireSubsystem::HandleControlActorApplyForce(
 
 	McpHandlerUtils::AddVerification(Data, Found);
 
-	SendAutomationResponse(Socket, RequestId, true, TEXT("Force applied"), Data);
+	SendAutomationResponse(Socket, RequestId, true,
+	    Mass > KINDA_SMALL_NUMBER
+	        ? FString::Printf(TEXT("Pushed %s (%.0f kg): %.0f cm/s from the push"), *Prim->GetName(), Mass,
+	                          (ForceVector / Mass).Size())
+	        : FString(TEXT("Impulse applied")),
+	    Data);
   return true;
 }
 bool UEngineWireSubsystem::HandleControlActorSetCollision(
@@ -256,7 +280,10 @@ bool UEngineWireSubsystem::HandleControlActorSetCollision(
   // it lists the single form's actorName.
   Data->SetNumberField(TEXT("updatedActors"), Affected.Num());
   Data->SetArrayField(TEXT("affectedActors"), McpHandlerUtils::ToJsonStringArray(Affected));
-  Data->SetArrayField(TEXT("missing"), McpHandlerUtils::ToJsonStringArray(Missing));
+  if (Missing.Num() > 0)
+  {
+    Data->SetArrayField(TEXT("missing"), McpHandlerUtils::ToJsonStringArray(Missing));
+  }
   if (NoComponent.Num() > 0)
   {
     Data->SetArrayField(TEXT("noPrimitiveComponents"), McpHandlerUtils::ToJsonStringArray(NoComponent));

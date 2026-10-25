@@ -4,7 +4,7 @@ Core owns the request queue, the game-thread drain and the per-tool handler map:
 
 ## STRUCTURE
 - `Subsystem/` (11): `UEngineWireSubsystem` (declared in `../../Public/EngineWireSubsystem.h`) split into `...Subsystem.cpp`, `...RequestQueue.cpp`, `...RequestQueueCancellation.cpp`, `...Lifecycle.cpp`, `...HandlerRegistration.cpp`, `...Responses.cpp` + sanitization/enrichment headers, `...ErrorCapture.cpp`, `...EditorCommands.cpp`, `...RequestQueueTests.cpp`.
-- `Requests/` (5): `McpProcessRequest.cpp` (`AutomationHandlers.Find(Action)`, else `UNKNOWN_ACTION`), `McpRequestOriginRegistry` (request id → originating transport), `McpResponseCaptureRegistry`.
+- `Requests/` (9): `McpProcessRequest.cpp` (`AutomationHandlers.Find(Action)`, else `UNKNOWN_ACTION`), `McpRequestOriginRegistry` (request id → originating transport), `McpResponseCaptureRegistry`, `McpModalRefusal.cpp` (answers queued requests while a dialog runs its own loop), `McpUndoLedger` (the undo steps a request left, read from the transaction buffer, plus its in-editor test).
 - `Security/` (3): `McpPrequeueGate` + `McpPrequeueDemand` — scope/consent authorization before anything is enqueued, on both transports.
 - `Module/` (4), `Settings/` (1), `Compatibility/` (1), `Errors/` (1).
 
@@ -13,6 +13,7 @@ Core owns the request queue, the game-thread drain and the per-tool handler map:
 2. `QueueAutomationRequest()` locks `PendingAutomationRequestsMutex` and appends; it rejects with `EAutomationQueueRejection::{NotAccepting, AlreadyCanceled, QueueFull}` (cap `MaxPendingAutomationRequests`).
 3. `Tick()` → `ProcessPendingAutomationRequests()` drains 16 per tick on the game thread (re-posts itself when called off it).
 4. `ProcessRequest` looks up the tool name in `AutomationHandlers` and invokes the handler; the handler replies through its socket.
+5. While the handler runs, `McpChangeWatch` (`../Domains/ControlActor/Placement/`) notes the editor-level actors it spawns or modifies, and `SendAutomationResponse` adds their placement and content checks to a successful reply's `warnings`. A reply sent after the handler returned carries none. Core only calls it: the checks live in the domain. Beside it, `McpUndoLedger` records the transactions the request closes and gives the reply its `undo` block from the buffer: the steps it left, a handler claim the buffer dropped (`NOTHING_CHANGED`), or a cleared history (`UNDO_HISTORY_CLEARED`).
 
 ## HANDLER REGISTRATION
 The wire contract is the 23 parent tools plus `console_command`. `InitializeHandlers()` in `...HandlerRegistration.cpp` is one table:
@@ -30,6 +31,6 @@ The wire contract is the 23 parent tools plus `console_command`. `InitializeHand
 
 ## ANTI-PATTERNS
 - Editor APIs off the game thread, or invoking a handler around `QueueAutomationRequest()`.
-- A second drain path (see `../../Public/McpQueueFairness.h`: exactly one game-thread dequeuer).
+- A second dispatching drain (see `../../Public/McpQueueFairness.h`: exactly one game-thread path RUNS queued requests). Paths that only remove queued requests without running them are allowed: cancellation, and the modal-loop answer (`Requests/McpModalRefusal.cpp`, EDITOR_MODAL_ACTIVE while a dialog's own loop stops the ticker).
 - Handler logic in Core: Core routes, Domains implement.
 - More than 250 pure lines per file or 25 files per folder.

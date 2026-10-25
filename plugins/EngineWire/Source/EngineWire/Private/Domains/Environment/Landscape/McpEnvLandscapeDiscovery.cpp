@@ -37,9 +37,11 @@ ALandscape *McpFindLandscape(const TSharedPtr<FJsonObject> &Payload)
 
         if (LandscapeName.IsEmpty() && LandscapePath.IsEmpty())
         {
-            for (TActorIterator<ALandscape> It(World); It; ++It)
+            // with neither a name nor a path, the first landscape in the world
+            TActorIterator<ALandscape> First(World);
+            if (First)
             {
-                return *It;
+                return *First;
             }
         }
     }

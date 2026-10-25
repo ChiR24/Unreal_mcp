@@ -1,6 +1,7 @@
 #include "Domains/Animation/McpAnimActionContext.h"
 #include "Domains/Animation/Assets/McpAnimProceduralTracks.h"
 #include "Foundation/HandlerUtils/McpHandlerUtils.h"
+#include "Safety/McpSafeOperations.h"
 
 #include "Animation/AnimMontage.h"
 #include "Animation/AnimSequence.h"
@@ -17,6 +18,13 @@ bool HandleAnimationCreateAnimationAssetAction(FActionContext &Context,
   const FString AssetName = GetJsonStringField(Payload, TEXT("name"));
   if (AssetName.IsEmpty()) {
     Context.Fail(TEXT("INVALID_ARGUMENT"), TEXT("name required for create_animation_asset"));
+    return false;
+  }
+  // Any other assetType made a sequence.
+  const FString AssetType = GetJsonStringField(Payload, TEXT("assetType"));
+  if (!AssetType.IsEmpty() && !AssetType.Equals(TEXT("sequence"), ESearchCase::IgnoreCase) &&
+      !AssetType.Equals(TEXT("montage"), ESearchCase::IgnoreCase)) {
+    Context.Fail(TEXT("INVALID_ARGUMENT"), FString::Printf(TEXT("assetType must be sequence or montage, got '%s'"), *AssetType));
     return false;
   }
   // Published contract names the folder `path`.
@@ -40,7 +48,7 @@ bool HandleAnimationCreateAnimationAssetAction(FActionContext &Context,
     UEditorAssetLibrary::MakeDirectory(SavePath);
   }
 
-  const bool bMontage = GetJsonStringField(Payload, TEXT("assetType")).Equals(TEXT("montage"), ESearchCase::IgnoreCase);
+  const bool bMontage = AssetType.Equals(TEXT("montage"), ESearchCase::IgnoreCase);
   UFactory *Factory = nullptr;
   if (bMontage) {
     UAnimMontageFactory *MontageFactory = NewObject<UAnimMontageFactory>();
@@ -59,6 +67,12 @@ bool HandleAnimationCreateAnimationAssetAction(FActionContext &Context,
                                           Factory, SavePath, AssetName, bExisting, Code, Error);
   if (!Asset) {
     Context.Fail(*Code, Error);
+    return false;
+  }
+  // A new asset was only marked dirty, so it was gone after an editor restart.
+  if (!bExisting && !McpSafeOperations::McpSafeAssetSave(Asset)) {
+    Context.Fail(TEXT("SAVE_FAILED"), FString::Printf(TEXT("%s was created in this editor session but could not be written to disk"),
+                                                      *Asset->GetPathName()));
     return false;
   }
   Resp->SetStringField(TEXT("assetPath"), bExisting ? SavePath / AssetName : Asset->GetPathName());

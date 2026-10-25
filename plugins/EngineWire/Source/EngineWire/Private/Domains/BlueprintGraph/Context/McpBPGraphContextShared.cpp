@@ -99,6 +99,11 @@ void FActionContext::SendResponse(
         // package again, so every single-step edit left the Blueprint unsaved.
         Result->SetBoolField(TEXT("saved"), SaveLoadedAssetThrottled(Blueprint));
     }
+    if (OnSuccess)
+    {
+        OnSuccess(OutMessage, Result);
+        return;
+    }
     Subsystem->SendAutomationResponse(
         RequestingSocket,
         RequestId,

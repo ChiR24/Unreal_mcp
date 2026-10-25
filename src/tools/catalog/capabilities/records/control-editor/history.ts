@@ -1,5 +1,5 @@
 /**
- * Undo/redo history records: undo, redo.
+ * Undo/redo history records: undo, redo, restore_point.
  */
 import type { CapabilityRecordSource } from '../../model.js';
 import { buildCoreRecord } from '../core/builder.js';
@@ -30,5 +30,19 @@ export const HISTORY_RECORDS: readonly CapabilityRecordSource[] = [
     effect: 'write',
    
     exampleInput: { action: 'redo' },
+  }),
+  buildCoreRecord({
+    parentTool: 'control_editor', action: 'restore_point', domain: D, family: F,
+    topics: ['restore point', 'roll back my changes', 'undo everything since', 'savepoint', 'try and revert'],
+    summary: 'Mark a restore point to roll the editor back to, undoing only what calls through this server changed, chosen by op. begin opens it (one at a time; label names it); status lists the editor\'s transactions since it, newest first, each with byMcp, and the assets created, removed or saved since (assetsCreated, assetsRemoved, packagesSaved); rollback undoes every step since it and refuses before undoing anything when a step was not made through this server (USER_STEP_SINCE_RESTORE_POINT names it) or the editor\'s history was cleared since (UNDO_HISTORY_CLEARED: a Blueprint compile or a level load clears it); end closes it. Undo deletes no created asset and restores no saved file: rollback lists them, and asset.delete removes a created one. A rollback is refused while Play runs (PIE_RUNNING).',
+    whenToUse: ['A multi-step change may need throwing away: begin first, rollback if the result is wrong.', 'Before trying an approach that touches many actors or assets.'],
+    whenNotToUse: ['Only the last step must be reversed (use undo).'],
+    inputProps: {
+      op: { type: 'string', enum: ['begin', 'status', 'rollback', 'end'], description: 'begin opens the restore point, status lists what changed since it (the default), rollback undoes it, end closes it.' },
+      label: { type: 'string', description: 'Name for the restore point (begin); default restore point.' },
+    },
+    required: [],
+    effect: 'write',
+    exampleInput: { action: 'restore_point', op: 'begin', label: 'before lighting pass' },
   }),
 ];

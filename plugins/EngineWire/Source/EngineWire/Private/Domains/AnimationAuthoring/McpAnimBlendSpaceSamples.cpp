@@ -11,10 +11,7 @@ TSharedPtr<FJsonObject> HandleBlendSpaceSampleActions(const FString& SubAction, 
         FString AnimationPath = NormalizeAnimPath(GetJsonStringField(Params, TEXT("animationPath"), TEXT("")));
         bool bSave = GetJsonBoolField(Params, TEXT("save"), true);
 
-        UBlendSpace* BlendSpace2D = Cast<UBlendSpace>(StaticLoadObject(UBlendSpace::StaticClass(), nullptr, *AssetPath));
-        UBlendSpace1D* BlendSpace1D = Cast<UBlendSpace1D>(StaticLoadObject(UBlendSpace1D::StaticClass(), nullptr, *AssetPath));
-
-        UBlendSpace* BlendSpace = BlendSpace2D ? BlendSpace2D : BlendSpace1D;
+        UBlendSpace* BlendSpace = Cast<UBlendSpace>(StaticLoadObject(UBlendSpace::StaticClass(), nullptr, *AssetPath));
         if (!BlendSpace)
         {
             ANIM_ERROR_RESPONSE(FString::Printf(TEXT("Could not load blend space: %s"), *AssetPath), TEXT("BLENDSPACE_NOT_FOUND"));
@@ -54,16 +51,22 @@ TSharedPtr<FJsonObject> HandleBlendSpaceSampleActions(const FString& SubAction, 
             }
         }
 
-        // Add sample
-        BlendSpace->AddSample(Animation, SampleValue);
+        // AddSample refuses a position another sample holds and an animation of another skeleton or additive type
+        // (INDEX_NONE); that refusal used to be answered "Blend sample added".
+        const int32 SampleIndex = BlendSpace->AddSample(Animation, SampleValue);
+        if (SampleIndex == INDEX_NONE)
+        {
+            ANIM_ERROR_RESPONSE(FString::Printf(TEXT("The blend space refused a sample at (%g, %g): another sample is already there, or the animation's skeleton or additive type does not match it"), SampleValue.X, SampleValue.Y), TEXT("SAMPLE_REJECTED"));
+        }
 
         // Wave 7+ #12: Trigger PostEditChange so grid rebuild + referencer
         // notifications fire. Without this, BS internal cached grid stays
         // stale and referencing ABPs may compile-warn "sample out of bounds".
         BlendSpace->PostEditChange();
 
-        SaveAnimAsset(BlendSpace, bSave);
-
+        Response->SetNumberField(TEXT("sampleIndex"), SampleIndex);
+        Response->SetBoolField(TEXT("saved"), bSave && SaveAnimAsset(BlendSpace, bSave));
+        McpHandlerUtils::AddVerification(Response, BlendSpace);
         ANIM_SUCCESS_RESPONSE(TEXT("Blend sample added"));
         return Response;
     }
@@ -80,9 +83,7 @@ TSharedPtr<FJsonObject> HandleBlendSpaceSampleActions(const FString& SubAction, 
         bool bCompileReferencers = GetJsonBoolField(Params, TEXT("compileReferencers"), true);
         bool bSave = GetJsonBoolField(Params, TEXT("save"), true);
 
-        UBlendSpace* BlendSpace2D = Cast<UBlendSpace>(StaticLoadObject(UBlendSpace::StaticClass(), nullptr, *AssetPath));
-        UBlendSpace1D* BlendSpace1D = Cast<UBlendSpace1D>(StaticLoadObject(UBlendSpace1D::StaticClass(), nullptr, *AssetPath));
-        UBlendSpace* BlendSpace = BlendSpace2D ? BlendSpace2D : BlendSpace1D;
+        UBlendSpace* BlendSpace = Cast<UBlendSpace>(StaticLoadObject(UBlendSpace::StaticClass(), nullptr, *AssetPath));
         if (!BlendSpace)
         {
             ANIM_ERROR_RESPONSE(FString::Printf(TEXT("Could not load blend space: %s"), *AssetPath), TEXT("BLENDSPACE_NOT_FOUND"));
@@ -198,55 +199,53 @@ TSharedPtr<FJsonObject> HandleBlendSpaceSampleActions(const FString& SubAction, 
         FString Axis = GetJsonStringField(Params, TEXT("axis"), TEXT("Horizontal"));
         bool bSave = GetJsonBoolField(Params, TEXT("save"), true);
 
-        UBlendSpace* BlendSpace2D = Cast<UBlendSpace>(StaticLoadObject(UBlendSpace::StaticClass(), nullptr, *AssetPath));
-        UBlendSpace1D* BlendSpace1D = Cast<UBlendSpace1D>(StaticLoadObject(UBlendSpace1D::StaticClass(), nullptr, *AssetPath));
-
-        UBlendSpace* BlendSpace = BlendSpace2D ? BlendSpace2D : BlendSpace1D;
+        UBlendSpace* BlendSpace = Cast<UBlendSpace>(StaticLoadObject(UBlendSpace::StaticClass(), nullptr, *AssetPath));
         if (!BlendSpace)
         {
             ANIM_ERROR_RESPONSE(FString::Printf(TEXT("Could not load blend space: %s"), *AssetPath), TEXT("BLENDSPACE_NOT_FOUND"));
         }
 
-        // Determine axis index
-        int32 AxisIndex = 0;
-        if (Axis == TEXT("Vertical") || Axis == TEXT("Y"))
+        // Any axis name but these used to mean Horizontal, a 1D blend space took Vertical into a slot it never reads,
+        // and a call that set nothing (or set a backwards range) was saved as "updated".
+        const bool bVertical = Axis == TEXT("Vertical") || Axis == TEXT("Y");
+        const bool bAnyField = Params->HasField(TEXT("axisName")) || Params->HasField(TEXT("minValue")) || Params->HasField(TEXT("maxValue")) || Params->HasField(TEXT("gridDivisions"));
+        if ((!bVertical && Axis != TEXT("Horizontal") && Axis != TEXT("X")) || (bVertical && BlendSpace->IsA<UBlendSpace1D>()) || !bAnyField)
         {
-            AxisIndex = 1;
+            ANIM_ERROR_RESPONSE(FString::Printf(TEXT("axis must be Horizontal or Vertical (a 1D blend space has Horizontal only), with axisName, minValue, maxValue or gridDivisions to set; got axis '%s'"), *Axis), TEXT("INVALID_ARGUMENT"));
         }
-
-        // BlendParameters is protected; write it through reflection exactly like
-        // create_blend_space_1d/2d do. Only the fields the caller sent change.
-        if (FProperty* BlendParamsProp = UBlendSpace::StaticClass()->FindPropertyByName(TEXT("BlendParameters")))
+        // BlendParameters is protected; write it through reflection exactly like create_blend_space_1d/2d do. Only the
+        // fields the caller sent change.
+        FProperty* BlendParamsProp = UBlendSpace::StaticClass()->FindPropertyByName(TEXT("BlendParameters"));
+        FBlendParameter* BlendParams = BlendParamsProp ? BlendParamsProp->ContainerPtrToValuePtr<FBlendParameter>(BlendSpace) : nullptr;
+        if (!BlendParams)
         {
-            if (FBlendParameter* BlendParams = BlendParamsProp->ContainerPtrToValuePtr<FBlendParameter>(BlendSpace))
-            {
-                BlendSpace->Modify();
-                FBlendParameter& Param = BlendParams[AxisIndex];
-                if (Params->HasField(TEXT("axisName")))
-                {
-                    Param.DisplayName = GetJsonStringField(Params, TEXT("axisName"), Param.DisplayName);
-                }
-                if (Params->HasField(TEXT("minValue")))
-                {
-                    Param.Min = static_cast<float>(GetJsonNumberField(Params, TEXT("minValue"), Param.Min));
-                }
-                if (Params->HasField(TEXT("maxValue")))
-                {
-                    Param.Max = static_cast<float>(GetJsonNumberField(Params, TEXT("maxValue"), Param.Max));
-                }
-                if (Params->HasField(TEXT("gridDivisions")))
-                {
-                    Param.GridNum = static_cast<int32>(GetJsonNumberField(Params, TEXT("gridDivisions"), Param.GridNum));
-                }
-            }
+            ANIM_ERROR_RESPONSE(TEXT("This blend space has no axis settings to write"), TEXT("UNSUPPORTED"));
         }
-
-        // Trigger PostEditChange to ensure any internal updates
+        FBlendParameter Updated = BlendParams[bVertical ? 1 : 0];
+        Updated.DisplayName = GetJsonStringField(Params, TEXT("axisName"), Updated.DisplayName);
+        Updated.Min = static_cast<float>(GetJsonNumberField(Params, TEXT("minValue"), Updated.Min));
+        Updated.Max = static_cast<float>(GetJsonNumberField(Params, TEXT("maxValue"), Updated.Max));
+        Updated.GridNum = static_cast<int32>(GetJsonNumberField(Params, TEXT("gridDivisions"), Updated.GridNum));
+        if (Updated.Min >= Updated.Max || Updated.GridNum < 1)
+        {
+            ANIM_ERROR_RESPONSE(FString::Printf(TEXT("minValue must be below maxValue and gridDivisions at least 1 (got %g to %g, %d divisions); nothing was changed"), Updated.Min, Updated.Max, Updated.GridNum), TEXT("INVALID_ARGUMENT"));
+        }
+        BlendSpace->Modify();
+        BlendParams[bVertical ? 1 : 0] = Updated;
+        // PostEditChange names no property, so the blend space rebuilt nothing: samples off the new range stayed valid
+        // and the runtime data kept the old grid. Validate and resample as its own editor does after an edit.
+        BlendSpace->ValidateSampleData();
         BlendSpace->PostEditChange();
+        BlendSpace->ResampleData();
         BlendSpace->MarkPackageDirty();
 
-        SaveAnimAsset(BlendSpace, bSave);
-
+        Response->SetStringField(TEXT("axis"), bVertical ? TEXT("Vertical") : TEXT("Horizontal"));
+        Response->SetStringField(TEXT("axisName"), Updated.DisplayName);
+        Response->SetNumberField(TEXT("minValue"), Updated.Min);
+        Response->SetNumberField(TEXT("maxValue"), Updated.Max);
+        Response->SetNumberField(TEXT("gridDivisions"), Updated.GridNum);
+        Response->SetBoolField(TEXT("saved"), bSave && SaveAnimAsset(BlendSpace, bSave));
+        McpHandlerUtils::AddVerification(Response, BlendSpace);
         ANIM_SUCCESS_RESPONSE(TEXT("Axis settings updated"));
         return Response;
     }
@@ -256,10 +255,7 @@ TSharedPtr<FJsonObject> HandleBlendSpaceSampleActions(const FString& SubAction, 
         FString AssetPath = NormalizeAnimPath(GetJsonStringField(Params, TEXT("assetPath"), TEXT("")));
         bool bSave = GetJsonBoolField(Params, TEXT("save"), true);
 
-        UBlendSpace* BlendSpace2D = Cast<UBlendSpace>(StaticLoadObject(UBlendSpace::StaticClass(), nullptr, *AssetPath));
-        UBlendSpace1D* BlendSpace1D = Cast<UBlendSpace1D>(StaticLoadObject(UBlendSpace1D::StaticClass(), nullptr, *AssetPath));
-
-        UBlendSpace* BlendSpace = BlendSpace2D ? BlendSpace2D : BlendSpace1D;
+        UBlendSpace* BlendSpace = Cast<UBlendSpace>(StaticLoadObject(UBlendSpace::StaticClass(), nullptr, *AssetPath));
         if (!BlendSpace)
         {
             ANIM_ERROR_RESPONSE(FString::Printf(TEXT("Could not load blend space: %s"), *AssetPath), TEXT("BLENDSPACE_NOT_FOUND"));
@@ -268,6 +264,10 @@ TSharedPtr<FJsonObject> HandleBlendSpaceSampleActions(const FString& SubAction, 
         // interpolationType was read and never applied, and the weight speed was
         // overwritten with 5 on every call. Each field now changes only when sent;
         // the smoothing type and time apply to every input axis.
+        if (!Params->HasField(TEXT("interpolationType")) && !Params->HasField(TEXT("interpolationTime")) && !Params->HasField(TEXT("targetWeightInterpolationSpeed")))
+        {
+            ANIM_ERROR_RESPONSE(TEXT("Send interpolationType, interpolationTime or targetWeightInterpolationSpeed; nothing was changed"), TEXT("INVALID_ARGUMENT"));
+        }
         TOptional<EFilterInterpolationType> SmoothingType;
         if (Params->HasField(TEXT("interpolationType")))
         {
@@ -303,10 +303,11 @@ TSharedPtr<FJsonObject> HandleBlendSpaceSampleActions(const FString& SubAction, 
         BlendSpace->PostEditChange();
         BlendSpace->MarkPackageDirty();
 
-        SaveAnimAsset(BlendSpace, bSave);
+        Response->SetBoolField(TEXT("saved"), bSave && SaveAnimAsset(BlendSpace, bSave));
         Response->SetNumberField(TEXT("interpolationTime"), BlendSpace->InterpolationParam[0].InterpolationTime);
         Response->SetStringField(TEXT("interpolationType"), StaticEnum<EFilterInterpolationType>()->GetNameStringByValue(BlendSpace->InterpolationParam[0].InterpolationType));
         Response->SetNumberField(TEXT("targetWeightInterpolationSpeed"), BlendSpace->TargetWeightInterpolationSpeedPerSec);
+        McpHandlerUtils::AddVerification(Response, BlendSpace);
 
         ANIM_SUCCESS_RESPONSE(TEXT("Interpolation settings updated"));
         return Response;

@@ -5,6 +5,7 @@
 #include "Dom/JsonObject.h"
 #include "MCP/Routing/McpConsolidatedActionRouting.h"
 #include "Domains/AssetQuery/McpAssetQueryPrivate.h"
+#include "Domains/AssetWorkflow/Analysis/McpAssetDiff.h"
 #include "Domains/AssetWorkflow/Materials/McpAssetMeshMats.h"
 #include "Domains/AssetWorkflow/Rename/McpAssetRenameGuard.h"
 
@@ -121,6 +122,8 @@ bool UEngineWireSubsystem::HandleAssetAction(
     return HandleListAssets(RequestId, Payload, RequestingSocket);
   if (Lower == TEXT("generate_report"))
     return HandleGenerateReport(RequestId, Payload, RequestingSocket);
+  if (Lower == TEXT("diff_asset"))
+    return McpAssetDiff::HandleDiffAsset(this, RequestId, Payload, RequestingSocket);
   if (Lower == TEXT("create_thumbnail") || Lower == TEXT("generate_thumbnail"))
     return HandleGenerateThumbnail(RequestId, Lower, Payload, RequestingSocket);
   if (Lower == TEXT("add_material_parameter"))

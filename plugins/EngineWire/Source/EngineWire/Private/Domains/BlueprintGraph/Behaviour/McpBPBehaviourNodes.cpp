@@ -136,7 +136,8 @@ bool CreateAsyncTaskNode(FActionContext& Context, float X, float Y)
     }
     FString OverlapMessage;
     TSharedPtr<FJsonObject> OverlapDetails;
-    if (McpGraphLayout::RefuseOverlappingNode(Context.TargetGraph, Node, X, Y, OverlapMessage, OverlapDetails))
+    if (McpGraphLayout::RefuseOverlappingNode(Context.TargetGraph, Node, X, Y, OverlapMessage, OverlapDetails,
+                                              McpGraphLayout::NamesNoPosition(Context.Payload)))
     {
         Context.SendErrorWithDetails(OverlapMessage, TEXT("NODE_OVERLAP"), OverlapDetails);
         return true;

@@ -131,14 +131,16 @@ function nativeRecords(): readonly NativeRecord[] {
   }));
 }
 
-export const nativeSearchRanker: GatewayRanker = (intent, limit) => {
+/** Every record the native door ranks for a query, best first, with its score. */
+export function nativeScored(intent: string): readonly { readonly id: string; readonly score: number }[] {
   const query = intent.trim().toLowerCase();
   const all = searchWords(query);
   const content = [...new Set(all.filter((word) => !RETRIEVAL_FUNCTION_WORDS.has(word)))];
   return nativeRecords()
     .map((record) => ({ id: record.id, score: scoreRecord(record, query, all, content) }))
     .filter((entry): entry is { id: string; score: number } => entry.score !== null)
-    .sort((left, right) => right.score - left.score || compareAscii(left.id, right.id))
-    .slice(0, limit)
-    .map((entry) => entry.id);
-};
+    .sort((left, right) => right.score - left.score || compareAscii(left.id, right.id));
+}
+
+export const nativeSearchRanker: GatewayRanker = (intent, limit) =>
+  nativeScored(intent).slice(0, limit).map((entry) => entry.id);

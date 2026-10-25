@@ -83,9 +83,13 @@ const testCases = [
 
 // === ADD (Cached Pose - needs blueprintPath) ===
 { scenario: 'ADD: add_cached_pose', toolName: 'animation_physics', arguments: {"action": "add_cached_pose", "blueprintPath": `${TEST_FOLDER}/Testanimation_blueprint`, "cacheName": "Testcached_pose", "positionX": 600, "positionY": 0}, expected: 'success|already exists' },
+{ scenario: 'ERROR: add_cached_pose refuses a cache name the Blueprint has', toolName: 'animation_physics', arguments: {"action": "add_cached_pose", "blueprintPath": `${TEST_FOLDER}/Testanimation_blueprint`, "cacheName": "Testcached_pose", "positionX": 900, "positionY": 0}, expected: 'error|CACHE_NAME_TAKEN' },
 
 // === ADD (Slot Node - needs blueprintPath) ===
-{ scenario: 'ADD: add_slot_node', toolName: 'animation_physics', arguments: {"action": "add_slot_node", "blueprintPath": `${TEST_FOLDER}/Testanimation_blueprint`, "slotName": "Testslot_node", "groupName": "DefaultGroup", "positionX": 800, "positionY": 0}, expected: 'success|already exists' },
+{ scenario: 'ADD: add_slot_node', toolName: 'animation_physics', arguments: {"action": "add_slot_node", "blueprintPath": `${TEST_FOLDER}/Testanimation_blueprint`, "slotName": "Testslot_node", "groupName": "DefaultGroup", "positionX": 800, "positionY": 0}, expected: 'success|already exists', assertions: [
+  { path: 'structuredContent.result.slotName', equals: 'Testslot_node', label: 'the node plays the bare slot name montages use' },
+  { path: 'structuredContent.result.groupName', equals: 'DefaultGroup', label: 'the slot group is reported' },
+] },
 { scenario: 'ADD: add_layered_blend_per_bone', toolName: 'animation_physics', arguments: {"action": "add_layered_blend_per_bone", "blueprintPath": `${TEST_FOLDER}/Testanimation_blueprint`, "layerSetup": [{"branchFilters": [{"boneName": "Root", "blendDepth": 1}]}]}, expected: 'success|ANIMGRAPH_MODULE_UNAVAILABLE', assertions: [{ path: 'structuredContent.result.layerCount', equals: 1, label: 'layerSetup is applied to the node' }] },
 { scenario: 'ADD: add_layered_blend_per_bone from boneName', toolName: 'animation_physics', arguments: {"action": "add_layered_blend_per_bone", "blueprintPath": `${TEST_FOLDER}/Testanimation_blueprint`, "boneName": "Root", "positionX": 1000, "positionY": 200, "save": true}, expected: 'success|ANIMGRAPH_MODULE_UNAVAILABLE' },
 { scenario: 'CONFIG: set_anim_graph_node_value', toolName: 'animation_physics', arguments: {"action": "set_anim_graph_node_value", "blueprintPath": `${TEST_FOLDER}/Testanimation_blueprint`, "nodeName": "Testblend_node", "propertyName": "NodeComment", "value": "MCPUpdatedBlendNode", "save": true}, expected: 'success|ANIMGRAPH_MODULE_UNAVAILABLE|NODE_NOT_FOUND|PROPERTY_NOT_FOUND' },
@@ -105,6 +109,7 @@ const testCases = [
 
 // === CREATE (IK Rig - explicit retargeter dependency; unavailable on some engine builds) ===
 { scenario: 'SETUP: create IK Rig for retargeter', toolName: 'animation_physics', arguments: {"action": "create_ik_rig", "name": "Testik_rig", "path": TEST_FOLDER, "skeletonPath": TEST_SKELETON_PATH}, expected: 'success|IKRIG_FACTORY_UNAVAILABLE|NOT_SUPPORTED|already exists' },
+{ scenario: 'ERROR: create_ik_retargeter refuses a rig that does not load', toolName: 'animation_physics', arguments: { action: 'create_ik_retargeter', name: 'Testik_retargeter_missing_rig', path: TEST_FOLDER, sourceIKRigPath: `${TEST_FOLDER}/IKR_DoesNotExist` }, expected: 'error|IK Rig not found' },
 { scenario: 'CREATE: create_ik_retargeter', toolName: 'animation_physics', arguments: {"action": "create_ik_retargeter", "name": "Testik_retargeter", "path": TEST_FOLDER, "sourceIKRigPath": TEST_IK_RIG_PATH, "targetIKRigPath": TEST_IK_RIG_PATH, "save": true}, expected: 'success|IKRETARGET_FACTORY_UNAVAILABLE|NOT_SUPPORTED|already exists' },
 // The test IK Rig carries no retarget chains, so auto-mapping succeeds with what exists and a named chain is refused.
 // The rig above is built on a bare skeleton and has no retarget chains, so auto-mapping has nothing to map.
@@ -156,6 +161,8 @@ const testCases = [
 
 // === CONFIG (Curve Key - needs assetPath) ===
 { scenario: 'CONFIG: set_curve_key', toolName: 'animation_physics', arguments: {"action": "set_curve_key", "assetPath": `${TEST_FOLDER}/Testanimation_sequence`, "curveName": "TestCurve", "frame": 0, "value": 1.0, "createIfMissing": true, "save": true}, expected: 'success' },
+{ scenario: 'CONFIG: set_curve_key reads the key back', toolName: 'animation_physics', arguments: {"action": "set_curve_key", "assetPath": `${TEST_FOLDER}/Testanimation_sequence`, "curveName": "TestCurve", "frame": 0, "value": 0.5, "save": false}, expected: 'success', assertions: [{ path: 'structuredContent.result.value', equals: 0.5, label: 'curve value read back' }] },
+{ scenario: 'ERROR: set_curve_key refuses a missing curve without createIfMissing', toolName: 'animation_physics', arguments: {"action": "set_curve_key", "assetPath": `${TEST_FOLDER}/Testanimation_sequence`, "curveName": "NoSuchCurve", "frame": 0, "value": 1.0, "createIfMissing": false, "save": false}, expected: 'error|CURVE_NOT_FOUND' },
 
 // === CREATE (Montage - needs skeletonPath) ===
 // A pose asset takes one pose per key frame of the keyed sequence above; the first two get names.
@@ -167,7 +174,9 @@ const testCases = [
 { scenario: 'ADD: add_montage_section', toolName: 'animation_physics', arguments: {"action": "add_montage_section", "assetPath": `${TEST_FOLDER}/Testmontage`, "sectionName": "Testmontage_section", "startTime": 0}, expected: 'success|already exists' },
 
 // === ADD (Montage Slot - needs assetPath and animationPath) ===
-{ scenario: 'ADD: add_montage_slot', toolName: 'animation_physics', arguments: {"action": "add_montage_slot", "assetPath": `${TEST_FOLDER}/Testmontage`, "animationPath": `${TEST_FOLDER}/Testanimation_sequence`, "slotName": "DefaultSlot", "startTime": 0}, expected: 'success|already exists' },
+{ scenario: 'ADD: add_montage_slot', toolName: 'animation_physics', arguments: {"action": "add_montage_slot", "assetPath": `${TEST_FOLDER}/Testmontage`, "animationPath": `${TEST_FOLDER}/Testanimation_sequence`, "slotName": "UpperBody", "startTime": 0}, expected: 'success|already exists' },
+// A segment laid over one already on the slot was accepted and broke the montage.
+{ scenario: 'ERROR: add_montage_slot over a segment already on the slot', toolName: 'animation_physics', arguments: {"action": "add_montage_slot", "assetPath": `${TEST_FOLDER}/Testmontage`, "animationPath": `${TEST_FOLDER}/Testanimation_sequence`, "slotName": "DefaultSlot", "startTime": 0, "save": false}, expected: 'error|SEGMENT_OVERLAP' },
 
 // === CONFIG (Section Timing - needs assetPath) ===
 { scenario: 'CONFIG: set_section_timing', toolName: 'animation_physics', arguments: {"action": "set_section_timing", "assetPath": `${TEST_FOLDER}/Testmontage`, "sectionName": "Testmontage_section", "startTime": 0}, expected: 'success' },
@@ -175,15 +184,21 @@ const testCases = [
 // === ADD (Montage Notify - needs assetPath; no notifyClass = simple notify event) ===
 { scenario: 'ADD: add_montage_notify', toolName: 'animation_physics', arguments: {"action": "add_montage_notify", "assetPath": `${TEST_FOLDER}/Testmontage`, "time": 0.5, "notifyName": "Testmontage_notify"}, expected: 'success|already exists' },
 { scenario: 'ADD: add_montage_notify via notifyClass', toolName: 'animation_physics', arguments: {"action": "add_montage_notify", "assetPath": `${TEST_FOLDER}/Testmontage`, "time": 0.6, "notifyClass": "AnimNotify_PlaySound"}, expected: 'success|already exists' },
+// A notify past the end never fired.
+{ scenario: 'ERROR: add_montage_notify past the montage end', toolName: 'animation_physics', arguments: {"action": "add_montage_notify", "assetPath": `${TEST_FOLDER}/Testmontage`, "time": 99, "notifyName": "Late", "save": false}, expected: 'error|INVALID_ARGUMENT' },
 
 // === CONFIG (Blend In - needs assetPath) ===
 { scenario: 'CONFIG: set_blend_in', toolName: 'animation_physics', arguments: {"action": "set_blend_in", "assetPath": `${TEST_FOLDER}/Testmontage`, "blendTime": 0.25, "blendOption": "Cubic", "save": true}, expected: 'success' },
 
 // === CONFIG (Blend Out - needs assetPath) ===
 { scenario: 'CONFIG: set_blend_out', toolName: 'animation_physics', arguments: {"action": "set_blend_out", "assetPath": `${TEST_FOLDER}/Testmontage`, "blendTime": 0.25}, expected: 'success' },
+// A call naming neither saved the montage and answered "updated".
+{ scenario: 'ERROR: set_blend_out with nothing to set', toolName: 'animation_physics', arguments: {"action": "set_blend_out", "assetPath": `${TEST_FOLDER}/Testmontage`, "save": false}, expected: 'error|INVALID_ARGUMENT' },
 
 // === CONNECT (Link Sections - needs assetPath) ===
 { scenario: 'CONNECT: link_sections', toolName: 'animation_physics', arguments: {"action": "link_sections", "assetPath": `${TEST_FOLDER}/Testmontage`, "fromSection": "Testmontage_section", "toSection": "Testmontage_section"}, expected: 'success' },
+// A section the montage lacks was skipped behind "Linked".
+{ scenario: 'ERROR: link_sections to a section the montage lacks', toolName: 'animation_physics', arguments: {"action": "link_sections", "assetPath": `${TEST_FOLDER}/Testmontage`, "fromSection": "Testmontage_section", "toSection": "NoSuchSection", "save": false}, expected: 'error|SECTION_NOT_FOUND' },
 
 // === ADD (Notify - needs assetPath and notifyName; no notifyClass = simple notify) ===
 { scenario: 'ADD: add_notify', toolName: 'animation_physics', arguments: {"action": "add_notify", "assetPath": `${TEST_FOLDER}/Testanimation_sequence`, "notifyName": "Testnotify", "frame": 0, "trackIndex": 0, "save": true}, expected: 'success|already exists' },
@@ -198,6 +213,9 @@ const testCases = [
 
 // === SETUP: Spawn a SkeletalMeshActor for playback/ragdoll tests ===
 { scenario: 'Setup: spawn SkeletalMeshActor', toolName: 'control_actor', arguments: {"action": "spawn", "actorName": "SkelTestActor", "actorClass": "SkeletalMeshActor"}, expected: 'success|already exists' },
+// A crate handed to setup_physics_simulation was refused for having no skeletal mesh; its mesh simulates now.
+{ scenario: 'Setup: spawn a prop', toolName: 'control_actor', arguments: { action: 'spawn', actorName: 'PhysPropTest', classPath: '/Engine/BasicShapes/Cube', location: { x: 0, y: 900, z: 300 } }, expected: 'success|already exists' },
+{ scenario: 'ACTION: setup_physics_simulation makes a placed prop simulate', toolName: 'animation_physics', arguments: { action: 'setup_physics_simulation', actorName: 'PhysPropTest' }, expected: 'success', assertions: [{ path: 'structuredContent.result.componentName', equals: 'StaticMeshComponent0', label: 'its mesh simulates' }] },
 
 // === PLAYBACK (Montage - needs actorName with SkeletalMeshComponent) ===
 { scenario: 'PLAYBACK: play_montage', toolName: 'animation_physics', arguments: {"action": "play_montage", "actorName": "SkelTestActor", "montagePath": `${TEST_FOLDER}/Testmontage`, "playRate": 1.25}, expected: 'success|COMPONENT_NOT_FOUND' },
@@ -262,6 +280,7 @@ const testCases = [
 
 // === CLEANUP ===
 { scenario: 'Cleanup: delete SkelTestActor', toolName: 'control_actor', arguments: { action: 'delete', actorName: 'SkelTestActor' }, expected: 'success|not found' },
+{ scenario: 'Cleanup: delete PhysPropTest', toolName: 'control_actor', arguments: { action: 'delete', actorName: 'PhysPropTest' }, expected: 'success|not found' },
 { scenario: 'Cleanup: delete test folder', toolName: 'manage_asset', arguments: { action: 'delete', path: TEST_FOLDER, force: true }, expected: 'success|not found' },
 ];
 
@@ -284,8 +303,9 @@ const testCases = [
   const MESH_BONE_B = 'Bone02';
   const CHILD_BONE = `McpChild_${ts}`;
   const TEMP_BONE = `McpTemp_${ts}`;
-  const VIRTUAL_BONE = `VB_Mcp_${ts}`;
-  const RENAMED_VIRTUAL_BONE = `VB_McpRenamed_${ts}`;
+  // The engine names virtual bones "VB <name>"; a name without that prefix gets it.
+  const VIRTUAL_BONE = `VB Mcp_${ts}`;
+  const RENAMED_VIRTUAL_BONE = `VB McpRenamed_${ts}`;
   const SOCKET_NAME = `McpSocket_${ts}`;
   const MORPH_TARGET_NAME = `McpMorph_${ts}`;
   const RENDER_ONLY_MORPH = `McpRenderOnly_${ts}`;
@@ -308,6 +328,8 @@ const testCases = [
     { scenario: 'CONFIG: set mesh bone transform', toolName: 'animation_physics', arguments: { action: 'set_bone_transform', skeletalMeshPath: SKELETAL_MESH_PATH, boneName: MESH_BONE_A, location: [0, 0, 0], rotation: [0, 0, 0], scale: [1, 1, 1], save: false }, expected: 'success' },
     { scenario: 'ADD: add temp bone', toolName: 'animation_physics', arguments: { action: 'add_bone', skeletonPath: SKELETON_PATH, boneName: TEMP_BONE, parentBoneName: ROOT_BONE, location: [0, 10, 0], save: true }, expected: 'success|already exists' },
     { scenario: 'CONFIG: set temp bone parent', toolName: 'animation_physics', arguments: { action: 'set_bone_parent', skeletonPath: SKELETON_PATH, boneName: TEMP_BONE, parentBoneName: CHILD_BONE, save: true }, expected: 'success' },
+    { scenario: 'CONFIG: set_bone_parent to the parent it has changes nothing', toolName: 'animation_physics', arguments: { action: 'set_bone_parent', skeletonPath: SKELETON_PATH, boneName: TEMP_BONE, parentBoneName: CHILD_BONE, save: true }, expected: 'success', assertions: [{ path: 'structuredContent.result.changed', equals: false, label: 'same parent leaves the skeleton alone' }] },
+    { scenario: 'CONFIG: set_bone_parent refuses a descendant as parent', toolName: 'animation_physics', arguments: { action: 'set_bone_parent', skeletonPath: SKELETON_PATH, boneName: CHILD_BONE, parentBoneName: TEMP_BONE, save: true }, expected: 'error|INVALID_ARGUMENT' },
     { scenario: 'DELETE: remove temp bone', toolName: 'animation_physics', arguments: { action: 'remove_bone', skeletonPath: SKELETON_PATH, boneName: TEMP_BONE, removeChildren: true, save: true }, expected: 'success|not found' },
 
     // === SOCKETS ===
@@ -322,13 +344,17 @@ const testCases = [
     // === PHYSICS ASSET ===
     { scenario: 'CREATE: create physics asset', toolName: 'animation_physics', arguments: { action: 'create_physics_asset', skeletalMeshPath: SKELETAL_MESH_PATH, outputPath: PHYSICS_ASSET_PATH, save: true }, expected: 'success|already exists' },
     { scenario: 'CREATE: create physics asset with generation options', toolName: 'animation_physics', arguments: { action: 'create_physics_asset', skeletalMeshPath: SKELETAL_MESH_PATH, name: 'PA_McpGenerated', path: '/Game/MCPTest/Physics', geomType: 'Sphyl', minBoneSize: 5, createConstraints: true, bodyForAll: false, assignToMesh: false }, expected: 'success|already exists' },
-    { scenario: 'ACTION: setup physics simulation from skeletal mesh', toolName: 'animation_physics', arguments: { action: 'setup_physics_simulation', skeletalMeshPath: SKELETAL_MESH_PATH, savePath: TEST_FOLDER, physicsAssetName: PHYSICS_SIM_NAME, assignToMesh: false }, expected: 'success|already exists', assertions: [{ path: 'structuredContent.result.existingAsset', equals: false, label: 'new physics simulation asset created from skeletalMeshPath' }] },
+    { scenario: 'ERROR: create physics asset refuses an unknown geomType', toolName: 'animation_physics', arguments: { action: 'create_physics_asset', skeletalMeshPath: SKELETAL_MESH_PATH, name: 'PA_McpBadShape', path: '/Game/MCPTest/Physics', geomType: 'Cylinder' }, expected: 'error|not a body shape' },
+    { scenario: 'ACTION: setup physics simulation from skeletal mesh', toolName: 'animation_physics', arguments: { action: 'setup_physics_simulation', skeletalMeshPath: SKELETAL_MESH_PATH, savePath: TEST_FOLDER, physicsAssetName: PHYSICS_SIM_NAME, assignToMesh: false }, expected: 'success|already exists', assertions: [{ path: 'structuredContent.result.existingAsset', equals: false, label: 'new physics simulation asset created from skeletalMeshPath' }, { path: 'structuredContent.result.bodyCount', gte: 1, label: 'with bodies made for its bones' }] },
     { scenario: 'INFO: list physics bodies', toolName: 'animation_physics', arguments: { action: 'list_physics_bodies', physicsAssetPath: PHYSICS_ASSET_PATH }, expected: 'success' },
     { scenario: 'ADD: add physics body A', toolName: 'animation_physics', arguments: { action: 'add_physics_body', physicsAssetPath: PHYSICS_ASSET_PATH, boneName: MESH_BONE_A, bodyType: 'Sphere', radius: 12, center: [0, 0, 0], save: true }, expected: 'success|already exists' },
     { scenario: 'ADD: add physics body B', toolName: 'animation_physics', arguments: { action: 'add_physics_body', physicsAssetPath: PHYSICS_ASSET_PATH, boneName: MESH_BONE_B, bodyType: 'Sphere', radius: 10, center: [0, 0, 0], save: true }, expected: 'success|already exists' },
     { scenario: 'ADD: add box physics body', toolName: 'animation_physics', arguments: { action: 'add_physics_body', physicsAssetPath: PHYSICS_ASSET_PATH, boneName: MESH_BONE_A, bodyType: 'Box', width: 8, depth: 6, height: 4, rotation: [0, 45, 0], save: false }, expected: 'success' },
     { scenario: 'ADD: add capsule physics body', toolName: 'animation_physics', arguments: { action: 'add_physics_body', physicsAssetPath: PHYSICS_ASSET_PATH, boneName: MESH_BONE_B, bodyType: 'Capsule', radius: 5, length: 12, save: false }, expected: 'success' },
-    { scenario: 'CONFIG: configure physics body', toolName: 'animation_physics', arguments: { action: 'configure_physics_body', physicsAssetPath: PHYSICS_ASSET_PATH, boneName: MESH_BONE_A, mass: 5, linearDamping: 0.25, angularDamping: 0.5, collisionEnabled: true, simulatePhysics: false, save: true }, expected: 'success' },
+    { scenario: 'ERROR: add physics body refuses an unknown bodyType', toolName: 'animation_physics', arguments: { action: 'add_physics_body', physicsAssetPath: PHYSICS_ASSET_PATH, boneName: MESH_BONE_B, bodyType: 'Cylinder', save: false }, expected: 'error|not a body shape' },
+    { scenario: 'CONFIG: configure physics body', toolName: 'animation_physics', arguments: { action: 'configure_physics_body', physicsAssetPath: PHYSICS_ASSET_PATH, boneName: MESH_BONE_A, mass: 5, linearDamping: 0.25, angularDamping: 0.5, collisionEnabled: true, simulatePhysics: false, save: true }, expected: 'success', assertions: [{ path: 'structuredContent.result.mass', equals: 5, label: 'the mass override holds the mass sent' }, { path: 'structuredContent.result.physicsType', equals: 'Kinematic', label: 'simulatePhysics false makes the body kinematic' }] },
+    { scenario: 'ERROR: configure physics body refuses a call that sets nothing', toolName: 'animation_physics', arguments: { action: 'configure_physics_body', physicsAssetPath: PHYSICS_ASSET_PATH, boneName: MESH_BONE_A }, expected: 'error|INVALID_ARGUMENT' },
+    { scenario: 'ERROR: configure physics body refuses a mass of 0', toolName: 'animation_physics', arguments: { action: 'configure_physics_body', physicsAssetPath: PHYSICS_ASSET_PATH, boneName: MESH_BONE_A, mass: 0 }, expected: 'error|INVALID_ARGUMENT' },
     { scenario: 'ADD: add physics constraint', toolName: 'animation_physics', arguments: { action: 'add_physics_constraint', physicsAssetPath: PHYSICS_ASSET_PATH, bodyA: MESH_BONE_A, bodyB: MESH_BONE_B, constraintName: `McpConstraint_${ts}`, limits: { swing1LimitAngle: 40 }, save: true }, expected: 'success|already exists' },
     { scenario: 'CONFIG: configure constraint limits', toolName: 'animation_physics', arguments: { action: 'configure_constraint_limits', physicsAssetPath: PHYSICS_ASSET_PATH, bodyA: MESH_BONE_A, bodyB: MESH_BONE_B, limits: { swing1LimitAngle: 30, swing2LimitAngle: 35, twistLimitAngle: 20, swing1Motion: 'Limited', swing2Motion: 'Limited', twistMotion: 'Limited' }, save: true }, expected: 'success' },
 

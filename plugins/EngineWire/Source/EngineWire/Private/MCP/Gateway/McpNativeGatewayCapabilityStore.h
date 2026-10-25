@@ -62,6 +62,8 @@ struct FMcpCapabilityRecord
 	TMap<FString, FString> DispatchByActions;
 	/** routing.dispatchBy.declaredBy: parameter -> the selector values whose variant declares it. */
 	TMap<FString, TArray<FString>> DispatchByDeclaredBy;
+	/** routing.dispatchBy.requires: dispatched action -> {required, oneOf} beyond the union schema; read by McpFoldVariantRules. */
+	TSharedPtr<FJsonObject> DispatchByRequires;
 };
 
 /**

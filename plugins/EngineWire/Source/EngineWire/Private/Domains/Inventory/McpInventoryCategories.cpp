@@ -14,11 +14,11 @@ bool HandleInventoryCategoryActions(UEngineWireSubsystem& Bridge, const FString&
       return true;
     }
 
-    UPackage* Package = CreateInventoryAssetPackage(Path, Name);
+    FString PackageError;
+    FString PackageCode;
+    UPackage* Package = CreateInventoryAssetPackage(Path, Name, PackageError, PackageCode);
     if (!Package) {
-      Bridge.SendAutomationError(RequestingSocket, RequestId,
-                          TEXT("Failed to create package"),
-                          TEXT("PACKAGE_CREATE_FAILED"));
+      Bridge.SendAutomationError(RequestingSocket, RequestId, PackageError, PackageCode);
       return true;
     }
 
@@ -30,11 +30,10 @@ bool HandleInventoryCategoryActions(UEngineWireSubsystem& Bridge, const FString&
       CategoryAsset->MarkPackageDirty();
       FAssetRegistryModule::AssetCreated(CategoryAsset);
 
-      if (GetJsonBoolField(Payload, TEXT("save"), true)) {
-        McpSafeAssetSave(CategoryAsset);
-      }
+      const bool bSaved = GetJsonBoolField(Payload, TEXT("save"), true) && McpSafeAssetSave(CategoryAsset);
 
       TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
+      Result->SetBoolField(TEXT("saved"), bSaved);
       Result->SetStringField(TEXT("categoryPath"), Package->GetName());
       Result->SetStringField(TEXT("assetPath"), Package->GetName() + TEXT(".") + FPackageName::GetShortName(Package->GetName())); // dogfood #55: consistent object path
       Bridge.SendAutomationResponse(RequestingSocket, RequestId, true,
@@ -67,6 +66,13 @@ bool HandleInventoryCategoryActions(UEngineWireSubsystem& Bridge, const FString&
       Bridge.SendAutomationError(
           RequestingSocket, RequestId,
           FString::Printf(TEXT("Item not found: %s"), *ItemPath),
+          TEXT("ASSET_NOT_FOUND"));
+      return true;
+    }
+    // The category path used to be stored without a look, so a typo saved a category that does not exist.
+    if (!CategoryObj) {
+      Bridge.SendAutomationError(RequestingSocket, RequestId,
+          FString::Printf(TEXT("Category not found: %s (create it with create_inventory_asset kind=item_category); nothing was changed."), *CategoryPath),
           TEXT("ASSET_NOT_FOUND"));
       return true;
     }
@@ -115,14 +121,14 @@ bool HandleInventoryCategoryActions(UEngineWireSubsystem& Bridge, const FString&
     }
     ItemObj->MarkPackageDirty();
 
-    if (GetJsonBoolField(Payload, TEXT("save"), true)) {
-      McpSafeAssetSave(ItemObj);
-    }
+    const bool bSaved = GetJsonBoolField(Payload, TEXT("save"), true) && McpSafeAssetSave(ItemObj);
 
     TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
+    Result->SetBoolField(TEXT("saved"), bSaved);
     Result->SetStringField(TEXT("itemPath"), ItemPath);
     Result->SetStringField(TEXT("categoryPath"), CategoryPath);
     Result->SetBoolField(TEXT("assigned"), bCategoryAssigned);
+    McpHandlerUtils::AddVerification(Result, ItemObj);
     Bridge.SendAutomationResponse(RequestingSocket, RequestId, true,
                            TEXT("Category assigned to item"), Result);
     return true;

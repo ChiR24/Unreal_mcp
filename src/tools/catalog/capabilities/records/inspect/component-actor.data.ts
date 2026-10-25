@@ -4,6 +4,7 @@
 import type { CapabilityRecordSource } from '../../model.js';
 import { buildCoreRecord } from '../core/builder.js';
 import { P } from './properties.js';
+import { TAG_OUT } from '../control-actor/search-records.js';
 
 const D = 'inspect';
 
@@ -12,7 +13,7 @@ export const COMPONENT_ACTOR_RECORDS: readonly CapabilityRecordSource[] = [
     parentTool: 'inspect', action: 'get_components', dispatchAction: 'get_components', domain: D, family: 'components',
     topics: ['list components', 'actor components', 'component list', 'components of actor'],
     aliases: ['inspect.list_components'],
-    summary: 'List components on a world actor (or a Blueprint CDO when blueprintPath is supplied).',
+    summary: 'List the components of a level actor (actorName, name or objectPath) or of a Blueprint (blueprintPath, or an objectPath that is a Blueprint asset: its construction-script components and class defaults), each with its name, class, parent and where it comes from. A mesh component adds its static mesh and the material drawn in each slot, overrides included; a Blueprint component adds its relative transform and visibility. componentNames narrows the list, naming the ones not found under missingComponents.',
     whenToUse: ['An actor\'s component list must be enumerated.'],
     whenNotToUse: ['A single component\'s properties are needed; use get_component_property.'],
     inputProps: {
@@ -43,7 +44,7 @@ export const COMPONENT_ACTOR_RECORDS: readonly CapabilityRecordSource[] = [
   }),
   buildCoreRecord({
     parentTool: 'inspect', action: 'set_component_property', dispatchAction: 'control_actor', domain: D, family: 'components',
-    summary: 'Write a property on a world actor component (cross-parent to control_actor).',
+    summary: 'Write one or more properties of a component on a placed actor, as control_actor edit_component set_property does: propertyName or a dotted propertyPath with value, or properties for several. One undo step, the level left unsaved; while Play runs it changes the playing copy. The actor is named by actorName, name or objectPath.',
     whenToUse: ['A single component property value must be written.'],
     whenNotToUse: ['The component does not own the property; use get_components to enumerate.'],
     inputProps: {
@@ -83,11 +84,13 @@ export const COMPONENT_ACTOR_RECORDS: readonly CapabilityRecordSource[] = [
   }),
   buildCoreRecord({
     parentTool: 'inspect', action: 'add_tag', dispatchAction: 'control_actor', domain: D, family: 'actor',
-    summary: 'Add a tag to a world actor (cross-parent to control_actor).',
+    summary: 'Add a tag to an actor named by actorName, name or objectPath, or to several with actorNames: control_actor.add_tag runs it, with the same reply (wasPresent; taggedCount, affectedActors and missing for several) and the same ACTOR_NOT_FOUND when nothing matched.',
     whenToUse: ['A tag must be added to an actor for grouping or queries.'],
     whenNotToUse: ['The actor already has the tag.'],
     inputProps: { objectPath: P.objectPath, actorName: P.actorName, actorNames: P.actorNames, name: P.name, tag: P.tag },
     required: ['tag'],
+    requiredOneOf: ['actorName', 'actorNames', 'name', 'objectPath'],
+    outputProps: TAG_OUT,
     effect: 'write', behavior: { idempotency: 'idempotent' },
     exampleInput: { action: 'add_tag', actorName: 'PlayerStart_1', tag: 'Spawn' },
   }),
@@ -105,7 +108,7 @@ export const COMPONENT_ACTOR_RECORDS: readonly CapabilityRecordSource[] = [
   }),
   buildCoreRecord({
     parentTool: 'inspect', action: 'create_snapshot', dispatchAction: 'control_actor', domain: D, family: 'snapshot',
-    summary: 'Create a property snapshot of a world actor (cross-parent to control_actor).',
+    summary: 'Remember a world actor\'s transform (location, rotation and scale only) under snapshotName, in editor memory, for restore_snapshot to set again.',
     whenToUse: ['An actor\'s state must be captured for later restore.'],
     whenNotToUse: ['No restore is planned.'],
     inputProps: { objectPath: P.objectPath, actorName: P.actorName, name: P.name, snapshotName: P.snapshotName },
@@ -115,7 +118,7 @@ export const COMPONENT_ACTOR_RECORDS: readonly CapabilityRecordSource[] = [
   }),
   buildCoreRecord({
     parentTool: 'inspect', action: 'restore_snapshot', dispatchAction: 'control_actor', domain: D, family: 'snapshot',
-    summary: 'Restore a previously created property snapshot onto a world actor (cross-parent to control_actor).',
+    summary: 'Set a world actor back to the transform a snapshot remembered (create_snapshot); transformChanged says whether anything moved.',
     whenToUse: ['An actor\'s state must be restored from a snapshot.'],
     whenNotToUse: ['No snapshot exists for the actor.'],
     inputProps: { objectPath: P.objectPath, actorName: P.actorName, name: P.name, snapshotName: P.snapshotName },
@@ -135,15 +138,20 @@ export const COMPONENT_ACTOR_RECORDS: readonly CapabilityRecordSource[] = [
   }),
   buildCoreRecord({
     parentTool: 'inspect', action: 'delete_object', dispatchAction: 'control_actor', domain: D, family: 'actor',
-    summary: 'Delete a world actor by name (cross-parent to control_actor; dispatches action delete).',
+    summary: 'Delete placed actors by exact name, as control_actor delete does: actorName (or name, or objectPath), or several with actorNames, in one undo step. Names not found refuse with NOT_FOUND, or DELETE_PARTIAL when some went, both listing what was deleted and what was missing.',
     whenToUse: ['A world actor must be permanently removed from the level.'],
-    whenNotToUse: ['The target is an asset path; use manage_asset delete (TS returns a NOT_FOUND hint).'],
+    whenNotToUse: ['The target is an asset, not a placed actor (use manage_asset delete).', 'Every actor carrying a tag must go (use control_actor delete with deleteScope by_tag).'],
     inputProps: { objectPath: P.objectPath, actorName: P.actorName, actorNames: P.actorNames, name: P.name },
     required: [],
     effect: 'destructive', costLatency: 'interactive',
     exampleInput: { action: 'delete_object', actorName: 'PlayerStart_1' },
-    exampleOutput: { success: true, message: 'Actor deleted', deleted: 'PlayerStart_1' },
-    outputProps: { deleted: { type: 'string', description: 'Name of the deleted actor.' } },
+    exampleOutput: { success: true, message: 'Actors deleted', deletedCount: 1, deleted: ['PlayerStart_1'] },
+    // The shared delete replies a list (it takes several names); a string here refused every reply that had one.
+    outputProps: {
+      deletedCount: { type: 'number', description: 'How many actors were deleted.' },
+      deleted: { type: 'array', items: { type: 'string' }, description: 'The deleted actors.' },
+      missing: { type: 'array', items: { type: 'string' }, description: 'Names no actor answered to.' },
+    },
   }),
   buildCoreRecord({
     parentTool: 'inspect', action: 'list_objects', dispatchAction: 'control_actor', domain: D, family: 'actor',

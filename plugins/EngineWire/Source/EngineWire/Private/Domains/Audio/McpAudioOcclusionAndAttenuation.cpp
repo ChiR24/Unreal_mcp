@@ -71,10 +71,16 @@ bool HandleSpatialActions(
           const FString AttenName = Sound->GetName() + TEXT("_Attenuation");
           const FString AttenPackageName =
               FPackageName::GetLongPackagePath(Sound->GetOutermost()->GetName()) + TEXT("/") + AttenName;
-          UPackage* AttenPackage = CreatePackage(*AttenPackageName);
-          AttenuationSettings = AttenPackage
-              ? NewObject<USoundAttenuation>(AttenPackage, FName(*AttenName), RF_Public | RF_Standalone)
-              : nullptr;
+          // An attenuation an earlier call made for this sound is reused; NewObject over it rebuilt it empty, and
+          // another kind of asset under that name is refused.
+          AttenuationSettings = LoadObject<USoundAttenuation>(nullptr, *(AttenPackageName + TEXT(".") + AttenName));
+          if (!AttenuationSettings) {
+            FString CreateError, CreateCode;
+            UPackage* AttenPackage = McpCreatePackageForNewAsset(AttenPackageName, CreateError, CreateCode);
+            AttenuationSettings = AttenPackage
+                ? NewObject<USoundAttenuation>(AttenPackage, FName(*AttenName), RF_Public | RF_Standalone)
+                : nullptr;
+          }
           if (!AttenuationSettings) {
             Self->SendAutomationError(RequestingSocket, RequestId,
                                 FString::Printf(TEXT("Failed to create %s"), *AttenPackageName),
@@ -155,6 +161,20 @@ bool HandleSpatialActions(
       Payload->TryGetStringField(TEXT("falloffMode"), FalloffMode);
      bool bSave = true;
      Payload->TryGetBoolField(TEXT("save"), bSave);
+     // Any other name became a Sphere or Linear falloff, with only the reply to tell.
+     const bool bKnownShape = AttenuationShape.Equals(TEXT("Sphere"), ESearchCase::IgnoreCase) ||
+         AttenuationShape.Equals(TEXT("Capsule"), ESearchCase::IgnoreCase) || AttenuationShape.Equals(TEXT("Box"), ESearchCase::IgnoreCase) ||
+         AttenuationShape.Equals(TEXT("Cone"), ESearchCase::IgnoreCase);
+     const bool bKnownFalloff = FalloffMode.Equals(TEXT("Linear"), ESearchCase::IgnoreCase) ||
+         FalloffMode.Equals(TEXT("Logarithmic"), ESearchCase::IgnoreCase) || FalloffMode.Equals(TEXT("Inverse"), ESearchCase::IgnoreCase) ||
+         FalloffMode.Equals(TEXT("NaturalSound"), ESearchCase::IgnoreCase);
+     if (!bKnownShape || !bKnownFalloff) {
+       Self->SendAutomationError(RequestingSocket, RequestId, bKnownShape
+           ? FString::Printf(TEXT("falloffMode must be Linear, Logarithmic, Inverse or NaturalSound, got '%s'. Nothing was created."), *FalloffMode)
+           : FString::Printf(TEXT("attenuationShape must be Sphere, Capsule, Box or Cone, got '%s'. Nothing was created."), *AttenuationShape),
+           TEXT("INVALID_ARGUMENT"));
+       return true;
+     }
      // Checked before the asset is made.
      TOptional<FVector> BoxExtent;
      FString ExtentError;
@@ -172,10 +192,10 @@ bool HandleSpatialActions(
        return true;
      }
 
-     UPackage *Package = CreatePackage(*FullPath);
+     FString CreateError, CreateCode;
+     UPackage *Package = McpCreatePackageForNewAsset(FullPath, CreateError, CreateCode);
      if (!Package) {
-       Self->SendAutomationError(RequestingSocket, RequestId,
-                           TEXT("Failed to create package"), TEXT("PACKAGE_ERROR"));
+       Self->SendAutomationError(RequestingSocket, RequestId, CreateError, CreateCode);
        return true;
      }
 
@@ -239,7 +259,7 @@ bool HandleSpatialActions(
       Resp->SetStringField(TEXT("name"), Name);
       // Read back: extent replaces the size innerRadius gives a box.
       Resp->SetNumberField(TEXT("innerRadius"), McpAudioAuthoring::GetAttenuationInnerRadius(Atten->Attenuation));
-      Resp->SetNumberField(TEXT("falloffDistance"), FalloffDistance);
+      Resp->SetNumberField(TEXT("falloffDistance"), Atten->Attenuation.FalloffDistance);
       Resp->SetStringField(TEXT("attenuationShape"), AppliedShape);
       McpAudioAuthoring::AddAttenuationBoxExtent(Resp, Atten->Attenuation);
       Resp->SetStringField(TEXT("falloffMode"), AppliedFalloffMode);

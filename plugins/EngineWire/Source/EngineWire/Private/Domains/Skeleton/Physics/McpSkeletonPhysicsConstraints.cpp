@@ -165,13 +165,13 @@ bool UEngineWireSubsystem::HandleAddPhysicsConstraint(
     }
 
     PhysicsAsset->UpdateBodySetupIndexMap();
-    SaveIfRequested(PhysicsAsset, Payload);
 
     TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
     Result->SetStringField(TEXT("bodyA"), BodyA);
     Result->SetStringField(TEXT("bodyB"), BodyB);
     Result->SetNumberField(TEXT("constraintIndex"), PhysicsAsset->ConstraintSetup.IndexOfByKey(Constraint));
     Result->SetBoolField(TEXT("created"), bCreated);
+    SaveAndReport(PhysicsAsset, Payload, Result);
 
     SendAutomationResponse(RequestingSocket, RequestId, true,
         FString::Printf(TEXT("Constraint %s between '%s' and '%s'"), bCreated ? TEXT("created") : TEXT("updated"), *BodyA, *BodyB), Result);
@@ -222,11 +222,10 @@ bool UEngineWireSubsystem::HandleConfigureConstraintLimits(
     const bool bHasLimits = Payload->TryGetObjectField(TEXT("limits"), LimitsObj) && LimitsObj;
     ApplyMcpConstraintLimits(Constraint->DefaultInstance, bHasLimits ? *LimitsObj : Payload);
 
-    SaveIfRequested(PhysicsAsset, Payload);
-
     TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
     Result->SetStringField(TEXT("bodyA"), BodyA);
     Result->SetStringField(TEXT("bodyB"), BodyB);
+    SaveAndReport(PhysicsAsset, Payload, Result);
 
     SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Constraint limits configured"), Result);
     return true;

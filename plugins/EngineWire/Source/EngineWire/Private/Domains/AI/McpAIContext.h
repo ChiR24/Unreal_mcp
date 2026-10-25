@@ -33,53 +33,41 @@ inline bool SanitizeAIAssetPath(const FString& InputPath, FString& OutSanitizedP
 
 
 /**
- * Create a /Game AI asset of type T at Path/Name, or fill OutError.
- *
- * create_behavior_tree, create_blackboard_asset and create_eqs_query each
- * carried their own byte-identical copy of these five checks (sanitize,
- * FindObject-exists, DoesPackageExist, CreatePackage, NewObject); the only
- * difference was the asset type and the noun in the last message. The caller
- * still owns whatever comes after creation (graph seeding, saving).
+ * Create a /Game AI asset of AssetClass at Path/Name, or fill OutError and OutCode
+ * (ASSET_ALREADY_EXISTS for anything already at the path, saved or only in memory).
+ * The caller still owns whatever comes after creation (graph seeding, saving).
  */
-template <typename T>
-T* CreateAIAssetInPackage(const FString& Path, const FString& Name, const TCHAR* TypeNoun, FString& OutError)
+inline UObject* CreateAIAssetOfClass(UClass* AssetClass, const FString& Path, const FString& Name, const TCHAR* TypeNoun, FString& OutError, FString& OutCode)
 {
 	FString SanitizedPath;
 	if (!SanitizeAIAssetPath(Path, SanitizedPath, OutError))
 	{
+		OutCode = TEXT("INVALID_PATH");
 		return nullptr;
 	}
 
-	const FString FullPath = SanitizedPath / Name;
-
-	if (FindObject<T>(nullptr, *FullPath) != nullptr)
-	{
-		OutError = FString::Printf(TEXT("Asset already exists: %s"), *FullPath);
-		return nullptr;
-	}
-
-	if (FPackageName::DoesPackageExist(FullPath))
-	{
-		OutError = FString::Printf(TEXT("Package already exists: %s"), *FullPath);
-		return nullptr;
-	}
-
-	UPackage* Package = CreatePackage(*FullPath);
+	UPackage* Package = McpCreatePackageForNewAsset(SanitizedPath / Name, OutError, OutCode);
 	if (!Package)
 	{
-		OutError = FString::Printf(TEXT("Failed to create package: %s"), *FullPath);
 		return nullptr;
 	}
 
-	T* Asset = NewObject<T>(Package, T::StaticClass(), FName(*Name), RF_Public | RF_Standalone);
+	UObject* Asset = NewObject<UObject>(Package, AssetClass, FName(*Name), RF_Public | RF_Standalone);
 	if (!Asset)
 	{
 		OutError = FString::Printf(TEXT("Failed to create %s asset"), TypeNoun);
+		OutCode = TEXT("CREATION_FAILED");
 		return nullptr;
 	}
 
 	FAssetRegistryModule::AssetCreated(Asset);
 	return Asset;
+}
+
+template <typename T>
+T* CreateAIAssetInPackage(const FString& Path, const FString& Name, const TCHAR* TypeNoun, FString& OutError, FString& OutCode)
+{
+	return Cast<T>(CreateAIAssetOfClass(T::StaticClass(), Path, Name, TypeNoun, OutError, OutCode));
 }
 
 

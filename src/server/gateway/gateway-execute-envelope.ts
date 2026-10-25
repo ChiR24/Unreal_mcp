@@ -277,6 +277,8 @@ export function executeSuccessEnvelope(input: {
   readonly migratedFrom?: { readonly tool: string; readonly action: string };
   readonly options?: Record<string, unknown>;
   readonly warnings: readonly string[];
+  /** One page of a result too large for one reply: which array was cut, where, and how to read on. */
+  readonly page?: object;
 }, context: GatewayReceiptContext): Record<string, unknown> {
   const capabilityId: CapabilityId = input.record.id;
   const liveRevisions = liveStateRevisionsFromEnvelope(input.result);
@@ -315,6 +317,7 @@ export function executeSuccessEnvelope(input: {
     migratedFrom: input.migratedFrom,
     options: input.options,
     warnings: input.warnings.length > 0 ? input.warnings : undefined,
+    page: input.page,
     liveRevisions,
     receipt,
     // The documented payload location, and the one the native surface already

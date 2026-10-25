@@ -22,8 +22,14 @@ TSharedPtr<FJsonObject> HandleChannelExtract(const TSharedPtr<FJsonObject>& Para
     const int32 Width = SourceTexture->Source.GetSizeX();
     const int32 Height = SourceTexture->Source.GetSizeY();
     const FString FullAssetPath = Path / Name;
-    UPackage* Package = CreatePackage(*FullAssetPath);
-    UTexture2D* NewTexture = Package ? NewObject<UTexture2D>(Package, FName(*Name), RF_Public | RF_Standalone) : nullptr;
+    FString CreateError, CreateCode;
+    UPackage* Package = McpCreatePackageForNewAsset(FullAssetPath, CreateError, CreateCode);
+    if (!Package)
+    {
+        Response->SetStringField(TEXT("errorCode"), CreateCode);
+        TEXTURE_ERROR_RESPONSE(CreateError);
+    }
+    UTexture2D* NewTexture = NewObject<UTexture2D>(Package, FName(*Name), RF_Public | RF_Standalone);
     if (!NewTexture)
     {
         TEXTURE_ERROR_RESPONSE(TEXT("Failed to create output texture"));

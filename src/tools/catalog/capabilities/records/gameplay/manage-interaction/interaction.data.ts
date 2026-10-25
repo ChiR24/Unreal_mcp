@@ -85,7 +85,7 @@ export const INTERACTION_RECORDS: readonly CapabilityRecordSource[] = [
   }),
   interactionRecord({
     action: 'configure_switch_properties',
-    summary: 'Configure persistent switch properties.',
+    summary: 'Change a switch Blueprint made by create_interactable: switchType (button or lever flip per press, pressure_plate holds while stood on; a new type rewrites the switch logic), canToggle and resetTime (Blueprint variables). Only the fields sent change, and the Blueprint is saved; one without the SwitchMesh component is refused.',
     whenToUse: ['An existing switch needs a different type (a pressure_plate is on while stood on, a button or lever flips per press), a toggle-back rule or a reset delay; fields left out keep their value.'],
     whenNotToUse: [
       'The Blueprint does not exist yet or lacks the components its create step adds (use manage_interaction.create_interactable).',
@@ -205,7 +205,7 @@ export const INTERACTION_RECORDS: readonly CapabilityRecordSource[] = [
   }),
   interactionRecord({
     action: 'create_switch_actor',
-    summary: 'Create a switch actor Blueprint asset.',
+    summary: 'Create a switch actor Blueprint (name in folder, default /Game/Interactables): a mesh and an overlap sphere that a pawn walking in switches, firing OnSwitchChanged(bActivated). switchType button (the default) or lever flips per press, pressure_plate holds while stood on; another type is refused.',
     whenToUse: ['A switch, button or lever needs an actor Blueprint with mesh parts and an overlap sphere as its trigger; a pawn walking into it switches it and OnSwitchChanged(bActivated) fires, which a door can follow (configure_interactable setting door, switchPath).'],
     whenNotToUse: [
       'An actor must be placed in the level from an existing Blueprint (use control_actor.spawn).',

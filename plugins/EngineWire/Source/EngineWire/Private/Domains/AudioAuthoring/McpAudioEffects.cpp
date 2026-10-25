@@ -13,8 +13,9 @@ TSharedPtr<FJsonObject> HandleEffectActions(const FString& SubAction, const TSha
 		bool bSave = GetJsonBoolField(Params, TEXT("save"), true);
 		if (Name.IsEmpty()) { return McpHandlerUtils::BuildErrorResponse(TEXT("MISSING_NAME"), TEXT("Name is required")); }
 
-		UPackage* Package = CreatePackage(*(Path / Name));
-		if (!Package) { return McpHandlerUtils::BuildErrorResponse(TEXT("PACKAGE_ERROR"), TEXT("Failed to create package")); }
+		FString CreateError, CreateCode;
+		UPackage* Package = McpCreatePackageForNewAsset(Path / Name, CreateError, CreateCode);
+		if (!Package) { return McpHandlerUtils::BuildErrorResponse(CreateCode, CreateError); }
 		UReverbEffect* NewEffect = NewObject<UReverbEffect>(Package, FName(*Name), RF_Public | RF_Standalone);
 		if (!NewEffect) { return McpHandlerUtils::BuildErrorResponse(TEXT("CREATE_FAILED"), TEXT("Failed to create ReverbEffect")); }
 
@@ -41,8 +42,9 @@ TSharedPtr<FJsonObject> HandleEffectActions(const FString& SubAction, const TSha
 		bool bSave = GetJsonBoolField(Params, TEXT("save"), true);
 		if (Name.IsEmpty()) { return McpHandlerUtils::BuildErrorResponse(TEXT("MISSING_NAME"), TEXT("Name is required")); }
 
-		UPackage* Package = CreatePackage(*(Path / Name));
-		if (!Package) { return McpHandlerUtils::BuildErrorResponse(TEXT("PACKAGE_ERROR"), TEXT("Failed to create package")); }
+		FString CreateError, CreateCode;
+		UPackage* Package = McpCreatePackageForNewAsset(Path / Name, CreateError, CreateCode);
+		if (!Package) { return McpHandlerUtils::BuildErrorResponse(CreateCode, CreateError); }
 		USoundEffectSourcePresetChain* NewChain = NewObject<USoundEffectSourcePresetChain>(Package, FName(*Name), RF_Public | RF_Standalone);
 		if (!NewChain) { return McpHandlerUtils::BuildErrorResponse(TEXT("CREATE_FAILED"), TEXT("Failed to create source effect chain")); }
 
@@ -77,8 +79,12 @@ TSharedPtr<FJsonObject> HandleEffectActions(const FString& SubAction, const TSha
 #if MCP_HAS_SOURCE_EFFECT_PRESETS
 		if (!EffectPreset && !EffectType.IsEmpty())
 		{
-			const FString PresetPkg = FPackageName::ObjectPathToPackageName(AssetPath + TEXT("_") + EffectType);
-			UPackage* PresetPackage = CreatePackage(*PresetPkg);
+			// Each added effect gets its own preset under the next free <chain>_<type>[_<n>]: a second effect of one type
+			// rebuilt the first one's preset in place.
+			const FString PresetBase = FPackageName::ObjectPathToPackageName(AssetPath) + TEXT("_") + EffectType;
+			FString PresetPkg = PresetBase;
+			for (int32 Suffix = 1; McpAssetExists(PresetPkg); ++Suffix) { PresetPkg = FString::Printf(TEXT("%s_%d"), *PresetBase, Suffix); }
+			UPackage* PresetPackage = CreatePackage(*PresetPkg); // a free name by construction
 			if (PresetPackage)
 			{
 				EffectPreset = CreateSourceEffectPresetByType(EffectType, PresetPackage);
@@ -87,7 +93,15 @@ TSharedPtr<FJsonObject> HandleEffectActions(const FString& SubAction, const TSha
 					EffectPreset->SetFlags(RF_Public | RF_Standalone);
 					SaveAudioAsset(EffectPreset, bSave);
 					Response->SetStringField(TEXT("effectPresetPath"), EffectPreset->GetPathName());
+					// The receipt lists the new preset beside the chain.
+					Response->SetStringField(TEXT("createdAssetPath"), PresetPkg);
 				}
+			}
+			if (!EffectPreset)
+			{
+				return McpHandlerUtils::BuildErrorResponse(TEXT("INVALID_ARGUMENT"), FString::Printf(TEXT("Unknown effectType %s: use eq, chorus, delay, "
+					"filter, dynamics, bitcrusher, phaser, waveshaper, panner, stereodelay, foldback, ringmodulation, midsidespreader, "
+					"motionfilter, envelopefollower or convolutionreverb. Nothing was added."), *EffectType));
 			}
 		}
 #endif
@@ -133,8 +147,9 @@ TSharedPtr<FJsonObject> HandleEffectActions(const FString& SubAction, const TSha
 			return McpHandlerUtils::BuildErrorResponse(TEXT("UNSUPPORTED_EFFECT_TYPE"), FString::Printf(TEXT("effectType '%s' is not Reverb, EQ or Dynamics"), *EffectType));
 		}
 
-		UPackage* Package = CreatePackage(*(Path / Name));
-		if (!Package) { return McpHandlerUtils::BuildErrorResponse(TEXT("PACKAGE_ERROR"), TEXT("Failed to create package")); }
+		FString CreateError, CreateCode;
+		UPackage* Package = McpCreatePackageForNewAsset(Path / Name, CreateError, CreateCode);
+		if (!Package) { return McpHandlerUtils::BuildErrorResponse(CreateCode, CreateError); }
 		USoundSubmix* NewSubmix = NewObject<USoundSubmix>(Package, FName(*Name), RF_Public | RF_Standalone);
 		if (!NewSubmix) { return McpHandlerUtils::BuildErrorResponse(TEXT("CREATE_FAILED"), TEXT("Failed to create submix")); }
 		// The preset lives inside the submix package, so the one save persists both.

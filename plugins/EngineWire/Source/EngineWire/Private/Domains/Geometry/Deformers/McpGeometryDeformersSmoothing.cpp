@@ -14,6 +14,13 @@ bool ApplySmoothing(UEngineWireSubsystem* Self, const FString& RequestId, const 
     const FString ActorName = GetJsonStringField(Payload, TEXT("actorName"));
     const int32 Iterations = GetJsonIntField(Payload, TEXT("iterations"), DefaultIterations);
     const double Step = GetJsonNumberField(Payload, TEXT("strength"), DefaultStep);
+    // The engine returns without a change for either: the reply said the smoothing was applied.
+    if (Iterations < 1 || Step <= 0.0)
+    {
+        Self->SendAutomationError(Socket, RequestId, TEXT("iterations must be at least 1 and strength above 0. Nothing was changed."),
+                                  TEXT("INVALID_ARGUMENT"));
+        return true;
+    }
 
     const TOptional<FMcpGeometryTarget> Target = ResolveGeometryTarget(Self, RequestId, ActorName, Socket);
     if (!Target) return true;

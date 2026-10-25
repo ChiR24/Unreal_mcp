@@ -2,6 +2,7 @@
 
 #include "Domains/AI/SmartObjects/McpAISmartObjectsFeature.h"
 
+#include "Components/ActorComponent.h"
 #include "Engine/Blueprint.h"
 #include "Engine/SCS_Node.h"
 #include "Engine/SimpleConstructionScript.h"
@@ -9,6 +10,34 @@
 
 namespace McpAIHandlers
 {
+static const TCHAR* const SmartObjectsDisabledMessage =
+    TEXT("SmartObjects plugin is not enabled in this project. Enable the SmartObjects plugin to use Smart Object features.");
+
+// Points a Smart Object component at Definition. From 5.4 SetDefinition is a UFUNCTION that also syncs the
+// definition's parameters into DefinitionRef; before, it was an inline setter of the DefinitionAsset property.
+// Answers whether the component now holds Definition, read back from where this engine stores it.
+static bool SetSmartObjectComponentDefinition(UObject* Component, UObject* Definition)
+{
+    UClass* Class = Component->GetClass();
+    FObjectProperty* AssetProp = CastField<FObjectProperty>(Class->FindPropertyByName(TEXT("DefinitionAsset")));
+    if (UFunction* Setter = Component->FindFunction(TEXT("SetDefinition")))
+    {
+        struct FSetDefinitionParams { UObject* Value; } Params{ Definition };
+        Component->ProcessEvent(Setter, &Params);
+    }
+    else if (AssetProp)
+    {
+        AssetProp->SetObjectPropertyValue_InContainer(Component, Definition);
+    }
+    if (AssetProp)
+    {
+        return AssetProp->GetObjectPropertyValue_InContainer(Component) == Definition;
+    }
+    const FStructProperty* RefProp = CastField<FStructProperty>(Class->FindPropertyByName(TEXT("DefinitionRef")));
+    const FObjectProperty* RefAsset = RefProp ? CastField<FObjectProperty>(RefProp->Struct->FindPropertyByName(TEXT("SmartObjectDefinition"))) : nullptr;
+    return RefAsset && RefAsset->GetObjectPropertyValue_InContainer(RefProp->ContainerPtrToValuePtr<void>(Component)) == Definition;
+}
+
 // Implements the "configure_slot_behavior" action.
 bool HandleConfigureSmartObjectSlotBehavior(UEngineWireSubsystem* Self, const FString& RequestId, const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> RequestingSocket)
 {
@@ -22,32 +51,62 @@ bool HandleConfigureSmartObjectSlotBehavior(UEngineWireSubsystem* Self, const FS
         return true;
     }
 
-    // Load the SmartObjectDefinition
-    USmartObjectDefinition* Definition = LoadObject<USmartObjectDefinition>(nullptr, *DefinitionPath);
-    if (!Definition)
+    UClass* DefinitionClass = FindSmartObjectClass(TEXT("SmartObjectDefinition"));
+    if (!DefinitionClass)
+    {
+        Self->SendAutomationError(RequestingSocket, RequestId, SmartObjectsDisabledMessage, TEXT("SMARTOBJECTS_PLUGIN_NOT_ENABLED"));
+        return true;
+    }
+    UObject* Definition = LoadObject<UObject>(nullptr, *DefinitionPath);
+    if (!Definition || !Definition->IsA(DefinitionClass))
     {
         Self->SendAutomationError(RequestingSocket, RequestId,
             FString::Printf(TEXT("SmartObjectDefinition not found: %s"), *DefinitionPath), TEXT("NOT_FOUND"));
         return true;
     }
 
-#if ENGINE_MINOR_VERSION >= 1
-    if (!Definition->GetSlots().IsValidIndex(SlotIndex))
+    FStructProperty* SlotProp = nullptr;
+    FArrayProperty* SlotsProp = FindSmartObjectSlots(Definition, SlotProp);
+    if (!SlotsProp)
+    {
+        Self->SendAutomationError(RequestingSocket, RequestId, TEXT("This engine's Smart Object definition has no Slots array."), TEXT("INVALID_STATE"));
+        return true;
+    }
+    FScriptArrayHelper Slots(SlotsProp, SlotsProp->ContainerPtrToValuePtr<void>(Definition));
+    if (!Slots.IsValidIndex(SlotIndex))
     {
         Self->SendAutomationError(RequestingSocket, RequestId,
             FString::Printf(TEXT("Invalid slot index: %d"), SlotIndex), TEXT("INVALID_PARAMS"));
         return true;
     }
 
-    // Get the slot and configure it
-    FSmartObjectSlotDefinition& Slot = Definition->GetMutableSlots()[SlotIndex];
-
-    // Configure activity tags if provided. Resolve every tag first: an unregistered one used
-    // to be dropped while the call still reported success.
+    // A call with neither field used to save and answer success.
     const TArray<TSharedPtr<FJsonValue>>* TagsArray = nullptr;
-    if (Payload->TryGetArrayField(TEXT("activityTags"), TagsArray) && TagsArray)
+    const bool bHasTags = Payload->TryGetArrayField(TEXT("activityTags"), TagsArray) && TagsArray;
+    const bool bHasEnabled = Payload->HasField(TEXT("enabled"));
+    if (!bHasTags && !bHasEnabled)
     {
-        FGameplayTagContainer NewTags;
+        Self->SendAutomationError(RequestingSocket, RequestId, TEXT("Nothing to set: send activityTags or enabled."), TEXT("INVALID_ARGUMENT"));
+        return true;
+    }
+
+    // Slots carry ActivityTags from 5.1 and bEnabled from 5.2; asking for one this engine lacks changes nothing.
+    const FStructProperty* TagsProp = CastField<FStructProperty>(SlotProp->Struct->FindPropertyByName(TEXT("ActivityTags")));
+    FBoolProperty* EnabledProp = CastField<FBoolProperty>(SlotProp->Struct->FindPropertyByName(TEXT("bEnabled")));
+    const bool bNoTags = bHasTags && !(TagsProp && TagsProp->Struct == FGameplayTagContainer::StaticStruct());
+    if (bNoTags || (bHasEnabled && !EnabledProp))
+    {
+        Self->SendAutomationError(RequestingSocket, RequestId,
+            FString::Printf(TEXT("Smart Object slots on this engine have no %s (activity tags arrive in UE 5.1, the enabled flag in 5.2). Nothing was changed."),
+                bNoTags ? TEXT("activity tags") : TEXT("enabled flag")),
+            TEXT("UNSUPPORTED_VERSION"));
+        return true;
+    }
+
+    // Resolve every tag first: an unregistered one used to be dropped while the call still reported success.
+    FGameplayTagContainer NewTags;
+    if (bHasTags)
+    {
         TArray<FString> UnknownTags;
         for (const auto& TagValue : *TagsArray)
         {
@@ -62,30 +121,25 @@ bool HandleConfigureSmartObjectSlotBehavior(UEngineWireSubsystem* Self, const FS
                 TEXT("GAMEPLAY_TAG_NOT_REGISTERED"));
             return true;
         }
-        Slot.ActivityTags.AppendTags(NewTags);
     }
 
-    // Configure enabled state
-#if ENGINE_MAJOR_VERSION > 5 || ENGINE_MINOR_VERSION >= 2
-    if (Payload->HasField(TEXT("enabled")))
+    Definition->Modify();
+    uint8* Slot = Slots.GetRawPtr(SlotIndex);
+    if (bHasTags)
     {
-        Slot.bEnabled = GetJsonBoolField(Payload, TEXT("enabled"), true);
+        TagsProp->ContainerPtrToValuePtr<FGameplayTagContainer>(Slot)->AppendTags(NewTags);
     }
-#endif
+    if (bHasEnabled)
+    {
+        EnabledProp->SetPropertyValue_InContainer(Slot, GetJsonBoolField(Payload, TEXT("enabled"), true));
+    }
 
-    // Save
-    McpSafeAssetSave(Definition);
-
+    const FArrayProperty* BehaviorsProp = CastField<FArrayProperty>(SlotProp->Struct->FindPropertyByName(TEXT("BehaviorDefinitions")));
     Result->SetNumberField(TEXT("slotIndex"), SlotIndex);
-    Result->SetNumberField(TEXT("behaviorCount"), Slot.BehaviorDefinitions.Num());
-    Result->SetStringField(TEXT("message"), TEXT("Slot behavior configured"));
+    Result->SetNumberField(TEXT("behaviorCount"), BehaviorsProp ? FScriptArrayHelper(BehaviorsProp, BehaviorsProp->ContainerPtrToValuePtr<void>(Slot)).Num() : 0);
+    Result->SetBoolField(TEXT("saved"), McpSafeAssetSave(Definition));
+    McpHandlerUtils::AddVerification(Result, Definition);
     Self->SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Behavior configured"), Result);
-#else
-    // UE 5.0: SmartObject API is limited - skip slot configuration
-    Self->SendAutomationError(RequestingSocket, RequestId,
-        TEXT("SmartObject slot configuration requires UE 5.1+"), TEXT("UNSUPPORTED_VERSION"));
-    return true;
-#endif
     return true;
 }
 
@@ -103,6 +157,14 @@ bool HandleAddSmartObjectComponent(UEngineWireSubsystem* Self, const FString& Re
         return true;
     }
 
+    UClass* ComponentClass = FindSmartObjectClass(TEXT("SmartObjectComponent"));
+    UClass* DefinitionClass = FindSmartObjectClass(TEXT("SmartObjectDefinition"));
+    if (!ComponentClass || !DefinitionClass)
+    {
+        Self->SendAutomationError(RequestingSocket, RequestId, SmartObjectsDisabledMessage, TEXT("SMARTOBJECTS_PLUGIN_NOT_ENABLED"));
+        return true;
+    }
+
     // Load the Blueprint
     FString NormalizedPath, LoadError;
     UBlueprint* Blueprint = LoadBlueprintAsset(BlueprintPath, NormalizedPath, LoadError);
@@ -112,11 +174,13 @@ bool HandleAddSmartObjectComponent(UEngineWireSubsystem* Self, const FString& Re
         return true;
     }
 
-    // Load the definition if provided
-    USmartObjectDefinition* Definition = nullptr;
-    if (!DefinitionPath.IsEmpty())
+    // A definition that did not load was dropped, leaving a component with nothing to offer.
+    UObject* Definition = DefinitionPath.IsEmpty() ? nullptr : McpLoadAsset(DefinitionPath);
+    if (!DefinitionPath.IsEmpty() && !(Definition && Definition->IsA(DefinitionClass)))
     {
-        Definition = LoadObject<USmartObjectDefinition>(nullptr, *DefinitionPath);
+        Self->SendAutomationError(RequestingSocket, RequestId,
+            FString::Printf(TEXT("Smart Object definition not found: %s. Nothing was added."), *DefinitionPath), TEXT("NOT_FOUND"));
+        return true;
     }
 
     // Get the SCS
@@ -126,20 +190,31 @@ bool HandleAddSmartObjectComponent(UEngineWireSubsystem* Self, const FString& Re
         Self->SendAutomationError(RequestingSocket, RequestId, TEXT("Blueprint has no SimpleConstructionScript"), TEXT("INVALID_STATE"));
         return true;
     }
+    // A taken name made CreateNode pick another while the reply named the one asked for.
+    for (const USCS_Node* Node : SCS->GetAllNodes())
+    {
+        if (Node && Node->GetVariableName().ToString().Equals(ComponentName, ESearchCase::IgnoreCase))
+        {
+            Self->SendAutomationError(RequestingSocket, RequestId, FString::Printf(TEXT("Component '%s' already exists on %s; pick another "
+                "componentName. Nothing was added."), *ComponentName, *Blueprint->GetName()), TEXT("ALREADY_EXISTS"));
+            return true;
+        }
+    }
 
     // Create the component node using proper UE 5.7 SCS pattern
-    USCS_Node* NewNode = SCS->CreateNode(USmartObjectComponent::StaticClass(), FName(*ComponentName));
-    if (!NewNode)
+    USCS_Node* NewNode = SCS->CreateNode(ComponentClass, FName(*ComponentName));
+    if (!NewNode || !NewNode->ComponentTemplate)
     {
         Self->SendAutomationError(RequestingSocket, RequestId, TEXT("Failed to create SCS node for SmartObjectComponent"), TEXT("CREATION_FAILED"));
         return true;
     }
 
-    // Configure the component template
-    USmartObjectComponent* SOComp = Cast<USmartObjectComponent>(NewNode->ComponentTemplate);
-    if (SOComp && Definition)
+    // The node is not in the construction script yet, so a definition that did not take leaves the Blueprint as it was.
+    if (Definition && !SetSmartObjectComponentDefinition(NewNode->ComponentTemplate, Definition))
     {
-        SOComp->SetDefinition(Definition);
+        Self->SendAutomationError(RequestingSocket, RequestId,
+            FString::Printf(TEXT("The Smart Object component did not accept %s as its definition. Nothing was added."), *DefinitionPath), TEXT("SET_DEFINITION_FAILED"));
+        return true;
     }
 
     // Add to SCS
@@ -147,15 +222,15 @@ bool HandleAddSmartObjectComponent(UEngineWireSubsystem* Self, const FString& Re
 
     // Mark for compile and save
     FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(Blueprint);
-    McpSafeAssetSave(Blueprint);
 
-    Result->SetStringField(TEXT("componentName"), ComponentName);
+    Result->SetStringField(TEXT("componentName"), NewNode->GetVariableName().ToString());
     Result->SetStringField(TEXT("blueprintPath"), NormalizedPath);
     if (Definition)
     {
-        Result->SetStringField(TEXT("definitionPath"), DefinitionPath);
+        Result->SetStringField(TEXT("definitionPath"), Definition->GetPathName());
     }
-    Result->SetStringField(TEXT("message"), TEXT("Smart Object component added to blueprint"));
+    Result->SetBoolField(TEXT("saved"), McpSafeAssetSave(Blueprint));
+    McpHandlerUtils::AddVerification(Result, Blueprint);
     Self->SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Component added"), Result);
     return true;
 }

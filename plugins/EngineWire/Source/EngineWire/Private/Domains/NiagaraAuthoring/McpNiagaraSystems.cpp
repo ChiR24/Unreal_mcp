@@ -1,4 +1,5 @@
 #include "Domains/NiagaraAuthoring/McpNiagaraContext.h"
+#include "Domains/NiagaraAuthoring/McpNiagaraCreatePackage.h"
 #include "Domains/NiagaraAuthoring/McpNiagaraEmitterName.h"
 
 namespace McpNiagaraAuthoringHandlers
@@ -10,15 +11,20 @@ static bool CreateNiagaraSystem(FActionContext& Context)
         Context.SendError(TEXT("Missing 'name' parameter."), TEXT("INVALID_ARGUMENT"));
         return true;
     }
-    if (!Context.Path.EndsWith(TEXT("/")))
+    FString PathError;
+    const FString PackageName = McpNiagaraCreatePackageName(Context.Path, Context.Name, PathError);
+    if (PackageName.IsEmpty())
     {
-        Context.Path += TEXT("/");
+        Context.SendError(PathError, TEXT("INVALID_ARGUMENT"));
+        return true;
     }
-    const FString FullPath = Context.Path + Context.Name;
-    UPackage* Package = CreatePackage(*FPackageName::ObjectPathToPackageName(FullPath));
+    // CreatePackage hands back a package already there, and NewObject under a taken name rebuilt the asset in place
+    // (a system's emitters gone) or, for another class, stopped the editor with a fatal error: refuse it instead.
+    FString CreateError, CreateCode;
+    UPackage* Package = McpCreatePackageForNewAsset(PackageName, CreateError, CreateCode);
     if (!Package)
     {
-        Context.SendError(TEXT("Failed to create package."), TEXT("PACKAGE_ERROR"));
+        Context.SendError(CreateError, CreateCode);
         return true;
     }
     // RF_Transactional as the asset factory gives it: without it undo skipped the system and every Niagara stack
@@ -30,6 +36,8 @@ static bool CreateNiagaraSystem(FActionContext& Context)
         FModuleManager::Get().LoadModule(TEXT("NiagaraEditor"));
         UNiagaraSystemFactoryNew::InitializeSystem(NewSystem, true);
 #endif
+        // The factory compiles a new system; built here without it, it was saved with no compiled scripts.
+        NewSystem->RequestCompile(false);
     }
     if (!NewSystem)
     {
@@ -41,7 +49,9 @@ static bool CreateNiagaraSystem(FActionContext& Context)
     {
         McpSafeAssetSave(NewSystem);
     }
-    if (!FPackageName::DoesPackageExist(FPackageName::ObjectPathToPackageName(NewSystem->GetPathName())))
+    // save false leaves nothing on disk by design: checked then too, every such create answered CREATE_FAILED for a
+    // system it had made.
+    if (Context.bSave && !FPackageName::DoesPackageExist(FPackageName::ObjectPathToPackageName(NewSystem->GetPathName())))
     {
         Context.SendError(TEXT("Created system package does not exist on disk."), TEXT("CREATE_FAILED"));
         return true;
@@ -60,23 +70,41 @@ static bool CreateNiagaraEmitter(FActionContext& Context)
         Context.SendError(TEXT("Missing 'name' parameter."), TEXT("INVALID_ARGUMENT"));
         return true;
     }
-    if (!Context.Path.EndsWith(TEXT("/")))
+    FString PathError;
+    const FString PackageName = McpNiagaraCreatePackageName(Context.Path, Context.Name, PathError);
+    if (PackageName.IsEmpty())
     {
-        Context.Path += TEXT("/");
-    }
-    UPackage* Package = CreatePackage(*FPackageName::ObjectPathToPackageName(Context.Path + Context.Name));
-    if (!Package)
-    {
-        Context.SendError(TEXT("Failed to create package."), TEXT("PACKAGE_ERROR"));
+        Context.SendError(PathError, TEXT("INVALID_ARGUMENT"));
         return true;
     }
-    UNiagaraEmitter* NewEmitter = NewObject<UNiagaraEmitter>(Package, FName(*Context.Name), RF_Public | RF_Standalone | RF_Transactional);
+    // CreatePackage hands back a package already there, and NewObject under a taken name rebuilt the asset in place
+    // (a system's emitters gone) or, for another class, stopped the editor with a fatal error: refuse it instead.
+    FString CreateError, CreateCode;
+    UPackage* Package = McpCreatePackageForNewAsset(PackageName, CreateError, CreateCode);
+    if (!Package)
+    {
+        Context.SendError(CreateError, CreateCode);
+        return true;
+    }
+    const EObjectFlags EmitterFlags = RF_Public | RF_Standalone | RF_Transactional;
+#if MCP_HAS_NIAGARA_EMITTER_FACTORY_NEW && ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION < 3
+    // InitializeEmitter is exported only from UE 5.3, so 5.1 and 5.2 go through the factory: its
+    // virtual FactoryCreateNew makes the emitter and runs InitializeEmitter inside NiagaraEditor.
+    FModuleManager::Get().LoadModule(TEXT("NiagaraEditor"));
+    UNiagaraEmitterFactoryNew* Factory = NewObject<UNiagaraEmitterFactoryNew>();
+    Factory->bAddDefaultModulesAndRenderersToEmptyEmitter = true;
+    UNiagaraEmitter* NewEmitter = Cast<UNiagaraEmitter>(static_cast<UFactory*>(Factory)->FactoryCreateNew(
+        UNiagaraEmitter::StaticClass(), Package, FName(*Context.Name), EmitterFlags, nullptr, GWarn));
+    if (NewEmitter) { NewEmitter->SetUniqueEmitterName(Context.Name); }
+#else
+    UNiagaraEmitter* NewEmitter = NewObject<UNiagaraEmitter>(Package, FName(*Context.Name), EmitterFlags);
+#endif
     if (!NewEmitter)
     {
         Context.SendError(TEXT("Failed to create Niagara Emitter."), TEXT("CREATE_FAILED"));
         return true;
     }
-#if MCP_HAS_NIAGARA_EMITTER_FACTORY_NEW
+#if MCP_HAS_NIAGARA_EMITTER_FACTORY_NEW && (ENGINE_MAJOR_VERSION > 5 || ENGINE_MINOR_VERSION >= 3)
     FModuleManager::Get().LoadModule(TEXT("NiagaraEditor"));
     UNiagaraEmitterFactoryNew::InitializeEmitter(NewEmitter, true);
     McpNameNewEmitterAsset(*NewEmitter);

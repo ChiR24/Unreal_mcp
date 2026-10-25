@@ -85,11 +85,11 @@ bool HandleStructImportActions(UEngineWireSubsystem& Bridge, const FString& Requ
                 Bridge.SendAutomationError(RequestingSocket, RequestId, PathError, TEXT("PACKAGE_CREATE_FAILED"));
                 return true;
             }
-            UPackage* Package = CreatePackage(*PackageName);
+            FString CreateError, CreateCode;
+            UPackage* Package = McpCreatePackageForNewAsset(PackageName, CreateError, CreateCode);
             if (!Package)
             {
-                Bridge.SendAutomationError(RequestingSocket, RequestId,
-                    TEXT("Failed to create package"), TEXT("PACKAGE_CREATE_FAILED"));
+                Bridge.SendAutomationError(RequestingSocket, RequestId, CreateError, CreateCode);
                 return true;
             }
             S = CreateUnseededUserStruct(Package, SanitizedName);

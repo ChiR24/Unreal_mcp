@@ -82,6 +82,16 @@ bool HandleConfigureRuntimeHashSetGrid(
             nullptr, TEXT("INVALID_ARGUMENT"));
         return true;
     }
+    // An existing row changes only in what was sent: the defaults of the fields left out overwrote its own values.
+    const bool bSetRange = Index == INDEX_NONE || Payload->HasField(TEXT("loadingRange"));
+    const bool bSetCellSize = Index == INDEX_NONE || Payload->HasField(TEXT("gridCellSize"));
+    if (!bSetRange && !bSetCellSize)
+    {
+        Subsystem->SendAutomationResponse(Socket, RequestId, false, FString::Printf(TEXT("Partition '%s' found; pass "
+            "gridCellSize or loadingRange to change it. Nothing was changed."), *TargetPartitionName.ToString()),
+            nullptr, TEXT("INVALID_ARGUMENT"));
+        return true;
+    }
     HashSet->Modify();
     const bool bCreated = Index == INDEX_NONE;
     if (bCreated)
@@ -129,8 +139,22 @@ bool HandleConfigureRuntimeHashSetGrid(
             return SetNumber(PartitionStruct, Row, Names, Value) ||
                    (MainLayer && SetNumber(MainLayer->GetClass(), MainLayer, Names, Value));
         };
-        bLoadingRangeApplied = SetField({TEXT("LoadingRange")}, LoadingRange);
-        bCellSizeApplied = SetField({TEXT("CellSize"), TEXT("GridSize")}, GridCellSize);
+        bLoadingRangeApplied = bSetRange && SetField({TEXT("LoadingRange")}, LoadingRange);
+        bCellSizeApplied = bSetCellSize && SetField({TEXT("CellSize"), TEXT("GridSize")}, GridCellSize);
+    }
+    // A row with no grid layer holds neither value: it answered success with both flags false, and a created row
+    // stayed in the hash set with nothing to stream by.
+    if (!bLoadingRangeApplied && !bCellSizeApplied)
+    {
+        if (bCreated)
+        {
+            ArrayHelper.RemoveValues(Index);
+        }
+        Subsystem->SendAutomationResponse(Socket, RequestId, false, FString::Printf(TEXT("Partition '%s' has no grid layer to hold a "
+            "cell size or loading range%s. Give it a Main Layer under World Settings > World Partition > Runtime Partitions, then "
+            "retry."), *TargetPartitionName.ToString(), bCreated ? TEXT(" (a new row is made without one, so it was taken back)") : TEXT("")),
+            nullptr, TEXT("PARTITION_HAS_NO_LAYER"));
+        return true;
     }
 
     HashSet->MarkPackageDirty();
@@ -140,8 +164,14 @@ bool HandleConfigureRuntimeHashSetGrid(
     ResponseJson->SetBoolField(TEXT("success"), true);
     ResponseJson->SetStringField(TEXT("hashType"), TEXT("RuntimeHashSet"));
     ResponseJson->SetStringField(TEXT("partitionName"), TargetPartitionName.ToString());
-    ResponseJson->SetNumberField(TEXT("loadingRange"), LoadingRange);
-    ResponseJson->SetNumberField(TEXT("cellSize"), GridCellSize);
+    if (bLoadingRangeApplied)
+    {
+        ResponseJson->SetNumberField(TEXT("loadingRange"), LoadingRange);
+    }
+    if (bCellSizeApplied)
+    {
+        ResponseJson->SetNumberField(TEXT("cellSize"), GridCellSize);
+    }
     ResponseJson->SetBoolField(TEXT("created"), bCreated);
     ResponseJson->SetBoolField(TEXT("modified"), bFound);
     ResponseJson->SetBoolField(TEXT("loadingRangeApplied"), bLoadingRangeApplied);

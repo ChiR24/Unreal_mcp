@@ -56,6 +56,11 @@ bool UEngineWireSubsystem::HandleGenerateThumbnail(
     Width = static_cast<int32>(TempWidth);
   if (Payload->TryGetNumberField(TEXT("height"), TempHeight))
     Height = static_cast<int32>(TempHeight);
+  if (Width < 1 || Height < 1 || Width > 4096 || Height > 4096) {
+    SendAutomationError(RequestingSocket, RequestId, TEXT("width and height must be between 1 and 4096"),
+                        TEXT("INVALID_ARGUMENT"));
+    return true;
+  }
 
   FString OutputPath;
   Payload->TryGetStringField(TEXT("outputPath"), OutputPath);
@@ -114,6 +119,17 @@ bool UEngineWireSubsystem::HandleGenerateThumbnail(
   bool bSuccess = ObjectThumbnail.GetImageWidth() > 0 &&
                   ObjectThumbnail.GetImageHeight() > 0;
 
+  // The thumbnail goes into the asset's package, as the editor's own capture does: rendered and dropped, it left the
+  // asset's thumbnail as it was while the package was marked changed. Engine content keeps its own: a dirty engine
+  // package is one Save All would write.
+  UPackage *Package = Asset->GetOutermost();
+  const bool bEngineContent = Package && Package->GetName().StartsWith(TEXT("/Engine/"));
+  const bool bCached = bSuccess && Package && !bEngineContent;
+  if (bCached) {
+    ThumbnailTools::CacheThumbnail(Asset->GetFullName(), &ObjectThumbnail, Package);
+    Package->MarkPackageDirty();
+  }
+
   if (bSuccess && !OutputPath.IsEmpty()) {
     const TArray<uint8> &ImageData = ObjectThumbnail.GetUncompressedImageData();
 
@@ -169,15 +185,15 @@ bool UEngineWireSubsystem::HandleGenerateThumbnail(
     }
   }
 
-  if (Asset->GetOutermost()) {
-    Asset->GetOutermost()->MarkPackageDirty();
-  }
-
   TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
   Result->SetBoolField(TEXT("success"), bSuccess);
   Result->SetStringField(TEXT("assetPath"), SafeAssetPath);
   Result->SetNumberField(TEXT("width"), Width);
   Result->SetNumberField(TEXT("height"), Height);
+  Result->SetBoolField(TEXT("thumbnailCached"), bCached);
+  if (!bCached) {
+    McpHandlerUtils::MarkNoAssetsChanged(Result);
+  }
 
   if (!OutputPath.IsEmpty()) {
     Result->SetStringField(TEXT("outputPath"), OutputPath);
@@ -185,8 +201,9 @@ bool UEngineWireSubsystem::HandleGenerateThumbnail(
 
   SendAutomationResponse(
       RequestingSocket, RequestId, bSuccess,
-      bSuccess ? TEXT("Thumbnail generated successfully")
-               : TEXT("Thumbnail generation failed"),
+      !bSuccess ? TEXT("Thumbnail generation failed")
+      : bCached ? TEXT("Thumbnail stored in the asset, which is left unsaved")
+                : TEXT("Thumbnail rendered; engine content keeps its own thumbnail"),
       Result, bSuccess ? FString() : TEXT("THUMBNAIL_GENERATION_FAILED"));
 
   return true;

@@ -58,9 +58,12 @@ const testCases = [
   { scenario: 'ACTION: create from a path that names the sequence', toolName: 'manage_sequence', arguments: { action: 'create', path: `${TEST_FOLDER}/SEQ_PathOnly_${ts}` }, expected: 'success' },
   { scenario: 'ERROR: create with a folder path and no name', toolName: 'manage_sequence', arguments: { action: 'create', path: TEST_FOLDER }, expected: 'error' },
   { scenario: 'ACTION: open', toolName: 'manage_sequence', arguments: { action: 'open', path: SEQUENCE_PATH }, expected: 'success' },
+  { scenario: 'ERROR: open refuses an asset that is not a sequence', toolName: 'manage_sequence', arguments: { action: 'open', path: SOUND_WAVE }, expected: 'error|SEQUENCE_NOT_FOUND' },
 
   // === BINDINGS ===
   { scenario: 'ADD: add_camera', toolName: 'manage_sequence', arguments: { action: 'add_camera', path: SEQUENCE_PATH, spawnable: true }, expected: 'success|already exists' },
+  // Another kind of asset at the path got a camera spawned into the level and a "bound" success with no binding.
+  { scenario: 'ERROR: add_camera refuses an asset that is not a Level Sequence', toolName: 'manage_sequence', arguments: { action: 'add_camera', path: '/Engine/BasicShapes/Cube' }, expected: 'error|INVALID_SEQUENCE' },
   { scenario: 'ADD: add_actor', toolName: 'manage_sequence', arguments: { action: 'add_actor', path: SEQUENCE_PATH, actorName: ACTOR_A }, expected: 'success|already exists', captureResult: { key: 'actorBindingId', fromField: 'result.bindingGuid' } },
   { scenario: 'ADD: add_actors', toolName: 'manage_sequence', arguments: { action: 'add_actors', path: SEQUENCE_PATH, actorNames: [ACTOR_A, ACTOR_B] }, expected: 'success|already exists' },
   { scenario: 'INFO: get_bindings', toolName: 'manage_sequence', arguments: { action: 'get_bindings', path: SEQUENCE_PATH }, expected: 'success' },
@@ -72,6 +75,7 @@ const testCases = [
   // startTime is seconds; a frame number sent there lands past the end and is refused.
   { scenario: 'ERROR: pause past the end of the sequence', toolName: 'manage_sequence', arguments: { action: 'pause', path: SEQUENCE_PATH, startTime: 100000 }, expected: 'error' },
   { scenario: 'PLAYBACK: stop', toolName: 'manage_sequence', arguments: { action: 'stop', path: SEQUENCE_PATH }, expected: 'success' },
+  { scenario: 'PLAYBACK: stop reads the playhead back', toolName: 'manage_sequence', arguments: { action: 'stop', path: SEQUENCE_PATH }, expected: 'success', assertions: [{ path: 'structuredContent.result.currentFrame', exists: true, label: 'currentFrame read back' }] },
   { scenario: 'CONFIG: set_playback_speed', toolName: 'manage_sequence', arguments: { action: 'set_playback_speed', path: SEQUENCE_PATH, speed: 1.25 }, expected: 'success' },
 
   // === PROPERTIES / KEYFRAMES ===
@@ -95,8 +99,14 @@ const testCases = [
   { scenario: 'CONFIG: set_properties lengthInFrames', toolName: 'manage_sequence', arguments: { action: 'set_properties', path: SEQUENCE_PATH, playbackStart: 12, lengthInFrames: 36 }, expected: 'success', assertions: [{ path: 'structuredContent.result.playbackStart', equals: 12 }, { path: 'structuredContent.result.playbackEnd', equals: 48 }, { path: 'structuredContent.result.duration', equals: 36 }] },
   { scenario: 'CONFIG: set_display_rate', toolName: 'manage_sequence', arguments: { action: 'set_display_rate', path: SEQUENCE_PATH, frameRate: '24fps' }, expected: 'success' },
   { scenario: 'CONFIG: set_tick_resolution', toolName: 'manage_sequence', arguments: { action: 'set_tick_resolution', path: SEQUENCE_PATH, resolution: '24000/1' }, expected: 'success' },
+  { scenario: 'CONFIG: set_tick_resolution migrates to 60000', toolName: 'manage_sequence', arguments: { action: 'set_tick_resolution', path: SEQUENCE_PATH, resolution: '60000' }, expected: 'success', assertions: [{ path: 'structuredContent.result.previousTickResolution', exists: true, label: 'previous resolution reported' }] },
+  { scenario: 'ERROR: set_tick_resolution refuses a grid coarser than the display rate', toolName: 'manage_sequence', arguments: { action: 'set_tick_resolution', path: SEQUENCE_PATH, resolution: '24000/1001' }, expected: 'error|coarser than the display rate' },
+  { scenario: 'CONFIG: set_tick_resolution back to 24000', toolName: 'manage_sequence', arguments: { action: 'set_tick_resolution', path: SEQUENCE_PATH, resolution: '24000' }, expected: 'success' },
+  { scenario: 'ERROR: set_tick_resolution refuses zero', toolName: 'manage_sequence', arguments: { action: 'set_tick_resolution', path: SEQUENCE_PATH, resolution: '0' }, expected: 'error|resolution must be whole ticks' },
   { scenario: 'CONFIG: set_work_range', toolName: 'manage_sequence', arguments: { action: 'set_work_range', path: SEQUENCE_PATH, start: 0, end: 5 }, expected: 'success' },
   { scenario: 'CONFIG: set_view_range', toolName: 'manage_sequence', arguments: { action: 'set_view_range', path: SEQUENCE_PATH, start: 0, end: 5 }, expected: 'success' },
+  { scenario: 'ERROR: set_view_range refuses an end before its start', toolName: 'manage_sequence', arguments: { action: 'set_view_range', path: SEQUENCE_PATH, start: 5, end: 1 }, expected: 'error|end after start' },
+  { scenario: 'ERROR: set_properties refuses a call that sets nothing', toolName: 'manage_sequence', arguments: { action: 'set_properties', path: SEQUENCE_PATH }, expected: 'error|Pass frameRate' },
 
   // === METADATA / LISTING ===
   { scenario: 'ACTION: list', toolName: 'manage_sequence', arguments: { action: 'list', path: TEST_FOLDER }, expected: 'success' },
@@ -113,8 +123,11 @@ const testCases = [
   // set_section moves, trims and eases a section already on the track.
   { scenario: 'EDIT: set_section trims and eases a section', toolName: 'manage_sequence', arguments: { action: 'set_section', path: SEQUENCE_PATH, trackName: TRACK_NAME, sectionIndex: 0, startFrame: 4, endFrame: 40, easeInFrames: 6, easeOutFrames: 6 }, expected: 'success', assertions: [{ path: 'structuredContent.result.sectionIndex', equals: 0 }] },
   { scenario: 'ERROR: set_section with no such section', toolName: 'manage_sequence', arguments: { action: 'set_section', path: SEQUENCE_PATH, trackName: TRACK_NAME, sectionIndex: 99, endFrame: 40 }, expected: 'error' },
+  { scenario: 'ERROR: set_section playRate on a section that plays no animation', toolName: 'manage_sequence', arguments: { action: 'set_section', path: SEQUENCE_PATH, trackName: TRACK_NAME, playRate: 2 }, expected: 'error|INVALID_ARGUMENT' },
   { scenario: 'ERROR: set_section ending before it starts', toolName: 'manage_sequence', arguments: { action: 'set_section', path: SEQUENCE_PATH, trackName: TRACK_NAME, startFrame: 40, endFrame: 10 }, expected: 'error' },
   { scenario: 'ADD: add_track Audio (music or sound)', toolName: 'manage_sequence', arguments: { action: 'add_track', path: SEQUENCE_PATH, trackType: 'Audio', trackName: AUDIO_TRACK_NAME }, expected: 'success', assertions: [{ path: 'structuredContent.result.trackClass', equals: 'MovieSceneAudioTrack', label: 'Audio resolves to the audio track' }] },
+  { scenario: 'CONFIG: set_track_muted finds a track by the name add_track gave it', toolName: 'manage_sequence', arguments: { action: 'set_track_muted', path: SEQUENCE_PATH, trackName: AUDIO_TRACK_NAME, muted: false }, expected: 'success', assertions: [{ path: 'structuredContent.result.muted', equals: false, label: 'unmuted' }] },
+  { scenario: 'ERROR: add_track refuses an unknown track type', toolName: 'manage_sequence', arguments: { action: 'add_track', path: SEQUENCE_PATH, trackType: 'NoSuchTrackType' }, expected: 'error|TRACK_CREATION_FAILED' },
   { scenario: 'ADD: add_section soundPath puts the sound in the audio track, as long as the sound', toolName: 'manage_sequence', arguments: { action: 'add_section', path: SEQUENCE_PATH, trackName: AUDIO_TRACK_NAME, start: 24, soundPath: SOUND_WAVE }, expected: 'success', assertions: [{ path: 'structuredContent.result.soundName', equals: 'VR_click1', label: 'reply names the sound' }] },
   { scenario: 'ADD: add_section soundPath with an explicit end', toolName: 'manage_sequence', arguments: { action: 'add_section', path: SEQUENCE_PATH, trackName: AUDIO_TRACK_NAME, start: 0, end: 48, soundPath: SOUND_WAVE }, expected: 'success', assertions: [{ path: 'structuredContent.result.endFrame', equals: 48, label: 'the given end is kept' }] },
   { scenario: 'ADD: add_section with a missing sound is refused', toolName: 'manage_sequence', arguments: { action: 'add_section', path: SEQUENCE_PATH, trackName: AUDIO_TRACK_NAME, start: 0, soundPath: `/Game/MCPTest/NoSuchSound_${ts}` }, expected: 'error|ASSET_NOT_FOUND' },
@@ -148,7 +161,7 @@ const testCases = [
   { scenario: 'CINEMATICS: create_cine_camera_actor', toolName: 'manage_sequence', arguments: { action: 'create_cine_camera_actor', path: SEQUENCE_PATH, actorName: CINE_CAM }, expected: 'success|already exists' },
   { scenario: 'CINEMATICS: create_cine_camera_actor optional', toolName: 'manage_sequence', arguments: { action: 'create_cine_camera_actor', path: SEQUENCE_PATH, label: CINE_CAM_2, location: { x: 0, y: 0, z: 200 }, rotation: { pitch: 0, yaw: 0, roll: 0 }, currentFocalLength: 35, currentAperture: 2.8, sensorWidth: 36, sensorHeight: 24, manualFocusDistance: 500, lens: { focalLength: 35 }, filmback: { sensorWidth: 36 }, focus: { manualFocusDistance: 500 } }, expected: 'success|already exists' },
   // configure_camera_settings
-  { scenario: 'CINEMATICS: configure_camera_settings', toolName: 'manage_sequence', arguments: { action: 'configure_camera_settings', cameraName: CINE_CAM, aperture: 2.8 }, expected: 'success' },
+  { scenario: 'CINEMATICS: configure_camera_settings', toolName: 'manage_sequence', arguments: { action: 'configure_camera_settings', cameraName: CINE_CAM, aperture: 2.8 }, expected: 'success', assertions: [{ path: 'structuredContent.result.values.CurrentAperture', gte: 2.79, label: 'the aperture the camera kept is read back (a float, so not exactly 2.8)' }, { path: 'structuredContent.result.undo.undoable', equals: true, label: 'one undo step' }] },
   { scenario: 'CINEMATICS: configure_camera_settings optional', toolName: 'manage_sequence', arguments: { action: 'configure_camera_settings', cameraName: CINE_CAM, actorName: CINE_CAM, aperture: 4.0, focalLength: 50, focusDistance: 1000, sensorHeight: 24, sensorWidth: 36, currentAperture: 2.8, currentFocalLength: 35, manualFocusDistance: 750, lens: { focalLength: 50 }, filmback: { sensorWidth: 36, sensorHeight: 24 }, focus: { focusDistance: 1000 } }, expected: 'success' },
   // add_camera_cut_track
   { scenario: 'CINEMATICS: add_camera_cut_track', toolName: 'manage_sequence', arguments: { action: 'add_camera_cut_track', path: SEQUENCE_PATH, cameraName: CINE_CAM }, expected: 'success|already exists' },
@@ -203,6 +216,7 @@ const testCases = [
   // === DUPLICATE / RENAME / DELETE ===
   { scenario: 'ACTION: duplicate', toolName: 'manage_sequence', arguments: { action: 'duplicate', path: SEQUENCE_PATH, destinationPath: TEST_FOLDER, newName: DUPLICATE_NAME }, expected: 'success' },
   { scenario: 'ACTION: rename', toolName: 'manage_sequence', arguments: { action: 'rename', path: DUPLICATE_PATH, newName: RENAMED_NAME }, expected: 'success' },
+  { scenario: 'ERROR: duplicate onto a taken name is refused', toolName: 'manage_sequence', arguments: { action: 'duplicate', path: SEQUENCE_PATH, destinationPath: TEST_FOLDER, newName: SEQUENCE_NAME }, expected: 'error|ASSET_ALREADY_EXISTS' },
   { scenario: 'DELETE: delete', toolName: 'manage_sequence', arguments: { action: 'delete', path: RENAMED_PATH }, expected: 'success|not found' },
   { scenario: 'DELETE: remove_actors', toolName: 'manage_sequence', arguments: { action: 'remove_actors', path: SEQUENCE_PATH, actorNames: [ACTOR_A, ACTOR_B] }, expected: 'success|not found' },
 

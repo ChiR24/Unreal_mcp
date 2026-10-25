@@ -28,6 +28,7 @@
 #include "Domains/ControlEditor/McpEditorSupport.h"
 
 #include "Containers/Ticker.h"
+#include "Safety/McpSafeOperationsRenderGuard.h"
 #include "UnrealEdMisc.h"
 
 bool UEngineWireSubsystem::HandleControlEditorRestart(
@@ -61,6 +62,11 @@ bool UEngineWireSubsystem::HandleControlEditorRestart(
   const bool bDiscardUnsaved =
       GetJsonBoolField(Payload, TEXT("discardUnsaved"), false);
   const bool bBlockedByUnsaved = DirtyNames.Num() > 0 && !bDiscardUnsaved;
+  // A restart answered "requested" while a render went on writing frames, and cut it off.
+  if (McpMovieRenderRunning() && !GetJsonBoolField(Payload, TEXT("validateOnly"), false)) {
+    SendStandardErrorResponse(this, Socket, RequestId, TEXT("RENDER_IN_PROGRESS"), McpMovieRenderRunningMessage(), nullptr);
+    return true;
+  }
 
   TArray<TSharedPtr<FJsonValue>> NameValues;
   for (const FString &Name : DirtyNames) {
@@ -79,17 +85,19 @@ bool UEngineWireSubsystem::HandleControlEditorRestart(
     TSharedPtr<FJsonObject> Preview = McpHandlerUtils::CreateResultObject();
     Preview->SetBoolField(TEXT("restarting"), false);
     Preview->SetBoolField(TEXT("validateOnly"), true);
-    Preview->SetBoolField(TEXT("wouldRestart"), !bBlockedByUnsaved);
+    Preview->SetBoolField(TEXT("wouldRestart"), !bBlockedByUnsaved && !McpMovieRenderRunning());
+    Preview->SetBoolField(TEXT("renderRunning"), McpMovieRenderRunning());
     Preview->SetArrayField(TEXT("unsavedPackages"), NameValues);
     Preview->SetNumberField(TEXT("unsavedCount"), DirtyNames.Num());
     Preview->SetNumberField(TEXT("delaySeconds"), DelaySeconds);
     Preview->SetStringField(TEXT("projectPath"), FPaths::GetProjectFilePath());
-    SendAutomationResponse(
-        Socket, RequestId, true,
-        bBlockedByUnsaved
+    // A running render refuses the restart as well, and the message said it would proceed beside wouldRestart false.
+    const TCHAR *Verdict = McpMovieRenderRunning()
+        ? (bRelaunch ? TEXT("Restart would be refused: a Movie Render Queue render is running.") : TEXT("Closing the editor would be refused: a Movie Render Queue render is running."))
+        : bBlockedByUnsaved
             ? (bRelaunch ? TEXT("Restart would be refused: unsaved packages would be lost.") : TEXT("Closing the editor would be refused: unsaved packages would be lost."))
-            : (bRelaunch ? TEXT("Restart would proceed.") : TEXT("Closing the editor would proceed.")),
-        Preview, FString());
+            : (bRelaunch ? TEXT("Restart would proceed.") : TEXT("Closing the editor would proceed."));
+    SendAutomationResponse(Socket, RequestId, true, Verdict, Preview, FString());
     return true;
   }
 

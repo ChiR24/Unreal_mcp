@@ -1,5 +1,6 @@
 #include "Domains/ControlEditor/McpEditorSupport.h"
 
+#include "Domains/Log/McpLogHistory.h"
 #include "Framework/Docking/TabManager.h"
 #include "GameFramework/PlayerState.h"
 #include "GameFramework/WorldSettings.h"
@@ -45,14 +46,16 @@ bool UEngineWireSubsystem::HandleControlEditorPlay(
     Resp->SetBoolField(TEXT("success"), bStarted);
     if (World) { Resp->SetStringField(TEXT("pieWorld"), World->GetOutermost()->GetName()); }
     // A minimized editor paints no widget, so a title screen that clears itself on a timer stood still and
-    // the game it paused looked hung.
+    // the game it paused looked hung. Physics steps at most MaxPhysicsDeltaTime (1/30 s) a frame, so at 3 fps it
+    // runs a tenth as fast as the game clock: a crate fell off the platform that moved out from under it.
     const TSharedPtr<SWindow> Root = FGlobalTabmanager::Get()->GetRootWindow();
     if (bStarted && Root.IsValid() && Root->IsWindowMinimized()) {
       TArray<TSharedPtr<FJsonValue>> Warnings;
       Warnings.Add(MakeShared<FJsonValueString>(TEXT(
-          "The editor window is minimized: the game runs at about 3 fps and its widgets are not painted, so a title "
-          "screen that clears itself on a timer stands still, and a game it paused stays paused. Restore it "
-          "(control_editor configure_editor setting window), or lift such a pause with resume unpauseGame.")));
+          "The editor window is minimized: the game runs at about 3 fps, physics at a tenth of the game clock (a body "
+          "falls off a platform that moves out from under it) and no widget is painted, so a title screen that clears "
+          "itself on a timer stands still and a game it paused stays paused. Restore it (control_editor "
+          "configure_editor setting window) before testing physics or timing, or lift such a pause with resume unpauseGame.")));
       Resp->SetArrayField(TEXT("warnings"), Warnings);
     }
     WeakThis->SendAutomationResponse(Socket, RequestId, bStarted,
@@ -121,7 +124,8 @@ bool UEngineWireSubsystem::HandleControlEditorSetGameSpeed(
 
   TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
   Resp->SetBoolField(TEXT("success"), true);
-  Resp->SetNumberField(TEXT("speed"), Speed);
+  // The dilation the world now holds (SetTimeDilation clamps to the game's limits), not the one asked for.
+  Resp->SetNumberField(TEXT("speed"), World->GetWorldSettings()->TimeDilation);
   Resp->SetNumberField(TEXT("timeDilation"), World->GetWorldSettings()->GetEffectiveTimeDilation());
   SendAutomationResponse(Socket, RequestId, true, TEXT("Game speed set"), Resp,
                          FString());
@@ -142,15 +146,16 @@ bool UEngineWireSubsystem::HandleControlEditorPause(
     return true;
   }
 
+  // A session already paused answered "paused" as if this call had paused it.
+  const bool bWasPaused = GEditor->PlayWorld->bDebugPauseExecution;
   GEditor->PlayWorld->bDebugPauseExecution = true;
 
   TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
-  Resp->SetBoolField(TEXT("success"), true);
   Resp->SetStringField(TEXT("state"), TEXT("paused"));
-  Resp->SetStringField(TEXT("message"), TEXT("PIE session paused"));
+  Resp->SetBoolField(TEXT("alreadyPaused"), bWasPaused);
 
   SendAutomationResponse(Socket, RequestId, true,
-                         TEXT("PIE session paused"), Resp, FString());
+                         bWasPaused ? TEXT("PIE was already paused; nothing changed") : TEXT("PIE session paused"), Resp, FString());
   return true;
 }
 
@@ -169,10 +174,12 @@ bool UEngineWireSubsystem::HandleControlEditorResume(
     return true;
   }
 
+  const AWorldSettings *Settings = GEditor->PlayWorld->GetWorldSettings();
+  // A session that was not paused answered "resumed" as if this call had resumed it.
+  const bool bWasPaused = GEditor->PlayWorld->bDebugPauseExecution || (Settings && Settings->GetPauserPlayerState());
   GEditor->PlayWorld->bDebugPauseExecution = false;
   // The game can hold a pause of its own (SetGamePaused, from a pause menu or a title screen): the world then stays still
   // with the editor's pause off, and "resumed" was untrue. unpauseGame lifts it as the game's own unpause would.
-  const AWorldSettings *Settings = GEditor->PlayWorld->GetWorldSettings();
   if (Settings && Settings->GetPauserPlayerState() && GetJsonBoolField(Payload, TEXT("unpauseGame"))) {
     UGameplayStatics::SetGamePaused(GEditor->PlayWorld, false);
   }
@@ -188,12 +195,22 @@ bool UEngineWireSubsystem::HandleControlEditorResume(
   }
 
   TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
-  Resp->SetBoolField(TEXT("success"), true);
   Resp->SetStringField(TEXT("state"), TEXT("resumed"));
-  Resp->SetStringField(TEXT("message"), TEXT("PIE session resumed"));
+  Resp->SetBoolField(TEXT("wasPaused"), bWasPaused);
+  // Unpausing does not close the menu that paused the game: its focused button kept taking the jump key.
+  const FString Focused = FocusedPieWidgetForMcp();
+  if (!Focused.IsEmpty()) {
+    TArray<TSharedPtr<FJsonValue>> Warnings;
+    Warnings.Add(MakeShared<FJsonValueString>(FString::Printf(
+        TEXT("%s holds keyboard focus, so keys reach it before the game (a focused button takes Space and Enter as a "
+             "press). If it belongs to a title or pause menu, the menu is still up: press its button with "
+             "simulate_input type \"widget_click\" to go on as a player would."),
+        *Focused)));
+    Resp->SetArrayField(TEXT("warnings"), Warnings);
+  }
 
   SendAutomationResponse(Socket, RequestId, true,
-                         TEXT("PIE session resumed"), Resp, FString());
+                         bWasPaused ? TEXT("PIE session resumed") : TEXT("PIE was not paused; nothing changed"), Resp, FString());
   return true;
 }
 bool UEngineWireSubsystem::HandleControlEditorStepFrame(
@@ -234,7 +251,7 @@ bool UEngineWireSubsystem::HandleControlEditorStepFrame(
   // held by the ticker below cannot outlive it.
   auto SendStepped = [](UEngineWireSubsystem *Self,
                         TSharedPtr<FMcpBridgeWebSocket> ReplySocket,
-                        const FString &ReplyRequestId, int32 Stepped) {
+                        const FString &ReplyRequestId, int32 Stepped, double Since) {
     // A step keeps the slow motion that was set, so "Stepped 6 frame(s)" at speed 0.1 advanced
     // 0.02 s, not the 0.2 s the caller assumed: say the speed, and the game time when steps are fixed.
     const UWorld *PlayWorld = GEditor ? GEditor->PlayWorld.Get() : nullptr;
@@ -249,6 +266,12 @@ bool UEngineWireSubsystem::HandleControlEditorStepFrame(
     if (FApp::UseFixedTimeStep()) {
       Resp->SetNumberField(TEXT("gameSeconds"), Stepped * FApp::GetFixedDeltaTime() * Dilation);
     }
+    // What the game logged during the steps (a light that cannot move because it is not Movable, an Accessed
+    // None): a step read only the state afterwards, and why it had not changed stayed in the log.
+    const TArray<FString> Logged = FMcpLogHistory::Get().WarningsSince(Since, 5);
+    if (Logged.Num() > 0) {
+      Resp->SetArrayField(TEXT("warnings"), McpHandlerUtils::ToJsonStringArray(Logged));
+    }
     Resp->SetBoolField(TEXT("success"), true);
     Resp->SetNumberField(TEXT("steps"), Stepped);
     Resp->SetStringField(TEXT("message"), Message);
@@ -256,9 +279,10 @@ bool UEngineWireSubsystem::HandleControlEditorStepFrame(
                                  Resp, FString());
   };
 
+  const double Since = FMcpLogHistory::Now();
   AdvanceOneFrame(GEditor->PlayWorld);
   if (TotalSteps == 1) {
-    SendStepped(this, Socket, RequestId, 1);
+    SendStepped(this, Socket, RequestId, 1, Since);
     return true;
   }
 
@@ -267,7 +291,7 @@ bool UEngineWireSubsystem::HandleControlEditorStepFrame(
   FTSTicker::GetCoreTicker().AddTicker(
       FTickerDelegate::CreateLambda([WeakThis, Socket, RequestId, TotalSteps,
                                      Stepped, AdvanceOneFrame,
-                                     SendStepped](float) {
+                                     SendStepped, Since](float) {
         if (!WeakThis.IsValid()) {
           return false;
         }
@@ -281,7 +305,7 @@ bool UEngineWireSubsystem::HandleControlEditorStepFrame(
         }
         // Finished, or PIE ended early -- either way report the frames that
         // actually advanced rather than the count that was asked for.
-        SendStepped(WeakThis.Get(), Socket, RequestId, *Stepped);
+        SendStepped(WeakThis.Get(), Socket, RequestId, *Stepped, Since);
         return false;
       }),
       0.0f);

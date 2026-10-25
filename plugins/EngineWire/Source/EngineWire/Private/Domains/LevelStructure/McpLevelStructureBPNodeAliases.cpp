@@ -14,6 +14,7 @@
 // path works for gameplay graphs and not just for PrintString/Delay.
 #include "Domains/LevelStructure/McpLevelStructureActions.h"
 
+#include "Domains/BlueprintGraph/McpBPGraphPrivate.h"
 #include "GameFramework/Actor.h"
 #include "K2Node_CallFunction.h"
 #include "K2Node_Event.h"
@@ -144,8 +145,10 @@ bool ResolveLevelBlueprintNodeAlias(FString& InOutNodeClass, FString& OutEventNa
     return false;
 }
 
-bool ApplyLevelBlueprintNodeAlias(UK2Node* Node, const FString& EventName, const FString& FunctionName, FString& OutError)
+bool ApplyLevelBlueprintNodeAlias(UK2Node* Node, const FString& EventName, const FString& FunctionName,
+                                  const FString& MemberClass, FString& OutError, FString& OutCode)
 {
+    OutCode = TEXT("NOT_SUPPORTED");
     if (!EventName.IsEmpty())
     {
         UK2Node_Event* EventNode = Cast<UK2Node_Event>(Node);
@@ -195,17 +198,26 @@ bool ApplyLevelBlueprintNodeAlias(UK2Node* Node, const FString& EventName, const
     if (!FunctionName.IsEmpty())
     {
         UK2Node_CallFunction* CallNode = Cast<UK2Node_CallFunction>(Node);
-        // Dogfood #221: search every common Blueprint library instead of only
-        // UKismetSystemLibrary, so gameplay calls (GetPlayerPawn, ApplyDamage,
-        // SpawnSystemAtLocation, ...) bind instead of being rejected.
-        UFunction* Function = FindBindableFunctionByName(FunctionName);
-        if (!CallNode || !Function)
+        // memberClass names the class of a function outside the common libraries (a component's SetVisibility), the
+        // way create_node takes it; without it, dogfood #221's search of every common Blueprint library binds the
+        // gameplay calls (GetPlayerPawn, ApplyDamage, SpawnSystemAtLocation, ...).
+        UClass* Owner = MemberClass.IsEmpty() ? nullptr : McpBlueprintGraphHandlers::ResolveMemberClass(MemberClass);
+        if (!MemberClass.IsEmpty() && !Owner)
         {
-            OutError = FString::Printf(
-                TEXT("Function '%s' could not be bound to a K2Node_CallFunction. "
-                     "Pass a K2 callable name from a Blueprint library (KismetSystemLibrary, "
-                     "KismetMathLibrary, GameplayStatics, Actor, ...) or use an event alias."),
-                *FunctionName);
+            OutError = DescribeUnknownMemberClass(MemberClass);
+            OutCode = TEXT("INVALID_ARGUMENT");
+            return false;
+        }
+        UFunction* Function = Owner ? Owner->FindFunctionByName(FName(*FunctionName)) : FindBindableFunctionByName(FunctionName);
+        if (!CallNode || !Function || !Function->HasAnyFunctionFlags(FUNC_BlueprintCallable | FUNC_BlueprintPure))
+        {
+            OutError = Owner
+                ? FString::Printf(TEXT("%s has no Blueprint-callable function '%s'."), *Owner->GetName(), *FunctionName)
+                : FString::Printf(
+                    TEXT("Function '%s' could not be bound to a K2Node_CallFunction. Pass a K2 callable name from a "
+                         "Blueprint library (KismetSystemLibrary, KismetMathLibrary, GameplayStatics, Actor, ...), "
+                         "memberClass for a function of another class (SceneComponent for SetVisibility), or an event alias."),
+                    *FunctionName);
             return false;
         }
         CallNode->SetFromFunction(Function);

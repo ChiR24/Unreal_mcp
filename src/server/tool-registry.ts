@@ -1,5 +1,4 @@
-import { Server } from '@modelcontextprotocol/sdk/server/index.js';
-import { CallToolRequestSchema, ListToolsRequestSchema } from '@modelcontextprotocol/sdk/types.js';
+import { isInputRequiredResult, ProtocolError, type CallToolResult, type Server, type Tool } from '@modelcontextprotocol/server';
 import { AutomationBridge } from '../automation/index.js';
 import { Logger } from '../utils/logging/logger.js';
 import { HealthMonitor } from '../services/health-monitor.js';
@@ -18,6 +17,7 @@ import { ProgressSinkRegistry } from './mcp-primitives/progress/progress-sink-re
 import { handleUnrealGatewayCall, type GatewayContext } from './tool-registry-gateway.js';
 import { unrealGatewayToolDefinition } from '../tools/catalog/unreal-gateway-definition.js';
 import { buildDirectCallMigration } from './gateway/direct-call-migration.js';
+import { consentChannel } from './gateway/gateway-execute-consent.js';
 
 export class ToolRegistry {
     private readonly progressSinks = new ProgressSinkRegistry();
@@ -33,9 +33,9 @@ export class ToolRegistry {
     register() {
         const tools: ITools = { automationBridge: this.automationBridge };
 
-        this.server.setRequestHandler(ListToolsRequestSchema, async () => {
+        this.server.setRequestHandler('tools/list', async () => {
             this.logger.debug('Serving gateway tool list (static single-tool mode)');
-            return { tools: [unrealGatewayToolDefinition] };
+            return { tools: [unrealGatewayToolDefinition as Tool] };
         });
 
         // Unreal reports progress against an automation id; the bridge resolves
@@ -56,7 +56,7 @@ export class ToolRegistry {
             previousOnClose?.();
         };
 
-        this.server.setRequestHandler(CallToolRequestSchema, async (request, extra) => {
+        this.server.setRequestHandler('tools/call', async (request, ctx) => {
             const { name } = request.params;
             const args: Record<string, unknown> = (request.params.arguments || {}) as Record<string, unknown>;
             const startTime = Date.now();
@@ -65,16 +65,16 @@ export class ToolRegistry {
             // no caller-supplied string can reach a metric label.
             const actionClass = actionClassForGatewayArgs(args);
 
-            const mcpRequestId = extra.requestId !== undefined
-                ? canonicalizeMcpRequestId(extra.requestId)
+            const mcpRequestId = ctx.mcpReq.id !== undefined
+                ? canonicalizeMcpRequestId(ctx.mcpReq.id)
                 : undefined;
 
             // The token is READ from the client's _meta, never allocated. A
             // client that sent none gets an inert reporter, so absent stays
             // absent instead of becoming a server-invented id.
             const progress = createProgressReporter({
-                token: readProgressToken(extra._meta),
-                notify: (notification) => extra.sendNotification(notification),
+                token: readProgressToken(ctx.mcpReq._meta),
+                notify: (notification) => ctx.mcpReq.notify(notification),
                 onError: (error) => this.logger.debug('Progress notification dropped', {
                     error: error instanceof Error ? error.message : String(error)
                 })
@@ -97,8 +97,8 @@ export class ToolRegistry {
             // still runs to completion — but the client has said it no longer
             // wants to hear about it, so the progress stream ends here rather
             // than trickling on until the abandoned handler settles.
-            if (mcpRequestId && extra.signal) {
-                extra.signal.addEventListener(
+            if (mcpRequestId) {
+                ctx.mcpReq.signal.addEventListener(
                     'abort',
                     () => {
                         endProgress();
@@ -110,7 +110,7 @@ export class ToolRegistry {
 
             const withRequestContext = <T>(fn: () => T): T =>
                 mcpRequestId
-                    ? runWithMcpRequestContext({ requestId: mcpRequestId, signal: extra.signal }, fn)
+                    ? runWithMcpRequestContext({ requestId: mcpRequestId, signal: ctx.mcpReq.signal }, fn)
                     : fn();
 
             if (name !== 'unreal') {
@@ -120,12 +120,16 @@ export class ToolRegistry {
                 // The receipt carries the gateway envelope fields the `unreal`
                 // output schema requires (success:false + operation); wrapResponse
                 // promotes success:false to top-level isError.
-                return wrapGatewayResponse(migration);
+                return wrapGatewayResponse(migration) as CallToolResult;
             }
 
             try {
-                const context: GatewayContext = { tools, logger: this.logger, ensureConnected: this.ensureConnected };
+                const context: GatewayContext = {
+                    tools, logger: this.logger, ensureConnected: this.ensureConnected, consent: consentChannel(ctx)
+                };
                 const gatewayResult = cleanObject(await withRequestContext(() => handleUnrealGatewayCall(args, context)));
+                // A consent question for the client (MCP 2026-07-28) goes back as it is, not as a tool result.
+                if (isInputRequiredResult(gatewayResult)) return gatewayResult;
                 const wrapped = wrapGatewayResponse(gatewayResult);
 
                 const finalSuccess = wrapped.isError !== true;
@@ -138,14 +142,16 @@ export class ToolRegistry {
                     const preview = JSON.stringify(redactImagePayloadForLog(wrapped)).substring(0, 100);
                     this.logger.debug(`Returning gateway response to MCP client: ${preview}...`);
                 }
-                return wrapped;
+                return wrapped as CallToolResult;
             } catch (error) {
+                // A protocol-level refusal (an unverifiable consent requestState) answers as a JSON-RPC error.
+                if (error instanceof ProtocolError) throw error;
                 this.healthMonitor.trackPerformance(startTime, false, { actionClass, failureClass: failureClassForError(error) });
                 const detail = error instanceof Error ? error.message : String(error);
                 const errorResponse = { success: false, isError: true, error: detail, message: `Failed to execute unreal: ${detail}`, scope: 'tool-call/unreal' };
                 this.logger.error('Gateway tool execution failed', errorResponse);
                 this.healthMonitor.recordError(errorResponse);
-                return wrapGatewayResponse(errorResponse);
+                return wrapGatewayResponse(errorResponse) as CallToolResult;
             } finally {
                 endProgress();
             }

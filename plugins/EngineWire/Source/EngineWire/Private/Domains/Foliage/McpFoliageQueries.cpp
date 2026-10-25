@@ -1,5 +1,6 @@
 #include "Core/Compatibility/McpVersionCompatibility.h"
 #include "Domains/Foliage/McpFoliagePrivate.h"
+#include "Foundation/McpScopedEditorTransaction.h"
 
 bool UEngineWireSubsystem::HandleRemoveFoliage(
     const FString &RequestId, const FString &Action,
@@ -36,11 +37,10 @@ bool UEngineWireSubsystem::HandleRemoveFoliage(
   }
 
   UWorld *World = GEditor->GetEditorWorldContext().World();
-  AInstancedFoliageActor *IFA =
-      McpFoliageHandlers::GetOrCreateFoliageActorForWorldSafe(World, false);
-  if (!IFA) {
+  const TArray<AInstancedFoliageActor *> FoliageActors = McpFoliageHandlers::AllFoliageActors(World);
+  if (FoliageActors.Num() == 0) {
     SendAutomationError(RequestingSocket, RequestId,
-                        TEXT("No foliage actor found"),
+                        TEXT("This level holds no foliage; nothing was removed."),
                         TEXT("FOLIAGE_ACTOR_NOT_FOUND"));
     return true;
   }
@@ -83,55 +83,61 @@ bool UEngineWireSubsystem::HandleRemoveFoliage(
                         TEXT("INVALID_ARGUMENT"));
     return true;
   }
-  if (Boxes.Num() > 0) {
-    UFoliageType *OnlyType = FoliageTypePath.IsEmpty()
-        ? nullptr : LoadObject<UFoliageType>(nullptr, *FoliageTypePath);
-    IFA->Modify();
-    IFA->ForEachFoliageInfo([&](UFoliageType *Type, FFoliageInfo &Info) {
-      TArray<int32> Inside;
-      for (int32 Index = 0; (!OnlyType || Type == OnlyType) && Index < Info.Instances.Num(); ++Index) {
-        const FVector Location(Info.Instances[Index].Location);
-        if (Boxes.ContainsByPredicate([&Location](const FBox &Box) { return Box.IsInsideOrOn(Location); })) {
-          Inside.Add(Index);
+  UFoliageType *OnlyType = FoliageTypePath.IsEmpty() ? nullptr : LoadObject<UFoliageType>(nullptr, *FoliageTypePath);
+  // One undo step for every foliage actor touched (it had none); each is modified only when it loses instances.
+  FMcpScopedEditorTransaction Transaction(FText::FromString(TEXT("Remove Foliage")), EMcpMutationDurability::EditorStateOnly,
+                                          TArray<UObject *>());
+  TArray<TSharedPtr<FJsonValue>> Changed;
+  for (AInstancedFoliageActor *IFA : FoliageActors) {
+    const int32 Before = RemovedCount;
+    if (Boxes.Num() > 0) {
+      IFA->ForEachFoliageInfo([&](UFoliageType *Type, FFoliageInfo &Info) {
+        TArray<int32> Inside;
+        for (int32 Index = 0; (!OnlyType || Type == OnlyType) && Index < Info.Instances.Num(); ++Index) {
+          const FVector Location(Info.Instances[Index].Location);
+          if (Boxes.ContainsByPredicate([&Location](const FBox &Box) { return Box.IsInsideOrOn(Location); })) {
+            Inside.Add(Index);
+          }
         }
+        if (Inside.Num() > 0) {
+          IFA->Modify();
+          Info.RemoveInstances(Inside, true);
+          RemovedCount += Inside.Num();
+        }
+        return true;
+      });
+    } else {
+      // Emptying FFoliageInfo::Instances left every rendered instance in its component, out of step with the list
+      // the next add appends to; RemoveFoliageType takes the instances, their components and the type out together.
+      TArray<UFoliageType *> Types;
+      IFA->ForEachFoliageInfo([&](UFoliageType *Type, FFoliageInfo &Info) {
+        if (bRemoveAll || Type == OnlyType) {
+          RemovedCount += Info.Instances.Num();
+          Types.Add(Type);
+        }
+        return true;
+      });
+      if (Types.Num() > 0) {
+        IFA->Modify();
+        IFA->RemoveFoliageType(Types.GetData(), Types.Num());
       }
-      if (Inside.Num() > 0) {
-        Info.RemoveInstances(Inside, true);
-        RemovedCount += Inside.Num();
-      }
-      return true;
-    });
-  } else if (bRemoveAll) {
-    // Emptying FFoliageInfo::Instances left every rendered instance in its component,
-    // out of step with the list the next add appends to; RemoveFoliageType takes the
-    // instances, their components and the type out together.
-    IFA->Modify();
-    TArray<UFoliageType *> Types;
-    IFA->ForEachFoliageInfo([&](UFoliageType *Type, FFoliageInfo &Info) {
-      RemovedCount += Info.Instances.Num();
-      Types.Add(Type);
-      return true;
-    });
-    IFA->RemoveFoliageType(Types.GetData(), Types.Num());
-  } else {
-    UFoliageType *FoliageType = LoadObject<UFoliageType>(nullptr, *FoliageTypePath);
-    if (FFoliageInfo *Info = FoliageType ? IFA->FindInfo(FoliageType) : nullptr) {
-      IFA->Modify();
-      RemovedCount = Info->Instances.Num();
-      IFA->RemoveFoliageType(&FoliageType, 1);
+    }
+    if (RemovedCount > Before) {
+      Changed.Add(MakeShared<FJsonValueString>(IFA->GetName()));
     }
   }
 
   TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
   Resp->SetNumberField(TEXT("instancesRemoved"), RemovedCount);
-  Resp->SetStringField(TEXT("foliageActorPath"), IFA->GetPathName());
-  if (RemovedCount > 0) {
-    McpFoliageHandlers::SetFoliageActorChanged(Resp, IFA);
+  // A removal that matched nothing changed nothing, so it names no undo step.
+  if (Changed.Num() > 0) {
+    Resp->SetArrayField(TEXT("affectedActors"), Changed);
+    Transaction.DescribeInto(Resp);
   }
-  Resp->SetBoolField(TEXT("existsAfter"), true);
   SendAutomationResponse(RequestingSocket, RequestId, true,
-                         Boxes.Num() > 0 ? FString::Printf(TEXT("Removed %d foliage instances inside %d area(s)"), RemovedCount, Boxes.Num())
-                                         : FString(TEXT("Foliage removed successfully")),
+                         RemovedCount == 0 ? FString(TEXT("Nothing matched: no foliage instances were removed."))
+                         : Boxes.Num() > 0 ? FString::Printf(TEXT("Removed %d foliage instances inside %d area(s)."), RemovedCount, Boxes.Num())
+                                           : FString::Printf(TEXT("Removed %d foliage instances."), RemovedCount),
                          Resp, FString());
   return true;
 }

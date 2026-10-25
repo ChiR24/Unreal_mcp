@@ -56,7 +56,7 @@ export const GEOMETRY_OPTIMIZE_RECORDS: readonly CapabilityRecordSource[] = [
   }),
   buildWorldRecord({
     parentTool: 'manage_geometry', action: 'array_linear', plugins: PLUGIN,
-    family: F, summary: 'Repeat a dynamic mesh in a row inside the same mesh: count copies in all, each one offset further from the last.', whenToUse: ['Instances must be arrayed linearly.'], whenNotToUse: ['A radial array is needed; use array_radial.'],
+    family: F, summary: 'Repeat a dynamic mesh in a row inside the same mesh: count copies in all, each one offset further from the last. The reply gives the triangleCount after the copies.', whenToUse: ['Instances must be arrayed linearly.'], whenNotToUse: ['A radial array is needed; use array_radial.'],
     inputProps: {
       actorName: P.actorName, targetActor: P.targetActor, count: ARRAY_COUNT,
       offset: { ...P.offset, description: 'Row: the step from one copy to the next in the mesh\'s local space, cm (default 100 along x); copy k sits k steps from the original.' },
@@ -65,7 +65,7 @@ export const GEOMETRY_OPTIMIZE_RECORDS: readonly CapabilityRecordSource[] = [
   }),
   buildWorldRecord({
     parentTool: 'manage_geometry', action: 'array_radial', plugins: PLUGIN,
-    family: F, summary: 'Repeat a dynamic mesh round its local Z axis inside the same mesh: count copies in all, angle / count apart.', whenToUse: ['Instances must be arrayed radially.'], whenNotToUse: ['A linear array is needed; use array_linear.'],
+    family: F, summary: 'Repeat a dynamic mesh round its local Z axis inside the same mesh: count copies in all, angle / count apart. The reply gives the triangleCount after the copies.', whenToUse: ['Instances must be arrayed radially.'], whenNotToUse: ['A linear array is needed; use array_linear.'],
     inputProps: {
       actorName: P.actorName, targetActor: P.targetActor, count: ARRAY_COUNT,
       angle: { ...P.angle, description: 'Ring: the total sweep in degrees (default 360). Copies sit angle / count apart, so 360 closes a ring of count; an open arc of N copies 22.5 degrees apart takes angle 22.5 * N.' },
@@ -155,31 +155,31 @@ export const GEOMETRY_OPTIMIZE_RECORDS: readonly CapabilityRecordSource[] = [
   }),
   buildWorldRecord({
     parentTool: 'manage_geometry', action: 'auto_uv', plugins: PLUGIN,
-    family: F, summary: 'Auto-generate UVs for a dynamic mesh.', whenToUse: ['UVs must be auto-generated.'], whenNotToUse: ['UVs must be unwrapped; use unwrap_uv.'],
+    family: F, summary: 'Unwrap a dynamic mesh actor with XAtlas into uvChannel (default 0, made when missing): seams are cut and the islands packed into the 0-1 square, compacting the mesh first (compacted). When XAtlas writes nothing it falls back to a bounds-sized box projection (method box_projection_fallback, with xatlasError saying why). The reply gives uvElementCount; none at all is UV_GENERATION_FAILED.', whenToUse: ['A mesh needs UVs that follow its surface, such as before a texture, a lightmap or a bake.'], whenNotToUse: ['A tiling material must repeat at a world size (use project_uv with tileSize).'],
     inputProps: { actorName: P.actorName, targetActor: P.targetActor, uvChannel: P.uvChannel }, required: [], requiredOneOf: ['actorName', 'targetActor'], effect: 'write', costLatency: 'interactive', costResources: 'low',
     exampleInput: { action: 'auto_uv', targetActor: 'DM_A', uvChannel: 0 },
   }),
   buildWorldRecord({
     parentTool: 'manage_geometry', action: 'project_uv', plugins: PLUGIN,
-    family: F, summary: 'Project UVs from a planar/box projection.', whenToUse: ['UVs must be projected.'], whenNotToUse: ['UVs must be transformed; use transform_uvs.'],
-    inputProps: { actorName: P.actorName, targetActor: P.targetActor, uvChannel: P.uvChannel }, required: [], requiredOneOf: ['actorName', 'targetActor'], effect: 'write', costLatency: 'interactive', costResources: 'low',
-    exampleInput: { action: 'project_uv', targetActor: 'DM_A', uvChannel: 0 },
+    family: F, summary: 'Box-project UVs onto a dynamic mesh actor into uvChannel (default 0, made when missing): each triangle takes the face of the box it points at. tileSize is the world size one texture repeat covers, for tiling materials such as brick or concrete; without it the box is the mesh bounds and the texture spans each side once. The reply gives projectionSize.', whenToUse: ['A box-like mesh needs simple UVs fast, or a tiling material must repeat at a real-world size (tileSize).'], whenNotToUse: ['UVs must follow the surface with few seams (use auto_uv), or existing UVs only shift or scale (use transform_uvs).'],
+    inputProps: { actorName: P.actorName, targetActor: P.targetActor, uvChannel: P.uvChannel, tileSize: { type: 'number', minimum: 1, description: 'World size in cm one texture repeat covers (100 repeats a brick texture every metre); omitted, the texture spans each side of the mesh once.' } }, required: [], requiredOneOf: ['actorName', 'targetActor'], effect: 'write', costLatency: 'interactive', costResources: 'low',
+    exampleInput: { action: 'project_uv', targetActor: 'DM_A', uvChannel: 0, tileSize: 100 },
   }),
   buildWorldRecord({
     parentTool: 'manage_geometry', action: 'transform_uvs', plugins: PLUGIN,
-    family: F, summary: 'Transform existing UVs (scale/offset) of a dynamic mesh.', whenToUse: ['UVs must be scaled/offset.'], whenNotToUse: ['UVs must be repacked; use pack_uv_islands.'],
+    family: F, summary: 'Move, scale and turn the UVs already in uvChannel (default 0) of a dynamic mesh actor, in that order: uvOffset {u, v} shifts them, uvScale {u, v} scales them about the middle of the 0-1 square (2 repeats a texture twice), rotation turns them by degrees about the same point. The reply echoes what was applied.', whenToUse: ['A texture on a mesh must repeat more or less often, shift or turn, keeping its UV layout.'], whenNotToUse: ['The mesh has no usable UVs yet (use auto_uv or project_uv).'],
     inputProps: { actorName: P.actorName, rotation: P.uvRotation, targetActor: P.targetActor, uvChannel: P.uvChannel, uvScale: P.uvScale, uvOffset: P.uvOffset }, required: [], requiredOneOf: ['actorName', 'targetActor'], effect: 'write', costLatency: 'interactive', costResources: 'low',
     exampleInput: { action: 'transform_uvs', targetActor: 'DM_A', uvChannel: 0, uvScale: { u: 2, v: 2 } },
   }),
   buildWorldRecord({
     parentTool: 'manage_geometry', action: 'unwrap_uv', plugins: PLUGIN,
-    family: F, summary: 'Unwrap UVs of a dynamic mesh.', whenToUse: ['UVs must be unwrapped.'], whenNotToUse: ['UVs must be auto-generated; use auto_uv.'],
+    family: F, summary: 'Same as auto_uv: unwrap a dynamic mesh actor with XAtlas into uvChannel, falling back to a bounds-sized box projection, and report uvElementCount.', whenToUse: ['A mesh needs UVs that follow its surface.'], whenNotToUse: ['The existing islands only need repacking (use pack_uv_islands).'],
     inputProps: { actorName: P.actorName, targetActor: P.targetActor, uvChannel: P.uvChannel }, required: [], requiredOneOf: ['actorName', 'targetActor'], effect: 'write', costLatency: 'interactive', costResources: 'low',
     exampleInput: { action: 'unwrap_uv', targetActor: 'DM_A', uvChannel: 0 },
   }),
   buildWorldRecord({
     parentTool: 'manage_geometry', action: 'pack_uv_islands', plugins: PLUGIN,
-    family: F, summary: 'Pack UV islands of a dynamic mesh into a 0-1 square.', whenToUse: ['UV islands must be packed.'], whenNotToUse: ['UVs must be transformed; use transform_uvs.'],
+    family: F, summary: 'Repack the UV islands already in uvChannel (default 0) of a dynamic mesh actor into the 0-1 square without overlap, keeping each island\'s shape.', whenToUse: ['Islands overlap or stray outside 0-1 after edits, such as before a lightmap bake.'], whenNotToUse: ['The mesh has no UVs yet (use auto_uv).'],
     inputProps: { actorName: P.actorName, targetActor: P.targetActor, uvChannel: P.uvChannel }, required: [], requiredOneOf: ['actorName', 'targetActor'], effect: 'write', costLatency: 'interactive', costResources: 'low',
     exampleInput: { action: 'pack_uv_islands', targetActor: 'DM_A', uvChannel: 0 },
   }),
@@ -227,24 +227,25 @@ export const GEOMETRY_OPTIMIZE_RECORDS: readonly CapabilityRecordSource[] = [
   }),
   buildWorldRecord({
     parentTool: 'manage_geometry', action: 'set_lod_settings', plugins: PLUGIN,
-    family: F, summary: 'Set LOD settings for a dynamic mesh.', whenToUse: ['LOD build settings must be configured.'], whenNotToUse: ['LODs must be generated; use generate_lods.'],
+    family: F, summary: 'Set the reduction of one LOD of the static mesh asset an actor draws.', whenToUse: ['LOD build settings must be configured.'], whenNotToUse: ['LODs must be generated; use generate_lods.'],
     inputProps: { actorName: P.actorName, lodIndex: P.lodIndex, trianglePercent: P.trianglePercent, reductionPercent: P.reductionPercent, recomputeNormals: P.recomputeNormals, recomputeTangents: P.recomputeTangents, targetActor: P.targetActor }, required: [], requiredOneOf: ['actorName', 'targetActor'], effect: 'write', behavior: { idempotency: 'idempotent' }, costLatency: 'interactive', costResources: 'low',
     exampleInput: { action: 'set_lod_settings', targetActor: 'DM_A' },
   }),
   buildWorldRecord({
     parentTool: 'manage_geometry', action: 'set_lod_screen_sizes', plugins: PLUGIN,
-    family: F, summary: 'Set LOD screen-size thresholds for a dynamic mesh.', whenToUse: ['LOD screen-size transitions must be tuned.'], whenNotToUse: ['LOD settings must be configured; use set_lod_settings.'],
+    family: F, summary: 'Set the screen sizes at which the LODs of the static mesh asset an actor draws take over.', whenToUse: ['LOD screen-size transitions must be tuned.'], whenNotToUse: ['LOD settings must be configured; use set_lod_settings.'],
     inputProps: { actorName: P.actorName, screenSizes: P.screenSizes, targetActor: P.targetActor }, required: [], requiredOneOf: ['actorName', 'targetActor'], effect: 'write', behavior: { idempotency: 'idempotent' }, costLatency: 'interactive', costResources: 'low',
     exampleInput: { action: 'set_lod_screen_sizes', targetActor: 'DM_A' },
   }),
   buildWorldRecord({
     parentTool: 'manage_geometry', action: 'convert_to_nanite', plugins: PLUGIN,
-    family: F, summary: 'Bake a dynamic mesh into a Nanite-enabled static mesh asset, with a material per slot and a collision choice; the reply reads naniteEnabled back from the saved mesh. An asset already at outputPath is replaced, and its material slots come back empty unless materials fills them (asset.process_asset process=mesh_materials sets them later).',
+    family: F, summary: 'Bake a dynamic mesh actor into a Nanite-enabled static mesh asset at outputPath (a folder gets <actor>_Nanite; default /Game/GeneratedMeshes/<actor>_Nanite), with a material per slot (materials, entry i for material id i; slots left out get the default material) and collision box (default), complex or none; the asset is saved and naniteEnabled is read back from it. A static mesh already at outputPath is replaced in place (replaced true), so everything drawing it follows; another kind of asset there is refused (ASSET_EXISTS). A material that does not load, or more materials than slots, is refused before anything is created.',
     whenToUse: ['A baked static mesh must use Nanite for virtualized geometry. The end of the subdivision-surface workflow: append_polygons a cage, subdivide with catmull_clark, set_material_id per part, bake_vertex_colors, then convert here with materials (entry i is the material of id i).'],
     whenNotToUse: ['The baked mesh must not use Nanite; use convert_to_static_mesh.'],
     inputProps: { actorName: P.actorName, outputPath: P.outputPath, targetActor: P.targetActor, materials: CONVERT_MATERIALS, collision: CONVERT_COLLISION }, required: [], requiredOneOf: ['actorName', 'targetActor'], effect: 'write', behavior: { idempotency: 'idempotent' }, costLatency: 'interactive', costResources: 'medium',
     outputProps: {
       assetPath: { type: 'string', description: 'Path of the new static mesh asset.' },
+      replaced: { type: 'boolean', description: 'True when a static mesh already at the path was replaced in place; everything drawing it shows the new mesh.' },
       naniteEnabled: { type: 'boolean', description: 'Whether Nanite is on for the asset.' },
       collision: { type: 'string', description: 'Collision the asset got.' },
       slots: { type: 'array', description: 'The asset\'s material slots; an empty material is the default material.', items: SLOT },
@@ -255,13 +256,14 @@ export const GEOMETRY_OPTIMIZE_RECORDS: readonly CapabilityRecordSource[] = [
   buildWorldRecord({
     parentTool: 'manage_geometry', action: 'convert_to_static_mesh', plugins: PLUGIN,
     topics: ['static mesh from geometry', 'bake to static mesh', 'convert mesh', 'dynamic mesh to static'],
-    family: F, summary: 'Bake a dynamic mesh actor into a static mesh asset, with a material per slot and a collision choice.',
+    family: F, summary: 'Bake a dynamic mesh actor into a static mesh asset at outputPath (a folder gets the actor\'s name; default /Game/GeneratedMeshes/<actor>), with a material per slot (materials, entry i for material id i; slots left out get the default material) and collision box (default), complex or none; the asset is saved and the actor keeps its dynamic mesh. A static mesh already at outputPath is replaced in place (replaced true), so everything drawing it follows; another kind of asset there is refused (ASSET_EXISTS). A material that does not load, or more materials than slots, is refused before anything is created.',
     whenToUse: ['A dynamic mesh must be persisted as a static mesh. Give the triangles material ids with edit_dynamic_mesh set_material_id first, then list one material per id in materials (entry i is the material of id i).',
       'Colours baked with bake_vertex_colors come through to the material\'s VertexColor node unchanged.'],
     whenNotToUse: ['A static mesh must use Nanite; use convert_to_nanite.'],
     inputProps: { actorName: P.actorName, outputPath: P.outputPath, targetActor: P.targetActor, materials: CONVERT_MATERIALS, collision: CONVERT_COLLISION }, required: [], requiredOneOf: ['actorName', 'targetActor'], effect: 'write', costLatency: 'interactive', costResources: 'medium',
     outputProps: {
       assetPath: { type: 'string', description: 'Path of the new static mesh asset.' },
+      replaced: { type: 'boolean', description: 'True when a static mesh already at the path was replaced in place; everything drawing it shows the new mesh.' },
       naniteEnabled: { type: 'boolean', description: 'Whether Nanite is on for the asset.' },
       collision: { type: 'string', description: 'Collision the asset got.' },
       slots: { type: 'array', description: 'The asset\'s material slots; an empty material is the default material.', items: SLOT },

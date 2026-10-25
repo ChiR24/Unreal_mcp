@@ -4,6 +4,7 @@
 #include "Foundation/HandlerUtils/McpHandlerUtils.h"
 #include "Safety/McpSafeOperations.h"
 #include "Core/Compatibility/McpVersionCompatibility.h"
+#include "Domains/Animation/Physics/McpAnimPhysicsProp.h"
 
 #include "Animation/Skeleton.h"
 #include "AssetRegistry/AssetRegistryModule.h"
@@ -13,6 +14,8 @@
 #include "GameFramework/Actor.h"
 #include "Misc/PackageName.h"
 #include "PhysicsEngine/PhysicsAsset.h"
+// UE 5.7 ships PhysicsAssetUtils.h in Developer/PhysicsUtilities; earlier versions in UnrealEd.
+#include "PhysicsAssetUtils.h"
 
 namespace McpAnimationHandlers {
 bool HandleAnimationSetupPhysicsSimulationAction(FActionContext &Context,
@@ -72,9 +75,11 @@ bool HandleAnimationSetupPhysicsSimulationAction(FActionContext &Context,
             UE_LOG(LogEngineWireSubsystem, Error, TEXT("%s"),
                    *Message);
           }
+        } else if (SimulatePlacedProp(Context, FoundActor)) {
+          return false;
         } else {
           Message = FString::Printf(
-              TEXT("Actor '%s' does not have a SkeletalMeshComponent."),
+              TEXT("Actor '%s' has neither a skeletal mesh nor a static mesh with collision to simulate."),
               *FoundActor->GetName());
           ErrorCode = TEXT("ACTOR_NO_SKELETAL_MESH_COMPONENT");
           UE_LOG(LogEngineWireSubsystem, Error, TEXT("%s"), *Message);
@@ -233,18 +238,30 @@ bool HandleAnimationSetupPhysicsSimulationAction(FActionContext &Context,
             UPhysicsAsset *PhysicsAsset = NewObject<UPhysicsAsset>(
                 Package, FName(*PhysicsAssetName),
                 RF_Public | RF_Standalone | RF_Transactional);
-
-            if (!PhysicsAsset) {
-              Context.Fail(TEXT("ASSET_CREATION_FAILED"), TEXT("Failed to create physics asset"));
+            bool bAssignToMesh = false;
+            Payload->TryGetBoolField(TEXT("assignToMesh"), bAssignToMesh);
+            // Bodies and constraints as the editor's Create Physics Asset makes them: the empty asset saved here
+            // before let nothing simulate while the reply said the setup completed.
+            FText CreateError;
+            if (!PhysicsAsset ||
+                !FPhysicsAssetUtils::CreateFromSkeletalMesh(PhysicsAsset, TargetMesh, FPhysAssetCreateParams(),
+                                                            CreateError, bAssignToMesh) ||
+                PhysicsAsset->SkeletalBodySetups.Num() == 0) {
+              if (PhysicsAsset) {
+                PhysicsAsset->ClearFlags(RF_Public | RF_Standalone);
+                PhysicsAsset->MarkAsGarbage();
+              }
+              const FString Why = CreateError.IsEmpty() ? FString(TEXT("its bones are too small or it has none"))
+                                                        : CreateError.ToString();
+              Context.Fail(TEXT("BODY_GENERATION_FAILED"),
+                           FString::Printf(TEXT("No physics bodies could be made for %s: %s"),
+                                           *TargetMesh->GetName(), *Why));
             } else {
               PhysicsAsset->SetPreviewMesh(TargetMesh);
               PhysicsAsset->UpdateBodySetupIndexMap();
               PhysicsAsset->UpdateBoundsBodiesArray();
               FAssetRegistryModule::AssetCreated(PhysicsAsset);
               Package->MarkPackageDirty();
-
-              bool bAssignToMesh = false;
-              Payload->TryGetBoolField(TEXT("assignToMesh"), bAssignToMesh);
 
               if (bAssignToMesh) {
                 TargetMesh->Modify();

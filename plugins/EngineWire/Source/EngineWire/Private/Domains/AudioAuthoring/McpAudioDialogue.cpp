@@ -26,8 +26,9 @@ TSharedPtr<FJsonObject> HandleDialogueActions(const FString& SubAction, const TS
 			return McpHandlerUtils::BuildErrorResponse(TEXT("INVALID_ARGUMENT"), FString::Printf(TEXT("plurality '%s' is not Singular or Plural"), *Plurality));
 		}
 
-		UPackage* Package = CreatePackage(*(Path / Name));
-		if (!Package) { return McpHandlerUtils::BuildErrorResponse(TEXT("PACKAGE_ERROR"), TEXT("Failed to create package")); }
+		FString CreateError, CreateCode;
+		UPackage* Package = McpCreatePackageForNewAsset(Path / Name, CreateError, CreateCode);
+		if (!Package) { return McpHandlerUtils::BuildErrorResponse(CreateCode, CreateError); }
 
 		UDialogueVoiceFactory* Factory = NewObject<UDialogueVoiceFactory>();
 		UDialogueVoice* NewVoice = Cast<UDialogueVoice>(Factory->FactoryCreateNew(UDialogueVoice::StaticClass(), Package, FName(*Name), RF_Public | RF_Standalone, nullptr, GWarn));
@@ -62,8 +63,9 @@ TSharedPtr<FJsonObject> HandleDialogueActions(const FString& SubAction, const TS
 		if (!WavePath.IsEmpty() && !ContextWave) { return McpHandlerUtils::BuildErrorResponse(TEXT("SOUNDWAVE_NOT_FOUND"), FString::Printf(TEXT("Could not load SoundWave: %s"), *WavePath)); }
 		if (!SpeakerPath.IsEmpty() && !Speaker) { return McpHandlerUtils::BuildErrorResponse(TEXT("SPEAKER_NOT_FOUND"), FString::Printf(TEXT("Could not load speaker DialogueVoice: %s"), *SpeakerPath)); }
 
-		UPackage* Package = CreatePackage(*(Path / Name));
-		if (!Package) { return McpHandlerUtils::BuildErrorResponse(TEXT("PACKAGE_ERROR"), TEXT("Failed to create package")); }
+		FString CreateError, CreateCode;
+		UPackage* Package = McpCreatePackageForNewAsset(Path / Name, CreateError, CreateCode);
+		if (!Package) { return McpHandlerUtils::BuildErrorResponse(CreateCode, CreateError); }
 
 		UDialogueWaveFactory* Factory = NewObject<UDialogueWaveFactory>();
 		UDialogueWave* NewWave = Cast<UDialogueWave>(Factory->FactoryCreateNew(UDialogueWave::StaticClass(), Package, FName(*Name), RF_Public | RF_Standalone, nullptr, GWarn));
@@ -95,12 +97,10 @@ TSharedPtr<FJsonObject> HandleDialogueActions(const FString& SubAction, const TS
 		UDialogueWave* Wave = Cast<UDialogueWave>(StaticLoadObject(UDialogueWave::StaticClass(), nullptr, *AssetPath));
 		if (!Wave) { return McpHandlerUtils::BuildErrorResponse(TEXT("WAVE_NOT_FOUND"), FString::Printf(TEXT("Could not load DialogueWave: %s"), *AssetPath)); }
 
-		UDialogueVoice* SpeakerVoice = nullptr;
-		if (!SpeakerPath.IsEmpty())
-		{
-			SpeakerVoice = Cast<UDialogueVoice>(StaticLoadObject(UDialogueVoice::StaticClass(), nullptr, *SpeakerPath));
-			if (!SpeakerVoice) { return McpHandlerUtils::BuildErrorResponse(TEXT("SPEAKER_NOT_FOUND"), FString::Printf(TEXT("Could not load speaker DialogueVoice: %s"), *SpeakerPath)); }
-		}
+		// A context is who speaks the line: one without a speaker was added and matched nothing at runtime.
+		if (SpeakerPath.IsEmpty()) { return McpHandlerUtils::BuildErrorResponse(TEXT("INVALID_ARGUMENT"), TEXT("speakerPath is required: the DialogueVoice that speaks this line. Nothing was added.")); }
+		UDialogueVoice* SpeakerVoice = Cast<UDialogueVoice>(StaticLoadObject(UDialogueVoice::StaticClass(), nullptr, *SpeakerPath));
+		if (!SpeakerVoice) { return McpHandlerUtils::BuildErrorResponse(TEXT("SPEAKER_NOT_FOUND"), FString::Printf(TEXT("Could not load speaker DialogueVoice: %s"), *SpeakerPath)); }
 
 		USoundWave* ContextSoundWave = nullptr;
 		if (!SoundWavePath.IsEmpty())
@@ -131,27 +131,23 @@ TSharedPtr<FJsonObject> HandleDialogueActions(const FString& SubAction, const TS
 		NewMapping.SoundWave = ContextSoundWave;
 		NewMapping.LocalizationKeyFormat = GetJsonStringField(Params, TEXT("localizationKeyFormat"), TEXT("{ContextHash}"));
 
-		bool bReplaceExisting = GetJsonBoolField(Params, TEXT("replace"), false);
-		if (bReplaceExisting)
+		// A context is its speaker AND listeners: replace matched the speaker alone and overwrote another listener's
+		// line, and without replace the same context was added twice.
+		const bool bReplaceExisting = GetJsonBoolField(Params, TEXT("replace"), false);
+		FDialogueContextMapping* Existing = Wave->ContextMappings.FindByPredicate(
+			[&NewMapping](const FDialogueContextMapping& Mapping) { return Mapping.Context == NewMapping.Context; });
+		if (Existing && !bReplaceExisting)
 		{
-			bool bFound = false;
-			for (FDialogueContextMapping& Mapping : Wave->ContextMappings)
-			{
-				if (Mapping.Context.Speaker == SpeakerVoice)
-				{
-					Mapping = NewMapping;
-					bFound = true;
-					break;
-				}
-			}
-			if (!bFound) { Wave->ContextMappings.Add(NewMapping); }
+			return McpHandlerUtils::BuildErrorResponse(TEXT("CONTEXT_EXISTS"),
+				TEXT("This speaker and these listeners already have a context on the wave; pass replace true to change its sound. Nothing was added."));
 		}
-		else
-		{
-			Wave->ContextMappings.Add(NewMapping);
-		}
+		Wave->Modify();
+		if (Existing) { *Existing = NewMapping; } else { Wave->ContextMappings.Add(NewMapping); }
+		Wave->PostEditChange();
 
-		SaveAudioAsset(Wave, bSave);
+		const bool bSaved = SaveAudioAsset(Wave, bSave) && bSave;
+		Response->SetBoolField(TEXT("replaced"), Existing != nullptr);
+		Response->SetBoolField(TEXT("saved"), bSaved);
 		Response->SetNumberField(TEXT("contextCount"), Wave->ContextMappings.Num());
 		McpHandlerUtils::AddVerification(Response, Wave);
 		Response->SetBoolField(TEXT("success"), true);

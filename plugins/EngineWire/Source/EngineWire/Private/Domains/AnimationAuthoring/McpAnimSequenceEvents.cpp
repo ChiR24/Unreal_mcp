@@ -29,28 +29,40 @@ TSharedPtr<FJsonObject> HandleSequenceEventActions(const FString& SubAction, con
         // UE 5.3+ API - FAnimationCurveIdentifier takes FName directly
         IAnimationDataController& Controller = Sequence->GetController();
         FAnimationCurveIdentifier CurveId(FName(*CurveName), ERawCurveTrackTypes::RCT_Float);
-#elif ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 1
-        // UE 5.1-5.2 API - FAnimationCurveIdentifier takes FSmartName
+#else
+        // UE 5.0-5.2: a curve is a smart name the skeleton must know. A name with no UID was refused by AddCurve,
+        // and 5.0 wrote no key at all, each answering "Curve key set".
         IAnimationDataController& Controller = Sequence->GetController();
         FSmartName SmartCurveName;
         SmartCurveName.DisplayName = FName(*CurveName);
+        if (USkeleton* CurveSkeleton = Sequence->GetSkeleton())
+        {
+            CurveSkeleton->VerifySmartName(USkeleton::AnimCurveMappingName, SmartCurveName);
+        }
         FAnimationCurveIdentifier CurveId(SmartCurveName, ERawCurveTrackTypes::RCT_Float);
 #endif
 
-#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 1
-        // Find or create curve
-        const FFloatCurve* ExistingCurve = Sequence->GetDataModel()->FindFloatCurve(CurveId);
-        if (!ExistingCurve && bCreateIfMissing)
+        // A curve the sequence lacks with createIfMissing false, and a key the controller refused, answered "set".
+        const bool bHadCurve = Sequence->GetDataModel()->FindFloatCurve(CurveId) != nullptr;
+        if (!bHadCurve && !bCreateIfMissing)
         {
-            Controller.AddCurve(CurveId, AACF_DefaultCurve);
+            ANIM_ERROR_RESPONSE(FString::Printf(TEXT("The sequence has no curve '%s'; createIfMissing true adds it"), *CurveName), TEXT("CURVE_NOT_FOUND"));
         }
-
-        // Set key value
-        float FrameTime = static_cast<float>(Frame) / Sequence->GetSamplingFrameRate().AsDecimal();
-        Controller.SetCurveKey(CurveId, FRichCurveKey(FrameTime, Value));
-#endif
-
-        SaveAnimAsset(Sequence, bSave);
+        if (!bHadCurve && !Controller.AddCurve(CurveId, AACF_DefaultCurve))
+        {
+            ANIM_ERROR_RESPONSE(FString::Printf(TEXT("Curve '%s' could not be added to the sequence"), *CurveName), TEXT("CURVE_ADD_FAILED"));
+        }
+        const float FrameTime = static_cast<float>(Frame) / Sequence->GetSamplingFrameRate().AsDecimal();
+        if (!Controller.SetCurveKey(CurveId, FRichCurveKey(FrameTime, Value)))
+        {
+            ANIM_ERROR_RESPONSE(FString::Printf(TEXT("The key at frame %d on curve '%s' was not set"), Frame, *CurveName), TEXT("CURVE_KEY_FAILED"));
+        }
+        const FFloatCurve* Curve = Sequence->GetDataModel()->FindFloatCurve(CurveId);
+        Response->SetStringField(TEXT("curveName"), CurveName);
+        Response->SetNumberField(TEXT("frame"), Frame);
+        Response->SetNumberField(TEXT("value"), Curve ? Curve->FloatCurve.Eval(FrameTime) : Value);
+        Response->SetBoolField(TEXT("curveCreated"), !bHadCurve);
+        SaveAnimAssetAndReport(Sequence, bSave, Response);
 
         ANIM_SUCCESS_RESPONSE(FString::Printf(TEXT("Curve key set at frame %d"), Frame));
         McpHandlerUtils::AddVerification(Response, Sequence);

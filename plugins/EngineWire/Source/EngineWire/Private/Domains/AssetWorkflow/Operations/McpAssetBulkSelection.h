@@ -50,3 +50,22 @@ inline bool McpCollectBulkAssetPaths(UEngineWireSubsystem& Bridge, const FString
     }
     return true;
 }
+
+// The packages that reference PackageName and are not themselves being deleted: DeleteSet holds the
+// package names of the delete, and a folder in it covers everything under it. Deleting an asset these
+// still use breaks them, so delete keeps it (unless force) and bulk_delete keeps it.
+inline TArray<FString> McpOutsideReferencers(const FString& PackageName, const TArray<FString>& DeleteSet)
+{
+    TArray<FAssetIdentifier> Refs;
+    FAssetRegistryModule::GetRegistry().GetReferencers(FAssetIdentifier(FName(*PackageName)), Refs,
+                                                       UE::AssetRegistry::EDependencyCategory::Package);
+    TArray<FString> Outside;
+    for (const FAssetIdentifier& Ref : Refs)
+    {
+        const FString RefPackage = Ref.PackageName.ToString();
+        const bool bDeletedToo = DeleteSet.ContainsByPredicate([&RefPackage](const FString& D)
+            { return RefPackage == D || RefPackage.StartsWith(D + TEXT("/")); });
+        if (!RefPackage.IsEmpty() && !bDeletedToo) Outside.AddUnique(RefPackage);
+    }
+    return Outside;
+}

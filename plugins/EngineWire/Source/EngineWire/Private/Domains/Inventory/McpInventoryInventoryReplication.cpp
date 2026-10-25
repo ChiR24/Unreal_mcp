@@ -67,11 +67,10 @@ bool HandleInventoryReplicationActions(UEngineWireSubsystem& Bridge, const FStri
 
     FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(Blueprint);
 
-    if (GetJsonBoolField(Payload, TEXT("save"), true)) {
-      McpSafeAssetSave(Blueprint);
-    }
+    const bool bSaved = GetJsonBoolField(Payload, TEXT("save"), true) && McpSafeAssetSave(Blueprint);
 
     TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
+    Result->SetBoolField(TEXT("saved"), bSaved);
     Result->SetBoolField(TEXT("replicated"), bReplicated);
     Result->SetStringField(TEXT("replicationCondition"), ReplicationCondition);
     Result->SetStringField(TEXT("blueprintPath"), BlueprintPath);
@@ -82,6 +81,7 @@ bool HandleInventoryReplicationActions(UEngineWireSubsystem& Bridge, const FStri
     }
     Result->SetArrayField(TEXT("modifiedVariables"), VarsArr);
 
+    McpHandlerUtils::AddVerification(Result, Blueprint);
     Bridge.SendAutomationResponse(RequestingSocket, RequestId, true,
                            TEXT("Inventory replication configured"), Result);
     return true;

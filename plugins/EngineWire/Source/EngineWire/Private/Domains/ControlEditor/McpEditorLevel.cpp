@@ -1,6 +1,7 @@
 #include "Domains/ControlEditor/McpEditorSupport.h"
 
 #include "ContentStreaming.h"
+#include "Misc/PackageName.h"
 
 namespace {
 constexpr int32 McpLevelSettleFrames = 10;
@@ -67,6 +68,8 @@ bool UEngineWireSubsystem::HandleControlEditorOpenLevel(
   if (LevelPath.EndsWith(TEXT(".umap"))) {
     LevelPath.LeftChopInline(5);
   }
+  // An asset listing hands out object paths (/Game/Maps/Demo.Demo); one was looked for as a file and not found.
+  LevelPath = FPackageName::ObjectPathToPackageName(LevelPath);
 
   if (!GEditor) {
     SendStandardErrorResponse(this, Socket, RequestId, TEXT("EDITOR_NOT_AVAILABLE"),

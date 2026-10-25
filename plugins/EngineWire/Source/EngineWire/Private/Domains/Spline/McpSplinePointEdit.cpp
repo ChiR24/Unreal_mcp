@@ -4,6 +4,7 @@
 #include "Foundation/BridgeHelpers/McpHelpers.h"
 #include "EngineWireSubsystem.h"
 #include "Foundation/HandlerUtils/McpHandlerUtils.h"
+#include "Foundation/McpScopedEditorTransaction.h"
 
 #include "Editor.h"
 #include "Engine/World.h"
@@ -19,6 +20,18 @@ bool HandleAddSplinePoint(
     FVector Position = ExtractVectorField(Payload, TEXT("position"), FVector::ZeroVector);
     int32 Index = GetJsonIntField(Payload, TEXT("index"), -1);
     FString PointType = GetJsonStringField(Payload, TEXT("pointType"), TEXT("Curve"));
+    ESplinePointType::Type ParsedType;
+    if (!ParseSplinePointType(PointType, ParsedType))
+    {
+        return RefuseSplinePointType(Self, RequestId, Socket, PointType);
+    }
+    // Left out, the point landed on the actor's own origin.
+    if (!Payload->HasField(TEXT("position")))
+    {
+        Self->SendAutomationResponse(Socket, RequestId, false, TEXT("position is required. Nothing was changed."), nullptr,
+                                     TEXT("INVALID_ARGUMENT"));
+        return true;
+    }
 
     AActor* Actor = nullptr;
     USplineComponent* SplineComp = ResolveSplineTarget(Self, RequestId, Socket, ActorName, Actor);
@@ -27,6 +40,8 @@ bool HandleAddSplinePoint(
         return true;
     }
 
+    FMcpScopedEditorTransaction Transaction(FText::FromString(TEXT("Add Spline Point")), EMcpMutationDurability::EditorStateOnly,
+                                            {SplineComp});
     if (Index < 0 || Index >= SplineComp->GetNumberOfSplinePoints())
     {
         SplineComp->AddSplinePoint(Position, ESplineCoordinateSpace::Local, true);
@@ -37,7 +52,7 @@ bool HandleAddSplinePoint(
         SplineComp->AddSplinePointAtIndex(Position, Index, ESplineCoordinateSpace::Local, true);
     }
 
-    SplineComp->SetSplinePointType(Index, ParseSplinePointType(PointType), true);
+    SplineComp->SetSplinePointType(Index, ParsedType, true);
     // The declared tangents were never read, so every added point took automatic ones.
     ApplySplinePointTangents(SplineComp, Index, Payload);
     SplineComp->UpdateSpline();
@@ -76,6 +91,8 @@ bool HandleRemoveSplinePoint(
         return true;
     }
 
+    FMcpScopedEditorTransaction Transaction(FText::FromString(TEXT("Remove Spline Point")), EMcpMutationDurability::EditorStateOnly,
+                                            {SplineComp});
     SplineComp->RemoveSplinePoint(PointIndex, true);
     SplineComp->UpdateSpline();
     Actor->MarkPackageDirty();
@@ -99,6 +116,13 @@ bool HandleSetSplinePointPosition(
     FString ActorName = GetJsonStringField(Payload, TEXT("actorName"));
     int32 PointIndex = GetJsonIntField(Payload, TEXT("pointIndex"), 0);
     FVector Position = ExtractVectorField(Payload, TEXT("position"), FVector::ZeroVector);
+    // Left out, these moved point 0, or moved the point to the actor's origin.
+    if (!Payload->HasField(TEXT("pointIndex")) || !Payload->HasField(TEXT("position")))
+    {
+        Self->SendAutomationResponse(Socket, RequestId, false, TEXT("pointIndex and position are required. Nothing was changed."),
+                                     nullptr, TEXT("INVALID_ARGUMENT"));
+        return true;
+    }
 
     AActor* Actor = nullptr;
     USplineComponent* SplineComp = ResolveSplineTarget(Self, RequestId, Socket, ActorName, Actor);
@@ -114,12 +138,15 @@ bool HandleSetSplinePointPosition(
         return true;
     }
 
+    FMcpScopedEditorTransaction Transaction(FText::FromString(TEXT("Move Spline Point")), EMcpMutationDurability::EditorStateOnly,
+                                            {SplineComp});
     SplineComp->SetLocationAtSplinePoint(PointIndex, Position, ESplineCoordinateSpace::Local, true);
     SplineComp->UpdateSpline();
     Actor->MarkPackageDirty();
 
     TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
     Result->SetNumberField(TEXT("pointIndex"), PointIndex);
+    Transaction.DescribeInto(Result);
     McpHandlerUtils::AddVerification(Result, Actor);
 
     Self->SendAutomationResponse(Socket, RequestId, true,

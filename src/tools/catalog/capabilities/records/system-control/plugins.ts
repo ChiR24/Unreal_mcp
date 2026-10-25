@@ -66,9 +66,10 @@ export const PLUGIN_RECORDS: readonly CapabilityRecordSource[] = [
     action: 'enable_plugin',
     domain: 'project',
     family: 'plugin',
-    summary: 'Enable a plugin for this project by writing it into the .uproject. The editor must be restarted before the plugin\'s modules load and its content mounts, so the response reports restartRequired.',
+    summary: 'Enable a plugin for this project by writing it into the .uproject, or limit it to some build targets (targets ["Editor"] keeps an editor-only plugin out of a packaged game). A plugin on only because another plugin needs it is written into the project file. A plugin the editor has not loaded yet needs a restart, so the response reports restartRequired.',
     whenToUse: [
       'Migrated content depends on a plugin that is installed but disabled (for example ChaosVehicles for the advanced vehicle template).',
+      'A plugin used only in the editor should stay out of the packaged game (targets ["Editor"]), or one the game uses must stay on when the plugin that brought it in is limited to the editor.',
     ],
     whenNotToUse: [
       'The plugin is not installed at all — list_plugins returns NOT_FOUND and this cannot download it.',
@@ -76,12 +77,18 @@ export const PLUGIN_RECORDS: readonly CapabilityRecordSource[] = [
     ],
     inputProps: {
       pluginName: { type: 'string', description: 'Plugin name exactly as reported by list_plugins (the .uplugin name, not the friendly name).' },
+      targets: {
+        type: 'array',
+        items: { type: 'string', enum: ['Editor', 'Game', 'Client', 'Server', 'Program'] },
+        description: 'Build targets the plugin is enabled for, every other build leaving it out: ["Editor"] keeps it in the editor and out of a packaged game. An empty list lifts the limit.',
+      },
     },
     outputProps: {
       pluginName: { type: 'string', description: 'Plugin acted on.' },
       enabled: { type: 'boolean', description: 'Enabled state now recorded in the .uproject.' },
+      targets: { type: 'array', items: { type: 'string' }, description: 'The build targets the plugin is now limited to; absent when it is enabled for every target.' },
       changed: { type: 'boolean', description: 'False when the plugin was already in the requested state and nothing was written.' },
-      restartRequired: { type: 'boolean', description: 'True whenever the project file changed; modules and content mount only at startup.' },
+      restartRequired: { type: 'boolean', description: 'True when this editor loads or drops the plugin only at its next start; a packaged game takes the project file as it is when it builds.' },
     },
     required: ['pluginName'],
     effect: 'write',

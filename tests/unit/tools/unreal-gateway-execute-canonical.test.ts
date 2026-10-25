@@ -25,6 +25,7 @@ import {
 import {
   resolveExecuteTarget
 } from '../../../src/server/gateway/gateway-execute-resolve.js';
+import { resetLoopGuard } from '../../../src/server/gateway/gateway-loop-guard.js';
 import type { CapabilityRecord } from '../../../src/tools/catalog/capabilities/model.js';
 import {
   CapabilityAliasSchema,
@@ -95,6 +96,8 @@ function stableReceipt(value: unknown): Record<string, unknown> {
 
 beforeEach(() => {
   handlerResult = { success: true, message: 'ok' };
+  // Cases send the same failing call more than LOOP_LIMIT times across the file.
+  resetLoopGuard();
 });
 
 afterEach(() => {

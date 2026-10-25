@@ -116,7 +116,7 @@ TArray<uint8> ReadSourceBGRA(UTexture2D* Texture)
 }
 
 UTexture2D* LoadSourceTexture(const FString& RawPath, const TCHAR* Field, FString& OutPath, FString& OutError,
-                              bool bConvertToBGRA8)
+                              bool bConvertToBGRA8, FString* OutErrorCode)
 {
     OutPath = NormalizeTexturePath(RawPath);
     UTexture2D* Texture = OutPath.IsEmpty() ? nullptr : LoadObject<UTexture2D>(nullptr, *OutPath);
@@ -132,6 +132,17 @@ UTexture2D* LoadSourceTexture(const FString& RawPath, const TCHAR* Field, FStrin
         OutError = FString::Printf(TEXT("%s '%s' has a %s source; only 8-bit BGRA8 and G8 sources can be read"),
                                    Field, *OutPath,
                                    *StaticEnum<ETextureSourceFormat>()->GetNameStringByValue(static_cast<int64>(Format)));
+        return nullptr;
+    }
+    // bConvertToBGRA8 is the in-place edit (curves, levels, filters): engine content edited and saved changes the engine
+    // every project shares, and the G8 conversion below would already have rewritten it in memory.
+    if (bConvertToBGRA8 && Texture->GetOutermost()->GetName().StartsWith(TEXT("/Engine/")))
+    {
+        OutError = FString::Printf(TEXT("%s '%s' is engine content, which is not changed: duplicate it into /Game and edit the copy"), Field, *OutPath);
+        if (OutErrorCode)
+        {
+            *OutErrorCode = TEXT("ENGINE_CONTENT");
+        }
         return nullptr;
     }
     if (bConvertToBGRA8 && Format == TSF_G8)

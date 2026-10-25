@@ -22,7 +22,7 @@ export const MANAGE_NETWORKING_FOLDS: readonly FoldSpec[] = [
   },
   {
     primary: 'configure_rpc', selector: 'setting',
-    summary: 'Create an RPC function, or set its validation or reliability.',
+    summary: 'Blueprint RPCs, chosen by setting. create makes a function graph named functionName (a free name: NAME_TAKEN otherwise) in an Actor or ActorComponent Blueprint (INVALID_TARGET otherwise) whose calls run where rpcType says: Server, Client or NetMulticast. inputs are its parameters ({name, type}); reliable defaults to true. The function body is the graph of that name, built with manage_blueprint edit_graph, and it is called like any function. The Blueprint compiles and saves, and actorReplicates says whether it replicates, without which no RPC leaves the machine. reliability makes an existing RPC (that function, or a custom event set to replicate) reliable or not; a non-replicating one is NOT_AN_RPC. validation true is refused (NOT_SUPPORTED): only C++ RPCs validate, so check the parameters at the start of the body. changed false means the flag already had that value and nothing was compiled or saved.',
     topics: ['rpc', 'remote procedure call', 'rpc reliability', 'rpc validation'],
     members: { create: 'create_rpc_function', validation: 'configure_rpc_validation', reliability: 'set_rpc_reliability' },
   },
@@ -40,7 +40,7 @@ export const MANAGE_NETWORKING_FOLDS: readonly FoldSpec[] = [
   },
   {
     primary: 'configure_game_mode', selector: 'setting',
-    summary: 'Configure a game mode: default classes (pawn, controller, state, HUD), rules, respawn, spectating.',
+    summary: 'Change a game mode Blueprint (gameModeBlueprint or blueprintPath), chosen by setting, then compile and save it: default_pawn_class (pawnClass), player_controller_class, game_state_class, player_state_class and hud_class set the class it spawns for that role (a class that does not load is NOT_FOUND); rules sets bDelayedStart, respawn sets respawnDelay (both on GameMode children only, a GameModeBase child is NOT_SUPPORTED), spectating sets spectatorClass. A class setting never changes which game mode plays: makeDefault true makes this one the project default (DefaultEngine.ini), and the reply says whether the open level plays with it (effectiveInOpenLevel, openLevelGameMode).',
     topics: ['default pawn', 'game rules', 'respawn', 'spectating', 'set game mode', 'change game mode', 'respawn time', 'enable spectator mode'],
     members: {
       default_pawn_class: 'set_default_pawn_class', player_controller_class: 'set_player_controller_class', game_state_class: 'set_game_state_class', player_state_class: 'set_player_state_class',
@@ -77,12 +77,12 @@ export const MANAGE_NETWORKING_FOLDS: readonly FoldSpec[] = [
   },
   {
     primary: 'add_legacy_mapping', selector: 'mapping',
-    summary: 'Add a legacy input action or axis mapping.',
+    summary: 'Bind a key to a legacy (Project Settings, Input) mapping, chosen by mapping: action takes actionName (or name), key and the shift, ctrl, alt and cmd modifiers; axis takes axisName (or name), key and scale (default 1, -1 for the reverse direction). key is the engine key name (SpaceBar, W, LeftMouseButton, Gamepad_LeftX); an unknown one is INVALID_ARGUMENT. A binding already there is kept (alreadyPresent true, added false); a new one is written to the project DefaultInput.ini (defaultConfigUpdated). Projects on Enhanced Input map keys with manage_networking configure_input instead.',
     members: byTarget('add_legacy_', ['add_legacy_action_mapping', 'add_legacy_axis_mapping'], '_mapping'),
   },
   {
     primary: 'remove_legacy_mapping', selector: 'mapping',
-    summary: 'Remove a legacy input action or axis mapping.',
+    summary: 'Remove the binding of key from a legacy action or axis mapping, chosen by mapping (actionName, axisName or name): every binding of that name and key goes (an action binding only with the same shift, ctrl, alt and cmd), removedCount says how many, and a pair that is not bound is NOT_FOUND with nothing written. The project DefaultInput.ini is written (defaultConfigUpdated).',
     members: byTarget('remove_legacy_', ['remove_legacy_action_mapping', 'remove_legacy_axis_mapping'], '_mapping'),
   },
 ];

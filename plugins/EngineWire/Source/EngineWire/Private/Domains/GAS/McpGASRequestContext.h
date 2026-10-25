@@ -5,6 +5,7 @@
 #include "CoreMinimal.h"
 #include "Dom/JsonObject.h"
 #include "Engine/Blueprint.h"
+#include "Foundation/BridgeHelpers/Blueprints/McpBPCompileError.h"
 #include "Foundation/BridgeHelpers/Blueprints/McpBPCompileHelpers.h"
 #include "Kismet2/BlueprintEditorUtils.h"
 #include "EngineWireSubsystem.h"
@@ -69,15 +70,28 @@ inline bool SaveVerifiedGASBlueprint(const FGASRequestContext& Context, UBluepri
 }
 
 // A CDO or component-template edit is lost on editor restart unless the Blueprint is compiled and saved.
-// Replies COMPILE_FAILED or SAVE_FAILED and returns false when either step fails.
-inline bool CommitGASBlueprintEdit(const FGASRequestContext& Context, UBlueprint* Blueprint, const TCHAR* What)
+// IsPersisted, run after the compile, checks the edit on the recompiled class (compiling reinstances the default
+// object, so a value written on the old one is measured, not assumed). Replies COMPILE_FAILED, EDIT_NOT_APPLIED or
+// SAVE_FAILED and returns false when a step fails; nothing is saved before the check passes.
+inline bool CommitGASBlueprintEdit(const FGASRequestContext& Context, UBlueprint* Blueprint, const TCHAR* What,
+                                   TFunctionRef<bool()> IsPersisted = [] { return true; })
 {
     FBlueprintEditorUtils::MarkBlueprintAsModified(Blueprint);
-    if (!McpSafeCompileBlueprint(Blueprint))
+    // The compiler's reason, not a guess: a cooldown effect that grants no tags failed here as "unrelated graph errors".
+    FString CompileError;
+    if (!McpCompileBlueprintWithError(Blueprint, CompileError))
     {
         Context.Subsystem->SendAutomationError(Context.RequestingSocket, Context.RequestId,
-            FString::Printf(TEXT("%s applied, but the Blueprint failed to compile (it may have unrelated graph errors), so the asset was NOT saved."), What),
+            FString::Printf(TEXT("%s applied, but the Blueprint failed to compile, so the asset was NOT saved: %s"), What,
+                CompileError.IsEmpty() ? TEXT("the compiler gave no reason") : *CompileError),
             TEXT("COMPILE_FAILED"));
+        return false;
+    }
+    if (!IsPersisted())
+    {
+        Context.Subsystem->SendAutomationError(Context.RequestingSocket, Context.RequestId,
+            FString::Printf(TEXT("%s did not persist onto the compiled class, so the asset was NOT saved."), What),
+            TEXT("EDIT_NOT_APPLIED"));
         return false;
     }
     if (McpSafeOperations::McpSafeAssetSave(Blueprint))

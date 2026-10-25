@@ -6,6 +6,7 @@
 #include "Editor.h"
 #include "Engine/World.h"
 #include "Foundation/BridgeHelpers/McpHelpers.h"
+#include "Foundation/HandlerUtils/McpHandlerUtilsActionsPaths.h"
 #include "EngineWireSubsystem.h"
 
 bool UEngineWireSubsystem::HandleCreateLandscape(
@@ -39,7 +40,9 @@ bool UEngineWireSubsystem::HandleCreateLandscape(
     if (bHasCount && (*ComponentCount)->TryGetNumberField(Axis, Value)) {
       Out = FMath::Max(1, static_cast<int32>(Value));
     } else if (Payload->TryGetNumberField(SizeField, Value) && Value > 0) {
-      Out = FMath::Max(1, FMath::DivideAndRoundUp(static_cast<int32>(Value), Request.QuadsPerComponent));
+      // A size in vertices like the editor's Overall Resolution (1009 is 16 components of 63 quads) or in quads: the
+      // vertex past the last quad needs no extra component, where 1009 used to build 17.
+      Out = FMath::Max(1, FMath::DivideAndRoundUp(static_cast<int32>(Value) - 1, Request.QuadsPerComponent));
     }
   };
   Components(TEXT("x"), TEXT("sizeX"), Request.ComponentsX);
@@ -48,6 +51,11 @@ bool UEngineWireSubsystem::HandleCreateLandscape(
   Request.MaterialPath = GetJsonStringField(Payload, TEXT("materialPath"));
   if (Request.MaterialPath.IsEmpty()) {
     Request.MaterialPath = TEXT("/Engine/EngineMaterials/WorldGridMaterial");
+  } else if (!McpLandscapeCreation::LoadLandscapeMaterial(Request.MaterialPath)) {
+    SendAutomationError(RequestingSocket, RequestId,
+                        FString::Printf(TEXT("Material not found: %s. Nothing was created."), *Request.MaterialPath),
+                        TEXT("ASSET_NOT_FOUND"));
+    return true;
   }
 
   if (!GEditor || !GEditor->GetEditorWorldContext().World()) {
@@ -72,6 +80,14 @@ bool UEngineWireSubsystem::HandleCreateLandscape(
         RequestingSocket, RequestId,
         TEXT("name must be at most 128 characters and contain none of / \\ : * ? \" < > |"),
         TEXT("INVALID_ARGUMENT"));
+    return true;
+  }
+  // A second landscape under one label left every later sculpt or paint by that name on whichever came first.
+  if (FindActorByNameInWorldForMcp(GEditor->GetEditorWorldContext().World(), Request.Name, true)) {
+    SendAutomationError(
+        RequestingSocket, RequestId,
+        FString::Printf(TEXT("An actor named %s is already in the level; pick another name. Nothing was created."), *Request.Name),
+        TEXT("NAME_TAKEN"));
     return true;
   }
 

@@ -13,26 +13,98 @@
 #include "Engine/StaticMesh.h"
 #include "Materials/MaterialInterface.h"
 
+namespace
+{
+// What a template draws without a meshPath, and the cross-section it gives the mesh. Every template drew the same
+// flat ribbon (a wall or a pipe came out as a road), and nothing at all without a meshPath.
+struct FMcpSplineKind
+{
+    const TCHAR* Name;
+    const TCHAR* StockMesh;
+    ESplineMeshAxis::Type StockAxis; // the stock mesh's length axis
+    double Width;                    // across the route; the diameter of a round kind
+    double Height;                   // up from the route; a round kind takes Width
+    bool bRound;
+    bool bStandsOnRoute;             // the mesh's bottom on the route (a wall), not its middle (a road)
+};
+
+const TCHAR* const StockCube = TEXT("/Engine/BasicShapes/Cube.Cube");
+const TCHAR* const StockCylinder = TEXT("/Engine/BasicShapes/Cylinder.Cylinder");
+
+// 0 (nothing asked, a mesh of the caller's) keeps the mesh's own size on that axis.
+double FitScale(double Want, double Have)
+{
+    return Want > 0.0 && Have > 1e-4 ? Want / Have : 1.0;
+}
+}
+
 static bool HandleCreateTemplateSpline(
     UEngineWireSubsystem* Self,
     const FString& RequestId,
     const TSharedPtr<FJsonObject>& Payload,
     TSharedPtr<FMcpBridgeWebSocket> Socket,
-    const FString& TemplateName,
-    const FString& DefaultMeshPath)
+    const FMcpSplineKind& Kind)
 {
-    // `name` is the spelling create_road_spline and its sibling templates publish, and it
-    // wins over the legacy `actorName`: reading only `actorName` once meant a caller following
-    // the schema always got the default label instead of the name they asked for.
+    // `name` is the spelling the templates publish and wins over the legacy `actorName`.
     FString ActorName = McpGetFirstStringField(Payload, {TEXT("name"), TEXT("actorName")});
     if (ActorName.IsEmpty())
     {
-        ActorName = TemplateName + TEXT("_Spline");
+        ActorName = FString(Kind.Name) + TEXT("_Spline");
     }
-    FVector Location = ExtractVectorField(Payload, TEXT("location"), FVector::ZeroVector);
-    double Width = GetJsonNumberField(Payload, TEXT("width"), 400.0);
-    FString MaterialPath = GetJsonStringField(Payload, TEXT("materialPath"));
-    FString MeshPath = GetJsonStringField(Payload, TEXT("meshPath"));
+    const FVector Location = ExtractVectorField(Payload, TEXT("location"), FVector::ZeroVector);
+    const FString MeshPath = GetJsonStringField(Payload, TEXT("meshPath"));
+    const FString MaterialPath = GetJsonStringField(Payload, TEXT("materialPath"));
+    const bool bStock = MeshPath.IsEmpty();
+    const bool bHasWidth = Payload->HasField(TEXT("width"));
+    const bool bHasHeight = Kind.bStandsOnRoute && Payload->HasField(TEXT("height"));
+    const double Width = bHasWidth ? GetJsonNumberField(Payload, TEXT("width"), 0.0) : (bStock ? Kind.Width : 0.0);
+    const double Height = Kind.bRound ? Width
+        : bHasHeight ? GetJsonNumberField(Payload, TEXT("height"), 0.0) : (bStock ? Kind.Height : 0.0);
+    if ((bHasWidth && Width <= 0.0) || (bHasHeight && Height <= 0.0))
+    {
+        Self->SendAutomationResponse(Socket, RequestId, false,
+            TEXT("width and height must be greater than 0; nothing was created."), nullptr, TEXT("INVALID_ARGUMENT"));
+        return true;
+    }
+
+    // Everything loads before anything spawns: a mesh or material that failed to load left a bare spline and a success.
+    UStaticMesh* SegmentMesh = nullptr;
+    if (bStock)
+    {
+        SegmentMesh = LoadObject<UStaticMesh>(nullptr, Kind.StockMesh);
+    }
+    else
+    {
+        const FString SafeMeshPath = RequireSplineProjectPath(Self, RequestId, Socket, TEXT("meshPath"), MeshPath);
+        if (SafeMeshPath.IsEmpty())
+        {
+            return true;
+        }
+        SegmentMesh = LoadObject<UStaticMesh>(nullptr, *SafeMeshPath);
+    }
+    if (!SegmentMesh)
+    {
+        Self->SendAutomationResponse(Socket, RequestId, false,
+            FString::Printf(TEXT("Static mesh not found: %s; nothing was created."), bStock ? Kind.StockMesh : *MeshPath),
+            nullptr, TEXT("MESH_NOT_FOUND"));
+        return true;
+    }
+    UMaterialInterface* SegmentMaterial = nullptr;
+    if (!MaterialPath.IsEmpty())
+    {
+        const FString SafeMaterialPath = RequireSplineProjectPath(Self, RequestId, Socket, TEXT("materialPath"), MaterialPath);
+        if (SafeMaterialPath.IsEmpty())
+        {
+            return true;
+        }
+        SegmentMaterial = LoadObject<UMaterialInterface>(nullptr, *SafeMaterialPath);
+        if (!SegmentMaterial)
+        {
+            Self->SendAutomationResponse(Socket, RequestId, false,
+                FString::Printf(TEXT("Material not found: %s; nothing was created."), *MaterialPath), nullptr, TEXT("MATERIAL_NOT_FOUND"));
+            return true;
+        }
+    }
 
     UWorld* World = GEditor ? GEditor->GetEditorWorldContext().World() : nullptr;
     if (!World)
@@ -51,9 +123,7 @@ static bool HandleCreateTemplateSpline(
     }
     AActor* NewActor = SplineComp->GetOwner();
 
-    // Caller-supplied route. The declared `points` parameter used to be ignored outright and
-    // every template emitted the same hardcoded zigzag below, so the capability could only
-    // ever produce a demo shape regardless of what was asked for.
+    // The caller's route, local to location; without one, a short demo route.
     SplineComp->ClearSplinePoints(false);
     const TArray<TSharedPtr<FJsonValue>>* PointsArray = nullptr;
     if (Payload->TryGetArrayField(TEXT("points"), PointsArray) && PointsArray && PointsArray->Num() >= 2)
@@ -73,129 +143,101 @@ static bool HandleCreateTemplateSpline(
     SplineComp->SetClosedLoop(bClosedLoop, false);
     SplineComp->UpdateSpline();
 
-    // Deform a mesh along the route. `meshPath`, `width` and `materialPath` were all read and
-    // then discarded, so the actor carried a bare spline with no renderable geometry and no
-    // material slot — set_material on it failed with MATERIAL_SLOT_NOT_FOUND.
+    // The spline mesh maps the mesh's two cross-section axes to across the route, then up: Y and Z for a mesh that
+    // runs along X, X and Y for one along Z (the stock cylinder).
+    const ESplineMeshAxis::Type Axis = bStock ? Kind.StockAxis : ESplineMeshAxis::X;
+    const int32 SideAxis = Axis == ESplineMeshAxis::Z ? 0 : 1;
+    const int32 UpAxis = Axis == ESplineMeshAxis::Z ? 1 : 2;
+    const FBoxSphereBounds Bounds = SegmentMesh->GetBounds();
+    const FVector2D SegmentScale(FitScale(Width, 2.0 * Bounds.BoxExtent[SideAxis]), FitScale(Height, 2.0 * Bounds.BoxExtent[UpAxis]));
+    // A wall stands on its route: the mesh's lowest point goes on the spline instead of its middle.
+    const FVector2D SegmentOffset(0.0, Kind.bStandsOnRoute
+        ? (Bounds.BoxExtent[UpAxis] - Bounds.Origin[UpAxis]) * SegmentScale.Y : 0.0);
+
     int32 MeshSegments = 0;
-    const FString ResolvedMeshPath = MeshPath.IsEmpty() ? DefaultMeshPath : MeshPath;
-    if (!ResolvedMeshPath.IsEmpty())
+    const int32 NumPoints = SplineComp->GetNumberOfSplinePoints();
+    const int32 SegmentCount = bClosedLoop ? NumPoints : NumPoints - 1;
+    for (int32 SegmentIndex = 0; SegmentIndex < SegmentCount; ++SegmentIndex)
     {
-        if (UStaticMesh* SegmentMesh = LoadObject<UStaticMesh>(nullptr, *ResolvedMeshPath))
+        USplineMeshComponent* SegmentComp = NewObject<USplineMeshComponent>(NewActor);
+        SegmentComp->SetMobility(EComponentMobility::Movable);
+        SegmentComp->AttachToComponent(SplineComp, FAttachmentTransformRules::KeepRelativeTransform);
+        SegmentComp->RegisterComponent();
+        NewActor->AddInstanceComponent(SegmentComp);
+        SegmentComp->SetStaticMesh(SegmentMesh);
+        if (SegmentMaterial)
         {
-            UMaterialInterface* SegmentMaterial = MaterialPath.IsEmpty()
-                ? nullptr : LoadObject<UMaterialInterface>(nullptr, *MaterialPath);
-            const int32 NumPoints = SplineComp->GetNumberOfSplinePoints();
-            const int32 SegmentCount = bClosedLoop ? NumPoints : NumPoints - 1;
-            // The mesh cross-section spans Y/Z for a forward axis of X; a 100-unit unit cube
-            // therefore scales by width/100 across and stays thin vertically for a road ribbon.
-            const FVector2D SegmentScale(static_cast<float>(Width) / 100.0f, 0.08f);
-            for (int32 SegmentIndex = 0; SegmentIndex < SegmentCount; ++SegmentIndex)
-            {
-                USplineMeshComponent* SegmentComp = NewObject<USplineMeshComponent>(NewActor);
-                SegmentComp->SetMobility(EComponentMobility::Movable);
-                SegmentComp->AttachToComponent(SplineComp, FAttachmentTransformRules::KeepRelativeTransform);
-                SegmentComp->RegisterComponent();
-                NewActor->AddInstanceComponent(SegmentComp);
-                SegmentComp->SetStaticMesh(SegmentMesh);
-                if (SegmentMaterial)
-                {
-                    SegmentComp->SetMaterial(0, SegmentMaterial);
-                }
-                SegmentComp->SetForwardAxis(ESplineMeshAxis::X, false);
-
-                // A road or wall you cannot drive into or stand on is not a road
-                // or a wall. A freshly constructed spline mesh arrives with the
-                // NoCollision profile here, so without this the whole ribbon is
-                // scenery: vehicles and characters fall straight through it and
-                // the failure only shows up at play time, far from this call.
-                // Complex-as-simple is what makes it work: simple primitives do
-                // NOT follow the spline deformation, so only the per-poly body
-                // matches the shape actually drawn.
-                SegmentComp->bUseDefaultCollision = false;
-                SegmentComp->bAlwaysCreatePhysicsState = true;
-                SegmentComp->SetCollisionProfileName(UCollisionProfile::BlockAll_ProfileName);
-                SegmentComp->SetCollisionEnabled(ECollisionEnabled::QueryAndPhysics);
-
-                const int32 NextIndex = (SegmentIndex + 1) % NumPoints;
-                SegmentComp->SetStartAndEnd(
-                    SplineComp->GetLocationAtSplinePoint(SegmentIndex, ESplineCoordinateSpace::Local),
-                    SplineComp->GetTangentAtSplinePoint(SegmentIndex, ESplineCoordinateSpace::Local),
-                    SplineComp->GetLocationAtSplinePoint(NextIndex, ESplineCoordinateSpace::Local),
-                    SplineComp->GetTangentAtSplinePoint(NextIndex, ESplineCoordinateSpace::Local),
-                    false);
-                SegmentComp->SetStartScale(SegmentScale, false);
-                SegmentComp->SetEndScale(SegmentScale, true);
-                ++MeshSegments;
-            }
+            SegmentComp->SetMaterial(0, SegmentMaterial);
         }
+        SegmentComp->SetForwardAxis(Axis, false);
+
+        // A fresh spline mesh arrives with NoCollision, so a road or wall nothing can stand on or bump into only
+        // showed at play time. Spline meshes deform their collision with the mesh, so it matches what is drawn.
+        SegmentComp->bUseDefaultCollision = false;
+        SegmentComp->bAlwaysCreatePhysicsState = true;
+        SegmentComp->SetCollisionProfileName(UCollisionProfile::BlockAll_ProfileName);
+        SegmentComp->SetCollisionEnabled(ECollisionEnabled::QueryAndPhysics);
+
+        const int32 NextIndex = (SegmentIndex + 1) % NumPoints;
+        SegmentComp->SetStartAndEnd(
+            SplineComp->GetLocationAtSplinePoint(SegmentIndex, ESplineCoordinateSpace::Local),
+            SplineComp->GetTangentAtSplinePoint(SegmentIndex, ESplineCoordinateSpace::Local),
+            SplineComp->GetLocationAtSplinePoint(NextIndex, ESplineCoordinateSpace::Local),
+            SplineComp->GetTangentAtSplinePoint(NextIndex, ESplineCoordinateSpace::Local),
+            false);
+        SegmentComp->SetStartOffset(SegmentOffset, false);
+        SegmentComp->SetEndOffset(SegmentOffset, false);
+        SegmentComp->SetStartScale(SegmentScale, false);
+        SegmentComp->SetEndScale(SegmentScale, true);
+        ++MeshSegments;
     }
 
     World->MarkPackageDirty();
 
     TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
     Result->SetStringField(TEXT("actorName"), McpActorRef(NewActor));
-    Result->SetStringField(TEXT("templateType"), TemplateName);
-    Result->SetNumberField(TEXT("pointCount"), SplineComp->GetNumberOfSplinePoints());
+    Result->SetStringField(TEXT("templateType"), Kind.Name);
+    Result->SetNumberField(TEXT("pointCount"), NumPoints);
     Result->SetNumberField(TEXT("splineLength"), SplineComp->GetSplineLength());
     Result->SetNumberField(TEXT("meshSegments"), MeshSegments);
+    Result->SetStringField(TEXT("meshPath"), SegmentMesh->GetPathName());
+    Result->SetNumberField(TEXT("width"), SegmentScale.X * 2.0 * Bounds.BoxExtent[SideAxis]);
+    Result->SetNumberField(TEXT("height"), SegmentScale.Y * 2.0 * Bounds.BoxExtent[UpAxis]);
     Result->SetBoolField(TEXT("closedLoop"), bClosedLoop);
     McpHandlerUtils::AddVerification(Result, NewActor);
 
     Self->SendAutomationResponse(Socket, RequestId, true,
-        FString::Printf(TEXT("%s spline '%s' created"), *TemplateName, *ActorName), Result);
+        FString::Printf(TEXT("%s spline '%s' created: %d segments of %s"), Kind.Name, *ActorName, MeshSegments,
+                        *SegmentMesh->GetName()), Result);
     return true;
 }
 
-bool HandleCreateRoadSpline(
-    UEngineWireSubsystem* Self,
-    const FString& RequestId,
-    const TSharedPtr<FJsonObject>& Payload,
-    TSharedPtr<FMcpBridgeWebSocket> Socket)
+bool HandleCreateRoadSpline(UEngineWireSubsystem* Self, const FString& RequestId, const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> Socket)
 {
-    return HandleCreateTemplateSpline(Self, RequestId, Payload, Socket, TEXT("Road"), TEXT(""));
+    return HandleCreateTemplateSpline(Self, RequestId, Payload, Socket, {TEXT("Road"), StockCube, ESplineMeshAxis::X, 400.0, 8.0, false, false});
 }
 
-bool HandleCreateRiverSpline(
-    UEngineWireSubsystem* Self,
-    const FString& RequestId,
-    const TSharedPtr<FJsonObject>& Payload,
-    TSharedPtr<FMcpBridgeWebSocket> Socket)
+bool HandleCreateRiverSpline(UEngineWireSubsystem* Self, const FString& RequestId, const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> Socket)
 {
-    return HandleCreateTemplateSpline(Self, RequestId, Payload, Socket, TEXT("River"), TEXT(""));
+    return HandleCreateTemplateSpline(Self, RequestId, Payload, Socket, {TEXT("River"), StockCube, ESplineMeshAxis::X, 400.0, 8.0, false, false});
 }
 
-bool HandleCreateFenceSpline(
-    UEngineWireSubsystem* Self,
-    const FString& RequestId,
-    const TSharedPtr<FJsonObject>& Payload,
-    TSharedPtr<FMcpBridgeWebSocket> Socket)
+bool HandleCreateFenceSpline(UEngineWireSubsystem* Self, const FString& RequestId, const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> Socket)
 {
-    return HandleCreateTemplateSpline(Self, RequestId, Payload, Socket, TEXT("Fence"), TEXT(""));
+    return HandleCreateTemplateSpline(Self, RequestId, Payload, Socket, {TEXT("Fence"), StockCube, ESplineMeshAxis::X, 10.0, 100.0, false, true});
 }
 
-bool HandleCreateWallSpline(
-    UEngineWireSubsystem* Self,
-    const FString& RequestId,
-    const TSharedPtr<FJsonObject>& Payload,
-    TSharedPtr<FMcpBridgeWebSocket> Socket)
+bool HandleCreateWallSpline(UEngineWireSubsystem* Self, const FString& RequestId, const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> Socket)
 {
-    return HandleCreateTemplateSpline(Self, RequestId, Payload, Socket, TEXT("Wall"), TEXT(""));
+    return HandleCreateTemplateSpline(Self, RequestId, Payload, Socket, {TEXT("Wall"), StockCube, ESplineMeshAxis::X, 20.0, 300.0, false, true});
 }
 
-bool HandleCreateCableSpline(
-    UEngineWireSubsystem* Self,
-    const FString& RequestId,
-    const TSharedPtr<FJsonObject>& Payload,
-    TSharedPtr<FMcpBridgeWebSocket> Socket)
+bool HandleCreateCableSpline(UEngineWireSubsystem* Self, const FString& RequestId, const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> Socket)
 {
-    return HandleCreateTemplateSpline(Self, RequestId, Payload, Socket, TEXT("Cable"), TEXT(""));
+    return HandleCreateTemplateSpline(Self, RequestId, Payload, Socket, {TEXT("Cable"), StockCylinder, ESplineMeshAxis::Z, 4.0, 4.0, true, false});
 }
 
-bool HandleCreatePipeSpline(
-    UEngineWireSubsystem* Self,
-    const FString& RequestId,
-    const TSharedPtr<FJsonObject>& Payload,
-    TSharedPtr<FMcpBridgeWebSocket> Socket)
+bool HandleCreatePipeSpline(UEngineWireSubsystem* Self, const FString& RequestId, const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> Socket)
 {
-    return HandleCreateTemplateSpline(Self, RequestId, Payload, Socket, TEXT("Pipe"), TEXT(""));
+    return HandleCreateTemplateSpline(Self, RequestId, Payload, Socket, {TEXT("Pipe"), StockCylinder, ESplineMeshAxis::Z, 50.0, 50.0, true, false});
 }

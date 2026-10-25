@@ -93,8 +93,8 @@ export const ASSET_QUERY_RECORDS: readonly RecordSpec[] = [
       examples: [ex('Read the reference graph through the direct bridge route', { assetPath: '/Game/Materials/M_Base', maxDepth: 2 }, { success: true })] }
   ),
 
-  r('create_thumbnail', 'asset', 'Generate a thumbnail for an asset.',
-    schema({ assetPath: ASSET_PATH, width: num('Thumbnail width.'), height: num('Thumbnail height.'), outputPath: str('Project-relative PNG file to write, e.g. Saved/Thumbnails/SM_Crate.png.') }, ['assetPath']),
+  r('create_thumbnail', 'asset', 'Render the preview of an asset and store it as its thumbnail (the asset is left unsaved; engine content keeps its own), and write it as a PNG when outputPath is given.',
+    schema({ assetPath: ASSET_PATH, width: num('Thumbnail width in pixels (default 512, 1 to 4096).'), height: num('Thumbnail height in pixels (default 512, 1 to 4096).'), outputPath: str('Project-relative PNG file to write, e.g. Saved/Thumbnails/SM_Crate.png.') }, ['assetPath']),
     OK, WRITE, WRITE_POLICY, LOW,
     { dispatchAction: 'generate_thumbnail',
       whenToUse: ['An asset needs a preview image, optionally written as a PNG file inside the project.'],
@@ -142,6 +142,34 @@ export const ASSET_QUERY_RECORDS: readonly RecordSpec[] = [
     { whenToUse: ['An asset must be confirmed to exist and load before other calls rely on it (no content, reference or data checks are run).'],
       whenNotToUse: ['Every asset in a folder must be checked for load errors (use system_control.validate_assets).'],
       examples: [ex('Confirm a material exists and loads', { assetPath: '/Game/Materials/M_Base' }, { success: true })] }
+  ),
+
+  r('diff_asset', 'asset', 'Compare a Blueprint, DataTable or data asset with its saved file (its unsaved edits) or with another asset: changed, added and removed properties and class defaults, Blueprint components and graph changes, DataTable rows. Read-only.',
+    schema({
+      assetPath: ASSET_PATH,
+      againstPath: str('Another asset of the same kind to compare with, such as a duplicate kept as a backup. Omitted, the asset is compared with its own saved file, so the reply lists its unsaved edits.'),
+    }, ['assetPath']),
+    schema({
+      success: bool('Operation succeeded.'),
+      assetPath: ASSET_PATH,
+      against: str('What the asset was compared with: "saved file", or the againstPath asset.'),
+      identical: bool('True when nothing differs.'),
+      propertyChanges: arrObj('Saved properties that differ, at most 50: object (asset, defaults for a Blueprint\'s class defaults, component <name>, or row <name>), property, change (changed, added or removed) and now and saved (the other side) as text, each cut at 200 characters.'),
+      componentChanges: arrObj('Blueprint components added, removed, or moved to another class or parent, at most 50: component, change, now and saved; a component\'s changed values are under propertyChanges.'),
+      graphChanges: arrObj('Blueprint graph changes, at most 50, node moves left out: graph, change (graph added, graph removed, node added, node removed, or changed), node and nodeId when a node is named (nodeId is the live graph\'s node where it has one), and detail, the engine\'s own description.'),
+      rowChanges: arrObj('DataTable rows added or removed, at most 50: row and change; a changed row\'s values are under propertyChanges.'),
+      truncated: bool('True when a list was cut at 50.'),
+    }, ['success']),
+    READ, READ_POLICY, MEDIUM,
+    { whenToUse: ['What changed in an asset since it was last saved must be known before saving or discarding it.', 'Two versions of an asset must be compared, such as a backup copy and the current one.'],
+      whenNotToUse: ['The asset\'s current values are wanted (use blueprint.get_blueprint or inspect.get_property).', 'A level or another kind of asset must be compared; only Blueprints, DataTables and data assets are.'],
+      examples: [ex('List the unsaved edits of a Blueprint', { assetPath: '/Game/Blueprints/BP_Door' }, {
+        success: true, assetPath: '/Game/Blueprints/BP_Door.BP_Door', against: 'saved file', identical: false,
+        propertyChanges: [{ object: 'defaults', property: 'OpenSpeed', change: 'changed', now: '2.000000', saved: '1.000000' }],
+        componentChanges: [],
+        graphChanges: [{ graph: 'EventGraph', change: 'node added', node: 'Print String', nodeId: '6F1D2B9E4C0A4E7B8D3F2A1B0C9D8E7F', detail: 'Added Node Print String' }],
+        rowChanges: [],
+      })] }
   ),
 
   r('fixup_redirectors', 'asset', 'Fix up redirector assets in a directory.',

@@ -128,7 +128,8 @@ inline int32 DeleteAnimationRigClusterOrdered(const TArray<FAssetData>& ClusterA
         const bool bDeleteAnimBlueprintsIndividually = FCString::Strcmp(BatchLabel, TEXT("AnimBlueprintFamily")) == 0;
         if (bDeleteAnimBlueprintsIndividually)
         {
-            UE_LOG(LogMcpSafeOperations, Warning,
+            // Routine, not a problem: at Warning it reached every delete reply's warnings.
+            UE_LOG(LogMcpSafeOperations, Log,
                 TEXT("DeleteAnimationRigClusterOrdered: Deleting %d AnimBlueprint asset(s) individually via engine-owned delete"),
                 BatchAssets.Num());
 

@@ -68,7 +68,6 @@ describe('test runner gateway adapter', () => {
           options: { timeoutMs: 5_000 },
         },
       },
-      undefined,
       { timeout: 5_000 },
     );
   });
@@ -89,7 +88,7 @@ describe('test runner gateway adapter', () => {
 
     await callToolOnce(gatewayCall);
 
-    expect(callTool).toHaveBeenCalledWith(gatewayCall, undefined, { timeout: 7_000 });
+    expect(callTool).toHaveBeenCalledWith(gatewayCall, { timeout: 7_000 });
   });
 
   it('clamps the configured harness timeout to the gateway option maximum', async () => {
@@ -114,7 +113,6 @@ describe('test runner gateway adapter', () => {
             options: { timeoutMs: 600_000 },
           },
         },
-        undefined,
         { timeout: 600_000 },
       );
     } finally {

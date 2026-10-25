@@ -53,23 +53,36 @@ bool HandleAddStateTreeTransition(UEngineWireSubsystem* Self, const FString& Req
         return true;
     }
 
-    // Any EStateTreeTransitionTrigger name (case ignored); OnStateCompleted otherwise.
-    const int64 TriggerValue = StaticEnum<EStateTreeTransitionTrigger>()->GetValueByNameString(TriggerType);
-    const EStateTreeTransitionTrigger Trigger = TriggerValue == INDEX_NONE
-        ? EStateTreeTransitionTrigger::OnStateCompleted
-        : static_cast<EStateTreeTransitionTrigger>(TriggerValue);
+    // Any EStateTreeTransitionTrigger name, case ignored; an unknown one used to become OnStateCompleted.
+    const UEnum* TriggerEnum = StaticEnum<EStateTreeTransitionTrigger>();
+    const int64 TriggerValue = TriggerEnum->GetValueByNameString(TriggerType);
+    if (TriggerValue == INDEX_NONE || TriggerValue == 0)
+    {
+        TArray<FString> TriggerNames;
+        for (int32 Index = 0; Index < TriggerEnum->NumEnums() - 1; ++Index)
+        {
+            if (TriggerEnum->GetValueByIndex(Index) != 0)
+            {
+                TriggerNames.Add(TriggerEnum->GetNameStringByIndex(Index));
+            }
+        }
+        Self->SendAutomationError(RequestingSocket, RequestId, FString::Printf(TEXT("triggerType must be one of %s."),
+            *FString::Join(TriggerNames, TEXT(", "))), TEXT("INVALID_ARGUMENT"));
+        return true;
+    }
 
-    // Add transition
-    FStateTreeTransition& Transition = SourceState->AddTransition(Trigger, EStateTreeTransitionType::GotoState, TargetState);
+    SourceState->Modify();
+    FStateTreeTransition& Transition = SourceState->AddTransition(
+        static_cast<EStateTreeTransitionTrigger>(TriggerValue), EStateTreeTransitionType::GotoState, TargetState);
+    const FString TransitionId = Transition.ID.ToString();
+    McpCompileStateTreeInto(StateTree, Result);
 
-    // Save
-    McpSafeAssetSave(StateTree);
-
-    Result->SetStringField(TEXT("fromState"), FromState);
-    Result->SetStringField(TEXT("toState"), ToState);
-    Result->SetStringField(TEXT("triggerType"), TriggerType);
-    Result->SetStringField(TEXT("transitionId"), Transition.ID.ToString());
-    Result->SetStringField(TEXT("message"), TEXT("Transition added"));
+    Result->SetStringField(TEXT("fromState"), SourceState->Name.ToString());
+    Result->SetStringField(TEXT("toState"), TargetState->Name.ToString());
+    Result->SetStringField(TEXT("triggerType"), TriggerEnum->GetNameStringByValue(TriggerValue));
+    Result->SetStringField(TEXT("transitionId"), TransitionId);
+    Result->SetBoolField(TEXT("saved"), McpSafeAssetSave(StateTree));
+    McpHandlerUtils::AddVerification(Result, StateTree);
     Self->SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Transition added"), Result);
 #else
     Self->SendAutomationError(RequestingSocket, RequestId,

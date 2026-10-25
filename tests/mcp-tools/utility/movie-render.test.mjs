@@ -59,6 +59,12 @@ const testCases = [
   { scenario: 'MRQ: configure_anti_aliasing', toolName: 'manage_sequence', arguments: { action: 'configure_anti_aliasing', renderJobName: JOB_NAME, antiAliasingMethod: 'tsr' }, expected: 'success' },
   { scenario: 'MRQ: configure_anti_aliasing optional', toolName: 'manage_sequence', arguments: { action: 'configure_anti_aliasing', renderJobName: JOB_NAME, method: 'spatialtemporal', spatialSampleCount: 8, temporalSampleCount: 16, settings: { spatialSampleCount: 8, temporalSampleCount: 16, antiAliasingMethod: 'tsr', method: 'spatialtemporal' } }, expected: 'success' },
 
+  // === configure_render_camera ===
+  { scenario: 'MRQ: configure_render_camera opens the shutter at the frame', toolName: 'manage_sequence', arguments: { action: 'configure_render_camera', renderJobName: JOB_NAME, shutterTiming: 'FrameOpen', overscanPercentage: 0.05 }, expected: 'success', assertions: [{ path: 'structuredContent.result.shutterTiming', equals: 'FrameOpen', label: 'the shutter opens at the frame' }] },
+  { scenario: 'MRQ: configure_render_camera renders the camera cut only', toolName: 'manage_sequence', arguments: { action: 'configure_render_camera', renderJobName: JOB_NAME, renderAllCameras: false }, expected: 'success' },
+  { scenario: 'MRQ: configure_render_camera refuses an unknown shutter', toolName: 'manage_sequence', arguments: { action: 'configure_render_camera', renderJobName: JOB_NAME, shutterTiming: 'Sideways' }, expected: 'error' },
+  { scenario: 'MRQ: cancel_render with nothing rendering', toolName: 'manage_sequence', arguments: { action: 'cancel_render' }, expected: 'error|MRQ_NOT_RENDERING' },
+
   // === configure_console_variables ===
   { scenario: 'MRQ: configure_console_variables', toolName: 'manage_sequence', arguments: { action: 'configure_console_variables', renderJobName: JOB_NAME, consoleVariables: { r: { MotionBlurQuality: 2 } } }, expected: 'success' },
   { scenario: 'MRQ: configure_console_variables optional', toolName: 'manage_sequence', arguments: { action: 'configure_console_variables', renderJobName: JOB_NAME, consoleVariables: { r: { AmbientOcclusionLevels: 1, Shadow: { Quality: 3 } }, sg: { PostProcessQuality: 2 } } }, expected: 'success' },

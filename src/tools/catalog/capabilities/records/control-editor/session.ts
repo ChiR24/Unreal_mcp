@@ -53,7 +53,7 @@ export const SESSION_RECORDS: readonly CapabilityRecordSource[] = [
   buildCoreRecord({
     parentTool: 'control_editor', action: 'pause', domain: D, family: F,
     editorStates: ANY_EDITOR_STATE,
-    summary: 'Pause the running PIE session.',
+    summary: 'Pause the running Play In Editor session, as the toolbar pause does; the reply says alreadyPaused when it was. No session is NO_ACTIVE_SESSION.',
     whenToUse: ['PIE must be paused without stopping.'],
     whenNotToUse: ['PIE is not running or already paused.'],
     inputProps: {},
@@ -65,7 +65,7 @@ export const SESSION_RECORDS: readonly CapabilityRecordSource[] = [
   buildCoreRecord({
     parentTool: 'control_editor', action: 'resume', domain: D, family: F,
     editorStates: ANY_EDITOR_STATE,
-    summary: 'Resume a paused PIE session.',
+    summary: 'Resume a paused Play In Editor session; wasPaused false says it was not paused and nothing changed. A pause the game holds itself (a pause menu) is GAME_PAUSED unless unpauseGame is true, and a widget that still holds keyboard focus is named in warnings. No session is NO_ACTIVE_SESSION.',
     whenToUse: ['A paused PIE session must resume.', 'The running game paused itself (a title screen or a pause menu) and must run again for a test: pass unpauseGame.'],
     whenNotToUse: ['PIE is not paused.'],
     inputProps: {
@@ -125,7 +125,8 @@ export const SESSION_RECORDS: readonly CapabilityRecordSource[] = [
       'The editor is no longer needed and should close (relaunch false).',
       'Which packages have unsaved changes must be known (validateOnly).'],
     whenNotToUse: ['Only a level needs reloading; use open_level.',
-      'A PIE session should end; use stop.'],
+      'A PIE session should end; use stop.',
+      'A Movie Render Queue render is running: refused with RENDER_IN_PROGRESS until it ends or manage_sequence cancel_render stops it.'],
     inputProps: {
       validateOnly: P.validateOnly, discardUnsaved: P.discardUnsaved, delaySeconds: P.delaySeconds,
       relaunch: { type: 'boolean', description: 'false closes the editor instead of relaunching it (default true). Unsaved packages are refused the same way.' },
@@ -138,6 +139,7 @@ export const SESSION_RECORDS: readonly CapabilityRecordSource[] = [
       closing: { type: 'boolean', description: 'True once closing the editor (relaunch false) has been scheduled.' },
       validateOnly: { type: 'boolean', description: 'True when this call only reported what a restart would do.' },
       wouldRestart: { type: 'boolean', description: 'Under validateOnly, whether a real restart would proceed.' },
+      renderRunning: { type: 'boolean', description: 'Under validateOnly, whether a Movie Render Queue render is running (a restart is refused until it ends).' },
       unsavedPackages: { type: 'array', items: { type: 'string', description: 'Package path.' }, description: 'Packages with unsaved changes a restart would discard.' },
       unsavedCount: { type: 'integer', description: 'How many packages have unsaved changes.' },
       delaySeconds: { type: 'number', description: 'Seconds the editor waits before relaunching.' },

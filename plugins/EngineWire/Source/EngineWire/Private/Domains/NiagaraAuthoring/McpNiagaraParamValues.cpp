@@ -67,19 +67,30 @@ struct FParameterWrite
     FString Error;
 };
 
-// One value written: the user parameter of that name, else the module input. It replies and saves nothing, so a
-// list writes every entry and saves once. Entry holds parameterValue (the payload itself, or one list entry).
-static FParameterWrite WriteParameter(const FActionContext& Context, UNiagaraSystem* System, const FString& ParamName, const TSharedPtr<FJsonObject>& Entry)
+static const FNiagaraVariableWithOffset* FindUserParameter(UNiagaraSystem* System, const FString& ParamName)
+{
+    const FString UserName = ParamName.StartsWith(TEXT("User.")) ? ParamName : TEXT("User.") + ParamName;
+    return System->GetExposedParameters().ReadParameterVariables().FindByPredicate(
+        [&UserName](const FNiagaraVariableWithOffset& Var) { return Var.GetName().ToString() == UserName; });
+}
+
+// A module input belongs to one emitter, or to the system stage. User parameters need no emitter.
+static bool NamesModuleInput(UNiagaraSystem* System, const TArray<FString>& Names)
+{
+    return Names.ContainsByPredicate([System](const FString& Name) { return !Name.IsEmpty() && !FindUserParameter(System, Name); });
+}
+
+// One value written: the user parameter of that name, else the module input in EmitterName's scripts (empty: in
+// every script, which the caller allows only when the name matches in one place). It replies and saves nothing, so
+// a list writes every entry and saves once. Entry holds parameterValue (the payload itself, or one list entry).
+static FParameterWrite WriteParameter(UNiagaraSystem* System, const FString& EmitterName, const FString& ParamName, const TSharedPtr<FJsonObject>& Entry)
 {
     static const TCHAR* ValueForms = TEXT("parameterValue must be a number (float, int or bool) or an {x,y,z[,w]} or {r,g,b,a} object (or an array) to match.");
     FParameterWrite Write;
-    FNiagaraUserRedirectionParameterStore& UserStore = System->GetExposedParameters();
-    const FString UserName = ParamName.StartsWith(TEXT("User.")) ? ParamName : TEXT("User.") + ParamName;
-    const FNiagaraVariableWithOffset* UserVar = UserStore.ReadParameterVariables().FindByPredicate(
-        [&UserName](const FNiagaraVariableWithOffset& Var) { return Var.GetName().ToString() == UserName; });
+    const FNiagaraVariableWithOffset* UserVar = FindUserParameter(System, ParamName);
     if (UserVar)
     {
-        Write.bApplied = WriteRapidIterationValue(UserStore, FNiagaraVariable(*UserVar), Entry);
+        Write.bApplied = WriteRapidIterationValue(System->GetExposedParameters(), FNiagaraVariable(*UserVar), Entry);
         if (!Write.bApplied)
         {
             Write.ErrorCode = TEXT("PARAM_TYPE_MISMATCH");
@@ -90,12 +101,12 @@ static FParameterWrite WriteParameter(const FActionContext& Context, UNiagaraSys
     // Not a user parameter: try the module inputs, which is what tuning a template emitter needs.
     TArray<FString> Candidates;
     FString MatchedType;
-    Write.InputCopies = SetModuleInputValue(System, Context.EmitterName, ParamName, Entry, Candidates, MatchedType);
+    Write.InputCopies = SetModuleInputValue(System, EmitterName, ParamName, Entry, Candidates, MatchedType);
     // Nor a module input: a module's static switch ("InitializeParticle.Ribbon Width Mode"), which gates inputs.
     FString SwitchError;
     if (Write.InputCopies == 0 && MatchedType.IsEmpty())
     {
-        Write.InputCopies = SetModuleStaticSwitch(System, Context.EmitterName, ParamName, Entry->TryGetField(TEXT("parameterValue")), SwitchError);
+        Write.InputCopies = SetModuleStaticSwitch(System, EmitterName, ParamName, Entry->TryGetField(TEXT("parameterValue")), SwitchError);
     }
     Write.bApplied = Write.InputCopies > 0;
     if (Write.bApplied)
@@ -110,19 +121,20 @@ static FParameterWrite WriteParameter(const FActionContext& Context, UNiagaraSys
     }
     if (!MatchedType.IsEmpty())
     {
-        Write.Error = FString::Printf(TEXT("Module input '%s' is a %s; %s"), *ParamName, *MatchedType, ValueForms);
+        const FString OfEmitter = EmitterName.IsEmpty() ? FString() : FString::Printf(TEXT(" of emitter '%s'"), *EmitterName);
+        Write.Error = FString::Printf(TEXT("Module input '%s'%s is a %s; %s"), *ParamName, *OfEmitter, *MatchedType, ValueForms);
         return Write;
     }
     // An error message is capped in transit, so the full list lives in get_niagara_info;
     // name a few here, without the scope prefix every one of them shares.
-    const FString Scope = TEXT("Constants.") + Context.EmitterName + TEXT(".");
+    const FString Scope = TEXT("Constants.") + EmitterName + TEXT(".");
     for (FString& Candidate : Candidates)
     {
         Candidate.RemoveFromStart(Scope);
     }
     Candidates.SetNum(FMath::Min(Candidates.Num(), 8));
     Write.Error = FString::Printf(TEXT("Parameter '%s' is neither a user parameter nor a module input or static switch%s. get_niagara_info lists every emitter's moduleInputs and staticSwitches with their values; some here: %s"),
-        *ParamName, Context.EmitterName.IsEmpty() ? TEXT("") : *FString::Printf(TEXT(" of emitter '%s'"), *Context.EmitterName),
+        *ParamName, EmitterName.IsEmpty() ? TEXT("") : *FString::Printf(TEXT(" of emitter '%s'"), *EmitterName),
         *FString::Join(Candidates, TEXT(", ")));
     return Write;
 }
@@ -131,26 +143,47 @@ static FParameterWrite WriteParameter(const FActionContext& Context, UNiagaraSys
 // reported as the material parameters list reports its own, so twelve values of an emitter cost one call.
 static bool SetParameterValueList(FActionContext& Context, UNiagaraSystem* System, const TArray<TSharedPtr<FJsonValue>>& Entries)
 {
+    TArray<TSharedPtr<FJsonObject>> Objects;
+    TArray<FString> Names;
+    for (const TSharedPtr<FJsonValue>& Item : Entries)
+    {
+        const TSharedPtr<FJsonObject>* Object = nullptr;
+        Objects.Add(Item.IsValid() && Item->TryGetObject(Object) ? *Object : MakeShared<FJsonObject>());
+        Names.Add(GetJsonStringField(Objects.Last(), TEXT("parameterName")));
+    }
+    // A chosen emitterName is checked once; when it names no emitter, only the entries that need one fail. Without
+    // one, each entry is looked up on its own: it needs emitterName only when it matches in more than one place.
+    FString EmitterError;
+    if (!Context.EmitterName.IsEmpty() && NamesModuleInput(System, Names) && !FindTargetEmitter(Context, System, EmitterError))
+    {
+        EmitterError = FString::Printf(TEXT("no emitter '%s': one of [%s]"), *Context.EmitterName, *ListEmitterNames(System));
+    }
     TArray<TSharedPtr<FJsonValue>> Results;
     TArray<FString> Failed;
     bool bWroteModuleInput = false;
-    for (const TSharedPtr<FJsonValue>& Item : Entries)
+    for (int32 Index = 0; Index < Objects.Num(); ++Index)
     {
-        TSharedPtr<FJsonObject> Entry = MakeShared<FJsonObject>();
-        const TSharedPtr<FJsonObject>* Object = nullptr;
-        if (Item.IsValid() && Item->TryGetObject(Object))
-        {
-            Entry = *Object;
-        }
-        const FString Name = GetJsonStringField(Entry, TEXT("parameterName"));
+        const TSharedPtr<FJsonObject>& Entry = Objects[Index];
+        const FString& Name = Names[Index];
         FParameterWrite Write;
+        const bool bUser = !Name.IsEmpty() && FindUserParameter(System, Name);
+        FString Emitter = bUser ? FString() : Context.EmitterName;
+        FString ScopeError = bUser ? FString() : EmitterError;
+        if (!bUser && !Name.IsEmpty() && ScopeError.IsEmpty() && Emitter.IsEmpty())
+        {
+            FindInputEmitter(System, Name, Emitter, ScopeError);
+        }
         if (Name.IsEmpty())
         {
             Write.Error = TEXT("Missing 'parameterName'.");
         }
+        else if (!ScopeError.IsEmpty())
+        {
+            Write.Error = ScopeError;
+        }
         else
         {
-            Write = WriteParameter(Context, System, Name, Entry);
+            Write = WriteParameter(System, Emitter, Name, Entry);
         }
         bWroteModuleInput = bWroteModuleInput || Write.InputCopies > 0;
         TSharedPtr<FJsonObject> Row = McpHandlerUtils::CreateResultObject();
@@ -159,6 +192,7 @@ static bool SetParameterValueList(FActionContext& Context, UNiagaraSystem* Syste
         if (Write.bApplied)
         {
             if (Write.InputCopies > 0) Row->SetNumberField(TEXT("moduleInputCopiesWritten"), Write.InputCopies);
+            if (!Emitter.IsEmpty()) Row->SetStringField(TEXT("emitterName"), Emitter);
         }
         else
         {
@@ -212,7 +246,13 @@ bool SetParameterValue(FActionContext& Context)
         Context.SendError(TEXT("Missing 'parameterName' (or a 'parameters' list)."), TEXT("INVALID_ARGUMENT"));
         return true;
     }
-    const FParameterWrite Write = WriteParameter(Context, System, ParamName, Context.Payload);
+    // A chosen emitterName must name an emitter; without one, only a name that matches in more than one place needs it.
+    if (NamesModuleInput(System, {ParamName})
+        && !(Context.EmitterName.IsEmpty() ? ResolveInputEmitter(Context, System, ParamName) : ResolveEmitterHandle(Context, System) != nullptr))
+    {
+        return true;
+    }
+    const FParameterWrite Write = WriteParameter(System, Context.EmitterName, ParamName, Context.Payload);
     if (!Write.bApplied)
     {
         Context.SendError(Write.Error, Write.ErrorCode);

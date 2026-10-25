@@ -140,7 +140,7 @@ bool HandleAddLocalPlayer(
     if (!Payload.IsValid() || !Payload->HasField(TEXT("controllerId")))
     {
         Subsystem->SendAutomationResponse(Socket, RequestId, false,
-            TEXT("controllerId is required to add a local player"), nullptr);
+            TEXT("controllerId is required to add a local player"), nullptr, TEXT("INVALID_ARGUMENT"));
         return true;
     }
 
@@ -149,7 +149,7 @@ bool HandleAddLocalPlayer(
     if (!GameInstance)
     {
         Subsystem->SendAutomationResponse(Socket, RequestId, false,
-            TEXT("No active game instance. Start Play-In-Editor first."), nullptr);
+            TEXT("No active game instance. Start Play-In-Editor first."), nullptr, TEXT("NOT_IN_PLAY"));
         return true;
     }
 
@@ -158,7 +158,7 @@ bool HandleAddLocalPlayer(
     if (!NewPlayer)
     {
         Subsystem->SendAutomationResponse(Socket, RequestId, false,
-            FString::Printf(TEXT("Failed to add local player: %s"), *Error), nullptr);
+            FString::Printf(TEXT("Failed to add local player: %s"), *Error), nullptr, TEXT("ADD_PLAYER_FAILED"));
         return true;
     }
 
@@ -185,7 +185,7 @@ bool HandleRemoveLocalPlayer(
     if (!Payload.IsValid() || !Payload->HasField(TEXT("playerIndex")))
     {
         Subsystem->SendAutomationResponse(Socket, RequestId, false,
-            TEXT("playerIndex is required to remove a local player"), nullptr);
+            TEXT("playerIndex is required to remove a local player"), nullptr, TEXT("INVALID_ARGUMENT"));
         return true;
     }
 
@@ -194,14 +194,14 @@ bool HandleRemoveLocalPlayer(
     if (!GameInstance)
     {
         Subsystem->SendAutomationResponse(Socket, RequestId, false,
-            TEXT("No active game instance. Start Play-In-Editor first."), nullptr);
+            TEXT("No active game instance. Start Play-In-Editor first."), nullptr, TEXT("NOT_IN_PLAY"));
         return true;
     }
 
     if (PlayerIndex == 0)
     {
         Subsystem->SendAutomationResponse(Socket, RequestId, false,
-            TEXT("Cannot remove the primary local player (index 0)."), nullptr);
+            TEXT("Cannot remove the primary local player (index 0)."), nullptr, TEXT("PRIMARY_PLAYER"));
         return true;
     }
 
@@ -209,7 +209,7 @@ bool HandleRemoveLocalPlayer(
     if (!Player)
     {
         Subsystem->SendAutomationResponse(Socket, RequestId, false,
-            FString::Printf(TEXT("No local player at index %d"), PlayerIndex), nullptr);
+            FString::Printf(TEXT("No local player at index %d"), PlayerIndex), nullptr, TEXT("PLAYER_NOT_FOUND"));
         return true;
     }
 

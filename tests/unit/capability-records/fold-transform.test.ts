@@ -7,6 +7,7 @@ import type { CapabilityRecordSource, JsonObject } from '../../../src/tools/cata
 import { createCapabilityRecord } from '../../../src/tools/catalog/capabilities/parser.js';
 import { buildCoreRecord } from '../../../src/tools/catalog/capabilities/records/core/builder.js';
 import { applyFolds, byName, type FoldSpec } from '../../../src/tools/catalog/capabilities/records/shared/fold.js';
+import { ALL_CAPABILITY_RECORDS } from '../../../src/tools/catalog/capabilities/records/aggregate.js';
 
 const member = (
   action: string,
@@ -185,6 +186,39 @@ describe('widen() merge rules (two-member folds)', () => {
       'system_control',
     )[0] as CapabilityRecordSource;
     expect(folded.schemas.input.requiredOneOf).toBeUndefined();
+  });
+});
+
+describe('folded variant summaries', () => {
+  const described = (action: string, summary: string): CapabilityRecordSource => ({
+    ...member(action, {}, []),
+    discovery: { ...member(action, {}, []).discovery, summary },
+  });
+
+  it('lists every variant summary under the selector, naming siblings by selector value', () => {
+    const folded = applyFolds(
+      [described('q_one', 'Reads one thing; for two use q_two.'), described('q_two', 'Reads two things.')],
+      [FOLD],
+      'system_control',
+    )[0] as CapabilityRecordSource;
+    const selector = folded.schemas.input.properties.which as JsonObject;
+    expect(selector.description).toBe('Which query variant to run.\none: Reads one thing; for two use which=two.\ntwo: Reads two things.');
+  });
+
+  it('reaches the shipped records: a folded family lists what each variant does', () => {
+    const family = ALL_CAPABILITY_RECORDS.find((record) => String(record.id) === 'system_control.configure_performance');
+    const selector = family?.schemas.input.properties.setting as JsonObject | undefined;
+    expect(selector?.description).toContain('\nframe_rate_limit: Cap the frame rate of this editor session');
+    expect(selector?.description).toContain('(setting=vsync, setting=frame_rate_limit)');
+  });
+
+  it('leaves out a variant whose summary is the family summary', () => {
+    const folded = applyFolds(
+      [described('q_one', 'query variants'), described('q_two', 'Reads two things.')],
+      [FOLD],
+      'system_control',
+    )[0] as CapabilityRecordSource;
+    expect((folded.schemas.input.properties.which as JsonObject).description).toBe('Which query variant to run.\ntwo: Reads two things.');
   });
 });
 

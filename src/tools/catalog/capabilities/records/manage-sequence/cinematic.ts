@@ -61,7 +61,7 @@ function trackRecord(id: string, action: string, summary: string, extraProps: Re
 export const CINEMATIC_RECORDS: readonly CapabilityRecordSource[] = [
   buildRecord({
     id: 'sequence.cinematic.create_master_sequence', action: 'create_master_sequence', family: F, domain: D,
-    summary: 'Create a master cinematic sequence with sub-sequence and shot track structure.',
+    summary: 'Create the master level sequence of a cinematic: an empty sequence at frameRate (default 24 fps) with its playback range, saved; shots and sub-sequences are added to it afterwards.',
     whenToUse: ['A new cinematic with shots must be scaffolded.'],
     whenNotToUse: ['A flat sequence without shots is sufficient.'],
     // Native HandleCreateMasterSequence (Cinematics/Assets.cpp:45-141) resolves
@@ -70,8 +70,14 @@ export const CINEMATIC_RECORDS: readonly CapabilityRecordSource[] = [
     // (:120-121), and endFrame through GetDuration when durationFrames is
     // absent. masterSequencePath and mapPath are never read; the sequence
     // is saved unconditionally (McpSafeAssetSave :122), so save is dead too.
-    inputProps: { name: P.name, sequencePath: P.sequencePath, path: P.path, assetPath: P.assetPath, frameRate: P.frameRate, startFrame: P.startFrame, durationFrames: A.durationFrames, endFrame: int('Playback range end frame (exclusive); used when durationFrames is absent.') },
-    required: ['name', 'sequencePath'],
+    inputProps: {
+      name: { ...P.name, description: 'Name of the new sequence; alone, it is created in path (default /Game/Cinematics).' },
+      sequencePath: { ...P.sequencePath, description: 'Full asset path of the new sequence (/Game/Cinematics/SEQ_Master), or, sent with name, the folder it goes in.' },
+      path: { ...P.path, description: 'Folder for name (default /Game/Cinematics).' },
+      assetPath: { ...P.assetPath, description: 'Alias of sequencePath.' },
+      frameRate: P.frameRate, startFrame: P.startFrame, durationFrames: A.durationFrames, endFrame: int('Playback range end frame (exclusive); used when durationFrames is absent.'),
+    },
+    required: [], requiredOneOf: ['name', 'sequencePath', 'assetPath'],
     outputProps: { sequencePath: P.sequencePath },
     outputRequired: ['sequencePath'],
     effect: 'write', latency: 'interactive', resources: 'medium', plugins: SEQ_PLUGINS,
@@ -100,8 +106,9 @@ export const CINEMATIC_RECORDS: readonly CapabilityRecordSource[] = [
     whenNotToUse: ['The master sequence already has a shot track.'],
     // Native HandleAddShotTrack (Assets.cpp) loads the master from path and
     // requires the shot sequence it adds as a section.
-    inputProps: { path: masterPath, shotSequencePath: P.shotSequencePath, displayName: A.displayName, ...SECTION_RANGE, save: A.save },
-    required: ['path', 'shotSequencePath'],
+    inputProps: { path: masterPath, shotSequencePath: P.shotSequencePath, subsequencePath: { ...P.subsequencePath, description: 'Alias of shotSequencePath.' }, displayName: A.displayName, ...SECTION_RANGE, save: A.save },
+    // The handler reads the shot as shotSequencePath, else subsequencePath.
+    required: ['path'], requiredOneOf: ['shotSequencePath', 'subsequencePath'],
     outputProps: { sectionName: sectionNameOutput },
     outputRequired: [],
     effect: 'write', latency: 'interactive', resources: 'low', plugins: SEQ_PLUGINS,
@@ -131,8 +138,8 @@ export const CINEMATIC_RECORDS: readonly CapabilityRecordSource[] = [
     // never read. ApplyCameraSettings (:73-84) reads the lens, filmback and
     // focus fields. Emits actorName/actorPath (+bindingGuid when a sequence is
     // supplied) on success, so they are declared as receipt-visible outputs.
-    inputProps: { ...CAMERA_SETTINGS, path: P.path, actorName: P.actorName, label: A.label, location: { type: 'object', description: 'Camera location.', additionalProperties: false, properties: { x: { type: 'number' }, y: { type: 'number' }, z: { type: 'number' } }, required: ['x', 'y', 'z'] }, rotation: { type: 'object', description: 'Camera rotation as {pitch, yaw, roll} (x/y/z are accepted as aliases).', additionalProperties: false, properties: { pitch: { type: 'number' }, yaw: { type: 'number' }, roll: { type: 'number' }, x: { type: 'number' }, y: { type: 'number' }, z: { type: 'number' } } } },
-    required: ['path'],
+    inputProps: { ...CAMERA_SETTINGS, path: { ...P.path, description: 'Level Sequence to bind the new camera to (sequencePath is read in its place); left out, the camera is placed unbound.' }, sequencePath: { ...P.sequencePath, description: 'Alias of path.' }, actorName: P.actorName, label: A.label, location: { type: 'object', description: 'Camera location.', additionalProperties: false, properties: { x: { type: 'number' }, y: { type: 'number' }, z: { type: 'number' } }, required: ['x', 'y', 'z'] }, rotation: { type: 'object', description: 'Camera rotation as {pitch, yaw, roll} (x/y/z are accepted as aliases).', additionalProperties: false, properties: { pitch: { type: 'number' }, yaw: { type: 'number' }, roll: { type: 'number' }, x: { type: 'number' }, y: { type: 'number' }, z: { type: 'number' } } } },
+    required: [],
     outputProps: {
       actorName: { type: 'string', description: 'Label of the created camera actor.' },
       actorPath: { type: 'string', description: 'Path to the created camera actor.' },
@@ -146,7 +153,7 @@ export const CINEMATIC_RECORDS: readonly CapabilityRecordSource[] = [
   }),
   buildRecord({
     id: 'sequence.cinematic.configure_camera_settings', action: 'configure_camera_settings', family: F, domain: D,
-    summary: 'Configure CineCamera lens, filmback, and focus settings on a camera actor in the level.',
+    summary: 'Set the lens of a CineCameraActor (actorName): currentFocalLength or focalLength (mm), currentAperture or aperture (f-stop), sensorWidth and sensorHeight (mm), manualFocusDistance or focusDistance (cm), each also accepted inside a lens, filmback or focus object. The camera clamps them to its lens limits and the reply reads back what it kept (values). One undo step; a call with nothing to set, or an actor with no CineCameraComponent, is refused.',
     whenToUse: ['Camera lens, focal length, aperture, or focus must be set.'],
     whenNotToUse: ['Default camera settings are acceptable.'],
     // Native HandleConfigureCameraSettings (Cameras.cpp) edits the level actor
@@ -190,7 +197,7 @@ export const CINEMATIC_RECORDS: readonly CapabilityRecordSource[] = [
   // they never load a sequence or save one, so path and save are not declared.
   buildRecord({
     id: 'sequence.cinematic.configure_camera_rig_rail', action: 'configure_camera_rig_rail', family: F, domain: D,
-    summary: 'Configure a camera rig rail for dolly camera movement.',
+    summary: 'Set positionOnRail (0 to 1, where the camera mount sits along the rail spline) on a CameraRig_Rail named actorName, placing one at the world origin when actorName names none (spawned true). One undo step; a call with no setting is refused, and an actor of another class is RIG_CLASS_MISMATCH.',
     whenToUse: ['A camera must move along a rail for dolly shots.'],
     whenNotToUse: ['No rail-based camera movement is needed.'],
     inputProps: { positionOnRail: { type: 'number', description: 'Position on the rail (0-1).' }, actorName: P.actorName, label: A.label },
@@ -199,7 +206,7 @@ export const CINEMATIC_RECORDS: readonly CapabilityRecordSource[] = [
   }),
   buildRecord({
     id: 'sequence.cinematic.configure_camera_rig_crane', action: 'configure_camera_rig_crane', family: F, domain: D,
-    summary: 'Configure a camera rig crane for boom camera movement.',
+    summary: 'Set cranePitch and craneYaw (degrees) and craneArmLength (cm) on a CameraRig_Crane named actorName, placing one at the world origin when actorName names none (spawned true). One undo step; a call with no setting is refused, and an actor of another class is RIG_CLASS_MISMATCH.',
     whenToUse: ['A camera must boom or swing on a crane arm.'],
     whenNotToUse: ['No crane-based camera movement is needed.'],
     inputProps: { cranePitch: { type: 'number', description: 'Crane pitch in degrees.' }, craneYaw: { type: 'number', description: 'Crane yaw in degrees.' }, craneArmLength: { type: 'number', description: 'Crane arm length.' }, actorName: P.actorName, label: A.label },
@@ -238,6 +245,6 @@ export const CINEMATIC_RECORDS: readonly CapabilityRecordSource[] = [
     { actorName: P.actorName, bindingGuid: A.bindingGuid, ...SECTION_RANGE }),
   trackRecord('sequence.cinematic.add_property_track', 'add_property_track',
     'Add a property track to animate a specific property on a bound actor.',
-    { property: P.property, actorName: P.actorName, bindingGuid: A.bindingGuid, propertyName: A.propertyName, propertyPath: A.propertyPath, propertyType: A.propertyType, ...SECTION_RANGE },
-    { required: ['path', 'property'], example: { actorName: 'CineCameraActor_1', property: 'Transform' }, requiredOneOf: ['actorName', 'bindingGuid'] }),
+    { property: { ...P.property, description: 'Property to animate, by name (Transform, Intensity...); required, or send it as propertyName (refused with INVALID_ARGUMENT when neither is sent).' }, actorName: P.actorName, bindingGuid: A.bindingGuid, propertyName: A.propertyName, propertyPath: A.propertyPath, propertyType: A.propertyType, ...SECTION_RANGE },
+    { required: ['path'], example: { actorName: 'CineCameraActor_1', property: 'Transform' }, requiredOneOf: ['actorName', 'bindingGuid'] }),
 ];

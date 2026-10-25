@@ -67,6 +67,12 @@ USplineComponent* ResolveSplineTarget(UEngineWireSubsystem* Self, const FString&
         Self->SendAutomationResponse(Socket, RequestId, false,
             TEXT("No spline component found on actor"), nullptr, TEXT("NO_SPLINE"));
     }
+    // A component made without RF_Transactional (every spline create_spline_actor made) kept each point edit out of
+    // the undo buffer; flagged, Modify() records it.
+    if (Spline && !Spline->HasAnyFlags(RF_Transactional))
+    {
+        Spline->SetFlags(RF_Transactional);
+    }
     return Spline;
 }
 
@@ -94,10 +100,12 @@ USplineComponent* SpawnSplineActor(UWorld* World, const FString& Name, const FVe
         return nullptr;
     }
     Actor->SetActorLabel(*Name);
-    USplineComponent* Spline = NewObject<USplineComponent>(Actor, TEXT("SplineComponent"));
+    USplineComponent* Spline = NewObject<USplineComponent>(Actor, TEXT("SplineComponent"), RF_Transactional);
     Spline->RegisterComponent();
     Actor->AddInstanceComponent(Spline);
     Actor->SetRootComponent(Spline);
+    // A bare AActor spawns with no root to hold the spawn transform, so every spline sat at the origin, unturned.
+    Actor->SetActorLocationAndRotation(Location, Rotation);
     return Spline;
 }
 
@@ -131,22 +139,43 @@ USplineMeshComponent* FindSplineMeshComponent(AActor* Actor, const FString& Comp
     return MeshComponents.Num() > 0 ? MeshComponents[0] : nullptr;
 }
 
-ESplineMeshAxis::Type ParseSplineMeshAxis(const FString& ForwardAxis)
+bool ParseSplineMeshAxis(const FString& ForwardAxis, ESplineMeshAxis::Type& OutAxis)
 {
-    if (ForwardAxis == TEXT("Y")) return ESplineMeshAxis::Y;
-    if (ForwardAxis == TEXT("Z")) return ESplineMeshAxis::Z;
-    return ESplineMeshAxis::X;
+    OutAxis = ForwardAxis.Equals(TEXT("Y"), ESearchCase::IgnoreCase) ? ESplineMeshAxis::Y
+        : ForwardAxis.Equals(TEXT("Z"), ESearchCase::IgnoreCase) ? ESplineMeshAxis::Z : ESplineMeshAxis::X;
+    return OutAxis != ESplineMeshAxis::X || ForwardAxis.Equals(TEXT("X"), ESearchCase::IgnoreCase);
 }
 
-ESplinePointType::Type ParseSplinePointType(const FString& TypeStr)
+const TCHAR* SplineMeshAxisName(ESplineMeshAxis::Type Axis)
 {
-    FString LowerStr = TypeStr.ToLower();
-    if (LowerStr == TEXT("linear")) return ESplinePointType::Linear;
-    if (LowerStr == TEXT("curve")) return ESplinePointType::Curve;
-    if (LowerStr == TEXT("constant")) return ESplinePointType::Constant;
-    if (LowerStr == TEXT("curveclamped")) return ESplinePointType::CurveClamped;
-    if (LowerStr == TEXT("curvecustomtangent")) return ESplinePointType::CurveCustomTangent;
-    return ESplinePointType::Curve;
+    return Axis == ESplineMeshAxis::Y ? TEXT("Y") : Axis == ESplineMeshAxis::Z ? TEXT("Z") : TEXT("X");
+}
+
+bool RefuseSplineMeshAxis(UEngineWireSubsystem* Self, const FString& RequestId, TSharedPtr<FMcpBridgeWebSocket> Socket,
+                          const FString& ForwardAxis)
+{
+    Self->SendAutomationResponse(Socket, RequestId, false, FString::Printf(TEXT("'%s' is not a spline mesh axis; use X, Y or Z. "
+        "Nothing was changed."), *ForwardAxis), nullptr, TEXT("INVALID_ARGUMENT"));
+    return true;
+}
+
+bool ParseSplinePointType(const FString& TypeStr, ESplinePointType::Type& OutType)
+{
+    const FString LowerStr = TypeStr.ToLower();
+    OutType = LowerStr == TEXT("linear") ? ESplinePointType::Linear
+        : LowerStr == TEXT("constant") ? ESplinePointType::Constant
+        : LowerStr == TEXT("curveclamped") ? ESplinePointType::CurveClamped
+        : LowerStr == TEXT("curvecustomtangent") ? ESplinePointType::CurveCustomTangent
+        : ESplinePointType::Curve;
+    return OutType != ESplinePointType::Curve || LowerStr == TEXT("curve");
+}
+
+bool RefuseSplinePointType(UEngineWireSubsystem* Self, const FString& RequestId, TSharedPtr<FMcpBridgeWebSocket> Socket,
+                           const FString& TypeStr)
+{
+    Self->SendAutomationResponse(Socket, RequestId, false, FString::Printf(TEXT("'%s' is not a spline point type; use Linear, "
+        "Curve, Constant, CurveClamped or CurveCustomTangent. Nothing was changed."), *TypeStr), nullptr, TEXT("INVALID_ARGUMENT"));
+    return true;
 }
 
 FString SplinePointTypeToString(ESplinePointType::Type Type)
@@ -171,6 +200,8 @@ void SetSplineConfigValue(AActor* Target, const FString& Key, const FString& Val
 {
     if (!Target) return;
 
+    // Before the old value goes, so undo restores it.
+    Target->Modify();
     const FString Prefix = MakeSplineConfigTagPrefix(Key);
     for (int32 Index = Target->Tags.Num() - 1; Index >= 0; --Index)
     {
@@ -179,8 +210,6 @@ void SetSplineConfigValue(AActor* Target, const FString& Key, const FString& Val
             Target->Tags.RemoveAt(Index);
         }
     }
-
-    Target->Modify();
     Target->Tags.Add(FName(*(Prefix + Value)));
     Target->MarkPackageDirty();
 }

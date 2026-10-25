@@ -253,8 +253,15 @@ UEdGraphNode *CreateBlueprintGraphNode(
     return CustomEvent;
   }
 
-  if (NodeTypeLower.Contains(TEXT("literal"))) {
-    return NewObject<UK2Node_Literal>(TargetGraph);
+  // An actor reference or actor-bound event is about one placed actor, bound when it is created, and this function
+  // never sees the payload that names it: the node came out "Unknown" / "None (None)" and broke the compile.
+  if (NodeTypeLower == TEXT("literal") || NodeTypeLower == TEXT("k2node_literal") ||
+      NodeTypeLower.Contains(TEXT("actorboundevent"))) {
+    OutErrorResult = McpHandlerUtils::CreateResultObject();
+    OutErrorMessage = TEXT("An actor reference or actor-bound event binds its actor when it is created: use create_node "
+                           "with nodeType K2Node_Literal or K2Node_ActorBoundEvent plus actorName (and eventName).");
+    OutErrorCode = TEXT("NODE_TYPE_NOT_SUPPORTED");
+    return nullptr;
   }
 
   // ForLoop / ForEachLoop / DoOnce / Gate and friends are Blueprint MACROS in

@@ -28,6 +28,15 @@ bool HandleRenderPostProcessColorAction(
     {
         return false;
     }
+    // set_tonemapper_type set r.TonemapperFilm, gone from the engine before 5.0, and answered applied.
+    const FString ToneMethod = GetJsonStringField(Payload, TEXT("method"), TEXT("Filmic"));
+    const bool bFilmic = ToneMethod.Equals(TEXT("Filmic"), ESearchCase::IgnoreCase);
+    if (SubAction == TEXT("set_tonemapper_type") && !bFilmic && !ToneMethod.Equals(TEXT("Linear"), ESearchCase::IgnoreCase))
+    {
+        Subsystem->SendAutomationError(RequestingSocket, RequestId, FString::Printf(TEXT("method '%s' is not a tonemapper: use "
+            "Filmic (the tone curve, the default) or Linear (no tone curve). Nothing was changed."), *ToneMethod), TEXT("INVALID_ARGUMENT"));
+        return true;
+    }
 
     APostProcessVolume* Volume =
         RequirePostProcessVolume(Subsystem, RequestId, Payload, RequestingSocket);
@@ -35,22 +44,16 @@ bool HandleRenderPostProcessColorAction(
     {
         return true;
     }
-    Volume->Modify();
+    // Every value goes to a copy first: the volume changes, in one undo step, only once all of them are taken.
+    FPostProcessSettings Staged = Volume->Settings;
     TArray<FString> Applied;
     TArray<FString> Unsupported;
     FString Error;
-    // Every color variant takes the volume's infiniteUnbound and blendWeight.
-    ApplyVolumeBlendFields(Volume, Payload, Applied);
+    const bool bBlend = SubAction == TEXT("configure_pp_blend");
 
-    if (SubAction == TEXT("configure_pp_blend"))
+    if (bBlend)
     {
-        // Only what was passed is written and reported: listing all three as applied
-        // on an empty call slipped past the NO_SETTING_SUPPLIED guard below.
-        if (Payload->HasTypedField<EJson::Boolean>(TEXT("enabled")))
-        {
-            Volume->bEnabled = Payload->GetBoolField(TEXT("enabled"));
-            Applied.Add(TEXT("bEnabled"));
-        }
+        // Only the volume's own fields (enabled, blendWeight, infiniteUnbound), which the commit below writes.
     }
     else if (SubAction == TEXT("set_pp_lut"))
     {
@@ -62,25 +65,29 @@ bool HandleRenderPostProcessColorAction(
                 RequestingSocket, RequestId, TEXT("Color grading LUT not found."), TEXT("ASSET_NOT_FOUND"));
             return true;
         }
-        Volume->Settings.bOverride_ColorGradingLUT = true;
-        Volume->Settings.ColorGradingLUT = Texture;
+        Staged.bOverride_ColorGradingLUT = true;
+        Staged.ColorGradingLUT = Texture;
         Applied.Add(TEXT("ColorGradingLUT"));
     }
     else if (SubAction == TEXT("set_tonemapper_type"))
     {
-        const FString Method = GetJsonStringField(Payload, TEXT("method"), TEXT("Filmic"));
-        SetConsoleVariable(
-            TEXT("r.TonemapperFilm"),
-            Method.Equals(TEXT("Filmic"), ESearchCase::IgnoreCase) ? TEXT("1") : TEXT("0"),
-            Applied,
-            Unsupported);
+        // The filmic tone curve is the engine's one tonemapper; Linear switches the curve off the way the engine
+        // documents it, ToneCurveAmount and ExpandGamut at 0.
+        for (const TCHAR* Field : {TEXT("ToneCurveAmount"), TEXT("ExpandGamut")})
+        {
+            if (!ApplyPostProcessField(Staged, Field, MakeShared<FJsonValueNumber>(bFilmic ? 1.0 : 0.0), Applied, Unsupported, Error))
+            {
+                Subsystem->SendAutomationError(RequestingSocket, RequestId, Error, TEXT("INVALID_SETTING"));
+                return true;
+            }
+        }
     }
     else if (SubAction == TEXT("set_bloom_intensity"))
     {
         // amount is the declared name; this read the undeclared intensity, so bloom stayed at 1.0.
         if (Payload->HasTypedField<EJson::Number>(TEXT("amount")) &&
             !ApplyPostProcessField(
-                Volume, TEXT("BloomIntensity"),
+                Staged, TEXT("BloomIntensity"),
                 MakeShared<FJsonValueNumber>(Payload->GetNumberField(TEXT("amount"))),
                 Applied, Unsupported, Error))
         {
@@ -95,20 +102,15 @@ bool HandleRenderPostProcessColorAction(
         // caller who passed them got "Post-process color settings applied." and
         // an unchanged volume. Read them as the lens variants read their number,
         // and still fold in `settings` for anything else on the struct.
-        ApplyPostProcessSettings(Volume, GetSettingsObject(Payload), Applied, Unsupported, Error);
-        if (Payload->HasField(TEXT("amount")))
+        // amount and threshold go on as sent, so a value that is no number is refused: it was taken as 1 and -1.
+        if (ApplyPostProcessSettings(Staged, GetSettingsObject(Payload), Applied, Unsupported, Error) &&
+            Payload->HasField(TEXT("amount")))
         {
-            ApplyPostProcessField(
-                Volume, TEXT("BloomIntensity"),
-                MakeShared<FJsonValueNumber>(GetJsonNumberField(Payload, TEXT("amount"), 1.0)),
-                Applied, Unsupported, Error);
+            ApplyPostProcessField(Staged, TEXT("BloomIntensity"), Payload->TryGetField(TEXT("amount")), Applied, Unsupported, Error);
         }
-        if (Payload->HasField(TEXT("threshold")))
+        if (Error.IsEmpty() && Payload->HasField(TEXT("threshold")))
         {
-            ApplyPostProcessField(
-                Volume, TEXT("BloomThreshold"),
-                MakeShared<FJsonValueNumber>(GetJsonNumberField(Payload, TEXT("threshold"), -1.0)),
-                Applied, Unsupported, Error);
+            ApplyPostProcessField(Staged, TEXT("BloomThreshold"), Payload->TryGetField(TEXT("threshold")), Applied, Unsupported, Error);
         }
         if (!Error.IsEmpty())
         {
@@ -121,7 +123,7 @@ bool HandleRenderPostProcessColorAction(
         // The declared threshold alone: a settings.BloomThreshold used to win over it.
         if (Payload->HasTypedField<EJson::Number>(TEXT("threshold")) &&
             !ApplyPostProcessField(
-                Volume, TEXT("BloomThreshold"), MakeShared<FJsonValueNumber>(Payload->GetNumberField(TEXT("threshold"))),
+                Staged, TEXT("BloomThreshold"), MakeShared<FJsonValueNumber>(Payload->GetNumberField(TEXT("threshold"))),
                 Applied, Unsupported, Error))
         {
             Subsystem->SendAutomationError(RequestingSocket, RequestId, Error, TEXT("INVALID_SETTING"));
@@ -129,7 +131,7 @@ bool HandleRenderPostProcessColorAction(
         }
     }
     else if (!ApplyPostProcessSettings(
-                 Volume, GetSettingsObject(Payload), Applied, Unsupported, Error))
+                 Staged, GetSettingsObject(Payload), Applied, Unsupported, Error))
     {
         Subsystem->SendAutomationError(RequestingSocket, RequestId, Error, TEXT("INVALID_SETTING"));
         return true;
@@ -138,7 +140,10 @@ bool HandleRenderPostProcessColorAction(
     // "Post-process color settings applied." over an empty Applied list is a
     // lie the caller cannot see past: the volume is untouched and the receipt
     // reads like a success. Refuse instead, and name the thing that was missing.
-    if (Applied.Num() == 0 && Unsupported.Num() == 0)
+    // blendWeight or infiniteUnbound alone answered success for any variant while its own value was never sent.
+    const bool bVolumeFields = bBlend && (Payload->HasTypedField<EJson::Boolean>(TEXT("enabled")) ||
+        Payload->HasTypedField<EJson::Number>(TEXT("blendWeight")) || Payload->HasTypedField<EJson::Boolean>(TEXT("infiniteUnbound")));
+    if (Applied.Num() == 0 && Unsupported.Num() == 0 && !bVolumeFields)
     {
         Subsystem->SendAutomationError(
             RequestingSocket, RequestId,
@@ -151,7 +156,7 @@ bool HandleRenderPostProcessColorAction(
         return true;
     }
 
-    Volume->MarkComponentsRenderStateDirty();
+    CommitPostProcessVolume(Volume, Staged, Payload, bBlend, Applied);
     TSharedPtr<FJsonObject> Result = MakeRenderResult(SubAction);
     AddStringArray(Result, TEXT("appliedSettings"), Applied);
     AddStringArray(Result, TEXT("unsupportedSettings"), Unsupported);

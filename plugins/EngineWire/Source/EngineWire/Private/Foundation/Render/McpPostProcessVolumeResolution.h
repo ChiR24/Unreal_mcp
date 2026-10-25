@@ -16,7 +16,9 @@ class UWorld;
 //
 // Resolution policy (records-unchanged branch of plan line 381):
 //   - actorName matching a PostProcessVolume -> that volume (Explicit); the
-//     post-process, exposure and screen records all declare it.
+//     post-process, exposure and screen records all declare it. A name that
+//     matches none is ACTOR_NOT_FOUND, listing the volumes, unless the level
+//     has no unbound volume and bAllowSpawn: then a new one under that name.
 //   - exactly one unbound APostProcessVolume -> that volume (ClassDefault).
 //   - more than one unbound -> AMBIGUOUS + candidate identities, never a silent
 //     pick.

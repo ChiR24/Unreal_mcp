@@ -42,33 +42,34 @@ bool UEngineWireSubsystem::HandleSourceControlCheckout(
   }
 
   if (!ISourceControlModule::Get().IsEnabled()) {
-    TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
-    Result->SetBoolField(TEXT("success"), false);
-    Result->SetStringField(TEXT("error"),
-                           TEXT("Source control is not enabled"));
     SendAutomationResponse(RequestingSocket, RequestId, false,
-                           TEXT("Source control disabled"), Result,
+                           TEXT("Source control is off: turn it on with sourceControlOp enable and a provider (Git, Perforce or Subversion)."), nullptr,
                            TEXT("SOURCE_CONTROL_DISABLED"));
     return true;
   }
 
   TArray<FString> PackageNames;
   TArray<FString> ValidPaths;
+  // A path that named no asset was dropped without a word, so a typo looked checked out.
+  TArray<TSharedPtr<FJsonValue>> Skipped;
   for (const FString &Path : AssetPaths) {
     const FString SafePath = SanitizeProjectRelativePath(Path);
     if (!SafePath.IsEmpty() && McpAssetExists(SafePath)) {
       ValidPaths.Add(SafePath);
       FString PackageName = FPackageName::ObjectPathToPackageName(SafePath);
       PackageNames.Add(PackageName);
+    } else {
+      Skipped.Add(MakeShared<FJsonValueString>(Path));
     }
   }
 
   if (PackageNames.Num() == 0) {
     TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
     Result->SetBoolField(TEXT("success"), false);
-    Result->SetStringField(TEXT("error"), TEXT("No valid assets found"));
+    Result->SetArrayField(TEXT("skipped"), Skipped);
     SendAutomationResponse(RequestingSocket, RequestId, false,
-                           TEXT("No valid assets"), Result,
+                           FString::Printf(TEXT("No asset in the project at %s; nothing was sent to source control."),
+                                           *FString::Join(AssetPaths, TEXT(", "))), Result,
                            TEXT("NO_VALID_ASSETS"));
     return true;
   }
@@ -84,6 +85,7 @@ bool UEngineWireSubsystem::HandleSourceControlCheckout(
   Result->SetBoolField(TEXT("success"), bSuccess);
   Result->SetNumberField(TEXT("checkedOut"), PackageNames.Num());
   Result->SetArrayField(TEXT("assets"), CheckedOutPaths);
+  Result->SetArrayField(TEXT("skipped"), Skipped);
 
   SendAutomationResponse(RequestingSocket, RequestId, bSuccess,
                          bSuccess ? TEXT("Assets checked out successfully")
@@ -128,12 +130,8 @@ bool UEngineWireSubsystem::HandleSourceControlSubmit(
   }
 
   if (!ISourceControlModule::Get().IsEnabled()) {
-    TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
-    Result->SetBoolField(TEXT("success"), false);
-    Result->SetStringField(TEXT("error"),
-                           TEXT("Source control is not enabled"));
     SendAutomationResponse(RequestingSocket, RequestId, false,
-                           TEXT("Source control disabled"), Result,
+                           TEXT("Source control is off: turn it on with sourceControlOp enable and a provider (Git, Perforce or Subversion)."), nullptr,
                            TEXT("SOURCE_CONTROL_DISABLED"));
     return true;
   }
@@ -142,20 +140,24 @@ bool UEngineWireSubsystem::HandleSourceControlSubmit(
       ISourceControlModule::Get().GetProvider();
 
   TArray<FString> PackageNames;
+  TArray<TSharedPtr<FJsonValue>> Skipped;
   for (const FString &Path : AssetPaths) {
     const FString SafePath = SanitizeProjectRelativePath(Path);
     if (!SafePath.IsEmpty() && McpAssetExists(SafePath)) {
       FString PackageName = FPackageName::ObjectPathToPackageName(SafePath);
       PackageNames.Add(PackageName);
+    } else {
+      Skipped.Add(MakeShared<FJsonValueString>(Path));
     }
   }
 
   if (PackageNames.Num() == 0) {
     TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
     Result->SetBoolField(TEXT("success"), false);
-    Result->SetStringField(TEXT("error"), TEXT("No valid assets found"));
+    Result->SetArrayField(TEXT("skipped"), Skipped);
     SendAutomationResponse(RequestingSocket, RequestId, false,
-                           TEXT("No valid assets"), Result,
+                           FString::Printf(TEXT("No asset in the project at %s; nothing was sent to source control."),
+                                           *FString::Join(AssetPaths, TEXT(", "))), Result,
                            TEXT("NO_VALID_ASSETS"));
     return true;
   }
@@ -183,7 +185,7 @@ bool UEngineWireSubsystem::HandleSourceControlSubmit(
   ResultObj->SetBoolField(TEXT("success"), bSuccess);
   ResultObj->SetNumberField(TEXT("submitted"),
                             bSuccess ? PackageNames.Num() : 0);
-  ResultObj->SetStringField(TEXT("description"), Description);
+  ResultObj->SetArrayField(TEXT("skipped"), Skipped);
 
   SendAutomationResponse(
       RequestingSocket, RequestId, bSuccess,
@@ -206,20 +208,20 @@ bool UEngineWireSubsystem::HandleSourceControlEnable(
   }
 
   ISourceControlModule& SourceControlModule = ISourceControlModule::Get();
+  const bool bWantsProvider = !Provider.IsEmpty() && !Provider.Equals(TEXT("None"), ESearchCase::IgnoreCase);
 
-  // Check if already enabled
-  if (SourceControlModule.IsEnabled()) {
+  // Asking for another provider while one was enabled answered "already enabled" and switched nothing.
+  if (SourceControlModule.IsEnabled() &&
+      (!bWantsProvider || SourceControlModule.GetProvider().GetName().ToString().Equals(Provider, ESearchCase::IgnoreCase))) {
     TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
     Result->SetBoolField(TEXT("success"), true);
     Result->SetStringField(TEXT("provider"), SourceControlModule.GetProvider().GetName().ToString());
-    Result->SetStringField(TEXT("message"), TEXT("Source control already enabled"));
     SendAutomationResponse(RequestingSocket, RequestId, true,
                            TEXT("Source control already enabled"), Result, FString());
     return true;
   }
 
-  // Try to set the provider by name
-  if (!Provider.IsEmpty() && !Provider.Equals(TEXT("None"), ESearchCase::IgnoreCase)) {
+  if (bWantsProvider) {
     SourceControlModule.SetProvider(FName(*Provider));
   }
 
@@ -232,9 +234,13 @@ bool UEngineWireSubsystem::HandleSourceControlEnable(
     SendAutomationResponse(RequestingSocket, RequestId, true,
                            TEXT("Source control enabled"), Result, FString());
   } else {
-    Result->SetStringField(TEXT("error"), TEXT("Failed to enable source control. Please configure provider in Editor preferences."));
+    // It pointed at the Editor preferences dialog, the one place an automation caller cannot reach.
+    Result->SetStringField(TEXT("error"), bWantsProvider
+        ? FString::Printf(TEXT("Provider '%s' is not available or could not connect: its plugin must be enabled, and Git needs "
+            "a repository at the project root (source_control_init makes one)."), *Provider)
+        : FString(TEXT("Source control is off: name a provider (provider Git, Perforce or Subversion) to turn it on.")));
     SendAutomationResponse(RequestingSocket, RequestId, false,
-                           TEXT("Source control enable failed"), Result,
+                           Result->GetStringField(TEXT("error")), Result,
                            TEXT("SOURCE_CONTROL_ENABLE_FAILED"));
   }
   return true;

@@ -190,7 +190,8 @@ export type AutomationRequestOptions = {
     timeoutMs?: number;
     mcpRequestId?: string;
     correlationId?: string;
-    consent?: { capability: string; acknowledge: 'explicit' | 'elevated' };
+    // A grant from consent asked through the client carries a nonce, which the plugin's consent ledger burns once.
+    consent?: { capability: string; acknowledge: 'explicit' | 'elevated'; nonce?: string };
     expectedRevisions?: ExpectedRevisions;
 };
 

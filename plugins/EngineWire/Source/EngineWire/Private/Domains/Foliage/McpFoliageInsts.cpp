@@ -1,5 +1,6 @@
 #include "Core/Compatibility/McpVersionCompatibility.h"
 #include "Domains/Foliage/McpFoliagePrivate.h"
+#include "Foundation/McpScopedEditorTransaction.h"
 
 bool UEngineWireSubsystem::HandleAddFoliageInstances(
     const FString &RequestId, const FString &Action,
@@ -78,6 +79,10 @@ bool UEngineWireSubsystem::HandleAddFoliageInstances(
   if (!IFA) {
     return true;
   }
+  // One undo step: the actor is recorded before any instance lands. Modify() after the adds recorded the state
+  // with the new instances already in it, so undo kept them.
+  const FMcpScopedEditorTransaction Transaction(FText::FromString(TEXT("Add Foliage Instances")),
+                                                EMcpMutationDurability::EditorStateOnly, {IFA});
   for (const FFoliageTransformData &TransformData : ParsedTransforms) {
     FFoliageInstance Instance;
     Instance.Location = TransformData.Location;
@@ -86,9 +91,9 @@ bool UEngineWireSubsystem::HandleAddFoliageInstances(
     McpFoliageHandlers::AddFoliageInstance(IFA, FoliageType, Instance);
   }
   const int32 Added = ParsedTransforms.Num();
-  IFA->Modify();
 
   TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
+  Transaction.DescribeInto(Resp);
   Resp->SetBoolField(TEXT("success"), true);
   Resp->SetNumberField(TEXT("instancesPlaced"), Added);
   Resp->SetStringField(TEXT("foliageActorPath"), IFA->GetPathName());

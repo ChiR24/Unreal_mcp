@@ -2,6 +2,7 @@
 
 // The add_behaviour plans: which recipe each behaviour writes, its placeholder values, and the checks a call must pass
 // before anything is authored (McpBPAddBehaviour.cpp runs the plan).
+#include "Domains/BlueprintGraph/Behaviour/McpBPBehaviour.h"
 #include "Foundation/BridgeHelpers/Blueprints/McpBPPaths.h"
 #include "Foundation/BridgeHelpers/Reflection/McpClassResolve.h"
 #include "Foundation/BridgeHelpers/Responses/McpJsonFields.h"
@@ -21,7 +22,8 @@ void SetString(FBehaviourPlan &Plan, const TCHAR *Name, const FString &Value) {
   Plan.Values.Add(Name, MakeShared<FJsonValueString>(Value));
 }
 
-// soundPath as the object path a variable default takes, or None when it is not given.
+} // namespace
+
 bool ReadSound(const TSharedPtr<FJsonObject> &Payload, FBehaviourPlan &Plan, FString &OutError) {
   const FString SoundPath = GetJsonStringField(Payload, TEXT("soundPath")).TrimStartAndEnd();
   USoundBase *Sound = SoundPath.IsEmpty() ? nullptr : Cast<USoundBase>(McpLoadAsset(SoundPath));
@@ -32,6 +34,8 @@ bool ReadSound(const TSharedPtr<FJsonObject> &Payload, FBehaviourPlan &Plan, FSt
   SetString(Plan, TEXT("Sound"), Sound ? Sound->GetPathName() : FString(TEXT("None")));
   return true;
 }
+
+namespace {
 
 // A counting pickup: the collector class, its Int or Float variable, and the pin the Cast node gives that class.
 bool PlanCountingPickup(const TSharedPtr<FJsonObject> &Payload, FBehaviourPlan &Plan, FString &OutError) {
@@ -61,25 +65,14 @@ bool PlanCountingPickup(const TSharedPtr<FJsonObject> &Payload, FBehaviourPlan &
 // A pawn that shoots the projectileClass actor on a key press (recipe Character/Shoot).
 bool PlanShoot(const TSharedPtr<FJsonObject> &Payload, const UBlueprint *Blueprint, FBehaviourPlan &Plan, FString &OutError) {
   const UClass *Parent = Blueprint->GeneratedClass ? Blueprint->GeneratedClass.Get() : Blueprint->ParentClass.Get();
-  const FString ClassText = GetJsonStringField(Payload, TEXT("projectileClass")).TrimStartAndEnd();
-  UClass *Fired = ResolveClassByName(ClassText);
-  const double Speed = GetJsonNumberField(Payload, TEXT("projectileSpeed"), 3000.0);
-  const double Rate = GetJsonNumberField(Payload, TEXT("fireRate"), 300.0);
   OutError = !Parent || !Parent->IsChildOf(APawn::StaticClass()) ? FString(TEXT("Shooting needs a Pawn or Character Blueprint"))
-             : !Fired || !Fired->IsChildOf(AActor::StaticClass())
-                 ? FString::Printf(TEXT("projectileClass %s is not an actor class or Blueprint (make one with manage_combat "
-                                        "create_combat_asset kind projectile_blueprint)"), *ClassText)
-             : Speed <= 0.0 || Rate <= 0.0 ? FString(TEXT("projectileSpeed and fireRate must be above 0")) : FString();
-  if (!OutError.IsEmpty()) {
+                                                                 : FString();
+  if (!OutError.IsEmpty() || !ReadProjectile(Payload, Blueprint, 300.0, Plan, OutError)) {
     return false;
   }
   Plan.Domain = TEXT("Character");
   Plan.Recipe = TEXT("Shoot");
   SetString(Plan, TEXT("Key"), GetJsonStringField(Payload, TEXT("key"), TEXT("LeftMouseButton")));
-  SetString(Plan, TEXT("ProjectileType"), TEXT("Class:") + Fired->GetPathName());
-  SetString(Plan, TEXT("ProjectileClass"), Fired->GetPathName());
-  SetNumber(Plan, TEXT("ProjectileSpeed"), Speed);
-  SetNumber(Plan, TEXT("FireRate"), Rate);
   SetString(Plan, TEXT("InputAction"), GetJsonStringField(Payload, TEXT("inputActionPath")));
   SetString(Plan, TEXT("MappingContext"), GetJsonStringField(Payload, TEXT("mappingContextPath")));
   return true;
@@ -152,7 +145,8 @@ bool PlanSpawner(const TSharedPtr<FJsonObject> &Payload, const UBlueprint *Bluep
     return false;
   }
   Plan.Recipe = TEXT("Spawner");
-  SetString(Plan, TEXT("SpawnType"), TEXT("Class:") + Spawned->GetPathName());
+  SetString(Plan, TEXT("SpawnType"),
+            McpBlueprintBehaviour::ClassVariableType(Blueprint, TEXT("SpawnClass"), Spawned, AActor::StaticClass()));
   SetString(Plan, TEXT("SpawnClass"), Spawned->GetPathName());
   SetNumber(Plan, TEXT("Interval"), Interval);
   SetNumber(Plan, TEXT("MaxAlive"), FMath::FloorToDouble(MaxAlive));
@@ -185,15 +179,34 @@ bool PlanBehaviour(const FString &Action, const TSharedPtr<FJsonObject> &Payload
                    FBehaviourPlan &Plan, FString &OutError) {
   if (Action == TEXT("add_health")) {
     const double MaxHealth = GetJsonNumberField(Payload, TEXT("maxHealth"), 100.0);
+    const double Invulnerable = GetJsonNumberField(Payload, TEXT("invulnerableTime"), 0.0);
     Plan.Recipe = TEXT("Health");
     SetNumber(Plan, TEXT("MaxHealth"), MaxHealth);
+    SetNumber(Plan, TEXT("Invulnerable"), Invulnerable);
     Plan.Values.Add(TEXT("DestroyOnDeath"), MakeShared<FJsonValueBoolean>(GetJsonBoolField(Payload, TEXT("destroyOnDeath"))));
-    OutError = MaxHealth > 0.0 ? FString() : FString(TEXT("maxHealth must be above 0"));
+    OutError = MaxHealth > 0.0 && Invulnerable >= 0.0 ? FString()
+                                                      : FString(TEXT("maxHealth must be above 0 and invulnerableTime 0 or more"));
   } else if (Action == TEXT("add_damage_on_touch")) {
     const double Damage = GetJsonNumberField(Payload, TEXT("damage"), 10.0);
+    const double Knockback = GetJsonNumberField(Payload, TEXT("knockback"), 0.0);
     Plan.Recipe = TEXT("DamageOnTouch");
     SetNumber(Plan, TEXT("Damage"), Damage);
-    OutError = Damage != 0.0 ? FString() : FString(TEXT("damage must not be 0 (a negative amount heals)"));
+    SetNumber(Plan, TEXT("Knockback"), Knockback);
+    OutError = Damage == 0.0     ? FString(TEXT("damage must not be 0 (a negative amount heals)"))
+               : Knockback < 0.0 ? FString(TEXT("knockback must be 0 or more")) : FString();
+  } else if (Action == TEXT("add_countdown")) {
+    const double Seconds = FMath::FloorToDouble(GetJsonNumberField(Payload, TEXT("seconds"), 60.0));
+    Plan.Recipe = TEXT("Countdown");
+    SetNumber(Plan, TEXT("Seconds"), Seconds);
+    Plan.Values.Add(TEXT("Kill"), MakeShared<FJsonValueBoolean>(GetJsonBoolField(Payload, TEXT("killAtZero"), true)));
+    OutError = Seconds >= 1.0 ? FString() : FString(TEXT("seconds must be 1 or more"));
+  } else if (Action == TEXT("add_falling_platform")) {
+    const double Delay = GetJsonNumberField(Payload, TEXT("fallDelay"), 0.5);
+    const double Respawn = GetJsonNumberField(Payload, TEXT("respawnTime"), 3.0);
+    Plan.Recipe = TEXT("FallingPlatform");
+    SetNumber(Plan, TEXT("Delay"), Delay);
+    SetNumber(Plan, TEXT("Respawn"), Respawn);
+    OutError = Delay >= 0.0 && Respawn >= 0.0 ? FString() : FString(TEXT("fallDelay and respawnTime must be 0 or more"));
   } else if (Action == TEXT("add_pickup")) {
     const double Heal = GetJsonNumberField(Payload, TEXT("heal"), 0.0);
     if (!ReadSound(Payload, Plan, OutError)) {
@@ -212,6 +225,14 @@ bool PlanBehaviour(const FString &Action, const TSharedPtr<FJsonObject> &Payload
     return PlanChase(Payload, Blueprint, Plan, OutError);
   } else if (Action == TEXT("add_patrol")) {
     return PlanPatrol(Payload, Blueprint, Plan, OutError);
+  } else if (Action == TEXT("add_moving_platform")) {
+    return PlanMovingPlatform(Payload, Plan, OutError);
+  } else if (Action == TEXT("add_explosive")) {
+    return PlanExplosive(Payload, Blueprint, Plan, OutError);
+  } else if (Action == TEXT("add_stomp")) {
+    return PlanStomp(Payload, Blueprint, Plan, OutError);
+  } else if (Action == TEXT("add_turret")) {
+    return PlanTurret(Payload, Blueprint, Plan, OutError);
   } else if (Action == TEXT("add_launch_pad")) {
     return PlanLaunchPad(Payload, Plan, OutError);
   } else if (Action == TEXT("add_teleporter")) {

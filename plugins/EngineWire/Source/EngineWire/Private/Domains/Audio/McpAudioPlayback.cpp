@@ -61,7 +61,7 @@ bool HandlePlaybackActions(
                           TEXT("Editor not available"), TEXT("NO_EDITOR"));
       return true;
     }
-    UWorld *World = GEditor->GetEditorWorldContext().World();
+    UWorld *World = McpAudibleWorld();
     if (!World) {
       Self->SendAutomationError(RequestingSocket, RequestId,
                           TEXT("No world context available"), TEXT("NO_WORLD"));
@@ -116,7 +116,7 @@ bool HandlePlaybackActions(
                           TEXT("EDITOR_NOT_AVAILABLE"));
       return true;
     }
-    UWorld *World = GEditor->GetEditorWorldContext().World();
+    UWorld *World = McpAudibleWorld();
     if (!World) {
       Self->SendAutomationError(RequestingSocket, RequestId, TEXT("No World Context"),
                           TEXT("NO_WORLD"));
@@ -125,10 +125,17 @@ bool HandlePlaybackActions(
 
     // A component, not a fire-and-forget PlaySound2D, so stop_sound can stop it:
     // a looping preview (the stage music) could not be stopped at all.
-    if (UAudioComponent *Preview = UGameplayStatics::SpawnSound2D(
-            World, Sound, (float)Volume, (float)Pitch, (float)StartTime)) {
-      McpPreviewSounds().Add(Preview);
+    UAudioComponent *Preview = UGameplayStatics::SpawnSound2D(
+        World, Sound, (float)Volume, (float)Pitch, (float)StartTime);
+    // It answered "Sound played 2D" when the engine started nothing.
+    if (!Preview) {
+      Self->SendAutomationError(RequestingSocket, RequestId,
+                          TEXT("The engine played nothing: sound is off in this editor (started with -nosound, or with no "
+                               "audio device)."),
+                          TEXT("NOT_PLAYED"));
+      return true;
     }
+    McpPreviewSounds().Add(Preview);
 
     TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
     Resp->SetBoolField(TEXT("success"), true);
@@ -210,7 +217,7 @@ bool HandlePlaybackActions(
                           TEXT("Editor not available"), TEXT("NO_EDITOR"));
       return true;
     }
-    UWorld *World = GEditor->GetEditorWorldContext().World();
+    UWorld *World = McpAudibleWorld();
     if (!World) {
       Self->SendAutomationError(RequestingSocket, RequestId, TEXT("No World Context"),
                           TEXT("NO_WORLD"));

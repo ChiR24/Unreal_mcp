@@ -19,6 +19,7 @@
 #include "Engine/Blueprint.h"
 #include "Kismet2/BlueprintEditorUtils.h"
 #include "Kismet2/KismetEditorUtilities.h"
+#include "ScopedTransaction.h"
 
 bool UEngineWireSubsystem::HandleSetObjectProperty(
     const FString &RequestId, const FString &Action,
@@ -170,6 +171,11 @@ bool UEngineWireSubsystem::HandleSetObjectProperty(
   const FString BeforeText = bCompare ? McpPropertyTarget::ValueText(Property, TargetContainer) : FString();
   // Modify() marks the package dirty unless told not to: markDirty false left a level unsaved all the same.
   const bool bMarkDirty = GetJsonBoolField(Payload, TEXT("markDirty"), true);
+  // Modify used to run with no transaction open, so undo never took a write back. One step holds the write and what it
+  // sets off (copies following a default, the owners' refresh) and closes before a Blueprint compile below; an object
+  // undo cannot record (a running game's) leaves no step, which the reply's undo block then says.
+  TOptional<FScopedTransaction> Transaction;
+  Transaction.Emplace(FText::FromString(TEXT("Set Property")));
   RootObject->Modify(bMarkDirty);
 
   FString ConversionError;
@@ -205,6 +211,7 @@ bool UEngineWireSubsystem::HandleSetObjectProperty(
   RootObject->PostEditChangeProperty(Changed);
   McpRefreshComponentAfterEdit(Cast<UActorComponent>(RootObject));
   McpPropertyTarget::NotifyOwners(RootObject);
+  Transaction.Reset();
   // A value the object's own change handling put back was never applied (a StaticMeshActor's mesh restored a raw
   // CollisionEnabled from its mesh's default collision), and the reply read the old value back while it said success.
   // One it only adjusted (a clamp, a warm-up time snapped to whole ticks) is applied, and the message names it.
@@ -261,6 +268,7 @@ bool UEngineWireSubsystem::HandleSetObjectProperty(
   }
   McpPropertyActorAccess::RefreshK2NodeTitleCacheIfNeeded(RootObject);
   const bool bMaterialRebuilt = McpPropertyActorAccess::RefreshMaterialHostAfterEdit(RootObject);
+  McpPropertyActorAccess::RefreshNiagaraHostAfterEdit(RootObject);
 
   FString SaveSkippedReason;
   const bool bSaved = McpPropertyTarget::SaveAfterWrite(RootObject, ResolvedBlueprint, bMarkDirty, SaveSkippedReason);

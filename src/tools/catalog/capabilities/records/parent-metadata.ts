@@ -73,7 +73,7 @@ const PARENT_METADATA: Readonly<
   },
   manage_geometry: {
     description:
-      'Create procedural meshes using Geometry Script: booleans, deformers, UVs, collision, and LOD generation.',
+      'Create procedural meshes using Geometry Script: booleans, deformers, UVs, collision, and LOD generation. Each edit of a placed dynamic mesh is one undo step.',
     category: 'world',
   },
   manage_pcg: {

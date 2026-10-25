@@ -37,8 +37,10 @@ bool UEngineWireSubsystem::HandleBulkDeleteAssets(
     return true;
   }
   if (AssetPaths.Num() == 0) {
+    // deleted is a list on every path: a bare 0 here read as a different shape from the reply of a delete.
     TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
-    Result->SetNumberField(TEXT("deleted"), 0);
+    Result->SetArrayField(TEXT("deleted"), TArray<TSharedPtr<FJsonValue>>());
+    Result->SetNumberField(TEXT("requested"), 0);
     SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("No assets found"), Result, FString());
     return true;
   }
@@ -56,6 +58,41 @@ bool UEngineWireSubsystem::HandleBulkDeleteAssets(
     }
   }
 
+  // The engine deletes nothing at all when any asset of the batch is still referenced (FAssetDeleteModel::
+  // CanDelete), and the reply said only BULK_DELETE_FAILED: one used mesh kept a whole folder. An asset
+  // something outside this delete references is kept, named with what uses it, and the rest go.
+  TArray<FString> DeleteSet;
+  for (const FString &Path : ValidPaths) {
+    DeleteSet.Add(FPackageName::ObjectPathToPackageName(Path));
+  }
+  // Until nothing changes: an asset used only by one this keeps is outside-referenced in turn.
+  TArray<TSharedPtr<FJsonValue>> Referenced;
+  for (bool bKeptOne = true; bKeptOne;) {
+    bKeptOne = false;
+    for (int32 Index = ValidPaths.Num() - 1; Index >= 0; --Index) {
+      const TArray<FString> Users = McpOutsideReferencers(DeleteSet[Index], DeleteSet);
+      if (Users.Num() == 0) {
+        continue;
+      }
+      TSharedPtr<FJsonObject> Row = McpHandlerUtils::CreateResultObject();
+      Row->SetStringField(TEXT("path"), ValidPaths[Index]);
+      Row->SetArrayField(TEXT("referencedBy"), McpHandlerUtils::ToJsonStringArray(Users));
+      Referenced.Add(MakeShared<FJsonValueObject>(Row));
+      ObjectsToDelete.RemoveAt(Index);
+      ValidPaths.RemoveAt(Index);
+      DeleteSet.RemoveAt(Index);
+      bKeptOne = true;
+    }
+  }
+  if (ObjectsToDelete.Num() == 0 && Referenced.Num() > 0) {
+    TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
+    Result->SetArrayField(TEXT("deleted"), TArray<TSharedPtr<FJsonValue>>());
+    Result->SetArrayField(TEXT("referenced"), Referenced);
+    SendAutomationResponse(RequestingSocket, RequestId, false,
+                           TEXT("Nothing was deleted: every asset is still used by others (referenced names them). Delete or retarget those first, or use manage_asset delete with force."),
+                           Result, TEXT("ASSETS_REFERENCED"));
+    return true;
+  }
   if (ObjectsToDelete.Num() == 0) {
     TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
     Result->SetBoolField(TEXT("success"), false);
@@ -106,15 +143,23 @@ bool UEngineWireSubsystem::HandleBulkDeleteAssets(
   TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
   Result->SetBoolField(TEXT("success"), DeletedCount > 0);
   Result->SetArrayField(TEXT("deleted"), DeletedArray);
-  Result->SetNumberField(TEXT("requested"), ObjectsToDelete.Num());
+  Result->SetNumberField(TEXT("requested"), ObjectsToDelete.Num() + Referenced.Num());
   if (RemainingArray.Num() > 0) {
     Result->SetArrayField(TEXT("remaining"), RemainingArray);
   }
+  if (Referenced.Num() > 0) {
+    Result->SetArrayField(TEXT("referenced"), Referenced);
+  }
 
-  SendAutomationResponse(
-      RequestingSocket, RequestId, DeletedCount > 0,
-      FString::Printf(TEXT("Deleted %d of %d assets"), DeletedCount,
-                      ObjectsToDelete.Num()),
-      Result, DeletedCount > 0 ? FString() : TEXT("BULK_DELETE_FAILED"));
+  FString Message = FString::Printf(TEXT("Deleted %d of %d assets"), DeletedCount, ObjectsToDelete.Num() + Referenced.Num());
+  if (Referenced.Num() > 0) {
+    Message += FString::Printf(TEXT("; %d kept because others use them (referenced)"), Referenced.Num());
+  }
+  if (DeletedCount == 0) {
+    // Nothing went although nothing on disk references them: something in memory still holds them.
+    Message = TEXT("The engine deleted nothing: something loaded (an open level or asset editor) still holds them.");
+  }
+  SendAutomationResponse(RequestingSocket, RequestId, DeletedCount > 0, Message, Result,
+                         DeletedCount > 0 ? FString() : TEXT("BULK_DELETE_FAILED"));
   return true;
 }

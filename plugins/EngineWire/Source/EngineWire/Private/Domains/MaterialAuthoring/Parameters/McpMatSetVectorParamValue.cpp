@@ -60,7 +60,8 @@ bool HandleSetVectorParameterValue(UEngineWireSubsystem* Bridge, const FString& 
     };
     Color = FLinearColor(Num(0, 1.0), Num(1, 1.0), Num(2, 1.0),
                          ValueArr->Num() > 3 ? Num(3, 1.0) : 1.0);
-  } else if (Payload->HasField(TEXT("value"))) {
+  } else {
+    // Missing as well as unreadable: a missing value used to write white.
     Bridge->SendAutomationError(
         Socket, RequestId,
         TEXT("'value' must be an object {r,g,b,a} / {x,y,z,w} or an array [r,g,b(,a)]."),

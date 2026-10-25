@@ -1,6 +1,7 @@
 #include "Domains/LevelStructure/McpLevelStructureActions.h"
 #include "Foundation/HandlerUtils/McpHandlerUtilsTransforms.h"
 #include "Domains/LevelStructure/McpLevelStructureEditorWorld.h"
+#include "Domains/Volume/McpVolumeGeometry.h"
 
 #include "AssetRegistry/AssetRegistryModule.h"
 #include "Engine/World.h"
@@ -64,11 +65,25 @@ bool HandleConfigureHlodLayer(
         FullPath = TEXT("/Game/") + FullPath;
     }
 
-    UPackage* AssetPackage = CreatePackage(*FullPath);
+    // An unknown layerType was written as nothing and answered success with layerTypeApplied false: refused before
+    // the asset exists.
+    static const TMap<FString, FString> LayerTypeAliases = {
+        {TEXT("SimplifiedMesh"), TEXT("MeshSimplify")}, {TEXT("ApproximatedMesh"), TEXT("MeshApproximate")}};
+    const FString* LayerTypeAlias = LayerTypeAliases.Find(LayerType);
+    const FString ResolvedLayerType = LayerTypeAlias ? *LayerTypeAlias : LayerType;
+    if (StaticEnum<EHLODLayerType>()->GetValueByNameString(ResolvedLayerType) == INDEX_NONE)
+    {
+        Subsystem->SendAutomationResponse(Socket, RequestId, false, FString::Printf(TEXT("layerType '%s' is not an HLOD layer type: use "
+            "Instancing, MeshMerge, MeshSimplify or MeshApproximate. Nothing was created."), *LayerType), nullptr, TEXT("INVALID_ARGUMENT"));
+        return true;
+    }
+
+    FString CreateError, CreateCode;
+    UPackage* AssetPackage = McpCreatePackageForNewAsset(FullPath, CreateError, CreateCode);
     if (!AssetPackage)
     {
         Subsystem->SendAutomationResponse(Socket, RequestId, false,
-            FString::Printf(TEXT("Failed to create package for HLOD layer at: %s"), *FullPath), nullptr, TEXT("PACKAGE_CREATION_FAILED"));
+            CreateError, nullptr, CreateCode);
         return true;
     }
 
@@ -82,16 +97,13 @@ bool HandleConfigureHlodLayer(
 
     // LayerType, bIsSpatiallyLoaded, CellSize and LoadingRange are reflected properties on every 5.x UHLODLayer
     // (5.7 moved only their public setters), so each is written through reflection and reported as applied or not.
-    static const TMap<FString, FString> LayerTypeAliases = {
-        {TEXT("SimplifiedMesh"), TEXT("MeshSimplify")}, {TEXT("ApproximatedMesh"), TEXT("MeshApproximate")}};
-    const FString* LayerTypeAlias = LayerTypeAliases.Find(LayerType);
     auto ApplyLayerProperty = [NewHLODLayer](const TCHAR* Name, const TSharedPtr<FJsonValue>& Value)
     {
         FProperty* Property = NewHLODLayer->GetClass()->FindPropertyByName(Name);
         FString ApplyError;
         return Property && ApplyJsonValueToProperty(NewHLODLayer, Property, Value, ApplyError);
     };
-    const bool bLayerTypeApplied = ApplyLayerProperty(TEXT("LayerType"), MakeShared<FJsonValueString>(LayerTypeAlias ? *LayerTypeAlias : LayerType));
+    const bool bLayerTypeApplied = ApplyLayerProperty(TEXT("LayerType"), MakeShared<FJsonValueString>(ResolvedLayerType));
     const bool bSpatiallyLoadedApplied = ApplyLayerProperty(TEXT("bIsSpatiallyLoaded"), MakeShared<FJsonValueBoolean>(bIsSpatiallyLoaded));
     const bool bCellSizeApplied = ApplyLayerProperty(TEXT("CellSize"), MakeShared<FJsonValueNumber>(CellSize));
     const bool bLoadingDistanceApplied = ApplyLayerProperty(TEXT("LoadingRange"), MakeShared<FJsonValueNumber>(LoadingDistance));
@@ -181,10 +193,9 @@ bool HandleCreateMinimapVolume(
     // Set actor label to the requested name (may differ from internal name if collision occurred)
     MiniMapVolume->SetActorLabel(*VolumeName);
 
-    // Scale the volume to match the extent (AVolume uses a brush, scale affects it)
-    // The default brush is a 200x200x200 cube, so we scale it to match the desired extent
-    FVector DesiredScale = VolumeExtent / 100.0; // Brush is 200 units, so divide by half
-    MiniMapVolume->SetActorScale3D(DesiredScale);
+    // A volume from SpawnActor has no brush, so scaling it left bounds of zero and the minimap builder, which captures
+    // the volume's bounds, drew nothing. Build the box brush the editor gives a placed volume.
+    VolumeHelpers::CreateBoxBrushForVolume(MiniMapVolume, VolumeExtent);
 
     TSharedPtr<FJsonObject> ResponseJson = McpHandlerUtils::CreateResultObject();
     McpHandlerUtils::AddVerification(ResponseJson, MiniMapVolume);

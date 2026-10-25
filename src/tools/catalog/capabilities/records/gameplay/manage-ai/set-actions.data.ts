@@ -14,6 +14,26 @@ import { NAV } from './properties-navigation.js';
 import { AI } from './properties.js';
 
 const A = AI;
+
+// What the controller actions answer: McpBlueprintBehaviour::Author's report (McpAIControllerFocus.cpp).
+export const CONTROLLER_LOGIC_OUT = {
+  controllerPath: { type: 'string', description: 'The AIController Blueprint edited.' },
+  compiled: { type: 'boolean', description: 'Whether the Blueprint compiled with the logic.' },
+  saved: { type: 'boolean', description: 'Whether the Blueprint was saved.' },
+  rolledBack: { type: 'boolean', description: 'A step failed and the Blueprint was put back as it was.' },
+  previousRemoved: { type: 'number', description: 'Nodes an earlier run of the same action had made, taken out first.' },
+  variables: { type: 'array', items: { type: 'object', additionalProperties: true, 'x-unreal-reflection-boundary': true }, description: 'Variables the logic uses: {name, status added, redefaulted or kept}.' },
+  hooks: { type: 'array', items: { type: 'object', additionalProperties: true, 'x-unreal-reflection-boundary': true }, description: 'The events the logic hangs on (On Possess, Tick), each made when the Blueprint lacked it.' },
+} as const;
+const TREE_OUT = {
+  ...CONTROLLER_LOGIC_OUT,
+  behaviorTreePath: { type: 'string', description: 'The Behavior Tree, by object path.' },
+  variable: { type: 'string', description: 'The BehaviorTree variable that holds it: one the controller declared, else DefaultBehaviorTree.' },
+} as const;
+export const REMOVED_OUT = {
+  ...CONTROLLER_LOGIC_OUT,
+  removed: { type: 'boolean', description: 'Whether there was logic to take out; false changes nothing.' },
+} as const;
 const N = NAV;
 
 const OUT_STR = (d: string) => ({ type: 'string', description: d });
@@ -39,40 +59,41 @@ export const AI_SET_RECORDS: readonly CapabilityRecordSource[] = [
     example: { assetPath: '/Game/AI/BT_Enemy', nodeId: 'Node_1' }, result: 'Node removed',
   }),
   aiRecord({
-    action: 'run_behavior_tree', summary: 'Author the run-on-start Behavior Tree of an AIController asset.',
-    use: 'A controller asset should start a Behavior Tree when it possesses a pawn.',
+    action: 'run_behavior_tree', summary: 'Make an AIController Blueprint run a Behavior Tree whenever it possesses a pawn: its On Possess event calls Run Behavior Tree (which also starts the Blackboard) with its BehaviorTree variable, set to behaviorTreePath as assign_behavior_tree does. Engine nodes in the Blueprint, compiled and saved, so it works in a packaged game, for every pawn whose AI Controller Class is this one and whose Auto Possess AI covers how it enters the level. Re-running replaces it; stop_behavior_tree takes it out. NOT_AI_CONTROLLER for another Blueprint, NOT_FOUND for a missing tree, and refused during Play.',
+    use: 'A controller should start a Behavior Tree whenever it possesses a pawn.',
     avoid: 'Use control_editor to start a PIE session; this edits the asset only.',
     props: { controllerPath: A.controllerPath, behaviorTreePath: A.behaviorTreePath },
     required: ['controllerPath', 'behaviorTreePath'], plugins: BT,
-    out: { assetPath: A.assetPath },
+    out: TREE_OUT,
     example: { controllerPath: '/Game/AI/AIC_Enemy', behaviorTreePath: '/Game/AI/BT_Enemy' },
     result: 'Behavior Tree run configured',
   }),
   aiRecord({
-    action: 'set_blackboard_value', summary: 'Set a Blackboard key value on a Blackboard asset.',
-    use: 'A Blackboard key needs a different authored default.',
-    avoid: 'Use add_blackboard_key to create the key.',
+    action: 'set_blackboard_value', summary: 'Set the default of a Blackboard key, the value it holds when an AI starts with the asset, and save it: UE 5.4+ for Bool, Int, Float, Vector, Rotator, Name and String keys, 5.5+ for Enum, Object and Class keys. value takes the kind the key holds: true or false, a whole number, a number, {x, y, z}, {pitch, yaw, roll}, text, an enumerator by name or value, an asset path for an Object key (placed actors are not assets; None clears it) or a class path for a Class key. A value of the wrong kind or outside the base class of the key is refused, as is a key with no default on this engine (NOT_SUPPORTED) or one a parent Blackboard holds (KEY_IN_PARENT); value in the reply is what the key now holds.',
+    use: 'A Blackboard key needs a different authored default, such as a speed or a starting state.',
+    avoid: 'Use add_blackboard_key to create the key; a value an AI writes while it runs comes from its Behavior Tree or Blueprint.',
     props: {
       blackboardPath: A.blackboardPath,
-      keyName: A.keyName, value: A.value,
+      keyName: A.keyName,
+      value: { description: 'The default, in the kind the key holds: a boolean, a number, {x, y, z}, {pitch, yaw, roll}, text, an enumerator, or an asset or class path.' },
     },
-    required: ['blackboardPath', 'keyName'], plugins: BT,
-    out: { assetPath: A.assetPath },
-    example: { blackboardPath: '/Game/AI/BB_Enemy', keyName: 'TargetActor', value: 'true' },
+    required: ['blackboardPath', 'keyName', 'value'], plugins: BT,
+    out: { assetPath: A.assetPath, value: { type: 'string', description: 'The default the key now holds, as the engine writes it.' } },
+    example: { blackboardPath: '/Game/AI/BB_Enemy', keyName: 'PatrolSpeed', value: 300 },
     result: 'Blackboard value set',
   }),
   aiRecord({
-    action: 'set_focus', summary: 'Author the focus target on an AIController asset.',
-    use: 'A controller asset should focus a named actor.',
-    avoid: 'Use clear_focus to remove the target.',
-    props: { controllerPath: A.controllerPath, focusActorName: A.focusActorName },
-    required: ['controllerPath'],
-    out: { assetPath: A.assetPath },
-    example: { controllerPath: '/Game/AI/AIC_Enemy', focusActorName: 'PlayerStart' },
-    result: 'Focus set',
+    action: 'set_focus', summary: 'Make an AIController Blueprint keep its focus on a target: the player 0 pawn (focusPlayer) or the first actor carrying focusTag. Each frame it has no focus actor, its Tick finds the target and calls Set Focus, so a target that spawns after the AI, or respawns, is picked up again; a pawn that uses its controller rotation turns to face it. Engine nodes in the Blueprint, compiled and saved; re-running replaces the target and clear_focus takes it out. Exactly one of focusPlayer and focusTag (INVALID_ARGUMENT); NOT_AI_CONTROLLER for another Blueprint.',
+    use: 'An AI should face and track the player, or an actor marked with a tag.',
+    avoid: 'Use clear_focus to take the focus logic out.',
+    props: { controllerPath: A.controllerPath, focusPlayer: A.focusPlayer, focusTag: A.focusTag },
+    required: ['controllerPath'], requiredOneOf: ['focusPlayer', 'focusTag'],
+    out: { ...CONTROLLER_LOGIC_OUT, focusTarget: { type: 'string', description: 'What it focuses: player, or tag and the tag.' } },
+    example: { controllerPath: '/Game/AI/AIC_Enemy', focusPlayer: true },
+    result: 'Focus written',
   }),
   aiRecord({
-    action: 'set_key_instance_synced', summary: 'Set Blackboard key instance synchronization.',
+    action: 'set_key_instance_synced', summary: 'Mark a Blackboard key instance-synced (isInstanceSynced, default true) or not, and save the asset. A synced key holds one value shared by every Blackboard component using the asset, so a value one AI sets reaches all of them. A key already set that way changes nothing (changed false), and a key a parent Blackboard holds is refused (KEY_IN_PARENT), naming the parent.',
     use: 'A Blackboard key must share its value across instances.',
     avoid: 'Use add_blackboard_key to create the key.',
     props: {
@@ -108,11 +129,11 @@ export const AI_SET_RECORDS: readonly CapabilityRecordSource[] = [
     result: 'Nav area class set',
   }),
   aiRecord({
-    action: 'set_nav_link_type', summary: 'Set an authored navigation link type.',
+    action: 'set_nav_link_type', summary: 'Switch a placed NavLinkProxy (actorName) between a simple link, its point link, and a smart link, its smart link alone (linkType simple or smart), carrying the endpoints and direction over. A proxy already of that type changes nothing (changed false). One undo step; the level is left unsaved.',
     use: 'A link must switch between the simple and smart form.',
     avoid: 'Use configure_smart_link_behavior to tune a smart link.',
     props: { actorName: A.actorName, linkType: N.linkType },
-    required: ['actorName'],
+    required: ['actorName', 'linkType'],
     out: { actorName: A.actorName },
     example: { actorName: 'NavLinkProxy_0', linkType: 'smart' }, result: 'Nav link type set',
   }),
@@ -130,16 +151,16 @@ export const AI_SET_RECORDS: readonly CapabilityRecordSource[] = [
     result: 'Node properties set',
   }),
   aiRecord({
-    action: 'set_perception_team', summary: 'Set perception team data on a Blueprint asset.',
-    use: 'An AI must belong to a specific perception team.',
+    action: 'set_perception_team', summary: 'Store a team id (teamId 0 to 254, 255 meaning none) in a GenericTeamId integer variable on a Blueprint (added when missing) and save. It does not change the team the engine sees: an AI controller takes a team only in C++ (SetGenericTeamId is not exposed to Blueprints), so appliedToGenericTeamAgent is false, and an actor with no team counts as neutral to every AI. Read the variable from the project logic.',
+    use: 'A team id should be stored on the AI for its own logic to read.',
     avoid: 'Use configure_sight_config for sense tuning.',
     props: { blueprintPath: A.blueprintPath, teamId: A.teamId },
-    required: ['blueprintPath'],
+    required: ['blueprintPath', 'teamId'],
     out: { blueprintPath: A.blueprintPath },
     example: { blueprintPath: '/Game/AI/BP_Enemy', teamId: 2 }, result: 'Perception team set',
   }),
   aiRecord({
-    action: 'setup_perception', summary: 'Set up AI perception on a Blueprint asset.',
+    action: 'setup_perception', summary: 'Add or update the AIPerception component of an AI controller or pawn Blueprint and save: enableSight, enableHearing and enableDamage set up or update each sense (sightRadius, loseSightRadius, peripheralVisionAngle, hearingRange), and dominantSense (Sight, Hearing, Damage, Touch or None) picks the sense whose stimulus location wins. A sense already set up keeps what this call does not send; a call that enables nothing and names no dominant sense is refused. createdNew says whether the component was added.',
     use: 'A Blueprint needs perception added and several senses tuned at once.',
     avoid: 'Use the individual configure_*_config actions for one sense.',
     props: {
@@ -155,17 +176,17 @@ export const AI_SET_RECORDS: readonly CapabilityRecordSource[] = [
     result: 'Perception set up',
   }),
   aiRecord({
-    action: 'stop_behavior_tree', summary: 'Clear the run-on-start Behavior Tree of an AIController asset.',
-    use: 'A controller asset should no longer start a Behavior Tree.',
+    action: 'stop_behavior_tree', summary: 'Take out the Run Behavior Tree logic run_behavior_tree wrote into an AIController Blueprint, so possessing a pawn no longer starts a tree (its BehaviorTree variable and On Possess event stay), compiled and saved; removed false, and nothing changed, when there was none.',
+    use: 'A controller should no longer start a Behavior Tree when it possesses a pawn.',
     avoid: 'Use control_editor to stop a PIE session; this edits the asset only.',
     props: { controllerPath: A.controllerPath },
     required: ['controllerPath'], plugins: BT,
-    out: { assetPath: A.assetPath },
+    out: REMOVED_OUT,
       example: { controllerPath: '/Game/AI/AIC_Enemy' }, result: 'Behavior Tree run cleared',
     }),
     aiRecord({
       action: 'set_ai_perception',
-      summary: 'Configure the sight and hearing senses of an AIController perception component.',
+      summary: 'Add or update the AIPerception component of an AI controller Blueprint (controllerPath) and save, as setup_perception does: enableSight, enableHearing and enableDamage set up or update each sense (sightRadius, loseSightRadius, peripheralVisionAngle, hearingRange) and dominantSense picks the leading one. A sense already set up keeps what is not sent; a call that enables nothing and names no dominant sense is refused.',
       use: 'One call should add the perception component and set its senses together.',
       avoid: 'Only one sense needs tuning; configure_sight_config and configure_hearing_config edit them separately.',
       props: {
@@ -186,7 +207,7 @@ export const AI_SET_RECORDS: readonly CapabilityRecordSource[] = [
     }),
     aiRecord({
       action: 'set_ai_movement',
-      summary: 'Set the movement limits on the CharacterMovement component of a Blueprint.',
+      summary: 'Set the movement limits on the CharacterMovement component of a Character Blueprint (an AI pawn) and save it: maxWalkSpeed, maxAcceleration, brakingDeceleration (walking), rotationRate (yaw, degrees per second), maxFlySpeed, jumpZVelocity and avoidanceWeight, plus useAccelerationForPaths (path following speeds up and slows down like a player instead of moving at full speed at once), orientRotationToMovement (turn to face where it goes) and useRVOAvoidance (steer around other agents). Only what is sent changes, 0 included; a negative number or a call that sets nothing is refused, as is a Blueprint with no CharacterMovement component (COMPONENT_NOT_FOUND). propertiesSet names what changed and currentValues reads the main values back.',
       use: 'Walk speed, acceleration, braking or rotation rate must change on a pawn asset.',
       avoid: 'The pawn has no CharacterMovement component; the call reports the missing component instead.',
       props: {

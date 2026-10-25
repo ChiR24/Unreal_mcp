@@ -1,6 +1,6 @@
 #include "Domains/Blueprint/McpBPActionContext.h"
 #include "Domains/BlueprintGraph/McpBPGraphCompatibility.h"
-#include "Foundation/BridgeHelpers/Reflection/McpClassResolve.h"
+#include "Domains/BlueprintGraph/McpBPGraphPrivate.h"
 #include "Foundation/HandlerUtils/McpHandlerUtils.h"
 
 namespace McpBlueprintHandlers {
@@ -14,8 +14,9 @@ namespace McpBlueprintHandlers {
 //
 // memberClass now does what a caller reading another object's property
 // expects: the node becomes an EXTERNAL member of that class, which gives it
-// a target pin to wire a cast result into. Without it, only the Blueprint's
-// own variables resolve.
+// a target pin to wire a cast result into (a class this Blueprint is itself
+// keeps a self member, as create_node does). Without it, only the Blueprint's
+// own and inherited variables resolve.
 UEdGraphNode *MakeVariableNodeForMcp(UBlueprint *BP, UEdGraph *TargetGraph,
                                      const FString &NodeTypeLower,
                                      const FString &VariableName,
@@ -36,27 +37,35 @@ UEdGraphNode *MakeVariableNodeForMcp(UBlueprint *BP, UEdGraph *TargetGraph,
     return nullptr;
   }
 
+  // The same lookup, self-or-target choice and access check as create_node, so
+  // the two edits give one variable the same node.
   const FName VarFName(*VariableName);
-  UClass *ExternalOwner = nullptr;
-  if (!FEngineWire_FindProperty(BP, VariableName)) {
-    UClass *Named =
-        MemberClass.IsEmpty() ? nullptr : ResolveClassByName(MemberClass);
-    if (Named && Named->FindPropertyByName(VarFName)) {
-      ExternalOwner = Named;
-    } else {
-      OutErrorResult = McpHandlerUtils::CreateResultObject();
-      OutErrorResult->SetStringField(
-          TEXT("error"),
-          FString::Printf(
-              TEXT("'%s' is not a variable of '%s', so the node would have no "
-                   "pins. Add it with add_variable, or name the class that "
-                   "owns it in memberClass and wire a cast result into the "
-                   "node's target pin."),
-              *VariableName, *BP->GetName()));
-      OutErrorMessage = TEXT("Unresolved variable name");
-      OutErrorCode = TEXT("VARIABLE_NOT_FOUND");
-      return nullptr;
-    }
+  UClass *Owner = nullptr;
+  bool bOwnVariable = false;
+  FProperty *Property = McpBlueprintGraphHandlers::ResolveVariableMember(
+      BP, VarFName, MemberClass, Owner, bOwnVariable);
+  if (!Property && !bOwnVariable) {
+    OutErrorResult = McpHandlerUtils::CreateResultObject();
+    OutErrorResult->SetStringField(
+        TEXT("error"),
+        FString::Printf(
+            TEXT("'%s' is not a variable of '%s', so the node would have no "
+                 "pins. Add it with add_variable, or name the class that "
+                 "owns it in memberClass and wire a cast result into the "
+                 "node's target pin."),
+            *VariableName, *BP->GetName()));
+    OutErrorMessage = TEXT("Unresolved variable name");
+    OutErrorCode = TEXT("VARIABLE_NOT_FOUND");
+    return nullptr;
+  }
+  const FString Access = McpBlueprintGraphHandlers::DescribeVariableAccess(
+      BP, Property, bIsSetter);
+  if (!Access.IsEmpty()) {
+    OutErrorResult = McpHandlerUtils::CreateResultObject();
+    OutErrorResult->SetStringField(TEXT("error"), Access);
+    OutErrorMessage = Access;
+    OutErrorCode = TEXT("VARIABLE_NOT_ACCESSIBLE");
+    return nullptr;
   }
 
   UK2Node_Variable *VarNode =
@@ -66,11 +75,8 @@ UEdGraphNode *MakeVariableNodeForMcp(UBlueprint *BP, UEdGraph *TargetGraph,
           : static_cast<UK2Node_Variable *>(
                 NewObject<UK2Node_VariableGet>(TargetGraph));
   if (VarNode) {
-    if (ExternalOwner) {
-      VarNode->VariableReference.SetExternalMember(VarFName, ExternalOwner);
-    } else {
-      VarNode->VariableReference.SetSelfMember(VarFName);
-    }
+    McpBlueprintGraphHandlers::SetVariableReference(
+        *VarNode, BP, Property, Owner, bOwnVariable, VarFName);
   }
   return VarNode;
 }

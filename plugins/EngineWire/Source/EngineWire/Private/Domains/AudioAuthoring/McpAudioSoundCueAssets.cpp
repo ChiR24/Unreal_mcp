@@ -37,10 +37,11 @@ TSharedPtr<FJsonObject> HandleSoundCueAssetActions(const FString& SubAction, con
 		return McpHandlerUtils::BuildErrorResponse(TEXT("WAVE_NOT_FOUND"), FString::Printf(TEXT("Could not load SoundWave: %s"), *WavePath));
 	}
 
-	UPackage* Package = CreatePackage(*PackagePath);
+	FString CreateError, CreateCode;
+	UPackage* Package = McpCreatePackageForNewAsset(PackagePath, CreateError, CreateCode);
 	if (!Package)
 	{
-		return McpHandlerUtils::BuildErrorResponse(TEXT("PACKAGE_ERROR"), TEXT("Failed to create package"));
+		return McpHandlerUtils::BuildErrorResponse(CreateCode, CreateError);
 	}
 
 	USoundCueFactoryNew* Factory = NewObject<USoundCueFactoryNew>();

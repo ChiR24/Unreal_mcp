@@ -1,11 +1,19 @@
 #include "Core/Compatibility/McpVersionCompatibility.h"
 
 #include "Domains/Performance/McpPerfPrivate.h"
+#include "Foundation/Render/McpConsoleVariableWrite.h"
+#include "Foundation/Render/McpViewportStats.h"
 
 #include "Foundation/HandlerUtils/McpHandlerUtils.h"
 
 #include "Containers/Ticker.h"
 #include "Engine/Engine.h"
+#include "RHI.h"
+#if __has_include("RenderTimer.h")
+#include "RenderTimer.h"
+#else
+#include "RenderCore.h"
+#endif
 #include "HAL/FileManager.h"
 #include "HAL/IConsoleManager.h"
 #include "Misc/DateTime.h"
@@ -165,91 +173,85 @@ bool HandleProfilingAction(const FPerformanceActionContext& Context)
     }
     if (Context.Lower == TEXT("run_benchmark"))
     {
-        double Duration = 60.0;
+        // It answered "completed" with no measurement at all, opened the GPU Visualizer (profilegpu) and wrote a stats
+        // file each run. It samples every frame now and reports the times; start_profiling writes the stats file.
+        double Duration = 10.0;
         Context.Payload->TryGetNumberField(TEXT("duration"), Duration);
-        const double BenchmarkDuration = FMath::Max(0.0, Duration);
-
+        const double BenchmarkDuration = FMath::Clamp(Duration, 0.5, 600.0);
         FString BenchmarkType = TEXT("all");
         Context.Payload->TryGetStringField(TEXT("type"), BenchmarkType);
-
+        const bool bCpu = BenchmarkType.Equals(TEXT("cpu"), ESearchCase::IgnoreCase) || BenchmarkType.Equals(TEXT("all"), ESearchCase::IgnoreCase);
+        const bool bGpu = BenchmarkType.Equals(TEXT("gpu"), ESearchCase::IgnoreCase) || BenchmarkType.Equals(TEXT("all"), ESearchCase::IgnoreCase);
+        if (!bCpu && !bGpu)
+        {
+            Context.Bridge.SendAutomationError(Context.RequestingSocket, Context.RequestId,
+                FString::Printf(TEXT("type '%s' is not a benchmark type; use cpu, gpu or all."), *BenchmarkType), TEXT("INVALID_ARGUMENT"));
+            return true;
+        }
         if (!RequireEditor(Context))
         {
             return true;
         }
-
-        UWorld* World = GEditor->GetEditorWorldContext().World();
-        if (!GEngine || !World)
-        {
-            Context.Bridge.SendAutomationError(
-                Context.RequestingSocket, Context.RequestId,
-                TEXT("Editor world not available"), TEXT("NO_WORLD"));
-            return true;
-        }
-
         const ERequestOrigin ResponseOrigin = Context.ResponseOrigin;
-        GEngine->Exec(World, TEXT("stat startfile"));
-
-        if (BenchmarkType.Equals(TEXT("gpu"), ESearchCase::IgnoreCase) ||
-            BenchmarkType.Equals(TEXT("all"), ESearchCase::IgnoreCase))
-        {
-            GEngine->Exec(World, TEXT("profilegpu"));
-        }
-
         Context.Bridge.SendProgressUpdate(
             Context.RequestId, 0.0f,
             FString::Printf(TEXT("Benchmark running for %.0fs"), BenchmarkDuration),
             true, ResponseOrigin);
 
+        struct FSamples { double Elapsed = 0.0; int32 Frames = 0; double FrameMs = 0.0; double WorstMs = 0.0; double BestMs = TNumericLimits<double>::Max();
+                          double GameMs = 0.0; double RenderMs = 0.0; double GpuMs = 0.0; };
+        const TSharedRef<FSamples> Samples = MakeShared<FSamples>();
         TWeakObjectPtr<UEngineWireSubsystem> WeakThis(&Context.Bridge);
         const FString RequestId = Context.RequestId;
         TSharedPtr<FMcpBridgeWebSocket> RequestingSocket = Context.RequestingSocket;
-        FTSTicker::GetCoreTicker().AddTicker(
-            FTickerDelegate::CreateLambda(
-                [WeakThis, RequestingSocket, RequestId, BenchmarkType,
-                 BenchmarkDuration, ResponseOrigin](float)
+        FTSTicker::GetCoreTicker().AddTicker(FTickerDelegate::CreateLambda(
+            [WeakThis, RequestingSocket, RequestId, BenchmarkDuration, ResponseOrigin, Samples, bCpu, bGpu](float DeltaSeconds)
+            {
+                UEngineWireSubsystem* Subsystem = WeakThis.Get();
+                if (!Subsystem)
                 {
-                    UEngineWireSubsystem* Subsystem = WeakThis.Get();
-                    if (!Subsystem)
-                    {
-                        return false;
-                    }
-
-                    if (!GEditor || !GEngine)
-                    {
-                        Subsystem->SendAutomationResponse(
-                            RequestingSocket, RequestId, false,
-                            TEXT("Editor not available while completing benchmark"),
-                            nullptr, TEXT("NO_EDITOR"), ResponseOrigin);
-                        return false;
-                    }
-
-                    UWorld* StopWorld = GEditor->GetEditorWorldContext().World();
-                    if (!StopWorld)
-                    {
-                        Subsystem->SendAutomationResponse(
-                            RequestingSocket, RequestId, false,
-                            TEXT("Editor world not available while completing benchmark"),
-                            nullptr, TEXT("NO_WORLD"), ResponseOrigin);
-                        return false;
-                    }
-
-                    GEngine->Exec(StopWorld, TEXT("stat stopfile"));
-                    GEngine->Exec(StopWorld, TEXT("stat none"));
-
-                    TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
-                    Resp->SetNumberField(TEXT("duration"), BenchmarkDuration);
-                    Resp->SetStringField(TEXT("type"), BenchmarkType);
-                    Resp->SetStringField(TEXT("status"), TEXT("completed"));
-
-                    Subsystem->SendAutomationResponse(
-                        RequestingSocket, RequestId, true,
-                        FString::Printf(
-                            TEXT("Benchmark completed (type: %s, duration: %.0fs)"),
-                            *BenchmarkType, BenchmarkDuration),
-                        Resp, FString(), ResponseOrigin);
                     return false;
-                }),
-            static_cast<float>(BenchmarkDuration));
+                }
+                // The first tick closes the frame the request arrived in; it is not counted.
+                if (Samples->Elapsed > 0.0)
+                {
+                    const double Ms = DeltaSeconds * 1000.0;
+                    ++Samples->Frames;
+                    Samples->FrameMs += Ms;
+                    Samples->WorstMs = FMath::Max(Samples->WorstMs, Ms);
+                    Samples->BestMs = FMath::Min(Samples->BestMs, Ms);
+                    Samples->GameMs += FPlatformTime::ToMilliseconds(GGameThreadTime);
+                    Samples->RenderMs += FPlatformTime::ToMilliseconds(GRenderThreadTime);
+                    Samples->GpuMs += FPlatformTime::ToMilliseconds(RHIGetGPUFrameCycles());
+                }
+                Samples->Elapsed += FMath::Max(DeltaSeconds, 1e-4f);
+                if (Samples->Elapsed < BenchmarkDuration)
+                {
+                    return true;
+                }
+                const double Frames = FMath::Max(1, Samples->Frames);
+                TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
+                Resp->SetNumberField(TEXT("duration"), Samples->Elapsed);
+                Resp->SetNumberField(TEXT("frames"), Samples->Frames);
+                Resp->SetNumberField(TEXT("averageFps"), Samples->FrameMs > 0.0 ? 1000.0 * Samples->Frames / Samples->FrameMs : 0.0);
+                if (bCpu)
+                {
+                    Resp->SetNumberField(TEXT("averageFrameMs"), Samples->FrameMs / Frames);
+                    Resp->SetNumberField(TEXT("worstFrameMs"), Samples->WorstMs);
+                    Resp->SetNumberField(TEXT("bestFrameMs"), Samples->Frames > 0 ? Samples->BestMs : 0.0);
+                    Resp->SetNumberField(TEXT("gameThreadMs"), Samples->GameMs / Frames);
+                    Resp->SetNumberField(TEXT("renderThreadMs"), Samples->RenderMs / Frames);
+                }
+                if (bGpu)
+                {
+                    Resp->SetNumberField(TEXT("gpuMs"), Samples->GpuMs / Frames);
+                }
+                Resp->SetStringField(TEXT("status"), TEXT("completed"));
+                Subsystem->SendAutomationResponse(RequestingSocket, RequestId, true,
+                    FString::Printf(TEXT("Benchmark completed: %d frames over %.1fs"), Samples->Frames, Samples->Elapsed),
+                    Resp, FString(), ResponseOrigin);
+                return false;
+            }));
         return true;
     }
 
@@ -258,23 +260,29 @@ bool HandleProfilingAction(const FPerformanceActionContext& Context)
         bool bEnabled = true;
         Context.Payload->TryGetBoolField(TEXT("enabled"), bEnabled);
 
-        if (IConsoleVariable* CVar =
-                IConsoleManager::Get().FindConsoleVariable(TEXT("r.GPUStatsEnabled")))
+        if (!RequireEditor(Context))
         {
-            CVar->Set(bEnabled ? 1 : 0);
+            return true;
         }
-
-        if (bEnabled)
+        // Set as the console does and read back; a code-priority Set lost to any console set without a word. The variable
+        // gates GPU timing up to UE 5.7; UE 5.8 times the GPU always and has none.
+        IConsoleVariable* CVar = IConsoleManager::Get().FindConsoleVariable(TEXT("r.GPUStatsEnabled"));
+        const FString NotTaken = CVar ? McpSetConsoleVariable(*CVar, bEnabled ? TEXT("1") : TEXT("0")) : FString();
+        if (!NotTaken.IsEmpty())
         {
-            if (!RequireEditor(Context))
-            {
-                return true;
-            }
+            Context.Bridge.SendAutomationError(Context.RequestingSocket, Context.RequestId,
+                FString::Printf(TEXT("r.GPUStatsEnabled %s; GPU timing was not changed."), *NotTaken), TEXT("CVAR_UNAVAILABLE"));
+            return true;
+        }
+        // "stat gpu" toggles: run while the overlay was already up it hid it, and enabled false never hid it.
+        if (McpIsStatShown(TEXT("GPU")) != bEnabled)
+        {
             GEngine->Exec(GEditor->GetEditorWorldContext().World(), TEXT("stat gpu"));
         }
 
         TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
         Resp->SetBoolField(TEXT("enabled"), bEnabled);
+        Resp->SetBoolField(TEXT("overlayShown"), McpIsStatShown(TEXT("GPU")));
         Context.Bridge.SendAutomationResponse(
             Context.RequestingSocket, Context.RequestId, true,
             FString::Printf(TEXT("GPU timing %s"),

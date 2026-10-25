@@ -23,7 +23,7 @@ const ROTATION = { ...P.rotation, description: 'Actor rotation, applied on every
 export const WEATHER_RECORDS: readonly CapabilityRecordSource[] = [
   buildRecord({
     id: 'build_environment.create_weather_system', action: 'create_weather_system', family: F,
-    summary: 'Create a weather system actor with particle effects.',
+    summary: 'Find or spawn an Emitter actor (default label WeatherEmitter, the one configure_weather rain uses) and give it the Cascade particle system particleSystemPath. It is one emitter, not a weather simulation; a path that does not load is reported in particleSystemError while the call still succeeds.',
     whenToUse: WU, whenNotToUse: ['Individual particle systems should be used.'],
     inputProps: { name: P.name, location: P.location, rotation: ROTATION, particleSystemPath: P.particleSystemPath },
     required: [], effect: 'write', latency: 'interactive', resources: 'medium',

@@ -127,7 +127,12 @@ bool HandleAnimationSkinMeshToSkeletonAction(FActionContext &Context,
         Mesh, Skeleton, FGeometryScriptSmoothBoneWeightsOptions());
   }
 
-  UPackage *Package = CreatePackage(*OutputPath);
+  FString CreateError, CreateCode;
+  UPackage* Package = McpCreatePackageForNewAsset(OutputPath, CreateError, CreateCode);
+  if (!Package) {
+    Fail(CreateError, *CreateCode);
+    return false;
+  }
   const FString AssetName = FPackageName::GetShortName(OutputPath);
   USkeletalMesh *Skinned = NewObject<USkeletalMesh>(
       Package, USkeletalMesh::StaticClass(), FName(*AssetName),

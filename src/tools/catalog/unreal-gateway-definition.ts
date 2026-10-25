@@ -11,7 +11,9 @@ export const UNREAL_GATEWAY_DESCRIPTION =
   'Unreal Engine editor automation: one tool, four operations. Always in this order: '
   + "(1) search with query = 2-4 plain words naming the verb and the object, e.g. 'spawn actor', 'add variable blueprint', 'save level'; every result row carries a one-line summary, its effect and a ready-made nextCall. "
   + "(2) describe: send the chosen row's nextCall unchanged; the reply is the exact contract: parameters (name, type, required), inputSchema, a working example and, when required, consentGrant. "
+  + 'A first row that carries signature may skip describe: fill params from its signature and send its executeCall. '
   + "(3) execute: send describe's nextCall with params filled in, using ONLY the parameter names describe listed. "
+  + '(4) read warnings[] on a successful reply: they name what the call left wrong (an actor it placed now sunk, floating, intersecting or z-fighting; a default grid material; placeholder text; a pasted duplicate), so fix those before the next step. '
   + 'Rules: never guess capability ids, tool names, action names or parameter names; never put action or subAction inside params; a failed call returns suggestions and an executable nextCall, so send that nextCall instead of retrying blindly. '
   + 'To browse instead of search, call describe with no selector and follow the nextCall on each row one level down. '
   + 'configure only enables or disables internal tool groups; it never performs editor work.';
@@ -25,10 +27,11 @@ export const UNREAL_GATEWAY_INSTRUCTIONS = [
   '',
   'Workflow for every task:',
   '1. search: {"operation":"search","query":"spawn actor"}. Use 2-4 plain words (verb + object), not a sentence. Each result row has a one-line summary, an effect (read, write or destructive) and a nextCall. Pick the row whose summary matches the task. If none fits, retry with different words, narrow with a filter (domain, tool, effect), or browse by calling describe with no selector and following each row\'s nextCall one level down.',
-  '2. describe: send the chosen row\'s nextCall unchanged. The reply is the exact contract for that one action: parameters[] (name, type, required, description, and variants when only some variants of a family read it), inputSchema, examples[] with a working input, consentGrant when consent is required, and the nextCall for execute.',
+  '2. describe: send the chosen row\'s nextCall unchanged. The reply is the exact contract for that one action: parameters[] (name, type, required, description, and variants when only some variants of a family read it), inputSchema, examples[] with a working input, consentGrant when consent is required, and the nextCall for execute. When the first search row carries signature (required parameters with types, a family\'s selector values, one example) and executeCall, describe may be skipped: fill params from the signature and send executeCall.',
   '3. execute: send describe\'s nextCall with params filled in. Use only the parameter names describe listed, with the same casing. Never put action or subAction inside params. If describe returned consentGrant, pass it back as the top-level consent field.',
+  '4. read the reply: a successful execute can still carry warnings[] naming what the call left wrong. Every call that spawns, moves or re-meshes actors checks them on the spot: an actor now sunk into the floor, floating, intersecting another or sharing a face plane with one (z-fighting flicker), a mesh slot on the engine\'s default grid material, a text still reading "Text", a copy pasted onto its original. Engine warnings logged during the call land there too. Fix what they name before the next step; tag an actor mcp.placement.ok when its placement is deliberate. The undo block says whether control_editor undo reverts the call (undoable, transactionScope, steps) or why not (reasonCode).',
   '',
-  'Recovery: every failed call returns errorCode, message, suggestions[] and an executable nextCall. Send that nextCall (adjusting params) instead of guessing another tool, action or capability. UNKNOWN_TOOL, UNKNOWN_ACTION and UNKNOWN_CAPABILITY mean a name was invented: go back to search. INVALID_PARAMS names the offending field in pointer and lists allowedParameters. NOT_CONNECTED means the Unreal Editor is not running with the bridge; report it instead of retrying.',
+  'Recovery: every failed call returns errorCode, message, suggestions[] and an executable nextCall. Send that nextCall (adjusting params) instead of guessing another tool, action or capability. UNKNOWN_TOOL, UNKNOWN_ACTION and UNKNOWN_CAPABILITY mean a name was invented: go back to search. INVALID_PARAMS names the offending field in pointer and lists allowedParameters. REPEATED_FAILURE means the same call already failed three times in a row, so it was not run: change its params or read its contract with describe. NOT_CONNECTED means the Unreal Editor is not running with the bridge; report it instead of retrying.',
   '',
   'Conventions: asset paths start with /Game (e.g. /Game/Blueprints/BP_Door); class paths look like /Script/Engine.Actor; vectors are objects {x, y, z}. Read with inspect-style capabilities before mutating, and never run a destructive capability without the consentGrant describe returned. configure only enables or disables internal tool groups; it never performs editor work.'
 ].join('\n');
@@ -79,10 +82,11 @@ export const unrealGatewayToolDefinition: ToolDefinition = {
             additionalProperties: false,
             description: 'Live editor-state revisions to pin, as the ue://state/revisions resource reports them; the call is refused with STALE_STATE when one has moved.'
           },
-          timeoutMs: { type: 'integer', minimum: 1, maximum: 600000, description: 'Deadline for this call in milliseconds.' }
+          timeoutMs: { type: 'integer', minimum: 1, maximum: 600000, description: 'Deadline for this call in milliseconds.' },
+          pageCursor: { type: 'string', minLength: 1, maxLength: 64, description: 'Read the next page of a result too large for one reply: the cursor its page block named, sent with the same capability and params (page.nextCall is that call). Nothing runs again.' }
         },
         additionalProperties: false,
-        description: 'Execution controls for execute only; never put these inside params. Honored keys: idempotencyKey, expectedCatalogRevision, expectedRevisions, timeoutMs.'
+        description: 'Execution controls for execute only; never put these inside params. Honored keys: idempotencyKey, expectedCatalogRevision, expectedRevisions, timeoutMs, pageCursor.'
       },
       limit: { type: 'integer', minimum: 1, maximum: 25, description: 'Maximum rows per page: search results (default 12) or describe action rows (default 20). Defaults to 12.' },
       offset: { type: 'integer', minimum: 0, description: 'Zero-based offset into search results or into a described tool\x27s action list. Defaults to 0.' },

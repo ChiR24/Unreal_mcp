@@ -1,4 +1,5 @@
 #include "Domains/Character/McpCharacterHandlers.h"
+#include "Animation/Skeleton.h"
 
 namespace McpCharacterHandlers
 {
@@ -80,6 +81,28 @@ bool HandleConfigureMeshComponent(UEngineWireSubsystem* Self, const FString& Req
     bool bSkeletalMeshAssigned = false;
     bool bAnimBlueprintAssigned = false;
     ACharacter* CharCDO = Blueprint->GeneratedClass ? Cast<ACharacter>(Blueprint->GeneratedClass->GetDefaultObject()) : nullptr;
+    // An Animation Blueprint made for another skeleton animates nothing: its clips evaluate to the mesh's rest pose,
+    // without a warning. A template Animation Blueprint has no skeleton and fits any mesh.
+    const USkeletalMesh* TargetMesh = RequestedMesh;
+#if ENGINE_MAJOR_VERSION > 5 || ENGINE_MINOR_VERSION >= 1
+    if (!TargetMesh && CharCDO && CharCDO->GetMesh()) TargetMesh = CharCDO->GetMesh()->GetSkeletalMeshAsset();
+#else
+    if (!TargetMesh && CharCDO && CharCDO->GetMesh()) TargetMesh = CharCDO->GetMesh()->SkeletalMesh;
+#endif
+    const USkeleton* MeshSkeleton = TargetMesh ? TargetMesh->GetSkeleton() : nullptr;
+    const USkeleton* AnimSkeleton = RequestedAnimBP ? RequestedAnimBP->TargetSkeleton.Get() : nullptr;
+#if ENGINE_MAJOR_VERSION > 5 || ENGINE_MINOR_VERSION >= 2
+    const bool bAnimFits = !MeshSkeleton || !AnimSkeleton || MeshSkeleton->IsCompatibleForEditor(AnimSkeleton);
+#else
+    const bool bAnimFits = !MeshSkeleton || !AnimSkeleton || MeshSkeleton->IsCompatible(AnimSkeleton);
+#endif
+    if (!bAnimFits)
+    {
+        Self->SendAutomationError(Socket, RequestId, FString::Printf(TEXT("%s animates skeleton %s, which the mesh's skeleton %s "
+            "does not take, so the character would stand in its rest pose; nothing was changed."), *AnimBPPath,
+            *GetPathNameSafe(AnimSkeleton), *GetPathNameSafe(MeshSkeleton)), TEXT("SKELETON_MISMATCH"));
+        return true;
+    }
     if (CharCDO && CharCDO->GetMesh())
     {
         if (RequestedMesh)

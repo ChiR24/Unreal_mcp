@@ -42,11 +42,13 @@ const testCases = [
 
   // === AI: set_ai_perception ===
   { scenario: 'AI: set_ai_perception with both senses tuned', toolName: 'manage_ai', arguments: { action: 'set_ai_perception', controllerPath: CONTROLLER, enableSight: true, sightRadius: 2500, loseSightRadius: 3000, peripheralVisionAngle: 75, enableHearing: true, hearingRange: 1800, enableDamage: true, dominantSense: 'Touch' }, expected: 'success' },
-  { scenario: 'AI: set_ai_perception defaults every sense parameter', toolName: 'manage_ai', arguments: { action: 'set_ai_perception', controllerPath: CONTROLLER }, expected: 'success' },
+  { scenario: 'AI: set_ai_perception refuses a call that sets nothing', toolName: 'manage_ai', arguments: { action: 'set_ai_perception', controllerPath: CONTROLLER }, expected: 'error|INVALID_ARGUMENT' },
+  { scenario: 'AI: set_ai_perception keeps the sight it is not sent', toolName: 'manage_ai', arguments: { action: 'set_ai_perception', controllerPath: CONTROLLER, enableSight: true }, expected: 'success' },
 
   // === AI: set_ai_movement ===
   { scenario: 'AI: set_ai_movement sets every movement limit', toolName: 'manage_ai', arguments: { action: 'set_ai_movement', blueprintPath: ACTOR_BP, maxWalkSpeed: 450, maxAcceleration: 1800, brakingDeceleration: 1200, rotationRate: 360, useAccelerationForPaths: true, orientRotationToMovement: true, useRVOAvoidance: true, avoidanceWeight: 0.5, maxFlySpeed: 800, jumpZVelocity: 600 }, expected: 'success' },
-  { scenario: 'AI: set_ai_movement leaves every limit unchanged when omitted', toolName: 'manage_ai', arguments: { action: 'set_ai_movement', blueprintPath: ACTOR_BP }, expected: 'success' },
+  { scenario: 'AI: set_ai_movement refuses a call that sets nothing', toolName: 'manage_ai', arguments: { action: 'set_ai_movement', blueprintPath: ACTOR_BP }, expected: 'error|INVALID_ARGUMENT' },
+  { scenario: 'AI: set_ai_movement takes 0 for a pawn that stands still', toolName: 'manage_ai', arguments: { action: 'set_ai_movement', blueprintPath: ACTOR_BP, maxWalkSpeed: 0 }, expected: 'success' },
 
   // === AI: create_nav_modifier ===
   { scenario: 'AI: create_nav_modifier with an explicit area class', toolName: 'manage_ai', arguments: { action: 'create_nav_modifier', blueprintPath: ACTOR_BP, componentName: 'NavModifier', areaClass: '/Script/NavigationSystem.NavArea_Obstacle', failsafeToDefaultNavmesh: true }, expected: 'success' },

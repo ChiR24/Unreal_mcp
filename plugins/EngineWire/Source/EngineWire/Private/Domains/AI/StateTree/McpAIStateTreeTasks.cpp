@@ -5,7 +5,7 @@
 
 #if MCP_HAS_STATE_TREE && MCP_STATE_TREE_HEADERS_AVAILABLE
 #include "StateTreeNodeBase.h"
-#include MCP_INSTANCED_STRUCT_HEADER
+#include "Foundation/Reflection/McpInstancedStructView.h"
 #endif
 
 namespace McpAIHandlers
@@ -15,18 +15,20 @@ namespace
 {
 FString StateTreeTaskName(const FStateTreeEditorNode& Task)
 {
-    if (const FStateTreeNodeBase* Node = Task.Node.GetPtr<FStateTreeNodeBase>())
+    const FMcpInstancedStructView Node(Task.Node);
+    if (Node.IsValid() && Node.Type->IsChildOf(TBaseStructure<FStateTreeNodeBase>::Get()))
     {
-        if (!Node->Name.IsNone())
+        const FName Name = reinterpret_cast<const FStateTreeNodeBase*>(Node.Memory)->Name;
+        if (!Name.IsNone())
         {
-            return Node->Name.ToString();
+            return Name.ToString();
         }
     }
     if (Task.InstanceObject)
     {
         return Task.InstanceObject->GetClass()->GetName();
     }
-    return Task.Node.IsValid() ? Task.Node.GetScriptStruct()->GetName() : FString(TEXT("None"));
+    return Node.IsValid() ? Node.Type->GetName() : FString(TEXT("None"));
 }
 
 // Properties land on the task's Blueprint instance object, its instance-data
@@ -42,15 +44,14 @@ int32 ApplyStateTreeTaskProperties(FStateTreeEditorNode& Task, const TSharedPtr<
         Count += ApplyAIJsonProperties(InstanceObject->GetClass(), InstanceObject, Properties, Applied, Failed);
         ListAIPropertyNames(InstanceObject->GetClass(), Available);
     }
-    if (Task.Instance.IsValid())
+    for (const FInstancedStruct* Value : {&Task.Instance, &Task.Node})
     {
-        Count += ApplyAIJsonProperties(Task.Instance.GetScriptStruct(), Task.Instance.GetMutableMemory(), Properties, Applied, Failed);
-        ListAIPropertyNames(Task.Instance.GetScriptStruct(), Available);
-    }
-    if (Task.Node.IsValid())
-    {
-        Count += ApplyAIJsonProperties(Task.Node.GetScriptStruct(), Task.Node.GetMutableMemory(), Properties, Applied, Failed);
-        ListAIPropertyNames(Task.Node.GetScriptStruct(), Available);
+        const FMcpInstancedStructView View(*Value);
+        if (View.IsValid())
+        {
+            Count += ApplyAIJsonProperties(View.Type, View.Memory, Properties, Applied, Failed);
+            ListAIPropertyNames(View.Type, Available);
+        }
     }
     return Count;
 }
@@ -115,6 +116,7 @@ bool HandleConfigureStateTreeTask(UEngineWireSubsystem* Self, const FString& Req
         return true;
     }
 
+    FoundState->Modify();
     TArray<FString> Applied;
     TArray<FString> Failed;
     if (!SelectionBehavior.IsEmpty())
@@ -174,17 +176,18 @@ bool HandleConfigureStateTreeTask(UEngineWireSubsystem* Self, const FString& Req
         }
     }
 
+    const int32 TaskCount = FoundState->Tasks.Num();
+    McpCompileStateTreeInto(StateTree, Result);
     const bool bSaved = McpSafeAssetSave(StateTree);
 
     Result->SetStringField(TEXT("assetPath"), StateTree->GetPathName());
     Result->SetStringField(TEXT("packagePath"), StateTree->GetOutermost()->GetName()); // dogfood #66
     Result->SetStringField(TEXT("stateName"), StateName);
-    Result->SetNumberField(TEXT("taskCount"), FoundState->Tasks.Num());
+    Result->SetNumberField(TEXT("taskCount"), TaskCount);
     Result->SetArrayField(TEXT("applied"), ToJsonStringArray(Applied));
     Result->SetArrayField(TEXT("failed"), ToJsonStringArray(Failed));
     Result->SetBoolField(TEXT("saved"), bSaved);
     Result->SetStringField(TEXT("message"), FString::Printf(TEXT("State task updated: %d field(s) applied"), Applied.Num()));
-    Result->SetStringField(TEXT("note"), TEXT("Edits target the StateTree editor data; recompile the asset in the StateTree editor to bake them into the runtime tree."));
     Self->SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("State task updated"), Result);
 #else
     Self->SendAutomationError(RequestingSocket, RequestId,

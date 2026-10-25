@@ -2,7 +2,8 @@
 // read-only ue:// resources, the workflow prompts and argument completion.
 // Driven end-to-end through an in-memory client; no Unreal connection.
 
-import { EmptyResultSchema, ErrorCode } from '@modelcontextprotocol/sdk/types.js';
+import { ProtocolErrorCode } from '@modelcontextprotocol/client';
+import { z } from 'zod';
 import { afterEach, describe, expect, it } from 'vitest';
 import { isRecord } from '../../../src/utils/validation/type-guards.js';
 import { connectClient, structuredPayload } from '../support/in-memory-server.js';
@@ -35,7 +36,6 @@ describe('single gateway tool', () => {
         const ctx = await build();
         const response = await ctx.client.callTool(
             { name: 'manage_asset', arguments: { action: 'list_assets', assetPath: '/Game/Env' } },
-            undefined,
             { timeout: 15000 },
         );
         expect(response.isError).toBe(true);
@@ -46,7 +46,7 @@ describe('single gateway tool', () => {
 
     it('configure get_status reports both catalog revisions', async () => {
         const ctx = await build();
-        const response = await ctx.client.callTool({ name: 'unreal', arguments: { operation: 'configure', action: 'get_status' } }, undefined, { timeout: 15000 });
+        const response = await ctx.client.callTool({ name: 'unreal', arguments: { operation: 'configure', action: 'get_status' } }, { timeout: 15000 });
         const envelope = structuredPayload(response);
         const status = isRecord(envelope.result) ? envelope.result : envelope;
         expect(typeof status.catalogRevision).toBe('string');
@@ -108,7 +108,7 @@ describe('completions', () => {
 describe('unadvertised methods', () => {
     it.each(['tasks/list', 'resources/subscribe', 'logging/setLevel'])('%s is MethodNotFound', async (method) => {
         const ctx = await build();
-        const error = await ctx.client.request({ method, params: {} }, EmptyResultSchema, { timeout: 15000 }).then(() => undefined, (caught: unknown) => caught);
-        expect(isRecord(error) ? error.code : undefined).toBe(ErrorCode.MethodNotFound);
+        const error = await ctx.client.request({ method, params: {} }, z.looseObject({}), { timeout: 15000 }).then(() => undefined, (caught: unknown) => caught);
+        expect(isRecord(error) ? error.code : undefined).toBe(ProtocolErrorCode.MethodNotFound);
     });
 });

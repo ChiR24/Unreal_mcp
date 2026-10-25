@@ -1,4 +1,5 @@
 #include "Domains/ControlEditor/McpEditorSupport.h"
+#include "Domains/ControlEditor/Input/McpEditorGameCursor.h"
 
 #include "Framework/Application/SlateUser.h"
 #include "GenericPlatform/ICursor.h"
@@ -144,7 +145,8 @@ void SimulateKeyInputForMcp(const FString &Key, const EInputEvent InputEvent,
   }
 
   // A menu widget the game focused takes the key through Slate first, as a real key reaches it.
-  bRoutedToPIE = RouteKeyToFocusedPieWidgetForMcp(InputKey, InputEvent, bHandledBySlate) ||
+  FString FocusNote;
+  bRoutedToPIE = RouteKeyToFocusedPieWidgetForMcp(InputKey, InputEvent, bHandledBySlate, FocusNote) ||
                  RouteKeyToPIEForMcp(InputKey, InputEvent, bHandledByPIE);
   if (!bRoutedToPIE) {
     FSlateApplication &SlateApp = FSlateApplication::Get();
@@ -155,7 +157,7 @@ void SimulateKeyInputForMcp(const FString &Key, const EInputEvent InputEvent,
   }
   bSuccess = true;
   Message = bRoutedToPIE
-                ? FString::Printf(TEXT("%s: %s (delivered to PIE)"), Verb, *Key)
+                ? FString::Printf(TEXT("%s: %s (delivered to PIE)%s"), Verb, *Key, *FocusNote)
                 : FString::Printf(TEXT("%s: %s"), Verb, *Key);
 }
 }
@@ -213,8 +215,7 @@ void SimulateEditorInputForMcp(const FString &InputType, const FString &Key,
                            bRoutedToPIE, bHandledByPIE, bHandledBySlate,
                            Message);
   } else if (InputType == TEXT("mouse_click") || InputType == TEXT("click")) {
-    double X = 0;
-    double Y = 0;
+    double X = 0, Y = 0;
     Payload->TryGetNumberField(TEXT("x"), X);
     Payload->TryGetNumberField(TEXT("y"), Y);
 
@@ -315,10 +316,12 @@ void SimulateEditorInputForMcp(const FString &InputType, const FString &Key,
                              "whatever is drawn at those coordinates."),
                         X, Y, *CaptorName);
   } else if (InputType == TEXT("mouse_move") || InputType == TEXT("move")) {
-    double X = 0;
-    double Y = 0;
+    double X = 0, Y = 0;
     Payload->TryGetNumberField(TEXT("x"), X);
     Payload->TryGetNumberField(TEXT("y"), Y);
+    if (McpSimulateGameMouseMove(X, Y, bSuccess, bRoutedToPIE, bHandledByPIE, Message)) {
+      return; // a running game takes x and y as pixels of its own viewport
+    }
 
     // SetCursorPos drives the REAL system cursor: it yanked the pointer out of
     // whatever the person was doing on another window, and the editor grabbing

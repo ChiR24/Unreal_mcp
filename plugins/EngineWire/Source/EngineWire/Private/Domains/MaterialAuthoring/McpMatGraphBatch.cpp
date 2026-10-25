@@ -18,103 +18,6 @@ namespace
 constexpr int32 MaxMaterialBatchSteps = 200;
 constexpr int32 AutoRows = 5;
 
-// Additive edits only: deleting and disconnecting stay single calls behind
-// their own consent, and creating an asset is not a graph edit.
-bool IsBatchableMaterialEdit(const FString& Edit)
-{
-  static const TSet<FString> Others = {
-      TEXT("connect_nodes"), TEXT("connect_material_pins"), TEXT("use_material_function"),
-      TEXT("set_node_position"), TEXT("update_custom_expression"), TEXT("set_blend_mode"),
-      TEXT("set_shading_model"), TEXT("set_material_domain"), TEXT("set_two_sided")};
-  return Edit.StartsWith(TEXT("add_")) || Others.Contains(Edit);
-}
-
-bool CreatesNode(const FString& Edit)
-{
-  return Edit.StartsWith(TEXT("add_")) || Edit == TEXT("use_material_function");
-}
-
-bool HasPosition(const TSharedPtr<FJsonObject>& Step)
-{
-  return Step->HasField(TEXT("x")) || Step->HasField(TEXT("posX"));
-}
-
-// "from": "$uv.G" / "to": "Main.EmissiveColor" -> connect_nodes' node and pin fields.
-void ExpandEndpoint(const TSharedPtr<FJsonObject>& Payload, const TCHAR* Key, const TCHAR* NodeField, const TCHAR* PinField)
-{
-  FString Endpoint, Node, Pin;
-  if (!Payload->TryGetStringField(Key, Endpoint)) {
-    return;
-  }
-  if (!Endpoint.Split(TEXT("."), &Node, &Pin)) {
-    Node = Endpoint;
-  }
-  Payload->SetStringField(NodeField, Node);
-  if (!Pin.IsEmpty()) {
-    Payload->SetStringField(PinField, Pin);
-  }
-  Payload->RemoveField(Key);
-}
-
-// The step's own fields over the batch's shared ones (assetPath).
-TSharedPtr<FJsonObject> BuildStepPayload(const TSharedPtr<FJsonObject>& Batch, const TSharedPtr<FJsonObject>& Step, const FString& Edit)
-{
-  TSharedPtr<FJsonObject> Out = MakeShared<FJsonObject>();
-  for (const TPair<FString, TSharedPtr<FJsonValue>>& Pair : Batch->Values) {
-    if (Pair.Key != TEXT("operations")) {
-      Out->SetField(Pair.Key, Pair.Value);
-    }
-  }
-  for (const TPair<FString, TSharedPtr<FJsonValue>>& Pair : Step->Values) {
-    // One asset per batch: the final compile and save are the batch's, so a step
-    // naming another material would edit it and never save it.
-    if (Pair.Key != TEXT("assetPath") && Pair.Key != TEXT("materialPath")) {
-      Out->SetField(Pair.Key, Pair.Value);
-    }
-  }
-  Out->RemoveField(TEXT("edit"));
-  Out->RemoveField(TEXT("id"));
-  Out->RemoveField(TEXT("nodeKind"));
-  Out->SetStringField(TEXT("subAction"), Edit);
-  ExpandEndpoint(Out, TEXT("from"), TEXT("sourceNodeId"), TEXT("sourcePin"));
-  ExpandEndpoint(Out, TEXT("to"), TEXT("targetNodeId"), TEXT("inputName"));
-  // connect_nodes reads the target pin as inputName, and add_material_node reads
-  // only x/y; the published spellings are targetPin and posX/posY.
-  FString Pin;
-  if (!Out->HasField(TEXT("inputName")) && Out->TryGetStringField(TEXT("targetPin"), Pin)) {
-    Out->SetStringField(TEXT("inputName"), Pin);
-  }
-  double Coord = 0.0;
-  if (!Out->HasField(TEXT("x")) && Out->TryGetNumberField(TEXT("posX"), Coord)) {
-    Out->SetNumberField(TEXT("x"), Coord);
-  }
-  if (!Out->HasField(TEXT("y")) && Out->TryGetNumberField(TEXT("posY"), Coord)) {
-    Out->SetNumberField(TEXT("y"), Coord);
-  }
-  return Out;
-}
-
-// "$name" -> the node id an earlier step created under `id: "name"`.
-bool ResolveAliases(const TMap<FString, FString>& Aliases, const TSharedPtr<FJsonObject>& Payload, FString& OutError)
-{
-  for (const TCHAR* Field : {TEXT("sourceNodeId"), TEXT("targetNodeId"), TEXT("nodeId")}) {
-    FString Ref;
-    if (!Payload->TryGetStringField(Field, Ref) || !Ref.StartsWith(TEXT("$"))) {
-      continue;
-    }
-    const FString* NodeId = Aliases.Find(Ref.RightChop(1));
-    if (!NodeId) {
-      TArray<FString> Known;
-      Aliases.GenerateKeyArray(Known);
-      OutError = FString::Printf(TEXT("%s '%s' names no earlier step. Ids defined so far: %s."), Field, *Ref,
-                                 Known.Num() > 0 ? *FString::Join(Known, TEXT(", ")) : TEXT("<none>"));
-      return false;
-    }
-    Payload->SetStringField(Field, *NodeId);
-  }
-  return true;
-}
-
 // Auto-placed nodes fill columns left of everything the graph already holds,
 // the first created furthest left: material graphs flow right, into the output.
 // Within a column each node sits below the last by that node's reported height
@@ -148,6 +51,11 @@ bool HandleBuildMaterialGraph(UEngineWireSubsystem* Bridge, const FString& Reque
   }
   LOAD_MATERIAL_OR_FUNCTION_OR_RETURN();
   Payload->SetStringField(TEXT("assetPath"), AssetPath);
+  // Every edit and "$id" is checked before a step runs: a misspelled id at step 10 left steps 0-9 applied.
+  const TArray<TSharedPtr<FJsonValue>> Problems = CheckMaterialBatch(Payload, *Steps);
+  if (Problems.Num() > 0 || GetJsonBoolField(Payload, TEXT("dryRun"), false)) {
+    return AnswerMaterialBatchCheck(Bridge, RequestId, Socket, *Steps, Problems, GetJsonBoolField(Payload, TEXT("dryRun"), false));
+  }
 
   int32 AutoTotal = 0;
   for (const TSharedPtr<FJsonValue>& Value : *Steps) {
@@ -175,12 +83,7 @@ bool HandleBuildMaterialGraph(UEngineWireSubsystem* Bridge, const FString& Reque
     if (!(*Steps)[Index].IsValid() || !(*Steps)[Index]->TryGetObject(StepPtr) ||
         !(*StepPtr)->TryGetStringField(TEXT("edit"), Edit) ||
         !IsBatchableMaterialEdit(Edit = McpMaterialBatchStepEdit(Edit, *StepPtr))) {
-      Error = FString::Printf(TEXT("%s: a node adder (add_material_node, add_scalar_parameter, add_math_node, "
-                   "add_custom_expression, ...), use_material_function, connect_nodes, set_node_position, "
-                   "update_custom_expression, set_blend_mode, set_shading_model, set_material_domain or set_two_sided"),
-          Edit.IsEmpty() ? TEXT("each step needs `edit`")
-                         : TEXT("that edit is not batched (deleting and disconnecting keep their own consent, so call "
-                                "them on their own); a step's edit is"));
+      Error = DescribeUnbatchableMaterialEdit(Edit);
     } else {
       Entry->SetStringField(TEXT("edit"), Edit);
       if ((*StepPtr)->TryGetStringField(TEXT("id"), Alias)) {

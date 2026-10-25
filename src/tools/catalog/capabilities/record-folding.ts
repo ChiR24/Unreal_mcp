@@ -17,7 +17,9 @@ import { isRecord } from '../../../utils/validation/type-guards.js';
  *     legacy pairs, and a mapped pair's pin agrees with the value mapping to
  *     it — the two call forms of one family dispatch the same action;
  *   - routing.dispatchBy.declaredBy names declared input properties and maps
- *     each to selector values the map can route.
+ *     each to selector values the map can route;
+ *   - routing.dispatchBy.requires is keyed by the record's legacy actions and
+ *     names only declared input properties.
  */
 export function verifyFolding(record: Record<string, unknown>, ctx: z.RefinementCtx): void {
   const legacyIds = readField(record, 'legacyIds');
@@ -124,6 +126,18 @@ export function verifyFolding(record: Record<string, unknown>, ctx: z.Refinement
           code: 'custom',
           path: ['routing', 'dispatchBy', 'declaredBy', name],
           message: 'declaredBy must name a declared input property and map it to selector values dispatchBy.actions routes'
+        });
+      }
+    }
+  }
+  if (isRecord(dispatchBy.requires)) {
+    for (const [action, requirement] of Object.entries(dispatchBy.requires)) {
+      const names = isRecord(requirement) ? [requirement.required, requirement.oneOf].flatMap((list) => (Array.isArray(list) ? list : [])) : [];
+      if (!pairActions.has(action) || !names.every((name) => typeof name === 'string' && Object.hasOwn(properties, name))) {
+        ctx.addIssue({
+          code: 'custom',
+          path: ['routing', 'dispatchBy', 'requires', action],
+          message: 'requires must be keyed by one of the record\'s legacy actions and name declared input properties'
         });
       }
     }

@@ -144,7 +144,6 @@ bool HandleSetVertexWeightsAction(UEngineWireSubsystem* Subsystem, const FString
         }
 
         Mesh->Build();
-        SaveIfRequested(Mesh, Payload);
 
         TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
         Result->SetStringField(TEXT("skeletalMeshPath"), SkeletalMeshPath);
@@ -152,6 +151,7 @@ bool HandleSetVertexWeightsAction(UEngineWireSubsystem* Subsystem, const FString
         Result->SetNumberField(TEXT("verticesModified"), WeightsSet);
         Result->SetNumberField(TEXT("lodIndex"), LODIndex);
 
+        SaveAndReport(Mesh, Payload, Result);
         Subsystem->SendAutomationResponse(RequestingSocket, RequestId, true,
             FString::Printf(TEXT("Set weights for %d vertices in profile '%s'"), WeightsSet, *ProfileName), Result);
         return true;
@@ -221,7 +221,6 @@ bool HandleAutoSkinWeightsAction(UEngineWireSubsystem* Subsystem, const FString&
         }
         Mesh->PostEditChange();
         Mesh->MarkPackageDirty();
-        SaveIfRequested(Mesh, Payload);
 
         TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
         Result->SetStringField(TEXT("skeletalMeshPath"), SkeletalMeshPath);
@@ -240,6 +239,7 @@ bool HandleAutoSkinWeightsAction(UEngineWireSubsystem* Subsystem, const FString&
         Result->SetStringField(TEXT("weights"), TEXT("smooth"));
         Result->SetNumberField(TEXT("lodIndex"), 0);
 
+        SaveAndReport(Mesh, Payload, Result);
         Subsystem->SendAutomationResponse(RequestingSocket, RequestId, true,
             TEXT("Skin weights recomputed by smooth binding on LOD 0"), Result);
         return true;

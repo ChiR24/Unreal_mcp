@@ -108,26 +108,13 @@ bool McpAddSpecToWidget(UEngineWireSubsystem& Subsystem, const FString& RequestI
                         const FString& SlotName, TArray<UWidget*>& OutCreated)
 {
     UWidgetTree* Tree = WidgetBP->WidgetTree;
-    TArray<FString> Names;
-    McpCollectSpecNames(Spec, SlotName, Names);
-    for (const FString& Name : Names)
+    FString Code;
+    if (const FString Refusal = McpCheckSpecPlacement(WidgetBP, Spec, SlotName, Payload, Code); !Refusal.IsEmpty())
     {
-        if (Tree->FindWidget(FName(*Name)))
-        {
-            Subsystem.SendAutomationError(Socket, RequestId, FString::Printf(
-                TEXT("'%s' already holds a widget named '%s'. Pick another slotName, or remove_widget the old one first."),
-                *WidgetBP->GetName(), *Name), TEXT("SLOT_EXISTS"));
-            return false;
-        }
-    }
-    const FString ParentSlot = ResolveParentSlotName(Payload);
-    if (!ParentSlot.IsEmpty() && !Cast<UPanelWidget>(Tree->FindWidget(FName(*ParentSlot))))
-    {
-        Subsystem.SendAutomationError(Socket, RequestId, FString::Printf(
-            TEXT("'%s' is not a panel in '%s'; parentSlot must name a panel widget (get_widget_info lists them)."),
-            *ParentSlot, *WidgetBP->GetName()), TEXT("PARENT_NOT_FOUND"));
+        Subsystem.SendAutomationError(Socket, RequestId, Refusal, Code);
         return false;
     }
+    const FString ParentSlot = ResolveParentSlotName(Payload);
     UWidget* CreatedRoot = nullptr;
     if (ParentSlot.IsEmpty() && !Tree->RootWidget)
     {

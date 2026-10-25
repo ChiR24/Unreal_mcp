@@ -25,7 +25,7 @@
 namespace
 {
 // More short strings than the scan may visit, so the real path that follows
-// them is never reached. This is the >4096-node padding attack.
+// them is never reached. This is the padding attack past McpMaxPayloadScanNodes.
 void AddPadding(const TSharedPtr<FJsonObject>& Payload, int32 Count)
 {
 	TArray<TSharedPtr<FJsonValue>> Padding;
@@ -86,10 +86,10 @@ bool FMcpPrequeueGateScanTruncationTest::RunTest(const FString& Parameters)
 	{
 		const TSharedPtr<FJsonObject> Payload =
 			McpTestFields({ { TEXT("folderPath"), TEXT("/Game/TeamB/Secret") } });
-		AddPadding(Payload, 5000);
+		AddPadding(Payload, McpMaxPayloadScanNodes + 1);
 
 		const FMcpPayloadPathScan Scan = CollectPayloadPaths(Payload, true);
-		TestTrue(TEXT("a >4096-node payload reports a truncated scan"), Scan.bTruncated);
+		TestTrue(TEXT("a payload past the node budget reports a truncated scan"), Scan.bTruncated);
 
 		const FMcpAuthorizationDecision Decision = CheckPathCoverage(Confined, Demand, Scan);
 		TestFalse(TEXT("a truncated scan is refused, not admitted"), Decision.bAllowed);
@@ -102,10 +102,11 @@ bool FMcpPrequeueGateScanTruncationTest::RunTest(const FString& Parameters)
 			CheckPathCoverage(Unconfined, Demand, Scan).bAllowed);
 	}
 
-	// Nesting the real path below the depth bound is the same attack.
+	// Nesting the real path below the depth bound (24 levels since payloads that deep are checked) is the same
+	// attack.
 	{
 		const TSharedPtr<FJsonObject> Deep =
-			Nest(McpTestFields({ { TEXT("folderPath"), TEXT("/Game/TeamB/Secret") } }), 12);
+			Nest(McpTestFields({ { TEXT("folderPath"), TEXT("/Game/TeamB/Secret") } }), 30);
 		const FMcpPayloadPathScan Scan = CollectPayloadPaths(Deep, true);
 		TestTrue(TEXT("a value nested below the depth bound reports truncation"),
 			Scan.bTruncated);
@@ -237,7 +238,7 @@ bool FMcpPrequeueGateWriteTargetProofTest::RunTest(const FString& Parameters)
 		const TSharedPtr<FJsonObject> Payload =
 			McpTestFields({ { TEXT("subAction"), TEXT("console_command") },
 					 { TEXT("command"), TEXT("stat fps") } });
-		AddPadding(Payload, 5000);
+		AddPadding(Payload, McpMaxPayloadScanNodes + 1);
 		const FMcpAuthorizationDecision Decision =
 			Authorize(Unconfined, TEXT("system_control"), Payload);
 		TestFalse(TEXT("a payload too large to check for blocked commands is refused"),

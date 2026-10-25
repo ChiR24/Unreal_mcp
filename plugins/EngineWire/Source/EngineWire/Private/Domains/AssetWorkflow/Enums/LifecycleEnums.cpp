@@ -1,4 +1,5 @@
 #include "Domains/AssetWorkflow/Enums/Shared.h"
+#include "Domains/AssetWorkflow/Operations/McpAssetBulkSelection.h"
 #include "Async/Async.h"
 #include "Kismet2/EnumEditorUtils.h"
 #include "Misc/ScopedEvent.h"
@@ -53,6 +54,28 @@ bool HandleEnumLifecycleActions(
             return true;
         }
 
+        // The initial values (`values`, names or {name} objects), checked before anything is made: two entries of one
+        // name break the enum.
+        TArray<FString> ValueNames;
+        const TArray<TSharedPtr<FJsonValue>>* InitValues = nullptr;
+        if (Params->TryGetArrayField(TEXT("values"), InitValues) && InitValues)
+        {
+            for (const TSharedPtr<FJsonValue>& V : *InitValues)
+            {
+                FString ValName;
+                const TSharedPtr<FJsonObject>* Obj = nullptr;
+                if (V->Type == EJson::Object && V->TryGetObject(Obj) && *Obj) { (*Obj)->TryGetStringField(TEXT("name"), ValName); }
+                else if (V->Type != EJson::Object) { ValName = V->AsString(); }
+                if (ValName.IsEmpty()) { continue; }
+                if (ValueNames.Contains(ValName))
+                {
+                    SetEnumResultFields(OutResult, false, FString::Printf(TEXT("values names '%s' twice; nothing was created."), *ValName), TEXT("INVALID_ARGUMENT"));
+                    return true;
+                }
+                ValueNames.Add(ValName);
+            }
+        }
+
         FString PathError;
         FString SanitizedName = SanitizeAssetName(Name);
         FString PackageName;
@@ -76,42 +99,10 @@ bool HandleEnumLifecycleActions(
             SetEnumResultFields(OutResult, false, TEXT("Failed to create user defined enum"));
             return true;
         }
-
-        // Apply initial enum values when provided. Both the TS and native MCP
-        // schemas advertise a `values` array for create_enum; previously the
-        // handler created an empty enum and silently ignored it, leaving the
-        // advertised parameter non-functional. Reuses the same SetEnums pattern
-        // as add_enum_value.
-        const TArray<TSharedPtr<FJsonValue>>* InitValues = nullptr;
-        if (Params->TryGetArrayField(TEXT("values"), InitValues) && InitValues && InitValues->Num() > 0)
+        if (ValueNames.Num() > 0)
         {
             TArray<TPair<FName, int64>> Names;
-            Names.Reserve(InitValues->Num());
-            for (const TSharedPtr<FJsonValue>& V : *InitValues)
-            {
-                FString ValName;
-                if (V->Type == EJson::Object)
-                {
-                    const TSharedPtr<FJsonObject>* Obj = nullptr;
-                    if (V->TryGetObject(Obj) && *Obj)
-                    {
-                        (*Obj)->TryGetStringField(TEXT("name"), ValName);
-                    }
-                }
-                else
-                {
-                    ValName = V->AsString();
-                }
-                if (ValName.IsEmpty())
-                {
-                    continue;
-                }
-                Names.Emplace(*Enum->GenerateFullEnumName(*ValName), 0);
-            }
-            for (int32 i = 0; i < Names.Num(); ++i)
-            {
-                Names[i].Value = i;
-            }
+            for (int32 i = 0; i < ValueNames.Num(); ++i) { Names.Emplace(*Enum->GenerateFullEnumName(*ValueNames[i]), i); }
             MCP_SET_ENUMS(Enum, Names, Enum->GetCppForm());
         }
 
@@ -133,28 +124,23 @@ bool HandleEnumLifecycleActions(
         UUserDefinedEnum* Enum = RequireEnum(Params, OutResult, bHandled);
         if (bHandled) { return true; }
 
-        TArray<TPair<FName, int64>> Names;
-        const int32 NumEnumEntries = Enum->NumEnums();
-        for (int32 i = 0; i < NumEnumEntries; ++i)
+        // name is the internal name stored values use; displayName what the editor shows, which rename_enum_value changes.
+        TArray<TSharedPtr<FJsonValue>> ValuesArr;
+        for (int32 i = 0; i < Enum->NumEnums(); ++i)
         {
             const FString EntryName = Enum->GetNameStringByIndex(i);
             if (EntryName.EndsWith(TEXT("_MAX"))) { continue; }
-            Names.Add(TPair<FName, int64>(FName(*EntryName), Enum->GetValueByIndex(i)));
-        }
-
-        TArray<TSharedPtr<FJsonValue>> ValuesArr;
-        for (const TPair<FName, int64>& Pair : Names)
-        {
             TSharedPtr<FJsonObject> V = MakeShared<FJsonObject>();
-            V->SetStringField(TEXT("name"), Pair.Key.ToString());
-            V->SetNumberField(TEXT("value"), static_cast<double>(Pair.Value));
+            V->SetStringField(TEXT("name"), EntryName);
+            V->SetStringField(TEXT("displayName"), Enum->GetDisplayNameTextByIndex(i).ToString());
+            V->SetNumberField(TEXT("value"), static_cast<double>(Enum->GetValueByIndex(i)));
             ValuesArr.Add(MakeShared<FJsonValueObject>(V));
         }
 
         TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
         Result->SetStringField(TEXT("enumPath"), Enum->GetPathName());
         Result->SetArrayField(TEXT("values"), ValuesArr);
-        Result->SetNumberField(TEXT("valueCount"), Names.Num());
+        Result->SetNumberField(TEXT("valueCount"), ValuesArr.Num());
         OutResult = Result;
         return true;
     }
@@ -175,6 +161,7 @@ bool HandleEnumLifecycleActions(
         // game thread. Capture the path BEFORE deletion: the pointer is dangling
         // once the delete succeeds.
         const FString EnumPath = Enum->GetPathName();
+        const FString EnumPackage = Enum->GetOutermost()->GetName();
         TArray<UObject*> ObjectsToDelete = { Enum };
 
         // ObjectTools::DeleteObjects returns the number of objects actually removed.
@@ -183,9 +170,14 @@ bool HandleEnumLifecycleActions(
 
         if (DeletedCount == 0)
         {
-            SetEnumResultFields(OutResult, false, FString::Printf(TEXT("Enum %s was not deleted; the delete was refused or cancelled (check what still references it)."), *EnumPath), TEXT("DELETE_FAILED"));
+            // The engine refuses while anything references the enum; name what does, so the caller can fix it.
+            const TArray<FString> Users = McpOutsideReferencers(EnumPackage, {EnumPackage});
+            const TCHAR* Why = Users.Num() > 0 ? TEXT("assets still use it (referencedBy); change or delete them first")
+                                               : TEXT("something loaded still holds it");
+            SetEnumResultFields(OutResult, false, FString::Printf(TEXT("Enum %s was not deleted: %s."), *EnumPath, Why), TEXT("DELETE_FAILED"));
             OutResult->SetStringField(TEXT("enumPath"), EnumPath);
             OutResult->SetBoolField(TEXT("deleted"), false);
+            OutResult->SetArrayField(TEXT("referencedBy"), McpHandlerUtils::ToJsonStringArray(Users));
             return true;
         }
 

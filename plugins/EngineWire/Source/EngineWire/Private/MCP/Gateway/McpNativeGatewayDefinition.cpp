@@ -45,7 +45,7 @@ TSharedPtr<FJsonObject> BuildUnrealGatewayToolDefinition()
 		// client had no legal way to send an idempotency key or a timeout.
 		.Object(TEXT("options"),
 			TEXT("Execution controls for execute only; never put these inside params. Honored keys: "
-				"idempotencyKey, expectedCatalogRevision, expectedRevisions, timeoutMs."),
+				"idempotencyKey, expectedCatalogRevision, expectedRevisions, timeoutMs, pageCursor."),
 			[](FMcpSchemaBuilder& Sub)
 			{
 				Sub.String(TEXT("idempotencyKey"),
@@ -57,7 +57,10 @@ TSharedPtr<FJsonObject> BuildUnrealGatewayToolDefinition()
 					.FreeformObject(TEXT("expectedRevisions"),
 						TEXT("Live editor-state revisions to pin (selection, level, assetRegistry, package), as the "
 							"ue://state/revisions resource reports them; the call is refused with STALE_STATE when one has moved."))
-					.Integer(TEXT("timeoutMs"), TEXT("Deadline for this call in milliseconds (1-600000)."));
+					.Integer(TEXT("timeoutMs"), TEXT("Deadline for this call in milliseconds (1-600000)."))
+					.String(TEXT("pageCursor"),
+						TEXT("Read the next page of a result too large for one reply: the cursor its page block named, sent with "
+							"the same capability and params (page.nextCall is that call). Nothing runs again."));
 			})
 		.Integer(TEXT("limit"), TEXT("Maximum rows per page: search results (default 12) or describe action rows (default 20). Defaults to 12."))
 		.Integer(TEXT("offset"), TEXT("Zero-based offset into search results or into a described tool's action list. Defaults to 0."))
@@ -98,7 +101,9 @@ TSharedPtr<FJsonObject> BuildUnrealGatewayToolDefinition()
 		TEXT("Unreal Engine editor automation: one tool, four operations. Always in this order: "
 			"(1) search with query = 2-4 plain words naming the verb and the object, e.g. 'spawn actor', 'add variable blueprint', 'save level'; every result row carries a one-line summary, its effect and a ready-made nextCall. "
 			"(2) describe: send the chosen row's nextCall unchanged; the reply is the exact contract: parameters (name, type, required), inputSchema, a working example and, when required, consentGrant. "
+			"A first row that carries signature may skip describe: fill params from its signature and send its executeCall. "
 			"(3) execute: send describe's nextCall with params filled in, using ONLY the parameter names describe listed. "
+			"(4) read warnings[] on a successful reply: they name what the call left wrong (an actor it placed now sunk, floating, intersecting or z-fighting; a default grid material; placeholder text; a pasted duplicate), so fix those before the next step. "
 			"Rules: never guess capability ids, tool names, action names or parameter names; never put action or subAction inside params; a failed call returns suggestions and an executable nextCall, so send that nextCall instead of retrying blindly. "
 			"To browse instead of search, call describe with no selector and follow the nextCall on each row one level down. "
 			"configure only enables or disables internal tool groups; it never performs editor work."));

@@ -4,20 +4,22 @@
 #include "EnvironmentQuery/EnvQuery.h"
 #include "EnvironmentQuery/EnvQueryOption.h"
 #include "EnvironmentQuery/Generators/EnvQueryGenerator_ActorsOfClass.h"
+#include "EnvironmentQuery/Generators/EnvQueryGenerator_Donut.h"
 #include "EnvironmentQuery/Generators/EnvQueryGenerator_OnCircle.h"
 #include "EnvironmentQuery/Generators/EnvQueryGenerator_SimpleGrid.h"
+#include "Foundation/BridgeHelpers/Reflection/McpClassResolve.h"
 #include "GameFramework/Actor.h"
 #include "Misc/PackageName.h"
 
 namespace McpAIHandlers
 {
-static UEnvQuery* CreateEQSQueryAsset(const FString& Path, const FString& Name, FString& OutError)
+static UEnvQuery* CreateEQSQueryAsset(const FString& Path, const FString& Name, FString& OutError, FString& OutCode, bool& bOutSaved)
 {
     UEnvQuery* Query = CreateAIAssetInPackage<UEnvQuery>(
-        Path, Name, TEXT("EQS Query"), OutError);
+        Path, Name, TEXT("EQS Query"), OutError, OutCode);
     if (Query)
     {
-        McpSafeAssetSave(Query);
+        bOutSaved = McpSafeAssetSave(Query);
     }
     return Query;
 }
@@ -38,148 +40,129 @@ bool HandleCreateEQSQuery(UEngineWireSubsystem* Self, const FString& RequestId, 
     }
 
     FString Error;
-    UEnvQuery* Query = CreateEQSQueryAsset(Path, Name, Error);
+    FString ErrorCode;
+    bool bSaved = false;
+    UEnvQuery* Query = CreateEQSQueryAsset(Path, Name, Error, ErrorCode, bSaved);
     if (!Query)
     {
-        Self->SendAutomationError(RequestingSocket, RequestId, Error, TEXT("CREATION_FAILED"));
+        Self->SendAutomationError(RequestingSocket, RequestId, Error, ErrorCode);
         return true;
     }
 
     Result->SetStringField(TEXT("queryPath"), Query->GetPathName());
+    Result->SetBoolField(TEXT("saved"), bSaved);
     Result->SetStringField(TEXT("message"), FString::Printf(TEXT("Created EQS Query: %s"), *Name));
     McpHandlerUtils::AddVerification(Result, Query);
     Self->SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("EQS Query created"), Result);
     return true;
 }
 
-// Implements the "add_eqs_generator" action.
+// The generatorSettings keys each generator reads (PathingGrid is a SimpleGrid); any other key is refused, not dropped.
+static TArray<FString> GeneratorSettingKeys(const UClass* GeneratorClass)
+{
+    if (GeneratorClass->IsChildOf<UEnvQueryGenerator_ActorsOfClass>()) { return {TEXT("searchRadius"), TEXT("actorClass")}; }
+    if (GeneratorClass->IsChildOf<UEnvQueryGenerator_SimpleGrid>()) { return {TEXT("gridSize"), TEXT("spacesBetween")}; }
+    if (GeneratorClass->IsChildOf<UEnvQueryGenerator_OnCircle>()) { return {TEXT("searchRadius"), TEXT("outerRadius"), TEXT("spacesBetween")}; }
+    if (GeneratorClass->IsChildOf<UEnvQueryGenerator_Donut>()) { return {TEXT("innerRadius"), TEXT("outerRadius")}; }
+    return {};
+}
+
+static void ApplyGeneratorSettings(UEnvQueryGenerator* Generator, const TSharedPtr<FJsonObject>& Settings, UClass* ActorClass)
+{
+    double Value = 0.0;
+    if (UEnvQueryGenerator_ActorsOfClass* Actors = Cast<UEnvQueryGenerator_ActorsOfClass>(Generator))
+    {
+        if (Settings->TryGetNumberField(TEXT("searchRadius"), Value))
+        {
+            Actors->SearchRadius.DefaultValue = static_cast<float>(Value);
+            Actors->GenerateOnlyActorsInRadius.DefaultValue = true;
+        }
+        if (ActorClass)
+        {
+            Actors->SearchedActorClass = ActorClass;
+        }
+    }
+    else if (UEnvQueryGenerator_SimpleGrid* Grid = Cast<UEnvQueryGenerator_SimpleGrid>(Generator))
+    {
+        if (Settings->TryGetNumberField(TEXT("gridSize"), Value)) { Grid->GridSize.DefaultValue = static_cast<float>(Value); }
+        if (Settings->TryGetNumberField(TEXT("spacesBetween"), Value)) { Grid->SpaceBetween.DefaultValue = static_cast<float>(Value); }
+    }
+    else if (UEnvQueryGenerator_OnCircle* Circle = Cast<UEnvQueryGenerator_OnCircle>(Generator))
+    {
+        if (Settings->TryGetNumberField(TEXT("searchRadius"), Value) || Settings->TryGetNumberField(TEXT("outerRadius"), Value))
+        {
+            Circle->CircleRadius.DefaultValue = static_cast<float>(Value);
+        }
+        if (Settings->TryGetNumberField(TEXT("spacesBetween"), Value)) { Circle->SpaceBetween.DefaultValue = static_cast<float>(Value); }
+    }
+    else if (UEnvQueryGenerator_Donut* Donut = Cast<UEnvQueryGenerator_Donut>(Generator))
+    {
+        if (Settings->TryGetNumberField(TEXT("innerRadius"), Value)) { Donut->InnerRadius.DefaultValue = static_cast<float>(Value); }
+        if (Settings->TryGetNumberField(TEXT("outerRadius"), Value)) { Donut->OuterRadius.DefaultValue = static_cast<float>(Value); }
+    }
+}
+
+// Implements the "add_eqs_generator" action: a new option whose generator is generatorType, saved. Settings the generator
+// does not read (searchCenter, innerRadius on a grid) and an actorClass that did not resolve were dropped with success.
 bool HandleAddEQSGenerator(UEngineWireSubsystem* Self, const FString& RequestId, const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> RequestingSocket)
 {
-    TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
-    FString QueryPath = GetJsonStringField(Payload, TEXT("queryPath"));
+    const auto Fail = [&](const FString& Message, const TCHAR* Code)
+    {
+        Self->SendAutomationError(RequestingSocket, RequestId, Message, Code);
+        return true;
+    };
+    const FString QueryPath = GetJsonStringField(Payload, TEXT("queryPath"));
     FString GeneratorType = GetJsonStringField(Payload, TEXT("generatorType"));
-
+    GeneratorType.RemoveFromStart(TEXT("EnvQueryGenerator_"));
     UEnvQuery* Query = LoadObject<UEnvQuery>(nullptr, *QueryPath);
     if (!Query)
     {
-        Self->SendAutomationError(RequestingSocket, RequestId,
-                            FString::Printf(TEXT("EQS Query not found: %s"), *QueryPath),
-                            TEXT("NOT_FOUND"));
-        return true;
+        return Fail(FString::Printf(TEXT("EQS Query not found: %s"), *QueryPath), TEXT("NOT_FOUND"));
     }
-
-    // Map generator type strings to actual UE classes via template or runtime lookup
-    UEnvQueryGenerator* NewGenerator = nullptr;
-    UClass* GeneratorClass = nullptr;
-    if (GeneratorType.Equals(TEXT("ActorsOfClass"), ESearchCase::IgnoreCase) ||
-        GeneratorType.Equals(TEXT("EnvQueryGenerator_ActorsOfClass"), ESearchCase::IgnoreCase))
+    UClass* GeneratorClass = FindObject<UClass>(nullptr, *FString::Printf(TEXT("/Script/AIModule.EnvQueryGenerator_%s"), *GeneratorType));
+    if (!GeneratorClass || !GeneratorClass->IsChildOf(UEnvQueryGenerator::StaticClass()) || GeneratorClass->HasAnyClassFlags(CLASS_Abstract))
     {
-        NewGenerator = NewObject<UEnvQueryGenerator_ActorsOfClass>(Query);
+        return Fail(FString::Printf(TEXT("generatorType %s is not an engine EQS generator. Nothing was added."), *GeneratorType), TEXT("INVALID_ARGUMENT"));
     }
-    else if (GeneratorType.Equals(TEXT("OnCircle"), ESearchCase::IgnoreCase) ||
-             GeneratorType.Equals(TEXT("EnvQueryGenerator_OnCircle"), ESearchCase::IgnoreCase))
+    TSharedPtr<FJsonObject> Settings = MakeShared<FJsonObject>();
+    const TSharedPtr<FJsonObject>* SentSettings = nullptr;
+    if (Payload->TryGetObjectField(TEXT("generatorSettings"), SentSettings) && SentSettings && SentSettings->IsValid())
     {
-        NewGenerator = NewObject<UEnvQueryGenerator_OnCircle>(Query);
+        Settings = *SentSettings;
     }
-    else if (GeneratorType.Equals(TEXT("SimpleGrid"), ESearchCase::IgnoreCase) ||
-             GeneratorType.Equals(TEXT("EnvQueryGenerator_SimpleGrid"), ESearchCase::IgnoreCase))
+    const TArray<FString> Keys = GeneratorSettingKeys(GeneratorClass);
+    for (const auto& Pair : Settings->Values)
     {
-        NewGenerator = NewObject<UEnvQueryGenerator_SimpleGrid>(Query);
-    }
-    else
-    {
-        // Fallback: try runtime class lookup with full class name
-        GeneratorClass = FindObject<UClass>(nullptr, *FString::Printf(TEXT("/Script/AIModule.%s"), *GeneratorType));
-        if (!GeneratorClass)
+        // 5.8 keys are not FString: copy the text first.
+        const FString Key(Pair.Key.Len(), *Pair.Key);
+        if (!Keys.Contains(Key))
         {
-            GeneratorClass = FindObject<UClass>(nullptr, *FString::Printf(TEXT("/Script/AIModule.EnvQueryGenerator_%s"), *GeneratorType));
-        }
-        if (GeneratorClass)
-        {
-            UObject* GenObj = NewObject<UObject>(Query, GeneratorClass);
-            if (GenObj && GenObj->GetClass()->IsChildOf(UEnvQueryGenerator::StaticClass()))
-            {
-                NewGenerator = static_cast<UEnvQueryGenerator*>(GenObj);
-            }
+            return Fail(FString::Printf(TEXT("generatorSettings.%s does not apply to %s, which reads %s; add_eqs_context sets where it centers. Nothing was added."),
+                *Key, *GeneratorType, Keys.Num() > 0 ? *FString::Join(Keys, TEXT(", ")) : TEXT("no settings")), TEXT("INVALID_ARGUMENT"));
         }
     }
-
-    if (NewGenerator)
+    FString ActorClassPath;
+    UClass* ActorClass = Settings->TryGetStringField(TEXT("actorClass"), ActorClassPath) ? ResolveClassByName(ActorClassPath) : nullptr;
+    if (!ActorClassPath.IsEmpty() && (!ActorClass || !ActorClass->IsChildOf(AActor::StaticClass())))
     {
-        const TSharedPtr<FJsonObject>* GeneratorSettings = nullptr;
-        if (Payload->TryGetObjectField(TEXT("generatorSettings"), GeneratorSettings) && GeneratorSettings && GeneratorSettings->IsValid())
-        {
-            double NumberValue = 0.0;
-            if (UEnvQueryGenerator_ActorsOfClass* ActorsGenerator = Cast<UEnvQueryGenerator_ActorsOfClass>(NewGenerator))
-            {
-                if ((*GeneratorSettings)->TryGetNumberField(TEXT("searchRadius"), NumberValue))
-                {
-                    ActorsGenerator->SearchRadius.DefaultValue = static_cast<float>(NumberValue);
-                    ActorsGenerator->GenerateOnlyActorsInRadius.DefaultValue = true;
-                }
-                FString ActorClassPath;
-                if ((*GeneratorSettings)->TryGetStringField(TEXT("actorClass"), ActorClassPath) && !ActorClassPath.IsEmpty())
-                {
-                    if (UClass* ActorClass = ResolveClassByName(ActorClassPath))
-                    {
-                        if (ActorClass->IsChildOf(AActor::StaticClass()))
-                        {
-                            ActorsGenerator->SearchedActorClass = ActorClass;
-                        }
-                    }
-                }
-            }
-            else if (UEnvQueryGenerator_SimpleGrid* GridGenerator = Cast<UEnvQueryGenerator_SimpleGrid>(NewGenerator))
-            {
-                if ((*GeneratorSettings)->TryGetNumberField(TEXT("gridSize"), NumberValue))
-                {
-                    GridGenerator->GridSize.DefaultValue = static_cast<float>(NumberValue);
-                }
-                if ((*GeneratorSettings)->TryGetNumberField(TEXT("spacesBetween"), NumberValue))
-                {
-                    GridGenerator->SpaceBetween.DefaultValue = static_cast<float>(NumberValue);
-                }
-            }
-            else if (UEnvQueryGenerator_OnCircle* CircleGenerator = Cast<UEnvQueryGenerator_OnCircle>(NewGenerator))
-            {
-                if ((*GeneratorSettings)->TryGetNumberField(TEXT("searchRadius"), NumberValue) ||
-                    (*GeneratorSettings)->TryGetNumberField(TEXT("outerRadius"), NumberValue))
-                {
-                    CircleGenerator->CircleRadius.DefaultValue = static_cast<float>(NumberValue);
-                }
-                if ((*GeneratorSettings)->TryGetNumberField(TEXT("spacesBetween"), NumberValue))
-                {
-                    CircleGenerator->SpaceBetween.DefaultValue = static_cast<float>(NumberValue);
-                }
-            }
-        }
-
-        UEnvQueryOption* NewOption = NewObject<UEnvQueryOption>(Query);
-        if (!NewOption)
-        {
-            Self->SendAutomationError(RequestingSocket, RequestId,
-                                TEXT("Failed to create EQS option for generator"),
-                                TEXT("CREATION_FAILED"));
-            return true;
-        }
-
-        NewOption->Generator = NewGenerator;
-        const int32 OptionIndex = Query->GetOptionsMutable().Add(NewOption);
-        Query->MarkPackageDirty();
-        McpSafeAssetSave(Query);
-        Result->SetNumberField(TEXT("optionIndex"), OptionIndex);
-        Result->SetStringField(TEXT("generatorType"), GeneratorType);
-        Result->SetStringField(TEXT("message"), FString::Printf(TEXT("Added %s generator"), *GeneratorType));
-        McpHandlerUtils::AddVerification(Result, Query);
-        Self->SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Generator added"), Result);
-    }
-    else
-    {
-        Self->SendAutomationError(RequestingSocket, RequestId,
-                            FString::Printf(TEXT("Failed to create generator: %s"), *GeneratorType),
-                            TEXT("CREATION_FAILED"));
+        return Fail(FString::Printf(TEXT("actorClass %s is not an Actor class that loads. Nothing was added."), *ActorClassPath), TEXT("INVALID_ARGUMENT"));
     }
 
+    Query->Modify();
+    UEnvQueryGenerator* Generator = NewObject<UEnvQueryGenerator>(Query, GeneratorClass);
+    ApplyGeneratorSettings(Generator, Settings, ActorClass);
+    UEnvQueryOption* Option = NewObject<UEnvQueryOption>(Query);
+    Option->Generator = Generator;
+    const int32 OptionIndex = Query->GetOptionsMutable().Add(Option);
+    Query->MarkPackageDirty();
+
+    TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
+    Result->SetNumberField(TEXT("optionIndex"), OptionIndex);
+    Result->SetStringField(TEXT("generatorType"), GeneratorType);
+    Result->SetStringField(TEXT("generatorClass"), GeneratorClass->GetName());
+    Result->SetBoolField(TEXT("saved"), McpSafeAssetSave(Query));
+    McpHandlerUtils::AddVerification(Result, Query);
+    Self->SendAutomationResponse(RequestingSocket, RequestId, true, FString::Printf(TEXT("Added %s generator as option %d"), *GeneratorType, OptionIndex), Result);
     return true;
 }
 }

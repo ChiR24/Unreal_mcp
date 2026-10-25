@@ -30,6 +30,8 @@ bool HandleConfigureGridSize(
     bool bBlockOnSlowStreaming = GetJsonBoolField(Payload, TEXT("bBlockOnSlowStreaming"), false);
     int32 Priority = GetJsonIntField(Payload, TEXT("priority"), 0);
     bool bCreateIfMissing = GetJsonBoolField(Payload, TEXT("createIfMissing"), true);
+    const bool bHasValue = Payload->HasField(TEXT("gridCellSize")) || Payload->HasField(TEXT("loadingRange")) ||
+                           Payload->HasField(TEXT("bBlockOnSlowStreaming")) || Payload->HasField(TEXT("priority"));
 
     UWorld* World = GetEditorWorld();
     if (!World)
@@ -125,10 +127,20 @@ bool HandleConfigureGridSize(
         {
             if (GridName.IsEmpty() || Grid->GridName == TargetGridName)
             {
-                Grid->CellSize = GridCellSize;
-                Grid->LoadingRange = LoadingRange;
-                Grid->bBlockOnSlowStreaming = bBlockOnSlowStreaming;
-                Grid->Priority = Priority;
+                if (!bHasValue)
+                {
+                    Subsystem->SendAutomationResponse(Socket, RequestId, false, FString::Printf(TEXT("Grid '%s' found; pass "
+                        "gridCellSize, loadingRange, bBlockOnSlowStreaming or priority to change it. Nothing was changed."),
+                        *Grid->GridName.ToString()), nullptr, TEXT("INVALID_ARGUMENT"));
+                    return true;
+                }
+                // Before the change, so undo returns to it (the snapshot was taken after, so undo restored the new
+                // values); only what was sent changes: the defaults of the fields left out overwrote the grid's own.
+                SpatialHash->Modify();
+                if (Payload->HasField(TEXT("gridCellSize"))) { Grid->CellSize = GridCellSize; }
+                if (Payload->HasField(TEXT("loadingRange"))) { Grid->LoadingRange = LoadingRange; }
+                if (Payload->HasField(TEXT("bBlockOnSlowStreaming"))) { Grid->bBlockOnSlowStreaming = bBlockOnSlowStreaming; }
+                if (Payload->HasField(TEXT("priority"))) { Grid->Priority = Priority; }
 
                 bFound = true;
                 ModifiedIndex = i;
@@ -139,6 +151,7 @@ bool HandleConfigureGridSize(
 
     if (!bFound && bCreateIfMissing && !GridName.IsEmpty())
     {
+        SpatialHash->Modify();
         int32 NewIndex = ArrayHelper.AddValue();
         FSpatialHashRuntimeGrid* NewGrid = reinterpret_cast<FSpatialHashRuntimeGrid*>(ArrayHelper.GetRawPtr(NewIndex));
         if (NewGrid)
@@ -181,7 +194,6 @@ bool HandleConfigureGridSize(
         return true;
     }
 
-    SpatialHash->Modify();
     SpatialHash->MarkPackageDirty();
     World->MarkPackageDirty();
 
@@ -202,21 +214,23 @@ bool HandleConfigureGridSize(
         }
     }
 
+    // The grid as it now stands: a field left out keeps the grid's own value, which the reply printed as the default.
+    const FSpatialHashRuntimeGrid* Edited = reinterpret_cast<const FSpatialHashRuntimeGrid*>(ArrayHelper.GetRawPtr(ModifiedIndex));
     TSharedPtr<FJsonObject> ResponseJson = McpHandlerUtils::CreateResultObject();
     McpHandlerUtils::AddVerification(ResponseJson, World);
-    ResponseJson->SetStringField(TEXT("gridName"), GridName.IsEmpty() ? TEXT("(default)") : GridName);
-    ResponseJson->SetNumberField(TEXT("cellSize"), GridCellSize);
-    ResponseJson->SetNumberField(TEXT("loadingRange"), LoadingRange);
-    ResponseJson->SetBoolField(TEXT("blockOnSlowStreaming"), bBlockOnSlowStreaming);
-    ResponseJson->SetNumberField(TEXT("priority"), Priority);
+    ResponseJson->SetStringField(TEXT("gridName"), Edited->GridName.ToString());
+    ResponseJson->SetNumberField(TEXT("cellSize"), Edited->CellSize);
+    ResponseJson->SetNumberField(TEXT("loadingRange"), Edited->LoadingRange);
+    ResponseJson->SetBoolField(TEXT("blockOnSlowStreaming"), Edited->bBlockOnSlowStreaming);
+    ResponseJson->SetNumberField(TEXT("priority"), Edited->Priority);
     ResponseJson->SetBoolField(TEXT("created"), bCreated);
     ResponseJson->SetBoolField(TEXT("modified"), bFound);
     ResponseJson->SetArrayField(TEXT("allGrids"), GridsArray);
     ResponseJson->SetStringField(TEXT("note"), TEXT("Grid configuration updated. Regenerate streaming data to apply changes (World Partition > Generate Streaming)."));
 
     FString Action = bCreated ? TEXT("Created") : TEXT("Configured");
-    FString Message = FString::Printf(TEXT("%s grid '%s' with CellSize=%d, LoadingRange=%.0f"),
-        *Action, GridName.IsEmpty() ? TEXT("(default)") : *GridName, GridCellSize, LoadingRange);
+    FString Message = FString::Printf(TEXT("%s grid '%s': CellSize=%d, LoadingRange=%.0f"),
+        *Action, *Edited->GridName.ToString(), Edited->CellSize, Edited->LoadingRange);
     SendLevelEditResult(Subsystem, RequestId, Socket, Payload, World->PersistentLevel, Message, ResponseJson);
     return true;
 

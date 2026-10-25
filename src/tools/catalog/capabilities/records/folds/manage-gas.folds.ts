@@ -31,13 +31,13 @@ export const MANAGE_GAS_FOLDS: readonly FoldSpec[] = [
   },
   {
     primary: 'configure_attribute_set', selector: 'setting',
-    summary: 'Configure an attribute set: add an attribute or set its base value.',
+    summary: 'An AttributeSet Blueprint (attributeSetPath), chosen by setting. add_attribute adds a Gameplay Attribute (FGameplayAttributeData) named attributeName at defaultValue (default 0), checked on the compiled class before it saves (ATTRIBUTE_NOT_APPLIED otherwise). base_value sets an existing attribute\'s base and current value to baseValue (required). A Blueprint that is not an AttributeSet, or a property that is not an attribute, is INVALID_TYPE; a name already there is NAME_TAKEN. Attributes added here do not replicate and are not clamped until the set does that itself.',
     topics: ['attribute', 'attribute base value', 'add health attribute', 'health attribute'],
     members: { add_attribute: 'add_attribute', base_value: 'set_attribute_base_value' },
   },
   {
     primary: 'configure_asc', selector: 'setting',
-    summary: 'Add an Ability System Component to a Blueprint, or configure its replication mode.',
+    summary: 'The Ability System Component of an Actor Blueprint, chosen by setting. add_component adds one named componentName (default AbilitySystemComponent); one already there, its own or inherited from a native parent, is kept and named (alreadyExists), never doubled. configure sets its replicationMode: Full (every effect to every client, for single player), Mixed (effects to the owner only, cues and tags to all, for player characters) or Minimal (cues and tags only, for AI). A non-Actor Blueprint is INVALID_TARGET and a name another member holds NAME_TAKEN. Compiles and saves (COMPILE_FAILED or SAVE_FAILED otherwise).',
     topics: ['ability system component', 'asc replication'],
     members: { configure: 'configure_asc', add_component: 'add_ability_system_component' },
   },

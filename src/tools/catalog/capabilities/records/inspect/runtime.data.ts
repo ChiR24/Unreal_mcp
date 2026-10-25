@@ -29,15 +29,16 @@ const RUNTIME_REPORT_OUTPUT = {
   pawn: { type: 'string', description: 'Object path of the possessed pawn; inspect it to find where the player actually is.' },
   viewTarget: { type: 'string', description: 'Object path of the current view target.' },
   playerCameraManager: { type: 'object', additionalProperties: true, 'x-unreal-reflection-boundary': true, description: 'PlayerCameraManager described as a runtime actor, plus cameraLocation and cameraRotation as {x,y,z} / {pitch,yaw,roll} objects.' },
+  scriptErrors: { type: 'array', items: { type: 'object', additionalProperties: true, 'x-unreal-reflection-boundary': true }, description: 'Blueprint runtime errors (an Accessed None, an infinite loop) of this play session, or of the last one until the next play starts: message, blueprintPath, graph, node and nodeId (as edit_graph takes them; function when no node resolves), objects that raised it, count, firstGameSeconds, and values (the object\'s Blueprint variables at the first hit). Absent when none fired.' },
 } as const satisfies JsonObject;
 
 export const RUNTIME_RECORDS: readonly CapabilityRecordSource[] = [
   buildCoreRecord({
     parentTool: 'inspect', action: 'runtime_report', dispatchAction: 'runtime_report', domain: D, family: 'runtime',
     editorStates: ANY_EDITOR_STATE,
-    summary: 'Report the running PIE/simulate session: its world, player pawn, controller, view target and camera; with filter or actorName, also the matching actors with their components and properties.',
-    whenToUse: ['Runtime state of actors/components/properties must be inspected during PIE.', 'PIE-only runtime state must be inspected.'],
-    whenNotToUse: ['The editor is not in PIE; the report will be empty.'],
+    summary: 'Report the running PIE/simulate session: its world, player pawn, controller, view target and camera, and the Blueprint runtime errors it raised with the node that raised each; with filter or actorName, also the matching actors with their components and properties.',
+    whenToUse: ['Runtime state of actors/components/properties must be inspected during PIE.', 'PIE-only runtime state must be inspected.', 'A Blueprint failed while the game ran (Accessed None): scriptErrors names the node, graph and Blueprint.'],
+    whenNotToUse: ['The editor is not in PIE; the report then holds only the last play session\'s scriptErrors.'],
     inputProps: {
       filter: P.filter, actorName: P.actorName, name: P.name,
       componentName: P.componentName, componentNames: P.componentNames,

@@ -23,7 +23,7 @@ FString OwnerTag(const FString& Tag, const UEdGraphNode& Node)
     return FString::Printf(TEXT("%s%s #%s"), OwnerTagPrefix, *Tag, *Node.NodeGuid.ToString());
 }
 
-TArray<UEdGraphNode*> FindOwned(UBlueprint* Blueprint, const FString& Tag)
+TArray<UEdGraphNode*> FindOwned(const UBlueprint* Blueprint, const FString& Tag)
 {
     TArray<UEdGraphNode*> Owned;
     TArray<UEdGraph*> Graphs;

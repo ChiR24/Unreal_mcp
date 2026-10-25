@@ -16,6 +16,7 @@
 #include "MCP/Gateway/McpNativeGatewayGuidance.h"
 #include "MCP/Gateway/McpNativeGatewayCapabilityStore.h"
 #include "MCP/Gateway/McpNativeGatewaySearch.h"
+#include "MCP/Execute/Request/McpFoldVariantRules.h"
 
 namespace
 {
@@ -94,6 +95,7 @@ void SetVariants(const TSharedPtr<FJsonObject>& Out, const FMcpCapabilityRecord&
 	{
 		Out->SetArrayField(TEXT("variants"), GatewayStringArray(*Variants));
 	}
+	McpSetVariantRequirementViews(Out, Record, Name);
 }
 
 

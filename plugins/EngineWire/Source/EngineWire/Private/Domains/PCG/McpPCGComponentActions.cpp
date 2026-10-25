@@ -32,6 +32,7 @@ bool HandleExecutePCGGraph(UEngineWireSubsystem* Bridge, const FString& RequestI
     const FString ComponentSelector = !ComponentPath.IsEmpty() ? ComponentPath : ComponentName;
     const bool bCreateComponent = GetJsonBoolField(Payload, TEXT("createComponent"), false);
     AActor* Actor = nullptr;
+    bool bCreatedComponent = false;
     UPCGComponent* Component = FindPCGComponent(World, ActorName, ComponentSelector, Actor);
     if (!Component && !bCreateComponent && ActorName.IsEmpty() && ComponentSelector.IsEmpty())
     {
@@ -46,7 +47,15 @@ bool HandleExecutePCGGraph(UEngineWireSubsystem* Bridge, const FString& RequestI
             Bridge->SendAutomationError(Socket, RequestId, TEXT("createComponent requires an existing actorName."), TEXT("ACTOR_NOT_FOUND"));
             return true;
         }
+        // NewObject over a subobject of another class with that name collides; refuse instead.
+        if (!ComponentName.IsEmpty() && FindObject<UObject>(Actor, *ComponentName))
+        {
+            Bridge->SendAutomationError(Socket, RequestId, FString::Printf(TEXT("%s already has a %s named %s that is no PCG component; pick another componentName."),
+                *McpActorRef(Actor), *FindObject<UObject>(Actor, *ComponentName)->GetClass()->GetName(), *ComponentName), TEXT("NAME_TAKEN"));
+            return true;
+        }
         Component = CreatePCGComponent(Actor, ComponentName);
+        bCreatedComponent = Component != nullptr;
     }
     if (!Component)
     {
@@ -77,8 +86,10 @@ bool HandleExecutePCGGraph(UEngineWireSubsystem* Bridge, const FString& RequestI
 
     TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
     Result->SetStringField(TEXT("graphPath"), GraphPath);
-    Result->SetStringField(TEXT("actorName"), Actor ? Actor->GetName() : FString());
+    // The owner's label (it named the object, and nothing when the component was found by path).
+    Result->SetStringField(TEXT("actorName"), McpActorRef(Component->GetOwner()));
     Result->SetStringField(TEXT("componentName"), Component->GetName());
+    Result->SetBoolField(TEXT("createdComponent"), bCreatedComponent);
     Result->SetStringField(TEXT("componentPath"), Component->GetPathName());
     Result->SetNumberField(TEXT("taskId"), static_cast<double>(TaskId));
     Result->SetBoolField(TEXT("force"), bForceGenerate);

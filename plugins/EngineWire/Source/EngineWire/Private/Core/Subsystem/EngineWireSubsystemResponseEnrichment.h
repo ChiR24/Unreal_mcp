@@ -107,13 +107,30 @@ inline TSharedPtr<FJsonObject> McpBuildEnrichedResponseResult(
         }
     }
 
-    if (Captured.WarningMessages.Num() > 0)
+    // A batch can compile part-way (an override add_function makes compiles before its body is wired), and the
+    // reply kept that half-built graph's compiler warning although the batch's own final compile was clean, so a
+    // caller "fixed" a graph with nothing wrong. A clean final compile settles every compiler line logged before it.
+    FString CompilerStatus;
+    const bool bCleanCompile = Result.IsValid() && Result->TryGetStringField(TEXT("compilerStatus"), CompilerStatus)
+        && CompilerStatus == TEXT("UpToDate");
+    TArray<FString> WarningMessages = Captured.WarningMessages;
+    TArray<FString> ErrorMessages = Captured.ErrorMessages;
+    int32 WarningCount = Captured.WarningCount;
+    int32 ErrorCount = Captured.ErrorCount;
+    if (bCleanCompile)
     {
-        WarningValues.Append(McpAttachCapturedEngineMessages(Enriched, TEXT("Warning"),
-            Captured.WarningMessages, Captured.WarningCount, Captured.bWarningMessagesTruncated, false));
+        const auto IsCompilerLine = [](const FString& Line) { return Line.Contains(TEXT("[Compiler]")); };
+        WarningCount = FMath::Max(0, WarningCount - WarningMessages.RemoveAll(IsCompilerLine));
+        ErrorCount = FMath::Max(0, ErrorCount - ErrorMessages.RemoveAll(IsCompilerLine));
     }
 
-    if (Captured.ErrorMessages.Num() == 0)
+    if (WarningMessages.Num() > 0)
+    {
+        WarningValues.Append(McpAttachCapturedEngineMessages(Enriched, TEXT("Warning"),
+            WarningMessages, WarningCount, Captured.bWarningMessagesTruncated, false));
+    }
+
+    if (ErrorMessages.Num() == 0)
     {
         if (WarningValues.Num() > 0)
         {
@@ -123,7 +140,7 @@ inline TSharedPtr<FJsonObject> McpBuildEnrichedResponseResult(
     }
 
     McpAttachCapturedEngineMessages(Enriched, TEXT("Error"),
-        Captured.ErrorMessages, Captured.ErrorCount, Captured.bErrorMessagesTruncated, true);
+        ErrorMessages, ErrorCount, Captured.bErrorMessagesTruncated, true);
 
     // The errors were only reachable under `details`, while `warnings` is the channel a caller watches
     // for "it succeeded, but read this" -- so a mutation that tripped 32 engine errors, including an
@@ -131,7 +148,7 @@ inline TSharedPtr<FJsonObject> McpBuildEnrichedResponseResult(
     WarningValues.Add(MakeShared<FJsonValueString>(FString::Printf(
         TEXT("%d engine error(s) were logged while this request ran. The handler still reports success; ")
         TEXT("see engineErrors for the captured text."),
-        Captured.ErrorCount)));
+        ErrorCount)));
     Enriched->SetArrayField(TEXT("warnings"), WarningValues);
     return Enriched;
 }

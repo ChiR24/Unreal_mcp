@@ -175,7 +175,65 @@ describe('build_graph: an overlapping explicit position moves the node instead o
     const layout = read('Foundation', 'GraphLayout', 'McpGraphNodeExtent.h');
     expect(layout).toContain('inline bool FindNearestFreeSlot(');
     expect(layout).toMatch(/FindNearestFreeSlot\(Graph, NewX, NewY, NewW, NewH, IgnoreNode, FreeX, FreeY\)/u);
-    expect(layout).toContain('BuildNodeOverlapDetails(PosX, PosY, Width, Height, Overlapping, OutMessage, Graph)');
+    const overlap = read('Foundation', 'GraphLayout', 'McpGraphOverlap.h');
+    expect(overlap).toContain('BuildNodeOverlapDetails(PosX, PosY, Width, Height, Overlapping, OutMessage, Graph)');
+  });
+
+  // A lone create_node SwitchOnEnum with no position landed on BeginPlay at (0, 0) and was refused, while the same
+  // call for a function node took the first free slot.
+  it('every create path places a node that named no position instead of refusing it', () => {
+    const overlap = read('Foundation', 'GraphLayout', 'McpGraphOverlap.h');
+    expect(overlap).toContain('for (int32 Step = 0; bOverlaps && bAutoPlace && Step < 8; ++Step)');
+    expect(read('Domains', 'BlueprintGraph', 'McpBPGraphPrivate.h')).toContain('McpGraphLayout::NamesNoPosition(Payload)))');
+    for (const file of ['McpBPGraphNodeCreationDynamic.cpp', 'McpBPGraphSpecialNodes.cpp', 'McpBPGraphConstructObjectNodes.cpp',
+      'Behaviour/McpBPBehaviourBindNodes.cpp', 'Behaviour/McpBPBehaviourNodes.cpp']) {
+      expect(read('Domains', 'BlueprintGraph', ...file.split('/'))).toContain('McpGraphLayout::NamesNoPosition(Context.Payload)))');
+    }
+    // The bound event goes under the bind node where it ended up, not where it was asked for.
+    expect(read('Domains', 'BlueprintGraph', 'Behaviour', 'McpBPBehaviourBindNodes.cpp'))
+      .toContain('PlaceBoundEvent(Context.TargetGraph, *Bind, Bind->NodePosX, Y)');
+    expect(read('Domains', 'Blueprint', 'Graph', 'McpBPAddNode.cpp')).toContain('McpGraphLayout::NamesNoPosition(LocalPayload)))');
+  });
+});
+
+// A refused create_node left the Blueprint marked changed and an empty undo step, which the next undo spent.
+describe('a refused node leaves no undo step and no change mark', () => {
+  it('cancels its transaction and clears the dirty flag it set when no node came or went', () => {
+    const creation = read('Domains', 'BlueprintGraph', 'McpBPGraphNodeCreation.cpp');
+    expect(creation).toContain('const bool bOutermost = !(GEditor && GEditor->IsTransactionActive());');
+    expect(creation.indexOf('const bool bWasDirty = Package->IsDirty();')).toBeLessThan(creation.indexOf('Context.Blueprint->Modify();'));
+    expect(creation).toContain('!NodesBefore.Contains(Node->NodeGuid)');
+    expect(creation).toMatch(/if \(bOutermost && bUnchanged\)\s*\{\s*Transaction\.Cancel\(\);\s*if \(!bWasDirty\)\s*\{\s*Package->SetDirtyFlag\(false\);/u);
+  });
+});
+
+// A call node named GetActorTransform, the title the editor shows for GetTransform, failed FUNCTION_NOT_FOUND.
+describe('a call node is found by the title the editor shows', () => {
+  it('falls back to a callable whose DisplayName matches, spaces aside', () => {
+    const handlers = read('Domains', 'BlueprintGraph', 'McpBPGraphHandlers.cpp');
+    expect(handlers).toContain('It->GetMetaData(TEXT("DisplayName")).Replace(TEXT(" "), TEXT("")).Equals(Name, ESearchCase::IgnoreCase)');
+    // Only after the name itself and its K2_ twin missed.
+    expect(handlers.indexOf('if (Twin || Function)')).toBeLessThan(handlers.indexOf('TFieldIterator<UFunction> It(Class)'));
+  });
+});
+
+// create_node SwitchOnEnum made a Switch with no enum and no case outputs, and answered success.
+describe('create_node: an enum node gets its enum or is refused', () => {
+  it('sets the Enum property from enumPath before the pins are allocated', () => {
+    const nodes = read('Domains', 'BlueprintGraph', 'McpBPGraphSubsystemNodes.cpp');
+    expect(nodes).toContain('CastField<FObjectPropertyBase>(NodeClass->FindPropertyByName(TEXT("Enum")))');
+    expect(nodes).toContain('NodeClass->IsChildOf(UK2Node_Select::StaticClass())');
+    expect(nodes).toMatch(/needs enumPath: the enum its pins come from/u);
+    const seeded = nodes.indexOf('EnumProperty->SetObjectPropertyValue_InContainer(Node, Enum);');
+    expect(seeded).toBeGreaterThan(-1);
+    expect(seeded).toBeLessThan(nodes.lastIndexOf('Context.FinalizeNode(Creator, Node, X, Y);'));
+    expect(read('Domains', 'BlueprintGraph', 'McpBPGraphNodeCreationDynamic.cpp'))
+      .toContain('TryCreateSubsystemNode(Context, NodeClass, X, Y) || TryCreateEnumNode(Context, NodeClass, X, Y)');
+  });
+
+  it('the node type list says SwitchOnEnum takes enumPath', () => {
+    expect(paramDescription('blueprint.edit_graph', 'nodeType')).toContain('SwitchOnEnum (enumPath');
+    expect(paramDescription('blueprint.edit_graph', 'enumPath')).toContain('/Script/Engine.ECollisionChannel');
   });
 });
 
@@ -348,7 +406,7 @@ describe('a Blueprint asset path resolves wherever a graph node takes a class', 
     const special = read('Domains', 'BlueprintGraph', 'McpBPGraphSpecialNodes.cpp');
     expect(special).toContain('TargetClass = ResolveTargetClassFromString(TargetClassName);');
     expect(read('Domains', 'BlueprintGraph', 'McpBPGraphVariableNodes.cpp'))
-      .toContain('OwnerClass = ResolveTargetClassFromString(MemberClassName);');
+      .toContain('return Class ? Class : ResolveTargetClassFromString(MemberClassName);');
     expect(read('Domains', 'BlueprintGraph', 'McpBPGraphFunctionEventNodes.cpp'))
       .toContain('TargetClass = ResolveTargetClassFromString(MemberClass);');
   });
@@ -545,6 +603,12 @@ describe('an edit_scs add takes its class from componentType as well as componen
     expect(fields()).toMatch(/inline FString ScsOpComponentClass\(const TSharedPtr<FJsonObject> &Op\)\s*\{\s*return McpGetFirstStringField\(Op, \{TEXT\("componentClass"\), TEXT\("component_class"\), TEXT\("componentType"\)\}\);/u);
   });
 
+  // The batch saved each part it added, so save:false wrote the Blueprint to disk while the reply said saved:false.
+  it('a batch add leaves saving to the batch, which honours save', () => {
+    expect(batchAdd()).not.toMatch(/SaveLoadedAsset|McpSafeAssetSave/u);
+    expect(scs('McpBPModifyScsFinalize.cpp')).toContain('if (State.bSave && LocalBP && !(State.bCompile && !bCompileOk)) {');
+  });
+
   it('the promotion, the batch add and the single add_scs_component route all read the class through it', () => {
     expect(state()).toContain('const bool bIsAdd = !ScsOpComponentClass(Op).IsEmpty();');
     expect(batchAdd()).toContain('const FString ComponentClassPath = ScsOpComponentClass(Op);');
@@ -673,5 +737,29 @@ describe('a call node takes a function by the name the editor shows', () => {
 
     expect(helper).toContain('Function->HasAnyFunctionFlags(FUNC_BlueprintCallable | FUNC_BlueprintPure)');
     expect(helper).toContain('return Twin ? Twin : Function;');
+  });
+});
+
+describe('build_graph dryRun checks the batch and runs nothing', () => {
+  const batch = (): string => read('Domains', 'BlueprintGraph', 'McpBPGraphBatch.cpp').replace(/\r\n/gu, '\n');
+  const check = (): string => read('Domains', 'BlueprintGraph', 'McpBPGraphBatchCheck.cpp').replace(/\r\n/gu, '\n');
+
+  it('is build_graph\'s own (the recipes that author through the batch never dry-run) and answers before any step', () => {
+    const run = sliceBetween(batch(), 'bool RunGraphBatch(', 'bool HandleGraphBatchAction(');
+    expect(run).toContain('const bool bDryRun = bCompile && GetJsonBoolField(Context.Payload, TEXT("dryRun"), false);');
+    const answer = run.indexOf('return AnswerDryRun(Context, *Steps);');
+    expect(answer).toBeGreaterThan(run.indexOf('PassesPrecheck(Context, *Steps, bDryRun)'));
+    expect(answer).toBeLessThan(run.indexOf('TakeSnapshot('));
+    expect(answer).toBeLessThan(run.indexOf('RunBatchStep('));
+  });
+
+  it('resolves "$id" with the run\'s own payload and alias helpers and reports every problem', () => {
+    const dry = sliceBetween(check(), 'bool AnswerDryRun(', '} // namespace McpBlueprintGraphHandlers::GraphBatch');
+    expect(dry).toContain('BuildStepPayload(Context.Payload, *Step, Edit)');
+    expect(dry).toContain('ResolveStepAliases(State, Payload, Error)');
+    expect(dry).toContain('SetArrayField(TEXT("problems"), Problems)');
+    for (const mutation of ['RunStep(', 'RunPlacedStep(', 'Modify(', 'SaveLoadedAssetThrottled(', 'McpCompileBlueprintWithDiagnostics(']) {
+      expect(dry, mutation).not.toContain(mutation);
+    }
   });
 });

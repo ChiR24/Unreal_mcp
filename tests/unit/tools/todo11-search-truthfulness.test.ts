@@ -52,6 +52,18 @@ describe('Todo 11 gateway search truthfulness', () => {
     expect(result.hasMore).toBe(true);
   });
 
+  // The first row's signature was added before the trim, so 'save level' at a tight budget answered no results
+  // where the native door keeps its first row: the signature now goes before the row does.
+  it('drops the first row\'s signature before the row itself', () => {
+    const roomy = searchGatewayCapabilities({ query: 'save level', limit: 1 });
+    expect(rows(roomy)[0]?.signature).toBeDefined();
+    const plainSize = JSON.stringify({ ...roomy, results: [{ ...rows(roomy)[0], signature: undefined, executeCall: undefined }] }).length;
+    const tight = searchGatewayCapabilities({ query: 'save level', limit: 1, maxBytes: Math.max(1000, plainSize + 40) });
+    expect(rows(tight)).toHaveLength(1);
+    expect(rows(tight)[0]?.signature).toBeUndefined();
+    expect(tight.budgetExceeded).toBeUndefined();
+  });
+
   it('keeps cursor continuation executable to exhaustion', () => {
     // Given a one-row first page
     // When its cursors are followed until the catalog says there is nothing left

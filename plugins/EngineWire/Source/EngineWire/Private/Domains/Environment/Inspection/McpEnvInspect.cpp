@@ -1,4 +1,5 @@
 #include "Domains/Environment/McpEnvShared.h"
+#include "Domains/Debug/Explain/McpExplain.h"
 
 // Struct ecosystem (issue #struct-ecosystem) — inspect_struct handler shard forward declaration.
 namespace McpInspectStruct
@@ -91,6 +92,18 @@ bool UEngineWireSubsystem::HandleInspectAction(
     if (LowerSubAction.Equals(TEXT("describe_view")))
     {
         return HandleInspectViewContentsAction(*this, RequestId, Payload, RequestingSocket);
+    }
+    if (LowerSubAction.Equals(TEXT("get_editor_focus")))
+    {
+        return HandleInspectEditorFocusAction(*this, RequestId, RequestingSocket);
+    }
+    if (LowerSubAction.Equals(TEXT("get_frame_cost")))
+    {
+        return HandleInspectFrameCostAction(*this, RequestId, RequestingSocket);
+    }
+    if (LowerSubAction.StartsWith(TEXT("explain_")))
+    {
+        return McpExplain::Handle(*this, RequestId, LowerSubAction, Payload, RequestingSocket);
     }
     if (LowerSubAction.Equals(TEXT("capture_passes")))
     {

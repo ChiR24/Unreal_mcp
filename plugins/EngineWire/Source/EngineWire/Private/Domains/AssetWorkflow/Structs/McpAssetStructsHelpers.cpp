@@ -1,6 +1,7 @@
 #include "Domains/AssetWorkflow/Structs/McpAssetStructsShared.h"
 
 #include "EditorAssetLibrary.h"
+#include "Foundation/BridgeHelpers/Properties/McpPropApply.h"
 #include "Foundation/HandlerUtils/McpHandlerUtilsBlueprintGraph.h"
 #include "UObject/StructOnScope.h"
 
@@ -217,7 +218,7 @@ FString BuildDefaultExportText(UUserDefinedStruct* S, FProperty* Prop, const TSh
     void* Container = Scratch.GetStructMemory();
 
     FString ApplyError;
-    if (McpPropertyReflection::ApplyJsonValueToProperty(Container, Prop, JsonValue, ApplyError))
+    if (::ApplyJsonValueToProperty(Container, Prop, JsonValue, ApplyError))
     {
         FString OutStr;
         const void* Value = Prop->ContainerPtrToValuePtr<void>(Container);

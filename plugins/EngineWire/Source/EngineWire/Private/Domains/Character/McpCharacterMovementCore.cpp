@@ -21,10 +21,6 @@ bool HandleConfigureMovementSpeeds(UEngineWireSubsystem* Self, const FString& Re
         if (Payload->HasField(TEXT("walkSpeed")))
         {
             Movement->MaxWalkSpeed = static_cast<float>(GetJsonNumberField(Payload, TEXT("walkSpeed"), 600.0));
-            if (Payload->HasField(TEXT("runSpeed")))
-            {
-                UE_LOG(LogMcpCharacterHandlers, Warning, TEXT("configure_movement_speeds: Both walkSpeed and runSpeed provided. runSpeed is ignored (both map to MaxWalkSpeed in UE). Use configure_sprint for run speed."));
-            }
         }
         else if (Payload->HasField(TEXT("runSpeed")))
         {
@@ -77,8 +73,15 @@ bool HandleConfigureMovementSpeeds(UEngineWireSubsystem* Self, const FString& Re
     }
     if (Payload->HasField(TEXT("runSpeed")))
     {
-        Result->SetNumberField(TEXT("runSpeed"), GetJsonNumberField(Payload, TEXT("runSpeed"), 600.0));
         Result->SetBoolField(TEXT("runSpeedApplied"), bRunSpeedApplied);
+        // The old log line sent callers to a sprint action that does not exist.
+        if (!bRunSpeedApplied)
+        {
+            TArray<TSharedPtr<FJsonValue>> Warnings;
+            Warnings.Add(MakeShared<FJsonValueString>(TEXT("runSpeed was left out: a Character has one walk speed, and walkSpeed "
+                "set it. A sprint is game logic that raises MaxWalkSpeed while a key is held (manage_blueprint edit_graph).")));
+            Result->SetArrayField(TEXT("warnings"), Warnings);
+        }
     }
     if (bHasAppliedWalkSpeed)
     {
@@ -185,6 +188,9 @@ bool HandleConfigureNavMovement(UEngineWireSubsystem* Self, const FString& Reque
         UCharacterMovementComponent* Movement = CharCDO->GetCharacterMovement();
         if (Payload->HasField(TEXT("navAgentRadius"))) Movement->NavAgentProps.AgentRadius = static_cast<float>(GetJsonNumberField(Payload, TEXT("navAgentRadius"), 42.0));
         if (Payload->HasField(TEXT("navAgentHeight"))) Movement->NavAgentProps.AgentHeight = static_cast<float>(GetJsonNumberField(Payload, TEXT("navAgentHeight"), 192.0));
+        // By default the spawned character copies its capsule size over the nav agent size, so a size set here was
+        // gone before any path was found; an explicit size stops that copy.
+        if (Payload->HasField(TEXT("navAgentRadius")) || Payload->HasField(TEXT("navAgentHeight"))) Movement->SetUpdateNavAgentWithOwnersCollisions(false);
         if (Payload->HasField(TEXT("avoidanceEnabled"))) Movement->bUseRVOAvoidance = GetJsonBoolField(Payload, TEXT("avoidanceEnabled"), false);
     }
 
@@ -192,6 +198,14 @@ bool HandleConfigureNavMovement(UEngineWireSubsystem* Self, const FString& Reque
     if (!CommitCharacterEdit(Self, RequestId, Blueprint, Socket)) return true;
     TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
     Result->SetStringField(TEXT("blueprintPath"), BlueprintPath);
+    // Read back from the defaults: it answered "configured" with no value at all.
+    if (const UCharacterMovementComponent* Applied = CharCDO ? CharCDO->GetCharacterMovement() : nullptr)
+    {
+        Result->SetNumberField(TEXT("navAgentRadius"), Applied->NavAgentProps.AgentRadius);
+        Result->SetNumberField(TEXT("navAgentHeight"), Applied->NavAgentProps.AgentHeight);
+        Result->SetBoolField(TEXT("avoidanceEnabled"), Applied->bUseRVOAvoidance);
+        Result->SetBoolField(TEXT("navAgentFollowsCapsule"), Applied->ShouldUpdateNavAgentWithOwnersCollision());
+    }
     McpHandlerUtils::AddVerification(Result, Blueprint);
     Self->SendAutomationResponse(Socket, RequestId, true, TEXT("Nav movement configured"), Result);
     return true;
@@ -206,19 +220,25 @@ bool HandleSetupMovement(UEngineWireSubsystem* Self, const FString& RequestId, c
         return true;
     }
 
-    ACharacter* CharCDO = Blueprint->GeneratedClass ? Cast<ACharacter>(Blueprint->GeneratedClass->GetDefaultObject()) : nullptr;
-    if (CharCDO && CharCDO->GetCharacterMovement())
-    {
-        UCharacterMovementComponent* Movement = CharCDO->GetCharacterMovement();
-        if (Payload->HasField(TEXT("walkSpeed"))) Movement->MaxWalkSpeed = static_cast<float>(GetJsonNumberField(Payload, TEXT("walkSpeed"), 600.0));
-        else if (Payload->HasField(TEXT("runSpeed"))) Movement->MaxWalkSpeed = static_cast<float>(GetJsonNumberField(Payload, TEXT("runSpeed"), 600.0));
-        if (Payload->HasField(TEXT("acceleration"))) Movement->MaxAcceleration = static_cast<float>(GetJsonNumberField(Payload, TEXT("acceleration"), 2048.0));
-    }
+    // LoadCharacterBlueprint already refused a Blueprint without CharacterMovement (NOT_A_CHARACTER).
+    UCharacterMovementComponent* Movement = Cast<ACharacter>(Blueprint->GeneratedClass->GetDefaultObject())->GetCharacterMovement();
+    if (Payload->HasField(TEXT("walkSpeed"))) Movement->MaxWalkSpeed = static_cast<float>(GetJsonNumberField(Payload, TEXT("walkSpeed"), 600.0));
+    else if (Payload->HasField(TEXT("runSpeed"))) Movement->MaxWalkSpeed = static_cast<float>(GetJsonNumberField(Payload, TEXT("runSpeed"), 600.0));
+    if (Payload->HasField(TEXT("acceleration"))) Movement->MaxAcceleration = static_cast<float>(GetJsonNumberField(Payload, TEXT("acceleration"), 2048.0));
 
     FBlueprintEditorUtils::MarkBlueprintAsModified(Blueprint);
     if (!CommitCharacterEdit(Self, RequestId, Blueprint, Socket)) return true;
     TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
     Result->SetStringField(TEXT("blueprintPath"), BlueprintPath);
+    Result->SetNumberField(TEXT("maxWalkSpeed"), Movement->MaxWalkSpeed);
+    Result->SetNumberField(TEXT("maxAcceleration"), Movement->MaxAcceleration);
+    if (Payload->HasField(TEXT("walkSpeed")) && Payload->HasField(TEXT("runSpeed")))
+    {
+        TArray<TSharedPtr<FJsonValue>> Warnings;
+        Warnings.Add(MakeShared<FJsonValueString>(TEXT("runSpeed was left out: a Character has one walk speed, and walkSpeed "
+            "set it. A sprint is game logic that raises MaxWalkSpeed while a key is held (manage_blueprint edit_graph).")));
+        Result->SetArrayField(TEXT("warnings"), Warnings);
+    }
     Self->SendAutomationResponse(Socket, RequestId, true, TEXT("Movement configured"), Result);
     return true;
 }

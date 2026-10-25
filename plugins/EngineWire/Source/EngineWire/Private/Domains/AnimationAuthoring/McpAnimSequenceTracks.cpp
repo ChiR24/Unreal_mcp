@@ -3,6 +3,41 @@
 
 namespace McpAnimationAuthoring {
 
+namespace {
+// What a key leaves out stays the bone's own at that frame: its track's key, or the skeleton's reference pose for a
+// bone with no track yet. A location left out read as (0,0,0) and put the bone on its parent, in an additive clip too.
+FTransform BoneKeyBase(const UAnimSequence* Sequence, FName Bone, int32 Frame)
+{
+#if ENGINE_MINOR_VERSION >= 2
+    const IAnimationDataModel* Model = Sequence->GetDataModel();
+    if (Model && Model->IsValidBoneTrackName(Bone))
+    {
+        // The read answers identity where the track holds no key, and a track add_bone_track just made holds none: the
+        // omitted rotation and scale became identity instead of the bone's own pose. Only a key that is there counts.
+        // ponytail: a real key of exactly identity reads as the reference pose; read the track's keys if that matters.
+        const FTransform Keyed = Model->GetBoneTrackTransform(Bone, FFrameNumber(Frame));
+        if (!Keyed.Equals(FTransform::Identity, 0.0))
+        {
+            return Keyed;
+        }
+    }
+#else
+    // 5.0 and 5.1 have no transform read; a track holds one key per frame, or a single key for a constant one.
+    const FBoneAnimationTrack* Track = Sequence->GetDataModel() ? Sequence->GetDataModel()->FindBoneTrackByName(Bone) : nullptr;
+    const FRawAnimSequenceTrack* Raw = Track ? &Track->InternalTrackData : nullptr;
+    if (Raw && Raw->PosKeys.Num() > 0 && Raw->RotKeys.Num() > 0)
+    {
+        const auto At = [Frame](int32 Num) { return FMath::Clamp(Frame, 0, Num - 1); };
+        const FVector Scale = Raw->ScaleKeys.Num() > 0 ? FVector(Raw->ScaleKeys[At(Raw->ScaleKeys.Num())]) : FVector::OneVector;
+        return FTransform(FQuat(Raw->RotKeys[At(Raw->RotKeys.Num())]), FVector(Raw->PosKeys[At(Raw->PosKeys.Num())]), Scale);
+    }
+#endif
+    const USkeleton* Skeleton = Sequence->GetSkeleton();
+    const int32 Index = Skeleton ? Skeleton->GetReferenceSkeleton().FindBoneIndex(Bone) : INDEX_NONE;
+    return Index != INDEX_NONE ? Skeleton->GetReferenceSkeleton().GetRefBonePose()[Index] : FTransform::Identity;
+}
+} // namespace
+
 TSharedPtr<FJsonObject> HandleSequenceTrackActions(const FString& SubAction, const TSharedPtr<FJsonObject>& Params, TSharedPtr<FJsonObject> Response)
 {
     if (SubAction == TEXT("add_bone_track"))
@@ -55,6 +90,7 @@ TSharedPtr<FJsonObject> HandleSequenceTrackActions(const FString& SubAction, con
             );
         }
 
+        bool bAlreadyHadTrack = false;
 #if ENGINE_MINOR_VERSION >= 2
         // UE 5.2+ uses IAnimationDataController with IsValidBoneTrackName and AddBoneCurve
         IAnimationDataController& Controller = Sequence->GetController();
@@ -69,7 +105,8 @@ TSharedPtr<FJsonObject> HandleSequenceTrackActions(const FString& SubAction, con
         }
 
         // Use IsValidBoneTrackName (non-deprecated) instead of GetBoneTrackIndexByName (deprecated since 5.2)
-        if (!Controller.GetModel()->IsValidBoneTrackName(BoneFName))
+        bAlreadyHadTrack = Controller.GetModel()->IsValidBoneTrackName(BoneFName);
+        if (!bAlreadyHadTrack)
         {
             // AddBoneCurve returns bool - check the result
             const bool bAdded = Controller.AddBoneCurve(BoneFName);
@@ -92,7 +129,8 @@ TSharedPtr<FJsonObject> HandleSequenceTrackActions(const FString& SubAction, con
 #elif ENGINE_MINOR_VERSION == 1
         // UE 5.1: AddBoneTrack/FindBoneTrackByName (AddBoneCurve is 5.2+, AddNewRawTrack is 5.0-only)
         IAnimationDataController& Controller = Sequence->GetController();
-        if (Controller.GetModel()->FindBoneTrackByName(BoneFName) == nullptr)
+        bAlreadyHadTrack = Controller.GetModel()->FindBoneTrackByName(BoneFName) != nullptr;
+        if (!bAlreadyHadTrack)
         {
             Controller.AddBoneTrack(BoneFName);
             if (Controller.GetModel()->FindBoneTrackByName(BoneFName) == nullptr)
@@ -108,6 +146,7 @@ TSharedPtr<FJsonObject> HandleSequenceTrackActions(const FString& SubAction, con
         IAnimationDataController& Controller = Sequence->GetController();
 
         const FBoneAnimationTrack* Track = Controller.GetModel()->FindBoneTrackByName(BoneFName);
+        bAlreadyHadTrack = Track != nullptr;
         if (Track == nullptr)
         {
             // UE 5.0 doesn't have AddBoneCurve - use AddNewRawTrack directly on the sequence
@@ -129,9 +168,13 @@ TSharedPtr<FJsonObject> HandleSequenceTrackActions(const FString& SubAction, con
         }
 #endif
 
-        SaveAnimAsset(Sequence, bSave);
+        // A track the sequence already had answered "added" and the sequence was written again.
+        Response->SetBoolField(TEXT("alreadyExists"), bAlreadyHadTrack);
+        SaveAnimAssetAndReport(Sequence, bSave && !bAlreadyHadTrack, Response);
 
-        ANIM_SUCCESS_RESPONSE(FString::Printf(TEXT("Bone track '%s' added"), *BoneName));
+        ANIM_SUCCESS_RESPONSE(bAlreadyHadTrack
+            ? FString::Printf(TEXT("The sequence already has a track for bone '%s'; nothing was changed"), *BoneName)
+            : FString::Printf(TEXT("Bone track '%s' added"), *BoneName));
         McpHandlerUtils::AddVerification(Response, Sequence);
         return Response;
     }
@@ -154,14 +197,6 @@ TSharedPtr<FJsonObject> HandleSequenceTrackActions(const FString& SubAction, con
             ANIM_ERROR_RESPONSE(FString::Printf(TEXT("Could not load animation sequence: %s"), *AssetPath), TEXT("SEQUENCE_NOT_FOUND"));
         }
 
-        // Build transform key
-        FVector Location = ExtractVectorField(Params, TEXT("location"), FVector::ZeroVector);
-        // The contract types rotation as [pitch, yaw, roll] and the gateway
-        // hands objects over as that array; GetObjectField read null for it, so
-        // every key was written with identity rotation and reported success.
-        FQuat Rotation = ExtractRotatorField(Params, TEXT("rotation"), FRotator::ZeroRotator).Quaternion();
-        FVector Scale = ExtractVectorField(Params, TEXT("scale"), FVector::OneVector);
-
         int32 TotalFrames = Sequence->GetDataModel()->GetNumberOfFrames();
         if (Frame < 0 || Frame >= TotalFrames)
         {
@@ -170,6 +205,16 @@ TSharedPtr<FJsonObject> HandleSequenceTrackActions(const FString& SubAction, con
                 TEXT("FRAME_OUT_OF_RANGE")
             );
         }
+
+        // Build transform key
+        const FTransform Base = BoneKeyBase(Sequence, FName(*BoneName), Frame);
+        FVector Location = ExtractVectorField(Params, TEXT("location"), Base.GetLocation());
+        // The contract types rotation as [pitch, yaw, roll] and the gateway
+        // hands objects over as that array; GetObjectField read null for it, so
+        // every key was written with identity rotation and reported success.
+        FQuat Rotation = Params->HasField(TEXT("rotation"))
+            ? ExtractRotatorField(Params, TEXT("rotation"), FRotator::ZeroRotator).Quaternion() : Base.GetRotation();
+        FVector Scale = ExtractVectorField(Params, TEXT("scale"), Base.GetScale3D());
 
 #if ENGINE_MINOR_VERSION >= 2
         // UE 5.2+ API

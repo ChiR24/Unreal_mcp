@@ -12,6 +12,7 @@
 #include "Foundation/McpLiveStateRevisions.h"
 
 struct FMcpReceiptContext;
+struct FMcpJsonRpcRequest;
 
 class UEngineWireSubsystem;
 class FSocket;
@@ -134,9 +135,16 @@ private:
 	FString HandleInitialize(const TSharedPtr<FJsonObject>& Params,
 		const TSharedPtr<FJsonValue>& Id, FString& OutSessionId,
 		const FString& ConnectionRemoteAddr);
-	// server/discover (MCP 2026-07-28): versions, capabilities, identity and instructions with no session. It
-	// lists only the versions initialize negotiates, so a 2026-07-28 client falls back to that handshake.
+	// server/discover (MCP 2026-07-28): versions, capabilities, identity and instructions with no session.
 	FString HandleServerDiscover(const TSharedPtr<FJsonValue>& Id) const;
+	// A 2026-07-28 request (its _meta names the version): no initialize and no session id, served on one implicit
+	// session per principal that is never shown to the client (Protocol/McpNativeTransportModern.cpp).
+	void HandleModernRequest(FSocket* ClientSocket, const FParsedHttpRequest& HttpReq, const FMcpJsonRpcRequest& Rpc);
+	FString EnsureModernSession(const FString& PresentedToken);
+	// tasks/get, tasks/cancel and tasks/update (the tasks extension); OutCancelId names a call still waiting in the
+	// queue, cancelled once the answer is sent.
+	FString HandleTaskMethod(const FString& Method, const TSharedPtr<FJsonObject>& Params,
+		const TSharedPtr<FJsonValue>& Id, const FString& SessionId, FString& OutCancelId);
 	// The capabilities and instructions initialize and server/discover share, written into Result; returns serverInfo.
 	TSharedPtr<FJsonObject> DescribeServer(const TSharedPtr<FJsonObject>& Result) const;
 	FString HandleToolsList(const TSharedPtr<FJsonValue>& Id, const FString& SessionId);
@@ -197,10 +205,11 @@ private:
 	static int32 GetSessionValidationStatusCode(ESessionValidationResult Result);
 	void TouchSession(const FString& SessionId);
 	void MarkSessionInitializationComplete(const FString& SessionId);
+	// False with OutError (the cap, its setting and the wait) and, when asked, the seconds until the window resets.
 	bool ConsumeSessionRequestBudget(
-		const FString& SessionId, bool bToolCall, FString& OutError);
+		const FString& SessionId, bool bToolCall, FString& OutError, int32* OutRetryAfterSeconds = nullptr);
 	bool ConsumeClientRequestBudgetLocked(
-		const FString& ClientRateKey, bool bToolCall, FString& OutError);
+		const FString& ClientRateKey, bool bToolCall, FString& OutError, int32* OutRetryAfterSeconds = nullptr);
 	bool QueueAutomationRequestForSession(
 		const FString& SessionId, const FString& RequestId,
 		const FString& DispatchAction,

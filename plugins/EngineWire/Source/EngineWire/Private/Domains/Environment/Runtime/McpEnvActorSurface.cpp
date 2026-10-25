@@ -63,6 +63,29 @@ int32 McpSetMaterialOnActor(AActor *Actor, const TSharedPtr<FJsonObject> &Payloa
         return 0;
     }
 
+    // A water body draws its surface with its WaterBodyComponent's WaterMaterial: a slot material on its components
+    // never reached the water. Found by reflection, since this module does not link Water.
+    for (UActorComponent *Component : Actor->GetComponents())
+    {
+        FObjectProperty *WaterMaterial = Component ? FindFProperty<FObjectProperty>(Component->GetClass(), TEXT("WaterMaterial")) : nullptr;
+        if (WaterMaterial)
+        {
+            Component->Modify();
+            WaterMaterial->SetObjectPropertyValue_InContainer(Component, Material);
+            FPropertyChangedEvent Changed(WaterMaterial);
+            Component->PostEditChangeProperty(Changed);
+            Actor->MarkPackageDirty();
+            const UObject *Landed = WaterMaterial->GetObjectPropertyValue_InContainer(Component);
+            Resp->SetStringField(TEXT("waterMaterial"), Landed ? Landed->GetPathName() : FString());
+            if (Landed != Material)
+            {
+                Resp->SetStringField(TEXT("materialError"), TEXT("The water body did not keep the material."));
+                return 0;
+            }
+            return 1;
+        }
+    }
+
     int32 MaterialIndex = 0;
     Payload->TryGetNumberField(TEXT("materialIndex"), MaterialIndex);
     int32 AppliedCount = 0;

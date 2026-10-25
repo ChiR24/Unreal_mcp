@@ -214,8 +214,10 @@ int32 McpApplyPayloadSettings(UObject *Target, const TSharedPtr<FJsonObject> &Pa
                 continue;
             }
 
+            // The writer edit_component uses: the reflection importer takes scalars and structs only, so an object
+            // or soft reference (a cloud's Material) answered "Unsupported property type" here alone.
             FString ApplyError;
-            if (McpPropertyReflection::ApplyJsonValueToProperty(Target, Property, Pair.Value, ApplyError))
+            if (::ApplyJsonValueToProperty(Target, Property, Pair.Value, ApplyError))
             {
                 AppliedProperties.Add(Property->GetName());
                 ++AppliedCount;

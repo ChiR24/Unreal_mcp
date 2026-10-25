@@ -2,7 +2,7 @@
 // The six static workflow prompts (prompts/list, prompts/get). Each renders a
 // step list of describe/execute calls; nothing runs on its own.
 
-import { ErrorCode, McpError } from '@modelcontextprotocol/sdk/types.js';
+import { ProtocolError, ProtocolErrorCode } from '@modelcontextprotocol/server';
 
 interface PromptStep {
   readonly summary: string;
@@ -132,21 +132,21 @@ export function listPrompts(): { name: string; title: string; description: strin
 
 export function getPrompt(name: string, args: Readonly<Record<string, string>>): { description: string; messages: { role: 'user'; content: { type: 'text'; text: string } }[] } {
   const prompt = WORKFLOW_PROMPTS.find((candidate) => candidate.id === name);
-  if (prompt === undefined) throw new McpError(ErrorCode.InvalidParams, `Unknown workflow prompt: ${name}`);
+  if (prompt === undefined) throw new ProtocolError(ProtocolErrorCode.InvalidParams, `Unknown workflow prompt: ${name}`);
   const declared = new Set(prompt.arguments.map((argument) => argument.name));
   for (const argName of Object.keys(args)) {
-    if (!declared.has(argName)) throw new McpError(ErrorCode.InvalidParams, `Unknown argument: ${argName}`);
+    if (!declared.has(argName)) throw new ProtocolError(ProtocolErrorCode.InvalidParams, `Unknown argument: ${argName}`);
   }
   for (const spec of prompt.arguments) {
     const value = args[spec.name];
     if (value === undefined) {
-      if (spec.required) throw new McpError(ErrorCode.InvalidParams, `Missing required argument: ${spec.name}`);
+      if (spec.required) throw new ProtocolError(ProtocolErrorCode.InvalidParams, `Missing required argument: ${spec.name}`);
       continue;
     }
     // The value is echoed into a model-facing message: an unbounded one made the prompt as big as the caller liked.
-    if (value.length > MAX_ARGUMENT_LENGTH) throw new McpError(ErrorCode.InvalidParams, `Argument ${spec.name} is longer than ${String(MAX_ARGUMENT_LENGTH)} characters`);
+    if (value.length > MAX_ARGUMENT_LENGTH) throw new ProtocolError(ProtocolErrorCode.InvalidParams, `Argument ${spec.name} is longer than ${String(MAX_ARGUMENT_LENGTH)} characters`);
     if (spec.allowed !== undefined && !spec.allowed.includes(value)) {
-      throw new McpError(ErrorCode.InvalidParams, `Argument ${spec.name} must be one of: ${spec.allowed.join(', ')}`);
+      throw new ProtocolError(ProtocolErrorCode.InvalidParams, `Argument ${spec.name} must be one of: ${spec.allowed.join(', ')}`);
     }
   }
 

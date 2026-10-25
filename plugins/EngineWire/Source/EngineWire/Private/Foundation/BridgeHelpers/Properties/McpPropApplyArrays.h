@@ -9,11 +9,28 @@
 // listing Objects before Arrays makes a build break out of swapping two include lines.
 #include "Foundation/BridgeHelpers/Properties/McpPropApplyObjects.h"
 
+// The elements of a JSON array into an empty array value, each through the importer every property uses (strict
+// integer ranges, enum names), and an element given as text the JSON path cannot read through the engine's
+// export-text import. Returns the refusal, or an empty string.
+static inline FString McpFillArrayFromJson(FArrayProperty *AP, void *ArrayValue,
+                                           const TArray<TSharedPtr<FJsonValue>> &Src) {
+  FScriptArrayHelper Helper(AP, ArrayValue);
+  for (int32 i = 0; i < Src.Num(); ++i) {
+    void *ElemPtr = Helper.GetRawPtr(Helper.AddValue());
+    FString Error;
+    if (ApplyJsonValueToProperty(ElemPtr, AP->Inner, Src[i], Error) ||
+        (Src[i]->Type == EJson::String && ImportExportTextIntoValue(ElemPtr, AP->Inner, Src[i]->AsString()))) {
+      continue;
+    }
+    return FString::Printf(TEXT("Could not convert element %d of array property '%s' (element type '%s'): %s"), i,
+                           *AP->GetName(), *AP->Inner->GetClass()->GetName(), *Error);
+  }
+  return FString();
+}
+
 static inline bool ApplyJsonArrayValueToProperty(void *TargetContainer, FProperty *Property,
                                                  const TSharedPtr<FJsonValue> &ValueField,
                                                  FString &OutError) {
-  // Arrays: handle common inner element types directly. Unsupported inner
-  // types will return an error to avoid relying on ImportText-like APIs.
   if (FArrayProperty *AP = CastField<FArrayProperty>(Property)) {
     if (ValueField->Type != EJson::Array) {
       // Callers commonly hand us an array that is *already* serialized: either
@@ -46,95 +63,79 @@ static inline bool ApplyJsonArrayValueToProperty(void *TargetContainer, FPropert
           *AP->GetName());
       return false;
     }
-    FScriptArrayHelper Helper(
-        AP, AP->ContainerPtrToValuePtr<void>(TargetContainer));
-    Helper.EmptyValues();
     const TArray<TSharedPtr<FJsonValue>> &Src = ValueField->AsArray();
-    for (int32 i = 0; i < Src.Num(); ++i) {
-      Helper.AddValue();
-      void *ElemPtr = Helper.GetRawPtr(Helper.Num() - 1);
-      FProperty *Inner = AP->Inner;
-      const TSharedPtr<FJsonValue> &V = Src[i];
-      if (FStrProperty *SIP = CastField<FStrProperty>(Inner)) {
-        FString &Dest = *reinterpret_cast<FString *>(ElemPtr);
-        Dest = (V->Type == EJson::String)
-                   ? V->AsString()
-                   : FString::Printf(TEXT("%g"), V->AsNumber());
-        continue;
-      }
-      if (FNameProperty *NIP = CastField<FNameProperty>(Inner)) {
-        FName &Dest = *reinterpret_cast<FName *>(ElemPtr);
-        Dest = (V->Type == EJson::String)
-                   ? FName(*V->AsString())
-                   : FName(*FString::Printf(TEXT("%g"), V->AsNumber()));
-        continue;
-      }
-      if (FBoolProperty *BIP = CastField<FBoolProperty>(Inner)) {
-        uint8 &Dest = *reinterpret_cast<uint8 *>(ElemPtr);
-        Dest = (V->Type == EJson::Boolean) ? (V->AsBool() ? 1 : 0)
-                                           : (V->AsNumber() != 0.0 ? 1 : 0);
-        continue;
-      }
-      if (FFloatProperty *FIP = CastField<FFloatProperty>(Inner)) {
-        float &Dest = *reinterpret_cast<float *>(ElemPtr);
-        Dest = (V->Type == EJson::Number)
-                   ? (float)V->AsNumber()
-                   : (float)FCString::Atod(*V->AsString());
-        continue;
-      }
-      if (FDoubleProperty *DIP = CastField<FDoubleProperty>(Inner)) {
-        double &Dest = *reinterpret_cast<double *>(ElemPtr);
-        Dest = (V->Type == EJson::Number) ? V->AsNumber()
-                                          : FCString::Atod(*V->AsString());
-        continue;
-      }
-      if (FIntProperty *IIP = CastField<FIntProperty>(Inner)) {
-        int32 &Dest = *reinterpret_cast<int32 *>(ElemPtr);
-        Dest = (V->Type == EJson::Number) ? (int32)V->AsNumber()
-                                          : FCString::Atoi(*V->AsString());
-        continue;
-      }
-      if (FInt64Property *I64IP = CastField<FInt64Property>(Inner)) {
-        int64 &Dest = *reinterpret_cast<int64 *>(ElemPtr);
-        Dest = (V->Type == EJson::Number) ? (int64)V->AsNumber()
-                                          : FCString::Atoi64(*V->AsString());
-        continue;
-      }
-      if (FByteProperty *BYP = CastField<FByteProperty>(Inner)) {
-        uint8 &Dest = *reinterpret_cast<uint8 *>(ElemPtr);
-        Dest = (V->Type == EJson::Number)
-                   ? (uint8)V->AsNumber()
-                   : (uint8)FCString::Atoi(*V->AsString());
-        continue;
-      }
-
-      FString InnerError;
-      if (ApplyJsonValueToProperty(ElemPtr, Inner, V, InnerError)) {
-        continue;
-      }
-
-      // Last resort for element types the JSON path cannot express: let the
-      // engine parse the element's export text.
-      if (V->Type == EJson::String &&
-          ImportExportTextIntoValue(ElemPtr, Inner, V->AsString())) {
-        continue;
-      }
-
-      // Still no: say which element failed, what it is, and what we accept --
-      // "Unsupported array inner property type" told the caller nothing.
-      OutError = FString::Printf(
-          TEXT("Could not convert element %d of array property '%s' (element "
-               "type '%s'%s). Directly supported element types: string, name, "
-               "bool, float, double, int32, int64, byte, object reference, "
-               "soft object/class reference, and struct (as a JSON object or "
-               "UE export text)."),
-          i, *AP->GetName(),
-          Inner ? *Inner->GetClass()->GetName() : TEXT("<unknown>"),
-          InnerError.IsEmpty() ? TEXT("")
-                               : *FString::Printf(TEXT(": %s"), *InnerError));
-      return false;
-    }
-    return true;
+    // Filled in scratch, so a refused element leaves the property as it was.
+    return McpWriteThroughScratch(AP->ContainerPtrToValuePtr<void>(TargetContainer), AP, [AP, &Src, &OutError](void *Scratch) {
+      OutError = McpFillArrayFromJson(AP, Scratch, Src);
+      return OutError.IsEmpty();
+    });
   }
   return false;
+}
+
+// The entries of a JSON object into an empty map value, each key and value through the importer every property uses.
+// Returns the refusal, or an empty string. The map is hashed only once every entry is in, and a key that repeats an
+// earlier one (two spellings of one enum value) is refused, since a map holds each key once.
+static inline FString McpFillMapFromJson(FMapProperty *MP, void *MapValue, const TSharedPtr<FJsonObject> &Object) {
+  FScriptMapHelper Helper(MP, MapValue);
+  for (const auto &Entry : Object->Values) {
+    const FString Key(Entry.Key.Len(), *Entry.Key);
+    const int32 Index = Helper.AddDefaultValue_Invalid_NeedsRehash();
+    uint8 *Pair = Helper.GetPairPtr(Index);
+    FString Error;
+    if (ApplyJsonValueToProperty(Pair, MP->KeyProp, MakeShared<FJsonValueString>(Key), Error) &&
+        ApplyJsonValueToProperty(Pair, MP->ValueProp, Entry.Value, Error)) {
+      if (Helper.FindMapIndexWithKey(Pair) == Index) {
+        continue;
+      }
+      Error = TEXT("an earlier key is the same key");
+    }
+    return FString::Printf(TEXT("Map property '%s', key '%s': %s"), *MP->GetName(), *Key, *Error);
+  }
+  Helper.Rehash();
+  return FString();
+}
+
+// The same for a set from a JSON array.
+static inline FString McpFillSetFromJson(FSetProperty *SP, void *SetValue, const TArray<TSharedPtr<FJsonValue>> &Src) {
+  FScriptSetHelper Helper(SP, SetValue);
+  for (int32 i = 0; i < Src.Num(); ++i) {
+    const int32 Index = Helper.AddDefaultValue_Invalid_NeedsRehash();
+    uint8 *Element = Helper.GetElementPtr(Index);
+    FString Error;
+    if (ApplyJsonValueToProperty(Element, SP->ElementProp, Src[i], Error)) {
+      if (Helper.FindElementIndex(Element) == Index) {
+        continue;
+      }
+      Error = TEXT("an earlier element is the same value");
+    }
+    return FString::Printf(TEXT("Set property '%s', element %d: %s"), *SP->GetName(), i, *Error);
+  }
+  Helper.Rehash();
+  return FString();
+}
+
+// A map takes a JSON object of key: value, the form get_property reads back (a JSON key is text, so a number or
+// enum key is spelled as text); a set takes a JSON array. Filled in scratch, so a refused entry leaves the property
+// as it was.
+static inline bool ApplyJsonMapOrSetValueToProperty(void *TargetContainer, FProperty *Property,
+                                                     const TSharedPtr<FJsonValue> &ValueField, FString &OutError) {
+  FMapProperty *MP = CastField<FMapProperty>(Property);
+  FSetProperty *SP = CastField<FSetProperty>(Property);
+  if (!MP && !SP) {
+    return false;
+  }
+  if (ValueField->Type != (MP ? EJson::Object : EJson::Array)) {
+    OutError = MP ? FString::Printf(TEXT("Map property '%s' takes a JSON object of key: value, such as {\"Apple\": 3}"),
+                                    *Property->GetName())
+                  : FString::Printf(TEXT("Set property '%s' takes a JSON array, such as [\"Red\", \"Blue\"]"),
+                                    *Property->GetName());
+    return false;
+  }
+  return McpWriteThroughScratch(Property->ContainerPtrToValuePtr<void>(TargetContainer), Property,
+                                [MP, SP, &ValueField, &OutError](void *Scratch) {
+                                  OutError = MP ? McpFillMapFromJson(MP, Scratch, ValueField->AsObject())
+                                                : McpFillSetFromJson(SP, Scratch, ValueField->AsArray());
+                                  return OutError.IsEmpty();
+                                });
 }

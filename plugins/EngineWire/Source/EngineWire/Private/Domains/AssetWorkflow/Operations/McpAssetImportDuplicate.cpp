@@ -115,9 +115,10 @@ bool UEngineWireSubsystem::HandleImportAsset(
           ImportData->Filenames = {ResolvedSourcePath};
           FString SetupError, SetupCode;
           ImportData->Factory = McpMakeFbxFactory(ImportData, FbxOptions, SetupError, SetupCode);
-          if (SetupError.IsEmpty() && ImportData->Factory != nullptr) {
-            McpClearFbxImportTarget(DestPath, DestName, ResolvedSourcePath,
-                                    bOverwrite, SetupError, SetupCode);
+          // Every import: an asset at the destination is replaced only with overwrite.
+          if (SetupError.IsEmpty()) {
+            McpClearImportTarget(DestPath, DestName, ResolvedSourcePath,
+                                 bOverwrite, SetupError, SetupCode, ImportData->Factory != nullptr);
           }
           if (!SetupError.IsEmpty()) {
             StrongThis->SendAutomationResponse(Socket, RequestId, false,
@@ -191,10 +192,15 @@ bool UEngineWireSubsystem::HandleDuplicateAsset(
   Payload->TryGetStringField(TEXT("sourcePath"), SourcePath);
   FString DestinationPath;
   Payload->TryGetStringField(TEXT("destinationPath"), DestinationPath);
+  FString NewName;
+  Payload->TryGetStringField(TEXT("newName"), NewName);
+  NewName.TrimStartAndEndInline();
+  // newName alone copies beside the source; it was refused for want of a destinationPath.
+  if (DestinationPath.IsEmpty() && !NewName.IsEmpty()) DestinationPath = FPaths::GetPath(SourcePath);
 
   if (SourcePath.IsEmpty() || DestinationPath.IsEmpty()) {
     SendAutomationResponse(Socket, RequestId, false,
-                           TEXT("sourcePath and destinationPath required"),
+                           TEXT("sourcePath and destinationPath (or newName) required"),
                            nullptr, TEXT("INVALID_ARGUMENT"));
     return true;
   }
@@ -206,9 +212,6 @@ bool UEngineWireSubsystem::HandleDuplicateAsset(
   // Passing a folder straight to DuplicateAsset used to "succeed" while
   // creating nothing usable (the folder name became the asset name), so
   // resolve folder + newName (or the source's own name) to a full asset path.
-  FString NewName;
-  Payload->TryGetStringField(TEXT("newName"), NewName);
-  NewName.TrimStartAndEndInline();
   // With newName the folder need not exist yet: a not-yet-created "/Game/X/FX" used to lose its last
   // segment and land the copy in "/Game/X". Only an existing asset there means a full asset path.
   const bool bDestinationIsFolder =
@@ -292,6 +295,8 @@ bool UEngineWireSubsystem::HandleDuplicateAsset(
     Resp->SetBoolField(TEXT("success"), bSuccess);
     Resp->SetStringField(TEXT("sourcePath"), SourcePath);
     Resp->SetStringField(TEXT("destinationPath"), DestinationPath);
+    // Against assetCount, a short duplicatedCount names copies refused because the destination was taken.
+    Resp->SetNumberField(TEXT("assetCount"), Assets.Num());
     Resp->SetNumberField(TEXT("duplicatedCount"), DuplicatedCount);
     Resp->SetNumberField(TEXT("savedCount"), SavedCount);
 

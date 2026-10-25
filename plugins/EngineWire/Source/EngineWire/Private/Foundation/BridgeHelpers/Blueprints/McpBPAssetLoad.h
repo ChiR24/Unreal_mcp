@@ -10,6 +10,12 @@
 #include "UObject/Package.h"
 #include "UObject/UObjectIterator.h"
 
+// True when PackagePath is a level (Assets is the registry's answer for it), so a Blueprint lookup ends there:
+// OutBlueprint is then its level Blueprint when the level is open in the editor (the persistent level or one
+// streamed into it), else null with OutError saying how to reach it. A level that is not open is never loaded.
+bool McpResolveLevelBlueprint(const FString &PackagePath, const TArray<FAssetData> &Assets,
+                              UBlueprint *&OutBlueprint, FString &OutError);
+
 // Attempt to locate and load a Blueprint by several heuristics. Returns nullptr
 /**
  * Locate and load a Blueprint asset from a variety of request formats and
@@ -79,6 +85,13 @@ static inline UBlueprint *LoadBlueprintAsset(const FString &Req,
           TEXT("AssetRegistry"));
   TArray<FAssetData> Results;
   ARM.Get().GetAssetsByPackageName(FName(*PackagePath), Results);
+  // A level's Blueprint is its level script, held by the level rather than the
+  // package, so a level path reaches it without the L.L:PersistentLevel.L spelling.
+  UBlueprint *LevelBP = nullptr;
+  if (McpResolveLevelBlueprint(PackagePath, Results, LevelBP, OutError)) {
+    OutNormalized = LevelBP ? PackagePath : FString();
+    return LevelBP;
+  }
   // GetAsset loads the asset when it is not in memory yet.
   if (UBlueprint* BP = Results.Num() > 0 ? Cast<UBlueprint>(Results[0].GetAsset()) : nullptr) {
     OutNormalized = Results[0].PackageName.ToString();

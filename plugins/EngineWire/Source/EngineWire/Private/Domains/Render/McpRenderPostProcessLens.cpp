@@ -60,8 +60,10 @@ bool HandleRenderPostProcessLensAction(
 
     FString ResolveError;
     FString ResolveErrorCode;
+    // A level without an unbound volume gets one, as the bloom, color and lighting variants already did: these
+    // answered ACTOR_NOT_FOUND there.
     APostProcessVolume* Volume = McpResolvePostProcessVolume(
-        GetRenderWorld(), Payload, false, ResolveError, ResolveErrorCode);
+        GetRenderWorld(), Payload, true, ResolveError, ResolveErrorCode);
     if (!Volume)
     {
         if (!ResolveError.IsEmpty())
@@ -70,7 +72,8 @@ bool HandleRenderPostProcessLensAction(
         }
         return true;
     }
-    Volume->Modify();
+    // Every value goes to a copy first: the volume changes, in one undo step, only once all of them are taken.
+    FPostProcessSettings Staged = Volume->Settings;
     TArray<FString> Applied;
     TArray<FString> Unsupported;
     FString Error;
@@ -82,15 +85,14 @@ bool HandleRenderPostProcessLensAction(
          SubAction == TEXT("configure_motion_blur") ||
          SubAction == TEXT("configure_exposure") ||
          SubAction == TEXT("configure_gtao")) &&
-        !ApplyPostProcessSettings(Volume, Settings, Applied, Unsupported, Error))
+        !ApplyPostProcessSettings(Staged, Settings, Applied, Unsupported, Error))
     {
         Subsystem->SendAutomationError(RequestingSocket, RequestId, Error, TEXT("INVALID_SETTING"));
         return true;
     }
 
-    ApplyVolumeBlendFields(Volume, Payload, Applied);
     if (SubAction == TEXT("configure_exposure") &&
-        !ApplyDeclaredExposureFields(Volume, Payload, Applied, Unsupported, Error))
+        !ApplyDeclaredExposureFields(Staged, Payload, Applied, Unsupported, Error))
     {
         Subsystem->SendAutomationError(RequestingSocket, RequestId, Error, TEXT("INVALID_SETTING"));
         return true;
@@ -103,25 +105,29 @@ bool HandleRenderPostProcessLensAction(
     {
         if (Payload->HasTypedField<EJson::Number>(Key))
         {
-            ApplyPostProcessField(Volume, Field, MakeShared<FJsonValueNumber>(Payload->GetNumberField(Key)), Applied, Unsupported, Error);
+            ApplyPostProcessField(Staged, Field, MakeShared<FJsonValueNumber>(Payload->GetNumberField(Key)), Applied, Unsupported, Error);
         }
     };
-    if (SubAction == TEXT("configure_lens_flare") &&
-        Payload->HasTypedField<EJson::Boolean>(TEXT("enabled")) &&
-        !GetJsonBoolField(Payload, TEXT("enabled"), true))
+    if (SubAction == TEXT("configure_lens_flare"))
     {
-        ApplyPostProcessField(Volume, TEXT("LensFlareIntensity"), MakeShared<FJsonValueNumber>(0.0), Applied, Unsupported, Error);
+        // enabled false zeroes the flare; true put nothing back, so a flare zeroed before stayed off. It now
+        // restores the engine default (1), unless settings gives LensFlareIntensity itself.
+        if (Payload->HasTypedField<EJson::Boolean>(TEXT("enabled")) &&
+            (!Payload->GetBoolField(TEXT("enabled")) || !(Settings.IsValid() && Settings->HasField(TEXT("LensFlareIntensity")))))
+        {
+            ApplyPostProcessField(Staged, TEXT("LensFlareIntensity"),
+                MakeShared<FJsonValueNumber>(Payload->GetBoolField(TEXT("enabled")) ? 1.0 : 0.0), Applied, Unsupported, Error);
+        }
     }
     else if (SubAction == TEXT("set_dof_method"))
     {
-        const FString Method = GetJsonStringField(Payload, TEXT("method"));
-        FString Value;
-        if (!ResolveEnumAlias(DepthOfFieldMethodMap(), Method, Value, Error))
+        bool bMobileHQGaussian = false;
+        if (!ResolveDepthOfFieldMethod(GetJsonStringField(Payload, TEXT("method")), bMobileHQGaussian, Error))
         {
             Subsystem->SendAutomationError(RequestingSocket, RequestId, Error, TEXT("INVALID_SETTING"));
             return true;
         }
-        ApplyPostProcessField(Volume, TEXT("DepthOfFieldMethod"), MakeShared<FJsonValueString>(Value), Applied, Unsupported, Error);
+        ApplyPostProcessField(Staged, TEXT("bMobileHQGaussian"), MakeShared<FJsonValueBoolean>(bMobileHQGaussian), Applied, Unsupported, Error);
     }
     else if (SubAction == TEXT("set_focal_distance"))
     {
@@ -148,7 +154,7 @@ bool HandleRenderPostProcessLensAction(
             Subsystem->SendAutomationError(RequestingSocket, RequestId, Error, TEXT("INVALID_SETTING"));
             return true;
         }
-        ApplyPostProcessField(Volume, TEXT("AutoExposureMethod"), MakeShared<FJsonValueString>(Value), Applied, Unsupported, Error);
+        ApplyPostProcessField(Staged, TEXT("AutoExposureMethod"), MakeShared<FJsonValueString>(Value), Applied, Unsupported, Error);
     }
     else if (SubAction == TEXT("set_exposure_compensation"))
     {
@@ -162,7 +168,7 @@ bool HandleRenderPostProcessLensAction(
     else if (SubAction == TEXT("configure_ssao") || SubAction == TEXT("configure_chromatic_aberration") ||
              SubAction == TEXT("configure_grain"))
     {
-        ApplyPostProcessSettings(Volume, Settings, Applied, Unsupported, Error);
+        ApplyPostProcessSettings(Staged, Settings, Applied, Unsupported, Error);
         ApplyGiven(TEXT("amount"), SubAction == TEXT("configure_ssao") ? TEXT("AmbientOcclusionIntensity")
                                    : SubAction == TEXT("configure_grain") ? TEXT("FilmGrainIntensity")
                                                                            : TEXT("SceneFringeIntensity"));
@@ -186,7 +192,7 @@ bool HandleRenderPostProcessLensAction(
             TEXT("NO_SETTING_SUPPLIED"));
         return true;
     }
-    Volume->MarkComponentsRenderStateDirty();
+    CommitPostProcessVolume(Volume, Staged, Payload, false, Applied);
     TSharedPtr<FJsonObject> Result = MakeRenderResult(SubAction);
     AddStringArray(Result, TEXT("appliedSettings"), Applied);
     AddStringArray(Result, TEXT("unsupportedSettings"), Unsupported);

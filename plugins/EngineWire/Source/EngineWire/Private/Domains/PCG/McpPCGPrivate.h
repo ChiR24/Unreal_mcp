@@ -84,7 +84,8 @@ bool ApplyPCGConvenienceSettings(const FString& SubAction, UPCGSettings* Setting
 UPCGComponent* FindPCGComponent(UWorld* World, const FString& ActorName, const FString& ComponentName, AActor*& OutActor);
 UPCGComponent* CreatePCGComponent(AActor* Actor, const FString& ComponentName);
 bool SaveEditorWorldIfRequested(UWorld* World, bool bSave, bool& bOutSaved, FString& OutError);
-void ApplyNodeMetadata(UPCGNode* Node, const TSharedPtr<FJsonObject>& Payload);
+// bNameIsTitle: nodeName and name may title the node (a create); an edit finds its node by nodeName instead.
+void ApplyNodeMetadata(UPCGNode* Node, const TSharedPtr<FJsonObject>& Payload, bool bNameIsTitle = true);
 bool SaveGraphIfRequested(UPCGGraph* Graph, bool bSave, bool& bOutSaved, FString& OutError);
 
 bool HandleCreatePCGGraph(UEngineWireSubsystem* Bridge, const FString& RequestId, const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> Socket, bool bSave);

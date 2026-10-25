@@ -2,6 +2,7 @@
 #include "Domains/ControlEditor/McpEditorSupport.h"
 
 #include "Foundation/BridgeHelpers/Reflection/McpClassResolve.h"
+#include "Foundation/Render/McpConsoleVariableWrite.h"
 #include "UObject/UnrealType.h"
 #include "EditorModeManager.h"
 #include "EngineWireSettings.h"
@@ -104,23 +105,22 @@ bool UEngineWireSubsystem::HandleControlEditorSetPreferences(
       IConsoleVariable* CVar = IConsoleManager::Get().FindConsoleVariable(*PreferenceName);
       if (CVar) {
         FString Value;
-        if (McpHandlerUtils::TryGetJsonValueString(Pair.Value, Value)) {
-          CVar->Set(*Value);
+        double NumVal = 0.0;
+        bool BoolVal = false;
+        bool bHasValue = McpHandlerUtils::TryGetJsonValueString(Pair.Value, Value);
+        if (!bHasValue && Pair.Value->TryGetNumber(NumVal)) {
+          Value = FString::SanitizeFloat(NumVal);
+          bHasValue = true;
+        } else if (!bHasValue && Pair.Value->TryGetBool(BoolVal)) {
+          Value = BoolVal ? TEXT("1") : TEXT("0");
+          bHasValue = true;
+        }
+        // Set as the console does and read back: a value a higher-priority source held was listed as applied.
+        const FString NotTaken = bHasValue ? McpSetConsoleVariable(*CVar, Value) : FString(TEXT("not a string, number or bool"));
+        if (NotTaken.IsEmpty()) {
           AppliedSettings.Add(PreferenceName);
         } else {
-          double NumVal;
-          if (Pair.Value->TryGetNumber(NumVal)) {
-            CVar->Set((float)NumVal);
-            AppliedSettings.Add(PreferenceName);
-          } else {
-            bool BoolVal;
-            if (Pair.Value->TryGetBool(BoolVal)) {
-              CVar->Set(BoolVal ? 1 : 0);
-              AppliedSettings.Add(PreferenceName);
-            } else {
-              FailedSettings.Add(PreferenceName);
-            }
-          }
+          FailedSettings.Add(FString::Printf(TEXT("%s (%s)"), *PreferenceName, *NotTaken));
         }
       } else if (Category.Equals(TEXT("LevelEditor"), ESearchCase::IgnoreCase) && PreferenceName.Equals(TEXT("RealtimeAudio"), ESearchCase::IgnoreCase)) {
         bool BoolVal;

@@ -193,7 +193,8 @@ FPropertyResolveResult ResolveProperty(UObject* Object, const FString& PropertyN
     // paths at any depth, and a bare name that lives in one struct member.
     FString ResolvedPath;
     Result.Property = McpResolvePropertyPath(Object, PropertyName, Result.Container, ResolvedPath, Result.Error);
-    if (!Result.Property && !PropertyName.Contains(TEXT(".")))
+    const FProperty* Deprecated = FindFProperty<FProperty>(Object->GetClass(), FName(*PropertyName));
+    if (!Result.Property && !PropertyName.Contains(TEXT(".")) && !(Deprecated && Deprecated->HasAnyPropertyFlags(CPF_Deprecated)))
     {
         // Most misses are a component property looked up on the actor
         // (Intensity lives on LightComponent0, not the light actor). The
@@ -213,7 +214,10 @@ void AddVerification(TSharedPtr<FJsonObject>& Result, UObject* Object)
         return;
     }
 
-    if (AActor* AsActor = Cast<AActor>(Object))
+    // A class default (a Blueprint's CDO that get_property read) is an AActor but no placed actor: its receipt handle
+    // named an actor nothing could find. It answers as the asset it belongs to.
+    AActor* AsActor = Cast<AActor>(Object);
+    if (AsActor && !AsActor->HasAnyFlags(RF_ClassDefaultObject | RF_ArchetypeObject))
     {
         AddActorVerification(Result, AsActor);
     }

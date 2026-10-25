@@ -1,9 +1,12 @@
 // Copyright (c) 2024 EngineWire Contributors
 
 #include "Domains/ControlActor/McpActorSupport.h"
+#include "Domains/ControlActor/Placement/McpChangeWatch.h"
 #include "Domains/ControlActor/Placement/McpPlacementMount.h"
 #include "Domains/ControlActor/Placement/McpPlacementShapes.h"
 
+#include "Components/CapsuleComponent.h"
+#include "Engine/NavigationObjectBase.h"
 #include "GameFramework/Volume.h"
 
 // A spawn or a transform write used to answer nothing but "success" and the
@@ -114,6 +117,7 @@ bool McpPlacementAccepted(const AActor *Actor) {
 // overlappingActors[] and suggestedLocation to Data when there is something to
 // say, and leaves Data untouched when the placement looks clean.
 void DescribePlacement(AActor *Actor, const TSharedPtr<FJsonObject> &Data) {
+  McpChangeWatch::NotePlacementReported(Actor); // the reply reports it: the change watch checks only what it shows
   if (!Actor || !Data.IsValid()) {
     return;
   }
@@ -125,13 +129,22 @@ void DescribePlacement(AActor *Actor, const TSharedPtr<FJsonObject> &Data) {
   // level-spanning debug-draw proxy reported itself as sunk into the geometry it
   // was drawn over, and led the list every time. An actor of overlap bodies alone
   // can neither interpenetrate nor rest on anything, so it has nothing to report.
-  if (IsBoundsOnlyActor(Actor) || McpPlacementAccepted(Actor) || McpIsOverlapOnly(Actor) || McpIsWaterBody(Actor)) {
+  // A player start collides with nothing (its capsule only tests where a pawn fits), so it was skipped like a volume and
+  // one buried in the floor or a wall, where the player then spawns, read as fine: its capsule is what it occupies.
+  const ANavigationObjectBase *Start = Cast<ANavigationObjectBase>(Actor);
+  const UCapsuleComponent *StartCapsule = Start ? Start->GetCapsuleComponent() : nullptr;
+  if ((!StartCapsule && IsBoundsOnlyActor(Actor)) || McpPlacementAccepted(Actor) ||
+      McpIsOverlapOnly(Actor) || McpIsWaterBody(Actor)) {
     return;
   }
 
   FVector Origin = FVector::ZeroVector;
   FVector Extent = FVector::ZeroVector;
   Actor->GetActorBounds(true, Origin, Extent);
+  if (StartCapsule) {
+    Origin = StartCapsule->Bounds.Origin;
+    Extent = StartCapsule->Bounds.BoxExtent;
+  }
   if (!McpHasUsableBounds(Extent)) {
     return;
   }
@@ -204,9 +217,11 @@ void DescribePlacement(AActor *Actor, const TSharedPtr<FJsonObject> &Data) {
   // Every hit along the ray, not just those up to the first block: a channel
   // trace ended at a pipe's lip resting on its body, so the floor beneath was
   // never seen and the body read "nothing below it".
+  // A simulated body is a PhysicsBody: a crate stacked on a physics crate read "floating" above the floor under both.
   FCollisionObjectQueryParams Solids;
   Solids.AddObjectTypesToQuery(ECC_WorldStatic);
   Solids.AddObjectTypesToQuery(ECC_WorldDynamic);
+  Solids.AddObjectTypesToQuery(ECC_PhysicsBody);
   TArray<FHitResult> Hits;
   World->LineTraceMultiByObjectType(Hits, TraceStart, TraceEnd, Solids, Params);
 

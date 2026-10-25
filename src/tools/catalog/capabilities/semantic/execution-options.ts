@@ -13,7 +13,8 @@ export const EXECUTION_OPTION_KEYS = [
   'idempotencyKey',
   'expectedCatalogRevision',
   'expectedRevisions',
-  'timeoutMs'
+  'timeoutMs',
+  'pageCursor'
 ] as const;
 
 export type ExecutionOptionKey = (typeof EXECUTION_OPTION_KEYS)[number];
@@ -45,7 +46,9 @@ const ExecutionOptionsShape = {
   idempotencyKey: IdempotencyKeySchema.optional(),
   expectedCatalogRevision: CatalogRevisionSchema.optional(),
   expectedRevisions: ExpectedRevisionsSchema.optional(),
-  timeoutMs: z.number().int().positive().max(MAX_TIMEOUT_MS).optional()
+  timeoutMs: z.number().int().positive().max(MAX_TIMEOUT_MS).optional(),
+  // The cursor a paged result's page block names; reads its next page.
+  pageCursor: z.string().min(1).max(64).optional()
 } satisfies Record<ExecutionOptionKey, z.ZodType>;
 
 export const ExecutionOptionsSchema = z.strictObject(ExecutionOptionsShape).readonly();

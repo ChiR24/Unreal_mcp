@@ -3,11 +3,57 @@
 #include "EngineUtils.h"
 #include "Foundation/BridgeHelpers/McpHelpers.h"
 #include "Foundation/HandlerUtils/McpHandlerUtils.h"
+#include "Foundation/McpScopedEditorTransaction.h"
 #include "Landscape.h"
 #include "LandscapeInfo.h"
+#include "Misc/App.h"
 #include "EngineWireSubsystem.h"
+#if ENGINE_MAJOR_VERSION > 5 || (ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 6)
+#include "LandscapeEditLayer.h"
+#endif
 
 namespace McpLandscapeHandlers {
+// The landscape's first edit layer: FLandscapeLayer carried its guid up to 5.5, the edit layer object does from 5.6.
+static FGuid FirstEditLayerGuid(const ALandscape *Landscape) {
+#if ENGINE_MAJOR_VERSION > 5 || (ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 6)
+  const ULandscapeEditLayerBase *Layer = Landscape->GetEditLayerConst(0);
+  return Layer ? Layer->GetGuid() : FGuid();
+#elif ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION == 5
+  const FLandscapeLayer *Layer = Landscape->GetLayerConst(0);
+  return Layer ? Layer->Guid : FGuid();
+#else
+  const FLandscapeLayer *Layer = Landscape->GetLayer(0);
+  return Layer ? Layer->Guid : FGuid();
+#endif
+}
+
+FMcpLandscapeEditScope::FMcpLandscapeEditScope(ALandscape *InLandscape, const TCHAR *Title, bool bInDeferMerge)
+    : Transaction(MakeUnique<FMcpScopedEditorTransaction>(FText::FromString(Title), EMcpMutationDurability::EditorStateOnly,
+                                                          TArray<UObject *>{InLandscape})),
+      Landscape(InLandscape), bDeferMerge(bInDeferMerge) {
+  Landscape->Modify();
+  bLayered = Landscape->HasLayersContent();
+  if (bLayered) {
+    PreviousLayer = Landscape->GetEditingLayer();
+    Landscape->SetEditingLayer(PreviousLayer.IsValid() ? PreviousLayer : FirstEditLayerGuid(Landscape));
+  }
+}
+
+FMcpLandscapeEditScope::~FMcpLandscapeEditScope() {
+  if (bLayered) {
+    Landscape->SetEditingLayer(PreviousLayer);
+  }
+  // The undo step holds the layer textures; the merge rebuilds what renders and collides from them, outside it.
+  Transaction.Reset();
+  if (bLayered && !bDeferMerge && FApp::CanEverRender()) {
+    Landscape->ForceUpdateLayersContent();
+  }
+}
+
+void FMcpLandscapeEditScope::DescribeInto(const TSharedPtr<FJsonObject> &Result) const {
+  Transaction->DescribeInto(Result);
+}
+
 static ALandscape *FindLandscapeForEdit(const FString &LandscapePath,
                                         const FString &LandscapeName,
                                         const FString &ActorPath) {

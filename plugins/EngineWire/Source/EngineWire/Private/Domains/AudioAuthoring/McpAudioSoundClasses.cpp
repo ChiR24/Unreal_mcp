@@ -72,10 +72,11 @@ TSharedPtr<FJsonObject> HandleSoundClassActions(const FString& SubAction, const 
 			return McpHandlerUtils::BuildErrorResponse(TEXT("INVALID_ASSET_PATH"), PathError);
 		}
 
-		UPackage* Package = CreatePackage(*PackagePath);
+		FString CreateError, CreateCode;
+		UPackage* Package = McpCreatePackageForNewAsset(PackagePath, CreateError, CreateCode);
 		if (!Package)
 		{
-			return McpHandlerUtils::BuildErrorResponse(TEXT("PACKAGE_ERROR"), TEXT("Failed to create package"));
+			return McpHandlerUtils::BuildErrorResponse(CreateCode, CreateError);
 		}
 
 		USoundClass* NewClass = NewObject<USoundClass>(Package, FName(*Name), RF_Public | RF_Standalone);
@@ -87,7 +88,7 @@ TSharedPtr<FJsonObject> HandleSoundClassActions(const FString& SubAction, const 
 		NewClass->Properties.Volume = static_cast<float>(GetJsonNumberField(Params, TEXT("volume"), 1.0));
 		NewClass->Properties.Pitch = static_cast<float>(GetJsonNumberField(Params, TEXT("pitch"), 1.0));
 		ReparentSoundClass(NewClass, ParentClass, bSave);
-		SaveAudioAsset(NewClass, bSave);
+		Response->SetBoolField(TEXT("saved"), SaveAudioAsset(NewClass, bSave));
 		Response->SetStringField(TEXT("assetPath"), NewClass->GetPathName());
 		Response->SetStringField(TEXT("parentClass"), ParentClass ? ParentClass->GetPathName() : TEXT(""));
 		Response->SetStringField(TEXT("message"),
@@ -107,16 +108,31 @@ TSharedPtr<FJsonObject> HandleSoundClassActions(const FString& SubAction, const 
 			return McpHandlerUtils::BuildErrorResponse(TEXT("CLASS_NOT_FOUND"), FString::Printf(TEXT("Could not load SoundClass: %s"), *AssetPath));
 		}
 
-		if (Params->HasField(TEXT("volume"))) { SoundClass->Properties.Volume = static_cast<float>(GetJsonNumberField(Params, TEXT("volume"), 1.0)); }
-		if (Params->HasField(TEXT("pitch"))) { SoundClass->Properties.Pitch = static_cast<float>(GetJsonNumberField(Params, TEXT("pitch"), 1.0)); }
-		if (Params->HasField(TEXT("lowPassFilterFrequency"))) { SoundClass->Properties.LowPassFilterFrequency = static_cast<float>(GetJsonNumberField(Params, TEXT("lowPassFilterFrequency"), 20000.0)); }
-		if (Params->HasField(TEXT("lfeBleed"))) { SoundClass->Properties.LFEBleed = static_cast<float>(GetJsonNumberField(Params, TEXT("lfeBleed"), 0.5)); }
-		if (Params->HasField(TEXT("voiceCenterChannelVolume"))) { SoundClass->Properties.VoiceCenterChannelVolume = static_cast<float>(GetJsonNumberField(Params, TEXT("voiceCenterChannelVolume"), 0.0)); }
-
-		SaveAudioAsset(SoundClass, bSave);
-		Response->SetNumberField(TEXT("volume"), SoundClass->Properties.Volume);
-		Response->SetNumberField(TEXT("pitch"), SoundClass->Properties.Pitch);
-		Response->SetNumberField(TEXT("lowPassFilterFrequency"), SoundClass->Properties.LowPassFilterFrequency);
+		// Each field is written only when sent; a call sending none saved the class untouched and answered success.
+		const TPair<const TCHAR*, float*> Fields[] = {
+			{TEXT("volume"), &SoundClass->Properties.Volume}, {TEXT("pitch"), &SoundClass->Properties.Pitch},
+			{TEXT("lowPassFilterFrequency"), &SoundClass->Properties.LowPassFilterFrequency}, {TEXT("lfeBleed"), &SoundClass->Properties.LFEBleed},
+			{TEXT("voiceCenterChannelVolume"), &SoundClass->Properties.VoiceCenterChannelVolume}};
+		bool bAnySent = false;
+		for (const TPair<const TCHAR*, float*>& Field : Fields)
+		{
+			bAnySent |= Params->HasField(Field.Key);
+		}
+		if (!bAnySent)
+		{
+			return McpHandlerUtils::BuildErrorResponse(TEXT("INVALID_ARGUMENT"), TEXT("Nothing to set: send volume, pitch, lowPassFilterFrequency, lfeBleed or voiceCenterChannelVolume."));
+		}
+		SoundClass->Modify();
+		for (const TPair<const TCHAR*, float*>& Field : Fields)
+		{
+			if (Params->HasField(Field.Key))
+			{
+				*Field.Value = static_cast<float>(GetJsonNumberField(Params, Field.Key));
+			}
+			Response->SetNumberField(Field.Key, *Field.Value);
+		}
+		Response->SetBoolField(TEXT("saved"), SaveAudioAsset(SoundClass, bSave));
+		Response->SetStringField(TEXT("message"), FString::Printf(TEXT("Sound class properties set on %s"), *SoundClass->GetName()));
 		McpHandlerUtils::AddVerification(Response, SoundClass);
 		Response->SetBoolField(TEXT("success"), true);
 		return Response;
@@ -133,7 +149,12 @@ TSharedPtr<FJsonObject> HandleSoundClassActions(const FString& SubAction, const 
 		}
 
 		// The contract names the parent `parentClass`; only `parentPath` was read, so every
-		// gateway call cleared the parent, and a wrong path was ignored with success.
+		// gateway call cleared the parent, and a wrong path was ignored with success. A call that
+		// sends no parent at all still cleared it; clearing takes an explicit empty parentClass.
+		if (!Params->HasField(TEXT("parentClass")) && !Params->HasField(TEXT("parentPath")))
+		{
+			return McpHandlerUtils::BuildErrorResponse(TEXT("INVALID_ARGUMENT"), TEXT("Send parentClass: the parent SoundClass, or an empty string to clear the parent."));
+		}
 		USoundClass* ParentClass = nullptr;
 		TSharedPtr<FJsonObject> Error = ResolveParentSoundClass(Params, ParentClass);
 		if (!Error.IsValid())
@@ -144,8 +165,11 @@ TSharedPtr<FJsonObject> HandleSoundClassActions(const FString& SubAction, const 
 		{
 			return Error;
 		}
-		SaveAudioAsset(SoundClass, bSave);
+		Response->SetBoolField(TEXT("saved"), SaveAudioAsset(SoundClass, bSave));
 		Response->SetStringField(TEXT("parentPath"), SoundClass->ParentClass ? SoundClass->ParentClass->GetPathName() : TEXT(""));
+		Response->SetStringField(TEXT("message"), SoundClass->ParentClass
+			? FString::Printf(TEXT("Parent of %s set to %s"), *SoundClass->GetName(), *SoundClass->ParentClass->GetName())
+			: FString::Printf(TEXT("Parent of %s cleared"), *SoundClass->GetName()));
 		McpHandlerUtils::AddVerification(Response, SoundClass);
 		Response->SetBoolField(TEXT("success"), true);
 		return Response;

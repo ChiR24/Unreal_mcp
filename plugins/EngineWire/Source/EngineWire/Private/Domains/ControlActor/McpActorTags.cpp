@@ -47,9 +47,13 @@ bool UEngineWireSubsystem::HandleControlActorFindByTag(
   }
 
   TSharedPtr<FJsonObject> Data = McpHandlerUtils::CreateResultObject();
+  const int32 Total = McpCapFindRows(Payload, Matches, Data);
   Data->SetArrayField(TEXT("actors"), Matches);
   Data->SetNumberField(TEXT("count"), Matches.Num());
-  SendStandardSuccessResponse(this, Socket, RequestId, TEXT("Actors found"),
+  SendStandardSuccessResponse(this, Socket, RequestId,
+                              Total > Matches.Num()
+                                  ? FString::Printf(TEXT("Found %d actors tagged %s; the first %d are listed"), Total, *TagValue, Matches.Num())
+                                  : FString::Printf(TEXT("Found %d actors tagged %s"), Total, *TagValue),
                               Data);
   return true;
 }
@@ -69,6 +73,11 @@ bool UEngineWireSubsystem::HandleControlActorAddTag(
   TArray<FString> Missing;
   if (!TagValue.IsEmpty() &&
       McpResolveActorNames(Payload, [this](const FString &Name) { return FindActorByName(Name); }, Actors, Missing)) {
+    // None found answered success, "Tag applied to 0 actor(s)".
+    if (Actors.Num() == 0) {
+      McpSendNoActorNamesFound(this, Socket, RequestId, Missing);
+      return true;
+    }
     const FName TagName(*TagValue);
     TArray<UObject *> Targets;
     for (AActor *Actor : Actors) {
@@ -88,7 +97,9 @@ bool UEngineWireSubsystem::HandleControlActorAddTag(
     Data->SetStringField(TEXT("tag"), TagName.ToString());
     Data->SetNumberField(TEXT("taggedCount"), Actors.Num());
     Data->SetArrayField(TEXT("affectedActors"), McpHandlerUtils::ToJsonStringArray(Affected));
-    Data->SetArrayField(TEXT("missing"), McpHandlerUtils::ToJsonStringArray(Missing));
+    if (Missing.Num() > 0) {
+      Data->SetArrayField(TEXT("missing"), McpHandlerUtils::ToJsonStringArray(Missing));
+    }
     Transaction.DescribeInto(Data);
     SendAutomationResponse(Socket, RequestId, true,
                            FString::Printf(TEXT("Tag applied to %d actor(s); %d not found"),
@@ -229,7 +240,9 @@ bool UEngineWireSubsystem::HandleControlActorSetFolder(
   Data->SetStringField(TEXT("folder"), FolderPath.IsNone() ? FString() : FolderPath.ToString());
   Data->SetNumberField(TEXT("movedCount"), Actors.Num());
   Data->SetArrayField(TEXT("affectedActors"), McpHandlerUtils::ToJsonStringArray(Affected));
-  Data->SetArrayField(TEXT("missing"), McpHandlerUtils::ToJsonStringArray(Missing));
+  if (Missing.Num() > 0) {
+    Data->SetArrayField(TEXT("missing"), McpHandlerUtils::ToJsonStringArray(Missing));
+  }
   Transaction.DescribeInto(Data);
   SendAutomationResponse(Socket, RequestId, true,
                          FString::Printf(TEXT("%d actor(s) moved to %s; %d not found"), Actors.Num(),

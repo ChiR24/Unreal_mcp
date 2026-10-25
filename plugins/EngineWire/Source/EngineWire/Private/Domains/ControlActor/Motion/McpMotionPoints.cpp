@@ -20,11 +20,13 @@ constexpr double McpGroundTraceUp = 50.0;
 constexpr double McpGroundTraceDown = 1000.0;
 
 double McpRound1(double Value) { return FMath::RoundToDouble(Value * 10.0) / 10.0; }
+} // namespace
 
 TArray<TSharedPtr<FJsonValue>> McpPointVec(const FVector &V) {
   return McpHandlerUtils::VectorToJsonArray(FVector(McpRound1(V.X), McpRound1(V.Y), McpRound1(V.Z)));
 }
 
+namespace {
 // A component by its exact name, then a bone or socket any component has, or Component.Socket.
 bool McpResolveMotionPoint(AActor *Actor, const FString &Label, FMcpMotionPoint &Out) {
   FString Owner, Socket;
@@ -213,6 +215,7 @@ FMcpMotionOverlaps::~FMcpMotionOverlaps() {
 }
 
 void McpTrackMotionOverlaps(FMcpMotionOverlaps &Overlaps, AActor *Actor) {
+  McpTrackMotionPasses(Overlaps.Passes, Actor);
   if (!Overlaps.bOn) {
     return;
   }

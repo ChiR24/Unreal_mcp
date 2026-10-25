@@ -79,12 +79,14 @@ TSharedPtr<FJsonObject> FMcpDynamicToolManager::GetStatus()
 TSharedPtr<FJsonObject> FMcpDynamicToolManager::Reset(bool& bOutChanged)
 {
 	int32 Changed = 0;
+	int32 Enabled = 0; // tools switched back on, the record's enabled (the TypeScript door counts the same)
 	for (auto& Pair : ToolStates)
 	{
 		const bool* Initial = InitialToolEnabled.Find(Pair.Key);
 		const bool bTarget = Initial ? *Initial : true;
 		if (Pair.Value.bEnabled != bTarget)
 		{
+			Enabled += bTarget ? 1 : 0;
 			Pair.Value.bEnabled = bTarget;
 			Changed++;
 		}
@@ -105,6 +107,7 @@ TSharedPtr<FJsonObject> FMcpDynamicToolManager::Reset(bool& bOutChanged)
 
 	auto Result = MakeShared<FJsonObject>();
 	Result->SetBoolField(TEXT("success"), true);
+	Result->SetNumberField(TEXT("enabled"), Enabled);
 	Result->SetNumberField(TEXT("changed"), Changed);
 	Result->SetStringField(TEXT("message"),
 		FString::Printf(TEXT("Reset to initial state. %d tools changed."), Changed));

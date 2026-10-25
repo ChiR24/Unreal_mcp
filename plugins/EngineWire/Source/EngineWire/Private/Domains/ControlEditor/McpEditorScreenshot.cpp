@@ -235,6 +235,7 @@ bool UEngineWireSubsystem::HandleControlEditorScreenshot(
   // (a sign's text, a tree) the new view shows; a few frames later the picture is what the camera sees.
   const bool bCameraMoved = CaptureClient && (Payload->HasField(TEXT("location")) || Payload->HasField(TEXT("rotation")));
   DrawViewportFramesForMcp(Viewport, CaptureClient ? CaptureClient->GetWorld() : nullptr, bCameraMoved ? 3 : 1);
+  if (!ViewFrameSettledForMcp(Viewport, Payload)) { RetryLater(); return true; }
 
   TArray<FColor> Bitmap;
   const FReadSurfaceDataFlags ReadFlags(RCM_UNorm);
@@ -315,10 +316,8 @@ bool UEngineWireSubsystem::HandleControlEditorScreenshot(
   if (Payload->HasField(TEXT("_levelEditorFronted"))) {
     Resp->SetBoolField(TEXT("levelEditorBroughtToFront"), true);
   }
-  // Nothing that ticks moves in a viewport that is not realtime: a placed fire showed no flame at all.
-  if (CaptureClient && !CaptureClient->IsRealtime()) {
-    Resp->SetArrayField(TEXT("warnings"), TArray<TSharedPtr<FJsonValue>>{MakeShared<FJsonValueString>(TEXT("The level viewport is not realtime, so particle effects and anything else that ticks stand still or are missing from this picture: turn realtime on with control_editor configure_viewport, or capture the running game."))});
-  }
+  const TArray<TSharedPtr<FJsonValue>> CaptureWarnings = ViewCaptureWarningsForMcp(CaptureClient);
+  if (CaptureWarnings.Num() > 0) Resp->SetArrayField(TEXT("warnings"), CaptureWarnings);
   SendScreenshotReceiptForMcp(this, Socket, RequestId, Payload, Resp,
                               PngData.GetData(), PngData.Num(), FullPath,
                               TEXT("Screenshot"));

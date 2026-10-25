@@ -22,9 +22,10 @@ struct FJob
 	// "Completed" when the game outlived its run, "ExitedEarly" when it did not.
 	FString Result;
 
-	// launch_build only: the packaged game this job runs and where it logs.
+	// launch_build only: the packaged game this job runs, the level it was asked to open, and where it logs.
 	bool bLaunch = false;
 	FProcHandle Proc;
+	FString Map;
 	FString GameLogPath;
 	double RunSeconds = 0.0;
 	int32 ExitCode = 0;

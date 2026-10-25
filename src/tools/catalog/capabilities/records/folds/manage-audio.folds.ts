@@ -5,12 +5,12 @@ export const MANAGE_AUDIO_FOLDS: readonly FoldSpec[] = [
   {
     primary: 'play_sound', selector: 'playback',
     summary: 'Play a sound: 2D, at a location (played or spawned), attached to an actor, or prime it for playback. A 2D sound (looping music too) plays until stop_sound. measure plays it 2D and reports how loud it played (peak and average dB, silent). The sounds already playing are listed by console_command au.DumpActiveSounds.',
-    topics: ['play sound', 'play sound 2d', 'play sound at location', 'attached sound', 'prime sound', 'preview sound', 'preload sound', 'measure sound', 'is sound audible', 'looping music'],
+    topics: ['play sound', 'play sound 2d', 'play sound at location', 'attached sound', 'prime sound', 'preview sound', 'preload sound', 'measure sound', 'is sound audible', 'looping music', 'background music'],
     members: { '2d': 'play_sound_2d', at_location: 'play_sound_at_location', spawn_at_location: 'spawn_sound_at_location', attached: 'play_sound_attached', prime: 'prime_sound', measure: 'play_sound_measure' },
   },
   {
     primary: 'fade_sound', selector: 'fade',
-    summary: 'Fade a playing sound: to a target volume, in, or out.',
+    summary: 'Fade a sound an actor or audio component plays. soundName is an actor label or name, or an audio component name; componentName picks one of that actor\'s audio components (refused, listing the ones it has, when it names none), else the first. in (re)starts the sound from its beginning, rising from silence to targetVolume (default 1) over fadeInTime; out lowers it to targetVolume (default 0) over fadeOutTime and then stops it, whatever the level, and changes nothing when it was not playing; to_volume changes the volume of the sound playing to targetVolume over fadeTime (default 1 s), stopping it at 0 (the default), and is refused with SOUND_NOT_PLAYING when nothing plays. The engine ignores a fade out to a level at or above the current one. While a game runs in the editor, the name resolves in the game first. The reply names the actor and component, the fade time and volume used, and playing (whether the sound plays after the call).',
     topics: ['music volume', 'turn down the music', 'lower the volume', 'make the music quieter'],
     members: { to_volume: 'fade_sound', in: 'fade_sound_in', out: 'fade_sound_out' },
   },
@@ -23,19 +23,19 @@ export const MANAGE_AUDIO_FOLDS: readonly FoldSpec[] = [
   },
   {
     primary: 'control_sound_mix', selector: 'control',
-    summary: 'Control sound mixes at runtime: push or pop a mix, set the base mix, set or clear a class override.',
+    summary: 'Change the mix of the sound being heard (the running game while one plays, else the editor; inGame says which), chosen by control: push and pop put a Sound Mix on the mix stack and take it off, set_base sets the base mix beneath them, and set_class_override and clear_class_override change how a mix adjusts the volume and pitch of one Sound Class, which applies while that mix is pushed or base. Mixes and classes are named by asset path or bare name (ASSET_NOT_FOUND when one does not load). Runtime state only: nothing is saved.',
     topics: ['sound mix', 'push sound mix', 'base sound mix', 'sound class override', 'duck music'],
     members: { push: 'push_sound_mix', pop: 'pop_sound_mix', set_base: 'set_base_sound_mix', set_class_override: 'set_sound_mix_class_override', clear_class_override: 'clear_sound_mix_class_override' },
   },
   {
     primary: 'create_audio_actor', selector: 'kind',
-    summary: 'Create an ambient sound actor, an audio component on an actor, or a reverb zone.',
+    summary: 'Place sound in the level being edited, chosen by kind. ambient_sound spawns an Ambient Sound actor playing soundPath at location (default 0,0,0), labelled name, at volume and pitch, with attenuationPath and concurrencyPath when given; it plays in the editor now and when the game starts. audio_component adds an audio component with soundPath to actorName, or to a new actor at location when actorName is left out (the reply names the actor), playing at once unless autoPlay is false. reverb_zone spawns an Audio Volume named name (DUPLICATE_NAME when taken) as a box of size (default 500 on each axis) around location, applying reverbEffect at volume (default 1) with fadeTime (default 2 s). A sound, attenuation, concurrency or reverb path that does not load is ASSET_NOT_FOUND before anything spawns; the ambient sound and the reverb zone are one undo step each.',
     topics: ['ambient sound', 'audio component', 'reverb zone'],
     members: { ambient_sound: 'create_ambient_sound', audio_component: 'create_audio_component', reverb_zone: 'create_reverb_zone' },
   },
   {
     primary: 'create_audio_asset', selector: 'kind',
-    summary: 'Create an audio asset: sound cue, sound class, sound mix, attenuation settings, reverb effect, dialogue voice or wave, source effect chain, submix effect.',
+    summary: 'Create an audio asset named name in path, chosen by kind: sound_cue (playing wavePath when given), sound_class, sound_mix, attenuation_settings, reverb_effect, dialogue_voice, dialogue_wave, source_effect_chain or submix_effect. An asset already at that path is refused (ASSET_ALREADY_EXISTS) rather than rebuilt over, and a reference that does not load is refused before anything is made. Saved unless save is false.',
     topics: ['sound cue', 'sound class', 'sound mix', 'attenuation settings', 'reverb effect', 'dialogue wave', 'submix effect', 'make sound'],
     members: {
       sound_cue: 'create_sound_cue', sound_class: 'create_sound_class', sound_mix: 'create_sound_mix', attenuation_settings: 'create_attenuation_settings',
@@ -45,7 +45,7 @@ export const MANAGE_AUDIO_FOLDS: readonly FoldSpec[] = [
   },
   {
     primary: 'edit_sound_cue', selector: 'edit',
-    summary: 'Edit a sound cue graph: add or connect nodes, set attenuation or concurrency, add a Doppler pitch shift at the root, add a source effect.',
+    summary: 'Edit a sound cue graph (assetPath): add or connect nodes, set attenuation or concurrency, add a Doppler pitch shift at the root. add_source_effect works on a Source Effect Chain at assetPath instead: it appends effectPresetPath, or a new preset of effectType saved as its own asset beside the chain (<chain>_<effectType>, numbered when taken).',
     topics: ['sound cue node', 'cue attenuation', 'cue concurrency', 'doppler effect', 'source effect', 'add wave player to cue'],
     members: { add_node: 'add_cue_node', connect_nodes: 'connect_cue_nodes', set_attenuation: 'set_cue_attenuation', set_concurrency: 'set_cue_concurrency', doppler: 'set_doppler_effect', add_source_effect: 'add_source_effect' },
   },
@@ -60,7 +60,7 @@ export const MANAGE_AUDIO_FOLDS: readonly FoldSpec[] = [
   },
   {
     primary: 'configure_sound_class', selector: 'setting',
-    summary: 'Configure a sound class or mix: parent class, class properties, mix modifier, mix EQ.',
+    summary: 'Change a Sound Class or Sound Mix, chosen by setting, each saved: parent sets or clears a class\'s parent (a loop is refused), properties sets its volume, pitch, low-pass, LFE bleed and center-channel volume, mix_modifier adds or edits the adjuster a mix applies to a class (and the mix fades), mix_eq sets the mix\'s four EQ bands. A call that sets nothing is refused.',
     topics: ['sound class properties', 'sound class parent', 'mix modifier', 'mix eq', 'mix equalizer', 'master volume'],
     members: { parent: 'set_class_parent', properties: 'set_class_properties', mix_modifier: 'add_mix_modifier', mix_eq: 'configure_mix_eq' },
   },

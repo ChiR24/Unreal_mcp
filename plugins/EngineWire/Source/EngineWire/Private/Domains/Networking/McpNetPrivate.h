@@ -46,8 +46,14 @@ struct FNetworkingActionContext
 UBlueprint* LoadBlueprintFromPath(const FString& BlueprintPath);
 // blueprintPath missing -> INVALID_PARAMS, not loadable -> NOT_FOUND; both replies are sent here.
 UBlueprint* LoadBlueprintOrReply(FNetworkingActionContext& Context, const FString& BlueprintPath);
-// Mark the edited Blueprint modified, save it, and send the verified success reply.
+// Mark the edited Blueprint modified, save it (saved), and send the verified success reply.
 bool SaveBlueprintAndReply(FNetworkingActionContext& Context, UBlueprint* Blueprint, const FString& Detail, const TCHAR* Message);
+// The Blueprint's own function graph named Name (FName compare, case ignored), or null.
+UEdGraph* FindFunctionGraph(UBlueprint* Blueprint, FName Name);
+// True when Name is free for a new function in Blueprint (FKismetNameValidator: own and inherited members).
+// Otherwise replies NAME_TAKEN (a member already has it) or INVALID_ARGUMENT (not a valid name) and returns false.
+// FBlueprintEditorUtils::CreateNewGraph does not refuse a taken name: it renames the graph holding it out of the way.
+bool CheckFreeMemberNameOrReply(FNetworkingActionContext& Context, UBlueprint* Blueprint, const FString& Name, const TCHAR* Field);
 // Parses Name as a value of TEnum ("COND_OwnerOnly", "DORM_Awake", "ROLE_Authority", "Exponential"; case
 // ignored). An unknown name used to fall back to a default (COND_None, DORM_Never, ROLE_None) while the reply
 // echoed the caller's string, so it now fails and OutValidNames lists the accepted spellings.

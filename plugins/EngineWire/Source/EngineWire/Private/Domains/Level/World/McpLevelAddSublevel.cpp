@@ -10,7 +10,6 @@
 #include "Engine/World.h"
 #include "HAL/FileManager.h"
 #include "Misc/Paths.h"
-#include "RenderingThread.h"
 
 namespace McpLevelHandlers {
 bool HandleAddSublevelAction(UEngineWireSubsystem& Subsystem, const FString& RequestId, const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> RequestingSocket) {
@@ -28,13 +27,27 @@ bool HandleAddSublevelAction(UEngineWireSubsystem& Subsystem, const FString& Req
     }
 
     const FString SubLevelPathAsGiven = SubLevelPath;
-    SubLevelPath = SanitizeProjectRelativePath(SubLevelPath);
+    // An object path (/Game/Maps/Sub.Sub) or a .umap name reads as its package: it was refused as a missing file.
+    SubLevelPath = NormalizeLevelPackagePath(SanitizeProjectRelativePath(SubLevelPath));
     if (SubLevelPath.IsEmpty()) {
       Subsystem.SendAutomationError(RequestingSocket, RequestId,
                           McpPathRefusalMessage(TEXT("subLevelPath"), SubLevelPathAsGiven),
                           TEXT("SECURITY_VIOLATION"));
       return true;
     }
+
+    // Any other method used to become Blueprint while the reply echoed what was asked.
+    FString StreamingMethod = TEXT("Blueprint");
+    if (Payload.IsValid())
+      Payload->TryGetStringField(TEXT("streamingMethod"), StreamingMethod);
+    const bool bAlwaysLoaded = StreamingMethod.Equals(TEXT("AlwaysLoaded"), ESearchCase::IgnoreCase);
+    if (!bAlwaysLoaded && !StreamingMethod.Equals(TEXT("Blueprint"), ESearchCase::IgnoreCase)) {
+      Subsystem.SendAutomationError(RequestingSocket, RequestId,
+          FString::Printf(TEXT("streamingMethod %s is not one of Blueprint (streamed in and out by the game) or AlwaysLoaded"), *StreamingMethod),
+          TEXT("INVALID_ARGUMENT"));
+      return true;
+    }
+    StreamingMethod = bAlwaysLoaded ? TEXT("AlwaysLoaded") : TEXT("Blueprint");
 
     // Robustness: Cleanup before adding
     if (GEditor) {
@@ -67,10 +80,6 @@ bool HandleAddSublevelAction(UEngineWireSubsystem& Subsystem, const FString& Req
         return true;
       }
     }
-
-    FString StreamingMethod = TEXT("Blueprint");
-    if (Payload.IsValid())
-      Payload->TryGetStringField(TEXT("streamingMethod"), StreamingMethod);
 
     if (!GEditor) {
       Subsystem.SendAutomationResponse(RequestingSocket, RequestId, false,
@@ -109,17 +118,7 @@ bool HandleAddSublevelAction(UEngineWireSubsystem& Subsystem, const FString& Req
     // BUT: Also check if the existing level is actually loaded/valid
     for (ULevelStreaming* ExistingStreamingLevel : World->GetStreamingLevels()) {
       if (ExistingStreamingLevel) {
-        FString ExistingPath = ExistingStreamingLevel->GetWorldAssetPackageName();
-        // Compare normalized paths (without .umap extension)
-        FString NormalizedExisting = ExistingPath;
-        FString NormalizedNew = SubLevelPath;
-        if (NormalizedExisting.EndsWith(TEXT(".umap"))) {
-          NormalizedExisting = NormalizedExisting.LeftChop(5);
-        }
-        if (NormalizedNew.EndsWith(TEXT(".umap"))) {
-          NormalizedNew = NormalizedNew.LeftChop(5);
-        }
-        if (NormalizedExisting.Equals(NormalizedNew, ESearchCase::IgnoreCase)) {
+        if (ExistingStreamingLevel->GetWorldAssetPackageName().Equals(SubLevelPath, ESearchCase::IgnoreCase)) {
           // Check if the existing streaming level is actually valid/loaded
           // If it failed to load (file doesn't exist), it's a broken reference
           ULevel* ExistingLevel = ExistingStreamingLevel->GetLoadedLevel();
@@ -127,10 +126,12 @@ bool HandleAddSublevelAction(UEngineWireSubsystem& Subsystem, const FString& Req
                                    ExistingStreamingLevel->IsStreamingStatePending();
 
           if (bIsValidStreaming) {
-            // Sublevel already exists and is valid - return success with info
+            // Already there: the reply names the method it streams with, which may not be the one asked for.
             TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
-            Result->SetStringField(TEXT("sublevelPath"), SubLevelPath);
+            Result->SetStringField(TEXT("subLevelPath"), SubLevelPath);
             Result->SetStringField(TEXT("world"), World->GetName());
+            Result->SetStringField(TEXT("streamingMethod"),
+                ExistingStreamingLevel->IsA<ULevelStreamingAlwaysLoaded>() ? TEXT("AlwaysLoaded") : TEXT("Blueprint"));
             Result->SetBoolField(TEXT("alreadyExists"), true);
             Subsystem.SendAutomationResponse(RequestingSocket, RequestId, true,
                                    FString::Printf(TEXT("Sublevel already in world: %s"), *SubLevelPath), Result);
@@ -146,39 +147,29 @@ bool HandleAddSublevelAction(UEngineWireSubsystem& Subsystem, const FString& Req
       }
     }
 
-    UClass *StreamingClass = ULevelStreamingDynamic::StaticClass();
-    if (StreamingMethod.Equals(TEXT("AlwaysLoaded"), ESearchCase::IgnoreCase)) {
-      StreamingClass = ULevelStreamingAlwaysLoaded::StaticClass();
-    }
+    UClass *StreamingClass = bAlwaysLoaded ? ULevelStreamingAlwaysLoaded::StaticClass()
+                                           : ULevelStreamingDynamic::StaticClass();
 
     ULevelStreaming *NewLevel = UEditorLevelUtils::AddLevelToWorld(
         World, *SubLevelPath, StreamingClass);
     if (NewLevel) {
-      // CRITICAL FIX: Verify the streaming level can actually be loaded
-      // AddLevelToWorld() creates the streaming level object but doesn't verify
-      // the level file exists. Check if the level loaded successfully.
-      // Give the engine a moment to attempt loading
-      FlushRenderingCommands();
-      FPlatformProcess::Sleep(0.1f);
-
-      // Check if the level is actually loaded or pending load
-      // If the level file doesn't exist, GetLoadedLevel() will be null and
-      // the streaming state will not be pending
+      // AddLevelToWorld loads the level before it returns (RefreshStreamingLevels), so a null level here is a
+      // file that did not load; the sleep that used to sit here only held the game thread for 100 ms.
       ULevel* LoadedLevel = NewLevel->GetLoadedLevel();
       bool bIsPendingLoad = NewLevel->IsStreamingStatePending();
 
       // If level is loaded or pending, it's a valid streaming level
       if (LoadedLevel || bIsPendingLoad) {
         TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
-        Result->SetStringField(TEXT("sublevelPath"), SubLevelPath);
+        Result->SetStringField(TEXT("subLevelPath"), SubLevelPath);
         Result->SetStringField(TEXT("world"), World->GetName());
         Result->SetStringField(TEXT("streamingMethod"), StreamingMethod);
         Subsystem.SendAutomationResponse(RequestingSocket, RequestId, true,
                                TEXT("Sublevel added successfully"), Result);
       } else {
-        // CRITICAL FIX: Level file doesn't exist - return ERROR not success with warning
-        // The streaming level was added to the world but the level file doesn't exist
-        // This is an error condition, not a warning
+        // The level file did not load: take back the entry AddLevelToWorld made, so a refused call leaves
+        // no broken sublevel in the open level.
+        World->RemoveStreamingLevel(NewLevel);
         Subsystem.SendAutomationResponse(
             RequestingSocket, RequestId, false,
             FString::Printf(TEXT("Sublevel file not found: %s"), *SubLevelPath),

@@ -43,13 +43,19 @@ bool HandleGASEffectModifiers(const FGASRequestContext& Context, const FString& 
         FGameplayModifierInfo Modifier;
 
         // The op by its enumerator name (Additive, Multiplicitive, Division, Override, and the newer ops),
-        // or the verbs callers use; Additive when nothing matches.
+        // or the verbs callers use. One it did not know became Additive without a word, so "Subtract" 10 added 10.
         static const TMap<FString, FString> OpVerbs = {
             {TEXT("add"), TEXT("Additive")}, {TEXT("multiply"), TEXT("Multiplicitive")},
             {TEXT("multiplicative"), TEXT("Multiplicitive")}, {TEXT("divide"), TEXT("Division")}};
         const FString* OpVerb = OpVerbs.Find(NormalizeGASToken(Operation));
         EGameplayModOp::Type ModOp = EGameplayModOp::Additive;
-        TryParseGASEnum(OpVerb ? *OpVerb : Operation, ModOp);
+        if (!TryParseGASEnum(OpVerb ? *OpVerb : Operation, ModOp) || ModOp >= EGameplayModOp::Max)
+        {
+            Bridge->SendAutomationError(RequestingSocket, RequestId, FString::Printf(TEXT("modifierOperation '%s' is not a modifier "
+                "operation: use Add (a negative magnitude subtracts), Multiply, Divide or Override; newer engines also take AddBase, "
+                "AddFinal, MultiplyAdditive, MultiplyCompound and DivideAdditive. Nothing was changed."), *Operation), TEXT("INVALID_ARGUMENT"));
+            return true;
+        }
         Modifier.ModifierOp = ModOp;
 
         // Note: SetValue doesn't exist in UE 5.6. Use FScalableFloat constructor.
@@ -215,7 +221,7 @@ bool HandleGASEffectModifiers(const FGASRequestContext& Context, const FString& 
 
         TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
         Result->SetStringField(TEXT("blueprintPath"), BlueprintPath);
-        Result->SetStringField(TEXT("operation"), Operation);
+        Result->SetStringField(TEXT("operation"), GASEnumName(ModOp));
         Result->SetNumberField(TEXT("magnitude"), Magnitude);
         // EffectCDO is the pre-compile object; the compile above reinstanced it.
         Result->SetNumberField(TEXT("modifierCount"), VerifiedModifierCount);

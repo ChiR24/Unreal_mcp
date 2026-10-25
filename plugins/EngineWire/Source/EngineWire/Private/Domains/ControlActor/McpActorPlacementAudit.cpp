@@ -1,6 +1,7 @@
 // Copyright (c) 2024 EngineWire Contributors
 
 #include "Domains/ControlActor/McpActorSupport.h"
+#include "Domains/ControlActor/Placement/McpAuditFinding.h"
 #include "Domains/ControlActor/Placement/McpCoplanarFaces.h"
 #include "Domains/ControlActor/Placement/McpPartPlacement.h"
 #include "Domains/ControlActor/Placement/McpPlacementTilt.h"
@@ -52,17 +53,6 @@ FString McpPlacementKind(const FString &Warning) {
   }
   return TEXT("overlapping");
 }
-
-struct FMcpPlacementFinding {
-  FString ActorName;
-  FString Kind;
-  FString Issue;
-  double Severity = 0.0;
-  bool bHasSuggestedZ = false;
-  double SuggestedZ = 0.0;
-  TArray<TSharedPtr<FJsonValue>> CoplanarFaces;
-  TArray<TSharedPtr<FJsonValue>> Overlaps;
-};
 
 /**
  * Folds each actor's coplanar faces into its finding. Two faces in one plane
@@ -228,6 +218,7 @@ bool UEngineWireSubsystem::HandleControlActorAuditPlacement(
 
     FindingIndex.Add(Actor, Findings.Add(MoveTemp(Finding)));
   }
+  McpContentAudit::MergeContent(World, NameFilter, Findings, FindingIndex);
   McpMergeCoplanar(World, NameFilter, Findings, FindingIndex);
 
   // Count only what survives minSeverity, so byKind and flagged describe the
@@ -237,7 +228,8 @@ bool UEngineWireSubsystem::HandleControlActorAuditPlacement(
   Findings.RemoveAll([MinSeverity, &WantedKinds](const FMcpPlacementFinding &Finding) {
     const bool bKindWanted =
         WantedKinds.Num() == 0 || WantedKinds.Contains(Finding.Kind) ||
-        (WantedKinds.Contains(TEXT("coplanar")) && Finding.CoplanarFaces.Num() > 0);
+        (WantedKinds.Contains(TEXT("coplanar")) && Finding.CoplanarFaces.Num() > 0) ||
+        Finding.ContentKinds.ContainsByPredicate([&WantedKinds](const FString &Kind) { return WantedKinds.Contains(Kind); });
     return !bKindWanted || Finding.Severity < MinSeverity;
   });
   TMap<FString, int32> KindCounts;
@@ -269,6 +261,7 @@ bool UEngineWireSubsystem::HandleControlActorAuditPlacement(
     if (Finding.Overlaps.Num() > 0) {
       Object->SetArrayField(TEXT("overlappingActors"), Finding.Overlaps);
     }
+    if (Finding.ContentIssues.Num() > 0) Object->SetArrayField(TEXT("contentIssues"), Finding.ContentIssues);
     Problems.Add(MakeShared<FJsonValueObject>(Object));
   }
 

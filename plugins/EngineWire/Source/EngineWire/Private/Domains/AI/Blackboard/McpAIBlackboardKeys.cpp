@@ -1,4 +1,5 @@
 #include "Domains/AI/McpAIContext.h"
+#include "Domains/AI/Blackboard/McpAIBlackboardDefaults.h"
 
 #include "BehaviorTree/Blackboard/BlackboardKeyType_Bool.h"
 #include "BehaviorTree/Blackboard/BlackboardKeyType_Class.h"
@@ -11,144 +12,169 @@
 #include "BehaviorTree/Blackboard/BlackboardKeyType_String.h"
 #include "BehaviorTree/Blackboard/BlackboardKeyType_Vector.h"
 #include "BehaviorTree/BlackboardData.h"
-#include "EditorAssetLibrary.h"
+#include "Foundation/BridgeHelpers/Blueprints/McpBPPaths.h"
 #include "Foundation/BridgeHelpers/Reflection/McpClassResolve.h"
+
+namespace
+{
+// keyType as the Blackboard editor names the types; an unknown one used to become an Object key.
+UClass* BlackboardKeyClass(const FString& KeyType)
+{
+    const TPair<const TCHAR*, UClass*> Types[] = {
+        {TEXT("Bool"), UBlackboardKeyType_Bool::StaticClass()}, {TEXT("Int"), UBlackboardKeyType_Int::StaticClass()},
+        {TEXT("Float"), UBlackboardKeyType_Float::StaticClass()}, {TEXT("Vector"), UBlackboardKeyType_Vector::StaticClass()},
+        {TEXT("Rotator"), UBlackboardKeyType_Rotator::StaticClass()}, {TEXT("Object"), UBlackboardKeyType_Object::StaticClass()},
+        {TEXT("Class"), UBlackboardKeyType_Class::StaticClass()}, {TEXT("Enum"), UBlackboardKeyType_Enum::StaticClass()},
+        {TEXT("Name"), UBlackboardKeyType_Name::StaticClass()}, {TEXT("String"), UBlackboardKeyType_String::StaticClass()}};
+    for (const TPair<const TCHAR*, UClass*>& Type : Types)
+    {
+        if (KeyType.Equals(Type.Key, ESearchCase::IgnoreCase))
+        {
+            return Type.Value;
+        }
+    }
+    return nullptr;
+}
+}
 
 namespace McpAIHandlers
 {
 // Implements the "add_blackboard_key" action.
 bool HandleAddBlackboardKey(UEngineWireSubsystem* Self, const FString& RequestId, const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> RequestingSocket)
 {
-    TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
-    FString BlackboardPath = GetJsonStringField(Payload, TEXT("blackboardPath"));
-    FString KeyName = GetJsonStringField(Payload, TEXT("keyName"));
-    FString KeyType = GetJsonStringField(Payload, TEXT("keyType"));
-    // baseObjectClass was accepted by the schema and never read, so every
-    // Object/Class key was created as a bare UObject -- useless as a
-    // BTTask_MoveTo target key -- while the call reported success.
-    const FString BaseObjectClass = GetJsonStringField(Payload, TEXT("baseObjectClass"));
-    UClass* ResolvedBaseClass = BaseObjectClass.IsEmpty()
-        ? nullptr
-        : ResolveClassByName(BaseObjectClass);
-
-    UBlackboardData* Blackboard = LoadObject<UBlackboardData>(nullptr, *BlackboardPath);
+    const auto Fail = [&](const FString& Message, const TCHAR* FailCode)
+    {
+        Self->SendAutomationError(RequestingSocket, RequestId, Message, FailCode);
+        return true;
+    };
+    FString Error;
+    FString Code;
+    UBlackboardData* Blackboard = LoadEditableBlackboard(Payload, Error, Code);
     if (!Blackboard)
     {
-        Self->SendAutomationError(RequestingSocket, RequestId,
-                            FString::Printf(TEXT("Blackboard not found: %s"), *BlackboardPath),
-                            TEXT("NOT_FOUND"));
-        return true;
+        return Fail(Error, *Code);
+    }
+    const FString KeyName = GetJsonStringField(Payload, TEXT("keyName")).TrimStartAndEnd();
+    UClass* KeyClass = BlackboardKeyClass(GetJsonStringField(Payload, TEXT("keyType")));
+    const FString BaseClassName = GetJsonStringField(Payload, TEXT("baseObjectClass"));
+    const FString EnumPath = GetJsonStringField(Payload, TEXT("enumType"));
+    const bool bTakesBaseClass = KeyClass == UBlackboardKeyType_Object::StaticClass() || KeyClass == UBlackboardKeyType_Class::StaticClass();
+    UClass* BaseClass = BaseClassName.IsEmpty() ? nullptr : ResolveClassByName(BaseClassName);
+    UEnum* EnumType = EnumPath.IsEmpty() ? nullptr : LoadObject<UEnum>(nullptr, *EnumPath, nullptr, LOAD_NoWarn | LOAD_Quiet);
+    if (!EnumType && !EnumPath.IsEmpty())
+    {
+        EnumType = Cast<UEnum>(McpLoadAsset(EnumPath));
     }
 
-    // Create appropriate key type
-    FBlackboardEntry NewEntry;
-    NewEntry.EntryName = FName(*KeyName);
-
-    if (KeyType.Equals(TEXT("Bool"), ESearchCase::IgnoreCase))
+    if (KeyName.IsEmpty())
     {
-        NewEntry.KeyType = NewObject<UBlackboardKeyType_Bool>(Blackboard);
+        return Fail(TEXT("keyName is required"), TEXT("INVALID_ARGUMENT"));
     }
-    else if (KeyType.Equals(TEXT("Int"), ESearchCase::IgnoreCase))
+    // GetKeyID looks through the parent chain too: a second key of one name was appended before and shadowed the first.
+    if (Blackboard->GetKeyID(FName(*KeyName)) != FBlackboard::InvalidKey)
     {
-        NewEntry.KeyType = NewObject<UBlackboardKeyType_Int>(Blackboard);
+        return Fail(FString::Printf(TEXT("%s already has a key named %s (its own or its parent's); pick another name. Nothing was added."),
+            *Blackboard->GetPathName(), *KeyName), TEXT("NAME_TAKEN"));
     }
-    else if (KeyType.Equals(TEXT("Float"), ESearchCase::IgnoreCase))
+    if (!KeyClass)
     {
-        NewEntry.KeyType = NewObject<UBlackboardKeyType_Float>(Blackboard);
+        return Fail(TEXT("keyType must be Bool, Int, Float, Vector, Rotator, Object, Class, Enum, Name or String."), TEXT("INVALID_ARGUMENT"));
     }
-    else if (KeyType.Equals(TEXT("Vector"), ESearchCase::IgnoreCase))
+    if (!BaseClassName.IsEmpty() && !bTakesBaseClass)
     {
-        NewEntry.KeyType = NewObject<UBlackboardKeyType_Vector>(Blackboard);
+        return Fail(TEXT("baseObjectClass applies to Object and Class keys only."), TEXT("INVALID_ARGUMENT"));
     }
-    else if (KeyType.Equals(TEXT("Rotator"), ESearchCase::IgnoreCase))
+    if (!BaseClassName.IsEmpty() && !BaseClass)
     {
-        NewEntry.KeyType = NewObject<UBlackboardKeyType_Rotator>(Blackboard);
+        return Fail(FString::Printf(TEXT("Class not found: %s"), *BaseClassName), TEXT("CLASS_NOT_FOUND"));
     }
-    else if (KeyType.Equals(TEXT("Object"), ESearchCase::IgnoreCase))
+    if (!EnumPath.IsEmpty() && KeyClass != UBlackboardKeyType_Enum::StaticClass())
     {
-        UBlackboardKeyType_Object* ObjectKey = NewObject<UBlackboardKeyType_Object>(Blackboard);
-        if (ResolvedBaseClass) { ObjectKey->BaseClass = ResolvedBaseClass; }
-        NewEntry.KeyType = ObjectKey;
+        return Fail(TEXT("enumType applies to Enum keys only."), TEXT("INVALID_ARGUMENT"));
     }
-    else if (KeyType.Equals(TEXT("Class"), ESearchCase::IgnoreCase))
+    if (!EnumPath.IsEmpty() && !EnumType)
     {
-        UBlackboardKeyType_Class* ClassKey = NewObject<UBlackboardKeyType_Class>(Blackboard);
-        if (ResolvedBaseClass) { ClassKey->BaseClass = ResolvedBaseClass; }
-        NewEntry.KeyType = ClassKey;
-    }
-    else if (KeyType.Equals(TEXT("Enum"), ESearchCase::IgnoreCase))
-    {
-        NewEntry.KeyType = NewObject<UBlackboardKeyType_Enum>(Blackboard);
-    }
-    else if (KeyType.Equals(TEXT("Name"), ESearchCase::IgnoreCase))
-    {
-        NewEntry.KeyType = NewObject<UBlackboardKeyType_Name>(Blackboard);
-    }
-    else if (KeyType.Equals(TEXT("String"), ESearchCase::IgnoreCase))
-    {
-        NewEntry.KeyType = NewObject<UBlackboardKeyType_String>(Blackboard);
-    }
-    else
-    {
-        // Default to Object
-        NewEntry.KeyType = NewObject<UBlackboardKeyType_Object>(Blackboard);
+        return Fail(FString::Printf(TEXT("Enum not found: %s; pass its path, e.g. /Game/Enums/E_State or /Script/Engine.ECollisionChannel."), *EnumPath), TEXT("NOT_FOUND"));
     }
 
-    NewEntry.bInstanceSynced = GetJsonBoolField(Payload, TEXT("isInstanceSynced"), false);
+    Blackboard->Modify();
+    FBlackboardEntry Entry;
+    Entry.EntryName = FName(*KeyName);
+    Entry.KeyType = NewObject<UBlackboardKeyType>(Blackboard, KeyClass);
+    Entry.bInstanceSynced = GetJsonBoolField(Payload, TEXT("isInstanceSynced"), false);
+    UClass* KeptBaseClass = nullptr;
+    // An Object key keeps the engine's base class Object unless told otherwise; actor filters such as MoveTo's skip it.
+    if (UBlackboardKeyType_Object* ObjectKey = Cast<UBlackboardKeyType_Object>(Entry.KeyType))
+    {
+        if (BaseClass)
+        {
+            ObjectKey->BaseClass = BaseClass;
+        }
+        KeptBaseClass = ObjectKey->BaseClass.Get();
+    }
+    else if (UBlackboardKeyType_Class* ClassKey = Cast<UBlackboardKeyType_Class>(Entry.KeyType))
+    {
+        if (BaseClass)
+        {
+            ClassKey->BaseClass = BaseClass;
+        }
+        KeptBaseClass = ClassKey->BaseClass.Get();
+    }
+    else if (UBlackboardKeyType_Enum* EnumKey = Cast<UBlackboardKeyType_Enum>(Entry.KeyType))
+    {
+        EnumKey->EnumType = EnumType;
+    }
+    const int32 KeyIndex = Blackboard->Keys.Add(Entry);
+    NotifyBlackboardKeysChanged(Blackboard);
 
-    Blackboard->Keys.Add(NewEntry);
-    Blackboard->MarkPackageDirty();
-    McpSafeAssetSave(Blackboard);
-
-    Result->SetNumberField(TEXT("keyIndex"), Blackboard->Keys.Num() - 1);
+    TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
+    Result->SetNumberField(TEXT("keyIndex"), KeyIndex);
     Result->SetStringField(TEXT("keyName"), KeyName);
-    Result->SetStringField(TEXT("keyType"), KeyType);
+    Result->SetStringField(TEXT("keyType"), KeyClass->GetName().Replace(TEXT("BlackboardKeyType_"), TEXT("")));
+    if (KeptBaseClass)
+    {
+        Result->SetStringField(TEXT("baseClass"), KeptBaseClass->GetPathName());
+    }
+    if (EnumType)
+    {
+        Result->SetStringField(TEXT("enumType"), EnumType->GetPathName());
+    }
+    Result->SetBoolField(TEXT("isInstanceSynced"), Entry.bInstanceSynced);
+    Result->SetBoolField(TEXT("saved"), McpSafeAssetSave(Blackboard));
     McpHandlerUtils::AddVerification(Result, Blackboard);
-    Self->SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Blackboard key added"), Result);
+    Self->SendAutomationResponse(RequestingSocket, RequestId, true, FString::Printf(TEXT("Blackboard key %s added"), *KeyName), Result);
     return true;
 }
 
 // Implements the "set_key_instance_synced" action.
 bool HandleSetKeyInstanceSynced(UEngineWireSubsystem* Self, const FString& RequestId, const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> RequestingSocket)
 {
+    FString Error;
+    FString Code;
+    UBlackboardData* Blackboard = LoadEditableBlackboard(Payload, Error, Code);
+    FBlackboardEntry* Key = Blackboard ? FindOwnBlackboardKey(Blackboard, GetJsonStringField(Payload, TEXT("keyName")), Error, Code) : nullptr;
+    if (!Key)
+    {
+        Self->SendAutomationError(RequestingSocket, RequestId, Error, Code);
+        return true;
+    }
+
+    const bool bSynced = GetJsonBoolField(Payload, TEXT("isInstanceSynced"), true);
     TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
-    FString BlackboardPath = GetJsonStringField(Payload, TEXT("blackboardPath"));
-    FString KeyName = GetJsonStringField(Payload, TEXT("keyName"));
-    bool bInstanceSynced = GetJsonBoolField(Payload, TEXT("isInstanceSynced"), true);
-
-    UBlackboardData* Blackboard = LoadObject<UBlackboardData>(nullptr, *BlackboardPath);
-    if (!Blackboard)
+    Result->SetStringField(TEXT("keyName"), Key->EntryName.ToString());
+    Result->SetBoolField(TEXT("isInstanceSynced"), bSynced);
+    Result->SetBoolField(TEXT("changed"), Key->bInstanceSynced != bSynced);
+    if (Key->bInstanceSynced == bSynced)
     {
-        Self->SendAutomationError(RequestingSocket, RequestId,
-                            FString::Printf(TEXT("Blackboard not found: %s"), *BlackboardPath),
-                            TEXT("NOT_FOUND"));
+        McpHandlerUtils::MarkNoAssetsChanged(Result);
+        Self->SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("The key already had that setting; nothing changed"), Result);
         return true;
     }
 
-    bool bFound = false;
-    for (FBlackboardEntry& Entry : Blackboard->Keys)
-    {
-        if (Entry.EntryName.ToString() == KeyName)
-        {
-            Entry.bInstanceSynced = bInstanceSynced;
-            bFound = true;
-            break;
-        }
-    }
-
-    if (!bFound)
-    {
-        Self->SendAutomationError(RequestingSocket, RequestId,
-                            FString::Printf(TEXT("Key not found: %s"), *KeyName),
-                            TEXT("NOT_FOUND"));
-        return true;
-    }
-
-    Blackboard->MarkPackageDirty();
-    McpSafeAssetSave(Blackboard);
-
-    Result->SetStringField(TEXT("keyName"), KeyName);
-    Result->SetBoolField(TEXT("isInstanceSynced"), bInstanceSynced);
+    Blackboard->Modify();
+    Key->bInstanceSynced = bSynced;
+    NotifyBlackboardKeysChanged(Blackboard);
+    Result->SetBoolField(TEXT("saved"), McpSafeAssetSave(Blackboard));
     McpHandlerUtils::AddVerification(Result, Blackboard);
     Self->SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Key instance sync updated"), Result);
     return true;

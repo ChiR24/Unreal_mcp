@@ -22,14 +22,25 @@ TSharedPtr<FJsonObject> HandleIKRetargetActions(const FString& SubAction, const 
         {
             ANIM_ERROR_RESPONSE(TEXT("Name is required"), TEXT("MISSING_NAME"));
         }
+        // A rig path that did not load was skipped and the retargeter made without that rig; set_retarget_chain_mapping
+        // then failed with RIGS_NOT_SET two calls later.
+        for (const FString* RigPath : {&SourceIKRigPath, &TargetIKRigPath})
+        {
+            if (!RigPath->IsEmpty() &&
+                !Cast<UIKRigDefinition>(StaticLoadObject(UIKRigDefinition::StaticClass(), nullptr, **RigPath, nullptr, LOAD_NoWarn)))
+            {
+                ANIM_ERROR_RESPONSE(FString::Printf(TEXT("IK Rig not found: %s. Nothing was created."), **RigPath), TEXT("IK_RIG_NOT_FOUND"));
+            }
+        }
 
         // Create the IK Retargeter using factory
         FString FullPath = Path / Name;
         FString PackageName = FullPath;
-        UPackage* Package = CreatePackage(*PackageName);
+        FString CreateError, CreateCode;
+        UPackage* Package = McpCreatePackageForNewAsset(PackageName, CreateError, CreateCode);
         if (!Package)
         {
-            ANIM_ERROR_RESPONSE(TEXT("Failed to create package for IK Retargeter"), TEXT("PACKAGE_ERROR"));
+            ANIM_ERROR_RESPONSE(CreateError, CreateCode);
         }
 
         UIKRetargetFactory* Factory = NewObject<UIKRetargetFactory>();
@@ -48,7 +59,7 @@ TSharedPtr<FJsonObject> HandleIKRetargetActions(const FString& SubAction, const 
             ANIM_ERROR_RESPONSE(TEXT("Failed to create IK Retargeter"), TEXT("CREATION_FAILED"));
         }
 
-// Set source and target IK Rigs using the controller (UE 5.1+ requires this as direct access is private)
+// Source and target IK Rigs go through the controller: UIKRetargeter keeps both private on every version
 #if MCP_HAS_IKRETARGETER_CONTROLLER
 if (UIKRetargeterController* Controller = UIKRetargeterController::GetController(Retargeter))
 {
@@ -73,24 +84,6 @@ MCP_IKRETARGETER_SET_TARGET_IKRIG(Controller, TargetRig);
 // factory makes an empty one; these are the ops the editor's own new-retargeter setup adds.
 Controller->AddDefaultOps();
 #endif
-}
-#else
-// Fallback for UE 5.0 where direct access was public
-if (!SourceIKRigPath.IsEmpty())
-{
-UIKRigDefinition* SourceRig = Cast<UIKRigDefinition>(StaticLoadObject(UIKRigDefinition::StaticClass(), nullptr, *SourceIKRigPath));
-if (SourceRig)
-{
-Retargeter->SourceIKRigAsset = SourceRig;
-}
-}
-if (!TargetIKRigPath.IsEmpty())
-{
-UIKRigDefinition* TargetRig = Cast<UIKRigDefinition>(StaticLoadObject(UIKRigDefinition::StaticClass(), nullptr, *TargetIKRigPath));
-if (TargetRig)
-{
-Retargeter->TargetIKRigAsset = TargetRig;
-}
 }
 #endif
 

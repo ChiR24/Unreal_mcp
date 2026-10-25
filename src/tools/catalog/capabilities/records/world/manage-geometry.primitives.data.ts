@@ -119,13 +119,13 @@ export const GEOMETRY_PRIMITIVES_RECORDS: readonly CapabilityRecordSource[] = [
   buildWorldRecord({
     parentTool: 'manage_geometry', action: 'create_stairs', plugins: PLUGIN,
     family: F, summary: 'Create a stairs dynamic mesh actor.', whenToUse: ['A stair primitive must be created.'], whenNotToUse: ['A ramp is needed; use create_ramp.'],
-    inputProps: { ...IDENT, ...XFORM, steps: P.steps, numSteps: P.numSteps, stepWidth: P.stepWidth, stepHeight: P.stepHeight, stepDepth: P.stepDepth, floating: P.floating }, required: ['steps'], effect: 'write', costLatency: 'interactive', costResources: 'low',
+    inputProps: { ...IDENT, ...XFORM, steps: { ...P.steps, description: 'Number of steps (default 8; numSteps wins when both are sent).' }, numSteps: P.numSteps, stepWidth: P.stepWidth, stepHeight: P.stepHeight, stepDepth: P.stepDepth, floating: P.floating }, required: [], effect: 'write', costLatency: 'interactive', costResources: 'low',
     exampleInput: { action: 'create_stairs', steps: 10, stepWidth: 200, stepHeight: 20, stepDepth: 30 },
   }),
   buildWorldRecord({
     parentTool: 'manage_geometry', action: 'create_spiral_stairs', plugins: PLUGIN,
     family: F, summary: 'Create a spiral stairs dynamic mesh actor.', whenToUse: ['A spiral stair primitive must be created.'], whenNotToUse: ['A straight stair is needed; use create_stairs.'],
-    inputProps: { ...IDENT, ...XFORM, steps: P.steps, numSteps: P.numSteps, radius: RADIUS, innerRadius: INNER_RADIUS, numTurns: P.numTurns, stepWidth: P.stepWidth, stepHeight: P.stepHeight, floating: P.floating }, required: ['steps'], effect: 'write', costLatency: 'interactive', costResources: 'low',
+    inputProps: { ...IDENT, ...XFORM, steps: { ...P.steps, description: 'Number of steps (default 8; numSteps wins when both are sent).' }, numSteps: P.numSteps, radius: RADIUS, innerRadius: INNER_RADIUS, numTurns: P.numTurns, stepWidth: P.stepWidth, stepHeight: P.stepHeight, floating: P.floating }, required: [], effect: 'write', costLatency: 'interactive', costResources: 'low',
     exampleInput: { action: 'create_spiral_stairs', steps: 20, radius: 200 },
   }),
   buildWorldRecord({

@@ -123,10 +123,15 @@ TSharedPtr<FJsonObject> CompactDetail(const TSharedPtr<FJsonObject>& Detail, con
 	{
 		Out->RemoveField(TEXT("error"));
 	}
-	const TSharedPtr<FJsonObject> Error = ObjectField(Out, TEXT("error"));
-	if (SameField(Error, TEXT("message"), Reply, TEXT("message")) && SameField(Error, TEXT("code"), Reply, TEXT("errorCode")))
+	// The handler's own details (the unsaved packages, the offending parameter) sit in this object too: only the
+	// repeats go.
+	if (const TSharedPtr<FJsonObject> Error = ObjectField(Out, TEXT("error")))
 	{
-		Out->RemoveField(TEXT("error"));
+		const TSharedPtr<FJsonObject> Kept = Copy(Error);
+		if (SameField(Kept, TEXT("message"), Reply, TEXT("message"))) Kept->RemoveField(TEXT("message"));
+		if (SameField(Kept, TEXT("code"), Reply, TEXT("errorCode"))) Kept->RemoveField(TEXT("code"));
+		if (Kept->Values.Num() > 0) Out->SetObjectField(TEXT("error"), Kept);
+		else Out->RemoveField(TEXT("error"));
 	}
 	const TSharedPtr<FJsonObject> Data = ObjectField(Out, TEXT("data"));
 	if (Data && Data->Values.Num() == 0) Out->RemoveField(TEXT("data"));

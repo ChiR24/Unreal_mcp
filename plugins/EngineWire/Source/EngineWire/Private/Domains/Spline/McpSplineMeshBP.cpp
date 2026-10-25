@@ -23,6 +23,11 @@ bool HandleCreateSplineMeshComponent(
     FString ComponentName = GetJsonStringField(Payload, TEXT("componentName"), TEXT("SplineMesh"));
     FString MeshPath = GetJsonStringField(Payload, TEXT("meshPath"));
     FString ForwardAxis = GetJsonStringField(Payload, TEXT("forwardAxis"), TEXT("X"));
+    ESplineMeshAxis::Type Axis = ESplineMeshAxis::X;
+    if (!ParseSplineMeshAxis(ForwardAxis, Axis))
+    {
+        return RefuseSplineMeshAxis(Self, RequestId, Socket, ForwardAxis);
+    }
 
     const FString ActorName = GetJsonStringField(Payload, TEXT("actorName"));
     if (BlueprintPath.IsEmpty() && !ActorName.IsEmpty())
@@ -97,7 +102,6 @@ bool HandleCreateSplineMeshComponent(
             MeshComp->SetStaticMesh(Mesh);
         }
 
-        const ESplineMeshAxis::Type Axis = ParseSplineMeshAxis(ForwardAxis);
         MeshComp->SetForwardAxis(Axis);
 
         if (MeshComp->GetMaterial(0) == nullptr)

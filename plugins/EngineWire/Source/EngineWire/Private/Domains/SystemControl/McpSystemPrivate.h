@@ -7,6 +7,7 @@ class FJsonObject;
 class FJsonValue;
 class FMcpBridgeWebSocket;
 class UEngineWireSubsystem;
+namespace McpPackageJobs { struct FJob; }
 
 namespace McpSystemControlHandlers {
 
@@ -38,6 +39,10 @@ bool HandlePackageProject(UEngineWireSubsystem* Self,
                           const FString& RequestId,
                           const TSharedPtr<FJsonObject>& Payload,
                           FSystemControlSocket RequestingSocket);
+// package_project executableName: Source/<Name>.Target.cs, a copy of the project's own game target under the new
+// name, made when the project has no target of that name. False with OutError and OutCode when it cannot be had.
+bool McpEnsureGameTarget(const FString& Name, FString& OutFile, bool& bOutCreated, FString& OutError,
+                         FString& OutCode);
 bool HandlePackageStatus(UEngineWireSubsystem* Self,
                          const FString& RequestId,
                          const TSharedPtr<FJsonObject>& Payload,
@@ -47,8 +52,7 @@ bool HandleLaunchBuild(UEngineWireSubsystem* Self,
                        const TSharedPtr<FJsonObject>& Payload,
                        FSystemControlSocket RequestingSocket);
 // Adds a launch_build job's game-log evidence to a package_status reply.
-void AppendLaunchStatus(const FString& GameLogPath, int32 ExitCode, bool bExitedEarly,
-                        const TSharedPtr<FJsonObject>& Result);
+void AppendLaunchStatus(const McpPackageJobs::FJob& Job, const TSharedPtr<FJsonObject>& Result);
 bool HandleExecutePython(UEngineWireSubsystem* Self,
                          const FString& RequestId,
                          const TSharedPtr<FJsonObject>& Payload,

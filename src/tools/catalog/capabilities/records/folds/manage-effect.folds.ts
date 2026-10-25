@@ -5,7 +5,7 @@ import type { FoldSpec } from '../shared/fold-types.js';
 export const MANAGE_EFFECT_FOLDS: readonly FoldSpec[] = [
   {
     primary: 'activate', selector: 'control',
-    summary: 'Activate, deactivate or reset a Niagara component on an actor, or activate an effect by asset or system name.',
+    summary: 'Activate (restarting from age 0 unless reset is false), deactivate or reset the Niagara component on a placed actor (actorName), or with assetPath the one playing that system, on actorName or anywhere in the level; the running game\'s copy while Play runs. The reply says active, false while its system is still compiling or loading. A miss names what was not found: the actor, its Niagara component, or a component playing assetPath (SYSTEM_NOT_FOUND).',
     topics: ['activate effect', 'deactivate effect', 'stop effect', 'reset effect', 'niagara component', 'restart particle effect', 'reset niagara system'],
     members: { activate: 'activate', deactivate: 'deactivate', reset: 'reset', effect: 'activate_effect' },
   },
@@ -47,14 +47,15 @@ export const MANAGE_EFFECT_FOLDS: readonly FoldSpec[] = [
       enable_gpu_simulation: 'enable_gpu_simulation', connect_pins: 'connect_niagara_pins',
     },
   },
+  // cleanup deletes level actors, so it is destructive and stands alone; clearing debug shapes is a write.
   {
-    primary: 'cleanup', topics: ['clean up effects', 'delete spawned effects'], selector: 'cleanupTarget',
-    summary: 'Clean up spawned effects, or clear debug shapes.',
-    members: { effects: 'cleanup', debug_shapes: 'clear_debug_shapes' },
+    primary: 'debug_shape', selector: 'debugOp',
+    summary: 'Draw a temporary debug shape in the editor viewport (debugOp draw, the default: sphere, box, circle, line, point, coordinate, cylinder, cone, capsule, arrow or plane at location, for duration seconds, default 5), or clear every debug shape drawn (clear). Nothing is spawned or saved, and nothing shows in Play In Editor or a packaged game.',
+    members: { draw: 'debug_shape', clear: 'clear_debug_shapes' },
   },
   {
     primary: 'get_niagara_info', selector: 'info',
-    summary: 'Read a Niagara system: each emitter (enabled, CPU or GPU, stack modules, current module input values, an input that reads a parameter or a dynamic input as {linkedTo}, the static switches such as Ribbon Width Mode that gate them, and its renderers with the object path inspect.set_property writes and their material) and its user parameters; emitterName and moduleNames narrow it to one emitter and the named modules. An emitter asset gives its name and CPU or GPU target. info=validate lists errors and warnings, each naming the module, the problem and the fixes the editor offers.',
+    summary: 'Read a Niagara system: each emitter (enabled, CPU or GPU, stack modules, current module input values, an input that reads a parameter or a dynamic input as {linkedTo}, the static switches such as Ribbon Width Mode that gate them, and its renderers with the object path inspect.set_property writes and their material) and its user parameters with their default values; emitterName and moduleNames narrow it to one emitter and the named modules, and actorName reads one placed effect\'s own values and which of them it overrides. An emitter asset gives its name and CPU or GPU target. info=validate lists errors and warnings, each naming the module, the problem and the fixes the editor offers.',
     topics: ['emitter list', 'stack modules', 'user parameters', 'static switches'],
     members: { info: 'get_niagara_info', validate: 'validate_niagara_system' },
   },

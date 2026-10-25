@@ -6,7 +6,7 @@ Hazardous UE editor APIs live here behind wrappers. Every domain handler that sa
 
 | Wrapper | Replaces | Prevents | Header |
 |---------|----------|----------|--------|
-| `McpSafeAssetSave` | `UPackage::SavePackage`, `FileHelpers::SaveDirtyPackages` | Picks the correct `RF_Public`/`RF_Standalone` asset object, retries, refuses transient/unsaved packages. Prevents corrupt saves and editor crashes. | `McpSafeOperationsAssetSave.h` |
+| `McpSafeAssetSave` | `UPackage::SavePackage`, `FileHelpers::SaveDirtyPackages` | Picks the correct `RF_Public`/`RF_Standalone` asset object, retries, refuses transient/unsaved packages and all engine content (`/Engine/`, shared by every project). Prevents corrupt saves and editor crashes. A handler that edits an asset in place still refuses engine content itself (`ENGINE_CONTENT`) before changing it in memory. | `McpSafeOperationsAssetSave.h` |
 | `McpSafeLevelSave` | `FEditorFileUtils::SaveMap` | Rejects `/Temp/`, `/Engine/Transient`, `Untitled` (transient levels cannot be saved). Prevents silent data loss. | `McpSafeOperationsLevelSave.h` |
 | `McpSafeLoadMap` + `ResolveExpectedMapPackageName` | raw `UEngine::LoadMap` | Closes asset editors, unloads the prior world, defers GC. Prevents GC-vs-load races / editor lockup. | `McpSafeOperationsMapLoad.h` |
 | `McpLoadMaterialWithFallback` | bare `LoadObject<UMaterialInterface>` | Falls back to `/Engine/EngineMaterials/*`. Prevents null-material crashes. | `McpSafeOperationsMaterial.h` |

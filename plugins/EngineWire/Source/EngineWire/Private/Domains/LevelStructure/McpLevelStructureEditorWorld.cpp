@@ -1,7 +1,11 @@
 #include "Domains/LevelStructure/McpLevelStructureEditorWorld.h"
 
 #include "Editor.h"
+#include "EdGraph/EdGraph.h"
+#include "EdGraph/EdGraphNode.h"
 #include "Engine/Level.h"
+#include "Engine/LevelScriptBlueprint.h"
+#include "Kismet2/BlueprintEditorUtils.h"
 #include "Foundation/BridgeHelpers/McpHelpers.h"
 #include "EngineWireSubsystem.h"
 #include "Safety/McpSafeOperations.h"
@@ -161,8 +165,9 @@ void SendLevelEditResult(
     // Not saving is the default on purpose: saving a level also writes every other unsaved change
     // the user has in it. The reply says the edit is still only in memory instead of implying it stuck.
     Result->SetBoolField(TEXT("saved"), false);
-    Subsystem->SendAutomationResponse(Socket, RequestId, true,
-        Message + TEXT(" The level is not saved yet; pass save: true, or save it with manage_level save."), Result);
+    // The note is a sentence of its own; a message without a closing stop ran straight into it.
+    Subsystem->SendAutomationResponse(Socket, RequestId, true, (Message.EndsWith(TEXT(".")) ? Message : Message + TEXT(".")) +
+        TEXT(" The level is not saved yet; pass save: true, or save it with manage_level save."), Result);
 }
 
 ULevelStreaming* FindOrAddStreamingLevel(UWorld* World, const FString& LevelName)
@@ -205,6 +210,90 @@ ULevelStreaming* FindOrAddStreamingLevel(UWorld* World, const FString& LevelName
         }
     }
     return nullptr;
+}
+
+bool ResolveLevelBlueprintGraph(
+    UEngineWireSubsystem* Subsystem, const FString& RequestId, TSharedPtr<FMcpBridgeWebSocket> Socket,
+    const TSharedPtr<FJsonObject>& Payload, bool bCreate, ULevel*& OutLevel, ULevelScriptBlueprint*& OutBlueprint,
+    UEdGraph*& OutGraph)
+{
+    OutBlueprint = nullptr;
+    OutGraph = nullptr;
+    UWorld* World = GetEditorWorld();
+    FString LevelError = TEXT("No editor world available");
+    OutLevel = World ? ResolveTargetLevelForBlueprintRequest(World, Payload, LevelError) : nullptr;
+    if (!OutLevel)
+    {
+        Subsystem->SendAutomationResponse(Socket, RequestId, false, LevelError, nullptr, TEXT("LEVEL_NOT_OPEN"));
+        return false;
+    }
+    const FString LevelName = OutLevel->GetOutermost()->GetName();
+    OutBlueprint = OutLevel->GetLevelScriptBlueprint(/*bDontCreate=*/!bCreate);
+    if (!OutBlueprint)
+    {
+        if (bCreate)
+        {
+            Subsystem->SendAutomationResponse(Socket, RequestId, false,
+                FString::Printf(TEXT("Failed to create the level Blueprint of %s."), *LevelName), nullptr, TEXT("CREATE_FAILED"));
+        }
+        else
+        {
+            Subsystem->SendAutomationResponse(Socket, RequestId, false,
+                FString::Printf(TEXT("Level %s has no level Blueprint yet; add a node first (edit_level_blueprint edit add_node)."), *LevelName),
+                nullptr, TEXT("NOT_FOUND"));
+        }
+        return false;
+    }
+    OutGraph = FBlueprintEditorUtils::FindEventGraph(OutBlueprint);
+    if (!OutGraph)
+    {
+        Subsystem->SendAutomationResponse(Socket, RequestId, false,
+            FString::Printf(TEXT("The level Blueprint of %s has no event graph."), *LevelName), nullptr, TEXT("GRAPH_NOT_FOUND"));
+        return false;
+    }
+    return true;
+}
+
+bool IsLevelBlueprintNodeNamed(UEdGraphNode* Node, const FString& Wanted)
+{
+    if (!Node || Wanted.IsEmpty())
+    {
+        return false;
+    }
+    // A call's full title is two lines ("Set Light Color\nTarget is Light Component"); its first line is what the
+    // node shows, and its list title is the bare function name (SetLightColor).
+    const FString FullTitle = Node->GetNodeTitle(ENodeTitleType::FullTitle).ToString();
+    FString Header;
+    if (!FullTitle.Split(TEXT("\n"), &Header, nullptr))
+    {
+        Header = FullTitle;
+    }
+    return Node->GetName().Equals(Wanted, ESearchCase::IgnoreCase) || Node->NodeGuid.ToString().Equals(Wanted, ESearchCase::IgnoreCase) ||
+           FullTitle.Equals(Wanted, ESearchCase::IgnoreCase) || Header.Equals(Wanted, ESearchCase::IgnoreCase) ||
+           Node->GetNodeTitle(ENodeTitleType::ListView).ToString().Equals(Wanted, ESearchCase::IgnoreCase);
+}
+
+UEdGraphNode* FindLevelBlueprintNode(UEdGraph* Graph, const FString& Wanted)
+{
+    // An actor reference's title is its actor's label, and that actor's bound event carries the label too
+    // ("On Actor Begin Overlap (TriggerBox_Center)"), so a part match alone picked whichever came last.
+    UEdGraphNode* Partial = nullptr;
+    if (!Graph || Wanted.IsEmpty())
+    {
+        return nullptr;
+    }
+    for (UEdGraphNode* Node : Graph->Nodes)
+    {
+        if (IsLevelBlueprintNodeNamed(Node, Wanted))
+        {
+            return Node;
+        }
+        if (Node && (Node->GetNodeTitle(ENodeTitleType::FullTitle).ToString().Contains(Wanted) || Node->GetName().Contains(Wanted)))
+        {
+            Partial = Node;
+        }
+    }
+    return Partial;
 }
 
 } // namespace LevelStructureHelpers

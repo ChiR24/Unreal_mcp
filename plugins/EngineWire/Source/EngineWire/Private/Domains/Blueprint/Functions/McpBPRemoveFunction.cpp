@@ -2,6 +2,7 @@
 #include "Domains/BlueprintGraph/McpBPGraphCompatibility.h"
 #include "Foundation/BridgeHelpers/Assets/McpAssetSaveRegistry.h"
 #include "Foundation/BridgeHelpers/Blueprints/McpBPAssetLoad.h"
+#include "Foundation/BridgeHelpers/Blueprints/McpBPCallers.h"
 #include "Foundation/BridgeHelpers/Blueprints/McpBPCompileHelpers.h"
 #include "Foundation/HandlerUtils/McpHandlerUtils.h"
 
@@ -91,6 +92,19 @@ bool HandleBlueprintRemoveFunction(const FBlueprintActionContext &Context) {
       return true;
     }
 
+    // A function still called would leave every call calling nothing: the Blueprint stopped compiling while the
+    // reply said removed and saved. The calls are named instead, to delete first.
+    const TArray<FString> Callers = McpBlueprintCallersOf(Blueprint, Target->GetFName(), Target);
+    if (Callers.Num() > 0) {
+      TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
+      Resp->SetStringField(TEXT("functionName"), FuncName);
+      Resp->SetArrayField(TEXT("callers"), McpHandlerUtils::ToJsonStringArray(Callers));
+      Bridge.SendAutomationResponse(RequestingSocket, RequestId, false,
+          FString::Printf(TEXT("%s is still called %d time(s): %s. Delete those call nodes first (manage_blueprint delete_node), then remove it."),
+                          *FuncName, Callers.Num(), *FString::Join(Callers, TEXT(", "))),
+          Resp, TEXT("FUNCTION_IN_USE"));
+      return true;
+    }
     FBlueprintEditorUtils::RemoveGraph(Blueprint, Target,
                                        EGraphRemoveFlags::Recompile);
     const bool bSaved = McpSafeAssetSave(Blueprint);

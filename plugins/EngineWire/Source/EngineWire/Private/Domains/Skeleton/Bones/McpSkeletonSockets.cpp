@@ -111,13 +111,13 @@ bool UEngineWireSubsystem::HandleCreateSocket(
     // it here the add is saved but cannot be undone.
     Skeleton->Modify();
     Skeleton->Sockets.Add(NewSocket);
-    SaveIfRequested(Skeleton, Payload);
 
     TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
     Result->SetStringField(TEXT("socketName"), SocketName);
     Result->SetStringField(TEXT("boneName"), BoneName);
     Result->SetStringField(TEXT("skeletonPath"), Skeleton->GetPathName());
 
+    SaveAndReport(Skeleton, Payload, Result);
     SendAutomationResponse(RequestingSocket, RequestId, true,
         FString::Printf(TEXT("Socket '%s' created on bone '%s'"), *SocketName, *BoneName), Result);
     return true;
@@ -132,6 +132,15 @@ bool UEngineWireSubsystem::HandleConfigureSocket(
     if (SocketName.IsEmpty())
     {
         SendAutomationError(RequestingSocket, RequestId, TEXT("socketName is required"), TEXT("MISSING_PARAM"));
+        return true;
+    }
+    const FString NewBoneName = GetJsonStringField(Payload, TEXT("attachBoneName"));
+    // A call naming nothing to change saved the skeleton and answered "configured".
+    if (NewBoneName.IsEmpty() && !Payload->HasField(TEXT("relativeLocation")) && !Payload->HasField(TEXT("relativeRotation")) &&
+        !Payload->HasField(TEXT("relativeScale")))
+    {
+        SendAutomationError(RequestingSocket, RequestId,
+            TEXT("Nothing to change: send attachBoneName, relativeLocation, relativeRotation or relativeScale."), TEXT("INVALID_ARGUMENT"));
         return true;
     }
 
@@ -151,7 +160,6 @@ bool UEngineWireSubsystem::HandleConfigureSocket(
         return true;
     }
 
-    FString NewBoneName = GetJsonStringField(Payload, TEXT("attachBoneName"));
     if (!NewBoneName.IsEmpty() &&
         Skeleton->GetReferenceSkeleton().FindBoneIndex(FName(*NewBoneName)) == INDEX_NONE)
     {
@@ -185,12 +193,12 @@ bool UEngineWireSubsystem::HandleConfigureSocket(
         Socket->RelativeScale = ExtractVectorField(Payload, TEXT("relativeScale"), FVector::OneVector);
     }
 
-    SaveIfRequested(Skeleton, Payload);
 
     TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
     Result->SetStringField(TEXT("socketName"), SocketName);
     Result->SetStringField(TEXT("skeletonPath"), Skeleton->GetPathName());
 
+    SaveAndReport(Skeleton, Payload, Result);
     SendAutomationResponse(RequestingSocket, RequestId, true,
         FString::Printf(TEXT("Socket '%s' configured"), *SocketName), Result);
     return true;

@@ -12,18 +12,19 @@ import type { CapabilityRecordSource } from '../../../model.js';
 import { BT, EQS, MASS_AI, SMART_OBJECTS, STATE_TREE, aiRecord } from './builder.js';
 import { NAV } from './properties-navigation.js';
 import { AI } from './properties.js';
+import { CONTROLLER_LOGIC_OUT, REMOVED_OUT } from './set-actions.data.js';
 
 const A = AI;
 const N = NAV;
 
 export const AI_CONFIGURE_RECORDS: readonly CapabilityRecordSource[] = [
   aiRecord({
-    action: 'assign_behavior_tree', summary: 'Store a Behavior Tree reference variable on an AIController asset (run it from BeginPlay with RunBehaviorTree).',
-    use: 'A controller asset should run a specific Behavior Tree.',
-    avoid: 'Use assign_blackboard to bind the Blackboard.',
+    action: 'assign_behavior_tree', summary: 'Put a Behavior Tree in an AIController Blueprint: its BehaviorTree variable (one it declares, else a new instance-editable DefaultBehaviorTree) holds behaviorTreePath by default, compiled and saved. Nothing runs the tree until run_behavior_tree writes Run Behavior Tree on possess, or the controller calls it itself. NOT_AI_CONTROLLER for another Blueprint, NOT_FOUND for a missing tree.',
+    use: 'A controller should hold a Behavior Tree that its own logic runs.',
+    avoid: 'The tree should run whenever the controller possesses a pawn; run_behavior_tree sets the variable too.',
     props: { controllerPath: A.controllerPath, behaviorTreePath: A.behaviorTreePath },
     required: ['controllerPath', 'behaviorTreePath'], plugins: BT,
-    out: { assetPath: A.assetPath },
+    out: { ...CONTROLLER_LOGIC_OUT, behaviorTreePath: { type: 'string', description: 'The Behavior Tree, by object path.' }, variable: { type: 'string', description: 'The BehaviorTree variable that holds it.' } },
     example: { controllerPath: '/Game/AI/AIC_Enemy', behaviorTreePath: '/Game/AI/BT_Enemy' },
     result: 'Behavior Tree assigned',
   }),
@@ -50,11 +51,11 @@ export const AI_CONFIGURE_RECORDS: readonly CapabilityRecordSource[] = [
     example: { assetPath: '/Game/AI/BT_Enemy', nodeId: 'Node_0' }, result: 'Connections broken',
   }),
   aiRecord({
-    action: 'clear_focus', summary: 'Clear the authored focus target on an AIController asset.',
-    use: 'A controller asset should stop targeting a focus actor.',
-    avoid: 'Use set_focus to assign a target.',
+    action: 'clear_focus', summary: 'Take out the focus logic set_focus wrote into an AIController Blueprint, so it stops seeking a target each frame (a focus already set in a running game stays until something clears it), compiled and saved; removed false, and nothing changed, when there was none.',
+    use: 'A controller should stop tracking its focus target.',
+    avoid: 'Use set_focus to give it a target.',
     props: { controllerPath: A.controllerPath }, required: ['controllerPath'],
-    out: { assetPath: A.assetPath },
+    out: REMOVED_OUT,
     example: { controllerPath: '/Game/AI/AIC_Enemy' }, result: 'Focus cleared',
   }),
   aiRecord({
@@ -70,7 +71,7 @@ export const AI_CONFIGURE_RECORDS: readonly CapabilityRecordSource[] = [
     example: { behaviorTreePath: '/Game/AI/BT_Enemy', nodeId: 'Root' }, result: 'Node configured',
   }),
   aiRecord({
-    action: 'configure_damage_sense_config', summary: 'Configure damage perception on a Blueprint asset.',
+    action: 'configure_damage_sense_config', summary: 'Set the damage sense of an AIPerception component (added when missing) and save: damageConfig.maxAge, the seconds a hit is remembered (a new sense starts at 10; 0 is forever). Hits reach it only through Report Damage Event, not from Apply Damage alone.',
     use: 'An AIPerception component needs damage-sense tuning.',
     avoid: 'Use configure_sight_config or configure_hearing_config for other senses.',
     props: { blueprintPath: A.blueprintPath, damageConfig: A.damageConfig },
@@ -80,7 +81,7 @@ export const AI_CONFIGURE_RECORDS: readonly CapabilityRecordSource[] = [
     result: 'Damage sense configured',
   }),
   aiRecord({
-    action: 'configure_hearing_config', summary: 'Configure hearing perception on a Blueprint asset.',
+    action: 'configure_hearing_config', summary: 'Set the hearing sense of an AIPerception component (added when missing) and save: hearingRange, and in hearingConfig detectFriendly and maxAge (seconds, 0 forever); a hearingConfig field wins over the top-level one. Only what is sent changes; a new hearing sense hears 3000 units, enemies and neutrals, for 5 s, and the reply carries its settings under these names. Sounds reach it only through Report Noise Event or a Pawn Noise Emitter, not from audio.',
     use: 'An AIPerception component needs hearing-sense tuning.',
     avoid: 'Use setup_perception to configure several senses at once.',
     props: {
@@ -93,12 +94,12 @@ export const AI_CONFIGURE_RECORDS: readonly CapabilityRecordSource[] = [
     result: 'Hearing sense configured',
   }),
   aiRecord({
-    action: 'configure_mass_entity', summary: 'Configure a Mass Entity config: parent config and trait properties.',
-    use: 'A Mass Entity config needs its parent config set.',
+    action: 'configure_mass_entity', summary: 'Change a Mass entity config and save: traitClass adds that trait when the config has none of it (a new config starts with no traits, and traits such as MassMovementTrait or a visualization trait are what give entities data and behaviour), properties go onto the trait traitIndex or traitClass names, else the first trait that takes them, and parentConfigPath makes it derive from another config (one that already derives from it is refused). A call with none of these, or a traitClass that is no Mass trait, is refused; traits lists the config\'s traits after the call, traitAdded says whether one was added, applied and failed name the fields.',
+    use: 'A Mass entity config needs a trait, trait settings or a parent config.',
     avoid: 'Use add_mass_spawner to spawn from the config.',
-    props: { configPath: A.configPath, parentConfigPath: { type: 'string', description: 'Parent Mass entity config asset to inherit from.' }, traitClass: { type: 'string', description: 'Trait class name whose properties are configured.' }, traitIndex: { type: 'number', description: 'Zero-based trait index (alternative to traitClass).' }, properties: { type: 'object', 'x-unreal-reflection-boundary': true, description: 'Trait property values keyed by UPROPERTY name.' } }, required: ['configPath'], plugins: MASS_AI,
+    props: { configPath: A.configPath, parentConfigPath: { type: 'string', description: 'Parent Mass entity config asset to inherit from.' }, traitClass: { type: 'string', description: 'Mass trait class (short name or path, a UMassEntityTraitBase subclass): edited when the config has it, added when it does not.' }, traitIndex: { type: 'number', description: 'Zero-based trait index (alternative to traitClass).' }, properties: { type: 'object', 'x-unreal-reflection-boundary': true, description: 'Trait property values keyed by UPROPERTY name.' } }, required: ['configPath'], plugins: MASS_AI,
     out: { configPath: A.configPath },
-    example: { configPath: '/Game/AI/Mass/MEC_Crowd' }, result: 'Mass entity configured',
+    example: { configPath: '/Game/AI/Mass/MEC_Crowd', traitClass: 'MassMovementTrait' }, result: 'Mass entity configured',
   }),
   aiRecord({
     action: 'configure_nav_area_cost', summary: 'Configure navigation area cost data.',
@@ -113,7 +114,7 @@ export const AI_CONFIGURE_RECORDS: readonly CapabilityRecordSource[] = [
     result: 'Nav area cost configured',
   }),
   aiRecord({
-    action: 'configure_nav_link', summary: 'Configure an authored navigation link.',
+    action: 'configure_nav_link', summary: 'Change the link of a placed NavLinkProxy (actorName): startPoint and endPoint (relative to the actor) and direction go on its smart link when it uses one, else on its point link, and snapRadius on the point link (refused for a smart link). Only what is sent changes, and a call that sends none of them is refused. The navmesh takes the change at once; one undo step, the level left unsaved; the reply gives the link as it is now.',
     use: 'A placed nav link actor needs endpoint or snap tuning.',
     avoid: 'Use create_nav_link_proxy to place the link first.',
     props: {
@@ -136,7 +137,7 @@ export const AI_CONFIGURE_RECORDS: readonly CapabilityRecordSource[] = [
     example: { cellSize: 19, cellHeight: 10, tileSizeUU: 1000 }, result: 'NavMesh settings configured',
   }),
   aiRecord({
-    action: 'configure_sight_config', summary: 'Configure sight perception on a Blueprint asset.',
+    action: 'configure_sight_config', summary: 'Set the sight sense of an AIPerception component (added when missing) and save: sightRadius, loseSightRadius, peripheralVisionAngle (half-angle in degrees), and in sightConfig also pointOfViewBackwardOffset, nearClippingRadius, autoSuccessRange, maxAge (seconds a sighting is remembered, 0 forever) and detectionByAffiliation {enemies, neutrals, friendlies}; a sightConfig field wins over the top-level one. Only what is sent changes; a new sight sense starts at 3000, losing sight 500 further, 90 degrees, enemies and neutrals, 5 s. An actor with no team counts as neutral, so neutrals must stay detected for an AI to see the player.',
     use: 'An AIPerception component needs sight-sense tuning.',
     avoid: 'Use setup_perception to configure several senses at once.',
     props: {
@@ -150,7 +151,7 @@ export const AI_CONFIGURE_RECORDS: readonly CapabilityRecordSource[] = [
     result: 'Sight sense configured',
   }),
   aiRecord({
-    action: 'configure_slot_behavior', summary: 'Configure Smart Object slot behavior.',
+    action: 'configure_slot_behavior', summary: 'Change slot slotIndex (default 0) of a Smart Object definition and save: enabled, and activityTags added to its activity tags (registered gameplay tags only: an unregistered one is refused and nothing changes). A call with neither is refused; behaviorCount reports its behavior definitions.',
     use: 'An existing Smart Object slot needs enable/index edits.',
     avoid: 'Use add_smart_object_slot to create the slot.',
     props: {
@@ -164,7 +165,7 @@ export const AI_CONFIGURE_RECORDS: readonly CapabilityRecordSource[] = [
     result: 'Slot behavior configured',
   }),
   aiRecord({
-    action: 'configure_smart_link_behavior', summary: 'Configure smart navigation link behavior.',
+    action: 'configure_smart_link_behavior', summary: 'Change the smart link of a NavLinkProxy (actorName): linkEnabled switches it on or off; enabledAreaClass and disabledAreaClass are the navigation areas it marks while on and off (NavArea_Null blocks it); broadcastRadius and broadcastInterval set who hears it switch, heard only while its Notify When Enabled or Disabled is on, and the one left out keeps its value; bCreateBoxObstacle true sets its box obstacle of obstacleAreaClass (default NavArea_Null), obstacleExtent (default 100) and obstacleOffset. An area class that does not load is refused before anything changes, as is a call that sets nothing. The settings stay on a proxy that uses its point link and apply once set_nav_link_type makes it smart. One undo step; the level is left unsaved.',
     use: 'A smart link needs area-class switching or an obstacle.',
     avoid: 'Use configure_nav_link for a simple link.',
     props: {
@@ -179,16 +180,16 @@ export const AI_CONFIGURE_RECORDS: readonly CapabilityRecordSource[] = [
     example: { actorName: 'SmartLink_0', linkEnabled: true }, result: 'Smart link behavior configured',
   }),
   aiRecord({
-    action: 'configure_state_tree_task', summary: 'Configure a StateTree task by setting its instance properties or the state selection behavior.',
+    action: 'configure_state_tree_task', summary: 'Change a task of a State Tree state (taskName, else taskIndex, default the first) by its properties (UPROPERTY names on the task, its instance data or its Blueprint instance) and/or the state selectionBehavior (TryEnterState, TrySelectChildrenInOrder, TrySelectChildrenAtRandom, TryFollowTransitions), compiled and saved. A call with neither, a task that is not found, or properties no part of the task takes are refused; applied and failed name the fields.',
     use: 'A StateTree state needs its task settings changed.',
     avoid: 'Use add_state_tree_state to create the state.',
     props: { stateTreePath: A.stateTreePath, stateName: A.stateName, taskName: { type: 'string', description: 'Task to configure, matched by class or instance name (defaults to the first task).' }, taskIndex: { type: 'number', description: 'Zero-based task index in the state (alternative to taskName).' }, selectionBehavior: { type: 'string', description: 'State selection behavior (e.g. TryEnterState, TrySelectChildrenInOrder, TryFollowTransitions).' }, properties: { type: 'object', 'x-unreal-reflection-boundary': true, description: 'Task property values keyed by UPROPERTY name, imported by reflection onto the task instance.' } },
     required: ['stateTreePath', 'stateName'], plugins: STATE_TREE,
     out: { assetPath: A.assetPath },
-    example: { stateTreePath: '/Game/AI/ST_Enemy', stateName: 'Patrol' }, result: 'StateTree task configured',
+    example: { stateTreePath: '/Game/AI/ST_Enemy', stateName: 'Patrol', selectionBehavior: 'TrySelectChildrenInOrder' }, result: 'StateTree task configured',
   }),
   aiRecord({
-    action: 'configure_test_scoring', summary: 'Configure Environment Query test scoring.',
+    action: 'configure_test_scoring', summary: 'Set how a test of an Environment Query (testIndex, counted across options) filters and scores, and save: scoringEquation (Linear, Square, InverseLinear, SquareRoot or Constant), clampMin and clampMax, filterType (Minimum, Maximum, Range or Match) with floatMin and floatMax (a float range filters by Range unless filterType says otherwise), in testSettings or at the top level. The test becomes Filter and Score; unknown names and a call that sets nothing are refused.',
     use: 'An existing Environment Query test needs scoring or filter tuning.',
     avoid: 'Use add_eqs_test to create the test.',
     props: {
@@ -197,7 +198,7 @@ export const AI_CONFIGURE_RECORDS: readonly CapabilityRecordSource[] = [
     },
     required: ['queryPath'], plugins: EQS,
     out: { assetPath: A.assetPath },
-    example: { queryPath: '/Game/AI/EQS_Cover', testIndex: 0 }, result: 'Test scoring configured',
+    example: { queryPath: '/Game/AI/EQS_Cover', testIndex: 0, testSettings: { scoringEquation: 'InverseLinear' } }, result: 'Test scoring configured',
   }),
   aiRecord({
     action: 'connect_nodes', summary: 'Connect Behavior Tree graph nodes.',

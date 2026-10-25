@@ -11,7 +11,10 @@ bool HandleAutoUV(UEngineWireSubsystem* Self, const FString& RequestId,
 
     const TOptional<FMcpGeometryTarget> Target = ResolveGeometryTarget(Self, RequestId, ActorName, Socket);
     if (!Target) return true;
-    auto [TargetActor, DMC, Mesh] = *Target;
+    // Plain locals, not a structured binding: CountUVElements captures Mesh, and capturing a binding is a C++20 rule
+    // that older compilers refuse.
+    UDynamicMeshComponent* DMC = Target->Component;
+    UDynamicMesh* Mesh = Target->Mesh;
     const int32 UVChannel = FMath::Max(0, GetJsonIntField(Payload, TEXT("uvChannel"), 0));
 
     // XAtlas silently refuses a non-compact mesh or a missing UV layer (its Debug sink
@@ -101,17 +104,45 @@ bool HandleProjectUV(UEngineWireSubsystem* Self, const FString& RequestId,
     FString ActorName = GetJsonStringField(Payload, TEXT("actorName"));
     int32 UVChannel = GetJsonIntField(Payload, TEXT("uvChannel"), 0);
 
+    double TileSize = 0.0;
+    const bool bTiled = Payload->TryGetNumberField(TEXT("tileSize"), TileSize);
+    if (bTiled && TileSize <= 0.0)
+    {
+        Self->SendAutomationError(Socket, RequestId, TEXT("tileSize must be above 0 cm. Nothing was changed."), TEXT("INVALID_ARGUMENT"));
+        return true;
+    }
     const TOptional<FMcpGeometryTarget> Target = ResolveGeometryTarget(Self, RequestId, ActorName, Socket);
     if (!Target) return true;
     auto [TargetActor, DMC, Mesh] = *Target;
+    UVChannel = FMath::Max(0, UVChannel);
+    {
+        // A channel the mesh lacked was left unwritten while the reply said applied.
+        UE::Geometry::FDynamicMesh3& EditMesh = Mesh->GetMeshRef();
+        if (!EditMesh.HasAttributes())
+        {
+            EditMesh.EnableAttributes();
+        }
+        if (EditMesh.Attributes()->NumUVLayers() <= UVChannel)
+        {
+            EditMesh.Attributes()->SetNumUVLayers(UVChannel + 1);
+        }
+    }
 
+    // An identity box laid one texture repeat on every centimetre, so any texture read as noise. tileSize is the size one
+    // repeat covers; without it the box is the mesh's bounds and the texture spans each side once.
+    const UE::Geometry::FAxisAlignedBox3d Bounds = Mesh->GetMeshRef().GetBounds();
+    FVector BoxSize = bTiled ? FVector(TileSize) : FVector(Bounds.Max - Bounds.Min);
+    BoxSize = BoxSize.ComponentMax(FVector(1.0));
     UGeometryScriptLibrary_MeshUVFunctions::SetMeshUVsFromBoxProjection(
-        Mesh, UVChannel, FTransform::Identity, FGeometryScriptMeshSelection(), 2, nullptr);
+        Mesh, UVChannel, FTransform(FQuat::Identity, bTiled ? FVector::ZeroVector : FVector(Bounds.Center()), BoxSize),
+        FGeometryScriptMeshSelection(), 2, nullptr);
     DMC->NotifyMeshUpdated();
 
     TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
     Result->SetStringField(TEXT("actorName"), ActorName);
     Result->SetNumberField(TEXT("uvChannel"), UVChannel);
+    Result->SetArrayField(TEXT("projectionSize"), McpHandlerUtils::VectorToJsonArray(BoxSize));
+    McpHandlerUtils::AddVerification(Result, TargetActor);
     Self->SendAutomationResponse(Socket, RequestId, true, TEXT("UV projection applied"), Result);
     return true;
 }
@@ -133,6 +164,11 @@ bool HandleTransformUVs(UEngineWireSubsystem* Self, const FString& RequestId,
     const FVector2D Translate = ReadUV(TEXT("uvOffset"), 0.0);
     const FVector2D Scale = ReadUV(TEXT("uvScale"), 1.0);
     const double Rotation = GetJsonNumberField(Payload, TEXT("rotation"), 0.0);
+    if (!Payload->HasField(TEXT("uvOffset")) && !Payload->HasField(TEXT("uvScale")) && !Payload->HasField(TEXT("rotation")))
+    {
+        Self->SendAutomationError(Socket, RequestId, TEXT("Nothing to apply: send uvOffset, uvScale or rotation."), TEXT("INVALID_ARGUMENT"));
+        return true;
+    }
 
     const TOptional<FMcpGeometryTarget> Target = ResolveGeometryTarget(Self, RequestId, ActorName, Socket);
     if (!Target) return true;

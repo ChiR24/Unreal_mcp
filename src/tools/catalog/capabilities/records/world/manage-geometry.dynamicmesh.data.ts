@@ -1,5 +1,5 @@
 /**
- * DynamicMesh authoring records (13 actions), promoted from raw native routes.
+ * DynamicMesh authoring records (17 actions), promoted from raw native routes.
  *
  * These edit a UDynamicMeshComponent on a placed actor vertex by vertex, rather
  * than running a modeling operator over a whole mesh, so they address the mesh
@@ -55,6 +55,87 @@ const FACE_MATERIALS = {
   maxItems: 20000,
   description: 'Material id of each face, one entry per face, 0 to 255 (default 0). A material id becomes a static-mesh material slot when the mesh is baked with convert_to_static_mesh or convert_to_nanite.',
 };
+
+const MATERIAL_ID = { type: 'integer', minimum: 0, maximum: 255 };
+const OFFSET = (d: string): JsonObject => ({ ...POINT, required: [], description: d });
+const COUNT = (d: string): JsonObject => ({ type: 'integer', minimum: 1, maximum: 1000, description: d });
+const REPEAT = (part: string): JsonObject => ({
+  type: 'object',
+  properties: {
+    count: COUNT(`Copies along offset, the ${part} itself included (default 1).`),
+    offset: OFFSET('Step from one copy to the next, e.g. {x: 200} for one every 2 m.'),
+    rows: COUNT('Rows of those copies (default 1).'),
+    rowOffset: OFFSET('Step from one row to the next.'),
+    layers: COUNT('Layers of those rows (default 1), e.g. the tiers of a stack.'),
+    layerOffset: OFFSET('Step from one layer to the next.'),
+  },
+  additionalProperties: false,
+  description: `Lay the ${part} out count x rows x layers times, each copy moved by offset per step, rowOffset per row and layerOffset per layer. A step larger than the ${part} leaves a gap between copies.`,
+});
+const BOXES = {
+  type: 'array',
+  minItems: 1,
+  maxItems: 500,
+  items: {
+    type: 'object',
+    properties: {
+      min: { ...POINT, description: 'Corner with the smallest x, y and z, in the mesh\'s local space.' },
+      max: { ...POINT, description: 'Corner with the largest x, y and z; larger than min on every axis.' },
+      materialId: { ...MATERIAL_ID, description: 'Material id of every face of the box and its copies (default 0); a baked asset gets one slot per id.' },
+      materialIds: { type: 'array', items: MATERIAL_ID, maxItems: 256, description: 'Material ids the copies take in turn (copy k takes entry k modulo the list length), counted along count, then rows, then layers: colour variety across a stack or a row. Replaces materialId.' },
+      open: { type: 'array', items: { type: 'string', enum: ['-x', '+x', '-y', '+y', '-z', '+z'] }, maxItems: 6, description: 'Faces to leave out, by the direction they face: a face nobody sees (the bottom of a post on a floor, the faces two touching boxes share) costs triangles and can flicker.' },
+      repeat: REPEAT('box'),
+    },
+    required: ['min', 'max'],
+    additionalProperties: false,
+  },
+  description: 'Boxes to append, at most 2500 once repeats are unrolled: each an axis-aligned box from min to max, its six faces wound outward and each face its own polygroup.',
+};
+const LOFT_SECTIONS = {
+  type: 'array',
+  minItems: 2,
+  maxItems: 256,
+  items: { type: 'array', items: POINT, minItems: 2, maxItems: 256 },
+  description: 'Cross sections in order along the shape, 2 to 256, each a list of {x, y, z} points in the mesh\'s local space, the same count in every section (3 or more for a closed loop). Point k of one section joins point k of the next, so list every section in the same turning order from the same starting place. A section need not be flat (a raked bow); a section a few cm across gives a blunt end, endPoint a sharp one.',
+};
+const PLACEMENTS = {
+  type: 'array',
+  minItems: 1,
+  maxItems: 500,
+  items: {
+    type: 'object',
+    properties: {
+      location: { ...POINT, description: 'Where the copy\'s pivot goes, in the target mesh\'s local space (default 0, 0, 0).' },
+      rotation: {
+        type: 'object',
+        properties: { pitch: { type: 'number', description: 'Pitch' }, yaw: { type: 'number', description: 'Yaw' }, roll: { type: 'number', description: 'Roll' } },
+        additionalProperties: false,
+        description: 'Turn of the copy in degrees (default none).',
+      },
+      scale: { ...POINT, description: 'Scale of the copy on each axis (default 1, 1, 1); a negative axis mirrors it, faces still turned outward.' },
+      materialIds: {
+        type: 'array',
+        maxItems: 256,
+        items: { type: ['integer', 'array'], minimum: 0, maximum: 255, items: MATERIAL_ID, minItems: 1, maxItems: 256 },
+        description: 'The target material id of each material slot of the copied mesh, one entry per slot in slot order (the reply\'s sourceSlots, or inspect_object objectKind=mesh, says how many): an id, or a list of ids the copies take in turn (copy k takes entry k modulo the list length) for colour variety across a stack or a row. Omitted, each slot keeps its own index as its id.',
+      },
+      repeat: REPEAT('copy'),
+    },
+    additionalProperties: false,
+  },
+  description: 'Where the copies go, at most 2500 once repeats are unrolled: each placement a transform in the target mesh\'s local space, an optional repeat on up to three axes (its steps add to location and are not turned by rotation), and how the copy\'s material slots map to the target\'s material ids.',
+};
+const LOFT_TIP = (which: string): JsonObject => ({ ...POINT, description: `Close the ${which} section as a fan of triangles to this point instead of a flat cap: a bow, a nose cone, a spire. Needs closed true.` });
+const APPEND_OUT = {
+  actorName: P.actorName,
+  verticesAdded: int('Points appended: those some face uses.'),
+  facesAdded: int('Faces appended.'),
+  trianglesAdded: int('Triangles the faces came to once larger polygons were triangulated.'),
+  vertexCount: OUT_VERTEX_COUNT,
+  triangleCount: OUT_TRIANGLE_COUNT,
+  groupCount: int('Distinct polygroups the mesh holds after the call.'),
+};
+const APPEND_OUT_REQUIRED = ['actorName', 'verticesAdded', 'facesAdded', 'trianglesAdded', 'vertexCount', 'triangleCount', 'groupCount'];
 
 export const GEOMETRY_DYNAMICMESH_RECORDS: readonly CapabilityRecordSource[] = [
   buildWorldRecord({
@@ -195,16 +276,7 @@ export const GEOMETRY_DYNAMICMESH_RECORDS: readonly CapabilityRecordSource[] = [
     whenNotToUse: ['One triangle or one point is enough; use append_triangle or append_vertex.', 'A parametric shape is enough; use a create_* primitive.'],
     inputProps: { actorName: P.actorName, vertices: POLYGON_VERTICES, faces: POLYGON_FACES, faceGroups: FACE_GROUPS, faceMaterials: FACE_MATERIALS },
     required: ['actorName', 'vertices', 'faces'], effect: 'write', costLatency: 'interactive', costResources: 'medium',
-    outputProps: {
-      actorName: P.actorName,
-      verticesAdded: int('Points appended: those some face uses.'),
-      facesAdded: int('Faces appended.'),
-      trianglesAdded: int('Triangles the faces came to once larger polygons were triangulated.'),
-      vertexCount: OUT_VERTEX_COUNT,
-      triangleCount: OUT_TRIANGLE_COUNT,
-      groupCount: int('Distinct polygroups the mesh holds after the call.'),
-    },
-    outputRequired: ['actorName', 'verticesAdded', 'facesAdded', 'trianglesAdded', 'vertexCount', 'triangleCount', 'groupCount'],
+    outputProps: APPEND_OUT, outputRequired: APPEND_OUT_REQUIRED,
     exampleInput: {
       action: 'append_polygons', actorName: 'DM_Cage',
       vertices: [
@@ -214,6 +286,106 @@ export const GEOMETRY_DYNAMICMESH_RECORDS: readonly CapabilityRecordSource[] = [
       faces: [[0, 3, 2, 1], [4, 5, 6, 7], [0, 1, 5, 4], [1, 2, 6, 5], [2, 3, 7, 6], [3, 0, 4, 7]],
     },
     exampleOutput: { success: true, actorName: 'DM_Cage', verticesAdded: 8, facesAdded: 6, trianglesAdded: 12, vertexCount: 8, triangleCount: 12, groupCount: 6 },
+  }),
+  buildWorldRecord({
+    parentTool: 'manage_geometry', action: 'append_cuboids', plugins: PLUGIN,
+    topics: ['railing posts and rails', 'stack of crates', 'grid of windows', 'shelves and frames', 'beams and pillars', 'repeat a part in rows'],
+    family: F, summary: 'Append axis-aligned boxes to a DynamicMesh actor in one call, each with a material id, faces left open and a repeat along up to three axes (a railing, a stack of crates, a grid of windows, shelves, pillars), wound outward for you.',
+    whenToUse: ['A model is built from rectangular parts: posts and rails, beams, pillars, crates and containers, panels, windows, steps or furniture.',
+      'The same part repeats in a row, a grid or a block (repeat count with offset, rows with rowOffset, layers with layerOffset), each copy taking the next id of materialIds for colour variety.'],
+    whenNotToUse: ['Boxes are rotated, or the shape is curved: use append_loft for a shape through cross sections, or append_polygons.',
+      'Separate actors are wanted rather than one mesh: use control_actor.spawn.'],
+    inputProps: { actorName: P.actorName, boxes: BOXES },
+    required: ['actorName', 'boxes'], effect: 'write', costLatency: 'interactive', costResources: 'medium',
+    outputProps: APPEND_OUT, outputRequired: APPEND_OUT_REQUIRED,
+    exampleInput: {
+      action: 'append_cuboids', actorName: 'DM_Railing',
+      boxes: [
+        { min: { x: -2, y: -2, z: 0 }, max: { x: 2, y: 2, z: 100 }, open: ['-z'], repeat: { count: 11, offset: { x: 200, y: 0, z: 0 } } },
+        { min: { x: 0, y: -2, z: 96 }, max: { x: 2000, y: 2, z: 100 }, materialId: 1 },
+      ],
+    },
+    exampleOutput: { success: true, actorName: 'DM_Railing', verticesAdded: 96, facesAdded: 61, trianglesAdded: 122, vertexCount: 96, triangleCount: 122, groupCount: 61 },
+  }),
+  buildWorldRecord({
+    parentTool: 'manage_geometry', action: 'append_loft', plugins: PLUGIN,
+    topics: ['loft through cross sections', 'hull from sections', 'car body shape', 'tapered tube', 'bottle or vase profile', 'skin between profiles'],
+    family: F, summary: 'Append a surface lofted through cross sections to a DynamicMesh actor: each section a loop of points (the same count in every one), joined in order with every face turned outward, the ends capped flat or closed to a tip point.',
+    whenToUse: ['A shape changes its cross section along its length: a ship hull or a car body (sections narrowing to the bow or nose), a fuselage, a bottle, a horn, a tapered column.',
+      'A pointed end is wanted: give endPoint (or startPoint) and the last section closes as a fan to it.',
+      'Parts of the skin need their own materials: edgeMaterials gives each edge of the section loop an id, so the strip it sweeps (a waterline band, a stripe, a window row) keeps it.'],
+    whenNotToUse: ['The shape is round about one axis: use model_mesh with modeling=revolve.', 'The shape follows a curved path with one profile: use model_mesh with modeling=sweep or extrude_along_spline.'],
+    inputProps: {
+      actorName: P.actorName, sections: LOFT_SECTIONS,
+      closed: { type: 'boolean', description: 'Each section is a closed loop and the loft a closed tube (default true). false joins open polylines into a sheet (an awning, a curved panel), its faces turned by the order of the points; flip reverses them.' },
+      caps: { type: 'boolean', description: 'Close a closed tube\'s first and last sections with a flat face each (default true), unless startPoint or endPoint closes that end.' },
+      startPoint: LOFT_TIP('first'), endPoint: LOFT_TIP('last'),
+      edgeMaterials: { type: 'array', items: MATERIAL_ID, maxItems: 256, description: 'Material id of each edge of the section loop, one per edge (point k to point k+1; a closed loop has as many edges as points, an open one one fewer): the strip each edge sweeps keeps it, for a painted band, a stripe or a row of windows. Default 0.' },
+      capMaterialId: { ...MATERIAL_ID, description: 'Material id of the end caps and tip fans (default 0).' },
+      flip: { type: 'boolean', description: 'Reverse every face. A closed tube is turned outward from the first section\'s turning order and the way the sections run, so flip is for an open sheet or an inside surface (a tunnel seen from within).' },
+    },
+    required: ['actorName', 'sections'], effect: 'write', costLatency: 'interactive', costResources: 'medium',
+    outputProps: APPEND_OUT, outputRequired: APPEND_OUT_REQUIRED,
+    exampleInput: {
+      action: 'append_loft', actorName: 'DM_Hull',
+      sections: [
+        [{ x: 0, y: 400, z: 300 }, { x: 0, y: 400, z: -200 }, { x: 0, y: -400, z: -200 }, { x: 0, y: -400, z: 300 }],
+        [{ x: 800, y: 300, z: 300 }, { x: 800, y: 200, z: -150 }, { x: 800, y: -200, z: -150 }, { x: 800, y: -300, z: 300 }],
+      ],
+      endPoint: { x: 1200, y: 0, z: 300 },
+    },
+    exampleOutput: { success: true, actorName: 'DM_Hull', verticesAdded: 9, facesAdded: 9, trianglesAdded: 14, vertexCount: 9, triangleCount: 14, groupCount: 9 },
+  }),
+  buildWorldRecord({
+    parentTool: 'manage_geometry', action: 'append_mesh', plugins: PLUGIN,
+    topics: ['kitbash from existing parts', 'copy a mesh many times', 'detailed parts in rows', 'assemble a model from props', 'cargo on a deck', 'repeat a detailed part'],
+    family: F, summary: 'Copy a static mesh asset into a DynamicMesh actor at placements, each repeated along up to three axes, with its material slots mapped to the target\'s material ids (a list cycles copy by copy for colour variety): a model assembled from detailed parts in one call, its copies keeping the asset\'s normals and UVs.',
+    whenToUse: ['A model needs detail an existing mesh already has: containers on a ship, window frames on a facade, seats in rows, bolts on a plate, crates in a stack. Copy the detailed part here instead of approximating it with boxes, then bake with convert_to_static_mesh.',
+      'The copies need different colours: give materialIds a list for the painted slot and each copy takes the next id.'],
+    whenNotToUse: ['Each copy must stay a separate actor (moved, hidden or destroyed on its own): use control_actor.spawn.',
+      'The part is a plain box: append_cuboids builds it without an asset.'],
+    inputProps: {
+      actorName: P.actorName,
+      meshPath: str('Static mesh asset to copy, with the normals and UVs it was built with, each section on the material id of its slot unless materialIds maps it.'),
+      placements: PLACEMENTS,
+      lod: { type: 'string', enum: ['source', 'render'], description: 'Which geometry is copied: source (default) is the full-detail source mesh; render is the mesh as it draws, for a Nanite mesh its fallback, often a twentieth of the source triangles: use it to lay out many copies of a Nanite part within the mesh\'s 500000-triangle budget.' },
+    },
+    required: ['actorName', 'meshPath', 'placements'], effect: 'write', costLatency: 'interactive', costResources: 'medium',
+    outputProps: {
+      actorName: P.actorName,
+      meshPath: str('Static mesh that was copied.'),
+      copies: int('Copies appended once repeats were unrolled.'),
+      sourceSlots: int('Material slots of the copied mesh: the entries each placement\'s materialIds needs.'),
+      trianglesAdded: int('Triangles the copies added.'),
+      vertexCount: OUT_VERTEX_COUNT,
+      triangleCount: OUT_TRIANGLE_COUNT,
+      materialIdsInUse: { type: 'array', items: { type: 'integer' }, description: 'Every material id the mesh carries now, ascending: one material each when it is baked.' },
+    },
+    outputRequired: ['actorName', 'meshPath', 'copies', 'sourceSlots', 'trianglesAdded', 'vertexCount', 'triangleCount', 'materialIdsInUse'],
+    exampleInput: {
+      action: 'append_mesh', actorName: 'DM_Deck', meshPath: '/Game/Props/SM_Container', lod: 'render',
+      placements: [{ location: { x: 0, y: -250, z: 0 }, materialIds: [[3, 4, 5], 6, 7], repeat: { count: 4, offset: { x: 620, y: 0, z: 0 }, rows: 2, rowOffset: { x: 0, y: 250, z: 0 }, layers: 3, layerOffset: { x: 0, y: 0, z: 262 } } }],
+    },
+    exampleOutput: { success: true, actorName: 'DM_Deck', meshPath: '/Game/Props/SM_Container', copies: 24, sourceSlots: 3, trianglesAdded: 62784, vertexCount: 31536, triangleCount: 62784, materialIdsInUse: [3, 4, 5, 6, 7] },
+  }),
+  buildWorldRecord({
+    parentTool: 'manage_geometry', action: 'delete_triangles', plugins: PLUGIN,
+    topics: ['delete faces', 'remove part of a mesh', 'cut away faces', 'delete hidden faces'],
+    family: F, summary: 'Delete the triangles of a DynamicMesh actor that triangleIndices or a region picks (by box, facing direction, polygroup or material id), with the points only they used.',
+    whenToUse: ['A part of an authored mesh must go: faces nobody sees, a piece built in the wrong place, every triangle of one material id before it is rebuilt.'],
+    whenNotToUse: ['A solid must be cut by another shape: use boolean_subtract.', 'Only the material must change: use set_material_id.'],
+    inputProps: { actorName: P.actorName, triangleIndices: P.triangleIndices, region: P.region },
+    required: ['actorName'], effect: 'write', costLatency: 'interactive', costResources: 'low',
+    outputProps: {
+      actorName: P.actorName,
+      trianglesRemoved: int('Triangles deleted.'),
+      vertexCount: OUT_VERTEX_COUNT,
+      triangleCount: OUT_TRIANGLE_COUNT,
+      materialIdsInUse: { type: 'array', items: { type: 'integer' }, description: 'Every material id the mesh carries now, ascending.' },
+    },
+    outputRequired: ['actorName', 'trianglesRemoved', 'vertexCount', 'triangleCount', 'materialIdsInUse'],
+    exampleInput: { action: 'delete_triangles', actorName: 'DM_Ship', region: { materialIds: [9, 10, 11] } },
+    exampleOutput: { success: true, actorName: 'DM_Ship', trianglesRemoved: 1656, vertexCount: 812, triangleCount: 1248, materialIdsInUse: [0, 1, 2, 3, 4, 5, 6, 7, 8] },
   }),
   buildWorldRecord({
     parentTool: 'manage_geometry', action: 'set_material_id', plugins: PLUGIN,

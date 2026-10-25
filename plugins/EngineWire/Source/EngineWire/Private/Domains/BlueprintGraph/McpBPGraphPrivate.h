@@ -6,6 +6,7 @@
 #include "Dom/JsonObject.h"
 #include "Core/Module/EngineWireGlobals.h"
 #include "Foundation/BridgeHelpers/McpHelpers.h"
+#include "Foundation/BridgeHelpers/Blueprints/McpBPActorBinding.h"
 #include "EngineWireSubsystem.h"
 #include "Foundation/HandlerUtils/McpHandlerUtils.h"
 
@@ -17,9 +18,10 @@
 #include "Kismet/BlueprintFunctionLibrary.h"
 #include "Kismet2/BlueprintEditorUtils.h"
 #include "UObject/UObjectIterator.h"
-#include "Foundation/GraphLayout/McpGraphNodeExtent.h"
+#include "Foundation/GraphLayout/McpGraphOverlap.h"
 
 class UK2Node_CallFunction;
+class UK2Node_Variable;
 
 namespace McpBlueprintGraphHandlers
 {
@@ -28,20 +30,7 @@ namespace McpBlueprintGraphHandlers
 // already in hand at each of those sites; this names them.
 static inline FString DescribeNodePins(UEdGraphNode* Node)
 {
-    if (!Node)
-    {
-        return TEXT("<node not found>");
-    }
-    TArray<FString> Names;
-    for (UEdGraphPin* Pin : Node->Pins)
-    {
-        if (Pin)
-        {
-            Names.Add(FString::Printf(TEXT("%s (%s)"), *Pin->GetName(),
-                Pin->Direction == EGPD_Output ? TEXT("out") : TEXT("in")));
-        }
-    }
-    return Names.Num() > 0 ? FString::Join(Names, TEXT(", ")) : TEXT("<none>");
+    return McpDescribeNodePins(Node);
 }
 
 // The classes other than Class that declare a Blueprint-callable Wanted, as a
@@ -115,6 +104,9 @@ struct FActionContext
     // No compile at response time: a build_graph step (half-wired states are
     // expected mid-batch, so the batch compiles once at the end) or a read.
     bool bDeferCompile = false;
+    // When set, a success reply goes here instead of to the socket: the level Blueprint door runs a graph edit on
+    // its level Blueprint and answers through its own level-save rule.
+    TFunction<void(const FString&, const TSharedPtr<FJsonObject>&)> OnSuccess;
 
     void SendError(const FString& Message, const FString& ErrorCode) const;
     void SendErrorWithDetails(
@@ -153,40 +145,13 @@ struct FActionContext
         // Refuse stacked placements: the node is already in the graph at this
         // point (FGraphNodeCreator adds it on CreateNode), so pull it back out
         // on overlap and fail with coordinates instead of silently stacking.
+        FString OverlapMessage;
+        TSharedPtr<FJsonObject> OverlapDetails;
+        if (McpGraphLayout::RefuseOverlappingNode(TargetGraph, NewNode, X, Y, OverlapMessage, OverlapDetails,
+                                                  McpGraphLayout::NamesNoPosition(Payload)))
         {
-            float NewWidth = 0.0f;
-            float NewHeight = 0.0f;
-            McpGraphLayout::EstimateNodeExtent(*NewNode, NewWidth, NewHeight);
-            TArray<McpGraphLayout::FGraphNodeOccupant> Overlapping;
-            bool bOverlaps = McpGraphLayout::CheckGraphNodeOverlap(
-                TargetGraph, X, Y, NewWidth, NewHeight, Overlapping,
-                McpGraphLayout::NodeOverlapPadding, NewNode);
-            // A call that named no position gets the first free slot to the
-            // right instead of an overlap refusal it could only answer by retrying.
-            const bool bAutoPlace = Payload.IsValid() &&
-                !Payload->HasField(TEXT("x")) && !Payload->HasField(TEXT("posX")) &&
-                !Payload->HasField(TEXT("y")) && !Payload->HasField(TEXT("posY"));
-            for (int32 Step = 0; bOverlaps && bAutoPlace && Step < 8; ++Step)
-            {
-                for (const McpGraphLayout::FGraphNodeOccupant& Occupant : Overlapping)
-                {
-                    X = FMath::Max(X, Occupant.X + Occupant.Width + McpGraphLayout::NodeSuggestGap);
-                }
-                NewNode->NodePosX = X;
-                bOverlaps = McpGraphLayout::CheckGraphNodeOverlap(
-                    TargetGraph, X, Y, NewWidth, NewHeight, Overlapping,
-                    McpGraphLayout::NodeOverlapPadding, NewNode);
-            }
-            if (bOverlaps)
-            {
-                TargetGraph->RemoveNode(NewNode);
-                FString OverlapMessage;
-                TSharedPtr<FJsonObject> OverlapDetails =
-                    McpGraphLayout::BuildNodeOverlapDetails(
-                        X, Y, NewWidth, NewHeight, Overlapping, OverlapMessage, TargetGraph);
-                SendErrorWithDetails(OverlapMessage, TEXT("NODE_OVERLAP"), OverlapDetails);
-                return;
-            }
+            SendErrorWithDetails(OverlapMessage, TEXT("NODE_OVERLAP"), OverlapDetails);
+            return;
         }
         FBlueprintEditorUtils::MarkBlueprintAsModified(Blueprint);
         SaveLoadedAssetThrottled(Blueprint);
@@ -221,6 +186,7 @@ struct FActionContext
 bool ValidateProvidedPaths(const FActionContext& Context);
 bool PrepareBlueprintAndGraph(FActionContext& Context);
 bool HandleListNodeTypes(FActionContext& Context);
+bool HandleFindFunctions(FActionContext& Context);
 bool HandleNodeCreationAction(FActionContext& Context);
 bool HandlePinMutationAction(FActionContext& Context);
 bool SetPinDefaultValue(FActionContext& Context);
@@ -285,6 +251,21 @@ bool TryCreateCommonFunctionNode(
 // VariableGet, GetVariable or K2Node_VariableGet, any case (the Set forms set
 // bOutIsSet). Shared by create_node and the build_graph pre-check.
 bool ParseVariableNodeType(const FString& NodeType, bool& bOutIsSet);
+// The class a memberClass names: a native class name, a class path or a Blueprint asset path; null when none.
+UClass* ResolveMemberClass(const FString& MemberClassName);
+// The property a variable node names: VariableName on MemberClassName when given (a placed actor's component is
+// PointLightComponent on PointLight), else Blueprint's own variable (bOutOwnVariable, no property yet) or one its
+// generated, skeleton or parent class has. Null and no own variable when nothing matches; OutOwner is then
+// memberClass's class (null when it names none), the class a caller can list members of.
+FProperty* ResolveVariableMember(UBlueprint* Blueprint, FName VariableName, const FString& MemberClassName,
+                                 UClass*& OutOwner, bool& bOutOwnVariable);
+// Points Node at it, before its pins exist: a self member when Blueprint's class has it, else a member of Owner,
+// read from the object wired into the node's Target pin. Shared by create_node, add_node and the level Blueprint.
+void SetVariableReference(UK2Node_Variable& Node, UBlueprint* Blueprint, FProperty* Property, UClass* Owner,
+                          bool bOwnVariable, FName VariableName);
+// Why Blueprint cannot read (or, bWrite, write) Property, as its compile would refuse it: not Blueprint-visible,
+// private to another Blueprint, or read-only. Empty when it can, and for a null Property (an uncompiled own variable).
+FString DescribeVariableAccess(const UBlueprint* Blueprint, const FProperty* Property, bool bWrite);
 bool TryCreateVariableNode(
     FActionContext& Context,
     const FString& NodeType,
@@ -315,6 +296,10 @@ bool TryCreateConstructObjectNode(
     UClass* NodeClass,
     float X,
     float Y);
+// Switch on Enum and the other nodes that build their pins from an Enum property, seeded from enumPath.
+bool TryCreateEnumNode(FActionContext& Context, UClass* NodeClass, float X, float Y);
+// A level Blueprint's actor-bound event or actor reference, bound to actorName (and eventName) before its pins exist.
+bool TryCreateLevelActorNode(FActionContext& Context, UClass* NodeClass, float X, float Y);
 bool TryCreateSubsystemNode(
     FActionContext& Context,
     UClass* NodeClass,

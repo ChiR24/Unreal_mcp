@@ -40,6 +40,27 @@ bool HandleEnumValueActions(
     const TSharedPtr<FJsonObject>& Params,
     TSharedPtr<FJsonObject>& OutResult);
 
+// split_enum: a new enum holding the named values, or every value from an index on; the source is left as it is.
+bool HandleEnumSplit(
+    const FString& Action,
+    const TSharedPtr<FJsonObject>& Params,
+    TSharedPtr<FJsonObject>& OutResult);
+
+// The index of the value named Requested, by its internal name or by its display name (rename_enum_value changes only
+// the display name, which keeps every stored value), any case; INDEX_NONE when none matches. The hidden _MAX is no value.
+inline int32 McpFindEnumValue(const UUserDefinedEnum* Enum, const FString& Requested)
+{
+    for (int32 Index = 0; Enum && Index < Enum->NumEnums(); ++Index)
+    {
+        const FString Short = Enum->GetNameStringByIndex(Index);
+        if (!Short.EndsWith(TEXT("_MAX")) && (Short == Requested || Enum->GetDisplayNameTextByIndex(Index).ToString() == Requested))
+        {
+            return Index;
+        }
+    }
+    return INDEX_NONE;
+}
+
 // Resolve a UUserDefinedEnum from the "enumPath" payload field, or nullptr.
 inline UUserDefinedEnum* ResolveUserDefinedEnum(const TSharedPtr<FJsonObject>& Params)
 {

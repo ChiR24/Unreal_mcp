@@ -76,7 +76,7 @@ void FMcpNativeTransport::MarkSessionInitializationComplete(
 }
 
 bool FMcpNativeTransport::ConsumeSessionRequestBudget(
-	const FString& SessionId, bool bToolCall, FString& OutError)
+	const FString& SessionId, bool bToolCall, FString& OutError, int32* OutRetryAfterSeconds)
 {
 	FScopeLock Lock(&SessionMutex);
 	FSessionRateState* State = SessionRateStates.Find(SessionId);
@@ -86,11 +86,11 @@ bool FMcpNativeTransport::ConsumeSessionRequestBudget(
 		return false;
 	}
 	return ConsumeClientRequestBudgetLocked(
-		State->ClientRateKey, bToolCall, OutError);
+		State->ClientRateKey, bToolCall, OutError, OutRetryAfterSeconds);
 }
 
 bool FMcpNativeTransport::ConsumeClientRequestBudgetLocked(
-	const FString& ClientRateKey, bool bToolCall, FString& OutError)
+	const FString& ClientRateKey, bool bToolCall, FString& OutError, int32* OutRetryAfterSeconds)
 {
 	const double Now = FPlatformTime::Seconds();
 	FClientRateState& State = ClientRateStates.FindOrAdd(ClientRateKey);
@@ -115,11 +115,18 @@ bool FMcpNativeTransport::ConsumeClientRequestBudgetLocked(
 	const int32 ToolCallsCap = RateSettings
 		? RateSettings->MaxClientToolCallsPerMinute
 		: MaxClientToolCallsPerMinute;
-	if ((RequestsCap > 0 && State.RequestCount >= RequestsCap) ||
-		(bToolCall && ToolCallsCap > 0 &&
-		 State.ToolCallCount >= ToolCallsCap))
+	const bool bRequestsFull = RequestsCap > 0 && State.RequestCount >= RequestsCap;
+	if (bRequestsFull || (bToolCall && ToolCallsCap > 0 && State.ToolCallCount >= ToolCallsCap))
 	{
-		OutError = TEXT("Native MCP client rate limit reached");
+		// The cap, the setting that raises it and the wait: a bare "limit reached" left a client looping on retries.
+		const int32 RetryAfter = FMath::Max(1, FMath::CeilToInt(SessionRateWindowSeconds - (Now - State.WindowStart)));
+		OutError = FString::Printf(TEXT("Native MCP client rate limit reached: %d %s a minute (EngineWire setting %s). Retry in %d s."),
+			bRequestsFull ? RequestsCap : ToolCallsCap, bRequestsFull ? TEXT("requests") : TEXT("tool calls"),
+			bRequestsFull ? TEXT("MaxClientRequestsPerMinute") : TEXT("MaxClientToolCallsPerMinute"), RetryAfter);
+		if (OutRetryAfterSeconds)
+		{
+			*OutRetryAfterSeconds = RetryAfter;
+		}
 		return false;
 	}
 	++State.RequestCount;

@@ -85,9 +85,9 @@ describe('executeAutomationRequest console command validation', () => {
   it("uses the caller's timeoutMs control over the cost tier", async () => {
     const { tools, sendAutomationRequest } = createConnectedTools();
 
-    await executeAutomationRequest(tools, 'manage_sequence', { action: 'start_render' }, { timeoutMs: 65000 });
+    await executeAutomationRequest(tools, 'manage_asset', { action: 'delete_asset' }, { timeoutMs: 65000 });
 
-    expect(sendAutomationRequest).toHaveBeenCalledWith('manage_sequence', { action: 'start_render' }, { timeoutMs: 65000 });
+    expect(sendAutomationRequest).toHaveBeenCalledWith('manage_asset', { action: 'delete_asset' }, { timeoutMs: 65000 });
   });
 });
 

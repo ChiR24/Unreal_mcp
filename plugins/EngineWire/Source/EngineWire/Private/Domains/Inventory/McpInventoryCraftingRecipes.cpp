@@ -15,12 +15,15 @@ bool HandleInventoryCraftingRecipeActions(UEngineWireSubsystem& Bridge, const FS
           TEXT("MISSING_PARAMETER"));
       return true;
     }
+    if (!RequireReferencedAsset(Bridge, RequestId, RequestingSocket, OutputItemPath, TEXT("outputItemPath"))) {
+      return true;
+    }
 
-    UPackage* Package = CreateInventoryAssetPackage(Path, Name);
+    FString PackageError;
+    FString PackageCode;
+    UPackage* Package = CreateInventoryAssetPackage(Path, Name, PackageError, PackageCode);
     if (!Package) {
-      Bridge.SendAutomationError(RequestingSocket, RequestId,
-                          TEXT("Failed to create package"),
-                          TEXT("PACKAGE_CREATE_FAILED"));
+      Bridge.SendAutomationError(RequestingSocket, RequestId, PackageError, PackageCode);
       return true;
     }
 
@@ -43,11 +46,10 @@ bool HandleInventoryCraftingRecipeActions(UEngineWireSubsystem& Bridge, const FS
       RecipeAsset->MarkPackageDirty();
       FAssetRegistryModule::AssetCreated(RecipeAsset);
 
-      if (GetJsonBoolField(Payload, TEXT("save"), true)) {
-        McpSafeAssetSave(RecipeAsset);
-      }
+      const bool bSaved = GetJsonBoolField(Payload, TEXT("save"), true) && McpSafeAssetSave(RecipeAsset);
 
       TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
+      Result->SetBoolField(TEXT("saved"), bSaved);
       Result->SetStringField(TEXT("recipePath"), Package->GetName());
       Result->SetStringField(TEXT("assetPath"), Package->GetName() + TEXT(".") + FPackageName::GetShortName(Package->GetName())); // dogfood #55: consistent object path
       Result->SetStringField(TEXT("outputItemPath"), OutputItemPath);
@@ -84,22 +86,39 @@ bool HandleInventoryCraftingRecipeActions(UEngineWireSubsystem& Bridge, const FS
       return true;
     }
 
+    // Only the fields sent are written: an omitted one used to be reset to level 0 or station None.
+    const bool bHasLevel = Payload->HasField(TEXT("requiredLevel"));
+    const bool bHasStation = Payload->HasField(TEXT("requiredStation"));
     const int32 RequiredLevel = static_cast<int32>(GetJsonNumberField(Payload, TEXT("requiredLevel"), 0));
-    const FString RequiredStation = GetJsonStringField(Payload, TEXT("requiredStation"), TEXT("None"));
-    GenericRecipe->Properties.Add(TEXT("RequiredLevel"), FString::FromInt(RequiredLevel));
-    GenericRecipe->Properties.Add(TEXT("RequiredStation"), RequiredStation);
+    const FString RequiredStation = GetJsonStringField(Payload, TEXT("requiredStation"));
+    if ((!bHasLevel && !bHasStation) || RequiredLevel < 0) {
+      Bridge.SendAutomationError(RequestingSocket, RequestId,
+          TEXT("Send requiredLevel (0 or more), requiredStation, or both; nothing was changed."), TEXT("INVALID_ARGUMENT"));
+      return true;
+    }
+    GenericRecipe->Modify();
+    if (bHasLevel) {
+      GenericRecipe->Properties.Add(TEXT("RequiredLevel"), FString::FromInt(RequiredLevel));
+    }
+    if (bHasStation) {
+      GenericRecipe->Properties.Add(TEXT("RequiredStation"), RequiredStation);
+    }
     GenericRecipe->MarkPackageDirty();
 
-    if (GetJsonBoolField(Payload, TEXT("save"), true)) {
-      McpSafeAssetSave(GenericRecipe);
-    }
+    const bool bSaved = GetJsonBoolField(Payload, TEXT("save"), true) && McpSafeAssetSave(GenericRecipe);
 
     TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
+    Result->SetBoolField(TEXT("saved"), bSaved);
     Result->SetStringField(TEXT("recipePath"), RecipePath);
-    Result->SetNumberField(TEXT("requiredLevel"), RequiredLevel);
-    Result->SetStringField(TEXT("requiredStation"), RequiredStation);
+    if (bHasLevel) {
+      Result->SetNumberField(TEXT("requiredLevel"), RequiredLevel);
+    }
+    if (bHasStation) {
+      Result->SetStringField(TEXT("requiredStation"), RequiredStation);
+    }
     Result->SetBoolField(TEXT("configured"), true);
-    Result->SetNumberField(TEXT("propertiesModified"), 2);
+    Result->SetNumberField(TEXT("propertiesModified"), (bHasLevel ? 1 : 0) + (bHasStation ? 1 : 0));
+    McpHandlerUtils::AddVerification(Result, GenericRecipe);
     Bridge.SendAutomationResponse(RequestingSocket, RequestId, true,
                            TEXT("Recipe requirements configured"), Result);
     return true;
@@ -142,6 +161,14 @@ bool HandleInventoryCraftingRecipeActions(UEngineWireSubsystem& Bridge, const FS
           TEXT("UNSUPPORTED_RECIPE_CLASS"));
       return true;
     }
+    if (Quantity < 1) {
+      Bridge.SendAutomationError(RequestingSocket, RequestId,
+          FString::Printf(TEXT("quantity must be at least 1 (got %d); nothing was changed."), Quantity), TEXT("INVALID_ARGUMENT"));
+      return true;
+    }
+    if (!RequireReferencedAsset(Bridge, RequestId, RequestingSocket, IngredientItemPath, TEXT("ingredientItemPath"))) {
+      return true;
+    }
     // One past the highest Ingredient_<n>: the map size also counts the recipe's other fields and repeats a live key after a removal.
     const int32 IngredientIndex = NextIndexedPropertyIndex(GenericRecipe->Properties, TEXT("Ingredient_"));
     GenericRecipe->Properties.Add(FString::Printf(TEXT("Ingredient_%d"), IngredientIndex),
@@ -149,11 +176,10 @@ bool HandleInventoryCraftingRecipeActions(UEngineWireSubsystem& Bridge, const FS
 
     RecipeAsset->MarkPackageDirty();
 
-    if (GetJsonBoolField(Payload, TEXT("save"), true)) {
-      McpSafeAssetSave(RecipeAsset);
-    }
+    const bool bSaved = GetJsonBoolField(Payload, TEXT("save"), true) && McpSafeAssetSave(RecipeAsset);
 
     TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
+    Result->SetBoolField(TEXT("saved"), bSaved);
     Result->SetStringField(TEXT("recipePath"), RecipePath);
     Result->SetStringField(TEXT("ingredientItemPath"), IngredientItemPath);
     Result->SetNumberField(TEXT("quantity"), Quantity);
@@ -161,6 +187,7 @@ bool HandleInventoryCraftingRecipeActions(UEngineWireSubsystem& Bridge, const FS
     Result->SetBoolField(TEXT("added"), true);
     Result->SetStringField(TEXT("storage"), TEXT("Properties"));
 
+    McpHandlerUtils::AddVerification(Result, RecipeAsset);
     Bridge.SendAutomationResponse(RequestingSocket, RequestId, true,
                            TEXT("Recipe ingredient added"), Result);
     return true;

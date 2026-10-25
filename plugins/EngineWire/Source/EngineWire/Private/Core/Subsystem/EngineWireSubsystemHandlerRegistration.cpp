@@ -26,7 +26,7 @@ bool IsBlueprintGraphAction(const FString& SubAction)
         TEXT("break_pin_links"), TEXT("set_node_property"),
         TEXT("create_reroute_node"), TEXT("get_node_details"),
         TEXT("get_graph_details"), TEXT("get_pin_details"),
-        TEXT("list_node_types"), TEXT("set_pin_default_value"),
+        TEXT("list_node_types"), TEXT("find_functions"), TEXT("set_pin_default_value"),
         TEXT("list_animbp_graphs"), TEXT("get_transition_rule_graph"),
         TEXT("build_graph"), TEXT("arrange_nodes")};
     return Actions.Contains(SubAction);

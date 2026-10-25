@@ -1,0 +1,4 @@
+{
+  "description": "Takes out what set_focus authored, so the controller stops seeking a focus target every frame. The Tick event stays, and a focus already set in a running game stays until something clears it.",
+  "tag": "MCP AI focus"
+}

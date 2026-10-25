@@ -50,6 +50,8 @@ const testCases = [
     captureResult: { key: 'projectilePath', fromField: 'result.blueprintPath' },
     assertions: [{ path: 'structuredContent.result.damage', equals: 35, label: 'the projectile deals the damage asked for' }, { path: 'structuredContent.result.compiled', equals: true, label: 'the projectile compiles with its hit logic' }, { path: 'structuredContent.result.projectileMeshPath', equals: '/Engine/BasicShapes/Sphere.Sphere', label: 'projectile mesh path consumed' }, { path: 'structuredContent.result.projectileMeshLoaded', equals: true, label: 'projectile mesh asset loaded' }, { path: 'structuredContent.result.existsAfter', equals: true, label: 'projectile blueprint exists after creation' }]
   },
+  // A mesh that did not load still made the projectile, invisible, behind a success.
+  { scenario: 'ERROR: create_projectile_blueprint refuses a mesh that does not load', toolName: 'manage_combat', arguments: { action: 'create_projectile_blueprint', name: `${PROJECTILE_NAME}_NoMesh`, path: TEST_FOLDER, projectileMeshPath: `${TEST_FOLDER}/NoSuchMesh` }, expected: 'error|NOT_FOUND' },
   { scenario: 'CONFIG: configure_projectile', toolName: 'manage_combat', arguments: { action: 'configure_projectile', blueprintPath: weaponPath, projectileClass: projectilePath, projectileSpeed: 4500 }, expected: 'success', assertions: [{ path: 'structuredContent.result.projectileSpeed', equals: 4500, label: 'weapon projectile speed applied' }, { path: 'structuredContent.result.fireFunction', equals: 'Fire', label: 'the weapon shoots from Fire' }, { path: 'structuredContent.result.compiled', equals: true, label: 'the weapon compiles with Fire' }] },
   { scenario: 'ERROR: configure_projectile refuses a class that is not an actor', toolName: 'manage_combat', arguments: { action: 'configure_projectile', blueprintPath: weaponPath, projectileClass: '/Script/Engine.StaticMesh' }, expected: 'error|INVALID_ARGUMENT' },
   { scenario: 'CONFIG: configure_projectile_movement', toolName: 'manage_combat', arguments: { action: 'configure_projectile_movement', blueprintPath: projectilePath, projectileSpeed: 6500, projectileGravityScale: 0.5, projectileLifespan: 4 }, expected: 'success', assertions: [{ path: 'structuredContent.result.existsAfter', equals: true, label: 'projectile exists after movement configuration' }] },
@@ -67,6 +69,7 @@ const testCases = [
 
   // === WEAPON FEATURES ===
   { scenario: 'ACTION: setup_attachment_system', toolName: 'manage_combat', arguments: { action: 'setup_attachment_system', blueprintPath: weaponPath, attachmentSlots: [{ slotName: 'Optic', socketName: 'OpticSocket', allowedTypes: ['Scope'] }, { slotName: 'Magazine', socketName: 'MagazineSocket', allowedTypes: ['Magazine'] }] }, expected: 'success', assertions: [{ path: 'structuredContent.result.attachmentSlots', length: 2, label: 'attachment slots registered' }, { path: 'structuredContent.result.componentsCreated', length: 2, label: 'attachment scene components created' }] },
+  { scenario: 'ACTION: setup_attachment_system refuses a call with no slot', toolName: 'manage_combat', arguments: { action: 'setup_attachment_system', blueprintPath: weaponPath, attachmentSlots: [] }, expected: 'error|INVALID_ARGUMENT' },
 
   // === EFFECTS ===
 

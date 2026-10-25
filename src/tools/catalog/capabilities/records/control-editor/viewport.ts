@@ -13,7 +13,7 @@ const D = 'editor';
 export const VIEWPORT_RECORDS: readonly CapabilityRecordSource[] = [
   buildCoreRecord({
     parentTool: 'control_editor', action: 'set_view_mode', domain: D, family: F,
-    summary: 'Set the rendering view mode (Lit, Unlit, Wireframe, etc.) of the view on screen: the level viewport, or while the player plays the running game\'s view (method game_viewport).',
+    summary: 'Set the rendering view mode of the view on screen (the level viewport, or the running game\'s view while the player plays: method game_viewport) by any engine view mode name, its enum name or display name with case, spaces and underscores ignored: Lit, Unlit, Wireframe, DetailLighting, LightingOnly, LightComplexity, ShaderComplexity, LightmapDensity, ReflectionOverride, PathTracing, RayTracingDebug, CollisionPawn, CollisionVisibility, LODColoration, VisualizeNanite, VisualizeLumen, VisualizeVirtualShadowMap and the rest of this engine version\'s list. An unknown name is refused with that list; with no level viewport open, NO_VIEWPORT.',
     whenToUse: ['The viewport render mode must be changed for debugging or visualization.'],
     whenNotToUse: ['The default Lit mode is acceptable.'],
     inputProps: { viewMode: P.viewMode },
@@ -25,7 +25,7 @@ export const VIEWPORT_RECORDS: readonly CapabilityRecordSource[] = [
   buildCoreRecord({
     parentTool: 'control_editor', action: 'set_viewport_resolution', dispatchAction: 'console_command',
     domain: D, family: F,
-    summary: 'Set the viewport resolution via the r.SetRes console command.',
+    summary: 'Set the game window resolution through the console (r.SetRes <width>x<height>, fractions dropped); it does not resize an editor viewport. The reply is the console command\'s: command and output.',
     whenToUse: ['The viewport resolution must be changed.'],
     whenNotToUse: ['The default resolution is acceptable.'],
     inputProps: { width: P.width, height: P.height },
@@ -33,13 +33,13 @@ export const VIEWPORT_RECORDS: readonly CapabilityRecordSource[] = [
     effect: 'read',
    
     exampleInput: { action: 'set_viewport_resolution', width: 1920, height: 1080 },
-    exampleOutput: { success: true, message: 'Resolution set', width: 1920, height: 1080 },
-    outputProps: { width: P.width, height: P.height },
+    exampleOutput: { success: true, message: 'Command executed: r.SetRes 1920x1080' },
+    outputProps: { command: { type: 'string', description: 'The console command that ran.' }, output: { type: 'string', description: 'What the command printed, at most 4096 characters.' } },
   }),
   buildCoreRecord({
     parentTool: 'control_editor', action: 'set_viewport_realtime', domain: D, family: F,
-    summary: 'Toggle realtime rendering in the editor viewport.',
-    whenToUse: ['Realtime rendering must be enabled or disabled.'],
+    summary: 'Toggle realtime rendering in the editor viewport: particles and animated materials move only in a realtime viewport. When another system holds the viewport off realtime the request is put on top of it (overrode names it); while the editor is in the background with Use Less CPU when in Background on, realtime stays off (heldBy, realtime false) until control_editor configure_editor setting=window unthrottle lifts the throttle.',
+    whenToUse: ['Realtime rendering must be enabled or disabled.', 'A screenshot warned that the level viewport is not realtime, so effects stood still in it.'],
     whenNotToUse: ['The current realtime state is acceptable.'],
     inputProps: { enabled: P.enabled, realtime: P.realtime },
     required: [],

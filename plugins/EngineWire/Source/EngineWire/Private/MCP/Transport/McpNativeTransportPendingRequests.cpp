@@ -2,6 +2,7 @@
 #include "MCP/Execute/McpNativeGatewayReceipt.h"
 #include "MCP/Gateway/McpNativeGatewayExecuteReceiptBuild.h"
 #include "MCP/Protocol/McpJsonRpcReplyCompaction.h"
+#include "MCP/Protocol/McpModernRequest.h"
 
 namespace
 {
@@ -158,6 +159,7 @@ bool FMcpNativeTransport::CompletePendingRequest(
 		Context.StartTimeSeconds = Conn->RequestStartSeconds;
 		Context.GatewayWarnings = Conn->GatewayWarnings;
 		Context.Provenance = Conn->Provenance;
+		Context.PageOwner = Conn->PageOwner;
 		ReportedResult = McpBuildGatewayExecuteReceipt(
 			Conn->CapabilityId, Conn->OutputSchema, Context, bSuccess, Message, Result, ErrorCode);
 		if (!bSuccess)
@@ -170,6 +172,7 @@ bool FMcpNativeTransport::CompletePendingRequest(
 		ReportedErrorCode.Reset();
 		ReportedResult->TryGetStringField(TEXT("errorCode"), ReportedErrorCode);
 		McpSettleIdempotency(Conn->IdempotencySlot, bReportedSuccess, ReportedResult);
+		McpLoopGuardNote(Conn->PageOwner, bReportedSuccess, ReportedErrorCode);
 	}
 	else
 	{
@@ -179,16 +182,17 @@ bool FMcpNativeTransport::CompletePendingRequest(
 		McpSettleIdempotency(Conn->IdempotencySlot, false, nullptr);
 	}
 	Conn->IdempotencySlot.Reset();
+	TSharedPtr<FJsonObject> ToolResult = FMcpJsonRpc::BuildToolResult(
+		bReportedSuccess, ReportedMessage, ReportedResult, ReportedErrorCode);
+	if (Conn->bModern) McpModern::StampResult(TEXT("tools/call"), ToolResult);
 	if (Conn->bAnsweredRunning.load())
 	{
 		// The client was already told it was still running (AnswerStillRunning): the outcome is kept for
-		// manage_tools get_task_result, and logged.
-		TaskResults.NoteDone(RequestId, McpTaskOutcome(bReportedSuccess, ReportedMessage, ReportedErrorCode, ReportedResult));
+		// manage_tools get_task_result and the tasks extension's tasks/get, and logged.
+		TaskResults.NoteDone(RequestId, McpTaskOutcome(bReportedSuccess, ReportedMessage, ReportedErrorCode, ReportedResult), ToolResult);
 		UE_LOG(LogMcpNativeTransport, Log, TEXT("tools/call %s finished after its still-running answer (tool=%s, success=%s): %s"),
 			*RequestId, *Conn->ToolName, bReportedSuccess ? TEXT("true") : TEXT("false"), *ReportedMessage.Left(400));
 	}
-	TSharedPtr<FJsonObject> ToolResult = FMcpJsonRpc::BuildToolResult(
-		bReportedSuccess, ReportedMessage, ReportedResult, ReportedErrorCode);
 	FString ResponseBody = FMcpJsonRpc::BuildResponse(Conn->JsonRpcId, ToolResult);
 
 	// Offload blocking write + close to thread pool so GameThread is not blocked

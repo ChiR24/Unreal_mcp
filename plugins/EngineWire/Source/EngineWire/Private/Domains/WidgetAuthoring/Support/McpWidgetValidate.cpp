@@ -78,8 +78,11 @@ FString McpWidgetNameConflict(UWidgetBlueprint* WidgetBP, const FName Name, cons
     }
     // The validator's own text ("Name is already in use.") does not say which name it refused.
     const EValidatorResult Result = FKismetNameValidator(WidgetBP).IsValid(Name);
-    return Result == EValidatorResult::Ok ? FString()
-        : FString::Printf(TEXT("'%s': %s"), *Name.ToString(), *INameValidatorInterface::GetErrorString(Name.ToString(), Result));
+    if (Result == EValidatorResult::Ok) { return FString(); }
+    // Its full stop is dropped: every refusal goes on ("... in use. Pick another ...") and read "in use..".
+    FString Why = INameValidatorInterface::GetErrorString(Name.ToString(), Result);
+    Why.RemoveFromEnd(TEXT("."));
+    return FString::Printf(TEXT("'%s': %s"), *Name.ToString(), *Why);
 }
 
 FString McpFreeWidgetName(UWidgetBlueprint* WidgetBP, const FName Name, const UClass* WidgetClass)

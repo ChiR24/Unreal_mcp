@@ -3,6 +3,7 @@
 #include "MCP/Transport/McpNativeTransportPrivate.h"
 #include "MCP/Transport/McpNativeTransportTimeoutPolicy.h"
 #include "MCP/Execute/McpNativeGatewayReceipt.h"
+#include "MCP/Protocol/McpModernRequest.h"
 
 void FMcpNativeTransport::StreamToolCall(
 	const FString& ToolName, const FString& DispatchAction,
@@ -42,6 +43,9 @@ void FMcpNativeTransport::StreamToolCall(
 	Conn->Arguments = Arguments;
 	Conn->GatewayWarnings = Context.GatewayWarnings;
 	Conn->Provenance = Context.Provenance;
+	Conn->bModern = McpModern::Current().bActive;
+	Conn->bTasks = McpModern::Current().bTasks;
+	Conn->PageOwner = Context.PageOwner;
 	bool bPendingLimitReached = false;
 	bool bSessionInvalid = false;
 	{
@@ -111,8 +115,9 @@ void FMcpNativeTransport::StreamToolCall(
 		FScopeLock WriteLock(&Conn->WriteMutex);
 		if (Conn->Socket)
 		{
+			// The implicit session of a 2026-07-28 call is never shown to its client.
 			bHeadersSent = SendSSEHeaders(
-				Conn->Socket, SessionId, CorsOrigin);
+				Conn->Socket, Conn->bModern ? FString() : SessionId, CorsOrigin);
 			if (!bHeadersSent)
 			{
 				CloseSocket(Conn->Socket);

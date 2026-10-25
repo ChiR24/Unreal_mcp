@@ -1,6 +1,8 @@
 #include "Domains/Log/McpLogHistory.h"
 
 #include "Algo/Reverse.h"
+#include "Core/Subsystem/EngineWireSubsystemResponseSanitization.h"
+#include "Domains/Log/McpScriptErrors.h"
 #include "CoreGlobals.h"
 #include "HAL/FileManager.h"
 #include "HAL/PlatformOutputDevices.h"
@@ -37,6 +39,76 @@ void FMcpLogHistory::Unregister()
     bRegistered = false;
 }
 
+double FMcpLogHistory::Now()
+{
+    return FPlatformTime::Seconds() - GStartTime;
+}
+
+TArray<FString> FMcpLogHistory::WarningsSince(double SinceSeconds, int32 MaxDistinct) const
+{
+    static const FName OwnCategory(TEXT("LogEngineWireSubsystem"));
+    // A Blueprint runtime error leads, read back to its node; the lines repeating it are left out (the LogScript
+    // warning and the PIE message log's "Blueprint Runtime Error").
+    TArray<FString> ScriptMessages;
+    TArray<FString> Result = FMcpScriptErrors::Get().LinesSince(SinceSeconds, ScriptMessages);
+    // A Raise Script Error with an empty message is in every line, so it left out every warning of the window.
+    ScriptMessages.RemoveAll([](const FString& Text) { return Text.TrimStartAndEnd().IsEmpty(); });
+    TArray<FString> Logged;
+    {
+        FScopeLock Lock(&Mutex);
+        const int32 Count = Lines.Num();
+        // Oldest first: Head is the oldest slot once the ring is full and 0 before.
+        for (int32 Offset = 0; Offset < Count; ++Offset)
+        {
+            const FLine& Line = Lines[(Head + Offset) % Count];
+            if (Line.Seconds >= SinceSeconds && Line.Verbosity != ELogVerbosity::NoLogging &&
+                Line.Verbosity <= ELogVerbosity::Warning && Line.Category != OwnCategory &&
+                !ScriptMessages.ContainsByPredicate([&Line](const FString& Text) { return Line.Message.Contains(Text); }))
+            {
+                Logged.Add(FString::Printf(TEXT("%s: %s"), *Line.Category.ToString(), *Line.Message.TrimStartAndEnd()));
+            }
+        }
+    }
+    // Sanitized outside the lock: the redactor asks the engine for its content mounts.
+    TArray<FString> Messages;
+    TArray<int32> Counts;
+    int32 Unlisted = 0;
+    for (const FString& Raw : Logged)
+    {
+        const FString Text = EngineWireSubsystemResponse::SanitizeEngineErrorForResponse(Raw);
+        const int32 Index = Messages.Find(Text);
+        if (Index != INDEX_NONE)
+        {
+            ++Counts[Index];
+        }
+        else if (Messages.Num() < MaxDistinct)
+        {
+            Messages.Add(Text);
+            Counts.Add(1);
+        }
+        else
+        {
+            ++Unlisted;
+        }
+    }
+    for (int32 Index = 0; Index < Messages.Num(); ++Index)
+    {
+        Messages[Index] = Counts[Index] > 1 ? FString::Printf(TEXT("%dx %s"), Counts[Index], *Messages[Index]) : Messages[Index];
+    }
+    // Blueprint errors lead but leave other warnings at least half the lines, and a cut says how much it left out:
+    // ten script errors pushed every other warning off with no sign.
+    const int32 ScriptKeep = FMath::Min(Result.Num(), Messages.Num() > 0 ? FMath::Max(MaxDistinct - Messages.Num(), MaxDistinct / 2) : MaxDistinct);
+    Unlisted += Result.Num() - ScriptKeep;
+    Result.SetNum(ScriptKeep);
+    Result.Append(Messages);
+    // The note on what was cut is one of the MaxDistinct lines, not one more; with no lines allowed there is no note.
+    const int32 Cap = Unlisted > 0 || Result.Num() > MaxDistinct ? MaxDistinct - 1 : MaxDistinct;
+    Unlisted += FMath::Max(0, Result.Num() - FMath::Max(Cap, 0));
+    Result.SetNum(FMath::Clamp(Cap, 0, Result.Num()));
+    if (Unlisted > 0 && MaxDistinct > 0) Result.Add(FString::Printf(TEXT("(%d more distinct warnings or Blueprint errors not listed)"), Unlisted));
+    return Result;
+}
+
 void FMcpLogHistory::Serialize(const TCHAR* V, ELogVerbosity::Type Verbosity, const FName& Category)
 {
     if (!V)
@@ -44,7 +116,7 @@ void FMcpLogHistory::Serialize(const TCHAR* V, ELogVerbosity::Type Verbosity, co
         return;
     }
     FLine Line;
-    Line.Seconds = FPlatformTime::Seconds() - GStartTime;
+    Line.Seconds = Now();
     Line.Category = Category;
     Line.Verbosity = static_cast<ELogVerbosity::Type>(Verbosity & ELogVerbosity::VerbosityMask);
     Line.Message = FString(V).Left(1024);

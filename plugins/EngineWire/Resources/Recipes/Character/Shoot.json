@@ -3,7 +3,7 @@
   "tag": "Shoot",
   "placeholders": {
     "Key": "Key pressed to shoot, e.g. LeftMouseButton.",
-    "ProjectileType": "Class:<projectile class path>, the type of ProjectileClass.",
+    "ProjectileType": "The ProjectileClass variable's type, Class: followed by a class path (any actor, or the narrower class the variable already holds).",
     "ProjectileClass": "The projectile Blueprint's generated class path.",
     "ProjectileSpeed": "Launch speed in units per second.",
     "FireRate": "Most shots a minute.",

@@ -1,4 +1,6 @@
 #include "Domains/Environment/McpEnvShared.h"
+#include "Foundation/McpScopedEditorTransaction.h"
+#include "Foundation/Reflection/McpPropertyReflection.h"
 
 namespace McpEnvironmentHandlers {
 namespace {
@@ -16,9 +18,27 @@ bool ConfigureLandscapeActor(const FString &LowerSub, FEnvironmentBuildContext &
 
     // Only configure_landscape_lod lands here (configure_landscape_material goes to
     // HandleSetLandscapeMaterial). It used to report success with nothing applied or with
-    // configurationErrors listed.
+    // configurationErrors listed. Its writes recorded no undo and fired no edit event, so a World Partition
+    // landscape's streaming proxies kept the old LOD and nothing redrew until a reload.
+    FMcpScopedEditorTransaction Transaction(FText::FromString(TEXT("Configure Landscape LOD")), EMcpMutationDurability::EditorStateOnly,
+                                            TArray<UObject *>());
     Landscape->Modify();
     const int32 AppliedCount = McpApplyEnvironmentSettings(Landscape, Context.Payload, Context.Resp);
+    const TArray<TSharedPtr<FJsonValue>> *Applied = nullptr;
+    TSharedPtr<FJsonObject> Values = MakeShared<FJsonObject>();
+    if (Context.Resp->TryGetArrayField(TEXT("configuredProperties"), Applied) && Applied)
+    {
+        for (const TSharedPtr<FJsonValue> &Name : *Applied)
+        {
+            FProperty *Property = Name.IsValid() ? FindFProperty<FProperty>(Landscape->GetClass(), FName(*Name->AsString())) : nullptr;
+            if (!Property) continue;
+            FPropertyChangedEvent Event(Property, EPropertyChangeType::ValueSet);
+            Landscape->PostEditChangeProperty(Event);
+            Values->SetField(Property->GetName(), McpPropertyReflection::ExportWrittenValueToJson(Landscape, Property));
+        }
+    }
+    Context.Resp->SetObjectField(TEXT("values"), Values);
+    Transaction.DescribeInto(Context.Resp);
     const TArray<TSharedPtr<FJsonValue>> *Errors = nullptr;
     const bool bErrors = Context.Resp->TryGetArrayField(TEXT("configurationErrors"), Errors) && Errors && Errors->Num() > 0;
     Context.Resp->SetStringField(TEXT("landscapeName"), Landscape->GetActorLabel());

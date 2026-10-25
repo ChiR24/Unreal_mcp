@@ -19,6 +19,7 @@ const smartObjectName = `TestSmartObject_${ts}`;
 const massConfigName = `TestMassConfig_${ts}`;
 const blueprintName = `BP_TestAI_${ts}`;
 const navLinkName = `BP_TestNavLink_${ts}`;
+const massSpawnerName = `TestMassSpawner_${ts}`;
 const blackboardKeyName = `TargetActor_${ts}`;
 const moveGoalKeyName = `MoveGoal_${ts}`;
 const childStateName = `Patrol_${ts}`;
@@ -57,19 +58,26 @@ const testCases = [
     expected: 'success',
     captureResult: { key: 'behaviorTreePath', fromField: 'result.assetPath' }
   },
-  { scenario: 'CONNECT: assign_behavior_tree', toolName: 'manage_ai', arguments: { action: 'assign_behavior_tree', controllerPath: '${captured:controllerPath}', behaviorTreePath: '${captured:behaviorTreePath}' }, expected: 'success' },
+  // The controller actions write engine nodes into the Blueprint; they used to add an empty variable and say done.
+  { scenario: 'CONNECT: assign_behavior_tree', toolName: 'manage_ai', arguments: { action: 'assign_behavior_tree', controllerPath: '${captured:controllerPath}', behaviorTreePath: '${captured:behaviorTreePath}' }, expected: 'success', assertions: [{ path: 'structuredContent.result.compiled', equals: true, label: 'the variable compiles with its default' }, { path: 'structuredContent.result.variable', equals: 'DefaultBehaviorTree', label: 'a new variable, as the controller had none' }] },
   { scenario: 'CONNECT: assign_blackboard', toolName: 'manage_ai', arguments: { action: 'assign_blackboard', controllerPath: '${captured:controllerPath}', blackboardPath: '${captured:blackboardPath}' }, expected: 'success' },
 
   // === BLACKBOARD ===
   { scenario: 'ADD: add_blackboard_key', toolName: 'manage_ai', arguments: { action: 'add_blackboard_key', blackboardPath: '${captured:blackboardPath}', keyName: blackboardKeyName, keyType: 'Bool', isInstanceSynced: false }, expected: 'success' },
   { scenario: 'ADD: add_blackboard_key vector goal', toolName: 'manage_ai', arguments: { action: 'add_blackboard_key', blackboardPath: '${captured:blackboardPath}', keyName: moveGoalKeyName, keyType: 'Vector' }, expected: 'success' },
+  { scenario: 'ERROR: add_blackboard_key refuses a name the Blackboard already has', toolName: 'manage_ai', arguments: { action: 'add_blackboard_key', blackboardPath: '${captured:blackboardPath}', keyName: blackboardKeyName, keyType: 'Int' }, expected: 'error|NAME_TAKEN' },
+  { scenario: 'ADD: add_blackboard_key enum with its enum type', toolName: 'manage_ai', arguments: { action: 'add_blackboard_key', blackboardPath: '${captured:blackboardPath}', keyName: `Channel_${ts}`, keyType: 'Enum', enumType: '/Script/Engine.ECollisionChannel' }, expected: 'success' },
+  { scenario: 'ADD: add_blackboard_key object based on Actor', toolName: 'manage_ai', arguments: { action: 'add_blackboard_key', blackboardPath: '${captured:blackboardPath}', keyName: `Chased_${ts}`, keyType: 'Object', baseObjectClass: '/Script/Engine.Actor' }, expected: 'success', assertions: [{ path: 'structuredContent.result.baseClass', equals: '/Script/Engine.Actor', label: 'the key holds actors, so a MoveTo target accepts it' }] },
   { scenario: 'CONFIG: set_key_instance_synced', toolName: 'manage_ai', arguments: { action: 'set_key_instance_synced', blackboardPath: '${captured:blackboardPath}', keyName: blackboardKeyName, isInstanceSynced: true }, expected: 'success' },
   { scenario: 'CONFIG: set_blackboard_value', toolName: 'manage_ai', arguments: { action: 'set_blackboard_value', blackboardPath: '${captured:blackboardPath}', keyName: blackboardKeyName, value: 'true' }, expected: 'success' },
+  { scenario: 'ERROR: set_blackboard_value refuses a value the key cannot hold', toolName: 'manage_ai', arguments: { action: 'set_blackboard_value', blackboardPath: '${captured:blackboardPath}', keyName: blackboardKeyName, value: 'maybe' }, expected: 'error|INVALID_ARGUMENT' },
+  { scenario: 'CONFIG: set_blackboard_value sets a vector default', toolName: 'manage_ai', arguments: { action: 'set_blackboard_value', blackboardPath: '${captured:blackboardPath}', keyName: moveGoalKeyName, value: { x: 100, y: 200, z: 0 } }, expected: 'success' },
   { scenario: 'INFO: get_blackboard_value', toolName: 'manage_ai', arguments: { action: 'get_blackboard_value', blackboardPath: '${captured:blackboardPath}', keyName: blackboardKeyName }, expected: 'success' },
 
   // === BEHAVIOR TREE ===
   { scenario: 'ADD: add_composite_node', toolName: 'manage_ai', arguments: { action: 'add_composite_node', behaviorTreePath: '${captured:behaviorTreePath}', compositeType: 'Sequence' }, expected: 'success' },
   { scenario: 'ADD: add_composite_node named', toolName: 'manage_ai', arguments: { action: 'add_composite_node', behaviorTreePath: '${captured:behaviorTreePath}', compositeType: 'Selector', nodeName: 'RootSelector' }, expected: 'success' },
+  { scenario: 'ADD: add_composite_node SimpleParallel', toolName: 'manage_ai', arguments: { action: 'add_composite_node', behaviorTreePath: '${captured:behaviorTreePath}', compositeType: 'SimpleParallel', parentNodeId: 'RootSelector' }, expected: 'success' },
   { scenario: 'ADD: add_task_node', toolName: 'manage_ai', arguments: { action: 'add_task_node', behaviorTreePath: '${captured:behaviorTreePath}', taskType: 'Wait' }, expected: 'success' },
   { scenario: 'ADD: add_decorator', toolName: 'manage_ai', arguments: { action: 'add_decorator', behaviorTreePath: '${captured:behaviorTreePath}', decoratorType: 'Blackboard' }, expected: 'success' },
   { scenario: 'ADD: add_decorator on a named node', toolName: 'manage_ai', arguments: { action: 'add_decorator', behaviorTreePath: '${captured:behaviorTreePath}', decoratorType: 'Cooldown', parentNodeId: 'RootSelector' }, expected: 'success', assertions: [{ path: 'structuredContent.result.attachedTo', equals: 'RootSelector' }] },
@@ -77,8 +85,10 @@ const testCases = [
   { scenario: 'CONFIG: configure_bt_node sets a key selector by key name', toolName: 'manage_ai', arguments: { action: 'configure_bt_node', behaviorTreePath: '${captured:behaviorTreePath}', nodeId: '${captured:moveToNodeId}', properties: { BlackboardKey: moveGoalKeyName } }, expected: 'success' },
   { scenario: 'ADD: add_service', toolName: 'manage_ai', arguments: { action: 'add_service', behaviorTreePath: '${captured:behaviorTreePath}', serviceType: 'DefaultFocus' }, expected: 'success' },
   { scenario: 'CONFIG: configure_bt_node', toolName: 'manage_ai', arguments: { action: 'configure_bt_node', behaviorTreePath: '${captured:behaviorTreePath}', nodeId: 'Root' }, expected: 'success' },
-  { scenario: 'ACTION: run_behavior_tree', toolName: 'manage_ai', arguments: { action: 'run_behavior_tree', controllerPath: '${captured:controllerPath}', behaviorTreePath: '${captured:behaviorTreePath}' }, expected: 'success' },
-  { scenario: 'PLAYBACK: stop_behavior_tree', toolName: 'manage_ai', arguments: { action: 'stop_behavior_tree', controllerPath: '${captured:controllerPath}' }, expected: 'success' },
+  { scenario: 'ACTION: run_behavior_tree', toolName: 'manage_ai', arguments: { action: 'run_behavior_tree', controllerPath: '${captured:controllerPath}', behaviorTreePath: '${captured:behaviorTreePath}' }, expected: 'success', assertions: [{ path: 'structuredContent.result.compiled', equals: true, label: 'On Possess runs the tree and the Blueprint compiles' }, { path: 'structuredContent.result.variable', equals: 'DefaultBehaviorTree', label: 'it reads the variable assign_behavior_tree set' }] },
+  { scenario: 'PLAYBACK: stop_behavior_tree', toolName: 'manage_ai', arguments: { action: 'stop_behavior_tree', controllerPath: '${captured:controllerPath}' }, expected: 'success', assertions: [{ path: 'structuredContent.result.removed', equals: true, label: 'the run logic came out' }] },
+  { scenario: 'PLAYBACK: stop_behavior_tree again finds nothing to take out', toolName: 'manage_ai', arguments: { action: 'stop_behavior_tree', controllerPath: '${captured:controllerPath}' }, expected: 'success', assertions: [{ path: 'structuredContent.result.removed', equals: false, label: 'nothing was installed, and it says so' }] },
+  { scenario: 'ERROR: run_behavior_tree refuses a Blueprint that is not an AI controller', toolName: 'manage_ai', arguments: { action: 'run_behavior_tree', controllerPath: '${captured:blueprintPath}', behaviorTreePath: '${captured:behaviorTreePath}' }, expected: 'error|NOT_AI_CONTROLLER' },
 
   // === EQS ===
   {
@@ -91,10 +101,18 @@ const testCases = [
   { scenario: 'ADD: add_eqs_generator', toolName: 'manage_ai', arguments: { action: 'add_eqs_generator', queryPath: '${captured:queryPath}', generatorType: 'ActorsOfClass', generatorSettings: { searchRadius: 600, actorClass: '/Script/Engine.Actor' } }, expected: 'success' },
   { scenario: 'ADD: add_eqs_context', toolName: 'manage_ai', arguments: { action: 'add_eqs_context', queryPath: '${captured:queryPath}', contextType: 'Querier' }, expected: 'success' },
   { scenario: 'ADD: add_eqs_test', toolName: 'manage_ai', arguments: { action: 'add_eqs_test', queryPath: '${captured:queryPath}', testType: 'Distance' }, expected: 'success' },
+  { scenario: 'ADD: add_eqs_test Dot, one of the engine tests that used to fail', toolName: 'manage_ai', arguments: { action: 'add_eqs_test', queryPath: '${captured:queryPath}', testType: 'Dot' }, expected: 'success' },
+  { scenario: 'ADD: add_eqs_context measures the Distance test to the querier', toolName: 'manage_ai', arguments: { action: 'add_eqs_context', queryPath: '${captured:queryPath}', contextType: 'Querier', testIndex: 0, contextProperty: 'DistanceTo' }, expected: 'success' },
+  { scenario: 'ADD: add_eqs_context with a context class on the generator', toolName: 'manage_ai', arguments: { action: 'add_eqs_context', queryPath: '${captured:queryPath}', contextType: 'Custom', contextClass: '/Script/AIModule.EnvQueryContext_Querier', optionIndex: 0 }, expected: 'success' },
+  { scenario: 'ERROR: add_eqs_context refuses a property the generator lacks', toolName: 'manage_ai', arguments: { action: 'add_eqs_context', queryPath: '${captured:queryPath}', contextType: 'Querier', contextProperty: 'NoSuchContextProperty' }, expected: 'error|NO_CONTEXT_PROPERTY' },
   { scenario: 'CONFIG: configure_test_scoring', toolName: 'manage_ai', arguments: { action: 'configure_test_scoring', queryPath: '${captured:queryPath}', testIndex: 0, testSettings: { scoringEquation: 'Square', clampMin: 0, clampMax: 1, filterType: 'Range', floatMin: 0, floatMax: 5000 } }, expected: 'success' },
+  { scenario: 'ERROR: configure_test_scoring refuses a call that sets nothing', toolName: 'manage_ai', arguments: { action: 'configure_test_scoring', queryPath: '${captured:queryPath}', testIndex: 0 }, expected: 'error|INVALID_ARGUMENT' },
+  { scenario: 'ADD: add_eqs_generator Donut takes its radii', toolName: 'manage_ai', arguments: { action: 'add_eqs_generator', queryPath: '${captured:queryPath}', generatorType: 'Donut', generatorSettings: { innerRadius: 200, outerRadius: 600 } }, expected: 'success' },
+  { scenario: 'ERROR: add_eqs_generator refuses a setting the generator does not read', toolName: 'manage_ai', arguments: { action: 'add_eqs_generator', queryPath: '${captured:queryPath}', generatorType: 'SimpleGrid', generatorSettings: { innerRadius: 100 } }, expected: 'error|INVALID_ARGUMENT' },
 
   // === PERCEPTION ===
   { scenario: 'ADD: add_ai_perception_component', toolName: 'manage_ai', arguments: { action: 'add_ai_perception_component', blueprintPath: '${captured:blueprintPath}' }, expected: 'success' },
+  { scenario: 'ADD: add_ai_perception_component keeps the component already there', toolName: 'manage_ai', arguments: { action: 'add_ai_perception_component', blueprintPath: '${captured:blueprintPath}' }, expected: 'success' },
   { scenario: 'CONFIG: configure_sight_config', toolName: 'manage_ai', arguments: { action: 'configure_sight_config', blueprintPath: '${captured:blueprintPath}', sightConfig: { sightRadius: 3000, loseSightRadius: 3500, peripheralVisionAngle: 90 } }, expected: 'success' },
   { scenario: 'CONFIG: configure_hearing_config', toolName: 'manage_ai', arguments: { action: 'configure_hearing_config', blueprintPath: '${captured:blueprintPath}', hearingConfig: { hearingRange: 2000 } }, expected: 'success' },
   { scenario: 'CONFIG: configure_damage_sense_config', toolName: 'manage_ai', arguments: { action: 'configure_damage_sense_config', blueprintPath: '${captured:blueprintPath}', damageConfig: { maxAge: 10 } }, expected: 'success' },
@@ -110,8 +128,13 @@ const testCases = [
     captureResult: { key: 'stateTreePath', fromField: 'result.assetPath' }
   },
   { scenario: 'ADD: add_state_tree_state', toolName: 'manage_ai', arguments: { action: 'add_state_tree_state', stateTreePath: '${captured:stateTreePath}', stateName: childStateName, parentStateName: 'Root', stateType: 'State' }, expected: 'success' },
+  { scenario: 'ERROR: add_state_tree_state refuses a name the tree already has', toolName: 'manage_ai', arguments: { action: 'add_state_tree_state', stateTreePath: '${captured:stateTreePath}', stateName: childStateName, parentStateName: 'Root' }, expected: 'error|NAME_TAKEN' },
+  { scenario: 'ERROR: add_state_tree_state refuses an unknown state type', toolName: 'manage_ai', arguments: { action: 'add_state_tree_state', stateTreePath: '${captured:stateTreePath}', stateName: `Odd_${ts}`, stateType: 'Wobbly' }, expected: 'error|INVALID_ARGUMENT' },
   { scenario: 'ADD: add_state_tree_transition', toolName: 'manage_ai', arguments: { action: 'add_state_tree_transition', stateTreePath: '${captured:stateTreePath}', fromState: 'Root', toState: childStateName, triggerType: 'OnStateCompleted' }, expected: 'success' },
-  { scenario: 'CONFIG: configure_state_tree_task', toolName: 'manage_ai', arguments: { action: 'configure_state_tree_task', stateTreePath: '${captured:stateTreePath}', stateName: childStateName }, expected: 'success' },
+  { scenario: 'ERROR: add_state_tree_transition refuses an unknown trigger', toolName: 'manage_ai', arguments: { action: 'add_state_tree_transition', stateTreePath: '${captured:stateTreePath}', fromState: 'Root', toState: childStateName, triggerType: 'Whenever' }, expected: 'error|INVALID_ARGUMENT' },
+  { scenario: 'CREATE: create_state_tree with the AI controller schema', toolName: 'manage_ai', arguments: { action: 'create_state_tree', name: `${stateTreeName}_AI`, path: TEST_FOLDER, schema: 'ai' }, expected: 'success' },
+  { scenario: 'ERROR: create_state_tree refuses a schema class that is no State Tree schema', toolName: 'manage_ai', arguments: { action: 'create_state_tree', name: `${stateTreeName}_Bad`, path: TEST_FOLDER, schema: '/Script/Engine.Actor' }, expected: 'error|INVALID_ARGUMENT' },
+  { scenario: 'ERROR: configure_state_tree_task refuses a call that sets nothing', toolName: 'manage_ai', arguments: { action: 'configure_state_tree_task', stateTreePath: '${captured:stateTreePath}', stateName: childStateName }, expected: 'error|INVALID_ARGUMENT' },
   { scenario: 'CONFIG: configure_state_tree_task with task properties', toolName: 'manage_ai', arguments: { action: 'configure_state_tree_task', stateTreePath: '${captured:stateTreePath}', stateName: childStateName, taskIndex: 0, taskName: 'Delay', selectionBehavior: 'TryEnterState', properties: { Duration: 1.5 } }, expected: 'success|not found' },
 
   // === SMART OBJECTS ===
@@ -125,7 +148,10 @@ const testCases = [
   { scenario: 'ADD: add_smart_object_slot', toolName: 'manage_ai', arguments: { action: 'add_smart_object_slot', definitionPath: '${captured:definitionPath}', offset: { x: 100, y: 0, z: 0 }, rotation: { pitch: 0, yaw: 0, roll: 0 }, enabled: true }, expected: 'success' },
   { scenario: 'CONFIG: configure_slot_behavior', toolName: 'manage_ai', arguments: { action: 'configure_slot_behavior', definitionPath: '${captured:definitionPath}', slotIndex: 0, enabled: true }, expected: 'success' },
   { scenario: 'CONFIG: configure_slot_behavior refuses an unregistered activity tag', toolName: 'manage_ai', arguments: { action: 'configure_slot_behavior', definitionPath: '${captured:definitionPath}', slotIndex: 0, activityTags: ['MCP.Test.UnregisteredTag'] }, expected: 'error' },
+  { scenario: 'ERROR: configure_slot_behavior refuses a call that sets nothing', toolName: 'manage_ai', arguments: { action: 'configure_slot_behavior', definitionPath: '${captured:definitionPath}', slotIndex: 0 }, expected: 'error|INVALID_ARGUMENT' },
   { scenario: 'ADD: add_smart_object_component', toolName: 'manage_ai', arguments: { action: 'add_smart_object_component', blueprintPath: '${captured:blueprintPath}' }, expected: 'success' },
+  { scenario: 'ERROR: add_smart_object_component refuses a component name the Blueprint has', toolName: 'manage_ai', arguments: { action: 'add_smart_object_component', blueprintPath: '${captured:blueprintPath}' }, expected: 'error|ALREADY_EXISTS' },
+  { scenario: 'ERROR: add_smart_object_component refuses a definition that does not load', toolName: 'manage_ai', arguments: { action: 'add_smart_object_component', blueprintPath: '${captured:blueprintPath}', componentName: `SmartObject_${ts}`, definitionPath: `${TEST_FOLDER}/NoSuchDefinition` }, expected: 'error|NOT_FOUND' },
 
   // === MASS AI ===
   {
@@ -135,9 +161,13 @@ const testCases = [
     expected: 'success',
     captureResult: { key: 'configPath', fromField: 'result.configPath' }
   },
-  { scenario: 'CONFIG: configure_mass_entity', toolName: 'manage_ai', arguments: { action: 'configure_mass_entity', configPath: '${captured:configPath}' }, expected: 'success' },
-  { scenario: 'CONFIG: configure_mass_entity trait properties', toolName: 'manage_ai', arguments: { action: 'configure_mass_entity', configPath: '${captured:configPath}', parentConfigPath: '${captured:configPath}', traitIndex: 0, traitClass: 'MassMovementTrait', properties: {} }, expected: 'success|not found' },
-  { scenario: 'ADD: add_mass_spawner', toolName: 'manage_ai', arguments: { action: 'add_mass_spawner', blueprintPath: '${captured:blueprintPath}', configPath: '${captured:configPath}', componentName: 'MassSpawner', spawnCount: 10 }, expected: 'success' },
+  { scenario: 'ERROR: configure_mass_entity refuses a call that sets nothing', toolName: 'manage_ai', arguments: { action: 'configure_mass_entity', configPath: '${captured:configPath}' }, expected: 'error|INVALID_ARGUMENT' },
+  { scenario: 'ERROR: configure_mass_entity refuses a config as its own parent', toolName: 'manage_ai', arguments: { action: 'configure_mass_entity', configPath: '${captured:configPath}', parentConfigPath: '${captured:configPath}', traitIndex: 0, traitClass: 'MassMovementTrait', properties: {} }, expected: 'error|INVALID_ARGUMENT' },
+  { scenario: 'CONFIG: configure_mass_entity adds a trait the new config lacks', toolName: 'manage_ai', arguments: { action: 'configure_mass_entity', configPath: '${captured:configPath}', traitClass: 'MassMovementTrait' }, expected: 'success' },
+  { scenario: 'ERROR: configure_mass_entity refuses a traitClass that is no Mass trait', toolName: 'manage_ai', arguments: { action: 'configure_mass_entity', configPath: '${captured:configPath}', traitClass: 'StaticMeshActor' }, expected: 'error|INVALID_ARGUMENT' },
+  { scenario: 'ADD: add_mass_spawner places a spawner', toolName: 'manage_ai', arguments: { action: 'add_mass_spawner', configPath: '${captured:configPath}', queryPath: '${captured:queryPath}', actorName: massSpawnerName, spawnCount: 10, location: { x: 0, y: 400, z: 100 } }, expected: 'success' },
+  { scenario: 'ERROR: add_mass_spawner refuses a label already in the level', toolName: 'manage_ai', arguments: { action: 'add_mass_spawner', configPath: '${captured:configPath}', queryPath: '${captured:queryPath}', actorName: massSpawnerName }, expected: 'error|NAME_TAKEN' },
+  { scenario: 'ERROR: add_mass_spawner refuses a query path that is no Environment Query', toolName: 'manage_ai', arguments: { action: 'add_mass_spawner', configPath: '${captured:configPath}', queryPath: '${captured:configPath}' }, expected: 'error|TYPE_MISMATCH' },
 
   // === UTILITY / ALIASES ===
   { scenario: 'INFO: get_ai_info', toolName: 'manage_ai', arguments: { action: 'get_ai_info', controllerPath: '${captured:controllerPath}' }, expected: 'success' },
@@ -166,11 +196,14 @@ const testCases = [
     expected: 'success',
     captureResult: { key: 'navLinkPath', fromField: 'result.actorPath' }
   },
-  { scenario: 'CONFIG: set_focus', toolName: 'manage_ai', arguments: { action: 'set_focus', controllerPath: '${captured:controllerPath}', focusActorName: testActorName }, expected: 'success' },
-  { scenario: 'DELETE: clear_focus', toolName: 'manage_ai', arguments: { action: 'clear_focus', controllerPath: '${captured:controllerPath}' }, expected: 'success' },
+  { scenario: 'CONFIG: set_focus on the player', toolName: 'manage_ai', arguments: { action: 'set_focus', controllerPath: '${captured:controllerPath}', focusPlayer: true }, expected: 'success', assertions: [{ path: 'structuredContent.result.compiled', equals: true, label: 'the Tick logic compiles' }, { path: 'structuredContent.result.focusTarget', equals: 'player', label: 'the player is the target' }] },
+  { scenario: 'CONFIG: set_focus on a tag replaces the player target', toolName: 'manage_ai', arguments: { action: 'set_focus', controllerPath: '${captured:controllerPath}', focusTag: 'FocusTarget' }, expected: 'success', assertions: [{ path: 'structuredContent.result.previousRemoved', gte: 1, label: 'the player logic was taken out first' }] },
+  { scenario: 'ERROR: set_focus refuses two targets', toolName: 'manage_ai', arguments: { action: 'set_focus', controllerPath: '${captured:controllerPath}', focusPlayer: true, focusTag: 'FocusTarget' }, expected: 'error|INVALID_ARGUMENT' },
+  { scenario: 'DELETE: clear_focus', toolName: 'manage_ai', arguments: { action: 'clear_focus', controllerPath: '${captured:controllerPath}' }, expected: 'success', assertions: [{ path: 'structuredContent.result.removed', equals: true, label: 'the focus logic came out' }] },
 
   // === CLEANUP ===
   { scenario: 'Cleanup: delete test actor', toolName: 'control_actor', arguments: { action: 'delete', actorName: testActorName }, expected: 'success|not found' },
+  { scenario: 'Cleanup: delete mass spawner', toolName: 'control_actor', arguments: { action: 'delete', actorName: massSpawnerName }, expected: 'success|not found' },
   { scenario: 'Cleanup: delete test folder', toolName: 'manage_asset', arguments: { action: 'delete', path: TEST_FOLDER, force: true }, expected: 'success|not found' }
 ];
 
@@ -306,13 +339,17 @@ const testCases = [
     { scenario: 'CONFIG: configure_nav_area_cost', toolName: 'manage_ai', arguments: {"action": "configure_nav_area_cost", "areaClass": OBSTACLE_AREA, "areaCost": 1.0, "fixedAreaEnteringCost": 0}, expected: 'success' },
     // === CREATE ===
     { scenario: 'CREATE: create_nav_link_proxy', toolName: 'manage_ai', arguments: {"action": "create_nav_link_proxy", "actorName": NAV_LINK, "location": {"x": 0, "y": 0, "z": 100}, "startPoint": {"x": -100, "y": 0, "z": 0}, "endPoint": {"x": 100, "y": 0, "z": 0}, "direction": "BothWays"}, expected: 'success' },
+    { scenario: 'ERROR: create_nav_link_proxy refuses a label already in the level', toolName: 'manage_ai', arguments: {"action": "create_nav_link_proxy", "actorName": NAV_LINK, "location": {"x": 0, "y": 0, "z": 100}, "startPoint": {"x": -100, "y": 0, "z": 0}, "endPoint": {"x": 100, "y": 0, "z": 0}}, expected: 'error|NAME_TAKEN' },
     // === CONFIG ===
     { scenario: 'CONFIG: configure_nav_link', toolName: 'manage_ai', arguments: {"action": "configure_nav_link", "actorName": NAV_LINK, "snapRadius": 30}, expected: 'success' },
+    { scenario: 'ERROR: configure_nav_link refuses a call that sets nothing', toolName: 'manage_ai', arguments: { action: 'configure_nav_link', actorName: NAV_LINK }, expected: 'error|INVALID_ARGUMENT' },
+    { scenario: 'CONFIG: configure_nav_link direction alone', toolName: 'manage_ai', arguments: { action: 'configure_nav_link', actorName: NAV_LINK, direction: 'LeftToRight' }, expected: 'success' },
     { scenario: 'CONFIG: set_nav_link_type', toolName: 'manage_ai', arguments: {"action": "set_nav_link_type", "actorName": NAV_LINK, "linkType": "smart"}, expected: 'success' },
     // === CREATE ===
     { scenario: 'CREATE: create_smart_link', toolName: 'manage_ai', arguments: {"action": "create_smart_link", "actorName": SMART_LINK, "location": {"x": 0, "y": 200, "z": 100}, "startPoint": {"x": -100, "y": 0, "z": 0}, "endPoint": {"x": 100, "y": 0, "z": 0}, "direction": "BothWays"}, expected: 'success' },
     // === CONFIG ===
     { scenario: 'CONFIG: configure_smart_link_behavior', toolName: 'manage_ai', arguments: {"action": "configure_smart_link_behavior", "actorName": SMART_LINK, "linkEnabled": true, "enabledAreaClass": "/Script/NavigationSystem.NavArea_Default", "disabledAreaClass": "/Script/NavigationSystem.NavArea_Null", "broadcastRadius": 900, "broadcastInterval": 0, "bCreateBoxObstacle": true, "obstacleAreaClass": "/Script/NavigationSystem.NavArea_Null", "obstacleExtent": {"x": 75, "y": 50, "z": 40}, "obstacleOffset": {"x": 0, "y": 0, "z": 20}}, expected: 'success' },
+    { scenario: 'ERROR: configure_smart_link_behavior refuses an area class that does not load', toolName: 'manage_ai', arguments: { action: 'configure_smart_link_behavior', actorName: SMART_LINK, enabledAreaClass: '/Script/NavigationSystem.NoSuchNavArea' }, expected: 'error|INVALID_AREA_CLASS' },
     // === INFO ===
     { scenario: 'INFO: get_navigation_info', toolName: 'manage_ai', arguments: {"action": "get_navigation_info"}, expected: 'success' },
 

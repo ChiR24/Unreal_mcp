@@ -13,32 +13,67 @@ static bool RequireEventName(FActionContext& Context, FString& EventName)
     return ValidateNiagaraIdentifier(Context, EventName, TEXT("eventName"), false);
 }
 
-static FString EventGeneratorModulePath(const FString& EventType)
+// The engine's generator module for an event type; empty for any other type. An unknown type made a location
+// generator, a misspelt Death included.
+static FString EventGeneratorModulePath(FString& InOutEventType)
 {
-    if (EventType.Equals(TEXT("Collision"), ESearchCase::IgnoreCase))
+    for (const TCHAR* Type : {TEXT("Location"), TEXT("Collision"), TEXT("Death")})
     {
-        return TEXT("/Niagara/Modules/Events/GenerateCollisionEvent.GenerateCollisionEvent");
+        if (InOutEventType.Equals(Type, ESearchCase::IgnoreCase))
+        {
+            InOutEventType = Type;
+            return FString::Printf(TEXT("/Niagara/Modules/Events/Generate%sEvent.Generate%sEvent"), Type, Type);
+        }
     }
-    if (EventType.Equals(TEXT("Death"), ESearchCase::IgnoreCase))
+    return FString();
+}
+
+// The event a generator module writes, which a receiver's eventName must match: its write node's EventName, else
+// that node's data set name. It lives in the module asset, so no eventName given here can rename it.
+static FString GeneratedEventName(const UNiagaraNodeFunctionCall* Module)
+{
+    const UNiagaraScriptSource* Source = Module && Module->FunctionScript
+        ? Cast<UNiagaraScriptSource>(Module->FunctionScript->GetLatestSource()) : nullptr;
+    if (!Source || !Source->NodeGraph)
     {
-        return TEXT("/Niagara/Modules/Events/GenerateDeathEvent.GenerateDeathEvent");
+        return FString();
     }
-    return TEXT("/Niagara/Modules/Events/GenerateLocationEvent.GenerateLocationEvent");
+    for (const UEdGraphNode* Node : Source->NodeGraph->Nodes)
+    {
+        const FNameProperty* Prop = Node && Node->GetClass()->GetName() == TEXT("NiagaraNodeWriteDataSet")
+            ? CastField<FNameProperty>(Node->GetClass()->FindPropertyByName(TEXT("EventName"))) : nullptr;
+        const FStructProperty* DataSet = Prop ? CastField<FStructProperty>(Node->GetClass()->FindPropertyByName(TEXT("DataSet"))) : nullptr;
+        const FName Name = Prop ? Prop->GetPropertyValue_InContainer(Node) : NAME_None;
+        if (!Name.IsNone() || DataSet)
+        {
+            return Name.IsNone() ? DataSet->ContainerPtrToValuePtr<FNiagaraDataSetID>(Node)->Name.ToString() : Name.ToString();
+        }
+    }
+    return FString();
 }
 
 static bool AddEventGenerator(FActionContext& Context)
 {
-    FString EventName;
+    // eventName is optional here: the generator's event is named by its module, and the name given was answered as
+    // the generator's while the asset emitted another.
+    const FString EventName = GetJsonStringField(Context.Payload, TEXT("eventName"));
     UNiagaraSystem* System = nullptr;
     FNiagaraEmitterHandle* Handle = nullptr;
-    if (!RequireEventName(Context, EventName) || !LoadSystemAndEmitter(Context, System, Handle))
+    FString EventType = GetJsonStringField(Context.Payload, TEXT("eventType"), TEXT("Location"));
+    const FString ModulePath = EventGeneratorModulePath(EventType);
+    if (ModulePath.IsEmpty())
+    {
+        Context.SendError(FString::Printf(TEXT("eventType must be Location, Collision or Death; got '%s'. Nothing was changed."), *EventType),
+            TEXT("INVALID_ARGUMENT"));
+        return true;
+    }
+    if (!LoadSystemAndEmitter(Context, System, Handle))
     {
         return true;
     }
-    const FString EventType = GetJsonStringField(Context.Payload, TEXT("eventType"), TEXT("Location"));
     UNiagaraNodeFunctionCall* NewModule = AddModuleToEmitterStack(
         Handle,
-        EventGeneratorModulePath(EventType),
+        ModulePath,
         ENiagaraScriptUsage::ParticleUpdateScript,
         FString::Printf(TEXT("Generate%sEvent"), *EventType));
     if (!NewModule)
@@ -48,12 +83,24 @@ static bool AddEventGenerator(FActionContext& Context)
         return true;
     }
     MarkDirtyAndVerify(Context, System);
-    Context.Result->SetStringField(TEXT("eventName"), EventName);
-    Context.Result->SetStringField(TEXT("eventType"), TEXT("Generator"));
+    const FString Emitted = GeneratedEventName(NewModule);
+    if (!Emitted.IsEmpty())
+    {
+        Context.Result->SetStringField(TEXT("eventName"), Emitted);
+    }
+    Context.Result->SetStringField(TEXT("eventType"), EventType);
+    Context.Result->SetStringField(TEXT("moduleName"), NewModule->GetFunctionName());
     Context.Result->SetBoolField(TEXT("moduleAdded"), true);
     Context.Result->SetBoolField(TEXT("eventGeneratorAdded"), true);
-    Context.Result->SetStringField(TEXT("message"), FString::Printf(TEXT("Added event generator '%s'."), *EventName));
-    Context.SendSuccess(true, TEXT("Event generator added."));
+    if (!EventName.IsEmpty() && !Emitted.IsEmpty() && !EventName.Equals(Emitted, ESearchCase::IgnoreCase))
+    {
+        TArray<TSharedPtr<FJsonValue>> Warnings;
+        Warnings.Add(MakeShared<FJsonValueString>(FString::Printf(TEXT("The generator emits '%s', set in the engine's Generate%sEvent "
+            "module; eventName '%s' does not rename it. Give add_event_receiver eventName '%s'."), *Emitted, *EventType, *EventName, *Emitted)));
+        Context.Result->SetArrayField(TEXT("warnings"), Warnings);
+    }
+    Context.SendSuccess(true, Emitted.IsEmpty() ? FString(TEXT("Event generator added."))
+                                                : FString::Printf(TEXT("Event generator added; it emits '%s'."), *Emitted));
     return true;
 }
 
@@ -113,6 +160,8 @@ static bool AddEventReceiver(FActionContext& Context)
     Context.Result->SetStringField(TEXT("eventName"), EventName);
     Context.Result->SetStringField(TEXT("eventType"), TEXT("Receiver"));
     Context.Result->SetBoolField(TEXT("spawnOnEvent"), bSpawnOnEvent);
+    // The engine reads SpawnNumber only for a handler that spawns particles: a count sent without spawnOnEvent did nothing.
+    Context.Result->SetNumberField(TEXT("eventSpawnCount"), bSpawnOnEvent ? FMath::Max(0.0, EventSpawnCount) : 0.0);
     Context.Result->SetBoolField(TEXT("eventHandlerAdded"), bEventHandlerAdded);
     Context.Result->SetBoolField(TEXT("eventGraphCreated"), bEventGraphCreated);
     Context.Result->SetStringField(TEXT("message"), FString::Printf(TEXT("Added event receiver '%s'."), *EventName));

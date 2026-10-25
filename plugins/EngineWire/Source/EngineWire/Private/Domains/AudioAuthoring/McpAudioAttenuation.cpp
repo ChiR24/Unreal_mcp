@@ -17,10 +17,11 @@ TSharedPtr<FJsonObject> HandleAttenuationActions(const FString& SubAction, const
 		}
 
 		FString PackagePath = Path / Name;
-		UPackage* Package = CreatePackage(*PackagePath);
+		FString CreateError, CreateCode;
+		UPackage* Package = McpCreatePackageForNewAsset(PackagePath, CreateError, CreateCode);
 		if (!Package)
 		{
-			return McpHandlerUtils::BuildErrorResponse(TEXT("PACKAGE_ERROR"), TEXT("Failed to create package"));
+			return McpHandlerUtils::BuildErrorResponse(CreateCode, CreateError);
 		}
 
 		USoundAttenuationFactory* Factory = NewObject<USoundAttenuationFactory>();
@@ -111,13 +112,22 @@ TSharedPtr<FJsonObject> HandleAttenuationActions(const FString& SubAction, const
 
 		// The contract names the algorithm `spatialization`; only `spatializationAlgorithm` was read.
 		const FString Algorithm = McpGetFirstStringField(Params, {TEXT("spatialization"), TEXT("spatializationAlgorithm")}).ToLower();
+		const bool bHasSpatialize = Params->HasField(TEXT("spatialize"));
+		if (Algorithm.IsEmpty() && !bHasSpatialize)
+		{
+			return McpHandlerUtils::BuildErrorResponse(TEXT("INVALID_ARGUMENT"), TEXT("Pass spatialize and/or spatialization. Nothing was changed."));
+		}
 		if (Algorithm == TEXT("default") || Algorithm == TEXT("panner")) { Atten->Attenuation.SpatializationAlgorithm = ESoundSpatializationAlgorithm::SPATIALIZATION_Default; }
 		else if (Algorithm == TEXT("binaural") || Algorithm == TEXT("hrtf")) { Atten->Attenuation.SpatializationAlgorithm = ESoundSpatializationAlgorithm::SPATIALIZATION_HRTF; }
 		else if (!Algorithm.IsEmpty())
 		{
 			return McpHandlerUtils::BuildErrorResponse(TEXT("INVALID_ARGUMENT"), FString::Printf(TEXT("spatialization '%s' is not Default or Binaural"), *Algorithm));
 		}
-		Atten->Attenuation.bSpatialize = GetJsonBoolField(Params, TEXT("spatialize"), true);
+		// spatialize defaulted to true, so setting only the algorithm switched spatialization on.
+		if (bHasSpatialize)
+		{
+			Atten->Attenuation.bSpatialize = GetJsonBoolField(Params, TEXT("spatialize"), true);
+		}
 
 		SaveAudioAsset(Atten, bSave);
 		Response->SetBoolField(TEXT("spatialize"), Atten->Attenuation.bSpatialize);
@@ -147,9 +157,12 @@ TSharedPtr<FJsonObject> HandleAttenuationActions(const FString& SubAction, const
 		}
 
 		// The contract spells these enable, occlusionVolumeScale and occlusionFilterScale (as set_audio_occlusion
-		// does); only the engine field names were read, so enable:false could never arrive and every call turned
-		// occlusion on. The engine spellings stay as fallbacks.
-		Atten->Attenuation.bEnableOcclusion = GetJsonBoolField(Params, TEXT("enable"), GetJsonBoolField(Params, TEXT("enableOcclusion"), true));
+		// does); the engine spellings stay as fallbacks. enable is written only when sent: a call that set only the
+		// volume turned occlusion on.
+		if (Params->HasField(TEXT("enable")) || Params->HasField(TEXT("enableOcclusion")))
+		{
+			Atten->Attenuation.bEnableOcclusion = GetJsonBoolField(Params, TEXT("enable"), GetJsonBoolField(Params, TEXT("enableOcclusion"), true));
+		}
 		if (Params->HasField(TEXT("occlusionFilterScale"))) { Atten->Attenuation.OcclusionLowPassFilterFrequency = static_cast<float>(20000.0 * GetJsonNumberField(Params, TEXT("occlusionFilterScale"), 1.0)); }
 		else if (Params->HasField(TEXT("occlusionLowPassFilterFrequency"))) { Atten->Attenuation.OcclusionLowPassFilterFrequency = static_cast<float>(GetJsonNumberField(Params, TEXT("occlusionLowPassFilterFrequency"), 20000.0)); }
 		if (Params->HasField(TEXT("occlusionVolumeScale"))) { Atten->Attenuation.OcclusionVolumeAttenuation = static_cast<float>(GetJsonNumberField(Params, TEXT("occlusionVolumeScale"), 0.0)); }

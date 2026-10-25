@@ -60,7 +60,8 @@ export const WIDGET_TEMPLATES_RECORDS: readonly CapabilityRecordSource[] = [
   screen('create_hud_widget', 'Create a HUD Widget Blueprint on a canvas holding ready-made pieces (default health bar, crosshair, ammo counter).',
     { elements: P.elements }, { elements: ['health_bar', 'crosshair'] }),
   screen('create_dialog_widget', 'Create a dialog box Widget Blueprint: speaker name, wrapped dialog line, response buttons and a continue hint.',
-    { showSpeakerName: P.showSpeakerName, responseCount: P.responseCount }, { responseCount: 2 }),
+    { showSpeakerName: P.showSpeakerName, responseCount: P.responseCount, buttons: P.buttons, text: { type: 'string', description: 'The dialog line (default a placeholder).' } },
+    { text: 'Open the gate?', buttons: ['Yes', 'No'] }),
   screen('create_inventory_ui', 'Create an inventory Widget Blueprint: titled panel with a grid of item slots (default 6 by 4).',
     { columns: P.columns, rows: P.rows }, { columns: 5, rows: 3 }),
   screen('create_radial_menu', 'Create a radial menu Widget Blueprint: a ring of round buttons around a centre label (default 8 segments).',
@@ -68,5 +69,6 @@ export const WIDGET_TEMPLATES_RECORDS: readonly CapabilityRecordSource[] = [
   screen('create_credits_screen', 'Create a credits Widget Blueprint: centred scrolling list of role and name pairs with a Back button.',
     { title: P.title, entries: P.entries }, { entries: [{ title: 'Design', name: 'Ada' }, { title: 'Music', name: 'Grace' }] }),
   screen('create_shop_ui', 'Create a shop Widget Blueprint: header with currency, a scrolling grid of item cards each with a Buy button, and Close.',
-    { columns: P.columns, itemCount: P.itemCount }, { columns: 4, itemCount: 8 }),
+    { columns: P.columns, itemCount: P.itemCount, items: P.shopItems, currency: P.currency },
+    { currency: 'Coins', items: [{ name: 'Sword', price: 250 }, { name: 'Shield', price: 180 }] }),
 ];

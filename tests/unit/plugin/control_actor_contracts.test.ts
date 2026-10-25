@@ -228,7 +228,8 @@ describe('sample_motion runs at full rate or says it did not', () => {
     expect(advance.indexOf('McpTrackMotionOverlaps(Run.Overlaps, Actor);'), 'every frame, once the run has started')
       .toBeGreaterThan(advance.indexOf('Run.bWaiting = false;'));
     expect(source).toContain('McpSampleMotionOverlaps(Run.Overlaps, Actor, *Sample);');
-    expect(source).toContain('if (Run.Overlaps.bOn) Data->SetArrayField(TEXT("overlapped"), McpHandlerUtils::ToJsonStringArray(Run.Overlaps.Ever));');
+    expect(source).toContain('McpAddMotionOverlapResult(Run.Overlaps, *Data);');
+    expect(read('Motion', 'McpMotionPassThrough.cpp')).toMatch(/if \(Overlaps\.bOn\) \{\s*Data\.SetArrayField\(TEXT\("overlapped"\), McpHandlerUtils::ToJsonStringArray\(Overlaps\.Ever\)\);/u);
     expect(points.match(/McpActorRef\(/gu), 'a name is looked up only when a touch begins').toHaveLength(1);
     expect(points).toContain('const FString Name = Begun.Add(Other, McpActorRef(Other));');
   });
@@ -291,6 +292,16 @@ describe('set_visibility and set_actor_collision take many actors in one call, a
     for (const source of [visibility(), collision()]) {
       expect(source).toMatch(/if \(bMany && Actors\.Num\(\) == 0\) \{\s*McpSendNoActorNamesFound\(this, Socket, RequestId, Missing\);\s*return true;/u);
       expect(source).toContain('Data->SetArrayField(TEXT("missing"), McpHandlerUtils::ToJsonStringArray(Missing));');
+    }
+  });
+
+  // Every add_tag that found all its actors answered "missing": [].
+  it('lists missing only when a name matched no actor', () => {
+    for (const source of [visibility(), collision(), read('McpActorTags.cpp')]) {
+      const writes = source.split('Data->SetArrayField(TEXT("missing")').length - 1;
+      const guarded = source.match(/if \(Missing\.Num\(\) > 0\)\s*\{\s*Data->SetArrayField\(TEXT\("missing"\)/gu) ?? [];
+      expect(writes).toBeGreaterThan(0);
+      expect(guarded.length).toBe(writes);
     }
   });
 
@@ -657,11 +668,12 @@ describe('control_actor find asks which actors use a static mesh or a material',
     expect(dispatchBy?.actions).toEqual({ class: 'find_by_class', name: 'find_by_name', mesh: 'find_by_mesh', material: 'find_by_material' });
     expect(dispatchBy?.declaredBy?.meshPath).toEqual(['mesh']);
     expect(dispatchBy?.declaredBy?.materialPath).toEqual(['material']);
-    expect(dispatchBy?.declaredBy?.limit, 'limit is read by the two asset finds only').toEqual(['mesh', 'material']);
+    // Every find stops at limit: a class or tag most of a level shares listed every actor before.
+    expect(dispatchBy?.declaredBy?.limit, 'every find reads limit').toBeUndefined();
     const folded = Object.fromEntries((record()?.legacyIds ?? []).map((entry) => [entry.action, entry.folded]));
     expect(folded.find_by_mesh).toEqual({ findBy: 'mesh' });
     expect(folded.find_by_material).toEqual({ findBy: 'material' });
-    expect(unreadVariantParams(record(), ['limit'], { findBy: 'class' })).toHaveLength(1);
+    expect(unreadVariantParams(record(), ['limit'], { findBy: 'class' })).toEqual([]);
     expect(unreadVariantParams(record(), ['limit', 'meshPath'], { findBy: 'mesh' })).toEqual([]);
   });
 
@@ -969,5 +981,54 @@ describe('a spawn_batch item\'s properties go on the component it spawned', () =
     expect(batch).toContain('TEXT("spawnKind"), TEXT("properties")};');
     expect(batch).toContain('const FString PropertiesError = McpApplySpawnItemProperties(Actor, Item);');
     expect(batch).toContain('!Entry->HasField(TEXT("propertiesError"))');
+  });
+});
+
+// A one-frame force of 60000 moved a crate 0 cm while the reply said "Force applied", and in the editor world the
+// call left the placed actor simulating while nothing moved.
+describe('apply_force pushes once, in the running game only', () => {
+  const source = (): string => sliceBetween(read('McpActorPhysics.cpp'), 'HandleControlActorApplyForce(', 'HandleControlActorSetCollision(');
+
+  it('refuses the editor world before it changes anything', () => {
+    const handler = source();
+    const refusal = handler.indexOf('TEXT("NOT_SIMULATING")');
+
+    expect(handler).toContain('World->WorldType != EWorldType::PIE && World->WorldType != EWorldType::Game');
+    expect(refusal).toBeGreaterThan(-1);
+    expect(refusal, 'before simulation is switched on').toBeLessThan(handler.indexOf('SetSimulatePhysics(true)'));
+    expect(capabilityIndex().byId.get('control_actor.apply_force')?.availability.editorStates).toEqual(['pie', 'simulate']);
+  });
+
+  it('pushes the root body, else a simulating part, else a mesh, with one impulse, and says how fast it left', () => {
+    const handler = source();
+
+    expect(handler).toContain('Cast<UPrimitiveComponent>(Found->GetRootComponent())');
+    expect(handler).toContain('Found->FindComponentByClass<UMeshComponent>()');
+    expect(handler).toContain('Prim->AddImpulse(ForceVector);');
+    expect(handler).not.toContain('AddForce(');
+    expect(handler).toContain('TEXT("massKg")');
+    expect(handler).toContain('VectorToJsonArray(ForceVector / Mass)');
+  });
+});
+
+// A grenade at 1100 cm/s fell through a floor made of a Plane, and the motion read showed only that it fell on.
+describe('a motion read names a surface the actor went through', () => {
+  it('traces every frame from the last position as the body collides, skipping teleports and bodies with no collision', () => {
+    const pass = read('Motion', 'McpMotionPassThrough.cpp');
+
+    expect(pass).toContain('Body->GetCollisionEnabled() == ECollisionEnabled::NoCollision');
+    expect(pass).toContain('Step > Actor->GetVelocity().Size() * Dt * 2.0 + 50.0');
+    expect(pass).toContain('World->LineTraceSingleByChannel(Hit, From.GetValue(), Here, Body->GetCollisionObjectType(), Params,');
+    expect(pass).toContain('FCollisionResponseParams(Body->GetCollisionResponseToChannels())');
+    expect(pass).toContain('Passes.Found.Num() >= 3');
+    expect(pass).toContain('TEXT("passedThrough")');
+    expect(read('Motion', 'McpMotionPoints.cpp')).toMatch(/void McpTrackMotionOverlaps\(FMcpMotionOverlaps &Overlaps, AActor \*Actor\) \{\s*McpTrackMotionPasses\(Overlaps\.Passes, Actor\);\s*if \(!Overlaps\.bOn\)/u);
+  });
+
+  it('puts what it found in the result and its warning in the reply', () => {
+    const sample = read('McpActorMotionSample.cpp');
+
+    expect(sample).toContain('McpAddMotionOverlapResult(Run.Overlaps, *Data);');
+    expect(sample).toContain('Run->Overlaps.Passes.Warning}) {');
   });
 });

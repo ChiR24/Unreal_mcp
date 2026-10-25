@@ -105,6 +105,21 @@ bool McpCoplanarDrawnInView(const UStaticMeshComponent* Component)
     return Component->bRenderInMainPass && Component->GetClass()->GetFName() != TEXT("WaterBodyInfoMeshComponent");
 }
 
+// Two undersides with something solid right below them are seen from nowhere: carpet trims whose bottoms lay in the
+// carpet's plane on the floor were reported, and fixed, as flicker no camera could show.
+bool McpCoplanarHiddenUnderside(UWorld* World, const FVector& Normal, const FVector& Center, const AActor* A, const AActor* B)
+{
+    if (Normal.Z > -0.99)
+    {
+        return false;
+    }
+    FCollisionQueryParams Params(SCENE_QUERY_STAT(McpCoplanarUnderside), true);
+    Params.AddIgnoredActor(A);
+    Params.AddIgnoredActor(B);
+    FHitResult Hit;
+    return World->LineTraceSingleByChannel(Hit, Center + FVector(0.0, 0.0, 0.5), Center - FVector(0.0, 0.0, 2.0), ECC_Visibility, Params);
+}
+
 TArray<FMcpCoplanarPiece> McpCoplanarCollect(UWorld* World, const FString& NameFilter, const TArray<AActor*>* Focus)
 {
     TArray<FMcpCoplanarPiece> Pieces;
@@ -192,6 +207,7 @@ TArray<FMcpCoplanarHit> FindCoplanarFaces(UWorld* World, const FString& NameFilt
             FMcpCoplanarHit Best;
             double AreaA = 0.0;
             double AreaB = 0.0;
+            FVector SmallerCenter = FVector::ZeroVector;
             for (const FMcpCoplanarFace& FaceA : A.Faces)
             {
                 for (const FMcpCoplanarFace& FaceB : B.Faces)
@@ -207,10 +223,11 @@ TArray<FMcpCoplanarHit> FindCoplanarFaces(UWorld* World, const FString& NameFilt
                         Best.OverlapV = V;
                         AreaA = 4.0 * FaceA.HalfU * FaceA.HalfV;
                         AreaB = 4.0 * FaceB.HalfU * FaceB.HalfV;
+                        SmallerCenter = AreaA <= AreaB ? FaceA.Center : FaceB.Center;
                     }
                 }
             }
-            if (Best.OverlapU <= 0.0)
+            if (Best.OverlapU <= 0.0 || McpCoplanarHiddenUnderside(World, Best.Normal, SmallerCenter, A.Actor, B.Actor))
             {
                 continue;
             }

@@ -52,12 +52,16 @@ UAnimSequence* LoadAnimSequenceFromPath(const FString& AnimPath)
 // in-memory delete sets that later crash post-response cleanup.
 bool SaveAnimAsset(UObject* Asset, bool bShouldSave)
 {
-    if (!bShouldSave || !Asset)
+    if (!Asset)
     {
         return true;
     }
-
+    // save false keeps the edit as an unsaved change: unmarked, it was in no save list and went with the editor.
     Asset->MarkPackageDirty();
+    if (!bShouldSave)
+    {
+        return true;
+    }
     FAssetRegistryModule::AssetCreated(Asset);
 
     const bool bSaved = SaveLoadedAssetThrottled(Asset, true);

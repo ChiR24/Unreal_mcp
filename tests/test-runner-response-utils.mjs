@@ -48,7 +48,7 @@ function matchesObjectSubset(candidate, expectedSubset) {
 /** Operators evaluateAssertions actually honours. Anything else is a typo. */
 const ASSERTION_OPERATORS = new Set([
   'equals', 'approximately', 'includes', 'notIncludes',
-  'length', 'minLength', 'includesObject', 'gte'
+  'length', 'minLength', 'includesObject', 'gte', 'exists'
 ]);
 
 export function evaluateAssertions(testCase, response) {
@@ -149,6 +149,11 @@ export function evaluateAssertions(testCase, response) {
       if (typeof actual !== 'number' || !Number.isFinite(actual) || actual < assertion.gte) {
         return { passed: false, reason: `${label}: expected a number >= ${assertion.gte}, got ${JSON.stringify(actual)}` };
       }
+    }
+
+    // exists: true holds when the path resolves to a value, exists: false when it resolves to nothing.
+    if (Object.prototype.hasOwnProperty.call(assertion, 'exists') && (actual !== undefined) !== assertion.exists) {
+      return { passed: false, reason: `${label}: expected the path ${assertion.exists ? 'to hold a value' : 'to be absent'}, got ${JSON.stringify(actual)}` };
     }
 
     if (assertion.includesObject) {

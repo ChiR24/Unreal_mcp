@@ -124,6 +124,10 @@ bool UEngineWireSubsystem::HandleManageLevelStructureAction(
     {
         bHandled = HandleConnectLevelBlueprintNodes(this, RequestId, Payload, Socket);
     }
+    else if (SubAction == TEXT("set_level_blueprint_pin_default"))
+    {
+        bHandled = HandleSetLevelBlueprintPinDefault(this, RequestId, Payload, Socket);
+    }
     else if (SubAction == TEXT("get_level_structure_info"))
     {
         bHandled = HandleGetLevelStructureInfo(this, RequestId, Payload, Socket);

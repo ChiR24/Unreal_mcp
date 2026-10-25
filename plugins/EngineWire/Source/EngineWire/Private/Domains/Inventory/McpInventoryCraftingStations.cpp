@@ -16,11 +16,11 @@ bool HandleInventoryCraftingStationActions(UEngineWireSubsystem& Bridge, const F
       return true;
     }
 
-    UPackage* Package = CreateInventoryAssetPackage(Path, Name);
+    FString PackageError;
+    FString PackageCode;
+    UPackage* Package = CreateInventoryAssetPackage(Path, Name, PackageError, PackageCode);
     if (!Package) {
-      Bridge.SendAutomationError(RequestingSocket, RequestId,
-                          TEXT("Failed to create package"),
-                          TEXT("PACKAGE_CREATE_FAILED"));
+      Bridge.SendAutomationError(RequestingSocket, RequestId, PackageError, PackageCode);
       return true;
     }
 
@@ -48,11 +48,10 @@ bool HandleInventoryCraftingStationActions(UEngineWireSubsystem& Bridge, const F
       FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(StationBlueprint);
       FAssetRegistryModule::AssetCreated(StationBlueprint);
 
-        if (GetJsonBoolField(Payload, TEXT("save"), true)) {
-          McpSafeAssetSave(StationBlueprint);
-        }
+      const bool bSaved = GetJsonBoolField(Payload, TEXT("save"), true) && McpSafeAssetSave(StationBlueprint);
 
       TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
+      Result->SetBoolField(TEXT("saved"), bSaved);
       Result->SetStringField(TEXT("stationPath"), Package->GetName());
       Result->SetStringField(TEXT("assetPath"), Package->GetName() + TEXT(".") + FPackageName::GetShortName(Package->GetName())); // dogfood #55: consistent object path
       Result->SetStringField(TEXT("stationType"), StationType);

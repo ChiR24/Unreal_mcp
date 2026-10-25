@@ -3,6 +3,7 @@
 #include "CoreMinimal.h"
 #include "Dom/JsonObject.h"
 
+class AActor;
 class UBlueprint;
 class UStaticMesh;
 
@@ -32,6 +33,8 @@ struct FPartAudit
     double GroundZ = 0.0;
     // Worst first.
     TArray<FPartIssue> Issues;
+    // Warning sentences about the Focus parts that are not placement: a part under an unevenly scaled parent.
+    TArray<FString> Notes;
     // Set when the Blueprint could not be measured at all.
     FString Error;
 };
@@ -65,6 +68,10 @@ FPartAudit AuditBlueprintPartsUsingMesh(UBlueprint* Blueprint, const UStaticMesh
 int32 AppendMeshUserWarnings(UStaticMesh* Mesh, const TSharedPtr<FJsonObject>& Result);
 
 TSharedPtr<FJsonObject> IssueToJson(const FPartIssue& Issue);
+
+// Adds a sentence for each Focus part attached to a parent scaled unevenly in the world: the part takes that scale
+// too, so its size and offsets are stretched the same way.
+void NoteInheritedScale(AActor* Actor, const TSet<FString>& Focus, TArray<FString>& OutNotes);
 
 // For an edit's reply: partWarnings[] plus one warnings[] sentence per issue involving Focus.
 // Returns the number of issues found (the reply lists the worst eight).

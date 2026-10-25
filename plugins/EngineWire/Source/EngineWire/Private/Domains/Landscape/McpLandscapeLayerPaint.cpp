@@ -166,7 +166,6 @@ bool UEngineWireSubsystem::HandlePaintLandscapeLayer(
     return true;
   }
 
-  FLandscapeEditDataInterface LandscapeEdit(LandscapeInfo, false);
   const uint8 PaintValue =
       static_cast<uint8>(Strength * 255.0);
   const int32 RegionSizeX = PaintMaxX - PaintMinX + 1;
@@ -183,6 +182,9 @@ bool UEngineWireSubsystem::HandlePaintLandscapeLayer(
     return true;
   }
 
+  // Without a layer and the upload (false), the paint never showed and the next layer merge wrote over it.
+  const McpLandscapeHandlers::FMcpLandscapeEditScope Edit(Landscape, TEXT("Paint Landscape Layer"), bSkipFlush);
+  FLandscapeEditDataInterface LandscapeEdit(LandscapeInfo);
   TArray<uint8> AlphaData;
   AlphaData.Init(bBrush ? 0 : PaintValue, RegionSizeX * RegionSizeY);
   if (bBrush) {
@@ -219,6 +221,8 @@ bool UEngineWireSubsystem::HandlePaintLandscapeLayer(
   Resp->SetNumberField(TEXT("regionMinY"), PaintMinY);
   Resp->SetNumberField(TEXT("regionMaxX"), PaintMaxX);
   Resp->SetNumberField(TEXT("regionMaxY"), PaintMaxY);
+  Edit.DescribeInto(Resp);
+  McpHandlerUtils::AddVerification(Resp, Landscape);
   SendAutomationResponse(
       RequestingSocket, RequestId, true,
       TEXT("Layer painted successfully"), Resp, FString());

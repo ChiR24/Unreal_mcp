@@ -1,5 +1,6 @@
 #include "Core/Compatibility/McpVersionCompatibility.h"
 
+#include "AssetRegistry/AssetRegistryModule.h"
 #include "Dom/JsonObject.h"
 #include "Engine/StaticMesh.h"
 #include "LandscapeGrassType.h"
@@ -52,22 +53,24 @@ bool UEngineWireSubsystem::HandleCreateLandscapeGrassType(
   }
 
   const FString FullPackagePath = PackagePath / Name;
-  if (UObject *ExistingAsset = StaticLoadObject(
-          ULandscapeGrassType::StaticClass(), nullptr,
-          *FullPackagePath)) {
-    TSharedPtr<FJsonObject> Resp =
-        McpHandlerUtils::CreateResultObject();
-    Resp->SetBoolField(TEXT("success"), true);
-    Resp->SetStringField(TEXT("asset_path"),
-                         ExistingAsset->GetPathName());
-    SendAutomationResponse(
-        RequestingSocket, RequestId, true,
-        TEXT("Landscape grass type already exists"), Resp,
-        FString());
+  TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
+  if (ULandscapeGrassType *Existing = Cast<ULandscapeGrassType>(McpLoadAsset(FullPackagePath))) {
+    Resp->SetStringField(TEXT("asset_path"), Existing->GetPathName());
+    Resp->SetBoolField(TEXT("alreadyExists"), true);
+    McpHandlerUtils::MarkNoAssetsChanged(Resp);
+    SendAutomationResponse(RequestingSocket, RequestId, true,
+                           TEXT("Landscape grass type already exists; nothing was changed"), Resp, FString());
     return true;
   }
 
-  UPackage *Package = CreatePackage(*FullPackagePath);
+  // Another kind of asset at the path was rebuilt in place, or crashed the editor.
+  FString PackageError;
+  FString PackageCode;
+  UPackage *Package = McpCreatePackageForNewAsset(FullPackagePath, PackageError, PackageCode);
+  if (!Package) {
+    SendAutomationError(RequestingSocket, RequestId, PackageError, PackageCode);
+    return true;
+  }
   ULandscapeGrassType *GrassType =
       NewObject<ULandscapeGrassType>(
           Package, FName(*Name),
@@ -88,12 +91,11 @@ bool UEngineWireSubsystem::HandleCreateLandscapeGrassType(
   Variety.RandomRotation = true;
   Variety.AlignToSurface = true;
 
-  McpSafeAssetSave(GrassType);
-  TSharedPtr<FJsonObject> Resp =
-      McpHandlerUtils::CreateResultObject();
-  Resp->SetBoolField(TEXT("success"), true);
-  Resp->SetStringField(TEXT("asset_path"),
-                       GrassType->GetPathName());
+  FAssetRegistryModule::AssetCreated(GrassType);
+  GrassType->MarkPackageDirty();
+  Resp->SetStringField(TEXT("asset_path"), GrassType->GetPathName());
+  Resp->SetBoolField(TEXT("saved"), McpSafeAssetSave(GrassType));
+  McpHandlerUtils::AddVerification(Resp, GrassType);
   SendAutomationResponse(
       RequestingSocket, RequestId, true,
       TEXT("Landscape grass type created"), Resp, FString());

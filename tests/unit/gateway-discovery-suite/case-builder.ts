@@ -8,6 +8,7 @@ import type { CapabilityRecord } from '../../../src/tools/catalog/capabilities/m
 
 type CapabilityLike = CapabilityRecord;
 import { isRecord } from '../../../src/utils/validation/type-guards.js';
+import { selectedRequirement } from '../tools/support/capability-fixtures.js';
 
 export const EXECUTE_RULES = [
   'valid',
@@ -104,7 +105,8 @@ export function sampleValue(propertySchema: unknown): unknown {
   }
 }
 
-export function minimalValidParams(record: CapabilityLike): JsonRecord {
+/** The union schema's own minimum, without what the selected variant adds. */
+function unionMinimalParams(record: CapabilityLike): JsonRecord {
   const properties = propertiesOf(record.schemas.input);
   const params: JsonRecord = {};
   for (const name of requiredOf(record.schemas.input)) {
@@ -117,6 +119,20 @@ export function minimalValidParams(record: CapabilityLike): JsonRecord {
     const first = group[0] as string;
     params[first] = sampleValue(properties[first]);
   }
+  return params;
+}
+
+export function minimalValidParams(record: CapabilityLike): JsonRecord {
+  const properties = propertiesOf(record.schemas.input);
+  const params = unionMinimalParams(record);
+  // A folded variant is held to its own requirements too (routing.dispatchBy.requires): the one the
+  // payload selects, else the selector's default.
+  const requirement = selectedRequirement(record, params);
+  for (const name of requirement?.required ?? []) {
+    if (!(name in params)) params[name] = sampleValue(properties[name]);
+  }
+  const oneOf = requirement?.oneOf ?? [];
+  if (oneOf.length > 0 && !oneOf.some((name) => name in params)) params[oneOf[0] as string] = sampleValue(properties[oneOf[0] as string]);
   return params;
 }
 
@@ -218,7 +234,9 @@ export function buildCasesForRecord(record: CapabilityLike): readonly ExecuteCas
     return !(isRecord(propertySchema) && 'default' in propertySchema);
   });
   if (required.length > 0) {
-    const dropped = { ...valid };
+    // From the union-only payload: a variant's own parameters would name the variant, and an omitted
+    // selector is inferred from them.
+    const dropped = unionMinimalParams(record);
     delete dropped[required[0] as string];
     cases.push({
       caseId: `${record.id}#missing-required`,

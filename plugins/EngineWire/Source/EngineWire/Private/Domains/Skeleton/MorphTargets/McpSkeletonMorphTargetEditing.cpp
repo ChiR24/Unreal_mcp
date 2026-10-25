@@ -89,7 +89,6 @@ bool UEngineWireSubsystem::HandleCreateMorphTarget(
     Mesh->Modify();
     Mesh->RegisterMorphTarget(NewMorphTarget);
     Mesh->MarkPackageDirty();
-    SaveIfRequested(Mesh, Payload);
 
     TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
     Result->SetStringField(TEXT("morphTargetName"), MorphTargetName);
@@ -98,6 +97,7 @@ bool UEngineWireSubsystem::HandleCreateMorphTarget(
     Result->SetNumberField(TEXT("deltasApplied"), Deltas.Num());
     Result->SetNumberField(TEXT("lodIndex"), LODIndex);
 
+    SaveAndReport(Mesh, Payload, Result);
     SendAutomationResponse(RequestingSocket, RequestId, true,
         FString::Printf(TEXT("Morph target '%s' created with %d deltas"), *MorphTargetName, Deltas.Num()), Result);
     return true;
@@ -174,7 +174,6 @@ bool UEngineWireSubsystem::HandleSetMorphTargetDeltas(
         Mesh->RegisterMorphTarget(MorphTarget);
     }
     Mesh->MarkPackageDirty();
-    SaveIfRequested(Mesh, Payload);
 
     TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
     Result->SetStringField(TEXT("morphTargetName"), MorphTargetName);
@@ -183,6 +182,7 @@ bool UEngineWireSubsystem::HandleSetMorphTargetDeltas(
     Result->SetNumberField(TEXT("lodIndex"), LODIndex);
     Result->SetBoolField(TEXT("created"), bCreatedMorphTarget);
 
+    SaveAndReport(Mesh, Payload, Result);
     SendAutomationResponse(RequestingSocket, RequestId, true,
         FString::Printf(TEXT("Set %d deltas on morph target '%s'"), Deltas.Num(), *MorphTargetName), Result);
     return true;

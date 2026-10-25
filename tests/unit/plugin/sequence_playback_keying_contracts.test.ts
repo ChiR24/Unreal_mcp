@@ -36,7 +36,7 @@ describe('sequence playback', () => {
     const pause = playback.slice(playback.indexOf('HandleSequencePause'));
     expect(pause).toMatch(/TryGetNumberField\(TEXT\("startTime"\), HoldAt\)/u);
     expect(pause).toMatch(/bHold && [\s\S]*OpenLevelSequence\(LevelSeq\)/u);
-    expect(pause).toContain('McpSeekPaused(Sequencer, LevelSeq->GetMovieScene(), HoldAt)');
+    expect(pause).toContain('McpSeekPaused(Sequencer, McpTickAt(MovieScene, HoldAt))');
   });
 });
 
