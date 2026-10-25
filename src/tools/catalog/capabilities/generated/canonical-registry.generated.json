@@ -1,5 +1,5 @@
 {
-  "catalogRevision": "5b6493b455e5ec24",
+  "catalogRevision": "401fe1971a4cbf8e",
   "recordCount": 425,
   "records": [
     {
@@ -47127,7 +47127,7 @@
               "type": "object",
               "additionalProperties": true,
               "x-unreal-reflection-boundary": true,
-              "description": "With cost: high (percent of the frame in the top quarter of the shader complexity ramp), mean (0 to 1) and actors [{actorName, frameShare, ofItself}] (up to 5 drawing at a high cost over at least 1% of the frame), or note when the view could not be read."
+              "description": "With cost: high (percent of the frame at red or beyond on the shader complexity ramp: a third of its maximum, its legend's Bad), mean (0 to 1) and actors [{actorName, frameShare, ofItself}] (up to 5 drawing at a high cost over at least 1% of the frame), or note when the view could not be read. The legend and crosshair the view mode draws over the frame are left out. While shaders still compile, what they cover draws with a stand-in material and a warning says so."
             },
             "cameraLocation": {
               "type": "object",
@@ -47245,8 +47245,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "8db88278992af763c56a7523f4e67ab2b855461796fbbc7bded8bc50a615b114",
-        "content": "03c723e84b103a909925a59aaa6951aa36942f7c24b1a7d9ecd51a35c17a0233"
+        "schema": "84fed90dbf8efb7e1676ecaa97fca6018c109c083bcd62b49461cd65136c21ba",
+        "content": "6f4aba1c0a2e315ca6fd6e7ed44d3b1423488de5426fb0a8974ea75518869397"
       }
     },
     {

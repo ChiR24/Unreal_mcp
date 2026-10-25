@@ -12,6 +12,7 @@
 #include "Domains/Environment/McpEnvShared.h"
 #include "EditorViewportClient.h"
 #include "EngineUtils.h"
+#include "Foundation/McpScreenshotResample.h"
 
 namespace McpPerception
 {
@@ -142,6 +143,15 @@ bool HandleAnalyzeView(UEngineWireSubsystem& Bridge, const FString& RequestId, c
     }
     Result->SetObjectField(TEXT("cameraLocation"), McpHandlerUtils::VectorToJson(View.Client->GetViewLocation()));
     Result->SetObjectField(TEXT("cameraRotation"), McpHandlerUtils::RotatorToJson(View.Client->GetViewRotation()));
+    // Until a material's shaders finish compiling it draws as the engine's stand-in, and every aspect reads that: a stack
+    // of translucent cubes first read as cheap as the floor.
+    if (const int32 Jobs = McpShaderJobsRemaining())
+    {
+        TArray<TSharedPtr<FJsonValue>> Warnings;
+        Warnings.Add(MakeShared<FJsonValueString>(FString::Printf(TEXT("%d shader job(s) were still compiling: what they cover drew "
+            "with the engine's stand-in material, so this frame is not its final look or cost; call again when they finish."), Jobs)));
+        Result->SetArrayField(TEXT("warnings"), Warnings);
+    }
     McpHandlerUtils::MarkNoAssetsChanged(Result);
     Bridge.SendAutomationResponse(Socket, RequestId, true, FString::Printf(TEXT("Analyzed the view (%d x %d cells): %s."),
         Frame.Width, Frame.Height, *FString::Join(Aspects.Array(), TEXT(", "))), Result, FString());

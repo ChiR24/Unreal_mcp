@@ -7,36 +7,36 @@ All notable changes to the EngineWire plugin (formerly McpAutomationBridge) will
 ## [Unreleased]
 
 ### Added
-- **Blueprint runtime errors** name their node, graph and Blueprint, and an Accessed None its cause; `lint_blueprint` finds Tick searches, dead nodes, re-rolled randoms, endless loops, and unset or unchecked object variables before Play.
+- **Blueprint runtime errors** name their node and an Accessed None its cause; `lint_blueprint` finds such mistakes before Play.
 - **`get_editor_focus`**: open editors, the focused graph's selected nodes, selected actors, recent errors.
-- **`describe_view`** `points` (with `tolerance`), `labels`, `coveredBy`, and `saveAs`/`compareWith`: what changed in the picture, region by region, with the actors drawn there before and after; **`analyze_view`** judges the frame: where the eye goes, palette and hue harmony, exposure and key to fill, shader cost; **`contact_sheet`**: an actor's elevations, plan and three-quarter view in one labelled image.
+- **`describe_view`** `points` (`tolerance`), `labels`, `coveredBy`, `compareWith` (what changed since `saveAs`); **`analyze_view`** (saliency, palette, light, shader cost); **`contact_sheet`** (an actor from every side).
 - **MCP 2026-07-28 on `/mcp`**: sessionless requests, header checks, `resultType`, consent by elicitation, the tasks extension.
 - **Result pages** for oversized arrays (`options.pageCursor`), and a **search signature** on a confident first hit.
 - **`get_frame_cost`**, **`diff_asset`**, **`cancel_render`**, `configure_render_camera` shutter and overscan, `set_section` `playRate`.
 - **`nanite_rebuild_mesh` `assetPaths`**, `get_niagara_info` values, `edit_dynamic_mesh` `append_cuboids`, `append_loft`, `append_mesh` and `delete_triangles`.
-- **Change watch**: what a request spawns or modifies (and an edited Blueprint's placed copies) is checked into `warnings`, with Map Check (`CheckForErrors`) on its actors and save-time Data Validation on its assets.
+- **Change watch**: what a request spawns or modifies is checked into `warnings`, with Map Check and Data Validation on what it touched.
 - **Undo ledger**: `undo` blocks come from the transaction buffer; **restore points** undo only this server's steps and name the delete of what they created.
 - **`explain`** fault trees (collision, visible, input, widget, audible, lit), each failure naming the call that fixes it.
 - **Loop guard** on `/mcp`: a call failing three times unchanged is refused (`REPEATED_FAILURE`).
 - **`dryRun`** on `build_graph`, `build_material_graph` and `add_widget_tree`, which check every step first.
-- **`run_map_check`** reads Map Check as rows; **`fix_placement`** moves sunk, floating and intersecting actors in one undo step; **`describe_relations`** reads the level back as relations, groups, rows, grids, rings and scene roles; **`arrange_by_relations`** anneals actors into stated relations, overlapping nothing, in one undo step; execute's `options.expect` is judged after the call (receipt `expectations`, with the fixing call) and `options.require` before it (`PRECONDITION_FAILED`, nothing runs).
-- **Change journal**: `changes_since` lists what changed since a cursor, by whom (mcp, user, editor), from and to; a reply warns once of the user's edits; `/mcp` serves `ue://changes` subscriptions.
+- **`run_map_check`**, **`fix_placement`**, **`describe_relations`**, **`arrange_by_relations`**, and execute's `options.expect` (after the call) and `options.require` (before it).
+- **Change journal**: `changes_since` and `ue://changes` subscriptions list what changed since a cursor and who changed it.
 
 ### Changed
 - **Enable Native MCP Server is on by default**: `/mcp` is the only gateway, and the npm package is a stdio proxy in front of it.
 
 ### Fixed
-- **Small fixes**: links on UE 5.0; whole-path `runtime_report` filters; diagnostics records replace their files; exact task principals; the RHI thread in `busiestThreadMs`; effect lifecycle misses name what is missing.
+- **Small fixes**: UE 5.0 links, `runtime_report` filters, diagnostics files, task principals, the RHI thread in `busiestThreadMs`.
 - **Removals** name what still uses an asset (`*_IN_USE`, `referencedBy`), keep outside-referenced assets, take exact components and undo for tracks and keys; extra sky lights are named, not destroyed.
 - **Fold variants** enforce their own requirements before dispatch, and describe lists what each one does under the selector.
 - **Renders** honour `renderTimeoutMs`; save_all and restart_editor wait (`RENDER_IN_PROGRESS`).
 - **Dialogs**: an open editor dialog answers requests `EDITOR_MODAL_ACTIVE` with its title instead of a wait and `EDITOR_BLOCKED`.
 - **Viewport captures** settle across ticks and warn on demoted video memory; grid edits keep the fields left out and answer with the grid's values.
 - **Properties**: deprecated ones are refused; Niagara systems re-init after a write; settings take object references; component writes run the component's own change handling; reads write out 0 and false.
-- **Placement and tracks**: physics-body ground traces, player-start capsules, whole track names, display names and `AMBIGUOUS_TRACK`, `set_bone_key` keeps unsent parts, a display-rate change keeps key times, stop seeks the range start.
-- **Niagara and animation**: creates refuse taken names and unknown types; a `save: false` system no longer fails; curve keys and axes read back; PIE pause and resume say when nothing changed; legacy mappings report `added`.
+- **Placement and tracks**: physics-body ground traces, player-start capsules, whole track names (`AMBIGUOUS_TRACK`), partial `set_bone_key`, key times across display rates.
+- **Niagara and animation**: creates refuse taken names and unknown types; curve keys and axes read back; PIE pause and resume say when nothing changed.
 - **Pre-queue scans** walk 262144 values; rate-limit replies carry `retryAfterSeconds`.
-- **Undo** for property writes, spawns, transforms, attachments, components, splines, lighting, post-process, foliage, water, cameras, landscape, meshes, sequences, data table rows, bones and material nodes, also on assets created without `RF_Transactional`.
+- **Undo** for property, actor, component, lighting, foliage, landscape, sequence, data table, bone and material-node edits, also on assets created without `RF_Transactional`.
 - **Git**: commit messages go to git through a file and identities refuse quotes (a quote injected git options); checkout and submit list skipped paths; `enable` switches providers.
 - **Finds** stop at `limit` with `truncated` and `totalCount`; **`cleanup`** is destructive, one transaction, refused in Play.
 - **Refused instead of overwritten or guessed**: taken names and paths, bakes over another kind, engine content, unknown types, empty edits, incompatible pins, non-Character edits.

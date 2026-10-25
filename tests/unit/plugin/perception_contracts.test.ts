@@ -48,6 +48,21 @@ describe('analyze_view', () => {
     expect(capture).toMatch(/Out\.Ids = Viewport->GetRawHitProxyData\([^;]*\);\s*if \(bSwitch\)\s*\{\s*Out\.Client->SetGameView\(false\);/u);
   });
 
+  // The view mode draws its legend into the frame: its red end over a floor read as the floor costing high.
+  it('leaves the shader complexity legend and crosshair out of the cost', () => {
+    const cost = code('Domains', 'Perception', 'McpPerceptionCost.cpp');
+    expect(cost).toContain('const bool bLegend = X >= 46 && X < Size.X - 46 && Y >= Size.Y - 88 && Y < Size.Y - 34;');
+    expect(cost).toMatch(/if \(IsOverlay\(PixelX, PixelY, Size\)\)\s*\{\s*continue;/u);
+  });
+
+  // A stack of translucent cubes first read as cheap as the floor: their shaders were still compiling.
+  it('waits a few seconds for the complexity view\'s shaders, and warns when shaders were still compiling', () => {
+    const cost = code('Domains', 'Perception', 'McpPerceptionCost.cpp');
+    expect(cost).toMatch(/GShaderCompilingManager->IsCompiling\(\) && FPlatformTime::Seconds\(\) < Until;\)\s*\{\s*GShaderCompilingManager->ProcessAsyncResults\(false, false\);/u);
+    expect(cost.indexOf('GShaderCompilingManager->ProcessAsyncResults')).toBeLessThan(cost.indexOf('Viewport->ReadPixels'));
+    expect(handler).toMatch(/if \(const int32 Jobs = McpShaderJobsRemaining\(\)\)\s*\{\s*TArray<TSharedPtr<FJsonValue>> Warnings;/u);
+  });
+
   it('scores harmony only: nothing is recoloured', () => {
     const color = code('Domains', 'Perception', 'McpPerceptionColor.cpp');
     expect(color).toContain('McpKMeans::Cluster(Frame.Lab, nullptr, PaletteSize, 12, 5)');

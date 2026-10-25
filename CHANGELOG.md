@@ -12,26 +12,26 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 <details>
 <summary><b>✨ Added</b></summary>
 
-- **Blueprint runtime errors name their node** (`nodeId`, graph, hits) in frame steps and motion reads, and an Accessed None its `cause`; **`lint_blueprint`** finds such mistakes before Play.
-- **MCP 2026-07-28**: sessionless requests, consent through the client and tasks; older clients are unchanged.
-- **Reads**: `get_editor_state` `focus` (open editors, selected nodes and actors, recent errors); `describe_view` `points`, `labels`, `coveredBy` and `compareWith` (what changed in the picture since `saveAs`); **`analyze_view`** (saliency, palette and harmony, light, shader cost); **`contact_sheet`** (an actor from every side in one image); `get_stats` `frame`.
+- **Blueprint runtime errors name their node** and an Accessed None its `cause`; **`lint_blueprint`** finds such mistakes before Play.
+- **MCP 2026-07-28**: sessionless requests, client consent and tasks; older clients unchanged.
+- **Reads**: `get_editor_state` `focus`; `describe_view` `points`, `labels`, `coveredBy`, `compareWith` (what changed since `saveAs`); **`analyze_view`** (saliency, palette, light, shader cost); **`contact_sheet`** (an actor from every side); `get_stats` `frame`.
 - **Large results come in pages** (`page.nextCall`), and **search hands over a clear first hit** (`signature`, `executeCall`).
-- **`nanite_rebuild_mesh` `assetPaths`**, **`inspect_asset` `diff`**, `get_niagara_info` values, `setup_global_illumination` `saveToProject`, and `edit_dynamic_mesh` `append_cuboids`, `append_loft`, `append_mesh`, `delete_triangles`.
+- **`nanite_rebuild_mesh` `assetPaths`**, **`inspect_asset` `diff`**, `get_niagara_info` values, `setup_global_illumination` `saveToProject`, four `edit_dynamic_mesh` operations.
 - **Renders and sequences**: `cancel_render`, camera shutter and overscan, `set_section` `playRate`, clips and keyed bones in the readers.
-- **Writes are checked**: actors left sunk, floating, intersecting, z-fighting, untextured, labelled "Text", pasted twice or with a Map Check finding, and assets by Data Validation.
+- **Writes are checked**: sunk, floating, intersecting, z-fighting or untextured actors, placeholder text, pasted twins, Map Check findings, and Data Validation on assets.
 - **Replies say what undo can revert**; **`restore_point`** undoes only this server's steps and offers the delete of what they created.
 - **`inspect explain`** says why something does not happen and names the call that fixes it.
 - **A call failing three times unchanged is refused** (`REPEATED_FAILURE`).
 - **Batches check every step first**; `build_graph`, `build_material_graph` and `add_widget_tree` take `dryRun`.
-- **`run_map_check`** reads Map Check as rows; **`fix_placement`** moves sunk, floating and intersecting actors; **`describe_relations`** reads back what rests on, hangs on, touches or faces what, **`arrange_by_relations`** moves actors until such relations hold, and execute's **`expect`/`require`** options check them, values and visibility after or before a call.
-- **`inspect changes_since`**: what changed since a cursor, by whom, from and to; replies note the user's edits; `/mcp` serves `ue://changes` subscriptions.
+- **`run_map_check`**, **`fix_placement`**, **`describe_relations`**, **`arrange_by_relations`**, and execute's **`expect`/`require`**, checked after or before a call.
+- **`inspect changes_since`** and `ue://changes` subscriptions: what changed since a cursor, and by whom.
 
 </details>
 
 <details>
 <summary><b>🔄 Changed</b></summary>
 
-- **The npm package is a stdio proxy** to the plugin's `/mcp` with no runtime dependencies: `NOT_CONNECTED` while the editor is down, no reconnect needed; `UNREAL_MCP_URL` picks the endpoint, `UE_PROJECT_PATH` finds the token.
+- **The npm package is a stdio proxy** to the plugin's `/mcp` with no runtime dependencies: `NOT_CONNECTED` while the editor is down; `UNREAL_MCP_URL` picks the endpoint, `UE_PROJECT_PATH` finds the token.
 - **Enable Native MCP Server is on by default.**
 
 </details>
@@ -40,34 +40,34 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 <summary><b>🗑️ Removed</b></summary>
 
 - **The TypeScript gateway and WebSocket client**, with their resources, telemetry, mock mode and `test:smoke`; `.env` is not read.
-- **Over stdio**: search and describe while the editor is down, the `ue://assets`, `actors`, `editor` and `selection` resources, TLS to a remote editor, and the `2024-11-05` and `2024-10-07` protocol versions.
+- **Over stdio**: search and describe with the editor down, the `ue://assets`/`actors`/`editor`/`selection` resources, TLS to a remote editor, protocols `2024-11-05` and `2024-10-07`.
 
 </details>
 
 <details>
 <summary><b>🔧 Fixed</b></summary>
 
-- **Crashes**: Ability System actions on a non-Actor Blueprint, and creates or mesh bakes over an asset of another class, are refused.
-- **`run_benchmark` measures** frames, FPS, frame and thread times (it measured nothing and opened the GPU Visualizer).
-- **Small fixes**: `RayTraced` GI is refused from UE 5.4; whole-path `runtime_report` filters; UE 5.0 links; rate limits say when to retry; folded descriptions keep plain words; reads return 0 and false (they came back empty).
-- **Removals** take exact components, name and keep assets others use, list what `remove_variable` deletes, and undo for tracks and keys.
-- **Nothing is overwritten unasked**: taken names and paths are refused; edits keep the fields left out; engine content is never edited in place.
-- **A family's variant needs what its action needs**, and describe shows each variant's requirements.
-- **Renders** keep their request open for `renderTimeoutMs`; `save_all` and `restart_editor` wait for them.
-- **An open editor dialog** answers calls `EDITOR_MODAL_ACTIVE` with its title; they waited, then failed `EDITOR_BLOCKED`.
+- **Crashes**: Ability System actions on non-Actor Blueprints and creates or bakes over another class's asset are refused.
+- **`run_benchmark` measures** frames, FPS and thread times (it measured nothing).
+- **Small fixes**: `RayTraced` GI refused from 5.4, `runtime_report` filters, UE 5.0 links, retry hints, reads return 0 and false.
+- **Removals** take exact components, keep assets others use and undo for tracks and keys.
+- **Nothing is overwritten unasked**: taken names and paths are refused, unsent fields kept, engine content never edited in place.
+- **Family variants** enforce their own requirements, shown by describe.
+- **Renders** honour `renderTimeoutMs`; `save_all` and `restart_editor` wait for them.
+- **An open editor dialog** answers calls `EDITOR_MODAL_ACTIVE` with its title instead of a timeout.
 - **Viewport screenshots wait for streaming** and name video memory over budget.
-- **Property writes**: deprecated properties are refused with their replacement, Niagara writes restart placed effects, environment settings take object references, component writes run the component's own change handling.
-- **Placement checks**: `audit_placement` counts simulated bodies, player-start capsules and skips undersides; `fix_coplanar` handles several neighbours.
-- **Animation and effects**: whole track names; `set_bone_key` keeps unsent parts; key times survive a frame-rate change; curve keys and axes read back; Niagara creates refuse taken names and unknown types.
-- **Undo** covers property writes, spawns, transforms, meshes, landscape, lights, foliage, sequences, bones, material nodes and more.
+- **Property writes** refuse deprecated properties, restart placed Niagara effects, take object references and run components' own change handling.
+- **Placement checks** count simulated bodies and player starts; `fix_coplanar` handles several neighbours.
+- **Animation and effects**: whole track names, partial `set_bone_key`, key times across frame rates, curve read-back; Niagara creates refuse taken names.
+- **Undo** covers spawns, transforms, properties, meshes, landscape, foliage, sequences and more.
 - **Finds stop at `limit`** (default 200) and say how many matched.
-- **Records and replies say what happens**: defaults, refusals and read-back values; failed saves and compiles say so.
-- **Successes that did nothing now act**: foliage, water, Characters, AI, audio and streaming in Play, splines, volumes, landscape, view modes and more.
-- **`manage_effect cleanup` needs destructive consent** and `filter`, is one undo step and refuses during Play; clearing debug shapes moved to `debug_shape`.
-- **Sublevels and paths**: object paths work in `open_level`, `load` and `add_sublevel`; a relative `.t3d` export lands in the project.
+- **Replies say what happened**, failed saves and compiles included.
+- **Successes that did nothing now act** (foliage, water, AI, Play audio, splines, landscape and more).
+- **`manage_effect cleanup`** needs destructive consent and a `filter`, is one undo step and refuses Play; debug shapes clear through `debug_shape`.
+- **Object paths** work in `open_level`, `load` and `add_sublevel`; relative `.t3d` exports land in the project.
 - **Git**: any commit message is safe (a quote could inject options); checkout and submit list skipped paths.
 - **`/mcp` discovery**: search rows, `describe` by domain and family, `cursor` and param `suggestions`.
-- **A disabled tool's `nextCall` turns it back on** (`configure` `enable_tools`; the call it named was refused).
+- **A disabled tool's `nextCall` turns it back on** (`configure` `enable_tools`).
 
 </details>
 

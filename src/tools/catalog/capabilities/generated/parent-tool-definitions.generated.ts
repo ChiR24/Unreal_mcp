@@ -7793,7 +7793,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "object",
           "additionalProperties": true,
           "x-unreal-reflection-boundary": true,
-          "description": "With cost: high (percent of the frame in the top quarter of the shader complexity ramp), mean (0 to 1) and actors [{actorName, frameShare, ofItself}] (up to 5 drawing at a high cost over at least 1% of the frame), or note when the view could not be read."
+          "description": "With cost: high (percent of the frame at red or beyond on the shader complexity ramp: a third of its maximum, its legend's Bad), mean (0 to 1) and actors [{actorName, frameShare, ofItself}] (up to 5 drawing at a high cost over at least 1% of the frame), or note when the view could not be read. The legend and crosshair the view mode draws over the frame are left out. While shaders still compile, what they cover draws with a stand-in material and a warning says so."
         },
         "count": {
           "type": "number",

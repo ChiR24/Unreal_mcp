@@ -10,13 +10,26 @@
 #include "EditorViewportClient.h"
 #include "Engine/Engine.h"
 #include "Foundation/BridgeHelpers/Responses/McpResponseVerify.h"
+#include "HAL/PlatformTime.h"
+#include "ShaderCompiler.h"
 
 namespace McpPerception
 {
 namespace
 {
-constexpr double HighCost = 0.75; // the top quarter of the ramp: red and beyond
+constexpr double HighCost = 0.75; // the ramp's red and beyond: a third of the maximum complexity, the legend's "Bad"
 constexpr int32 CostlyActors = 5;
+constexpr double ShaderWaitSeconds = 5.0;
+
+// The view mode draws its legend into the frame (a bar 64 px in from the sides and 52 px up from the bottom, 18 px tall,
+// inside an 18 px black border) and a crosshair at the centre (ShaderComplexityApplyPixelShader.usf, 5.0-5.8): the
+// legend's red end over a floor read as the floor costing high.
+bool IsOverlay(int32 X, int32 Y, const FIntPoint& Size)
+{
+    const bool bLegend = X >= 46 && X < Size.X - 46 && Y >= Size.Y - 88 && Y < Size.Y - 34;
+    const bool bCross = (X == Size.X / 2 || Y == Size.Y / 2) && FMath::Max(FMath::Abs(X - Size.X / 2), FMath::Abs(Y - Size.Y / 2)) < 17;
+    return bLegend || bCross;
+}
 } // namespace
 
 TSharedPtr<FJsonObject> ShaderCost(FEditorViewportClient& Client, const FFrame& Frame)
@@ -39,6 +52,14 @@ TSharedPtr<FJsonObject> ShaderCost(FEditorViewportClient& Client, const FFrame& 
     Client.SetViewMode(VMI_ShaderComplexity);
     Client.Invalidate();
     DrawViewportFramesForMcp(Viewport, Client.GetWorld(), 2);
+    // The view mode's shaders compile on first use, and until they land a material draws at its stand-in's cost (a stack
+    // of translucent cubes first read as cheap as the floor): draw on as they arrive, for a few seconds at most.
+    for (const double Until = FPlatformTime::Seconds() + ShaderWaitSeconds;
+         GShaderCompilingManager && GShaderCompilingManager->IsCompiling() && FPlatformTime::Seconds() < Until;)
+    {
+        GShaderCompilingManager->ProcessAsyncResults(false, false);
+        DrawViewportFramesForMcp(Viewport, Client.GetWorld(), 1);
+    }
     TArray<FColor> Pixels;
     Viewport->ReadPixels(Pixels, FReadSurfaceDataFlags(RCM_UNorm));
     const FIntPoint Size = Viewport->GetSizeXY();
@@ -59,15 +80,20 @@ TSharedPtr<FJsonObject> ShaderCost(FEditorViewportClient& Client, const FFrame& 
     {
         Steps.Add(Step.ToFColor(true));
     }
-    int32 High = 0;
+    int32 High = 0, Cells = 0;
     double Sum = 0.0;
     TMap<const AActor*, TPair<int32, int32>> ByActor; // cells, of them at a high cost
     for (int32 Y = 0; Y < Frame.Height; ++Y)
     {
         for (int32 X = 0; X < Frame.Width; ++X)
         {
-            const FColor& Pixel = Pixels[FMath::Min(Y * Frame.Block + Frame.Block / 2, Size.Y - 1) * Size.X +
-                                         FMath::Min(X * Frame.Block + Frame.Block / 2, Size.X - 1)];
+            const int32 PixelX = FMath::Min(X * Frame.Block + Frame.Block / 2, Size.X - 1);
+            const int32 PixelY = FMath::Min(Y * Frame.Block + Frame.Block / 2, Size.Y - 1);
+            if (IsOverlay(PixelX, PixelY, Size))
+            {
+                continue;
+            }
+            const FColor& Pixel = Pixels[PixelY * Size.X + PixelX];
             int32 Nearest = 0;
             int32 NearestDistance = MAX_int32;
             for (int32 Index = 0; Index < Steps.Num(); ++Index)
@@ -79,6 +105,7 @@ TSharedPtr<FJsonObject> ShaderCost(FEditorViewportClient& Client, const FFrame& 
             }
             const double Cost = double(Nearest) / (Steps.Num() - 1);
             const bool bHigh = Cost >= HighCost;
+            ++Cells;
             Sum += Cost;
             High += bHigh ? 1 : 0;
             TPair<int32, int32>& Entry = ByActor.FindOrAdd(Frame.Actor[Y * Frame.Width + X]);
@@ -86,7 +113,6 @@ TSharedPtr<FJsonObject> ShaderCost(FEditorViewportClient& Client, const FFrame& 
             Entry.Value += bHigh ? 1 : 0;
         }
     }
-    const int32 Cells = Frame.Width * Frame.Height;
     TArray<TPair<const AActor*, TPair<int32, int32>>> Costly;
     for (const TPair<const AActor*, TPair<int32, int32>>& Entry : ByActor)
     {
