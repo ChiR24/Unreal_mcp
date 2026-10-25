@@ -1,5 +1,5 @@
 {
-  "catalogRevision": "671d201e60c9ee29",
+  "catalogRevision": "8a7844c5adfcc0f8",
   "recordCount": 424,
   "records": [
     {
@@ -48301,14 +48301,19 @@
           "labelled screenshot",
           "numbered boxes",
           "what covers an actor",
-          "occluded from the camera"
+          "occluded from the camera",
+          "what changed in the view",
+          "compare the view before and after",
+          "visual diff of the frame",
+          "did the edit change the picture"
         ],
-        "summary": "Describe what the level viewport's camera sees, as text: each actor in view with its share of the frame, its box on screen, how bright it is drawn and its distance, the share that is background (sky, void), and the frame's brightness; or only the actors named, with what hides each one that is not seen. points names what is under spots of the frame and where they are in the world; labels returns the frame with each listed actor boxed and numbered. location and rotation place the camera first, as control_editor screenshot takes them.",
+        "summary": "Describe what the level viewport's camera sees, as text: each actor in view with its share of the frame, its box on screen, how bright it is drawn and its distance, the share that is background (sky, void), and the frame's brightness; or only the actors named, with what hides each one that is not seen. points names what is under spots of the frame and where they are in the world; labels returns the frame with each listed actor boxed and numbered; saveAs keeps the frame under a name and compareWith says what changed in the picture since, region by region, with the actors drawn there before and after. location and rotation place the camera first, as control_editor screenshot takes them.",
         "whenToUse": [
           "A shot must be checked without looking at a picture: is the subject in view, how much of the frame it fills, where it sits, whether it is lit or lost in the dark.",
           "A camera placement must be compared or tuned by numbers (subject coverage, sky share, brightness).",
           "A spot of the frame (from a screenshot, a click, a box) must be turned into an actor and a world location: points.",
-          "A picture where every actor is boxed and numbered to match the list is wanted, to point at one by number: labels."
+          "A picture where every actor is boxed and numbered to match the list is wanted, to point at one by number: labels.",
+          "Checking that an edit changed the picture where it should, and nowhere else: saveAs before it, compareWith after."
         ],
         "whenNotToUse": [
           "A picture is wanted (use control_editor screenshot).",
@@ -48397,6 +48402,22 @@
             "labels": {
               "type": "boolean",
               "description": "Also return the frame (at most 960 px wide) with each actor listed under actors boxed in its own colour and numbered from 1 in list order, as an image (imageBase64)."
+            },
+            "tolerance": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 16,
+              "description": "With points: a spot where no actor is drawn (just beside a thin pole, past an edge) moves to the nearest pixel within this many where one is, and its row says where under snappedTo (default 0: no move)."
+            },
+            "saveAs": {
+              "type": "string",
+              "maxLength": 64,
+              "description": "Keep this frame under a name for a later compareWith, with the camera it was taken from (until the editor closes; the same name replaces it, and a ninth name forgets the oldest). Drawn twice, to learn how much the renderer varies an unchanged frame by itself. With saveAs or compareWith the frame is read as the game draws it, so icons, gizmos and selection outlines are left out and other reads 0."
+            },
+            "compareWith": {
+              "type": "string",
+              "maxLength": 64,
+              "description": "Compare this frame with the one saved under that name, taken again from its camera: change lists what changed beyond the renderer's own noise. Refused with VIEW_BASELINE_NOT_FOUND for a name not saved, VIEW_SIZE_CHANGED when the viewport changed size, and CAMERA_MOVED when location or rotation (or the field of view) differs from the saved camera. With saveAs in the same call, the comparison comes first."
             }
           },
           "required": [
@@ -48499,11 +48520,21 @@
                 "additionalProperties": true,
                 "x-unreal-reflection-boundary": true
               },
-              "description": "With points, one per spot: x, y; drawn (actor, editor for what only the editor draws, or background); actorName, the actor drawn there; and hit, what the line from the camera through the spot hits first against Visibility collision: location, normal, distance (cm), actorName and componentName. A drawn actor with no collision is passed through, so hit can name what is behind it; no hit means nothing within 20 km."
+              "description": "With points, one per spot: x, y; drawn (actor, editor for what only the editor draws, or background); actorName, the actor drawn there; and hit, what the line from the camera through the spot hits first against Visibility collision: location, normal, distance (cm), actorName and componentName. A drawn actor with no collision is passed through, so hit can name what is behind it; no hit means nothing within 20 km. With tolerance, snappedTo {x, y} is the spot it moved to."
             },
             "imageBase64": {
               "type": "string",
               "description": "With labels: the frame as a PNG, base64, with each listed actor boxed and numbered; returned as an image."
+            },
+            "change": {
+              "type": "object",
+              "additionalProperties": true,
+              "x-unreal-reflection-boundary": true,
+              "description": "With compareWith: comparedWith, changed (percent of the frame that changed: 8 x 8 pixel blocks compared by structure (SSIM) and colour beyond the renderer's own noise), regionCount, regions (up to 8, largest first: box [left, top, right, bottom] in percent of the frame, share of the frame, and before and after [{name, share}], the actors drawn there in each frame, up to three, by share of the region) and brightnessShift (mean brightness now minus then, -1 to 1). A moved actor shows as a region where it was and one where it is; no regions means nothing changed."
+            },
+            "savedAs": {
+              "type": "string",
+              "description": "With saveAs: the name the frame is kept under."
             },
             "mimeType": {
               "type": "string",
@@ -48522,7 +48553,7 @@
       },
       "examples": [
         {
-          "title": "Describe what the level viewport's camera sees, as text: each actor in view with its share of the frame, its box on screen, how bright it is drawn and its distance, the share that is background (sky, void), and the frame's brightness; or only the actors named, with what hides each one that is not seen. points names what is under spots of the frame and where they are in the world; labels returns the frame with each listed actor boxed and numbered. location and rotation place the camera first, as control_editor screenshot takes them.",
+          "title": "Describe what the level viewport's camera sees, as text: each actor in view with its share of the frame, its box on screen, how bright it is drawn and its distance, the share that is background (sky, void), and the frame's brightness; or only the actors named, with what hides each one that is not seen. points names what is under spots of the frame and where they are in the world; labels returns the frame with each listed actor boxed and numbered; saveAs keeps the frame under a name and compareWith says what changed in the picture since, region by region, with the actors drawn there before and after. location and rotation place the camera first, as control_editor screenshot takes them.",
           "input": {
             "action": "describe_view",
             "location": {
@@ -48618,8 +48649,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "35618390674de7af81bc1ad60649d77802b7eca01427e6dae087e08aff860ac4",
-        "content": "e7790dcae9b86d41c5395629b87974a2b4e5373d74b41aee4aec5a3fb8af4488"
+        "schema": "d6889ea4c612ebd7203600f7787a807141bd17c49050ba498a59b252f4fa1623",
+        "content": "3a367a12b82398537903e4ea4fa45e34608ed18833cb1a0c4254cba09d932d96"
       }
     },
     {

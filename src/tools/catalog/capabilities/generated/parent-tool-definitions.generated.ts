@@ -6976,6 +6976,11 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "string",
           "description": "Class asset path (alias of className)."
         },
+        "compareWith": {
+          "type": "string",
+          "maxLength": 64,
+          "description": "Compare this frame with the one saved under that name, taken again from its camera: change lists what changed beyond the renderer's own noise. Refused with VIEW_BASELINE_NOT_FOUND for a name not saved, VIEW_SIZE_CHANGED when the viewport changed size, and CAMERA_MOVED when location or rotation (or the field of view) differs from the saved camera. With saveAs in the same call, the comparison comes first."
+        },
         "componentName": {
           "type": "string",
           "description": "Component name on the actor."
@@ -7371,6 +7376,11 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "additionalProperties": false,
           "description": "Camera rotation {pitch, yaw, roll} in degrees; omitted, the viewport's current one."
         },
+        "saveAs": {
+          "type": "string",
+          "maxLength": 64,
+          "description": "Keep this frame under a name for a later compareWith, with the camera it was taken from (until the editor closes; the same name replaces it, and a ninth name forgets the oldest). Drawn twice, to learn how much the renderer varies an unchanged frame by itself. With saveAs or compareWith the frame is read as the game draws it, so icons, gizmos and selection outlines are left out and other reads 0."
+        },
         "since": {
           "type": "string",
           "description": "The cursor a previous changes_since reply returned. Omit it to get the most recent changes kept, and a cursor to start from."
@@ -7413,6 +7423,12 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "targetActor": {
           "type": "string",
           "description": "The actor the light should reach; omitted, only the light itself is checked."
+        },
+        "tolerance": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 16,
+          "description": "With points: a spot where no actor is drawn (just beside a thin pole, past an edge) moves to the nearest pixel within this many where one is, and its row says where under snappedTo (default 0: no move)."
         },
         "traceComplex": {
           "type": "boolean",
@@ -7676,6 +7692,12 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "cellsDown": {
           "type": "number",
           "description": "Cells down the frame."
+        },
+        "change": {
+          "type": "object",
+          "additionalProperties": true,
+          "x-unreal-reflection-boundary": true,
+          "description": "With compareWith: comparedWith, changed (percent of the frame that changed: 8 x 8 pixel blocks compared by structure (SSIM) and colour beyond the renderer's own noise), regionCount, regions (up to 8, largest first: box [left, top, right, bottom] in percent of the frame, share of the frame, and before and after [{name, share}], the actors drawn there in each frame, up to three, by share of the region) and brightnessShift (mean brightness now minus then, -1 to 1). A moved actor shows as a region where it was and one where it is; no regions means nothing changed."
         },
         "changes": {
           "type": "array",
@@ -8383,7 +8405,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             "additionalProperties": true,
             "x-unreal-reflection-boundary": true
           },
-          "description": "With points, one per spot: x, y; drawn (actor, editor for what only the editor draws, or background); actorName, the actor drawn there; and hit, what the line from the camera through the spot hits first against Visibility collision: location, normal, distance (cm), actorName and componentName. A drawn actor with no collision is passed through, so hit can name what is behind it; no hit means nothing within 20 km."
+          "description": "With points, one per spot: x, y; drawn (actor, editor for what only the editor draws, or background); actorName, the actor drawn there; and hit, what the line from the camera through the spot hits first against Visibility collision: location, normal, distance (cm), actorName and componentName. A drawn actor with no collision is passed through, so hit can name what is behind it; no hit means nothing within 20 km. With tolerance, snappedTo {x, y} is the spot it moved to."
         },
         "primitivesInView": {
           "type": "number",
@@ -8491,6 +8513,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "saved": {
           "type": "boolean",
           "description": "Whether the target's package was written to disk after the write; with properties, the last write's save, which holds every write of the call. False with saveSkippedReason when nothing was saved."
+        },
+        "savedAs": {
+          "type": "string",
+          "description": "With saveAs: the name the frame is kept under."
         },
         "scale": {
           "type": "object",

@@ -28,7 +28,7 @@ const FColor McpLabelColours[] = {FColor(255, 70, 70), FColor(70, 200, 255), FCo
 
 bool McpDescribeViewPoints(const FEditorViewportClient &Client, const FIntPoint &Size, const TArray<FColor> &Ids,
                            TMap<uint32, FMcpViewProxy> &Proxies, const TArray<TSharedPtr<FJsonValue>> &Points,
-                           TArray<TSharedPtr<FJsonValue>> &OutRows, FString &OutError)
+                           int32 Tolerance, TArray<TSharedPtr<FJsonValue>> &OutRows, FString &OutError)
 {
     if (Client.IsOrtho())
     {
@@ -47,6 +47,13 @@ bool McpDescribeViewPoints(const FEditorViewportClient &Client, const FIntPoint 
     const FVector Camera = Client.GetViewLocation();
     UWorld *World = Client.GetWorld();
     const FCollisionQueryParams Params(FName(TEXT("McpViewPoint")), true);
+    // A pointer into Proxies lasts only until the next lookup adds to it.
+    const auto ProxyAt = [&Ids, &Size, &Proxies](int32 PixelX, int32 PixelY) -> const FMcpViewProxy *
+    {
+        const FColor &Id = Ids[PixelY * Size.X + PixelX];
+        const FMcpViewProxy *Found = Proxies.Find(McpViewIdKey(Id));
+        return Found ? Found : &Proxies.Add(McpViewIdKey(Id), McpViewProxyOf(Id));
+    };
     for (const TSharedPtr<FJsonValue> &Value : Points)
     {
         const TSharedPtr<FJsonObject> *Point = nullptr;
@@ -61,10 +68,36 @@ bool McpDescribeViewPoints(const FEditorViewportClient &Client, const FIntPoint 
         const TSharedPtr<FJsonObject> Row = MakeShared<FJsonObject>();
         Row->SetNumberField(TEXT("x"), X);
         Row->SetNumberField(TEXT("y"), Y);
-        // What the eye sees there: the id drawn at that pixel.
-        const FColor &Id = Ids[FMath::Min(int32(Y * Size.Y), Size.Y - 1) * Size.X + FMath::Min(int32(X * Size.X), Size.X - 1)];
-        const FMcpViewProxy *Proxy = Proxies.Find(McpViewIdKey(Id));
-        Proxy = Proxy ? Proxy : &Proxies.Add(McpViewIdKey(Id), McpViewProxyOf(Id));
+        // What the eye sees there: the id drawn at that pixel. With tolerance, a spot just off an actor (beside a thin
+        // pole, past an edge) moves to the nearest pixel within that many where one is drawn.
+        int32 PixelX = FMath::Min(int32(X * Size.X), Size.X - 1);
+        int32 PixelY = FMath::Min(int32(Y * Size.Y), Size.Y - 1);
+        int32 Nearest = ProxyAt(PixelX, PixelY)->Kind == EMcpViewKind::Actor ? 0 : MAX_int32;
+        const int32 FromX = PixelX, FromY = PixelY;
+        for (int32 DY = -Tolerance; DY <= Tolerance && Nearest > 0; ++DY)
+        {
+            for (int32 DX = -Tolerance; DX <= Tolerance; ++DX)
+            {
+                const int32 CandidateX = FromX + DX, CandidateY = FromY + DY;
+                if (DX * DX + DY * DY < FMath::Min(Nearest, Tolerance * Tolerance + 1) && CandidateX >= 0 && CandidateY >= 0 &&
+                    CandidateX < Size.X && CandidateY < Size.Y && ProxyAt(CandidateX, CandidateY)->Kind == EMcpViewKind::Actor)
+                {
+                    Nearest = DX * DX + DY * DY;
+                    PixelX = CandidateX;
+                    PixelY = CandidateY;
+                }
+            }
+        }
+        if (Nearest > 0 && Nearest != MAX_int32)
+        {
+            X = (PixelX + 0.5) / Size.X;
+            Y = (PixelY + 0.5) / Size.Y;
+            const TSharedPtr<FJsonObject> Snapped = MakeShared<FJsonObject>();
+            Snapped->SetNumberField(TEXT("x"), McpViewRound(X, 10000.0));
+            Snapped->SetNumberField(TEXT("y"), McpViewRound(Y, 10000.0));
+            Row->SetObjectField(TEXT("snappedTo"), Snapped);
+        }
+        const FMcpViewProxy *Proxy = ProxyAt(PixelX, PixelY);
         Row->SetStringField(TEXT("drawn"), Proxy->Kind == EMcpViewKind::Actor ? TEXT("actor")
             : Proxy->Kind == EMcpViewKind::Other ? TEXT("editor") : TEXT("background"));
         if (Proxy->Kind == EMcpViewKind::Actor)

@@ -8,6 +8,10 @@ class AActor;
 class FEditorViewportClient;
 class FMcpBridgeWebSocket;
 class UEngineWireSubsystem;
+namespace McpEnvironmentHandlers
+{
+struct FMcpViewCapture;
+}
 
 // inspect analyze_view: the level viewport's picture judged as a reviewer would, in numbers a model that cannot see it
 // can act on: where the eye goes (saliency, and the share each actor draws), the palette and how its hues sit together,
@@ -45,6 +49,18 @@ TSharedPtr<FJsonObject> Light(const FFrame& Frame, const AActor* Subject, const 
 /** How much of the frame, and of each actor, the shader complexity view draws at a high cost: the viewport is drawn
  *  once in that view mode and put back (McpPerceptionCost). */
 TSharedPtr<FJsonObject> ShaderCost(FEditorViewportClient& Client, const FFrame& Frame);
+
+/** describe_view compareWith: OutCamera names the camera the frame saved under that name was taken from, so the capture
+ *  is taken from there (it stays Payload without compareWith). False with OutError and OutCode: VIEW_BASELINE_NOT_FOUND,
+ *  or CAMERA_MOVED when the payload names another location or rotation (McpPerceptionDiff). */
+bool PrepareViewDiff(const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FJsonObject>& OutCamera, FString& OutError, FString& OutCode);
+
+/** describe_view saveAs and compareWith on a frame drawn as the game shows it: OutChange is what changed since the frame
+ *  saved under compareWith (null without it), then the frame is kept under saveAs with the renderer's own noise, read
+ *  from a second capture. False with OutError and OutCode: VIEW_SIZE_CHANGED, CAMERA_MOVED (another field of view), or
+ *  a capture refusal. */
+bool DiffView(const TSharedPtr<FJsonObject>& Payload, const McpEnvironmentHandlers::FMcpViewCapture& View,
+              TSharedPtr<FJsonObject>& OutChange, FString& OutError, FString& OutCode);
 
 /** inspect analyze_view. */
 bool HandleAnalyzeView(UEngineWireSubsystem& Bridge, const FString& RequestId, const TSharedPtr<FJsonObject>& Payload,

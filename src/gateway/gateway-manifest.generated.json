@@ -5221,6 +5221,7 @@
         "channel",
         "className",
         "classPath",
+        "compareWith",
         "componentName",
         "componentNames",
         "detailed",
@@ -5253,6 +5254,7 @@
         "propertyPath",
         "rays",
         "rotation",
+        "saveAs",
         "since",
         "snapshotName",
         "snapshotOp",
@@ -5261,6 +5263,7 @@
         "subject",
         "tag",
         "targetActor",
+        "tolerance",
         "traceComplex",
         "value",
         "watch",
@@ -5321,6 +5324,11 @@
           "classPath": {
             "type": "string",
             "description": "Class asset path (alias of className)."
+          },
+          "compareWith": {
+            "type": "string",
+            "maxLength": 64,
+            "description": "Compare this frame with the one saved under that name, taken again from its camera: change lists what changed beyond the renderer's own noise. Refused with VIEW_BASELINE_NOT_FOUND for a name not saved, VIEW_SIZE_CHANGED when the viewport changed size, and CAMERA_MOVED when location or rotation (or the field of view) differs from the saved camera. With saveAs in the same call, the comparison comes first."
           },
           "componentName": {
             "type": "string",
@@ -5717,6 +5725,11 @@
             "additionalProperties": false,
             "description": "Camera rotation {pitch, yaw, roll} in degrees; omitted, the viewport's current one."
           },
+          "saveAs": {
+            "type": "string",
+            "maxLength": 64,
+            "description": "Keep this frame under a name for a later compareWith, with the camera it was taken from (until the editor closes; the same name replaces it, and a ninth name forgets the oldest). Drawn twice, to learn how much the renderer varies an unchanged frame by itself. With saveAs or compareWith the frame is read as the game draws it, so icons, gizmos and selection outlines are left out and other reads 0."
+          },
           "since": {
             "type": "string",
             "description": "The cursor a previous changes_since reply returned. Omit it to get the most recent changes kept, and a cursor to start from."
@@ -5759,6 +5772,12 @@
           "targetActor": {
             "type": "string",
             "description": "The actor the light should reach; omitted, only the light itself is checked."
+          },
+          "tolerance": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 16,
+            "description": "With points: a spot where no actor is drawn (just beside a thin pole, past an edge) moves to the nearest pixel within this many where one is, and its row says where under snappedTo (default 0: no move)."
           },
           "traceComplex": {
             "type": "boolean",

@@ -53,10 +53,11 @@ TArray<TSharedPtr<FJsonValue>> McpCoveringActors(AActor *Actor, const FEditorVie
 
 // describe_view points: per normalized {x, y}, what is drawn at that pixel (drawn, actorName) and what the line from
 // the camera through it hits first against Visibility collision (hit: location, normal, distance, actorName,
-// componentName). False with OutError for a malformed point or an orthographic viewport.
+// componentName). A spot no actor is drawn on moves to the nearest pixel within Tolerance where one is (snappedTo).
+// False with OutError for a malformed point or an orthographic viewport.
 bool McpDescribeViewPoints(const FEditorViewportClient &Client, const FIntPoint &Size, const TArray<FColor> &Ids,
                            TMap<uint32, FMcpViewProxy> &Proxies, const TArray<TSharedPtr<FJsonValue>> &Points,
-                           TArray<TSharedPtr<FJsonValue>> &OutRows, FString &OutError);
+                           int32 Tolerance, TArray<TSharedPtr<FJsonValue>> &OutRows, FString &OutError);
 
 // describe_view labels: the frame, at most 960 px wide, with each box drawn and numbered from 1 in list order; a
 // base64 PNG.

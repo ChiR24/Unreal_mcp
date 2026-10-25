@@ -14,7 +14,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - **Blueprint runtime errors name their node** (`nodeId`, graph, hits) in frame steps and motion reads, and an Accessed None its `cause`; **`lint_blueprint`** finds such mistakes before Play.
 - **MCP 2026-07-28**: sessionless requests, consent through the client and tasks; older clients are unchanged.
-- **Reads**: `get_editor_state` `focus` (open editors, selected nodes and actors, recent errors); `describe_view` `points`, `labels` and `coveredBy`; **`analyze_view`** (saliency, palette and harmony, light, shader cost); `get_stats` `frame`.
+- **Reads**: `get_editor_state` `focus` (open editors, selected nodes and actors, recent errors); `describe_view` `points`, `labels`, `coveredBy` and `compareWith` (what changed in the picture since `saveAs`); **`analyze_view`** (saliency, palette and harmony, light, shader cost); `get_stats` `frame`.
 - **Large results come in pages** (`page.nextCall`), and **search hands over a clear first hit** (`signature`, `executeCall`).
 - **`nanite_rebuild_mesh` `assetPaths`**, **`inspect_asset` `diff`**, `get_niagara_info` values, `setup_global_illumination` `saveToProject`, and `edit_dynamic_mesh` `append_cuboids`, `append_loft`, `append_mesh`, `delete_triangles`.
 - **Renders and sequences**: `cancel_render`, camera shutter and overscan, `set_section` `playRate`, clips and keyed bones in the readers.

@@ -652,4 +652,7 @@ export const PLAIN_PROBE: readonly PlainProbeCase[] = [
   { query: 'judge the colour harmony', accepted: ['inspect.analyze_view'] },
   { query: 'is the lighting flat', accepted: ['inspect.analyze_view'] },
   { query: 'which actors are expensive to shade', accepted: ['inspect.analyze_view'] },
+  { query: 'what changed in the view', accepted: ['inspect.describe_view'] },
+  { query: 'compare the view before and after', accepted: ['inspect.describe_view'] },
+  { query: 'did my edit change the picture', accepted: ['inspect.describe_view'] },
 ];

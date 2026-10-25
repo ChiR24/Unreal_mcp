@@ -1,6 +1,7 @@
 #include "Domains/Environment/McpEnvShared.h"
 #include "Domains/Environment/Inspection/McpEnvInspectViewIds.h"
 #include "Domains/ControlEditor/McpEditorScreenshotSupport.h"
+#include "Domains/Perception/McpPerception.h"
 
 #include "Components/InstancedStaticMeshComponent.h"
 #include "EditorViewportClient.h"
@@ -51,9 +52,16 @@ bool HandleInspectViewContentsAction(
     const TSharedPtr<FJsonObject> &Payload,
     TSharedPtr<FMcpBridgeWebSocket> RequestingSocket)
 {
+    // saveAs and compareWith read the frame as the game draws it: a selection outline or a gizmo is no change.
+    const FString SaveAs = GetJsonStringField(Payload, TEXT("saveAs"));
+    const bool bDiff = !SaveAs.IsEmpty() || !GetJsonStringField(Payload, TEXT("compareWith")).IsEmpty();
+    TSharedPtr<FJsonObject> CameraPayload;
+    TSharedPtr<FJsonObject> Change;
     FMcpViewCapture View;
     FString CaptureError, CaptureCode;
-    if (!McpCaptureView(Payload, TEXT("describe_view"), false, View, CaptureError, CaptureCode))
+    if (!McpPerception::PrepareViewDiff(Payload, CameraPayload, CaptureError, CaptureCode) ||
+        !McpCaptureView(CameraPayload, TEXT("describe_view"), bDiff, View, CaptureError, CaptureCode) ||
+        (bDiff && !McpPerception::DiffView(Payload, View, Change, CaptureError, CaptureCode)))
     {
         Bridge.SendAutomationError(RequestingSocket, RequestId, CaptureError, CaptureCode);
         return true;
@@ -167,7 +175,8 @@ bool HandleInspectViewContentsAction(
     TArray<TSharedPtr<FJsonValue>> PointRows;
     FString PointError;
     if (Payload->TryGetArrayField(TEXT("points"), Points) && Points &&
-        !McpDescribeViewPoints(*Client, Size, Ids, Proxies, *Points, PointRows, PointError))
+        !McpDescribeViewPoints(*Client, Size, Ids, Proxies, *Points, FMath::Clamp(GetJsonIntField(Payload, TEXT("tolerance"), 0), 0, 16),
+                               PointRows, PointError))
     {
         Bridge.SendAutomationError(RequestingSocket, RequestId, PointError, TEXT("INVALID_ARGUMENT"));
         return true;
@@ -208,6 +217,14 @@ bool HandleInspectViewContentsAction(
     if (Points)
     {
         Result->SetArrayField(TEXT("points"), PointRows);
+    }
+    if (Change)
+    {
+        Result->SetObjectField(TEXT("change"), Change);
+    }
+    if (!SaveAs.IsEmpty())
+    {
+        Result->SetStringField(TEXT("savedAs"), SaveAs);
     }
     // labels: the frame with each actor listed above boxed and numbered in list order, returned as an image.
     if (GetJsonBoolField(Payload, TEXT("labels"), false))

@@ -22,7 +22,7 @@ describe('analyze_view', () => {
     );
     expect(handler).toContain('McpEnvironmentHandlers::McpCaptureView(Payload, TEXT("analyze_view"), true, View, Error, Code)');
     expect(code('Domains', 'Environment', 'Inspection', 'McpEnvInspectViewContents.cpp')).toContain(
-      'McpCaptureView(Payload, TEXT("describe_view"), false, View, CaptureError, CaptureCode)',
+      'McpCaptureView(CameraPayload, TEXT("describe_view"), bDiff, View, CaptureError, CaptureCode)',
     );
   });
 
@@ -67,3 +67,28 @@ describe('analyze_view', () => {
   });
 });
 
+// describe_view saveAs and compareWith: what changed in the picture since a saved frame (Domains/Perception, Diff).
+describe('describe_view saveAs and compareWith', () => {
+  const view = code('Domains', 'Environment', 'Inspection', 'McpEnvInspectViewContents.cpp');
+  const saved = code('Domains', 'Perception', 'McpPerceptionDiff.cpp');
+  const frames = code('Domains', 'Perception', 'McpPerceptionDiffFrames.cpp');
+
+  // A selection outline or the gizmo moving with the selection would read as a change.
+  it('compares from the saved camera, on the frame as the game draws it', () => {
+    expect(view).toMatch(/!McpPerception::PrepareViewDiff\(Payload, CameraPayload, CaptureError, CaptureCode\) \|\|\s*!McpCaptureView\(CameraPayload, TEXT\("describe_view"\), bDiff,/u);
+    expect(view).toContain('const bool bDiff = !SaveAs.IsEmpty() || !GetJsonStringField(Payload, TEXT("compareWith")).IsEmpty();');
+    expect(saved).toContain('OutCamera->SetObjectField(TEXT("location"), McpHandlerUtils::VectorToJson(Saved->Location));');
+  });
+
+  // Temporal anti-aliasing never draws the same frame twice: an unchanged scene must read no change.
+  it('learns the renderer\'s own noise from a second capture and counts a block only beyond it', () => {
+    expect(saved).toMatch(/McpCaptureView\(MakeShared<FJsonObject>\(\), TEXT\("describe_view"\), true, Again, OutError, OutCode\)[\s\S]*?Diff::BlockChange\(Now, Diff::MeasureFrame\(Again\), Entry\.NoiseLoss, Entry\.NoiseColour\);/u);
+    expect(frames).toContain('Loss[Block] / (LossFloor + NoiseFactor * Saved.NoiseLoss[Block])');
+    expect(frames).toContain('Colour[Block] / (ColourFloor + NoiseFactor * Saved.NoiseColour[Block])');
+  });
+
+  it('refuses a frame of another size or field of view instead of comparing it', () => {
+    expect(saved).toContain('OutCode = TEXT("VIEW_SIZE_CHANGED");');
+    expect(saved).toContain('if (!FMath::IsNearlyEqual(Saved->Fov, View.Client->ViewFOV, 0.01f))');
+  });
+});

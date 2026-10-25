@@ -2617,7 +2617,7 @@ describe('describe_view counts what the game draws in the camera view', () => {
     const view = code('Environment', 'Inspection', 'McpEnvInspectViewContents.cpp');
     // The capture is shared with analyze_view.
     const capture = code('Environment', 'Inspection', 'McpEnvInspectViewPoints.cpp');
-    expect(view).toContain('McpCaptureView(Payload, TEXT("describe_view"), false, View, CaptureError, CaptureCode)');
+    expect(view).toContain('McpCaptureView(CameraPayload, TEXT("describe_view"), bDiff, View, CaptureError, CaptureCode)');
     expect(capture).toMatch(/Viewport->InvalidateHitProxy\(\);\s*Out\.Ids = Viewport->GetRawHitProxyData\(/u);
     expect(view).toContain('const bool bGameDraws = Actor && !(Component && (Component->IsEditorOnly() || Component->bHiddenInGame));');
     expect(capture).toContain('if (GEditor->PlayWorld && !GEditor->bIsSimulatingInEditor)');
@@ -2652,7 +2652,7 @@ describe('describe_view counts what the game draws in the camera view', () => {
   // point at an actor by number.
   it('answers points from the id drawn there and a line through the same camera, and numbers the listed boxes', () => {
     const view = code('Environment', 'Inspection', 'McpEnvInspectViewContents.cpp');
-    expect(view).toContain('!McpDescribeViewPoints(*Client, Size, Ids, Proxies, *Points, PointRows, PointError)');
+    expect(view).toMatch(/!McpDescribeViewPoints\(\*Client, Size, Ids, Proxies, \*Points, FMath::Clamp\(GetJsonIntField\(Payload, TEXT\("tolerance"\), 0\), 0, 16\),\s*PointRows, PointError\)/u);
     expect(view).toContain('Result->SetStringField(TEXT("imageBase64"), McpLabelledViewPng(Colors, Size, ListedBoxes));');
     const points = code('Environment', 'Inspection', 'McpEnvInspectViewPoints.cpp');
     expect(points, 'the inverse of the unseen projection, horizontal FOV').toContain('const double TanY = TanX * Size.Y / Size.X;');
