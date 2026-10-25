@@ -21,9 +21,10 @@ constexpr float McpFarDepth = 1.0e7f;
 constexpr int32 McpMaxLegend = 256;
 } // namespace
 
-// Renders World from the view into a float target of Size and returns its pixels; Source picks depth or normal.
+// Renders World from the view into a float target of Size and returns its pixels; Source picks the pass.
 TArray<FLinearColor> McpCapturePass(UWorld *World, const FVector &Location, const FRotator &Rotation, float Fov,
-                                    const FIntPoint &Size, ESceneCaptureSource Source)
+                                    const FIntPoint &Size, ESceneCaptureSource Source, float OrthoWidth,
+                                    const TArray<AActor *> *ShowOnly)
 {
     UTextureRenderTarget2D *Target = NewObject<UTextureRenderTarget2D>(GetTransientPackage());
     Target->ClearColor = FLinearColor::Black;
@@ -34,6 +35,13 @@ TArray<FLinearColor> McpCapturePass(UWorld *World, const FVector &Location, cons
     Capture->bCaptureOnMovement = false;
     Capture->CaptureSource = Source;
     Capture->FOVAngle = Fov;
+    Capture->ProjectionType = OrthoWidth > 0.f ? ECameraProjectionMode::Orthographic : ECameraProjectionMode::Perspective;
+    Capture->OrthoWidth = OrthoWidth;
+    if (ShowOnly)
+    {
+        Capture->PrimitiveRenderMode = ESceneCapturePrimitiveRenderMode::PRM_UseShowOnlyList;
+        for (AActor *Actor : *ShowOnly) Capture->ShowOnlyActors.Add(Actor);
+    }
     Capture->TextureTarget = Target;
     Capture->SetWorldLocationAndRotation(Location, Rotation);
     Capture->RegisterComponentWithWorld(World);
@@ -48,11 +56,6 @@ namespace {
 bool McpWriteFile(const FString &Path, const TArray64<uint8> &Bytes)
 {
     return Bytes.Num() > 0 && FFileHelper::SaveArrayToFile(Bytes, *Path);
-}
-
-double McpRound(double Value, double Scale)
-{
-    return FMath::RoundToDouble(Value * Scale) / Scale;
 }
 
 FString McpHex(const FColor &Color)
@@ -109,8 +112,7 @@ bool HandleInspectCapturePassesAction(
         Name = FDateTime::Now().ToString(TEXT("Passes_%Y%m%d_%H%M%S"));
     }
     const FString Folder = GetJsonStringField(Payload, TEXT("outputPath"), TEXT("Saved/Captures"));
-    FString Probe;
-    FString PathError;
+    FString Probe, PathError;
     if (!McpResolveProjectFilePath(Folder / (Name + TEXT("_id.png")), Probe, PathError))
     {
         return Fail(FString::Printf(TEXT("outputPath '%s' and name '%s' must stay inside the project."), *Folder, *Name), TEXT("SECURITY_VIOLATION"));
@@ -163,7 +165,7 @@ bool HandleInspectCapturePassesAction(
             Summary->SetNumberField(TEXT("median"), FMath::RoundToDouble(Near[Near.Num() / 2]));
             Summary->SetNumberField(TEXT("max"), FMath::RoundToDouble(Near.Last()));
         }
-        Summary->SetNumberField(TEXT("sky"), McpRound(100.0 * (Count - Near.Num()) / Count, 100.0));
+        Summary->SetNumberField(TEXT("sky"), McpViewRound(100.0 * (Count - Near.Num()) / Count, 100.0));
         Result->SetObjectField(TEXT("depth"), Summary);
     }
     if (Passes.Contains(TEXT("normal")))
@@ -192,9 +194,9 @@ bool HandleInspectCapturePassesAction(
                 Files->SetStringField(TEXT("normal"), Base + TEXT("_normal.png"));
             }
             const TSharedPtr<FJsonObject> Summary = MakeShared<FJsonObject>();
-            Summary->SetNumberField(TEXT("up"), Drawn > 0 ? McpRound(100.0 * Up / Drawn, 100.0) : 0.0);
-            Summary->SetNumberField(TEXT("down"), Drawn > 0 ? McpRound(100.0 * Down / Drawn, 100.0) : 0.0);
-            Summary->SetNumberField(TEXT("side"), Drawn > 0 ? McpRound(100.0 * (Drawn - Up - Down) / Drawn, 100.0) : 0.0);
+            Summary->SetNumberField(TEXT("up"), Drawn > 0 ? McpViewRound(100.0 * Up / Drawn, 100.0) : 0.0);
+            Summary->SetNumberField(TEXT("down"), Drawn > 0 ? McpViewRound(100.0 * Down / Drawn, 100.0) : 0.0);
+            Summary->SetNumberField(TEXT("side"), Drawn > 0 ? McpViewRound(100.0 * (Drawn - Up - Down) / Drawn, 100.0) : 0.0);
             Result->SetObjectField(TEXT("normal"), Summary);
         }
     }
@@ -240,7 +242,7 @@ bool HandleInspectCapturePassesAction(
                     Item->SetStringField(TEXT("color"), McpHex(Color));
                     Item->SetStringField(TEXT("name"), Entry.Key->GetActorLabel());
                     Item->SetStringField(TEXT("class"), Entry.Key->GetClass()->GetName());
-                    Item->SetNumberField(TEXT("coverage"), McpRound(100.0 * Entry.Value / Count, 100.0));
+                    Item->SetNumberField(TEXT("coverage"), McpViewRound(100.0 * Entry.Value / Count, 100.0));
                     Legend.Add(MakeShared<FJsonValueObject>(Item));
                 }
             }

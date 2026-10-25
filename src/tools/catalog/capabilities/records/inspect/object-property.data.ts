@@ -291,6 +291,46 @@ export const OBJECT_PROPERTY_RECORDS: readonly CapabilityRecordSource[] = [
     },
     outputRequired: ['cellsAcross', 'cellsDown'],
   }),
+  // One camera hides a sunk foot, a missing back or a wrong scale.
+  buildCoreRecord({
+    parentTool: 'inspect', action: 'contact_sheet', dispatchAction: 'contact_sheet', domain: D, family: 'object',
+    editorStates: ['edit', 'simulate'],
+    summary: 'One image of an actor from several sides: front, back, left, right and top as true elevations (orthographic, in the actor\'s own turned frame, with a grid every round number of centimetres) and a three-quarter view, each tile labelled, the actor\'s size in the title. Shaded as clay from the geometry, the same whatever lights the level: the actor orange, everything else grey, and the parts of the actor hidden behind something (a foot sunk in the floor, a back against a wall) showing through it. Only the actor and the actors within reach of it are drawn, so a wall farther off never hides it while the floor it stands in stays. Returned as an image and written as a PNG under Saved/Captures; the level viewport is not moved.',
+    topics: ['contact sheet', 'views from every side', 'show a prop or actor from every side', 'front back side and top views', 'orthographic views of an actor', 'check an actor from all sides', 'turntable views of an actor', 'elevations of an actor'],
+    whenToUse: [
+      'Checking an actor from every side at once: sunk into the floor or floating, a missing back, a wrong size against the grid, a part poking through another.',
+      'Reviewing a prop or character after placing it, without moving the level viewport.',
+    ],
+    whenNotToUse: [
+      'A picture of what the level viewport\'s camera sees is wanted (use control_editor screenshot).',
+      'Numbers about a shot are wanted rather than a picture (use describe_view or analyze_view).',
+    ],
+    inputProps: {
+      actorName: { type: 'string', description: 'The actor to show (label, name or path). One that matches no actor refuses with ACTOR_NOT_FOUND; one that draws nothing the game shows (only editor icons) refuses with NOTHING_DRAWN.' },
+      views: { type: 'array', items: { type: 'string', enum: ['front', 'back', 'left', 'right', 'top', 'three_quarter'] }, description: 'The views, in this order (default all six). front looks at the side the actor faces (its X axis); left and right are its own; top looks straight down with its front at the bottom of the tile; three_quarter is a perspective view from its front right, above.' },
+      tileSize: { type: 'number', minimum: 128, maximum: 480, description: 'Side of each square tile in pixels (default 320); the sheet is three tiles across.' },
+    },
+    required: ['actorName'],
+    effect: 'read',
+    costLatency: 'interactive',
+    exampleInput: { action: 'contact_sheet', actorName: 'Crate', views: ['front', 'left', 'top'] },
+    exampleOutput: {
+      success: true, message: 'Contact sheet of Crate: 3 view(s), 960 x 372.', file: 'X:/Games/MyGame/Saved/Captures/ContactSheet_Crate_20261025_101500.png',
+      size: { x: 100, y: 100, z: 100 }, views: [{ view: 'front', grid: 20 }, { view: 'left', grid: 20 }, { view: 'top', grid: 20 }], shown: ['Floor'],
+      width: 960, height: 372, mimeType: 'image/png',
+    },
+    outputProps: {
+      file: { type: 'string', description: 'Absolute path of the PNG written.' },
+      size: { type: 'object', properties: { x: { type: 'number' }, y: { type: 'number' }, z: { type: 'number' } }, additionalProperties: false, description: 'The actor\'s drawn size in cm along its own X (front to back), Y (side to side) and Z.' },
+      views: { type: 'array', items: { type: 'object', additionalProperties: true, 'x-unreal-reflection-boundary': true }, description: 'Each tile in order: view and, for an elevation, grid (cm between lines; vertical lines pass the actor\'s pivot, horizontal ones in front, back, left and right sit at round heights above the world\'s zero).' },
+      shown: { type: 'array', items: { type: 'string' }, description: 'The other actors drawn: those whose boxes come within reach of the actor\'s (up to 63).' },
+      width: { type: 'number', description: 'Sheet width in pixels.' },
+      height: { type: 'number', description: 'Sheet height in pixels.' },
+      imageBase64: { type: 'string', description: 'The sheet as a PNG, base64, returned as an image; left out past 3 MB (the file has it).' },
+      mimeType: { type: 'string', description: 'image/png, with imageBase64.' },
+    },
+    outputRequired: ['size', 'views', 'width', 'height'],
+  }),
   // A picture could only be judged by eye: no pass said which actor a region belongs to, how far it is or which way
   // it faces.
   buildCoreRecord({

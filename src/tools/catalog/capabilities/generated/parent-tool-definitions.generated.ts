@@ -6931,7 +6931,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "actorName": {
           "type": "string",
-          "description": "The first actor, by label, name or path."
+          "description": "The actor to show (label, name or path). One that matches no actor refuses with ACTOR_NOT_FOUND; one that draws nothing the game shows (only editor icons) refuses with NOTHING_DRAWN."
         },
         "actorNames": {
           "type": "array",
@@ -7424,6 +7424,12 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "string",
           "description": "The actor the light should reach; omitted, only the light itself is checked."
         },
+        "tileSize": {
+          "type": "number",
+          "minimum": 128,
+          "maximum": 480,
+          "description": "Side of each square tile in pixels (default 320); the sheet is three tiles across."
+        },
         "tolerance": {
           "type": "number",
           "minimum": 0,
@@ -7436,6 +7442,21 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "value": {
           "description": "Property value to set, in the form get_property reads back: a number, string or bool, {\"X\": 0, \"Y\": 0, \"Z\": 100} for a vector, an object or asset path, an array for an Array or Set, and a JSON object of key: value for a Map ({\"Apple\": 3}), which replaces the whole map."
+        },
+        "views": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "enum": [
+              "front",
+              "back",
+              "left",
+              "right",
+              "top",
+              "three_quarter"
+            ]
+          },
+          "description": "The views, in this order (default all six). front looks at the side the actor faces (its X axis); left and right are its own; top looks straight down with its front at the bottom of the tile; three_quarter is a perspective view from its front right, above."
         },
         "watch": {
           "type": "object",
@@ -7489,6 +7510,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             "check_mesh",
             "describe_view",
             "analyze_view",
+            "contact_sheet",
             "capture_passes",
             "raycast_world",
             "get_property",
@@ -7858,6 +7880,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "number",
           "description": "Estimated frames per second from delta time."
         },
+        "file": {
+          "type": "string",
+          "description": "Absolute path of the PNG written."
+        },
         "files": {
           "type": "object",
           "properties": {
@@ -8079,7 +8105,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "imageBase64": {
           "type": "string",
-          "description": "With labels: the frame as a PNG, base64, with each listed actor boxed and numbered; returned as an image."
+          "description": "The sheet as a PNG, base64, returned as an image; left out past 3 MB (the file has it)."
         },
         "instancesUpdated": {
           "type": "number",
@@ -8561,11 +8587,39 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "number",
           "description": "Every get_editor_state variant: shader compile jobs still outstanding. Above 0 the viewport, and a screenshot of it, shows the engine default material (black foliage, grey ground) for what they cover; a warning says so."
         },
-        "size": {
+        "shown": {
           "type": "array",
           "items": {
-            "type": "number"
+            "type": "string"
           },
+          "description": "The other actors drawn: those whose boxes come within reach of the actor's (up to 63)."
+        },
+        "size": {
+          "oneOf": [
+            {
+              "type": "array",
+              "items": {
+                "type": "number"
+              },
+              "description": "Extent [x, y, z] in cm, in the mesh's own space."
+            },
+            {
+              "type": "object",
+              "properties": {
+                "x": {
+                  "type": "number"
+                },
+                "y": {
+                  "type": "number"
+                },
+                "z": {
+                  "type": "number"
+                }
+              },
+              "additionalProperties": false,
+              "description": "The actor's drawn size in cm along its own X (front to back), Y (side to side) and Z."
+            }
+          ],
           "description": "Extent [x, y, z] in cm, in the mesh's own space."
         },
         "slotBoundsAvailable": {
@@ -8753,6 +8807,15 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "viewTarget": {
           "type": "string",
           "description": "Object path of the current view target."
+        },
+        "views": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": true,
+            "x-unreal-reflection-boundary": true
+          },
+          "description": "Each tile in order: view and, for an elevation, grid (cm between lines; vertical lines pass the actor's pivot, horizontal ones in front, back, left and right sit at round heights above the world's zero)."
         },
         "visibleActors": {
           "type": "number",

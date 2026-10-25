@@ -5192,6 +5192,7 @@
         "check_mesh",
         "describe_view",
         "analyze_view",
+        "contact_sheet",
         "capture_passes",
         "raycast_world",
         "get_property",
@@ -5263,9 +5264,11 @@
         "subject",
         "tag",
         "targetActor",
+        "tileSize",
         "tolerance",
         "traceComplex",
         "value",
+        "views",
         "watch",
         "what",
         "widgetPath",
@@ -5280,7 +5283,7 @@
           },
           "actorName": {
             "type": "string",
-            "description": "The first actor, by label, name or path."
+            "description": "The actor to show (label, name or path). One that matches no actor refuses with ACTOR_NOT_FOUND; one that draws nothing the game shows (only editor icons) refuses with NOTHING_DRAWN."
           },
           "actorNames": {
             "type": "array",
@@ -5773,6 +5776,12 @@
             "type": "string",
             "description": "The actor the light should reach; omitted, only the light itself is checked."
           },
+          "tileSize": {
+            "type": "number",
+            "minimum": 128,
+            "maximum": 480,
+            "description": "Side of each square tile in pixels (default 320); the sheet is three tiles across."
+          },
           "tolerance": {
             "type": "number",
             "minimum": 0,
@@ -5785,6 +5794,21 @@
           },
           "value": {
             "description": "Property value to set, in the form get_property reads back: a number, string or bool, {\"X\": 0, \"Y\": 0, \"Z\": 100} for a vector, an object or asset path, an array for an Array or Set, and a JSON object of key: value for a Map ({\"Apple\": 3}), which replaces the whole map."
+          },
+          "views": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "enum": [
+                "front",
+                "back",
+                "left",
+                "right",
+                "top",
+                "three_quarter"
+              ]
+            },
+            "description": "The views, in this order (default all six). front looks at the side the actor faces (its X axis); left and right are its own; top looks straight down with its front at the bottom of the tile; three_quarter is a perspective view from its front right, above."
           },
           "watch": {
             "type": "object",
@@ -5838,6 +5862,7 @@
               "check_mesh",
               "describe_view",
               "analyze_view",
+              "contact_sheet",
               "capture_passes",
               "raycast_world",
               "get_property",

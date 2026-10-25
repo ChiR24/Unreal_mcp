@@ -1,4 +1,5 @@
 #include "Domains/Texture/McpTextureShared.h"
+#include "Domains/Texture/McpTextRaster.h"
 
 #include "Engine/Font.h"
 #include "Fonts/FontMeasure.h"
@@ -55,10 +56,9 @@ int32 McpFitFontSize(const FString& Text, FSlateFontInfo Font, const FVector2f& 
     }
     return Size;
 }
+} // namespace
 
-// White text at its own size, centred, drawn offscreen by Slate (the editor UI's own rasterizer, so
-// any Font asset and face draws as it does in a widget). Only the alpha of OutPixels is used: it is
-// each pixel's coverage, whatever Slate does with gamma or premultiply.
+// Only the alpha is used whatever Slate does with gamma or premultiply.
 bool McpRasterizeText(const FString& Text, const FSlateFontInfo& Font, ETextJustify::Type Justify,
                       FIntPoint Size, TArray<FColor>& OutPixels)
 {
@@ -78,7 +78,6 @@ bool McpRasterizeText(const FString& Text, const FSlateFontInfo& Font, ETextJust
     const bool bRead = Resource && Resource->ReadPixels(OutPixels) && OutPixels.Num() == Size.X * Size.Y;
     BeginCleanup(Renderer);
     return bRead;
-}
 }
 
 TSharedPtr<FJsonObject> HandleCreateTextTexture(const TSharedPtr<FJsonObject>& Params)

@@ -62,6 +62,10 @@ bool PrepareViewDiff(const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FJsonObj
 bool DiffView(const TSharedPtr<FJsonObject>& Payload, const McpEnvironmentHandlers::FMcpViewCapture& View,
               TSharedPtr<FJsonObject>& OutChange, FString& OutError, FString& OutCode);
 
+/** inspect contact_sheet: an actor from several sides in one labelled image (McpPerceptionSheet). */
+bool HandleContactSheet(UEngineWireSubsystem& Bridge, const FString& RequestId, const TSharedPtr<FJsonObject>& Payload,
+                        TSharedPtr<FMcpBridgeWebSocket> Socket);
+
 /** inspect analyze_view. */
 bool HandleAnalyzeView(UEngineWireSubsystem& Bridge, const FString& RequestId, const TSharedPtr<FJsonObject>& Payload,
                        TSharedPtr<FMcpBridgeWebSocket> Socket);

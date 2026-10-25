@@ -655,4 +655,7 @@ export const PLAIN_PROBE: readonly PlainProbeCase[] = [
   { query: 'what changed in the view', accepted: ['inspect.describe_view'] },
   { query: 'compare the view before and after', accepted: ['inspect.describe_view'] },
   { query: 'did my edit change the picture', accepted: ['inspect.describe_view'] },
+  { query: 'contact sheet of an actor', accepted: ['inspect.contact_sheet'] },
+  { query: 'show the prop from every side', accepted: ['inspect.contact_sheet'] },
+  { query: 'front side and top views of an actor', accepted: ['inspect.contact_sheet'] },
 ];

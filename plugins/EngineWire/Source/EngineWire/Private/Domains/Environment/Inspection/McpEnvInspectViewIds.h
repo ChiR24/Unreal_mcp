@@ -78,7 +78,10 @@ struct FMcpViewCapture {
 bool McpCaptureView(const TSharedPtr<FJsonObject> &Payload, const TCHAR *What, bool bGameView, FMcpViewCapture &Out,
                     FString &OutError, FString &OutCode);
 
-// A scene capture of World from the view into a float target of Size: SCS_SceneDepth (cm), SCS_Normal (world normal).
+// A scene capture of World from the view into a float target of Size: SCS_SceneDepth (cm), SCS_Normal (world normal),
+// SCS_SceneColorHDR (the scene colour before tonemapping). An OrthoWidth above 0 makes it orthographic, that many cm
+// across; ShowOnly draws only those actors.
 TArray<FLinearColor> McpCapturePass(UWorld *World, const FVector &Location, const FRotator &Rotation, float Fov,
-                                    const FIntPoint &Size, ESceneCaptureSource Source);
+                                    const FIntPoint &Size, ESceneCaptureSource Source, float OrthoWidth = 0.f,
+                                    const TArray<AActor *> *ShowOnly = nullptr);
 } // namespace McpEnvironmentHandlers

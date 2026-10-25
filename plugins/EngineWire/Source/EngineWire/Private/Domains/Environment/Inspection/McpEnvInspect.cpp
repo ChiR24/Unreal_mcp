@@ -99,6 +99,10 @@ bool UEngineWireSubsystem::HandleInspectAction(
     {
         return McpPerception::HandleAnalyzeView(*this, RequestId, Payload, RequestingSocket);
     }
+    if (LowerSubAction.Equals(TEXT("contact_sheet")))
+    {
+        return McpPerception::HandleContactSheet(*this, RequestId, Payload, RequestingSocket);
+    }
     if (LowerSubAction.Equals(TEXT("get_editor_focus")))
     {
         return HandleInspectEditorFocusAction(*this, RequestId, RequestingSocket);

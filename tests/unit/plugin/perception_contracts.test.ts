@@ -92,3 +92,54 @@ describe('describe_view saveAs and compareWith', () => {
     expect(saved).toContain('if (!FMath::IsNearlyEqual(Saved->Fov, View.Client->ViewFOV, 0.01f))');
   });
 });
+
+// inspect contact_sheet: one image of an actor from several sides (Domains/Perception, Sheet).
+describe('contact_sheet', () => {
+  const sheet = code('Domains', 'Perception', 'McpPerceptionSheet.cpp');
+  const draw = code('Domains', 'Perception', 'McpPerceptionSheetDraw.cpp');
+  const passes = code('Domains', 'Environment', 'Inspection', 'McpEnvInspectCapturePasses.cpp');
+
+  it('is routed by inspect', () => {
+    expect(code('Domains', 'Environment', 'Inspection', 'McpEnvInspect.cpp')).toContain(
+      'return McpPerception::HandleContactSheet(*this, RequestId, Payload, RequestingSocket);',
+    );
+  });
+
+  // A wall between a camera and the actor would fill the tile; the floor it is sunk into must stay.
+  it('draws only the actor and what comes within reach of it, never moving the level viewport', () => {
+    expect(passes).toMatch(/if \(ShowOnly\)\s*\{\s*Capture->PrimitiveRenderMode = ESceneCapturePrimitiveRenderMode::PRM_UseShowOnlyList;/u);
+    expect(sheet).toContain('if (Box.IsValid && Box.Intersect(Reach))');
+    // A subsystem's debug-draw actor, whose box spans the level, was listed beside a cube.
+    expect(sheet).toContain('const bool bSkip = *It == Subject || It->IsHidden() || McpPlacement::IsBoundsOnlyActor(*It);');
+    expect(sheet).not.toMatch(/SetViewLocation|SetViewRotation/u);
+  });
+
+  // From inside the floor slab a cube was sunk into, none of the slab's faces showed, and the cube read as resting.
+  it('takes each elevation from outside everything it draws', () => {
+    expect(sheet).toContain('const double Distance = bOrtho ? Beyond + 100.0');
+    expect(sheet).toMatch(/for \(const FBox& Box : ShownBoxes\)\s*\{\s*Beyond = FMath::Max\(Beyond,/u);
+  });
+
+  it('measures the elevations in the actor\'s own turned frame, orthographic', () => {
+    expect(sheet).toContain('const FTransform Frame(FRotator(0.0, Subject->GetActorRotation().Yaw, 0.0), Subject->GetActorLocation());');
+    expect(sheet).toContain('const FBox Local = McpPlacement::DrawnBoundsIn(*Subject, Frame);');
+    expect(passes).toContain('Capture->ProjectionType = OrthoWidth > 0.f ? ECameraProjectionMode::Orthographic : ECameraProjectionMode::Perspective;');
+  });
+
+  // In a level lit by one sun with no sky light, the faces turned from it read black; a cube sunk in a floor of its own
+  // grey could not be told from the floor.
+  it('shades from the geometry, the actor apart, its hidden parts shown through what covers them', () => {
+    expect(sheet).toContain('Normals = Pass(SCS_Normal, Shown), Depth = Pass(SCS_SceneDepth, Shown), SubjectDepth = Pass(SCS_SceneDepth, Alone);');
+    expect(sheet).not.toMatch(/SCS_SceneColor|SCS_FinalColor/u);
+    expect(draw).toContain('FLinearColor Colour = (bOwn ? SubjectAlbedo : OtherAlbedo) * Lit;');
+    expect(draw).toMatch(/if \(!bOwn && Own < Empty && Own > Near\)\s*\{\s*Colour = FMath::Lerp\(Colour, SubjectAlbedo \* 0\.8f, XRay\);/u);
+  });
+
+  // An orthographic view puts the far plane at a finite depth and leaves a stale normal where nothing is drawn: empty
+  // space read as the actor, orange to the tile's edges.
+  it('reads empty space off the far plane, not the normal', () => {
+    expect(draw).toMatch(/for \(const FLinearColor& Pixel : Alone\)\s*\{\s*Far = FMath::Max\(Far, Pixel\.R\);/u);
+    expect(draw).toMatch(/if \(Near >= Empty\)\s*\{\s*Out\[Index\] = TileBackground;/u);
+    expect(draw).not.toContain('Normal.SizeSquared()');
+  });
+});
