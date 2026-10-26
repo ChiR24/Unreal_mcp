@@ -1,6 +1,7 @@
 #include "Domains/ControlEditor/McpEditorSupport.h"
 
 #include "Domains/Log/McpLogHistory.h"
+#include "Domains/Play/McpPlaySession.h"
 #include "Framework/Docking/TabManager.h"
 #include "GameFramework/PlayerState.h"
 #include "GameFramework/WorldSettings.h"
@@ -42,6 +43,8 @@ bool UEngineWireSubsystem::HandleControlEditorPlay(
     if (!WeakThis.IsValid() || (!bStarted && FPlatformTime::Seconds() < Deadline)) {
       return WeakThis.IsValid();
     }
+    // What drives the running game (playtest) drives only a session started here: one the user started may be played.
+    if (bStarted) { McpPlaySession::NoteStarted(World); }
     TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
     Resp->SetBoolField(TEXT("success"), bStarted);
     if (World) { Resp->SetStringField(TEXT("pieWorld"), World->GetOutermost()->GetName()); }
@@ -127,8 +130,7 @@ bool UEngineWireSubsystem::HandleControlEditorSetGameSpeed(
   // The dilation the world now holds (SetTimeDilation clamps to the game's limits), not the one asked for.
   Resp->SetNumberField(TEXT("speed"), World->GetWorldSettings()->TimeDilation);
   Resp->SetNumberField(TEXT("timeDilation"), World->GetWorldSettings()->GetEffectiveTimeDilation());
-  SendAutomationResponse(Socket, RequestId, true, TEXT("Game speed set"), Resp,
-                         FString());
+  SendAutomationResponse(Socket, RequestId, true, TEXT("Game speed set"), Resp, FString());
   return true;
 }
 bool UEngineWireSubsystem::HandleControlEditorPause(

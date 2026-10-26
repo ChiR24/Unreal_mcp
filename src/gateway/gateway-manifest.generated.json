@@ -4640,9 +4640,11 @@
         "focus_actor",
         "save_all",
         "simulate_input",
-        "undo"
+        "undo",
+        "playtest"
       ],
       "parameterNames": [
+        "acceptRadius",
         "actorName",
         "arguments",
         "assetPath",
@@ -4651,6 +4653,7 @@
         "button",
         "cameraOp",
         "category",
+        "checks",
         "className",
         "classPath",
         "command",
@@ -4660,11 +4663,14 @@
         "discardUnsaved",
         "durationSeconds",
         "enabled",
+        "fallCm",
         "filename",
         "filter",
         "fov",
         "frameRate",
         "functionName",
+        "goal",
+        "goalActor",
         "height",
         "history",
         "holdSeconds",
@@ -4679,6 +4685,7 @@
         "levelPath",
         "limit",
         "location",
+        "maxSeconds",
         "metadata",
         "minimize",
         "mode",
@@ -4697,6 +4704,7 @@
         "speed",
         "stat",
         "steps",
+        "stuckSeconds",
         "tabId",
         "toolName",
         "toolset",
@@ -4717,6 +4725,10 @@
       "inputSchema": {
         "type": "object",
         "properties": {
+          "acceptRadius": {
+            "type": "number",
+            "description": "How near the goal counts as reached, in cm (default 100)."
+          },
           "actorName": {
             "type": "string",
             "description": "Name of the actor to target."
@@ -4758,6 +4770,13 @@
           "category": {
             "type": "string",
             "description": "Preferences category."
+          },
+          "checks": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Assertions judged when the leg ends, in execute's expect language (Door_1 hidden, BP_Player.Health > 0), at most 16."
           },
           "className": {
             "type": "string",
@@ -4807,6 +4826,10 @@
             "type": "boolean",
             "description": "Whether the feature is enabled."
           },
+          "fallCm": {
+            "type": "number",
+            "description": "How far below its start the pawn may drop before it counts as fallen (default 500)."
+          },
           "filename": {
             "type": "string",
             "description": "Screenshot or recording filename."
@@ -4826,6 +4849,26 @@
           "functionName": {
             "type": "string",
             "description": "Function name exactly as reported by describe_reflected_api."
+          },
+          "goal": {
+            "type": "object",
+            "properties": {
+              "x": {
+                "type": "number"
+              },
+              "y": {
+                "type": "number"
+              },
+              "z": {
+                "type": "number"
+              }
+            },
+            "additionalProperties": false,
+            "description": "Where the pawn should get to."
+          },
+          "goalActor": {
+            "type": "string",
+            "description": "An actor of the running game to walk to, in place of goal."
           },
           "height": {
             "type": "number",
@@ -4942,6 +4985,10 @@
               }
             ],
             "description": "3D location (x, y, z)."
+          },
+          "maxSeconds": {
+            "type": "number",
+            "description": "Game seconds the leg may take (default 15, at most 60; at most 25 real seconds)."
           },
           "metadata": {
             "type": "object",
@@ -5076,6 +5123,10 @@
             "type": "integer",
             "description": "Number of frames to step."
           },
+          "stuckSeconds": {
+            "type": "number",
+            "description": "Game seconds without getting nearer that count as stuck (default 2)."
+          },
           "tabId": {
             "type": "string",
             "description": "Registered nomad tab id, for example \"BridgeTab\" (Quixel Bridge); \"Fab\" opens a new Fab tab."
@@ -5169,7 +5220,8 @@
               "focus_actor",
               "save_all",
               "simulate_input",
-              "undo"
+              "undo",
+              "playtest"
             ],
             "description": "Action to invoke on control_editor."
           }

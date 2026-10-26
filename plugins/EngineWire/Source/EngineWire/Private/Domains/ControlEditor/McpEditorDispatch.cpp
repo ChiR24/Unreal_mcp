@@ -1,6 +1,7 @@
 #include "Domains/ControlEditor/McpEditorSupport.h"
 #include "Domains/ControlEditor/Checkpoint/McpEditorCheckpoint.h"
 #include "Domains/ControlEditor/Toolsets/McpEditorToolsets.h"
+#include "Domains/Play/McpPlaytest.h"
 
 bool UEngineWireSubsystem::HandleControlEditorAction(
     const FString &RequestId, const FString &Action,
@@ -33,6 +34,8 @@ bool UEngineWireSubsystem::HandleControlEditorAction(
     return HandleControlEditorPlay(RequestId, Payload, RequestingSocket);
   if (LowerSub == TEXT("stop") || LowerSub == TEXT("stop_pie"))
     return HandleControlEditorStop(RequestId, Payload, RequestingSocket);
+  if (LowerSub == TEXT("playtest"))
+    return McpPlaytest::Handle(*this, RequestId, Payload, RequestingSocket);
   if (LowerSub == TEXT("eject"))
     return HandleControlEditorEject(RequestId, Payload, RequestingSocket);
   if (LowerSub == TEXT("possess"))

@@ -4,7 +4,7 @@
 
 # Action reference
 
-Catalog revision: `84215d69cbd804be`
+Catalog revision: `612e5bead588e53e`
 
 Both transports expose exactly ONE public MCP tool, `unreal`, with the four
 operations `search` / `describe` / `execute` / `configure`. The parent tools
@@ -13,7 +13,7 @@ by `tools/list` and a direct `tools/call` on one returns a
 `DIRECT_TOOL_CALL_REMOVED` receipt rather than executing
 (`src/server/gateway/direct-call-migration.ts`).
 
-The catalog declares 428 capabilities across
+The catalog declares 429 capabilities across
 23 internal parent tools.
 Every row is derived from the capability record that the gateway actually
 validates against, so `execute` cannot accept an action this table omits.
@@ -39,7 +39,7 @@ validates against, so `execute` cannot accept an action this table omits.
 | `animation_physics` | 31 | 5 | 24 | 2 | animation physics |
 | `build_environment` | 40 | 4 | 33 | 3 | environment |
 | `control_actor` | 28 | 9 | 17 | 2 | actor |
-| `control_editor` | 24 | 9 | 12 | 3 | editor |
+| `control_editor` | 25 | 9 | 13 | 3 | editor |
 | `inspect` | 25 | 20 | 4 | 1 | inspect |
 | `manage_ai` | 16 | 2 | 14 | 0 | manage ai |
 | `manage_asset` | 47 | 10 | 32 | 5 | asset, datatable, enum, material, struct, texture |
@@ -62,7 +62,7 @@ validates against, so `execute` cannot accept an action this table omits.
 
 ## Capabilities requiring consent
 
-67 of 428 capabilities require consent.
+67 of 429 capabilities require consent.
 
 | Capability | Tool | Action | Effect | Consent |
 | --- | --- | --- | --- | --- |
@@ -307,6 +307,7 @@ validates against, so `execute` cannot accept an action this table omits.
 | `control_editor.open_asset` | `control_editor` | `open_asset` | read | read | none | `control_editor.open_asset` |
 | `control_editor.open_level` | `control_editor` | `open_level` | write | write | none | `control_editor.open_level` |
 | `control_editor.play` | `control_editor` | `play` | write | write | none | `control_editor.play` `control_editor.pause` `control_editor.resume` `control_editor.stop` `control_editor.eject` `control_editor.possess` `control_editor.stop_pie` |
+| `control_editor.playtest` | `control_editor` | `playtest` | write | write | none | `control_editor.playtest` |
 | `control_editor.restart_editor` | `control_editor` | `restart_editor` | destructive | destructive | explicit | `control_editor.restart_editor` |
 | `control_editor.save_all` | `control_editor` | `save_all` | write | write | none | `control_editor.save_all` |
 | `control_editor.screenshot` | `control_editor` | `screenshot` | read | read | none | `control_editor.screenshot` `control_editor.take_screenshot` |

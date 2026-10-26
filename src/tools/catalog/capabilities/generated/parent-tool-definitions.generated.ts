@@ -5895,6 +5895,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
     "inputSchema": {
       "type": "object",
       "properties": {
+        "acceptRadius": {
+          "type": "number",
+          "description": "How near the goal counts as reached, in cm (default 100)."
+        },
         "actorName": {
           "type": "string",
           "description": "Name of the actor to target."
@@ -5936,6 +5940,13 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "category": {
           "type": "string",
           "description": "Preferences category."
+        },
+        "checks": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Assertions judged when the leg ends, in execute's expect language (Door_1 hidden, BP_Player.Health > 0), at most 16."
         },
         "className": {
           "type": "string",
@@ -5985,6 +5996,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "boolean",
           "description": "Whether the feature is enabled."
         },
+        "fallCm": {
+          "type": "number",
+          "description": "How far below its start the pawn may drop before it counts as fallen (default 500)."
+        },
         "filename": {
           "type": "string",
           "description": "Screenshot or recording filename."
@@ -6004,6 +6019,26 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "functionName": {
           "type": "string",
           "description": "Function name exactly as reported by describe_reflected_api."
+        },
+        "goal": {
+          "type": "object",
+          "properties": {
+            "x": {
+              "type": "number"
+            },
+            "y": {
+              "type": "number"
+            },
+            "z": {
+              "type": "number"
+            }
+          },
+          "additionalProperties": false,
+          "description": "Where the pawn should get to."
+        },
+        "goalActor": {
+          "type": "string",
+          "description": "An actor of the running game to walk to, in place of goal."
         },
         "height": {
           "type": "number",
@@ -6120,6 +6155,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             }
           ],
           "description": "3D location (x, y, z)."
+        },
+        "maxSeconds": {
+          "type": "number",
+          "description": "Game seconds the leg may take (default 15, at most 60; at most 25 real seconds)."
         },
         "metadata": {
           "type": "object",
@@ -6254,6 +6293,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "integer",
           "description": "Number of frames to step."
         },
+        "stuckSeconds": {
+          "type": "number",
+          "description": "Game seconds without getting nearer that count as stuck (default 2)."
+        },
         "tabId": {
           "type": "string",
           "description": "Registered nomad tab id, for example \"BridgeTab\" (Quixel Bridge); \"Fab\" opens a new Fab tab."
@@ -6347,7 +6390,8 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             "focus_actor",
             "save_all",
             "simulate_input",
-            "undo"
+            "undo",
+            "playtest"
           ],
           "description": "Action to invoke on control_editor."
         }
@@ -6363,6 +6407,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "alreadyEjected": {
           "type": "boolean",
           "description": "True when the player was already ejected, so nothing changed."
+        },
+        "bestDistance": {
+          "type": "number",
+          "description": "The nearest it got to the goal, in cm (2D)."
         },
         "cameraLocation": {
           "oneOf": [
@@ -6409,6 +6457,15 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             }
           ],
           "description": "How the camera is turned after the call, {pitch, yaw, roll}."
+        },
+        "checks": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": true,
+            "x-unreal-reflection-boundary": true
+          },
+          "description": "Each check: text, verdict (ok, failed, unknown), actual."
         },
         "className": {
           "type": "string",
@@ -6568,9 +6625,17 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "boolean",
           "description": "True once the player has left its pawn and the view is a free camera; false (with EJECT_FAILED) when the session did not switch within 5 seconds, which happens when Play In Editor runs in a window of its own instead of a level viewport."
         },
+        "ended": {
+          "type": "string",
+          "description": "How the leg ended: reached, stuck, fell, timeout, paused, pawn_lost, world_ended, or the reason no leg was tried (no_path, partial, start_off_navmesh, goal_off_navmesh)."
+        },
         "filename": {
           "type": "string",
           "description": "Screenshot or recording filename."
+        },
+        "frames": {
+          "type": "number",
+          "description": "Frames the leg ran."
         },
         "functionCount": {
           "type": "number",
@@ -6655,6 +6720,13 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "isDefaultObject": {
           "type": "boolean",
           "description": "True when only the CDO existed, which usually means the owning window has never been opened."
+        },
+        "last": {
+          "type": "array",
+          "items": {
+            "type": "number"
+          },
+          "description": "Where the pawn ended, [x, y, z]."
         },
         "leftDirtyPackages": {
           "type": "array",
@@ -6757,6 +6829,13 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "string",
           "description": "Saved screenshot file path."
         },
+        "scriptErrors": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Blueprint runtime errors during the leg, each with the node that raised it."
+        },
         "settledSeconds": {
           "type": "number",
           "description": "How long the reply waited for the level to settle (its water, streamed textures and effects drawn), so a screenshot right after shows the level as it looks."
@@ -6799,6 +6878,15 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "number",
           "description": "The game speed the steps ran at, present when it is not 1: a step keeps the slow motion that was set, so at speed 0.1 each step advances a tenth of its frame of game time."
         },
+        "timeline": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": true,
+            "x-unreal-reflection-boundary": true
+          },
+          "description": "Where the pawn was: { t, location }, at most 50 samples."
+        },
         "tool": {
           "type": "object",
           "additionalProperties": true,
@@ -6829,6 +6917,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "x-unreal-reflection-boundary": true,
           "description": "Every registered toolset: name, description, toolCount."
         },
+        "traveled": {
+          "type": "number",
+          "description": "How far it moved, in cm."
+        },
         "unsavedCount": {
           "type": "integer",
           "description": "How many packages have unsaved changes."
@@ -6851,6 +6943,16 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "validateOnly": {
           "type": "boolean",
           "description": "True when this call only reported what a restart would do."
+        },
+        "verdict": {
+          "type": "string",
+          "enum": [
+            "pass",
+            "fail",
+            "inconclusive",
+            "error"
+          ],
+          "description": "The judgement of the leg."
         },
         "view": {
           "type": "string",

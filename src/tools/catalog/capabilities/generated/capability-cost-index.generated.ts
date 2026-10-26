@@ -375,6 +375,7 @@ export const CAPABILITY_COST_INDEX: Readonly<Record<string, string>> = {
   "control_editor::open_level": "interactive|medium",
   "control_editor::pause": "interactive|medium",
   "control_editor::play": "interactive|medium",
+  "control_editor::playtest": "long-running|medium",
   "control_editor::possess": "interactive|medium",
   "control_editor::redo": "instant|low",
   "control_editor::restart_editor": "long-running|high",
@@ -1622,4 +1623,4 @@ export const CAPABILITY_COST_INDEX: Readonly<Record<string, string>> = {
   "system_control::write_snapshot": "interactive|medium"
 };
 
-export const CAPABILITY_COST_INDEX_KEY_COUNT = 1609;
+export const CAPABILITY_COST_INDEX_KEY_COUNT = 1610;
