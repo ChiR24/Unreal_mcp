@@ -1,6 +1,10 @@
 #include "Foundation/Reflection/McpPropertyReflectionPrivate.h"
 #include "JsonObjectConverter.h"
 #include <cstdlib>
+#include <locale.h>
+#if PLATFORM_MAC
+#include <xlocale.h>
+#endif
 
 namespace McpPropertyReflection
 {
@@ -20,7 +24,18 @@ bool JsonNumberOrStringToDouble(const TSharedPtr<FJsonValue>& ValueField, double
         if (Text.IsEmpty() || Text.Len() != FCString::Strlen(*Text)) return false;
         const FTCHARToUTF8 Utf8(*Text);
         char* End = nullptr;
-        OutValue = std::strtod(Utf8.Get(), &End);
+        // Pin the numeric locale without changing the editor's process or thread locale.
+#if PLATFORM_WINDOWS
+        _locale_t Locale = _create_locale(LC_NUMERIC, "C");
+        if (!Locale) return false;
+        OutValue = _strtod_l(Utf8.Get(), &End, Locale);
+        _free_locale(Locale);
+#else
+        locale_t Locale = newlocale(LC_NUMERIC_MASK, "C", nullptr);
+        if (!Locale) return false;
+        OutValue = strtod_l(Utf8.Get(), &End, Locale);
+        freelocale(Locale);
+#endif
         return End && End != Utf8.Get() && *End == '\0' && FMath::IsFinite(OutValue);
     }
     return false;
