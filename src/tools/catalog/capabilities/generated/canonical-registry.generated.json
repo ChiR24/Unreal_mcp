@@ -1,6 +1,6 @@
 {
-  "catalogRevision": "cbb2b1f5e459cc03",
-  "recordCount": 430,
+  "catalogRevision": "be6a32a9a2ffd0b2",
+  "recordCount": 431,
   "records": [
     {
       "id": "animation_physics.analyze_animation",
@@ -53198,6 +53198,236 @@
         "algorithm": "sha256",
         "schema": "1ab3314b4bf07117180fb9623cedf7112cc81606dc685334887f869415560da4",
         "content": "9b256f888773194cdd625dc401d75e8ebeb4b93bfc0ff91391c1f77be4acf00f"
+      }
+    },
+    {
+      "id": "inspect.read_logpoints",
+      "aliases": [
+        "inspect.set_logpoints",
+        "inspect.clear_logpoints"
+      ],
+      "legacyIds": [
+        {
+          "tool": "inspect",
+          "action": "read_logpoints"
+        },
+        {
+          "tool": "inspect",
+          "action": "set_logpoints",
+          "folded": {
+            "logpointOp": "set"
+          }
+        },
+        {
+          "tool": "inspect",
+          "action": "clear_logpoints",
+          "folded": {
+            "logpointOp": "clear"
+          }
+        }
+      ],
+      "discovery": {
+        "domain": "inspect",
+        "family": "logpoints",
+        "topics": [
+          "read_logpoints",
+          "logpoint",
+          "trace blueprint execution",
+          "breakpoint without pausing",
+          "record pin values during play",
+          "log node values",
+          "print a blueprint value during play",
+          "debug blueprint values",
+          "what values did the node get"
+        ],
+        "summary": "Logpoints: mark Blueprint nodes (set) to record their pin values each time they run in Play without pausing it, read what they recorded (read), or remove marks (clear).",
+        "whenToUse": [
+          "logpointOp=set: Finding why a Blueprint does the wrong thing at run time: what a Branch tested, what a Set wrote, what a call received, on which actor and when.",
+          "logpointOp=set: Checking a value over time (a timer, a counter, a health drain) without adding Print String nodes.",
+          "logpointOp=read: After set_logpoints and some play: what each marked node received and produced.",
+          "logpointOp=clear: A trace is done, or before marking other nodes past the limit of 32."
+        ],
+        "whenNotToUse": [
+          "logpointOp=set: A runtime error is the question: runtime_report lists each one with its node and cause.",
+          "logpointOp=set: A pure node (no exec pins): it runs inside the node that reads it; mark that one (refused with PURE_NODE).",
+          "logpointOp=clear: Only the recorded values should be emptied: the next play session starts them empty."
+        ]
+      },
+      "schemas": {
+        "input": {
+          "$schema": "https://json-schema.org/draft/2020-12/schema",
+          "type": "object",
+          "properties": {
+            "action": {
+              "type": "string",
+              "description": "The action to execute on the parent tool."
+            },
+            "blueprintPath": {
+              "type": "string",
+              "description": "The Blueprint whose nodes are marked, as /Game/Folder/BP_Name."
+            },
+            "nodeIds": {
+              "type": "array",
+              "maxItems": 32,
+              "minItems": 0,
+              "description": "Nodes by id: the GUID edit_graph and get_graph_details give, or the tag read_graph_as_code prints (n + the GUID's first hex digits, as n3fa9c1).",
+              "items": {
+                "type": "string"
+              }
+            },
+            "maxHits": {
+              "type": "number",
+              "description": "How many of each node's newest runs are kept (1-500, default 100); runs counts them all."
+            },
+            "last": {
+              "type": "number",
+              "description": "How many of each node's newest runs to list (1-500, default 20)."
+            },
+            "logpointOp": {
+              "type": "string",
+              "enum": [
+                "set",
+                "read",
+                "clear"
+              ],
+              "description": "Which read logpoints variant to run; omit for 'read'.\nset: Mark Blueprint nodes to record the values on their pins each time they run in Play, without pausing the game: a print statement that changes no graph. Before Play or during it; each play session starts the timelines empty. Read them with logpointOp=read. Marks last until logpointOp=clear or the editor closes; at most 32 at once.\nread: Read what marked Blueprint nodes recorded in Play: for each node its runs and newest values, input and output pins by name, with the game time and the object it ran on. Readable during Play and after it stops, until the next play session starts.\nclear: Remove logpoint marks: all of them, those of one Blueprint, or chosen nodes. With none left, nothing listens to the running game any more.",
+              "default": "read"
+            }
+          },
+          "required": [
+            "action"
+          ],
+          "additionalProperties": false
+        },
+        "output": {
+          "$schema": "https://json-schema.org/draft/2020-12/schema",
+          "type": "object",
+          "properties": {
+            "success": {
+              "type": "boolean",
+              "description": "Whether the action succeeded."
+            },
+            "message": {
+              "type": "string",
+              "description": "Human-readable result message."
+            },
+            "details": {
+              "type": "object",
+              "x-unreal-reflection-boundary": true,
+              "description": "Additional handler result fields not named by the contract."
+            },
+            "logpoints": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "additionalProperties": true,
+                "x-unreal-reflection-boundary": true
+              },
+              "description": "Each marked node as {nodeId, node (its title), graph, blueprintPath, runs (times it ran this play session), timeline}: timeline lists its newest runs as {t (game seconds), object (the actor or object it ran on), in {pin: value}, out {pin: value}} by pin name; out is present once the node has finished (a latent node still waiting keeps only in). Values are text as the property exports it, read through reroute knots; \"(not kept by the compiler)\" for a value the compiler folded away. Recorded in Play only: Simulate (settle_physics runs one) neither records nor empties them."
+            },
+            "cleared": {
+              "type": "number",
+              "description": "Marks removed."
+            },
+            "remaining": {
+              "type": "number",
+              "description": "Marks left."
+            }
+          },
+          "required": [
+            "success"
+          ],
+          "additionalProperties": false
+        }
+      },
+      "examples": [
+        {
+          "title": "Logpoints: mark Blueprint nodes (set) to record their pin values each time they run in Play without pausing it, read what they recorded (read), or remove marks (clear).",
+          "input": {
+            "action": "read_logpoints",
+            "blueprintPath": "/Game/BP_Door",
+            "last": 5,
+            "logpointOp": "read"
+          },
+          "output": {
+            "success": true,
+            "message": "1 mark(s) read.",
+            "logpoints": [
+              {
+                "nodeId": "3FA9C1D2E4B5A6978877665544332211",
+                "node": "Branch",
+                "graph": "EventGraph",
+                "blueprintPath": "/Game/BP_Door",
+                "runs": 3,
+                "timeline": [
+                  {
+                    "t": 4.512,
+                    "object": "BP_Door_C_1",
+                    "in": {
+                      "Condition": "false"
+                    }
+                  }
+                ]
+              }
+            ]
+          }
+        }
+      ],
+      "availability": {
+        "requiredPlugins": [],
+        "editorStates": [
+          "edit",
+          "pie",
+          "simulate"
+        ]
+      },
+      "behavior": {
+        "effect": "read",
+        "idempotency": "idempotent",
+        "longRunning": false,
+        "safeToRetry": true
+      },
+      "policy": {
+        "requiredScope": "read",
+        "consent": "none",
+        "dataAccess": "project-read"
+      },
+      "cost": {
+        "latency": "instant",
+        "resources": "low"
+      },
+      "routing": {
+        "parentTool": "inspect",
+        "dispatchAction": "read_logpoints",
+        "dispatchBy": {
+          "param": "logpointOp",
+          "actions": {
+            "set": "set_logpoints",
+            "read": "read_logpoints",
+            "clear": "clear_logpoints"
+          },
+          "declaredBy": {
+            "maxHits": [
+              "set"
+            ],
+            "last": [
+              "read"
+            ]
+          },
+          "requires": {
+            "set_logpoints": {
+              "required": [
+                "blueprintPath",
+                "nodeIds"
+              ]
+            }
+          }
+        }
+      },
+      "hashes": {
+        "algorithm": "sha256",
+        "schema": "51db1435777f528df424b8a68c4f1e1ddd97cbfe84890da5692dde584443ea6e",
+        "content": "ca01d8c2d7cb8ebba2c2c808799e0d9e350f2135f8cd10688f271314ad082b04"
       }
     },
     {

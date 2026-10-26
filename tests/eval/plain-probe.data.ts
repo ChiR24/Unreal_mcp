@@ -668,4 +668,7 @@ export const PLAIN_PROBE: readonly PlainProbeCase[] = [
   { query: 'settle actors', accepted: ['control_actor.settle_physics'] },
   { query: 'drop crates', accepted: ['control_actor.settle_physics'] },
   { query: 'is this stack stable', accepted: ['control_actor.settle_physics'] },
+  { query: 'breakpoint', accepted: ['inspect.read_logpoints'] },
+  { query: 'record pin values', accepted: ['inspect.read_logpoints'] },
+  { query: 'print the value of a blueprint node during play', accepted: ['inspect.read_logpoints'] },
 ];

@@ -4,7 +4,7 @@
 
 # Action reference
 
-Catalog revision: `cbb2b1f5e459cc03`
+Catalog revision: `be6a32a9a2ffd0b2`
 
 Both transports expose exactly ONE public MCP tool, `unreal`, with the four
 operations `search` / `describe` / `execute` / `configure`. The parent tools
@@ -13,7 +13,7 @@ by `tools/list` and a direct `tools/call` on one returns a
 `DIRECT_TOOL_CALL_REMOVED` receipt rather than executing
 (`src/server/gateway/direct-call-migration.ts`).
 
-The catalog declares 430 capabilities across
+The catalog declares 431 capabilities across
 23 internal parent tools.
 Every row is derived from the capability record that the gateway actually
 validates against, so `execute` cannot accept an action this table omits.
@@ -40,7 +40,7 @@ validates against, so `execute` cannot accept an action this table omits.
 | `build_environment` | 40 | 4 | 33 | 3 | environment |
 | `control_actor` | 29 | 9 | 18 | 2 | actor |
 | `control_editor` | 25 | 9 | 13 | 3 | editor |
-| `inspect` | 25 | 20 | 4 | 1 | inspect |
+| `inspect` | 26 | 21 | 4 | 1 | inspect |
 | `manage_ai` | 16 | 2 | 14 | 0 | manage ai |
 | `manage_asset` | 47 | 10 | 32 | 5 | asset, datatable, enum, material, struct, texture |
 | `manage_audio` | 14 | 3 | 11 | 0 | audio |
@@ -62,7 +62,7 @@ validates against, so `execute` cannot accept an action this table omits.
 
 ## Capabilities requiring consent
 
-67 of 430 capabilities require consent.
+67 of 431 capabilities require consent.
 
 | Capability | Tool | Action | Effect | Consent |
 | --- | --- | --- | --- | --- |
@@ -346,6 +346,7 @@ validates against, so `execute` cannot accept an action this table omits.
 | `inspect.query_object` | `inspect` | `control_actor` | read | read | none | `inspect.query_object` `inspect.list_objects` `inspect.find_by_tag` `inspect.get_metadata` `inspect.get_bounding_box` `inspect.export` |
 | `inspect.raycast_mesh` | `inspect` | `raycast_mesh` | read | read | none | `inspect.raycast_mesh` |
 | `inspect.raycast_world` | `inspect` | `raycast_world` | read | read | none | `inspect.raycast_world` |
+| `inspect.read_logpoints` | `inspect` | `read_logpoints` | read | read | none | `inspect.read_logpoints` `inspect.set_logpoints` `inspect.clear_logpoints` |
 | `inspect.runtime_report` | `inspect` | `runtime_report` | read | read | none | `inspect.runtime_report` `inspect.pie_report` |
 | `inspect.set_component_property` | `inspect` | `control_actor` | write | write | none | `inspect.set_component_property` |
 | `inspect.set_property` | `inspect` | `set_property` | write | write | none | `inspect.set_property` |

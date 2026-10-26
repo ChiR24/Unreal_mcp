@@ -7234,6 +7234,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "boolean",
           "description": "Also return the frame (at most 960 px wide) with each actor listed under actors boxed in its own colour and numbered from 1 in list order, as an image (imageBase64)."
         },
+        "last": {
+          "type": "number",
+          "description": "How many of each node's newest runs to list (1-500, default 20)."
+        },
         "limit": {
           "type": "number",
           "description": "Maximum objects to return (default 100)."
@@ -7275,6 +7279,16 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           ],
           "description": "Camera location {x, y, z} in cm; omitted, the viewport's current one. The camera stays there afterwards, as describe_view leaves it."
         },
+        "logpointOp": {
+          "type": "string",
+          "enum": [
+            "set",
+            "read",
+            "clear"
+          ],
+          "description": "Which read logpoints variant to run; omit for 'read'.\nset: Mark Blueprint nodes to record the values on their pins each time they run in Play, without pausing the game: a print statement that changes no graph. Before Play or during it; each play session starts the timelines empty. Read them with logpointOp=read. Marks last until logpointOp=clear or the editor closes; at most 32 at once.\nread: Read what marked Blueprint nodes recorded in Play: for each node its runs and newest values, input and output pins by name, with the game time and the object it ran on. Readable during Play and after it stops, until the next play session starts.\nclear: Remove logpoint marks: all of them, those of one Blueprint, or chosen nodes. With none left, nothing listens to the running game any more.",
+          "default": "read"
+        },
         "lookup": {
           "type": "string",
           "enum": [
@@ -7290,6 +7304,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "boolean",
           "description": "Default true: mark the package dirty and save an asset package. false leaves the package untouched and unsaved, so the change lives in memory only."
         },
+        "maxHits": {
+          "type": "number",
+          "description": "How many of each node's newest runs are kept (1-500, default 100); runs counts them all."
+        },
         "meshPath": {
           "type": "string",
           "description": "Static mesh asset path, e.g. /Game/Meshes/SM_Rock. Its source triangles (LOD 0 as imported or built) are checked, so a Nanite mesh answers at full detail. A placed actor's mesh is named by get_components."
@@ -7297,6 +7315,15 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "name": {
           "type": "string",
           "description": "Actor name identifier (alias of actorName)."
+        },
+        "nodeIds": {
+          "type": "array",
+          "maxItems": 32,
+          "minItems": 0,
+          "description": "Nodes by id: the GUID edit_graph and get_graph_details give, or the tag read_graph_as_code prints (n + the GUID's first hex digits, as n3fa9c1).",
+          "items": {
+            "type": "string"
+          }
         },
         "objectKind": {
           "type": "string",
@@ -7685,7 +7712,8 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             "get_editor_state",
             "changes_since",
             "get_stats",
-            "explain"
+            "explain",
+            "read_logpoints"
           ],
           "description": "Action to invoke on inspect."
         }
@@ -7898,6 +7926,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "classPath": {
           "type": "string",
           "description": "Full /Script class path of the inspected object."
+        },
+        "cleared": {
+          "type": "number",
+          "description": "Marks removed."
         },
         "closed": {
           "type": "boolean",
@@ -8364,6 +8396,15 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "x-unreal-reflection-boundary": true,
           "description": "World location as {x, y, z}."
         },
+        "logpoints": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": true,
+            "x-unreal-reflection-boundary": true
+          },
+          "description": "Each marked node as {nodeId, node (its title), graph, blueprintPath, runs (times it ran this play session), timeline}: timeline lists its newest runs as {t (game seconds), object (the actor or object it ran on), in {pin: value}, out {pin: value}} by pin name; out is present once the node has finished (a latent node still waiting keeps only in). Values are text as the property exports it, read through reroute knots; \"(not kept by the compiler)\" for a value the compiler folded away. Recorded in Play only: Simulate (settle_physics runs one) neither records nor empties them."
+        },
         "materialRebuilt": {
           "type": "boolean",
           "description": "True when the target lives inside a material or material function (a material expression such as a TextureObjectParameter, as <material>.<material>:<nodeName>) and that material was rebuilt, so its parameter lists, which every material instance reads, show the write at once (a new ParameterName, a new default Texture). Absent for any other target."
@@ -8663,6 +8704,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             "type": "string"
           },
           "description": "The distinct warnings and errors logged in the last minute (\"3x Category: message\"), at most 10, a Blueprint runtime error first with the node that raised it."
+        },
+        "remaining": {
+          "type": "number",
+          "description": "Marks left."
         },
         "renderThreadMs": {
           "type": "number",

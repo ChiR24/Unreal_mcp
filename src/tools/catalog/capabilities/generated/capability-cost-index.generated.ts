@@ -416,6 +416,7 @@ export const CAPABILITY_COST_INDEX: Readonly<Record<string, string>> = {
   "inspect::capture_passes": "interactive|low",
   "inspect::changes_since": "instant|low",
   "inspect::check_mesh": "interactive|low",
+  "inspect::clear_logpoints": "instant|low",
   "inspect::contact_sheet": "interactive|low",
   "inspect::control_actor": "interactive|low",
   "inspect::create_snapshot": "interactive|low",
@@ -464,9 +465,11 @@ export const CAPABILITY_COST_INDEX: Readonly<Record<string, string>> = {
   "inspect::query_object": "interactive|low",
   "inspect::raycast_mesh": "instant|low",
   "inspect::raycast_world": "instant|low",
+  "inspect::read_logpoints": "instant|low",
   "inspect::restore_snapshot": "interactive|low",
   "inspect::runtime_report": "instant|low",
   "inspect::set_component_property": "interactive|low",
+  "inspect::set_logpoints": "instant|low",
   "inspect::set_property": "interactive|low",
   "manage_ai::add_ai_perception_component": "interactive|medium",
   "manage_ai::add_blackboard_key": "interactive|medium",
@@ -1624,4 +1627,4 @@ export const CAPABILITY_COST_INDEX: Readonly<Record<string, string>> = {
   "system_control::write_snapshot": "interactive|medium"
 };
 
-export const CAPABILITY_COST_INDEX_KEY_COUNT = 1611;
+export const CAPABILITY_COST_INDEX_KEY_COUNT = 1614;

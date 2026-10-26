@@ -55,4 +55,9 @@ export const INSPECT_FOLDS: readonly FoldSpec[] = [
     topics: ['why does nothing happen', 'explain', 'diagnose', 'why not working', 'troubleshoot', 'root cause'],
     members: { collision: 'explain_collision', visible: 'explain_visible', input: 'explain_input', widget: 'explain_widget', audible: 'explain_audible', lit: 'explain_lit' },
   },
+  {
+    primary: 'read_logpoints', selector: 'logpointOp',
+    summary: 'Logpoints: mark Blueprint nodes (set) to record their pin values each time they run in Play without pausing it, read what they recorded (read), or remove marks (clear).',
+    members: { set: 'set_logpoints', read: 'read_logpoints', clear: 'clear_logpoints' },
+  },
 ];
