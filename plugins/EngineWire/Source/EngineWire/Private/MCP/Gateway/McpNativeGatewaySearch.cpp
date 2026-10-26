@@ -286,8 +286,9 @@ TSharedPtr<FJsonObject> McpGatewaySearchCapabilities(
 		Out->SetObjectField(TEXT("nextCall"), GatewayBuildNextCall(TEXT("describe"), FString(), FString(), FString()));
 	}
 	// Saved recipes (system_control save_recipe) the request names, on an unfiltered first page (McpRecipesSearch.cpp).
+	// They are project data, so only for a caller list_recipes would answer (Read scope or Admin).
 	const bool bFiltered = bExact || Input.bHasDomain || Input.bHasFamily || Input.bHasTool || Input.bHasAction || Input.bHasEffect;
-	const TArray<TSharedPtr<FJsonValue>> Recipes = bFiltered || Offset > 0 ? TArray<TSharedPtr<FJsonValue>>() : McpRecipes::SearchRows(ContentWords, 3);
+	const TArray<TSharedPtr<FJsonValue>> Recipes = !Input.bMayReadProject || bFiltered || Offset > 0 ? TArray<TSharedPtr<FJsonValue>>() : McpRecipes::SearchRows(ContentWords, 3);
 	if (Recipes.Num() > 0) Out->SetArrayField(TEXT("recipes"), Recipes);
 	if (Input.Coercions.Num() > 0) Out->SetArrayField(TEXT("coercions"), Input.Coercions);
 	return Out;

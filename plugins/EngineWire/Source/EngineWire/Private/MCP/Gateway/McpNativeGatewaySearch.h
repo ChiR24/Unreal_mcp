@@ -41,6 +41,8 @@ struct FMcpDiscoveryQuery
 	int32 Limit = 12;
 	int32 Offset = 0;
 	int32 MaxBytes = 0; // 0 -> McpMaxResultBytes; the schema accepted maxBytes but native ignored it (dogfood #3)
+	/** search: the caller may read project data (Read scope or Admin), so saved recipes are listed as list_recipes would. */
+	bool bMayReadProject = false;
 	/** search: each sent integer that was clamped, {parameter, requested, applied, reason} as in gateway-shared.ts. */
 	TArray<TSharedPtr<FJsonValue>> Coercions;
 };

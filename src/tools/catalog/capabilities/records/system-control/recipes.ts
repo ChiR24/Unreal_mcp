@@ -17,7 +17,7 @@ export const RECIPE_RECORDS: readonly CapabilityRecordSource[] = [
     summary: 'Keep a run_script script in the project as a named recipe with parameters, so a later call (or another agent) runs it as one checked call with run_recipe. The script is checked as run_script checks one, its parameters bound by name (each a variable the script reads); nothing runs at save time. destructive lists the destructive capabilities it calls, as run_script takes them, and run_recipe\'s consent covers exactly those. A taken name is refused (RECIPE_EXISTS) unless overwrite is true. Stored under Saved/EngineWire/Recipes/<name>.json.',
     whenToUse: [
       'A sequence of calls worked and will be needed again with other values: save it, then run_recipe.',
-      'Search lists a saved recipe beside the capabilities (its recipes field) when its name and summary name the words of the request: write the summary as a caller would ask for the task.',
+      'Search lists a saved recipe beside the capabilities (its recipes field, for a caller that may read the project) when its name and summary name the words of the request: write the summary as a caller would ask for the task.',
     ],
     whenNotToUse: ['Running a script once: run_script.'],
     inputProps: {

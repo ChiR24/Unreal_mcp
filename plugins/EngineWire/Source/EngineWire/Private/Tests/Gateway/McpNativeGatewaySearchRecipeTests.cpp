@@ -1,5 +1,6 @@
 // McpNativeGatewaySearchRecipeTests.cpp — search lists a saved recipe whose name and summary name the request's words,
-// beside the capabilities, on an unfiltered first page only (McpNativeGatewaySearch.cpp, Domains/Scripts/McpRecipesSearch.cpp).
+// beside the capabilities, on an unfiltered first page and for a caller that may read the project only
+// (McpNativeGatewaySearch.cpp, Domains/Scripts/McpRecipesSearch.cpp).
 
 #include "MCP/Gateway/McpNativeGatewaySearch.h"
 #include "Domains/Scripts/McpRecipes.h"
@@ -13,12 +14,13 @@
 
 namespace
 {
-/** How many recipe rows a search lists, and the first one's name. */
-int32 RecipeSearchTestRows(const TCHAR* Query, const TCHAR* Tool, int32 Offset, FString& OutFirst)
+/** How many recipe rows a search lists, and the first one's name; bRead is whether the caller may read the project. */
+int32 RecipeSearchTestRows(const TCHAR* Query, const TCHAR* Tool, int32 Offset, FString& OutFirst, bool bRead = true)
 {
 	FMcpDiscoveryQuery Input;
 	Input.Query = Query;
 	Input.Offset = Offset;
+	Input.bMayReadProject = bRead;
 	Input.bHasTool = Tool != nullptr;
 	Input.Tool = Tool != nullptr ? Tool : TEXT("");
 	const TSharedPtr<FJsonObject> Out =
@@ -58,6 +60,7 @@ bool FMcpNativeSearchRecipeTest::RunTest(const FString& Parameters)
 	TestEqual(TEXT("the one word asked for does"), RecipeSearchTestRows(TEXT("zzqpallet"), nullptr, 0, First), 1);
 	TestEqual(TEXT("not under a filter"), RecipeSearchTestRows(TEXT("stack the zzqcrates"), TEXT("system_control"), 0, First), 0);
 	TestEqual(TEXT("not past the first page"), RecipeSearchTestRows(TEXT("stack the zzqcrates"), nullptr, 5, First), 0);
+	TestEqual(TEXT("not for a caller without the read scope"), RecipeSearchTestRows(TEXT("stack the zzqcrates"), nullptr, 0, First, false), 0);
 	IFileManager::Get().Delete(*Path);
 	TestEqual(TEXT("gone once removed"), RecipeSearchTestRows(TEXT("stack the zzqcrates"), nullptr, 0, First), 0);
 	return true;

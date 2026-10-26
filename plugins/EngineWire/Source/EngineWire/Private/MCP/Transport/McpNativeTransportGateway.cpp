@@ -101,6 +101,8 @@ void FMcpNativeTransport::HandleGatewayCall(
 		DiscoveryQuery.Limit = McpSearchDefaultLimit;
 		ReadBounded(TEXT("limit"), 1, McpSearchMaxLimit, DiscoveryQuery.Limit);
 		ReadBounded(TEXT("maxBytes"), 512, 262144, DiscoveryQuery.MaxBytes);
+		// Saved recipes ride on search only for a caller that may read them (Write does not imply Read).
+		DiscoveryQuery.bMayReadProject = GetSessionPrincipal(SessionId).IsScopeAuthorized(EMcpCapabilityScope::Read);
 		SendDiscoveryResult(McpGatewaySearchCapabilities(DiscoveryQuery, CapabilityStore, IsToolEnabled));
 		return;
 	}
