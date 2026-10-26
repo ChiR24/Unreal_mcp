@@ -1145,6 +1145,20 @@ describe('simulated keys and focused PIE widgets', () => {
     const routing = code('ControlEditor', 'McpEditorInputRouting.cpp');
     expect(routing).toMatch(/bRoutedToPIE = RouteKeyToFocusedPieWidgetForMcp\(InputKey, InputEvent, bHandledBySlate, FocusNote\) \|\|\s*RouteKeyToPIEForMcp\(InputKey, InputEvent, bHandledByPIE\);/u);
   });
+
+  // A key no play session took went to the focused editor panel, sample_motion's inputs (declared read) too, where
+  // Delete or End runs that panel's command; a key held into the game and released after Stop let go there as well.
+  it('hands a key to the editor only when the caller allows it, never from sample_motion or a game key\'s release', () => {
+    expect(code('ControlEditor', 'McpEditorInputRouting.cpp')).toContain('if (!bRoutedToPIE && bEditorFallback) {');
+    expect(code('ControlEditor', 'McpEditorSupport.h')).toContain('FString &Message, bool bEditorFallback = true);');
+    const motion = code('ControlActor', 'McpActorMotionInputs.cpp');
+    expect(motion).toContain('MakeShared<FJsonObject>(), bOk, bRouted, bPIE, bSlate, Message, false);');
+    expect(motion).toContain('Input.bRouted = McpSendMotionKey(Input.Key, true);');
+    expect(motion).toContain('Entry->SetBoolField(TEXT("routedToPIE"), false);');
+    const input = code('ControlEditor', 'McpEditorInput.cpp');
+    expect(input).toContain('SimulateEditorInputForMcp(TEXT("key_up"), Key, Payload, bOk, bRouted, bPIE, bSlate, Unused, !bPressRouted);');
+    expect(input).toContain('ScheduleKeyReleaseForMcp(Key, HoldSeconds, Payload, bRoutedToPIE);');
+  });
 });
 
 describe('Blueprints that depend on a changed Widget Blueprint', () => {

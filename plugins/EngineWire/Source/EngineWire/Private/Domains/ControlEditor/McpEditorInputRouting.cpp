@@ -127,10 +127,9 @@ bool RouteKeyToPIEForMcp(const FKey &InputKey, const EInputEvent InputEvent,
   return RouteKeyToPlayerController();
 }
 
-void SimulateKeyInputForMcp(const FString &Key, const EInputEvent InputEvent,
-                            const TCHAR *Verb, bool &bSuccess,
-                            bool &bRoutedToPIE, bool &bHandledByPIE,
-                            bool &bHandledBySlate, FString &Message) {
+void SimulateKeyInputForMcp(const FString &Key, const EInputEvent InputEvent, const TCHAR *Verb, bool bEditorFallback,
+                            bool &bSuccess, bool &bRoutedToPIE, bool &bHandledByPIE, bool &bHandledBySlate,
+                            FString &Message) {
   if (Key.IsEmpty()) {
     Message =
         InputEvent == IE_Released ? TEXT("Key parameter required for key_up")
@@ -148,7 +147,9 @@ void SimulateKeyInputForMcp(const FString &Key, const EInputEvent InputEvent,
   FString FocusNote;
   bRoutedToPIE = RouteKeyToFocusedPieWidgetForMcp(InputKey, InputEvent, bHandledBySlate, FocusNote) ||
                  RouteKeyToPIEForMcp(InputKey, InputEvent, bHandledByPIE);
-  if (!bRoutedToPIE) {
+  // Without the fallback a key no play session took goes nowhere: Delete or End on a focused editor panel runs
+  // that panel's command, which a caller driving the game never asked for.
+  if (!bRoutedToPIE && bEditorFallback) {
     FSlateApplication &SlateApp = FSlateApplication::Get();
     FKeyEvent KeyEvent(InputKey, FModifierKeysState(), 0, false, 0, 0);
     bHandledBySlate = InputEvent == IE_Released
@@ -201,19 +202,15 @@ FString NormalizeSimulatedInputTypeForMcp(const TSharedPtr<FJsonObject> &Payload
   return InputType;
 }
 
-void SimulateEditorInputForMcp(const FString &InputType, const FString &Key,
-                               const TSharedPtr<FJsonObject> &Payload,
-                               bool &bSuccess, bool &bRoutedToPIE,
-                               bool &bHandledByPIE, bool &bHandledBySlate,
-                               FString &Message) {
+void SimulateEditorInputForMcp(const FString &InputType, const FString &Key, const TSharedPtr<FJsonObject> &Payload,
+                               bool &bSuccess, bool &bRoutedToPIE, bool &bHandledByPIE, bool &bHandledBySlate,
+                               FString &Message, bool bEditorFallback) {
   if (InputType == TEXT("key_down") || InputType == TEXT("keydown")) {
-    SimulateKeyInputForMcp(Key, IE_Pressed, TEXT("Key down"), bSuccess,
-                           bRoutedToPIE, bHandledByPIE, bHandledBySlate,
-                           Message);
+    SimulateKeyInputForMcp(Key, IE_Pressed, TEXT("Key down"), bEditorFallback, bSuccess, bRoutedToPIE, bHandledByPIE,
+                           bHandledBySlate, Message);
   } else if (InputType == TEXT("key_up") || InputType == TEXT("keyup")) {
-    SimulateKeyInputForMcp(Key, IE_Released, TEXT("Key up"), bSuccess,
-                           bRoutedToPIE, bHandledByPIE, bHandledBySlate,
-                           Message);
+    SimulateKeyInputForMcp(Key, IE_Released, TEXT("Key up"), bEditorFallback, bSuccess, bRoutedToPIE, bHandledByPIE,
+                           bHandledBySlate, Message);
   } else if (InputType == TEXT("mouse_click") || InputType == TEXT("click")) {
     double X = 0, Y = 0;
     Payload->TryGetNumberField(TEXT("x"), X);

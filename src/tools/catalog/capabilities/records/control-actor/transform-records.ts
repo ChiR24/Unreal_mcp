@@ -244,7 +244,7 @@ export const TRANSFORM_RECORDS: readonly CapabilityRecordSource[] = [
             required: ['key'],
             additionalProperties: false,
           },
-          description: 'Keys pressed and released at exact game times during the run (at most 32), e.g. [{"key":"D","atSeconds":0,"holdSeconds":2},{"key":"SpaceBar","atSeconds":0.6,"holdSeconds":0.2}]. A key still held when the run ends is released.',
+          description: 'Keys pressed and released at exact game times during the run (at most 32), e.g. [{"key":"D","atSeconds":0,"holdSeconds":2},{"key":"SpaceBar","atSeconds":0.6,"holdSeconds":0.2}]. A key still held when the run ends is released. Keys go to the game only (a focused game widget, else its viewport and player), never to an editor panel: a key no play session takes is sent nowhere and marked routedToPIE false, and a release after Play stopped is dropped.',
         },
         points: {
           type: 'array', items: { type: 'string' }, maxItems: 8,
@@ -286,7 +286,7 @@ export const TRANSFORM_RECORDS: readonly CapabilityRecordSource[] = [
         endedBecause: { type: 'string', description: 'duration, realTimeCap, sampleCap, actorDestroyed (the actor was destroyed while its level kept running), levelChanged (the game loaded a level and PIE runs on in it: a death that reloads the level, or travel to the next one), worldEnded (PIE stopped), startWhenTimeout (startWhen never happened within maxWaitSeconds), spawnTimeout (spawnOf: nothing of the class spawned within spawnWaitSeconds) or gamePaused (game time stood still for 3 s: a title or pause menu holds the game; the warning says how to get past it).' },
         inputsApplied: {
           type: 'array', items: { type: 'object', additionalProperties: true, 'x-unreal-reflection-boundary': true },
-          description: 'One entry per input: key, at, hold, and down/up, the game seconds since the start when it was pressed and released (up is when the run ended for a key still held).',
+          description: 'One entry per input: key, at, hold, and down/up, the game seconds since the start when it was pressed and released (up is when the run ended for a key still held); routedToPIE false when no play session took the key, which then went nowhere.',
         },
         waitedSeconds: { type: 'number', description: 'Game seconds spent waiting for startWhen before the run began, or for a spawnOf spawn that never came.' },
         start: { type: 'array', items: { type: 'number' }, description: 'First sampled location.' },

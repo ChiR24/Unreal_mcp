@@ -71,11 +71,13 @@ bool RefuseCameraMoveWhilePieFollowsPawnForMcp(UEngineWireSubsystem *Bridge,
                                                const FString &RequestId, const TCHAR *What);
 FString NormalizeSimulatedInputTypeForMcp(
     const TSharedPtr<FJsonObject> &Payload);
+// bEditorFallback false: a key no play session takes is sent nowhere (bRoutedToPIE false) instead of to the editor
+// widget with keyboard focus.
 void SimulateEditorInputForMcp(const FString &InputType, const FString &Key,
                                const TSharedPtr<FJsonObject> &Payload,
                                bool &bSuccess, bool &bRoutedToPIE,
                                bool &bHandledByPIE, bool &bHandledBySlate,
-                               FString &Message);
+                               FString &Message, bool bEditorFallback = true);
 void AddInputPawnForMcp(const TSharedPtr<FJsonObject> &Resp);
 // widget_list / widget_click: drive the PIE session's live UMG by reflection
 // instead of the OS cursor. Fills Resp and returns whether the call succeeded.

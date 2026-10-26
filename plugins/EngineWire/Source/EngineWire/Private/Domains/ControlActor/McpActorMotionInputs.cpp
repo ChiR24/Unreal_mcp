@@ -14,12 +14,15 @@ namespace {
 constexpr int32 McpMaxMotionInputs = 32;
 
 // The same path simulate_input takes, so a key that moves the pawn there
-// moves it here.
-void McpSendMotionKey(const FString &Key, bool bDown) {
+// moves it here, but into the game only: a key no play session took is not
+// handed to the focused editor panel (false), and a release after Play
+// stopped goes nowhere.
+bool McpSendMotionKey(const FString &Key, bool bDown) {
   bool bOk = false, bRouted = false, bPIE = false, bSlate = false;
   FString Message;
   SimulateEditorInputForMcp(bDown ? TEXT("key_down") : TEXT("key_up"), Key,
-                            MakeShared<FJsonObject>(), bOk, bRouted, bPIE, bSlate, Message);
+                            MakeShared<FJsonObject>(), bOk, bRouted, bPIE, bSlate, Message, false);
+  return bRouted;
 }
 
 // "True" and "true" are one bool, and 3 and "3.000000" one number.
@@ -155,6 +158,14 @@ FString McpGamePausedWarning(const UWorld *World) {
 // alone read like a level that blocks the way, so the reply says it.
 FString McpIgnoredInputsWarning(const AActor *Actor, const TArray<FMcpMotionInput> &Inputs, int32 SampleCount,
                                 const FBox &Extent) {
+  // Before the pawn check: a play world with no player is exactly where a key finds nothing to take it.
+  const FMcpMotionInput *Lost = Inputs.FindByPredicate([](const FMcpMotionInput &Input) { return Input.DownAt >= 0.0 && !Input.bRouted; });
+  if (Lost) {
+    return FString::Printf(TEXT("%s never reached the game (inputsApplied marks each such key routedToPIE false): "
+                                "the play world has no player controller and its viewport did not take the key. It "
+                                "was not sent to the editor either."),
+                           *Lost->Key);
+  }
   const APawn *Pawn = Cast<APawn>(Actor);
   if (Inputs.Num() == 0 || SampleCount < 2 || !Pawn || !Pawn->IsPlayerControlled() || Extent.GetSize().GetMax() > 1.0) {
     return FString();
@@ -204,7 +215,7 @@ void McpApplyMotionInputs(TArray<FMcpMotionInput> &Inputs, double Elapsed, bool 
   for (FMcpMotionInput &Input : Inputs) {
     if (!bRunEnded && Input.DownAt < 0.0 && Elapsed >= Input.At) {
       Input.Focused = FocusedPieWidgetForMcp();
-      McpSendMotionKey(Input.Key, true);
+      Input.bRouted = McpSendMotionKey(Input.Key, true);
       Input.DownAt = Elapsed;
       Input.DownFrame = GFrameCounter;
     }
@@ -225,6 +236,9 @@ TArray<TSharedPtr<FJsonValue>> McpMotionInputsJson(const TArray<FMcpMotionInput>
     Entry->SetNumberField(TEXT("hold"), McpRoundMs(Input.Hold));
     if (Input.DownAt >= 0.0) {
       Entry->SetNumberField(TEXT("down"), McpRoundMs(Input.DownAt));
+      if (!Input.bRouted) {
+        Entry->SetBoolField(TEXT("routedToPIE"), false);
+      }
     }
     if (Input.UpAt >= 0.0) {
       Entry->SetNumberField(TEXT("up"), McpRoundMs(Input.UpAt));

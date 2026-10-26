@@ -36,9 +36,10 @@ void CancelKeyReleaseForMcp(const FString &Key) {
 
 // Game seconds in PIE, like the action hold; wall seconds for an editor key.
 // A PIE world that reloaded or stopped releases at once instead of timing the
-// hold against a fresh clock.
-void ScheduleKeyReleaseForMcp(const FString &Key, double HoldSeconds,
-                              const TSharedPtr<FJsonObject> &Payload) {
+// hold against a fresh clock. The release goes where the press went: a key pressed into the game is never let go
+// into the editor panel that has focus once Play has stopped.
+void ScheduleKeyReleaseForMcp(const FString &Key, double HoldSeconds, const TSharedPtr<FJsonObject> &Payload,
+                              bool bPressRouted) {
   CancelKeyReleaseForMcp(Key);
   UWorld *World = GEditor != nullptr ? GEditor->PlayWorld.Get() : nullptr;
   const TWeakObjectPtr<UWorld> HoldWorld(World);
@@ -52,7 +53,7 @@ void ScheduleKeyReleaseForMcp(const FString &Key, double HoldSeconds,
   const uint64 MinReleaseFrame = GFrameCounter + 2;
   McpKeyReleases().Add(Key, FTSTicker::GetCoreTicker().AddTicker(
       FTickerDelegate::CreateLambda([Key, Payload, HoldWorld, bGameTime, EndGameTime, EndHoldWall,
-                                     EndWallTime, MinReleaseFrame](float) -> bool {
+                                     EndWallTime, MinReleaseFrame, bPressRouted](float) -> bool {
         UWorld *Live = GEditor != nullptr ? GEditor->PlayWorld.Get() : nullptr;
         const bool bWorldGone = bGameTime && (Live == nullptr || Live != HoldWorld.Get());
         // The game's own pause (a title or pause menu) keeps game time still, so a key tapped on its menu stayed
@@ -71,7 +72,7 @@ void ScheduleKeyReleaseForMcp(const FString &Key, double HoldSeconds,
         McpKeyReleases().Remove(Key);
         bool bOk = false, bRouted = false, bPIE = false, bSlate = false;
         FString Unused;
-        SimulateEditorInputForMcp(TEXT("key_up"), Key, Payload, bOk, bRouted, bPIE, bSlate, Unused);
+        SimulateEditorInputForMcp(TEXT("key_up"), Key, Payload, bOk, bRouted, bPIE, bSlate, Unused, !bPressRouted);
         return false;
       }),
       0.0f));
@@ -278,7 +279,7 @@ bool UEngineWireSubsystem::HandleControlEditorSimulateInput(
     SimulateEditorInputForMcp(bTap ? FString(TEXT("key_down")) : InputType, Key, Payload,
                               bSuccess, bRoutedToPIE, bHandledByPIE, bHandledBySlate, Message);
     if (bSuccess && bPress && HoldSeconds > 0.0) {
-      ScheduleKeyReleaseForMcp(Key, HoldSeconds, Payload);
+      ScheduleKeyReleaseForMcp(Key, HoldSeconds, Payload, bRoutedToPIE);
       // The release is scheduled, not waited for: this reply leaves with the key still down.
       const UWorld *PlayWorld = GEditor->PlayWorld.Get();
       Message += PlayWorld && PlayWorld->bDebugPauseExecution
