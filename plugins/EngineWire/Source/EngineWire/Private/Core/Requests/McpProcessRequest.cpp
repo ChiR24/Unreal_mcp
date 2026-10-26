@@ -308,3 +308,24 @@ bool UEngineWireSubsystem::RunHandlerInProcess(const FString &RequestId, const F
   const FAutomationHandler *Handler = AutomationHandlers.Find(Action);
   return Handler && (*Handler)(RequestId, Action, Payload, Socket);
 }
+
+void UEngineWireSubsystem::RunLatentReply(const FString &RequestId, const FString &Action, TFunctionRef<void()> Work) {
+  if (bProcessingAutomationRequest) {
+    Work(); // inside a dispatch already: its brackets are open, and opening them again would end them
+    return;
+  }
+  // As for a dispatch: a dialog the edit raises answers its default instead of blocking the game thread.
+  TGuardValue<bool> UnattendedScriptGuard(GIsRunningUnattendedScript, true);
+  bProcessingAutomationRequest = true;
+  BeginErrorCapture();
+  McpChangeWatch::Begin(RequestId);
+  McpUndoLedger::Begin(RequestId);
+  McpChangeJournal::BeginRequest(RequestId, Action);
+  Work();
+  McpUndoLedger::Flush();
+  EndErrorCapture();
+  McpChangeWatch::End();
+  McpUndoLedger::End();
+  McpChangeJournal::EndRequest();
+  bProcessingAutomationRequest = false;
+}

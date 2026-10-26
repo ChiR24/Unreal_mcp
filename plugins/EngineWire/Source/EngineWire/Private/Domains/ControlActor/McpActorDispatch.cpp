@@ -3,6 +3,7 @@
 #include "Domains/ControlActor/Placement/McpCoplanarFaces.h"
 #include "Domains/ControlActor/Placement/Fix/McpPlacementFix.h"
 #include "Domains/ControlActor/Relations/McpRelations.h"
+#include "Domains/Play/McpSettle.h"
 
 bool UEngineWireSubsystem::HandleControlActorAction(
     const FString &RequestId, const FString &Action,
@@ -148,6 +149,9 @@ bool UEngineWireSubsystem::HandleControlActorAction(
   if (LowerSub == TEXT("arrange_by_relations"))
     return McpRelations::HandleArrangeByRelations(this, RequestId, Payload, RequestingSocket,
                                                   [this](const FString &Name) { return FindActorByName(Name, true); });
+  if (LowerSub == TEXT("settle_physics"))
+    return McpSettle::Handle(*this, RequestId, Payload, RequestingSocket,
+                             [this](const FString &Name) { return FindActorByName(Name, true); });
   if (LowerSub == TEXT("set_property"))
     return HandleSetObjectProperty(RequestId, TEXT("set_object_property"), Payload, RequestingSocket);
   if (LowerSub == TEXT("get_property"))

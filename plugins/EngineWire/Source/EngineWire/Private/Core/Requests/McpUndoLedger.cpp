@@ -192,7 +192,7 @@ void Describe(const FString& RequestId, const TSharedPtr<FJsonObject>& Result)
 {
     UTransBuffer* Trans = GBound.Get();
     // A transaction still open records until it closes, and a reply sent after its handler returned (deferred) is
-    // past End: what such a call leaves on the stack is not known here.
+    // past End, unless it runs inside RunLatentReply: what such a call leaves on the stack is not known here.
     if (!GRecording || !Trans || !Result.IsValid() || RequestId != GRequestId || Trans->IsActive())
     {
         return;

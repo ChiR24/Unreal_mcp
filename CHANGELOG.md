@@ -23,7 +23,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **`inspect explain`** says why something does not happen and names the call that fixes it.
 - **A call failing three times unchanged is refused** (`REPEATED_FAILURE`).
 - **Batches check every step first**; `build_graph`, `build_material_graph` and `add_widget_tree` take `dryRun`; **`run_script`** runs many calls with loops and conditions in one request, rolled back on a failure.
-- **`run_map_check`**, **`fix_placement`**, **`describe_relations`**, **`arrange_by_relations`**, **`playtest`** (a pawn walked to a goal in Play, judged with evidence), and execute's **`expect`/`require`**, checked after or before a call.
+- **`run_map_check`**, **`fix_placement`**, **`describe_relations`**, **`arrange_by_relations`**, **`playtest`** (a pawn walked to a goal in Play, judged with evidence), **`settle_physics`** (props dropped and kept where they come to rest), and execute's **`expect`/`require`**, checked after or before a call.
 - **`inspect changes_since`** and `ue://changes` subscriptions: what changed since a cursor, and by whom.
 
 </details>

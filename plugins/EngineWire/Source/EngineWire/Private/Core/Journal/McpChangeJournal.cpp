@@ -194,8 +194,7 @@ uint8 CurrentBy()
     {
         return JournalByMcp;
     }
-    // ponytail: a latent task that opens a transaction after its request ended reads as the user; tag latent work if
-    // that ever shows up.
+    // Latent work that edits after its request ended reads as mcp only inside UEngineWireSubsystem::RunLatentReply.
     return (GUndo || GIsTransacting) ? JournalByUser : JournalByEditor;
 }
 

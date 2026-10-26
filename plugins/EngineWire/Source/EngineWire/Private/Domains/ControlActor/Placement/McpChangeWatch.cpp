@@ -145,8 +145,8 @@ void Begin(const FString& RequestId)
     }
 }
 
-// ponytail: a reply sent after its handler returned (call_editor_tool, long tasks) carries no checks; keep a watch per
-// request id until that request's reply if a placing capability ever answers late.
+// A reply sent after its handler returned carries these checks only when its work runs inside
+// UEngineWireSubsystem::RunLatentReply (settle_physics); call_editor_tool and long tasks do not edit placement.
 void End()
 {
     FCoreUObjectDelegates::OnObjectModified.Remove(GWatchModifiedHandle);

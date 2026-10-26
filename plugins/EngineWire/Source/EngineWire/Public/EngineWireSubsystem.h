@@ -144,6 +144,9 @@ public:
   // checks: the caller has made them. False when no handler takes it.
   bool RunHandlerInProcess(const FString& RequestId, const FString& Action, const TSharedPtr<FJsonObject>& Payload,
                            TSharedPtr<FMcpBridgeWebSocket> Socket);
+  // Work that edits after its handler returned (a ticker) and then answers: run inside this, it gets the brackets a
+  // dispatch opens (error capture, change watch, undo ledger, journal), so its reply is enriched as a direct one is.
+  void RunLatentReply(const FString& RequestId, const FString& Action, TFunctionRef<void()> Work);
 
   struct FRequestErrorCapture
   {

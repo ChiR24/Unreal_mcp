@@ -4195,6 +4195,15 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
               "minItems": 1,
               "maxItems": 500,
               "description": "Many actors given the same change: the location, offset, rotation or scale beside it (forty frost caps rescaled by one scale, a group raised by one offset). Reported as actors is."
+            },
+            {
+              "type": "array",
+              "minItems": 1,
+              "maxItems": 64,
+              "items": {
+                "type": "string"
+              },
+              "description": "The actors to settle, by exact name (1-64). Each needs a root that is a body with physics collision (a static mesh with simple collision: the engine cubes and most props); a floor or landscape, an actor with Lock Actor Movement, an attached actor, or one whose root is no body comes back under skipped with the reason and stays put. A name that matches no actor refuses with ACTOR_NOT_FOUND (missing lists them); when none of them can fall it refuses with NOTHING_TO_SETTLE. Everything else in the level takes part in the simulation as it is (static actors are what the bodies land on)."
             }
           ],
           "description": "Actor names to act on (batch delete)."
@@ -4393,6 +4402,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             "set_properties"
           ],
           "description": "Which edit component variant to run.\nadd: Add a new component of a given type to an actor. If any requested property (or meshPath) does not apply, the call fails naming what did not, although the component was added.\nremove: Remove a component that was added to this actor (edit=add, or by hand in the editor), by its exact name, in one undo step, leaving the level unsaved. A near miss is refused with COMPONENT_NOT_FOUND naming the closest component; a component of the actor class or its Blueprint, or the root, is refused with COMPONENT_NOT_REMOVABLE (a Blueprint one comes out with edit_scs).\nset_property: Set one or more properties on a named actor component. For RelativeScale3D/RelativeLocation, note that a child inherits its parent's scale: Unreal multiplies parent and child scale COMPONENT-WISE in the child's own local axes, and rotation does NOT permute which axis each factor lands on. World size = ParentScale * ChildScale * MeshExtent per local axis, and world offset = ParentScale * RelativeLocation. Under a parent scaled non-uniformly, divide the offset you want by the parent scale on that axis.\nset_properties: Alias of edit=set_property. The bridge dispatches both names to the same handler."
+        },
+        "fallCm": {
+          "type": "number",
+          "description": "A body that ends more than this many cm below its START height fell (10-100000, default 500), measured from where it started, not from the floor: its old pose is kept rather than one under the floor, and it is listed under unstable. Dropping props from higher than 5 m onto the floor needs a larger fallCm."
         },
         "filter": {
           "type": "string",
@@ -4778,6 +4791,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "maxItems": 3,
           "description": "Scale as [x, y, z]."
         },
+        "seconds": {
+          "type": "number",
+          "description": "At most this much physics time (0.5-10, default 3): the run stops sooner once every body sleeps. A body still moving at the end comes back under unstable with its pose at that moment, which is kept."
+        },
         "snapToTarget": {
           "type": "boolean",
           "description": "Snap the child onto the bone or socket instead of keeping its current world placement (default false)."
@@ -4930,7 +4947,8 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             "set_blueprint_variables",
             "create_snapshot",
             "set_actor_collision",
-            "call_actor_function"
+            "call_actor_function",
+            "settle_physics"
           ],
           "description": "Action to invoke on control_actor."
         }
@@ -4978,6 +4996,15 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
                   }
                 }
               }
+            },
+            {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "additionalProperties": true,
+                "x-unreal-reflection-boundary": true
+              },
+              "description": "Each actor simulated as {actorName, to [x, y, z], rotation [pitch, yaw, roll], moved (cm), turned (degrees), resting (asleep at the end), fell, peakSpeed (cm/s)}."
             },
             {
               "type": "array",
@@ -5038,7 +5065,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
               "description": "Matched actors."
             }
           ],
-          "description": "Matched actors."
+          "description": "Each actor simulated as {actorName, to [x, y, z], rotation [pitch, yaw, roll], moved (cm), turned (degrees), resting (asleep at the end), fell, peakSpeed (cm/s)}."
         },
         "actorsExamined": {
           "type": "number",
@@ -5299,6 +5326,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "string",
           "description": "The folder the actors are in now (\"\" for the root)."
         },
+        "fps": {
+          "type": "number",
+          "description": "Editor frames per second during the run; physics steps at most 1/30 s a frame, so a low rate makes the run take longer, never fall short."
+        },
         "gameSeconds": {
           "type": "number",
           "description": "Game time covered."
@@ -5347,6 +5378,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "isPieWorld": {
           "type": "boolean",
           "description": "Whether the list was produced while a Play-In-Editor (PIE) session is active."
+        },
+        "kept": {
+          "type": "number",
+          "description": "How many resting poses were written to the level (0 under dryRun); control_editor undo takes them all back in one step."
         },
         "label": {
           "type": "string",
@@ -5547,6 +5582,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "passes": {
           "type": "number",
           "description": "Passes made: a move can line an actor up with a neighbour that moved the same way, so the fix repeats (at most four passes; one under dryRun)."
+        },
+        "physicsSeconds": {
+          "type": "number",
+          "description": "Physics time simulated."
         },
         "placementWarning": {
           "type": "string",
@@ -5755,6 +5794,15 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
                 "additionalProperties": true,
                 "x-unreal-reflection-boundary": true
               },
+              "description": "Actors named that never fall, as {actorName, reason}; physics also refuses a mesh without simple collision once Simulate has started."
+            },
+            {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "additionalProperties": true,
+                "x-unreal-reflection-boundary": true
+              },
               "description": "Actors that would move but never do, as {actorName, reason}."
             },
             {
@@ -5853,6 +5901,13 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             "type": "string"
           },
           "description": "The unique name of every item that gave no actorName, in batch order (\"\" where it failed), under either report mode. Their labels repeat (every cube is \"Cube\"), so these are the names later calls must use."
+        },
+        "unstable": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Actors still moving when the run ended, or that fell: empty when everything came to rest."
         },
         "value": {
           "description": "Property value (any type)."

@@ -665,4 +665,7 @@ export const PLAIN_PROBE: readonly PlainProbeCase[] = [
   { query: 'write blueprint from code', accepted: ['blueprint.write_graph_from_code'] },
   { query: 'rewrite an event body as text', accepted: ['blueprint.write_graph_from_code'] },
   { query: 'turn code into blueprint nodes', accepted: ['blueprint.write_graph_from_code'] },
+  { query: 'settle actors', accepted: ['control_actor.settle_physics'] },
+  { query: 'drop crates', accepted: ['control_actor.settle_physics'] },
+  { query: 'is this stack stable', accepted: ['control_actor.settle_physics'] },
 ];

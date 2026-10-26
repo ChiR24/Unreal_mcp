@@ -1,7 +1,7 @@
 /**
  * Attachment and advanced records: attach/attach_actor, detach/detach_actor,
  * set_blueprint_variables, create_snapshot, set_actor_collision,
- * call_actor_function.
+ * call_actor_function, settle_physics.
  */
 import type { CapabilityRecordSource } from '../../model.js';
 import { ANY_EDITOR_STATE, buildCoreRecord } from '../core/builder.js';
@@ -13,6 +13,7 @@ const FAMILY_BLUEPRINT = 'blueprint';
 const FAMILY_SNAPSHOT = 'snapshot';
 const FAMILY_COLLISION = 'collision';
 const FAMILY_FUNCTION = 'function';
+const FAMILY_PHYSICS = 'physics';
 
 export const ADVANCED_RECORDS: readonly CapabilityRecordSource[] = [
   buildCoreRecord({
@@ -160,5 +161,49 @@ export const ADVANCED_RECORDS: readonly CapabilityRecordSource[] = [
     costLatency: 'interactive',
     exampleInput: { action: 'call_actor_function', actorName: 'Lamp1', functionName: 'ToggleLight' },
     exampleOutput: { success: true, message: 'Called ToggleLight on Lamp1', value: true },
+  }),
+  buildCoreRecord({
+    parentTool: 'control_actor',
+    action: 'settle_physics',
+    domain: DOMAIN,
+    family: FAMILY_PHYSICS,
+    // No "rest", "simulate", "crate" or "scatter" in a topic: with the domain's "actor" they would name every word of
+    // "what does each actor rest on", "simulate physics", "make the crate fall" and "scatter rocks", which other records answer.
+    topics: ['settle physics', 'let props fall into place', 'drop props onto the floor', 'is this stack stable', 'pile of boxes that settles'],
+    summary: 'Let actors fall under physics and keep where they come to rest, in one undo step: a pile of crates, rocks scattered on a slope, a toppled chair, a stack whose stability is in doubt. The editor\'s own Simulate runs for up to the seconds asked (of physics time), each named actor\'s root body simulating; it stops early once every body sleeps. The reply says, for each actor, where it ended up, how far it moved and turned, whether it came to rest or was still moving, whether it fell (more than fallCm below where it started, or out of the world), and its peak speed (a body launched by starting inside another reads high). With dryRun nothing is kept: a stability check. Answers after Simulate has ended, in about 2-10 s. A run that cannot finish keeps nothing: SIMULATE_STOPPED (Simulate stopped in the editor mid-run), SIMULATE_TIMEOUT, SETTLE_RUNNING (another settle is simulating), NO_LEVEL_VIEWPORT.',
+    whenToUse: [
+      'Props must rest naturally on what is under them (a heap of crates, rocks on uneven ground, books on a shelf), without computing each pose.',
+      'Checking whether a stack or a pile is stable before the game runs: dryRun, then read each actor\'s moved and turned (a piece that toppled moved and turned far, though it lies at rest) and unstable.',
+      'After spawning loose props above the ground, dropping them into place in one call.',
+    ],
+    whenNotToUse: [
+      'Only lifting a sunk actor or lowering a floating one onto the surface under it, keeping its turn: use fix_placement, which needs no simulation.',
+      'Placing actors by relations (on, nextTo, facing): use arrange_by_relations.',
+      'While Play or Simulate runs or is starting: it refuses (PLAY_RUNNING), since it runs a Simulate session of its own.',
+      'In a level whose game pauses itself in Simulate (a title screen, a pause menu): nothing falls, so it answers GAME_PAUSED and keeps nothing; give the level a plain game mode first (manage_level set_world_settings gameMode).',
+    ],
+    inputProps: {
+      actorNames: { type: 'array', minItems: 1, maxItems: 64, items: { type: 'string' }, description: 'The actors to settle, by exact name (1-64). Each needs a root that is a body with physics collision (a static mesh with simple collision: the engine cubes and most props); a floor or landscape, an actor with Lock Actor Movement, an attached actor, or one whose root is no body comes back under skipped with the reason and stays put. A name that matches no actor refuses with ACTOR_NOT_FOUND (missing lists them); when none of them can fall it refuses with NOTHING_TO_SETTLE. Everything else in the level takes part in the simulation as it is (static actors are what the bodies land on).' },
+      seconds: { type: 'number', description: 'At most this much physics time (0.5-10, default 3): the run stops sooner once every body sleeps. A body still moving at the end comes back under unstable with its pose at that moment, which is kept.' },
+      fallCm: { type: 'number', description: 'A body that ends more than this many cm below its START height fell (10-100000, default 500), measured from where it started, not from the floor: its old pose is kept rather than one under the floor, and it is listed under unstable. Dropping props from higher than 5 m onto the floor needs a larger fallCm.' },
+      dryRun: { type: 'boolean', description: 'Simulate and report only: nothing is kept (default false). Use it to check whether a stack stands.' },
+    },
+    required: ['actorNames'],
+    outputProps: {
+      actors: { type: 'array', items: { type: 'object', additionalProperties: true, 'x-unreal-reflection-boundary': true }, description: 'Each actor simulated as {actorName, to [x, y, z], rotation [pitch, yaw, roll], moved (cm), turned (degrees), resting (asleep at the end), fell, peakSpeed (cm/s)}.' },
+      unstable: { type: 'array', items: { type: 'string' }, description: 'Actors still moving when the run ended, or that fell: empty when everything came to rest.' },
+      skipped: { type: 'array', items: { type: 'object', additionalProperties: true, 'x-unreal-reflection-boundary': true }, description: 'Actors named that never fall, as {actorName, reason}; physics also refuses a mesh without simple collision once Simulate has started.' },
+      kept: { type: 'number', description: 'How many resting poses were written to the level (0 under dryRun); control_editor undo takes them all back in one step.' },
+      endedBecause: { type: 'string', description: 'rested (every body asleep), fell (every body asleep but those that fell, whose poses are not kept), seconds (the physics time asked for ran out) or deadline (the call had to answer before every body rested).' },
+      physicsSeconds: { type: 'number', description: 'Physics time simulated.' },
+      fps: { type: 'number', description: 'Editor frames per second during the run; physics steps at most 1/30 s a frame, so a low rate makes the run take longer, never fall short.' },
+      dryRun: { type: 'boolean', description: 'Present and true when nothing was kept because dryRun was set.' },
+    },
+    outputRequired: [],
+    effect: 'write', behavior: { longRunning: true },
+    costLatency: 'long-running', // Simulate starts, settles and ends: 2-26 s
+    costResources: 'high',
+    exampleInput: { action: 'settle_physics', actorNames: ['Crate_1', 'Crate_2', 'Crate_3'] },
+    exampleOutput: { success: true, message: 'Simulated 3 actor(s) for 1.2 s of physics: 3 resting, 0 still moving or fell; 3 resting pose(s) kept as one undo step.', actors: [{ actorName: 'Crate_3', to: [120, 40, 150], rotation: [0, 12, 0], moved: 38, turned: 12, resting: true, fell: false, peakSpeed: 270 }], unstable: [], kept: 3, endedBecause: 'rested', physicsSeconds: 1.2, fps: 58 },
   }),
 ];
