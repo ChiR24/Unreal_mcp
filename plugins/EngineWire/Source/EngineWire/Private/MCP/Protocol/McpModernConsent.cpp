@@ -7,7 +7,7 @@
 #include "MCP/Protocol/McpModernRequest.h"
 #include "Misc/Base64.h"
 #include "Misc/DateTime.h"
-#include "Misc/Guid.h"
+#include "Core/Security/McpConsentLedger.h"
 #include "Misc/SecureHash.h"
 #include "Serialization/JsonReader.h"
 #include "Serialization/JsonSerializer.h"
@@ -69,7 +69,8 @@ TSharedPtr<FJsonObject> MakeAsk(const FString& Principal, const FString& Digest,
     State->SetStringField(TEXT("capability"), CapabilityId);
     State->SetStringField(TEXT("acknowledge"), ConsentMode);
     State->SetNumberField(TEXT("expires"), static_cast<double>(FDateTime::UtcNow().ToUnixTimestamp() + AskLifetimeSeconds));
-    State->SetStringField(TEXT("nonce"), FGuid::NewGuid().ToString());
+    // Minted in the consent ledger like describe's, so the yes this ask turns into a grant passes the native gate.
+    State->SetStringField(TEXT("nonce"), McpCapabilityAuthorization::FMcpConsentLedger::Get().Mint(CapabilityId));
     const FTCHARToUTF8 StateBytes(*FMcpJsonRpc::JsonToString(State));
     const FString Payload = FBase64::Encode(reinterpret_cast<const uint8*>(StateBytes.Get()), StateBytes.Length());
 

@@ -2,6 +2,7 @@
 
 #if WITH_DEV_AUTOMATION_TESTS
 #include "Tests/McpTestFixtures.h"
+#include "Core/Security/McpConsentLedger.h"
 #include "Misc/AutomationTest.h"
 #include "Foundation/McpPrincipalQuota.h"
 #include "MCP/Gateway/McpNativeGatewayCapabilityStore.h"
@@ -236,6 +237,58 @@ bool FMcpPrequeueGateReadDemandTest::RunTest(const FString& Parameters)
 	TestFalse(TEXT("an out-of-prefix resource path is refused"),
 		McpPrequeueGate::AuthorizeRead(Request).bAllowed);
 
+	FMcpPrincipalQuotaLedger::Get().Reset();
+	return true;
+}
+
+// The native door accepts only a consent nonce describe (or the consent ask) minted for the capability: a made-up
+// nonce was taken as fresh and a missing one as legacy. The WebSocket door, which has no describe, keeps the old rule.
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FMcpPrequeueGateConsentNonceTest,
+	"EngineWire.Foundation.PrequeueGate.ConsentNonce",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+bool FMcpPrequeueGateConsentNonceTest::RunTest(const FString& Parameters)
+{
+	(void)Parameters;
+	using McpCapabilityAuthorization::FMcpConsentLedger;
+	if (!TestTrue(TEXT("capability store is ready"), FMcpCapabilityStore::Get().IsReady()))
+	{
+		return false;
+	}
+	const FMcpCapabilityPrincipal Admin = McpTestPrincipal(TEXT("scoped:nonce-test"), { EMcpCapabilityScope::Admin });
+	const FString Capability = TEXT("asset.delete");
+	FMcpPrequeueRequest Request = MakeGateRequest(TEXT("manage_asset"),
+		McpTestFields({ { TEXT("subAction"), TEXT("delete") }, { TEXT("path"), TEXT("/Game/NonceTest") } }));
+	Request.Principal = &Admin;
+	Request.CapabilityId = Capability;
+	Request.RequestId = TEXT("nonce-test-request");
+	Request.bRequireIssuedNonce = true;
+	const auto With = [&Request, &Capability](const FString& Nonce)
+	{
+		TMap<FString, FString> Fields = { { TEXT("capability"), Capability }, { TEXT("acknowledge"), TEXT("elevated") } };
+		if (!Nonce.IsEmpty())
+		{
+			Fields.Add(TEXT("nonce"), Nonce);
+		}
+		Request.Consent = McpTestFields(Fields);
+		return McpPrequeueGate::Authorize(Request);
+	};
+	const FString NotIssued = TEXT("CONSENT_NOT_ISSUED");
+	TestEqual(TEXT("a made-up nonce is refused"), With(TEXT("00000000-1111-2222-3333-444444444444")).ErrorCode, NotIssued);
+	TestEqual(TEXT("a grant without a nonce is refused"), With(FString()).ErrorCode, NotIssued);
+	TestEqual(TEXT("a nonce minted for another capability is refused"),
+		With(FMcpConsentLedger::Get().Mint(TEXT("material.create_material"))).ErrorCode, NotIssued);
+	const FString Minted = FMcpConsentLedger::Get().Mint(Capability);
+	TestTrue(TEXT("control: a nonce minted for the capability passes"), With(Minted).bAllowed);
+	TestEqual(TEXT("its replay is refused"), With(Minted).ErrorCode, FString(TEXT("CONSENT_REUSED")));
+	McpPrequeueGate::RefundConsentForRequest(Request.RequestId);
+	TestTrue(TEXT("a refunded nonce is issued again"), With(Minted).bAllowed);
+	McpPrequeueGate::ForgetConsentForRequest(Request.RequestId);
+
+	Request.bRequireIssuedNonce = false;
+	TestTrue(TEXT("the WebSocket door keeps a grant without a nonce"), With(FString()).bAllowed);
+	McpPrequeueGate::ForgetRequestPrincipal(Request.RequestId);
 	FMcpPrincipalQuotaLedger::Get().Reset();
 	return true;
 }

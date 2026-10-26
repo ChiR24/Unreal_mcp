@@ -33,6 +33,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - **The npm package is a stdio proxy** to the plugin's `/mcp` with no runtime dependencies: `NOT_CONNECTED` while the editor is down; `UNREAL_MCP_URL` picks the endpoint, `UE_PROJECT_PATH` finds the token.
 - **Enable Native MCP Server is on by default.**
+- **Consent grants need the nonce `describe` minted**: a missing or made-up one is refused (`CONSENT_NOT_ISSUED`).
 
 </details>
 

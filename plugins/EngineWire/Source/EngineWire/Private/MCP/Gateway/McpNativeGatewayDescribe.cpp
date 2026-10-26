@@ -1,6 +1,6 @@
 #include "MCP/Gateway/McpNativeGatewayDescribe.h"
 #include "Foundation/HandlerUtils/McpHandlerUtilsJson.h"
-#include "Misc/Guid.h"
+#include "Core/Security/McpConsentLedger.h"
 // McpNativeGatewayDescribe.cpp — capability describe for the unreal gateway.
 //
 // The levels below the browse listings (McpNativeGatewayDescribeOverview.cpp), the same replies as the TypeScript
@@ -131,11 +131,11 @@ TSharedPtr<FJsonObject> ConsentGrant(const FMcpCapabilityRecord& Record)
 	auto Grant = MakeShared<FJsonObject>();
 	Grant->SetStringField(TEXT("capability"), Record.Id);
 	Grant->SetStringField(TEXT("acknowledge"), bElevated ? TEXT("elevated") : TEXT("explicit"));
-	// Single-use binding: each describe mints a fresh nonce and the prequeue
-	// gate burns it on first acceptance, so replaying a grant object is refused
-	// with CONSENT_REUSED. Additive to the two base fields, so older callers
-	// that omit it keep the previous capability-match-only behaviour.
-	Grant->SetStringField(TEXT("nonce"), FGuid::NewGuid().ToString(EGuidFormats::DigitsWithHyphens));
+	// Single-use binding: each describe mints a fresh nonce for this capability in
+	// the consent ledger, and the prequeue gate burns it on first acceptance, so a
+	// replayed grant is CONSENT_REUSED and one whose nonce this server did not mint
+	// for the capability (made up, missing, too old) is CONSENT_NOT_ISSUED.
+	Grant->SetStringField(TEXT("nonce"), McpCapabilityAuthorization::FMcpConsentLedger::Get().Mint(Record.Id));
 	return Grant;
 }
 

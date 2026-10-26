@@ -25,6 +25,7 @@ All notable changes to the EngineWire plugin (formerly McpAutomationBridge) will
 
 ### Changed
 - **Enable Native MCP Server is on by default**: `/mcp` is the only gateway, and the npm package is a stdio proxy in front of it.
+- **Consent nonces are minted and required on `/mcp`**: describe and the consent ask mint each grant's nonce for its capability in the ledger, and a missing, made-up or other capability's nonce is `CONSENT_NOT_ISSUED` (the WebSocket bridge, which has no describe, keeps the old rule).
 
 ### Fixed
 - **Small fixes**: UE 5.0 links, `runtime_report` filters, diagnostics files, task principals, the RHI thread in `busiestThreadMs`, material instances as instance parents.

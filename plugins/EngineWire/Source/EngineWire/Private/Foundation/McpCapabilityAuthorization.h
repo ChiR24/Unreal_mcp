@@ -74,6 +74,7 @@ namespace McpAuthorizationCodes
 extern const TCHAR* const ScopeNotGranted;
 extern const TCHAR* const ConsentRequired;
 extern const TCHAR* const ConsentReused;
+extern const TCHAR* const ConsentNotIssued;
 extern const TCHAR* const PathNotPermitted;
 extern const TCHAR* const ProjectNotPermitted;
 extern const TCHAR* const QuotaExceeded;
@@ -129,34 +130,7 @@ FMcpAuthorizationDecision CheckScope(
 FMcpAuthorizationDecision CheckConsent(
 	const FMcpCapabilityDemand& Demand, const FMcpAuthorizationGrant& Grant);
 
-// Single-use ledger for nonce-bearing grants. describe() issues a fresh nonce
-// with every grant; the first execute that presents it burns it, and any replay
-// of the same grant object is refused with CONSENT_REUSED. Grants without a
-// nonce (older clients, the TypeScript surface) are unaffected. Thread-safe:
-// both transports authorize through here.
-class FMcpConsentLedger
-{
-public:
-	static FMcpConsentLedger& Get();
-
-	// Returns true and burns the nonce on first presentation; false when this
-	// exact nonce was already consumed. An empty nonce is legacy and always
-	// passes (capability-match enforcement still applies upstream).
-	bool TryConsume(const FString& Nonce);
-
-	// Hands a burned nonce back. The gate burns before the handler runs, so a
-	// handler that REFUSES -- "component not found", a bad path, an unresolvable
-	// name -- would otherwise cost the caller its single-use grant for a call
-	// that changed nothing, forcing a describe round trip to retry a typo.
-	void Refund(const FString& Nonce);
-
-private:
-	FMcpConsentLedger() = default;
-	FCriticalSection Mutex;
-	TSet<FString> Consumed;
-	TArray<FString> ConsumptionOrder;
-	static constexpr int32 MaxEntries = 4096;
-};
+// The single-use consent nonce ledger is Core/Security/McpConsentLedger.h.
 
 // Boundary-aware containment: the prefix "/Game/Team" permits "/Game/Team" and
 // "/Game/Team/Sub" but never "/Game/TeamOther".

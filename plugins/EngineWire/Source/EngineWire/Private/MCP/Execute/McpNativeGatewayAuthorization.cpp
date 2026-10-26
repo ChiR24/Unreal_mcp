@@ -40,6 +40,7 @@ FMcpSemanticError McpAuthorizationSemanticError(const FMcpAuthorizationDecision&
 	static const TMap<FString, const TCHAR*> KindByCode = {
 		{ McpAuthorizationCodes::ScopeNotGranted, TEXT("authorization") },
 		{ McpAuthorizationCodes::ConsentRequired, TEXT("consent") },
+		{ McpAuthorizationCodes::ConsentNotIssued, TEXT("consent") },
 		{ McpAuthorizationCodes::ProjectNotPermitted, TEXT("project") },
 		{ McpAuthorizationCodes::PathNotPermitted, TEXT("pathPolicy") },
 		{ McpAuthorizationCodes::CommandBlocked, TEXT("command") },

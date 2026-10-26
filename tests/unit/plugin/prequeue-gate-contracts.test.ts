@@ -357,3 +357,27 @@ describe('Task 40 Blocker 6 — native MCP primitives are not an ungated read ch
     expect(source).toMatch(/Request\.bIsToolCall\s*=\s*false/u);
   });
 });
+
+// A consent grant on native /mcp carries a nonce this server minted for that capability (describe, or the
+// 2026-07-28 consent ask) and spends it once. A made-up nonce was taken as fresh and a missing one as legacy.
+describe('consent nonces are minted by the server and required on native /mcp', () => {
+  it('native execute asks the gate for an issued nonce', () => {
+    expect(nativeExecute()).toContain('AuthRequest.bRequireIssuedNonce = true;');
+  });
+  it('the gate consumes through the ledger with that requirement and refuses an unissued nonce', () => {
+    const gate = gateOrder();
+    expect(gate).toMatch(/Consume\(\s*Grant\.ConsentNonce, Demand\.CapabilityId, Request\.bRequireIssuedNonce\)/u);
+    expect(gate).toContain('McpAuthorizationCodes::ConsentNotIssued');
+  });
+  it('describe and the consent ask mint their nonces in the ledger, never as a bare GUID', () => {
+    const describeSource = privateSource('MCP', 'Gateway', 'McpNativeGatewayDescribe.cpp');
+    expect(describeSource).toContain('FMcpConsentLedger::Get().Mint(Record.Id)');
+    const ask = privateSource('MCP', 'Protocol', 'McpModernConsent.cpp');
+    expect(ask).toContain('FMcpConsentLedger::Get().Mint(CapabilityId)');
+    for (const source of [describeSource, ask]) expect(source).not.toMatch(/"nonce"\),\s*FGuid::NewGuid/u);
+  });
+  it('an unissued nonce is refused only where issuance is required', () => {
+    const ledger = privateSource('Core', 'Security', 'McpConsentLedger.cpp');
+    expect(ledger).toContain('if (bRequireIssued && (!IssuedFor || !IssuedFor->Equals(CapabilityId, ESearchCase::CaseSensitive)))');
+  });
+});

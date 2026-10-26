@@ -760,6 +760,16 @@ function recordConsent(tool, action) {
   return consentByAction.get(`${tool}.${action}`);
 }
 
+// The native door accepts only a nonce describe minted for the grant's capability, once. A grant the case or the
+// record supplies without one gets a fresh nonce from describe; its capability and acknowledgement stay as written,
+// so a deliberately wrong grant still meets its own refusal.
+async function withMintedNonce(client, consent) {
+  if (!isRecord(consent) || typeof consent.nonce === 'string' || typeof consent.capability !== 'string') return consent;
+  const reply = await client.callTool({ name: 'unreal', arguments: { operation: 'describe', capability: consent.capability } });
+  const nonce = normalizeMcpResponse(reply).structuredContent?.consentGrant?.nonce;
+  return typeof nonce === 'string' ? { ...consent, nonce } : consent;
+}
+
 export function createToolCaller(client, { useProgressTimeouts = false } = {}) {
   return async function callToolOnce(callOptions, baseTimeoutMs) {
     const configuredDefault = Number(process.env.UNREAL_MCP_TEST_CALL_TIMEOUT_MS ?? '60000');
@@ -790,9 +800,9 @@ export function createToolCaller(client, { useProgressTimeouts = false } = {}) {
     // Consent is an execute envelope sibling carried at the CASE level (never
     // inside `arguments`), so the parameter audit never mistakes it for an
     // action param. Attach it to whichever form produced the gateway request.
-    const consent = callOptions.consent === undefined && callOptions.name !== 'unreal'
+    const consent = await withMintedNonce(client, callOptions.consent === undefined && callOptions.name !== 'unreal'
       ? recordConsent(callOptions.name, callOptions.arguments?.action)
-      : callOptions.consent;
+      : callOptions.consent);
     if (isRecord(consent)) {
       gatewayCall.arguments = { ...gatewayCall.arguments, consent };
     }

@@ -2,6 +2,7 @@
 #include "MCP/Protocol/McpModernRequest.h"
 
 #if WITH_DEV_AUTOMATION_TESTS
+#include "Core/Security/McpConsentLedger.h"
 #include "Foundation/McpCapabilityAuthorization.h"
 #include "MCP/DynamicTools/McpTaskResults.h"
 #include "Misc/AutomationTest.h"
@@ -150,7 +151,8 @@ bool FMcpModernProtocolConsentTest::RunTest(const FString& Parameters)
 	TestEqual(TEXT("grant carries the asked mode"), Accepted.Grant->GetStringField(TEXT("acknowledge")), FString(TEXT("elevated")));
 	const FString Nonce = Accepted.Grant->GetStringField(TEXT("nonce"));
 	auto& Ledger = McpCapabilityAuthorization::FMcpConsentLedger::Get();
-	TestTrue(TEXT("the grant's nonce burns once"), Ledger.TryConsume(Nonce));
+	TestTrue(TEXT("the grant's nonce was minted for the capability and burns once"),
+		Ledger.Consume(Nonce, Capability, true) == McpCapabilityAuthorization::EMcpConsentNonce::Accepted);
 	TestFalse(TEXT("a replayed yes is refused by the ledger"), Ledger.TryConsume(Nonce));
 
 	FString Tampered = State;

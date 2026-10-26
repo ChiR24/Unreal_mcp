@@ -134,8 +134,10 @@ session.
 
 Full negotiation and header-guard behavior: [`protocol.md`](protocol.md).
 
-A consent grant from `describe` carries a single-use `nonce`; the same grant
-sent again is refused with `CONSENT_REUSED`. A refused execute carries its typed
+A consent grant from `describe` carries a single-use `nonce`, minted for that
+capability and required: the same grant sent again is refused with
+`CONSENT_REUSED`, and a grant whose nonce this server did not mint for the
+capability (missing, made up, or too old) with `CONSENT_NOT_ISSUED`. A refused execute carries its typed
 error as `typedError`, and `maxBytes` counts the result rows.
 
 ## Discovery is progressive, never a schema dump

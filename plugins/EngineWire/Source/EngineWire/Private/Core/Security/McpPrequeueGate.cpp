@@ -1,5 +1,6 @@
 #include "Core/Security/McpPrequeueGate.h"
 
+#include "Core/Security/McpConsentLedger.h"
 #include "Domains/ConsoleCommand/McpConsolePrivate.h"
 #include "Foundation/McpPrincipalQuota.h"
 #include "Misc/App.h"
@@ -225,14 +226,25 @@ FMcpAuthorizationDecision AuthorizeWithDemand(
 	// the quota charge. Two consequences are deliberate: a replay is rejected
 	// before it can spend the principal's budget, and a quota-exceeded call has
 	// already consumed its grant, so it needs a fresh one (re-run describe) once
-	// the window rolls. Grants without a nonce (older clients, the TypeScript
-	// surface) skip the ledger entirely.
-	if (Grant.bConsentPresent && !Grant.ConsentNonce.IsEmpty())
+	// the window rolls. On native /mcp the nonce must be one describe (or the
+	// consent ask) minted for this capability; a made-up nonce was taken as fresh
+	// and a missing one as legacy. The WebSocket door skips a grant without one.
+	if (Grant.bConsentPresent && (Request.bRequireIssuedNonce || !Grant.ConsentNonce.IsEmpty()))
 	{
-		if (!McpCapabilityAuthorization::FMcpConsentLedger::Get().TryConsume(Grant.ConsentNonce))
+		using McpCapabilityAuthorization::EMcpConsentNonce;
+		const EMcpConsentNonce Nonce = McpCapabilityAuthorization::FMcpConsentLedger::Get().Consume(
+			Grant.ConsentNonce, Demand.CapabilityId, Request.bRequireIssuedNonce);
+		if (Nonce == EMcpConsentNonce::Reused)
 		{
 			return FMcpAuthorizationDecision::Deny(McpAuthorizationCodes::ConsentReused,
 				TEXT("This consent grant was already used by an earlier call. Consent grants are single-use: re-run describe for a fresh grant and retry."));
+		}
+		if (Nonce == EMcpConsentNonce::NotIssued)
+		{
+			FMcpAuthorizationDecision NotIssued = FMcpAuthorizationDecision::Deny(McpAuthorizationCodes::ConsentNotIssued,
+				TEXT("This consent grant's nonce was not minted by describe for this capability (missing, made up, or too old). Run describe for the capability and send its consentGrant back unchanged, nonce included."));
+			NotIssued.ConsentScope = Demand.ConsentMode;
+			return NotIssued;
 		}
 		// Remember what this request burned. The handler runs later and may
 		// refuse without touching anything, and charging a single-use grant for

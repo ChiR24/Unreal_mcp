@@ -5,6 +5,7 @@ namespace McpAuthorizationCodes
 const TCHAR* const ScopeNotGranted = TEXT("SCOPE_NOT_GRANTED");
 const TCHAR* const ConsentRequired = TEXT("CONSENT_REQUIRED");
 const TCHAR* const ConsentReused = TEXT("CONSENT_REUSED");
+const TCHAR* const ConsentNotIssued = TEXT("CONSENT_NOT_ISSUED");
 const TCHAR* const PathNotPermitted = TEXT("PATH_NOT_PERMITTED");
 const TCHAR* const ProjectNotPermitted = TEXT("PROJECT_NOT_PERMITTED");
 const TCHAR* const QuotaExceeded = TEXT("QUOTA_EXCEEDED");
@@ -90,10 +91,10 @@ FMcpAuthorizationDecision CheckConsent(
 		if (bKnown)
 		{
 			Message += FString::Printf(
-				TEXT(" Re-send this same call with consent: ")
-				TEXT("{\"capability\":\"%s\",\"acknowledge\":\"%s\"} as a top-level ")
-				TEXT("sibling of params, not inside params."),
-				*Demand.CapabilityId, *Mode);
+				TEXT(" Run describe for '%s' and re-send this same call with its consentGrant ")
+				TEXT("({\"capability\":\"%s\",\"acknowledge\":\"%s\",\"nonce\":...}, the nonce single-use) ")
+				TEXT("as the top-level consent sibling of params, not inside params."),
+				*Demand.CapabilityId, *Demand.CapabilityId, *Mode);
 		}
 		FMcpAuthorizationDecision Decision = FMcpAuthorizationDecision::Deny(
 			McpAuthorizationCodes::ConsentRequired, Message);
@@ -117,53 +118,6 @@ FMcpAuthorizationDecision CheckConsent(
 	// "explicit" is satisfied by an explicit or a stronger elevated acknowledgement.
 	const bool bSatisfied = Acknowledge == TEXT("explicit") || Acknowledge == TEXT("elevated");
 	return bSatisfied ? FMcpAuthorizationDecision::Allow() : Refuse();
-}
-
-FMcpConsentLedger& FMcpConsentLedger::Get()
-{
-	static FMcpConsentLedger Instance;
-	return Instance;
-}
-
-bool FMcpConsentLedger::TryConsume(const FString& Nonce)
-{
-	if (Nonce.IsEmpty())
-	{
-		// Legacy grants carry no nonce; capability-match enforcement upstream
-		// still applies, so there is nothing to burn.
-		return true;
-	}
-	FScopeLock Lock(&Mutex);
-	if (Consumed.Contains(Nonce))
-	{
-		return false;
-	}
-	// Bounded: prune oldest-first so a long-lived editor never grows this set
-	// without limit. Pruned nonces become re-presentable, which is the safe
-	// direction (fail-open toward a still-capability-checked call, never toward
-	// a capability the grant does not name).
-	if (ConsumptionOrder.Num() >= MaxEntries)
-	{
-		const FString Oldest = ConsumptionOrder[0];
-		ConsumptionOrder.RemoveAt(0);
-		Consumed.Remove(Oldest);
-	}
-	ConsumptionOrder.Add(Nonce);
-	Consumed.Add(Nonce);
-	return true;
-}
-
-void FMcpConsentLedger::Refund(const FString& Nonce)
-{
-	if (Nonce.IsEmpty())
-	{
-		return;
-	}
-	FScopeLock Lock(&Mutex);
-	if (Consumed.Remove(Nonce) > 0)
-	{
-		ConsumptionOrder.RemoveSingle(Nonce);
-	}
 }
 
 bool IsPathWithinPrefix(const FString& Path, const FString& Prefix)

@@ -149,6 +149,7 @@ void FMcpNativeTransport::HandleGatewayExecute(
 		AuthRequest.DispatchAction = Plan.DispatchAction;
 		AuthRequest.Payload = Plan.Arguments;
 		AuthRequest.RequestId = Context.QueueRequestId;
+		AuthRequest.bRequireIssuedNonce = true; // describe and the consent ask mint every nonce this door accepts
 		const TSharedPtr<FJsonObject>* ConsentField = nullptr;
 		if (Params.IsValid() && Params->TryGetObjectField(TEXT("consent"), ConsentField) && ConsentField)
 		{

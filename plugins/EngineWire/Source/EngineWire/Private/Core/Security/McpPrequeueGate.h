@@ -37,6 +37,10 @@ struct FMcpPrequeueRequest
 	// never trusts the TypeScript layer to have checked it.
 	TSharedPtr<FJsonObject> Consent;
 
+	// Set by native /mcp, whose describe mints every grant's nonce: a grant's nonce must be one the ledger issued for
+	// CapabilityId (Core/Security/McpConsentLedger.h). The WebSocket door has no describe and leaves it false.
+	bool bRequireIssuedNonce = false;
+
 	// False for a discovery request (native resources/*, prompts/*, tools/list),
 	// which consumes the principal's request budget but not its tool-call budget.
 	// This is what makes MaxRequestsPerMinute and MaxToolCallsPerMinute distinct
