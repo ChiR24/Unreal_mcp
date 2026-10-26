@@ -324,6 +324,15 @@ const testCases = [
   const PATH_BOUNDS = `MCP_PathBounds_${ts}`;
   const PATH_MARK = `MCP_PathMark_${ts}`;
   const wall = (side, x, y, sx, sy) => ({ actorName: `MCP_PathWall${side}_${ts}`, location: { x, y, z: 150 }, scale: [sx, sy, 3] });
+  // analyze_level_layout: floor slabs far from everything else, read as spaces. A 10 m room joined by a 3 m wide
+  // corridor to an 8 m room with a 2 x 3 m alcove off it, and a 6 m room 4 m away that nothing joins.
+  const LAYOUT_TAG = `MCPLayoutTag_${ts}`;
+  const LAYOUT_BOUNDS = `MCP_LayoutBounds_${ts}`;
+  const LAYOUT_START = `MCP_LayoutStart_${ts}`;
+  const LAYOUT_GOAL = `MCP_LayoutGoal_${ts}`;
+  const LO = -34000;
+  const slab = (name, x0, y0, x1, y1) => ({ actorName: `MCP_Layout${name}_${ts}`, location: { x: LO + (x0 + x1) / 2, y: LO + (y0 + y1) / 2, z: -10 }, scale: [(x1 - x0) / 100, (y1 - y0) / 100, 0.2] });
+  const LAYOUT_BOX = { center: { x: LO + 1800, y: LO + 500, z: 0 }, extent: { x: 1900, y: 600, z: 200 } };
 
   testCases.push(
     // === SETUP ===
@@ -378,6 +387,35 @@ const testCases = [
     { scenario: 'ERROR: get_navigation_path with an actor not in the level', toolName: 'manage_ai', arguments: { action: 'get_navigation_path', from: { x: 33200, y: 33200, z: 20 }, toActor: `MCP_NoSuchActor_${ts}` }, expected: 'error|INVALID_ARGUMENT' },
     { scenario: 'Cleanup: the path scene', toolName: 'control_actor', arguments: { action: 'delete_by_tag', tag: PATH_TAG }, expected: 'success|not found' },
     { scenario: 'Cleanup: the path nav bounds', toolName: 'control_actor', arguments: { action: 'delete', actorName: PATH_BOUNDS }, expected: 'success|not found' },
+    { scenario: 'Setup: two rooms, a corridor, an alcove and a room nothing joins', toolName: 'control_actor', arguments: { action: 'spawn_batch', defaults: { classPath: '/Engine/BasicShapes/Cube', tags: [LAYOUT_TAG] }, actors: [
+      slab('RoomA', 0, 0, 1000, 1000), slab('Corridor', 1000, 350, 1600, 650), slab('RoomB', 1600, 100, 2400, 900), slab('Alcove', 2400, 600, 2600, 900), slab('Island', 3000, 200, 3600, 800),
+      { actorName: LAYOUT_START, classPath: '/Script/Engine.TargetPoint', location: { x: LO + 300, y: LO + 500, z: 50 } },
+      { actorName: LAYOUT_GOAL, classPath: '/Script/Engine.TargetPoint', location: { x: LO + 2500, y: LO + 800, z: 50 } },
+    ] }, expected: 'success' },
+    { scenario: 'Setup: nav mesh bounds around the slabs', toolName: 'manage_level_structure', arguments: { action: 'create_nav_mesh_bounds_volume', volumeName: LAYOUT_BOUNDS, location: { x: LO + 1800, y: LO + 500, z: 0 }, extent: { x: 2000, y: 700, z: 400 } }, expected: 'success' },
+    { scenario: 'Setup: build the layout nav mesh', toolName: 'manage_ai', arguments: { action: 'rebuild_navigation' }, expected: 'success' },
+    { scenario: 'READ: analyze_level_layout reads rooms, corridors, the choke and the dead ends', toolName: 'manage_ai', arguments: { action: 'analyze_level_layout', ...LAYOUT_BOX, startActor: LAYOUT_START, goalActor: LAYOUT_GOAL, image: true }, expected: 'success', assertions: [
+      { path: 'structuredContent.result.message', includes: '3 room(s) and 2 corridor(s)', label: 'three rooms (one cut off) and two corridors (the passage and the alcove)' },
+      { path: 'structuredContent.result.chokes.0', equals: 'Corridor 1', label: 'the passage between the rooms is the top choke' },
+      { path: 'structuredContent.result.deadEnds', length: 2, label: 'two dead ends' },
+      { path: 'structuredContent.result.deadEnds.1', equals: 'Corridor 2', label: 'the alcove is one' },
+      { path: 'structuredContent.result.loops', equals: 0, label: 'no loop' },
+      { path: 'structuredContent.result.unreachable.0', equals: 'Room 3', label: 'the room nothing joins cannot be walked to' },
+      { path: 'structuredContent.result.path.spaces', length: 4, label: 'the walk crosses room, passage, room, alcove' },
+      { path: 'structuredContent.result.imagePath', exists: true, label: 'the picture was written' },
+    ] },
+    { scenario: 'READ: analyze_level_layout says a goal on the cut-off room cannot be walked to', toolName: 'manage_ai', arguments: { action: 'analyze_level_layout', ...LAYOUT_BOX, startActor: LAYOUT_START, goal: { x: LO + 3300, y: LO + 500, z: 20 }, cellCm: 100, roomWidthCm: 400 }, expected: 'success', assertions: [
+      { path: 'structuredContent.result.path.reachable', equals: false, label: 'no walk reaches it' },
+    ] },
+    { scenario: 'READ: analyze_level_layout widens the cell past maxNodes and says so', toolName: 'manage_ai', arguments: { action: 'analyze_level_layout', ...LAYOUT_BOX, startActor: LAYOUT_START, maxNodes: 100 }, expected: 'success', assertions: [
+      { path: 'structuredContent.result.message', includes: 'Sampled every', label: 'the wider cell is named' },
+    ] },
+    { scenario: 'ERROR: analyze_level_layout needs center and extent together', toolName: 'manage_ai', arguments: { action: 'analyze_level_layout', center: LAYOUT_BOX.center }, expected: 'error|INVALID_ARGUMENT' },
+    { scenario: 'ERROR: analyze_level_layout with a goal outside the area read', toolName: 'manage_ai', arguments: { action: 'analyze_level_layout', ...LAYOUT_BOX, startActor: LAYOUT_START, goal: { x: LO + 9000, y: LO + 500, z: 20 } }, expected: 'error|INVALID_ARGUMENT' },
+    { scenario: 'ERROR: analyze_level_layout with a start not in the level', toolName: 'manage_ai', arguments: { action: 'analyze_level_layout', ...LAYOUT_BOX, startActor: `MCP_NoSuchActor_${ts}` }, expected: 'error|ACTOR_NOT_FOUND' },
+    { scenario: 'ERROR: analyze_level_layout over a box with no nav mesh', toolName: 'manage_ai', arguments: { action: 'analyze_level_layout', center: { x: LO - 6000, y: LO - 6000, z: 0 }, extent: { x: 300, y: 300, z: 100 } }, expected: 'error|NO_WALKABLE_AREA' },
+    { scenario: 'Cleanup: the layout scene', toolName: 'control_actor', arguments: { action: 'delete_by_tag', tag: LAYOUT_TAG }, expected: 'success|not found' },
+    { scenario: 'Cleanup: the layout nav bounds', toolName: 'control_actor', arguments: { action: 'delete', actorName: LAYOUT_BOUNDS }, expected: 'success|not found' },
 
     // === CLEANUP ===
     { scenario: 'Cleanup: delete nav test actor', toolName: 'control_actor', arguments: { action: 'delete', actorName: NAV_ACTOR }, expected: 'success|not found' },

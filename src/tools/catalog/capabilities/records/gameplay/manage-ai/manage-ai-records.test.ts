@@ -131,8 +131,8 @@ describe('manage_ai capability records', () => {
     expect(plugins('rebuild_navigation')).toEqual([]);
   });
 
-  it('marks the four read actions as reads and the rest as writes', () => {
+  it('marks the read actions as reads and the rest as writes', () => {
     const reads = records.filter((record) => record.behavior.effect === 'read').map(actionOf).sort();
-    expect(reads).toEqual(['get_ai_info', 'get_blackboard_value', 'get_navigation_info', 'get_navigation_path', 'get_tree']);
+    expect(reads).toEqual(['analyze_level_layout', 'get_ai_info', 'get_blackboard_value', 'get_navigation_info', 'get_navigation_path', 'get_tree']);
   });
 });

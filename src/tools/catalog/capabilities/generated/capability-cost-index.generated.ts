@@ -488,6 +488,7 @@ export const CAPABILITY_COST_INDEX: Readonly<Record<string, string>> = {
   "manage_ai::add_state_tree_transition": "interactive|medium",
   "manage_ai::add_subnode": "interactive|medium",
   "manage_ai::add_task_node": "interactive|medium",
+  "manage_ai::analyze_level_layout": "interactive|medium",
   "manage_ai::assign_behavior_tree": "interactive|medium",
   "manage_ai::assign_blackboard": "interactive|medium",
   "manage_ai::break_connections": "interactive|medium",
@@ -1631,4 +1632,4 @@ export const CAPABILITY_COST_INDEX: Readonly<Record<string, string>> = {
   "system_control::write_snapshot": "interactive|medium"
 };
 
-export const CAPABILITY_COST_INDEX_KEY_COUNT = 1618;
+export const CAPABILITY_COST_INDEX_KEY_COUNT = 1619;

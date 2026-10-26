@@ -682,4 +682,7 @@ export const PLAIN_PROBE: readonly PlainProbeCase[] = [
   { query: 'actor floating above the floor', accepted: ['control_actor.fix_placement'] },
   { query: 'make the floor slippery', accepted: ['animation_physics.create_physical_material'] },
   { query: 'push the player back', accepted: ['blueprint.add_behaviour'] },
+  { query: 'find choke points', accepted: ['manage_ai.analyze_level_layout'] },
+  { query: 'where are the dead ends', accepted: ['manage_ai.analyze_level_layout'] },
+  { query: 'rooms and corridors in my level', accepted: ['manage_ai.analyze_level_layout'] },
 ];

@@ -1,6 +1,6 @@
 /**
- * manage_ai capability record catalog: 65 authored CapabilityRecordSource
- * entries (add 16, configure 17, create/read 17, set 15), folded by
+ * manage_ai capability record catalog: 66 authored CapabilityRecordSource
+ * entries (add 16, configure 17, create/read 18, set 15), folded by
  * MANAGE_AI_FOLDS into MANAGE_AI_SOURCES. The authored count is pinned by
  * manage-ai-records.test.ts.
  */

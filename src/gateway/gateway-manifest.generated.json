@@ -6062,6 +6062,7 @@
         "create_nav_actor",
         "get_ai_info",
         "get_tree",
+        "analyze_level_layout",
         "set_ai_movement"
       ],
       "parameterNames": [
@@ -6083,8 +6084,10 @@
         "brakingDeceleration",
         "broadcastInterval",
         "broadcastRadius",
+        "cellCm",
         "cellHeight",
         "cellSize",
+        "center",
         "childNodeId",
         "comment",
         "componentName",
@@ -6121,8 +6124,11 @@
         "fromState",
         "generatorSettings",
         "generatorType",
+        "goal",
+        "goalActor",
         "hearingConfig",
         "hearingRange",
+        "image",
         "info",
         "isInstanceSynced",
         "jumpZVelocity",
@@ -6135,6 +6141,7 @@
         "loseSightRadius",
         "maxAcceleration",
         "maxFlySpeed",
+        "maxNodes",
         "maxSimplificationError",
         "maxWalkSpeed",
         "mergeRegionSize",
@@ -6158,6 +6165,7 @@
         "projectExtent",
         "properties",
         "queryPath",
+        "roomWidthCm",
         "rotation",
         "rotationRate",
         "save",
@@ -6171,6 +6179,7 @@
         "slotIndex",
         "snapRadius",
         "spawnCount",
+        "startActor",
         "startPoint",
         "stateName",
         "stateTreePath",
@@ -6274,6 +6283,12 @@
             "type": "number",
             "description": "Radius, in units, of the agents told when the smart link switches; the engine default 0 tells none."
           },
+          "cellCm": {
+            "type": "number",
+            "minimum": 25,
+            "maximum": 1000,
+            "description": "Spacing of the nav mesh samples, in cm (default 100): a smaller cell sees narrower gaps and takes longer."
+          },
           "cellHeight": {
             "type": "number",
             "description": "NavMesh cell height (default: 10)."
@@ -6281,6 +6296,22 @@
           "cellSize": {
             "type": "number",
             "description": "NavMesh cell size (default: 19)."
+          },
+          "center": {
+            "type": "object",
+            "properties": {
+              "x": {
+                "type": "number"
+              },
+              "y": {
+                "type": "number"
+              },
+              "z": {
+                "type": "number"
+              }
+            },
+            "description": "Centre of the box to read, with extent; omit both to read the whole navigable area.",
+            "additionalProperties": false
           },
           "childNodeId": {
             "type": "string",
@@ -6476,20 +6507,41 @@
             "description": "Enum an Enum key holds, by path (/Game/Enums/E_State, /Script/Engine.ECollisionChannel); Enum keys only. Without it the key has no enumerators to hold."
           },
           "extent": {
-            "type": "object",
-            "properties": {
-              "x": {
-                "type": "number"
+            "oneOf": [
+              {
+                "type": "object",
+                "properties": {
+                  "x": {
+                    "type": "number"
+                  },
+                  "y": {
+                    "type": "number"
+                  },
+                  "z": {
+                    "type": "number"
+                  }
+                },
+                "description": "Half-size of that box per axis, in cm.",
+                "additionalProperties": false
               },
-              "y": {
-                "type": "number"
-              },
-              "z": {
-                "type": "number"
+              {
+                "type": "object",
+                "properties": {
+                  "x": {
+                    "type": "number"
+                  },
+                  "y": {
+                    "type": "number"
+                  },
+                  "z": {
+                    "type": "number"
+                  }
+                },
+                "description": "Half-size of the placed NavModifierVolume (volume form only; default 200, 200, 100).",
+                "additionalProperties": false
               }
-            },
-            "description": "Half-size of the placed NavModifierVolume (volume form only; default 200, 200, 100).",
-            "additionalProperties": false
+            ],
+            "description": "Half-size of that box per axis, in cm."
           },
           "failsafeExtent": {
             "type": "object",
@@ -6594,6 +6646,26 @@
             ],
             "description": "EQS generator type."
           },
+          "goal": {
+            "type": "object",
+            "properties": {
+              "x": {
+                "type": "number"
+              },
+              "y": {
+                "type": "number"
+              },
+              "z": {
+                "type": "number"
+              }
+            },
+            "description": "Point to walk to from the start.",
+            "additionalProperties": false
+          },
+          "goalActor": {
+            "type": "string",
+            "description": "Actor to walk to from the start, in place of goal."
+          },
           "hearingConfig": {
             "type": "object",
             "properties": {
@@ -6613,6 +6685,10 @@
           "hearingRange": {
             "type": "number",
             "description": "Hearing range in world units."
+          },
+          "image": {
+            "type": "boolean",
+            "description": "Also write a top-down PNG of the spaces (each its own colour, doors white, start green, goal red) under the project's Saved/EngineWire/Layout; its path is imagePath."
           },
           "info": {
             "type": "string",
@@ -6726,6 +6802,12 @@
           "maxFlySpeed": {
             "type": "number",
             "description": "Maximum flying speed; left unchanged when omitted."
+          },
+          "maxNodes": {
+            "type": "integer",
+            "minimum": 100,
+            "maximum": 20000,
+            "description": "Most samples to take (default 6000); a larger area is read with a wider cell, and the message says so."
           },
           "maxSimplificationError": {
             "type": "number",
@@ -6884,6 +6966,12 @@
             "type": "string",
             "description": "Canonical /Game Environment Query asset path."
           },
+          "roomWidthCm": {
+            "type": "number",
+            "minimum": 100,
+            "maximum": 5000,
+            "description": "How wide a space must be to count as a room, in cm (default 400): some point of it lies at least half this far inside the nav mesh's edge (which keeps the agent's radius off the walls), counted in whole cells. Narrower spaces are corridors."
+          },
           "rotation": {
             "type": "object",
             "properties": {
@@ -7009,6 +7097,10 @@
           "spawnCount": {
             "type": "number",
             "description": "Number of entities the spawner creates."
+          },
+          "startActor": {
+            "type": "string",
+            "description": "Actor where routes start, standing on the nav mesh read (default the first PlayerStart, when it does); without a start, no walk or unreachable list is given."
           },
           "startPoint": {
             "type": "object",
@@ -7213,6 +7305,7 @@
               "create_nav_actor",
               "get_ai_info",
               "get_tree",
+              "analyze_level_layout",
               "set_ai_movement"
             ],
             "description": "Action to invoke on manage_ai."

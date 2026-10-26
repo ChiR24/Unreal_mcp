@@ -1,4 +1,5 @@
 #include "Domains/Navigation/McpNavPrivate.h"
+#include "Domains/Navigation/Analytics/McpLevelLayout.h"
 
 DEFINE_LOG_CATEGORY_STATIC(LogMcpNavigationHandlers, Log, All);
 
@@ -40,6 +41,8 @@ bool UEngineWireSubsystem::HandleManageNavigationAction(
         return McpNavigationHandlers::HandleGetNavigationInfo(this, RequestId, Payload, Socket);
     if (SubAction == TEXT("get_navigation_path"))
         return McpNavigationHandlers::HandleGetNavigationPath(this, RequestId, Payload, Socket);
+    if (SubAction == TEXT("analyze_level_layout"))
+        return McpLevelLayout::Handle(this, RequestId, Payload, Socket);
 
     SendAutomationResponse(Socket, RequestId, false,
         FString::Printf(TEXT("Unknown navigation subAction: %s"), *SubAction), nullptr, TEXT("UNKNOWN_ACTION"));

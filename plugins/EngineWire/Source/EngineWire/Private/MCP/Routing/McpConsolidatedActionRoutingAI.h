@@ -24,7 +24,8 @@ inline const TArray<FString>& Navigation()
 		TEXT("configure_nav_area_cost"), TEXT("create_nav_link_proxy"),
 		TEXT("configure_nav_link"), TEXT("set_nav_link_type"),
 		TEXT("create_smart_link"), TEXT("configure_smart_link_behavior"),
-		TEXT("get_navigation_info"), TEXT("get_navigation_path")
+		TEXT("get_navigation_info"), TEXT("get_navigation_path"),
+		TEXT("analyze_level_layout")
 	};
 	return Actions;
 }

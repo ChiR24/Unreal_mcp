@@ -12,7 +12,7 @@ All notable changes to the EngineWire plugin (formerly McpAutomationBridge) will
 - **`describe_view`** `points` (`tolerance`), `labels`, `coveredBy`, `compareWith` (what changed since `saveAs`); **`analyze_view`** (saliency, palette, light, shader cost); **`contact_sheet`** (an actor from every side).
 - **MCP 2026-07-28 on `/mcp`**: sessionless requests, header checks, `resultType`, consent by elicitation, the tasks extension.
 - **Result pages** for oversized arrays (`options.pageCursor`), and a **search signature** on a confident first hit.
-- **`get_ai_info` `info: 'path'`**: whether a pawn could walk between two points on the nav mesh, and why not.
+- **`get_ai_info` `info: 'path'`**: whether a pawn could walk between two points on the nav mesh, and why not; **`analyze_level_layout`**: the nav mesh read as rooms, corridors and doors, with chokes, dead ends, loops, sightlines and what the start cannot reach.
 - **`get_frame_cost`**, **`diff_asset`**, **`cancel_render`**, `configure_render_camera` shutter and overscan, `set_section` `playRate`.
 - **`nanite_rebuild_mesh` `assetPaths`**, `get_niagara_info` values, `edit_dynamic_mesh` `append_cuboids`, `append_loft`, `append_mesh` and `delete_triangles`.
 - **Change watch**: what a request spawns or modifies is checked into `warnings`, with Map Check and Data Validation on what it touched.

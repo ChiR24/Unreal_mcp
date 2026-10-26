@@ -10,7 +10,7 @@
  * pure-ASCII JSON payload carrying the COMPLETE CapabilityRecord for native
  * discovery (aliases, legacyIds, discovery, schemas.input/output, examples,
  * availability, behavior/policy, normalization, deprecation, hashes).
- * 23 shards, 435 records total.
+ * 23 shards, 436 records total.
  *
  * Chunks are bounded so no single string literal approaches the MSVC 65,535-byte
  * ceiling; concatenating a shard's chunks in order yields its exact JSON.
@@ -24,7 +24,7 @@ namespace Detail
 	extern const TCHAR* const MCP_CAP_SHARD_CONTROL_ACTOR_CHUNKS[];	// control_actor (29)
 	extern const TCHAR* const MCP_CAP_SHARD_CONTROL_EDITOR_CHUNKS[];	// control_editor (26)
 	extern const TCHAR* const MCP_CAP_SHARD_INSPECT_CHUNKS[];	// inspect (26)
-	extern const TCHAR* const MCP_CAP_SHARD_MANAGE_AI_CHUNKS[];	// manage_ai (16)
+	extern const TCHAR* const MCP_CAP_SHARD_MANAGE_AI_CHUNKS[];	// manage_ai (17)
 	extern const TCHAR* const MCP_CAP_SHARD_MANAGE_ASSET_CHUNKS[];	// manage_asset (47)
 	extern const TCHAR* const MCP_CAP_SHARD_MANAGE_AUDIO_CHUNKS[];	// manage_audio (14)
 	extern const TCHAR* const MCP_CAP_SHARD_MANAGE_BLUEPRINT_CHUNKS[];	// manage_blueprint (35)
@@ -62,7 +62,7 @@ inline const FMcpCapabilityShard& At(int32 Index)
 		{ TEXT("control_actor"), Detail::MCP_CAP_SHARD_CONTROL_ACTOR_CHUNKS, 46, 29 },
 		{ TEXT("control_editor"), Detail::MCP_CAP_SHARD_CONTROL_EDITOR_CHUNKS, 32, 26 },
 		{ TEXT("inspect"), Detail::MCP_CAP_SHARD_INSPECT_CHUNKS, 43, 26 },
-		{ TEXT("manage_ai"), Detail::MCP_CAP_SHARD_MANAGE_AI_CHUNKS, 30, 16 },
+		{ TEXT("manage_ai"), Detail::MCP_CAP_SHARD_MANAGE_AI_CHUNKS, 33, 17 },
 		{ TEXT("manage_asset"), Detail::MCP_CAP_SHARD_MANAGE_ASSET_CHUNKS, 88, 47 },
 		{ TEXT("manage_audio"), Detail::MCP_CAP_SHARD_MANAGE_AUDIO_CHUNKS, 27, 14 },
 		{ TEXT("manage_blueprint"), Detail::MCP_CAP_SHARD_MANAGE_BLUEPRINT_CHUNKS, 80, 35 },
@@ -85,7 +85,7 @@ inline const FMcpCapabilityShard& At(int32 Index)
 	return Table[Index];
 }
 
-inline int32 TotalRecordCount() { return 435; }
+inline int32 TotalRecordCount() { return 436; }
 
-inline const TCHAR* CatalogRevision() { return TEXT("72d873f9a2208a41"); }
+inline const TCHAR* CatalogRevision() { return TEXT("4a42a4cdebee9d3c"); }
 }

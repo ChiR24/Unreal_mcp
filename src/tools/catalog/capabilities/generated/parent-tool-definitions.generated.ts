@@ -9231,6 +9231,12 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "number",
           "description": "Radius, in units, of the agents told when the smart link switches; the engine default 0 tells none."
         },
+        "cellCm": {
+          "type": "number",
+          "minimum": 25,
+          "maximum": 1000,
+          "description": "Spacing of the nav mesh samples, in cm (default 100): a smaller cell sees narrower gaps and takes longer."
+        },
         "cellHeight": {
           "type": "number",
           "description": "NavMesh cell height (default: 10)."
@@ -9238,6 +9244,22 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "cellSize": {
           "type": "number",
           "description": "NavMesh cell size (default: 19)."
+        },
+        "center": {
+          "type": "object",
+          "properties": {
+            "x": {
+              "type": "number"
+            },
+            "y": {
+              "type": "number"
+            },
+            "z": {
+              "type": "number"
+            }
+          },
+          "description": "Centre of the box to read, with extent; omit both to read the whole navigable area.",
+          "additionalProperties": false
         },
         "childNodeId": {
           "type": "string",
@@ -9433,20 +9455,41 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "description": "Enum an Enum key holds, by path (/Game/Enums/E_State, /Script/Engine.ECollisionChannel); Enum keys only. Without it the key has no enumerators to hold."
         },
         "extent": {
-          "type": "object",
-          "properties": {
-            "x": {
-              "type": "number"
+          "oneOf": [
+            {
+              "type": "object",
+              "properties": {
+                "x": {
+                  "type": "number"
+                },
+                "y": {
+                  "type": "number"
+                },
+                "z": {
+                  "type": "number"
+                }
+              },
+              "description": "Half-size of that box per axis, in cm.",
+              "additionalProperties": false
             },
-            "y": {
-              "type": "number"
-            },
-            "z": {
-              "type": "number"
+            {
+              "type": "object",
+              "properties": {
+                "x": {
+                  "type": "number"
+                },
+                "y": {
+                  "type": "number"
+                },
+                "z": {
+                  "type": "number"
+                }
+              },
+              "description": "Half-size of the placed NavModifierVolume (volume form only; default 200, 200, 100).",
+              "additionalProperties": false
             }
-          },
-          "description": "Half-size of the placed NavModifierVolume (volume form only; default 200, 200, 100).",
-          "additionalProperties": false
+          ],
+          "description": "Half-size of that box per axis, in cm."
         },
         "failsafeExtent": {
           "type": "object",
@@ -9551,6 +9594,26 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           ],
           "description": "EQS generator type."
         },
+        "goal": {
+          "type": "object",
+          "properties": {
+            "x": {
+              "type": "number"
+            },
+            "y": {
+              "type": "number"
+            },
+            "z": {
+              "type": "number"
+            }
+          },
+          "description": "Point to walk to from the start.",
+          "additionalProperties": false
+        },
+        "goalActor": {
+          "type": "string",
+          "description": "Actor to walk to from the start, in place of goal."
+        },
         "hearingConfig": {
           "type": "object",
           "properties": {
@@ -9570,6 +9633,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "hearingRange": {
           "type": "number",
           "description": "Hearing range in world units."
+        },
+        "image": {
+          "type": "boolean",
+          "description": "Also write a top-down PNG of the spaces (each its own colour, doors white, start green, goal red) under the project's Saved/EngineWire/Layout; its path is imagePath."
         },
         "info": {
           "type": "string",
@@ -9683,6 +9750,12 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "maxFlySpeed": {
           "type": "number",
           "description": "Maximum flying speed; left unchanged when omitted."
+        },
+        "maxNodes": {
+          "type": "integer",
+          "minimum": 100,
+          "maximum": 20000,
+          "description": "Most samples to take (default 6000); a larger area is read with a wider cell, and the message says so."
         },
         "maxSimplificationError": {
           "type": "number",
@@ -9841,6 +9914,12 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "string",
           "description": "Canonical /Game Environment Query asset path."
         },
+        "roomWidthCm": {
+          "type": "number",
+          "minimum": 100,
+          "maximum": 5000,
+          "description": "How wide a space must be to count as a room, in cm (default 400): some point of it lies at least half this far inside the nav mesh's edge (which keeps the agent's radius off the walls), counted in whole cells. Narrower spaces are corridors."
+        },
         "rotation": {
           "type": "object",
           "properties": {
@@ -9966,6 +10045,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "spawnCount": {
           "type": "number",
           "description": "Number of entities the spawner creates."
+        },
+        "startActor": {
+          "type": "string",
+          "description": "Actor where routes start, standing on the nav mesh read (default the first PlayerStart, when it does); without a start, no walk or unreachable list is given."
         },
         "startPoint": {
           "type": "object",
@@ -10170,6 +10253,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             "create_nav_actor",
             "get_ai_info",
             "get_tree",
+            "analyze_level_layout",
             "set_ai_movement"
           ],
           "description": "Action to invoke on manage_ai."
@@ -10330,6 +10414,17 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "string",
           "description": "Canonical /Game Blueprint asset path."
         },
+        "cellCm": {
+          "type": "number",
+          "description": "The sample spacing used."
+        },
+        "chokes": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Spaces on at least 1% of the routes between the others, most first (of two equal, the narrower), 50 at most."
+        },
         "compiled": {
           "type": "boolean",
           "description": "Whether the Blueprint compiled with the logic."
@@ -10350,6 +10445,13 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "boolean",
           "description": "Whether the perception component was added by this call."
         },
+        "deadEnds": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Spaces with one neighbour."
+        },
         "definitionPath": {
           "type": "string",
           "description": "Canonical /Game Smart Object definition asset path."
@@ -10362,6 +10464,38 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "dominantSense": {
           "type": "string",
           "description": "Sense the component treats as dominant."
+        },
+        "doors": {
+          "type": "array",
+          "description": "Where two spaces meet.",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "between": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                },
+                "description": "The two spaces."
+              },
+              "location": {
+                "type": "array",
+                "items": {
+                  "type": "number"
+                },
+                "description": "Its middle, as [x, y, z]."
+              },
+              "widthCm": {
+                "type": "number",
+                "description": "How wide it is."
+              },
+              "share": {
+                "type": "number",
+                "description": "Of the routes between points of different spaces, the share that crosses it (0-1)."
+              }
+            }
+          }
         },
         "focusTarget": {
           "type": "string",
@@ -10387,9 +10521,17 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           },
           "description": "The events the logic hangs on (On Possess, Tick), each made when the Blueprint lacked it."
         },
+        "imagePath": {
+          "type": "string",
+          "description": "With image: the PNG written."
+        },
         "isRoot": {
           "type": "boolean",
           "description": "Whether this node became the tree root."
+        },
+        "loops": {
+          "type": "number",
+          "description": "Independent loops among the spaces (doors - spaces + separate parts)."
         },
         "maxAcceleration": {
           "type": "number",
@@ -10466,6 +10608,42 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "boolean",
           "description": "Whether the component orients rotation to movement."
         },
+        "path": {
+          "type": "object",
+          "additionalProperties": false,
+          "description": "With a start and a goal: the walk between them.",
+          "properties": {
+            "reachable": {
+              "type": "boolean"
+            },
+            "lengthCm": {
+              "type": "number"
+            },
+            "spaces": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "description": "The spaces it crosses, in order."
+            },
+            "points": {
+              "type": "array",
+              "items": {
+                "type": "array",
+                "items": {
+                  "type": "number"
+                }
+              },
+              "description": "Samples along it as [x, y, z], about 40."
+            },
+            "from": {
+              "type": "string"
+            },
+            "to": {
+              "type": "string"
+            }
+          }
+        },
         "pathLength": {
           "type": "number",
           "description": "Length of the path in cm."
@@ -10522,6 +10700,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "number",
           "description": "Yaw component of the resulting rotation rate."
         },
+        "samples": {
+          "type": "number",
+          "description": "Nav mesh samples read."
+        },
         "saved": {
           "type": "boolean",
           "description": "Whether the Blackboard reached disk."
@@ -10532,6 +10714,65 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             "type": "string"
           },
           "description": "Names of the senses this call configured."
+        },
+        "spaces": {
+          "type": "array",
+          "description": "Rooms first, then corridors, each largest first.",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "name": {
+                "type": "string",
+                "description": "Room n or Corridor n, as the other fields name it."
+              },
+              "kind": {
+                "type": "string",
+                "enum": [
+                  "room",
+                  "corridor"
+                ]
+              },
+              "center": {
+                "type": "array",
+                "items": {
+                  "type": "number"
+                },
+                "description": "Mean of its samples, as [x, y, z]."
+              },
+              "areaM2": {
+                "type": "number",
+                "description": "Floor area in square metres."
+              },
+              "widthCm": {
+                "type": "number",
+                "description": "Width at its widest point, to within a cell."
+              },
+              "neighbours": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                },
+                "description": "Spaces a door joins it to."
+              },
+              "deadEnd": {
+                "type": "boolean",
+                "description": "One neighbour only."
+              },
+              "passThroughShare": {
+                "type": "number",
+                "description": "Of the routes between points of the other spaces, the share that passes through this one (0-1)."
+              },
+              "sightlineCm": {
+                "type": "number",
+                "description": "Longest clear view at eye height from its deepest point (5000 at most)."
+              },
+              "reachable": {
+                "type": "boolean",
+                "description": "With a start: whether it can be walked to."
+              }
+            }
+          }
         },
         "success": {
           "type": "boolean",
@@ -10549,6 +10790,13 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "description": "Serialized Behavior Tree graph (root node, children, decorators, services) reported by the native BehaviorTree domain (HandleGetTree).",
           "additionalProperties": true,
           "x-unreal-reflection-boundary": true
+        },
+        "unreachable": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "With a start: spaces it cannot walk to."
         },
         "useRVOAvoidance": {
           "type": "boolean",
