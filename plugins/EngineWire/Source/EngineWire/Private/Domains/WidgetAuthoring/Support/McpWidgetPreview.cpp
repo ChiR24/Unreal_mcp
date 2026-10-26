@@ -20,16 +20,11 @@
 #include "Transport/WebSocket/McpBridgeWebSocket.h"
 #include "WidgetBlueprint.h"
 
-namespace WidgetAuthoringHandlers
+namespace WidgetAuthoringHelpers
 {
-using namespace WidgetAuthoringHelpers;
-
-namespace
-{
-// Draws the widget offscreen the way the game would at Size (the project's DPI curve applied), with the
-// designer flags of its thumbnail: Construct graphs do not run, so a HUD shows its designer texts.
 // The preview used to open and focus the Widget Blueprint editor and return no image at all.
-bool McpDrawWidgetPreview(UWidgetBlueprint* WidgetBP, FIntPoint Size, TArray<FColor>& OutPixels, FString& OutError)
+bool McpDrawWidget(UWidgetBlueprint* WidgetBP, FIntPoint Size, TArray<FColor>& OutPixels, FString& OutError,
+                   TFunctionRef<void(UUserWidget& Widget, float Scale)> Inspect)
 {
     UWorld* World = GEditor ? GEditor->GetEditorWorldContext().World() : nullptr;
     UClass* Class = WidgetBP->GeneratedClass;
@@ -65,24 +60,38 @@ bool McpDrawWidgetPreview(UWidgetBlueprint* WidgetBP, FIntPoint Size, TArray<FCo
     Target->UpdateResourceImmediate(true);
     FWidgetRenderer* Renderer = new FWidgetRenderer(false);
     const float Scale = GetDefault<UUserInterfaceSettings>()->GetDPIScaleBasedOnSize(Size);
+    // Twice: a wrapping text sizes itself from the width its first arrangement gave it, as in the game's second frame.
+    Renderer->DrawWidget(Target, Slate, Scale, FVector2D(Size.X, Size.Y), 0.f);
     Renderer->DrawWidget(Target, Slate, Scale, FVector2D(Size.X, Size.Y), 0.f);
     FlushRenderingCommands();
     FTextureRenderTargetResource* Resource = Target->GameThread_GetRenderTargetResource();
     const bool bRead = Resource && Resource->ReadPixels(OutPixels) && OutPixels.Num() == Size.X * Size.Y;
+    Inspect(*Widget, Scale);
     BeginCleanup(Renderer);
     Widget->MarkAsGarbage();
-    // Over dark grey, so white HUD text on nothing still reads.
-    for (FColor& Pixel : OutPixels)
-    {
-        const float Alpha = Pixel.A / 255.f;
-        Pixel = FColor(FMath::RoundToInt(Pixel.R * Alpha + 24 * (1.f - Alpha)), FMath::RoundToInt(Pixel.G * Alpha + 24 * (1.f - Alpha)),
-                       FMath::RoundToInt(Pixel.B * Alpha + 28 * (1.f - Alpha)), 255);
-    }
     if (!bRead)
     {
         OutError = TEXT("The widget drew, but its pixels could not be read back.");
     }
     return bRead;
+}
+}
+
+namespace WidgetAuthoringHandlers
+{
+using namespace WidgetAuthoringHelpers;
+
+namespace
+{
+// Over dark grey, so white HUD text on nothing still reads.
+void McpOverDarkGrey(TArray<FColor>& Pixels)
+{
+    for (FColor& Pixel : Pixels)
+    {
+        const float Alpha = Pixel.A / 255.f;
+        Pixel = FColor(FMath::RoundToInt(Pixel.R * Alpha + 24 * (1.f - Alpha)), FMath::RoundToInt(Pixel.G * Alpha + 24 * (1.f - Alpha)),
+                       FMath::RoundToInt(Pixel.B * Alpha + 28 * (1.f - Alpha)), 255);
+    }
 }
 }
 
@@ -117,11 +126,12 @@ bool HandleWidgetAuthoringPreview(
     TArray<FColor> Pixels;
     FString Error;
     TArray64<uint8> Png;
-    if (!McpDrawWidgetPreview(WidgetBP, Size, Pixels, Error))
+    if (!McpDrawWidget(WidgetBP, Size, Pixels, Error, [](UUserWidget&, float) {}))
     {
         Subsystem.SendAutomationError(RequestingSocket, RequestId, Error, TEXT("PREVIEW_FAILED"));
         return true;
     }
+    McpOverDarkGrey(Pixels);
     // The editor compiles a material's Slate shaders when it is first drawn, so the first preview after the editor
     // starts (or after a material edit) drew panels and button faces blank. waitForShaders waits for that compile and
     // draws again; without it the reply says shaders were compiling.

@@ -685,4 +685,7 @@ export const PLAIN_PROBE: readonly PlainProbeCase[] = [
   { query: 'find choke points', accepted: ['manage_ai.analyze_level_layout'] },
   { query: 'where are the dead ends', accepted: ['manage_ai.analyze_level_layout'] },
   { query: 'rooms and corridors in my level', accepted: ['manage_ai.analyze_level_layout'] },
+  { query: 'check ui layout', accepted: ['blueprint.audit_widget'] },
+  { query: 'text is cut off in the widget', accepted: ['blueprint.audit_widget'] },
+  { query: 'overlapping buttons', accepted: ['blueprint.audit_widget'] },
 ];

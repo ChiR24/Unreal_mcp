@@ -27,6 +27,10 @@ const WIDGET_NAME = `WBP_Promotion_${ts}`;
 const WIDGET_PATH = `${TEST_FOLDER}/${WIDGET_NAME}`;
 
 const widgetArgs = (action, extra = {}) => ({ action, widgetPath: WIDGET_PATH, ...extra });
+// audit_widget reads a widget of its own, built with one of each problem it looks for.
+const AUDIT_NAME = `WBP_Audit_${ts}`;
+const auditArgs = (action, extra = {}) => ({ action, widgetPath: `${TEST_FOLDER}/${AUDIT_NAME}`, ...extra });
+const auditTree = (x, y, w, h, tree) => auditArgs('add_widget_tree', { parentSlot: 'RootCanvas', positionX: x, positionY: y, sizeX: w, sizeY: h, tree });
 
 const testCases = [
   // === SETUP ===
@@ -101,6 +105,27 @@ const testCases = [
   { scenario: 'GRAPH: a VariableGet names the widget add_text_block just added', toolName: 'manage_blueprint', arguments: { action: 'create_node', blueprintPath: WIDGET_PATH, graphName: 'EventGraph', nodeType: 'VariableGet', memberName: 'OrderMe' }, expected: 'success' },
   { scenario: 'ACTION: remove_widget', toolName: 'manage_blueprint', arguments: widgetArgs('remove_widget', { slotName: 'RemoveMe' }), expected: 'success' },
   { scenario: 'ACTION: delete_animation', toolName: 'manage_blueprint', arguments: widgetArgs('delete_animation', { animationName: 'Anim_Doomed' }), expected: 'success|not found' },
+
+  // === AUDIT ===
+  { scenario: 'Setup: a Widget Blueprint to audit', toolName: 'manage_blueprint', arguments: { action: 'create_widget_blueprint', name: AUDIT_NAME, path: TEST_FOLDER }, expected: 'success|already exists' },
+  { scenario: 'Setup: its root canvas', toolName: 'manage_blueprint', arguments: auditArgs('add_canvas_panel', { slotName: 'RootCanvas' }), expected: 'success|already exists' },
+  { scenario: 'Setup: a label too narrow for its text', toolName: 'manage_blueprint', arguments: auditTree(400, 200, 80, 40, { type: 'TextBlock', name: 'CutLabel', text: 'Settings and Options' }), expected: 'success' },
+  { scenario: 'Setup: a button', toolName: 'manage_blueprint', arguments: auditTree(400, 400, 200, 60, { type: 'Button', name: 'PlayButton' }), expected: 'success' },
+  { scenario: 'Setup: a second button on top of the first', toolName: 'manage_blueprint', arguments: auditTree(450, 420, 200, 60, { type: 'Button', name: 'QuitButton' }), expected: 'success' },
+  { scenario: 'Setup: a button too small to touch', toolName: 'manage_blueprint', arguments: auditTree(900, 500, 30, 30, { type: 'Button', name: 'TinyButton' }), expected: 'success' },
+  { scenario: 'Setup: a dark grey label on nothing', toolName: 'manage_blueprint', arguments: auditTree(400, 700, 300, 30, { type: 'TextBlock', name: 'FaintLabel', text: 'Hard to read', fontSize: 12, color: [0.18, 0.18, 0.18, 1] }), expected: 'success' },
+  { scenario: 'Setup: an icon past the right edge of a 1920 screen', toolName: 'manage_blueprint', arguments: auditTree(1850, 100, 120, 60, { type: 'Image', name: 'EdgeIcon' }), expected: 'success' },
+  { scenario: 'READ: audit_widget finds each problem at two sizes', toolName: 'manage_blueprint', arguments: auditArgs('audit_widget', { resolutions: ['1920x1080', '1280x720'], touch: true, safeZone: 0.95, image: true }), expected: 'success', assertions: [
+    { path: 'structuredContent.result.counts.clipped_text', gte: 1, label: 'the narrow label is cut off' },
+    { path: 'structuredContent.result.counts.overlap', gte: 1, label: 'the two buttons overlap' },
+    { path: 'structuredContent.result.counts.small_target', gte: 1, label: 'the 30 px button is too small to touch' },
+    { path: 'structuredContent.result.counts.low_contrast', gte: 1, label: 'the dark grey label is hard to read' },
+    { path: 'structuredContent.result.counts.off_screen', gte: 1, label: 'the icon leaves the screen' },
+    { path: 'structuredContent.result.imageBase64', exists: true, label: 'the picture with the findings outlined' },
+  ] },
+  { scenario: 'READ: audit_widget judges once shaders finish', toolName: 'manage_blueprint', arguments: auditArgs('audit_widget', { waitForShaders: true }), expected: 'success', timeoutMs: 30000, assertions: [{ path: 'structuredContent.result.shadersCompiling', gte: 0, label: 'shader jobs reported' }] },
+  { scenario: 'ERROR: audit_widget refuses a size it cannot draw', toolName: 'manage_blueprint', arguments: auditArgs('audit_widget', { resolutions: ['8000x8000'] }), expected: 'error|INVALID_ARGUMENT' },
+  { scenario: 'ERROR: audit_widget on a Widget Blueprint that is not there', toolName: 'manage_blueprint', arguments: { action: 'audit_widget', widgetPath: `${TEST_FOLDER}/WBP_Missing_${ts}` }, expected: 'error|NOT_FOUND' },
 
   // === CLEANUP ===
   { scenario: 'Cleanup: delete test folder', toolName: 'manage_asset', arguments: { action: 'delete', path: TEST_FOLDER, force: true }, expected: 'success|not found', timeoutMs: 30000 },

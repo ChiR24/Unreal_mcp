@@ -79,6 +79,7 @@ bool UEngineWireSubsystem::HandleManageWidgetAuthoringAction(
         HandleWidgetAuthoringEventBindings,
         HandleWidgetAuthoringAnimationCore,
         HandleWidgetAuthoringPreview,
+        HandleWidgetAuthoringAudit,
         HandleWidgetAuthoringGenericComponent,
         HandleWidgetAuthoringManipulation,
         HandleWidgetAuthoringDuplicate,

@@ -1,6 +1,6 @@
 /**
  * Widget lifecycle records: create_widget_blueprint, set_widget_parent_class,
- * preview_widget.
+ * preview_widget, audit_widget.
  *
  * create_widget_blueprint is the canonical Widget Blueprint creation action.
  * The native route `create_widget` (reachable via system_control) maps to it
@@ -98,6 +98,49 @@ export const WIDGET_LIFECYCLE_RECORDS: readonly CapabilityRecordSource[] = [
     plugins: WIDGET_PLUGINS,
     exampleInput: { action: 'preview_widget', widgetPath: '/Game/UI/WBP_MainUI' },
     exampleOutput: { success: true, message: 'Widget drawn at 1280x720 as the game creates it (Construct graphs do not run)', widgetPath: '/Game/UI/WBP_MainUI', mimeType: 'image/png', width: 1280, height: 720 },
+  }),
+  buildRecord({
+    id: 'blueprint.audit_widget',
+    action: 'audit_widget',
+    family: FAMILY,
+    domain: DOMAIN,
+    topics: ['audit widget', 'check ui layout', 'ui review', 'text cut off', 'overlapping buttons', 'buttons overlap', 'text contrast', 'readable text', 'safe zone', 'ui accessibility', 'hud layout', 'menu layout', 'ui problems'],
+    summary: 'Check a Widget Blueprint the way a UI reviewer would, at several screen sizes: it is laid out offscreen as the game creates it (as preview_widget draws it) at each of resolutions, and every visible widget is judged. Findings: off_screen (part or all of a widget past the screen edge), clipped_text (a text needing more room than its box gives, without wrapping), overlap (buttons on buttons, text on text, text across a button it is not part of; images are backdrops and not judged), unsafe (text or a button inside the margin outside the title-safe area, safeZone), small_target (with touch: a button, check box, slider or text box under 44 Slate units on its short side), low_contrast (the WCAG 2.x ratio of a text\'s colour to what is drawn behind it, under 4.5:1, or 3:1 for text of 18 pt or 14 pt bold; where nothing is drawn behind it, the preview\'s dark backdrop stands in for the game), misaligned (two neighbouring widgets whose edges miss each other by 1-4 px). Each finding names its widget (and the other one), the sizes it shows at, its rect at the first of them and what is wrong; the most severe come first, 100 at most. Reads only.',
+    whenToUse: ['After building or changing a menu or HUD: is anything cut off, on top of something else, off the screen at another size, hard to read or out of line?'],
+    whenNotToUse: ['Only the picture is wanted (use preview_widget).', 'The running game\'s screen, runtime texts included, must be judged (play, then inspect analyze_view).'],
+    inputProps: {
+      widgetPath: P.widgetPath,
+      resolutions: { type: 'array', items: { type: 'string' }, minItems: 1, maxItems: 6, description: 'Screen sizes to lay it out at, each "WxH" (up to 3840x2160), the project\'s DPI scaling applied as in the game (default 1920x1080, 1280x720 and 3440x1440).' },
+      safeZone: { type: 'number', minimum: 0.5, maximum: 1, description: 'Share of each side of the screen that is title-safe (default 0.9: a 5% margin on every side); 1 turns the check off.' },
+      touch: { type: 'boolean', description: 'The UI is touched: also flag interactive widgets under 44 Slate units on their short side (default false).' },
+      image: { type: 'boolean', description: 'Also return the first size\'s picture with each finding outlined (red, orange, yellow, grey from most to least severe).' },
+      waitForShaders: { type: 'boolean', description: 'true: when the drawing would find shaders still compiling (a material\'s UI shaders compile the first time it is drawn), wait for them, at most 25 seconds, before judging: until then a material draws blank and its contrast reads wrong. Default false: judge at once and report shadersCompiling.' },
+    },
+    required: ['widgetPath'],
+    outputProps: {
+      widgetPath: P.widgetPath,
+      findings: { type: 'array', description: 'Most severe first, 100 at most.', items: { type: 'object', additionalProperties: false, properties: {
+        kind: { type: 'string', enum: ['off_screen', 'clipped_text', 'overlap', 'unsafe', 'small_target', 'low_contrast', 'misaligned'] },
+        widget: { type: 'string', description: 'The widget, by its name in the tree.' },
+        other: { type: 'string', description: 'overlap and misaligned: the other widget.' },
+        resolutions: { type: 'array', items: { type: 'string' }, description: 'The sizes it shows at.' },
+        rect: { type: 'array', items: { type: 'number' }, description: '[x, y, width, height] in pixels at the first of those sizes (both widgets, for a pair).' },
+        detail: { type: 'string', description: 'What is wrong, in numbers.' },
+      } } },
+      counts: { type: 'object', additionalProperties: { type: 'number' }, description: 'Findings per kind.' },
+      widgetsChecked: { type: 'number', description: 'Visible widgets laid out at the first size.' },
+      imageBase64: { type: 'string', description: 'With image: the first size\'s picture with the findings outlined, PNG, base64.' },
+      mimeType: { type: 'string', description: 'image/png.' },
+      shadersCompiling: { type: 'number', description: 'Shader compile jobs outstanding when it was drawn: above 0, a material may have drawn blank (contrast then reads wrong); pass waitForShaders.' },
+      shaderWait: { type: 'object', additionalProperties: true, 'x-unreal-reflection-boundary': true, description: 'With waitForShaders while shaders compiled: waitedSeconds, jobsLeft and timedOut.' },
+    },
+    outputRequired: ['widgetPath'],
+    effect: 'read',
+    latency: 'interactive',
+    resources: 'medium',
+    plugins: WIDGET_PLUGINS,
+    exampleInput: { action: 'audit_widget', widgetPath: '/Game/UI/WBP_MainMenu', touch: true },
+    exampleOutput: { success: true, message: '2 finding(s) at 3 screen size(s): 1 clipped_text, 1 overlap.', widgetPath: '/Game/UI/WBP_MainMenu', findings: [{ kind: 'clipped_text', widget: 'Title', resolutions: ['1920x1080', '1280x720', '3440x1440'], rect: [660, 120, 600, 64], detail: "'Settings & Options' needs 412 x 48, its box is 300 x 48 (Slate units)" }], counts: { clipped_text: 1, overlap: 1 }, widgetsChecked: 14 },
   }),
   buildRecord({
     id: 'blueprint.remove_widget',

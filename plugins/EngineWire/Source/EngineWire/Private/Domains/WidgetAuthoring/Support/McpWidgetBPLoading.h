@@ -7,6 +7,7 @@
 class FMcpBridgeWebSocket;
 class UEngineWireSubsystem;
 
+class UUserWidget;
 class UWidget;
 class UWidgetAnimation;
 class UWidgetBlueprint;
@@ -15,6 +16,11 @@ class UWidgetTree;
 namespace WidgetAuthoringHelpers
 {
 UWidgetBlueprint* LoadWidgetBlueprint(const FString& WidgetPath);
+// Draws WidgetBP offscreen the way the game would at Size (the project's DPI curve applied, Scale), with the designer
+// flags of its thumbnail: Construct graphs do not run, and each widget keeps the visibility it is saved with.
+// OutPixels are the raw pixels (alpha 0 where nothing drew); Inspect sees the laid-out widget before it is dropped.
+bool McpDrawWidget(UWidgetBlueprint* WidgetBP, FIntPoint Size, TArray<FColor>& OutPixels, FString& OutError,
+                   TFunctionRef<void(UUserWidget& Widget, float Scale)> Inspect);
 // The canonical /Game package path of a Widget Blueprint (/Game/UI/WBP_Menu), which is what every
 // widgetPath a reply carries must name. UObject::GetPathName() answers the object path
 // (/Game/UI/WBP_Menu.WBP_Menu), so a receipt listed the same asset twice beside assetPath.

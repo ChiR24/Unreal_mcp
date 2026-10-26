@@ -15227,6 +15227,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "boolean",
           "description": "Play at real speed while the game is slowed down or sped up."
         },
+        "image": {
+          "type": "boolean",
+          "description": "Also return the first size's picture with each finding outlined (red, orange, yellow, grey from most to least severe)."
+        },
         "includePins": {
           "type": "boolean",
           "description": "When true, graph details include per-node pins and links."
@@ -15877,6 +15881,15 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "string",
           "description": "Screen size the widget is drawn for, \"WxH\" (default \"1280x720\"); the project DPI scaling for that size applies, as in the game."
         },
+        "resolutions": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "minItems": 1,
+          "maxItems": 6,
+          "description": "Screen sizes to lay it out at, each \"WxH\" (up to 3840x2160), the project's DPI scaling applied as in the game (default 1920x1080, 1280x720 and 3440x1440)."
+        },
         "respawnTime": {
           "type": "number",
           "description": "Seconds after it starts to drop until it is back in place (default 3); 0 never: it is destroyed 5 seconds into its fall."
@@ -15921,6 +15934,12 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             ]
           },
           "description": "The rules to run, default all: tick_heavy, unreachable, random_fanout, infinite_while, never_assigned, unguarded_read. An unknown name is INVALID_ARGUMENT."
+        },
+        "safeZone": {
+          "type": "number",
+          "minimum": 0.5,
+          "maximum": 1,
+          "description": "Share of each side of the screen that is title-safe (default 0.9: a 5% margin on every side); 1 turns the check off."
         },
         "save": {
           "type": "boolean",
@@ -16152,6 +16171,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "number",
           "description": "Top margin in slate units."
         },
+        "touch": {
+          "type": "boolean",
+          "description": "The UI is touched: also flag interactive widgets under 44 Slate units on their short side (default false)."
+        },
         "trackType": {
           "type": "string",
           "enum": [
@@ -16360,6 +16383,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             "probe_handle",
             "edit_widget_blueprint",
             "preview_widget",
+            "audit_widget",
             "remove_widget",
             "duplicate_widget",
             "add_panel_widget",
@@ -16704,11 +16728,23 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "description": "Total number of node types listed."
         },
         "counts": {
-          "type": "object",
-          "additionalProperties": {
-            "type": "number"
-          },
-          "description": "Findings per rule, listed or not."
+          "oneOf": [
+            {
+              "type": "object",
+              "additionalProperties": {
+                "type": "number"
+              },
+              "description": "Findings per kind."
+            },
+            {
+              "type": "object",
+              "additionalProperties": {
+                "type": "number"
+              },
+              "description": "Findings per rule, listed or not."
+            }
+          ],
+          "description": "Findings per kind."
         },
         "created": {
           "type": [
@@ -16890,14 +16926,67 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "description": "Every finding, listed or not."
         },
         "findings": {
-          "type": "array",
-          "items": {
-            "type": "object",
-            "additionalProperties": true,
-            "x-unreal-reflection-boundary": true
-          },
-          "x-unreal-reflection-boundary": true,
-          "description": "One row per finding: rule, severity (warning, or error for a loop that never ends), graph, node (its title), nodeId (as edit_graph takes it) and detail (what is wrong and the fix). unreachable names only the first node of each dead chain, unguarded_read the first unchecked use of each variable (detail counts the rest)."
+          "oneOf": [
+            {
+              "type": "array",
+              "description": "Most severe first, 100 at most.",
+              "items": {
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {
+                  "kind": {
+                    "type": "string",
+                    "enum": [
+                      "off_screen",
+                      "clipped_text",
+                      "overlap",
+                      "unsafe",
+                      "small_target",
+                      "low_contrast",
+                      "misaligned"
+                    ]
+                  },
+                  "widget": {
+                    "type": "string",
+                    "description": "The widget, by its name in the tree."
+                  },
+                  "other": {
+                    "type": "string",
+                    "description": "overlap and misaligned: the other widget."
+                  },
+                  "resolutions": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    },
+                    "description": "The sizes it shows at."
+                  },
+                  "rect": {
+                    "type": "array",
+                    "items": {
+                      "type": "number"
+                    },
+                    "description": "[x, y, width, height] in pixels at the first of those sizes (both widgets, for a pair)."
+                  },
+                  "detail": {
+                    "type": "string",
+                    "description": "What is wrong, in numbers."
+                  }
+                }
+              }
+            },
+            {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "additionalProperties": true,
+                "x-unreal-reflection-boundary": true
+              },
+              "x-unreal-reflection-boundary": true,
+              "description": "One row per finding: rule, severity (warning, or error for a loop that never ends), graph, node (its title), nodeId (as edit_graph takes it) and detail (what is wrong and the fix). unreachable names only the first node of each dead chain, unguarded_read the first unchecked use of each variable (detail counts the rest)."
+            }
+          ],
+          "description": "Most severe first, 100 at most."
         },
         "flaggedCount": {
           "type": "number",
@@ -17565,14 +17654,25 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "description": "An animation graph node's editable settings, name to value (a Sequence Player: Sequence, PlayRate, StartPosition, bLoopAnimation ...; at most 24, lists left out). Absent on any other node. graphName is the AnimGraph, or the name of the state whose graph holds the node."
         },
         "shaderWait": {
-          "type": "object",
-          "additionalProperties": true,
-          "x-unreal-reflection-boundary": true,
+          "oneOf": [
+            {
+              "type": "object",
+              "additionalProperties": true,
+              "x-unreal-reflection-boundary": true,
+              "description": "With waitForShaders while shaders compiled: waitedSeconds, jobsLeft (still outstanding when the wait ended) and timedOut (true when jobs were left after the 25 second cap)."
+            },
+            {
+              "type": "object",
+              "additionalProperties": true,
+              "x-unreal-reflection-boundary": true,
+              "description": "With waitForShaders while shaders compiled: waitedSeconds, jobsLeft and timedOut."
+            }
+          ],
           "description": "With waitForShaders while shaders compiled: waitedSeconds, jobsLeft (still outstanding when the wait ended) and timedOut (true when jobs were left after the 25 second cap)."
         },
         "shadersCompiling": {
           "type": "number",
-          "description": "Shader compile jobs still outstanding when the widget was drawn. Above 0, images and borders that use a material may be drawn blank and a warning says so; pass waitForShaders to draw after they finish."
+          "description": "Shader compile jobs outstanding when it was drawn: above 0, a material may have drawn blank (contrast then reads wrong); pass waitForShaders."
         },
         "sizeBytes": {
           "type": "number",
@@ -17861,6 +17961,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             }
           ],
           "description": "Every widget created, root first; bind or restyle them by these names."
+        },
+        "widgetsChecked": {
+          "type": "number",
+          "description": "Visible widgets laid out at the first size."
         },
         "width": {
           "type": "number",

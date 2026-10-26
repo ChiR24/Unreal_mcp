@@ -1601,8 +1601,17 @@ describe('widget previews', () => {
   // material's Slate shaders when it is first drawn, so the wait has to follow a draw and be followed by another.
   it('preview_widget waits for shaders on request and always reports them', () => {
     const preview = code('WidgetAuthoring', 'Support', 'McpWidgetPreview.cpp');
-    expect(preview.indexOf('McpDrawWidgetPreview(WidgetBP')).toBeLessThan(preview.indexOf('McpDeferForShaderCompile(Payload'));
+    expect(preview.indexOf('McpDrawWidget(WidgetBP')).toBeLessThan(preview.indexOf('McpDeferForShaderCompile(Payload'));
     expect(preview).toContain('McpAddShaderCompileState(ResultJson, Payload);');
+  });
+
+  // The same lesson for audit_widget: a wait checked before anything was drawn found nothing compiling, so the audit
+  // judged contrast on blank material brushes.
+  it('audit_widget draws before it waits for shaders, and reports them', () => {
+    const audit = code('WidgetAuthoring', 'Audit', 'McpWidgetAudit.cpp');
+    expect(audit.indexOf('McpDrawWidget(WidgetBP')).toBeGreaterThan(-1);
+    expect(audit.indexOf('McpDrawWidget(WidgetBP')).toBeLessThan(audit.indexOf('McpDeferForShaderCompile(Payload'));
+    expect(audit).toContain('McpAddShaderCompileState(ResultJson, Payload);');
   });
 });
 

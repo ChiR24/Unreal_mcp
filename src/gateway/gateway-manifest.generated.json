@@ -10078,6 +10078,7 @@
         "probe_handle",
         "edit_widget_blueprint",
         "preview_widget",
+        "audit_widget",
         "remove_widget",
         "duplicate_widget",
         "add_panel_widget",
@@ -10182,6 +10183,7 @@
         "hintText",
         "hoverSoundPath",
         "ignoreTimeDilation",
+        "image",
         "includePins",
         "includeProgressBar",
         "index",
@@ -10292,6 +10294,7 @@
         "remove",
         "renderOpacity",
         "resolution",
+        "resolutions",
         "respawnTime",
         "responseCount",
         "restartDelay",
@@ -10300,6 +10303,7 @@
         "rowCount",
         "rows",
         "rules",
+        "safeZone",
         "save",
         "saveAfterCompile",
         "savePath",
@@ -10345,6 +10349,7 @@
         "toNodeId",
         "toPinName",
         "top",
+        "touch",
         "trackType",
         "tracks",
         "translation",
@@ -10868,6 +10873,10 @@
           "ignoreTimeDilation": {
             "type": "boolean",
             "description": "Play at real speed while the game is slowed down or sped up."
+          },
+          "image": {
+            "type": "boolean",
+            "description": "Also return the first size's picture with each finding outlined (red, orange, yellow, grey from most to least severe)."
           },
           "includePins": {
             "type": "boolean",
@@ -11519,6 +11528,15 @@
             "type": "string",
             "description": "Screen size the widget is drawn for, \"WxH\" (default \"1280x720\"); the project DPI scaling for that size applies, as in the game."
           },
+          "resolutions": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "minItems": 1,
+            "maxItems": 6,
+            "description": "Screen sizes to lay it out at, each \"WxH\" (up to 3840x2160), the project's DPI scaling applied as in the game (default 1920x1080, 1280x720 and 3440x1440)."
+          },
           "respawnTime": {
             "type": "number",
             "description": "Seconds after it starts to drop until it is back in place (default 3); 0 never: it is destroyed 5 seconds into its fall."
@@ -11563,6 +11581,12 @@
               ]
             },
             "description": "The rules to run, default all: tick_heavy, unreachable, random_fanout, infinite_while, never_assigned, unguarded_read. An unknown name is INVALID_ARGUMENT."
+          },
+          "safeZone": {
+            "type": "number",
+            "minimum": 0.5,
+            "maximum": 1,
+            "description": "Share of each side of the screen that is title-safe (default 0.9: a 5% margin on every side); 1 turns the check off."
           },
           "save": {
             "type": "boolean",
@@ -11794,6 +11818,10 @@
             "type": "number",
             "description": "Top margin in slate units."
           },
+          "touch": {
+            "type": "boolean",
+            "description": "The UI is touched: also flag interactive widgets under 44 Slate units on their short side (default false)."
+          },
           "trackType": {
             "type": "string",
             "enum": [
@@ -12002,6 +12030,7 @@
               "probe_handle",
               "edit_widget_blueprint",
               "preview_widget",
+              "audit_widget",
               "remove_widget",
               "duplicate_widget",
               "add_panel_widget",
