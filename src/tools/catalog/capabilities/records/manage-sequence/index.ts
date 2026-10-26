@@ -1,5 +1,5 @@
 /**
- * manage_sequence capability record catalog: timeline, metadata, cinematic,
+ * manage_sequence capability record catalog: timeline, metadata, cinematic, planner,
  * MRQ, media, take recorder and replay families, folded by MANAGE_SEQUENCE_FOLDS.
  */
 import { type CapabilityRecordSource } from '../../model.js';
@@ -8,6 +8,7 @@ import { CINEMATIC_RECORDS } from './cinematic.js';
 import { MEDIA_RECORDS } from './media.js';
 import { METADATA_RECORDS } from './metadata.js';
 import { MRQ_RECORDS } from './mrq.js';
+import { PLANNER_RECORDS } from './planner.js';
 import { REPLAY_RECORDS } from './replay.js';
 import { TAKE_RECORDS } from './take.js';
 import { TIMELINE_BINDINGS_RECORDS } from './timeline-bindings.js';
@@ -27,6 +28,7 @@ export const MANAGE_SEQUENCE_UNFOLDED_SOURCES: readonly CapabilityRecordSource[]
   ...TIMELINE_STATE_RANGE_RECORDS,
   ...METADATA_RECORDS,
   ...CINEMATIC_RECORDS,
+  ...PLANNER_RECORDS,
   ...MRQ_RECORDS,
   ...MEDIA_RECORDS,
   ...TAKE_RECORDS,

@@ -691,4 +691,7 @@ export const PLAIN_PROBE: readonly PlainProbeCase[] = [
   { query: 'stack the buttons under the title', accepted: ['blueprint.arrange_widgets'] },
   { query: 'place widgets relative to each other', accepted: ['blueprint.arrange_widgets'] },
   { query: 'space buttons evenly', accepted: ['blueprint.arrange_widgets'] },
+  { query: 'frame a shot', accepted: ['sequence.planner.frame_shot'] },
+  { query: 'rule of thirds', accepted: ['sequence.planner.frame_shot'] },
+  { query: 'aim the camera at two actors', accepted: ['sequence.planner.frame_shot'] },
 ];

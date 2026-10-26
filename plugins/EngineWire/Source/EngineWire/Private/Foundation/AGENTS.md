@@ -14,6 +14,7 @@ domain-local copy of reflection, path, JSON, or response helpers.
 | `Diagnostics/` | 6 files | diagnostics snapshot capture/load/rotation + file-name/schema helpers |
 | `GraphLayout/` | 1 file | graph node extent geometry |
 | `Solvers/` | 23 files | general algorithms, one per file (a long one split), each with a known-answer test: `McpPratt` (the assertion language of execute's `expect`/`require`), `McpAnneal` (Metropolis annealing over a caller's state), `McpBoxSat` (boxes turned about Z: separation, depth, containment), `McpKMeans` (weighted k-means, fixed seed), `McpWatershed` (basins of a height over a graph, merged across high saddles), `McpBetweenness` (Brandes route shares of weighted nodes and edges), `McpCassowary` (linear constraints, required or preferred by strength, solved by the incremental simplex Kiwi builds) |
+| `Optimize/` | 3 files | `McpNelderMead`: the downhill simplex, for a cost of a few variables with no gradient (a camera judged by traces); deterministic, with a known-answer test |
 | `Render/` | 5 files | post-process volume resolution, console variable writes, stat overlay state |
 | `BridgeHelpers/` | umbrella + 7 groups | asset/actor/BP/property/response/security facade |
 | root | `McpSecureTokenCompare.h` | constant-time token equality |

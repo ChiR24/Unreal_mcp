@@ -13,7 +13,7 @@ All notable changes to the EngineWire plugin (formerly McpAutomationBridge) will
 - **MCP 2026-07-28 on `/mcp`**: sessionless requests, header checks, `resultType`, consent by elicitation, the tasks extension.
 - **Result pages** for oversized arrays (`options.pageCursor`), and a **search signature** on a confident first hit.
 - **`get_ai_info` `info: 'path'`**: whether a pawn could walk between two points on the nav mesh, and why not; **`analyze_level_layout`**: the nav mesh read as rooms, corridors and doors, with chokes, dead ends, loops, sightlines and what the start cannot reach.
-- **`get_frame_cost`**, **`diff_asset`**, **`cancel_render`**, `configure_render_camera` shutter and overscan, `set_section` `playRate`.
+- **`get_frame_cost`**, **`diff_asset`**, **`cancel_render`**, `configure_render_camera` shutter and overscan, `set_section` `playRate`; **`frame_shot`**: a camera placed so one or two actors sit on their screen points (the thirds by default), clear of what stands around them, its lens and focus set, in one undo step.
 - **`nanite_rebuild_mesh` `assetPaths`**, `get_niagara_info` values, `edit_dynamic_mesh` `append_cuboids`, `append_loft`, `append_mesh` and `delete_triangles`.
 - **Change watch**: what a request spawns or modifies is checked into `warnings`, with Map Check and Data Validation on what it touched.
 - **Undo ledger**: `undo` blocks come from the transaction buffer; **restore points** undo only this server's steps and name the delete of what they created.

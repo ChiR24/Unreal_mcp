@@ -25287,6 +25287,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             "enabled"
           ]
         },
+        "camera": {
+          "type": "string",
+          "description": "The camera actor to move (a CineCameraActor or a CameraActor), by name; when no actor has this name a CineCameraActor is spawned with it as its label (default ShotCamera, so repeated calls move the same camera)."
+        },
         "cameraName": {
           "type": "string",
           "description": "Actor name in the current level."
@@ -25393,6 +25397,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "displayName": {
           "type": "string",
           "description": "Shot display name (alias of shotName)."
+        },
+        "dryRun": {
+          "type": "boolean",
+          "description": "Find the shot and answer without moving or spawning anything (default false)."
         },
         "duration": {
           "type": "number",
@@ -25522,8 +25530,19 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           }
         },
         "focalLength": {
-          "type": "number",
-          "description": "Focal length in mm."
+          "oneOf": [
+            {
+              "type": "number",
+              "description": "Focal length in mm."
+            },
+            {
+              "type": "number",
+              "minimum": 4,
+              "maximum": 1000,
+              "description": "Focal length in mm for a cine camera (default by shotSize: close 85, medium 50, wide 24; two subjects 35), kept within what its lens allows. A plain camera actor has no lens: its own field of view is used and focalLength is refused."
+            }
+          ],
+          "description": "Focal length in mm for a cine camera (default by shotSize: close 85, medium 50, wide 24; two subjects 35), kept within what its lens allows. A plain camera actor has no lens: its own field of view is used and focalLength is refused."
         },
         "focus": {
           "type": "object",
@@ -25564,6 +25583,34 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             "description": "Frame number."
           },
           "description": "Remove the keys on each of these frames in one call, of every key type (transform, float, Visibility, particle). Without frame and frames every key on the track goes."
+        },
+        "framing": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 2,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "x",
+              "y"
+            ],
+            "properties": {
+              "x": {
+                "type": "number",
+                "minimum": -1,
+                "maximum": 1,
+                "description": "Left edge -1, centre 0, right edge 1; the third lines are at -0.333 and 0.333."
+              },
+              "y": {
+                "type": "number",
+                "minimum": -1,
+                "maximum": 1,
+                "description": "Bottom -1, centre 0, top 1."
+              }
+            }
+          },
+          "description": "Where each subject's centre should sit on screen, one {x, y} per subject in the order of subjects (default: one subject at {x: -0.333, y: 0}, two at {x: -0.333, y: 0} and {x: 0.333, y: 0}). Two subjects need points apart from each other."
         },
         "friendlyName": {
           "type": "string",
@@ -26150,6 +26197,15 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "string",
           "description": "Canonical /Game shot sequence path."
         },
+        "shotSize": {
+          "type": "string",
+          "enum": [
+            "close",
+            "medium",
+            "wide"
+          ],
+          "description": "One subject: how much of the frame its box spans, the larger of its height share and its width share (close 90%, medium 55%, the default, wide 25%); it also picks the default focal length. Two subjects are sized by their framing points, so it only picks the lens."
+        },
         "shutterTiming": {
           "type": "string",
           "enum": [
@@ -26226,6 +26282,15 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "number",
           "minimum": 0,
           "description": "Sequence time in seconds. play starts there; pause jumps the playhead there and holds that frame, so the viewport and screenshots show the scene at that moment. A time past the end of the playback range is refused: frame N at 24 fps is N / 24 seconds."
+        },
+        "subjects": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 2,
+          "items": {
+            "type": "string"
+          },
+          "description": "The one or two actors to frame, by exact name. Each is framed by the box of what it draws: its centre goes to its framing point, and its size sets the distance."
         },
         "subsequencePath": {
           "type": "string",
@@ -26347,6 +26412,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             "create_cinematic_asset",
             "add_cinematic_track",
             "configure_cinematic",
+            "frame_shot",
             "create_render_job",
             "configure_render_job",
             "create_media_asset",
@@ -26436,6 +26502,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           },
           "description": "Sequence bindings."
         },
+        "camera": {
+          "type": "string",
+          "description": "The camera's label."
+        },
         "cancelRequested": {
           "type": "boolean",
           "description": "The executor was told to cancel its jobs."
@@ -26469,6 +26539,9 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "x-unreal-reflection-boundary": true,
           "description": "Additional handler result fields not named by the contract."
         },
+        "dryRun": {
+          "type": "boolean"
+        },
         "existsAfter": {
           "type": "boolean",
           "description": "Whether the asset existed after the call."
@@ -26476,6 +26549,22 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "failed": {
           "type": "number",
           "description": "Actor names that could not be bound."
+        },
+        "fieldOfView": {
+          "type": "number",
+          "description": "Horizontal field of view in degrees."
+        },
+        "fill": {
+          "type": "number",
+          "description": "One subject: the share of the frame its box spans."
+        },
+        "focalLength": {
+          "type": "number",
+          "description": "Cine camera: the focal length set, in mm."
+        },
+        "focusDistance": {
+          "type": "number",
+          "description": "Cine camera: the manual focus distance set, in cm (to the first subject's centre)."
         },
         "found": {
           "type": "boolean",
@@ -26511,6 +26600,13 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "lengthInFrames": {
           "type": "integer",
           "description": "Sequence length in frames."
+        },
+        "location": {
+          "type": "array",
+          "items": {
+            "type": "number"
+          },
+          "description": "Where the camera stands, as [x, y, z]."
         },
         "looping": {
           "type": "boolean",
@@ -26624,6 +26720,13 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             "description": "Per-actor binding result."
           }
         },
+        "rotation": {
+          "type": "array",
+          "items": {
+            "type": "number"
+          },
+          "description": "Its rotation as [pitch, yaw, roll]; roll is always 0."
+        },
         "saved": {
           "type": "boolean",
           "description": "Whether the asset was saved."
@@ -26671,9 +26774,48 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "boolean",
           "description": "True for a camera the sequence owns."
         },
+        "spawned": {
+          "type": "boolean",
+          "description": "The camera was spawned by this call (with dryRun: would be)."
+        },
         "state": {
           "type": "string",
           "description": "Recorder state after the stop."
+        },
+        "subjects": {
+          "type": "array",
+          "description": "Each subject as framed.",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "actorName": {
+                "type": "string"
+              },
+              "target": {
+                "type": "array",
+                "items": {
+                  "type": "number"
+                },
+                "description": "A screen point as [x, y]: x -1 (left edge) to 1 (right edge), y -1 (bottom) to 1 (top)."
+              },
+              "screen": {
+                "type": "array",
+                "items": {
+                  "type": "number"
+                },
+                "description": "Where its centre landed, as [x, y]."
+              },
+              "error": {
+                "type": "number",
+                "description": "How far that is from its target, in the same units (0.02 is about 1% of the frame's width)."
+              },
+              "hidden": {
+                "type": "number",
+                "description": "Share of the sight lines from the camera to it that something else blocks (0-1)."
+              }
+            }
+          }
         },
         "subsceneFolderPath": {
           "type": "string",
@@ -26895,6 +27037,12 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             "description": "Track type name."
           },
           "description": "Available track types."
+        },
+        "undo": {
+          "type": "object",
+          "additionalProperties": true,
+          "x-unreal-reflection-boundary": true,
+          "description": "What editor undo takes back: {undoable, transactionScope, steps}; the move or spawn and the lens are one step. Absent under dryRun."
         },
         "value": {
           "type": "string",

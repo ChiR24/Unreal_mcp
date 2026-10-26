@@ -4,7 +4,7 @@
 
 # Action reference
 
-Catalog revision: `3094c44bec76d29a`
+Catalog revision: `1d1c882c6a7bae40`
 
 Both transports expose exactly ONE public MCP tool, `unreal`, with the four
 operations `search` / `describe` / `execute` / `configure`. The parent tools
@@ -13,7 +13,7 @@ by `tools/list` and a direct `tools/call` on one returns a
 `DIRECT_TOOL_CALL_REMOVED` receipt rather than executing
 (`src/server/gateway/direct-call-migration.ts`).
 
-The catalog declares 438 capabilities across
+The catalog declares 439 capabilities across
 23 internal parent tools.
 Every row is derived from the capability record that the gateway actually
 validates against, so `execute` cannot accept an action this table omits.
@@ -56,13 +56,13 @@ validates against, so `execute` cannot accept an action this table omits.
 | `manage_level_structure` | 8 | 2 | 5 | 1 | world |
 | `manage_networking` | 21 | 5 | 13 | 3 | networking |
 | `manage_pcg` | 3 | 0 | 3 | 0 | world |
-| `manage_sequence` | 19 | 2 | 16 | 1 | cinematics, media, movie_render, replay, sequence, take_recorder |
+| `manage_sequence` | 20 | 2 | 17 | 1 | cinematics, media, movie_render, replay, sequence, take_recorder |
 | `manage_tools` | 9 | 4 | 5 | 0 | tools |
 | `system_control` | 33 | 10 | 19 | 4 | audio, build, console, insights, logs, performance, project, python, render, system, viewport, widget |
 
 ## Capabilities requiring consent
 
-68 of 438 capabilities require consent.
+68 of 439 capabilities require consent.
 
 | Capability | Tool | Action | Effect | Consent |
 | --- | --- | --- | --- | --- |
@@ -531,6 +531,7 @@ validates against, so `execute` cannot accept an action this table omits.
 | `sequence.media.play_media` | `manage_sequence` | `play_media` | write | write | none | `manage_sequence.play_media` `manage_sequence.pause_media` `manage_sequence.seek_media` |
 | `sequence.mrq.configure_render_job` | `manage_sequence` | `configure_output_settings` | write | write | none | `manage_sequence.configure_render_job` `manage_sequence.configure_output_settings` `manage_sequence.configure_anti_aliasing` `manage_sequence.add_render_pass` `manage_sequence.configure_burn_ins` `manage_sequence.configure_console_variables` `manage_sequence.configure_render_camera` |
 | `sequence.mrq.create_render_job` | `manage_sequence` | `create_render_job` | write | write | none | `manage_sequence.create_render_job` `manage_sequence.queue_render` `manage_sequence.start_render` `manage_sequence.cancel_render` `manage_sequence.remove_render_job` |
+| `sequence.planner.frame_shot` | `manage_sequence` | `frame_shot` | write | write | none | `manage_sequence.frame_shot` |
 | `sequence.play` | `manage_sequence` | `play` | write | write | none | `manage_sequence.play` `manage_sequence.pause` `manage_sequence.stop` |
 | `sequence.replay.configure_demo_settings` | `manage_sequence` | `configure_demo_settings` | write | write | none | `manage_sequence.configure_demo_settings` `manage_sequence.configure_killcam_duration` |
 | `sequence.replay.play_demo` | `manage_sequence` | `play_demo` | write | write | none | `manage_sequence.play_demo` `manage_sequence.pause_demo` `manage_sequence.seek_demo` `manage_sequence.set_demo_playback_speed` `manage_sequence.start_demo_recording` `manage_sequence.stop_demo_recording` `manage_sequence.start_killcam` |

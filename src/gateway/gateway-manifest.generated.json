@@ -18131,6 +18131,7 @@
         "create_cinematic_asset",
         "add_cinematic_track",
         "configure_cinematic",
+        "frame_shot",
         "create_render_job",
         "configure_render_job",
         "create_media_asset",
@@ -18158,6 +18159,7 @@
         "bindingGuid",
         "bindingId",
         "burnIn",
+        "camera",
         "cameraName",
         "cameraShakeClass",
         "cameraShakePath",
@@ -18179,6 +18181,7 @@
         "destinationPath",
         "disableOthers",
         "displayName",
+        "dryRun",
         "duration",
         "durationFrames",
         "durationSeconds",
@@ -18199,6 +18202,7 @@
         "frame",
         "frameRate",
         "frames",
+        "framing",
         "friendlyName",
         "from",
         "gameModeOverride",
@@ -18287,6 +18291,7 @@
         "settings",
         "shotName",
         "shotSequencePath",
+        "shotSize",
         "shutterTiming",
         "solo",
         "soundPath",
@@ -18301,6 +18306,7 @@
         "start",
         "startFrame",
         "startTime",
+        "subjects",
         "subsequencePath",
         "takePresetPath",
         "takeSequencePath",
@@ -18424,6 +18430,10 @@
               "enabled"
             ]
           },
+          "camera": {
+            "type": "string",
+            "description": "The camera actor to move (a CineCameraActor or a CameraActor), by name; when no actor has this name a CineCameraActor is spawned with it as its label (default ShotCamera, so repeated calls move the same camera)."
+          },
           "cameraName": {
             "type": "string",
             "description": "Actor name in the current level."
@@ -18530,6 +18540,10 @@
           "displayName": {
             "type": "string",
             "description": "Shot display name (alias of shotName)."
+          },
+          "dryRun": {
+            "type": "boolean",
+            "description": "Find the shot and answer without moving or spawning anything (default false)."
           },
           "duration": {
             "type": "number",
@@ -18659,8 +18673,19 @@
             }
           },
           "focalLength": {
-            "type": "number",
-            "description": "Focal length in mm."
+            "oneOf": [
+              {
+                "type": "number",
+                "description": "Focal length in mm."
+              },
+              {
+                "type": "number",
+                "minimum": 4,
+                "maximum": 1000,
+                "description": "Focal length in mm for a cine camera (default by shotSize: close 85, medium 50, wide 24; two subjects 35), kept within what its lens allows. A plain camera actor has no lens: its own field of view is used and focalLength is refused."
+              }
+            ],
+            "description": "Focal length in mm for a cine camera (default by shotSize: close 85, medium 50, wide 24; two subjects 35), kept within what its lens allows. A plain camera actor has no lens: its own field of view is used and focalLength is refused."
           },
           "focus": {
             "type": "object",
@@ -18701,6 +18726,34 @@
               "description": "Frame number."
             },
             "description": "Remove the keys on each of these frames in one call, of every key type (transform, float, Visibility, particle). Without frame and frames every key on the track goes."
+          },
+          "framing": {
+            "type": "array",
+            "minItems": 1,
+            "maxItems": 2,
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "x",
+                "y"
+              ],
+              "properties": {
+                "x": {
+                  "type": "number",
+                  "minimum": -1,
+                  "maximum": 1,
+                  "description": "Left edge -1, centre 0, right edge 1; the third lines are at -0.333 and 0.333."
+                },
+                "y": {
+                  "type": "number",
+                  "minimum": -1,
+                  "maximum": 1,
+                  "description": "Bottom -1, centre 0, top 1."
+                }
+              }
+            },
+            "description": "Where each subject's centre should sit on screen, one {x, y} per subject in the order of subjects (default: one subject at {x: -0.333, y: 0}, two at {x: -0.333, y: 0} and {x: 0.333, y: 0}). Two subjects need points apart from each other."
           },
           "friendlyName": {
             "type": "string",
@@ -19287,6 +19340,15 @@
             "type": "string",
             "description": "Canonical /Game shot sequence path."
           },
+          "shotSize": {
+            "type": "string",
+            "enum": [
+              "close",
+              "medium",
+              "wide"
+            ],
+            "description": "One subject: how much of the frame its box spans, the larger of its height share and its width share (close 90%, medium 55%, the default, wide 25%); it also picks the default focal length. Two subjects are sized by their framing points, so it only picks the lens."
+          },
           "shutterTiming": {
             "type": "string",
             "enum": [
@@ -19363,6 +19425,15 @@
             "type": "number",
             "minimum": 0,
             "description": "Sequence time in seconds. play starts there; pause jumps the playhead there and holds that frame, so the viewport and screenshots show the scene at that moment. A time past the end of the playback range is refused: frame N at 24 fps is N / 24 seconds."
+          },
+          "subjects": {
+            "type": "array",
+            "minItems": 1,
+            "maxItems": 2,
+            "items": {
+              "type": "string"
+            },
+            "description": "The one or two actors to frame, by exact name. Each is framed by the box of what it draws: its centre goes to its framing point, and its size sets the distance."
           },
           "subsequencePath": {
             "type": "string",
@@ -19484,6 +19555,7 @@
               "create_cinematic_asset",
               "add_cinematic_track",
               "configure_cinematic",
+              "frame_shot",
               "create_render_job",
               "configure_render_job",
               "create_media_asset",

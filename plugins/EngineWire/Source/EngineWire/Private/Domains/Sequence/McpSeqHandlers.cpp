@@ -5,6 +5,7 @@
 #include "Domains/Sequence/Media/McpSeqMedia.h"
 #include "Domains/Sequence/Metadata/McpSeqMetadata.h"
 #include "Domains/Sequence/MovieRender/McpSeqMRQ.h"
+#include "Domains/Sequence/Planner/McpFrameShot.h"
 #include "Domains/Sequence/RecordReplay/McpSeqRecordReplay.h"
 
 bool UEngineWireSubsystem::HandleSequenceAction(
@@ -130,6 +131,10 @@ bool UEngineWireSubsystem::HandleSequenceAction(
   if (EffectiveAction == TEXT("sequence_set_work_range"))
     return McpSequenceRanges::HandleSetWorkRange(this, RequestId, LocalPayload,
                                                  RequestingSocket);
+
+  if (EffectiveAction == TEXT("sequence_frame_shot"))
+    return McpFrameShot::Handle(*this, RequestId, LocalPayload, RequestingSocket,
+                                [this](const FString &Name) { return FindActorByName(Name, true); });
 
   TSharedPtr<FJsonObject> CinematicsResult;
   if (McpSequenceCinematics::TryHandleCinematics(
