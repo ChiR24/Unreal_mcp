@@ -27101,6 +27101,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
                 "type": "integer",
                 "description": "Number of sections on the track."
               },
+              "muted": {
+                "type": "boolean",
+                "description": "Whether the track is muted: set_track_muted, or solo on another track, turned it off."
+              },
               "animations": {
                 "type": "array",
                 "items": {

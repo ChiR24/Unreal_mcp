@@ -1,5 +1,5 @@
 {
-  "catalogRevision": "5319a91298ff0ce4",
+  "catalogRevision": "6d0e40bd6474e1e6",
   "recordCount": 440,
   "records": [
     {
@@ -99970,6 +99970,10 @@
                     "type": "integer",
                     "description": "Number of sections on the track."
                   },
+                  "muted": {
+                    "type": "boolean",
+                    "description": "Whether the track is muted: set_track_muted, or solo on another track, turned it off."
+                  },
                   "animations": {
                     "type": "array",
                     "items": {
@@ -100247,8 +100251,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "f146add400dcf3ac4d3b025f28ce84afb28302693ea428f584272076a6fae9de",
-        "content": "72c21866dc13adcca08288891d3dd735724417b80b32a6aca365998b292892a4"
+        "schema": "7c53eee436aa3876c16affea342963e5498a3b4665826458d703cceb4b991c7c",
+        "content": "235bd5f26ebe06d8c8874777f8eed752bbc51b76dc5023c507a07b4cfc640be9"
       }
     },
     {

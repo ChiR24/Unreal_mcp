@@ -59,8 +59,9 @@ export const TIMELINE_TRACKS_RECORDS: readonly CapabilityRecordSource[] = [
     // tracks as OBJECTS: master rows carry trackName/trackType/displayName/
     // isMasterTrack(=true)/sectionCount/isCameraCut (:72-82); binding rows add
     // bindingName/bindingGuid and isMasterTrack=false (:99-112). Also emits
-    // trackCount and sequencePath at top level. Declared exactly — omitting
-    // isCameraCut made every real response fail its own output schema.
+    // trackCount and sequencePath at top level, and muted on every row. Declared
+    // exactly — omitting isCameraCut, then muted, made every real response fail
+    // its own output schema.
     outputProps: {
       tracks: { type: 'array', items: { type: 'object', description: 'Track info.', additionalProperties: false, properties: {
         trackName: { type: 'string', description: 'Track name.' },
@@ -71,6 +72,7 @@ export const TIMELINE_TRACKS_RECORDS: readonly CapabilityRecordSource[] = [
         bindingName: { type: 'string', description: 'Bound actor name, or Actor/Component for a component bound under its actor (binding tracks only).' },
         bindingGuid: { type: 'string', description: 'Bound object guid string (binding tracks only).' },
         sectionCount: { type: 'integer', description: 'Number of sections on the track.' },
+        muted: { type: 'boolean', description: 'Whether the track is muted: set_track_muted, or solo on another track, turned it off.' },
         animations: { type: 'array', items: { type: 'string', description: 'Animation asset path.' }, description: 'An animation track: the clips its sections play, once each, in section order.' },
       }, required: ['trackName', 'trackType', 'displayName', 'isMasterTrack', 'sectionCount'] }, description: 'Sequence tracks.' },
       trackCount: { type: 'integer', description: 'Total number of tracks reported.' },
