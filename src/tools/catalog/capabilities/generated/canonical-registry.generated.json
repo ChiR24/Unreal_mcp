@@ -1,5 +1,5 @@
 {
-  "catalogRevision": "08b9b1a9219dfa77",
+  "catalogRevision": "a849f4a381e81bde",
   "recordCount": 435,
   "records": [
     {
@@ -8831,7 +8831,7 @@
             },
             "force": {
               "type": "boolean",
-              "description": "Delete an asset even when assets outside this delete still reference it (their references break). Default false: such an asset is kept and listed in referencedPaths. Folders are always deleted whole."
+              "description": "Delete an asset even when assets outside this delete still reference it (their references break). Default false: such an asset is kept and listed in referencedPaths, and so is one of this delete that only a kept asset uses. Folders are always deleted whole."
             }
           },
           "required": [],
@@ -8900,8 +8900,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "a83863754d93c784d2b59577d1ceba43a4ca2d086c736b14c2e0bfde855d708d",
-        "content": "c626f6787bfeed8cc7c5d1d2b2e567d9ddbb365ec58cd22c5175bb94522df6f3"
+        "schema": "58109949e9c4c4ac840a8e1b522a001d5461d95c383124f22c00e5cfd25f43a9",
+        "content": "e93973b355e2626e4276f65d987f4b58fc68863a060ad7fc56f7cf07a00a414d"
       }
     },
     {

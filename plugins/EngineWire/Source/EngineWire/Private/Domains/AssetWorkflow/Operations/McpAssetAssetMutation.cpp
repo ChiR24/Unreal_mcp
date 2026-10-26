@@ -185,9 +185,20 @@ bool UEngineWireSubsystem::HandleDeleteAssets(
     const FString Safe = SanitizeProjectRelativePath(Path);
     if (!Safe.IsEmpty()) { DeleteSet.Add(FPackageName::ObjectPathToPackageName(Safe)); }
   }
-  const auto OutsideReferencers = [&DeleteSet](const FString &PackageName) {
-    return McpOutsideReferencers(PackageName, DeleteSet);
-  };
+  // Until nothing changes, as bulk_delete does: an asset used only by one this keeps is outside-referenced in turn.
+  // One pass deleted it, and the asset kept for its outside user was left pointing at nothing.
+  TMap<FString, TArray<FString>> Kept;
+  for (bool bKeptOne = !bForce; bKeptOne;) {
+    bKeptOne = false;
+    for (int32 Index = DeleteSet.Num() - 1; Index >= 0; --Index) {
+      TArray<FString> Users = McpOutsideReferencers(DeleteSet[Index], DeleteSet);
+      if (Users.Num() > 0) {
+        Kept.Add(DeleteSet[Index], MoveTemp(Users));
+        DeleteSet.RemoveAt(Index);
+        bKeptOne = true;
+      }
+    }
+  }
 
   int32 PathIndex = -1;
   for (const FString &Path : PathsToDelete) {
@@ -226,9 +237,8 @@ bool UEngineWireSubsystem::HandleDeleteAssets(
       // had already dropped it from the registry, so a retry answered "not
       // found" about an asset that came back on the next editor start.
       // And it counts as deleted only once that file is gone.
-      const TArray<FString> Referencers = bForce ? TArray<FString>() : OutsideReferencers(FPackageName::ObjectPathToPackageName(SafePath));
-      if (Referencers.Num() > 0) {
-        ReferencedPaths.Add(FString::Printf(TEXT("%s (referenced by %s)"), *SafePath, *FString::Join(Referencers, TEXT(", "))));
+      if (const TArray<FString> *Referencers = Kept.Find(FPackageName::ObjectPathToPackageName(SafePath))) {
+        ReferencedPaths.Add(FString::Printf(TEXT("%s (referenced by %s)"), *SafePath, *FString::Join(*Referencers, TEXT(", "))));
       } else if (McpSafeOperations::McpDeleteAssetAndFile(SafePath) ||
                  (!McpAssetExists(SafePath) &&
                   !FPackageName::DoesPackageExist(FPackageName::ObjectPathToPackageName(SafePath)))) {

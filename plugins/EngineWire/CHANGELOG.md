@@ -28,7 +28,7 @@ All notable changes to the EngineWire plugin (formerly McpAutomationBridge) will
 
 ### Fixed
 - **Small fixes**: UE 5.0 links, `runtime_report` filters, diagnostics files, task principals, the RHI thread in `busiestThreadMs`, material instances as instance parents.
-- **Removals** name what still uses an asset (`*_IN_USE`, `referencedBy`), keep outside-referenced assets, take exact components and undo for tracks and keys; extra sky lights are named, not destroyed.
+- **Removals** name what still uses an asset (`*_IN_USE`, `referencedBy`), keep outside-referenced assets (and what only a kept asset uses), take exact components and undo for tracks and keys; extra sky lights are named, not destroyed.
 - **Fold variants** enforce their own requirements before dispatch, and describe lists what each one does under the selector.
 - **Renders** honour `renderTimeoutMs`; save_all and restart_editor wait (`RENDER_IN_PROGRESS`).
 - **Dialogs**: an open editor dialog answers requests `EDITOR_MODAL_ACTIVE` with its title instead of a wait and `EDITOR_BLOCKED`.

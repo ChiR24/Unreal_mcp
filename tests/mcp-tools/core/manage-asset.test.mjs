@@ -337,6 +337,11 @@ const testCases = [
     { scenario: 'Setup: a material for an instance chain', toolName: 'manage_asset', arguments: { action: 'create_material', name: `Testmaterial_chain_${ts}`, path: TEST_FOLDER }, expected: 'success' },
     { scenario: 'Setup: instance B of it', toolName: 'manage_asset', arguments: { action: 'create_material_instance', name: `Testmaterial_chain_${ts}_B`, savePath: TEST_FOLDER, parentMaterial: CHAIN_PATH }, expected: 'success' },
     { scenario: 'CREATE: create_material_instance with an instance as the parent', toolName: 'manage_asset', arguments: { action: 'create_material_instance', name: `Testmaterial_chain_${ts}_C`, savePath: TEST_FOLDER, parentMaterial: `${CHAIN_PATH}_B` }, expected: 'success' },
+    // Deleting the material and B keeps B (C uses it) and so the material too: one pass deleted it, since its only
+    // user was in the delete, and left B without a parent.
+    { scenario: 'DELETE: delete keeps a material only a kept instance uses', toolName: 'manage_asset', arguments: { action: 'delete', paths: [CHAIN_PATH, `${CHAIN_PATH}_B`] }, expected: 'error|ASSET_REFERENCED', assertions: [
+      { path: 'structuredContent.typedError.unrealDetail.referencedPaths', length: 2, label: 'B, which C uses, and the material only B uses' },
+    ] },
     { scenario: 'Cleanup: delete the chain whole', toolName: 'manage_asset', arguments: { action: 'delete', paths: [CHAIN_PATH, `${CHAIN_PATH}_B`, `${CHAIN_PATH}_C`] }, expected: 'success' },
     { scenario: 'Cleanup: delete material instance', toolName: 'manage_asset', arguments: { action: 'delete', path: INSTANCE_PATH, force: true }, expected: 'success|not found' },
     { scenario: 'Cleanup: delete authored material', toolName: 'manage_asset', arguments: { action: 'delete', path: MATERIAL_PATH, force: true }, expected: 'success|not found' },

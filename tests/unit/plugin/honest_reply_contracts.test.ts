@@ -106,13 +106,14 @@ describe('handlers answer what they did', () => {
     expect(keys).toContain('TEXT("TRACK_REQUIRED")');
   });
 
-  it('bulk_delete keeps an asset others use and names it, and deletes the rest', () => {
+  // delete as well: one pass deleted an asset whose only user was a kept one, so both keep until nothing changes.
+  it('bulk_delete and delete keep an asset others use and name it, and delete the rest', () => {
     const source = code('AssetWorkflow', 'Operations', 'McpAssetBulkDelete.cpp');
     expect(source).toContain('McpOutsideReferencers(DeleteSet[Index], DeleteSet)');
     expect(source).toContain('Row->SetArrayField(TEXT("referencedBy"), McpHandlerUtils::ToJsonStringArray(Users));');
     expect(source).toContain('TEXT("ASSETS_REFERENCED")');
     expect(source).not.toContain('SetNumberField(TEXT("deleted")');
-    expect(code('AssetWorkflow', 'Operations', 'McpAssetAssetMutation.cpp')).toContain('return McpOutsideReferencers(PackageName, DeleteSet);');
+    expect(code('AssetWorkflow', 'Operations', 'McpAssetAssetMutation.cpp')).toContain('McpOutsideReferencers(DeleteSet[Index], DeleteSet)');
   });
 
   // Five failed saves of a texture were reported saved: true because an older file was still on

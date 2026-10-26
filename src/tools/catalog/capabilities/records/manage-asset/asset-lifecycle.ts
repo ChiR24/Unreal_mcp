@@ -147,7 +147,7 @@ export const ASSET_LIFECYCLE_RECORDS: readonly RecordSpec[] = [
   ),
 
   r('delete', 'asset', 'Permanently delete one or more assets after explicit confirmation.',
-    schema({ paths: arr('Asset paths to delete.'), path: str('Single asset path (alternative to paths).'), assetPath: str('Alias for path (accepted for compatibility).'), force: bool('Delete an asset even when assets outside this delete still reference it (their references break). Default false: such an asset is kept and listed in referencedPaths. Folders are always deleted whole.') }, []),
+    schema({ paths: arr('Asset paths to delete.'), path: str('Single asset path (alternative to paths).'), assetPath: str('Alias for path (accepted for compatibility).'), force: bool('Delete an asset even when assets outside this delete still reference it (their references break). Default false: such an asset is kept and listed in referencedPaths, and so is one of this delete that only a kept asset uses. Folders are always deleted whole.') }, []),
     OK_OUTPUT, DESTRUCTIVE, DESTRUCTIVE_POLICY, HIGH,
     { topics: ['delete asset', 'remove asset', 'destroy asset'],
       whenToUse: [
@@ -161,13 +161,13 @@ export const ASSET_LIFECYCLE_RECORDS: readonly RecordSpec[] = [
       examples: [ex('Delete one asset', { paths: ['/Game/MCPTest/Disposable'] }, { success: true })] }
   ),
   r('delete_asset', 'asset', 'Long-form alias for delete.',
-    schema({ paths: arr('Asset paths to delete.'), path: str('Single asset path.'), assetPath: str('Alias for path (accepted for compatibility).'), force: bool('Delete an asset even when assets outside this delete still reference it (their references break). Default false: such an asset is kept and listed in referencedPaths. Folders are always deleted whole.') }, []),
+    schema({ paths: arr('Asset paths to delete.'), path: str('Single asset path.'), assetPath: str('Alias for path (accepted for compatibility).'), force: bool('Delete an asset even when assets outside this delete still reference it (their references break). Default false: such an asset is kept and listed in referencedPaths, and so is one of this delete that only a kept asset uses. Folders are always deleted whole.') }, []),
     OK_OUTPUT, DESTRUCTIVE, DESTRUCTIVE_POLICY, HIGH,
     { 
       examples: [ex('Delete a single asset by path', { path: '/Game/MCPTest/Disposable' }, { success: true })] }
   ),
   r('delete_assets', 'asset', 'Plural-form alias for delete.',
-    schema({ paths: arr('Asset paths to delete.'), path: str('Single asset path.'), assetPath: str('Alias for path (accepted for compatibility).'), force: bool('Delete an asset even when assets outside this delete still reference it (their references break). Default false: such an asset is kept and listed in referencedPaths. Folders are always deleted whole.') }, []),
+    schema({ paths: arr('Asset paths to delete.'), path: str('Single asset path.'), assetPath: str('Alias for path (accepted for compatibility).'), force: bool('Delete an asset even when assets outside this delete still reference it (their references break). Default false: such an asset is kept and listed in referencedPaths, and so is one of this delete that only a kept asset uses. Folders are always deleted whole.') }, []),
     OK_OUTPUT, DESTRUCTIVE, DESTRUCTIVE_POLICY, HIGH,
     { 
       examples: [ex('Delete several assets in one call', { paths: ['/Game/MCPTest/DisposableA', '/Game/MCPTest/DisposableB'] }, { success: true })] }

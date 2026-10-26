@@ -11028,7 +11028,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "force": {
           "type": "boolean",
-          "description": "Delete an asset even when assets outside this delete still reference it (their references break). Default false: such an asset is kept and listed in referencedPaths. Folders are always deleted whole."
+          "description": "Delete an asset even when assets outside this delete still reference it (their references break). Default false: such an asset is kept and listed in referencedPaths, and so is one of this delete that only a kept asset uses. Folders are always deleted whole."
         },
         "format": {
           "type": "string",
