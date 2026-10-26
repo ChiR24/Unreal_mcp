@@ -9,13 +9,17 @@
 #define MCP_HAS_STATE_TREE 1
 #if __has_include("StateTree.h")
 #include "StateTree.h"
-#include "StateTreeCompiler.h"
 #include "StateTreeCompilerLog.h"
 #include "StateTreeEditorData.h"
 #include "StateTreeSchema.h"
 #include "StateTreeState.h"
 #if ENGINE_MAJOR_VERSION > 5 || (ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 5)
 #include "StateTreeEditingSubsystem.h"
+#else
+#include "CoreGlobals.h"
+#include "HAL/PlatformTLS.h"
+#include "Misc/OutputDeviceRedirector.h"
+#include "StateTreeDelegates.h"
 #endif
 #define MCP_STATE_TREE_HEADERS_AVAILABLE 1
 #else
@@ -96,21 +100,18 @@ inline UClass* McpFindStateTreeSchemaClass(const FString& Schema, FString& OutEr
     return SchemaClass;
 }
 
-// The tree compiled from its editor data, as the editor's Compile button does: from 5.5 through the editing subsystem,
-// which validates the data first and stamps the hash that marks the tree up to date. An uncompiled tree does not run;
-// edits used to reply "recompile the asset in the StateTree editor". OutMessages gets the errors and warnings.
+// The tree compiled from its editor data, as the editor's Compile button does: through the editing subsystem from 5.5,
+// through the editor module's compile request before; both validate the data first and stamp the hash that marks the
+// tree up to date. An uncompiled tree does not run; edits used to reply "recompile the asset in the StateTree editor".
+// OutMessages gets the errors and warnings.
 inline bool McpCompileStateTree(UStateTree* Tree, TArray<FString>& OutMessages)
 {
+#if ENGINE_MAJOR_VERSION > 5 || (ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 5)
     struct FLog : FStateTreeCompilerLog
     {
         const TArray<FStateTreeCompilerLogMessage>& All() const { return Messages; }
     } Log;
-#if ENGINE_MAJOR_VERSION > 5 || (ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 5)
     const bool bCompiled = UStateTreeEditingSubsystem::CompileStateTree(Tree, Log);
-#else
-    FStateTreeCompiler Compiler(Log);
-    const bool bCompiled = Compiler.Compile(*Tree);
-#endif
     for (const FStateTreeCompilerLogMessage& Message : Log.All())
     {
         if (Message.Severity <= EMessageSeverity::Warning)
@@ -119,6 +120,36 @@ inline bool McpCompileStateTree(UStateTree* Tree, TArray<FString>& OutMessages)
         }
     }
     return bCompiled;
+#else
+    // No compiler object here: its destructor would be compiled into this plugin on Mac and call into StructUtils,
+    // which the plugin does not link. The editor module compiles the tree and logs what failed; the warnings and
+    // errors it logs on this thread during the call are the messages.
+    struct FCapture : FOutputDevice
+    {
+        TArray<FString>& Out;
+        const uint32 ThreadId = FPlatformTLS::GetCurrentThreadId();
+        explicit FCapture(TArray<FString>& InOut) : Out(InOut) { GLog->AddOutputDevice(this); }
+        virtual ~FCapture() override { GLog->RemoveOutputDevice(this); }
+        virtual bool CanBeUsedOnAnyThread() const override { return true; }
+        virtual bool CanBeUsedOnMultipleThreads() const override { return true; }
+        virtual void Serialize(const TCHAR* Text, ELogVerbosity::Type Verbosity, const FName& Category) override
+        {
+            if (Text && (Verbosity & ELogVerbosity::VerbosityMask) <= ELogVerbosity::Warning
+                && FPlatformTLS::GetCurrentThreadId() == ThreadId && Category == FName(TEXT("LogStateTreeEditor")))
+            {
+                Out.Add(Text);
+            }
+        }
+    };
+    FModuleManager::Get().LoadModule(TEXT("StateTreeEditorModule"));
+    if (!UE::StateTree::Delegates::OnRequestCompile.IsBound())
+    {
+        OutMessages.Add(TEXT("The StateTree editor module is not loaded, so the tree was not compiled."));
+        return false;
+    }
+    FCapture Capture(OutMessages);
+    return UE::StateTree::Delegates::OnRequestCompile.Execute(*Tree);
+#endif
 }
 
 // compiled, and compileMessages when the compiler had something to say.

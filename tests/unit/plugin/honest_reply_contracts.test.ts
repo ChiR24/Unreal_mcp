@@ -4138,7 +4138,10 @@ describe('AI and navigation writes say what they did', () => {
     expect(feature).toContain('/Script/GameplayStateTreeModule.StateTreeComponentSchema');
     expect(feature).not.toContain('__has_include("Components/StateTreeComponentSchema.h")');
     expect(feature).toContain('UStateTreeEditingSubsystem::CompileStateTree(Tree, Log)');
-    expect(feature).toContain('FStateTreeCompiler Compiler(Log);');
+    // Before 5.5 the editor module compiles: a compiler object here put its destructor (and its call into StructUtils,
+    // which the plugin does not link) into the plugin on Mac.
+    expect(feature).toContain('UE::StateTree::Delegates::OnRequestCompile.Execute(*Tree)');
+    expect(feature).not.toContain('FStateTreeCompiler Compiler(');
     const assets = code('AI', 'StateTree', 'McpAIStateTreeAssets.cpp');
     expect(assets).toContain('CreateAIAssetInPackage<UStateTree>(');
     expect(assets).toContain('TEXT("NAME_TAKEN")');
