@@ -387,7 +387,7 @@ export const SEARCH_RECORDS: readonly CapabilityRecordSource[] = [
     action: 'fix_placement',
     domain: DOMAIN,
     family: FAMILY_FIND,
-    topics: ['fix sunk actors', 'fix floating actors', 'fix overlapping actors', 'push intersecting actors apart', 'snap actors to the floor'],
+    topics: ['fix sunk actors', 'fix floating actors', 'fix overlapping actors', 'push intersecting actors apart', 'snap actors to the floor', 'floating above the floor or ground'],
     summary: 'Fix what audit_placement reports, judged by its own rules: a sunk actor moves up and a floating one down onto the surface under it, and intersecting actors are pushed apart the shortest way out of each other, measured on their collision (the smaller moves further; floors, landscapes, locked and attached actors never move). kinds names which of sunk, floating and overlapping to fix, since each can be deliberate. Every move is one undo step; a run checks what it moved again, up to three rounds, and dryRun lists the moves without making them.',
     whenToUse: [
       'audit_placement, or the warnings of a spawn or a move, reported actors sunk into the floor, floating above it or intersecting each other.',

@@ -83,7 +83,7 @@ export const BEHAVIOURS_RECORDS: readonly CapabilityRecordSource[] = [
     action: 'add_damage_on_touch',
     family: FAMILY,
     domain: DOMAIN,
-    topics: ['damage on touch', 'hazard', 'spikes', 'spike trap', 'spikes kill the player', 'hurts the player on contact', 'knockback', 'knock the player back'],
+    topics: ['damage on touch', 'hazard', 'spikes', 'spike trap', 'spikes kill the player', 'hurts the player on contact', 'knockback', 'knock the player back', 'push back whoever touches or hits it'],
     summary: `Make an actor damage whatever touches it: ApplyDamage with TouchDamage on each overlap, which an actor with health loses (a negative amount heals); with knockback a touching Character is also launched away from it. ${OVERLAP_NOTE}`,
     whenToUse: ['Spikes, lava, an enemy body or a fire must hurt what touches it.'],
     whenNotToUse: ['A whole area must hurt or kill (use manage_level_structure create_volume with a pain causing or kill Z volume).'],

@@ -679,4 +679,7 @@ export const PLAIN_PROBE: readonly PlainProbeCase[] = [
   { query: 'what recipes are there', accepted: ['system_control.list_recipes'] },
   { query: 'snap actor to the floor', accepted: ['control_actor.fix_placement'] },
   { query: 'actor is sunk in the floor', accepted: ['control_actor.fix_placement'] },
+  { query: 'actor floating above the floor', accepted: ['control_actor.fix_placement'] },
+  { query: 'make the floor slippery', accepted: ['animation_physics.create_physical_material'] },
+  { query: 'push the player back', accepted: ['blueprint.add_behaviour'] },
 ];

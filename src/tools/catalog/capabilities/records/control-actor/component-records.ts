@@ -116,7 +116,7 @@ export const COMPONENT_RECORDS: readonly CapabilityRecordSource[] = [
     action: 'set_material',
     domain: DOMAIN,
     family: FAMILY_MATERIAL,
-    topics: ['assign material to mesh', 'apply material to actor', 'change actor material', 'put material on mesh', 'replace mesh material', 'set material slot'],
+    topics: ['assign material to mesh', 'apply material to actor', 'change actor material', 'change the floor material', 'put material on mesh', 'replace mesh material', 'set material slot'],
     summary: 'Apply a material asset to a mesh component on an actor, optionally per slot, or a material to every slot in one call (materials).',
     whenToUse: ['A material must be assigned to an actor mesh component.', 'A mesh with several material slots (an SDF part) needs a material in each: materials sets them all in one call.'],
     whenNotToUse: ['The mesh has no material slots (the assignment is a no-op).'],
