@@ -25289,7 +25289,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "camera": {
           "type": "string",
-          "description": "The camera actor to move (a CineCameraActor or a CameraActor), by name; when no actor has this name a CineCameraActor is spawned with it as its label (default ShotCamera, so repeated calls move the same camera)."
+          "description": "The camera actor to fly, by name; when no actor has this name a CineCameraActor is spawned with it as its label (default FlyCamera)."
         },
         "cameraName": {
           "type": "string",
@@ -25314,6 +25314,12 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "clearSources": {
           "type": "boolean",
           "description": "Remove every existing source before adding the ones sent (default false); alone it empties the take."
+        },
+        "clearanceCm": {
+          "type": "number",
+          "minimum": 10,
+          "maximum": 500,
+          "description": "How far from geometry the camera stays, in cm (default 50): the straight lines between corners keep all of it, the smoothed curve at least 80% of it. A gap narrower than twice this cannot be flown through."
         },
         "componentName": {
           "type": "string",
@@ -25780,6 +25786,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "boolean",
           "description": "Whether to lock."
         },
+        "lookAt": {
+          "type": "string",
+          "description": "An actor the camera faces the whole way (the middle of what it draws); left out, the camera faces the way it is going."
+        },
         "loop": {
           "type": "boolean",
           "description": "Whether media playback loops."
@@ -26056,8 +26066,19 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "description": "Whether to save the sequence asset after the mutation."
         },
         "seconds": {
-          "type": "number",
-          "description": "Seek time in seconds (alias of timeSeconds)."
+          "oneOf": [
+            {
+              "type": "number",
+              "description": "Seek time in seconds (alias of timeSeconds)."
+            },
+            {
+              "type": "number",
+              "minimum": 0.5,
+              "maximum": 600,
+              "description": "How long the flight takes (0.5-600; default its length at 300 cm a second, at least 1)."
+            }
+          ],
+          "description": "How long the flight takes (0.5-600; default its length at 300 cm a second, at least 1)."
         },
         "sectionIndex": {
           "oneOf": [
@@ -26312,6 +26333,32 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "integer",
           "description": "Sample count per render sample pass."
         },
+        "through": {
+          "type": "array",
+          "minItems": 2,
+          "maxItems": 16,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "x",
+              "y",
+              "z"
+            ],
+            "properties": {
+              "x": {
+                "type": "number"
+              },
+              "y": {
+                "type": "number"
+              },
+              "z": {
+                "type": "number"
+              }
+            }
+          },
+          "description": "The points the camera passes, in order, in cm (2-16). Each must stand at least clearanceCm from geometry (a point beside a wall or near the floor is POINT_IN_SOLID)."
+        },
         "time": {
           "type": "number",
           "description": "Seek time in seconds (alias of timeSeconds)."
@@ -26413,6 +26460,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             "add_cinematic_track",
             "configure_cinematic",
             "frame_shot",
+            "fly_through",
             "create_render_job",
             "configure_render_job",
             "create_media_asset",
@@ -26506,6 +26554,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "string",
           "description": "The camera's label."
         },
+        "cameraCut": {
+          "type": "boolean",
+          "description": "A camera cut to the camera covers the flight."
+        },
         "cancelRequested": {
           "type": "boolean",
           "description": "The executor was told to cancel its jobs."
@@ -26521,6 +26573,16 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "clearedAllFrames": {
           "type": "boolean",
           "description": "True when no frame was supplied and the whole track was cleared."
+        },
+        "corners": {
+          "type": "array",
+          "items": {
+            "type": "array",
+            "items": {
+              "type": "number"
+            }
+          },
+          "description": "The corners the curve passes, as [x, y, z], the given points among them (64 at most)."
         },
         "count": {
           "type": "number",
@@ -26541,6 +26603,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "dryRun": {
           "type": "boolean"
+        },
+        "endFrame": {
+          "type": "number",
+          "description": "Its last frame."
         },
         "existsAfter": {
           "type": "boolean",
@@ -26596,6 +26662,14 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "keyCount": {
           "type": "integer",
           "description": "Total keys across every reported channel."
+        },
+        "keys": {
+          "type": "number",
+          "description": "Transform keys written (ten a second)."
+        },
+        "lengthCm": {
+          "type": "number",
+          "description": "How far the camera flies."
         },
         "lengthInFrames": {
           "type": "integer",
@@ -26674,6 +26748,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "integer",
           "description": "Playback end frame."
         },
+        "playbackGrown": {
+          "type": "boolean",
+          "description": "The playback range was lengthened to hold the flight."
+        },
         "playbackStart": {
           "type": "integer",
           "description": "Playback start frame."
@@ -26706,6 +26784,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "boolean",
           "description": "Whether render continued asynchronously after timeout."
         },
+        "replacedTrack": {
+          "type": "boolean",
+          "description": "The camera already had a transform track in this sequence, and the flight replaced it (its keys are gone; undo brings them back)."
+        },
         "replayName": {
           "type": "string",
           "description": "Name for the demo replay."
@@ -26730,6 +26812,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "saved": {
           "type": "boolean",
           "description": "Whether the asset was saved."
+        },
+        "seconds": {
+          "type": "number",
+          "description": "How long the flight takes."
         },
         "sectionIndex": {
           "type": "integer",
@@ -26777,6 +26863,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "spawned": {
           "type": "boolean",
           "description": "The camera was spawned by this call (with dryRun: would be)."
+        },
+        "startFrame": {
+          "type": "number",
+          "description": "First frame of the flight, at the sequence's display rate."
         },
         "state": {
           "type": "string",
@@ -27039,10 +27129,21 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "description": "Available track types."
         },
         "undo": {
-          "type": "object",
-          "additionalProperties": true,
-          "x-unreal-reflection-boundary": true,
-          "description": "What editor undo takes back: {undoable, transactionScope, steps}; the move or spawn and the lens are one step. Absent under dryRun."
+          "oneOf": [
+            {
+              "type": "object",
+              "additionalProperties": true,
+              "x-unreal-reflection-boundary": true,
+              "description": "What editor undo takes back: {undoable, transactionScope, steps}; the camera, its keys and the cut are one step. Absent under dryRun."
+            },
+            {
+              "type": "object",
+              "additionalProperties": true,
+              "x-unreal-reflection-boundary": true,
+              "description": "What editor undo takes back: {undoable, transactionScope, steps}; the move or spawn and the lens are one step. Absent under dryRun."
+            }
+          ],
+          "description": "What editor undo takes back: {undoable, transactionScope, steps}; the camera, its keys and the cut are one step. Absent under dryRun."
         },
         "value": {
           "type": "string",

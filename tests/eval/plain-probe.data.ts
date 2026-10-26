@@ -694,4 +694,7 @@ export const PLAIN_PROBE: readonly PlainProbeCase[] = [
   { query: 'frame a shot', accepted: ['sequence.planner.frame_shot'] },
   { query: 'rule of thirds', accepted: ['sequence.planner.frame_shot'] },
   { query: 'aim the camera at two actors', accepted: ['sequence.planner.frame_shot'] },
+  { query: 'camera fly through', accepted: ['sequence.planner.fly_through'] },
+  { query: 'drone shot', accepted: ['sequence.planner.fly_through'] },
+  { query: 'fly through the level', accepted: ['sequence.planner.fly_through'] },
 ];

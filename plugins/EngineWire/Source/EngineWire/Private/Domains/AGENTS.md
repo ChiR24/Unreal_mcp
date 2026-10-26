@@ -10,7 +10,7 @@ Each domain is a folder `Domains/<Domain>/` holding one thin `*Dispatch.cpp` plu
 
 Grouped index (largest first; the rest are discoverable by folder name):
 
-- Cinematics: `Sequence` (~112; `Planner/`: `frame_shot`, a camera placed by where its subjects must sit on screen, two subjects through toric space, refined by `McpNelderMead` over sight-line costs), `Animation` (~27), `AnimationAuthoring` (~24), `Skeleton` (~25)
+- Cinematics: `Sequence` (~118; `Planner/`: `frame_shot`, a camera placed by where its subjects must sit on screen, two subjects through toric space, refined by `McpNelderMead` over sight-line costs; `fly_through`, A* through free cells, cut short by sweeps, smoothed by `McpMinSnap` and keyed with a camera cut), `Animation` (~27), `AnimationAuthoring` (~24), `Skeleton` (~25)
 - Asset/Blueprint: `AssetWorkflow` (~65), `MaterialAuthoring` (~50), `Blueprint` (~49), `WidgetAuthoring` (~36; `Audit/`: `audit_widget`, the preview's offscreen draw read back as laid-out rectangles and pixels; `Arrange/`: `arrange_widgets`, relations solved by `McpCassowary`, anchors from what pins each widget), `BlueprintGraph`, `BlueprintCreation`, `SCS`, `StructProperty`, `Texture`, `AssetQuery`
 - World: `Environment` (~42), `Geometry` (~37), `Level` (~35), `Volume`, `LevelStructure`, `Landscape`, `Foliage`, `Spline`, `Navigation` (`Analytics/`: `analyze_level_layout`, the nav mesh sampled into a graph and read as rooms, corridors, doors and route shares), `PCG`, `Lighting`, `Render`
 - VFX: `Niagara`, `NiagaraAuthoring`, `NiagaraGraph`, `Effect`

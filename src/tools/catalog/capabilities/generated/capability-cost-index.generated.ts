@@ -1501,6 +1501,7 @@ export const CAPABILITY_COST_INDEX: Readonly<Record<string, string>> = {
   "manage_sequence::duplicate": "interactive|low",
   "manage_sequence::edit_sequence_bindings": "interactive|low",
   "manage_sequence::edit_sequence_tracks": "interactive|low",
+  "manage_sequence::fly_through": "interactive|medium",
   "manage_sequence::frame_shot": "interactive|medium",
   "manage_sequence::get_bindings": "instant|low",
   "manage_sequence::get_metadata": "instant|low",
@@ -1635,4 +1636,4 @@ export const CAPABILITY_COST_INDEX: Readonly<Record<string, string>> = {
   "system_control::write_snapshot": "interactive|medium"
 };
 
-export const CAPABILITY_COST_INDEX_KEY_COUNT = 1622;
+export const CAPABILITY_COST_INDEX_KEY_COUNT = 1623;

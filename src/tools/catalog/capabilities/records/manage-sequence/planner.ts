@@ -3,7 +3,7 @@
  * Native Domains/Sequence/Planner (McpFrameShot*).
  */
 import type { CapabilityRecordSource } from '../../model.js';
-import { buildRecord } from './helpers.js';
+import { buildRecord, SEQ_PLUGINS } from './helpers.js';
 
 const F = 'planner';
 const D = 'cinematics';
@@ -66,5 +66,54 @@ export const PLANNER_RECORDS: readonly CapabilityRecordSource[] = [
     effect: 'write', latency: 'interactive', resources: 'medium', plugins: [],
     exampleInput: { action: 'frame_shot', subjects: ['Hero'], shotSize: 'medium' },
     exampleOutput: { success: true, message: 'Spawned ShotCamera to frame Hero on its mark from 520 cm with a 50 mm lens; nothing in the way.', camera: 'ShotCamera', spawned: true, location: [452.3, 261.1, 182.4], rotation: [-7.15, -150.0, 0], fieldOfView: 26.6, focalLength: 50, focusDistance: 524.8, subjects: [{ actorName: 'Hero', target: [-0.333, 0], screen: [-0.333, 0], error: 0, hidden: 0 }], fill: 0.55, dryRun: false },
+  }),
+  buildRecord({
+    id: 'sequence.planner.fly_through', action: 'fly_through', family: F, domain: D,
+    topics: ['fly through', 'camera fly through', 'flythrough', 'camera flight', 'fly the camera through the level',
+      'drone shot', 'smooth camera path', 'camera move between points', 'camera path around the walls'],
+    summary: 'Fly a camera through points of the level and key the flight into a Level Sequence, never nearer to geometry than a clearance: between two points the camera goes straight when nothing is in the way, else round or over what is (a search through free space, cut short wherever a straight line is clear), and the corners are smoothed into one minimum-snap curve (unbroken in speed, acceleration and jerk) at rest at both ends, timed by distance over seconds (default the path length at 3 m/s). It faces lookAt (an actor) the whole way, else the way ahead. Keys every tenth of a second go on a transform track of its own (an earlier one of that camera is replaced: replacedTrack says so), with a camera cut to it over the flight and the playback range grown to hold it, all in one undo step, from the sequence\'s playback start; the camera is the actor named camera (default FlyCamera), or a CineCameraActor spawned under that label. dryRun answers the corners and the length without writing. Refused, changing nothing, with POINT_IN_SOLID (a point nearer to geometry than clearanceCm; point gives its index), NO_PATH (no way through free space joins two points, or the smoothed curve cannot be kept clear), ACTOR_NOT_FOUND (lookAt), INVALID_SEQUENCE, INVALID_ARGUMENT.',
+    whenToUse: [
+      'A camera must move smoothly through a level (a fly-through, a drone shot, a reveal) without working out keys or clipping through walls.',
+      'A cinematic needs a camera move between given places, looking at one actor all the way.',
+    ],
+    whenNotToUse: [
+      'A still camera framing actors: use frame_shot.',
+      'Keying one transform by hand: use add_keyframe.',
+    ],
+    inputProps: {
+      sequencePath: { type: 'string', description: 'The Level Sequence to key the flight into (/Game/...); the keys start at its playback start.' },
+      through: {
+        type: 'array', minItems: 2, maxItems: 16,
+        items: { type: 'object', additionalProperties: false, required: ['x', 'y', 'z'], properties: { x: { type: 'number' }, y: { type: 'number' }, z: { type: 'number' } } },
+        description: 'The points the camera passes, in order, in cm (2-16). Each must stand at least clearanceCm from geometry (a point beside a wall or near the floor is POINT_IN_SOLID).',
+      },
+      lookAt: { type: 'string', description: 'An actor the camera faces the whole way (the middle of what it draws); left out, the camera faces the way it is going.' },
+      seconds: { type: 'number', minimum: 0.5, maximum: 600, description: 'How long the flight takes (0.5-600; default its length at 300 cm a second, at least 1).' },
+      clearanceCm: { type: 'number', minimum: 10, maximum: 500, description: 'How far from geometry the camera stays, in cm (default 50): the straight lines between corners keep all of it, the smoothed curve at least 80% of it. A gap narrower than twice this cannot be flown through.' },
+      camera: { type: 'string', description: 'The camera actor to fly, by name; when no actor has this name a CineCameraActor is spawned with it as its label (default FlyCamera).' },
+      dryRun: { type: 'boolean', description: 'Plan the flight and answer without writing anything (default false).' },
+    },
+    required: ['sequencePath', 'through'],
+    outputProps: {
+      camera: { type: 'string', description: 'The camera\'s label.' },
+      spawned: { type: 'boolean', description: 'The camera was spawned by this call (with dryRun: would be).' },
+      sequencePath: { type: 'string' },
+      seconds: { type: 'number', description: 'How long the flight takes.' },
+      lengthCm: { type: 'number', description: 'How far the camera flies.' },
+      keys: { type: 'number', description: 'Transform keys written (ten a second).' },
+      corners: { type: 'array', items: { type: 'array', items: { type: 'number' } }, description: 'The corners the curve passes, as [x, y, z], the given points among them (64 at most).' },
+      bindingGuid: { type: 'string', description: 'The camera\'s binding in the sequence.' },
+      startFrame: { type: 'number', description: 'First frame of the flight, at the sequence\'s display rate.' },
+      endFrame: { type: 'number', description: 'Its last frame.' },
+      playbackGrown: { type: 'boolean', description: 'The playback range was lengthened to hold the flight.' },
+      cameraCut: { type: 'boolean', description: 'A camera cut to the camera covers the flight.' },
+      replacedTrack: { type: 'boolean', description: 'The camera already had a transform track in this sequence, and the flight replaced it (its keys are gone; undo brings them back).' },
+      dryRun: { type: 'boolean' },
+      undo: { type: 'object', additionalProperties: true, 'x-unreal-reflection-boundary': true, description: 'What editor undo takes back: {undoable, transactionScope, steps}; the camera, its keys and the cut are one step. Absent under dryRun.' },
+    },
+    outputRequired: [],
+    effect: 'write', latency: 'interactive', resources: 'medium', plugins: SEQ_PLUGINS,
+    exampleInput: { action: 'fly_through', sequencePath: '/Game/Cinematics/SEQ_Tour', through: [{ x: 0, y: 0, z: 200 }, { x: 1500, y: 600, z: 300 }], lookAt: 'Statue' },
+    exampleOutput: { success: true, message: 'Flew FlyCamera through 2 point(s) in 5.4 s along 1625 cm, 4 corner(s), never nearer to geometry than 40 cm; 55 key(s) in SEQ_Tour.', camera: 'FlyCamera', spawned: true, seconds: 5.42, lengthCm: 1625, keys: 55, startFrame: 0, endFrame: 130, playbackGrown: false, cameraCut: true, dryRun: false },
   }),
 ];
