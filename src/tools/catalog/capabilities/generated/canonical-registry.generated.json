@@ -1,5 +1,5 @@
 {
-  "catalogRevision": "56dd15b358c7685c",
+  "catalogRevision": "b64ff97bca969e96",
   "recordCount": 435,
   "records": [
     {
@@ -2075,7 +2075,7 @@
           "restitution",
           "surface friction"
         ],
-        "summary": "Create or tune a physical material: friction, bounce (restitution), density and how two touching surfaces combine them. A mesh takes it through control_actor edit_component property PhysMaterialOverride (edit_scs set_property on a class template).",
+        "summary": "Create or tune a physical material: friction (an icy or slippery floor, a grippy one), bounce (restitution), density and how two touching surfaces combine them. A mesh takes it through control_actor edit_component property PhysMaterialOverride (edit_scs set_property on a class template).",
         "whenToUse": [
           "An object must bounce, slide or grip differently: a bouncy ball (restitution 0.9, restitutionCombineMode Max), an ice floor (friction 0.05, frictionCombineMode Min).",
           "A physical material must be adjusted: the same name and path tune it in place."
@@ -2174,7 +2174,7 @@
       },
       "examples": [
         {
-          "title": "Create or tune a physical material: friction, bounce (restitution), density and how two touching surfaces combine them. A mesh takes it through control_actor edit_component property PhysMaterialOverride (edit_scs set_property on a class template).",
+          "title": "Create or tune a physical material: friction (an icy or slippery floor, a grippy one), bounce (restitution), density and how two touching surfaces combine them. A mesh takes it through control_actor edit_component property PhysMaterialOverride (edit_scs set_property on a class template).",
           "input": {
             "action": "create_physical_material",
             "name": "PM_Bouncy",
@@ -2218,7 +2218,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "8fc12fe57a87d5606b19d0d2839598bf362c09b8576d999dab20e9571ffe3aae",
-        "content": "d049ed431c0da5343cf0de470c4a23d5ba7b7a4fe7e3664cb93e03dd689a7194"
+        "content": "33eddf69383ff6bc0a0c1fa28ccf22445e5d3b60e48a506e989008c99804b66b"
       }
     },
     {
@@ -38383,7 +38383,8 @@
           "fix sunk actors",
           "fix floating actors",
           "fix overlapping actors",
-          "push intersecting actors apart"
+          "push intersecting actors apart",
+          "snap actors to the floor"
         ],
         "summary": "Fix what audit_placement reports, judged by its own rules: a sunk actor moves up and a floating one down onto the surface under it, and intersecting actors are pushed apart the shortest way out of each other, measured on their collision (the smaller moves further; floors, landscapes, locked and attached actors never move). kinds names which of sunk, floating and overlapping to fix, since each can be deliberate. Every move is one undo step; a run checks what it moved again, up to three rounds, and dryRun lists the moves without making them.",
         "whenToUse": [
@@ -38601,7 +38602,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "20b65fcc68e07b80e37090de314deeca7e0bbc9c4e68582714c84201ce40c67b",
-        "content": "cbc70ade223a15eb912dedfe5e9608e6385a67fca8a808ce07bb9c4355e4d127"
+        "content": "2c00b87db84e01b1463fae4a6c65389bfc67d3cee88cc70b8e141d0157fa6fec"
       }
     },
     {

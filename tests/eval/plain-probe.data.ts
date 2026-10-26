@@ -677,4 +677,6 @@ export const PLAIN_PROBE: readonly PlainProbeCase[] = [
   { query: 'save the steps as a recipe', accepted: ['system_control.save_recipe'] },
   { query: 'run my saved recipe', accepted: ['system_control.run_recipe'] },
   { query: 'what recipes are there', accepted: ['system_control.list_recipes'] },
+  { query: 'snap actor to the floor', accepted: ['control_actor.fix_placement'] },
+  { query: 'actor is sunk in the floor', accepted: ['control_actor.fix_placement'] },
 ];

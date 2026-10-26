@@ -65,7 +65,7 @@ export const ANIM_AUTHORED_3: readonly CapabilityRecordSource[] = [
     exampleOutput: { success: true, message: 'Physics simulation set', existingAsset: false } }),
   buildRecord({ parentTool: T, id: `${T}.create_physical_material`, action: 'create_physical_material', family: F,
     topics: ['physical material', 'make it bouncy', 'bouncy ball', 'bounciness', 'slippery surface', 'restitution', 'surface friction'],
-    summary: 'Create or tune a physical material: friction, bounce (restitution), density and how two touching surfaces combine them. A mesh takes it through control_actor edit_component property PhysMaterialOverride (edit_scs set_property on a class template).',
+    summary: 'Create or tune a physical material: friction (an icy or slippery floor, a grippy one), bounce (restitution), density and how two touching surfaces combine them. A mesh takes it through control_actor edit_component property PhysMaterialOverride (edit_scs set_property on a class template).',
     whenToUse: ['An object must bounce, slide or grip differently: a bouncy ball (restitution 0.9, restitutionCombineMode Max), an ice floor (friction 0.05, frictionCombineMode Min).', 'A physical material must be adjusted: the same name and path tune it in place.'],
     whenNotToUse: ['A character slides or grips the ground: use manage_character set_movement_property (ground friction, braking).'],
     inputProps: { name: str('Asset name, e.g. PM_Bouncy.'), path: str('Folder for the asset (default /Game/Physics).'),
