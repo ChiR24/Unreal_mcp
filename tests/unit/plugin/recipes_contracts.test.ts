@@ -37,4 +37,18 @@ describe('recipes', () => {
     expect(save).toContain('McpScript::Check(Forms, Allowed, Error, Code)');
     expect(save).not.toContain('HandleRunScript');
   });
+
+  // Search answers on the socket thread (McpNativeTransportGateway.cpp), so the recipes it lists are read from files
+  // and JSON alone: no editor or engine header, no UObject lookup, no game-thread state.
+  it('lists recipes in search from files and JSON only', () => {
+    const scan = code(join(PRIVATE, 'Domains', 'Scripts', 'McpRecipesSearch.cpp'));
+    const includes = [...scan.matchAll(/#include "([^"]+)"/gu)].map((match) => String(match[1]));
+    expect(includes.sort()).toEqual(['Dom/JsonValue.h', 'Domains/Scripts/McpRecipes.h', 'HAL/FileManager.h',
+      'MCP/Gateway/McpNativeGatewaySearchMatch.h', 'Misc/Paths.h']);
+    expect(scan).not.toMatch(/\b(GEditor|GWorld|GEngine|FindObject|LoadObject|StaticLoadObject|AsyncTask)\b/u);
+    const header = code(join(PRIVATE, 'Domains', 'Scripts', 'McpRecipes.h'));
+    expect([...header.matchAll(/#include "([^"]+)"/gu)].map((match) => String(match[1])).sort())
+      .toEqual(['CoreMinimal.h', 'Dom/JsonObject.h']);
+    expect(code(join(PRIVATE, 'MCP', 'Gateway', 'McpNativeGatewaySearch.cpp'))).toContain('McpRecipes::SearchRows(ContentWords, 3)');
+  });
 });

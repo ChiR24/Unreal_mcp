@@ -73,7 +73,7 @@ The native surface permanently exposes the single `unreal` tool; it is the only 
 - `describe {}` -> the domains, `{ domain }` -> its families, `{ domain?, family }` -> its capabilities (`McpNativeGatewayDescribeOverview.cpp`; 50 rows unless `limit` is sent).
 - `describe { tool }` -> the parent summary: every action name unless `limit` is sent, and a `browse` call (search filtered to the tool).
 - `describe { capability }` or `{ tool, action }` -> that capability's exact contract (`perActionSchemas` true: only the parameters it declares). `{ ..., param }` -> one parameter's schema (`scope: "parameter"`).
-- `search` rows are built by `McpSearchRow` in `McpNativeGatewayCatalog.cpp`; the envelope echoes `filters` and `maxBytes`, pages with `c:<offset>` cursors and reports clamped integers as `coercions`.
+- `search` rows are built by `McpSearchRow` in `McpNativeGatewayCatalog.cpp`; the envelope echoes `filters` and `maxBytes`, pages with `c:<offset>` cursors and reports clamped integers as `coercions`. An unfiltered first page also lists the saved recipes the request names under `recipes` (`McpRecipes::SearchRows`, Domains/Scripts: files and JSON only, since search answers on the socket thread).
 
 Every view is sourced from the generated capability store (`McpNativeGatewayCapabilityStore.cpp` over the `Generated/` shards), generated from the TypeScript records.
 

@@ -15,15 +15,15 @@
 
 namespace McpRecipes
 {
-namespace RecipeParts
-{
-constexpr int32 Schema = 1;
-constexpr int32 MaxParams = 16;
-
 FString Dir()
 {
     return FPaths::Combine(FPaths::ProjectSavedDir(), TEXT("EngineWire"), TEXT("Recipes"));
 }
+
+namespace RecipeParts
+{
+constexpr int32 Schema = 1;
+constexpr int32 MaxParams = 16;
 
 // A recipe's name is its file name: letters, digits and underscores only, so it can never leave the folder.
 bool ValidName(const FString& Name)
@@ -45,17 +45,6 @@ bool ValidName(const FString& Name)
 FString PathOf(const FString& Name)
 {
     return FPaths::Combine(Dir(), Name + TEXT(".json"));
-}
-
-TSharedPtr<FJsonObject> Load(const FString& Name)
-{
-    FString Text;
-    TSharedPtr<FJsonObject> Recipe;
-    if (ValidName(Name) && FFileHelper::LoadFileToString(Text, *PathOf(Name)))
-    {
-        FJsonSerializer::Deserialize(TJsonReaderFactory<>::Create(Text), Recipe);
-    }
-    return Recipe;
 }
 
 bool Store(const FString& Name, const TSharedPtr<FJsonObject>& Recipe)
@@ -115,6 +104,17 @@ FString Bound(const TArray<FString>& Params, const TSharedPtr<FJsonObject>& Args
 } // namespace RecipeParts
 
 using namespace RecipeParts;
+
+TSharedPtr<FJsonObject> Load(const FString& Name)
+{
+    FString Text;
+    TSharedPtr<FJsonObject> Recipe;
+    if (ValidName(Name) && FFileHelper::LoadFileToString(Text, *PathOf(Name)))
+    {
+        FJsonSerializer::Deserialize(TJsonReaderFactory<>::Create(Text), Recipe);
+    }
+    return Recipe;
+}
 
 bool HandleSave(UEngineWireSubsystem& Bridge, const FString& RequestId, const TSharedPtr<FJsonObject>& Payload,
                 const TSharedPtr<FMcpBridgeWebSocket>& Socket)

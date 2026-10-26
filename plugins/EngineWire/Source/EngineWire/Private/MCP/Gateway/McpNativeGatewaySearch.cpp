@@ -1,6 +1,7 @@
 // McpNativeGatewaySearch.cpp — see header for the cross-surface contract.
 
 #include "MCP/Gateway/McpNativeGatewaySearch.h"
+#include "Domains/Scripts/McpRecipes.h"
 #include "MCP/Gateway/McpNativeGatewayCanonicalJson.h"
 #include "MCP/Gateway/McpNativeGatewayCapabilityStore.h"
 #include "MCP/Gateway/McpNativeGatewayCatalog.h"
@@ -284,6 +285,10 @@ TSharedPtr<FJsonObject> McpGatewaySearchCapabilities(
 			: FString::Printf(TEXT("No capability matched '%s'. Use 2-4 plain words naming the verb and the object (e.g. 'spawn actor'), drop any filter, or call describe with no selector to browse domains. Game logic no capability makes in one call is built as a Blueprint graph: search 'blueprint logic'."), *Input.Query));
 		Out->SetObjectField(TEXT("nextCall"), GatewayBuildNextCall(TEXT("describe"), FString(), FString(), FString()));
 	}
+	// Saved recipes (system_control save_recipe) the request names, on an unfiltered first page (McpRecipesSearch.cpp).
+	const bool bFiltered = bExact || Input.bHasDomain || Input.bHasFamily || Input.bHasTool || Input.bHasAction || Input.bHasEffect;
+	const TArray<TSharedPtr<FJsonValue>> Recipes = bFiltered || Offset > 0 ? TArray<TSharedPtr<FJsonValue>>() : McpRecipes::SearchRows(ContentWords, 3);
+	if (Recipes.Num() > 0) Out->SetArrayField(TEXT("recipes"), Recipes);
 	if (Input.Coercions.Num() > 0) Out->SetArrayField(TEXT("coercions"), Input.Coercions);
 	return Out;
 }

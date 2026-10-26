@@ -27229,7 +27229,8 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "summary": {
           "type": "string",
-          "description": "What the recipe does, in a sentence: list_recipes matches it."
+          "maxLength": 300,
+          "description": "What the recipe does, in a sentence: search and list_recipes match its words."
         },
         "target": {
           "type": "string",

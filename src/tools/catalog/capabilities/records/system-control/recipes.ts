@@ -15,11 +15,14 @@ export const RECIPE_RECORDS: readonly CapabilityRecordSource[] = [
     parentTool: 'system_control', action: 'save_recipe', domain: D, family: F, editorStates: ANY_EDITOR_STATE,
     topics: ['save a recipe', 'save this workflow', 'reusable script', 'remember how to do this'],
     summary: 'Keep a run_script script in the project as a named recipe with parameters, so a later call (or another agent) runs it as one checked call with run_recipe. The script is checked as run_script checks one, its parameters bound by name (each a variable the script reads); nothing runs at save time. destructive lists the destructive capabilities it calls, as run_script takes them, and run_recipe\'s consent covers exactly those. A taken name is refused (RECIPE_EXISTS) unless overwrite is true. Stored under Saved/EngineWire/Recipes/<name>.json.',
-    whenToUse: ['A sequence of calls worked and will be needed again with other values: save it, then run_recipe.'],
+    whenToUse: [
+      'A sequence of calls worked and will be needed again with other values: save it, then run_recipe.',
+      'Search lists a saved recipe beside the capabilities (its recipes field) when its name and summary name the words of the request: write the summary as a caller would ask for the task.',
+    ],
     whenNotToUse: ['Running a script once: run_script.'],
     inputProps: {
       name: NAME,
-      summary: { type: 'string', description: 'What the recipe does, in a sentence: list_recipes matches it.' },
+      summary: { type: 'string', maxLength: 300, description: 'What the recipe does, in a sentence: search and list_recipes match its words.' },
       script: { type: 'string', description: 'The script, in run_script\'s language; it reads each of paramNames as a variable.' },
       paramNames: { type: 'array', items: { type: 'string' }, description: 'The parameter names (at most 16), each bound by run_recipe\'s args before the script runs.' },
       destructive: { type: 'array', items: { type: 'string' }, description: 'The destructive capabilities the script calls, as run_script takes them.' },
@@ -40,7 +43,7 @@ export const RECIPE_RECORDS: readonly CapabilityRecordSource[] = [
     parentTool: 'system_control', action: 'run_recipe', domain: D, family: F, editorStates: ANY_EDITOR_STATE,
     topics: ['run a recipe', 'run a saved workflow'],
     summary: 'Run a recipe saved with save_recipe: args gives each parameter a value (bound as (let name value) before its first line), and the script runs exactly as run_script runs one: every step checked as a direct execute is, its destructive steps covered by this call\'s one consent, and everything rolled back when a step or an expectation fails. A run that succeeds marks the recipe verified with the engine version. RECIPE_NOT_FOUND for an unknown name, RECIPE_ARGS when args lacks a parameter.',
-    whenToUse: ['A recipe exists for the task (list_recipes finds it).'],
+    whenToUse: ['A recipe exists for the task: search lists it under recipes, and list_recipes finds it by its words.'],
     whenNotToUse: ['No recipe fits: run_script, or the capabilities themselves.'],
     inputProps: {
       name: NAME,

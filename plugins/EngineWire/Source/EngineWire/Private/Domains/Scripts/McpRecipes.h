@@ -21,4 +21,16 @@ bool HandleRun(UEngineWireSubsystem& Bridge, const FString& RequestId, const TSh
                const TSharedPtr<FMcpBridgeWebSocket>& Socket);
 bool HandleList(UEngineWireSubsystem& Bridge, const FString& RequestId, const TSharedPtr<FJsonObject>& Payload,
                 const TSharedPtr<FMcpBridgeWebSocket>& Socket);
+
+/** Saved/EngineWire/Recipes, where every recipe is a <name>.json file. */
+FString Dir();
+/** A saved recipe, or null: no such file, a name that is no file name, or a file that does not parse. */
+TSharedPtr<FJsonObject> Load(const FString& Name);
+/**
+ * The recipes the gateway's search lists beside its capabilities (McpRecipesSearch.cpp): those whose name and summary
+ * name every content word of the request, or at least two of them, most words first, at most Max. Each row is
+ * {name, summary, paramNames, verified?, nextCall} with nextCall the describe of system_control.run_recipe. Runs on
+ * the socket thread that answers search: files and JSON only, no editor API.
+ */
+TArray<TSharedPtr<FJsonValue>> SearchRows(const TArray<FString>& ContentWords, int32 Max);
 } // namespace McpRecipes

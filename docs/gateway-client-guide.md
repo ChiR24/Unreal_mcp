@@ -288,6 +288,15 @@ one grant then covers. A failed call or expectation rolls the script back
 through a restore point, as far as editor undo reaches (a Blueprint compile or a
 level load clears the history; the reply says what was not undone).
 
+A script that worked can be kept as a **recipe**: `save_recipe { name, summary,
+script, paramNames }` checks it as `run_script` would and stores it under
+`Saved/EngineWire/Recipes/`, and `run_recipe { name, args }` runs it as
+`run_script` runs one. Search lists matching recipes beside the capabilities, under
+`recipes` (at most three, only on an unfiltered first page): each is `{ name,
+summary, paramNames, verified?, nextCall }`, listed when its name and summary
+name every content word of the request or at least two of them; its `nextCall`
+describes `run_recipe`, which hands over the consent grant.
+
 ## Deprecation and removal behavior
 
 Three distinct removal behaviors exist. They are not interchangeable.
