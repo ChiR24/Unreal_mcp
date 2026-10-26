@@ -697,4 +697,7 @@ export const PLAIN_PROBE: readonly PlainProbeCase[] = [
   { query: 'camera fly through', accepted: ['sequence.planner.fly_through'] },
   { query: 'drone shot', accepted: ['sequence.planner.fly_through'] },
   { query: 'fly through the level', accepted: ['sequence.planner.fly_through'] },
+  { query: 'cut between cameras', accepted: ['sequence.planner.auto_edit'] },
+  { query: '180 degree rule', accepted: ['sequence.planner.auto_edit'] },
+  { query: 'auto edit the cinematic', accepted: ['sequence.planner.auto_edit'] },
 ];

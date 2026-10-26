@@ -5,6 +5,7 @@
 #include "Domains/Sequence/Media/McpSeqMedia.h"
 #include "Domains/Sequence/Metadata/McpSeqMetadata.h"
 #include "Domains/Sequence/MovieRender/McpSeqMRQ.h"
+#include "Domains/Sequence/Planner/McpAutoEdit.h"
 #include "Domains/Sequence/Planner/McpFlyThrough.h"
 #include "Domains/Sequence/Planner/McpFrameShot.h"
 #include "Domains/Sequence/RecordReplay/McpSeqRecordReplay.h"
@@ -133,6 +134,9 @@ bool UEngineWireSubsystem::HandleSequenceAction(
     return McpSequenceRanges::HandleSetWorkRange(this, RequestId, LocalPayload,
                                                  RequestingSocket);
 
+  if (EffectiveAction == TEXT("sequence_auto_edit"))
+    return McpAutoEdit::Handle(*this, RequestId, LocalPayload, RequestingSocket,
+                               [this](const FString &Name) { return FindActorByName(Name, true); });
   if (EffectiveAction == TEXT("sequence_fly_through"))
     return McpFlyThrough::Handle(*this, RequestId, LocalPayload, RequestingSocket,
                                  [this](const FString &Name) { return FindActorByName(Name, true); });

@@ -1,6 +1,6 @@
 {
-  "catalogRevision": "6d0e40bd6474e1e6",
-  "recordCount": 440,
+  "catalogRevision": "1b831a5d7bd23cae",
+  "recordCount": 441,
   "records": [
     {
       "id": "animation_physics.analyze_animation",
@@ -101856,6 +101856,245 @@
         "algorithm": "sha256",
         "schema": "36ee2cf6833b1e40063aee08e7ad1949b29236d11766ef92f944c570590ddce4",
         "content": "d176a0a5878de4041f05d734fd6c74eb7508710d870b17603c2e1b34d0f9669b"
+      }
+    },
+    {
+      "id": "sequence.planner.auto_edit",
+      "aliases": [],
+      "legacyIds": [
+        {
+          "tool": "manage_sequence",
+          "action": "auto_edit"
+        }
+      ],
+      "discovery": {
+        "domain": "cinematics",
+        "family": "planner",
+        "topics": [
+          "auto_edit",
+          "auto edit",
+          "edit the cameras",
+          "cut between cameras",
+          "camera cuts",
+          "edit a cinematic",
+          "choose camera angles",
+          "shot editing",
+          "180 degree rule",
+          "cut a scene",
+          "which camera when"
+        ],
+        "summary": "Cut a Level Sequence between its cameras the way an editor would, as its camera cut track: the playback range is split into segments (segmentSeconds, default 0.5), and at each segment's middle every camera is scored by how it shows the subjects as the sequence plays them (each subject hidden behind something or out of frame, the first, the main one, counting double; the main one too small or too large), and every cut by its jump (two cameras within 30 degrees of each other round the main subject) and its crossing of the line between the first two subjects. The cheapest edit whose shots all last minShotSeconds to maxShotSeconds (default 1.5 to 8) is found by dynamic programming over segment, camera and time held, and replaces the camera cut track's sections, cameras bound to the sequence when they are not, in one undo step. dryRun answers the shots without writing. Refused, changing nothing, with NO_CUT (some moment no camera sees the main subject: unseenSeconds lists when), ACTOR_NOT_FOUND, INVALID_SEQUENCE, INVALID_ARGUMENT (fewer than 2 cameras, a range shorter than the shortest shot).",
+        "whenToUse": [
+          "A scene has several cameras and needs cutting between them: which camera is on when, without cutting across the line or jumping between near-identical angles.",
+          "Re-cutting after the action or the cameras changed: run it again, it replaces the cuts."
+        ],
+        "whenNotToUse": [
+          "Placing one camera on a shot: use frame_shot.",
+          "Moving a camera along a path: use fly_through.",
+          "Adding one cut by hand: use add_cinematic_track kind=camera_cut."
+        ]
+      },
+      "schemas": {
+        "input": {
+          "$schema": "https://json-schema.org/draft/2020-12/schema",
+          "type": "object",
+          "properties": {
+            "action": {
+              "type": "string",
+              "description": "The action to execute on the parent tool."
+            },
+            "sequencePath": {
+              "type": "string",
+              "description": "The Level Sequence to cut; its playback range is the range edited."
+            },
+            "cameras": {
+              "type": "array",
+              "minItems": 2,
+              "maxItems": 12,
+              "items": {
+                "type": "string"
+              },
+              "description": "The camera actors to cut between (2-12), by name; where the sequence moves one, it is judged where the sequence has it."
+            },
+            "subjects": {
+              "type": "array",
+              "minItems": 1,
+              "maxItems": 4,
+              "items": {
+                "type": "string"
+              },
+              "description": "The actors the cut serves (1-4), most important first: the first must be seen at every moment (NO_CUT otherwise), and the line between the first two is the one cuts should not cross."
+            },
+            "segmentSeconds": {
+              "type": "number",
+              "minimum": 0.1,
+              "maximum": 5,
+              "description": "How finely the range is judged, in seconds (default 0.5): cuts fall on these steps."
+            },
+            "minShotSeconds": {
+              "type": "number",
+              "minimum": 0.1,
+              "maximum": 120,
+              "description": "Shortest shot, in seconds (default 1.5; at least segmentSeconds)."
+            },
+            "maxShotSeconds": {
+              "type": "number",
+              "minimum": 0.1,
+              "maximum": 600,
+              "description": "Longest shot, in seconds (default 8; at least minShotSeconds)."
+            },
+            "dryRun": {
+              "type": "boolean",
+              "description": "Find the edit and answer without writing it (default false)."
+            }
+          },
+          "required": [
+            "action",
+            "sequencePath",
+            "cameras",
+            "subjects"
+          ],
+          "additionalProperties": false
+        },
+        "output": {
+          "$schema": "https://json-schema.org/draft/2020-12/schema",
+          "type": "object",
+          "properties": {
+            "success": {
+              "type": "boolean",
+              "description": "Whether the action succeeded."
+            },
+            "message": {
+              "type": "string",
+              "description": "Human-readable result message."
+            },
+            "details": {
+              "type": "object",
+              "x-unreal-reflection-boundary": true,
+              "description": "Additional handler result fields not named by the contract."
+            },
+            "sequencePath": {
+              "type": "string"
+            },
+            "shots": {
+              "type": "array",
+              "description": "The edit, in order.",
+              "items": {
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {
+                  "camera": {
+                    "type": "string"
+                  },
+                  "startFrame": {
+                    "type": "number",
+                    "description": "At the sequence's display rate."
+                  },
+                  "endFrame": {
+                    "type": "number"
+                  }
+                }
+              }
+            },
+            "camerasUsed": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "description": "The cameras the edit cuts to, in order of first use."
+            },
+            "cuts": {
+              "type": "number",
+              "description": "Cuts between shots."
+            },
+            "crossings": {
+              "type": "number",
+              "description": "Cuts that cross the line between the first two subjects (0 unless no other edit fits)."
+            },
+            "segments": {
+              "type": "number",
+              "description": "Segments judged."
+            },
+            "dryRun": {
+              "type": "boolean"
+            },
+            "undo": {
+              "type": "object",
+              "additionalProperties": true,
+              "x-unreal-reflection-boundary": true,
+              "description": "What editor undo takes back: {undoable, transactionScope, steps}; every cut is one step. Absent under dryRun."
+            }
+          },
+          "required": [
+            "success"
+          ],
+          "additionalProperties": false
+        }
+      },
+      "examples": [
+        {
+          "title": "Cut a Level Sequence between its cameras the way an editor would, as its camera cut track: the playback range is split into segments (segmentSeconds, default 0.5), and at each segment's middle every camera is scored by how it shows the subjects as the sequence plays them (each subject hidden behind something or out of frame, the first, the main one, counting double; the main one too small or too large), and every cut by its jump (two cameras within 30 degrees of each other round the main subject) and its crossing of the line between the first two subjects. The cheapest edit whose shots all last minShotSeconds to maxShotSeconds (default 1.5 to 8) is found by dynamic programming over segment, camera and time held, and replaces the camera cut track's sections, cameras bound to the sequence when they are not, in one undo step. dryRun answers the shots without writing. Refused, changing nothing, with NO_CUT (some moment no camera sees the main subject: unseenSeconds lists when), ACTOR_NOT_FOUND, INVALID_SEQUENCE, INVALID_ARGUMENT (fewer than 2 cameras, a range shorter than the shortest shot).",
+          "input": {
+            "action": "auto_edit",
+            "sequencePath": "/Game/Cinematics/SEQ_Talk",
+            "cameras": [
+              "CamWide",
+              "CamOverA",
+              "CamOverB"
+            ],
+            "subjects": [
+              "Hero",
+              "Rival"
+            ]
+          },
+          "output": {
+            "success": true,
+            "message": "Cut 4 shot(s) from 3 of 3 camera(s) over 12.0 s (shots 1.5 to 8.0 s); no cut crosses the line.",
+            "shots": [
+              {
+                "camera": "CamWide",
+                "startFrame": 0,
+                "endFrame": 72
+              }
+            ],
+            "cuts": 3,
+            "crossings": 0,
+            "segments": 24,
+            "dryRun": false
+          }
+        }
+      ],
+      "availability": {
+        "requiredPlugins": [
+          "LevelSequenceEditor"
+        ],
+        "editorStates": [
+          "edit"
+        ]
+      },
+      "behavior": {
+        "effect": "write",
+        "idempotency": "non-idempotent",
+        "longRunning": false,
+        "safeToRetry": false
+      },
+      "policy": {
+        "requiredScope": "write",
+        "consent": "none",
+        "dataAccess": "project-write"
+      },
+      "cost": {
+        "latency": "interactive",
+        "resources": "medium"
+      },
+      "routing": {
+        "parentTool": "manage_sequence",
+        "dispatchAction": "auto_edit"
+      },
+      "hashes": {
+        "algorithm": "sha256",
+        "schema": "b6e8584d6017a1e9a5bd1f581f19029537597c00ba54fec082fb00a5c7e19eec",
+        "content": "d882bf02848b570ffcac8b6ebfa2f700b4db0c1afa39cc4d22dc55f360fdeab3"
       }
     },
     {

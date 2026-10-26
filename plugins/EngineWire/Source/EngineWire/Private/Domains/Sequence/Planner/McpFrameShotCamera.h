@@ -6,6 +6,7 @@
 
 class UCameraComponent;
 class UWorld;
+struct FCollisionQueryParams;
 
 // frame_shot's camera side: the lens read from the camera, the world's sight lines, the undo step, the reply.
 namespace McpFrameShot
@@ -20,6 +21,10 @@ struct FFrameCamera
     double FocalLength = 0.0; // a cine camera: the focal length it will keep
     FLens Lens;
 };
+
+/** The share of nine sight lines from Camera to Box (its middle and a 3 x 3 grid across it as seen from there) that
+ *  something blocks first; Params leaves out the subject, what hangs on it, and the camera. */
+double HiddenShare(const UWorld& World, const FCollisionQueryParams& Params, const FVector& Camera, const FBox& Box);
 
 /** The camera and the frame its lens gives; OutError when the actor is no camera or focalLength cannot apply. */
 void ReadCamera(AActor* Actor, const FString& Label, double AskedFocalLength, double DefaultFocalLength, FFrameCamera& Out,

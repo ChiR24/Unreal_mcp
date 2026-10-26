@@ -25303,6 +25303,15 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "string",
           "description": "Camera shake asset path."
         },
+        "cameras": {
+          "type": "array",
+          "minItems": 2,
+          "maxItems": 12,
+          "items": {
+            "type": "string"
+          },
+          "description": "The camera actors to cut between (2-12), by name; where the sequence moves one, it is judged where the sequence has it."
+        },
         "checkpointSaveMaxMSPerFrame": {
           "type": "number",
           "description": "Max checkpoint save MS per frame (<=1000)."
@@ -25406,7 +25415,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "dryRun": {
           "type": "boolean",
-          "description": "Find the shot and answer without moving or spawning anything (default false)."
+          "description": "Find the edit and answer without writing it (default false)."
         },
         "duration": {
           "type": "number",
@@ -25826,6 +25835,12 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "number",
           "description": "Max record time (<=86400)."
         },
+        "maxShotSeconds": {
+          "type": "number",
+          "minimum": 0.1,
+          "maximum": 600,
+          "description": "Longest shot, in seconds (default 8; at least minShotSeconds)."
+        },
         "mediaPath": {
           "type": "string",
           "description": "Media file path (alias of filePath)."
@@ -25847,6 +25862,12 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "method": {
           "type": "string",
           "description": "Anti-aliasing method (alias of antiAliasingMethod)."
+        },
+        "minShotSeconds": {
+          "type": "number",
+          "minimum": 0.1,
+          "maximum": 120,
+          "description": "Shortest shot, in seconds (default 1.5; at least segmentSeconds)."
         },
         "muted": {
           "type": "boolean",
@@ -26102,6 +26123,12 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "number",
           "description": "Seek time in seconds."
         },
+        "segmentSeconds": {
+          "type": "number",
+          "minimum": 0.1,
+          "maximum": 5,
+          "description": "How finely the range is judged, in seconds (default 0.5): cuts fall on these steps."
+        },
         "sensorHeight": {
           "type": "number",
           "description": "Sensor height in mm."
@@ -26305,13 +26332,27 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "description": "Sequence time in seconds. play starts there; pause jumps the playhead there and holds that frame, so the viewport and screenshots show the scene at that moment. A time past the end of the playback range is refused: frame N at 24 fps is N / 24 seconds."
         },
         "subjects": {
-          "type": "array",
-          "minItems": 1,
-          "maxItems": 2,
-          "items": {
-            "type": "string"
-          },
-          "description": "The one or two actors to frame, by exact name. Each is framed by the box of what it draws: its centre goes to its framing point, and its size sets the distance."
+          "oneOf": [
+            {
+              "type": "array",
+              "minItems": 1,
+              "maxItems": 2,
+              "items": {
+                "type": "string"
+              },
+              "description": "The one or two actors to frame, by exact name. Each is framed by the box of what it draws: its centre goes to its framing point, and its size sets the distance."
+            },
+            {
+              "type": "array",
+              "minItems": 1,
+              "maxItems": 4,
+              "items": {
+                "type": "string"
+              },
+              "description": "The actors the cut serves (1-4), most important first: the first must be seen at every moment (NO_CUT otherwise), and the line between the first two is the one cuts should not cross."
+            }
+          ],
+          "description": "The actors the cut serves (1-4), most important first: the first must be seen at every moment (NO_CUT otherwise), and the line between the first two is the one cuts should not cross."
         },
         "subsequencePath": {
           "type": "string",
@@ -26461,6 +26502,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             "configure_cinematic",
             "frame_shot",
             "fly_through",
+            "auto_edit",
             "create_render_job",
             "configure_render_job",
             "create_media_asset",
@@ -26558,6 +26600,13 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "boolean",
           "description": "A camera cut to the camera covers the flight."
         },
+        "camerasUsed": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "The cameras the edit cuts to, in order of first use."
+        },
         "cancelRequested": {
           "type": "boolean",
           "description": "The executor was told to cancel its jobs."
@@ -26591,6 +26640,14 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "created": {
           "type": "boolean",
           "description": "Whether the asset was created."
+        },
+        "crossings": {
+          "type": "number",
+          "description": "Cuts that cross the line between the first two subjects (0 unless no other edit fits)."
+        },
+        "cuts": {
+          "type": "number",
+          "description": "Cuts between shots."
         },
         "deletedPath": {
           "type": "string",
@@ -26825,6 +26882,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "string",
           "description": "Name of the created section, assigned by Sequencer."
         },
+        "segments": {
+          "type": "number",
+          "description": "Segments judged."
+        },
         "sequencePackagePath": {
           "type": "string",
           "description": "Package of the recorded sequence."
@@ -26848,6 +26909,26 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
               "name": {
                 "type": "string",
                 "description": "Asset name."
+              }
+            }
+          }
+        },
+        "shots": {
+          "type": "array",
+          "description": "The edit, in order.",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "camera": {
+                "type": "string"
+              },
+              "startFrame": {
+                "type": "number",
+                "description": "At the sequence's display rate."
+              },
+              "endFrame": {
+                "type": "number"
               }
             }
           }
@@ -27138,6 +27219,12 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
               "type": "object",
               "additionalProperties": true,
               "x-unreal-reflection-boundary": true,
+              "description": "What editor undo takes back: {undoable, transactionScope, steps}; every cut is one step. Absent under dryRun."
+            },
+            {
+              "type": "object",
+              "additionalProperties": true,
+              "x-unreal-reflection-boundary": true,
               "description": "What editor undo takes back: {undoable, transactionScope, steps}; the camera, its keys and the cut are one step. Absent under dryRun."
             },
             {
@@ -27147,7 +27234,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
               "description": "What editor undo takes back: {undoable, transactionScope, steps}; the move or spawn and the lens are one step. Absent under dryRun."
             }
           ],
-          "description": "What editor undo takes back: {undoable, transactionScope, steps}; the camera, its keys and the cut are one step. Absent under dryRun."
+          "description": "What editor undo takes back: {undoable, transactionScope, steps}; every cut is one step. Absent under dryRun."
         },
         "value": {
           "type": "string",

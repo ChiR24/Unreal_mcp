@@ -6,7 +6,7 @@ Contract records are hand-authored here. Everything downstream is generated. A h
 ```
 capabilities/
 |-- records/                      # HAND-EDIT ZONE
-|   |-- aggregate.ts              # ALL_CAPABILITY_RECORDS (folded); asserts ALL_CAPABILITY_RECORD_COUNT (440 on 2026-10-26)
+|   |-- aggregate.ts              # ALL_CAPABILITY_RECORDS (folded); asserts ALL_CAPABILITY_RECORD_COUNT (441 on 2026-10-26)
 |   |-- unfolded.ts               # every authored source before folding (tests read it)
 |   |-- parent-metadata.ts        # parent tool metadata
 |   |-- compensation.ts           # behavior.compensation (inverse capability or cleanup note)
@@ -33,7 +33,7 @@ Generators: `scripts/generate-canonical-registry.ts` (+ `scripts/canonical-regis
 Declare exactly what the C++ handler reads and emits. The gateway validates strictly (undeclared param → `UNDECLARED_PARAMETER`), and `npm run test:params` (strict) fails on a case param no schema declares or an optional param no case covers.
 
 ## FOLDED FAMILIES (read before adding an action)
-440 records fold 1,416 authored sources; 242 are families, and 1,598 `{tool, action}` pairs stay callable (2026-10-26). `records/folds/<parent>.folds.ts` lists, per family, the primary action, a selector parameter (`kind`, `edit`, `setting`, ...) and the member each selector value dispatches to; `routing.dispatchBy` maps selector → bridge action, and each former name is a `legacyIds[]` entry carrying `folded: { <selector>: <value> }` pins that the gateway injects before validation. A family whose primary is one of its members keeps the selector optional with that member as default. Members must share effect, policy, availability, family and id namespace (`applyFolds` throws otherwise). A spec's `topics` come first and its members' own topics follow (search reads them all), and `routing.dispatchBy.declaredBy` names the variants that declare each parameter the members do not all share, which describe shows as `variants` on that parameter.
+441 records fold 1,417 authored sources; 242 are families, and 1,599 `{tool, action}` pairs stay callable (2026-10-26). `records/folds/<parent>.folds.ts` lists, per family, the primary action, a selector parameter (`kind`, `edit`, `setting`, ...) and the member each selector value dispatches to; `routing.dispatchBy` maps selector → bridge action, and each former name is a `legacyIds[]` entry carrying `folded: { <selector>: <value> }` pins that the gateway injects before validation. A family whose primary is one of its members keeps the selector optional with that member as default. Members must share effect, policy, availability, family and id namespace (`applyFolds` throws otherwise). A spec's `topics` come first and its members' own topics follow (search reads them all), and `routing.dispatchBy.declaredBy` names the variants that declare each parameter the members do not all share, which describe shows as `variants` on that parameter.
 
 A family's discovery summary is the spec's `summary`; each member's own summary goes under the selector parameter's description, one line per variant (`value: summary`, a sibling action name rewritten to `selector=value`). That line is where a member's defaults, replies and refusals reach a caller, so write member summaries in full; search scores the spec summary, topics and whenToUse, never parameter descriptions.
 

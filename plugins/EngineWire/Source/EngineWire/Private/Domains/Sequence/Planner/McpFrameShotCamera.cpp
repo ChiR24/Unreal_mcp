@@ -24,8 +24,26 @@ namespace
 {
 constexpr float FrameShotRoom = 15.f; // cm the camera needs clear around it
 
-// The share of nine sight lines from Camera to a box (its middle and a 3 x 3 grid across it as seen from there) that
-// something blocks first; Params leaves out the subject, what hangs on it, and the camera.
+double FieldOfView(const FLens& Lens)
+{
+    return FMath::RadiansToDegrees(2.0 * FMath::Atan(Lens.TanHalfH));
+}
+
+// Value to 1 / Scale (Scale 10, 100 or 1000): divided, so 26.7 reads 26.7 rather than 26.700000000000003.
+double Rounded(double Value, double Scale)
+{
+    return FMath::RoundToDouble(Value * Scale) / Scale;
+}
+
+TArray<TSharedPtr<FJsonValue>> ScreenPoint(const FVector2D& Point)
+{
+    TArray<TSharedPtr<FJsonValue>> Out;
+    Out.Add(MakeShared<FJsonValueNumber>(Rounded(Point.X, 1000.0)));
+    Out.Add(MakeShared<FJsonValueNumber>(Rounded(Point.Y, 1000.0)));
+    return Out;
+}
+} // namespace
+
 double HiddenShare(const UWorld& World, const FCollisionQueryParams& Params, const FVector& Camera, const FBox& Box)
 {
     const FVector Centre = Box.GetCenter();
@@ -49,26 +67,6 @@ double HiddenShare(const UWorld& World, const FCollisionQueryParams& Params, con
     }
     return Blocked / 9.0;
 }
-
-double FieldOfView(const FLens& Lens)
-{
-    return FMath::RadiansToDegrees(2.0 * FMath::Atan(Lens.TanHalfH));
-}
-
-// Value to 1 / Scale (Scale 10, 100 or 1000): divided, so 26.7 reads 26.7 rather than 26.700000000000003.
-double Rounded(double Value, double Scale)
-{
-    return FMath::RoundToDouble(Value * Scale) / Scale;
-}
-
-TArray<TSharedPtr<FJsonValue>> ScreenPoint(const FVector2D& Point)
-{
-    TArray<TSharedPtr<FJsonValue>> Out;
-    Out.Add(MakeShared<FJsonValueNumber>(Rounded(Point.X, 1000.0)));
-    Out.Add(MakeShared<FJsonValueNumber>(Rounded(Point.Y, 1000.0)));
-    return Out;
-}
-} // namespace
 
 void ReadCamera(AActor* Actor, const FString& Label, double Asked, double Default, FFrameCamera& Out, FString& OutError)
 {
