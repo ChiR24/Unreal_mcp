@@ -1,4 +1,5 @@
 import {
+  existsSync,
   readFileSync,
   readdirSync,
 } from 'node:fs';
@@ -91,6 +92,19 @@ describe('plugin source structure contracts', () => {
               : [];
           }),
       );
+
+    expect(offenders).toEqual([]);
+  }, 60_000);
+
+  it('includes a source file\'s own header first', () => {
+    // UBT logs "error: Expected X.h to be first header included" for an X.cpp whose X.h sits beside it and is not
+    // its first include. The local build still finishes, but the line reads as an error in a build log.
+    const offenders = listFiles(pluginSourceRoot)
+      .filter((file) => file.endsWith('.cpp') && existsSync(file.replace(/\.cpp$/u, '.h')))
+      .filter((file) => {
+        const first = /^#include\s+["<]([^">]+)[">]/mu.exec(readFileSync(file, 'utf8'))?.[1] ?? '';
+        return basename(first) !== basename(file).replace(/\.cpp$/u, '.h');
+      });
 
     expect(offenders).toEqual([]);
   }, 60_000);

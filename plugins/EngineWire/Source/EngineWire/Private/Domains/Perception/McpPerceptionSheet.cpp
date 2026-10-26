@@ -8,14 +8,14 @@
 // shows through. Each view is three scene captures (normals and depth of everything drawn, depth of the actor alone),
 // shaded as clay by McpPerceptionSheetDraw: the level viewport is not moved.
 
-#include "Domains/Perception/McpPerception.h"
+#include "Domains/Perception/McpPerceptionSheet.h"
 
 #include "Algo/Find.h"
 #include "Domains/ControlActor/Placement/McpPlacementMount.h"
 #include "Domains/ControlEditor/McpEditorScreenshotSupport.h"
 #include "Domains/Environment/Inspection/McpEnvInspectViewIds.h"
 #include "Domains/Environment/McpEnvShared.h"
-#include "Domains/Perception/McpPerceptionSheet.h"
+#include "Domains/Perception/McpPerception.h"
 #include "EngineUtils.h"
 #include "ImageUtils.h"
 #include "Misc/Base64.h"

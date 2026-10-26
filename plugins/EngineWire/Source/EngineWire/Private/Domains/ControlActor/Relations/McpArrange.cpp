@@ -7,13 +7,13 @@
 // where the actors stand (McpArrange.h), so a caller's rough placement is kept wherever it already fits; the engine
 // then judges each relation as expect does.
 
-#include "Domains/ControlActor/Relations/McpRelations.h"
+#include "Domains/ControlActor/Relations/McpArrange.h"
 
 #include "Algo/Find.h"
 #include "Domains/ControlActor/McpActorSupport.h"
 #include "Domains/ControlActor/Placement/Fix/McpPlacementFix.h"
 #include "Domains/ControlActor/Placement/McpPlacementMount.h"
-#include "Domains/ControlActor/Relations/McpArrange.h"
+#include "Domains/ControlActor/Relations/McpRelations.h"
 #include "Foundation/BridgeHelpers/Actors/McpActorMove.h"
 #include "Foundation/Solvers/McpPratt.h"
 #include "Misc/Crc.h"
