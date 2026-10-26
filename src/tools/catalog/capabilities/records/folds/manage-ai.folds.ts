@@ -91,8 +91,8 @@ export const MANAGE_AI_FOLDS: readonly FoldSpec[] = [
   },
   {
     primary: 'get_ai_info', selector: 'info',
-    summary: 'Read an AI asset: a pawn or AI controller Blueprint (each perception sense with its settings under the names the configure actions take, the engine teamId and the teamIdVariable set_perception_team stores, movement), a Behavior Tree summary, Blackboard keys, State Tree states or EQS query options; info=navigation returns NavMesh and agent settings.',
-    topics: ['controller settings', 'list blackboard keys', 'navmesh settings', 'state tree states'],
-    members: { ai: 'get_ai_info', navigation: 'get_navigation_info' },
+    summary: 'Read an AI asset: a pawn or AI controller Blueprint (each perception sense with its settings under the names the configure actions take, the engine teamId and the teamIdVariable set_perception_team stores, movement), a Behavior Tree summary, Blackboard keys, State Tree states or EQS query options; info=navigation returns NavMesh and agent settings; info=path says whether a pawn could walk between two points on the nav mesh, and why not.',
+    topics: ['controller settings', 'list blackboard keys', 'navmesh settings', 'state tree states', 'can it reach', 'path between points'],
+    members: { ai: 'get_ai_info', navigation: 'get_navigation_info', path: 'get_navigation_path' },
   },
 ];

@@ -523,6 +523,7 @@ export const CAPABILITY_COST_INDEX: Readonly<Record<string, string>> = {
   "manage_ai::get_ai_info": "interactive|medium",
   "manage_ai::get_blackboard_value": "interactive|medium",
   "manage_ai::get_navigation_info": "interactive|medium",
+  "manage_ai::get_navigation_path": "interactive|medium",
   "manage_ai::get_tree": "interactive|medium",
   "manage_ai::rebuild_navigation": "interactive|medium",
   "manage_ai::remove_node": "interactive|medium",
@@ -1621,4 +1622,4 @@ export const CAPABILITY_COST_INDEX: Readonly<Record<string, string>> = {
   "system_control::write_snapshot": "interactive|medium"
 };
 
-export const CAPABILITY_COST_INDEX_KEY_COUNT = 1608;
+export const CAPABILITY_COST_INDEX_KEY_COUNT = 1609;

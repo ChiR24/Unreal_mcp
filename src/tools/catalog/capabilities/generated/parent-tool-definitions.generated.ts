@@ -9207,6 +9207,26 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "string",
           "description": "Focus the first actor carrying this tag (mark the target with control_actor add_tag)."
         },
+        "from": {
+          "type": "object",
+          "properties": {
+            "x": {
+              "type": "number"
+            },
+            "y": {
+              "type": "number"
+            },
+            "z": {
+              "type": "number"
+            }
+          },
+          "description": "Where the walk starts.",
+          "additionalProperties": false
+        },
+        "fromActor": {
+          "type": "string",
+          "description": "An actor whose location is the start, in place of from."
+        },
         "fromState": {
           "type": "string",
           "description": "Source state name."
@@ -9274,10 +9294,11 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "enum": [
             "ai",
             "navigation",
+            "path",
             "tree",
             "blackboard_value"
           ],
-          "description": "Which get ai info variant to run; omit for 'ai'.\nai: Read AI asset information.\nnavigation: Read navigation state and settings."
+          "description": "Which get ai info variant to run; omit for 'ai'.\nai: Read AI asset information.\nnavigation: Read navigation state and settings.\npath: Say whether a pawn could walk from one point to another on the editor level's nav mesh, and why not: an end off the mesh within projectExtent (start_off_navmesh, goal_off_navmesh), both ends on it with nothing connecting them (no_path), or a partial path that stops gap cm short (partial). from and to are points, or fromActor and toActor stand for where those actors are. The reply gives reachable, reason, the path points (100 at most), pathLength in cm, and where each end lands on the mesh (fromOnMesh, toOnMesh). Refused with NAV_DATA_MISSING when the level has no nav mesh, and NAV_BUILD_IN_PROGRESS while it builds."
         },
         "isInstanceSynced": {
           "type": "boolean",
@@ -9496,6 +9517,22 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "peripheralVisionAngle": {
           "type": "number",
           "description": "Peripheral vision half-angle in degrees."
+        },
+        "projectExtent": {
+          "type": "object",
+          "properties": {
+            "x": {
+              "type": "number"
+            },
+            "y": {
+              "type": "number"
+            },
+            "z": {
+              "type": "number"
+            }
+          },
+          "description": "How far from an end, per axis in cm, the nav mesh may be found (default 100, 100, 250).",
+          "additionalProperties": false
         },
         "properties": {
           "oneOf": [
@@ -9778,6 +9815,26 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "number",
           "description": "NavMesh tile size in Unreal units (default: 1000)."
         },
+        "to": {
+          "type": "object",
+          "properties": {
+            "x": {
+              "type": "number"
+            },
+            "y": {
+              "type": "number"
+            },
+            "z": {
+              "type": "number"
+            }
+          },
+          "description": "Where it should end.",
+          "additionalProperties": false
+        },
+        "toActor": {
+          "type": "string",
+          "description": "An actor whose location is the goal, in place of to."
+        },
         "toState": {
           "type": "string",
           "description": "Target state name."
@@ -10028,6 +10085,17 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "string",
           "description": "What it focuses: player, or tag and the tag."
         },
+        "fromOnMesh": {
+          "type": "array",
+          "items": {
+            "type": "number"
+          },
+          "description": "Where the start lands on the nav mesh, as [x, y, z]."
+        },
+        "gap": {
+          "type": "number",
+          "description": "partial: how far the path stops short of the goal, in cm."
+        },
         "hooks": {
           "type": "array",
           "items": {
@@ -10052,6 +10120,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "message": {
           "type": "string",
           "description": "Human-readable result message."
+        },
+        "navData": {
+          "type": "string",
+          "description": "The navigation data the path was found on."
         },
         "navMeshInfo": {
           "type": "object",
@@ -10112,6 +10184,20 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "boolean",
           "description": "Whether the component orients rotation to movement."
         },
+        "pathLength": {
+          "type": "number",
+          "description": "Length of the path in cm."
+        },
+        "points": {
+          "type": "array",
+          "items": {
+            "type": "array",
+            "items": {
+              "type": "number"
+            }
+          },
+          "description": "The path corners as [x, y, z], start to end (100 at most)."
+        },
         "previousRemoved": {
           "type": "number",
           "description": "Nodes an earlier run of the same action had made, taken out first."
@@ -10126,6 +10212,21 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "propertyCount": {
           "type": "number",
           "description": "How many movement properties were changed."
+        },
+        "reachable": {
+          "type": "boolean",
+          "description": "Whether a full path joins the two ends."
+        },
+        "reason": {
+          "type": "string",
+          "enum": [
+            "ok",
+            "start_off_navmesh",
+            "goal_off_navmesh",
+            "no_path",
+            "partial"
+          ],
+          "description": "Why, or ok."
         },
         "removed": {
           "type": "boolean",
@@ -10153,6 +10254,13 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "success": {
           "type": "boolean",
           "description": "Whether the action succeeded."
+        },
+        "toOnMesh": {
+          "type": "array",
+          "items": {
+            "type": "number"
+          },
+          "description": "Where the goal lands on the nav mesh, as [x, y, z]."
         },
         "tree": {
           "type": "object",

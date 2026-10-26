@@ -193,4 +193,11 @@ bool HandleGetNavigationInfo(
     const FString& RequestId,
     const TSharedPtr<FJsonObject>& Payload,
     TSharedPtr<FMcpBridgeWebSocket> Socket);
+
+// get_ai_info info:'path' (McpNavPath.cpp): whether a pawn could walk from one point to another, and why not.
+bool HandleGetNavigationPath(
+    UEngineWireSubsystem* Self,
+    const FString& RequestId,
+    const TSharedPtr<FJsonObject>& Payload,
+    TSharedPtr<FMcpBridgeWebSocket> Socket);
 }

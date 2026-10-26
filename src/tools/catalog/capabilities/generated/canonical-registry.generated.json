@@ -1,5 +1,5 @@
 {
-  "catalogRevision": "3052d84a2cf161f4",
+  "catalogRevision": "84215d69cbd804be",
   "recordCount": 428,
   "records": [
     {
@@ -56593,7 +56593,8 @@
     {
       "id": "manage_ai.get_ai_info",
       "aliases": [
-        "manage_ai.get_navigation_info"
+        "manage_ai.get_navigation_info",
+        "manage_ai.get_navigation_path"
       ],
       "legacyIds": [
         {
@@ -56606,6 +56607,13 @@
           "folded": {
             "info": "navigation"
           }
+        },
+        {
+          "tool": "manage_ai",
+          "action": "get_navigation_path",
+          "folded": {
+            "info": "path"
+          }
         }
       ],
       "discovery": {
@@ -56616,14 +56624,24 @@
           "controller settings",
           "list blackboard keys",
           "navmesh settings",
-          "state tree states"
+          "state tree states",
+          "can it reach",
+          "path between points",
+          "is it reachable",
+          "walkable path",
+          "find path",
+          "pathfinding",
+          "path to a location"
         ],
-        "summary": "Read an AI asset: a pawn or AI controller Blueprint (each perception sense with its settings under the names the configure actions take, the engine teamId and the teamIdVariable set_perception_team stores, movement), a Behavior Tree summary, Blackboard keys, State Tree states or EQS query options; info=navigation returns NavMesh and agent settings.",
+        "summary": "Read an AI asset: a pawn or AI controller Blueprint (each perception sense with its settings under the names the configure actions take, the engine teamId and the teamIdVariable set_perception_team stores, movement), a Behavior Tree summary, Blackboard keys, State Tree states or EQS query options; info=navigation returns NavMesh and agent settings; info=path says whether a pawn could walk between two points on the nav mesh, and why not.",
         "whenToUse": [
           "info=ai: A caller needs the current state of an AI asset.",
-          "info=navigation: A caller needs current NavMesh and agent settings."
+          "info=navigation: A caller needs current NavMesh and agent settings.",
+          "info=path: Before sending a pawn or AI somewhere: can it get there on foot, and if not, where does the way end?"
         ],
-        "whenNotToUse": []
+        "whenNotToUse": [
+          "info=path: Navigation settings or the nav mesh itself must be read (use info navigation)."
+        ]
       },
       "schemas": {
         "input": {
@@ -56658,13 +56676,70 @@
               "type": "string",
               "description": "Canonical /Game Blueprint asset path."
             },
+            "from": {
+              "type": "object",
+              "properties": {
+                "x": {
+                  "type": "number"
+                },
+                "y": {
+                  "type": "number"
+                },
+                "z": {
+                  "type": "number"
+                }
+              },
+              "description": "Where the walk starts.",
+              "additionalProperties": false
+            },
+            "to": {
+              "type": "object",
+              "properties": {
+                "x": {
+                  "type": "number"
+                },
+                "y": {
+                  "type": "number"
+                },
+                "z": {
+                  "type": "number"
+                }
+              },
+              "description": "Where it should end.",
+              "additionalProperties": false
+            },
+            "fromActor": {
+              "type": "string",
+              "description": "An actor whose location is the start, in place of from."
+            },
+            "toActor": {
+              "type": "string",
+              "description": "An actor whose location is the goal, in place of to."
+            },
+            "projectExtent": {
+              "type": "object",
+              "properties": {
+                "x": {
+                  "type": "number"
+                },
+                "y": {
+                  "type": "number"
+                },
+                "z": {
+                  "type": "number"
+                }
+              },
+              "description": "How far from an end, per axis in cm, the nav mesh may be found (default 100, 100, 250).",
+              "additionalProperties": false
+            },
             "info": {
               "type": "string",
               "enum": [
                 "ai",
-                "navigation"
+                "navigation",
+                "path"
               ],
-              "description": "Which get ai info variant to run; omit for 'ai'.\nai: Read AI asset information.\nnavigation: Read navigation state and settings.",
+              "description": "Which get ai info variant to run; omit for 'ai'.\nai: Read AI asset information.\nnavigation: Read navigation state and settings.\npath: Say whether a pawn could walk from one point to another on the editor level's nav mesh, and why not: an end off the mesh within projectExtent (start_off_navmesh, goal_off_navmesh), both ends on it with nothing connecting them (no_path), or a partial path that stops gap cm short (partial). from and to are points, or fromActor and toActor stand for where those actors are. The reply gives reachable, reason, the path points (100 at most), pathLength in cm, and where each end lands on the mesh (fromOnMesh, toOnMesh). Refused with NAV_DATA_MISSING when the level has no nav mesh, and NAV_BUILD_IN_PROGRESS while it builds.",
               "default": "ai"
             }
           },
@@ -56849,6 +56924,57 @@
                 }
               },
               "additionalProperties": false
+            },
+            "reachable": {
+              "type": "boolean",
+              "description": "Whether a full path joins the two ends."
+            },
+            "reason": {
+              "type": "string",
+              "enum": [
+                "ok",
+                "start_off_navmesh",
+                "goal_off_navmesh",
+                "no_path",
+                "partial"
+              ],
+              "description": "Why, or ok."
+            },
+            "points": {
+              "type": "array",
+              "items": {
+                "type": "array",
+                "items": {
+                  "type": "number"
+                }
+              },
+              "description": "The path corners as [x, y, z], start to end (100 at most)."
+            },
+            "pathLength": {
+              "type": "number",
+              "description": "Length of the path in cm."
+            },
+            "gap": {
+              "type": "number",
+              "description": "partial: how far the path stops short of the goal, in cm."
+            },
+            "fromOnMesh": {
+              "type": "array",
+              "items": {
+                "type": "number"
+              },
+              "description": "Where the start lands on the nav mesh, as [x, y, z]."
+            },
+            "toOnMesh": {
+              "type": "array",
+              "items": {
+                "type": "number"
+              },
+              "description": "Where the goal lands on the nav mesh, as [x, y, z]."
+            },
+            "navData": {
+              "type": "string",
+              "description": "The navigation data the path was found on."
             }
           },
           "required": [
@@ -56859,7 +56985,7 @@
       },
       "examples": [
         {
-          "title": "Read an AI asset: a pawn or AI controller Blueprint (each perception sense with its settings under the names the configure actions take, the engine teamId and the teamIdVariable set_perception_team stores, movement), a Behavior Tree summary, Blackboard keys, State Tree states or EQS query options; info=navigation returns NavMesh and agent settings.",
+          "title": "Read an AI asset: a pawn or AI controller Blueprint (each perception sense with its settings under the names the configure actions take, the engine teamId and the teamIdVariable set_perception_team stores, movement), a Behavior Tree summary, Blackboard keys, State Tree states or EQS query options; info=navigation returns NavMesh and agent settings; info=path says whether a pawn could walk between two points on the nav mesh, and why not.",
           "input": {
             "action": "get_ai_info",
             "controllerPath": "/Game/AI/AIC_Enemy",
@@ -56899,7 +57025,8 @@
           "param": "info",
           "actions": {
             "ai": "get_ai_info",
-            "navigation": "get_navigation_info"
+            "navigation": "get_navigation_info",
+            "path": "get_navigation_path"
           },
           "declaredBy": {
             "controllerPath": [
@@ -56922,14 +57049,29 @@
             ],
             "blueprintPath": [
               "ai"
+            ],
+            "from": [
+              "path"
+            ],
+            "to": [
+              "path"
+            ],
+            "fromActor": [
+              "path"
+            ],
+            "toActor": [
+              "path"
+            ],
+            "projectExtent": [
+              "path"
             ]
           }
         }
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "675757bcd57532b24e6cec75f6fd7b4627fde47d0c8f663e67b1fa9f4304431f",
-        "content": "1b241333d2d7f5d765ef568136f2f31eddc35655943636d6684f460487d5a880"
+        "schema": "74deb8b63f78af325b3eb53eebebb508d8d74c8feaff6f8dcedea6c616a02225",
+        "content": "fda82636a8ed03bdf50800a89f543f583be25ea55d880fc3a8d6543618857d23"
       }
     },
     {

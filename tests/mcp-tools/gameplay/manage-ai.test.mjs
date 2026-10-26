@@ -319,6 +319,11 @@ const testCases = [
   const NAV_MODIFIER = `NavModifier_${ts}`;
   const NAV_VOLUME = `NavModifierVolume_${ts}`;
   const OBSTACLE_AREA = '/Script/NavigationSystem.NavArea_Obstacle';
+  // get_navigation_path: an open floor with a walled room on it, far from everything else.
+  const PATH_TAG = `MCPPathTag_${ts}`;
+  const PATH_BOUNDS = `MCP_PathBounds_${ts}`;
+  const PATH_MARK = `MCP_PathMark_${ts}`;
+  const wall = (side, x, y, sx, sy) => ({ actorName: `MCP_PathWall${side}_${ts}`, location: { x, y, z: 150 }, scale: [sx, sy, 3] });
 
   testCases.push(
     // === SETUP ===
@@ -352,6 +357,27 @@ const testCases = [
     { scenario: 'ERROR: configure_smart_link_behavior refuses an area class that does not load', toolName: 'manage_ai', arguments: { action: 'configure_smart_link_behavior', actorName: SMART_LINK, enabledAreaClass: '/Script/NavigationSystem.NoSuchNavArea' }, expected: 'error|INVALID_AREA_CLASS' },
     // === INFO ===
     { scenario: 'INFO: get_navigation_info', toolName: 'manage_ai', arguments: {"action": "get_navigation_info"}, expected: 'success' },
+    { scenario: 'Setup: a floor with a closed room on it, and a marker', toolName: 'control_actor', arguments: { action: 'spawn_batch', defaults: { classPath: '/Engine/BasicShapes/Cube', tags: [PATH_TAG] }, actors: [
+      { actorName: `MCP_PathFloor_${ts}`, location: { x: 34000, y: 34000, z: -10 }, scale: [20, 20, 0.2] },
+      wall('N', 34600, 34760, 3.4, 0.2), wall('S', 34600, 34440, 3.4, 0.2), wall('E', 34760, 34600, 0.2, 3.4), wall('W', 34440, 34600, 0.2, 3.4),
+      { actorName: PATH_MARK, classPath: '/Script/Engine.TargetPoint', location: { x: 33300, y: 33300, z: 50 } },
+    ] }, expected: 'success' },
+    { scenario: 'Setup: nav mesh bounds around the floor', toolName: 'manage_level_structure', arguments: { action: 'create_nav_mesh_bounds_volume', volumeName: PATH_BOUNDS, location: { x: 34000, y: 34000, z: 0 }, extent: { x: 1100, y: 1100, z: 400 } }, expected: 'success' },
+    { scenario: 'Setup: build the nav mesh', toolName: 'manage_ai', arguments: { action: 'rebuild_navigation' }, expected: 'success' },
+    { scenario: 'READ: a path across the open floor', toolName: 'manage_ai', arguments: { action: 'get_navigation_path', from: { x: 33200, y: 33200, z: 20 }, to: { x: 33200, y: 34800, z: 20 } }, expected: 'success', assertions: [
+      { path: 'structuredContent.result.reachable', equals: true, label: 'the open floor connects' },
+      { path: 'structuredContent.result.reason', equals: 'ok', label: 'reason ok' },
+    ] },
+    { scenario: 'READ: no full path into the closed room', toolName: 'manage_ai', arguments: { action: 'get_navigation_path', fromActor: PATH_MARK, to: { x: 34600, y: 34600, z: 20 }, projectExtent: { x: 50, y: 50, z: 250 } }, expected: 'success', assertions: [
+      { path: 'structuredContent.result.reachable', equals: false, label: 'the walls close it off' },
+    ] },
+    { scenario: 'READ: a goal high above the floor is off the nav mesh', toolName: 'manage_ai', arguments: { action: 'get_navigation_path', from: { x: 33200, y: 33200, z: 20 }, to: { x: 33200, y: 33200, z: 3000 } }, expected: 'success', assertions: [
+      { path: 'structuredContent.result.reason', equals: 'goal_off_navmesh', label: 'nothing walkable near the goal' },
+    ] },
+    { scenario: 'ERROR: get_navigation_path needs a goal', toolName: 'manage_ai', arguments: { action: 'get_navigation_path', from: { x: 33200, y: 33200, z: 20 } }, expected: 'error|INVALID_ARGUMENT' },
+    { scenario: 'ERROR: get_navigation_path with an actor not in the level', toolName: 'manage_ai', arguments: { action: 'get_navigation_path', from: { x: 33200, y: 33200, z: 20 }, toActor: `MCP_NoSuchActor_${ts}` }, expected: 'error|INVALID_ARGUMENT' },
+    { scenario: 'Cleanup: the path scene', toolName: 'control_actor', arguments: { action: 'delete_by_tag', tag: PATH_TAG }, expected: 'success|not found' },
+    { scenario: 'Cleanup: the path nav bounds', toolName: 'control_actor', arguments: { action: 'delete', actorName: PATH_BOUNDS }, expected: 'success|not found' },
 
     // === CLEANUP ===
     { scenario: 'Cleanup: delete nav test actor', toolName: 'control_actor', arguments: { action: 'delete', actorName: NAV_ACTOR }, expected: 'success|not found' },
