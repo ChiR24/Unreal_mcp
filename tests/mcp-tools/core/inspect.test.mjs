@@ -168,8 +168,8 @@ const testCases = [
 
   // === EXPLAIN ===
   // Two default cubes block each other and stand apart: not an overlap, for reasons the tree names.
-  { scenario: 'EXPLAIN: why two blocking shapes do not overlap', toolName: 'inspect', arguments: { action: 'explain_collision', actorName: ACTOR, otherActor: DELETE_ACTOR, expect: 'overlap' }, expected: 'success', assertions: [{ path: 'structuredContent.result.verdict', equals: 'failed', label: 'blocking shapes apart do not overlap' }] },
-  { scenario: 'EXPLAIN: whether they would hit', toolName: 'inspect', arguments: { action: 'explain_collision', actorName: ACTOR, otherActor: DELETE_ACTOR, expect: 'hit' }, expected: 'success' },
+  { scenario: 'EXPLAIN: why two blocking shapes do not overlap', toolName: 'inspect', arguments: { action: 'explain_collision', actorName: ACTOR, otherActor: DELETE_ACTOR, event: 'overlap' }, expected: 'success', assertions: [{ path: 'structuredContent.result.verdict', equals: 'failed', label: 'blocking shapes apart do not overlap' }] },
+  { scenario: 'EXPLAIN: whether they would hit', toolName: 'inspect', arguments: { action: 'explain_collision', actorName: ACTOR, otherActor: DELETE_ACTOR, event: 'hit' }, expected: 'success' },
   { scenario: 'ERROR: explain_collision with an actor not in the level', toolName: 'inspect', arguments: { action: 'explain_collision', actorName: ACTOR, otherActor: `MCP_NoSuchActor_${ts}` }, expected: 'error|ACTOR_NOT_FOUND' },
   { scenario: 'EXPLAIN: why an actor is not seen', toolName: 'inspect', arguments: { action: 'explain_visible', actorName: ACTOR }, expected: 'success' },
   { scenario: 'CREATE: an input action no context maps', toolName: 'manage_networking', arguments: { action: 'configure_input', setting: 'create_action', name: `IA_Explain_${ts}`, path: TEST_FOLDER, valueType: 'digital' }, expected: 'success' },

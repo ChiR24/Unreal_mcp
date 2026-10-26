@@ -797,7 +797,7 @@ export function createToolCaller(client, { useProgressTimeouts = false } = {}) {
       gatewayCall.arguments = { ...gatewayCall.arguments, consent };
     }
     // Execute options a case states for itself (expect, require) ride at the case level for the
-    // same reason: explain_collision has an `expect` param of its own.
+    // same reason: inside `arguments` they would read as action params, which the gateway refuses.
     if (isRecord(callOptions.options)) {
       gatewayCall.arguments = { ...gatewayCall.arguments, options: { ...gatewayCall.arguments.options, ...callOptions.options } };
     }

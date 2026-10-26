@@ -121,7 +121,7 @@ bool ExplainCollision(UEngineWireSubsystem& Self, const FString& RequestId, cons
 {
     const FString NameA = GetJsonStringField(Payload, TEXT("actorName"));
     const FString NameB = GetJsonStringField(Payload, TEXT("otherActor"));
-    const bool bHit = GetJsonStringField(Payload, TEXT("expect"), TEXT("overlap")).Equals(TEXT("hit"), ESearchCase::IgnoreCase);
+    const bool bHit = GetJsonStringField(Payload, TEXT("event"), TEXT("overlap")).Equals(TEXT("hit"), ESearchCase::IgnoreCase);
     AActor* A = NameA.IsEmpty() ? nullptr : McpHandlerUtils::FindActorByName(NameA);
     AActor* B = NameB.IsEmpty() ? nullptr : McpHandlerUtils::FindActorByName(NameB);
     if (!A || !B)
@@ -213,7 +213,7 @@ bool ExplainCollision(UEngineWireSubsystem& Self, const FString& RequestId, cons
     }
     TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
     Tree.WriteTo(Result);
-    Result->SetStringField(TEXT("expect"), bHit ? TEXT("hit") : TEXT("overlap"));
+    Result->SetStringField(TEXT("event"), bHit ? TEXT("hit") : TEXT("overlap"));
     Self.SendAutomationResponse(Socket, RequestId, true,
         Tree.Summary(FString::Printf(TEXT("Why '%s' and '%s' do not %s"), *McpActorRef(A), *McpActorRef(B), bHit ? TEXT("hit") : TEXT("overlap"))),
         Result);
