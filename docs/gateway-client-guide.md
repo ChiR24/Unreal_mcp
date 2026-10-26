@@ -273,6 +273,21 @@ naming each unmet requirement (a consent grant is handed back). Both lists are
 part of the idempotency fingerprint, so a key resent with other assertions is
 refused with `IDEMPOTENCY_CONFLICT`, never served the first call's receipt.
 
+### Many calls in one: `run_script`
+
+`system_control run_script` runs a script of capability calls in one request,
+in the S-expression grammar `read_graph_as_code` prints: `(let r
+(control_actor.list :filter "Crate"))`, `(for c r.actors ...)`, `(if ...)`,
+`(expect "...")` in the language above, `(return ...)`. The whole script is
+checked before anything runs (capability ids, each call's parameters against
+its contract, names bound before use). Each call then goes through the same
+validation and pre-queue gate as a direct execute, for the same caller, except
+consent: `run_script` asks for elevated consent, and every capability the
+script calls that asks for consent must be listed in `destructive`, which that
+one grant then covers. A failed call or expectation rolls the script back
+through a restore point, as far as editor undo reaches (a Blueprint compile or a
+level load clears the history; the reply says what was not undone).
+
 ## Deprecation and removal behavior
 
 Three distinct removal behaviors exist. They are not interchangeable.

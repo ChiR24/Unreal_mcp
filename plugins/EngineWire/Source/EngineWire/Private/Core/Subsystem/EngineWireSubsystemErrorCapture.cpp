@@ -155,6 +155,12 @@ bool UEngineWireSubsystem::HasCapturedErrors() const
     return CurrentErrorCapture.ErrorCount > 0;
 }
 
+int32 UEngineWireSubsystem::GetCapturedErrorCount() const
+{
+    FScopeLock Lock(&ErrorCaptureMutex);
+    return CurrentErrorCapture.ErrorCount;
+}
+
 void UEngineWireSubsystem::ForgetCapturedMessages(TFunctionRef<bool(const FString&)> Matches)
 {
     FScopeLock Lock(&ErrorCaptureMutex);

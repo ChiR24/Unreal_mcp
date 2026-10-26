@@ -141,7 +141,7 @@ bool UEngineWireSubsystem::HandleControlActorSetBlueprintVariables(
     return true;
   }
   // A variable set ran outside any transaction, so undo answered NOTHING_TO_UNDO; a batch item uses the batch's.
-  const TUniquePtr<FMcpScopedEditorTransaction> Transaction = FMcpResponseCaptureRegistry::Get().IsCapturing(RequestId)
+  const TUniquePtr<FMcpScopedEditorTransaction> Transaction = FMcpResponseCaptureRegistry::Get().IsBatchStep(RequestId)
       ? nullptr
       : MakeUnique<FMcpScopedEditorTransaction>(FText::FromString(TEXT("Set Blueprint Variables")),
                                                 EMcpMutationDurability::EditorStateOnly, TArray<UObject *>{Found});

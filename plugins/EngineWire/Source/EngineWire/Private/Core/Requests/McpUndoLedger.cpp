@@ -156,7 +156,10 @@ void End()
 
 bool IsMcpStep(const FGuid& TransactionId)
 {
-    return GOwnedSet.Contains(TransactionId);
+    // Or a step the request still running left: a script rolls its own steps back before its request ends.
+    return GOwnedSet.Contains(TransactionId) ||
+           (GRecording && GSteps.ContainsByPredicate([&TransactionId](const FStep& Step)
+                                                     { return !Step.bDropped && Step.Id == TransactionId; }));
 }
 
 bool Hold(const FString& RequestId, TFunction<void()> Send)

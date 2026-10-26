@@ -71,6 +71,17 @@ void ForgetConsentForRequest(const FString& RequestId);
 // not consume the principal's budget.
 FMcpAuthorizationDecision Authorize(const FMcpPrequeueRequest& Request);
 
+// A step a request runs in-process (system_control run_script): the same gate for the caller's principal, without
+// consent, which the script's own grant covers for the capabilities it listed (the caller checks the list). Burns no
+// nonce and records nothing, so RequestId stays empty.
+FMcpAuthorizationDecision AuthorizeStep(const FMcpPrequeueRequest& Request);
+
+// The principal Authorize allowed a request for, kept from the gate until its reply (McpRequestPrincipals.cpp), so
+// what the request runs in-process is authorized for the same caller. False for a request never authorized.
+void RememberRequestPrincipal(const FString& RequestId, const FMcpCapabilityPrincipal& Principal);
+bool FindRequestPrincipal(const FString& RequestId, FMcpCapabilityPrincipal& OutPrincipal);
+void ForgetRequestPrincipal(const FString& RequestId);
+
 // The BOUNDED telemetry action class for a dispatch action, resolved
 // from the same catalogue demand the gate uses, so "how dangerous was it" is
 // reported by the authority rather than re-derived from the action string.

@@ -51,6 +51,8 @@ public:
 	bool IsRunning() const { return Thread != nullptr && !bStopping.load(); }
 	int32 GetListenPort() const { return ListenPort; }
 	int32 GetActiveSessionCount() const;
+	/** Which tool groups are enabled: what gateway validation checks a script's steps against. */
+	const FMcpDynamicToolManager& GetToolManager() const { return ToolManager; }
 
 	/**
 	 * Complete a pending SSE request with the handler's result.

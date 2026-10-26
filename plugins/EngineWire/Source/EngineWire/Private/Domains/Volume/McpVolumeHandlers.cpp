@@ -111,7 +111,7 @@ bool UEngineWireSubsystem::HandleManageVolumesAction(
     TUniquePtr<FMcpScopedEditorTransaction> Transaction;
     const bool bEdit = SubAction.StartsWith(TEXT("set_volume_")) || SubAction == TEXT("remove_volume");
     if ((!ClassKey.IsEmpty() || bEdit) && !GetJsonBoolField(Payload, TEXT("save"), false) &&
-        !FMcpResponseCaptureRegistry::Get().IsCapturing(RequestId))
+        !FMcpResponseCaptureRegistry::Get().IsBatchStep(RequestId))
     {
         TArray<UObject*> Undoable;
         if (AActor* Target = bEdit ? VolumeHelpers::FindVolumeByName(VolumeHelpers::GetEditorWorld(), GetJsonStringField(Payload, TEXT("volumeName"), TEXT(""))) : nullptr)

@@ -4,6 +4,9 @@ namespace McpGraphCode
 {
 namespace ParseParts
 {
+// Reading, checking and running all recurse once per list level: a bound, so no text can overflow the game thread's stack.
+constexpr int32 MaxDepth = 128;
+
 struct FToken
 {
     // ( or ), in Atom.Text.
@@ -186,11 +189,16 @@ bool IsClose(const FToken& Token)
     return Token.bParen && Token.Atom.Text == TEXT(")");
 }
 
-bool ReadForm(const TArray<FToken>& Tokens, int32& Pos, TMap<int32, FString>& Tags, FSExpr& Out, FString& OutError)
+bool ReadForm(const TArray<FToken>& Tokens, int32& Pos, TMap<int32, FString>& Tags, FSExpr& Out, FString& OutError, int32 Depth = 0)
 {
     if (!Tokens.IsValidIndex(Pos) || IsClose(Tokens[Pos]))
     {
         OutError = Tokens.IsValidIndex(Pos) ? FString::Printf(TEXT("Line %d: unexpected )"), Tokens[Pos].Atom.Line) : FString(TEXT("Unexpected end of input"));
+        return false;
+    }
+    if (Tokens[Pos].bParen && Depth >= MaxDepth)
+    {
+        OutError = FString::Printf(TEXT("Line %d: lists nested deeper than %d"), Tokens[Pos].Atom.Line, MaxDepth);
         return false;
     }
     if (!Tokens[Pos].bParen)
@@ -213,7 +221,7 @@ bool ReadForm(const TArray<FToken>& Tokens, int32& Pos, TMap<int32, FString>& Ta
             ++Pos;
             return true;
         }
-        if (!ReadForm(Tokens, Pos, Tags, Out.Items.AddDefaulted_GetRef(), OutError))
+        if (!ReadForm(Tokens, Pos, Tags, Out.Items.AddDefaulted_GetRef(), OutError, Depth + 1))
         {
             return false;
         }

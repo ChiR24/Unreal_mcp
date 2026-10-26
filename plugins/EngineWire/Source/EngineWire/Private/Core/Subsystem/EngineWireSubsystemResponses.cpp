@@ -96,6 +96,7 @@ void UEngineWireSubsystem::SendAutomationResponse(
     // is unchanged.
     if (bSuccess) { McpPrequeueGate::ForgetConsentForRequest(RequestId); }
     else { McpPrequeueGate::RefundConsentForRequest(RequestId); }
+    McpPrequeueGate::ForgetRequestPrincipal(RequestId);
 
     FString EffectiveMessage = Message;
     FString EffectiveErrorCode = ErrorCode;

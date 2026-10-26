@@ -45,6 +45,8 @@ bool FMcpGraphCodeParseTest::RunTest(const FString& Parameters)
     TestTrue(TEXT("an unclosed paren is refused"), Parse(TEXT("(event A"), Error).Num() == 0 && Error == TEXT("Line 1: unclosed parenthesis"));
     TestTrue(TEXT("a stray close paren is refused"), Parse(TEXT(")"), Error).Num() == 0 && Error == TEXT("Line 1: unexpected )"));
     TestTrue(TEXT("an unterminated string is refused with its line"), Parse(TEXT("(a\n\"open)"), Error).Num() == 0 && Error.StartsWith(TEXT("Line 2: unterminated string")));
+    TestTrue(TEXT("lists nested past the bound are refused, not recursed into"),
+             Parse(FString::ChrN(5000, TEXT('(')) + FString::ChrN(5000, TEXT(')')), Error).Num() == 0 && Error.Contains(TEXT("nested deeper")));
 
     FPin Pin;
     Pin.bBool = true;

@@ -1,6 +1,6 @@
 # DOMAINS — Automation Implementation Layer
 
-55 top-level domain directories, ~1,016 source files. Every editor action an MCP client can trigger is implemented here.
+57 top-level domain directories, ~1,300 source files. Every editor action an MCP client can trigger is implemented here.
 
 Cross-link, never duplicate: scope map in `../AGENTS.md`, registration in `../Core/AGENTS.md`, shared helpers in `../Foundation/AGENTS.md`, hazardous-op wrappers in `../Safety/AGENTS.md`, native MCP in `../MCP/AGENTS.md`.
 
@@ -15,7 +15,7 @@ Grouped index (largest first; the rest are discoverable by folder name):
 - World: `Environment` (~42), `Geometry` (~37), `Level` (~35), `Volume`, `LevelStructure`, `Landscape`, `Foliage`, `Spline`, `Navigation`, `PCG`, `Lighting`, `Render`
 - VFX: `Niagara`, `NiagaraAuthoring`, `NiagaraGraph`, `Effect`
 - Gameplay: `AI` (~35), `GAS`, `Character`, `Combat`, `Interaction`, `Inventory`, `BehaviorTree`, `GameFramework`, `Input`, `Networking`, `Sessions`, `MetaHuman`
-- Editor/System: `ControlActor`, `ControlEditor`, `ConsoleCommand`, `Debug`, `Inspect`, `Log`, `Property`, `SystemControl`, `Performance`, `Insights`, `Ui`, `Audio`, `AudioAuthoring`
+- Editor/System: `ControlActor`, `ControlEditor`, `ConsoleCommand`, `Debug`, `Inspect`, `Log`, `Property`, `SystemControl`, `Performance`, `Insights`, `Ui`, `Audio`, `AudioAuthoring`, `Perception` (what a captured view shows), `Scripts` (`run_script`: each step is held to a direct execute's gateway validation and pre-queue gate for the caller's principal, consent aside, and dispatched in-process under a captured id)
 
 ## DISPATCH CONTRACT
 

@@ -373,7 +373,7 @@ describe('handlers answer what they did', () => {
     const batch = code('MaterialAuthoring', 'McpMatGraphBatch.cpp');
     const compile = code('MaterialAuthoring', 'Properties', 'McpMatCompileMat.cpp');
 
-    expect(header).toMatch(/inline void McpFinishMaterialEdit\(const FString &RequestId, UObject \*Host\) \{\s*if \(Host && !FMcpResponseCaptureRegistry::Get\(\)\.IsCapturing\(RequestId\)\) \{ Host->PostEditChange\(\); \}\s*if \(Host\) \{ Host->MarkPackageDirty\(\); \}\s*\}/u);
+    expect(header).toMatch(/inline void McpFinishMaterialEdit\(const FString &RequestId, UObject \*Host\) \{\s*if \(Host && !FMcpResponseCaptureRegistry::Get\(\)\.IsBatchStep\(RequestId\)\) \{ Host->PostEditChange\(\); \}\s*if \(Host\) \{ Host->MarkPackageDirty\(\); \}\s*\}/u);
     expect(header).toContain('#define FINALIZE_HOST() McpFinishMaterialEdit(RequestId, Material ? static_cast<UObject *>(Material) : static_cast<UObject *>(Function))');
     for (const file of [
       ['Nodes', 'McpMatAddMatNode.cpp'],
@@ -408,9 +408,9 @@ describe('handlers answer what they did', () => {
   // reports as compile_material does; as a step of build_material_graph it leaves both to the batch.
   it('update_custom_expression on its own saves the material and says whether it compiles, as compile_material does', () => {
     const source = code('MaterialAuthoring', 'Nodes', 'McpMatUpdateCustomExpr.cpp');
-    const own = source.slice(source.indexOf('if (!FMcpResponseCaptureRegistry::Get().IsCapturing(RequestId)) {'));
+    const own = source.slice(source.indexOf('if (!FMcpResponseCaptureRegistry::Get().IsBatchStep(RequestId)) {'));
 
-    expect(source.indexOf('FINALIZE_HOST();'), 'after the edit').toBeLessThan(source.indexOf('IsCapturing(RequestId)'));
+    expect(source.indexOf('FINALIZE_HOST();'), 'after the edit').toBeLessThan(source.indexOf('IsBatchStep(RequestId)'));
     expect(own).toContain('const TArray<FString> CompileErrors = McpMaterialCompileErrors(Material);');
     expect(own).toContain('Result->SetBoolField(TEXT("compiled"), CompileErrors.Num() == 0);');
     expect(own).toContain('Result->SetBoolField(TEXT("saved"), Material ? McpSafeAssetSave(Material) : McpSafeAssetSave(Function));');
@@ -4408,7 +4408,7 @@ describe('spline point edits and Blueprint variable sets undo, and refuse what t
   it('set_blueprint_variables is one undo step, a batch included', () => {
     const advanced = code('ControlActor', 'McpActorAdvanced.cpp');
     expect(advanced).toContain('FMcpScopedEditorTransaction BatchTransaction(FText::FromString(TEXT("Set Blueprint Variables"))');
-    expect(advanced).toMatch(/IsCapturing\(RequestId\)\s*\?\s*nullptr\s*:\s*MakeUnique<FMcpScopedEditorTransaction>/u);
+    expect(advanced).toMatch(/IsBatchStep\(RequestId\)\s*\?\s*nullptr\s*:\s*MakeUnique<FMcpScopedEditorTransaction>/u);
   });
 });
 

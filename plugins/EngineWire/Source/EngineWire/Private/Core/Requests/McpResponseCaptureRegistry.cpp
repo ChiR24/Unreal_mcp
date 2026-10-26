@@ -8,10 +8,12 @@ FMcpResponseCaptureRegistry& FMcpResponseCaptureRegistry::Get()
 	return Instance;
 }
 
-void FMcpResponseCaptureRegistry::Begin(const FString& RequestId)
+void FMcpResponseCaptureRegistry::Begin(const FString& RequestId, bool bBatchStep)
 {
 	FScopeLock Lock(&Mutex);
-	Pending.Add(RequestId, FMcpCapturedResponse());
+	FMcpCapturedResponse Slot;
+	Slot.bBatchStep = bBatchStep;
+	Pending.Add(RequestId, Slot);
 }
 
 bool FMcpResponseCaptureRegistry::TryCapture(const FString& RequestId, bool bSuccess,
@@ -45,4 +47,11 @@ bool FMcpResponseCaptureRegistry::IsCapturing(const FString& RequestId) const
 {
 	FScopeLock Lock(&Mutex);
 	return Pending.Contains(RequestId);
+}
+
+bool FMcpResponseCaptureRegistry::IsBatchStep(const FString& RequestId) const
+{
+	FScopeLock Lock(&Mutex);
+	const FMcpCapturedResponse* Slot = Pending.Find(RequestId);
+	return Slot && Slot->bBatchStep;
 }

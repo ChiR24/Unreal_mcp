@@ -17,6 +17,7 @@ struct FMcpCapturedResponse
 	FString Message;
 	FString ErrorCode;
 	TSharedPtr<FJsonObject> Result;
+	bool bBatchStep = true;
 };
 
 class FMcpResponseCaptureRegistry
@@ -24,8 +25,10 @@ class FMcpResponseCaptureRegistry
 public:
 	static FMcpResponseCaptureRegistry& Get();
 
-	/** Start holding whatever response is sent for `RequestId`. */
-	void Begin(const FString& RequestId);
+	/** Start holding whatever response is sent for `RequestId`. bBatchStep: the caller finishes the step's work itself
+	 *  (one transaction, compile or placement check for every step); false for a step that finishes its own, as a
+	 *  direct call would (system_control run_script). */
+	void Begin(const FString& RequestId, bool bBatchStep = true);
 
 	/** True when `RequestId` is being captured; the reply is stored and must not be delivered. */
 	bool TryCapture(const FString& RequestId, bool bSuccess, const FString& Message,
@@ -36,6 +39,10 @@ public:
 
 	/** True between Begin and End of `RequestId`: the handler runs as a step of a bigger call. */
 	bool IsCapturing(const FString& RequestId) const;
+
+	/** Captured for a batch that finishes the step's work: a handler leaves its transaction, recompile or placement
+	 *  check to it. A captured step that is no batch step does all of that itself. */
+	bool IsBatchStep(const FString& RequestId) const;
 
 private:
 	mutable FCriticalSection Mutex;

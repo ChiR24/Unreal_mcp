@@ -1591,6 +1591,7 @@ export const CAPABILITY_COST_INDEX: Readonly<Record<string, string>> = {
   "system_control::resume_session": "interactive|medium",
   "system_control::run_benchmark": "long-running|medium",
   "system_control::run_build": "long-running|high",
+  "system_control::run_script": "interactive|medium",
   "system_control::run_tests": "long-running|high",
   "system_control::run_ubt": "long-running|high",
   "system_control::screenshot": "interactive|low",
@@ -1620,4 +1621,4 @@ export const CAPABILITY_COST_INDEX: Readonly<Record<string, string>> = {
   "system_control::write_snapshot": "interactive|medium"
 };
 
-export const CAPABILITY_COST_INDEX_KEY_COUNT = 1607;
+export const CAPABILITY_COST_INDEX_KEY_COUNT = 1608;

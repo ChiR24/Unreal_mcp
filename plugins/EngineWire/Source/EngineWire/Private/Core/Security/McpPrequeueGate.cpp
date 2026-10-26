@@ -250,6 +250,7 @@ FMcpAuthorizationDecision AuthorizeWithDemand(
 		Quota.bRetryable = true;
 		return Quota;
 	}
+	RememberRequestPrincipal(Request.RequestId, Principal);
 	return FMcpAuthorizationDecision::Allow();
 }
 
@@ -279,6 +280,15 @@ FMcpAuthorizationDecision Authorize(const FMcpPrequeueRequest& Request)
 	const FMcpAuthorizationDecision Bound = RequirePrincipal(Request);
 	if (!Bound.bAllowed) return Bound;
 	return AuthorizeWithDemand(Request, ResolveDemand(Request));
+}
+
+FMcpAuthorizationDecision AuthorizeStep(const FMcpPrequeueRequest& Request)
+{
+	const FMcpAuthorizationDecision Bound = RequirePrincipal(Request);
+	if (!Bound.bAllowed) return Bound;
+	FMcpCapabilityDemand Demand = ResolveDemand(Request);
+	Demand.ConsentMode = TEXT("none");
+	return AuthorizeWithDemand(Request, Demand);
 }
 
 FMcpAuthorizationDecision AuthorizeRead(const FMcpPrequeueRequest& Request)

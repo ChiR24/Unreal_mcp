@@ -603,7 +603,7 @@ describe('set_material is one undoable step, single and many, as set_visibility 
   it('the single form opens a "Set Actor Material" transaction over the actor and its primitive components, and describes it in the reply', () => {
     const body = single();
 
-    expect(body).toMatch(/if \(!FMcpResponseCaptureRegistry::Get\(\)\.IsCapturing\(RequestId\)\) \{\s*TArray<UObject \*> Undoable;\s*McpAddActorUndoSet\(Found, Undoable\);\s*Transaction = MakeUnique<FMcpScopedEditorTransaction>\(\s*FText::FromString\(TEXT\("Set Actor Material"\)\), EMcpMutationDurability::EditorStateOnly, Undoable\);\s*\}/u);
+    expect(body).toMatch(/if \(!FMcpResponseCaptureRegistry::Get\(\)\.IsBatchStep\(RequestId\)\) \{\s*TArray<UObject \*> Undoable;\s*McpAddActorUndoSet\(Found, Undoable\);\s*Transaction = MakeUnique<FMcpScopedEditorTransaction>\(\s*FText::FromString\(TEXT\("Set Actor Material"\)\), EMcpMutationDurability::EditorStateOnly, Undoable\);\s*\}/u);
     expect(body).toMatch(/Data->SetArrayField\(TEXT\("components"\), AppliedComponents\);\s*if \(Transaction\) \{\s*Transaction->DescribeInto\(Data\);\s*\}\s*McpHandlerUtils::AddVerification\(Data, Found\);/u);
   });
 
@@ -739,7 +739,7 @@ describe('every spawn is one undo step, "Spawn Actors", and the reply says so', 
   const support = (): string => read('McpActorSupport.h');
 
   it('the helper opens it, and leaves it to the batch when the run is captured', () => {
-    expect(support()).toMatch(/inline TUniquePtr<FMcpScopedEditorTransaction> McpBeginSpawnTransaction\(const FString &RequestId\) \{\s*if \(FMcpResponseCaptureRegistry::Get\(\)\.IsCapturing\(RequestId\)\) \{\s*return nullptr;\s*\}\s*return MakeUnique<FMcpScopedEditorTransaction>\(FText::FromString\(TEXT\("Spawn Actors"\)\),\s*EMcpMutationDurability::EditorStateOnly, TArray<UObject \*>\(\)\);\s*\}/u);
+    expect(support()).toMatch(/inline TUniquePtr<FMcpScopedEditorTransaction> McpBeginSpawnTransaction\(const FString &RequestId\) \{\s*if \(FMcpResponseCaptureRegistry::Get\(\)\.IsBatchStep\(RequestId\)\) \{\s*return nullptr;\s*\}\s*return MakeUnique<FMcpScopedEditorTransaction>\(FText::FromString\(TEXT\("Spawn Actors"\)\),\s*EMcpMutationDurability::EditorStateOnly, TArray<UObject \*>\(\)\);\s*\}/u);
   });
 
   it('spawn and spawn_blueprint open it before the level is touched and describe it after the actor exists', () => {

@@ -102,7 +102,7 @@ bool UEngineWireSubsystem::HandleControlActorSetMaterial(
   if (Payload->TryGetArrayField(TEXT("materials"), SlotMaterials) && SlotMaterials->Num() > 0) {
     TArray<UObject *> Undoable; // one undo step for every slot; a captured run (actorNames) leaves it to its caller
     AActor *Owner = FindActorByName(GetJsonStringField(Payload, TEXT("actorName")));
-    if (Owner && !FMcpResponseCaptureRegistry::Get().IsCapturing(RequestId)) McpAddActorUndoSet(Owner, Undoable);
+    if (Owner && !FMcpResponseCaptureRegistry::Get().IsBatchStep(RequestId)) McpAddActorUndoSet(Owner, Undoable);
     TUniquePtr<FMcpScopedEditorTransaction> Transaction(Undoable.Num() == 0 ? nullptr : new FMcpScopedEditorTransaction(
         FText::FromString(TEXT("Set Actor Material")), EMcpMutationDurability::EditorStateOnly, Undoable));
     TArray<TSharedPtr<FJsonValue>> Slots;
@@ -239,7 +239,7 @@ bool UEngineWireSubsystem::HandleControlActorSetMaterial(
   // RF_Transactional first. A run inside a batch (captured) leaves the step to its caller: the actorNames form
   // holds one for every actor, and spawn_batch's material was never undoable.
   TUniquePtr<FMcpScopedEditorTransaction> Transaction;
-  if (!FMcpResponseCaptureRegistry::Get().IsCapturing(RequestId)) {
+  if (!FMcpResponseCaptureRegistry::Get().IsBatchStep(RequestId)) {
     TArray<UObject *> Undoable;
     McpAddActorUndoSet(Found, Undoable);
     Transaction = MakeUnique<FMcpScopedEditorTransaction>(

@@ -291,7 +291,7 @@ bool HandleSetTwoSided(UEngineWireSubsystem* Bridge, const FString& RequestId, c
 // reply is captured): that batch ends with one compile_material, and a recompile per step translated the half-built
 // graph and logged it as a failure on the receipt ("Custom material X missing input 20 (OP)" before the connect feeding it).
 inline void McpFinishMaterialEdit(const FString &RequestId, UObject *Host) {
-  if (Host && !FMcpResponseCaptureRegistry::Get().IsCapturing(RequestId)) { Host->PostEditChange(); }
+  if (Host && !FMcpResponseCaptureRegistry::Get().IsBatchStep(RequestId)) { Host->PostEditChange(); }
   if (Host) { Host->MarkPackageDirty(); }
 }
 

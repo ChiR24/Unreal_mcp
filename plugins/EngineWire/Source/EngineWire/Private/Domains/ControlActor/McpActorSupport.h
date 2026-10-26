@@ -239,7 +239,7 @@ inline void McpAddActorUndoSet(AActor *Actor, TArray<UObject *> &Undoable) {
 // describes it in its reply; a run inside spawn_batch (captured) gets none, because the batch holds
 // one for every item.
 inline TUniquePtr<FMcpScopedEditorTransaction> McpBeginSpawnTransaction(const FString &RequestId) {
-  if (FMcpResponseCaptureRegistry::Get().IsCapturing(RequestId)) {
+  if (FMcpResponseCaptureRegistry::Get().IsBatchStep(RequestId)) {
     return nullptr;
   }
   return MakeUnique<FMcpScopedEditorTransaction>(FText::FromString(TEXT("Spawn Actors")),
@@ -319,8 +319,9 @@ bool McpIsGroundLike(const AActor *Actor);
 void McpApplySpawnOrganisation(AActor *Actor, const TSharedPtr<FJsonObject> &Payload);
 
 // A spawn or a move answers where the actor ended up, and which faces of it share a plane with another (z-fighting). Run
-// as an item of spawn_batch or of set_transform's actors (captured), it leaves both to the batch, which checks once the
-// whole layout stands (a spawn after tagging the actor mcp.placement.ok): each check walks every actor in the level.
+// as an item of spawn_batch or of set_transform's actors, or as a step of run_script (captured: no client reads that
+// reply), it leaves both to the request's change watch, which checks once the whole layout stands (a spawn after tagging
+// the actor mcp.placement.ok): each check walks every actor in the level, and an actor described here counts as reported.
 inline void McpDescribeActorPlacement(const FString &RequestId, AActor *Actor, const TSharedPtr<FJsonObject> &Data) {
   if (!FMcpResponseCaptureRegistry::Get().IsCapturing(RequestId)) {
     McpPlacement::DescribePlacement(Actor, Data);

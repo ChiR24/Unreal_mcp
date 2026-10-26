@@ -140,6 +140,10 @@ public:
       TSharedPtr<FMcpBridgeWebSocket>)>;
 
   bool RegisterHandler(const FString& Action, FAutomationHandler Handler);
+  // Runs Action's handler at once inside the request already running (a script's step), with none of the queue's
+  // checks: the caller has made them. False when no handler takes it.
+  bool RunHandlerInProcess(const FString& RequestId, const FString& Action, const TSharedPtr<FJsonObject>& Payload,
+                           TSharedPtr<FMcpBridgeWebSocket> Socket);
 
   struct FRequestErrorCapture
   {
@@ -158,6 +162,7 @@ public:
   void BeginErrorCapture();
   TArray<FString> EndErrorCapture();
   bool HasCapturedErrors() const;
+  int32 GetCapturedErrorCount() const;
   TArray<FString> GetCapturedErrorMessages() const;
   // Drops captured log lines a later step supersedes; that step logs again if it still fails.
   void ForgetCapturedMessages(TFunctionRef<bool(const FString&)> Matches);

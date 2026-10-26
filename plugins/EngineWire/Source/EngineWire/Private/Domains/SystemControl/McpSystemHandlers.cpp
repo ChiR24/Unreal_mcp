@@ -1,6 +1,7 @@
 #include "Domains/SystemControl/McpSystemPrivate.h"
 
 #include "Dom/JsonObject.h"
+#include "Domains/Scripts/McpScript.h"
 #include "EngineWireSubsystem.h"
 
 bool UEngineWireSubsystem::HandleSystemControlAction(
@@ -58,7 +59,8 @@ bool UEngineWireSubsystem::HandleSystemControlAction(
       !bLogSubscriptionAction &&
       Lower != TEXT("validate_assets") &&
       Lower != TEXT("create_cpp_class") &&
-      Lower != TEXT("execute_python")) {
+      Lower != TEXT("execute_python") &&
+      Lower != TEXT("run_script")) {
     return false;
   }
 
@@ -133,6 +135,9 @@ bool UEngineWireSubsystem::HandleSystemControlAction(
   if (Lower == TEXT("execute_python")) {
     return McpSystemControlHandlers::HandleExecutePython(
         this, RequestId, Payload, RequestingSocket);
+  }
+  if (Lower == TEXT("run_script")) {
+    return McpScript::HandleRunScript(*this, RequestId, Payload, RequestingSocket);
   }
 
   return false;

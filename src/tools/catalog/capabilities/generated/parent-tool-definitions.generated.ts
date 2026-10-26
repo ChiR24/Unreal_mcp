@@ -26315,9 +26315,22 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "boolean",
           "description": "Also run Data Validation on every asset that loads (default false): an asset row gains dataValidation (valid, invalid or notValidated, the last when no validator checks that kind of asset) with its errors and warnings, a folder row the count of each verdict and issues (up to 20 assets with errors or warnings). An invalid asset makes its row invalid."
         },
+        "deadlineMs": {
+          "type": "integer",
+          "minimum": 100,
+          "maximum": 25000,
+          "description": "Milliseconds after which no further call starts; default 20000, at most 25000 (a client gives up on a call at 30 s). Past it the script stops (SCRIPT_DEADLINE) and rolls back."
+        },
         "deleteSlot": {
           "type": "boolean",
           "description": "true deletes the slot instead; properties are then ignored."
+        },
+        "destructive": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "The capabilities the script calls that ask for consent, by id or alias (control_actor.delete, asset.delete); this run's one elevated consent covers exactly these."
         },
         "detailed": {
           "type": "boolean",
@@ -26467,6 +26480,12 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "maxFPS": {
           "type": "number",
           "description": "Maximum frames per second; 0 for no cap."
+        },
+        "maxSteps": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 1000,
+          "description": "Calls the script may make; default 200. Past it the script stops (SCRIPT_BUDGET) and rolls back."
         },
         "maxTests": {
           "type": "number",
@@ -26684,6 +26703,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "number",
           "description": "Percent of the window resolution per axis (100 is full resolution); 0 for the engine default."
         },
+        "script": {
+          "type": "string",
+          "description": "The script, statements one after another (; starts a comment to the end of the line). Refused before anything runs: SCRIPT_PARSE_ERROR, SCRIPT_INVALID, UNKNOWN_CAPABILITY (a name search does not find), UNDECLARED_PARAMETER and MISSING_REQUIRED_PARAMETER (checked against the capability's contract), SCRIPT_UNBOUND_NAME, CONSENT_NOT_LISTED, SCRIPT_STEP_REFUSED. Stopped and rolled back while running: the failed call's own error code, SCRIPT_TYPE (an operator or for over the wrong kind of value), SCRIPT_VALUE (a path into a result that holds no such field: the fields it has are named), EXPECTATION_FAILED, ENGINE_ERROR (the engine logged an error during a call), STEP_DEFERRED (a call that answers later cannot run in a script), SCRIPT_BUDGET, SCRIPT_DEADLINE."
+        },
         "seconds": {
           "type": "number",
           "description": "How long the game runs before it is closed (default 20, 5-120). Quitting or crashing sooner fails the run."
@@ -26870,6 +26893,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             "lumen_update_scene",
             "list_plugins",
             "enable_plugin",
+            "run_script",
             "start_session",
             "get_trace_status",
             "create_widget",
@@ -26926,6 +26950,11 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "classPath": {
           "type": "string",
           "description": "The class's path once compiled (/Script/<Module>.<Name>), for a class with a UObject parent."
+        },
+        "cleanupCall": {
+          "type": "object",
+          "x-unreal-reflection-boundary": true,
+          "description": "On a failure: the manage_asset bulk_delete call that removes the assets the script created, which undo does not remove."
         },
         "codeSha256": {
           "type": "string",
@@ -27291,8 +27320,36 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "description": "One row per path: path, isValid, kind (asset, directory, missing or invalid), message, assetCount for a folder, with dataValidation its verdict, errors, warnings or issues, and with materialUsage the missing flags (materialUsage, and materialUsageCount for a folder)."
         },
         "returned": {
-          "type": "number",
+          "oneOf": [
+            {
+              "type": "number",
+              "description": "How many files this page lists."
+            },
+            {
+              "type": "number",
+              "description": "How many lines were returned."
+            },
+            {
+              "type": [
+                "string",
+                "number",
+                "boolean",
+                "array",
+                "object",
+                "null"
+              ],
+              "description": "The value of (return ...), when the script returned one."
+            }
+          ],
           "description": "How many files this page lists."
+        },
+        "rollback": {
+          "type": "string",
+          "description": "On a failure: what undoing the script did, or why it could not undo everything."
+        },
+        "rolledBack": {
+          "type": "boolean",
+          "description": "On a failure: whether everything the script changed was undone."
         },
         "roots": {
           "type": "string",
@@ -27358,6 +27415,13 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "statusQuerySupported": {
           "type": "boolean",
           "description": "Whether this engine version supports status queries."
+        },
+        "steps": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "One line per call made: \"line N capability ok\" (a loop's run of the same call as one line, \"ok x25\"), or \"line N capability CODE: message\" for the call that stopped the script."
         },
         "success": {
           "type": "boolean",

@@ -301,3 +301,10 @@ void UEngineWireSubsystem::ProcessAutomationRequest(
         TEXT("UNKNOWN_ACTION"));
   }
 }
+
+bool UEngineWireSubsystem::RunHandlerInProcess(const FString &RequestId, const FString &Action,
+                                               const TSharedPtr<FJsonObject> &Payload,
+                                               TSharedPtr<FMcpBridgeWebSocket> Socket) {
+  const FAutomationHandler *Handler = AutomationHandlers.Find(Action);
+  return Handler && (*Handler)(RequestId, Action, Payload, Socket);
+}

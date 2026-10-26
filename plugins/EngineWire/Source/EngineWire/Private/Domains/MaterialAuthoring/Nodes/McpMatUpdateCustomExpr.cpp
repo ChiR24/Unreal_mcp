@@ -58,7 +58,7 @@ bool HandleUpdateCustomExpression(UEngineWireSubsystem* Bridge, const FString& R
     // A step of build_material_graph leaves the compile and the save to the batch, which does both once at its end.
     // A call of its own does both here, as compile_material does: it used to leave the material unsaved and say
     // nothing of a compile error, including the HLSL errors only the shader compile finds.
-    if (!FMcpResponseCaptureRegistry::Get().IsCapturing(RequestId)) {
+    if (!FMcpResponseCaptureRegistry::Get().IsBatchStep(RequestId)) {
       const TArray<FString> CompileErrors = McpMaterialCompileErrors(Material);
       TArray<TSharedPtr<FJsonValue>> ErrorValues;
       for (const FString &Error : CompileErrors) {
