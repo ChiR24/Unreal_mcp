@@ -15,8 +15,8 @@ Area-specific guidance lives in nested `AGENTS.md` files (see **AREA GUIDES** be
 |   |-- tools/                   # catalog/ (records = contracts, generated/), definitions/
 |   `-- utils/                   # commands (console policy rules), config, logging, serialization, validation
 |-- plugins/EngineWire/ # the ONLY plugin; editor-only UE (bridge + native MCP + Fab adapter)
-|   |-- Source/EngineWire/{Public (19), Private/}
-|   |   Private/: Core(26) Domains(1016 / 55 domains) Foundation(92) MCP(137) Safety(18) Transport(21) Tests(25) UI(2)
+|   |-- Source/EngineWire/{Public (20), Private/}
+|   |   Private/ (source files, subfolders included, 2026-10-26): Core(39) Domains(1312 / 58 domains) Foundation(126) MCP(155) Safety(19) Transport(23) Tests(34) UI(2)
 |   `-- Source/EngineWireFab/     # Fab asset-store adapter module (delay-loaded, optional)
 |-- tests/                       # Vitest unit tests + custom MCP integration runner
 |-- scripts/                     # generators, packaging, sync
@@ -114,14 +114,14 @@ Every automation request is gated **before it reaches the editor queue**.
 - Editing generated artifacts (`*.generated.*`, `capabilities/generated/`, plugin `MCP/Generated/`, `MCP/Tools/McpGeneratedParentRegistry.cpp`): edit the records, regenerate.
 - A record param the C++ never reads, or a read param the record never declares: the strict gateway refuses undeclared params.
 - AGENTS files in `dist/`, `build/`, `coverage/`, `tests/reports/`, `tmp/`, plugin `Binaries/`/`Intermediate/`.
-- **Folder budget** (≤25 source files per folder under `Private/`, counted 2026-10-17): at 25 — `MCP/Gateway`, `MCP/Transport`, `MCP/Execute`, `Foundation`, `Domains/ControlEditor`, `Domains/ControlActor`, `Domains/Environment/Inspection`; at 24 — `MCP/Generated`, `Tests`, `Domains/Sequence`, `Domains/LevelStructure`, `Domains/BlueprintGraph`, `Domains/AssetWorkflow/Operations`, `Domains/AnimationAuthoring`. Split into a subdirectory before adding.
+- **Folder budget** (≤25 source files per folder under `Private/`, counted 2026-10-26): at 25 — `MCP/Gateway`, `MCP/Transport`, `MCP/Execute`, `Foundation`, `Domains/ControlEditor`, `Domains/ControlActor`, `Domains/Environment/Inspection`, `Domains/BlueprintGraph`; at 24 — `MCP/Generated`, `Tests`, `Domains/Sequence`, `Domains/LevelStructure`, `Domains/AssetWorkflow/Operations`, `Domains/AnimationAuthoring`, `Domains/ControlActor/Placement`. Split into a subdirectory before adding.
 - **Source-contract gates** (Vitest reads C++ text): 250 pure-line ceiling per plugin file; ≤25 files per folder; no split artifacts; every local `Mcp*` include resolves; no `UPackage::SavePackage`; constant-time token compare; no non-loopback bind without `bRequireCapabilityToken`; no browser-origin WS upgrade; `/Script` reflection targets refused; identity redaction on replies; no raw Python in logs.
 - **Lint**: `no-explicit-any` and `no-console` are `error` for `src/**`; `scripts/` and `tests/` are exempt, and `logger.ts` is the sanctioned console sink.
 - **Never `localeCompare`** for ordering: use `src/utils/serialization/ordering.ts` so generated shards agree byte-for-byte.
 - **No knip / ts-prune** (evaluated 2026-09-19, rejected): integration cases load at run time and source-contract tests read files as text, so its findings are noise. Dead code is found by reading; `noUnusedLocals`/`noUnusedParameters` are on.
 
 ## UNIQUE STYLES
-- 23 canonical parent tools hide their actions behind action enums; 416 records (240 of them folded families) keep 1,554 `{tool, action}` pairs callable.
+- 23 canonical parent tools hide their actions behind action enums; 435 records (242 of them folded families) keep 1,593 `{tool, action}` pairs callable.
 - Dynamic tool management is native (`MCP/DynamicTools/`); `manage_tools` and `inspect` are protected, the `core` category is fixed.
 - The plugin is responsibility-split: `Core` routes, `Domains` implement, `Foundation` shares primitives, `Safety` wraps hazardous editor ops, `Transport` owns sockets.
 - Discovery is progressive and never dumps full schemas; invalid calls return `suggestions` plus an executable `nextCall`. A direct call to a canonical tool name returns a `DIRECT_TOOL_CALL_REMOVED` receipt whose `nextCall` re-runs it through `unreal`.
@@ -160,7 +160,7 @@ npx vitest run tests/unit/<file>.test.ts
 **Unreal plugin** (all under `plugins/EngineWire/`)
 - `AGENTS.md` — plugin scope, cross-surface rules, packaging.
 - `Source/EngineWire/Private/Core/AGENTS.md` — request queue, game-thread dispatch, the handler table.
-- `.../Private/Domains/AGENTS.md` — 55 domain implementations + dispatch contract.
+- `.../Private/Domains/AGENTS.md` — 58 domain implementations + dispatch contract.
 - `.../Private/Domains/BlueprintGraph/Behaviour/AGENTS.md` — `McpBlueprintBehaviour::Author`: gameplay logic written into Blueprint assets from recipe files.
 - `.../Private/Foundation/AGENTS.md` — reflection, handler utils, shared primitives.
 - `.../Private/Safety/AGENTS.md` — safe wrappers for hazardous editor operations.

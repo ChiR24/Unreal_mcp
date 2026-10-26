@@ -9,13 +9,13 @@ Editor-only UE 5.0-5.8 plugin. It owns the native `/mcp` HTTP/SSE server (the on
 | Module dependencies | `Source/EngineWire/EngineWire.Build.cs` | Optional-module detection; keep the compatibility macros |
 | Fab adapter | `Source/EngineWireFab/` | Delay-loaded; compiles away when Fab/Megascans are absent |
 | Public API/settings | `Source/EngineWire/Public/` | Subsystem, settings, connection manager, queue fairness |
-| Core | `Private/Core/` (26) | Queue, game-thread drain, the one handler table, pre-queue gate — nested `AGENTS.md` |
-| Domains | `Private/Domains/` (1,016 files, 55 domains) | Action implementations — nested `AGENTS.md` |
-| Shared helpers | `Private/Foundation/` (92) | Reflection, Blueprint, path, JSON, response helpers — nested `AGENTS.md` |
-| Native MCP | `Private/MCP/` (137) | Registry/session/transport, generated shards — nested `AGENTS.md` |
-| Hazardous UE ops | `Private/Safety/` (18) | Save/load/delete wrappers — nested `AGENTS.md` |
-| WebSocket transport | `Private/Transport/` (21) | Auth, sockets, framing, TLS, rate limits — nested `AGENTS.md` |
-| Native C++ tests | `Private/Tests/` (25) | Automation tests |
+| Core | `Private/Core/` (39) | Queue, game-thread drain, the one handler table, pre-queue gate — nested `AGENTS.md` |
+| Domains | `Private/Domains/` (1,312 files, 58 domains; counts include subfolders, 2026-10-26) | Action implementations — nested `AGENTS.md` |
+| Shared helpers | `Private/Foundation/` (126) | Reflection, Blueprint, path, JSON, response helpers — nested `AGENTS.md` |
+| Native MCP | `Private/MCP/` (155) | Registry/session/transport, generated shards — nested `AGENTS.md` |
+| Hazardous UE ops | `Private/Safety/` (19) | Save/load/delete wrappers — nested `AGENTS.md` |
+| WebSocket transport | `Private/Transport/` (23) | Auth, sockets, framing, TLS, rate limits — nested `AGENTS.md` |
+| Native C++ tests | `Private/Tests/` (34) | Automation tests |
 | Status UI | `Private/UI/` (2) | Thin Slate presentation |
 
 ## CROSS-SURFACE RULES
