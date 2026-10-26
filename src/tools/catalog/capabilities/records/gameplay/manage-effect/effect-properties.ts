@@ -62,7 +62,7 @@ export const E: PropertyMap = {
   steps: num('Steps to run (default 1): the system ages steps x deltaTime seconds.'),
   filter: str('Actor name prefix selecting which transient effects are cleaned up.'),
   preset: str('Particle preset name or canonical /Game particle asset path.'),
-  shapeType: str('Debug shape type (Sphere, Box, Line, Capsule).'),
+  shapeType: str('The shape to draw: sphere, box, circle, line, point, coordinate, cylinder, cone, capsule, arrow or plane, in any case (default sphere; another name is refused).'),
   intensity: num('Light intensity.'),
   lightType: str('Dynamic light type: Point (the default, and what any other value gives), Spot, Directional or Rect, in any case; there is no sky light here.'),
   density: num('Volumetric fog density.'),

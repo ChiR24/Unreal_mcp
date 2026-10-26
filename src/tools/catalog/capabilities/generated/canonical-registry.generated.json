@@ -1,5 +1,5 @@
 {
-  "catalogRevision": "2bd484ac1c3768c6",
+  "catalogRevision": "107155777975bce6",
   "recordCount": 435,
   "records": [
     {
@@ -3211,11 +3211,11 @@
             },
             "enableRootMotion": {
               "type": "boolean",
-              "description": "Boolean parameter."
+              "description": "Move the character by the motion of the root bone instead of playing in place (default true)."
             },
             "rootMotionRootLock": {
               "type": "string",
-              "description": "String parameter."
+              "description": "The pose the root is locked to: RefPose (default), AnimFirstFrame or Zero, in any case; another value reads as RefPose."
             },
             "forceRootLock": {
               "type": "boolean",
@@ -3255,7 +3255,7 @@
                 "set_sequence_length",
                 "add_aim_offset_sample"
               ],
-              "description": "Which edit animation variant to run.\nadd_bone_track: Add an empty transform track for boneName to an animation sequence (assetPath, or animationPath), to key with edit=set_bone_key. A bone its skeleton lacks is BONE_NOT_FOUND_IN_SKELETON, listing bones. A track the sequence already has is left as it is and answered with alreadyExists true and nothing saved; otherwise the sequence is saved unless save is false (saved).\nset_bone_key: Set a bone transform key at a frame; a location, rotation or scale left out keeps the value the bone has there (the key of its track, or the reference pose for a bone with no track yet).\nset_curve_key: Set a key of the float curve curveName in an animation sequence at frame (default 0) to value: a curve the sequence lacks is added (curveCreated) unless createIfMissing is false, which refuses it (CURVE_NOT_FOUND), and a key the engine does not take is CURVE_KEY_FAILED. The reply reads the curve back at that frame (value) and says whether it saved (saved, unless save is false). Curves drive morph targets and material parameters, and AnimBlueprints read them by name.\nadd_notify: Add a frame notify to a sequence (authoring).\nadd_notify_state: Add a notify state spanning a frame range.\nadd_sync_marker: Add a sync marker to a sequence.\nset_additive_settings: Configure additive animation settings.\nset_root_motion_settings: Configure root motion on a sequence.\nset_sequence_length: Set the length of an Animation Sequence.\nadd_aim_offset_sample: Add a sample pose to an Aim Offset."
+              "description": "Which edit animation variant to run.\nadd_bone_track: Add an empty transform track for boneName to an animation sequence (assetPath, or animationPath), to key with edit=set_bone_key. A bone its skeleton lacks is BONE_NOT_FOUND_IN_SKELETON, listing bones. A track the sequence already has is left as it is and answered with alreadyExists true and nothing saved; otherwise the sequence is saved unless save is false (saved).\nset_bone_key: Set a bone transform key at a frame; a location, rotation or scale left out keeps the value the bone has there (the key of its track, or the reference pose for a bone with no track yet).\nset_curve_key: Set a key of the float curve curveName in an animation sequence at frame (default 0) to value: a curve the sequence lacks is added (curveCreated) unless createIfMissing is false, which refuses it (CURVE_NOT_FOUND), and a key the engine does not take is CURVE_KEY_FAILED. The reply reads the curve back at that frame (value) and says whether it saved (saved, unless save is false). Curves drive morph targets and material parameters, and AnimBlueprints read them by name.\nadd_notify: Add a frame notify to a sequence (authoring).\nadd_notify_state: Add a notify state spanning a frame range.\nadd_sync_marker: Add a sync marker to a sequence.\nset_additive_settings: Configure additive animation settings.\nset_root_motion_settings: Configure root motion on an animation sequence: whether the motion of the root bone moves the character (enableRootMotion), which pose the root is locked to while that motion is taken out (rootMotionRootLock), and whether the root is locked even without root motion (forceRootLock). Saved unless save is false; SEQUENCE_NOT_FOUND when no sequence loads.\nset_sequence_length: Set the length of an Animation Sequence.\nadd_aim_offset_sample: Add a sample pose to an Aim Offset."
             }
           },
           "required": [
@@ -3487,8 +3487,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "5bd4e542227c9b2188a5fbc99a638dc99d50485625a62119c7c489ef39827792",
-        "content": "9d9b9795cce07448fb9279c4042af13219c7178669e5606031053aed1df43fde"
+        "schema": "c92733abcfa7c50a8e0767c71eb7008771da238041480aeedafcefe9fa4a03a8",
+        "content": "ba5ccd9330b3b17412d83fa533285c9b654c2d320cbfe1adcfb462c60386ad7d"
       }
     },
     {
@@ -63585,7 +63585,7 @@
             },
             "walkSpeed": {
               "type": "number",
-              "description": "Maximum walk speed."
+              "description": "Top ground speed in cm/s (MaxWalkSpeed; engine default 600)."
             },
             "runSpeed": {
               "type": "number",
@@ -63597,27 +63597,27 @@
             },
             "swimSpeed": {
               "type": "number",
-              "description": "Maximum swim speed."
+              "description": "Top swim speed in cm/s (MaxSwimSpeed; engine default 300)."
             },
             "flySpeed": {
               "type": "number",
-              "description": "Maximum fly speed."
+              "description": "Top fly speed in cm/s (MaxFlySpeed; engine default 600)."
             },
             "acceleration": {
               "type": "number",
-              "description": "Maximum acceleration."
+              "description": "How fast it reaches its top speed, in cm/s per second (MaxAcceleration; engine default 2048)."
             },
             "deceleration": {
               "type": "number",
-              "description": "Walking deceleration."
+              "description": "How fast it stops on the ground with no input, in cm/s per second (BrakingDecelerationWalking; engine default 2048)."
             },
             "groundFriction": {
               "type": "number",
-              "description": "Ground friction."
+              "description": "How sharply it turns and stops on the ground (GroundFriction; engine default 8; lower slides like ice)."
             },
             "jumpHeight": {
               "type": "number",
-              "description": "Jump z-velocity."
+              "description": "The jump launch speed in cm/s, not a height (JumpZVelocity; engine default 420): it rises about v*v/(1960*gravityScale) cm, so 420 is about 90 cm and 600 about 1.8 m."
             },
             "jumpHoldTime": {
               "type": "number",
@@ -63625,15 +63625,15 @@
             },
             "maxJumpCount": {
               "type": "number",
-              "description": "Maximum number of jumps."
+              "description": "Jumps before landing (JumpMaxCount; 1 by default, 2 for a double jump)."
             },
             "airControl": {
               "type": "number",
-              "description": "Air control fraction (0-1)."
+              "description": "How much it can steer in the air, 0 to 1 (AirControl; engine default 0.05)."
             },
             "gravityScale": {
               "type": "number",
-              "description": "Gravity scale multiplier."
+              "description": "Multiplier on world gravity (GravityScale; 1 is normal, 2 falls twice as hard)."
             },
             "fallingLateralFriction": {
               "type": "number",
@@ -63717,7 +63717,7 @@
             },
             "springArmLength": {
               "type": "number",
-              "description": "Spring-arm target arm length."
+              "description": "How far the camera sits behind the character, in cm (spring arm TargetArmLength; 300 on a new boom)."
             },
             "springArmLagEnabled": {
               "type": "boolean",
@@ -63725,7 +63725,7 @@
             },
             "springArmLagSpeed": {
               "type": "number",
-              "description": "Spring-arm camera lag speed."
+              "description": "How fast a lagging camera catches up (CameraLagSpeed; 10 on a new boom, higher is tighter); it lags only with springArmLagEnabled."
             },
             "cameraUsePawnControlRotation": {
               "type": "boolean",
@@ -63733,11 +63733,11 @@
             },
             "navAgentRadius": {
               "type": "number",
-              "description": "Nav agent radius."
+              "description": "The radius navigation plans paths for, in cm (NavAgentProps.AgentRadius)."
             },
             "navAgentHeight": {
               "type": "number",
-              "description": "Nav agent height."
+              "description": "The height navigation plans paths for, in cm (NavAgentProps.AgentHeight)."
             },
             "avoidanceEnabled": {
               "type": "boolean",
@@ -63954,8 +63954,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "5f5719e77debd42bd6e8bdce60cb22699138ae173d0350475c4bb1f0a6fb2bab",
-        "content": "42f37cae9e7bc772a7345a6c8b19769fa01e91a579308f44f69fcb978cfd153e"
+        "schema": "575372bd717cd683d494bbbc58ba03dcc9f46fcd02e432c1095dd9b93be0e6b7",
+        "content": "c66e46fda21db56e7972ed5a760f73570daa62b67d5bd675abdc6193be8b1a70"
       }
     },
     {
@@ -64979,19 +64979,19 @@
             },
             "walkSpeed": {
               "type": "number",
-              "description": "Maximum walk speed."
+              "description": "Top ground speed in cm/s (MaxWalkSpeed; engine default 600)."
             },
             "jumpHeight": {
               "type": "number",
-              "description": "Jump z-velocity."
+              "description": "The jump launch speed in cm/s, not a height (JumpZVelocity; engine default 420): it rises about v*v/(1960*gravityScale) cm, so 420 is about 90 cm and 600 about 1.8 m."
             },
             "gravityScale": {
               "type": "number",
-              "description": "Gravity scale multiplier."
+              "description": "Multiplier on world gravity (GravityScale; 1 is normal, 2 falls twice as hard)."
             },
             "groundFriction": {
               "type": "number",
-              "description": "Ground friction."
+              "description": "How sharply it turns and stops on the ground (GroundFriction; engine default 8; lower slides like ice)."
             },
             "brakingDeceleration": {
               "type": "number",
@@ -65134,8 +65134,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "3ce373e7fab8dfefc424bce2d4b2333e513c2c27db23a618dab8524a8aaeb242",
-        "content": "131d1cb5ab9c493a127f2622012d1874768d1f38778b5b8f8d949e6b4d17463a"
+        "schema": "0042c4c9505656c13806f2d231beb6aa1e7fd3587fb73bcacc0ef9e93131c72a",
+        "content": "a74afab4103bb9a4b90b18b11cf88681376790e7aef48718f1e4a0df9b5a2e54"
       }
     },
     {
@@ -65172,7 +65172,7 @@
             },
             "walkSpeed": {
               "type": "number",
-              "description": "Maximum walk speed."
+              "description": "Top ground speed in cm/s (MaxWalkSpeed; engine default 600)."
             },
             "runSpeed": {
               "type": "number",
@@ -65180,7 +65180,7 @@
             },
             "acceleration": {
               "type": "number",
-              "description": "Maximum acceleration."
+              "description": "How fast it reaches its top speed, in cm/s per second (MaxAcceleration; engine default 2048)."
             }
           },
           "required": [
@@ -65253,8 +65253,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "e4a44b41622a3dd289ba00c448262214968d649d561b9a0fd66e06720a65a205",
-        "content": "1a57be8ed646844faedfa6ef0763297e6600f387a8ea96c608fcbae09ebba4e6"
+        "schema": "37918c745a5974f3249f76753f3d39fa686454f10a120fa5301ec99458d465a8",
+        "content": "b344d02e232d084c74da409e900a18abbd36bfa4f5dcb036d28405c4f0d066de"
       }
     },
     {
@@ -68352,11 +68352,11 @@
           "properties": {
             "shape": {
               "type": "string",
-              "description": "String parameter."
+              "description": "The shape, as shapeType names it; read when shapeType is absent or sphere."
             },
             "shapeType": {
               "type": "string",
-              "description": "Debug shape type (Sphere, Box, Line, Capsule)."
+              "description": "The shape to draw: sphere, box, circle, line, point, coordinate, cylinder, cone, capsule, arrow or plane, in any case (default sphere; another name is refused)."
             },
             "location": {
               "type": "array",
@@ -68571,8 +68571,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "11c12ee4e6f95d269118f7b7df7afe6f27ae568036bcedb51be612a34da09b55",
-        "content": "c6658b16b500b6b620dcbf6c5817651582cb77cae3e1df33741fa3e2e08ac963"
+        "schema": "043df6f92697a2b3c162343a10bd7c8e3d991424138c80cb3bb2f4e3a5ba3213",
+        "content": "94666960c051face8ffc8d2f534f3aefd4a7c97cf3112e37ecd20bac502625b6"
       }
     },
     {
@@ -70726,7 +70726,7 @@
             },
             "calculationClass": {
               "type": "string",
-              "description": "String parameter."
+              "description": "The GameplayEffectExecutionCalculation class: a Blueprint path (/Game/X/GEC, as create_execution_calculation returns, or /Game/X/GEC.GEC_C) or a native /Script/Module.Class."
             },
             "cueTag": {
               "type": "string",
@@ -70916,8 +70916,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "a3724855171770ca23cca76ae510c59368ee7a4ff74a13a3e4c83026a59237fc",
-        "content": "d99313aca3bcded40aa5e7b6cbf9b04019ffcff13239dec3292f015185bd249a"
+        "schema": "7aa2621c5eccc69b781a9ce20ffa2dc1a3256c06a46775b2019991ea2702d0bb",
+        "content": "97f1639bf10a28e94807586970b5bacc92f6b7d2d89e5b53a1acadc38a316fd0"
       }
     },
     {
@@ -71031,7 +71031,7 @@
             },
             "cueType": {
               "type": "string",
-              "description": "String parameter."
+              "description": "Static or Actor, in any case (default Static; any other value makes a Static one)."
             },
             "cueTag": {
               "type": "string",
@@ -71046,7 +71046,7 @@
                 "gameplay_cue_notify",
                 "execution_calculation"
               ],
-              "description": "Which create gas asset variant to run.\ngameplay_ability: Create a Gameplay Ability asset.\ngameplay_effect: Create a Gameplay Effect Blueprint (name, in path) with its duration policy: durationType Instant (the default without duration), HasDuration (the default with duration, in seconds) or Infinite; period in seconds makes a non-Instant effect tick. An effect already at that path is left as it is (reusedExisting; set_effect_duration changes it). Saved.\nattribute_set: Create an AttributeSet class/asset.\ngameplay_cue_notify: Create a Gameplay Cue Notify asset.\nexecution_calculation: Create a GameplayEffectExecutionCalculation blueprint for custom effect math."
+              "description": "Which create gas asset variant to run.\ngameplay_ability: Create a Gameplay Ability asset.\ngameplay_effect: Create a Gameplay Effect Blueprint (name, in path) with its duration policy: durationType Instant (the default without duration), HasDuration (the default with duration, in seconds) or Infinite; period in seconds makes a non-Instant effect tick. An effect already at that path is left as it is (reusedExisting; set_effect_duration changes it). Saved.\nattribute_set: Create an AttributeSet class/asset.\ngameplay_cue_notify: Create a Gameplay Cue Notify Blueprint: Static (GameplayCueNotify_Static, nothing spawned, for one-shot cues) or Actor (GameplayCueNotify_Actor, spawned and kept while the cue is active, for looping ones), with cueTag set as its GameplayCueTag.\nexecution_calculation: Create a GameplayEffectExecutionCalculation blueprint for custom effect math."
             }
           },
           "required": [
@@ -71165,20 +71165,13 @@
             "cueTag": [
               "gameplay_cue_notify"
             ]
-          },
-          "requires": {
-            "create_gameplay_cue_notify": {
-              "required": [
-                "cueType"
-              ]
-            }
           }
         }
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "5a1d012cca60abccadd2f1eb28b105755620d01cb845826b8eba5ab161c2ef63",
-        "content": "883c4e673e1c0e0154bb10e023f7efd1cd5010921e2b049f9ad6d1ddc08fe958"
+        "schema": "faae317ba784e5ec4d5dbe3dfaad52b0261bf9b3e8bd824c6a65bc58e1084a13",
+        "content": "2f1dea7de554b1d41005dfc1b8ace5d44dcdfc1d759c3837340f53eee0ed579e"
       }
     },
     {

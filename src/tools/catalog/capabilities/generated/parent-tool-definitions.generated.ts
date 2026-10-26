@@ -389,7 +389,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "enableRootMotion": {
           "type": "boolean",
-          "description": "Boolean parameter."
+          "description": "Move the character by the motion of the root bone instead of playing in place (default true)."
         },
         "endFrame": {
           "type": "number",
@@ -869,7 +869,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "rootMotionRootLock": {
           "type": "string",
-          "description": "String parameter."
+          "description": "The pose the root is locked to: RefPose (default), AnimFirstFrame or Zero, in any case; another value reads as RefPose."
         },
         "rotation": {
           "oneOf": [
@@ -17643,11 +17643,11 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
       "properties": {
         "acceleration": {
           "type": "number",
-          "description": "Maximum acceleration."
+          "description": "How fast it reaches its top speed, in cm/s per second (MaxAcceleration; engine default 2048)."
         },
         "airControl": {
           "type": "number",
-          "description": "Air control fraction (0-1)."
+          "description": "How much it can steer in the air, 0 to 1 (AirControl; engine default 0.05)."
         },
         "animBlueprintPath": {
           "type": "string",
@@ -17715,7 +17715,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "deceleration": {
           "type": "number",
-          "description": "Walking deceleration."
+          "description": "How fast it stops on the ground with no input, in cm/s per second (BrakingDecelerationWalking; engine default 2048)."
         },
         "dnaBody": {
           "type": "boolean",
@@ -17744,7 +17744,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "flySpeed": {
           "type": "number",
-          "description": "Maximum fly speed."
+          "description": "Top fly speed in cm/s (MaxFlySpeed; engine default 600)."
         },
         "fullBodyMesh": {
           "type": "boolean",
@@ -17752,11 +17752,11 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "gravityScale": {
           "type": "number",
-          "description": "Gravity scale multiplier."
+          "description": "Multiplier on world gravity (GravityScale; 1 is normal, 2 falls twice as hard)."
         },
         "groundFriction": {
           "type": "number",
-          "description": "Ground friction."
+          "description": "How sharply it turns and stops on the ground (GroundFriction; engine default 8; lower slides like ice)."
         },
         "headMesh": {
           "type": "boolean",
@@ -17764,7 +17764,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "jumpHeight": {
           "type": "number",
-          "description": "Jump z-velocity."
+          "description": "The jump launch speed in cm/s, not a height (JumpZVelocity; engine default 420): it rises about v*v/(1960*gravityScale) cm, so 420 is about 90 cm and 600 about 1.8 m."
         },
         "jumpHoldTime": {
           "type": "number",
@@ -17772,7 +17772,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "maxJumpCount": {
           "type": "number",
-          "description": "Maximum number of jumps."
+          "description": "Jumps before landing (JumpMaxCount; 1 by default, 2 for a double jump)."
         },
         "meshOffset": {
           "type": "object",
@@ -17827,11 +17827,11 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "navAgentHeight": {
           "type": "number",
-          "description": "Nav agent height."
+          "description": "The height navigation plans paths for, in cm (NavAgentProps.AgentHeight)."
         },
         "navAgentRadius": {
           "type": "number",
-          "description": "Nav agent radius."
+          "description": "The radius navigation plans paths for, in cm (NavAgentProps.AgentRadius)."
         },
         "orientToMovement": {
           "type": "boolean",
@@ -17916,15 +17916,15 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "springArmLagSpeed": {
           "type": "number",
-          "description": "Spring-arm camera lag speed."
+          "description": "How fast a lagging camera catches up (CameraLagSpeed; 10 on a new boom, higher is tighter); it lags only with springArmLagEnabled."
         },
         "springArmLength": {
           "type": "number",
-          "description": "Spring-arm target arm length."
+          "description": "How far the camera sits behind the character, in cm (spring arm TargetArmLength; 300 on a new boom)."
         },
         "swimSpeed": {
           "type": "number",
-          "description": "Maximum swim speed."
+          "description": "Top swim speed in cm/s (MaxSwimSpeed; engine default 300)."
         },
         "useControllerRotationPitch": {
           "type": "boolean",
@@ -17940,7 +17940,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "walkSpeed": {
           "type": "number",
-          "description": "Maximum walk speed."
+          "description": "Top ground speed in cm/s (MaxWalkSpeed; engine default 600)."
         },
         "action": {
           "type": "string",
@@ -18925,11 +18925,11 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "shape": {
           "type": "string",
-          "description": "String parameter."
+          "description": "The shape, as shapeType names it; read when shapeType is absent or sphere."
         },
         "shapeType": {
           "type": "string",
-          "description": "Debug shape type (Sphere, Box, Line, Capsule)."
+          "description": "The shape to draw: sphere, box, circle, line, point, coordinate, cylinder, cone, capsule, arrow or plane, in any case (default sphere; another name is refused)."
         },
         "sourceBinding": {
           "type": "string",
@@ -19273,7 +19273,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "calculationClass": {
           "type": "string",
-          "description": "String parameter."
+          "description": "The GameplayEffectExecutionCalculation class: a Blueprint path (/Game/X/GEC, as create_execution_calculation returns, or /Game/X/GEC.GEC_C) or a native /Script/Module.Class."
         },
         "cancelAbilitiesWithTag": {
           "type": "array",
@@ -19300,7 +19300,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "cueType": {
           "type": "string",
-          "description": "String parameter."
+          "description": "Static or Actor, in any case (default Static; any other value makes a Static one)."
         },
         "defaultValue": {
           "type": "number",
@@ -19355,7 +19355,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             "gameplay_cue_notify",
             "execution_calculation"
           ],
-          "description": "Which create gas asset variant to run.\ngameplay_ability: Create a Gameplay Ability asset.\ngameplay_effect: Create a Gameplay Effect Blueprint (name, in path) with its duration policy: durationType Instant (the default without duration), HasDuration (the default with duration, in seconds) or Infinite; period in seconds makes a non-Instant effect tick. An effect already at that path is left as it is (reusedExisting; set_effect_duration changes it). Saved.\nattribute_set: Create an AttributeSet class/asset.\ngameplay_cue_notify: Create a Gameplay Cue Notify asset.\nexecution_calculation: Create a GameplayEffectExecutionCalculation blueprint for custom effect math."
+          "description": "Which create gas asset variant to run.\ngameplay_ability: Create a Gameplay Ability asset.\ngameplay_effect: Create a Gameplay Effect Blueprint (name, in path) with its duration policy: durationType Instant (the default without duration), HasDuration (the default with duration, in seconds) or Infinite; period in seconds makes a non-Instant effect tick. An effect already at that path is left as it is (reusedExisting; set_effect_duration changes it). Saved.\nattribute_set: Create an AttributeSet class/asset.\ngameplay_cue_notify: Create a Gameplay Cue Notify Blueprint: Static (GameplayCueNotify_Static, nothing spawned, for one-shot cues) or Actor (GameplayCueNotify_Actor, spawned and kept while the cue is active, for looping ones), with cueTag set as its GameplayCueTag.\nexecution_calculation: Create a GameplayEffectExecutionCalculation blueprint for custom effect math."
         },
         "magnitudeCalculationType": {
           "type": "string",

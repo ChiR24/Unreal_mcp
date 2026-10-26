@@ -45,7 +45,7 @@ export const EFFECT_RECORDS: readonly CapabilityRecordSource[] = [
     exampleInput: { action: 'niagara', systemPath: '/Game/NS_Explosion', actorName: 'FX_1' }, exampleOutput: { success: true, message: 'Niagara system authored', actorName: 'FX_1' } }),
   buildRecord({ parentTool: T, id: `${T}.debug_shape`, action: 'debug_shape', topics: ['draw debug shape', 'debug sphere box line arrow capsule', 'show debug shape', 'draw a debug line', 'draw debug line'], family: F,
     summary: 'Draw a temporary debug shape in the editor viewport (sphere, box, circle, line, point, coordinate, cylinder, cone, capsule, arrow or plane) at location, for duration seconds (default 5). Nothing is spawned or saved, and nothing shows in Play In Editor or a packaged game.', whenToUse: ['A point, a reach or a region must be shown in the viewport while checking a layout.'], whenNotToUse: ['An effect players should see (use spawn_niagara).'],
-    inputProps: { shape: P.string_, shapeType: E.shapeType, location: P.location, radius: P.radius, color: E.color, duration: P.duration, thickness: E.thickness,
+    inputProps: { shape: { type: 'string', description: 'The shape, as shapeType names it; read when shapeType is absent or sphere.' }, shapeType: E.shapeType, location: P.location, radius: P.radius, color: E.color, duration: P.duration, thickness: E.thickness,
       boxSize: E.boxSize, endLocation: E.endLocation, rotation: P.rotation, direction: E.direction, length: E.length, angle: E.angle, halfHeight: E.halfHeight }, required: ['location'],
     effect: 'write', editorStates: ['edit'], latency: 'instant', resources: 'low',
     exampleInput: { action: 'debug_shape', shape: 'Sphere', location: [0, 0, 0], radius: 100 } }),
