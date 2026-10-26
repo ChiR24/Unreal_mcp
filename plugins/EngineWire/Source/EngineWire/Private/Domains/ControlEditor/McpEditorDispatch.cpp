@@ -1,6 +1,7 @@
 #include "Domains/ControlEditor/McpEditorSupport.h"
 #include "Domains/ControlEditor/Checkpoint/McpEditorCheckpoint.h"
 #include "Domains/ControlEditor/Toolsets/McpEditorToolsets.h"
+#include "Domains/Play/McpExplore.h"
 #include "Domains/Play/McpPlaytest.h"
 
 bool UEngineWireSubsystem::HandleControlEditorAction(
@@ -36,6 +37,8 @@ bool UEngineWireSubsystem::HandleControlEditorAction(
     return HandleControlEditorStop(RequestId, Payload, RequestingSocket);
   if (LowerSub == TEXT("playtest"))
     return McpPlaytest::Handle(*this, RequestId, Payload, RequestingSocket);
+  if (LowerSub == TEXT("explore_level"))
+    return McpExplore::Handle(*this, RequestId, Payload, RequestingSocket);
   if (LowerSub == TEXT("eject"))
     return HandleControlEditorEject(RequestId, Payload, RequestingSocket);
   if (LowerSub == TEXT("possess"))

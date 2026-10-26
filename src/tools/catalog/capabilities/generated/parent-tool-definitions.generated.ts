@@ -5996,6 +5996,14 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "string",
           "description": "Preferences category."
         },
+        "cell": {
+          "type": "number",
+          "description": "continue: the archive index of the cell the next round starts from (read with detail lists them)."
+        },
+        "cellCm": {
+          "type": "number",
+          "description": "start: the cell size on the floor plan, in cm (50-2000, default 200)."
+        },
         "checks": {
           "type": "array",
           "items": {
@@ -6038,6 +6046,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "deltaTime": {
           "type": "number",
           "description": "Seconds every frame advances the running game, however long the frame really took (deterministic runs); 0 turns fixed stepping off. It also ends when PIE stops."
+        },
+        "detail": {
+          "type": "boolean",
+          "description": "read and stop: list the archive, each cell as {cell, where, parent, chosen, leads, flags}, at most 200."
         },
         "discardUnsaved": {
           "type": "boolean",
@@ -6098,6 +6110,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "height": {
           "type": "number",
           "description": "Viewport height in pixels."
+        },
+        "heightCm": {
+          "type": "number",
+          "description": "start: the height band, in cm (25-1000, default 100): a ledge above another floor is another cell."
         },
         "history": {
           "type": "string",
@@ -6243,7 +6259,11 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             "begin",
             "status",
             "rollback",
-            "end"
+            "end",
+            "start",
+            "continue",
+            "read",
+            "stop"
           ],
           "description": "begin opens the restore point, status lists what changed since it (the default), rollback undoes it, end closes it."
         },
@@ -6320,6 +6340,14 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           ],
           "description": "3D rotation (pitch, yaw, roll)."
         },
+        "seconds": {
+          "type": "number",
+          "description": "start and continue: real seconds to explore before answering (1-22, default 10)."
+        },
+        "seed": {
+          "type": "number",
+          "description": "start: the seed of the random moves (default 1): the same seed repeats the same moves."
+        },
         "setting": {
           "type": "string",
           "enum": [
@@ -6363,6 +6391,13 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "toolset": {
           "type": "string",
           "description": "List only the tools of this toolset, by the name the toolsets list shows."
+        },
+        "track": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "start: assertions in execute's expect language whose truth joins the cell (Door_1 hidden, BP_Key exists), at most 16: the same place with a door open is a new cell to explore from. A teleport cannot restore them; such cells are marked."
         },
         "type": {
           "type": "string",
@@ -6446,7 +6481,8 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             "save_all",
             "simulate_input",
             "undo",
-            "playtest"
+            "playtest",
+            "explore_level"
           ],
           "description": "Action to invoke on control_editor."
         }
@@ -6462,6 +6498,15 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "alreadyEjected": {
           "type": "boolean",
           "description": "True when the player was already ejected, so nothing changed."
+        },
+        "archive": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": true,
+            "x-unreal-reflection-boundary": true
+          },
+          "description": "With detail: the cells, each {cell, where, parent, chosen, leads, flags}."
         },
         "bestDistance": {
           "type": "number",
@@ -6512,6 +6557,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             }
           ],
           "description": "How the camera is turned after the call, {pitch, yaw, roll}."
+        },
+        "cells": {
+          "type": "number",
+          "description": "Cells in the archive: places the pawn stood (none filed in mid-air)."
         },
         "checks": {
           "type": "array",
@@ -6659,6 +6708,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           ],
           "additionalProperties": false
         },
+        "coverage": {
+          "type": "number",
+          "description": "Of the nav-mesh cells sampled at start, the share the pawn stood in (0-1)."
+        },
         "delaySeconds": {
           "type": "number",
           "description": "Seconds the editor waits before relaunching."
@@ -6687,6 +6740,15 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "filename": {
           "type": "string",
           "description": "Screenshot or recording filename."
+        },
+        "findings": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": true,
+            "x-unreal-reflection-boundary": true
+          },
+          "description": "What was found, each {kind (escape_killz, escape_bounds, trap, script_error), text, where [x, y, z], cell (the first cell of its round: explore from it to see it again), t (game seconds)}; one per kind and floor-plan cell, at most 64."
         },
         "frames": {
           "type": "number",
@@ -6775,6 +6837,16 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "isDefaultObject": {
           "type": "boolean",
           "description": "True when only the CDO existed, which usually means the owning window has never been opened."
+        },
+        "islands": {
+          "type": "array",
+          "items": {
+            "type": "array",
+            "items": {
+              "type": "number"
+            }
+          },
+          "description": "Nav-mesh points sampled at start that no path from the start reaches and no visited cell holds, at most 32: a sealed room, a roof the level never connects."
         },
         "last": {
           "type": "array",
@@ -6876,6 +6948,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "boolean",
           "description": "Whether the viewport took the requested rotation."
         },
+        "rounds": {
+          "type": "number",
+          "description": "Rounds begun so far, an escape cutting one short included."
+        },
         "routedToPIE": {
           "type": "boolean",
           "description": "The event was routed to the PIE viewport rather than the editor."
@@ -6912,6 +6988,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "steps": {
           "type": "integer",
           "description": "Number of frames to step."
+        },
+        "stopped": {
+          "type": "string",
+          "description": "Why an exploring call answered: seconds, paused, pawn_lost or world_ended."
         },
         "success": {
           "type": "boolean",

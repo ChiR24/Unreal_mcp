@@ -31,6 +31,7 @@ import { ASSET_RECORDS } from './asset.js';
 import { BOOKMARK_RECORDS } from './bookmark.js';
 import { CAMERA_RECORDS } from './camera.js';
 import { COMMAND_RECORDS } from './command.js';
+import { EXPLORE_RECORDS } from './explore.js';
 import { HISTORY_RECORDS } from './history.js';
 import { INPUT_RECORDS } from './input.js';
 import { PLAYTEST_RECORDS } from './playtest.js';
@@ -56,6 +57,7 @@ export const CONTROL_EDITOR_UNFOLDED_SOURCES: readonly CapabilityRecordSource[] 
   ...INPUT_RECORDS,
   ...HISTORY_RECORDS,
   ...PLAYTEST_RECORDS,
+  ...EXPLORE_RECORDS,
 ];
 
 export const CONTROL_EDITOR_SOURCES: readonly CapabilityRecordSource[] = applyFolds(CONTROL_EDITOR_UNFOLDED_SOURCES, CONTROL_EDITOR_FOLDS, 'control_editor');

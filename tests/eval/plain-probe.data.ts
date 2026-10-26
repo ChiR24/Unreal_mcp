@@ -671,4 +671,7 @@ export const PLAIN_PROBE: readonly PlainProbeCase[] = [
   { query: 'breakpoint', accepted: ['inspect.read_logpoints'] },
   { query: 'record pin values', accepted: ['inspect.read_logpoints'] },
   { query: 'print the value of a blueprint node during play', accepted: ['inspect.read_logpoints'] },
+  { query: 'find holes in the level', accepted: ['control_editor.explore_level'] },
+  { query: 'where does the player get stuck', accepted: ['control_editor.explore_level'] },
+  { query: 'can the player fall out of the level', accepted: ['control_editor.explore_level'] },
 ];

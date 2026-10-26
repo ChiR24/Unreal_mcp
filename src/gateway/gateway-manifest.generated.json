@@ -4662,7 +4662,8 @@
         "save_all",
         "simulate_input",
         "undo",
-        "playtest"
+        "playtest",
+        "explore_level"
       ],
       "parameterNames": [
         "acceptRadius",
@@ -4674,6 +4675,8 @@
         "button",
         "cameraOp",
         "category",
+        "cell",
+        "cellCm",
         "checks",
         "className",
         "classPath",
@@ -4681,6 +4684,7 @@
         "control",
         "delaySeconds",
         "deltaTime",
+        "detail",
         "discardUnsaved",
         "durationSeconds",
         "enabled",
@@ -4693,6 +4697,7 @@
         "goal",
         "goalActor",
         "height",
+        "heightCm",
         "history",
         "holdSeconds",
         "id",
@@ -4721,6 +4726,8 @@
         "resolution",
         "returnBase64",
         "rotation",
+        "seconds",
+        "seed",
         "setting",
         "speed",
         "stat",
@@ -4729,6 +4736,7 @@
         "tabId",
         "toolName",
         "toolset",
+        "track",
         "type",
         "unpauseGame",
         "unthrottle",
@@ -4792,6 +4800,14 @@
             "type": "string",
             "description": "Preferences category."
           },
+          "cell": {
+            "type": "number",
+            "description": "continue: the archive index of the cell the next round starts from (read with detail lists them)."
+          },
+          "cellCm": {
+            "type": "number",
+            "description": "start: the cell size on the floor plan, in cm (50-2000, default 200)."
+          },
           "checks": {
             "type": "array",
             "items": {
@@ -4834,6 +4850,10 @@
           "deltaTime": {
             "type": "number",
             "description": "Seconds every frame advances the running game, however long the frame really took (deterministic runs); 0 turns fixed stepping off. It also ends when PIE stops."
+          },
+          "detail": {
+            "type": "boolean",
+            "description": "read and stop: list the archive, each cell as {cell, where, parent, chosen, leads, flags}, at most 200."
           },
           "discardUnsaved": {
             "type": "boolean",
@@ -4894,6 +4914,10 @@
           "height": {
             "type": "number",
             "description": "Viewport height in pixels."
+          },
+          "heightCm": {
+            "type": "number",
+            "description": "start: the height band, in cm (25-1000, default 100): a ledge above another floor is another cell."
           },
           "history": {
             "type": "string",
@@ -5039,7 +5063,11 @@
               "begin",
               "status",
               "rollback",
-              "end"
+              "end",
+              "start",
+              "continue",
+              "read",
+              "stop"
             ],
             "description": "begin opens the restore point, status lists what changed since it (the default), rollback undoes it, end closes it."
           },
@@ -5116,6 +5144,14 @@
             ],
             "description": "3D rotation (pitch, yaw, roll)."
           },
+          "seconds": {
+            "type": "number",
+            "description": "start and continue: real seconds to explore before answering (1-22, default 10)."
+          },
+          "seed": {
+            "type": "number",
+            "description": "start: the seed of the random moves (default 1): the same seed repeats the same moves."
+          },
           "setting": {
             "type": "string",
             "enum": [
@@ -5159,6 +5195,13 @@
           "toolset": {
             "type": "string",
             "description": "List only the tools of this toolset, by the name the toolsets list shows."
+          },
+          "track": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "start: assertions in execute's expect language whose truth joins the cell (Door_1 hidden, BP_Key exists), at most 16: the same place with a door open is a new cell to explore from. A teleport cannot restore them; such cells are marked."
           },
           "type": {
             "type": "string",
@@ -5242,7 +5285,8 @@
               "save_all",
               "simulate_input",
               "undo",
-              "playtest"
+              "playtest",
+              "explore_level"
             ],
             "description": "Action to invoke on control_editor."
           }

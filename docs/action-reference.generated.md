@@ -4,7 +4,7 @@
 
 # Action reference
 
-Catalog revision: `be6a32a9a2ffd0b2`
+Catalog revision: `cd30aa650f5848d5`
 
 Both transports expose exactly ONE public MCP tool, `unreal`, with the four
 operations `search` / `describe` / `execute` / `configure`. The parent tools
@@ -13,7 +13,7 @@ by `tools/list` and a direct `tools/call` on one returns a
 `DIRECT_TOOL_CALL_REMOVED` receipt rather than executing
 (`src/server/gateway/direct-call-migration.ts`).
 
-The catalog declares 431 capabilities across
+The catalog declares 432 capabilities across
 23 internal parent tools.
 Every row is derived from the capability record that the gateway actually
 validates against, so `execute` cannot accept an action this table omits.
@@ -39,7 +39,7 @@ validates against, so `execute` cannot accept an action this table omits.
 | `animation_physics` | 31 | 5 | 24 | 2 | animation physics |
 | `build_environment` | 40 | 4 | 33 | 3 | environment |
 | `control_actor` | 29 | 9 | 18 | 2 | actor |
-| `control_editor` | 25 | 9 | 13 | 3 | editor |
+| `control_editor` | 26 | 9 | 14 | 3 | editor |
 | `inspect` | 26 | 21 | 4 | 1 | inspect |
 | `manage_ai` | 16 | 2 | 14 | 0 | manage ai |
 | `manage_asset` | 47 | 10 | 32 | 5 | asset, datatable, enum, material, struct, texture |
@@ -62,7 +62,7 @@ validates against, so `execute` cannot accept an action this table omits.
 
 ## Capabilities requiring consent
 
-67 of 431 capabilities require consent.
+67 of 432 capabilities require consent.
 
 | Capability | Tool | Action | Effect | Consent |
 | --- | --- | --- | --- | --- |
@@ -301,6 +301,7 @@ validates against, so `execute` cannot accept an action this table omits.
 | `control_editor.console_command` | `control_editor` | `console_command` | write | write | none | `control_editor.console_command` `control_editor.execute_command` |
 | `control_editor.create_bookmark` | `control_editor` | `create_bookmark` | write | write | none | `control_editor.create_bookmark` |
 | `control_editor.describe_reflected_api` | `control_editor` | `control_editor` | read | read | none | `control_editor.describe_reflected_api` |
+| `control_editor.explore_level` | `control_editor` | `explore_level` | write | write | none | `control_editor.explore_level` |
 | `control_editor.focus_actor` | `control_editor` | `focus_actor` | read | read | none | `control_editor.focus_actor` |
 | `control_editor.invoke_reflected_function` | `control_editor` | `control_editor` | destructive | destructive | elevated | `control_editor.invoke_reflected_function` |
 | `control_editor.jump_to_bookmark` | `control_editor` | `jump_to_bookmark` | read | read | none | `control_editor.jump_to_bookmark` |
