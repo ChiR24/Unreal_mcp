@@ -88,10 +88,12 @@ bool HandleCreateMaterialInstance(UEngineWireSubsystem* Bridge, const FString& R
     }
     ParentMaterial = ValidatedParentPath;
 
-    UMaterial *Parent = LoadObject<UMaterial>(nullptr, *ParentMaterial);
+    // Any material interface: a child instance of another instance is how a material family is built, and loading
+    // only a UMaterial refused every instance as a parent.
+    UMaterialInterface *Parent = LoadObject<UMaterialInterface>(nullptr, *ParentMaterial);
     if (!Parent) {
       Bridge->SendAutomationError(Socket, RequestId,
-                          TEXT("Could not load parent material."),
+                          TEXT("Could not load parent material (a Material or a Material Instance)."),
                           TEXT("ASSET_NOT_FOUND"));
       return true;
     }

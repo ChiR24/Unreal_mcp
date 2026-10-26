@@ -28,9 +28,9 @@ export const MATERIAL_CREATE_RECORDS: readonly RecordSpec[] = [
       topics: ['new material', 'make material', 'material asset', 'shader'],
       examples: [ex('Create an opaque lit surface material', { name: 'M_Base', path: '/Game/Materials', materialDomain: 'Surface', blendMode: 'Opaque', shadingModel: 'DefaultLit', twoSided: false, save: true }, { success: true })] }
   ),
-  r('create_material_instance', 'material', 'Create a material instance from a parent material, optionally with its parameter values already set, or several instances (a palette) under one consent.',
+  r('create_material_instance', 'material', 'Create a material instance from a parent material or another instance (a child instance), optionally with its parameter values already set, or several instances (a palette) under one consent.',
     schema({
-      name: str('Instance name.'), parentMaterial: str('Parent material /Game path.'), savePath: str('Package path for the instance.'), parameters: MATERIAL_PARAMETER_LIST, save: SAVE,
+      name: str('Instance name.'), parentMaterial: str('The parent, as a /Game path: a Material, or another Material Instance for a child instance.'), savePath: str('Package path for the instance.'), parameters: MATERIAL_PARAMETER_LIST, save: SAVE,
       instances: {
         type: 'array', minItems: 1, maxItems: 64, items: { type: 'object', additionalProperties: true, 'x-unreal-reflection-boundary': true }, 'x-unreal-reflection-boundary': true,
         description: 'Several instances in one call, in place of name: each {name, and any of parentMaterial, savePath, parameters, save}; the call\'s own parentMaterial, savePath and save are every entry\'s defaults. Every entry is reported under instances; the call fails naming any that were not created.',

@@ -210,6 +210,7 @@ const testCases = [
   const POST_PROCESS_MATERIAL_PATH = `${TEST_FOLDER}/${POST_PROCESS_MATERIAL_NAME}`;
   const TEXTURE_NAME = `Testmaterial_texture_${ts}`;
   const TEXTURE_PATH = `${TEST_FOLDER}/${TEXTURE_NAME}`;
+  const CHAIN_PATH = `${TEST_FOLDER}/Testmaterial_chain_${ts}`;
 
   testCases.push(
     // === SETUP ===
@@ -332,6 +333,11 @@ const testCases = [
 
     // === CLEANUP ===
     { scenario: 'DELETE: delete keeps a material its instance still references', toolName: 'manage_asset', arguments: { action: 'delete', path: MATERIAL_PATH }, expected: 'error|ASSET_REFERENCED' },
+    // A chain: C's parent is the instance B (a child instance), B's parent is the material.
+    { scenario: 'Setup: a material for an instance chain', toolName: 'manage_asset', arguments: { action: 'create_material', name: `Testmaterial_chain_${ts}`, path: TEST_FOLDER }, expected: 'success' },
+    { scenario: 'Setup: instance B of it', toolName: 'manage_asset', arguments: { action: 'create_material_instance', name: `Testmaterial_chain_${ts}_B`, savePath: TEST_FOLDER, parentMaterial: CHAIN_PATH }, expected: 'success' },
+    { scenario: 'CREATE: create_material_instance with an instance as the parent', toolName: 'manage_asset', arguments: { action: 'create_material_instance', name: `Testmaterial_chain_${ts}_C`, savePath: TEST_FOLDER, parentMaterial: `${CHAIN_PATH}_B` }, expected: 'success' },
+    { scenario: 'Cleanup: delete the chain whole', toolName: 'manage_asset', arguments: { action: 'delete', paths: [CHAIN_PATH, `${CHAIN_PATH}_B`, `${CHAIN_PATH}_C`] }, expected: 'success' },
     { scenario: 'Cleanup: delete material instance', toolName: 'manage_asset', arguments: { action: 'delete', path: INSTANCE_PATH, force: true }, expected: 'success|not found' },
     { scenario: 'Cleanup: delete authored material', toolName: 'manage_asset', arguments: { action: 'delete', path: MATERIAL_PATH, force: true }, expected: 'success|not found' },
     { scenario: 'Cleanup: delete material function', toolName: 'manage_asset', arguments: { action: 'delete', path: FUNCTION_PATH, force: true }, expected: 'success|not found' },

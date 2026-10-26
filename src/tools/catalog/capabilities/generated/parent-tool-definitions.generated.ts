@@ -11654,7 +11654,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "parentMaterial": {
           "type": "string",
-          "description": "Parent material /Game path."
+          "description": "The parent, as a /Game path: a Material, or another Material Instance for a child instance."
         },
         "path": {
           "oneOf": [
