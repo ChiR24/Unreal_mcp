@@ -2,6 +2,7 @@
 
 #include "CoreMinimal.h"
 
+class FJsonValue;
 class UUserWidget;
 
 // manage_blueprint audit_widget: a Widget Blueprint laid out offscreen at several screen sizes (the preview's draw) and
@@ -66,4 +67,8 @@ void CheckContrast(const TArray<FItem>& Items, const TArray<FColor>& Pixels, FIn
 
 /** WCAG 2.x contrast ratio of two sRGB colours, 1 to 21. */
 double ContrastRatio(const FColor& A, const FColor& B);
+
+/** Screen sizes from "WxH" strings (64-3840 by 64-2160, at most 6); no Values gives 1920x1080, 1280x720 and 3440x1440.
+ *  False with OutError naming Field when a size cannot be read. */
+bool ParseSizes(const TArray<TSharedPtr<FJsonValue>>* Values, const TCHAR* Field, TArray<FIntPoint>& Out, FString& OutError);
 } // namespace McpWidgetAudit

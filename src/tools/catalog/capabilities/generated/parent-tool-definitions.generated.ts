@@ -15869,6 +15869,96 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "number",
           "description": "Distance within which it turns to the player and fires, in units (default 2000)."
         },
+        "relations": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 64,
+          "description": "How the widgets relate, each one an object; the widgets named must be children of one Canvas Panel.",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "type"
+            ],
+            "properties": {
+              "type": {
+                "type": "string",
+                "enum": [
+                  "leftOf",
+                  "rightOf",
+                  "above",
+                  "below",
+                  "alignLeft",
+                  "alignRight",
+                  "alignTop",
+                  "alignBottom",
+                  "alignCenterX",
+                  "alignCenterY",
+                  "sameWidth",
+                  "sameHeight",
+                  "width",
+                  "height",
+                  "inset",
+                  "center"
+                ]
+              },
+              "widget": {
+                "type": "string",
+                "description": "The widget the relation is about (every type but the align and same ones)."
+              },
+              "of": {
+                "type": "string",
+                "description": "leftOf, rightOf, above, below: the widget it is placed against (widget leftOf of)."
+              },
+              "widgets": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                },
+                "minItems": 2,
+                "description": "align and same types: the widgets lined up or sized alike."
+              },
+              "gap": {
+                "type": "number",
+                "description": "leftOf, rightOf, above, below: exactly this far apart, in Slate units (left out: at least 0 apart)."
+              },
+              "value": {
+                "type": "number",
+                "minimum": 0,
+                "description": "width, height: the size; inset: the distance from the edge; in Slate units."
+              },
+              "edge": {
+                "type": "string",
+                "enum": [
+                  "left",
+                  "right",
+                  "top",
+                  "bottom"
+                ],
+                "description": "inset: the edge of the panel."
+              },
+              "axis": {
+                "type": "string",
+                "enum": [
+                  "x",
+                  "y",
+                  "both"
+                ],
+                "description": "center: across (x), up and down (y) or both (default both)."
+              },
+              "strength": {
+                "type": "string",
+                "enum": [
+                  "required",
+                  "strong",
+                  "medium",
+                  "weak"
+                ],
+                "description": "required (default) holds exactly or the call is refused; the others are kept as far as the required ones allow, stronger first."
+              }
+            }
+          }
+        },
         "remove": {
           "type": "boolean",
           "description": "Drop the interface instead (its function graphs go with it)."
@@ -15879,16 +15969,30 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "resolution": {
           "type": "string",
-          "description": "Screen size the widget is drawn for, \"WxH\" (default \"1280x720\"); the project DPI scaling for that size applies, as in the game."
+          "description": "Screen size the boxes are solved at, \"WxH\" (default 1920x1080)."
         },
         "resolutions": {
-          "type": "array",
-          "items": {
-            "type": "string"
-          },
-          "minItems": 1,
-          "maxItems": 6,
-          "description": "Screen sizes to lay it out at, each \"WxH\" (up to 3840x2160), the project's DPI scaling applied as in the game (default 1920x1080, 1280x720 and 3440x1440)."
+          "oneOf": [
+            {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "minItems": 1,
+              "maxItems": 6,
+              "description": "Screen sizes the relations are checked at afterwards, each \"WxH\" up to 3840x2160 (default 1920x1080, 1280x720 and 3440x1440)."
+            },
+            {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "minItems": 1,
+              "maxItems": 6,
+              "description": "Screen sizes to lay it out at, each \"WxH\" (up to 3840x2160), the project's DPI scaling applied as in the game (default 1920x1080, 1280x720 and 3440x1440)."
+            }
+          ],
+          "description": "Screen sizes the relations are checked at afterwards, each \"WxH\" up to 3840x2160 (default 1920x1080, 1280x720 and 3440x1440)."
         },
         "respawnTime": {
           "type": "number",
@@ -16390,6 +16494,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             "add_content_widget",
             "set_font",
             "set_widget_layout",
+            "arrange_widgets",
             "bind_widget",
             "edit_widget_animation",
             "delete_animation",
@@ -16496,6 +16601,12 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "assetPath": {
           "type": "string",
           "description": "Asset path of the created node (verification)."
+        },
+        "auditCall": {
+          "type": "object",
+          "additionalProperties": true,
+          "x-unreal-reflection-boundary": true,
+          "description": "The audit_widget call that checks the result at the same sizes (cut-off text, overlaps, safe area, contrast)."
         },
         "autoPlay": {
           "type": "boolean",
@@ -17559,6 +17670,31 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "boolean",
           "description": "Whether the Blueprint handle is reachable."
         },
+        "relations": {
+          "type": "array",
+          "description": "Each relation as checked at the sizes.",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "relation": {
+                "type": "string",
+                "description": "The relation as written."
+              },
+              "metAt": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                },
+                "description": "The sizes it holds at (within 1 Slate unit)."
+              },
+              "worstMiss": {
+                "type": "number",
+                "description": "Its largest miss over the sizes, in Slate units."
+              }
+            }
+          }
+        },
         "remainingAnimations": {
           "type": "number",
           "description": "Number of animations left on the Widget Blueprint."
@@ -17771,6 +17907,12 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "boolean",
           "description": "Present and true when nodes or links stopped at their limit."
         },
+        "undo": {
+          "type": "object",
+          "additionalProperties": true,
+          "x-unreal-reflection-boundary": true,
+          "description": "What editor undo takes back: {undoable, transactionScope, steps}; all the moves are one step. Absent under dryRun."
+        },
         "unmoved": {
           "type": "array",
           "items": {
@@ -17937,6 +18079,30 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "oneOf": [
             {
               "type": "array",
+              "description": "Each widget arranged.",
+              "items": {
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {
+                  "name": {
+                    "type": "string"
+                  },
+                  "box": {
+                    "type": "array",
+                    "items": {
+                      "type": "number"
+                    },
+                    "description": "[left, top, width, height] in the panel at the reference resolution, Slate units."
+                  },
+                  "anchors": {
+                    "type": "string",
+                    "description": "What it holds on to, across then up and down: left, centre, right or stretch; top, middle, bottom or stretch."
+                  }
+                }
+              }
+            },
+            {
+              "type": "array",
               "description": "With animationName: each widget it drives, by its name in the widget tree.",
               "items": {
                 "type": "object",
@@ -17960,7 +18126,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
               "description": "Every widget the tree made, by name, parents first; with dryRun, the names it would use."
             }
           ],
-          "description": "Every widget created, root first; bind or restyle them by these names."
+          "description": "Each widget arranged."
         },
         "widgetsChecked": {
           "type": "number",

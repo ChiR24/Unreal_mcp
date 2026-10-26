@@ -11,7 +11,7 @@ Each domain is a folder `Domains/<Domain>/` holding one thin `*Dispatch.cpp` plu
 Grouped index (largest first; the rest are discoverable by folder name):
 
 - Cinematics: `Sequence` (~106), `Animation` (~27), `AnimationAuthoring` (~24), `Skeleton` (~25)
-- Asset/Blueprint: `AssetWorkflow` (~65), `MaterialAuthoring` (~50), `Blueprint` (~49), `WidgetAuthoring` (~36; `Audit/`: `audit_widget`, the preview's offscreen draw read back as laid-out rectangles and pixels), `BlueprintGraph`, `BlueprintCreation`, `SCS`, `StructProperty`, `Texture`, `AssetQuery`
+- Asset/Blueprint: `AssetWorkflow` (~65), `MaterialAuthoring` (~50), `Blueprint` (~49), `WidgetAuthoring` (~36; `Audit/`: `audit_widget`, the preview's offscreen draw read back as laid-out rectangles and pixels; `Arrange/`: `arrange_widgets`, relations solved by `McpCassowary`, anchors from what pins each widget), `BlueprintGraph`, `BlueprintCreation`, `SCS`, `StructProperty`, `Texture`, `AssetQuery`
 - World: `Environment` (~42), `Geometry` (~37), `Level` (~35), `Volume`, `LevelStructure`, `Landscape`, `Foliage`, `Spline`, `Navigation` (`Analytics/`: `analyze_level_layout`, the nav mesh sampled into a graph and read as rooms, corridors, doors and route shares), `PCG`, `Lighting`, `Render`
 - VFX: `Niagara`, `NiagaraAuthoring`, `NiagaraGraph`, `Effect`
 - Gameplay: `AI` (~35), `GAS`, `Character`, `Combat`, `Interaction`, `Inventory`, `BehaviorTree`, `GameFramework`, `Input`, `Networking`, `Sessions`, `MetaHuman`

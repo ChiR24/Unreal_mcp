@@ -126,6 +126,23 @@ const testCases = [
   { scenario: 'READ: audit_widget judges once shaders finish', toolName: 'manage_blueprint', arguments: auditArgs('audit_widget', { waitForShaders: true }), expected: 'success', timeoutMs: 30000, assertions: [{ path: 'structuredContent.result.shadersCompiling', gte: 0, label: 'shader jobs reported' }] },
   { scenario: 'ERROR: audit_widget refuses a size it cannot draw', toolName: 'manage_blueprint', arguments: auditArgs('audit_widget', { resolutions: ['8000x8000'] }), expected: 'error|INVALID_ARGUMENT' },
   { scenario: 'ERROR: audit_widget on a Widget Blueprint that is not there', toolName: 'manage_blueprint', arguments: { action: 'audit_widget', widgetPath: `${TEST_FOLDER}/WBP_Missing_${ts}` }, expected: 'error|NOT_FOUND' },
+  // === ARRANGE === the audit's title and buttons placed by relations: a centred title 80 from the top (wide enough
+  // for its text now), Play 40 under it on its centre line and 300 wide, Quit 20 under Play, as wide, on its left edge.
+  { scenario: 'ACTION: arrange_widgets lays out a title and two buttons by relations, held at three sizes', toolName: 'manage_blueprint', arguments: auditArgs('arrange_widgets', { resolution: '1920x1080', resolutions: ['1920x1080', '1280x720', '3440x1440'], relations: [
+    { type: 'center', widget: 'CutLabel', axis: 'x' }, { type: 'inset', widget: 'CutLabel', edge: 'top', value: 80 },
+    { type: 'below', widget: 'PlayButton', of: 'CutLabel', gap: 40 }, { type: 'alignCenterX', widgets: ['PlayButton', 'CutLabel'] },
+    { type: 'width', widget: 'PlayButton', value: 300, strength: 'required' }, { type: 'below', widget: 'QuitButton', of: 'PlayButton', gap: 20 },
+    { type: 'sameWidth', widgets: ['QuitButton', 'PlayButton'] }, { type: 'alignLeft', widgets: ['QuitButton', 'PlayButton'], strength: 'strong' },
+  ] }), expected: 'success', assertions: [
+    { path: 'structuredContent.result.message', includes: '8 of 8 relation(s) hold at all 3 size(s)', label: 'every relation holds at every size' },
+    { path: 'structuredContent.result.widgets.0.anchors', equals: 'centre top', label: 'the title holds the top centre' },
+    { path: 'structuredContent.result.undo.undoable', equals: true, label: 'one undo step takes it back' },
+  ] },
+  { scenario: 'ACTION: arrange_widgets dryRun changes nothing', toolName: 'manage_blueprint', arguments: auditArgs('arrange_widgets', { dryRun: true, relations: [{ type: 'width', widget: 'TinyButton', value: 44 }, { type: 'height', widget: 'TinyButton', value: 44 }] }), expected: 'success', assertions: [{ path: 'structuredContent.result.dryRun', equals: true, label: 'nothing written' }] },
+  { scenario: 'ERROR: arrange_widgets refuses two widths that cannot both hold', toolName: 'manage_blueprint', arguments: auditArgs('arrange_widgets', { relations: [{ type: 'width', widget: 'PlayButton', value: 300 }, { type: 'width', widget: 'PlayButton', value: 200 }] }), expected: 'error|UNSATISFIABLE' },
+  { scenario: 'ERROR: arrange_widgets places only children of a Canvas Panel', toolName: 'manage_blueprint', arguments: auditArgs('arrange_widgets', { relations: [{ type: 'center', widget: 'RootCanvas' }] }), expected: 'error|NOT_A_CANVAS' },
+  { scenario: 'ERROR: arrange_widgets names a widget that is not there', toolName: 'manage_blueprint', arguments: auditArgs('arrange_widgets', { relations: [{ type: 'center', widget: 'NoSuchWidget' }] }), expected: 'error|WIDGET_NOT_FOUND' },
+  { scenario: 'ERROR: arrange_widgets refuses an axis the schema does not know', toolName: 'manage_blueprint', arguments: auditArgs('arrange_widgets', { relations: [{ type: 'center', widget: 'PlayButton', axis: 'z' }] }), expected: 'error|INVALID_PARAMETER_VALUE' },
 
   // === CLEANUP ===
   { scenario: 'Cleanup: delete test folder', toolName: 'manage_asset', arguments: { action: 'delete', path: TEST_FOLDER, force: true }, expected: 'success|not found', timeoutMs: 30000 },

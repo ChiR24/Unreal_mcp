@@ -10085,6 +10085,7 @@
         "add_content_widget",
         "set_font",
         "set_widget_layout",
+        "arrange_widgets",
         "bind_widget",
         "edit_widget_animation",
         "delete_animation",
@@ -10291,6 +10292,7 @@
         "pure",
         "radius",
         "range",
+        "relations",
         "remove",
         "renderOpacity",
         "resolution",
@@ -11516,6 +11518,96 @@
             "type": "number",
             "description": "Distance within which it turns to the player and fires, in units (default 2000)."
           },
+          "relations": {
+            "type": "array",
+            "minItems": 1,
+            "maxItems": 64,
+            "description": "How the widgets relate, each one an object; the widgets named must be children of one Canvas Panel.",
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "type"
+              ],
+              "properties": {
+                "type": {
+                  "type": "string",
+                  "enum": [
+                    "leftOf",
+                    "rightOf",
+                    "above",
+                    "below",
+                    "alignLeft",
+                    "alignRight",
+                    "alignTop",
+                    "alignBottom",
+                    "alignCenterX",
+                    "alignCenterY",
+                    "sameWidth",
+                    "sameHeight",
+                    "width",
+                    "height",
+                    "inset",
+                    "center"
+                  ]
+                },
+                "widget": {
+                  "type": "string",
+                  "description": "The widget the relation is about (every type but the align and same ones)."
+                },
+                "of": {
+                  "type": "string",
+                  "description": "leftOf, rightOf, above, below: the widget it is placed against (widget leftOf of)."
+                },
+                "widgets": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  },
+                  "minItems": 2,
+                  "description": "align and same types: the widgets lined up or sized alike."
+                },
+                "gap": {
+                  "type": "number",
+                  "description": "leftOf, rightOf, above, below: exactly this far apart, in Slate units (left out: at least 0 apart)."
+                },
+                "value": {
+                  "type": "number",
+                  "minimum": 0,
+                  "description": "width, height: the size; inset: the distance from the edge; in Slate units."
+                },
+                "edge": {
+                  "type": "string",
+                  "enum": [
+                    "left",
+                    "right",
+                    "top",
+                    "bottom"
+                  ],
+                  "description": "inset: the edge of the panel."
+                },
+                "axis": {
+                  "type": "string",
+                  "enum": [
+                    "x",
+                    "y",
+                    "both"
+                  ],
+                  "description": "center: across (x), up and down (y) or both (default both)."
+                },
+                "strength": {
+                  "type": "string",
+                  "enum": [
+                    "required",
+                    "strong",
+                    "medium",
+                    "weak"
+                  ],
+                  "description": "required (default) holds exactly or the call is refused; the others are kept as far as the required ones allow, stronger first."
+                }
+              }
+            }
+          },
           "remove": {
             "type": "boolean",
             "description": "Drop the interface instead (its function graphs go with it)."
@@ -11526,16 +11618,30 @@
           },
           "resolution": {
             "type": "string",
-            "description": "Screen size the widget is drawn for, \"WxH\" (default \"1280x720\"); the project DPI scaling for that size applies, as in the game."
+            "description": "Screen size the boxes are solved at, \"WxH\" (default 1920x1080)."
           },
           "resolutions": {
-            "type": "array",
-            "items": {
-              "type": "string"
-            },
-            "minItems": 1,
-            "maxItems": 6,
-            "description": "Screen sizes to lay it out at, each \"WxH\" (up to 3840x2160), the project's DPI scaling applied as in the game (default 1920x1080, 1280x720 and 3440x1440)."
+            "oneOf": [
+              {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                },
+                "minItems": 1,
+                "maxItems": 6,
+                "description": "Screen sizes the relations are checked at afterwards, each \"WxH\" up to 3840x2160 (default 1920x1080, 1280x720 and 3440x1440)."
+              },
+              {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                },
+                "minItems": 1,
+                "maxItems": 6,
+                "description": "Screen sizes to lay it out at, each \"WxH\" (up to 3840x2160), the project's DPI scaling applied as in the game (default 1920x1080, 1280x720 and 3440x1440)."
+              }
+            ],
+            "description": "Screen sizes the relations are checked at afterwards, each \"WxH\" up to 3840x2160 (default 1920x1080, 1280x720 and 3440x1440)."
           },
           "respawnTime": {
             "type": "number",
@@ -12037,6 +12143,7 @@
               "add_content_widget",
               "set_font",
               "set_widget_layout",
+              "arrange_widgets",
               "bind_widget",
               "edit_widget_animation",
               "delete_animation",

@@ -45,6 +45,8 @@ bool FMcpWidgetAuditTest::RunTest(const FString& Parameters)
     Items.Add(AuditTestItem(TEXT("Tiny"), EKind::Interactive, 300, 200, 330, 230));
     Items.Add(AuditTestItem(TEXT("PlayText"), EKind::Text, 505, 105, 545, 145));
     Items.Last().Ancestors = {1};
+    Items.Add(AuditTestItem(TEXT("Centred"), EKind::Text, 700, 300, 800, 330)); // centred labels of two widths:
+    Items.Add(AuditTestItem(TEXT("Centred2"), EKind::Text, 703, 340, 797, 370)); // left edges 3 apart, centres equal
 
     McpWidgetAudit::FOptions Options;
     Options.MinTarget = 44.0;
@@ -55,6 +57,7 @@ bool FMcpWidgetAuditTest::RunTest(const FString& Parameters)
     TestEqual(TEXT("a label inside its button overlaps nothing"), AuditTestCount(Findings, TEXT("overlap"), TEXT("PlayText")), 0);
     TestEqual(TEXT("the icon leaves the screen"), AuditTestCount(Findings, TEXT("off_screen"), TEXT("Icon")), 1);
     TestEqual(TEXT("the stacked labels are 2 px out of line"), AuditTestCount(Findings, TEXT("misaligned"), TEXT("Time")), 1);
+    TestEqual(TEXT("two centred labels of two widths are not"), AuditTestCount(Findings, TEXT("misaligned"), TEXT("Centred2")), 0);
     TestEqual(TEXT("the 30 px button is too small to touch"), AuditTestCount(Findings, TEXT("small_target"), TEXT("Tiny")), 1);
     TestEqual(TEXT("the large buttons are not"), AuditTestCount(Findings, TEXT("small_target"), TEXT("Play")), 0);
 

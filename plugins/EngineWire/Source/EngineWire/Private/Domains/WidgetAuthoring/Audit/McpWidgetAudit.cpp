@@ -13,25 +13,12 @@
 #include "Transport/WebSocket/McpBridgeWebSocket.h"
 #include "WidgetBlueprint.h"
 
-namespace WidgetAuthoringHandlers
+namespace McpWidgetAudit
 {
-using namespace WidgetAuthoringHelpers;
-
-namespace
+bool ParseSizes(const TArray<TSharedPtr<FJsonValue>>* Values, const TCHAR* Field, TArray<FIntPoint>& Out, FString& OutError)
 {
-constexpr int32 AuditMaxFindings = 100;
-constexpr int32 AuditMaxSizes = 6;
-
-struct FAuditRow
-{
-    McpWidgetAudit::FFinding Finding;
-    TArray<FString> Sizes;
-};
-
-bool AuditSizes(const TSharedPtr<FJsonObject>& Payload, TArray<FIntPoint>& Out, FString& OutError)
-{
-    const TArray<TSharedPtr<FJsonValue>>* Values = nullptr;
-    if (!Payload->TryGetArrayField(TEXT("resolutions"), Values) || !Values)
+    constexpr int32 MaxSizes = 6;
+    if (!Values)
     {
         Out = {FIntPoint(1920, 1080), FIntPoint(1280, 720), FIntPoint(3440, 1440)};
         return true;
@@ -45,18 +32,33 @@ bool AuditSizes(const TSharedPtr<FJsonObject>& Payload, TArray<FIntPoint>& Out, 
         const FIntPoint Size = bPair ? FIntPoint(FCString::Atoi(*Width), FCString::Atoi(*Height)) : FIntPoint::ZeroValue;
         if (Size.X < 64 || Size.X > 3840 || Size.Y < 64 || Size.Y > 2160)
         {
-            OutError = FString::Printf(TEXT("resolutions: '%s' is not \"WxH\" with a width of 64-3840 and a height of 64-2160."), *Text);
+            OutError = FString::Printf(TEXT("%s: '%s' is not \"WxH\" with a width of 64-3840 and a height of 64-2160."), Field, *Text);
             return false;
         }
         Out.AddUnique(Size);
     }
-    if (Out.Num() == 0 || Out.Num() > AuditMaxSizes)
+    if (Out.Num() == 0 || Out.Num() > MaxSizes)
     {
-        OutError = FString::Printf(TEXT("resolutions takes 1 to %d sizes; got %d."), AuditMaxSizes, Out.Num());
+        OutError = FString::Printf(TEXT("%s takes 1 to %d sizes; got %d."), Field, MaxSizes, Out.Num());
         return false;
     }
     return true;
 }
+} // namespace McpWidgetAudit
+
+namespace WidgetAuthoringHandlers
+{
+using namespace WidgetAuthoringHelpers;
+
+namespace
+{
+constexpr int32 AuditMaxFindings = 100;
+
+struct FAuditRow
+{
+    McpWidgetAudit::FFinding Finding;
+    TArray<FString> Sizes;
+};
 
 TSharedPtr<FJsonObject> AuditRowJson(const FAuditRow& Row)
 {
@@ -125,7 +127,9 @@ bool HandleWidgetAuthoringAudit(UEngineWireSubsystem& Subsystem, const FString& 
     UWidgetBlueprint* WidgetBP = WidgetPath.IsEmpty() ? nullptr : LoadWidgetBlueprint(WidgetPath);
     TArray<FIntPoint> Sizes;
     FString Error;
-    if (!WidgetBP || !AuditSizes(Payload, Sizes, Error))
+    const TArray<TSharedPtr<FJsonValue>>* SizeJson = nullptr;
+    Payload->TryGetArrayField(TEXT("resolutions"), SizeJson);
+    if (!WidgetBP || !McpWidgetAudit::ParseSizes(SizeJson, TEXT("resolutions"), Sizes, Error))
     {
         Subsystem.SendAutomationError(Socket, RequestId, WidgetBP ? Error : TEXT("No Widget Blueprint at widgetPath."),
                                       WidgetBP ? TEXT("INVALID_ARGUMENT") : TEXT("NOT_FOUND"));

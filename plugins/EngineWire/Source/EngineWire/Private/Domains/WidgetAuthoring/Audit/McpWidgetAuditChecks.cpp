@@ -113,10 +113,14 @@ void AuditMisaligned(const TArray<FItem>& Items, double NearMissPx, TArray<FFind
             const double Lines[6] = {RA.Min.X - RB.Min.X, RA.Max.X - RB.Max.X, RA.GetCenter().X - RB.GetCenter().X,
                                      RA.Min.Y - RB.Min.Y, RA.Max.Y - RB.Max.Y, RA.GetCenter().Y - RB.GetCenter().Y};
             static const TCHAR* const Names[6] = {TEXT("left"), TEXT("right"), TEXT("centre"), TEXT("top"), TEXT("bottom"), TEXT("middle")};
+            // Lined up exactly on one line of an axis (two centred labels of different widths), they are not out of line
+            // on its others.
+            const bool bAlignedX = FMath::Min3(FMath::Abs(Lines[0]), FMath::Abs(Lines[1]), FMath::Abs(Lines[2])) <= 0.5;
+            const bool bAlignedY = FMath::Min3(FMath::Abs(Lines[3]), FMath::Abs(Lines[4]), FMath::Abs(Lines[5])) <= 0.5;
             for (int32 Line = 0; Line < 6; ++Line)
             {
                 const double By = FMath::Abs(Lines[Line]);
-                if ((Line < 3 ? bStacked : bBeside) && By > 0.5 && By <= NearMissPx)
+                if ((Line < 3 ? bStacked && !bAlignedX : bBeside && !bAlignedY) && By > 0.5 && By <= NearMissPx)
                 {
                     Misses.Add({A, B, By, Names[Line]});
                     break;
@@ -152,8 +156,9 @@ void CheckLayout(const TArray<FItem>& Items, FIntPoint Size, const FOptions& Opt
             Out.Add(AuditFinding(TEXT("off_screen"), 3, Item, Item.Rect.Intersect(Screen)
                 ? FString::Printf(TEXT("%.0f px past the %s edge of the screen"), Off, Side) : FString(TEXT("entirely off the screen"))));
         }
-        const bool bWide = Item.Kind == EKind::Text && !Item.bWraps && Item.Desired.X > Item.Local.X + 0.5;
-        const bool bTall = Item.Kind == EKind::Text && Item.Desired.Y > Item.Local.Y + 0.5;
+        // Over a unit: a text measures a unit wider or narrower at another DPI scale (font hinting), under a pixel.
+        const bool bWide = Item.Kind == EKind::Text && !Item.bWraps && Item.Desired.X > Item.Local.X + 1.0;
+        const bool bTall = Item.Kind == EKind::Text && Item.Desired.Y > Item.Local.Y + 1.0;
         if (bWide || bTall)
         {
             Out.Add(AuditFinding(TEXT("clipped_text"), 3, Item, FString::Printf(TEXT("'%s' needs %.0f x %.0f, its box is %.0f x %.0f (Slate units)"),

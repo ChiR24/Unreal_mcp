@@ -688,4 +688,7 @@ export const PLAIN_PROBE: readonly PlainProbeCase[] = [
   { query: 'check ui layout', accepted: ['blueprint.audit_widget'] },
   { query: 'text is cut off in the widget', accepted: ['blueprint.audit_widget'] },
   { query: 'overlapping buttons', accepted: ['blueprint.audit_widget'] },
+  { query: 'stack the buttons under the title', accepted: ['blueprint.arrange_widgets'] },
+  { query: 'place widgets relative to each other', accepted: ['blueprint.arrange_widgets'] },
+  { query: 'space buttons evenly', accepted: ['blueprint.arrange_widgets'] },
 ];

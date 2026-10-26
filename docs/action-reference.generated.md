@@ -4,7 +4,7 @@
 
 # Action reference
 
-Catalog revision: `03d73dac2e211aa4`
+Catalog revision: `3094c44bec76d29a`
 
 Both transports expose exactly ONE public MCP tool, `unreal`, with the four
 operations `search` / `describe` / `execute` / `configure`. The parent tools
@@ -13,7 +13,7 @@ by `tools/list` and a direct `tools/call` on one returns a
 `DIRECT_TOOL_CALL_REMOVED` receipt rather than executing
 (`src/server/gateway/direct-call-migration.ts`).
 
-The catalog declares 437 capabilities across
+The catalog declares 438 capabilities across
 23 internal parent tools.
 Every row is derived from the capability record that the gateway actually
 validates against, so `execute` cannot accept an action this table omits.
@@ -44,7 +44,7 @@ validates against, so `execute` cannot accept an action this table omits.
 | `manage_ai` | 17 | 3 | 14 | 0 | manage ai |
 | `manage_asset` | 47 | 10 | 32 | 5 | asset, datatable, enum, material, struct, texture |
 | `manage_audio` | 14 | 3 | 11 | 0 | audio |
-| `manage_blueprint` | 36 | 10 | 19 | 7 | blueprint, widget |
+| `manage_blueprint` | 37 | 10 | 20 | 7 | blueprint, widget |
 | `manage_character` | 10 | 2 | 8 | 0 | manage character |
 | `manage_combat` | 6 | 1 | 5 | 0 | manage combat |
 | `manage_effect` | 13 | 2 | 9 | 2 | manage effect |
@@ -62,7 +62,7 @@ validates against, so `execute` cannot accept an action this table omits.
 
 ## Capabilities requiring consent
 
-68 of 437 capabilities require consent.
+68 of 438 capabilities require consent.
 
 | Capability | Tool | Action | Effect | Consent |
 | --- | --- | --- | --- | --- |
@@ -195,6 +195,7 @@ validates against, so `execute` cannot accept an action this table omits.
 | `blueprint.add_function` | `manage_blueprint` | `add_function` | write | write | none | `manage_blueprint.add_function` `manage_blueprint.add_event` |
 | `blueprint.add_game_widget` | `manage_blueprint` | `add_health_bar` | write | write | none | `manage_blueprint.add_game_widget` `manage_blueprint.add_health_bar` `manage_blueprint.add_ammo_counter` `manage_blueprint.add_crosshair` `manage_blueprint.add_minimap` `manage_blueprint.add_compass` `manage_blueprint.add_damage_indicator` `manage_blueprint.add_interaction_prompt` `manage_blueprint.add_objective_tracker` `manage_blueprint.add_quest_tracker` |
 | `blueprint.add_panel_widget` | `manage_blueprint` | `add_canvas_panel` | write | write | none | `manage_blueprint.add_panel_widget` `manage_blueprint.add_canvas_panel` `manage_blueprint.add_overlay` `manage_blueprint.add_vertical_box` `manage_blueprint.add_horizontal_box` `manage_blueprint.add_grid_panel` `manage_blueprint.add_uniform_grid` `manage_blueprint.add_wrap_box` `manage_blueprint.add_border` `manage_blueprint.add_scroll_box` `manage_blueprint.add_size_box` `manage_blueprint.add_scale_box` `manage_blueprint.add_spacer` `manage_blueprint.add_safe_zone` `manage_blueprint.add_widget_switcher` `manage_blueprint.add_widget_tree` |
+| `blueprint.arrange_widgets` | `manage_blueprint` | `arrange_widgets` | write | write | none | `manage_blueprint.arrange_widgets` |
 | `blueprint.audit_widget` | `manage_blueprint` | `audit_widget` | read | read | none | `manage_blueprint.audit_widget` |
 | `blueprint.bind_widget` | `manage_blueprint` | `bind_text` | write | write | none | `manage_blueprint.bind_widget` `manage_blueprint.bind_text` `manage_blueprint.bind_color` `manage_blueprint.bind_enabled` `manage_blueprint.bind_percent` `manage_blueprint.bind_visibility` `manage_blueprint.bind_on_clicked` `manage_blueprint.bind_on_hovered` `manage_blueprint.bind_on_value_changed` `manage_blueprint.bind_localized_text` `manage_blueprint.set_localization_key` |
 | `blueprint.compile` | `manage_blueprint` | `compile` | write | write | none | `manage_blueprint.compile` |
