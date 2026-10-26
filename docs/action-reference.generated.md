@@ -4,7 +4,7 @@
 
 # Action reference
 
-Catalog revision: `cd30aa650f5848d5`
+Catalog revision: `56dd15b358c7685c`
 
 Both transports expose exactly ONE public MCP tool, `unreal`, with the four
 operations `search` / `describe` / `execute` / `configure`. The parent tools
@@ -13,7 +13,7 @@ by `tools/list` and a direct `tools/call` on one returns a
 `DIRECT_TOOL_CALL_REMOVED` receipt rather than executing
 (`src/server/gateway/direct-call-migration.ts`).
 
-The catalog declares 432 capabilities across
+The catalog declares 435 capabilities across
 23 internal parent tools.
 Every row is derived from the capability record that the gateway actually
 validates against, so `execute` cannot accept an action this table omits.
@@ -58,11 +58,11 @@ validates against, so `execute` cannot accept an action this table omits.
 | `manage_pcg` | 3 | 0 | 3 | 0 | world |
 | `manage_sequence` | 19 | 2 | 16 | 1 | cinematics, media, movie_render, replay, sequence, take_recorder |
 | `manage_tools` | 9 | 4 | 5 | 0 | tools |
-| `system_control` | 30 | 9 | 18 | 3 | audio, build, console, insights, logs, performance, project, python, render, system, viewport, widget |
+| `system_control` | 33 | 10 | 19 | 4 | audio, build, console, insights, logs, performance, project, python, render, system, viewport, widget |
 
 ## Capabilities requiring consent
 
-67 of 432 capabilities require consent.
+68 of 435 capabilities require consent.
 
 | Capability | Tool | Action | Effect | Consent |
 | --- | --- | --- | --- | --- |
@@ -129,6 +129,7 @@ validates against, so `execute` cannot accept an action this table omits.
 | `system_control.delete_output_file` | `system_control` | `delete_output_file` | destructive | explicit |
 | `system_control.edit_save_game` | `system_control` | `edit_save_game` | destructive | explicit |
 | `system_control.execute_python` | `system_control` | `system_control` | write | explicit |
+| `system_control.run_recipe` | `system_control` | `run_recipe` | destructive | elevated |
 | `system_control.run_script` | `system_control` | `run_script` | destructive | elevated |
 | `texture.adjust_texture` | `manage_asset` | `adjust_curves` | write | explicit |
 | `texture.configure_texture` | `manage_asset` | `set_compression_settings` | write | explicit |
@@ -551,6 +552,7 @@ validates against, so `execute` cannot accept an action this table omits.
 | `system_control.launch_build` | `system_control` | `system_control` | write | write | none | `system_control.launch_build` |
 | `system_control.list_output_files` | `system_control` | `list_output_files` | read | read | none | `system_control.list_output_files` |
 | `system_control.list_plugins` | `system_control` | `system_control` | read | read | none | `system_control.list_plugins` |
+| `system_control.list_recipes` | `system_control` | `list_recipes` | read | read | none | `system_control.list_recipes` |
 | `system_control.list_save_games` | `system_control` | `list_save_games` | read | read | none | `system_control.list_save_games` |
 | `system_control.lumen_update_scene` | `system_control` | `manage_render` | write | write | none | `system_control.lumen_update_scene` |
 | `system_control.merge_actors` | `system_control` | `merge_actors` | write | write | none | `system_control.merge_actors` |
@@ -560,7 +562,9 @@ validates against, so `execute` cannot accept an action this table omits.
 | `system_control.profile_performance` | `system_control` | `start_profiling` | write | write | none | `system_control.profile_performance` `system_control.start_profiling` `system_control.stop_profiling` `system_control.run_benchmark` `system_control.generate_memory_report` `system_control.show_stats` |
 | `system_control.read_log` | `system_control` | `manage_logs` | read | read | none | `system_control.read_log` |
 | `system_control.run_build` | `system_control` | `manage_tests` | write | write | none | `system_control.run_build` `system_control.run_tests` `system_control.run_ubt` |
+| `system_control.run_recipe` | `system_control` | `run_recipe` | destructive | destructive | elevated | `system_control.run_recipe` |
 | `system_control.run_script` | `system_control` | `run_script` | destructive | destructive | elevated | `system_control.run_script` |
+| `system_control.save_recipe` | `system_control` | `save_recipe` | write | write | none | `system_control.save_recipe` |
 | `system_control.screenshot` | `system_control` | `control_editor` | read | read | none | `system_control.screenshot` |
 | `system_control.set_project_setting` | `system_control` | `system_control` | write | write | none | `system_control.set_project_setting` |
 | `system_control.start_session` | `system_control` | `manage_insights` | write | write | none | `system_control.start_session` `system_control.stop_session` `system_control.pause_session` `system_control.resume_session` `system_control.capture_insights_trace` `system_control.send_snapshot` `system_control.write_snapshot` `system_control.start_unreal_insights` |

@@ -674,4 +674,7 @@ export const PLAIN_PROBE: readonly PlainProbeCase[] = [
   { query: 'find holes in the level', accepted: ['control_editor.explore_level'] },
   { query: 'where does the player get stuck', accepted: ['control_editor.explore_level'] },
   { query: 'can the player fall out of the level', accepted: ['control_editor.explore_level'] },
+  { query: 'save the steps as a recipe', accepted: ['system_control.save_recipe'] },
+  { query: 'run my saved recipe', accepted: ['system_control.run_recipe'] },
+  { query: 'what recipes are there', accepted: ['system_control.list_recipes'] },
 ];

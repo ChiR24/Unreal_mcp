@@ -19,7 +19,7 @@ All notable changes to the EngineWire plugin (formerly McpAutomationBridge) will
 - **Undo ledger**: `undo` blocks come from the transaction buffer; **restore points** undo only this server's steps and name the delete of what they created.
 - **`explain`** fault trees (collision, visible, input, widget, audible, lit), each failure naming the call that fixes it.
 - **Loop guard** on `/mcp`: a call failing three times unchanged is refused (`REPEATED_FAILURE`).
-- **`dryRun`** on `build_graph`, `build_material_graph` and `add_widget_tree`, which check every step first; **`run_script`** runs capability calls with loops and conditions in one request, each step checked as a direct execute is, rolled back on a failure.
+- **`dryRun`** on `build_graph`, `build_material_graph` and `add_widget_tree`, which check every step first; **`run_script`** runs capability calls with loops and conditions in one request, each step checked as a direct execute is, rolled back on a failure; **recipes** (`save_recipe`, `run_recipe`, `list_recipes`) keep such a script in the project with parameters.
 - **`run_map_check`**, **`fix_placement`**, **`describe_relations`**, **`arrange_by_relations`**, **`playtest`** (a pawn walked to a goal in Play, judged with evidence), **`settle_physics`** (props dropped and kept where they come to rest), **`explore_level`** (a pawn explores the level: falls, traps, unreachable areas), and execute's `options.expect` (after the call) and `options.require` (before it).
 - **Change journal**: `changes_since` and `ue://changes` subscriptions list what changed since a cursor and who changed it.
 

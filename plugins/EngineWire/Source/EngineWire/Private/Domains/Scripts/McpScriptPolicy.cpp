@@ -30,9 +30,9 @@ bool AsksConsent(const FString& CapabilityId)
 FString StepRefusal(const FString& CapabilityId, const TSet<FString>& Allowed, FString& OutCode)
 {
     OutCode = TEXT("SCRIPT_STEP_REFUSED");
-    if (CapabilityId == TEXT("system_control.run_script"))
+    if (CapabilityId == TEXT("system_control.run_script") || CapabilityId == TEXT("system_control.run_recipe"))
     {
-        return TEXT("a script cannot run another script.");
+        return TEXT("a script cannot run another script (a recipe runs as one).");
     }
     if (CapabilityId == TEXT("control_editor.undo"))
     {

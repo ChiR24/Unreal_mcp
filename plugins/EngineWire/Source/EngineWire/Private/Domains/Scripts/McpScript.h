@@ -104,7 +104,7 @@ private:
     bool Dispatch(int32 Line, const FMcpGatewayExecutePlan& Plan, const FString& StepId, TSharedPtr<FJsonValue>& Out);
 };
 
-// McpScriptHandler.cpp
+// McpScriptHandler.cpp. OutRan (run_recipe): whether the script ran to its end, every step and expectation holding.
 bool HandleRunScript(UEngineWireSubsystem& Subsystem, const FString& RequestId, const TSharedPtr<FJsonObject>& Payload,
-                     const TSharedPtr<FMcpBridgeWebSocket>& Socket);
+                     const TSharedPtr<FMcpBridgeWebSocket>& Socket, bool* OutRan = nullptr);
 } // namespace McpScript

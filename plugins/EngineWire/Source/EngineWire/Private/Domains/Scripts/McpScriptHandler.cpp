@@ -85,7 +85,7 @@ bool ReadAllowed(const TSharedPtr<FJsonObject>& Payload, TSet<FString>& OutAllow
 using namespace ScriptHandlerParts;
 
 bool HandleRunScript(UEngineWireSubsystem& Subsystem, const FString& RequestId, const TSharedPtr<FJsonObject>& Payload,
-                     const TSharedPtr<FMcpBridgeWebSocket>& Socket)
+                     const TSharedPtr<FMcpBridgeWebSocket>& Socket, bool* OutRan)
 {
     auto Refuse = [&](const FString& Code, const FString& Message)
     {
@@ -134,6 +134,10 @@ bool HandleRunScript(UEngineWireSubsystem& Subsystem, const FString& RequestId, 
     }
     FRunner Runner(Subsystem, RequestId, Socket, Principal, Allowed, Limits);
     const bool bRan = Runner.Run(Forms);
+    if (OutRan)
+    {
+        *OutRan = bRan;
+    }
     TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
     Result->SetArrayField(TEXT("steps"), Strings(StepRows(Runner.Steps)));
     if (Runner.Warnings.Num() > 0)

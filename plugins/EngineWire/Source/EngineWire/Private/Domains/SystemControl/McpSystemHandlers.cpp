@@ -1,6 +1,7 @@
 #include "Domains/SystemControl/McpSystemPrivate.h"
 
 #include "Dom/JsonObject.h"
+#include "Domains/Scripts/McpRecipes.h"
 #include "Domains/Scripts/McpScript.h"
 #include "EngineWireSubsystem.h"
 
@@ -60,7 +61,8 @@ bool UEngineWireSubsystem::HandleSystemControlAction(
       Lower != TEXT("validate_assets") &&
       Lower != TEXT("create_cpp_class") &&
       Lower != TEXT("execute_python") &&
-      Lower != TEXT("run_script")) {
+      Lower != TEXT("run_script") &&
+      Lower != TEXT("save_recipe") && Lower != TEXT("run_recipe") && Lower != TEXT("list_recipes")) {
     return false;
   }
 
@@ -138,6 +140,15 @@ bool UEngineWireSubsystem::HandleSystemControlAction(
   }
   if (Lower == TEXT("run_script")) {
     return McpScript::HandleRunScript(*this, RequestId, Payload, RequestingSocket);
+  }
+  if (Lower == TEXT("save_recipe")) {
+    return McpRecipes::HandleSave(*this, RequestId, Payload, RequestingSocket);
+  }
+  if (Lower == TEXT("run_recipe")) {
+    return McpRecipes::HandleRun(*this, RequestId, Payload, RequestingSocket);
+  }
+  if (Lower == TEXT("list_recipes")) {
+    return McpRecipes::HandleList(*this, RequestId, Payload, RequestingSocket);
   }
 
   return false;

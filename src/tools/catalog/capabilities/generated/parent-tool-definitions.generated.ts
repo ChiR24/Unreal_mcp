@@ -26604,6 +26604,12 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "string",
           "description": "Archive directory package_project wrote (default <Project>/Packaged). Must be inside the project."
         },
+        "args": {
+          "type": "object",
+          "additionalProperties": true,
+          "x-unreal-reflection-boundary": true,
+          "description": "Each parameter's value by name: a number, text, true/false, a list or an object."
+        },
         "arguments": {
           "type": "string",
           "description": "Extra UBT arguments (validated)."
@@ -26706,20 +26712,43 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "description": "Also run Data Validation on every asset that loads (default false): an asset row gains dataValidation (valid, invalid or notValidated, the last when no validator checks that kind of asset) with its errors and warnings, a folder row the count of each verdict and issues (up to 20 assets with errors or warnings). An invalid asset makes its row invalid."
         },
         "deadlineMs": {
-          "type": "integer",
-          "minimum": 100,
-          "maximum": 25000,
-          "description": "Milliseconds after which no further call starts; default 20000, at most 25000 (a client gives up on a call at 30 s). Past it the script stops (SCRIPT_DEADLINE) and rolls back."
+          "oneOf": [
+            {
+              "type": "integer",
+              "minimum": 100,
+              "maximum": 25000,
+              "description": "As run_script: milliseconds after which no further call starts; default 20000."
+            },
+            {
+              "type": "integer",
+              "minimum": 100,
+              "maximum": 25000,
+              "description": "Milliseconds after which no further call starts; default 20000, at most 25000 (a client gives up on a call at 30 s). Past it the script stops (SCRIPT_DEADLINE) and rolls back."
+            }
+          ],
+          "description": "As run_script: milliseconds after which no further call starts; default 20000."
         },
         "deleteSlot": {
           "type": "boolean",
           "description": "true deletes the slot instead; properties are then ignored."
         },
         "destructive": {
-          "type": "array",
-          "items": {
-            "type": "string"
-          },
+          "oneOf": [
+            {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "description": "The capabilities the script calls that ask for consent, by id or alias (control_actor.delete, asset.delete); this run's one elevated consent covers exactly these."
+            },
+            {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "description": "The destructive capabilities the script calls, as run_script takes them."
+            }
+          ],
           "description": "The capabilities the script calls that ask for consent, by id or alias (control_actor.delete, asset.delete); this run's one elevated consent covers exactly these."
         },
         "detailed": {
@@ -26872,10 +26901,21 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "description": "Maximum frames per second; 0 for no cap."
         },
         "maxSteps": {
-          "type": "integer",
-          "minimum": 1,
-          "maximum": 1000,
-          "description": "Calls the script may make; default 200. Past it the script stops (SCRIPT_BUDGET) and rolls back."
+          "oneOf": [
+            {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 1000,
+              "description": "As run_script: calls the recipe may make; default 200."
+            },
+            {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 1000,
+              "description": "Calls the script may make; default 200. Past it the script stops (SCRIPT_BUDGET) and rolls back."
+            }
+          ],
+          "description": "As run_script: calls the recipe may make; default 200."
         },
         "maxTests": {
           "type": "number",
@@ -26944,7 +26984,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "overwrite": {
           "type": "boolean",
-          "description": "Replace an existing trace file of that name (default false: an existing file is refused)."
+          "description": "Replace a recipe of the same name (default false)."
         },
         "packageName": {
           "type": "string",
@@ -26953,6 +26993,13 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "pak": {
           "type": "boolean",
           "description": "Pak the staged content (default true)."
+        },
+        "paramNames": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "The parameter names (at most 16), each bound by run_recipe's args before the script runs."
         },
         "parentClass": {
           "type": "string",
@@ -27042,6 +27089,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "x-unreal-reflection-boundary": true,
           "description": "Saved properties to set, by name, each value as list_save_games shows it ({\"BestScore\": 0}). All are checked before the slot is written. A slot being created may leave them out: it is written with its class defaults."
         },
+        "query": {
+          "type": "string",
+          "description": "Words every listed recipe's name or summary holds."
+        },
         "recursive": {
           "type": "boolean",
           "description": "For a folder path, include its subfolders (default true)."
@@ -27054,6 +27105,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             "none"
           ],
           "description": "Reflection method."
+        },
+        "remove": {
+          "type": "boolean",
+          "description": "Delete the recipe named instead of saving one (script is then not needed); RECIPE_NOT_FOUND when there is none."
         },
         "replaceSourceActors": {
           "type": "boolean",
@@ -27095,7 +27150,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "script": {
           "type": "string",
-          "description": "The script, statements one after another (; starts a comment to the end of the line). Refused before anything runs: SCRIPT_PARSE_ERROR, SCRIPT_INVALID, UNKNOWN_CAPABILITY (a name search does not find), UNDECLARED_PARAMETER and MISSING_REQUIRED_PARAMETER (checked against the capability's contract), SCRIPT_UNBOUND_NAME, CONSENT_NOT_LISTED, SCRIPT_STEP_REFUSED. Stopped and rolled back while running: the failed call's own error code, SCRIPT_TYPE (an operator or for over the wrong kind of value), SCRIPT_VALUE (a path into a result that holds no such field: the fields it has are named), EXPECTATION_FAILED, ENGINE_ERROR (the engine logged an error during a call), STEP_DEFERRED (a call that answers later cannot run in a script), SCRIPT_BUDGET, SCRIPT_DEADLINE."
+          "description": "The script, in run_script's language; it reads each of paramNames as a variable."
         },
         "seconds": {
           "type": "number",
@@ -27171,6 +27226,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "subfolder": {
           "type": "string",
           "description": "Folder under the module's Public (or Private) folder, such as Gameplay/Pickups; default none. A module without Public and Private folders refuses one: its own folder is no include path, so the class would not compile there."
+        },
+        "summary": {
+          "type": "string",
+          "description": "What the recipe does, in a sentence: list_recipes matches it."
         },
         "target": {
           "type": "string",
@@ -27284,6 +27343,9 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             "list_plugins",
             "enable_plugin",
             "run_script",
+            "save_recipe",
+            "run_recipe",
+            "list_recipes",
             "start_session",
             "get_trace_status",
             "create_widget",
@@ -27342,9 +27404,19 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "description": "The class's path once compiled (/Script/<Module>.<Name>), for a class with a UObject parent."
         },
         "cleanupCall": {
-          "type": "object",
-          "x-unreal-reflection-boundary": true,
-          "description": "On a failure: the manage_asset bulk_delete call that removes the assets the script created, which undo does not remove."
+          "oneOf": [
+            {
+              "type": "object",
+              "x-unreal-reflection-boundary": true,
+              "description": "On a failure: the call that removes the assets the recipe created."
+            },
+            {
+              "type": "object",
+              "x-unreal-reflection-boundary": true,
+              "description": "On a failure: the manage_asset bulk_delete call that removes the assets the script created, which undo does not remove."
+            }
+          ],
+          "description": "On a failure: the call that removes the assets the recipe created."
         },
         "codeSha256": {
           "type": "string",
@@ -27549,6 +27621,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "string",
           "description": "The module the class went into."
         },
+        "name": {
+          "type": "string",
+          "description": "The recipe saved or removed."
+        },
         "nextOffset": {
           "type": "number",
           "description": "The offset of the next page; present only when hasMore is true."
@@ -27589,7 +27665,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "path": {
           "type": "string",
-          "description": "With path: the file that was deleted."
+          "description": "Its file, when saved."
         },
         "paused": {
           "type": "boolean",
@@ -27662,6 +27738,19 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           ],
           "description": "Every saved property as read back from the written slot."
         },
+        "recipes": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": true,
+            "x-unreal-reflection-boundary": true
+          },
+          "description": "Each {name, summary, paramNames, destructive, verified}."
+        },
+        "removed": {
+          "type": "boolean",
+          "description": "Present and true when remove deleted it."
+        },
         "reportDirectory": {
           "type": "string",
           "description": "Directory where memory reports are written."
@@ -27728,6 +27817,17 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
                 "object",
                 "null"
               ],
+              "description": "The value of (return ...), when the recipe returned one."
+            },
+            {
+              "type": [
+                "string",
+                "number",
+                "boolean",
+                "array",
+                "object",
+                "null"
+              ],
               "description": "The value of (return ...), when the script returned one."
             }
           ],
@@ -27735,11 +27835,11 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "rollback": {
           "type": "string",
-          "description": "On a failure: what undoing the script did, or why it could not undo everything."
+          "description": "On a failure: what undoing it did, or why it could not undo everything."
         },
         "rolledBack": {
           "type": "boolean",
-          "description": "On a failure: whether everything the script changed was undone."
+          "description": "On a failure: whether everything the recipe changed was undone."
         },
         "roots": {
           "type": "string",
@@ -27807,11 +27907,23 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "description": "Whether this engine version supports status queries."
         },
         "steps": {
-          "type": "array",
-          "items": {
-            "type": "string"
-          },
-          "description": "One line per call made: \"line N capability ok\" (a loop's run of the same call as one line, \"ok x25\"), or \"line N capability CODE: message\" for the call that stopped the script."
+          "oneOf": [
+            {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "description": "As run_script: one line per call made."
+            },
+            {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "description": "One line per call made: \"line N capability ok\" (a loop's run of the same call as one line, \"ok x25\"), or \"line N capability CODE: message\" for the call that stopped the script."
+            }
+          ],
+          "description": "As run_script: one line per call made."
         },
         "success": {
           "type": "boolean",
