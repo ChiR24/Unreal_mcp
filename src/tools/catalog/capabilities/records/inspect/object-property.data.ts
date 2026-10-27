@@ -1,0 +1,667 @@
+/**
+ * Object, property, and class introspection records (12 actions).
+ */
+import type { CapabilityRecordSource } from '../../model.js';
+import { ANY_EDITOR_STATE, buildCoreRecord } from '../core/builder.js';
+import { P } from './properties.js';
+
+const D = 'inspect';
+
+/**
+ * What HandleInspectObjectAction actually returns
+ * (Private/Domains/Environment/Inspection/McpEnvInspectObject.cpp).
+ *
+ * These MUST be declared. McpProjectCanonicalOutput keeps only the properties a
+ * record declares, so while this set was missing the native gateway stripped the
+ * entire payload and every inspect_object call — plus its four aliases — answered
+ * `{success, message}` and nothing else, for a capability whose whole purpose is
+ * "returning detailed properties".
+ */
+const INSPECT_OBJECT_OUTPUT = {
+  objectName: { type: 'string', description: 'Object name.' },
+  objectPath: { type: 'string', description: 'Full object path of the inspected object.' },
+  class: { type: 'string', description: 'Class name of the inspected object.' },
+  className: { type: 'string', description: 'Class name of the inspected object (alias of class).' },
+  classPath: { type: 'string', description: 'Full /Script class path of the inspected object.' },
+  actorLabel: { type: 'string', description: 'Editor display label. Actors only.' },
+  isActor: { type: 'boolean', description: 'True when the object is a world actor rather than an asset.' },
+  isStaticMesh: { type: 'boolean', description: 'True when the object is a StaticMesh asset.' },
+  isSceneComponent: { type: 'boolean', description: 'True when the object is a scene component.' },
+  isSelected: { type: 'boolean', description: 'True when the actor is selected in the editor.' },
+  isHidden: { type: 'boolean', description: 'True when the actor is hidden in the editor viewport.' },
+  isVisible: { type: 'boolean', description: 'True when the object is visible.' },
+  isActive: { type: 'boolean', description: 'True when the component is active.' },
+  staticMesh: { type: 'string', description: 'Static mesh asset path assigned to the object, when it has one.' },
+  location: { type: 'object', 'x-unreal-reflection-boundary': true, description: 'World location as {x, y, z}.' },
+  rotation: { type: 'object', 'x-unreal-reflection-boundary': true, description: 'World rotation as {pitch, yaw, roll} in degrees.' },
+  scale: { type: 'object', 'x-unreal-reflection-boundary': true, description: 'World scale as {x, y, z}.' },
+  transform: { type: 'object', 'x-unreal-reflection-boundary': true, description: 'Combined transform: location, rotation and scale.' },
+  components: { type: 'array', description: 'Attached components with their names, classes and transforms.' },
+  componentCount: { type: 'number', description: 'Number of attached components.' },
+  tags: { type: 'array', items: { type: 'string' }, description: 'Actor tags.' },
+};
+
+/**
+ * What a static or skeletal mesh asset adds
+ * (Private/Domains/Environment/Inspection/McpEnvInspectAssetMesh.cpp):
+ * the slot table, with what LOD0 draws in each slot.
+ */
+const MESH_DETAILS_OUTPUT = {
+  ...INSPECT_OBJECT_OUTPUT,
+  materialSlots: {
+    type: 'array',
+    items: { type: 'object', additionalProperties: true, 'x-unreal-reflection-boundary': true },
+    description: 'Mesh assets: every material slot as {slotIndex, slotName, material (asset path, empty for none), triangles and sections (what LOD0 draws with the slot), bounds (where that geometry is, in mesh space: origin is its center, extent its half size, with min, max, size and radius)}. bounds is absent for a slot LOD0 draws nothing with, and for every slot when slotBoundsAvailable is false. A Nanite mesh reports its fallback mesh. A skeletal mesh is read in its reference pose.',
+  },
+  materialSlotCount: { type: 'number', description: 'Mesh assets: how many material slots the mesh has.' },
+  slotBoundsAvailable: { type: 'boolean', description: 'Mesh assets: false when the render data keeps no CPU copy of its vertices, so each slot has its triangle count but no bounds.' },
+};
+
+export const OBJECT_PROPERTY_RECORDS: readonly CapabilityRecordSource[] = [
+  buildCoreRecord({
+    parentTool: 'inspect', action: 'inspect_object', dispatchAction: 'inspect_object', domain: D, family: 'object',
+    topics: ['inspect actor', 'object details', 'actor properties', 'dump object', 'all properties', 'introspect object'],
+    aliases: ['inspect.inspect_actor'],
+    summary: 'Inspect a world actor or asset object by path, returning detailed properties.',
+    whenToUse: ['An object\'s properties and structure must be read.'],
+    whenNotToUse: ['A Blueprint CDO without a spawned actor is needed; use inspect_cdo.'],
+    inputProps: { objectPath: P.objectPath, actorName: P.actorName, name: P.name, componentName: P.componentName, detailed: P.detailed, propertyNames: P.propertyNames },
+    required: [],
+    outputProps: INSPECT_OBJECT_OUTPUT,
+    effect: 'read',
+    exampleInput: { action: 'inspect_object', objectPath: '/Game/Maps/Demo.Demo_PersistentLevel.PlayerStart_1' },
+    exampleOutput: { success: true, message: 'Object inspected', objectName: 'PlayerStart_1', class: 'PlayerStart', isActor: true, location: { x: 0, y: 0, z: 100 } },
+  }),
+  buildCoreRecord({
+    parentTool: 'inspect', action: 'get_actor_details', dispatchAction: 'inspect_object', domain: D, family: 'object',
+    summary: 'Inspect a world actor (alias of inspect_object).',
+    whenToUse: ['A world actor\'s details must be read using the get_actor_details verb.'],
+    whenNotToUse: ['Prefer the canonical inspect_object verb.'],
+    inputProps: { objectPath: P.objectPath, actorName: P.actorName, name: P.name, componentName: P.componentName, detailed: P.detailed, propertyNames: P.propertyNames },
+    required: [],
+    outputProps: INSPECT_OBJECT_OUTPUT,
+    effect: 'read',
+    exampleInput: { action: 'get_actor_details', actorName: 'PlayerStart_1' },
+    exampleOutput: { success: true, message: 'Object inspected', objectName: 'PlayerStart_1', isActor: true },
+  }),
+  buildCoreRecord({
+    parentTool: 'inspect', action: 'get_blueprint_details', dispatchAction: 'blueprint_get', domain: D, family: 'object',
+    topics: ['compile status', 'parent class', 'graph node counts'],
+    summary: 'Read a Blueprint asset without spawning it: parent class, type, compile status, variables with defaults, functions, events, graph node counts, and components with transforms, meshes and materials.',
+    whenToUse: ['A Blueprint asset\'s structure must be read without spawning an actor.'],
+    whenNotToUse: ['A world actor is in scope; use inspect_object.'],
+    inputProps: { objectPath: P.objectPath, blueprintPath: P.blueprintPath },
+    required: [],
+    effect: 'read',
+    exampleInput: { action: 'get_blueprint_details', blueprintPath: '/Game/Blueprints/BP_Test' },
+  }),
+  buildCoreRecord({
+    parentTool: 'inspect', action: 'get_mesh_details', dispatchAction: 'inspect_object', domain: D, family: 'object',
+    summary: 'Inspect a static or skeletal mesh asset: size, bounds, pivot, LODs, and every material slot with the triangles and bounds of the geometry it covers. Any other object is refused with TYPE_MISMATCH.',
+    topics: ['material slot bounds', 'which slot is which part', 'mesh size', 'mesh bounds', 'static mesh size', 'static mesh triangles'],
+    whenToUse: ['A mesh asset\'s details must be read.', 'It is not known which material slot holds which part of a mesh (legs, hull, claws): each slot lists the triangles and mesh-space bounds of its LOD0 geometry.'],
+    whenNotToUse: ['Prefer the canonical inspect_object verb.'],
+    inputProps: { objectPath: P.objectPath, actorName: P.actorName, name: P.name, detailed: P.detailed, propertyNames: P.propertyNames },
+    required: [],
+    outputProps: MESH_DETAILS_OUTPUT,
+    effect: 'read',
+    exampleInput: { action: 'get_mesh_details', objectPath: '/Game/Meshes/SM_Cube' },
+    exampleOutput: {
+      success: true, message: 'Object inspected', objectName: 'SM_Cube', isStaticMesh: true, materialSlotCount: 1, slotBoundsAvailable: true,
+      materialSlots: [{ slotIndex: 0, slotName: 'Cube', material: '/Engine/BasicShapes/BasicShapeMaterial.BasicShapeMaterial', triangles: 12, sections: 1, bounds: { origin: { x: 0, y: 0, z: 50 }, extent: { x: 50, y: 50, z: 50 } } }],
+    },
+  }),
+  buildCoreRecord({
+    parentTool: 'inspect', action: 'raycast_mesh', dispatchAction: 'raycast_mesh', domain: D, family: 'object',
+    summary: 'Cast rays at a static mesh asset in its own local space and read where each one meets the surface: the point, the surface normal and the material slot. Places a part, a print or a decal on a curved surface without a placed actor or collision.',
+    topics: ['raycast mesh', 'surface point', 'where is the surface', 'line trace mesh', 'surface normal'],
+    whenToUse: ['A part, decal or print must sit exactly on a mesh surface (a chest, a hull, a rock) and the surface position at a given height or side is unknown; the decalRotation and location of a hit place a DecalComponent there directly.', 'A surface profile must be sampled: one ray per row or column across the area.'],
+    whenNotToUse: ['Only the overall size or pivot of the mesh is needed (use get_mesh_details).', 'Parts of a Blueprint must be checked for sinking into each other (use control_actor.audit_placement).'],
+    inputProps: {
+      meshPath: { type: 'string', description: 'Static mesh asset path, e.g. /Game/Meshes/SM_Rock. Rays meet its source triangles, so a Nanite mesh answers at full detail.' },
+      rays: {
+        type: 'array', minItems: 1, maxItems: 256,
+        items: {
+          type: 'object', additionalProperties: false,
+          properties: {
+            origin: { type: 'object', additionalProperties: true, 'x-unreal-reflection-boundary': true, description: 'Ray start {x, y, z} in the mesh\'s local space, in cm; start outside the mesh to find its outer surface.' },
+            direction: { type: 'object', additionalProperties: true, 'x-unreal-reflection-boundary': true, description: 'Ray direction {x, y, z}; any length, it is normalized.' },
+            start: { type: 'object', additionalProperties: true, 'x-unreal-reflection-boundary': true, description: 'Line start {x, y, z} in local space, with end in place of origin and direction (the form raycast_world takes).' },
+            end: { type: 'object', additionalProperties: true, 'x-unreal-reflection-boundary': true, description: 'Line end {x, y, z} in local space; nothing past it is reported.' },
+          },
+        },
+        description: 'Rays in the mesh\'s local space, each {origin, direction} or {start, end}; each answers in hits at the same index.',
+      },
+    },
+    required: ['meshPath', 'rays'],
+    effect: 'read',
+    exampleInput: { action: 'raycast_mesh', meshPath: '/Engine/BasicShapes/Cube', rays: [{ origin: { x: 200, y: 0, z: 50 }, direction: { x: -1, y: 0, z: 0 } }] },
+    exampleOutput: { success: true, meshPath: '/Engine/BasicShapes/Cube', hitCount: 1, hits: [{ hit: true, location: { x: 50, y: 0, z: 50 }, normal: { x: 1, y: 0, z: 0 }, distance: 150, materialSlot: 'Cube' }] },
+    outputProps: {
+      meshPath: { type: 'string', description: 'The mesh the rays were cast at.' },
+      hitCount: { type: 'number', description: 'How many rays met the surface.' },
+      hits: {
+        type: 'array',
+        items: {
+          type: 'object', additionalProperties: false,
+          properties: {
+            hit: { type: 'boolean', description: 'Whether this ray met the surface.' },
+            location: { type: 'object', additionalProperties: true, 'x-unreal-reflection-boundary': true, description: 'Nearest point where the ray meets the surface, {x, y, z} in local space.' },
+            normal: { type: 'object', additionalProperties: true, 'x-unreal-reflection-boundary': true, description: 'Surface normal there, turned to face back along the ray (from outside, the outward normal).' },
+            distance: { type: 'number', description: 'Distance from the ray origin, in cm.' },
+            materialSlot: { type: 'string', description: 'Name of the material slot whose triangle was hit.' },
+            decalRotation: { type: 'object', additionalProperties: true, 'x-unreal-reflection-boundary': true, description: 'Rotation {pitch, yaw, roll} for a DecalComponent placed at location in the same space, so its texture prints upright and readable on this surface: the decal projects into the surface along its X axis, and its DecalSize is (projection depth, half the print height, half the print width).' },
+          },
+        },
+        description: 'One entry per ray, in order.',
+      },
+    },
+  }),
+  // A model cannot see a mesh: an imported or generated one with a hole, a crack between unwelded vertices, an edge
+  // shared by three faces or faces turned inside out passed every other check.
+  buildCoreRecord({
+    parentTool: 'inspect', action: 'check_mesh', dispatchAction: 'check_mesh', domain: D, family: 'object',
+    editorStates: ANY_EDITOR_STATE,
+    summary: 'Check whether a static mesh\'s geometry is sound, from its source triangles: closed (watertight) or open with how many holes, edges shared by three or more faces, faces turned inside out, faces with no area, seams where faces do not share their corners, and how many separate parts it is made of, with its size, surface area and (when closed) volume.',
+    topics: ['check mesh', 'mesh holes', 'mesh has holes', 'watertight', 'non manifold edges', 'flipped normals', 'inside out faces', 'mesh parts', 'broken mesh', 'mesh volume'],
+    whenToUse: ['An imported, downloaded or generated mesh must be proven sound before it is placed, merged, used for collision or booleans, or shipped.', 'A mesh shows see-through gaps, black or inside-out faces, or splits into loose pieces.'],
+    whenNotToUse: ['Only the mesh\'s size, pivot, slots or triangle counts per material are needed (use inspect_object objectKind mesh).', 'The mesh must be cut into one asset per part (use manage_geometry split_mesh).'],
+    inputProps: {
+      meshPath: { type: 'string', description: 'Static mesh asset path, e.g. /Game/Meshes/SM_Rock. Its source triangles (LOD 0 as imported or built) are checked, so a Nanite mesh answers at full detail. A placed actor\'s mesh is named by get_components.' },
+    },
+    required: ['meshPath'],
+    effect: 'read',
+    costLatency: 'interactive',
+    exampleInput: { action: 'check_mesh', meshPath: '/Engine/BasicShapes/Cube' },
+    exampleOutput: {
+      success: true, message: 'Cube: 48 triangles in 1 part(s), closed.', meshPath: '/Engine/BasicShapes/Cube.Cube',
+      triangles: 48, vertices: 26, size: [100, 100, 100], surfaceArea: 60000, closed: true, volume: 1000000,
+      openEdges: 0, holes: 0, seamEdges: 0, nonManifoldEdges: 0, flippedEdges: 0, degenerateTriangles: 0, parts: 1,
+      largestParts: [{ triangles: 48, size: [100, 100, 100], center: [0, 0, 0] }],
+    },
+    outputProps: {
+      meshPath: { type: 'string', description: 'The mesh checked.' },
+      triangles: { type: 'number', description: 'Source triangles (LOD 0).' },
+      vertices: { type: 'number', description: 'Distinct corner positions (to 0.01 cm): corners at one place count once, whether or not the source shares the vertex.' },
+      size: { type: 'array', items: { type: 'number' }, description: 'Extent [x, y, z] in cm, in the mesh\'s own space.' },
+      surfaceArea: { type: 'number', description: 'Total face area in cm².' },
+      closed: { type: 'boolean', description: 'True when every edge joins exactly two faces (seams count as joined): the surface is watertight (a solid, not a sheet or a shell with gaps).' },
+      volume: { type: 'number', description: 'With closed: the volume it encloses, in cm³.' },
+      openEdges: { type: 'number', description: 'Edges with a face on one side only and none on the other at that place: the outlines of holes and open rims.' },
+      holes: { type: 'number', description: 'Separate outlines those open edges form (one per hole or open rim).' },
+      seamEdges: { type: 'number', description: 'Places where two faces meet without sharing their corners (split for flat shading or UV seams): the surface renders whole, but booleans, remeshing and collision built from the mesh need it welded.' },
+      nonManifoldEdges: { type: 'number', description: 'Edges shared by three or more faces (fins, faces stacked on one edge); they break booleans, remeshing and collision generation.' },
+      flippedEdges: { type: 'number', description: 'Edges (seams included) whose two faces wind the same way along them, so one of the two faces points inward (a face turned inside out renders dark or vanishes).' },
+      degenerateTriangles: { type: 'number', description: 'Faces with no area (slivers or a repeated corner).' },
+      parts: { type: 'number', description: 'Separate pieces: groups of faces joined by corners at the same place.' },
+      largestParts: { type: 'array', items: { type: 'object', additionalProperties: true, 'x-unreal-reflection-boundary': true }, description: 'Up to 8 pieces, largest first: triangles, size [x, y, z] and center [x, y, z] in cm, in the mesh\'s own space.' },
+    },
+    outputRequired: ['meshPath', 'triangles', 'closed', 'parts'],
+  }),
+  // A model that cannot see a picture could not tell whether a shot showed the subject, how big, or how dark.
+  buildCoreRecord({
+    parentTool: 'inspect', action: 'describe_view', dispatchAction: 'describe_view', domain: D, family: 'object',
+    editorStates: ['edit', 'simulate'],
+    summary: 'Describe what the level viewport\'s camera sees, as text: each actor in view with its share of the frame, its box on screen, how bright it is drawn and its distance, the share that is background (sky, void), and the frame\'s brightness; or only the actors named, with what hides each one that is not seen. points names what is under spots of the frame and where they are in the world; labels returns the frame with each listed actor boxed and numbered; saveAs keeps the frame under a name and compareWith says what changed in the picture since, region by region, with the actors drawn there before and after. location and rotation place the camera first, as control_editor screenshot takes them.',
+    topics: ['what is visible', 'what the camera sees', 'describe view', 'describe frame', 'is it on screen', 'player on screen', 'screen coverage', 'check the camera shot', 'in shot', 'visible actors', 'frame brightness', 'too dark', 'what is at this point on screen', 'screen point to world', 'deproject', 'labelled screenshot', 'numbered boxes', 'what covers an actor', 'occluded from the camera', 'what changed in the view', 'compare the view before and after', 'visual diff of the frame', 'did the edit change the picture'],
+    whenToUse: ['A shot must be checked without looking at a picture: is the subject in view, how much of the frame it fills, where it sits, whether it is lit or lost in the dark.', 'A camera placement must be compared or tuned by numbers (subject coverage, sky share, brightness).', 'A spot of the frame (from a screenshot, a click, a box) must be turned into an actor and a world location: points.', 'A picture where every actor is boxed and numbered to match the list is wanted, to point at one by number: labels.', 'Checking that an edit changed the picture where it should, and nowhere else: saveAs before it, compareWith after.'],
+    whenNotToUse: ['A picture is wanted (use control_editor screenshot).', 'Play In Editor runs: the level viewport does not show the running game (stop it, or use Simulate).', 'Whether collision blocks a line between two points (use raycast_world).'],
+    inputProps: {
+      actors: { type: 'array', items: { type: 'string' }, description: 'Only these actors (label, name or path): their rows under actors (a row whose box nearer actors partly cover names them under coveredBy, as a sign half behind a row of blocks), and under notVisible each one that drew no pixel with its reason, outside the frame or hidden, with hiddenBy naming the actors drawn over its box (up to three, by share of the box). Names that match no actor are listed under notFound. limit does not apply.' },
+      location: { type: 'object', properties: { x: { type: 'number' }, y: { type: 'number' }, z: { type: 'number' } }, additionalProperties: false, description: 'Camera location {x, y, z} in cm; omitted, the viewport\'s current one. The camera stays there.' },
+      rotation: { type: 'object', properties: { pitch: { type: 'number' }, yaw: { type: 'number' }, roll: { type: 'number' } }, additionalProperties: false, description: 'Camera rotation {pitch, yaw, roll} in degrees; omitted, the viewport\'s current one.' },
+      limit: { type: 'number', description: 'Most actors to list, largest share first (default 20, at most 100); visibleActors counts them all.' },
+      points: { type: 'array', minItems: 1, maxItems: 64, items: { type: 'object', required: ['x', 'y'], additionalProperties: false, properties: { x: { type: 'number', minimum: 0, maximum: 1 }, y: { type: 'number', minimum: 0, maximum: 1 } } }, description: 'Spots of the frame as {x, y} from 0 to 1 (x from the left, y from the top; 0.5, 0.5 is the middle): each answers under points at the same index with what is drawn there and what the line from the camera through it hits. A perspective viewport only.' },
+      labels: { type: 'boolean', description: 'Also return the frame (at most 960 px wide) with each actor listed under actors boxed in its own colour and numbered from 1 in list order, as an image (imageBase64).' },
+      tolerance: { type: 'number', minimum: 0, maximum: 16, description: 'With points: a spot where no actor is drawn (just beside a thin pole, past an edge) moves to the nearest pixel within this many where one is, and its row says where under snappedTo (default 0: no move).' },
+      saveAs: { type: 'string', maxLength: 64, description: 'Keep this frame under a name for a later compareWith, with the camera it was taken from (until the editor closes; the same name replaces it, and a ninth name forgets the oldest). Drawn twice, to learn how much the renderer varies an unchanged frame by itself. With saveAs or compareWith the frame is read as the game draws it, so icons, gizmos and selection outlines are left out and other reads 0.' },
+      compareWith: { type: 'string', maxLength: 64, description: 'Compare this frame with the one saved under that name, taken again from its camera: change lists what changed beyond the renderer\'s own noise. Refused with VIEW_BASELINE_NOT_FOUND for a name not saved, VIEW_SIZE_CHANGED when the viewport changed size, and CAMERA_MOVED when location or rotation (or the field of view) differs from the saved camera. With saveAs in the same call, the comparison comes first.' },
+    },
+    required: [],
+    effect: 'read',
+    costLatency: 'interactive',
+    exampleInput: { action: 'describe_view', location: { x: 0, y: -600, z: 200 }, rotation: { pitch: -10, yaw: 90, roll: 0 } },
+    exampleOutput: {
+      success: true, message: '2 actor(s) in view; the largest is Floor at 41.2% of the frame.',
+      cameraLocation: { x: 0, y: -600, z: 200 }, cameraRotation: { pitch: -10, yaw: 90, roll: 0 }, visibleActors: 2,
+      actors: [
+        { name: 'Floor', class: 'StaticMeshActor', coverage: 41.2, box: [0, 52.4, 100, 100], brightness: 0.34, distance: 220 },
+        { name: 'Crate', class: 'StaticMeshActor', coverage: 6.8, box: [44.1, 38.2, 55.9, 61.3], brightness: 0.51, distance: 560 },
+      ],
+      background: 52, other: 0, brightness: { p10: 0.05, median: 0.31, p90: 0.62, clipped: 0, dark: 4.1 },
+    },
+    outputProps: {
+      cameraLocation: { type: 'object', additionalProperties: true, 'x-unreal-reflection-boundary': true, description: 'Where the camera was.' },
+      cameraRotation: { type: 'object', additionalProperties: true, 'x-unreal-reflection-boundary': true, description: 'Where it looked.' },
+      visibleActors: { type: 'number', description: 'Actors the game would draw with at least one pixel in the frame.' },
+      actors: { type: 'array', items: { type: 'object', additionalProperties: true, 'x-unreal-reflection-boundary': true }, description: 'Largest share first: name (actor label), class, coverage (percent of the frame), box [left, top, right, bottom] in percent of the frame\'s width and height, brightness (0-1, as drawn) and distance (cm from the camera to its bounds); with actors, coveredBy [{name, share}] lists the nearer actors drawn over at least 5% of its box. Editor icons and shapes hidden in game are left out.' },
+      background: { type: 'number', description: 'Percent of the frame where no object was drawn (sky, void).' },
+      other: { type: 'number', description: 'Percent drawn by what only the editor shows (icons, gizmos, shapes hidden in game) or no actor owns (BSP).' },
+      brightness: { type: 'object', properties: { p10: { type: 'number' }, median: { type: 'number' }, p90: { type: 'number' }, clipped: { type: 'number' }, dark: { type: 'number' } }, additionalProperties: false, description: 'The frame as drawn: p10, median and p90 brightness (0-1), and the percent of the frame clipped (a channel at full) or dark (below 0.05).' },
+      notVisible: { type: 'array', items: { type: 'object', additionalProperties: true, 'x-unreal-reflection-boundary': true }, description: 'With actors: each named actor that drew no pixel, as {name, reason (outside the frame; at the edge of the frame, mostly outside it; hidden behind what is drawn over its box; or not drawn with nothing nearer over it), inFrame (percent of its projected box inside the frame), hiddenBy [{name, share (percent of its box)}], which leaves out actors centred farther than it and the ground under it}.' },
+      notFound: { type: 'array', items: { type: 'string' }, description: 'With actors: the names that match no actor.' },
+      points: { type: 'array', items: { type: 'object', additionalProperties: true, 'x-unreal-reflection-boundary': true }, description: 'With points, one per spot: x, y; drawn (actor, editor for what only the editor draws, or background); actorName, the actor drawn there; and hit, what the line from the camera through the spot hits first against Visibility collision: location, normal, distance (cm), actorName and componentName. A drawn actor with no collision is passed through, so hit can name what is behind it; no hit means nothing within 20 km. With tolerance, snappedTo {x, y} is the spot it moved to.' },
+      imageBase64: { type: 'string', description: 'With labels: the frame as a PNG, base64, with each listed actor boxed and numbered; returned as an image.' },
+      change: { type: 'object', additionalProperties: true, 'x-unreal-reflection-boundary': true, description: 'With compareWith: comparedWith, changed (percent of the frame that changed: 8 x 8 pixel blocks compared by structure (SSIM) and colour beyond the renderer\'s own noise), regionCount, regions (up to 8, largest first: box [left, top, right, bottom] in percent of the frame, share of the frame, and before and after [{name, share}], the actors drawn there in each frame, up to three, by share of the region) and brightnessShift (mean brightness now minus then, -1 to 1). A moved actor shows as a region where it was and one where it is; no regions means nothing changed.' },
+      savedAs: { type: 'string', description: 'With saveAs: the name the frame is kept under.' },
+      mimeType: { type: 'string', description: 'With labels: image/png.' },
+    },
+    outputRequired: ['visibleActors', 'actors', 'background', 'brightness'],
+  }),
+  // A model that cannot see a picture could not judge one: where the eye goes, how its colours sit, how it is lit.
+  buildCoreRecord({
+    parentTool: 'inspect', action: 'analyze_view', dispatchAction: 'analyze_view', domain: D, family: 'object',
+    editorStates: ['edit', 'simulate'],
+    summary: 'Judge the level viewport\'s picture as a reviewer would, in numbers: saliency (where the eye goes: how strongly each actor draws it, the focus point, and a named subject\'s rank), palette (five colours with their shares, the hue template of Cohen-Or et al. they fit best and how far the rest stray from it, and the colour cast of surfaces that should be grey), light (a lightness histogram, clipped and crushed shares, contrast, exposure, flat lighting and, on a subject lit by the sun, its key to fill ratio in stops) and cost (how much of the frame, and of each actor, the shader complexity view draws at a high cost). Read only: the camera moves only when location or rotation is given, and cost puts the viewport\'s view mode back after one frame in the shader complexity view.',
+    topics: ['analyze view', 'judge the shot', 'where does the eye go', 'saliency', 'composition of the shot', 'colour harmony', 'colour palette of the shot', 'key to fill ratio', 'is the lighting flat', 'which actors are expensive to shade'],
+    whenToUse: [
+      'Checking whether a shot draws the eye to its subject, without looking at it.',
+      'Judging a scene\'s palette and colour cast, or whether its lighting is flat, too dark or blown out.',
+      'Finding which actors cost the most to shade in a view.',
+    ],
+    whenNotToUse: [
+      'Listing which actors are in view and their share of the frame (use describe_view).',
+      'A picture to look at is wanted (use control_editor screenshot).',
+      'Play In Editor runs: the level viewport does not show the running game (stop it, or use Simulate).',
+    ],
+    inputProps: {
+      aspects: { type: 'array', items: { type: 'string', enum: ['saliency', 'palette', 'light', 'cost'] }, description: 'What to judge (default saliency, palette and light; cost draws the viewport once in another view mode). Any other name refuses with INVALID_ARGUMENT.' },
+      subject: { type: 'string', description: 'The actor the shot is about (label, name or path): its saliency share and rank, and its key to fill ratio against the sun. A name that matches no actor refuses with ACTOR_NOT_FOUND.' },
+      location: { type: 'object', properties: { x: { type: 'number' }, y: { type: 'number' }, z: { type: 'number' } }, additionalProperties: false, description: 'Camera location {x, y, z} in cm; omitted, the viewport\'s current one. The camera stays there afterwards, as describe_view leaves it.' },
+      rotation: { type: 'object', properties: { pitch: { type: 'number' }, yaw: { type: 'number' }, roll: { type: 'number' } }, additionalProperties: false, description: 'Camera rotation {pitch, yaw, roll} in degrees; omitted, the viewport\'s current one.' },
+    },
+    required: [],
+    effect: 'read',
+    costLatency: 'interactive',
+    exampleInput: { action: 'analyze_view', subject: 'Statue', aspects: ['saliency', 'light'] },
+    exampleOutput: {
+      success: true, message: 'Analyzed the view (240 x 135 cells): saliency, light.', cellsAcross: 240, cellsDown: 135,
+      saliency: { top: [{ actorName: 'Statue', density: 3.1, share: 41.5 }, { actorName: 'Floor', density: 0.8, share: 20.2 }], background: 12, focus: { x: 0.52, y: 0.44 }, subject: { actorName: 'Statue', density: 3.1, share: 41.5, rank: 1 } },
+      light: { histogram: [2.1, 6, 14.2, 25.5, 30.1, 15.4, 5.2, 1.5], clipped: 0.4, crushed: 2.1, contrast: 0.52, medianLightness: 0.48, flat: false, exposure: 'balanced', subject: { lit: 58, shadowed: 31, keyFill: 1.6 } },
+    },
+    outputProps: {
+      cellsAcross: { type: 'number', description: 'Cells across the frame: each is the average of a square block of pixels, about 240 across whatever the viewport size.' },
+      cellsDown: { type: 'number', description: 'Cells down the frame.' },
+      saliency: { type: 'object', additionalProperties: true, 'x-unreal-reflection-boundary': true, description: 'With saliency (Boolean Map Saliency, Zhang and Sclaroff): top (up to 5 actors, ranked by density: its mean saliency per cell against the frame\'s mean, 1 for average, so above 1 draws the eye more than its size alone; share is its percent of the whole frame\'s saliency, which a large wall can hold without being what the eye goes to), background (the share where no actor is drawn), focus {x, y} (0 to 1 across and down, the most salient cell: blurred as fixations are, it can sit just beside the actor that draws it) and, with subject, subject {actorName, density, share, rank} (rank 1 draws the eye most; 0 draws no cell).' },
+      palette: { type: 'object', additionalProperties: true, 'x-unreal-reflection-boundary': true, description: 'With palette: colors [{hex, share}] (OKLab k-means, up to 5, largest first), harmony {chromatic (percent of cells with colour), template (i, V, L, I, T, Y or X), rotation (degrees), offBy (degrees the hues stray outside the template, weighted by chroma), verdict} and cast {tint (neutral, warm, cool, green or magenta), a, b (the mean OKLab shift of near-neutral surfaces)}. A score only: nothing is recoloured.' },
+      light: { type: 'object', additionalProperties: true, 'x-unreal-reflection-boundary': true, description: 'With light: histogram (8 lightness bins, percent of cells, dark to bright), clipped and crushed (percent near white or black), contrast (lightness from the darker 5 percent to the brighter 5 percent), medianLightness, flat (contrast under 0.25), exposure (dark, balanced or bright) and, with subject and a directional light, subject {lit, shadowed (percent of its cells facing toward or away from the sun), keyFill (stops brighter the lit side is drawn) or keyFillNote}; a subject whose materials are all unlit has only keyFillNote, since no light shades it.' },
+      cost: { type: 'object', additionalProperties: true, 'x-unreal-reflection-boundary': true, description: 'With cost: high (percent of the frame at red or beyond on the shader complexity ramp: a third of its maximum, its legend\'s Bad), mean (0 to 1) and actors [{actorName, frameShare, ofItself}] (up to 5 drawing at a high cost over at least 1% of the frame), or note when the view could not be read. The legend and crosshair the view mode draws over the frame are left out. While shaders still compile, what they cover draws with a stand-in material and a warning says so.' },
+      cameraLocation: { type: 'object', additionalProperties: true, 'x-unreal-reflection-boundary': true, description: 'Where the camera was.' },
+      cameraRotation: { type: 'object', additionalProperties: true, 'x-unreal-reflection-boundary': true, description: 'Where it looked.' },
+    },
+    outputRequired: ['cellsAcross', 'cellsDown'],
+  }),
+  // One camera hides a sunk foot, a missing back or a wrong scale.
+  buildCoreRecord({
+    parentTool: 'inspect', action: 'contact_sheet', dispatchAction: 'contact_sheet', domain: D, family: 'object',
+    editorStates: ['edit', 'simulate'],
+    summary: 'One image of an actor from several sides: front, back, left, right and top as true elevations (orthographic, in the actor\'s own turned frame, with a grid every round number of centimetres) and a three-quarter view, each tile labelled, the actor\'s size in the title. Shaded as clay from the geometry, the same whatever lights the level: the actor orange, everything else grey, and the parts of the actor hidden behind something (a foot sunk in the floor, a back against a wall) showing through it. Only the actor and the actors within reach of it are drawn, so a wall farther off never hides it while the floor it stands in stays. Returned as an image and written as a PNG under Saved/Captures; the level viewport is not moved.',
+    topics: ['contact sheet', 'views from every side', 'show a prop or actor from every side', 'front back side and top views', 'orthographic views of an actor', 'check an actor from all sides', 'turntable views of an actor', 'elevations of an actor'],
+    whenToUse: [
+      'Checking an actor from every side at once: sunk into the floor or floating, a missing back, a wrong size against the grid, a part poking through another.',
+      'Reviewing a prop or character after placing it, without moving the level viewport.',
+    ],
+    whenNotToUse: [
+      'A picture of what the level viewport\'s camera sees is wanted (use control_editor screenshot).',
+      'Numbers about a shot are wanted rather than a picture (use describe_view or analyze_view).',
+    ],
+    inputProps: {
+      actorName: { type: 'string', description: 'The actor to show (label, name or path). One that matches no actor refuses with ACTOR_NOT_FOUND; one that draws nothing the game shows (only editor icons) refuses with NOTHING_DRAWN.' },
+      views: { type: 'array', items: { type: 'string', enum: ['front', 'back', 'left', 'right', 'top', 'three_quarter'] }, description: 'The views, in this order (default all six). front looks at the side the actor faces (its X axis); left and right are its own; top looks straight down with its front at the bottom of the tile; three_quarter is a perspective view from its front right, above.' },
+      tileSize: { type: 'number', minimum: 128, maximum: 480, description: 'Side of each square tile in pixels (default 320); the sheet is three tiles across.' },
+    },
+    required: ['actorName'],
+    effect: 'read',
+    costLatency: 'interactive',
+    exampleInput: { action: 'contact_sheet', actorName: 'Crate', views: ['front', 'left', 'top'] },
+    exampleOutput: {
+      success: true, message: 'Contact sheet of Crate: 3 view(s), 960 x 372.', file: 'X:/Games/MyGame/Saved/Captures/ContactSheet_Crate_20261025_101500.png',
+      size: { x: 100, y: 100, z: 100 }, views: [{ view: 'front', grid: 20 }, { view: 'left', grid: 20 }, { view: 'top', grid: 20 }], shown: ['Floor'],
+      width: 960, height: 372, mimeType: 'image/png',
+    },
+    outputProps: {
+      file: { type: 'string', description: 'Absolute path of the PNG written.' },
+      size: { type: 'object', properties: { x: { type: 'number' }, y: { type: 'number' }, z: { type: 'number' } }, additionalProperties: false, description: 'The actor\'s drawn size in cm along its own X (front to back), Y (side to side) and Z.' },
+      views: { type: 'array', items: { type: 'object', additionalProperties: true, 'x-unreal-reflection-boundary': true }, description: 'Each tile in order: view and, for an elevation, grid (cm between lines; vertical lines pass the actor\'s pivot, horizontal ones in front, back, left and right sit at round heights above the world\'s zero).' },
+      shown: { type: 'array', items: { type: 'string' }, description: 'The other actors drawn: those whose boxes come within reach of the actor\'s (up to 63).' },
+      width: { type: 'number', description: 'Sheet width in pixels.' },
+      height: { type: 'number', description: 'Sheet height in pixels.' },
+      imageBase64: { type: 'string', description: 'The sheet as a PNG, base64, returned as an image; left out past 3 MB (the file has it).' },
+      mimeType: { type: 'string', description: 'image/png, with imageBase64.' },
+    },
+    outputRequired: ['size', 'views', 'width', 'height'],
+  }),
+  // Materials look wrong for reasons a picture hides: a base colour no real surface has, a half-metal, a texture
+  // stretched over ten times the area of its neighbours.
+  buildCoreRecord({
+    parentTool: 'inspect', action: 'audit_materials', dispatchAction: 'audit_materials', domain: D, family: 'object',
+    editorStates: ['edit', 'simulate'],
+    summary: 'Check the materials in the level viewport\'s view the way a technical artist would. pbr: the viewport is drawn in the Buffer Visualization view mode for base colour, metallic and roughness (the values the G-buffer holds, so tints and constants in the material count) and each lit, opaque actor in view is judged: too_dark (base colour under sRGB 30, darker than charcoal, on a quarter of it), too_bright (a non-metal over sRGB 240, whiter than snow; a metal\'s base colour is its reflectance, silver near 250), dark_metal (a metal\'s base colour under sRGB 155: metals reflect at least about a third of light), partial_metallic (metallic between 0.1 and 0.9 on a quarter: a surface is metal or not), mirror_roughness (roughness under 0.05 on half); an actor with an unlit or translucent material is listed under skipped with why. texel_density: each material slot of the static meshes in view at its sharpest 2D texture, as the texture streamer reckons it (texture size times the material\'s UV tiling for it over the mesh\'s UV density times the actor\'s scale), against the view\'s median: too_sharp (four times or more: memory spent on detail nobody sees) or too_blurry (a quarter or less). Only a slot whose material holds texture streaming data for the texture is judged, and the median is theirs when there are any; one without (a world-aligned material such as the engine\'s grid, or data never built) is listed with approximate and its ratio. instancing: static mesh actors of the level drawing one mesh with the same materials, groups of 8 or more, worth turning into one instanced mesh. Read only: the camera moves only when location or rotation is given, and the viewport\'s view mode and buffer are put back.',
+    topics: ['audit materials', 'material qa', 'check pbr values', 'albedo too dark', 'base color too bright', 'metallic values', 'roughness values', 'texel density', 'texture resolution consistency', 'stretched texture', 'meshes to instance', 'material review'],
+    whenToUse: [
+      'Reviewing a scene\'s materials for physically based values before lighting it: base colours too dark or too bright, half-metal surfaces, mirror-smooth roughness.',
+      'Finding a texture stretched or crammed compared to its neighbours, or a slot spending a 4K texture on a pebble.',
+      'Finding repeated meshes that could be drawn as one instanced mesh.',
+    ],
+    whenNotToUse: [
+      'Judging the picture itself (where the eye goes, palette, light): use analyze_view.',
+      'Changing a material\'s values: use set_material_parameter or the material graph actions.',
+      'Play In Editor runs: the level viewport does not show the running game (stop it, or use Simulate).',
+    ],
+    inputProps: {
+      checks: { type: 'array', items: { type: 'string', enum: ['pbr', 'texel_density', 'instancing'] }, description: 'What to check (default all three). Any other name refuses with INVALID_ARGUMENT.' },
+      location: { type: 'object', properties: { x: { type: 'number' }, y: { type: 'number' }, z: { type: 'number' } }, additionalProperties: false, description: 'Camera location {x, y, z} in cm; omitted, the viewport\'s current one. The camera stays there afterwards, as describe_view leaves it.' },
+      rotation: { type: 'object', properties: { pitch: { type: 'number' }, yaw: { type: 'number' }, roll: { type: 'number' } }, additionalProperties: false, description: 'Camera rotation {pitch, yaw, roll} in degrees; omitted, the viewport\'s current one.' },
+    },
+    required: [],
+    effect: 'read',
+    costLatency: 'interactive',
+    exampleInput: { action: 'audit_materials', checks: ['pbr', 'texel_density'] },
+    exampleOutput: {
+      success: true, message: '1 of 6 actor(s) in view off physically based ranges; 1 of 9 material slot(s) 4x off the view\'s texel density.',
+      pbr: { judged: 6, flagged: 1, actors: [{ actorName: 'Crate', share: 0.08, baseColor: [12, 11, 10], metallic: 0, roughness: 0.6, findings: ['too_dark'] }] },
+      texelDensity: { medianTexelsPerMetre: 512, slots: 9, outliers: 1, rows: [{ actorName: 'Pebble', slot: 0, material: '/Game/M_Rock.M_Rock', texture: '/Game/T_Rock_4K.T_Rock_4K', texelsPerMetre: 8192, ratio: 16, finding: 'too_sharp' }] },
+    },
+    outputProps: {
+      pbr: { type: 'object', additionalProperties: true, 'x-unreal-reflection-boundary': true, description: 'With pbr: judged and flagged (actors covering at least 20 cells of the view), actors [{actorName, share (of the view), baseColor [r, g, b] (median, sRGB 0-255), metallic and roughness (medians, 0-1), findings}] (flagged ones first, 30 at most) and skipped [{actorName, reason}] (unlit or translucent materials, which the G-buffer does not show), or note when the view could not be read.' },
+      texelDensity: { type: 'object', additionalProperties: true, 'x-unreal-reflection-boundary': true, description: 'With texel_density: medianTexelsPerMetre (of the judged slots in view, else of all), slots, judged (slots with streaming data), outliers and rows [{actorName, slot, material, texture, texelsPerMetre, ratio (to the median), finding (too_sharp or too_blurry), approximate (true when the material has no texture streaming data for the texture: UV channel 0 and no tiling assumed, so no finding)}] (furthest from the median first, 40 at most), or note.' },
+      instancing: { type: 'object', additionalProperties: true, 'x-unreal-reflection-boundary': true, description: 'With instancing: groups [{mesh, mobility, count, actors (the first 10 labels)}] (largest first, 20 at most; same level, mobility, mesh and materials), actors (how many the groups hold) and note (loaded actors only: a World Partition level counts the cells it has loaded).' },
+      cameraLocation: { type: 'object', additionalProperties: true, 'x-unreal-reflection-boundary': true, description: 'Where the camera was (pbr and texel_density).' },
+      cameraRotation: { type: 'object', additionalProperties: true, 'x-unreal-reflection-boundary': true, description: 'Where it looked.' },
+    },
+    outputRequired: [],
+  }),
+  // A picture could only be judged by eye: no pass said which actor a region belongs to, how far it is or which way
+  // it faces.
+  buildCoreRecord({
+    parentTool: 'inspect', action: 'capture_passes', dispatchAction: 'capture_passes', domain: D, family: 'object',
+    editorStates: ['edit', 'simulate'],
+    summary: 'Capture the level viewport\'s view as machine-readable passes, aligned pixel for pixel: id (a PNG with one colour per actor, and the legend naming each colour\'s actor), depth (an EXR of the distance in cm) and normal (a PNG of the world normal, RGB = normal x 0.5 + 0.5), with a summary of each. location and rotation place the camera first, as describe_view and control_editor screenshot take them.',
+    topics: ['capture passes', 'id pass', 'object id', 'depth pass', 'depth map', 'normal pass', 'normal map of the view', 'segmentation mask', 'render passes'],
+    whenToUse: ['A frame must be analysed by a script, a probe or a model: which actor covers a region (id), how far each pixel is (depth), which way surfaces face (normal).', 'Regions of a screenshot must be attributed to actors, or distances in a shot measured.'],
+    whenNotToUse: ['A picture to look at is wanted (use control_editor screenshot).', 'Only which actors are in view and their share is needed (use describe_view, which writes no files).', 'Passes of a rendered sequence are needed (use manage_sequence add_render_pass).'],
+    inputProps: {
+      location: { type: 'object', properties: { x: { type: 'number' }, y: { type: 'number' }, z: { type: 'number' } }, additionalProperties: false, description: 'Camera location {x, y, z} in cm; omitted, the viewport\'s current one. The camera stays there.' },
+      rotation: { type: 'object', properties: { pitch: { type: 'number' }, yaw: { type: 'number' }, roll: { type: 'number' } }, additionalProperties: false, description: 'Camera rotation {pitch, yaw, roll} in degrees; omitted, the viewport\'s current one.' },
+      passes: { type: 'array', items: { type: 'string', enum: ['id', 'depth', 'normal'] }, description: 'Passes to write (default all three).' },
+      width: { type: 'number', description: 'Width of every pass in pixels (default 960, 64 to 4096); the height follows the viewport\'s shape so the passes line up with it.' },
+      outputPath: { type: 'string', description: 'Folder inside the project, project-relative or absolute (default Saved/Captures).' },
+      name: { type: 'string', description: 'File name prefix (default Passes_<date>_<time>): files are <name>_id.png, <name>_depth.exr and <name>_normal.png.' },
+    },
+    required: [],
+    effect: 'read',
+    costLatency: 'interactive',
+    exampleInput: { action: 'capture_passes', location: { x: 0, y: -600, z: 200 }, rotation: { pitch: -10, yaw: 90, roll: 0 }, name: 'Crate' },
+    exampleOutput: {
+      success: true, message: 'Captured 3 pass(es) at 960x404.', cameraLocation: { x: 0, y: -600, z: 200 }, cameraRotation: { pitch: -10, yaw: 90, roll: 0 },
+      fov: 90, width: 960, height: 404,
+      files: { id: 'X:/Games/MyGame/Saved/Captures/Crate_id.png', depth: 'X:/Games/MyGame/Saved/Captures/Crate_depth.exr', normal: 'X:/Games/MyGame/Saved/Captures/Crate_normal.png' },
+      ids: [{ color: '#ff3333', name: 'Floor', class: 'StaticMeshActor', coverage: 41.2 }, { color: '#33ffb2', name: 'Crate', class: 'StaticMeshActor', coverage: 6.8 }],
+      depth: { min: 220, median: 640, max: 2400, sky: 52 }, normal: { up: 61.3, down: 0, side: 38.7 },
+    },
+    outputProps: {
+      cameraLocation: { type: 'object', additionalProperties: true, 'x-unreal-reflection-boundary': true, description: 'Where the camera was.' },
+      cameraRotation: { type: 'object', additionalProperties: true, 'x-unreal-reflection-boundary': true, description: 'Where it looked.' },
+      fov: { type: 'number', description: 'Horizontal field of view in degrees.' },
+      width: { type: 'number', description: 'Pass width in pixels.' },
+      height: { type: 'number', description: 'Pass height in pixels.' },
+      files: { type: 'object', properties: { id: { type: 'string' }, depth: { type: 'string' }, normal: { type: 'string' } }, additionalProperties: false, description: 'Absolute path of each pass written.' },
+      ids: { type: 'array', items: { type: 'object', additionalProperties: true, 'x-unreal-reflection-boundary': true }, description: 'id: each actor in the id image, largest first (up to 256): color (#rrggbb in the PNG), name (actor label), class and coverage (percent of the frame). Black is background (sky, void), dark grey (#404040) what only the editor draws.' },
+      depth: { type: 'object', properties: { min: { type: 'number' }, median: { type: 'number' }, max: { type: 'number' }, sky: { type: 'number' } }, additionalProperties: false, description: 'depth: nearest, median and farthest distance of the drawn pixels in cm, and the percent that is sky (nothing within 100 km).' },
+      normal: { type: 'object', properties: { up: { type: 'number' }, down: { type: 'number' }, side: { type: 'number' } }, additionalProperties: false, description: 'normal: percent of the drawn pixels facing up (normal z above 0.7), down (below -0.7) and sideways.' },
+    },
+    outputRequired: ['files'],
+  }),
+  buildCoreRecord({
+    parentTool: 'inspect', action: 'raycast_world', dispatchAction: 'raycast_world', domain: D, family: 'object',
+    editorStates: ANY_EDITOR_STATE,
+    summary: 'Trace lines through the level against collision and read what each one hits first: the point, the surface normal, the distance, the actor and the component. Finds the ground under a point, checks a line of sight, and proves a wall, floor or volume really blocks. Traces the running game while Play In Editor runs.',
+    topics: ['line trace', 'raycast world', 'what is below', 'ground height', 'line of sight', 'does it block', 'collision test', 'trace channel'],
+    whenToUse: [
+      'The ground height under a point, or what a jump or a drop would land on, must be known.',
+      'A line of sight between two points (a camera, an enemy, the player) must be checked.',
+      'A placed wall, floor, platform or blocking volume must be proven to block: a mesh or volume with no collision is traced straight through.',
+    ],
+    whenNotToUse: ['The surface of a mesh asset must be found without placing it (use raycast_mesh).', 'Only an actor\'s overall size is needed (use query_object lookup bounding_box).'],
+    inputProps: {
+      rays: {
+        type: 'array', minItems: 1, maxItems: 256,
+        items: {
+          type: 'object', additionalProperties: false, required: ['start', 'end'],
+          properties: {
+            start: { type: 'object', additionalProperties: true, 'x-unreal-reflection-boundary': true, description: 'Line start {x, y, z} in world space, in cm.' },
+            end: { type: 'object', additionalProperties: true, 'x-unreal-reflection-boundary': true, description: 'Line end {x, y, z} in world space; nothing past it is reported.' },
+          },
+        },
+        description: 'Lines in world space; each answers in hits at the same index.',
+      },
+      channel: { type: 'string', description: 'Collision channel traced: Visibility (default), Camera, WorldStatic, WorldDynamic, Pawn, PhysicsBody, Vehicle, Destructible, or a project trace channel by its name. What blocks depends on each component\'s response to that channel: most meshes block Visibility, a character capsule blocks Pawn.' },
+      traceComplex: { type: 'boolean', description: 'Trace the render triangles of meshes that allow it instead of their simple collision (default false: the shapes the game\'s movement collides with).' },
+      ignoreActors: { type: 'array', items: { type: 'string' }, description: 'Actors (label, name or path) the lines pass through, such as the player pawn a line starts inside; an unknown name is refused.' },
+    },
+    required: ['rays'],
+    effect: 'read',
+    exampleInput: { action: 'raycast_world', rays: [{ start: { x: 0, y: 0, z: 1000 }, end: { x: 0, y: 0, z: -1000 } }] },
+    exampleOutput: { success: true, hitCount: 1, hits: [{ hit: true, location: { x: 0, y: 0, z: 0 }, normal: { x: 0, y: 0, z: 1 }, distance: 1000, actorName: 'Floor', componentName: 'StaticMeshComponent0' }] },
+    outputProps: {
+      hitCount: { type: 'number', description: 'How many lines hit something.' },
+      hits: {
+        type: 'array',
+        items: {
+          type: 'object', additionalProperties: false,
+          properties: {
+            hit: { type: 'boolean', description: 'Whether this line hit something that blocks the channel.' },
+            location: { type: 'object', additionalProperties: true, 'x-unreal-reflection-boundary': true, description: 'Where the line first hits, {x, y, z} in world space.' },
+            normal: { type: 'object', additionalProperties: true, 'x-unreal-reflection-boundary': true, description: 'Surface normal there.' },
+            distance: { type: 'number', description: 'Distance from start, in cm.' },
+            actorName: { type: 'string', description: 'Label of the actor hit.' },
+            componentName: { type: 'string', description: 'Component whose collision the line hit.' },
+            startedInside: { type: 'boolean', description: 'True when start was already inside the collision it reports: the line begins in a wall, or in a pawn left out of ignoreActors.' },
+          },
+        },
+        description: 'One entry per line, in order.',
+      },
+    },
+  }),
+  buildCoreRecord({
+    parentTool: 'inspect', action: 'get_texture_details', dispatchAction: 'inspect_object', domain: D, family: 'object',
+    summary: 'Inspect a texture asset: dimensions, format and settings. Any other object is refused with TYPE_MISMATCH.',
+    whenToUse: ['A texture asset\'s details must be read.'],
+    whenNotToUse: ['Prefer the canonical inspect_object verb.'],
+    inputProps: { objectPath: P.objectPath, actorName: P.actorName, name: P.name, detailed: P.detailed, propertyNames: P.propertyNames },
+    required: [],
+    outputProps: INSPECT_OBJECT_OUTPUT,
+    effect: 'read',
+    exampleInput: { action: 'get_texture_details', objectPath: '/Game/Textures/T_Base' },
+  }),
+  buildCoreRecord({
+    parentTool: 'inspect', action: 'get_material_details', dispatchAction: 'inspect_object', domain: D, family: 'object',
+    summary: 'Inspect a material or material instance: blend mode, parameters and textures. Any other object is refused with TYPE_MISMATCH.',
+    whenToUse: ['A material asset\'s details must be read.'],
+    whenNotToUse: ['Prefer the canonical inspect_object verb.'],
+    inputProps: { objectPath: P.objectPath, actorName: P.actorName, name: P.name, detailed: P.detailed, propertyNames: P.propertyNames },
+    required: [],
+    outputProps: INSPECT_OBJECT_OUTPUT,
+    effect: 'read',
+    exampleInput: { action: 'get_material_details', objectPath: '/Game/Materials/M_Base' },
+  }),
+  buildCoreRecord({
+    parentTool: 'inspect', action: 'get_level_details', dispatchAction: 'get_world_settings', domain: D, family: 'object',
+    summary: 'Inspect the current level/world summary (TS normalizes to get_world_settings).',
+    whenToUse: ['The current level\'s world settings summary must be read.'],
+    whenNotToUse: ['A specific actor is in scope; use inspect_object.'],
+    inputProps: {},
+    required: [],
+    effect: 'read',
+    exampleInput: { action: 'get_level_details' },
+    exampleOutput: { success: true, message: 'World settings', worldName: 'Demo' },
+    outputProps: { worldName: { type: 'string', description: 'Current world name.' } },
+  }),
+  buildCoreRecord({
+    parentTool: 'inspect', action: 'get_property', dispatchAction: 'get_property', domain: D, family: 'property',
+    editorStates: ANY_EDITOR_STATE,
+    topics: ['read property', 'property value', 'get value', 'read field', 'actor property', 'object property', 'game instance variable', 'read live widget property', 'widget value during play'],
+    summary: 'Read a property value from a world actor, asset, or Blueprint class defaults (blueprintPath, or the Blueprint asset\'s own path), several at once (propertyNames), or the same ones from several objects (objectPaths).',
+    whenToUse: ['A single property value must be read.', 'Several properties of one target must be read in one call (propertyNames).', 'The same properties must be read from several objects in one call (objectPaths), e.g. the state of every moving platform.'],
+    whenNotToUse: ['All properties are needed; use inspect_object or inspect_cdo.'],
+    // One requiredOneOf group only: the property name is the one the schema
+    // enforces (propertyPath alone used to be refused by a required propertyName);
+    // a missing target is refused by the handler, naming the four spellings.
+    inputProps: {
+      objectPath: P.runtimeObjectPath, actorName: P.actorName, name: P.name, blueprintPath: P.blueprintPath, propertyName: P.propertyName, propertyPath: P.propertyPath,
+      propertyNames: { type: 'array', items: { type: 'string' }, minItems: 1, maxItems: 64, description: 'Several properties of the same target in one call, in place of propertyName: each read as a single call would (dotted paths too, such as CharacterMovement.MaxWalkSpeed). Answered under properties; a name that does not resolve is listed under missingProperties with the reason, and the others still answer.' },
+      objectPaths: { type: 'array', items: { type: 'string' }, minItems: 1, maxItems: 64, description: 'The same read on several objects in one call, in place of objectPath: each entry is a target as objectPath takes it (an actor by name or label, an asset, a class default, PlayerPawn), read as a single call would be, propertyNames included. Answered under targets; a target that cannot be read carries its error and the others still answer.' },
+    },
+    required: [],
+    requiredOneOf: ['propertyName', 'propertyPath', 'propertyNames'],
+    effect: 'read',
+    exampleInput: { action: 'get_property', objectPath: '/Game/Maps/Demo.Demo_PersistentLevel.PlayerStart_1', propertyName: 'ActorLabel' },
+    exampleOutput: { success: true, message: 'Property read', value: 'PlayerStart_1' },
+    outputProps: {
+      value: P.valueRead,
+      targets: { type: 'array', items: { type: 'object', additionalProperties: true, 'x-unreal-reflection-boundary': true }, 'x-unreal-reflection-boundary': true, description: 'With objectPaths: each target as {objectPath as given, propertyName and value, or properties and missingProperties with propertyNames, error when it could not be read}.' },
+      properties: { type: 'array', items: { type: 'object', additionalProperties: true, 'x-unreal-reflection-boundary': true }, 'x-unreal-reflection-boundary': true, description: 'With propertyNames: each property that resolved, as {propertyName (its own spelling), value}, plus propertyPath (the path as asked) when that differs, so two .Text reads stay apart.' },
+      missingProperties: { type: 'array', items: { type: 'string' }, description: 'With propertyNames: each name that did not resolve, as "Name: reason".' },
+    },
+  }),
+  buildCoreRecord({
+    parentTool: 'inspect', action: 'set_property', dispatchAction: 'set_property', domain: D, family: 'property',
+    editorStates: ANY_EDITOR_STATE,
+    topics: ['write property', 'set value', 'change property', 'modify property', 'edit property', 'set field', 'set property on actor', 'set game instance variable'],
+    summary: 'Write a property value on a world actor, asset, or Blueprint CDO; several at once (properties), or the same on several objects (objectPaths).',
+    whenToUse: [
+      'A single property value must be written.',
+      'Several properties of one target must be written in one call (properties).',
+      'The same property must be written on several objects in one call (objectPaths), e.g. one volume on every ambient sound.',
+      'A placed actor\'s component property must be written ("StaticMeshComponent0.StaticMesh", "Mesh.BodyInstance.CollisionEnabled"): a StaticMesh, collision, SimulatePhysics or Mobility key goes through the component\'s own setter, as control_actor edit_component writes it.',
+    ],
+    whenNotToUse: [
+      'The property is read-only or the target is a packed asset.',
+      'A value the object works out from another of its settings: the object puts the write back and the call fails with PROPERTY_SET_FAILED naming both values, so change that setting instead. A value the object only adjusts (a clamp) is written, and the message names what it became.',
+    ],
+    inputProps: {
+      objectPath: P.runtimeObjectPath, actorName: P.actorName, name: P.name, blueprintPath: P.blueprintPath, propertyName: P.propertyName, propertyPath: P.propertyPath, value: P.value, markDirty: P.markDirty,
+      properties: {
+        type: 'object',
+        additionalProperties: true,
+        'x-unreal-reflection-boundary': true,
+        description: 'Several writes on the same target in place of propertyName and value: {name or dotted path: value}, e.g. {"BoxExtent": {"X": 20, "Y": 90, "Z": 100}, "CollisionProfileName": "OverlapAllDynamic"}. Each is written as a single call would be and reported under properties; the call fails naming any that did not apply. watch applies to single writes only.',
+      },
+      objectPaths: { type: 'array', items: { type: 'string' }, minItems: 1, maxItems: 64, description: 'The same write on several targets in one call, in place of objectPath: each entry is a target as objectPath takes it (an actor, "Actor.Component", an asset, a class default), written as a single call would be, with properties too. Answered under targets; the call fails naming each target that did not take the write, and the others keep it.' },
+      // A UMG pop set off by a write ran on real time and ended between two calls; LivesPop was only
+      // provable by slowing the asset 50x.
+      watch: {
+        type: 'object',
+        description: 'Sample a property right after the write, in the same call, to see what the write sets off before it ends: a HUD pop or fade runs on real time, even with PIE paused, and is over before a later call can read it. The reply lists each value the property took with its time t in seconds (Lives on GameInstance with watch {objectPath: "WBP_HUD", propertyName: "LivesBox.RenderTransform"}).',
+        properties: {
+          propertyName: { type: 'string', description: 'The property to sample; a dotted path reaches through widgets and structs (LivesBox.RenderTransform). Omitted, the property the call writes.' },
+          objectPath: { type: 'string', description: 'The object to sample, as objectPath takes it (GameInstance, a live widget such as WBP_HUD); omitted, the object written.' },
+          durationSeconds: { type: 'number', description: 'Real seconds to sample (default 0.5, at most 20).' },
+          intervalSeconds: { type: 'number', description: 'Seconds between samples (default 0: every frame); a sample is kept only when the value changed.' },
+        },
+        additionalProperties: false,
+      },
+    },
+    required: [],
+    requiredOneOf: ['propertyName', 'propertyPath', 'properties'],
+    effect: 'write', costLatency: 'interactive',
+    outputProps: {
+      watch: { type: 'object', additionalProperties: true, 'x-unreal-reflection-boundary': true, description: 'With watch: objectPath, propertyName, samples ({t, value}, kept when the value changed), sampleCount, changed (it took more than one value) and frames.' },
+      properties: { type: 'array', items: { type: 'object', additionalProperties: true, 'x-unreal-reflection-boundary': true }, 'x-unreal-reflection-boundary': true, description: 'With properties: each write as {propertyName, applied, value read back}.' },
+      targets: { type: 'array', items: { type: 'object', additionalProperties: true, 'x-unreal-reflection-boundary': true }, 'x-unreal-reflection-boundary': true, description: 'With objectPaths: each target as {objectPath as given, applied, the value read back (properties with properties), actorPath, saved, saveSkippedReason}.' },
+      applied: { type: 'number', description: 'With properties: how many writes applied; with objectPaths: how many targets.' },
+      saved: { type: 'boolean', description: 'Whether the target\'s package was written to disk after the write; with properties, the last write\'s save, which holds every write of the call. False with saveSkippedReason when nothing was saved.' },
+      saveSkippedReason: { type: 'string', description: 'Why nothing was saved: markDirty was false, a running-game or transient object (the change lasts until PIE stops), level content (saved with its level), engine content, or a save that failed (the change is only in memory).' },
+      instancesUpdated: { type: 'number', description: 'A write to a class default or component template: how many placed copies, and derived Blueprints\' defaults with their own copies, still held the old default and took the new one, as the details panel does; one that overrides the value keeps it. Absent for any other target.' },
+      // Writing a Blueprint CDO only reaches instances spawned later once the
+      // class is rebuilt, so the caller is told whether that recompile happened.
+      blueprintCompiled: { type: 'boolean', description: 'True when the target was a Blueprint CDO and the Blueprint was recompiled, so the value now applies to newly spawned instances. The reply (value, actorPath, actorClass) is read back from the recompiled class default object and the Blueprint package is saved; a variable the Blueprint declares keeps the value as its default, and the call fails with PROPERTY_SET_FAILED, never success, when the compile did not keep it. A Default__ objectPath resolves to the Blueprint\'s current default object; a copy a compile left behind (a REINST_ class, or a Blueprint object in /Engine/Transient with no game running) fails with STALE_TARGET. False for plain world actors and assets, where no compile is involved.' },
+      // A material expression's write reaches material instances only through the rebuilt material.
+      materialRebuilt: { type: 'boolean', description: 'True when the target lives inside a material or material function (a material expression such as a TextureObjectParameter, as <material>.<material>:<nodeName>) and that material was rebuilt, so its parameter lists, which every material instance reads, show the write at once (a new ParameterName, a new default Texture). Absent for any other target.' },
+    },
+    exampleInput: { action: 'set_property', objectPath: '/Game/Maps/Demo.Demo_PersistentLevel.PlayerStart_1', propertyName: 'ActorLabel', value: 'Spawn_01' },
+  }),
+  buildCoreRecord({
+    parentTool: 'inspect', action: 'inspect_class', dispatchAction: 'inspect_class', domain: D, family: 'class',
+    topics: ['class info', 'class metadata', 'reflection', 'class properties', 'uclass'],
+    summary: 'Inspect a UClass: metadata, parent, default CDO properties.',
+    whenToUse: ['A class\'s hierarchy and defaults must be read.'],
+    whenNotToUse: ['A specific instance is in scope; use inspect_object.'],
+    inputProps: { className: P.className, classPath: P.classPath },
+    // Read as className, else classPath.
+    required: [], requiredOneOf: ['className', 'classPath'],
+    effect: 'read',
+    exampleInput: { action: 'inspect_class', className: 'PointLight' },
+    exampleOutput: { success: true, message: 'Class inspected', className: 'PointLight', classPath: '/Script/Engine.PointLight', parentClass: 'Light' },
+    outputProps: {
+      className: P.className,
+      classPath: { type: 'string', description: 'Full /Script path of the resolved class.' },
+      parentClass: { type: 'string', description: 'Immediate super-class name ("None" when the class has no super).' },
+      // The handler always sent these; undeclared, they were projected away, and once folded beside
+      // inspect_cdo the array met its object-typed `properties` and every class inspect failed.
+      parentClassPath: { type: 'string', description: 'Full path of the super-class.' },
+      module: { type: 'string', description: 'Module that declares a C++ class (empty for a Blueprint class).' },
+      isNative: { type: 'boolean', description: 'True for a C++ class.' },
+      isBlueprintGenerated: { type: 'boolean', description: 'True for a Blueprint-generated class.' },
+      generatedBy: { type: 'string', description: 'Blueprint asset that generated the class, when it is Blueprint-generated.' },
+      ancestors: { type: 'array', items: { type: 'string' }, description: 'Super-classes from the parent up to Object.' },
+      flags: { type: 'object', properties: { abstract: { type: 'boolean' }, blueprintable: { type: 'boolean' }, blueprintType: { type: 'boolean' }, deprecated: { type: 'boolean' }, transient: { type: 'boolean' }, config: { type: 'boolean' }, interface: { type: 'boolean' }, isActor: { type: 'boolean' }, isComponent: { type: 'boolean' } }, additionalProperties: false, description: 'Class flags as booleans.' },
+      properties: { type: 'array', items: { type: 'object', additionalProperties: true, 'x-unreal-reflection-boundary': true }, description: 'kind=class: every property the class declares or inherits (name, type, category, declaredIn, editable, blueprintVisible, deprecated). kind=cdo: the requested property values by name.' },
+      propertyCount: { type: 'number', description: 'Properties the class has, including any past the 200 listed.' },
+      propertiesTruncated: { type: 'boolean', description: 'True when the class has more than the 200 properties listed.' },
+      defaultProperties: { type: 'object', additionalProperties: true, 'x-unreal-reflection-boundary': true, description: 'Default value of each property on the class default object, as text.' },
+      defaultObjectPath: { type: 'string', description: 'Path of the class default object.' },
+      functionCount: { type: 'number', description: 'Functions the class declares or inherits.' },
+    },
+    outputRequired: [],
+  }),
+  buildCoreRecord({
+    parentTool: 'inspect', action: 'inspect_cdo', dispatchAction: 'inspect_cdo', domain: D, family: 'class',
+    summary: 'Inspect a Blueprint Class Default Object (CDO) and its default components without spawning an actor.',
+    whenToUse: ['A Blueprint\'s default properties and components must be read.'],
+    whenNotToUse: ['A spawned world actor is in scope; use inspect_object.'],
+    inputProps: {
+      blueprintPath: P.blueprintPath, componentName: P.componentName, propertyNames: P.propertyNames, detailed: P.detailed,
+      componentNames: { type: 'array', items: { type: 'string' }, description: 'Return only these components in components, by name (case-insensitive); a name that matches none is listed under missingComponents.' },
+    },
+    required: ['blueprintPath'],
+    effect: 'read',
+    // The handler (McpPropCdoInspection.cpp) emits
+    // every field below. With NO outputProps declared, output projection kept
+    // only {success, message} and the capability answered "CDO inspection
+    // completed" carrying nothing — leaving Blueprint defaults unreadable.
+    outputProps: {
+      className: { type: 'string', description: 'Generated class name of the inspected CDO.' },
+      classPath: { type: 'string', description: 'Full path of the generated class.' },
+      blueprintPath: P.blueprintPath,
+      parentClass: { type: 'string', description: 'Parent class name.' },
+      componentCount: { type: 'number', description: 'Number of default components on the CDO.' },
+      cdoProperties: { type: 'object', additionalProperties: true, 'x-unreal-reflection-boundary': true, description: 'Default property values on the Class Default Object.' },
+      properties: { type: 'object', additionalProperties: true, 'x-unreal-reflection-boundary': true, description: 'Requested property values.' },
+      components: { type: 'array', items: { type: 'object', additionalProperties: true, 'x-unreal-reflection-boundary': true }, description: 'Default component descriptors (name, class, attachParent).' },
+      missingComponents: { type: 'array', items: { type: 'string' }, description: 'componentNames that matched no component.' },
+    },
+    outputRequired: [],
+    exampleInput: { action: 'inspect_cdo', blueprintPath: '/Game/Blueprints/BP_Test' },
+    exampleOutput: { success: true, message: 'CDO inspected', className: 'BP_Test_C', componentCount: 3 },
+  }),
+  buildCoreRecord({
+    parentTool: 'inspect', action: 'inspect_struct', dispatchAction: 'inspect_struct', domain: D, family: 'class',
+    summary: 'Inspect a UserDefinedStruct layout (member names, types, defaults) read-only.',
+    whenToUse: ['A Blueprint Struct\'s member layout must be read.'],
+    whenNotToUse: ['Struct values must be read or written; use manage_asset struct actions.'],
+    inputProps: { structPath: P.structPath },
+    required: ['structPath'],
+    effect: 'read',
+    // The native handler (McpInspectStruct.cpp) returns its
+    // findings nested under `result`; with no outputProps declared the output
+    // projection stripped the entire nested object and the capability answered
+    // bare success — a layout reader that returned nothing.
+    exampleInput: { action: 'inspect_struct', structPath: '/Game/Structs/S_Test' },
+    exampleOutput: { success: true, message: 'Struct inspected', result: { structName: 'S_Test', memberCount: 3 } },
+    outputProps: {
+      result: { type: 'object', additionalProperties: true, 'x-unreal-reflection-boundary': true, description: 'Struct layout: structName, structPath, parentStruct(Path), isRowStruct, isUserDefined, members[] (name/type/default/tooltip/guid/metadata/innerStruct), memberCount.' },
+    },
+    outputRequired: [],
+  }),
+];

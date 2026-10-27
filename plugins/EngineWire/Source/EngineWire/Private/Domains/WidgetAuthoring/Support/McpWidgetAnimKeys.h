@@ -1,0 +1,53 @@
+// McpWidgetAnimKeys.h — MovieScene key authoring for widget animations.
+#pragma once
+
+#include "CoreMinimal.h"
+#include "Dom/JsonObject.h"
+
+class FMcpBridgeWebSocket;
+class UEngineWireSubsystem;
+class UWidget;
+class UWidgetAnimation;
+class UWidgetBlueprint;
+
+namespace WidgetAuthoringHelpers
+{
+struct FMcpWidgetKeyResult
+{
+    FString TrackType;
+    FString PropertyName;
+    FString TrackClass;
+    FString BindingGuid;
+    int32 ChannelCount = 0;
+    int32 KeyCount = 0;
+    int32 FrameNumber = 0;
+    bool bCreatedTrack = false;
+    bool bCreatedBinding = false;
+};
+
+// Finds or creates the widget binding and property track, then writes channel keys.
+// trackType: opacity | color | translation | scale | angle | shear | transform.
+bool McpAuthorWidgetAnimationKey(UWidgetBlueprint* WidgetBP, UWidgetAnimation* Animation, UWidget* Target,
+                                 const TSharedPtr<FJsonObject>& Payload, FMcpWidgetKeyResult& Out,
+                                 FString& OutError, FString& OutErrorCode);
+
+// Finds or creates the widget's binding and the property track for trackType (opacity, color,
+// translation, scale, angle, shear, transform), with an empty section ready for keys.
+bool McpAddWidgetAnimationTrack(UWidgetAnimation* Animation, UWidget* Target, const FString& TrackType,
+                                FMcpWidgetKeyResult& Out, FString& OutError);
+
+// A key's value: propertyValue, value or keyValue, whichever it carries.
+TSharedPtr<FJsonValue> ReadValueField(const TSharedPtr<FJsonObject>& Payload);
+
+// Why McpAuthorWidgetAnimationKey would refuse a key of this kind (the trackType lowercased) and
+// value, or empty when it can write it; nothing is touched.
+FString KeyValueError(const FString& Kind, const FString& TrackType, const TSharedPtr<FJsonValue>& Value);
+}
+
+namespace WidgetAuthoringHandlers
+{
+bool HandleWidgetAuthoringAnimationKeyframe(UEngineWireSubsystem& Subsystem, const FString& RequestId,
+                                            const TSharedPtr<FJsonObject>& Payload,
+                                            TSharedPtr<FMcpBridgeWebSocket> RequestingSocket,
+                                            TSharedPtr<FJsonObject> ResultJson);
+}

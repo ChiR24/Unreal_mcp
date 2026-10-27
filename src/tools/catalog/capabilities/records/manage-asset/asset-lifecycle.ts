@@ -1,0 +1,234 @@
+// Asset lifecycle records: list, import, duplicate/rename/move/delete alias
+// families, create_folder, search_assets. List and search model bounded
+// continuation with max page size 500 and opaque cursor contract.
+
+import type { RecordSpec } from './builder.js';
+import { arr, arrObj, bool, boundedLimit, boundedPagination, DESTRUCTIVE, DESTRUCTIVE_POLICY, ex, HIGH, LOW, MEDIUM, NON_IDEMPOTENT, num, READ, READ_POLICY, r, str, WRITE, WRITE_POLICY } from './builder.js';
+import { schema } from '../shared/record-presets.js';
+
+const SOURCE_PATH = str('File to import, inside the project folder: relative to it (Saved/Imports/Crate.fbx) or absolute under it; any other path is refused.');
+const DEST_PATH = str('Destination /Game asset path.');
+
+const PAGINATED_OUTPUT = schema({
+  success: bool('Operation succeeded.'),
+  assets: arrObj('Matched assets on this page.'),
+  folders: arr('Subfolder paths.'),
+  totalCount: num('Total matched count before pagination.'),
+  count: num('Asset count on this page.'),
+  limit: num('Applied page size.'),
+  offset: num('Applied zero-based offset.'),
+  hasMore: bool('True when more results exist beyond the current page.'),
+  nextOffset: num('Next-page offset.'),
+  // handleListAssets resolves both to `... : (cursor ?? null)` / `... : null`, so
+  // null is a produced value on the last page, not merely an absent field.
+  cursor: { type: ['string', 'null'], description: 'Opaque cursor for the current page, or null when the page was requested without one.' },
+  nextCursor: { type: ['string', 'null'], description: 'Opaque cursor for the next page, or null on the last page.' }
+}, ['success']);
+
+// What an import made: the asset it is about (a mesh before its animations, materials and textures), the rest, and
+// for a skeletal mesh what it is bound to.
+const IMPORT_OUTPUT = schema({
+  success: bool('Operation succeeded.'), assetPath: str('The imported asset, renamed to the destination name: a mesh when the file holds one.'),
+  saved: bool('Whether it was saved.'), alsoImported: arr('Other assets the import made (its takes, materials, textures), at most 50.'),
+  skeleton: str('Skeletal mesh: the skeleton it is bound to.'), physicsAsset: str('Skeletal mesh: its physics asset (empty when none).'),
+  bones: num('Skeletal mesh: bones in its reference skeleton.'), morphTargets: num('Skeletal mesh: morph targets it carries.'),
+  details: { type: 'object', 'x-unreal-reflection-boundary': true, description: 'Operation details.' },
+}, ['success']);
+const OK_OUTPUT = schema({ success: bool('Operation succeeded.'), details: { type: 'object', 'x-unreal-reflection-boundary': true, description: 'Operation details.' } }, ['success']);
+
+// duplicate and duplicate_asset: one handler (McpAssetImportDuplicate.cpp), one asset or a whole folder.
+const DUPLICATE_INPUT = schema({
+  sourcePath: str('The asset to copy (a /Game package or object path), or a folder: every asset under it is copied, sub-folders kept.'),
+  destinationPath: str('Where the copy goes: a folder (one that exists, or ending in /) where it keeps the source name or takes newName, a full asset path, or a bare name, which lands beside the source.'),
+  newName: str('Name for the copy: in the destinationPath folder, or beside the source when destinationPath is left out.'),
+}, ['sourcePath'], ['destinationPath', 'newName']);
+const DUPLICATE_OUTPUT = schema({
+  success: bool('Operation succeeded.'),
+  assetPath: str('One asset: the copy.'),
+  saved: bool('One asset: whether the copy was saved (an unsaved copy is gone after the editor restarts).'),
+  sourcePath: str('Folder: the folder copied.'),
+  destinationPath: str('Folder: where the copies went.'),
+  assetCount: num('Folder: the assets found under it, as far as the asset registry has indexed them.'),
+  duplicatedCount: num('Folder: how many were copied; fewer than assetCount means some destinations were taken.'),
+  savedCount: num('Folder: how many copies were saved.'),
+  details: { type: 'object', 'x-unreal-reflection-boundary': true, description: 'Operation details.' },
+}, ['success']);
+
+export const ASSET_LIFECYCLE_RECORDS: readonly RecordSpec[] = [
+  r('list', 'asset', 'List assets under a /Game path with bounded pagination and opaque cursor continuation.',
+    schema({
+      path: { type: 'string', default: '/Game', description: 'Canonical /Game path to list.' },
+      limit: boundedLimit(500, 50),
+      offset: num('Zero-based offset into the full result set.'),
+      pagination: boundedPagination(500, 50),
+      cursor: str('Opaque pagination cursor returned by a previous list response. Forward verbatim to resume.'),
+      recursive: bool('Include the assets of every subfolder (default true); false lists only this folder\'s own assets, its subfolders still named under folders.'),
+      depth: num('Maximum recursion depth.'),
+      includeTags: bool('When true, include asset tags in the listing response.'),
+      includeMetadata: bool('When true, include the file size and modification date of each asset.'),
+      filter: str('Substring filter. Listing assets: a case-insensitive match on the asset name, and on the own name of each folder listed. Listing content sources: a case-sensitive match on the source id and, for plugins, the category.')
+    }, ['path']),
+    PAGINATED_OUTPUT, READ, READ_POLICY, MEDIUM,
+    { topics: ['list assets', 'browse folder', 'content browser', 'assets in folder', 'directory listing', 'folder contents'], dispatchAction: 'list', examples: [ex('List first page', { path: '/Game' }, { success: true, assets: [], hasMore: false, nextCursor: null })] }
+  ),
+
+  r('import', 'asset', 'Import a file inside the project folder (sourcePath, relative to the project or absolute under it; a path outside is SECURITY_VIOLATION, a missing file SOURCE_NOT_FOUND) as an asset at destinationPath: a folder keeps the file name, an object path names it. An asset already there is replaced only with overwrite (DESTINATION_OCCUPIED otherwise): a plain file replaces it in place, keeping what points at it, while an FBX with skeleton or animation options deletes it first (REPLACE_FAILED while something still uses it). skeletonPath imports an FBX animation take onto that skeleton, or with importMesh binds the imported skeletal mesh to it. The reply names assetPath (the mesh when the file holds one), alsoImported (its takes, materials and textures) and saved (default true).',
+    schema({ sourcePath: SOURCE_PATH, destinationPath: str('The folder the asset goes in, e.g. /Game/Imports (it keeps the source file\'s name), or an object path such as /Game/Chars/SK_Hero.SK_Hero to name it.'), overwrite: bool('Replace an asset already at the destination; without it the import is refused with DESTINATION_OCCUPIED. A plain file replaces it in place; an FBX with skeleton or animation options deletes it first, so the old asset is not reimported with its own stored settings.'), save: bool('Save the imported asset. Defaults to true; pass false to keep it in memory only.'), importAnimations: bool('Import animation takes from an FBX. Off by default, which imports mesh only.'), skeletonPath: str('Existing skeleton, e.g. /Game/Chars/SK_Hero_Skeleton. Alone it imports the FBX\'s animation take ALONE against it (implies importAnimations); with importMesh it binds the imported skeletal mesh to it instead, so the mesh shares that skeleton\'s animations.'), importMesh: bool('With skeletonPath: import the skeletal mesh onto that skeleton (its takes too when importAnimations) instead of the take alone.'), createPhysicsAsset: bool('Skeletal mesh: make a physics asset for it (default true); false makes none.'), physicsAssetPath: str('Skeletal mesh: an existing physics asset to use instead of making one.'), importMorphTargets: bool('Skeletal mesh: import its morph targets (blend shapes).') }, ['sourcePath', 'destinationPath']),
+    IMPORT_OUTPUT, WRITE, WRITE_POLICY, MEDIUM,
+    { aliases: ['asset.import_asset'], topics: ['import fbx', 'import file', 'import mesh', 'import texture', 'import obj', 'import png', 'import wav', 'import sound file', 'import audio file', 'bring file into project', 'import animation', 'import mocap', 'fbx animation', 'import anim sequence', 'import mp3', 'import 3d model', 'add file to project', 'import image', 'import skeletal mesh', 'import character model', 'import onto existing skeleton', 'share a skeleton'],
+      whenToUse: [
+        'A source file inside the project folder (FBX, OBJ, PNG, WAV) must become an asset at a /Game path.',
+        'An FBX animation take must be imported onto an existing skeleton without importing the mesh again.',
+        'A character FBX must become a skeletal mesh bound to an existing skeleton (skeletonPath with importMesh), so it plays that skeleton\'s animations; createPhysicsAsset, physicsAssetPath and importMorphTargets shape the rest.',
+      ],
+      whenNotToUse: [
+        'The content is a Fab listing or a downloaded Megascans pack (use asset.import_marketplace_asset with marketplace=fab_listing or megascans).',
+        'Ready-made assets from an engine template, plugin or downloaded pack must be copied in as they are (use asset.maintain_content with maintenance=migrate).',
+      ],
+      examples: [ex('Import FBX', { sourcePath: '/tmp/mesh.fbx', destinationPath: '/Game/Imports/Mesh' }, { success: true }), ex('Import a mocap take onto an existing skeleton', { sourcePath: '/Game/../Imports/Mocap.fbx', destinationPath: '/Game/Anims/A_Mocap', importAnimations: true, skeletonPath: '/Game/Chars/SK_Hero_Skeleton' }, { success: true }), ex('Import a character onto an existing skeleton', { sourcePath: '/Game/../Imports/Hero.fbx', destinationPath: '/Game/Chars/SK_Hero.SK_Hero', skeletonPath: '/Game/Chars/SK_Mannequin_Skeleton', importMesh: true, createPhysicsAsset: false }, { success: true, assetPath: '/Game/Chars/SK_Hero', skeleton: '/Game/Chars/SK_Mannequin_Skeleton.SK_Mannequin_Skeleton', physicsAsset: '', bones: 68, morphTargets: 0 })] }
+  ),
+
+  r('duplicate', 'asset', 'Copy an asset, or a whole folder with its sub-folders, to a new path or name, and save the copies.',
+    DUPLICATE_INPUT, DUPLICATE_OUTPUT, WRITE, WRITE_POLICY, MEDIUM,
+    { topics: ['copy asset', 'clone asset', 'copy material', 'copy texture', 'duplicate material', 'duplicate blueprint', 'duplicate data table', 'make copy of asset', 'copy asset to another folder'],
+      whenToUse: [
+        'An asset needs a copy to edit safely while the original stays unchanged.',
+        'A whole folder must be copied with its sub-folders and every asset in it.',
+      ],
+      whenNotToUse: [
+        'The asset keeps its identity but changes name or folder (use asset.rename or asset.move).',
+        'A variant of a material with different parameter values is wanted, without copying its graph (use material.create_material_instance).',
+      ],
+      examples: [ex('Duplicate a material', { sourcePath: '/Game/Materials/M_Base', destinationPath: '/Game/Materials', newName: 'M_Base_Variant' }, { success: true })] }
+  ),
+  r('duplicate_asset', 'asset', 'Long-form alias for duplicate.',
+    DUPLICATE_INPUT, DUPLICATE_OUTPUT, WRITE, WRITE_POLICY, MEDIUM,
+    { 
+      examples: [ex('Duplicate via the long-form alias', { sourcePath: '/Game/Materials/M_Base', destinationPath: '/Game/Materials', newName: 'M_Base_Variant' }, { success: true })] }
+  ),
+
+  r('rename', 'asset', 'Rename an existing asset, or a whole folder, in place; settings that point at it follow.',
+    schema({ sourcePath: str('Source /Game asset path, or a folder: a folder is renamed with everything under it.'), destinationPath: DEST_PATH, newName: str('New asset name.') }, ['sourcePath']),
+    OK_OUTPUT, NON_IDEMPOTENT, WRITE_POLICY, MEDIUM,
+    { topics: ['rename asset'],
+      whenToUse: [
+        'An asset needs a new name in its own folder; settings that point at it (default map, game mode) follow.',
+        'A folder must get a new name and every asset under it must go along.',
+      ],
+      whenNotToUse: [
+        'Many assets need new names by pattern, prefix, suffix or a list (use asset.maintain_content with maintenance=bulk_rename).',
+        'A copy under a new name is wanted, with the original kept (use asset.duplicate).',
+      ],
+      examples: [ex('Rename a mesh in place', { sourcePath: '/Game/Meshes/SM_Crate', newName: 'SM_Crate_Large' }, { success: true })] }
+  ),
+  r('rename_asset', 'asset', 'Long-form alias for rename.',
+    schema({ sourcePath: str('Source /Game asset path.'), destinationPath: DEST_PATH, newName: str('New asset name.') }, ['sourcePath']),
+    OK_OUTPUT, NON_IDEMPOTENT, WRITE_POLICY, MEDIUM,
+    { 
+      examples: [ex('Rename via the long-form alias', { sourcePath: '/Game/Meshes/SM_Crate', newName: 'SM_Crate_Large' }, { success: true })] }
+  ),
+
+  r('move', 'asset', 'Move an asset, or a whole folder, to a new path; references and settings that point at it follow.',
+    schema({ sourcePath: str('Source /Game asset path, or a folder: everything under it moves into destinationPath, keeping sub-folders, and the emptied folder is removed.'), destinationPath: DEST_PATH, newName: str('Rename in place instead: the asset keeps its folder and takes this name (used when destinationPath is omitted).') }, ['sourcePath']),
+    OK_OUTPUT, NON_IDEMPOTENT, WRITE_POLICY, MEDIUM,
+    { topics: ['move asset', 'relocate asset', 'move folder', 'rename folder'],
+      whenToUse: [
+        'An asset must go to another folder; references and project settings (default map, game mode) that point at it follow.',
+        'A whole content folder must relocate with its sub-folders; its redirectors are resolved and the emptied source folder is removed.',
+      ],
+      whenNotToUse: [
+        'Only the name changes and the asset stays in its folder (use asset.rename).',
+        'The asset must be copied and the original left in place (use asset.duplicate).',
+      ],
+      examples: [
+        ex('Move a texture into a subfolder', { sourcePath: '/Game/Textures/T_Rock', destinationPath: '/Game/Textures/Terrain/T_Rock' }, { success: true }),
+        ex('Move a whole game folder', { sourcePath: '/Game/OldGame', destinationPath: '/Game/NewGame' }, { success: true }),
+      ] }
+  ),
+
+  r('delete', 'asset', 'Permanently delete one or more assets after explicit confirmation.',
+    schema({ paths: arr('Asset paths to delete.'), path: str('Single asset path (alternative to paths).'), assetPath: str('Alias for path (accepted for compatibility).'), force: bool('Delete an asset even when assets outside this delete still reference it (their references break). Default false: such an asset is kept and listed in referencedPaths, and so is one of this delete that only a kept asset uses. Folders are always deleted whole.') }, []),
+    OK_OUTPUT, DESTRUCTIVE, DESTRUCTIVE_POLICY, HIGH,
+    { topics: ['delete asset', 'remove asset', 'destroy asset'],
+      whenToUse: [
+        'One or several assets, or a whole folder, must be removed from the project for good.',
+        'An asset should go only if nothing else uses it; a still-referenced asset is kept and reported.',
+      ],
+      whenNotToUse: [
+        'A placed actor must leave the open level, not its asset (use inspect.delete_object).',
+        'The assets under a folder must go while the folder stays, with old redirectors there resolved in the same call (use asset.bulk_delete).',
+      ],
+      examples: [ex('Delete one asset', { paths: ['/Game/MCPTest/Disposable'] }, { success: true })] }
+  ),
+  r('delete_asset', 'asset', 'Long-form alias for delete.',
+    schema({ paths: arr('Asset paths to delete.'), path: str('Single asset path.'), assetPath: str('Alias for path (accepted for compatibility).'), force: bool('Delete an asset even when assets outside this delete still reference it (their references break). Default false: such an asset is kept and listed in referencedPaths, and so is one of this delete that only a kept asset uses. Folders are always deleted whole.') }, []),
+    OK_OUTPUT, DESTRUCTIVE, DESTRUCTIVE_POLICY, HIGH,
+    { 
+      examples: [ex('Delete a single asset by path', { path: '/Game/MCPTest/Disposable' }, { success: true })] }
+  ),
+  r('delete_assets', 'asset', 'Plural-form alias for delete.',
+    schema({ paths: arr('Asset paths to delete.'), path: str('Single asset path.'), assetPath: str('Alias for path (accepted for compatibility).'), force: bool('Delete an asset even when assets outside this delete still reference it (their references break). Default false: such an asset is kept and listed in referencedPaths, and so is one of this delete that only a kept asset uses. Folders are always deleted whole.') }, []),
+    OK_OUTPUT, DESTRUCTIVE, DESTRUCTIVE_POLICY, HIGH,
+    { 
+      examples: [ex('Delete several assets in one call', { paths: ['/Game/MCPTest/DisposableA', '/Game/MCPTest/DisposableB'] }, { success: true })] }
+  ),
+
+  r('create_folder', 'asset', 'Create a Content Browser folder at path (under /Game or another allowed root); one that exists already answers success with alreadyExisted true. An empty folder may be gone after an editor restart until an asset is saved in it.',
+    schema({ path: str('Folder path, e.g. /Game/Art/Props; a path outside the allowed roots is refused (INVALID_PATH).') }, ['path']),
+    OK_OUTPUT, WRITE, WRITE_POLICY, LOW,
+    { topics: ['make folder', 'new folder', 'create directory'],
+      whenToUse: [
+        'A new empty folder is wanted in the content browser, for example to organise assets before moving them in.',
+        'A folder must be ensured at a path without knowing whether it exists; alreadyExisted in the reply says which it was.',
+      ],
+      whenNotToUse: [
+        'An existing folder must change name or location (use asset.rename or asset.move).',
+        'The folder exists and its contents must be seen (use asset.list).',
+      ],
+      examples: [ex('Create folder', { path: '/Game/NewFolder' }, { success: true })] }
+  ),
+
+  r('search_assets', 'asset', 'Find or search assets by text, class, or package path with bounded pagination.',
+    schema({
+      searchText: str('Text to search for.'),
+      classNames: arr('Asset classes to filter: a short class name (StaticMesh, Blueprint, ObjectRedirector, InputMappingContext) or a full class path (/Script/Engine.StaticMesh).'),
+      packagePaths: arr('Package paths to search within.'),
+      recursivePaths: bool('Recurse into subdirectories.'),
+      recursiveClasses: bool('Recurse into child classes.'),
+      limit: boundedLimit(500, 50),
+      offset: num('Zero-based offset into the full result set.')
+    }, []),
+    PAGINATED_OUTPUT, READ, READ_POLICY, MEDIUM,
+    { aliases: ['asset.find_assets'], topics: ['find assets', 'search assets', 'assets by class', 'filter assets', 'query assets', 'assets of type', 'list sounds', 'list sound cues', 'list materials', 'list textures', 'list images', 'list meshes', 'list blueprints', 'list widget blueprints', 'list animations'],
+      whenToUse: ['Assets must be found across the project by name, class, folder or asset-registry tag.'],
+      whenNotToUse: ['Actors placed in the open level must be found (use control_actor.find).'],
+      examples: [ex('Search materials by name',
+        { searchText: 'M_Rock', classNames: ['Material'], packagePaths: ['/Game/Materials'], recursivePaths: true, limit: 25 },
+        { success: true, assets: [{ name: 'M_Rock', path: '/Game/Materials/M_Rock.M_Rock', class: 'Material', packagePath: '/Game/Materials' }], folders: [], totalCount: 1, count: 1, limit: 25, offset: 0, hasMore: false, nextOffset: 1, cursor: null, nextCursor: null })] }
+  ),
+
+  // search_assets matches asset names only; this reads what the assets and the open level contain.
+  r('find_text', 'asset', 'Find where a piece of text appears: Blueprint graph nodes by title (every call of a function, by its name as the graph shows it), literals, assets picked on pins and comments, variable and component defaults (a reference to another asset matches by its path, so a sound name finds the node or component that plays it), widget texts, DataTable rows, String Table entries, and the actors of the open level.',
+    schema({
+      searchText: str('Text to search for.'),
+      packagePaths: arr('Package paths to search within.'),
+      caseSensitive: bool('Match letter case (default false).'),
+      includeLevel: bool('Also search the actors and components of the open level: true or false outright; omitted, only when that level lies under packagePaths (always with the default /Game).'),
+      limit: boundedLimit(500, 50)
+    }, ['searchText']),
+    schema({
+      success: bool('Operation succeeded.'),
+      matches: arrObj('Each match: asset, where (graph and node title, widget, row, string key or actor label), field, the full text, and nodeId for a graph literal.'),
+      matchCount: num('Every match found; more than the matches returned when truncated.'),
+      scannedAssets: num('Blueprints, DataTables and String Tables searched.'),
+      truncated: bool('True when limit cut the list; raise limit to see the rest.')
+    }, ['success', 'matches', 'matchCount']),
+    READ, READ_POLICY, MEDIUM,
+    { topics: ['find text', 'search text', 'find string', 'where is text used', 'text in widgets', 'text in blueprints', 'find literal'],
+      whenToUse: ['A piece of text, such as a UI label or dialogue line, must be traced to the Blueprint, widget, table row or level actor holding it.'],
+      whenNotToUse: ['One known Blueprint graph must be read node by node (use blueprint.inspect_graph).'],
+      examples: [ex('Find a string in the UI and the open level',
+        { searchText: 'Game Over', packagePaths: ['/Game/UI'] },
+        { success: true, matches: [{ asset: '/Game/UI/WBP_HUD.WBP_HUD', where: 'GameOverText', field: 'Text', text: 'Game Over' }], matchCount: 1, scannedAssets: 12, truncated: false })] }
+  )
+];

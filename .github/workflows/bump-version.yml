@@ -39,14 +39,14 @@ jobs:
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           fetch-depth: 0
           ref: ${{ github.event.inputs.branch || 'main' }}
           token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Setup Node.js
-        uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6.4.0
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version: "20"
           cache: "npm"
@@ -68,9 +68,9 @@ jobs:
         env:
           VERSION_INPUT: ${{ github.event.inputs.version }}
         run: |
-          if [[ ! "$VERSION_INPUT" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+          if [[ ! "$VERSION_INPUT" =~ ^[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.-]+)?$ ]]; then
             echo "❌ Invalid version format: $VERSION_INPUT"
-            echo "Version must be in semver format: X.Y.Z"
+            echo "Version must be in semver format: X.Y.Z or X.Y.Z-prerelease"
             exit 1
           fi
           echo "✅ Version format validated: $VERSION_INPUT"
@@ -144,16 +144,25 @@ jobs:
           jq --arg v "$VERSION" '.version = $v | .packages[] |= if .registryType == "npm" then .version = $v else . end' server.json > tmp && mv tmp server.json
           echo "✅ Updated server.json to $VERSION"
 
-      - name: Update src/index.ts
+      - name: Update EngineWire.uplugin
         env:
           FINAL_VERSION: ${{ steps.final_version.outputs.version }}
         run: |
           VERSION="$FINAL_VERSION"
-
-          # Update only the DEFAULT_SERVER_VERSION fallback string (targeted replacement)
-          perl -0777 -i -pe "s/(const DEFAULT_SERVER_VERSION[\\s\\S]*?:\\s*)'[^']+';/\${1}'$VERSION';/" src/index.ts
-
-          echo "✅ Updated src/index.ts DEFAULT_SERVER_VERSION fallback to $VERSION"
+          # Unreal reads the INTEGER `Version` as the plugin's real version and
+          # `VersionName` only for display. This step used to rewrite the name
+          # alone, so Version stayed frozen at 530 (the 0.5.30 encoding) while
+          # the plugin shipped 0.6.0. The encoding continues what 530 started:
+          # major*10000 + minor*100 + patch, which stays monotonic past 1.0.0.
+          # tests/unit/version-consistency.test.ts gates the two agreeing.
+          CORE="${VERSION%%-*}"
+          MAJOR="${CORE%%.*}"
+          REST="${CORE#*.}"
+          MINOR="${REST%%.*}"
+          PATCH="${REST#*.}"
+          NUMERIC=$(( MAJOR * 10000 + MINOR * 100 + PATCH ))
+          jq --arg v "$VERSION" --argjson n "$NUMERIC"             '.VersionName = $v | .Version = $n'             plugins/EngineWire/EngineWire.uplugin > tmp             && mv tmp plugins/EngineWire/EngineWire.uplugin
+          echo "✅ Updated EngineWire.uplugin to $VERSION (Version $NUMERIC)"
 
       - name: Verify no hardcoded npm versions remain
         env:
@@ -251,6 +260,12 @@ jobs:
           echo "### Detailed Changes:"
           git diff
 
+      - name: Verify version sources agree
+        run: |
+          npm ci
+          npm run version:check
+          echo "✅ All version sources agree after the bump"
+
       - name: Commit changes
         env:
           FINAL_VERSION: ${{ steps.final_version.outputs.version }}
@@ -264,7 +279,8 @@ jobs:
             COMMIT_MESSAGE="chore: bump version to v$VERSION"
           fi
 
-          git add package.json package-lock.json server.json src/index.ts
+          git add package.json package-lock.json server.json \
+            plugins/EngineWire/EngineWire.uplugin
 
           if [ "$CREATE_CHANGELOG" == "true" ]; then
             git add CHANGELOG.md
@@ -299,7 +315,7 @@ jobs:
           echo "### 📦 Files Updated:" >> $GITHUB_STEP_SUMMARY
           echo "- \`package.json\`" >> $GITHUB_STEP_SUMMARY
           echo "- \`server.json\` (2 occurrences)" >> $GITHUB_STEP_SUMMARY
-          echo "- \`src/index.ts\`" >> $GITHUB_STEP_SUMMARY
+          echo "- \`plugins/EngineWire/EngineWire.uplugin\` (VersionName)" >> $GITHUB_STEP_SUMMARY
 
           if [ "$CREATE_CHANGELOG" == "true" ]; then
             echo "- \`CHANGELOG.md\`" >> $GITHUB_STEP_SUMMARY

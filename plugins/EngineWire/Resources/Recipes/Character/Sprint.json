@@ -1,0 +1,40 @@
+{
+  "description": "Sprint for a Character: while the key is held, the CharacterMovement component's MaxWalkSpeed is SprintSpeed; on release it goes back to the walk speed the character had at BeginPlay. The key gets its own Input Action and mapping, and the context is registered when the character is possessed.",
+  "tag": "Sprint",
+  "placeholders": {
+    "Key": "Key held to sprint, e.g. LeftShift.",
+    "SprintSpeed": "MaxWalkSpeed while sprinting, in cm/s.",
+    "InputAction": "Input Action asset to use, or empty for IA_Sprint next to the Blueprint.",
+    "MappingContext": "Input Mapping Context the key goes in, or empty for the one the character registers (else /Game/Input/IMC_MCP)."
+  },
+  "variables": [
+    { "variableName": "SprintSpeed", "variableType": "Float", "defaultValue": "{{SprintSpeed}}", "category": "Sprint", "instanceEditable": true },
+    { "variableName": "WalkSpeed", "variableType": "Float", "defaultValue": 0, "category": "Sprint" }
+  ],
+  "hooks": [
+    { "id": "sprintBegin", "event": "BeginPlay" }
+  ],
+  "input": { "id": "sprintInput", "key": "{{Key}}", "inputActionPath": "{{InputAction}}", "mappingContextPath": "{{MappingContext}}" },
+  "eventGraph": [
+    { "edit": "create_node", "id": "sbMove", "nodeType": "VariableGet", "memberName": "CharacterMovement", "memberClass": "/Script/Engine.Character" },
+    { "edit": "create_node", "id": "sbSpeed", "nodeType": "VariableGet", "memberName": "MaxWalkSpeed", "memberClass": "/Script/Engine.CharacterMovementComponent" },
+    { "edit": "create_node", "id": "sbSave", "nodeType": "VariableSet", "memberName": "WalkSpeed" },
+    { "edit": "connect_pins", "from": "$sbMove.CharacterMovement", "to": "$sbSpeed.self" },
+    { "edit": "connect_pins", "from": "$sbSpeed.MaxWalkSpeed", "to": "$sbSave.WalkSpeed" },
+    { "edit": "connect_pins", "from": "$sprintBegin.then", "to": "$sbSave.execute" },
+
+    { "edit": "create_node", "id": "ssMove", "nodeType": "VariableGet", "memberName": "CharacterMovement", "memberClass": "/Script/Engine.Character" },
+    { "edit": "create_node", "id": "ssSpeed", "nodeType": "VariableGet", "memberName": "SprintSpeed" },
+    { "edit": "create_node", "id": "ssSet", "nodeType": "VariableSet", "memberName": "MaxWalkSpeed", "memberClass": "/Script/Engine.CharacterMovementComponent" },
+    { "edit": "connect_pins", "from": "$ssMove.CharacterMovement", "to": "$ssSet.self" },
+    { "edit": "connect_pins", "from": "$ssSpeed.SprintSpeed", "to": "$ssSet.MaxWalkSpeed" },
+    { "edit": "connect_pins", "from": "$sprintInput.Started", "to": "$ssSet.execute" },
+
+    { "edit": "create_node", "id": "scMove", "nodeType": "VariableGet", "memberName": "CharacterMovement", "memberClass": "/Script/Engine.Character" },
+    { "edit": "create_node", "id": "scWalk", "nodeType": "VariableGet", "memberName": "WalkSpeed" },
+    { "edit": "create_node", "id": "scSet", "nodeType": "VariableSet", "memberName": "MaxWalkSpeed", "memberClass": "/Script/Engine.CharacterMovementComponent" },
+    { "edit": "connect_pins", "from": "$scMove.CharacterMovement", "to": "$scSet.self" },
+    { "edit": "connect_pins", "from": "$scWalk.WalkSpeed", "to": "$scSet.MaxWalkSpeed" },
+    { "edit": "connect_pins", "from": "$sprintInput.Completed", "to": "$scSet.execute" }
+  ]
+}

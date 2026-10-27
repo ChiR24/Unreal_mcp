@@ -25,7 +25,6 @@ const EXPECTED_SWITCH_PATH = `${TEST_FOLDER}/${SWITCH_NAME}.${SWITCH_NAME}`;
 const EXPECTED_CHEST_PATH = `${TEST_FOLDER}/${CHEST_NAME}.${CHEST_NAME}`;
 const EXPECTED_LEVER_PATH = `${TEST_FOLDER}/${LEVER_NAME}.${LEVER_NAME}`;
 const EXPECTED_TRIGGER_PATH = `${TEST_FOLDER}/${TRIGGER_NAME}.${TRIGGER_NAME}`;
-const TEST_WIDGET_CLASS = '/Script/UMG.UserWidget';
 const TEST_LOOT_TABLE_PATH = `${TEST_FOLDER}/LT_MCP_Test`;
 
 const blueprintPath = '${captured:blueprintPath}';
@@ -36,12 +35,11 @@ const triggerPath = '${captured:triggerPath}';
 
 const testCases = [
   // === SETUP ===
-  { scenario: 'Setup: create test folder', toolName: 'manage_asset', arguments: { action: 'create_folder', path: TEST_FOLDER }, expected: 'success|already exists' },
-  { scenario: 'Setup: spawn destructible target actor', toolName: 'control_actor', arguments: { action: 'spawn', classPath: '/Engine/BasicShapes/Cube', actorName: TEST_ACTOR, location: { x: 0, y: 0, z: 100 } }, expected: 'success', assertions: [{ path: 'structuredContent.result.actorName', equals: TEST_ACTOR, label: 'destructible target actor spawned' }] },
+  { scenario: 'Setup: spawn target actor', toolName: 'control_actor', arguments: { action: 'spawn', classPath: '/Engine/BasicShapes/Cube', actorName: TEST_ACTOR, location: { x: 0, y: 0, z: 100 } }, expected: 'success', assertions: [{ path: 'structuredContent.result.actorName', equals: TEST_ACTOR, label: 'destructible target actor spawned' }] },
   {
     scenario: 'Setup: create interaction actor blueprint',
     toolName: 'manage_blueprint',
-    arguments: { action: 'create', name: BLUEPRINT_NAME, path: TEST_FOLDER, parentClass: 'Actor' },
+    arguments: { action: 'create', name: BLUEPRINT_NAME, savePath: TEST_FOLDER, parentClass: 'Actor' },
     expected: 'success',
     captureResult: { key: 'blueprintPath', fromField: 'result.assetPath' },
     assertions: [{ path: 'structuredContent.result.assetPath', equals: EXPECTED_BLUEPRINT_PATH, label: 'interaction target blueprint path returned' }]
@@ -50,36 +48,38 @@ const testCases = [
   // === INTERACTION COMPONENT ===
   { scenario: 'CREATE: create_interaction_component', toolName: 'manage_interaction', arguments: { action: 'create_interaction_component', blueprintPath, componentName: 'InteractionComponent', traceDistance: 250 }, expected: 'success', assertions: [{ path: 'structuredContent.result.componentAdded', equals: true, label: 'interaction component added' }, { path: 'structuredContent.result.componentName', equals: 'InteractionComponent', label: 'interaction component name returned' }, { path: 'structuredContent.result.assetPath', equals: EXPECTED_BLUEPRINT_PATH, label: 'interaction component target verified' }] },
   { scenario: 'CONFIG: configure_interaction_trace', toolName: 'manage_interaction', arguments: { action: 'configure_interaction_trace', blueprintPath, traceType: 'sphere', traceDistance: 375, traceRadius: 80 }, expected: 'success', assertions: [{ path: 'structuredContent.result.traceType', equals: 'sphere', label: 'interaction trace type configured' }, { path: 'structuredContent.result.traceDistance', equals: 375, label: 'interaction trace distance configured' }, { path: 'structuredContent.result.traceRadius', equals: 80, label: 'interaction trace radius configured' }, { path: 'structuredContent.result.configured', equals: true, label: 'interaction trace configured flag returned' }] },
-  { scenario: 'CONFIG: configure_interaction_widget', toolName: 'manage_interaction', arguments: { action: 'configure_interaction_widget', blueprintPath, widgetClass: TEST_WIDGET_CLASS, showOnHover: true, showPromptText: false, promptTextFormat: 'Use {Key}' }, expected: 'success', assertions: [{ path: 'structuredContent.result.widgetClass', equals: TEST_WIDGET_CLASS, label: 'interaction widget class returned' }, { path: 'structuredContent.result.showOnHover', equals: true, label: 'interaction widget hover enabled' }, { path: 'structuredContent.result.showPromptText', equals: false, label: 'interaction widget prompt flag configured' }, { path: 'structuredContent.result.promptTextFormat', equals: 'Use {Key}', label: 'interaction widget prompt format configured' }, { path: 'structuredContent.result.blueprintPath', equals: EXPECTED_BLUEPRINT_PATH, label: 'interaction widget target returned' }] },
-  { scenario: 'ADD: add_interaction_events', toolName: 'manage_interaction', arguments: { action: 'add_interaction_events', blueprintPath }, expected: 'success', assertions: [{ path: 'structuredContent.result.eventsAdded', length: 4, label: 'interaction event dispatchers added' }, { path: 'structuredContent.result.eventCount', equals: 4, label: 'interaction event count returned' }, { path: 'structuredContent.result.blueprintPath', equals: EXPECTED_BLUEPRINT_PATH, label: 'interaction events target returned' }] },
 
   // === INTERACTABLES ===
   { scenario: 'CREATE: create_interactable_interface', toolName: 'manage_interaction', arguments: { action: 'create_interactable_interface', name: INTERFACE_NAME, folder: TEST_FOLDER_ALIAS }, expected: 'success', assertions: [{ path: 'structuredContent.result.interfacePath', equals: EXPECTED_INTERFACE_PATH, label: 'interactable interface path returned' }, { path: 'structuredContent.result.created', equals: true, label: 'interactable interface created' }, { path: 'structuredContent.result.functionsAdded', length: 3, label: 'interactable interface functions added' }] },
   {
     scenario: 'CREATE: create_door_actor',
     toolName: 'manage_interaction',
-    arguments: { action: 'create_door_actor', name: DOOR_NAME, folder: TEST_FOLDER, openAngle: 110, openTime: 0.75, autoClose: true, autoCloseDelay: 2.5, requiresKey: true },
+    arguments: { action: 'create_door_actor', name: DOOR_NAME, folder: TEST_FOLDER, openAngle: 110, openTime: 0.75, autoClose: true, autoCloseDelay: 2.5, requiresKey: true, locked: true },
     expected: 'success',
     captureResult: { key: 'doorPath', fromField: 'result.assetPath' },
-    assertions: [{ path: 'structuredContent.result.openAngle', equals: 110, label: 'door open angle set at creation' }, { path: 'structuredContent.result.openTime', equals: 0.75, label: 'door open time set at creation' }, { path: 'structuredContent.result.autoClose', equals: true, label: 'door auto-close set at creation' }, { path: 'structuredContent.result.requiresKey', equals: true, label: 'door key requirement set at creation' }, { path: 'structuredContent.result.assetPath', equals: EXPECTED_DOOR_PATH, label: 'door asset path returned' }]
+    assertions: [{ path: 'structuredContent.result.openAngle', equals: 110, label: 'door open angle set at creation' }, { path: 'structuredContent.result.openTime', equals: 0.75, label: 'door open time set at creation' }, { path: 'structuredContent.result.autoClose', equals: true, label: 'door auto-close set at creation' }, { path: 'structuredContent.result.requiresKey', equals: true, label: 'door key requirement set at creation' }, { path: 'structuredContent.result.assetPath', equals: EXPECTED_DOOR_PATH, label: 'door asset path returned' }, { path: 'structuredContent.result.opensOnApproach', equals: true, label: 'door opening logic written' }, { path: 'structuredContent.result.compiled', equals: true, label: 'door compiles with its opening logic' }]
   },
+  { scenario: 'CREATE: create_door_actor again on the existing door', toolName: 'manage_interaction', arguments: { action: 'create_door_actor', name: DOOR_NAME, folder: TEST_FOLDER }, expected: 'success', assertions: [{ path: 'structuredContent.result.alreadyExisted', equals: true, label: 'existing door answered' }, { path: 'structuredContent.result.opensOnApproach', equals: true, label: 'existing door keeps one opening logic' }] },
   { scenario: 'CONFIG: configure_door_properties', toolName: 'manage_interaction', arguments: { action: 'configure_door_properties', doorPath, openAngle: 95, openTime: 1.25, locked: true }, expected: 'success', assertions: [{ path: 'structuredContent.result.doorPath', equals: EXPECTED_DOOR_PATH, label: 'door config target returned' }, { path: 'structuredContent.result.openAngle', equals: 95, label: 'door config open angle applied' }, { path: 'structuredContent.result.openTime', equals: 1.25, label: 'door config open time applied' }, { path: 'structuredContent.result.locked', equals: true, label: 'door locked flag applied' }] },
+  { scenario: 'CONFIG: configure_door_properties changes only what it is given', toolName: 'manage_interaction', arguments: { action: 'configure_door_properties', doorPath, openAngle: 100 }, expected: 'success', assertions: [{ path: 'structuredContent.result.openAngle', equals: 100, label: 'door angle changed' }] },
   {
     scenario: 'CREATE: create_switch_actor',
     toolName: 'manage_interaction',
     arguments: { action: 'create_switch_actor', name: SWITCH_NAME, folder: TEST_FOLDER, switchType: 'lever' },
     expected: 'success',
     captureResult: { key: 'switchPath', fromField: 'result.switchPath' },
-    assertions: [{ path: 'structuredContent.result.switchPath', equals: EXPECTED_SWITCH_PATH, label: 'switch path returned' }, { path: 'structuredContent.result.switchType', equals: 'lever', label: 'switch type set at creation' }]
+    assertions: [{ path: 'structuredContent.result.switchPath', equals: EXPECTED_SWITCH_PATH, label: 'switch path returned' }, { path: 'structuredContent.result.switchType', equals: 'lever', label: 'switch type set at creation' }, { path: 'structuredContent.result.dispatcher', equals: 'OnSwitchChanged', label: 'the switch fires OnSwitchChanged' }, { path: 'structuredContent.result.compiled', equals: true, label: 'the switch compiles with its logic' }]
   },
-  { scenario: 'CONFIG: configure_switch_properties', toolName: 'manage_interaction', arguments: { action: 'configure_switch_properties', switchPath, switchType: 'pressure_plate', canToggle: false, resetTime: 3.5 }, expected: 'success', assertions: [{ path: 'structuredContent.result.switchPath', equals: EXPECTED_SWITCH_PATH, label: 'switch config target returned' }, { path: 'structuredContent.result.switchType', equals: 'pressure_plate', label: 'switch config type applied' }, { path: 'structuredContent.result.canToggle', equals: false, label: 'switch toggle flag applied' }, { path: 'structuredContent.result.resetTime', equals: 3.5, label: 'switch reset time applied' }] },
+  { scenario: 'CONFIG: configure_switch_properties', toolName: 'manage_interaction', arguments: { action: 'configure_switch_properties', switchPath, switchType: 'pressure_plate', canToggle: false, resetTime: 3.5 }, expected: 'success', assertions: [{ path: 'structuredContent.result.switchPath', equals: EXPECTED_SWITCH_PATH, label: 'switch config target returned' }, { path: 'structuredContent.result.switchType', equals: 'pressure_plate', label: 'switch config type applied' }, { path: 'structuredContent.result.canToggle', equals: false, label: 'switch toggle flag applied' }, { path: 'structuredContent.result.resetTime', equals: 3.5, label: 'switch reset time applied' }, { path: 'structuredContent.result.dispatcher', equals: 'OnSwitchChanged', label: 'the plate logic replaced the press logic' }] },
+  { scenario: 'CONFIG: configure_door_properties makes the door follow the switch', toolName: 'manage_interaction', arguments: { action: 'configure_door_properties', doorPath, switchPath }, expected: 'success', assertions: [{ path: 'structuredContent.result.followsSwitch', equals: EXPECTED_SWITCH_PATH, label: 'the door follows that switch' }, { path: 'structuredContent.result.locked', equals: true, label: 'walking up no longer opens it' }, { path: 'structuredContent.result.compiled', equals: true, label: 'the door compiles with the link' }] },
+  { scenario: 'ERROR: configure_door_properties refuses a switchPath without OnSwitchChanged', toolName: 'manage_interaction', arguments: { action: 'configure_door_properties', doorPath, switchPath: blueprintPath }, expected: 'error|DISPATCHER_NOT_FOUND' },
   {
     scenario: 'CREATE: create_chest_actor',
     toolName: 'manage_interaction',
-    arguments: { action: 'create_chest_actor', name: CHEST_NAME, folder: TEST_FOLDER, locked: true },
+    arguments: { action: 'create_chest_actor', name: CHEST_NAME, folder: TEST_FOLDER, locked: true, openAngle: 110, openTime: 0.4, autoClose: true, autoCloseDelay: 1.5 },
     expected: 'success',
     captureResult: { key: 'chestPath', fromField: 'result.chestPath' },
-    assertions: [{ path: 'structuredContent.result.chestPath', equals: EXPECTED_CHEST_PATH, label: 'chest path returned' }, { path: 'structuredContent.result.locked', equals: true, label: 'chest locked at creation' }]
+    assertions: [{ path: 'structuredContent.result.chestPath', equals: EXPECTED_CHEST_PATH, label: 'chest path returned' }, { path: 'structuredContent.result.locked', equals: true, label: 'chest locked at creation' }, { path: 'structuredContent.result.opensOnApproach', equals: true, label: 'chest lid opening logic written' }, { path: 'structuredContent.result.compiled', equals: true, label: 'chest compiles with its opening logic' }]
   },
   { scenario: 'CONFIG: configure_chest_properties', toolName: 'manage_interaction', arguments: { action: 'configure_chest_properties', chestPath, locked: false, openAngle: 75, openTime: 0.6, lootTablePath: TEST_LOOT_TABLE_PATH }, expected: 'success', assertions: [{ path: 'structuredContent.result.chestPath', equals: EXPECTED_CHEST_PATH, label: 'chest config target returned' }, { path: 'structuredContent.result.locked', equals: false, label: 'chest locked flag configured' }, { path: 'structuredContent.result.openAngle', equals: 75, label: 'chest open angle configured' }, { path: 'structuredContent.result.openTime', equals: 0.6, label: 'chest open time configured' }, { path: 'structuredContent.result.lootTablePath', equals: TEST_LOOT_TABLE_PATH, label: 'chest loot table path returned' }] },
   {
@@ -88,15 +88,10 @@ const testCases = [
     arguments: { action: 'create_lever_actor', name: LEVER_NAME, folder: TEST_FOLDER },
     expected: 'success',
     captureResult: { key: 'leverPath', fromField: 'result.leverPath' },
-    assertions: [{ path: 'structuredContent.result.leverPath', equals: EXPECTED_LEVER_PATH, label: 'lever path returned' }, { path: 'structuredContent.result.blueprintPath', equals: EXPECTED_LEVER_PATH, label: 'lever blueprint path returned' }]
+    assertions: [{ path: 'structuredContent.result.leverPath', equals: EXPECTED_LEVER_PATH, label: 'lever path returned' }, { path: 'structuredContent.result.blueprintPath', equals: EXPECTED_LEVER_PATH, label: 'lever blueprint path returned' }, { path: 'structuredContent.result.dispatcher', equals: 'OnSwitchChanged', label: 'the lever fires OnSwitchChanged' }]
   },
 
   // === DESTRUCTIBLES ===
-  { scenario: 'ACTION: setup_destructible_mesh', toolName: 'manage_interaction', arguments: { action: 'setup_destructible_mesh', actorName: TEST_ACTOR }, expected: 'success', assertions: [{ path: 'structuredContent.result.actorName', equals: TEST_ACTOR, label: 'destructible mesh actor target returned' }, { path: 'structuredContent.result.configured', equals: true, label: 'destructible mesh configured flag returned' }, { path: 'structuredContent.result.tagAdded', equals: 'MCP_DestructibleMeshConfigured', label: 'destructible mesh actor tag added' }] },
-  { scenario: 'CONFIG: configure_destruction_levels', toolName: 'manage_interaction', arguments: { action: 'configure_destruction_levels', actorName: TEST_ACTOR }, expected: 'success', assertions: [{ path: 'structuredContent.result.actorName', equals: TEST_ACTOR, label: 'destruction levels actor target returned' }, { path: 'structuredContent.result.configured', equals: true, label: 'destruction levels configured flag returned' }, { path: 'structuredContent.result.tagAdded', equals: 'MCP_DestructionLevelsConfigured', label: 'destruction levels actor tag added' }] },
-  { scenario: 'CONFIG: configure_destruction_effects', toolName: 'manage_interaction', arguments: { action: 'configure_destruction_effects', actorName: TEST_ACTOR }, expected: 'success', assertions: [{ path: 'structuredContent.result.actorName', equals: TEST_ACTOR, label: 'destruction effects actor target returned' }, { path: 'structuredContent.result.configured', equals: true, label: 'destruction effects configured flag returned' }, { path: 'structuredContent.result.tagAdded', equals: 'MCP_DestructionEffectsConfigured', label: 'destruction effects actor tag added' }] },
-  { scenario: 'CONFIG: configure_destruction_damage', toolName: 'manage_interaction', arguments: { action: 'configure_destruction_damage', actorName: TEST_ACTOR }, expected: 'success', assertions: [{ path: 'structuredContent.result.actorName', equals: TEST_ACTOR, label: 'destruction damage actor target returned' }, { path: 'structuredContent.result.configured', equals: true, label: 'destruction damage configured flag returned' }, { path: 'structuredContent.result.tagAdded', equals: 'MCP_DestructionDamageConfigured', label: 'destruction damage actor tag added' }] },
-  { scenario: 'ADD: add_destruction_component', toolName: 'manage_interaction', arguments: { action: 'add_destruction_component', blueprintPath, componentName: 'DestructionComponent' }, expected: 'success', assertions: [{ path: 'structuredContent.result.componentAdded', equals: true, label: 'destruction component added' }, { path: 'structuredContent.result.componentName', equals: 'DestructionComponent', label: 'destruction component name returned' }, { path: 'structuredContent.result.variablesAdded', length: 4, label: 'destruction variables added' }] },
 
   // === TRIGGERS ===
   {
@@ -105,18 +100,19 @@ const testCases = [
     arguments: { action: 'create_trigger_actor', name: TRIGGER_NAME, folder: TEST_FOLDER, triggerShape: 'sphere' },
     expected: 'success',
     captureResult: { key: 'triggerPath', fromField: 'result.triggerPath' },
-    assertions: [{ path: 'structuredContent.result.triggerPath', equals: EXPECTED_TRIGGER_PATH, label: 'trigger path returned' }, { path: 'structuredContent.result.triggerShape', equals: 'sphere', label: 'trigger shape set at creation' }]
+    assertions: [{ path: 'structuredContent.result.triggerPath', equals: EXPECTED_TRIGGER_PATH, label: 'trigger path returned' }, { path: 'structuredContent.result.triggerShape', equals: 'sphere', label: 'trigger shape set at creation' }, { path: 'structuredContent.result.dispatcher', equals: 'OnSwitchChanged', label: 'the trigger fires OnSwitchChanged while a pawn is inside' }]
   },
-  { scenario: 'CONFIG: configure_trigger_events', toolName: 'manage_interaction', arguments: { action: 'configure_trigger_events', triggerPath }, expected: 'success', assertions: [{ path: 'structuredContent.result.configured', equals: true, label: 'trigger events configured flag returned' }, { path: 'structuredContent.result.eventCount', equals: 3, label: 'trigger event dispatchers added' }, { path: 'structuredContent.result.eventsAdded', length: 3, label: 'trigger event names returned' }] },
-  { scenario: 'CONFIG: configure_trigger_filter', toolName: 'manage_interaction', arguments: { action: 'configure_trigger_filter', triggerPath }, expected: 'success', assertions: [{ path: 'structuredContent.result.triggerPath', equals: EXPECTED_TRIGGER_PATH, label: 'trigger filter target returned' }, { path: 'structuredContent.result.configured', equals: true, label: 'trigger filter configured flag returned' }, { path: 'structuredContent.result.variablesAdded', length: 2, label: 'trigger filter variables added' }] },
-  { scenario: 'CONFIG: configure_trigger_response', toolName: 'manage_interaction', arguments: { action: 'configure_trigger_response', triggerPath }, expected: 'success', assertions: [{ path: 'structuredContent.result.triggerPath', equals: EXPECTED_TRIGGER_PATH, label: 'trigger response target returned' }, { path: 'structuredContent.result.configured', equals: true, label: 'trigger response configured flag returned' }, { path: 'structuredContent.result.variablesAdded', length: 2, label: 'trigger response variables added' }] },
 
   // === INFO ===
   { scenario: 'INFO: get_interaction_info blueprint', toolName: 'manage_interaction', arguments: { action: 'get_interaction_info', blueprintPath }, expected: 'success', assertions: [{ path: 'structuredContent.result.assetType', equals: 'Blueprint', label: 'interaction info reports blueprint asset type' }, { path: 'structuredContent.result.blueprintPath', equals: EXPECTED_BLUEPRINT_PATH, label: 'interaction info returns blueprint path' }, { path: 'structuredContent.result.blueprintName', equals: BLUEPRINT_NAME, label: 'interaction info returns blueprint name' }] },
+  // params envelope: clients that cannot send arbitrary top-level fields nest them
+  // under `params`, which is merged with top-level arguments before routing.
+  { scenario: 'INFO: get_interaction_info blueprint via params envelope', toolName: 'manage_interaction', arguments: { action: 'get_interaction_info', params: { blueprintPath } }, expected: 'success', assertions: [{ path: 'structuredContent.result.assetType', equals: 'Blueprint', label: 'nested params selected the blueprint asset branch' }, { path: 'structuredContent.result.blueprintPath', equals: EXPECTED_BLUEPRINT_PATH, label: 'nested params resolved the same interaction blueprint' }] },
 
   // === CLEANUP ===
+  { scenario: 'INFO: get_interaction_info trigger', toolName: 'manage_interaction', arguments: { action: 'get_interaction_info', triggerPath }, expected: 'success', assertions: [{ path: 'structuredContent.result.assetType', equals: 'Trigger', label: 'interaction info reports trigger asset type' }] },
+  { scenario: 'INFO: get_interaction_info actor', toolName: 'manage_interaction', arguments: { action: 'get_interaction_info', actorName: TEST_ACTOR }, expected: 'success', assertions: [{ path: 'structuredContent.result.assetType', equals: 'Actor', label: 'interaction info reports placed actor' }] },
   { scenario: 'Cleanup: delete test actor', toolName: 'control_actor', arguments: { action: 'delete', actorName: TEST_ACTOR }, expected: 'success|not found' },
-  { scenario: 'Cleanup: delete test folder', toolName: 'manage_asset', arguments: { action: 'delete', path: TEST_FOLDER, force: true }, expected: 'success|not found' },
 ];
 
-runToolTests('manage-interaction', testCases);
+runToolTests('manage-interaction', testCases, { folder: TEST_FOLDER });

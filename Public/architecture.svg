@@ -1,0 +1,60 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1280" height="480" viewBox="0 0 1280 480">
+  <defs>
+    <style>
+      text { font-family: "Segoe UI", -apple-system, BlinkMacSystemFont, "Helvetica Neue", Helvetica, Arial, sans-serif; }
+      .nt { font-size: 19px; font-weight: 700; fill: #f4fbe6; }
+      .nd { font-size: 19px; font-weight: 700; fill: #0a0c05; }
+      .ns { font-size: 14px; font-weight: 600; fill: #f4fbe6; fill-opacity: .8; }
+      .nsd { font-size: 14px; font-weight: 600; fill: #0a0c05; fill-opacity: .72; }
+      .pl { font-size: 16px; fill: #b9c0ad; }
+      .pt { font-size: 16px; fill: #e9f0de; }
+      .tag { font-size: 14px; font-weight: 700; fill: #0a0c05; }
+      .frame { font-size: 15px; font-weight: 700; letter-spacing: 2px; fill: #9aa38c; }
+      .cap { font-size: 15px; fill: #8a9180; }
+    </style>
+    <pattern id="gMinor" width="16" height="16" patternUnits="userSpaceOnUse"><path d="M16 0H0V16" fill="none" stroke="#e8ffd0" stroke-opacity="0.03"/></pattern>
+    <pattern id="gMajor" width="128" height="128" patternUnits="userSpaceOnUse"><path d="M128 0H0V128" fill="none" stroke="#e8ffd0" stroke-opacity="0.06"/></pattern>
+    <radialGradient id="glow" cx="0.5" cy="0.5" r="0.5"><stop offset="0" stop-color="#9dff2e" stop-opacity="0.2"/><stop offset="1" stop-color="#9dff2e" stop-opacity="0"/></radialGradient>
+    <clipPath id="card"><rect width="1280" height="480" rx="18"/></clipPath>
+  </defs>
+  <g clip-path="url(#card)">
+    <rect width="1280" height="480" fill="#0a0b0a"/>
+    <rect width="1280" height="480" fill="url(#gMinor)"/>
+    <rect width="1280" height="480" fill="url(#gMajor)"/>
+    <ellipse cx="1000" cy="240" rx="460.8" ry="288" fill="url(#glow)"/>
+    <rect x="764" y="34" width="476" height="404" rx="16" fill="#060607" fill-opacity="0.45" stroke="#d4ff3a" stroke-opacity="0.32" stroke-dasharray="7 6"/>
+    <text class="frame" x="790" y="66">UNREAL EDITOR</text>
+    <path d="M287 166 C 546 166, 546 146, 805 146" fill="none" stroke="#d4ff3a" stroke-width="3" stroke-linecap="round"/>
+    <path d="M287 294 C 353 294, 353 362, 419 362" fill="none" stroke="#6be4ff" stroke-width="3" stroke-linecap="round"/>
+    <path d="M679 362 C 742 362, 742 178, 805 178" fill="none" stroke="#9dff2e" stroke-width="3" stroke-linecap="round"/>
+    <path d="M1002 204 V 296" stroke="#3dff7a" stroke-width="3" stroke-linecap="round"/>
+    <path d="M994 284 l8 12 l8 -12z" fill="#3dff7a"/>
+    <rect x="40" y="104" width="262" height="216" rx="11" fill="#111311" fill-opacity="0.96" stroke="#2c3329"/>
+    <path d="M40 115a11 11 0 0 1 11 -11h240a11 11 0 0 1 11 11v27h-262z" fill="#1f5a35"/>
+    <text class="nt" x="55" y="129.5">AI client</text>
+    <circle cx="287" cy="166" r="6.5" fill="#d4ff3a"/><text class="pl" x="272" y="171.5" text-anchor="end">HTTP</text>
+    <text class="pt" x="70" y="203.5">Claude Code · Cursor</text>
+    <text class="pt" x="70" y="235.5">VS Code · Claude Desktop</text>
+    <text class="pt" x="70" y="267.5">any MCP client</text>
+    <circle cx="287" cy="294" r="6.5" fill="#6be4ff"/><text class="pl" x="272" y="299.5" text-anchor="end">stdio</text>
+    <rect x="404" y="300" width="290" height="120" rx="11" fill="#111311" fill-opacity="0.96" stroke="#2c3329"/>
+    <path d="M404 311a11 11 0 0 1 11 -11h268a11 11 0 0 1 11 11v27h-290z" fill="#45520f"/>
+    <text class="nt" x="419" y="325.5">unreal-engine-mcp-server</text>
+    <circle cx="419" cy="362" r="6.5" fill="#6be4ff"/><text class="pl" x="434" y="367.5">stdio</text>
+    <circle cx="679" cy="362" r="6.5" fill="#9dff2e"/><text class="pl" x="664" y="367.5" text-anchor="end">HTTP</text>
+    <text class="pt" x="434" y="399.5">Node.js · optional</text>
+    <rect x="790" y="84" width="424" height="120" rx="11" fill="#111311" fill-opacity="0.96" stroke="#2c3329"/>
+    <path d="M790 95a11 11 0 0 1 11 -11h402a11 11 0 0 1 11 11v27h-424z" fill="#d4ff3a"/>
+    <text class="nd" x="805" y="109.5">EngineWire</text><text class="nsd" x="1199" y="109" text-anchor="end">editor plugin</text>
+    <circle cx="805" cy="146" r="6.5" fill="#d4ff3a"/><text class="pl" x="820" y="151.5">:3000/mcp · Streamable HTTP</text>
+    <circle cx="805" cy="178" r="6.5" fill="#9dff2e"/><text class="pl" x="820" y="183.5">:3000/mcp · through the proxy</text>
+    <rect x="790" y="296" width="424" height="120" rx="11" fill="#111311" fill-opacity="0.96" stroke="#2c3329"/>
+    <path d="M790 307a11 11 0 0 1 11 -11h402a11 11 0 0 1 11 11v27h-424z" fill="#155e63"/>
+    <text class="nt" x="805" y="321.5">Editor APIs</text><text class="ns" x="1199" y="321" text-anchor="end">game thread</text>
+    <text class="pt" x="820" y="363.5">actors · levels · Blueprints · UMG</text>
+    <text class="pt" x="820" y="395.5">materials · Niagara · Sequencer · audio</text>
+    <rect x="357.6" y="117" width="352.8" height="30" rx="15" fill="#d4ff3a"/><text class="tag" x="534" y="137" text-anchor="middle">Route A · Streamable HTTP · no Node.js</text>
+    <rect x="383" y="247" width="294" height="30" rx="15" fill="#6be4ff"/><text class="tag" x="530" y="267" text-anchor="middle">Route B · stdio → the same /mcp</text>
+    <text class="cap" x="40" y="462">Both routes expose the same single tool, unreal. Loopback only and token-protected by default.</text>
+  </g>
+</svg>

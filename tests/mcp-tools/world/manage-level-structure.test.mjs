@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 /**
  * manage_level_structure Tool Integration Tests
- * Covers all 17 actions with concrete native payload contracts.
+ * Covers all 18 actions with concrete native payload contracts.
  */
 
 import { runToolTests } from '../../test-runner.mjs';
@@ -22,56 +22,143 @@ const HLOD_FOLDER = `${TEST_FOLDER}/HLOD`;
 const MINIMAP_VOLUME = `StructMiniMap_${ts}`;
 const LEVEL_INSTANCE = `StructLevelInstance_${ts}`;
 const PACKED_LEVEL = `StructPackedLevel_${ts}`;
+const PACKED_BLUEPRINT = `${TEST_FOLDER}/${PACKED_LEVEL}`;
+const TEMPLATE_MAP = '/Engine/Maps/Templates/Template_Default';
 const SEQUENCE_NODE = `StructSequence_${ts}`;
 const SEQUENCE_TARGET_NODE = `StructSequenceTarget_${ts}`;
+const OVERLAP_NODE = `StructOverlap_${ts}`;
+const DESTROY_NODE = `StructDestroy_${ts}`;
+const LITERAL_NODE = `StructActorRef_${ts}`;
+const MESH_NODE = `StructMeshGet_${ts}`;
+const VISIBILITY_NODE = `StructVisibility_${ts}`;
+const ACTOR_TAGS_NODE = `StructActorTags_${ts}`;
+const LIGHT_COLOR_NODE = `StructLightColor_${ts}`;
 const STREAMING_VOLUME = `StreamingVolume_${SUBLEVEL_PATH}`;
 
 const testCases = [
   // === SETUP ===
-  { scenario: 'Setup: create test folder', toolName: 'manage_asset', arguments: { action: 'create_folder', path: TEST_FOLDER }, expected: 'success|already exists' },
   { scenario: 'Setup: spawn actor for data layer assignment', toolName: 'control_actor', arguments: { action: 'spawn', classPath: '/Engine/BasicShapes/Cube', actorName: TEST_ACTOR, location: { x: 0, y: 0, z: 100 } }, expected: 'success' },
 
   // === CREATE ===
-  { scenario: 'CREATE: create_level', toolName: 'manage_level_structure', arguments: { action: 'create_level', levelName: LEVEL_NAME, levelPath: TEST_FOLDER_ALIAS, bCreateWorldPartition: false, bUseExternalActors: false, save: true }, expected: 'success|already exists' },
-  { scenario: 'CREATE: create_sublevel', toolName: 'manage_level_structure', arguments: { action: 'create_sublevel', sublevelName: SUBLEVEL_NAME, sublevelPath: SUBLEVEL_PATH_ALIAS, parentLevel: LEVEL_PATH_ALIAS, save: true }, expected: 'success|already exists' },
+  { scenario: 'CREATE: create_level', toolName: 'manage_level_structure', arguments: { action: 'create_level', levelName: LEVEL_NAME, levelPath: TEST_FOLDER_ALIAS, bCreateWorldPartition: false, bUseExternalActors: false, loadAfterCreate: false, save: true }, expected: 'success|already exists' },
+  // parentLevel naming a level that is not open was checked to exist and then ignored: the sublevel streamed into the open one.
+  { scenario: 'ERROR: create_sublevel refuses a parent level that is not open', toolName: 'manage_level_structure', arguments: { action: 'create_sublevel', sublevelName: SUBLEVEL_NAME, sublevelPath: SUBLEVEL_PATH_ALIAS, parentLevel: LEVEL_PATH_ALIAS, streamingMethod: 'Blueprint', save: true }, expected: 'error|PARENT_LEVEL_NOT_LOADED' },
+  { scenario: 'CREATE: create_sublevel', toolName: 'manage_level_structure', arguments: { action: 'create_sublevel', sublevelName: SUBLEVEL_NAME, sublevelPath: SUBLEVEL_PATH_ALIAS, streamingMethod: 'Blueprint', save: true }, expected: 'success|already exists' },
 
   // === LEVEL CONFIG ===
   { scenario: 'CONFIG: configure_level_streaming', toolName: 'manage_level_structure', arguments: { action: 'configure_level_streaming', levelName: SUBLEVEL_PATH_ALIAS, streamingMethod: 'Blueprint', bShouldBeVisible: true, bShouldBlockOnLoad: false, bDisableDistanceStreaming: false }, expected: 'success|not found' },
-  { scenario: 'CONFIG: set_streaming_distance', toolName: 'manage_level_structure', arguments: { action: 'set_streaming_distance', levelName: SUBLEVEL_PATH_ALIAS, streamingDistance: 5000, streamingUsage: 'Blueprint', volumeLocation: { x: 0, y: 0, z: 0 }, createVolume: true }, expected: 'success|not found' },
-  { scenario: 'CONFIG: configure_level_bounds', toolName: 'manage_level_structure', arguments: { action: 'configure_level_bounds', bAutoCalculateBounds: false, boundsOrigin: { x: 0, y: 0, z: 0 }, boundsExtent: { x: 1000, y: 1000, z: 1000 } }, expected: 'success' },
+  { scenario: 'CONFIG: set_streaming_distance', toolName: 'manage_level_structure', arguments: { action: 'set_streaming_distance', levelName: SUBLEVEL_PATH_ALIAS, streamingDistance: 5000, streamingUsage: 'LoadingAndVisibility', volumeLocation: { x: 0, y: 0, z: 0 }, createVolume: true }, expected: 'success|not found' },
+  // The volume used to be scaled with no brush, bounds of zero that no viewer is ever inside.
+  { scenario: 'ERROR: set_streaming_distance refuses a distance of 0', toolName: 'manage_level_structure', arguments: { action: 'set_streaming_distance', levelName: SUBLEVEL_PATH_ALIAS, streamingDistance: 0 }, expected: 'error|greater than 0' },
 
   // === WORLD PARTITION GUARDED ACTIONS ===
-  { scenario: 'TOGGLE: enable_world_partition', toolName: 'manage_level_structure', arguments: { action: 'enable_world_partition', bEnableWorldPartition: true }, expected: 'error|cannot enable|success' },
-  { scenario: 'CONFIG: configure_grid_size', toolName: 'manage_level_structure', arguments: { action: 'configure_grid_size', gridName: 'MainGrid', gridCellSize: 12800, loadingRange: 25600, bBlockOnSlowStreaming: false, priority: 0, createIfMissing: true }, expected: 'error|not enabled|success' },
-  { scenario: 'CREATE: create_data_layer', toolName: 'manage_level_structure', arguments: { action: 'create_data_layer', dataLayerName: DATA_LAYER, dataLayerType: 'Runtime', bIsInitiallyVisible: true, bIsInitiallyLoaded: true }, expected: 'error|world partition|success|already exists' },
-  { scenario: 'CONNECT: assign_actor_to_data_layer', toolName: 'manage_level_structure', arguments: { action: 'assign_actor_to_data_layer', actorName: TEST_ACTOR, dataLayerName: DATA_LAYER }, expected: 'error|world partition|not found|success' },
+  { scenario: 'TOGGLE: enable_world_partition', toolName: 'manage_level_structure', arguments: { action: 'enable_world_partition', bEnableWorldPartition: true, bUseExternalActors: false }, expected: 'success|cannot enable' },
+  { scenario: 'CONFIG: configure_grid_size', toolName: 'manage_level_structure', arguments: { action: 'configure_grid_size', gridName: 'MainGrid', gridCellSize: 12800, loadingRange: 25600, bBlockOnSlowStreaming: false, priority: 0, createIfMissing: true }, expected: 'success|not enabled' },
+  { scenario: 'CREATE: create_data_layer', toolName: 'manage_level_structure', arguments: { action: 'create_data_layer', dataLayerName: DATA_LAYER, dataLayerType: 'Runtime', bIsInitiallyVisible: true, bIsInitiallyLoaded: true, dataLayerAssetPath: '/Game/DataLayers', bIsPrivate: false }, expected: 'success|world partition|already exists' },
+  { scenario: 'CONNECT: assign_actor_to_data_layer', toolName: 'manage_level_structure', arguments: { action: 'assign_actor_to_data_layer', actorName: TEST_ACTOR, dataLayerName: DATA_LAYER }, expected: 'success|world partition|not found' },
+  { scenario: 'CONNECT: assign_actor_to_data_layer by actor path', toolName: 'manage_level_structure', arguments: { action: 'assign_actor_to_data_layer', actorPath: TEST_ACTOR, dataLayerName: DATA_LAYER }, expected: 'success|world partition|not found' },
+  // An unknown layer type was written as nothing and answered success with layerTypeApplied false.
+  { scenario: 'ERROR: configure_hlod_layer refuses an unknown layer type', toolName: 'manage_level_structure', arguments: { action: 'configure_hlod_layer', hlodLayerName: `${HLOD_LAYER}_Bad`, hlodLayerPath: HLOD_FOLDER, layerType: 'Nanite' }, expected: 'error|not an HLOD layer type' },
   { scenario: 'CONFIG: configure_hlod_layer', toolName: 'manage_level_structure', arguments: { action: 'configure_hlod_layer', hlodLayerName: HLOD_LAYER, hlodLayerPath: HLOD_FOLDER, cellSize: 12800, loadingDistance: 25600, layerType: 'Instancing', bIsSpatiallyLoaded: true }, expected: 'success|already exists' },
-  { scenario: 'CREATE: create_minimap_volume', toolName: 'manage_level_structure', arguments: { action: 'create_minimap_volume', volumeName: MINIMAP_VOLUME, volumeLocation: { x: 0, y: 0, z: 0 }, volumeExtent: { x: 1000, y: 1000, z: 1000 } }, expected: 'error|world partition|success|already exists' },
+  { scenario: 'CREATE: create_minimap_volume', toolName: 'manage_level_structure', arguments: { action: 'create_minimap_volume', volumeName: MINIMAP_VOLUME, location: { x: 0, y: 0, z: 0 }, extent: { x: 1000, y: 1000, z: 1000 }, volumeLocation: { x: 0, y: 0, z: 0 }, volumeExtent: { x: 1000, y: 1000, z: 1000 } }, expected: 'success|world partition|already exists' },
 
   // === LEVEL BLUEPRINT ===
-  { scenario: 'ACTION: open_level_blueprint', toolName: 'manage_level_structure', arguments: { action: 'open_level_blueprint', levelName: LEVEL_NAME }, expected: 'success' },
-  { scenario: 'ADD: add_level_blueprint_node', toolName: 'manage_level_structure', arguments: { action: 'add_level_blueprint_node', nodeClass: 'K2Node_ExecutionSequence', nodeName: SEQUENCE_NODE, nodePosition: { x: 200, y: 100 } }, expected: 'success|already exists|not found' },
-  { scenario: 'ADD: add target level blueprint node', toolName: 'manage_level_structure', arguments: { action: 'add_level_blueprint_node', nodeClass: 'K2Node_ExecutionSequence', nodeName: SEQUENCE_TARGET_NODE, nodePosition: { x: 500, y: 100 } }, expected: 'success|already exists|not found' },
+  { scenario: 'ACTION: open_level_blueprint', toolName: 'manage_level_structure', arguments: { action: 'open_level_blueprint' }, expected: 'success' },
+  { scenario: 'ADD: add_level_blueprint_node', toolName: 'manage_level_structure', arguments: { action: 'add_level_blueprint_node', nodeClass: 'K2Node_ExecutionSequence', nodeName: SEQUENCE_NODE, nodePosition: { x: 200, y: 100 } }, expected: 'success|already exists|not found', captureResult: { key: 'lbpSequenceName', fromField: 'result.nodeName' } },
+  { scenario: 'ADD: add_level_blueprint_node with functionName', toolName: 'manage_level_structure', arguments: { action: 'add_level_blueprint_node', nodeClass: 'K2Node_CallFunction', functionName: 'PrintString' }, expected: 'success' },
+  { scenario: 'REMOVE: remove_level_blueprint_node by name', toolName: 'manage_level_structure', arguments: { action: 'remove_level_blueprint_node', nodeName: 'K2Node_CallFunction_0', nodeId: '0F806A8F437089C69734C4BE30FA3B9D', save: false }, expected: 'success|not found' },
+  { scenario: 'REMOVE: remove unbound call nodes', toolName: 'manage_level_structure', arguments: { action: 'remove_level_blueprint_node', unboundOnly: true }, expected: 'success' },
+  { scenario: 'ADD: add target level blueprint node', toolName: 'manage_level_structure', arguments: { action: 'add_level_blueprint_node', nodeClass: 'K2Node_ExecutionSequence', nodeName: SEQUENCE_TARGET_NODE, nodePosition: { x: 500, y: 100 } }, expected: 'success|already exists|not found', captureResult: { key: 'lbpSequenceTargetName', fromField: 'result.nodeName' } },
+  { scenario: 'ADD: add_level_blueprint_node refuses a level that is not open', toolName: 'manage_level_structure', arguments: { action: 'add_level_blueprint_node', nodeClass: 'K2Node_ExecutionSequence', levelPath: LEVEL_PATH }, expected: 'error' },
+  { scenario: 'CONNECT: connect_level_blueprint_nodes refuses a level that is not open', toolName: 'manage_level_structure', arguments: { action: 'connect_level_blueprint_nodes', sourceNodeName: SEQUENCE_NODE, targetNodeName: SEQUENCE_TARGET_NODE, levelPath: LEVEL_PATH }, expected: 'error' },
+  { scenario: 'REMOVE: remove_level_blueprint_node refuses a level that is not open', toolName: 'manage_level_structure', arguments: { action: 'remove_level_blueprint_node', unboundOnly: true, levelPath: LEVEL_PATH }, expected: 'error' },
   { scenario: 'CONNECT: connect_level_blueprint_nodes', toolName: 'manage_level_structure', arguments: { action: 'connect_level_blueprint_nodes', sourceNodeName: SEQUENCE_NODE, targetNodeName: SEQUENCE_TARGET_NODE, sourcePinName: 'then_0', targetPinName: 'execute' }, expected: 'success' },
+  // Issue #675: a bound event and an actor reference used to come back unbound ("None (None)", "Unknown") as success.
+  { scenario: 'ADD: add_level_blueprint_node binds an overlap event to a placed actor', toolName: 'manage_level_structure', arguments: { action: 'add_level_blueprint_node', nodeClass: 'K2Node_ActorBoundEvent', nodeName: OVERLAP_NODE, actorName: TEST_ACTOR, eventName: 'OnActorBeginOverlap', nodePosition: { x: 3000, y: 2000 } }, expected: 'success', assertions: [{ path: 'structuredContent.result.nodeTitle', includes: 'Overlap', label: 'bound to the event' }, { path: 'structuredContent.result.nodeTitle', includes: TEST_ACTOR, label: 'bound to the actor' }], captureResult: { key: 'lbpOverlapId', fromField: 'result.nodeId' } },
+  { scenario: 'ADD: a second bound event for the same actor and event is refused', toolName: 'manage_level_structure', arguments: { action: 'add_level_blueprint_node', nodeClass: 'K2Node_ActorBoundEvent', actorName: TEST_ACTOR, eventName: 'OnActorBeginOverlap', nodePosition: { x: 3000, y: 2400 } }, expected: 'error|ALREADY_EXISTS' },
+  { scenario: 'ADD: an actor-bound event without its event is refused', toolName: 'manage_level_structure', arguments: { action: 'add_level_blueprint_node', nodeClass: 'K2Node_ActorBoundEvent', actorName: TEST_ACTOR, nodePosition: { x: 3000, y: 2400 } }, expected: 'error|INVALID_ARGUMENT' },
+  { scenario: 'ADD: a misspelled actor event is refused', toolName: 'manage_level_structure', arguments: { action: 'add_level_blueprint_node', nodeClass: 'K2Node_ActorBoundEvent', actorName: TEST_ACTOR, eventName: 'OnActorBeginOverlapp', nodePosition: { x: 3000, y: 2400 } }, expected: 'error|DELEGATE_NOT_FOUND' },
+  { scenario: 'ADD: an actor-bound event for a missing actor is refused', toolName: 'manage_level_structure', arguments: { action: 'add_level_blueprint_node', nodeClass: 'K2Node_ActorBoundEvent', actorName: `NoSuchActor_${ts}`, eventName: 'OnActorBeginOverlap', nodePosition: { x: 3000, y: 2400 } }, expected: 'error|ACTOR_NOT_FOUND' },
+  { scenario: 'ADD: an actor reference without its actor is refused', toolName: 'manage_level_structure', arguments: { action: 'add_level_blueprint_node', nodeClass: 'K2Node_Literal', nodePosition: { x: 3000, y: 2400 } }, expected: 'error|INVALID_ARGUMENT' },
+  { scenario: 'ADD: actorName on a node that is not about an actor is refused', toolName: 'manage_level_structure', arguments: { action: 'add_level_blueprint_node', nodeClass: 'K2Node_ExecutionSequence', actorName: TEST_ACTOR, nodePosition: { x: 3000, y: 2400 } }, expected: 'error|INVALID_ARGUMENT' },
+  { scenario: 'ADD: eventName on a node that is not a bound event is refused', toolName: 'manage_level_structure', arguments: { action: 'add_level_blueprint_node', nodeClass: 'K2Node_ExecutionSequence', eventName: 'OnActorBeginOverlap', nodePosition: { x: 3000, y: 2400 } }, expected: 'error|INVALID_ARGUMENT' },
+  { scenario: 'ADD: add_level_blueprint_node references a placed actor', toolName: 'manage_level_structure', arguments: { action: 'add_level_blueprint_node', nodeClass: 'K2Node_Literal', nodeName: LITERAL_NODE, actorName: TEST_ACTOR, nodePosition: { x: 3000, y: 2400 } }, expected: 'success', assertions: [{ path: 'structuredContent.result.nodeTitle', equals: TEST_ACTOR, label: 'references the actor' }], captureResult: { key: 'lbpLiteralId', fromField: 'result.nodeId' } },
+  { scenario: 'ADD: destroy node for the overlapping actor', toolName: 'manage_level_structure', arguments: { action: 'add_level_blueprint_node', nodeClass: 'DestroyActor', nodeName: DESTROY_NODE, nodePosition: { x: 3600, y: 2000 } }, expected: 'success', captureResult: { key: 'lbpDestroyId', fromField: 'result.nodeId' } },
+  { scenario: 'CONNECT: the bound event OtherActor drives further logic', toolName: 'manage_level_structure', arguments: { action: 'connect_level_blueprint_nodes', sourceNodeName: OVERLAP_NODE, sourcePinName: 'OtherActor', targetNodeName: DESTROY_NODE, targetPinName: 'self' }, expected: 'success' },
+  { scenario: 'ADD: a function of another class binds through memberClass', toolName: 'manage_level_structure', arguments: { action: 'add_level_blueprint_node', nodeClass: 'K2Node_CallFunction', nodeName: VISIBILITY_NODE, functionName: 'SetVisibility', memberClass: 'SceneComponent', nodePosition: { x: 3600, y: 2400 } }, expected: 'success', captureResult: { key: 'lbpVisibilityId', fromField: 'result.nodeId' } },
+  { scenario: 'ADD: a memberClass that is not a class is refused', toolName: 'manage_level_structure', arguments: { action: 'add_level_blueprint_node', nodeClass: 'K2Node_CallFunction', functionName: 'SetVisibility', memberClass: `NoSuchClass_${ts}`, nodePosition: { x: 3600, y: 2800 } }, expected: 'error|INVALID_ARGUMENT' },
+  // A component function needs the component: a getter on the actor's class, fed from the actor's reference.
+  { scenario: 'ADD: a getter reads a placed actor\'s component', toolName: 'manage_level_structure', arguments: { action: 'add_level_blueprint_node', nodeClass: 'K2Node_VariableGet', nodeName: MESH_NODE, memberClass: 'StaticMeshActor', memberName: 'StaticMeshComponent', nodePosition: { x: 3300, y: 2800 } }, expected: 'success', assertions: [{ path: 'structuredContent.result.nodeTitle', includes: 'StaticMeshComponent', label: 'bound to the component' }], captureResult: { key: 'lbpMeshId', fromField: 'result.nodeId' } },
+  { scenario: 'CONNECT: the actor reference feeds the component getter', toolName: 'manage_level_structure', arguments: { action: 'connect_level_blueprint_nodes', sourceNodeName: LITERAL_NODE, sourcePinName: TEST_ACTOR, targetNodeName: MESH_NODE, targetPinName: 'self' }, expected: 'success' },
+  { scenario: 'CONNECT: the component feeds its own function', toolName: 'manage_level_structure', arguments: { action: 'connect_level_blueprint_nodes', sourceNodeName: MESH_NODE, sourcePinName: 'StaticMeshComponent', targetNodeName: VISIBILITY_NODE, targetPinName: 'self' }, expected: 'success' },
+  // MakeLinkTo linked any two pins, so a component wired into an actor target broke the level Blueprint's compile.
+  { scenario: 'CONNECT: a component into an actor target is refused', toolName: 'manage_level_structure', arguments: { action: 'connect_level_blueprint_nodes', sourceNodeName: MESH_NODE, sourcePinName: 'StaticMeshComponent', targetNodeName: DESTROY_NODE, targetPinName: 'self' }, expected: 'error|CONNECTION_REFUSED' },
+  { scenario: 'ADD: a component the class does not have is refused', toolName: 'manage_level_structure', arguments: { action: 'add_level_blueprint_node', nodeClass: 'K2Node_VariableGet', memberClass: 'StaticMeshActor', memberName: `NoSuchComponent_${ts}`, nodePosition: { x: 3300, y: 3200 } }, expected: 'error|VARIABLE_NOT_FOUND' },
+  { scenario: 'ADD: a getter without its member is refused', toolName: 'manage_level_structure', arguments: { action: 'add_level_blueprint_node', nodeClass: 'K2Node_VariableGet', nodePosition: { x: 3300, y: 3200 } }, expected: 'error|INVALID_ARGUMENT' },
+  { scenario: 'ADD: memberName on a node that is not a variable is refused', toolName: 'manage_level_structure', arguments: { action: 'add_level_blueprint_node', nodeClass: 'K2Node_ExecutionSequence', memberName: 'StaticMeshComponent', nodePosition: { x: 3300, y: 3200 } }, expected: 'error|INVALID_ARGUMENT' },
+  { scenario: 'ADD: memberName on a struct node, also a variable node, is refused', toolName: 'manage_level_structure', arguments: { action: 'add_level_blueprint_node', nodeClass: 'K2Node_BreakStruct', memberName: 'Tags', nodePosition: { x: 3300, y: 3200 } }, expected: 'error|INVALID_ARGUMENT' },
+  { scenario: 'ADD: a setter of a read-only component is refused', toolName: 'manage_level_structure', arguments: { action: 'add_level_blueprint_node', nodeClass: 'K2Node_VariableSet', memberClass: 'StaticMeshActor', memberName: 'StaticMeshComponent', nodePosition: { x: 3300, y: 3200 } }, expected: 'error|VARIABLE_NOT_ACCESSIBLE' },
+  { scenario: 'ADD: a property Blueprints cannot see is refused', toolName: 'manage_level_structure', arguments: { action: 'add_level_blueprint_node', nodeClass: 'K2Node_VariableGet', memberClass: 'StaticMeshActor', memberName: 'bStaticMeshReplicateMovement', nodePosition: { x: 3300, y: 3200 } }, expected: 'error|VARIABLE_NOT_ACCESSIBLE' },
+  // The level script actor is an Actor too; a named class still means the placed actor, so the getter keeps its self pin.
+  { scenario: 'ADD: a getter on Actor keeps the self pin for a placed actor', toolName: 'manage_level_structure', arguments: { action: 'add_level_blueprint_node', nodeClass: 'K2Node_VariableGet', nodeName: ACTOR_TAGS_NODE, memberClass: 'Actor', memberName: 'Tags', nodePosition: { x: 2400, y: 2400 } }, expected: 'success', assertions: [{ path: 'structuredContent.result.pins', includes: 'self (in)', label: 'has the self pin' }], captureResult: { key: 'lbpActorTagsId', fromField: 'result.nodeId' } },
+  { scenario: 'CONNECT: the actor reference feeds the Actor getter', toolName: 'manage_level_structure', arguments: { action: 'connect_level_blueprint_nodes', sourceNodeName: LITERAL_NODE, sourcePinName: TEST_ACTOR, targetNodeName: ACTOR_TAGS_NODE, targetPinName: 'self' }, expected: 'success' },
+  { scenario: 'ADD: a getter of the level Blueprint\'s inherited variable', toolName: 'manage_level_structure', arguments: { action: 'add_level_blueprint_node', nodeClass: 'K2Node_VariableGet', memberName: 'Tags', nodePosition: { x: 2400, y: 2700 } }, expected: 'success', assertions: [{ path: 'structuredContent.result.nodeTitle', includes: 'Tags', label: 'bound to the variable' }], captureResult: { key: 'lbpOwnTagsGetId', fromField: 'result.nodeId' } },
+  { scenario: 'ADD: a setter of the level Blueprint\'s inherited variable', toolName: 'manage_level_structure', arguments: { action: 'add_level_blueprint_node', nodeClass: 'K2Node_VariableSet', memberName: 'Tags', nodePosition: { x: 2400, y: 3000 } }, expected: 'success', assertions: [{ path: 'structuredContent.result.nodeTitle', includes: 'Tags', label: 'bound to the variable' }], captureResult: { key: 'lbpOwnTagsSetId', fromField: 'result.nodeId' } },
+  { scenario: 'ADD: a light color call whose color is a pin default', toolName: 'manage_level_structure', arguments: { action: 'add_level_blueprint_node', nodeClass: 'K2Node_CallFunction', nodeName: LIGHT_COLOR_NODE, functionName: 'SetLightColor', memberClass: 'LightComponent', nodePosition: { x: 3900, y: 2800 } }, expected: 'success', captureResult: [{ key: 'lbpLightColorId', fromField: 'result.nodeId' }, { key: 'lbpLightColorName', fromField: 'result.nodeName' }] },
+  { scenario: 'SET: set_level_blueprint_pin_default sets a color pin from {r,g,b,a}', toolName: 'manage_level_structure', arguments: { action: 'set_level_blueprint_pin_default', nodeId: '${captured:lbpLightColorId}', pinName: 'NewLightColor', propertyValue: { r: 1, g: 0, b: 0, a: 1 }, save: false }, expected: 'success', assertions: [{ path: 'structuredContent.result.appliedValue', includes: 'R=1', label: 'color stored on the pin' }, { path: 'structuredContent.result.saved', equals: false, label: 'level left unsaved' }] },
+  // A node's name is the nodeName add_level_blueprint_node returned (it gets a number), not the nodeName it was given.
+  { scenario: 'SET: set_level_blueprint_pin_default finds a node by its name', toolName: 'manage_level_structure', arguments: { action: 'set_level_blueprint_pin_default', nodeId: '${captured:lbpLightColorName}', pinName: 'bSRGB', propertyValue: false }, expected: 'success', assertions: [{ path: 'structuredContent.result.appliedValue', equals: 'false', label: 'bool stored on the pin' }] },
+  { scenario: 'SET: a pin the node does not have is refused', toolName: 'manage_level_structure', arguments: { action: 'set_level_blueprint_pin_default', nodeId: '${captured:lbpLightColorId}', pinName: `NoSuchPin_${ts}`, propertyValue: 1 }, expected: 'error|PIN_NOT_FOUND' },
+  { scenario: 'SET: an output pin is refused', toolName: 'manage_level_structure', arguments: { action: 'set_level_blueprint_pin_default', nodeId: '${captured:lbpMeshId}', pinName: 'StaticMeshComponent', propertyValue: 'None' }, expected: 'error|INVALID_PIN_DIRECTION' },
+  { scenario: 'SET: a node the level Blueprint does not have is refused', toolName: 'manage_level_structure', arguments: { action: 'set_level_blueprint_pin_default', nodeId: `NoSuchNode_${ts}`, pinName: 'NewLightColor', propertyValue: 1 }, expected: 'error|NODE_NOT_FOUND' },
+  { scenario: 'SET: set_level_blueprint_pin_default refuses a level that is not open', toolName: 'manage_level_structure', arguments: { action: 'set_level_blueprint_pin_default', nodeId: '${captured:lbpLightColorId}', pinName: 'NewLightColor', propertyValue: 1, levelPath: LEVEL_PATH }, expected: 'error' },
+  { scenario: 'SET: set_level_blueprint_pin_default finds a node by its title', toolName: 'manage_level_structure', arguments: { action: 'set_level_blueprint_pin_default', nodeId: 'Set Light Color', pinName: 'bSRGB', propertyValue: false }, expected: 'success', assertions: [{ path: 'structuredContent.result.nodeName', includes: LIGHT_COLOR_NODE, label: 'the titled node' }, { path: 'structuredContent.result.appliedValue', equals: 'false', label: 'bool stored on the pin' }] },
+  { scenario: 'SET: a node that only contains the text is not taken', toolName: 'manage_level_structure', arguments: { action: 'set_level_blueprint_pin_default', nodeId: `LightColor_${ts}`, pinName: 'bSRGB', propertyValue: true }, expected: 'error|NODE_NOT_FOUND' },
+  // The two sequence nodes share the title "Sequence": it names neither, so nothing is changed or removed.
+  { scenario: 'SET: a title several nodes share is refused', toolName: 'manage_level_structure', arguments: { action: 'set_level_blueprint_pin_default', nodeId: 'Sequence', pinName: 'then_0', propertyValue: 1 }, expected: 'error|AMBIGUOUS_NODE' },
+  { scenario: 'REMOVE: a title several nodes share is refused', toolName: 'manage_level_structure', arguments: { action: 'remove_level_blueprint_node', nodeId: 'Sequence' }, expected: 'error|AMBIGUOUS_NODE' },
+  { scenario: 'Cleanup: remove the light color call by its name as nodeId', toolName: 'manage_level_structure', arguments: { action: 'remove_level_blueprint_node', nodeId: '${captured:lbpLightColorName}' }, expected: 'success', assertions: [{ path: 'structuredContent.result.removedCount', equals: 1, label: 'one node removed' }] },
+  { scenario: 'Cleanup: remove the sequence node', toolName: 'manage_level_structure', arguments: { action: 'remove_level_blueprint_node', nodeId: '${captured:lbpSequenceName}' }, expected: 'success' },
+  { scenario: 'Cleanup: remove the target sequence node', toolName: 'manage_level_structure', arguments: { action: 'remove_level_blueprint_node', nodeId: '${captured:lbpSequenceTargetName}' }, expected: 'success' },
+  { scenario: 'Cleanup: remove the bound event', toolName: 'manage_level_structure', arguments: { action: 'remove_level_blueprint_node', nodeId: '${captured:lbpOverlapId}' }, expected: 'success' },
+  { scenario: 'Cleanup: remove the actor reference', toolName: 'manage_level_structure', arguments: { action: 'remove_level_blueprint_node', nodeId: '${captured:lbpLiteralId}' }, expected: 'success' },
+  { scenario: 'Cleanup: remove the destroy node', toolName: 'manage_level_structure', arguments: { action: 'remove_level_blueprint_node', nodeId: '${captured:lbpDestroyId}' }, expected: 'success' },
+  { scenario: 'Cleanup: remove the memberClass call', toolName: 'manage_level_structure', arguments: { action: 'remove_level_blueprint_node', nodeId: '${captured:lbpVisibilityId}' }, expected: 'success' },
+  { scenario: 'Cleanup: remove the component getter', toolName: 'manage_level_structure', arguments: { action: 'remove_level_blueprint_node', nodeId: '${captured:lbpMeshId}' }, expected: 'success' },
+  { scenario: 'Cleanup: remove the Actor getter', toolName: 'manage_level_structure', arguments: { action: 'remove_level_blueprint_node', nodeId: '${captured:lbpActorTagsId}' }, expected: 'success' },
+  { scenario: 'Cleanup: remove the inherited variable getter', toolName: 'manage_level_structure', arguments: { action: 'remove_level_blueprint_node', nodeId: '${captured:lbpOwnTagsGetId}' }, expected: 'success' },
+  { scenario: 'Cleanup: remove the inherited variable setter', toolName: 'manage_level_structure', arguments: { action: 'remove_level_blueprint_node', nodeId: '${captured:lbpOwnTagsSetId}' }, expected: 'success' },
+  { scenario: 'COMPILE: read the open level path', toolName: 'manage_level_structure', arguments: { action: 'get_level_structure_info' }, expected: 'success', captureResult: { key: 'openLevelPath', fromField: 'result.levelStructureInfo.persistentLevel' } },
+  // The suite's nodes are gone by now, so the open test level's own graph must compile.
+  { scenario: 'COMPILE: blueprint compile takes the open level\'s path for its level Blueprint', toolName: 'manage_blueprint', arguments: { action: 'compile', blueprintPath: '${captured:openLevelPath}' }, expected: 'success', assertions: [{ path: 'structuredContent.result.compiled', equals: true, label: 'level Blueprint compiled' }] },
+  { scenario: 'COMPILE: a level that is not open is refused with how to reach it', toolName: 'manage_blueprint', arguments: { action: 'compile', blueprintPath: LEVEL_PATH }, expected: 'error|not open in the editor' },
 
   // === LEVEL INSTANCE / PACKED LEVEL ===
-  { scenario: 'CREATE: create_level_instance', toolName: 'manage_level_structure', arguments: { action: 'create_level_instance', levelAssetPath: SUBLEVEL_PATH, levelInstanceName: LEVEL_INSTANCE, instanceLocation: { x: 500, y: 0, z: 0 }, instanceRotation: { pitch: 0, yaw: 0, roll: 0 }, instanceScale: { x: 1, y: 1, z: 1 } }, expected: 'success|already exists' },
-  { scenario: 'CREATE: create_packed_level_actor', toolName: 'manage_level_structure', arguments: { action: 'create_packed_level_actor', levelAssetPath: SUBLEVEL_PATH, packedLevelName: PACKED_LEVEL, instanceLocation: { x: 700, y: 0, z: 0 }, instanceRotation: { pitch: 0, yaw: 0, roll: 0 }, bPackBlueprints: true, bPackStaticMeshes: true }, expected: 'success|already exists' },
+  // The engine's default template map holds a floor mesh, so it can be both instanced and packed.
+  { scenario: 'CREATE: create_level_instance loads the level it names', toolName: 'manage_level_structure', arguments: { action: 'create_level_instance', levelAssetPath: TEMPLATE_MAP, label: LEVEL_INSTANCE, location: { x: 5000, y: 0, z: 0 }, rotation: { pitch: 0, yaw: 90, roll: 0 }, save: false }, expected: 'success', assertions: [{ path: 'structuredContent.result.loaded', equals: true, label: 'instanced level loaded' }, { path: 'structuredContent.result.childActorCount', gte: 1, label: 'instance holds the level actors' }] },
+  { scenario: 'CREATE: create_level_instance of a missing level is refused', toolName: 'manage_level_structure', arguments: { action: 'create_level_instance', levelAssetPath: `${TEST_FOLDER}/NoSuchLevel_${ts}` }, expected: 'error|LEVEL_NOT_FOUND' },
+  { scenario: 'CREATE: create_packed_level_actor bakes the level meshes', toolName: 'manage_level_structure', arguments: { action: 'create_packed_level_actor', levelAssetPath: TEMPLATE_MAP, blueprintPath: PACKED_BLUEPRINT, spawn: true, location: { x: 0, y: 5000, z: 0 }, save: false }, expected: 'success', assertions: [{ path: 'structuredContent.result.instanceCount', gte: 1, label: 'meshes packed as instances' }, { path: 'structuredContent.result.ismComponentCount', gte: 1, label: 'instanced mesh components on the Blueprint' }] },
+  // The Blueprint above is unsaved (save false): a repeat must update it, not create over it (a modal overwrite dialog).
+  { scenario: 'CREATE: create_packed_level_actor again updates the unsaved Blueprint', toolName: 'manage_level_structure', arguments: { action: 'create_packed_level_actor', levelAssetPath: TEMPLATE_MAP, blueprintPath: PACKED_BLUEPRINT, spawn: false, save: false }, expected: 'success', assertions: [{ path: 'structuredContent.result.blueprintCreated', equals: false, label: 'existing Blueprint reused' }, { path: 'structuredContent.result.instanceCount', gte: 1, label: 'still packed' }] },
+  { scenario: 'CREATE: create_packed_level_actor of an empty level into an existing Blueprint is refused', toolName: 'manage_level_structure', arguments: { action: 'create_packed_level_actor', levelAssetPath: LEVEL_PATH, blueprintPath: PACKED_BLUEPRINT, spawn: false, save: false }, expected: 'error|NOTHING_TO_PACK' },
+  { scenario: 'CREATE: create_packed_level_actor of a level with no meshes is refused', toolName: 'manage_level_structure', arguments: { action: 'create_packed_level_actor', levelAssetPath: LEVEL_PATH, blueprintPath: `${TEST_FOLDER}/BPP_Empty_${ts}`, spawn: false }, expected: 'error|NOTHING_TO_PACK' },
 
   // === INFO ===
   { scenario: 'INFO: get_level_structure_info', toolName: 'manage_level_structure', arguments: { action: 'get_level_structure_info' }, expected: 'success' },
+  { scenario: 'INFO: get_volumes_info via params passthrough', toolName: 'manage_level_structure', arguments: { action: 'get_volumes_info', params: { filter: 'Test' } }, expected: 'success' },
 
   // === CLEANUP ===
   { scenario: 'Cleanup: delete level instance', toolName: 'control_actor', arguments: { action: 'delete', actorName: LEVEL_INSTANCE }, expected: 'success|not found' },
   { scenario: 'Cleanup: delete packed level actor', toolName: 'control_actor', arguments: { action: 'delete', actorName: PACKED_LEVEL }, expected: 'success|not found' },
-  { scenario: 'Cleanup: delete minimap volume', toolName: 'control_actor', arguments: { action: 'delete', actorName: MINIMAP_VOLUME }, expected: 'not found|success' },
+  { scenario: 'Cleanup: delete packed level blueprint', toolName: 'manage_asset', arguments: { action: 'delete', path: PACKED_BLUEPRINT, force: true }, expected: 'success|not found' },
+  { scenario: 'Cleanup: delete minimap volume', toolName: 'control_actor', arguments: { action: 'delete', actorName: MINIMAP_VOLUME }, expected: 'success|not found' },
   { scenario: 'Cleanup: delete streaming volume', toolName: 'control_actor', arguments: { action: 'delete', actorName: STREAMING_VOLUME }, expected: 'success|not found' },
   { scenario: 'Cleanup: delete test actor', toolName: 'control_actor', arguments: { action: 'delete', actorName: TEST_ACTOR }, expected: 'success|not found' },
   { scenario: 'Cleanup: unload sublevel', toolName: 'manage_level', arguments: { action: 'unload', levelPath: SUBLEVEL_PATH }, expected: 'success|not loaded|not found' },
-  { scenario: 'Cleanup: delete created levels', toolName: 'manage_level', arguments: { action: 'delete', levelPaths: [SUBLEVEL_PATH, LEVEL_PATH] }, expected: 'success|not found' },
-  { scenario: 'Cleanup: delete data layer asset', toolName: 'manage_asset', arguments: { action: 'delete', path: `/Game/DataLayers/${DATA_LAYER}`, force: true }, expected: 'not found|success' },
+  { scenario: 'Cleanup: delete SUBLEVEL_PATH', toolName: 'manage_level', arguments: { action: 'delete', levelPath: SUBLEVEL_PATH }, expected: 'success|not found' },
+  { scenario: 'Cleanup: delete LEVEL_PATH', toolName: 'manage_level', arguments: { action: 'delete', levelPath: LEVEL_PATH }, expected: 'success|not found' },
+  { scenario: 'Cleanup: delete data layer asset', toolName: 'manage_asset', arguments: { action: 'delete', path: `/Game/DataLayers/${DATA_LAYER}`, force: true }, expected: 'success|not found' },
   { scenario: 'Cleanup: delete HLOD asset', toolName: 'manage_asset', arguments: { action: 'delete', path: `${HLOD_FOLDER}/${HLOD_LAYER}`, force: true }, expected: 'success|not found' },
-  { scenario: 'Cleanup: delete test folder', toolName: 'manage_asset', arguments: { action: 'delete', path: TEST_FOLDER, force: true }, expected: 'success|not found' },
 ];
 
 // === VOLUME ACTIONS ===
@@ -140,10 +227,63 @@ const testCases = [
     // === INFO ===
     { scenario: 'INFO: get_volumes_info', toolName: 'manage_level_structure', arguments: {"action": "get_volumes_info", "filter": "Test"}, expected: 'success' },
 
+    // === CREATE via the folded operation: one action, the class selects the native handler ===
+    { scenario: 'CREATE: create_volume TriggerVolume', toolName: 'manage_level_structure', arguments: { action: 'create_volume', volumeClass: 'TriggerVolume', volumeName: 'TestVol_Trigger', location: { x: 0, y: 0, z: 0 }, rotation: { pitch: 0, yaw: 0, roll: 0 }, extent: { x: 100, y: 100, z: 100 }, save: false }, expected: 'success|already exists' },
+    { scenario: 'CREATE: create_volume TriggerBox', toolName: 'manage_level_structure', arguments: { action: 'create_volume', volumeClass: 'TriggerBox', volumeName: 'TestVol_Box', location: { x: 0, y: 0, z: 0 }, boxExtent: { x: 100, y: 100, z: 100 } }, expected: 'success|already exists' },
+    { scenario: 'CREATE: create_volume TriggerSphere', toolName: 'manage_level_structure', arguments: { action: 'create_volume', volumeClass: 'TriggerSphere', volumeName: 'TestVol_Sphere', location: { x: 0, y: 0, z: 0 }, sphereRadius: 100 }, expected: 'success|already exists' },
+    { scenario: 'CREATE: create_volume TriggerCapsule', toolName: 'manage_level_structure', arguments: { action: 'create_volume', volumeClass: 'TriggerCapsule', volumeName: 'TestVol_Capsule', location: { x: 0, y: 0, z: 0 }, capsuleRadius: 50, capsuleHalfHeight: 100 }, expected: 'success|already exists' },
+    { scenario: 'CREATE: create_volume BlockingVolume attached to actor', toolName: 'manage_level_structure', arguments: { action: 'create_volume', volumeClass: 'BlockingVolume', volumeName: 'TestVol_BlockingAttached', location: { x: 0, y: 0, z: 0 }, actorPath: TEST_ACTOR }, expected: 'success|already exists' },
+    { scenario: 'CREATE: create_volume PainCausingVolume', toolName: 'manage_level_structure', arguments: { action: 'create_volume', volumeClass: 'PainCausingVolume', volumeName: 'TestVol_Pain', location: { x: 0, y: 0, z: 0 }, bPainCausing: false, damagePerSec: 10 }, expected: 'success|already exists' },
+    { scenario: 'CREATE: create_volume PhysicsVolume', toolName: 'manage_level_structure', arguments: { action: 'create_volume', volumeClass: 'PhysicsVolume', volumeName: 'TestVol_Physics', location: { x: 0, y: 0, z: 0 }, bWaterVolume: false, fluidFriction: 0.3, terminalVelocity: 4000 }, expected: 'success|already exists' },
+    { scenario: 'CREATE: create_volume AudioVolume', toolName: 'manage_level_structure', arguments: { action: 'create_volume', volumeClass: 'AudioVolume', volumeName: 'TestVol_Audio', location: { x: 0, y: 0, z: 0 }, bEnabled: true }, expected: 'success|already exists' },
+    { scenario: 'CREATE: create_volume refuses a parameter its class ignores', toolName: 'manage_level_structure', arguments: { action: 'create_volume', volumeClass: 'AudioVolume', volumeName: 'TestVol_AudioBad', location: { x: 0, y: 0, z: 0 }, reverbVolume: 0.5 }, expected: 'error' },
+    { scenario: 'CREATE: create_volume ReverbVolume', toolName: 'manage_level_structure', arguments: { action: 'create_volume', volumeClass: 'ReverbVolume', volumeName: 'TestVol_Reverb', location: { x: 0, y: 0, z: 0 }, reverbVolume: 0.5, fadeTime: 0.5 }, expected: 'success|already exists' },
+    { scenario: 'CREATE: create_volume KillZVolume at a kill height', toolName: 'manage_level_structure', arguments: { action: 'create_volume', volumeClass: 'KillZVolume', volumeName: 'TestVol_KillZ', location: { x: 0, y: 0, z: 0 }, killZHeight: -500 }, expected: 'success|already exists' },
+    { scenario: 'CREATE: create_volume CullDistanceVolume', toolName: 'manage_level_structure', arguments: { action: 'create_volume', volumeClass: 'CullDistanceVolume', volumeName: 'TestVol_Cull', location: { x: 0, y: 0, z: 0 }, cullDistances: [{ size: 100, cullDistance: 1000 }] }, expected: 'success|already exists' },
+    { scenario: 'CREATE: create_volume PostProcessVolume', toolName: 'manage_level_structure', arguments: { action: 'create_volume', volumeClass: 'PostProcessVolume', volumeName: 'TestVol_PostProcess', location: { x: 0, y: 0, z: 0 }, bUnbound: true, blendRadius: 100, blendWeight: 1, priority: 1, bEnabled: true, postProcessSettings: { exposureBias: 0.5, vignetteIntensity: 0.2 } }, expected: 'success|already exists' },
+    { scenario: 'CONFIG: set_volume_properties on a post-process volume', toolName: 'manage_level_structure', arguments: { action: 'set_volume_properties', volumeName: 'TestVol_PostProcess', priority: 2, blendWeight: 0.5, bEnabled: true }, expected: 'success' },
+    { scenario: 'CONFIG: set_volume_properties on a pain volume', toolName: 'manage_level_structure', arguments: { action: 'set_volume_properties', volumeName: 'TestVol_Pain', bPainCausing: true, damagePerSec: 5 }, expected: 'success' },
+    { scenario: 'CONFIG: set_volume_properties on a reverb volume', toolName: 'manage_level_structure', arguments: { action: 'set_volume_properties', volumeName: 'TestVol_Reverb', reverbVolume: 0.4, fadeTime: 1 }, expected: 'success' },
+    { scenario: 'DELETE: remove_volume TestVol_Reverb', toolName: 'manage_level_structure', arguments: { action: 'remove_volume', volumeName: 'TestVol_Reverb' }, expected: 'success|not found' },
+    { scenario: 'DELETE: remove_volume TestVol_KillZ', toolName: 'manage_level_structure', arguments: { action: 'remove_volume', volumeName: 'TestVol_KillZ' }, expected: 'success|not found' },
+    { scenario: 'DELETE: remove_volume TestVol_Trigger', toolName: 'manage_level_structure', arguments: { action: 'remove_volume', volumeName: 'TestVol_Trigger' }, expected: 'success|not found' },
+    { scenario: 'DELETE: remove_volume TestVol_Box', toolName: 'manage_level_structure', arguments: { action: 'remove_volume', volumeName: 'TestVol_Box' }, expected: 'success|not found' },
+    { scenario: 'DELETE: remove_volume TestVol_Sphere', toolName: 'manage_level_structure', arguments: { action: 'remove_volume', volumeName: 'TestVol_Sphere' }, expected: 'success|not found' },
+    { scenario: 'DELETE: remove_volume TestVol_Capsule', toolName: 'manage_level_structure', arguments: { action: 'remove_volume', volumeName: 'TestVol_Capsule' }, expected: 'success|not found' },
+    { scenario: 'DELETE: remove_volume TestVol_BlockingAttached', toolName: 'manage_level_structure', arguments: { action: 'remove_volume', volumeName: 'TestVol_BlockingAttached' }, expected: 'success|not found' },
+    { scenario: 'DELETE: remove_volume TestVol_Pain', toolName: 'manage_level_structure', arguments: { action: 'remove_volume', volumeName: 'TestVol_Pain' }, expected: 'success|not found' },
+    { scenario: 'DELETE: remove_volume TestVol_Physics', toolName: 'manage_level_structure', arguments: { action: 'remove_volume', volumeName: 'TestVol_Physics' }, expected: 'success|not found' },
+    { scenario: 'DELETE: remove_volume TestVol_Audio', toolName: 'manage_level_structure', arguments: { action: 'remove_volume', volumeName: 'TestVol_Audio' }, expected: 'success|not found' },
+    { scenario: 'DELETE: remove_volume TestVol_Cull', toolName: 'manage_level_structure', arguments: { action: 'remove_volume', volumeName: 'TestVol_Cull' }, expected: 'success|not found' },
+    { scenario: 'DELETE: remove_volume TestVol_PostProcess', toolName: 'manage_level_structure', arguments: { action: 'remove_volume', volumeName: 'TestVol_PostProcess' }, expected: 'success|not found' },
+
     // === CLEANUP ===
+    // Every volume this block created. They carry FIXED names, so without this they
+    // survived the run: the next run's create took the 'already exists' branch
+    // against a stale actor, and the get_volumes_info filter above kept matching
+    // volumes from previous runs. The TestVol_* block already removes each of its own.
+    ...[
+      `${TRIGGER_VOLUME}_Actor`,
+      'Testtrigger_box', 'Testtrigger_sphere', 'Testtrigger_capsule',
+      BLOCKING_VOLUME, `${BLOCKING_VOLUME}_Actor`,
+      KILL_Z_VOLUME, `${KILL_Z_VOLUME}_Actor`,
+      'Testpain_causing_volume',
+      PHYSICS_VOLUME, `${PHYSICS_VOLUME}_Actor`,
+      'Testaudio_volume', 'Testreverb_volume',
+      CULL_DISTANCE_VOLUME, `${CULL_DISTANCE_VOLUME}_Actor`,
+      'Testprecomputed_visibility_volume', 'Testlightmass_importance_volume',
+      'Testnav_mesh_bounds_volume', 'Testnav_modifier_volume',
+      'Testcamera_blocking_volume',
+      POST_PROCESS_VOLUME, `${POST_PROCESS_VOLUME}_Actor`,
+    ].map((volumeName) => ({
+      scenario: `Cleanup: remove volume ${volumeName}`,
+      toolName: 'manage_level_structure',
+      arguments: { action: 'remove_volume', volumeName },
+      expected: 'success|not found',
+    })),
     { scenario: 'Cleanup: delete test actor', toolName: 'control_actor', arguments: { action: 'delete', actorName: TEST_ACTOR }, expected: 'success|not found' },
     { scenario: 'Cleanup: delete test folder', toolName: 'manage_asset', arguments: { action: 'delete', path: TEST_FOLDER, force: true }, expected: 'success|not found' },
   );
 }
 
-runToolTests('manage-level-structure', testCases);
+runToolTests('manage-level-structure', testCases, { folder: TEST_FOLDER });

@@ -1,0 +1,49 @@
+{
+  "description": "A dash for a Character: each press of the key launches it DashSpeed units per second along where it faces, with a DashLift upward so the dash carries before the ground slows it, at most once every DashCooldown seconds. The key gets its own Input Action and mapping, and the context is registered when the character is possessed.",
+  "tag": "Dash",
+  "placeholders": {
+    "Key": "Key pressed to dash, e.g. Q.",
+    "DashSpeed": "Launch speed along the facing, in units per second.",
+    "Cooldown": "Seconds before the next dash.",
+    "InputAction": "Input Action asset to use, or empty for IA_Dash next to the Blueprint.",
+    "MappingContext": "Input Mapping Context the key goes in, or empty for the one the character registers (else /Game/Input/IMC_MCP)."
+  },
+  "variables": [
+    { "variableName": "DashSpeed", "variableType": "Float", "defaultValue": "{{DashSpeed}}", "category": "Dash", "instanceEditable": true },
+    { "variableName": "DashCooldown", "variableType": "Float", "defaultValue": "{{Cooldown}}", "category": "Dash", "instanceEditable": true },
+    { "variableName": "DashLift", "variableType": "Float", "defaultValue": 150, "category": "Dash", "instanceEditable": true, "keepExisting": true },
+    { "variableName": "LastDashTime", "variableType": "Float", "defaultValue": -1000, "category": "Dash" }
+  ],
+  "input": { "id": "dashInput", "key": "{{Key}}", "inputActionPath": "{{InputAction}}", "mappingContextPath": "{{MappingContext}}" },
+  "eventGraph": [
+    { "edit": "create_node", "id": "dashNow", "nodeType": "CallFunction", "memberName": "GetGameTimeInSeconds", "memberClass": "/Script/Engine.KismetSystemLibrary" },
+    { "edit": "create_node", "id": "dashLast", "nodeType": "VariableGet", "memberName": "LastDashTime" },
+    { "edit": "create_node", "id": "dashSince", "nodeType": "CallFunction", "memberName": "Subtract_DoubleDouble", "memberClass": "/Script/Engine.KismetMathLibrary" },
+    { "edit": "create_node", "id": "dashCool", "nodeType": "VariableGet", "memberName": "DashCooldown" },
+    { "edit": "create_node", "id": "dashReady", "nodeType": "CallFunction", "memberName": "GreaterEqual_DoubleDouble", "memberClass": "/Script/Engine.KismetMathLibrary" },
+    { "edit": "create_node", "id": "dashBranch", "nodeType": "Branch" },
+    { "edit": "create_node", "id": "dashStamp", "nodeType": "VariableSet", "memberName": "LastDashTime" },
+    { "edit": "create_node", "id": "dashAhead", "nodeType": "CallFunction", "memberName": "GetActorForwardVector", "memberClass": "/Script/Engine.Actor" },
+    { "edit": "create_node", "id": "dashSpeed", "nodeType": "VariableGet", "memberName": "DashSpeed" },
+    { "edit": "create_node", "id": "dashPush", "nodeType": "CallFunction", "memberName": "Multiply_VectorFloat", "memberClass": "/Script/Engine.KismetMathLibrary" },
+    { "edit": "create_node", "id": "dashLiftGet", "nodeType": "VariableGet", "memberName": "DashLift" },
+    { "edit": "create_node", "id": "dashUp", "nodeType": "CallFunction", "memberName": "MakeVector", "memberClass": "/Script/Engine.KismetMathLibrary", "pinDefaults": { "X": 0, "Y": 0 } },
+    { "edit": "create_node", "id": "dashVelocity", "nodeType": "CallFunction", "memberName": "Add_VectorVector", "memberClass": "/Script/Engine.KismetMathLibrary" },
+    { "edit": "create_node", "id": "dashLaunch", "nodeType": "CallFunction", "memberName": "LaunchCharacter", "memberClass": "/Script/Engine.Character", "pinDefaults": { "bXYOverride": true, "bZOverride": true } },
+    { "edit": "connect_pins", "from": "$dashNow.ReturnValue", "to": "$dashSince.A" },
+    { "edit": "connect_pins", "from": "$dashLast.LastDashTime", "to": "$dashSince.B" },
+    { "edit": "connect_pins", "from": "$dashSince.ReturnValue", "to": "$dashReady.A" },
+    { "edit": "connect_pins", "from": "$dashCool.DashCooldown", "to": "$dashReady.B" },
+    { "edit": "connect_pins", "from": "$dashReady.ReturnValue", "to": "$dashBranch.Condition" },
+    { "edit": "connect_pins", "from": "$dashNow.ReturnValue", "to": "$dashStamp.LastDashTime" },
+    { "edit": "connect_pins", "from": "$dashAhead.ReturnValue", "to": "$dashPush.A" },
+    { "edit": "connect_pins", "from": "$dashSpeed.DashSpeed", "to": "$dashPush.B" },
+    { "edit": "connect_pins", "from": "$dashLiftGet.DashLift", "to": "$dashUp.Z" },
+    { "edit": "connect_pins", "from": "$dashPush.ReturnValue", "to": "$dashVelocity.A" },
+    { "edit": "connect_pins", "from": "$dashUp.ReturnValue", "to": "$dashVelocity.B" },
+    { "edit": "connect_pins", "from": "$dashVelocity.ReturnValue", "to": "$dashLaunch.LaunchVelocity" },
+    { "edit": "connect_pins", "from": "$dashInput.Started", "to": "$dashBranch.execute" },
+    { "edit": "connect_pins", "from": "$dashBranch.then", "to": "$dashStamp.execute" },
+    { "edit": "connect_pins", "from": "$dashStamp.then", "to": "$dashLaunch.execute" }
+  ]
+}

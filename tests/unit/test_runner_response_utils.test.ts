@@ -1,0 +1,214 @@
+import { describe, expect, it } from 'vitest';
+
+import {
+  evaluateAssertions,
+  resolveResponsePath,
+  selectCaptureValue,
+  selectCaptureValues,
+  withServerTimeout,
+} from '../test-runner-response-utils.mjs';
+
+describe('result paths on a reply that carries only its projection', () => {
+  const success = { structuredContent: { success: true, message: 'Moved.', data: { movedActors: 2, details: { worldName: '/Game/Maps/Demo' } } } };
+
+  it('reads a declared field from data, an undeclared one from data.details, and success from the reply', () => {
+    expect(resolveResponsePath(success, 'structuredContent.result.movedActors')).toBe(2);
+    expect(resolveResponsePath(success, 'structuredContent.result.worldName')).toBe('/Game/Maps/Demo');
+    expect(resolveResponsePath(success, 'structuredContent.result.success')).toBe(true);
+    expect(resolveResponsePath(success, 'structuredContent.result.missing')).toBeUndefined();
+    expect(selectCaptureValue(success.structuredContent, { fromField: 'result.details.worldName' })).toBe('/Game/Maps/Demo');
+  });
+
+  it('keeps a failure on its own result', () => {
+    const failure = { structuredContent: { success: false, result: { code: 'X' }, data: { code: 'Y' } } };
+    expect(resolveResponsePath(failure, 'structuredContent.result.code')).toBe('X');
+    expect(resolveResponsePath(failure, 'structuredContent.result.other')).toBeUndefined();
+  });
+});
+
+describe('test runner response helpers', () => {
+  it('accepts numeric assertions within an explicit tolerance', () => {
+    const result = evaluateAssertions(
+      {
+        assertions: [
+          {
+            path: 'structuredContent.result.rotation.pitch',
+            approximately: 35,
+            tolerance: 0.001,
+            label: 'restored pitch',
+          },
+        ],
+      },
+      {
+        structuredContent: {
+          result: {
+            rotation: {
+              pitch: 35.000000000000014,
+            },
+          },
+        },
+      },
+    );
+
+    expect(result).toEqual({ passed: true });
+  });
+
+  it('rejects numeric assertions outside their explicit tolerance', () => {
+    const result = evaluateAssertions(
+      {
+        assertions: [
+          {
+            path: 'structuredContent.result.rotation.pitch',
+            approximately: 35,
+            tolerance: 0.001,
+            label: 'restored pitch',
+          },
+        ],
+      },
+      {
+        structuredContent: {
+          result: {
+            rotation: {
+              pitch: 35.01,
+            },
+          },
+        },
+      },
+    );
+
+    expect(result.passed).toBe(false);
+    expect(result.reason).toContain('within 0.001');
+  });
+
+  it('captures a selected field from the matching array item', () => {
+    const value = selectCaptureValue(
+      {
+        result: {
+          components: [
+            { name: 'Sprite', class: 'BillboardComponent' },
+            { name: 'SkyLightComponent0', class: 'SkyLightComponent' },
+          ],
+        },
+      },
+      {
+        fromField: 'result.components',
+        where: { path: 'class', includes: 'SkyLightComponent' },
+        selectField: 'name',
+      },
+    );
+
+    expect(value).toBe('SkyLightComponent0');
+  });
+
+  it('captures multiple cleanup paths from one response', () => {
+    const values = selectCaptureValues(
+      {
+        result: {
+          sequencePackagePath:
+            '/Game/Cinematics/Takes/2026-06-10/Scene_1_07',
+          subsceneFolderPath:
+            '/Game/Cinematics/Takes/2026-06-10/Scene_1_07_Subscenes',
+        },
+      },
+      [
+        {
+          key: 'takeSequencePackagePath',
+          fromField: 'result.sequencePackagePath',
+        },
+        {
+          key: 'takeSubsceneFolderPath',
+          fromField: 'result.subsceneFolderPath',
+        },
+      ],
+    );
+
+    expect(values).toEqual([
+      {
+        key: 'takeSequencePackagePath',
+        value: '/Game/Cinematics/Takes/2026-06-10/Scene_1_07',
+      },
+      {
+        key: 'takeSubsceneFolderPath',
+        value:
+          '/Game/Cinematics/Takes/2026-06-10/Scene_1_07_Subscenes',
+      },
+    ]);
+  });
+
+  it('checks whether a path holds a value', () => {
+    const response = { structuredContent: { result: { value: { Plum: 7 } } } };
+    const check = (path: string, exists: boolean) => evaluateAssertions({ assertions: [{ path, exists }] }, response).passed;
+
+    expect(check('structuredContent.result.value.Plum', true)).toBe(true);
+    expect(check('structuredContent.result.value.Apple', false)).toBe(true);
+    expect(check('structuredContent.result.value.Apple', true)).toBe(false);
+    expect(check('structuredContent.result.value.Plum', false)).toBe(false);
+  });
+
+  it('checks string fragments before dependent test actions run', () => {
+    const result = evaluateAssertions(
+      {
+        assertions: [
+          {
+            path: 'structuredContent.result.directionalLightActorPath',
+            includes: 'SnapshotSun_123',
+            label: 'snapshot directional light selection',
+          },
+        ],
+      },
+      {
+        structuredContent: {
+          result: {
+            directionalLightActorPath:
+              '/Game/Test.Test:PersistentLevel.SnapshotSun_123',
+          },
+        },
+      },
+    );
+
+    expect(result).toEqual({ passed: true });
+  });
+
+  it('finds a string among an array of strings, as a whole item', () => {
+    const response = { structuredContent: { result: { appliedCVars: ['r.PathTracing.Denoiser', 'r.PathTracing.SamplesPerPixel'] } } };
+    const check = (includes: string) => evaluateAssertions({ assertions: [{ path: 'structuredContent.result.appliedCVars', includes }] }, response).passed;
+
+    expect(check('r.PathTracing.Denoiser')).toBe(true);
+    expect(check('r.PathTracing.MaxBounces')).toBe(false);
+    expect(check('r.PathTracing')).toBe(false);
+  });
+
+  it('does not let a generic error satisfy a requested error code', async () => {
+    const { evaluateExpectation } = await import('../test-runner.mjs');
+    const result = evaluateExpectation(
+      { expected: 'error|mrq_resource_limit_exceeded' },
+      {
+        isError: true,
+        content: [{ type: 'text', text: 'Error: actor was not found' }],
+        structuredContent: {
+          success: false,
+          errorCode: 'ACTOR_NOT_FOUND',
+        },
+      },
+    );
+
+    expect(result.passed).toBe(false);
+  });
+
+  it.each([0, -1, 3_600_001])(
+    'preserves an explicit server timeout value of %s',
+    (timeoutMs) => {
+      const call = { name: 'unreal', arguments: { operation: 'execute', capability: 'sequence.start_render', options: { timeoutMs } } };
+      expect(withServerTimeout(call, 5000)).toEqual(call);
+    },
+  );
+
+  it('injects the harness timeout when the tool call omits timeoutMs', () => {
+    expect(
+      withServerTimeout({ name: 'unreal', arguments: { operation: 'execute', capability: 'sequence.start_render' } }, 5000),
+    ).toEqual({
+      name: 'unreal',
+      arguments: { operation: 'execute', capability: 'sequence.start_render', options: { timeoutMs: 5000 } },
+    });
+  });
+});

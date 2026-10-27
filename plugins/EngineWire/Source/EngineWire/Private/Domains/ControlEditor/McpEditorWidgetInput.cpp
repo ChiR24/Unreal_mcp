@@ -1,0 +1,278 @@
+#include "Domains/ControlEditor/McpEditorSupport.h"
+
+#include "Blueprint/UserWidget.h"
+#include "Blueprint/WidgetTree.h"
+#include "Components/Button.h"
+#include "Components/CheckBox.h"
+#include "Components/PanelWidget.h"
+#include "Components/Slider.h"
+#include "Components/TextBlock.h"
+#include "UObject/UObjectIterator.h"
+#include "Widgets/SViewport.h"
+#include "Widgets/SWindow.h"
+
+namespace {
+// The user widgets a PIE player can actually see: in the play world, and either
+// added to the viewport or nested in a panel of one that is.
+TArray<UUserWidget *> LiveUserWidgetsForMcp() {
+  TArray<UUserWidget *> Widgets;
+  UWorld *PlayWorld = GEditor ? GEditor->PlayWorld.Get() : nullptr;
+  if (!PlayWorld) {
+    return Widgets;
+  }
+  for (TObjectIterator<UUserWidget> It; It; ++It) {
+    UUserWidget *Widget = *It;
+    if (IsValid(Widget) && Widget->WidgetTree &&
+        !Widget->HasAnyFlags(RF_ClassDefaultObject | RF_ArchetypeObject) &&
+        Widget->GetWorld() == PlayWorld &&
+        (Widget->IsInViewport() || Widget->GetParent() != nullptr)) {
+      Widgets.Add(Widget);
+    }
+  }
+  return Widgets;
+}
+
+bool IsDrivableWidgetForMcp(const UWidget *Widget) {
+  return Widget->IsA<UButton>() || Widget->IsA<UCheckBox>() ||
+         Widget->IsA<USlider>();
+}
+
+// "WBP_MainMenu" names the widget whose class is WBP_MainMenu_C, so the owner
+// half of Owner.Name reads the way the asset is named.
+FString OwnerLabelForMcp(const UUserWidget *Owner) {
+  FString Label = Owner->GetClass()->GetName();
+  Label.RemoveFromEnd(TEXT("_C"));
+  return Label;
+}
+
+TSharedPtr<FJsonObject> DescribeWidgetForMcp(UWidget *Widget) {
+  TSharedPtr<FJsonObject> Entry = MakeShared<FJsonObject>();
+  Entry->SetStringField(TEXT("name"), Widget->GetName());
+  Entry->SetStringField(TEXT("type"), Widget->GetClass()->GetName());
+  Entry->SetBoolField(TEXT("enabled"), Widget->GetIsEnabled());
+  Entry->SetBoolField(TEXT("visible"), Widget->IsVisible());
+  if (Widget->HasKeyboardFocus()) {
+    Entry->SetBoolField(TEXT("focused"), true);
+  }
+  if (UButton *Button = Cast<UButton>(Widget)) {
+    if (UTextBlock *Label = Cast<UTextBlock>(Button->GetContent())) {
+      Entry->SetStringField(TEXT("text"), Label->GetText().ToString());
+    }
+  } else if (USlider *Slider = Cast<USlider>(Widget)) {
+    Entry->SetNumberField(TEXT("value"), Slider->GetValue());
+  } else if (UCheckBox *Box = Cast<UCheckBox>(Widget)) {
+    Entry->SetBoolField(TEXT("checked"), Box->IsChecked());
+  }
+  return Entry;
+}
+
+bool ListLiveWidgetsForMcp(const TSharedPtr<FJsonObject> &Resp,
+                           FString &Message) {
+  TArray<TSharedPtr<FJsonValue>> Owners;
+  for (UUserWidget *Owner : LiveUserWidgetsForMcp()) {
+    TArray<TSharedPtr<FJsonValue>> Children;
+    TArray<FString> Texts;
+    Owner->WidgetTree->ForEachWidget([&Children, &Texts](UWidget *Child) {
+      if (Child && IsDrivableWidgetForMcp(Child)) {
+        Children.Add(MakeShared<FJsonValueObject>(DescribeWidgetForMcp(Child)));
+      } else if (const UTextBlock *Text = Cast<UTextBlock>(Child)) {
+        // What the player reads that is no button's label: a list built at runtime showed as rows with nothing in them.
+        if (Text->IsVisible() && !Cast<UButton>(Text->GetParent()) && !Text->GetText().IsEmpty() && Texts.Num() < 20) {
+          Texts.Add(Text->GetText().ToString());
+        }
+      }
+    });
+    TSharedPtr<FJsonObject> Entry = MakeShared<FJsonObject>();
+    Entry->SetStringField(TEXT("userWidget"), OwnerLabelForMcp(Owner));
+    Entry->SetStringField(TEXT("object"), Owner->GetName());
+    Entry->SetBoolField(TEXT("inViewport"), Owner->IsInViewport());
+    // A widget made at runtime and added to another's panel, such as a list row, is shown inside that widget.
+    const UPanelWidget *Panel = Owner->IsInViewport() ? nullptr : Owner->GetParent();
+    if (const UUserWidget *Outer = Panel ? Panel->GetTypedOuter<UUserWidget>() : nullptr) {
+      Entry->SetStringField(TEXT("in"), Outer->GetName() + TEXT(".") + Panel->GetName());
+    }
+    if (Texts.Num() > 0) {
+      Entry->SetArrayField(TEXT("texts"), McpHandlerUtils::ToJsonStringArray(Texts));
+    }
+    Entry->SetArrayField(TEXT("children"), Children);
+    Owners.Add(MakeShared<FJsonValueObject>(Entry));
+  }
+  Resp->SetArrayField(TEXT("widgets"), Owners);
+  if (!GEditor || !GEditor->PlayWorld) {
+    Message = TEXT("No PIE session is running, so there is no live UI to list.");
+    return false;
+  }
+  Message = FString::Printf(TEXT("%d live user widget(s) in the PIE session."),
+                            Owners.Num());
+  return true;
+}
+
+// Press / toggle / set exactly as the widget's own events would fire for a
+// player, so the Blueprint handlers bound to them run -- without the OS cursor.
+bool DriveWidgetForMcp(UWidget *Widget, const TSharedPtr<FJsonObject> &Payload,
+                       FString &Message) {
+  if (UButton *Button = Cast<UButton>(Widget)) {
+    Button->OnPressed.Broadcast();
+    Button->OnReleased.Broadcast();
+    Button->OnClicked.Broadcast();
+    Message = TEXT("pressed");
+    return true;
+  }
+  if (UCheckBox *Box = Cast<UCheckBox>(Widget)) {
+    const bool bChecked = !Box->IsChecked();
+    Box->SetIsChecked(bChecked);
+    Box->OnCheckStateChanged.Broadcast(bChecked);
+    Message = bChecked ? TEXT("checked") : TEXT("unchecked");
+    return true;
+  }
+  if (USlider *Slider = Cast<USlider>(Widget)) {
+    double Value = 0.0;
+    if (!Payload->TryGetNumberField(TEXT("value"), Value)) {
+      Message = TEXT("a Slider needs `value`, the value to drag it to");
+      return false;
+    }
+    Slider->SetValue(static_cast<float>(Value));
+    Slider->OnValueChanged.Broadcast(Slider->GetValue());
+    Message = FString::Printf(TEXT("set to %g"), Slider->GetValue());
+    return true;
+  }
+  Message = FString::Printf(
+      TEXT("is a %s; widget_click drives a Button, CheckBox or Slider"),
+      *Widget->GetClass()->GetName());
+  return false;
+}
+
+bool ClickLiveWidgetForMcp(const TSharedPtr<FJsonObject> &Payload,
+                           const TSharedPtr<FJsonObject> &Resp,
+                           FString &Message) {
+  FString Target;
+  Payload->TryGetStringField(TEXT("widget"), Target);
+  FString OwnerFilter;
+  FString WidgetName = Target;
+  Target.Split(TEXT("."), &OwnerFilter, &WidgetName);
+  if (WidgetName.IsEmpty()) {
+    Message = TEXT("widget_click needs `widget`: a widget name, or Owner.Name "
+                   "when several live widgets share it (widget_list shows both).");
+    return false;
+  }
+
+  TArray<TPair<UUserWidget *, UWidget *>> Matches;
+  for (UUserWidget *Owner : LiveUserWidgetsForMcp()) {
+    if (!OwnerFilter.IsEmpty() && OwnerLabelForMcp(Owner) != OwnerFilter &&
+        Owner->GetName() != OwnerFilter) {
+      continue;
+    }
+    if (UWidget *Found = Owner->WidgetTree->FindWidget(FName(*WidgetName))) {
+      Matches.Add({Owner, Found});
+    }
+  }
+  if (Matches.Num() != 1) {
+    TArray<FString> Names;
+    for (const TPair<UUserWidget *, UWidget *> &Match : Matches) {
+      Names.Add(OwnerLabelForMcp(Match.Key) + TEXT(".") + Match.Value->GetName());
+    }
+    Message = Matches.Num() == 0
+                  ? FString::Printf(TEXT("No live widget named '%s' in the PIE "
+                                         "session; call widget_list to see what is on screen."),
+                                    *Target)
+                  : FString::Printf(TEXT("'%s' is ambiguous: %s. Name one as Owner.Name."),
+                                    *Target, *FString::Join(Names, TEXT(", ")));
+    return false;
+  }
+
+  UUserWidget *Owner = Matches[0].Key;
+  UWidget *Widget = Matches[0].Value;
+  const FString Label = OwnerLabelForMcp(Owner) + TEXT(".") + Widget->GetName();
+  Resp->SetStringField(TEXT("widget"), Label);
+  Resp->SetStringField(TEXT("widgetType"), Widget->GetClass()->GetName());
+  if (!Widget->GetIsEnabled() || !Widget->IsVisible()) {
+    Message = FString::Printf(TEXT("%s is %s, so a player could not press it."),
+                              *Label, Widget->GetIsEnabled() ? TEXT("hidden") : TEXT("disabled"));
+    return false;
+  }
+  FString Outcome;
+  const bool bDriven = DriveWidgetForMcp(Widget, Payload, Outcome);
+  Message = FString::Printf(TEXT("%s %s"), *Label, *Outcome);
+  return bDriven;
+}
+
+// A minimized window is never painted, and UMG ticks a user widget while it paints it, so the Delay nodes of a
+// widget graph and its animations stand still: a stage card meant to clear itself after two seconds stayed up
+// for as long as the editor was minimized, and widget_list kept listing it with nothing to say why.
+void WarnWhenPieWindowMinimizedForMcp(const TSharedPtr<FJsonObject> &Resp) {
+  UWorld *PlayWorld = GEditor ? GEditor->PlayWorld.Get() : nullptr;
+  UGameViewportClient *Viewport = PlayWorld ? PlayWorld->GetGameViewport() : nullptr;
+  TSharedPtr<SWindow> Window;
+  if (Viewport) {
+    Window = Viewport->GetWindow();
+  }
+  // Once per play session: a caller pressing through a menu read the same paragraph on every click.
+  static TWeakObjectPtr<UWorld> WarnedWorld;
+  if (Window.IsValid() && Window->IsWindowMinimized() && WarnedWorld.Get() != PlayWorld) {
+    WarnedWorld = PlayWorld;
+    TArray<TSharedPtr<FJsonValue>> Warnings;
+    Warnings.Add(MakeShared<FJsonValueString>(
+        TEXT("The window showing Play In Editor is minimized, so its widgets are not painted and do not tick: "
+             "Delay nodes in a widget graph and widget animations stand still until it is restored "
+             "(control_editor.configure_editor setting window).")));
+    Resp->SetArrayField(TEXT("warnings"), Warnings);
+  }
+}
+} // namespace
+
+// A real key goes through Slate's focus path first, so a menu button the game has focused takes Enter or Space
+// and the arrows move focus between buttons; only what it leaves bubbles up to the viewport and the game. Keys
+// sent straight to the viewport client never reached a focused UMG button. Only while a widget inside the PIE
+// viewport holds focus: otherwise Slate would hand the key to whatever editor panel has focus.
+bool RouteKeyToFocusedPieWidgetForMcp(const FKey &Key, const EInputEvent InputEvent, bool &bOutHandled,
+                                      FString &OutNote) {
+  UWorld *PlayWorld = GEditor ? GEditor->PlayWorld.Get() : nullptr;
+  UGameViewportClient *Viewport = PlayWorld ? PlayWorld->GetGameViewport() : nullptr;
+  const TSharedPtr<SViewport> ViewportWidget = Viewport ? Viewport->GetGameViewportWidget() : nullptr;
+  FSlateApplication &SlateApp = FSlateApplication::Get();
+  if (!ViewportWidget.IsValid() || !SlateApp.HasUserFocusedDescendants(ViewportWidget.ToSharedRef(), 0)) {
+    return false;
+  }
+  // Named before the key lands: a pressed button can close its menu and take the focus with it.
+  const FString Focused = FocusedPieWidgetForMcp();
+  if (!Focused.IsEmpty()) {
+    OutNote = FString::Printf(TEXT(". It went to %s first, the widget holding keyboard focus, as a real key does (a "
+                                   "focused button takes Space and Enter as a press), so the game's own controls may "
+                                   "not have seen it"),
+                              *Focused);
+  }
+  const FKeyEvent KeyEvent(Key, FModifierKeysState(), 0, false, 0, 0);
+  bOutHandled = InputEvent == IE_Released ? SlateApp.ProcessKeyUpEvent(KeyEvent) : SlateApp.ProcessKeyDownEvent(KeyEvent);
+  return true;
+}
+
+// A title screen left up with its Play button focused took every jump key as a press, and the replies only said
+// the pawn never moved.
+FString FocusedPieWidgetForMcp() {
+  for (UUserWidget *Owner : LiveUserWidgetsForMcp()) {
+    if (Owner->HasKeyboardFocus()) {
+      return OwnerLabelForMcp(Owner);
+    }
+    FString Found;
+    Owner->WidgetTree->ForEachWidget([&](UWidget *Child) {
+      if (Found.IsEmpty() && Child && Child->HasKeyboardFocus()) {
+        Found = OwnerLabelForMcp(Owner) + TEXT(".") + Child->GetName();
+      }
+    });
+    if (!Found.IsEmpty()) {
+      return Found;
+    }
+  }
+  return FString();
+}
+
+bool SimulateLiveWidgetInputForMcp(const FString &InputType,
+                                   const TSharedPtr<FJsonObject> &Payload,
+                                   const TSharedPtr<FJsonObject> &Resp,
+                                   FString &Message) {
+  WarnWhenPieWindowMinimizedForMcp(Resp);
+  if (InputType == TEXT("widget_list")) {
+    return ListLiveWidgetsForMcp(Resp, Message);
+  }
+  return ClickLiveWidgetForMcp(Payload, Resp, Message);
+}

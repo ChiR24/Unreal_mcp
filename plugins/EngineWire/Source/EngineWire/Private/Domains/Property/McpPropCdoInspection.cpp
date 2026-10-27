@@ -1,0 +1,233 @@
+#include "Foundation/HandlerUtils/McpHandlerUtilsJson.h"
+#include "Core/Compatibility/McpVersionCompatibility.h"
+
+#include "Domains/Property/McpPropCdoComponents.h"
+
+#include "Dom/JsonObject.h"
+#include "Foundation/BridgeHelpers/McpHelpers.h"
+#include "EngineWireSubsystem.h"
+#include "Foundation/HandlerUtils/McpHandlerUtils.h"
+#include "Foundation/Reflection/McpPropertyReflection.h"
+
+#include "Components/ActorComponent.h"
+#include "Engine/Blueprint.h"
+#include "Engine/SCS_Node.h"
+#include "Engine/SimpleConstructionScript.h"
+#include "GameFramework/Actor.h"
+
+bool UEngineWireSubsystem::HandleInspectCdoAction(
+    const FString& RequestId,
+    const TSharedPtr<FJsonObject>& Payload,
+    TSharedPtr<FMcpBridgeWebSocket> RequestingSocket)
+{
+    if (!Payload.IsValid())
+    {
+        SendAutomationError(RequestingSocket, RequestId,
+                            TEXT("inspect_cdo: payload missing"),
+                            TEXT("INVALID_PAYLOAD"));
+        return true;
+    }
+
+    FString BlueprintPath;
+    Payload->TryGetStringField(TEXT("blueprintPath"), BlueprintPath);
+    BlueprintPath.TrimStartAndEndInline();
+    if (BlueprintPath.IsEmpty())
+    {
+        SendAutomationError(RequestingSocket, RequestId,
+                            TEXT("blueprintPath is required for inspect_cdo"),
+                            TEXT("INVALID_ARGUMENT"));
+        return true;
+    }
+
+    FString NormalizedPath, LoadError;
+    UBlueprint* Blueprint = LoadBlueprintAsset(BlueprintPath, NormalizedPath, LoadError);
+    if (!Blueprint)
+    {
+        SendAutomationError(RequestingSocket, RequestId,
+                            FString::Printf(TEXT("Blueprint not found: %s (%s)"),
+                                            *BlueprintPath, *LoadError),
+                            TEXT("BLUEPRINT_NOT_FOUND"));
+        return true;
+    }
+
+    UClass* GeneratedClass = Blueprint->GeneratedClass;
+    if (!GeneratedClass)
+    {
+        SendAutomationError(RequestingSocket, RequestId,
+                            TEXT("Blueprint has no GeneratedClass (not compiled?)"),
+                            TEXT("CDO_NOT_FOUND"));
+        return true;
+    }
+
+    UObject* CDO = GeneratedClass->GetDefaultObject();
+    if (!CDO)
+    {
+        SendAutomationError(RequestingSocket, RequestId,
+                            TEXT("Failed to get Class Default Object"),
+                            TEXT("CDO_NOT_FOUND"));
+        return true;
+    }
+
+    FString ComponentNameFilter;
+    Payload->TryGetStringField(TEXT("componentName"), ComponentNameFilter);
+    ComponentNameFilter.TrimStartAndEndInline();
+    bool bDetailed = false;
+    Payload->TryGetBoolField(TEXT("detailed"), bDetailed);
+
+    TArray<FName> PropertyNameFilter;
+    FString PropertyPathFilter;
+    if (Payload->TryGetStringField(TEXT("propertyPath"), PropertyPathFilter))
+    {
+        PropertyPathFilter.TrimStartAndEndInline();
+        if (!PropertyPathFilter.IsEmpty())
+        {
+            PropertyNameFilter.Add(FName(*PropertyPathFilter));
+        }
+    }
+    const TArray<TSharedPtr<FJsonValue>>* PropNamesArr = nullptr;
+    if (Payload->TryGetArrayField(TEXT("propertyNames"), PropNamesArr) && PropNamesArr)
+    {
+        for (const auto& Val : *PropNamesArr)
+        {
+            FString S;
+            if (McpHandlerUtils::TryGetJsonValueString(Val, S))
+            {
+                PropertyNameFilter.Add(FName(*S));
+            }
+        }
+    }
+
+    TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
+    Resp->SetStringField(TEXT("blueprintPath"), NormalizedPath);
+    Resp->SetStringField(TEXT("className"), GeneratedClass->GetName());
+    Resp->SetStringField(TEXT("classPath"), GeneratedClass->GetPathName());
+    Resp->SetStringField(TEXT("parentClass"),
+        GeneratedClass->GetSuperClass()
+            ? GeneratedClass->GetSuperClass()->GetName()
+            : TEXT("None"));
+
+    if (!ComponentNameFilter.IsEmpty())
+    {
+        UActorComponent* FoundComp = McpPropertyCdoComponents::FindCdoComponent(Blueprint, CDO, ComponentNameFilter, false);
+        if (!FoundComp)
+        {
+            // Name the candidates so the caller can correct in one round trip
+            // instead of guessing (native components are often reachable under
+            // both an object name and a UPROPERTY alias).
+            const TArray<FString> Available =
+                McpPropertyCdoComponents::CollectResolvableComponentNames(Blueprint, CDO);
+            TArray<TSharedPtr<FJsonValue>> AvailableJson;
+            for (const FString& Name : Available)
+            {
+                AvailableJson.Add(MakeShared<FJsonValueString>(Name));
+            }
+
+            TSharedPtr<FJsonObject> ErrData = McpHandlerUtils::CreateResultObject();
+            ErrData->SetArrayField(TEXT("availableComponents"), AvailableJson);
+
+            SendAutomationResponse(
+                RequestingSocket, RequestId, false,
+                FString::Printf(TEXT("Component not found: %s. Available components: %s"),
+                                *ComponentNameFilter,
+                                Available.Num() > 0 ? *FString::Join(Available, TEXT(", "))
+                                                    : TEXT("<none>")),
+                ErrData, TEXT("COMPONENT_NOT_FOUND"));
+            return true;
+        }
+
+        TSharedPtr<FJsonObject> CompJson;
+        if (PropertyNameFilter.Num() > 0)
+        {
+            CompJson = McpPropertyReflection::ExportPropertiesToJson(FoundComp, PropertyNameFilter);
+        }
+        else
+        {
+            CompJson = McpPropertyReflection::ExportObjectToJsonBounded(FoundComp, false);
+        }
+
+        Resp->SetStringField(TEXT("componentName"), ComponentNameFilter);
+        Resp->SetStringField(TEXT("templateObjectName"), FoundComp->GetName());
+        Resp->SetStringField(TEXT("componentClass"), FoundComp->GetClass()->GetName());
+        if (CompJson.IsValid())
+        {
+            Resp->SetObjectField(TEXT("properties"), CompJson);
+        }
+        Resp->SetBoolField(TEXT("success"), true);
+        SendAutomationResponse(RequestingSocket, RequestId, true,
+                               TEXT("CDO component inspected"), Resp, FString());
+        return true;
+    }
+
+    if (PropertyNameFilter.Num() > 0)
+    {
+        TSharedPtr<FJsonObject> CdoProps =
+            McpPropertyReflection::ExportPropertiesToJson(CDO, PropertyNameFilter);
+        if (CdoProps.IsValid())
+        {
+            Resp->SetObjectField(TEXT("cdoProperties"), CdoProps);
+        }
+    }
+    else if (bDetailed)
+    {
+        TSharedPtr<FJsonObject> CdoProps =
+            McpPropertyReflection::ExportObjectToJsonBounded(CDO, false);
+        if (CdoProps.IsValid())
+        {
+            Resp->SetObjectField(TEXT("cdoProperties"), CdoProps);
+        }
+    }
+
+    TArray<TSharedPtr<FJsonValue>> ComponentsArray;
+    TSet<FString> SeenNames;
+    TMap<FString, FString> ScsSourceMap = McpPropertyCdoComponents::BuildScsSourceMap(Blueprint);
+
+    if (AActor* DefaultActor = Cast<AActor>(CDO))
+    {
+        TInlineComponentArray<UActorComponent*> CdoComponents;
+        DefaultActor->GetComponents(CdoComponents);
+        for (UActorComponent* Comp : CdoComponents)
+        {
+            if (!Comp) continue;
+            const FString CompName = Comp->GetName();
+            SeenNames.Add(CompName);
+            const FString Source = ScsSourceMap.Contains(CompName)
+                ? TEXT("Native_Override") : TEXT("Native");
+            ComponentsArray.Add(MakeShared<FJsonValueObject>(
+                McpPropertyCdoComponents::BuildComponentSummary(Comp, CompName, Source,
+                                      bDetailed, PropertyNameFilter)));
+        }
+    }
+
+    McpPropertyCdoComponents::ForEachScsNode(Blueprint, [&](USCS_Node* Node, bool bInherited)
+    {
+        const FString VarName = Node->GetVariableName().ToString();
+        if (!Node->ComponentTemplate || SeenNames.Contains(VarName))
+        {
+            return true;
+        }
+        SeenNames.Add(VarName);
+        bool bOverridden = false;
+        TSharedPtr<FJsonObject> CompObj = McpPropertyCdoComponents::BuildComponentSummary(
+            McpPropertyCdoComponents::EffectiveTemplate(Blueprint, Node, &bOverridden), VarName,
+            bInherited ? TEXT("SCS_Inherited") : TEXT("SCS"), bDetailed, PropertyNameFilter);
+        if (bOverridden)
+        {
+            CompObj->SetBoolField(TEXT("overridden"), true);
+        }
+        if (Node->ParentComponentOrVariableName != NAME_None)
+        {
+            CompObj->SetStringField(TEXT("attachParent"), Node->ParentComponentOrVariableName.ToString());
+        }
+        ComponentsArray.Add(MakeShared<FJsonValueObject>(CompObj));
+        return true;
+    });
+
+    McpHandlerUtils::FilterRowsByListedNames(Payload, TEXT("componentNames"), ComponentsArray, Resp,
+                                             TEXT("missingComponents"));
+    Resp->SetArrayField(TEXT("components"), ComponentsArray);
+    Resp->SetNumberField(TEXT("componentCount"), ComponentsArray.Num());
+    Resp->SetBoolField(TEXT("success"), true);
+    SendAutomationResponse(RequestingSocket, RequestId, true,
+                           TEXT("CDO inspection completed"), Resp, FString());
+    return true;
+}

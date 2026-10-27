@@ -6,15 +6,15 @@ import { fileURLToPath } from 'node:url';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-const SOURCE_RELATIVE = ['..', 'plugins', 'McpAutomationBridge'];
+const SOURCE_RELATIVE = ['..', 'plugins', 'EngineWire'];
 const sourceDir = path.resolve(__dirname, ...SOURCE_RELATIVE);
 
 function showHelp() {
   const scriptName = path.basename(process.argv[1]);
   console.log(`Usage: node ${scriptName} [--engine <engine_plugins_dir>] [--project <project_plugins_dir>] [--dry-run] [--clean-engine] [--clean-project]`);
-  console.log('Copies the MCP Automation Bridge plugin from this repository into Engine and/or Project plugin directories.');
-  console.log('--engine <dir>         Path to the Engine/Plugins directory (the script appends McpAutomationBridge automatically).');
-  console.log('--project <dir>        Path to the Project/Plugins directory (the script appends McpAutomationBridge automatically).');
+  console.log('Copies the EngineWire plugin from this repository into Engine and/or Project plugin directories.');
+  console.log('--engine <dir>         Path to the Engine/Plugins directory (the script appends EngineWire automatically).');
+  console.log('--project <dir>        Path to the Project/Plugins directory (the script appends EngineWire automatically).');
   console.log('--dry-run              Log the operations without modifying the filesystem.');
   console.log('--clean-engine         Remove the destination engine plugin directory before copying.');
   console.log('--clean-project        Remove the destination project plugin directory before copying.');
@@ -83,7 +83,7 @@ function resolveDestination(rootDir, label) {
     return null;
   }
 
-  const fullPath = path.resolve(rootDir, 'McpAutomationBridge');
+  const fullPath = path.resolve(rootDir, 'EngineWire');
   if (!fs.existsSync(path.dirname(fullPath))) {
     throw new Error(`Destination parent directory does not exist for ${label}: ${path.dirname(fullPath)}`);
   }
@@ -115,6 +115,12 @@ function copyDir(targetPath, dryRun) {
   console.log(`Copied ${sourceDir} -> ${targetPath}`);
 }
 
+// The plugin was called McpAutomationBridge before. A copy left beside EngineWire would load
+// as well, and the two would fight over the same ports.
+function removeLegacyCopy(targetPath, dryRun) {
+  removeDir(path.join(path.dirname(targetPath), 'McpAutomationBridge'), dryRun);
+}
+
 function main() {
   const args = parseArgs(process.argv);
 
@@ -131,6 +137,7 @@ function main() {
       removeDir(engineDest, args.dryRun);
     }
     copyDir(engineDest, args.dryRun);
+    removeLegacyCopy(engineDest, args.dryRun);
   }
 
   if (args.project) {
@@ -139,6 +146,7 @@ function main() {
       removeDir(projectDest, args.dryRun);
     }
     copyDir(projectDest, args.dryRun);
+    removeLegacyCopy(projectDest, args.dryRun);
   }
 
   console.log('Done. Clean sync removes plugin binaries/intermediates; rebuild the project if Unreal cannot find the module.');

@@ -1,4 +1,7 @@
+import { readdirSync, readFileSync, statSync } from 'node:fs';
+import { join, resolve } from 'node:path';
 import { describe, expect, it } from 'vitest';
+import { evaluateAssertions } from '../test-runner-response-utils.mjs';
 import { evaluateExpectation, resolveCapturedValues, summarizeResponseForReport } from '../test-runner.mjs';
 
 describe('test runner response evaluation', () => {
@@ -55,6 +58,77 @@ describe('test runner response evaluation', () => {
 
     expect(result.passed).toBe(true);
     expect(result.reason).toContain('world partition');
+  });
+
+  it('does not treat empty unsupported-setting metadata as a failed success response', () => {
+    const result = evaluateExpectation(
+      { expected: 'success' },
+      {
+        isError: false,
+        structuredContent: {
+          success: true,
+          message: 'Post-process settings applied.',
+          result: {
+            success: true,
+            applied: true,
+            unsupportedSettings: []
+          }
+        }
+      }
+    );
+
+    expect(result.passed).toBe(true);
+  });
+
+  it('fails success expectations when success true still reports a placeholder implementation', () => {
+    const result = evaluateExpectation(
+      { expected: 'success' },
+      {
+        isError: false,
+        structuredContent: {
+          success: true,
+          message: 'Render action not implemented yet',
+          result: { success: true }
+        }
+      }
+    );
+
+    expect(result.passed).toBe(false);
+    expect(result.reason).toContain('plugin reported failure');
+  });
+
+  it('fails success-primary alternatives when success true reports a placeholder implementation', () => {
+    const result = evaluateExpectation(
+      { expected: 'success|unsupported|not available' },
+      {
+        isError: false,
+        structuredContent: {
+          success: true,
+          message: 'Render action not implemented yet',
+          result: { success: true }
+        }
+      }
+    );
+
+    expect(result.passed).toBe(false);
+    expect(result.reason).toContain('plugin reported failure');
+  });
+
+  it('fails success-primary alternatives when failure response reports a placeholder implementation', () => {
+    const result = evaluateExpectation(
+      { expected: 'success|unsupported|not available' },
+      {
+        isError: true,
+        structuredContent: {
+          success: false,
+          error: 'NOT_IMPLEMENTED',
+          message: 'Render action not implemented yet and not available'
+        }
+      }
+    );
+
+    expect(result.passed).toBe(false);
+    expect(result.reason).toContain('plugin reported failure');
   });
 
   it('rejects unrelated failures when a success-primary expectation allows a specific editor-state fallback', () => {
@@ -185,6 +259,14 @@ describe('test runner response evaluation', () => {
     expect(missingFallback.reason).toContain('Error pattern not matched');
   });
 
+  it('keeps a captured value\'s type when the placeholder is the whole value', () => {
+    const resolved = resolveCapturedValues(
+      { bloom: '${captured:bloom}', label: 'bloom is ${captured:bloom}', samples: '${captured:samples}', method: '${captured:method}' },
+      { bloom: true, samples: 30, method: 'tsr' }
+    );
+    expect(resolved).toEqual({ bloom: true, label: 'bloom is true', samples: 30, method: 'tsr' });
+  });
+
   it('resolves captured placeholders recursively through nested argument arrays', () => {
     const missingKeys: string[] = [];
     const resolved = resolveCapturedValues(
@@ -215,5 +297,102 @@ describe('test runner response evaluation', () => {
       unchanged: 7
     });
     expect(missingKeys).toEqual(['missingNodeId']);
+  });
+
+});
+
+
+describe('test runner response assertions', () => {
+  it('passes notIncludes assertions when an array omits the forbidden value', () => {
+    const result = evaluateAssertions(
+      {
+        assertions: [
+          {
+            path: 'structuredContent.result.appliedCVars',
+            notIncludes: 'r.PathTracing.MaxBounces',
+            label: 'omitted path tracing bounces'
+          }
+        ]
+      },
+      {
+        structuredContent: {
+          result: {
+            appliedCVars: ['r.PathTracing', 'r.PathTracing.SamplesPerPixel']
+          }
+        }
+      }
+    );
+
+    expect(result.passed).toBe(true);
+  });
+
+  it('fails notIncludes assertions when an array contains the forbidden value', () => {
+    const result = evaluateAssertions(
+      {
+        assertions: [
+          {
+            path: 'structuredContent.result.appliedCVars',
+            notIncludes: 'r.PathTracing.MaxBounces',
+            label: 'omitted path tracing bounces'
+          }
+        ]
+      },
+      {
+        structuredContent: {
+          result: {
+            appliedCVars: ['r.PathTracing.MaxBounces']
+          }
+        }
+      }
+    );
+
+    expect(result.passed).toBe(false);
+    expect(result.reason).toContain('r.PathTracing.MaxBounces');
+  });
+});
+
+// A broad mask such as `expected: 'error|CODE|success'` accepts either outcome,
+// so it cannot fail on the thing the case exists to prove. It is worse than
+// loose: a primary of `error` sets primaryExpectsFailure in evaluateExpectation,
+// which SKIPS both the infrastructure-error guard and the "response indicates
+// error but test expected success" guard, so such a case also passes on
+// NO_NAVMESH / NOT_FOUND / bridge loss. Twelve of these had accumulated.
+//
+// Controlled fallbacks belong in the success-primary form
+// (`'success|CODE|already exists'`) or the object form
+// (`{ condition: 'success', errorPattern: 'CODE' }`), both of which keep the
+// guards armed.
+describe('integration-suite expectation grammar', () => {
+  const PRIMARY = new Set(['success', 'error', 'timeout']);
+
+  function suiteFiles(dir: string): string[] {
+    const out: string[] = [];
+    for (const entry of readdirSync(dir)) {
+      if (entry === 'node_modules' || entry === 'reports') continue;
+      const full = join(dir, entry);
+      if (statSync(full).isDirectory()) out.push(...suiteFiles(full));
+      else if (full.endsWith('.mjs') || full.endsWith('.cjs')) out.push(full);
+    }
+    return out;
+  }
+
+  it('no case accepts BOTH success and error, and every primary is a real intent', () => {
+    const offenders: string[] = [];
+    for (const file of suiteFiles(resolve(process.cwd(), 'tests'))) {
+      const text = readFileSync(file, 'utf8');
+      for (const match of text.matchAll(/expected:\s*'([^']*)'/g)) {
+        const tokens = match[1].split(/\s+or\s+|\|/).map((t) => t.trim()).filter(Boolean);
+        if (tokens.length === 0) continue;
+        const lowered = tokens.map((t) => t.toLowerCase());
+        const outcomes = new Set(lowered.filter((t) => PRIMARY.has(t)));
+        if (!PRIMARY.has(lowered[0])) {
+          offenders.push(`${file}: primary '${tokens[0]}' is not success/error/timeout`);
+        }
+        if (outcomes.has('success') && outcomes.has('error')) {
+          offenders.push(`${file}: broad mask '${match[1]}'`);
+        }
+      }
+    }
+    expect(offenders).toEqual([]);
   });
 });

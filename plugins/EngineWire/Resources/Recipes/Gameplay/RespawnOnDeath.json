@@ -1,0 +1,29 @@
+{
+  "description": "Respawning after death, for a pawn with the Health and Respawn behaviours: OnDied, bound at BeginPlay, puts Health back to MaxHealth, clears bIsDead, turns bDestroyOnDeath off so the respawned pawn is not destroyed, reports the new health through OnHealthChanged and calls Respawn.",
+  "tag": "RespawnOnDeath",
+  "placeholders": {
+    "SelfClass": "The pawn Blueprint's own generated class path; it declares OnDied and Respawn."
+  },
+  "hooks": [
+    { "id": "deathBegin", "event": "BeginPlay" }
+  ],
+  "eventGraph": [
+    { "edit": "create_node", "id": "deathSelf", "nodeType": "Self" },
+    { "edit": "create_node", "id": "deathBind", "nodeType": "BindEvent", "memberName": "OnDied", "memberClass": "{{SelfClass}}", "eventName": "OnDiedRespawn" },
+    { "edit": "create_node", "id": "deathMax", "nodeType": "VariableGet", "memberName": "MaxHealth" },
+    { "edit": "create_node", "id": "deathHealth", "nodeType": "VariableSet", "memberName": "Health" },
+    { "edit": "create_node", "id": "deathAlive", "nodeType": "VariableSet", "memberName": "bIsDead", "pinDefaults": { "bIsDead": false } },
+    { "edit": "create_node", "id": "deathKeep", "nodeType": "VariableSet", "memberName": "bDestroyOnDeath", "pinDefaults": { "bDestroyOnDeath": false } },
+    { "edit": "create_node", "id": "deathNotify", "nodeType": "CallDelegate", "memberName": "OnHealthChanged" },
+    { "edit": "create_node", "id": "deathRespawn", "nodeType": "CallFunction", "memberName": "Respawn", "memberClass": "{{SelfClass}}" },
+    { "edit": "connect_pins", "from": "$deathSelf.self", "to": "$deathBind.self" },
+    { "edit": "connect_pins", "from": "$deathMax.MaxHealth", "to": "$deathHealth.Health" },
+    { "edit": "connect_pins", "from": "$deathHealth.Output_Get", "to": "$deathNotify.NewHealth" },
+    { "edit": "connect_pins", "from": "$deathBegin.then", "to": "$deathBind.execute" },
+    { "edit": "connect_pins", "from": "$deathBind_event.then", "to": "$deathHealth.execute" },
+    { "edit": "connect_pins", "from": "$deathHealth.then", "to": "$deathAlive.execute" },
+    { "edit": "connect_pins", "from": "$deathAlive.then", "to": "$deathKeep.execute" },
+    { "edit": "connect_pins", "from": "$deathKeep.then", "to": "$deathNotify.execute" },
+    { "edit": "connect_pins", "from": "$deathNotify.then", "to": "$deathRespawn.execute" }
+  ]
+}

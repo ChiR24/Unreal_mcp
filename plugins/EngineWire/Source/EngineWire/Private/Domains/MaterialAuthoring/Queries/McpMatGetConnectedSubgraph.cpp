@@ -1,0 +1,131 @@
+#include "Domains/MaterialAuthoring/McpMatPrivate.h"
+#include "Materials/MaterialExpressionCustomOutput.h"
+
+namespace McpMaterialAuthoringHandlers
+{
+bool HandleGetConnectedSubgraph(UEngineWireSubsystem* Bridge, const FString& RequestId, const FString& SubAction, const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> Socket)
+{
+  if (SubAction == TEXT("get_connected_subgraph")) {
+    LOAD_MATERIAL_OR_FUNCTION_OR_RETURN();
+
+    bool bOrphansOnly = false;
+    Payload->TryGetBoolField(TEXT("orphansOnly"), bOrphansOnly);
+
+    FString NodeId;
+    Payload->TryGetStringField(TEXT("nodeId"), NodeId);
+
+    if (NodeId.IsEmpty() && !bOrphansOnly) {
+      Bridge->SendAutomationError(Socket, RequestId, TEXT("Missing 'nodeId' (or set orphansOnly=true)."), TEXT("INVALID_ARGUMENT"));
+      return true;
+    }
+
+    auto& AllExpr = Material
+        ? MCP_GET_MATERIAL_EXPRESSIONS(Material)
+        : MCP_GET_FUNCTION_EXPRESSIONS(Function);
+
+    // Adj is both ways (a node's island); Reads only from a node to the nodes feeding it. Reaching an output
+    // walked Adj, so a node that only read a live one, its own result wired to nothing, counted as connected
+    // and a dead branch never listed as orphaned.
+    TMultiMap<UMaterialExpression*, UMaterialExpression*> Adj, Reads;
+    for (UMaterialExpression *Expr : AllExpr) {
+      ForEachExpressionInput(Expr, [&](FExpressionInput &Input, const FString &) {
+        if (Input.Expression) { Adj.Add(Input.Expression, Expr); Adj.Add(Expr, Input.Expression); Reads.Add(Expr, Input.Expression); }
+      });
+    }
+
+    // Find nodes connected to Material main pins (or MF FunctionOutputs)
+    TSet<UMaterialExpression*> OutputConnected;
+    TArray<UMaterialExpression*> FloodQueue;
+    if (Material) {
+      auto SeedMain = [&](const TCHAR *, const FExpressionInput &Input) {
+        if (Input.Expression) { OutputConnected.Add(Input.Expression); FloodQueue.Add(Input.Expression); }
+      };
+      ForEachMainMaterialInput(Material, SeedMain);
+    }
+    // A function's outputs, and a custom output (a vertex interpolator, the water output), are outputs that
+    // nothing reads.
+    for (UMaterialExpression *Expr : AllExpr) {
+      if (Cast<UMaterialExpressionFunctionOutput>(Expr) || Cast<UMaterialExpressionCustomOutput>(Expr)) {
+        OutputConnected.Add(Expr);
+        FloodQueue.Add(Expr);
+      }
+    }
+    int32 FIdx = 0;
+    while (FIdx < FloodQueue.Num()) {
+      UMaterialExpression *Cur = FloodQueue[FIdx++];
+      TArray<UMaterialExpression*> Neighbors;
+      Reads.MultiFind(Cur, Neighbors);
+      for (UMaterialExpression *N : Neighbors) {
+        if (!OutputConnected.Contains(N)) {
+          OutputConnected.Add(N);
+          FloodQueue.Add(N);
+        }
+      }
+    }
+
+    if (bOrphansOnly) {
+      TArray<TSharedPtr<FJsonValue>> OrphansArr;
+      for (UMaterialExpression *Expr : AllExpr) {
+        if (!Expr) continue;
+        if (!OutputConnected.Contains(Expr)) {
+          TSharedPtr<FJsonObject> Obj = MakeShared<FJsonObject>();
+          Obj->SetStringField(TEXT("nodeId"), MCP_NODE_ID(Expr));
+          Obj->SetStringField(TEXT("type"), Expr->GetClass()->GetName());
+          Obj->SetStringField(TEXT("desc"), Expr->GetDescription());
+          OrphansArr.Add(MakeShared<FJsonValueObject>(Obj));
+        }
+      }
+      TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
+      Result->SetNumberField(TEXT("orphanCount"), OrphansArr.Num());
+      Result->SetArrayField(TEXT("orphans"), OrphansArr);
+      Bridge->SendAutomationResponse(Socket, RequestId, true,
+                             FString::Printf(TEXT("Found %d orphaned node(s)."), OrphansArr.Num()),
+                             Result);
+      return true;
+    }
+
+    UMaterialExpression *SeedExpr = FIND_EXPR_IN_HOST(NodeId);
+    if (!SeedExpr) {
+      Bridge->SendAutomationError(Socket, RequestId, TEXT("Node not found."), TEXT("NODE_NOT_FOUND"));
+      return true;
+    }
+
+    TSet<UMaterialExpression*> Island;
+    TArray<UMaterialExpression*> IslandQueue;
+    Island.Add(SeedExpr);
+    IslandQueue.Add(SeedExpr);
+    int32 IIdx = 0;
+    while (IIdx < IslandQueue.Num()) {
+      UMaterialExpression *Cur = IslandQueue[IIdx++];
+      TArray<UMaterialExpression*> Neighbors;
+      Adj.MultiFind(Cur, Neighbors);
+      for (UMaterialExpression *N : Neighbors) {
+        if (!Island.Contains(N)) {
+          Island.Add(N);
+          IslandQueue.Add(N);
+        }
+      }
+    }
+
+    TArray<TSharedPtr<FJsonValue>> NodesArr;
+    for (UMaterialExpression *Expr : Island) {
+      TSharedPtr<FJsonObject> Obj = MakeShared<FJsonObject>();
+      Obj->SetStringField(TEXT("nodeId"), MCP_NODE_ID(Expr));
+      Obj->SetStringField(TEXT("type"), Expr->GetClass()->GetName());
+      Obj->SetStringField(TEXT("desc"), Expr->GetDescription());
+      Obj->SetBoolField(TEXT("connectedToOutput"), OutputConnected.Contains(Expr));
+      NodesArr.Add(MakeShared<FJsonValueObject>(Obj));
+    }
+
+    TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
+    Result->SetNumberField(TEXT("islandSize"), NodesArr.Num());
+    Result->SetArrayField(TEXT("nodes"), NodesArr);
+    Bridge->SendAutomationResponse(Socket, RequestId, true,
+                           FString::Printf(TEXT("Subgraph contains %d node(s)."), NodesArr.Num()),
+                           Result);
+    return true;
+  }
+
+  return false;
+}
+}

@@ -2,6 +2,21 @@ name: CI
 permissions:
   contents: read
 
+# Hosted CI never requires Unreal. Every deterministic gate below runs on a
+# stock GitHub runner with no engine, no editor and no plugin build.
+#
+# Unreal-dependent work is opt-in, switched on by repository VARIABLES (never
+# by secrets -- a secret in an `if:` is readable in this file and does not
+# function as a gate):
+#
+#   vars.UNREAL_ENGINE_ROOT     switches on `package-plugin` (RunUAT BuildPlugin)
+#   vars.UNREAL_LIVE_TESTS      switches on `live-matrix` (integration vs a live editor)
+#   vars.UNREAL_RUNNER_LABEL    the self-hosted runner label that owns an engine
+#   secrets.UNREAL_ENGINE_ROOT  the engine path itself, supplied via env only
+#
+# Once a job is switched on, its first step fails loudly on a bad engine root or
+# a hosted runner instead of degrading into a skip.
+
 on:
   push:
     branches: [ main ]
@@ -16,13 +31,13 @@ jobs:
   lint:
     name: Lint (TS)
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 20
     steps:
       - name: Checkout
-        uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
       - name: Setup Node.js
-        uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6.4.0
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version: '20'
           cache: 'npm'
@@ -32,11 +47,196 @@ jobs:
 
       - name: Run ESLint (TypeScript/JavaScript)
         run: |
-          echo "Running ESLint (fail on warnings)"
-          npx eslint . --ext .ts --max-warnings=0
+          echo "Running ESLint 9 (fail on warnings)"
+          npx eslint . --max-warnings=0
 
       - name: Type-check TypeScript
         run: npm run type-check
 
       - name: Run unit tests
         run: npm run test:unit
+
+      # -------------------------------------------------------------------
+      # Deterministic gates. Everything below runs without Unreal and is
+      # ordered after the lint/type/unit sequence above.
+      # -------------------------------------------------------------------
+
+      # The canonical capability records generate the TypeScript facades and
+      # the native C++ registry. Nothing else in CI notices
+      # when a generated artifact stops matching its records, so a stale
+      # generate would reach consumers as a build that compiles and lies.
+      - name: Canonical registry generation drift
+        run: npm run registry:check
+
+      - name: Verify gateway manifest is in sync
+        run: npm run manifest:check
+
+      - name: Native header drift (console policy, telemetry schema)
+        run: npm run headers:check
+
+      - name: Parameter combination audit
+        run: npm run test:params
+
+      # The eval gate lives behind a separate Vitest config, so
+      # `npm run test:unit` never reaches it.
+      - name: Evaluation budget gate
+        run: npm run eval:check
+
+  dependency-audit:
+    name: Dependency audit
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    # Its own job on purpose. npm audit queries the live advisory database, so
+    # its verdict is a function of the world and not of this repository: an
+    # advisory published against a dependency turns it red with nothing here
+    # having changed. Inside the lint job that verdict also discarded every
+    # deterministic gate above it, and the only way to unblock a release was to
+    # edit this workflow under pressure. Split out, a red audit is legible on
+    # its own and the deterministic gates still report their own result.
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Setup Node.js
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      # Blocking scope is what ships: runtime dependencies at moderate or above.
+      # --omit=dev is load-bearing: the eslint -> @eslint/config-array ->
+      # minimatch -> brace-expansion chain is dev-only, cannot be cleared
+      # without a breaking eslint major, and took the whole job red on every run.
+      #
+      # The threshold used to sit at =high because GHSA-frvp-7c67-39w9 sat on
+      # the PRODUCTION path under the pinned @modelcontextprotocol/sdk 1.29.0,
+      # so a runtime moderate was tolerated rather than absent. That advisory no
+      # longer reports against the pinned tree, so the narrowing has nothing
+      # left to excuse and the gate sits at moderate. If a runtime moderate
+      # reappears, fix or upgrade it; do not widen this back without saying here
+      # which advisory forced it.
+      - name: Dependency audit (runtime deps, blocking)
+        run: npm audit --omit=dev --audit-level=moderate
+
+      # Dev-tree advisories stay visible without gating. Never let this one fail
+      # the job: it reports on tooling that does not ship.
+      - name: Dependency audit (full tree, informational)
+        continue-on-error: true
+        run: npm audit --audit-level=moderate
+
+  package-plugin:
+    name: Package Plugin (opt-in, requires UE source root)
+    # The label is supplied by the repository owner rather than hardcoded, for
+    # the same reason as live-matrix below: RunUAT BuildPlugin needs an engine
+    # root, which a hosted runner never has. Pinning ubuntu-latest here meant
+    # that switching the job on could only ever fail its own preflight.
+    runs-on: ${{ vars.UNREAL_RUNNER_LABEL || 'ubuntu-latest' }}
+    timeout-minutes: 60
+    needs: lint
+    # Opt-in gate: only runs when the UNREAL_ENGINE_ROOT repository variable is set.
+    # Hosted CI stays green without it (job is skipped, not failed). The engine
+    # root secret is supplied via job/step env (see below), never in `if`.
+    if: ${{ vars.UNREAL_ENGINE_ROOT != '' }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Preflight the engine root
+        env:
+          UNREAL_ENGINE_ROOT: ${{ secrets.UNREAL_ENGINE_ROOT }}
+        shell: bash
+        run: test -f "$UNREAL_ENGINE_ROOT/Engine/Build/Build.version" || { echo "::error::secrets.UNREAL_ENGINE_ROOT is not an engine root"; exit 1; }
+
+      - name: Setup Node.js
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Package plugin with RunUAT BuildPlugin
+        env:
+          UNREAL_ENGINE_ROOT: ${{ secrets.UNREAL_ENGINE_ROOT }}
+          # Strict deprecation build: the quiet default is for local iteration,
+          # so CI must be the place the module's own deprecation drift stays
+          # visible (Build.cs honours MCP_STRICT_DEPRECATIONS=1).
+          MCP_STRICT_DEPRECATIONS: '1'
+        run: node scripts/package-plugin.mjs "$UNREAL_ENGINE_ROOT" build/plugin-package
+
+  live-matrix:
+    name: Live Unreal integration (opt-in, requires owned runner + editor)
+    # The label is supplied by the repository owner rather than hardcoded here.
+    # When live tests are switched on without one, the job lands on a hosted
+    # runner and the preflight below fails loudly instead of skipping.
+    runs-on: ${{ vars.UNREAL_RUNNER_LABEL || 'ubuntu-latest' }}
+    timeout-minutes: 90
+    needs: lint
+    if: ${{ vars.UNREAL_LIVE_TESTS != '' }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Preflight the runner and engine root
+        env:
+          UNREAL_RUNNER_LABEL: ${{ vars.UNREAL_RUNNER_LABEL }}
+          UNREAL_ENGINE_ROOT: ${{ secrets.UNREAL_ENGINE_ROOT }}
+        shell: bash
+        run: |
+          [ -n "$UNREAL_RUNNER_LABEL" ] || { echo "::error::vars.UNREAL_RUNNER_LABEL must name the self-hosted runner that owns an editor"; exit 1; }
+          test -f "$UNREAL_ENGINE_ROOT/Engine/Build/Build.version" || { echo "::error::secrets.UNREAL_ENGINE_ROOT is not an engine root"; exit 1; }
+
+      - name: Setup Node.js
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build TypeScript server
+        run: npm run build
+
+      - name: Run the Unreal-dependent integration suite
+        env:
+          UNREAL_ENGINE_ROOT: ${{ secrets.UNREAL_ENGINE_ROOT }}
+          UE_PROJECT_PATH: ${{ vars.UE_PROJECT_PATH }}
+        run: npm test
+
+  test-matrix:
+    name: Test Matrix (Node 20.19 / 26)
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        node-version: ['20.19.x', '26.x']
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Setup Node.js
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: ${{ matrix.node-version }}
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run ESLint (TypeScript/JavaScript)
+        run: npx eslint . --max-warnings=0
+
+      - name: Type-check TypeScript
+        run: npm run type-check
+
+      - name: Run unit tests
+        run: npx vitest run
+
+      - name: Build TypeScript server
+        run: npm run build

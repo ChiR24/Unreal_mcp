@@ -1,0 +1,199 @@
+#pragma once
+
+FBlueprintActionContext BuildBlueprintActionContext(
+    UEngineWireSubsystem &Bridge, const FString &RequestId,
+    const FString &Action, const TSharedPtr<FJsonObject> &Payload,
+    TSharedPtr<FMcpBridgeWebSocket> RequestingSocket);
+FBlueprintActionContext BuildScsActionContext(
+    UEngineWireSubsystem &Bridge, const FString &RequestId,
+    const FString &Action, const TSharedPtr<FJsonObject> &Payload,
+    TSharedPtr<FMcpBridgeWebSocket> RequestingSocket);
+bool ActionMatchesPattern(const FBlueprintActionContext &Context,
+                          const TCHAR *Pattern);
+FString ResolveBlueprintRequestedPath(
+    const TSharedPtr<FJsonObject> &LocalPayload);
+UBlueprint *ResolveScsBlueprint(const TSharedPtr<FJsonObject> &Payload);
+// variableNames then variableName, without repeats: set_variable_metadata and remove_variable read a list the same way.
+TArray<FString> McpReadVariableNames(const TSharedPtr<FJsonObject> &Payload);
+// Each name takes the Blueprint's own spelling (case-insensitive); OutMissing gets the names it lacks, OutKnown its variables.
+void McpMatchVariableNames(const UBlueprint *Blueprint, TArray<FString> &InOutNames, TArray<FString> &OutMissing,
+                           TArray<FString> &OutKnown);
+void FEngineWire_AddUserDefinedPin(UK2Node *Node,
+                                            const FString &PinName,
+                                            const FString &PinType,
+                                            EEdGraphPinDirection Direction);
+UFunction *FEngineWire_ResolveFunction(UBlueprint *Blueprint,
+                                                const FString &FunctionName);
+FProperty *FEngineWire_FindProperty(UBlueprint *Blueprint,
+                                             const FString &PropertyName);
+UEdGraphNode *MakeVariableNodeForMcp(UBlueprint *BP, UEdGraph *TargetGraph,
+                                     const FString &NodeTypeLower,
+                                     const FString &VariableName,
+                                     const FString &MemberClass,
+                                     FString &OutErrorMessage,
+                                     FString &OutErrorCode,
+                                     TSharedPtr<FJsonObject> &OutErrorResult);
+FName FEngineWire_ResolveMetadataKey(const FString &RawKey);
+void FEngineWire_AppendPinsJson(
+    const TArray<TSharedPtr<FUserPinInfo>> &Pins,
+    TArray<TSharedPtr<FJsonValue>> &Out);
+bool FEngineWire_CollectVariableMetadata(
+    const UBlueprint *Blueprint, const FBPVariableDescription &VarDesc,
+    TSharedPtr<FJsonObject> &OutMetadata);
+TSharedPtr<FJsonObject> FEngineWire_BuildVariableJson(
+    const UBlueprint *Blueprint, const FBPVariableDescription &VarDesc);
+FString FEngineWire_DescribePropertyType(const FProperty *Property);
+TSharedPtr<FJsonObject> FEngineWire_CollectBlueprintDefaults(
+    UBlueprint *Blueprint, const TArray<TSharedPtr<FJsonValue>> &Variables);
+void FEngineWire_CollectEventPins(
+    UK2Node *Node, TArray<TSharedPtr<FJsonValue>> &Out);
+TArray<TSharedPtr<FJsonValue>> FEngineWire_CollectBlueprintEvents(
+    UBlueprint *Blueprint);
+TSharedPtr<FJsonObject> FEngineWire_FindNamedEntry(
+    const TArray<TSharedPtr<FJsonValue>> &Array, const FString &FieldName,
+    const FString &DesiredValue);
+TSharedPtr<FJsonObject> FEngineWire_BuildBlueprintSnapshot(
+    UBlueprint *Blueprint, const FString &NormalizedPath);
+
+struct FModifyScsState {
+  FString BlueprintPath;
+  TArray<FString> CandidatePaths;
+  const TArray<TSharedPtr<FJsonValue>> *OperationsArray = nullptr;
+  bool bCompile = false;
+  bool bSave = false;
+  FString NormalizedBlueprintPath;
+  FString LoadError;
+  TArray<FString> TriedCandidates;
+  TArray<TSharedPtr<FJsonValue>> DeferredOps;
+  TSharedPtr<FJsonObject> CompletionResult;
+  TArray<FString> LocalWarnings;
+  TArray<TSharedPtr<FJsonValue>> FinalSummaries;
+  bool bOk = false;
+  bool bSaveResult = false;
+};
+
+bool PrepareModifyScsPayload(const FBlueprintActionContext &Context,
+                             FModifyScsState &State);
+bool ResolveModifyScsTarget(const FBlueprintActionContext &Context,
+                            FModifyScsState &State);
+// Answers an empty operations list itself (success, nothing to do); false then.
+bool RequireModifyScsOperations(const FBlueprintActionContext &Context,
+                                FModifyScsState &State);
+bool ValidateModifyScsOperations(const FBlueprintActionContext &Context,
+                                 FModifyScsState &State);
+bool LoadModifyScsBlueprint(const FBlueprintActionContext &Context,
+                            FModifyScsState &State, UBlueprint *&LocalBP,
+                            USimpleConstructionScript *&LocalSCS);
+void ApplyModifyScsOperation(UBlueprint *LocalBP,
+                             USimpleConstructionScript *LocalSCS,
+                             const FString &NormalizedType,
+                             const TSharedPtr<FJsonObject> &Op,
+                             TSharedPtr<FJsonObject> OpSummary);
+void ApplyModifyScsComponentOperation(UBlueprint *LocalBP,
+                                      USimpleConstructionScript *LocalSCS,
+                                      const FString &NormalizedType,
+                                      const TSharedPtr<FJsonObject> &Op,
+                                      TSharedPtr<FJsonObject> OpSummary);
+void FinalizeModifyScsResponse(const FBlueprintActionContext &Context,
+                               FModifyScsState &State,
+                               UBlueprint *LocalBP);
+UEdGraph *FindOrCreateBlueprintNodeGraph(UBlueprint *BP,
+                                         const FString &GraphName);
+UEdGraphNode *CreateBlueprintGraphNode(UEdGraph *TargetGraph,
+                                       UBlueprint *BP,
+                                       const FString &NodeType,
+                                       const FString &FunctionName,
+                                       const FString &VariableName,
+                                       const FString &NodeName,
+                                       const FString &TargetClass,
+                                       FString &OutErrorMessage,
+                                       FString &OutErrorCode,
+                                       TSharedPtr<FJsonObject> &OutErrorResult);
+void SendBlueprintAddNodeResult(
+    UEngineWireSubsystem &Bridge, const FString &RequestId,
+    TSharedPtr<FMcpBridgeWebSocket> RequestingSocket,
+    const FString &RegistryKey, UEdGraph *TargetGraph, UEdGraphNode *NewNode,
+    float PosX, float PosY, bool bSaved,
+    const FString &NodeName, const FString &FunctionName,
+    const FString &VariableName);
+void SendBlueprintAddEventResult(
+    UEngineWireSubsystem &Bridge, const FString &RequestId,
+    TSharedPtr<FMcpBridgeWebSocket> RequestingSocket, UBlueprint *BP,
+    const FString &RegistryKey, const FName &EventName,
+    const FString &FinalType, const TArray<TSharedPtr<FJsonValue>> &Params,
+    bool bSaved, const FString &Overrides = FString());
+// The event graph page named GraphName, or the main event graph when it is
+// empty; null with OutError set when a named page does not exist.
+UEdGraph *FindBlueprintEventGraph(UBlueprint *BP, const FString &GraphName,
+                                  FString &OutError);
+bool McpBlueprintAddEventComponentBound(
+    const FBlueprintActionContext &Context, UBlueprint *BP, UEdGraph *EventGraph,
+    int32 EventPosX, int32 EventPosY, const FString &RegistryKey,
+    const FString &ComponentName, const FString &DelegateEventName,
+    const FString &FinalType, const TArray<TSharedPtr<FJsonValue>> &Params);
+bool McpBlueprintAddEventCustom(
+    const FBlueprintActionContext &Context, UBlueprint *BP, UEdGraph *EventGraph,
+    int32 EventPosX, int32 EventPosY, const FString &RegistryKey,
+    const FString &FinalType, const FString &CustomName,
+    const TArray<TSharedPtr<FJsonValue>> &Params);
+bool McpBlueprintAddEventStandard(
+    const FBlueprintActionContext &Context, UBlueprint *BP, UEdGraph *EventGraph,
+    int32 EventPosX, int32 EventPosY, const FString &RegistryKey,
+    const FString &FinalType, const TArray<TSharedPtr<FJsonValue>> &Params);
+// An event the parent class chain or an implemented interface declares under Name, or null.
+UFunction *McpFindOverridableEvent(const UBlueprint *BP, const FString &Name);
+// EntryNodeGuid goes out as nodeGuid, ResultNodeGuid (when the function has a
+// return node) as resultNodeGuid: build_graph aliases them "$id" and "$id_return".
+// OverrideClass names the parent function the new one overrides, as overrides.
+void SendBlueprintAddFunctionResult(
+    UEngineWireSubsystem &Bridge, const FString &RequestId,
+    TSharedPtr<FMcpBridgeWebSocket> RequestingSocket, UBlueprint *Blueprint,
+    const FString &RegistryKey, const FString &FuncName, bool bIsPublic,
+    const TArray<TSharedPtr<FJsonValue>> &Inputs,
+    const TArray<TSharedPtr<FJsonValue>> &Outputs, bool bSaved,
+    const FString &EntryNodeGuid, const FString &ResultNodeGuid,
+    const UClass *OverrideClass = nullptr);
+// The class declaring the overridable function FuncName names (a widget's OnKeyDown), or null for a new
+// function. OutRefusal is set when it is overridden as an event, or the request gave a signature of its own.
+UClass *ResolveFunctionOverride(UBlueprint *Blueprint, const FString &FuncName,
+                                const TSharedPtr<FJsonObject> &Payload, FString &OutRefusal);
+// The guid of a function graph's entry (bEntry) or first return node; empty when none.
+FString FunctionTerminatorGuid(const UEdGraph *Graph, bool bEntry);
+// Why an existing function does not match the pure, inputs and outputs a request
+// gives (only those it gives); empty when it matches.
+FString DescribeFunctionSignatureMismatch(const UEdGraph *Graph,
+                                          const TSharedPtr<FJsonObject> &Payload);
+
+bool HandleBlueprintModifyScs(const FBlueprintActionContext &Context);
+bool HandleBlueprintScsWrappers(const FBlueprintActionContext &Context);
+bool HandleBlueprintSetVariableMetadata(const FBlueprintActionContext &Context);
+bool HandleBlueprintAddConstructionScript(const FBlueprintActionContext &Context);
+bool HandleBlueprintAddVariable(const FBlueprintActionContext &Context);
+bool HandleBlueprintSetDefaultLiteral(const FBlueprintActionContext &Context);
+bool HandleBlueprintRemoveRenameVariable(const FBlueprintActionContext &Context);
+bool HandleBlueprintAddEvent(const FBlueprintActionContext &Context);
+bool HandleBlueprintRemoveEvent(const FBlueprintActionContext &Context);
+bool HandleBlueprintAddFunction(const FBlueprintActionContext &Context);
+// build_graph member step only (no standalone action): {dispatcherName, parameters}.
+bool HandleBlueprintAddEventDispatcher(const FBlueprintActionContext &Context);
+bool HandleBlueprintRemoveFunction(const FBlueprintActionContext &Context);
+bool HandleBlueprintImplementInterface(const FBlueprintActionContext &Context);
+bool HandleBlueprintEditTimeline(const FBlueprintActionContext &Context);
+bool HandleBlueprintAddBehaviour(const FBlueprintActionContext &Context);
+bool HandleBlueprintAddControls(const FBlueprintActionContext &Context);
+bool HandleBlueprintAddRespawn(const FBlueprintActionContext &Context);
+bool HandleBlueprintAddHealthHud(const FBlueprintActionContext &Context);
+bool HandleBlueprintAddCounterHud(const FBlueprintActionContext &Context);
+bool HandleBlueprintAddGameOver(const FBlueprintActionContext &Context);
+bool HandleBlueprintAddHint(const FBlueprintActionContext &Context);
+bool HandleBlueprintCompile(const FBlueprintActionContext &Context);
+// compile with folder: every Blueprint under it, answered with the ones the compiler or the graph checks flag.
+void McpCompileBlueprintFolder(const FBlueprintActionContext &Context, const FString &Folder);
+bool HandleBlueprintCreateExists(const FBlueprintActionContext &Context);
+bool HandleBlueprintGet(const FBlueprintActionContext &Context);
+bool HandleBlueprintAddNode(const FBlueprintActionContext &Context);
+bool HandleBlueprintEnsureProbe(const FBlueprintActionContext &Context);
+bool HandleBlueprintSetMetadata(const FBlueprintActionContext &Context);
+bool HandleBlueprintStructMakeBreakNodes(const FBlueprintActionContext &Context);
+bool HandleScsAddComponent(const FBlueprintActionContext &Context);
+bool HandleScsGet(const FBlueprintActionContext &Context);

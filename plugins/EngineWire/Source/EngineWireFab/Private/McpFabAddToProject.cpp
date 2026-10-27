@@ -1,0 +1,352 @@
+// Copyright (c) 2024 EngineWire Contributors
+
+// The whole add-to-project chain, run inside Fab's authenticated page.
+//
+// Resolve and add are ONE page-side operation on purpose. Handing the signed URL
+// back to C++ so C++ could pass it down again would put transient
+// authentication-derived material into this process, where it could reach a log,
+// a receipt or JSON-RPC. Here it is minted and consumed without ever leaving the
+// page: C++ learns only that the workflow was accepted.
+//
+// UFabBrowserApi::AddToProject shows what actually matters for a UE listing --
+// AssetType must be "unreal-engine", and it then uses AssetId, AssetName and
+// DistributionPointBaseUrls to build an FPackImportWorkflow. Everything else on
+// FFabAssetMetadata belongs to the Quixel branch.
+
+#include "McpFabAddScript.h"
+#include "McpFabDownloadScript.h"
+#include "McpFabSelectionScript.h"
+
+DEFINE_LOG_CATEGORY_STATIC(LogMcpFabAdd, Log, All);
+
+namespace McpFabAddOperation
+{
+/**
+ * A listing id is an opaque Fab uid, so anything outside this set is a caller
+ * trying to steer the path. Rejecting here rather than escaping later keeps the
+ * guarantee simple: no request can be aimed at /i/account or /i/auth even though
+ * console commands are reachable through MCP's console_command.
+ */
+bool IsSafeListingId(const FString& Value)
+{
+	if (Value.IsEmpty() || Value.Len() > 64)
+	{
+		return false;
+	}
+	for (const TCHAR C : Value)
+	{
+		const bool bAllowed = FChar::IsAlnum(C) || C == TEXT('-') || C == TEXT('_');
+		if (!bAllowed)
+		{
+			return false;
+		}
+	}
+	return true;
+}
+
+/** The four tiers Megascans publishes, or empty for none: the only values that ever reach the page. */
+bool IsKnownQuality(const FString& Value)
+{
+	return Value.IsEmpty() || Value == TEXT("raw") || Value == TEXT("high") || Value == TEXT("mid") || Value == TEXT("low");
+}
+
+/**
+ * Composed entirely in native code. ListingId is validated above and passed
+ * through encodeURIComponent as well; the format and file segments come from
+ * Fab's own response, not from any caller.
+ */
+FString BuildAddScript(const FString& RequestId, const FString& ListingId, const FString& EngineVersion,
+	const TOptional<bool>& CombineMeshes, const FString& Quality)
+{
+	return FString::Printf(TEXT(R"JS(
+(function () {
+  var id = "%s", listing = "%s", engine = "%s", combine = %d, quality = "%s";
+%s
+%s
+  function shape(v, d) {
+    if (v === null) return "null";
+    if (Array.isArray(v)) return d <= 0 ? "array[" + v.length + "]" : { array: v.length, first: v.length ? shape(v[0], d - 1) : "empty" };
+    if (typeof v === "object") { var o = {}; if (d <= 0) return "object"; Object.keys(v).slice(0, 40).forEach(function (k) { o[k] = shape(v[k], d - 1); }); return o; }
+    return typeof v;
+  }
+  // Mirrors the C++/TS receipt redaction for the two fields that echo
+  // third-party response text (a failed claim body and download-info detail).
+  // The reply is logged in full on refusal, so secret-shaped values must not
+  // survive in it; only the value AFTER masking crosses the boundary.
+  function scrub(v) {
+    return String(v == null ? "" : v)
+      .replace(/(token|secret|passwords?|passwd|pwd|api[_-]?key|authorization)\s*[:=]\s*[^\s,;]+/gi, "$1=[REDACTED]")
+      .slice(0, 300);
+  }
+  function send(o) { try { window.ue.mcpfab.onresult(id, JSON.stringify(o)); } catch (e) {} }
+  function fail(e) { try { window.ue.mcpfab.onerror(id, String(e).slice(0, 400)); } catch (_) {} }
+
+  var out = { listing: listing, engine: engine };
+  var base = "https://www.fab.com/i/listings/" + encodeURIComponent(listing);
+
+  // The format segment is resolved from the listing, not assumed. Requesting
+  // /asset-formats/unreal-engine directly returned 404 for a listing the site
+  // tags as Unreal: the site's listing_types filter and the asset-format code
+  // are not the same thing.
+  fetch(base, { credentials: "include" })
+    .then(function (r) { out.listingStatus = r.status; return r.json(); })
+    .then(function (listingJson) {
+      var formats = (listingJson && listingJson.assetFormats) || [];
+      out.title = String((listingJson && listingJson.title) || "").slice(0, 120);
+      out.formatShape = formats.length ? shape(formats[0], 2) : "none";
+      // The format is chosen from the full list: a listing can name unreal-engine tenth, after its
+      // source formats. Only the report is cut to eight.
+      var codes = formats.map(function (f) {
+        return f.assetFormatType ? f.assetFormatType.code : (f.code || f.type || "?");
+      });
+      out.formatCodes = codes.slice(0, 8);
+
+      // The publisher decides which importer runs: FabBrowserApi::AddToProject
+      // tests IsQuixel BEFORE it looks at gltf/fbx, routing Megascans content
+      // to FQuixelImportWorkflow instead of the generic Interchange one.
+      var seller = (listingJson.user && listingJson.user.sellerName) || "";
+      out.seller = String(seller);
+      out.isQuixel = /quixel/i.test(String(seller));
+
+      // Preference order mirrors that same dispatch: a packaged unreal-engine
+      // build goes through FPackImportWorkflow, and gltf/glb/fbx go through the
+      // Quixel or generic Interchange workflow. Demanding unreal-engine here
+      // rejected every listing that ships source formats -- the whole
+      // Megascans library -- even though Fab's own UI imports them through
+      // these very paths. The format is what selects the importer, not a
+      // precondition for importing at all.
+      var preferred = ["unreal-engine", "gltf", "glb", "fbx", "obj", "usdz"];
+      var code = null;
+      for (var p = 0; p < preferred.length && !code; p++) {
+        for (var i = 0; i < codes.length; i++) {
+          if (codes[i] === preferred[p]) { code = preferred[p]; break; }
+        }
+      }
+      if (!code) {
+        // A MetaHuman listing has its own workflow inside Fab, which this add does not drive: that is a
+        // different refusal from a listing that ships nothing Fab can import, and it says so.
+        var mh = /metahuman/i;
+        var isMetaHuman = codes.some(function (c) { return mh.test(c); }) || mh.test(String(listingJson.listingType || ""));
+        out.error = isMetaHuman ? "METAHUMAN_FORMAT" : "NO_IMPORTABLE_FORMAT";
+        send(out); return null;
+      }
+      out.formatCode = code;
+      // Fab's AddToProject switches on four strings -- unreal-engine,
+      // IsQuixel, gltf/glb/fbx -- and an obj listing matches none, so it
+      // falls through every branch and silently does nothing. But the
+      // workflow BEHIND that gate already handles obj: FGenericImportWorkflow
+      // downloads, unzips, then scans for MeshImportExtensions =
+      // {fbx, obj, usdz} and imports through Interchange, which ships a
+      // first-class OBJ translator. Epic's dispatch is simply narrower than
+      // its own workflow.
+      //
+      // So the real format still resolves the download URL below, and only
+      // the dispatch value is mapped onto a code that reaches the generic
+      // workflow. The archive we hand over is unchanged -- the workflow
+      // identifies content by file extension, not by this label.
+      out.dispatchType = ["unreal-engine","gltf","glb","fbx"].indexOf(code) >= 0 ? code : "fbx";
+      // Fab's generic importer merges every mesh in a source file into ONE static mesh; Megascans goes
+      // through its own importer, and a packaged unreal-engine build is already assets.
+      out.combinesMeshes = !out.isQuixel && ["gltf", "glb", "fbx", "obj", "usdz"].indexOf(code) >= 0;
+
+      // Entitlement first. download-info answers 404 for a listing the account
+      // does not own, which is why an unowned Quixel asset failed at that step
+      // while an already-owned one resolved: the miss was never the identifier
+      // or the URL shape, it was that nothing had claimed the listing. The Fab
+      // UI does this when you press Add to Project; add-to-library is the same
+      // call, observed in the plugin's own traffic. Free listings claim without
+      // charge, and an already-entitled one is a no-op, so this is safe to run
+      // unconditionally -- but it DOES add the listing to the signed-in Fab
+)JS") TEXT(R"JS(      // library, which the capability description states.
+      // The listing publishes no `offers` array -- 30 top-level keys and none
+      // of them is that -- so the offer id is nested. Rather than hardcode a
+      // guess at licenses[].offerId, walk for it and report where it was
+      // found, so the path is learned from the response instead of assumed.
+      function findOffer(o, depth, path) {
+        if (!o || typeof o !== "object" || depth > 4) { return null; }
+        for (var k in o) {
+          if (!Object.prototype.hasOwnProperty.call(o, k)) { continue; }
+          var v = o[k];
+          if (typeof v === "string" && v && /^offer(_?id)?$|offerid$/i.test(k)) {
+            return { id: v, at: path + "." + k };
+          }
+          if (v && typeof v === "object") {
+            var hit = findOffer(v, depth + 1, path + "." + k);
+            if (hit) { return hit; }
+          }
+        }
+        return null;
+      }
+      var found = findOffer(listingJson, 0, "listing");
+      // A listing can carry several licenses, each with its own offer. The free ones come first --
+      // add-to-library can claim a free offer without checkout, and each is tried until Fab accepts
+      // one -- then the offer the walk found, which is the only candidate when prices are not published.
+      var licensed = ((listingJson && listingJson.licenses) || []).filter(function (l) {
+        return l && l.offerId && (l.isCc0 || (l.priceTier && l.priceTier.price === 0));
+      }).map(function (l) { return String(l.offerId); });
+      out.offerIds = licensed.concat(found ? [String(found.id)] : []).filter(function (v, i, all) {
+        return all.indexOf(v) === i;
+      }).slice(0, 3);
+      out.offerFoundAt = found ? found.at : "";
+      if (!found) {
+        out.offerShape = Object.keys(listingJson).slice(0, 40);
+        out.licenseShape = shape(listingJson.licenses, 3);
+        out.priceShape2 = shape(listingJson.startingPrice, 2);
+      }
+      // Fab answers the claim with {"detail":"CSRF Failed: CSRF token missing."}
+      // -- Django REST Framework guarding an unsafe method.
+      //
+      // The token is taken from the DOM when the page publishes it there, and
+      // otherwise from the csrftoken cookie. That cookie read is deliberate and
+      // narrow: Django sets csrftoken non-HttpOnly precisely so page script can
+      // echo it back as a header. It is an anti-forgery nonce rather than a
+      // credential -- it authenticates nothing by itself and is worthless
+      // without the session cookie, which is never read, returned or sent. The
+      // value is used inline for one same-origin header and is never assigned
+      // to `out`, so it cannot reach a reply or a log; only csrfSource, a
+      // source name, is reported. The contract suite pins that: cookie access
+      // is allowed in this one helper and nowhere else, and a separate rule
+      // asserts the value never reaches send/onresult/onerror or a UE_LOG --
+      // proving no leakage rather than merely proving an API went uncalled.
+      // Fab names its cookie fab_csrftoken, NOT Django's default
+      // csrftoken. Matching only the default meant the token was never
+      // found -- no meta tag, no form input, and a cookie under a name we
+      // did not look for -- so every claim went out unsigned and Fab
+      // answered 403 CSRF Failed. That single mismatch is what made every
+      // Quixel/Megascans listing look permanently unclaimable.
+      function readCsrfCookie() {
+        var names = ["fab_csrftoken", "csrftoken"];
+        var parts = String(document.cookie || "").split(";");
+        for (var c = 0; c < parts.length; c++) {
+          var kv = parts[c].split("=");
+          if (kv.length > 1 && names.indexOf(kv[0].trim()) >= 0) {
+            return decodeURIComponent(kv.slice(1).join("=").trim());
+          }
+        }
+        return "";
+      }
+
+      var csrf = "";
+      var csrfFrom = "none";
+      var meta = document.querySelector(
+        "meta[name='csrf-token'], meta[name='csrfmiddlewaretoken'], meta[name='csrf_token']");
+      if (meta) { csrf = String(meta.getAttribute("content") || ""); csrfFrom = "meta"; }
+      if (!csrf) {
+        var input = document.querySelector("input[name='csrfmiddlewaretoken']");
+        if (input) { csrf = String(input.value || ""); csrfFrom = "form-input"; }
+      }
+      if (!csrf) { csrf = readCsrfCookie(); csrfFrom = csrf ? "cookie" : "none"; }
+      // A source name, never the value.
+      out.csrfSource = csrfFrom;
+
+      function claimOffer(i) {
+        if (i >= out.offerIds.length) { return Promise.resolve(null); }
+        var form = new FormData();
+        form.append("offer_id", out.offerIds[i]);
+        if (csrf) { form.append("csrfmiddlewaretoken", csrf); }
+        var headers = csrf ? { "X-CSRFToken": csrf } : {};
+        return fetch(base + "/add-to-library", { method: "POST", credentials: "include", headers: headers, body: form })
+          .then(function (r) {
+            out.entitleStatus = r.status;
+            if (r.ok) { return null; }
+            // A 403 here has two opposite readings -- a missing CSRF header,
+)JS") TEXT(R"JS(            // which is fixable, or first-party content that simply cannot be
+            // claimed, which is not -- and the reason string is what tells
+            // them apart. Reading it costs one field and saves a guess.
+            return r.text().then(function (t) {
+              out.entitleDetail = scrub(t);
+              return claimOffer(i + 1);
+            }).catch(function () { return claimOffer(i + 1); });
+          })
+          .catch(function (e) { out.entitleError = String(e).slice(0, 120); return null; });
+      }
+      return claimOffer(0).then(function () {
+        return fetch(base + "/asset-formats/" + encodeURIComponent(code), { credentials: "include" });
+      });
+    })
+    .then(function (r) { if (!r) return null; out.formatsStatus = r.status; return r.json(); })
+    .then(function (fmt) {
+      if (!fmt) return null;
+      // A complete project is not content for an existing project: Fab creates a new project from it. The
+      // listing was claimed above, so it is in the library for that.
+      if (out.formatCode === "unreal-engine" && String(fmt.distributionMethod || "") === "complete_project") {
+        out.error = "COMPLETE_PROJECT"; send(out); return null;
+      }
+      var picked = pickVersion(fmt.versions || [], engine);
+      out.engineExactMatch = !!picked && picked.match === "exact";
+      // exact, older or newer: which build the add takes when none declares the running engine.
+      if (picked && picked.match !== "unknown") { out.engineMatch = picked.match; }
+      if (picked && picked.engine) { out.engineVersion = picked.engine; }
+      var chosen = picked ? picked.version : null;
+
+      // A source format publishes no versions array at all: its downloadable
+      // units sit directly under files, each carrying the uid the
+      // download-info path wants. Only the packaged unreal-engine format is
+      // versioned by engine, so this is a second shape to read rather than a
+      // field that went missing -- treating it as missing is what produced
+      // NO_VERSION for every gltf and fbx listing.
+      if (!chosen) {
+        var ready = readyFiles(fmt);
+        out.fileChoices = ready.slice(0, 6).map(function (f) {
+          return String(f.name || "") + "|" + String(f.fileType || "") + "|" +
+                 String(f.artifactTag || "") + "|" + String(fileBytes(f));
+        });
+        // A quality the caller named is taken exactly or refused with what the listing offers; asking for
+        // none takes the best game-ready tier. A listing that publishes no tiers at all has one file, and
+        // a tier cannot apply to it.
+        var offered = qualitiesOf(ready);
+        if (quality) { chosen = pickTier(ready, quality); }
+        if (quality && !chosen && offered.length) {
+          out.error = "QUALITY_NOT_AVAILABLE";
+          out.qualityAsked = quality;
+          out.qualities = offered;
+          send(out); return null;
+        }
+        // out.formatCode, not code: `code` is a local of the previous then()
+        // callback and is out of scope here.
+        chosen = chosen || pickFile(ready, out.formatCode);
+      }
+      if (!chosen) {
+        out.error = "NO_VERSION";
+        out.versionShape = shape(fmt, 3);
+        send(out); return null;
+      }
+      out.versionName = chosen.name || "";
+      // What the caller is told about the download it just started: the tier, and the size
+      // when Fab publishes one (a pack does not, and unknown is not zero).
+      out.quality = tierOf(chosen.name);
+      if (fileBytes(chosen) >= 0) { out.downloadBytes = fileBytes(chosen); }
+      // A large single file is almost always a whole scene, and merging one was ruinous: a 189 MB city
+      // became a single static mesh that needed 14 GB to build and held the editor for many minutes.
+      // So it is not downloaded until the caller has said which way to import it (combine is -1 when
+      // they have not).
+      if (out.combinesMeshes && combine < 0 && fileBytes(chosen) >= SCENE_BYTES) {
+        out.error = "LARGE_SCENE_FILE";
+        send(out); return null;
+      }
+)JS") TEXT(R"JS(      return resolveDownload(chosen);
+    })
+    .then(function (got) {
+      if (!got) return;
+      // AssetType carries the resolved format, because it is the value the
+      // plugin switches on. Sending a constant "unreal-engine" for a gltf
+      // download would hand a Megascans archive to the pack workflow.
+      window.ue.fab.addtoproject(got.url, {
+        AssetId: listing,
+        AssetName: out.versionName || listing,
+        AssetType: out.dispatchType,
+        ListingType: out.dispatchType,
+        AssetNamespace: "",
+        DistributionPointBaseUrls: got.bases,
+        IsQuixel: out.isQuixel
+      });
+      out.accepted = true;
+      send(out);
+    })
+    .catch(fail);
+})();
+)JS"), *RequestId, *ListingId, *EngineVersion,
+		CombineMeshes.IsSet() ? (CombineMeshes.GetValue() ? 1 : 0) : -1, *Quality, McpFabSelection::Script(),
+		McpFabDownload::Script());
+}
+} // namespace McpFabAddOperation

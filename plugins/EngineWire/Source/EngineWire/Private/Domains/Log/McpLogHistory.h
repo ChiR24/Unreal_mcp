@@ -1,0 +1,71 @@
+#pragma once
+
+#include "CoreMinimal.h"
+#include "HAL/CriticalSection.h"
+#include "Misc/OutputDevice.h"
+
+// The recent editor log, kept from startup so a caller can read what the log
+// said without a live subscription: Live Coding results, PIE warnings,
+// au.DumpActiveSounds. Before this the only way to see those lines was reading
+// Saved/Logs from disk, outside the tool.
+class FMcpLogHistory : public FOutputDevice
+{
+public:
+    static FMcpLogHistory& Get();
+
+    void Register();
+    void Unregister();
+
+    void Serialize(const TCHAR* V, ELogVerbosity::Type Verbosity, const FName& Category) override;
+    bool CanBeUsedOnAnyThread() const override { return true; }
+    bool CanBeUsedOnMultipleThreads() const override { return true; }
+
+    // The newest MaxLines lines that pass every filter, oldest first. OutMatched
+    // counts every buffered match, so a caller can tell the cap cut some off.
+    TArray<FString> Read(int32 MaxLines, const FString& Contains, const FString& Category,
+                         ELogVerbosity::Type MinVerbosity, int32& OutMatched) const;
+
+    // The log clock the lines are stamped with, and the distinct warnings and errors logged since a reading of it
+    // ("3x Category: message"), at most MaxDistinct, this plugin's own lines left out: what a game said while a
+    // call ran it (a light that cannot move, an Accessed None).
+    static double Now();
+    TArray<FString> WarningsSince(double SinceSeconds, int32 MaxDistinct) const;
+
+    // The same tail read over a log FILE some other process writes (the Live
+    // Coding console's), opened shared because that process still holds it.
+    static TArray<FString> ReadFileTail(const FString& Path, int32 MaxLines, const FString& Contains,
+                                        int32& OutMatched);
+
+    // A compiler diagnostic names its file by full host path, and the response
+    // redactor removes that whole run up to the next quote, line number and
+    // error code included: "X:\...\Foo.cpp(42): error C2440: 'x'" read back as
+    // "[path redacted]'x'". This keeps the file name; the directory still never
+    // leaves the editor.
+    static FString KeepDiagnosticFileName(const FString& Line);
+
+    // The editor renames its log to <Project>-backup-<time>.log at the next
+    // start, so the newest backup is the run before this one: the only record
+    // of why an editor that is no longer running went away. RunsBack 2 is the
+    // run before that (a crash, then a rebuild restart). Empty if none.
+    static FString PreviousRunLogPath(int32 RunsBack = 1);
+
+    // The log of the Live Coding console serving THIS editor. A second editor of
+    // the same engine gets its own console, which logs to LiveCodingConsole_2.log
+    // because the first still holds the plain name.
+    static FString LiveCodingLogPath();
+
+private:
+    struct FLine
+    {
+        double Seconds = 0.0;
+        FName Category;
+        ELogVerbosity::Type Verbosity = ELogVerbosity::Log;
+        FString Message;
+    };
+
+    static constexpr int32 Capacity = 2000;
+    mutable FCriticalSection Mutex;
+    TArray<FLine> Lines;
+    int32 Head = 0;
+    bool bRegistered = false;
+};

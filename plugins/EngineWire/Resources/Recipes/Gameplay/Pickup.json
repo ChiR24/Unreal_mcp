@@ -1,0 +1,37 @@
+{
+  "description": "A pickup a pawn collects by touching it: the pawn is healed by PickupHeal (ApplyDamage with the negative amount, so an actor with the Health behaviour gains it, up to its MaxHealth), PickupSound plays where the pickup was, and the pickup is destroyed. Other actors pass through it. The actor needs a component that overlaps pawns.",
+  "tag": "Pickup",
+  "placeholders": {
+    "Heal": "Health given to the pawn that collects it, 0 or more.",
+    "Sound": "Object path of the sound to play when collected, or None."
+  },
+  "variables": [
+    { "variableName": "PickupHeal", "variableType": "Float", "defaultValue": "{{Heal}}", "category": "Pickup", "instanceEditable": true },
+    { "variableName": "PickupSound", "variableType": "Object:/Script/Engine.SoundBase", "defaultValue": "{{Sound}}", "category": "Pickup", "instanceEditable": true }
+  ],
+  "hooks": [
+    { "id": "pick", "event": "ActorBeginOverlap" }
+  ],
+  "eventGraph": [
+    { "edit": "create_node", "id": "pickPawn", "nodeType": "Cast", "targetClass": "/Script/Engine.Pawn" },
+    { "edit": "create_node", "id": "pickHeal", "nodeType": "VariableGet", "memberName": "PickupHeal" },
+    { "edit": "create_node", "id": "pickNegate", "nodeType": "CallFunction", "memberName": "Multiply_DoubleDouble", "memberClass": "/Script/Engine.KismetMathLibrary", "pinDefaults": { "B": -1 } },
+    { "edit": "create_node", "id": "pickSelf", "nodeType": "Self" },
+    { "edit": "create_node", "id": "pickApply", "nodeType": "CallFunction", "memberName": "ApplyDamage", "memberClass": "/Script/Engine.GameplayStatics" },
+    { "edit": "create_node", "id": "pickSound", "nodeType": "VariableGet", "memberName": "PickupSound" },
+    { "edit": "create_node", "id": "pickWhere", "nodeType": "CallFunction", "memberName": "K2_GetActorLocation", "memberClass": "/Script/Engine.Actor" },
+    { "edit": "create_node", "id": "pickPlay", "nodeType": "CallFunction", "memberName": "PlaySoundAtLocation", "memberClass": "/Script/Engine.GameplayStatics" },
+    { "edit": "create_node", "id": "pickDestroy", "nodeType": "CallFunction", "memberName": "K2_DestroyActor", "memberClass": "/Script/Engine.Actor" },
+    { "edit": "connect_pins", "from": "$pick_event.OtherActor", "to": "$pickPawn.Object" },
+    { "edit": "connect_pins", "from": "$pickHeal.PickupHeal", "to": "$pickNegate.A" },
+    { "edit": "connect_pins", "from": "$pick_event.OtherActor", "to": "$pickApply.DamagedActor" },
+    { "edit": "connect_pins", "from": "$pickNegate.ReturnValue", "to": "$pickApply.BaseDamage" },
+    { "edit": "connect_pins", "from": "$pickSelf.self", "to": "$pickApply.DamageCauser" },
+    { "edit": "connect_pins", "from": "$pickSound.PickupSound", "to": "$pickPlay.Sound" },
+    { "edit": "connect_pins", "from": "$pickWhere.ReturnValue", "to": "$pickPlay.Location" },
+    { "edit": "connect_pins", "from": "$pick.then", "to": "$pickPawn.execute" },
+    { "edit": "connect_pins", "from": "$pickPawn.then", "to": "$pickApply.execute" },
+    { "edit": "connect_pins", "from": "$pickApply.then", "to": "$pickPlay.execute" },
+    { "edit": "connect_pins", "from": "$pickPlay.then", "to": "$pickDestroy.execute" }
+  ]
+}

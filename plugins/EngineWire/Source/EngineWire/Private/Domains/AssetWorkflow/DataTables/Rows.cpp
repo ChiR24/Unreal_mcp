@@ -1,0 +1,225 @@
+#include "Domains/AssetWorkflow/DataTables/Shared.h"
+#include "Foundation/McpScopedEditorTransaction.h"
+
+
+// MakeInvalidEntry/FPendingRow moved to RowsBulk.cpp with their only callers.
+// Leaving copies here would be a redefinition once Unity merges the two shards.
+bool HandleDataTableRowActions(
+    const FString& Action,
+    const TSharedPtr<FJsonObject>& Params,
+    TSharedPtr<FJsonObject>& OutResult)
+{
+    // === add_data_table_row ===
+    if (Action == TEXT("add_data_table_row"))
+    {
+        TSharedPtr<FJsonObject> R;
+        UDataTable* Table = ResolveDataTable(Params, R);
+        if (!Table) { OutResult = R; return true; }
+        FString RowName = GetJsonStringField(Params, TEXT("rowName"));
+        const TSharedPtr<FJsonObject>* RowDataPtr = nullptr;
+        Params->TryGetObjectField(TEXT("rowData"), RowDataPtr);
+        TSharedPtr<FJsonObject> RowData = RowDataPtr ? *RowDataPtr : nullptr;
+        if (RowName.IsEmpty() || !RowData.IsValid()) { OutResult = McpDataTableMakeError(TEXT("MISSING_PARAMETER"), TEXT("rowName and a rowData object are required.")); return true; }
+        if (!Table->RowStruct) { OutResult = McpDataTableMakeError(TEXT("INVALID_OPERATION"), TEXT("This data table has no row struct; bind one with set_row_struct first.")); return true; }
+        // AddRow replaces a row of the same name, every column it leaves out back to its default: adding a name twice
+        // wiped the first row's values and still answered added.
+        if (Table->FindRowUnchecked(FName(*RowName)))
+        {
+            OutResult = McpDataTableMakeError(TEXT("ROW_ALREADY_EXISTS"), *FString::Printf(TEXT("Row '%s' already exists; update_row changes its columns, import_rows replaces it whole."), *RowName));
+            return true;
+        }
+
+        uint8* RowMem = nullptr;
+        FString Err;
+        if (!McpBuildDataTableRow(Table->RowStruct, RowData, RowMem, Err))
+        {
+            OutResult = McpDataTableMakeError(TEXT("INVALID_ROW_DATA"), *Err);
+            return true;
+        }
+        OutResult = McpHandlerUtils::CreateResultObject();
+        {
+            // One undo step, closed before the save: no row edit recorded anything to undo to.
+            FMcpScopedEditorTransaction Transaction(FText::FromString(TEXT("Add Data Table Row")),
+                                                    EMcpMutationDurability::EditorStateOnly, {Table});
+            MCP_DATATABLE_ADD_ROW(Table, FName(*RowName), RowMem);
+            Transaction.DescribeInto(OutResult);
+        }
+        McpFreeDataTableRow(Table->RowStruct, RowMem);
+        const bool bSaved = McpDataTableSaveIfRequested(Params, Table);
+
+        OutResult->SetBoolField(TEXT("added"), true);
+        OutResult->SetBoolField(TEXT("saved"), bSaved);
+        OutResult->SetStringField(TEXT("rowName"), RowName);
+        McpHandlerUtils::AddVerification(OutResult, Table);
+        return true;
+    }
+
+    // === get_data_table_row ===
+    if (Action == TEXT("get_data_table_row"))
+    {
+        TSharedPtr<FJsonObject> R;
+        UDataTable* Table = ResolveDataTable(Params, R);
+        if (!Table) { OutResult = R; return true; }
+        FString RowName = GetJsonStringField(Params, TEXT("rowName"));
+        if (RowName.IsEmpty()) { OutResult = McpDataTableMakeError(TEXT("MISSING_PARAMETER"), TEXT("rowName is required.")); return true; }
+
+        const void* Row = Table->FindRowUnchecked(FName(*RowName));
+        OutResult = McpHandlerUtils::CreateResultObject();
+        if (Row && Table->RowStruct)
+        {
+            OutResult->SetBoolField(TEXT("found"), true);
+            OutResult->SetStringField(TEXT("rowName"), RowName);
+            OutResult->SetObjectField(TEXT("rowData"), McpExportDataTableRow(Table->RowStruct, Row));
+        }
+        else
+        {
+            OutResult->SetBoolField(TEXT("found"), false);
+        }
+        McpHandlerUtils::AddVerification(OutResult, Table);
+        return true;
+    }
+
+    // === update_data_table_row ===
+    // Build + validate the replacement BEFORE touching the existing row so a
+    // conversion failure never destroys the original data, and MERGE the
+    // payload over the row that is already there. This used to replace:
+    // McpBuildDataTableRow starts from a default-constructed row, so every
+    // column the caller did not name came back as the row struct's default. A
+    // call setting two fields silently wiped the other thirteen -- data loss
+    // from an action whose name promises the opposite.
+    if (Action == TEXT("update_data_table_row"))
+    {
+        TSharedPtr<FJsonObject> R;
+        UDataTable* Table = ResolveDataTable(Params, R);
+        if (!Table) { OutResult = R; return true; }
+        FString RowName = GetJsonStringField(Params, TEXT("rowName"));
+        const TSharedPtr<FJsonObject>* RowDataPtr = nullptr;
+        Params->TryGetObjectField(TEXT("rowData"), RowDataPtr);
+        TSharedPtr<FJsonObject> RowData = RowDataPtr ? *RowDataPtr : nullptr;
+        if (RowName.IsEmpty() || !RowData.IsValid()) { OutResult = McpDataTableMakeError(TEXT("MISSING_PARAMETER"), TEXT("rowName and a rowData object are required.")); return true; }
+        if (!Table->RowStruct) { OutResult = McpDataTableMakeError(TEXT("INVALID_OPERATION"), TEXT("This data table has no row struct; bind one with set_row_struct first.")); return true; }
+
+        const void* Existing = Table->FindRowUnchecked(FName(*RowName));
+        if (!Existing)
+        {
+            OutResult = McpDataTableMakeError(TEXT("ROW_NOT_FOUND"),
+                TEXT("No row by that name to update; use add_row to create one."));
+            return true;
+        }
+        TSharedPtr<FJsonObject> Merged = McpExportDataTableRow(Table->RowStruct, Existing);
+        int32 Overwritten = 0;
+        for (const TPair<FString, TSharedPtr<FJsonValue>>& Field : RowData->Values)
+        {
+            if (Merged->HasField(Field.Key)) { ++Overwritten; }
+            Merged->SetField(Field.Key, Field.Value);
+        }
+
+        uint8* RowMem = nullptr;
+        FString Err;
+        if (!McpBuildDataTableRow(Table->RowStruct, Merged, RowMem, Err))
+        {
+            OutResult = McpDataTableMakeError(TEXT("INVALID_ROW_DATA"), *Err);
+            return true;
+        }
+        OutResult = McpHandlerUtils::CreateResultObject();
+        {
+            FMcpScopedEditorTransaction Transaction(FText::FromString(TEXT("Update Data Table Row")),
+                                                    EMcpMutationDurability::EditorStateOnly, {Table});
+            Table->RemoveRow(FName(*RowName));
+            MCP_DATATABLE_ADD_ROW(Table, FName(*RowName), RowMem);
+            Transaction.DescribeInto(OutResult);
+        }
+        McpFreeDataTableRow(Table->RowStruct, RowMem);
+        const bool bSaved = McpDataTableSaveIfRequested(Params, Table);
+
+        OutResult->SetBoolField(TEXT("updated"), true);
+        OutResult->SetBoolField(TEXT("saved"), bSaved);
+        OutResult->SetStringField(TEXT("rowName"), RowName);
+        // Say so out loud: a caller who expected replace semantics can see that
+        // the columns it did not name were carried over, not reset.
+        OutResult->SetNumberField(TEXT("fieldsWritten"), Overwritten);
+        OutResult->SetNumberField(TEXT("fieldsPreserved"), Merged->Values.Num() - Overwritten);
+        McpHandlerUtils::AddVerification(OutResult, Table);
+        return true;
+    }
+
+    // === delete_data_table_row ===
+    if (Action == TEXT("delete_data_table_row"))
+    {
+        TSharedPtr<FJsonObject> R;
+        UDataTable* Table = ResolveDataTable(Params, R);
+        if (!Table) { OutResult = R; return true; }
+        FString RowName = GetJsonStringField(Params, TEXT("rowName"));
+        if (RowName.IsEmpty()) { OutResult = McpDataTableMakeError(TEXT("MISSING_PARAMETER"), TEXT("rowName is required.")); return true; }
+        if (!Table->FindRowUnchecked(FName(*RowName)))
+        {
+            OutResult = McpDataTableMakeError(TEXT("ROW_NOT_FOUND"), *FString::Printf(TEXT("No row named '%s' to delete."), *RowName));
+            return true;
+        }
+
+        OutResult = McpHandlerUtils::CreateResultObject();
+        {
+            FMcpScopedEditorTransaction Transaction(FText::FromString(TEXT("Delete Data Table Row")),
+                                                    EMcpMutationDurability::EditorStateOnly, {Table});
+            Table->RemoveRow(FName(*RowName));
+            Transaction.DescribeInto(OutResult);
+        }
+        const bool bSaved = McpDataTableSaveIfRequested(Params, Table);
+
+        OutResult->SetBoolField(TEXT("removed"), true);
+        OutResult->SetBoolField(TEXT("saved"), bSaved);
+        OutResult->SetStringField(TEXT("rowName"), RowName);
+        McpHandlerUtils::AddVerification(OutResult, Table);
+        return true;
+    }
+
+    // === list_data_table_rows ===
+    // Rows are objects carrying their values, with rowCount the table's total and rowStructPath its row struct, all
+    // at the reply root, which the declared contract folds into details. A listing too large for one reply is paged
+    // there by the gateway (options.pageCursor): a second copy of the rows under details kept the rest of the reply
+    // too large to page, and the old cap of 200 rows left the others unreachable.
+    if (Action == TEXT("list_data_table_rows"))
+    {
+        TSharedPtr<FJsonObject> R;
+        UDataTable* Table = ResolveDataTable(Params, R);
+        if (!Table) { OutResult = R; return true; }
+
+        // UDataTable::GetRowNames() is available across the supported 5.x range.
+        TArray<FName> Names = Table->GetRowNames();
+
+        // ponytail: 10,000-row ceiling (each row is exported on the game thread); an offset param if a larger table must be read.
+        constexpr int32 MaxListedRows = 10000;
+        TArray<TSharedPtr<FJsonValue>> RowsArr;
+        for (const FName& N : Names)
+        {
+            if (RowsArr.Num() >= MaxListedRows) { break; }
+            TSharedPtr<FJsonObject> Row = MakeShared<FJsonObject>();
+            Row->SetStringField(TEXT("rowName"), N.ToString());
+            // Names alone forced one get_row call per row to read a table.
+            // McpExportDataTableRow is the same exporter the single-row path
+            // uses, so the listing now round-trips with no extra calls.
+            uint8* const* RowMem = Table->RowStruct ? Table->GetRowMap().Find(N) : nullptr;
+            if (RowMem) { Row->SetObjectField(TEXT("rowData"), McpExportDataTableRow(Table->RowStruct, *RowMem)); }
+            RowsArr.Add(MakeShared<FJsonValueObject>(Row));
+        }
+
+        const FString RowStructPath = Table->RowStruct ? Table->RowStruct->GetPathName() : FString();
+
+        OutResult = McpHandlerUtils::CreateResultObject();
+        OutResult->SetArrayField(TEXT("rows"), RowsArr);
+        OutResult->SetNumberField(TEXT("count"), RowsArr.Num());
+        OutResult->SetNumberField(TEXT("rowCount"), Names.Num());
+        OutResult->SetStringField(TEXT("rowStructPath"), RowStructPath);
+        if (RowsArr.Num() < Names.Num())
+        {
+            OutResult->SetBoolField(TEXT("truncated"), true);
+        }
+        McpHandlerUtils::AddVerification(OutResult, Table);
+        return true;
+    }
+
+    // Bulk import/clear live in RowsBulk.cpp; this shard would otherwise run
+    // past the 250 pure-line ceiling. Callers see one entry point either way.
+    return HandleDataTableBulkRowActions(Action, Params, OutResult);
+}
+

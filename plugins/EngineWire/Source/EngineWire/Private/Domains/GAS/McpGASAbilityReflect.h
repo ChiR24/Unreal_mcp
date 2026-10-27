@@ -1,0 +1,100 @@
+#pragma once
+
+#include "Core/Compatibility/McpVersionCompatibility.h"
+
+#include "Abilities/GameplayAbility.h"
+#include "Engine/Blueprint.h"
+#include "GameplayTagContainer.h"
+#include "UObject/UnrealType.h"
+
+namespace McpGASHandlers
+{
+static inline FGameplayTag GetOrRequestTag(const FString& TagString)
+{
+    return FGameplayTag::RequestGameplayTag(FName(*TagString), false);
+}
+
+template<typename T>
+static bool SetAbilityPropertyValue(UGameplayAbility* Ability, const FName& PropertyName, const T& Value)
+{
+    if (!Ability)
+    {
+        return false;
+    }
+
+    FProperty* Property = Ability->GetClass()->FindPropertyByName(PropertyName);
+    if (!Property)
+    {
+        return false;
+    }
+
+    void* ValuePtr = Property->ContainerPtrToValuePtr<void>(Ability);
+    if (!ValuePtr)
+    {
+        return false;
+    }
+
+    *static_cast<T*>(ValuePtr) = Value;
+    return true;
+}
+
+template<typename T>
+static bool GetAbilityPropertyValue(const UGameplayAbility* Ability, const FName& PropertyName, T& OutValue)
+{
+    if (!Ability)
+    {
+        return false;
+    }
+
+    FProperty* Property = Ability->GetClass()->FindPropertyByName(PropertyName);
+    if (!Property)
+    {
+        return false;
+    }
+
+    const void* ValuePtr = Property->ContainerPtrToValuePtr<void>(Ability);
+    if (!ValuePtr)
+    {
+        return false;
+    }
+
+    OutValue = *static_cast<const T*>(ValuePtr);
+    return true;
+}
+
+// PropertyName as the default object of Blueprint's compiled class holds it; false when there is none to read.
+template<typename T>
+static bool ReadCompiledAbilityValue(const UBlueprint* Blueprint, const FName& PropertyName, T& OutValue)
+{
+    const UGameplayAbility* Compiled = Blueprint && Blueprint->GeneratedClass
+        ? Cast<UGameplayAbility>(Blueprint->GeneratedClass->GetDefaultObject()) : nullptr;
+    return GetAbilityPropertyValue(Compiled, PropertyName, OutValue);
+}
+
+static inline bool AddTagToAbilityContainer(
+    UGameplayAbility* Ability,
+    const FName& PropertyName,
+    const FGameplayTag& Tag)
+{
+    if (!Ability || !Tag.IsValid())
+    {
+        return false;
+    }
+
+    FProperty* Property = Ability->GetClass()->FindPropertyByName(PropertyName);
+    FStructProperty* StructProperty = CastField<FStructProperty>(Property);
+    if (!StructProperty || StructProperty->Struct != FGameplayTagContainer::StaticStruct())
+    {
+        return false;
+    }
+
+    void* ValuePtr = Property->ContainerPtrToValuePtr<void>(Ability);
+    if (!ValuePtr)
+    {
+        return false;
+    }
+
+    static_cast<FGameplayTagContainer*>(ValuePtr)->AddTag(Tag);
+    return true;
+}
+}

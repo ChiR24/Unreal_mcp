@@ -1,0 +1,203 @@
+#include "Domains/ControlEditor/McpEditorScreenshotSupport.h"
+
+#include "Misc/FileHelper.h"
+
+FString MakeSafeScreenshotFilenameForMcp(
+    const TSharedPtr<FJsonObject> &Payload) {
+  FString Filename;
+  if (Payload.IsValid()) {
+    Payload->TryGetStringField(TEXT("filename"), Filename);
+  }
+
+  if (Filename.IsEmpty()) {
+    Filename = FString::Printf(
+        TEXT("Screenshot_%s"),
+        *FDateTime::Now().ToString(TEXT("%Y%m%d_%H%M%S")));
+  }
+
+  Filename = FPaths::GetCleanFilename(Filename);
+  if (Filename.Contains(TEXT("..")) || Filename.Contains(TEXT("/")) ||
+      Filename.Contains(TEXT("\\"))) {
+    Filename = FString::Printf(
+        TEXT("Screenshot_%s"),
+        *FDateTime::Now().ToString(TEXT("%Y%m%d_%H%M%S")));
+  }
+
+  if (!Filename.EndsWith(TEXT(".png"))) {
+    Filename += TEXT(".png");
+  }
+  return Filename;
+}
+
+void AddScreenshotMetadataForMcp(const TSharedPtr<FJsonObject> &Resp,
+                                 const TSharedPtr<FJsonObject> &Payload) {
+  if (!Resp.IsValid() || !Payload.IsValid()) {
+    return;
+  }
+
+  bool bIncludeMetadata = false;
+  if (!Payload->TryGetBoolField(TEXT("includeMetadata"), bIncludeMetadata) ||
+      !bIncludeMetadata) {
+    return;
+  }
+
+  const TSharedPtr<FJsonObject> *Metadata = nullptr;
+  if (Payload->TryGetObjectField(TEXT("metadata"), Metadata) && Metadata &&
+      Metadata->IsValid()) {
+    Resp->SetObjectField(TEXT("metadata"), *Metadata);
+  }
+}
+
+FString MakeScreenshotTooLargeMessageForMcp(int32 SizeBytes) {
+  // Naming resolution matters: "use a smaller viewport" is not something a
+  // caller on the far side of the bridge can act on, so the old wording left
+  // returnBase64=false -- i.e. no image at all -- as the only apparent way out.
+  return FString::Printf(
+      TEXT("Screenshot PNG is too large to return as base64 (%d bytes, max %d bytes). Retry with a smaller resolution (e.g. resolution=\"1280x720\") or returnBase64=false."),
+      SizeBytes, MaxScreenshotPngBytesForBase64ForMcp);
+}
+
+void SendScreenshotReceiptForMcp(UEngineWireSubsystem *Subsystem,
+                                 TSharedPtr<FMcpBridgeWebSocket> Socket,
+                                 const FString &RequestId,
+                                 const TSharedPtr<FJsonObject> &Payload,
+                                 const TSharedPtr<FJsonObject> &Resp,
+                                 const uint8 *PngData, int64 PngBytes,
+                                 const FString &FullPath, const TCHAR *What) {
+  // keepFile:false hands the image back without leaving a file in
+  // Saved/Screenshots: a look at the screen should not litter the project.
+  bool bKeepFile = true;
+  Payload->TryGetBoolField(TEXT("keepFile"), bKeepFile);
+  const bool bSaved = bKeepFile && FFileHelper::SaveArrayToFile(
+      TArrayView<const uint8>(PngData, static_cast<int32>(PngBytes)), *FullPath);
+  // The image comes back inline unless returnBase64 is false: a plain capture that
+  // answered only a file path showed a model caller nothing. The default used to be
+  // off because a native-size PNG blew the base64 cap; with no resolution given, an
+  // inline capture now fits McpInlineScreenshotBox (ResolveScreenshotResolutionForMcp).
+  const bool bReturnBase64 = McpScreenshotReturnsImage(Payload);
+
+  Resp->SetBoolField(TEXT("success"), true);
+  Resp->SetBoolField(TEXT("saved"), bSaved);
+  Resp->SetNumberField(TEXT("sizeBytes"), PngBytes);
+  Resp->SetNumberField(TEXT("fileSizeBytes"), PngBytes);
+  Resp->SetStringField(TEXT("mimeType"), TEXT("image/png"));
+  if (bSaved) {
+    Resp->SetStringField(TEXT("path"), FullPath);
+    Resp->SetStringField(TEXT("screenshotPath"), FPaths::ConvertRelativePathToFull(FullPath));
+  }
+  AddScreenshotMetadataForMcp(Resp, Payload);
+  // Pixels drawn while shaders compile show the default material; say how many were still compiling.
+  McpAddShaderCompileState(Resp, Payload);
+
+  FString Error;
+  FString ErrorCode;
+  if (!bKeepFile && !bReturnBase64) {
+    Error = TEXT("keepFile:false needs returnBase64:true, or the capture goes nowhere.");
+    ErrorCode = TEXT("INVALID_ARGUMENT");
+  } else if (!bSaved && !bReturnBase64) {
+    Error = FString::Printf(TEXT("%s captured but failed to save to %s, and returnBase64=false leaves no image output."),
+                            What, *FullPath);
+    ErrorCode = TEXT("SAVE_FAILED");
+  } else if (bReturnBase64 && PngBytes > MaxScreenshotPngBytesForBase64ForMcp) {
+    Error = MakeScreenshotTooLargeMessageForMcp(static_cast<int32>(PngBytes));
+    ErrorCode = TEXT("IMAGE_TOO_LARGE");
+  }
+  if (!ErrorCode.IsEmpty()) {
+    Resp->SetBoolField(TEXT("success"), false);
+    Resp->SetStringField(TEXT("error"), Error);
+    Resp->SetStringField(TEXT("message"), Error);
+    Subsystem->SendAutomationResponse(Socket, RequestId, false, Error, Resp, ErrorCode);
+    return;
+  }
+  if (bReturnBase64) {
+    Resp->SetStringField(TEXT("imageBase64"),
+                         FBase64::Encode(PngData, static_cast<uint32>(PngBytes)));
+  }
+  const FString Message = bReturnBase64
+      ? FString::Printf(TEXT("%s captured and returned as image/png base64."), What)
+      : FString::Printf(TEXT("%s captured."), What);
+  Resp->SetStringField(TEXT("message"), Message);
+  Subsystem->SendAutomationResponse(Socket, RequestId, true, Message, Resp, FString());
+}
+
+bool CaptureSlateWindowPngForMcp(const TSharedRef<SWindow> &Window,
+                                 const TSharedPtr<FJsonObject> &Payload,
+                                 TArray<uint8> &OutPngData,
+                                 FIntVector &OutSize, FString &OutError,
+                                 FIntPoint *OutSourceSize) {
+  TSharedRef<SWidget> WindowWidget = Window;
+  TArray<FColor> Bitmap;
+
+  // ForceRedrawWindow repaints Slate, but a level viewport only re-renders its
+  // scene when it is invalidated or realtime is on. A backgrounded editor is
+  // throttled and neither happens, so this capture returned a 3D view that
+  // could be minutes old while reporting success - a camera move or an actor
+  // edit read as having done nothing. Re-render the level viewports first.
+  // Same guards as the game-viewport capture: game thread only, never
+  // re-entering rendering.
+  if (GEditor && IsInGameThread() && !IsInRenderingThread()) {
+    GEditor->RedrawLevelEditingViewports(false);
+  }
+  FSlateApplication::Get().ForceRedrawWindow(Window);
+  if (!FSlateApplication::Get().TakeScreenshot(WindowWidget, Bitmap, OutSize) ||
+      Bitmap.Num() == 0 || OutSize.X <= 0 || OutSize.Y <= 0) {
+    OutError = TEXT("Failed to capture Slate window pixels");
+    return false;
+  }
+
+  for (FColor &Pixel : Bitmap) {
+    Pixel.A = 255;
+  }
+
+  const FIntPoint CapturedSize(OutSize.X, OutSize.Y);
+  if (OutSourceSize) {
+    *OutSourceSize = CapturedSize;
+  }
+  FIntPoint TargetSize = CapturedSize;
+  if (!ResolveScreenshotResolutionForMcp(Payload, CapturedSize, TargetSize,
+                                         OutError)) {
+    return false;
+  }
+  if (TargetSize != CapturedSize &&
+      Bitmap.Num() >= CapturedSize.X * CapturedSize.Y) {
+    TArray<FColor> Resampled;
+    ResampleBitmapForMcp(Bitmap, CapturedSize, Resampled, TargetSize);
+    Bitmap = MoveTemp(Resampled);
+    OutSize.X = TargetSize.X;
+    OutSize.Y = TargetSize.Y;
+  }
+
+  IImageWrapperModule &ImageWrapperModule =
+      FModuleManager::LoadModuleChecked<IImageWrapperModule>(
+          FName("ImageWrapper"));
+  TSharedPtr<IImageWrapper> ImageWrapper =
+      ImageWrapperModule.CreateImageWrapper(EImageFormat::PNG);
+  if (!ImageWrapper.IsValid()) {
+    OutError = TEXT("Failed to create PNG image wrapper");
+    return false;
+  }
+
+  TArray<uint8> RawData;
+  RawData.SetNumUninitialized(Bitmap.Num() * 4);
+  for (int32 PixelIndex = 0; PixelIndex < Bitmap.Num(); ++PixelIndex) {
+    const FColor &Pixel = Bitmap[PixelIndex];
+    RawData[PixelIndex * 4 + 0] = Pixel.R;
+    RawData[PixelIndex * 4 + 1] = Pixel.G;
+    RawData[PixelIndex * 4 + 2] = Pixel.B;
+    RawData[PixelIndex * 4 + 3] = Pixel.A;
+  }
+
+  if (!ImageWrapper->SetRaw(RawData.GetData(), RawData.Num(), OutSize.X,
+                            OutSize.Y, ERGBFormat::RGBA, 8)) {
+    OutError =
+        TEXT("Failed to prepare Slate window screenshot pixels for PNG encoding");
+    return false;
+  }
+
+  OutPngData = ImageWrapper->GetCompressed(100);
+  if (OutPngData.Num() == 0) {
+    OutError = TEXT("Failed to encode Slate window screenshot as PNG");
+    return false;
+  }
+  return true;
+}

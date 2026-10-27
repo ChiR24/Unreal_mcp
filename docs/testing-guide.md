@@ -2,148 +2,127 @@
 
 ## Overview
 
-This project uses consolidated integration test suites covering the 23 canonical MCP tools:
-- **Canonical Integration Suite** (`tests/integration.mjs`) for cross-tool workflows
-- **Per-Tool MCP Suites** (`tests/mcp-tools/**/*.test.mjs`) for every exposed parent tool
+| Suite | What it covers | Needs Unreal? |
+|-------|----------------|---------------|
+| **Unit** (Vitest) | `src/**/*.test.ts` and `tests/unit/**/*.test.ts`: the capability records, and source contracts that read the plugin's C++ without compiling it. No mocks or fakes | No |
+| **Parameter audit** | Every action and parameter in the generated schemas against the integration cases | No |
+| **Search eval** | The search-ranking corpus | No |
+| **Integration** | `tests/integration.mjs` (cross-tool workflows) and `tests/mcp-tools/**/*.test.mjs` (one suite per area), against a live editor | Yes |
 
-Plus Vitest for unit tests and a CI smoke test for mock-mode validation.
+The public surface is the single `unreal` gateway tool. Integration cases still name the 23 internal parent tools and their actions; the runner sends each case through `unreal` as an `execute` call.
 
-## Test Commands
+## Commands
 
-| Command | Description | Requires UE? |
-|---------|-------------|--------------|
-| `npm test` | Run canonical integration suite | Yes |
-| `node tests/mcp-tools/<category>/<tool>.test.mjs` | Run one per-tool MCP suite | Yes |
-| `npm run test:all` | Run canonical integration entrypoint | Yes |
-| `npm run test:unit` | Run Vitest unit tests | No |
-| `npm run test:smoke` | CI smoke test (mock mode) | No |
+| Command | Description | Needs Unreal? |
+|---------|-------------|---------------|
+| `npm run test:unit` | Vitest unit tests | No |
+| `npm run test:params` | Static, strict parameter audit | No |
+| `npm run eval:check` | Search-ranking corpus | No |
+| `npm test` or `npm run test:all` | `tests/integration.mjs` | Yes |
+| `node tests/mcp-tools/<category>/<suite>.test.mjs` | One integration suite | Yes |
 
-## Integration Tests
+## Integration tests
+
+### Prerequisites
+
+1. An Unreal Editor (5.0 to 5.8) running with the EngineWire plugin loaded and **Enable Native MCP Server** on (the default). The runner waits for `/mcp` at `UNREAL_MCP_URL` (default `http://127.0.0.1:3000/mcp`).
+2. `UE_PROJECT_PATH` set to that project's folder or `.uproject`. The runner launches the stdio proxy with its own environment, and the proxy needs the path to read the capability token (on by default). Alternatively, set `MCP_AUTOMATION_CAPABILITY_TOKEN`.
+3. A built server. The runner runs `npm run build` itself when `dist/cli.js` is missing or older than the source; `UNREAL_MCP_NO_AUTO_BUILD=1` turns that off.
 
 ### Running
 
 ```bash
-# Ensure Unreal Engine is running with MCP Automation Bridge plugin enabled
+export UE_PROJECT_PATH="/path/to/MyGame"
 npm test
 node tests/mcp-tools/core/manage-asset.test.mjs
 for f in tests/mcp-tools/{core,gameplay,utility,world}/*.test.mjs; do node "$f"; done
 ```
 
-### Canonical Integration Suite (`tests/integration.mjs`)
+### Suites
 
-Covers cross-tool workflows across the 23 canonical MCP tools:
-- Infrastructure & Discovery
-- Asset & Material Lifecycle
-- Actor Control & Introspection
-- Blueprint Authoring
-- Environment & Visuals
-- AI & Input
-- Cinematics & Audio
-- Operations & Performance
+`tests/integration.mjs` is a compact cross-tool workflow suite: assets and materials, actors, Blueprints, environment, AI and input, cinematics and audio, operations and performance.
 
-### Per-Tool MCP Suites (`tests/mcp-tools/**/*.test.mjs`)
+`tests/mcp-tools/` holds the per-area suites:
 
-Covers every exposed parent tool with domain-specific setup and teardown:
-- Core: `manage_tools`, `manage_asset`, `manage_blueprint`, `control_actor`, `control_editor`, `manage_level`, `inspect`, `system_control`
-- World: `build_environment`, `manage_level_structure`, `manage_geometry`, `manage_pcg`
-- Gameplay: `animation_physics`, `manage_effect`, `manage_ai`, `manage_gas`, `manage_character`, `manage_combat`, `manage_inventory`, `manage_interaction`
-- Utility: `manage_audio`, `manage_sequence`, `manage_networking`
+- **core:** actors, editor, assets, Blueprints, levels, `inspect`, `manage_tools`, `system_control`, DataTables, enums and structs
+- **gameplay:** animation and physics, AI, characters, combat, effects, GAS, interaction, inventory
+- **utility:** audio, Behavior Trees, networking, sequences, media, Movie Render Queue
+- **world:** environment, geometry, level structure, PCG, rendering
 
-### Test Structure
+Cases name the pre-fold actions. For each folded family, the runner re-runs the first case that names a member as the family's advertised primary plus its selector value (`tests/fold-twins.mjs`), so every primary and selector is covered without duplicate cases. The parameter audit captures the same twins.
 
-```
-tests/
-├── integration.mjs          # Canonical integration suite
-├── mcp-tools/               # Per-tool canonical MCP suites
-├── test-runner.mjs          # Shared test harness
-└── reports/                 # JSON test results (gitignored)
-```
+### Writing a case
 
-### Adding New Tests
-
-Edit `tests/integration.mjs` and add a test case to the `testCases` array:
+Add an object to the suite's case array:
 
 ```javascript
 {
-  scenario: 'Your test description',
-  toolName: 'manage_asset',
-  arguments: { action: 'list', path: '/Game/MyFolder' },
-  expected: 'success'
+  scenario: 'Blueprint: create Actor blueprint',
+  toolName: 'manage_blueprint',
+  arguments: { action: 'create', name: 'BP_IntegrationTest', savePath: TEST_FOLDER, parentClass: 'Actor' },
+  expected: 'success|already exists'
 }
 ```
 
-The `expected` field supports flexible matching:
-- `'success'` — response must have `success: true`
-- `'success|not found'` — either success OR "not found" in response
-- `'error'` — expects failure
+A capability that needs consent carries it on the case, not in `arguments`:
 
-### Test Output
-
-Console shows pass/fail status with timing:
+```javascript
+{
+  scenario: 'Cleanup: delete test actor',
+  toolName: 'control_actor',
+  arguments: { action: 'delete', actorName: 'IT_Cube' },
+  expected: 'success|not found',
+  consent: { capability: 'control_actor.delete', acknowledge: 'explicit' }
+}
 ```
+
+Optional fields: `assertions` (checks on response paths such as `structuredContent.result.assetPath`, with the operators `equals`, `approximately`, `includes`, `notIncludes`, `length`, `minLength`, `includesObject` and `gte`), `captureResult` (save a value for later cases as `${captured:key}`), and `timeoutMs`. Use unique names and clean up what a suite creates. Suites end with `runToolTests('<suite-name>', cases)`.
+
+### Expectations
+
+- `expected` splits on `|` (or ` or `). The **first** token is what the case proves: put `success`, `error` or `timeout` first.
+- A success-first case may list narrow alternatives such as `already exists` or `not found`.
+- Don't mask with `success|error`, and don't put `timeout` after `error`. Crashes, a lost bridge and unexpected timeouts count as infrastructure failures.
+- A response with `success: false`, a nested failure or `isError: true` never passes a success-first case unless an allowed alternative matches.
+- Object expectations support `condition`, `successPattern` and `errorPattern`, for exact error codes.
+
+### Output
+
+```text
 [PASSED] Asset: create test folder (234.5 ms)
 [PASSED] Actor: spawn StaticMeshActor (456.7 ms)
 [FAILED] Level: get summary (123.4 ms) => {"success":false,"error":"..."}
 ```
 
-JSON reports are saved to `tests/reports/` with timestamps.
+Each suite writes `tests/reports/<suite>-test-results-<timestamp>.json` (gitignored). The process exits with `0` when every case passed and `1` otherwise.
 
-## Unit Tests
+### Timeouts and runner settings
+
+| Scope | Default | Override |
+|-------|---------|----------|
+| Integration case | 5 s | Per-case `timeoutMs`, or `UNREAL_MCP_TEST_CASE_TIMEOUT_MS` |
+| Server call | 60 s | `UNREAL_MCP_TEST_CALL_TIMEOUT_MS` |
+| Client, with progress | 300 s | `UNREAL_MCP_TEST_CLIENT_TIMEOUT_MS` |
+| Wait for the bridge port | 10 s | Fixed |
+| Pause between cases | 100 ms | `UNREAL_MCP_TEST_THROTTLE_MS` |
+
+Other runner variables: `MCP_AUTOMATION_WS_HOST` and `MCP_AUTOMATION_WS_PORTS` (where to wait for the editor), `UNREAL_MCP_SERVER_CMD` / `_ARGS` / `_CWD` (how to launch the server), `UNREAL_MCP_FORCE_DIST`, `UNREAL_MCP_ALLOW_TS_FALLBACK` and `UNREAL_MCP_TEST_LOG_RESPONSES`.
+
+## Unit tests
 
 ```bash
-npm run test:unit        # Run once
-npm run test:unit:watch  # Watch mode
-npm run test:unit:coverage  # With coverage
+npm run test:unit            # run once
+npm run test:unit:watch      # watch mode
+npm run test:unit:coverage   # with coverage
 ```
 
-Unit tests use Vitest and don't require Unreal Engine. They cover:
-- Utility functions (`normalize.ts`, `validation.ts`, `safe-json.ts`)
-- Pure TypeScript logic
-
-## CI Smoke Test
-
-```bash
-MOCK_UNREAL_CONNECTION=true npm run test:smoke
-```
-
-Runs in GitHub Actions on every push/PR. Uses mock mode to validate server startup and basic tool registration without an actual Unreal connection.
-
-## Prerequisites
-
-### Unreal Engine Setup
-1. **Unreal Engine 5.0–5.8 Preview** must be running
-2. **MCP Automation Bridge plugin** enabled and listening on port 8091
-
-### Environment Variables (optional)
-```bash
-MCP_AUTOMATION_HOST=127.0.0.1  # Default
-MCP_AUTOMATION_PORT=8091       # Default
-MCP_CONNECTION_TIMEOUT_MS=5000 # Connection and handshake timeout
-```
+The tests under `tests/unit/plugin/` read the plugin's C++ source and assert required or forbidden patterns; they don't compile Unreal. Structure tests enforce file boundaries, resolvable includes and the 250-line ceiling.
 
 ## Troubleshooting
 
-### All Tests Fail with ECONNREFUSED
-- Unreal Engine is not running, or
-- MCP Automation Bridge plugin is not enabled, or
-- Port 8091 is blocked
-
-### Specific Tests Fail
-- Check Unreal Output Log for errors
-- Verify the asset/actor/level referenced in the test exists
-- Some tests create temporary assets in `/Game/IntegrationTest` (cleaned up at end)
-
-### Test Times Out
-- Default timeout is 30 seconds per test
-- Complex operations (lighting builds, large imports) may need longer
-- Check if Unreal is frozen or unresponsive
-
-## Exit Codes
-
-- `0` — All tests passed
-- `1` — One or more tests failed
-
-Use in CI/CD:
-```bash
-npm test && echo "All tests passed"
-```
+| Symptom | Cause |
+|---------|-------|
+| *Native /mcp did not become available before tests started* | The editor isn't running, the plugin isn't loaded, **Enable Native MCP Server** is off, or **Native MCP Port** changed: point `UNREAL_MCP_URL` at the new port |
+| Every case fails with *Invalid capability token* | The proxy can't find the capability token: set `UE_PROJECT_PATH` |
+| One case fails | Check the editor's Output Log and the newest JSON in `tests/reports/`. Suites create assets under `/Game/IntegrationTest` and `/Game/AdvancedIntegrationTest` and actors named `IT_*`, and delete them in their cleanup cases. |
+| A slow case times out | Give it a `timeoutMs`, or raise `UNREAL_MCP_TEST_CASE_TIMEOUT_MS` |

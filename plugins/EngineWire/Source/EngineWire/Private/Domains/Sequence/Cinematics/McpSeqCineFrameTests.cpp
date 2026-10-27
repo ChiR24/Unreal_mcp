@@ -1,0 +1,80 @@
+#include "Core/Compatibility/McpVersionCompatibility.h"
+#include "Domains/Sequence/Cinematics/McpSeqCine.h"
+
+#if WITH_DEV_AUTOMATION_TESTS
+#include "Misc/AutomationTest.h"
+#include "MovieScene.h"
+#include "Tracks/MovieSceneFadeTrack.h"
+#include "UObject/Package.h"
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+    FMcpSequenceCinematicsTrackRollbackTest,
+    "EngineWire.Sequence.Cinematics.TrackRollback",
+    EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+bool FMcpSequenceCinematicsTrackRollbackTest::RunTest(
+    const FString& Parameters)
+{
+    (void)Parameters;
+    UMovieScene* MovieScene =
+        NewObject<UMovieScene>(GetTransientPackage());
+    if (!TestNotNull(TEXT("MovieScene exists"), MovieScene))
+    {
+        return false;
+    }
+    UMovieSceneFadeTrack* Track =
+        Cast<UMovieSceneFadeTrack>(MCP_ADD_MOVIESCENE_TRACK(MovieScene, UMovieSceneFadeTrack::StaticClass()));
+    if (!TestNotNull(TEXT("Track exists"), Track))
+    {
+        return false;
+    }
+    TestTrue(TEXT("Track belongs to MovieScene"),
+             MCP_GET_MOVIESCENE_TRACKS(MovieScene).Contains(Track));
+    McpSequenceCinematics::RemoveTrackAfterSectionFailure(
+        MovieScene, Track, true);
+    TestFalse(TEXT("Created track is removed after section failure"),
+              MCP_GET_MOVIESCENE_TRACKS(MovieScene).Contains(Track));
+    return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+    FMcpSequenceCinematicsDisplayFrameConversionTest,
+    "EngineWire.Sequence.Cinematics.DisplayFramesConvertToTicks",
+    EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+bool FMcpSequenceCinematicsDisplayFrameConversionTest::RunTest(
+    const FString& Parameters)
+{
+    (void)Parameters;
+    UMovieScene* MovieScene =
+        NewObject<UMovieScene>(GetTransientPackage());
+    if (!TestNotNull(TEXT("MovieScene exists"), MovieScene))
+    {
+        return false;
+    }
+    MovieScene->SetDisplayRate(FFrameRate(24, 1));
+    MovieScene->SetTickResolutionDirectly(FFrameRate(24000, 1));
+
+    TSharedPtr<FJsonObject> Payload = MakeShared<FJsonObject>();
+    Payload->SetNumberField(TEXT("startFrame"), 24);
+    Payload->SetNumberField(TEXT("durationFrames"), 12);
+
+    TestEqual(
+        TEXT("One display-rate second converts to one tick-rate second"),
+        McpSequenceCinematics::GetFrame(
+            Payload, MovieScene, TEXT("startFrame")).Value,
+        24000);
+    TestEqual(
+        TEXT("Display-frame duration converts to tick duration"),
+        McpSequenceCinematics::GetDuration(Payload, MovieScene, 100),
+        12000);
+
+    MovieScene->SetDisplayRate(FFrameRate(24000, 1001));
+    TestEqual(
+        TEXT("Fractional display rates preserve exact frame-rate conversion"),
+        McpSequenceCinematics::GetFrame(
+            Payload, MovieScene, TEXT("startFrame")).Value,
+        24024);
+    return true;
+}
+#endif

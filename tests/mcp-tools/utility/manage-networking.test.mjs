@@ -19,7 +19,6 @@ const OWNER_ACTOR = `MCP_NetworkOwner_${ts}`;
 const PAWN_ACTOR = `MCP_NetworkPawn_${ts}`;
 const RPC_FUNCTION = `Server_DoThing_${ts}`;
 const REP_NOTIFY_FUNCTION = `OnRep_NetworkValue_${ts}`;
-const PREDICTION_VAR = `PredictedLocation_${ts}`;
 
 const blueprintAssertion = (expectedPath, label) => [
   { path: 'structuredContent.result.success', equals: true, label: `${label} native success flag` },
@@ -29,11 +28,10 @@ const blueprintAssertion = (expectedPath, label) => [
 
 const testCases = [
   // === SETUP ===
-  { scenario: 'Setup: create test folder', toolName: 'manage_asset', arguments: { action: 'create_folder', path: TEST_FOLDER }, expected: 'success|already exists' },
   {
     scenario: 'Setup: create replicated actor blueprint',
     toolName: 'manage_blueprint',
-    arguments: { action: 'create_blueprint', name: ACTOR_BP_NAME, path: TEST_FOLDER, parentClass: 'Actor' },
+    arguments: { action: 'create_blueprint', name: ACTOR_BP_NAME, savePath: TEST_FOLDER, parentClass: 'Actor' },
     expected: 'success|already exists',
     assertions: [{ path: 'structuredContent.result.assetPath', equals: EXPECTED_ACTOR_BP_ASSET_PATH, label: 'network actor blueprint created' }]
   },
@@ -43,7 +41,7 @@ const testCases = [
   {
     scenario: 'Setup: create network character blueprint',
     toolName: 'manage_blueprint',
-    arguments: { action: 'create_blueprint', name: CHARACTER_BP_NAME, path: TEST_FOLDER, parentClass: 'Character' },
+    arguments: { action: 'create_blueprint', name: CHARACTER_BP_NAME, savePath: TEST_FOLDER, parentClass: 'Character' },
     expected: 'success|already exists',
     assertions: [{ path: 'structuredContent.result.assetPath', equals: EXPECTED_CHARACTER_BP_ASSET_PATH, label: 'network character blueprint created' }]
   },
@@ -56,41 +54,46 @@ const testCases = [
   { scenario: 'CONFIG: set_replication_condition', toolName: 'manage_networking', arguments: { action: 'set_replication_condition', blueprintPath: ACTOR_BP_PATH, propertyName: 'ReplicatedFlag', condition: 'COND_OwnerOnly' }, expected: 'success', assertions: blueprintAssertion(EXPECTED_ACTOR_BP_ASSET_PATH, 'set_replication_condition') },
   { scenario: 'CONFIG: configure_net_update_frequency', toolName: 'manage_networking', arguments: { action: 'configure_net_update_frequency', blueprintPath: ACTOR_BP_PATH, netUpdateFrequency: 33, minNetUpdateFrequency: 7 }, expected: 'success', assertions: blueprintAssertion(EXPECTED_ACTOR_BP_ASSET_PATH, 'configure_net_update_frequency') },
   { scenario: 'CONFIG: configure_net_priority', toolName: 'manage_networking', arguments: { action: 'configure_net_priority', blueprintPath: ACTOR_BP_PATH, netPriority: 2.75 }, expected: 'success', assertions: blueprintAssertion(EXPECTED_ACTOR_BP_ASSET_PATH, 'configure_net_priority') },
+  { scenario: 'CONFIG: set_replication_condition refuses an unknown condition', toolName: 'manage_networking', arguments: { action: 'set_replication_condition', blueprintPath: ACTOR_BP_PATH, propertyName: 'ReplicatedFlag', condition: 'COND_NoSuchCondition' }, expected: 'error|INVALID_ARGUMENT' },
   { scenario: 'CONFIG: set_net_dormancy', toolName: 'manage_networking', arguments: { action: 'set_net_dormancy', blueprintPath: ACTOR_BP_PATH, dormancy: 'DORM_Awake' }, expected: 'success', assertions: blueprintAssertion(EXPECTED_ACTOR_BP_ASSET_PATH, 'set_net_dormancy') },
   {
     scenario: 'CONFIG: configure_replication_graph',
     toolName: 'manage_networking',
-    arguments: { action: 'configure_replication_graph', blueprintPath: ACTOR_BP_PATH, spatiallyLoaded: true, netLoadOnClient: false, replicationPolicy: 'Spatial' },
+    arguments: { action: 'configure_replication_graph', blueprintPath: ACTOR_BP_PATH, spatiallyLoaded: true, netLoadOnClient: false },
     expected: 'success',
     assertions: [
       ...blueprintAssertion(EXPECTED_ACTOR_BP_ASSET_PATH, 'configure_replication_graph'),
       { path: 'structuredContent.result.spatiallyLoaded', equals: true, label: 'replication graph spatial flag returned' },
-      { path: 'structuredContent.result.netLoadOnClient', equals: false, label: 'replication graph client load flag returned' },
-      { path: 'structuredContent.result.replicationPolicy', equals: 'Spatial', label: 'replication policy returned' }
+      { path: 'structuredContent.result.netLoadOnClient', equals: false, label: 'replication graph client load flag returned' }
     ]
   },
 
   // === RPCS ===
+  { scenario: 'CREATE: create_rpc_function refuses an unknown rpcType', toolName: 'manage_networking', arguments: { action: 'create_rpc_function', blueprintPath: ACTOR_BP_PATH, functionName: `Bad_RPC_${ts}`, rpcType: 'Sideways' }, expected: 'error|INVALID_ARGUMENT' },
   {
     scenario: 'CREATE: create_rpc_function',
     toolName: 'manage_networking',
-    arguments: { action: 'create_rpc_function', blueprintPath: ACTOR_BP_PATH, functionName: RPC_FUNCTION, rpcType: 'Server', reliable: true },
+    arguments: { action: 'create_rpc_function', blueprintPath: ACTOR_BP_PATH, functionName: RPC_FUNCTION, rpcType: 'server', reliable: true, inputs: [{ name: 'Amount', type: 'Float' }] },
     expected: 'success',
     assertions: [
       ...blueprintAssertion(EXPECTED_ACTOR_BP_ASSET_PATH, 'create_rpc_function'),
       { path: 'structuredContent.result.functionName', equals: RPC_FUNCTION, label: 'RPC function name returned' },
-      { path: 'structuredContent.result.rpcType', equals: 'Server', label: 'RPC type returned' },
-      { path: 'structuredContent.result.reliable', equals: true, label: 'RPC reliability returned at creation' }
+      { path: 'structuredContent.result.rpcType', equals: 'Server', label: 'RPC type returned in its canonical spelling' },
+      { path: 'structuredContent.result.reliable', equals: true, label: 'RPC reliability returned at creation' },
+      { path: 'structuredContent.result.compiled', equals: true, label: 'RPC with an input compiles' }
     ]
   },
+  { scenario: 'CREATE: create_rpc_function refuses a name already taken', toolName: 'manage_networking', arguments: { action: 'create_rpc_function', blueprintPath: ACTOR_BP_PATH, functionName: RPC_FUNCTION, rpcType: 'Client' }, expected: 'error|NAME_TAKEN' },
+  { scenario: 'CREATE: create_rpc_function refuses a nameless input', toolName: 'manage_networking', arguments: { action: 'create_rpc_function', blueprintPath: ACTOR_BP_PATH, functionName: `Bad_Input_RPC_${ts}`, rpcType: 'Server', inputs: [{ type: 'Float' }] }, expected: 'error|TYPE_RESOLUTION_FAILED' },
+  { scenario: 'CONFIG: configure_rpc_validation refuses validation a Blueprint RPC cannot run', toolName: 'manage_networking', arguments: { action: 'configure_rpc_validation', blueprintPath: ACTOR_BP_PATH, functionName: RPC_FUNCTION, withValidation: true }, expected: 'error|NOT_SUPPORTED' },
   {
-    scenario: 'CONFIG: configure_rpc_validation',
+    scenario: 'CONFIG: configure_rpc_validation off on an RPC without it changes nothing',
     toolName: 'manage_networking',
-    arguments: { action: 'configure_rpc_validation', blueprintPath: ACTOR_BP_PATH, functionName: RPC_FUNCTION, withValidation: true },
+    arguments: { action: 'configure_rpc_validation', blueprintPath: ACTOR_BP_PATH, functionName: RPC_FUNCTION, withValidation: false },
     expected: 'success',
     assertions: [
-      ...blueprintAssertion(EXPECTED_ACTOR_BP_ASSET_PATH, 'configure_rpc_validation'),
-      { path: 'structuredContent.result.withValidation', equals: true, label: 'RPC validation flag returned' }
+      { path: 'structuredContent.result.withValidation', equals: false, label: 'RPC validation flag returned' },
+      { path: 'structuredContent.result.changed', equals: false, label: 'no validation flag was there to clear' }
     ]
   },
   {
@@ -100,11 +103,20 @@ const testCases = [
     expected: 'success',
     assertions: [
       ...blueprintAssertion(EXPECTED_ACTOR_BP_ASSET_PATH, 'set_rpc_reliability'),
-      { path: 'structuredContent.result.reliable', equals: false, label: 'RPC reliability updated' }
+      { path: 'structuredContent.result.reliable', equals: false, label: 'RPC reliability updated' },
+      { path: 'structuredContent.result.changed', equals: true, label: 'RPC reliability changed' }
     ]
+  },
+  {
+    scenario: 'CONFIG: set_rpc_reliability to the value it has changes nothing',
+    toolName: 'manage_networking',
+    arguments: { action: 'set_rpc_reliability', blueprintPath: ACTOR_BP_PATH, functionName: RPC_FUNCTION, reliable: false },
+    expected: 'success',
+    assertions: [{ path: 'structuredContent.result.changed', equals: false, label: 'RPC already unreliable' }]
   },
 
   // === AUTHORITY / OWNERSHIP ===
+  { scenario: 'CONFIG: set_owner refuses an unknown owner', toolName: 'manage_networking', arguments: { action: 'set_owner', actorName: TARGET_ACTOR, ownerActorName: `MCP_NoSuchOwner_${ts}` }, expected: 'error|NOT_FOUND' },
   { scenario: 'CONFIG: set_owner', toolName: 'manage_networking', arguments: { action: 'set_owner', actorName: TARGET_ACTOR, ownerActorName: OWNER_ACTOR }, expected: 'success', assertions: [{ path: 'structuredContent.result.success', equals: true, label: 'set_owner native success flag' }, { path: 'structuredContent.result.actorName', equals: TARGET_ACTOR, label: 'set_owner target actor verified' }, { path: 'structuredContent.result.existsAfter', equals: true, label: 'set_owner target actor still exists' }] },
   {
     scenario: 'CONFIG: set_autonomous_proxy',
@@ -124,17 +136,16 @@ const testCases = [
   { scenario: 'CONFIG: set_always_relevant', toolName: 'manage_networking', arguments: { action: 'set_always_relevant', blueprintPath: ACTOR_BP_PATH, alwaysRelevant: true }, expected: 'success', assertions: blueprintAssertion(EXPECTED_ACTOR_BP_ASSET_PATH, 'set_always_relevant') },
   { scenario: 'CONFIG: set_only_relevant_to_owner', toolName: 'manage_networking', arguments: { action: 'set_only_relevant_to_owner', blueprintPath: ACTOR_BP_PATH, onlyRelevantToOwner: false }, expected: 'success', assertions: blueprintAssertion(EXPECTED_ACTOR_BP_ASSET_PATH, 'set_only_relevant_to_owner') },
   {
-    scenario: 'CONFIG: configure_net_serialization',
+    scenario: 'CONFIG: set_replicated_using',
     toolName: 'manage_networking',
-    arguments: { action: 'configure_net_serialization', blueprintPath: ACTOR_BP_PATH, structName: 'MCPNetPayload', customSerialization: true },
+    arguments: { action: 'set_replicated_using', blueprintPath: ACTOR_BP_PATH, propertyName: 'RepNotifyValue', repNotifyFunc: REP_NOTIFY_FUNCTION },
     expected: 'success',
     assertions: [
-      ...blueprintAssertion(EXPECTED_ACTOR_BP_ASSET_PATH, 'configure_net_serialization'),
-      { path: 'structuredContent.result.customSerialization', equals: true, label: 'custom serialization flag returned' },
-      { path: 'structuredContent.result.structName', equals: 'MCPNetPayload', label: 'net serialization struct returned' }
+      ...blueprintAssertion(EXPECTED_ACTOR_BP_ASSET_PATH, 'set_replicated_using'),
+      { path: 'structuredContent.result.functionCreated', equals: true, label: 'missing RepNotify function created' }
     ]
   },
-  { scenario: 'CONFIG: set_replicated_using', toolName: 'manage_networking', arguments: { action: 'set_replicated_using', blueprintPath: ACTOR_BP_PATH, propertyName: 'RepNotifyValue', repNotifyFunc: REP_NOTIFY_FUNCTION }, expected: 'success', assertions: blueprintAssertion(EXPECTED_ACTOR_BP_ASSET_PATH, 'set_replicated_using') },
+  { scenario: 'CONFIG: set_rpc_reliability refuses a function that is not an RPC', toolName: 'manage_networking', arguments: { action: 'set_rpc_reliability', blueprintPath: ACTOR_BP_PATH, functionName: REP_NOTIFY_FUNCTION, reliable: true }, expected: 'error|NOT_AN_RPC' },
   {
     scenario: 'CONFIG: configure_push_model',
     toolName: 'manage_networking',
@@ -150,49 +161,72 @@ const testCases = [
   {
     scenario: 'CONFIG: configure_client_prediction',
     toolName: 'manage_networking',
-    arguments: { action: 'configure_client_prediction', blueprintPath: CHARACTER_BP_PATH, enablePrediction: true, predictionThreshold: 0.25 },
+    arguments: { action: 'configure_client_prediction', blueprintPath: CHARACTER_BP_PATH, enablePrediction: true },
     expected: 'success',
     assertions: [
       ...blueprintAssertion(EXPECTED_CHARACTER_BP_ASSET_PATH, 'configure_client_prediction'),
-      { path: 'structuredContent.result.enablePrediction', equals: true, label: 'client prediction flag returned' },
-      { path: 'structuredContent.result.predictionThreshold', equals: 0.25, label: 'client prediction threshold returned' }
+      { path: 'structuredContent.result.enablePrediction', equals: true, label: 'client prediction flag returned' }
     ]
   },
   {
     scenario: 'CONFIG: configure_server_correction',
     toolName: 'manage_networking',
-    arguments: { action: 'configure_server_correction', blueprintPath: CHARACTER_BP_PATH, correctionThreshold: 1.5, smoothingRate: 0.35 },
+    arguments: { action: 'configure_server_correction', blueprintPath: CHARACTER_BP_PATH, smoothingRate: 0.35 },
     expected: 'success',
     assertions: [
       ...blueprintAssertion(EXPECTED_CHARACTER_BP_ASSET_PATH, 'configure_server_correction'),
-      { path: 'structuredContent.result.correctionThreshold', equals: 1.5, label: 'server correction threshold returned' },
       { path: 'structuredContent.result.smoothingRate', equals: 0.35, label: 'server correction smoothing rate returned' }
     ]
   },
+  { scenario: 'CONFIG: configure_movement_prediction', toolName: 'manage_networking', arguments: { action: 'configure_movement_prediction', blueprintPath: CHARACTER_BP_PATH, networkSmoothingMode: 'Exponential', networkMaxSmoothUpdateDistance: 512, networkNoSmoothUpdateDistance: 768 }, expected: 'success', assertions: blueprintAssertion(EXPECTED_CHARACTER_BP_ASSET_PATH, 'configure_movement_prediction') },
   {
-    scenario: 'ADD: add_network_prediction_data',
+    scenario: 'CREATE: add_network_prediction_data adds an owner-only variable',
     toolName: 'manage_networking',
-    arguments: { action: 'add_network_prediction_data', blueprintPath: CHARACTER_BP_PATH, dataType: 'Vector', variableName: PREDICTION_VAR },
+    arguments: { action: 'add_network_prediction_data', blueprintPath: CHARACTER_BP_PATH, dataType: 'Vector', variableName: 'PredictedLocation' },
     expected: 'success',
     assertions: [
-      ...blueprintAssertion(EXPECTED_CHARACTER_BP_ASSET_PATH, 'add_network_prediction_data'),
-      { path: 'structuredContent.result.variableName', equals: PREDICTION_VAR, label: 'network prediction variable returned' },
-      { path: 'structuredContent.result.dataType', equals: 'Vector', label: 'network prediction data type returned' }
+      { path: 'structuredContent.result.variableName', equals: 'PredictedLocation', label: 'prediction variable named' },
+      { path: 'structuredContent.result.created', equals: true, label: 'prediction variable created' },
+      { path: 'structuredContent.result.saved', equals: true, label: 'blueprint saved with the variable' }
     ]
   },
-  { scenario: 'CONFIG: configure_movement_prediction', toolName: 'manage_networking', arguments: { action: 'configure_movement_prediction', blueprintPath: CHARACTER_BP_PATH, networkSmoothingMode: 'Exponential', networkMaxSmoothUpdateDistance: 512, networkNoSmoothUpdateDistance: 768 }, expected: 'success', assertions: blueprintAssertion(EXPECTED_CHARACTER_BP_ASSET_PATH, 'configure_movement_prediction') },
+  {
+    scenario: 'CONFIG: configure_prediction add_data on the same variable changes nothing',
+    toolName: 'manage_networking',
+    arguments: { action: 'configure_prediction', setting: 'add_data', blueprintPath: CHARACTER_BP_PATH, dataType: 'Vector', variableName: 'PredictedLocation' },
+    expected: 'success',
+    assertions: [
+      { path: 'structuredContent.result.created', equals: false, label: 'no second variable' },
+      { path: 'structuredContent.result.updated', equals: false, label: 'already owner-only, nothing converted' }
+    ]
+  },
+  { scenario: 'CREATE: add_network_prediction_data default name', toolName: 'manage_networking', arguments: { action: 'add_network_prediction_data', blueprintPath: CHARACTER_BP_PATH, dataType: 'Rotator' }, expected: 'success', assertions: [{ path: 'structuredContent.result.variableName', equals: 'PredictionData_Rotator', label: 'default prediction variable name' }] },
+  { scenario: 'Setup: add a double-precision speed variable', toolName: 'manage_blueprint', arguments: { action: 'add_variable', blueprintPath: CHARACTER_BP_PATH, variableName: 'PredictedSpeed', variableType: 'Double' }, expected: 'success|already exists' },
+  {
+    scenario: 'CONFIG: add_network_prediction_data Float converts a double variable',
+    toolName: 'manage_networking',
+    arguments: { action: 'add_network_prediction_data', blueprintPath: CHARACTER_BP_PATH, dataType: 'Float', variableName: 'PredictedSpeed' },
+    expected: 'success',
+    assertions: [
+      { path: 'structuredContent.result.created', equals: false, label: 'existing real variable reused' },
+      { path: 'structuredContent.result.updated', equals: true, label: 'real variable converted despite float or double precision' }
+    ]
+  },
+  { scenario: 'CREATE: add_network_prediction_data refuses a type clash', toolName: 'manage_networking', arguments: { action: 'add_network_prediction_data', blueprintPath: CHARACTER_BP_PATH, dataType: 'Rotator', variableName: 'PredictedLocation' }, expected: 'error|VARIABLE_TYPE_CONFLICT' },
+  { scenario: 'CREATE: add_network_prediction_data refuses a plain Actor Blueprint', toolName: 'manage_networking', arguments: { action: 'add_network_prediction_data', blueprintPath: ACTOR_BP_PATH, dataType: 'Vector', variableName: 'PredictedLocation' }, expected: 'error|NOT_SUPPORTED' },
+  { scenario: 'CREATE: add_network_prediction_data refuses an unknown type', toolName: 'manage_networking', arguments: { action: 'add_network_prediction_data', blueprintPath: CHARACTER_BP_PATH, dataType: 'NoSuchType' }, expected: 'error|TYPE_RESOLUTION_FAILED' },
 
   // === CONNECTION / ROLE / INFO ===
   {
     scenario: 'CONFIG: configure_net_driver',
     toolName: 'manage_networking',
-    arguments: { action: 'configure_net_driver', maxClientRate: 20000, maxInternetClientRate: 12000, netServerMaxTickRate: 45 },
+    arguments: { action: 'configure_net_driver', maxClientRate: 15000, maxInternetClientRate: 10000, netServerMaxTickRate: 30 },
     expected: 'success',
     assertions: [
       { path: 'structuredContent.result.success', equals: true, label: 'net driver native success flag' },
-      { path: 'structuredContent.result.maxClientRate', equals: 20000, label: 'net driver max client rate returned' },
-      { path: 'structuredContent.result.maxInternetClientRate', equals: 12000, label: 'net driver internet client rate returned' },
-      { path: 'structuredContent.result.netServerMaxTickRate', equals: 45, label: 'net driver max tick rate returned' }
+      { path: 'structuredContent.result.maxClientRate', equals: 15000, label: 'net driver max client rate returned' },
+      { path: 'structuredContent.result.maxInternetClientRate', equals: 10000, label: 'net driver internet client rate returned' },
+      { path: 'structuredContent.result.netServerMaxTickRate', equals: 30, label: 'net driver max tick rate returned' }
     ]
   },
   {
@@ -224,10 +258,21 @@ const testCases = [
       { path: 'structuredContent.result.networkingInfo.netDormancy', equals: 'DORM_Awake', label: 'networking info reads dormancy' }
     ]
   },
+  // params envelope: clients that cannot send arbitrary top-level fields nest them
+  // under `params`, which is merged with top-level arguments before routing.
+  {
+    scenario: 'INFO: get_networking_info via params envelope',
+    toolName: 'manage_networking',
+    arguments: { action: 'get_networking_info', params: { blueprintPath: ACTOR_BP_PATH } },
+    expected: 'success',
+    assertions: [
+      { path: 'structuredContent.result.networkingInfo.bReplicates', equals: true, label: 'nested params resolved the same replicated actor CDO' },
+      { path: 'structuredContent.result.networkingInfo.netUpdateFrequency', equals: 33, label: 'nested params read the configured net update frequency' }
+    ]
+  },
 
   // === CLEANUP ===
   { scenario: 'Cleanup: delete spawned actors', toolName: 'control_actor', arguments: { action: 'delete', actorNames: [TARGET_ACTOR, OWNER_ACTOR, PAWN_ACTOR] }, expected: 'success|not found' },
-  { scenario: 'Cleanup: delete test folder', toolName: 'manage_asset', arguments: { action: 'delete', path: TEST_FOLDER, force: true }, expected: 'success|not found' },
 ];
 
 // === SESSION AND LOCAL MULTIPLAYER ACTIONS ===
@@ -240,56 +285,17 @@ const testCases = [
   const TEST_FOLDER = '/Game/MCPTest/GameplayAssets';
   const ts = Date.now();
 
-  const SESSION_NAME = `MCP_LiveSession_${ts}`;
-  const SERVER_NAME = `MCP_LAN_${ts}`;
-  const VOICE_CHANNEL = `MCP_Voice_${ts}`;
   const PLAYER_NAME = `MCP_Player_${ts}`;
   const TARGET_PLAYER_ID = `MCP_TargetId_${ts}`;
   const MAP_PATH = '/Game/MCPTest/MainLevel';
-  const SERVER_PORT = 7788;
-  const SERVER_PASSWORD = 'mcp-test-password';
-  const JOIN_OPTIONS = '?Name=MCPClient';
-  const HOST_OPTIONS = '?MCPTest=1';
-  const HOST_TRAVEL_URL = `${MAP_PATH}?listen?bIsLanMatch=1?MaxPlayers=4${HOST_OPTIONS}`;
-  const JOIN_CONNECTION_URL = `127.0.0.1:${SERVER_PORT}${JOIN_OPTIONS}?Password=${SERVER_PASSWORD}`;
+  const HOST_OPTIONS = 'MCPTest=1';
+  const HOST_TRAVEL_URL = `${MAP_PATH}?listen?bIsLanMatch=1?MaxPlayers=4?${HOST_OPTIONS}`;
 
   testCases.push(
     // === SETUP ===
     { scenario: 'Setup: create test folder', toolName: 'manage_asset', arguments: { action: 'create_folder', path: TEST_FOLDER }, expected: 'success|already exists' },
 
     // === SESSION CONFIGURATION ===
-    {
-      scenario: 'CONFIG: configure_local_session_settings',
-      toolName: 'manage_networking',
-      arguments: {
-        action: 'configure_local_session_settings',
-        sessionName: SESSION_NAME,
-        maxPlayers: 4,
-        bIsLANMatch: true,
-        bAllowJoinInProgress: false,
-        bAllowInvites: true,
-        bUsesPresence: false,
-        bUseLobbiesIfAvailable: false,
-        bShouldAdvertise: true
-      },
-      expected: 'success',
-      assertions: [
-        { path: 'structuredContent.result.sessionName', equals: SESSION_NAME, label: 'session name applied' },
-        { path: 'structuredContent.result.maxPlayers', equals: 4, label: 'session max players applied' },
-        { path: 'structuredContent.result.bIsLANMatch', equals: true, label: 'LAN match flag applied' },
-        { path: 'structuredContent.result.bAllowJoinInProgress', equals: false, label: 'join-in-progress flag applied' }
-      ]
-    },
-    {
-      scenario: 'CONFIG: configure_session_interface',
-      toolName: 'manage_networking',
-      arguments: { action: 'configure_session_interface', interfaceType: 'Null' },
-      expected: 'success',
-      assertions: [
-        { path: 'structuredContent.result.interfaceType', equals: 'Null', label: 'session interface type applied' },
-        { path: 'structuredContent.result.status', equals: 'configured', label: 'session interface configured status returned' }
-      ]
-    },
 
     // === SPLIT-SCREEN CONFIGURATION ===
     {
@@ -300,17 +306,63 @@ const testCases = [
       assertions: [
         { path: 'structuredContent.result.enabled', equals: true, label: 'split-screen enabled flag applied' },
         { path: 'structuredContent.result.splitScreenType', equals: 'TwoPlayer_Vertical', label: 'split-screen type applied' },
-        { path: 'structuredContent.result.verticalSplit', equals: true, label: 'vertical split detected' },
+        { path: 'structuredContent.result.layoutsWritten', equals: 'TwoPlayerSplitscreenLayout', label: 'only the two-player layout written' },
         { path: 'structuredContent.result.success', equals: true, label: 'split-screen native configuration succeeded' }
       ]
     },
     {
-      scenario: 'CONFIG: set_split_screen_type',
+      scenario: 'CONFIG: set_split_screen_type writes only the three-player layout',
       toolName: 'manage_networking',
-      arguments: { action: 'set_split_screen_type', splitScreenType: 'FourPlayer_Grid' },
+      arguments: { action: 'set_split_screen_type', splitScreenType: 'ThreePlayer_FavorBottom', enabled: true },
       expected: 'success',
-      assertions: [{ path: 'structuredContent.result.splitScreenType', equals: 'FourPlayer_Grid', label: 'split-screen layout returned' }]
+      assertions: [
+        { path: 'structuredContent.result.splitScreenType', equals: 'ThreePlayer_FavorBottom', label: 'three-player layout applied' },
+        { path: 'structuredContent.result.layoutsWritten', equals: 'ThreePlayerSplitscreenLayout', label: 'only the three-player layout written' },
+        { path: 'structuredContent.result.settingsSaved', equals: true, label: 'GameMapsSettings saved' }
+      ]
     },
+    { scenario: 'CONFIG: configure_session split_screen refuses an unknown layout', toolName: 'manage_networking', arguments: { action: 'configure_session', setting: 'split_screen', splitScreenType: 'Diagonal' }, expected: 'error|INVALID_ARGUMENT' },
+
+    // === PROJECT NETWORK CONFIG (DefaultEngine.ini, read back from disk) ===
+    {
+      scenario: 'CONFIG: configure_session lan_play writes the default game port',
+      toolName: 'manage_networking',
+      arguments: { action: 'configure_session', setting: 'lan_play', serverPort: 7777 },
+      expected: 'success',
+      assertions: [
+        { path: 'structuredContent.result.serverPort', equals: 7777, label: 'default game port applied' },
+        { path: 'structuredContent.result.persisted', equals: true, label: 'port read back from DefaultEngine.ini' }
+      ]
+    },
+    { scenario: 'CONFIG: configure_lan_play refuses a privileged port', toolName: 'manage_networking', arguments: { action: 'configure_lan_play', serverPort: 80 }, expected: 'error|INVALID_ARGUMENT' },
+    {
+      scenario: 'CONFIG: configure_session interface selects the Null subsystem',
+      toolName: 'manage_networking',
+      arguments: { action: 'configure_session', setting: 'interface', interfaceType: 'Null' },
+      expected: 'success',
+      assertions: [
+        { path: 'structuredContent.result.interfaceType', equals: 'Null', label: 'DefaultPlatformService written' },
+        { path: 'structuredContent.result.written.0', equals: '[OnlineSubsystem] DefaultPlatformService=Null', label: 'only the choice written: Null is enabled by config' },
+        { path: 'structuredContent.result.requiresRestart', equals: true, label: 'subsystem choice applies on next launch' }
+      ]
+    },
+    { scenario: 'CONFIG: configure_session_interface refuses LAN', toolName: 'manage_networking', arguments: { action: 'configure_session_interface', interfaceType: 'LAN' }, expected: 'error|INVALID_ARGUMENT' },
+    { scenario: 'CONFIG: configure_session_interface refuses Utils, which is no subsystem', toolName: 'manage_networking', arguments: { action: 'configure_session_interface', interfaceType: 'Utils' }, expected: 'error|INVALID_ARGUMENT' },
+    { scenario: 'CONFIG: configure_session_interface refuses a subsystem whose plugin is off', toolName: 'manage_networking', arguments: { action: 'configure_session_interface', interfaceType: 'Tencent' }, expected: 'error|PLUGIN_NOT_ENABLED' },
+    {
+      scenario: 'CONFIG: configure_voice settings writes the voice console variables',
+      toolName: 'manage_networking',
+      arguments: { action: 'configure_voice', setting: 'settings', micInputGain: 1, noiseGateThreshold: 0.08, silenceDetectionThreshold: 0.08, sampleRate: 16000 },
+      expected: 'success',
+      assertions: [
+        { path: 'structuredContent.result.written.3', equals: '[/Script/Engine.AudioSettings] VoiPSampleRate=Low16000Hz', label: 'sample rate entry written last' },
+        { path: 'structuredContent.result.liveApplied.2', equals: 'voice.SilenceDetectionThreshold', label: 'all three voice console variables live' },
+        { path: 'structuredContent.result.requiresRestart', equals: true, label: 'sample rate applies on next launch' }
+      ]
+    },
+    { scenario: 'CONFIG: configure_voice_settings refuses an unsupported sample rate', toolName: 'manage_networking', arguments: { action: 'configure_voice_settings', voiceEnabled: true, sampleRate: 44100 }, expected: 'error|INVALID_ARGUMENT' },
+    { scenario: 'ACTION: join_lan_server outside PIE is refused', toolName: 'manage_networking', arguments: { action: 'host_lan_server', serverOp: 'join', serverAddress: '127.0.0.1', serverPort: 7777, travelOptions: 'Name=McpJoin' }, expected: 'error|PIE_NOT_RUNNING' },
+    { scenario: 'ACTION: join_lan_server refuses an address carrying a port', toolName: 'manage_networking', arguments: { action: 'join_lan_server', serverAddress: '127.0.0.1:7777' }, expected: 'error|INVALID_ARGUMENT' },
 
     // === PIE-ONLY LOCAL MULTIPLAYER ===
     { scenario: 'PLAYBACK: start PIE for local players', toolName: 'control_editor', arguments: { action: 'play' }, expected: 'success' },
@@ -370,37 +422,14 @@ const testCases = [
 
     // === LAN CONFIGURATION ===
     {
-      scenario: 'CONFIG: configure_lan_play',
-      toolName: 'manage_networking',
-      arguments: { action: 'configure_lan_play', enabled: true, serverPort: SERVER_PORT, serverPassword: SERVER_PASSWORD },
-      expected: 'success',
-      assertions: [
-        { path: 'structuredContent.result.enabled', equals: true, label: 'LAN play enabled flag applied' },
-        { path: 'structuredContent.result.serverPort', equals: SERVER_PORT, label: 'LAN server port applied' },
-        { path: 'structuredContent.result.hasPassword', equals: true, label: 'LAN password presence returned' }
-      ]
-    },
-    {
       scenario: 'ACTION: host_lan_server',
       toolName: 'manage_networking',
-      arguments: { action: 'host_lan_server', serverName: SERVER_NAME, mapName: MAP_PATH, maxPlayers: 4, travelOptions: HOST_OPTIONS, executeTravel: false },
+      arguments: { action: 'host_lan_server', mapName: MAP_PATH, maxPlayers: 4, travelOptions: HOST_OPTIONS, executeTravel: false },
       expected: 'success',
       assertions: [
-        { path: 'structuredContent.result.serverName', equals: SERVER_NAME, label: 'LAN server name returned' },
         { path: 'structuredContent.result.mapPath', equals: MAP_PATH, label: 'LAN host map path returned' },
         { path: 'structuredContent.result.travelURL', equals: HOST_TRAVEL_URL, label: 'LAN host travel URL constructed' },
         { path: 'structuredContent.result.travelExecuted', equals: false, label: 'LAN host test avoids disruptive travel' }
-      ]
-    },
-    {
-      scenario: 'ACTION: join_lan_server',
-      toolName: 'manage_networking',
-      arguments: { action: 'join_lan_server', serverAddress: '127.0.0.1', serverPort: SERVER_PORT, serverPassword: SERVER_PASSWORD, travelOptions: JOIN_OPTIONS },
-      expected: 'success',
-      assertions: [
-        { path: 'structuredContent.result.serverAddress', equals: `127.0.0.1:${SERVER_PORT}`, label: 'LAN join address normalized with port' },
-        { path: 'structuredContent.result.connectionURL', equals: JOIN_CONNECTION_URL, label: 'LAN join connection URL constructed' },
-        { path: 'structuredContent.result.status', equals: 'configured', label: 'LAN join configured status returned' }
       ]
     },
 
@@ -416,79 +445,26 @@ const testCases = [
       ]
     },
     {
-      scenario: 'CONFIG: configure_voice_settings',
-      toolName: 'manage_networking',
-      arguments: {
-        action: 'configure_voice_settings',
-        voiceSettings: {
-          volume: 0.42,
-          noiseGateThreshold: 0.03,
-          noiseSuppression: false,
-          echoCancellation: true,
-          sampleRate: 24000
-        }
-      },
-      expected: 'success',
-      assertions: [
-        { path: 'structuredContent.result.voiceSettings.volume', equals: 0.42, label: 'voice volume applied' },
-        { path: 'structuredContent.result.voiceSettings.noiseGateThreshold', equals: 0.03, label: 'voice noise gate applied' },
-        { path: 'structuredContent.result.voiceSettings.noiseSuppression', equals: false, label: 'voice noise suppression applied' },
-        { path: 'structuredContent.result.voiceSettings.echoCancellation', equals: true, label: 'voice echo cancellation applied' },
-        { path: 'structuredContent.result.voiceSettings.sampleRate', equals: 24000, label: 'voice sample rate applied' }
-      ]
-    },
-    {
-      scenario: 'CONFIG: set_voice_channel',
-      toolName: 'manage_networking',
-      arguments: { action: 'set_voice_channel', channelName: VOICE_CHANNEL, channelType: 'Party' },
-      expected: 'success',
-      assertions: [
-        { path: 'structuredContent.result.channelName', equals: VOICE_CHANNEL, label: 'voice channel name returned' },
-        { path: 'structuredContent.result.channelType', equals: 'Party', label: 'voice channel type returned' }
-      ]
-    },
-    {
       scenario: 'ACTION: mute_player',
       toolName: 'manage_networking',
       arguments: { action: 'mute_player', playerName: PLAYER_NAME, muted: true, localPlayerNum: 0, systemWide: false },
-      expected: 'success',
+      // Without a voice chat or online voice interface the mute cannot be applied and is refused.
+      expected: 'success|NOT_SUPPORTED',
       assertions: [
         { path: 'structuredContent.result.target', equals: PLAYER_NAME, label: 'mute player target returned' },
-        { path: 'structuredContent.result.muted', equals: true, label: 'mute state returned' },
-        { path: 'structuredContent.result.success', equals: true, label: 'mute request completed' }
+        { path: 'structuredContent.result.muted', equals: true, label: 'mute state returned' }
       ]
     },
     {
       scenario: 'ACTION: mute_player via targetPlayerId',
       toolName: 'manage_networking',
       arguments: { action: 'mute_player', targetPlayerId: TARGET_PLAYER_ID, muted: false, localPlayerNum: 0, systemWide: true },
-      expected: 'success',
+      expected: 'success|NOT_SUPPORTED',
       assertions: [
         { path: 'structuredContent.result.target', equals: TARGET_PLAYER_ID, label: 'target player id returned' },
         { path: 'structuredContent.result.muted', equals: false, label: 'unmute state returned' },
         { path: 'structuredContent.result.localPlayerNum', equals: 0, label: 'local player number returned' },
-        { path: 'structuredContent.result.systemWide', equals: true, label: 'system-wide mute flag returned' },
-        { path: 'structuredContent.result.success', equals: true, label: 'target id mute request completed' }
-      ]
-    },
-    {
-      scenario: 'CONFIG: set_voice_attenuation',
-      toolName: 'manage_networking',
-      arguments: { action: 'set_voice_attenuation', attenuationRadius: 1800, attenuationFalloff: 2.5 },
-      expected: 'success',
-      assertions: [
-        { path: 'structuredContent.result.attenuationRadius', equals: 1800, label: 'voice attenuation radius returned' },
-        { path: 'structuredContent.result.attenuationFalloff', equals: 2.5, label: 'voice attenuation falloff returned' }
-      ]
-    },
-    {
-      scenario: 'CONFIG: configure_push_to_talk',
-      toolName: 'manage_networking',
-      arguments: { action: 'configure_push_to_talk', pushToTalkEnabled: true, pushToTalkKey: 'LeftShift' },
-      expected: 'success',
-      assertions: [
-        { path: 'structuredContent.result.pushToTalkEnabled', equals: true, label: 'push-to-talk enabled flag returned' },
-        { path: 'structuredContent.result.pushToTalkKey', equals: 'LeftShift', label: 'push-to-talk key returned' }
+        { path: 'structuredContent.result.systemWide', equals: true, label: 'system-wide mute flag returned' }
       ]
     },
 
@@ -514,9 +490,12 @@ const testCases = [
   const PLAYER_STATE_NAME = `BP_FrameworkPlayerState_${ts}`;
   const GAME_INSTANCE_NAME = `BP_FrameworkGameInstance_${ts}`;
   const HUD_NAME = `BP_FrameworkHUD_${ts}`;
+  const PLAYER_START_NAME = `MCP_PlayerStart_${ts}`;
 
   const GAME_MODE_ASSET_PATH = `${TEST_FOLDER}/${GAME_MODE_NAME}`;
   const GAME_MODE_OBJECT_PATH = `${GAME_MODE_ASSET_PATH}.${GAME_MODE_NAME}`;
+  const BASE_GAME_MODE_NAME = `GM_Base_${ts}`;
+  const BASE_GAME_MODE_OBJECT_PATH = `${TEST_FOLDER}/${BASE_GAME_MODE_NAME}.${BASE_GAME_MODE_NAME}`;
   const GAME_STATE_ASSET_PATH = `${TEST_FOLDER}/${GAME_STATE_NAME}`;
   const GAME_STATE_OBJECT_PATH = `${GAME_STATE_ASSET_PATH}.${GAME_STATE_NAME}`;
   const PLAYER_CONTROLLER_ASSET_PATH = `${TEST_FOLDER}/${PLAYER_CONTROLLER_NAME}`;
@@ -551,14 +530,17 @@ const testCases = [
   testCases.push(
     { scenario: 'Setup: create test folder', toolName: 'manage_asset', arguments: { action: 'create_folder', path: TEST_FOLDER }, expected: 'success|already exists' },
 
-    { scenario: 'CREATE: create_hud_class', toolName: 'manage_networking', arguments: { action: 'create_hud_class', name: HUD_NAME, path: TEST_FOLDER, parentClass: '/Script/Engine.HUD', timeoutMs: 120000 }, expected: 'success', assertions: createBlueprintAssertions(HUD_ASSET_PATH, HUD_OBJECT_PATH, HUD_NAME, 'hud blueprint') },
+    { scenario: 'CREATE: create_hud_class', toolName: 'manage_networking', arguments: { action: 'create_hud_class', name: HUD_NAME, path: TEST_FOLDER, parentClass: '/Script/Engine.HUD' }, expected: 'success', timeoutMs: 120000, assertions: createBlueprintAssertions(HUD_ASSET_PATH, HUD_OBJECT_PATH, HUD_NAME, 'hud blueprint') },
     { scenario: 'CREATE: create_game_mode', toolName: 'manage_networking', arguments: { action: 'create_game_mode', name: GAME_MODE_NAME, path: TEST_FOLDER, parentClass: '/Script/Engine.GameMode', defaultPawnClass: DEFAULT_PAWN_CLASS, hudClass: HUD_OBJECT_PATH, save: true }, expected: 'success', assertions: createBlueprintAssertions(GAME_MODE_ASSET_PATH, GAME_MODE_OBJECT_PATH, GAME_MODE_NAME, 'game mode blueprint') },
     { scenario: 'CREATE: create_game_state', toolName: 'manage_networking', arguments: { action: 'create_game_state', name: GAME_STATE_NAME, path: TEST_FOLDER, parentClass: '/Script/Engine.GameState' }, expected: 'success', assertions: createBlueprintAssertions(GAME_STATE_ASSET_PATH, GAME_STATE_OBJECT_PATH, GAME_STATE_NAME, 'game state blueprint') },
     { scenario: 'CREATE: create_player_controller', toolName: 'manage_networking', arguments: { action: 'create_player_controller', name: PLAYER_CONTROLLER_NAME, path: TEST_FOLDER, parentClass: '/Script/Engine.PlayerController' }, expected: 'success', assertions: createBlueprintAssertions(PLAYER_CONTROLLER_ASSET_PATH, PLAYER_CONTROLLER_OBJECT_PATH, PLAYER_CONTROLLER_NAME, 'player controller blueprint') },
     { scenario: 'CREATE: create_player_state', toolName: 'manage_networking', arguments: { action: 'create_player_state', name: PLAYER_STATE_NAME, path: TEST_FOLDER, parentClass: '/Script/Engine.PlayerState' }, expected: 'success', assertions: createBlueprintAssertions(PLAYER_STATE_ASSET_PATH, PLAYER_STATE_OBJECT_PATH, PLAYER_STATE_NAME, 'player state blueprint') },
     { scenario: 'CREATE: create_game_instance', toolName: 'manage_networking', arguments: { action: 'create_game_instance', name: GAME_INSTANCE_NAME, path: TEST_FOLDER, parentClass: '/Script/Engine.GameInstance' }, expected: 'success', assertions: createBlueprintAssertions(GAME_INSTANCE_ASSET_PATH, GAME_INSTANCE_OBJECT_PATH, GAME_INSTANCE_NAME, 'game instance blueprint') },
+    { scenario: 'CREATE: create_game_mode on GameModeBase', toolName: 'manage_networking', arguments: { action: 'create_game_mode', name: BASE_GAME_MODE_NAME, path: TEST_FOLDER, parentClass: '/Script/Engine.GameModeBase' }, expected: 'success' },
+    { scenario: 'CREATE: create_game_state refuses an unloadable parentClass', toolName: 'manage_networking', arguments: { action: 'create_game_state', name: `GS_Missing_${ts}`, path: TEST_FOLDER, parentClass: '/Script/Engine.NoSuchGameState' }, expected: 'error|NOT_FOUND' },
 
-    { scenario: 'CONFIG: set_default_pawn_class', toolName: 'manage_networking', arguments: { action: 'set_default_pawn_class', gameModeBlueprint: GAME_MODE_OBJECT_PATH, pawnClass: DEFAULT_PAWN_CLASS }, expected: 'success', assertions: gameModePathAssertion('default pawn class') },
+    { scenario: 'CONFIG: set_default_pawn_class', toolName: 'manage_networking', arguments: { action: 'set_default_pawn_class', gameModeBlueprint: GAME_MODE_OBJECT_PATH, pawnClass: DEFAULT_PAWN_CLASS, makeDefault: false }, expected: 'success', assertions: [...gameModePathAssertion('default pawn class'), { path: 'structuredContent.result.madeDefault', equals: false, label: 'project default left alone without makeDefault' }] },
+    { scenario: 'CONFIG: set_hud_class', toolName: 'manage_networking', arguments: { action: 'set_hud_class', gameModeBlueprint: GAME_MODE_OBJECT_PATH, hudClass: HUD_OBJECT_PATH, save: true }, expected: 'success', assertions: gameModePathAssertion('hud class') },
     { scenario: 'INFO: read back default pawn class', toolName: 'manage_networking', arguments: { action: 'get_game_framework_info', gameModeBlueprint: GAME_MODE_OBJECT_PATH }, expected: 'success', assertions: [{ path: 'structuredContent.result.gameFrameworkInfo.defaultPawnClass', equals: DEFAULT_PAWN_CLASS, label: 'default pawn class read back from CDO' }] },
     { scenario: 'CONFIG: set_player_controller_class', toolName: 'manage_networking', arguments: { action: 'set_player_controller_class', gameModeBlueprint: GAME_MODE_OBJECT_PATH, playerControllerClass: PLAYER_CONTROLLER_CLASS }, expected: 'success', assertions: gameModePathAssertion('player controller class') },
     { scenario: 'INFO: read back player controller class', toolName: 'manage_networking', arguments: { action: 'get_game_framework_info', gameModeBlueprint: GAME_MODE_OBJECT_PATH }, expected: 'success', assertions: [{ path: 'structuredContent.result.gameFrameworkInfo.playerControllerClass', equals: PLAYER_CONTROLLER_CLASS, label: 'player controller class read back from CDO' }] },
@@ -566,17 +548,19 @@ const testCases = [
     { scenario: 'INFO: read back game state class', toolName: 'manage_networking', arguments: { action: 'get_game_framework_info', gameModeBlueprint: GAME_MODE_OBJECT_PATH }, expected: 'success', assertions: [{ path: 'structuredContent.result.gameFrameworkInfo.gameStateClass', equals: GAME_STATE_CLASS, label: 'game state class read back from CDO' }] },
     { scenario: 'CONFIG: set_player_state_class', toolName: 'manage_networking', arguments: { action: 'set_player_state_class', gameModeBlueprint: GAME_MODE_OBJECT_PATH, playerStateClass: PLAYER_STATE_CLASS }, expected: 'success', assertions: gameModePathAssertion('player state class') },
     { scenario: 'INFO: read back player state class', toolName: 'manage_networking', arguments: { action: 'get_game_framework_info', gameModeBlueprint: GAME_MODE_OBJECT_PATH }, expected: 'success', assertions: [{ path: 'structuredContent.result.gameFrameworkInfo.playerStateClass', equals: PLAYER_STATE_CLASS, label: 'player state class read back from CDO' }] },
-    { scenario: 'CONFIG: configure_game_rules', toolName: 'manage_networking', arguments: { action: 'configure_game_rules', gameModeBlueprint: GAME_MODE_OBJECT_PATH, bDelayedStart: true }, expected: 'success', assertions: gameModePathAssertion('game rules') },
+    { scenario: 'CONFIG: configure_game_rules', toolName: 'manage_networking', arguments: { action: 'configure_game_rules', gameModeBlueprint: GAME_MODE_OBJECT_PATH, bDelayedStart: true, save: true }, expected: 'success', assertions: gameModePathAssertion('game rules') },
+    { scenario: 'CONFIG: configure_game_rules refuses a GameModeBase child', toolName: 'manage_networking', arguments: { action: 'configure_game_rules', gameModeBlueprint: BASE_GAME_MODE_OBJECT_PATH, bDelayedStart: true }, expected: 'error|NOT_SUPPORTED' },
+    { scenario: 'CONFIG: set_respawn_rules refuses a GameModeBase child', toolName: 'manage_networking', arguments: { action: 'set_respawn_rules', gameModeBlueprint: BASE_GAME_MODE_OBJECT_PATH, respawnDelay: 3 }, expected: 'error|NOT_SUPPORTED' },
 
-    { scenario: 'ACTION: setup_match_states', toolName: 'manage_networking', arguments: { action: 'setup_match_states', gameModeBlueprint: GAME_MODE_OBJECT_PATH, states: ['Waiting', 'Warmup', 'InProgress', 'PostMatch'] }, expected: 'success', assertions: [...gameModePathAssertion('match states'), { path: 'structuredContent.result.variablesAdded', equals: 6, label: 'match flow variables added' }, { path: 'structuredContent.result.stateCount', equals: 4, label: 'match state count returned' }, { path: 'structuredContent.result.configuredStates', length: 4, label: 'configured match states returned' }] },
-    { scenario: 'CONFIG: configure_round_system', toolName: 'manage_networking', arguments: { action: 'configure_round_system', gameModeBlueprint: GAME_MODE_OBJECT_PATH, numRounds: 3, roundTime: 180, intermissionTime: 15 }, expected: 'success', assertions: [...gameModePathAssertion('round system'), { path: 'structuredContent.result.variablesAdded', equals: 7, label: 'round system variables added' }, { path: 'structuredContent.result.configuration.numRounds', equals: 3, label: 'round count configured' }, { path: 'structuredContent.result.configuration.roundTime', equals: 180, label: 'round time configured' }, { path: 'structuredContent.result.configuration.intermissionTime', equals: 15, label: 'intermission time configured' }] },
-    { scenario: 'CONFIG: configure_team_system', toolName: 'manage_networking', arguments: { action: 'configure_team_system', gameModeBlueprint: GAME_MODE_OBJECT_PATH, numTeams: 4, teamSize: 5, autoBalance: false, friendlyFire: true }, expected: 'success', assertions: [...gameModePathAssertion('team system'), { path: 'structuredContent.result.variablesAdded', equals: 6, label: 'team system variables added' }, { path: 'structuredContent.result.configuration.numTeams', equals: 4, label: 'team count configured' }, { path: 'structuredContent.result.configuration.teamSize', equals: 5, label: 'team size configured' }, { path: 'structuredContent.result.configuration.autoBalance', equals: false, label: 'auto balance configured' }, { path: 'structuredContent.result.configuration.friendlyFire', equals: true, label: 'friendly fire configured' }] },
-    { scenario: 'CONFIG: configure_scoring_system', toolName: 'manage_networking', arguments: { action: 'configure_scoring_system', gameModeBlueprint: GAME_MODE_OBJECT_PATH, scorePerKill: 125, scorePerAssist: 25, scorePerObjective: 750, winScore: 1500, scorePerDeath: -10 }, expected: 'success', assertions: [...gameModePathAssertion('scoring system'), { path: 'structuredContent.result.variablesAdded', equals: 5, label: 'scoring system variables added' }, { path: 'structuredContent.result.configuration.scorePerKill', equals: 125, label: 'kill score configured' }, { path: 'structuredContent.result.configuration.scorePerAssist', equals: 25, label: 'assist score configured' }, { path: 'structuredContent.result.configuration.scorePerObjective', equals: 750, label: 'objective score configured' }, { path: 'structuredContent.result.configuration.winScore', equals: 1500, label: 'win score configured' }, { path: 'structuredContent.result.configuration.scorePerDeath', equals: -10, label: 'death score configured' }] },
-    { scenario: 'CONFIG: configure_spawn_system', toolName: 'manage_networking', arguments: { action: 'configure_spawn_system', gameModeBlueprint: GAME_MODE_OBJECT_PATH, spawnSelectionMethod: 'TeamWeighted', respawnDelay: 6.5, usePlayerStarts: true, canRespawn: false, maxRespawns: 2 }, expected: 'success', assertions: [...gameModePathAssertion('spawn system'), { path: 'structuredContent.result.variablesAdded', equals: 5, label: 'spawn system variables added' }, { path: 'structuredContent.result.configuration.spawnSelectionMethod', equals: 'TeamWeighted', label: 'spawn selection configured' }, { path: 'structuredContent.result.configuration.respawnDelay', equals: 6.5, label: 'spawn respawn delay configured' }, { path: 'structuredContent.result.configuration.usePlayerStarts', equals: true, label: 'player starts enabled' }, { path: 'structuredContent.result.configuration.canRespawn', equals: false, label: 'can respawn configured' }, { path: 'structuredContent.result.configuration.maxRespawns', equals: 2, label: 'max respawns configured' }] },
 
-    { scenario: 'CONFIG: configure_player_start', toolName: 'manage_networking', arguments: { action: 'configure_player_start', blueprintPath: GAME_MODE_OBJECT_PATH, teamIndex: 2 }, expected: 'success', assertions: [{ path: 'structuredContent.result.success', equals: true, label: 'player start native success flag' }, { path: 'structuredContent.result.teamIndex', equals: 2, label: 'player start team index returned' }, { path: 'structuredContent.result.playerStartTag', equals: 'Team2', label: 'player start team tag generated' }] },
-    { scenario: 'CONFIG: set_respawn_rules', toolName: 'manage_networking', arguments: { action: 'set_respawn_rules', gameModeBlueprint: GAME_MODE_OBJECT_PATH, respawnDelay: 9.25, respawnLocation: 'TeamStart', forceRespawn: false, respawnLives: 3 }, expected: 'success', assertions: [...gameModePathAssertion('respawn rules'), { path: 'structuredContent.result.variablesAdded', equals: 3, label: 'respawn variables added' }, { path: 'structuredContent.result.configuration.respawnDelay', equals: 9.25, label: 'respawn delay configured' }, { path: 'structuredContent.result.configuration.respawnLocation', equals: 'TeamStart', label: 'respawn location configured' }, { path: 'structuredContent.result.configuration.forceRespawn', equals: false, label: 'force respawn configured' }, { path: 'structuredContent.result.configuration.respawnLives', equals: 3, label: 'respawn lives configured' }] },
-    { scenario: 'CONFIG: configure_spectating', toolName: 'manage_networking', arguments: { action: 'configure_spectating', gameModeBlueprint: GAME_MODE_OBJECT_PATH, spectatorClass: SPECTATOR_CLASS, allowSpectating: true, spectatorViewMode: 'FreeCam' }, expected: 'success', assertions: gameModePathAssertion('spectating') },
+    { scenario: 'CONFIG: set_respawn_rules', toolName: 'manage_networking', arguments: { action: 'set_respawn_rules', gameModeBlueprint: GAME_MODE_OBJECT_PATH, respawnDelay: 9.25 }, expected: 'success', assertions: [...gameModePathAssertion('respawn rules'), { path: 'structuredContent.result.configuration.respawnDelay', equals: 9.25, label: 'respawn delay configured' }] },
+    { scenario: 'CONFIG: configure_spectating', toolName: 'manage_networking', arguments: { action: 'configure_spectating', gameModeBlueprint: GAME_MODE_OBJECT_PATH, spectatorClass: SPECTATOR_CLASS, save: true }, expected: 'success', assertions: gameModePathAssertion('spectating') },
+    { scenario: 'Setup: spawn a PlayerStart', toolName: 'control_actor', arguments: { action: 'spawn', classPath: '/Script/Engine.PlayerStart', actorName: PLAYER_START_NAME, location: { x: 0, y: 400, z: 120 } }, expected: 'success' },
+    { scenario: 'CONFIG: configure_player_start teamIndex sets TeamN', toolName: 'manage_networking', arguments: { action: 'configure_player_start', playerStartName: PLAYER_START_NAME, teamIndex: 1 }, expected: 'success', assertions: [{ path: 'structuredContent.result.playerStartTag', equals: 'Team1', label: 'team tag set' }] },
+    { scenario: 'CONFIG: configure_player_start explicit tag reports the previous one', toolName: 'manage_networking', arguments: { action: 'configure_player_start', playerStartName: PLAYER_START_NAME, playerStartTag: 'RedBase' }, expected: 'success', assertions: [{ path: 'structuredContent.result.playerStartTag', equals: 'RedBase', label: 'explicit tag set' }, { path: 'structuredContent.result.previousTag', equals: 'Team1', label: 'previous tag reported' }] },
+    { scenario: 'CONFIG: configure_player_start refuses teamIndex 0', toolName: 'manage_networking', arguments: { action: 'configure_player_start', playerStartName: PLAYER_START_NAME, teamIndex: 0 }, expected: 'error|INVALID_ARGUMENT' },
+    { scenario: 'CONFIG: configure_player_start refuses an unknown PlayerStart', toolName: 'manage_networking', arguments: { action: 'configure_player_start', playerStartName: `NoSuchStart_${ts}`, playerStartTag: 'RedBase' }, expected: 'error|NOT_FOUND' },
+    { scenario: 'Cleanup: delete the PlayerStart', toolName: 'control_actor', arguments: { action: 'delete', actorNames: [PLAYER_START_NAME] }, expected: 'success|not found' },
 
     { scenario: 'INFO: get_game_framework_info final readback', toolName: 'manage_networking', arguments: { action: 'get_game_framework_info', gameModeBlueprint: GAME_MODE_OBJECT_PATH }, expected: 'success', assertions: [{ path: 'structuredContent.result.success', equals: true, label: 'game framework info native success flag' }, { path: 'structuredContent.result.gameFrameworkInfo.gameModeClass', equals: `${GAME_MODE_OBJECT_PATH}_C`, label: 'game mode generated class read back' }, { path: 'structuredContent.result.gameFrameworkInfo.defaultPawnClass', equals: DEFAULT_PAWN_CLASS, label: 'final default pawn readback' }, { path: 'structuredContent.result.gameFrameworkInfo.playerControllerClass', equals: PLAYER_CONTROLLER_CLASS, label: 'final player controller readback' }, { path: 'structuredContent.result.gameFrameworkInfo.gameStateClass', equals: GAME_STATE_CLASS, label: 'final game state readback' }, { path: 'structuredContent.result.gameFrameworkInfo.playerStateClass', equals: PLAYER_STATE_CLASS, label: 'final player state readback' }, { path: 'structuredContent.result.gameFrameworkInfo.hudClass', equals: `${HUD_OBJECT_PATH}_C`, label: 'final HUD class readback' }] },
 
@@ -602,23 +586,32 @@ const testCases = [
   testCases.push(
     // === SETUP ===
     { scenario: 'Setup: create test folder', toolName: 'manage_asset', arguments: { action: 'create_folder', path: TEST_FOLDER }, expected: 'success|already exists' },
-    { scenario: 'Setup: create test blueprint', toolName: 'manage_blueprint', arguments: { action: 'create', name: `BP_Test_${ts}`, path: TEST_FOLDER, parentClass: 'Actor' }, expected: 'success|already exists' },
+    { scenario: 'Setup: create test blueprint', toolName: 'manage_blueprint', arguments: { action: 'create', name: `BP_Test_${ts}`, savePath: TEST_FOLDER, parentClass: 'Actor' }, expected: 'success|already exists' },
 
     // === CREATE ===
     { scenario: 'CREATE: create_input_action', toolName: 'manage_networking', arguments: {"action": "create_input_action", "name": "Testinput_action", "path": INPUT_FOLDER_ALIAS}, expected: 'success|already exists' },
+    { scenario: 'CREATE: create_input_action axis2d', toolName: 'manage_networking', arguments: { action: 'create_input_action', name: `Testmove_${ts}`, path: INPUT_FOLDER_ALIAS, valueType: 'axis2d' }, expected: 'success|already exists' },
     { scenario: 'CREATE: create_input_mapping_context', toolName: 'manage_networking', arguments: {"action": "create_input_mapping_context", "name": "Testinput_mapping_context", "path": INPUT_FOLDER_ALIAS}, expected: 'success|already exists' },
     // === ADD ===
     { scenario: 'ADD: add_mapping', toolName: 'manage_networking', arguments: { action: 'add_mapping', contextPath: INPUT_CONTEXT, actionPath: INPUT_ACTION, key: 'SpaceBar' }, expected: 'success|already exists' },
     // === ACTION ===
     { scenario: 'ACTION: map_input_action', toolName: 'manage_networking', arguments: { action: 'map_input_action', contextPath: INPUT_CONTEXT, actionPath: INPUT_ACTION, key: 'LeftMouseButton' }, expected: 'success' },
+    { scenario: 'ACTION: map_input_action with a trigger and modifier', toolName: 'manage_networking', arguments: { action: 'map_input_action', contextPath: INPUT_CONTEXT, actionPath: INPUT_ACTION, key: 'RightMouseButton', triggerType: 'Released', modifierType: 'Negate' }, expected: 'success' },
     // === CONFIG ===
     { scenario: 'CONFIG: set_input_trigger', toolName: 'manage_networking', arguments: { action: 'set_input_trigger', actionPath: INPUT_ACTION, triggerType: 'Pressed' }, expected: 'success' },
+    { scenario: 'CONFIG: set_input_trigger again keeps one trigger', toolName: 'manage_networking', arguments: { action: 'set_input_trigger', actionPath: INPUT_ACTION, triggerType: 'Pressed' }, expected: 'success', assertions: [{ path: 'structuredContent.result.success', equals: true, label: 'repeated set_input_trigger succeeds without stacking' }] },
     { scenario: 'CONFIG: set_input_modifier', toolName: 'manage_networking', arguments: { action: 'set_input_modifier', contextPath: INPUT_CONTEXT, actionPath: INPUT_ACTION, key: 'SpaceBar', modifierType: 'Negate' }, expected: 'success' },
+    // A remap moves the mapping whole: a remove-then-add lost the Negate set on SpaceBar just above.
+    { scenario: 'ACTION: map_input_action replaceKey moves a mapping to another key with its modifier', toolName: 'manage_networking', arguments: { action: 'map_input_action', contextPath: INPUT_CONTEXT, actionPath: INPUT_ACTION, key: 'E', replaceKey: 'SpaceBar' }, expected: 'success', assertions: [{ path: 'structuredContent.result.replacedKey', equals: 'SpaceBar', label: 'SpaceBar no longer fires the action' }, { path: 'structuredContent.result.modifierCount', equals: 1, label: 'the Negate on SpaceBar moved to E' }] },
+    { scenario: 'ERROR: map_input_action replaceKey names a key the action is not mapped to', toolName: 'manage_networking', arguments: { action: 'map_input_action', contextPath: INPUT_CONTEXT, actionPath: INPUT_ACTION, key: 'Q', replaceKey: 'SpaceBar' }, expected: 'error|NOT_FOUND' },
     // === DELETE ===
-    { scenario: 'DELETE: remove_mapping', toolName: 'manage_networking', arguments: { action: 'remove_mapping', contextPath: INPUT_CONTEXT, actionPath: INPUT_ACTION, key: 'SpaceBar' }, expected: 'success|not found' },
+    { scenario: 'DELETE: remove_mapping', toolName: 'manage_networking', arguments: { action: 'remove_mapping', contextPath: INPUT_CONTEXT, actionPath: INPUT_ACTION, key: 'E' }, expected: 'success|not found' },
     // === TOGGLE ===
-    { scenario: 'TOGGLE: enable_input_mapping', toolName: 'manage_networking', arguments: { action: 'enable_input_mapping', contextPath: INPUT_CONTEXT, priority: 1 }, expected: 'success' },
-    { scenario: 'TOGGLE: disable_input_action', toolName: 'manage_networking', arguments: { action: 'disable_input_action', actionPath: INPUT_ACTION }, expected: 'success' },
+    // A context is enabled on a running local player, so outside PIE the call is refused.
+    { scenario: 'TOGGLE: enable_input_mapping outside PIE is refused', toolName: 'manage_networking', arguments: { action: 'enable_input_mapping', contextPath: INPUT_CONTEXT }, expected: 'error|PIE_NOT_RUNNING' },
+    { scenario: 'PLAYBACK: start PIE for enable_input_mapping', toolName: 'control_editor', arguments: { action: 'play' }, expected: 'success' },
+    { scenario: 'TOGGLE: enable_input_mapping', toolName: 'manage_networking', arguments: { action: 'enable_input_mapping', contextPath: INPUT_CONTEXT, priority: 1 }, expected: 'success', assertions: [{ path: 'structuredContent.result.success', equals: true, label: 'context enabled on the PIE local player' }] },
+    { scenario: 'PLAYBACK: stop PIE after enable_input_mapping', toolName: 'control_editor', arguments: { action: 'stop_pie' }, expected: 'success' },
     // === INFO ===
     { scenario: 'INFO: get_input_info', toolName: 'manage_networking', arguments: { action: 'get_input_info', assetPath: INPUT_CONTEXT }, expected: 'success' },
     { scenario: 'ADD: add_legacy_action_mapping', toolName: 'manage_networking', arguments: { action: 'add_legacy_action_mapping', actionName: LEGACY_ACTION_NAME, key: 'F', shift: true, ctrl: false, alt: false, cmd: false }, expected: 'success' },
@@ -628,8 +621,8 @@ const testCases = [
 
     // === CLEANUP ===
     { scenario: 'Cleanup: delete test blueprint', toolName: 'manage_asset', arguments: { action: 'delete', path: `${TEST_FOLDER}/BP_Test_${ts}`, force: true }, expected: 'success|not found' },
-    { scenario: 'Cleanup: delete test folder', toolName: 'manage_asset', arguments: { action: 'delete', path: TEST_FOLDER, force: true }, expected: 'DELETE_FAILED|success|not found' },
+    { scenario: 'Cleanup: delete test folder', toolName: 'manage_asset', arguments: { action: 'delete', path: TEST_FOLDER, force: true }, expected: 'success|not found|DELETE_FAILED' },
   );
 }
 
-runToolTests('manage-networking', testCases);
+runToolTests('manage-networking', testCases, { folder: TEST_FOLDER });

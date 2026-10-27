@@ -1,0 +1,82 @@
+// McpNativeGatewayCanonicalRecords.h — capability resolution for gateway execute
+//
+// Execute has to answer three questions discovery never asks: which capability
+// does a canonical id name, which capability does a generated legacy
+// {tool, action} pair name, and is an alias unambiguous. Many records carry a
+// legacy action that differs from routing.dispatchAction (for example
+// query_asset dispatches exists), and a folded family carries
+// one legacy pair per name it absorbed, so a legacy caller cannot be resolved
+// by dispatch action alone.
+//
+// Schemas, routing and policy come from FMcpCapabilityStore — this index adds
+// only the alias/legacy projection the store does not retain, and never becomes
+// a second source of capability metadata.
+
+#pragma once
+
+#include "CoreMinimal.h"
+
+struct FMcpCapabilityRecord;
+
+enum class EMcpAliasResolution : uint8
+{
+	Unknown,
+	Unique,
+	Ambiguous,
+};
+
+class FMcpCanonicalRecordIndex
+{
+public:
+	/** Process-wide index, built once on first use. */
+	static const FMcpCanonicalRecordIndex& Get();
+
+	/** Build from the generated shards. Used by Get() and by tests. */
+	static FMcpCanonicalRecordIndex Build();
+
+	bool IsLoaded() const { return bLoaded; }
+	const FString& GetLoadError() const { return LoadError; }
+	const FString& GetCatalogRevision() const { return CatalogRevision; }
+	int32 Num() const { return RecordsById.Num(); }
+
+	const FMcpCapabilityRecord* FindById(const FString& CapabilityId) const;
+
+	/** Resolve a generated legacy {tool, action} pair to its canonical record. */
+	const FMcpCapabilityRecord* FindByLegacy(const FString& Tool, const FString& Action) const;
+
+	/** Ambiguous aliases are reported, never silently resolved to a first match. */
+	EMcpAliasResolution ResolveAlias(const FString& Alias, FString& OutCapabilityId) const;
+
+	/** Legacy action names accepted for a parent tool, sorted. */
+	TArray<FString> GetLegacyActionsForTool(const FString& Tool) const;
+
+	/**
+	 * The advertised primary action for a capability: its first legacy id. A
+	 * folded family carries further pairs (the old names it replaced), which
+	 * resolve through FindByLegacy but never displace the primary. This is NOT
+	 * routing.dispatchAction (that names the internal TypeScript route).
+	 */
+	FString GetLegacyActionForCapability(const FString& CapabilityId) const;
+
+	TArray<FString> GetCapabilityIds() const;
+
+	/**
+	 * A capability ID's namespace (asset.list -> asset) is not always a parent tool: asset.* is dispatched by
+	 * manage_asset, blueprint.* by manage_blueprint. The parent tool a namespace names, when every record carrying
+	 * it agrees on one (the TypeScript deriveNamespaceAliases rule); otherwise, and for a real tool name, Tool.
+	 */
+	FString ResolveToolNamespace(const FString& Tool) const;
+
+private:
+	bool bLoaded = false;
+	FString LoadError;
+	FString CatalogRevision;
+	TMap<FString, const FMcpCapabilityRecord*> RecordsById;
+	TMap<FString, FString> LegacyToCapabilityId;
+	TMap<FString, FString> CapabilityIdToLegacyAction;
+	TMap<FString, TArray<FString>> AliasToCapabilityIds;
+	TMap<FString, FString> ParentToolByNamespace;
+};
+
+/** Stable key for a generated legacy {tool, action} pair. */
+FString McpLegacyCapabilityKey(const FString& Tool, const FString& Action);

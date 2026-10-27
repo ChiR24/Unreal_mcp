@@ -1,0 +1,251 @@
+#include "Domains/AssetWorkflow/Structs/McpAssetStructsShared.h"
+#include "UObject/UObjectIterator.h"
+
+
+bool HandleStructLifecycleActions(UEngineWireSubsystem& Bridge, const FString& RequestId, const FString& Action, const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> RequestingSocket)
+{
+    const FString Lower = Action.ToLower();
+
+    if (Lower == TEXT("create_struct"))
+    {
+        FString StructPath = GetJsonStringField(Payload, TEXT("structPath"));
+        FString Name = GetJsonStringField(Payload, TEXT("name"));
+        FString Path = GetJsonStringField(Payload, TEXT("path"), TEXT("/Game/Structs"));
+        bool bSave = GetJsonBoolField(Payload, TEXT("save"), true);
+
+        // Accept the documented structPath (used by every other struct action)
+        // and derive name + parent path from it when name is not given.
+        if (Name.IsEmpty() && !StructPath.IsEmpty())
+        {
+            if (LoadObject<UUserDefinedStruct>(nullptr, *StructPath))
+            {
+                Bridge.SendAutomationError(RequestingSocket, RequestId,
+                    FString::Printf(TEXT("Struct already exists: %s"), *StructPath), TEXT("ASSET_ALREADY_EXISTS"));
+                return true;
+            }
+            if (!StructPath.Split(TEXT("/"), &Path, &Name, ESearchCase::CaseSensitive, ESearchDir::FromEnd)) { Name = StructPath; }
+        }
+
+        if (Name.IsEmpty())
+        {
+            Bridge.SendAutomationError(RequestingSocket, RequestId,
+                TEXT("Missing required parameter: name or structPath"), TEXT("MISSING_PARAMETER"));
+            return true;
+        }
+
+        FString PathError;
+        FString SanitizedName = SanitizeAssetName(Name);
+        FString PackageName;
+        if (!ValidateAssetCreationPath(Path, SanitizedName, PackageName, PathError))
+        {
+            Bridge.SendAutomationError(RequestingSocket, RequestId, PathError, TEXT("PACKAGE_CREATE_FAILED"));
+            return true;
+        }
+
+        const TArray<TSharedPtr<FJsonValue>>* MembersArr = nullptr;
+        const bool bHasMembers = Payload->TryGetArrayField(TEXT("members"), MembersArr) && MembersArr;
+        TArray<FParsedMember> ParsedMembers;
+        if (bHasMembers)
+        {
+            const FName SelfPath = FName(*FString::Printf(TEXT("%s.%s"), *PackageName, *SanitizedName));
+            TArray<FString> ValidationFailures;
+            if (!ValidateStructMembers(*MembersArr, SelfPath, ParsedMembers, ValidationFailures))
+            {
+                TArray<TSharedPtr<FJsonValue>> FailureArr;
+                for (const FString& F : ValidationFailures) FailureArr.Add(MakeShared<FJsonValueString>(F));
+                TSharedPtr<FJsonObject> ValidationResult = McpHandlerUtils::CreateResultObject();
+                ValidationResult->SetNumberField(TEXT("failed"), ValidationFailures.Num());
+                ValidationResult->SetArrayField(TEXT("failures"), FailureArr);
+                Bridge.SendAutomationResponse(RequestingSocket, RequestId, false,
+                    FString::Printf(TEXT("Struct creation rejected: %d member(s) failed validation"), ValidationFailures.Num()),
+                    ValidationResult);
+                return true;
+            }
+        }
+
+        UPackage* Package = CreatePackage(*PackageName);
+        if (!Package)
+        {
+            Bridge.SendAutomationError(RequestingSocket, RequestId,
+                TEXT("Failed to create package"), TEXT("PACKAGE_CREATE_FAILED"));
+            return true;
+        }
+
+        // The engine re-seeds a placeholder member when the seeded one goes: a UserDefinedStruct cannot persist empty.
+        UUserDefinedStruct* S = CreateUnseededUserStruct(Package, SanitizedName);
+        if (!S)
+        {
+            Bridge.SendAutomationError(RequestingSocket, RequestId,
+                TEXT("Failed to create user defined struct"), TEXT("ASSET_CREATE_FAILED"));
+            return true;
+        }
+        // Capture the re-seeded placeholder by GUID now, while it is the only
+        // thing in the struct, so it can be dropped once the requested members
+        // exist. Matching "MemberVar*" by name later would also catch a member
+        // the caller actually asked for.
+        TArray<FGuid> PlaceholderGuids;
+        for (const FStructVariableDescription& Var : FStructureEditorUtils::GetVarDesc(S)) { PlaceholderGuids.Add(Var.VarGuid); }
+
+        if (bHasMembers)
+        {
+            TArray<FString> ApplyFailures;
+            int32 Applied = ApplyParsedStructMembers(S, ParsedMembers, ApplyFailures);
+            if (ApplyFailures.Num() > 0)
+            {
+                TArray<TSharedPtr<FJsonValue>> FailureArr;
+                for (const FString& F : ApplyFailures) FailureArr.Add(MakeShared<FJsonValueString>(F));
+                TSharedPtr<FJsonObject> ApplyResult = McpHandlerUtils::CreateResultObject();
+                ApplyResult->SetStringField(TEXT("assetPath"), PackageName + TEXT(".") + SanitizedName);
+                ApplyResult->SetNumberField(TEXT("imported"), Applied);
+                ApplyResult->SetNumberField(TEXT("failed"), ApplyFailures.Num());
+                ApplyResult->SetArrayField(TEXT("failures"), FailureArr);
+                Bridge.SendAutomationResponse(RequestingSocket, RequestId, false,
+                    FString::Printf(TEXT("Struct created but %d member(s) failed to apply"), ApplyFailures.Num()),
+                    ApplyResult);
+                return true;
+            }
+        }
+
+        // Drop the placeholder now that real members hold the struct together.
+        // Left in, it rode along beside them for the life of the asset and
+        // surfaced as a phantom memberVar_0 column in every DataTable built on
+        // the struct - and edit_struct has no member-remove to clean it up.
+        // Only when nothing else was applied does it stay, and get reported.
+        int32 PlaceholderMembers = PlaceholderGuids.Num();
+        if (bHasMembers && FStructureEditorUtils::GetVarDesc(S).Num() > PlaceholderMembers)
+        {
+            for (const FGuid& G : PlaceholderGuids) { FStructureEditorUtils::RemoveVariable(S, G); }
+            PlaceholderMembers = 0;
+        }
+        // Compile so the struct is in a valid, consistent (UpToDate) state.
+        FStructureEditorUtils::CompileStructure(S);
+
+        Package->MarkPackageDirty();
+        FAssetRegistryModule::AssetCreated(S);
+        const bool bSaved = bSave && McpSafeAssetSave(S);
+
+        TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
+        Result->SetStringField(TEXT("assetPath"), PackageName + TEXT(".") + SanitizedName);
+        Result->SetStringField(TEXT("structName"), SanitizedName);
+        Result->SetStringField(TEXT("status"), TEXT("UpToDate"));
+        Result->SetBoolField(TEXT("saved"), bSaved);
+        Result->SetNumberField(TEXT("placeholderMembers"), PlaceholderMembers);
+        if (bHasMembers)
+        {
+            Result->SetNumberField(TEXT("memberCount"), FStructureEditorUtils::GetVarDesc(S).Num());
+        }
+        McpHandlerUtils::AddVerification(Result, S);
+        Bridge.SendAutomationResponse(RequestingSocket, RequestId, true,
+            PlaceholderMembers > 0
+                ? FString::Printf(TEXT("User defined struct created. UE re-seeded %d placeholder member(s) (an empty struct cannot persist); replace them via add_struct_member or create with a members array."), PlaceholderMembers)
+                : TEXT("User defined struct created"),
+            Result);
+        return true;
+    }
+
+    // list_struct_members and export_struct read the same member list.
+    if (Lower == TEXT("get_struct") || Lower == TEXT("read_struct") || Lower == TEXT("list_struct_members") || Lower == TEXT("export_struct"))
+    {
+        FString StructPath = GetJsonStringField(Payload, TEXT("structPath"));
+        if (StructPath.IsEmpty())
+        {
+            Bridge.SendAutomationError(RequestingSocket, RequestId,
+                TEXT("Missing required parameter: structPath"), TEXT("MISSING_PARAMETER"));
+            return true;
+        }
+
+        UStruct* Resolved = LoadObject<UStruct>(nullptr, *StructPath);
+        if (!Resolved)
+        {
+            // Native (C++) script structs such as /Script/Engine.Vector are not
+            // backed by a package on disk, so LoadObject cannot resolve them.
+            // Fall back to an in-memory lookup to handle native USTRUCTs.
+            Resolved = FindObject<UStruct>(nullptr, *StructPath);
+        }
+        if (!Resolved && StructPath.Contains(TEXT("/Script/")))
+        {
+            // Native (C++) script structs have no on-disk asset; they live in a
+            // /Script/<Module> package (e.g. /Script/Engine.Vector). Resolve the
+            // module package, then the struct by its trailing name within it.
+            const int32 DotIdx = StructPath.Find(TEXT("."), ESearchCase::IgnoreCase, ESearchDir::FromEnd);
+            const FString PkgPath = (DotIdx > 0) ? StructPath.Left(DotIdx) : StructPath;
+            const FString StructName = (DotIdx > 0) ? StructPath.Mid(DotIdx + 1) : FPaths::GetCleanFilename(StructPath);
+            if (UPackage* Pkg = FindPackage(nullptr, *PkgPath))
+            {
+                Resolved = FindObject<UScriptStruct>(Pkg, *StructName);
+            }
+            if (!Resolved)
+            {
+                // Fallback: scan loaded script structs for a name match (covers
+                // modules that are loaded but not yet resolvable by package).
+                for (TObjectIterator<UScriptStruct> It; It; ++It)
+                {
+                    if (It->GetName() == StructName)
+                    {
+                        Resolved = *It;
+                        break;
+                    }
+                }
+            }
+        }
+        if (!Resolved)
+        {
+            Bridge.SendAutomationError(RequestingSocket, RequestId,
+                FString::Printf(TEXT("Struct not found: %s"), *StructPath), TEXT("ASSET_NOT_FOUND"));
+            return true;
+        }
+
+        if (UUserDefinedStruct* S = Cast<UUserDefinedStruct>(Resolved))
+        {
+            TArray<TSharedPtr<FJsonValue>> MembersArr;
+            for (const FStructVariableDescription& Var : FStructureEditorUtils::GetVarDesc(S))
+            {
+                MembersArr.Add(MakeShared<FJsonValueObject>(VariableDescriptionToJson(Var)));
+            }
+
+            FString ValidityMsg;
+            const bool bValid = (FStructureEditorUtils::IsStructureValid(S, nullptr, &ValidityMsg) == FStructureEditorUtils::EStructureError::Ok);
+
+            TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
+            Result->SetStringField(TEXT("assetPath"), StructPath);
+            Result->SetStringField(TEXT("structName"), S->GetName());
+            Result->SetArrayField(TEXT("members"), MembersArr);
+            Result->SetStringField(TEXT("status"), UserDefinedStructureStatusToString(S->Status));
+            Result->SetBoolField(TEXT("isValid"), bValid);
+            if (!bValid)
+            {
+                Result->SetStringField(TEXT("validityMessage"), ValidityMsg);
+            }
+            McpHandlerUtils::AddVerification(Result, S);
+            Bridge.SendAutomationResponse(RequestingSocket, RequestId, true,
+                TEXT("User defined struct read"), Result);
+            return true;
+        }
+
+        if (UScriptStruct* SS = Cast<UScriptStruct>(Resolved))
+        {
+            TArray<TSharedPtr<FJsonValue>> MembersArr;
+            for (TFieldIterator<FProperty> It(SS); It; ++It)
+            {
+                MembersArr.Add(MakeShared<FJsonValueObject>(NativePropertyToMemberJson(*It)));
+            }
+
+            TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
+            Result->SetStringField(TEXT("assetPath"), StructPath);
+            Result->SetArrayField(TEXT("members"), MembersArr);
+            Result->SetStringField(TEXT("status"), TEXT("Native"));
+            Result->SetBoolField(TEXT("isValid"), true);
+            McpHandlerUtils::AddVerification(Result, SS);
+            Bridge.SendAutomationResponse(RequestingSocket, RequestId, true,
+                TEXT("Native struct read"), Result);
+            return true;
+        }
+
+        Bridge.SendAutomationError(RequestingSocket, RequestId,
+            FString::Printf(TEXT("Not a struct: %s"), *StructPath), TEXT("INVALID_ARGUMENT"));
+        return true;
+    }
+
+    return false;
+}
+

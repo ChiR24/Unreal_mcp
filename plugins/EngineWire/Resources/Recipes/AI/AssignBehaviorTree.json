@@ -1,0 +1,11 @@
+{
+  "description": "The AI controller's Behavior Tree variable VariableName (an instance-editable BehaviorTree reference in category AI) holds BehaviorTreePath by default. Nothing runs it until run_behavior_tree authors Run Behavior Tree on possess, or the controller's own logic calls it with this variable.",
+  "tag": "MCP assign behavior tree",
+  "placeholders": {
+    "VariableName": "The variable: a BehaviorTree variable the controller already has, else DefaultBehaviorTree.",
+    "BehaviorTreePath": "The Behavior Tree's object path."
+  },
+  "variables": [
+    { "variableName": "{{VariableName}}", "variableType": "Object:/Script/AIModule.BehaviorTree", "defaultValue": "{{BehaviorTreePath}}", "category": "AI", "instanceEditable": true }
+  ]
+}

@@ -1,0 +1,53 @@
+// Enum records: UserDefinedEnum CRUD, value management, metadata,
+// reordering, and split (issue #struct-ecosystem).
+
+import type { RecordSpec } from './builder.js';
+import { arr, bool, DESTRUCTIVE, DESTRUCTIVE_POLICY, ex, LOW, MEDIUM, NON_IDEMPOTENT, num, READ, READ_POLICY, r, str, WRITE, WRITE_POLICY } from './builder.js';
+import { schema } from '../shared/record-presets.js';
+
+const ENUM_PATH = str('Asset path of the UserDefinedEnum (e.g. /Game/Enums/E_MyEnum).');
+const VALUE_NAME = str('Enum value (entry), by its internal name or the name the editor shows (get_enum lists both as name and displayName).');
+const SAVE = bool('Persist the enum asset to disk. Defaults to true; pass false to keep the change in memory only.');
+const OK = schema({ success: bool('Operation succeeded.'), details: { type: 'object', 'x-unreal-reflection-boundary': true, description: 'Operation details.' } }, ['success']);
+
+const E = '/Game/Enums/E_WeaponType';
+const DONE = { success: true };
+
+export const ENUM_RECORDS: readonly RecordSpec[] = [
+  r('create_enum', 'enum', 'Create a new UserDefinedEnum asset.', schema({ name: str('Enum name.'), path: str('Package path (default /Game/Enums).'), enumPath: ENUM_PATH, values: arr('create: the initial value names in order, as strings or { name } objects (a name given twice is refused and nothing is made). split: the values to copy into the new enum, by internal or shown name.'), save: SAVE }, [], ['name', 'enumPath']), OK, WRITE, WRITE_POLICY, MEDIUM,
+    { examples: [ex('Create a weapon-type enum', { name: 'E_WeaponType', path: '/Game/Enums', values: ['Melee', 'Ranged', 'Thrown'] }, DONE)],
+      whenToUse: ['A new Blueprint enum is needed for a fixed set of named choices; pass values for its entries. It is saved unless save is false.'],
+      whenNotToUse: ['A group of typed fields is needed rather than a list of names (use struct.edit_struct).'] }),
+  r('delete_enum', 'enum', 'Delete a UserDefinedEnum asset.', schema({ enumPath: ENUM_PATH }, ['enumPath']), OK, { ...DESTRUCTIVE, longRunning: false }, DESTRUCTIVE_POLICY, LOW,
+    { examples: [ex('Delete an obsolete enum', { enumPath: '/Game/Enums/E_Deprecated' }, DONE)],
+      whenToUse: ['An obsolete enum asset must be deleted from the project; while anything still uses it the delete is refused (DELETE_FAILED) and referencedBy names what does.'],
+      whenNotToUse: ['Assets that still use the enum must be found first (use asset.inspect_asset with lookup=dependencies and referencers=true).', 'The enum should be renamed or moved, not deleted (use asset.rename).'] }),
+  r('get_enum', 'enum', 'Read a Blueprint enum (UserDefinedEnum): every entry with its name and numeric value, plus the value count.', schema({ enumPath: ENUM_PATH }, ['enumPath']), OK, READ, READ_POLICY, LOW,
+    { topics: ['entry names and values', 'list entries', 'show enum values'], examples: [ex('Read an enum\'s values', { enumPath: E }, DONE)],
+      whenToUse: ['The current entries of an enum, with their exact names and numeric values, must be read before any edit that names an entry.','An enum must be checked after an edit: its entries, numeric values and entry count.'],
+      whenNotToUse: ['An enum must be changed rather than read (use enum.edit_enum).', 'The enum asset must be found by name first (use asset.query_asset).'] }),
+  r('add_enum_value', 'enum', 'Add a new value to a UserDefinedEnum.', schema({ enumPath: ENUM_PATH, valueName: VALUE_NAME, save: SAVE }, ['enumPath', 'valueName']), OK, WRITE, WRITE_POLICY, LOW,
+    { examples: [ex('Add a new weapon type', { enumPath: E, valueName: 'Explosive' }, DONE)],
+      whenToUse: ['One more named entry must be appended to the end of an existing enum.'],
+      whenNotToUse: ['The existing entries must only be read (use enum.get_enum).'] }),
+  r('remove_enum_value', 'enum', 'Remove a value from a UserDefinedEnum.', schema({ enumPath: ENUM_PATH, valueName: VALUE_NAME, save: SAVE }, ['enumPath', 'valueName']), OK, { ...DESTRUCTIVE, longRunning: false }, DESTRUCTIVE_POLICY, LOW,
+    { examples: [ex('Remove an unused weapon type', { enumPath: E, valueName: 'Thrown' }, DONE)],
+      whenToUse: ['One entry must be dropped from an enum. The entries after it move up one, as in the enum editor: loaded Blueprints and assets holding them keep their entries (remapped by name), graph pins set to the dropped entry are reset to the first one, and nodes that list the entries are rebuilt.'],
+      whenNotToUse: ['An entry only needs a new name (use enum.edit_enum).'] }),
+  r('rename_enum_value', 'enum', 'Rename a value in a UserDefinedEnum.', schema({ enumPath: ENUM_PATH, valueName: VALUE_NAME, newValueName: str('New name the editor shows; the internal name stored values hold stays.'), save: SAVE }, ['enumPath', 'valueName', 'newValueName']), OK, NON_IDEMPOTENT, WRITE_POLICY, LOW,
+    { examples: [ex('Rename Ranged to Firearm', { enumPath: E, valueName: 'Ranged', newValueName: 'Firearm' }, DONE)],
+      whenToUse: ['An enum entry needs a new name while keeping its place in the order.'],
+      whenNotToUse: ['An entry must be dropped, not renamed (use enum.delete_enum with deleteScope=value).'] }),
+  r('reorder_enum_values', 'enum', 'Reorder values in a UserDefinedEnum.', schema({ enumPath: ENUM_PATH, order: arr('Every value once, in the new order, by internal or shown name; a partial list is refused.'), save: SAVE }, ['enumPath', 'order']), OK, WRITE, WRITE_POLICY, LOW,
+    { examples: [ex('Put ranged weapons first', { enumPath: E, order: ['Ranged', 'Melee', 'Thrown'] }, DONE)],
+      whenToUse: ['The order of entries must change; the order list must name every current value and numeric values follow the new order, while loaded Blueprints and assets holding the entries keep them (remapped by name, as the enum editor does).'],
+      whenNotToUse: ['The current order must be checked before reordering (use enum.get_enum).'] }),
+  r('set_enum_value_metadata', 'enum', 'Set metadata (tooltip, etc.) on an enum value.', schema({ enumPath: ENUM_PATH, valueName: VALUE_NAME, key: str('Metadata key on the entry, such as ToolTip.'), value: { description: 'Metadata value (text).' }, save: SAVE }, ['enumPath', 'valueName', 'key']), OK, WRITE, WRITE_POLICY, LOW,
+    { examples: [ex('Document a value with a tooltip', { enumPath: E, valueName: 'Melee', key: 'ToolTip', value: 'Close-quarters weapon.' }, DONE)],
+      whenToUse: ['A metadata key such as ToolTip must be stored against one enum entry.'],
+      whenNotToUse: ['Metadata for a struct field is wanted (use struct.edit_struct).'] }),
+  r('split_enum', 'enum', 'Split a UserDefinedEnum into a new enum with selected values.', schema({ enumPath: ENUM_PATH, newEnumName: str('Name for the new enum.'), values: arr('Value names to copy into the new enum. Pass this or index.'), index: num('Split position: every value from this zero-based index on is copied into the new enum. Pass this or values.'), path: str('Package path for the new enum.'), save: SAVE }, ['enumPath', 'newEnumName']), OK, WRITE, WRITE_POLICY, MEDIUM,
+    { examples: [ex('Split thrown weapons into their own enum', { enumPath: E, newEnumName: 'E_ThrownType', values: ['Thrown'] }, DONE)],
+      whenToUse: ['Chosen entries must be copied into a new enum, by name or from an index on; the source enum is left unchanged.'],
+      whenNotToUse: ['The chosen entries must also leave the source enum, which a split does not do (use enum.delete_enum with deleteScope=value).'] })
+];

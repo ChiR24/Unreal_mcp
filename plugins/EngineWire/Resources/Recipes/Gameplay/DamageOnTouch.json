@@ -1,0 +1,48 @@
+{
+  "description": "Damages whatever starts to overlap the actor: ApplyDamage with TouchDamage, the actor as the damage causer. Actors with health lose it (a negative TouchDamage heals them); others ignore it. With TouchKnockback above 0 a Character that touches it is also launched away from the actor's centre at that speed. The actor needs a component that overlaps pawns.",
+  "tag": "DamageOnTouch",
+  "placeholders": {
+    "Damage": "Damage dealt on each touch, a number other than 0 (negative heals).",
+    "Knockback": "Speed a touching Character is launched away at, in units per second; 0 for none."
+  },
+  "variables": [
+    { "variableName": "TouchDamage", "variableType": "Float", "defaultValue": "{{Damage}}", "category": "Damage", "instanceEditable": true },
+    { "variableName": "TouchKnockback", "variableType": "Float", "defaultValue": "{{Knockback}}", "category": "Damage", "instanceEditable": true }
+  ],
+  "hooks": [
+    { "id": "touch", "event": "ActorBeginOverlap" }
+  ],
+  "eventGraph": [
+    { "edit": "create_node", "id": "touchAmount", "nodeType": "VariableGet", "memberName": "TouchDamage" },
+    { "edit": "create_node", "id": "touchSelf", "nodeType": "Self" },
+    { "edit": "create_node", "id": "touchApply", "nodeType": "CallFunction", "memberName": "ApplyDamage", "memberClass": "/Script/Engine.GameplayStatics" },
+    { "edit": "create_node", "id": "touchPush", "nodeType": "VariableGet", "memberName": "TouchKnockback" },
+    { "edit": "create_node", "id": "touchPushOn", "nodeType": "CallFunction", "memberName": "Greater_DoubleDouble", "memberClass": "/Script/Engine.KismetMathLibrary", "pinDefaults": { "B": 0 } },
+    { "edit": "create_node", "id": "touchPushBranch", "nodeType": "Branch" },
+    { "edit": "create_node", "id": "touchWho", "nodeType": "Cast", "targetClass": "/Script/Engine.Character" },
+    { "edit": "create_node", "id": "touchHere", "nodeType": "CallFunction", "memberName": "K2_GetActorLocation", "memberClass": "/Script/Engine.Actor" },
+    { "edit": "create_node", "id": "touchThere", "nodeType": "CallFunction", "memberName": "K2_GetActorLocation", "memberClass": "/Script/Engine.Actor" },
+    { "edit": "create_node", "id": "touchAway", "nodeType": "CallFunction", "memberName": "Subtract_VectorVector", "memberClass": "/Script/Engine.KismetMathLibrary" },
+    { "edit": "create_node", "id": "touchDirection", "nodeType": "CallFunction", "memberName": "Normal", "memberClass": "/Script/Engine.KismetMathLibrary" },
+    { "edit": "create_node", "id": "touchVelocity", "nodeType": "CallFunction", "memberName": "Multiply_VectorFloat", "memberClass": "/Script/Engine.KismetMathLibrary" },
+    { "edit": "create_node", "id": "touchLaunch", "nodeType": "CallFunction", "memberName": "LaunchCharacter", "memberClass": "/Script/Engine.Character", "pinDefaults": { "bXYOverride": true, "bZOverride": true } },
+    { "edit": "connect_pins", "from": "$touch_event.OtherActor", "to": "$touchApply.DamagedActor" },
+    { "edit": "connect_pins", "from": "$touchAmount.TouchDamage", "to": "$touchApply.BaseDamage" },
+    { "edit": "connect_pins", "from": "$touchSelf.self", "to": "$touchApply.DamageCauser" },
+    { "edit": "connect_pins", "from": "$touchPush.TouchKnockback", "to": "$touchPushOn.A" },
+    { "edit": "connect_pins", "from": "$touchPushOn.ReturnValue", "to": "$touchPushBranch.Condition" },
+    { "edit": "connect_pins", "from": "$touch_event.OtherActor", "to": "$touchWho.Object" },
+    { "edit": "connect_pins", "from": "$touchWho.AsCharacter", "to": "$touchThere.self" },
+    { "edit": "connect_pins", "from": "$touchThere.ReturnValue", "to": "$touchAway.A" },
+    { "edit": "connect_pins", "from": "$touchHere.ReturnValue", "to": "$touchAway.B" },
+    { "edit": "connect_pins", "from": "$touchAway.ReturnValue", "to": "$touchDirection.A" },
+    { "edit": "connect_pins", "from": "$touchDirection.ReturnValue", "to": "$touchVelocity.A" },
+    { "edit": "connect_pins", "from": "$touchPush.TouchKnockback", "to": "$touchVelocity.B" },
+    { "edit": "connect_pins", "from": "$touchWho.AsCharacter", "to": "$touchLaunch.self" },
+    { "edit": "connect_pins", "from": "$touchVelocity.ReturnValue", "to": "$touchLaunch.LaunchVelocity" },
+    { "edit": "connect_pins", "from": "$touch.then", "to": "$touchApply.execute" },
+    { "edit": "connect_pins", "from": "$touchApply.then", "to": "$touchPushBranch.execute" },
+    { "edit": "connect_pins", "from": "$touchPushBranch.then", "to": "$touchWho.execute" },
+    { "edit": "connect_pins", "from": "$touchWho.then", "to": "$touchLaunch.execute" }
+  ]
+}

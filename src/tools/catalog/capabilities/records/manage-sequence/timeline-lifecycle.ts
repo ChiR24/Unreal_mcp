@@ -1,0 +1,147 @@
+/**
+ * Timeline lifecycle records: create, open, duplicate, rename, delete, list.
+ *
+ * Grounded in sequence-core-actions.ts (create/open) and
+ * sequence-asset-actions.ts (duplicate/rename/delete/get_metadata/list).
+ */
+import type { CapabilityRecordSource } from '../../model.js';
+import { buildRecord, P, SEQ_PLUGINS } from './helpers.js';
+import { str } from '../shared/schema-props.js';
+
+const FAMILY = 'timeline';
+const DOMAIN = 'sequence';
+
+export const TIMELINE_LIFECYCLE_RECORDS: readonly CapabilityRecordSource[] = [
+  buildRecord({
+    id: 'sequence.create',
+    action: 'create',
+    family: FAMILY,
+    domain: DOMAIN,
+    topics: ['level sequence', 'new sequence', 'cinematic', 'sequencer', 'create cinematic', 'cutscene', 'make a cutscene', 'level sequence asset', 'create level sequence'],
+    aliases: ['sequence.create_level_sequence', 'sequence.create_cinematic'],
+    summary: 'Create a Level Sequence asset and save it: name in the folder path names (default /Game), or path alone naming the sequence itself (/Game/Cinematics/SEQ_Shot). A Level Sequence already there is kept and answered with alreadyExists true; another asset there is ASSET_ALREADY_EXISTS, and a path outside the writable content roots SEQUENCE_PATH_NOT_WRITABLE. The new sequence is empty, with no bindings or camera, at the project\'s default display rate (30 fps out of the box) and 24000 ticks per second.',
+    whenToUse: ['A new cinematic or animation sequence asset is needed.'],
+    whenNotToUse: ['An existing sequence should be opened instead.'],
+    inputProps: {
+      name: str('Name of the new sequence, made in the folder path names (default /Game). Leave it out when path names the sequence itself.'),
+      path: str('Sequence asset path, such as /Game/Cinematics/SEQ_Shot; with name, create reads it as the folder instead.'),
+    },
+    required: [],
+    requiredOneOf: ['name', 'path'],
+    // Native HandleSequenceCreate (SequenceHandlersAssetCreation.cpp:5-109)
+    // never emits sequencePath: it verifies with assetPath/assetName/assetClass/
+    // existsAfter (AddAssetVerification) on create, or verifiedPath/existsAfter
+    // (VerifyAssetExists) when the asset already exists. Declared exactly.
+    outputProps: {
+      assetPath: { type: 'string', description: 'Created sequence asset path (verification).' },
+      assetName: { type: 'string', description: 'Created sequence asset name (verification).' },
+      assetClass: { type: 'string', description: 'Created sequence asset class (verification).' },
+      verifiedPath: { type: 'string', description: 'Verified existing asset path.' },
+      existsAfter: { type: 'boolean', description: 'Whether the asset existed after the call.' },
+    },
+    outputRequired: [],
+    effect: 'write',
+    latency: 'interactive',
+    resources: 'low',
+    plugins: SEQ_PLUGINS,
+    exampleInput: { action: 'create', name: 'SEQ_Master', path: '/Game/Cinematics' },
+    exampleOutput: { success: true, assetPath: '/Game/Cinematics/SEQ_Master', assetName: 'SEQ_Master', existsAfter: true },
+  }),
+  buildRecord({
+    id: 'sequence.open',
+    action: 'open',
+    family: FAMILY,
+    domain: DOMAIN,
+    summary: 'Open a Level Sequence (path) in the Sequencer editor; nothing in it changes. The reply gives sequencePath. A path that is not a Level Sequence is SEQUENCE_NOT_FOUND, and an editor that does not open EDITOR_NOT_OPEN.',
+    whenToUse: ['An existing sequence must be opened for editing.', 'pause or stop must act on a sequence, which they do only while it is open (play and pause with startTime open it themselves).'],
+    whenNotToUse: ['A new sequence should be created instead.'],
+    inputProps: { path: P.path },
+    required: ['path'],
+    effect: 'read',
+    latency: 'instant',
+    resources: 'low',
+    plugins: SEQ_PLUGINS,
+    exampleInput: { action: 'open', path: '/Game/Cinematics/SEQ_Master' },
+  }),
+  buildRecord({
+    id: 'sequence.duplicate',
+    action: 'duplicate',
+    family: FAMILY,
+    domain: DOMAIN,
+    summary: 'Copy a Level Sequence to destinationPath (a folder; one not starting with / is under the source folder) as newName, and save the copy. A destination already taken is ASSET_ALREADY_EXISTS, a source that is not a Level Sequence INVALID_SEQUENCE, a destination outside the writable content roots SEQUENCE_PATH_NOT_WRITABLE. The reply gives duplicatedPath and saved; the copy keeps the original\'s bindings, which still point at the same level actors.',
+    whenToUse: ['A sequence must be copied to a different folder or name.'],
+    whenNotToUse: ['The sequence should be renamed in place.'],
+    inputProps: { path: P.path, destinationPath: P.destinationPath, newName: P.newName },
+    required: ['path', 'destinationPath', 'newName'],
+    outputProps: { sequencePath: P.sequencePath },
+    outputRequired: ['sequencePath'],
+    effect: 'write',
+    latency: 'interactive',
+    resources: 'low',
+    plugins: SEQ_PLUGINS,
+    exampleInput: { action: 'duplicate', path: '/Game/Cinematics/SEQ_Master', destinationPath: '/Game/Cinematics/Copies', newName: 'SEQ_Copy' },
+    exampleOutput: { success: true, sequencePath: '/Game/Cinematics/Copies/SEQ_Copy' },
+  }),
+  buildRecord({
+    id: 'sequence.rename',
+    action: 'rename',
+    family: FAMILY,
+    domain: DOMAIN,
+    summary: 'Rename a Level Sequence: newName keeps its folder, a path starting with / moves it there. The engine saves the renamed sequence and leaves a redirector at the old path when other assets reference it. A name already taken is ASSET_ALREADY_EXISTS, a source that is not a Level Sequence INVALID_SEQUENCE, a path outside the writable content roots SEQUENCE_PATH_NOT_WRITABLE. The reply gives oldPath and sequencePath.',
+    whenToUse: ['A sequence asset needs a new name.'],
+    whenNotToUse: ['The sequence should be duplicated to preserve the original.'],
+    inputProps: { path: P.path, newName: P.newName },
+    required: ['path', 'newName'],
+    effect: 'write',
+    behavior: { idempotency: 'idempotent' },
+    latency: 'interactive',
+    resources: 'low',
+    plugins: SEQ_PLUGINS,
+    exampleInput: { action: 'rename', path: '/Game/Cinematics/SEQ_Master', newName: 'SEQ_Renamed' },
+  }),
+  buildRecord({
+    id: 'sequence.delete',
+    action: 'delete',
+    family: FAMILY,
+    domain: DOMAIN,
+    summary: 'Permanently delete a Level Sequence asset: refused with SEQUENCE_IN_USE, naming referencedBy, while a level or asset still uses it (a Level Sequence Actor playing it). Its editors close and the undo history may be cleared.',
+    whenToUse: ['A sequence asset must be permanently removed.'],
+    whenNotToUse: ['The sequence should only be unloaded or hidden.', 'A sequence still in use must go anyway, breaking what plays it (use asset.delete with force).'],
+    inputProps: { path: P.path },
+    required: ['path'],
+    effect: 'destructive',
+    // The handler reports the deleted package path and re-checks existence; both
+    // were undeclared, so the output projection dropped them and a destructive
+    // call published neither identity nor a post-condition.
+    outputProps: {
+      deletedPath: { type: 'string', description: 'Package path of the deleted sequence asset.' },
+      existsAfter: { type: 'boolean', description: 'Whether the asset still exists after the delete.' },
+    },
+    behavior: { safeToRetry: false },
+    latency: 'interactive',
+    resources: 'low',
+    plugins: SEQ_PLUGINS,
+    exampleInput: { action: 'delete', path: '/Game/Cinematics/SEQ_Disposable' },
+  }),
+  buildRecord({
+    id: 'sequence.list',
+    action: 'list',
+    family: FAMILY,
+    domain: DOMAIN,
+    summary: 'List Level Sequence assets under a content folder (recursively; the whole Game folder when path is omitted).',
+    whenToUse: ['Available sequences under a folder must be enumerated.'],
+    whenNotToUse: ['A specific known sequence path is already available.'],
+    inputProps: { path: P.path },
+    outputProps: {
+      sequences: { type: 'array', description: 'Discovered sequences.', items: { type: 'object', description: 'Sequence asset.', additionalProperties: false, properties: { path: { type: 'string', description: 'Sequence object path.' }, name: { type: 'string', description: 'Asset name.' } } } },
+      count: { type: 'number', description: 'Number of sequences found.' },
+    },
+    outputRequired: ['sequences'],
+    effect: 'read',
+    latency: 'instant',
+    resources: 'low',
+    plugins: SEQ_PLUGINS,
+    exampleInput: { action: 'list', path: '/Game/Cinematics' },
+    exampleOutput: { success: true, sequences: [{ path: '/Game/Cinematics/SEQ_Master.SEQ_Master', name: 'SEQ_Master' }], count: 1 },
+  }),
+];

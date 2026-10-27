@@ -1,0 +1,85 @@
+#include "Core/Compatibility/McpVersionCompatibility.h"
+#include "Domains/Sessions/McpSessionsPrivate.h"
+
+#include "Foundation/BridgeHelpers/McpHelpers.h"
+#include "EngineWireSubsystem.h"
+
+DEFINE_LOG_CATEGORY(LogMcpSessionsHandlers);
+
+bool UEngineWireSubsystem::HandleManageSessionsAction(
+    const FString& RequestId,
+    const FString& Action,
+    const TSharedPtr<FJsonObject>& Payload,
+    TSharedPtr<FMcpBridgeWebSocket> Socket)
+{
+    // This never inspected Action at all, so in the fallback chain it behaved as
+    // a catch-all: any foreign action reaching this step was claimed and
+    // answered "Unknown manage_sessions action: <x>", naming a domain the caller
+    // never asked for, and every handler ordered after this one became
+    // unreachable by fallback. Witnessed answering asset.analyze_graph. Both
+    // entry points pass the parent verb explicitly (MCP_REGISTER_DIRECT
+    // "manage_sessions" and the Blueprint-domain route), so anything else is
+    // not ours to answer.
+    if (Action != TEXT("manage_sessions"))
+    {
+        return false;
+    }
+
+    FString SubAction;
+    if (Payload.IsValid() && Payload->HasField(TEXT("action")))
+    {
+        SubAction = GetJsonStringField(Payload, TEXT("action"));
+    }
+
+    UE_LOG(LogMcpSessionsHandlers, Log, TEXT("HandleManageSessionsAction: SubAction=%s, RequestId=%s"), *SubAction, *RequestId);
+
+    // set_split_screen_type is the same operation by its older name.
+    if (SubAction == TEXT("configure_split_screen") || SubAction == TEXT("set_split_screen_type"))
+    {
+        return HandleConfigureSplitScreen(this, RequestId, Payload, Socket);
+    }
+    if (SubAction == TEXT("add_local_player"))
+    {
+        return HandleAddLocalPlayer(this, RequestId, Payload, Socket);
+    }
+    if (SubAction == TEXT("remove_local_player"))
+    {
+        return HandleRemoveLocalPlayer(this, RequestId, Payload, Socket);
+    }
+    if (SubAction == TEXT("host_lan_server"))
+    {
+        return HandleHostLanServer(this, RequestId, Payload, Socket);
+    }
+    if (SubAction == TEXT("join_lan_server"))
+    {
+        return HandleJoinLanServer(this, RequestId, Payload, Socket);
+    }
+    if (SubAction == TEXT("configure_lan_play"))
+    {
+        return HandleConfigureLanPlay(this, RequestId, Payload, Socket);
+    }
+    if (SubAction == TEXT("configure_session_interface"))
+    {
+        return HandleConfigureSessionInterface(this, RequestId, Payload, Socket);
+    }
+    if (SubAction == TEXT("configure_voice_settings"))
+    {
+        return HandleConfigureVoiceSettings(this, RequestId, Payload, Socket);
+    }
+    if (SubAction == TEXT("enable_voice_chat"))
+    {
+        return HandleEnableVoiceChat(this, RequestId, Payload, Socket);
+    }
+    if (SubAction == TEXT("mute_player"))
+    {
+        return HandleMutePlayer(this, RequestId, Payload, Socket);
+    }
+    if (SubAction == TEXT("get_sessions_info"))
+    {
+        return HandleGetSessionsInfo(this, RequestId, Payload, Socket);
+    }
+
+    SendAutomationResponse(Socket, RequestId, false,
+        FString::Printf(TEXT("Unknown manage_sessions action: %s"), *SubAction), nullptr);
+    return true;
+}

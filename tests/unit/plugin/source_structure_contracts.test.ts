@@ -1,0 +1,150 @@
+import {
+  existsSync,
+  readFileSync,
+  readdirSync,
+} from 'node:fs';
+import {
+  basename,
+  resolve,
+} from 'node:path';
+
+import {
+  describe,
+  expect,
+  it,
+} from 'vitest';
+
+import { countPureLines } from './plugin-contract-fixtures.js';
+
+const pluginSourceRoot = resolve(
+  process.cwd(),
+  'plugins/EngineWire/Source',
+);
+const sourceExtensionPattern = /\.(?:cpp|cs|h)$/u;
+const splitArtifactPattern =
+  /Common.*\.(?:cpp|cs|h)$|(?:^|[_-])Part(?:[_-]?\d+)?\.(?:cpp|cs|h)$|(?:^|[_-])\d+\.(?:cpp|cs|h)$|\.in[cl]$/u;
+
+const listFiles = (directory: string): readonly string[] => {
+  const files: string[] = [];
+
+  for (const entry of readdirSync(directory, { withFileTypes: true })) {
+    const entryPath = resolve(directory, entry.name);
+    if (entry.isDirectory()) {
+      files.push(...listFiles(entryPath));
+    } else {
+      files.push(entryPath);
+    }
+  }
+
+  return files;
+};
+
+describe('plugin source structure contracts', () => {
+  it('keeps handwritten C++ and C# files within 250 pure lines', () => {
+    // Given
+    const sourceFiles = listFiles(pluginSourceRoot).filter((file) =>
+      sourceExtensionPattern.test(file),
+    );
+
+    // When
+    const oversizedFiles = sourceFiles
+      .map((file) => ({
+        file,
+        pureLines: countPureLines(readFileSync(file, 'utf8')),
+      }))
+      .filter(({ pureLines }) => pureLines > 250)
+      .map(({ file, pureLines }) => `${pureLines} ${file}`);
+
+    // Then
+    expect(oversizedFiles).toEqual([]);
+  }, 60_000);
+
+  it('keeps every raw string literal under the MSVC single-literal limit', () => {
+    // MSVC refuses one string literal over 16380 bytes (C2026); a TEXT() literal
+    // is UTF-16, so ~8190 characters. Fab's build farm rejected a submission for
+    // it. Split a long script into adjacent TEXT(R"JS(...)JS") literals instead.
+    const limit = 7000;
+    const oversized = listFiles(pluginSourceRoot)
+      .filter((file) => sourceExtensionPattern.test(file))
+      .flatMap((file) =>
+        [...readFileSync(file, 'utf8').matchAll(/R"([^(\s]{0,16})\(([\s\S]*?)\)\1"/gu)]
+          .filter((match) => (match[2] ?? '').length > limit)
+          .map((match) => `${(match[2] ?? '').length} ${file}`),
+      );
+
+    expect(oversized).toEqual([]);
+  }, 60_000);
+
+  it('avoids the two warnings Fab builds treat as errors', () => {
+    // Fab's MSVC build fails C4706 (an assignment as a condition, here `!(X = f())`);
+    // its Mac clang build fails -Wdeprecated-enum-compare-conditional (a ternary
+    // whose arms are two different enum types, e.g. HAlign_Fill : VAlign_Fill).
+    const offenders = listFiles(pluginSourceRoot)
+      .filter((file) => sourceExtensionPattern.test(file))
+      .flatMap((file) =>
+        readFileSync(file, 'utf8')
+          .split('\n')
+          .flatMap((line, index) => {
+            const code = line.replace(/\/\/.*$/u, '');
+            const mixed = /\?\s*([A-Z][A-Za-z]*)_\w+\s*:\s*([A-Z][A-Za-z]*)_\w+/u.exec(code);
+            return /!\(\s*\*?\w+\s*=[^=]/u.test(code) || (mixed && mixed[1] !== mixed[2])
+              ? [`${file}:${index + 1}: ${line.trim()}`]
+              : [];
+          }),
+      );
+
+    expect(offenders).toEqual([]);
+  }, 60_000);
+
+  it('includes a source file\'s own header first', () => {
+    // UBT logs "error: Expected X.h to be first header included" for an X.cpp whose X.h sits beside it and is not
+    // its first include. The local build still finishes, but the line reads as an error in a build log.
+    const offenders = listFiles(pluginSourceRoot)
+      .filter((file) => file.endsWith('.cpp') && existsSync(file.replace(/\.cpp$/u, '.h')))
+      .filter((file) => {
+        const first = /^#include\s+["<]([^">]+)[">]/mu.exec(readFileSync(file, 'utf8'))?.[1] ?? '';
+        return basename(first) !== basename(file).replace(/\.cpp$/u, '.h');
+      });
+
+    expect(offenders).toEqual([]);
+  }, 60_000);
+
+  it('rejects catch-all and mechanical split artifacts', () => {
+    // Given
+    const sourceFiles = listFiles(pluginSourceRoot);
+
+    // When
+    const splitArtifacts = sourceFiles
+      .filter((file) => splitArtifactPattern.test(basename(file)))
+      .map((file) => basename(file))
+      .sort();
+
+    // Then
+    expect(splitArtifacts).toEqual([]);
+  });
+
+  it('resolves every local Mcp include to a source file', () => {
+    // Given
+    const sourceFiles = listFiles(pluginSourceRoot);
+    const sourceNames = new Set(sourceFiles.map((file) => basename(file)));
+
+    // When
+    const missingIncludes = sourceFiles
+      .filter((file) => sourceExtensionPattern.test(file))
+      .flatMap((file) => {
+        const source = readFileSync(file, 'utf8');
+        return [...source.matchAll(/^\s*#include\s+"([^"]+)"/gmu)]
+          .map((match) => basename(match[1] ?? ''))
+          .filter(
+            (includeName) =>
+              includeName.startsWith('Mcp') &&
+              !includeName.endsWith('.generated.h') &&
+              !sourceNames.has(includeName),
+          )
+          .map((includeName) => `${file}: ${includeName}`);
+      });
+
+    // Then
+    expect(missingIncludes).toEqual([]);
+  }, 60_000);
+});

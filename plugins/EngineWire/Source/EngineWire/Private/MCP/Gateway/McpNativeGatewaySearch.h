@@ -1,0 +1,108 @@
+// McpNativeGatewaySearch.h — deterministic capability search for the unreal gateway
+//
+// Its own integer rule ranking, not the TypeScript BM25 scorer: the two surfaces
+// share the filters, the read/delete intent word lists (pinned by
+// search-read-intent-parity.test.ts), the total order and the paging, but not
+// the weights, so result order can differ between them.
+//
+// Reads only the generated capability store. There is no alternate catalog: an
+// unavailable store yields a typed error, never substituted metadata.
+
+#pragma once
+
+#include "CoreMinimal.h"
+#include "Dom/JsonObject.h"
+
+class FMcpCapabilityStore;
+
+/** Runtime capability probe: is this parent tool currently exposed to the session? */
+using FMcpToolEnabledPredicate = TFunctionRef<bool(const FString&)>;
+
+struct FMcpDiscoveryQuery
+{
+	FString Query;
+	FString Domain;
+	FString Family;
+	FString Tool;
+	FString Action;
+	FString Capability;
+	FString Param;
+	FString Effect;
+	bool bHasDomain = false; // search filters by it; describe browses it
+	bool bHasFamily = false;
+	bool bHasTool = false;
+	bool bHasEffect = false;
+	bool bHasAction = false;
+	bool bHasCapability = false; // search only: describe resolves the id to its tool and action first
+	bool bHasParam = false;
+	bool bHasLimit = false; // describe pages a listing at Limit only when the caller sent one
+	FString Cursor; // search: a nextCursor sent back, which supersedes Offset
+	bool bHasCursor = false;
+	int32 Limit = 12;
+	int32 Offset = 0;
+	int32 MaxBytes = 0; // 0 -> McpMaxResultBytes; the schema accepted maxBytes but native ignored it (dogfood #3)
+	/** search: the caller may read project data (Read scope or Admin), so saved recipes are listed as list_recipes would. */
+	bool bMayReadProject = false;
+	/** search: each sent integer that was clamped, {parameter, requested, applied, reason} as in gateway-shared.ts. */
+	TArray<TSharedPtr<FJsonValue>> Coercions;
+};
+
+/** Search default/maximum budgets, shared with the gateway tool schema. */
+constexpr int32 McpSearchDefaultLimit = 12;
+constexpr int32 McpSearchMaxLimit = 25;
+
+/**
+ * Per-matched-word score bonus for multi-word queries. Ranks a record that
+ * covers more of the query above one that covers less, so a natural phrase
+ * ("create new level map") surfaces the capability matching the most words
+ * rather than returning nothing at all.
+ */
+constexpr int32 McpSearchWordCoverageBonus = 5;
+/**
+ * When the query names every word of a record's OWN action (two words or more)
+ * and the record matches every query word: "delete blueprint graph node" is
+ * delete_node, where a folded record's aliases used to out-score it word by word.
+ */
+constexpr int32 McpSearchActionCoveredBonus = 50;
+/**
+ * When every word of a multi-word query is named by the record's action, aliases,
+ * family, domain or topics (not its summary): "change button text" is all of
+ * set_widget_layout's vocabulary, while add_content_widget matched two of its words
+ * through alias names at 50 each and outranked it.
+ */
+constexpr int32 McpSearchFullCoverageBonus = 100;
+/**
+ * When a topic holds a multi-word query as written: the record's author named that very request,
+ * which beats the same words matched one by one elsewhere. "tag an asset" went to query_asset (its
+ * find_by_tag and query_asset names) over set_metadata's own topic, "connect blueprint nodes" to
+ * edit_level_blueprint over edit_graph's.
+ */
+constexpr int32 McpSearchPhraseTopicBonus = 50;
+/**
+ * When the query opens with a read word ("get actor location", "what is in this
+ * folder"), a matching record whose effect is read ranks ahead: set_transform used
+ * to answer "get actor location". Only reorders records that already matched.
+ */
+constexpr int32 McpSearchReadIntentBonus = 40;
+/** The same for a query that opens with a delete word and a record whose effect is destructive. */
+constexpr int32 McpSearchDeleteIntentBonus = 40;
+/**
+ * A first hit whose runner-up scores at most this percentage of it, and that needs no consent, carries its signature
+ * and execute call so a caller can skip describe (SEARCH_CONFIDENT_RATIO_PERCENT in gateway-search.ts; measured by
+ * tests/eval/confident-hit.test.ts).
+ */
+constexpr int32 McpSearchConfidentRatioPercent = 90;
+/** A describe page's ceiling, and a browse level's page when no limit is sent (MAX_DESCRIBE_LIMIT, DEFAULT_BROWSE_LIMIT). */
+constexpr int32 McpDescribeMaxLimit = 50;
+// Search result byte budget (24 KB); a page that would pass it is cut short and
+// reported as truncated by "byte-budget".
+constexpr int32 McpMaxResultBytes = 24576; // matches DEFAULT_SEARCH_MAX_BYTES on the TS gateway (dogfood #3)
+
+/** Typed error emitted when the generated capability catalog failed to load. */
+TSharedPtr<FJsonObject> McpGatewayCatalogUnavailable(
+	const FString& Operation, const FMcpCapabilityStore& Store);
+
+/** Bounded, ranked, capability-level search over the generated catalog. */
+TSharedPtr<FJsonObject> McpGatewaySearchCapabilities(
+	const FMcpDiscoveryQuery& Query, const FMcpCapabilityStore& Store,
+	FMcpToolEnabledPredicate IsToolEnabled);

@@ -1,0 +1,186 @@
+/**
+ * Semantic output-field glossary for the utility capability records.
+ *
+ * WHY THIS FILE EXISTS
+ * `helpers.ts` used to build the OUTPUT schema with the same name-keyed
+ * inference it uses for INPUTS. That inference has no entry for `success`, so
+ * all 127 utility records shipped `success: { type: 'string' }` while both
+ * transports write a boolean (`SetBoolField(TEXT("success"), true)` in
+ * Private/Domains/{Networking,AudioAuthoring,GameFramework}/...HandlersInfo.cpp)
+ * and every example declared `success: true`. The same fallback also stamped
+ * `description: <fieldName>`, producing 294 degenerate descriptions.
+ *
+ * The fix is deliberately NOT "add success to the shared boolean set": that set
+ * is keyed on bare field names and is shared with the input schema, so adding
+ * `success` there would silently retype any future input named `success`. The
+ * output envelope is therefore built explicitly here, and only the output side
+ * consults this glossary. `helpers.ts` keeps its input inference untouched.
+ *
+ * The `success` / `message` wording is copied verbatim from the five already
+ * correct builders (`records/core/builder.ts#outputSchema`) so the utility lane
+ * is indistinguishable from them downstream.
+ */
+import type { JsonObject } from '../../model.js';
+import { str, num, bool } from '../shared/schema-props.js';
+import { OUTPUT_HEADER } from '../shared/record-presets.js';
+
+/** An intentionally open object whose interior is arbitrary Unreal reflection data. */
+const REFLECTION_BOUNDARY = 'x-unreal-reflection-boundary';
+
+function reflected(description: string): JsonObject {
+  return {
+    type: 'object',
+    description,
+    additionalProperties: true,
+    [REFLECTION_BOUNDARY]: true,
+  };
+}
+
+/**
+ * Every non-header output name produced by the utility data files, with the
+ * type the bridge actually returns and prose a caller can act on.
+ *
+ * Three entries correct a type the name inference got wrong: `hasAuthority`,
+ * `isLocallyControlled` and `isLocalController` were emitted as `string` but
+ * are written with `SetBoolField` by the networking domain. Correcting them
+ * NARROWS the contract (boolean is a strict subset of the previous string), so
+ * this is a strengthening, never a weakening to make an example pass.
+ *
+ * The four `*Info` wrapper names this table used to carry (`frameworkInfo`,
+ * `audioInfo`, `inputInfo` and the `sessions` array) described keys no
+ * transport ever sent. The plugin nests the GameMode payload under
+ * `gameFrameworkInfo`, nests session state under a `sessionsInfo` OBJECT, and
+ * writes the audio and Enhanced Input payloads FLAT with no wrapper at all.
+ * The flat scalars below are those payloads; `tests/unit/capability-records/
+ * utility-wire-contract.test.ts` re-derives every name and type from
+ * the shipping C++ and fails if either side drifts.
+ */
+export const UTILITY_OUTPUT_FIELDS: Readonly<Record<string, JsonObject>> = Object.freeze({
+  actorName: str('Name of the actor that was spawned or acted upon.'),
+  stopped: num('Sounds play_sound had started that this call stopped.'),
+  paused: num('Playing sounds this call paused (0 when none was playing).'),
+  resumed: num('Paused sounds this call resumed (0 when none was paused).'),
+  allStopped: bool('Whether every sound on the editor and game audio devices was stopped (all: true).'),
+  assetClass: str('Unreal class name of the asset that was inspected, such as SoundCue or InputAction.'),
+  assetName: str('Object name of the asset that was inspected, without its package path.'),
+  assetPath: str('Full /Game path of the asset that was created, modified or inspected.'),
+  attenuationPath: str('Path of the Sound Attenuation asset referenced by the inspected Sound Cue.'),
+  componentName: str('Name of the audio component that was created, spawned or faded.'),
+  fadeTime: num('Seconds the fade takes, as used.'),
+  targetVolume: num('Volume the fade ends at, as used: a multiplier, where 1 plays the sound at the volume it was made with.'),
+  playing: bool('Whether the faded sound is playing after the call (a fade out still plays until it ends).'),
+  consumeInput: bool('Whether the Input Action consumes the input it handles.'),
+  effectiveInOpenLevel: bool('Whether the open level runs this game mode in play: its World Settings override names it, or it has none and this is the project default.'),
+  duration: num('Length of the inspected sound in seconds.'),
+  peakDb: num('Loudest level the sound reached, in dB of full scale (0 is full scale, -120 means no signal). The mixer meters each sound after its own volume and before distance attenuation; the editor being in the background does not lower it.'),
+  averageDb: num('Mean level over every reading in dB, the release tail included.'),
+  silent: bool('True when the peak stayed below -60 dB: the sound played but produced no audio; the warning says the likely cause.'),
+  envelopeUpdates: num('Meter readings that arrived, about one per editor frame; 0 means the engine never rendered the sound.'),
+  endedBecause: str('finished (the sound ended on its own), maxSeconds (cut there, as looping sounds and music always are) or stopped (stopped by another call, or its Play-In-Editor world ended).'),
+  timeline: { type: 'array', items: { type: ['number', 'null'] }, description: 'Loudest reading in dB in each timelineStepSeconds step from the start, null for a step no reading landed in (a slow editor frame).' },
+  timelineStepSeconds: num('Seconds each timeline entry covers: 0.05 for sounds up to 5 s, longer so there are at most 100 entries.'),
+  // The meter is read once per editor frame: at a few frames a second it misses a short hit's peak and reads its tail.
+  wavePeakDb: num('A Sound Wave only: the loudest sample of the recording itself, in dB of full scale, read from its imported audio rather than the meter, so it holds however few frames the editor drew. Before volume. Compare sounds by this when matching levels.'),
+  waveRmsDb: num('A Sound Wave only: the average (RMS) level of the whole recording in dB, before volume.'),
+  waveSeconds: num('A Sound Wave only: the length of the recording in seconds.'),
+  existsAfter: bool('Whether the asset still resolved after the action completed.'),
+  falloffDistance: num('Distance in centimetres over which the attenuation falls off.'),
+  functionName: str('The RPC the call created or changed: its function graph, or the replicated custom event.'),
+  rpcType: str('Server, Client or NetMulticast: where the call runs (the server, the owning player client, or the server and every client).'),
+  reliable: bool('Whether the RPC is reliable: resent until it arrives, in order. An unreliable call can be dropped under load.'),
+  withValidation: bool('The validation flag asked for; only false gets this far, since a Blueprint RPC has no validation step.'),
+  changed: bool('Whether the call changed anything. false: the flag already had the value asked for, so nothing was compiled or saved.'),
+  repNotifyFunc: str('The function clients call when the variable\'s new value arrives.'),
+  functionCreated: bool('Whether repNotifyFunc did not exist and was created empty (it needs a body to do anything).'),
+  gameFrameworkInfo: reflected('The game mode in use (gameModeClass) and its default pawn, player controller, game state, player state and HUD class paths; a level or live read also gives source, worldName and isPlayInEditor. Carries no game rules.'),
+  hasAuthority: bool('Whether the actor currently holds network authority.'),
+  isLocalController: bool('Whether the controller possessing this actor is the local controller.'),
+  isLocallyControlled: bool('Whether the actor is controlled by the local player.'),
+  madeDefault: bool('Whether this game mode was made the project default game mode (makeDefault).'),
+  mappingCount: num('Number of key mappings declared by the inspected Input Mapping Context.'),
+  modifierCount: num('Number of Sound Class effects declared by the inspected Sound Mix.'),
+  networkingInfo: reflected('Replication, relevancy and network role state read from the Blueprint or actor.'),
+  mapPath: str('Resolved package path of the map the LAN server travels to.'),
+  edgeCount: num('Number of links in the inspected MetaSound graph.'),
+  edges: { type: 'array', items: { type: 'object', additionalProperties: true, [REFLECTION_BOUNDARY]: true }, description: 'Every link: fromNodeId, fromNode, fromPin, toNodeId, toNode, toPin.' },
+  edgesRemoved: num('How many MetaSound links were removed.'),
+  graphInputs: { type: 'array', items: { type: 'object', additionalProperties: true, [REFLECTION_BOUNDARY]: true }, description: 'Inputs of the MetaSound itself: name, type and the nodeId that carries each.' },
+  graphOutputs: { type: 'array', items: { type: 'object', additionalProperties: true, [REFLECTION_BOUNDARY]: true }, description: 'Outputs of the MetaSound itself: name, type and the nodeId that carries each.' },
+  nodeCount: num('Number of nodes in the inspected Sound Cue or MetaSound graph.'),
+  nodeClasses: { type: 'array', items: { type: 'object', additionalProperties: true, [REFLECTION_BOUNDARY]: true }, description: 'Each matching MetaSound node class, by name: nodeClassName (the spelling add_node takes), category, description and, with includePins, inputs and outputs as "Name (Type)".' },
+  matchCount: num('Number of node classes that match filter, before limit cut the list.'),
+  truncated: bool('True when limit cut the list; raise limit or narrow filter to see the rest.'),
+  nodeId: str('Identifier of the graph node that was added.'),
+  nodeName: str('Name of the graph node that was added or updated.'),
+  inserted: bool('True when the node was newly inserted; false when an existing one was updated.'),
+  dopplerIntensity: num('Doppler pitch-shift strength now set on the node.'),
+  smoothing: bool('Whether the Doppler pitch change is smoothed.'),
+  rootNodeClass: str('Class of the node now at the root of the Sound Cue.'),
+  drivesNode: str('Name of the node the inserted node now plays.'),
+  saved: bool('Whether the asset was saved to disk.'),
+  replaced: bool('True when the call swapped a context the speaker already had with the same listeners; false when it added one.'),
+  contextCount: num('Number of contexts the Dialogue Wave now has.'),
+  inGame: bool('True when the change went to the running game (Play In Editor), whose sound is the one heard; false for the editor.'),
+  oneShot: bool('Whether the new MetaSound is a one-shot source; false when it was made continuous (no On Finished output).'),
+  nodes: { type: 'array', items: { type: 'object', additionalProperties: true, [REFLECTION_BOUNDARY]: true }, description: 'Every node: nodeId, name, className, kind (Node, GraphInput, GraphOutput, Literal, Variable...), inputs [{name, type, literal}] and outputs [{name, type}].' },
+  nodeIds: reflected('Batch step id -> node id for every node the batch created.'),
+  numChannels: num('Number of audio channels in the inspected Sound Wave.'),
+  openLevelGameMode: str('Class path of the game mode the open level runs in play: its World Settings override, else the project default.'),
+  parentClass: str('Path of the parent Sound Class the inspected Sound Class inherits from.'),
+  pitch: num('Pitch multiplier declared by the inspected Sound Class.'),
+  playerIndex: num('Index assigned to the local player that was added.'),
+  results: {
+    type: 'array',
+    items: { type: 'object', additionalProperties: true, [REFLECTION_BOUNDARY]: true },
+    description: 'Per-step outcome of a batch: index, edit, id, success, nodeId, appliedValue.',
+  },
+  removed: { type: 'array', items: { type: 'string' }, description: 'Ids of the nodes that were removed.' },
+  removedCount: num('How many nodes were removed.'),
+  role: str('Network role of the actor, such as ROLE_Authority.'),
+  sampleRate: num('Sample rate of the inspected Sound Wave for the current platform.'),
+  serverName: str('Display name of the hosted LAN server.'),
+  sessionsInfo: reflected('Current play session: localPlayerCount, inPlaySession, currentPlayers, splitScreenEnabled, splitScreenActive, splitScreenLayout and pieInstances [{instance, netMode, url}]. Carries no online-subsystem, voice or hosting flags.'),
+  spatialize: bool('Whether the inspected Sound Attenuation spatializes its source.'),
+  travelURL: str('Listen-server travel URL built for the map and options.'),
+  type: str('Kind of asset the bridge resolved, such as SoundCue, SoundWave or InputAction.'),
+  valueType: str('Enhanced Input value type of the Input Action, reported as its numeric enum index.'),
+  volume: num('Volume multiplier declared by the inspected Sound Class.'),
+  actorReplicates: bool('Whether the Blueprint itself replicates (Replicates in its class defaults). Its replicated variables and RPCs reach no other machine until it does; nothing here turns it on.'),
+  compiled: bool('Whether the Blueprint compiled cleanly after the change.'),
+  configFile: str('Absolute path of the project config file that was written and read back.'),
+  connectionURL: str('The address:port URL, with options, the PIE instance travels to.'),
+  created: bool('Whether a new variable was added (false when an existing one was converted).'),
+  dataType: str('Resolved variable type in the add_variable grammar.'),
+  enabled: bool('Whether split screen is on after the change.'),
+  interfaceType: str('Online subsystem name written as DefaultPlatformService.'),
+  layoutsWritten: str('The GameMapsSettings layout field that changed (TwoPlayerSplitscreenLayout, ThreePlayerSplitscreenLayout or FourPlayerSplitscreenLayout); empty when only enabled changed.'),
+  liveApplied: { type: 'array', items: { type: 'string' }, description: 'Voice console variables applied to the running editor now.' },
+  persisted: bool('Whether the value was read back from the config file on disk.'),
+  pieWorld: str('The PIE world and instance that started travelling.'),
+  playerStart: str('Label of the PlayerStart that was tagged.'),
+  playerStartTag: str('PlayerStartTag after the change.'),
+  previous: str('DefaultPlatformService this editor session started with (empty for the engine default).'),
+  previousPort: num('Default game port before the change.'),
+  previousTag: str('PlayerStartTag before the change (None when it had none).'),
+  requiresRestart: bool('Whether a written setting is only read at startup, so the running editor keeps the old value until it restarts.'),
+  serverPort: num('Default game port after the change.'),
+  settingsSaved: bool('Whether GameMapsSettings was written to DefaultEngine.ini.'),
+  splitScreenType: str('Layout name that was applied, None when split screen was turned off, empty when only enabled changed.'),
+  travelStarted: bool('Whether ClientTravel was issued; the connection itself completes asynchronously.'),
+  updated: bool('Whether an existing variable was converted to owner-only replication.'),
+  variableName: str('Name of the prediction data variable.'),
+  written: { type: 'array', items: { type: 'string' }, description: 'Every [Section] Key=Value entry written to the config file, in order.' },
+});
+
+/**
+ * Resolve one output property. Unknown names fall back to a string with prose
+ * rather than throwing, so a new data-file field can never break module load;
+ * `utility-contract-honesty.test.ts` is what fails instead, naming the
+ * field so it gets a real entry above.
+ */
+export function outputProperty(name: string): JsonObject {
+  if (name === 'success' || name === 'message' || name === 'details') return { ...OUTPUT_HEADER[name] };
+  const known = UTILITY_OUTPUT_FIELDS[name];
+  if (known !== undefined) return { ...known };
+  return { type: 'string', description: `Value reported by the bridge for ${name}.` };
+}

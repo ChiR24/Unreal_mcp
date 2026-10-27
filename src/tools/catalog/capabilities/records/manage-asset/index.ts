@@ -1,0 +1,42 @@
+// Aggregates every manage_asset record spec (asset core, content sources,
+// material, texture, struct, DataTable, enum) and folds them with
+// MANAGE_ASSET_FOLDS into the shipped sources.
+import { CapabilityRecordSourceSchema } from '../../record-schema.js';
+import type { CapabilityRecordSource } from '../../model.js';
+import { MANAGE_ASSET_FOLDS } from '../folds/manage-asset.folds.js';
+import { applyFolds } from '../shared/fold.js';
+import { ASSET_ADVANCED_RECORDS } from './asset-advanced.js';
+import { ASSET_LIFECYCLE_RECORDS } from './asset-lifecycle.js';
+import { ASSET_QUERY_RECORDS } from './asset-query.js';
+import { ASSET_RETRIEVAL_RECORDS } from './asset-retrieval.js';
+import type { RecordSpec } from './builder.js';
+import { toSource } from './builder.js';
+import { CONTENT_SOURCE_RECORDS } from './content-sources.js';
+import { DATATABLE_RECORDS } from './datatable-records.js';
+import { ENUM_RECORDS } from './enum-records.js';
+import { MATERIAL_CREATE_RECORDS } from './material-create.js';
+import { MATERIAL_GRAPH_RECORDS } from './material-graph.js';
+import { MATERIAL_NODES_RECORDS } from './material-nodes.js';
+import { MATERIAL_PARAMS_RECORDS } from './material-params.js';
+import { STRUCT_RECORDS } from './struct-records.js';
+import { TEXTURE_ADJUST_RECORDS } from './texture-adjust.js';
+import { TEXTURE_CONFIG_RECORDS } from './texture-config.js';
+import { TEXTURE_CREATE_RECORDS } from './texture-create.js';
+
+export const MANAGE_ASSET_RECORD_SPECS: readonly RecordSpec[] = [
+  ...ASSET_LIFECYCLE_RECORDS, ...CONTENT_SOURCE_RECORDS, ...ASSET_QUERY_RECORDS, ...ASSET_RETRIEVAL_RECORDS, ...ASSET_ADVANCED_RECORDS,
+  ...MATERIAL_CREATE_RECORDS, ...MATERIAL_NODES_RECORDS, ...MATERIAL_GRAPH_RECORDS, ...MATERIAL_PARAMS_RECORDS,
+  ...TEXTURE_CREATE_RECORDS, ...TEXTURE_ADJUST_RECORDS, ...TEXTURE_CONFIG_RECORDS,
+  ...STRUCT_RECORDS, ...DATATABLE_RECORDS, ...ENUM_RECORDS
+];
+
+/** The authored records before folding; per-action contract tests pin these. */
+export const MANAGE_ASSET_UNFOLDED_SOURCES: readonly CapabilityRecordSource[] =
+  MANAGE_ASSET_RECORD_SPECS.map((spec) => CapabilityRecordSourceSchema.parse(toSource(spec)));
+
+export const MANAGE_ASSET_SOURCES: readonly CapabilityRecordSource[] = applyFolds(
+  MANAGE_ASSET_UNFOLDED_SOURCES,
+  MANAGE_ASSET_FOLDS,
+  'manage_asset',
+);
+

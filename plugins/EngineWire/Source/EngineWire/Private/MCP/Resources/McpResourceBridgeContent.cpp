@@ -1,0 +1,78 @@
+#include "MCP/Resources/McpResourceBridgeContent.h"
+
+#include "EngineWireSettings.h"
+#include "Foundation/Diagnostics/McpDiagnosticsSnapshot.h"
+#include "Foundation/McpReadinessState.h"
+#include "Foundation/McpTelemetryRegistry.h"
+#include "Dom/JsonValue.h"
+
+namespace
+{
+	int32 FirstListenPort(const UEngineWireSettings* Settings)
+	{
+		if (!Settings)
+		{
+			return 0;
+		}
+		FString First = Settings->ListenPorts;
+		int32 Comma = INDEX_NONE;
+		if (First.FindChar(TEXT(','), Comma))
+		{
+			First = First.Left(Comma);
+		}
+		return FCString::Atoi(*First.TrimStartAndEnd());
+	}
+}  // namespace
+
+namespace McpResourceBridge
+{
+	TSharedRef<FJsonObject> BuildAutomationBridgeData()
+	{
+		const UEngineWireSettings* Settings = GetDefault<UEngineWireSettings>();
+		const FMcpReadinessState& Readiness = FMcpReadinessState::Get();
+
+		auto Summary = MakeShared<FJsonObject>();
+		Summary->SetBoolField(TEXT("enabled"), Settings ? Settings->bAlwaysListen : false);
+		Summary->SetBoolField(TEXT("connected"), Readiness.IsEditorReady());
+		Summary->SetStringField(TEXT("host"), Settings ? Settings->ListenHost : FString());
+		Summary->SetNumberField(TEXT("port"), FirstListenPort(Settings));
+		Summary->SetBoolField(TEXT("capabilityTokenRequired"),
+			Settings ? Settings->bRequireCapabilityToken : false);
+		Summary->SetNumberField(TEXT("pendingRequests"),
+			FMcpTelemetryRegistry::Get().InFlightCount());
+
+		// The four connection timestamps, the last disconnect and the last two
+		// failures are tracked only by the TypeScript bridge CLIENT, which owns
+		// the socket lifecycle it is reporting on. The plugin is the SERVER here
+		// and holds no equivalent history, so these are reported as null rather
+		// than back-filled from something that would merely look similar. The key
+		// set stays identical to the TypeScript body so a client can parse one
+		// shape on both transports.
+		auto Timestamps = MakeShared<FJsonObject>();
+		for (const TCHAR* Key : { TEXT("connectedAt"), TEXT("lastHandshakeAt"),
+			TEXT("lastMessageAt"), TEXT("lastRequestSentAt") })
+		{
+			Timestamps->SetField(Key, MakeShared<FJsonValueNull>());
+		}
+
+		auto Data = MakeShared<FJsonObject>();
+		Data->SetObjectField(TEXT("summary"), Summary);
+		Data->SetObjectField(TEXT("timestamps"), Timestamps);
+		Data->SetField(TEXT("lastDisconnect"), MakeShared<FJsonValueNull>());
+		Data->SetField(TEXT("lastHandshakeFailure"), MakeShared<FJsonValueNull>());
+		Data->SetField(TEXT("lastError"), MakeShared<FJsonValueNull>());
+		Data->SetBoolField(TEXT("listening"), Readiness.IsTransportReady());
+		// PreviousSummaryJson() is an EMPTY object when no previous record
+		// exists (store returns MakeShared<FJsonObject>() when !bHasPrevious). The
+		// TS reader emits null for a missing previous FILE, so native must emit
+		// JSON null for the same semantic state. CurrentSummaryJson() is NEVER
+		// empty (BuildSnapshotJson always emits schemaVersion/instance/counters/
+		// lastRequest + three nullable sections).
+		const TSharedRef<FJsonObject> PreviousSummary = FMcpDiagnosticsSnapshot::Get().PreviousSummaryJson();
+		Data->SetField(TEXT("previousSession"), PreviousSummary->Values.Num() == 0
+			? TSharedPtr<FJsonValue>(MakeShared<FJsonValueNull>())
+			: TSharedPtr<FJsonValue>(MakeShared<FJsonValueObject>(PreviousSummary)));
+		Data->SetObjectField(TEXT("currentSession"), FMcpDiagnosticsSnapshot::Get().CurrentSummaryJson());
+		return Data;
+	}
+}  // namespace McpResourceBridge

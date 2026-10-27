@@ -1,0 +1,20 @@
+{
+  "description": "When the AI controller possesses a pawn, it runs the Behavior Tree its variable VariableName holds (BehaviorTreePath by default) with Run Behavior Tree, which also starts the tree's Blackboard. A pawn placed in the level is possessed as the level starts, and a spawned one when it spawns, so long as its Auto Possess AI and AI Controller Class point here.",
+  "tag": "MCP run behavior tree",
+  "placeholders": {
+    "VariableName": "The variable: a BehaviorTree variable the controller already has, else DefaultBehaviorTree.",
+    "BehaviorTreePath": "The Behavior Tree's object path."
+  },
+  "variables": [
+    { "variableName": "{{VariableName}}", "variableType": "Object:/Script/AIModule.BehaviorTree", "defaultValue": "{{BehaviorTreePath}}", "category": "AI", "instanceEditable": true }
+  ],
+  "hooks": [
+    { "id": "btPossess", "event": "ReceivePossess" }
+  ],
+  "eventGraph": [
+    { "edit": "create_node", "id": "btTree", "nodeType": "VariableGet", "memberName": "{{VariableName}}" },
+    { "edit": "create_node", "id": "btRun", "nodeType": "CallFunction", "memberName": "RunBehaviorTree", "memberClass": "/Script/AIModule.AIController" },
+    { "edit": "connect_pins", "from": "$btPossess.then", "to": "$btRun.execute" },
+    { "edit": "connect_pins", "fromNodeId": "$btTree", "fromPinName": "{{VariableName}}", "toNodeId": "$btRun", "toPinName": "BTAsset" }
+  ]
+}

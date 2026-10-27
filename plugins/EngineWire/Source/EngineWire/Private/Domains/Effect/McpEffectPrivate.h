@@ -1,0 +1,78 @@
+#pragma once
+
+#include "Core/Compatibility/McpVersionCompatibility.h"
+#include "Foundation/HandlerUtils/McpHandlerUtils.h"
+
+#include "Dom/JsonObject.h"
+#include "Core/Module/EngineWireGlobals.h"
+#include "Foundation/BridgeHelpers/McpHelpers.h"
+#include "EngineWireSubsystem.h"
+
+class AActor;
+class UEditorActorSubsystem;
+class UNiagaraSystem;
+class UWorld;
+
+namespace McpEffectHandlers
+{
+struct FEffectActionContext
+{
+    UEngineWireSubsystem& Bridge;
+    const FString& RequestId;
+    const FString& Action;
+    const FString& Lower;
+    TSharedPtr<FJsonObject> Payload;
+    TSharedPtr<FMcpBridgeWebSocket> Socket;
+};
+
+FString NormalizeNativeSubAction(
+    const FString& Lower,
+    const FString& Action,
+    const TSharedPtr<FJsonObject>& Payload);
+bool IsNiagaraAuthoringSubAction(const FString& SubAction);
+bool IsNiagaraGraphSubAction(const FString& SubAction);
+FString ResolveCreateEffectSubAction(
+    const FString& Action,
+    const FString& Lower,
+    const TSharedPtr<FJsonObject>& Payload);
+
+FColor ReadColorField(
+    const TSharedPtr<FJsonObject>& Payload,
+    const TCHAR* FieldName,
+    const FColor& DefaultValue = FColor::White);
+FVector ReadScaleField(const TSharedPtr<FJsonObject>& Payload);
+
+using McpHandlerUtils::GetEditorWorld;
+UEditorActorSubsystem* GetEditorActorSubsystem();
+// Both keep working while PIE runs; the actor lookup searches the play world then.
+UObject* LoadEffectAsset(const FString& AssetPath);
+AActor* FindActorByLabel(const FString& ActorName);
+
+bool HandleEffectDiscoveryAction(const FEffectActionContext& Context);
+bool HandleCreateEffectSubAction(
+    const FEffectActionContext& Context,
+    const FString& LowerSubAction);
+bool HandleDrawDebugShape(const FEffectActionContext& Context);
+bool HandleParticleEffect(const FEffectActionContext& Context);
+FString ReadNiagaraSystemPathField(const TSharedPtr<FJsonObject>& Payload);
+bool AuthorProceduralNiagaraSystem(
+    const FEffectActionContext& Context,
+    const FString& EffectName,
+    FString& OutSystemPath,
+    TSharedPtr<FJsonObject>& OutDetails,
+    FString& OutError,
+    FString& OutErrorCode);
+bool HandleSetNiagaraParameter(const FEffectActionContext& Context);
+bool HandleNiagaraLifecycleAction(
+    const FEffectActionContext& Context,
+    const FString& LowerSubAction);
+bool HandleSpawnNiagara(const FEffectActionContext& Context, bool bIsCreateEffect);
+bool HandleCreateDynamicLight(const FEffectActionContext& Context);
+bool HandleCleanup(const FEffectActionContext& Context, bool bIsCreateEffect);
+bool HandleProceduralEffectAction(const FEffectActionContext& Context, bool bIsCreateEffect);
+bool CreateNiagaraEffectFromPayload(
+    const FEffectActionContext& Context,
+    const FString& EffectName,
+    const FString& DefaultSystemPath,
+    const TSharedPtr<FJsonObject>& ExtraFields = nullptr);
+}

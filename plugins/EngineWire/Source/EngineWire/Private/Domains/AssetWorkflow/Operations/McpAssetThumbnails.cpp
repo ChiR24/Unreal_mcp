@@ -1,0 +1,205 @@
+// Copyright (c) 2024 EngineWire Contributors
+
+#include "EngineWireSubsystem.h"
+#include "Foundation/BridgeHelpers/McpHelpers.h"
+#include "Foundation/HandlerUtils/McpHandlerUtils.h"
+
+#include "Dom/JsonObject.h"
+#include "ImageUtils.h"
+#include "Misc/CommandLine.h"
+#include "Misc/FileHelper.h"
+#include "Misc/ObjectThumbnail.h"
+#include "Misc/Paths.h"
+
+#include "EditorAssetLibrary.h"
+#include "ObjectTools.h"
+
+bool UEngineWireSubsystem::HandleGenerateThumbnail(
+    const FString &RequestId, const FString &Action,
+    const TSharedPtr<FJsonObject> &Payload,
+    TSharedPtr<FMcpBridgeWebSocket> RequestingSocket) {
+  const FString Lower = Action.ToLower();
+  if (!Lower.Equals(TEXT("generate_thumbnail"), ESearchCase::IgnoreCase) &&
+      !Lower.Equals(TEXT("create_thumbnail"), ESearchCase::IgnoreCase)) {
+    return false;
+  }
+  if (!Payload.IsValid()) {
+    SendAutomationError(RequestingSocket, RequestId,
+                        TEXT("generate_thumbnail payload missing"),
+                        TEXT("INVALID_PAYLOAD"));
+    return true;
+  }
+
+  FString AssetPath;
+  if (!Payload->TryGetStringField(TEXT("assetPath"), AssetPath) ||
+      AssetPath.IsEmpty()) {
+    SendAutomationError(RequestingSocket, RequestId, TEXT("assetPath required"),
+                        TEXT("INVALID_ARGUMENT"));
+    return true;
+  }
+
+  // SECURITY: Validate asset path
+  FString SafeAssetPath = SanitizeProjectRelativePath(AssetPath);
+  if (SafeAssetPath.IsEmpty()) {
+    SendAutomationError(RequestingSocket, RequestId,
+        McpPathRefusalMessage(TEXT("path"), AssetPath),
+        TEXT("SECURITY_VIOLATION"));
+    return true;
+  }
+
+  int32 Width = 512;
+  int32 Height = 512;
+
+  double TempWidth = 0, TempHeight = 0;
+  if (Payload->TryGetNumberField(TEXT("width"), TempWidth))
+    Width = static_cast<int32>(TempWidth);
+  if (Payload->TryGetNumberField(TEXT("height"), TempHeight))
+    Height = static_cast<int32>(TempHeight);
+  if (Width < 1 || Height < 1 || Width > 4096 || Height > 4096) {
+    SendAutomationError(RequestingSocket, RequestId, TEXT("width and height must be between 1 and 4096"),
+                        TEXT("INVALID_ARGUMENT"));
+    return true;
+  }
+
+  FString OutputPath;
+  Payload->TryGetStringField(TEXT("outputPath"), OutputPath);
+
+  // NOTE: ProcessAutomationRequest already dispatches to GameThread.
+  // Wrapping ALL work (including fast existence checks) in AsyncTask(GameThread, ...)
+  // caused the queued lambda to sit behind the current dispatch cycle, so responses
+  // never reached the MCP server before the 30-second timeout (issues #138, #139).
+  // Execute synchronously instead.
+  SendProgressUpdate(RequestId, 0.0f,
+      FString::Printf(TEXT("Starting thumbnail generation for: %s"), *SafeAssetPath), true);
+
+  if (!McpAssetExists(SafeAssetPath)) {
+    SendAutomationResponse(RequestingSocket, RequestId, false,
+                           TEXT("Asset not found"), nullptr,
+                           TEXT("ASSET_NOT_FOUND"));
+    return true;
+  }
+
+  UObject *Asset = McpLoadAsset(SafeAssetPath);
+  if (!Asset) {
+    SendAutomationResponse(RequestingSocket, RequestId, false,
+                           TEXT("Failed to load asset"), nullptr,
+                           TEXT("LOAD_FAILED"));
+    return true;
+  }
+
+  if (FParse::Param(FCommandLine::Get(), TEXT("NullRHI"))) {
+    TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
+    Result->SetBoolField(TEXT("success"), true);
+    Result->SetStringField(TEXT("assetPath"), SafeAssetPath);
+    Result->SetStringField(TEXT("assetClass"), Asset->GetClass()->GetName());
+    Result->SetNumberField(TEXT("width"), Width);
+    Result->SetNumberField(TEXT("height"), Height);
+    Result->SetBoolField(TEXT("thumbnailRendered"), false);
+    Result->SetBoolField(TEXT("headlessSafe"), true);
+    if (!OutputPath.IsEmpty()) {
+      Result->SetStringField(TEXT("outputPath"), OutputPath);
+    }
+    SendAutomationResponse(RequestingSocket, RequestId, true,
+                           TEXT("Asset verified; thumbnail rendering skipped under NullRHI"),
+                           Result, FString());
+    return true;
+  }
+
+  // Send progress update before GPU operation
+  SendProgressUpdate(RequestId, 50.0f,
+      TEXT("Rendering thumbnail (GPU operation)..."), true);
+
+  FObjectThumbnail ObjectThumbnail;
+  ThumbnailTools::RenderThumbnail(
+      Asset, Width, Height,
+      ThumbnailTools::EThumbnailTextureFlushMode::NeverFlush, nullptr,
+      &ObjectThumbnail);
+
+  bool bSuccess = ObjectThumbnail.GetImageWidth() > 0 &&
+                  ObjectThumbnail.GetImageHeight() > 0;
+
+  // The thumbnail goes into the asset's package, as the editor's own capture does: rendered and dropped, it left the
+  // asset's thumbnail as it was while the package was marked changed. Engine content keeps its own: a dirty engine
+  // package is one Save All would write.
+  UPackage *Package = Asset->GetOutermost();
+  const bool bEngineContent = Package && Package->GetName().StartsWith(TEXT("/Engine/"));
+  const bool bCached = bSuccess && Package && !bEngineContent;
+  if (bCached) {
+    ThumbnailTools::CacheThumbnail(Asset->GetFullName(), &ObjectThumbnail, Package);
+    Package->MarkPackageDirty();
+  }
+
+  if (bSuccess && !OutputPath.IsEmpty()) {
+    const TArray<uint8> &ImageData = ObjectThumbnail.GetUncompressedImageData();
+
+    if (ImageData.Num() > 0) {
+      TArray<FColor> ColorData;
+      ColorData.Reserve(Width * Height);
+
+      // Fixed: Ensure we don't read out of bounds if ImageData length isn't a multiple of 4
+      for (int32 i = 0; i + 3 < ImageData.Num(); i += 4) {
+        FColor Color;
+        Color.B = ImageData[i + 0];
+        Color.G = ImageData[i + 1];
+        Color.R = ImageData[i + 2];
+        Color.A = ImageData[i + 3];
+        ColorData.Add(Color);
+      }
+
+      // SECURITY: Sanitize and validate the output path to prevent path traversal
+      FString SafeOutputPath = SanitizeProjectFilePath(OutputPath);
+      if (SafeOutputPath.IsEmpty()) {
+        SendAutomationResponse(RequestingSocket, RequestId, false,
+                               FString::Printf(TEXT("Invalid or unsafe output path: %s"), *OutputPath),
+                               nullptr, TEXT("SECURITY_VIOLATION"));
+        return true;
+      }
+
+      FString AbsolutePath = FPaths::ProjectDir() / SafeOutputPath;
+      AbsolutePath = FPaths::ConvertRelativePathToFull(AbsolutePath);
+      FPaths::NormalizeFilename(AbsolutePath);
+
+      FString NormalizedProjectDir = FPaths::ConvertRelativePathToFull(FPaths::ProjectDir());
+      FPaths::NormalizeDirectoryName(NormalizedProjectDir);
+      if (!NormalizedProjectDir.EndsWith(TEXT("/"))) {
+        NormalizedProjectDir += TEXT("/");
+      }
+
+      if (!AbsolutePath.StartsWith(NormalizedProjectDir, ESearchCase::IgnoreCase)) {
+        SendAutomationResponse(RequestingSocket, RequestId, false,
+                               FString::Printf(TEXT("Output path escapes project directory: %s"), *OutputPath),
+                               nullptr, TEXT("SECURITY_VIOLATION"));
+        return true;
+      }
+
+      // A PNG, as promised: from 5.1 ThumbnailCompressImageArray writes the JPEG a package stores, so the .png held JPEG.
+      TArray64<uint8> CompressedData;
+      FImageUtils::PNGCompressImageArray(Width, Height, TArrayView64<const FColor>(ColorData.GetData(), ColorData.Num()), CompressedData);
+      bSuccess = FFileHelper::SaveArrayToFile(CompressedData, *AbsolutePath);
+    }
+  }
+
+  TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
+  Result->SetBoolField(TEXT("success"), bSuccess);
+  Result->SetStringField(TEXT("assetPath"), SafeAssetPath);
+  Result->SetNumberField(TEXT("width"), Width);
+  Result->SetNumberField(TEXT("height"), Height);
+  Result->SetBoolField(TEXT("thumbnailCached"), bCached);
+  if (!bCached) {
+    McpHandlerUtils::MarkNoAssetsChanged(Result);
+  }
+
+  if (!OutputPath.IsEmpty()) {
+    Result->SetStringField(TEXT("outputPath"), OutputPath);
+  }
+
+  SendAutomationResponse(
+      RequestingSocket, RequestId, bSuccess,
+      !bSuccess ? TEXT("Thumbnail generation failed")
+      : bCached ? TEXT("Thumbnail stored in the asset, which is left unsaved")
+                : TEXT("Thumbnail rendered; engine content keeps its own thumbnail"),
+      Result, bSuccess ? FString() : TEXT("THUMBNAIL_GENERATION_FAILED"));
+
+  return true;
+}
+

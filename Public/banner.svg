@@ -1,0 +1,49 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1280" height="360" viewBox="0 0 1280 360" role="img" aria-label="EngineWire: wire your AI into Unreal Engine">
+  <defs>
+    <style>
+      text { font-family: "Segoe UI", -apple-system, BlinkMacSystemFont, "Helvetica Neue", Helvetica, Arial, sans-serif; text-anchor: middle; }
+      .tag { font-size: 32px; font-weight: 600; fill: #f4fbe6; letter-spacing: -.5px; }
+      .sub { font-size: 15px; font-weight: 500; fill: #9aa38c; letter-spacing: 1.4px; font-family: "Cascadia Mono", Consolas, "SFMono-Regular", Menlo, monospace; }
+      .tip { transform-box: fill-box; transform-origin: center; animation: flare 2.6s ease-in-out infinite; }
+      @keyframes flare { 0%, 52%, 100% { transform: scale(1); } 64% { transform: scale(1.45); } }
+      @media (prefers-reduced-motion: reduce) { .tip { animation: none; } }
+    </style>
+    <clipPath id="card"><rect width="1280" height="360" rx="18"/></clipPath>
+    <radialGradient id="glow" cx=".5" cy=".42" r=".5"><stop offset="0" stop-color="#9dff2e" stop-opacity=".22"/><stop offset=".55" stop-color="#3dff7a" stop-opacity=".05"/><stop offset="1" stop-color="#3dff7a" stop-opacity="0"/></radialGradient>
+    <linearGradient id="fade" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#060607"/><stop offset="1" stop-color="#060607" stop-opacity="0"/></linearGradient>
+    <filter id="bloom" x="-20%" y="-60%" width="140%" height="220%"><feGaussianBlur stdDeviation="14"/></filter>
+    <mask id="lm-a" maskUnits="userSpaceOnUse" x="-8" y="-8" width="80" height="80"><rect x="-8" y="-8" width="80" height="80" fill="#fff"/><path d="M14.3 42C22.5 42 24.5 32 31.5 32C38.5 32 40.5 22 48.5 22" fill="none" stroke="#000" stroke-width="8.2"/></mask>
+    <mask id="lm-b" maskUnits="userSpaceOnUse" x="-8" y="-8" width="80" height="80"><rect x="-8" y="-8" width="80" height="80" fill="#fff"/><path d="M31.5 52A10.5 20 0 0 0 31.5 12" fill="none" stroke="#000" stroke-width="8.2"/></mask>
+    <linearGradient id="lm-w" gradientUnits="userSpaceOnUse" x1="6" y1="46" x2="60" y2="18"><stop offset="0" stop-color="#3dff7a"/><stop offset="0.45" stop-color="#9dff2e"/><stop offset="0.8" stop-color="#d6ff3a"/><stop offset="1" stop-color="#f3ffc2"/></linearGradient>
+    <radialGradient id="lm-g"><stop offset=".3" stop-color="#fff"/><stop offset=".7" stop-color="#f3ffc2"/><stop offset="1" stop-color="#d4ff3a"/></radialGradient>
+    <linearGradient id="lw-p" gradientUnits="userSpaceOnUse" x1="188.65" y1="0" x2="417.65" y2="0"><stop offset="0" stop-color="#3dff7a"/><stop offset="0.45" stop-color="#9dff2e"/><stop offset="0.8" stop-color="#d6ff3a"/></linearGradient>
+    <symbol id="logo" viewBox="5.1 -87.2 682.39 105.7">
+      <g transform="translate(0 -106.50) scale(2.21875)">
+        <path d="M31.5 12A10.5 20 0 0 0 31.5 52" fill="none" stroke="url(#lm-w)" stroke-width="4.4" stroke-linecap="round" mask="url(#lm-a)"/>
+        <circle cx="10" cy="42" r="4.3" fill="none" stroke="url(#lm-w)" stroke-width="4.4"/>
+        <path d="M14.3 42C22.5 42 24.5 32 31.5 32C38.5 32 40.5 22 48.5 22" fill="none" stroke="url(#lm-w)" stroke-width="4.4" stroke-linecap="round" mask="url(#lm-b)"/>
+        <path d="M31.5 52A10.5 20 0 0 0 31.5 12" fill="none" stroke="url(#lm-w)" stroke-width="4.4" stroke-linecap="round"/>
+        <g mask="url(#lm-b)"><circle r="1.7" fill="#fff"><animateMotion dur="2.6s" repeatCount="indefinite" calcMode="spline" keyTimes="0;.6;1" keyPoints="0;1;1" keySplines=".45 0 .55 1;0 0 1 1" path="M14.3 42C22.5 42 24.5 32 31.5 32C38.5 32 40.5 22 48.5 22"/></circle></g>
+        <path class="tip" d="M53 16.7C53.848 21.152 53.848 21.152 61 22C53.848 22.848 53.848 22.848 53 27.3C52.152 22.848 52.152 22.848 45 22C52.152 21.152 52.152 21.152 53 16.7Z" fill="url(#lm-g)"/>
+      </g>
+      <g transform="translate(161.79 0)">
+        <path d="M8 0L8 -71L55.8 -71L55.8 -59.7L21 -59.7L21 -41.2L54.6 -41.2L54.6 -30L21 -30L21 -11.3L56.6 -11.3L56.6 0ZM66.5 0L66.5 -53.4L78.1 -53.4L78.4 -44.3Q80.6 -49.8 84.85 -52.2Q89.1 -54.6 94.4 -54.6Q103.2 -54.6 107.9 -48.95Q112.6 -43.3 112.6 -34.3L112.6 0L99.8 0L99.8 -30.2Q99.8 -37 97.75 -40.6Q95.7 -44.2 90.5 -44.2Q85.3 -44.2 82.3 -40.6Q79.3 -37 79.3 -30.2L79.3 0ZM146.1 16.2Q135.6 16.2 129.6 12Q123.6 7.8 121.8 1L135 0.1Q136 3.2 138.45 4.85Q140.9 6.5 146.1 6.5Q152 6.5 155.2 3.85Q158.4 1.2 158.4 -4.4L158.4 -11.2Q156.5 -7.3 152.3 -4.95Q148.1 -2.6 142.9 -2.6Q136.3 -2.6 131.15 -5.85Q126 -9.1 123.1 -14.95Q120.2 -20.8 120.2 -28.5Q120.2 -36.2 123.1 -42.05Q126 -47.9 131.05 -51.25Q136.1 -54.6 142.7 -54.6Q148.4 -54.6 152.6 -52Q156.8 -49.4 158.8 -45.1L158.8 -53.4L171.3 -53.4L171.3 -4.7Q171.3 5.6 164.4 10.9Q157.5 16.2 146.1 16.2ZM145.9 -12.6Q151.6 -12.6 155.05 -16.85Q158.5 -21.1 158.5 -28.6Q158.6 -36 155.15 -40.3Q151.7 -44.6 145.9 -44.6Q140 -44.6 136.75 -40.25Q133.5 -35.9 133.5 -28.6Q133.5 -21.3 136.85 -16.95Q140.2 -12.6 145.9 -12.6ZM182.2 0L182.2 -53.4L195 -53.4L195 0ZM207.7 0L207.7 -53.4L219.3 -53.4L219.6 -44.3Q221.8 -49.8 226.05 -52.2Q230.3 -54.6 235.6 -54.6Q244.4 -54.6 249.1 -48.95Q253.8 -43.3 253.8 -34.3L253.8 0L241 0L241 -30.2Q241 -37 238.95 -40.6Q236.9 -44.2 231.7 -44.2Q226.5 -44.2 223.5 -40.6Q220.5 -37 220.5 -30.2L220.5 0ZM287.6 1.2Q279.6 1.2 273.7 -2.25Q267.8 -5.7 264.6 -12Q261.4 -18.3 261.4 -26.7Q261.4 -35.1 264.6 -41.4Q267.8 -47.7 273.65 -51.15Q279.5 -54.6 287.3 -54.6Q294.9 -54.6 300.6 -51.2Q306.3 -47.8 309.45 -41.4Q312.6 -35 312.6 -26L312.6 -23.1L274.7 -23.1Q275 -16.1 278.5 -12.55Q282 -9 287.7 -9Q296.4 -9 298.8 -16.4L311.9 -15.6Q309.7 -7.8 303.25 -3.3Q296.8 1.2 287.6 1.2ZM274.7 -31.7L299.4 -31.7Q298.9 -38.2 295.65 -41.35Q292.4 -44.5 287.3 -44.5Q282.1 -44.5 278.8 -41.2Q275.5 -37.9 274.7 -31.7ZM332.3 0L313.3 -71L327 -71L340 -18L353.1 -71L365.2 -71L378.3 -18L391.2 -71L405 -71L386 0L371.6 0L359.2 -48.6L346.8 0ZM411.2 0L411.2 -53.4L424 -53.4L424 0ZM436.7 0L436.7 -53.4L448.7 -53.4L449 -43Q450.6 -48.4 453.7 -50.9Q456.8 -53.4 461.8 -53.4L466.7 -53.4L466.7 -42.4L461.7 -42.4Q455.6 -42.4 452.55 -39.65Q449.5 -36.9 449.5 -30.8L449.5 0ZM494.7 1.2Q486.7 1.2 480.8 -2.25Q474.9 -5.7 471.7 -12Q468.5 -18.3 468.5 -26.7Q468.5 -35.1 471.7 -41.4Q474.9 -47.7 480.75 -51.15Q486.6 -54.6 494.4 -54.6Q502 -54.6 507.7 -51.2Q513.4 -47.8 516.55 -41.4Q519.7 -35 519.7 -26L519.7 -23.1L481.8 -23.1Q482.1 -16.1 485.6 -12.55Q489.1 -9 494.8 -9Q503.5 -9 505.9 -16.4L519 -15.6Q516.8 -7.8 510.35 -3.3Q503.9 1.2 494.7 1.2ZM481.8 -31.7L506.5 -31.7Q506 -38.2 502.75 -41.35Q499.5 -44.5 494.4 -44.5Q489.2 -44.5 485.9 -41.2Q482.6 -37.9 481.8 -31.7Z" fill="#f4fbe6"/>
+        <circle cx="188.65" cy="-66.2" r="6.78" fill="none" stroke="url(#lw-p)" stroke-width="4.26"/>
+        <path d="M417.65 -76.5075C419.1928 -68.4078 419.1928 -68.4078 432.28 -66.865C419.1928 -65.3222 419.1928 -65.3222 417.65 -57.2225C416.1072 -65.3222 416.1072 -65.3222 403.02 -66.865C416.1072 -68.4078 416.1072 -68.4078 417.65 -76.5075Z" fill="url(#lw-p)"/>
+      </g>
+    </symbol>
+  </defs>
+  <g clip-path="url(#card)">
+    <rect width="1280" height="360" fill="#060607"/>
+    <g stroke="#d4ff3a" stroke-width="1" fill="none">
+      <path stroke-opacity=".08" d="M640 190L640 360M640 190L520 360M640 190L760 360M640 190L400 360M640 190L880 360M640 190L280 360M640 190L1000 360M640 190L160 360M640 190L1120 360M640 190L40 360M640 190L1240 360M640 190L-80 360M640 190L1360 360"/>
+      <path stroke-opacity=".05" d="M0 196H1280M0 214H1280M0 244H1280M0 286H1280M0 340H1280"/>
+    </g>
+    <rect y="186" width="1280" height="70" fill="url(#fade)"/>
+    <rect width="1280" height="360" fill="url(#glow)"/>
+    <use href="#logo" x="350" y="66" width="580" height="89.8" opacity=".55" filter="url(#bloom)"/>
+    <use href="#logo" x="350" y="66" width="580" height="89.8"/>
+    <text class="tag" x="640" y="232">Wire your AI into Unreal Engine</text>
+    <text class="sub" x="640" y="272">MCP SERVER + EDITOR PLUGIN  ·  ONE TOOL, 400+ CAPABILITIES  ·  UNREAL ENGINE 5.0 – 5.8</text>
+  </g>
+</svg>

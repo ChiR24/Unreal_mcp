@@ -1,0 +1,305 @@
+#include "Core/Compatibility/McpVersionCompatibility.h"
+
+#include "Domains/ControlEditor/McpEditorSupport.h"
+#include "Domains/Ui/McpUiPrivate.h"
+
+#include "Camera/PlayerCameraManager.h"
+#include "Editor.h"
+#include "Engine/Engine.h"
+#include "Engine/GameViewportClient.h"
+#include "Engine/LocalPlayer.h"
+#include "GameFramework/PlayerController.h"
+#include "HAL/FileManager.h"
+#include "IImageWrapper.h"
+#include "IImageWrapperModule.h"
+#include "Foundation/BridgeHelpers/McpHelpers.h"
+#include "Foundation/McpScreenshotResample.h"
+#include "Domains/Ui/McpUiScreenshotSlate.h"
+#include "Domains/Ui/McpUiScreenshotSupport.h"
+#include "Misc/Base64.h"
+#include "Misc/FileHelper.h"
+#include "Misc/Paths.h"
+#include "Modules/ModuleManager.h"
+#include "RenderingThread.h"
+#include "SceneView.h"
+#include "UnrealClient.h"
+
+namespace McpUiHandlers {
+
+bool HandleScreenshotAction(
+    UEngineWireSubsystem &Bridge, const FString &RequestId,
+    bool bIsSystemControl, const FString &LowerSub,
+    const TSharedPtr<FJsonObject> &Payload,
+    TSharedPtr<FMcpBridgeWebSocket> RequestingSocket,
+    const TSharedPtr<FJsonObject> &Resp, bool &bSuccess, FString &Message,
+    FString &ErrorCode, bool &bResponseSent,
+    const FUiScreenshotFallback &ScreenshotFallback) {
+  if (LowerSub != TEXT("screenshot")) {
+    return false;
+  }
+
+  FString Mode;
+  Payload->TryGetStringField(TEXT("mode"), Mode);
+  Mode = Mode.TrimStartAndEnd().ToLower();
+  if (Mode.IsEmpty() && bIsSystemControl) {
+    bResponseSent = true;
+    return ScreenshotFallback();
+  }
+  if (Mode == TEXT("full_editor_window") || Mode == TEXT("editor_viewport")) {
+    bResponseSent = true;
+    return ScreenshotFallback();
+  }
+  // An ejected player no longer feeds the game viewport read below: the picture of the game is the editor viewport that
+  // draws it, which the editor capture takes (and which does not send an ejected player back here).
+  if (Mode == TEXT("game_viewport") && GetEjectedPieViewportClientForMcp()) {
+    bResponseSent = true;
+    return ScreenshotFallback();
+  }
+  if (!Mode.IsEmpty() && Mode != TEXT("game_viewport")) {
+    Message =
+        TEXT("Invalid screenshot mode. Supported modes: editor_viewport, game_viewport, full_editor_window");
+    ErrorCode = TEXT("INVALID_ARGUMENT");
+    Resp->SetStringField(TEXT("error"), Message);
+    Bridge.SendAutomationResponse(RequestingSocket, RequestId, false, Message,
+                                  Resp, ErrorCode);
+    bResponseSent = true;
+    return true;
+  }
+
+  FString ScreenshotPath;
+  if (!ResolveScreenshotDirectoryForMcp(
+          Payload, FPaths::ProjectSavedDir() / TEXT("Screenshots/WindowsEditor"),
+          ScreenshotPath, Message)) {
+    ErrorCode = TEXT("SECURITY_VIOLATION");
+    Resp->SetStringField(TEXT("error"), Message);
+    Bridge.SendAutomationResponse(RequestingSocket, RequestId, false,
+                                  Message, Resp, ErrorCode);
+    bResponseSent = true;
+    return true;
+  }
+
+  const FString Filename = MakeSafeUiScreenshotFilenameForMcp(Payload);
+
+  // The same rule as the editor captures (McpScreenshotReturnsImage): inline unless
+  // returnBase64 is false, fitted to McpInlineScreenshotBox when no resolution is given.
+  const bool bReturnBase64 = McpScreenshotReturnsImage(Payload);
+
+  UGameViewportClient *ViewportClient = nullptr;
+  bool bUsingPieViewport = false;
+  if (GEditor && GEditor->PlayWorld) {
+    if (UWorld *PlayWorld = GEditor->PlayWorld.Get()) {
+      ViewportClient = PlayWorld->GetGameViewport();
+      bUsingPieViewport = ViewportClient != nullptr;
+    }
+  }
+  if (!ViewportClient && GEngine) {
+    ViewportClient = GEngine->GameViewport;
+  }
+
+  if (!ViewportClient) {
+    Message = TEXT("No game viewport available: the game viewport exists only while Play In Editor runs; capture the "
+                   "editor with mode full_editor_window, or start play first");
+    ErrorCode = TEXT("NO_VIEWPORT");
+    Resp->SetStringField(TEXT("error"), Message);
+    return true;
+  }
+
+  FViewport *Viewport = ViewportClient->Viewport;
+  if (!Viewport) {
+    Message = TEXT("No viewport available");
+    ErrorCode = TEXT("NO_VIEWPORT");
+    Resp->SetStringField(TEXT("error"), Message);
+    return true;
+  }
+
+  bool bForcedViewportDraw = false;
+  bool bHasPlayerCamera = false;
+  FString ActiveViewTargetPath;
+  FVector ActiveCameraLocation = FVector::ZeroVector;
+  FRotator ActiveCameraRotation = FRotator::ZeroRotator;
+  float ActiveCameraFov = 0.0f;
+  FVector2D RenderedFov = FVector2D::ZeroVector;
+
+  if (UWorld *ViewportWorld = ViewportClient->GetWorld()) {
+    if (APlayerController *PlayerController =
+            ViewportWorld->GetFirstPlayerController()) {
+      if (AActor *ViewTarget = PlayerController->GetViewTarget()) {
+        ActiveViewTargetPath = ViewTarget->GetPathName();
+      }
+      if (APlayerCameraManager *CameraManager =
+              PlayerController->PlayerCameraManager) {
+        CameraManager->UpdateCamera(0.0f);
+#if ENGINE_MAJOR_VERSION > 5 || (ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 3)
+        const FMinimalViewInfo &CameraView = CameraManager->GetCameraCacheView();
+#else
+        const FMinimalViewInfo CameraView = CameraManager->GetCameraCachePOV();
+#endif
+        ActiveCameraLocation = CameraView.Location;
+        ActiveCameraRotation = CameraView.Rotation;
+        ActiveCameraFov = CameraView.FOV;
+        bHasPlayerCamera = true;
+      }
+      // The camera's FOV is the frame's width only at its own aspect ratio: a viewport of another shape under the
+      // project's keep-vertical setting showed 64 degrees across for an FOV of 50, and points placed from 50 landed
+      // well off. The projection the frame was drawn with says what it shows.
+      FSceneViewProjectionData Projection;
+      ULocalPlayer *LocalPlayer = PlayerController->GetLocalPlayer();
+      if (LocalPlayer && LocalPlayer->GetProjectionData(Viewport, Projection) &&
+          Projection.ProjectionMatrix.M[3][3] == 0.0f) {
+        RenderedFov.X = FMath::RadiansToDegrees(2.0 * FMath::Atan(1.0 / Projection.ProjectionMatrix.M[0][0]));
+        RenderedFov.Y = FMath::RadiansToDegrees(2.0 * FMath::Atan(1.0 / Projection.ProjectionMatrix.M[1][1]));
+      }
+    }
+  }
+
+  // Forcing a draw and then flushing blocks the game thread until the render
+  // thread drains. Once a UMG widget was live in the PIE viewport that pairing
+  // could sit for minutes and never return, so the capture appeared to hang.
+  // FViewport::ReadPixels already flushes on its own, making the explicit flush
+  // redundant, and the draw is only safe when the render thread is actually
+  // running and we are not re-entering it from inside rendering.
+  if (bUsingPieViewport && IsInGameThread() && !IsInRenderingThread()) {
+    Viewport->Draw(false);
+    bForcedViewportDraw = true;
+  }
+
+  TArray<FColor> Bitmap;
+  const FIntVector Size(Viewport->GetSizeXY().X, Viewport->GetSizeXY().Y, 0);
+  const bool bReadSuccess = Viewport->ReadPixels(Bitmap);
+  if (!bReadSuccess || Bitmap.Num() == 0) {
+    Message = TEXT("Failed to read viewport pixels");
+    ErrorCode = TEXT("CAPTURE_FAILED");
+    Resp->SetStringField(TEXT("error"), Message);
+    return true;
+  }
+  // These pixels never contain the widget layer; say so rather than let an
+  // absent HUD read as a broken HUD. See the header for why compositing here
+  // is not an option.
+  Resp->SetStringField(TEXT("captureSource"), TEXT("scene_render_target"));
+  TArray<TSharedPtr<FJsonValue>> CaptureWarnings;
+  CaptureWarnings.Add(MakeShared<FJsonValueString>(McpSceneOnlyCaptureWarning()));
+  Resp->SetArrayField(TEXT("warnings"), CaptureWarnings);
+
+  // The game-viewport capture declares the same `resolution` parameter as the
+  // editor-viewport one and used to ignore it, so a PIE screenshot on a 4K
+  // display could only ever answer IMAGE_TOO_LARGE.
+  const FIntPoint CapturedSize(Size.X, Size.Y);
+  FIntPoint TargetSize = CapturedSize;
+  FString ResolutionError;
+  if (!ResolveScreenshotResolutionForMcp(Payload, CapturedSize, TargetSize,
+                                         ResolutionError)) {
+    Message = ResolutionError;
+    ErrorCode = TEXT("INVALID_ARGUMENT");
+    Resp->SetStringField(TEXT("error"), Message);
+    Bridge.SendAutomationResponse(RequestingSocket, RequestId, false, Message,
+                                  Resp, ErrorCode);
+    bResponseSent = true;
+    return true;
+  }
+  if (TargetSize != CapturedSize &&
+      Bitmap.Num() >= CapturedSize.X * CapturedSize.Y) {
+    TArray<FColor> Resampled;
+    ResampleBitmapForMcp(Bitmap, CapturedSize, Resampled, TargetSize);
+    Bitmap = MoveTemp(Resampled);
+  } else {
+    TargetSize = CapturedSize;
+  }
+
+  const int32 Width = TargetSize.X;
+  const int32 Height = TargetSize.Y;
+  TArray<uint8> PngData;
+  IImageWrapperModule &ImageWrapperModule =
+      FModuleManager::LoadModuleChecked<IImageWrapperModule>(
+          FName("ImageWrapper"));
+  TSharedPtr<IImageWrapper> ImageWrapper =
+      ImageWrapperModule.CreateImageWrapper(EImageFormat::PNG);
+
+  if (ImageWrapper.IsValid()) {
+    TArray<uint8> RawData;
+    RawData.SetNumUninitialized(Width * Height * 4);
+    for (int32 i = 0; i < Bitmap.Num(); ++i) {
+      RawData[i * 4 + 0] = Bitmap[i].R;
+      RawData[i * 4 + 1] = Bitmap[i].G;
+      RawData[i * 4 + 2] = Bitmap[i].B;
+      RawData[i * 4 + 3] = 255;
+    }
+
+    if (ImageWrapper->SetRaw(RawData.GetData(), RawData.Num(), Width, Height,
+                             ERGBFormat::RGBA, 8)) {
+      PngData = ImageWrapper->GetCompressed(100);
+    }
+  }
+
+  if (PngData.Num() == 0) {
+    Message = TEXT("Failed to encode viewport screenshot as PNG");
+    ErrorCode = TEXT("CAPTURE_FAILED");
+    Resp->SetStringField(TEXT("error"), Message);
+    Bridge.SendAutomationResponse(RequestingSocket, RequestId, false, Message,
+                                  Resp, ErrorCode);
+    bResponseSent = true;
+    return true;
+  }
+
+  FString FullPath = FPaths::Combine(ScreenshotPath, Filename);
+  FPaths::MakeStandardFilename(FullPath);
+
+  // Same keepFile as control_editor.screenshot: no file left behind.
+  bool bKeepFile = true;
+  Payload->TryGetBoolField(TEXT("keepFile"), bKeepFile);
+  if (bKeepFile) {
+    IFileManager::Get().MakeDirectory(*ScreenshotPath, true);
+  }
+  const bool bSaved = bKeepFile && FFileHelper::SaveArrayToFile(PngData, *FullPath);
+
+  bSuccess = true;
+  Message = FString::Printf(TEXT("Screenshot captured (%dx%d)"), Width, Height);
+  if (bSaved) {
+    Resp->SetStringField(TEXT("screenshotPath"), FullPath);
+  }
+  Resp->SetStringField(TEXT("filename"), Filename);
+  Resp->SetStringField(TEXT("mode"), TEXT("game_viewport"));
+  Resp->SetBoolField(TEXT("usingPieViewport"), bUsingPieViewport);
+  Resp->SetBoolField(TEXT("forcedViewportDraw"), bForcedViewportDraw);
+  AddViewportDetailsForUiScreenshot(Resp, ViewportClient, ActiveViewTargetPath,
+                                    bHasPlayerCamera, ActiveCameraLocation,
+                                    ActiveCameraRotation, ActiveCameraFov, RenderedFov);
+  Resp->SetBoolField(TEXT("saved"), bSaved);
+  Resp->SetNumberField(TEXT("width"), Width);
+  Resp->SetNumberField(TEXT("height"), Height);
+  // Only when resampled (a failed resample resets TargetSize), as the editor captures do.
+  if (TargetSize != CapturedSize) {
+    Resp->SetNumberField(TEXT("viewportWidth"), CapturedSize.X);
+    Resp->SetNumberField(TEXT("viewportHeight"), CapturedSize.Y);
+  }
+  Resp->SetNumberField(TEXT("sizeBytes"), PngData.Num());
+  Resp->SetStringField(TEXT("mimeType"), TEXT("image/png"));
+  AddScreenshotMetadataForUiMcp(Resp, Payload);
+  // As the editor captures: pixels drawn while shaders compile show the default material.
+  McpAddShaderCompileState(Resp, Payload);
+
+  if (!bKeepFile && !bReturnBase64) {
+    bSuccess = false;
+    Message = TEXT("keepFile:false needs returnBase64:true, or the capture goes nowhere.");
+    ErrorCode = TEXT("INVALID_ARGUMENT");
+    Resp->SetStringField(TEXT("error"), Message);
+  } else if (!bSaved && !bReturnBase64) {
+    bSuccess = false;
+    Message =
+        TEXT("Screenshot captured but failed to save, and returnBase64=false leaves no image output.");
+    ErrorCode = TEXT("SAVE_FAILED");
+    Resp->SetStringField(TEXT("error"), Message);
+  } else if (bReturnBase64 &&
+             PngData.Num() > MaxScreenshotPngBytesForBase64ForMcp) {
+    bSuccess = false;
+    Message = MakeScreenshotTooLargeMessageForUiMcp(PngData.Num());
+    ErrorCode = TEXT("IMAGE_TOO_LARGE");
+    Resp->SetStringField(TEXT("error"), Message);
+  }
+
+  if (bSuccess && bReturnBase64) {
+    Resp->SetStringField(TEXT("imageBase64"), FBase64::Encode(PngData));
+  }
+  return true;
+}
+
+}

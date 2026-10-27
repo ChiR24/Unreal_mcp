@@ -14,8 +14,6 @@ area/server:
 area/docs:
   - changed-files:
     - any-glob-to-any-file: '*.md'
-    - any-glob-to-any-file: 'mcp-config-example.json'
-    - any-glob-to-any-file: 'claude_desktop_config_example.json'
     - any-glob-to-any-file: 'docs/**/*'
 
 area/tools:

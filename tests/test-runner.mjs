@@ -1,10 +1,13 @@
-import { Client } from '@modelcontextprotocol/sdk/client/index.js';
-import { StdioClientTransport } from '@modelcontextprotocol/sdk/client/stdio.js';
+import { Client } from '@modelcontextprotocol/client';
+import { StdioClientTransport } from '@modelcontextprotocol/client/stdio';
 import path from 'node:path';
 import fs from 'node:fs/promises';
+import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import net from 'node:net';
 import { expectedCondition as conditionFromExpectation, splitExpectedConditions } from './expectation-utils.mjs';
+import { evaluateAssertions, selectCaptureValues, withServerTimeout } from './test-runner-response-utils.mjs';
+import { withFoldTwins } from './fold-twins.mjs';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -33,7 +36,7 @@ const infrastructureErrorCodes = [
   'texture_error', 'invalid_texture', 'source_invalid', 'lock_failed', 'node_not_found',
   'physics_failed', 'function_not_found'
 ];
-const baseCrashIndicators = ['1006', 'econnreset', 'socket hang up', 'connection lost', 'bridge disconnected', 'ue_not_connected', 'automation bridge not connected'];
+const baseCrashIndicators = ['econnreset', 'socket hang up', 'connection lost', 'bridge disconnected', 'ue_not_connected', 'automation bridge not connected'];
 const crashIndicatorsWithDisconnect = [...baseCrashIndicators, 'disconnect'];
 // Defaults for spawning the MCP server.
 let serverCommand = process.env.UNREAL_MCP_SERVER_CMD ?? 'node';
@@ -43,6 +46,55 @@ const serverEnv = Object.assign({}, process.env);
 
 const DEFAULT_RESPONSE_LOG_MAX_CHARS = 6000; // default max chars
 const RESPONSE_LOGGING_ENABLED = process.env.UNREAL_MCP_TEST_LOG_RESPONSES !== '0';
+const GATEWAY_CONTROL_FIELDS = ['action', 'subAction', 'params', 'consent'];
+const GATEWAY_OPTION_FIELDS = [
+  'idempotencyKey',
+  'expectedCatalogRevision',
+  'expectedRevisions',
+  'preview',
+  'savePolicy',
+  'timeoutMs',
+  'validationLevel',
+  'taskPreference'
+];
+const MAX_GATEWAY_TIMEOUT_MS = 600_000;
+
+export function toGatewayCall(toolName, args) {
+  const action = typeof args?.action === 'string'
+    ? args.action
+    : typeof args?.subAction === 'string'
+      ? args.subAction
+      : undefined;
+  if (action === undefined) {
+    throw new TypeError(`Gateway call for '${toolName}' requires a string action or subAction.`);
+  }
+
+  const nested = args?.params !== null
+    && typeof args?.params === 'object'
+    && !Array.isArray(args.params)
+    ? args.params
+    : {};
+  const params = { ...nested, ...args };
+  for (const field of GATEWAY_CONTROL_FIELDS) delete params[field];
+
+  const options = {};
+  for (const field of GATEWAY_OPTION_FIELDS) {
+    if (!Object.prototype.hasOwnProperty.call(params, field)) continue;
+    options[field] = params[field];
+    delete params[field];
+  }
+
+  return {
+    name: 'unreal',
+    arguments: {
+      operation: 'execute',
+      tool: toolName,
+      action,
+      params,
+      ...(Object.keys(options).length === 0 ? {} : { options })
+    }
+  };
+}
 
 function clampString(value, maxChars) {
   if (typeof value !== 'string') return '';
@@ -110,6 +162,34 @@ function collectResponseText(value) {
     return Object.values(value).map((entry) => collectResponseText(entry)).join(' ');
   }
   return '';
+}
+
+function hasCrashConnectionSignal({
+  errorText = '',
+  messageText = '',
+  contentText = '',
+  includeDisconnect = false
+}) {
+  const error = String(errorText).toLowerCase();
+  const message = String(messageText).toLowerCase();
+  const content = String(contentText).toLowerCase();
+  const combined = `${error} ${message} ${content}`;
+  const indicators = includeDisconnect
+    ? crashIndicatorsWithDisconnect
+    : baseCrashIndicators;
+  const hasNamedIndicator = indicators.some(
+    (indicator) => combined.includes(indicator)
+  );
+  const hasStandalone1006 =
+    error.trim() === '1006' || message.trim() === '1006';
+  const hasExplicitCloseCode1006 =
+    /\b(?:websocket|socket|connection)?\s*clos(?:e|ed)\b[^.\n]{0,40}\b(?:code\s*)?1006\b/i
+      .test(combined) ||
+    /\bclose\s+code\s*[:=]?\s*1006\b/i.test(combined);
+  const hasNotConnected = /\bnot connected\b/i.test(combined);
+
+  return hasNamedIndicator || hasStandalone1006 ||
+    hasExplicitCloseCode1006 || hasNotConnected;
 }
 
 function isRecord(value) {
@@ -284,11 +364,6 @@ function isBridgeDisconnectedSignal(value) {
   return bridgeDisconnectedIndicators.some((indicator) => text.includes(indicator));
 }
 
-function formatResultLine(testCase, status, detail, durationMs) {
-  const durationText = typeof durationMs === 'number' ? ` (${durationMs.toFixed(1)} ms)` : '';
-  return `[${status.toUpperCase()}] ${testCase.scenario}${durationText}${detail ? ` => ${detail}` : ''}`;
-}
-
 async function persistResults(toolName, results) {
   await fs.mkdir(reportsDir, { recursive: true });
   const timestamp = new Date().toISOString().replace(/[:]/g, '-');
@@ -346,9 +421,32 @@ export function evaluateExpectation(testCase, response) {
   const { actualError, actualMessage, messageStr, errorStr, contentStr, combined } = responseTextContext(response, responseOutcome);
   const isObjectExpectation = typeof expectation === 'object' && expectation !== null;
   const serializedResponse = JSON.stringify(response).toLowerCase();
+  const hasSpecificFailureAlternative = expectedConditions.some(
+    (condition, index) =>
+      index > 0 &&
+      condition !== 'error' &&
+      !successKeywords.some((keyword) => condition.includes(keyword))
+  );
   const matchedExplicitFailureAlternative = !actualSuccess && primaryExpectsSuccess
     ? findMatchedExplicitFailureAlternative(expectedConditions, combined)
     : null;
+
+  // Hard placeholder signals must fail before success alternatives are evaluated.
+  // Engine capability fallbacks such as "unsupported" or "not available" remain
+  // valid only when the expectation explicitly allows them. Restrict the hard
+  // list to placeholder-shaped indicators that are uniquely tied to
+  // not-yet-implemented actions, not the bare token "unknown" (which would
+  // also match legitimate "Unknown subAction." dispatcher errors and other
+  // surface messages).
+  const hardPluginFailureIndicators = ['does not match prefix', 'not implemented', 'not_implemented'];
+  const hardPluginFailureText = `${messageStr} ${errorStr}`;
+  const hasHardPluginFailure = hardPluginFailureIndicators.some(term => hardPluginFailureText.includes(term));
+  if (primaryExpectsSuccess && hasHardPluginFailure) {
+    return {
+      passed: false,
+      reason: `Expected success but plugin reported failure: ${actualMessage || actualError}`
+    };
+  }
 
   // Object expectations can intentionally assert exact controlled error codes
   // (for example NOT_PARTITIONED guards). Honor those before the generic
@@ -407,22 +505,16 @@ export function evaluateExpectation(testCase, response) {
   // FIX: Only check for crash indicators if response is NOT a success (success: true)
   // This prevents false positives where "Node disconnection partial" (a valid success message)
   // incorrectly matches "disconnect" as a substring.
-  // Word-boundary checks for ambiguous terms
-  const hasDisconnect = /\bdisconnect(ed)?\b/i.test(errorStr) || /\bdisconnect(ed)?\b/i.test(messageStr);
-  const hasConnectionLost = /\bconnection lost\b/i.test(errorStr) || /\bconnection lost\b/i.test(messageStr);
-  const hasNotConnected = /\bnot connected\b/i.test(errorStr) || /\bnot connected\b/i.test(messageStr);
+  const hasCrashIndicator = hasCrashConnectionSignal({
+    errorText: errorStr,
+    messageText: messageStr,
+    contentText: contentStr,
+    includeDisconnect: !actualSuccess
+  });
 
-  // Only include 'disconnect' as crash indicator when response indicates FAILURE
-  // This fixes false positives for disconnect_nodes action that returns "Disconnect operation completed."
-  const crashIndicators = actualSuccess ? baseCrashIndicators : crashIndicatorsWithDisconnect;
-  const hasCrashIndicator = (crashIndicators.some(ind =>
-    errorStr.includes(ind) || messageStr.includes(ind) || combined.includes(ind)
-  )) || hasDisconnect || hasConnectionLost || hasNotConnected;
-
-  // Only fail on crash indicators if response is NOT successful
-  // "Node disconnection partial" is a SUCCESS message, not a crash indicator
-  const responseSuccess = structuredSuccess === true;
-  const isActuallyCrash = hasCrashIndicator && !responseSuccess;
+  // Only fail on crash indicators if response is NOT successful.
+  // "Node disconnection partial" is a SUCCESS message, not a crash indicator.
+  const isActuallyCrash = hasCrashIndicator && !actualSuccess;
 
   const explicitlyExpectsCrash = lowerExpected.includes('disconnect') ||
     lowerExpected.includes('crash') ||
@@ -505,8 +597,15 @@ export function evaluateExpectation(testCase, response) {
       // CRITICAL FIX: If condition is "error" and response.isError is true, match it
       // This handles cases where the error message doesn't contain the word "error" but
       // isError: true clearly indicates an error state.
-      if (condition === 'error' && (response.isError === true || response.structuredContent?.isError === true)) {
+      if (
+        condition === 'error' &&
+        !hasSpecificFailureAlternative &&
+        (response.isError === true || response.structuredContent?.isError === true)
+      ) {
         return { passed: true, reason: `Expected condition met: isError=true` };
+      }
+      if (condition === 'error' && hasSpecificFailureAlternative) {
+        continue;
       }
 
       // Only allow substring match if:
@@ -534,8 +633,12 @@ export function evaluateExpectation(testCase, response) {
 
   // Also flag common automation/plugin failure phrases.
   // Placeholder/not-implemented responses must never satisfy success tests.
+  // Keep "unknown" in the broader list because it appears in legitimate
+  // dispatcher messages (e.g. "Unknown subAction."), but the hard short-circuit
+  // above intentionally excludes it so capability fallbacks are not over-rejected.
   const pluginFailureIndicators = ['does not match prefix', 'unknown', 'unavailable', 'unsupported', 'not implemented', 'not_implemented'];
-  const hasPluginFailure = pluginFailureIndicators.some(term => combined.includes(term));
+  const pluginFailureText = `${messageStr} ${errorStr}`;
+  const hasPluginFailure = pluginFailureIndicators.some(term => pluginFailureText.includes(term));
 
   if (!containsFailure && hasPluginFailure) {
     return {
@@ -641,12 +744,49 @@ export function summarizeResponseForReport(response) {
   };
 }
 
-function createToolCaller(client, { useProgressTimeouts = false } = {}) {
+// The consent grant a {tool}.{action}'s record demands, or undefined when it demands none. The test author is the
+// acknowledging human, so a call without its own `consent` carries this one; `consent: null` sends none.
+let consentByAction;
+function recordConsent(tool, action) {
+  if (consentByAction === undefined) {
+    const registryPath = path.join(repoRoot, 'src/tools/catalog/capabilities/generated/canonical-registry.generated.json');
+    consentByAction = new Map();
+    for (const record of JSON.parse(readFileSync(registryPath, 'utf8')).records) {
+      if (record.policy.consent === 'none') continue;
+      const grant = { capability: record.id, acknowledge: record.policy.consent };
+      for (const legacy of record.legacyIds) consentByAction.set(`${legacy.tool}.${legacy.action}`, grant);
+    }
+  }
+  return consentByAction.get(`${tool}.${action}`);
+}
+
+// The native door accepts only a nonce describe minted for the grant's capability, once. A grant the case or the
+// record supplies without one gets a fresh nonce from describe; its capability and acknowledgement stay as written,
+// so a deliberately wrong grant still meets its own refusal.
+async function withMintedNonce(client, consent) {
+  if (!isRecord(consent) || typeof consent.nonce === 'string' || typeof consent.capability !== 'string') return consent;
+  const reply = await client.callTool({ name: 'unreal', arguments: { operation: 'describe', capability: consent.capability } });
+  const nonce = normalizeMcpResponse(reply).structuredContent?.consentGrant?.nonce;
+  return typeof nonce === 'string' ? { ...consent, nonce } : consent;
+}
+
+export function createToolCaller(client, { useProgressTimeouts = false } = {}) {
   return async function callToolOnce(callOptions, baseTimeoutMs) {
-    const envDefault = Number(process.env.UNREAL_MCP_TEST_CALL_TIMEOUT_MS ?? '60000') || 60000;
-    const perCall = Number(callOptions?.arguments?.timeoutMs) || undefined;
-    const base = typeof baseTimeoutMs === 'number' && baseTimeoutMs > 0 ? baseTimeoutMs : (perCall || envDefault);
-    const serverTimeoutMs = base;
+    const configuredDefault = Number(process.env.UNREAL_MCP_TEST_CALL_TIMEOUT_MS ?? '60000');
+    const envDefault = Number.isFinite(configuredDefault) && configuredDefault > 0
+      ? Math.min(Math.trunc(configuredDefault), MAX_GATEWAY_TIMEOUT_MS)
+      : 60_000;
+    const explicitTimeout = callOptions?.name === 'unreal'
+      ? callOptions?.arguments?.options?.timeoutMs
+      : callOptions?.arguments?.timeoutMs ?? callOptions?.arguments?.params?.timeoutMs;
+    const parsedTimeout = Number(explicitTimeout);
+    const perCall = Number.isFinite(parsedTimeout) && parsedTimeout > 0
+      ? Math.trunc(parsedTimeout)
+      : undefined;
+    const base = typeof baseTimeoutMs === 'number' && Number.isFinite(baseTimeoutMs) && baseTimeoutMs > 0
+      ? baseTimeoutMs
+      : (perCall ?? envDefault);
+    const serverTimeoutMs = Math.min(Math.trunc(base), MAX_GATEWAY_TIMEOUT_MS);
     const clientTimeoutMs = useProgressTimeouts
       ? Number(process.env.UNREAL_MCP_TEST_CLIENT_TIMEOUT_MS ?? '300000') || 300000
       : serverTimeoutMs;
@@ -654,53 +794,50 @@ function createToolCaller(client, { useProgressTimeouts = false } = {}) {
       ? `server timeout: ${serverTimeoutMs}ms, client timeout: ${clientTimeoutMs}ms`
       : `timeout ${clientTimeoutMs}ms`;
 
+    const gatewayCall = callOptions.name === 'unreal'
+      ? callOptions
+      : toGatewayCall(callOptions.name, callOptions.arguments ?? {});
+    // Consent is an execute envelope sibling carried at the CASE level (never
+    // inside `arguments`), so the parameter audit never mistakes it for an
+    // action param. Attach it to whichever form produced the gateway request.
+    const consent = await withMintedNonce(client, callOptions.consent === undefined && callOptions.name !== 'unreal'
+      ? recordConsent(callOptions.name, callOptions.arguments?.action)
+      : callOptions.consent);
+    if (isRecord(consent)) {
+      gatewayCall.arguments = { ...gatewayCall.arguments, consent };
+    }
+    // Execute options a case states for itself (expect, require) ride at the case level for the
+    // same reason: inside `arguments` they would read as action params, which the gateway refuses.
+    if (isRecord(callOptions.options)) {
+      gatewayCall.arguments = { ...gatewayCall.arguments, options: { ...gatewayCall.arguments.options, ...callOptions.options } };
+    }
+    const outgoing = withServerTimeout(gatewayCall, serverTimeoutMs);
+    const callTarget = outgoing.name === 'unreal' && typeof outgoing.arguments?.tool === 'string'
+      ? `${outgoing.name}:${outgoing.arguments.tool}`
+      : outgoing.name;
+    console.log(`[CALL] ${callTarget} (${timeoutLabel})`);
+    const callPromise = client.callTool(outgoing, { timeout: clientTimeoutMs });
+
+    let timeoutId;
+    const timeoutPromise = new Promise((_, rej) => {
+      timeoutId = setTimeout(() => rej(new Error(`Local test runner timeout after ${clientTimeoutMs}ms`)), clientTimeoutMs);
+      if (timeoutId && typeof timeoutId.unref === 'function') {
+        timeoutId.unref();
+      }
+    });
+
     try {
-      console.log(`[CALL] ${callOptions.name} (${timeoutLabel})`);
-      const outgoing = Object.assign({}, callOptions, { arguments: { ...(callOptions.arguments || {}), timeoutMs: serverTimeoutMs } });
-      let callPromise;
-      try {
-        callPromise = client.callTool(outgoing, undefined, { timeout: clientTimeoutMs });
-      } catch (err) {
-        try {
-          callPromise = client.callTool(outgoing, { timeout: clientTimeoutMs });
-        } catch (inner) {
-          try {
-            callPromise = client.callTool(outgoing);
-          } catch (inner2) {
-            throw inner2 || inner || err;
-          }
-        }
-      }
-
-      let timeoutId;
-      const timeoutPromise = new Promise((_, rej) => {
-        timeoutId = setTimeout(() => rej(new Error(`Local test runner timeout after ${clientTimeoutMs}ms`)), clientTimeoutMs);
-        if (timeoutId && typeof timeoutId.unref === 'function') {
-          timeoutId.unref();
-        }
-      });
-
-      try {
-        return await Promise.race([callPromise, timeoutPromise]);
-      } finally {
-        if (timeoutId) clearTimeout(timeoutId);
-      }
-    } catch (e) {
-      const msg = String(e?.message || e || '');
-      if (msg.includes('Unknown blueprint action')) {
-        return { structuredContent: { success: false, error: msg } };
-      }
-      throw e;
+      return await Promise.race([callPromise, timeoutPromise]);
+    } finally {
+      if (timeoutId) clearTimeout(timeoutId);
     }
   };
 }
 
-function automationBridgeTarget() {
-  const host = process.env.MCP_AUTOMATION_WS_HOST ?? '127.0.0.1';
-  const ports = process.env.MCP_AUTOMATION_WS_PORTS
-    ? process.env.MCP_AUTOMATION_WS_PORTS.split(',').map((port) => parseInt(port.trim(), 10)).filter(Boolean)
-    : [8090, 8091];
-  return { host, ports };
+// The server under test is the stdio proxy, so the editor must be serving its native /mcp endpoint.
+function nativeEndpointTarget() {
+  const url = new URL(process.env.UNREAL_MCP_URL ?? 'http://127.0.0.1:3000/mcp');
+  return { host: url.hostname, ports: [Number(url.port) || 80] };
 }
 
 async function waitForAnyPort(host, ports, timeoutMs = 10000) {
@@ -717,7 +854,7 @@ async function waitForAnyPort(host, ports, timeoutMs = 10000) {
           sock.once('error', () => { if (!settled) { settled = true; sock.destroy(); reject(new Error('error')); } });
           sock.connect(port, host);
         });
-        console.log(`✅ Automation bridge appears to be listening on ${host}:${port}`);
+        console.log(`✅ Native /mcp appears to be listening on ${host}:${port}`);
         return port;
       } catch {
         // Ignore and try the next port until the overall timeout expires.
@@ -725,7 +862,7 @@ async function waitForAnyPort(host, ports, timeoutMs = 10000) {
     }
     await new Promise((resolve) => setImmediate(resolve));
   }
-  throw new Error(`Timed out waiting for automation bridge on ports: ${ports.join(',')}`);
+  throw new Error(`Timed out waiting for native /mcp on ports: ${ports.join(',')}`);
 }
 
 async function getLatestMtime(dir) {
@@ -751,6 +888,28 @@ async function getLatestMtime(dir) {
     // Ignore missing directories when deciding whether dist is stale.
   }
   return latest;
+}
+
+// A failed build used to fall through to running src/ with ts-node, so `npm
+// test` could report a full green while dist/ was broken or absent -- the
+// artifact the package actually ships. A build that was attempted and FAILED
+// is a defect, so it stops the run unless the caller says otherwise. Choosing
+// source deliberately (stale dist, UNREAL_MCP_NO_AUTO_BUILD) is unaffected:
+// that path never calls this.
+function onBuildFailure(buildErr) {
+  if (process.env.UNREAL_MCP_ALLOW_TS_FALLBACK === '1') {
+    console.warn('Build failed — UNREAL_MCP_ALLOW_TS_FALLBACK=1, running TypeScript source instead:', String(buildErr));
+    return;
+  }
+  const fatal = new Error(
+    `Build failed, so dist/ was not tested: ${String(buildErr)}
+` +
+    'Fix the build, or set UNREAL_MCP_ALLOW_TS_FALLBACK=1 to run TypeScript source and accept that dist/ is unverified.',
+  );
+  // The stat/mtime try block encloses the build call, so without this marker
+  // its catch would swallow the refusal and fall back regardless.
+  fatal.isBuildFailure = true;
+  throw fatal;
 }
 
 async function runNpmBuild() {
@@ -798,7 +957,7 @@ async function resolveServerLaunch() {
             console.log('Build succeeded — using dist/ for live tests');
             useDist = true;
           } catch (buildErr) {
-            console.warn('Automatic build failed or could not stat files — falling back to TypeScript source for live tests:', String(buildErr));
+            onBuildFailure(buildErr);
             useDist = false;
           }
         } else {
@@ -811,7 +970,8 @@ async function resolveServerLaunch() {
         console.log('Using built dist for live tests');
       }
     } catch (buildErr) {
-      console.warn('Automatic build failed or could not stat files — falling back to TypeScript source for live tests:', String(buildErr));
+      if (buildErr?.isBuildFailure === true) throw buildErr;
+      console.warn('Could not stat dist/src — falling back to TypeScript source for live tests:', String(buildErr));
       useDist = false;
       console.log('Preferring TypeScript source for tests to pick up local changes (set UNREAL_MCP_FORCE_DIST=1 to force dist)');
     }
@@ -822,7 +982,7 @@ async function resolveServerLaunch() {
       useDist = true;
       console.log('Build succeeded — using dist/ for live tests');
     } catch (buildErr) {
-      console.warn('Automatic build failed — falling back to running TypeScript source with ts-node-esm:', String(buildErr));
+      onBuildFailure(buildErr);
       useDist = false;
     }
   }
@@ -841,12 +1001,12 @@ async function resolveServerLaunch() {
 }
 
 async function createConnectedClient(clientName, waitMs) {
-  const { host, ports } = automationBridgeTarget();
-  console.log(`Waiting up to ${waitMs}ms for automation bridge on ${host}:${ports.join(',')}`);
+  const { host, ports } = nativeEndpointTarget();
+  console.log(`Waiting up to ${waitMs}ms for native /mcp on ${host}:${ports.join(',')}`);
   try {
     await waitForAnyPort(host, ports, waitMs);
   } catch (err) {
-    throw new Error(`Automation bridge did not become available before tests started: ${err.message}`);
+    throw new Error(`Native /mcp did not become available before tests started (is Enable Native MCP Server on?): ${err.message}`);
   }
 
   const launch = await resolveServerLaunch();
@@ -866,59 +1026,6 @@ async function createConnectedClient(clientName, waitMs) {
   return { transport, client };
 }
 
-function getValueAtPath(source, pathExpression) {
-  if (!pathExpression || typeof pathExpression !== 'string') return undefined;
-  return pathExpression.split('.').reduce((current, part) => {
-    if (current === undefined || current === null) return undefined;
-    if (Array.isArray(current)) {
-      const index = Number.parseInt(part, 10);
-      return Number.isInteger(index) ? current[index] : undefined;
-    }
-    if (typeof current === 'object') {
-      return Object.prototype.hasOwnProperty.call(current, part) ? current[part] : undefined;
-    }
-    return undefined;
-  }, source);
-}
-
-function matchesObjectSubset(candidate, expectedSubset) {
-  if (!candidate || typeof candidate !== 'object' || !expectedSubset || typeof expectedSubset !== 'object') return false;
-  return Object.entries(expectedSubset).every(([key, expectedValue]) => {
-    if (!Object.prototype.hasOwnProperty.call(candidate, key)) return false;
-    const actualValue = candidate[key];
-    if (expectedValue && typeof expectedValue === 'object' && !Array.isArray(expectedValue)) {
-      if ('length' in expectedValue && Array.isArray(actualValue)) return actualValue.length === expectedValue.length;
-      return matchesObjectSubset(actualValue, expectedValue);
-    }
-    return actualValue === expectedValue;
-  });
-}
-
-function evaluateAssertions(testCase, response) {
-  if (!Array.isArray(testCase.assertions) || testCase.assertions.length === 0) return { passed: true };
-
-  for (const assertion of testCase.assertions) {
-    const label = assertion.label || assertion.path || 'assertion';
-    const actual = getValueAtPath(response, assertion.path);
-
-    if (Object.prototype.hasOwnProperty.call(assertion, 'equals') && actual !== assertion.equals) {
-      return { passed: false, reason: `${label}: expected ${JSON.stringify(assertion.equals)}, got ${JSON.stringify(actual)}` };
-    }
-
-    if (Object.prototype.hasOwnProperty.call(assertion, 'length') && (!Array.isArray(actual) || actual.length !== assertion.length)) {
-      return { passed: false, reason: `${label}: expected array length ${assertion.length}, got ${Array.isArray(actual) ? actual.length : typeof actual}` };
-    }
-
-    if (assertion.includesObject) {
-      if (!Array.isArray(actual) || !actual.some((entry) => matchesObjectSubset(entry, assertion.includesObject))) {
-        return { passed: false, reason: `${label}: no array item matched ${JSON.stringify(assertion.includesObject)}` };
-      }
-    }
-  }
-
-  return { passed: true };
-}
-
 const capturedPlaceholderPattern = /\$\{captured:([^}]+)\}/g;
 /** @type {(captureKey: string) => void} */
 const noopMissingCapture = () => {};
@@ -927,12 +1034,18 @@ const noopMissingCapture = () => {};
  * Resolves ${captured:key} placeholders in nested test arguments.
  *
  * @param {unknown} value
- * @param {Record<string, string>} capturedValues
+ * @param {Record<string, unknown>} capturedValues
  * @param {(captureKey: string) => void} onMissingCapture
  * @returns {unknown}
  */
 export function resolveCapturedValues(value, capturedValues, onMissingCapture = noopMissingCapture) {
   if (typeof value === 'string') {
+    // A value that is one placeholder and nothing else keeps the captured value's own type, so a captured
+    // true goes back as a boolean, not the text "true".
+    const whole = /^\$\{captured:([^}]+)\}$/.exec(value);
+    if (whole && capturedValues[whole[1]] !== undefined && typeof capturedValues[whole[1]] !== 'string') {
+      return capturedValues[whole[1]];
+    }
     return value.replace(capturedPlaceholderPattern, (match, captureKey) => {
       const captured = capturedValues[captureKey];
       if (captured === undefined) {
@@ -959,15 +1072,29 @@ export function resolveCapturedValues(value, capturedValues, onMissingCapture = 
 /**
  * Main test runner function
  */
-export async function runToolTests(toolName, testCases) {
+export async function runToolTests(toolName, suiteCases, { folder } = {}) {
+  // `folder` brackets the suite: created first, deleted last.
+  const bracketed = folder === undefined ? suiteCases : [
+    { scenario: 'Setup: create test folder', toolName: 'manage_asset', arguments: { action: 'create_folder', path: folder }, expected: 'success|already exists' },
+    ...suiteCases,
+    { scenario: 'Cleanup: delete test folder', toolName: 'manage_asset', arguments: { action: 'delete', path: folder, force: true }, expected: 'success|not found' },
+  ];
+  // The parameter audit imports every suite to read its cases without running them.
+  if (Array.isArray(globalThis.__capturedToolSuites)) {
+    globalThis.__capturedToolSuites.push({ name: toolName, cases: bracketed });
+    return;
+  }
+  // Every folded family's advertised primary runs once, derived from the first
+  // case that exercises one of the names it folded (tests/fold-twins.mjs).
+  const testCases = withFoldTwins(bracketed);
   console.log(`Total test cases: ${testCases.length}`);
   console.log('='.repeat(60));
   console.log('');
 
     // === CAPTURED VALUES SUPPORT ===
     // Stores values captured from previous test responses for use in subsequent tests
-    // Test cases can specify captureResult: { key: 'nodeName', fromField: 'nodeId' }
-    // to capture a value, and use ${captured:key} in arguments to inject it.
+    // Test cases can capture a direct field or filter an array with where/selectField,
+    // then use ${captured:key} in later arguments.
     const capturedValues = {};
 
     /**
@@ -976,13 +1103,10 @@ export async function runToolTests(toolName, testCases) {
     function captureResultValues(testCase, response) {
       if (!testCase.captureResult || !response?.structuredContent) return;
 
-      const { key, fromField } = testCase.captureResult;
-      if (!key || !fromField) return;
-
-      const value = fromField.includes('.')
-        ? getValueAtPath(response.structuredContent, fromField)
-        : response.structuredContent[fromField];
-      if (value !== undefined) {
+      for (const { key, value } of selectCaptureValues(
+        response.structuredContent,
+        testCase.captureResult
+      )) {
         capturedValues[key] = value;
         console.log(`📦 Captured: ${key} = ${value}`);
       }
@@ -1050,40 +1174,30 @@ export async function runToolTests(toolName, testCases) {
     try {
       // Delete test levels
       await callToolOnce({ name: 'manage_level', arguments: { action: 'unload', levelName: 'MainLevel' } }, 10000).catch(() => {});
-      await callToolOnce({ name: 'manage_level', arguments: { action: 'unload', levelName: 'TestLevel' } }, 10000).catch(() => {});
 
       // Delete geometry actors
       await callToolOnce({ name: 'control_actor', arguments: { action: 'delete', actorName: 'TestBox' } }, 5000).catch(() => {});
       await callToolOnce({ name: 'control_actor', arguments: { action: 'delete', actorName: 'TestSphere' } }, 5000).catch(() => {});
-      await callToolOnce({ name: 'control_actor', arguments: { action: 'delete', actorName: 'TestCylinder' } }, 5000).catch(() => {});
       await callToolOnce({ name: 'control_actor', arguments: { action: 'delete', actorName: 'TestActor' } }, 5000).catch(() => {});
       await callToolOnce({ name: 'control_actor', arguments: { action: 'delete', actorName: 'ParentActor' } }, 5000).catch(() => {});
       await callToolOnce({ name: 'control_actor', arguments: { action: 'delete', actorName: 'ChildActor' } }, 5000).catch(() => {});
       await callToolOnce({ name: 'control_actor', arguments: { action: 'delete', actorName: 'NavTestActor' } }, 5000).catch(() => {});
       await callToolOnce({ name: 'control_actor', arguments: { action: 'delete', actorName: 'TestSpline' } }, 5000).catch(() => {});
-      await callToolOnce({ name: 'control_actor', arguments: { action: 'delete', actorName: 'TestRoad' } }, 5000).catch(() => {});
       await callToolOnce({ name: 'control_actor', arguments: { action: 'delete', actorName: 'SplineControlPoints' } }, 5000).catch(() => {});
       await callToolOnce({ name: 'control_actor', arguments: { action: 'delete', actorName: 'NavLinkProxy_Test' } }, 5000).catch(() => {});
       await callToolOnce({ name: 'control_actor', arguments: { action: 'delete', actorName: 'SmartNavLink_Test' } }, 5000).catch(() => {});
 
       // Delete test assets (blueprints, materials)
       await callToolOnce({ name: 'manage_asset', arguments: { action: 'delete_asset', path: '/Game/MCPTest/BP_Test' } }, 10000).catch(() => {});
-      await callToolOnce({ name: 'manage_asset', arguments: { action: 'delete_asset', path: '/Game/MCPTest/SplineBP' } }, 10000).catch(() => {});
-      await callToolOnce({ name: 'manage_asset', arguments: { action: 'delete_asset', path: '/Game/MCPTest/TestMaterial' } }, 10000).catch(() => {});
-      await callToolOnce({ name: 'manage_asset', arguments: { action: 'delete_asset', path: '/Game/MCPTest/Parent' } }, 10000).catch(() => {});
-      await callToolOnce({ name: 'manage_asset', arguments: { action: 'delete_asset', path: '/Game/MCPTest/M_Test' } }, 10000).catch(() => {});
       await callToolOnce({ name: 'manage_asset', arguments: { action: 'delete_asset', path: '/Game/MCPTest/ConvertedMesh' } }, 10000).catch(() => {});
       await callToolOnce({ name: 'manage_asset', arguments: { action: 'delete_asset', path: '/Game/MCPTest/TestLandscape' } }, 10000).catch(() => {});
       // Delete asset test artifacts
-      await callToolOnce({ name: 'manage_asset', arguments: { action: 'delete_asset', path: '/Game/MCPTest/TestAsset' } }, 10000).catch(() => {});
       await callToolOnce({ name: 'manage_asset', arguments: { action: 'delete_asset', path: '/Game/MCPTest/TestMesh' } }, 10000).catch(() => {});
       await callToolOnce({ name: 'manage_asset', arguments: { action: 'delete_asset', path: '/Game/MCPTest/TestMat' } }, 10000).catch(() => {});
-      await callToolOnce({ name: 'manage_asset', arguments: { action: 'delete', path: '/Game/MCPTest/TestInstance', force: true } }, 10000).catch(() => {});
 
       // Delete foliage types
       await callToolOnce({ name: 'manage_asset', arguments: { action: 'delete_asset', path: '/Game/Foliage/Grass' } }, 10000).catch(() => {});
       await callToolOnce({ name: 'manage_asset', arguments: { action: 'delete_asset', path: '/Game/Foliage/Tree' } }, 10000).catch(() => {});
-      await callToolOnce({ name: 'manage_asset', arguments: { action: 'delete_asset', path: '/Game/Foliage/Bush' } }, 10000).catch(() => {});
 
       // Delete NavMeshBoundsVolume
       await callToolOnce({ name: 'control_actor', arguments: { action: 'delete', actorName: 'NavMeshBoundsVolume' } }, 5000).catch(() => {});
@@ -1169,36 +1283,6 @@ export async function runToolTests(toolName, testCases) {
         }
       }, { maxRetries: 3, timeoutMs: 20000, operationName: 'create BP_Test blueprint' }).catch(err => console.warn('⚠️  BP_Test may already exist:', err?.message || err));
 
-      // Create Test Material
-      await callToolOnce({
-        name: 'manage_asset',
-        arguments: {
-          action: 'create_material',
-          name: 'TestMaterial',
-          path: '/Game/MCPTest'
-        }
-      }, 15000).catch(err => console.warn('⚠️  TestMaterial may already exist:', err?.message || err));
-
-      // Create Parent Material for create_material_instance tests
-      await callToolOnce({
-        name: 'manage_asset',
-        arguments: {
-          action: 'create_material',
-          name: 'Parent',
-          path: '/Game/MCPTest'
-        }
-      }, 15000).catch(err => console.warn('⚠️  Parent material may already exist:', err?.message || err));
-
-      // Create M_Test Material for material authoring tests
-      await callToolOnce({
-        name: 'manage_asset',
-        arguments: {
-          action: 'create_material',
-          name: 'M_Test',
-          path: '/Game/MCPTest'
-        }
-      }, 15000).catch(err => console.warn('⚠️  M_Test material may already exist:', err?.message || err));
-
       // === Asset Test Setup for manage_asset tests ===
       // Create TestMat material for material graph/stats tests
       await callToolOnce({
@@ -1209,29 +1293,6 @@ export async function runToolTests(toolName, testCases) {
           path: '/Game/MCPTest'
         }
       }, 15000).catch(err => console.warn('⚠️  TestMat material may already exist:', err?.message || err));
-
-      // Create TestInstance material instance for reset_instance_parameters tests
-      await callToolOnce({
-        name: 'manage_asset',
-        arguments: {
-          action: 'create_material_instance',
-          name: 'TestInstance',
-          parentMaterial: '/Game/MCPTest/Parent',
-          path: '/Game/MCPTest'
-        }
-      }, 15000).catch(err => console.warn('⚠️  TestInstance material instance may already exist:', err?.message || err));
-
-      // Create TestAsset by duplicating an engine cube mesh
-      // This is needed for duplicate/rename/move/get_dependencies/validate etc. tests
-      // Use /Engine/EngineMeshes/Cube (exists in UE 5.3-5.7) instead of /Engine/BasicShapes/Cube (doesn't exist)
-      await callToolOnce({
-        name: 'manage_asset',
-        arguments: {
-          action: 'duplicate',
-          sourcePath: '/Engine/EngineMeshes/Cube',
-          destinationPath: '/Game/MCPTest/TestAsset'
-        }
-      }, 15000).catch(err => console.warn('⚠️  TestAsset may already exist:', err?.message || err));
 
       // Create TestMesh for generate_lods and nanite_rebuild_mesh tests
       await callToolOnce({
@@ -1273,16 +1334,6 @@ export async function runToolTests(toolName, testCases) {
         }
       }, 15000).catch(err => console.warn('⚠️  Tree foliage type may already exist:', err?.message || err));
 
-      // Create Bush foliage type for procedural foliage tests
-      await callToolOnce({
-        name: 'build_environment',
-        arguments: {
-          action: 'add_foliage_type',
-          name: 'Bush',
-          meshPath: '/Engine/BasicShapes/Sphere',
-          density: 75
-        }
-      }, 15000).catch(err => console.warn('⚠️  Bush foliage type may already exist:', err?.message || err));
       // === End Foliage Setup ===
 
       // === Geometry Setup for manage_geometry tests ===
@@ -1298,11 +1349,6 @@ export async function runToolTests(toolName, testCases) {
         arguments: { action: 'create_sphere', name: 'TestSphere', radius: 50, segments: 16 }
       }, 15000).catch(err => console.warn('⚠️  TestSphere may already exist:', err?.message || err));
 
-      // Create TestCylinder for additional geometry tests
-      await callToolOnce({
-        name: 'manage_geometry',
-        arguments: { action: 'create_cylinder', name: 'TestCylinder', radius: 50, height: 100, segments: 16 }
-      }, 15000).catch(err => console.warn('⚠️  TestCylinder may already exist:', err?.message || err));
       // === End Geometry Setup ===
 
       // === Navigation Setup for manage_ai navigation tests ===
@@ -1355,59 +1401,9 @@ export async function runToolTests(toolName, testCases) {
         arguments: { action: 'create_spline_actor', actorName: 'TestSpline', location: {x:0,y:0,z:0} }
       }, 15000).catch(err => console.warn('⚠️  TestSpline may already exist:', err?.message || err));
 
-      // Create template spline actors for specialized spline tests
-      await callToolOnce({
-        name: 'build_environment',
-        arguments: { action: 'create_road_spline', actorName: 'TestRoad', location: {x:500,y:0,z:0} }
-      }, 15000).catch(err => console.warn('⚠️  TestRoad may already exist:', err?.message || err));
-
-      await callToolOnce({
-        name: 'build_environment',
-        arguments: { action: 'create_river_spline', actorName: 'TestRiver', location: {x:1000,y:0,z:0} }
-      }, 15000).catch(err => console.warn('⚠️  TestRiver may already exist:', err?.message || err));
-
-      await callToolOnce({
-        name: 'build_environment',
-        arguments: { action: 'create_fence_spline', actorName: 'TestFence', location: {x:1500,y:0,z:0} }
-      }, 15000).catch(err => console.warn('⚠️  TestFence may already exist:', err?.message || err));
-
-      await callToolOnce({
-        name: 'build_environment',
-        arguments: { action: 'create_wall_spline', actorName: 'TestWall', location: {x:2000,y:0,z:0} }
-      }, 15000).catch(err => console.warn('⚠️  TestWall may already exist:', err?.message || err));
-
-      await callToolOnce({
-        name: 'build_environment',
-        arguments: { action: 'create_cable_spline', actorName: 'TestCable', location: {x:2500,y:0,z:100} }
-      }, 15000).catch(err => console.warn('⚠️  TestCable may already exist:', err?.message || err));
-
-      await callToolOnce({
-        name: 'build_environment',
-        arguments: { action: 'create_pipe_spline', actorName: 'TestPipe', location: {x:3000,y:0,z:0} }
-      }, 15000).catch(err => console.warn('⚠️  TestPipe may already exist:', err?.message || err));
-
-      // Create SplineBP blueprint for create_spline_mesh_component tests
-      // Note: create_blueprint creates directly under path, so /Game/ creates /Game/SplineBP
-      await callToolOnce({
-        name: 'manage_blueprint',
-        arguments: { action: 'create_blueprint', name: 'SplineBP', path: '/Game' }
-      }, 15000).catch(err => console.warn('⚠️  SplineBP may already exist:', err?.message || err));
       // === End Spline Setup ===
 
       // === Level Structure Setup for manage_level_structure tests ===
-      // Create TestLevel for level blueprint and level instance tests
-      // Use retry logic for level creation due to Intel GPU driver instability
-      await callWithRetry({
-        name: 'manage_level_structure',
-        arguments: {
-          action: 'create_level',
-          levelName: 'TestLevel',
-          levelPath: '/Game/MCPTest',
-          bCreateWorldPartition: false,
-          save: true
-        }
-      }, { maxRetries: 5, timeoutMs: 20000, operationName: 'create TestLevel' }).catch(err => console.warn('⚠️  TestLevel creation failed after retries:', err?.message || err));
-
       // Create MainLevel for streaming/sublevel tests
       await callWithRetry({
         name: 'manage_level_structure',
@@ -1420,15 +1416,6 @@ export async function runToolTests(toolName, testCases) {
         }
       }, { maxRetries: 5, timeoutMs: 20000, operationName: 'create MainLevel' }).catch(err => console.warn('⚠️  MainLevel creation failed after retries:', err?.message || err));
 
-      // Create DataLayers folder for data layer tests
-      await callToolOnce({
-        name: 'manage_asset',
-        arguments: { action: 'create_folder', path: '/Game/MCPTest/DataLayers' }
-      }, 10000).catch(() => { /* Folder may already exist */ });
-
-      // Note: TestLayer creation requires World Partition enabled on the level
-      // and the DataLayerEditorSubsystem to be available. We create it per-test
-      // with unique names in the test file itself.
       // === End Level Structure Setup ===
 
       console.log('✅ Test assets setup complete\n');
@@ -1471,10 +1458,29 @@ export async function runToolTests(toolName, testCases) {
     // Rate limit: 600 req/min = 10 req/sec, so add 100ms delay between tests
     const TEST_THROTTLE_MS = Number(process.env.UNREAL_MCP_TEST_THROTTLE_MS ?? 100);
 
+    // Destructive operations (subdivide, bevel, shell, ...) can create millions of
+    // triangles, eventually causing OOM crashes, so geometry is reset periodically.
+    const GEOMETRY_RESET_INTERVAL = 5; // Reset every 5 destructive geometry tests
+
+    // Operations that cause exponential triangle growth - reset BEFORE each of these.
+    const HIGH_IMPACT_OPS = ['poke', 'subdivide', 'triangulate', 'array_radial', 'array_linear'];
+
+    const geometryActionOf = (candidate) =>
+      (candidate?.toolName === 'manage_geometry' ? candidate.arguments?.action || '' : '');
+
     for (let i = 0; i < testCases.length; i++) {
       const testCase = testCases[i];
       const testCaseTimeoutMs = getTestCaseTimeoutMs(testCase);
       const startTime = performance.now();
+
+      // Reset BEFORE the high-impact op runs. This used to sit at the bottom of the
+      // loop, which reset only once the op had already exploded the mesh it was
+      // meant to protect.
+      const upcomingGeometryAction = geometryActionOf(testCase);
+      if (HIGH_IMPACT_OPS.some(op => upcomingGeometryAction.includes(op))) {
+        console.log('  🔄 Resetting geometry before high-impact operation: ' + upcomingGeometryAction);
+        await resetGeometryActors();
+      }
 
       try {
         // Log test start to Unreal Engine console without echoing scenario text.
@@ -1488,10 +1494,26 @@ export async function runToolTests(toolName, testCases) {
 
       try {
         // Resolve captured values in arguments before executing
-        const resolvedArgs = resolveCapturedValues(testCase.arguments, capturedValues, (captureKey) => {
-          console.warn(`⚠️  Captured value '${captureKey}' not found, using placeholder`);
-        });
-        const response = await callToolOnce({ name: testCase.toolName, arguments: resolvedArgs }, testCaseTimeoutMs);
+        const missingCaptures = [];
+        const resolvedArgs = resolveCapturedValues(
+          testCase.arguments,
+          capturedValues,
+          captureKey => missingCaptures.push(captureKey)
+        );
+        if (missingCaptures.length > 0) {
+          throw new Error(
+            `Missing captured test values: ${Array.from(new Set(missingCaptures)).join(', ')}`
+          );
+        }
+        const response = await callToolOnce(
+          {
+            name: testCase.toolName,
+            arguments: resolvedArgs,
+            ...(testCase.consent === undefined ? {} : { consent: testCase.consent }),
+            ...(testCase.options === undefined ? {} : { options: testCase.options })
+          },
+          testCaseTimeoutMs
+        );
 
         const endTime = performance.now();
         const durationMs = endTime - startTime;
@@ -1511,31 +1533,6 @@ export async function runToolTests(toolName, testCases) {
         // Capture results if specified in test case
         if (passed && testCase.captureResult) {
           captureResultValues(testCase, normalizedResponse);
-        }
-
-        // CRITICAL FIX: For performance tests (tests with timeoutMs), if the response
-        // has success=false AND the PRIMARY expectation is success, the test should FAIL.
-        // However, if the PRIMARY expectation is failure (error/not found/etc), then
-        // success=false is the EXPECTED outcome and the test should PASS.
-        // This fixes negative test cases (like delete_object with non-existent actor)
-        // where success=false is the correct expected result.
-        const isPerformanceTest = testCase.arguments?.timeoutMs !== undefined ||
-                                  testCase.scenario?.includes('performance');
-        const responseSuccess = getResponseOutcome(normalizedResponse).structuredSuccess;
-
-        // Check PRIMARY intent - if the test EXPECTS failure, success=false is correct
-        const { primaryExpectsFailure } = getExpectationIntent(testCase.expected || '');
-
-        // Only fail performance test if:
-        // 1. It's a performance test AND
-        // 2. Response shows success=false AND
-        // 3. PRIMARY expectation is NOT failure (test expected success)
-        if (isPerformanceTest && responseSuccess === false && !primaryExpectsFailure) {
-          passed = false;
-          const errorMsg = normalizedResponse?.structuredContent?.error ||
-                          normalizedResponse?.structuredContent?.message ||
-                          'Operation failed during performance test';
-          reason = `Performance test failed: Operation returned success=false. Error: ${errorMsg}`;
         }
 
         const responseSummary = summarizeResponseForReport(normalizedResponse);
@@ -1582,8 +1579,10 @@ export async function runToolTests(toolName, testCases) {
         // unless the test explicitly expects disconnection. This prevents false positives
         // where tests like "error|not found" pass on crash/connection loss because
         // "error" matches any error message.
-        const crashIndicators = ['disconnect', '1006', 'econnreset', 'socket hang up', 'connection lost', 'bridge disconnected'];
-        const isCrashError = crashIndicators.some(ind => lowerError.includes(ind));
+        const isCrashError = hasCrashConnectionSignal({
+          errorText: lowerError,
+          includeDisconnect: true
+        });
         const explicitlyExpectsCrash = lowerExpected.includes('disconnect') ||
           lowerExpected.includes('crash') ||
           lowerExpected.includes('connection lost') ||
@@ -1657,30 +1656,17 @@ export async function runToolTests(toolName, testCases) {
         await new Promise(resolve => setTimeout(resolve, TEST_THROTTLE_MS));
       }
 
-      // GEOMETRY RESET: Reset geometry actors between manage_geometry tests to prevent
-      // polygon explosion from accumulating. Destructive operations (subdivide, bevel, shell,
-      // etc.) can create millions of triangles, eventually causing OOM crashes.
-      // We reset every N destructive geometry tests to balance performance vs memory safety.
-      const GEOMETRY_RESET_INTERVAL = 5; // Reset every 5 destructive geometry tests (reduced from 10)
-
-      // High-impact operations that cause exponential triangle growth - ALWAYS reset before these
-      const HIGH_IMPACT_OPS = ['poke', 'subdivide', 'triangulate', 'array_radial', 'array_linear'];
-
-      const isGeometryTest = testCase.toolName === 'manage_geometry';
-      const testAction = testCase.arguments?.action || '';
-      const isDestructiveGeometryOp = isGeometryTest && [
+      // Periodic cleanup after the destructive ops that only grow the mesh slowly.
+      // The high-impact ops are handled at the top of the loop instead.
+      const ranGeometryAction = geometryActionOf(testCase);
+      const wasDestructiveGeometryOp = [
         'subdivide', 'extrude', 'inset', 'outset', 'bevel', 'offset_faces', 'shell', 'chamfer',
         'boolean_union', 'boolean_subtract', 'boolean_intersection', 'remesh_uniform', 'poke',
         'array_linear', 'array_radial', 'cylindrify', 'spherify', 'bend', 'twist', 'taper',
         'noise_deform', 'smooth', 'relax', 'stretch', 'triangulate'
-      ].some(op => testAction.includes(op));
+      ].some(op => ranGeometryAction.includes(op));
 
-      // Always reset BEFORE high-impact operations to prevent POLYGON_LIMIT_EXCEEDED
-      const isHighImpactOp = isGeometryTest && HIGH_IMPACT_OPS.some(op => testAction.includes(op));
-      if (isHighImpactOp) {
-        console.log('  🔄 Resetting geometry before high-impact operation: ' + testAction);
-        await resetGeometryActors();
-      } else if (isDestructiveGeometryOp) {
+      if (wasDestructiveGeometryOp && !HIGH_IMPACT_OPS.some(op => ranGeometryAction.includes(op))) {
         geometryResetCounter++;
         if (geometryResetCounter % GEOMETRY_RESET_INTERVAL === 0) {
           console.log('  🔄 Resetting geometry actors to prevent polygon accumulation...');
@@ -1697,7 +1683,12 @@ export async function runToolTests(toolName, testCases) {
 
   } catch (error) {
     console.error('Test runner failed:', error);
-    process.exit(1);
+    // Set exit code but rethrow so wrappers can catch failures via Promise.all
+    // or similar. The old behavior (process.exit(1)) skipped the rethrow and
+    // terminated the process immediately; this is the supported propagation
+    // shape for callers that wrap runToolTests in try/catch.
+    process.exitCode = 1;
+    throw error;
   } finally {
     if (client) {
       try {
@@ -1711,127 +1702,6 @@ export async function runToolTests(toolName, testCases) {
         await transport.close();
       } catch {
         // ignore
-      }
-    }
-  }
-}
-
-export class TestRunner {
-  constructor(suiteName) {
-    this.suiteName = suiteName || 'Test Suite';
-    this.steps = [];
-  }
-
-  addStep(name, fn) {
-    this.steps.push({ name, fn });
-  }
-
-  async run() {
-    if (this.steps.length === 0) {
-      console.warn(`No steps registered for ${this.suiteName}`);
-      return;
-    }
-
-    console.log('\n' + '='.repeat(60));
-    console.log(`${this.suiteName}`);
-    console.log('='.repeat(60));
-    console.log(`Total steps: ${this.steps.length}`);
-    console.log('');
-
-    let transport;
-    let client;
-    const results = [];
-
-    try {
-      const waitMs = parseInt(process.env.UNREAL_MCP_WAIT_PORT_MS ?? '5000', 10);
-      ({ transport, client } = await createConnectedClient('unreal-mcp-step-runner', waitMs));
-
-      const callToolOnce = createToolCaller(client);
-
-      const tools = {
-        async executeTool(toolName, args, options = {}) {
-          const timeoutMs = typeof options.timeoutMs === 'number' ? options.timeoutMs : undefined;
-          const response = await callToolOnce({ name: toolName, arguments: args }, timeoutMs);
-          if (isBridgeDisconnectedSignal(response)) {
-            throw new Error('Unreal Engine is not connected');
-          }
-          const { structuredContent } = normalizeResponseForEvaluation(response);
-
-          if (structuredContent && typeof structuredContent === 'object') {
-            return structuredContent;
-          }
-
-          return {
-            success: !response.isError,
-            message: undefined,
-            error: undefined
-          };
-        }
-      };
-
-      for (const step of this.steps) {
-        const startTime = performance.now();
-
-        try {
-          // Log step start to Unreal Engine console without echoing scenario text.
-          await callToolOnce({
-            name: 'system_control',
-            arguments: { action: 'console_command', command: 'Log Starting MCP test step' }
-          }, 5000).catch(() => { });
-        } catch (e) { /* ignore */ }
-
-        try {
-          const ok = await step.fn(tools);
-          const durationMs = performance.now() - startTime;
-          const status = ok ? 'passed' : 'failed';
-          console.log(formatResultLine({ scenario: step.name }, status, ok ? '' : 'Step returned false', durationMs));
-          results.push({
-            scenario: step.name,
-            toolName: null,
-            arguments: null,
-            status,
-            durationMs,
-            detail: ok ? undefined : 'Step returned false'
-          });
-        } catch (err) {
-          const durationMs = performance.now() - startTime;
-          const detail = err?.message || String(err);
-          console.log(formatResultLine({ scenario: step.name }, 'failed', detail, durationMs));
-          results.push({
-            scenario: step.name,
-            toolName: null,
-            arguments: null,
-            status: 'failed',
-            durationMs,
-            detail
-          });
-          if (isBridgeDisconnectedSignal(detail)) {
-            console.log('🛑 Automation bridge is not connected; aborting remaining steps to avoid wasting time.');
-            break;
-          }
-        }
-      }
-
-      const resultsPath = await persistResults(this.suiteName, results);
-      summarize(this.suiteName, results, resultsPath);
-
-      const hasFailures = results.some((result) => result.status === 'failed');
-      process.exitCode = hasFailures ? 1 : 0;
-    } catch (error) {
-      console.error('Step-based test runner failed:', error);
-      process.exit(1);
-    } finally {
-      if (client) {
-        try {
-          await client.close();
-        } catch {
-        }
-      }
-      if (transport) {
-        try {
-          await transport.close();
-        } catch {
-        }
       }
     }
   }

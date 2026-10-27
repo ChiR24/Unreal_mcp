@@ -1,0 +1,214 @@
+// Every translation unit that calls a shared bridge helper must be able to see
+// where that helper is declared, through its OWN include graph.
+//
+// Unreal compiles this module as a unity build: several .cpp files are
+// concatenated into one blob. A file that calls GetJsonStringField without
+// including the header that declares it still compiles, silently, as long as
+// some other file in the same blob happened to include it. Blob membership is
+// an artefact of how many files precede it in the module, so adding an
+// unrelated .cpp ANYWHERE earlier reshuffles the blobs and the borrowed
+// declaration disappears.
+//
+// That is not hypothetical. Adding one file under Domains/ControlEditor broke
+// a world-objects handler in the former Misc domain with twelve
+// "identifier not found" errors for helpers it had always used and never
+// included; the Misc domain prelude included only CoreMinimal.h. The failure
+// points at a file nobody touched, which makes it expensive to read.
+//
+// Nothing else catches this. CI never compiles the plugin, so the first signal
+// is a full editor build on someone's machine. This test reads the include
+// graph as text and fails on the borrowed declaration instead.
+
+import { readFileSync, readdirSync } from 'node:fs';
+import { relative, resolve } from 'node:path';
+
+import { describe, expect, it } from 'vitest';
+
+const privateRoot = resolve(
+  process.cwd(),
+  'plugins/EngineWire/Source/EngineWire/Private',
+);
+
+/** Helpers declared in one shared header and used across many domains. */
+const SHARED_HELPERS =
+  /\b(?:GetJsonStringField|GetJsonBoolField|GetJsonNumberField|ExtractVectorField|ExtractRotatorField)\s*\(/u;
+
+/** Either the umbrella or the specific header satisfies the requirement. */
+const DECLARING_HEADERS: readonly string[] = [
+  'Foundation/BridgeHelpers/McpHelpers.h',
+  'Foundation/BridgeHelpers/Responses/McpJsonFields.h',
+];
+
+/** The asset registry reads that replaced UEditorAssetLibrary's, which refuse every call during Play. */
+const ASSET_HELPERS = /\b(?:McpAssetExists|McpLoadAsset)\s*\(/u;
+const ASSET_HEADERS: readonly string[] = [
+  'Foundation/BridgeHelpers/McpHelpers.h',
+  'Foundation/BridgeHelpers/Blueprints/McpBPPaths.h',
+];
+
+/** The wording of a refused path, declared where SanitizeProjectRelativePath is: every caller of one needs the other. */
+const PATH_REFUSAL_HELPERS = /\bMcpPathRefusalMessage\s*\(/u;
+const PATH_REFUSAL_HEADERS: readonly string[] = [
+  'Foundation/BridgeHelpers/McpHelpers.h',
+  'Foundation/BridgeHelpers/Security/McpProjectPaths.h',
+  'Foundation/BridgeHelpers/Security/McpProjectPathsRefusal.h',
+];
+
+/** The response and result helpers: adding one placement file left a renderer-settings handler without them. */
+const HANDLER_UTILS = /\bMcpHandlerUtils::/u;
+const withoutComments = (body: string): string => body.replace(/\/\*[\s\S]*?\*\//gu, '').replace(/\/\/.*$/gmu, '');
+
+/** The editor's undo buffer: GEditor->Trans is a TObjectPtr<UTransactor>, complete only with its header. A checkpoint test
+ *  that called GEditor->Trans->Reset compiled while a blob neighbour included Editor/Transactor.h, then failed when two
+ *  relations files reshuffled the blobs. */
+const TRANSACTOR = /\bGEditor->Trans->|\bUTransactor\b|\bUTransBuffer\b/u;
+const TRANSACTOR_HEADERS: readonly string[] = ['Editor/Transactor.h', 'Editor/TransBuffer.h'];
+
+/** The constants and types a file declares directly in an anonymous namespace, each as `Enclosing::Namespace::Name`. */
+const anonymousNames = (body: string): readonly string[] => {
+  const code = withoutComments(body).replace(/"(?:[^"\\\n]|\\.)*"/gu, '""').replace(/^\s*#.*$/gmu, '');
+  const scopes: (string | null | undefined)[] = []; // a namespace's name, null for an anonymous one, undefined for any other brace
+  const names: string[] = [];
+  let opening: string | null | undefined;
+  for (const line of code.split('\n')) {
+    const namespace = /^\s*namespace\b\s*([\w:]+)?\s*(\{)?/u.exec(line);
+    if (namespace && !/=|\busing\b/u.test(line)) {
+      opening = namespace[1] ?? null;
+      if (!namespace[2]) continue;
+    } else if (scopes.at(-1) === null && opening === undefined) {
+      const declared = /^\s*(?:static\s+)?(?:constexpr|const)\s+[\w:<>,\s*&]+?\s+(\w+)\s*(?:=|\[|\{)/u.exec(line)
+        ?? /^\s*(?:struct|class|enum(?:\s+class)?)\s+(\w+)\s*(?::[^;{]*)?\{?\s*$/u.exec(line);
+      if (declared) names.push(`${scopes.filter((scope): scope is string => typeof scope === 'string').join('::')}::${declared[1]}`);
+    }
+    for (const character of line) {
+      if (character === '{') {
+        scopes.push(opening);
+        opening = undefined;
+      } else if (character === '}') {
+        scopes.pop();
+      }
+    }
+  }
+  return names;
+};
+
+const INCLUDE = /#include\s+"([^"]+)"/gu;
+
+const collectSources = (directory: string, out: Map<string, string>): void => {
+  for (const entry of readdirSync(directory, { withFileTypes: true })) {
+    const entryPath = resolve(directory, entry.name);
+    if (entry.isDirectory()) {
+      // Generated shards are emitted with their own includes by the generator.
+      if (entry.name !== 'Generated') collectSources(entryPath, out);
+      continue;
+    }
+    if (!/\.(?:cpp|h)$/u.test(entry.name)) continue;
+    out.set(relative(privateRoot, entryPath).replace(/\\/gu, '/'), readFileSync(entryPath, 'utf8'));
+  }
+};
+
+const sources = new Map<string, string>();
+collectSources(privateRoot, sources);
+
+/** Walks a file's include graph, resolving only includes rooted at Private/. */
+const reachesDeclaringHeader = (
+  path: string,
+  headers: readonly string[] = DECLARING_HEADERS,
+  seen = new Set<string>(),
+): boolean => {
+  if (seen.has(path)) return false;
+  seen.add(path);
+  const body = sources.get(path);
+  if (body === undefined) return false;
+  for (const [, included] of body.matchAll(INCLUDE)) {
+    if (headers.includes(included)) return true;
+    if (sources.has(included) && reachesDeclaringHeader(included, headers, seen)) return true;
+  }
+  return false;
+};
+
+describe('plugin translation units do not borrow declarations from unity-blob neighbours', () => {
+  it('finds the shared sources it is supposed to be checking', () => {
+    // Guards against the whole suite passing vacuously if the tree moves: a
+    // zero-offender result only means something when there are users to check.
+    const users = [...sources].filter(([path, body]) => path.endsWith('.cpp') && SHARED_HELPERS.test(body));
+    expect(users.length, 'no translation unit uses the shared helpers; the pattern or root is wrong').toBeGreaterThan(50);
+  });
+
+  it('every user of the shared JSON helpers includes a header that declares them', () => {
+    const borrowed = [...sources]
+      .filter(([path, body]) => path.endsWith('.cpp') && SHARED_HELPERS.test(body))
+      .map(([path]) => path)
+      .filter((path) => !reachesDeclaringHeader(path))
+      .sort();
+
+    expect(
+      borrowed,
+      'these compile only while a unity-blob neighbour includes the helpers for them; ' +
+        `include one of ${DECLARING_HEADERS.join(' or ')} from the file or its domain prelude`,
+    ).toEqual([]);
+  });
+
+  it('every user of the asset registry reads includes the header that declares them', () => {
+    const users = [...sources].filter(([path, body]) => path.endsWith('.cpp') && ASSET_HELPERS.test(body));
+    expect(users.length).toBeGreaterThan(50);
+    expect(users.map(([path]) => path).filter((path) => !reachesDeclaringHeader(path, ASSET_HEADERS)).sort()).toEqual([]);
+  });
+
+  it('every user of the handler utils includes a header that declares them', () => {
+    const headers = [...sources].filter(([path, body]) => path.endsWith('.h') && /\bnamespace McpHandlerUtils\b/u.test(body)).map(([path]) => path);
+    const users = [...sources].filter(([path, body]) => path.endsWith('.cpp') && HANDLER_UTILS.test(withoutComments(body)));
+    expect(headers.length).toBeGreaterThan(4);
+    expect(users.length).toBeGreaterThan(50);
+    expect(users.map(([path]) => path).filter((path) => !reachesDeclaringHeader(path, headers)).sort()).toEqual([]);
+  });
+
+  // The save and load wrappers live in namespace McpSafeOperations; Safety/McpSafeOperations.h (and a few domain
+  // preludes) bring them out with a using. A placement file that included only the inner header compiled while a blob
+  // neighbour supplied the using, then failed when adding a materials file reshuffled the blobs.
+  it('every unqualified call of a safe save or load wrapper sees a using that names it', () => {
+    for (const helper of ['McpSafeAssetSave', 'McpSafeLevelSave', 'McpSafeLoadMap']) {
+      const using = new RegExp(`using\\s+McpSafeOperations::${helper}\\s*;|using\\s+namespace\\s+McpSafeOperations\\b`, 'u');
+      const call = new RegExp(`(?<!::)\\b${helper}\\s*\\(`, 'u');
+      const providers = [...sources].filter(([, body]) => using.test(withoutComments(body))).map(([path]) => path);
+      const users = [...sources].filter(([path, body]) => path.endsWith('.cpp') && !path.startsWith('Safety/') && call.test(withoutComments(body)));
+      expect(users.length, helper).toBeGreaterThan(0);
+      expect(users.map(([path]) => path).filter((path) => !providers.includes(path) && !reachesDeclaringHeader(path, providers)).sort(), helper).toEqual([]);
+    }
+  });
+
+  it('every user of the editor transactor includes its header', () => {
+    const users = [...sources].filter(([path, body]) => path.endsWith('.cpp') && TRANSACTOR.test(withoutComments(body)));
+    expect(users.length).toBeGreaterThan(4);
+    expect(users.map(([path]) => path).filter((path) => !reachesDeclaringHeader(path, TRANSACTOR_HEADERS)).sort()).toEqual([]);
+  });
+
+  // A unity blob is one translation unit, so the anonymous namespaces two files open inside the same namespace are one
+  // namespace there: a constant or type both declare is a redefinition once a reshuffle puts them in one blob
+  // (SupportTolerance in two relations files; Note and Fingerprint in two change-watch files before that).
+  it('reads the names a file declares in an anonymous namespace, by the namespace around it', () => {
+    const body = 'namespace McpA\n{\nnamespace\n{\nconstexpr double Tolerance = 3.0; // cm\nstruct FRow\n{\n    int32 Count = 0;\n};\n'
+      + 'void Helper() { const int32 Local = 1; }\n} // namespace\n} // namespace McpA\nnamespace McpB {\nnamespace {\nenum class EKind : uint8\n{\n};\n}\n}\n';
+    expect(anonymousNames(body)).toEqual(['McpA::Tolerance', 'McpA::FRow', 'McpB::EKind']);
+  });
+
+  it('no two files declare the same constant or type in an anonymous namespace of the same namespace', () => {
+    const owners = new Map<string, string[]>();
+    for (const [path, body] of sources) {
+      if (!path.endsWith('.cpp')) continue;
+      for (const name of new Set(anonymousNames(body))) owners.set(name, [...(owners.get(name) ?? []), path]);
+    }
+    expect(owners.size, 'no anonymous-namespace names found; the scan is broken').toBeGreaterThan(200);
+    expect([...owners].filter(([, paths]) => paths.length > 1).map(([name, paths]) => `${name}: ${paths.join(', ')}`).sort()).toEqual([]);
+  });
+
+  it('every user of the path refusal wording includes the header that declares it', () => {
+    const users = [...sources].filter(([path, body]) => /\.(?:cpp|h)$/u.test(path) && PATH_REFUSAL_HELPERS.test(body));
+    expect(users.length).toBeGreaterThan(50);
+    const borrowed = users
+      .map(([path]) => path)
+      .filter((path) => !PATH_REFUSAL_HEADERS.includes(path) && !reachesDeclaringHeader(path, PATH_REFUSAL_HEADERS))
+      .sort();
+    expect(borrowed).toEqual([]);
+  });
+});

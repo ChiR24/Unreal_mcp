@@ -1,2 +1,21 @@
+# Normalize all text files to LF in the repo on commit, checkout as-native.
+# This prevents accidental LF→CRLF flips that pollute diffs and git blame.
+# Platform-specific overrides below take precedence.
+* text=auto
+
 # Force CRLF for Windows batch scripts
 scripts/*.bat text eol=crlf
+
+# Shell scripts must reach Linux with LF. Today they do, but only because
+# core.autocrlf=true normalizes on commit - a contributor without it can commit
+# CRLF, and `#!/usr/bin/env bash\r` fails with "bad interpreter". package-plugin.sh
+# runs RunUAT on the build host, so that break would surface as a packaging failure.
+*.sh text eol=lf
+
+# Generated artifacts are written with LF and their drift gates (registry:check,
+# manifest:check, headers:check) compare bytes: a native-EOL (CRLF) checkout on
+# Windows failed every gate on content that had not changed.
+*.generated.* text eol=lf
+plugins/EngineWire/Source/EngineWire/Private/MCP/Generated/** text eol=lf
+plugins/EngineWire/Source/EngineWire/Private/MCP/Tools/McpGeneratedParentRegistry.cpp text eol=lf
+plugins/EngineWire/Source/EngineWire/Private/Foundation/McpTelemetrySchema.h text eol=lf

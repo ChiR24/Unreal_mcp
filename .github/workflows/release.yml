@@ -16,12 +16,12 @@ jobs:
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           fetch-depth: 0
 
       - name: Setup Node.js
-        uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6.4.0
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version: '20'
           cache: 'npm'
@@ -114,25 +114,58 @@ jobs:
         env:
           VERSION: ${{ steps.version.outputs.version }}
         run: |
-          if [ -d "plugins/McpAutomationBridge" ]; then
-            tar -czvf release-artifacts/McpAutomationBridge-plugin-${VERSION}.tar.gz \
-              plugins/McpAutomationBridge/
+          if [ -d "plugins/EngineWire" ]; then
+            # Exclude generated/editor build dirs so local paths and object
+            # files never leak into the distributed plugin archive.
+            tar -czvf release-artifacts/EngineWire-plugin-${VERSION}.tar.gz \
+              --exclude='plugins/EngineWire/Binaries' \
+              --exclude='plugins/EngineWire/Intermediate' \
+              --exclude='plugins/EngineWire/Saved' \
+              --exclude='plugins/EngineWire/.cache' \
+              --exclude='plugins/EngineWire/DerivedDataCache' \
+              plugins/EngineWire/
 
-            zip -r release-artifacts/McpAutomationBridge-plugin-${VERSION}.zip \
-              plugins/McpAutomationBridge/
+            zip -r release-artifacts/EngineWire-plugin-${VERSION}.zip \
+              plugins/EngineWire/ \
+              -x '*/Binaries/*' \
+              -x '*/Intermediate/*' \
+              -x '*/Saved/*' \
+              -x '*/.cache/*' \
+              -x '*/DerivedDataCache/*'
 
             echo "Plugin archive created"
           else
             echo "Plugin directory not found, skipping plugin archive"
           fi
 
+      - name: Verify no generated build dirs in plugin archive
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
+        run: |
+          set -e
+          if [ ! -f "release-artifacts/EngineWire-plugin-${VERSION}.tar.gz" ]; then
+            echo "No plugin archive produced; skipping verification"
+            exit 0
+          fi
+          FORBIDDEN=$(tar -tzvf "release-artifacts/EngineWire-plugin-${VERSION}.tar.gz" \
+            | awk '{print $NF}' | grep -E '(^|/)(Binaries|Intermediate|Saved|\.cache|DerivedDataCache)(/|$)' || true)
+          if [ -n "$FORBIDDEN" ]; then
+            echo "❌ Plugin archive contains generated build dirs:"
+            echo "$FORBIDDEN"
+            exit 1
+          fi
+          echo "✅ Plugin archive excludes Binaries/Intermediate/Saved/.cache/DerivedDataCache"
+
       - name: Create GitHub Release
-        uses: softprops/action-gh-release@b4309332981a82ec1c5618f44dd2e27cc8bfbfda # v3.0.0
+        uses: softprops/action-gh-release@efb35369e0ad2afab669f228072c1b0d510eae64 # v3.0.3
         with:
           name: Release ${{ steps.version.outputs.tag }}
           body_path: release_notes.md
           draft: false
-          prerelease: ${{ contains(github.ref, 'alpha') || contains(github.ref, 'beta') || contains(github.ref, 'rc') }}
+          # A semver prerelease is any version carrying a '-'. The old
+          # alpha/beta/rc substring test missed v0.6.0-a, so GitHub
+          # published a beta as a normal release and marked it Latest.
+          prerelease: ${{ contains(steps.version.outputs.tag, '-') }}
           files: |
             release-artifacts/*
         env:

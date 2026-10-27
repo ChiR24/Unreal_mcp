@@ -1,0 +1,68 @@
+{
+  "description": "Gives a weapon Fire(): it spawns ProjectileClass at the WeaponMesh's Muzzle socket (the mesh's own position when it has none), facing the same way, owned by the weapon and instigated by the pawn holding it, and launches it forward at ProjectileSpeed; calls closer together than 60 / FireRate seconds do nothing. Call Fire from the holder's input or AI.",
+  "tag": "WeaponFire",
+  "placeholders": {
+    "ProjectileType": "The ProjectileClass variable's type, Class: followed by a class path (any actor, or the narrower class the variable already holds).",
+    "ProjectileClass": "The projectile Blueprint's generated class path.",
+    "ProjectileSpeed": "Launch speed in units per second."
+  },
+  "variables": [
+    { "variableName": "ProjectileClass", "variableType": "{{ProjectileType}}", "defaultValue": "{{ProjectileClass}}", "category": "Combat", "instanceEditable": true },
+    { "variableName": "ProjectileSpeed", "variableType": "Float", "defaultValue": "{{ProjectileSpeed}}", "category": "Combat", "instanceEditable": true },
+    { "variableName": "FireRate", "variableType": "Float", "defaultValue": 600, "category": "Combat", "keepExisting": true },
+    { "variableName": "LastFireTime", "variableType": "Float", "defaultValue": -1000, "category": "Combat" }
+  ],
+  "functions": [
+    {
+      "id": "fire",
+      "functionName": "Fire",
+      "operations": [
+        { "edit": "create_node", "id": "fireNow", "nodeType": "CallFunction", "memberName": "GetGameTimeInSeconds", "memberClass": "/Script/Engine.KismetSystemLibrary" },
+        { "edit": "create_node", "id": "fireLast", "nodeType": "VariableGet", "memberName": "LastFireTime" },
+        { "edit": "create_node", "id": "fireSince", "nodeType": "CallFunction", "memberName": "Subtract_DoubleDouble", "memberClass": "/Script/Engine.KismetMathLibrary" },
+        { "edit": "create_node", "id": "fireRate", "nodeType": "VariableGet", "memberName": "FireRate" },
+        { "edit": "create_node", "id": "fireRateFloor", "nodeType": "CallFunction", "memberName": "FMax", "memberClass": "/Script/Engine.KismetMathLibrary", "pinDefaults": { "B": 1 } },
+        { "edit": "create_node", "id": "fireGap", "nodeType": "CallFunction", "memberName": "Divide_DoubleDouble", "memberClass": "/Script/Engine.KismetMathLibrary", "pinDefaults": { "A": 60 } },
+        { "edit": "create_node", "id": "fireReady", "nodeType": "CallFunction", "memberName": "GreaterEqual_DoubleDouble", "memberClass": "/Script/Engine.KismetMathLibrary" },
+        { "edit": "create_node", "id": "fireBranch", "nodeType": "Branch" },
+        { "edit": "create_node", "id": "fireStamp", "nodeType": "VariableSet", "memberName": "LastFireTime" },
+        { "edit": "create_node", "id": "fireMesh", "nodeType": "VariableGet", "memberName": "WeaponMesh" },
+        { "edit": "create_node", "id": "fireAt", "nodeType": "CallFunction", "memberName": "GetSocketLocation", "memberClass": "/Script/Engine.SceneComponent", "pinDefaults": { "InSocketName": "Muzzle" } },
+        { "edit": "create_node", "id": "fireFacing", "nodeType": "CallFunction", "memberName": "GetSocketRotation", "memberClass": "/Script/Engine.SceneComponent", "pinDefaults": { "InSocketName": "Muzzle" } },
+        { "edit": "create_node", "id": "firePlace", "nodeType": "CallFunction", "memberName": "MakeTransform", "memberClass": "/Script/Engine.KismetMathLibrary" },
+        { "edit": "create_node", "id": "fireClass", "nodeType": "VariableGet", "memberName": "ProjectileClass" },
+        { "edit": "create_node", "id": "fireOwner", "nodeType": "Self" },
+        { "edit": "create_node", "id": "fireHolder", "nodeType": "CallFunction", "memberName": "GetInstigator", "memberClass": "/Script/Engine.Actor" },
+        { "edit": "create_node", "id": "fireSpawn", "nodeType": "SpawnActorFromClass", "pinDefaults": { "CollisionHandlingOverride": "AlwaysSpawn" } },
+        { "edit": "create_node", "id": "fireMover", "nodeType": "CallFunction", "memberName": "GetComponentByClass", "memberClass": "/Script/Engine.Actor", "pinDefaults": { "ComponentClass": "/Script/Engine.ProjectileMovementComponent" } },
+        { "edit": "create_node", "id": "fireSpeed", "nodeType": "VariableGet", "memberName": "ProjectileSpeed" },
+        { "edit": "create_node", "id": "fireForward", "nodeType": "CallFunction", "memberName": "MakeVector", "memberClass": "/Script/Engine.KismetMathLibrary" },
+        { "edit": "create_node", "id": "fireLaunch", "nodeType": "CallFunction", "memberName": "SetVelocityInLocalSpace", "memberClass": "/Script/Engine.ProjectileMovementComponent" },
+        { "edit": "connect_pins", "from": "$fireNow.ReturnValue", "to": "$fireSince.A" },
+        { "edit": "connect_pins", "from": "$fireLast.LastFireTime", "to": "$fireSince.B" },
+        { "edit": "connect_pins", "from": "$fireRate.FireRate", "to": "$fireRateFloor.A" },
+        { "edit": "connect_pins", "from": "$fireRateFloor.ReturnValue", "to": "$fireGap.B" },
+        { "edit": "connect_pins", "from": "$fireSince.ReturnValue", "to": "$fireReady.A" },
+        { "edit": "connect_pins", "from": "$fireGap.ReturnValue", "to": "$fireReady.B" },
+        { "edit": "connect_pins", "from": "$fireReady.ReturnValue", "to": "$fireBranch.Condition" },
+        { "edit": "connect_pins", "from": "$fireNow.ReturnValue", "to": "$fireStamp.LastFireTime" },
+        { "edit": "connect_pins", "from": "$fireMesh.WeaponMesh", "to": "$fireAt.self" },
+        { "edit": "connect_pins", "from": "$fireMesh.WeaponMesh", "to": "$fireFacing.self" },
+        { "edit": "connect_pins", "from": "$fireAt.ReturnValue", "to": "$firePlace.Location" },
+        { "edit": "connect_pins", "from": "$fireFacing.ReturnValue", "to": "$firePlace.Rotation" },
+        { "edit": "connect_pins", "from": "$fireClass.ProjectileClass", "to": "$fireSpawn.Class" },
+        { "edit": "connect_pins", "from": "$firePlace.ReturnValue", "to": "$fireSpawn.SpawnTransform" },
+        { "edit": "connect_pins", "from": "$fireOwner.self", "to": "$fireSpawn.Owner" },
+        { "edit": "connect_pins", "from": "$fireHolder.ReturnValue", "to": "$fireSpawn.Instigator" },
+        { "edit": "connect_pins", "from": "$fireSpawn.ReturnValue", "to": "$fireMover.self" },
+        { "edit": "connect_pins", "from": "$fireSpeed.ProjectileSpeed", "to": "$fireForward.X" },
+        { "edit": "connect_pins", "from": "$fireMover.ReturnValue", "to": "$fireLaunch.self" },
+        { "edit": "connect_pins", "from": "$fireForward.ReturnValue", "to": "$fireLaunch.NewVelocity" },
+        { "edit": "connect_pins", "from": "$fire.then", "to": "$fireBranch.execute" },
+        { "edit": "connect_pins", "from": "$fireBranch.then", "to": "$fireStamp.execute" },
+        { "edit": "connect_pins", "from": "$fireStamp.then", "to": "$fireSpawn.execute" },
+        { "edit": "connect_pins", "from": "$fireSpawn.then", "to": "$fireLaunch.execute" }
+      ]
+    }
+  ]
+}

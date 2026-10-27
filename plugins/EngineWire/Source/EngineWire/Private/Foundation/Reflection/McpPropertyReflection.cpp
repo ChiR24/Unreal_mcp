@@ -1,0 +1,209 @@
+#include "Foundation/Reflection/McpPropertyReflection.h"
+
+#include "Core/Compatibility/McpVersionCompatibility.h"
+#include "Foundation/Reflection/McpPropertyReflectionPrivate.h"
+#include MCP_USER_DEFINED_STRUCT_HEADER
+
+namespace McpPropertyReflection
+{
+TSharedPtr<FJsonValue> ExportPropertyToJsonValue(void* TargetContainer, FProperty* Property)
+{
+    if (!TargetContainer || !Property) return nullptr;
+
+    if (FStrProperty* Str = CastField<FStrProperty>(Property))
+    {
+        return MakeShared<FJsonValueString>(Str->GetPropertyValue_InContainer(TargetContainer));
+    }
+    if (FNameProperty* NameProp = CastField<FNameProperty>(Property))
+    {
+        return MakeShared<FJsonValueString>(NameProp->GetPropertyValue_InContainer(TargetContainer).ToString());
+    }
+    if (FTextProperty* TextProp = CastField<FTextProperty>(Property))
+    {
+        return MakeShared<FJsonValueString>(Private::ExportTextToJsonString(TextProp->GetPropertyValue_InContainer(TargetContainer)));
+    }
+    if (FBoolProperty* BoolProp = CastField<FBoolProperty>(Property))
+    {
+        return MakeShared<FJsonValueBoolean>(BoolProp->GetPropertyValue_InContainer(TargetContainer));
+    }
+    if (FFloatProperty* FloatProp = CastField<FFloatProperty>(Property))
+    {
+        return MakeShared<FJsonValueNumber>(ReadableFloat(FloatProp->GetPropertyValue_InContainer(TargetContainer)));
+    }
+    if (FDoubleProperty* DoubleProp = CastField<FDoubleProperty>(Property))
+    {
+        return MakeShared<FJsonValueNumber>(DoubleProp->GetPropertyValue_InContainer(TargetContainer));
+    }
+    if (FIntProperty* IntProp = CastField<FIntProperty>(Property))
+    {
+        return MakeShared<FJsonValueNumber>(static_cast<double>(IntProp->GetPropertyValue_InContainer(TargetContainer)));
+    }
+    if (FInt64Property* Int64Prop = CastField<FInt64Property>(Property))
+    {
+        return MakeShared<FJsonValueNumber>(static_cast<double>(Int64Prop->GetPropertyValue_InContainer(TargetContainer)));
+    }
+
+    if (FByteProperty* ByteProp = CastField<FByteProperty>(Property))
+    {
+        const uint8 ByteVal = ByteProp->GetPropertyValue_InContainer(TargetContainer);
+        if (UEnum* Enum = ByteProp->Enum)
+        {
+            const FString EnumName = Enum->GetNameStringByValue(ByteVal);
+            if (!EnumName.IsEmpty()) return MakeShared<FJsonValueString>(EnumName);
+        }
+        return MakeShared<FJsonValueNumber>(static_cast<double>(ByteVal));
+    }
+
+    if (FEnumProperty* EnumProp = CastField<FEnumProperty>(Property))
+    {
+        if (UEnum* Enum = EnumProp->GetEnum())
+        {
+            void* ValuePtr = EnumProp->ContainerPtrToValuePtr<void>(TargetContainer);
+            if (FNumericProperty* UnderlyingProp = EnumProp->GetUnderlyingProperty())
+            {
+                const int64 EnumVal = UnderlyingProp->GetSignedIntPropertyValue(ValuePtr);
+                const FString EnumName = Enum->GetNameStringByValue(EnumVal);
+                if (!EnumName.IsEmpty())
+                {
+                    return MakeShared<FJsonValueString>(EnumName);
+                }
+                return MakeShared<FJsonValueNumber>(static_cast<double>(EnumVal));
+            }
+        }
+        return MakeShared<FJsonValueNumber>(0.0);
+    }
+
+    // Also FSoftClassProperty, which derives from FSoftObjectProperty.
+    if (FSoftObjectProperty* SoftObjectProp = CastField<FSoftObjectProperty>(Property))
+    {
+        const FSoftObjectPtr* SoftObject = static_cast<const FSoftObjectPtr*>(SoftObjectProp->ContainerPtrToValuePtr<void>(TargetContainer));
+        if (SoftObject && !SoftObject->IsNull())
+        {
+            return MakeShared<FJsonValueString>(SoftObject->ToSoftObjectPath().ToString());
+        }
+        return MakeShared<FJsonValueNull>();
+    }
+    // The base also reads weak and lazy pointers (a skeletal mesh's LeaderPoseComponent), which came back as an
+    // unsupported type; soft ones were answered above with their path, unloaded.
+    if (FObjectPropertyBase* ObjectProp = CastField<FObjectPropertyBase>(Property))
+    {
+        UObject* Object = ObjectProp->GetObjectPropertyValue_InContainer(TargetContainer);
+        if (Object)
+        {
+            return MakeShared<FJsonValueString>(Object->GetPathName());
+        }
+        return MakeShared<FJsonValueNull>();
+    }
+
+    if (FStructProperty* StructProp = CastField<FStructProperty>(Property))
+    {
+        const FString TypeName = StructProp->Struct ? StructProp->Struct->GetName() : FString();
+        if (TypeName.Equals(TEXT("Vector"), ESearchCase::IgnoreCase))
+        {
+            return MakeShared<FJsonValueArray>(McpHandlerUtils::VectorToJsonArray(*StructProp->ContainerPtrToValuePtr<FVector>(TargetContainer)));
+        }
+        if (TypeName.Equals(TEXT("Rotator"), ESearchCase::IgnoreCase))
+        {
+            return MakeShared<FJsonValueArray>(McpHandlerUtils::RotatorToJsonArray(*StructProp->ContainerPtrToValuePtr<FRotator>(TargetContainer)));
+        }
+
+        // A Blueprint struct names its members <Name>_<n>_<GUID> inside, and its export text spelled that out
+        // ("PlayerName_2_0AD1...=\"Di\""): read it as an object under the names it was authored with, the keys a
+        // write takes.
+        if (const UUserDefinedStruct* UserStruct = Cast<UUserDefinedStruct>(StructProp->Struct))
+        {
+            TSharedPtr<FJsonObject> Members = MakeShared<FJsonObject>();
+            void* StructMemory = StructProp->ContainerPtrToValuePtr<void>(TargetContainer);
+            for (TFieldIterator<FProperty> It(UserStruct); It; ++It)
+            {
+                Members->SetField(It->GetAuthoredName(), ExportPropertyToJsonValueOrText(StructMemory, *It));
+            }
+            return MakeShared<FJsonValueObject>(Members);
+        }
+        // The value as its own defaults writes every field: with no defaults the export compares each field
+        // to zero and leaves zeros out, so a damping set to 0 (struct default 1) read as never set.
+        FString Exported;
+        const void* StructValue = StructProp->ContainerPtrToValuePtr<void>(TargetContainer);
+        StructProp->Struct->ExportText(Exported, StructValue, StructValue, nullptr, 0, nullptr, true);
+        return MakeShared<FJsonValueString>(Exported);
+    }
+
+    if (FArrayProperty* ArrayProp = CastField<FArrayProperty>(Property))
+    {
+        return MakeShared<FJsonValueArray>(ExportArrayToJson(TargetContainer, ArrayProp));
+    }
+    if (FMapProperty* MapProp = CastField<FMapProperty>(Property))
+    {
+        return Private::ExportMapToJsonValue(TargetContainer, MapProp);
+    }
+    if (FSetProperty* SetProp = CastField<FSetProperty>(Property))
+    {
+        return Private::ExportSetToJsonValue(TargetContainer, SetProp);
+    }
+
+    return nullptr;
+}
+
+double ReadableFloat(float Value)
+{
+    return FCString::Atod(*FString::Printf(TEXT("%.7g"), Value));
+}
+
+TSharedPtr<FJsonValue> ExportPropertyToJsonValueOrText(void* TargetContainer, FProperty* Property)
+{
+    TSharedPtr<FJsonValue> Json = ExportPropertyToJsonValue(TargetContainer, Property);
+    if (!Json.IsValid() && TargetContainer && Property)
+    {
+        FString Text;
+        const void* Value = Property->ContainerPtrToValuePtr<void>(TargetContainer);
+        MCP_PROPERTY_EXPORT_TEXT(Property, Text, Value, Value, nullptr, PPF_None);
+        Json = MakeShared<FJsonValueString>(Text);
+    }
+    return Json;
+}
+
+namespace
+{
+// A struct's editable fields as export text; "" when none is left out or none is editable, so a vector, a colour or
+// any all-editable struct keeps the full export.
+FString EditableStructText(const UScriptStruct* Struct, void* Data)
+{
+    TArray<FString> Fields;
+    bool bLeftOut = false;
+    for (TFieldIterator<FProperty> It(Struct); It; ++It)
+    {
+        if (!It->HasAnyPropertyFlags(CPF_Edit))
+        {
+            bLeftOut = true;
+            continue;
+        }
+        FString Text;
+        MCP_PROPERTY_EXPORT_TEXT(*It, Text, It->ContainerPtrToValuePtr<void>(Data), nullptr, nullptr, PPF_Delimited);
+        Fields.Add(It->GetName() + TEXT("=") + Text);
+    }
+    return bLeftOut && !Fields.IsEmpty() ? TEXT("(") + FString::Join(Fields, TEXT(",")) + TEXT(")") : FString();
+}
+}
+
+// Runtime state a reader wants (a pontoon's LocalForce, CenterLocation, WaterHeight ...) is not what a caller wrote:
+// four written pontoons echoed 4 KB of it. Reads keep the full export.
+TSharedPtr<FJsonValue> ExportWrittenValueToJson(void* TargetContainer, FProperty* Property)
+{
+    FArrayProperty* ArrayProp = CastField<FArrayProperty>(Property);
+    FStructProperty* StructProp = CastField<FStructProperty>(ArrayProp ? ArrayProp->Inner : Property);
+    if (!TargetContainer || !StructProp || !StructProp->Struct) return ExportPropertyToJsonValue(TargetContainer, Property);
+    if (!ArrayProp)
+    {
+        const FString Text = EditableStructText(StructProp->Struct, StructProp->ContainerPtrToValuePtr<void>(TargetContainer));
+        return Text.IsEmpty() ? ExportPropertyToJsonValue(TargetContainer, Property) : MakeShared<FJsonValueString>(Text);
+    }
+    TArray<TSharedPtr<FJsonValue>> Out;
+    FScriptArrayHelper Helper(ArrayProp, ArrayProp->ContainerPtrToValuePtr<void>(TargetContainer));
+    for (int32 Index = 0; Index < Helper.Num(); ++Index)
+    {
+        const FString Text = EditableStructText(StructProp->Struct, Helper.GetRawPtr(Index));
+        Out.Add(Text.IsEmpty() ? Private::ExportElementToJsonValue(ArrayProp->Inner, Helper.GetRawPtr(Index)) : MakeShared<FJsonValueString>(Text));
+    }
+    return MakeShared<FJsonValueArray>(Out);
+}
+}
