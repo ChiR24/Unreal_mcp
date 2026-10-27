@@ -14041,9 +14041,15 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
     "inputSchema": {
       "type": "object",
       "properties": {
+        "absorption": {
+          "type": "number",
+          "minimum": 0.02,
+          "maximum": 0.9,
+          "description": "The share of sound energy the surfaces absorb at each reflection (default 0.1): 0.02-0.05 bare concrete or tile, 0.1 plaster or wood, 0.2-0.3 a furnished room, 0.5 and up heavy curtains or a treated studio."
+        },
         "actorName": {
           "type": "string",
-          "description": "Target actor label or name in the current level."
+          "description": "An actor whose location is the listener, instead of location (a character, a sound source); the rays pass through it."
         },
         "all": {
           "type": "boolean",
@@ -14327,13 +14333,39 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "description": "Localization key format of the context (default {ContextHash})."
         },
         "location": {
-          "type": "array",
-          "description": "World location as [x, y, z] (an {x, y, z} object is accepted).",
-          "items": {
-            "type": "number"
-          },
-          "minItems": 3,
-          "maxItems": 3
+          "oneOf": [
+            {
+              "type": "array",
+              "description": "World location as [x, y, z] (an {x, y, z} object is accepted).",
+              "items": {
+                "type": "number"
+              },
+              "minItems": 3,
+              "maxItems": 3
+            },
+            {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "x",
+                "y",
+                "z"
+              ],
+              "properties": {
+                "x": {
+                  "type": "number"
+                },
+                "y": {
+                  "type": "number"
+                },
+                "z": {
+                  "type": "number"
+                }
+              },
+              "description": "Where the listener stands, in cm: a point in the open air of the room."
+            }
+          ],
+          "description": "Where the listener stands, in cm: a point in the open air of the room."
         },
         "loopCount": {
           "type": "number",
@@ -14370,6 +14402,12 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "lpfRadiusMin": {
           "type": "number",
           "description": "Distance in cm where the low-pass starts closing; nearer than this the cutoff is lpfFrequencyAtMin."
+        },
+        "maxDistance": {
+          "type": "number",
+          "minimum": 500,
+          "maximum": 20000,
+          "description": "How far a ray reaches, in cm (default 5000); a ray that meets nothing within it counts as open."
         },
         "maxSeconds": {
           "type": "number",
@@ -14668,7 +14706,8 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             "get_audio_info",
             "set_dialogue_context",
             "measure_loudness",
-            "normalize_loudness"
+            "normalize_loudness",
+            "analyze_acoustics"
           ],
           "description": "Action to invoke on manage_audio."
         }
@@ -14755,6 +14794,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "number",
           "description": "Meter readings that arrived, about one per editor frame; 0 means the engine never rendered the sound."
         },
+        "eyringRt60": {
+          "type": "number",
+          "description": "Eyring's formula, given only for a closed room with proportion under 3."
+        },
         "fadeTime": {
           "type": "number",
           "description": "Seconds the fade takes, as used."
@@ -14762,6 +14805,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "falloffDistance": {
           "type": "number",
           "description": "Distance in centimetres over which the attenuation falls off."
+        },
+        "firstReflectionMs": {
+          "type": "number",
+          "description": "Out to the nearest surface and back, in milliseconds."
         },
         "graphInputs": {
           "type": "array",
@@ -14781,6 +14828,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           },
           "description": "Outputs of the MetaSound itself: name, type and the nodeId that carries each."
         },
+        "heightM": {
+          "type": "number",
+          "description": "Floor to ceiling, in metres."
+        },
         "inGame": {
           "type": "boolean",
           "description": "True when the change went to the running game (Play In Editor), whose sound is the one heard; false for the editor."
@@ -14789,9 +14840,38 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "boolean",
           "description": "True when the node was newly inserted; false when an existing one was updated."
         },
+        "lengthM": {
+          "type": "number",
+          "description": "The longer of the room's floor sides, along its own walls, in metres."
+        },
+        "listener": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "x",
+            "y",
+            "z"
+          ],
+          "properties": {
+            "x": {
+              "type": "number"
+            },
+            "y": {
+              "type": "number"
+            },
+            "z": {
+              "type": "number"
+            }
+          },
+          "description": "Where the rays were cast from."
+        },
         "matchCount": {
           "type": "number",
           "description": "Number of node classes that match filter, before limit cut the list."
+        },
+        "meanFreePathM": {
+          "type": "number",
+          "description": "The mean distance sound travels between reflections (4 V / S), in metres."
         },
         "message": {
           "type": "string",
@@ -14800,6 +14880,12 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "modifierCount": {
           "type": "number",
           "description": "Number of Sound Class effects declared by the inspected Sound Mix."
+        },
+        "nextCall": {
+          "type": "object",
+          "additionalProperties": true,
+          "x-unreal-reflection-boundary": true,
+          "description": "The create_reverb_effect call making a Reverb Effect with decayTime rt60 (0.1-20 s, the engine's range)."
         },
         "nodeClasses": {
           "type": "array",
@@ -14845,6 +14931,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "boolean",
           "description": "Whether the new MetaSound is a one-shot source; false when it was made continuous (no On Finished output)."
         },
+        "openShare": {
+          "type": "number",
+          "description": "The share of rays (0-1) that met nothing within maxDistance."
+        },
         "parentClass": {
           "type": "string",
           "description": "Path of the parent Sound Class the inspected Sound Class inherits from."
@@ -14864,6 +14954,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "playing": {
           "type": "boolean",
           "description": "Whether the faded sound is playing after the call (a fade out still plays until it ends)."
+        },
+        "proportion": {
+          "type": "number",
+          "description": "Its largest side over its smallest; past 3 it is long or flat and Eyring's formula does not hold."
         },
         "removed": {
           "type": "array",
@@ -14893,9 +14987,55 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "number",
           "description": "Paused sounds this call resumed (0 when none was paused)."
         },
+        "roomCenter": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "x",
+            "y",
+            "z"
+          ],
+          "properties": {
+            "x": {
+              "type": "number"
+            },
+            "y": {
+              "type": "number"
+            },
+            "z": {
+              "type": "number"
+            }
+          },
+          "description": "The middle of the box around every first hit (world axes), in cm."
+        },
+        "roomSize": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "x",
+            "y",
+            "z"
+          ],
+          "properties": {
+            "x": {
+              "type": "number"
+            },
+            "y": {
+              "type": "number"
+            },
+            "z": {
+              "type": "number"
+            }
+          },
+          "description": "The size of that box, in cm."
+        },
         "rootNodeClass": {
           "type": "string",
           "description": "Class of the node now at the root of the Sound Cue."
+        },
+        "rt60": {
+          "type": "number",
+          "description": "Seconds for sound to fall 60 dB, from the traced decay; absent when the decay fell less than 25 dB (most rays escaped)."
         },
         "sampleRate": {
           "type": "number",
@@ -14970,6 +15110,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "boolean",
           "description": "Whether the action succeeded."
         },
+        "surfaceM2": {
+          "type": "number",
+          "description": "The surface seen from the listener, in square metres."
+        },
         "targetVolume": {
           "type": "number",
           "description": "Volume the fade ends at, as used: a multiplier, where 1 plays the sound at the volume it was made with."
@@ -15006,6 +15150,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "number",
           "description": "Volume multiplier declared by the inspected Sound Class."
         },
+        "volumeM3": {
+          "type": "number",
+          "description": "The volume seen from the listener, in cubic metres (a space around a corner is not counted)."
+        },
         "wavePeakDb": {
           "type": "number",
           "description": "A Sound Wave only: the loudest sample of the recording itself, in dB of full scale, read from its imported audio rather than the meter, so it holds however few frames the editor drew. Before volume. Compare sounds by this when matching levels."
@@ -15017,6 +15165,16 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "waveSeconds": {
           "type": "number",
           "description": "A Sound Wave only: the length of the recording in seconds."
+        },
+        "widthM": {
+          "type": "number",
+          "description": "The shorter of its floor sides, in metres."
+        },
+        "zoneCall": {
+          "type": "object",
+          "additionalProperties": true,
+          "x-unreal-reflection-boundary": true,
+          "description": "The create_reverb_zone call placing that effect as an Audio Volume over roomCenter and roomSize."
         }
       },
       "additionalProperties": true

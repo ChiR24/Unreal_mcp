@@ -9417,9 +9417,11 @@
         "get_audio_info",
         "set_dialogue_context",
         "measure_loudness",
-        "normalize_loudness"
+        "normalize_loudness",
+        "analyze_acoustics"
       ],
       "parameterNames": [
+        "absorption",
         "actorName",
         "all",
         "applyEQ",
@@ -9485,6 +9487,7 @@
         "lpfFrequencyAtMin",
         "lpfRadiusMax",
         "lpfRadiusMin",
+        "maxDistance",
         "maxSeconds",
         "midFrequency",
         "midGain",
@@ -9545,9 +9548,15 @@
       "inputSchema": {
         "type": "object",
         "properties": {
+          "absorption": {
+            "type": "number",
+            "minimum": 0.02,
+            "maximum": 0.9,
+            "description": "The share of sound energy the surfaces absorb at each reflection (default 0.1): 0.02-0.05 bare concrete or tile, 0.1 plaster or wood, 0.2-0.3 a furnished room, 0.5 and up heavy curtains or a treated studio."
+          },
           "actorName": {
             "type": "string",
-            "description": "Target actor label or name in the current level."
+            "description": "An actor whose location is the listener, instead of location (a character, a sound source); the rays pass through it."
           },
           "all": {
             "type": "boolean",
@@ -9831,13 +9840,39 @@
             "description": "Localization key format of the context (default {ContextHash})."
           },
           "location": {
-            "type": "array",
-            "description": "World location as [x, y, z] (an {x, y, z} object is accepted).",
-            "items": {
-              "type": "number"
-            },
-            "minItems": 3,
-            "maxItems": 3
+            "oneOf": [
+              {
+                "type": "array",
+                "description": "World location as [x, y, z] (an {x, y, z} object is accepted).",
+                "items": {
+                  "type": "number"
+                },
+                "minItems": 3,
+                "maxItems": 3
+              },
+              {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "x",
+                  "y",
+                  "z"
+                ],
+                "properties": {
+                  "x": {
+                    "type": "number"
+                  },
+                  "y": {
+                    "type": "number"
+                  },
+                  "z": {
+                    "type": "number"
+                  }
+                },
+                "description": "Where the listener stands, in cm: a point in the open air of the room."
+              }
+            ],
+            "description": "Where the listener stands, in cm: a point in the open air of the room."
           },
           "loopCount": {
             "type": "number",
@@ -9874,6 +9909,12 @@
           "lpfRadiusMin": {
             "type": "number",
             "description": "Distance in cm where the low-pass starts closing; nearer than this the cutoff is lpfFrequencyAtMin."
+          },
+          "maxDistance": {
+            "type": "number",
+            "minimum": 500,
+            "maximum": 20000,
+            "description": "How far a ray reaches, in cm (default 5000); a ray that meets nothing within it counts as open."
           },
           "maxSeconds": {
             "type": "number",
@@ -10172,7 +10213,8 @@
               "get_audio_info",
               "set_dialogue_context",
               "measure_loudness",
-              "normalize_loudness"
+              "normalize_loudness",
+              "analyze_acoustics"
             ],
             "description": "Action to invoke on manage_audio."
           }

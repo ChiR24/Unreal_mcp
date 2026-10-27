@@ -709,4 +709,7 @@ export const PLAIN_PROBE: readonly PlainProbeCase[] = [
   { query: 'loudness of sound effects', accepted: ['manage_audio.measure_loudness'] },
   { query: 'normalize loudness', accepted: ['manage_audio.normalize_loudness'] },
   { query: 'make sounds equally loud', accepted: ['manage_audio.normalize_loudness'] },
+  { query: 'room acoustics', accepted: ['manage_audio.analyze_acoustics'] },
+  { query: 'reverberation time', accepted: ['manage_audio.analyze_acoustics'] },
+  { query: 'how does this room sound', accepted: ['manage_audio.analyze_acoustics'] },
 ];

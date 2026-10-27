@@ -4,7 +4,7 @@
 
 # Action reference
 
-Catalog revision: `c488e0bbfae201c7`
+Catalog revision: `1378918dd6583da0`
 
 Both transports expose exactly ONE public MCP tool, `unreal`, with the four
 operations `search` / `describe` / `execute` / `configure`. The parent tools
@@ -13,7 +13,7 @@ by `tools/list` and a direct `tools/call` on one returns a
 `DIRECT_TOOL_CALL_REMOVED` receipt rather than executing
 (`src/server/gateway/direct-call-migration.ts`).
 
-The catalog declares 447 capabilities across
+The catalog declares 448 capabilities across
 23 internal parent tools.
 Every row is derived from the capability record that the gateway actually
 validates against, so `execute` cannot accept an action this table omits.
@@ -43,7 +43,7 @@ validates against, so `execute` cannot accept an action this table omits.
 | `inspect` | 27 | 22 | 4 | 1 | inspect |
 | `manage_ai` | 17 | 3 | 14 | 0 | manage ai |
 | `manage_asset` | 50 | 12 | 33 | 5 | asset, datatable, enum, material, struct, texture |
-| `manage_audio` | 16 | 4 | 12 | 0 | audio |
+| `manage_audio` | 17 | 5 | 12 | 0 | audio |
 | `manage_blueprint` | 37 | 10 | 20 | 7 | blueprint, widget |
 | `manage_character` | 10 | 2 | 8 | 0 | manage character |
 | `manage_combat` | 6 | 1 | 5 | 0 | manage combat |
@@ -62,7 +62,7 @@ validates against, so `execute` cannot accept an action this table omits.
 
 ## Capabilities requiring consent
 
-68 of 447 capabilities require consent.
+68 of 448 capabilities require consent.
 
 | Capability | Tool | Action | Effect | Consent |
 | --- | --- | --- | --- | --- |
@@ -375,6 +375,7 @@ validates against, so `execute` cannot accept an action this table omits.
 | `manage_ai.set_ai_movement` | `manage_ai` | `set_ai_movement` | write | write | none | `manage_ai.set_ai_movement` |
 | `manage_ai.set_focus` | `manage_ai` | `set_focus` | write | write | none | `manage_ai.set_focus` `manage_ai.clear_focus` |
 | `manage_ai.setup_perception` | `manage_ai` | `setup_perception` | write | write | none | `manage_ai.setup_perception` `manage_ai.add_ai_perception_component` `manage_ai.configure_sight_config` `manage_ai.configure_hearing_config` `manage_ai.configure_damage_sense_config` `manage_ai.set_perception_team` `manage_ai.set_ai_perception` |
+| `manage_audio.analyze_acoustics` | `manage_audio` | `manage_audio` | read | read | none | `manage_audio.analyze_acoustics` |
 | `manage_audio.configure_sound_attenuation` | `manage_audio` | `manage_audio` | write | write | none | `manage_audio.configure_sound_attenuation` `manage_audio.configure_distance_attenuation` `manage_audio.configure_spatialization` `manage_audio.configure_occlusion` `manage_audio.configure_reverb_send` `manage_audio.set_audio_occlusion` `manage_audio.set_sound_attenuation` |
 | `manage_audio.configure_sound_class` | `manage_audio` | `manage_audio` | write | write | none | `manage_audio.configure_sound_class` `manage_audio.set_class_parent` `manage_audio.set_class_properties` `manage_audio.add_mix_modifier` `manage_audio.configure_mix_eq` |
 | `manage_audio.control_sound_mix` | `manage_audio` | `manage_audio` | write | write | none | `manage_audio.control_sound_mix` `manage_audio.push_sound_mix` `manage_audio.pop_sound_mix` `manage_audio.set_base_sound_mix` `manage_audio.set_sound_mix_class_override` `manage_audio.clear_sound_mix_class_override` |

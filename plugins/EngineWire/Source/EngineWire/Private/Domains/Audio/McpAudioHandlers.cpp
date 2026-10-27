@@ -36,7 +36,8 @@ bool UEngineWireSubsystem::HandleAudioAction(
       !Lower.StartsWith(TEXT("spawn_sound_")) &&
       Lower != TEXT("stop_sound") &&
       Lower != TEXT("pause_sound") &&
-      Lower != TEXT("resume_sound"))
+      Lower != TEXT("resume_sound") &&
+      Lower != TEXT("analyze_acoustics"))
   {
     return false;
   }
@@ -60,6 +61,7 @@ bool UEngineWireSubsystem::HandleAudioAction(
       &McpAudioHandlers::HandleComponentActions,
       &McpAudioHandlers::HandleSpatialActions,
       &McpAudioHandlers::HandleFadeAndReverbActions,
+      &McpAudioHandlers::HandleAcousticsActions,
   };
   for (McpAudioHandlers::FAudioActionHandler Handler : Handlers)
   {

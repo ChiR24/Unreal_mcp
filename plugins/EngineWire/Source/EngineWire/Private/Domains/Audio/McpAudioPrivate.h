@@ -96,4 +96,6 @@ bool HandleMixActions(UEngineWireSubsystem* Self, const FString& RequestId, cons
 bool HandleComponentActions(UEngineWireSubsystem* Self, const FString& RequestId, const FString& Lower, const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> RequestingSocket);
 bool HandleSpatialActions(UEngineWireSubsystem* Self, const FString& RequestId, const FString& Lower, const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> RequestingSocket);
 bool HandleFadeAndReverbActions(UEngineWireSubsystem* Self, const FString& RequestId, const FString& Lower, const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> RequestingSocket);
+// analyze_acoustics: a room's size and reverberation time from rays cast where a listener stands (McpAcoustics).
+bool HandleAcousticsActions(UEngineWireSubsystem* Self, const FString& RequestId, const FString& Lower, const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> RequestingSocket);
 }
