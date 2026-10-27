@@ -18,6 +18,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Large results come in pages** (`page.nextCall`), and **search hands over a clear first hit** (`signature`, `executeCall`).
 - **`nanite_rebuild_mesh` `assetPaths`**, **`inspect_asset` `diff`**, `get_niagara_info` values, `setup_global_illumination` `saveToProject`, four `edit_dynamic_mesh` operations.
 - **Renders and sequences**: **`frame_shot`** (a camera placed so one or two actors sit where asked on screen, in clear view), **`fly_through`** (a camera flown smoothly through points, clear of geometry, keyed into a sequence), **`auto_edit`** (a sequence cut between its cameras as an editor would: no crossing the line, no jump cuts), `cancel_render`, camera shutter and overscan, `set_section` `playRate`, clips and keyed bones in the readers.
+- **Sound levels**: **`measure_loudness`** and **`normalize_loudness`** (Sound Waves measured in LUFS as broadcast measures them, and set to play at one loudness).
 - **Assets found by what they show**: **`thumbnail_sheet`** (a folder's thumbnails as one numbered picture), **`caption_assets`** (captions kept beside the project, never in the assets), **`find_assets_like`** (by words, an example asset, colour or size).
 - **Writes are checked**: sunk, floating, intersecting, z-fighting or untextured actors, placeholder text, pasted twins, Map Check findings, and Data Validation on assets.
 - **Replies say what undo can revert**; **`restore_point`** undoes only this server's steps and offers the delete of what they created.

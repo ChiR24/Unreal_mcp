@@ -14570,6 +14570,15 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "string",
           "description": "Canonical /Game sound asset path (SoundWave, SoundCue or MetaSound)."
         },
+        "soundPaths": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 64,
+          "items": {
+            "type": "string"
+          },
+          "description": "The Sound Waves, by asset path (1-64). A Sound Cue or MetaSound is refused with ASSET_NOT_FOUND naming it: measure the waves it plays."
+        },
         "soundWavePath": {
           "type": "string",
           "description": "Canonical /Game SoundWave asset spoken in this context."
@@ -14605,6 +14614,12 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "targetInputName": {
           "type": "string",
           "description": "Input pin name on the target node."
+        },
+        "targetLufs": {
+          "type": "number",
+          "minimum": -70,
+          "maximum": 0,
+          "description": "The loudness each wave should play at, in LUFS (-23 is broadcast; games and streaming commonly sit around -14 to -18)."
         },
         "targetNodeId": {
           "type": "string",
@@ -14651,7 +14666,9 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             "list_metasound_nodes",
             "create_audio_asset",
             "get_audio_info",
-            "set_dialogue_context"
+            "set_dialogue_context",
+            "measure_loudness",
+            "normalize_loudness"
           ],
           "description": "Action to invoke on manage_audio."
         }
@@ -14896,9 +14913,54 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "boolean",
           "description": "Whether the Doppler pitch change is smoothed."
         },
+        "sounds": {
+          "type": "array",
+          "description": "Each Sound Wave, in the order given.",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "soundPath": {
+                "type": "string"
+              },
+              "lufs": {
+                "type": "number",
+                "description": "Its integrated loudness in LUFS (EBU R128: K-weighted, gated at -70 LUFS and 10 LU under the mean), from its own samples."
+              },
+              "playsAtLufs": {
+                "type": "number",
+                "description": "The loudness it plays at through its Volume (lufs plus 20 log10 of the Volume)."
+              },
+              "volume": {
+                "type": "number",
+                "description": "Its Volume (the wave's own gain, 1 as recorded)."
+              },
+              "peakDb": {
+                "type": "number",
+                "description": "Its sample peak in dBFS."
+              },
+              "peakAtVolumeDb": {
+                "type": "number",
+                "description": "The sample peak through its Volume; above 0 it is louder than full scale before the mix."
+              },
+              "note": {
+                "type": "string",
+                "description": "Silent, or under 400 ms of sound: it has no loudness (its Volume is left alone)."
+              },
+              "saved": {
+                "type": "boolean",
+                "description": "normalize_loudness: the wave was saved."
+              }
+            }
+          }
+        },
         "spatialize": {
           "type": "boolean",
           "description": "Whether the inspected Sound Attenuation spatializes its source."
+        },
+        "spreadLu": {
+          "type": "number",
+          "description": "How many LU apart the waves play now (0 when every one reached the target)."
         },
         "stopped": {
           "type": "number",
@@ -14933,6 +14995,12 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "type": {
           "type": "string",
           "description": "Kind of asset the bridge resolved, such as SoundCue, SoundWave or InputAction."
+        },
+        "undo": {
+          "type": "object",
+          "additionalProperties": true,
+          "x-unreal-reflection-boundary": true,
+          "description": "What editor undo takes back: {undoable, transactionScope, steps}; every Volume set is one step."
         },
         "volume": {
           "type": "number",

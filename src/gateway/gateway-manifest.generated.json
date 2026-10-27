@@ -9415,7 +9415,9 @@
         "list_metasound_nodes",
         "create_audio_asset",
         "get_audio_info",
-        "set_dialogue_context"
+        "set_dialogue_context",
+        "measure_loudness",
+        "normalize_loudness"
       ],
       "parameterNames": [
         "actorName",
@@ -9521,6 +9523,7 @@
         "soundName",
         "soundOp",
         "soundPath",
+        "soundPaths",
         "soundWavePath",
         "sourceNodeId",
         "sourceOutputName",
@@ -9530,6 +9533,7 @@
         "spokenText",
         "startTime",
         "targetInputName",
+        "targetLufs",
         "targetNodeId",
         "targetVoices",
         "targetVolume",
@@ -10070,6 +10074,15 @@
             "type": "string",
             "description": "Canonical /Game sound asset path (SoundWave, SoundCue or MetaSound)."
           },
+          "soundPaths": {
+            "type": "array",
+            "minItems": 1,
+            "maxItems": 64,
+            "items": {
+              "type": "string"
+            },
+            "description": "The Sound Waves, by asset path (1-64). A Sound Cue or MetaSound is refused with ASSET_NOT_FOUND naming it: measure the waves it plays."
+          },
           "soundWavePath": {
             "type": "string",
             "description": "Canonical /Game SoundWave asset spoken in this context."
@@ -10105,6 +10118,12 @@
           "targetInputName": {
             "type": "string",
             "description": "Input pin name on the target node."
+          },
+          "targetLufs": {
+            "type": "number",
+            "minimum": -70,
+            "maximum": 0,
+            "description": "The loudness each wave should play at, in LUFS (-23 is broadcast; games and streaming commonly sit around -14 to -18)."
           },
           "targetNodeId": {
             "type": "string",
@@ -10151,7 +10170,9 @@
               "list_metasound_nodes",
               "create_audio_asset",
               "get_audio_info",
-              "set_dialogue_context"
+              "set_dialogue_context",
+              "measure_loudness",
+              "normalize_loudness"
             ],
             "description": "Action to invoke on manage_audio."
           }

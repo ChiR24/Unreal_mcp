@@ -797,6 +797,8 @@ export const CAPABILITY_COST_INDEX: Readonly<Record<string, string>> = {
   "manage_audio::get_metasound_graph": "interactive|low",
   "manage_audio::list_metasound_nodes": "interactive|low",
   "manage_audio::manage_audio": "interactive|low",
+  "manage_audio::measure_loudness": "interactive|low",
+  "manage_audio::normalize_loudness": "interactive|low",
   "manage_audio::pause_sound": "interactive|low",
   "manage_audio::play_sound": "interactive|low",
   "manage_audio::play_sound_2d": "interactive|low",
@@ -1641,4 +1643,4 @@ export const CAPABILITY_COST_INDEX: Readonly<Record<string, string>> = {
   "system_control::write_snapshot": "interactive|medium"
 };
 
-export const CAPABILITY_COST_INDEX_KEY_COUNT = 1628;
+export const CAPABILITY_COST_INDEX_KEY_COUNT = 1630;

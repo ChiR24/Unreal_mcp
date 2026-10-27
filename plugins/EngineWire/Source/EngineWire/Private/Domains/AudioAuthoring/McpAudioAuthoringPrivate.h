@@ -267,5 +267,7 @@ inline double GetAttenuationInnerRadius(const FBaseAttenuationSettings& Settings
 TSharedPtr<FJsonObject> HandleDialogueActions(const FString& SubAction, const TSharedPtr<FJsonObject>& Params, TSharedPtr<FJsonObject> Response);
 TSharedPtr<FJsonObject> HandleEffectActions(const FString& SubAction, const TSharedPtr<FJsonObject>& Params, TSharedPtr<FJsonObject> Response);
 TSharedPtr<FJsonObject> HandleAudioInfoActions(const FString& SubAction, const TSharedPtr<FJsonObject>& Params, TSharedPtr<FJsonObject> Response);
+// measure_loudness and normalize_loudness: EBU R128 loudness of Sound Waves, and their Volume set to a target (McpAudioLoudness).
+TSharedPtr<FJsonObject> HandleLoudnessActions(const FString& SubAction, const TSharedPtr<FJsonObject>& Params, TSharedPtr<FJsonObject> Response);
 }
 

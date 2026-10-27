@@ -55,6 +55,7 @@ static TSharedPtr<FJsonObject> HandleAudioAuthoringRequest(const TSharedPtr<FJso
 	if (TSharedPtr<FJsonObject> Result = HandleDialogueActions(SubAction, Params, Response)) { return Result; }
 	if (TSharedPtr<FJsonObject> Result = HandleEffectActions(SubAction, Params, Response)) { return Result; }
 	if (TSharedPtr<FJsonObject> Result = HandleAudioInfoActions(SubAction, Params, Response)) { return Result; }
+	if (TSharedPtr<FJsonObject> Result = HandleLoudnessActions(SubAction, Params, Response)) { return Result; }
 
 	return McpHandlerUtils::BuildErrorResponse(TEXT("UNKNOWN_ACTION"), FString::Printf(TEXT("Unknown audio authoring action: %s"), *SubAction));
 }

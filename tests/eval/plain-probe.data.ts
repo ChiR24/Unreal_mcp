@@ -706,4 +706,7 @@ export const PLAIN_PROBE: readonly PlainProbeCase[] = [
   { query: 'audit materials', accepted: ['inspect.audit_materials'] },
   { query: 'check pbr values', accepted: ['inspect.audit_materials'] },
   { query: 'texel density', accepted: ['inspect.audit_materials'] },
+  { query: 'loudness of sound effects', accepted: ['manage_audio.measure_loudness'] },
+  { query: 'normalize loudness', accepted: ['manage_audio.normalize_loudness'] },
+  { query: 'make sounds equally loud', accepted: ['manage_audio.normalize_loudness'] },
 ];
