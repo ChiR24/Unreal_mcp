@@ -4491,7 +4491,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "object",
           "additionalProperties": true,
           "x-unreal-reflection-boundary": true,
-          "description": "configure_landscape_splines with the points and the landscape, ready to send (on a landscape)."
+          "description": "configure_landscape_splines with the points and the landscape, ready to send (on a landscape): it shapes the terrain along the road."
         },
         "lengthM": {
           "type": "number",

@@ -37,6 +37,10 @@ const testCases = [
     { path: 'structuredContent.result.lengthM', approximately: 155.2, tolerance: 0.1, label: 'as long as the line between them' },
   ] },
   { scenario: 'LAY: the planned road, as handed back', toolName: 'build_environment', arguments: { action: 'create_road_spline', name: ROAD, points: '${captured:roadPoints}', width: 600 }, expected: 'success' },
+  { scenario: 'SHAPE: the same route as a landscape spline, as handed back', toolName: 'build_environment', arguments: { action: 'configure_landscape_splines', landscapeName: LANDSCAPE, points: '${captured:roadPoints}', width: 300 }, expected: 'success', assertions: [
+    { path: 'structuredContent.result.terrainShaped', equals: true, label: 'the terrain is shaped to the road' },
+    { path: 'structuredContent.result.undo.undoable', equals: true, label: 'one undo step' },
+  ] },
   { scenario: 'Setup: a box across a straight route', toolName: 'control_actor', arguments: { action: 'spawn', classPath: '/Engine/BasicShapes/Cube', actorName: BOX, location: { x: at.x + 25000, y: at.y + 45000, z: 150 }, scale: { x: 4, y: 40, z: 4 } }, expected: 'success' },
   { scenario: 'PLAN: round the box', toolName: 'build_environment', arguments: { action: 'plan_road', ...across(45000), maxGradePercent: 10 }, expected: 'success', assertions: [
     { path: 'structuredContent.result.lengthM', gte: 401, label: 'longer than the straight 400 m' },

@@ -214,7 +214,7 @@ bool HandlePlanRoad(UEngineWireSubsystem& Bridge, const FString& RequestId, cons
     Bridge.SendAutomationResponse(Socket, RequestId, true,
         FString::Printf(TEXT("A road of %.0f m climbing %.1f m, no grade over %.1f%%, %d switchback(s), through %d point(s). nextCall lays it as a road slab%s."),
                         Laid.LengthCm / 100.0, Laid.ClimbCm / 100.0, Grade * 100.0, Laid.Switchbacks, Route.Num(),
-                        Landscape ? TEXT("; landscapeSplineCall makes it a landscape spline") : TEXT("")), Result);
+                        Landscape ? TEXT("; landscapeSplineCall makes it a landscape spline that shapes the terrain to it") : TEXT("")), Result);
     return true;
 }
 } // namespace McpRoadPlanning
