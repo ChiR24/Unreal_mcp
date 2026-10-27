@@ -1,5 +1,5 @@
 {
-  "catalogRevision": "06ec022f5d4c614a",
+  "catalogRevision": "81bddf27a5db71ee",
   "recordCount": 449,
   "records": [
     {
@@ -75698,7 +75698,7 @@
           "metaball",
           "rounded character part"
         ],
-        "summary": "Create a primitive mesh actor: box, sphere, cylinder, cone, capsule, plane, disc, ring, torus, pipe, arch, ramp, stairs, spiral stairs, a hip roof over any footprint, or one smooth organic mesh from blended shapes (sdf) with soft fillets where they meet.",
+        "summary": "Create a primitive mesh actor: box, sphere, cylinder, cone, capsule, plane, disc, ring, torus, pipe, arch, ramp, stairs, spiral stairs, a hip roof over any footprint, or one smooth organic mesh from blended shapes (sdf) with soft fillets where they meet. Each is a DynamicMeshActor with no collision: traces and players pass through it, and what stands on it reads \"nothing below it\", until configure_mesh_collision gives it some.",
         "whenToUse": [
           "primitive=box: A box primitive must be created.",
           "primitive=sphere: A sphere primitive must be created.",
@@ -76312,7 +76312,7 @@
       },
       "examples": [
         {
-          "title": "Create a primitive mesh actor: box, sphere, cylinder, cone, capsule, plane, disc, ring, torus, pipe, arch, ramp, stairs, spiral stairs, a hip roof over any footprint, or one smooth organic mesh from blended shapes (sdf) with soft fillets where they meet.",
+          "title": "Create a primitive mesh actor: box, sphere, cylinder, cone, capsule, plane, disc, ring, torus, pipe, arch, ramp, stairs, spiral stairs, a hip roof over any footprint, or one smooth organic mesh from blended shapes (sdf) with soft fillets where they meet. Each is a DynamicMeshActor with no collision: traces and players pass through it, and what stands on it reads \"nothing below it\", until configure_mesh_collision gives it some.",
           "input": {
             "action": "create_primitive",
             "dimensions": {
@@ -76527,7 +76527,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "48dc3aeda0cfc28ef5bf650e1d7ee3a40ec94f237850c3de3784d0c72dcb6f53",
-        "content": "e1527d0a4ee2adebb2aa5dec759b65c5ff83aceac4e9cb1b0137bcf8668391fe"
+        "content": "c4be97c13ca66e34fa0ea1f803894ba0a575edf43cb0fcb3fe3a00fc8c5847c0"
       }
     },
     {

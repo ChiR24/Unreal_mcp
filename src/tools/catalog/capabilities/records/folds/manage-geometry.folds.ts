@@ -5,7 +5,7 @@ import type { FoldSpec } from '../shared/fold-types.js';
 export const MANAGE_GEOMETRY_FOLDS: readonly FoldSpec[] = [
   {
     primary: 'create_primitive', selector: 'primitive',
-    summary: 'Create a primitive mesh actor: box, sphere, cylinder, cone, capsule, plane, disc, ring, torus, pipe, arch, ramp, stairs, spiral stairs, a hip roof over any footprint, or one smooth organic mesh from blended shapes (sdf) with soft fillets where they meet.',
+    summary: 'Create a primitive mesh actor: box, sphere, cylinder, cone, capsule, plane, disc, ring, torus, pipe, arch, ramp, stairs, spiral stairs, a hip roof over any footprint, or one smooth organic mesh from blended shapes (sdf) with soft fillets where they meet. Each is a DynamicMeshActor with no collision: traces and players pass through it, and what stands on it reads "nothing below it", until configure_mesh_collision gives it some.',
     topics: ['create box', 'create sphere', 'create cylinder', 'create plane', 'box mesh', 'primitive mesh', 'stairs', 'torus', 'make a cube or ramp',
       'signed distance field', 'smooth blend shapes', 'organic mesh'],
     members: byTarget('create_', ['create_box', 'create_sphere', 'create_cylinder', 'create_cone', 'create_capsule', 'create_plane', 'create_disc',
