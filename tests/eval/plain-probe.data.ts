@@ -712,4 +712,7 @@ export const PLAIN_PROBE: readonly PlainProbeCase[] = [
   { query: 'room acoustics', accepted: ['manage_audio.analyze_acoustics'] },
   { query: 'reverberation time', accepted: ['manage_audio.analyze_acoustics'] },
   { query: 'how does this room sound', accepted: ['manage_audio.analyze_acoustics'] },
+  { query: 'locomotion blend space', accepted: ['animation_physics.auto_blend_space'] },
+  { query: 'walk run blend space', accepted: ['animation_physics.auto_blend_space'] },
+  { query: 'lay out a blend space', accepted: ['animation_physics.auto_blend_space'] },
 ];

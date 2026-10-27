@@ -1,6 +1,7 @@
 #include "Domains/AnimationAuthoring/McpAnimSupport.h"
 
 #include "AnimPose.h"
+#include "Domains/AnimationAuthoring/Analysis/McpAnimLocomotion.h"
 
 // analyze_animation: an Animation Sequence's motion read from its own frames, with no level or actor: how far and how
 // fast the root travels, when each foot is planted and how fast a planted foot still moves, how closely the last frame
@@ -21,30 +22,6 @@ TSharedPtr<FJsonValue> McpVectorJson(const FVector& Value)
 {
     return MakeShared<FJsonValueArray>(TArray<TSharedPtr<FJsonValue>>{MakeShared<FJsonValueNumber>(McpRound(Value.X)),
         MakeShared<FJsonValueNumber>(McpRound(Value.Y)), MakeShared<FJsonValueNumber>(McpRound(Value.Z))});
-}
-
-// The feet to check: the bones named, else every bone whose name holds "foot" but not "ik" (foot_l, not ik_foot_l).
-TArray<FName> McpAnalysisFeet(const TSharedPtr<FJsonObject>& Params, const TArray<FName>& Bones)
-{
-    TArray<FName> Feet;
-    const TArray<TSharedPtr<FJsonValue>>* Given = nullptr;
-    if (Params->TryGetArrayField(TEXT("feet"), Given) && Given)
-    {
-        for (const TSharedPtr<FJsonValue>& Value : *Given)
-        {
-            Feet.Add(FName(*Value->AsString()));
-        }
-        return Feet;
-    }
-    for (const FName& Bone : Bones)
-    {
-        const FString Name = Bone.ToString();
-        if (Name.Contains(TEXT("foot")) && !Name.Contains(TEXT("ik")))
-        {
-            Feet.Add(Bone);
-        }
-    }
-    return Feet;
 }
 
 // One foot over the sampled frames: planted where it is within ContactHeight of its lowest point.
@@ -132,7 +109,7 @@ TSharedPtr<FJsonObject> HandleAnalyzeAnimation(const TSharedPtr<FJsonObject>& Pa
         if (Sample == 0)
         {
             UAnimPoseExtensions::GetBoneNames(Pose, Bones);
-            Feet = McpAnalysisFeet(Params, Bones);
+            Feet = McpAnimLocomotion::FeetOf(Params, Bones);
             for (const FName& Foot : Feet)
             {
                 if (!Bones.Contains(Foot))

@@ -46,6 +46,15 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "string",
           "description": "Canonical /Game Animation asset path."
         },
+        "animationPaths": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 32,
+          "items": {
+            "type": "string"
+          },
+          "description": "The Animation Sequences to place (1-32), each of the blend space's skeleton."
+        },
         "animations": {
           "type": "array",
           "description": "Animation asset paths to play in this state; one Sequence Player is created per entry and the first drives the state Result pose. Without it the state is created empty and the character holds its reference pose.",
@@ -98,6 +107,21 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "automaticRule": {
           "type": "boolean",
           "description": "Fire the transition when the source state's sequence player reaches the end of its animation instead of testing a condition. Left alone when omitted."
+        },
+        "axes": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 2,
+          "items": {
+            "type": "string",
+            "enum": [
+              "speed",
+              "direction",
+              "forwardSpeed",
+              "rightSpeed"
+            ]
+          },
+          "description": "What each axis holds, horizontal first: one for a Blend Space 1D (default speed), two different ones for a Blend Space (default direction, speed)."
         },
         "axis": {
           "type": "string",
@@ -310,6 +334,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "boolean",
           "description": "The edit rebuilds the mesh from its source data, which deletes morph targets that exist only in render data (made by create_morph_target or set_morph_target_deltas). Without true, a mesh that has any is refused with RENDER_ONLY_MORPHS naming them and nothing changes (default false)."
         },
+        "dryRun": {
+          "type": "boolean",
+          "description": "Measure and lay out, changing nothing."
+        },
         "edit": {
           "type": "string",
           "enum": [
@@ -412,15 +440,37 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "description": "Engine settings: maxRPM, maxTorque, gears (forward gear count)."
         },
         "feet": {
-          "type": "array",
-          "items": {
-            "type": "string"
-          },
-          "description": "Foot bones to check (default every bone whose name holds foot but not ik, e.g. foot_l and foot_r)."
+          "oneOf": [
+            {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "description": "Foot bones read for an in-place clip (default every bone whose name holds foot but not ik, e.g. foot_l and foot_r)."
+            },
+            {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "description": "Foot bones to check (default every bone whose name holds foot but not ik, e.g. foot_l and foot_r)."
+            }
+          ],
+          "description": "Foot bones read for an in-place clip (default every bone whose name holds foot but not ik, e.g. foot_l and foot_r)."
         },
         "forceRootLock": {
           "type": "boolean",
           "description": "Whether root motion is force-locked to the reference pose."
+        },
+        "forwardAxis": {
+          "type": "string",
+          "enum": [
+            "+Y",
+            "-Y",
+            "+X",
+            "-X"
+          ],
+          "description": "The way the character faces in its clips' component space (default +Y, as the UE mannequin; a mesh made facing +X takes +X). Right is forward turned +90 degrees in yaw."
         },
         "frame": {
           "type": "number",
@@ -518,6 +568,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             "SpringDamper"
           ],
           "description": "Input smoothing type for every axis; it only acts while interpolationTime is above 0."
+        },
+        "keepSamples": {
+          "type": "boolean",
+          "description": "Keep the samples the blend space holds and add the clips beside them (default false: the clips replace them). The axes then also hold the kept samples."
         },
         "kind": {
           "type": "string",
@@ -1289,6 +1343,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             "configure_anim_graph_node",
             "get_animation_info",
             "analyze_animation",
+            "auto_blend_space",
             "cleanup",
             "create_skeleton",
             "edit_skeleton",
@@ -1373,6 +1428,32 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "assetPath": {
           "type": "string",
           "description": "Canonical /Game asset path."
+        },
+        "axes": {
+          "type": "array",
+          "description": "Each axis as set (or as it would be under dryRun).",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "axisName": {
+                "type": "string",
+                "description": "Speed, Direction, Forward Speed or Right Speed."
+              },
+              "minValue": {
+                "type": "number",
+                "description": "Its minimum."
+              },
+              "maxValue": {
+                "type": "number",
+                "description": "Its maximum."
+              },
+              "wrapInput": {
+                "type": "boolean",
+                "description": "Input past an edge wraps around (direction)."
+              }
+            }
+          }
         },
         "blueprintPath": {
           "type": "string",
@@ -1484,6 +1565,62 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "changed": {
           "type": "boolean",
           "description": "Whether any mapping changed."
+        },
+        "clips": {
+          "type": "array",
+          "description": "One row per clip, in the order given.",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "animationPath": {
+                "type": "string",
+                "description": "The clip."
+              },
+              "speed": {
+                "type": "number",
+                "description": "Ground speed in cm/s."
+              },
+              "direction": {
+                "type": "number",
+                "description": "Degrees: 0 forward, +90 right, 180 back (0 for an idle)."
+              },
+              "forwardSpeed": {
+                "type": "number",
+                "description": "Speed along forward, cm/s (negative: backward)."
+              },
+              "rightSpeed": {
+                "type": "number",
+                "description": "Speed along right, cm/s (negative: left)."
+              },
+              "source": {
+                "type": "string",
+                "enum": [
+                  "root",
+                  "feet"
+                ],
+                "description": "root: its root travels; feet: in place, read from its planted feet."
+              },
+              "idle": {
+                "type": "boolean",
+                "description": "Under 10 cm/s."
+              },
+              "positions": {
+                "type": "array",
+                "items": {
+                  "type": "array",
+                  "items": {
+                    "type": "number"
+                  }
+                },
+                "description": "Where its samples went, as [x, y] (y 0 in a Blend Space 1D)."
+              },
+              "refused": {
+                "type": "number",
+                "description": "Positions dropped because another clip or a kept sample holds them."
+              }
+            }
+          }
         },
         "compileErrors": {
           "type": "array",
@@ -2018,6 +2155,12 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "success": {
           "type": "boolean",
           "description": "Whether the action succeeded."
+        },
+        "undo": {
+          "type": "object",
+          "additionalProperties": true,
+          "x-unreal-reflection-boundary": true,
+          "description": "What editor undo takes back: {undoable, transactionScope}; the whole layout is one step."
         },
         "units": {
           "type": "array",

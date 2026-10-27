@@ -145,6 +145,10 @@ TSharedPtr<FJsonObject> HandleAnimationInfoActions(const FString& SubAction, con
     {
         return HandleAnalyzeAnimation(Params, Response);
     }
+    if (SubAction == TEXT("auto_blend_space"))
+    {
+        return HandleAutoBlendSpace(Params, Response);
+    }
     if (SubAction != TEXT("get_animation_info"))
     {
         return nullptr;

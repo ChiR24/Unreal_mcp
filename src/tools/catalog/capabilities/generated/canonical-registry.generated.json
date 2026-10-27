@@ -1,6 +1,6 @@
 {
-  "catalogRevision": "1378918dd6583da0",
-  "recordCount": 448,
+  "catalogRevision": "deb9583d2070c442",
+  "recordCount": 449,
   "records": [
     {
       "id": "animation_physics.analyze_animation",
@@ -314,6 +314,381 @@
         "algorithm": "sha256",
         "schema": "62dbc61a78eaceb7302ab0a6dd353d584e6799190301f7099b6010895a6ae20a",
         "content": "a64655369c7d428ac83c262b9162245b1eb9d919571b567dd077e20b190dbc7e"
+      }
+    },
+    {
+      "id": "animation_physics.auto_blend_space",
+      "aliases": [],
+      "legacyIds": [
+        {
+          "tool": "animation_physics",
+          "action": "auto_blend_space"
+        }
+      ],
+      "discovery": {
+        "domain": "animation physics",
+        "family": "physics",
+        "topics": [
+          "auto_blend_space",
+          "auto blend space",
+          "lay out a blend space",
+          "locomotion blend space",
+          "walk run blend space"
+        ],
+        "summary": "Lay out a locomotion blend space from its clips' own motion: each Animation Sequence in animationPaths is read from its frames (a root that travels is the clip's motion; a root that stays is an in-place clip, read from its planted feet, which slide backward at the ground speed) and placed by its speed and direction in the character's frame. forwardAxis is the way the character faces in its clips (+Y for the UE mannequin). axes picks what each axis holds: speed (cm/s), direction (degrees: 0 forward, +90 right, 180 back), forwardSpeed or rightSpeed (signed cm/s); default speed for a Blend Space 1D, direction and speed for a Blend Space. The axes are set to hold every sample: speed from 0 to the top speed rounded up to 50, signed speeds symmetric, direction -180 to 180 with wrapping input. A clip within 10 degrees of backward takes both direction edges, an idle (under 10 cm/s) takes every direction used, at speed 0, and a position another clip or a kept sample already holds is refused (refused in that clip's row). The listed clips replace the samples, or with keepSamples join them, in one undo step, saved unless save is false; dryRun answers the same and changes nothing. Refused, changing nothing: BLENDSPACE_NOT_FOUND, ANIMATION_NOT_FOUND, ANIMATION_INCOMPATIBLE (another skeleton, or an additive type the blend space or the other clips do not share), EMPTY_ANIMATION, BONE_NOT_FOUND (a bone named in feet), INVALID_ARGUMENT (an Aim Offset, an unknown axis, axes that do not fit the blend space).",
+        "whenToUse": [
+          "A walk/run (1D) or a directional locomotion (2D) blend space must place its clips where their motion puts them, instead of guessing speeds.",
+          "Checking how fast and which way each clip moves before building a blend space (dryRun)."
+        ],
+        "whenNotToUse": [
+          "One sample must go at a chosen value (use edit_blend_space with add_blend_sample).",
+          "An Aim Offset (use add_aim_offset_sample).",
+          "Only one clip's motion must be read (use analyze_animation)."
+        ]
+      },
+      "schemas": {
+        "input": {
+          "$schema": "https://json-schema.org/draft/2020-12/schema",
+          "type": "object",
+          "properties": {
+            "assetPath": {
+              "type": "string",
+              "description": "Blend Space or Blend Space 1D asset path, e.g. /Game/Anims/BS_Locomotion."
+            },
+            "animationPaths": {
+              "type": "array",
+              "minItems": 1,
+              "maxItems": 32,
+              "items": {
+                "type": "string"
+              },
+              "description": "The Animation Sequences to place (1-32), each of the blend space's skeleton."
+            },
+            "axes": {
+              "type": "array",
+              "minItems": 1,
+              "maxItems": 2,
+              "items": {
+                "type": "string",
+                "enum": [
+                  "speed",
+                  "direction",
+                  "forwardSpeed",
+                  "rightSpeed"
+                ]
+              },
+              "description": "What each axis holds, horizontal first: one for a Blend Space 1D (default speed), two different ones for a Blend Space (default direction, speed)."
+            },
+            "forwardAxis": {
+              "type": "string",
+              "enum": [
+                "+Y",
+                "-Y",
+                "+X",
+                "-X"
+              ],
+              "description": "The way the character faces in its clips' component space (default +Y, as the UE mannequin; a mesh made facing +X takes +X). Right is forward turned +90 degrees in yaw."
+            },
+            "feet": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "description": "Foot bones read for an in-place clip (default every bone whose name holds foot but not ik, e.g. foot_l and foot_r)."
+            },
+            "contactHeight": {
+              "type": "number",
+              "description": "cm above a foot's lowest point that still counts as planted (default 5)."
+            },
+            "keepSamples": {
+              "type": "boolean",
+              "description": "Keep the samples the blend space holds and add the clips beside them (default false: the clips replace them). The axes then also hold the kept samples."
+            },
+            "dryRun": {
+              "type": "boolean",
+              "description": "Measure and lay out, changing nothing."
+            },
+            "save": {
+              "type": "boolean",
+              "description": "Save the blend space afterwards (default true)."
+            }
+          },
+          "required": [
+            "assetPath",
+            "animationPaths"
+          ],
+          "additionalProperties": false
+        },
+        "output": {
+          "$schema": "https://json-schema.org/draft/2020-12/schema",
+          "type": "object",
+          "properties": {
+            "success": {
+              "type": "boolean",
+              "description": "Whether the action succeeded."
+            },
+            "message": {
+              "type": "string",
+              "description": "Human-readable result message."
+            },
+            "details": {
+              "type": "object",
+              "x-unreal-reflection-boundary": true,
+              "description": "Additional handler result fields not named by the contract."
+            },
+            "assetPath": {
+              "type": "string",
+              "description": "The blend space."
+            },
+            "axes": {
+              "type": "array",
+              "description": "Each axis as set (or as it would be under dryRun).",
+              "items": {
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {
+                  "axisName": {
+                    "type": "string",
+                    "description": "Speed, Direction, Forward Speed or Right Speed."
+                  },
+                  "minValue": {
+                    "type": "number",
+                    "description": "Its minimum."
+                  },
+                  "maxValue": {
+                    "type": "number",
+                    "description": "Its maximum."
+                  },
+                  "wrapInput": {
+                    "type": "boolean",
+                    "description": "Input past an edge wraps around (direction)."
+                  }
+                }
+              }
+            },
+            "clips": {
+              "type": "array",
+              "description": "One row per clip, in the order given.",
+              "items": {
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {
+                  "animationPath": {
+                    "type": "string",
+                    "description": "The clip."
+                  },
+                  "speed": {
+                    "type": "number",
+                    "description": "Ground speed in cm/s."
+                  },
+                  "direction": {
+                    "type": "number",
+                    "description": "Degrees: 0 forward, +90 right, 180 back (0 for an idle)."
+                  },
+                  "forwardSpeed": {
+                    "type": "number",
+                    "description": "Speed along forward, cm/s (negative: backward)."
+                  },
+                  "rightSpeed": {
+                    "type": "number",
+                    "description": "Speed along right, cm/s (negative: left)."
+                  },
+                  "source": {
+                    "type": "string",
+                    "enum": [
+                      "root",
+                      "feet"
+                    ],
+                    "description": "root: its root travels; feet: in place, read from its planted feet."
+                  },
+                  "idle": {
+                    "type": "boolean",
+                    "description": "Under 10 cm/s."
+                  },
+                  "positions": {
+                    "type": "array",
+                    "items": {
+                      "type": "array",
+                      "items": {
+                        "type": "number"
+                      }
+                    },
+                    "description": "Where its samples went, as [x, y] (y 0 in a Blend Space 1D)."
+                  },
+                  "refused": {
+                    "type": "number",
+                    "description": "Positions dropped because another clip or a kept sample holds them."
+                  }
+                }
+              }
+            },
+            "samples": {
+              "type": "number",
+              "description": "Samples the blend space holds now (under dryRun: the samples the layout would add)."
+            },
+            "saved": {
+              "type": "boolean",
+              "description": "Whether the blend space was saved."
+            },
+            "undo": {
+              "type": "object",
+              "additionalProperties": true,
+              "x-unreal-reflection-boundary": true,
+              "description": "What editor undo takes back: {undoable, transactionScope}; the whole layout is one step."
+            }
+          },
+          "required": [
+            "success",
+            "clips"
+          ],
+          "additionalProperties": false
+        }
+      },
+      "examples": [
+        {
+          "title": "Lay out a locomotion blend space from its clips' own motion: each Animation Sequence in animationPaths is read from its frames (a root that travels is the clip's motion; a root that stays is an in-place clip, read from its planted feet, which slide backward at the ground speed) and placed by its speed and direction in the character's frame. forwardAxis is the way the character faces in its clips (+Y for the UE mannequin). axes picks what each axis holds: speed (cm/s), direction (degrees: 0 forward, +90 right, 180 back), forwardSpeed or rightSpeed (signed cm/s); default speed for a Blend Space 1D, direction and speed for a Blend Space. The axes are set to hold every sample: speed from 0 to the top speed rounded up to 50, signed speeds symmetric, direction -180 to 180 with wrapping input. A clip within 10 degrees of backward takes both direction edges, an idle (under 10 cm/s) takes every direction used, at speed 0, and a position another clip or a kept sample already holds is refused (refused in that clip's row). The listed clips replace the samples, or with keepSamples join them, in one undo step, saved unless save is false; dryRun answers the same and changes nothing. Refused, changing nothing: BLENDSPACE_NOT_FOUND, ANIMATION_NOT_FOUND, ANIMATION_INCOMPATIBLE (another skeleton, or an additive type the blend space or the other clips do not share), EMPTY_ANIMATION, BONE_NOT_FOUND (a bone named in feet), INVALID_ARGUMENT (an Aim Offset, an unknown axis, axes that do not fit the blend space).",
+          "input": {
+            "action": "auto_blend_space",
+            "assetPath": "/Game/Anims/BS_Locomotion",
+            "animationPaths": [
+              "/Game/Anims/A_Idle",
+              "/Game/Anims/A_Walk_Fwd",
+              "/Game/Anims/A_Run_Fwd",
+              "/Game/Anims/A_Walk_Bwd"
+            ]
+          },
+          "output": {
+            "success": true,
+            "message": "Laid out 4 clip(s) as 7 sample(s) on Direction (-180 to 180) and Speed (0 to 450).",
+            "assetPath": "/Game/Anims/BS_Locomotion.BS_Locomotion",
+            "axes": [
+              {
+                "axisName": "Direction",
+                "minValue": -180,
+                "maxValue": 180,
+                "wrapInput": true
+              },
+              {
+                "axisName": "Speed",
+                "minValue": 0,
+                "maxValue": 450,
+                "wrapInput": false
+              }
+            ],
+            "clips": [
+              {
+                "animationPath": "/Game/Anims/A_Idle.A_Idle",
+                "speed": 0,
+                "direction": 0,
+                "forwardSpeed": 0,
+                "rightSpeed": 0,
+                "source": "root",
+                "idle": true,
+                "positions": [
+                  [
+                    0,
+                    0
+                  ],
+                  [
+                    -180,
+                    0
+                  ],
+                  [
+                    180,
+                    0
+                  ]
+                ]
+              },
+              {
+                "animationPath": "/Game/Anims/A_Walk_Fwd.A_Walk_Fwd",
+                "speed": 150,
+                "direction": 0,
+                "forwardSpeed": 150,
+                "rightSpeed": 0,
+                "source": "feet",
+                "idle": false,
+                "positions": [
+                  [
+                    0,
+                    150
+                  ]
+                ]
+              },
+              {
+                "animationPath": "/Game/Anims/A_Run_Fwd.A_Run_Fwd",
+                "speed": 450,
+                "direction": 0,
+                "forwardSpeed": 450,
+                "rightSpeed": 0,
+                "source": "feet",
+                "idle": false,
+                "positions": [
+                  [
+                    0,
+                    450
+                  ]
+                ]
+              },
+              {
+                "animationPath": "/Game/Anims/A_Walk_Bwd.A_Walk_Bwd",
+                "speed": 150,
+                "direction": 179.2,
+                "forwardSpeed": -150,
+                "rightSpeed": 2,
+                "source": "feet",
+                "idle": false,
+                "positions": [
+                  [
+                    -180,
+                    150
+                  ],
+                  [
+                    180,
+                    150
+                  ]
+                ]
+              }
+            ],
+            "samples": 7,
+            "saved": true,
+            "undo": {
+              "undoable": true,
+              "transactionScope": "Lay Out Blend Space"
+            }
+          }
+        }
+      ],
+      "availability": {
+        "requiredPlugins": [
+          "EditorScriptingUtilities"
+        ],
+        "editorStates": [
+          "edit"
+        ]
+      },
+      "behavior": {
+        "effect": "write",
+        "idempotency": "non-idempotent",
+        "longRunning": false,
+        "safeToRetry": false
+      },
+      "policy": {
+        "requiredScope": "write",
+        "consent": "none",
+        "dataAccess": "project-write"
+      },
+      "cost": {
+        "latency": "interactive",
+        "resources": "low"
+      },
+      "routing": {
+        "parentTool": "animation_physics",
+        "dispatchAction": "auto_blend_space"
+      },
+      "hashes": {
+        "algorithm": "sha256",
+        "schema": "0fbbb63f3d7d5c04cb3954e16963ca6ccd5de09cb308fad7decd05d537e533c9",
+        "content": "d2b8bd5a9c42fce757f04d2f7b21c126ffeb6cec71ebb1bb33ffacec5193b1c5"
       }
     },
     {

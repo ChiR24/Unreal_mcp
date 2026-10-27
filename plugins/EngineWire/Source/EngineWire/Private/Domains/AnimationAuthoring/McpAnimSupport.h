@@ -249,6 +249,8 @@ inline FString McpMontageSectionNames(const UAnimMontage* Montage)
 // analyze_animation (Analysis/McpAnimAnalysis.cpp): a sequence's root path, foot contacts, loop
 // seam and rotation spikes, sampled from its own frames.
 TSharedPtr<FJsonObject> HandleAnalyzeAnimation(const TSharedPtr<FJsonObject>& Params, TSharedPtr<FJsonObject> Response);
+// auto_blend_space (Analysis/McpAnimAutoBlendSpace.cpp): a locomotion blend space laid out from its clips' own motion.
+TSharedPtr<FJsonObject> HandleAutoBlendSpace(const TSharedPtr<FJsonObject>& Params, TSharedPtr<FJsonObject> Response);
 
 UEdGraph* GetAnimGraphFromBlueprint(UAnimBlueprint* AnimBP);
 UAnimGraphNode_StateMachine* FindStateMachineNode(UEdGraph* Graph, const FString& Name);
