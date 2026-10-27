@@ -4503,7 +4503,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "maxLiftCm": {
           "type": "number",
-          "description": "The most a point is lifted above its ground, in cm: 10, more where the ground between two points rises above the straight road joining them."
+          "description": "The most a point is lifted above its ground, in cm: 10, more where the ground between two points rises above the straight road joining them or a lifted neighbour would leave the road between them steeper than the limit."
         },
         "maxLoweredCm": {
           "type": "number",
