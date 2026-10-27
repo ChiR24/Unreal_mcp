@@ -1,0 +1,177 @@
+#include "Core/Compatibility/McpVersionCompatibility.h"
+
+#include "Domains/Lighting/McpLightingPrivate.h"
+
+#include "Foundation/BridgeHelpers/McpHelpers.h"
+#include "EngineWireSubsystem.h"
+#include "Foundation/HandlerUtils/McpHandlerUtils.h"
+#include "Dom/JsonObject.h"
+#include "Engine/PostProcessVolume.h"
+#include "Engine/RendererSettings.h"
+#include "Foundation/Render/McpConsoleVariableWrite.h"
+#include "Foundation/Render/McpPostProcessVolumeResolution.h"
+#include "GameFramework/WorldSettings.h"
+#include "HAL/IConsoleManager.h"
+
+namespace McpLightingHandlers
+{
+
+bool HandleSetupGlobalIllumination(
+    UEngineWireSubsystem& Subsystem,
+    const FString& RequestId,
+    const TSharedPtr<FJsonObject>& Payload,
+    TSharedPtr<FMcpBridgeWebSocket> RequestingSocket)
+{
+    FString Method;
+    if (!Payload->TryGetStringField(TEXT("method"), Method) || Method.IsEmpty())
+    {
+        Subsystem.SendAutomationError(
+            RequestingSocket,
+            RequestId,
+            TEXT("method parameter is required. Valid values: LumenGI, ScreenSpace, None, RayTraced, Lightmass"),
+            TEXT("INVALID_ARGUMENT"));
+        return true;
+    }
+
+    // r.DynamicGlobalIlluminationMethod per method (Lightmass is baked: no dynamic GI). Standalone ray-traced GI left
+    // the engine in 5.4, where method 3 became Plugin: RayTraced switched on a GI plugin there.
+#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION < 4
+    static const TMap<FString, int32> GIMethods = {
+        {TEXT("None"), 0}, {TEXT("LumenGI"), 1}, {TEXT("ScreenSpace"), 2}, {TEXT("RayTraced"), 3}, {TEXT("Lightmass"), 0}};
+    const TCHAR* ValidMethods = TEXT("LumenGI, ScreenSpace, None, RayTraced, Lightmass");
+#else
+    static const TMap<FString, int32> GIMethods = {
+        {TEXT("None"), 0}, {TEXT("LumenGI"), 1}, {TEXT("ScreenSpace"), 2}, {TEXT("Lightmass"), 0}};
+    const TCHAR* ValidMethods = TEXT("LumenGI, ScreenSpace, None, Lightmass (RayTraced left the engine in 5.4: use LumenGI with hardware ray tracing)");
+#endif
+    const int32* GIMethod = GIMethods.Find(Method);
+    if (!GIMethod)
+    {
+        Subsystem.SendAutomationError(
+            RequestingSocket,
+            RequestId,
+            FString::Printf(TEXT("Invalid GI method: %s. Valid values: %s"), *Method, ValidMethods),
+            TEXT("INVALID_GI_METHOD"));
+        return true;
+    }
+    // quality, indirectLightingIntensity and bounces were declared and never read.
+    static const TMap<FString, int32> QualityLevels = {
+        {TEXT("Low"), 0}, {TEXT("Medium"), 1}, {TEXT("High"), 2}, {TEXT("Epic"), 3}};
+    const FString Quality = GetJsonStringField(Payload, TEXT("quality"));
+    const int32* QualityLevel = QualityLevels.Find(Quality);
+    if (!Quality.IsEmpty() && !QualityLevel)
+    {
+        Subsystem.SendAutomationError(RequestingSocket, RequestId,
+            FString::Printf(TEXT("Invalid GI quality: %s. Valid values: Low, Medium, High, Epic"), *Quality),
+            TEXT("INVALID_ARGUMENT"));
+        return true;
+    }
+    // Set as the console does and read back: a code-priority Set lost to any console set of the same variable, and
+    // the reply said "configured" either way.
+    IConsoleVariable* GICVar = IConsoleManager::Get().FindConsoleVariable(TEXT("r.DynamicGlobalIlluminationMethod"));
+    const FString GINotTaken = GICVar ? McpSetConsoleVariable(*GICVar, FString::FromInt(*GIMethod))
+                                      : FString(TEXT("is not registered in this editor"));
+    if (!GINotTaken.IsEmpty())
+    {
+        Subsystem.SendAutomationError(RequestingSocket, RequestId,
+            FString::Printf(TEXT("r.DynamicGlobalIlluminationMethod %s"), *GINotTaken), TEXT("GI_METHOD_NOT_APPLIED"));
+        return true;
+    }
+    APostProcessVolume* PPV = nullptr;
+    if (Payload->HasTypedField<EJson::Number>(TEXT("indirectLightingIntensity")))
+    {
+        FString ResolveError;
+        FString ResolveErrorCode;
+        PPV = McpRenderHandlers::McpResolvePostProcessVolume(
+            McpHandlerUtils::GetEditorWorld(), Payload, true, ResolveError, ResolveErrorCode);
+        if (!PPV)
+        {
+            Subsystem.SendAutomationError(RequestingSocket, RequestId,
+                ResolveError.IsEmpty() ? FString(TEXT("No post-process volume for indirectLightingIntensity")) : ResolveError,
+                ResolveErrorCode.IsEmpty() ? FString(TEXT("ACTOR_NOT_FOUND")) : ResolveErrorCode);
+            return true;
+        }
+        PPV->Modify();
+        PPV->Settings.bOverride_IndirectLightingIntensity = true;
+        PPV->Settings.IndirectLightingIntensity = static_cast<float>(Payload->GetNumberField(TEXT("indirectLightingIntensity")));
+        PPV->MarkPackageDirty();
+    }
+    TArray<FString> NotSet;
+    if (QualityLevel)
+    {
+        IConsoleVariable* CVar = IConsoleManager::Get().FindConsoleVariable(TEXT("sg.GlobalIlluminationQuality"));
+        const FString NotTaken = CVar ? McpSetConsoleVariable(*CVar, FString::FromInt(*QualityLevel)) : FString(TEXT("not in this engine version"));
+        if (!NotTaken.IsEmpty())
+        {
+            NotSet.Add(FString::Printf(TEXT("quality (sg.GlobalIlluminationQuality %s)"), *NotTaken));
+        }
+    }
+    // Baked (Lightmass) bounces live on the World Settings.
+    AWorldSettings* WorldSettings = McpHandlerUtils::GetEditorWorld() ? McpHandlerUtils::GetEditorWorld()->GetWorldSettings() : nullptr;
+    if (WorldSettings && Payload->HasTypedField<EJson::Number>(TEXT("bounces")))
+    {
+        WorldSettings->Modify();
+        WorldSettings->LightmassSettings.NumIndirectLightingBounces =
+            FMath::Clamp(FMath::RoundToInt(Payload->GetNumberField(TEXT("bounces"))), 0, 100);
+        WorldSettings->MarkPackageDirty();
+    }
+    // Lumen GI pairs with Lumen reflections.
+    IConsoleVariable* CVarRefl = IConsoleManager::Get().FindConsoleVariable(TEXT("r.ReflectionMethod"));
+    if (*GIMethod == 1 && CVarRefl)
+    {
+        const FString NotTaken = McpSetConsoleVariable(*CVarRefl, TEXT("1"));
+        if (!NotTaken.IsEmpty())
+        {
+            NotSet.Add(FString::Printf(TEXT("Lumen reflections (r.ReflectionMethod %s)"), *NotTaken));
+        }
+    }
+
+    TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
+    Resp->SetBoolField(TEXT("success"), true);
+    Resp->SetStringField(TEXT("method"), Method);
+    if (QualityLevel && !NotSet.ContainsByPredicate([](const FString& Entry) { return Entry.StartsWith(TEXT("quality")); }))
+    {
+        Resp->SetStringField(TEXT("quality"), Quality);
+    }
+    if (NotSet.Num() > 0)
+    {
+        TArray<TSharedPtr<FJsonValue>> NotSetJson;
+        for (const FString& Entry : NotSet)
+        {
+            NotSetJson.Add(MakeShared<FJsonValueString>(Entry));
+        }
+        Resp->SetArrayField(TEXT("notSet"), NotSetJson);
+    }
+    if (PPV)
+    {
+        Resp->SetNumberField(TEXT("indirectLightingIntensity"), PPV->Settings.IndirectLightingIntensity);
+        Resp->SetStringField(TEXT("postProcessVolume"), McpActorRef(PPV));
+    }
+    if (WorldSettings && Payload->HasTypedField<EJson::Number>(TEXT("bounces")))
+    {
+        Resp->SetNumberField(TEXT("bounces"), WorldSettings->LightmassSettings.NumIndirectLightingBounces);
+    }
+    // The console variables above last for this editor session; Project Settings > Rendering keeps the method for the
+    // project and its packaged game (DefaultEngine.ini), written only when asked.
+    if (GetJsonBoolField(Payload, TEXT("saveToProject"), false))
+    {
+        URendererSettings* Renderer = GetMutableDefault<URendererSettings>();
+        Renderer->DynamicGlobalIllumination = static_cast<EDynamicGlobalIlluminationMethod::Type>(*GIMethod);
+        if (*GIMethod == 1)
+        {
+            Renderer->Reflections = EReflectionMethod::Lumen;
+        }
+        Renderer->SaveConfig();
+        Resp->SetBoolField(TEXT("savedToProject"), Renderer->TryUpdateDefaultConfigFile());
+    }
+    Subsystem.SendAutomationResponse(
+        RequestingSocket,
+        RequestId,
+        true,
+        FString::Printf(TEXT("GI method configured: %s%s"), *Method,
+                        NotSet.Num() > 0 ? *(TEXT("; not set: ") + FString::Join(NotSet, TEXT("; "))) : TEXT("")),
+        Resp);
+    return true;
+}
+
+}

@@ -1,0 +1,343 @@
+// tests/unit/support/schema-validate.ts
+// Record schema checks for the unit tests: the Draft-2020-12 keyword subset the
+// generated capability records actually use, plus declared-default application.
+// The native `/mcp` validator implements the same subset and rejects any keyword
+// outside it, fail-closed.
+
+import { isRecord } from '../../../src/utils/validation/type-guards.js';
+
+export const SUPPORTED_SCHEMA_KEYWORDS: ReadonlySet<string> = new Set([
+  '$schema',
+  'type',
+  'description',
+  'properties',
+  'required',
+  'requiredOneOf',
+  'additionalProperties',
+  'items',
+  'minItems',
+  'maxItems',
+  'enum',
+  'default',
+  'minimum',
+  'maximum',
+  'maxLength',
+  'x-unreal-reflection-boundary'
+]);
+
+/** An intentionally open object whose interior is arbitrary Unreal property data. */
+const REFLECTION_BOUNDARY_KEYWORD = 'x-unreal-reflection-boundary';
+
+export type ViolationReason =
+  | 'missing-required'
+  | 'required-one-of'
+  | 'undeclared'
+  | 'type'
+  | 'enum'
+  | 'range'
+  | 'unsupported-keyword';
+
+/** Named per rule so the two surfaces emit the same precise code, not a catch-all. */
+export const VIOLATION_GATEWAY_CODES: Readonly<Record<ViolationReason, string>> = {
+  'missing-required': 'MISSING_REQUIRED_PARAMETER',
+  'required-one-of': 'MISSING_REQUIRED_ONEOF',
+  undeclared: 'UNDECLARED_PARAMETER',
+  type: 'INVALID_PARAMETER_TYPE',
+  enum: 'INVALID_PARAMETER_VALUE',
+  range: 'OUT_OF_RANGE',
+  'unsupported-keyword': 'UNSUPPORTED_SCHEMA_KEYWORD'
+};
+
+const MAX_LISTED_PARAMETERS = 24;
+
+/** camelCase -> lowercase word tokens: 'propertyValue' -> ['property', 'value']. */
+function parameterNameTokens(name: string): string[] {
+  return name
+    .replace(/([a-z0-9])([A-Z])/g, '$1 $2')
+    .toLowerCase()
+    .split(/[^a-z0-9]+/)
+    .filter((token) => token.length > 0);
+}
+
+/**
+ * "Undeclared parameter 'x'" named the one spelling that does NOT work and
+ * nothing that does, so every wrong guess cost a describe round trip for a list
+ * the validator already had in hand.
+ *
+ * Substring matching alone missed the common miss — a synonym, not a typo —
+ * so 'defaultValue' drew no "did you mean" for 'propertyValue', and the
+ * alphabetical truncation then dropped 'propertyValue' into "and 9 more" while
+ * spending the 24 slots on names starting with 'a'. Score by shared camelCase
+ * token as well as substring, and list the scoring names first, so the names
+ * that survive truncation are the plausible ones. Ordering and tie-breaking are
+ * mirrored byte-for-byte by the native validator.
+ */
+export function describeUndeclaredParameter(
+  key: string,
+  properties: Record<string, unknown> | undefined
+): string {
+  // action/subAction are envelope fields that execute refuses inside params, yet every record
+  // still declares action, so 'playAction' drew "did you mean 'action'". Never offer them.
+  const declared = properties === undefined
+    ? []
+    : Object.keys(properties).filter((name) => name !== 'action' && name !== 'subAction').sort();
+  if (declared.length === 0) {
+    return `Undeclared parameter '${key}' (this action declares no parameters)`;
+  }
+  const lowerKey = key.toLowerCase();
+  const keyTokens = new Set(parameterNameTokens(key));
+  const score = (name: string): number => {
+    const lower = name.toLowerCase();
+    const substring = lower.includes(lowerKey) || lowerKey.includes(lower) ? 2 : 0;
+    const shared = parameterNameTokens(name).some((token) => keyTokens.has(token)) ? 1 : 0;
+    return substring + shared;
+  };
+  const near = declared
+    .filter((name) => score(name) > 0)
+    .sort((a, b) => (score(b) - score(a)) || (a.length - b.length) || (a < b ? -1 : a > b ? 1 : 0));
+  // A key that is one of a declared parameter's values (motion for readMode) is that parameter set to it: the list
+  // named readMode and never said motion was one of its values. Mirrors McpParameterHints::EnumValueHint.
+  const enumHint = declared
+    .map((name) => {
+      const schema = properties?.[name];
+      const value = isRecord(schema) && Array.isArray(schema.enum)
+        ? schema.enum.find((entry) => typeof entry === 'string' && entry.toLowerCase() === lowerKey)
+        : undefined;
+      return typeof value === 'string' ? `did you mean ${name}: '${value}'; ` : undefined;
+    })
+    .find((entry) => entry !== undefined);
+  const hint = enumHint ?? (near.length > 0 ? `did you mean '${near[0]}'; ` : '');
+  const ranked = [...near, ...declared.filter((name) => score(name) === 0)];
+  const listed = ranked.slice(0, MAX_LISTED_PARAMETERS);
+  const more = ranked.length > listed.length ? ` and ${ranked.length - listed.length} more` : '';
+  return `Undeclared parameter '${key}' (${hint}allowed: ${listed.join(', ')}${more})`;
+}
+
+export type SchemaViolation = {
+  readonly reason: ViolationReason;
+  readonly pointer: string;
+  readonly message: string;
+};
+
+/**
+ * A missing enum parameter is the one case where the caller cannot guess: the
+ * refusal named the field and nothing about what it accepts, so `bindingKind`
+ * cost a describe round trip for a list already in the schema.
+ */
+export function describeMissingParameter(
+  name: string,
+  properties: Record<string, unknown> | undefined
+): string {
+  const propertySchema = properties === undefined ? undefined : properties[name];
+  if (isRecord(propertySchema) && Array.isArray(propertySchema.enum)) {
+    const allowed = propertySchema.enum.filter((entry): entry is string => typeof entry === 'string');
+    if (allowed.length > 0) {
+      return `Missing required parameter '${name}' (one of: ${allowed.join(', ')})`;
+    }
+  }
+  return `Missing required parameter '${name}'`;
+}
+
+function typeMatches(value: unknown, declared: string): boolean {
+  switch (declared) {
+    case 'string': return typeof value === 'string';
+    case 'number': return typeof value === 'number' && Number.isFinite(value);
+    case 'integer': return typeof value === 'number' && Number.isInteger(value);
+    case 'boolean': return typeof value === 'boolean';
+    case 'array': return Array.isArray(value);
+    case 'object': return isRecord(value);
+    case 'null': return value === null;
+    default: return false;
+  }
+}
+
+function declaredTypes(schema: Record<string, unknown>): readonly string[] {
+  const declared = schema.type;
+  if (typeof declared === 'string') return [declared];
+  if (Array.isArray(declared)) return declared.filter((entry): entry is string => typeof entry === 'string');
+  return [];
+}
+
+function rejectUnsupportedKeywords(schema: Record<string, unknown>, pointer: string): SchemaViolation | undefined {
+  for (const keyword of Object.keys(schema)) {
+    if (SUPPORTED_SCHEMA_KEYWORDS.has(keyword)) continue;
+    return {
+      reason: 'unsupported-keyword',
+      pointer,
+      message: `Schema keyword '${keyword}' at ${pointer} is not implemented by the canonical validator`
+    };
+  }
+  return undefined;
+}
+
+function validateScalarBounds(
+  value: unknown,
+  schema: Record<string, unknown>,
+  pointer: string
+): SchemaViolation | undefined {
+  if (typeof value === 'number') {
+    if (typeof schema.minimum === 'number' && value < schema.minimum) {
+      return { reason: 'range', pointer, message: `${pointer} must be >= ${schema.minimum}` };
+    }
+    if (typeof schema.maximum === 'number' && value > schema.maximum) {
+      return { reason: 'range', pointer, message: `${pointer} must be <= ${schema.maximum}` };
+    }
+  }
+  if (typeof value === 'string' && typeof schema.maxLength === 'number' && value.length > schema.maxLength) {
+    return { reason: 'range', pointer, message: `${pointer} must be at most ${schema.maxLength} characters` };
+  }
+  if (Array.isArray(value)) {
+    if (typeof schema.minItems === 'number' && value.length < schema.minItems) {
+      return { reason: 'range', pointer, message: `${pointer} must have at least ${schema.minItems} item(s)` };
+    }
+    if (typeof schema.maxItems === 'number' && value.length > schema.maxItems) {
+      return { reason: 'range', pointer, message: `${pointer} must have at most ${schema.maxItems} item(s)` };
+    }
+  }
+  return undefined;
+}
+
+// `key in object` walks the prototype chain, so `__proto__`, `constructor`,
+// `toString` and every other Object.prototype member would read as "declared"
+// and slip past the additionalProperties gate into dispatch. Native compares
+// against a TMap and has no such chain, so own-key lookup is also what keeps
+// the two surfaces reporting the same code for the same payload.
+// (Implementation shared from src/utils/validation/type-guards.ts.)
+
+function ownProperty(properties: Record<string, unknown>, key: string): unknown {
+  return Object.hasOwn(properties, key) ? properties[key] : undefined;
+}
+
+function validateObject(
+  value: Record<string, unknown>,
+  schema: Record<string, unknown>,
+  pointer: string
+): SchemaViolation | undefined {
+  const properties = isRecord(schema.properties) ? schema.properties : undefined;
+  // A key the action does not take, sent beside a missing one, is usually that field misnamed (path for savePath,
+  // assetPath for meshPath): the refusal named only the missing field, and the stray key looked accepted.
+  const strayNote = (): string => {
+    const stray = schema.additionalProperties === false
+      ? Object.keys(value).filter((key) => properties === undefined || !Object.hasOwn(properties, key))
+      : [];
+    return stray.length === 0 ? '' : `; sent ${stray.join(', ')}, which this action does not take`;
+  };
+
+  if (Array.isArray(schema.required)) {
+    for (const name of schema.required) {
+      if (typeof name === 'string' && !Object.hasOwn(value, name)) {
+        return {
+          reason: 'missing-required',
+          pointer: `${pointer}/${name}`,
+          message: `${describeMissingParameter(name, properties)}${strayNote()}`
+        };
+      }
+    }
+  }
+
+  // At-least-one-of: mirrors CheckRequiredOneOf in McpNativeGatewaySchemaKeywords.cpp.
+  if (Array.isArray(schema.requiredOneOf)) {
+    const group = schema.requiredOneOf.filter((name): name is string => typeof name === 'string');
+    if (group.length > 0 && !group.some((name) => Object.hasOwn(value, name))) {
+      return {
+        reason: 'required-one-of',
+        pointer: `${pointer}/requiredOneOf`,
+        message: `At least one of [${group.join(', ')}] must be provided${strayNote()}`
+      };
+    }
+  }
+
+  // An intentionally open object whose interior is arbitrary Unreal property data.
+  // Required/requiredOneOf above still apply to its declared fields; only the
+  // undeclared-key gate and property recursion are skipped for the interior.
+  if (schema[REFLECTION_BOUNDARY_KEYWORD] === true) return undefined;
+
+  // `additionalProperties: false` admits only declared keys. With no `properties`
+  // declared at all, that means NO key is admitted — absent `properties` must not
+  // read as "everything allowed", or the fail-closed gate would admit any key.
+  if (schema.additionalProperties === false) {
+    for (const key of Object.keys(value)) {
+      if (properties === undefined || !Object.hasOwn(properties, key)) {
+        return {
+          reason: 'undeclared',
+          pointer: `${pointer}/${key}`,
+          message: describeUndeclaredParameter(key, properties)
+        };
+      }
+    }
+  }
+
+  if (properties !== undefined) {
+    for (const [key, entry] of Object.entries(value)) {
+      const propertySchema = ownProperty(properties, key);
+      if (propertySchema === undefined) continue;
+      const violation = validateAgainstCapabilitySchema(entry, propertySchema, `${pointer}/${key}`);
+      if (violation !== undefined) return violation;
+    }
+  }
+
+  return undefined;
+}
+
+export function validateAgainstCapabilitySchema(
+  value: unknown,
+  schema: unknown,
+  pointer = ''
+): SchemaViolation | undefined {
+  if (!isRecord(schema)) {
+    return { reason: 'type', pointer, message: `Schema at ${pointer || '/'} is not an object` };
+  }
+  const unsupported = rejectUnsupportedKeywords(schema, pointer || '/');
+  if (unsupported !== undefined) return unsupported;
+
+  const types = declaredTypes(schema);
+  if (types.length > 0 && !types.some((declared) => typeMatches(value, declared))) {
+    return {
+      reason: 'type',
+      pointer: pointer || '/',
+      message: `${pointer || '/'} must be of type ${types.join(' | ')}`
+    };
+  }
+
+  if (Array.isArray(schema.enum) && !schema.enum.some((allowed) => allowed === value)) {
+    return {
+      reason: 'enum',
+      pointer: pointer || '/',
+      message: `${pointer || '/'} must be one of [${schema.enum.map(String).join(', ')}]`
+    };
+  }
+
+  const bounds = validateScalarBounds(value, schema, pointer || '/');
+  if (bounds !== undefined) return bounds;
+
+  if (isRecord(value)) {
+    const violation = validateObject(value, schema, pointer);
+    if (violation !== undefined) return violation;
+  }
+
+  if (Array.isArray(value) && schema.items !== undefined) {
+    for (let index = 0; index < value.length; index += 1) {
+      const violation = validateAgainstCapabilitySchema(value[index], schema.items, `${pointer}/${index}`);
+      if (violation !== undefined) return violation;
+    }
+  }
+
+  return undefined;
+}
+
+// Defaults are applied before validation so a record's declared `default` is the
+// value that actually reaches Unreal. Native applies the same top-level rule.
+export function applyDeclaredDefaults(
+  params: Record<string, unknown>,
+  schema: unknown
+): Record<string, unknown> {
+  if (!isRecord(schema) || !isRecord(schema.properties)) return params;
+  const withDefaults: Record<string, unknown> = { ...params };
+  for (const [name, propertySchema] of Object.entries(schema.properties)) {
+    if (Object.hasOwn(withDefaults, name)) continue;
+    if (isRecord(propertySchema) && Object.hasOwn(propertySchema, 'default')) {
+      withDefaults[name] = propertySchema.default;
+    }
+  }
+  return withDefaults;
+}

@@ -1,0 +1,278 @@
+#include "Core/Compatibility/McpVersionCompatibility.h"
+#include "Domains/Spline/McpSplinePrivate.h"
+
+#include "Engine/World.h"
+#include "EngineUtils.h"
+#include "GameFramework/Actor.h"
+#include "GameFramework/WorldSettings.h"
+#include "Components/SplineMeshComponent.h"
+#include "Editor.h"
+#include "Foundation/BridgeHelpers/McpHelpers.h"
+#include "EngineWireSubsystem.h"
+
+USplineComponent* FindSplineComponent(AActor* Actor, const FString& ComponentName)
+{
+    if (!Actor) return nullptr;
+
+    TArray<USplineComponent*> SplineComponents;
+    Actor->GetComponents<USplineComponent>(SplineComponents);
+
+    if (SplineComponents.Num() == 0) return nullptr;
+
+    if (!ComponentName.IsEmpty())
+    {
+        for (USplineComponent* Comp : SplineComponents)
+        {
+            if (Comp && Comp->GetName() == ComponentName)
+            {
+                return Comp;
+            }
+        }
+        return nullptr;
+    }
+
+    return SplineComponents[0];
+}
+
+AActor* ResolveSplineActor(UEngineWireSubsystem* Self, const FString& RequestId, TSharedPtr<FMcpBridgeWebSocket> Socket, const FString& ActorName)
+{
+    if (ActorName.IsEmpty())
+    {
+        Self->SendAutomationResponse(Socket, RequestId, false,
+            TEXT("actorName is required"), nullptr, TEXT("MISSING_PARAM"));
+        return nullptr;
+    }
+    UWorld* World = GEditor ? GEditor->GetEditorWorldContext().World() : nullptr;
+    if (!World)
+    {
+        Self->SendAutomationResponse(Socket, RequestId, false,
+            TEXT("No editor world available"), nullptr, TEXT("NO_WORLD"));
+        return nullptr;
+    }
+    AActor* Actor = FindActorByNameInWorldForMcp(World, ActorName, true);
+    if (!Actor)
+    {
+        Self->SendAutomationResponse(Socket, RequestId, false,
+            FString::Printf(TEXT("Actor not found: %s"), *ActorName), nullptr, TEXT("NOT_FOUND"));
+    }
+    return Actor;
+}
+
+USplineComponent* ResolveSplineTarget(UEngineWireSubsystem* Self, const FString& RequestId, TSharedPtr<FMcpBridgeWebSocket> Socket, const FString& ActorName, AActor*& OutActor)
+{
+    OutActor = ResolveSplineActor(Self, RequestId, Socket, ActorName);
+    USplineComponent* Spline = OutActor ? FindSplineComponent(OutActor) : nullptr;
+    if (OutActor && !Spline)
+    {
+        Self->SendAutomationResponse(Socket, RequestId, false,
+            TEXT("No spline component found on actor"), nullptr, TEXT("NO_SPLINE"));
+    }
+    // A component made without RF_Transactional (every spline create_spline_actor made) kept each point edit out of
+    // the undo buffer; flagged, Modify() records it.
+    if (Spline && !Spline->HasAnyFlags(RF_Transactional))
+    {
+        Spline->SetFlags(RF_Transactional);
+    }
+    return Spline;
+}
+
+USplineMeshComponent* ResolveSplineMeshTarget(UEngineWireSubsystem* Self, const FString& RequestId, TSharedPtr<FMcpBridgeWebSocket> Socket, const FString& ActorName, const FString& ComponentName, AActor*& OutActor)
+{
+    OutActor = ResolveSplineActor(Self, RequestId, Socket, ActorName);
+    USplineMeshComponent* Mesh = OutActor ? FindSplineMeshComponent(OutActor, ComponentName) : nullptr;
+    if (OutActor && !Mesh)
+    {
+        Self->SendAutomationResponse(Socket, RequestId, false,
+            TEXT("No SplineMeshComponent found on actor"), nullptr, TEXT("NO_COMPONENT"));
+    }
+    return Mesh;
+}
+
+USplineComponent* SpawnSplineActor(UWorld* World, const FString& Name, const FVector& Location, const FRotator& Rotation)
+{
+    FActorSpawnParameters SpawnParams;
+    SpawnParams.Name = *Name;
+    SpawnParams.NameMode = FActorSpawnParameters::ESpawnActorNameMode::Requested;
+    SpawnParams.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
+    AActor* Actor = World->SpawnActor<AActor>(AActor::StaticClass(), Location, Rotation, SpawnParams);
+    if (!Actor)
+    {
+        return nullptr;
+    }
+    Actor->SetActorLabel(*Name);
+    USplineComponent* Spline = NewObject<USplineComponent>(Actor, TEXT("SplineComponent"), RF_Transactional);
+    Spline->RegisterComponent();
+    Actor->AddInstanceComponent(Spline);
+    Actor->SetRootComponent(Spline);
+    // A bare AActor spawns with no root to hold the spawn transform, so every spline sat at the origin, unturned.
+    Actor->SetActorLocationAndRotation(Location, Rotation);
+    return Spline;
+}
+
+FString RequireSplineProjectPath(UEngineWireSubsystem* Self, const FString& RequestId, TSharedPtr<FMcpBridgeWebSocket> Socket, const TCHAR* Field, const FString& Path)
+{
+    const FString Safe = SanitizeProjectRelativePath(Path);
+    if (Safe.IsEmpty())
+    {
+        Self->SendAutomationResponse(Socket, RequestId, false,
+            McpPathRefusalMessage(Field, Path),
+            nullptr, TEXT("SECURITY_VIOLATION"));
+    }
+    return Safe;
+}
+
+USplineMeshComponent* FindSplineMeshComponent(AActor* Actor, const FString& ComponentName)
+{
+    TArray<USplineMeshComponent*> MeshComponents;
+    Actor->GetComponents<USplineMeshComponent>(MeshComponents);
+    if (!ComponentName.IsEmpty())
+    {
+        for (USplineMeshComponent* Comp : MeshComponents)
+        {
+            if (Comp && Comp->GetName() == ComponentName)
+            {
+                return Comp;
+            }
+        }
+        return nullptr;
+    }
+    return MeshComponents.Num() > 0 ? MeshComponents[0] : nullptr;
+}
+
+bool ParseSplineMeshAxis(const FString& ForwardAxis, ESplineMeshAxis::Type& OutAxis)
+{
+    OutAxis = ForwardAxis.Equals(TEXT("Y"), ESearchCase::IgnoreCase) ? ESplineMeshAxis::Y
+        : ForwardAxis.Equals(TEXT("Z"), ESearchCase::IgnoreCase) ? ESplineMeshAxis::Z : ESplineMeshAxis::X;
+    return OutAxis != ESplineMeshAxis::X || ForwardAxis.Equals(TEXT("X"), ESearchCase::IgnoreCase);
+}
+
+const TCHAR* SplineMeshAxisName(ESplineMeshAxis::Type Axis)
+{
+    return Axis == ESplineMeshAxis::Y ? TEXT("Y") : Axis == ESplineMeshAxis::Z ? TEXT("Z") : TEXT("X");
+}
+
+bool RefuseSplineMeshAxis(UEngineWireSubsystem* Self, const FString& RequestId, TSharedPtr<FMcpBridgeWebSocket> Socket,
+                          const FString& ForwardAxis)
+{
+    Self->SendAutomationResponse(Socket, RequestId, false, FString::Printf(TEXT("'%s' is not a spline mesh axis; use X, Y or Z. "
+        "Nothing was changed."), *ForwardAxis), nullptr, TEXT("INVALID_ARGUMENT"));
+    return true;
+}
+
+bool ParseSplinePointType(const FString& TypeStr, ESplinePointType::Type& OutType)
+{
+    const FString LowerStr = TypeStr.ToLower();
+    OutType = LowerStr == TEXT("linear") ? ESplinePointType::Linear
+        : LowerStr == TEXT("constant") ? ESplinePointType::Constant
+        : LowerStr == TEXT("curveclamped") ? ESplinePointType::CurveClamped
+        : LowerStr == TEXT("curvecustomtangent") ? ESplinePointType::CurveCustomTangent
+        : ESplinePointType::Curve;
+    return OutType != ESplinePointType::Curve || LowerStr == TEXT("curve");
+}
+
+bool RefuseSplinePointType(UEngineWireSubsystem* Self, const FString& RequestId, TSharedPtr<FMcpBridgeWebSocket> Socket,
+                           const FString& TypeStr)
+{
+    Self->SendAutomationResponse(Socket, RequestId, false, FString::Printf(TEXT("'%s' is not a spline point type; use Linear, "
+        "Curve, Constant, CurveClamped or CurveCustomTangent. Nothing was changed."), *TypeStr), nullptr, TEXT("INVALID_ARGUMENT"));
+    return true;
+}
+
+FString SplinePointTypeToString(ESplinePointType::Type Type)
+{
+    switch (Type)
+    {
+        case ESplinePointType::Linear: return TEXT("Linear");
+        case ESplinePointType::Curve: return TEXT("Curve");
+        case ESplinePointType::Constant: return TEXT("Constant");
+        case ESplinePointType::CurveClamped: return TEXT("CurveClamped");
+        case ESplinePointType::CurveCustomTangent: return TEXT("CurveCustomTangent");
+        default: return TEXT("Unknown");
+    }
+}
+
+static FString MakeSplineConfigTagPrefix(const FString& Key)
+{
+    return FString::Printf(TEXT("MCP.Spline.%s="), *Key);
+}
+
+void SetSplineConfigValue(AActor* Target, const FString& Key, const FString& Value)
+{
+    if (!Target) return;
+
+    // Before the old value goes, so undo restores it.
+    Target->Modify();
+    const FString Prefix = MakeSplineConfigTagPrefix(Key);
+    for (int32 Index = Target->Tags.Num() - 1; Index >= 0; --Index)
+    {
+        if (Target->Tags[Index].ToString().StartsWith(Prefix))
+        {
+            Target->Tags.RemoveAt(Index);
+        }
+    }
+    Target->Tags.Add(FName(*(Prefix + Value)));
+    Target->MarkPackageDirty();
+}
+
+static bool TryGetSplineConfigValue(AActor* Target, const FString& Key, FString& OutValue)
+{
+    if (!Target) return false;
+
+    const FString Prefix = MakeSplineConfigTagPrefix(Key);
+    for (const FName& Tag : Target->Tags)
+    {
+        const FString TagString = Tag.ToString();
+        if (TagString.StartsWith(Prefix))
+        {
+            OutValue = TagString.RightChop(Prefix.Len());
+            return true;
+        }
+    }
+
+    return false;
+}
+
+AActor* ResolveSplineConfigTarget(UWorld* World, const FString& ActorName)
+{
+    if (!World) return nullptr;
+
+    if (!ActorName.TrimStartAndEnd().IsEmpty())
+    {
+        return FindActorByNameInWorldForMcp(World, ActorName.TrimStartAndEnd(), true);
+    }
+
+    return World->GetWorldSettings();
+}
+
+FString GetSplineConfigTargetName(AActor* Target)
+{
+    if (!Target) return TEXT("");
+    return Target->GetActorLabel().IsEmpty() ? Target->GetName() : Target->GetActorLabel();
+}
+
+bool GetConfiguredSplineBool(AActor* Actor, UWorld* World, const FString& Key, bool DefaultValue)
+{
+    FString Value;
+    if (TryGetSplineConfigValue(Actor, Key, Value) || TryGetSplineConfigValue(World ? World->GetWorldSettings() : nullptr, Key, Value))
+    {
+        return Value.Equals(TEXT("true"), ESearchCase::IgnoreCase) || Value == TEXT("1");
+    }
+
+    return DefaultValue;
+}
+
+double GetConfiguredSplineNumber(AActor* Actor, UWorld* World, const FString& Key, double DefaultValue)
+{
+    FString Value;
+    if (TryGetSplineConfigValue(Actor, Key, Value) || TryGetSplineConfigValue(World ? World->GetWorldSettings() : nullptr, Key, Value))
+    {
+        return FCString::Atod(*Value);
+    }
+
+    return DefaultValue;
+}
+
+FString BoolToSplineConfigString(bool bValue)
+{
+    return bValue ? TEXT("true") : TEXT("false");
+}

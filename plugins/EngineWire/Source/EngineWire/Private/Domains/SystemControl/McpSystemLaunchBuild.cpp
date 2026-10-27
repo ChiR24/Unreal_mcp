@@ -1,0 +1,244 @@
+#include "Domains/SystemControl/McpSystemPrivate.h"
+#include "Domains/SystemControl/McpSystemPackageJobs.h"
+
+#include "Containers/Ticker.h"
+#include "Core/Subsystem/EngineWireSubsystemResponseSanitization.h"
+#include "Dom/JsonObject.h"
+#include "Domains/Log/McpLogHistory.h"
+#include "Foundation/HandlerUtils/McpHandlerUtils.h"
+#include "HAL/FileManager.h"
+#include "HAL/PlatformProcess.h"
+#include "HAL/PlatformTime.h"
+#include "EngineWireSubsystem.h"
+#include "Misc/App.h"
+#include "Misc/FileHelper.h"
+#include "Misc/Guid.h"
+#include "Misc/Paths.h"
+
+namespace McpSystemControlHandlers {
+namespace {
+
+// A packaged build was only ever checked inside the editor: nothing in the tool
+// could start the game package_project produced, so "it packaged" stood in for
+// "it runs". This starts that game for a short smoke run and closes it again.
+
+// The real game executable, not the bootstrap one at the archive root: killing
+// the bootstrap would orphan the game it had started.
+FString FindGameExecutable(const FString& ArchiveDir)
+{
+	const FString Project = FApp::GetProjectName();
+	const FString BinDir = FPaths::Combine(ArchiveDir, TEXT("Windows"), Project, TEXT("Binaries"), TEXT("Win64"));
+	const FString Exact = FPaths::Combine(BinDir, Project + TEXT(".exe"));
+	if (FPaths::FileExists(Exact)) { return Exact; }
+	// DebugGame and Shipping builds name it <Project>-Win64-<Configuration>.exe.
+	TArray<FString> Found;
+	IFileManager::Get().FindFiles(Found, *FPaths::Combine(BinDir, Project + TEXT("-Win64-*.exe")), true, false);
+	if (Found.Num() > 0) { return FPaths::Combine(BinDir, Found[0]); }
+	// A build packaged under another name (package_project executableName) names its binary after that game target:
+	// the newest executable there is the one just packaged.
+	TArray<FString> Named;
+	IFileManager::Get().FindFiles(Named, *FPaths::Combine(BinDir, TEXT("*.exe")), true, false);
+	FString Newest;
+	FDateTime NewestTime = FDateTime::MinValue();
+	for (const FString& File : Named)
+	{
+		const FString Path = FPaths::Combine(BinDir, File);
+		const FDateTime Time = IFileManager::Get().GetTimeStamp(*Path);
+		if (Time > NewestTime) { NewestTime = Time; Newest = Path; }
+	}
+	return Newest;
+}
+
+// Closes the game at its deadline and records how the run ended. A game that
+// quits or crashes before the deadline fails the smoke run.
+bool TickLaunch(const FString& JobId)
+{
+	McpPackageJobs::FJob* Job = McpPackageJobs::Registry().Find(JobId);
+	if (Job == nullptr || !Job->Result.IsEmpty()) { return false; }
+	const double Elapsed = FPlatformTime::Seconds() - Job->StartedAtSeconds;
+	if (FPlatformProcess::IsProcRunning(Job->Proc))
+	{
+		if (Elapsed < Job->RunSeconds) { return true; }
+		FPlatformProcess::TerminateProc(Job->Proc, true);
+		Job->Result = TEXT("Completed");
+	}
+	else
+	{
+		FPlatformProcess::GetProcReturnCode(Job->Proc, &Job->ExitCode);
+		Job->Result = TEXT("ExitedEarly");
+	}
+	Job->DurationSeconds = Elapsed;
+	FPlatformProcess::CloseProc(Job->Proc);
+	return false;
+}
+}
+
+bool HandleLaunchBuild(UEngineWireSubsystem* Self, const FString& RequestId,
+                       const TSharedPtr<FJsonObject>& Payload, FSystemControlSocket RequestingSocket)
+{
+#if PLATFORM_WINDOWS
+	// map: the level to open in place of the game's default map, so each level can have its own smoke run. Letters,
+	// digits, '_' and '/' only: the value goes on the game's command line.
+	FString Map;
+	Payload->TryGetStringField(TEXT("map"), Map);
+	Map.TrimStartAndEndInline();
+	bool bMapIsName = !Map.Contains(TEXT("//")) && !Map.EndsWith(TEXT("/"));
+	for (const TCHAR C : Map)
+	{
+		bMapIsName &= (C >= TCHAR('a') && C <= TCHAR('z')) || (C >= TCHAR('A') && C <= TCHAR('Z'))
+			|| (C >= TCHAR('0') && C <= TCHAR('9')) || C == TCHAR('_') || C == TCHAR('/');
+	}
+	if (!Map.IsEmpty() && !bMapIsName)
+	{
+		Self->SendAutomationError(RequestingSocket, RequestId, FString::Printf(
+			TEXT("map '%s' is not a level path or name (/Game/Maps/L_Main or L_Main). Nothing was started."), *Map),
+			TEXT("INVALID_ARGUMENT"));
+		return true;
+	}
+
+	FString ArchiveDir;
+	Payload->TryGetStringField(TEXT("archiveDirectory"), ArchiveDir);
+	ArchiveDir.TrimStartAndEndInline();
+	if (ArchiveDir.IsEmpty()) { ArchiveDir = FPaths::Combine(FPaths::ProjectDir(), TEXT("Packaged")); }
+	ArchiveDir = FPaths::ConvertRelativePathToFull(ArchiveDir);
+	FPaths::NormalizeDirectoryName(ArchiveDir);
+	// Only a build inside this project may run: an archive directory anywhere else
+	// would let a caller start any executable that happens to carry its name.
+	const FString ProjectDir = FPaths::ConvertRelativePathToFull(FPaths::ProjectDir());
+	if (!FPaths::IsUnderDirectory(ArchiveDir, ProjectDir))
+	{
+		Self->SendAutomationError(RequestingSocket, RequestId,
+			FString::Printf(TEXT("archiveDirectory must be inside the project (%s)."), *ProjectDir),
+			TEXT("INVALID_ARGUMENT"));
+		return true;
+	}
+	const FString Exe = FindGameExecutable(ArchiveDir);
+	if (Exe.IsEmpty())
+	{
+		Self->SendAutomationError(RequestingSocket, RequestId,
+			FString::Printf(TEXT("No packaged Win64 game under %s. Run package_project first."), *ArchiveDir),
+			TEXT("BUILD_NOT_FOUND"));
+		return true;
+	}
+
+	double Seconds = 20.0;
+	Payload->TryGetNumberField(TEXT("seconds"), Seconds);
+	Seconds = FMath::Clamp(Seconds, 5.0, 120.0);
+	bool bWindowed = false;
+	Payload->TryGetBoolField(TEXT("windowed"), bWindowed);
+
+	const FString GameLog = FPaths::ConvertRelativePathToFull(
+		FPaths::Combine(FPaths::ProjectSavedDir(), TEXT("Logs"), TEXT("McpBuildRun.log")));
+	IFileManager::Get().Delete(*GameLog, false, true, true);
+	// Offscreen by default: no window appears and nobody's focus is taken.
+	// No -FORCELOGFLUSH: a flush per line slowed startup several-fold, and an idle
+	// title screen simply logs nothing more, which is not a truncated log.
+	// A level on a game's command line comes first, before any switch.
+	const FString MapArg = Map.IsEmpty() ? FString() : Map + TEXT(" ");
+	const FString Args = FString::Printf(TEXT("%s%s -unattended -nosplash -abslog=\"%s\""), *MapArg,
+		bWindowed ? TEXT("-windowed -ResX=1280 -ResY=720") : TEXT("-RenderOffscreen"), *GameLog);
+
+	McpPackageJobs::FJob Job;
+	Job.bLaunch = true;
+	Job.CommandLine = FString::Printf(TEXT("\"%s\" %s"), *Exe, *Args);
+	Job.ArchiveDirectory = ArchiveDir;
+	Job.Platform = TEXT("Win64");
+	// <Name>-Win64-<Configuration>.exe for DebugGame, Test and Shipping; a Development build carries no suffix.
+	Job.Configuration = TEXT("Development");
+	FPaths::GetBaseFilename(Exe).Split(TEXT("-Win64-"), nullptr, &Job.Configuration);
+	Job.Map = Map;
+	Job.GameLogPath = GameLog;
+	Job.RunSeconds = Seconds;
+	Job.StartedAtSeconds = FPlatformTime::Seconds();
+	Job.Proc = FPlatformProcess::CreateProc(*Exe, *Args, true, false, false, nullptr, 0, nullptr, nullptr);
+	if (!Job.Proc.IsValid())
+	{
+		Self->SendAutomationError(RequestingSocket, RequestId,
+			FString::Printf(TEXT("Could not start %s."), *Exe), TEXT("LAUNCH_FAILED"));
+		return true;
+	}
+	const FString JobId = FGuid::NewGuid().ToString(EGuidFormats::DigitsWithHyphens);
+	McpPackageJobs::Registry().Add(JobId, Job);
+	// ponytail: a run still going when the editor closes keeps running; it is capped at 120 s.
+	FTSTicker::GetCoreTicker().AddTicker(
+		FTickerDelegate::CreateLambda([JobId](float) { return TickLaunch(JobId); }), 0.5f);
+
+	TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
+	Result->SetStringField(TEXT("jobId"), JobId);
+	Result->SetStringField(TEXT("status"), TEXT("running"));
+	Result->SetStringField(TEXT("executable"), Exe);
+	Result->SetStringField(TEXT("gameLogPath"), GameLog);
+	if (!Map.IsEmpty()) { Result->SetStringField(TEXT("map"), Map); }
+	Result->SetNumberField(TEXT("seconds"), Seconds);
+	Self->SendAutomationResponse(RequestingSocket, RequestId, true,
+		FString::Printf(TEXT("Packaged game started for a %.0f s smoke run; poll package_status with this jobId."), Seconds),
+		Result);
+	return true;
+#else
+	Self->SendAutomationError(RequestingSocket, RequestId,
+		TEXT("launch_build starts a Win64 build and needs a Windows editor."), TEXT("NOT_SUPPORTED"));
+	return true;
+#endif
+}
+
+void AppendLaunchStatus(const McpPackageJobs::FJob& Job, const TSharedPtr<FJsonObject>& Result)
+{
+	Result->SetStringField(TEXT("gameLogPath"), Job.GameLogPath);
+	if (!Job.Map.IsEmpty()) { Result->SetStringField(TEXT("map"), Job.Map); }
+	if (Job.Result == TEXT("ExitedEarly")) { Result->SetNumberField(TEXT("exitCode"), Job.ExitCode); }
+	// The game may still hold its log open for writing.
+	FString Text;
+	FFileHelper::LoadFileToString(Text, *Job.GameLogPath, FFileHelper::EHashOptions::None, FILEREAD_AllowWrite);
+	// No log is not a clean log: a Shipping run answered errorCount 0 and no maps loaded, which read as a clean
+	// run although nothing had been seen at all.
+	if (Text.IsEmpty())
+	{
+		if (!Job.Result.IsEmpty())
+		{
+			const bool bShipping = Job.Configuration == TEXT("Shipping");
+			Result->SetArrayField(TEXT("warnings"), TArray<TSharedPtr<FJsonValue>>{MakeShared<FJsonValueString>(FString::Printf(
+				TEXT("The game wrote no log%s, so this run shows only whether it started and stayed up, not which maps it ")
+				TEXT("loaded or what errors it hit.%s"), bShipping ? TEXT(" (a Shipping build logs nothing)") : TEXT(""),
+				bShipping ? TEXT(" Package with configuration Development for a run whose log can be read.") : TEXT("")))});
+		}
+		return;
+	}
+	TArray<FString> Lines;
+	Text.ParseIntoArrayLines(Lines);
+	int32 Errors = 0;
+	// "LogLoad: Took 0.12 seconds to LoadMap(/Game/Maps/L_Main)" is the proof the
+	// game reached a level rather than just initialising the engine.
+	TArray<TSharedPtr<FJsonValue>> Maps;
+	for (const FString& Line : Lines)
+	{
+		if (Line.Contains(TEXT(": Error: ")) || Line.Contains(TEXT("Fatal error"))) { ++Errors; }
+		FString Map;
+		if (Line.Split(TEXT("to LoadMap("), nullptr, &Map) && Map.Split(TEXT(")"), &Map, nullptr))
+		{
+			Maps.Add(MakeShared<FJsonValueString>(Map));
+		}
+	}
+	Result->SetArrayField(TEXT("mapsLoaded"), Maps);
+	// A level that is not in the game (or not cooked) leaves the game on its default map, still running: the run
+	// "succeeds" without ever having opened what it was asked to.
+	if (!Job.Map.IsEmpty() && !Job.Result.IsEmpty() && !Maps.ContainsByPredicate([&Job](const TSharedPtr<FJsonValue>& Loaded)
+		{
+			const FString Path = Loaded->AsString();
+			return Path.Equals(Job.Map, ESearchCase::IgnoreCase) || Path.EndsWith(TEXT("/") + Job.Map, ESearchCase::IgnoreCase);
+		}))
+	{
+		Result->SetArrayField(TEXT("warnings"), TArray<TSharedPtr<FJsonValue>>{MakeShared<FJsonValueString>(FString::Printf(
+			TEXT("The game never logged loading %s, so this run did not test it: check the name, and that the level "
+			     "is in the packaged maps (package_project maps)."), *Job.Map))});
+	}
+	TArray<TSharedPtr<FJsonValue>> Tail;
+	for (int32 Index = FMath::Max(0, Lines.Num() - 30); Index < Lines.Num(); ++Index)
+	{
+		// Same redaction as read_log: the game's log carries host paths and account ids too.
+		Tail.Add(MakeShared<FJsonValueString>(EngineWireSubsystemResponse::SanitizeEngineErrorForResponse(
+			FMcpLogHistory::KeepDiagnosticFileName(Lines[Index]))));
+	}
+	Result->SetNumberField(TEXT("errorCount"), Errors);
+	Result->SetArrayField(TEXT("logTail"), Tail);
+}
+}

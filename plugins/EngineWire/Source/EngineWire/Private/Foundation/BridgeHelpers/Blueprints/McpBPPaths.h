@@ -1,0 +1,84 @@
+#pragma once
+
+#include "CoreMinimal.h"
+#include "Misc/PackageName.h"
+
+#include "AssetRegistry/AssetData.h"
+#include "AssetRegistry/AssetRegistryModule.h"
+#include "Modules/ModuleManager.h"
+#include "EditorAssetLibrary.h"
+
+// Whether an asset lives at this package (or Package.Object) path, read from the
+// asset registry. UEditorAssetLibrary::DoesAssetExist answers false for every
+// path while PIE runs and logs an engine error, so blueprint calls made during
+// play logged that error and blueprint_exists reported a real Blueprint missing.
+static inline bool McpAssetExists(const FString &Path, FAssetData *OutData = nullptr) {
+  FString PackagePath = Path;
+  int32 DotIdx;
+  if (PackagePath.FindChar(TEXT('.'), DotIdx)) {
+    PackagePath.LeftInline(DotIdx);
+  }
+  TArray<FAssetData> Found;
+  FModuleManager::LoadModuleChecked<FAssetRegistryModule>(TEXT("AssetRegistry"))
+      .Get().GetAssetsByPackageName(FName(*PackagePath), Found);
+  if (Found.Num() == 0) {
+    return false;
+  }
+  if (OutData) {
+    *OutData = Found[0];
+  }
+  return true;
+}
+
+// The asset at this path, loaded when it is not in memory yet; nullptr when there
+// is none. UEditorAssetLibrary::LoadAsset refuses the same way during PIE, so a
+// sound, class or Blueprint path used while the game ran read as missing.
+static inline UObject *McpLoadAsset(const FString &Path) {
+  FAssetData Data;
+  UObject *Asset = McpAssetExists(Path, &Data) ? Data.GetAsset() : nullptr;
+  return IsValid(Asset) ? Asset : nullptr;
+}
+
+static inline bool FindBlueprintNormalizedPath(const FString &Req,
+                                               FString &OutNormalized) {
+  OutNormalized.Empty();
+  if (Req.IsEmpty())
+    return false;
+  FString CheckPath = Req;
+
+  if (CheckPath.EndsWith(TEXT(".uasset"))) {
+    CheckPath = CheckPath.LeftChop(7);
+  }
+
+  int32 DotIdx;
+  if (CheckPath.FindLastChar(TEXT('.'), DotIdx)) {
+    const FString AfterDot = CheckPath.Mid(DotIdx + 1);
+    const FString BeforeDot = CheckPath.Left(DotIdx);
+    int32 LastSlashIdx;
+    if (BeforeDot.FindLastChar(TEXT('/'), LastSlashIdx)) {
+      const FString AssetName = BeforeDot.Mid(LastSlashIdx + 1);
+      if (AssetName.Equals(AfterDot, ESearchCase::IgnoreCase)) {
+        CheckPath = BeforeDot;
+      }
+    }
+  }
+
+  if (!CheckPath.StartsWith(TEXT("/Game/")) &&
+      !CheckPath.StartsWith(TEXT("/Engine/")) &&
+      !CheckPath.StartsWith(TEXT("/Script/"))) {
+    if (CheckPath.StartsWith(TEXT("/")) &&
+        FPackageName::IsValidLongPackageName(CheckPath, true)) {
+      // Preserve registered plugin mount points.
+    } else if (CheckPath.StartsWith(TEXT("/"))) {
+      CheckPath = TEXT("/Game") + CheckPath;
+    } else {
+      CheckPath = TEXT("/Game/") + CheckPath;
+    }
+  }
+
+  if (McpAssetExists(CheckPath)) {
+    OutNormalized = CheckPath;
+    return true;
+  }
+  return false;
+}

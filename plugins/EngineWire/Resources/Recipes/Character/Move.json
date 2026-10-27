@@ -1,0 +1,30 @@
+{
+  "description": "Walking for a pawn: while its Axis2D move action fires, the pawn moves forward and back by the action's Y and sideways by its X, relative to where the controller faces (yaw only), through AddMovementInput. The context is registered when the pawn is possessed; the keys are mapped by the caller.",
+  "tag": "Move",
+  "placeholders": {
+    "InputAction": "The Axis2D Input Action that moves the pawn.",
+    "MappingContext": "Input Mapping Context its keys are in."
+  },
+  "input": { "id": "moveInput", "inputActionPath": "{{InputAction}}", "mappingContextPath": "{{MappingContext}}" },
+  "eventGraph": [
+    { "edit": "create_node", "id": "moveSplit", "nodeType": "CallFunction", "memberName": "BreakVector2D", "memberClass": "/Script/Engine.KismetMathLibrary" },
+    { "edit": "create_node", "id": "moveAim", "nodeType": "CallFunction", "memberName": "GetControlRotation", "memberClass": "/Script/Engine.Pawn" },
+    { "edit": "create_node", "id": "moveAimParts", "nodeType": "CallFunction", "memberName": "BreakRotator", "memberClass": "/Script/Engine.KismetMathLibrary" },
+    { "edit": "create_node", "id": "moveFlat", "nodeType": "CallFunction", "memberName": "MakeRotator", "memberClass": "/Script/Engine.KismetMathLibrary" },
+    { "edit": "create_node", "id": "moveAhead", "nodeType": "CallFunction", "memberName": "GetForwardVector", "memberClass": "/Script/Engine.KismetMathLibrary" },
+    { "edit": "create_node", "id": "moveSide", "nodeType": "CallFunction", "memberName": "GetRightVector", "memberClass": "/Script/Engine.KismetMathLibrary" },
+    { "edit": "create_node", "id": "moveForward", "nodeType": "CallFunction", "memberName": "AddMovementInput", "memberClass": "/Script/Engine.Pawn" },
+    { "edit": "create_node", "id": "moveRight", "nodeType": "CallFunction", "memberName": "AddMovementInput", "memberClass": "/Script/Engine.Pawn" },
+    { "edit": "connect_pins", "from": "$moveInput.ActionValue", "to": "$moveSplit.InVec" },
+    { "edit": "connect_pins", "from": "$moveAim.ReturnValue", "to": "$moveAimParts.InRot" },
+    { "edit": "connect_pins", "from": "$moveAimParts.Yaw", "to": "$moveFlat.Yaw" },
+    { "edit": "connect_pins", "from": "$moveFlat.ReturnValue", "to": "$moveAhead.InRot" },
+    { "edit": "connect_pins", "from": "$moveFlat.ReturnValue", "to": "$moveSide.InRot" },
+    { "edit": "connect_pins", "from": "$moveAhead.ReturnValue", "to": "$moveForward.WorldDirection" },
+    { "edit": "connect_pins", "from": "$moveSplit.Y", "to": "$moveForward.ScaleValue" },
+    { "edit": "connect_pins", "from": "$moveSide.ReturnValue", "to": "$moveRight.WorldDirection" },
+    { "edit": "connect_pins", "from": "$moveSplit.X", "to": "$moveRight.ScaleValue" },
+    { "edit": "connect_pins", "from": "$moveInput.Triggered", "to": "$moveForward.execute" },
+    { "edit": "connect_pins", "from": "$moveForward.then", "to": "$moveRight.execute" }
+  ]
+}

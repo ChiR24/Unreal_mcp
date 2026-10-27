@@ -1,0 +1,63 @@
+import type { CapabilityRecordSource, JsonObject } from '../../model.js';
+import { utilityRecord, withInputProps, withTopics, withWhenNotToUse } from '../utility/utility-record-builders.js';
+
+const T = 'manage_networking' as const;
+// Every Game Framework action authors a Blueprint asset, and an unsaved edit is lost on the next
+// editor restart, so the handler saves unless told not to.
+const SAVE: Readonly<Record<string, JsonObject>> = {
+  save: { type: 'boolean', description: 'Save the Blueprint asset to disk after the change (default true).' },
+};
+const f = (action: string, summary: string, params: readonly string[], required: readonly string[], outputs: readonly string[] = [], outputRequired: readonly string[] = [], read = false, props: Readonly<Record<string, JsonObject>> = {}, requiredOneOf?: readonly string[]): CapabilityRecordSource => {
+  const record = utilityRecord({
+    tool: T, action, family: 'gameFramework', summary, params, required, outputs, outputRequired, requiredOneOf,
+    effect: read ? 'read' : 'write', safeToRetry: read, dispatchAction: 'manage_game_framework',
+  });
+  return withInputProps(record, read ? props : { ...SAVE, ...props });
+};
+const create = (action: string, label: string, parent: string, extra: readonly string[] = [], more = ''): CapabilityRecordSource => f(
+  action, `Create a ${label} Blueprint (name, in path) whose parent is ${parent} or the parentClass given (a child of ${parent}; an unloadable one, or one that is not, is refused). An asset already at the path is refused (CREATION_FAILED).${more} Saved unless save is false (saved); the reply gives assetPath.`,
+  ['name', 'path', 'parentClass', 'save', ...extra], ['name', 'path'], ['assetPath', 'saved'], ['assetPath'],
+);
+// Setting a class changes only this game mode. makeDefault opts in to making it the project default
+// (DefaultEngine.ini), and the reply always says which game mode the open level runs in play.
+const EFFECTIVE = ' Pass makeDefault: true to also make this game mode the project default; the reply says whether the open level runs it (effectiveInOpenLevel).';
+// "set class defaults" (a Blueprint's CDO values) ranked these first through their set/default/class names.
+const GAME_MODE = ['gameModeBlueprint', 'blueprintPath'];
+const setClass = (action: string, label: string, field: string, alias: readonly string[] = []): CapabilityRecordSource => withWhenNotToUse(f(
+  action, `Set a GameMode ${label} class.${EFFECTIVE}`, [...GAME_MODE, field, ...alias, 'makeDefault', 'save'], alias.length > 0 ? [] : [field],
+  ['madeDefault', 'effectiveInOpenLevel', 'openLevelGameMode'], [], false,
+  alias.length > 0 ? { [field]: { type: 'string', description: `The ${label} class (a class path or Blueprint path); required, or send it as ${alias.join(' or ')}.` } } : {}, GAME_MODE,
+), ['A Blueprint\'s own class default values (its CDO) must be set (use blueprint.edit_variable edit=set_default).']);
+
+export const NETWORKING_FRAMEWORK_RECORDS: readonly CapabilityRecordSource[] = [
+  create('create_game_mode', 'GameMode', 'GameModeBase', ['defaultPawnClass', 'playerControllerClass', 'gameStateClass', 'playerStateClass', 'hudClass'],
+    ' defaultPawnClass, playerControllerClass, gameStateClass, playerStateClass and hudClass set its classes; each must load and be the kind its slot holds (a Pawn for the pawn), checked before anything is created.'),
+  create('create_game_state', 'GameState', 'GameStateBase'),
+  create('create_player_controller', 'PlayerController', 'PlayerController'),
+  create('create_player_state', 'PlayerState', 'PlayerState'),
+  create('create_game_instance', 'GameInstance', 'GameInstance'),
+  create('create_hud_class', 'HUD', 'HUD'),
+  setClass('set_default_pawn_class', 'default pawn', 'pawnClass', ['defaultPawnClass']),
+  setClass('set_player_controller_class', 'PlayerController', 'playerControllerClass'),
+  setClass('set_game_state_class', 'GameState', 'gameStateClass'),
+  setClass('set_player_state_class', 'PlayerState', 'playerStateClass'),
+  setClass('set_hud_class', 'HUD', 'hudClass'),
+  f('configure_game_rules', 'Set a GameMode\'s bDelayedStart match rule; only GameMode (AGameMode) children have it, a GameModeBase child is refused with NOT_SUPPORTED.', [...GAME_MODE, 'bDelayedStart', 'save'], ['bDelayedStart'], [], [], false, {
+    bDelayedStart: { type: 'boolean', description: 'Hold the match in WaitingToStart until StartMatch is called (AGameMode::bDelayedStart).' },
+  }, GAME_MODE),
+  f('set_respawn_rules', 'Set the game mode\'s minimum respawn delay (AGameMode::MinRespawnDelay); a GameModeBase child is refused with NOT_SUPPORTED.', [...GAME_MODE, 'respawnDelay', 'save'], ['respawnDelay'], [], [], false, {}, GAME_MODE),
+  f('configure_spectating', 'Set the GameMode spectator pawn class (SpectatorClass).', [...GAME_MODE, 'spectatorClass', 'save'], ['spectatorClass'], [], [], false, {
+    spectatorClass: { type: 'string', description: 'SpectatorPawn class path, e.g. /Script/Engine.SpectatorPawn or a Blueprint path.' },
+  }, GAME_MODE),
+  // A level edit, not a Blueprint one: undoable and left unsaved, so it takes no save flag.
+  withTopics(utilityRecord({
+    tool: T, action: 'configure_player_start', family: 'gameFramework',
+    summary: 'Set the PlayerStartTag of a PlayerStart in the open level: an explicit tag, or TeamN for teamIndex N. The engine only matches the tag against a ?Portal=<tag> travel option; team spawning needs a game mode that reads it. Undoable; the level is left modified, not saved.',
+    whenNotToUse: ['A PlayerStart must be placed in the level first (use control_actor.spawn with the PlayerStart class).'],
+    params: ['playerStartName', 'playerStartTag', 'teamIndex'], requiredOneOf: ['playerStartTag', 'teamIndex'],
+    outputs: ['playerStart', 'playerStartTag', 'previousTag'], outputRequired: ['playerStart', 'playerStartTag', 'previousTag'],
+    dispatchAction: 'manage_game_framework',
+  }), ['player start', 'player start tag', 'team spawn point', 'spawn point tag']),
+  withTopics(f('get_game_framework_info', 'Read which game mode is in use and its default classes (pawn, player controller, game state, player state, HUD), from a game mode Blueprint or from the live world, the level override or the project default.', ['gameModeBlueprint', 'blueprintPath'], [], ['gameFrameworkInfo'], ['gameFrameworkInfo'], true),
+    ['which mode is used', 'default pawn class', 'default classes', 'read game mode', 'game mode settings']),
+];

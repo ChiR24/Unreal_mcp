@@ -1,0 +1,174 @@
+// set_anim_graph_node_value could not find a node by the name create_node and add_state report (its object name or its
+// GUID), picked the first of two Sequence Players that share a title, and wrote a setting of the node's embedded Node struct
+// through the graph node, so a value was stored at the struct's offset inside the wrong object and the reply still said
+// success. Wiring contracts only; behaviour needs an editor.
+
+import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
+
+import { describe, expect, it } from 'vitest';
+
+import { capabilityIndex } from '../support/capability-index.js';
+import { isRecord } from '../../../src/utils/validation/type-guards.js';
+
+import { sliceBetween } from './plugin-contract-fixtures.js';
+
+const DOMAINS = join('plugins', 'EngineWire', 'Source', 'EngineWire', 'Private', 'Domains');
+
+/** Block and line comments removed, so no assertion can be satisfied by prose. */
+const code = (...segments: readonly string[]): string =>
+  readFileSync(join(DOMAINS, ...segments), 'utf8').replace(/\/\*[\s\S]*?\*\//gu, ' ').replace(/\/\/[^\n]*/gu, ' ');
+const compact = (source: string): string => source.split(/\s+/u).join(' ');
+
+const handler = (): string => code('AnimationAuthoring', 'McpAnimBPNodeValues.cpp');
+const lookup = (): string => code('Animation', 'Blueprints', 'McpAnimGraphNodeLookup.cpp');
+
+describe('set_anim_graph_node_value finds the node it was handed', () => {
+  it('looks in the AnimGraph and every graph under it, where a state\'s Sequence Player lives', () => {
+    const source = lookup();
+
+    expect(source).toMatch(/Graphs\.Add\(AnimGraph\);\s*AnimGraph->GetAllChildrenGraphs\(Graphs\);/u);
+    expect(source).toContain('for (UEdGraph* Graph : AnimGraphsOf(AnimBP))');
+  });
+
+  it('takes the object name or the GUID outright, a custom name before a shared title, and refuses a name two nodes share', () => {
+    const find = sliceBetween(lookup(), 'UEdGraphNode* FindAnimGraphNode(', 'FProperty* ResolveAnimNodeProperty(');
+    const flat = compact(find);
+
+    expect(flat).toContain('const bool bIsGuid = FGuid::Parse(Requested, Guid);');
+    expect(flat).toContain('if (Node->GetName().Equals(Requested, ESearchCase::IgnoreCase) || (bIsGuid && Node->NodeGuid == Guid)) { return Node; }');
+    expect(flat).toContain('if (Node->NodeComment.Contains(Requested)) { ByComment.Add(Node); }');
+    expect(flat).toContain('else if (Node->GetNodeTitle(ENodeTitleType::ListView).ToString().Contains(Requested)) { ByTitle.Add(Node); }');
+    expect(flat).toContain('const TArray<UEdGraphNode*>& Candidates = ByComment.Num() > 0 ? ByComment : ByTitle; if (Candidates.Num() == 1) { return Candidates[0]; } OutAmbiguous = Candidates; return nullptr;');
+  });
+
+  it('the handler takes nodeId as nodeName, names the candidates of a shared name and lists the nodes of a miss', () => {
+    const flat = compact(handler());
+
+    expect(flat).toContain('if (NodeName.IsEmpty()) { NodeName = GetJsonStringField(Params, TEXT("nodeId"), TEXT("")); }');
+    expect(flat).toContain('UEdGraphNode* FoundNode = FindAnimGraphNode(AnimBP, NodeName, Ambiguous);');
+    expect(flat).toContain('Response->SetArrayField(TEXT("candidates"), Candidates);');
+    expect(flat).toContain('TEXT("AMBIGUOUS_NODE")');
+    expect(flat).toContain('Response->SetArrayField(TEXT("nodes"), ListAnimGraphNodes(AnimBP, 60));');
+    expect(flat).toContain('TEXT("NODE_NOT_FOUND")');
+    expect(flat, 'no first-match loop over the AnimGraph left behind').not.toContain('AnimGraph->Nodes');
+  });
+});
+
+describe('set_anim_graph_node_value stores what it was given, where the node keeps it', () => {
+  it('writes through the memory the property lives in: the embedded Node struct for its settings, not the graph node', () => {
+    const resolve = sliceBetween(lookup(), 'FProperty* ResolveAnimNodeProperty(', 'bool IsAnimPlayerAssetProperty(');
+    const flat = compact(handler());
+
+    expect(compact(resolve)).toContain('OutContainer = NodeStruct->ContainerPtrToValuePtr<void>(Node); Scope = NodeStruct->Struct;');
+    expect(compact(resolve)).toContain('OutContainer = Inner->ContainerPtrToValuePtr<void>(OutContainer); Scope = Inner->Struct;');
+    expect(flat).toContain('ResolveAnimNodeProperty(FoundNode, PropertyName, Container, Missing);');
+    expect(flat).toContain('ApplyJsonValueToProperty(Container, Property, ValueField, SetError)');
+    expect(flat, 'the container is not the graph node').not.toContain('ApplyJsonValueToProperty(FoundNode');
+  });
+
+  it('reads the stored value back, and the reply names the node it found', () => {
+    const flat = compact(handler());
+
+    expect(flat).toContain('MCP_PROPERTY_EXPORT_TEXT(Property, Stored, Property->ContainerPtrToValuePtr<void>(Container), nullptr, nullptr, PPF_None);');
+    expect(flat).toContain('Response->SetStringField(TEXT("value"), Stored);');
+    expect(flat).toContain('Response->SetStringField(TEXT("nodeName"), FoundNode->GetName());');
+    expect(flat).toContain('Response->SetStringField(TEXT("nodeId"), FoundNode->NodeGuid.ToString());');
+  });
+
+  it('an asset player\'s asset goes through the node\'s own setter, only for a class it plays, and fails when it did not take', () => {
+    const flat = compact(handler());
+    const setter = compact(sliceBetween(lookup(), 'bool SetAnimPlayerAsset(', 'zzz-end'));
+    const supports = setter.indexOf('Player->SupportsAssetClass(Asset->GetClass()) == EAnimAssetHandlerType::NotSupported');
+    const set = setter.indexOf('Player->SetAnimationAsset(Asset);');
+
+    expect(flat).toContain('if (IsAnimPlayerAssetProperty(FoundNode, Property)) {');
+    expect(flat).toContain('SetAnimPlayerAsset(FoundNode, ValueField, Stored, SetError, SetErrorCode)');
+    expect(compact(lookup())).toContain('Cast<UAnimGraphNode_AssetPlayerBase>(Node) && ObjectProperty && ObjectProperty->PropertyClass && ObjectProperty->PropertyClass->IsChildOf(UAnimationAsset::StaticClass())');
+    expect(supports, 'the class check').toBeGreaterThan(-1);
+    expect(set, 'the setter runs after it').toBeGreaterThan(supports);
+    expect(setter).toContain('Player->Modify(); Player->SetAnimationAsset(Asset); if (Player->GetAnimationAsset() != Asset) {');
+    expect(setter).toContain('OutErrorCode = TEXT("PROPERTY_SET_FAILED");');
+    expect(setter).toContain('OutErrorCode = TEXT("ASSET_TYPE_MISMATCH");');
+    expect(setter).toContain('OutErrorCode = TEXT("ASSET_NOT_FOUND");');
+  });
+});
+
+describe('the set_anim_graph_node_value record says how to name a node', () => {
+  const record = () => capabilityIndex().byId.get('animation_physics.configure_anim_graph_node');
+  const description = (name: string): string => {
+    const properties = record()?.schemas.input.properties;
+    const entry = isRecord(properties) ? properties[name] : undefined;
+    return isRecord(entry) && typeof entry.description === 'string' ? entry.description : '';
+  };
+
+  it('nodeName takes the object name or the GUID, and nodeId is the GUID alone, read by this variant only', () => {
+    expect(description('nodeName')).toMatch(/object name \(AnimGraphNode_SequencePlayer_0\), its GUID/u);
+    expect(description('nodeName')).toMatch(/NODE_NOT_FOUND listing every node/u);
+    expect(description('nodeId')).toMatch(/GUID/u);
+    expect(record()?.routing.dispatchBy?.declaredBy?.nodeId).toEqual(['set_value']);
+    expect(record()?.routing.dispatchBy?.declaredBy?.nodeName).toEqual(['set_value']);
+  });
+
+  it('propertyName says an asset property is set through the node and read back', () => {
+    expect(description('propertyName')).toMatch(/asset property \(Sequence, BlendSpace\) is written through the node's own setter and read back/u);
+  });
+});
+
+// inspect_graph info=node on an animation graph node listed its pins and nothing else: not the animation a Sequence Player
+// plays, nor its play rate or loop, which are settings of the node and not pins.
+describe('inspect_graph info=node shows what an animation node plays and how it is set', () => {
+  const details = (): string => code('BlueprintGraph', 'McpBPGraphDetails.cpp');
+
+  it('an animation graph node adds the asset it plays and its editable settings to the node details', () => {
+    const source = details();
+    const flat = compact(sliceBetween(source, 'static void AddAnimNodeSettings(', 'static bool GetNodeDetails('));
+
+    expect(flat).toContain('const UAnimGraphNode_Base* AnimNode = Cast<UAnimGraphNode_Base>(Node);');
+    expect(flat).toContain('CastField<FStructProperty>(Node->GetClass()->FindPropertyByName(TEXT("Node")))');
+    expect(flat).toContain('if (const UAnimationAsset* Asset = AnimNode->GetAnimationAsset()) {');
+    expect(flat).toContain('Result->SetStringField(TEXT("animationAsset"), Asset->GetPathName());');
+    expect(flat).toContain('Result->SetStringField(TEXT("animationAssetClass"), Asset->GetClass()->GetName());');
+    expect(flat).toContain('void* Settings = NodeStruct->ContainerPtrToValuePtr<void>(Node);');
+    expect(flat, 'only what a caller can edit, no list, at most 24').toContain('It && Values->Values.Num() < 24');
+    expect(flat).toContain('It->HasAnyPropertyFlags(CPF_Edit) && !It->IsA<FArrayProperty>() && !It->IsA<FMapProperty>() && !It->IsA<FSetProperty>()');
+    expect(flat, 'typed values off the node struct, not the graph node').toContain('McpPropertyReflection::ExportPropertyToJsonValue(Settings, *It)');
+    expect(flat).toContain('Result->SetObjectField(TEXT("settings"), Values);');
+  });
+
+  it('get_node_details adds them after the pins and the node id, for every node', () => {
+    const flat = compact(details());
+
+    expect(flat).toContain('Result->SetStringField(TEXT("nodeId"), TargetNode->NodeGuid.ToString()); AddAnimNodeSettings(TargetNode, Result);');
+    expect(flat.indexOf('Result->SetArrayField(TEXT("pins"), Pins); Result->SetStringField(TEXT("nodeId")')).toBeGreaterThan(-1);
+  });
+
+  it('the record declares the asset, its class and the settings', () => {
+    const properties = capabilityIndex().byId.get('blueprint.inspect_graph')?.schemas.output.properties;
+    const description = (name: string): string => {
+      const entry = isRecord(properties) ? properties[name] : undefined;
+      return isRecord(entry) && typeof entry.description === 'string' ? entry.description : '';
+    };
+
+    expect(description('animationAsset')).toMatch(/the path of the animation it plays/u);
+    expect(description('animationAssetClass')).toMatch(/class of that animation asset/u);
+    expect(description('settings')).toMatch(/editable settings, name to value .* PlayRate, StartPosition, bLoopAnimation/u);
+    expect(description('settings')).toMatch(/graphName is the AnimGraph, or the name of the state whose graph holds the node/u);
+  });
+});
+
+describe('a retargeter built for setup_retargeting carries the pelvis and matches the poses', () => {
+  it('starts from the default op stack, maps chains, auto-aligns the target pose and leaves the IK pass off, as the editor does', () => {
+    const pipeline = compact(code('Animation', 'Rigging', 'McpAnimRetargetPipeline.h'));
+    const build = pipeline.slice(pipeline.indexOf('inline UIKRetargeter *McpBuildRetargeter('));
+
+    expect(build).toMatch(/MCP_IKRETARGETER_SET_TARGET_IKRIG\(Controller, TargetRig\);.*Controller->AddDefaultOps\(\);.*AutoMapChains\(EAutoMapChainType::Exact.*Controller->AutoAlignAllBones\(ERetargetSourceOrTarget::Target\);.*RunIK->SetEnabled\(false\);/u);
+  });
+
+  it('create_ik_rig with a mesh builds the same characterized rig, in place, and names the asset it wrote', () => {
+    const rig = compact(code('AnimationAuthoring', 'McpAnimIKRig.cpp'));
+
+    expect(rig).toContain('UIKRigDefinition* Built = McpBuildIKRig(RigMesh, Path, Name, BuildError, bSave, &bSaved);');
+    expect(rig).toContain('created successfully"), *IKRig->GetName())');
+  });
+});

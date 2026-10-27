@@ -1,0 +1,156 @@
+/**
+ * Asset and level navigation records: open_asset, close_asset, open_level,
+ * focus_actor, save_all.
+ */
+import type { CapabilityRecordSource, JsonObject } from '../../model.js';
+import { buildCoreRecord } from '../core/builder.js';
+import { P } from './properties.js';
+
+const F = 'asset';
+const D = 'editor';
+
+// The compensating-cleanup receipt save_all emits, declared so it survives the
+// gateway's output narrowing. `projectCanonicalOutput` copies only DECLARED
+// properties into the payload a client reads, so an undeclared block is dropped
+// on the success path and reaches the caller only as un-narrowed error detail.
+// Mirrors FMcpCompensationReceipt::DescribeInto() in
+// plugins/.../Private/Foundation/McpCompensationReceipt.cpp exactly.
+const COMPENSATION_STEP: JsonObject = {
+  type: 'object',
+  description: 'One step of the non-atomic save, naming what landed or why it did not.',
+  properties: {
+    step: { type: 'string', description: 'Machine-readable step id, e.g. save:/Game/Maps/Main.' },
+    detail: { type: 'string', description: 'What landed on disk, or the reason nothing did.' },
+  },
+  required: ['step', 'detail'],
+  additionalProperties: false,
+};
+
+const COMPENSATION: JsonObject = {
+  type: 'object',
+  description:
+    'Compensating-cleanup receipt. Present on every outcome including the all-succeeded one, because '
+    + 'each package lands independently and a completed save is already durable: non-atomic is a property '
+    + 'of the operation, not of one result.',
+  properties: {
+    operation: { type: 'string', description: 'Canonical capability this receipt describes.' },
+    atomic: {
+      type: 'boolean',
+      enum: [false],
+      description: 'Always false. Packages land one at a time and the ones that landed stay landed.',
+    },
+    rollback: {
+      type: 'string',
+      enum: ['unavailable'],
+      description: 'Always "unavailable". No editor transaction can reach a finished save, so this call was not and cannot be undone.',
+    },
+    rollbackReason: { type: 'string', description: 'Why no rollback exists for this class of work.' },
+    state: {
+      type: 'string',
+      enum: ['completed', 'partial', 'failed', 'noop'],
+      description: 'Outcome across all steps: everything landed, some did, none did, or there was nothing to do.',
+    },
+    completed: { type: 'array', items: COMPENSATION_STEP, description: 'Steps whose effect is now durable on disk.' },
+    notCompleted: { type: 'array', items: COMPENSATION_STEP, description: 'Steps that did not complete, each with its reason.' },
+    skipped: { type: 'array', items: COMPENSATION_STEP, description: 'Steps deliberately not attempted, such as transient packages.' },
+    compensatingCapabilities: {
+      type: 'array',
+      items: { type: 'string', description: 'Canonical capability id that reverses a durable effect.' },
+      description: 'Separate calls the caller may make to reverse a durable effect. Never a rollback of this call.',
+    },
+    callerAction: { type: 'string', description: 'Exact instruction for reaching a clean state; empty when nothing is outstanding.' },
+  },
+  required: ['atomic', 'rollback', 'state'],
+  additionalProperties: false,
+};
+
+export const ASSET_RECORDS: readonly CapabilityRecordSource[] = [
+  buildCoreRecord({
+    parentTool: 'control_editor', action: 'open_asset', domain: D, family: F,
+    topics: ['open blueprint editor', 'open asset editor', 'open in editor'],
+    summary: 'Open an asset\'s editor (a Blueprint, a material, a widget, a sequence) by asset path, loading the asset first; it must be known to the asset registry (ASSET_NOT_FOUND). Under -NullRHI it loads the asset and opens no window, and says so.',
+    whenToUse: ['An asset must be opened for the user to look at or edit by hand, or so focus reads what is open.'],
+    whenNotToUse: ['The asset is already open.'],
+    inputProps: { assetPath: P.assetPath },
+    required: ['assetPath'],
+    effect: 'read',
+    costLatency: 'interactive',
+    exampleInput: { action: 'open_asset', assetPath: '/Game/Materials/M_Base' },
+  }),
+  buildCoreRecord({
+    parentTool: 'control_editor', action: 'close_asset', domain: D, family: F,
+    summary: 'Close every editor open on an asset, by asset path. Fails with EDITOR_NOT_OPEN when none is open; the asset is never loaded to do this.',
+    whenToUse: ['An open asset editor must be closed.'],
+    whenNotToUse: ['The asset is not open.', 'The Unreal Editor itself must close: that is restart_editor with relaunch false.'],
+    inputProps: { assetPath: P.assetPath },
+    required: ['assetPath'],
+    effect: 'write',
+   
+    exampleInput: { action: 'close_asset', assetPath: '/Game/Materials/M_Base' },
+  }),
+  buildCoreRecord({
+    parentTool: 'control_editor', action: 'open_level', domain: D, family: F,
+    topics: ['open map', 'open level asset'],
+    summary: 'Open a level from disk by its path (/Game/Maps/Demo; an object path such as /Game/Maps/Demo.Demo, or a bare name read as /Game/<name>, works too), replacing the open level: Play In Editor is stopped and asset editors close. Unsaved levels are refused, never saved (DIRTY_PACKAGES); the reply waits for the level to settle (settledSeconds).',
+    whenToUse: ['A different level must be loaded into the editor.'],
+    whenNotToUse: ['The level is already loaded.',
+      'Open levels have unsaved changes: opening another level would drop them, so the call is refused with DIRTY_PACKAGES, listing them in unsavedPackages. Save first (manage_level save), or use manage_level load, which takes saveDirtyPackages or discardUnsaved.'],
+    inputProps: { levelPath: P.levelPath },
+    required: ['levelPath'],
+    outputProps: { settledSeconds: { type: 'number', description: 'How long the reply waited for the level to settle (its water, streamed textures and effects drawn), so a screenshot right after shows the level as it looks.' }, texturesStillStreaming: { type: 'number', description: 'Textures still streaming in when the wait ended at its cap; absent when streaming had gone quiet.' }, },
+    outputRequired: [],
+    effect: 'write',
+    costLatency: 'interactive', costResources: 'medium',
+    exampleInput: { action: 'open_level', levelPath: '/Game/Maps/EntryMap' },
+  }),
+  buildCoreRecord({
+    parentTool: 'control_editor', action: 'focus_actor', domain: D, family: F,
+    aliases: ['control_editor.move_camera_to_actor'],
+    summary: 'Focus the viewport camera on a specific actor by name: the level viewport, or the free view of an ejected player.',
+    whenToUse: ['The viewport must frame a specific actor.'],
+    whenNotToUse: ['The actor does not exist in the current level.',
+      'Play In Editor runs and the player is not ejected: the level viewport is hidden behind the game, so this is refused with PIE_VIEW_NOT_EJECTED (eject first, or point the game camera with set_camera cameraOp=view_target).'],
+    inputProps: { actorName: P.actorName },
+    required: ['actorName'],
+    effect: 'read',
+   
+    exampleInput: { action: 'focus_actor', actorName: 'BP_PlayerStart' },
+  }),
+  buildCoreRecord({
+    parentTool: 'control_editor', action: 'save_all', domain: D, family: F,
+    topics: ['save all', 'save everything', 'save dirty packages', 'save project', 'save assets', 'save asset', 'save one asset'],
+    summary: 'Save every level and asset with unsaved changes, or only the packages named in assetPaths (the other dirty ones stay unsaved and are listed in leftDirtyPackages). Temporary packages are skipped; one that fails to save (read-only, not checked out) is listed in failedPackages and fails the call with SAVE_FAILED while the rest stay written. Refused during a Movie Render Queue render (RENDER_IN_PROGRESS). Not undoable.',
+    whenToUse: ['All unsaved changes must be persisted.', 'Only the assets this task changed should be saved (assetPaths), leaving other unsaved work alone.'],
+    whenNotToUse: ['Nothing has changed since the last save.',
+      'A Movie Render Queue render is running: its sequence is in a temporary state until the job ends, so the save is refused with RENDER_IN_PROGRESS.'],
+    inputProps: {
+      // Saving everything also wrote out unrelated work someone had open, and the
+      // contract pointed at a per-asset save that did not exist.
+      assetPaths: { type: 'array', items: { type: 'string' }, description: 'Save only these assets or levels, e.g. ["/Game/UI/WBP_Menu"], and leave every other dirty package as it is; omit to save everything dirty. A named asset the editor has loaded is written even when it is not marked dirty (a material usage flag the editor set while loading).' },
+    },
+    required: [],
+    outputProps: {
+      compensation: COMPENSATION,
+      leftDirtyPackages: { type: 'array', items: { type: 'string' }, description: 'With assetPaths: the other packages that still hold unsaved changes, left as they were.' },
+    },
+    effect: 'write',
+    costLatency: 'interactive', costResources: 'medium',
+    exampleInput: { action: 'save_all' },
+    exampleOutput: {
+      success: true,
+      message: 'All assets saved',
+      compensation: {
+        operation: 'control_editor.save_all',
+        atomic: false,
+        rollback: 'unavailable',
+        rollbackReason: 'Completed steps are already durable on disk. No editor transaction can reach a finished save, build or render, so nothing here was or can be undone.',
+        state: 'completed',
+        completed: [{ step: 'save:/Game/Maps/EntryMap', detail: 'level package written to disk' }],
+        notCompleted: [],
+        skipped: [],
+        compensatingCapabilities: [],
+        callerAction: '',
+      },
+    },
+  }),
+];

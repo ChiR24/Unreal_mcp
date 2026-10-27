@@ -1,0 +1,21 @@
+{
+  "description": "Looking around for a pawn: while its Axis2D look action fires, the controller turns by the action's X (AddControllerYawInput) and tilts by its Y, inverted so that pushing up looks up (AddControllerPitchInput). The context is registered when the pawn is possessed; the keys are mapped by the caller.",
+  "tag": "Look",
+  "placeholders": {
+    "InputAction": "The Axis2D Input Action that turns the view.",
+    "MappingContext": "Input Mapping Context its keys are in."
+  },
+  "input": { "id": "lookInput", "inputActionPath": "{{InputAction}}", "mappingContextPath": "{{MappingContext}}" },
+  "eventGraph": [
+    { "edit": "create_node", "id": "lookSplit", "nodeType": "CallFunction", "memberName": "BreakVector2D", "memberClass": "/Script/Engine.KismetMathLibrary" },
+    { "edit": "create_node", "id": "lookUpIsUp", "nodeType": "CallFunction", "memberName": "Multiply_DoubleDouble", "memberClass": "/Script/Engine.KismetMathLibrary", "pinDefaults": { "B": -1 } },
+    { "edit": "create_node", "id": "lookTurn", "nodeType": "CallFunction", "memberName": "AddControllerYawInput", "memberClass": "/Script/Engine.Pawn" },
+    { "edit": "create_node", "id": "lookTilt", "nodeType": "CallFunction", "memberName": "AddControllerPitchInput", "memberClass": "/Script/Engine.Pawn" },
+    { "edit": "connect_pins", "from": "$lookInput.ActionValue", "to": "$lookSplit.InVec" },
+    { "edit": "connect_pins", "from": "$lookSplit.X", "to": "$lookTurn.Val" },
+    { "edit": "connect_pins", "from": "$lookSplit.Y", "to": "$lookUpIsUp.A" },
+    { "edit": "connect_pins", "from": "$lookUpIsUp.ReturnValue", "to": "$lookTilt.Val" },
+    { "edit": "connect_pins", "from": "$lookInput.Triggered", "to": "$lookTurn.execute" },
+    { "edit": "connect_pins", "from": "$lookTurn.then", "to": "$lookTilt.execute" }
+  ]
+}

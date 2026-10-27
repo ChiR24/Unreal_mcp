@@ -1,12 +1,12 @@
 # Unreal Engine 5.x API Reference for MCP Implementation
 
-This document provides key engine API information to guide implementation of the MCP roadmap phases.
+This document provides key engine API information to guide implementation of the MCP roadmap.
 
 Paths below use `<UE_ROOT>` as the Unreal Engine installation root, for example `/data/UnrealEngine` or `C:/Program Files/Epic Games/UE_5.6`.
 
 ---
 
-## Phase 6: Geometry & Mesh Creation
+## Geometry & Mesh Creation
 
 ### Plugin Location
 `<UE_ROOT>/Engine/Plugins/Runtime/GeometryScripting/`
@@ -49,7 +49,7 @@ UGeometryScriptLibrary_MeshPrimitiveFunctions::AppendBox(
 
 ---
 
-## Phase 7: Skeletal Mesh & Rigging
+## Skeletal Mesh & Rigging
 
 ### Key Headers
 | File | Purpose |
@@ -101,7 +101,7 @@ MorphTarget->PopulateDeltas(Deltas, LODIndex, BaseMesh);
 
 ---
 
-## Phase 8: Material Authoring
+## Material Authoring
 
 ### Key Headers
 | File | Purpose |
@@ -145,7 +145,7 @@ UMaterialEditingLibrary::RecompileMaterial(Material);
 
 ---
 
-## Phase 9: Texture Generation & Processing
+## Texture Generation & Processing
 
 ### Key Headers
 | File | Purpose |
@@ -193,7 +193,7 @@ Texture->AddressY = TA_Wrap;
 
 ---
 
-## Phase 10: Complete Animation System
+## Complete Animation System
 
 ### Key Headers
 | File | Purpose |
@@ -266,7 +266,7 @@ Retargeter->SetChainMapping(SourceChainName, TargetChainName);
 
 ---
 
-## Phase 11: Complete Audio System
+## Complete Audio System
 
 ### Key Headers
 | File | Purpose |
@@ -324,7 +324,7 @@ Concurrency->Concurrency.ResolutionRule = EMaxConcurrentResolutionRule::StopLowe
 
 ---
 
-## Phase 12: Complete Niagara VFX System
+## Complete Niagara VFX System
 
 ### Plugin Location
 `<UE_ROOT>/Engine/Plugins/FX/Niagara/`
@@ -373,7 +373,7 @@ NiagaraComp->SetVariableObject(FName("Mesh"), StaticMesh);
 
 ---
 
-## Phase 13: Gameplay Ability System (GAS)
+## Gameplay Ability System (GAS)
 
 ### Plugin Location
 `<UE_ROOT>/Engine/Plugins/Runtime/GameplayAbilities/`
@@ -414,7 +414,7 @@ ASC->SetNumericAttributeBase(Attribute, NewValue);
 
 ---
 
-## Phase 14: Character & Movement System
+## Character & Movement System
 
 ### Key Headers
 | File | Purpose |
@@ -473,7 +473,7 @@ CMC->ApplyRootMotionSource(RMS);
 
 ---
 
-## Phase 15: Combat & Weapons System
+## Combat & Weapons System
 
 ### Key Headers
 | File | Purpose |
@@ -557,7 +557,7 @@ UKismetSystemLibrary::CapsuleTraceSingle(...);
 
 ---
 
-## Phase 16: AI System
+## AI System
 
 ### Key Headers
 | File | Purpose |
@@ -601,7 +601,7 @@ Located at: `Plugins/Runtime/StateTree/`
 
 ---
 
-## Phase 17: Inventory & Items System
+## Inventory & Items System
 
 ### Key Headers
 | File | Purpose |
@@ -670,7 +670,7 @@ AM.LoadPrimaryAssets(ItemIds, TArray<FName>(),
 
 ---
 
-## Phase 18: Interaction System
+## Interaction System
 
 ### Key Headers
 | File | Purpose |
@@ -742,7 +742,7 @@ if (bHit && Hit.GetActor()->Implements<UInteractableInterface>())
 
 ---
 
-## Phase 19: UMG Widget System
+## UMG Widget System
 
 ### Key Headers
 | File | Purpose |
@@ -777,7 +777,7 @@ Widget->IsAnimationPlaying(Animation);
 
 ---
 
-## Phase 20: Networking & Replication
+## Networking & Replication
 
 ### Key Headers
 | File | Purpose |
@@ -819,7 +819,7 @@ void MulticastEffect();
 
 ---
 
-## Phase 21: Game Framework
+## Game Framework
 
 ### Key Headers
 | File | Purpose |
@@ -860,7 +860,7 @@ GI->GetWorld()->ServerTravel("/Game/Maps/NewLevel");
 
 ---
 
-## Phase 22: Sessions & Local Multiplayer
+## Sessions & Local Multiplayer
 
 ### Key Headers
 | File | Purpose |
@@ -925,7 +925,7 @@ Session->KickPlayer(PlayerToKick, KickReason);
 
 ---
 
-## Phase 23-24: World Structure & Volumes
+## World Structure & Volumes
 
 ### Key Headers
 | File | Purpose |
@@ -990,7 +990,7 @@ PhysVol->TerminalVelocity = 4000.f;
 
 ---
 
-## Phase 25: Navigation System
+## Navigation System
 
 ### Key Headers
 | File | Purpose |
@@ -1028,7 +1028,7 @@ Link->GetSmartLinkComp()->SetLinkData(Start, End, ENavLinkDirection::BothWays);
 
 ---
 
-## Phase 26: Spline System
+## Spline System
 
 ### Key Headers
 | File | Purpose |
@@ -1072,7 +1072,7 @@ SplineMesh->SetEndScale(FVector2D(1.5f, 1.5f));
 
 ---
 
-## Phase 27: PCG Framework
+## PCG Framework
 
 ### Plugin Location
 `<UE_ROOT>/Engine/Plugins/PCG/`
@@ -1103,7 +1103,7 @@ UPCGGraph → UPCGNode → UPCGSettings
 
 ---
 
-## Phase 28: Landscape & Foliage
+## Landscape & Foliage
 
 ### Key Headers
 | File | Purpose |
@@ -1138,7 +1138,7 @@ FoliageActor->AddInstances(FoliageType, Instances);
 
 ---
 
-## Phase 29: Advanced Lighting & Rendering
+## Advanced Lighting & Rendering
 
 ### Key Headers
 | File | Purpose |
@@ -1196,7 +1196,7 @@ Box->SetBoxTransitionDistance(100.f);
 
 ---
 
-## Phase 30: Sequencer & Cinematics
+## Sequencer & Cinematics
 
 ### Key Headers
 | File | Purpose |
@@ -1237,7 +1237,7 @@ Subsystem->RenderJob(Job);
 
 ---
 
-## Phase 31: Data & Persistence
+## Data & Persistence
 
 ### Key Headers
 | File | Purpose |
@@ -1302,7 +1302,7 @@ float Result = Curve->GetFloatValue(Time);
 
 ---
 
-## Phase 32: Build & Deployment
+## Build & Deployment
 
 ### Key Headers
 | File | Purpose |
@@ -1343,7 +1343,7 @@ BlueprintNativizationMethod=Disabled
 
 ---
 
-## Phase 33: Testing & Quality
+## Testing & Quality
 
 ### Key Headers
 | File | Purpose |
@@ -1421,7 +1421,7 @@ RunUAT.bat RunUnreal -project=MyProject -test=Project.Category -platform=Win64
 
 ---
 
-## Phase 34: Editor Utilities
+## Editor Utilities
 
 ### Key Headers
 | File | Purpose |
@@ -1474,7 +1474,7 @@ class UMyEditorTask : public UEditorUtilityTask
 
 ---
 
-## Phase 35: Additional Gameplay Systems
+## Additional Gameplay Systems
 
 ### Key Headers
 | File | Purpose |
@@ -1572,7 +1572,7 @@ SubMgr->DisplaySubtitle(this, {Sub}, Duration);
 
 ---
 
-## Phase 36-39: Third-Party Plugin Integration
+## Third-Party Plugin Integration
 
 ### Quixel Bridge (Megascans)
 **Location**: `Plugins/Bridge/`
@@ -1631,7 +1631,7 @@ const FLiveLinkAnimationFrameData* FrameAnimData = FrameData.FrameData.Cast<FLiv
 
 ---
 
-## Phase 40: Virtual Production
+## Virtual Production
 
 ### Key Locations
 - nDisplay: `Plugins/Runtime/nDisplay/`
@@ -1706,7 +1706,7 @@ for (UDMXEntityFixturePatch* Patch : Patches)
 
 ---
 
-## Phase 41: XR (VR/AR/MR)
+## XR (VR/AR/MR)
 
 ### Key Headers
 | File | Purpose |
@@ -1749,7 +1749,7 @@ UInputAction* GrabAction;
 
 ---
 
-## Phase 43: Online Services
+## Online Services
 
 ### Plugin Location
 `Plugins/Online/OnlineSubsystem*/`
@@ -1800,7 +1800,7 @@ Sessions->JoinSession(LocalPlayerNum, SessionName, SearchResult);
 
 ---
 
-## Phase 42: AI & NPC Plugins
+## AI & NPC Plugins
 
 ### Mass Entity/AI (Crowd Simulation)
 **Location**: `Plugins/Runtime/MassGameplay/`
@@ -1860,7 +1860,7 @@ protected:
 
 ---
 
-## Phase 44: Streaming & Distribution
+## Streaming & Distribution
 
 ### Pixel Streaming
 **Location**: `Plugins/Media/PixelStreaming/`
@@ -1894,7 +1894,7 @@ Preset->ExposeFunction(Object, FunctionName, DisplayName);
 
 ---
 
-## Phase 45: Utility Plugins
+## Utility Plugins
 
 ### Python Scripting
 **Location**: `Plugins/Experimental/PythonScriptPlugin/`
@@ -1930,7 +1930,7 @@ unreal.EditorAssetLibrary.duplicate_asset("/Game/Source", "/Game/Dest")
 
 ---
 
-## Phase 47: Accessibility System
+## Accessibility System
 
 ### Key Headers
 | File | Purpose |
@@ -2002,7 +2002,7 @@ Subsystem->AddPlayerMappedKey(ActionName, NewKey);
 
 ---
 
-## Phase 48: Modding & UGC System
+## Modding & UGC System
 
 ### Key Headers
 | File | Purpose |
@@ -2083,7 +2083,7 @@ if (OSS)
 
 ---
 
-## Phase 46: Chaos Physics (Destruction, Vehicles, Cloth)
+## Chaos Physics (Destruction, Vehicles, Cloth)
 
 ### Key Headers
 | File | Purpose |
@@ -2204,47 +2204,47 @@ if (!IsValid(Object))
 
 ## Quick Reference: Module Dependencies
 
-| Phase | Required Modules |
-|-------|------------------|
-| 6 (Geometry) | GeometryScriptingCore |
-| 7 (Skeletal) | Engine, SkeletalMeshUtilitiesCommon |
-| 8 (Materials) | Engine, MaterialEditor (Editor) |
-| 9 (Textures) | Engine, ImageCore |
-| 10 (Animation) | Engine, ControlRig, IKRig |
-| 11 (Audio) | Engine, AudioMixer, MetasoundEngine |
-| 12 (Niagara) | Niagara, NiagaraCore |
-| 13 (GAS) | GameplayAbilities, GameplayTags |
-| 14 (Character) | Engine |
-| 15 (Combat) | Engine |
-| 16 (AI) | AIModule, StateTreeModule |
-| 17 (Inventory) | Engine, AssetRegistry |
-| 18 (Interaction) | Engine |
-| 19 (UMG) | UMG, UMGEditor (Editor) |
-| 20 (Networking) | Engine (NetDriver) |
-| 21 (Game Framework) | Engine |
-| 22 (Sessions) | Engine |
-| 23-24 (World/Volumes) | Engine, WorldPartitionEditor (Editor) |
-| 25 (Navigation) | NavigationSystem, AIModule |
-| 26 (Splines) | Engine |
-| 27 (PCG) | PCG |
-| 28 (Landscape) | Landscape, Foliage |
-| 29 (Lighting) | Engine, Renderer |
-| 30 (Sequencer) | LevelSequence, MovieScene, MovieRenderPipelineCore |
-| 31 (Data) | Engine |
-| 32 (Build) | DesktopPlatform, TargetPlatform |
-| 33 (Testing) | AutomationController, FunctionalTesting |
-| 34 (Editor Utilities) | Blutility (Editor) |
-| 35 (Gameplay) | Engine |
-| 36-39 (Plugins) | Bridge, LiveLink, (External: Wwise, FMOD) |
-| 40 (Virtual Production) | DisplayCluster, LiveLink, DMXRuntime |
-| 41 (XR) | HeadMountedDisplay, OpenXRHMD |
-| 42 (Mass AI) | MassEntity, MassGameplay |
-| 43 (Online) | OnlineSubsystem, OnlineSubsystemUtils |
-| 44 (Streaming) | PixelStreaming, RemoteControl |
-| 45 (Utility) | PythonScriptPlugin |
-| 46 (Chaos Physics) | Chaos, GeometryCollectionEngine, ChaosVehicles, ChaosCloth, FieldSystemEngine |
-| 47 (Accessibility) | Engine, Slate |
-| 48 (Modding) | PakFile, AssetRegistry |
+| Feature Area | Required Modules |
+|--------------|------------------|
+| Geometry | GeometryScriptingCore |
+| Skeletal Mesh | Engine, SkeletalMeshUtilitiesCommon |
+| Material Authoring | Engine, MaterialEditor (Editor) |
+| Texture Authoring | Engine, ImageCore |
+| Animation Authoring | Engine, ControlRig, IKRig |
+| Audio Authoring | Engine, AudioMixer, MetasoundEngine |
+| Niagara Authoring | Niagara, NiagaraCore |
+| GAS | GameplayAbilities, GameplayTags |
+| Character | Engine |
+| Combat | Engine |
+| AI | AIModule, StateTreeModule |
+| Inventory | Engine, AssetRegistry |
+| Interaction | Engine |
+| UMG | UMG, UMGEditor (Editor) |
+| Networking | Engine (NetDriver) |
+| Game Framework | Engine |
+| Sessions | Engine |
+| World and Volumes | Engine, WorldPartitionEditor (Editor) |
+| Navigation | NavigationSystem, AIModule |
+| Splines | Engine |
+| PCG | PCG |
+| Landscape and Foliage | Landscape, Foliage |
+| Lighting and Rendering | Engine, Renderer |
+| Sequencer | LevelSequence, MovieScene, MovieRenderPipelineCore |
+| Data | Engine |
+| Build | DesktopPlatform, TargetPlatform |
+| Testing | AutomationController, FunctionalTesting |
+| Editor Utilities | Blutility (Editor) |
+| Gameplay | Engine |
+| Plugins | Bridge, LiveLink, (External: Wwise, FMOD) |
+| Virtual Production | DisplayCluster, LiveLink, DMXRuntime |
+| XR | HeadMountedDisplay, OpenXRHMD |
+| Mass AI | MassEntity, MassGameplay |
+| Online | OnlineSubsystem, OnlineSubsystemUtils |
+| Streaming | PixelStreaming, RemoteControl |
+| Utility | PythonScriptPlugin |
+| Chaos Physics | Chaos, GeometryCollectionEngine, ChaosVehicles, ChaosCloth, FieldSystemEngine |
+| Accessibility | Engine, Slate |
+| Modding | PakFile, AssetRegistry |
 
 ---
 

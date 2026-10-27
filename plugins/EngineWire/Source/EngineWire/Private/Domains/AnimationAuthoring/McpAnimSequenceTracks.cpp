@@ -1,0 +1,327 @@
+#include "Core/Compatibility/McpVersionCompatibility.h"
+#include "Domains/AnimationAuthoring/McpAnimSupport.h"
+
+namespace McpAnimationAuthoring {
+
+namespace {
+// What a key leaves out stays the bone's own at that frame: its track's key, or the skeleton's reference pose for a
+// bone with no track yet. A location left out read as (0,0,0) and put the bone on its parent, in an additive clip too.
+FTransform BoneKeyBase(const UAnimSequence* Sequence, FName Bone, int32 Frame)
+{
+#if ENGINE_MINOR_VERSION >= 2
+    const IAnimationDataModel* Model = Sequence->GetDataModel();
+    if (Model && Model->IsValidBoneTrackName(Bone))
+    {
+        // The read answers identity where the track holds no key, and a track add_bone_track just made holds none: the
+        // omitted rotation and scale became identity instead of the bone's own pose. Only a key that is there counts.
+        // ponytail: a real key of exactly identity reads as the reference pose; read the track's keys if that matters.
+        const FTransform Keyed = Model->GetBoneTrackTransform(Bone, FFrameNumber(Frame));
+        if (!Keyed.Equals(FTransform::Identity, 0.0))
+        {
+            return Keyed;
+        }
+    }
+#else
+    // 5.0 and 5.1 have no transform read; a track holds one key per frame, or a single key for a constant one.
+    const FBoneAnimationTrack* Track = Sequence->GetDataModel() ? Sequence->GetDataModel()->FindBoneTrackByName(Bone) : nullptr;
+    const FRawAnimSequenceTrack* Raw = Track ? &Track->InternalTrackData : nullptr;
+    if (Raw && Raw->PosKeys.Num() > 0 && Raw->RotKeys.Num() > 0)
+    {
+        const auto At = [Frame](int32 Num) { return FMath::Clamp(Frame, 0, Num - 1); };
+        const FVector Scale = Raw->ScaleKeys.Num() > 0 ? FVector(Raw->ScaleKeys[At(Raw->ScaleKeys.Num())]) : FVector::OneVector;
+        return FTransform(FQuat(Raw->RotKeys[At(Raw->RotKeys.Num())]), FVector(Raw->PosKeys[At(Raw->PosKeys.Num())]), Scale);
+    }
+#endif
+    const USkeleton* Skeleton = Sequence->GetSkeleton();
+    const int32 Index = Skeleton ? Skeleton->GetReferenceSkeleton().FindBoneIndex(Bone) : INDEX_NONE;
+    return Index != INDEX_NONE ? Skeleton->GetReferenceSkeleton().GetRefBonePose()[Index] : FTransform::Identity;
+}
+} // namespace
+
+TSharedPtr<FJsonObject> HandleSequenceTrackActions(const FString& SubAction, const TSharedPtr<FJsonObject>& Params, TSharedPtr<FJsonObject> Response)
+{
+    if (SubAction == TEXT("add_bone_track"))
+    {
+        FString AssetPath = NormalizeAnimPath(GetJsonStringField(Params, TEXT("assetPath"), TEXT("")));
+        FString BoneName = GetJsonStringField(Params, TEXT("boneName"), TEXT(""));
+        bool bSave = GetJsonBoolField(Params, TEXT("save"), true);
+
+        if (BoneName.IsEmpty())
+        {
+            ANIM_ERROR_RESPONSE(TEXT("boneName is required"), TEXT("MISSING_BONE_NAME"));
+        }
+
+        UAnimSequence* Sequence = LoadAnimSequenceFromPath(AssetPath);
+        if (!Sequence)
+        {
+            ANIM_ERROR_RESPONSE(FString::Printf(TEXT("Could not load animation sequence: %s"), *AssetPath), TEXT("SEQUENCE_NOT_FOUND"));
+        }
+
+        // Validate that the bone exists in the skeleton before trying to add a track
+        USkeleton* Skeleton = Sequence->GetSkeleton();
+        if (!Skeleton)
+        {
+            ANIM_ERROR_RESPONSE(TEXT("Animation sequence has no skeleton reference"), TEXT("NO_SKELETON"));
+        }
+
+        FName BoneFName(*BoneName);
+
+        // Check if the bone exists in the skeleton's reference skeleton
+        const FReferenceSkeleton& RefSkeleton = Skeleton->GetReferenceSkeleton();
+        int32 BoneIndex = RefSkeleton.FindBoneIndex(BoneFName);
+        if (BoneIndex == INDEX_NONE)
+        {
+            // Provide helpful error message with available bone names
+            TArray<FString> AvailableBones;
+            const int32 NumBones = FMath::Min(RefSkeleton.GetNum(), 10); // Limit to first 10 bones
+            for (int32 i = 0; i < NumBones; ++i)
+            {
+                AvailableBones.Add(RefSkeleton.GetBoneName(i).ToString());
+            }
+            FString BoneList = FString::Join(AvailableBones, TEXT(", "));
+            if (RefSkeleton.GetNum() > 10)
+            {
+                BoneList += FString::Printf(TEXT(" ... and %d more"), RefSkeleton.GetNum() - 10);
+            }
+
+            ANIM_ERROR_RESPONSE(
+                FString::Printf(TEXT("Bone '%s' not found in skeleton. Available bones: %s"), *BoneName, *BoneList),
+                TEXT("BONE_NOT_FOUND_IN_SKELETON")
+            );
+        }
+
+        bool bAlreadyHadTrack = false;
+#if ENGINE_MINOR_VERSION >= 2
+        // UE 5.2+ uses IAnimationDataController with IsValidBoneTrackName and AddBoneCurve
+        IAnimationDataController& Controller = Sequence->GetController();
+
+        // Validate the controller model is available
+        if (!Controller.GetModel())
+        {
+            ANIM_ERROR_RESPONSE(
+                TEXT("Animation data model is not available - cannot add bone track"),
+                TEXT("MODEL_NOT_AVAILABLE")
+            );
+        }
+
+        // Use IsValidBoneTrackName (non-deprecated) instead of GetBoneTrackIndexByName (deprecated since 5.2)
+        bAlreadyHadTrack = Controller.GetModel()->IsValidBoneTrackName(BoneFName);
+        if (!bAlreadyHadTrack)
+        {
+            // AddBoneCurve returns bool - check the result
+            const bool bAdded = Controller.AddBoneCurve(BoneFName);
+            if (!bAdded)
+            {
+                ANIM_ERROR_RESPONSE(
+                    FString::Printf(TEXT("AddBoneCurve failed for bone '%s' - the bone may not be valid for this animation"), *BoneName),
+                    TEXT("BONE_TRACK_ADD_FAILED")
+                );
+            }
+
+            if (!Controller.GetModel()->IsValidBoneTrackName(BoneFName))
+            {
+                ANIM_ERROR_RESPONSE(
+                    FString::Printf(TEXT("Bone track '%s' was not found after AddBoneCurve succeeded - internal inconsistency"), *BoneName),
+                    TEXT("BONE_TRACK_ADD_FAILED")
+                );
+            }
+        }
+#elif ENGINE_MINOR_VERSION == 1
+        // UE 5.1: AddBoneTrack/FindBoneTrackByName (AddBoneCurve is 5.2+, AddNewRawTrack is 5.0-only)
+        IAnimationDataController& Controller = Sequence->GetController();
+        bAlreadyHadTrack = Controller.GetModel()->FindBoneTrackByName(BoneFName) != nullptr;
+        if (!bAlreadyHadTrack)
+        {
+            Controller.AddBoneTrack(BoneFName);
+            if (Controller.GetModel()->FindBoneTrackByName(BoneFName) == nullptr)
+            {
+                ANIM_ERROR_RESPONSE(
+                    FString::Printf(TEXT("Failed to add bone track '%s' - the bone may not be valid for this animation"), *BoneName),
+                    TEXT("BONE_TRACK_ADD_FAILED")
+                );
+            }
+        }
+#else
+        // UE 5.0 approach - uses FindBoneTrackByName which returns a pointer
+        IAnimationDataController& Controller = Sequence->GetController();
+
+        const FBoneAnimationTrack* Track = Controller.GetModel()->FindBoneTrackByName(BoneFName);
+        bAlreadyHadTrack = Track != nullptr;
+        if (Track == nullptr)
+        {
+            // UE 5.0 doesn't have AddBoneCurve - use AddNewRawTrack directly on the sequence
+            // AddNewRawTrack is deprecated in UE 5.1+ but needed for UE 5.0 compatibility
+            PRAGMA_DISABLE_DEPRECATION_WARNINGS
+            FRawAnimSequenceTrack NewTrack;
+            Sequence->AddNewRawTrack(BoneFName, &NewTrack);
+            PRAGMA_ENABLE_DEPRECATION_WARNINGS
+
+            // Verify the bone track was actually added
+            const FBoneAnimationTrack* AddedTrack = Controller.GetModel()->FindBoneTrackByName(BoneFName);
+            if (AddedTrack == nullptr)
+            {
+                ANIM_ERROR_RESPONSE(
+                    FString::Printf(TEXT("Failed to add bone track '%s' - internal error"), *BoneName),
+                    TEXT("BONE_TRACK_ADD_FAILED")
+                );
+            }
+        }
+#endif
+
+        // A track the sequence already had answered "added" and the sequence was written again.
+        Response->SetBoolField(TEXT("alreadyExists"), bAlreadyHadTrack);
+        SaveAnimAssetAndReport(Sequence, bSave && !bAlreadyHadTrack, Response);
+
+        ANIM_SUCCESS_RESPONSE(bAlreadyHadTrack
+            ? FString::Printf(TEXT("The sequence already has a track for bone '%s'; nothing was changed"), *BoneName)
+            : FString::Printf(TEXT("Bone track '%s' added"), *BoneName));
+        McpHandlerUtils::AddVerification(Response, Sequence);
+        return Response;
+    }
+
+    if (SubAction == TEXT("set_bone_key"))
+    {
+        FString AssetPath = NormalizeAnimPath(GetJsonStringField(Params, TEXT("assetPath"), TEXT("")));
+        FString BoneName = GetJsonStringField(Params, TEXT("boneName"), TEXT(""));
+        int32 Frame = static_cast<int32>(GetJsonNumberField(Params, TEXT("frame"), 0));
+        bool bSave = GetJsonBoolField(Params, TEXT("save"), true);
+
+        if (BoneName.IsEmpty())
+        {
+            ANIM_ERROR_RESPONSE(TEXT("boneName is required"), TEXT("MISSING_BONE_NAME"));
+        }
+
+        UAnimSequence* Sequence = LoadAnimSequenceFromPath(AssetPath);
+        if (!Sequence)
+        {
+            ANIM_ERROR_RESPONSE(FString::Printf(TEXT("Could not load animation sequence: %s"), *AssetPath), TEXT("SEQUENCE_NOT_FOUND"));
+        }
+
+        // A sequence of N frames has N + 1 keys, 0 to N: the last key (N) used to be refused, so no clip could be keyed
+        // to end anywhere but at its reference pose.
+        int32 TotalFrames = Sequence->GetDataModel()->GetNumberOfFrames();
+        if (Frame < 0 || Frame > TotalFrames)
+        {
+            ANIM_ERROR_RESPONSE(
+                FString::Printf(TEXT("Frame %d is out of range: the animation's keys are frames 0 to %d"), Frame, TotalFrames),
+                TEXT("FRAME_OUT_OF_RANGE")
+            );
+        }
+
+        // Build transform key
+        const FTransform Base = BoneKeyBase(Sequence, FName(*BoneName), Frame);
+        FVector Location = ExtractVectorField(Params, TEXT("location"), Base.GetLocation());
+        // The contract types rotation as [pitch, yaw, roll] and the gateway
+        // hands objects over as that array; GetObjectField read null for it, so
+        // every key was written with identity rotation and reported success.
+        FQuat Rotation = Params->HasField(TEXT("rotation"))
+            ? ExtractRotatorField(Params, TEXT("rotation"), FRotator::ZeroRotator).Quaternion() : Base.GetRotation();
+        FVector Scale = ExtractVectorField(Params, TEXT("scale"), Base.GetScale3D());
+
+#if ENGINE_MINOR_VERSION >= 2
+        // UE 5.2+ API
+        IAnimationDataController& Controller = Sequence->GetController();
+        FName BoneFName(*BoneName);
+
+        if (!Controller.GetModel())
+        {
+            ANIM_ERROR_RESPONSE(
+                TEXT("Animation data model is not available - cannot set bone key"),
+                TEXT("MODEL_NOT_AVAILABLE")
+            );
+        }
+
+        // Use IsValidBoneTrackName (non-deprecated) instead of GetBoneTrackIndexByName (deprecated since 5.2)
+        if (!Controller.GetModel()->IsValidBoneTrackName(BoneFName))
+        {
+            const bool bAdded = Controller.AddBoneCurve(BoneFName);
+            if (!bAdded)
+            {
+                ANIM_ERROR_RESPONSE(
+                    FString::Printf(TEXT("Failed to create missing bone track '%s' before keying"), *BoneName),
+                    TEXT("BONE_TRACK_ADD_FAILED")
+                );
+            }
+
+            // Verify the track was actually created after AddBoneCurve succeeded
+            if (!Controller.GetModel()->IsValidBoneTrackName(BoneFName))
+            {
+                ANIM_ERROR_RESPONSE(
+                    FString::Printf(TEXT("Bone track '%s' not found in animation sequence after AddBoneCurve. Add the track first using add_bone_track."), *BoneName),
+                    TEXT("BONE_TRACK_NOT_FOUND")
+                );
+            }
+        }
+
+        // UpdateBoneTrackKeys preserves other frames; SetBoneTrackKeys would replace the entire track
+        FInt32Range KeyRange(Frame, Frame + 1);
+        if (!Controller.UpdateBoneTrackKeys(BoneFName, KeyRange, {Location}, {Rotation}, {Scale}))
+        {
+            ANIM_ERROR_RESPONSE(
+                FString::Printf(TEXT("Failed to set bone key at frame %d"), Frame),
+                TEXT("BONE_KEY_SET_FAILED")
+            );
+        }
+#elif ENGINE_MINOR_VERSION == 1
+        // UE 5.1: AddBoneTrack/FindBoneTrackByName, then UpdateBoneTrackKeys (present since 5.0)
+        IAnimationDataController& Controller = Sequence->GetController();
+        FName BoneFName(*BoneName);
+        if (Controller.GetModel()->FindBoneTrackByName(BoneFName) == nullptr)
+        {
+            Controller.AddBoneTrack(BoneFName);
+        }
+        if (Controller.GetModel()->FindBoneTrackByName(BoneFName) == nullptr)
+        {
+            ANIM_ERROR_RESPONSE(
+                FString::Printf(TEXT("Bone track '%s' not found in animation sequence. Add the track first using add_bone_track."), *BoneName),
+                TEXT("BONE_TRACK_NOT_FOUND")
+            );
+        }
+        FInt32Range KeyRange(Frame, Frame + 1);
+        if (!Controller.UpdateBoneTrackKeys(BoneFName, KeyRange, {Location}, {Rotation}, {Scale}))
+        {
+            ANIM_ERROR_RESPONSE(
+                FString::Printf(TEXT("Failed to set bone key at frame %d"), Frame),
+                TEXT("BONE_KEY_SET_FAILED")
+            );
+        }
+#else
+        // UE 5.0 API - uses FindBoneTrackByName which returns a pointer
+        IAnimationDataController& Controller = Sequence->GetController();
+        FName BoneFName(*BoneName);
+
+        const FBoneAnimationTrack* Track = Controller.GetModel()->FindBoneTrackByName(BoneFName);
+        if (Track == nullptr)
+        {
+            // UE 5.0 doesn't have AddBoneCurve - use AddNewRawTrack
+            // AddNewRawTrack is deprecated in UE 5.1+ but needed for UE 5.0 compatibility
+            PRAGMA_DISABLE_DEPRECATION_WARNINGS
+            FRawAnimSequenceTrack NewTrack;
+            Sequence->AddNewRawTrack(BoneFName, &NewTrack);
+            PRAGMA_ENABLE_DEPRECATION_WARNINGS
+        }
+
+        // Verify bone track exists before setting keys
+        const FBoneAnimationTrack* VerifiedTrack = Controller.GetModel()->FindBoneTrackByName(BoneFName);
+        if (VerifiedTrack == nullptr)
+        {
+            ANIM_ERROR_RESPONSE(
+                FString::Printf(TEXT("Bone track '%s' not found in animation sequence. Add the track first using add_bone_track."), *BoneName),
+                TEXT("BONE_TRACK_NOT_FOUND")
+            );
+        }
+
+        // UE 5.0 fallback: SetBoneTrackKeys replaces the entire track (no UpdateBoneTrackKeys available)
+        Controller.SetBoneTrackKeys(BoneFName, {Location}, {Rotation}, {Scale});
+#endif
+
+        SaveAnimAsset(Sequence, bSave);
+
+        ANIM_SUCCESS_RESPONSE(FString::Printf(TEXT("Bone key set at frame %d"), Frame));
+        McpHandlerUtils::AddVerification(Response, Sequence);
+        return Response;
+    }
+    return nullptr;
+}
+
+} // namespace McpAnimationAuthoring

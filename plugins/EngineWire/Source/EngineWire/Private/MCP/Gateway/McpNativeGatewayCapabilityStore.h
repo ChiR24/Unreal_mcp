@@ -1,0 +1,146 @@
+// McpNativeGatewayCapabilityStore.h — generated capability shard loader
+//
+// Owns the ONLY native source of discovery metadata: the generated shards under
+// MCP/Generated. There is deliberately no handwritten alternate catalog. If a
+// shard is missing, unparsable, structurally invalid, or the record total does
+// not match the generated index, the store reports a typed failure and exposes
+// ZERO records, so discovery answers with an honest startup error instead of
+// advertising data that is not in the canonical registry.
+
+#pragma once
+
+#include "CoreMinimal.h"
+#include "Dom/JsonObject.h"
+
+enum class EMcpCapabilityStoreStatus : uint8
+{
+	Ready,
+	ShardParseFailed,
+	ShardRecordInvalid,
+	RecordCountMismatch,
+};
+
+/**
+ * One {tool, action} pair a capability answers to. A folded pair is a former
+ * action name the record replaced: FoldedPins carries the selector values that
+ * name implied, so a call by the old name validates against the folded
+ * contract and dispatches unchanged. Mirror of `legacyIds[]` in TypeScript.
+ */
+struct FMcpLegacyPair
+{
+	FString Tool;
+	FString Action;
+	TSharedPtr<FJsonObject> FoldedPins;
+	bool IsFolded() const { return FoldedPins.IsValid(); }
+};
+
+struct FMcpCapabilityRecord
+{
+	FString Id;
+	FString Parent;
+	FString DispatchAction;
+	FString Domain;
+	FString Family;
+	FString Summary;
+	FString Effect;
+	TArray<FString> Topics;
+	TArray<FString> Aliases;
+	TArray<FString> WhenToUse;
+	TArray<FString> WhenNotToUse;
+	TArray<TSharedPtr<FJsonValue>> Examples;
+	TSharedPtr<FJsonObject> InputSchema;
+	TSharedPtr<FJsonObject> OutputSchema;
+	TSharedPtr<FJsonObject> Availability;
+	TSharedPtr<FJsonObject> Behavior;
+	TSharedPtr<FJsonObject> Policy;
+	TSharedPtr<FJsonObject> Cost;
+	TSharedPtr<FJsonObject> Hashes;
+	/** Every pair execute accepts; the first is the advertised primary. */
+	TArray<FMcpLegacyPair> LegacyPairs;
+	/** routing.dispatchBy: the selector parameter and value -> bridge action. Empty unless the record is a fold. */
+	FString DispatchBySelector;
+	TMap<FString, FString> DispatchByActions;
+	/** routing.dispatchBy.declaredBy: parameter -> the selector values whose variant declares it. */
+	TMap<FString, TArray<FString>> DispatchByDeclaredBy;
+	/** routing.dispatchBy.requires: dispatched action -> {required, oneOf} beyond the union schema; read by McpFoldVariantRules. */
+	TSharedPtr<FJsonObject> DispatchByRequires;
+};
+
+/**
+ * The action name this capability is addressed by on its parent tool — the
+ * capability id's last dotted segment (e.g. "manage_audio.create_metasound" ->
+ * "create_metasound").
+ *
+ * This is the name `execute` accepts and `search` advertises. `DispatchAction`
+ * is INTERNAL routing and is not unique per capability (every manage_audio
+ * capability dispatches through "manage_audio"), so it cannot identify one.
+ */
+// The part of a capability id after its last '.', or the whole id when it has none.
+inline FString McpLastDottedSegment(const FString& Id)
+{
+	int32 LastDot = INDEX_NONE;
+	return Id.FindLastChar(TEXT('.'), LastDot) ? Id.RightChop(LastDot + 1) : Id;
+}
+
+inline FString McpCapabilityPublicAction(const FMcpCapabilityRecord& Record)
+{
+	return Record.Id.Contains(TEXT(".")) ? McpLastDottedSegment(Record.Id) : Record.DispatchAction;
+}
+
+// Distinct (case-sensitive), byte-order-sorted projection over records. The
+// projection returns by value, so computed strings are safe too.
+inline TArray<FString> McpDistinctSorted(
+	const TArray<const FMcpCapabilityRecord*>& Records,
+	TFunctionRef<FString(const FMcpCapabilityRecord&)> Project)
+{
+	TArray<FString> Values;
+	for (const FMcpCapabilityRecord* Record : Records)
+	{
+		const FString Value = Project(*Record);
+		if (!Values.ContainsByPredicate(
+				[&Value](const FString& E) { return E.Equals(Value, ESearchCase::CaseSensitive); }))
+		{
+			Values.Add(Value);
+		}
+	}
+	Values.Sort([](const FString& L, const FString& R) { return L.Compare(R, ESearchCase::CaseSensitive) < 0; });
+	return Values;
+}
+
+class FMcpCapabilityStore
+{
+public:
+	/** Process-wide store, loaded once on first use. */
+	static const FMcpCapabilityStore& Get();
+
+	/** Build a store from explicit shard payloads. Used by Get() and by tests. */
+	static FMcpCapabilityStore FromShards();
+
+	bool IsReady() const { return Status == EMcpCapabilityStoreStatus::Ready; }
+	EMcpCapabilityStoreStatus GetStatus() const { return Status; }
+	const FString& GetStatusDetail() const { return StatusDetail; }
+
+	/** Records ordered by canonical id. Empty unless IsReady(). */
+	const TArray<FMcpCapabilityRecord>& GetRecords() const { return Records; }
+	const FString& GetCatalogRevision() const { return CatalogRevision; }
+
+	/** Distinct sorted projections used by discovery filters and guidance. */
+	TArray<FString> GetParents() const;
+	TArray<FString> GetDomains() const;
+	TArray<FString> GetFamilies() const;
+
+	/** Records for one parent tool, ordered by canonical id. */
+	TArray<const FMcpCapabilityRecord*> GetRecordsForParent(const FString& Parent) const;
+	const FMcpCapabilityRecord* FindByParentAction(const FString& Parent, const FString& Action) const;
+	/** Every parent tool FindByParentAction resolves Action for, sorted. */
+	TArray<FString> GetParentsWithAction(const FString& Action) const;
+
+private:
+	EMcpCapabilityStoreStatus Status = EMcpCapabilityStoreStatus::ShardParseFailed;
+	FString StatusDetail;
+	FString CatalogRevision;
+	TArray<FMcpCapabilityRecord> Records;
+};
+
+/** Stable machine-readable token for a store failure, echoed in discovery errors. */
+const TCHAR* McpCapabilityStoreStatusToken(EMcpCapabilityStoreStatus Status);

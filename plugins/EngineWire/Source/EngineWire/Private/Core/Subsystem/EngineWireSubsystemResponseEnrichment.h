@@ -1,0 +1,155 @@
+#pragma once
+
+#include "CoreMinimal.h"
+#include "Dom/JsonObject.h"
+#include "Dom/JsonValue.h"
+#include "Core/Subsystem/EngineWireSubsystemResponseSanitization.h"
+#include "EngineWireSubsystem.h"
+
+// Enriches an outgoing automation result with transport-level context that the handler itself
+// cannot know, without ever overriding the handler's own verdict.
+//
+// Two things are attached:
+//   * the world the request ran against. An actor mutation reports success for the world
+//     that was current when it ran; if a level load replaces that world, the receipt gives the caller
+//     no way to notice. Naming the world makes the mismatch detectable instead of invisible.
+//   * engine-log errors observed during the request. These are ATTACHED for the caller to judge; the
+//     handler's success verdict deliberately stands, because downgrading it conflated transport success
+//     with asset-level warnings and produced false negatives (a handler that completed its work was
+//     reported as failed, triggering pointless retries and undo-then-reapply flows).
+namespace EngineWireSubsystemResponse
+{
+// Unreal's editor-scripting libraries (UEditorAssetLibrary, the editor actor
+// subsystem's GetAllLevelActors) refuse EVERY call while Play In Editor runs and
+// only log it, so ~190 lookups across the handlers answered "not found" for an
+// asset or actor that exists, and a caller had no way to tell. The refusal is in
+// the request's captured errors: name it, and the way out, on the failure itself.
+inline void McpAppendPieRefusalHint(FString& Message, const bool bPieRequest,
+                                    const TArray<FString>& CapturedErrors)
+{
+    if (!bPieRequest) { return; }
+    for (const FString& Error : CapturedErrors)
+    {
+        if (Error.Contains(TEXT("currently in a play mode")))
+        {
+            Message += TEXT(" -- Play In Editor is running, and Unreal refused an editor-only lookup this ")
+                TEXT("action uses (\"The Editor is currently in a play mode\"), so this does not show that ")
+                TEXT("anything is missing. Stop play (control_editor, action \"stop\"), then retry.");
+            return;
+        }
+    }
+}
+
+// engine<Kind>sObserved / engine<Kind>Count / engine<Kind>sTruncated, and engine<Kind>s (the first 3,
+// sanitized) when bList; returns those lines. Warnings pass bList false: their lines ride in `warnings`,
+// and listing them again sent every captured warning twice in one reply.
+inline TArray<TSharedPtr<FJsonValue>> McpAttachCapturedEngineMessages(
+    const TSharedPtr<FJsonObject>& Enriched, const TCHAR* Kind,
+    const TArray<FString>& Messages, const int32 Total, const bool bTruncated, const bool bList)
+{
+    constexpr int32 MaxInResponse = 3;
+    TArray<TSharedPtr<FJsonValue>> Values;
+    for (int32 Index = 0; Index < FMath::Min(Messages.Num(), MaxInResponse); ++Index)
+    {
+        Values.Add(MakeShared<FJsonValueString>(SanitizeEngineErrorForResponse(Messages[Index])));
+    }
+    Enriched->SetBoolField(FString::Printf(TEXT("engine%ssObserved"), Kind), true);
+    Enriched->SetNumberField(FString::Printf(TEXT("engine%sCount"), Kind), Total);
+    if (bList)
+    {
+        Enriched->SetArrayField(FString::Printf(TEXT("engine%ss"), Kind), Values);
+    }
+    if (bTruncated || Messages.Num() > MaxInResponse)
+    {
+        Enriched->SetBoolField(FString::Printf(TEXT("engine%ssTruncated"), Kind), true);
+    }
+    return Values;
+}
+
+inline TSharedPtr<FJsonObject> McpBuildEnrichedResponseResult(
+    const TSharedPtr<FJsonObject>& Result,
+    const FString& WorldName,
+    const bool bIsTransientWorld,
+    const UEngineWireSubsystem::FRequestErrorCapture& Captured)
+{
+    TSharedPtr<FJsonObject> Enriched = MakeShared<FJsonObject>();
+    if (Result.IsValid())
+    {
+        for (const auto& Pair : Result->Values)
+        {
+            Enriched->SetField(Pair.Key, Pair.Value);
+        }
+    }
+
+    if (!WorldName.IsEmpty())
+    {
+        Enriched->SetStringField(TEXT("worldName"), WorldName);
+        if (bIsTransientWorld)
+        {
+            // A /Temp package is unsaved and is discarded if a level load completes, so an actor
+            // reported under it may not be reachable by the time the caller acts on this receipt.
+            Enriched->SetBoolField(TEXT("isTransientWorld"), true);
+        }
+    }
+
+    // A warning the engine logged while the request ran was captured and then
+    // thrown away, so "Saved 0 packages" or a material that failed to find a
+    // parameter answered as a clean success and nothing surfaced until someone
+    // opened the Output Log. Warnings ride the same channel as errors now, one
+    // rung quieter.
+    TArray<TSharedPtr<FJsonValue>> WarningValues;
+    if (Result.IsValid())
+    {
+        const TArray<TSharedPtr<FJsonValue>>* ExistingWarnings = nullptr;
+        if (Result->TryGetArrayField(TEXT("warnings"), ExistingWarnings) && ExistingWarnings)
+        {
+            WarningValues = *ExistingWarnings;
+        }
+    }
+
+    // A batch can compile part-way (an override add_function makes compiles before its body is wired), and the
+    // reply kept that half-built graph's compiler warning although the batch's own final compile was clean, so a
+    // caller "fixed" a graph with nothing wrong. A clean final compile settles every compiler line logged before it.
+    FString CompilerStatus;
+    const bool bCleanCompile = Result.IsValid() && Result->TryGetStringField(TEXT("compilerStatus"), CompilerStatus)
+        && CompilerStatus == TEXT("UpToDate");
+    TArray<FString> WarningMessages = Captured.WarningMessages;
+    TArray<FString> ErrorMessages = Captured.ErrorMessages;
+    int32 WarningCount = Captured.WarningCount;
+    int32 ErrorCount = Captured.ErrorCount;
+    if (bCleanCompile)
+    {
+        const auto IsCompilerLine = [](const FString& Line) { return Line.Contains(TEXT("[Compiler]")); };
+        WarningCount = FMath::Max(0, WarningCount - WarningMessages.RemoveAll(IsCompilerLine));
+        ErrorCount = FMath::Max(0, ErrorCount - ErrorMessages.RemoveAll(IsCompilerLine));
+    }
+
+    if (WarningMessages.Num() > 0)
+    {
+        WarningValues.Append(McpAttachCapturedEngineMessages(Enriched, TEXT("Warning"),
+            WarningMessages, WarningCount, Captured.bWarningMessagesTruncated, false));
+    }
+
+    if (ErrorMessages.Num() == 0)
+    {
+        if (WarningValues.Num() > 0)
+        {
+            Enriched->SetArrayField(TEXT("warnings"), WarningValues);
+        }
+        return Enriched;
+    }
+
+    McpAttachCapturedEngineMessages(Enriched, TEXT("Error"),
+        ErrorMessages, ErrorCount, Captured.bErrorMessagesTruncated, true);
+
+    // The errors were only reachable under `details`, while `warnings` is the channel a caller watches
+    // for "it succeeded, but read this" -- so a mutation that tripped 32 engine errors, including an
+    // ensure, looked completely clean to anyone inspecting warnings. Mirror a bounded summary there.
+    WarningValues.Add(MakeShared<FJsonValueString>(FString::Printf(
+        TEXT("%d engine error(s) were logged while this request ran. The handler still reports success; ")
+        TEXT("see engineErrors for the captured text."),
+        ErrorCount)));
+    Enriched->SetArrayField(TEXT("warnings"), WarningValues);
+    return Enriched;
+}
+}

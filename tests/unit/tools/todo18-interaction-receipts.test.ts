@@ -1,0 +1,162 @@
+// Plan Todo 18 (BB-007, BB-008, BB-009) - interaction validation, reads, and
+// receipts must be truthful.
+//
+// Written after the fixes landed, so non-vacuity is proven by mutation: toggle
+// any one fix off and the case naming it fails. The native cases are
+// source-contract reads because no engine root exists here to compile the
+// plugin.
+
+import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
+import { describe, expect, it } from 'vitest';
+
+import { ALL_CAPABILITY_RECORDS } from '../../../src/tools/catalog/capabilities/records/aggregate.js';
+import type { CapabilityRecord } from '../../../src/tools/catalog/capabilities/model.js';
+
+const PRIVATE = join(
+  'plugins', 'EngineWire', 'Source', 'EngineWire', 'Private'
+);
+
+function nativeSource(...segments: readonly string[]): string {
+  return readFileSync(join(PRIVATE, ...segments), 'utf8');
+}
+
+/** Blank comments so no assertion can be satisfied by prose. */
+function code(source: string): string {
+  return source
+    .replace(/\/\*[\s\S]*?\*\//gu, ' ')
+    .replace(/\/\/[^\n]*/gu, ' ');
+}
+
+function record(id: string): CapabilityRecord {
+  const found = ALL_CAPABILITY_RECORDS.find((entry) => String(entry.id) === id);
+  if (!found) throw new Error(`fixture record '${id}' is absent from the canonical source`);
+  return found;
+}
+
+function outputKeys(id: string): readonly string[] {
+  return Object.keys(JSON.parse(JSON.stringify(record(id).schemas.output.properties)) as object);
+}
+
+describe('todo18 BB-007: get_interaction_info declares what the native reader emits', () => {
+  const READ_ID = 'manage_interaction.get_interaction_info';
+  const EXPECTED_FIELDS = [
+    'assetPath', 'assetType', 'blueprintName', 'blueprintPath',
+    'actorName', 'actorClass', 'doorPath', 'switchPath',
+    'chestPath', 'triggerPath'
+  ] as const;
+
+  it('declares every field HandleInteractionInfoAction emits', () => {
+    const declared = outputKeys(READ_ID);
+    for (const field of EXPECTED_FIELDS) {
+      expect(declared, `${READ_ID} must declare ${field}`).toContain(field);
+    }
+  });
+
+  it('keeps assetPath in the declared set (the identity handle)', () => {
+    expect(outputKeys(READ_ID)).toContain('assetPath');
+  });
+
+  it('native reader still emits the canonical assetPath', () => {
+    const source = code(
+      nativeSource('Domains', 'Interaction', 'McpInteractionInfo.cpp')
+    );
+
+    expect(source).toContain('SetStringField(TEXT("assetPath"), ResolvedPath)');
+  });
+});
+
+describe('todo18 BB-008: every mutation receipt carries canonical identity', () => {
+  // Every mutation path finishes through SendInteractableResult, which stamps the evidence (Interface finishes
+  // inline). Existence regexes proved too weak here: an oracle probe deleted one of Chest's TWO call sites and
+  // the suite stayed green. Pin exact counts.
+  const EXPECTED_FINISHES = {
+    Chest: 2, Components: 2, Door: 2, Lever: 1, Switch: 2, Triggers: 1,
+  } as const;
+  const source = (name: string): string =>
+    code(nativeSource('Domains', 'Interaction', `McpInteraction${name}.cpp`));
+
+  it.each(Object.keys(EXPECTED_FINISHES) as (keyof typeof EXPECTED_FINISHES)[])(
+    '%s finishes every mutating handler through SendInteractableResult', (name) => {
+      const calls = source(name).match(/SendInteractableResult\(/gu) ?? [];
+      expect(calls, `${name} must keep all ${EXPECTED_FINISHES[name]} finishes`).toHaveLength(EXPECTED_FINISHES[name]);
+    });
+
+  it('the finisher and Interface each stamp evidence once', () => {
+    expect(source('BPVariables')).toContain('McpMutationEvidence.h');
+    expect(source('BPVariables').match(/AddMutationEvidence\(/gu) ?? []).toHaveLength(1);
+    expect(source('Interface').match(/AddMutationEvidence\(/gu) ?? []).toHaveLength(1);
+  });
+
+  it('create_door_actor keeps its verification (the finisher verifies every Blueprint it saves)', () => {
+    expect(source('BPVariables')).toContain('McpHandlerUtils::AddVerification(Result, Blueprint)');
+    expect(source('Door')).toMatch(/SendInteractableResult\(Subsystem, RequestId, RequestingSocket, DoorBP,/u);
+  });
+});
+
+describe('todo18 BB-009a: duplicate create_interactable_interface refuses before any mutation', () => {
+  const iface = (): string =>
+    code(nativeSource('Domains', 'Interaction', 'McpInteractionInterface.cpp'));
+
+  it('checks McpAssetExists BEFORE CreatePackage', () => {
+    const source = iface();
+    const doesExist = source.indexOf('McpAssetExists(');
+    const createPackage = source.indexOf('CreatePackage');
+
+    expect(doesExist).toBeGreaterThan(-1);
+    expect(createPackage).toBeGreaterThan(-1);
+    expect(doesExist, 'the existence check must precede CreatePackage').toBeLessThan(createPackage);
+  });
+
+  it('refuses with typed ALREADY_EXISTS naming the colliding path', () => {
+    const source = iface();
+
+    expect(source).toContain('ALREADY_EXISTS');
+    expect(source).toContain('already exists at');
+  });
+
+  it('does NOT call FactoryCreateNew in the refusal path', () => {
+    const source = iface();
+    const refusalIdx = source.indexOf('ALREADY_EXISTS');
+    const factoryIdx = source.indexOf('FactoryCreateNew');
+
+    expect(refusalIdx).toBeGreaterThan(-1);
+    expect(factoryIdx).toBeGreaterThan(-1);
+    // The factory must come AFTER the refusal check, not inside it.
+    expect(refusalIdx).toBeLessThan(factoryIdx);
+  });
+});
+
+describe('todo18 BB-009b: configure_door_properties validates target class before mutating', () => {
+  const door = (): string =>
+    code(nativeSource('Domains', 'Interaction', 'McpInteractionDoor.cpp'));
+  const loader = (): string => {
+    const source = code(nativeSource('Domains', 'Interaction', 'McpInteractionBPVariables.cpp'));
+    const start = source.indexOf('UBlueprint* LoadInteractableBlueprint(');
+    return source.slice(start, source.indexOf('\n}', start));
+  };
+
+  it('asks the loader to require both DoorPivot and DoorMesh SCS nodes', () => {
+    expect(door()).toMatch(/LoadInteractableBlueprint\([^;]*\{TEXT\("DoorPivot"\), TEXT\("DoorMesh"\)\}\)/u);
+    expect(loader()).toContain('GetVariableName()');
+  });
+
+  it('refuses with INVALID_OBJECT_TYPE when any required node is missing', () => {
+    const source = loader();
+
+    expect(source).toContain('INVALID_OBJECT_TYPE');
+    expect(source).toContain('is not a %s blueprint');
+    expect(source).toMatch(/if \(!bAllFound\)/u);
+  });
+
+  it('does NOT mutate before the class check: configure only authors variables after the loader returns', () => {
+    const source = door();
+    const configure = source.indexOf('configure_door_properties');
+    const loadIdx = source.indexOf('LoadInteractableBlueprint(', configure);
+    const mutateIdx = source.indexOf('ApplyInteractionVars(', loadIdx);
+
+    expect(loadIdx).toBeGreaterThan(-1);
+    expect(mutateIdx).toBeGreaterThan(-1);
+    expect(loadIdx).toBeLessThan(mutateIdx);
+  });
+});

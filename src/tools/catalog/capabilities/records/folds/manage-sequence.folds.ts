@@ -1,0 +1,109 @@
+// Fold specs for manage_sequence. Data only; see ../shared/fold.ts.
+import { byTarget } from '../shared/fold-spec.js';
+import type { FoldSpec } from '../shared/fold-types.js';
+
+export const MANAGE_SEQUENCE_FOLDS: readonly FoldSpec[] = [
+  {
+    primary: 'create', selector: 'sequenceOp',
+    summary: 'Create a level sequence (sequenceOp create, the default): name in the folder path (default /Game), or path naming the asset itself; it is saved (saved), and a level sequence already there is kept and answered with alreadyExists, while another asset there is ASSET_ALREADY_EXISTS. duplicate copies the sequence at path into the folder destinationPath as newName and saves the copy; rename gives the sequence at path the name newName in its folder (a path starting with / moves it), references following it; the engine saves it and leaves a redirector at the old path when other assets reference it. Only /Game paths are written (SEQUENCE_PATH_NOT_WRITABLE); a source that is not a level sequence is INVALID_SEQUENCE, and a taken destination ASSET_ALREADY_EXISTS.',
+    topics: ['level sequence', 'create sequence', 'create cinematic', 'duplicate sequence', 'rename sequence'],
+    members: { create: 'create', duplicate: 'duplicate', rename: 'rename' },
+  },
+  {
+    primary: 'play', selector: 'control',
+    summary: 'Play, pause or stop a level sequence in the editor; pause with startTime moves the playhead to that time and holds the frame there, so the level shows that moment.',
+    topics: ['sequencer playhead', 'scrub sequence', 'set sequence time', 'go to frame', 'jump to time in sequence', 'hold a frame'],
+    members: { play: 'play', pause: 'pause', stop: 'stop' },
+  },
+  {
+    primary: 'edit_sequence_bindings', selector: 'edit',
+    summary: 'Bind actors to a Level Sequence at path, chosen by edit; an asset that is not a Level Sequence is refused. add_actor and add_actors bind placed actors by label as possessables, reusing a binding an actor already has, and answer per actor (results, successful, failed; NO_ACTORS_BOUND when none bound); add_camera places a CameraActor at the world origin and binds it (actorName labels it), or with spawnable true adds a camera the sequence owns that exists only while it plays; add_spawnable adds a spawnable of className; remove_actors drops the bindings of the named actors (NO_ACTORS_REMOVED when none was bound). Each answers the bindingGuid it made or found.',
+    topics: ['sequence binding', 'add actor to sequence', 'spawnable', 'sequence camera', 'spawn actor in sequence'],
+    members: { add_actor: 'add_actor', add_actors: 'add_actors', add_camera: 'add_camera', add_spawnable: 'add_spawnable_from_class', remove_actors: 'remove_actors' },
+  },
+  {
+    primary: 'edit_sequence_tracks', selector: 'edit',
+    summary: 'Edit sequence tracks: add a track, section or keyframe; move, trim or ease a section, or change the play rate of an animation clip; lock, mute or solo a track.',
+    topics: ['sequence track', 'add track', 'add section', 'keyframe', 'mute track', 'solo track', 'lock track', 'keyframe actor location', 'crossfade clips', 'ease section', 'trim section', 'clip play rate'],
+    members: { add_track: 'add_track', add_section: 'add_section', add_keyframe: 'add_keyframe', set_locked: 'set_track_locked', set_muted: 'set_track_muted', set_solo: 'set_track_solo', set_section: 'set_section' },
+  },
+  {
+    primary: 'set_properties', selector: 'sequenceProperty',
+    summary: 'Set sequence properties: playback range and frame rate, display rate, tick resolution, playback speed, view range, work range.',
+    topics: ['frame rate', 'playback range', 'display rate', 'tick resolution', 'playback speed', 'work range', 'view range', 'cutscene length', 'level sequence length'],
+    members: { properties: 'set_properties', display_rate: 'set_display_rate', tick_resolution: 'set_tick_resolution', playback_speed: 'set_playback_speed', view_range: 'set_view_range', work_range: 'set_work_range' },
+  },
+  {
+    primary: 'delete', topics: ['delete level sequence', 'delete cutscene'], selector: 'deleteScope',
+    summary: 'Delete a level sequence (deleteScope sequence, the default: refused with SEQUENCE_IN_USE, naming referencedBy, while a level or asset still uses it; its editors close and the undo history may be cleared), remove one track by name (track, one undo step), or remove keys (keyframe: from the tracks trackName or bindingId picks, on frame or frames, else every key on them; one undo step; replies removedKeys).',
+    members: { sequence: 'delete', track: 'remove_track', keyframe: 'remove_keyframe' },
+  },
+  {
+    primary: 'get_properties', selector: 'info',
+    summary: 'Read a sequence: properties, bindings, tracks, the keys on a track, the available track types, list sequences, or open one in Sequencer.',
+    topics: ['sequence properties', 'sequence bindings', 'list tracks', 'track types', 'list sequences', 'open sequencer'],
+    members: { properties: 'get_properties', bindings: 'get_bindings', tracks: 'list_tracks', keys: 'list_track_keys', track_types: 'list_track_types', list: 'list', open: 'open' },
+  },
+  {
+    primary: 'add_cinematic_track', selector: 'trackKind',
+    summary: 'Add a cinematic track: camera cut, camera shake, transform, property, skeletal animation, material parameter, particle, event, fade, level visibility, shot, or subsequence.',
+    topics: ['camera cut track', 'camera shake', 'transform track', 'property track', 'animation track', 'fade track', 'shot track', 'subsequence', 'fade to black', 'add skeletal animation to sequence'],
+    members: {
+      ...byTarget('add_', ['add_camera_cut_track', 'add_camera_shake_track', 'add_transform_track', 'add_property_track', 'add_skeletal_animation_track',
+        'add_material_parameter_track', 'add_particle_track', 'add_event_track', 'add_fade_track', 'add_level_visibility_track', 'add_shot_track'], '_track'),
+      subsequence: 'add_subsequence',
+    },
+  },
+  {
+    primary: 'configure_cinematic', selector: 'setting',
+    summary: 'Cinematic cameras and shots, chosen by setting. camera sets a CineCameraActor\'s focal length, aperture, sensor size and focus distance and reads back what the camera kept after clamping to its lens (values); rig_rail sets a rail rig\'s positionOnRail (0 to 1) and rig_crane a crane rig\'s pitch, yaw and arm length, each placing the rig at the world origin when actorName names none (spawned); shot sets a shot\'s display name, range or row. camera and the rigs are one undo step, and a call with nothing to set is refused.',
+    topics: ['cine camera settings', 'camera rig crane', 'camera rig rail', 'shot settings', 'focal length', 'aperture', 'set camera focal length'],
+    members: { camera: 'configure_camera_settings', rig_crane: 'configure_camera_rig_crane', rig_rail: 'configure_camera_rig_rail', shot: 'configure_shot_settings' },
+  },
+  {
+    primary: 'create_cinematic_asset', selector: 'kind',
+    summary: 'Create a cinematic piece, chosen by kind. master_sequence makes a level sequence (name in path, default /Game/Cinematics, or sequencePath) at frameRate (default 24 fps) playing from startFrame (default 0) for durationFrames (default 240) or to endFrame, and saves it; it starts with no tracks, so add shots with add_shot_track and sub-sequences with add_subsequence. A level sequence already there is kept (alreadyExists); another asset there is ASSET_TYPE_MISMATCH. cine_camera_actor places a Cine Camera Actor named actorName (or label) at location and rotation with the lens, filmback and focus settings given (appliedProperties) and, with path or sequencePath, binds it to that sequence (bindingGuid); during Play it goes into the running game.',
+    topics: ['cine camera actor', 'master sequence'],
+    members: { cine_camera_actor: 'create_cine_camera_actor', master_sequence: 'create_master_sequence' },
+  },
+  {
+    primary: 'create_render_job', selector: 'control',
+    summary: 'Movie Render Queue: create a render job, queue it, start rendering, cancel a running render, or remove jobs from the queue.',
+    topics: ['movie render queue', 'render job', 'queue render', 'start render', 'mrq', 'render video', 'remove render job', 'clear render queue', 'cancel render', 'stop render'],
+    members: { create: 'create_render_job', queue: 'queue_render', start: 'start_render', cancel: 'cancel_render', remove: 'remove_render_job' },
+  },
+  {
+    primary: 'configure_render_job', selector: 'setting',
+    summary: 'Configure a Movie Render Queue job: output settings, anti-aliasing, render passes, burn-ins, console variables, and the camera setting (shutter timing, overscan).',
+    topics: ['render output settings', 'anti aliasing', 'render pass', 'burn in', 'console variables', 'movie output resolution', 'shutter timing', 'motion blur at camera cuts', 'render overscan'],
+    members: { output: 'configure_output_settings', anti_aliasing: 'configure_anti_aliasing', add_render_pass: 'add_render_pass', burn_ins: 'configure_burn_ins', console_variables: 'configure_console_variables', camera: 'configure_render_camera' },
+  },
+  {
+    primary: 'create_media_asset', selector: 'kind',
+    summary: 'Create media playback pieces, chosen by kind, each saved: source points at a local video file (under Content or Saved) or per-platform sources, player plays a source (loop, playOnOpen), playlist strings sources and files together, texture shows a player\'s picture in a material or widget, sound_component gives a placed actor the player\'s sound. A taken name is refused.',
+    topics: ['media source', 'media player', 'media playlist', 'media texture', 'media sound'],
+    members: byTarget('create_media_', ['create_media_source', 'create_media_player', 'create_media_playlist', 'create_media_texture', 'create_media_sound_component']),
+  },
+  {
+    primary: 'play_media', topics: ['play video file'], selector: 'control',
+    summary: 'Play a media player asset (control play, the default): it opens mediaSourcePath, a playlist (playlistPath, playlistIndex) or filePath first when given, closing what it was playing, else plays what it has open, and the reply waits up to 10 s for it to open and start (openStatus, openWaitMs, isPlaying, currentUrl), failing with MEDIA_OPEN_FAILED, MEDIA_OPEN_TIMEOUT or MEDIA_PLAY_TIMEOUT. Or pause it (pause) or seek it (seek). The picture shows only where its media texture is used (a material on a mesh, or a widget), and its sound needs a media sound component.',
+    members: { play: 'play_media', pause: 'pause_media', seek: 'seek_media' },
+  },
+  {
+    primary: 'play_demo', selector: 'control',
+    summary: 'Record and play back gameplay replays in the running game, chosen by control; outside Play every control is NOT_IN_PIE. start_recording records replayName (else the configured default, else McpReplay_<time>) until stop_recording, which answers the name, and is refused while a replay plays or records (ALREADY_PLAYING, ALREADY_RECORDING). play plays replayName back (refused while recording); pause pauses or resumes it (paused; without it, toggles); seek jumps to timeSeconds, clamped to the replay\'s length, and answers once playback gets there (REPLAY_SEEK_TIMEOUT after 10 s); set_playback_speed sets speed (at most 16); start_killcam plays the last durationSeconds of the playing replay, or of replayName. pause, seek and set_playback_speed need a replay playing (NOT_PLAYING). Replies give the replay state (activeReplayName, recording, playing, currentTimeSeconds, totalTimeSeconds, paused, playbackSpeed).',
+    topics: ['replay', 'demo recording', 'play demo', 'killcam', 'demo playback speed'],
+    members: { play: 'play_demo', pause: 'pause_demo', seek: 'seek_demo', set_playback_speed: 'set_demo_playback_speed', start_recording: 'start_demo_recording', stop_recording: 'stop_demo_recording', start_killcam: 'start_killcam' },
+  },
+  {
+    primary: 'configure_demo_settings', selector: 'setting',
+    summary: 'Set how this editor session records and plays demo replays, chosen by setting. demo stores the default replayName and friendlyName, extra additionalOptions, maxRecordTimeSeconds (up to 86400), checkpointSaveMaxMSPerFrame (up to 1000 ms; also written to the engine config and the demo driver defaults), playbackSpeed, prioritizeActors and loadDefaultMapOnStop; a recording or playback running now takes them at once (appliedToRuntime), and the reply lists everything stored. killcam_duration sets how many seconds start_killcam replays (up to 600). All but the checkpoint budget last until the editor closes.',
+    members: { demo: 'configure_demo_settings', killcam_duration: 'configure_killcam_duration' },
+  },
+  {
+    primary: 'configure_take_recorder', selector: 'setting',
+    summary: 'Record a take with the Take Recorder (Takes plugin), chosen by setting: sources picks the actors and allowlisted source classes to record and the sequence or preset to record from; recorded_tracks turns recorded properties of actor sources on or off; panel opens the panel and reads its mode, sequence, frame rate and source count; start_recording begins a take once its countdown ends, for duration seconds or until stop_recording; stop_recording finalizes the take and says whether it recorded anything (RECORDING_OUTPUT_EMPTY when not). Setup changes are refused while a take records (RECORDING_ACTIVE), and a refused call leaves the panel and sources as they were.',
+    topics: ['take recorder', 'take sources', 'recorded tracks', 'start take recording', 'record actor animation'],
+    members: { sources: 'configure_take_sources', recorded_tracks: 'configure_recorded_tracks', panel: 'create_take_recorder_panel', start_recording: 'start_recording', stop_recording: 'stop_recording' },
+  },
+];

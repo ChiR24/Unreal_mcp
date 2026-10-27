@@ -1,0 +1,202 @@
+#pragma once
+
+#include "CoreMinimal.h"
+
+#include "Components/ActorComponent.h"
+#include "Components/SceneComponent.h"
+#include "Dom/JsonObject.h"
+#include "Engine/Blueprint.h"
+#include "Engine/SCS_Node.h"
+#include "Engine/SimpleConstructionScript.h"
+#include "Foundation/BridgeHelpers/Blueprints/McpScsLookup.h"
+#include "Domains/Property/McpPropCdoComponents.h"
+
+namespace McpScsParent {
+
+// A Blueprint's own SCS is only half its component tree: everything inherited
+// from a native parent class (ACharacter's `Mesh` and `CapsuleComponent`,
+// APawn's movement component) lives on the CDO and has no USCS_Node at all.
+// Every batch path here used to look only at the SCS, so `attachTo: "Mesh"`
+// matched nothing -- and rather than say so, the add path fell back to the
+// first handle it had (the root), which is how fourteen body parts silently
+// ended up on the collision cylinder while the call reported success.
+// Resolving only USceneComponent missed the component most worth editing on a
+// character: CharacterMovement is a UActorComponent, so tuning jump height,
+// gravity or the plane constraint through the batch path was told the
+// component "is neither a component of this Blueprint nor one it inherits" --
+// while get_scs listed it, and the refusal told the caller to run get_scs.
+inline UActorComponent *FindInheritedComponent(UBlueprint *Blueprint,
+                                               const FString &Name) {
+  if (!Blueprint || Name.IsEmpty()) {
+    return nullptr;
+  }
+  UClass *Class = Blueprint->GeneratedClass ? Blueprint->GeneratedClass
+                                            : Blueprint->ParentClass;
+  AActor *CDO = Class ? Cast<AActor>(Class->GetDefaultObject()) : nullptr;
+  if (!CDO) {
+    return nullptr;
+  }
+  for (UActorComponent *Component : CDO->GetComponents()) {
+    if (!Component) {
+      continue;
+    }
+    // Match the object name AND the UPROPERTY alias: ACharacter's mesh is the
+    // object "CharacterMesh0" but every caller, and the editor's own details
+    // panel, calls it `Mesh`.
+    if (Component->GetName().Equals(Name, ESearchCase::IgnoreCase)) {
+      return Component;
+    }
+    if (FProperty *Property = Class->FindPropertyByName(FName(*Name))) {
+      if (FObjectProperty *ObjectProp = CastField<FObjectProperty>(Property)) {
+        if (ObjectProp->GetObjectPropertyValue_InContainer(CDO) == Component) {
+          return Component;
+        }
+      }
+    }
+  }
+  return nullptr;
+}
+
+// Attach targets must still be scene components; this keeps one lookup.
+inline USceneComponent *FindInheritedSceneComponent(UBlueprint *Blueprint,
+                                                    const FString &Name) {
+  return Cast<USceneComponent>(FindInheritedComponent(Blueprint, Name));
+}
+
+// A scene component from a parent Blueprint's construction script, by variable name: a node takes it as its parent
+// (variable and owner class), as the Components panel does.
+inline USCS_Node *FindInheritedScsSceneNode(UBlueprint *Blueprint, const FString &Name) {
+  USCS_Node *Found = nullptr;
+  McpPropertyCdoComponents::ForEachScsNode(Blueprint, [&](USCS_Node *Node, bool bInherited) {
+    if (bInherited && Node->GetVariableName().ToString().Equals(Name, ESearchCase::IgnoreCase)) Found = Node;
+    return Found == nullptr;
+  });
+  return Found && Found->ComponentTemplate && Found->ComponentTemplate->IsA<USceneComponent>() ? Found : nullptr;
+}
+
+// Attaches Child under ParentName, which may name an SCS node in this
+// Blueprint or an inherited/native scene component. Returns false with a
+// caller-facing reason rather than quietly leaving the node where it was.
+inline bool AttachNodeToNamedParent(UBlueprint *Blueprint,
+                                    USimpleConstructionScript *SCS,
+                                    USCS_Node *Child, const FString &ParentName,
+                                    FString &OutResolvedAs, FString &OutError) {
+  if (!SCS || !Child) {
+    OutError = TEXT("No SCS or component node to attach.");
+    return false;
+  }
+  const FString Trimmed = ParentName.TrimStartAndEnd();
+  if (Trimmed.IsEmpty()) {
+    OutError = TEXT("No parent name given.");
+    return false;
+  }
+
+  if (USCS_Node *ParentNode = FindScsNodeByName(SCS, Trimmed)) {
+    if (ParentNode == Child) {
+      OutError = TEXT("A component cannot be its own parent.");
+      return false;
+    }
+    // AddChildNode and AddNode both APPEND to the SCS AllNodes array (no
+    // uniqueness check), so a detach that keeps the node there leaves it
+    // counted twice once it is re-added below.
+    if (USCS_Node *OldParent = SCS->FindParentNode(Child)) {
+      OldParent->RemoveChildNode(Child, /*bRemoveFromAllNodes=*/true);
+    } else if (SCS->GetRootNodes().Contains(Child)) {
+      // A new node lands as a ROOT under the inherited root, so only the
+      // SCS-parent case above ever detached anything: nested under an SCS
+      // parent it stayed in RootNodes too, sat in two places at once (the
+      // engine warns "being removed from the root set ... possible cyclic
+      // linkage") and every listing counted it twice. RemoveNode takes it out
+      // of the root set and clears the native-parent fields it carried there.
+      SCS->RemoveNode(Child, /*bValidateSceneRootNodes=*/false);
+    }
+    ParentNode->AddChildNode(Child);
+    OutResolvedAs = TEXT("scs");
+    return true;
+  }
+
+  // Only native parents were looked up, so attachTo a parent Blueprint's part failed while get_scs listed it as
+  // inherited.
+  if (USCS_Node *InheritedNode = FindInheritedScsSceneNode(Blueprint, Trimmed)) {
+    if (USCS_Node *OldParent = SCS->FindParentNode(Child)) {
+      OldParent->RemoveChildNode(Child, /*bRemoveFromAllNodes=*/true);
+      SCS->AddNode(Child);
+    }
+    Child->SetParent(InheritedNode);
+    OutResolvedAs = TEXT("inherited");
+    return true;
+  }
+
+  if (USceneComponent *Native = FindInheritedSceneComponent(Blueprint, Trimmed)) {
+    // A node parented to a native component is a ROOT node of the SCS that
+    // carries the parent's name plus bIsParentComponentNative; SetParent sets
+    // both. Detach from any SCS parent first so it is not in two places.
+    if (USCS_Node *OldParent = SCS->FindParentNode(Child)) {
+      OldParent->RemoveChildNode(Child, /*bRemoveFromAllNodes=*/true);
+      SCS->AddNode(Child);
+    }
+    Child->SetParent(Native);
+    OutResolvedAs = TEXT("inherited");
+    return true;
+  }
+
+  OutError = FString::Printf(
+      TEXT("Parent '%s' is neither a component of this Blueprint nor one it "
+           "inherits. Inherited components are addressable by their property "
+           "name (Mesh, CapsuleComponent, CharacterMovement); call get_scs to "
+           "list what this Blueprint actually has."),
+      *Trimmed);
+  return false;
+}
+
+// One-line call site for the batch ops: attach by name and say in the op
+// summary what happened. An `attachTo` that cannot be resolved is reported as
+// a failed op instead of being dropped on the floor, which is what let a whole
+// prefab land on the root while every op claimed success.
+inline void AttachAndReport(UBlueprint *Blueprint,
+                            USimpleConstructionScript *SCS,
+                            const FString &ChildName, const FString &ParentName,
+                            const TSharedPtr<FJsonObject> &OpSummary) {
+  if (ParentName.TrimStartAndEnd().IsEmpty() || !OpSummary.IsValid()) {
+    return;
+  }
+  USCS_Node *Child = FindScsNodeByName(SCS, ChildName);
+  FString ResolvedAs;
+  FString Error;
+  if (Child &&
+      AttachNodeToNamedParent(Blueprint, SCS, Child, ParentName, ResolvedAs, Error)) {
+    OpSummary->SetStringField(TEXT("attachedTo"), ParentName);
+    OpSummary->SetStringField(TEXT("attachedToKind"), ResolvedAs);
+    return;
+  }
+  OpSummary->SetBoolField(TEXT("success"), false);
+  OpSummary->SetStringField(
+      TEXT("warning"),
+      Child ? Error
+            : FString::Printf(TEXT("Added component '%s' could not be found to "
+                                   "attach it to '%s'."),
+                              *ChildName, *ParentName));
+}
+
+// No attachTo: says where the new component ended. Like the editor's Components panel it lands under
+// DefaultSceneRoot, not in its place (add_scs_component's root-level add makes the engine swap the root), and the
+// reply said nothing, so a mesh meant to be the physics root sat under the placeholder unnoticed.
+inline void ReportParent(USimpleConstructionScript *SCS, const FString &ChildName,
+                         const TSharedPtr<FJsonObject> &OpSummary) {
+  USCS_Node *Child = SCS ? FindScsNodeByName(SCS, ChildName) : nullptr;
+  // An actor component (movement, audio logic) has no transform and attaches to nothing.
+  if (!Child || !OpSummary.IsValid() || !Child->ComponentTemplate ||
+      !Child->ComponentTemplate->IsA<USceneComponent>()) {
+    return;
+  }
+  const USCS_Node *Parent = SCS->FindParentNode(Child);
+  FString Where = TEXT("(root)");
+  if (Parent) {
+    Where = Parent->GetVariableName().ToString();
+  } else if (Child->ParentComponentOrVariableName != NAME_None) {
+    Where = Child->ParentComponentOrVariableName.ToString();
+  }
+  OpSummary->SetStringField(TEXT("attachedTo"), Where);
+}
+
+}  // namespace McpScsParent

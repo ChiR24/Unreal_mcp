@@ -1,0 +1,66 @@
+#include "Domains/Level/McpLevelActions.h"
+#include "Foundation/BridgeHelpers/Responses/McpJsonFields.h"
+#include "Domains/Level/Copy/McpLevelCopyOperations.h"
+#include "Domains/Level/Lifecycle/McpLevelPathSafety.h"
+
+namespace McpLevelHandlers {
+bool HandleDuplicateLevelAction(UEngineWireSubsystem& Subsystem, const FString& RequestId, const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> RequestingSocket) {
+    FString SourcePath;
+    if (Payload.IsValid())
+      Payload->TryGetStringField(TEXT("sourcePath"), SourcePath);
+    if (SourcePath.IsEmpty() && Payload.IsValid())
+      Payload->TryGetStringField(TEXT("levelPath"), SourcePath);
+
+    FString DestinationPath = McpGetFirstStringField(Payload, {TEXT("destinationPath")});
+
+    if (SourcePath.IsEmpty()) {
+      Subsystem.SendAutomationResponse(RequestingSocket, RequestId, false,
+                             TEXT("sourcePath or levelPath required for duplicate_level"),
+                             nullptr, TEXT("INVALID_ARGUMENT"));
+      return true;
+    }
+    if (DestinationPath.IsEmpty()) {
+      Subsystem.SendAutomationResponse(RequestingSocket, RequestId, false,
+                             TEXT("destinationPath required for duplicate_level"),
+                             nullptr, TEXT("INVALID_ARGUMENT"));
+      return true;
+    }
+
+    // Issue #8: Sanitize paths to prevent traversal attacks
+    FString SanitizedSource = SanitizeProjectRelativePath(SourcePath);
+    if (SanitizedSource.IsEmpty()) {
+      Subsystem.SendAutomationResponse(RequestingSocket, RequestId, false,
+                             McpPathRefusalMessage(TEXT("source path"), SourcePath),
+                             nullptr, TEXT("SECURITY_VIOLATION"));
+      return true;
+    }
+    FString SanitizedDest = SanitizeProjectRelativePath(DestinationPath);
+    if (SanitizedDest.IsEmpty()) {
+      Subsystem.SendAutomationResponse(RequestingSocket, RequestId, false,
+                             McpPathRefusalMessage(TEXT("destination path"), DestinationPath),
+                             nullptr, TEXT("SECURITY_VIOLATION"));
+      return true;
+    }
+    SourcePath = NormalizeLevelPackagePath(SanitizedSource);
+    DestinationPath = NormalizeLevelPackagePath(SanitizedDest);
+
+    bool bOverwrite = false;
+    if (Payload.IsValid()) {
+      Payload->TryGetBoolField(TEXT("overwrite"), bOverwrite);
+    }
+
+    TSharedPtr<FJsonObject> Result;
+    FString ErrorMessage;
+    FString ErrorCode;
+    const bool bDuplicated = CopyLevelMapPackageFile(SourcePath, DestinationPath, bOverwrite, Result, ErrorMessage, ErrorCode);
+    if (bDuplicated) {
+      Result->SetBoolField(TEXT("duplicated"), true);
+      Subsystem.SendAutomationResponse(RequestingSocket, RequestId, true,
+                             FString::Printf(TEXT("Level duplicated to: %s"), *DestinationPath), Result);
+    } else {
+      Subsystem.SendAutomationResponse(RequestingSocket, RequestId, false, ErrorMessage, Result,
+                             ErrorCode.IsEmpty() ? TEXT("DUPLICATE_FAILED") : ErrorCode);
+    }
+    return true;
+}
+} // namespace McpLevelHandlers

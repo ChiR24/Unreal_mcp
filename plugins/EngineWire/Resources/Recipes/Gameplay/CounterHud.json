@@ -1,0 +1,96 @@
+{
+  "description": "One of a pawn's numbers on screen (Coins, Score): when a local player's controller takes the pawn, the widget is created for that player and added to the viewport, and every 0.1 seconds its text shows Prefix and the variable rounded to a whole number; the widget comes off the screen when the pawn loses that controller or is destroyed.",
+  "tag": "{{Tag}}",
+  "placeholders": {
+    "Tag": "Owner tag, one per variable (CounterHud_Coins), so counters of several variables live side by side.",
+    "WidgetClass": "The widget's generated class path (/Game/UI/WBP_CoinsCounter.WBP_CoinsCounter_C).",
+    "WidgetType": "The HudVariable's type: Object: followed by the widget's generated class path.",
+    "HudVariable": "The variable holding the widget (CoinsCounterHud).",
+    "TextName": "The TextBlock in the widget that shows the number.",
+    "VariableName": "The pawn's Int or Float variable shown.",
+    "Prefix": "Text before the number (\"Coins: \"), or empty.",
+    "FillFunction": "The function that writes the number into the text (UpdateCoinsCounter), run by a looping timer.",
+    "DropFunction": "The function that takes the widget off the screen (RemoveCoinsCounter)."
+  },
+  "variables": [
+    { "variableName": "{{HudVariable}}", "variableType": "{{WidgetType}}", "category": "HUD" }
+  ],
+  "functions": [
+    {
+      "id": "ctrFill",
+      "functionName": "{{FillFunction}}",
+      "operations": [
+        { "edit": "create_node", "id": "ctrFillWidget", "nodeType": "VariableGet", "memberName": "{{HudVariable}}" },
+        { "edit": "create_node", "id": "ctrFillValid", "nodeType": "CallFunction", "memberName": "IsValid", "memberClass": "/Script/Engine.KismetSystemLibrary" },
+        { "edit": "create_node", "id": "ctrFillBranch", "nodeType": "Branch" },
+        { "edit": "create_node", "id": "ctrFillText", "nodeType": "VariableGet", "memberName": "{{TextName}}", "memberClass": "{{WidgetClass}}" },
+        { "edit": "create_node", "id": "ctrFillValue", "nodeType": "VariableGet", "memberName": "{{VariableName}}" },
+        { "edit": "create_node", "id": "ctrFillRound", "nodeType": "CallFunction", "memberName": "Round", "memberClass": "/Script/Engine.KismetMathLibrary" },
+        { "edit": "create_node", "id": "ctrFillDigits", "nodeType": "CallFunction", "memberName": "Conv_IntToString", "memberClass": "/Script/Engine.KismetStringLibrary" },
+        { "edit": "create_node", "id": "ctrFillJoin", "nodeType": "CallFunction", "memberName": "Concat_StrStr", "memberClass": "/Script/Engine.KismetStringLibrary", "pinDefaults": { "A": "{{Prefix}}" } },
+        { "edit": "create_node", "id": "ctrFillToText", "nodeType": "CallFunction", "memberName": "Conv_StringToText", "memberClass": "/Script/Engine.KismetTextLibrary" },
+        { "edit": "create_node", "id": "ctrFillSet", "nodeType": "CallFunction", "memberName": "SetText", "memberClass": "/Script/UMG.TextBlock" },
+        { "edit": "connect_pins", "fromNodeId": "$ctrFillWidget", "fromPinName": "{{HudVariable}}", "toNodeId": "$ctrFillValid", "toPinName": "Object" },
+        { "edit": "connect_pins", "from": "$ctrFillValid.ReturnValue", "to": "$ctrFillBranch.Condition" },
+        { "edit": "connect_pins", "fromNodeId": "$ctrFillWidget", "fromPinName": "{{HudVariable}}", "toNodeId": "$ctrFillText", "toPinName": "self" },
+        { "edit": "connect_pins", "fromNodeId": "$ctrFillText", "fromPinName": "{{TextName}}", "toNodeId": "$ctrFillSet", "toPinName": "self" },
+        { "edit": "connect_pins", "fromNodeId": "$ctrFillValue", "fromPinName": "{{VariableName}}", "toNodeId": "$ctrFillRound", "toPinName": "A" },
+        { "edit": "connect_pins", "from": "$ctrFillRound.ReturnValue", "to": "$ctrFillDigits.InInt" },
+        { "edit": "connect_pins", "from": "$ctrFillDigits.ReturnValue", "to": "$ctrFillJoin.B" },
+        { "edit": "connect_pins", "from": "$ctrFillJoin.ReturnValue", "to": "$ctrFillToText.InString" },
+        { "edit": "connect_pins", "from": "$ctrFillToText.ReturnValue", "to": "$ctrFillSet.InText" },
+        { "edit": "connect_pins", "from": "$ctrFill.then", "to": "$ctrFillBranch.execute" },
+        { "edit": "connect_pins", "from": "$ctrFillBranch.then", "to": "$ctrFillSet.execute" }
+      ]
+    },
+    {
+      "id": "ctrDrop",
+      "functionName": "{{DropFunction}}",
+      "operations": [
+        { "edit": "create_node", "id": "ctrDropWidget", "nodeType": "VariableGet", "memberName": "{{HudVariable}}" },
+        { "edit": "create_node", "id": "ctrDropValid", "nodeType": "CallFunction", "memberName": "IsValid", "memberClass": "/Script/Engine.KismetSystemLibrary" },
+        { "edit": "create_node", "id": "ctrDropBranch", "nodeType": "Branch" },
+        { "edit": "create_node", "id": "ctrDropRemove", "nodeType": "CallFunction", "memberName": "RemoveFromParent", "memberClass": "/Script/UMG.Widget" },
+        { "edit": "create_node", "id": "ctrDropClear", "nodeType": "VariableSet", "memberName": "{{HudVariable}}" },
+        { "edit": "connect_pins", "fromNodeId": "$ctrDropWidget", "fromPinName": "{{HudVariable}}", "toNodeId": "$ctrDropValid", "toPinName": "Object" },
+        { "edit": "connect_pins", "from": "$ctrDropValid.ReturnValue", "to": "$ctrDropBranch.Condition" },
+        { "edit": "connect_pins", "fromNodeId": "$ctrDropWidget", "fromPinName": "{{HudVariable}}", "toNodeId": "$ctrDropRemove", "toPinName": "self" },
+        { "edit": "connect_pins", "from": "$ctrDrop.then", "to": "$ctrDropBranch.execute" },
+        { "edit": "connect_pins", "from": "$ctrDropBranch.then", "to": "$ctrDropRemove.execute" },
+        { "edit": "connect_pins", "from": "$ctrDropRemove.then", "to": "$ctrDropClear.execute" }
+      ]
+    }
+  ],
+  "hooks": [
+    { "id": "ctrControl", "event": "ReceiveControllerChanged" },
+    { "id": "ctrEnd", "event": "Destroyed" }
+  ],
+  "eventGraph": [
+    { "edit": "create_node", "id": "ctrSwap", "nodeType": "CallFunction", "memberName": "{{DropFunction}}" },
+    { "edit": "create_node", "id": "ctrLocal", "nodeType": "CallFunction", "memberName": "IsLocallyControlled", "memberClass": "/Script/Engine.Pawn" },
+    { "edit": "create_node", "id": "ctrLocalBranch", "nodeType": "Branch" },
+    { "edit": "create_node", "id": "ctrPlayer", "nodeType": "Cast", "targetClass": "/Script/Engine.PlayerController" },
+    { "edit": "create_node", "id": "ctrCreate", "nodeType": "K2Node_CreateWidget", "targetClass": "{{WidgetClass}}" },
+    { "edit": "create_node", "id": "ctrKeep", "nodeType": "VariableSet", "memberName": "{{HudVariable}}" },
+    { "edit": "create_node", "id": "ctrShow", "nodeType": "CallFunction", "memberName": "AddToViewport", "memberClass": "/Script/UMG.UserWidget" },
+    { "edit": "create_node", "id": "ctrFirstFill", "nodeType": "CallFunction", "memberName": "{{FillFunction}}" },
+    { "edit": "create_node", "id": "ctrSelf", "nodeType": "Self" },
+    { "edit": "create_node", "id": "ctrTimer", "nodeType": "CallFunction", "memberName": "K2_SetTimer", "memberClass": "/Script/Engine.KismetSystemLibrary", "pinDefaults": { "FunctionName": "{{FillFunction}}", "Time": 0.1, "bLooping": true } },
+    { "edit": "connect_pins", "from": "$ctrControl.then", "to": "$ctrSwap.execute" },
+    { "edit": "connect_pins", "from": "$ctrSwap.then", "to": "$ctrLocalBranch.execute" },
+    { "edit": "connect_pins", "from": "$ctrLocal.ReturnValue", "to": "$ctrLocalBranch.Condition" },
+    { "edit": "connect_pins", "from": "$ctrLocalBranch.then", "to": "$ctrPlayer.execute" },
+    { "edit": "connect_pins", "from": "$ctrControl_event.NewController", "to": "$ctrPlayer.Object" },
+    { "edit": "connect_pins", "from": "$ctrPlayer.then", "to": "$ctrCreate.execute" },
+    { "edit": "connect_pins", "from": "$ctrPlayer.AsPlayer Controller", "to": "$ctrCreate.OwningPlayer" },
+    { "edit": "connect_pins", "from": "$ctrCreate.then", "to": "$ctrKeep.execute" },
+    { "edit": "connect_pins", "fromNodeId": "$ctrCreate", "fromPinName": "ReturnValue", "toNodeId": "$ctrKeep", "toPinName": "{{HudVariable}}" },
+    { "edit": "connect_pins", "from": "$ctrKeep.then", "to": "$ctrShow.execute" },
+    { "edit": "connect_pins", "from": "$ctrKeep.Output_Get", "to": "$ctrShow.self" },
+    { "edit": "connect_pins", "from": "$ctrShow.then", "to": "$ctrFirstFill.execute" },
+    { "edit": "connect_pins", "from": "$ctrFirstFill.then", "to": "$ctrTimer.execute" },
+    { "edit": "connect_pins", "from": "$ctrSelf.self", "to": "$ctrTimer.Object" },
+    { "edit": "create_node", "id": "ctrGone", "nodeType": "CallFunction", "memberName": "{{DropFunction}}" },
+    { "edit": "connect_pins", "from": "$ctrEnd.then", "to": "$ctrGone.execute" }
+  ]
+}

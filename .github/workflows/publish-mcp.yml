@@ -15,10 +15,10 @@ jobs:
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
       - name: Setup Node.js
-        uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6.4.0
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version: "20"
           registry-url: "https://registry.npmjs.org"
@@ -33,8 +33,8 @@ jobs:
       - name: Run linting
         run: npm run lint
 
-      - name: Run smoke tests
-        run: npm run test:smoke
+      - name: Run unit tests
+        run: npx vitest run
 
       - name: Extract version from tag
         id: version
@@ -73,9 +73,39 @@ jobs:
 
       - name: Publish to npm
         if: ${{ steps.npm_version.outputs.exists != 'true' }}
-        run: npm publish
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+          VERSION: ${{ steps.version.outputs.version }}
+        run: |
+          # `npm publish` with no --tag applies `latest` even to a prerelease,
+          # which is how 0.6.0-a became the default install. Derive the tag.
+          if [[ "$VERSION" == *-* ]]; then
+            PUBLISH_TAG=beta
+          else
+            PUBLISH_TAG=latest
+          fi
+          echo "Publishing $VERSION under dist-tag $PUBLISH_TAG"
+          npm publish --tag "$PUBLISH_TAG"
+
+      - name: Repair dist-tags
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+          VERSION: ${{ steps.version.outputs.version }}
+        run: |
+          # Idempotent, and runs even when publish was skipped, so a release
+          # already mistagged as `latest` is corrected on a re-run.
+          if [[ "$VERSION" == *-* ]]; then
+            npm dist-tag add "unreal-engine-mcp-server@$VERSION" beta || true
+            STABLE=$(npm view unreal-engine-mcp-server versions --json \
+              | jq -r '.[]' | grep -v -- '-' | tail -1)
+            CURRENT=$(npm view unreal-engine-mcp-server dist-tags.latest 2>/dev/null || echo '')
+            if [[ -n "$STABLE" && "$CURRENT" != "$STABLE" ]]; then
+              echo "latest is $CURRENT; restoring newest stable $STABLE"
+              npm dist-tag add "unreal-engine-mcp-server@$STABLE" latest
+            fi
+          fi
+          echo "dist-tags now:"
+          npm view unreal-engine-mcp-server dist-tags
 
       - name: Install MCP Publisher
         env:
@@ -83,6 +113,25 @@ jobs:
         run: |
           curl -L "https://github.com/modelcontextprotocol/registry/releases/download/${MCP_PUBLISHER_VERSION}/mcp-publisher_$(uname -s | tr '[:upper:]' '[:lower:]')_$(uname -m | sed 's/x86_64/amd64/;s/aarch64/arm64/').tar.gz" | tar xz mcp-publisher
           chmod +x mcp-publisher
+
+      - name: Wait for npm to serve the new version
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
+        run: |
+          # The MCP Registry rejects a server whose npm version 404s, and npm
+          # holds new versions in an automated-review queue before serving
+          # them. Without this wait the registry publish loses the race and
+          # fails on every release.
+          for attempt in $(seq 1 30); do
+            if npm view "unreal-engine-mcp-server@$VERSION" version --prefer-online >/dev/null 2>&1; then
+              echo "npm is serving $VERSION after $attempt attempt(s)."
+              exit 0
+            fi
+            echo "attempt $attempt: npm has not served $VERSION yet; waiting 20s"
+            sleep 20
+          done
+          echo "::error::npm did not serve $VERSION within 10 minutes."
+          exit 1
 
       - name: Login to MCP Registry
         run: ./mcp-publisher login github-oidc --registry https://registry.modelcontextprotocol.io
@@ -96,13 +145,22 @@ jobs:
           VERSION: ${{ steps.version.outputs.version }}
         run: |
           echo "Waiting for registry to update..."
+          BASE="https://registry.modelcontextprotocol.io/v0/servers?search=io.github.ChiR24/unreal-engine-mcp"
           for attempt in {1..6}; do
-            response=$(curl -fsS "https://registry.modelcontextprotocol.io/v0/servers?search=io.github.ChiR24/unreal-engine-mcp")
-            if echo "$response" | jq -e --arg v "$VERSION" 'any(.servers[]?.server.version; . == $v)' >/dev/null; then
-              echo "MCP Registry contains version $VERSION."
-              echo "$response" | jq '.'
-              exit 0
-            fi
+            # The listing is paged 30 versions at a time, oldest first. Reading only
+            # the first page failed v0.6.0-beta-b, the server's 31st version, although
+            # the registry listed it: follow nextCursor to the last page.
+            url="$BASE"
+            for page in {1..20}; do
+              response=$(curl -fsS "$url")
+              if echo "$response" | jq -e --arg v "$VERSION" 'any(.servers[]?.server.version; . == $v)' >/dev/null; then
+                echo "MCP Registry contains version $VERSION (page $page)."
+                exit 0
+              fi
+              cursor=$(echo "$response" | jq -r '.metadata.nextCursor // empty')
+              [ -z "$cursor" ] && break
+              url="$BASE&cursor=$(jq -rn --arg c "$cursor" '$c | @uri')"
+            done
             echo "MCP Registry does not list version $VERSION yet (attempt $attempt/6)."
             sleep 20
           done

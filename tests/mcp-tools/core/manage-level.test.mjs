@@ -17,57 +17,92 @@ const IMPORTED_LEVEL = `${TEST_FOLDER}/LevelImported_${ts}`;
 const DUPLICATED_LEVEL = `${TEST_FOLDER}/LevelDuplicated_${ts}`;
 const RENAMED_LEVEL_NAME = `LevelRenamed_${ts}`;
 const RENAMED_LEVEL = `${TEST_FOLDER}/${RENAMED_LEVEL_NAME}`;
+const MOVED_LEVEL = `${TEST_FOLDER}/LevelMoved_${ts}`;
+const SAVE_VIA_SAVE_LEVEL = `${TEST_FOLDER}/LevelSaveViaSave_${ts}`;
 const TEST_ACTOR = `LevelActor_${ts}`;
 
 const testCases = [
-  // === SETUP ===
-  { scenario: 'Setup: create test folder', toolName: 'manage_asset', arguments: { action: 'create_folder', path: TEST_FOLDER }, expected: 'success|already exists' },
-
   // === CREATE / SAVE / LOAD ===
-  { scenario: 'CREATE: create_level', toolName: 'manage_level', arguments: { action: 'create_level', levelName: `LevelMain_${ts}`, levelPath: TEST_FOLDER, template: '/Engine/Maps/Templates/OpenWorld', useWorldPartition: false, saveDirtyPackages: true }, expected: 'success|already exists' },
+  { scenario: 'CREATE: create_level', toolName: 'manage_level', arguments: { action: 'create_level', levelName: `LevelMain_${ts}`, levelPath: TEST_FOLDER, useWorldPartition: false, saveDirtyPackages: true }, expected: 'success|already exists' },
   { scenario: 'ACTION: save', toolName: 'manage_level', arguments: { action: 'save' }, expected: 'success' },
-  { scenario: 'ACTION: save_level alias', toolName: 'manage_level', arguments: { action: 'save_level' }, expected: 'success' },
+  { scenario: 'ACTION: save_level alias (levelPath pins the open level)', toolName: 'manage_level', arguments: { action: 'save_level', levelPath: MAIN_LEVEL }, expected: 'success' },
+  { scenario: 'ERROR: save refuses a levelPath that is not open', toolName: 'manage_level', arguments: { action: 'save', levelPath: SUB_LEVEL }, expected: 'error|LEVEL_NOT_LOADED' },
   { scenario: 'ACTION: save_as', toolName: 'manage_level', arguments: { action: 'save_as', savePath: SAVE_AS_LEVEL }, expected: 'success' },
   { scenario: 'ACTION: save_level_as', toolName: 'manage_level', arguments: { action: 'save_level_as', savePath: SAVE_LEVEL_AS }, expected: 'success' },
+  { scenario: 'ACTION: save with savePath saves as', toolName: 'manage_level', arguments: { action: 'save', savePath: SAVE_VIA_SAVE_LEVEL }, expected: 'success' },
   { scenario: 'Setup: create sublevel', toolName: 'manage_level', arguments: { action: 'create_level', levelName: `LevelSub_${ts}`, levelPath: TEST_FOLDER, useWorldPartition: false, saveDirtyPackages: true }, expected: 'success|already exists' },
-  { scenario: 'ACTION: load', toolName: 'manage_level', arguments: { action: 'load', levelPath: MAIN_LEVEL, streaming: false, saveDirtyPackages: true }, expected: 'success' },
-  { scenario: 'ACTION: load_level alias', toolName: 'manage_level', arguments: { action: 'load_level', levelPath: MAIN_LEVEL, streaming: false, saveDirtyPackages: true }, expected: 'success' },
+  // The sub-level create_level just made is the open one, so this is a real load.
+  { scenario: 'ACTION: load', toolName: 'manage_level', arguments: { action: 'load', levelPath: MAIN_LEVEL, streaming: false, saveDirtyPackages: true }, expected: 'success', assertions: [{ path: 'structuredContent.result.reloaded', equals: true, label: 'the level was loaded from disk' }, { path: 'structuredContent.result.alreadyLoaded', equals: false, label: 'it was not the open one' }] },
+  { scenario: 'ACTION: load_level alias of the open level reloads nothing and says so', toolName: 'manage_level', arguments: { action: 'load_level', levelPath: MAIN_LEVEL, streaming: false, saveDirtyPackages: true }, expected: 'success', assertions: [{ path: 'structuredContent.result.alreadyLoaded', equals: true, label: 'the level was already open' }, { path: 'structuredContent.result.reloaded', equals: false, label: 'so nothing was loaded' }, { path: 'structuredContent.result.unsaved', equals: false, label: 'and saveDirtyPackages left nothing unsaved' }] },
   { scenario: 'Setup: spawn actor in level', toolName: 'control_actor', arguments: { action: 'spawn', classPath: '/Engine/BasicShapes/Cube', actorName: TEST_ACTOR, location: { x: 0, y: 0, z: 100 } }, expected: 'success' },
+  { scenario: 'ACTION: load of the open level keeps its unsaved changes and reports them', toolName: 'manage_level', arguments: { action: 'load', levelPath: MAIN_LEVEL, streaming: false }, expected: 'success', assertions: [{ path: 'structuredContent.result.alreadyLoaded', equals: true, label: 'the open level is not loaded again' }, { path: 'structuredContent.result.unsaved', equals: true, label: 'the spawn above left it unsaved, and the reply says so' }, { path: 'structuredContent.result.dirtyWorldPackagesBeforeLoad', gte: 1, label: 'the count agrees (it read 0)' }] },
+  { scenario: 'INFO: the unsaved spawn survived the load', toolName: 'control_actor', arguments: { action: 'find_by_name', name: TEST_ACTOR }, expected: 'success', assertions: [{ path: 'structuredContent.result.count', gte: 1, label: 'nothing was reloaded' }] },
+  // A load over unsaved level changes dropped them without a word; it is refused until the caller says save or discard.
+  { scenario: 'ERROR: load of another level over unsaved changes is refused and lists them', toolName: 'manage_level', arguments: { action: 'load', levelPath: SAVE_AS_LEVEL, streaming: false }, expected: 'error|DIRTY_PACKAGES' },
+  { scenario: 'ACTION: load with discardUnsaved drops the unsaved changes', toolName: 'manage_level', arguments: { action: 'load', levelPath: SAVE_AS_LEVEL, streaming: false, discardUnsaved: true }, expected: 'success', assertions: [{ path: 'structuredContent.result.reloaded', equals: true, label: 'the other level was loaded' }] },
+  { scenario: 'Setup: back to the main level', toolName: 'manage_level', arguments: { action: 'load', levelPath: MAIN_LEVEL, streaming: false, saveDirtyPackages: true }, expected: 'success' },
+  { scenario: 'INFO: the dropped spawn is gone', toolName: 'control_actor', arguments: { action: 'find_by_name', name: TEST_ACTOR }, expected: 'success', assertions: [{ path: 'structuredContent.result.count', equals: 0, label: 'discardUnsaved dropped it' }] },
+
+  { scenario: 'ADD: add_sublevel', toolName: 'manage_level', arguments: { action: 'add_sublevel', subLevelPath: SUB_LEVEL, parentLevel: MAIN_LEVEL, streamingMethod: 'AlwaysLoaded' }, expected: 'success|already exists' },
+  { scenario: 'ERROR: add_sublevel refuses a parentLevel that is not open', toolName: 'manage_level', arguments: { action: 'add_sublevel', subLevelPath: SUB_LEVEL, parentLevel: SAVE_AS_LEVEL }, expected: 'error|PARENT_LEVEL_NOT_LOADED' },
+  { scenario: 'ADD: add_sublevel via levelPath alias', toolName: 'manage_level', arguments: { action: 'add_sublevel', levelPath: SUB_LEVEL, streamingMethod: 'AlwaysLoaded' }, expected: 'success|already exists' },
+  { scenario: 'ACTION: load with streaming adds a sub-level', toolName: 'manage_level', arguments: { action: 'load', levelPath: SUB_LEVEL, streaming: true }, expected: 'success|already exists' },
+  // Any other method used to become Blueprint while the reply echoed the one asked for.
+  { scenario: 'ERROR: add_sublevel refuses a streamingMethod it does not have', toolName: 'manage_level', arguments: { action: 'add_sublevel', subLevelPath: SUB_LEVEL, streamingMethod: 'Kismet' }, expected: 'error|INVALID_PARAMETER_VALUE' },
 
   // === STREAMING ===
-  { scenario: 'ACTION: stream', toolName: 'manage_level', arguments: { action: 'stream', levelPath: SUB_LEVEL, shouldBeLoaded: true, shouldBeVisible: true }, expected: 'success|already loaded' },
-  { scenario: 'ACTION: unload', toolName: 'manage_level', arguments: { action: 'unload', levelPath: SUB_LEVEL }, expected: 'success|not loaded' },
-  { scenario: 'ACTION: unload_level alias', toolName: 'manage_level', arguments: { action: 'unload_level', levelPath: SUB_LEVEL }, expected: 'success|not loaded' },
-  { scenario: 'ADD: add_sublevel', toolName: 'manage_level', arguments: { action: 'add_sublevel', subLevelPath: SUB_LEVEL, parentLevel: MAIN_LEVEL, parentPath: TEST_FOLDER, streamingMethod: 'AlwaysLoaded' }, expected: 'success|already exists' },
-  { scenario: 'ADD: add_sublevel via sublevelPath alias', toolName: 'manage_level', arguments: { action: 'add_sublevel', sublevelPath: SUB_LEVEL, streamingMethod: 'AlwaysLoaded' }, expected: 'success|already exists' },
+  // The editor world ignores streaming state: stream and unload show and hide the sublevel there (they replied
+  // "updated" and changed nothing), and unload says it kept the level loaded.
+  { scenario: 'ACTION: stream', toolName: 'manage_level', arguments: { action: 'stream', levelPath: SUB_LEVEL, shouldBeLoaded: true, shouldBeVisible: true }, expected: 'success|already loaded', assertions: [{ path: 'structuredContent.result.world', equals: 'editor', label: 'no Play session, so the editor world' }, { path: 'structuredContent.result.visible', equals: true, label: 'the sublevel is drawn' }] },
+  { scenario: 'ACTION: unload', toolName: 'manage_level', arguments: { action: 'unload', levelPath: SUB_LEVEL }, expected: 'success|not loaded', assertions: [{ path: 'structuredContent.result.visible', equals: false, label: 'it is hidden' }, { path: 'structuredContent.result.loaded', equals: true, label: 'the editor keeps it loaded, and the reply warns' }] },
+  { scenario: 'ACTION: unload_level alias', toolName: 'manage_level', arguments: { action: 'unload_level', levelName: `LevelSub_${ts}` }, expected: 'success|not loaded', assertions: [{ path: 'structuredContent.result.levelPath', equals: SUB_LEVEL, label: 'the name after the last slash finds it' }] },
+  { scenario: 'ERROR: stream refuses a level that is not a sublevel', toolName: 'manage_level', arguments: { action: 'stream', levelPath: `${TEST_FOLDER}/NoSuchSub_${ts}` }, expected: 'error|STREAMING_LEVEL_NOT_FOUND' },
+
+  // === REMOVE ===
+  { scenario: 'ERROR: remove_sublevel refuses a level that is not a sublevel of the open one', toolName: 'manage_level', arguments: { action: 'remove_sublevel', subLevelPath: `${TEST_FOLDER}/NoSuchSub_${ts}` }, expected: 'error|SUBLEVEL_NOT_FOUND' },
+  { scenario: 'ERROR: remove_sublevel refuses the open level itself', toolName: 'manage_level', arguments: { action: 'remove_sublevel', subLevelPath: MAIN_LEVEL }, expected: 'error|INVALID_ARGUMENT' },
+  { scenario: 'ACTION: remove_sublevel takes the sublevel out of the open level', toolName: 'manage_level', arguments: { action: 'remove_sublevel', subLevelPath: SUB_LEVEL, discardUnsaved: true }, expected: 'success', assertions: [{ path: 'structuredContent.result.subLevelPath', equals: SUB_LEVEL, label: 'the sublevel removed' }, { path: 'structuredContent.result.wasLoaded', equals: true, label: 'it was loaded in the editor' }] },
+  { scenario: 'INFO: the removed sublevel no longer streams', toolName: 'manage_level', arguments: { action: 'stream', levelPath: SUB_LEVEL }, expected: 'error|STREAMING_LEVEL_NOT_FOUND' },
+  { scenario: 'Setup: add the sublevel back', toolName: 'manage_level', arguments: { action: 'add_sublevel', subLevelPath: SUB_LEVEL }, expected: 'success' },
+  { scenario: 'ACTION: remove_sublevel via levelPath alias', toolName: 'manage_level', arguments: { action: 'remove_sublevel', levelPath: SUB_LEVEL }, expected: 'success' },
+  // The removal changes the open level; saved, it lasts through a reload.
+  { scenario: 'ACTION: save keeps the removal', toolName: 'manage_level', arguments: { action: 'save' }, expected: 'success' },
+  { scenario: 'Setup: open another level', toolName: 'manage_level', arguments: { action: 'load', levelPath: SAVE_AS_LEVEL, streaming: false, saveDirtyPackages: true }, expected: 'success' },
+  { scenario: 'Setup: open the main level again', toolName: 'manage_level', arguments: { action: 'load', levelPath: MAIN_LEVEL, streaming: false, saveDirtyPackages: true }, expected: 'success' },
+  { scenario: 'INFO: the saved removal lasted', toolName: 'manage_level', arguments: { action: 'stream', levelPath: SUB_LEVEL }, expected: 'error|STREAMING_LEVEL_NOT_FOUND' },
 
   // === LIGHTING ===
   { scenario: 'CREATE: create_light', toolName: 'manage_level', arguments: { action: 'create_light', lightType: 'Point', name: `LevelLight_${ts}`, location: { x: 150, y: 0, z: 250 }, rotation: { pitch: -20, yaw: 0, roll: 0 }, intensity: 1500, color: [1, 0.85, 0.6, 1] }, expected: 'success|already exists' },
+  { scenario: 'CREATE: create_light by class with properties', toolName: 'manage_level', arguments: { action: 'create_light', lightClass: 'SpotLight', name: `LevelSpot_${ts}`, location: { x: -150, y: 0, z: 250 }, properties: { castShadows: false, attenuationRadius: 800, outerConeAngle: 30 } }, expected: 'success|already exists' },
   { scenario: 'CREATE: build_lighting', toolName: 'manage_level', arguments: { action: 'build_lighting', quality: 'Preview' }, expected: 'success|already exists' },
 
   // === METADATA ===
-  { scenario: 'CONFIG: set_metadata', toolName: 'manage_level', arguments: { action: 'set_metadata', assetPath: MAIN_LEVEL, metadata: { suite: 'manage_level', timestamp: ts } }, expected: 'success' },
+  { scenario: 'CONFIG: set_metadata', toolName: 'manage_level', arguments: { action: 'set_metadata', levelPath: MAIN_LEVEL, metadata: { suite: 'manage_level', timestamp: ts } }, expected: 'success' },
+  { scenario: 'CONFIG: set_world_settings', toolName: 'manage_level', arguments: { action: 'set_world_settings', gameMode: '/Game/Maps/BP_RaceGameMode', killZ: -100000, gravityZ: -980, timeDilation: 1, enableWorldBoundsChecks: true }, expected: 'success' },
 
   // === IMPORT / EXPORT / INFO ===
-  { scenario: 'ACTION: export_level', toolName: 'manage_level', arguments: { action: 'export_level', levelPath: MAIN_LEVEL, exportPath: EXPORTED_LEVEL, timeoutMs: 45000 }, expected: 'success' },
-  { scenario: 'ACTION: import_level', toolName: 'manage_level', arguments: { action: 'import_level', packagePath: MAIN_LEVEL, destinationPath: IMPORTED_LEVEL, timeoutMs: 45000 }, expected: 'success|already exists' },
-  { scenario: 'ACTION: import_level targetPath alias', toolName: 'manage_level', arguments: { action: 'import_level', packagePath: MAIN_LEVEL, targetPath: `${TEST_FOLDER}/LevelImportedAlias_${ts}`, timeoutMs: 45000 }, expected: 'success|already exists' },
+  { scenario: 'ACTION: export_level', toolName: 'manage_level', arguments: { action: 'export_level', levelPath: MAIN_LEVEL, exportPath: EXPORTED_LEVEL }, expected: 'success', timeoutMs: 45000 },
+  { scenario: 'ACTION: import_level', toolName: 'manage_level', arguments: { action: 'import_level', packagePath: MAIN_LEVEL, destinationPath: IMPORTED_LEVEL }, expected: 'success|already exists', timeoutMs: 45000 },
+  { scenario: 'ACTION: import_level targetPath alias', toolName: 'manage_level', arguments: { action: 'import_level', packagePath: MAIN_LEVEL, targetPath: `${TEST_FOLDER}/LevelImportedAlias_${ts}` }, expected: 'success|already exists', timeoutMs: 45000 },
   { scenario: 'INFO: list_levels', toolName: 'manage_level', arguments: { action: 'list_levels' }, expected: 'success' },
   { scenario: 'INFO: get_summary', toolName: 'manage_level', arguments: { action: 'get_summary', levelPath: MAIN_LEVEL }, expected: 'success' },
   { scenario: 'ACTION: validate_level', toolName: 'manage_level', arguments: { action: 'validate_level', levelPath: MAIN_LEVEL }, expected: 'success' },
-  { scenario: 'ACTION: validate_level assetPath alias', toolName: 'manage_level', arguments: { action: 'validate_level', assetPath: MAIN_LEVEL }, expected: 'success' },
+  { scenario: 'INFO: run_map_check answers the engine\'s Map Check as rows', toolName: 'manage_level', arguments: { action: 'run_map_check' }, expected: 'success', assertions: [{ path: 'structuredContent.result.messages', exists: true, label: 'one row per Map Check message' }, { path: 'structuredContent.result.total', gte: 0, label: 'every message counted' }] },
   { scenario: 'INFO: get_current_level', toolName: 'manage_level', arguments: { action: 'get_current_level' }, expected: 'success' },
 
   // === ASSET OPERATIONS ===
-  { scenario: 'ACTION: duplicate_level', toolName: 'manage_level', arguments: { action: 'duplicate_level', sourcePath: MAIN_LEVEL, destinationPath: DUPLICATED_LEVEL, targetPath: TEST_FOLDER, overwrite: false }, expected: 'success|already exists' },
+  { scenario: 'ACTION: duplicate_level', toolName: 'manage_level', arguments: { action: 'duplicate_level', sourcePath: MAIN_LEVEL, destinationPath: DUPLICATED_LEVEL, overwrite: false }, expected: 'success|already exists' },
   { scenario: 'ACTION: rename_level', toolName: 'manage_level', arguments: { action: 'rename_level', levelPath: DUPLICATED_LEVEL, newName: RENAMED_LEVEL_NAME, overwrite: false }, expected: 'success|already exists' },
-  { scenario: 'DELETE: delete multiple levels', toolName: 'manage_level', arguments: { action: 'delete', levelPaths: [SAVE_AS_LEVEL, SAVE_LEVEL_AS, EXPORTED_LEVEL] }, expected: 'success|not found' },
-  { scenario: 'DELETE: delete', toolName: 'manage_level', arguments: { action: 'delete', levelPath: RENAMED_LEVEL }, expected: 'success|not found' },
-  { scenario: 'DELETE: delete_level path alias', toolName: 'manage_level', arguments: { action: 'delete_level', path: IMPORTED_LEVEL }, expected: 'success|not found' },
+  { scenario: 'ACTION: rename_level to a destinationPath', toolName: 'manage_level', arguments: { action: 'rename_level', levelPath: RENAMED_LEVEL, destinationPath: MOVED_LEVEL }, expected: 'success|already exists' },
+  { scenario: 'DELETE: delete SAVE_AS_LEVEL', toolName: 'manage_level', arguments: { action: 'delete', levelPath: SAVE_AS_LEVEL }, expected: 'success|not found' },
+  { scenario: 'DELETE: delete SAVE_LEVEL_AS', toolName: 'manage_level', arguments: { action: 'delete', levelPath: SAVE_LEVEL_AS }, expected: 'success|not found' },
+  { scenario: 'DELETE: delete EXPORTED_LEVEL', toolName: 'manage_level', arguments: { action: 'delete', levelPath: EXPORTED_LEVEL }, expected: 'success|not found' },
+  { scenario: 'DELETE: delete SAVE_VIA_SAVE_LEVEL', toolName: 'manage_level', arguments: { action: 'delete', levelPath: SAVE_VIA_SAVE_LEVEL }, expected: 'success|not found' },
+  { scenario: 'DELETE: delete', toolName: 'manage_level', arguments: { action: 'delete', levelPath: MOVED_LEVEL }, expected: 'success|not found' },
+  { scenario: 'DELETE: delete_level', toolName: 'manage_level', arguments: { action: 'delete_level', levelPath: IMPORTED_LEVEL }, expected: 'success|not found' },
 
   // === CLEANUP ===
   { scenario: 'Cleanup: delete test actor', toolName: 'control_actor', arguments: { action: 'delete', actorName: TEST_ACTOR }, expected: 'success|not found' },
-  { scenario: 'Cleanup: delete test folder', toolName: 'manage_asset', arguments: { action: 'delete', path: TEST_FOLDER, force: true }, expected: 'success|not found' },
 ];
 
-runToolTests('manage-level', testCases);
+runToolTests('manage-level', testCases, { folder: TEST_FOLDER });

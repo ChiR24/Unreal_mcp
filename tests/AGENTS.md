@@ -1,68 +1,88 @@
-# tests
+# TEST KNOWLEDGE BASE
 
-Test infrastructure for Unreal MCP. Unit tests use Vitest; integration tests use a custom MCP runner and usually require Unreal Editor with the plugin available.
+Test infrastructure for the capability records, the stdio proxy and the plugin's source contracts. Vitest tests run without Unreal; MCP integration suites need a built server plus an editor serving `/mcp`. No mocks or fakes: there is no mock connection, fake upstream or in-memory server.
 
 ## STRUCTURE
-```
+```text
 tests/
-|-- test-runner.mjs                 # custom MCP runner, expectations, reports, cleanup
-|-- integration.mjs                 # canonical integration entry
-|-- parameter-combination-audit.mjs # parameter coverage audit script
+|-- test-runner.mjs                 # stdio client of dist/cli.js (the proxy), setup/cleanup, expectations, JSON reports
+|-- test-runner-response-utils.mjs  # response-path assertions and filtered capture selection
+|-- integration.mjs                 # compact representative parent-tool integration suite
+|-- expectation-utils.mjs           # shared expectation parsing
 |-- mcp-tools/
-|   |-- core/                       # asset, blueprint, actor/editor/level, inspect, system, tools
-|   |-- world/                      # environment, level structure, geometry
-|   |-- gameplay/                   # animation, effects, AI, GAS, character, combat, inventory, interaction
-|   `-- utility/                    # audio, sequence, networking
-|-- unit/                           # Vitest unit tests for config/security/handlers
-`-- reports/                        # generated JSON output; never add AGENTS here
+|   |-- core/                       # actor, editor, assets, blueprints, levels, inspect, tools
+|   |-- gameplay/                   # animation, AI, character, combat, effects, GAS, inventory
+|   |-- utility/                    # audio, behavior trees, networking, sequences
+|   `-- world/                      # environment, geometry, level structure, PCG
+|-- parameter-combination-audit.mjs # audit CLI entrypoint
+|-- parameter-audit-*.mjs           # CLI, schema extraction, suite capture, coverage, context
+|-- fold-twins.mjs                  # one twin case per folded family, applied by the runner and the audit capture
+|-- unit/                           # Vitest behavior, security, routing, and source contracts
+`-- reports/                        # generated JSON only; never add AGENTS or hand-authored files
 ```
+
+Record tests look records up through `unit/support/capability-index.ts` (which also fails on an alias or tool+action pair two records claim) and check examples and schemas with `unit/support/schema-validate.ts`.
+
+## TIMEOUT LADDER
+| Scope | Default | Override |
+|-------|---------|----------|
+| Vitest unit | 10s | `vitest.config.ts` `testTimeout` |
+| Integration per-case | **5s** | `UNREAL_MCP_TEST_CASE_TIMEOUT_MS`, or per-case `timeoutMs` (cleanup cases use 30s) |
+| Per-call server | 60s | `UNREAL_MCP_TEST_CALL_TIMEOUT_MS` |
+| Client / progress | 300s | `UNREAL_MCP_TEST_CLIENT_TIMEOUT_MS` |
+| `/mcp` port wait | 10s | none; `createConnectedClient` is passed 10000 |
+| Inter-case throttle | 100ms | `UNREAL_MCP_TEST_THROTTLE_MS` |
+
+Other runner env: `UNREAL_MCP_URL` (http://127.0.0.1:3000/mcp, also read by the proxy), `UNREAL_MCP_SERVER_CMD/ARGS/CWD`, `UNREAL_MCP_FORCE_DIST`, `UNREAL_MCP_AUTO_BUILD` / `UNREAL_MCP_NO_AUTO_BUILD`, `UNREAL_MCP_ALLOW_TS_FALLBACK`, `UNREAL_MCP_TEST_LOG_RESPONSES`.
+
+The runner AUTO-BUILDS: if `dist/cli.js` is missing, or source is newer than dist, it runs `npm run build` unless `UNREAL_MCP_NO_AUTO_BUILD=1`. It still needs a live editor.
+
+A build that is attempted and FAILS now aborts the run. It used to fall through to `ts-node-esm src/cli.ts`, so a full green could be reported while `dist/` — the artifact the package ships — was broken. Set `UNREAL_MCP_ALLOW_TS_FALLBACK=1` to run source anyway and accept that `dist/` is unverified. Choosing source deliberately (stale dist with `UNREAL_MCP_NO_AUTO_BUILD=1`) is unchanged.
 
 ## WHERE TO LOOK
 | Task | Location | Notes |
 |------|----------|-------|
-| Run unit tests | `npm run test:unit` | Vitest, no Unreal required |
-| Run smoke test | `npm run test:smoke` | Mock mode path |
-| Run integration | `npm test` or `npm run test:all` | Unreal-dependent integration entry |
-| Add integration case | `tests/mcp-tools/*/*.test.mjs` | Use `runToolTests(toolName, testCases)` |
-| Add unit test | `src/**/*.test.ts` or `tests/unit/**/*.ts` | Follow nearby Vitest setup/cleanup style |
-| Audit parameter coverage | `npm run test:params` | Writes reports under `tests/reports/` |
+| Change live test execution | `test-runner.mjs`, `test-runner-response-utils.mjs` | Owns server spawn, response normalization, retries, assertions, captures, cleanup, reports |
+| Add broad integration coverage | `integration.mjs` | Canonical quick suite across parent tools |
+| Add tool/action coverage | `mcp-tools/<category>/*.test.mjs` | Import `runToolTests` directly and keep setup before dependent cases |
+| Change expectation parsing | `expectation-utils.mjs`, `unit/test_runner.test.ts` | Lock evaluator changes with focused unit cases |
+| Change parameter audit | `parameter-audit-*.mjs` | Schema AST, suite capture, live/static evidence, reporting |
+| Change architectural contracts | `unit/plugin/`, `unit/source_structure.test.ts` | These inspect source text and layout; they do not compile Unreal |
 
-## TEST CASE SHAPE
-```javascript
-{
-  scenario: 'human-readable behavior',
-  toolName: 'manage_ai',
-  arguments: { action: '...', ... },
-  expected: 'success|error',
-  assertions: [/* optional custom checks */],
-  captureResult: 'optionalName'
-}
+## COMMANDS
+```bash
+npm run test:unit          # Vitest: src/**/*.test.ts and tests/unit/**/*.test.ts
+npm test                   # tests/integration.mjs; Unreal-dependent
+npm run test:params        # static + strict + optional-strict parameter audit
 ```
 
+## INTEGRATION CASES
+- Use `{ scenario, toolName, arguments, expected }`; optional fields include `assertions`, `captureResult`, and `timeoutMs`.
+- Export no custom harness: end each suite with `runToolTests('<suite-name>', cases)`.
+- Keep the standard relative `runToolTests` import shape; the static audit replaces that import while evaluating suite definitions.
+- Cases keep naming the pre-fold actions. At run time `runToolTests` derives one twin per folded family (`fold-twins.mjs`): the first case naming a folded member is re-run as the family's primary plus its selector value, right after its source case. The audit captures the same twins, so every advertised primary and selector is covered without hand-written duplicates.
+- Use unique actor/asset names, usually timestamped, and add explicit cleanup for created state.
+- Captures use `{ key, fromField }`; array captures may add `where: { path, equals|includes }` and `selectField`. Later arguments reference `${captured:key}`.
+- Assertions address response paths such as `structuredContent.result.assetPath`; a success reply carries only `data`, so `resolveResponsePath` reads a `result.*` path from `data`, then `data.details`, then the reply itself. The operators `evaluateAssertions` implements are exactly: `equals`, `approximately` (with a nonnegative `tolerance`), `includes`, `notIncludes`, `length`, `minLength`, `includesObject`, and `gte` (numeric, the counterpart of `minLength`).
+- An assertion naming no recognised operator is REFUSED rather than passed. It used to fall through every check and report success, which is how two `gte` assertions sat here asserting nothing; `ASSERTION_OPERATORS` in `test-runner-response-utils.mjs` is the list, and adding an operator means adding it there.
+
 ## EXPECTATION GRAMMAR
-- String expectations are pipe-separated or `or`-separated; any matching condition can pass.
-- The first token is the primary intent and controls whether infra failures can pass.
-- Common keywords: `success`, `error`, `handled`, `skipped`, `not found`, `timeout`.
-- Suite-specific phrases such as `already exists`, `not loaded`, and `NOT_PARTITIONED` are intentional.
-- Object expectations can use `{ condition, successPattern, errorPattern }`.
-- Crashes, disconnects, `UE_NOT_CONNECTED`, and timeouts fail unless the primary expectation explicitly allows them.
+- Strings split on literal ` or ` or `|`; the first token is the primary intent.
+- Put `success`, `error`, or `timeout` first according to what the case is proving.
+- Success-primary cases may name narrow state alternatives such as `already exists`, `not found`, `not loaded`, or `NOT_PARTITIONED`.
+- Do not use broad masks such as `success|error` or place `timeout` after `error`; crashes, bridge loss, and non-primary timeouts are infrastructure failures.
+- Object expectations support `condition`, `successPattern`, and `errorPattern`; prefer patterns for exact controlled fallback codes.
+- `structuredContent.success: false`, nested failures, or `isError: true` must not pass a success-primary case unless an explicit allowed alternative matches.
 
-## ENVIRONMENT AND TIMEOUTS
-- Server spawn: `UNREAL_MCP_SERVER_CMD`, `UNREAL_MCP_SERVER_ARGS`, `UNREAL_MCP_SERVER_CWD`.
-- Build/source mode: `UNREAL_MCP_AUTO_BUILD`, `UNREAL_MCP_FORCE_DIST`.
-- Logging: `UNREAL_MCP_TEST_LOG_RESPONSES`, `UNREAL_MCP_TEST_RESPONSE_MAX_CHARS`.
-- Timing defaults: throttle `100ms`, case timeout `5000ms`, call timeout `60000ms`, client timeout `300000ms`.
-- `callWithRetry()` defaults to 3 retries with exponential backoff.
+## AUDIT CONTRACTS
+- Parameter schemas come from the generated parent definitions (the surface the server exposes); suite coverage is captured from `mcp-tools/` plus `integration.mjs`.
+- Missing or extra actions always fail the parameter audit. `--strict` also fails undeclared test parameters, so a case for a removed action or param must go with it.
+- `--optional-strict` fails optional schema parameters absent from static coverage; `npm run test:params` enables all strict static gates.
+- A folded family's former names count as declared actions (`readFoldedActionsByTool`), never as extra actions.
+- Live audit mode consumes the latest `<suite>-test-results-*.json`; only successful live responses prove optional-parameter coverage.
+- Treat `reports/` as disposable evidence. Diagnose failures from the newest JSON, but never edit reports to satisfy a gate.
 
-## CLEANUP PATTERNS
-- Use `Date.now()` plus counters/tags for unique asset and actor names.
-- Include setup cases before dependent actions and explicit cleanup cases at the end.
-- Cleanup uses delete actions, `delete_asset`, `delete_by_tag`, or folder deletion with `force: true`.
-- `manage_geometry` resets around destructive operations; keep the reset cadence before high-impact edits such as poke/subdivide/triangulate/array operations.
-- Runtime temp paths such as `./tmp/unreal-mcp/build-environment` are artifacts, not source.
-
-## ANTI-PATTERNS
-- Writing AGENTS or hand-authored docs under `tests/reports/`.
-- Letting infrastructure failures pass through broad strings like `error|timeout|success` when success is the real intent.
-- Reusing fixed actor/asset names across integration cases.
-- Removing setup/cleanup because a case passes locally.
+## SOURCE-CONTRACT TESTS
+- Many `unit/plugin/*contracts.test.ts` cases read C++/C# files and assert required or forbidden source patterns.
+- Structure tests enforce responsibility boundaries, resolvable local includes, naming rules, and the 250 pure-line ceiling.
+- When moving or renaming implementation files, update contract paths and assertions only when the intended invariant changed.

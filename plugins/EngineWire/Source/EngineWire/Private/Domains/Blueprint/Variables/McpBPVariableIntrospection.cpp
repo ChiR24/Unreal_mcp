@@ -1,0 +1,186 @@
+#include "Domains/Blueprint/McpBPActionContext.h"
+#include "Core/Compatibility/McpVersionCompatibility.h"
+#include "Domains/BlueprintGraph/McpBPGraphCompatibility.h"
+#include "Foundation/HandlerUtils/McpHandlerUtils.h"
+
+#include "Engine/Blueprint.h"
+#include "Kismet2/BlueprintEditorUtils.h"
+#include "UObject/UnrealType.h"
+
+namespace McpBlueprintHandlers {
+void FEngineWire_AppendPinsJson(
+    const TArray<TSharedPtr<FUserPinInfo>> &Pins,
+    TArray<TSharedPtr<FJsonValue>> &Out) {
+  for (const TSharedPtr<FUserPinInfo> &PinInfo : Pins) {
+    if (!PinInfo.IsValid()) {
+      continue;
+    }
+    const FString PinName = PinInfo->PinName.ToString();
+    if (PinName.IsEmpty()) {
+      continue;
+    }
+    TSharedPtr<FJsonObject> PinJson = McpHandlerUtils::CreateResultObject();
+    PinJson->SetStringField(TEXT("name"), PinName);
+    PinJson->SetStringField(
+        TEXT("type"), McpBlueprintUtils::DescribePinType(PinInfo->PinType));
+    Out.Add(MakeShared<FJsonValueObject>(PinJson));
+  }
+}
+
+bool FEngineWire_CollectVariableMetadata(
+    const UBlueprint *Blueprint, const FBPVariableDescription &VarDesc,
+    TSharedPtr<FJsonObject> &OutMetadata) {
+  OutMetadata.Reset();
+
+  if (Blueprint) {
+    TSharedPtr<FJsonObject> MetaJson = McpHandlerUtils::CreateResultObject();
+    bool bAny = false;
+    UBlueprint *MutableBlueprint = const_cast<UBlueprint *>(Blueprint);
+    if (FProperty *Property = FEngineWire_FindProperty(
+            MutableBlueprint, VarDesc.VarName.ToString())) {
+      if (const TMap<FName, FString> *MetaMap = Property->GetMetaDataMap()) {
+        for (const TPair<FName, FString> &Pair : *MetaMap) {
+          if (!Pair.Value.IsEmpty()) {
+            MetaJson->SetStringField(Pair.Key.ToString(), Pair.Value);
+            bAny = true;
+          }
+        }
+      }
+    }
+    if (bAny && MetaJson->Values.Num() > 0) {
+      OutMetadata = MetaJson;
+      return true;
+    }
+  }
+
+  return false;
+}
+
+FString
+FEngineWire_DescribePropertyType(const FProperty *Property) {
+  if (!Property) {
+    return FString();
+  }
+
+  // Convert property to pin type for Blueprint-style type string
+  FEdGraphPinType PinType;
+  if (const UEdGraphSchema_K2 *Schema = GetDefault<UEdGraphSchema_K2>()) {
+    if (Schema->ConvertPropertyToPinType(Property, PinType)) {
+      return McpBlueprintUtils::DescribePinType(PinType);
+    }
+  }
+
+  // Fallback to C++ style if conversion fails
+  FString ExtendedType;
+  const FString BaseType = Property->GetCPPType(&ExtendedType);
+  return ExtendedType.IsEmpty() ? BaseType : BaseType + ExtendedType;
+}
+TSharedPtr<FJsonObject>
+FEngineWire_BuildVariableJson(const UBlueprint *Blueprint,
+                                       const FBPVariableDescription &VarDesc) {
+  TSharedPtr<FJsonObject> Obj = McpHandlerUtils::CreateResultObject();
+  Obj->SetStringField(TEXT("name"), VarDesc.VarName.ToString());
+  Obj->SetStringField(TEXT("type"),
+                      McpBlueprintUtils::DescribePinType(VarDesc.VarType));
+  Obj->SetBoolField(TEXT("replicated"), (VarDesc.PropertyFlags & CPF_Net) != 0);
+  // Public = the editor's eye toggle (Instance Editable), which add_variable's
+  // isPublic sets; BlueprintReadOnly is a different flag.
+  Obj->SetBoolField(TEXT("public"),
+                    (VarDesc.PropertyFlags & CPF_DisableEditOnInstance) == 0);
+  const FString CategoryStr =
+      VarDesc.Category.IsEmpty() ? FString() : VarDesc.Category.ToString();
+  if (!CategoryStr.IsEmpty()) {
+    Obj->SetStringField(TEXT("category"), CategoryStr);
+  }
+  TSharedPtr<FJsonObject> Metadata;
+  if (FEngineWire_CollectVariableMetadata(Blueprint, VarDesc,
+                                                   Metadata)) {
+    // The editor keeps DisplayName and Category on every variable, copies of the name and category beside them.
+    FString Value;
+    if (Metadata->TryGetStringField(TEXT("DisplayName"), Value) && Value == VarDesc.VarName.ToString()) {
+      Metadata->RemoveField(TEXT("DisplayName"));
+    }
+    if (Metadata->TryGetStringField(TEXT("Category"), Value) && Value == CategoryStr) {
+      Metadata->RemoveField(TEXT("Category"));
+    }
+    if (Metadata->Values.Num() > 0) {
+      Obj->SetObjectField(TEXT("metadata"), Metadata);
+    }
+  }
+  return Obj;
+}
+
+TSharedPtr<FJsonObject> FEngineWire_CollectBlueprintDefaults(
+    UBlueprint *Blueprint, const TArray<TSharedPtr<FJsonValue>> &Variables) {
+  TSharedPtr<FJsonObject> Defaults = MakeShared<FJsonObject>();
+  if (!Blueprint) {
+    return Defaults;
+  }
+
+  UClass *GeneratedClass = Blueprint->GeneratedClass;
+  UObject *GeneratedCDO = GeneratedClass ? GeneratedClass->GetDefaultObject() : nullptr;
+
+  for (const TSharedPtr<FJsonValue> &VariableValue : Variables) {
+    if (!VariableValue.IsValid() || VariableValue->Type != EJson::Object) {
+      continue;
+    }
+
+    const TSharedPtr<FJsonObject> VariableObj = VariableValue->AsObject();
+    FString VariableName;
+    if (!VariableObj.IsValid() ||
+        !VariableObj->TryGetStringField(TEXT("name"), VariableName) ||
+        VariableName.IsEmpty()) {
+      continue;
+    }
+
+    FProperty *Property =
+        FEngineWire_FindProperty(Blueprint, VariableName);
+    // FindProperty also searches the skeleton class (SKEL_*_C). Until the
+    // blueprint is recompiled a freshly added variable exists only there, and
+    // reading it through the generated CDO asserts ("'Default__X_C' is of
+    // class 'X_C' however property belongs to class 'SKEL_X_C'"). Only use a
+    // property the CDO actually owns; otherwise use the authored default.
+    if (Property && GeneratedCDO) {
+      UClass *OwnerClass = Property->GetOwner<UClass>();
+      if (!OwnerClass || !GeneratedCDO->IsA(OwnerClass)) {
+        Property = GeneratedClass
+                       ? GeneratedClass->FindPropertyByName(FName(*VariableName))
+                       : nullptr;
+      }
+    }
+    if (Property && GeneratedCDO) {
+      if (void *PropertyAddress =
+              Property->ContainerPtrToValuePtr<void>(GeneratedCDO)) {
+        // A bool default is a JSON boolean, not "True"/"False" export text: the
+        // caller compares it with the true/false it set, and receipt redaction
+        // spares a boolean, where it masked a "bSecret" string default.
+        if (const FBoolProperty *BoolProperty = CastField<FBoolProperty>(Property)) {
+          Defaults->SetBoolField(VariableName, BoolProperty->GetPropertyValue(PropertyAddress));
+          continue;
+        }
+        FString ExportedDefault;
+        MCP_PROPERTY_EXPORT_TEXT(Property, ExportedDefault, PropertyAddress, nullptr, GeneratedCDO, PPF_SerializedAsImportText);
+        Defaults->SetStringField(VariableName, ExportedDefault);
+        continue;
+      }
+    }
+
+    UBlueprint *DeclaringBlueprint = nullptr;
+    const int32 NewVarIndex = FBlueprintEditorUtils::FindNewVariableIndexAndBlueprint(
+        Blueprint, FName(*VariableName), DeclaringBlueprint);
+    if (DeclaringBlueprint && NewVarIndex != INDEX_NONE &&
+        DeclaringBlueprint->NewVariables.IsValidIndex(NewVarIndex)) {
+      const FBPVariableDescription &Declared =
+          DeclaringBlueprint->NewVariables[NewVarIndex];
+      if (Declared.VarType.PinCategory == UEdGraphSchema_K2::PC_Boolean &&
+          !Declared.VarType.IsContainer()) {
+        Defaults->SetBoolField(VariableName, Declared.DefaultValue.ToBool());
+      } else {
+        Defaults->SetStringField(VariableName, Declared.DefaultValue);
+      }
+    }
+  }
+
+  return Defaults;
+}
+} // namespace McpBlueprintHandlers

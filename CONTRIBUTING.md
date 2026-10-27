@@ -40,9 +40,9 @@ Please be respectful and constructive in all interactions. We're building someth
    npm run build
    ```
 
-4. Run smoke tests (no Unreal needed):
+4. Run the unit tests (no Unreal needed):
    ```bash
-   npm run test:smoke
+   npm run test:unit
    ```
 
 ## Development Workflow
@@ -58,8 +58,8 @@ Use descriptive branch names:
 ### Running Tests
 
 ```bash
-# Smoke test (CI-compatible, no Unreal needed)
-npm run test:smoke
+# Unit tests (CI-compatible, no Unreal needed)
+npm run test:unit
 
 # Live tests (requires Unreal Editor running with plugin)
 npm run test:all
@@ -77,7 +77,7 @@ npm run build:core   # TypeScript only
 ### Before Submitting
 
 1. ✅ Run `npm run lint` and fix any issues
-2. ✅ Run `npm run test:smoke` to verify basic functionality
+2. ✅ Run `npm run test:unit` to verify basic functionality
 3. ✅ Update documentation if adding new features
 4. ✅ Update `CHANGELOG.md` under `[Unreleased]`
 
@@ -100,7 +100,7 @@ refactor: simplify blueprint graph handler
 ### Review Process
 
 1. All PRs require at least one approval
-2. CI must pass (lint, smoke test, CodeQL)
+2. CI must pass (lint, unit tests, CodeQL)
 3. Maintainers may request changes
 
 ## Coding Standards
@@ -128,7 +128,7 @@ src/
 └── services/        # Background services
 
 plugins/
-└── McpAutomationBridge/  # C++ Unreal plugin
+└── EngineWire/  # C++ Unreal plugin
 ```
 
 ## Questions?

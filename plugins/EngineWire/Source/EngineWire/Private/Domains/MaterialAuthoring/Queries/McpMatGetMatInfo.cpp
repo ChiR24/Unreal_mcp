@@ -1,0 +1,199 @@
+#include "Domains/MaterialAuthoring/McpMatPrivate.h"
+#include "Domains/MaterialAuthoring/Queries/McpMatFunctionIO.h"
+#include "Materials/MaterialExpressionRuntimeVirtualTextureSampleParameter.h"
+#include "Materials/MaterialExpressionTextureBase.h"
+#include "VT/RuntimeVirtualTexture.h"
+
+namespace McpMaterialAuthoringHandlers
+{
+namespace
+{
+// A texture parameter also says what it samples by default and how: the default texture's path ("" while none
+// is set) and the sampler type (Color, Normal, Masks...). A runtime virtual texture parameter names its virtual
+// texture. Any other parameter kind adds nothing.
+void AddTextureParameterFields(UMaterialExpression* Expr, const TSharedPtr<FJsonObject>& Row)
+{
+  if (const UMaterialExpressionTextureBase* Sampled = Cast<UMaterialExpressionTextureBase>(Expr))
+  {
+    Row->SetStringField(TEXT("texture"), Sampled->Texture ? Sampled->Texture->GetPathName() : FString());
+    Row->SetStringField(TEXT("samplerType"), MaterialEnumShortName(StaticEnum<EMaterialSamplerType>(), Sampled->SamplerType));
+  }
+  else if (const UMaterialExpressionRuntimeVirtualTextureSampleParameter* Rvt = Cast<UMaterialExpressionRuntimeVirtualTextureSampleParameter>(Expr))
+  {
+    Row->SetStringField(TEXT("texture"), Rvt->VirtualTexture ? Rvt->VirtualTexture->GetPathName() : FString());
+  }
+}
+
+// An instance has no node graph of its own, so get_material_info on one used to
+// answer ASSET_NOT_FOUND. It reports the parent it overrides and each override.
+void SendMaterialInstanceInfo(UEngineWireSubsystem* Bridge, const FString& RequestId,
+                              TSharedPtr<FMcpBridgeWebSocket> Socket, UMaterialInstance* Instance)
+{
+  TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
+  Result->SetStringField(TEXT("assetType"), TEXT("MaterialInstance"));
+  Result->SetStringField(TEXT("parent"), Instance->Parent ? Instance->Parent->GetPathName() : FString());
+  UMaterial* Base = Instance->GetMaterial();
+  Result->SetStringField(TEXT("baseMaterial"), Base ? Base->GetPathName() : FString());
+  TArray<TSharedPtr<FJsonValue>> Overrides;
+  auto AddOverride = [&Overrides](const FName& Name, const TCHAR* Type, const TSharedPtr<FJsonValue>& Value) {
+    TSharedPtr<FJsonObject> Row = McpHandlerUtils::CreateResultObject();
+    Row->SetStringField(TEXT("name"), Name.ToString());
+    Row->SetStringField(TEXT("type"), Type);
+    Row->SetField(TEXT("value"), Value);
+    Overrides.Add(MakeShared<FJsonValueObject>(Row));
+  };
+  for (const FScalarParameterValue& Param : Instance->ScalarParameterValues)
+    AddOverride(Param.ParameterInfo.Name, TEXT("scalar"), MakeShared<FJsonValueNumber>(Param.ParameterValue));
+  for (const FVectorParameterValue& Param : Instance->VectorParameterValues)
+  {
+    AddOverride(Param.ParameterInfo.Name, TEXT("vector"),
+                MakeShared<FJsonValueObject>(McpHandlerUtils::LinearColorToJson(Param.ParameterValue)));
+  }
+  for (const FTextureParameterValue& Param : Instance->TextureParameterValues)
+    AddOverride(Param.ParameterInfo.Name, TEXT("texture"),
+                MakeShared<FJsonValueString>(Param.ParameterValue ? Param.ParameterValue->GetPathName() : FString()));
+  Result->SetArrayField(TEXT("parameterOverrides"), Overrides);
+  Bridge->SendAutomationResponse(Socket, RequestId, true,
+                                 TEXT("Material instance: its parent and parameter overrides (the node graph lives on the parent)."),
+                                 Result);
+}
+} // namespace
+
+bool HandleGetMaterialInfo(UEngineWireSubsystem* Bridge, const FString& RequestId, const FString& SubAction, const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> Socket)
+{
+  if (SubAction == TEXT("get_material_info")) {
+    FString AssetPath;
+    // The published contract names materialPath first and lists assetPath as the
+    // alternate spelling, so a caller following it was answered "Missing
+    // 'assetPath'" for a request that carried the path all along.
+    if (!Payload->TryGetStringField(TEXT("assetPath"), AssetPath) ||
+        AssetPath.IsEmpty()) {
+      Payload->TryGetStringField(TEXT("materialPath"), AssetPath);
+    }
+    if (AssetPath.IsEmpty()) {
+      Bridge->SendAutomationError(Socket, RequestId,
+                          TEXT("Missing 'assetPath' (or 'materialPath')."),
+                          TEXT("INVALID_ARGUMENT"));
+      return true;
+    }
+
+    // Validate path security BEFORE loading asset
+    FString ValidatedPath = SanitizeProjectRelativePath(AssetPath);
+    if (ValidatedPath.IsEmpty()) {
+      Bridge->SendAutomationError(Socket, RequestId,
+                          McpPathRefusalMessage(TEXT("path"), AssetPath),
+                          TEXT("INVALID_PATH"));
+      return true;
+    }
+    AssetPath = ValidatedPath;
+
+    UMaterial *Material = nullptr;
+    UMaterialFunction *Function = nullptr;
+    LoadMaterialOrFunction(AssetPath, Material, Function);
+    if (!Material && !Function) {
+      if (UMaterialInstance* Instance = Cast<UMaterialInstance>(StaticLoadObject(UObject::StaticClass(), nullptr, *AssetPath))) {
+        SendMaterialInstanceInfo(Bridge, RequestId, Socket, Instance);
+        return true;
+      }
+      Bridge->SendAutomationError(Socket, RequestId,
+                          TEXT("Could not load Material or Material Function."),
+                          TEXT("ASSET_NOT_FOUND"));
+      return true;
+    }
+
+    // Optional filter: "parameters", "expressions", "connections", or "all" (default)
+    FString Filter;
+    Payload->TryGetStringField(TEXT("filter"), Filter);
+    bool bWantParams      = Filter.IsEmpty() || Filter == TEXT("all") || Filter == TEXT("parameters");
+    bool bWantExpressions = Filter.IsEmpty() || Filter == TEXT("all") || Filter == TEXT("expressions");
+    bool bWantConnections = Filter.IsEmpty() || Filter == TEXT("all") || Filter == TEXT("connections");
+
+    TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
+    Result->SetStringField(TEXT("assetType"),
+                           Material ? TEXT("Material") : TEXT("MaterialFunction"));
+
+    // Collect the expression array (shared by both Material and MF paths)
+    auto& AllExpressions = Material
+        ? MCP_GET_MATERIAL_EXPRESSIONS(Material)
+        : MCP_GET_FUNCTION_EXPRESSIONS(Function);
+    Result->SetNumberField(TEXT("nodeCount"), AllExpressions.Num());
+
+    if (Material) {
+      Result->SetStringField(TEXT("domain"),
+                             MaterialEnumShortName(StaticEnum<EMaterialDomain>(), Material->MaterialDomain));
+      Result->SetStringField(TEXT("blendMode"),
+                             MaterialEnumShortName(StaticEnum<EBlendMode>(), Material->BlendMode));
+
+      Result->SetBoolField(TEXT("twoSided"), Material->TwoSided);
+    } else {
+      Result->SetStringField(TEXT("description"), Function->Description);
+      Result->SetBoolField(TEXT("exposeToLibrary"), Function->bExposeToLibrary);
+    }
+
+    // --- Parameters (always separated for both Material and MF) ---
+    if (bWantParams) {
+      TArray<TSharedPtr<FJsonValue>> ParamsArray;
+      for (UMaterialExpression *Expr : AllExpressions) {
+        if (!Expr) continue;
+        // HasAParameterName is the engine's own test for a parameter: texture, font and virtual-texture sample
+        // parameters carry a ParameterName but derive from the sample nodes, not UMaterialExpressionParameter,
+        // so a cast to that class listed only the scalars, vectors and switches.
+        if (Expr->HasAParameterName()) {
+          TSharedPtr<FJsonObject> ParamObj = McpHandlerUtils::CreateResultObject();
+          ParamObj->SetStringField(TEXT("name"), Expr->GetParameterName().ToString());
+          ParamObj->SetStringField(TEXT("type"), Expr->GetClass()->GetName());
+          ParamObj->SetStringField(TEXT("nodeId"), MCP_NODE_ID(Expr));
+          AddTextureParameterFields(Expr, ParamObj);
+          ParamsArray.Add(MakeShared<FJsonValueObject>(ParamObj));
+        }
+      }
+      Result->SetArrayField(TEXT("parameters"), ParamsArray);
+    }
+
+    // --- MF-specific: FunctionInput/FunctionOutput enumeration ---
+    if (!Material) {
+      AppendMaterialFunctionIO(Result, AllExpressions);
+    }
+
+    // --- Full expression list (types, nodeIds, positions) ---
+    if (bWantExpressions) {
+      TArray<TSharedPtr<FJsonValue>> ExprsArray;
+      for (UMaterialExpression *Expr : AllExpressions) {
+        if (!Expr) continue;
+        TSharedPtr<FJsonObject> ExprObj = MakeShared<FJsonObject>();
+        ExprObj->SetStringField(TEXT("nodeId"), MCP_NODE_ID(Expr));
+        ExprObj->SetStringField(TEXT("type"), Expr->GetClass()->GetName());
+        ExprObj->SetStringField(TEXT("desc"), Expr->GetDescription());
+        ExprObj->SetNumberField(TEXT("x"), Expr->MaterialExpressionEditorX);
+        ExprObj->SetNumberField(TEXT("y"), Expr->MaterialExpressionEditorY);
+        if (Expr->HasAParameterName()) {
+          ExprObj->SetStringField(TEXT("name"), Expr->GetParameterName().ToString());
+        } else if (UMaterialExpressionFunctionInput *FI = Cast<UMaterialExpressionFunctionInput>(Expr)) {
+          ExprObj->SetStringField(TEXT("name"), FI->InputName.ToString());
+        } else if (UMaterialExpressionFunctionOutput *FO = Cast<UMaterialExpressionFunctionOutput>(Expr)) {
+          ExprObj->SetStringField(TEXT("name"), FO->OutputName.ToString());
+        }
+        if (UMaterialExpressionCustom *CE = Cast<UMaterialExpressionCustom>(Expr)) {
+          ExprObj->SetStringField(TEXT("code"), CE->Code);
+          ExprObj->SetNumberField(TEXT("inputCount"), CE->Inputs.Num());
+          ExprObj->SetNumberField(TEXT("additionalOutputCount"), CE->AdditionalOutputs.Num());
+        }
+        ExprsArray.Add(MakeShared<FJsonValueObject>(ExprObj));
+      }
+      Result->SetArrayField(TEXT("expressions"), ExprsArray);
+    }
+
+    if (bWantConnections) {
+      AppendMaterialInfoConnections(Material, Function, Payload, Result);
+    }
+
+    Bridge->SendAutomationResponse(Socket, RequestId, true,
+                           Material ? TEXT("Material info retrieved.")
+                                    : TEXT("Material function info retrieved."),
+                           Result);
+    return true;
+  }
+
+  return false;
+}
+}

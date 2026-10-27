@@ -1,0 +1,151 @@
+#!/usr/bin/env node
+/**
+ * manage_blueprint widget-authoring promotion suite.
+ *
+ * Covers the eighteen WidgetAuthoring routes promoted from the route ledger:
+ * implemented natively, but previously unreachable because no canonical parent
+ * named them.
+ *
+ * These cases carry a second, static duty. `npm run test:params
+ * --optional-strict` reads this file WITHOUT executing it and fails when a
+ * declared action has no case, or when an optional parameter declared in a
+ * capability record never appears as a top-level `arguments` key. So every
+ * optional in the eighteen records is referenced at least once below, and the
+ * union here is exactly the union declared there.
+ *
+ * Setup builds a widget tree first: the manipulation, styling, and localization
+ * actions all resolve a named slot, so they need real widgets to address.
+ * Destructive actions run last so they cannot invalidate the slots the earlier
+ * cases read.
+ */
+
+import { runToolTests } from '../../test-runner.mjs';
+
+const TEST_FOLDER = '/Game/MCPTest/WidgetPromotion';
+const ts = Date.now();
+const WIDGET_NAME = `WBP_Promotion_${ts}`;
+const WIDGET_PATH = `${TEST_FOLDER}/${WIDGET_NAME}`;
+
+const widgetArgs = (action, extra = {}) => ({ action, widgetPath: WIDGET_PATH, ...extra });
+// audit_widget reads a widget of its own, built with one of each problem it looks for.
+const AUDIT_NAME = `WBP_Audit_${ts}`;
+const auditArgs = (action, extra = {}) => ({ action, widgetPath: `${TEST_FOLDER}/${AUDIT_NAME}`, ...extra });
+const auditTree = (x, y, w, h, tree) => auditArgs('add_widget_tree', { parentSlot: 'RootCanvas', positionX: x, positionY: y, sizeX: w, sizeY: h, tree });
+
+const testCases = [
+  // === SETUP ===
+  { scenario: 'Setup: create test folder', toolName: 'manage_asset', arguments: { action: 'create_folder', path: TEST_FOLDER }, expected: 'success|already exists' },
+  { scenario: 'Setup: create widget blueprint', toolName: 'manage_blueprint', arguments: { action: 'create_widget_blueprint', name: WIDGET_NAME, path: TEST_FOLDER }, expected: 'success|already exists' },
+  { scenario: 'Setup: add root canvas panel', toolName: 'manage_blueprint', arguments: widgetArgs('add_canvas_panel', { slotName: 'RootCanvas' }), expected: 'success|already exists' },
+  { scenario: 'Setup: add text block for styling and localization', toolName: 'manage_blueprint', arguments: widgetArgs('add_text_block', { slotName: 'TitleText', text: 'Title' }), expected: 'success|already exists' },
+  { scenario: 'Setup: add vertical box as a reparent target', toolName: 'manage_blueprint', arguments: widgetArgs('add_vertical_box', { slotName: 'MenuColumn' }), expected: 'success|already exists' },
+  { scenario: 'Setup: add text block to rename', toolName: 'manage_blueprint', arguments: widgetArgs('add_text_block', { slotName: 'RenameMe', text: 'Rename' }), expected: 'success|already exists' },
+  { scenario: 'Setup: add text block to remove', toolName: 'manage_blueprint', arguments: widgetArgs('add_text_block', { slotName: 'RemoveMe', text: 'Remove' }), expected: 'success|already exists' },
+  { scenario: 'Setup: create widget animation to delete', toolName: 'manage_blueprint', arguments: widgetArgs('create_widget_animation', { animationName: 'Anim_Doomed' }), expected: 'success|already exists' },
+
+  // === PANELS: layout containers ===
+  { scenario: 'PANEL: add_spacer with explicit size', toolName: 'manage_blueprint', arguments: widgetArgs('add_spacer', { slotName: 'GapWide', parentSlot: 'RootCanvas', sizeX: 240, sizeY: 16 }), expected: 'success' },
+  { scenario: 'PANEL: add_spacer relies on default size', toolName: 'manage_blueprint', arguments: widgetArgs('add_spacer'), expected: 'success' },
+  { scenario: 'PANEL: add_safe_zone', toolName: 'manage_blueprint', arguments: widgetArgs('add_safe_zone', { slotName: 'TitleSafeArea', parentSlot: 'RootCanvas' }), expected: 'success' },
+  { scenario: 'PANEL: add_safe_zone relies on default slot name', toolName: 'manage_blueprint', arguments: widgetArgs('add_safe_zone'), expected: 'success' },
+  { scenario: 'PANEL: add_widget_switcher with active index', toolName: 'manage_blueprint', arguments: widgetArgs('add_widget_switcher', { slotName: 'PageSwitcher', parentSlot: 'RootCanvas', activeIndex: 0 }), expected: 'success' },
+  // One call builds a styled panel: a rounded border holding a label and a bold, outlined value.
+  { scenario: 'PANEL: add_widget_tree builds a styled score panel', toolName: 'manage_blueprint', arguments: widgetArgs('add_widget_tree', { parentSlot: 'RootCanvas', positionX: 32, positionY: 24, tree: { type: 'Border', name: 'ScorePanel', color: [0, 0, 0, 0.55], radius: 12, outlineColor: [0.4, 1, 0.9, 1], outlineWidth: 2, padding: [18, 10, 18, 10], slot: { autoSize: true }, children: [{ type: 'VerticalBox', name: 'ScoreStack', children: [{ type: 'TextBlock', name: 'ScoreLabel', text: 'SCORE', fontSize: 14, letterSpacing: 200, color: [0.4, 1, 0.9, 1] }, { type: 'TextBlock', name: 'ScoreValue', text: '0', fontSize: 36, typeface: 'Bold', outline: 2, outlineColor: [0, 0, 0, 1], shadowOffset: [2, 2], slot: { hAlign: 'right' } }] }] } }), expected: 'success', assertions: [{ path: 'structuredContent.result.widgetCount', equals: 4, label: 'the border, the box and both labels are built' }] },
+  { scenario: 'PANEL: add_widget_tree dryRun checks a tree and adds nothing', toolName: 'manage_blueprint', arguments: widgetArgs('add_widget_tree', { parentSlot: 'RootCanvas', dryRun: true, tree: { type: 'VerticalBox', name: 'DryRunBox', children: [{ type: 'TextBlock', name: 'DryRunLabel', text: 'Checked' }] } }), expected: 'success', assertions: [{ path: 'structuredContent.result.dryRun', equals: true, label: 'nothing was added' }, { path: 'structuredContent.result.widgetCount', equals: 2, label: 'the two widgets it would make' }] },
+  { scenario: 'PANEL: add_widget_tree dryRun finds a name already taken', toolName: 'manage_blueprint', arguments: widgetArgs('add_widget_tree', { dryRun: true, tree: { type: 'TextBlock', name: 'RootCanvas' } }), expected: 'error|SLOT_EXISTS' },
+  { scenario: 'PANEL: add_widget_tree refuses an unknown field instead of ignoring it', toolName: 'manage_blueprint', arguments: widgetArgs('add_widget_tree', { tree: { type: 'TextBlock', name: 'TypoLabel', fontsize: 20 } }), expected: 'error|unknown field' },
+  { scenario: 'PANEL: add_widget_tree refuses a typeface the font lacks and adds nothing', toolName: 'manage_blueprint', arguments: widgetArgs('add_widget_tree', { parentSlot: 'RootCanvas', sizeX: 200, sizeY: 40, tree: { type: 'TextBlock', name: 'FaceLabel', typeface: 'Gothic' } }), expected: 'error|not a face' },
+
+  // === COMPONENTS ===
+  { scenario: 'COMPONENT: add_widget_component placed on the canvas', toolName: 'manage_blueprint', arguments: widgetArgs('add_widget_component', { componentType: 'TextBlock', slotName: 'ScoreLabel', parentSlot: 'RootCanvas', positionX: 32, positionY: 64, sizeX: 200, sizeY: 40, text: 'Score' }), expected: 'success' },
+  { scenario: 'COMPONENT: add_widget_component names itself when unnamed', toolName: 'manage_blueprint', arguments: widgetArgs('add_widget_component', { componentType: 'Button' }), expected: 'success' },
+
+  // === NAMES: a widget compiles to a member, so a taken name is refused before anything is built ===
+  { scenario: 'NAME: add_text_block named like an inherited property is refused', toolName: 'manage_blueprint', arguments: widgetArgs('add_text_block', { slotName: 'DisplayLabel', parentSlot: 'RootCanvas', text: 'Label' }), expected: 'error|NAME_CONFLICT' },
+  { scenario: 'NAME: add_image under a text block name is refused', toolName: 'manage_blueprint', arguments: widgetArgs('add_image', { slotName: 'TitleText', parentSlot: 'RootCanvas' }), expected: 'error|NAME_CONFLICT' },
+  { scenario: 'NAME: add_widget_component under a text block name is refused', toolName: 'manage_blueprint', arguments: widgetArgs('add_widget_component', { componentType: 'Image', slotName: 'TitleText' }), expected: 'error|NAME_CONFLICT' },
+  { scenario: 'NAME: a second unnamed add gets a free name', toolName: 'manage_blueprint', arguments: widgetArgs('add_spacer', { parentSlot: 'RootCanvas' }), expected: 'success', assertions: [{ path: 'structuredContent.result.slotName', includes: 'Spacer_', label: 'the first Spacer is left alone' }] },
+
+  // Re-using a slotName edits that widget in place; the funnel says so, since the caller may have meant a second widget.
+  { scenario: 'NAME: re-adding a taken slotName still warns that the widget was already in the tree', toolName: 'manage_blueprint', arguments: widgetArgs('add_text_block', { slotName: 'TitleText', parentSlot: 'RootCanvas', text: 'Title' }), expected: 'success', assertions: [{ path: 'structuredContent.receipt.warnings.0', includes: 'was already in the tree', label: 'the slotName re-use warning is kept' }] },
+
+  // === STYLING ===
+  { scenario: 'STYLE: set_font with an explicit face and size', toolName: 'manage_blueprint', arguments: widgetArgs('set_font', { slotName: 'TitleText', font: '/Engine/EngineFonts/Roboto.Roboto', fontSize: 32 }), expected: 'success' },
+  { scenario: 'STYLE: set_font applies the default size', toolName: 'manage_blueprint', arguments: widgetArgs('set_font', { slotName: 'TitleText' }), expected: 'success' },
+  { scenario: 'STYLE: set_margin on every edge', toolName: 'manage_blueprint', arguments: widgetArgs('set_margin', { slotName: 'MenuColumn', left: 8, top: 4, right: 8, bottom: 4 }), expected: 'success' },
+
+  // === GAME UI TEMPLATES ===
+
+  // === LOCALIZATION AND BINDING ===
+  { scenario: 'BIND: set_localization_key with an explicit namespace', toolName: 'manage_blueprint', arguments: widgetArgs('set_localization_key', { slotName: 'TitleText', key: 'MainMenu_Title', namespace: 'MenuUI' }), expected: 'success' },
+  { scenario: 'BIND: set_localization_key defaults the namespace', toolName: 'manage_blueprint', arguments: widgetArgs('set_localization_key', { slotName: 'TitleText', key: 'MainMenu_Subtitle' }), expected: 'success' },
+  { scenario: 'BIND: bind_localized_text against a missing table entry', toolName: 'manage_blueprint', arguments: widgetArgs('bind_localized_text', { slotName: 'TitleText', stringTableId: '/Game/UI/ST_Menu.ST_Menu', stringKey: 'Title' }), expected: 'success|not found' },
+
+  // === QUERIES (before the destructive cases invalidate the slots) ===
+  { scenario: 'INFO: get_widget_slot_info', toolName: 'manage_blueprint', arguments: widgetArgs('get_widget_slot_info', { slotName: 'TitleText' }), expected: 'success' },
+
+  // === DESTRUCTIVE (last: these invalidate slots the cases above address) ===
+  // A reparent moves a seated widget on purpose; the add funnel's "was already in the tree" warning is for an add that re-uses a slotName.
+  { scenario: 'ACTION: reparent_widget', toolName: 'manage_blueprint', arguments: widgetArgs('reparent_widget', { slotName: 'RenameMe', newParent: 'MenuColumn' }), expected: 'success', assertions: [{ path: 'structuredContent.receipt.warnings', equals: undefined, label: 'a move is not reported as a duplicate add' }, { path: 'structuredContent.receipt.changes', length: 1, label: 'the widget is listed once, not as a package path and again as an object path' }] },
+  // reparent_widget keeps the slot layout and takes an index; the same parent reorders.
+  { scenario: 'Setup: second child of MenuColumn', toolName: 'manage_blueprint', arguments: widgetArgs('add_text_block', { slotName: 'OrderMe', parentSlot: 'MenuColumn', text: 'Order' }), expected: 'success' },
+  { scenario: 'Setup: pad the second child', toolName: 'manage_blueprint', arguments: widgetArgs('set_margin', { slotName: 'OrderMe', top: 34 }), expected: 'success' },
+  { scenario: 'ACTION: reparent_widget reorders within its parent and keeps the padding', toolName: 'manage_blueprint', arguments: widgetArgs('reparent_widget', { slotName: 'OrderMe', newParent: 'MenuColumn', index: 0 }), expected: 'success', assertions: [{ path: 'structuredContent.result.index', equals: 0, label: 'moved to the front' }, { path: 'structuredContent.result.applied.padding.top', equals: 34, label: 'padding kept' }] },
+  { scenario: 'ACTION: reparent_widget into its own subtree is refused', toolName: 'manage_blueprint', arguments: widgetArgs('reparent_widget', { slotName: 'RootCanvas', newParent: 'MenuColumn' }), expected: 'error|INVALID_PARENT' },
+  // duplicate_widget copies a panel with its children, named and placed on request.
+  { scenario: 'ACTION: duplicate_widget copies a subtree beside the original', toolName: 'manage_blueprint', arguments: widgetArgs('duplicate_widget', { slotName: 'MenuColumn', newName: 'MenuColumnCopy' }), expected: 'success', assertions: [{ path: 'structuredContent.result.slotName', equals: 'MenuColumnCopy', label: 'the copy takes newName' }] },
+  { scenario: 'ACTION: duplicate_widget into another panel at an index', toolName: 'manage_blueprint', arguments: widgetArgs('duplicate_widget', { slotName: 'OrderMe', newParent: 'MenuColumnCopy', index: 0 }), expected: 'success', assertions: [{ path: 'structuredContent.result.index', equals: 0, label: 'placed first' }] },
+  // A widget the tree edit just made is a variable, and the generated class has its property at once (the handlers compile),
+  // so a graph step can name it without a manual compile in between.
+  { scenario: 'GRAPH: a VariableGet names the widget duplicate_widget just copied', toolName: 'manage_blueprint', arguments: { action: 'create_node', blueprintPath: WIDGET_PATH, graphName: 'EventGraph', nodeType: 'VariableGet', memberName: 'MenuColumnCopy' }, expected: 'success' },
+  // DisplayLabel is a UWidget property: a widget renamed to it stopped the Widget Blueprint compiling.
+  { scenario: 'ERROR: rename_widget refuses a name an inherited property holds', toolName: 'manage_blueprint', arguments: widgetArgs('rename_widget', { slotName: 'RenameMe', newName: 'DisplayLabel' }), expected: 'error|NAME_CONFLICT' },
+  { scenario: 'ACTION: rename_widget', toolName: 'manage_blueprint', arguments: widgetArgs('rename_widget', { slotName: 'RenameMe', newName: 'RenamedText' }), expected: 'success' },
+  { scenario: 'GRAPH: a VariableGet names the widget rename_widget just renamed', toolName: 'manage_blueprint', arguments: { action: 'create_node', blueprintPath: WIDGET_PATH, graphName: 'EventGraph', nodeType: 'VariableGet', memberName: 'RenamedText' }, expected: 'success' },
+  { scenario: 'GRAPH: a VariableGet names the widget add_text_block just added', toolName: 'manage_blueprint', arguments: { action: 'create_node', blueprintPath: WIDGET_PATH, graphName: 'EventGraph', nodeType: 'VariableGet', memberName: 'OrderMe' }, expected: 'success' },
+  { scenario: 'ACTION: remove_widget', toolName: 'manage_blueprint', arguments: widgetArgs('remove_widget', { slotName: 'RemoveMe' }), expected: 'success' },
+  { scenario: 'ACTION: delete_animation', toolName: 'manage_blueprint', arguments: widgetArgs('delete_animation', { animationName: 'Anim_Doomed' }), expected: 'success|not found' },
+
+  // === AUDIT ===
+  { scenario: 'Setup: a Widget Blueprint to audit', toolName: 'manage_blueprint', arguments: { action: 'create_widget_blueprint', name: AUDIT_NAME, path: TEST_FOLDER }, expected: 'success|already exists' },
+  { scenario: 'Setup: its root canvas', toolName: 'manage_blueprint', arguments: auditArgs('add_canvas_panel', { slotName: 'RootCanvas' }), expected: 'success|already exists' },
+  { scenario: 'Setup: a label too narrow for its text', toolName: 'manage_blueprint', arguments: auditTree(400, 200, 80, 40, { type: 'TextBlock', name: 'CutLabel', text: 'Settings and Options' }), expected: 'success' },
+  { scenario: 'Setup: a button', toolName: 'manage_blueprint', arguments: auditTree(400, 400, 200, 60, { type: 'Button', name: 'PlayButton' }), expected: 'success' },
+  { scenario: 'Setup: a second button on top of the first', toolName: 'manage_blueprint', arguments: auditTree(450, 420, 200, 60, { type: 'Button', name: 'QuitButton' }), expected: 'success' },
+  { scenario: 'Setup: a button too small to touch', toolName: 'manage_blueprint', arguments: auditTree(900, 500, 30, 30, { type: 'Button', name: 'TinyButton' }), expected: 'success' },
+  { scenario: 'Setup: a dark grey label on nothing', toolName: 'manage_blueprint', arguments: auditTree(400, 700, 300, 30, { type: 'TextBlock', name: 'FaintLabel', text: 'Hard to read', fontSize: 12, color: [0.18, 0.18, 0.18, 1] }), expected: 'success' },
+  { scenario: 'Setup: an icon past the right edge of a 1920 screen', toolName: 'manage_blueprint', arguments: auditTree(1850, 100, 120, 60, { type: 'Image', name: 'EdgeIcon' }), expected: 'success' },
+  { scenario: 'READ: audit_widget finds each problem at two sizes', toolName: 'manage_blueprint', arguments: auditArgs('audit_widget', { resolutions: ['1920x1080', '1280x720'], touch: true, safeZone: 0.95, image: true }), expected: 'success', assertions: [
+    { path: 'structuredContent.result.counts.clipped_text', gte: 1, label: 'the narrow label is cut off' },
+    { path: 'structuredContent.result.counts.overlap', gte: 1, label: 'the two buttons overlap' },
+    { path: 'structuredContent.result.counts.small_target', gte: 1, label: 'the 30 px button is too small to touch' },
+    { path: 'structuredContent.result.counts.low_contrast', gte: 1, label: 'the dark grey label is hard to read' },
+    { path: 'structuredContent.result.counts.off_screen', gte: 1, label: 'the icon leaves the screen' },
+    { path: 'structuredContent.result.imageBase64', exists: true, label: 'the picture with the findings outlined' },
+  ] },
+  { scenario: 'READ: audit_widget judges once shaders finish', toolName: 'manage_blueprint', arguments: auditArgs('audit_widget', { waitForShaders: true }), expected: 'success', timeoutMs: 30000, assertions: [{ path: 'structuredContent.result.shadersCompiling', gte: 0, label: 'shader jobs reported' }] },
+  { scenario: 'ERROR: audit_widget refuses a size it cannot draw', toolName: 'manage_blueprint', arguments: auditArgs('audit_widget', { resolutions: ['8000x8000'] }), expected: 'error|INVALID_ARGUMENT' },
+  { scenario: 'ERROR: audit_widget on a Widget Blueprint that is not there', toolName: 'manage_blueprint', arguments: { action: 'audit_widget', widgetPath: `${TEST_FOLDER}/WBP_Missing_${ts}` }, expected: 'error|NOT_FOUND' },
+  // === ARRANGE === the audit's title and buttons placed by relations: a centred title 80 from the top (wide enough
+  // for its text now), Play 40 under it on its centre line and 300 wide, Quit 20 under Play, as wide, on its left edge.
+  { scenario: 'ACTION: arrange_widgets lays out a title and two buttons by relations, held at three sizes', toolName: 'manage_blueprint', arguments: auditArgs('arrange_widgets', { resolution: '1920x1080', resolutions: ['1920x1080', '1280x720', '3440x1440'], relations: [
+    { type: 'center', widget: 'CutLabel', axis: 'x' }, { type: 'inset', widget: 'CutLabel', edge: 'top', value: 80 },
+    { type: 'below', widget: 'PlayButton', of: 'CutLabel', gap: 40 }, { type: 'alignCenterX', widgets: ['PlayButton', 'CutLabel'] },
+    { type: 'width', widget: 'PlayButton', value: 300, strength: 'required' }, { type: 'below', widget: 'QuitButton', of: 'PlayButton', gap: 20 },
+    { type: 'sameWidth', widgets: ['QuitButton', 'PlayButton'] }, { type: 'alignLeft', widgets: ['QuitButton', 'PlayButton'], strength: 'strong' },
+  ] }), expected: 'success', assertions: [
+    { path: 'structuredContent.result.message', includes: '8 of 8 relation(s) hold at all 3 size(s)', label: 'every relation holds at every size' },
+    { path: 'structuredContent.result.widgets.0.anchors', equals: 'centre top', label: 'the title holds the top centre' },
+    { path: 'structuredContent.result.undo.undoable', equals: true, label: 'one undo step takes it back' },
+  ] },
+  { scenario: 'ACTION: arrange_widgets dryRun changes nothing', toolName: 'manage_blueprint', arguments: auditArgs('arrange_widgets', { dryRun: true, relations: [{ type: 'width', widget: 'TinyButton', value: 44 }, { type: 'height', widget: 'TinyButton', value: 44 }] }), expected: 'success', assertions: [{ path: 'structuredContent.result.dryRun', equals: true, label: 'nothing written' }] },
+  { scenario: 'ERROR: arrange_widgets refuses two widths that cannot both hold', toolName: 'manage_blueprint', arguments: auditArgs('arrange_widgets', { relations: [{ type: 'width', widget: 'PlayButton', value: 300 }, { type: 'width', widget: 'PlayButton', value: 200 }] }), expected: 'error|UNSATISFIABLE' },
+  { scenario: 'ERROR: arrange_widgets places only children of a Canvas Panel', toolName: 'manage_blueprint', arguments: auditArgs('arrange_widgets', { relations: [{ type: 'center', widget: 'RootCanvas' }] }), expected: 'error|NOT_A_CANVAS' },
+  { scenario: 'ERROR: arrange_widgets names a widget that is not there', toolName: 'manage_blueprint', arguments: auditArgs('arrange_widgets', { relations: [{ type: 'center', widget: 'NoSuchWidget' }] }), expected: 'error|WIDGET_NOT_FOUND' },
+  { scenario: 'ERROR: arrange_widgets refuses an axis the schema does not know', toolName: 'manage_blueprint', arguments: auditArgs('arrange_widgets', { relations: [{ type: 'center', widget: 'PlayButton', axis: 'z' }] }), expected: 'error|INVALID_PARAMETER_VALUE' },
+
+  // === CLEANUP ===
+  { scenario: 'Cleanup: delete test folder', toolName: 'manage_asset', arguments: { action: 'delete', path: TEST_FOLDER, force: true }, expected: 'success|not found', timeoutMs: 30000 },
+];
+
+runToolTests('manage-blueprint-widget-promotion', testCases);

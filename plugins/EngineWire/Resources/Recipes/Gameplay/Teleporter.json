@@ -1,0 +1,75 @@
+{
+  "description": "A teleporter: a pawn that touches the actor is moved to TeleportTarget (any actor, set on each placed teleporter), keeping its rotation, and TeleportSound plays where it arrives. A target that is itself a teleporter of this class first ignores pawns for TeleportCooldown seconds, so a pair of pads does not send the pawn straight back. With no target the teleporter does nothing. The actor needs a component that overlaps pawns.",
+  "tag": "Teleporter",
+  "placeholders": {
+    "Cooldown": "Seconds a teleporter ignores pawns after one arrives on it.",
+    "Sound": "Object path of the sound to play where the pawn arrives, or None.",
+    "SelfClass": "The teleporter Blueprint's own generated class path, to recognise a target that is a teleporter too.",
+    "CastPin": "The output pin of a Cast to that class (As followed by its display name)."
+  },
+  "variables": [
+    { "variableName": "TeleportTarget", "variableType": "Object:/Script/Engine.Actor", "category": "Teleport", "instanceEditable": true, "exposeOnSpawn": true },
+    { "variableName": "TeleportCooldown", "variableType": "Float", "defaultValue": "{{Cooldown}}", "category": "Teleport", "instanceEditable": true },
+    { "variableName": "TeleportSound", "variableType": "Object:/Script/Engine.SoundBase", "defaultValue": "{{Sound}}", "category": "Teleport", "instanceEditable": true },
+    { "variableName": "TeleportReadyAt", "variableType": "Float", "defaultValue": 0, "category": "Teleport" }
+  ],
+  "functions": [
+    {
+      "id": "teleHoldFn",
+      "functionName": "HoldTeleport",
+      "operations": [
+        { "edit": "create_node", "id": "holdNow", "nodeType": "CallFunction", "memberName": "GetTimeSeconds", "memberClass": "/Script/Engine.GameplayStatics" },
+        { "edit": "create_node", "id": "holdFor", "nodeType": "VariableGet", "memberName": "TeleportCooldown" },
+        { "edit": "create_node", "id": "holdUntil", "nodeType": "CallFunction", "memberName": "Add_DoubleDouble", "memberClass": "/Script/Engine.KismetMathLibrary" },
+        { "edit": "create_node", "id": "holdSet", "nodeType": "VariableSet", "memberName": "TeleportReadyAt" },
+        { "edit": "connect_pins", "from": "$holdNow.ReturnValue", "to": "$holdUntil.A" },
+        { "edit": "connect_pins", "from": "$holdFor.TeleportCooldown", "to": "$holdUntil.B" },
+        { "edit": "connect_pins", "from": "$holdUntil.ReturnValue", "to": "$holdSet.TeleportReadyAt" },
+        { "edit": "connect_pins", "from": "$teleHoldFn.then", "to": "$holdSet.execute" }
+      ]
+    }
+  ],
+  "hooks": [
+    { "id": "tele", "event": "ActorBeginOverlap" }
+  ],
+  "eventGraph": [
+    { "edit": "create_node", "id": "teleWho", "nodeType": "Cast", "targetClass": "/Script/Engine.Pawn" },
+    { "edit": "create_node", "id": "teleNow", "nodeType": "CallFunction", "memberName": "GetTimeSeconds", "memberClass": "/Script/Engine.GameplayStatics" },
+    { "edit": "create_node", "id": "teleReadyAt", "nodeType": "VariableGet", "memberName": "TeleportReadyAt" },
+    { "edit": "create_node", "id": "teleReady", "nodeType": "CallFunction", "memberName": "GreaterEqual_DoubleDouble", "memberClass": "/Script/Engine.KismetMathLibrary" },
+    { "edit": "create_node", "id": "teleTarget", "nodeType": "VariableGet", "memberName": "TeleportTarget" },
+    { "edit": "create_node", "id": "teleHas", "nodeType": "CallFunction", "memberName": "IsValid", "memberClass": "/Script/Engine.KismetSystemLibrary" },
+    { "edit": "create_node", "id": "teleOk", "nodeType": "CallFunction", "memberName": "BooleanAND", "memberClass": "/Script/Engine.KismetMathLibrary" },
+    { "edit": "create_node", "id": "teleBranch", "nodeType": "Branch" },
+    { "edit": "create_node", "id": "teleOther", "nodeType": "Cast", "targetClass": "{{SelfClass}}" },
+    { "edit": "create_node", "id": "teleHold", "nodeType": "CallFunction", "memberName": "HoldTeleport" },
+    { "edit": "create_node", "id": "teleDest", "nodeType": "CallFunction", "memberName": "K2_GetActorLocation", "memberClass": "/Script/Engine.Actor" },
+    { "edit": "create_node", "id": "teleTurn", "nodeType": "CallFunction", "memberName": "K2_GetActorRotation", "memberClass": "/Script/Engine.Actor" },
+    { "edit": "create_node", "id": "teleMove", "nodeType": "CallFunction", "memberName": "K2_TeleportTo", "memberClass": "/Script/Engine.Actor" },
+    { "edit": "create_node", "id": "teleSound", "nodeType": "VariableGet", "memberName": "TeleportSound" },
+    { "edit": "create_node", "id": "telePlay", "nodeType": "CallFunction", "memberName": "PlaySoundAtLocation", "memberClass": "/Script/Engine.GameplayStatics" },
+    { "edit": "connect_pins", "from": "$tele_event.OtherActor", "to": "$teleWho.Object" },
+    { "edit": "connect_pins", "from": "$teleNow.ReturnValue", "to": "$teleReady.A" },
+    { "edit": "connect_pins", "from": "$teleReadyAt.TeleportReadyAt", "to": "$teleReady.B" },
+    { "edit": "connect_pins", "from": "$teleTarget.TeleportTarget", "to": "$teleHas.Object" },
+    { "edit": "connect_pins", "from": "$teleReady.ReturnValue", "to": "$teleOk.A" },
+    { "edit": "connect_pins", "from": "$teleHas.ReturnValue", "to": "$teleOk.B" },
+    { "edit": "connect_pins", "from": "$teleOk.ReturnValue", "to": "$teleBranch.Condition" },
+    { "edit": "connect_pins", "from": "$teleTarget.TeleportTarget", "to": "$teleOther.Object" },
+    { "edit": "connect_pins", "fromNodeId": "$teleOther", "fromPinName": "{{CastPin}}", "toNodeId": "$teleHold", "toPinName": "self" },
+    { "edit": "connect_pins", "from": "$teleTarget.TeleportTarget", "to": "$teleDest.self" },
+    { "edit": "connect_pins", "from": "$teleWho.AsPawn", "to": "$teleTurn.self" },
+    { "edit": "connect_pins", "from": "$teleWho.AsPawn", "to": "$teleMove.self" },
+    { "edit": "connect_pins", "from": "$teleDest.ReturnValue", "to": "$teleMove.DestLocation" },
+    { "edit": "connect_pins", "from": "$teleTurn.ReturnValue", "to": "$teleMove.DestRotation" },
+    { "edit": "connect_pins", "from": "$teleSound.TeleportSound", "to": "$telePlay.Sound" },
+    { "edit": "connect_pins", "from": "$teleDest.ReturnValue", "to": "$telePlay.Location" },
+    { "edit": "connect_pins", "from": "$tele.then", "to": "$teleWho.execute" },
+    { "edit": "connect_pins", "from": "$teleWho.then", "to": "$teleBranch.execute" },
+    { "edit": "connect_pins", "from": "$teleBranch.then", "to": "$teleOther.execute" },
+    { "edit": "connect_pins", "from": "$teleOther.then", "to": "$teleHold.execute" },
+    { "edit": "connect_pins", "from": "$teleHold.then", "to": "$teleMove.execute" },
+    { "edit": "connect_pins", "from": "$teleOther.CastFailed", "to": "$teleMove.execute" },
+    { "edit": "connect_pins", "from": "$teleMove.then", "to": "$telePlay.execute" }
+  ]
+}

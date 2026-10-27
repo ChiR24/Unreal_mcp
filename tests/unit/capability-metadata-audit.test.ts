@@ -1,0 +1,151 @@
+/**
+ * tests/unit/capability-metadata-audit.test.ts
+ *
+ * Cross-domain metadata audit over every ALL_CAPABILITY_RECORD_COUNT record.
+ *
+ * RED first: a seeded stale "5.1-5.6 only" comment OR verb-derived metadata
+ * (a read record relabelled as a mutating write) MUST make the audit fail with
+ * a leaf-evidence violation. This proves the audit catches dishonest/derived
+ * metadata rather than rubber-stamping the source.
+ *
+ * GREEN after Task 19 corrections: the real record universe passes with
+ * zero hard violations, and the audit is deterministic across runs.
+ */
+import { describe, expect, it } from 'vitest';
+import type { CapabilityRecord } from '../../src/tools/catalog/capabilities/model.js';
+import {
+  auditCapabilityMetadata,
+  type AuditViolation,
+} from '../../scripts/qa/capability-metadata-audit.js';
+import { ALL_CAPABILITY_RECORD_COUNT, ALL_CAPABILITY_RECORDS } from '../../src/tools/catalog/capabilities/records/aggregate.js';
+
+function cloneRecord(record: CapabilityRecord): CapabilityRecord {
+  return structuredClone(record);
+}
+
+describe('capability metadata audit — RED seed must fail', () => {
+  it('flags verb-derived metadata: a read record claiming mutation (C1)', () => {
+    const records = ALL_CAPABILITY_RECORDS;
+    const readRecord = records.find((r) => r.behavior.effect === 'read');
+    if (!readRecord) throw new Error('expected at least one read-effect record in the universe');
+    const seeded: CapabilityRecord = {
+      ...readRecord,
+      behavior: { ...readRecord.behavior, safeToRetry: false },
+      policy: { ...readRecord.policy, dataAccess: 'project-write' },
+    };
+    const report = auditCapabilityMetadata([seeded]);
+    const flagged = report.violations.filter(
+      (v: AuditViolation) => v.id === seeded.id && v.rule === 'C1',
+    );
+    expect(flagged.length).toBeGreaterThan(0);
+  });
+
+  it('flags a no-op-marked record that still claims mutation (C4)', () => {
+    const records = ALL_CAPABILITY_RECORDS;
+    const target = cloneRecord(records[0]);
+    const seeded: CapabilityRecord = {
+      ...target,
+      discovery: { ...target.discovery, summary: 'Documented no-op; performs no mutation.' },
+      behavior: { ...target.behavior, effect: 'write' },
+    };
+    const report = auditCapabilityMetadata([seeded]);
+    const c4 = report.violations.filter((v: AuditViolation) => v.id === seeded.id && v.rule === 'C4');
+    expect(c4.length).toBeGreaterThan(0);
+  });
+});
+
+describe('capability metadata audit — GREEN universe passes', () => {
+  it('audits every ALL_CAPABILITY_RECORD_COUNT record with zero hard violations', () => {
+    const records = ALL_CAPABILITY_RECORDS;
+    expect(records.length).toBe(ALL_CAPABILITY_RECORD_COUNT);
+    expect(new Set(records.map((r) => r.id)).size).toBe(ALL_CAPABILITY_RECORD_COUNT);
+    const report = auditCapabilityMetadata(records);
+    expect(report.passed).toBe(true);
+    expect(report.violations).toHaveLength(0);
+  });
+
+  it('is deterministic: two runs produce identical reports', () => {
+    const records = ALL_CAPABILITY_RECORDS;
+    const a = JSON.stringify(auditCapabilityMetadata(records));
+    const b = JSON.stringify(auditCapabilityMetadata(records));
+    expect(a).toBe(b);
+  });
+
+  it('never declares an idempotent non-destructive capability unsafe to retry', () => {
+    const records = ALL_CAPABILITY_RECORDS;
+    const contradictory = records
+      .filter(
+        (r) =>
+          r.behavior.idempotency === 'idempotent'
+          && r.behavior.effect !== 'destructive'
+          && r.behavior.safeToRetry === false,
+      )
+      .map((r) => `${r.id} (${r.behavior.effect})`);
+    expect(contradictory).toHaveLength(0);
+  });
+
+  it('does not grow the set of capabilities whose output schema promises nothing', () => {
+    const records = ALL_CAPABILITY_RECORDS;
+    const sealedStubs = records
+      .filter((r) => {
+        const declared = Object.keys(r.schemas.output.properties);
+        const envelopeOnly = declared.length === 2
+          && declared.includes('success')
+          && declared.includes('message');
+        return envelopeOnly && r.schemas.output.additionalProperties === false;
+      })
+      .map((r) => r.id);
+    // Ratchet, not a target: `additionalProperties: false` on a `{success, message}` schema
+    // forbids the payload the summary promises. Clearing it is per-record output authoring.
+    // The bound tracks the real figure and only ever moves DOWN. It sat at 827 while the
+    // catalog was unfolded; against 380 records that was above the arithmetic maximum, so
+    // the assertion could not fail for any input.
+    expect(sealedStubs.length).toBeLessThanOrEqual(7);
+  });
+
+  it('MCPBB-079: named read capabilities publish the data their summaries promise', () => {
+    // Ground truth for the field contracts lives in the native handlers
+    // (EnvironmentHandlersInspectSettings.cpp, LevelHandlersInfo.cpp).
+    // generate_memory_report is deliberately excluded: PerformanceHandlersProfiling.cpp
+    // replies envelope-only, so its stub is correct and the defect is handler-side (C++).
+    const byId = new Map(ALL_CAPABILITY_RECORDS.map((r) => [String(r.id), r]));
+    // Folding merged several authored read records into one id each, so the list
+    // that used to name five now names three; repeating a folded id would only
+    // re-check the same record.
+    const namedReadStubs = [
+      'inspect.get_stats',
+      'inspect.get_editor_state',
+      'manage_level.get_summary',
+    ];
+    const stillSealed = namedReadStubs.filter((id) => {
+      const record = byId.get(id);
+      if (record === undefined) return true; // a missing record is itself a failure
+      const declared = Object.keys(record.schemas.output.properties);
+      const envelopeOnly = declared.length === 2
+        && declared.includes('success')
+        && declared.includes('message');
+      return envelopeOnly && record.schemas.output.additionalProperties === false;
+    });
+    expect(stillSealed).toEqual([]);
+  });
+
+  it('declares the path parameter each material handler actually reads', () => {
+    // These native handlers read assetPath with no fallback branch, and the native transport
+    // has no alias layer, so declaring any other spelling is unsatisfiable there.
+    // One entry per surviving record: folding collapsed the fourteen authored
+    // material records this list was written against into these five.
+    const readsAssetPath = [
+      'material.set_material_property',
+      'material.compile_material',
+      'material.get_material_info',
+      'material.add_function_io',
+      'material.set_material_parameter',
+    ];
+    const byId = new Map(ALL_CAPABILITY_RECORDS.map((r) => [String(r.id), r]));
+    const undeclared = readsAssetPath.filter((id) => {
+      const record = byId.get(id);
+      return record === undefined || !Object.keys(record.schemas.input.properties).includes('assetPath');
+    });
+    expect(undeclared).toEqual([]);
+  });
+});

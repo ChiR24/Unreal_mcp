@@ -1,0 +1,54 @@
+// Fold specs for control_editor. Data only; see ../shared/fold.ts.
+import type { FoldSpec } from '../shared/fold-types.js';
+
+export const CONTROL_EDITOR_FOLDS: readonly FoldSpec[] = [
+  {
+    primary: 'play', selector: 'control',
+    summary: 'Control Play In Editor with control: play (starts it, answering once play has begun), pause, resume, stop (answers once play has ended), eject (leave the pawn for a free camera) or possess (control another pawn by actorName, such as a character to test, or back to the player pawn).',
+    topics: ['play in editor', 'press play', 'start the game', 'run the game', 'start pie', 'stop pie', 'pause pie', 'pause game', 'pause simulation', 'resume game', 'eject', 'possess', 'possess a character', 'quit game'],
+    members: { play: 'play', pause: 'pause', resume: 'resume', stop: 'stop', eject: 'eject', possess: 'possess' },
+    aliasMembers: { stop: 'stop_pie' },
+  },
+  {
+    primary: 'set_game_speed', selector: 'control',
+    summary: 'Control the clock of the running game during Play In Editor: game speed (slow motion), a fixed delta time, or step frames.',
+    topics: ['game speed', 'time dilation', 'fixed delta time', 'step frame', 'slow motion', 'game too fast'],
+    members: { speed: 'set_game_speed', fixed_delta_time: 'set_fixed_delta_time', step_frame: 'step_frame' },
+    aliasMembers: { step_frame: 'single_frame_step' },
+  },
+  {
+    primary: 'start_recording', selector: 'control',
+    summary: 'Record the running Play In Editor game as a replay (control start, the default: DemoRec, written by default under Saved/Demos; frameRate and durationSeconds), or stop it (stop; NOT_RECORDING when nothing records). Refused without a running game (NO_ACTIVE_SESSION). For playback, seeking or a killcam, use the sequence demo actions.',
+    members: { start: 'start_recording', stop: 'stop_recording' },
+  },
+  {
+    primary: 'set_camera', selector: 'cameraOp',
+    summary: 'Set the viewport camera transform, its field of view, or the view target actor. While Play In Editor runs, the transform moves the free camera of an ejected player and is refused until the player is ejected.',
+    topics: ['viewport camera', 'camera position', 'camera fov', 'view target', 'look at actor', 'move the camera', 'move camera', 'game camera', 'pie camera'],
+    members: { transform: 'set_camera', fov: 'set_camera_fov', view_target: 'set_view_target' },
+    aliasMembers: { transform: ['set_camera_position', 'set_viewport_camera'], view_target: 'set_game_view_target' },
+  },
+  {
+    primary: 'configure_viewport', selector: 'setting',
+    summary: 'Change what the editor viewport shows, chosen by setting: view_mode (any engine view mode by name: Lit, Unlit, Wireframe, LightingOnly, ShaderComplexity, CollisionPawn, PathTracing and the rest; the running game\'s view while Play runs), editor_mode (activate a mode such as EM_Landscape, EM_Foliage or EM_Default, checked active), game_view (hide editor icons), immersive_mode (the viewport fills its window), realtime (keep effects and animated materials moving), show_stats or hide_stats (stat overlays: FPS and Unit by default; hide_stats with no stat hides them all). Each answers with the state it reads back; with no level viewport open, NO_VIEWPORT.',
+    topics: ['view mode', 'editor mode', 'game view', 'immersive mode', 'realtime viewport', 'viewport stats', 'show stats'],
+    members: { view_mode: 'set_view_mode', editor_mode: 'set_editor_mode', game_view: 'set_game_view', immersive_mode: 'set_immersive_mode', realtime: 'set_viewport_realtime', show_stats: 'show_stats', hide_stats: 'hide_stats' },
+  },
+  { primary: 'console_command', summary: 'Run one console command against the editor world, or through the first player while Play In Editor runs, and return what it printed (output, at most 4096 characters). A command the engine does not recognise fails (EXEC_FAILED); one holding ;, |, &&, a backtick or several lines, or a blocked name (quit, exit, py, crash and the like), is refused (COMMAND_BLOCKED). Success means the engine ran it, not that it had the effect wanted.', members: ['execute_command'] },
+  {
+    primary: 'configure_editor', selector: 'setting',
+    summary: 'Open an editor tab, set editor preferences, or restore or minimize the main editor window without focus (restoring unthrottles Play In Editor).',
+    topics: ['editor tab', 'editor preferences', 'open tab', 'restore editor window', 'minimize editor window', 'editor minimized', 'pie slow 3 fps', 'throttle'],
+    members: { open_tab: 'open_editor_tab', preferences: 'set_preferences', window: 'restore_editor_window' },
+  },
+  {
+    primary: 'screenshot', summary: 'Capture a screenshot of the level viewport (optionally from a camera location and rotation given in the same call), of the running game view, or of the whole editor window with the game UI.', members: ['take_screenshot'],
+    topics: ['capture viewport', 'screen capture', 'viewport image', 'snapshot', 'take picture', 'look from here', 'camera screenshot', 'game view screenshot', 'screenshot hud'],
+  },
+  {
+    primary: 'undo', selector: 'history',
+    summary: 'Undo or redo the last editor transaction (the reply names it, or says there was none), or roll back to a restore point, undoing only what this server changed since.',
+    topics: ['undo', 'redo', 'transaction history', 'restore point', 'rollback'],
+    members: { undo: 'undo', redo: 'redo', restore_point: 'restore_point' },
+  },
+];

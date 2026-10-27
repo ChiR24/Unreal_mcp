@@ -1,0 +1,318 @@
+#include "Domains/ControlActor/McpActorSupport.h"
+#include "Foundation/BridgeHelpers/Blueprints/McpBPPaths.h"
+#include "Misc/PackageName.h"
+
+bool UEngineWireSubsystem::HandleControlActorSpawn(
+    const FString &RequestId, const TSharedPtr<FJsonObject> &Payload,
+    TSharedPtr<FMcpBridgeWebSocket> Socket) {
+  FString ClassPath;
+  Payload->TryGetStringField(TEXT("classPath"), ClassPath);
+  if (ClassPath.IsEmpty()) {
+    // Schema-documented alias.
+    Payload->TryGetStringField(TEXT("actorClass"), ClassPath);
+  }
+  if (ClassPath.IsEmpty()) {
+    // The contract publishes blueprintPath (and a spawnKind of "blueprint"),
+    // but this handler only ever read classPath/actorClass -- so the documented
+    // Blueprint spawn failed with "spawn requires classPath". A Blueprint
+    // asset path spawns through its generated class, so append _C when the
+    // caller passed the asset rather than the class.
+    FString BlueprintPath;
+    Payload->TryGetStringField(TEXT("blueprintPath"), BlueprintPath);
+    if (!BlueprintPath.IsEmpty()) {
+      ClassPath = BlueprintPath.EndsWith(TEXT("_C"))
+                      ? BlueprintPath
+                      : BlueprintPath + TEXT(".") +
+                            FPackageName::GetShortName(BlueprintPath) +
+                            TEXT("_C");
+    }
+  }
+  FString ActorName;
+  Payload->TryGetStringField(TEXT("actorName"), ActorName);
+  FVector Location =
+      ExtractVectorField(Payload, TEXT("location"), FVector::ZeroVector);
+  FRotator Rotation =
+      ExtractRotatorField(Payload, TEXT("rotation"), FRotator::ZeroRotator);
+  const bool bHasScale = Payload->HasField(TEXT("scale"));
+  const FVector Scale =
+      ExtractVectorField(Payload, TEXT("scale"), FVector::OneVector);
+
+  UClass *ResolvedClass = nullptr;
+  FString MeshPath;
+  Payload->TryGetStringField(TEXT("meshPath"), MeshPath);
+  UStaticMesh *ResolvedStaticMesh = nullptr;
+  USkeletalMesh *ResolvedSkeletalMesh = nullptr;
+
+  // Skip LoadAsset for script classes (e.g. /Script/Engine.CameraActor) to
+  // avoid LogEditorAssetSubsystem errors
+  // A generated-class path ("/Game/X/BP.BP_C") is not an asset: LoadAsset
+  // logged "could not be found in the Asset Registry" for every Blueprint
+  // spawn before ResolveClassByName below resolved it anyway.
+  if ((ClassPath.StartsWith(TEXT("/")) || ClassPath.Contains(TEXT("/"))) &&
+      !ClassPath.StartsWith(TEXT("/Script/")) && !ClassPath.EndsWith(TEXT("_C"))) {
+    const FString SafeClassPath = SanitizeProjectRelativePath(ClassPath);
+    if (!SafeClassPath.IsEmpty()) {
+      if (UObject *Loaded = McpLoadAsset(SafeClassPath)) {
+        if (UBlueprint *BP = Cast<UBlueprint>(Loaded))
+          ResolvedClass = BP->GeneratedClass;
+        else if (UClass *C = Cast<UClass>(Loaded))
+          ResolvedClass = C;
+        else if (UStaticMesh *Mesh = Cast<UStaticMesh>(Loaded))
+          ResolvedStaticMesh = Mesh;
+        else if (USkeletalMesh *SkelMesh = Cast<USkeletalMesh>(Loaded))
+          ResolvedSkeletalMesh = SkelMesh;
+      }
+    }
+  }
+  if (!ResolvedClass && !ResolvedStaticMesh && !ResolvedSkeletalMesh)
+    ResolvedClass = ResolveClassByName(ClassPath);
+
+  // If explicit mesh path provided for a general spawn request. Try a robust
+  // resolution chain: the asset registry (McpLoadAsset) first, then a completed
+  // LoadObject with the short-name object path ("/pkg/path.AssetName"), then
+  // FSoftObjectPath::TryLoad — engine content such as
+  // /Engine/BasicShapes/Cube.Cube has been observed to fail the first path
+  // while resolving through the later ones.
+  if (!ResolvedStaticMesh && !ResolvedSkeletalMesh && !MeshPath.IsEmpty()) {
+    const FString SafeMeshPath = SanitizeProjectRelativePath(MeshPath);
+    if (!SafeMeshPath.IsEmpty()) {
+      UObject *MeshObj = McpLoadAsset(SafeMeshPath);
+      if (!MeshObj) {
+        MeshObj = LoadObject<UObject>(nullptr, *SafeMeshPath);
+      }
+      if (!MeshObj && !SafeMeshPath.Contains(TEXT("."))) {
+        const FString ObjectPath =
+            SafeMeshPath + TEXT(".") +
+            FPackageName::GetShortName(SafeMeshPath);
+        MeshObj = LoadObject<UObject>(nullptr, *ObjectPath);
+      }
+      if (!MeshObj) {
+        FSoftObjectPath SoftPath(SafeMeshPath);
+        MeshObj = SoftPath.TryLoad();
+      }
+      if (MeshObj) {
+        ResolvedStaticMesh = Cast<UStaticMesh>(MeshObj);
+        if (!ResolvedStaticMesh)
+          ResolvedSkeletalMesh = Cast<USkeletalMesh>(MeshObj);
+      }
+    }
+  }
+
+  // If the caller explicitly asked for a mesh but it could not be resolved to a
+  // static/skeletal mesh, fail BEFORE spawning anything. Otherwise we'd create an
+  // actor we can't configure as requested and report it as a (misleading) success.
+  if (!MeshPath.IsEmpty() && !ResolvedStaticMesh && !ResolvedSkeletalMesh) {
+    SendStandardErrorResponse(
+        this, Socket, RequestId, TEXT("MESH_NOT_FOUND"),
+        FString::Printf(TEXT("Requested mesh could not be loaded as a static or "
+                             "skeletal mesh: %s"),
+                        *MeshPath));
+    return true;
+  }
+  bool bSpawnStaticMeshActor = (ResolvedStaticMesh != nullptr);
+  bool bSpawnSkeletalMeshActor = (ResolvedSkeletalMesh != nullptr);
+
+  if (!bSpawnStaticMeshActor && !bSpawnSkeletalMeshActor && ResolvedClass) {
+    bSpawnStaticMeshActor =
+        ResolvedClass->IsChildOf(AStaticMeshActor::StaticClass());
+    if (!bSpawnStaticMeshActor)
+      bSpawnSkeletalMeshActor =
+          ResolvedClass->IsChildOf(ASkeletalMeshActor::StaticClass());
+  }
+
+  if (bSpawnStaticMeshActor && !ResolvedClass) {
+    ResolvedClass = AStaticMeshActor::StaticClass();
+  } else if (bSpawnSkeletalMeshActor && !ResolvedClass) {
+    ResolvedClass = ASkeletalMeshActor::StaticClass();
+  }
+
+  if (!ResolvedClass && !bSpawnStaticMeshActor && !bSpawnSkeletalMeshActor) {
+    // Distinguish "nothing was asked for" from "what was asked for didn't resolve".
+    // Previously an empty spawn payload produced "Class not found: ." — a message
+    // that reads like a resolution failure while hiding that no class was given.
+    if (ClassPath.IsEmpty() && MeshPath.IsEmpty()) {
+      SendStandardErrorResponse(
+          this, Socket, RequestId, TEXT("MISSING_REQUIRED_PARAMETER"),
+          TEXT("spawn requires classPath (or actorClass), or a meshPath. "
+               "Example: {\"classPath\": \"/Script/Engine.PointLight\", "
+               "\"actorName\": \"MyLight\", \"location\": [0, 0, 100]}"));
+      return true;
+    }
+    const FString ErrorMsg =
+        ClassPath.IsEmpty()
+            ? FString::Printf(TEXT("Mesh path could not be resolved: %s"), *MeshPath)
+            : FString::Printf(TEXT("Class not found: %s. Verify plugin is enabled if "
+                                   "using a plugin class."),
+                              *ClassPath);
+    SendStandardErrorResponse(this, Socket, RequestId, TEXT("CLASS_NOT_FOUND"),
+                              ErrorMsg);
+    return true;
+  }
+
+  AActor *Spawned = nullptr;
+
+  // Use direct world spawning for both PIE and editor worlds. EditorActorSubsystem
+  // routes through viewport placement and hit-proxy rendering, which crashes
+  // under NullRHI even when automation provides an explicit transform.
+  UWorld *TargetWorld = GEditor->PlayWorld ? GEditor->PlayWorld.Get() : GEditor->GetEditorWorldContext().World();
+
+  if (!TargetWorld) {
+    SendStandardErrorResponse(this, Socket, RequestId, TEXT("WORLD_NOT_FOUND"),
+                              TEXT("Editor world not available"));
+    return true;
+  }
+
+  // One undo step for what this spawn makes, opened before the level is touched; null inside spawn_batch.
+  const TUniquePtr<FMcpScopedEditorTransaction> Transaction = McpBeginSpawnTransaction(RequestId);
+
+  FActorSpawnParameters SpawnParams;
+  SpawnParams.SpawnCollisionHandlingOverride =
+      ESpawnActorCollisionHandlingMethod::AdjustIfPossibleButAlwaysSpawn;
+  SpawnParams.ObjectFlags |= RF_Transactional;
+  if (!GEditor->PlayWorld) {
+    SpawnParams.OverrideLevel = TargetWorld->GetCurrentLevel();
+    TargetWorld->Modify();
+  }
+
+  UClass *ClassToSpawn =
+      ResolvedClass
+          ? ResolvedClass
+          : (bSpawnStaticMeshActor ? AStaticMeshActor::StaticClass()
+                                   : (bSpawnSkeletalMeshActor
+                                          ? ASkeletalMeshActor::StaticClass()
+                                          : AActor::StaticClass()));
+  // A spawn_batch item's variables are the actor's own from its first frame. In a running game SpawnActor ran
+  // BeginPlay before the batch set them, so BeginPlay saw the class defaults (a projectile spawned with its launch
+  // velocity never moved); construction waits for them there. The batch sets them again after, reporting each one.
+  const TSharedPtr<FJsonObject> *Variables = nullptr;
+  SpawnParams.bDeferConstruction = GEditor->PlayWorld && Payload->TryGetObjectField(TEXT("variables"), Variables) &&
+                                   Variables && Variables->IsValid() && (*Variables)->Values.Num() > 0;
+  bool bSpawnStarted = false;
+  Spawned = McpSpawnActorNoting(TargetWorld, ClassToSpawn, Location, Rotation, SpawnParams, bSpawnStarted);
+  if (SpawnParams.bDeferConstruction && IsValid(Spawned)) {
+    for (const TPair<FString, TSharedPtr<FJsonValue>> &Pair : (*Variables)->Values) {
+      FString Unapplied; // reported by the batch's own pass
+      // An actor reference by name resolves here too: it was set only by the batch's pass, after BeginPlay.
+      if (FProperty *Property = Spawned->GetClass()->FindPropertyByName(*Pair.Key)) {
+        ApplyJsonValueToProperty(Spawned, Property,
+            McpActorRefsToPaths(Pair.Value, Property, [this](const FString &Name) { return FindActorByName(Name); }),
+            Unapplied);
+      }
+    }
+    Spawned->FinishSpawning(FTransform(Rotation, Location));
+  }
+
+  if (!IsValid(Spawned)) {
+    // SpawnActor returned null / an invalid object — nothing was added to the
+    // world, so there is nothing to roll back.
+    SendStandardErrorResponse(this, Socket, RequestId, McpSpawnFailureCode(bSpawnStarted),
+                              McpSpawnFailureMessage(bSpawnStarted, TEXT("Failed to spawn actor")));
+    return true;
+  }
+
+  // Transactional rollback: if a required post-spawn step fails, destroy the actor
+  // we just created so a failed request leaves the world unchanged rather than
+  // leaking a half-configured actor into the level (mirrors the spline handlers,
+  // which Destroy() the new actor when component setup fails).
+  auto RollbackSpawn = [&Spawned]() {
+    if (IsValid(Spawned)) {
+      Spawned->Destroy();
+    }
+    Spawned = nullptr;
+  };
+
+  Spawned->Modify();
+  Spawned->SetActorLocationAndRotation(Location, Rotation, false, nullptr,
+                                       ETeleportType::TeleportPhysics);
+  if (bSpawnStaticMeshActor) {
+    AStaticMeshActor *StaticMeshActor = Cast<AStaticMeshActor>(Spawned);
+    UStaticMeshComponent *MeshComponent =
+        StaticMeshActor ? StaticMeshActor->GetStaticMeshComponent() : nullptr;
+    if (ResolvedStaticMesh && !MeshComponent) {
+      // A mesh was explicitly resolved but the spawned actor can't hold it.
+      RollbackSpawn();
+      SendStandardErrorResponse(
+          this, Socket, RequestId, TEXT("MESH_APPLY_FAILED"),
+          TEXT("Could not apply the requested static mesh: the spawned actor has "
+               "no static mesh component."));
+      return true;
+    }
+    if (MeshComponent) {
+      // Movable first: a game world (Play In Editor) refuses SetStaticMesh on a Static component ("Calling
+      // SetStaticMesh ... but Mobility is Static"), so a cube spawned while PIE ran came up with no mesh at all.
+      MeshComponent->SetMobility(EComponentMobility::Movable);
+      if (ResolvedStaticMesh) {
+        MeshComponent->SetStaticMesh(ResolvedStaticMesh);
+      }
+      MeshComponent->MarkRenderStateDirty();
+    }
+  } else if (bSpawnSkeletalMeshActor) {
+    ASkeletalMeshActor *SkelActor = Cast<ASkeletalMeshActor>(Spawned);
+    USkeletalMeshComponent *SkelComp =
+        SkelActor ? SkelActor->GetSkeletalMeshComponent() : nullptr;
+    if (ResolvedSkeletalMesh && !SkelComp) {
+      RollbackSpawn();
+      SendStandardErrorResponse(
+          this, Socket, RequestId, TEXT("MESH_APPLY_FAILED"),
+          TEXT("Could not apply the requested skeletal mesh: the spawned actor "
+               "has no skeletal mesh component."));
+      return true;
+    }
+    if (SkelComp) {
+      if (ResolvedSkeletalMesh) {
+        SkelComp->SetSkeletalMesh(ResolvedSkeletalMesh);
+      }
+      SkelComp->SetMobility(EComponentMobility::Movable);
+      SkelComp->MarkRenderStateDirty();
+    }
+  }
+
+  if (bHasScale) {
+    Spawned->SetActorScale3D(Scale);
+  }
+
+  if (!ActorName.IsEmpty()) {
+    Spawned->SetActorLabel(ActorName);
+  } else {
+    // Auto-generate a friendly label from the mesh or class name
+    FString BaseName;
+    if (ResolvedStaticMesh) {
+      BaseName = ResolvedStaticMesh->GetName();
+    } else if (ResolvedSkeletalMesh) {
+      BaseName = ResolvedSkeletalMesh->GetName();
+    } else if (ResolvedClass) {
+      BaseName = ResolvedClass->GetName();
+      if (BaseName.EndsWith(TEXT("_C"))) {
+        BaseName.RemoveFromEnd(TEXT("_C"));
+      }
+    } else {
+      BaseName = TEXT("Actor");
+    }
+    Spawned->SetActorLabel(BaseName);
+  }
+  McpApplySpawnOrganisation(Spawned, Payload);
+
+  // actorPath, actorName and actorClass come from AddVerification below; an actor { id, name, path }
+  // object used to repeat them, with the path twice.
+  TSharedPtr<FJsonObject> Data = McpHandlerUtils::CreateResultObject();
+
+  // Provide the resolved class path useful for referencing
+  Data->SetStringField(TEXT("classPath"), ResolvedClass ? ResolvedClass->GetPathName() : ClassPath);
+
+  if (ResolvedStaticMesh)
+    Data->SetStringField(TEXT("meshPath"), ResolvedStaticMesh->GetPathName());
+  else if (ResolvedSkeletalMesh)
+    Data->SetStringField(TEXT("meshPath"), ResolvedSkeletalMesh->GetPathName());
+
+  Data->SetArrayField(TEXT("scale"), McpHandlerUtils::VectorToJsonArray(Spawned->GetActorScale3D()));
+  if (Transaction) {
+    Transaction->DescribeInto(Data);
+  }
+
+	McpHandlerUtils::AddVerification(Data, Spawned);
+	McpDescribeActorPlacement(RequestId, Spawned, Data);
+
+	SendAutomationResponse(Socket, RequestId, true, TEXT("Actor spawned"), Data);
+  return true;
+
+}

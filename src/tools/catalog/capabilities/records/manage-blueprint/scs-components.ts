@@ -1,0 +1,247 @@
+/**
+ * SCS (Simple Construction Script) component records.
+ *
+ * add_component is add_scs_component under another verb (one native
+ * implementation). The SCS actions construct component templates through SCS->CreateNode()/AddNode() so the
+ * template is owned by the SCS node, per the UE 5.7 safety rules in
+ * plugins/EngineWire/AGENTS.md.
+ *
+ * set_default applies property values to the CDO (Class Default Object) as a
+ * fallback when SCS-owned template properties are not the right target.
+ */
+import type { CapabilityRecordSource, JsonObject } from '../../model.js';
+import { BP_PLUGINS, buildRecord } from './helpers.js';
+import { P } from './properties.js';
+
+const FAMILY = 'scs';
+const DOMAIN = 'blueprint';
+
+// A part sunk 12 cm inside another part of the same actor answered these edits with a plain success: both parts
+// belong to one actor, so no placement check saw them. Every edit that adds, moves, re-meshes or
+// re-parents a part now measures it against the rest of the actor and names what sank.
+const PART_WARNINGS: JsonObject = {
+  type: 'array',
+  items: { type: 'object', additionalProperties: true, 'x-unreal-reflection-boundary': true },
+  'x-unreal-reflection-boundary': true,
+  description: 'Mesh parts this edit left sunk or buried, worst first (at most 8, each also a warnings[] sentence): componentName, kind (sunk: below the actor\'s ground, a Character\'s capsule bottom; buried: inside otherComponent), depth in cm, insideShare (0-1, how much of the part\'s surface is inside the other) and issue. Measured on the real triangles of a preview instance, not on bounds. A part tagged mcp.placement.ok (set ComponentTags to ["mcp.placement.ok"]) is a deliberate embed, such as an eyeball in its socket, and is left out; mcp.placement.ok:<component> accepts the embed in that one part only (a neck in its collar, a hand round a handle) and keeps every other check. control_actor.audit_placement with blueprintPath lists every part of the Blueprint.',
+};
+
+// Every SCS edit saves the Blueprint after its compile unless told not to (FSCSHandlers::bSaveScsChanges); only modify_scs
+// declared it, so a save: false on any other edit drew the receipt's "did not use it" warning while it was used.
+const SCS_SAVE = { type: 'boolean', description: 'Save the Blueprint after the edit (default true, so it survives an editor restart). false leaves it compiled in memory and unsaved: a trial change to put back, or to save later with control_editor save_all.' };
+
+export const SCS_COMPONENTS_RECORDS: readonly CapabilityRecordSource[] = [
+  buildRecord({
+    id: 'blueprint.add_component',
+    action: 'add_component',
+    family: FAMILY,
+    domain: DOMAIN,
+    // One native implementation serves add_component and add_scs_component
+    // (ScsAddComponent.cpp): both add an SCS-owned template and read the same
+    // fields (the class as componentClass or componentType, the parent as
+    // parentComponent or attachTo), so both declare them. A field one of them
+    // left out drew the receipt's "did not use it" warning for a call that used it.
+    summary: 'Add a component to a Blueprint (the same SCS template add_scs_component adds), optionally attached, placed, meshed and configured.',
+    whenToUse: ['A component must be added to a Blueprint under the add_component verb.'],
+    whenNotToUse: ['Several components or other SCS edits must be batched (use modify_scs).'],
+    inputProps: {
+      blueprintPath: P.blueprintPath, componentClass: P.componentClass, componentType: P.componentType, componentName: P.componentName, parentComponent: P.parentComponent, attachTo: P.attachTo, properties: P.properties,
+      meshPath: P.meshPath, materialPath: P.materialPath, location: P.location, rotation: P.rotation, scale: P.scale, save: SCS_SAVE,
+    },
+    // The class is read as componentClass, else componentType.
+    required: ['blueprintPath', 'componentName'], requiredOneOf: ['componentClass', 'componentType'],
+    outputProps: { componentName: P.componentName, partWarnings: PART_WARNINGS },
+    outputRequired: ['componentName'],
+    effect: 'write',
+    latency: 'interactive',
+    resources: 'low',
+    plugins: BP_PLUGINS,
+    exampleInput: { action: 'add_component', blueprintPath: '/Game/Blueprints/BP_Test', componentClass: '/Script/Engine.StaticMeshComponent', componentName: 'Mesh' },
+    exampleOutput: { success: true, componentName: 'Mesh' },
+  }),
+  buildRecord({
+    id: 'blueprint.add_scs_component',
+    action: 'add_scs_component',
+    family: FAMILY,
+    domain: DOMAIN,
+    topics: ['add component', 'attach component', 'static mesh component', 'mesh component', 'component template', 'add mesh to blueprint', 'add camera component', 'add component to blueprint', 'blueprint component'],
+    aliases: ['blueprint.add_component_to_blueprint'],
+    summary: 'Add a component named componentName of componentClass (a component class name such as StaticMeshComponent, or its /Script path) to a Blueprint, under parentComponent (attachTo): its own part, a parent Blueprint\'s, or the native root, by default the root. meshPath and materialPath give a mesh component its mesh and first material and are refused, adding nothing, when they do not load or the class shows none; location, rotation, scale and properties set the template, and a property that does not take fails the call. A taken name is refused. The Blueprint compiles and saves unless save is false (compiled, saved); the reply names the parent the component got, and mesh_applied and material_applied.',
+    whenToUse: ['A component template must be owned by the SCS tree for instanced property overrides.'],
+    whenNotToUse: ['Several components or other SCS edits must be batched (use modify_scs).', 'One placed actor needs the component, not every copy of the Blueprint (use control_actor.edit_component with edit=add).'],
+    inputProps: {
+      blueprintPath: P.blueprintPath, componentClass: P.componentClass, componentType: P.componentType, componentName: P.componentName, parentComponent: P.parentComponent, attachTo: P.attachTo, meshPath: P.meshPath, materialPath: P.materialPath,
+      location: P.location, rotation: P.rotation, scale: P.scale, properties: P.properties, save: SCS_SAVE,
+    },
+    // The class is read as componentClass, else componentType.
+    required: ['blueprintPath', 'componentName'], requiredOneOf: ['componentClass', 'componentType'],
+    outputProps: {
+      componentName: P.componentName,
+      componentClass: P.componentClass,
+      parent: P.parentComponent,
+      compiled: P.success,
+      saved: P.success,
+      scsVerification: { type: 'object', description: 'SCS node verification (exists, parent matches).', additionalProperties: true, 'x-unreal-reflection-boundary': true },
+      appliedProperties: { type: 'array', items: { type: 'string' }, description: 'The names in properties that took their value; one that did not apply fails the call and is named in the error.' },
+      partWarnings: PART_WARNINGS,
+    },
+    outputRequired: ['componentName'],
+    effect: 'write',
+    latency: 'interactive',
+    resources: 'low',
+    plugins: BP_PLUGINS,
+    exampleInput: { action: 'add_scs_component', blueprintPath: '/Game/Blueprints/BP_Test', componentClass: '/Script/Engine.StaticMeshComponent', componentName: 'SCS_Mesh', parentComponent: 'DefaultSceneRoot' },
+    exampleOutput: { success: true, componentName: 'SCS_Mesh', componentClass: '/Script/Engine.StaticMeshComponent', parent: 'DefaultSceneRoot', compiled: true, saved: true, scsVerification: { exists: true } },
+  }),
+  buildRecord({
+    id: 'blueprint.modify_scs',
+    action: 'modify_scs',
+    family: FAMILY,
+    domain: DOMAIN,
+    summary: 'Modify an existing SCS component template node (properties or transform).',
+    whenToUse: ['An SCS-owned component template needs property or transform updates.'],
+    whenNotToUse: ['Only a single property is needed (use set_scs_property).'],
+    // Either an operations batch, or one component described at the top level
+    // (componentName plus location, rotation, scale, meshPath, materialPath or
+    // properties), which the handler runs as a single modify op, or as an add
+    // when it also names its class (componentClass or componentType) and, under
+    // a parent, attachTo. The handler reads those three for that add, so they
+    // are declared here too: left out, the receipt warned that a call which
+    // used them "did not use it".
+    inputProps: {
+      componentClass: P.componentClass, componentType: P.componentType, attachTo: P.attachTo,
+      location: P.location, rotation: P.rotation, scale: P.scale, properties: P.properties, meshPath: P.meshPath, materialPath: P.materialPath,
+      compile: { type: 'boolean', description: 'Compile the Blueprint after the operations (default false; applyAndSave also compiles).' },
+      save: { type: 'boolean', description: 'Save the Blueprint after the operations (default true, so the edit survives an editor restart); applyAndSave overrides it.' },
+      blueprintPath: P.blueprintPath, componentName: P.componentName, operations: { type: 'array', description: 'SCS operations applied in order. Each entry is an object with `type` plus that operation\'s own fields; `type: "add_component"` also takes componentName, componentClass (or componentType), attachTo, transform, meshPath, materialPath and a nested properties bag; `type: "modify_component"` takes the same transform, meshPath, materialPath and properties for a component that already exists (its own, or a parent Blueprint\'s part, edited through this Blueprint\'s override of it); transform is {location:{x,y,z}, rotation:{pitch,yaw,roll}, scale:{x,y,z}} (or those three directly on the operation), and a part left out keeps its current value, while a transform that cannot be applied (a part that is not an {x,y,z} or {pitch,yaw,roll} object or a three-number array, or a component with no transform) is named in warnings, not skipped, as is a meshPath or materialPath that does not load or that its component cannot take; `type: "attach_component"` (or "reparent") moves componentName under parentComponent (or attachTo/newParent). A failed operation is named in warnings, and the call fails when none applied. Each result carries instancesUpdated (placed copies that took the change, 0 included) with up to three of their paths, and a hint, repeated in warnings, when a mesh or material lands on a hidden component.', items: { type: 'object', additionalProperties: true, 'x-unreal-reflection-boundary': true }, 'x-unreal-reflection-boundary': true }, applyAndSave: P.applyAndSave },
+    required: ['blueprintPath'],
+    requiredOneOf: ['operations', 'componentName'],
+    outputProps: { partWarnings: PART_WARNINGS },
+    effect: 'write',
+    latency: 'interactive',
+    resources: 'low',
+    plugins: BP_PLUGINS,
+    exampleInput: { action: 'modify_scs', blueprintPath: '/Game/Blueprints/BP_Test', operations: [{ type: 'add_component', componentName: 'SCS_Mesh', componentClass: 'StaticMeshComponent', properties: { bCastShadow: true } }], applyAndSave: true },
+  }),
+  buildRecord({
+    id: 'blueprint.get_scs',
+    action: 'get_scs',
+    family: FAMILY,
+    domain: DOMAIN,
+    topics: ['component hierarchy', 'component tree', 'inherited from parent class', 'attach parent names', 'which blueprints have a component', 'which blueprints use a component', 'find blueprints by component class', 'search blueprints for a component class'],
+    summary: 'List a Blueprint\'s own components (SCS nodes) with class, parent, root flag and relative transform, plus the components it inherits from parent Blueprints and its native parent class; or, given a folder (path) and componentClass, every Blueprint under it that has such a component, owned or inherited.',
+    whenToUse: [
+      'The SCS node hierarchy must be inspected before modifying components.',
+      'An inherited component must be named as an attach parent for add_scs_component.',
+      'Every Blueprint with a kind of component (a TextRender label, a light, an audio source) must be found in one call: path plus componentClass.',
+    ],
+    whenNotToUse: [
+      'A single component property is needed (use get or set_scs_property).',
+      'The assets that use a Blueprint are wanted (use asset.inspect_asset lookup=dependencies with referencers true).',
+    ],
+    inputProps: {
+      blueprintPath: P.blueprintPath,
+      path: { type: 'string', description: 'A folder (e.g. /Game/Blueprints) to scan instead of one Blueprint: each Blueprint under it, subfolders included, that has a component matching componentClass, its own or inherited, is listed under blueprints (at most 300 Blueprints are opened; truncated says when more exist).' },
+      componentClass: { type: 'string', description: 'Only components of this class or a subclass, by name part or /Script path: "TextRender" matches TextRenderComponent, "PointLight" PointLightComponent, "PrimitiveComponent" every primitive. Filters one Blueprint\'s listing too.' },
+    },
+    required: [],
+    requiredOneOf: ['blueprintPath', 'path'],
+    // inheritedComponents was invisible before: a Character Blueprint with no SCS
+    // nodes reported "Retrieved 0 SCS components" while owning several inherited
+    // ones, which are exactly the names add_scs_component wants as parentComponent.
+    outputProps: { components: { type: 'array', items: { type: 'object', additionalProperties: true, 'x-unreal-reflection-boundary': true }, description: 'SCS node descriptors with name, class, and parent.', 'x-unreal-reflection-boundary': true }, componentCount: { type: 'number', description: 'Number of SCS-owned components.' }, inheritedComponents: { type: 'array', items: { type: 'object', additionalProperties: true, 'x-unreal-reflection-boundary': true }, description: 'Components inherited from parent Blueprints (their own components) and from the native parent class (a Character\'s CollisionCylinder): componentName, componentType, isSceneComponent, ownerClass, and overridden when this Blueprint restyled the part. A scene component of either kind is valid as parentComponent or attachTo.', 'x-unreal-reflection-boundary': true }, inheritedComponentCount: { type: 'number', description: 'Number of inherited components.' }, blueprints: { type: 'array', items: { type: 'object', additionalProperties: true, 'x-unreal-reflection-boundary': true }, description: 'With path: each matching Blueprint as blueprintPath and components (componentName, componentType; inherited and ownerClass on one it inherits), in path order.', 'x-unreal-reflection-boundary': true }, blueprintCount: { type: 'number', description: 'With path: how many Blueprints matched.' }, scanned: { type: 'number', description: 'With path: how many Blueprints were opened.' }, truncated: { type: 'boolean', description: 'With path: true when the folder holds more than 300 Blueprints and the rest were not opened.' } },
+    effect: 'read',
+    latency: 'instant',
+    resources: 'low',
+    plugins: BP_PLUGINS,
+    exampleInput: { action: 'get_scs', blueprintPath: '/Game/Blueprints/BP_Test' },
+    exampleOutput: { success: true, components: [{ componentName: 'DefaultSceneRoot', componentType: 'SceneComponent' }], componentCount: 1, inheritedComponents: [{ componentName: 'CollisionCylinder', componentType: 'CapsuleComponent', isSceneComponent: true, ownerClass: 'Character' }], inheritedComponentCount: 1 },
+  }),
+  buildRecord({
+    id: 'blueprint.remove_scs_component',
+    action: 'remove_scs_component',
+    family: FAMILY,
+    domain: DOMAIN,
+    summary: 'Remove one or several SCS-owned component template nodes from the Blueprint. As the editor deletes, the children move up to the removed node\'s parent, and removing a root makes its first scene child the root (DefaultSceneRoot gives way to the mesh under it).',
+    whenToUse: ['An SCS component node and its template must be permanently removed.', 'A mesh under DefaultSceneRoot must become the root, as physics simulation and buoyancy need: remove DefaultSceneRoot.'],
+    whenNotToUse: ['The component should be detached but preserved (no detach action exists; remove is destructive).'],
+    inputProps: {
+      blueprintPath: P.blueprintPath, componentName: P.componentName,
+      componentNames: { type: 'array', items: { type: 'string' }, description: 'Several components to remove in one call, in place of componentName; each is reported, and the call fails naming any that were not removed.' },
+      save: SCS_SAVE,
+    },
+    required: ['blueprintPath'],
+    requiredOneOf: ['componentName', 'componentNames'],
+    outputProps: {
+      promotedChildren: { type: 'array', items: { type: 'string' }, description: 'The removed component\'s children, which moved up instead of going with it.' },
+      newRoot: { type: 'string', description: 'The root after a root was removed, read back after the compile.' },
+    },
+    effect: 'destructive',
+    behavior: { safeToRetry: false },
+    latency: 'interactive',
+    resources: 'low',
+    plugins: BP_PLUGINS,
+    exampleInput: { action: 'remove_scs_component', blueprintPath: '/Game/Blueprints/BP_Test', componentName: 'SCS_Mesh' },
+  }),
+  buildRecord({
+    id: 'blueprint.reparent_scs_component',
+    action: 'reparent_scs_component',
+    family: FAMILY,
+    domain: DOMAIN,
+    summary: 'Reparent an SCS component node to a new parent node in the SCS tree.',
+    whenToUse: ['An SCS component must move under a different parent node.'],
+    whenNotToUse: ['The component hierarchy does not need restructuring.'],
+    inputProps: { blueprintPath: P.blueprintPath, componentName: P.componentName, newParent: P.newParent, save: SCS_SAVE },
+    required: ['blueprintPath', 'componentName', 'newParent'],
+    outputProps: { partWarnings: PART_WARNINGS },
+    effect: 'write',
+    behavior: { idempotency: 'idempotent' },
+    latency: 'interactive',
+    resources: 'low',
+    plugins: BP_PLUGINS,
+    exampleInput: { action: 'reparent_scs_component', blueprintPath: '/Game/Blueprints/BP_Test', componentName: 'SCS_Mesh', newParent: 'CameraRoot' },
+  }),
+  buildRecord({
+    id: 'blueprint.set_scs_transform',
+    action: 'set_scs_transform',
+    family: FAMILY,
+    domain: DOMAIN,
+    summary: 'Set the transform (location, rotation, scale) of an SCS-owned component template. Placed actors that still had the old transform take the new one (instancesUpdated); an actor whose component was changed by hand keeps its own. instancesUpdated counts copies in loaded levels only: a copy in a level that is not loaded keeps the transform saved with it, so move it with control_actor.edit_component once its level is open.',
+    whenToUse: ['An SCS component template transform must be updated.'],
+    whenNotToUse: ['A non-SCS component transform is needed (use set_node_property or add_component).'],
+    inputProps: { blueprintPath: P.blueprintPath, componentName: P.componentName, location: P.location, rotation: P.rotation, scale: P.scale, save: SCS_SAVE },
+    required: ['blueprintPath', 'componentName'],
+    outputProps: { partWarnings: PART_WARNINGS },
+    effect: 'write',
+    behavior: { idempotency: 'idempotent', safeToRetry: true },
+    latency: 'instant',
+    resources: 'low',
+    plugins: BP_PLUGINS,
+    exampleInput: { action: 'set_scs_transform', blueprintPath: '/Game/Blueprints/BP_Test', componentName: 'SCS_Mesh' },
+  }),
+  buildRecord({
+    id: 'blueprint.set_scs_property',
+    action: 'set_scs_property',
+    family: FAMILY,
+    domain: DOMAIN,
+    summary: 'Set a single property on an SCS-owned component template; placed actors that still had the old value take the new one (instancesUpdated), one changed by hand keeps its own. For RelativeScale3D/RelativeLocation, note that a child inherits its parent\'s scale: Unreal multiplies parent and child scale COMPONENT-WISE in the child\'s own local axes, and rotation does NOT permute which axis each factor lands on. World size = ParentScale * ChildScale * MeshExtent per local axis, and world offset = ParentScale * RelativeLocation. Under a parent scaled non-uniformly, divide the offset you want by the parent scale on that axis.',
+    whenToUse: [
+      'One property on an SCS component template must be changed.',
+      'Collision of the template, for every placed copy: CollisionProfileName (a preset such as OverlapAllDynamic), CollisionEnabled, or CollisionResponses ({"Pawn": "Ignore"} lets a character walk through) go through the component setters, as does PhysMaterialOverride (a physical material path).',
+    ],
+    whenNotToUse: ['Multiple properties need batch updates (use modify_scs).'],
+    inputProps: { blueprintPath: P.blueprintPath, componentName: P.componentName, propertyName: P.propertyName, propertyValue: P.propertyValue, save: SCS_SAVE },
+    required: ['blueprintPath', 'componentName', 'propertyName', 'propertyValue'],
+    // SCSHandlersSetProperty re-reads the property after writing and returns it
+    // as verifiedValue, but only when the value exports to JSON, so it is
+    // declared optional (not required).
+    outputProps: { verifiedValue: P.propertyValue, partWarnings: PART_WARNINGS },
+    effect: 'write',
+    behavior: { idempotency: 'idempotent', safeToRetry: true },
+    latency: 'instant',
+    resources: 'low',
+    plugins: BP_PLUGINS,
+    exampleInput: { action: 'set_scs_property', blueprintPath: '/Game/Blueprints/BP_Test', componentName: 'SCS_Mesh', propertyName: 'bCastShadow', propertyValue: true },
+    exampleOutput: { success: true, message: 'SCS property set', verifiedValue: true },
+  }),
+];

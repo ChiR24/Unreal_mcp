@@ -1,0 +1,218 @@
+function getValueAtPath(source, pathExpression) {
+  if (!pathExpression || typeof pathExpression !== 'string') return undefined;
+  return pathExpression.split('.').reduce((current, part) => {
+    if (current === undefined || current === null) return undefined;
+    if (Array.isArray(current)) {
+      const index = Number.parseInt(part, 10);
+      return Number.isInteger(index) ? current[index] : undefined;
+    }
+    if (typeof current === 'object') {
+      return Object.prototype.hasOwnProperty.call(current, part) ? current[part] : undefined;
+    }
+    return undefined;
+  }, source);
+}
+
+// A success reply no longer repeats the raw handler result beside `data`, its projection, where a field the
+// contract does not name sits under data.details. A path written against `result` reads the projection then
+// (data, data.details, then the reply itself, which keeps success and message); a failure keeps its `result`.
+export function resolveResponsePath(source, pathExpression) {
+  const direct = getValueAtPath(source, pathExpression);
+  if (direct !== undefined || typeof pathExpression !== 'string') return direct;
+  const parts = pathExpression.split('.');
+  const at = parts.indexOf('result');
+  if (at < 0) return undefined;
+  const owner = at === 0 ? source : getValueAtPath(source, parts.slice(0, at).join('.'));
+  if (!owner || typeof owner !== 'object' || Object.prototype.hasOwnProperty.call(owner, 'result')) return undefined;
+  const rest = parts.slice(at + 1);
+  for (const candidate of [['data', ...rest], ['data', 'details', ...rest], rest]) {
+    const value = getValueAtPath(owner, candidate.join('.'));
+    if (value !== undefined) return value;
+  }
+  return undefined;
+}
+
+function matchesObjectSubset(candidate, expectedSubset) {
+  if (!candidate || typeof candidate !== 'object' || !expectedSubset || typeof expectedSubset !== 'object') return false;
+  return Object.entries(expectedSubset).every(([key, expectedValue]) => {
+    if (!Object.prototype.hasOwnProperty.call(candidate, key)) return false;
+    const actualValue = candidate[key];
+    if (expectedValue && typeof expectedValue === 'object' && !Array.isArray(expectedValue)) {
+      if ('length' in expectedValue && Array.isArray(actualValue)) return actualValue.length === expectedValue.length;
+      return matchesObjectSubset(actualValue, expectedValue);
+    }
+    return actualValue === expectedValue;
+  });
+}
+
+/** Operators evaluateAssertions actually honours. Anything else is a typo. */
+const ASSERTION_OPERATORS = new Set([
+  'equals', 'approximately', 'includes', 'notIncludes',
+  'length', 'minLength', 'includesObject', 'gte', 'exists'
+]);
+
+export function evaluateAssertions(testCase, response) {
+  if (!Array.isArray(testCase.assertions) || testCase.assertions.length === 0) return { passed: true };
+
+  for (const assertion of testCase.assertions) {
+    const label = assertion.label || assertion.path || 'assertion';
+
+    // An assertion that names no recognised operator used to match none of the
+    // checks below and fall through to `passed: true` -- so a typo, or an
+    // operator that was never implemented, produced an assertion that COULD NOT
+    // FAIL. Two `gte` assertions sat here in exactly that state. Refuse instead.
+    const operators = Object.keys(assertion).filter((key) => key !== 'path' && key !== 'label' && key !== 'tolerance');
+    const unknown = operators.filter((key) => !ASSERTION_OPERATORS.has(key));
+    if (unknown.length > 0) {
+      return { passed: false, reason: `${label}: unknown assertion operator(s) ${unknown.join(', ')}; supported: ${[...ASSERTION_OPERATORS].join(', ')}` };
+    }
+    if (operators.length === 0) {
+      return { passed: false, reason: `${label}: assertion declares no operator, so it can never fail` };
+    }
+
+    const actual = resolveResponsePath(response, assertion.path);
+
+    if (Object.prototype.hasOwnProperty.call(assertion, 'equals') && actual !== assertion.equals) {
+      return { passed: false, reason: `${label}: expected ${JSON.stringify(assertion.equals)}, got ${JSON.stringify(actual)}` };
+    }
+
+    if (Object.prototype.hasOwnProperty.call(assertion, 'approximately')) {
+      const expected = assertion.approximately;
+      const tolerance = assertion.tolerance ?? 1e-6;
+      const validNumbers =
+        typeof actual === 'number' &&
+        Number.isFinite(actual) &&
+        typeof expected === 'number' &&
+        Number.isFinite(expected) &&
+        typeof tolerance === 'number' &&
+        Number.isFinite(tolerance) &&
+        tolerance >= 0;
+      if (!validNumbers || Math.abs(actual - expected) > tolerance) {
+        return {
+          passed: false,
+          reason: `${label}: expected ${JSON.stringify(expected)} within ${JSON.stringify(tolerance)}, got ${JSON.stringify(actual)}`
+        };
+      }
+    }
+
+    // A string holds the needle as a fragment, an array of strings as one of its items (as notIncludes reads them).
+    if (Object.prototype.hasOwnProperty.call(assertion, 'includes')) {
+      const expected = assertion.includes;
+      if (
+        typeof expected !== 'string' ||
+        !(typeof actual === 'string' || Array.isArray(actual)) ||
+        !actual.includes(expected)
+      ) {
+        return {
+          passed: false,
+          reason: `${label}: expected ${JSON.stringify(actual)} to include ${JSON.stringify(expected)}`
+        };
+      }
+    }
+
+    if (Object.prototype.hasOwnProperty.call(assertion, 'notIncludes')) {
+      const expected = assertion.notIncludes;
+      const containsExpected =
+        typeof actual === 'string' && typeof expected === 'string'
+          ? actual.includes(expected)
+          : Array.isArray(actual) && typeof expected === 'string'
+            ? actual.includes(expected)
+            : undefined;
+
+      if (containsExpected === undefined) {
+        return {
+          passed: false,
+          reason: `${label}: expected an array or string and string needle, got ${typeof actual} and ${typeof expected}`
+        };
+      }
+
+      if (containsExpected) {
+        return {
+          passed: false,
+          reason: `${label}: expected ${JSON.stringify(actual)} not to include ${JSON.stringify(expected)}`
+        };
+      }
+    }
+
+    if (Object.prototype.hasOwnProperty.call(assertion, 'length') && (!Array.isArray(actual) || actual.length !== assertion.length)) {
+      return { passed: false, reason: `${label}: expected array length ${assertion.length}, got ${Array.isArray(actual) ? actual.length : typeof actual}` };
+    }
+
+    if (Object.prototype.hasOwnProperty.call(assertion, 'minLength') && (!Array.isArray(actual) || actual.length < assertion.minLength)) {
+      return { passed: false, reason: `${label}: expected array length at least ${assertion.minLength}, got ${Array.isArray(actual) ? actual.length : typeof actual}` };
+    }
+
+    // `gte` was already in use by two suites before it was implemented, which
+    // meant those assertions matched no operator and therefore always passed.
+    // It is the numeric counterpart of minLength: an array uses minLength, a
+    // count or size uses this.
+    if (Object.prototype.hasOwnProperty.call(assertion, 'gte')) {
+      if (typeof actual !== 'number' || !Number.isFinite(actual) || actual < assertion.gte) {
+        return { passed: false, reason: `${label}: expected a number >= ${assertion.gte}, got ${JSON.stringify(actual)}` };
+      }
+    }
+
+    // exists: true holds when the path resolves to a value, exists: false when it resolves to nothing.
+    if (Object.prototype.hasOwnProperty.call(assertion, 'exists') && (actual !== undefined) !== assertion.exists) {
+      return { passed: false, reason: `${label}: expected the path ${assertion.exists ? 'to hold a value' : 'to be absent'}, got ${JSON.stringify(actual)}` };
+    }
+
+    if (assertion.includesObject) {
+      if (!Array.isArray(actual) || !actual.some((entry) => matchesObjectSubset(entry, assertion.includesObject))) {
+        return { passed: false, reason: `${label}: no array item matched ${JSON.stringify(assertion.includesObject)}` };
+      }
+    }
+  }
+
+  return { passed: true };
+}
+
+export function selectCaptureValue(structuredContent, captureResult) {
+  const { fromField, selectField, where } = captureResult ?? {};
+  if (!fromField) return undefined;
+  let value = resolveResponsePath(structuredContent, fromField);
+
+  if (where) {
+    if (!Array.isArray(value) || typeof where.path !== 'string') return undefined;
+    value = value.find((entry) => {
+      const candidate = getValueAtPath(entry, where.path);
+      if (Object.prototype.hasOwnProperty.call(where, 'equals')) {
+        return candidate === where.equals;
+      }
+      return typeof candidate === 'string' &&
+        typeof where.includes === 'string' &&
+        candidate.includes(where.includes);
+    });
+  }
+
+  return selectField ? getValueAtPath(value, selectField) : value;
+}
+
+export function selectCaptureValues(structuredContent, captureResult) {
+  const captures = Array.isArray(captureResult)
+    ? captureResult
+    : [captureResult];
+  const values = [];
+
+  for (const capture of captures) {
+    const { key, fromField } = capture ?? {};
+    if (!key || !fromField) continue;
+    const value = selectCaptureValue(structuredContent, capture);
+    if (value !== undefined) {
+      values.push({ key, value });
+    }
+  }
+
+  return values;
+}
+
+export function withServerTimeout(callOptions, serverTimeoutMs) {
+  // Every call reaches here in the `unreal` gateway form; only execute carries options.
+  const args = { ...(callOptions.arguments ?? {}) };
+  if (args.operation !== 'execute') return { ...callOptions, arguments: args };
+  const options = args.options !== null && typeof args.options === 'object' && !Array.isArray(args.options)
+    ? { ...args.options }
+    : {};
+  if (!Object.prototype.hasOwnProperty.call(options, 'timeoutMs')) options.timeoutMs = serverTimeoutMs;
+  return { ...callOptions, arguments: { ...args, options } };
+}

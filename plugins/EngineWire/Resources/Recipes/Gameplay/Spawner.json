@@ -1,0 +1,82 @@
+{
+  "description": "A spawner: every SpawnInterval seconds, while fewer than MaxAlive of the actors it spawned are alive, it spawns SpawnClass at a random point up to SpawnRadius from itself across the ground (not up), counts it until it is destroyed, and reports it through OnSpawned. A spawned pawn set to be possessed by AI when spawned (the chase behaviour sets that) gets its controller.",
+  "tag": "Spawner",
+  "placeholders": {
+    "SpawnType": "The SpawnClass variable's type, Class: followed by the class path.",
+    "SpawnClass": "Class path of the actor to spawn.",
+    "Interval": "Seconds between spawns.",
+    "MaxAlive": "Most of its spawned actors alive at once.",
+    "Radius": "How far across from the spawner an actor may appear, in units."
+  },
+  "variables": [
+    { "variableName": "SpawnClass", "variableType": "{{SpawnType}}", "defaultValue": "{{SpawnClass}}", "category": "Spawner", "instanceEditable": true },
+    { "variableName": "SpawnInterval", "variableType": "Float", "defaultValue": "{{Interval}}", "category": "Spawner", "instanceEditable": true },
+    { "variableName": "MaxAlive", "variableType": "Int", "defaultValue": "{{MaxAlive}}", "category": "Spawner", "instanceEditable": true },
+    { "variableName": "SpawnRadius", "variableType": "Float", "defaultValue": "{{Radius}}", "category": "Spawner", "instanceEditable": true },
+    { "variableName": "AliveCount", "variableType": "Int", "defaultValue": 0, "category": "Spawner" }
+  ],
+  "dispatchers": [
+    { "name": "OnSpawned", "parameters": [{ "name": "Spawned", "type": "Object:/Script/Engine.Actor" }] }
+  ],
+  "customEvents": [
+    { "id": "spawnTick", "eventName": "SpawnTick" }
+  ],
+  "hooks": [
+    { "id": "spawnBegin", "event": "BeginPlay" }
+  ],
+  "eventGraph": [
+    { "edit": "create_node", "id": "beginSelf", "nodeType": "Self" },
+    { "edit": "create_node", "id": "beginEvery", "nodeType": "VariableGet", "memberName": "SpawnInterval" },
+    { "edit": "create_node", "id": "beginTimer", "nodeType": "CallFunction", "memberName": "K2_SetTimer", "memberClass": "/Script/Engine.KismetSystemLibrary", "pinDefaults": { "FunctionName": "SpawnTick", "bLooping": true } },
+    { "edit": "connect_pins", "from": "$beginSelf.self", "to": "$beginTimer.Object" },
+    { "edit": "connect_pins", "from": "$beginEvery.SpawnInterval", "to": "$beginTimer.Time" },
+    { "edit": "connect_pins", "from": "$spawnBegin.then", "to": "$beginTimer.execute" },
+
+    { "edit": "create_node", "id": "tickAlive", "nodeType": "VariableGet", "memberName": "AliveCount" },
+    { "edit": "create_node", "id": "tickMax", "nodeType": "VariableGet", "memberName": "MaxAlive" },
+    { "edit": "create_node", "id": "tickRoom", "nodeType": "CallFunction", "memberName": "Less_IntInt", "memberClass": "/Script/Engine.KismetMathLibrary" },
+    { "edit": "create_node", "id": "tickBranch", "nodeType": "Branch" },
+    { "edit": "create_node", "id": "tickWhere", "nodeType": "CallFunction", "memberName": "K2_GetActorLocation", "memberClass": "/Script/Engine.Actor" },
+    { "edit": "create_node", "id": "tickRadius", "nodeType": "VariableGet", "memberName": "SpawnRadius" },
+    { "edit": "create_node", "id": "tickSpread", "nodeType": "CallFunction", "memberName": "MakeVector", "memberClass": "/Script/Engine.KismetMathLibrary", "pinDefaults": { "Z": 0 } },
+    { "edit": "create_node", "id": "tickPoint", "nodeType": "CallFunction", "memberName": "RandomPointInBoundingBox", "memberClass": "/Script/Engine.KismetMathLibrary" },
+    { "edit": "create_node", "id": "tickFacing", "nodeType": "CallFunction", "memberName": "K2_GetActorRotation", "memberClass": "/Script/Engine.Actor" },
+    { "edit": "create_node", "id": "tickPlace", "nodeType": "CallFunction", "memberName": "MakeTransform", "memberClass": "/Script/Engine.KismetMathLibrary" },
+    { "edit": "create_node", "id": "tickClass", "nodeType": "VariableGet", "memberName": "SpawnClass" },
+    { "edit": "create_node", "id": "tickOwner", "nodeType": "Self" },
+    { "edit": "create_node", "id": "tickSpawn", "nodeType": "SpawnActorFromClass", "pinDefaults": { "CollisionHandlingOverride": "AdjustIfPossibleButAlwaysSpawn" } },
+    { "edit": "create_node", "id": "tickCount", "nodeType": "VariableGet", "memberName": "AliveCount" },
+    { "edit": "create_node", "id": "tickPlusOne", "nodeType": "CallFunction", "memberName": "Add_IntInt", "memberClass": "/Script/Engine.KismetMathLibrary", "pinDefaults": { "B": 1 } },
+    { "edit": "create_node", "id": "tickSetCount", "nodeType": "VariableSet", "memberName": "AliveCount" },
+    { "edit": "create_node", "id": "tickBind", "nodeType": "BindEvent", "memberName": "OnDestroyed", "memberClass": "/Script/Engine.Actor", "eventName": "OnSpawnedActorGone" },
+    { "edit": "create_node", "id": "tickNotify", "nodeType": "CallDelegate", "memberName": "OnSpawned" },
+    { "edit": "connect_pins", "from": "$tickAlive.AliveCount", "to": "$tickRoom.A" },
+    { "edit": "connect_pins", "from": "$tickMax.MaxAlive", "to": "$tickRoom.B" },
+    { "edit": "connect_pins", "from": "$tickRoom.ReturnValue", "to": "$tickBranch.Condition" },
+    { "edit": "connect_pins", "from": "$tickRadius.SpawnRadius", "to": "$tickSpread.X" },
+    { "edit": "connect_pins", "from": "$tickRadius.SpawnRadius", "to": "$tickSpread.Y" },
+    { "edit": "connect_pins", "from": "$tickWhere.ReturnValue", "to": "$tickPoint.Center" },
+    { "edit": "connect_pins", "from": "$tickSpread.ReturnValue", "to": "$tickPoint.HalfSize" },
+    { "edit": "connect_pins", "from": "$tickPoint.ReturnValue", "to": "$tickPlace.Location" },
+    { "edit": "connect_pins", "from": "$tickFacing.ReturnValue", "to": "$tickPlace.Rotation" },
+    { "edit": "connect_pins", "from": "$tickClass.SpawnClass", "to": "$tickSpawn.Class" },
+    { "edit": "connect_pins", "from": "$tickPlace.ReturnValue", "to": "$tickSpawn.SpawnTransform" },
+    { "edit": "connect_pins", "from": "$tickOwner.self", "to": "$tickSpawn.Owner" },
+    { "edit": "connect_pins", "from": "$tickCount.AliveCount", "to": "$tickPlusOne.A" },
+    { "edit": "connect_pins", "from": "$tickPlusOne.ReturnValue", "to": "$tickSetCount.AliveCount" },
+    { "edit": "connect_pins", "from": "$tickSpawn.ReturnValue", "to": "$tickBind.self" },
+    { "edit": "connect_pins", "from": "$tickSpawn.ReturnValue", "to": "$tickNotify.Spawned" },
+    { "edit": "connect_pins", "from": "$spawnTick.then", "to": "$tickBranch.execute" },
+    { "edit": "connect_pins", "from": "$tickBranch.then", "to": "$tickSpawn.execute" },
+    { "edit": "connect_pins", "from": "$tickSpawn.then", "to": "$tickSetCount.execute" },
+    { "edit": "connect_pins", "from": "$tickSetCount.then", "to": "$tickBind.execute" },
+    { "edit": "connect_pins", "from": "$tickBind.then", "to": "$tickNotify.execute" },
+
+    { "edit": "create_node", "id": "goneCount", "nodeType": "VariableGet", "memberName": "AliveCount" },
+    { "edit": "create_node", "id": "goneMinusOne", "nodeType": "CallFunction", "memberName": "Subtract_IntInt", "memberClass": "/Script/Engine.KismetMathLibrary", "pinDefaults": { "B": 1 } },
+    { "edit": "create_node", "id": "goneSet", "nodeType": "VariableSet", "memberName": "AliveCount" },
+    { "edit": "connect_pins", "from": "$goneCount.AliveCount", "to": "$goneMinusOne.A" },
+    { "edit": "connect_pins", "from": "$goneMinusOne.ReturnValue", "to": "$goneSet.AliveCount" },
+    { "edit": "connect_pins", "from": "$tickBind_event.then", "to": "$goneSet.execute" }
+  ]
+}

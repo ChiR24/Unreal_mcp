@@ -1,0 +1,74 @@
+{
+  "description": "A game over for the player, for a pawn with the Health behaviour: when the pawn dies (OnDied, bound at BeginPlay) while a local player controls it, that player's input to the pawn is turned off, the widget goes on the screen showing GameOverMessage, and with RestartDelay above 0 the current level opens again that many seconds later. The pawn stays when it dies (bDestroyOnDeath off), so the restart timer it holds survives.",
+  "tag": "GameOver",
+  "placeholders": {
+    "WidgetClass": "The game over widget's generated class path.",
+    "TextName": "The TextBlock in the widget that shows the message.",
+    "Message": "The text shown, such as GAME OVER.",
+    "RestartDelay": "Seconds before the level opens again; 0 never restarts it.",
+    "SelfClass": "The pawn Blueprint's own generated class path; it declares OnDied."
+  },
+  "variables": [
+    { "variableName": "GameOverMessage", "variableType": "String", "defaultValue": "{{Message}}", "category": "Game Over", "instanceEditable": true },
+    { "variableName": "RestartDelay", "variableType": "Float", "defaultValue": "{{RestartDelay}}", "category": "Game Over", "instanceEditable": true },
+    { "variableName": "bDestroyOnDeath", "variableType": "Bool", "defaultValue": false, "category": "Health" }
+  ],
+  "functions": [
+    {
+      "id": "goRestart",
+      "functionName": "RestartLevel",
+      "operations": [
+        { "edit": "create_node", "id": "goLevelName", "nodeType": "CallFunction", "memberName": "GetCurrentLevelName", "memberClass": "/Script/Engine.GameplayStatics", "pinDefaults": { "bRemovePrefixString": true } },
+        { "edit": "create_node", "id": "goOpen", "nodeType": "CallFunction", "memberName": "OpenLevel", "memberClass": "/Script/Engine.GameplayStatics" },
+        { "edit": "connect_pins", "from": "$goLevelName.ReturnValue", "to": "$goOpen.LevelName" },
+        { "edit": "connect_pins", "from": "$goRestart.then", "to": "$goLevelName.execute" },
+        { "edit": "connect_pins", "from": "$goLevelName.then", "to": "$goOpen.execute" }
+      ]
+    }
+  ],
+  "hooks": [
+    { "id": "goBegin", "event": "BeginPlay" }
+  ],
+  "eventGraph": [
+    { "edit": "create_node", "id": "goSelf", "nodeType": "Self" },
+    { "edit": "create_node", "id": "goBind", "nodeType": "BindEvent", "memberName": "OnDied", "memberClass": "{{SelfClass}}", "eventName": "OnDiedGameOver" },
+    { "edit": "create_node", "id": "goLocal", "nodeType": "CallFunction", "memberName": "IsLocallyControlled", "memberClass": "/Script/Engine.Pawn" },
+    { "edit": "create_node", "id": "goLocalBranch", "nodeType": "Branch" },
+    { "edit": "create_node", "id": "goController", "nodeType": "CallFunction", "memberName": "GetController", "memberClass": "/Script/Engine.Pawn" },
+    { "edit": "create_node", "id": "goPlayer", "nodeType": "Cast", "targetClass": "/Script/Engine.PlayerController" },
+    { "edit": "create_node", "id": "goStop", "nodeType": "CallFunction", "memberName": "DisableInput", "memberClass": "/Script/Engine.Actor" },
+    { "edit": "create_node", "id": "goCreate", "nodeType": "K2Node_CreateWidget", "targetClass": "{{WidgetClass}}" },
+    { "edit": "create_node", "id": "goShow", "nodeType": "CallFunction", "memberName": "AddToViewport", "memberClass": "/Script/UMG.UserWidget", "pinDefaults": { "ZOrder": 50 } },
+    { "edit": "create_node", "id": "goText", "nodeType": "VariableGet", "memberName": "{{TextName}}", "memberClass": "{{WidgetClass}}" },
+    { "edit": "create_node", "id": "goMessage", "nodeType": "VariableGet", "memberName": "GameOverMessage" },
+    { "edit": "create_node", "id": "goToText", "nodeType": "CallFunction", "memberName": "Conv_StringToText", "memberClass": "/Script/Engine.KismetTextLibrary" },
+    { "edit": "create_node", "id": "goSetText", "nodeType": "CallFunction", "memberName": "SetText", "memberClass": "/Script/UMG.TextBlock" },
+    { "edit": "create_node", "id": "goDelay", "nodeType": "VariableGet", "memberName": "RestartDelay" },
+    { "edit": "create_node", "id": "goRestartOn", "nodeType": "CallFunction", "memberName": "Greater_DoubleDouble", "memberClass": "/Script/Engine.KismetMathLibrary", "pinDefaults": { "B": 0 } },
+    { "edit": "create_node", "id": "goRestartBranch", "nodeType": "Branch" },
+    { "edit": "create_node", "id": "goTimer", "nodeType": "CallFunction", "memberName": "K2_SetTimer", "memberClass": "/Script/Engine.KismetSystemLibrary", "pinDefaults": { "FunctionName": "RestartLevel", "bLooping": false } },
+    { "edit": "connect_pins", "from": "$goSelf.self", "to": "$goBind.self" },
+    { "edit": "connect_pins", "from": "$goLocal.ReturnValue", "to": "$goLocalBranch.Condition" },
+    { "edit": "connect_pins", "from": "$goController.ReturnValue", "to": "$goPlayer.Object" },
+    { "edit": "connect_pins", "from": "$goPlayer.AsPlayer Controller", "to": "$goStop.PlayerController" },
+    { "edit": "connect_pins", "from": "$goPlayer.AsPlayer Controller", "to": "$goCreate.OwningPlayer" },
+    { "edit": "connect_pins", "from": "$goCreate.ReturnValue", "to": "$goShow.self" },
+    { "edit": "connect_pins", "from": "$goCreate.ReturnValue", "to": "$goText.self" },
+    { "edit": "connect_pins", "fromNodeId": "$goText", "fromPinName": "{{TextName}}", "toNodeId": "$goSetText", "toPinName": "self" },
+    { "edit": "connect_pins", "from": "$goMessage.GameOverMessage", "to": "$goToText.InString" },
+    { "edit": "connect_pins", "from": "$goToText.ReturnValue", "to": "$goSetText.InText" },
+    { "edit": "connect_pins", "from": "$goDelay.RestartDelay", "to": "$goRestartOn.A" },
+    { "edit": "connect_pins", "from": "$goRestartOn.ReturnValue", "to": "$goRestartBranch.Condition" },
+    { "edit": "connect_pins", "from": "$goSelf.self", "to": "$goTimer.Object" },
+    { "edit": "connect_pins", "from": "$goDelay.RestartDelay", "to": "$goTimer.Time" },
+    { "edit": "connect_pins", "from": "$goBegin.then", "to": "$goBind.execute" },
+    { "edit": "connect_pins", "from": "$goBind_event.then", "to": "$goLocalBranch.execute" },
+    { "edit": "connect_pins", "from": "$goLocalBranch.then", "to": "$goPlayer.execute" },
+    { "edit": "connect_pins", "from": "$goPlayer.then", "to": "$goStop.execute" },
+    { "edit": "connect_pins", "from": "$goStop.then", "to": "$goCreate.execute" },
+    { "edit": "connect_pins", "from": "$goCreate.then", "to": "$goShow.execute" },
+    { "edit": "connect_pins", "from": "$goShow.then", "to": "$goSetText.execute" },
+    { "edit": "connect_pins", "from": "$goSetText.then", "to": "$goRestartBranch.execute" },
+    { "edit": "connect_pins", "from": "$goRestartBranch.then", "to": "$goTimer.execute" }
+  ]
+}

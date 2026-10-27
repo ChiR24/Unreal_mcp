@@ -1,0 +1,91 @@
+#pragma once
+
+#include "Containers/Ticker.h"
+#include "CoreMinimal.h"
+#include "Templates/SharedPointer.h"
+#include "UObject/WeakObjectPtrTemplates.h"
+
+class FMcpBridgeWebSocket;
+class FJsonObject;
+class UMoviePipelineExecutorBase;
+class UMoviePipelineExecutorJob;
+class UMoviePipelineQueue;
+class UEngineWireSubsystem;
+struct FMoviePipelineOutputData;
+
+namespace McpSequenceMovieRender {
+
+struct FRenderFileSnapshot {
+  int64 Size = -1;
+  FDateTime Modified;
+};
+
+struct FRenderWaitState {
+  bool bCompleted = false;
+  bool bHadFatalError = false;
+  bool bOwnsRenderStart = false;
+  bool bTimedOut = false;
+  bool bCancellationRequested = false;
+  bool bCancellationDispatched = false;
+  bool bCancellationDeadlineExpired = false;
+  bool bClientDisconnected = false;
+  bool bOutputPathInvalidated = false;
+  double CancellationDeadlineSeconds = 0.0;
+  int32 FatalErrorCount = 0;
+  FString LastFatalError;
+  FString ExpectedJobName;
+  FString ExpectedSequencePath;
+  FString ExpectedFileNameFormat;
+  FString ExpectedOutputDirectory;
+  FString OutputPathValidationError;
+  TMap<FString, FRenderFileSnapshot> OutputFilesBeforeStart;
+  TSet<FString> ReportedOutputFiles;
+  TSet<FString> ReportedRenderPasses;
+  FDelegateHandle JobFinishedHandle;
+  FDelegateHandle FinishedHandle;
+  FDelegateHandle ErrorHandle;
+  FTSTicker::FDelegateHandle StartCheckHandle;
+  FTSTicker::FDelegateHandle TimeoutHandle;
+  FTSTicker::FDelegateHandle CancellationHandle;
+  FTSTicker::FDelegateHandle OutputPathCheckHandle;
+  // Enabled flags onlyJob overrode for this render, restored by the teardown.
+  TArray<TPair<TWeakObjectPtr<UMoviePipelineExecutorJob>, bool>> OnlyJobPreviousEnabled;
+};
+
+bool TryAcquireRenderStartOwnership(UMoviePipelineExecutorBase *Executor,
+                                    TSharedRef<FRenderWaitState> State);
+bool RequestRenderCancellation(UMoviePipelineExecutorBase *Executor);
+void DiscardPreparedRenderStart(UMoviePipelineExecutorBase *Executor,
+                                TSharedRef<FRenderWaitState> State);
+// Puts back the enabled flags onlyJob overrode for one render, then empties
+// the list so a second call is a no-op.
+void RestoreJobEnabledStates(
+    TArray<TPair<TWeakObjectPtr<UMoviePipelineExecutorJob>, bool>> &Previous);
+void CancelStartRender(UMoviePipelineExecutorBase *Executor,
+                       TSharedRef<FRenderWaitState> State);
+void BeginTimedOutRenderCancellation(
+    TSharedRef<FRenderWaitState> State,
+    TWeakObjectPtr<UEngineWireSubsystem> WeakSubsystem,
+    TWeakObjectPtr<UMoviePipelineExecutorBase> WeakExecutor,
+    TWeakObjectPtr<UMoviePipelineExecutorJob> WeakJob,
+    TWeakObjectPtr<UMoviePipelineQueue> WeakQueue, FString RequestId,
+    TSharedPtr<FMcpBridgeWebSocket> Socket);
+bool CaptureRenderOutputSnapshot(UMoviePipelineExecutorJob *Job,
+                                 TSharedRef<FRenderWaitState> State,
+                                 FString &OutMessage, FString &OutCode);
+void CaptureRenderOutputData(const FMoviePipelineOutputData &OutputData,
+                             TSharedRef<FRenderWaitState> State);
+// Writes the output-proof fields; returns the proven file count, or INDEX_NONE when the scan limit refused.
+int32 AppendRenderOutputProof(UMoviePipelineExecutorJob *Job,
+                              const FRenderWaitState &State,
+                              TSharedPtr<FJsonObject> Result);
+
+void SendStartRenderCompletion(
+    TSharedRef<FRenderWaitState> State,
+    TWeakObjectPtr<UEngineWireSubsystem> WeakSubsystem,
+    TWeakObjectPtr<UMoviePipelineExecutorBase> WeakExecutor,
+    TWeakObjectPtr<UMoviePipelineExecutorJob> WeakJob,
+    TWeakObjectPtr<UMoviePipelineQueue> WeakQueue, FString RequestId,
+    TSharedPtr<FMcpBridgeWebSocket> Socket, bool bSuccess, bool bTimedOut);
+
+}

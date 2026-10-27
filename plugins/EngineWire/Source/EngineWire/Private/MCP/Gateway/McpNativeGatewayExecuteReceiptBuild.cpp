@@ -1,0 +1,201 @@
+// McpNativeGatewayExecuteReceiptBuild.cpp — see header.
+
+#include "MCP/Gateway/McpNativeGatewayExecuteReceiptBuild.h"
+#include "MCP/Execute/McpNativeGatewayValidation.h"
+#include "MCP/Execute/McpNativeReceiptRedaction.h"
+#include "MCP/Execute/McpNativeGatewayCanonicalRecords.h"
+#include "MCP/Gateway/McpNativeGatewayCapabilityStore.h"
+#include "MCP/Gateway/McpNativeGatewayGuidance.h"
+
+namespace
+{
+// A refusal the client can act on names the capability's own parameters, not
+// paging it may not have, and hands back an executable call.
+TSharedPtr<FJsonObject> DescribeGuidance(const FString& CapabilityId)
+{
+	const FMcpCapabilityRecord* Record = FMcpCanonicalRecordIndex::Get().FindById(CapabilityId);
+	if (Record == nullptr)
+	{
+		return nullptr;
+	}
+	return GatewaySchemaGuidance(Record->Parent, McpCapabilityPublicAction(*Record), FString());
+}
+
+// RESULT_TOO_LARGE names the capability's own narrowing parameters, as the
+// TypeScript gateway's narrowingGuidance does. The native refusal only pointed
+// at describe, so the same oversized call was simply sent again.
+TSharedPtr<FJsonObject> NarrowingGuidance(const FString& CapabilityId)
+{
+	TSharedPtr<FJsonObject> Guidance = DescribeGuidance(CapabilityId);
+	const FMcpCapabilityRecord* Record = FMcpCanonicalRecordIndex::Get().FindById(CapabilityId);
+	const TSharedPtr<FJsonObject>* Properties = nullptr;
+	if (!Guidance.IsValid() || Record == nullptr || !Record->InputSchema.IsValid() ||
+		!Record->InputSchema->TryGetObjectField(TEXT("properties"), Properties) || Properties == nullptr)
+	{
+		return Guidance;
+	}
+	// Mirrors NARROWING_PARAM in src/server/gateway/gateway-execute-dispatch.ts.
+	static const TCHAR* const NarrowingWords[] = {
+		TEXT("summary"), TEXT("filter"), TEXT("name"), TEXT("path"), TEXT("kind"), TEXT("type"), TEXT("limit"),
+		TEXT("offset"), TEXT("page"), TEXT("cursor"), TEXT("count"), TEXT("max"), TEXT("top"), TEXT("depth")};
+	TArray<TSharedPtr<FJsonValue>> Suggestions;
+	for (const TPair<FString, TSharedPtr<FJsonValue>>& Pair : (*Properties)->Values)
+	{
+		const FString Lower = Pair.Key.ToLower();
+		for (const TCHAR* Word : NarrowingWords)
+		{
+			if (Lower.Contains(Word))
+			{
+				Suggestions.Add(MakeShared<FJsonValueString>(FString::Printf(TEXT("narrow with '%s'"), *Pair.Key)));
+				break;
+			}
+		}
+		if (Suggestions.Num() >= 6)
+		{
+			break;
+		}
+	}
+	if (Suggestions.Num() > 0)
+	{
+		Guidance->SetArrayField(TEXT("suggestions"), Suggestions);
+	}
+	return Guidance;
+}
+}
+
+// A gateway execute call answers with a semantic receipt: the handler result
+// is checked against the capability output schema first, so a schema violation
+// is reported as an error instead of being returned as a success.
+TSharedPtr<FJsonObject> McpBuildGatewayExecuteReceipt(
+	const FString& CapabilityId, const TSharedPtr<FJsonObject>& OutputSchema,
+	const FMcpReceiptContext& Context, bool bSuccess, const FString& Message,
+	const TSharedPtr<FJsonObject>& Result, const FString& ErrorCode)
+{
+	if (!bSuccess)
+	{
+		FMcpSemanticError Error;
+		if (ErrorCode == TEXT("NOT_CONNECTED"))
+		{
+			Error = McpDispatchError(ErrorCode, TEXT("NOT_CONNECTED"), Message, true);
+		}
+		else if (ErrorCode == TEXT("NOT_AVAILABLE") || ErrorCode == TEXT("AUTOMATION_QUEUE_FULL")
+			|| ErrorCode == TEXT("INVALID_SESSION"))
+		{
+			Error = McpDispatchError(ErrorCode, TEXT("DISPATCH_ERROR"), Message, true);
+		}
+			else
+			{
+				Error = McpUnrealExecutionError(Message, Result);
+				if (!ErrorCode.IsEmpty())
+				{
+					Error.GatewayCode = ErrorCode;
+					Error.HandlerCode = ErrorCode;
+				}
+			}
+		return McpBuildErrorReceipt(CapabilityId, Error, Context);
+	}
+
+	// Project the handler result to the capability's declared output fields
+	// before validating and publishing it, mirroring the TypeScript gateway
+	// (projectCanonicalOutput). This keeps undeclared native transport and
+	// verification fields (compiled, saved, scsVerification, assetPath, ...) from
+	// turning a correct success payload into OUTPUT_SCHEMA_VIOLATION. The native
+	// completion carries the success verdict separately from the payload (the
+	// WebSocket frame the TS gateway projects embeds it), so it is reunited
+	// first; the projected output is what is both validated and published.
+	// The 100k budget exists to stop an unbounded listing from flooding a client, and
+	// every capability that can page or filter keeps it. An image can do neither: it is
+	// one indivisible base64 string, so the cap turned a working capture (a screenshot, a
+	// widget preview) into RESULT_TOO_LARGE with advice ("retry with pagination") that
+	// cannot be followed. The budget follows the reply's shape, not the capability that
+	// sent it: a top-level imageBase64 string of at most 6000000 characters adds its own
+	// length to the flat 100000. The rest of the reply is still held to 100k, and an image
+	// past its own ceiling is refused. Mirrors resultCharBudget() in
+	// src/server/gateway/gateway-execute-dispatch.ts.
+	int32 ResultCharBudget = 100000;
+	FString ImageBase64;
+	if (Result.IsValid() && Result->TryGetStringField(TEXT("imageBase64"), ImageBase64) && ImageBase64.Len() <= 6000000)
+	{
+		ResultCharBudget += ImageBase64.Len();
+	}
+
+	int64 SerializedChars = 0;
+	TSharedPtr<FJsonObject> Published = Result;
+	TSharedPtr<FJsonObject> PageBlock;
+	if (McpSerializedResultExceeds(Result, ResultCharBudget, &SerializedChars))
+	{
+		// One top-level array that carries the size goes out a page at a time instead (McpNativeResultPages.cpp); a
+		// payload reporting a failure is never paged.
+		bool bPayloadOk = true;
+		Result->TryGetBoolField(TEXT("success"), bPayloadOk);
+		FMcpResultPage Paged;
+		if (!bPayloadOk || !Context.PageOwner.IsValid() || !McpFirstResultPage(Result, ResultCharBudget, *Context.PageOwner, Paged))
+		{
+			FMcpSemanticError TooLarge = McpOutputError(TEXT("RESULT_TOO_LARGE"),
+				FString::Printf(TEXT("Result exceeded the gateway safety limit (%lld chars). Narrow the request with one of this capability's own filter parameters, then retry."), SerializedChars));
+			TooLarge.bHasResultChars = true;
+			TooLarge.ResultChars = SerializedChars;
+			return McpBuildErrorReceipt(CapabilityId, TooLarge, Context, NarrowingGuidance(CapabilityId));
+		}
+		Published = Paged.Result;
+		PageBlock = Paged.Page;
+	}
+
+	TSharedPtr<FJsonObject> WithVerdict = MakeShared<FJsonObject>();
+	if (Published.IsValid())
+	{
+		WithVerdict->Values = Published->Values;
+	}
+	// A handler that answers success:false inside its payload has failed even
+	// when the completion frame said otherwise; surface it as an error like the
+	// TypeScript gateway does instead of a "success" wrapping a failure
+	// (dogfood #188/#189).
+	bool bPayloadSuccess = true;
+	if (WithVerdict->TryGetBoolField(TEXT("success"), bPayloadSuccess) && !bPayloadSuccess)
+	{
+		FString PayloadMessage;
+		if (!WithVerdict->TryGetStringField(TEXT("error"), PayloadMessage) || PayloadMessage.IsEmpty())
+		{
+			WithVerdict->TryGetStringField(TEXT("message"), PayloadMessage);
+		}
+		if (PayloadMessage.IsEmpty())
+		{
+			PayloadMessage = Message.IsEmpty() ? TEXT("Unreal reported a failed execution.") : Message;
+		}
+		FString PayloadCode;
+		WithVerdict->TryGetStringField(TEXT("errorCode"), PayloadCode);
+			FMcpSemanticError PayloadError = McpUnrealExecutionError(PayloadMessage, Result);
+			if (!PayloadCode.IsEmpty())
+			{
+				PayloadError.GatewayCode = PayloadCode;
+				PayloadError.HandlerCode = PayloadCode;
+			}
+			return McpBuildErrorReceipt(CapabilityId, PayloadError, Context);
+	}
+	if (!WithVerdict->HasField(TEXT("success")))
+	{
+		WithVerdict->SetBoolField(TEXT("success"), true);
+	}
+	// `message` is carried beside the payload on a native completion but INSIDE
+	// it on the WebSocket frame the TS gateway projects, so reuniting only
+	// `success` dropped a field the output schema declares and left the two
+	// surfaces publishing different `data` for the same call.
+	if (!Message.IsEmpty() && !WithVerdict->HasField(TEXT("message")))
+	{
+		WithVerdict->SetStringField(TEXT("message"), Message);
+	}
+	const TSharedPtr<FJsonObject> Canonical =
+		McpProjectCanonicalOutput(WithVerdict, OutputSchema);
+	const TSharedPtr<FJsonObject> OutputError = ValidateGatewayExecuteOutput(
+		CapabilityId, OutputSchema, Canonical, Published, Context);
+	if (OutputError.IsValid())
+	{
+		return OutputError;
+	}
+	const TSharedPtr<FJsonObject> Receipt = McpBuildSuccessReceipt(CapabilityId, Canonical, Context, Published, Message);
+	if (PageBlock.IsValid())
+	{
+		Receipt->SetObjectField(TEXT("page"), PageBlock);
+	}
+	return Receipt;
+}

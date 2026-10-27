@@ -1,0 +1,214 @@
+#include "Transport/WebSocket/McpBridgeWebSocket.h"
+
+#include "EngineWireSettings.h"
+#include "EngineWireSubsystem.h"
+#include "Transport/WebSocket/McpBridgeWebSocketPrivate.h"
+
+#include "HAL/PlatformProcess.h"
+#include "IPAddress.h"
+#include "Misc/ScopeLock.h"
+#include "Misc/ScopeExit.h"
+#include "SocketSubsystem.h"
+#include "Sockets.h"
+
+using namespace McpBridgeWebSocket;
+
+uint32 FMcpBridgeWebSocket::RunServer() {
+  const bool bIsIpv6Host = ListenHost.Contains(TEXT(":"));
+
+  ISocketSubsystem *SocketSubsystem =
+      ISocketSubsystem::Get(PLATFORM_SOCKETSUBSYSTEM);
+  UE_LOG(LogEngineWireSubsystem, Log,
+         TEXT("FMcpBridgeWebSocket::RunServer begin (host=%s, port=%d, IPv6=%s)"),
+         *ListenHost, Port, bIsIpv6Host ? TEXT("true") : TEXT("false"));
+
+  // Logs What with the socket error and tells the game thread; RunServer then returns 0.
+  const auto Fail = [this, SocketSubsystem](const TCHAR *What) -> uint32 {
+    const FString ErrorMessage = DescribeSocketError(SocketSubsystem, What);
+    UE_LOG(LogEngineWireSubsystem, Error, TEXT("%s"), *ErrorMessage);
+    DispatchOnGameThread([WeakThis = AsWeak(), ErrorMessage] {
+      if (TSharedPtr<FMcpBridgeWebSocket> Pinned = WeakThis.Pin()) {
+        Pinned->ConnectionErrorDelegate.Broadcast(ErrorMessage);
+      }
+    });
+    return 0;
+  };
+  // (Re)creates the blocking, reuse-addr listen socket for a family (NAME_None = IPv4).
+  const auto OpenListenSocket = [this, SocketSubsystem](const FName Protocol) {
+    if (ListenSocket) {
+      SocketSubsystem->DestroySocket(ListenSocket);
+    }
+    ListenSocket = SocketSubsystem->CreateSocket(
+        NAME_Stream, TEXT("EngineWireListenSocket"), Protocol);
+    if (ListenSocket) {
+      ListenSocket->SetReuseAddr(true);
+      ListenSocket->SetNonBlocking(false);
+    }
+    return ListenSocket != nullptr;
+  };
+
+  if (!OpenListenSocket(bIsIpv6Host ? FName(TEXT("IPv6")) : FName())) {
+    return Fail(TEXT("Failed to create listen socket"));
+  }
+  ON_SCOPE_EXIT { DestroyListenSocket(); };
+  UE_LOG(LogEngineWireSubsystem, Log, TEXT("Listen socket created."));
+
+  TSharedRef<FInternetAddr> ListenAddr = SocketSubsystem->CreateInternetAddr();
+  bool bResolvedHost = false;
+
+  FString HostToBind = ListenHost.TrimStartAndEnd();
+  if (HostToBind.IsEmpty()) {
+    HostToBind = TEXT("127.0.0.1");
+  }
+
+  if (HostToBind.Equals(TEXT("localhost"), ESearchCase::IgnoreCase)) {
+    HostToBind = TEXT("127.0.0.1");
+  }
+
+  const bool bIsLoopback =
+      HostToBind.Equals(TEXT("127.0.0.1"), ESearchCase::IgnoreCase) ||
+      HostToBind.Equals(TEXT("::1"), ESearchCase::IgnoreCase);
+
+  const UEngineWireSettings *Settings =
+      GetDefault<UEngineWireSettings>();
+  const bool bAllowNonLoopback = Settings ? Settings->bAllowNonLoopback : false;
+
+  if (bIsLoopback) {
+    bool bIsValidIp = false;
+    ListenAddr->SetIp(*HostToBind, bIsValidIp);
+    bResolvedHost = bIsValidIp;
+
+    if (!bResolvedHost && HostToBind.Equals(TEXT("::1"), ESearchCase::IgnoreCase)) {
+      UE_LOG(LogEngineWireSubsystem, Warning,
+             TEXT("IPv6 loopback '::1' not supported on this system. Falling back to 127.0.0.1."));
+
+      if (!OpenListenSocket(FName())) {
+        return Fail(TEXT("Failed to re-create IPv4 socket for fallback"));
+      }
+
+      bool bFallbackIsValidIp = false;
+      ListenAddr->SetIp(TEXT("127.0.0.1"), bFallbackIsValidIp);
+      bResolvedHost = bFallbackIsValidIp;
+    }
+  } else if (bAllowNonLoopback) {
+    // Fail-closed LAN/token coupling, mirroring the native MCP transport. A
+    // non-loopback WebSocket bind exposes the bridge to the local network. The
+    // default-allow loopback posture means a LAN bind without capability-token
+    // auth would let any network client call any tool unauthenticated, so refuse
+    // to start the listener unless the token is required. There is NO
+    // unauthenticated loopback fallback for this path: the operator must enable
+    // Require Capability Token (or keep the host loopback).
+    if (!Settings || !Settings->bRequireCapabilityToken) {
+      UE_LOG(LogEngineWireSubsystem, Error,
+             TEXT("SECURITY: refusing to bind WebSocket bridge to non-loopback '%s' without Require Capability Token; enable the capability token or keep the host loopback"),
+             *HostToBind);
+      // Fail-closed: tear down the listen socket before returning; it is
+      // idempotent, so the ON_SCOPE_EXIT guard stays a safe backstop.
+      DestroyListenSocket();
+      return 0;
+    }
+
+    UE_LOG(LogEngineWireSubsystem, Warning,
+           TEXT("SECURITY: Binding to non-loopback address '%s' requires capability token. The automation bridge is exposed to your local network."),
+           *HostToBind);
+
+    bool bIsValidIp = false;
+    ListenAddr->SetIp(*HostToBind, bIsValidIp);
+    bResolvedHost = bIsValidIp;
+
+    if (!bResolvedHost) {
+      UE_LOG(LogEngineWireSubsystem, Log,
+             TEXT("'%s' is not a valid IP address. Attempting DNS resolution..."),
+             *HostToBind);
+
+      FAddressInfoResult AddrInfoResult = SocketSubsystem->GetAddressInfo(
+          *HostToBind, nullptr, EAddressInfoFlags::Default, NAME_None,
+          ESocketType::SOCKTYPE_Streaming);
+
+      if (AddrInfoResult.ReturnCode == SE_NO_ERROR &&
+          AddrInfoResult.Results.Num() > 0) {
+        ListenAddr = AddrInfoResult.Results[0].Address;
+        bResolvedHost = true;
+        UE_LOG(LogEngineWireSubsystem, Log,
+               TEXT("Successfully resolved '%s' to address '%s'."), *HostToBind,
+               *ListenAddr->ToString(true));
+
+        const FName ProtocolType = ListenAddr->GetProtocolType();
+        const bool bResolvedIsIpv6 = (ProtocolType == FName(TEXT("IPv6")));
+        if (bResolvedIsIpv6 != bIsIpv6Host) {
+          UE_LOG(LogEngineWireSubsystem, Warning,
+                 TEXT("DNS resolved to %s but socket is %s. Recreating socket..."),
+                 bResolvedIsIpv6 ? TEXT("IPv6") : TEXT("IPv4"),
+                 bIsIpv6Host ? TEXT("IPv6") : TEXT("IPv4"));
+
+          if (!OpenListenSocket(bResolvedIsIpv6 ? FName(TEXT("IPv6")) : FName())) {
+            return Fail(TEXT("Failed to re-create socket for resolved address family"));
+          }
+        }
+      } else {
+        UE_LOG(LogEngineWireSubsystem, Error,
+               TEXT("Failed to resolve hostname '%s'. Falling back to 127.0.0.1."),
+               *HostToBind);
+        bool bFallbackIsValidIp = false;
+        ListenAddr->SetIp(TEXT("127.0.0.1"), bFallbackIsValidIp);
+        bResolvedHost = bFallbackIsValidIp;
+      }
+    }
+  } else {
+    UE_LOG(LogEngineWireSubsystem, Warning,
+           TEXT("ListenHost '%s' is not a loopback address and bAllowNonLoopback is false. Falling back to 127.0.0.1. Enable 'Allow Non Loop Back' in Project Settings to use LAN addresses."),
+           *HostToBind);
+
+    if (bIsIpv6Host && !OpenListenSocket(FName())) {
+      return Fail(TEXT("Failed to re-create IPv4 socket for fallback"));
+    }
+
+    bool bFallbackIsValidIp = false;
+    ListenAddr->SetIp(TEXT("127.0.0.1"), bFallbackIsValidIp);
+    bResolvedHost = bFallbackIsValidIp;
+  }
+
+  ListenAddr->SetPort(Port);
+
+  if (!ListenSocket->Bind(*ListenAddr)) {
+    return Fail(TEXT("Failed to bind listen socket"));
+  }
+  UE_LOG(LogEngineWireSubsystem, Log, TEXT("Listen socket bound to %s."),
+         *ListenAddr->ToString(false));
+
+  if (!ListenSocket->Listen(ListenBacklog > 0 ? ListenBacklog : 10)) {
+    return Fail(TEXT("Failed to listen on socket"));
+  }
+
+  bListening = true;
+  const FString BoundAddress = ListenAddr->ToString(false);
+  UE_LOG(LogEngineWireSubsystem, Log,
+         TEXT("EngineWire listening on %s"), *BoundAddress);
+  DispatchOnGameThread([WeakThis = AsWeak(), BoundAddress] {
+    if (TSharedPtr<FMcpBridgeWebSocket> Pinned = WeakThis.Pin()) {
+      Pinned->ConnectedDelegate.Broadcast(Pinned);
+    }
+  });
+
+  while (!bStopping && ListenSocket) {
+    FSocket *ClientSocket =
+        ListenSocket->Accept(TEXT("EngineWireClient"));
+
+    if (bStopping || !ListenSocket) {
+      if (ClientSocket) {
+        ClientSocket->Close();
+        SocketSubsystem->DestroySocket(ClientSocket);
+      }
+      break;
+    }
+
+    if (ClientSocket) {
+      HandleAcceptedClient(ClientSocket);
+    } else {
+      FPlatformProcess::Sleep(AcceptSleepSeconds > 0.0f ? AcceptSleepSeconds
+                                                        : 0.01f);
+    }
+  }
+
+  return 0;
+}

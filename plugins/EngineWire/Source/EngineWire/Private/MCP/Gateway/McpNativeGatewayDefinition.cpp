@@ -1,0 +1,112 @@
+// McpNativeGatewayDefinition.cpp — static 'unreal' gateway tool definition
+
+#include "MCP/Gateway/McpNativeGatewayDefinition.h"
+#include "MCP/Registry/McpSchemaBuilder.h"
+#include "MCP/Protocol/McpJsonRpc.h"
+
+TSharedPtr<FJsonObject> BuildUnrealGatewayToolDefinition()
+{
+	// Field for field the TypeScript unrealGatewayToolDefinition.inputSchema: unreal-gateway-guidance-contract.test.ts
+	// rebuilds this chain and diffs the two, and the consent nonce is their one difference. Closed at the gateway level
+	// and for consent and options (execute refuses any other option key as UNSUPPORTED_OPTION anyway); params stays
+	// open because its keys are per-action.
+	auto InputSchema = FMcpSchemaBuilder()
+		.StringEnum(TEXT("operation"),
+			{ TEXT("search"), TEXT("describe"), TEXT("execute"), TEXT("configure") },
+			TEXT("search finds capabilities by plain words. describe returns one capability's exact contract, "
+				"or browses one level when given no selector. execute runs one validated action. "
+				"configure enables or disables internal tool groups."))
+		.String(TEXT("query"), TEXT("2-4 plain words naming the verb and the object, e.g. 'spawn actor', 'add variable blueprint', 'save level'. Matched against action names, topics, family, domain and summary; full sentences and filler words rank worse."))
+		// Read by describe and execute; undeclared here, the ID every search row and nextCall carries was no legal field.
+		.String(TEXT("capability"), TEXT("Exact canonical capability id (or declared alias) copied from a search row or describe response, e.g. blueprint.create. Preferred selector for describe and execute; never guessed."))
+		.String(TEXT("domain"), TEXT("Capability domain to browse or filter by. Call describe with no selector to list domains."))
+		.String(TEXT("family"), TEXT("Capability family inside a domain. Call describe with a domain to list its families."))
+		.StringEnum(TEXT("effect"), { TEXT("read"), TEXT("write"), TEXT("destructive") },
+			TEXT("Filter search results by declared behavior effect."))
+		.String(TEXT("tool"), TEXT("Exact parent tool name copied from a search row (parentTool) or a describe response. Always paired with action; never guessed."))
+		.String(TEXT("action"), TEXT("Exact action name copied from a search row or describe response. For configure, this is a manage_tools action."))
+		.String(TEXT("param"), TEXT("Exact parameter name to inspect on one capability. Use with describe plus tool and action; returns that single parameter's schema plus the consent grant, when the capability needs one."))
+		.OpenObject(TEXT("params"), TEXT("Parameters for execute or configure: an object whose keys are exactly the parameter names describe listed for this action, with the same casing. Never include action or subAction here."))
+		.ClosedObject(TEXT("consent"),
+			TEXT("Per-call consent grant for a capability whose policy.consent is not 'none'. Bound to one "
+				"capability and one call; never persisted, inherited or reused. Read the exact grant from "
+				"describe.consentGrant — including its nonce — and echo it back verbatim. Replaying a grant "
+				"is refused with CONSENT_REUSED, and one whose nonce this server did not mint for that capability "
+				"with CONSENT_NOT_ISSUED. Use with execute only."),
+			[](FMcpSchemaBuilder& Sub)
+			{
+				Sub.String(TEXT("capability"),
+					TEXT("Exact canonical capability ID this grant authorizes, as returned by describe."))
+					.StringEnum(TEXT("acknowledge"), { TEXT("explicit"), TEXT("elevated") },
+						TEXT("Acknowledgement strength. 'explicit' satisfies an explicit policy; 'elevated' "
+							"is required by a destructive policy and also satisfies explicit."))
+					.String(TEXT("nonce"),
+						TEXT("Single-use token describe minted for this capability. Required: echo it back "
+							"exactly as received. One already used is CONSENT_REUSED; a missing, made-up or "
+							"too old one is CONSENT_NOT_ISSUED (run describe again)."))
+					.Required({ TEXT("capability"), TEXT("acknowledge"), TEXT("nonce") });
+			})
+		// Read by McpNativeGatewayExecuteRequest.cpp; undeclared here, a schema-driven
+		// client had no legal way to send an idempotency key or a timeout.
+		.ClosedObject(TEXT("options"),
+			TEXT("Execution controls for execute only; never put these inside params. Honored keys: "
+				"idempotencyKey, expectedCatalogRevision, expectedRevisions, timeoutMs, pageCursor, expect, require."),
+			[](FMcpSchemaBuilder& Sub)
+			{
+				Sub.String(TEXT("idempotencyKey"),
+					TEXT("Client-chosen key. A repeated execute with the same key and params returns the "
+						"recorded receipt instead of running the action again."))
+					.String(TEXT("expectedCatalogRevision"),
+						TEXT("Refuse to run unless the catalog revision still equals this value; read it "
+							"from any search or describe response."))
+					.ClosedObject(TEXT("expectedRevisions"),
+						TEXT("Live editor-state revisions to pin, as the ue://state/revisions resource reports them; "
+							"the call is refused with STALE_STATE when one has moved."),
+						[](FMcpSchemaBuilder& Revisions)
+						{
+							Revisions.Integer(TEXT("selection"), FString(), 1)
+								.Integer(TEXT("level"), FString(), 1)
+								.Integer(TEXT("assetRegistry"), FString(), 1)
+								.Integer(TEXT("package"), FString(), 1);
+						})
+					.Integer(TEXT("timeoutMs"), TEXT("Deadline for this call in milliseconds."), 1, 600000)
+					.String(TEXT("pageCursor"),
+						TEXT("Read the next page of a result too large for one reply: the cursor its page block named, sent with "
+							"the same capability and params (page.nextCall is that call). Nothing runs again."), 1, 64)
+					.StringArray(TEXT("expect"),
+						TEXT("What should hold once the call succeeds, judged in the editor: relations (Lamp on Table, A inside B, "
+							"A nextTo B, A against B (its back to B), A facing B, A near B within 50), comparisons (Cube.location.z in 0..10, "
+							"Lamp.LightComponent.Intensity > 1000), predicates (A exists, A hidden, A visible, /Game/BP_Door compiles) "
+							"and noWarnings, combined with not, and, or and parentheses; names with spaces in double quotes. The "
+							"reply's expectations[] gives each verdict (ok, failed or unknown) with what was found and, for a failure, "
+							"the call that fixes it. A failed expectation never undoes the call."), 1, 16, 300)
+					.StringArray(TEXT("require"),
+						TEXT("What must hold before the call runs, in the same language as expect (without noWarnings). When one "
+							"fails or cannot be judged yet, nothing runs: PRECONDITION_FAILED names each unmet requirement."),
+						1, 16, 300);
+			})
+		.Integer(TEXT("limit"), TEXT("Maximum rows per page. search: 12 by default. describe: a listing of domains, families or a family's capabilities shows 50 rows unless limit is set, and a tool's action list is whole."), 1, 25)
+		.Integer(TEXT("offset"), TEXT("Zero-based offset into search results or into a describe listing (domains, families, a family's capabilities or a tool's actions). Defaults to 0."), 0)
+		.String(TEXT("cursor"), TEXT("Opaque search cursor from a previous response nextCursor. Supersedes offset."))
+		.Integer(TEXT("maxBytes"), TEXT("Serialized byte ceiling for a search response. Results are dropped from the end until the response fits."), 512, 262144)
+		.Required({ TEXT("operation") })
+		.Closed()
+		.Build();
+
+	auto Tool = MakeShared<FJsonObject>();
+	Tool->SetStringField(TEXT("name"), TEXT("unreal"));
+	// The description every client lists the tool by; the stdio proxy serves the copy it last read from here.
+	Tool->SetStringField(TEXT("description"),
+		TEXT("Unreal Engine editor automation: one tool, four operations. Always in this order: "
+			"(1) search with query = 2-4 plain words naming the verb and the object, e.g. 'spawn actor', 'add variable blueprint', 'save level'; every result row carries a one-line summary, its effect and a ready-made nextCall. "
+			"(2) describe: send the chosen row's nextCall unchanged; the reply is the exact contract: parameters (name, type, required), inputSchema, a working example and, when required, consentGrant. "
+			"A first row that carries signature may skip describe: fill params from its signature and send its executeCall. "
+			"(3) execute: send describe's nextCall with params filled in, using ONLY the parameter names describe listed. "
+			"(4) read warnings[] on a successful reply: they name what the call left wrong (an actor it placed now sunk, floating, intersecting or z-fighting; a default grid material; placeholder text; a pasted duplicate), so fix those before the next step. "
+			"Rules: never guess capability ids, tool names, action names or parameter names; never put action or subAction inside params; a failed call returns suggestions and an executable nextCall, so send that nextCall instead of retrying blindly. "
+			"To browse instead of search, call describe with no selector and follow the nextCall on each row one level down. "
+			"configure only enables or disables internal tool groups; it never performs editor work."));
+	Tool->SetStringField(TEXT("category"), TEXT("core"));
+	Tool->SetObjectField(TEXT("inputSchema"), InputSchema);
+	return Tool;
+}

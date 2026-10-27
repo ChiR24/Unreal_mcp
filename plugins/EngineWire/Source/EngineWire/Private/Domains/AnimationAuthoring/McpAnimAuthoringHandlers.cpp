@@ -1,0 +1,197 @@
+#include "Core/Compatibility/McpVersionCompatibility.h"
+#include "EngineWireSubsystem.h"
+#include "Domains/AnimationAuthoring/McpAnimSupport.h"
+#include "Core/Subsystem/EngineWireSubsystemResponseSanitization.h"
+
+
+using namespace McpAnimationAuthoring;
+
+static TSharedPtr<FJsonObject> HandleAnimationAuthoringRequest(const TSharedPtr<FJsonObject>& Params)
+{
+    TSharedPtr<FJsonObject> Response = McpHandlerUtils::CreateResultObject();
+    FString SubAction = GetJsonStringField(Params, TEXT("subAction"), TEXT(""));
+    // Every authoring record advertises a typed alias (animationPath,
+    // sequencePath, montagePath, blendSpacePath, aimOffsetPath, ...) next to
+    // assetPath, but the leaf handlers read only assetPath; honour the aliases
+    // here so the documented calls work (dogfood #80).
+    // Where animationPath is an input of its own -- the sample or segment to
+    // add -- it is never the target: copying it into assetPath made
+    // add_aim_offset_sample load the sample as the aim offset, and
+    // add_montage_slot with montagePath + animationPath edit the sequence.
+    const bool bAnimationIsInput = SubAction == TEXT("add_aim_offset_sample") || SubAction == TEXT("add_blend_sample") ||
+        SubAction == TEXT("add_montage_slot") || SubAction == TEXT("create_montage");
+    if (Params.IsValid() && GetJsonStringField(Params, TEXT("assetPath"), TEXT("")).IsEmpty())
+    {
+        static const TCHAR* const AliasKeys[] = {
+            TEXT("sequencePath"), TEXT("montagePath"),
+            TEXT("blendSpacePath"), TEXT("aimOffsetPath"), TEXT("animBlueprintPath"),
+            TEXT("controlRigPath"), TEXT("ikRigPath"), TEXT("retargeterPath"), TEXT("animationPath")};
+        for (const TCHAR* Key : AliasKeys)
+        {
+            if (bAnimationIsInput && FCString::Strcmp(Key, TEXT("animationPath")) == 0)
+            {
+                continue;
+            }
+            const FString Alias = GetJsonStringField(Params, Key, TEXT(""));
+            if (!Alias.IsEmpty())
+            {
+                Params->SetStringField(TEXT("assetPath"), Alias);
+                break;
+            }
+        }
+    }
+
+    if (TSharedPtr<FJsonObject> Result = HandleSequenceAssetActions(SubAction, Params, Response))
+    {
+        return Result;
+    }
+
+    if (TSharedPtr<FJsonObject> Result = HandleSequenceTrackActions(SubAction, Params, Response))
+    {
+        return Result;
+    }
+
+    if (TSharedPtr<FJsonObject> Result = HandleSequenceEventActions(SubAction, Params, Response))
+    {
+        return Result;
+    }
+
+    if (TSharedPtr<FJsonObject> Result = HandleSequenceSettingsActions(SubAction, Params, Response))
+    {
+        return Result;
+    }
+
+    if (TSharedPtr<FJsonObject> Result = HandleMontageAssetActions(SubAction, Params, Response))
+    {
+        return Result;
+    }
+
+    if (TSharedPtr<FJsonObject> Result = HandleMontageNotifyBlendActions(SubAction, Params, Response))
+    {
+        return Result;
+    }
+
+    if (TSharedPtr<FJsonObject> Result = HandleBlendSpaceAssetActions(SubAction, Params, Response))
+    {
+        return Result;
+    }
+
+    if (TSharedPtr<FJsonObject> Result = HandleBlendSpaceSampleActions(SubAction, Params, Response))
+    {
+        return Result;
+    }
+
+    if (TSharedPtr<FJsonObject> Result = HandleAimOffsetActions(SubAction, Params, Response))
+    {
+        return Result;
+    }
+
+    if (TSharedPtr<FJsonObject> Result = HandleBlueprintAssetActions(SubAction, Params, Response))
+    {
+        return Result;
+    }
+
+    if (TSharedPtr<FJsonObject> Result = HandleBlueprintStateMachineActions(SubAction, Params, Response))
+    {
+        return Result;
+    }
+
+    if (TSharedPtr<FJsonObject> Result = HandleBlueprintStateTransitionActions(SubAction, Params, Response))
+    {
+        return Result;
+    }
+
+    if (TSharedPtr<FJsonObject> Result = HandleBlueprintTransitionRuleActions(SubAction, Params, Response))
+    {
+        return Result;
+    }
+
+    if (TSharedPtr<FJsonObject> Result = HandleBlueprintBlendNodeActions(SubAction, Params, Response))
+    {
+        return Result;
+    }
+
+    if (TSharedPtr<FJsonObject> Result = HandleBlueprintSlotLayerActions(SubAction, Params, Response))
+    {
+        return Result;
+    }
+
+    if (TSharedPtr<FJsonObject> Result = HandleBlueprintNodeValueActions(SubAction, Params, Response))
+    {
+        return Result;
+    }
+
+    if (TSharedPtr<FJsonObject> Result = HandleControlRigActions(SubAction, Params, Response))
+    {
+        return Result;
+    }
+
+    if (TSharedPtr<FJsonObject> Result = HandleIKRigActions(SubAction, Params, Response))
+    {
+        return Result;
+    }
+
+    if (TSharedPtr<FJsonObject> Result = HandleIKRetargetActions(SubAction, Params, Response))
+    {
+        return Result;
+    }
+
+    if (TSharedPtr<FJsonObject> Result = HandleAnimationInfoActions(SubAction, Params, Response))
+    {
+        return Result;
+    }
+
+    Response->SetBoolField(TEXT("success"), false);
+    Response->SetStringField(TEXT("error"), FString::Printf(TEXT("Unknown animation authoring action: %s"), *SubAction));
+    Response->SetStringField(TEXT("errorCode"), TEXT("UNKNOWN_ACTION"));
+    return Response;
+}
+
+bool UEngineWireSubsystem::HandleManageAnimationAuthoringAction(
+    const FString& RequestId, const FString& Action,
+    const TSharedPtr<FJsonObject>& Payload,
+    TSharedPtr<FMcpBridgeWebSocket> RequestingSocket)
+{
+    if (Action != TEXT("manage_animation_authoring"))
+    {
+        return false;
+    }
+
+    TSharedPtr<FJsonObject> Result = HandleAnimationAuthoringRequest(Payload);
+
+    // Send response
+    if (Result.IsValid())
+    {
+        bool bSuccess = Result->HasField(TEXT("success")) && GetJsonBoolField(Result, TEXT("success"));
+        FString Message = GetJsonStringField(Result, TEXT("message"), TEXT(""));
+
+        if (bSuccess)
+        {
+            SendAutomationResponse(RequestingSocket, RequestId, true, Message, Result);
+        }
+        else
+        {
+            FString Error = GetJsonStringField(Result, TEXT("error"), TEXT("Unknown error"));
+            FString ErrorCode = GetJsonStringField(Result, TEXT("errorCode"), TEXT("ANIMATION_AUTHORING_ERROR"));
+            // SendAutomationError carries only a message and a code, so every
+            // field a failing authoring handler had already gathered -- the
+            // states that DO exist, the animation paths that failed to load,
+            // the candidate names it tried -- was built and then thrown away.
+            // SendAutomationResponse keeps the payload, and the gateway
+            // republishes it as typedError.unrealDetail. Its one other job,
+            // the Warning that put every authoring failure in the editor log,
+            // has no equivalent in SendAutomationResponse, so it is kept here.
+            UE_LOG(
+                LogEngineWireSubsystem,
+                Warning,
+                TEXT("Automation request failed (%s): %s"),
+                *ErrorCode,
+                *EngineWireSubsystemResponse::SanitizeForLog(Error));
+            SendAutomationResponse(RequestingSocket, RequestId, false, Error, Result, ErrorCode);
+        }
+        return true;
+    }
+
+    SendAutomationError(RequestingSocket, RequestId, TEXT("Failed to process animation authoring action"), TEXT("PROCESSING_FAILED"));
+    return true;
+}

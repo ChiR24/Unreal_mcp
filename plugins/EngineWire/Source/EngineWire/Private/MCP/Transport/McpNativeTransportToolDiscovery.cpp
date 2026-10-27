@@ -1,0 +1,300 @@
+#include "MCP/Transport/McpNativeTransportPrivate.h"
+#include "MCP/Execute/McpNativeGatewayAuthorization.h"
+#include "MCP/Gateway/McpNativeGatewayDefinition.h"
+#include "Foundation/Diagnostics/McpDiagnosticsSnapshot.h"
+#include "MCP/Protocol/McpModernRequest.h"
+#include "Misc/SecureHash.h"
+
+namespace
+{
+FString BuildClientRateKey(
+	const FString& ConnectionRemoteAddr,
+	const FString& ClientName, const FString& ClientVersion)
+{
+	// ConnectionRemoteAddr is the primary input (anchored to the OS-level
+	// remote IP:port, not attacker-controlled). ClientName/ClientVersion are
+	// included as a secondary dimension so that two different clients behind
+	// the same NAT (e.g. two browsers on the same machine) still get distinct
+	// rate buckets. ClientName/ClientVersion alone MUST NOT be the key —
+	// they are attacker-controlled via the initialize clientInfo JSON field.
+	const FString Identity =
+		ConnectionRemoteAddr.Left(128) + TEXT("\x1f") +
+		ClientName.Left(64) + TEXT("\x1f") +
+		ClientVersion.Left(32);
+	return FMD5::HashAnsiString(*Identity);
+}
+}
+
+// A restarted transport starts with an EMPTY session table, while every client
+// that was connected before the restart still presents its pre-restart session
+// id. Adopt such an id once, only while the table is still empty, so that a
+// client which never re-sends `initialize` (the MCP client is not obliged to,
+// and the SDKs do not all re-initialize on HTTP 404) can keep working instead
+// of being locked out for the rest of its process lifetime. As soon as ANY
+// session exists an unknown id is a genuine expiry and keeps its 404, so the
+// existing expiry and cap semantics are preserved. Caller holds SessionMutex:
+// this is deliberately the Locked form, mirroring ConsumeClientRequestBudget.
+bool FMcpNativeTransport::RehydrateColdBootSessionLocked(
+	const FString& SessionId, const FString& PresentedToken)
+{
+	if (SessionId.IsEmpty() || SessionId.Len() > 128 ||
+		!ActiveSessions.IsEmpty() || ActiveSessions.Num() >= MaxActiveSessions)
+	{
+		return false;
+	}
+	ActiveSessions.Add(SessionId, FPlatformTime::Seconds());
+	FSessionRateState Adopted;
+	Adopted.ClientRateKey = TEXT("rehydrated:") + SessionId;
+	SessionRateStates.Add(SessionId, Adopted);
+	// Bind the principal from the token this request presented, exactly as
+	// initialize does. Without it GetSessionPrincipal returns the empty
+	// principal, whose scope set is empty, and every write capability is then
+	// refused with SCOPE_NOT_GRANTED. Binding also arms the token-swap guard
+	// for the adopted session, so it ends up no weaker than an initialized one.
+	SessionPrincipals.Add(SessionId, McpResolveNativePrincipal(PresentedToken));
+	UE_LOG(LogMcpNativeTransport, Warning,
+		TEXT("Rehydrated a native MCP session that predates this transport instance"));
+	return true;
+}
+
+FString FMcpNativeTransport::HandleInitialize(
+	const TSharedPtr<FJsonObject>& Params, const TSharedPtr<FJsonValue>& Id,
+	FString& OutSessionId, const FString& ConnectionRemoteAddr)
+{
+	// Negotiate the protocol version before allocating any session state.
+	// Echo a supported version; for any well-formed (non-empty string) request
+	// version, negotiate down to the latest supported one instead of erroring.
+	// Missing/non-string/empty -> JSON-RPC -32602 with supported/requested data.
+	FString NegotiatedVersion;
+	FString NegotiationError;
+	if (!NegotiateInitializeProtocolVersion(Params, NegotiatedVersion, NegotiationError))
+	{
+		auto Data = MakeShared<FJsonObject>();
+		TArray<TSharedPtr<FJsonValue>> Supported;
+		for (const FString& V : McpSupportedProtocolVersions())
+		{
+			Supported.Add(MakeShared<FJsonValueString>(V));
+		}
+		Data->SetArrayField(TEXT("supported"), Supported);
+		FString Requested;
+		if (Params.IsValid() && Params->TryGetStringField(TEXT("protocolVersion"), Requested))
+		{
+			Data->SetStringField(TEXT("requested"), Requested);
+		}
+		else
+		{
+			Data->SetField(TEXT("requested"), MakeShared<FJsonValueNull>());
+		}
+		OutSessionId.Reset();
+		return FMcpJsonRpc::BuildError(
+			Id, FMcpJsonRpc::ErrorInvalidParams, NegotiationError, Data);
+	}
+
+	FString ClientName = TEXT("unknown");
+	FString ClientVersion = TEXT("unknown");
+	if (Params.IsValid())
+	{
+		const TSharedPtr<FJsonObject>* ClientInfoObj = nullptr;
+		if (Params->TryGetObjectField(TEXT("clientInfo"), ClientInfoObj) &&
+			ClientInfoObj)
+		{
+			(*ClientInfoObj)->TryGetStringField(TEXT("name"), ClientName);
+			(*ClientInfoObj)->TryGetStringField(TEXT("version"), ClientVersion);
+		}
+	}
+	// Anchor the rate-limit key to the connection's remote address, not the
+	// attacker-controlled clientInfo. The clientName/clientVersion are still
+	// stored in the session metadata for diagnostics, but they MUST NOT be
+	// the sole input to a rate-limit key — an attacker can rotate them at
+	// will to bypass the per-client cap. The remote address changes only on
+	// reconnect, which is the right granularity for session-creation rate
+	// limiting. Falls back to clientInfo if the remote address is unknown
+	// (e.g. a test transport that does not bind a real socket).
+	const FString ClientRateKey = BuildClientRateKey(
+		ConnectionRemoteAddr, ClientName, ClientVersion);
+
+	// Gathered BEFORE SessionMutex: the second-tier reclaim below must not
+	// evict a session that still owns an SSE call or a notification stream, and
+	// the collection mutexes are never taken while the session map is locked.
+	TSet<FString> SessionsWithLiveConnections;
+	CollectSessionsWithLiveConnections(SessionsWithLiveConnections);
+
+	int32 CurrentSessionCount;
+	FString EvictedSessionId;
+	{
+		FScopeLock Lock(&SessionMutex);
+		const double Now = FPlatformTime::Seconds();
+		FString RateLimitError;
+		int32 RetryAfter = 0;
+		if (!ConsumeClientRequestBudgetLocked(
+				ClientRateKey, false, RateLimitError, &RetryAfter))
+		{
+			OutSessionId.Reset();
+			return FMcpJsonRpc::BuildRateLimitError(Id, RateLimitError, RetryAfter);
+		}
+		if (ActiveSessions.Num() >= MaxActiveSessions)
+		{
+			double OldestUnusedActivity = TNumericLimits<double>::Max();
+			for (const TPair<FString, double>& Entry : ActiveSessions)
+			{
+				const FSessionRateState* RateState =
+					SessionRateStates.Find(Entry.Key);
+				if (RateState && !RateState->bHasClientActivity &&
+					RateState->InitializationCompletedAt > 0.0 &&
+					Now - RateState->InitializationCompletedAt >=
+						AbandonedSessionGraceSeconds &&
+					!SessionsWithLiveConnections.Contains(Entry.Key) &&
+					Entry.Value < OldestUnusedActivity)
+				{
+					EvictedSessionId = Entry.Key;
+					OldestUnusedActivity = Entry.Value;
+				}
+			}
+			if (EvictedSessionId.IsEmpty())
+			{
+				// Second tier. The abandoned-session pass above also excludes
+				// live streams, but it only accepts sessions that NEVER made a
+				// request, so a client that issued even one call and then
+				// vanished without DELETE (crash, Ctrl-C, container stop) kept
+				// its slot until the 1-hour inactivity timer — and once every
+				// slot was held that way, initialize hard-failed for everyone.
+				// Reclaim the least-recently-active session that is meaningfully
+				// idle AND owns no live stream, so nothing in flight is ever
+				// cancelled to make room.
+				double OldestIdleActivity = TNumericLimits<double>::Max();
+				for (const TPair<FString, double>& Entry : ActiveSessions)
+				{
+					if (SessionsWithLiveConnections.Contains(Entry.Key) ||
+						Now - Entry.Value < IdleSessionReclaimSeconds ||
+						Entry.Value >= OldestIdleActivity)
+					{
+						continue;
+					}
+					EvictedSessionId = Entry.Key;
+					OldestIdleActivity = Entry.Value;
+				}
+			}
+			if (EvictedSessionId.IsEmpty())
+			{
+				OutSessionId.Reset();
+				return FMcpJsonRpc::BuildError(
+					Id, FMcpJsonRpc::ErrorInvalidRequest,
+					TEXT("Native MCP session limit reached: every session is "
+						"active or streaming. Close a session with HTTP DELETE "
+						"and its Mcp-Session-Id, or retry shortly."));
+			}
+			ForgetSessionLocked(EvictedSessionId);
+			// Evictions were the one session close that left no trace, which made
+			// the lifecycle unreadable from the log: initialize was logged, the
+			// matching close never was, so a churning client looked like a leak.
+			UE_LOG(LogMcpNativeTransport, Log,
+				TEXT("Session evicted at cap (idle slot reclaimed; remaining: %d)"),
+				ActiveSessions.Num());
+		}
+		OutSessionId = FGuid::NewGuid().ToString();
+		ActiveSessions.Add(OutSessionId, Now);
+		FSessionRateState RateState;
+		RateState.ClientRateKey = ClientRateKey;
+		SessionRateStates.Add(OutSessionId, RateState);
+		CurrentSessionCount = ActiveSessions.Num();
+	}
+	// H7: record the native session create AFTER the SessionMutex scope closes
+	// (the store's own mutex protects the memory record; only a truncated
+	// SHA-256 identity of the raw session id is stored - never the raw value).
+	// The disk write is deferred to the game thread.
+	FMcpDiagnosticsSnapshot::Get().RecordSessionCreated(OutSessionId);
+	FMcpDiagnosticsSnapshot::PersistCurrentAsync();
+	if (!EvictedSessionId.IsEmpty())
+	{
+		CloseSessionConnections(EvictedSessionId);
+		UE_LOG(LogMcpNativeTransport, Log,
+			TEXT("Evicted abandoned native MCP session before initialize"));
+	}
+
+	auto Result = MakeShared<FJsonObject>();
+	Result->SetStringField(TEXT("protocolVersion"), NegotiatedVersion);
+
+	Result->SetObjectField(TEXT("serverInfo"), DescribeServer(Result));
+
+	UE_LOG(LogMcpNativeTransport, Log,
+		TEXT("MCP session initialized (active sessions: %d)"),
+		CurrentSessionCount);
+
+	return FMcpJsonRpc::BuildResponse(Id, Result);
+}
+
+TSharedPtr<FJsonObject> FMcpNativeTransport::DescribeServer(const TSharedPtr<FJsonObject>& Result) const
+{
+	auto Capabilities = MakeShared<FJsonObject>();
+	// The public surface is the single static 'unreal' gateway tool, whose shape
+	// never changes, so the tools capability omits listChanged entirely (omission
+	// and an explicit false are different claims); the tools object is still sent.
+	Capabilities->SetObjectField(TEXT("tools"), MakeShared<FJsonObject>());
+	// resources, prompts and completions are all answered by HandlePrimitiveMethod. ue://changes can be subscribed to:
+	// subscriptions/listen in 2026-07-28, resources/subscribe before it (Protocol/McpNativeTransportListen.cpp).
+	const TSharedPtr<FJsonObject> Resources = MakeShared<FJsonObject>();
+	Resources->SetBoolField(TEXT("subscribe"), true);
+	Capabilities->SetObjectField(TEXT("resources"), Resources);
+	Capabilities->SetObjectField(TEXT("prompts"), MakeShared<FJsonObject>());
+	Capabilities->SetObjectField(TEXT("completions"), MakeShared<FJsonObject>());
+	Result->SetObjectField(TEXT("capabilities"), Capabilities);
+
+	FString CombinedInstructions = BaseInstructions;
+	if (!UserInstructions.IsEmpty())
+	{
+		CombinedInstructions += (CombinedInstructions.IsEmpty() ? TEXT("") : TEXT("\n\n")) + UserInstructions;
+	}
+	if (!CombinedInstructions.IsEmpty())
+	{
+		Result->SetStringField(TEXT("instructions"), CombinedInstructions);
+	}
+
+	auto ServerInfo = MakeShared<FJsonObject>();
+	ServerInfo->SetStringField(TEXT("name"), ServerName);
+	// serverInfo.version is required by MCP; an unresolvable plugin descriptor left it "".
+	ServerInfo->SetStringField(TEXT("version"), ServerVersion.IsEmpty() ? FString(TEXT("unknown")) : ServerVersion);
+	return ServerInfo;
+}
+
+FString FMcpNativeTransport::HandleServerDiscover(const TSharedPtr<FJsonValue>& Id) const
+{
+	auto Result = MakeShared<FJsonObject>();
+	Result->SetStringField(TEXT("resultType"), TEXT("complete"));
+	// The versions a request can name in its _meta, as the TypeScript SDK lists them; the older ones are negotiated
+	// by initialize, which a client that calls this does not need.
+	TArray<TSharedPtr<FJsonValue>> Versions = {MakeShared<FJsonValueString>(McpModern::Version)};
+	Result->SetArrayField(TEXT("supportedVersions"), Versions);
+	auto Meta = MakeShared<FJsonObject>();
+	Meta->SetObjectField(TEXT("io.modelcontextprotocol/serverInfo"), DescribeServer(Result));
+	Result->SetObjectField(TEXT("_meta"), Meta);
+	// The tasks extension: a 2026-07-28 call still open near the client's time limit answers a task to poll.
+	auto Extensions = MakeShared<FJsonObject>();
+	Extensions->SetObjectField(TEXT("io.modelcontextprotocol/tasks"), MakeShared<FJsonObject>());
+	Result->GetObjectField(TEXT("capabilities"))->SetObjectField(TEXT("extensions"), Extensions);
+	// Nothing here changes while the editor runs: an hour-long, shareable cache hint.
+	Result->SetNumberField(TEXT("ttlMs"), 3600000);
+	Result->SetStringField(TEXT("cacheScope"), TEXT("public"));
+	return FMcpJsonRpc::BuildResponse(Id, Result);
+}
+
+FString FMcpNativeTransport::HandleToolsList(
+	const TSharedPtr<FJsonValue>& Id, const FString& SessionId)
+{
+	// Discovery is a read of project capability state, so it is gated on the
+	// session principal exactly like resources/* — not left open to any
+	// principal that merely passed the transport token check.
+	const FString Refusal =
+		McpAuthorizePrimitiveRead(GetSessionPrincipal(SessionId), FString(), Id);
+	if (!Refusal.IsEmpty())
+	{
+		return Refusal;
+	}
+
+	// The public surface is permanently the single static 'unreal' gateway tool;
+	// the canonical 23 tools stay registered and reachable through it.
+	auto Result = MakeShared<FJsonObject>();
+	TArray<TSharedPtr<FJsonValue>> Tools;
+	Tools.Add(MakeShared<FJsonValueObject>(BuildUnrealGatewayToolDefinition()));
+	Result->SetArrayField(TEXT("tools"), Tools);
+	return FMcpJsonRpc::BuildResponse(Id, Result);
+}

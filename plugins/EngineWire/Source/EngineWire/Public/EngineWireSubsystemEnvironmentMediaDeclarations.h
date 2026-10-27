@@ -1,0 +1,14 @@
+#define MCP_SUBSYSTEM_ENVIRONMENT_MEDIA_DECLARATIONS \
+MCP_DECLARE_ACTION_HANDLER(HandleAudioAction); \
+MCP_DECLARE_ACTION_HANDLER(HandleLightingAction); \
+MCP_DECLARE_ACTION_HANDLER(HandlePerformanceAction); \
+MCP_DECLARE_ACTION_HANDLER(HandleBuildEnvironmentAction); \
+MCP_DECLARE_ACTION_HANDLER(HandlePaintFoliage); \
+MCP_DECLARE_ACTION_HANDLER(HandleGetFoliageInstances); \
+MCP_DECLARE_ACTION_HANDLER(HandleRemoveFoliage); \
+MCP_DECLARE_ACTION_HANDLER(HandleGenerateLODs); \
+MCP_DECLARE_ACTION_HANDLER(HandleBakeLightmap); \
+MCP_DECLARE_ACTION_HANDLER(HandleCreateProceduralTerrain); \
+MCP_DECLARE_ACTION_HANDLER(HandleCreateProceduralFoliage); \
+MCP_DECLARE_ACTION_HANDLER(HandleAddFoliageType); \
+MCP_DECLARE_ACTION_HANDLER(HandleAddFoliageInstances);

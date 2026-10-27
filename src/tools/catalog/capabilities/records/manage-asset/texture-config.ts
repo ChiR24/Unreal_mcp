@@ -1,0 +1,38 @@
+// Texture configuration and info records: compression, texture group,
+// LOD bias, virtual texture streaming, streaming priority, and texture info.
+
+import type { RecordSpec } from './builder.js';
+import { bool, ex, LOW, num, READ, READ_POLICY, r, str, WRITE, WRITE_POLICY } from './builder.js';
+import { schema } from '../shared/record-presets.js';
+
+const OK = schema({ success: bool('Operation succeeded.'), details: { type: 'object', 'x-unreal-reflection-boundary': true, description: 'Operation details.' } }, ['success']);
+
+const T = '/Game/Textures/T_Rock';
+const DONE = { success: true };
+
+export const TEXTURE_CONFIG_RECORDS: readonly RecordSpec[] = [
+  r('set_compression_settings', 'texture', 'Set a 2D texture\'s compression setting by its engine name, with or without the TC_ prefix (Normalmap or TC_Normalmap). The reply names the setting applied (compressionSettings) and whether the texture reached disk (saved). An unknown name is refused with the valid names and nothing changes.', schema({ assetPath: str('Texture /Game path.'), compressionSettings: str('Engine compression name, with or without TC_: Default, Normalmap, Masks, Grayscale, Displacementmap, VectorDisplacementmap, HDR, EditorIcon (UserInterface2D), Alpha, DistanceFieldFont, HDR_Compressed, BC7, HalfFloat, and from UE 5.1 SingleFloat and HDR_F32.'), save: bool('Save the texture after the change (default true); saved says whether it reached disk.') }, ['assetPath', 'compressionSettings']), OK, WRITE, WRITE_POLICY, LOW,
+    { examples: [ex('Compress a normal map as TC_Normalmap', { assetPath: '/Game/Textures/T_Normal', compressionSettings: 'TC_Normalmap', save: true }, DONE)],
+      whenToUse: ['A texture needs the compression its use calls for: Normalmap for a normal map, Masks for packed masks read without sRGB, Grayscale for one channel, HDR for HDR images, EditorIcon for UI art.'],
+      whenNotToUse: ['The pixels or size of the texture must change, not its asset settings (use texture.adjust_texture or texture.create_texture).'] }),
+  r('set_texture_group', 'texture', 'Set a 2D texture\'s texture group (its LOD group) by engine name, with or without the TEXTUREGROUP_ prefix (UI or TEXTUREGROUP_UI), so it follows that group\'s LOD and streaming rules. The reply names the group applied (textureGroup) and saved; an unknown name is refused with the valid names and nothing changes.', schema({ assetPath: str('Texture /Game path.'), textureGroup: str('Engine texture group, with or without TEXTUREGROUP_: World, WorldNormalMap, WorldSpecular, Character, CharacterNormalMap, Weapon, Vehicle, Cinematic, Effects, Skybox, UI, Lightmap, Shadowmap, ColorLookupTable, Bokeh, Pixels2D and the rest.'), save: bool('Save the texture after the change (default true); saved says whether it reached disk.') }, ['assetPath', 'textureGroup']), OK, WRITE, WRITE_POLICY, LOW,
+    { examples: [ex('Assign a texture to the World group', { assetPath: T, textureGroup: 'TEXTUREGROUP_World', save: true }, DONE)],
+      whenToUse: ['A texture must move to another group, such as UI, Character or Effects, so it follows that group\'s LOD rules.'],
+      whenNotToUse: ['The pixels or size of the texture must change, not its asset settings (use texture.adjust_texture or texture.create_texture).'] }),
+  r('set_lod_bias', 'texture', 'Set a 2D texture\'s LOD bias: the number of top mips dropped at runtime (1 halves each side, 0 restores full size). The reply carries lodBias and saved.', schema({ assetPath: str('Texture /Game path.'), lodBias: num('Whole mips to drop (a fraction is cut off): 1 halves each side, 0 restores full size.'), save: bool('Save the texture after the change (default true); saved says whether it reached disk.') }, ['assetPath', 'lodBias']), OK, WRITE, WRITE_POLICY, LOW,
+    { examples: [ex('Drop one mip on a background texture', { assetPath: T, lodBias: 1, save: true }, DONE)],
+      whenToUse: ['A background or distant texture uses too much memory and can lose its largest mip levels; a lodBias of 1 drops one level.'],
+      whenNotToUse: ['The pixels or size of the texture must change, not its asset settings (use texture.adjust_texture or texture.create_texture).', 'A smaller copy of the source image is wanted, not a runtime mip drop (use texture.create_texture with kind=resized).'] }),
+  r('configure_virtual_texture', 'texture', 'Switch virtual texture streaming on or off for a 2D texture (virtualTextureStreaming, required). Materials that sample the texture must then use the matching sampler type (Virtual Color, Virtual Normal and so on, or the plain type when it is switched off), or they stop compiling. The reply carries virtualTextureStreaming and saved.', schema({ assetPath: str('Texture /Game path.'), virtualTextureStreaming: bool('true streams the texture as a virtual texture (the project must have virtual texturing enabled), false stops; leaving it out is refused.'), save: bool('Save the texture after the change (default true); saved says whether it reached disk.') }, ['assetPath', 'virtualTextureStreaming']), OK, WRITE, WRITE_POLICY, LOW,
+    { examples: [ex('Enable virtual texture streaming', { assetPath: T, virtualTextureStreaming: true, save: true }, DONE)],
+      whenToUse: ['A very large texture must stream as a virtual texture, or stop; afterwards set the SamplerType of each material node that samples it (inspect.set_property with objectPath "<material path>.<material name>:<nodeId>", SAMPLERTYPE_VirtualColor and so on).'],
+      whenNotToUse: ['The pixels or size of the texture must change, not its asset settings (use texture.adjust_texture or texture.create_texture).'] }),
+  r('set_streaming_priority', 'texture', 'Set never-stream on a 2D texture (neverStream, required): true keeps every mip resident instead of streaming them in, false lets it stream again. UTexture has no per-texture streaming priority to set. The reply carries neverStream and saved.', schema({ assetPath: str('Texture /Game path.'), neverStream: bool('true keeps every mip resident, false lets the texture stream; leaving it out is refused.'), save: bool('Save the texture after the change (default true); saved says whether it reached disk.') }, ['assetPath', 'neverStream']), OK, WRITE, WRITE_POLICY, LOW,
+    { examples: [ex('Prioritise a hero texture and pin it resident', { assetPath: T, neverStream: true, save: true }, DONE)],
+      whenToUse: ['A texture must stay sharp because every mip is kept resident instead of streaming in late; there is no per-texture streaming priority to set.'],
+      whenNotToUse: ['The pixels or size of the texture must change, not its asset settings (use texture.adjust_texture or texture.create_texture).', 'The global texture streaming budget must change, not one texture (use system_control.configure_performance with setting=texture_streaming).'] }),
+  r('get_texture_info', 'texture', 'Read a 2D texture asset: width and height, pixel format, mip count, sRGB, compression setting, LOD bias, and virtual texture and never-stream flags.', schema({ assetPath: str('Texture /Game path.') }, ['assetPath']), OK, READ, READ_POLICY, LOW,
+    { topics: ['size and resolution', 'pixel format', 'compression setting', 'mip count', 'how big is a texture'], examples: [ex('Read a texture\'s size and format', { assetPath: T }, DONE)],
+      whenToUse: ['A texture\'s size, pixel format, mip count, sRGB flag and compression must be read before its pixels or settings are changed.','A texture setting must be verified after it was changed.'],
+      whenNotToUse: ['A texture setting must be changed, not read (use texture.configure_texture).', 'The texture group or another property not listed here must be read (use inspect.get_property).'] })
+];

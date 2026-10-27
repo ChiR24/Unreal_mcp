@@ -1,0 +1,56 @@
+{
+  "description": "A pressure plate: it is on (bIsActivated) while at least one pawn overlaps it and off once the last one leaves, and OnSwitchChanged(bActivated) reports each change. Other actors follow it by binding OnSwitchChanged.",
+  "tag": "SwitchLogic",
+  "variables": [
+    { "variableName": "bIsActivated", "variableType": "Bool", "defaultValue": false, "category": "Interaction", "keepExisting": true },
+    { "variableName": "PawnsOn", "variableType": "Int", "defaultValue": 0, "category": "Interaction" }
+  ],
+  "dispatchers": [
+    { "name": "OnSwitchChanged", "parameters": [{ "name": "bActivated", "type": "Bool" }] }
+  ],
+  "hooks": [
+    { "id": "plateEnter", "event": "ActorBeginOverlap" },
+    { "id": "plateLeave", "event": "ActorEndOverlap" }
+  ],
+  "eventGraph": [
+    { "edit": "create_node", "id": "enterPawn", "nodeType": "Cast", "targetClass": "/Script/Engine.Pawn" },
+    { "edit": "create_node", "id": "enterCount", "nodeType": "VariableGet", "memberName": "PawnsOn" },
+    { "edit": "create_node", "id": "enterAdd", "nodeType": "CallFunction", "memberName": "Add_IntInt", "memberClass": "/Script/Engine.KismetMathLibrary", "pinDefaults": { "B": 1 } },
+    { "edit": "create_node", "id": "enterStore", "nodeType": "VariableSet", "memberName": "PawnsOn" },
+    { "edit": "create_node", "id": "enterFirst", "nodeType": "CallFunction", "memberName": "EqualEqual_IntInt", "memberClass": "/Script/Engine.KismetMathLibrary", "pinDefaults": { "B": 1 } },
+    { "edit": "create_node", "id": "enterBranch", "nodeType": "Branch" },
+    { "edit": "create_node", "id": "enterOn", "nodeType": "VariableSet", "memberName": "bIsActivated", "pinDefaults": { "bIsActivated": true } },
+    { "edit": "create_node", "id": "enterNotify", "nodeType": "CallDelegate", "memberName": "OnSwitchChanged", "pinDefaults": { "bActivated": true } },
+    { "edit": "connect_pins", "from": "$plateEnter_event.OtherActor", "to": "$enterPawn.Object" },
+    { "edit": "connect_pins", "from": "$enterCount.PawnsOn", "to": "$enterAdd.A" },
+    { "edit": "connect_pins", "from": "$enterAdd.ReturnValue", "to": "$enterStore.PawnsOn" },
+    { "edit": "connect_pins", "from": "$enterStore.Output_Get", "to": "$enterFirst.A" },
+    { "edit": "connect_pins", "from": "$enterFirst.ReturnValue", "to": "$enterBranch.Condition" },
+    { "edit": "connect_pins", "from": "$plateEnter.then", "to": "$enterPawn.execute" },
+    { "edit": "connect_pins", "from": "$enterPawn.then", "to": "$enterStore.execute" },
+    { "edit": "connect_pins", "from": "$enterStore.then", "to": "$enterBranch.execute" },
+    { "edit": "connect_pins", "from": "$enterBranch.then", "to": "$enterOn.execute" },
+    { "edit": "connect_pins", "from": "$enterOn.then", "to": "$enterNotify.execute" },
+
+    { "edit": "create_node", "id": "leavePawn", "nodeType": "Cast", "targetClass": "/Script/Engine.Pawn" },
+    { "edit": "create_node", "id": "leaveCount", "nodeType": "VariableGet", "memberName": "PawnsOn" },
+    { "edit": "create_node", "id": "leaveSub", "nodeType": "CallFunction", "memberName": "Subtract_IntInt", "memberClass": "/Script/Engine.KismetMathLibrary", "pinDefaults": { "B": 1 } },
+    { "edit": "create_node", "id": "leaveFloor", "nodeType": "CallFunction", "memberName": "Max", "memberClass": "/Script/Engine.KismetMathLibrary", "pinDefaults": { "B": 0 } },
+    { "edit": "create_node", "id": "leaveStore", "nodeType": "VariableSet", "memberName": "PawnsOn" },
+    { "edit": "create_node", "id": "leaveNone", "nodeType": "CallFunction", "memberName": "EqualEqual_IntInt", "memberClass": "/Script/Engine.KismetMathLibrary", "pinDefaults": { "B": 0 } },
+    { "edit": "create_node", "id": "leaveBranch", "nodeType": "Branch" },
+    { "edit": "create_node", "id": "leaveOff", "nodeType": "VariableSet", "memberName": "bIsActivated", "pinDefaults": { "bIsActivated": false } },
+    { "edit": "create_node", "id": "leaveNotify", "nodeType": "CallDelegate", "memberName": "OnSwitchChanged", "pinDefaults": { "bActivated": false } },
+    { "edit": "connect_pins", "from": "$plateLeave_event.OtherActor", "to": "$leavePawn.Object" },
+    { "edit": "connect_pins", "from": "$leaveCount.PawnsOn", "to": "$leaveSub.A" },
+    { "edit": "connect_pins", "from": "$leaveSub.ReturnValue", "to": "$leaveFloor.A" },
+    { "edit": "connect_pins", "from": "$leaveFloor.ReturnValue", "to": "$leaveStore.PawnsOn" },
+    { "edit": "connect_pins", "from": "$leaveStore.Output_Get", "to": "$leaveNone.A" },
+    { "edit": "connect_pins", "from": "$leaveNone.ReturnValue", "to": "$leaveBranch.Condition" },
+    { "edit": "connect_pins", "from": "$plateLeave.then", "to": "$leavePawn.execute" },
+    { "edit": "connect_pins", "from": "$leavePawn.then", "to": "$leaveStore.execute" },
+    { "edit": "connect_pins", "from": "$leaveStore.then", "to": "$leaveBranch.execute" },
+    { "edit": "connect_pins", "from": "$leaveBranch.then", "to": "$leaveOff.execute" },
+    { "edit": "connect_pins", "from": "$leaveOff.then", "to": "$leaveNotify.execute" }
+  ]
+}

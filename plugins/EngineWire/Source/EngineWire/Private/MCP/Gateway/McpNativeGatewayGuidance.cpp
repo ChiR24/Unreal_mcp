@@ -1,0 +1,182 @@
+// McpNativeGatewayGuidance.cpp — see header.
+
+#include "MCP/Gateway/McpNativeGatewayGuidance.h"
+
+namespace
+{
+int32 CommonPrefixLength(const FString& Left, const FString& Right)
+{
+	const int32 Limit = FMath::Min(Left.Len(), Right.Len());
+	int32 Shared = 0;
+	while (Shared < Limit && Left[Shared] == Right[Shared]) ++Shared;
+	return Shared;
+}
+
+/** An action name's verb: the part before its first underscore, lowercased. */
+FString ActionVerb(const FString& Action)
+{
+	FString Verb;
+	for (int32 i = 0; i < Action.Len() && Action[i] != TEXT('_'); ++i) Verb.AppendChar(Action[i]);
+	return Verb.ToLower();
+}
+}
+
+int32 GatewayLevenshtein(const FString& A, const FString& B)
+{
+	const int32 M = A.Len();
+	const int32 N = B.Len();
+	if (M == 0) return N;
+	if (N == 0) return M;
+	TArray<int32> Prev;
+	Prev.SetNumUninitialized(N + 1);
+	for (int32 j = 0; j <= N; ++j) Prev[j] = j;
+	TArray<int32> Curr;
+	Curr.SetNumUninitialized(N + 1);
+	for (int32 i = 1; i <= M; ++i)
+	{
+		Curr[0] = i;
+		for (int32 j = 1; j <= N; ++j)
+		{
+			const int32 Cost = (A[i - 1] == B[j - 1]) ? 0 : 1;
+			Curr[j] = FMath::Min3(Prev[j] + 1, Curr[j - 1] + 1, Prev[j - 1] + Cost);
+		}
+		Swap(Prev, Curr);
+	}
+	return Prev[N];
+}
+
+TArray<FString> GatewayClosestMatches(const FString& Target, const TArray<FString>& Candidates, int32 Limit)
+{
+	if (Limit <= 0) return {};
+	const FString T = Target.TrimStartAndEnd().ToLower();
+	if (T.IsEmpty())
+	{
+		TArray<FString> Out;
+		const int32 Count = FMath::Min(Candidates.Num(), Limit);
+		for (int32 i = 0; i < Count; ++i) Out.Add(Candidates[i]);
+		return Out;
+	}
+	struct FScored { FString Name; int32 Score; int32 Prefix; };
+	TArray<FScored> Scored;
+	Scored.Reserve(Candidates.Num());
+	for (const FString& C : Candidates)
+	{
+		const FString Lower = C.ToLower();
+		int32 Score = GatewayLevenshtein(Lower, T);
+		if (Lower.Contains(T, ESearchCase::CaseSensitive) || T.Contains(Lower, ESearchCase::CaseSensitive)) Score -= 4;
+		Scored.Add({ C, Score, CommonPrefixLength(Lower, T) });
+	}
+	// Edit distance alone ties candidates a caller would never confuse, and the
+	// shared prefix a typo keeps is the better discriminator. The trailing
+	// ordinal comparison makes the order total, so the result never depends on
+	// TArray::Sort being an unstable introsort or on catalog order.
+	Scored.Sort([](const FScored& L, const FScored& R)
+	{
+		if (L.Score != R.Score) return L.Score < R.Score;
+		if (L.Prefix != R.Prefix) return L.Prefix > R.Prefix;
+		return L.Name.Compare(R.Name, ESearchCase::CaseSensitive) < 0;
+	});
+	TArray<FString> Out;
+	for (int32 i = 0; i < Scored.Num() && i < Limit; ++i) Out.Add(Scored[i].Name);
+	return Out;
+}
+
+TSharedPtr<FJsonObject> GatewayBuildNextCall(const FString& Operation, const FString& Tool, const FString& Action, const FString& Param)
+{
+	auto Next = MakeShared<FJsonObject>();
+	Next->SetStringField(TEXT("operation"), Operation);
+	if (!Tool.IsEmpty()) Next->SetStringField(TEXT("tool"), Tool);
+	if (!Action.IsEmpty()) Next->SetStringField(TEXT("action"), Action);
+	if (!Param.IsEmpty()) Next->SetStringField(TEXT("param"), Param);
+	return Next;
+}
+
+FMcpUnknownActionGuide GatewayGuideUnknownAction(const FString& Tool, const FString& Action,
+	const TArray<FString>& Actions, const TArray<FString>& OwningTools)
+{
+	FMcpUnknownActionGuide Guide;
+	Guide.Suggestions = GatewayClosestMatches(Action, Actions, 3);
+	TArray<FString> Others;
+	for (const FString& Owner : OwningTools)
+	{
+		if (!Owner.Equals(Tool, ESearchCase::CaseSensitive)) Others.Add(Owner);
+	}
+	if (Others.Num() == 1)
+	{
+		Guide.Hint = FString::Printf(TEXT(" '%s' is a %s action."), *Action, *Others[0]);
+		Guide.NextCall = GatewayBuildNextCall(TEXT("describe"), Others[0], Action, FString());
+		return Guide;
+	}
+	const FString Trimmed = Action.TrimStartAndEnd();
+	const FString Verb = ActionVerb(Trimmed);
+	if (!Verb.IsEmpty() && !Guide.Suggestions.ContainsByPredicate(
+		[&Verb](const FString& S) { return GatewayLevenshtein(ActionVerb(S), Verb) <= 1; }))
+	{
+		FString Query;
+		for (int32 i = 0; i < Trimmed.Len(); ++i) Query.AppendChar(Trimmed[i] == TEXT('_') ? TEXT(' ') : Trimmed[i]);
+		Guide.NextCall = GatewayBuildNextCall(TEXT("search"), FString(), FString(), FString());
+		Guide.NextCall->SetStringField(TEXT("query"), Query);
+		return Guide;
+	}
+	Guide.NextCall = GatewayBuildNextCall(TEXT("describe"), Tool,
+		Guide.Suggestions.Num() > 0 ? Guide.Suggestions[0] : FString(), FString());
+	return Guide;
+}
+
+TSharedPtr<FJsonObject> GatewayEnableToolNextCall(const FString& ParentTool)
+{
+	TSharedPtr<FJsonObject> Params = MakeShared<FJsonObject>();
+	Params->SetArrayField(TEXT("tools"), GatewayStringArray({ ParentTool }));
+	TSharedPtr<FJsonObject> Next = GatewayBuildNextCall(TEXT("configure"), FString(), TEXT("enable_tools"), FString());
+	Next->SetObjectField(TEXT("params"), Params);
+	return Next;
+}
+
+TSharedPtr<FJsonObject> GatewayDisabledCapabilityGuidance(const FString& ParentTool)
+{
+	TSharedPtr<FJsonObject> Guidance = MakeShared<FJsonObject>();
+	Guidance->SetStringField(TEXT("tool"), ParentTool);
+	Guidance->SetObjectField(TEXT("nextCall"), GatewayEnableToolNextCall(ParentTool));
+	return Guidance;
+}
+
+TSharedPtr<FJsonObject> GatewaySchemaGuidance(
+	const FString& ParentTool, const FString& Action, const FString& Pointer)
+{
+	TSharedPtr<FJsonObject> Guidance = MakeShared<FJsonObject>();
+	Guidance->SetStringField(TEXT("tool"), ParentTool);
+	Guidance->SetStringField(TEXT("action"), Action);
+	if (!Pointer.IsEmpty())
+	{
+		Guidance->SetStringField(TEXT("pointer"), Pointer);
+	}
+	Guidance->SetObjectField(TEXT("nextCall"),
+		GatewayBuildNextCall(TEXT("describe"), ParentTool, Action, FString()));
+	return Guidance;
+}
+
+TSharedPtr<FJsonObject> GatewaySchemaViolationGuidance(const FString& ParentTool, const FString& Action,
+	const FString& Pointer, const TSharedPtr<FJsonObject>& InputSchema)
+{
+	TArray<FString> Declared;
+	const TSharedPtr<FJsonObject>* Properties = nullptr;
+	if (InputSchema.IsValid() && InputSchema->TryGetObjectField(TEXT("properties"), Properties) && Properties)
+	{
+		for (const auto& Field : (*Properties)->Values)
+		{
+			const FString Name(Field.Key.Len(), *Field.Key);  // 5.8 keys are not FString
+			if (!Name.Equals(TEXT("action"), ESearchCase::CaseSensitive) && !Name.Equals(TEXT("subAction"), ESearchCase::CaseSensitive)) Declared.Add(Name);
+		}
+	}
+	Declared.Sort([](const FString& L, const FString& R) { return L.Compare(R, ESearchCase::CaseSensitive) < 0; });
+	// The offending field is the pointer's last segment: "/locaton" for an undeclared one, "/location/x" for a value.
+	TArray<FString> Segments;
+	Pointer.ParseIntoArray(Segments, TEXT("/"), /*InCullEmpty=*/true);
+	const TArray<FString> Suggestions = GatewayClosestMatches(Segments.Num() > 0 ? Segments.Last() : FString(), Declared, 3);
+	TSharedPtr<FJsonObject> Guidance = GatewaySchemaGuidance(ParentTool, Action, Pointer);
+	Guidance->SetArrayField(TEXT("suggestions"), GatewayStringArray(Suggestions));
+	Guidance->SetArrayField(TEXT("allowedParameters"), GatewayStringArray(Declared));
+	Guidance->SetObjectField(TEXT("nextCall"), GatewayBuildNextCall(TEXT("describe"), ParentTool, Action,
+		Suggestions.Num() > 0 ? Suggestions[0] : FString()));
+	return Guidance;
+}

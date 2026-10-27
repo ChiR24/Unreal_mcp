@@ -16,6 +16,7 @@ const REAL_GRAPH_PATH = `${REAL_TEST_FOLDER}/${REAL_GRAPH_NAME}`;
 const PATH_NAME_GRAPH = `${REAL_TEST_FOLDER}/PCG_RW_PathName_${ts}`;
 const ASSET_ALIAS_GRAPH = `${REAL_TEST_FOLDER}/PCG_RW_AssetAlias_${ts}`;
 const REAL_SUBGRAPH_PATH = `${REAL_TEST_FOLDER}/PCG_RW_Subgraph_${ts}`;
+const REAL_LEVEL_NAME = `PCG_RW_Level_${ts}`;
 const EXEC_ACTOR = `PCG_RW_Executor_${ts}`;
 const SECOND_ACTOR = `PCG_RW_SecondExecutor_${ts}`;
 const BOUNDSLESS_ACTOR = `PCG_RW_Boundsless_${ts}`;
@@ -66,6 +67,7 @@ const basicNodeActionCases = basicNodeActions.map((action, index) => ({
     nodeName: `${action}_${ts}`,
     x: 240 + (index % 6) * 160,
     y: 160 + Math.floor(index / 6) * 120,
+    settings: {},
     save: false
   },
   expected: pcgOptionalExpected
@@ -75,11 +77,12 @@ const basicCoverageCases = [
   { scenario: 'Setup: create PCG test folder', toolName: 'manage_asset', arguments: { action: 'create_folder', path: BASIC_TEST_FOLDER }, expected: 'success|already exists' },
   { scenario: 'Setup: spawn PCG execution actor', toolName: 'control_actor', arguments: { action: 'spawn', classPath: '/Script/Engine.StaticMeshActor', meshPath: '/Engine/BasicShapes/Cube.Cube', actorName: BASIC_PCG_ACTOR, location: { x: 0, y: 0, z: 120 } }, expected: 'success|already exists' },
   { scenario: 'CREATE: create_pcg_graph', toolName: 'manage_pcg', arguments: { action: 'create_pcg_graph', graphPath: BASIC_GRAPH_PATH, overwrite: true, save: false }, expected: pcgOptionalExpected },
+  { scenario: 'CREATE: create_pcg_graph via params passthrough', toolName: 'manage_pcg', arguments: { action: 'create_pcg_graph', params: { graphPath: BASIC_GRAPH_PATH, overwrite: true, save: false } }, expected: pcgOptionalExpected },
   { scenario: 'CREATE: create_pcg_subgraph', toolName: 'manage_pcg', arguments: { action: 'create_pcg_subgraph', subgraphPath: BASIC_SUBGRAPH_PATH, parentGraphPath: BASIC_GRAPH_PATH, nodeName: `Subgraph_${ts}`, overwrite: true, save: false }, expected: pcgOptionalExpected },
   { scenario: 'CREATE: add_pcg_node', toolName: 'manage_pcg', arguments: { action: 'add_pcg_node', graphPath: BASIC_GRAPH_PATH, settingsClass: 'PCGRerouteSettings', nodeName: BASIC_REROUTE_NODE, x: 120, y: 80, save: false }, expected: pcgOptionalExpected },
   ...basicNodeActionCases,
   { scenario: 'ACTION: connect_pcg_pins', toolName: 'manage_pcg', arguments: { action: 'connect_pcg_pins', graphPath: BASIC_GRAPH_PATH, sourceNodeId: 'input', targetNodeId: 'output', save: false }, expected: pcgOptionalExpected },
-  { scenario: 'CONFIG: set_pcg_node_settings', toolName: 'manage_pcg', arguments: { action: 'set_pcg_node_settings', graphPath: BASIC_GRAPH_PATH, nodeId: BASIC_REROUTE_NODE, title: BASIC_UPDATED_REROUTE_NODE, save: false }, expected: pcgOptionalExpected },
+  { scenario: 'CONFIG: set_pcg_node_settings', toolName: 'manage_pcg', arguments: { action: 'set_pcg_node_settings', graphPath: BASIC_GRAPH_PATH, nodeId: BASIC_REROUTE_NODE, title: BASIC_UPDATED_REROUTE_NODE, x: 140, y: 90, save: false }, expected: pcgOptionalExpected },
   { scenario: 'EXECUTE: execute_pcg_graph', toolName: 'manage_pcg', arguments: { action: 'execute_pcg_graph', graphPath: BASIC_GRAPH_PATH, actorName: BASIC_PCG_ACTOR, componentName: `PCGComponent_${ts}`, createComponent: true, force: true, save: false }, expected: pcgOptionalExpected },
   { scenario: 'CONFIG: set_pcg_partition_grid_size', toolName: 'manage_pcg', arguments: { action: 'set_pcg_partition_grid_size', gridSize: 3200, scope: 'world', save: false }, expected: pcgOptionalExpected },
   { scenario: 'Cleanup: delete PCG execution actor', toolName: 'control_actor', arguments: { action: 'delete', actorName: BASIC_PCG_ACTOR }, expected: 'success|not found' },
@@ -238,6 +241,12 @@ const realWorldCoverageCases = [
     ]
   },
   {
+    scenario: 'CONFIG: update actor spawner through top-level actorClass',
+    toolName: 'manage_pcg',
+    arguments: { action: 'set_pcg_node_settings', graphPath: REAL_GRAPH_PATH, nodeId: ACTOR_SPAWNER_NODE, actorClass: '/Script/Engine.StaticMeshActor', save: false },
+    expected: pcgExpected
+  },
+  {
     scenario: 'CONFIG: update actor spawner through top-level classPath',
     toolName: 'manage_pcg',
     arguments: { action: 'set_pcg_node_settings', graphPath: REAL_GRAPH_PATH, nodeId: ACTOR_SPAWNER_NODE, classPath: '/Script/Engine.Actor', save: false },
@@ -309,8 +318,9 @@ const realWorldCoverageCases = [
   {
     scenario: 'EXECUTE: create PCG component and generate on mesh actor',
     toolName: 'manage_pcg',
-    arguments: { action: 'execute_pcg_graph', graphPath: REAL_GRAPH_PATH, actorName: EXEC_ACTOR, componentName: COMPONENT_NAME, createComponent: true, force: true, wait: false, timeoutMs: 120000, save: false },
+    arguments: { action: 'execute_pcg_graph', graphPath: REAL_GRAPH_PATH, actorName: EXEC_ACTOR, componentName: COMPONENT_NAME, createComponent: true, force: true, save: false },
     expected: pcgExpected,
+    timeoutMs: 120000,
     captureResult: { key: 'pcgComponentPath', fromField: 'result.componentPath' },
     assertions: [
       { path: 'structuredContent.result.componentName', equals: COMPONENT_NAME, label: 'PCG component created with requested name' },
@@ -437,10 +447,26 @@ const realWorldCoverageCases = [
     expected: 'success|not found'
   },
   {
-    scenario: 'ERROR: save world partition grid size on transient level reports save failure',
+    scenario: 'Setup: create saved level for world partition persistence',
+    toolName: 'manage_level',
+    arguments: {
+      action: 'create_level',
+      levelName: REAL_LEVEL_NAME,
+      levelPath: REAL_TEST_FOLDER,
+      useWorldPartition: false,
+      saveDirtyPackages: true
+    },
+    expected: 'success|already exists'
+  },
+  {
+    scenario: 'SAVE: world partition grid size persists on current saved level',
     toolName: 'manage_pcg',
     arguments: { action: 'set_pcg_partition_grid_size', scope: 'world', gridSize: 9600, save: true },
-    expected: { errorPattern: 'SAVE_FAILED' }
+    expected: 'success',
+    assertions: [
+      { path: 'structuredContent.result.gridSize', equals: 9600, label: 'world partition grid size applied' },
+      { path: 'structuredContent.result.saved', equals: true, label: 'saved level persisted the grid size' }
+    ]
   },
   {
     scenario: 'Cleanup: delete real-world PCG folder',

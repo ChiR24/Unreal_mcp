@@ -1,39 +1,38 @@
 # src/tools
 
-Canonical TypeScript MCP tool contracts and dispatch glue. This directory defines 23 parent tools and hundreds of action variants; Unreal execution still happens through handlers and the plugin bridge.
+Contracts for the 23 **internal canonical parent tools**. The public surface is the single `unreal` gateway tool (`search`/`describe`/`execute`/`configure`), served by the plugin; the parents are reachable only through it. Their contracts live in capability records, which generate the plugin's `MCP/Generated/` shards. There is no TypeScript runtime behind them: execute runs `{ action, ...params }` on the record's parent tool inside the plugin.
 
 ## STRUCTURE
 ```
 tools/
-|-- consolidated-tool-definitions.ts  # parent tools, action enums, JSON schemas, output schemas
-|-- consolidated-tool-handlers.ts     # maps parent tool names to handler functions
-|-- dynamic-tool-manager.ts           # runtime enable/disable by tool/category
-|-- schemas/                          # shared schema fragments for core tools
-`-- handlers/                         # domain action handlers; see nested AGENTS
+|-- catalog/
+|   `-- capabilities/
+|       |-- records/                 # CANONICAL CONTRACT SOURCE (per-parent dirs, parent-metadata.ts, folds/, aggregate.ts)
+|       `-- generated/               # canonical registry, cost index, parent definitions (never hand-edit)
+`-- definitions/shared/tool-definition.ts
 ```
 
 ## WHERE TO LOOK
-| Task | File | Notes |
-|------|------|-------|
-| Add or change tool schema | `consolidated-tool-definitions.ts` | Keep action enum, input schema, category, and output schema aligned |
-| Route parent tool | `consolidated-tool-handlers.ts` | Register only through `registerDefaultHandlers()` |
-| Enable/disable tool sets | `dynamic-tool-manager.ts` | Categories are `core`, `world`, `gameplay`, `utility`, `all` |
-| Implement action logic | `handlers/*-handlers.ts` | Validate/normalize, then use `executeAutomationRequest()` |
-| Shared handler helpers | `handlers/common-handlers.ts` | `requireAction()`, response parsing, error formatting |
+| Task | Location |
+|------|----------|
+| Change a contract (actions, schemas, cost, policy) | `catalog/capabilities/records/<parent>/`, then `npm run registry:generate` |
+| Parent name/category/description | `catalog/capabilities/records/parent-metadata.ts` |
+| Fold a family into one record | `catalog/capabilities/records/folds/<parent>.folds.ts` |
+| Execute routing | `plugins/EngineWire/Source/EngineWire/Private/MCP/Execute/` |
+| Enable/disable tools | `plugins/EngineWire/Source/EngineWire/Private/MCP/DynamicTools/` (categories `core`, `world`, `gameplay`, `utility`) |
+
+## CANONICAL SURFACE (23 internal parents)
+- Core: `manage_tools`, `manage_asset`, `manage_blueprint`, `control_actor`, `control_editor`, `manage_level`, `system_control`, `inspect`.
+- World: `build_environment`, `manage_geometry`, `manage_pcg`, `manage_level_structure`.
+- Gameplay: `animation_physics`, `manage_effect`, `manage_gas`, `manage_character`, `manage_combat`, `manage_ai`, `manage_inventory`, `manage_interaction`.
+- Utility: `manage_sequence`, `manage_audio`, `manage_networking`.
 
 ## CONVENTIONS
-- Parent tools are canonical public names. Do not reintroduce former child tool names as exposed MCP tools.
-- Action strings must stay aligned across `consolidated-tool-definitions.ts`, handler switches, native WebSocket handler registration, native MCP tool schemas, and tests.
-- Output schemas should be registered and validated before responses leave the MCP server.
-- `manage_tools` and `inspect` are protected from disablement; keep dynamic-tool behavior consistent with native MCP.
-- Use `unknown` plus type guards/interfaces for untrusted tool arguments.
+- Records are the single source of truth; everything under `generated/` and the native registry shards derive from them. Run `registry:check` and `manifest:check` after a record change.
+- A record declares only the params its C++ handler reads and the outputs it emits: the gateway validates strictly, so an undeclared param is refused (`UNDECLARED_PARAMETER`) and a declared-but-unread one is a lie.
+- A folded family lists once in the parent's action enum; each member stays callable by its own `{tool, action}` pair.
+- `manage_tools` and `inspect` are protected from disabling.
 
 ## ANTI-PATTERNS
-- Calling handler functions directly instead of going through the MCP registry and consolidated dispatch path.
-- Adding placeholder actions or schemas without TS handler, C++ handler, and test coverage.
-- Sending user paths or console commands to Unreal before applying the relevant `src/utils` guards.
-- Logging via `console.log` from runtime tool code; stdout must remain JSON-RPC clean.
-
-## NOTES
-- `src/server/AGENTS.md` owns MCP request/list/call registration behavior.
-- `handlers/AGENTS.md` owns domain handler implementation rules.
+- Hand-editing anything under `generated/`.
+- A schema-only action with no C++ handler behind it.

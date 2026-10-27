@@ -1,0 +1,95 @@
+// Copyright (c) 2024 EngineWire Contributors
+
+#pragma once
+
+#include "CoreMinimal.h"
+#include "Dom/JsonValue.h"
+
+class AActor;
+class FJsonObject;
+class FMcpBridgeWebSocket;
+class UEngineWireSubsystem;
+class UStaticMesh;
+class UWorld;
+
+namespace McpCoplanar
+{
+// Two surfaces in one plane facing the same way: the depth test cannot order them, so where they overlap the
+// picture flickers between the two (z-fighting). Pillars built flush with the ground block they stand in showed
+// it all over a level while every other placement check passed.
+struct FMcpCoplanarHit
+{
+    AActor* Actor = nullptr; // the smaller of the two pieces, the one to nudge
+    AActor* OtherActor = nullptr;
+    FString Component;
+    FString OtherComponent;
+    FVector Normal = FVector::ZeroVector; // the way both faces point
+    double Gap = 0.0;                     // distance between the two planes
+    double OverlapU = 0.0;
+    double OverlapV = 0.0;
+    double FaceArea = 0.0; // the whole face of Actor that lies in the plane
+};
+
+// How much of each side of a mesh's local bounds (-X, +X, -Y, +Y, -Z, +Z) its own outward-facing triangles
+// cover: 1 for every side of a cube, about 0.79 for a cylinder's caps, 0 for anything curved.
+struct FMcpCoplanarFill
+{
+    double Share[6] = {};
+};
+FMcpCoplanarFill MeasureFill(const UStaticMesh* Mesh);
+
+// Every coplanar face pair among the visible static mesh components of World, largest overlap first. Only faces a
+// mesh really fills count (a cube's sides, a cylinder's caps), never the empty sides of a bounding box. With a
+// NameFilter, only pairs where either actor's label contains it. With Focus, only pairs that touch one of those
+// actors, and only the pieces near them are measured: a spawn or a move costs its neighbourhood, not the level.
+TArray<FMcpCoplanarHit> FindCoplanarFaces(UWorld* World, const FString& NameFilter,
+                                          const TArray<AActor*>* Focus = nullptr);
+
+// One actor's coplanar faces, ready for a placement report: its worst pair in words, every pair as data.
+struct FMcpCoplanarReport
+{
+    AActor* Actor = nullptr;
+    double Severity = 0.0; // side of the worst overlapping patch, in world units
+    FString Issue;
+    TArray<TSharedPtr<FJsonValue>> Faces;
+};
+
+// FindCoplanarFaces grouped by the actor to nudge, worst first.
+TArray<FMcpCoplanarReport> ReportCoplanarFaces(UWorld* World, const FString& NameFilter);
+
+// The pairs that touch the actors a spawn or a move placed, written into each one's placement row (coplanarFaces, and
+// the largest pair in placementWarning), one scan of their neighbourhood for the whole call. Only audit_placement
+// looked, so a room shell built with its walls up to the ceiling's top flickered while every spawn and move answered
+// clean. Returns the rows that had no warning before.
+int32 AddCoplanarToRows(const TMap<AActor*, TSharedPtr<FJsonObject>>& Rows);
+
+// "+X" for a face that points along an axis, so it reads like the gizmo arrows.
+FString DescribeDirection(const FVector& Normal);
+
+// Where one actor's faces go, per world axis: the shift of its + face and of its - face along that axis.
+struct FMcpCoplanarPlan
+{
+    bool bPlus[3] = {false, false, false};
+    bool bMinus[3] = {false, false, false};
+    double PlusShift[3] = {0.0, 0.0, 0.0};
+    double MinusShift[3] = {0.0, 0.0, 0.0};
+    FVector FreeShift = FVector::ZeroVector; // faces turned off the world axes can only be translated
+    TArray<TSharedPtr<FJsonValue>> Pairs;
+};
+
+// One fix_coplanar pass: where each actor's faces go. A pair inside one actor goes to Inside, to be fixed in its
+// Blueprint.
+TMap<AActor*, FMcpCoplanarPlan> PlanCoplanarPass(const TArray<FMcpCoplanarHit>& Hits, double Distance,
+                                                 TArray<FMcpCoplanarHit>& Inside);
+
+// control_actor fix_coplanar: moves the actor of every coplanar pair a unit so one surface is clearly in front.
+bool HandleFixCoplanar(UEngineWireSubsystem* Bridge, const FString& RequestId,
+                       const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> Socket);
+
+// One pass over the pairs inside Blueprint actors: the smaller part moves a unit in its Blueprint's component
+// template, so every placed copy takes it (propagated, compiled, saved), once however many copies are placed. Fixed
+// carries the pairs already fixed across passes; true when a Blueprint changed (or would, in a dry run).
+bool FixCoplanarInsideBlueprints(const TArray<FMcpCoplanarHit>& Inside, double Distance, bool bDryRun,
+                                 TSet<FString>& Fixed, TArray<TSharedPtr<FJsonValue>>& OutDone,
+                                 TArray<FString>& OutSkipped);
+} // namespace McpCoplanar

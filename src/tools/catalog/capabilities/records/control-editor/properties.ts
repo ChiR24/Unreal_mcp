@@ -1,0 +1,75 @@
+/**
+ * Shared JSON-schema property fragments for control_editor capability records.
+ */
+import type { JsonObject } from '../../model.js';
+import { str, num, bool } from '../shared/schema-props.js';
+
+const int = (description: string): JsonObject => ({ type: 'integer', description });
+
+export const P = {
+  actorName: str('Name of the actor to target.'),
+  name: str('Name identifier.'),
+  objectPath: str('Object path alias for actorName.'),
+  location: {
+    type: 'object',
+    properties: { x: num('x'), y: num('y'), z: num('z') },
+    description: '3D location (x, y, z).',
+    additionalProperties: false,
+  },
+  rotation: {
+    type: 'object',
+    properties: { pitch: num('pitch'), yaw: num('yaw'), roll: num('roll') },
+    description: '3D rotation (pitch, yaw, roll).',
+    additionalProperties: false,
+  },
+  blendTime: num('Blend time in seconds for set_view_target.'),
+  speed: num('Clock multiplier for the running game: 1 is normal, 0.05 runs it twenty times slower (above 0, up to 20).'),
+  deltaTime: num('Seconds every frame advances the running game, however long the frame really took (deterministic runs); 0 turns fixed stepping off. It also ends when PIE stops.'),
+  fov: num('Camera field of view in degrees.'),
+  viewMode: str('Viewport view mode (e.g. Lit, Unlit, Wireframe).'),
+  width: num('Viewport width in pixels.'),
+  height: num('Viewport height in pixels.'),
+  mode: str('Editor mode id to activate: EM_Default, EM_Landscape, EM_Foliage, EM_MeshPaint or any registered mode id; a bare name (landscape) is tried as EM_<name>. The call fails when the mode is not active afterwards.'),
+  enabled: bool('Whether the feature is enabled.'),
+  realtime: bool('Whether realtime rendering is enabled.'),
+  validateOnly: bool('Report whether a restart would proceed, and what it would discard, without restarting.'),
+  discardUnsaved: bool('Restart even though packages have unsaved changes, discarding them. Omitted, a restart with unsaved work is refused.'),
+  delaySeconds: num('Seconds to wait before restarting, so the response reaches the caller first. Clamped to 0.1-30.'),
+  stat: str('One stat to show or hide (FPS, Unit, Game, SceneRendering...). show_stats without it shows FPS and Unit; hide_stats without it hides every stat. A stat already in the wanted state is left alone, so repeating a call never toggles it back.'),
+  command: str('Console command string.'),
+  filename: str('Screenshot or recording filename.'),
+  path: str('Directory or file path.'),
+  resolution: str('Resolution setting (e.g. 1024x1024).'),
+  returnBase64: bool('Return the PNG inline as an image (default true); a capture also saves a file unless keepFile is false. With no resolution, an inline image is downscaled to fit 1600x900. false returns only the saved path and metadata, at the full viewport size.'),
+  includeMetadata: bool('true: echo metadata back in the reply (default false).'),
+  metadata: {
+    type: 'object',
+    description: 'An object of your own, such as a label or a step number, returned under metadata when includeMetadata is true; the capture itself never reads it.',
+    additionalProperties: true,
+    'x-unreal-reflection-boundary': true,
+  },
+  id: int('Bookmark slot number, 0 to 9 on a default level (the slots Ctrl+0..9 set). Unreal bookmarks are numbered slots, not names; a number outside the level\'s range is refused.'),
+  assetPath: str('Asset path (e.g. /Game/Path/Asset).'),
+  levelPath: str('Level asset path.'),
+  category: str('Preferences category.'),
+  preferences: {
+    type: 'object',
+    description: 'Editor preferences key-value pairs.',
+    additionalProperties: true,
+    'x-unreal-reflection-boundary': true,
+  },
+  steps: int('Number of frames to step.'),
+  key: str('Key name: SpaceBar, D, Left, Enter, P. Escape is the editor stop-play key: in Play In Editor it ends the session instead of reaching the game, so test an action bound to Escape through another key mapped to it.'),
+  type: str('Input event type (key_down, key_up, key_tap = press then release, mouse_click, mouse_move), or widget_list / widget_click to operate the live UMG of a PIE session.'),
+  inputType: str('Alias for type used by simulate_input.'),
+  inputAction: str('Enhanced Input action to inject directly, as an asset path such as /Game/Input/IA_Move. A raw key already reaches Enhanced Input through the active mapping contexts (key_down D moves a pawn whose context maps D); use inputAction when no key is mapped to the action, or to inject an analog value.'),
+  value: num('Scalar value to inject for inputAction (default 1; use a negative value for the opposite direction), or the value to set a Slider to with widget_click. Ignored for a raw key.'),
+  holdSeconds: num('Keep injecting inputAction, or keep a raw key_down/key_tap key pressed, for this many seconds of GAME time so the pawn actually travels (default 0: an action lasts one frame, a key_down stays down until key_up, a key_tap lets go after 0.1s). Game time, not wall time: under set_game_speed 0.05 a 2s hold still delivers 2s of in-game input, which takes 40s of real time. A key_up for the same action or key stops the hold early. The reply comes back at once, while the key is still down: read the pawn after the hold, or press and watch in one call with control_actor sample_motion inputs.'),
+  x: num('Mouse X for simulate_input: while a game runs, mouse_move takes pixels of the game viewport and moves the game cursor there (where Get Mouse Position and Get Hit Result Under Cursor read it; a click at it is a key_tap of LeftMouseButton); otherwise desktop coordinates for the editor UI. Or the X value of an Axis2D or Axis3D inputAction.'),
+  y: num('Mouse Y for simulate_input, in the same space as x, or the Y value of an Axis2D or Axis3D inputAction.'),
+  z: num('Z value of an Axis3D inputAction (x and y give the other two).'),
+  button: str('Mouse button for simulate_input.'),
+  widget: str('For type widget_click: the live UMG widget to drive, by name (PlayButton), or Owner.Name (WBP_MainMenu.PlayButton) when several share it. widget_list shows both.'),
+  frameRate: num('Replay frames recorded per second, 1 to 120 (sets demo.RecordHz; the engine default is 8).'),
+  durationSeconds: num('Stop the recording by itself after this many seconds of game time.'),
+};
