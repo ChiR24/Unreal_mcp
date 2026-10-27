@@ -20599,7 +20599,7 @@
           },
           "dataValidation": {
             "type": "boolean",
-            "description": "Also run Data Validation on every asset that loads (default false): an asset row gains dataValidation (valid, invalid or notValidated, the last when no validator checks that kind of asset) with its errors and warnings, a folder row the count of each verdict and issues (up to 20 assets with errors or warnings). An invalid asset makes its row invalid."
+            "description": "Also run Data Validation on every asset that loads (default false): an asset row gains dataValidation (valid, invalid or notValidated, the last when no validator checks that kind of asset) with its errors and warnings, a folder row the count of each verdict and issues (up to 20 assets with errors or warnings). An invalid asset makes its row invalid. Blueprints are also read by lint_blueprint's rules (lines starting EngineWire lint; a While Loop that never ends is an error). Refused (DATAVALIDATION_PLUGIN_NOT_ENABLED, nothing checked) where the project has turned the Data Validation plugin off."
           },
           "deadlineMs": {
             "oneOf": [

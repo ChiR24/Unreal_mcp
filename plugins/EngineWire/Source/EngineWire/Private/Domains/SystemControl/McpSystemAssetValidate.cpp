@@ -8,6 +8,7 @@
 
 #include "EditorAssetLibrary.h"
 #include "EditorValidatorSubsystem.h"
+#include "Modules/ModuleManager.h"
 
 namespace McpSystemControlHandlers {
 namespace {
@@ -80,7 +81,17 @@ bool HandleValidateAssets(UEngineWireSubsystem* Self,
   const bool bRecursive = Payload->HasField(TEXT("recursive"))
       ? GetJsonBoolField(Payload, TEXT("recursive"))
       : true;
-  UEditorValidatorSubsystem* Validator = GetJsonBoolField(Payload, TEXT("dataValidation")) && GEditor
+  // The plugin is optional and its module delay-loaded: where a project turned it off, reaching its subsystem would
+  // fail the delay-load and take the editor down.
+  const bool bDataValidation = GetJsonBoolField(Payload, TEXT("dataValidation"));
+  if (bDataValidation && !FModuleManager::Get().IsModuleLoaded(TEXT("DataValidation"))) {
+    Self->SendAutomationError(RequestingSocket, RequestId,
+                              TEXT("dataValidation needs the Data Validation plugin, which this project has turned "
+                                   "off; nothing was validated. Call again without dataValidation to check loading."),
+                              TEXT("DATAVALIDATION_PLUGIN_NOT_ENABLED"));
+    return true;
+  }
+  UEditorValidatorSubsystem* Validator = bDataValidation && GEditor
       ? GEditor->GetEditorSubsystem<UEditorValidatorSubsystem>()
       : nullptr;
   const bool bUsage = GetJsonBoolField(Payload, TEXT("materialUsage"));

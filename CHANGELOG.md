@@ -53,7 +53,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 <details>
 <summary><b>🔧 Fixed</b></summary>
 
-- **Crashes**: Ability System actions on non-Actor Blueprints and creates or bakes over another class's asset are refused.
+- **Crashes**: Ability System actions on non-Actor Blueprints, creates or bakes over another class's asset, and `validate_assets` `dataValidation` with the Data Validation plugin off are refused.
 - **`run_benchmark` measures** frames, FPS and thread times (it measured nothing).
 - **Small fixes**: `RayTraced` GI refused from 5.4, `runtime_report` filters, UE 5.0 links, retry hints, reads return 0 and false, a material instance can be another's parent, `list_tracks` answers again, a thumbnail's `outputPath` is a PNG on every 5.x, `set_bone_key` keys a sequence's last frame, `create_primitive` says its meshes have no collision, `configure_landscape_splines` shapes the terrain where its points are, placement warnings judge a spline mesh road where its segments lie and an actor on a landscape by its surface, undo takes back a new primitive mesh.
 - **Removals** take exact components, keep assets others use (through a chain of uses too) and undo for tracks and keys.

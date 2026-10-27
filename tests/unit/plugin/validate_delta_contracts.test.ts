@@ -35,4 +35,13 @@ describe('Data Validation of what a call changed', () => {
     expect(delta).toContain('FModuleManager::Get().IsModuleLoaded(TEXT("DataValidation"))');
     expect(delta).toContain('FMcpResponseCaptureRegistry::Get().IsCapturing(RequestId)');
   });
+
+  // The module is delay-loaded: where a project turned the plugin off, its subsystem's StaticClass fails the delay-load.
+  it('validate_assets refuses dataValidation before it reaches the subsystem when the module is not loaded', () => {
+    const validate = code('Domains', 'SystemControl', 'McpSystemAssetValidate.cpp');
+    const guard = validate.indexOf('if (bDataValidation && !FModuleManager::Get().IsModuleLoaded(TEXT("DataValidation")))');
+    expect(guard).toBeGreaterThan(-1);
+    expect(validate.indexOf('TEXT("DATAVALIDATION_PLUGIN_NOT_ENABLED")', guard)).toBeGreaterThan(guard);
+    expect(validate.indexOf('GetEditorSubsystem<UEditorValidatorSubsystem>()')).toBeGreaterThan(guard);
+  });
 });

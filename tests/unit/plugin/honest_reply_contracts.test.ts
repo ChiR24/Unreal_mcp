@@ -2490,7 +2490,8 @@ describe('split_mesh makes one static mesh per part', () => {
 describe('validate_assets runs Data Validation on request', () => {
   it('asks the editor validator subsystem for each loaded asset and turns a rejected one invalid', () => {
     const check = code('SystemControl', 'McpSystemAssetValidate.cpp');
-    expect(check).toContain('GetJsonBoolField(Payload, TEXT("dataValidation")) && GEditor');
+    expect(check).toContain('const bool bDataValidation = GetJsonBoolField(Payload, TEXT("dataValidation"));');
+    expect(check).toContain('UEditorValidatorSubsystem* Validator = bDataValidation && GEditor');
     expect(check).toContain('Validator->IsAssetValid(FAssetData(Asset), Errors, Warnings, EDataValidationUsecase::Script);');
     expect(check).toContain('if (Asset && Validator && McpRunDataValidation(Validator, Asset, Row) == EDataValidationResult::Invalid) {');
     expect(check).toContain('if (Counts[0] > 0) {');
