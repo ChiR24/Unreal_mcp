@@ -6,6 +6,7 @@
 #include "Dom/JsonValue.h"
 #include "Editor.h"
 #include "EditorValidatorSubsystem.h"
+#include "McpBlueprintLint.h"
 #include "Misc/PackageName.h"
 #include "Modules/ModuleManager.h"
 
@@ -56,7 +57,13 @@ void AddWarnings(const FString& RequestId, const TSharedPtr<FJsonObject>& Result
         }
         for (const FText& Text : Warnings)
         {
-            Found.AddUnique(FString::Printf(TEXT("'%s': Data Validation: %s"), *Package, *Text.ToString()));
+            // Lint warnings stay in Validate Assets, saves and validate_assets: here they came back on every edit of a
+            // Blueprint and told a graph built one node at a time that its newest node never runs. A lint error (a While
+            // Loop that never ends) is still said above.
+            if (!Text.ToString().Contains(MCP_LINT_MESSAGE_PREFIX))
+            {
+                Found.AddUnique(FString::Printf(TEXT("'%s': Data Validation: %s"), *Package, *Text.ToString()));
+            }
         }
         if (Verdict == EDataValidationResult::Invalid && Errors.Num() == 0)
         {

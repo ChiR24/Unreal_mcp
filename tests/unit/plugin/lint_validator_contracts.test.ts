@@ -46,4 +46,15 @@ describe('the lint validator module', () => {
     expect(validator.match(/McpLintBlueprint\(Cast<UBlueprint>\(InAsset\)\)/gu)).toHaveLength(2);
     expect(validator).toContain('if (Issue.Severity == TEXT("error"))');
   });
+
+  // A write's reply runs the save-time Data Validation on what it changed: there the lint warnings came back on every
+  // edit, and a graph built one node at a time was told its newest node never runs.
+  it('reaches write replies with its errors only', () => {
+    expect(read('Source', 'EngineWire', 'Public', 'McpBlueprintLint.h')).toContain('#define MCP_LINT_MESSAGE_PREFIX TEXT("EngineWire lint ")');
+    expect(read('Source', 'EngineWireValidation', 'Private', 'McpLintValidator.cpp')).toContain('MCP_LINT_MESSAGE_PREFIX, *Issue.Rule');
+    const delta = read('Source', 'EngineWire', 'Private', 'Domains', 'SystemControl', 'McpSystemValidateDelta.cpp');
+    const warnings = delta.indexOf('for (const FText& Text : Warnings)');
+    expect(warnings).toBeGreaterThan(-1);
+    expect(delta.indexOf('if (!Text.ToString().Contains(MCP_LINT_MESSAGE_PREFIX))', warnings)).toBeGreaterThan(warnings);
+  });
 });

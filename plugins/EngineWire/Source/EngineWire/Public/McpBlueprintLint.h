@@ -18,3 +18,6 @@ struct FMcpLintIssue
 
 /** Every lint_blueprint rule over the Blueprint's graphs that run (events, functions, what they collapse). Reads only. */
 ENGINEWIRE_API TArray<FMcpLintIssue> McpLintBlueprint(const UBlueprint* Blueprint);
+
+/** How every message of the lint validator begins, so a reader of Data Validation results can tell them apart. */
+#define MCP_LINT_MESSAGE_PREFIX TEXT("EngineWire lint ")

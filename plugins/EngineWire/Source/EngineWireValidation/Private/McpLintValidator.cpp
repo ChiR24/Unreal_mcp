@@ -9,8 +9,8 @@ namespace
 {
 FText McpLintMessage(const FMcpLintIssue& Issue)
 {
-	return FText::FromString(FString::Printf(TEXT("EngineWire lint %s: %s (graph %s, node %s)"), *Issue.Rule, *Issue.Detail,
-	                                         *Issue.Graph, *Issue.Node));
+	return FText::FromString(FString::Printf(TEXT("%s%s: %s (graph %s, node %s)"), MCP_LINT_MESSAGE_PREFIX, *Issue.Rule,
+	                                         *Issue.Detail, *Issue.Graph, *Issue.Node));
 }
 } // namespace
 
