@@ -1,4 +1,5 @@
 #include "Domains/Environment/McpEnvShared.h"
+#include "Foundation/McpScopedEditorTransaction.h"
 
 namespace McpEnvironmentHandlers {
 
@@ -52,6 +53,11 @@ bool McpConfigureLandscapeSplines(const TSharedPtr<FJsonObject> &Payload, TShare
         WorldPoints.Add(WorldPoint);
     }
 
+    // One undo step for the splines and the edit layer they shape the terrain through. The landscape actor joins it
+    // only when the splines component or that layer is added: after an undo the engine rebuilds the layer from the
+    // splines, clearing where it last drew them, and a restored copy of that record would miss the newest drawing.
+    TUniquePtr<FMcpScopedEditorTransaction> Undo = MakeUnique<FMcpScopedEditorTransaction>(
+        FText::FromString(TEXT("Configure Landscape Splines")), EMcpMutationDurability::EditorStateOnly, TArray<UObject *>());
     ULandscapeSplinesComponent *SplinesComponent = Landscape->GetSplinesComponent();
     if (!SplinesComponent)
     {
@@ -65,6 +71,14 @@ bool McpConfigureLandscapeSplines(const TSharedPtr<FJsonObject> &Payload, TShare
         OutErrorCode = TEXT("COMPONENT_CREATION_FAILED");
         return false;
     }
+    if (!SplinesComponent->IsRegistered())
+    {
+        SplinesComponent->RegisterComponent();
+    }
+    // Control points live in the splines component's space, as the Landscape mode's spline tool places them: the
+    // landscape's origin and rotation without its scale, which CreateSplineComponent undoes. The landscape's own
+    // transform put each point a hundredth of the way from the landscape's origin, and a hundredth as deep.
+    const FTransform SplineToWorld = SplinesComponent->GetComponentTransform();
 
     TArray<ULandscapeSplineControlPoint *> ControlPoints;
     ControlPoints.Reserve(WorldPoints.Num());
@@ -78,7 +92,7 @@ bool McpConfigureLandscapeSplines(const TSharedPtr<FJsonObject> &Payload, TShare
             return false;
         }
 
-        ControlPoint->Location = Landscape->GetTransform().InverseTransformPosition(WorldPoint);
+        ControlPoint->Location = SplineToWorld.InverseTransformPosition(WorldPoint);
         ControlPoint->Width = Width;
         ControlPoint->SideFalloff = SideFalloff;
         ControlPoint->EndFalloff = SideFalloff;
@@ -91,7 +105,6 @@ bool McpConfigureLandscapeSplines(const TSharedPtr<FJsonObject> &Payload, TShare
         ControlPoints.Add(ControlPoint);
     }
 
-    Landscape->Modify();
     SplinesComponent->Modify();
     McpClearLandscapeSplines(SplinesComponent);
     TArray<TObjectPtr<ULandscapeSplineControlPoint>> *SplineControlPoints = McpGetLandscapeSplineControlPoints(SplinesComponent);
@@ -149,15 +162,19 @@ bool McpConfigureLandscapeSplines(const TSharedPtr<FJsonObject> &Payload, TShare
         Segment->UpdateSplinePoints(false, false);
     }
 
-    if (!SplinesComponent->IsRegistered())
-    {
-        SplinesComponent->RegisterComponent();
-    }
     SplinesComponent->RebuildAllSplines(false);
     SplinesComponent->MarkRenderStateDirty();
     SplinesComponent->MarkPackageDirty();
     Landscape->MarkPackageDirty();
     Landscape->PostEditChange();
+    bool bMerge = false;
+    const bool bApplied = McpApplyLandscapeSplinesToTerrain(Landscape, Resp, bMerge);
+    const bool bShaped = bApplied && (bRaiseTerrain || bLowerTerrain);
+    if (bApplied && !bShaped)
+    {
+        Resp->SetStringField(TEXT("terrainNote"), TEXT("raiseTerrain and lowerTerrain are both false, so the heights stay as they are."));
+    }
+    Resp->SetBoolField(TEXT("terrainShaped"), bShaped);
 
     Resp->SetStringField(TEXT("landscapeName"), Landscape->GetActorLabel());
     Resp->SetStringField(TEXT("landscapePath"), Landscape->GetPackage() ? Landscape->GetPackage()->GetPathName() : Landscape->GetPathName());
@@ -174,8 +191,17 @@ bool McpConfigureLandscapeSplines(const TSharedPtr<FJsonObject> &Payload, TShare
     {
         Resp->SetStringField(TEXT("layerName"), LayerName);
     }
+    Undo->DescribeInto(Resp);
+    // The merge draws the splines into their layer and the layers into the terrain, outside the undo step, as the
+    // Landscape mode does on its next tick: so the reply and the next raycast already see the shaped ground.
+    Undo.Reset();
+    if (bMerge)
+    {
+        Landscape->ForceUpdateLayersContent();
+    }
     McpHandlerUtils::AddVerification(Resp, Landscape);
-    OutMessage = TEXT("Landscape spline configuration updated");
+    OutMessage = bShaped ? FString(TEXT("Landscape splines replaced; the terrain under them is shaped to them"))
+                         : FString(TEXT("Landscape splines replaced; the terrain is not shaped (terrainNote says why)"));
     return true;
 }
 bool McpCreateLandscapeStreamingProxy(const TSharedPtr<FJsonObject> &Payload, TSharedPtr<FJsonObject> Resp,

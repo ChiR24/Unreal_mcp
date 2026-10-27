@@ -177,6 +177,9 @@ void McpClearLandscapeSplines(ULandscapeSplinesComponent *SplinesComponent);
 ULandscapeSplineSegment *McpAddLandscapeSplineSegment(ULandscapeSplinesComponent *SplinesComponent,
                                                             ULandscapeSplineControlPoint *Start,
                                                             ULandscapeSplineControlPoint *End);
+// Applies the landscape's splines to its terrain (inside the caller's undo step) and says how in Resp; false when they
+// reach none. bOutMerge: the layers must merge, after that undo step closes, for the terrain to show it.
+bool McpApplyLandscapeSplinesToTerrain(ALandscape *Landscape, const TSharedPtr<FJsonObject> &Resp, bool &bOutMerge);
 bool McpConfigureLandscapeSplines(const TSharedPtr<FJsonObject> &Payload, TSharedPtr<FJsonObject> Resp,
                                          FString &OutMessage, FString &OutErrorCode);
 bool McpCreateLandscapeStreamingProxy(const TSharedPtr<FJsonObject> &Payload, TSharedPtr<FJsonObject> Resp,

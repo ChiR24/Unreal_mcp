@@ -158,7 +158,7 @@ export const LANDSCAPE_RECORDS: readonly CapabilityRecordSource[] = [
   }),
   buildRecord({
     id: 'build_environment.configure_landscape_splines', action: 'configure_landscape_splines', family: F,
-    summary: 'Replace a landscape\'s splines with one through the given points (width, loop, terrain deform, painted layer).',
+    summary: 'Replace a landscape\'s splines with one spline through points (world space, at least two; closedLoop joins the last back to the first) of width (default 256, falloff half of it). With raiseTerrain and lowerTerrain (default true) the ground under it is raised and lowered to it, and layerName paints that layer along it. That goes into the landscape\'s Splines edit layer, added when it has none (splinesLayer, splinesLayerCreated; an edit layer holding sculpting is never taken over), which the engine rebuilds from the splines, so a later call replaces it. One undo step; the layers merge before the reply, so the drawn landscape and its collision show it. terrainShaped says whether the heights were shaped and terrainNote why not: the landscape already has the most edit layers Project Settings > Landscape > Max Number Of Layers allows, part of it is not loaded (World Partition), or raiseTerrain and lowerTerrain are both false. Without edit layers (UE 5.6 and older) the heights themselves change, and a later call does not take that back.',
     whenToUse: ['Landscape splines need to be added or modified.'],
     whenNotToUse: ['Standalone spline actors should be used instead.'],
     inputProps: { ...LANDSCAPE, points: P.points,

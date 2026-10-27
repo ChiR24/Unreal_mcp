@@ -4311,6 +4311,27 @@ describe('landscape edits reach the merged landscape, physics and texture settin
     }
   });
 
+  // With edit layers the engine applies landscape splines only to the layer reserved for them: without one (or the
+  // update request) a spline said raiseTerrain true and left every height as it was.
+  it('landscape splines shape the terrain through the edit layer reserved for them, in one undo step', () => {
+    const handler = code('Environment', 'Landscape', 'McpEnvLandscapeSplines.cpp');
+    expect(handler).toContain('MakeUnique<FMcpScopedEditorTransaction>(');
+    expect(handler).toContain('McpApplyLandscapeSplinesToTerrain(Landscape, Resp, bMerge)');
+    // The layers merge after the undo step closes, and a replace never records the landscape actor: an undo would
+    // restore its record of where the splines were drawn, and the rebuild would clear only that.
+    expect(handler).toMatch(/Undo->DescribeInto\(Resp\);\s*Undo\.Reset\(\);\s*if \(bMerge\)\s*\{\s*Landscape->ForceUpdateLayersContent\(\);/u);
+    expect(handler).not.toMatch(/Landscape->Modify\(\);\s*SplinesComponent->Modify\(\);/u);
+    // Control points are in the splines component's unscaled space, not the landscape's (scaled 100).
+    expect(handler).toContain('ControlPoint->Location = SplineToWorld.InverseTransformPosition(WorldPoint);');
+    expect(handler).not.toContain('Landscape->GetTransform().InverseTransformPosition(WorldPoint)');
+    const terrain = code('Environment', 'Landscape', 'McpEnvLandscapeSplinePayload.cpp');
+    expect(terrain).toContain('Landscape->RequestSplineLayerUpdate();');
+    expect(terrain).toContain('CreateLayer(FName(TEXT("Splines")), ULandscapeEditLayerSplines::StaticClass());');
+    expect(terrain).toContain('Landscape->SetLandscapeSplinesReservedLayer(LayerIndex);');
+    expect(terrain).toContain('!Landscape->IsMaxLayersReached()');
+    expect(terrain).toContain('Info->ApplySplines(false, &Shaped)');
+  });
+
   it('physics asset edits report the save they made and refuse a shape they do not know', () => {
     const bodies = code('Skeleton', 'Physics', 'McpSkeletonPhysicsBodies.cpp');
     const constraints = code('Skeleton', 'Physics', 'McpSkeletonPhysicsConstraints.cpp');

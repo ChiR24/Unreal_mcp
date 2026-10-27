@@ -1,4 +1,7 @@
 #include "Domains/Environment/McpEnvShared.h"
+#if ENGINE_MAJOR_VERSION > 5 || (ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 5)
+#include "LandscapeEditLayer.h"
+#endif
 
 namespace McpEnvironmentHandlers {
 bool McpTryGetBoolFromPayloadOrSettings(const TSharedPtr<FJsonObject> &Payload, const TCHAR *FieldName, bool &OutValue)
@@ -189,6 +192,87 @@ ULandscapeSplineSegment *McpAddLandscapeSplineSegment(ULandscapeSplinesComponent
     Start->ConnectedSegments.Add(FLandscapeSplineConnection(Segment, 0));
     End->ConnectedSegments.Add(FLandscapeSplineConnection(Segment, 1));
     return Segment;
+}
+
+namespace {
+// The edit layer reserved for landscape splines: the layer of the splines class from 5.5, the reserved guid before.
+const FLandscapeLayer *McpFindLandscapeSplinesLayer(ALandscape *Landscape)
+{
+#if ENGINE_MAJOR_VERSION > 5 || (ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 6)
+    return Landscape->FindLayerOfTypeConst(ULandscapeEditLayerSplines::StaticClass());
+#elif ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION == 5
+    return Landscape->FindLayerOfType(ULandscapeEditLayerSplines::StaticClass());
+#else
+    return Landscape->GetLandscapeSplinesReservedLayer();
+#endif
+}
+} // namespace
+
+// With edit layers the engine applies splines only to the edit layer reserved for them, rebuilt from the splines at
+// the next merge (bOutMerge: the caller's, after its undo step), so the splines changed no heights until that layer
+// existed. It is found, else added as the Landscape mode's layer list adds it; a layer that holds sculpting is never
+// reserved, which clears it. Without edit layers (5.6 and older) the splines are written into the heights, as Apply
+// Splines does.
+bool McpApplyLandscapeSplinesToTerrain(ALandscape *Landscape, const TSharedPtr<FJsonObject> &Resp, bool &bOutMerge)
+{
+    ULandscapeInfo *Info = Landscape->GetLandscapeInfo();
+    bOutMerge = false;
+#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION < 7
+    if (!Landscape->HasLayersContent())
+    {
+        TSet<TObjectPtr<ULandscapeComponent>> Shaped;
+        const bool bApplied = Info && Info->ApplySplines(false, &Shaped) && Shaped.Num() > 0;
+        Resp->SetStringField(TEXT("terrainNote"), bApplied
+            ? TEXT("The landscape has no edit layers, so the splines were written into its heights: a later call does not take them back (undo does).")
+            : TEXT("The splines cross none of the landscape."));
+        return bApplied;
+    }
+#endif
+    const FLandscapeLayer *Layer = McpFindLandscapeSplinesLayer(Landscape);
+    const bool bCreated = !Layer && !Landscape->IsMaxLayersReached();
+    if (bCreated)
+    {
+#if ENGINE_MAJOR_VERSION > 5 || (ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 5)
+        Landscape->CreateLayer(FName(TEXT("Splines")), ULandscapeEditLayerSplines::StaticClass());
+#else
+        const int32 LayerIndex = Landscape->CreateLayer(FName(TEXT("Splines")));
+        if (LayerIndex != INDEX_NONE)
+        {
+            Landscape->SetLandscapeSplinesReservedLayer(LayerIndex);
+        }
+#endif
+        Layer = McpFindLandscapeSplinesLayer(Landscape);
+    }
+    const TCHAR *Note = nullptr;
+    if (!Layer)
+    {
+        Note = bCreated ? TEXT("The engine refused to add a Splines edit layer, the only layer splines shape the terrain through.")
+                        : TEXT("The landscape already has as many edit layers as Project Settings > Landscape > Max Number Of Layers allows, so no Splines layer, the only layer splines shape the terrain through, could be added: delete a layer or raise that setting, then call again.");
+    }
+    else if (!Info || !Info->AreAllComponentsRegistered())
+    {
+        Note = TEXT("Part of the landscape is not loaded, and the engine shapes the terrain to splines only when all of it is: load it all (World Partition), then call again.");
+    }
+    else if (!FApp::CanEverRender())
+    {
+        Note = TEXT("The editor runs without rendering, so the edit layers are never merged into the terrain.");
+    }
+    if (Layer)
+    {
+#if ENGINE_MAJOR_VERSION > 5 || (ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 6)
+        Resp->SetStringField(TEXT("splinesLayer"), Layer->EditLayer ? Layer->EditLayer->GetName().ToString() : FString());
+#else
+        Resp->SetStringField(TEXT("splinesLayer"), Layer->Name.ToString());
+#endif
+        Resp->SetBoolField(TEXT("splinesLayerCreated"), bCreated);
+        Landscape->RequestSplineLayerUpdate();
+    }
+    if (Note)
+    {
+        Resp->SetStringField(TEXT("terrainNote"), Note);
+    }
+    bOutMerge = Layer && !Note;
+    return bOutMerge;
 }
 
 } // namespace McpEnvironmentHandlers
