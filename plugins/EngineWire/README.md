@@ -34,12 +34,23 @@ The full list is the generated [Action Reference](https://github.com/ChiR24/Unre
 
 - **Unreal Engine** 5.0 to 5.8
 - **Platforms:** Win64, macOS and Linux editors. The plugin is editor-only and never ships in a packaged game.
-- **A project with C++ code**, so the plugin can compile. Blueprint-only projects can use [prebuilt binaries](https://github.com/ChiR24/Unreal_mcp/wiki/Installation#option-c-prebuilt-binaries).
+- **A project with C++ code** to build the plugin from source. Installing from [Fab](https://www.fab.com/listings/9407137f-14b3-44a8-af0e-e9c6a9c9f6fc) or from [prebuilt binaries](https://github.com/ChiR24/Unreal_mcp/wiki/Installation#option-c-prebuilt-binaries) needs no compiler and works in Blueprint-only projects.
 - **Node.js 20.19+**, only for the stdio route
 
 ---
 
 ## Installation
+
+### Install from Fab
+
+1. Get [EngineWire on Fab](https://www.fab.com/listings/9407137f-14b3-44a8-af0e-e9c6a9c9f6fc), then open the Epic Games Launcher.
+2. In **Unreal Engine › Library › Fab Library**, find **EngineWire** and click **Install to Engine** for your engine version.
+3. Open your project, enable **EngineWire** in **Edit › Plugins**, and restart the editor. Fab installs it as an engine plugin, so there is nothing to copy into the project.
+4. The Fab build ships with the native server off: turn on **Enable Native MCP Server** in **Edit › Project Settings › Plugins › EngineWire › Native MCP**, and restart the editor once more.
+
+Fab updates follow Epic's review, so the Fab build can trail the newest [release](https://github.com/ChiR24/Unreal_mcp/releases).
+
+### Install from source
 
 1. Copy this `EngineWire` folder into your project:
 
@@ -54,7 +65,7 @@ The full list is the generated [Action Reference](https://github.com/ChiR24/Unre
    ```
 
 2. Open the project. When Unreal asks to rebuild the missing modules, answer **Yes**. If it says *"Engine modules cannot be compiled at runtime"*, generate project files (right-click the `.uproject`), build the Editor target once in Visual Studio, Rider or Xcode, and reopen.
-3. Check the status bar at the bottom-right of the level editor: **`MCP off`** means the plugin is loaded, with the native HTTP server off.
+3. Check the status bar at the bottom-right of the level editor: **`MCP :3000 (0)`** means the plugin is loaded and serving MCP on port `3000`; **`MCP off`** means it is loaded with the native server off.
 
 The plugin declares the engine plugins it uses, so Unreal enables them with it:
 
@@ -105,7 +116,7 @@ Add this to your client's MCP configuration, for example Claude Desktop's `claud
   "mcpServers": {
     "unreal-engine": {
       "command": "npx",
-      "args": ["-y", "unreal-engine-mcp-server@beta"],
+      "args": ["-y", "unreal-engine-mcp-server"],
       "env": {
         "UE_PROJECT_PATH": "C:/Path/To/YourProject"
       }
@@ -114,7 +125,7 @@ Add this to your client's MCP configuration, for example Claude Desktop's `claud
 }
 ```
 
-`UE_PROJECT_PATH` (the project folder or its `.uproject`) is how the server finds the capability token and the WebSocket port. The npm package and this plugin must come from the same release; the `@beta` tag is the 0.6 line.
+`UE_PROJECT_PATH` (the project folder or its `.uproject`) is how the proxy finds the capability token (`MCP_AUTOMATION_CAPABILITY_TOKEN` overrides it). `UNREAL_MCP_URL` points it at another endpoint (default `http://127.0.0.1:3000/mcp`). Pair it with a 0.6 plugin; a 0.5.x plugin serves its 23 separate tools instead of the `unreal` gateway.
 
 ### Try it
 

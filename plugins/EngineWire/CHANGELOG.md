@@ -6,6 +6,12 @@ All notable changes to the EngineWire plugin (formerly McpAutomationBridge) will
 
 ## [Unreleased]
 
+_Nothing yet._
+
+## [0.6.0] - 2026-10-27
+
+Plugin-side changes since the `v0.6.0-beta-f` tag, from the code diff. The server-side view is in the root `CHANGELOG.md`.
+
 ### Added
 - **Blueprint runtime errors** name their node and an Accessed None its cause; `lint_blueprint` finds such mistakes before Play, and its rules run in Data Validation too (Validate Assets, saves, commandlets: module `EngineWireValidation`); **logpoints** record a node's pin values each time it runs in Play, without pausing; **`read_graph_as_code`** reads graphs as the text of Epic's 5.8 Blueprint DSL and **`write_graph_from_code`** writes it back as nodes, keeping the nodes its ids name, on every 5.x; `create_node` `menuId`, `arrange_nodes` `layout: 'layered'`.
 - **`get_editor_focus`**: open editors, the focused graph's selected nodes, selected actors, recent errors.
@@ -37,7 +43,9 @@ All notable changes to the EngineWire plugin (formerly McpAutomationBridge) will
 - **Consent nonces are minted and required on `/mcp`**: describe and the consent ask mint each grant's nonce for its capability in the ledger, and a missing, made-up or other capability's nonce is `CONSENT_NOT_ISSUED` (the WebSocket bridge, which has no describe, keeps the old rule).
 
 ### Fixed
-- **Small fixes**: UE 5.0 links, `runtime_report` filters, diagnostics files, task principals, the RHI thread in `busiestThreadMs`, material instances as instance parents, `list_tracks` (its rows' `muted` was undeclared, so every reply failed), `process_asset` thumbnail `outputPath` (from 5.1 it held JPEG data under the .png name), `set_bone_key` on a sequence's last frame (a clip of N frames has keys 0 to N; N was refused), `create_primitive`'s text says its meshes have no collision until `configure_mesh_collision`, `configure_landscape_splines` shapes the terrain where its points are (with edit layers its splines changed no heights, and its points went into the landscape's scaled space; they now go through a Splines edit layer, added when missing, in one undo step), a primitive (`create_primitive`, `create_procedural_mesh`) is spawned as one undo step (undo skipped the new actor), `validate_assets` `dataValidation` with the Data Validation plugin off is refused (`DATAVALIDATION_PLUGIN_NOT_ENABLED`; it failed the module's delay-load).
+- **Builds and links on UE 5.0-5.8, Windows and Mac**: each file compiles on its own; 5.1's data layer creation parameters are made by reflection; Smart Objects are reached by reflection, with no Mass module; before 5.5 State Trees compile through the editor module (validated and marked up to date, as from 5.5), with no StructUtils link; older Apple clang and UE 5.8's unreachable-code rule pass.
+- **Smart Object slots**: a field the engine lacks (activity tags before 5.1, the enabled flag before 5.2) is refused instead of ignored, and `add_smart_object_component` checks that its definition took.
+- **Small fixes**: `runtime_report` filters, diagnostics files, task principals, the RHI thread in `busiestThreadMs`, material instances as instance parents, `list_tracks` (its rows' `muted` was undeclared, so every reply failed), `process_asset` thumbnail `outputPath` (from 5.1 it held JPEG data under the .png name), `set_bone_key` on a sequence's last frame (a clip of N frames has keys 0 to N; N was refused), `create_primitive`'s text says its meshes have no collision until `configure_mesh_collision`, `configure_landscape_splines` shapes the terrain where its points are (with edit layers its splines changed no heights, and its points went into the landscape's scaled space; they now go through a Splines edit layer, added when missing, in one undo step), a primitive (`create_primitive`, `create_procedural_mesh`) is spawned as one undo step (undo skipped the new actor), `validate_assets` `dataValidation` with the Data Validation plugin off is refused (`DATAVALIDATION_PLUGIN_NOT_ENABLED`; it failed the module's delay-load).
 - **Removals** name what still uses an asset (`*_IN_USE`, `referencedBy`), keep outside-referenced assets (and what only a kept asset uses), take exact components and undo for tracks and keys; extra sky lights are named, not destroyed.
 - **Fold variants** enforce their own requirements before dispatch, and describe lists what each one does under the selector.
 - **Renders** honour `renderTimeoutMs`; save_all and restart_editor wait (`RENDER_IN_PROGRESS`).

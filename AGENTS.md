@@ -1,6 +1,6 @@
 # PROJECT KNOWLEDGE BASE
 
-MCP tooling for Unreal Engine 5.0-5.8. Server package version `0.6.0-beta-f`; bridge plugin version `0.6.0-beta-f` (separate `.uplugin`). The plugin does all the work and serves MCP itself at `/mcp`; the npm package is a stdio proxy in front of it, plus the capability records every contract is generated from.
+MCP tooling for Unreal Engine 5.0-5.8. Server package version `0.6.0`; bridge plugin version `0.6.0` (separate `.uplugin`). The plugin does all the work and serves MCP itself at `/mcp`; the npm package is a stdio proxy in front of it, plus the capability records every contract is generated from.
 
 Area-specific guidance lives in nested `AGENTS.md` files (see **AREA GUIDES** below). This root file is the workspace-wide view; do not duplicate their detail here.
 

@@ -7,7 +7,7 @@
 <p align="center">
   <a href="https://opensource.org/licenses/MIT"><img alt="License: MIT" src="https://img.shields.io/badge/License-MIT-yellow.svg"></a>
   <a href="https://www.npmjs.com/package/unreal-engine-mcp-server"><img alt="npm" src="https://img.shields.io/npm/v/unreal-engine-mcp-server"></a>
-  <a href="https://www.npmjs.com/package/unreal-engine-mcp-server?activeTab=versions"><img alt="npm beta" src="https://img.shields.io/npm/v/unreal-engine-mcp-server/beta?label=npm%20%40beta&color=8957e5"></a>
+  <a href="https://www.fab.com/listings/9407137f-14b3-44a8-af0e-e9c6a9c9f6fc"><img alt="Get it on Fab" src="https://img.shields.io/badge/Fab-Get%20EngineWire-0a0a0a"></a>
   <a href="https://github.com/modelcontextprotocol/sdk"><img alt="MCP SDK" src="https://img.shields.io/badge/MCP%20SDK-TypeScript-blue"></a>
   <a href="https://www.unrealengine.com/"><img alt="Unreal Engine 5.0-5.8" src="https://img.shields.io/badge/Unreal%20Engine-5.0--5.8-orange"></a>
   <a href="https://registry.modelcontextprotocol.io/"><img alt="MCP Registry" src="https://img.shields.io/badge/MCP%20Registry-Published-green"></a>
@@ -27,13 +27,14 @@
 
 <p align="center">
   <a href="https://enginewire.dev"><b>🌐 enginewire.dev</b></a> &nbsp;·&nbsp;
+  <a href="https://www.fab.com/listings/9407137f-14b3-44a8-af0e-e9c6a9c9f6fc"><b>🛒 Fab</b></a> &nbsp;·&nbsp;
   <a href="https://github.com/ChiR24/Unreal_mcp/wiki/Quick-Start"><b>🚀 Quick Start</b></a> &nbsp;·&nbsp;
   <a href="https://github.com/ChiR24/Unreal_mcp/wiki"><b>📖 Wiki</b></a> &nbsp;·&nbsp;
   <a href="https://github.com/ChiR24/Unreal_mcp/releases"><b>📦 Releases</b></a> &nbsp;·&nbsp;
   <a href="https://github.com/ChiR24/Unreal_mcp/discussions"><b>💬 Discussions</b></a>
 </p>
 
-> 📌 **Which version is this?** This README describes the **0.6** line: the `dev` branch and npm `unreal-engine-mcp-server@beta`. The previous stable release, **0.5.30** (npm `latest`), exposes 23 separate tools instead of one; see [Upgrading from 0.5.x](https://github.com/ChiR24/Unreal_mcp/wiki/Upgrading).
+> 📌 **Which version is this?** This README describes **0.6.0**, the stable release: npm `unreal-engine-mcp-server` (`latest`) and the plugin on the [Releases page](https://github.com/ChiR24/Unreal_mcp/releases) and on [Fab](https://www.fab.com/listings/9407137f-14b3-44a8-af0e-e9c6a9c9f6fc). The previous release, **0.5.30**, exposes 23 separate tools instead of one; see [Upgrading from 0.5.x](https://github.com/ChiR24/Unreal_mcp/wiki/Upgrading).
 
 **Contents** · [What it does](#what-it-does) · [How it works](#how-it-works) · [Quick start](#quick-start) · [The `unreal` tool](#the-unreal-tool) · [Configuration](#configuration) · [Security](#security) · [Engine plugins](#engine-plugins) · [Docker](#docker) · [Documentation](#documentation) · [Development](#development) · [Community](#community)
 
@@ -111,11 +112,13 @@ Everything listens on `127.0.0.1` and requires the project's capability token un
 
 ## Quick start
 
-The [Quick Start](https://github.com/ChiR24/Unreal_mcp/wiki/Quick-Start) page walks through this with screenshots. You need Unreal Engine 5.0 to 5.8 and a project with C++ code; a Blueprint-only project can use [prebuilt binaries](https://github.com/ChiR24/Unreal_mcp/wiki/Installation#option-c-prebuilt-binaries).
+The [Quick Start](https://github.com/ChiR24/Unreal_mcp/wiki/Quick-Start) page walks through this with screenshots. You need Unreal Engine 5.0 to 5.8. Installing from Fab needs nothing else; building the plugin from source needs a project with C++ code (a Blueprint-only project can install from Fab or use [prebuilt binaries](https://github.com/ChiR24/Unreal_mcp/wiki/Installation#option-c-prebuilt-binaries)).
 
 ### 1. Add the plugin
 
-Download `EngineWire-plugin-<version>.zip` from the newest `v0.6` pre-release on the [Releases page](https://github.com/ChiR24/Unreal_mcp/releases), and copy the `EngineWire` folder it contains into your project:
+**From Fab (no compiler needed).** Get [EngineWire on Fab](https://www.fab.com/listings/9407137f-14b3-44a8-af0e-e9c6a9c9f6fc). In the Epic Games Launcher, open **Unreal Engine › Library › Fab Library**, find **EngineWire** and click **Install to Engine** for your engine version. Open your project, enable **EngineWire** in **Edit › Plugins** and restart the editor. The Fab build ships with the native server off: turn on **Enable Native MCP Server** in **Edit › Project Settings › Plugins › EngineWire › Native MCP** and restart once more. Fab updates follow Epic's review, so the Fab build can trail the newest release here.
+
+**From a release.** Download `EngineWire-plugin-<version>.zip` from the newest release on the [Releases page](https://github.com/ChiR24/Unreal_mcp/releases), and copy the `EngineWire` folder it contains into your project:
 
 ```text
 MyGame/Plugins/EngineWire/
@@ -138,7 +141,7 @@ Build the plugin once on a machine with the engine and a compiler, then hand out
 node scripts/package-plugin.mjs "C:/Program Files/Epic Games/UE_5.7"
 ```
 
-This writes `build/EngineWire-v<version>-UE5.7-<Platform>.zip`, where `<version>` is the `package.json` version (currently `0.6.0-beta-f`). Unzip it into `YourProject/Plugins/`. Binaries only work with the engine minor and platform they were built for: a 5.6 build won't load in 5.5, 5.7 or 5.8.
+This writes `build/EngineWire-v<version>-UE5.7-<Platform>.zip`, where `<version>` is the `package.json` version (currently `0.6.0`). Unzip it into `YourProject/Plugins/`. Binaries only work with the engine minor and platform they were built for: a 5.6 build won't load in 5.5, 5.7 or 5.8.
 
 </details>
 
@@ -146,7 +149,7 @@ This writes `build/EngineWire-v<version>-UE5.7-<Platform>.zip`, where `<version>
 
 **Route A · Native HTTP (no Node.js)**
 
-1. **Enable Native MCP Server** is on by default (**Edit › Project Settings › Plugins › EngineWire**, port `3000`). A project that turned it off needs it back on and an editor restart.
+1. **Enable Native MCP Server** is on by default (**Edit › Project Settings › Plugins › EngineWire**, port `3000`); the Fab build ships with it off. A project where it is off needs it on and an editor restart.
 
    <img src="https://raw.githubusercontent.com/wiki/ChiR24/Unreal_mcp/assets/screenshots/settings-native-mcp.png" alt="The Native MCP section of the plugin settings, with Enable Native MCP Server ticked" width="520">
 
@@ -188,7 +191,7 @@ Add this to your client's MCP configuration, for example Claude Desktop's `claud
   "mcpServers": {
     "unreal-engine": {
       "command": "npx",
-      "args": ["-y", "unreal-engine-mcp-server@beta"],
+      "args": ["-y", "unreal-engine-mcp-server"],
       "env": {
         "UE_PROJECT_PATH": "C:/Path/To/YourProject"
       }
@@ -197,7 +200,7 @@ Add this to your client's MCP configuration, for example Claude Desktop's `claud
 }
 ```
 
-`UE_PROJECT_PATH` (the project folder or its `.uproject`) is how the proxy finds the capability token (`MCP_AUTOMATION_CAPABILITY_TOKEN` overrides it). `UNREAL_MCP_URL` points it at another endpoint (default `http://127.0.0.1:3000/mcp`). Keep the `@beta` tag: without it, npm installs 0.5.30, which doesn't match a 0.6 plugin.
+`UE_PROJECT_PATH` (the project folder or its `.uproject`) is how the proxy finds the capability token (`MCP_AUTOMATION_CAPABILITY_TOKEN` overrides it). `UNREAL_MCP_URL` points it at another endpoint (default `http://127.0.0.1:3000/mcp`). Pair it with a 0.6 plugin; a 0.5.x plugin serves its 23 separate tools instead of the `unreal` gateway.
 
 ### 3. Try it
 
