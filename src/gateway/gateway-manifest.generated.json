@@ -1604,6 +1604,7 @@
       "actions": [
         "create_landscape",
         "sculpt",
+        "erode_landscape",
         "edit_landscape",
         "export_heightmap",
         "create_landscape_asset",
@@ -1684,12 +1685,15 @@
         "direction",
         "directionalLightActorPath",
         "distance",
+        "droplets",
+        "dryRun",
         "edit",
         "elevation",
         "enabled",
         "falloff",
         "feature",
         "filename",
+        "fillDepressions",
         "foliageOp",
         "foliageType",
         "foliageTypePath",
@@ -1765,6 +1769,7 @@
         "removeAll",
         "renderTargetPath",
         "resolution",
+        "riverAreaM2",
         "rotation",
         "rotationRange",
         "save",
@@ -1797,6 +1802,7 @@
         "strength",
         "subdivisions",
         "summary",
+        "talusAngle",
         "targetActor",
         "threshold",
         "tileSize",
@@ -1805,6 +1811,7 @@
         "transforms",
         "updateNormals",
         "useRandomOffset",
+        "valleys",
         "viewDistance",
         "virtualShadowMaps",
         "volumeName",
@@ -2231,6 +2238,16 @@
             "type": "number",
             "description": "Focal distance in cm, 0 or more."
           },
+          "droplets": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 1000000,
+            "description": "Rain droplets that wash gullies into the slopes (default a quarter of the vertices, at most 200,000; 0 skips)."
+          },
+          "dryRun": {
+            "type": "boolean",
+            "description": "Compute and report, writing nothing (default false)."
+          },
           "edit": {
             "type": "string",
             "enum": [
@@ -2276,6 +2293,10 @@
           "filename": {
             "type": "string",
             "description": "File name for snapshot export/import."
+          },
+          "fillDepressions": {
+            "type": "boolean",
+            "description": "Raise every pit to where it would spill, so all ground drains (default true). false keeps basins: rivers then end in them, and drains is false."
           },
           "foliageOp": {
             "type": "string",
@@ -3138,27 +3159,55 @@
             "description": "Recapture the sky light after the change."
           },
           "region": {
-            "type": "object",
-            "description": "Rectangular region {minX, minY, maxX, maxY}.",
-            "properties": {
-              "minX": {
-                "type": "number",
-                "description": "Min X."
+            "oneOf": [
+              {
+                "type": "object",
+                "description": "Rectangular region {minX, minY, maxX, maxY}.",
+                "properties": {
+                  "minX": {
+                    "type": "number",
+                    "description": "Min X."
+                  },
+                  "minY": {
+                    "type": "number",
+                    "description": "Min Y."
+                  },
+                  "maxX": {
+                    "type": "number",
+                    "description": "Max X."
+                  },
+                  "maxY": {
+                    "type": "number",
+                    "description": "Max Y."
+                  }
+                },
+                "additionalProperties": false
               },
-              "minY": {
-                "type": "number",
-                "description": "Min Y."
-              },
-              "maxX": {
-                "type": "number",
-                "description": "Max X."
-              },
-              "maxY": {
-                "type": "number",
-                "description": "Max Y."
+              {
+                "type": "object",
+                "description": "Vertices to erode, {minX, minY, maxX, maxY} in the landscape's vertex grid (default all). Its border stays as it is.",
+                "properties": {
+                  "minX": {
+                    "type": "number",
+                    "description": "Min X."
+                  },
+                  "minY": {
+                    "type": "number",
+                    "description": "Min Y."
+                  },
+                  "maxX": {
+                    "type": "number",
+                    "description": "Max X."
+                  },
+                  "maxY": {
+                    "type": "number",
+                    "description": "Max Y."
+                  }
+                },
+                "additionalProperties": false
               }
-            },
-            "additionalProperties": false
+            ],
+            "description": "Rectangular region {minX, minY, maxX, maxY}."
           },
           "removeAll": {
             "type": "boolean",
@@ -3171,6 +3220,11 @@
           "resolution": {
             "type": "integer",
             "description": "Width and height in pixels, 1 to 4096."
+          },
+          "riverAreaM2": {
+            "type": "number",
+            "minimum": 1,
+            "description": "Catchment in square metres that makes a river (default 1% of the region)."
           },
           "rotation": {
             "oneOf": [
@@ -3538,6 +3592,12 @@
             "type": "boolean",
             "description": "Count only: byType and count, no instance list. A level-wide listing runs to tens of KB."
           },
+          "talusAngle": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 80,
+            "description": "Degrees: slopes steeper than this slump until they are not (default 0, off). 30 to 40 is loose rock and soil."
+          },
           "targetActor": {
             "type": "string",
             "description": "Target actor name for the operation."
@@ -3634,6 +3694,12 @@
             "type": "boolean",
             "description": "Apply a random offset to scattered meshes."
           },
+          "valleys": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 1,
+            "description": "How deep valleys cut, 0 to 1 (default 0.3; 0 skips): how far an erosion front travels up the largest river, as a share of the region's longer side, the same at any landscape size or resolution. Smaller rivers cut less (by the square root of their catchment)."
+          },
           "viewDistance": {
             "type": "number",
             "description": "Volumetric fog view distance in world units."
@@ -3667,6 +3733,7 @@
             "enum": [
               "create_landscape",
               "sculpt",
+              "erode_landscape",
               "edit_landscape",
               "export_heightmap",
               "create_landscape_asset",

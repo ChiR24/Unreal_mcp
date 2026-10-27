@@ -4,7 +4,7 @@
 
 # Action reference
 
-Catalog revision: `81bddf27a5db71ee`
+Catalog revision: `32ceb530574637d9`
 
 Both transports expose exactly ONE public MCP tool, `unreal`, with the four
 operations `search` / `describe` / `execute` / `configure`. The parent tools
@@ -13,7 +13,7 @@ by `tools/list` and a direct `tools/call` on one returns a
 `DIRECT_TOOL_CALL_REMOVED` receipt rather than executing
 (`src/server/gateway/direct-call-migration.ts`).
 
-The catalog declares 449 capabilities across
+The catalog declares 450 capabilities across
 23 internal parent tools.
 Every row is derived from the capability record that the gateway actually
 validates against, so `execute` cannot accept an action this table omits.
@@ -37,7 +37,7 @@ validates against, so `execute` cannot accept an action this table omits.
 | Parent tool | Capabilities | read | write | destructive | Domains |
 | --- | --- | --- | --- | --- | --- |
 | `animation_physics` | 32 | 5 | 25 | 2 | animation physics |
-| `build_environment` | 40 | 4 | 33 | 3 | environment |
+| `build_environment` | 41 | 4 | 34 | 3 | environment |
 | `control_actor` | 29 | 9 | 18 | 2 | actor |
 | `control_editor` | 26 | 9 | 14 | 3 | editor |
 | `inspect` | 27 | 22 | 4 | 1 | inspect |
@@ -62,7 +62,7 @@ validates against, so `execute` cannot accept an action this table omits.
 
 ## Capabilities requiring consent
 
-68 of 449 capabilities require consent.
+68 of 450 capabilities require consent.
 
 | Capability | Tool | Action | Effect | Consent |
 | --- | --- | --- | --- | --- |
@@ -260,6 +260,7 @@ validates against, so `execute` cannot accept an action this table omits.
 | `build_environment.delete` | `build_environment` | `delete` | destructive | destructive | explicit | `build_environment.delete` |
 | `build_environment.edit_landscape` | `build_environment` | `paint_landscape` | write | write | none | `build_environment.edit_landscape` `build_environment.paint_landscape` `build_environment.paint_landscape_layer` `build_environment.import_heightmap` `build_environment.configure_landscape_lod` `build_environment.configure_landscape_material` `build_environment.configure_landscape_splines` `build_environment.generate_lods` |
 | `build_environment.edit_spline` | `build_environment` | `add_spline_point` | write | write | none | `build_environment.edit_spline` `build_environment.add_spline_point` `build_environment.set_spline_point_position` `build_environment.set_spline_point_rotation` `build_environment.set_spline_point_scale` `build_environment.set_spline_point_tangents` `build_environment.set_spline_type` |
+| `build_environment.erode_landscape` | `build_environment` | `erode_landscape` | write | write | none | `build_environment.erode_landscape` |
 | `build_environment.export_heightmap` | `build_environment` | `export_heightmap` | write | write | none | `build_environment.export_heightmap` |
 | `build_environment.export_snapshot` | `build_environment` | `export_snapshot` | read | read | none | `build_environment.export_snapshot` |
 | `build_environment.get_foliage_instances` | `build_environment` | `get_foliage_instances` | read | read | none | `build_environment.get_foliage_instances` |

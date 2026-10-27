@@ -27,6 +27,11 @@ static FGuid FirstEditLayerGuid(const ALandscape *Landscape) {
 #endif
 }
 
+FGuid LandscapeWriteLayer(const ALandscape *Landscape) {
+  const FGuid Editing = Landscape->GetEditingLayer();
+  return Editing.IsValid() ? Editing : FirstEditLayerGuid(Landscape);
+}
+
 FMcpLandscapeEditScope::FMcpLandscapeEditScope(ALandscape *InLandscape, const TCHAR *Title, bool bInDeferMerge)
     : Transaction(MakeUnique<FMcpScopedEditorTransaction>(FText::FromString(Title), EMcpMutationDurability::EditorStateOnly,
                                                           TArray<UObject *>{InLandscape})),
@@ -35,7 +40,7 @@ FMcpLandscapeEditScope::FMcpLandscapeEditScope(ALandscape *InLandscape, const TC
   bLayered = Landscape->HasLayersContent();
   if (bLayered) {
     PreviousLayer = Landscape->GetEditingLayer();
-    Landscape->SetEditingLayer(PreviousLayer.IsValid() ? PreviousLayer : FirstEditLayerGuid(Landscape));
+    Landscape->SetEditingLayer(LandscapeWriteLayer(Landscape));
   }
 }
 

@@ -2658,6 +2658,16 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "number",
           "description": "Focal distance in cm, 0 or more."
         },
+        "droplets": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 1000000,
+          "description": "Rain droplets that wash gullies into the slopes (default a quarter of the vertices, at most 200,000; 0 skips)."
+        },
+        "dryRun": {
+          "type": "boolean",
+          "description": "Compute and report, writing nothing (default false)."
+        },
         "edit": {
           "type": "string",
           "enum": [
@@ -2703,6 +2713,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "filename": {
           "type": "string",
           "description": "File name for snapshot export/import."
+        },
+        "fillDepressions": {
+          "type": "boolean",
+          "description": "Raise every pit to where it would spill, so all ground drains (default true). false keeps basins: rivers then end in them, and drains is false."
         },
         "foliageOp": {
           "type": "string",
@@ -3565,27 +3579,55 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "description": "Recapture the sky light after the change."
         },
         "region": {
-          "type": "object",
-          "description": "Rectangular region {minX, minY, maxX, maxY}.",
-          "properties": {
-            "minX": {
-              "type": "number",
-              "description": "Min X."
+          "oneOf": [
+            {
+              "type": "object",
+              "description": "Rectangular region {minX, minY, maxX, maxY}.",
+              "properties": {
+                "minX": {
+                  "type": "number",
+                  "description": "Min X."
+                },
+                "minY": {
+                  "type": "number",
+                  "description": "Min Y."
+                },
+                "maxX": {
+                  "type": "number",
+                  "description": "Max X."
+                },
+                "maxY": {
+                  "type": "number",
+                  "description": "Max Y."
+                }
+              },
+              "additionalProperties": false
             },
-            "minY": {
-              "type": "number",
-              "description": "Min Y."
-            },
-            "maxX": {
-              "type": "number",
-              "description": "Max X."
-            },
-            "maxY": {
-              "type": "number",
-              "description": "Max Y."
+            {
+              "type": "object",
+              "description": "Vertices to erode, {minX, minY, maxX, maxY} in the landscape's vertex grid (default all). Its border stays as it is.",
+              "properties": {
+                "minX": {
+                  "type": "number",
+                  "description": "Min X."
+                },
+                "minY": {
+                  "type": "number",
+                  "description": "Min Y."
+                },
+                "maxX": {
+                  "type": "number",
+                  "description": "Max X."
+                },
+                "maxY": {
+                  "type": "number",
+                  "description": "Max Y."
+                }
+              },
+              "additionalProperties": false
             }
-          },
-          "additionalProperties": false
+          ],
+          "description": "Rectangular region {minX, minY, maxX, maxY}."
         },
         "removeAll": {
           "type": "boolean",
@@ -3598,6 +3640,11 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "resolution": {
           "type": "integer",
           "description": "Width and height in pixels, 1 to 4096."
+        },
+        "riverAreaM2": {
+          "type": "number",
+          "minimum": 1,
+          "description": "Catchment in square metres that makes a river (default 1% of the region)."
         },
         "rotation": {
           "oneOf": [
@@ -3965,6 +4012,12 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "boolean",
           "description": "Count only: byType and count, no instance list. A level-wide listing runs to tens of KB."
         },
+        "talusAngle": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 80,
+          "description": "Degrees: slopes steeper than this slump until they are not (default 0, off). 30 to 40 is loose rock and soil."
+        },
         "targetActor": {
           "type": "string",
           "description": "Target actor name for the operation."
@@ -4061,6 +4114,12 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "boolean",
           "description": "Apply a random offset to scattered meshes."
         },
+        "valleys": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1,
+          "description": "How deep valleys cut, 0 to 1 (default 0.3; 0 skips): how far an erosion front travels up the largest river, as a share of the region's longer side, the same at any landscape size or resolution. Smaller rivers cut less (by the square root of their catchment)."
+        },
         "viewDistance": {
           "type": "number",
           "description": "Volumetric fog view distance in world units."
@@ -4094,6 +4153,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "enum": [
             "create_landscape",
             "sculpt",
+            "erode_landscape",
             "edit_landscape",
             "export_heightmap",
             "create_landscape_asset",
@@ -4148,6 +4208,14 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "string",
           "description": "Label of the new spline actor."
         },
+        "cells": {
+          "type": "integer",
+          "description": "Vertices eroded."
+        },
+        "changedCells": {
+          "type": "integer",
+          "description": "Vertices whose height changed."
+        },
         "configuredProperties": {
           "type": "array",
           "items": {
@@ -4163,6 +4231,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "number",
           "description": "Number of available light types."
         },
+        "depressionsFilled": {
+          "type": "integer",
+          "description": "Separate hollows filled before erosion."
+        },
         "details": {
           "type": "object",
           "x-unreal-reflection-boundary": true,
@@ -4172,6 +4244,18 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "string",
           "description": "Directional light actor path. As input, selects the light to snapshot; the first directional light in the level is used when omitted. As output, the resolved actor path."
         },
+        "drains": {
+          "type": "boolean",
+          "description": "Every cell has a path to the region's border that never climbs."
+        },
+        "dropletsRun": {
+          "type": "integer",
+          "description": "Droplets run (fewer than asked only when a time guard stopped them)."
+        },
+        "editLayers": {
+          "type": "integer",
+          "description": "The landscape's edit layers (0 without them)."
+        },
         "height": {
           "type": "number",
           "description": "Size up from the route in world units, as drawn (the diameter for a pipe or cable)."
@@ -4179,6 +4263,18 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "instancesShowingNewMesh": {
           "type": "number",
           "description": "Mesh assignment: how many of the placed instances now draw the new mesh, read back off their component; below placedInstances means some did not follow."
+        },
+        "landscapeName": {
+          "type": "string",
+          "description": "The landscape eroded (its label)."
+        },
+        "maxLoweredCm": {
+          "type": "number",
+          "description": "Deepest cut, in cm."
+        },
+        "maxRaisedCm": {
+          "type": "number",
+          "description": "Highest fill, in cm."
         },
         "meshPath": {
           "type": "string",
@@ -4203,6 +4299,26 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "previousMesh": {
           "type": "string",
           "description": "Mesh assignment: the mesh the type used before this call (empty when it had none)."
+        },
+        "region": {
+          "type": "object",
+          "additionalProperties": true,
+          "x-unreal-reflection-boundary": true,
+          "description": "The vertices eroded, {minX, minY, maxX, maxY}."
+        },
+        "rivers": {
+          "type": "array",
+          "description": "Up to 20 rivers, largest catchment first.",
+          "items": {
+            "type": "object",
+            "additionalProperties": true,
+            "x-unreal-reflection-boundary": true,
+            "description": "{catchmentM2, lengthM, points: [{x, y, z}] from source to mouth, world cm}."
+          }
+        },
+        "seconds": {
+          "type": "number",
+          "description": "Time the call took."
         },
         "skyLightActorPath": {
           "type": "string",
@@ -4233,6 +4349,16 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             "description": "Light type."
           },
           "description": "Available light types."
+        },
+        "undo": {
+          "type": "object",
+          "additionalProperties": true,
+          "x-unreal-reflection-boundary": true,
+          "description": "What editor undo takes back: {undoable, transactionScope}."
+        },
+        "undrainedCells": {
+          "type": "integer",
+          "description": "Cells with no such path (fillDepressions false)."
         },
         "width": {
           "type": "number",

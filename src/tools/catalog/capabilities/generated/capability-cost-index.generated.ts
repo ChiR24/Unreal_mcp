@@ -245,6 +245,7 @@ export const CAPABILITY_COST_INDEX: Readonly<Record<string, string>> = {
   "build_environment::edit_landscape": "long-running|high",
   "build_environment::edit_spline": "interactive|low",
   "build_environment::ensure_single_sky_light": "interactive|low",
+  "build_environment::erode_landscape": "long-running|high",
   "build_environment::export_heightmap": "interactive|low",
   "build_environment::export_snapshot": "interactive|low",
   "build_environment::generate_lods": "long-running|high",
@@ -1646,4 +1647,4 @@ export const CAPABILITY_COST_INDEX: Readonly<Record<string, string>> = {
   "system_control::write_snapshot": "interactive|medium"
 };
 
-export const CAPABILITY_COST_INDEX_KEY_COUNT = 1633;
+export const CAPABILITY_COST_INDEX_KEY_COUNT = 1634;

@@ -4,7 +4,7 @@
 import type { CapabilityRecordSource } from '../../model.js';
 import { buildRecord } from './helpers.js';
 import { P } from './properties.js';
-import { num, str } from '../shared/schema-props.js';
+import { bool, int, num, str } from '../shared/schema-props.js';
 
 const F = 'landscape';
 const WU = ['A landscape must be created or modified in the current level.'];
@@ -51,6 +51,43 @@ export const LANDSCAPE_RECORDS: readonly CapabilityRecordSource[] = [
     effect: 'write', latency: 'interactive', resources: 'medium',
     dispatchAction: 'modify_heightmap',
     exampleInput: { action: 'modify_heightmap', landscapeName: 'Landscape_1', operation: 'raise', amount: 200, minX: 0, minY: 0, maxX: 15, maxY: 15 },
+  }),
+  buildRecord({
+    id: 'build_environment.erode_landscape', action: 'erode_landscape', family: F,
+    topics: ['erode terrain', 'terrain erosion', 'hydraulic erosion', 'rivers and valleys', 'natural terrain', 'terrain drains'],
+    summary: 'Wear a landscape down the way water wears ground, so that every cell drains: fillDepressions (default true) raises each pit to where it would spill (its basin becomes a flat lake bed), valleys cuts valleys by stream power, droplets wash gullies into the slopes, talusAngle slumps what is steeper, and the pits that leaves are filled again. region limits it to some of the landscape\'s vertices (default all), its border held so the result joins the ground around it. Written into the landscape\'s edit layer (the one being edited, else the first, as sculpt writes) as one undo step and merged before the reply; dryRun computes all of it and writes nothing. The reply gives drains (every cell has a path to the border that never climbs, judged on the heights written; undrainedCells when not), depressionsFilled, maxLoweredCm, maxRaisedCm, changedCells, dropletsRun (the same seed and droplets give the same ground), editLayers (with more than one, the others still add on top of this one) and rivers: up to 20, largest catchment first, each {catchmentM2, lengthM, points} with its course in world cm from source to mouth (at most 64 points; a river crossing a filled lake runs straight over it), for water bodies, splines and roads. Refused, changing nothing: LANDSCAPE_NOT_FOUND, INVALID_REGION (outside the landscape, or under 5 vertices a side), INVALID_ARGUMENT (more than 4,194,304 vertices at once: name a region).',
+    whenToUse: ['Sculpted, imported or noise terrain should look worn by water, with valleys, gullies and rivers, and no hollow that would hold water by accident.', 'Rivers are needed for water bodies, bridges or roads: their courses come back in world space.'],
+    whenNotToUse: ['One spot should rise, sink or flatten: sculpt or modify_heightmap.'],
+    inputProps: { ...LANDSCAPE,
+      region: { ...P.region, description: 'Vertices to erode, {minX, minY, maxX, maxY} in the landscape\'s vertex grid (default all). Its border stays as it is.' },
+      fillDepressions: bool('Raise every pit to where it would spill, so all ground drains (default true). false keeps basins: rivers then end in them, and drains is false.'),
+      valleys: { type: 'number', minimum: 0, maximum: 1, description: 'How deep valleys cut, 0 to 1 (default 0.3; 0 skips): how far an erosion front travels up the largest river, as a share of the region\'s longer side, the same at any landscape size or resolution. Smaller rivers cut less (by the square root of their catchment).' },
+      droplets: { type: 'integer', minimum: 0, maximum: 1000000, description: 'Rain droplets that wash gullies into the slopes (default a quarter of the vertices, at most 200,000; 0 skips).' },
+      talusAngle: { type: 'number', minimum: 0, maximum: 80, description: 'Degrees: slopes steeper than this slump until they are not (default 0, off). 30 to 40 is loose rock and soil.' },
+      riverAreaM2: { type: 'number', minimum: 1, description: 'Catchment in square metres that makes a river (default 1% of the region).' },
+      seed: int('Seed for the droplets (default 1): the same seed and droplets give the same ground.'),
+      dryRun: bool('Compute and report, writing nothing (default false).') },
+    outputProps: {
+      landscapeName: str('The landscape eroded (its label).'),
+      region: { type: 'object', additionalProperties: true, 'x-unreal-reflection-boundary': true, description: 'The vertices eroded, {minX, minY, maxX, maxY}.' },
+      drains: bool('Every cell has a path to the region\'s border that never climbs.'),
+      undrainedCells: int('Cells with no such path (fillDepressions false).'),
+      depressionsFilled: int('Separate hollows filled before erosion.'),
+      changedCells: int('Vertices whose height changed.'),
+      maxLoweredCm: num('Deepest cut, in cm.'),
+      maxRaisedCm: num('Highest fill, in cm.'),
+      dropletsRun: int('Droplets run (fewer than asked only when a time guard stopped them).'),
+      editLayers: int('The landscape\'s edit layers (0 without them).'),
+      rivers: { type: 'array', description: 'Up to 20 rivers, largest catchment first.', items: { type: 'object', additionalProperties: true, 'x-unreal-reflection-boundary': true, description: '{catchmentM2, lengthM, points: [{x, y, z}] from source to mouth, world cm}.' } },
+      cells: int('Vertices eroded.'),
+      seconds: num('Time the call took.'),
+      undo: { type: 'object', additionalProperties: true, 'x-unreal-reflection-boundary': true, description: 'What editor undo takes back: {undoable, transactionScope}.' },
+    },
+    requiredOneOf: ['landscapeName', 'landscapePath', 'landscapeActorPath'],
+    effect: 'write', latency: 'long-running', resources: 'high',
+    behavior: { longRunning: true },
+    dispatchAction: 'erode_landscape',
+    exampleInput: { action: 'erode_landscape', landscapeName: 'Landscape_1', valleys: 0.3, seed: 7 },
   }),
   buildRecord({
     id: 'build_environment.set_landscape_material', action: 'set_landscape_material', family: F,

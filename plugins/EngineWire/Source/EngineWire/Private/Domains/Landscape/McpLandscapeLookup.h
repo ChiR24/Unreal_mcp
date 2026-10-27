@@ -24,6 +24,9 @@ ALandscape *ResolveLandscapeOrReply(UEngineWireSubsystem &Bridge,
 // edit goes to the layer being edited, else the first, in one undo step, and the layers merge when the scope closes
 // (on a later editor tick with bDeferMerge). Construct it before the FLandscapeEditDataInterface: the interface then
 // reads and writes that layer, and is flushed before the merge.
+// The edit layer an edit writes: the one being edited, else the first (an invalid guid without edit layers).
+FGuid LandscapeWriteLayer(const ALandscape *Landscape);
+
 class FMcpLandscapeEditScope {
 public:
   FMcpLandscapeEditScope(ALandscape *InLandscape, const TCHAR *Title, bool bInDeferMerge);

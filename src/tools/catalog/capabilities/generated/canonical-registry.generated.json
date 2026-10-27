@@ -1,6 +1,6 @@
 {
-  "catalogRevision": "81bddf27a5db71ee",
-  "recordCount": 449,
+  "catalogRevision": "32ceb530574637d9",
+  "recordCount": 450,
   "records": [
     {
       "id": "animation_physics.analyze_animation",
@@ -35087,6 +35087,261 @@
         "algorithm": "sha256",
         "schema": "9c130df9b08870919bb41cd479e621c4edb25a06c5f329b41dfeae8593c55cd2",
         "content": "a7b7204623d04a912af53370730778f4bb281114cd1246959578eb428da6d352"
+      }
+    },
+    {
+      "id": "build_environment.erode_landscape",
+      "aliases": [],
+      "legacyIds": [
+        {
+          "tool": "build_environment",
+          "action": "erode_landscape"
+        }
+      ],
+      "discovery": {
+        "domain": "environment",
+        "family": "landscape",
+        "topics": [
+          "erode_landscape",
+          "erode terrain",
+          "terrain erosion",
+          "hydraulic erosion",
+          "rivers and valleys",
+          "natural terrain",
+          "terrain drains"
+        ],
+        "summary": "Wear a landscape down the way water wears ground, so that every cell drains: fillDepressions (default true) raises each pit to where it would spill (its basin becomes a flat lake bed), valleys cuts valleys by stream power, droplets wash gullies into the slopes, talusAngle slumps what is steeper, and the pits that leaves are filled again. region limits it to some of the landscape's vertices (default all), its border held so the result joins the ground around it. Written into the landscape's edit layer (the one being edited, else the first, as sculpt writes) as one undo step and merged before the reply; dryRun computes all of it and writes nothing. The reply gives drains (every cell has a path to the border that never climbs, judged on the heights written; undrainedCells when not), depressionsFilled, maxLoweredCm, maxRaisedCm, changedCells, dropletsRun (the same seed and droplets give the same ground), editLayers (with more than one, the others still add on top of this one) and rivers: up to 20, largest catchment first, each {catchmentM2, lengthM, points} with its course in world cm from source to mouth (at most 64 points; a river crossing a filled lake runs straight over it), for water bodies, splines and roads. Refused, changing nothing: LANDSCAPE_NOT_FOUND, INVALID_REGION (outside the landscape, or under 5 vertices a side), INVALID_ARGUMENT (more than 4,194,304 vertices at once: name a region).",
+        "whenToUse": [
+          "Sculpted, imported or noise terrain should look worn by water, with valleys, gullies and rivers, and no hollow that would hold water by accident.",
+          "Rivers are needed for water bodies, bridges or roads: their courses come back in world space."
+        ],
+        "whenNotToUse": [
+          "One spot should rise, sink or flatten: sculpt or modify_heightmap."
+        ]
+      },
+      "schemas": {
+        "input": {
+          "$schema": "https://json-schema.org/draft/2020-12/schema",
+          "type": "object",
+          "properties": {
+            "action": {
+              "type": "string",
+              "description": "The action to execute on the parent tool."
+            },
+            "landscapeName": {
+              "type": "string",
+              "description": "Target landscape actor name."
+            },
+            "landscapePath": {
+              "type": "string",
+              "description": "Canonical /Game landscape asset path."
+            },
+            "landscapeActorPath": {
+              "type": "string",
+              "description": "Landscape actor path in the level."
+            },
+            "region": {
+              "type": "object",
+              "description": "Vertices to erode, {minX, minY, maxX, maxY} in the landscape's vertex grid (default all). Its border stays as it is.",
+              "properties": {
+                "minX": {
+                  "type": "number",
+                  "description": "Min X."
+                },
+                "minY": {
+                  "type": "number",
+                  "description": "Min Y."
+                },
+                "maxX": {
+                  "type": "number",
+                  "description": "Max X."
+                },
+                "maxY": {
+                  "type": "number",
+                  "description": "Max Y."
+                }
+              },
+              "additionalProperties": false
+            },
+            "fillDepressions": {
+              "type": "boolean",
+              "description": "Raise every pit to where it would spill, so all ground drains (default true). false keeps basins: rivers then end in them, and drains is false."
+            },
+            "valleys": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 1,
+              "description": "How deep valleys cut, 0 to 1 (default 0.3; 0 skips): how far an erosion front travels up the largest river, as a share of the region's longer side, the same at any landscape size or resolution. Smaller rivers cut less (by the square root of their catchment)."
+            },
+            "droplets": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 1000000,
+              "description": "Rain droplets that wash gullies into the slopes (default a quarter of the vertices, at most 200,000; 0 skips)."
+            },
+            "talusAngle": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 80,
+              "description": "Degrees: slopes steeper than this slump until they are not (default 0, off). 30 to 40 is loose rock and soil."
+            },
+            "riverAreaM2": {
+              "type": "number",
+              "minimum": 1,
+              "description": "Catchment in square metres that makes a river (default 1% of the region)."
+            },
+            "seed": {
+              "type": "integer",
+              "description": "Seed for the droplets (default 1): the same seed and droplets give the same ground."
+            },
+            "dryRun": {
+              "type": "boolean",
+              "description": "Compute and report, writing nothing (default false)."
+            }
+          },
+          "required": [
+            "action"
+          ],
+          "additionalProperties": false,
+          "requiredOneOf": [
+            "landscapeName",
+            "landscapePath",
+            "landscapeActorPath"
+          ]
+        },
+        "output": {
+          "$schema": "https://json-schema.org/draft/2020-12/schema",
+          "type": "object",
+          "properties": {
+            "success": {
+              "type": "boolean",
+              "description": "Whether the action succeeded."
+            },
+            "message": {
+              "type": "string",
+              "description": "Human-readable result message."
+            },
+            "details": {
+              "type": "object",
+              "x-unreal-reflection-boundary": true,
+              "description": "Additional handler result fields not named by the contract."
+            },
+            "landscapeName": {
+              "type": "string",
+              "description": "The landscape eroded (its label)."
+            },
+            "region": {
+              "type": "object",
+              "additionalProperties": true,
+              "x-unreal-reflection-boundary": true,
+              "description": "The vertices eroded, {minX, minY, maxX, maxY}."
+            },
+            "drains": {
+              "type": "boolean",
+              "description": "Every cell has a path to the region's border that never climbs."
+            },
+            "undrainedCells": {
+              "type": "integer",
+              "description": "Cells with no such path (fillDepressions false)."
+            },
+            "depressionsFilled": {
+              "type": "integer",
+              "description": "Separate hollows filled before erosion."
+            },
+            "changedCells": {
+              "type": "integer",
+              "description": "Vertices whose height changed."
+            },
+            "maxLoweredCm": {
+              "type": "number",
+              "description": "Deepest cut, in cm."
+            },
+            "maxRaisedCm": {
+              "type": "number",
+              "description": "Highest fill, in cm."
+            },
+            "dropletsRun": {
+              "type": "integer",
+              "description": "Droplets run (fewer than asked only when a time guard stopped them)."
+            },
+            "editLayers": {
+              "type": "integer",
+              "description": "The landscape's edit layers (0 without them)."
+            },
+            "rivers": {
+              "type": "array",
+              "description": "Up to 20 rivers, largest catchment first.",
+              "items": {
+                "type": "object",
+                "additionalProperties": true,
+                "x-unreal-reflection-boundary": true,
+                "description": "{catchmentM2, lengthM, points: [{x, y, z}] from source to mouth, world cm}."
+              }
+            },
+            "cells": {
+              "type": "integer",
+              "description": "Vertices eroded."
+            },
+            "seconds": {
+              "type": "number",
+              "description": "Time the call took."
+            },
+            "undo": {
+              "type": "object",
+              "additionalProperties": true,
+              "x-unreal-reflection-boundary": true,
+              "description": "What editor undo takes back: {undoable, transactionScope}."
+            }
+          },
+          "required": [
+            "success"
+          ],
+          "additionalProperties": false
+        }
+      },
+      "examples": [
+        {
+          "title": "Wear a landscape down the way water wears ground, so that every cell drains: fillDepressions (default true) raises each pit to where it would spill (its basin becomes a flat lake bed), valleys cuts valleys by stream power, droplets wash gullies into the slopes, talusAngle slumps what is steeper, and the pits that leaves are filled again. region limits it to some of the landscape's vertices (default all), its border held so the result joins the ground around it. Written into the landscape's edit layer (the one being edited, else the first, as sculpt writes) as one undo step and merged before the reply; dryRun computes all of it and writes nothing. The reply gives drains (every cell has a path to the border that never climbs, judged on the heights written; undrainedCells when not), depressionsFilled, maxLoweredCm, maxRaisedCm, changedCells, dropletsRun (the same seed and droplets give the same ground), editLayers (with more than one, the others still add on top of this one) and rivers: up to 20, largest catchment first, each {catchmentM2, lengthM, points} with its course in world cm from source to mouth (at most 64 points; a river crossing a filled lake runs straight over it), for water bodies, splines and roads. Refused, changing nothing: LANDSCAPE_NOT_FOUND, INVALID_REGION (outside the landscape, or under 5 vertices a side), INVALID_ARGUMENT (more than 4,194,304 vertices at once: name a region).",
+          "input": {
+            "action": "erode_landscape",
+            "landscapeName": "Landscape_1",
+            "valleys": 0.3,
+            "seed": 7
+          },
+          "output": {
+            "success": true
+          }
+        }
+      ],
+      "availability": {
+        "requiredPlugins": [],
+        "editorStates": [
+          "edit"
+        ]
+      },
+      "behavior": {
+        "effect": "write",
+        "idempotency": "non-idempotent",
+        "longRunning": true,
+        "safeToRetry": false
+      },
+      "policy": {
+        "requiredScope": "write",
+        "consent": "none",
+        "dataAccess": "project-write"
+      },
+      "cost": {
+        "latency": "long-running",
+        "resources": "high"
+      },
+      "routing": {
+        "parentTool": "build_environment",
+        "dispatchAction": "erode_landscape"
+      },
+      "hashes": {
+        "algorithm": "sha256",
+        "schema": "91722e46b2a8c8c01a48ca457ead64518a6617a8a6fa526d5b3c98af97cc6b52",
+        "content": "1c4745854ee0c0e70de9a498ec798d7931ca10ea1eb5e364e926d045504bab3a"
       }
     },
     {

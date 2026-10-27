@@ -10,7 +10,7 @@
  * pure-ASCII JSON payload carrying the COMPLETE CapabilityRecord for native
  * discovery (aliases, legacyIds, discovery, schemas.input/output, examples,
  * availability, behavior/policy, normalization, deprecation, hashes).
- * 23 shards, 449 records total.
+ * 23 shards, 450 records total.
  *
  * Chunks are bounded so no single string literal approaches the MSVC 65,535-byte
  * ceiling; concatenating a shard's chunks in order yields its exact JSON.
@@ -20,7 +20,7 @@ namespace McpGeneratedCapabilityShards
 namespace Detail
 {
 	extern const TCHAR* const MCP_CAP_SHARD_ANIMATION_PHYSICS_CHUNKS[];	// animation_physics (32)
-	extern const TCHAR* const MCP_CAP_SHARD_BUILD_ENVIRONMENT_CHUNKS[];	// build_environment (40)
+	extern const TCHAR* const MCP_CAP_SHARD_BUILD_ENVIRONMENT_CHUNKS[];	// build_environment (41)
 	extern const TCHAR* const MCP_CAP_SHARD_CONTROL_ACTOR_CHUNKS[];	// control_actor (29)
 	extern const TCHAR* const MCP_CAP_SHARD_CONTROL_EDITOR_CHUNKS[];	// control_editor (26)
 	extern const TCHAR* const MCP_CAP_SHARD_INSPECT_CHUNKS[];	// inspect (27)
@@ -58,7 +58,7 @@ inline const FMcpCapabilityShard& At(int32 Index)
 {
 	static const FMcpCapabilityShard Table[] = {
 		{ TEXT("animation_physics"), Detail::MCP_CAP_SHARD_ANIMATION_PHYSICS_CHUNKS, 53, 32 },
-		{ TEXT("build_environment"), Detail::MCP_CAP_SHARD_BUILD_ENVIRONMENT_CHUNKS, 63, 40 },
+		{ TEXT("build_environment"), Detail::MCP_CAP_SHARD_BUILD_ENVIRONMENT_CHUNKS, 65, 41 },
 		{ TEXT("control_actor"), Detail::MCP_CAP_SHARD_CONTROL_ACTOR_CHUNKS, 46, 29 },
 		{ TEXT("control_editor"), Detail::MCP_CAP_SHARD_CONTROL_EDITOR_CHUNKS, 32, 26 },
 		{ TEXT("inspect"), Detail::MCP_CAP_SHARD_INSPECT_CHUNKS, 45, 27 },
@@ -85,7 +85,7 @@ inline const FMcpCapabilityShard& At(int32 Index)
 	return Table[Index];
 }
 
-inline int32 TotalRecordCount() { return 449; }
+inline int32 TotalRecordCount() { return 450; }
 
-inline const TCHAR* CatalogRevision() { return TEXT("81bddf27a5db71ee"); }
+inline const TCHAR* CatalogRevision() { return TEXT("32ceb530574637d9"); }
 }

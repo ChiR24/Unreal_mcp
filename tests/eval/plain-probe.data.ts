@@ -718,4 +718,7 @@ export const PLAIN_PROBE: readonly PlainProbeCase[] = [
   { query: 'hip roof', accepted: ['manage_geometry.create_primitive'] },
   { query: 'add a roof to the house', accepted: ['manage_geometry.create_primitive'] },
   { query: 'roof over a footprint', accepted: ['manage_geometry.create_primitive'] },
+  { query: 'erode terrain', accepted: ['build_environment.erode_landscape'] },
+  { query: 'hydraulic erosion', accepted: ['build_environment.erode_landscape'] },
+  { query: 'carve valleys', accepted: ['build_environment.erode_landscape'] },
 ];

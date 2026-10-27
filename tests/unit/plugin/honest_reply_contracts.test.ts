@@ -4299,7 +4299,8 @@ describe('physics bodies, heightmaps and geometry edits do what they say', () =>
 describe('landscape edits reach the merged landscape, physics and texture settings refuse what they cannot set', () => {
   it('every height and paint edit writes an edit layer, uploads its region and merges', () => {
     const scope = code('Landscape', 'McpLandscapeLookup.cpp');
-    expect(scope).toContain('Landscape->SetEditingLayer(PreviousLayer.IsValid() ? PreviousLayer : FirstEditLayerGuid(Landscape));');
+    expect(scope).toContain('Landscape->SetEditingLayer(LandscapeWriteLayer(Landscape));');
+    expect(scope).toContain('return Editing.IsValid() ? Editing : FirstEditLayerGuid(Landscape);');
     expect(scope).toContain('Landscape->ForceUpdateLayersContent();');
     for (const file of [['Landscape', 'McpLandscapeHeightmap.cpp'], ['Landscape', 'McpLandscapeSculpt.cpp'],
       ['Landscape', 'McpLandscapeLayerPaint.cpp'], ['Environment', 'Landscape', 'McpEnvLandscapeHeightmap.cpp']]) {
