@@ -730,4 +730,7 @@ export const PLAIN_PROBE: readonly PlainProbeCase[] = [
   { query: 'remove a sublevel', accepted: ['manage_level.remove_sublevel'] },
   { query: 'remove streaming level', accepted: ['manage_level.remove_sublevel'] },
   { query: 'take a sublevel out of the level', accepted: ['manage_level.remove_sublevel'] },
+  { query: 'player dies in lava', accepted: ['blueprint.add_behaviour'] },
+  { query: 'scene is too dark', accepted: ['build_environment.configure_lighting'] },
+  { query: 'the level is too dark', accepted: ['build_environment.configure_lighting'] },
 ];

@@ -67,7 +67,7 @@ export const BUILD_ENVIRONMENT_FOLDS: readonly FoldSpec[] = [
   {
     primary: 'configure_lighting', selector: 'setting',
     summary: 'Change scene lighting, chosen by setting. global_illumination sets the dynamic GI method (LumenGI, ScreenSpace, None, Lightmass) for this editor session, or in DefaultEngine.ini as well with saveToProject; shadows sets engine-wide shadow quality, distance and features for the session, or the shadow settings of the actor actorName names; exposure and ambient_occlusion write overrides on a post-process volume (actorName, else the level\'s one unbound volume, spawned when there is none); volumetric_fog enables or disables volumetric fog on the level\'s height fog. exposure, ambient_occlusion and volumetric_fog refuse a call that sets nothing (NO_SETTING_SUPPLIED).',
-    topics: ['shadows', 'ambient occlusion', 'exposure', 'global illumination', 'lumen', 'volumetric fog', 'turn on lumen'],
+    topics: ['shadows', 'ambient occlusion', 'exposure', 'global illumination', 'lumen', 'volumetric fog', 'turn on lumen', 'brighten the scene', 'scene is too dark', 'level is too dark', 'make the scene darker'],
     members: { shadows: 'configure_shadows', ambient_occlusion: 'set_ambient_occlusion', exposure: 'set_exposure', global_illumination: 'setup_global_illumination', volumetric_fog: 'setup_volumetric_fog' },
   },
   {

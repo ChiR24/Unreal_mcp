@@ -1,5 +1,5 @@
 {
-  "catalogRevision": "a803a50ee2f5ed5c",
+  "catalogRevision": "3c556d8b49a116df",
   "recordCount": 453,
   "records": [
     {
@@ -14782,6 +14782,8 @@
           "spikes",
           "spike trap",
           "spikes kill the player",
+          "lava kills the player",
+          "player dies in lava",
           "hurts the player on contact",
           "knockback",
           "knock the player back",
@@ -15634,7 +15636,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "9bff184328c255a15ce476992b13f501f4fa6647710f8229beb7d1f8f9ad80e3",
-        "content": "73b7910655b163254362cec2c37415bc41e1a58b5f11244faa6e38d753d8c7e5"
+        "content": "726a2a59a6b90e9898d3fb8c1cb9f6a34cbb065d51f75dd05c758c1880abf472"
       }
     },
     {
@@ -28583,7 +28585,11 @@
           "global illumination",
           "lumen",
           "volumetric fog",
-          "turn on lumen"
+          "turn on lumen",
+          "brighten the scene",
+          "scene is too dark",
+          "level is too dark",
+          "make the scene darker"
         ],
         "summary": "Change scene lighting, chosen by setting. global_illumination sets the dynamic GI method (LumenGI, ScreenSpace, None, Lightmass) for this editor session, or in DefaultEngine.ini as well with saveToProject; shadows sets engine-wide shadow quality, distance and features for the session, or the shadow settings of the actor actorName names; exposure and ambient_occlusion write overrides on a post-process volume (actorName, else the level's one unbound volume, spawned when there is none); volumetric_fog enables or disables volumetric fog on the level's height fog. exposure, ambient_occlusion and volumetric_fog refuse a call that sets nothing (NO_SETTING_SUPPLIED).",
         "whenToUse": [
@@ -28897,7 +28903,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "a731b276c513bdacc529bea41ff1f11f2625ea347fe73572496cbc8f3772426d",
-        "content": "ec8a32e1f75ee789c2a89644a4d5759df90c004989b456e124bbff1978b80e12"
+        "content": "8d1253ec8f7ecea5a1f9d7a2860f921e590391025a6885b0f3cfbc1ce365bae4"
       }
     },
     {
