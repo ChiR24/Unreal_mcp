@@ -756,4 +756,12 @@ export const PLAIN_PROBE: readonly PlainProbeCase[] = [
   { query: 'change the game name', accepted: ['system_control.set_project_setting'] },
   { query: 'see the console output', accepted: ['system_control.read_log'] },
   { query: 'pick up a key', accepted: ['blueprint.add_behaviour'] },
+  { query: 'gamepad trigger', accepted: ['manage_networking.configure_input'] },
+  { query: 'streaming pool', accepted: ['system_control.configure_performance'] },
+  { query: 'denoise the render', accepted: ['build_environment.configure_ray_tracing'] },
+  { query: 'wind on trees', accepted: ['build_environment.configure_weather'] },
+  { query: 'button hover effect', accepted: ['blueprint.set_widget_layout'] },
+  { query: 'scroll list', accepted: ['blueprint.add_panel_widget'] },
+  { query: 'security camera', accepted: ['build_environment.create_capture_actor'] },
+  { query: 'picture in picture', accepted: ['build_environment.create_capture_actor'] },
 ];

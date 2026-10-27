@@ -1,5 +1,5 @@
 {
-  "catalogRevision": "af01a8484591b6de",
+  "catalogRevision": "d3e7827016190926",
   "recordCount": 453,
   "records": [
     {
@@ -17015,6 +17015,7 @@
         "topics": [
           "add_panel_widget",
           "canvas panel",
+          "scroll list",
           "vertical box",
           "horizontal box",
           "overlay",
@@ -17556,7 +17557,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "5a4dac7a54a1f3bd5a1938c69c2343ed23dd436981386515cc1b84d4515c858d",
-        "content": "9fd72a7230251aa35f95fba19be7282cddf0cbb96de44ae50cecfd2f072977a1"
+        "content": "9243ba276e8a8a5cfbb2f62c42c8d7f638f3e88c509976f74449e7c5aa6f4b47"
       }
     },
     {
@@ -26108,6 +26109,7 @@
         "topics": [
           "set_widget_layout",
           "widget anchor",
+          "button hover effect",
           "widget position",
           "move widget",
           "widget size",
@@ -26616,7 +26618,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "460bbbe8aba77513a85e6575e112ea66182d809d218341f5243a4b37cd929dba",
-        "content": "e52693b22770fde5536dfa998567f44ce76fd9ab2f99769a98d48a34d8d6e28d"
+        "content": "1024be0c5830b98f084feb50c74fda15c9de9dbaf7181c03739e1e16ab4c234d"
       }
     },
     {
@@ -29917,7 +29919,8 @@
           "ray traced shadows",
           "ray traced reflections",
           "path tracing",
-          "ray traced gi"
+          "ray traced gi",
+          "denoise the render"
         ],
         "summary": "Turn a ray-tracing feature on or off and tune it through its console variables for this editor session: shadows, global illumination, reflections, ambient occlusion, path tracing. settings takes only the keys that feature reads (another is refused); with hardware ray tracing off for the project the values draw nothing and the reply warns.",
         "whenToUse": [
@@ -30047,7 +30050,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "86cbe46f295d67bc30db88098fe63f6db53301bdda23352585b6953931ba11ae",
-        "content": "6637c135d3d1eaccf7d1e0f2acceda72ded2bdd7f8bdef96cd4ffa7e6742c777"
+        "content": "849d18ade126e27d2b4a8b09b939d7f2e0e768768e28545b5b3943ee9bb22ae1"
       }
     },
     {
@@ -30937,7 +30940,8 @@
           "weather",
           "add snow",
           "add rain, snow, wind or lightning",
-          "make it rain"
+          "make it rain",
+          "wind on trees"
         ],
         "summary": "Configure a weather actor: rain, snow or lightning set a Cascade particle system (particleSystemPath) on an Emitter labelled WeatherEmitter, SnowEmitter or LightningEmitter; wind spawns or tunes a WindDirectionalSource (direction as its rotation, speed and other settings by property name). Nothing is simulated beyond what those actors do; not saved.",
         "whenToUse": [
@@ -31143,7 +31147,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "ed77f76bcae66a3710d7d472fc890a0029a37770f1ab267b41e9c26dacfd5efa",
-        "content": "0ffd4c8634090fb97c51a7aea52a79ce193033d71fb80203c6ebd4bbd95f429f"
+        "content": "9613f3c6cca58fefe382cc4bb1fa85fc49bedfa32cca61608542e43cd7ce825b"
       }
     },
     {
@@ -31548,7 +31552,9 @@
           "planar reflection",
           "render target capture",
           "place a reflection capture",
-          "add a reflection capture"
+          "add a reflection capture",
+          "security camera",
+          "picture in picture"
         ],
         "summary": "Place a capture actor labelled name at location and rotation, chosen by kind: scene_capture_2d or scene_capture_cube (renders the view into a render target, assigned with configure_scene_capture setting=render_target), or a sphere_reflection, box_reflection or planar_reflection capture (settings: properties of its capture component). A capture of the same kind already labelled name is kept (alreadyExists); an actor of another class under that label is refused (NAME_TAKEN).",
         "whenToUse": [
@@ -31739,7 +31745,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "06e1df1920297a38b6ca0adf74d3ae3a9f91d6bbda31ebecd5cc81334def37c1",
-        "content": "ed68b4ec41eac5ef71f4c2c400926d09532bbb39f15af7d496feabba1ab2d812"
+        "content": "7f46e7a8b8ba274573c056de9dd0ce44c012377c6cef8b875874cfce563369b7"
       }
     },
     {
@@ -90229,6 +90235,7 @@
         "topics": [
           "configure_input",
           "input action",
+          "gamepad trigger",
           "input mapping context",
           "enhanced input",
           "key mapping",
@@ -90504,7 +90511,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "047a315774edea706b24c596cdbc2782e39ed1b2f774d5f83c0aa7b59ebe46c9",
-        "content": "898cca5eed552e5c5532d7b59273fcfd5d8846a8244f700850a4a8971d71a84d"
+        "content": "d401dd24266ae70df99e599c41e75febf86483f315bf81bcd3bba9275c283b62"
       }
     },
     {
@@ -108711,7 +108718,8 @@
           "nanite",
           "occlusion culling",
           "texture streaming",
-          "performance"
+          "performance",
+          "texture streaming pool"
         ],
         "summary": "Configure performance settings, chosen by setting: scalability levels or a baseline profile (saved, kept across restarts); session-only console settings (frame rate cap, resolution scale, vsync, LOD and mip bias, Nanite, occlusion culling, texture streaming, draw-call batching, GPU timing), each set as the console does and read back, with appliedCVars and notSet in the reply and CVAR_UNAVAILABLE when none took; World Partition streaming and grid; a shader recompile.",
         "whenToUse": [
@@ -108996,7 +109004,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "23c4374d96bc58fddee4f1e7b20d22a19ed6a996b4edf79ced293811064b1fb9",
-        "content": "4872817025635022fccc0f4b5f72476b94181a6db7ffecf9336e4d20c0247ca9"
+        "content": "d88b738b3d950b5a107da1693b40549d328463cd6ae24342b4bf10a4353b123e"
       }
     },
     {

@@ -69,7 +69,7 @@ export const MANAGE_NETWORKING_FOLDS: readonly FoldSpec[] = [
   {
     primary: 'configure_input', selector: 'setting',
     summary: 'Enhanced Input: create an input action or mapping context, add or map keys, set triggers and modifiers, enable a context.',
-    topics: ['input action', 'input mapping context', 'enhanced input', 'key mapping', 'input trigger', 'input modifier', 'bind space to jump', 'wasd movement input', 'remap a key', 'change a key'],
+    topics: ['input action', 'gamepad trigger', 'input mapping context', 'enhanced input', 'key mapping', 'input trigger', 'input modifier', 'bind space to jump', 'wasd movement input', 'remap a key', 'change a key'],
     members: {
       create_action: 'create_input_action', create_mapping_context: 'create_input_mapping_context', add_mapping: 'add_mapping', map_action: 'map_input_action',
       set_trigger: 'set_input_trigger', set_modifier: 'set_input_modifier', enable_mapping: 'enable_input_mapping',

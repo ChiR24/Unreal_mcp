@@ -78,7 +78,7 @@ export const MANAGE_BLUEPRINT_FOLDS: readonly FoldSpec[] = [
   {
     primary: 'add_panel_widget', selector: 'widgetKind',
     summary: 'Add a panel widget to a Widget Blueprint: canvas, overlay, boxes, grids, border, scroll/size/scale box, spacer, safe zone, switcher, wrap box, or a whole layout of panels, text and images with their looks in one call (widget_tree).',
-    topics: ['canvas panel', 'vertical box', 'horizontal box', 'overlay', 'scroll box', 'grid panel', 'widget switcher', 'umg panel', 'row of buttons', 'stack buttons vertically', 'buttons side by side'],
+    topics: ['canvas panel', 'scroll list', 'vertical box', 'horizontal box', 'overlay', 'scroll box', 'grid panel', 'widget switcher', 'umg panel', 'row of buttons', 'stack buttons vertically', 'buttons side by side'],
     members: byTarget('add_', ['add_canvas_panel', 'add_overlay', 'add_vertical_box', 'add_horizontal_box', 'add_grid_panel', 'add_uniform_grid',
       'add_wrap_box', 'add_border', 'add_scroll_box', 'add_size_box', 'add_scale_box', 'add_spacer', 'add_safe_zone', 'add_widget_switcher', 'add_widget_tree']),
   },
@@ -100,7 +100,7 @@ export const MANAGE_BLUEPRINT_FOLDS: readonly FoldSpec[] = [
   {
     primary: 'set_widget_layout', selector: 'layoutProperty',
     summary: 'Set a widget slot layout property (anchor, position, size (canvas {x,y}; box child sizeRule Auto/Fill and fillValue weight), alignment, padding, z-order, visibility, clipping, render transform) or its style: the text of a text block or button label, text justification, color, font size, font face, family and letter spacing (or the look of another text block), image texture, opacity, rounded corners, button hover/press sounds.',
-    topics: ['widget anchor', 'widget position', 'move widget', 'widget size', 'resize widget', 'make widget bigger', 'widget padding', 'widget visibility', 'z order', 'render transform', 'widget style',
+    topics: ['widget anchor', 'button hover effect', 'widget position', 'move widget', 'widget size', 'resize widget', 'make widget bigger', 'widget padding', 'widget visibility', 'z order', 'render transform', 'widget style',
       'change widget text', 'button label', 'widget image', 'widget color', 'button sound', 'click sound', 'hover sound', 'center text', 'text alignment',
       'bold text', 'make text bold', 'change button text', 'hide widget', 'show widget', 'font face', 'letter spacing', 'copy text style', 'fill the screen', 'expand to fill', 'stretch widget', 'tint image', 'make text red', 'align widget', 'bring widget to front', 'rounded corners', 'text outline', 'outline text', 'add outline to text', 'text shadow', 'drop shadow on text'],
     members: byTarget('set_', ['set_anchor', 'set_position', 'set_size', 'set_alignment', 'set_padding', 'set_z_order', 'set_visibility',

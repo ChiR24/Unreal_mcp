@@ -79,7 +79,7 @@ export const BUILD_ENVIRONMENT_FOLDS: readonly FoldSpec[] = [
   {
     primary: 'configure_ray_tracing', selector: 'feature',
     summary: 'Turn a ray-tracing feature on or off and tune it through its console variables for this editor session: shadows, global illumination, reflections, ambient occlusion, path tracing. settings takes only the keys that feature reads (another is refused); with hardware ray tracing off for the project the values draw nothing and the reply warns.',
-    topics: ['ray tracing', 'ray traced shadows', 'ray traced reflections', 'path tracing', 'ray traced gi'],
+    topics: ['ray tracing', 'ray traced shadows', 'ray traced reflections', 'path tracing', 'ray traced gi', 'denoise the render'],
     members: { ao: 'configure_ray_traced_ao', gi: 'configure_ray_traced_gi', reflections: 'configure_ray_traced_reflections', shadows: 'configure_ray_traced_shadows', path_tracing: 'configure_path_tracing' },
   },
   {
@@ -95,7 +95,7 @@ export const BUILD_ENVIRONMENT_FOLDS: readonly FoldSpec[] = [
   {
     primary: 'create_capture_actor', selector: 'kind',
     summary: 'Place a capture actor labelled name at location and rotation, chosen by kind: scene_capture_2d or scene_capture_cube (renders the view into a render target, assigned with configure_scene_capture setting=render_target), or a sphere_reflection, box_reflection or planar_reflection capture (settings: properties of its capture component). A capture of the same kind already labelled name is kept (alreadyExists); an actor of another class under that label is refused (NAME_TAKEN).',
-    topics: ['scene capture', 'reflection capture', 'planar reflection', 'render target capture', 'place a reflection capture', 'add a reflection capture'],
+    topics: ['scene capture', 'reflection capture', 'planar reflection', 'render target capture', 'place a reflection capture', 'add a reflection capture', 'security camera', 'picture in picture'],
     members: { scene_capture_2d: 'create_scene_capture_2d', scene_capture_cube: 'create_scene_capture_cube', sphere_reflection: 'create_sphere_reflection_capture', box_reflection: 'create_box_reflection_capture', planar_reflection: 'create_planar_reflection' },
   },
   {
@@ -161,7 +161,7 @@ export const BUILD_ENVIRONMENT_FOLDS: readonly FoldSpec[] = [
   {
     primary: 'configure_weather', selector: 'setting',
     summary: 'Configure a weather actor: rain, snow or lightning set a Cascade particle system (particleSystemPath) on an Emitter labelled WeatherEmitter, SnowEmitter or LightningEmitter; wind spawns or tunes a WindDirectionalSource (direction as its rotation, speed and other settings by property name). Nothing is simulated beyond what those actors do; not saved.',
-    topics: ['rain', 'snow', 'lightning', 'wind', 'weather', 'add snow', 'add rain, snow, wind or lightning', 'make it rain'],
+    topics: ['rain', 'snow', 'lightning', 'wind', 'weather', 'add snow', 'add rain, snow, wind or lightning', 'make it rain', 'wind on trees'],
     members: { rain: 'configure_rain_particles', snow: 'configure_snow_particles', lightning: 'configure_lightning', wind: 'configure_wind' },
   },
   // water
