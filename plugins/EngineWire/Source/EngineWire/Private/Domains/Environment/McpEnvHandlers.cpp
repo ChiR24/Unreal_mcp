@@ -1,4 +1,5 @@
 #include "Domains/Environment/McpEnvShared.h"
+#include "Domains/Environment/Modules/McpModuleKit.h"
 #include "Domains/Environment/Roads/McpRoadPlan.h"
 #include "Domains/Landscape/Erosion/McpTerrainErosion.h"
 
@@ -170,6 +171,10 @@ bool UEngineWireSubsystem::HandleBuildEnvironmentAction(
     {
         return HandleSculptLandscape(RequestId, TEXT("sculpt_landscape"), Payload,
                                      RequestingSocket);
+    }
+    else if (LowerSub == TEXT("assemble_modules"))
+    {
+        return McpModuleAssembly::HandleAssembleModules(*this, RequestId, Payload, RequestingSocket);
     }
     else if (LowerSub == TEXT("plan_road"))
     {

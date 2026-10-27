@@ -4,7 +4,7 @@
 
 # Action reference
 
-Catalog revision: `6c549a5d704f003b`
+Catalog revision: `b5685449953bccc5`
 
 Both transports expose exactly ONE public MCP tool, `unreal`, with the four
 operations `search` / `describe` / `execute` / `configure`. The parent tools
@@ -13,7 +13,7 @@ by `tools/list` and a direct `tools/call` on one returns a
 `DIRECT_TOOL_CALL_REMOVED` receipt rather than executing
 (`src/server/gateway/direct-call-migration.ts`).
 
-The catalog declares 451 capabilities across
+The catalog declares 452 capabilities across
 23 internal parent tools.
 Every row is derived from the capability record that the gateway actually
 validates against, so `execute` cannot accept an action this table omits.
@@ -37,7 +37,7 @@ validates against, so `execute` cannot accept an action this table omits.
 | Parent tool | Capabilities | read | write | destructive | Domains |
 | --- | --- | --- | --- | --- | --- |
 | `animation_physics` | 32 | 5 | 25 | 2 | animation physics |
-| `build_environment` | 42 | 5 | 34 | 3 | environment |
+| `build_environment` | 43 | 5 | 35 | 3 | environment |
 | `control_actor` | 29 | 9 | 18 | 2 | actor |
 | `control_editor` | 26 | 9 | 14 | 3 | editor |
 | `inspect` | 27 | 22 | 4 | 1 | inspect |
@@ -62,7 +62,7 @@ validates against, so `execute` cannot accept an action this table omits.
 
 ## Capabilities requiring consent
 
-68 of 451 capabilities require consent.
+68 of 452 capabilities require consent.
 
 | Capability | Tool | Action | Effect | Consent |
 | --- | --- | --- | --- | --- |
@@ -232,6 +232,7 @@ validates against, so `execute` cannot accept an action this table omits.
 | `blueprint.set_widget_layout` | `manage_blueprint` | `set_anchor` | write | write | none | `manage_blueprint.set_widget_layout` `manage_blueprint.set_anchor` `manage_blueprint.set_position` `manage_blueprint.set_size` `manage_blueprint.set_alignment` `manage_blueprint.set_padding` `manage_blueprint.set_z_order` `manage_blueprint.set_visibility` `manage_blueprint.set_clipping` `manage_blueprint.set_render_transform` `manage_blueprint.set_style` |
 | `blueprint.write_graph_from_code` | `manage_blueprint` | `write_graph_from_code` | destructive | destructive | explicit | `manage_blueprint.write_graph_from_code` |
 | `build_environment.add_foliage` | `build_environment` | `add_foliage` | write | write | none | `build_environment.add_foliage` `build_environment.add_foliage_instances` `build_environment.paint_foliage` |
+| `build_environment.assemble_modules` | `build_environment` | `assemble_modules` | write | write | none | `build_environment.assemble_modules` |
 | `build_environment.bake_lightmap` | `build_environment` | `bake_lightmap` | write | write | none | `build_environment.bake_lightmap` |
 | `build_environment.build_lighting` | `build_environment` | `build_lighting` | write | write | none | `build_environment.build_lighting` |
 | `build_environment.configure_atmosphere` | `build_environment` | `configure_sky_atmosphere` | write | write | none | `build_environment.configure_atmosphere` `build_environment.configure_sky_atmosphere` `build_environment.configure_sky_light` `build_environment.configure_sun_position` `build_environment.configure_directional_light_atmosphere` `build_environment.configure_exponential_height_fog` `build_environment.configure_volumetric_cloud` `build_environment.set_time_of_day` `build_environment.configure_sky_color_curve` `build_environment.configure_light_color_curve` |

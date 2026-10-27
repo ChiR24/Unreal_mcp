@@ -1,5 +1,5 @@
 /**
- * Procedural and misc family records (5 actions).
+ * Procedural and misc family records (6 actions).
  *
  * Grounded in environment-procedural-actions.ts (create_procedural_terrain,
  * create_procedural_foliage) and environment-misc-actions.ts (bake_lightmap,
@@ -19,6 +19,7 @@
 import type { CapabilityRecordSource } from '../../model.js';
 import { buildRecord } from './helpers.js';
 import { P } from './properties.js';
+import { bool, int, num, str } from '../shared/schema-props.js';
 
 const F = 'procedural';
 
@@ -88,5 +89,43 @@ export const PROCEDURAL_RECORDS: readonly CapabilityRecordSource[] = [
     effect: 'destructive', behavior: { safeToRetry: false },
     latency: 'interactive', resources: 'low',
     exampleInput: { action: 'delete', names: ['Landscape_1'] },
+  }),
+  buildRecord({
+    id: 'build_environment.assemble_modules', action: 'assemble_modules', family: F,
+    topics: ['wave function collapse', 'modular kit layout', 'dungeon from tiles', 'assemble modular pieces', 'pieces that join up', 'dungeon or maze generator', 'modular building kit', 'snap modular pieces together'],
+    summary: 'Lay a modular kit out over a grid of cells so that every face where two pieces meet fits, by wave function collapse, and spawn the layout as one actor (an instanced static mesh component per piece, one undo step). Each piece is a static mesh made to fill one cell of cellSize; pivot says where its own origin sits in the cell (corner: the cell\'s lowest corner; center; bottom_center: the middle of its floor), and a piece reaching outside that box is refused. Each face of each piece, at each quarter turn about Z when rotations is on (half turns when the cell is not square), is read from the mesh\'s source geometry as 16 x 16 squares (each read by 4 x 4 rays cast in from just outside, so a wall as thin as 1/40 of the cell shows): two cells sit side by side only where the faces between them match, both empty or covering the same squares to 90% (a corridor 3 squares wide never meets one 4 wide). emptyWeight adds an empty cell (0 forbids it). The grid\'s outer faces must be empty except on openSides (default -Z: the pieces stand on the ground). A piece whose face nothing in the kit can meet is never placed and unmatchedFaces names it: a wall reaching the top of its cell needs +Z open or a piece to stack on it, and an outer wall needs a piece to stand back to back with or that side open. Instances collide where the piece\'s mesh has collision. dryRun lays the kit out and spawns nothing. Refused, placing nothing: NO_SOLUTION (no layout: why, and the faces nothing meets), MESH_NOT_FOUND (not a static mesh with source geometry), INVALID_ARGUMENT (a piece outside its cell box, more than 4096 cells, or pieces whose faces take more than 10 s to read).',
+    whenToUse: ['A dungeon, building, maze or town block should be assembled from a modular kit so the pieces join up.', 'Many variations of one layout from the same kit (seed).'],
+    whenNotToUse: ['A few pieces placed by hand: control_actor spawn.', 'Props scattered with no joins between them: the foliage or scatter tools.'],
+    inputProps: {
+      modules: { type: 'array', minItems: 1, maxItems: 32, description: 'The kit: 1-32 pieces, each a static mesh made to fill one cell.', items: { type: 'object', additionalProperties: false, required: ['meshPath'], properties: {
+        meshPath: { type: 'string', description: 'The piece\'s static mesh.' },
+        weight: { type: 'number', minimum: 0.001, description: 'How often it is chosen against the others (default 1), shared among its turns.' } } } },
+      cellSize: { type: 'object', additionalProperties: false, required: ['x', 'y', 'z'], properties: { x: { type: 'number', minimum: 1 }, y: { type: 'number', minimum: 1 }, z: { type: 'number', minimum: 1 } }, description: 'One cell, in cm: every piece fits inside one.' },
+      pivot: { type: 'string', enum: ['corner', 'center', 'bottom_center'], description: 'Where each piece\'s own origin sits in its cell: corner (the cell\'s lowest corner), center, or bottom_center (the middle of its floor).' },
+      size: { type: 'object', additionalProperties: false, required: ['x', 'y', 'z'], properties: { x: { type: 'integer', minimum: 1 }, y: { type: 'integer', minimum: 1 }, z: { type: 'integer', minimum: 1 } }, description: 'Cells along X, Y and Z, at most 4096 in all.' },
+      location: { ...P.location, description: 'The grid\'s lowest corner in world cm (default the origin).' },
+      rotations: bool('Also try each piece turned about Z: quarter turns in a square cell, half turns otherwise (default true).'),
+      emptyWeight: { type: 'number', minimum: 0, description: 'How often a cell is left empty against the pieces (default 1; 0: every cell holds a piece).' },
+      openSides: { type: 'array', items: { type: 'string', enum: ['+X', '-X', '+Y', '-Y', '+Z', '-Z'] }, description: 'Sides of the grid a piece may face out of with anything (default ["-Z"]: the floor); on the others only an empty face may.' },
+      seed: int('Seed (default 1): the same kit, size and seed give the same layout.'),
+      name: str('Label of the spawned actor (default ModuleAssembly).'),
+      dryRun: bool('Lay the kit out and report it, spawning nothing (default false).'),
+    },
+    outputProps: {
+      actorName: str('Label of the spawned actor (absent under dryRun).'),
+      placed: { type: 'array', description: 'Each piece and how many cells it fills.', items: { type: 'object', additionalProperties: true, 'x-unreal-reflection-boundary': true, description: '{meshPath, count}.' } },
+      cells: int('Cells in the grid.'),
+      emptyCells: int('Cells left empty.'),
+      variants: int('Pieces and their turns tried, the empty cell included.'),
+      openFaces: int('Faces where the layout meets a neighbour or the outside it does not match: always 0 on success.'),
+      backtracks: int('Choices undone on the way.'),
+      seedsTried: int('Seeds tried: after 1000 backtracks a seed is given up and the next one tried, up to 5.'),
+      unmatchedFaces: { type: 'array', items: { type: 'string' }, description: 'Pieces never placed and the face that nothing in the kit or the outside on that side takes.' },
+      seconds: num('Time the call took.'),
+      undo: { type: 'object', additionalProperties: true, 'x-unreal-reflection-boundary': true, description: 'What editor undo takes back: {undoable, transactionScope}; the whole layout is one step. Absent under dryRun.' },
+    },
+    required: ['modules', 'cellSize', 'pivot', 'size'],
+    effect: 'write', latency: 'interactive', resources: 'medium',
+    exampleInput: { action: 'assemble_modules', modules: [{ meshPath: '/Game/Kit/SM_Corridor_Straight' }, { meshPath: '/Game/Kit/SM_Corridor_Corner' }], cellSize: { x: 400, y: 400, z: 300 }, pivot: 'bottom_center', size: { x: 12, y: 8, z: 1 }, seed: 3 },
   }),
 ];

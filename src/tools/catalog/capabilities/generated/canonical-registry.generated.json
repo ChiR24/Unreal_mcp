@@ -1,6 +1,6 @@
 {
-  "catalogRevision": "6c549a5d704f003b",
-  "recordCount": 451,
+  "catalogRevision": "b5685449953bccc5",
+  "recordCount": 452,
   "records": [
     {
       "id": "animation_physics.analyze_animation",
@@ -27249,6 +27249,335 @@
         "algorithm": "sha256",
         "schema": "1d69a2ec3894703cfb5473af28e37c8f764811e72feee995d7335213b3db30fa",
         "content": "360cfe015f4c80c43e1516ac5669c28aecaec629b9c23f528e478685b59b26da"
+      }
+    },
+    {
+      "id": "build_environment.assemble_modules",
+      "aliases": [],
+      "legacyIds": [
+        {
+          "tool": "build_environment",
+          "action": "assemble_modules"
+        }
+      ],
+      "discovery": {
+        "domain": "environment",
+        "family": "procedural",
+        "topics": [
+          "assemble_modules",
+          "wave function collapse",
+          "modular kit layout",
+          "dungeon from tiles",
+          "assemble modular pieces",
+          "pieces that join up",
+          "dungeon or maze generator",
+          "modular building kit",
+          "snap modular pieces together"
+        ],
+        "summary": "Lay a modular kit out over a grid of cells so that every face where two pieces meet fits, by wave function collapse, and spawn the layout as one actor (an instanced static mesh component per piece, one undo step). Each piece is a static mesh made to fill one cell of cellSize; pivot says where its own origin sits in the cell (corner: the cell's lowest corner; center; bottom_center: the middle of its floor), and a piece reaching outside that box is refused. Each face of each piece, at each quarter turn about Z when rotations is on (half turns when the cell is not square), is read from the mesh's source geometry as 16 x 16 squares (each read by 4 x 4 rays cast in from just outside, so a wall as thin as 1/40 of the cell shows): two cells sit side by side only where the faces between them match, both empty or covering the same squares to 90% (a corridor 3 squares wide never meets one 4 wide). emptyWeight adds an empty cell (0 forbids it). The grid's outer faces must be empty except on openSides (default -Z: the pieces stand on the ground). A piece whose face nothing in the kit can meet is never placed and unmatchedFaces names it: a wall reaching the top of its cell needs +Z open or a piece to stack on it, and an outer wall needs a piece to stand back to back with or that side open. Instances collide where the piece's mesh has collision. dryRun lays the kit out and spawns nothing. Refused, placing nothing: NO_SOLUTION (no layout: why, and the faces nothing meets), MESH_NOT_FOUND (not a static mesh with source geometry), INVALID_ARGUMENT (a piece outside its cell box, more than 4096 cells, or pieces whose faces take more than 10 s to read).",
+        "whenToUse": [
+          "A dungeon, building, maze or town block should be assembled from a modular kit so the pieces join up.",
+          "Many variations of one layout from the same kit (seed)."
+        ],
+        "whenNotToUse": [
+          "A few pieces placed by hand: control_actor spawn.",
+          "Props scattered with no joins between them: the foliage or scatter tools."
+        ]
+      },
+      "schemas": {
+        "input": {
+          "$schema": "https://json-schema.org/draft/2020-12/schema",
+          "type": "object",
+          "properties": {
+            "action": {
+              "type": "string",
+              "description": "The action to execute on the parent tool."
+            },
+            "modules": {
+              "type": "array",
+              "minItems": 1,
+              "maxItems": 32,
+              "description": "The kit: 1-32 pieces, each a static mesh made to fill one cell.",
+              "items": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "meshPath"
+                ],
+                "properties": {
+                  "meshPath": {
+                    "type": "string",
+                    "description": "The piece's static mesh."
+                  },
+                  "weight": {
+                    "type": "number",
+                    "minimum": 0.001,
+                    "description": "How often it is chosen against the others (default 1), shared among its turns."
+                  }
+                }
+              }
+            },
+            "cellSize": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "x",
+                "y",
+                "z"
+              ],
+              "properties": {
+                "x": {
+                  "type": "number",
+                  "minimum": 1
+                },
+                "y": {
+                  "type": "number",
+                  "minimum": 1
+                },
+                "z": {
+                  "type": "number",
+                  "minimum": 1
+                }
+              },
+              "description": "One cell, in cm: every piece fits inside one."
+            },
+            "pivot": {
+              "type": "string",
+              "enum": [
+                "corner",
+                "center",
+                "bottom_center"
+              ],
+              "description": "Where each piece's own origin sits in its cell: corner (the cell's lowest corner), center, or bottom_center (the middle of its floor)."
+            },
+            "size": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "x",
+                "y",
+                "z"
+              ],
+              "properties": {
+                "x": {
+                  "type": "integer",
+                  "minimum": 1
+                },
+                "y": {
+                  "type": "integer",
+                  "minimum": 1
+                },
+                "z": {
+                  "type": "integer",
+                  "minimum": 1
+                }
+              },
+              "description": "Cells along X, Y and Z, at most 4096 in all."
+            },
+            "location": {
+              "type": "object",
+              "description": "The grid's lowest corner in world cm (default the origin).",
+              "properties": {
+                "x": {
+                  "type": "number",
+                  "description": "X"
+                },
+                "y": {
+                  "type": "number",
+                  "description": "Y"
+                },
+                "z": {
+                  "type": "number",
+                  "description": "Z"
+                }
+              },
+              "additionalProperties": false
+            },
+            "rotations": {
+              "type": "boolean",
+              "description": "Also try each piece turned about Z: quarter turns in a square cell, half turns otherwise (default true)."
+            },
+            "emptyWeight": {
+              "type": "number",
+              "minimum": 0,
+              "description": "How often a cell is left empty against the pieces (default 1; 0: every cell holds a piece)."
+            },
+            "openSides": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "enum": [
+                  "+X",
+                  "-X",
+                  "+Y",
+                  "-Y",
+                  "+Z",
+                  "-Z"
+                ]
+              },
+              "description": "Sides of the grid a piece may face out of with anything (default [\"-Z\"]: the floor); on the others only an empty face may."
+            },
+            "seed": {
+              "type": "integer",
+              "description": "Seed (default 1): the same kit, size and seed give the same layout."
+            },
+            "name": {
+              "type": "string",
+              "description": "Label of the spawned actor (default ModuleAssembly)."
+            },
+            "dryRun": {
+              "type": "boolean",
+              "description": "Lay the kit out and report it, spawning nothing (default false)."
+            }
+          },
+          "required": [
+            "action",
+            "modules",
+            "cellSize",
+            "pivot",
+            "size"
+          ],
+          "additionalProperties": false
+        },
+        "output": {
+          "$schema": "https://json-schema.org/draft/2020-12/schema",
+          "type": "object",
+          "properties": {
+            "success": {
+              "type": "boolean",
+              "description": "Whether the action succeeded."
+            },
+            "message": {
+              "type": "string",
+              "description": "Human-readable result message."
+            },
+            "details": {
+              "type": "object",
+              "x-unreal-reflection-boundary": true,
+              "description": "Additional handler result fields not named by the contract."
+            },
+            "actorName": {
+              "type": "string",
+              "description": "Label of the spawned actor (absent under dryRun)."
+            },
+            "placed": {
+              "type": "array",
+              "description": "Each piece and how many cells it fills.",
+              "items": {
+                "type": "object",
+                "additionalProperties": true,
+                "x-unreal-reflection-boundary": true,
+                "description": "{meshPath, count}."
+              }
+            },
+            "cells": {
+              "type": "integer",
+              "description": "Cells in the grid."
+            },
+            "emptyCells": {
+              "type": "integer",
+              "description": "Cells left empty."
+            },
+            "variants": {
+              "type": "integer",
+              "description": "Pieces and their turns tried, the empty cell included."
+            },
+            "openFaces": {
+              "type": "integer",
+              "description": "Faces where the layout meets a neighbour or the outside it does not match: always 0 on success."
+            },
+            "backtracks": {
+              "type": "integer",
+              "description": "Choices undone on the way."
+            },
+            "seedsTried": {
+              "type": "integer",
+              "description": "Seeds tried: after 1000 backtracks a seed is given up and the next one tried, up to 5."
+            },
+            "unmatchedFaces": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "description": "Pieces never placed and the face that nothing in the kit or the outside on that side takes."
+            },
+            "seconds": {
+              "type": "number",
+              "description": "Time the call took."
+            },
+            "undo": {
+              "type": "object",
+              "additionalProperties": true,
+              "x-unreal-reflection-boundary": true,
+              "description": "What editor undo takes back: {undoable, transactionScope}; the whole layout is one step. Absent under dryRun."
+            }
+          },
+          "required": [
+            "success"
+          ],
+          "additionalProperties": false
+        }
+      },
+      "examples": [
+        {
+          "title": "Lay a modular kit out over a grid of cells so that every face where two pieces meet fits, by wave function collapse, and spawn the layout as one actor (an instanced static mesh component per piece, one undo step). Each piece is a static mesh made to fill one cell of cellSize; pivot says where its own origin sits in the cell (corner: the cell's lowest corner; center; bottom_center: the middle of its floor), and a piece reaching outside that box is refused. Each face of each piece, at each quarter turn about Z when rotations is on (half turns when the cell is not square), is read from the mesh's source geometry as 16 x 16 squares (each read by 4 x 4 rays cast in from just outside, so a wall as thin as 1/40 of the cell shows): two cells sit side by side only where the faces between them match, both empty or covering the same squares to 90% (a corridor 3 squares wide never meets one 4 wide). emptyWeight adds an empty cell (0 forbids it). The grid's outer faces must be empty except on openSides (default -Z: the pieces stand on the ground). A piece whose face nothing in the kit can meet is never placed and unmatchedFaces names it: a wall reaching the top of its cell needs +Z open or a piece to stack on it, and an outer wall needs a piece to stand back to back with or that side open. Instances collide where the piece's mesh has collision. dryRun lays the kit out and spawns nothing. Refused, placing nothing: NO_SOLUTION (no layout: why, and the faces nothing meets), MESH_NOT_FOUND (not a static mesh with source geometry), INVALID_ARGUMENT (a piece outside its cell box, more than 4096 cells, or pieces whose faces take more than 10 s to read).",
+          "input": {
+            "action": "assemble_modules",
+            "modules": [
+              {
+                "meshPath": "/Game/Kit/SM_Corridor_Straight"
+              },
+              {
+                "meshPath": "/Game/Kit/SM_Corridor_Corner"
+              }
+            ],
+            "cellSize": {
+              "x": 400,
+              "y": 400,
+              "z": 300
+            },
+            "pivot": "bottom_center",
+            "size": {
+              "x": 12,
+              "y": 8,
+              "z": 1
+            },
+            "seed": 3
+          },
+          "output": {
+            "success": true
+          }
+        }
+      ],
+      "availability": {
+        "requiredPlugins": [],
+        "editorStates": [
+          "edit"
+        ]
+      },
+      "behavior": {
+        "effect": "write",
+        "idempotency": "non-idempotent",
+        "longRunning": false,
+        "safeToRetry": false
+      },
+      "policy": {
+        "requiredScope": "write",
+        "consent": "none",
+        "dataAccess": "project-write"
+      },
+      "cost": {
+        "latency": "interactive",
+        "resources": "medium"
+      },
+      "routing": {
+        "parentTool": "build_environment",
+        "dispatchAction": "assemble_modules"
+      },
+      "hashes": {
+        "algorithm": "sha256",
+        "schema": "70488f7880894beec77636e81741c67dc258ff3b0d25e09e24ea686166afb988",
+        "content": "ed661c7c670a8c23a9aa58db55b8b6262c7a872eb657f9aaaa304a270600b558"
       }
     },
     {

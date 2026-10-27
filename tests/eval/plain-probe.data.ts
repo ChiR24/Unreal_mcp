@@ -724,4 +724,7 @@ export const PLAIN_PROBE: readonly PlainProbeCase[] = [
   { query: 'plan a road', accepted: ['build_environment.plan_road'] },
   { query: 'road up a hill', accepted: ['build_environment.plan_road'] },
   { query: 'switchback road', accepted: ['build_environment.plan_road'] },
+  { query: 'wave function collapse', accepted: ['build_environment.assemble_modules'] },
+  { query: 'tile a dungeon', accepted: ['build_environment.assemble_modules'] },
+  { query: 'maze generator', accepted: ['build_environment.assemble_modules'] },
 ];

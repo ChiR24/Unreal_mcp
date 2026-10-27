@@ -131,6 +131,7 @@ export const CAPABILITY_COST_INDEX: Readonly<Record<string, string>> = {
   "build_environment::add_foliage_instances": "interactive|medium",
   "build_environment::add_foliage_type": "interactive|medium",
   "build_environment::add_spline_point": "interactive|low",
+  "build_environment::assemble_modules": "interactive|medium",
   "build_environment::assign_render_target": "interactive|low",
   "build_environment::bake_lightmap": "long-running|high",
   "build_environment::build_lighting": "long-running|high",
@@ -1648,4 +1649,4 @@ export const CAPABILITY_COST_INDEX: Readonly<Record<string, string>> = {
   "system_control::write_snapshot": "interactive|medium"
 };
 
-export const CAPABILITY_COST_INDEX_KEY_COUNT = 1635;
+export const CAPABILITY_COST_INDEX_KEY_COUNT = 1636;

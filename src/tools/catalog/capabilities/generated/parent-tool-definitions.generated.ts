@@ -2504,6 +2504,30 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "boolean",
           "description": "Whether the light (actorName) casts shadows."
         },
+        "cellSize": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "x",
+            "y",
+            "z"
+          ],
+          "properties": {
+            "x": {
+              "type": "number",
+              "minimum": 1
+            },
+            "y": {
+              "type": "number",
+              "minimum": 1
+            },
+            "z": {
+              "type": "number",
+              "minimum": 1
+            }
+          },
+          "description": "One cell, in cm: every piece fits inside one."
+        },
         "channel": {
           "type": "integer",
           "description": "Light channel index."
@@ -2690,6 +2714,11 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "elevation": {
           "type": "number",
           "description": "Sun elevation: degrees above the horizon (90 = overhead, negative = below it)."
+        },
+        "emptyWeight": {
+          "type": "number",
+          "minimum": 0,
+          "description": "How often a cell is left empty against the pieces (default 1; 0: every cell holds a piece)."
         },
         "enabled": {
           "type": "boolean",
@@ -3050,6 +3079,25 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             },
             {
               "type": "object",
+              "description": "The grid's lowest corner in world cm (default the origin).",
+              "properties": {
+                "x": {
+                  "type": "number",
+                  "description": "X"
+                },
+                "y": {
+                  "type": "number",
+                  "description": "Y"
+                },
+                "z": {
+                  "type": "number",
+                  "description": "Z"
+                }
+              },
+              "additionalProperties": false
+            },
+            {
+              "type": "object",
               "description": "Where the actor is spawned when it does not exist yet; an existing actor is not moved.",
               "properties": {
                 "x": {
@@ -3216,9 +3264,33 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "number",
           "description": "Region min Y."
         },
+        "modules": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 32,
+          "description": "The kit: 1-32 pieces, each a static mesh made to fill one cell.",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "meshPath"
+            ],
+            "properties": {
+              "meshPath": {
+                "type": "string",
+                "description": "The piece's static mesh."
+              },
+              "weight": {
+                "type": "number",
+                "minimum": 0.001,
+                "description": "How often it is chosen against the others (default 1), shared among its turns."
+              }
+            }
+          }
+        },
         "name": {
           "type": "string",
-          "description": "Label of the terrain actor (default ProceduralTerrain; actorName is accepted too)."
+          "description": "Label of the spawned actor (default ModuleAssembly)."
         },
         "names": {
           "type": "array",
@@ -3235,6 +3307,21 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "numLODs": {
           "type": "integer",
           "description": "Number of LODs to generate."
+        },
+        "openSides": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "enum": [
+              "+X",
+              "-X",
+              "+Y",
+              "-Y",
+              "+Z",
+              "-Z"
+            ]
+          },
+          "description": "Sides of the grid a piece may face out of with anything (default [\"-Z\"]: the floor); on the others only an empty face may."
         },
         "operation": {
           "type": "string",
@@ -3255,6 +3342,15 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "physicalMaterialPath": {
           "type": "string",
           "description": "Canonical /Game physical material path."
+        },
+        "pivot": {
+          "type": "string",
+          "enum": [
+            "corner",
+            "center",
+            "bottom_center"
+          ],
+          "description": "Where each piece's own origin sits in its cell: corner (the cell's lowest corner), center, or bottom_center (the middle of its floor)."
         },
         "pointIndex": {
           "type": "integer",
@@ -3780,6 +3876,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "number",
           "description": "Random rotation range in degrees."
         },
+        "rotations": {
+          "type": "boolean",
+          "description": "Also try each piece turned about Z: quarter turns in a square cell, half turns otherwise (default true)."
+        },
         "save": {
           "type": "boolean",
           "description": "Whether to save after the operation."
@@ -3959,23 +4059,52 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "description": "Shadow slope bias of the light (actorName)."
         },
         "size": {
-          "type": "object",
-          "description": "Box size in world units {x, y, z} (default 1000 on each axis).",
-          "properties": {
-            "x": {
-              "type": "number",
-              "description": "X"
+          "oneOf": [
+            {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "x",
+                "y",
+                "z"
+              ],
+              "properties": {
+                "x": {
+                  "type": "integer",
+                  "minimum": 1
+                },
+                "y": {
+                  "type": "integer",
+                  "minimum": 1
+                },
+                "z": {
+                  "type": "integer",
+                  "minimum": 1
+                }
+              },
+              "description": "Cells along X, Y and Z, at most 4096 in all."
             },
-            "y": {
-              "type": "number",
-              "description": "Y"
-            },
-            "z": {
-              "type": "number",
-              "description": "Z"
+            {
+              "type": "object",
+              "description": "Box size in world units {x, y, z} (default 1000 on each axis).",
+              "properties": {
+                "x": {
+                  "type": "number",
+                  "description": "X"
+                },
+                "y": {
+                  "type": "number",
+                  "description": "Y"
+                },
+                "z": {
+                  "type": "number",
+                  "description": "Z"
+                }
+              },
+              "additionalProperties": false
             }
-          },
-          "additionalProperties": false
+          ],
+          "description": "Box size in world units {x, y, z} (default 1000 on each axis)."
         },
         "sizeX": {
           "type": "number",
@@ -4236,6 +4365,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             "export_snapshot",
             "import_snapshot",
             "delete",
+            "assemble_modules",
             "create_light",
             "create_sky_light",
             "create_lighting_setup",
@@ -4277,13 +4407,17 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "string",
           "description": "Label of the new spline actor."
         },
+        "backtracks": {
+          "type": "integer",
+          "description": "Choices undone on the way."
+        },
         "cellCm": {
           "type": "number",
           "description": "Grid cell used."
         },
         "cells": {
           "type": "integer",
-          "description": "Vertices eroded."
+          "description": "Cells in the grid."
         },
         "changedCells": {
           "type": "integer",
@@ -4332,6 +4466,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "editLayers": {
           "type": "integer",
           "description": "The landscape's edit layers (0 without them)."
+        },
+        "emptyCells": {
+          "type": "integer",
+          "description": "Cells left empty."
         },
         "groundGapCm": {
           "type": "number",
@@ -4397,6 +4535,20 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "x-unreal-reflection-boundary": true,
           "description": "create_road_spline with the points and width, ready to send."
         },
+        "openFaces": {
+          "type": "integer",
+          "description": "Faces where the layout meets a neighbour or the outside it does not match: always 0 on success."
+        },
+        "placed": {
+          "type": "array",
+          "description": "Each piece and how many cells it fills.",
+          "items": {
+            "type": "object",
+            "additionalProperties": true,
+            "x-unreal-reflection-boundary": true,
+            "description": "{meshPath, count}."
+          }
+        },
         "placedInstances": {
           "type": "number",
           "description": "Mesh assignment: instances of this type placed in the level (its foliage actor)."
@@ -4439,6 +4591,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "number",
           "description": "Time the call took."
         },
+        "seedsTried": {
+          "type": "integer",
+          "description": "Seeds tried: after 1000 backtracks a seed is given up and the next one tried, up to 5."
+        },
         "skyLightActorPath": {
           "type": "string",
           "description": "Sky light actor path. As input, selects the light to snapshot; the first sky light in the level is used when omitted. As output, the resolved actor path."
@@ -4478,14 +4634,36 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "description": "Available light types."
         },
         "undo": {
-          "type": "object",
-          "additionalProperties": true,
-          "x-unreal-reflection-boundary": true,
+          "oneOf": [
+            {
+              "type": "object",
+              "additionalProperties": true,
+              "x-unreal-reflection-boundary": true,
+              "description": "What editor undo takes back: {undoable, transactionScope}."
+            },
+            {
+              "type": "object",
+              "additionalProperties": true,
+              "x-unreal-reflection-boundary": true,
+              "description": "What editor undo takes back: {undoable, transactionScope}; the whole layout is one step. Absent under dryRun."
+            }
+          ],
           "description": "What editor undo takes back: {undoable, transactionScope}."
         },
         "undrainedCells": {
           "type": "integer",
           "description": "Cells with no such path (fillDepressions false)."
+        },
+        "unmatchedFaces": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Pieces never placed and the face that nothing in the kit or the outside on that side takes."
+        },
+        "variants": {
+          "type": "integer",
+          "description": "Pieces and their turns tried, the empty cell included."
         },
         "width": {
           "type": "number",

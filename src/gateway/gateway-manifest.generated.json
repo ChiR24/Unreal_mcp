@@ -1619,6 +1619,7 @@
         "export_snapshot",
         "import_snapshot",
         "delete",
+        "assemble_modules",
         "create_light",
         "create_sky_light",
         "create_lighting_setup",
@@ -1668,6 +1669,7 @@
         "captureOffset",
         "captureSource",
         "castShadows",
+        "cellSize",
         "channel",
         "channelTarget",
         "channels",
@@ -1690,6 +1692,7 @@
         "dryRun",
         "edit",
         "elevation",
+        "emptyWeight",
         "enabled",
         "falloff",
         "feature",
@@ -1743,15 +1746,18 @@
         "minScale",
         "minX",
         "minY",
+        "modules",
         "name",
         "names",
         "noWeightBlend",
         "numLODs",
+        "openSides",
         "operation",
         "outputPath",
         "particleSystemPath",
         "path",
         "physicalMaterialPath",
+        "pivot",
         "pointIndex",
         "pointRotation",
         "pointScale",
@@ -1776,6 +1782,7 @@
         "riverAreaM2",
         "rotation",
         "rotationRange",
+        "rotations",
         "save",
         "saveToProject",
         "screenPercentage",
@@ -2090,6 +2097,30 @@
             "type": "boolean",
             "description": "Whether the light (actorName) casts shadows."
           },
+          "cellSize": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "x",
+              "y",
+              "z"
+            ],
+            "properties": {
+              "x": {
+                "type": "number",
+                "minimum": 1
+              },
+              "y": {
+                "type": "number",
+                "minimum": 1
+              },
+              "z": {
+                "type": "number",
+                "minimum": 1
+              }
+            },
+            "description": "One cell, in cm: every piece fits inside one."
+          },
           "channel": {
             "type": "integer",
             "description": "Light channel index."
@@ -2276,6 +2307,11 @@
           "elevation": {
             "type": "number",
             "description": "Sun elevation: degrees above the horizon (90 = overhead, negative = below it)."
+          },
+          "emptyWeight": {
+            "type": "number",
+            "minimum": 0,
+            "description": "How often a cell is left empty against the pieces (default 1; 0: every cell holds a piece)."
           },
           "enabled": {
             "type": "boolean",
@@ -2636,6 +2672,25 @@
               },
               {
                 "type": "object",
+                "description": "The grid's lowest corner in world cm (default the origin).",
+                "properties": {
+                  "x": {
+                    "type": "number",
+                    "description": "X"
+                  },
+                  "y": {
+                    "type": "number",
+                    "description": "Y"
+                  },
+                  "z": {
+                    "type": "number",
+                    "description": "Z"
+                  }
+                },
+                "additionalProperties": false
+              },
+              {
+                "type": "object",
                 "description": "Where the actor is spawned when it does not exist yet; an existing actor is not moved.",
                 "properties": {
                   "x": {
@@ -2802,9 +2857,33 @@
             "type": "number",
             "description": "Region min Y."
           },
+          "modules": {
+            "type": "array",
+            "minItems": 1,
+            "maxItems": 32,
+            "description": "The kit: 1-32 pieces, each a static mesh made to fill one cell.",
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "meshPath"
+              ],
+              "properties": {
+                "meshPath": {
+                  "type": "string",
+                  "description": "The piece's static mesh."
+                },
+                "weight": {
+                  "type": "number",
+                  "minimum": 0.001,
+                  "description": "How often it is chosen against the others (default 1), shared among its turns."
+                }
+              }
+            }
+          },
           "name": {
             "type": "string",
-            "description": "Label of the terrain actor (default ProceduralTerrain; actorName is accepted too)."
+            "description": "Label of the spawned actor (default ModuleAssembly)."
           },
           "names": {
             "type": "array",
@@ -2821,6 +2900,21 @@
           "numLODs": {
             "type": "integer",
             "description": "Number of LODs to generate."
+          },
+          "openSides": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "enum": [
+                "+X",
+                "-X",
+                "+Y",
+                "-Y",
+                "+Z",
+                "-Z"
+              ]
+            },
+            "description": "Sides of the grid a piece may face out of with anything (default [\"-Z\"]: the floor); on the others only an empty face may."
           },
           "operation": {
             "type": "string",
@@ -2841,6 +2935,15 @@
           "physicalMaterialPath": {
             "type": "string",
             "description": "Canonical /Game physical material path."
+          },
+          "pivot": {
+            "type": "string",
+            "enum": [
+              "corner",
+              "center",
+              "bottom_center"
+            ],
+            "description": "Where each piece's own origin sits in its cell: corner (the cell's lowest corner), center, or bottom_center (the middle of its floor)."
           },
           "pointIndex": {
             "type": "integer",
@@ -3366,6 +3469,10 @@
             "type": "number",
             "description": "Random rotation range in degrees."
           },
+          "rotations": {
+            "type": "boolean",
+            "description": "Also try each piece turned about Z: quarter turns in a square cell, half turns otherwise (default true)."
+          },
           "save": {
             "type": "boolean",
             "description": "Whether to save after the operation."
@@ -3545,23 +3652,52 @@
             "description": "Shadow slope bias of the light (actorName)."
           },
           "size": {
-            "type": "object",
-            "description": "Box size in world units {x, y, z} (default 1000 on each axis).",
-            "properties": {
-              "x": {
-                "type": "number",
-                "description": "X"
+            "oneOf": [
+              {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "x",
+                  "y",
+                  "z"
+                ],
+                "properties": {
+                  "x": {
+                    "type": "integer",
+                    "minimum": 1
+                  },
+                  "y": {
+                    "type": "integer",
+                    "minimum": 1
+                  },
+                  "z": {
+                    "type": "integer",
+                    "minimum": 1
+                  }
+                },
+                "description": "Cells along X, Y and Z, at most 4096 in all."
               },
-              "y": {
-                "type": "number",
-                "description": "Y"
-              },
-              "z": {
-                "type": "number",
-                "description": "Z"
+              {
+                "type": "object",
+                "description": "Box size in world units {x, y, z} (default 1000 on each axis).",
+                "properties": {
+                  "x": {
+                    "type": "number",
+                    "description": "X"
+                  },
+                  "y": {
+                    "type": "number",
+                    "description": "Y"
+                  },
+                  "z": {
+                    "type": "number",
+                    "description": "Z"
+                  }
+                },
+                "additionalProperties": false
               }
-            },
-            "additionalProperties": false
+            ],
+            "description": "Box size in world units {x, y, z} (default 1000 on each axis)."
           },
           "sizeX": {
             "type": "number",
@@ -3822,6 +3958,7 @@
               "export_snapshot",
               "import_snapshot",
               "delete",
+              "assemble_modules",
               "create_light",
               "create_sky_light",
               "create_lighting_setup",
