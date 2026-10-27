@@ -4741,6 +4741,14 @@ describe('render console settings say what took', () => {
     expect(console).not.toContain('Render console settings not available.');
   });
 
+  // A denoiser name no plugin registered left the renderer on whichever denoiser it had, without a word.
+  it('configure_path_tracing takes only a denoiser a loaded plugin registers, refused before any variable is set', () => {
+    const console = code('Render', 'McpRenderConsole.cpp');
+    expect(console).toContain('TArray<FString> RenderLoadedDenoisers()');
+    expect(console.indexOf('is not a denoiser this editor')).toBeLessThan(console.indexOf('TArray<FBoundedConsoleSetting> Values;'));
+    expect(console).toContain('SetConsoleVariable(TEXT("r.PathTracing.Denoiser.Name"), DenoiserName, Applied, Unsupported);');
+  });
+
   // set_tonemapper_type set r.TonemapperFilm, which no 5.x engine has, and answered applied.
   it('the tonemapper type drives the tone curve and refuses an unknown type', () => {
     const color = code('Render', 'McpRenderPostProcessColor.cpp');

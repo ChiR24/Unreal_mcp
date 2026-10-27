@@ -95,11 +95,12 @@ export function evaluateAssertions(testCase, response) {
       }
     }
 
+    // A string holds the needle as a fragment, an array of strings as one of its items (as notIncludes reads them).
     if (Object.prototype.hasOwnProperty.call(assertion, 'includes')) {
       const expected = assertion.includes;
       if (
-        typeof actual !== 'string' ||
         typeof expected !== 'string' ||
+        !(typeof actual === 'string' || Array.isArray(actual)) ||
         !actual.includes(expected)
       ) {
         return {

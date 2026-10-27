@@ -169,6 +169,15 @@ describe('test runner response helpers', () => {
     expect(result).toEqual({ passed: true });
   });
 
+  it('finds a string among an array of strings, as a whole item', () => {
+    const response = { structuredContent: { result: { appliedCVars: ['r.PathTracing.Denoiser', 'r.PathTracing.SamplesPerPixel'] } } };
+    const check = (includes: string) => evaluateAssertions({ assertions: [{ path: 'structuredContent.result.appliedCVars', includes }] }, response).passed;
+
+    expect(check('r.PathTracing.Denoiser')).toBe(true);
+    expect(check('r.PathTracing.MaxBounces')).toBe(false);
+    expect(check('r.PathTracing')).toBe(false);
+  });
+
   it('does not let a generic error satisfy a requested error code', async () => {
     const { evaluateExpectation } = await import('../test-runner.mjs');
     const result = evaluateExpectation(

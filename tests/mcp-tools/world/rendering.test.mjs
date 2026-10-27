@@ -207,6 +207,16 @@ function createRenderingHappyCases(ctx) {
         { path: 'structuredContent.result.appliedCVars', notIncludes: 'r.PathTracing.MaxBounces', label: 'omitted path tracing bounces are preserved' }
       ]
     }),
+    createNamedActionCase('RT: path tracing denoised by the NNE denoiser, by name', 'configure_path_tracing', {
+      enabled: false,
+      settings: { Denoiser: 1, DenoiserName: 'NNEDenoiser' }
+    }, {
+      expected: successExpected('unsupported', 'not available'),
+      assertions: [
+        { path: 'structuredContent.result.appliedCVars', includes: 'r.PathTracing.Denoiser', label: 'the denoiser is switched on' },
+        { path: 'structuredContent.result.denoisers', includes: 'NNEDenoiser', label: 'the reply names the loaded denoisers' }
+      ]
+    }),
 
     createNamedActionCase('Light Channels: set light channel', 'set_light_channel', {
       actorName: ctx.lightActor,
@@ -631,6 +641,9 @@ function createRenderingAdversarialCases(ctx) {
       intensity: 'bright',
       settings: { Radius: 150 }
     }, { expected: errorExpected('invalid') }),
+    createNamedActionCase('Adversarial: refuse a denoiser no loaded plugin registers', 'configure_path_tracing', {
+      settings: { DenoiserName: 'NoSuchDenoiser' }
+    }, { expected: errorExpected('not a denoiser') }),
     createNamedActionCase('Adversarial: reject below-min path-tracing bounces', 'configure_path_tracing', {
       enabled: true,
       settings: { SamplesPerPixel: 1, MaxBounces: -1 }
