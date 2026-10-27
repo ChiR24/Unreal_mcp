@@ -4,7 +4,7 @@
 
 # Action reference
 
-Catalog revision: `04e9021bc5015311`
+Catalog revision: `7d997af12bc34ee4`
 
 Both transports expose exactly ONE public MCP tool, `unreal`, with the four
 operations `search` / `describe` / `execute` / `configure`. The parent tools
@@ -13,7 +13,7 @@ by `tools/list` and a direct `tools/call` on one returns a
 `DIRECT_TOOL_CALL_REMOVED` receipt rather than executing
 (`src/server/gateway/direct-call-migration.ts`).
 
-The catalog declares 444 capabilities across
+The catalog declares 445 capabilities across
 23 internal parent tools.
 Every row is derived from the capability record that the gateway actually
 validates against, so `execute` cannot accept an action this table omits.
@@ -40,7 +40,7 @@ validates against, so `execute` cannot accept an action this table omits.
 | `build_environment` | 40 | 4 | 33 | 3 | environment |
 | `control_actor` | 29 | 9 | 18 | 2 | actor |
 | `control_editor` | 26 | 9 | 14 | 3 | editor |
-| `inspect` | 26 | 21 | 4 | 1 | inspect |
+| `inspect` | 27 | 22 | 4 | 1 | inspect |
 | `manage_ai` | 17 | 3 | 14 | 0 | manage ai |
 | `manage_asset` | 50 | 12 | 33 | 5 | asset, datatable, enum, material, struct, texture |
 | `manage_audio` | 14 | 3 | 11 | 0 | audio |
@@ -62,7 +62,7 @@ validates against, so `execute` cannot accept an action this table omits.
 
 ## Capabilities requiring consent
 
-68 of 444 capabilities require consent.
+68 of 445 capabilities require consent.
 
 | Capability | Tool | Action | Effect | Consent |
 | --- | --- | --- | --- | --- |
@@ -333,6 +333,7 @@ validates against, so `execute` cannot accept an action this table omits.
 | `enum.get_enum` | `manage_asset` | `get_enum` | read | read | none | `manage_asset.get_enum` |
 | `inspect.add_tag` | `inspect` | `control_actor` | write | write | none | `inspect.add_tag` |
 | `inspect.analyze_view` | `inspect` | `analyze_view` | read | read | none | `inspect.analyze_view` |
+| `inspect.audit_materials` | `inspect` | `audit_materials` | read | read | none | `inspect.audit_materials` |
 | `inspect.capture_passes` | `inspect` | `capture_passes` | read | read | none | `inspect.capture_passes` |
 | `inspect.changes_since` | `inspect` | `changes_since` | read | read | none | `inspect.changes_since` |
 | `inspect.check_mesh` | `inspect` | `check_mesh` | read | read | none | `inspect.check_mesh` |

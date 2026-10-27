@@ -331,6 +331,46 @@ export const OBJECT_PROPERTY_RECORDS: readonly CapabilityRecordSource[] = [
     },
     outputRequired: ['size', 'views', 'width', 'height'],
   }),
+  // Materials look wrong for reasons a picture hides: a base colour no real surface has, a half-metal, a texture
+  // stretched over ten times the area of its neighbours.
+  buildCoreRecord({
+    parentTool: 'inspect', action: 'audit_materials', dispatchAction: 'audit_materials', domain: D, family: 'object',
+    editorStates: ['edit', 'simulate'],
+    summary: 'Check the materials in the level viewport\'s view the way a technical artist would. pbr: the viewport is drawn in the Buffer Visualization view mode for base colour, metallic and roughness (the values the G-buffer holds, so tints and constants in the material count) and each lit, opaque actor in view is judged: too_dark (base colour under sRGB 30, darker than charcoal, on a quarter of it), too_bright (a non-metal over sRGB 240, whiter than snow; a metal\'s base colour is its reflectance, silver near 250), dark_metal (a metal\'s base colour under sRGB 155: metals reflect at least about a third of light), partial_metallic (metallic between 0.1 and 0.9 on a quarter: a surface is metal or not), mirror_roughness (roughness under 0.05 on half); an actor with an unlit or translucent material is listed under skipped with why. texel_density: each material slot of the static meshes in view at its sharpest 2D texture, as the texture streamer reckons it (texture size times the material\'s UV tiling for it over the mesh\'s UV density times the actor\'s scale), against the view\'s median: too_sharp (four times or more: memory spent on detail nobody sees) or too_blurry (a quarter or less). Only a slot whose material holds texture streaming data for the texture is judged, and the median is theirs when there are any; one without (a world-aligned material such as the engine\'s grid, or data never built) is listed with approximate and its ratio. instancing: static mesh actors of the level drawing one mesh with the same materials, groups of 8 or more, worth turning into one instanced mesh. Read only: the camera moves only when location or rotation is given, and the viewport\'s view mode and buffer are put back.',
+    topics: ['audit materials', 'material qa', 'check pbr values', 'albedo too dark', 'base color too bright', 'metallic values', 'roughness values', 'texel density', 'texture resolution consistency', 'stretched texture', 'meshes to instance', 'material review'],
+    whenToUse: [
+      'Reviewing a scene\'s materials for physically based values before lighting it: base colours too dark or too bright, half-metal surfaces, mirror-smooth roughness.',
+      'Finding a texture stretched or crammed compared to its neighbours, or a slot spending a 4K texture on a pebble.',
+      'Finding repeated meshes that could be drawn as one instanced mesh.',
+    ],
+    whenNotToUse: [
+      'Judging the picture itself (where the eye goes, palette, light): use analyze_view.',
+      'Changing a material\'s values: use set_material_parameter or the material graph actions.',
+      'Play In Editor runs: the level viewport does not show the running game (stop it, or use Simulate).',
+    ],
+    inputProps: {
+      checks: { type: 'array', items: { type: 'string', enum: ['pbr', 'texel_density', 'instancing'] }, description: 'What to check (default all three). Any other name refuses with INVALID_ARGUMENT.' },
+      location: { type: 'object', properties: { x: { type: 'number' }, y: { type: 'number' }, z: { type: 'number' } }, additionalProperties: false, description: 'Camera location {x, y, z} in cm; omitted, the viewport\'s current one. The camera stays there afterwards, as describe_view leaves it.' },
+      rotation: { type: 'object', properties: { pitch: { type: 'number' }, yaw: { type: 'number' }, roll: { type: 'number' } }, additionalProperties: false, description: 'Camera rotation {pitch, yaw, roll} in degrees; omitted, the viewport\'s current one.' },
+    },
+    required: [],
+    effect: 'read',
+    costLatency: 'interactive',
+    exampleInput: { action: 'audit_materials', checks: ['pbr', 'texel_density'] },
+    exampleOutput: {
+      success: true, message: '1 of 6 actor(s) in view off physically based ranges; 1 of 9 material slot(s) 4x off the view\'s texel density.',
+      pbr: { judged: 6, flagged: 1, actors: [{ actorName: 'Crate', share: 0.08, baseColor: [12, 11, 10], metallic: 0, roughness: 0.6, findings: ['too_dark'] }] },
+      texelDensity: { medianTexelsPerMetre: 512, slots: 9, outliers: 1, rows: [{ actorName: 'Pebble', slot: 0, material: '/Game/M_Rock.M_Rock', texture: '/Game/T_Rock_4K.T_Rock_4K', texelsPerMetre: 8192, ratio: 16, finding: 'too_sharp' }] },
+    },
+    outputProps: {
+      pbr: { type: 'object', additionalProperties: true, 'x-unreal-reflection-boundary': true, description: 'With pbr: judged and flagged (actors covering at least 20 cells of the view), actors [{actorName, share (of the view), baseColor [r, g, b] (median, sRGB 0-255), metallic and roughness (medians, 0-1), findings}] (flagged ones first, 30 at most) and skipped [{actorName, reason}] (unlit or translucent materials, which the G-buffer does not show), or note when the view could not be read.' },
+      texelDensity: { type: 'object', additionalProperties: true, 'x-unreal-reflection-boundary': true, description: 'With texel_density: medianTexelsPerMetre (of the judged slots in view, else of all), slots, judged (slots with streaming data), outliers and rows [{actorName, slot, material, texture, texelsPerMetre, ratio (to the median), finding (too_sharp or too_blurry), approximate (true when the material has no texture streaming data for the texture: UV channel 0 and no tiling assumed, so no finding)}] (furthest from the median first, 40 at most), or note.' },
+      instancing: { type: 'object', additionalProperties: true, 'x-unreal-reflection-boundary': true, description: 'With instancing: groups [{mesh, mobility, count, actors (the first 10 labels)}] (largest first, 20 at most; same level, mobility, mesh and materials), actors (how many the groups hold) and note (loaded actors only: a World Partition level counts the cells it has loaded).' },
+      cameraLocation: { type: 'object', additionalProperties: true, 'x-unreal-reflection-boundary': true, description: 'Where the camera was (pbr and texel_density).' },
+      cameraRotation: { type: 'object', additionalProperties: true, 'x-unreal-reflection-boundary': true, description: 'Where it looked.' },
+    },
+    outputRequired: [],
+  }),
   // A picture could only be judged by eye: no pass said which actor a region belongs to, how far it is or which way
   // it faces.
   buildCoreRecord({

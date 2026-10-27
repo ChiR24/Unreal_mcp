@@ -20,6 +20,7 @@ namespace
 {
 constexpr int32 GridWidth = 240; // cells across: fine enough for a figure, coarse enough to keep every aspect quick
 const TCHAR* const AllAspects[] = {TEXT("saliency"), TEXT("palette"), TEXT("light"), TEXT("cost")};
+} // namespace
 
 FFrame BuildFrame(const McpEnvironmentHandlers::FMcpViewCapture& View)
 {
@@ -58,6 +59,8 @@ FFrame BuildFrame(const McpEnvironmentHandlers::FMcpViewCapture& View)
     return Frame;
 }
 
+namespace
+{
 // The scene's sun: the brightest directional light that is on; OutToSun points from the scene toward it.
 bool FindSun(UWorld* World, FVector3f& OutToSun)
 {

@@ -13,6 +13,38 @@ const PRIVATE = join('plugins', 'EngineWire', 'Source', 'EngineWire', 'Private')
 const code = (...segments: readonly string[]): string =>
   readFileSync(join(PRIVATE, ...segments), 'utf8').replace(/\r\n/gu, '\n').replace(/\/\/[^\n]*/gu, ' ');
 
+// inspect audit_materials: the materials in view checked as a technical artist would (Domains/Perception, Pbr and Texel).
+describe('audit_materials', () => {
+  const pbr = code('Domains', 'Perception', 'McpPerceptionPbr.cpp');
+  const texel = code('Domains', 'Perception', 'McpPerceptionTexel.cpp');
+
+  it('is routed by inspect and reads the frame analyze_view reads', () => {
+    expect(code('Domains', 'Environment', 'Inspection', 'McpEnvInspect.cpp')).toContain(
+      'return McpPerception::HandleAuditMaterials(*this, RequestId, Payload, RequestingSocket);',
+    );
+    expect(code('Domains', 'Perception', 'McpPerceptionAudit.cpp')).toContain(
+      'McpEnvironmentHandlers::McpCaptureView(Payload, TEXT("audit_materials"), true, View, Error, Code)',
+    );
+  });
+
+  // A check that left the viewport in a buffer view would change what the user sees.
+  it('puts the view mode and the buffer back after reading the three buffers', () => {
+    expect(pbr).toMatch(/const EViewModeIndex Was = Client\.GetViewMode\(\);\s*const FName WasBuffer = Client\.CurrentBufferVisualizationMode;/u);
+    expect(pbr).toMatch(/Client\.CurrentBufferVisualizationMode = WasBuffer;\s*Client\.SetViewMode\(Was\);\s*if \(bSwitch\)\s*\{\s*Client\.SetGameView\(false\);/u);
+  });
+
+  // An unlit material writes black base colour and a translucent one none: every sign and window read as too dark.
+  it('skips actors whose materials the G-buffer does not show', () => {
+    expect(pbr).toContain('Material->GetShadingModels().HasOnlyShadingModel(MSM_Unlit)');
+    expect(pbr).toContain('Material->GetBlendMode() != BLEND_Opaque && Material->GetBlendMode() != BLEND_Masked');
+  });
+
+  // From 5.7 the five-argument GetUsedTextures is deprecated with an empty body: it compiles and finds nothing.
+  it('asks for a material\'s textures through the overload each engine version fills', () => {
+    expect(texel).toMatch(/#if ENGINE_MAJOR_VERSION > 5 \|\| ENGINE_MINOR_VERSION >= 7\s*Material->GetUsedTextures\(Textures\);/u);
+  });
+});
+
 describe('analyze_view', () => {
   const handler = code('Domains', 'Perception', 'McpPerceptionAnalyze.cpp');
 

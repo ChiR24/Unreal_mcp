@@ -5310,6 +5310,7 @@
         "describe_view",
         "analyze_view",
         "contact_sheet",
+        "audit_materials",
         "capture_passes",
         "raycast_world",
         "get_property",
@@ -5338,6 +5339,7 @@
         "aspects",
         "blueprintPath",
         "channel",
+        "checks",
         "className",
         "classPath",
         "compareWith",
@@ -5441,6 +5443,18 @@
           "channel": {
             "type": "string",
             "description": "Collision channel traced: Visibility (default), Camera, WorldStatic, WorldDynamic, Pawn, PhysicsBody, Vehicle, Destructible, or a project trace channel by its name. What blocks depends on each component's response to that channel: most meshes block Visibility, a character capsule blocks Pawn."
+          },
+          "checks": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "enum": [
+                "pbr",
+                "texel_density",
+                "instancing"
+              ]
+            },
+            "description": "What to check (default all three). Any other name refuses with INVALID_ARGUMENT."
           },
           "className": {
             "type": "string",
@@ -6012,6 +6026,7 @@
               "describe_view",
               "analyze_view",
               "contact_sheet",
+              "audit_materials",
               "capture_passes",
               "raycast_world",
               "get_property",

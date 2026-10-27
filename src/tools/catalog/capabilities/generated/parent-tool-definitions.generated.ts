@@ -7205,6 +7205,18 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "string",
           "description": "Collision channel traced: Visibility (default), Camera, WorldStatic, WorldDynamic, Pawn, PhysicsBody, Vehicle, Destructible, or a project trace channel by its name. What blocks depends on each component's response to that channel: most meshes block Visibility, a character capsule blocks Pawn."
         },
+        "checks": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "enum": [
+              "pbr",
+              "texel_density",
+              "instancing"
+            ]
+          },
+          "description": "What to check (default all three). Any other name refuses with INVALID_ARGUMENT."
+        },
         "className": {
           "type": "string",
           "description": "Class name or /Script/ class path to inspect."
@@ -7775,6 +7787,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             "describe_view",
             "analyze_view",
             "contact_sheet",
+            "audit_materials",
             "capture_passes",
             "raycast_world",
             "get_property",
@@ -7955,10 +7968,21 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "description": "Slowest of the game, render, RHI and GPU thread times, in milliseconds."
         },
         "cameraLocation": {
-          "type": "object",
-          "additionalProperties": true,
-          "x-unreal-reflection-boundary": true,
-          "description": "Where the camera was."
+          "oneOf": [
+            {
+              "type": "object",
+              "additionalProperties": true,
+              "x-unreal-reflection-boundary": true,
+              "description": "Where the camera was (pbr and texel_density)."
+            },
+            {
+              "type": "object",
+              "additionalProperties": true,
+              "x-unreal-reflection-boundary": true,
+              "description": "Where the camera was."
+            }
+          ],
+          "description": "Where the camera was (pbr and texel_density)."
         },
         "cameraRotation": {
           "type": "object",
@@ -8380,6 +8404,12 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "number",
           "description": "A write to a class default or component template: how many placed copies, and derived Blueprints' defaults with their own copies, still held the old default and took the new one, as the details panel does; one that overrides the value keeps it. Absent for any other target."
         },
+        "instancing": {
+          "type": "object",
+          "additionalProperties": true,
+          "x-unreal-reflection-boundary": true,
+          "description": "With instancing: groups [{mesh, mobility, count, actors (the first 10 labels)}] (largest first, 20 at most; same level, mobility, mesh and materials), actors (how many the groups hold) and note (loaded actors only: a World Partition level counts the cells it has loaded)."
+        },
         "isActive": {
           "type": "boolean",
           "description": "True when the component is active."
@@ -8676,6 +8706,12 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "string",
           "description": "Object path of the possessed pawn; inspect it to find where the player actually is."
         },
+        "pbr": {
+          "type": "object",
+          "additionalProperties": true,
+          "x-unreal-reflection-boundary": true,
+          "description": "With pbr: judged and flagged (actors covering at least 20 cells of the view), actors [{actorName, share (of the view), baseColor [r, g, b] (median, sRGB 0-255), metallic and roughness (medians, 0-1), findings}] (flagged ones first, 30 at most) and skipped [{actorName, reason}] (unlit or translucent materials, which the G-buffer does not show), or note when the view could not be read."
+        },
         "peakUsedPhysicalBytes": {
           "type": "number",
           "description": "Peak used physical memory in bytes."
@@ -8967,6 +9003,12 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             }
           ],
           "description": "With objectPaths: each target as {objectPath as given, applied, the value read back (properties with properties), actorPath, saved, saveSkippedReason}."
+        },
+        "texelDensity": {
+          "type": "object",
+          "additionalProperties": true,
+          "x-unreal-reflection-boundary": true,
+          "description": "With texel_density: medianTexelsPerMetre (of the judged slots in view, else of all), slots, judged (slots with streaming data), outliers and rows [{actorName, slot, material, texture, texelsPerMetre, ratio (to the median), finding (too_sharp or too_blurry), approximate (true when the material has no texture streaming data for the texture: UV channel 0 and no tiling assumed, so no finding)}] (furthest from the median first, 40 at most), or note."
         },
         "threadTimeDerivedFps": {
           "type": "number",

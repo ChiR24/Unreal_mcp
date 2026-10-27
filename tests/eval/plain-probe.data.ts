@@ -703,4 +703,7 @@ export const PLAIN_PROBE: readonly PlainProbeCase[] = [
   { query: 'find similar assets', accepted: ['asset.find_assets_like'] },
   { query: 'caption assets', accepted: ['asset.caption_assets'] },
   { query: 'asset thumbnails', accepted: ['asset.thumbnail_sheet'] },
+  { query: 'audit materials', accepted: ['inspect.audit_materials'] },
+  { query: 'check pbr values', accepted: ['inspect.audit_materials'] },
+  { query: 'texel density', accepted: ['inspect.audit_materials'] },
 ];

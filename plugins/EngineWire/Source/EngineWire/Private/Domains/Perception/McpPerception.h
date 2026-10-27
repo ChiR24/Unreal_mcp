@@ -8,6 +8,7 @@ class AActor;
 class FEditorViewportClient;
 class FMcpBridgeWebSocket;
 class UEngineWireSubsystem;
+class UWorld;
 namespace McpEnvironmentHandlers
 {
 struct FMcpViewCapture;
@@ -29,6 +30,9 @@ struct FFrame
     TArray<FVector3f> Lab;
     TArray<AActor*> Actor;
 };
+
+/** The frame of a viewport capture, on a grid of cells about 240 across (McpPerceptionAnalyze). */
+FFrame BuildFrame(const McpEnvironmentHandlers::FMcpViewCapture& View);
 
 /** OKLab (Ottosson 2020) of an sRGB colour (0-1, as displayed). */
 FVector3f OkLab(const FLinearColor& Srgb);
@@ -61,6 +65,28 @@ bool PrepareViewDiff(const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FJsonObj
  *  a capture refusal. */
 bool DiffView(const TSharedPtr<FJsonObject>& Payload, const McpEnvironmentHandlers::FMcpViewCapture& View,
               TSharedPtr<FJsonObject>& OutChange, FString& OutError, FString& OutCode);
+
+/** audit_materials' pbr findings on one actor's cells (base colour as shown, sRGB; metallic and roughness 0-1): too_dark,
+ *  too_bright, dark_metal, partial_metallic and mirror_roughness, each when a quarter of the cells (half for a mirror)
+ *  shows it (McpPerceptionPbr). */
+TArray<FString> PbrFindings(const TArray<FColor>& Base, const TArray<float>& Metal, const TArray<float>& Rough);
+
+/** The actors in view as the G-buffer holds them: the viewport drawn in the Buffer Visualization view mode for base
+ *  colour, metallic and roughness and put back; lit, opaque actors judged by PbrFindings, the others skipped. */
+TSharedPtr<FJsonObject> PbrAsRendered(FEditorViewportClient& Client, const FFrame& Frame);
+
+/** 1 when a slot's texel density is four times the view's median or more, -1 at a quarter or less, else 0. */
+int32 TexelVerdict(double Ratio);
+
+/** Texel density of each material slot of the static meshes in view, against the view's median (McpPerceptionTexel). */
+TSharedPtr<FJsonObject> TexelDensity(const FFrame& Frame);
+
+/** Groups of the level's static mesh actors drawing one mesh with one set of materials, worth instancing. */
+TSharedPtr<FJsonObject> InstancingGroups(UWorld* World);
+
+/** inspect audit_materials (McpPerceptionAudit). */
+bool HandleAuditMaterials(UEngineWireSubsystem& Bridge, const FString& RequestId, const TSharedPtr<FJsonObject>& Payload,
+                          TSharedPtr<FMcpBridgeWebSocket> Socket);
 
 /** inspect contact_sheet: an actor from several sides in one labelled image (McpPerceptionSheet). */
 bool HandleContactSheet(UEngineWireSubsystem& Bridge, const FString& RequestId, const TSharedPtr<FJsonObject>& Payload,
