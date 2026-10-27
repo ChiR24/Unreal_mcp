@@ -1,5 +1,5 @@
 {
-  "catalogRevision": "3c556d8b49a116df",
+  "catalogRevision": "26adbf1ab19ef7e5",
   "recordCount": 453,
   "records": [
     {
@@ -12265,6 +12265,7 @@
           "imported mesh grid material",
           "materials on a mesh asset",
           "add box collision",
+          "add collision to a mesh",
           "complex as simple",
           "remove collision",
           "player falls through mesh",
@@ -12572,7 +12573,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "37b0a784e698193bda962b81472822c374f79424e7322935914933eb6bfb948f",
-        "content": "32e81a9887300410a5e15e83414a5f5115546122f07dd666878a7fbaa9d5ece5"
+        "content": "aa99eef1acf01e7ff93b8ee3e826d194fc60adb663e60cc62546bc716f1a1e94"
       }
     },
     {
@@ -14808,6 +14809,7 @@
           "enemy follows the player",
           "follow the player",
           "patrol",
+          "ai patrol",
           "enemy patrol",
           "patrol between points",
           "guard patrol",
@@ -15636,7 +15638,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "9bff184328c255a15ce476992b13f501f4fa6647710f8229beb7d1f8f9ad80e3",
-        "content": "726a2a59a6b90e9898d3fb8c1cb9f6a34cbb065d51f75dd05c758c1880abf472"
+        "content": "bbf40dfbe8e2014a437e75c24ad8baea7b514a8b61d8b5c576ed62b6af7a719b"
       }
     },
     {
@@ -26861,7 +26863,7 @@
           "trees",
           "plants"
         ],
-        "summary": "Create or update a foliage type asset, place explicit instances/transforms, or paint instances over a brush disc or a box area, dropped onto the ground. Placing and painting are one undo step each.",
+        "summary": "Place foliage (trees, grass, bushes, rocks): create or update a foliage type asset, place explicit instances/transforms, or paint instances over a brush disc or a box area, dropped onto the ground. Placing and painting are one undo step each.",
         "whenToUse": [
           "Foliage must be added, configured, or removed in the level."
         ],
@@ -27154,7 +27156,7 @@
       },
       "examples": [
         {
-          "title": "Create or update a foliage type asset, place explicit instances/transforms, or paint instances over a brush disc or a box area, dropped onto the ground. Placing and painting are one undo step each.",
+          "title": "Place foliage (trees, grass, bushes, rocks): create or update a foliage type asset, place explicit instances/transforms, or paint instances over a brush disc or a box area, dropped onto the ground. Placing and painting are one undo step each.",
           "input": {
             "action": "add_foliage",
             "meshPath": "/Game/Meshes/SM_Bush",
@@ -27250,7 +27252,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "1d69a2ec3894703cfb5473af28e37c8f764811e72feee995d7335213b3db30fa",
-        "content": "360cfe015f4c80c43e1516ac5669c28aecaec629b9c23f528e478685b59b26da"
+        "content": "ddb33e0dd3499ece839ebee236f1b5b25980ae22bc12a6710815461a163d2f35"
       }
     },
     {
@@ -30929,7 +30931,8 @@
           "wind",
           "weather",
           "add snow",
-          "add rain, snow, wind or lightning"
+          "add rain, snow, wind or lightning",
+          "make it rain"
         ],
         "summary": "Configure a weather actor: rain, snow or lightning set a Cascade particle system (particleSystemPath) on an Emitter labelled WeatherEmitter, SnowEmitter or LightningEmitter; wind spawns or tunes a WindDirectionalSource (direction as its rotation, speed and other settings by property name). Nothing is simulated beyond what those actors do; not saved.",
         "whenToUse": [
@@ -31135,7 +31138,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "ed77f76bcae66a3710d7d472fc890a0029a37770f1ab267b41e9c26dacfd5efa",
-        "content": "b6d6d20fa947f1b482e19d2f204c18570dfe030094af8ab266eaa46bc675cf48"
+        "content": "0ffd4c8634090fb97c51a7aea52a79ce193033d71fb80203c6ebd4bbd95f429f"
       }
     },
     {
@@ -39012,9 +39015,10 @@
           "delete spawned actor",
           "delete selected actor",
           "remove actor from level",
+          "delete all cubes or all lights",
           "delete object"
         ],
-        "summary": "Delete actors (deleteScope actors, the default: actorName or actorNames, exact names only, so TestActor never takes TestActor_Copy) or every actor carrying tag or any of tags (by_tag), in one undo step. While Play runs they leave the running game, which nothing saves or undoes. Replies deletedCount and deleted; names not found refuse with NOT_FOUND, or DELETE_PARTIAL when some went, both carrying the deleted and missing lists.",
+        "summary": "Delete actors (deleteScope actors, the default: actorName or actorNames, exact names only, so TestActor never takes TestActor_Copy) or every actor carrying tag or any of tags (by_tag), in one undo step; every actor of a kind (all the cubes) goes by the names find lists. While Play runs they leave the running game, which nothing saves or undoes. Replies deletedCount and deleted; names not found refuse with NOT_FOUND, or DELETE_PARTIAL when some went, both carrying the deleted and missing lists.",
         "whenToUse": [
           "deleteScope=actors: An actor must be permanently removed from the level.",
           "deleteScope=by_tag: All actors sharing a tag must be removed in one operation.",
@@ -39104,7 +39108,7 @@
       },
       "examples": [
         {
-          "title": "Delete actors (deleteScope actors, the default: actorName or actorNames, exact names only, so TestActor never takes TestActor_Copy) or every actor carrying tag or any of tags (by_tag), in one undo step. While Play runs they leave the running game, which nothing saves or undoes. Replies deletedCount and deleted; names not found refuse with NOT_FOUND, or DELETE_PARTIAL when some went, both carrying the deleted and missing lists.",
+          "title": "Delete actors (deleteScope actors, the default: actorName or actorNames, exact names only, so TestActor never takes TestActor_Copy) or every actor carrying tag or any of tags (by_tag), in one undo step; every actor of a kind (all the cubes) goes by the names find lists. While Play runs they leave the running game, which nothing saves or undoes. Replies deletedCount and deleted; names not found refuse with NOT_FOUND, or DELETE_PARTIAL when some went, both carrying the deleted and missing lists.",
           "input": {
             "action": "delete",
             "actorName": "Cube1",
@@ -39186,7 +39190,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "8c3e23695164965208c5d990f589d52dc9b26bdec26c9270f0c1789ab528ced5",
-        "content": "a448a05c5dcbe89fb876076ba04bec60c571000ae48206c7e1ab9cad29f88387"
+        "content": "b4694615f52f6efe376828895afebe434f7e53fb7d8e43a99e1489be54c692c6"
       }
     },
     {
@@ -43047,6 +43051,7 @@
           "make actor smaller",
           "resize actor",
           "shrink actor",
+          "scale up a tree or a rock",
           "set position",
           "set rotation",
           "translate"
@@ -43407,7 +43412,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "6af5b619f64ce87631986e9ba9d0b1fec5c056e5aa571251d34e3202107f2ea4",
-        "content": "7767dbcc624a4534414463511cfb999fa8b1806a5a48afbf7356c6a163ea4806"
+        "content": "ddbcc908b7c0d84011c39e545ee14b715986482a99fd83823a528fe40263817e"
       }
     },
     {
@@ -57348,7 +57353,8 @@
           "smart link",
           "rebuild navigation",
           "navmesh",
-          "add navmesh"
+          "add navmesh",
+          "build the navmesh"
         ],
         "summary": "Configure navigation: nav mesh settings, agent properties, area cost or class, nav links, smart links, or rebuild the nav mesh. A level with no nav mesh yet gets one from a NavMeshBoundsVolume (manage_level_structure create_volume).",
         "whenToUse": [
@@ -57771,7 +57777,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "cbb74e1e3f085f76d7eacfb8813c73760a8ca9d354571eea2fbf2cfdc948735a",
-        "content": "b3eb5dcf16887fd9969788fbe7869487b1a86b22ef61e841a61eba29c96003bd"
+        "content": "3c87419c4b2414758024ff9a59b892b2f79eae7d21218d78ca604de0a57806be"
       }
     },
     {
@@ -112335,7 +112341,8 @@
           "stat unit",
           "show stats",
           "profile the game",
-          "find what is slow"
+          "find what is slow",
+          "check performance"
         ],
         "summary": "Measure performance, chosen by control. benchmark samples every frame for duration seconds (default 10) and answers averageFps, frame times and game, render and GPU thread times; start and stop record a .uestats file under Saved/Profiling for Unreal Insights (no MCP action reads it); memory_report runs memreport (detailed: memreport -full) and answers the .memreport file it wrote (reportPath, reportIsNew); show_stats turns an on-screen stat overlay on or off. A minimized or unfocused editor is throttled and measures slow. To find what makes a frame slow, inspect get_stats with stats frame names the busiest thread and what in view weighs on it.",
         "whenToUse": [
@@ -112498,7 +112505,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "4dacbb4d4d63dd1b1d4e536804a21ab771b11cf6c2d35c0fb7731b26a8b35c8c",
-        "content": "127b8c7ac044b72ecd67feada007572cf04b95b0bb1f024d997e9d8bbbae371d"
+        "content": "88632a442bb2ee499c96ae61efadb387892a8bf377750c675c6cbe6db4e18fa6"
       }
     },
     {

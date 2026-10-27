@@ -12,7 +12,7 @@ export const CONTROL_ACTOR_FOLDS: readonly FoldSpec[] = [
   {
     primary: 'set_transform', selector: 'transformMode',
     summary: 'Move, rotate or scale placed actors (the playing copy during Play), chosen by transformMode; every member writes alike. location, rotation ([pitch, yaw, roll] degrees) and scale are world values, a part left out keeps its current value, and offset moves by [dx, dy, dz] instead of to a location (both together are refused). actors gives several actors their own values and actorNames gives many the same change in one call. A single move is one undo step and teleports, without sweeping. The reply reads the transform back off the actor; one that did not end up as asked (attached, simulating physics, constrained, or moved by game logic) fails with TRANSFORM_MISMATCH carrying where it is, and TRANSFORM_BATCH_INCOMPLETE names batch items that did not move. The placement is checked: groundZ, groundClearance, and placementWarning with suggestedLocation when it is sunk, floating or intersecting.',
-    topics: ['move actor', 'rotate actor', 'scale actor', 'set actor location', 'set actor rotation', 'teleport actor', 'make actor bigger', 'make actor smaller', 'resize actor', 'shrink actor'],
+    topics: ['move actor', 'rotate actor', 'scale actor', 'set actor location', 'set actor rotation', 'teleport actor', 'make actor bigger', 'make actor smaller', 'resize actor', 'shrink actor', 'scale up a tree or a rock'],
     members: { transform: 'set_transform', location: 'set_actor_location', rotation: 'set_actor_rotation', scale: 'set_actor_scale', teleport: 'teleport_actor' },
     aliasMembers: ['set_actor_transform'],
   },
@@ -47,8 +47,8 @@ export const CONTROL_ACTOR_FOLDS: readonly FoldSpec[] = [
   { primary: 'detach', topics: ['unparent actor', 'remove actor from parent'], summary: 'Detach an actor from its parent, keeping where it stands in the world (KeepWorldTransform) and clearing its owner, in one undo step. An actor attached to nothing answers success with detached false. While Play In Editor runs it detaches the playing copy, not the editor actor.', members: ['detach_actor'] },
   {
     primary: 'delete', selector: 'deleteScope',
-    summary: 'Delete actors (deleteScope actors, the default: actorName or actorNames, exact names only, so TestActor never takes TestActor_Copy) or every actor carrying tag or any of tags (by_tag), in one undo step. While Play runs they leave the running game, which nothing saves or undoes. Replies deletedCount and deleted; names not found refuse with NOT_FOUND, or DELETE_PARTIAL when some went, both carrying the deleted and missing lists.',
-    topics: ['delete actor', 'destroy actor', 'remove actor', 'delete by tag', 'delete spawned actor', 'delete selected actor', 'remove actor from level'],
+    summary: 'Delete actors (deleteScope actors, the default: actorName or actorNames, exact names only, so TestActor never takes TestActor_Copy) or every actor carrying tag or any of tags (by_tag), in one undo step; every actor of a kind (all the cubes) goes by the names find lists. While Play runs they leave the running game, which nothing saves or undoes. Replies deletedCount and deleted; names not found refuse with NOT_FOUND, or DELETE_PARTIAL when some went, both carrying the deleted and missing lists.',
+    topics: ['delete actor', 'destroy actor', 'remove actor', 'delete by tag', 'delete spawned actor', 'delete selected actor', 'remove actor from level', 'delete all cubes or all lights'],
     members: { actors: 'delete', by_tag: 'delete_by_tag' },
     aliasMembers: ['destroy_actor'],
   },

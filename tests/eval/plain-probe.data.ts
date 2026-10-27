@@ -733,4 +733,12 @@ export const PLAIN_PROBE: readonly PlainProbeCase[] = [
   { query: 'player dies in lava', accepted: ['blueprint.add_behaviour'] },
   { query: 'scene is too dark', accepted: ['build_environment.configure_lighting'] },
   { query: 'the level is too dark', accepted: ['build_environment.configure_lighting'] },
+  { query: 'delete all cubes', accepted: ['control_actor.delete'] },
+  { query: 'make it rain', accepted: ['build_environment.configure_weather'] },
+  { query: 'add collision to a mesh', accepted: ['asset.process_asset'] },
+  { query: 'scale up the tree', accepted: ['control_actor.set_transform'] },
+  { query: 'add trees', accepted: ['build_environment.add_foliage'] },
+  { query: 'build the navmesh', accepted: ['manage_ai.configure_navigation'] },
+  { query: 'ai patrol', accepted: ['blueprint.add_behaviour'] },
+  { query: 'check performance', accepted: ['system_control.profile_performance'] },
 ];

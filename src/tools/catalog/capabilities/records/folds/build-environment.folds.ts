@@ -36,7 +36,7 @@ export const BUILD_ENVIRONMENT_FOLDS: readonly FoldSpec[] = [
     // scale range, culling); it places no instances. Saying it scattered
     // led callers to ask for 120 instances in a 6000uu radius, get a
     // success back, and find an empty level.
-    summary: 'Create or update a foliage type asset, place explicit instances/transforms, or paint instances over a brush disc or a box area, dropped onto the ground. Placing and painting are one undo step each.',
+    summary: 'Place foliage (trees, grass, bushes, rocks): create or update a foliage type asset, place explicit instances/transforms, or paint instances over a brush disc or a box area, dropped onto the ground. Placing and painting are one undo step each.',
     topics: ['add foliage', 'paint foliage', 'foliage instances', 'scatter foliage', 'scatter grass', 'fill area with foliage', 'plant trees', 'place bushes', 'add trees, grass or flowers to the level', 'make a forest', 'scatter rocks'],
     members: { scatter: 'add_foliage', instances: 'add_foliage_instances', paint: 'paint_foliage' },
   },
@@ -161,7 +161,7 @@ export const BUILD_ENVIRONMENT_FOLDS: readonly FoldSpec[] = [
   {
     primary: 'configure_weather', selector: 'setting',
     summary: 'Configure a weather actor: rain, snow or lightning set a Cascade particle system (particleSystemPath) on an Emitter labelled WeatherEmitter, SnowEmitter or LightningEmitter; wind spawns or tunes a WindDirectionalSource (direction as its rotation, speed and other settings by property name). Nothing is simulated beyond what those actors do; not saved.',
-    topics: ['rain', 'snow', 'lightning', 'wind', 'weather', 'add snow', 'add rain, snow, wind or lightning'],
+    topics: ['rain', 'snow', 'lightning', 'wind', 'weather', 'add snow', 'add rain, snow, wind or lightning', 'make it rain'],
     members: { rain: 'configure_rain_particles', snow: 'configure_snow_particles', lightning: 'configure_lightning', wind: 'configure_wind' },
   },
   // water
