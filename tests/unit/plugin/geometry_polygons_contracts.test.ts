@@ -140,3 +140,34 @@ describe('create starts a dynamic mesh from a static mesh asset when meshPath na
     expect(source).toContain('Result->SetNumberField(TEXT("triangleCount"), CopiedTriangles);');
   });
 });
+
+// A hip roof over a footprint: its faces go through append_polygons' own checks and append, each face its own polygroup
+// with UVs laid from its eave, and the actor spawned as one undo step.
+describe('create_primitive roof shares the polygon append and is one undo step', () => {
+  const roof = read('Roof', 'McpGeometryRoof.cpp');
+
+  it('builds its faces through FinishAppendPolygonsInput and AppendPolygonFaces, the path append_polygons runs', () => {
+    expect(roof).toContain('bool bBuilt = FinishAppendPolygonsInput(Input, Error);');
+    expect(roof).toContain('bBuilt = bBuilt && AppendPolygonFaces(EditMesh, Input, VerticesAdded, Error);');
+    expect(read('Modeling', 'McpGeometryAppendPolygons.cpp')).toContain('bAppended = AppendPolygonFaces(EditMesh, Input, VerticesAdded, Error);');
+  });
+
+  // AppendPolygonFaces shares one normal element per vertex, as a cage wants: on a roof that shaded every ridge and eave round.
+  it('gives each face its own polygroup, normal and UV elements, and spawns inside one transaction', () => {
+    expect(roof).toContain('Input.FaceGroups.Add(Face + 1);');
+    expect(roof).toContain('RoofFaceElements(EditMesh, Roof.Outline, Pitch);');
+    expect(roof).toContain('const int64 Key = (static_cast<int64>(Face) << 32) | Corners[K];');
+    expect(roof).toContain('Normals->SetTriangle(Triangle, Normal);');
+    expect(roof.indexOf('RoofFaceElements(EditMesh')).toBeLessThan(roof.indexOf('RecomputeMeshNormals(DynMesh);'));
+    expect(roof.indexOf('FMcpScopedEditorTransaction Transaction(')).toBeLessThan(roof.indexOf('SpawnPrimitiveOrReply('));
+    expect(roof).toContain('Transaction.DescribeInto(Result);');
+  });
+
+  it('refuses an outline the skeleton cannot carry before any mesh is made', () => {
+    expect(roof.indexOf('No roof: %s. Nothing was made.')).toBeLessThan(roof.indexOf('NewObject<UDynamicMesh>'));
+  });
+
+  it('the dispatcher routes create_roof', () => {
+    expect(read('McpGeometryHandlers.cpp')).toContain('if (SubAction == TEXT("create_roof")) return HandleCreateRoof(this, RequestId, Payload, RequestingSocket);');
+  });
+});

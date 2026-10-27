@@ -123,6 +123,11 @@ bool ParseAppendBoxesInput(const TSharedPtr<FJsonObject>& Payload, FAppendPolygo
 bool ParseAppendLoftInput(const TSharedPtr<FJsonObject>& Payload, FAppendPolygonsInput& OutInput, FString& OutError);
 // Triangulates the faces of an input built in code and checks it is a clean cage, as ParseAppendPolygonsInput does.
 bool FinishAppendPolygonsInput(FAppendPolygonsInput& Input, FString& OutError);
+// The input's points and triangles appended to EditMesh, each face's triangles in their own polygroup (or FaceGroups),
+// with FaceMaterials when given and a normal overlay set; false, naming the face, when the mesh refuses a triangle.
+bool AppendPolygonFaces(UE::Geometry::FDynamicMesh3& EditMesh, const FAppendPolygonsInput& Input, int32& OutVerticesAdded, FString& OutError);
+// create_primitive roof (Roof/McpGeometryRoof.cpp): a hip roof over a footprint, from its straight skeleton.
+bool HandleCreateRoof(UEngineWireSubsystem* Self, const FString& RequestId, const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> Socket);
 // A part laid out count x rows x layers times (append_cuboids' boxes, append_mesh's placements): copy k is moved by
 // At(k), counted along count, then rows, then layers.
 struct FMcpRepeatGrid

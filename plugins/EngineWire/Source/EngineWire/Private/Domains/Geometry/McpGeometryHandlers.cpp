@@ -66,6 +66,7 @@ bool UEngineWireSubsystem::HandleGeometryAction(
     if (SubAction == TEXT("create_disc")) return HandleCreateDisc(this, RequestId, Payload, RequestingSocket);
     if (SubAction == TEXT("create_stairs")) return HandleCreateStairs(this, RequestId, Payload, RequestingSocket);
     if (SubAction == TEXT("create_spiral_stairs")) return HandleCreateSpiralStairs(this, RequestId, Payload, RequestingSocket);
+    if (SubAction == TEXT("create_roof")) return HandleCreateRoof(this, RequestId, Payload, RequestingSocket);
     if (SubAction == TEXT("create_ring")) return HandleCreateDisc(this, RequestId, Payload, RequestingSocket, true);
     if (SubAction == TEXT("create_arch")) return HandleCreateTorus(this, RequestId, Payload, RequestingSocket, true);
     if (SubAction == TEXT("create_pipe")) return HandleCreatePipe(this, RequestId, Payload, RequestingSocket);

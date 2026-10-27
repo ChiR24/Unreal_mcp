@@ -9,6 +9,83 @@
 
 namespace McpGeometryHandlers
 {
+bool AppendPolygonFaces(UE::Geometry::FDynamicMesh3& EditMesh, const FAppendPolygonsInput& Input, int32& OutVerticesAdded, FString& OutError)
+{
+    if (!EditMesh.HasTriangleGroups())
+    {
+        EditMesh.EnableTriangleGroups();
+    }
+    UE::Geometry::FDynamicMeshMaterialAttribute* MaterialIds = nullptr;
+    if (Input.FaceMaterials.Num() > 0)
+    {
+        EditMesh.EnableAttributes();
+        if (!EditMesh.Attributes()->HasMaterialID())
+        {
+            EditMesh.Attributes()->EnableMaterialID();
+        }
+        MaterialIds = EditMesh.Attributes()->GetMaterialID();
+    }
+    // A point no face uses is left out: an isolated vertex would stretch the mesh's bounds, which masks and offsets read.
+    TArray<bool> Used;
+    Used.Init(false, Input.Vertices.Num());
+    for (const UE::Geometry::FIndex3i& Triangle : Input.Triangles)
+    {
+        Used[Triangle.A] = Used[Triangle.B] = Used[Triangle.C] = true;
+    }
+    TArray<int32> VertexIds;
+    VertexIds.Init(INDEX_NONE, Input.Vertices.Num());
+    for (int32 VertexIndex = 0; VertexIndex < Input.Vertices.Num(); ++VertexIndex)
+    {
+        if (Used[VertexIndex])
+        {
+            VertexIds[VertexIndex] = EditMesh.AppendVertex(UE::Geometry::FVertexInfo(Input.Vertices[VertexIndex]));
+            ++OutVerticesAdded;
+        }
+    }
+    TArray<int32> GroupOfFace;
+    GroupOfFace.Reserve(Input.Faces.Num());
+    for (int32 FaceIndex = 0; FaceIndex < Input.Faces.Num(); ++FaceIndex)
+    {
+        GroupOfFace.Add(Input.FaceGroups.Num() > 0 ? Input.FaceGroups[FaceIndex] : EditMesh.AllocateTriangleGroup());
+    }
+    for (int32 TriangleIndex = 0; TriangleIndex < Input.Triangles.Num(); ++TriangleIndex)
+    {
+        const UE::Geometry::FIndex3i& Triangle = Input.Triangles[TriangleIndex];
+        const int32 Face = Input.TriangleFace[TriangleIndex];
+        // Faces arrive with (v1 - v0) x (v2 - v0) pointing outward; Unreal's left-handed triangles face
+        // (v2 - v0) x (v1 - v0) (VectorUtil::Normal), so B and C swap or the cage is built inside out.
+        const int32 TriangleId = EditMesh.AppendTriangle(VertexIds[Triangle.A], VertexIds[Triangle.C], VertexIds[Triangle.B], GroupOfFace[Face]);
+        if (TriangleId < 0)
+        {
+            OutError = FString::Printf(TEXT("faces[%d] was refused by the mesh (code %d): it would duplicate a face or make an edge non-manifold"), Face, TriangleId);
+            return false;
+        }
+        if (MaterialIds)
+        {
+            MaterialIds->SetValue(TriangleId, Input.FaceMaterials[Face]);
+        }
+    }
+    // A normal overlay leaves new triangles unset, so faces appended to a mesh that had normals shaded as
+    // garbage, and RecomputeNormals only fills a wholly empty overlay (with a warning). Every unset triangle
+    // gets one element per corner vertex, shared around it; the recompute the caller runs sets their directions.
+    EditMesh.EnableAttributes();
+    UE::Geometry::FDynamicMeshNormalOverlay* Normals = EditMesh.Attributes()->PrimaryNormals();
+    TMap<int32, int32> ElementOfVertex;
+    for (const int32 TriangleId : EditMesh.TriangleIndicesItr())
+    {
+        if (!Normals || Normals->IsSetTriangle(TriangleId)) continue;
+        const UE::Geometry::FIndex3i Corners = EditMesh.GetTriangle(TriangleId);
+        UE::Geometry::FIndex3i Elements;
+        for (int32 Corner = 0; Corner < 3; ++Corner)
+        {
+            const int32* Found = ElementOfVertex.Find(Corners[Corner]);
+            Elements[Corner] = Found ? *Found : ElementOfVertex.Add(Corners[Corner], Normals->AppendElement(FVector3f(0.0f, 0.0f, 1.0f)));
+        }
+        Normals->SetTriangle(TriangleId, Elements);
+    }
+    return true;
+}
+
 bool HandleAppendPolygons(UEngineWireSubsystem* Self, const FString& RequestId,
                           const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> Socket, const FString& Edit)
 {
@@ -35,81 +112,7 @@ bool HandleAppendPolygons(UEngineWireSubsystem* Self, const FString& RequestId,
     Mesh->ProcessMesh([&Backup](const UE::Geometry::FDynamicMesh3& Source) { Backup = Source; });
     bool bAppended = true;
     int32 VerticesAdded = 0;
-    Mesh->EditMesh([&](UE::Geometry::FDynamicMesh3& EditMesh)
-    {
-        if (!EditMesh.HasTriangleGroups())
-        {
-            EditMesh.EnableTriangleGroups();
-        }
-        UE::Geometry::FDynamicMeshMaterialAttribute* MaterialIds = nullptr;
-        if (Input.FaceMaterials.Num() > 0)
-        {
-            EditMesh.EnableAttributes();
-            if (!EditMesh.Attributes()->HasMaterialID())
-            {
-                EditMesh.Attributes()->EnableMaterialID();
-            }
-            MaterialIds = EditMesh.Attributes()->GetMaterialID();
-        }
-        // A point no face uses is left out: an isolated vertex would stretch the mesh's bounds, which masks and offsets read.
-        TArray<bool> Used;
-        Used.Init(false, Input.Vertices.Num());
-        for (const UE::Geometry::FIndex3i& Triangle : Input.Triangles)
-        {
-            Used[Triangle.A] = Used[Triangle.B] = Used[Triangle.C] = true;
-        }
-        TArray<int32> VertexIds;
-        VertexIds.Init(INDEX_NONE, Input.Vertices.Num());
-        for (int32 VertexIndex = 0; VertexIndex < Input.Vertices.Num(); ++VertexIndex)
-        {
-            if (Used[VertexIndex])
-            {
-                VertexIds[VertexIndex] = EditMesh.AppendVertex(UE::Geometry::FVertexInfo(Input.Vertices[VertexIndex]));
-                ++VerticesAdded;
-            }
-        }
-        TArray<int32> GroupOfFace;
-        GroupOfFace.Reserve(Input.Faces.Num());
-        for (int32 FaceIndex = 0; FaceIndex < Input.Faces.Num(); ++FaceIndex)
-        {
-            GroupOfFace.Add(Input.FaceGroups.Num() > 0 ? Input.FaceGroups[FaceIndex] : EditMesh.AllocateTriangleGroup());
-        }
-        for (int32 TriangleIndex = 0; TriangleIndex < Input.Triangles.Num() && bAppended; ++TriangleIndex)
-        {
-            const UE::Geometry::FIndex3i& Triangle = Input.Triangles[TriangleIndex];
-            const int32 Face = Input.TriangleFace[TriangleIndex];
-            // Faces arrive with (v1 - v0) x (v2 - v0) pointing outward; Unreal's left-handed triangles face
-            // (v2 - v0) x (v1 - v0) (VectorUtil::Normal), so B and C swap or the cage is built inside out.
-            const int32 TriangleId = EditMesh.AppendTriangle(VertexIds[Triangle.A], VertexIds[Triangle.C], VertexIds[Triangle.B], GroupOfFace[Face]);
-            if (TriangleId < 0)
-            {
-                bAppended = false;
-                Error = FString::Printf(TEXT("faces[%d] was refused by the mesh (code %d): it would duplicate a face or make an edge non-manifold"), Face, TriangleId);
-            }
-            else if (MaterialIds)
-            {
-                MaterialIds->SetValue(TriangleId, Input.FaceMaterials[Face]);
-            }
-        }
-        // A normal overlay leaves new triangles unset, so faces appended to a mesh that had normals shaded as
-        // garbage, and RecomputeNormals only fills a wholly empty overlay (with a warning). Every unset triangle
-        // gets one element per corner vertex, shared around it; the recompute below sets their directions.
-        EditMesh.EnableAttributes();
-        UE::Geometry::FDynamicMeshNormalOverlay* Normals = EditMesh.Attributes()->PrimaryNormals();
-        TMap<int32, int32> ElementOfVertex;
-        for (const int32 TriangleId : EditMesh.TriangleIndicesItr())
-        {
-            if (!bAppended || !Normals || Normals->IsSetTriangle(TriangleId)) continue;
-            const UE::Geometry::FIndex3i Corners = EditMesh.GetTriangle(TriangleId);
-            UE::Geometry::FIndex3i Elements;
-            for (int32 Corner = 0; Corner < 3; ++Corner)
-            {
-                const int32* Found = ElementOfVertex.Find(Corners[Corner]);
-                Elements[Corner] = Found ? *Found : ElementOfVertex.Add(Corners[Corner], Normals->AppendElement(FVector3f(0.0f, 0.0f, 1.0f)));
-            }
-            Normals->SetTriangle(TriangleId, Elements);
-        }
-    });
+    Mesh->EditMesh([&](UE::Geometry::FDynamicMesh3& EditMesh) { bAppended = AppendPolygonFaces(EditMesh, Input, VerticesAdded, Error); });
     if (!bAppended)
     {
         Mesh->SetMesh(MoveTemp(Backup));

@@ -1159,6 +1159,7 @@ export const CAPABILITY_COST_INDEX: Readonly<Record<string, string>> = {
   "manage_geometry::create_procedural_mesh": "interactive|medium",
   "manage_geometry::create_ramp": "interactive|medium",
   "manage_geometry::create_ring": "interactive|medium",
+  "manage_geometry::create_roof": "interactive|medium",
   "manage_geometry::create_sdf": "interactive|medium",
   "manage_geometry::create_sphere": "interactive|medium",
   "manage_geometry::create_spiral_stairs": "interactive|medium",
@@ -1645,4 +1646,4 @@ export const CAPABILITY_COST_INDEX: Readonly<Record<string, string>> = {
   "system_control::write_snapshot": "interactive|medium"
 };
 
-export const CAPABILITY_COST_INDEX_KEY_COUNT = 1632;
+export const CAPABILITY_COST_INDEX_KEY_COUNT = 1633;

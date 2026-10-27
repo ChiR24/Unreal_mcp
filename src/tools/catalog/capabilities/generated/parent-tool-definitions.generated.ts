@@ -20759,6 +20759,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "number",
           "description": "Blue channel, 0-1."
         },
+        "base": {
+          "type": "boolean",
+          "description": "Close the roof underneath (default true), so the mesh is watertight."
+        },
         "baseRadius": {
           "type": "number",
           "description": "Cone base radius; defaults to radius."
@@ -21234,6 +21238,28 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "boolean",
           "description": "Build the stairs as free-floating steps with no solid underside."
         },
+        "footprint": {
+          "type": "array",
+          "minItems": 3,
+          "maxItems": 64,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "x",
+              "y"
+            ],
+            "properties": {
+              "x": {
+                "type": "number"
+              },
+              "y": {
+                "type": "number"
+              }
+            }
+          },
+          "description": "The outline under the roof, its corners in order around it as {x, y} in cm in the actor's space (either winding; corners under 0.5 cm apart or in a straight line are dropped)."
+        },
         "frequency": {
           "type": "number",
           "description": "Noise frequency in cycles per unit; defaults to three bumps across the mesh's largest dimension."
@@ -21501,6 +21527,18 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "string",
           "description": "Canonical /Game output asset path."
         },
+        "overhang": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 500,
+          "description": "How far the eaves reach past the walls, in cm (default 0)."
+        },
+        "pitch": {
+          "type": "number",
+          "minimum": 5,
+          "maximum": 75,
+          "description": "Slope of every face in degrees (default 30)."
+        },
         "pivot": {
           "type": "string",
           "enum": [
@@ -21730,9 +21768,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             "ramp",
             "stairs",
             "spiral_stairs",
+            "roof",
             "sdf"
           ],
-          "description": "Which create primitive variant to run.\nbox: Create a box dynamic mesh actor.\nsphere: Create a sphere dynamic mesh actor.\ncylinder: Create a cylinder dynamic mesh actor.\ncone: Create a cone dynamic mesh actor.\ncapsule: Create a capsule dynamic mesh actor.\nplane: Create a plane dynamic mesh actor: flat in XY, centred on its origin, facing +Z.\ndisc: Create a disc dynamic mesh actor.\nring: Create a ring dynamic mesh actor.\ntorus: Create a torus dynamic mesh actor.\npipe: Create a pipe dynamic mesh actor.\narch: Create an arch dynamic mesh actor.\nramp: Create a ramp dynamic mesh actor.\nstairs: Create a stairs dynamic mesh actor.\nspiral_stairs: Create a spiral stairs dynamic mesh actor.\nsdf: Create one smooth organic mesh actor from blended shapes (a signed distance field): spheres, ellipsoids, rounded boxes, capsules, cylinders, tori and cones joined with soft fillets, carved with rounded recesses, or intersected, each shape with its own material slot."
+          "description": "Which create primitive variant to run.\nbox: Create a box dynamic mesh actor.\nsphere: Create a sphere dynamic mesh actor.\ncylinder: Create a cylinder dynamic mesh actor.\ncone: Create a cone dynamic mesh actor.\ncapsule: Create a capsule dynamic mesh actor.\nplane: Create a plane dynamic mesh actor: flat in XY, centred on its origin, facing +Z.\ndisc: Create a disc dynamic mesh actor.\nring: Create a ring dynamic mesh actor.\ntorus: Create a torus dynamic mesh actor.\npipe: Create a pipe dynamic mesh actor.\narch: Create an arch dynamic mesh actor.\nramp: Create a ramp dynamic mesh actor.\nstairs: Create a stairs dynamic mesh actor.\nspiral_stairs: Create a spiral stairs dynamic mesh actor.\nroof: Create a hip roof mesh actor over a footprint: every face rises from its outline edge at pitch (default 30 degrees) and meets the others along ridges, hips and valleys where the outline's straight skeleton puts them, for any simple outline of 3 to 64 corners in either winding: rectangles, L, T and U plans, bays and angled walls (no holes). footprint is in the actor's space at the top of the walls (z 0); overhang (cm, default 0) carries the roof planes out past the walls, the eaves dropping by overhang x tan(pitch); base (default true) closes it underneath at the eaves' height, so the mesh is watertight (with an overhang that underside lies below the wall top: set the roof that much higher, or base false to leave it open). Each face is its own polygroup, its UVs in metres along its eave and up its slope, so a tiling roof material lies in rows along every eave. The reply gives faces (one per outline edge), ridgeHeight above the walls, eaveHeight, triangles and watertight; one undo step. Refused, making nothing: INVALID_ARGUMENT (fewer than 3 corners apart, an outline that crosses itself, an overhang that folds it over itself), ROOF_FAILED (faces that do not make a clean mesh).\nsdf: Create one smooth organic mesh actor from blended shapes (a signed distance field): spheres, ellipsoids, rounded boxes, capsules, cylinders, tori and cones joined with soft fillets, carved with rounded recesses, or intersected, each shape with its own material slot."
         },
         "profile": {
           "type": "array",
@@ -22633,6 +22672,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "number",
           "description": "Objects left out as repeats of a larger one."
         },
+        "eaveHeight": {
+          "type": "number",
+          "description": "Height of the eaves: 0 without an overhang, below the walls with one."
+        },
         "elementsModified": {
           "type": "integer",
           "description": "Number of UV elements written."
@@ -22640,6 +22683,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "enableCollision": {
           "type": "boolean",
           "description": "Enable simple collision on the created DynamicMesh actor."
+        },
+        "faces": {
+          "type": "integer",
+          "description": "Roof faces: one per outline edge."
         },
         "facesAdded": {
           "type": "integer",
@@ -22784,6 +22831,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "integer",
           "description": "Grid cells along the longest side, as used."
         },
+        "ridgeHeight": {
+          "type": "number",
+          "description": "Height of the highest ridge or peak above the walls."
+        },
         "scheme": {
           "type": "string",
           "description": "Scheme that ran."
@@ -22864,6 +22915,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "integer",
           "description": "Index of the triangle the operation targets."
         },
+        "triangles": {
+          "type": "integer",
+          "description": "Triangles in the mesh."
+        },
         "trianglesAdded": {
           "type": "integer",
           "description": "Triangles the faces came to once larger polygons were triangulated."
@@ -22897,6 +22952,12 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "u": {
           "type": "number",
           "description": "U coordinate."
+        },
+        "undo": {
+          "type": "object",
+          "additionalProperties": true,
+          "x-unreal-reflection-boundary": true,
+          "description": "What editor undo takes back: {undoable, transactionScope}."
         },
         "uvChannel": {
           "type": "integer",
@@ -22947,6 +23008,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "voxelSize": {
           "type": "number",
           "description": "Width of one grid cell in cm."
+        },
+        "watertight": {
+          "type": "boolean",
+          "description": "Every edge of the mesh is shared by two triangles."
         }
       },
       "additionalProperties": true

@@ -715,4 +715,7 @@ export const PLAIN_PROBE: readonly PlainProbeCase[] = [
   { query: 'locomotion blend space', accepted: ['animation_physics.auto_blend_space'] },
   { query: 'walk run blend space', accepted: ['animation_physics.auto_blend_space'] },
   { query: 'lay out a blend space', accepted: ['animation_physics.auto_blend_space'] },
+  { query: 'hip roof', accepted: ['manage_geometry.create_primitive'] },
+  { query: 'add a roof to the house', accepted: ['manage_geometry.create_primitive'] },
+  { query: 'roof over a footprint', accepted: ['manage_geometry.create_primitive'] },
 ];
