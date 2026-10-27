@@ -34,7 +34,7 @@
   <a href="https://github.com/ChiR24/Unreal_mcp/discussions"><b>💬 Discussions</b></a>
 </p>
 
-> 📌 **Which version is this?** This README describes **0.6.0**, the stable release: the plugin on [Fab](https://www.fab.com/listings/9407137f-14b3-44a8-af0e-e9c6a9c9f6fc) and on the [Releases page](https://github.com/ChiR24/Unreal_mcp/releases), and npm `unreal-engine-mcp-server` (`latest`). The previous release, **0.5.30**, exposes 23 separate tools instead of one; see [Upgrading from 0.5.x](https://github.com/ChiR24/Unreal_mcp/wiki/Upgrading).
+> 📌 **Which version is this?** This README describes **0.6.0**, the stable release: the plugin on [Fab](https://www.fab.com/listings/9407137f-14b3-44a8-af0e-e9c6a9c9f6fc) and on the [Releases page](https://github.com/ChiR24/Unreal_mcp/releases), and npm `unreal-engine-mcp-server` (`latest`). The previous release, **0.5.30**, exposes 23 separate tools instead of one; staying on a 0.5.30 plugin means pinning `unreal-engine-mcp-server@0.5.30`. See [Upgrading from 0.5.x](https://github.com/ChiR24/Unreal_mcp/wiki/Upgrading).
 
 **Contents** · [What it does](#what-it-does) · [How it works](#how-it-works) · [Quick start](#quick-start) · [The `unreal` tool](#the-unreal-tool) · [Configuration](#configuration) · [Security](#security) · [Engine plugins](#engine-plugins) · [Docker](#docker) · [Documentation](#documentation) · [Development](#development) · [Community](#community)
 
