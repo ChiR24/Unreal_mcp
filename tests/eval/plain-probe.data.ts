@@ -764,4 +764,5 @@ export const PLAIN_PROBE: readonly PlainProbeCase[] = [
   { query: 'scroll list', accepted: ['blueprint.add_panel_widget'] },
   { query: 'security camera', accepted: ['build_environment.create_capture_actor'] },
   { query: 'picture in picture', accepted: ['build_environment.create_capture_actor'] },
+  { query: 'make the chair face the table', accepted: ['control_actor.arrange_by_relations'] },
 ];

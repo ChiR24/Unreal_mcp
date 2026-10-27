@@ -1,5 +1,5 @@
 {
-  "catalogRevision": "d3e7827016190926",
+  "catalogRevision": "df21cbe47d9f1dbd",
   "recordCount": 453,
   "records": [
     {
@@ -18816,6 +18816,7 @@
           "derive from",
           "parent class",
           "blueprint from parent class",
+          "create blueprint parent class",
           "child blueprint",
           "camera shake class",
           "camera shake blueprint",
@@ -19032,7 +19033,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "83870dfb7d688319fb83fd01c8440eac40f8b7d9bd4eae4a3a95572a37d23976",
-        "content": "26df6e50b8692af1bab5e1eaa59216924985dc6152cea600cbf51ecf5bfdac51"
+        "content": "e0bef08cdb57dbbde4db0c204a9290d9b77daed2a0232acf6cca0462172c65c0"
       }
     },
     {
@@ -38164,6 +38165,7 @@
           "lay out a room",
           "put the lamp on the table",
           "chairs facing the table",
+          "make the chair face the table",
           "push the shelf against the wall",
           "place furniture",
           "solve a layout",
@@ -38357,7 +38359,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "f774e8f426b54affae6b80939e25eac3620da88b1771487b341d49f90cd0449f",
-        "content": "fe2480d1de39a873b5ba595a1d90a49d01561911caa0f364ae107ec56d8fc0e7"
+        "content": "f03340761ec4edd93a49befa1c444088d17d3d9665f585e2a7178f67929ba66d"
       }
     },
     {
@@ -39229,7 +39231,10 @@
           "actors in a ring",
           "what faces what",
           "describe the room layout",
-          "objects arranged in a grid"
+          "objects arranged in a grid",
+          "which props stand in a row",
+          "is the shelf against the wall",
+          "what is the chair facing"
         ],
         "summary": "Read the level back as relations between its actors, the way one describes a room: what rests on what (on), what hangs on a wall (mounted), what stands inside what (inside), what touches what side by side (nextTo) and what each actor's front points at (faces); which actors stand together (groups), which copies of one prop line up in rows or grids or stand in a ring; and the scene's roles: the ground, the sun's elevation and azimuth, the sky actors, player starts, cameras and the navigation area. Read only.",
         "whenToUse": [
@@ -39524,7 +39529,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "7ad734a5052fb4cfa62c78800ef838ef2f304d18bf18fc2e8b9532a1894ae6d3",
-        "content": "61bca43455bb6be0f1549c9cd1b01aa7e4ac0a660e0abff0def86951d7a18e9b"
+        "content": "29f340794d9fdbd1675338c2eca43ae2d27d3e762e5723dc2e9bbccaaab37a0d"
       }
     },
     {

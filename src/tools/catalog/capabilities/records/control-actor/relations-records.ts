@@ -22,7 +22,7 @@ export const RELATIONS_RECORDS: readonly CapabilityRecordSource[] = [
     action: 'describe_relations',
     domain: DOMAIN,
     family: FAMILY_FIND,
-    topics: ['spatial relations', 'scene graph', 'what rests on what', 'what is on the table', 'which actors touch each other', 'actors in a row', 'actors in a ring', 'what faces what', 'describe the room layout', 'objects arranged in a grid'],
+    topics: ['spatial relations', 'scene graph', 'what rests on what', 'what is on the table', 'which actors touch each other', 'actors in a row', 'actors in a ring', 'what faces what', 'describe the room layout', 'objects arranged in a grid', 'which props stand in a row', 'is the shelf against the wall', 'what is the chair facing'],
     summary: 'Read the level back as relations between its actors, the way one describes a room: what rests on what (on), what hangs on a wall (mounted), what stands inside what (inside), what touches what side by side (nextTo) and what each actor\'s front points at (faces); which actors stand together (groups), which copies of one prop line up in rows or grids or stand in a ring; and the scene\'s roles: the ground, the sun\'s elevation and azimuth, the sky actors, player starts, cameras and the navigation area. Read only.',
     whenToUse: [
       'Checking that a layout reads as intended (the lamp on the table, the chairs facing it, the shelf against the wall) without reading coordinates.',
@@ -67,7 +67,7 @@ export const RELATIONS_RECORDS: readonly CapabilityRecordSource[] = [
     action: 'arrange_by_relations',
     domain: DOMAIN,
     family: FAMILY_FIND,
-    topics: ['arrange actors by relations', 'lay out a room', 'put the lamp on the table', 'chairs facing the table', 'push the shelf against the wall', 'place furniture', 'solve a layout', 'move actors until relations hold'],
+    topics: ['arrange actors by relations', 'lay out a room', 'put the lamp on the table', 'chairs facing the table', 'make the chair face the table', 'push the shelf against the wall', 'place furniture', 'solve a layout', 'move actors until relations hold'],
     summary: 'Move actors until the relations stated hold, overlapping nothing, in one undo step: say where things go (["Lamp on Table", "Chair_1 nextTo Table", "Chair_1 facing Table", "Shelf against Wall"]) instead of computing coordinates. The relations are those execute\'s expect judges: A on B (resting on its top), A inside B, A nextTo B (side by side, touching), A against B (touching, its back to B, its front away), A facing B (the line ahead of its front, its X axis, meets B or points within 20 degrees of the centre of B; beside a side of B it turns square to it) and A near B within d (cm, default 100). A solver plans from where the actors stand now, keeping a rough placement wherever it already fits: each actor is a box turned about Z (what it draws), and their places and turns are annealed over how far each relation misses, how deep they overlap each other or the scene around them, and how far they wander; then each contact is snapped exact. What rests on a moved actor moves with it. Each relation is then judged by the engine as expect judges it.',
     whenToUse: [
       'Furnishing or dressing a scene from a description: the lamp on the table, chairs beside it facing it, the shelf against the wall.',
