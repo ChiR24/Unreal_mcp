@@ -2,11 +2,16 @@
 
 #if MCP_HAS_FULL_GEOMETRY_SCRIPT
 
+#include "Foundation/McpScopedEditorTransaction.h"
+
 namespace McpGeometryHandlers
 {
 AActor* SpawnPrimitiveOrReply(UEngineWireSubsystem* Self, const FString& RequestId, TSharedPtr<FMcpBridgeWebSocket> Socket,
                               const FTransform& Transform, const FString& Name, UDynamicMesh* DynMesh, TSharedPtr<FJsonObject>& OutResult)
 {
+    // One undo step: control_editor undo takes the new actor back out of the level.
+    const FMcpScopedEditorTransaction Transaction(FText::Format(NSLOCTEXT("McpGeometry", "CreatePrimitive", "Create {0}"), FText::FromString(Name)),
+                                                  EMcpMutationDurability::EditorStateOnly, TArray<UObject*>());
     FString SpawnError;
     AActor* NewActor = SpawnDynamicMeshActorWithMesh(Transform, Name, DynMesh, SpawnError);
     if (!NewActor)
@@ -16,6 +21,7 @@ AActor* SpawnPrimitiveOrReply(UEngineWireSubsystem* Self, const FString& Request
         return nullptr;
     }
     OutResult = McpHandlerUtils::CreateResultObject();
+    Transaction.DescribeInto(OutResult);
     // A label another actor already carries stays ambiguous: the reply names this actor by its unique object name,
     // and says why, so a later call by the label does not reach the older actor.
     const FString Ref = McpActorRef(NewActor);

@@ -159,8 +159,14 @@ describe('create_primitive roof shares the polygon append and is one undo step',
     expect(roof).toContain('const int64 Key = (static_cast<int64>(Face) << 32) | Corners[K];');
     expect(roof).toContain('Normals->SetTriangle(Triangle, Normal);');
     expect(roof.indexOf('RoofFaceElements(EditMesh')).toBeLessThan(roof.indexOf('RecomputeMeshNormals(DynMesh);'));
-    expect(roof.indexOf('FMcpScopedEditorTransaction Transaction(')).toBeLessThan(roof.indexOf('SpawnPrimitiveOrReply('));
-    expect(roof).toContain('Transaction.DescribeInto(Result);');
+    // The transaction is SpawnPrimitiveOrReply's (every primitive's): a second one here would nest under another title.
+    expect(roof).not.toContain('FMcpScopedEditorTransaction');
+    const spawn = read('Support', 'McpGeometryActorSupport.cpp');
+    expect(spawn.indexOf('const FMcpScopedEditorTransaction Transaction(')).toBeLessThan(spawn.indexOf('SpawnDynamicMeshActorWithMesh(Transform, Name, DynMesh, SpawnError)'));
+    expect(spawn).toContain('Transaction.DescribeInto(OutResult);');
+    const procedural = read('Modeling', 'McpGeometryProceduralMesh.cpp');
+    expect(procedural.indexOf('const FMcpScopedEditorTransaction Transaction(')).toBeLessThan(procedural.indexOf('SpawnDynamicMeshActorWithMesh('));
+    expect(procedural).toContain('Transaction.DescribeInto(Result);');
   });
 
   it('refuses an outline the skeleton cannot carry before any mesh is made', () => {

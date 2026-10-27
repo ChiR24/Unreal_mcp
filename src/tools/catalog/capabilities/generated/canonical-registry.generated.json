@@ -1,5 +1,5 @@
 {
-  "catalogRevision": "60af585e01f763f3",
+  "catalogRevision": "7ded7c89aca11f50",
   "recordCount": 452,
   "records": [
     {
@@ -76525,7 +76525,7 @@
           "metaball",
           "rounded character part"
         ],
-        "summary": "Create a primitive mesh actor: box, sphere, cylinder, cone, capsule, plane, disc, ring, torus, pipe, arch, ramp, stairs, spiral stairs, a hip roof over any footprint, or one smooth organic mesh from blended shapes (sdf) with soft fillets where they meet. Each is a DynamicMeshActor with no collision: traces and players pass through it, and what stands on it reads \"nothing below it\", until configure_mesh_collision gives it some.",
+        "summary": "Create a primitive mesh actor: box, sphere, cylinder, cone, capsule, plane, disc, ring, torus, pipe, arch, ramp, stairs, spiral stairs, a hip roof over any footprint, or one smooth organic mesh from blended shapes (sdf) with soft fillets where they meet. Each is a DynamicMeshActor with no collision: traces and players pass through it, and what stands on it reads \"nothing below it\", until configure_mesh_collision gives it some. Each is one undo step.",
         "whenToUse": [
           "primitive=box: A box primitive must be created.",
           "primitive=sphere: A sphere primitive must be created.",
@@ -77139,7 +77139,7 @@
       },
       "examples": [
         {
-          "title": "Create a primitive mesh actor: box, sphere, cylinder, cone, capsule, plane, disc, ring, torus, pipe, arch, ramp, stairs, spiral stairs, a hip roof over any footprint, or one smooth organic mesh from blended shapes (sdf) with soft fillets where they meet. Each is a DynamicMeshActor with no collision: traces and players pass through it, and what stands on it reads \"nothing below it\", until configure_mesh_collision gives it some.",
+          "title": "Create a primitive mesh actor: box, sphere, cylinder, cone, capsule, plane, disc, ring, torus, pipe, arch, ramp, stairs, spiral stairs, a hip roof over any footprint, or one smooth organic mesh from blended shapes (sdf) with soft fillets where they meet. Each is a DynamicMeshActor with no collision: traces and players pass through it, and what stands on it reads \"nothing below it\", until configure_mesh_collision gives it some. Each is one undo step.",
           "input": {
             "action": "create_primitive",
             "dimensions": {
@@ -77354,7 +77354,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "48dc3aeda0cfc28ef5bf650e1d7ee3a40ec94f237850c3de3784d0c72dcb6f53",
-        "content": "c4be97c13ca66e34fa0ea1f803894ba0a575edf43cb0fcb3fe3a00fc8c5847c0"
+        "content": "444c6e1f2d1b4393b702ef26334ace4f25e0a7e1b89619d10213cc3ee476a5c3"
       }
     },
     {
@@ -78829,7 +78829,7 @@
                 "translate",
                 "difference"
               ],
-              "description": "Which edit dynamic mesh variant to run.\ncreate: Spawn a DynamicMesh actor to author geometry into: empty, or a copy of a static mesh asset.\nappend_vertex: Append one vertex to a DynamicMesh actor and return its index.\nappend_triangle: Append a triangle to a DynamicMesh actor from three corner positions.\nappend_polygons: Author a polygon cage on a DynamicMesh actor in one call: new vertices and faces of three or more corners, each with its own polygroup and material id.\nappend_cuboids: Append axis-aligned boxes to a DynamicMesh actor in one call, each with a material id, faces left open and a repeat along up to three axes (a railing, a stack of crates, a grid of windows, shelves, pillars), wound outward for you.\nappend_loft: Append a surface lofted through cross sections to a DynamicMesh actor: each section a loop of points (the same count in every one), joined in order with every face turned outward, the ends capped flat or closed to a tip point.\nappend_mesh: Copy a static mesh asset into a DynamicMesh actor at placements, each repeated along up to three axes, with its material slots mapped to the target's material ids (a list cycles copy by copy for colour variety): a model assembled from detailed parts in one call, its copies keeping the asset's normals and UVs.\ndelete_triangles: Delete the triangles of a DynamicMesh actor that triangleIndices or a region picks (by box, facing direction, polygroup or material id), with the points only they used.\nset_vertex_position: Move one vertex of a DynamicMesh actor to a new position.\nset_vertex_color: Set the vertex colour on one vertex, or on every vertex, of a DynamicMesh actor.\nbake_vertex_colors: Bake ambient occlusion, convex-edge, concave-cavity and height masks into the vertex colours of a DynamicMesh actor, for a material to read through its VertexColor node.\nset_material_id: Set the material id (the static-mesh material slot) of triangles of a DynamicMesh actor: every triangle, the triangleIndices you list, or a region.\nset_uvs: Set the UV coordinate of one vertex on a UV channel of a DynamicMesh actor.\nsplit_normals: Split the normals of a DynamicMesh actor above an angle threshold to harden edges.\ntranslate: Translate every vertex of a DynamicMesh actor, leaving the actor transform alone.\ndifference: Subtract a tool mesh from a target mesh under the difference spelling of boolean_subtract."
+              "description": "Which edit dynamic mesh variant to run.\ncreate: Spawn a DynamicMesh actor to author geometry into: empty, or a copy of a static mesh asset. One undo step.\nappend_vertex: Append one vertex to a DynamicMesh actor and return its index.\nappend_triangle: Append a triangle to a DynamicMesh actor from three corner positions.\nappend_polygons: Author a polygon cage on a DynamicMesh actor in one call: new vertices and faces of three or more corners, each with its own polygroup and material id.\nappend_cuboids: Append axis-aligned boxes to a DynamicMesh actor in one call, each with a material id, faces left open and a repeat along up to three axes (a railing, a stack of crates, a grid of windows, shelves, pillars), wound outward for you.\nappend_loft: Append a surface lofted through cross sections to a DynamicMesh actor: each section a loop of points (the same count in every one), joined in order with every face turned outward, the ends capped flat or closed to a tip point.\nappend_mesh: Copy a static mesh asset into a DynamicMesh actor at placements, each repeated along up to three axes, with its material slots mapped to the target's material ids (a list cycles copy by copy for colour variety): a model assembled from detailed parts in one call, its copies keeping the asset's normals and UVs.\ndelete_triangles: Delete the triangles of a DynamicMesh actor that triangleIndices or a region picks (by box, facing direction, polygroup or material id), with the points only they used.\nset_vertex_position: Move one vertex of a DynamicMesh actor to a new position.\nset_vertex_color: Set the vertex colour on one vertex, or on every vertex, of a DynamicMesh actor.\nbake_vertex_colors: Bake ambient occlusion, convex-edge, concave-cavity and height masks into the vertex colours of a DynamicMesh actor, for a material to read through its VertexColor node.\nset_material_id: Set the material id (the static-mesh material slot) of triangles of a DynamicMesh actor: every triangle, the triangleIndices you list, or a region.\nset_uvs: Set the UV coordinate of one vertex on a UV channel of a DynamicMesh actor.\nsplit_normals: Split the normals of a DynamicMesh actor above an angle threshold to harden edges.\ntranslate: Translate every vertex of a DynamicMesh actor, leaving the actor transform alone.\ndifference: Subtract a tool mesh from a target mesh under the difference spelling of boolean_subtract."
             }
           },
           "required": [
@@ -78870,6 +78870,12 @@
             "triangleCount": {
               "type": "integer",
               "description": "With meshPath: triangles copied from the asset."
+            },
+            "undo": {
+              "type": "object",
+              "additionalProperties": true,
+              "x-unreal-reflection-boundary": true,
+              "description": "What editor undo takes back: {undoable, transactionScope}."
             },
             "actorName": {
               "type": "string",
@@ -79380,8 +79386,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "0b161d2d9cac6fd0ea88972bb28f2c4fe329dd369f95c930ad5f0447f519bbe3",
-        "content": "ecfa5548d3ad04b6d10178f2fbbacbed15de4e7de66ccd8b89c32de763986210"
+        "schema": "80c4ca68a8283282c06caa9cef3063143609caba534670aedbe27032a27ab45f",
+        "content": "b7ab9b293e5b77bc574eb4117bed9dbbb03f3a28612c5207abe2ad6114e9ea5f"
       }
     },
     {

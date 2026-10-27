@@ -9,7 +9,6 @@
 #if MCP_HAS_FULL_GEOMETRY_SCRIPT
 
 #include "Domains/Geometry/Roof/McpRoofSkeleton.h"
-#include "Foundation/McpScopedEditorTransaction.h"
 
 namespace McpGeometryHandlers
 {
@@ -156,7 +155,6 @@ bool HandleCreateRoof(UEngineWireSubsystem* Self, const FString& RequestId, cons
     bool bClosed = false;
     DynMesh->ProcessMesh([&bClosed](const UE::Geometry::FDynamicMesh3& Mesh) { bClosed = Mesh.IsClosed(); });
 
-    const FMcpScopedEditorTransaction Transaction(NSLOCTEXT("McpGeometryRoof", "Create", "Create Roof"), EMcpMutationDurability::EditorStateOnly, TArray<UObject*>());
     TSharedPtr<FJsonObject> Result;
     AActor* NewActor = SpawnPrimitiveOrReply(Self, RequestId, Socket, ReadTransformFromPayload(Payload), Name, DynMesh, Result);
     if (!NewActor)
@@ -168,7 +166,6 @@ bool HandleCreateRoof(UEngineWireSubsystem* Self, const FString& RequestId, cons
     Result->SetNumberField(TEXT("ridgeHeight"), FMath::RoundToDouble(Ridge * 10.0) / 10.0);
     Result->SetNumberField(TEXT("eaveHeight"), FMath::RoundToDouble(-Overhang * Rise * 10.0) / 10.0);
     Result->SetBoolField(TEXT("watertight"), bClosed);
-    Transaction.DescribeInto(Result);
     McpHandlerUtils::AddVerification(Result, NewActor);
     Self->SendAutomationResponse(Socket, RequestId, true,
         FString::Printf(TEXT("Roof of %d faces at %g degrees, its ridge %.1f cm above the walls%s."), Roof.Faces.Num(), Pitch, Ridge,

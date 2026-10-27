@@ -23,7 +23,9 @@ const testCases = [
   // NOTE: primitive create_* actions spawn LEVEL actors and do not take a `path`
   // (the param was declared historically but silently ignored by the handlers;
   // removed from the schema, so it must not be sent here either).
-  { scenario: 'CREATE: create_box', toolName: 'manage_geometry', arguments: {"action": "create_box", "name": `Testbox_${ts}`, "width": 120, "height": 80, "depth": 60, "widthSegments": 2, "heightSegments": 2, "depthSegments": 2, "rotation": {"pitch": 0, "yaw": 15, "roll": 0}, "scale": {"x": 1, "y": 1, "z": 1}}, expected: 'success|already exists' },
+  { scenario: 'CREATE: create_box', toolName: 'manage_geometry', arguments: {"action": "create_box", "name": `Testbox_${ts}`, "width": 120, "height": 80, "depth": 60, "widthSegments": 2, "heightSegments": 2, "depthSegments": 2, "rotation": {"pitch": 0, "yaw": 15, "roll": 0}, "scale": {"x": 1, "y": 1, "z": 1}}, expected: 'success|already exists', assertions: [
+    { path: 'structuredContent.result.undo.undoable', equals: true, label: 'the spawn is one undo step' },
+  ] },
   { scenario: 'CREATE: create_sphere', toolName: 'manage_geometry', arguments: {"action": "create_sphere", "name": `Testsphere_${ts}`, "radius": 45, "radialSegments": 12}, expected: 'success|already exists' },
   { scenario: 'CREATE: create_cylinder', toolName: 'manage_geometry', arguments: {"action": "create_cylinder", "name": `Testcylinder_${ts}`, "radius": 40, "height": 120, "numSides": 12}, expected: 'success|already exists' },
   { scenario: 'CREATE: create_cone', toolName: 'manage_geometry', arguments: {"action": "create_cone", "name": `Testcone_${ts}`, "radius": 45, "baseRadius": 50, "topRadius": 20, "height": 110, "numSides": 12}, expected: 'success|already exists' },

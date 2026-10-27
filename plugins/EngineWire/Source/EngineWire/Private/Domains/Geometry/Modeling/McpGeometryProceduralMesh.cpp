@@ -2,6 +2,8 @@
 
 #if MCP_HAS_FULL_GEOMETRY_SCRIPT
 
+#include "Foundation/McpScopedEditorTransaction.h"
+
 namespace McpGeometryHandlers
 {
 bool HandleCreateProceduralMesh(UEngineWireSubsystem* Self, const FString& RequestId,
@@ -42,9 +44,10 @@ bool HandleCreateProceduralMesh(UEngineWireSubsystem* Self, const FString& Reque
         }
         DynMesh->ProcessMesh([&CopiedTriangles](const UE::Geometry::FDynamicMesh3& Mesh) { CopiedTriangles = Mesh.TriangleCount(); });
     }
+    const FMcpScopedEditorTransaction Transaction(FText::Format(NSLOCTEXT("McpGeometry", "CreateProceduralMesh", "Create {0}"), FText::FromString(Name)),
+                                                  EMcpMutationDurability::EditorStateOnly, TArray<UObject*>());
     FString SpawnError;
-    AActor* NewActor = SpawnDynamicMeshActorWithMesh(Transform, Name, DynMesh,
-                                                     SpawnError);
+    AActor* NewActor = SpawnDynamicMeshActorWithMesh(Transform, Name, DynMesh, SpawnError);
     if (!NewActor)
     {
         DynMesh->MarkAsGarbage();
@@ -65,6 +68,7 @@ bool HandleCreateProceduralMesh(UEngineWireSubsystem* Self, const FString& Reque
     Result->SetStringField(TEXT("name"), McpActorRef(NewActor));
     Result->SetStringField(TEXT("class"), TEXT("DynamicMeshActor"));
     Result->SetBoolField(TEXT("enableCollision"), bEnableCollision);
+    Transaction.DescribeInto(Result);
     if (!MeshPath.IsEmpty())
     {
         Result->SetNumberField(TEXT("triangleCount"), CopiedTriangles);

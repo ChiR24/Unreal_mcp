@@ -140,7 +140,7 @@ const APPEND_OUT_REQUIRED = ['actorName', 'verticesAdded', 'facesAdded', 'triang
 export const GEOMETRY_DYNAMICMESH_RECORDS: readonly CapabilityRecordSource[] = [
   buildWorldRecord({
     parentTool: 'manage_geometry', action: 'create_procedural_mesh', plugins: PLUGIN,
-    family: F, summary: 'Spawn a DynamicMesh actor to author geometry into: empty, or a copy of a static mesh asset.',
+    family: F, summary: 'Spawn a DynamicMesh actor to author geometry into: empty, or a copy of a static mesh asset. One undo step.',
     whenToUse: ['A mesh must be built vertex by vertex rather than from a primitive.',
       'An existing static mesh asset must be cut, trimmed or edited: create with meshPath, edit, then bake it with convert_to_static_mesh.'],
     whenNotToUse: ['A parametric shape is enough; use a create_* primitive.'],
@@ -148,7 +148,8 @@ export const GEOMETRY_DYNAMICMESH_RECORDS: readonly CapabilityRecordSource[] = [
       meshPath: str('Static mesh asset to start from: its geometry is copied in, each section as the material id of its slot, in the mesh\'s own local space. Omitted, the mesh starts empty.') },
     required: [], effect: 'write', costLatency: 'interactive', costResources: 'low',
     outputProps: { name: P.name, class: str('Class of the spawned actor.'), enableCollision: P.enableCollision,
-      triangleCount: int('With meshPath: triangles copied from the asset.') },
+      triangleCount: int('With meshPath: triangles copied from the asset.'),
+      undo: { type: 'object', additionalProperties: true, 'x-unreal-reflection-boundary': true, description: 'What editor undo takes back: {undoable, transactionScope}.' } },
     outputRequired: ['name'],
     exampleInput: { action: 'create_procedural_mesh', name: 'DM_Authored', enableCollision: true },
     exampleOutput: { success: true, name: 'DM_Authored', class: 'DynamicMeshActor', enableCollision: true },
