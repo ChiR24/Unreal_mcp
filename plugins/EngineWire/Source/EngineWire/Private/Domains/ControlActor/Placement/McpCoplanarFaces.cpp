@@ -3,6 +3,7 @@
 #include "Domains/ControlActor/Placement/McpCoplanarFaces.h"
 
 #include "Components/InstancedStaticMeshComponent.h"
+#include "Components/SplineMeshComponent.h"
 #include "Components/StaticMeshComponent.h"
 #include "Engine/StaticMesh.h"
 #include "Engine/World.h"
@@ -148,9 +149,14 @@ TArray<FMcpCoplanarPiece> McpCoplanarCollect(UWorld* World, const FString& NameF
         Actor->GetComponents<UStaticMeshComponent>(Components);
         for (const UStaticMeshComponent* Component : Components)
         {
-            // Instanced components hold many transforms under one; their bounds are not one mesh.
+            // Instanced components hold many transforms under one; their bounds are not one mesh. A spline mesh bends its
+            // mesh along a curve, so the mesh's box under its transform is not where its faces are: every segment of a
+            // road read as the same stock cube at the actor's origin, z-fighting with the next.
+            // ponytail: a straight spline segment flush with a slab goes unchecked; take its faces from the sections at
+            // its two ends (CalcSliceTransform) if that flicker needs catching.
             if (!Component || !Component->IsVisible() || Component->bHiddenInGame || !Component->GetStaticMesh() ||
-                Component->IsA<UInstancedStaticMeshComponent>() || !McpCoplanarDrawnInView(Component))
+                Component->IsA<UInstancedStaticMeshComponent>() || Component->IsA<USplineMeshComponent>() ||
+                !McpCoplanarDrawnInView(Component))
             {
                 continue;
             }

@@ -17,7 +17,7 @@ const placementCheck = (): string =>
 // top of the deck: a fix that would have wrecked the level.
 describe('audit_placement finds the floor under an actor, not what it holds up', () => {
   it('skips a hit whose bottom sits in the upper half of the actor', () => {
-    expect(placementCheck()).toContain('if (HitBottomZ >= Origin.Z) {');
+    expect(placementCheck()).toContain('if (HitBottomZ >= Centre.Z) {');
   });
 
   // A crate stacked on a simulated crate read "floating" above the floor under both: a physics body is a PhysicsBody.
@@ -85,8 +85,88 @@ describe('the placement check treats a water body as a surface, not a solid', ()
 
   it('an actor below a water surface is not sunk and gets no suggested location', () => {
     const source = placementCheck();
-    expect(source).toContain('bOnWater = McpIsWaterBody(HitActor);');
-    expect(source).toContain('if (Clearance < -SunkFloor && !bOnWater) {');
+    expect(source).toContain('bOutOnWater = McpIsWaterBody(HitActor);');
+    expect(source).toContain('const bool bDeep = Gap < -Sample.SunkFloor && !bOnWater;');
+  });
+});
+
+// create_road_spline laid plan_road's 36 points over a hill and its reply said "'Road' nothing below it" plus a -X face
+// "overlapping 100 x 100" with itself; one call later the same road read clean, raised 3 m or lowered 1 m too.
+describe('a spline mesh actor is judged where its segments lie, on the bounds the call left', () => {
+  const placementRoot = 'plugins/EngineWire/Source/EngineWire/Private/Domains/ControlActor/Placement';
+  const readPlacement = (name: string): string => readFileSync(resolve(process.cwd(), placementRoot, name), 'utf8');
+  const flat = (source: string): string => source.split(/\s+/u).join(' ');
+
+  // Bounds follow a reshaped part only when its render state is rebuilt at the end of the frame, after the reply.
+  it('recomputes the bounds of what it judges before reading them', () => {
+    const source = placementCheck();
+    expect(source).toContain('Part->UpdateBounds();');
+    const refresh = source.indexOf('McpRefreshBounds(Actor);');
+    expect(refresh).toBeGreaterThan(-1);
+    expect(refresh).toBeLessThan(source.indexOf('Actor->GetActorBounds(true, Origin, Extent);'));
+    const watch = readPlacement('McpChangeWatch.cpp');
+    const watchRefresh = watch.indexOf('McpPlacement::McpRefreshBounds(Actor);');
+    expect(watchRefresh, 'every touched actor, before any is fingerprinted or judged').toBeGreaterThan(-1);
+    expect(watchRefresh).toBeLessThan(watch.indexOf('const auto Consider ='));
+  });
+
+  it('traces the ground under every section of a spline mesh and under one box round the other parts', () => {
+    const ground = flat(readPlacement('McpPlacementGround.cpp'));
+    expect(ground).toContain('if (const USplineMeshComponent *Spline = Cast<USplineMeshComponent>(Part)) {');
+    expect(ground).toContain('Spline.CalcSliceTransform(static_cast<float>(End ? Local.Max[Forward] : Local.Min[Forward]))');
+    // Halfway on the straight line between the end sections: a stock cube segment is drawn and collides that way.
+    expect(ground).toContain('Middle[Corner] = (Ends[0][Corner] + Ends[1][Corner]) * 0.5;');
+    expect(ground, 'an actor with no spline mesh keeps its one box').toContain('if (!bAnySpline) { Rest = SelfBox; }');
+    // A section is a slab when far wider than thick: a road may sink its own thickness before the terrain covers it.
+    expect(ground).toContain('Sample.SunkFloor = Thick * 4.0 < Wide ? FMath::Max(Sample.Graze, Thick) : Sample.Graze;');
+    const source = flat(placementCheck());
+    expect(source).toContain('McpGroundSamples(*Actor, SelfBox, Samples);');
+    expect(source).toContain('McpGroundUnder(World, Actor, SelfBox.Max.Z, Sample, SampleGroundZ, bOnWater)');
+    // Each section is traced from the road's top: a canopy or a roof over a low section is not the ground under it.
+    expect(source).toContain('if (Candidate.ImpactPoint.Z > Sample.Box.Max.Z && !McpIsGroundLike(HitActor)) {');
+    expect(source).toContain('if (!bHasGround || (bDeep && !bSunk) || (bDeep == bSunk && Gap < Clearance)) {');
+  });
+
+  // The verdict on plain numbers (a model of the loop pinned above): each sample is its underside's height over the
+  // ground and the depth it may be bedded. The planned road's sections sat 6 over the ground at its points, but the
+  // terrain rose over its top at 13 midpoints (underside 19.9 below the ground at the worst).
+  type Sample = { gap: number; floor: number; water?: boolean };
+  const verdict = (samples: readonly Sample[]): string => {
+    let best: { gap: number; deep: boolean } | undefined;
+    for (const { gap, floor, water } of samples) {
+      const deep = gap < -floor && !water;
+      if (!best || (deep && !best.deep) || (deep === best.deep && gap < best.gap)) best = { gap, deep };
+    }
+    if (!best) return 'nothing below';
+    return best.deep ? `sunk ${Math.round(-best.gap)}` : best.gap > 50 ? `floating ${Math.round(best.gap)}` : 'clean';
+  };
+  const road = (lift: number): Sample[] => [6, 6, -7.3, 6, -19.9, 6, -14.6].map((gap) => ({ gap: gap + lift, floor: 8 }));
+
+  it('names the deepest sunk section, else floats only when no section touches the ground', () => {
+    expect(verdict(road(0)), 'terrain over the road top at its midpoints').toBe('sunk 20');
+    expect(verdict(road(20)), 'the same road lifted 20, resting on the terrain everywhere').toBe('clean');
+    expect(verdict(road(300))).toBe('floating 280');
+    expect(verdict(road(-100))).toBe('sunk 120');
+    expect(verdict([{ gap: -30, floor: 8, water: true }, { gap: 6, floor: 8 }]), 'under a water surface is afloat').toBe('clean');
+    expect(verdict([])).toBe('nothing below');
+  });
+
+  // A landscape's box runs from its lowest valley to its highest peak: a cube resting on its flat part read
+  // "intersects 'RoadProbeLand' by 100", and the landscape "intersected" a ball of 10 m standing on it.
+  it('never measures an overlap against a landscape box, either way round', () => {
+    const source = placementCheck();
+    expect(source).toContain('#include "LandscapeProxy.h"');
+    expect(source).toContain('if (Other->IsA<ALandscapeProxy>() || Actor->IsA<ALandscapeProxy>()) {');
+  });
+
+  // Every segment of a road read as the same stock cube at the actor's origin: the faces of a mesh bent along a curve are
+  // not its mesh's box under its transform, and neither is the box fix_placement and the overlap test measure with.
+  it('never models a spline mesh as its mesh box under its transform', () => {
+    expect(flat(readPlacement('McpCoplanarFaces.cpp'))).toContain(
+      'Component->IsA<UInstancedStaticMeshComponent>() || Component->IsA<USplineMeshComponent>() ||');
+    const shapes = readPlacement('McpPlacementShapes.cpp');
+    expect(shapes).toContain('if (!Mesh || !Mesh->GetStaticMesh() || Mesh->IsA<USplineMeshComponent>() || !McpCanBeStruck(Struck)) {');
+    expect(shapes).toContain('if (!Mesh || Mesh->IsA<UInstancedStaticMeshComponent>() || Mesh->IsA<USplineMeshComponent>() || !Mesh->GetStaticMesh()) {');
   });
 });
 

@@ -42,7 +42,7 @@ All notable changes to the EngineWire plugin (formerly McpAutomationBridge) will
 - **Dialogs**: an open editor dialog answers requests `EDITOR_MODAL_ACTIVE` with its title instead of a wait and `EDITOR_BLOCKED`.
 - **Viewport captures** settle across ticks and warn on demoted video memory; grid edits keep the fields left out and answer with the grid's values.
 - **Properties**: deprecated ones are refused; Niagara systems re-init after a write; settings take object references; component writes run the component's own change handling; reads write out 0 and false.
-- **Placement and tracks**: physics-body ground traces, player-start capsules, whole track names (`AMBIGUOUS_TRACK`), partial `set_bone_key`, key times across display rates.
+- **Placement and tracks**: physics-body ground traces, player-start capsules, spline meshes judged section by section on current bounds (never as their mesh box), no overlaps with a landscape's box, whole track names (`AMBIGUOUS_TRACK`), partial `set_bone_key`, key times across display rates.
 - **Niagara and animation**: creates refuse taken names and unknown types; curve keys and axes read back; PIE pause and resume say when nothing changed.
 - **Pre-queue scans** walk 262144 values; rate-limit replies carry `retryAfterSeconds`.
 - **Undo** for property, actor, component, lighting, foliage, landscape, sequence, data table, bone and material-node edits, also on assets created without `RF_Transactional`.

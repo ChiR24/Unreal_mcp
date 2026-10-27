@@ -43,4 +43,32 @@ AActor *FindMount(UWorld *World, AActor *Actor, const FBox &ActorBox, double Tou
 
 /** FindMount's test for one pair: whether the actor bounded by ActorBox hangs on OtherBox from the side. */
 bool HangsOn(const FBox &ActorBox, const FBox &OtherBox, double Touch);
+
+/** Recomputes the bounds of Actor's parts, which a part reshaped this frame keeps stale until the frame ends. */
+void McpRefreshBounds(AActor *Actor);
+
+/**
+ * A slab: far wider than it is thick. Floors, aprons, inlays, emblems, road decals and platform tiers are all built this
+ * way, and a level assembles them by STACKING them into each other.
+ */
+bool McpIsSlab(const FVector &Extent);
+
+/**
+ * One place the ground under an actor is traced: the bottom of Box is the actor's underside there and its centre the
+ * line traced. Graze is the depth a touch may have; SunkFloor how deep it may be bedded before it reads sunk.
+ */
+struct FMcpGroundSample {
+  FBox Box = FBox(ForceInit);
+  double Graze = 4.0;
+  double SunkFloor = 4.0;
+};
+
+/** The sample for a part bounded by Box: a slab may be bedded to its own thickness, anything else to its graze. */
+FMcpGroundSample McpBoxSample(const FBox &Box);
+
+/**
+ * Where the ground under Actor is judged: SelfBox, the box round its colliding parts, except that each colliding spline
+ * mesh is judged at its two end sections and halfway between them, and the box then holds only the other parts.
+ */
+void McpGroundSamples(const AActor &Actor, const FBox &SelfBox, TArray<FMcpGroundSample> &OutSamples);
 } // namespace McpPlacement

@@ -6,6 +6,7 @@
 #include "CollisionShape.h"
 #include "Components/InstancedStaticMeshComponent.h"
 #include "Components/ShapeComponent.h"
+#include "Components/SplineMeshComponent.h"
 #include "Components/StaticMeshComponent.h"
 #include "Engine/StaticMesh.h"
 #include "GameFramework/Actor.h"
@@ -80,10 +81,10 @@ void McpMeshBox(const UStaticMeshComponent *Mesh, FCollisionShape &OutShape, FVe
 }
 
 // When that box strikes nothing of Struck, the mesh does not either. Two triangle meshes cannot be tested against each
-// other any other way.
+// other any other way. A spline mesh has no such box: its mesh is bent along a curve, away from its transform.
 bool McpBoxApartFrom(const UPrimitiveComponent *BoxOf, const UPrimitiveComponent *Struck) {
   const UStaticMeshComponent *Mesh = Cast<UStaticMeshComponent>(BoxOf);
-  if (!Mesh || !Mesh->GetStaticMesh() || !McpCanBeStruck(Struck)) {
+  if (!Mesh || !Mesh->GetStaticMesh() || Mesh->IsA<USplineMeshComponent>() || !McpCanBeStruck(Struck)) {
     return false;
   }
   FCollisionShape Box;
@@ -94,7 +95,7 @@ bool McpBoxApartFrom(const UPrimitiveComponent *BoxOf, const UPrimitiveComponent
 }
 
 // What a component is measured with: a box, sphere or capsule component's own shape, else a plain static mesh's box.
-// Instanced, skeletal and other bodies have no single shape here.
+// Instanced, spline (bent), skeletal and other bodies have no single shape here.
 bool McpQueryShape(const UPrimitiveComponent *Comp, FCollisionShape &OutShape, FVector &OutCenter, FQuat &OutRotation) {
   if (Comp->IsA<UShapeComponent>()) {
     OutShape = Comp->GetCollisionShape();
@@ -103,7 +104,7 @@ bool McpQueryShape(const UPrimitiveComponent *Comp, FCollisionShape &OutShape, F
     return true;
   }
   const UStaticMeshComponent *Mesh = Cast<UStaticMeshComponent>(Comp);
-  if (!Mesh || Mesh->IsA<UInstancedStaticMeshComponent>() || !Mesh->GetStaticMesh()) {
+  if (!Mesh || Mesh->IsA<UInstancedStaticMeshComponent>() || Mesh->IsA<USplineMeshComponent>() || !Mesh->GetStaticMesh()) {
     return false;
   }
   McpMeshBox(Mesh, OutShape, OutCenter, OutRotation);

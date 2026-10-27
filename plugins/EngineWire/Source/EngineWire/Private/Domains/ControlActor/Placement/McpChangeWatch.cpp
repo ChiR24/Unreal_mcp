@@ -10,6 +10,7 @@
 #include "Domains/ControlActor/McpActorSupport.h"
 #include "Domains/ControlActor/Placement/McpAuditFinding.h"
 #include "Domains/ControlActor/Placement/McpCoplanarFaces.h"
+#include "Domains/ControlActor/Placement/McpPlacementMount.h"
 #include "Domains/Level/Lifecycle/McpLevelMapCheck.h"
 #include "Editor.h"
 #include "Engine/Blueprint.h"
@@ -176,6 +177,14 @@ void AddWarnings(const FString& RequestId, const TSharedPtr<FJsonObject>& Result
         GWatchTouched.Num() + GWatchCopies.Num() == 0)
     {
         return;
+    }
+    // Judged on the shapes the call left: a part it reshaped keeps the bounds of its old shape until the frame ends.
+    for (const TPair<TWeakObjectPtr<AActor>, FWatchBefore>& Pair : GWatchTouched)
+    {
+        if (AActor* Actor = Pair.Key.Get())
+        {
+            McpPlacement::McpRefreshBounds(Actor);
+        }
     }
     TMap<AActor*, TSharedPtr<FJsonObject>> Rows; // judged together, so faces two changed actors share are found once
     TArray<FString> Content;

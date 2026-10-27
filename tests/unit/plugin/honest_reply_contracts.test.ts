@@ -201,9 +201,10 @@ describe('handlers answer what they did', () => {
   // A cart corral spawned around its carts read "sunk 97 units": the carts' tops were taken for the ground under it.
   it('the placement ground probe skips what the actor encloses', () => {
     const source = code('ControlActor', 'McpActorPlacementCheck.cpp');
-    const enclosed = source.indexOf('SelfBox.ExpandBy(1.0).IsInside(FBox::BuildAABB(HitOrigin, HitExtent))');
+    // The box of what is judged there: the actor's own, or one section of a spline mesh.
+    const enclosed = source.indexOf('Sample.Box.ExpandBy(1.0).IsInside(FBox::BuildAABB(HitOrigin, HitExtent))');
     expect(enclosed).toBeGreaterThan(-1);
-    expect(enclosed).toBeLessThan(source.indexOf('bHasGround = true;'));
+    expect(enclosed).toBeLessThan(source.indexOf('OutGroundZ = Candidate.ImpactPoint.Z;'));
   });
 
   // A single spawn refused folder, which only a batch item took, and no action could file an existing actor.
