@@ -215,7 +215,7 @@ LogEngineWireSubsystem: execute_python begin: executionId=<guid> requestId=<id> 
 Tools & Plugins
 ---------------------
 - **Features:** Editor automation bridge for Model Context Protocol clients. Includes a native MCP Streamable HTTP server, a WebSocket bridge for the optional Node.js stdio server, a single gateway tool with search, describe, execute and configure, asset/actor/editor/level automation, Blueprint and graph authoring, Niagara/material/audio/AI/PCG/Sequencer helpers, project and system controls, and security settings for loopback binding, capability tokens, consent, TLS and rate limits.
-- **Code Modules:** `EngineWire` - Editor module; `EngineWireFab` - Editor module (delay-loaded Fab asset-store adapter, optional).
+- **Code Modules:** `EngineWire` - Editor module; `EngineWireFab` - Editor module (delay-loaded Fab asset-store adapter, optional); `EngineWireValidation` - Editor module (Blueprint lint rules as a Data Validation validator).
 - **Number of Blueprints:** 0.
 - **Network Replicated:** No. This is an editor-only automation and MCP transport plugin; it does not add gameplay replication.
 - **Supported Development Platforms:** Windows: Yes. Mac: Yes. Linux: Yes.

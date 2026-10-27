@@ -33,6 +33,14 @@ public:
 
         UToolMenus::RegisterStartupCallback(FSimpleMulticastDelegate::FDelegate::CreateRaw(
             this, &FEngineWireModule::RegisterStatusBarWidget));
+
+        // The lint validator's module imports DataValidation, a plugin a project may turn off (whose module then does
+        // not exist), so the .uplugin never loads it (LoadingPhase None). It is loaded here, before the editor's
+        // validator subsystem gathers validator classes, only where DataValidation is on.
+        if (FModuleManager::Get().ModuleExists(TEXT("DataValidation")) && FModuleManager::Get().LoadModule(TEXT("DataValidation")))
+        {
+            FModuleManager::Get().LoadModule(TEXT("EngineWireValidation"));
+        }
     }
 
     /**

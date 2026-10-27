@@ -4,6 +4,8 @@
 #include "Domains/BlueprintGraph/McpBPGraphPrivate.h"
 #include "EdGraph/EdGraph.h"
 #include "Engine/Blueprint.h"
+#include "McpBlueprintLint.h"
+#include "Templates/Function.h"
 
 namespace McpBPLint
 {
@@ -11,6 +13,34 @@ namespace
 {
 const TCHAR* const Rules[] = {TEXT("tick_heavy"), TEXT("unreachable"), TEXT("random_fanout"), TEXT("infinite_while"),
                               TEXT("never_assigned"), TEXT("unguarded_read")};
+
+// The graphs that run: event graphs, functions and what they collapse; macro and delegate signatures are not code of
+// this Blueprint. Each rule On allows adds what it finds; the graphs checked come back.
+TArray<UEdGraph*> LintRunRules(const UBlueprint* Blueprint, TFunctionRef<bool(const TCHAR*)> On, TArray<FFinding>& Findings)
+{
+    TArray<UEdGraph*> Graphs;
+    Blueprint->GetAllGraphs(Graphs);
+    Graphs.RemoveAll([Blueprint](UEdGraph* Graph)
+    {
+        return !Graph || Blueprint->MacroGraphs.Contains(Graph) || Blueprint->DelegateSignatureGraphs.Contains(Graph);
+    });
+    for (const UEdGraph* Graph : Graphs)
+    {
+        if (On(TEXT("tick_heavy"))) TickHeavy(Graph, Findings);
+        if (On(TEXT("unreachable"))) Unreachable(Graph, Findings);
+        if (On(TEXT("random_fanout"))) RandomFanout(Graph, Findings);
+        if (On(TEXT("infinite_while"))) InfiniteWhile(Graph, Findings);
+    }
+    if (On(TEXT("never_assigned")))
+    {
+        NeverAssigned(Blueprint, Graphs, Findings);
+    }
+    if (On(TEXT("unguarded_read")))
+    {
+        UnguardedRead(Blueprint, Graphs, Findings);
+    }
+    return Graphs;
+}
 } // namespace
 
 bool HandleLint(const McpBlueprintGraphHandlers::FActionContext& Context)
@@ -43,31 +73,8 @@ bool HandleLint(const McpBlueprintGraphHandlers::FActionContext& Context)
     Context.Payload->TryGetNumberField(TEXT("maxFindings"), MaxFindings);
     const int32 Cap = FMath::Clamp(static_cast<int32>(MaxFindings), 1, 200);
     const auto On = [&Wanted](const TCHAR* Rule) { return Wanted.Num() == 0 || Wanted.Contains(Rule); };
-
-    // The graphs that run: event graphs, functions and what they collapse; macro and delegate signatures are not code
-    // of this Blueprint.
-    TArray<UEdGraph*> Graphs;
-    Context.Blueprint->GetAllGraphs(Graphs);
-    Graphs.RemoveAll([&Context](UEdGraph* Graph)
-    {
-        return !Graph || Context.Blueprint->MacroGraphs.Contains(Graph) || Context.Blueprint->DelegateSignatureGraphs.Contains(Graph);
-    });
     TArray<FFinding> Findings;
-    for (const UEdGraph* Graph : Graphs)
-    {
-        if (On(TEXT("tick_heavy"))) TickHeavy(Graph, Findings);
-        if (On(TEXT("unreachable"))) Unreachable(Graph, Findings);
-        if (On(TEXT("random_fanout"))) RandomFanout(Graph, Findings);
-        if (On(TEXT("infinite_while"))) InfiniteWhile(Graph, Findings);
-    }
-    if (On(TEXT("never_assigned")))
-    {
-        NeverAssigned(Context.Blueprint, Graphs, Findings);
-    }
-    if (On(TEXT("unguarded_read")))
-    {
-        UnguardedRead(Context.Blueprint, Graphs, Findings);
-    }
+    const TArray<UEdGraph*> Graphs = LintRunRules(Context.Blueprint, On, Findings);
 
     TArray<TSharedPtr<FJsonValue>> Rows;
     TSharedPtr<FJsonObject> Counts = MakeShared<FJsonObject>();
@@ -100,3 +107,20 @@ bool HandleLint(const McpBlueprintGraphHandlers::FActionContext& Context)
     return true;
 }
 } // namespace McpBPLint
+
+TArray<FMcpLintIssue> McpLintBlueprint(const UBlueprint* Blueprint)
+{
+    TArray<FMcpLintIssue> Issues;
+    if (!Blueprint)
+    {
+        return Issues;
+    }
+    TArray<McpBPLint::FFinding> Findings;
+    McpBPLint::LintRunRules(Blueprint, [](const TCHAR*) { return true; }, Findings);
+    for (const McpBPLint::FFinding& Finding : Findings)
+    {
+        Issues.Add({Finding.Rule, Finding.Severity, GetNameSafe(Finding.Node->GetGraph()),
+                    Finding.Node->GetNodeTitle(ENodeTitleType::ListView).ToString(), Finding.Detail});
+    }
+    return Issues;
+}

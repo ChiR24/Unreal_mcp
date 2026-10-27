@@ -40,6 +40,16 @@
         "Mac",
         "Linux"
       ]
+    },
+    {
+      "Name": "EngineWireValidation",
+      "Type": "Editor",
+      "LoadingPhase": "None",
+      "PlatformAllowList": [
+        "Win64",
+        "Mac",
+        "Linux"
+      ]
     }
   ],
   "Plugins": [

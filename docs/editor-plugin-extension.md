@@ -118,7 +118,7 @@ All paths are under `plugins/EngineWire/Source/EngineWire/`.
 | `Private/Transport/` | WebSocket listener, TLS, token auth, rate limits |
 | `Private/Tests/` | Native automation tests |
 
-The optional Fab adapter is a separate, delay-loaded module in `Source/EngineWireFab/`.
+The optional Fab adapter is a separate, delay-loaded module in `Source/EngineWireFab/`. `Source/EngineWireValidation/` registers lint_blueprint's rules as a Data Validation validator, so Validate Assets, saves and validation commandlets report them too.
 
 ## Related documents
 

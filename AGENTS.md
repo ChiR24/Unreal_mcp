@@ -14,10 +14,11 @@ Area-specific guidance lives in nested `AGENTS.md` files (see **AREA GUIDES** be
 |   |-- services/            (1) # telemetry schema (a generator input)
 |   |-- tools/                   # catalog/ (records = contracts, generated/), definitions/
 |   `-- utils/                   # commands (console policy rules), config, logging, serialization, validation
-|-- plugins/EngineWire/ # the ONLY plugin; editor-only UE (bridge + native MCP + Fab adapter)
-|   |-- Source/EngineWire/{Public (20), Private/}
+|-- plugins/EngineWire/ # the ONLY plugin; editor-only UE (bridge + native MCP + Fab adapter + lint validator)
+|   |-- Source/EngineWire/{Public (21), Private/}
 |   |   Private/ (source files, subfolders included, 2026-10-27): Core(41) Domains(1413 / 58 domains) Foundation(142) MCP(156) Safety(19) Transport(23) Tests(35) UI(2)
-|   `-- Source/EngineWireFab/     # Fab asset-store adapter module (delay-loaded, optional)
+|   |-- Source/EngineWireFab/     # Fab asset-store adapter module (delay-loaded, optional)
+|   `-- Source/EngineWireValidation/ # lint_blueprint's rules as a Data Validation validator
 |-- tests/                       # Vitest unit tests + custom MCP integration runner
 |-- scripts/                     # generators, packaging, sync
 |-- docs/                        # protocol, security, testing, gateway client guide, generated action reference

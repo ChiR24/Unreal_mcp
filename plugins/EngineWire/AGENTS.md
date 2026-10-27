@@ -1,6 +1,6 @@
 # MCP AUTOMATION BRIDGE PLUGIN
 
-Editor-only UE 5.0-5.8 plugin. It owns the native `/mcp` HTTP/SSE server (the only gateway; the npm package is a stdio proxy in front of it), the WebSocket automation bridge, and the delay-loaded Fab adapter module. It is the sole authority on security. Version: `EngineWire.uplugin` (`0.6.0-beta-b`), rewritten by the `bump-version.yml` workflow with the other version files.
+Editor-only UE 5.0-5.8 plugin. It owns the native `/mcp` HTTP/SSE server (the only gateway; the npm package is a stdio proxy in front of it), the WebSocket automation bridge, the delay-loaded Fab adapter module, and a Data Validation module that runs lint_blueprint's rules. It is the sole authority on security. Version: `EngineWire.uplugin` (`0.6.0-beta-b`), rewritten by the `bump-version.yml` workflow with the other version files.
 
 ## SCOPE MAP
 | Area | Owner | Notes |
@@ -8,6 +8,7 @@ Editor-only UE 5.0-5.8 plugin. It owns the native `/mcp` HTTP/SSE server (the on
 | Manifest/config/docs | plugin root | `.uplugin`, `Config/`, `README.md`, `CHANGELOG.md` |
 | Module dependencies | `Source/EngineWire/EngineWire.Build.cs` | Optional-module detection; keep the compatibility macros |
 | Fab adapter | `Source/EngineWireFab/` | Delay-loaded; compiles away when Fab/Megascans are absent |
+| Lint validator | `Source/EngineWireValidation/` | lint_blueprint's rules as a Data Validation validator (Validate Assets, saves, commandlets); its own module because a validator UCLASS needs DataValidation at compile time; LoadingPhase None, loaded by EngineWire's startup only where DataValidation is on |
 | Public API/settings | `Source/EngineWire/Public/` | Subsystem, settings, connection manager, queue fairness |
 | Core | `Private/Core/` (39) | Queue, game-thread drain, the one handler table, pre-queue gate — nested `AGENTS.md` |
 | Domains | `Private/Domains/` (1,312 files, 58 domains; counts include subfolders, 2026-10-26) | Action implementations — nested `AGENTS.md` |
