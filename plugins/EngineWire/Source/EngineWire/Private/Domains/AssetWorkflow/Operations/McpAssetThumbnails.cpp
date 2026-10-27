@@ -7,7 +7,6 @@
 #include "Dom/JsonObject.h"
 #include "ImageUtils.h"
 #include "Misc/CommandLine.h"
-#include "Misc/EngineVersionComparison.h"
 #include "Misc/FileHelper.h"
 #include "Misc/ObjectThumbnail.h"
 #include "Misc/Paths.h"
@@ -173,14 +172,9 @@ bool UEngineWireSubsystem::HandleGenerateThumbnail(
         return true;
       }
 
-      TArray<uint8> CompressedData;
-#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 1
-      FImageUtils::ThumbnailCompressImageArray(Width, Height, ColorData,
-                                               CompressedData);
-#else
-      // UE 5.0: Use CompressImageArray instead
-      FImageUtils::CompressImageArray(Width, Height, ColorData, CompressedData);
-#endif
+      // A PNG, as promised: from 5.1 ThumbnailCompressImageArray writes the JPEG a package stores, so the .png held JPEG.
+      TArray64<uint8> CompressedData;
+      FImageUtils::PNGCompressImageArray(Width, Height, TArrayView64<const FColor>(ColorData.GetData(), ColorData.Num()), CompressedData);
       bSuccess = FFileHelper::SaveArrayToFile(CompressedData, *AbsolutePath);
     }
   }
