@@ -40,7 +40,7 @@ export const INSPECT_FOLDS: readonly FoldSpec[] = [
   {
     primary: 'get_stats', selector: 'statsKind',
     summary: 'Read performance (FPS, frame rate and time, thread and GPU ms), memory usage (used, available, peak), scene statistics (actors by category, components, hidden actors), or frame cost: the thread that bounds the frame and what in view weighs on it (movable shadow-casting lights, heavy meshes, translucency, ticking actors).',
-    topics: ['performance stats', 'memory stats', 'scene stats', 'fps', 'game fps', 'measure fps', 'frame rate', 'frame time', 'how fast the game runs', 'gpu time', 'stat unit', 'frame cost', 'why is the game slow', 'performance bottleneck', 'gpu bound'],
+    topics: ['performance stats', 'memory stats', 'scene stats', 'fps', 'game fps', 'measure fps', 'frame rate', 'frame time', 'how fast the game runs', 'gpu time', 'stat unit', 'frame cost', 'why is the game slow', 'performance bottleneck', 'gpu bound', 'check performance'],
     members: { performance: 'get_performance_stats', memory: 'get_memory_stats', scene: 'get_scene_stats', frame: 'get_frame_cost' },
   },
   {

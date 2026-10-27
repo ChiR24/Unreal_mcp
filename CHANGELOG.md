@@ -83,7 +83,7 @@ _Nothing yet._
 - **`manage_effect cleanup`** needs destructive consent and a `filter`, is one undo step and refuses Play; debug shapes clear through `debug_shape`.
 - **Object paths** work in `open_level`, `load` and `add_sublevel`; relative `.t3d` exports land in the project.
 - **Git**: any commit message is safe (a quote could inject options); checkout and submit list skipped paths.
-- **`/mcp` discovery**: search rows, `describe` by domain and family, `cursor` and param `suggestions`.
+- **`/mcp` discovery**: search rows, `describe` by domain and family, `cursor` and param `suggestions`; plain requests ("delete all cubes", "make it rain", "measure distance between actors") reach the capability that answers them.
 - **A disabled tool's `nextCall` turns it back on** (`configure` `enable_tools`).
 
 </details>

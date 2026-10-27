@@ -740,7 +740,7 @@ export const PLAIN_PROBE: readonly PlainProbeCase[] = [
   { query: 'add trees', accepted: ['build_environment.add_foliage'] },
   { query: 'build the navmesh', accepted: ['manage_ai.configure_navigation'] },
   { query: 'ai patrol', accepted: ['blueprint.add_behaviour'] },
-  { query: 'check performance', accepted: ['system_control.profile_performance'] },
+  { query: 'check performance', accepted: ['inspect.get_stats'] },
   { query: 'fix foot sliding', accepted: ['animation_physics.auto_blend_space'] },
   { query: 'make the metal shiny', accepted: ['material.create_material'] },
   { query: 'emissive glow', accepted: ['material.create_material'] },

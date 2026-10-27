@@ -61,7 +61,7 @@ Plugin-side changes since the `v0.6.0-beta-f` tag, from the code diff. The serve
 - **Refused instead of overwritten or guessed**: taken names and paths, bakes over another kind, engine content, unknown types, empty edits, incompatible pins, non-Character edits.
 - **Calls that now do what they say**: fades, thumbnails, sockets, ragdolls, AI, PCG, widgets, landscape, foliage, water, Play audio and streaming, `run_benchmark`, splines, volumes, view modes and more.
 - **Saves are reported** (`saved`, `SAVE_FAILED`, `COMPILE_FAILED` with the compiler error) by creators and asset edits; a `save: false` edit stays unsaved.
-- **`/mcp` discovery**: search rows, filters and cursors, `describe` by domain and family, name and param guidance.
+- **`/mcp` discovery**: search rows, filters and cursors, `describe` by domain and family, name and param guidance; 41 plain requests a small model types ("delete all cubes", "measure distance between actors") now rank the capability that answers them first.
 - **A disabled tool's `nextCall` turns it back on** (`configure` `enable_tools`) in search rows, describe and `TOOL_DISABLED`.
 
 ## [0.6.0-beta-f] - 2026-10-16
