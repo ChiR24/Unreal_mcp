@@ -63,7 +63,7 @@ export const MANAGE_NETWORKING_FOLDS: readonly FoldSpec[] = [
   {
     primary: 'host_lan_server', selector: 'serverOp',
     summary: 'Host a LAN listen server (build the travel URL, optionally travel to it), or make a running Play-In-Editor instance join one.',
-    topics: ['host server', 'join server', 'lan server', 'listen server', 'connect to server'],
+    topics: ['host server', 'join server', 'lan server', 'listen server', 'connect to server', 'host a multiplayer game'],
     members: { host: 'host_lan_server', join: 'join_lan_server' },
   },
   {

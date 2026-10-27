@@ -1,5 +1,5 @@
 {
-  "catalogRevision": "26adbf1ab19ef7e5",
+  "catalogRevision": "af01a8484591b6de",
   "recordCount": 453,
   "records": [
     {
@@ -333,7 +333,8 @@
           "auto blend space",
           "lay out a blend space",
           "locomotion blend space",
-          "walk run blend space"
+          "walk run blend space",
+          "fix foot sliding"
         ],
         "summary": "Lay out a locomotion blend space from its clips' own motion: each Animation Sequence in animationPaths is read from its frames (a root that travels is the clip's motion; a root that stays is an in-place clip, read from its planted feet, which slide backward at the ground speed) and placed by its speed and direction in the character's frame. forwardAxis is the way the character faces in its clips (+Y for the UE mannequin). axes picks what each axis holds: speed (cm/s), direction (degrees: 0 forward, +90 right, 180 back), forwardSpeed or rightSpeed (signed cm/s); default speed for a Blend Space 1D, direction and speed for a Blend Space. The axes are set to hold every sample: speed from 0 to the top speed rounded up to 50, signed speeds symmetric, direction -180 to 180 with wrapping input. A clip within 10 degrees of backward takes both direction edges, an idle (under 10 cm/s) takes every direction used, at speed 0, and a position another clip or a kept sample already holds is refused (refused in that clip's row). The listed clips replace the samples, or with keepSamples join them, in one undo step, saved unless save is false; dryRun answers the same and changes nothing. Refused, changing nothing: BLENDSPACE_NOT_FOUND, ANIMATION_NOT_FOUND, ANIMATION_INCOMPATIBLE (another skeleton, or an additive type the blend space or the other clips do not share), EMPTY_ANIMATION, BONE_NOT_FOUND (a bone named in feet), INVALID_ARGUMENT (an Aim Offset, an unknown axis, axes that do not fit the blend space).",
         "whenToUse": [
@@ -688,7 +689,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "0fbbb63f3d7d5c04cb3954e16963ca6ccd5de09cb308fad7decd05d537e533c9",
-        "content": "d2b8bd5a9c42fce757f04d2f7b21c126ffeb6cec71ebb1bb33ffacec5193b1c5"
+        "content": "d3b30445740c951cea477931bcc1d00ac964c7bdbed2dcf8ec521ab3a541cb7c"
       }
     },
     {
@@ -14795,6 +14796,7 @@
           "coin",
           "collect coins",
           "item pickup",
+          "pick up a key",
           "sprint",
           "hold shift to sprint",
           "sprint key",
@@ -14843,6 +14845,7 @@
           "lift",
           "platform that moves back and forth",
           "platform that moves up and down",
+          "move an actor over time",
           "player controls",
           "wasd movement",
           "move with wasd",
@@ -15638,7 +15641,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "9bff184328c255a15ce476992b13f501f4fa6647710f8229beb7d1f8f9ad80e3",
-        "content": "bbf40dfbe8e2014a437e75c24ad8baea7b514a8b61d8b5c576ed62b6af7a719b"
+        "content": "d2097b8a743c24fd7471a8d359a787c8b2cc6160d3cc4b6affcd00991e567a4e"
       }
     },
     {
@@ -18273,6 +18276,7 @@
           "localization key",
           "handle button click",
           "call function on button click",
+          "button click opens a level",
           "bind health bar",
           "localize text"
         ],
@@ -18586,7 +18590,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "99f325bdc6d6ac38cfc96a501fc1a8df9de9a91aa6378eb76c7ba3938c9f7352",
-        "content": "73230ed058cd0768642dde362854dea1aae892e8733c7858e915b721c68f2254"
+        "content": "7278d62e8c158394e59a2ab5560e55c41e2a119918b87ed881d3be90f5db825d"
       }
     },
     {
@@ -20154,6 +20158,7 @@
           "wire pins",
           "print string",
           "print to screen",
+          "print a message",
           "pin default",
           "node property",
           "construction script",
@@ -21063,7 +21068,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "6f24f58d25fbdceb477ce3c41b65402b8ab690265a24b0b09e215b26cc470a98",
-        "content": "de7a783ccf526a1acd6002914e264f0e85006e2c2dc53d5dbea57b26d57dc6bc"
+        "content": "e93c54982a86dcdb0e4545dc41ba593b70379dcd8d9dc182805b67b9e39d0aae"
       }
     },
     {
@@ -32049,7 +32054,8 @@
           "terrain",
           "new landscape",
           "heightfield",
-          "add a landscape"
+          "add a landscape",
+          "make a landscape"
         ],
         "summary": "Create a new landscape in the world (its current level), or a grass type for one, chosen by kind. landscape spawns a flat Landscape actor labelled name (or landscapeName; an actor already under it is refused, NAME_TAKEN), its corner at location: componentCount {x, y} components (default 8 x 8), or the fewest that cover sizeX and sizeY (vertices like the editor Overall Resolution, or quads). Each component holds sectionsPerComponent (1 or 2) squared sections of quadsPerSection quads (7, 15, 31, 63 by default, 127 or 255). materialPath goes on it (default the engine grid material; one that does not load is refused, ASSET_NOT_FOUND). builtComponents, resolutionX/resolutionY and extentX/extentY (half the built size; a quad is 100 units) are measured from what was built, a build that makes no components fails (LANDSCAPE_BUILD_FAILED), and the level is left unsaved. grass_type saves a landscape grass type asset named name in path (default /Game/Landscape) that grows meshPath at density 1 per 10 square metres, scaled 0.8 to 1.2, randomly turned and aligned to the surface; a grass type already there is kept unchanged (alreadyExists) and another asset there is refused (ASSET_ALREADY_EXISTS).",
         "whenToUse": [
@@ -32292,7 +32298,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "c585a1300c02ae959c5c7e7210855fdb01e77b209d8f471024edcd0e91d1c8f2",
-        "content": "264c378b21fa224cfaf03ebe4b545a3c87c1bdc7db860270a3dd20eb459d69a5"
+        "content": "f2c873167c22458e1c182d7996e036c8723f9d5ab72dda40cd313d6048a39e34"
       }
     },
     {
@@ -34580,7 +34586,8 @@
           "landscape layer",
           "import heightmap",
           "landscape lod",
-          "landscape splines"
+          "landscape splines",
+          "paint a dirt path"
         ],
         "summary": "Edit a landscape (landscapeName or landscapePath, else the first in the level), chosen by edit. paint_landscape paints a layer over a brush disc, a vertex region or the whole landscape, and paint_landscape_layer at one weight over a region; import_heightmap writes a raw 16-bit heightmap into its heights. Those three go into the edit layer being edited (else the first), are one undo step and are merged before the reply, so the drawn landscape and its collision show them. configure_landscape_lod sets LOD properties by name and reads them back; configure_landscape_material assigns its material; configure_landscape_splines replaces its splines with one through points that raises and lowers the ground to it and can paint a layer, through the landscape's Splines edit layer (added when missing; terrainShaped and terrainNote say whether it did and why not); generate_lods gives static meshes simplified LODs.",
         "whenToUse": [
@@ -35043,7 +35050,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "8cfd07284a58a9f9054422f8a6e9d2dea22e00792bfb661cffb5ff1b4e857021",
-        "content": "17c36bf427739d857efd795fea1c0950af9c4ac667905c4cf70f8948c8c829b7"
+        "content": "007095d0b7a4604e7909e44c9bd656247d6b0da99b2e6b55875ca77fdba32eaa"
       }
     },
     {
@@ -61867,7 +61874,9 @@
           "hearing config",
           "damage sense",
           "perception team",
-          "sight range"
+          "sight range",
+          "enemy sees the player",
+          "enemy hears the player"
         ],
         "summary": "Set up AI perception on an AI controller or pawn Blueprint, chosen by setting, each saved: setup adds the component and several senses at once, add_component only the component (kept when present), sight, hearing and damage tune one sense and keep what is not sent, team stores a team id variable (the engine team itself needs C++), controller is setup for an AIController path. An actor with no team is neutral, so a sense must detect neutrals to notice the player.",
         "whenToUse": [
@@ -62229,7 +62238,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "b5ac626c3f017c63df45d25aa412705e5d52f083c6e81a1608a7ed1767e67221",
-        "content": "ef0ece5f9703a2c8bb9c030e39934ab8dfe53877e2dab757eef2dc5227be93cb"
+        "content": "792ed33daee4c4facf2f19f3a5baf1fab2f0ac73ceca9596d69cfca182c62a0a"
       }
     },
     {
@@ -71684,7 +71693,8 @@
           "particle system",
           "vfx",
           "particle effect",
-          "new niagara system"
+          "new niagara system",
+          "spawn sparks"
         ],
         "summary": "Create an effect: a Niagara system or emitter, a ribbon, particle trail, impact or environment effect, volumetric fog, or spawn a preset particle/niagara effect.",
         "whenToUse": [
@@ -72024,7 +72034,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "332be23fa2be58488ecf91463343001eb63f4bcb2731c89022912790fc94502c",
-        "content": "f37de94c1db1004016953dc566d38956752d592cc7d57e297f38da587beac39f"
+        "content": "0f3042e6eb532694fceeb4d258f8d55aa85409815ccea0e9e589c712c55733c9"
       }
     },
     {
@@ -93104,7 +93114,8 @@
           "join server",
           "lan server",
           "listen server",
-          "connect to server"
+          "connect to server",
+          "host a multiplayer game"
         ],
         "summary": "Host a LAN listen server (build the travel URL, optionally travel to it), or make a running Play-In-Editor instance join one.",
         "whenToUse": [
@@ -93288,7 +93299,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "8f69e4eac171a45247c075825137c39c7fe6319765b5a0f889069a4d376c4435",
-        "content": "272b4aaf847ae09680ed1ca7e81087609da68553be53254272ae128693f4b258"
+        "content": "6ba1742d395a1429e9150e28fd91527befc9218ae8f3a75c3ea2e7fde0d6e358"
       }
     },
     {
@@ -97811,6 +97822,9 @@
           "post process material",
           "material function",
           "material parameter collection",
+          "emissive glow",
+          "glowing material",
+          "shiny metal material",
           "new material",
           "make material",
           "material asset",
@@ -98074,7 +98088,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "ddb0f137f776b24373015bac1938e25ad09bd3ab03b7f86490acc94c1873ae5e",
-        "content": "051cb1ce0efb041e17cc9716f54df08059446efe9dda1faf8034cb6e46ff5aef"
+        "content": "1216a3c8dfb6998f4b53e9686c80681cbc01e4836f9bceed56903e282500e915"
       }
     },
     {
@@ -112529,7 +112543,8 @@
           "check for errors",
           "show errors",
           "see game messages",
-          "what did the game print"
+          "what did the game print",
+          "see the console output"
         ],
         "summary": "Read the newest editor log lines (kept since editor start), filtered by text, category or minimum severity, or read the build (UnrealBuildTool), Live Coding or previous-run log instead; returns the lines and a match count.",
         "whenToUse": [
@@ -112681,7 +112696,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "3c48a327260ec1f2462b2adb66c27682b96ab9d4f4a1a93b43b8d79f28351a71",
-        "content": "fcfd9708a5db0aac0b12cd3373d8308b9186d0c8fb77fe553f229fd7d6d5b533"
+        "content": "970e4b55c5f82f74b7e98e9abbc580929d7afcaafbb58c22cf1098a4bd3d10a5"
       }
     },
     {
@@ -113610,7 +113625,9 @@
           "set_project_setting",
           "set start level",
           "change default map",
-          "startup map"
+          "startup map",
+          "change project settings",
+          "change the game name"
         ],
         "summary": "Set one setting (section and key): applied to the live settings object and saved where the editor itself saves that class, the project Default<Config>.ini for a project setting, the user Saved config for a per-user one (EditorPerProjectUserSettings). configFile names the file written.",
         "whenToUse": [
@@ -113716,7 +113733,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "ebac35b79dda99a9b748e9df5cc12895f96a08f572cc0c883a5bff89225ea463",
-        "content": "f4d9bcc049f71738e024cad84334a09d389f7937f650949545fa596c4d7dec1d"
+        "content": "a7b85cccb05f3016b28c121764be89c8288b56b1e0acfd18eb42790318eee780"
       }
     },
     {

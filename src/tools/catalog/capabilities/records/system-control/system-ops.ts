@@ -260,7 +260,7 @@ export const SYSTEM_OPS_RECORDS: readonly CapabilityRecordSource[] = [
     action: 'read_log',
     domain: 'logs',
     family: 'logs',
-    topics: ['compile errors', 'build output', 'previous run', 'editor output', 'check for errors', 'show errors', 'see game messages', 'what did the game print'],
+    topics: ['compile errors', 'build output', 'previous run', 'editor output', 'check for errors', 'show errors', 'see game messages', 'what did the game print', 'see the console output'],
     summary: 'Read the newest editor log lines (kept since editor start), filtered by text, category or minimum severity, or read the build (UnrealBuildTool), Live Coding or previous-run log instead; returns the lines and a match count.',
     whenToUse: [
       'A one-shot historical log read is needed: Live Coding or compile results, PIE warnings such as Accessed None, or the output of a console command that only logs (au.DumpActiveSounds).',
@@ -496,7 +496,7 @@ export const SYSTEM_OPS_RECORDS: readonly CapabilityRecordSource[] = [
     domain: 'project',
     family: 'project',
     summary: 'Set one setting (section and key): applied to the live settings object and saved where the editor itself saves that class, the project Default<Config>.ini for a project setting, the user Saved config for a per-user one (EditorPerProjectUserSettings). configFile names the file written.',
-    topics: ['set start level', 'change default map', 'startup map'],
+    topics: ['set start level', 'change default map', 'startup map', 'change project settings', 'change the game name'],
     whenToUse: [
       'A single project setting value must be written.',
       'The level the game or the editor opens first must change: section GameMapsSettings, key GameDefaultMap (the game and a packaged build) or EditorStartupMap (the editor), value the level as /Game/Maps/L_Main.L_Main.',

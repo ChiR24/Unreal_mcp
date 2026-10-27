@@ -21,7 +21,7 @@ export const BUILD_ENVIRONMENT_FOLDS: readonly FoldSpec[] = [
   {
     primary: 'edit_landscape', selector: 'edit',
     summary: 'Edit a landscape (landscapeName or landscapePath, else the first in the level), chosen by edit. paint_landscape paints a layer over a brush disc, a vertex region or the whole landscape, and paint_landscape_layer at one weight over a region; import_heightmap writes a raw 16-bit heightmap into its heights. Those three go into the edit layer being edited (else the first), are one undo step and are merged before the reply, so the drawn landscape and its collision show them. configure_landscape_lod sets LOD properties by name and reads them back; configure_landscape_material assigns its material; configure_landscape_splines replaces its splines with one through points that raises and lowers the ground to it and can paint a layer, through the landscape\'s Splines edit layer (added when missing; terrainShaped and terrainNote say whether it did and why not); generate_lods gives static meshes simplified LODs.',
-    topics: ['paint landscape', 'landscape layer', 'import heightmap', 'landscape lod', 'landscape splines'],
+    topics: ['paint landscape', 'landscape layer', 'import heightmap', 'landscape lod', 'landscape splines', 'paint a dirt path'],
     members: byName(['paint_landscape', 'paint_landscape_layer', 'import_heightmap', 'configure_landscape_lod', 'configure_landscape_material', 'configure_landscape_splines', 'generate_lods']),
   },
   {
