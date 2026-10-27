@@ -24,10 +24,12 @@ const testCases = [
     { path: 'structuredContent.result.minTurnRadiusM', gte: 15, label: 'no corner under 15 m' },
     { path: 'structuredContent.result.switchbacks', gte: 1, label: 'it winds' },
     { path: 'structuredContent.result.groundGapCm', approximately: 12.5, tolerance: 12.5, label: 'the straight road between points stays within 25 cm of the ground' },
+    { path: 'structuredContent.result.maxLiftCm', gte: 10, label: 'points lifted at least 10 cm, more over a crest between two' },
     { path: 'structuredContent.result.points.0.x', approximately: at.x + 2000, tolerance: 1, label: 'it starts at from' },
     { path: 'structuredContent.result.points.0.y', approximately: at.y + 25000, tolerance: 1, label: 'it starts at from (y)' },
     { path: 'structuredContent.result.nextCall.action', equals: 'create_road_spline', label: 'ready to lay' },
     { path: 'structuredContent.result.landscapeSplineCall.params.landscapeName', equals: LANDSCAPE, label: 'or to shape the landscape' },
+    { path: 'structuredContent.result.landscapeSplineCall.params.width', equals: 300, label: 'a landscape spline takes half the road\'s width' },
   ] },
   { scenario: 'PLAN: straight across the flat at a slant, end to end', toolName: 'build_environment', arguments: { action: 'plan_road', from: { x: at.x + 5000, y: at.y + 5000 }, to: { x: at.x + 20000, y: at.y + 9000 } }, expected: 'success', assertions: [
     { path: 'structuredContent.result.points.1.x', approximately: at.x + 20000, tolerance: 1, label: 'it ends at to' },

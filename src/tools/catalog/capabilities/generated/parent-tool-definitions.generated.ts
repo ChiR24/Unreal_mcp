@@ -4363,6 +4363,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "number",
           "description": "Steepest grade on the points, in percent."
         },
+        "maxLiftCm": {
+          "type": "number",
+          "description": "The most a point is lifted above its ground, in cm: 10, more where the ground between two points rises above the straight road joining them."
+        },
         "maxLoweredCm": {
           "type": "number",
           "description": "Deepest cut, in cm."

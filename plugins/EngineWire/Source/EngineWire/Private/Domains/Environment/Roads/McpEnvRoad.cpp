@@ -5,22 +5,14 @@
 // named as ground; anything else solid is an obstacle, nothing at all a gap), the route is found and straightened by
 // McpRoadPlan, and the reply hands it to create_road_spline and configure_landscape_splines as ready calls.
 
-#include "Domains/Environment/Roads/McpRoadPlan.h"
+#include "Domains/Environment/Roads/McpRoadGround.h"
 
 #include "Dom/JsonObject.h"
-#include "Engine/EngineTypes.h"
 #include "Engine/World.h"
 #include "EngineWireSubsystem.h"
-#if ENGINE_MAJOR_VERSION > 5 || (ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 1)
-#include "Engine/HitResult.h"  // 5.0 declares FHitResult in EngineTypes.h
-#endif
-#if __has_include("Engine/OverlapResult.h")
-#include "Engine/OverlapResult.h"  // EngineTypes.h held FOverlapResult before
-#endif
 #include "Foundation/BridgeHelpers/McpHelpers.h"
 #include "Foundation/HandlerUtils/McpHandlerUtils.h"
 #include "Foundation/HandlerUtils/McpHandlerUtilsActionsPaths.h"
-#include "GameFramework/Volume.h"
 #include "HAL/PlatformTime.h"
 #include "Landscape.h"
 #include "LandscapeProxy.h"
@@ -29,68 +21,7 @@ namespace McpRoadPlanning
 {
 namespace
 {
-enum class ERoadGround : uint8
-{
-    Gap,
-    Ground,
-    Obstacle,
-};
-
-bool RoadIsGround(const AActor* Actor, const TSet<const AActor*>& Ground)
-{
-    // In a World Partition level the hits land on streaming proxies: a named landscape counts through them.
-    const ALandscapeProxy* Proxy = Cast<ALandscapeProxy>(Actor);
-    return Ground.Contains(Actor) || (Proxy && (Ground.Num() == 0 || Ground.Contains(Proxy->GetLandscapeActor())));
-}
-
-// Solid as the placement checks judge support: volumes and anything that does not block WorldStatic are passed through.
-bool RoadIsSolid(const AActor* Actor, const UPrimitiveComponent* Part)
-{
-    return Actor && Part && !Actor->IsA<AVolume>() && Part->GetCollisionResponseToChannel(ECC_WorldStatic) == ECR_Block;
-}
-
-// The first solid thing under a column. On ground, with HalfCell given, a box over the whole cell (turned as the grid is)
-// from 30 cm above the ground to a vehicle's height finds anything else standing on it: one trace at the cell's middle
-// let a 4 m wall between two cell centres through.
-ERoadGround RoadProbe(UWorld* World, const FVector2D& At, const TSet<const AActor*>& Ground, double& OutZ, AActor*& OutHit,
-                      double HalfCell = 0.0, const FQuat& Facing = FQuat::Identity)
-{
-    FCollisionObjectQueryParams Solids;
-    Solids.AddObjectTypesToQuery(ECC_WorldStatic);
-    Solids.AddObjectTypesToQuery(ECC_WorldDynamic);
-    Solids.AddObjectTypesToQuery(ECC_PhysicsBody);
-    const FCollisionQueryParams Params(SCENE_QUERY_STAT(McpPlanRoad), false);
-    TArray<FHitResult> Hits;
-    World->LineTraceMultiByObjectType(Hits, FVector(At, 500000.0), FVector(At, -500000.0), Solids, Params);
-    for (const FHitResult& Hit : Hits)
-    {
-        if (!RoadIsSolid(Hit.GetActor(), Hit.GetComponent()))
-        {
-            continue;
-        }
-        OutZ = Hit.ImpactPoint.Z;
-        OutHit = Hit.GetActor();
-        if (!RoadIsGround(OutHit, Ground))
-        {
-            return ERoadGround::Obstacle;
-        }
-        TArray<FOverlapResult> Overlaps;
-        if (HalfCell > 0.0)
-        {
-            World->OverlapMultiByObjectType(Overlaps, FVector(At, OutZ + 180.0), Facing, Solids, FCollisionShape::MakeBox(FVector(HalfCell, HalfCell, 150.0)), Params);
-        }
-        for (const FOverlapResult& Overlap : Overlaps)
-        {
-            if (RoadIsSolid(Overlap.GetActor(), Overlap.GetComponent()) && !RoadIsGround(Overlap.GetActor(), Ground))
-            {
-                OutHit = Overlap.GetActor();
-                return ERoadGround::Obstacle;
-            }
-        }
-        return ERoadGround::Ground;
-    }
-    return ERoadGround::Gap;
-}
+using McpRoadGround::ERoadGround;
 
 bool RoadReadPoint(const TSharedPtr<FJsonObject>& Payload, const TCHAR* Field, FVector2D& Out)
 {
@@ -151,13 +82,13 @@ bool HandlePlanRoad(UEngineWireSubsystem& Bridge, const FString& RequestId, cons
     AActor* FromHit = nullptr;
     AActor* ToHit = nullptr;
     // With no groundActors, a road from something other than a landscape runs on that something (a floor mesh).
-    if (Ground.Num() == 0 && RoadProbe(World, From, Ground, FromZ, FromHit) == ERoadGround::Obstacle)
+    if (Ground.Num() == 0 && McpRoadGround::Probe(World, From, Ground, FromZ, FromHit) == ERoadGround::Obstacle)
     {
         Ground.Add(FromHit);
     }
     // The ends are judged by their own points, not their cells: a road may end at a door, its cell touching the wall.
-    const ERoadGround FromKind = RoadProbe(World, From, Ground, FromZ, FromHit);
-    const ERoadGround ToKind = RoadProbe(World, To, Ground, ToZ, ToHit);
+    const ERoadGround FromKind = McpRoadGround::Probe(World, From, Ground, FromZ, FromHit);
+    const ERoadGround ToKind = McpRoadGround::Probe(World, To, Ground, ToZ, ToHit);
     if (FromKind != ERoadGround::Ground || ToKind != ERoadGround::Ground)
     {
         Bridge.SendAutomationError(Socket, RequestId, FromKind != ERoadGround::Ground ? RoadWhyBlocked(TEXT("from"), FromKind, FromHit) : RoadWhyBlocked(TEXT("to"), ToKind, ToHit),
@@ -199,7 +130,7 @@ bool HandlePlanRoad(UEngineWireSubsystem& Bridge, const FString& RequestId, cons
         for (int32 X = 0; X < Field.Width; ++X)
         {
             AActor* Hit = nullptr;
-            const ERoadGround Kind = RoadProbe(World, WorldAt(FIntPoint(X, Y)), Ground, Field.Heights[Y * Field.Width + X], Hit, Field.Cell / 2.0, Facing);
+            const ERoadGround Kind = McpRoadGround::Probe(World, WorldAt(FIntPoint(X, Y)), Ground, Field.Heights[Y * Field.Width + X], Hit, Field.Cell / 2.0, Facing);
             const bool bEnd = FIntPoint(X, Y) == FromCell || FIntPoint(X, Y) == ToCell;
             Field.Open[Y * Field.Width + X] = Kind == ERoadGround::Ground || bEnd ? 1 : 0;
             Landscape = Landscape ? Landscape : Kind == ERoadGround::Ground ? Cast<ALandscapeProxy>(Hit) : nullptr;
@@ -229,12 +160,20 @@ bool HandlePlanRoad(UEngineWireSubsystem& Bridge, const FString& RequestId, cons
     const TArray<FIntPoint> Route = McpRoadPlan::Smooth(Field, Lattice, MaxGrade, Radius);
     const McpRoadPlan::FMeasure Laid = McpRoadPlan::Measure(Field, Route);
 
+    // Each point lifted above its ground so the road laid straight between them clears it (McpRoadGround::Lift), and the
+    // grade taken on the lifted points too: the steeper of the ground under the road and the road itself.
+    const TArray<double> Lift = McpRoadGround::Lift(World, Field, Route, WorldAt, Ground, MaxGrade);
     TArray<TSharedPtr<FJsonValue>> Points, SplinePoints;
-    for (const FIntPoint& Point : Route)
+    double MaxLift = 0.0, Grade = Laid.Grade;
+    FVector Previous = FVector::ZeroVector;
+    for (int32 Index = 0; Index < Route.Num(); ++Index)
     {
-        const FVector2D Flat = WorldAt(Point);
-        const double Z = Field.Heights[Point.Y * Field.Width + Point.X] + 10.0;
-        const TSharedPtr<FJsonObject> At = McpHandlerUtils::VectorToJson(FVector(RoadRound(Flat.X, 1.0), RoadRound(Flat.Y, 1.0), RoadRound(Z, 1.0)));
+        const FVector2D Flat = WorldAt(Route[Index]);
+        const FVector Point(Flat, Field.Heights[Route[Index].Y * Field.Width + Route[Index].X] + Lift[Index]);
+        Grade = Index > 0 ? FMath::Max(Grade, FMath::Abs(Point.Z - Previous.Z) / FVector2D::Distance(Flat, FVector2D(Previous))) : Grade;
+        Previous = Point;
+        MaxLift = FMath::Max(MaxLift, Lift[Index]);
+        const TSharedPtr<FJsonObject> At = McpHandlerUtils::VectorToJson(FVector(RoadRound(Point.X, 1.0), RoadRound(Point.Y, 1.0), RoadRound(Point.Z, 1.0)));
         Points.Add(MakeShared<FJsonValueObject>(At));
         const TSharedPtr<FJsonObject> Spline = MakeShared<FJsonObject>();
         Spline->SetObjectField(TEXT("position"), At);
@@ -244,13 +183,14 @@ bool HandlePlanRoad(UEngineWireSubsystem& Bridge, const FString& RequestId, cons
     Result->SetArrayField(TEXT("points"), Points);
     Result->SetNumberField(TEXT("lengthM"), RoadRound(Laid.LengthCm / 100.0, 10.0));
     Result->SetNumberField(TEXT("climbM"), RoadRound(Laid.ClimbCm / 100.0, 10.0));
-    Result->SetNumberField(TEXT("maxGradePercent"), RoadRound(Laid.Grade * 100.0, 10.0));
+    Result->SetNumberField(TEXT("maxGradePercent"), RoadRound(Grade * 100.0, 10.0));
     if (Laid.MinRadiusCm < TNumericLimits<double>::Max())
     {
         Result->SetNumberField(TEXT("minTurnRadiusM"), RoadRound(Laid.MinRadiusCm / 100.0, 10.0));
     }
     Result->SetNumberField(TEXT("switchbacks"), Laid.Switchbacks);
     Result->SetNumberField(TEXT("groundGapCm"), RoadRound(Laid.GapCm, 1.0));
+    Result->SetNumberField(TEXT("maxLiftCm"), RoadRound(MaxLift, 1.0));
     Result->SetNumberField(TEXT("cellCm"), RoadRound(Field.Cell, 1.0));
     Result->SetNumberField(TEXT("statesSearched"), Searched);
     Result->SetNumberField(TEXT("seconds"), RoadRound(FPlatformTime::Seconds() - Start, 100.0));
@@ -266,12 +206,14 @@ bool HandlePlanRoad(UEngineWireSubsystem& Bridge, const FString& RequestId, cons
         const AActor* Owner = Landscape->GetLandscapeActor() ? static_cast<const AActor*>(Landscape->GetLandscapeActor()) : Landscape;
         Shaped->SetStringField(TEXT("landscapeName"), Owner->GetActorLabel());
         Shaped->SetArrayField(TEXT("points"), SplinePoints);
-        Shaped->SetNumberField(TEXT("width"), Width);
+        // A landscape spline's width is its half-width (ULandscapeSplineControlPoint::Width): the full width made a band twice
+        // as wide as the road.
+        Shaped->SetNumberField(TEXT("width"), Width / 2.0);
         Result->SetObjectField(TEXT("landscapeSplineCall"), RoadCall(TEXT("configure_landscape_splines"), Shaped));
     }
     Bridge.SendAutomationResponse(Socket, RequestId, true,
         FString::Printf(TEXT("A road of %.0f m climbing %.1f m, no grade over %.1f%%, %d switchback(s), through %d point(s). nextCall lays it as a road slab%s."),
-                        Laid.LengthCm / 100.0, Laid.ClimbCm / 100.0, Laid.Grade * 100.0, Laid.Switchbacks, Route.Num(),
+                        Laid.LengthCm / 100.0, Laid.ClimbCm / 100.0, Grade * 100.0, Laid.Switchbacks, Route.Num(),
                         Landscape ? TEXT("; landscapeSplineCall makes it a landscape spline") : TEXT("")), Result);
     return true;
 }

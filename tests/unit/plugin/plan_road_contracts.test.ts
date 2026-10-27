@@ -17,6 +17,7 @@ describe('plan_road', () => {
   const plan = read('McpRoadPlan.cpp');
   const smooth = read('McpRoadSmooth.cpp');
   const handler = read('McpEnvRoad.cpp');
+  const ground = read('McpRoadGround.cpp');
 
   // One heading notch between one-cell edges turns at 2.12 cells: finer cells than 0.48 x the radius could not turn, and
   // a cell 3% larger could no longer climb a hill at the limit. Ends snapped to cell centres began and ended the road up to
@@ -54,25 +55,35 @@ describe('plan_road', () => {
   // One trace at each cell's middle let a 4 m wall between two cell centres through; a cell box at the ends would refuse
   // a road ending at a door.
   it('finds anything standing anywhere in a cell, and judges the two ends by their own points', () => {
-    expect(handler).toContain('World->OverlapMultiByObjectType(Overlaps, FVector(At, OutZ + 180.0), Facing, Solids, FCollisionShape::MakeBox(FVector(HalfCell, HalfCell, 150.0)), Params);');
-    expect(handler).toContain('RoadProbe(World, WorldAt(FIntPoint(X, Y)), Ground, Field.Heights[Y * Field.Width + X], Hit, Field.Cell / 2.0, Facing);');
-    expect(handler).toContain('const ERoadGround FromKind = RoadProbe(World, From, Ground, FromZ, FromHit);');
+    expect(ground).toContain('World->OverlapMultiByObjectType(Overlaps, FVector(At, OutZ + 180.0), Facing, Solids, FCollisionShape::MakeBox(FVector(HalfCell, HalfCell, 150.0)), Params);');
+    expect(handler).toContain('McpRoadGround::Probe(World, WorldAt(FIntPoint(X, Y)), Ground, Field.Heights[Y * Field.Width + X], Hit, Field.Cell / 2.0, Facing);');
+    expect(handler).toContain('const ERoadGround FromKind = McpRoadGround::Probe(World, From, Ground, FromZ, FromHit);');
     expect(handler).toContain('Field.Open[Y * Field.Width + X] = Kind == ERoadGround::Ground || bEnd ? 1 : 0;');
   });
 
   // In a World Partition level the traces hit streaming proxies, not the landscape actor a caller names.
   it('counts a named landscape through its streaming proxies', () => {
-    expect(handler).toContain('Ground.Contains(Proxy->GetLandscapeActor())');
+    expect(ground).toContain('Ground.Contains(Proxy->GetLandscapeActor())');
   });
 
   it('reads ground as the placement checks judge support, and keeps obstacles half the width away except round the ends', () => {
-    expect(handler).toContain('return Actor && Part && !Actor->IsA<AVolume>() && Part->GetCollisionResponseToChannel(ECC_WorldStatic) == ECR_Block;');
+    expect(ground).toContain('return Actor && Part && !Actor->IsA<AVolume>() && Part->GetCollisionResponseToChannel(ECC_WorldStatic) == ECR_Block;');
     expect(handler).toContain('McpRoadPlan::Grow(Field, FMath::CeilToInt(Width / 2.0 / Field.Cell), {FromCell, ToCell});');
+  });
+
+  // A slab laid straight between two points sank 20 cm into a crest the plan's cells could not see; lifting one point more
+  // than its neighbour steepens the road between them.
+  it('lifts each point by the ground rising above the straight road to its neighbours, then keeps every stretch under the grade', () => {
+    expect(ground).toContain('const int32 Steps = FMath::Max(1, FMath::CeilToInt(FVector2D::Distance(A, B) / 100.0));');
+    expect(ground).toContain('Rise = FMath::Max(Rise, Z - FMath::Lerp(GroundA, GroundB, Along));');
+    expect(ground).toContain('Out[Climb > 0.0 ? Index : Index + 1] += Excess;');
+    expect(handler).toContain('const FVector Point(Flat, Field.Heights[Route[Index].Y * Field.Width + Route[Index].X] + Lift[Index]);');
   });
 
   it('hands the route to the road spline and the landscape spline as ready calls', () => {
     expect(handler).toContain('RoadCall(TEXT("create_road_spline"), Road)');
     expect(handler).toContain('RoadCall(TEXT("configure_landscape_splines"), Shaped)');
+    expect(handler).toContain('Shaped->SetNumberField(TEXT("width"), Width / 2.0);');
     expect(handler).toContain('Spline->SetObjectField(TEXT("position"), At);');
   });
 
