@@ -1,5 +1,5 @@
 {
-  "catalogRevision": "df21cbe47d9f1dbd",
+  "catalogRevision": "8baedf318cc69404",
   "recordCount": 453,
   "records": [
     {
@@ -41902,7 +41902,9 @@
           "nearby actors",
           "actors within radius",
           "actors around a location",
-          "count enemies"
+          "count enemies",
+          "measure distance between actors",
+          "actors near the player"
         ],
         "summary": "List actors in the current level with their label, class, location, rotation and scale, plus any propertyNames values, narrowed by name filter, tag, class or outliner folder; page on with offset. near (a world point) with radius is how to find what is near a point, nearest first, each with its distance. summary counts the level by class, tag and folder instead.",
         "whenToUse": [
@@ -42199,7 +42201,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "6e9d75f86e682ff04987647a57d7b51ace81a30d9800c2b9fe643eb66de6e19a",
-        "content": "e1a528092712550f4d224f3dd9195d09c45e76e9df4422c22791ed3b344fc914"
+        "content": "7aa5c11f2de2a47e08d27f1395042ea52eebd4e03d6c707e4b88a86f4560e338"
       }
     },
     {

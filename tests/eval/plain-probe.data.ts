@@ -765,4 +765,6 @@ export const PLAIN_PROBE: readonly PlainProbeCase[] = [
   { query: 'security camera', accepted: ['build_environment.create_capture_actor'] },
   { query: 'picture in picture', accepted: ['build_environment.create_capture_actor'] },
   { query: 'make the chair face the table', accepted: ['control_actor.arrange_by_relations'] },
+  { query: 'measure distance between actors', accepted: ['control_actor.list'] },
+  { query: 'actors near the player', accepted: ['control_actor.list'] },
 ];
