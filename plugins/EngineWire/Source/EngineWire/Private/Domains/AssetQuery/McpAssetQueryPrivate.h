@@ -33,6 +33,14 @@ bool HandleFindText(
     const TSharedPtr<FJsonObject>& Payload,
     TSharedPtr<FMcpBridgeWebSocket> Socket);
 
+// Retrieval by content (Retrieval/): a page of thumbnails to look at, captions written after looking, and the search.
+bool HandleThumbnailSheet(UEngineWireSubsystem* Bridge, const FString& RequestId, const TSharedPtr<FJsonObject>& Payload,
+                          TSharedPtr<FMcpBridgeWebSocket> Socket);
+bool HandleCaptionAssets(UEngineWireSubsystem* Bridge, const FString& RequestId, const TSharedPtr<FJsonObject>& Payload,
+                         TSharedPtr<FMcpBridgeWebSocket> Socket);
+bool HandleFindAssetsLike(UEngineWireSubsystem* Bridge, const FString& RequestId, const TSharedPtr<FJsonObject>& Payload,
+                          TSharedPtr<FMcpBridgeWebSocket> Socket);
+
 // find_text reads the open level as one more asset under the searched paths: a search narrowed to /Game/UI read
 // every actor of a level elsewhere and buried its few real matches. includeLevel, when given, decides outright.
 inline bool FindTextIncludesLevel(const TSharedPtr<FJsonObject>& Payload, const TArray<FName>& Paths, const UWorld* World)

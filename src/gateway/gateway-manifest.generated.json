@@ -7337,6 +7337,9 @@
         "inspect_asset",
         "process_asset",
         "set_metadata",
+        "thumbnail_sheet",
+        "caption_assets",
+        "find_assets_like",
         "create_render_target",
         "export_mesh",
         "edit_material_instance",
@@ -7391,17 +7394,20 @@
         "blendType",
         "blueTexture",
         "brickRatio",
+        "captions",
         "caseSensitive",
         "centerX",
         "centerY",
         "channel",
         "checkoutFiles",
+        "class",
         "classNames",
         "clearExisting",
         "code",
         "collectionPath",
         "collisionType",
         "color",
+        "colour",
         "columnTypes",
         "combineMeshes",
         "compileOp",
@@ -7438,6 +7444,7 @@
         "filter",
         "filterMethod",
         "fixupRedirectors",
+        "folder",
         "folderName",
         "folderPath",
         "fontFamily",
@@ -7475,6 +7482,7 @@
         "layers",
         "letterSpacing",
         "levels",
+        "likeAsset",
         "limit",
         "lineWidth",
         "listingId",
@@ -7582,6 +7590,7 @@
         "seller",
         "setting",
         "shadingModel",
+        "sizeCm",
         "skeletonPath",
         "sourceControlOp",
         "sourceId",
@@ -7616,6 +7625,7 @@
         "type",
         "typeface",
         "uTiling",
+        "uncaptionedOnly",
         "upstream",
         "userEmail",
         "userName",
@@ -7773,6 +7783,39 @@
             "type": "number",
             "description": "Brick width to height ratio (default 2)."
           },
+          "captions": {
+            "type": "array",
+            "minItems": 1,
+            "maxItems": 64,
+            "description": "The captions to keep (1-64).",
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "assetPath"
+              ],
+              "properties": {
+                "assetPath": {
+                  "type": "string",
+                  "description": "The asset, by package path (/Game/Rocks/SM_Rock_01)."
+                },
+                "caption": {
+                  "type": "string",
+                  "maxLength": 300,
+                  "description": "What it shows, in plain words (a mossy grey boulder, flat on top); empty with no tags removes the caption."
+                },
+                "tags": {
+                  "type": "array",
+                  "maxItems": 12,
+                  "items": {
+                    "type": "string",
+                    "maxLength": 40
+                  },
+                  "description": "Words or short phrases to find it by (rock, moss, cliff edge)."
+                }
+              }
+            }
+          },
           "caseSensitive": {
             "type": "boolean",
             "description": "Match letter case (default false)."
@@ -7792,6 +7835,10 @@
           "checkoutFiles": {
             "type": "boolean",
             "description": "Check out files in source control."
+          },
+          "class": {
+            "type": "string",
+            "description": "Only assets of this class by its name (default: likeAsset's class, else every class)."
           },
           "classNames": {
             "type": "array",
@@ -7825,6 +7872,10 @@
           },
           "color": {
             "description": "Text colour (default white) as {r, g, b, a} or [r, g, b, a] in 0-1."
+          },
+          "colour": {
+            "type": "string",
+            "description": "A colour the asset should mostly be: #RRGGBB or red, orange, yellow, green, cyan, blue, purple, pink, brown, black, white, grey."
           },
           "columnTypes": {
             "type": "array",
@@ -8054,6 +8105,10 @@
             "type": "boolean",
             "description": "Default true. After a delete that removed something, resolve the redirectors that already exist in the folders the assets were deleted from, subfolders included: their referencers are re-pointed and re-saved, then the redirectors nothing points at any more are removed. Deleting creates no redirectors, so this only cleans older ones."
           },
+          "folder": {
+            "type": "string",
+            "description": "Folder to look in, recursively (default /Game)."
+          },
           "folderName": {
             "type": "string",
             "description": "Destination folder name under /Game/Megascans. Required when synthesizing from assetPaths."
@@ -8280,6 +8335,10 @@
             "type": "number",
             "description": "Number of noise octaves (levels) combined."
           },
+          "likeAsset": {
+            "type": "string",
+            "description": "An example asset, by package path: assets like it are found (its own pack first, then by look and size)."
+          },
           "limit": {
             "oneOf": [
               {
@@ -8291,12 +8350,24 @@
               {
                 "type": "number",
                 "minimum": 1,
+                "maximum": 16,
+                "description": "Assets on the page (1-16, default 12)."
+              },
+              {
+                "type": "number",
+                "minimum": 1,
+                "maximum": 50,
+                "description": "Rows returned (1-50, default 10)."
+              },
+              {
+                "type": "number",
+                "minimum": 1,
                 "maximum": 500,
                 "default": 50,
                 "description": "Page size (1-500, default 50)."
               }
             ],
-            "description": "Maximum rows to return, clamped plugin-side."
+            "description": "Assets on the page (1-16, default 12)."
           },
           "lineWidth": {
             "type": "number",
@@ -8576,7 +8647,21 @@
             "description": "Noise octaves, 1-16 (default 4)."
           },
           "offset": {
-            "type": "number",
+            "oneOf": [
+              {
+                "type": "number",
+                "description": "Brick row offset, 0-1 (default 0.5)."
+              },
+              {
+                "type": "number",
+                "description": "Zero-based offset into the full result set."
+              },
+              {
+                "type": "number",
+                "minimum": 0,
+                "description": "How many assets of the list to skip (default 0): the previous reply's nextOffset."
+              }
+            ],
             "description": "Brick row offset, 0-1 (default 0.5)."
           },
           "opacity": {
@@ -9000,6 +9085,11 @@
             "type": "string",
             "description": "Shading model, such as DefaultLit, Unlit, Subsurface, ClearCoat or TwoSidedFoliage. The Details panel label and the MSM_ name work too."
           },
+          "sizeCm": {
+            "type": "number",
+            "minimum": 1,
+            "description": "About how big, in cm (the largest of its three dimensions; meshes only)."
+          },
           "skeletonPath": {
             "type": "string",
             "description": "Existing skeleton, e.g. /Game/Chars/SK_Hero_Skeleton. Alone it imports the FBX's animation take ALONE against it (implies importAnimations); with importMesh it binds the imported skeletal mesh to it instead, so the mesh shares that skeleton's animations."
@@ -9146,6 +9236,10 @@
             "type": "number",
             "description": "U tiling factor (default 1)."
           },
+          "uncaptionedOnly": {
+            "type": "boolean",
+            "description": "Only assets with no caption yet (default true); false shows every asset."
+          },
           "upstream": {
             "type": "boolean",
             "description": "Walk every upstream producer, overriding direction and depth."
@@ -9241,6 +9335,9 @@
               "inspect_asset",
               "process_asset",
               "set_metadata",
+              "thumbnail_sheet",
+              "caption_assets",
+              "find_assets_like",
               "create_render_target",
               "export_mesh",
               "edit_material_instance",

@@ -700,4 +700,7 @@ export const PLAIN_PROBE: readonly PlainProbeCase[] = [
   { query: 'cut between cameras', accepted: ['sequence.planner.auto_edit'] },
   { query: '180 degree rule', accepted: ['sequence.planner.auto_edit'] },
   { query: 'auto edit the cinematic', accepted: ['sequence.planner.auto_edit'] },
+  { query: 'find similar assets', accepted: ['asset.find_assets_like'] },
+  { query: 'caption assets', accepted: ['asset.caption_assets'] },
+  { query: 'asset thumbnails', accepted: ['asset.thumbnail_sheet'] },
 ];

@@ -585,6 +585,7 @@ export const CAPABILITY_COST_INDEX: Readonly<Record<string, string>> = {
   "manage_asset::bulk_delete": "long-running|high",
   "manage_asset::bulk_rename": "long-running|high",
   "manage_asset::cancel_fab_import": "long-running|high",
+  "manage_asset::caption_assets": "interactive|medium",
   "manage_asset::channel_extract": "long-running|high",
   "manage_asset::channel_pack": "long-running|high",
   "manage_asset::clear_data_table_rows": "instant|low",
@@ -638,6 +639,7 @@ export const CAPABILITY_COST_INDEX: Readonly<Record<string, string>> = {
   "manage_asset::exists": "interactive|medium",
   "manage_asset::export_mesh": "interactive|medium",
   "manage_asset::export_struct": "interactive|medium",
+  "manage_asset::find_assets_like": "interactive|medium",
   "manage_asset::find_by_tag": "interactive|medium",
   "manage_asset::find_node": "instant|low",
   "manage_asset::find_text": "interactive|medium",
@@ -746,6 +748,7 @@ export const CAPABILITY_COST_INDEX: Readonly<Record<string, string>> = {
   "manage_asset::source_control_init": "long-running|high",
   "manage_asset::source_control_submit": "long-running|high",
   "manage_asset::split_enum": "interactive|medium",
+  "manage_asset::thumbnail_sheet": "interactive|medium",
   "manage_asset::update_custom_expression": "instant|low",
   "manage_asset::update_data_table_row": "interactive|medium",
   "manage_asset::use_material_function": "instant|low",
@@ -1637,4 +1640,4 @@ export const CAPABILITY_COST_INDEX: Readonly<Record<string, string>> = {
   "system_control::write_snapshot": "interactive|medium"
 };
 
-export const CAPABILITY_COST_INDEX_KEY_COUNT = 1624;
+export const CAPABILITY_COST_INDEX_KEY_COUNT = 1627;

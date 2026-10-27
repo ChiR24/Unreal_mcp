@@ -142,6 +142,12 @@ bool UEngineWireSubsystem::HandleAssetAction(
     return McpAssetQueryHandlers::HandleSearchAssets(this, RequestId, Payload, RequestingSocket);
   if (Lower == TEXT("find_text"))
     return McpAssetQueryHandlers::HandleFindText(this, RequestId, Payload, RequestingSocket);
+  if (Lower == TEXT("thumbnail_sheet"))
+    return McpAssetQueryHandlers::HandleThumbnailSheet(this, RequestId, Payload, RequestingSocket);
+  if (Lower == TEXT("caption_assets"))
+    return McpAssetQueryHandlers::HandleCaptionAssets(this, RequestId, Payload, RequestingSocket);
+  if (Lower == TEXT("find_assets_like"))
+    return McpAssetQueryHandlers::HandleFindAssetsLike(this, RequestId, Payload, RequestingSocket);
 
   // Bulk Operations
   if (Lower == TEXT("fixup_redirectors"))

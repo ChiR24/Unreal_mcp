@@ -10,7 +10,7 @@
  * pure-ASCII JSON payload carrying the COMPLETE CapabilityRecord for native
  * discovery (aliases, legacyIds, discovery, schemas.input/output, examples,
  * availability, behavior/policy, normalization, deprecation, hashes).
- * 23 shards, 441 records total.
+ * 23 shards, 444 records total.
  *
  * Chunks are bounded so no single string literal approaches the MSVC 65,535-byte
  * ceiling; concatenating a shard's chunks in order yields its exact JSON.
@@ -25,7 +25,7 @@ namespace Detail
 	extern const TCHAR* const MCP_CAP_SHARD_CONTROL_EDITOR_CHUNKS[];	// control_editor (26)
 	extern const TCHAR* const MCP_CAP_SHARD_INSPECT_CHUNKS[];	// inspect (26)
 	extern const TCHAR* const MCP_CAP_SHARD_MANAGE_AI_CHUNKS[];	// manage_ai (17)
-	extern const TCHAR* const MCP_CAP_SHARD_MANAGE_ASSET_CHUNKS[];	// manage_asset (47)
+	extern const TCHAR* const MCP_CAP_SHARD_MANAGE_ASSET_CHUNKS[];	// manage_asset (50)
 	extern const TCHAR* const MCP_CAP_SHARD_MANAGE_AUDIO_CHUNKS[];	// manage_audio (14)
 	extern const TCHAR* const MCP_CAP_SHARD_MANAGE_BLUEPRINT_CHUNKS[];	// manage_blueprint (37)
 	extern const TCHAR* const MCP_CAP_SHARD_MANAGE_CHARACTER_CHUNKS[];	// manage_character (10)
@@ -63,7 +63,7 @@ inline const FMcpCapabilityShard& At(int32 Index)
 		{ TEXT("control_editor"), Detail::MCP_CAP_SHARD_CONTROL_EDITOR_CHUNKS, 32, 26 },
 		{ TEXT("inspect"), Detail::MCP_CAP_SHARD_INSPECT_CHUNKS, 43, 26 },
 		{ TEXT("manage_ai"), Detail::MCP_CAP_SHARD_MANAGE_AI_CHUNKS, 33, 17 },
-		{ TEXT("manage_asset"), Detail::MCP_CAP_SHARD_MANAGE_ASSET_CHUNKS, 88, 47 },
+		{ TEXT("manage_asset"), Detail::MCP_CAP_SHARD_MANAGE_ASSET_CHUNKS, 91, 50 },
 		{ TEXT("manage_audio"), Detail::MCP_CAP_SHARD_MANAGE_AUDIO_CHUNKS, 27, 14 },
 		{ TEXT("manage_blueprint"), Detail::MCP_CAP_SHARD_MANAGE_BLUEPRINT_CHUNKS, 84, 37 },
 		{ TEXT("manage_character"), Detail::MCP_CAP_SHARD_MANAGE_CHARACTER_CHUNKS, 12, 10 },
@@ -85,7 +85,7 @@ inline const FMcpCapabilityShard& At(int32 Index)
 	return Table[Index];
 }
 
-inline int32 TotalRecordCount() { return 441; }
+inline int32 TotalRecordCount() { return 444; }
 
-inline const TCHAR* CatalogRevision() { return TEXT("1b831a5d7bd23cae"); }
+inline const TCHAR* CatalogRevision() { return TEXT("04e9021bc5015311"); }
 }

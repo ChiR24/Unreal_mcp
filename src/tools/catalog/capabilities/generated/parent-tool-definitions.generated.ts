@@ -10981,6 +10981,39 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "number",
           "description": "Brick width to height ratio (default 2)."
         },
+        "captions": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 64,
+          "description": "The captions to keep (1-64).",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "assetPath"
+            ],
+            "properties": {
+              "assetPath": {
+                "type": "string",
+                "description": "The asset, by package path (/Game/Rocks/SM_Rock_01)."
+              },
+              "caption": {
+                "type": "string",
+                "maxLength": 300,
+                "description": "What it shows, in plain words (a mossy grey boulder, flat on top); empty with no tags removes the caption."
+              },
+              "tags": {
+                "type": "array",
+                "maxItems": 12,
+                "items": {
+                  "type": "string",
+                  "maxLength": 40
+                },
+                "description": "Words or short phrases to find it by (rock, moss, cliff edge)."
+              }
+            }
+          }
+        },
         "caseSensitive": {
           "type": "boolean",
           "description": "Match letter case (default false)."
@@ -11000,6 +11033,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "checkoutFiles": {
           "type": "boolean",
           "description": "Check out files in source control."
+        },
+        "class": {
+          "type": "string",
+          "description": "Only assets of this class by its name (default: likeAsset's class, else every class)."
         },
         "classNames": {
           "type": "array",
@@ -11033,6 +11070,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "color": {
           "description": "Text colour (default white) as {r, g, b, a} or [r, g, b, a] in 0-1."
+        },
+        "colour": {
+          "type": "string",
+          "description": "A colour the asset should mostly be: #RRGGBB or red, orange, yellow, green, cyan, blue, purple, pink, brown, black, white, grey."
         },
         "columnTypes": {
           "type": "array",
@@ -11262,6 +11303,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "boolean",
           "description": "Default true. After a delete that removed something, resolve the redirectors that already exist in the folders the assets were deleted from, subfolders included: their referencers are re-pointed and re-saved, then the redirectors nothing points at any more are removed. Deleting creates no redirectors, so this only cleans older ones."
         },
+        "folder": {
+          "type": "string",
+          "description": "Folder to look in, recursively (default /Game)."
+        },
         "folderName": {
           "type": "string",
           "description": "Destination folder name under /Game/Megascans. Required when synthesizing from assetPaths."
@@ -11488,6 +11533,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "number",
           "description": "Number of noise octaves (levels) combined."
         },
+        "likeAsset": {
+          "type": "string",
+          "description": "An example asset, by package path: assets like it are found (its own pack first, then by look and size)."
+        },
         "limit": {
           "oneOf": [
             {
@@ -11499,12 +11548,24 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             {
               "type": "number",
               "minimum": 1,
+              "maximum": 16,
+              "description": "Assets on the page (1-16, default 12)."
+            },
+            {
+              "type": "number",
+              "minimum": 1,
+              "maximum": 50,
+              "description": "Rows returned (1-50, default 10)."
+            },
+            {
+              "type": "number",
+              "minimum": 1,
               "maximum": 500,
               "default": 50,
               "description": "Page size (1-500, default 50)."
             }
           ],
-          "description": "Maximum rows to return, clamped plugin-side."
+          "description": "Assets on the page (1-16, default 12)."
         },
         "lineWidth": {
           "type": "number",
@@ -11784,7 +11845,21 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "description": "Noise octaves, 1-16 (default 4)."
         },
         "offset": {
-          "type": "number",
+          "oneOf": [
+            {
+              "type": "number",
+              "description": "Brick row offset, 0-1 (default 0.5)."
+            },
+            {
+              "type": "number",
+              "description": "Zero-based offset into the full result set."
+            },
+            {
+              "type": "number",
+              "minimum": 0,
+              "description": "How many assets of the list to skip (default 0): the previous reply's nextOffset."
+            }
+          ],
           "description": "Brick row offset, 0-1 (default 0.5)."
         },
         "opacity": {
@@ -12208,6 +12283,11 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "string",
           "description": "Shading model, such as DefaultLit, Unlit, Subsurface, ClearCoat or TwoSidedFoliage. The Details panel label and the MSM_ name work too."
         },
+        "sizeCm": {
+          "type": "number",
+          "minimum": 1,
+          "description": "About how big, in cm (the largest of its three dimensions; meshes only)."
+        },
         "skeletonPath": {
           "type": "string",
           "description": "Existing skeleton, e.g. /Game/Chars/SK_Hero_Skeleton. Alone it imports the FBX's animation take ALONE against it (implies importAnimations); with importMesh it binds the imported skeletal mesh to it instead, so the mesh shares that skeleton's animations."
@@ -12354,6 +12434,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "number",
           "description": "U tiling factor (default 1)."
         },
+        "uncaptionedOnly": {
+          "type": "boolean",
+          "description": "Only assets with no caption yet (default true); false shows every asset."
+        },
         "upstream": {
           "type": "boolean",
           "description": "Walk every upstream producer, overriding direction and depth."
@@ -12449,6 +12533,9 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             "inspect_asset",
             "process_asset",
             "set_metadata",
+            "thumbnail_sheet",
+            "caption_assets",
+            "find_assets_like",
             "create_render_target",
             "export_mesh",
             "edit_material_instance",
@@ -12570,6 +12657,72 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "oneOf": [
             {
               "type": "array",
+              "description": "Best first.",
+              "items": {
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {
+                  "assetPath": {
+                    "type": "string",
+                    "description": "Its package path."
+                  },
+                  "class": {
+                    "type": "string",
+                    "description": "Its class."
+                  },
+                  "score": {
+                    "type": "number",
+                    "description": "Its fused score (the sum over criteria of 1 / (60 + place))."
+                  },
+                  "why": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    },
+                    "description": "Each criterion that ranked it with its place there: words, name (likeAsset's words), look, size (likeAsset's), colour, sizeCm."
+                  },
+                  "caption": {
+                    "type": "string",
+                    "description": "Its caption, when it has one."
+                  },
+                  "sizeCm": {
+                    "type": "array",
+                    "items": {
+                      "type": "number"
+                    },
+                    "description": "Its size as [x, y, z] in cm (meshes)."
+                  }
+                }
+              }
+            },
+            {
+              "type": "array",
+              "description": "The page, in tile order.",
+              "items": {
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {
+                  "number": {
+                    "type": "number",
+                    "description": "The number on its tile (its place in the whole list, from 1)."
+                  },
+                  "assetPath": {
+                    "type": "string",
+                    "description": "Its package path."
+                  },
+                  "class": {
+                    "type": "string",
+                    "description": "Its class."
+                  },
+                  "thumbnail": {
+                    "type": "boolean",
+                    "description": "False when the editor keeps no thumbnail for it (its tile is grey)."
+                  }
+                }
+              }
+            },
+            {
+              "type": "array",
               "items": {
                 "type": "object",
                 "x-unreal-reflection-boundary": true
@@ -12585,7 +12738,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
               "description": "Matched assets on this page."
             }
           ],
-          "description": "Indexed library entries, verbatim from uassetsData.json."
+          "description": "Best first."
         },
         "assetsSoFar": {
           "type": "number",
@@ -12638,6 +12791,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "cancelled": {
           "type": "boolean",
           "description": "True when the cancel was accepted."
+        },
+        "captioned": {
+          "type": "number",
+          "description": "Captions kept."
         },
         "category": {
           "type": "string",
@@ -12724,6 +12881,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             "x-unreal-reflection-boundary": true
           },
           "description": "Edges found, each with sourceNodeId, sourceOutputIndex, targetNodeId, targetInput, hop and direction. A targetNodeId of \"Main\" is the material output node."
+        },
+        "considered": {
+          "type": "number",
+          "description": "Assets looked at (those under folder of the class, with an index entry)."
         },
         "convexMesh": {
           "type": "boolean",
@@ -12936,6 +13097,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "string",
           "description": "Present when phase is failed: FAB_IMPORT_FAILED (Fab logged that it gave up), IMPORT_TIMED_OUT (nothing appeared before the ceiling), IMPORT_PARTIAL (still streaming at the ceiling; what landed is reported), CANCELLED (cancel_fab_import stopped it; whatever had landed is listed and left unsaved), or the add's own refusal code (COMPLETE_PROJECT, METAHUMAN_FORMAT, LARGE_SCENE_FILE, QUALITY_NOT_AVAILABLE, NO_IMPORTABLE_FORMAT, NO_DOWNLOAD_URL)."
         },
+        "file": {
+          "type": "string",
+          "description": "The caption file."
+        },
         "fileName": {
           "type": "string",
           "description": "The file Fab downloads (source formats only)."
@@ -13018,7 +13183,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "height": {
           "type": "number",
-          "description": "Texture height."
+          "description": "Picture height in pixels."
         },
         "identical": {
           "type": "boolean",
@@ -13155,6 +13320,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "matchCount": {
           "type": "number",
           "description": "Every match found; more than the matches returned when truncated."
+        },
+        "matched": {
+          "type": "number",
+          "description": "Assets any criterion ranked."
         },
         "matches": {
           "type": "array",
@@ -13396,6 +13565,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "string",
           "description": "Absolute path of the file written."
         },
+        "pending": {
+          "type": "number",
+          "description": "Assets not read into the index yet for want of time: another call includes them."
+        },
         "phase": {
           "type": "string",
           "description": "queued when another import is running, else downloading right after Fab accepts. For alreadyRunning, the phase the operation was in."
@@ -13523,11 +13696,20 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "description": "Paths the engine left on disk although they were not referenced."
         },
         "removed": {
-          "type": "array",
-          "items": {
-            "type": "string"
-          },
-          "description": "The node ids deleted."
+          "oneOf": [
+            {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "description": "The node ids deleted."
+            },
+            {
+              "type": "number",
+              "description": "Captions taken away."
+            }
+          ],
+          "description": "Captions taken away."
         },
         "removedCount": {
           "type": "number",
@@ -13703,9 +13885,17 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "string",
           "description": "Listing title."
         },
+        "total": {
+          "type": "number",
+          "description": "Assets in the whole list (after uncaptionedOnly)."
+        },
         "totalBytes": {
           "type": "number",
           "description": "Expected total bytes."
+        },
+        "totalCaptions": {
+          "type": "number",
+          "description": "Captions in the project's caption file now."
         },
         "totalCount": {
           "type": "number",
@@ -13792,7 +13982,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "width": {
           "type": "number",
-          "description": "Texture width."
+          "description": "Picture width in pixels."
         },
         "wouldCreate": {
           "type": "number",

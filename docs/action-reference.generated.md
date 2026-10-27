@@ -4,7 +4,7 @@
 
 # Action reference
 
-Catalog revision: `1b831a5d7bd23cae`
+Catalog revision: `04e9021bc5015311`
 
 Both transports expose exactly ONE public MCP tool, `unreal`, with the four
 operations `search` / `describe` / `execute` / `configure`. The parent tools
@@ -13,7 +13,7 @@ by `tools/list` and a direct `tools/call` on one returns a
 `DIRECT_TOOL_CALL_REMOVED` receipt rather than executing
 (`src/server/gateway/direct-call-migration.ts`).
 
-The catalog declares 441 capabilities across
+The catalog declares 444 capabilities across
 23 internal parent tools.
 Every row is derived from the capability record that the gateway actually
 validates against, so `execute` cannot accept an action this table omits.
@@ -42,7 +42,7 @@ validates against, so `execute` cannot accept an action this table omits.
 | `control_editor` | 26 | 9 | 14 | 3 | editor |
 | `inspect` | 26 | 21 | 4 | 1 | inspect |
 | `manage_ai` | 17 | 3 | 14 | 0 | manage ai |
-| `manage_asset` | 47 | 10 | 32 | 5 | asset, datatable, enum, material, struct, texture |
+| `manage_asset` | 50 | 12 | 33 | 5 | asset, datatable, enum, material, struct, texture |
 | `manage_audio` | 14 | 3 | 11 | 0 | audio |
 | `manage_blueprint` | 37 | 10 | 20 | 7 | blueprint, widget |
 | `manage_character` | 10 | 2 | 8 | 0 | manage character |
@@ -62,7 +62,7 @@ validates against, so `execute` cannot accept an action this table omits.
 
 ## Capabilities requiring consent
 
-68 of 441 capabilities require consent.
+68 of 444 capabilities require consent.
 
 | Capability | Tool | Action | Effect | Consent |
 | --- | --- | --- | --- | --- |
@@ -171,12 +171,14 @@ validates against, so `execute` cannot accept an action this table omits.
 | `animation_physics.setup_retargeting` | `animation_physics` | `setup_retargeting` | write | write | none | `animation_physics.setup_retargeting` |
 | `animation_physics.skin_mesh_to_skeleton` | `animation_physics` | `skin_mesh_to_skeleton` | write | write | none | `animation_physics.skin_mesh_to_skeleton` |
 | `asset.bulk_delete` | `manage_asset` | `bulk_delete` | destructive | destructive | elevated | `manage_asset.bulk_delete` |
+| `asset.caption_assets` | `manage_asset` | `caption_assets` | write | write | none | `manage_asset.caption_assets` |
 | `asset.create_folder` | `manage_asset` | `create_folder` | write | write | explicit | `manage_asset.create_folder` |
 | `asset.create_render_target` | `manage_asset` | `manage_texture` | write | write | explicit | `manage_asset.create_render_target` |
 | `asset.delete` | `manage_asset` | `delete` | destructive | destructive | elevated | `manage_asset.delete` `manage_asset.delete_asset` `manage_asset.delete_assets` |
 | `asset.duplicate` | `manage_asset` | `duplicate` | write | write | explicit | `manage_asset.duplicate` `manage_asset.duplicate_asset` |
 | `asset.edit_material_instance` | `manage_asset` | `add_material_parameter` | write | write | explicit | `manage_asset.edit_material_instance` `manage_asset.add_material_parameter` `manage_asset.reset_instance_parameters` |
 | `asset.export_mesh` | `manage_asset` | `export_mesh` | read | read | none | `manage_asset.export_mesh` |
+| `asset.find_assets_like` | `manage_asset` | `find_assets_like` | read | read | none | `manage_asset.find_assets_like` |
 | `asset.import` | `manage_asset` | `import` | write | write | explicit | `manage_asset.import` |
 | `asset.import_marketplace_asset` | `manage_asset` | `add_fab_asset_to_project` | write | write | explicit | `manage_asset.import_marketplace_asset` `manage_asset.add_fab_asset_to_project` `manage_asset.cancel_fab_import` `manage_asset.download_fab_asset` `manage_asset.import_megascans_asset` |
 | `asset.inspect_asset` | `manage_asset` | `get_metadata` | read | read | none | `manage_asset.inspect_asset` `manage_asset.get_metadata` `manage_asset.get_dependencies` `manage_asset.get_asset_graph` `manage_asset.validate` `manage_asset.generate_report` `manage_asset.diff_asset` |
@@ -190,6 +192,7 @@ validates against, so `execute` cannot accept an action this table omits.
 | `asset.rename` | `manage_asset` | `rename` | write | write | explicit | `manage_asset.rename` `manage_asset.rename_asset` |
 | `asset.set_metadata` | `manage_asset` | `set_metadata` | write | write | explicit | `manage_asset.set_metadata` `manage_asset.set_tags` |
 | `asset.source_control` | `manage_asset` | `source_control_checkout` | write | write | explicit | `manage_asset.source_control` `manage_asset.source_control_checkout` `manage_asset.source_control_submit` `manage_asset.source_control_enable` `manage_asset.source_control_init` `manage_asset.source_control_commit_all` |
+| `asset.thumbnail_sheet` | `manage_asset` | `thumbnail_sheet` | read | read | none | `manage_asset.thumbnail_sheet` |
 | `blueprint.add_behaviour` | `manage_blueprint` | `add_health` | write | write | none | `manage_blueprint.add_behaviour` `manage_blueprint.add_health` `manage_blueprint.add_damage_on_touch` `manage_blueprint.add_pickup` `manage_blueprint.add_sprint` `manage_blueprint.add_shoot` `manage_blueprint.add_chase` `manage_blueprint.add_patrol` `manage_blueprint.add_turret` `manage_blueprint.add_stomp` `manage_blueprint.add_explosive` `manage_blueprint.add_moving_platform` `manage_blueprint.add_controls` `manage_blueprint.add_respawn` `manage_blueprint.add_goal` `manage_blueprint.add_launch_pad` `manage_blueprint.add_teleporter` `manage_blueprint.add_falling_platform` `manage_blueprint.add_countdown` `manage_blueprint.add_spawner` `manage_blueprint.add_dash` `manage_blueprint.add_health_hud` `manage_blueprint.add_counter_hud` `manage_blueprint.add_hint` `manage_blueprint.add_game_over` |
 | `blueprint.add_content_widget` | `manage_blueprint` | `add_text_block` | write | write | none | `manage_blueprint.add_content_widget` `manage_blueprint.add_text_block` `manage_blueprint.add_rich_text_block` `manage_blueprint.add_image` `manage_blueprint.add_button` `manage_blueprint.add_check_box` `manage_blueprint.add_combo_box` `manage_blueprint.add_slider` `manage_blueprint.add_spin_box` `manage_blueprint.add_progress_bar` `manage_blueprint.add_text_input` `manage_blueprint.add_list_view` `manage_blueprint.add_tree_view` `manage_blueprint.add_widget_component` |
 | `blueprint.add_function` | `manage_blueprint` | `add_function` | write | write | none | `manage_blueprint.add_function` `manage_blueprint.add_event` |
