@@ -84,7 +84,10 @@ void ApplyNumberSetting(
     }
 }
 
-// The denoisers this editor has, by the name each plugin registers its denoiser under (the module is the plugin's name).
+// The denoisers this editor has, by the name each plugin registers its denoiser under (the module is the plugin's name;
+// both are the same in 5.5-5.8).
+// ponytail: a loaded module, not proof its denoiser registered (NNEDenoiser and NFOR register only when their runtime and
+// settings allow, and the renderer offers no query by name in any 5.x); read the registry if that gap ever matters.
 TArray<FString> RenderLoadedDenoisers()
 {
     static const TCHAR* const Plugins[][2] = {{TEXT("NNEDenoiser"), TEXT("NNEDenoiser")}, {TEXT("OpenImageDenoise"), TEXT("OIDN")},
