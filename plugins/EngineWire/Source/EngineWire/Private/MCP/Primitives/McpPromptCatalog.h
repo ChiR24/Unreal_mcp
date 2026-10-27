@@ -1,6 +1,6 @@
 // McpPromptCatalog.h
-// The six workflow prompts served by prompts/list and prompts/get. Mirrors
-// src/server/mcp-primitives/prompts.ts; nothing here executes or stores state.
+// The prompts served by prompts/list and prompts/get: six step-by-step workflows and the per-domain playbooks
+// (McpPromptPlaybooks.cpp), each with the traps of its domain. Nothing here executes or stores state.
 #pragma once
 
 #include "CoreMinimal.h"
@@ -31,6 +31,11 @@ struct FMcpWorkflowPrompt
 	FString Description;
 	TArray<FMcpPromptArgumentSpec> Arguments;
 	TArray<FMcpPromptStep> Steps;
+	// What goes wrong in this domain and how to see it, rendered before the steps.
+	TArray<FString> Traps;
 };
 
 const TArray<FMcpWorkflowPrompt>& McpWorkflowPrompts();
+
+// The per-domain playbooks, appended to the workflows by McpWorkflowPrompts().
+TArray<FMcpWorkflowPrompt> McpPlaybookPrompts();

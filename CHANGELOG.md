@@ -29,6 +29,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Batches check every step first**; `build_graph`, `build_material_graph` and `add_widget_tree` take `dryRun`; **`run_script`** runs many calls with loops and conditions in one request, rolled back on a failure; **recipes** keep such a script in the project to run again with other values, and search lists the ones a request names.
 - **`run_map_check`**, **`fix_placement`**, **`describe_relations`**, **`arrange_by_relations`**, **`arrange_widgets`** (a menu or HUD laid out by relations, held at every screen size), **`playtest`** (a pawn walked to a goal in Play, judged with evidence), **`settle_physics`** (props dropped and kept where they come to rest), **`explore_level`** (a pawn explores the level: falls, traps, unreachable areas), and execute's **`expect`/`require`**, checked after or before a call.
 - **`inspect changes_since`** and `ue://changes` subscriptions: what changed since a cursor, and by whom.
+- **Domain playbooks** as MCP prompts: Blueprint logic, input, UI, Niagara, materials, world building, animation, cinematics and play testing, each with the traps of its domain.
 
 </details>
 

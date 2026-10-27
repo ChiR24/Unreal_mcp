@@ -40,6 +40,15 @@ namespace
 				Lines.Add(FString::Printf(TEXT("- %s: %s"), *Input.Key, *Input.Value));
 			}
 		}
+		if (Prompt.Traps.Num() > 0)
+		{
+			Lines.Add(TEXT(""));
+			Lines.Add(TEXT("Traps in this domain:"));
+			for (const FString& Trap : Prompt.Traps)
+			{
+				Lines.Add(FString::Printf(TEXT("- %s"), *Trap));
+			}
+		}
 		Lines.Add(TEXT(""));
 		Lines.Add(TEXT("Steps:"));
 		for (int32 Index = 0; Index < Prompt.Steps.Num(); ++Index)

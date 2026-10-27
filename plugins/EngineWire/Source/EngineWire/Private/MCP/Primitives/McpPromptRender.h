@@ -1,5 +1,5 @@
 // McpPromptRender.h
-// prompts/list entries and the prompts/get render (mirrors prompts.ts).
+// prompts/list entries and the prompts/get render.
 #pragma once
 
 #include "CoreMinimal.h"

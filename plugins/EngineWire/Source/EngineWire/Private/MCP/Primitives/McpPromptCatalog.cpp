@@ -1,10 +1,11 @@
 // McpPromptCatalog.cpp
-// The six workflow prompts, data only. Mirrors src/server/mcp-primitives/prompts.ts.
+// The six step-by-step workflow prompts, data only; the playbooks follow them (McpPromptPlaybooks.cpp).
 #include "McpPromptCatalog.h"
 
 const TArray<FMcpWorkflowPrompt>& McpWorkflowPrompts()
 {
-	static const TArray<FMcpWorkflowPrompt> Prompts = {
+	static const TArray<FMcpWorkflowPrompt> Prompts = [] {
+	TArray<FMcpWorkflowPrompt> All = {
 		FMcpWorkflowPrompt{ TEXT("inspect-fix"), TEXT("Inspect and fix an object property"),
 			TEXT("Walk through inspecting a UObject and correcting a single property, one reviewed call at a time."),
 			{ {TEXT("objectPath"), true, TEXT("Content path of the object to inspect")},
@@ -54,5 +55,8 @@ const TArray<FMcpWorkflowPrompt>& McpWorkflowPrompts()
 			  {TEXT("Queue the render job."), TEXT("sequence.mrq.queue_render"), TEXT("manage_sequence"), TEXT("queue_render"), TEXT(""), TEXT("Queuing stages the job; nothing is written until you start the render.")},
 			  {TEXT("Start the render."), TEXT("sequence.mrq.start_render"), TEXT("manage_sequence"), TEXT("start_render"), TEXT(""), TEXT("Rendering can be long-running and writes files; you start it explicitly.")} } },
 	};
+	All.Append(McpPlaybookPrompts());
+	return All;
+	}();
 	return Prompts;
 }

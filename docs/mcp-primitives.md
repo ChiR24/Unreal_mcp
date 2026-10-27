@@ -30,7 +30,7 @@ Reads are bounded (64 KiB). Payloads carry a revision; only `ue://capability/cat
 
 ## Prompts
 
-`prompts/list` and `prompts/get` serve six workflow prompts: `inspect-fix`, `asset-import`, `level-build`, `blueprint-edit`, `validation`, `sequence-render` (`McpPromptCatalog`). A prompt returns text messages only; getting one never executes anything.
+`prompts/list` and `prompts/get` serve six workflow prompts (`inspect-fix`, `asset-import`, `level-build`, `blueprint-edit`, `validation`, `sequence-render`; `McpPromptCatalog`) and nine domain playbooks (`blueprint-logic`, `input-setup`, `widget-ui`, `niagara-vfx`, `material-authoring`, `world-building`, `animation-setup`, `cinematics`, `play-testing`; `McpPromptPlaybooks`): the capabilities to reach for in order, and the traps of the domain (what goes wrong without a word, and how to see it). A prompt returns text messages only; getting one never executes anything. A unit test holds every step to a capability the catalog has.
 
 ## Completions
 
