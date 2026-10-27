@@ -137,7 +137,7 @@ With the editor open, ask your assistant to *"list the actors in the current lev
 
 Both routes expose the same single tool with four operations: `search` finds capabilities from a few plain words, `describe` returns one capability's exact contract, `execute` runs it, and `configure` enables or disables groups of internal tools. Only the contract the model is about to use gets loaded, instead of hundreds of tool schemas. A direct `tools/call` to one of the 0.5 tool names returns `DIRECT_TOOL_CALL_REMOVED` with a `nextCall` that runs the same request through `unreal`.
 
-Native HTTP negotiates MCP protocol versions `2025-11-25`, `2025-06-18` and `2025-03-26`; the stdio server also accepts `2024-11-05` and `2024-10-07`. Details: [Using the Gateway](https://github.com/ChiR24/Unreal_mcp/wiki/Using-the-Gateway) and [protocol.md](https://github.com/ChiR24/Unreal_mcp/blob/dev/docs/protocol.md).
+Both routes negotiate MCP protocol versions `2025-11-25`, `2025-06-18` and `2025-03-26`; a client asking for an older one is answered with `2025-11-25`. Details: [Using the Gateway](https://github.com/ChiR24/Unreal_mcp/wiki/Using-the-Gateway) and [protocol.md](https://github.com/ChiR24/Unreal_mcp/blob/dev/docs/protocol.md).
 
 ---
 
@@ -149,12 +149,12 @@ Native HTTP negotiates MCP protocol versions `2025-11-25`, `2025-06-18` and `202
 
 | Setting | Default | |
 |---------|---------|---|
-| **Enable Native MCP Server** | off | Serve MCP over Streamable HTTP at `/mcp` |
+| **Enable Native MCP Server** | on (off in the Fab build) | Serve MCP over Streamable HTTP at `/mcp`; both routes use it |
 | **Native MCP Port** | `3000` | Must differ from the WebSocket ports. The `MCP_NATIVE_PORT` environment variable of the editor process overrides it, for example to run several editors at once. |
 | **Load All Tools on Start** | on | When off, only the `core` internal tools start enabled; `configure` can enable the rest |
 | **Server Instructions** | empty | Text appended to the instructions native clients receive when they connect |
 | **Listen Host** | `127.0.0.1` | Bind address for both listeners |
-| **Listen Ports** | `8090,8091` | WebSocket ports; the stdio server dials the first |
+| **Listen Ports** | `8090,8091` | The plugin's WebSocket listener; neither route uses it |
 | **Require Capability Token** | on | Both routes refuse clients without the token |
 | **Capability Token** | empty | Your own token. When empty, the plugin generates one in `Saved/MCP/capability-token`. |
 | **Allow Non Loopback** | off | Let **Listen Host** be a LAN address |
@@ -168,10 +168,9 @@ Every setting, including the Movie Render Queue and Take Recorder limits: [Confi
 
 | Variable | Default | |
 |----------|---------|---|
-| `UE_PROJECT_PATH` | unset | Project folder or `.uproject`; used to find the token and the port |
-| `MCP_AUTOMATION_PORT` | the first **Listen Ports** entry, else `8090` | Editor WebSocket port |
-| `MCP_AUTOMATION_HOST` | `127.0.0.1` | A LAN address also needs `MCP_AUTOMATION_ALLOW_NON_LOOPBACK=true` |
+| `UE_PROJECT_PATH` | unset | Project folder or `.uproject`; used to find the token |
 | `MCP_AUTOMATION_CAPABILITY_TOKEN` | read from the token file | Token to present, when the server can't read the project folder |
+| `UNREAL_MCP_URL` | `http://127.0.0.1:3000/mcp` | The editor's `/mcp` endpoint; change it with **Native MCP Port** |
 | `LOG_LEVEL` | `info` | `debug`, `info`, `warn` or `error`; logs go to stderr |
 
 ---
@@ -181,7 +180,7 @@ Every setting, including the Movie Render Queue and Take Recorder limits: [Confi
 - **Loopback by default.** Both listeners, the WebSocket bridge and the native HTTP server, bind `127.0.0.1`. A LAN address needs **Allow Non Loopback**, and neither listener binds off-loopback unless **Require Capability Token** is also on.
 - **Capability token, on by default.** The plugin generates a random 32-byte token per project at `<Project>/Saved/MCP/capability-token` and compares it in constant time on both routes. A token typed into **Capability Token** overrides the file. Delete the file and restart the editor to rotate it.
 - **Consent for destructive work.** Deletes and some other writes need a per-call consent grant, which the plugin checks itself.
-- **Guard rails.** Asset paths are limited to `/Game`, `/Engine`, `/Script`, `/Temp`, `/Niagara` and configured prefixes; console commands that chain or quit the editor are blocked; file paths are checked for traversal and symbolic links; the plugin's own settings are out of reach of automation.
+- **Guard rails.** Asset paths are limited to `/Game`, `/Engine`, `/Script`, `/Temp`, `/Niagara` and the content mounts the editor reports; console commands that chain or quit the editor are blocked; file paths are checked for traversal and symbolic links; the plugin's own settings are out of reach of automation.
 - **TLS** for the WebSocket listener, and **rate limits** on both routes.
 
 Local file paths are checked for traversal and symbolic-link components when accepted and again immediately before media open or render start. The trusted boundary is the editor's operating-system user: a process that can change that user's project files is already able to alter editor inputs, and is outside the threat model of a remote client.
@@ -196,9 +195,9 @@ More: [Security](https://github.com/ChiR24/Unreal_mcp/wiki/Security). Report vul
 |---------|-----|
 | *"Plugin 'EngineWire' failed to load"* on the very first open | Close the editor and open the project again. It loads once the first build has finished. |
 | *"Engine modules cannot be compiled at runtime"* | Build the Editor target once in your IDE, then reopen the project |
-| Status bar reads **`MCP off`** | The native HTTP server is off: tick **Enable Native MCP Server** and restart the editor |
+| Status bar reads **`MCP off`** | The native HTTP server is off (the Fab build ships that way): tick **Enable Native MCP Server** and restart the editor |
 | **401** from the native server | The `X-MCP-Capability-Token` header is missing or wrong. Copy `Saved/MCP/capability-token` again, without a trailing newline. |
-| stdio server reports *not connected* | Keep the editor open with the plugin loaded, point `UE_PROJECT_PATH` at the project, and use the same release for the npm package and the plugin |
+| stdio server answers `NOT_CONNECTED` | Keep the editor open with the plugin loaded and the native server on. If the message ends in `initialize answered HTTP 401`, point `UE_PROJECT_PATH` at the open project |
 | Build errors after an update | Close the editor, delete the plugin's `Binaries/` and `Intermediate/` folders, regenerate project files and rebuild |
 
 More cases: [Troubleshooting](https://github.com/ChiR24/Unreal_mcp/wiki/Troubleshooting).

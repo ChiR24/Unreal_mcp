@@ -34,7 +34,7 @@
   <a href="https://github.com/ChiR24/Unreal_mcp/discussions"><b>💬 Discussions</b></a>
 </p>
 
-> 📌 **Which version is this?** This README describes **0.6.0**, the stable release: npm `unreal-engine-mcp-server` (`latest`) and the plugin on the [Releases page](https://github.com/ChiR24/Unreal_mcp/releases) and on [Fab](https://www.fab.com/listings/9407137f-14b3-44a8-af0e-e9c6a9c9f6fc). The previous release, **0.5.30**, exposes 23 separate tools instead of one; see [Upgrading from 0.5.x](https://github.com/ChiR24/Unreal_mcp/wiki/Upgrading).
+> 📌 **Which version is this?** This README describes **0.6.0**, the stable release: the plugin on [Fab](https://www.fab.com/listings/9407137f-14b3-44a8-af0e-e9c6a9c9f6fc) and on the [Releases page](https://github.com/ChiR24/Unreal_mcp/releases), and npm `unreal-engine-mcp-server` (`latest`). The previous release, **0.5.30**, exposes 23 separate tools instead of one; see [Upgrading from 0.5.x](https://github.com/ChiR24/Unreal_mcp/wiki/Upgrading).
 
 **Contents** · [What it does](#what-it-does) · [How it works](#how-it-works) · [Quick start](#quick-start) · [The `unreal` tool](#the-unreal-tool) · [Configuration](#configuration) · [Security](#security) · [Engine plugins](#engine-plugins) · [Docker](#docker) · [Documentation](#documentation) · [Development](#development) · [Community](#community)
 
@@ -85,7 +85,7 @@ Run Play-In-Editor with synthetic input, take screenshots the model can see, rea
 </tr>
 </table>
 
-Nearly 400 capabilities in all, behind a single MCP tool. The assistant finds them by searching in plain words, so nobody has to learn their names. The full list is the generated [Action Reference](https://github.com/ChiR24/Unreal_mcp/blob/dev/docs/action-reference.generated.md).
+Over 450 capabilities in all, behind a single MCP tool. The assistant finds them by searching in plain words, so nobody has to learn their names. The full list is the generated [Action Reference](https://github.com/ChiR24/Unreal_mcp/blob/dev/docs/action-reference.generated.md).
 
 <p align="center">
   <img src="https://raw.githubusercontent.com/wiki/ChiR24/Unreal_mcp/assets/screenshots/editor.webp" alt="Unreal Editor 5.8 showing a platformer level built with the MCP; the status bar reads MCP :3000 (1)" width="100%">
@@ -241,7 +241,7 @@ A typical exchange:
 ```
 
 - **Parameters are strict.** An undeclared name is refused with `UNDECLARED_PARAMETER` and the list of allowed names; every error carries an executable `nextCall`.
-- **Deletes need consent.** 62 capabilities (all destructive ones, plus some writes) only run with the `consentGrant` from `describe`, passed back as a top-level `consent` field.
+- **Deletes need consent.** Every destructive capability, plus some risky writes, only runs with the `consentGrant` from `describe`, passed back as a top-level `consent` field.
 - **Names.** A call names the `tool` + `action` pair or a capability id, such as `"capability": "control_actor.spawn"`.
 
 Full reference with real replies: [Using the Gateway](https://github.com/ChiR24/Unreal_mcp/wiki/Using-the-Gateway).
