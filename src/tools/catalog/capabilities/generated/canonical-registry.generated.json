@@ -1,5 +1,5 @@
 {
-  "catalogRevision": "deb9583d2070c442",
+  "catalogRevision": "ac0f8aa2cff3b7ff",
   "recordCount": 449,
   "records": [
     {
@@ -3631,7 +3631,7 @@
                 "set_sequence_length",
                 "add_aim_offset_sample"
               ],
-              "description": "Which edit animation variant to run.\nadd_bone_track: Add an empty transform track for boneName to an animation sequence (assetPath, or animationPath), to key with edit=set_bone_key. A bone its skeleton lacks is BONE_NOT_FOUND_IN_SKELETON, listing bones. A track the sequence already has is left as it is and answered with alreadyExists true and nothing saved; otherwise the sequence is saved unless save is false (saved).\nset_bone_key: Set a bone transform key at a frame; a location, rotation or scale left out keeps the value the bone has there (the key of its track, or the reference pose for a bone with no track yet).\nset_curve_key: Set a key of the float curve curveName in an animation sequence at frame (default 0) to value: a curve the sequence lacks is added (curveCreated) unless createIfMissing is false, which refuses it (CURVE_NOT_FOUND), and a key the engine does not take is CURVE_KEY_FAILED. The reply reads the curve back at that frame (value) and says whether it saved (saved, unless save is false). Curves drive morph targets and material parameters, and AnimBlueprints read them by name.\nadd_notify: Add a frame notify to a sequence (authoring).\nadd_notify_state: Add a notify state spanning a frame range.\nadd_sync_marker: Add a sync marker to a sequence.\nset_additive_settings: Configure additive animation settings.\nset_root_motion_settings: Configure root motion on an animation sequence: whether the motion of the root bone moves the character (enableRootMotion), which pose the root is locked to while that motion is taken out (rootMotionRootLock), and whether the root is locked even without root motion (forceRootLock). Saved unless save is false; SEQUENCE_NOT_FOUND when no sequence loads.\nset_sequence_length: Set the length of an Animation Sequence.\nadd_aim_offset_sample: Add a sample pose to an Aim Offset."
+              "description": "Which edit animation variant to run.\nadd_bone_track: Add an empty transform track for boneName to an animation sequence (assetPath, or animationPath), to key with edit=set_bone_key. A bone its skeleton lacks is BONE_NOT_FOUND_IN_SKELETON, listing bones. A track the sequence already has is left as it is and answered with alreadyExists true and nothing saved; otherwise the sequence is saved unless save is false (saved).\nset_bone_key: Set a bone transform key at a frame; a location, rotation or scale left out keeps the value the bone has there (the key of its track, or the reference pose for a bone with no track yet). Frame 0 is the first key and the sequence's frame count its last (a 1 s clip at 30 fps keys frames 0 to 30); past either end is FRAME_OUT_OF_RANGE.\nset_curve_key: Set a key of the float curve curveName in an animation sequence at frame (default 0) to value: a curve the sequence lacks is added (curveCreated) unless createIfMissing is false, which refuses it (CURVE_NOT_FOUND), and a key the engine does not take is CURVE_KEY_FAILED. The reply reads the curve back at that frame (value) and says whether it saved (saved, unless save is false). Curves drive morph targets and material parameters, and AnimBlueprints read them by name.\nadd_notify: Add a frame notify to a sequence (authoring).\nadd_notify_state: Add a notify state spanning a frame range.\nadd_sync_marker: Add a sync marker to a sequence.\nset_additive_settings: Configure additive animation settings.\nset_root_motion_settings: Configure root motion on an animation sequence: whether the motion of the root bone moves the character (enableRootMotion), which pose the root is locked to while that motion is taken out (rootMotionRootLock), and whether the root is locked even without root motion (forceRootLock). Saved unless save is false; SEQUENCE_NOT_FOUND when no sequence loads.\nset_sequence_length: Set the length of an Animation Sequence.\nadd_aim_offset_sample: Add a sample pose to an Aim Offset."
             }
           },
           "required": [
@@ -3863,8 +3863,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "c92733abcfa7c50a8e0767c71eb7008771da238041480aeedafcefe9fa4a03a8",
-        "content": "ba5ccd9330b3b17412d83fa533285c9b654c2d320cbfe1adcfb462c60386ad7d"
+        "schema": "48f3cdbbe4099b93937a27cce72559c4dbfbd8042658081536c2606fe183ec5f",
+        "content": "d39ad3535704359f7aa9512cd07adf0b5703f988ffa493cfadb6aff07ff19f06"
       }
     },
     {

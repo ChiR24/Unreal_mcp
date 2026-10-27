@@ -197,11 +197,13 @@ TSharedPtr<FJsonObject> HandleSequenceTrackActions(const FString& SubAction, con
             ANIM_ERROR_RESPONSE(FString::Printf(TEXT("Could not load animation sequence: %s"), *AssetPath), TEXT("SEQUENCE_NOT_FOUND"));
         }
 
+        // A sequence of N frames has N + 1 keys, 0 to N: the last key (N) used to be refused, so no clip could be keyed
+        // to end anywhere but at its reference pose.
         int32 TotalFrames = Sequence->GetDataModel()->GetNumberOfFrames();
-        if (Frame < 0 || Frame >= TotalFrames)
+        if (Frame < 0 || Frame > TotalFrames)
         {
             ANIM_ERROR_RESPONSE(
-                FString::Printf(TEXT("Frame %d is out of range (animation has %d frames)"), Frame, TotalFrames),
+                FString::Printf(TEXT("Frame %d is out of range: the animation's keys are frames 0 to %d"), Frame, TotalFrames),
                 TEXT("FRAME_OUT_OF_RANGE")
             );
         }
