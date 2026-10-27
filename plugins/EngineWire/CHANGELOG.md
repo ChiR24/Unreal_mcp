@@ -30,6 +30,7 @@ All notable changes to the EngineWire plugin (formerly McpAutomationBridge) will
 - **`run_map_check`**, **`fix_placement`**, **`describe_relations`**, **`arrange_by_relations`**, **`arrange_widgets`** (a Canvas Panel's children placed by relations, solved by Cassowary, anchored to hold at every screen size), **`playtest`** (a pawn walked to a goal in Play, judged with evidence), **`settle_physics`** (props dropped and kept where they come to rest), **`explore_level`** (a pawn explores the level: falls, traps, unreachable areas), and execute's `options.expect` (after the call) and `options.require` (before it).
 - **Change journal**: `changes_since` and `ue://changes` subscriptions list what changed since a cursor and who changed it.
 - **Domain playbooks as MCP prompts**: nine (`blueprint-logic`, `input-setup`, `widget-ui`, `niagara-vfx`, `material-authoring`, `world-building`, `animation-setup`, `cinematics`, `play-testing`), each the capabilities to reach for in order and the traps of its domain; a unit test holds every prompt step to a capability the catalog has.
+- **`remove_sublevel`**: the Levels panel's Remove, without the undo reset that turns a reference still held to the removed world into a Fatal; locked, unsaved (`discardUnsaved`) and Level Instance levels are refused before the engine would open a dialog.
 
 ### Changed
 - **Enable Native MCP Server is on by default**: `/mcp` is the only gateway, and the npm package is a stdio proxy in front of it.

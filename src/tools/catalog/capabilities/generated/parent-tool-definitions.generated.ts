@@ -24229,7 +24229,8 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             "run_map_check",
             "export_level",
             "import_level",
-            "add_sublevel"
+            "add_sublevel",
+            "remove_sublevel"
           ],
           "description": "Action to invoke on manage_level."
         }
@@ -24361,6 +24362,13 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "dirtyWorldPackagesBeforeLoad": {
           "type": "number",
           "description": "Level packages with unsaved changes when the call began, counted in every mode (it read 0 in an interactive editor)."
+        },
+        "discardedPackages": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "With discardUnsaved, the packages whose unsaved changes were dropped."
         },
         "errorCount": {
           "type": "number",
@@ -24529,6 +24537,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "warningCount": {
           "type": "number",
           "description": "Warning messages (the reply's warnings list only what else the call logged)."
+        },
+        "wasLoaded": {
+          "type": "boolean",
+          "description": "False when the sublevel was not loaded in the editor (only its entry was removed)."
         },
         "world": {
           "type": "string",

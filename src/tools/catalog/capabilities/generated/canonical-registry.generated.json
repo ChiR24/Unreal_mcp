@@ -1,6 +1,6 @@
 {
-  "catalogRevision": "917b713891c35837",
-  "recordCount": 452,
+  "catalogRevision": "a803a50ee2f5ed5c",
+  "recordCount": 453,
   "records": [
     {
       "id": "animation_physics.analyze_animation",
@@ -85500,6 +85500,149 @@
         "algorithm": "sha256",
         "schema": "3096cb32481c6996ae67b74ad001356e2c7db315a38ef57870e1cb9b6abc5728",
         "content": "2aa471fc0341af00d2cd922355afbdc1b6f96276384924120513d13b6db3b7a1"
+      }
+    },
+    {
+      "id": "manage_level.remove_sublevel",
+      "aliases": [],
+      "legacyIds": [
+        {
+          "tool": "manage_level",
+          "action": "remove_sublevel"
+        }
+      ],
+      "discovery": {
+        "domain": "level",
+        "family": "sublevel",
+        "topics": [
+          "remove_sublevel",
+          "remove streaming level",
+          "take a sublevel out of the level"
+        ],
+        "summary": "Remove a sublevel from the level open in the editor, as the Levels panel's Remove does: its streaming entry goes and its actors leave the editor world, while its map file stays on disk (manage_level delete removes that). Not undoable, as in the editor. A sublevel with unsaved changes is refused (DIRTY_PACKAGES, listing them) unless discardUnsaved is true, a locked one is refused (LEVEL_LOCKED), a Level Instance's level is not a sublevel (NOT_A_SUBLEVEL: delete its actor instead), and a name that is not a sublevel of the open level is SUBLEVEL_NOT_FOUND, listing the ones it has. The open level is left unsaved: save it (manage_level save) for the removal to last.",
+        "whenToUse": [
+          "A sublevel added to the open level (add_sublevel, create_sublevel) must leave it."
+        ],
+        "whenNotToUse": [
+          "The sublevel should only be hidden or streamed out; use stream.",
+          "The level map itself must go from the project: remove it here first, then manage_level delete."
+        ]
+      },
+      "schemas": {
+        "input": {
+          "$schema": "https://json-schema.org/draft/2020-12/schema",
+          "type": "object",
+          "properties": {
+            "action": {
+              "type": "string",
+              "description": "The action to execute on the parent tool."
+            },
+            "subLevelPath": {
+              "type": "string",
+              "description": "The sublevel to remove: its /Game package path (an object path or .umap name is cut to the package), or a name only one sublevel's path ends with."
+            },
+            "levelPath": {
+              "type": "string",
+              "description": "Alias of subLevelPath, read when subLevelPath is absent."
+            },
+            "discardUnsaved": {
+              "type": "boolean",
+              "description": "Remove it even though its level (or its actors' own files) has unsaved changes, which are lost (default false: refused with DIRTY_PACKAGES)."
+            }
+          },
+          "required": [
+            "action"
+          ],
+          "additionalProperties": false,
+          "requiredOneOf": [
+            "subLevelPath",
+            "levelPath"
+          ]
+        },
+        "output": {
+          "$schema": "https://json-schema.org/draft/2020-12/schema",
+          "type": "object",
+          "properties": {
+            "success": {
+              "type": "boolean",
+              "description": "Whether the action succeeded."
+            },
+            "message": {
+              "type": "string",
+              "description": "Human-readable result message."
+            },
+            "details": {
+              "type": "object",
+              "x-unreal-reflection-boundary": true,
+              "description": "Additional handler result fields not named by the contract."
+            },
+            "subLevelPath": {
+              "type": "string",
+              "description": "The sublevel package that was removed."
+            },
+            "world": {
+              "type": "string",
+              "description": "Name of the open level it was removed from."
+            },
+            "wasLoaded": {
+              "type": "boolean",
+              "description": "False when the sublevel was not loaded in the editor (only its entry was removed)."
+            },
+            "discardedPackages": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "description": "With discardUnsaved, the packages whose unsaved changes were dropped."
+            }
+          },
+          "required": [
+            "success"
+          ],
+          "additionalProperties": false
+        }
+      },
+      "examples": [
+        {
+          "title": "Remove a sublevel from the level open in the editor, as the Levels panel's Remove does: its streaming entry goes and its actors leave the editor world, while its map file stays on disk (manage_level delete removes that). Not undoable, as in the editor. A sublevel with unsaved changes is refused (DIRTY_PACKAGES, listing them) unless discardUnsaved is true, a locked one is refused (LEVEL_LOCKED), a Level Instance's level is not a sublevel (NOT_A_SUBLEVEL: delete its actor instead), and a name that is not a sublevel of the open level is SUBLEVEL_NOT_FOUND, listing the ones it has. The open level is left unsaved: save it (manage_level save) for the removal to last.",
+          "input": {
+            "action": "remove_sublevel",
+            "subLevelPath": "/Game/Maps/Sub01"
+          },
+          "output": {
+            "success": true
+          }
+        }
+      ],
+      "availability": {
+        "requiredPlugins": [],
+        "editorStates": [
+          "edit"
+        ]
+      },
+      "behavior": {
+        "effect": "destructive",
+        "idempotency": "non-idempotent",
+        "longRunning": false,
+        "safeToRetry": false
+      },
+      "policy": {
+        "requiredScope": "destructive",
+        "consent": "explicit",
+        "dataAccess": "project-write"
+      },
+      "cost": {
+        "latency": "interactive",
+        "resources": "low"
+      },
+      "routing": {
+        "parentTool": "manage_level",
+        "dispatchAction": "remove_sublevel"
+      },
+      "hashes": {
+        "algorithm": "sha256",
+        "schema": "8491ec463441893499f9ea0c391ddbaadfe5721a6a2b2a765472a61872bd7ede",
+        "content": "e0e101dc159796dcc943d8776f91ca6b6a5b1a1c8980b672f8b16fc12ddd0cf1"
       }
     },
     {

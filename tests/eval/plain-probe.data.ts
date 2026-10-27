@@ -727,4 +727,7 @@ export const PLAIN_PROBE: readonly PlainProbeCase[] = [
   { query: 'wave function collapse', accepted: ['build_environment.assemble_modules'] },
   { query: 'tile a dungeon', accepted: ['build_environment.assemble_modules'] },
   { query: 'maze generator', accepted: ['build_environment.assemble_modules'] },
+  { query: 'remove a sublevel', accepted: ['manage_level.remove_sublevel'] },
+  { query: 'remove streaming level', accepted: ['manage_level.remove_sublevel'] },
+  { query: 'take a sublevel out of the level', accepted: ['manage_level.remove_sublevel'] },
 ];

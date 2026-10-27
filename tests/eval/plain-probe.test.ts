@@ -8,7 +8,7 @@ import { finalRegistryRecords } from './fixtures.js';
 import { nativeSearchRanker } from './native-ranker.js';
 import { PLAIN_PROBE } from './plain-probe.data.js';
 
-const FLOORS = { native: 709 } as const;
+const FLOORS = { native: 712 } as const;
 
 const firstHits = (): number =>
   PLAIN_PROBE.filter((entry) => entry.accepted.includes(String(nativeSearchRanker(entry.query, 1)[0]))).length;

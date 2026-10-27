@@ -10,7 +10,7 @@
  * pure-ASCII JSON payload carrying the COMPLETE CapabilityRecord for native
  * discovery (aliases, legacyIds, discovery, schemas.input/output, examples,
  * availability, behavior/policy, normalization, deprecation, hashes).
- * 23 shards, 452 records total.
+ * 23 shards, 453 records total.
  *
  * Chunks are bounded so no single string literal approaches the MSVC 65,535-byte
  * ceiling; concatenating a shard's chunks in order yields its exact JSON.
@@ -35,7 +35,7 @@ namespace Detail
 	extern const TCHAR* const MCP_CAP_SHARD_MANAGE_GEOMETRY_CHUNKS[];	// manage_geometry (16)
 	extern const TCHAR* const MCP_CAP_SHARD_MANAGE_INTERACTION_CHUNKS[];	// manage_interaction (3)
 	extern const TCHAR* const MCP_CAP_SHARD_MANAGE_INVENTORY_CHUNKS[];	// manage_inventory (6)
-	extern const TCHAR* const MCP_CAP_SHARD_MANAGE_LEVEL_CHUNKS[];	// manage_level (18)
+	extern const TCHAR* const MCP_CAP_SHARD_MANAGE_LEVEL_CHUNKS[];	// manage_level (19)
 	extern const TCHAR* const MCP_CAP_SHARD_MANAGE_LEVEL_STRUCTURE_CHUNKS[];	// manage_level_structure (8)
 	extern const TCHAR* const MCP_CAP_SHARD_MANAGE_NETWORKING_CHUNKS[];	// manage_networking (21)
 	extern const TCHAR* const MCP_CAP_SHARD_MANAGE_PCG_CHUNKS[];	// manage_pcg (3)
@@ -73,7 +73,7 @@ inline const FMcpCapabilityShard& At(int32 Index)
 		{ TEXT("manage_geometry"), Detail::MCP_CAP_SHARD_MANAGE_GEOMETRY_CHUNKS, 39, 16 },
 		{ TEXT("manage_interaction"), Detail::MCP_CAP_SHARD_MANAGE_INTERACTION_CHUNKS, 6, 3 },
 		{ TEXT("manage_inventory"), Detail::MCP_CAP_SHARD_MANAGE_INVENTORY_CHUNKS, 9, 6 },
-		{ TEXT("manage_level"), Detail::MCP_CAP_SHARD_MANAGE_LEVEL_CHUNKS, 18, 18 },
+		{ TEXT("manage_level"), Detail::MCP_CAP_SHARD_MANAGE_LEVEL_CHUNKS, 19, 19 },
 		{ TEXT("manage_level_structure"), Detail::MCP_CAP_SHARD_MANAGE_LEVEL_STRUCTURE_CHUNKS, 17, 8 },
 		{ TEXT("manage_networking"), Detail::MCP_CAP_SHARD_MANAGE_NETWORKING_CHUNKS, 29, 21 },
 		{ TEXT("manage_pcg"), Detail::MCP_CAP_SHARD_MANAGE_PCG_CHUNKS, 8, 3 },
@@ -85,7 +85,7 @@ inline const FMcpCapabilityShard& At(int32 Index)
 	return Table[Index];
 }
 
-inline int32 TotalRecordCount() { return 452; }
+inline int32 TotalRecordCount() { return 453; }
 
-inline const TCHAR* CatalogRevision() { return TEXT("917b713891c35837"); }
+inline const TCHAR* CatalogRevision() { return TEXT("a803a50ee2f5ed5c"); }
 }

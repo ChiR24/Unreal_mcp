@@ -154,4 +154,26 @@ export const OPERATIONS_RECORDS: readonly CapabilityRecordSource[] = [
     effect: 'write', costLatency: 'interactive',
     exampleInput: { action: 'add_sublevel', subLevelPath: '/Game/Maps/Sub01', parentLevel: '/Game/Maps/Demo' },
   }),
+  buildCoreRecord({
+    parentTool: 'manage_level', action: 'remove_sublevel', topics: ['remove streaming level', 'take a sublevel out of the level'], dispatchAction: 'remove_sublevel',
+    domain: D, family: 'sublevel',
+    summary: 'Remove a sublevel from the level open in the editor, as the Levels panel\'s Remove does: its streaming entry goes and its actors leave the editor world, while its map file stays on disk (manage_level delete removes that). Not undoable, as in the editor. A sublevel with unsaved changes is refused (DIRTY_PACKAGES, listing them) unless discardUnsaved is true, a locked one is refused (LEVEL_LOCKED), a Level Instance\'s level is not a sublevel (NOT_A_SUBLEVEL: delete its actor instead), and a name that is not a sublevel of the open level is SUBLEVEL_NOT_FOUND, listing the ones it has. The open level is left unsaved: save it (manage_level save) for the removal to last.',
+    whenToUse: ['A sublevel added to the open level (add_sublevel, create_sublevel) must leave it.'],
+    whenNotToUse: ['The sublevel should only be hidden or streamed out; use stream.', 'The level map itself must go from the project: remove it here first, then manage_level delete.'],
+    inputProps: {
+      subLevelPath: { ...P.subLevelPath, description: 'The sublevel to remove: its /Game package path (an object path or .umap name is cut to the package), or a name only one sublevel\'s path ends with.' },
+      levelPath: { ...P.levelPath, description: 'Alias of subLevelPath, read when subLevelPath is absent.' },
+      discardUnsaved: { type: 'boolean', description: 'Remove it even though its level (or its actors\' own files) has unsaved changes, which are lost (default false: refused with DIRTY_PACKAGES).' },
+    },
+    required: [],
+    requiredOneOf: ['subLevelPath', 'levelPath'],
+    outputProps: {
+      subLevelPath: { type: 'string', description: 'The sublevel package that was removed.' },
+      world: { type: 'string', description: 'Name of the open level it was removed from.' },
+      wasLoaded: { type: 'boolean', description: 'False when the sublevel was not loaded in the editor (only its entry was removed).' },
+      discardedPackages: { type: 'array', items: { type: 'string' }, description: 'With discardUnsaved, the packages whose unsaved changes were dropped.' },
+    },
+    effect: 'destructive', costLatency: 'interactive',
+    exampleInput: { action: 'remove_sublevel', subLevelPath: '/Game/Maps/Sub01' },
+  }),
 ];

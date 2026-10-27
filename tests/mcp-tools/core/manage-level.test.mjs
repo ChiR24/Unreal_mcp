@@ -58,6 +58,19 @@ const testCases = [
   { scenario: 'ACTION: unload_level alias', toolName: 'manage_level', arguments: { action: 'unload_level', levelName: `LevelSub_${ts}` }, expected: 'success|not loaded', assertions: [{ path: 'structuredContent.result.levelPath', equals: SUB_LEVEL, label: 'the name after the last slash finds it' }] },
   { scenario: 'ERROR: stream refuses a level that is not a sublevel', toolName: 'manage_level', arguments: { action: 'stream', levelPath: `${TEST_FOLDER}/NoSuchSub_${ts}` }, expected: 'error|STREAMING_LEVEL_NOT_FOUND' },
 
+  // === REMOVE ===
+  { scenario: 'ERROR: remove_sublevel refuses a level that is not a sublevel of the open one', toolName: 'manage_level', arguments: { action: 'remove_sublevel', subLevelPath: `${TEST_FOLDER}/NoSuchSub_${ts}` }, expected: 'error|SUBLEVEL_NOT_FOUND' },
+  { scenario: 'ERROR: remove_sublevel refuses the open level itself', toolName: 'manage_level', arguments: { action: 'remove_sublevel', subLevelPath: MAIN_LEVEL }, expected: 'error|INVALID_ARGUMENT' },
+  { scenario: 'ACTION: remove_sublevel takes the sublevel out of the open level', toolName: 'manage_level', arguments: { action: 'remove_sublevel', subLevelPath: SUB_LEVEL, discardUnsaved: true }, expected: 'success', assertions: [{ path: 'structuredContent.result.subLevelPath', equals: SUB_LEVEL, label: 'the sublevel removed' }, { path: 'structuredContent.result.wasLoaded', equals: true, label: 'it was loaded in the editor' }] },
+  { scenario: 'INFO: the removed sublevel no longer streams', toolName: 'manage_level', arguments: { action: 'stream', levelPath: SUB_LEVEL }, expected: 'error|STREAMING_LEVEL_NOT_FOUND' },
+  { scenario: 'Setup: add the sublevel back', toolName: 'manage_level', arguments: { action: 'add_sublevel', subLevelPath: SUB_LEVEL }, expected: 'success' },
+  { scenario: 'ACTION: remove_sublevel via levelPath alias', toolName: 'manage_level', arguments: { action: 'remove_sublevel', levelPath: SUB_LEVEL }, expected: 'success' },
+  // The removal changes the open level; saved, it lasts through a reload.
+  { scenario: 'ACTION: save keeps the removal', toolName: 'manage_level', arguments: { action: 'save' }, expected: 'success' },
+  { scenario: 'Setup: open another level', toolName: 'manage_level', arguments: { action: 'load', levelPath: SAVE_AS_LEVEL, streaming: false, saveDirtyPackages: true }, expected: 'success' },
+  { scenario: 'Setup: open the main level again', toolName: 'manage_level', arguments: { action: 'load', levelPath: MAIN_LEVEL, streaming: false, saveDirtyPackages: true }, expected: 'success' },
+  { scenario: 'INFO: the saved removal lasted', toolName: 'manage_level', arguments: { action: 'stream', levelPath: SUB_LEVEL }, expected: 'error|STREAMING_LEVEL_NOT_FOUND' },
+
   // === LIGHTING ===
   { scenario: 'CREATE: create_light', toolName: 'manage_level', arguments: { action: 'create_light', lightType: 'Point', name: `LevelLight_${ts}`, location: { x: 150, y: 0, z: 250 }, rotation: { pitch: -20, yaw: 0, roll: 0 }, intensity: 1500, color: [1, 0.85, 0.6, 1] }, expected: 'success|already exists' },
   { scenario: 'CREATE: create_light by class with properties', toolName: 'manage_level', arguments: { action: 'create_light', lightClass: 'SpotLight', name: `LevelSpot_${ts}`, location: { x: -150, y: 0, z: 250 }, properties: { castShadows: false, attenuationRadius: 800, outerConeAngle: 30 } }, expected: 'success|already exists' },

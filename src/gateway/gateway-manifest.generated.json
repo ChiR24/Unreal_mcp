@@ -16804,7 +16804,8 @@
         "run_map_check",
         "export_level",
         "import_level",
-        "add_sublevel"
+        "add_sublevel",
+        "remove_sublevel"
       ],
       "parameterNames": [
         "color",
@@ -17056,7 +17057,8 @@
               "run_map_check",
               "export_level",
               "import_level",
-              "add_sublevel"
+              "add_sublevel",
+              "remove_sublevel"
             ],
             "description": "Action to invoke on manage_level."
           }

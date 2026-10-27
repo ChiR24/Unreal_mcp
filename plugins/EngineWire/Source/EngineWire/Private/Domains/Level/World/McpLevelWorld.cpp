@@ -24,4 +24,19 @@ TArray<ULevel*> GetAllLevelsFromWorld(UWorld* World) {
   }
   return Levels;
 }
+
+// A bare suffix used to match too, so "Sub01" could stream "BigSub01" when that one came first.
+TArray<ULevelStreaming*> FindStreamingLevels(UWorld* World, const FString& Name) {
+  TArray<ULevelStreaming*> Matches;
+  for (ULevelStreaming* Streaming : World->GetStreamingLevels()) {
+    const FString Package = Streaming ? UWorld::RemovePIEPrefix(Streaming->GetWorldAssetPackageName()) : FString();
+    if (!Package.IsEmpty() && Package.Equals(Name, ESearchCase::IgnoreCase)) {
+      return {Streaming};
+    }
+    if (!Package.IsEmpty() && Package.EndsWith(TEXT("/") + Name, ESearchCase::IgnoreCase)) {
+      Matches.Add(Streaming);
+    }
+  }
+  return Matches;
+}
 } // namespace McpLevelHandlers

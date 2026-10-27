@@ -1,5 +1,6 @@
 #include "Domains/Level/McpLevelActions.h"
 #include "Domains/Level/Lifecycle/McpLevelPathSafety.h"
+#include "Domains/Level/World/McpLevelWorldAccess.h"
 
 #include "Editor.h"
 #include "EditorLevelUtils.h"
@@ -10,24 +11,6 @@
 #include "Foundation/McpScopedEditorTransaction.h"
 
 namespace McpLevelHandlers {
-namespace {
-// The streaming levels whose package (PIE prefix removed) is Name or ends in /Name; an exact path wins outright.
-// A bare suffix used to match too, so "Sub01" could stream "BigSub01" when that one came first.
-TArray<ULevelStreaming*> FindStreamingLevels(UWorld* World, const FString& Name) {
-  TArray<ULevelStreaming*> Matches;
-  for (ULevelStreaming* Streaming : World->GetStreamingLevels()) {
-    const FString Package = Streaming ? UWorld::RemovePIEPrefix(Streaming->GetWorldAssetPackageName()) : FString();
-    if (!Package.IsEmpty() && Package.Equals(Name, ESearchCase::IgnoreCase)) {
-      return {Streaming};
-    }
-    if (!Package.IsEmpty() && Package.EndsWith(TEXT("/") + Name, ESearchCase::IgnoreCase)) {
-      Matches.Add(Streaming);
-    }
-  }
-  return Matches;
-}
-} // namespace
-
 bool HandleStreamLevelAction(UEngineWireSubsystem& Subsystem, const FString& RequestId, const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> RequestingSocket, bool bForceStreamUnload) {
     // An object path or a .umap name reads as its package, as open_level and add_sublevel take it.
     const FString LevelName = NormalizeLevelPackagePath(

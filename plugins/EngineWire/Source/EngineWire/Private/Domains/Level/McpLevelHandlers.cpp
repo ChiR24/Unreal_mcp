@@ -63,6 +63,8 @@ bool UEngineWireSubsystem::HandleLevelAction(
       EffectiveAction = TEXT("import_level");
     } else if (LowerSub == TEXT("add_sublevel")) {
       EffectiveAction = TEXT("add_sublevel");
+    } else if (LowerSub == TEXT("remove_sublevel")) {
+      EffectiveAction = TEXT("remove_sublevel");
     } else if (LowerSub == TEXT("delete") || LowerSub == TEXT("delete_level")) {
       EffectiveAction = TEXT("delete_level");
     } else if (LowerSub == TEXT("rename") || LowerSub == TEXT("rename_level")) {
@@ -100,6 +102,7 @@ bool UEngineWireSubsystem::HandleLevelAction(
       {TEXT("export_level"), McpLevelHandlers::HandleExportLevelAction},
       {TEXT("import_level"), McpLevelHandlers::HandleImportLevelAction},
       {TEXT("add_sublevel"), McpLevelHandlers::HandleAddSublevelAction},
+      {TEXT("remove_sublevel"), McpLevelHandlers::HandleRemoveSublevelAction},
       {TEXT("delete_level"), McpLevelHandlers::HandleDeleteLevelAction},
       {TEXT("rename_level"), McpLevelHandlers::HandleRenameLevelAction},
       {TEXT("duplicate_level"), McpLevelHandlers::HandleDuplicateLevelAction},
