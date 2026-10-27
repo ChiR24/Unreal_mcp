@@ -4,7 +4,7 @@
 
 # Action reference
 
-Catalog revision: `32ceb530574637d9`
+Catalog revision: `6efddf6957a829dc`
 
 Both transports expose exactly ONE public MCP tool, `unreal`, with the four
 operations `search` / `describe` / `execute` / `configure`. The parent tools
@@ -13,7 +13,7 @@ by `tools/list` and a direct `tools/call` on one returns a
 `DIRECT_TOOL_CALL_REMOVED` receipt rather than executing
 (`src/server/gateway/direct-call-migration.ts`).
 
-The catalog declares 450 capabilities across
+The catalog declares 451 capabilities across
 23 internal parent tools.
 Every row is derived from the capability record that the gateway actually
 validates against, so `execute` cannot accept an action this table omits.
@@ -37,7 +37,7 @@ validates against, so `execute` cannot accept an action this table omits.
 | Parent tool | Capabilities | read | write | destructive | Domains |
 | --- | --- | --- | --- | --- | --- |
 | `animation_physics` | 32 | 5 | 25 | 2 | animation physics |
-| `build_environment` | 41 | 4 | 34 | 3 | environment |
+| `build_environment` | 42 | 5 | 34 | 3 | environment |
 | `control_actor` | 29 | 9 | 18 | 2 | actor |
 | `control_editor` | 26 | 9 | 14 | 3 | editor |
 | `inspect` | 27 | 22 | 4 | 1 | inspect |
@@ -62,7 +62,7 @@ validates against, so `execute` cannot accept an action this table omits.
 
 ## Capabilities requiring consent
 
-68 of 450 capabilities require consent.
+68 of 451 capabilities require consent.
 
 | Capability | Tool | Action | Effect | Consent |
 | --- | --- | --- | --- | --- |
@@ -268,6 +268,7 @@ validates against, so `execute` cannot accept an action this table omits.
 | `build_environment.import_snapshot` | `build_environment` | `import_snapshot` | write | write | none | `build_environment.import_snapshot` |
 | `build_environment.list_light_types` | `build_environment` | `list_light_types` | read | read | none | `build_environment.list_light_types` |
 | `build_environment.paint_foliage_instances` | `build_environment` | `paint_foliage_instances` | write | write | none | `build_environment.paint_foliage_instances` |
+| `build_environment.plan_road` | `build_environment` | `plan_road` | read | read | none | `build_environment.plan_road` |
 | `build_environment.remove_foliage` | `build_environment` | `remove_foliage` | destructive | destructive | explicit | `build_environment.remove_foliage` `build_environment.remove_foliage_instances` |
 | `build_environment.remove_spline_point` | `build_environment` | `remove_spline_point` | destructive | destructive | explicit | `build_environment.remove_spline_point` |
 | `build_environment.sculpt` | `build_environment` | `sculpt_landscape` | write | write | none | `build_environment.sculpt` `build_environment.modify_heightmap` `build_environment.set_landscape_material` `build_environment.sculpt_landscape` |

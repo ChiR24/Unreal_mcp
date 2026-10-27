@@ -1635,6 +1635,7 @@
         "edit_spline",
         "remove_spline_point",
         "configure_spline_meshes",
+        "plan_road",
         "get_splines_info",
         "create_atmosphere_actor",
         "configure_atmosphere",
@@ -1699,6 +1700,8 @@
         "foliageTypePath",
         "foliageTypes",
         "forwardAxis",
+        "from",
+        "groundActors",
         "hardness",
         "height",
         "heightData",
@@ -1730,6 +1733,7 @@
         "materialIndex",
         "materialPath",
         "maxBrightness",
+        "maxGradePercent",
         "maxScale",
         "maxX",
         "maxY",
@@ -1807,8 +1811,10 @@
         "threshold",
         "tileSize",
         "time",
+        "to",
         "tool",
         "transforms",
+        "turnRadius",
         "updateNormals",
         "useRandomOffset",
         "valleys",
@@ -2339,6 +2345,30 @@
             "type": "string",
             "description": "Mesh axis laid along the spline: X (the default), Y or Z, any case; another name is refused."
           },
+          "from": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "x",
+              "y"
+            ],
+            "properties": {
+              "x": {
+                "type": "number"
+              },
+              "y": {
+                "type": "number"
+              }
+            },
+            "description": "Where the road starts, {x, y} in world cm; its height is read from the ground."
+          },
+          "groundActors": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Actors a road may run on (labels or names) instead of the landscape: a floor, a deck, a bridge."
+          },
           "hardness": {
             "type": "number",
             "description": "Landscape layer hardness (0-1)."
@@ -2729,6 +2759,12 @@
           "maxBrightness": {
             "type": "number",
             "description": "Highest auto exposure (EV100 with the extended luminance range)."
+          },
+          "maxGradePercent": {
+            "type": "number",
+            "minimum": 1,
+            "maximum": 60,
+            "description": "Steepest rise over run anywhere along the road, in percent (default 10; a main road 5-8, a mountain road 10-12, a track 15-20)."
           },
           "maxScale": {
             "type": "number",
@@ -3614,6 +3650,23 @@
             "type": "number",
             "description": "Time of day in hours (0-24)."
           },
+          "to": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "x",
+              "y"
+            ],
+            "properties": {
+              "x": {
+                "type": "number"
+              },
+              "y": {
+                "type": "number"
+              }
+            },
+            "description": "Where the road ends, {x, y} in world cm, at least 1 m from from."
+          },
           "tool": {
             "type": "string",
             "description": "Sculpt tool: Raise (default), Lower or Flatten (towards the location's z). Any other name is refused."
@@ -3686,6 +3739,12 @@
             },
             "description": "Instance transforms."
           },
+          "turnRadius": {
+            "type": "number",
+            "minimum": 200,
+            "maximum": 20000,
+            "description": "Tightest corner in cm (default 1500, a car; 600 a cart track, 3000 a fast road). It also sets the grid: cells of about half of it."
+          },
           "updateNormals": {
             "type": "boolean",
             "description": "Recompute normals after modification."
@@ -3725,8 +3784,23 @@
             "description": "Wavelength of the longest wave in cm, crest to crest; the shortest waves are 13% of it (a harbour is about 1500-2500)."
           },
           "width": {
-            "type": "number",
-            "description": "Size across the route in world units, over 0: a road or river slab's width (default 400), a wall's or fence's thickness (default 20 / 10), a pipe's or cable's diameter (default 50 / 4). With meshPath, omit it to keep the mesh's own width."
+            "oneOf": [
+              {
+                "type": "number",
+                "description": "Size across the route in world units, over 0: a road or river slab's width (default 400), a wall's or fence's thickness (default 20 / 10), a pipe's or cable's diameter (default 50 / 4). With meshPath, omit it to keep the mesh's own width."
+              },
+              {
+                "type": "number",
+                "description": "Spline width in world units (default 256); side falloff is half of it."
+              },
+              {
+                "type": "number",
+                "minimum": 100,
+                "maximum": 5000,
+                "description": "Road width in cm (default 600): obstacles and gaps stay half of it away, and the ready calls lay it this wide."
+              }
+            ],
+            "description": "Road width in cm (default 600): obstacles and gaps stay half of it away, and the ready calls lay it this wide."
           },
           "action": {
             "type": "string",
@@ -3764,6 +3838,7 @@
               "edit_spline",
               "remove_spline_point",
               "configure_spline_meshes",
+              "plan_road",
               "get_splines_info",
               "create_atmosphere_actor",
               "configure_atmosphere",

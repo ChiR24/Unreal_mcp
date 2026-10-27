@@ -721,4 +721,7 @@ export const PLAIN_PROBE: readonly PlainProbeCase[] = [
   { query: 'erode terrain', accepted: ['build_environment.erode_landscape'] },
   { query: 'hydraulic erosion', accepted: ['build_environment.erode_landscape'] },
   { query: 'carve valleys', accepted: ['build_environment.erode_landscape'] },
+  { query: 'plan a road', accepted: ['build_environment.plan_road'] },
+  { query: 'road up a hill', accepted: ['build_environment.plan_road'] },
+  { query: 'switchback road', accepted: ['build_environment.plan_road'] },
 ];

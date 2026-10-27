@@ -2759,6 +2759,30 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "string",
           "description": "Mesh axis laid along the spline: X (the default), Y or Z, any case; another name is refused."
         },
+        "from": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "x",
+            "y"
+          ],
+          "properties": {
+            "x": {
+              "type": "number"
+            },
+            "y": {
+              "type": "number"
+            }
+          },
+          "description": "Where the road starts, {x, y} in world cm; its height is read from the ground."
+        },
+        "groundActors": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Actors a road may run on (labels or names) instead of the landscape: a floor, a deck, a bridge."
+        },
         "hardness": {
           "type": "number",
           "description": "Landscape layer hardness (0-1)."
@@ -3149,6 +3173,12 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "maxBrightness": {
           "type": "number",
           "description": "Highest auto exposure (EV100 with the extended luminance range)."
+        },
+        "maxGradePercent": {
+          "type": "number",
+          "minimum": 1,
+          "maximum": 60,
+          "description": "Steepest rise over run anywhere along the road, in percent (default 10; a main road 5-8, a mountain road 10-12, a track 15-20)."
         },
         "maxScale": {
           "type": "number",
@@ -4034,6 +4064,23 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "number",
           "description": "Time of day in hours (0-24)."
         },
+        "to": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "x",
+            "y"
+          ],
+          "properties": {
+            "x": {
+              "type": "number"
+            },
+            "y": {
+              "type": "number"
+            }
+          },
+          "description": "Where the road ends, {x, y} in world cm, at least 1 m from from."
+        },
         "tool": {
           "type": "string",
           "description": "Sculpt tool: Raise (default), Lower or Flatten (towards the location's z). Any other name is refused."
@@ -4106,6 +4153,12 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           },
           "description": "Instance transforms."
         },
+        "turnRadius": {
+          "type": "number",
+          "minimum": 200,
+          "maximum": 20000,
+          "description": "Tightest corner in cm (default 1500, a car; 600 a cart track, 3000 a fast road). It also sets the grid: cells of about half of it."
+        },
         "updateNormals": {
           "type": "boolean",
           "description": "Recompute normals after modification."
@@ -4145,8 +4198,23 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "description": "Wavelength of the longest wave in cm, crest to crest; the shortest waves are 13% of it (a harbour is about 1500-2500)."
         },
         "width": {
-          "type": "number",
-          "description": "Size across the route in world units, over 0: a road or river slab's width (default 400), a wall's or fence's thickness (default 20 / 10), a pipe's or cable's diameter (default 50 / 4). With meshPath, omit it to keep the mesh's own width."
+          "oneOf": [
+            {
+              "type": "number",
+              "description": "Size across the route in world units, over 0: a road or river slab's width (default 400), a wall's or fence's thickness (default 20 / 10), a pipe's or cable's diameter (default 50 / 4). With meshPath, omit it to keep the mesh's own width."
+            },
+            {
+              "type": "number",
+              "description": "Spline width in world units (default 256); side falloff is half of it."
+            },
+            {
+              "type": "number",
+              "minimum": 100,
+              "maximum": 5000,
+              "description": "Road width in cm (default 600): obstacles and gaps stay half of it away, and the ready calls lay it this wide."
+            }
+          ],
+          "description": "Road width in cm (default 600): obstacles and gaps stay half of it away, and the ready calls lay it this wide."
         },
         "action": {
           "type": "string",
@@ -4184,6 +4252,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             "edit_spline",
             "remove_spline_point",
             "configure_spline_meshes",
+            "plan_road",
             "get_splines_info",
             "create_atmosphere_actor",
             "configure_atmosphere",
@@ -4208,6 +4277,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "string",
           "description": "Label of the new spline actor."
         },
+        "cellCm": {
+          "type": "number",
+          "description": "Grid cell used."
+        },
         "cells": {
           "type": "integer",
           "description": "Vertices eroded."
@@ -4215,6 +4288,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "changedCells": {
           "type": "integer",
           "description": "Vertices whose height changed."
+        },
+        "climbM": {
+          "type": "number",
+          "description": "Total rise along it, in m."
         },
         "configuredProperties": {
           "type": "array",
@@ -4256,6 +4333,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "integer",
           "description": "The landscape's edit layers (0 without them)."
         },
+        "groundGapCm": {
+          "type": "number",
+          "description": "The farthest the straight road between two points strays from the ground, in cm."
+        },
         "height": {
           "type": "number",
           "description": "Size up from the route in world units, as drawn (the diameter for a pipe or cable)."
@@ -4267,6 +4348,20 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "landscapeName": {
           "type": "string",
           "description": "The landscape eroded (its label)."
+        },
+        "landscapeSplineCall": {
+          "type": "object",
+          "additionalProperties": true,
+          "x-unreal-reflection-boundary": true,
+          "description": "configure_landscape_splines with the points and the landscape, ready to send (on a landscape)."
+        },
+        "lengthM": {
+          "type": "number",
+          "description": "Length along the points, in m."
+        },
+        "maxGradePercent": {
+          "type": "number",
+          "description": "Steepest grade on the points, in percent."
         },
         "maxLoweredCm": {
           "type": "number",
@@ -4288,6 +4383,16 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "string",
           "description": "Human-readable result message."
         },
+        "minTurnRadiusM": {
+          "type": "number",
+          "description": "Tightest corner on the points, in m (absent on a straight road)."
+        },
+        "nextCall": {
+          "type": "object",
+          "additionalProperties": true,
+          "x-unreal-reflection-boundary": true,
+          "description": "create_road_spline with the points and width, ready to send."
+        },
         "placedInstances": {
           "type": "number",
           "description": "Mesh assignment: instances of this type placed in the level (its foliage actor)."
@@ -4295,6 +4400,16 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "pointCount": {
           "type": "number",
           "description": "Points on the route."
+        },
+        "points": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": true,
+            "x-unreal-reflection-boundary": true,
+            "description": "{x, y, z} in world cm."
+          },
+          "description": "The road from from to to."
         },
         "previousMesh": {
           "type": "string",
@@ -4338,9 +4453,17 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             "x-unreal-reflection-boundary": true
           }
         },
+        "statesSearched": {
+          "type": "integer",
+          "description": "Search states expanded."
+        },
         "success": {
           "type": "boolean",
           "description": "Whether the action succeeded."
+        },
+        "switchbacks": {
+          "type": "integer",
+          "description": "Times the road turns back by more than 90 degrees."
         },
         "types": {
           "type": "array",

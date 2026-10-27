@@ -259,6 +259,7 @@ export const CAPABILITY_COST_INDEX: Readonly<Record<string, string>> = {
   "build_environment::paint_foliage_instances": "interactive|low",
   "build_environment::paint_landscape": "long-running|high",
   "build_environment::paint_landscape_layer": "long-running|high",
+  "build_environment::plan_road": "interactive|medium",
   "build_environment::recapture_scene": "interactive|low",
   "build_environment::remove_foliage": "interactive|low",
   "build_environment::remove_foliage_instances": "interactive|low",
@@ -1647,4 +1648,4 @@ export const CAPABILITY_COST_INDEX: Readonly<Record<string, string>> = {
   "system_control::write_snapshot": "interactive|medium"
 };
 
-export const CAPABILITY_COST_INDEX_KEY_COUNT = 1634;
+export const CAPABILITY_COST_INDEX_KEY_COUNT = 1635;

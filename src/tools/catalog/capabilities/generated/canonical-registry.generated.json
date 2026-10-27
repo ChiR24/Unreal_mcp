@@ -1,6 +1,6 @@
 {
-  "catalogRevision": "32ceb530574637d9",
-  "recordCount": 450,
+  "catalogRevision": "6efddf6957a829dc",
+  "recordCount": 451,
   "records": [
     {
       "id": "animation_physics.analyze_animation",
@@ -36370,6 +36370,245 @@
         "algorithm": "sha256",
         "schema": "6d437fa42a600a9f0d132343b1fbeb1f938adf0a3c072a80a3426daa30d259d0",
         "content": "019f5f2f2f5a9b2e2b26f129caf9b6904349376df8f3bca76c0b6265ca0a2dc5"
+      }
+    },
+    {
+      "id": "build_environment.plan_road",
+      "aliases": [],
+      "legacyIds": [
+        {
+          "tool": "build_environment",
+          "action": "plan_road"
+        }
+      ],
+      "discovery": {
+        "domain": "environment",
+        "family": "spline",
+        "topics": [
+          "plan_road",
+          "plan a road",
+          "road route",
+          "road up a hill",
+          "switchback road",
+          "route a road around obstacles"
+        ],
+        "summary": "Find a road between from and to that a vehicle could drive: no grade over maxGradePercent anywhere along it (default 10), every obstacle and gap kept half its width away (width, default 600 cm), and no corner tighter than turnRadius (default 1500 cm), so a slope too steep to take straight is climbed in turns and switchbacks (up a cone-shaped hill whose sides pass about three times the limit its straight runs may find no way to the top: NO_ROUTE then says how steep a route would be). The ground under a grid turned so both ends sit on its points (a margin of half their distance, or of half the road their difference in height needs at that grade, at least 50 m; cells of about half the turn radius, at most 400 a side) is read by vertical traces: a landscape is ground, or the actors in groundActors (with neither, the actor under from); anything else solid standing anywhere in a cell up to 3.3 m above the ground is an obstacle (a post or a thin wall included), and a place with no collision at all is a gap (a create_primitive mesh has none until configure_mesh_collision). The route is searched over every cell and the heading it is entered by (16 headings), then straightened wherever grade, clearance and radius still hold and the straight road stays within 25 cm of the ground. Reads only. The reply gives points (world cm, 10 cm above the ground, the first at from and the last at to), lengthM, climbM, and maxGradePercent and minTurnRadiusM measured on those points, switchbacks, groundGapCm (the farthest the straight road between two points strays from the ground), and two ready calls: nextCall lays the road with create_road_spline (a road slab named Road; rename it there), and on a landscape landscapeSplineCall makes the same route a landscape spline. Refused: POINT_BLOCKED (from or to on an obstacle or a gap), NO_ROUTE (only a route steeper than the limit reaches, with how steep; obstacles and gaps cut the ends apart; or the search ran out of time), ACTOR_NOT_FOUND (a groundActors name), INVALID_ARGUMENT.",
+        "whenToUse": [
+          "A road, track or path must reach a place uphill or past buildings at a grade a vehicle can drive.",
+          "A road should look engineered: gentle grades, wide curves, switchbacks on a steep slope."
+        ],
+        "whenNotToUse": [
+          "The route is already known: create_road_spline or configure_landscape_splines with its points.",
+          "A character's walking path: get_ai_info info path reads the nav mesh."
+        ]
+      },
+      "schemas": {
+        "input": {
+          "$schema": "https://json-schema.org/draft/2020-12/schema",
+          "type": "object",
+          "properties": {
+            "action": {
+              "type": "string",
+              "description": "The action to execute on the parent tool."
+            },
+            "from": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "x",
+                "y"
+              ],
+              "properties": {
+                "x": {
+                  "type": "number"
+                },
+                "y": {
+                  "type": "number"
+                }
+              },
+              "description": "Where the road starts, {x, y} in world cm; its height is read from the ground."
+            },
+            "to": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "x",
+                "y"
+              ],
+              "properties": {
+                "x": {
+                  "type": "number"
+                },
+                "y": {
+                  "type": "number"
+                }
+              },
+              "description": "Where the road ends, {x, y} in world cm, at least 1 m from from."
+            },
+            "maxGradePercent": {
+              "type": "number",
+              "minimum": 1,
+              "maximum": 60,
+              "description": "Steepest rise over run anywhere along the road, in percent (default 10; a main road 5-8, a mountain road 10-12, a track 15-20)."
+            },
+            "width": {
+              "type": "number",
+              "minimum": 100,
+              "maximum": 5000,
+              "description": "Road width in cm (default 600): obstacles and gaps stay half of it away, and the ready calls lay it this wide."
+            },
+            "turnRadius": {
+              "type": "number",
+              "minimum": 200,
+              "maximum": 20000,
+              "description": "Tightest corner in cm (default 1500, a car; 600 a cart track, 3000 a fast road). It also sets the grid: cells of about half of it."
+            },
+            "groundActors": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "description": "Actors a road may run on (labels or names) instead of the landscape: a floor, a deck, a bridge."
+            }
+          },
+          "required": [
+            "action",
+            "from",
+            "to"
+          ],
+          "additionalProperties": false
+        },
+        "output": {
+          "$schema": "https://json-schema.org/draft/2020-12/schema",
+          "type": "object",
+          "properties": {
+            "success": {
+              "type": "boolean",
+              "description": "Whether the action succeeded."
+            },
+            "message": {
+              "type": "string",
+              "description": "Human-readable result message."
+            },
+            "details": {
+              "type": "object",
+              "x-unreal-reflection-boundary": true,
+              "description": "Additional handler result fields not named by the contract."
+            },
+            "points": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "additionalProperties": true,
+                "x-unreal-reflection-boundary": true,
+                "description": "{x, y, z} in world cm."
+              },
+              "description": "The road from from to to."
+            },
+            "lengthM": {
+              "type": "number",
+              "description": "Length along the points, in m."
+            },
+            "climbM": {
+              "type": "number",
+              "description": "Total rise along it, in m."
+            },
+            "maxGradePercent": {
+              "type": "number",
+              "description": "Steepest grade on the points, in percent."
+            },
+            "minTurnRadiusM": {
+              "type": "number",
+              "description": "Tightest corner on the points, in m (absent on a straight road)."
+            },
+            "switchbacks": {
+              "type": "integer",
+              "description": "Times the road turns back by more than 90 degrees."
+            },
+            "groundGapCm": {
+              "type": "number",
+              "description": "The farthest the straight road between two points strays from the ground, in cm."
+            },
+            "cellCm": {
+              "type": "number",
+              "description": "Grid cell used."
+            },
+            "statesSearched": {
+              "type": "integer",
+              "description": "Search states expanded."
+            },
+            "seconds": {
+              "type": "number",
+              "description": "Time the call took."
+            },
+            "nextCall": {
+              "type": "object",
+              "additionalProperties": true,
+              "x-unreal-reflection-boundary": true,
+              "description": "create_road_spline with the points and width, ready to send."
+            },
+            "landscapeSplineCall": {
+              "type": "object",
+              "additionalProperties": true,
+              "x-unreal-reflection-boundary": true,
+              "description": "configure_landscape_splines with the points and the landscape, ready to send (on a landscape)."
+            }
+          },
+          "required": [
+            "success"
+          ],
+          "additionalProperties": false
+        }
+      },
+      "examples": [
+        {
+          "title": "Find a road between from and to that a vehicle could drive: no grade over maxGradePercent anywhere along it (default 10), every obstacle and gap kept half its width away (width, default 600 cm), and no corner tighter than turnRadius (default 1500 cm), so a slope too steep to take straight is climbed in turns and switchbacks (up a cone-shaped hill whose sides pass about three times the limit its straight runs may find no way to the top: NO_ROUTE then says how steep a route would be). The ground under a grid turned so both ends sit on its points (a margin of half their distance, or of half the road their difference in height needs at that grade, at least 50 m; cells of about half the turn radius, at most 400 a side) is read by vertical traces: a landscape is ground, or the actors in groundActors (with neither, the actor under from); anything else solid standing anywhere in a cell up to 3.3 m above the ground is an obstacle (a post or a thin wall included), and a place with no collision at all is a gap (a create_primitive mesh has none until configure_mesh_collision). The route is searched over every cell and the heading it is entered by (16 headings), then straightened wherever grade, clearance and radius still hold and the straight road stays within 25 cm of the ground. Reads only. The reply gives points (world cm, 10 cm above the ground, the first at from and the last at to), lengthM, climbM, and maxGradePercent and minTurnRadiusM measured on those points, switchbacks, groundGapCm (the farthest the straight road between two points strays from the ground), and two ready calls: nextCall lays the road with create_road_spline (a road slab named Road; rename it there), and on a landscape landscapeSplineCall makes the same route a landscape spline. Refused: POINT_BLOCKED (from or to on an obstacle or a gap), NO_ROUTE (only a route steeper than the limit reaches, with how steep; obstacles and gaps cut the ends apart; or the search ran out of time), ACTOR_NOT_FOUND (a groundActors name), INVALID_ARGUMENT.",
+          "input": {
+            "action": "plan_road",
+            "from": {
+              "x": 0,
+              "y": 0
+            },
+            "to": {
+              "x": 30000,
+              "y": 20000
+            },
+            "maxGradePercent": 10
+          },
+          "output": {
+            "success": true
+          }
+        }
+      ],
+      "availability": {
+        "requiredPlugins": [],
+        "editorStates": [
+          "edit"
+        ]
+      },
+      "behavior": {
+        "effect": "read",
+        "idempotency": "idempotent",
+        "longRunning": false,
+        "safeToRetry": true
+      },
+      "policy": {
+        "requiredScope": "read",
+        "consent": "none",
+        "dataAccess": "project-read"
+      },
+      "cost": {
+        "latency": "interactive",
+        "resources": "medium"
+      },
+      "routing": {
+        "parentTool": "build_environment",
+        "dispatchAction": "plan_road"
+      },
+      "hashes": {
+        "algorithm": "sha256",
+        "schema": "de6a04b9968b9d110b9eb5150cb30a823cb98b6a1614155ce487290adf4fb3c3",
+        "content": "52c8b814dbc518a2de12e76e3a0871d661d1bda516464c8ba40ac4f6b28d7fcd"
       }
     },
     {
