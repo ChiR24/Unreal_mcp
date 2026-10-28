@@ -8,6 +8,7 @@ All notable changes to the EngineWire plugin (formerly McpAutomationBridge) will
 
 ### Added
 - **Engine version gate**: a record's `availability.minEngineVersion` is compared with the running engine; below it search and describe read the capability `unavailable` (reason `engine_version`, not runnable, no confident-hit `executeCall`) and execute refuses it `ENGINE_VERSION_UNSUPPORTED` before dispatch. Declared by `manage_geometry` (5.1), `get_metasound_graph` and `skin_mesh_to_skeleton` (5.5) and `setup_retargeting` (5.8), whose handlers compile out below those versions.
+- **Abstract interpretation in `lint_blueprint`** (`Lint/Interp/`): intervals with bounds against array lengths, and differences between variables a check compared, run to a fixpoint per event or function through Sets, Branches, Sequences and loops; six rules: `divide_by_zero`, `index_out_of_range`, `out_of_range` (Value Range), `float_equality`, `constant_condition`, `endless_loop`. A divisor always 0 or an index always outside its array is an error and fails Data Validation.
 
 ## [0.6.0] - 2026-10-27
 

@@ -25,12 +25,20 @@ describe('blueprint lint', () => {
   });
 
   it('changes nothing: no Modify, no compile, no save in any lint file', () => {
-    for (const file of readdirSync(LINT)) {
-      const text = code(join(LINT, file));
+    for (const file of readdirSync(LINT, { recursive: true, withFileTypes: true }).filter((entry) => entry.isFile())) {
+      const text = code(join(file.parentPath, file.name));
       for (const forbidden of ['Modify(', 'MarkBlueprintAsModified', 'CompileBlueprint', 'McpSafeAssetSave', 'FScopedTransaction']) {
-        expect(text, `${file} must not call ${forbidden}`).not.toContain(forbidden);
+        expect(text, `${file.name} must not call ${forbidden}`).not.toContain(forbidden);
       }
     }
+  });
+
+  // An entry with more paths than the interpreter follows is left out; the reply says how many, so "No findings" never
+  // hides an event or function whose values were not judged.
+  it('says when the value rules gave up on an event or function', () => {
+    expect(handler).toContain('Result->SetNumberField(TEXT("valuesSkipped"), Skipped);');
+    expect(code(join(LINT, 'McpBPLintNumeric.cpp'))).toContain('return Skipped;');
+    expect(code(join(LINT, 'Interp', 'McpBPLintInterp.cpp'))).toContain('Analysis.Skipped += Runner.Run(Node, Start, Analysis) ? 0 : 1;');
   });
 
   it('runs exactly the rules the record lists', () => {

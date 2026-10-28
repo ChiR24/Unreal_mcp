@@ -12,11 +12,13 @@ namespace McpBPLint
 namespace
 {
 const TCHAR* const Rules[] = {TEXT("tick_heavy"), TEXT("unreachable"), TEXT("random_fanout"), TEXT("infinite_while"),
-                              TEXT("never_assigned"), TEXT("unguarded_read")};
+                              TEXT("never_assigned"), TEXT("unguarded_read"), TEXT("divide_by_zero"), TEXT("index_out_of_range"),
+                              TEXT("out_of_range"), TEXT("float_equality"), TEXT("constant_condition"), TEXT("endless_loop")};
 
 // The graphs that run: event graphs, functions and what they collapse; macro and delegate signatures are not code of
-// this Blueprint. Each rule On allows adds what it finds; the graphs checked come back.
-TArray<UEdGraph*> LintRunRules(const UBlueprint* Blueprint, TFunctionRef<bool(const TCHAR*)> On, TArray<FFinding>& Findings)
+// this Blueprint. Each rule On allows adds what it finds; the graphs checked come back, and OutSkipped counts the events
+// and functions the value rules gave up on.
+TArray<UEdGraph*> LintRunRules(const UBlueprint* Blueprint, TFunctionRef<bool(const TCHAR*)> On, TArray<FFinding>& Findings, int32& OutSkipped)
 {
     TArray<UEdGraph*> Graphs;
     Blueprint->GetAllGraphs(Graphs);
@@ -39,6 +41,7 @@ TArray<UEdGraph*> LintRunRules(const UBlueprint* Blueprint, TFunctionRef<bool(co
     {
         UnguardedRead(Blueprint, Graphs, Findings);
     }
+    OutSkipped = NumericRules(Blueprint, Graphs, On, Findings);
     return Graphs;
 }
 } // namespace
@@ -63,7 +66,12 @@ bool HandleLint(const McpBlueprintGraphHandlers::FActionContext& Context)
             }
             if (!bKnown)
             {
-                Context.SendError(FString::Printf(TEXT("Unknown rule '%s'. Rules: tick_heavy, unreachable, random_fanout, infinite_while, never_assigned, unguarded_read."), *Rule), TEXT("INVALID_ARGUMENT"));
+                FString Names;
+                for (const TCHAR* Known : Rules)
+                {
+                    Names += (Names.IsEmpty() ? TEXT("") : TEXT(", ")) + FString(Known);
+                }
+                Context.SendError(FString::Printf(TEXT("Unknown rule '%s'. Rules: %s."), *Rule, *Names), TEXT("INVALID_ARGUMENT"));
                 return true;
             }
             Wanted.Add(Rule);
@@ -74,7 +82,8 @@ bool HandleLint(const McpBlueprintGraphHandlers::FActionContext& Context)
     const int32 Cap = FMath::Clamp(static_cast<int32>(MaxFindings), 1, 200);
     const auto On = [&Wanted](const TCHAR* Rule) { return Wanted.Num() == 0 || Wanted.Contains(Rule); };
     TArray<FFinding> Findings;
-    const TArray<UEdGraph*> Graphs = LintRunRules(Context.Blueprint, On, Findings);
+    int32 Skipped = 0;
+    const TArray<UEdGraph*> Graphs = LintRunRules(Context.Blueprint, On, Findings, Skipped);
 
     TArray<TSharedPtr<FJsonValue>> Rows;
     TSharedPtr<FJsonObject> Counts = MakeShared<FJsonObject>();
@@ -100,10 +109,17 @@ bool HandleLint(const McpBlueprintGraphHandlers::FActionContext& Context)
     Result->SetNumberField(TEXT("findingCount"), Findings.Num());
     Result->SetBoolField(TEXT("truncated"), Findings.Num() > Rows.Num());
     Result->SetNumberField(TEXT("graphsChecked"), Graphs.Num());
+    const FString Unread = Skipped > 0
+        ? FString::Printf(TEXT(" The values of %d event(s) or function(s) were not followed: more paths than the value rules follow."), Skipped)
+        : FString();
+    if (Skipped > 0)
+    {
+        Result->SetNumberField(TEXT("valuesSkipped"), Skipped);
+    }
     Context.NameBlueprint(Result, false);
-    Context.SendResponse(Findings.Num() == 0
+    Context.SendResponse((Findings.Num() == 0
         ? FString::Printf(TEXT("No findings in %s (%d graphs)."), *Context.Blueprint->GetName(), Graphs.Num())
-        : FString::Printf(TEXT("%d finding(s) in %s."), Findings.Num(), *Context.Blueprint->GetName()), Result);
+        : FString::Printf(TEXT("%d finding(s) in %s."), Findings.Num(), *Context.Blueprint->GetName())) + Unread, Result);
     return true;
 }
 } // namespace McpBPLint
@@ -116,7 +132,8 @@ TArray<FMcpLintIssue> McpLintBlueprint(const UBlueprint* Blueprint)
         return Issues;
     }
     TArray<McpBPLint::FFinding> Findings;
-    McpBPLint::LintRunRules(Blueprint, [](const TCHAR*) { return true; }, Findings);
+    int32 Skipped = 0;
+    McpBPLint::LintRunRules(Blueprint, [](const TCHAR*) { return true; }, Findings, Skipped);
     for (const McpBPLint::FFinding& Finding : Findings)
     {
         Issues.Add({Finding.Rule, Finding.Severity, GetNameSafe(Finding.Node->GetGraph()),

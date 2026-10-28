@@ -40,8 +40,8 @@ describe('the lint validator module', () => {
   it('reports what lint_blueprint finds, through the same rule runner', () => {
     expect(read('Source', 'EngineWire', 'Public', 'McpBlueprintLint.h')).toContain('ENGINEWIRE_API TArray<FMcpLintIssue> McpLintBlueprint(const UBlueprint* Blueprint);');
     const lint = read('Source', 'EngineWire', 'Private', 'Domains', 'BlueprintGraph', 'Lint', 'McpBPLint.cpp');
-    expect(lint).toContain('const TArray<UEdGraph*> Graphs = LintRunRules(Context.Blueprint, On, Findings);');
-    expect(lint).toContain('McpBPLint::LintRunRules(Blueprint, [](const TCHAR*) { return true; }, Findings);');
+    expect(lint).toContain('const TArray<UEdGraph*> Graphs = LintRunRules(Context.Blueprint, On, Findings, Skipped);');
+    expect(lint).toContain('McpBPLint::LintRunRules(Blueprint, [](const TCHAR*) { return true; }, Findings, Skipped);');
     const validator = read('Source', 'EngineWireValidation', 'Private', 'McpLintValidator.cpp');
     expect(validator.match(/McpLintBlueprint\(Cast<UBlueprint>\(InAsset\)\)/gu)).toHaveLength(2);
     expect(validator).toContain('if (Issue.Severity == TEXT("error"))');

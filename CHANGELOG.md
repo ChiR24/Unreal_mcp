@@ -13,6 +13,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 <summary><b>✨ Added</b></summary>
 
 - **Capabilities an older engine cannot run say so**: search and describe read them `unavailable` (`engine_version`, `minEngineVersion`) and execute refuses them `ENGINE_VERSION_UNSUPPORTED`; Geometry Script tools need 5.1, `get_metasound_graph` and `skin_mesh_to_skeleton` 5.5, `setup_retargeting` 5.8.
+- **`lint_blueprint` follows what values can be**: a divisor that can be 0, an array index past the end (a ForLoop to Length), a Set outside a Value Range, `==` on computed floats, a Branch already decided, a While Loop nothing ends.
 
 </details>
 

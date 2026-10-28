@@ -17066,10 +17066,16 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
               "random_fanout",
               "infinite_while",
               "never_assigned",
-              "unguarded_read"
+              "unguarded_read",
+              "divide_by_zero",
+              "index_out_of_range",
+              "out_of_range",
+              "float_equality",
+              "constant_condition",
+              "endless_loop"
             ]
           },
-          "description": "The rules to run, default all: tick_heavy, unreachable, random_fanout, infinite_while, never_assigned, unguarded_read. An unknown name is INVALID_ARGUMENT."
+          "description": "The rules to run, default all: tick_heavy, unreachable, random_fanout, infinite_while, never_assigned, unguarded_read, divide_by_zero, index_out_of_range, out_of_range, float_equality, constant_condition, endless_loop. An unknown name is INVALID_ARGUMENT."
         },
         "safeZone": {
           "type": "number",
@@ -18126,7 +18132,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
                 "x-unreal-reflection-boundary": true
               },
               "x-unreal-reflection-boundary": true,
-              "description": "One row per finding: rule, severity (warning, or error for a loop that never ends), graph, node (its title), nodeId (as edit_graph takes it) and detail (what is wrong and the fix). unreachable names only the first node of each dead chain, unguarded_read the first unchecked use of each variable (detail counts the rest)."
+              "description": "One row per finding: rule, severity (warning, or error for a While Loop that never ends, a divisor always 0, an index always outside its array), graph, node (its title), nodeId (as edit_graph takes it) and detail (what is wrong and the fix: for the value rules, the values found, such as \"it can be 0 to 5\"). unreachable names only the first node of each dead chain, unguarded_read the first unchecked use of each variable (detail counts the rest)."
             }
           ],
           "description": "Most severe first, 100 at most."
@@ -18958,6 +18964,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "value": {
           "description": "Property value re-read from the Class Default Object after the write. Emitted on the literal path only and omitted when the value cannot be exported to JSON."
+        },
+        "valuesSkipped": {
+          "type": "number",
+          "description": "Present when some events or functions have more paths than the value rules follow (20,000 node visits each): how many. Their values are not judged, so the value rules say nothing of them; the other rules still read them."
         },
         "variableName": {
           "type": "string",

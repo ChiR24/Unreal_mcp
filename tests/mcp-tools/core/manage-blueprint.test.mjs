@@ -26,6 +26,22 @@ const ENGINE_SOUND = '/Engine/EditorSounds/Notifications/CompileSuccess.CompileS
 const SOUND_BP_NAME = `BP_SoundProbe_${ts}`;
 const CODE_BP_NAME = `BP_CodeProbe_${ts}`;
 const CODE_BP_PATH = `${TEST_FOLDER}/${CODE_BP_NAME}`;
+const VALUES_BP_NAME = `BP_LintValues_${ts}`;
+const VALUES_BP_PATH = `${TEST_FOLDER}/${VALUES_BP_NAME}`;
+const VALUE_RULES = ['divide_by_zero', 'index_out_of_range', 'out_of_range', 'float_equality', 'constant_condition', 'endless_loop'];
+// Each planted mistake beside a twin that guards it: only the mistakes may be found.
+const VALUES_CODE = [
+  '(fn Average (Total Count)\n  (return (/ Total Count)))',
+  '(fn SafeAverage (Total Count)\n  (if (> Count 0)\n    (return (/ Total Count)))\n  (return 0.0))',
+  '(fn Spread (A B)\n  (if (> A B)\n    (return (/ 1.0 (- A B))))\n  (return 0.0))',
+  '(fn TakeDamage (Damage)\n  (Variables|SetHealth (- (Variables|GetHealth) Damage)))',
+  '(fn TakeDamageClamped (Damage)\n  (Variables|SetHealth (Math|Float|Clamp(float) (- (Variables|GetHealth) Damage) 0.0 100.0)))',
+  '(fn Probes (X)\n  (if (== (* X 0.1) 0.3)\n    (Development|PrintString "float hit"))\n  (if (> 0 5)\n    (Development|PrintString "never"))\n  (return (/ X 0.0)))',
+  '(event Custom|OnWalkPastEnd\n  (for i (range (+ (Utilities|Array|Length (Variables|GetItems)) 1))\n    (Development|PrintString (Utilities|Array|Get(acopy) (Variables|GetItems) i))))',
+  '(event Custom|OnWalkItems\n  (for i (range (Utilities|Array|Length (Variables|GetItems)))\n    (Development|PrintString (Utilities|Array|Get(acopy) (Variables|GetItems) i))))',
+  '(event Custom|OnSpin\n  (Variables|SetbRunning true)\n  (while (Variables|GetbRunning)\n    (Development|PrintString "spin")))',
+  '(event Custom|OnSpinStops\n  (while (Variables|GetbRunning)\n    (Variables|SetbRunning false)))',
+].join('\n');
 
 const testCases = [
   // === SETUP ===
@@ -411,6 +427,32 @@ const testCases = [
   { scenario: 'LINT: lint_blueprint names a chain no event leads to', toolName: 'manage_blueprint', arguments: { action: 'lint_blueprint', blueprintPath: BP_PATH, rules: ['unreachable'], maxFindings: 5 }, expected: 'success', assertions: [{ path: 'structuredContent.result.findings.0.rule', equals: 'unreachable', label: 'a node no event leads to is named' }, { path: 'structuredContent.result.counts.unreachable', min: 1, label: 'findings are counted per rule' }] },
   { scenario: 'ERROR: lint_blueprint refuses a rule it does not have', toolName: 'manage_blueprint', arguments: { action: 'lint_blueprint', blueprintPath: BP_PATH, rules: ['no_such_rule'] }, expected: 'error|INVALID_PARAMETER_VALUE' },
   { scenario: 'LINT: Data Validation reports the same findings (the plugin registers the rules as a validator)', toolName: 'system_control', arguments: { action: 'validate_assets', assetPath: BP_PATH, dataValidation: true }, expected: 'success', assertions: [{ path: 'structuredContent.result.results.0.dataValidation', equals: 'valid', label: 'a warning-only finding leaves the asset valid' }, { path: 'structuredContent.result.results.0.warnings.0', includes: 'EngineWire lint ', label: 'lint findings come back as Data Validation warnings' }] },
+
+  // === LINT VALUES: the rules that follow what values a Blueprint's variables can hold, on a Blueprint of their own ===
+  { scenario: 'Setup: create the value-lint blueprint', toolName: 'manage_blueprint', arguments: { action: 'create_blueprint', name: VALUES_BP_NAME, savePath: TEST_FOLDER, parentClass: 'Actor' }, expected: 'success|already exists' },
+  { scenario: 'Setup: an int array to walk', toolName: 'manage_blueprint', arguments: { action: 'add_variable', blueprintPath: VALUES_BP_PATH, variableName: 'Items', variableType: 'Array<Int>' }, expected: 'success' },
+  { scenario: 'Setup: a health value', toolName: 'manage_blueprint', arguments: { action: 'add_variable', blueprintPath: VALUES_BP_PATH, variableName: 'Health', variableType: 'Float', defaultValue: 100 }, expected: 'success' },
+  { scenario: 'Setup: health ranges from 0 to 100', toolName: 'manage_blueprint', arguments: { action: 'set_variable_metadata', blueprintPath: VALUES_BP_PATH, variableName: 'Health', metadata: { ClampMin: '0', ClampMax: '100' } }, expected: 'success' },
+  { scenario: 'Setup: a running flag', toolName: 'manage_blueprint', arguments: { action: 'add_variable', blueprintPath: VALUES_BP_PATH, variableName: 'bRunning', variableType: 'Boolean' }, expected: 'success' },
+  { scenario: 'Setup: function Average', toolName: 'manage_blueprint', arguments: { action: 'add_function', blueprintPath: VALUES_BP_PATH, functionName: 'Average', inputs: [{ name: 'Total', type: 'Float' }, { name: 'Count', type: 'Int' }], outputs: [{ name: 'Result', type: 'Float' }] }, expected: 'success' },
+  { scenario: 'Setup: function SafeAverage', toolName: 'manage_blueprint', arguments: { action: 'add_function', blueprintPath: VALUES_BP_PATH, functionName: 'SafeAverage', inputs: [{ name: 'Total', type: 'Float' }, { name: 'Count', type: 'Int' }], outputs: [{ name: 'Result', type: 'Float' }] }, expected: 'success' },
+  { scenario: 'Setup: function Spread', toolName: 'manage_blueprint', arguments: { action: 'add_function', blueprintPath: VALUES_BP_PATH, functionName: 'Spread', inputs: [{ name: 'A', type: 'Float' }, { name: 'B', type: 'Float' }], outputs: [{ name: 'Result', type: 'Float' }] }, expected: 'success' },
+  { scenario: 'Setup: function TakeDamage', toolName: 'manage_blueprint', arguments: { action: 'add_function', blueprintPath: VALUES_BP_PATH, functionName: 'TakeDamage', inputs: [{ name: 'Damage', type: 'Float' }] }, expected: 'success' },
+  { scenario: 'Setup: function TakeDamageClamped', toolName: 'manage_blueprint', arguments: { action: 'add_function', blueprintPath: VALUES_BP_PATH, functionName: 'TakeDamageClamped', inputs: [{ name: 'Damage', type: 'Float' }] }, expected: 'success' },
+  { scenario: 'Setup: function Probes', toolName: 'manage_blueprint', arguments: { action: 'add_function', blueprintPath: VALUES_BP_PATH, functionName: 'Probes', inputs: [{ name: 'X', type: 'Float' }], outputs: [{ name: 'Result', type: 'Float' }] }, expected: 'success' },
+  { scenario: 'Setup: write each mistake beside a guarded twin', toolName: 'manage_blueprint', arguments: { action: 'write_graph_from_code', blueprintPath: VALUES_BP_PATH, code: VALUES_CODE }, expected: 'success', assertions: [{ path: 'structuredContent.result.compiled', equals: true, label: 'the Blueprint compiles' }] },
+  { scenario: 'LINT: the value rules find each planted mistake and none of the guarded twins', toolName: 'manage_blueprint', arguments: { action: 'lint_blueprint', blueprintPath: VALUES_BP_PATH, rules: VALUE_RULES }, expected: 'success', assertions: [
+    { path: 'structuredContent.result.findingCount', equals: 7, label: 'seven findings: the six rules, divide_by_zero twice' },
+    { path: 'structuredContent.result.findings', includesObject: { rule: 'divide_by_zero', graph: 'Average', severity: 'warning' }, label: 'a divisor nothing checks can be 0' },
+    { path: 'structuredContent.result.findings', includesObject: { rule: 'divide_by_zero', graph: 'Probes', severity: 'error' }, label: 'a divisor always 0 is an error' },
+    { path: 'structuredContent.result.findings', includesObject: { rule: 'index_out_of_range', graph: 'EventGraph' }, label: 'a loop to the length reads one past the end' },
+    { path: 'structuredContent.result.findings', includesObject: { rule: 'out_of_range', graph: 'TakeDamage' }, label: 'a Set past the Value Range' },
+    { path: 'structuredContent.result.findings', includesObject: { rule: 'float_equality', graph: 'Probes' }, label: '== on a computed float' },
+    { path: 'structuredContent.result.findings', includesObject: { rule: 'constant_condition', graph: 'Probes' }, label: 'a Branch decided before it runs' },
+    { path: 'structuredContent.result.findings', includesObject: { rule: 'endless_loop', graph: 'EventGraph' }, label: 'a While Loop nothing ends' },
+  ] },
+  { scenario: 'LINT: Data Validation fails the Blueprint on the divisor that is always 0', toolName: 'system_control', arguments: { action: 'validate_assets', assetPath: VALUES_BP_PATH, dataValidation: true }, expected: 'success', assertions: [{ path: 'structuredContent.result.results.0.dataValidation', equals: 'invalid', label: 'the asset fails' }, { path: 'structuredContent.result.results.0.errors.0', includes: 'divide_by_zero', label: 'on the lint error' }] },
+  { scenario: 'Cleanup: delete the value-lint blueprint', toolName: 'manage_asset', arguments: { action: 'delete', path: VALUES_BP_PATH, force: true }, expected: 'success|not found' },
 
   // === CODE: read_graph_as_code reads graphs as the text of Epic's Blueprint DSL, on a Blueprint of its own ===
   { scenario: 'Setup: create the code probe blueprint', toolName: 'manage_blueprint', arguments: { action: 'create_blueprint', name: CODE_BP_NAME, savePath: TEST_FOLDER, parentClass: 'Actor' }, expected: 'success|already exists' },

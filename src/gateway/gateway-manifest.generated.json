@@ -12198,10 +12198,16 @@
                 "random_fanout",
                 "infinite_while",
                 "never_assigned",
-                "unguarded_read"
+                "unguarded_read",
+                "divide_by_zero",
+                "index_out_of_range",
+                "out_of_range",
+                "float_equality",
+                "constant_condition",
+                "endless_loop"
               ]
             },
-            "description": "The rules to run, default all: tick_heavy, unreachable, random_fanout, infinite_while, never_assigned, unguarded_read. An unknown name is INVALID_ARGUMENT."
+            "description": "The rules to run, default all: tick_heavy, unreachable, random_fanout, infinite_while, never_assigned, unguarded_read, divide_by_zero, index_out_of_range, out_of_range, float_equality, constant_condition, endless_loop. An unknown name is INVALID_ARGUMENT."
           },
           "safeZone": {
             "type": "number",
