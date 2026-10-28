@@ -114,6 +114,8 @@ export const SESSION_RECORDS: readonly CapabilityRecordSource[] = [
   }),
   buildCoreRecord({
     parentTool: 'control_editor', action: 'restart_editor', domain: D, family: F,
+    // The name callers invent for it most (scripts/mine-invented-names.mjs).
+    aliases: ['system_control.restart_editor'],
     topics: ['restart editor', 'reload editor', 'apply plugin change', 'relaunch editor', 'quit editor', 'close editor', 'exit editor', 'unsaved packages', 'list unsaved changes', 'list unsaved assets', 'list dirty packages', 'what is unsaved'],
     summary: 'Restart the editor process, relaunching the same project, or close it (relaunch false). validateOnly lists the unsaved packages without doing either.',
     // enable_plugin and several project settings answer "restart the editor

@@ -22,7 +22,7 @@ struct FSubRoute
 bool IsBlueprintGraphAction(const FString& SubAction)
 {
     static const TSet<FString> Actions = {
-        TEXT("create_node"), TEXT("delete_node"), TEXT("connect_pins"),
+        TEXT("create_node"), TEXT("delete_node"), TEXT("connect_pins"), TEXT("connect_nodes"),
         TEXT("break_pin_links"), TEXT("set_node_property"),
         TEXT("create_reroute_node"), TEXT("get_node_details"),
         TEXT("get_graph_details"), TEXT("get_pin_details"),

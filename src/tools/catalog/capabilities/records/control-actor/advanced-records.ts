@@ -56,6 +56,7 @@ export const ADVANCED_RECORDS: readonly CapabilityRecordSource[] = [
   buildCoreRecord({
     parentTool: 'control_actor',
     action: 'set_blueprint_variables',
+    aliases: ['manage_blueprint.set_blueprint_variables'],
     topics: ['actor variable'],
     domain: DOMAIN,
     family: FAMILY_BLUEPRINT,
@@ -132,6 +133,7 @@ export const ADVANCED_RECORDS: readonly CapabilityRecordSource[] = [
   buildCoreRecord({
     parentTool: 'control_actor',
     action: 'call_actor_function',
+    aliases: ['control_actor.call_function'],
     editorStates: ANY_EDITOR_STATE,
     domain: DOMAIN,
     family: FAMILY_FUNCTION,

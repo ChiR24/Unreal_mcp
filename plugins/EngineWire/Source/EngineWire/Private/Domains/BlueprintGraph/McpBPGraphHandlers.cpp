@@ -220,12 +220,14 @@ bool UEngineWireSubsystem::HandleBlueprintGraphAction(
         return true;
     }
 
+    // connect_nodes (edit_graph's folded name for connect_pins, the word callers bring from the material graph) runs as it.
+    const FString SubAction = GetJsonStringField(Payload, TEXT("subAction"));
     McpBlueprintGraphHandlers::FActionContext Context{
         this,
         RequestId,
         Payload,
         RequestingSocket,
-        GetJsonStringField(Payload, TEXT("subAction"))};
+        SubAction == TEXT("connect_nodes") ? FString(TEXT("connect_pins")) : SubAction};
 
     if (!McpBlueprintGraphHandlers::ValidateProvidedPaths(Context))
     {

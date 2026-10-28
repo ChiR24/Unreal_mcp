@@ -1,5 +1,5 @@
 {
-  "catalogRevision": "763cd963c555d3cd",
+  "catalogRevision": "d7952fc33aab3d96",
   "recordCount": 453,
   "records": [
     {
@@ -20063,7 +20063,8 @@
         "blueprint.set_pin_default_value",
         "blueprint.add_construction_script",
         "blueprint.arrange_nodes",
-        "blueprint.build_graph"
+        "blueprint.build_graph",
+        "blueprint.connect_nodes"
       ],
       "legacyIds": [
         {
@@ -20138,6 +20139,13 @@
           "action": "build_graph",
           "folded": {
             "edit": "batch"
+          }
+        },
+        {
+          "tool": "manage_blueprint",
+          "action": "connect_nodes",
+          "folded": {
+            "edit": "connect_pins"
           }
         }
       ],
@@ -21072,7 +21080,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "6f24f58d25fbdceb477ce3c41b65402b8ab690265a24b0b09e215b26cc470a98",
-        "content": "e93c54982a86dcdb0e4545dc41ba593b70379dcd8d9dc182805b67b9e39d0aae"
+        "content": "0838d7b340d94bd94334803dfe7644be33b439de8bba709664a5e32acb04edaa"
       }
     },
     {
@@ -38761,7 +38769,9 @@
     },
     {
       "id": "control_actor.call_actor_function",
-      "aliases": [],
+      "aliases": [
+        "control_actor.call_function"
+      ],
       "legacyIds": [
         {
           "tool": "control_actor",
@@ -38888,7 +38898,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "56f575ff55cd15837c8cc7d086d7d6b94565dcc3d93f50ae852cf30049fd69fb",
-        "content": "33511621b1f9695d0c223c43005790bdd96dfb4787e46b3a010180107e1653f1"
+        "content": "1ee5035668b7b8e3e2a6e5b0d073d3010da75d301e3e04ff192b5fca2991d33d"
       }
     },
     {
@@ -42534,7 +42544,9 @@
     },
     {
       "id": "control_actor.set_blueprint_variables",
-      "aliases": [],
+      "aliases": [
+        "manage_blueprint.set_blueprint_variables"
+      ],
       "legacyIds": [
         {
           "tool": "control_actor",
@@ -42677,7 +42689,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "b489ea3a3cfadfc17572a4fed5a4430281fde42e2e6c78a681777c3e89897687",
-        "content": "918b2c299558b1b9554449acd6116956ad317d432e9017fe54b1922af7c7330e"
+        "content": "9660ebe4d79fdb9e59c32ff283bc8355f976c7426fe20faaacd4e9590f03f070"
       }
     },
     {
@@ -47076,7 +47088,9 @@
     },
     {
       "id": "control_editor.restart_editor",
-      "aliases": [],
+      "aliases": [
+        "system_control.restart_editor"
+      ],
       "legacyIds": [
         {
           "tool": "control_editor",
@@ -47261,12 +47275,14 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "cb0056eaee8d9453a451fa3cea2082b2a74361971bbc860485a9f95042074dec",
-        "content": "4dae93fa36332f500f17c74107c7f5035c31309d77405e50b72e2e79211b008c"
+        "content": "6732eee6dec021061c6807d24a4a6c80fa7e1613ebe6376d49559c1b00bb00f4"
       }
     },
     {
       "id": "control_editor.save_all",
-      "aliases": [],
+      "aliases": [
+        "manage_asset.save_all"
+      ],
       "legacyIds": [
         {
           "tool": "control_editor",
@@ -47531,7 +47547,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "87a41e8aa358d75918a48115cfc07c6df04f15b3b2d3e3d78c35ea069da76b9a",
-        "content": "1986d036f97ae99aba92ae6e26b6c120805390b9093215c6ddb30a46d2f58d56"
+        "content": "1f9b3a1db314454ec28344387dbf112277c20463eb781fbc573abe3dc83b1823"
       }
     },
     {

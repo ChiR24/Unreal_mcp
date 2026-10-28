@@ -62,6 +62,13 @@ it calls anything is treated as part of the contract:
   and the alias resolves on `describe` and `execute` exactly like the canonical
   id, so a model that guesses it lands on the right capability. Question words
   are function words, so "how do i spawn an actor" ranks like "spawn actor".
+- **A name callers keep inventing becomes an alias** — `scripts/mine-invented-names.mjs`
+  reads Claude Code transcripts, pairs each `UNKNOWN_ACTION` / `UNKNOWN_CAPABILITY`
+  name with the call that then worked, and proposes the ones two or more sessions
+  agree on (`system_control.restart_editor` for `control_editor.restart_editor`).
+  A person approves the list; the plain-request probes check that none moves a
+  first hit. A name for one variant of a family is an `aliasMembers` entry that
+  pins its selector value (`connect_nodes` for `edit_graph`'s `connect_pins`).
 
 ## Client configuration
 
@@ -252,7 +259,10 @@ Rules the resolver enforces:
   capability. Disagreement is a `FORM_CONFLICT` refusal, never a silent pick.
 - Supplying **neither** is `MISSING_SELECTOR`.
 - An alias resolves visibly; an alias owned by more than one capability is
-  `ALIAS_CONFLICT` rather than a guess.
+  `ALIAS_CONFLICT` rather than a guess. A `{tool, action}` that names none of
+  that tool's actions but one record's alias written `tool.action`
+  (`system_control` + `restart_editor`) resolves to that record on `describe`
+  and `execute` alike, and the reply says so (`resolvedFromAlias`, `migratedFrom`).
 - Unknown selectors return `UNKNOWN_CAPABILITY` / `UNKNOWN_TOOL` /
   `UNKNOWN_ACTION`, each with `suggestions` and an executable `nextCall`.
 

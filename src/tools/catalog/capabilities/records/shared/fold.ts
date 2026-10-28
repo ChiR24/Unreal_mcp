@@ -29,10 +29,15 @@ export function applyFolds(
     const index = new Map(out.map((record, position) => [actionOf(record), position] as const));
     const primaryPosition = index.get(spec.primary);
     // A pure alias (no selector value of its own) needs no authored record: it
-    // stands in with the primary's, so the name is declared in the fold alone.
+    // stands in with the record of the member its pin selects, else the
+    // primary's, so the name is declared in the fold alone.
     const isAlias = (entry: (typeof entries)[number]): boolean => entry.value === undefined && entry.action !== spec.primary;
+    const pinnedMember = (entry: (typeof entries)[number]): number | undefined => {
+      const member = entries.find((other) => other.value !== undefined && other.value === entry.pin);
+      return member === undefined ? undefined : index.get(member.action);
+    };
     const positions = entries.map((entry) => {
-      const position = index.get(entry.action) ?? (isAlias(entry) ? primaryPosition : undefined);
+      const position = index.get(entry.action) ?? (isAlias(entry) ? pinnedMember(entry) ?? primaryPosition : undefined);
       if (position === undefined) throw new Error(`fold ${spec.primary} (${parentTool}): member '${entry.action}' not found`);
       return position;
     });

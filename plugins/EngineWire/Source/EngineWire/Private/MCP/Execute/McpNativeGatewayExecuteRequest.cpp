@@ -149,6 +149,7 @@ bool ResolveFromLegacyFields(
 	// The namespace a caller reads off a search row's capability ID (asset for asset.list) names its parent tool.
 	const FString Tool = Index.ResolveToolNamespace(RequestedTool);
 	OutRecord = Index.FindByLegacy(Tool, Action);
+	if (!OutRecord) OutRecord = Index.FindByAliasPair(RequestedTool, Action);
 	if (OutRecord)
 	{
 		return true;

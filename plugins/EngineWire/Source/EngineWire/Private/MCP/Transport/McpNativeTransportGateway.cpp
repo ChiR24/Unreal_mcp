@@ -141,7 +141,12 @@ void FMcpNativeTransport::HandleGatewayCall(
 		// and it wins over tool and action (describeCapabilityReference in gateway-describe-capability.ts).
 		FString Capability;
 		FString ResolvedFromAlias;
-		if (Params->TryGetStringField(TEXT("capability"), Capability))
+		// A tool + action naming none of that tool's actions but one record's alias (system_control.restart_editor) is
+		// described as that alias, as execute runs it.
+		const bool bAliasPair = !Params->HasField(TEXT("capability")) && DiscoveryQuery.bHasAction &&
+			FMcpCanonicalRecordIndex::Get().FindByAliasPair(DiscoveryQuery.Tool, DiscoveryQuery.Action);
+		if (bAliasPair) Capability = DiscoveryQuery.Tool + TEXT(".") + DiscoveryQuery.Action;
+		if (bAliasPair || Params->TryGetStringField(TEXT("capability"), Capability))
 		{
 			const FMcpCanonicalRecordIndex& Index = FMcpCanonicalRecordIndex::Get();
 			const FMcpCapabilityRecord* Record = Index.FindById(Capability);

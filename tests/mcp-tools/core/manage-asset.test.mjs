@@ -115,6 +115,7 @@ const testCases = [
     { path: 'structuredContent.result.assets', length: 0, label: 'the list itself is not sent' },
   ] },
   { scenario: 'ERROR: aggregate refuses a sample past 10', toolName: 'manage_asset', arguments: { action: 'search_assets', packagePaths: ['/Engine/BasicShapes'], limit: 5 }, options: { aggregate: { sample: 20 } }, expected: 'error|INVALID_OPTIONS' },
+  { scenario: 'ACTION: save_all under manage_asset (an alias) saves the named package', toolName: 'manage_asset', arguments: { action: 'save_all', assetPaths: [BASE_MATERIAL] }, expected: 'success' },
   { scenario: 'INFO: get_dependencies', toolName: 'manage_asset', arguments: { action: 'get_dependencies', assetPath: BASE_MATERIAL }, expected: 'success' },
   { scenario: 'INFO: get_dependencies referencers', toolName: 'manage_asset', arguments: { action: 'get_dependencies', assetPath: BASE_MATERIAL, referencers: true }, expected: 'success' },
   { scenario: 'INFO: get_source_control_state', toolName: 'manage_asset', arguments: { action: 'get_source_control_state', assetPath: BASE_MATERIAL, recursive: true }, expected: { condition: 'success', errorPattern: 'SC_DISABLED' } },

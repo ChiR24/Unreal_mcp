@@ -300,6 +300,13 @@ describe('applyFolds position math and throw paths', () => {
     expect(() => createCapabilityRecord(record)).not.toThrow();
   });
 
+  it('lets a pinned alias member with no record of its own stand in with the member its pin selects', () => {
+    // A name callers invent for one variant (connect_nodes for edit_graph's connect_pins) has no authored record.
+    const record = foldTwo({}, {}, [], { ...FOLD, aliasMembers: { two: 'invented_name' } });
+    expect(record.legacyIds.find((legacy) => String(legacy.action) === 'invented_name')?.folded).toEqual({ which: 'two' });
+    expect(() => createCapabilityRecord(record)).not.toThrow();
+  });
+
   it('drops member use-guidance that points at a variant of the folded record itself', () => {
     const folded = applyFolds(
       [

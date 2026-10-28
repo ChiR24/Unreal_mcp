@@ -82,6 +82,8 @@ const testCases = [
   { scenario: 'Setup: create validation material', toolName: 'manage_asset', arguments: { action: 'create_material', name: 'M_SystemControlValidation', path: TEST_FOLDER }, expected: 'success|already exists' },
 
   // === ACTION ===
+  // system_control.restart_editor is an alias of control_editor's (the name callers invent for it): validateOnly only lists.
+  { scenario: 'INFO: restart_editor under system_control (an alias) lists the unsaved packages', toolName: 'system_control', arguments: { action: 'restart_editor', validateOnly: true }, consent: { capability: 'control_editor.restart_editor', acknowledge: 'explicit' }, expected: 'success' },
   { scenario: 'ACTION: profile', toolName: 'system_control', arguments: { action: 'profile', profileType: 'CPU' }, expected: 'success' },
   { scenario: 'ACTION: show_fps', toolName: 'system_control', arguments: { action: 'show_fps', enabled: true }, expected: 'success' },
   // === CONFIG ===

@@ -47,6 +47,13 @@ public:
 	/** Ambiguous aliases are reported, never silently resolved to a first match. */
 	EMcpAliasResolution ResolveAlias(const FString& Alias, FString& OutCapabilityId) const;
 
+	/**
+	 * The record a tool + action names when the tool has no such action but tool.action is one record's alias
+	 * (system_control.restart_editor: a name callers invent for another tool's action); null otherwise. A call that
+	 * writes the alias as tool and action then lands as one that writes it in the capability field does.
+	 */
+	const FMcpCapabilityRecord* FindByAliasPair(const FString& Tool, const FString& Action) const;
+
 	/** Legacy action names accepted for a parent tool, sorted. */
 	TArray<FString> GetLegacyActionsForTool(const FString& Tool) const;
 

@@ -16,7 +16,7 @@ Editor-only UE 5.0-5.8 plugin. It owns the native `/mcp` HTTP/SSE server (the on
 | Native MCP | `Private/MCP/` (160) | Registry/session/transport, generated shards — nested `AGENTS.md` |
 | Hazardous UE ops | `Private/Safety/` (19) | Save/load/delete wrappers — nested `AGENTS.md` |
 | WebSocket transport | `Private/Transport/` (23) | Auth, sockets, framing, TLS, rate limits — nested `AGENTS.md` |
-| Native C++ tests | `Private/Tests/` (37) | Automation tests |
+| Native C++ tests | `Private/Tests/` (38) | Automation tests |
 | Status UI | `Private/UI/` (2) | Thin Slate presentation |
 
 ## CROSS-SURFACE RULES

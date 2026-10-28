@@ -123,6 +123,14 @@ EMcpAliasResolution FMcpCanonicalRecordIndex::ResolveAlias(
 	return EMcpAliasResolution::Unique;
 }
 
+const FMcpCapabilityRecord* FMcpCanonicalRecordIndex::FindByAliasPair(const FString& Tool, const FString& Action) const
+{
+	FString CapabilityId;
+	const bool bAlias = !Tool.IsEmpty() && !Action.IsEmpty() &&
+		ResolveAlias(Tool + TEXT(".") + Action, CapabilityId) == EMcpAliasResolution::Unique;
+	return bAlias && !FindByLegacy(ResolveToolNamespace(Tool), Action) ? FindById(CapabilityId) : nullptr;
+}
+
 TArray<FString> FMcpCanonicalRecordIndex::GetLegacyActionsForTool(const FString& Tool) const
 {
 	const FString Prefix = Tool + TEXT("\t");

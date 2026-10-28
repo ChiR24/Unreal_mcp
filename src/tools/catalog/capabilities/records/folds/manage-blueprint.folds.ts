@@ -38,6 +38,8 @@ export const MANAGE_BLUEPRINT_FOLDS: readonly FoldSpec[] = [
         'set_node_property', 'set_pin_default_value', 'add_construction_script', 'arrange_nodes']),
       batch: 'build_graph',
     },
+    // The name callers invent for connect_pins (the material graph's word): the handler reads it as connect_pins.
+    aliasMembers: { connect_pins: 'connect_nodes' },
     exampleFrom: 'build_graph',
   },
   {
