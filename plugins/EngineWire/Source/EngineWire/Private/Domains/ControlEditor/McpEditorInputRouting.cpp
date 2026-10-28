@@ -127,14 +127,11 @@ bool RouteKeyToPIEForMcp(const FKey &InputKey, const EInputEvent InputEvent,
   return RouteKeyToPlayerController();
 }
 
-void SimulateKeyInputForMcp(const FString &Key, const EInputEvent InputEvent,
-                            const TCHAR *Verb, bool &bSuccess,
-                            bool &bRoutedToPIE, bool &bHandledByPIE,
-                            bool &bHandledBySlate, FString &Message) {
+void SimulateKeyInputForMcp(const FString &Key, const EInputEvent InputEvent, const TCHAR *Verb, EMcpKeyTarget Target,
+                            bool &bSuccess, bool &bRoutedToPIE, bool &bHandledByPIE, bool &bHandledBySlate,
+                            FString &Message) {
   if (Key.IsEmpty()) {
-    Message =
-        InputEvent == IE_Released ? TEXT("Key parameter required for key_up")
-                                  : TEXT("Key parameter required for key_down");
+    Message = InputEvent == IE_Released ? TEXT("Key parameter required for key_up") : TEXT("Key parameter required for key_down");
     return;
   }
 
@@ -144,16 +141,37 @@ void SimulateKeyInputForMcp(const FString &Key, const EInputEvent InputEvent,
     return;
   }
 
+  // A release that names no target goes where its press went, not wherever input goes now: a key pressed in the
+  // editor was let go into a game started since, and one pressed into a game into the editor once Play stopped. A
+  // game press keeps its play world, and once that world stopped or was replaced there is nothing left to let go.
+  // A release with no recorded press (a module reload lost it) is still routed as asked, so no key stays stuck.
+  struct FPress { EMcpKeyTarget Target = EMcpKeyTarget::Any; TWeakObjectPtr<UWorld> World; };
+  static TMap<FString, FPress> PressedTo;
+  UWorld *const PlayWorld = GEditor ? GEditor->PlayWorld.Get() : nullptr;
+  const bool bRecall = InputEvent == IE_Released && Target == EMcpKeyTarget::Any;
+  const FPress Press = bRecall ? PressedTo.FindRef(Key) : FPress{Target, PlayWorld};
+  const bool bWorldGone = Press.Target == EMcpKeyTarget::Game && Press.World.Get() != PlayWorld;
+  Target = Press.Target;
   // A menu widget the game focused takes the key through Slate first, as a real key reaches it.
   FString FocusNote;
-  bRoutedToPIE = RouteKeyToFocusedPieWidgetForMcp(InputKey, InputEvent, bHandledBySlate, FocusNote) ||
-                 RouteKeyToPIEForMcp(InputKey, InputEvent, bHandledByPIE);
-  if (!bRoutedToPIE) {
+  bRoutedToPIE = !bWorldGone && Target != EMcpKeyTarget::Editor &&
+                 (RouteKeyToFocusedPieWidgetForMcp(InputKey, InputEvent, bHandledBySlate, FocusNote) ||
+                  RouteKeyToPIEForMcp(InputKey, InputEvent, bHandledByPIE));
+  // For the game only, a key no play session took goes nowhere: Delete or End on a focused editor panel runs that
+  // panel's command, which a caller driving the game never asked for. For the editor only, nothing goes through
+  // Slate while the play viewport holds focus (Play started after an editor press): Slate would hand it to the game.
+  const bool bToEditor = !bRoutedToPIE && Target != EMcpKeyTarget::Game &&
+                         !(Target == EMcpKeyTarget::Editor && PieViewportHasFocusForMcp());
+  if (bToEditor) {
     FSlateApplication &SlateApp = FSlateApplication::Get();
     FKeyEvent KeyEvent(InputKey, FModifierKeysState(), 0, false, 0, 0);
-    bHandledBySlate = InputEvent == IE_Released
-                          ? SlateApp.ProcessKeyUpEvent(KeyEvent)
-                          : SlateApp.ProcessKeyDownEvent(KeyEvent);
+    bHandledBySlate = InputEvent == IE_Released ? SlateApp.ProcessKeyUpEvent(KeyEvent) : SlateApp.ProcessKeyDownEvent(KeyEvent);
+  }
+  // A press that reached nothing leaves no destination behind, and a release forgets it.
+  if (InputEvent == IE_Released || !(bRoutedToPIE || bToEditor)) {
+    PressedTo.Remove(Key);
+  } else {
+    PressedTo.Add(Key, bRoutedToPIE ? FPress{EMcpKeyTarget::Game, PlayWorld} : FPress{EMcpKeyTarget::Editor});
   }
   bSuccess = true;
   Message = bRoutedToPIE
@@ -201,19 +219,15 @@ FString NormalizeSimulatedInputTypeForMcp(const TSharedPtr<FJsonObject> &Payload
   return InputType;
 }
 
-void SimulateEditorInputForMcp(const FString &InputType, const FString &Key,
-                               const TSharedPtr<FJsonObject> &Payload,
-                               bool &bSuccess, bool &bRoutedToPIE,
-                               bool &bHandledByPIE, bool &bHandledBySlate,
-                               FString &Message) {
+void SimulateEditorInputForMcp(const FString &InputType, const FString &Key, const TSharedPtr<FJsonObject> &Payload,
+                               bool &bSuccess, bool &bRoutedToPIE, bool &bHandledByPIE, bool &bHandledBySlate,
+                               FString &Message, EMcpKeyTarget Target) {
   if (InputType == TEXT("key_down") || InputType == TEXT("keydown")) {
-    SimulateKeyInputForMcp(Key, IE_Pressed, TEXT("Key down"), bSuccess,
-                           bRoutedToPIE, bHandledByPIE, bHandledBySlate,
-                           Message);
+    SimulateKeyInputForMcp(Key, IE_Pressed, TEXT("Key down"), Target, bSuccess, bRoutedToPIE, bHandledByPIE,
+                           bHandledBySlate, Message);
   } else if (InputType == TEXT("key_up") || InputType == TEXT("keyup")) {
-    SimulateKeyInputForMcp(Key, IE_Released, TEXT("Key up"), bSuccess,
-                           bRoutedToPIE, bHandledByPIE, bHandledBySlate,
-                           Message);
+    SimulateKeyInputForMcp(Key, IE_Released, TEXT("Key up"), Target, bSuccess, bRoutedToPIE, bHandledByPIE,
+                           bHandledBySlate, Message);
   } else if (InputType == TEXT("mouse_click") || InputType == TEXT("click")) {
     double X = 0, Y = 0;
     Payload->TryGetNumberField(TEXT("x"), X);
@@ -263,29 +277,22 @@ void SimulateEditorInputForMcp(const FString &InputType, const FString &Key,
     // made automation unusable alongside other work, so put it back where the
     // person left it as soon as the release has been routed: they see at most a
     // single-frame blip instead of losing their pointer.
-    TSharedPtr<ICursor> PlatformCursor =
-        SlateApp.GetPlatformCursor().IsValid() ? SlateApp.GetPlatformCursor() : nullptr;
-    const FVector2D RestoreCursorTo =
-        PlatformCursor.IsValid() ? FVector2D(PlatformCursor->GetPosition()) : Position;
+    TSharedPtr<ICursor> PlatformCursor = SlateApp.GetPlatformCursor();
+    const FVector2D RestoreCursorTo = PlatformCursor.IsValid() ? FVector2D(PlatformCursor->GetPosition()) : Position;
     if (PlatformCursor.IsValid()) {
       PlatformCursor->SetPosition(static_cast<int32>(Position.X),
                                   static_cast<int32>(Position.Y));
     }
     TSet<FKey> NoButtons;
-    FPointerEvent PreClickMove(0, Position, SyntheticCursorPosForMcp(),
-                               NoButtons, EKeys::Invalid, 0.0f,
-                               FModifierKeysState());
+    FPointerEvent PreClickMove(0, Position, SyntheticCursorPosForMcp(), NoButtons, EKeys::Invalid, 0.0f, FModifierKeysState());
     SlateApp.ProcessMouseMoveEvent(PreClickMove);
     SyntheticCursorPosForMcp() = Position;
 
-    FPointerEvent MouseDownEvent(0, Position, Position, PressedButtons,
-                                 MouseButtonKey, 0.0f, FModifierKeysState());
-    const bool bDownHandled =
-        SlateApp.ProcessMouseButtonDownEvent(nullptr, MouseDownEvent);
+    FPointerEvent MouseDownEvent(0, Position, Position, PressedButtons, MouseButtonKey, 0.0f, FModifierKeysState());
+    const bool bDownHandled = SlateApp.ProcessMouseButtonDownEvent(nullptr, MouseDownEvent);
 
     TSet<FKey> ReleasedButtons;
-    FPointerEvent MouseUpEvent(0, Position, Position, ReleasedButtons,
-                               MouseButtonKey, 0.0f, FModifierKeysState());
+    FPointerEvent MouseUpEvent(0, Position, Position, ReleasedButtons, MouseButtonKey, 0.0f, FModifierKeysState());
     const bool bUpHandled = SlateApp.ProcessMouseButtonUpEvent(MouseUpEvent);
     if (PlatformCursor.IsValid()) {
       PlatformCursor->SetPosition(static_cast<int32>(RestoreCursorTo.X),

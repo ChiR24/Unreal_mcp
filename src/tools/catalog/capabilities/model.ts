@@ -97,6 +97,9 @@ export type CapabilityPolicy = {
   readonly requiredScope: (typeof POLICY_SCOPES)[number];
   readonly consent: (typeof CONSENT_MODES)[number];
   readonly dataAccess: (typeof DATA_ACCESS_CLASSES)[number];
+  /** Input parameters that, when a call sends them, demand a stricter scope as well as requiredScope (never
+   *  instead: membership is exact-set): sample_motion's inputs press keys in the game, so they also need write. */
+  readonly raisedBy?: Readonly<Record<string, (typeof POLICY_SCOPES)[number]>>;
 };
 
 export type CapabilityCost = {

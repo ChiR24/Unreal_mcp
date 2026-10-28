@@ -77,10 +77,12 @@ export function auditCapabilityMetadata(
     const p = r.policy;
     const noOpLike = isNoOpLike(r);
 
-    // C1: read-effect invariants
+    // C1: read-effect invariants. A read whose policy.raisedBy makes some calls act (sample_motion's inputs press
+    // keys) is not safe to retry as a whole, and may say so.
     if (b.effect === 'read') {
-      if (b.idempotency !== 'idempotent') push(r.id, 'C1', `read effect idempotency=${b.idempotency} (expected idempotent)`);
-      if (b.safeToRetry !== true) push(r.id, 'C1', `read effect safeToRetry=${b.safeToRetry} (expected true)`);
+      const acts = p.raisedBy !== undefined;
+      if (!acts && b.idempotency !== 'idempotent') push(r.id, 'C1', `read effect idempotency=${b.idempotency} (expected idempotent)`);
+      if (!acts && b.safeToRetry !== true) push(r.id, 'C1', `read effect safeToRetry=${b.safeToRetry} (expected true)`);
       if (p.requiredScope !== 'read') push(r.id, 'C1', `read effect requiredScope=${p.requiredScope} (expected read)`);
       if (p.consent !== 'none') push(r.id, 'C1', `read effect consent=${p.consent} (expected none)`);
       if (p.dataAccess !== 'project-read') push(r.id, 'C1', `read effect dataAccess=${p.dataAccess} (expected project-read)`);

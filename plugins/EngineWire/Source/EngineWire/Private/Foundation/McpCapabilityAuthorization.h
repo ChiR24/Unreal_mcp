@@ -18,6 +18,9 @@
 struct FMcpCapabilityDemand
 {
 	EMcpCapabilityScope RequiredScope = EMcpCapabilityScope::Admin;
+	// Scopes a parameter the call sent adds (policy.raisedBy), needed AS WELL as RequiredScope: membership is
+	// exact-set, so swapping read for write would let a write-only token read.
+	TArray<EMcpCapabilityScope> AlsoRequiredScopes;
 	// "none" | "explicit" | "elevated" — mirrors CONSENT_MODES in TypeScript.
 	FString ConsentMode = TEXT("none");
 	FString CapabilityId;

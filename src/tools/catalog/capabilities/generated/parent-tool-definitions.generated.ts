@@ -5048,7 +5048,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             ],
             "additionalProperties": false
           },
-          "description": "Keys pressed and released at exact game times during the run (at most 32), e.g. [{\"key\":\"D\",\"atSeconds\":0,\"holdSeconds\":2},{\"key\":\"SpaceBar\",\"atSeconds\":0.6,\"holdSeconds\":0.2}]. A key still held when the run ends is released."
+          "description": "Keys pressed and released at exact game times during the run (at most 32), e.g. [{\"key\":\"D\",\"atSeconds\":0,\"holdSeconds\":2},{\"key\":\"SpaceBar\",\"atSeconds\":0.6,\"holdSeconds\":0.2}]. A key still held when the run ends is released. Keys go to the game only (a focused game widget, else its viewport and player), never to an editor panel: a key no play session takes is sent nowhere and marked routedToPIE false, and a release after Play stopped is dropped. Pressing keys acts on the game (Escape stops Play), so a call that sends inputs needs the write scope as well as read, unlike watching alone, and is not safe to retry: a retry presses them again."
         },
         "intervalSeconds": {
           "type": "number",
@@ -5947,7 +5947,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             "additionalProperties": true,
             "x-unreal-reflection-boundary": true
           },
-          "description": "One entry per input: key, at, hold, and down/up, the game seconds since the start when it was pressed and released (up is when the run ended for a key still held)."
+          "description": "One entry per input: key, at, hold, and down/up, the game seconds since the start when it was pressed and released (up is when the run ended for a key still held); routedToPIE false when no play session took the key, which then went nowhere."
         },
         "isPieWorld": {
           "type": "boolean",
@@ -6701,7 +6701,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "holdSeconds": {
           "type": "number",
-          "description": "Keep injecting inputAction, or keep a raw key_down/key_tap key pressed, for this many seconds of GAME time so the pawn actually travels (default 0: an action lasts one frame, a key_down stays down until key_up, a key_tap lets go after 0.1s). Game time, not wall time: under set_game_speed 0.05 a 2s hold still delivers 2s of in-game input, which takes 40s of real time. A key_up for the same action or key stops the hold early. The reply comes back at once, while the key is still down: read the pawn after the hold, or press and watch in one call with control_actor sample_motion inputs."
+          "description": "Keep injecting inputAction, or keep a raw key_down/key_tap key pressed, for this many seconds of GAME time so the pawn actually travels (default 0: an action lasts one frame, a key_down stays down until key_up, a key_tap lets go after 0.1s). Game time, not wall time: under set_game_speed 0.05 a 2s hold still delivers 2s of in-game input, which takes 40s of real time. A key_up for the same action or key stops the hold early. The release goes where the press went: a key pressed into the game is never let go into an editor panel once Play has stopped. The reply comes back at once, while the key is still down: read the pawn after the hold, or press and watch in one call with control_actor sample_motion inputs."
         },
         "id": {
           "type": "integer",

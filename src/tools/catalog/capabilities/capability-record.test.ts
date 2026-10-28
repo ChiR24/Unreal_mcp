@@ -46,6 +46,17 @@ describe('CapabilityRecord validation boundary', () => {
       .toBe(stableJsonStringify({ a: { b: 3, y: 2 }, z: 1 }));
   });
 
+  it('takes a policy.raisedBy only when it names a declared parameter and tightens the scope', () => {
+    // Given a destructive record whose one declared input is assetPath
+    const source = validCapabilitySource();
+    const raised = (raisedBy: Record<string, string>) => ({ ...source, policy: { ...source.policy, raisedBy } });
+
+    // Then a stricter scope on a declared parameter parses, an undeclared one or a looser scope does not
+    expect(sourceRejectionPointers(raised({ assetPath: 'admin' }))).toEqual([]);
+    expect(sourceRejectionPointers(raised({ missing: 'admin' }))).toContain('/policy/raisedBy/missing');
+    expect(sourceRejectionPointers(raised({ assetPath: 'write' }))).toContain('/policy/raisedBy/assetPath');
+  });
+
   it('rejects unknown record fields at the exact JSON pointer', () => {
     // Given
     const source = { ...validCapabilitySource(), surprise: true };

@@ -4,7 +4,7 @@
 
 # Action reference
 
-Catalog revision: `7d1415c95f4e2a95`
+Catalog revision: `9d0b975f391dbe2d`
 
 Both transports expose exactly ONE public MCP tool, `unreal`, with the four
 operations `search` / `describe` / `execute` / `configure`. The parent tools
@@ -25,7 +25,10 @@ validates against, so `execute` cannot accept an action this table omits.
 - **Effect** — `read` | `write` | `destructive` (`behavior.effect`).
 - **Scope** — the capability scope the caller must hold
   (`policy.requiredScope`). Scope membership is EXACT-SET with an `admin`
-  wildcard: holding `write` does NOT imply `read`.
+  wildcard: holding `write` does NOT imply `read`. A call that sends a
+  parameter listed in `policy.raisedBy` needs that scope as well (sending
+  `inputs` to `control_actor.get_transform` presses keys, so it needs `read`
+  and `write`).
 - **Consent** — `none` | `explicit` | `elevated` (`policy.consent`). A
   non-`none` value must be satisfied by an execute-envelope `consent`
   sibling naming THAT capability; it is never a handler parameter.

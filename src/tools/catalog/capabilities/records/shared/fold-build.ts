@@ -25,7 +25,22 @@ import { intersectRequired, mergeProperties } from './fold-widen.js';
 const LATENCY_RANK: Readonly<Record<string, number>> = { instant: 0, interactive: 1, 'long-running': 2 };
 const RESOURCE_RANK: Readonly<Record<string, number>> = { low: 0, medium: 1, high: 2 };
 
+type Scope = CapabilityRecordSource['policy']['requiredScope'];
+const SCOPE_RANK: Readonly<Record<Scope, number>> = { read: 0, write: 1, destructive: 2, admin: 3 };
+const rank = (scope: Scope): number => SCOPE_RANK[scope];
+
 const namespaceOf = (id: string): string => id.slice(0, id.lastIndexOf('.'));
+
+// Members share scope, consent and data access (assertFoldable). A parameter one member raises the scope for raises
+// it for the family too, since that member is the one declaring it; the strictest wins if two raise the same one.
+function foldPolicy(first: CapabilityRecordSource, members: readonly CapabilityRecordSource[]): CapabilityRecordSource['policy'] {
+  const raisedBy: Record<string, Scope> = {};
+  for (const [name, scope] of members.flatMap((member) => Object.entries(member.policy.raisedBy ?? {}))) {
+    const held = raisedBy[name];
+    if (held === undefined || rank(scope) > rank(held)) raisedBy[name] = scope;
+  }
+  return Object.keys(raisedBy).length === 0 ? first.policy : { ...first.policy, raisedBy };
+}
 const actionProp = (): JsonObject => ({ type: 'string', description: 'The action to execute on the parent tool.' });
 
 // Union of every member's group: each member's own group is a subset, so the
@@ -251,7 +266,7 @@ export function buildFolded(
       longRunning: members.some((member) => member.behavior.longRunning),
       safeToRetry: members.every((member) => member.behavior.safeToRetry),
     },
-    policy: first.policy,
+    policy: foldPolicy(first, members),
     cost: {
       latency: maxBy(members.map((member) => member.cost.latency), LATENCY_RANK) as CapabilityRecordSource['cost']['latency'],
       resources: maxBy(members.map((member) => member.cost.resources), RESOURCE_RANK) as CapabilityRecordSource['cost']['resources'],

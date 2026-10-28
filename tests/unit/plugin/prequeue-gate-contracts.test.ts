@@ -3,6 +3,8 @@ import { resolve } from 'node:path';
 
 import { describe, expect, it } from 'vitest';
 
+import { CANONICAL_CAPABILITY_RECORDS } from '../../../src/tools/catalog/capabilities/generated/canonical-registry.generated.js';
+
 // Task 40 remediation — enforcement-wiring contracts.
 //
 // The gate itself is unit-tested in Private/Tests/McpPrequeueGateTests.cpp, but
@@ -104,6 +106,27 @@ describe('Task 40 Blocker 1 — the gate and the dispatcher resolve the SAME act
     for (const source of [gateDemand(), privateSource('Core', 'Security', 'McpPrequeueGate.cpp')]) {
       expect(source).not.toMatch(/TryGetStringField\(\s*TEXT\("action"\)/u);
     }
+  });
+
+  // sample_motion is a read, but its inputs press keys in the game (Escape stops Play): a read-only token drove the
+  // game. The record says which parameter raises the scope; both ways a call resolves to a record honour it.
+  it('a parameter listed in policy.raisedBy raises the demand, by capability id and by old action name', () => {
+    const transform = CANONICAL_CAPABILITY_RECORDS.find((record) => record.id === 'control_actor.get_transform');
+    expect(transform?.policy.requiredScope).toBe('read');
+    expect(transform?.policy.raisedBy).toEqual({ inputs: 'write' });
+    expect(transform?.behavior.safeToRetry, 'a retry presses the keys again').toBe(false);
+    const source = gateDemand();
+    expect(source).toContain('if (!Payload->HasField(Pair.Key))');
+    expect(source).toMatch(/ReadPolicy\(Record, OutDemand\.RequiredScope, OutDemand\.ConsentMode\);\s*RaiseForPayload\(Record, Payload, OutDemand\.AlsoRequiredScopes\);/u);
+    expect(source).toMatch(/ReadPolicy\(\*Record, Scope, Consent\);\s*RaiseForPayload\(\*Record, Request\.Payload, Demand\.AlsoRequiredScopes\);/u);
+    expect(source).toContain('FindById(Request.CapabilityId, Request.Payload, Store, Demand);');
+  });
+
+  // Membership is exact-set: replacing read with the raised write let a write-only token read motion samples.
+  it('a raised scope is needed as well as the capability\'s own, never instead of it', () => {
+    const source = authorization();
+    expect(source).toMatch(/bool bAllowed = Principal\.IsScopeAuthorized\(Missing\);\s*for \(const EMcpCapabilityScope Also : Demand\.AlsoRequiredScopes\)/u);
+    expect(source).toContain('Mutates(Demand.RequiredScope) || Demand.AlsoRequiredScopes.ContainsByPredicate(Mutates)');
   });
 
   it('dispatch-target narrowing fails closed when it yields no candidate', () => {
