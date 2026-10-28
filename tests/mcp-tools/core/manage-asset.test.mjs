@@ -107,6 +107,14 @@ const testCases = [
   // === INFO / METADATA ===
   { scenario: 'CREATE: create_folder', toolName: 'manage_asset', arguments: { action: 'create_folder', path: `${TEST_FOLDER}/SubFolder` }, expected: 'success|already exists' },
   { scenario: 'INFO: search_assets', toolName: 'manage_asset', arguments: { action: 'search_assets', searchText: `AssetBase_${ts}`, packagePaths: [TEST_FOLDER], recursivePaths: true, recursiveClasses: true, limit: 5, offset: 0 }, expected: 'success' },
+  // options.aggregate counts a list in the plugin instead of sending it.
+  { scenario: 'INFO: aggregate counts engine shapes by class instead of listing them', toolName: 'manage_asset', arguments: { action: 'search_assets', packagePaths: ['/Engine/BasicShapes'], recursivePaths: true, limit: 50 }, options: { aggregate: { groupBy: 'classPath', sample: 2 } }, expected: 'success', assertions: [
+    { path: 'structuredContent.aggregate.field', equals: 'assets', label: 'the asset list is the one counted' },
+    { path: 'structuredContent.aggregate.total', min: 5, label: 'every shape counted' },
+    { path: 'structuredContent.aggregate.groups.0.count', min: 1, label: 'grouped by class, most common first' },
+    { path: 'structuredContent.result.assets', length: 0, label: 'the list itself is not sent' },
+  ] },
+  { scenario: 'ERROR: aggregate refuses a sample past 10', toolName: 'manage_asset', arguments: { action: 'search_assets', packagePaths: ['/Engine/BasicShapes'], limit: 5 }, options: { aggregate: { sample: 20 } }, expected: 'error|INVALID_OPTIONS' },
   { scenario: 'INFO: get_dependencies', toolName: 'manage_asset', arguments: { action: 'get_dependencies', assetPath: BASE_MATERIAL }, expected: 'success' },
   { scenario: 'INFO: get_dependencies referencers', toolName: 'manage_asset', arguments: { action: 'get_dependencies', assetPath: BASE_MATERIAL, referencers: true }, expected: 'success' },
   { scenario: 'INFO: get_source_control_state', toolName: 'manage_asset', arguments: { action: 'get_source_control_state', assetPath: BASE_MATERIAL, recursive: true }, expected: { condition: 'success', errorPattern: 'SC_DISABLED' } },

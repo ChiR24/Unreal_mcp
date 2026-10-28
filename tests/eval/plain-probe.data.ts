@@ -767,4 +767,11 @@ export const PLAIN_PROBE: readonly PlainProbeCase[] = [
   { query: 'make the chair face the table', accepted: ['control_actor.arrange_by_relations'] },
   { query: 'measure distance between actors', accepted: ['control_actor.list'] },
   { query: 'actors near the player', accepted: ['control_actor.list'] },
+  // Typos a model makes: a word no record carries is read as the catalog word it is one slip from.
+  { query: 'spwan actor', accepted: ['control_actor.spawn'] },
+  { query: 'delte asset', accepted: ['asset.delete'] },
+  { query: 'compiel blueprint', accepted: ['blueprint.compile'] },
+  { query: 'add varaible', accepted: ['blueprint.edit_variable'] },
+  { query: 'lsit actors', accepted: ['control_actor.list'] },
+  { query: 'take a screenshto', accepted: ['control_editor.screenshot'] },
 ];

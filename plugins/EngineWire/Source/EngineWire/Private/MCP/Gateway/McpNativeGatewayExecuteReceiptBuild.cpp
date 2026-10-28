@@ -1,6 +1,7 @@
 // McpNativeGatewayExecuteReceiptBuild.cpp — see header.
 
 #include "MCP/Gateway/McpNativeGatewayExecuteReceiptBuild.h"
+#include "MCP/Execute/Request/McpExecuteAggregate.h"
 #include "MCP/Execute/McpNativeGatewayValidation.h"
 #include "MCP/Execute/McpNativeReceiptRedaction.h"
 #include "MCP/Execute/McpNativeGatewayCanonicalRecords.h"
@@ -122,14 +123,17 @@ TSharedPtr<FJsonObject> McpBuildGatewayExecuteReceipt(
 	int64 SerializedChars = 0;
 	TSharedPtr<FJsonObject> Published = Result;
 	TSharedPtr<FJsonObject> PageBlock;
-	if (McpSerializedResultExceeds(Result, ResultCharBudget, &SerializedChars))
+	// options.aggregate counts a list in the plugin instead of sending it (Request/McpExecuteAggregate.cpp).
+	const TSharedPtr<FJsonObject> AggregateBlock = Context.Aggregate.IsValid() && Result.IsValid()
+		? McpExecuteAggregate::Apply(Context.Aggregate, OutputSchema, Published) : nullptr;
+	if (McpSerializedResultExceeds(Published, ResultCharBudget, &SerializedChars))
 	{
 		// One top-level array that carries the size goes out a page at a time instead (McpNativeResultPages.cpp); a
 		// payload reporting a failure is never paged.
 		bool bPayloadOk = true;
 		Result->TryGetBoolField(TEXT("success"), bPayloadOk);
 		FMcpResultPage Paged;
-		if (!bPayloadOk || !Context.PageOwner.IsValid() || !McpFirstResultPage(Result, ResultCharBudget, *Context.PageOwner, Paged))
+		if (!bPayloadOk || !Context.PageOwner.IsValid() || !McpFirstResultPage(Published, ResultCharBudget, *Context.PageOwner, Paged))
 		{
 			FMcpSemanticError TooLarge = McpOutputError(TEXT("RESULT_TOO_LARGE"),
 				FString::Printf(TEXT("Result exceeded the gateway safety limit (%lld chars). Narrow the request with one of this capability's own filter parameters, then retry."), SerializedChars));
@@ -196,6 +200,10 @@ TSharedPtr<FJsonObject> McpBuildGatewayExecuteReceipt(
 	if (PageBlock.IsValid())
 	{
 		Receipt->SetObjectField(TEXT("page"), PageBlock);
+	}
+	if (AggregateBlock.IsValid())
+	{
+		Receipt->SetObjectField(TEXT("aggregate"), AggregateBlock);
 	}
 	return Receipt;
 }

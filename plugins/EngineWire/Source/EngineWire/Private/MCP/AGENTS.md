@@ -6,8 +6,8 @@ Direct plugin MCP implementation for Streamable HTTP/SSE at `/mcp`. This subtree
 | Area | Responsibility |
 |------|----------------|
 | `DynamicTools/` (7) | Enabled state, categories, protected tools; `McpTaskResults` keeps the calls that answered "still running" for `manage_tools get_task_result` |
-| `Execute/` (25, at cap) | Native execute pipeline: request parse, folded pins, schema validation, receipts, result pages (`McpNativeResultPages`); `Execute/Request/McpExecuteContractOptions` parses `options.expect`/`require` (judged by `Domains/Debug/Contracts/McpContracts`: require before the handler, expect in the reply funnel) |
-| `Gateway/` (25, at cap) | The gateway: catalog, capability store, describe, search, guidance, folding (`McpNativeGatewayFolding`: legacy pairs, pins, `dispatchBy`) |
+| `Execute/` (25, at cap) | Native execute pipeline: request parse, folded pins, schema validation, receipts, result pages (`McpNativeResultPages`); `Execute/Request/McpExecuteContractOptions` parses `options.expect`/`require` (judged by `Domains/Debug/Contracts/McpContracts`: require before the handler, expect in the reply funnel); `Execute/Request/McpExecuteAggregate` applies `options.aggregate` where the receipt is built (the pending connection carries it to completion) |
+| `Gateway/` (25, at cap) | The gateway: catalog, capability store, describe, search, guidance, folding (`McpNativeGatewayFolding`: legacy pairs, pins, `dispatchBy`); `Gateway/Search/McpSearchTypos` reads a query word no record carries as the nearest catalog word (`corrected` in the reply) |
 | `Generated/` (24) | **ALL GENERATED** capability shards (`npm run registry:generate`). Never hand-edit |
 | `Primitives/` (7) | Prompts, completions, resource revision |
 | `Protocol/` (14) | JSON-RPC parse/build helpers, MCP tool-result envelopes, and the 2026-07-28 request path (`McpModernRequest`, `McpModernConsent`, `McpNativeTransportModern.cpp`, and `McpNativeTransportListen.cpp` for subscriptions; transport members kept here because `Transport/` is full) |

@@ -50,7 +50,7 @@ TSharedPtr<FJsonObject> BuildUnrealGatewayToolDefinition()
 		// client had no legal way to send an idempotency key or a timeout.
 		.ClosedObject(TEXT("options"),
 			TEXT("Execution controls for execute only; never put these inside params. Honored keys: "
-				"idempotencyKey, expectedCatalogRevision, expectedRevisions, timeoutMs, pageCursor, expect, require."),
+				"idempotencyKey, expectedCatalogRevision, expectedRevisions, timeoutMs, pageCursor, expect, require, aggregate."),
 			[](FMcpSchemaBuilder& Sub)
 			{
 				Sub.String(TEXT("idempotencyKey"),
@@ -83,7 +83,17 @@ TSharedPtr<FJsonObject> BuildUnrealGatewayToolDefinition()
 					.StringArray(TEXT("require"),
 						TEXT("What must hold before the call runs, in the same language as expect (without noWarnings). When one "
 							"fails or cannot be judged yet, nothing runs: PRECONDITION_FAILED names each unmet requirement."),
-						1, 16, 300);
+						1, 16, 300)
+					.ClosedObject(TEXT("aggregate"),
+						TEXT("Count a list the reply would carry whole, instead of reading it: the list (field, default the largest) "
+							"comes back empty and the reply's aggregate gives its total and, with groupBy, each value's count, most "
+							"common first, with a few of each by name. How many actors of each class: aggregate {groupBy: 'class'}."),
+						[](FMcpSchemaBuilder& Aggregate)
+						{
+							Aggregate.String(TEXT("field"), TEXT("The list to count; default the largest list in the reply."), 1, 64)
+								.String(TEXT("groupBy"), TEXT("A field of the list's items to count by, such as class or type."), 1, 64)
+								.Integer(TEXT("sample"), TEXT("Items named per group (or in all, without groupBy): 0-10, default 3."), 0, 10);
+						});
 			})
 		.Integer(TEXT("limit"), TEXT("Maximum rows per page. search: 12 by default. describe: a listing of domains, families or a family's capabilities shows 50 rows unless limit is set, and a tool's action list is whole."), 1, 25)
 		.Integer(TEXT("offset"), TEXT("Zero-based offset into search results or into a describe listing (domains, families, a family's capabilities or a tool's actions). Defaults to 0."), 0)

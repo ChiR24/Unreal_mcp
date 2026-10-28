@@ -7,6 +7,7 @@
 #include "MCP/Gateway/McpNativeGatewayCatalog.h"
 #include "MCP/Gateway/McpNativeGatewayGuidance.h"
 #include "MCP/Gateway/McpNativeGatewaySearchMatch.h"
+#include "MCP/Gateway/Search/McpSearchTypos.h"
 #include "MCP/Execute/McpNativeGatewayCanonicalRecords.h"
 #include "MCP/Execute/Request/McpFoldVariantRules.h"
 
@@ -79,7 +80,9 @@ TSharedPtr<FJsonObject> McpGatewaySearchCapabilities(
 {
 	if (!Store.IsReady()) return McpGatewayCatalogUnavailable(TEXT("search"), Store);
 
-	const FString Query = Input.Query.TrimStartAndEnd().ToLower();
+	// A word no record could match is a typo of the nearest catalog word (Search/McpSearchTypos.cpp): "spwan actor".
+	TArray<FMcpQueryCorrection> Corrections;
+	const FString Query = McpCorrectQuery(Input.Query.TrimStartAndEnd().ToLower(), Store, Corrections);
 	const int32 Limit = FMath::Clamp(Input.Limit, 1, McpSearchMaxLimit);
 	int32 Offset = FMath::Max(0, Input.Offset);
 	const FString& Revision = Store.GetCatalogRevision();
@@ -292,5 +295,6 @@ TSharedPtr<FJsonObject> McpGatewaySearchCapabilities(
 	const TArray<TSharedPtr<FJsonValue>> Recipes = !Input.bMayReadProject || bFiltered || Offset > 0 ? TArray<TSharedPtr<FJsonValue>>() : McpRecipes::SearchRows(ContentWords, 3);
 	if (Recipes.Num() > 0) Out->SetArrayField(TEXT("recipes"), Recipes);
 	if (Input.Coercions.Num() > 0) Out->SetArrayField(TEXT("coercions"), Input.Coercions);
+	McpNoteCorrections(Out, Corrections);
 	return Out;
 }

@@ -12,12 +12,14 @@ import { describe, expect, it } from 'vitest';
 import { measureRetrieval } from './measure-retrieval.js';
 import {
   NATIVE_ACTION_COVERED_BONUS, NATIVE_DELETE_INTENT_BONUS, NATIVE_FULL_COVERAGE_BONUS, NATIVE_PHRASE_TOPIC_BONUS, NATIVE_READ_INTENT_BONUS,
-  NATIVE_RULE_WEIGHTS, NATIVE_WORD_COVERAGE_BONUS, nativeSearchRanker,
+  NATIVE_RULE_WEIGHTS, NATIVE_TYPO_LONG_LENGTH, NATIVE_TYPO_MIN_LENGTH, NATIVE_TYPO_SWAP_LENGTH, NATIVE_WORD_COVERAGE_BONUS,
+  nativeCorrectQuery, nativeEditDistance, nativeSearchRanker,
 } from './native-ranker.js';
 
 const GATEWAY = join('plugins', 'EngineWire', 'Source', 'EngineWire', 'Private', 'MCP', 'Gateway');
 const nativeMatch = readFileSync(join(GATEWAY, 'McpNativeGatewaySearchMatch.cpp'), 'utf8');
 const nativeHeader = readFileSync(join(GATEWAY, 'McpNativeGatewaySearch.h'), 'utf8');
+const nativeTypos = readFileSync(join(GATEWAY, 'Search', 'McpSearchTypos.cpp'), 'utf8');
 
 const headerConstant = (name: string): number => Number(nativeHeader.match(new RegExp(`constexpr int32 ${name} = (\\d+);`, 'u'))?.[1]);
 
@@ -37,6 +39,32 @@ describe('the TypeScript copy matches the native source', () => {
     expect(nativeMatch).toContain('Score += MatchRules[RuleTopic].Weight + McpSearchPhraseTopicBonus;');
     expect(headerConstant('McpSearchReadIntentBonus')).toBe(NATIVE_READ_INTENT_BONUS);
     expect(headerConstant('McpSearchDeleteIntentBonus')).toBe(NATIVE_DELETE_INTENT_BONUS);
+  });
+
+  it('corrects typos within the same limits', () => {
+    const typoConstant = (name: string): number => Number(nativeTypos.match(new RegExp(`constexpr int32 ${name} = (\\d+);`, 'u'))?.[1]);
+    expect(typoConstant('McpTypoSwapLength')).toBe(NATIVE_TYPO_SWAP_LENGTH);
+    expect(typoConstant('McpTypoMinLength')).toBe(NATIVE_TYPO_MIN_LENGTH);
+    expect(typoConstant('McpTypoLongLength')).toBe(NATIVE_TYPO_LONG_LENGTH);
+    expect(nativeTypos).toContain('AreNeighbourKeys(A[I - 1], B[J - 1]) ? 1 : 2');
+  });
+});
+
+// The known answers EngineWire.Gateway.SearchTypos holds the C++ to, on the copy.
+describe('typo correction', () => {
+  it('measures edits as the native door does', () => {
+    expect(nativeEditDistance('spwan', 'spawn', 1)).toBe(1);
+    expect(nativeEditDistance('delte', 'delete', 1)).toBe(1);
+    expect(nativeEditDistance('lighr', 'light', 1)).toBe(1);
+    expect(nativeEditDistance('carve', 'curve', 2)).toBe(2);
+    expect(nativeEditDistance('abcdef', 'uvwxyz', 1)).toBe(2);
+  });
+
+  it('corrects a typo, a four-letter swap, and leaves correct and real words alone', () => {
+    expect(nativeCorrectQuery('spwan actor')).toEqual({ query: 'spawn actor', corrected: [{ from: 'spwan', to: 'spawn' }] });
+    expect(nativeCorrectQuery('lsit actors').query).toBe('list actors');
+    expect(nativeCorrectQuery('spawn actor').corrected).toEqual([]);
+    expect(nativeCorrectQuery('carve valleys').corrected).toEqual([]);
   });
 });
 

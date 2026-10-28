@@ -177,6 +177,20 @@ family's `selector` (`name`, `values`, `default`) and one `example`;
 the signature and send `executeCall`, or describe first for the full contract.
 `tests/eval/confident-hit.test.ts` holds that rule to 95% precision.
 
+### A typo is read as the word it was meant to be
+
+A query word that no record's action words, aliases, topics, family, domain,
+parent or summary carry (so it could match nothing) is replaced by the nearest
+word that names a capability, and the reply lists each replacement in
+`corrected` (`[{ from: "spwan", to: "spawn" }]`). Nearest means fewest edits: a
+swap of two letters, a missing or extra letter, or a slip onto a neighbouring
+key costs one; any other substitution costs two, since that is where real words
+meet ("carve" stays "carve", it is not "curve"). Words of 5-7 letters take one
+edit, 8 or more two, 4 letters only a swap ("lsit"); shorter words, words with
+digits and function words are never changed. On the plain-request probes no
+correctly spelled request is rewritten, and one typo per request keeps the
+first hit right in 95% of them (33% uncorrected).
+
 ### Folded families
 
 Most capabilities are **families**: one record advertising one action whose
@@ -274,6 +288,21 @@ cannot be judged, nothing runs and the call answers `PRECONDITION_FAILED`,
 naming each unmet requirement (a consent grant is handed back). Both lists are
 part of the idempotency fingerprint, so a key resent with other assertions is
 refused with `IDEMPOTENCY_CONFLICT`, never served the first call's receipt.
+
+### Counting instead of reading: `aggregate`
+
+`options.aggregate` counts a list in the plugin instead of sending it. The list
+(`field`, default the largest list in the reply) comes back empty, and the
+reply's `aggregate` gives its `total`; with `groupBy` (a field of the items,
+such as `class`) each value's `count`, most common first, at most 50 groups
+(`otherGroups` counts the rest), each with a `sample` of up to `sample` items
+(0-10, default 3) named by their `name`, `label`, `actorName`, `assetPath`,
+`path` or `id`. "How many actors of each class" is one call:
+`{ ..., "options": { "aggregate": { "groupBy": "class" } } }`. It counts what
+the call returned: a paged list counts its page, and `aggregate.note` says so,
+so raise the call's own `limit` to count everything at once (the actor list
+takes 1000). A reply without that list keeps its data and `aggregate.note` says
+so. The aggregate is part of the idempotency fingerprint, as `expect` is.
 
 ### Many calls in one: `run_script`
 

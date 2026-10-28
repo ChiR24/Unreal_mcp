@@ -9,6 +9,7 @@
 #include "MCP/Execute/McpNativeGatewayValidation.h"
 #include "MCP/Execute/McpNativeReceiptEnrichment.h"
 #include "MCP/Execute/McpNativeGatewayAuthorization.h"
+#include "MCP/Execute/Request/McpExecuteAggregate.h"
 #include "MCP/Execute/Request/McpExecuteContractOptions.h"
 #include "Domains/Debug/Contracts/McpContracts.h"
 #include "MCP/Gateway/McpNativeGatewayGuidance.h"
@@ -39,6 +40,8 @@ void FMcpNativeTransport::HandleGatewayExecute(
 		{
 			ExecOptions = *Options;
 			(*Options)->TryGetStringField(TEXT("idempotencyKey"), Context.IdempotencyId);
+			const TSharedPtr<FJsonObject>* Aggregate = nullptr;
+			Context.Aggregate = (*Options)->TryGetObjectField(TEXT("aggregate"), Aggregate) && Aggregate ? *Aggregate : nullptr;
 		}
 	}
 
@@ -227,9 +230,9 @@ void FMcpNativeTransport::HandleGatewayExecute(
 	if (!Context.IdempotencyId.IsEmpty())
 	{
 		const FString PrincipalIdentity = GetSessionPrincipal(SessionId).Identity;
-		// The assertions are part of the call: a replay with others must not be served the first one's receipt.
-		const FString Fingerprint =
-			McpCanonicalFingerprint(Plan.CapabilityId + McpExecuteContracts::FingerprintPart(ExecOptions), Plan.Arguments);
+		// The assertions and the aggregate are part of the call: a replay with others must not be served the first receipt.
+		const FString Fingerprint = McpCanonicalFingerprint(Plan.CapabilityId + McpExecuteContracts::FingerprintPart(ExecOptions) +
+			McpExecuteAggregate::FingerprintPart(ExecOptions), Plan.Arguments);
 		FString Slot;
 		FString ReplayReceiptJson;
 		const EMcpIdempotencyOutcome Outcome = FMcpIdempotencyLedger::Get().Begin(

@@ -27,7 +27,7 @@ describe('action contracts', () => {
 
   // A replay with other expectations must not be served the first call's receipt.
   it('folds the assertions into the idempotency fingerprint and registers them before dispatch', () => {
-    expect(execute).toContain('McpCanonicalFingerprint(Plan.CapabilityId + McpExecuteContracts::FingerprintPart(ExecOptions), Plan.Arguments)');
+    expect(execute).toContain('McpCanonicalFingerprint(Plan.CapabilityId + McpExecuteContracts::FingerprintPart(ExecOptions) +\n\t\t\tMcpExecuteAggregate::FingerprintPart(ExecOptions), Plan.Arguments)');
     expect(execute.indexOf('McpContracts::Register(Context.QueueRequestId')).toBeGreaterThan(execute.indexOf('FMcpIdempotencyLedger::Get().Begin('));
     expect(execute.indexOf('McpContracts::Register(Context.QueueRequestId')).toBeLessThan(execute.indexOf('StreamToolCall('));
   });

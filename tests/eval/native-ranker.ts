@@ -147,9 +147,105 @@ function nativeRecords(): readonly NativeRecord[] {
   }));
 }
 
+/** The native door's typo correction (Private/MCP/Gateway/Search/McpSearchTypos.cpp), copied for the eval. */
+export const NATIVE_TYPO_SWAP_LENGTH = 4;
+export const NATIVE_TYPO_MIN_LENGTH = 5;
+export const NATIVE_TYPO_LONG_LENGTH = 8;
+
+const KEY_ROWS = ['qwertyuiop', 'asdfghjkl', 'zxcvbnm'] as const;
+function keyPlace(ch: string): readonly [number, number] | undefined {
+  for (const [row, keys] of KEY_ROWS.entries()) {
+    const col = keys.indexOf(ch);
+    if (col >= 0) return [row, col + 0.5 * row];
+  }
+  return undefined;
+}
+function neighbourKeys(a: string, b: string): boolean {
+  const p = keyPlace(a);
+  const q = keyPlace(b);
+  return p !== undefined && q !== undefined && Math.abs(p[0] - q[0]) <= 1 && Math.abs(p[1] - q[1]) <= 1;
+}
+
+/** Optimal string alignment distance; a substitution between keys that are not neighbours costs 2. */
+export function nativeEditDistance(a: string, b: string, limit: number): number {
+  if (Math.abs(a.length - b.length) > limit) return limit + 1;
+  const cell = (cells: readonly number[], index: number): number => cells[index] ?? 0;
+  let older = new Array<number>(b.length + 1).fill(0);
+  let prev = Array.from({ length: b.length + 1 }, (_, j) => j);
+  let row = new Array<number>(b.length + 1).fill(0);
+  for (let i = 1; i <= a.length; i += 1) {
+    row[0] = i;
+    let rowMin = i;
+    for (let j = 1; j <= b.length; j += 1) {
+      const substitute = a.charAt(i - 1) === b.charAt(j - 1) ? 0 : neighbourKeys(a.charAt(i - 1), b.charAt(j - 1)) ? 1 : 2;
+      let value = Math.min(cell(prev, j) + 1, cell(row, j - 1) + 1, cell(prev, j - 1) + substitute);
+      if (i > 1 && j > 1 && a.charAt(i - 1) === b.charAt(j - 2) && a.charAt(i - 2) === b.charAt(j - 1)) value = Math.min(value, cell(older, j - 2) + 1);
+      row[j] = value;
+      rowMin = Math.min(rowMin, value);
+    }
+    if (rowMin > limit) return limit + 1;
+    [older, prev, row] = [prev, row, older];
+  }
+  return Math.min(cell(prev, b.length), limit + 1);
+}
+
+function isSwapOf(a: string, b: string): boolean {
+  if (a.length !== b.length) return false;
+  const [first, second, ...rest] = [...a].flatMap((ch, index) => (ch === b.charAt(index) ? [] : [index]));
+  return first !== undefined && second !== undefined && rest.length === 0 &&
+    a.charAt(first) === b.charAt(second) && a.charAt(second) === b.charAt(first);
+}
+
+let typoWords: { readonly known: ReadonlySet<string>; readonly names: ReadonlyMap<string, number> } | undefined;
+function typoVocabulary(): { readonly known: ReadonlySet<string>; readonly names: ReadonlyMap<string, number> } {
+  if (typoWords) return typoWords;
+  const known = new Set<string>();
+  const names = new Map<string, number>();
+  for (const record of nativeRecords()) {
+    const own = new Set<string>([
+      ...searchWords(lastSegment(record.id)), ...record.aliases.flatMap((alias) => searchWords(lastSegment(alias))),
+      ...record.topics.flatMap((topic) => searchWords(topic)), ...searchWords(record.family), ...searchWords(record.domain),
+      ...searchWords(record.parent),
+    ]);
+    for (const word of own) {
+      names.set(word, (names.get(word) ?? 0) + 1);
+      known.add(word);
+    }
+    for (const word of searchWords(record.summary)) known.add(word);
+  }
+  return typoWords = { known, names };
+}
+
+/** The query with each word no record can match replaced by the nearest catalog name, as the native door does. */
+export function nativeCorrectQuery(query: string): { readonly query: string; readonly corrected: readonly { from: string; to: string }[] } {
+  const { known, names } = typoVocabulary();
+  const corrected: { from: string; to: string }[] = [];
+  const out = query.replace(/[a-z0-9]+/gu, (raw) => {
+    const folded = searchWords(raw)[0] ?? '';
+    if (RETRIEVAL_FUNCTION_WORDS.has(folded) || folded.length < NATIVE_TYPO_SWAP_LENGTH || /[0-9]/u.test(raw) || known.has(folded)) return raw;
+    const limit = folded.length >= NATIVE_TYPO_LONG_LENGTH ? 2 : 1;
+    let best = '';
+    let bestDistance = limit + 1;
+    let bestCount = 0;
+    for (const [name, count] of names) {
+      const distance = nativeEditDistance(folded, name, limit);
+      if (distance > limit || (folded.length < NATIVE_TYPO_MIN_LENGTH && !isSwapOf(folded, name))) continue;
+      if (distance < bestDistance || (distance === bestDistance && (count > bestCount || (count === bestCount && compareAscii(name, best) < 0)))) {
+        best = name;
+        bestDistance = distance;
+        bestCount = count;
+      }
+    }
+    if (best === '') return raw;
+    corrected.push({ from: raw, to: best });
+    return best;
+  });
+  return { query: out, corrected };
+}
+
 /** Every record the native door ranks for a query, best first, with its score. */
 export function nativeScored(intent: string): readonly { readonly id: string; readonly score: number }[] {
-  const query = intent.trim().toLowerCase();
+  const query = nativeCorrectQuery(intent.trim().toLowerCase()).query;
   const all = searchWords(query);
   const content = [...new Set(all.filter((word) => !RETRIEVAL_FUNCTION_WORDS.has(word)))];
   return nativeRecords()

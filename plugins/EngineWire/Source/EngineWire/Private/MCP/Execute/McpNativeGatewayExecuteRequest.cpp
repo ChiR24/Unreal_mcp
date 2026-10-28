@@ -2,6 +2,7 @@
 
 #include "MCP/Execute/McpNativeGatewayExecuteRequest.h"
 #include "MCP/Execute/McpNativeGatewayCanonicalRecords.h"
+#include "MCP/Execute/Request/McpExecuteAggregate.h"
 #include "MCP/Execute/Request/McpExecuteContractOptions.h"
 #include "MCP/Execute/Request/McpNativeGatewayReservedParams.h"
 #include "MCP/Gateway/McpNativeGatewayCapabilityStore.h"
@@ -17,6 +18,7 @@ const TArray<FString>& McpExecutionOptionKeys()
 		TEXT("pageCursor"),
 		TEXT("expect"),
 		TEXT("require"),
+		TEXT("aggregate"),
 	};
 	return Keys;
 }
@@ -94,7 +96,8 @@ bool McpValidateExecutionOptions(
 	// already refused. A dedup guard that cannot be honoured must refuse. It lives
 	// in McpNativeGatewayIdempotency.cpp because this file is at the line ceiling,
 	// as the expect and require checks live in Request/McpExecuteContractOptions.cpp.
-	return McpValidateIdempotencyKeyOption(Options, OutError) && McpExecuteContracts::Validate(Options, OutError);
+	return McpValidateIdempotencyKeyOption(Options, OutError) && McpExecuteContracts::Validate(Options, OutError) &&
+		McpExecuteAggregate::Validate(Options, OutError);
 }
 
 namespace

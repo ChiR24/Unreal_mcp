@@ -110,6 +110,9 @@ struct FMcpReceiptContext
 
 	/** Who may page through this call's result when it is too large for one reply; unset, it is refused instead. */
 	TSharedPtr<FMcpPageOwner> PageOwner;
+
+	/** options.aggregate: a list of the result counted instead of sent (Request/McpExecuteAggregate.h); unset, none. */
+	TSharedPtr<FJsonObject> Aggregate;
 };
 
 FMcpSemanticError McpValidationError(const FString& GatewayCode, const FString& Message, const FString& Pointer = FString());

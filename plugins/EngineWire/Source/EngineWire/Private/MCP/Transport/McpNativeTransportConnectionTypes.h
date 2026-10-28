@@ -103,6 +103,8 @@ struct FSSEConnection
 	bool bTasks = false;
 	// Who may page through the result if it is too large for one reply (FMcpReceiptContext::PageOwner).
 	TSharedPtr<struct FMcpPageOwner> PageOwner;
+	// options.aggregate of the call (FMcpReceiptContext::Aggregate).
+	TSharedPtr<FJsonObject> Aggregate;
 };
 
 /** Persistent SSE notification stream (GET /mcp). */
