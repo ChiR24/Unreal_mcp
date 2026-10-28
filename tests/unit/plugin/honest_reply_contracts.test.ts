@@ -1276,7 +1276,8 @@ describe('tapped keys with no play session', () => {
   // A key_tap sent with no PIE running crashed the editor on the next tick: its release read the world settings of a
   // play world that was null, since a key pressed outside PIE never counts game time.
   it('the release of an editor key reads no play world', () => {
-    const source = sliceBetween(code('ControlEditor', 'McpEditorInput.cpp'), 'void ScheduleKeyReleaseForMcp(', '} // namespace');
+    // Up to the function's own closing brace: code() strips the "// namespace" after it.
+    const source = sliceBetween(code('ControlEditor', 'McpEditorInput.cpp'), 'void ScheduleKeyReleaseForMcp(', '\n}');
     expect(source).toContain('const AWorldSettings *Settings = (bGameTime && !bWorldGone) ? Live->GetWorldSettings() : nullptr;');
     expect(source).not.toContain('bWorldGone ? nullptr : Live->GetWorldSettings()');
   });
