@@ -21,6 +21,7 @@ import { WIDGET_LAYOUT_RECORDS } from './widget-layout.js';
 import { WIDGET_LIFECYCLE_RECORDS } from './widget-lifecycle.js';
 import { WIDGET_PANELS_RECORDS } from './widget-panels.js';
 import { WIDGET_TEMPLATES_RECORDS } from './widget-templates.js';
+import { WIDGET_VIEWMODEL_RECORDS } from './widget-viewmodels.js';
 import { applyFolds } from '../shared/fold.js';
 import { MANAGE_BLUEPRINT_FOLDS } from '../folds/manage-blueprint.folds.js';
 
@@ -46,6 +47,7 @@ export const MANAGE_BLUEPRINT_UNFOLDED_SOURCES: readonly CapabilityRecordSource[
   ...WIDGET_INFO_RECORDS,
   ...WIDGET_GAME_UI_RECORDS,
   ...WIDGET_TEMPLATES_RECORDS,
+  ...WIDGET_VIEWMODEL_RECORDS,
 ];
 
 export const MANAGE_BLUEPRINT_SOURCES: readonly CapabilityRecordSource[] = applyFolds(MANAGE_BLUEPRINT_UNFOLDED_SOURCES, MANAGE_BLUEPRINT_FOLDS, 'manage_blueprint');

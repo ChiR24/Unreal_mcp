@@ -90,7 +90,8 @@ bool UEngineWireSubsystem::HandleManageWidgetAuthoringAction(
         HandleWidgetAuthoringHudElements,
         HandleWidgetAuthoringTreeBuild,
         HandleWidgetAuthoringScreens,
-        HandleWidgetAuthoringPropertyBindings
+        HandleWidgetAuthoringPropertyBindings,
+        HandleWidgetAuthoringViewModels
     };
 
     for (FWidgetAuthoringActionHandler Handler : Handlers)

@@ -16,7 +16,7 @@ Area-specific guidance lives in nested `AGENTS.md` files (see **AREA GUIDES** be
 |   `-- utils/                   # commands (console policy rules), config, logging, serialization, validation
 |-- plugins/EngineWire/ # the ONLY plugin; editor-only UE (bridge + native MCP + Fab, lint and game feature adapters)
 |   |-- Source/EngineWire/{Public (22), Private/}
-|   |   Private/ (source files, subfolders included, 2026-10-28): Core(41) Domains(1443 / 58 domains) Foundation(142) MCP(160) Safety(19) Transport(23) Tests(38) UI(2)
+|   |   Private/ (source files, subfolders included, 2026-10-28): Core(41) Domains(1450 / 58 domains) Foundation(142) MCP(160) Safety(19) Transport(23) Tests(38) UI(2)
 |   |-- Source/EngineWireFab/     # Fab asset-store adapter module (delay-loaded, optional)
 |   |-- Source/EngineWireValidation/ # lint_blueprint's rules as a Data Validation validator
 |   `-- Source/EngineWireGameFeatures/ # game feature plugins for system_control (loaded where GameFeatures is on)
@@ -124,7 +124,7 @@ Every automation request is gated **before it reaches the editor queue**.
 - **No knip / ts-prune** (evaluated 2026-09-19, rejected): integration cases load at run time and source-contract tests read files as text, so its findings are noise. Dead code is found by reading; `noUnusedLocals`/`noUnusedParameters` are on.
 
 ## UNIQUE STYLES
-- 23 canonical parent tools hide their actions behind action enums; 463 records (242 of them folded families) keep 1,623 `{tool, action}` pairs callable.
+- 23 canonical parent tools hide their actions behind action enums; 469 records (242 of them folded families) keep 1,629 `{tool, action}` pairs callable.
 - Dynamic tool management is native (`MCP/DynamicTools/`); `manage_tools` and `inspect` are protected, the `core` category is fixed.
 - The plugin is responsibility-split: `Core` routes, `Domains` implement, `Foundation` shares primitives, `Safety` wraps hazardous editor ops, `Transport` owns sockets.
 - Discovery is progressive and never dumps full schemas; invalid calls return `suggestions` plus an executable `nextCall`. A direct call to a canonical tool name returns a `DIRECT_TOOL_CALL_REMOVED` receipt whose `nextCall` re-runs it through `unreal`.

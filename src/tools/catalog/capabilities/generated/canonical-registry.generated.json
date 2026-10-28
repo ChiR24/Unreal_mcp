@@ -1,6 +1,6 @@
 {
-  "catalogRevision": "6db177880986060d",
-  "recordCount": 463,
+  "catalogRevision": "94fd21c4f38c089f",
+  "recordCount": 469,
   "records": [
     {
       "id": "animation_physics.analyze_animation",
@@ -17566,6 +17566,190 @@
       }
     },
     {
+      "id": "blueprint.add_widget_viewmodel",
+      "aliases": [],
+      "legacyIds": [
+        {
+          "tool": "manage_blueprint",
+          "action": "add_widget_viewmodel"
+        }
+      ],
+      "discovery": {
+        "domain": "widget",
+        "family": "viewmodel",
+        "topics": [
+          "add_widget_viewmodel",
+          "add viewmodel to widget",
+          "use a viewmodel in a widget",
+          "mvvm widget"
+        ],
+        "summary": "Add a viewmodel to a Widget Blueprint, as the widget editor's Viewmodels panel does: viewModelClass is a viewmodel class or Blueprint (list_viewmodels lists them), name its name in the widget (default the editor's, from the class), creation create_instance (the widget makes its own, default; an abstract class is manual) or manual (the game hands one over with the widget's setter). One undo step; compiled and saved. Refusals change nothing: NOT_A_VIEWMODEL (the class sends no field notifications), NAME_TAKEN, CLASS_NOT_FOUND, NOT_FOUND (no Widget Blueprint there), MVVM_DISABLED.",
+        "whenToUse": [
+          "A widget must show a viewmodel's data: add the viewmodel, then bind_widget_viewmodel."
+        ],
+        "whenNotToUse": [
+          "A viewmodel class itself must be made (create_blueprint with parent class /Script/ModelViewViewModel.MVVMViewModelBase)."
+        ]
+      },
+      "schemas": {
+        "input": {
+          "$schema": "https://json-schema.org/draft/2020-12/schema",
+          "type": "object",
+          "properties": {
+            "action": {
+              "type": "string",
+              "description": "The action to execute on the parent tool."
+            },
+            "widgetPath": {
+              "type": "string",
+              "description": "Canonical /Game Widget Blueprint asset path."
+            },
+            "viewModelClass": {
+              "type": "string",
+              "description": "The viewmodel: a class path (/Script/MyGame.HealthViewModel, /Game/UI/VM_Health.VM_Health_C) or a Blueprint asset (/Game/UI/VM_Health)."
+            },
+            "name": {
+              "type": "string",
+              "description": "Its name in the widget, which binding paths start with (default the editor's)."
+            },
+            "creation": {
+              "type": "string",
+              "enum": [
+                "create_instance",
+                "manual"
+              ],
+              "description": "create_instance: the widget makes its own (default; an abstract class cannot be made, and is manual); manual: the game sets one."
+            }
+          },
+          "required": [
+            "action",
+            "widgetPath",
+            "viewModelClass"
+          ],
+          "additionalProperties": false
+        },
+        "output": {
+          "$schema": "https://json-schema.org/draft/2020-12/schema",
+          "type": "object",
+          "properties": {
+            "success": {
+              "type": "boolean",
+              "description": "Whether the action succeeded."
+            },
+            "message": {
+              "type": "string",
+              "description": "Human-readable result message."
+            },
+            "details": {
+              "type": "object",
+              "x-unreal-reflection-boundary": true,
+              "description": "Additional handler result fields not named by the contract."
+            },
+            "widgetPath": {
+              "type": "string",
+              "description": "Canonical /Game Widget Blueprint asset path."
+            },
+            "viewModel": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "name": {
+                  "type": "string",
+                  "description": "Its name in the widget, the head of a binding path."
+                },
+                "class": {
+                  "type": "string"
+                },
+                "id": {
+                  "type": "string"
+                },
+                "creation": {
+                  "type": "string",
+                  "description": "How the widget gets it: CreateInstance (makes its own), Manual (the game sets it), or another of the editor's creation types."
+                }
+              }
+            },
+            "compiled": {
+              "type": "boolean",
+              "description": "Whether the Blueprint compiled afterwards."
+            },
+            "saved": {
+              "type": "boolean",
+              "description": "Whether it was saved."
+            },
+            "undo": {
+              "type": "object",
+              "additionalProperties": true,
+              "x-unreal-reflection-boundary": true,
+              "description": "What editor undo takes back: {undoable, transactionScope, steps}; the edit is one step."
+            }
+          },
+          "required": [
+            "success"
+          ],
+          "additionalProperties": false
+        }
+      },
+      "examples": [
+        {
+          "title": "Add a viewmodel to a Widget Blueprint, as the widget editor's Viewmodels panel does: viewModelClass is a viewmodel class or Blueprint (list_viewmodels lists them), name its name in the widget (default the editor's, from the class), creation create_instance (the widget makes its own, default; an abstract class is manual) or manual (the game hands one over with the widget's setter). One undo step; compiled and saved. Refusals change nothing: NOT_A_VIEWMODEL (the class sends no field notifications), NAME_TAKEN, CLASS_NOT_FOUND, NOT_FOUND (no Widget Blueprint there), MVVM_DISABLED.",
+          "input": {
+            "action": "add_widget_viewmodel",
+            "widgetPath": "/Game/UI/WBP_HUD",
+            "viewModelClass": "/Game/UI/VM_Health",
+            "name": "Health"
+          },
+          "output": {
+            "success": true,
+            "widgetPath": "/Game/UI/WBP_HUD",
+            "viewModel": {
+              "name": "Health",
+              "class": "/Game/UI/VM_Health.VM_Health_C",
+              "id": "6F9C1B2A-0000-0000-0000-000000000001",
+              "creation": "CreateInstance"
+            },
+            "compiled": true,
+            "saved": true
+          }
+        }
+      ],
+      "availability": {
+        "requiredPlugins": [
+          "EditorScriptingUtilities",
+          "UMG",
+          "ModelViewViewModel"
+        ],
+        "editorStates": [
+          "edit"
+        ],
+        "minEngineVersion": "5.4"
+      },
+      "behavior": {
+        "effect": "write",
+        "idempotency": "non-idempotent",
+        "longRunning": false,
+        "safeToRetry": false
+      },
+      "policy": {
+        "requiredScope": "write",
+        "consent": "none",
+        "dataAccess": "project-write"
+      },
+      "cost": {
+        "latency": "interactive",
+        "resources": "low"
+      },
+      "routing": {
+        "parentTool": "manage_blueprint",
+        "dispatchAction": "add_widget_viewmodel"
+      },
+      "hashes": {
+        "algorithm": "sha256",
+        "schema": "f5787cb45d3525b1f9d56615d52d0295c3d10a38a3d7453da6c0b86e0f50238d",
+        "content": "7c1a03c3fd08fa8e4c307b2161f9d0e075e4aa0b86017f63177fbb4162db8978"
+      }
+    },
+    {
       "id": "blueprint.arrange_widgets",
       "aliases": [],
       "legacyIds": [
@@ -18597,6 +18781,205 @@
         "algorithm": "sha256",
         "schema": "99f325bdc6d6ac38cfc96a501fc1a8df9de9a91aa6378eb76c7ba3938c9f7352",
         "content": "7278d62e8c158394e59a2ab5560e55c41e2a119918b87ed881d3be90f5db825d"
+      }
+    },
+    {
+      "id": "blueprint.bind_widget_viewmodel",
+      "aliases": [],
+      "legacyIds": [
+        {
+          "tool": "manage_blueprint",
+          "action": "bind_widget_viewmodel"
+        }
+      ],
+      "discovery": {
+        "domain": "widget",
+        "family": "viewmodel",
+        "topics": [
+          "bind_widget_viewmodel",
+          "bind widget to viewmodel",
+          "mvvm binding",
+          "viewmodel binding",
+          "show viewmodel value in widget",
+          "bind health bar"
+        ],
+        "summary": "Bind a widget property to a viewmodel field (MVVM), as the View Bindings panel does: source and destination are paths, Head.Field...: the head is a viewmodel of the widget (by its name), a widget of its tree, or Self (the Widget Blueprint), then the fields one after another (Health.Current, HealthBar.Percent, Player.Stats.Armor). A field is a property or a getter function. mode one_way (the destination follows the source whenever it changes, default), two_way, one_time or to_source (the source follows the destination: a slider writing a viewmodel). The Widget Blueprint is compiled with the binding and saved; a binding the MVVM compiler rejects (types that do not match without a conversion function, a source field that is not FieldNotify) is taken out again, leaving no undo step, and answers BINDING_INVALID with the compiler's message. A path naming nothing that is there is PATH_NOT_FOUND (with the viewmodels and widgets that are), a widget that does not compile beforehand WIDGET_DOES_NOT_COMPILE; refusals change nothing. Conversion functions are not made here.",
+        "whenToUse": [
+          "A widget must show a viewmodel field (a health bar's Percent from the viewmodel's Health), or write one back."
+        ],
+        "whenNotToUse": [
+          "A plain property binding to a Blueprint function is wanted (bind_text, bind_percent and the like)."
+        ]
+      },
+      "schemas": {
+        "input": {
+          "$schema": "https://json-schema.org/draft/2020-12/schema",
+          "type": "object",
+          "properties": {
+            "action": {
+              "type": "string",
+              "description": "The action to execute on the parent tool."
+            },
+            "widgetPath": {
+              "type": "string",
+              "description": "Canonical /Game Widget Blueprint asset path."
+            },
+            "source": {
+              "type": "string",
+              "description": "The value bound from, usually the viewmodel side: Head.Field...: the head is a viewmodel of the widget (by its name), a widget of its tree, or Self (the Widget Blueprint), then the fields one after another (Health.Current, HealthBar.Percent, Player.Stats.Armor). A field is a property or a getter function."
+            },
+            "destination": {
+              "type": "string",
+              "description": "The value bound to, usually a widget property (HealthBar.Percent)."
+            },
+            "mode": {
+              "type": "string",
+              "enum": [
+                "one_way",
+                "two_way",
+                "one_time",
+                "to_source"
+              ],
+              "description": "Default one_way."
+            }
+          },
+          "required": [
+            "action",
+            "widgetPath",
+            "source",
+            "destination"
+          ],
+          "additionalProperties": false
+        },
+        "output": {
+          "$schema": "https://json-schema.org/draft/2020-12/schema",
+          "type": "object",
+          "properties": {
+            "success": {
+              "type": "boolean",
+              "description": "Whether the action succeeded."
+            },
+            "message": {
+              "type": "string",
+              "description": "Human-readable result message."
+            },
+            "details": {
+              "type": "object",
+              "x-unreal-reflection-boundary": true,
+              "description": "Additional handler result fields not named by the contract."
+            },
+            "widgetPath": {
+              "type": "string",
+              "description": "Canonical /Game Widget Blueprint asset path."
+            },
+            "binding": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "id": {
+                  "type": "string",
+                  "description": "What remove_widget_viewmodel bindingId takes."
+                },
+                "source": {
+                  "type": "string",
+                  "description": "Head.Field...: a viewmodel, a widget of the tree, or Self, then its fields."
+                },
+                "destination": {
+                  "type": "string"
+                },
+                "mode": {
+                  "type": "string",
+                  "description": "one_way (source to destination whenever it changes), two_way, one_time, to_source."
+                },
+                "enabled": {
+                  "type": "boolean"
+                },
+                "conversion": {
+                  "type": "boolean",
+                  "description": "true: the binding runs a conversion function."
+                }
+              }
+            },
+            "compiled": {
+              "type": "boolean",
+              "description": "Whether the Blueprint compiled afterwards."
+            },
+            "saved": {
+              "type": "boolean",
+              "description": "Whether it was saved."
+            },
+            "undo": {
+              "type": "object",
+              "additionalProperties": true,
+              "x-unreal-reflection-boundary": true,
+              "description": "What editor undo takes back: {undoable, transactionScope, steps}; the edit is one step."
+            }
+          },
+          "required": [
+            "success"
+          ],
+          "additionalProperties": false
+        }
+      },
+      "examples": [
+        {
+          "title": "Bind a widget property to a viewmodel field (MVVM), as the View Bindings panel does: source and destination are paths, Head.Field...: the head is a viewmodel of the widget (by its name), a widget of its tree, or Self (the Widget Blueprint), then the fields one after another (Health.Current, HealthBar.Percent, Player.Stats.Armor). A field is a property or a getter function. mode one_way (the destination follows the source whenever it changes, default), two_way, one_time or to_source (the source follows the destination: a slider writing a viewmodel). The Widget Blueprint is compiled with the binding and saved; a binding the MVVM compiler rejects (types that do not match without a conversion function, a source field that is not FieldNotify) is taken out again, leaving no undo step, and answers BINDING_INVALID with the compiler's message. A path naming nothing that is there is PATH_NOT_FOUND (with the viewmodels and widgets that are), a widget that does not compile beforehand WIDGET_DOES_NOT_COMPILE; refusals change nothing. Conversion functions are not made here.",
+          "input": {
+            "action": "bind_widget_viewmodel",
+            "widgetPath": "/Game/UI/WBP_HUD",
+            "source": "Health.Health",
+            "destination": "HealthBar.Percent"
+          },
+          "output": {
+            "success": true,
+            "widgetPath": "/Game/UI/WBP_HUD",
+            "binding": {
+              "id": "0D3F2E1C-0000-0000-0000-000000000002",
+              "source": "Health.Health",
+              "destination": "HealthBar.Percent",
+              "mode": "one_way",
+              "enabled": true,
+              "conversion": false
+            },
+            "compiled": true,
+            "saved": true
+          }
+        }
+      ],
+      "availability": {
+        "requiredPlugins": [
+          "EditorScriptingUtilities",
+          "UMG",
+          "ModelViewViewModel"
+        ],
+        "editorStates": [
+          "edit"
+        ],
+        "minEngineVersion": "5.4"
+      },
+      "behavior": {
+        "effect": "write",
+        "idempotency": "non-idempotent",
+        "longRunning": false,
+        "safeToRetry": false
+      },
+      "policy": {
+        "requiredScope": "write",
+        "consent": "none",
+        "dataAccess": "project-write"
+      },
+      "cost": {
+        "latency": "interactive",
+        "resources": "low"
+      },
+      "routing": {
+        "parentTool": "manage_blueprint",
+        "dispatchAction": "bind_widget_viewmodel"
+      },
+      "hashes": {
+        "algorithm": "sha256",
+        "schema": "d8dc989e446581ab5bd73a59fd8a1bc9c2b12457d1128faafa701d8a07f4e7b2",
+        "content": "8f99d619124d32da2ba35d91a061c97a1bd10ff936f1d944983b9f8a710569d9"
       }
     },
     {
@@ -24705,6 +25088,217 @@
       }
     },
     {
+      "id": "blueprint.list_viewmodels",
+      "aliases": [],
+      "legacyIds": [
+        {
+          "tool": "manage_blueprint",
+          "action": "list_viewmodels"
+        }
+      ],
+      "discovery": {
+        "domain": "widget",
+        "family": "viewmodel",
+        "topics": [
+          "list_viewmodels",
+          "viewmodel",
+          "mvvm",
+          "view model",
+          "list viewmodels",
+          "viewmodel classes",
+          "model view viewmodel"
+        ],
+        "summary": "List the viewmodel classes a widget can bind to (MVVM): Blueprints whose class derives from MVVMViewModelBase under folder (default /Game, the first 200) and native (C++) ones, each with the fields it notifies through: properties and getter functions marked FieldNotify, which are what a binding reads changes from (set_field_notify marks a Blueprint's variables). A viewmodel Blueprint is made with create_blueprint, parent class /Script/ModelViewViewModel.MVVMViewModelBase. Needs the ModelViewViewModel plugin (MVVM_DISABLED otherwise; enable_plugin and a restart turn it on). Reads only.",
+        "whenToUse": [
+          "A widget should show game data through a viewmodel: which viewmodels exist and what can they be bound by?"
+        ],
+        "whenNotToUse": [
+          "A widget's own viewmodels and bindings are wanted (use read_widget_viewmodels)."
+        ]
+      },
+      "schemas": {
+        "input": {
+          "$schema": "https://json-schema.org/draft/2020-12/schema",
+          "type": "object",
+          "properties": {
+            "action": {
+              "type": "string",
+              "description": "The action to execute on the parent tool."
+            },
+            "folder": {
+              "type": "string",
+              "description": "Where to look for Blueprint viewmodels (default /Game)."
+            }
+          },
+          "required": [
+            "action"
+          ],
+          "additionalProperties": false
+        },
+        "output": {
+          "$schema": "https://json-schema.org/draft/2020-12/schema",
+          "type": "object",
+          "properties": {
+            "success": {
+              "type": "boolean",
+              "description": "Whether the action succeeded."
+            },
+            "message": {
+              "type": "string",
+              "description": "Human-readable result message."
+            },
+            "details": {
+              "type": "object",
+              "x-unreal-reflection-boundary": true,
+              "description": "Additional handler result fields not named by the contract."
+            },
+            "blueprints": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {
+                  "class": {
+                    "type": "string",
+                    "description": "The class path, which add_widget_viewmodel takes."
+                  },
+                  "assetPath": {
+                    "type": "string",
+                    "description": "The Blueprint asset (Blueprint viewmodels)."
+                  },
+                  "fields": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "additionalProperties": false,
+                      "properties": {
+                        "name": {
+                          "type": "string"
+                        },
+                        "type": {
+                          "type": "string",
+                          "description": "Its C++ type (float, int32, FText, bool...)."
+                        },
+                        "function": {
+                          "type": "boolean",
+                          "description": "true: a getter function the class notifies through."
+                        }
+                      }
+                    },
+                    "description": "The fields marked FieldNotify, which a binding reads changes from."
+                  }
+                }
+              },
+              "description": "Blueprint viewmodels under folder."
+            },
+            "native": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {
+                  "class": {
+                    "type": "string",
+                    "description": "The class path, which add_widget_viewmodel takes."
+                  },
+                  "assetPath": {
+                    "type": "string",
+                    "description": "The Blueprint asset (Blueprint viewmodels)."
+                  },
+                  "fields": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "additionalProperties": false,
+                      "properties": {
+                        "name": {
+                          "type": "string"
+                        },
+                        "type": {
+                          "type": "string",
+                          "description": "Its C++ type (float, int32, FText, bool...)."
+                        },
+                        "function": {
+                          "type": "boolean",
+                          "description": "true: a getter function the class notifies through."
+                        }
+                      }
+                    },
+                    "description": "The fields marked FieldNotify, which a binding reads changes from."
+                  }
+                }
+              },
+              "description": "Native viewmodel classes, any module."
+            }
+          },
+          "required": [
+            "success"
+          ],
+          "additionalProperties": false
+        }
+      },
+      "examples": [
+        {
+          "title": "List the viewmodel classes a widget can bind to (MVVM): Blueprints whose class derives from MVVMViewModelBase under folder (default /Game, the first 200) and native (C++) ones, each with the fields it notifies through: properties and getter functions marked FieldNotify, which are what a binding reads changes from (set_field_notify marks a Blueprint's variables). A viewmodel Blueprint is made with create_blueprint, parent class /Script/ModelViewViewModel.MVVMViewModelBase. Needs the ModelViewViewModel plugin (MVVM_DISABLED otherwise; enable_plugin and a restart turn it on). Reads only.",
+          "input": {
+            "action": "list_viewmodels",
+            "folder": "/Game/UI"
+          },
+          "output": {
+            "success": true,
+            "blueprints": [
+              {
+                "class": "/Game/UI/VM_Health.VM_Health_C",
+                "assetPath": "/Game/UI/VM_Health",
+                "fields": [
+                  {
+                    "name": "Health",
+                    "type": "float"
+                  }
+                ]
+              }
+            ],
+            "native": []
+          }
+        }
+      ],
+      "availability": {
+        "requiredPlugins": [
+          "EditorScriptingUtilities",
+          "UMG",
+          "ModelViewViewModel"
+        ],
+        "editorStates": [
+          "edit"
+        ],
+        "minEngineVersion": "5.4"
+      },
+      "behavior": {
+        "effect": "read",
+        "idempotency": "idempotent",
+        "longRunning": false,
+        "safeToRetry": true
+      },
+      "policy": {
+        "requiredScope": "read",
+        "consent": "none",
+        "dataAccess": "project-read"
+      },
+      "cost": {
+        "latency": "interactive",
+        "resources": "low"
+      },
+      "routing": {
+        "parentTool": "manage_blueprint",
+        "dispatchAction": "list_viewmodels"
+      },
+      "hashes": {
+        "algorithm": "sha256",
+        "schema": "207cf2d0defa02e0e1de7c680f169e97fa78464b1c4dfea5f5affdaf3b935b85",
+        "content": "d3309a194e2205578a31cbe5e45582b553e75698cd35e8fb5d320eba63555721"
+      }
+    },
+    {
       "id": "blueprint.preview_widget",
       "aliases": [],
       "legacyIds": [
@@ -25205,6 +25799,193 @@
         "algorithm": "sha256",
         "schema": "a5496089aa634a688329349ab3fa780ececc569c662c2b5e60d32ef196b29a77",
         "content": "678f24f840b996157eea30fafa4aaf958a113482443b2aa45663886078097b03"
+      }
+    },
+    {
+      "id": "blueprint.read_widget_viewmodels",
+      "aliases": [],
+      "legacyIds": [
+        {
+          "tool": "manage_blueprint",
+          "action": "read_widget_viewmodels"
+        }
+      ],
+      "discovery": {
+        "domain": "widget",
+        "family": "viewmodel",
+        "topics": [
+          "read_widget_viewmodels",
+          "mvvm bindings",
+          "viewmodel bindings",
+          "viewmodels of a widget",
+          "what a widget binds to viewmodels"
+        ],
+        "summary": "Read a Widget Blueprint's viewmodels (name, class, id, how the widget gets it) and its viewmodel bindings (id, source and destination as Head.Field paths, mode, enabled, whether it runs a conversion function). Empty lists for a widget with no viewmodel yet. Needs the ModelViewViewModel plugin (MVVM_DISABLED otherwise). Reads only.",
+        "whenToUse": [
+          "Before binding or removing: what does this widget already show through viewmodels?"
+        ],
+        "whenNotToUse": [
+          "Property bindings made with bind_text and the like are wanted (get_widget_info)."
+        ]
+      },
+      "schemas": {
+        "input": {
+          "$schema": "https://json-schema.org/draft/2020-12/schema",
+          "type": "object",
+          "properties": {
+            "action": {
+              "type": "string",
+              "description": "The action to execute on the parent tool."
+            },
+            "widgetPath": {
+              "type": "string",
+              "description": "Canonical /Game Widget Blueprint asset path."
+            }
+          },
+          "required": [
+            "action",
+            "widgetPath"
+          ],
+          "additionalProperties": false
+        },
+        "output": {
+          "$schema": "https://json-schema.org/draft/2020-12/schema",
+          "type": "object",
+          "properties": {
+            "success": {
+              "type": "boolean",
+              "description": "Whether the action succeeded."
+            },
+            "message": {
+              "type": "string",
+              "description": "Human-readable result message."
+            },
+            "details": {
+              "type": "object",
+              "x-unreal-reflection-boundary": true,
+              "description": "Additional handler result fields not named by the contract."
+            },
+            "widgetPath": {
+              "type": "string",
+              "description": "Canonical /Game Widget Blueprint asset path."
+            },
+            "viewModels": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {
+                  "name": {
+                    "type": "string",
+                    "description": "Its name in the widget, the head of a binding path."
+                  },
+                  "class": {
+                    "type": "string"
+                  },
+                  "id": {
+                    "type": "string"
+                  },
+                  "creation": {
+                    "type": "string",
+                    "description": "How the widget gets it: CreateInstance (makes its own), Manual (the game sets it), or another of the editor's creation types."
+                  }
+                }
+              }
+            },
+            "bindings": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {
+                  "id": {
+                    "type": "string",
+                    "description": "What remove_widget_viewmodel bindingId takes."
+                  },
+                  "source": {
+                    "type": "string",
+                    "description": "Head.Field...: a viewmodel, a widget of the tree, or Self, then its fields."
+                  },
+                  "destination": {
+                    "type": "string"
+                  },
+                  "mode": {
+                    "type": "string",
+                    "description": "one_way (source to destination whenever it changes), two_way, one_time, to_source."
+                  },
+                  "enabled": {
+                    "type": "boolean"
+                  },
+                  "conversion": {
+                    "type": "boolean",
+                    "description": "true: the binding runs a conversion function."
+                  }
+                }
+              }
+            }
+          },
+          "required": [
+            "success"
+          ],
+          "additionalProperties": false
+        }
+      },
+      "examples": [
+        {
+          "title": "Read a Widget Blueprint's viewmodels (name, class, id, how the widget gets it) and its viewmodel bindings (id, source and destination as Head.Field paths, mode, enabled, whether it runs a conversion function). Empty lists for a widget with no viewmodel yet. Needs the ModelViewViewModel plugin (MVVM_DISABLED otherwise). Reads only.",
+          "input": {
+            "action": "read_widget_viewmodels",
+            "widgetPath": "/Game/UI/WBP_HUD"
+          },
+          "output": {
+            "success": true,
+            "widgetPath": "/Game/UI/WBP_HUD",
+            "viewModels": [
+              {
+                "name": "VM_Health",
+                "class": "/Game/UI/VM_Health.VM_Health_C",
+                "id": "6F9C1B2A-0000-0000-0000-000000000001",
+                "creation": "CreateInstance"
+              }
+            ],
+            "bindings": []
+          }
+        }
+      ],
+      "availability": {
+        "requiredPlugins": [
+          "EditorScriptingUtilities",
+          "UMG",
+          "ModelViewViewModel"
+        ],
+        "editorStates": [
+          "edit"
+        ],
+        "minEngineVersion": "5.4"
+      },
+      "behavior": {
+        "effect": "read",
+        "idempotency": "idempotent",
+        "longRunning": false,
+        "safeToRetry": true
+      },
+      "policy": {
+        "requiredScope": "read",
+        "consent": "none",
+        "dataAccess": "project-read"
+      },
+      "cost": {
+        "latency": "instant",
+        "resources": "low"
+      },
+      "routing": {
+        "parentTool": "manage_blueprint",
+        "dispatchAction": "read_widget_viewmodels"
+      },
+      "hashes": {
+        "algorithm": "sha256",
+        "schema": "e1e86d1cb38b224bc9ab8c94747bc1db8d8269ca57b57f373f877c18208f047a",
+        "content": "cfccd7d451c656f9e8c583aee9feee96f178371cb0952170995dce461d7a74a1"
       }
     },
     {
@@ -25817,6 +26598,338 @@
         "algorithm": "sha256",
         "schema": "f793a1304e70c73d90aa35e0c773ba07ea24cbe66ba5f5980d8d3cfa1e723f03",
         "content": "d5df8f4e171d56d0969470a515627eb3928821183c5d166dae3c28fd8cdc9d53"
+      }
+    },
+    {
+      "id": "blueprint.remove_widget_viewmodel",
+      "aliases": [],
+      "legacyIds": [
+        {
+          "tool": "manage_blueprint",
+          "action": "remove_widget_viewmodel"
+        }
+      ],
+      "discovery": {
+        "domain": "widget",
+        "family": "viewmodel",
+        "topics": [
+          "remove_widget_viewmodel",
+          "remove viewmodel binding",
+          "unbind viewmodel",
+          "remove viewmodel from widget"
+        ],
+        "summary": "Remove one viewmodel binding (bindingId, from read_widget_viewmodels) or one viewmodel (viewModel, by name) from a Widget Blueprint. A viewmodel bindings still use is VIEWMODEL_IN_USE (their ids: remove them first); a binding that runs a conversion function is BINDING_HAS_CONVERSION (the editor removes its graph with it: the View Bindings panel). One undo step; compiled and saved. Refusals change nothing: BINDING_NOT_FOUND, VIEWMODEL_NOT_FOUND, VIEWMODEL_LOCKED, NOT_FOUND, MVVM_DISABLED.",
+        "whenToUse": [
+          "A viewmodel binding or a viewmodel the widget no longer needs."
+        ],
+        "whenNotToUse": [
+          "A binding should only stop for now (the View Bindings panel can disable one)."
+        ]
+      },
+      "schemas": {
+        "input": {
+          "$schema": "https://json-schema.org/draft/2020-12/schema",
+          "type": "object",
+          "properties": {
+            "action": {
+              "type": "string",
+              "description": "The action to execute on the parent tool."
+            },
+            "widgetPath": {
+              "type": "string",
+              "description": "Canonical /Game Widget Blueprint asset path."
+            },
+            "bindingId": {
+              "type": "string",
+              "description": "The binding's id, as read_widget_viewmodels lists it."
+            },
+            "viewModel": {
+              "type": "string",
+              "description": "The viewmodel's name in the widget."
+            }
+          },
+          "required": [
+            "action",
+            "widgetPath"
+          ],
+          "additionalProperties": false,
+          "requiredOneOf": [
+            "bindingId",
+            "viewModel"
+          ]
+        },
+        "output": {
+          "$schema": "https://json-schema.org/draft/2020-12/schema",
+          "type": "object",
+          "properties": {
+            "success": {
+              "type": "boolean",
+              "description": "Whether the action succeeded."
+            },
+            "message": {
+              "type": "string",
+              "description": "Human-readable result message."
+            },
+            "details": {
+              "type": "object",
+              "x-unreal-reflection-boundary": true,
+              "description": "Additional handler result fields not named by the contract."
+            },
+            "widgetPath": {
+              "type": "string",
+              "description": "Canonical /Game Widget Blueprint asset path."
+            },
+            "removed": {
+              "type": "object",
+              "additionalProperties": true,
+              "x-unreal-reflection-boundary": true,
+              "description": "The binding or viewmodel removed, as read_widget_viewmodels showed it."
+            },
+            "compiled": {
+              "type": "boolean",
+              "description": "Whether the Blueprint compiled afterwards."
+            },
+            "saved": {
+              "type": "boolean",
+              "description": "Whether it was saved."
+            },
+            "undo": {
+              "type": "object",
+              "additionalProperties": true,
+              "x-unreal-reflection-boundary": true,
+              "description": "What editor undo takes back: {undoable, transactionScope, steps}; the edit is one step."
+            }
+          },
+          "required": [
+            "success"
+          ],
+          "additionalProperties": false
+        }
+      },
+      "examples": [
+        {
+          "title": "Remove one viewmodel binding (bindingId, from read_widget_viewmodels) or one viewmodel (viewModel, by name) from a Widget Blueprint. A viewmodel bindings still use is VIEWMODEL_IN_USE (their ids: remove them first); a binding that runs a conversion function is BINDING_HAS_CONVERSION (the editor removes its graph with it: the View Bindings panel). One undo step; compiled and saved. Refusals change nothing: BINDING_NOT_FOUND, VIEWMODEL_NOT_FOUND, VIEWMODEL_LOCKED, NOT_FOUND, MVVM_DISABLED.",
+          "input": {
+            "action": "remove_widget_viewmodel",
+            "widgetPath": "/Game/UI/WBP_HUD",
+            "bindingId": "0D3F2E1C-0000-0000-0000-000000000002"
+          },
+          "output": {
+            "success": true,
+            "widgetPath": "/Game/UI/WBP_HUD",
+            "removed": {
+              "id": "0D3F2E1C-0000-0000-0000-000000000002"
+            },
+            "compiled": true,
+            "saved": true
+          }
+        }
+      ],
+      "availability": {
+        "requiredPlugins": [
+          "EditorScriptingUtilities",
+          "UMG",
+          "ModelViewViewModel"
+        ],
+        "editorStates": [
+          "edit"
+        ],
+        "minEngineVersion": "5.4"
+      },
+      "behavior": {
+        "effect": "destructive",
+        "idempotency": "non-idempotent",
+        "longRunning": false,
+        "safeToRetry": false
+      },
+      "policy": {
+        "requiredScope": "destructive",
+        "consent": "explicit",
+        "dataAccess": "project-write"
+      },
+      "cost": {
+        "latency": "interactive",
+        "resources": "low"
+      },
+      "routing": {
+        "parentTool": "manage_blueprint",
+        "dispatchAction": "remove_widget_viewmodel"
+      },
+      "hashes": {
+        "algorithm": "sha256",
+        "schema": "f1a60c2e340c6466c4251a750136450c88d1d3a7a72bea3ab8ccb10af0070a62",
+        "content": "89a307393bfe8c15b69fd962e0238d65881cd1bcfb26816c1463b023ee75cc27"
+      }
+    },
+    {
+      "id": "blueprint.set_field_notify",
+      "aliases": [],
+      "legacyIds": [
+        {
+          "tool": "manage_blueprint",
+          "action": "set_field_notify"
+        }
+      ],
+      "discovery": {
+        "domain": "widget",
+        "family": "viewmodel",
+        "topics": [
+          "set_field_notify",
+          "field notify",
+          "fieldnotify variable",
+          "notify field changes",
+          "viewmodel variable"
+        ],
+        "summary": "Turn FieldNotify on (default) or off for Blueprint variables, as the variable's FieldNotify box does: a FieldNotify variable tells its listeners each time a Set node changes it, which is what a viewmodel binding reads. Works on a viewmodel Blueprint (parent class MVVMViewModelBase) and on a Widget Blueprint; any other Blueprint is NOT_NOTIFYING. A name that is no variable of it is VARIABLE_NOT_FOUND (with the variables it has). One undo step; compiled and saved.",
+        "whenToUse": [
+          "A viewmodel Blueprint's variable must be bindable (add_variable makes it, this marks it)."
+        ],
+        "whenNotToUse": [
+          "Other variable metadata is set (set_variable_metadata)."
+        ]
+      },
+      "schemas": {
+        "input": {
+          "$schema": "https://json-schema.org/draft/2020-12/schema",
+          "type": "object",
+          "properties": {
+            "action": {
+              "type": "string",
+              "description": "The action to execute on the parent tool."
+            },
+            "blueprintPath": {
+              "type": "string",
+              "description": "Canonical /Game Blueprint asset path."
+            },
+            "variableNames": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "minItems": 1,
+              "maxItems": 32,
+              "description": "The variables."
+            },
+            "on": {
+              "type": "boolean",
+              "description": "false turns FieldNotify off (default true)."
+            }
+          },
+          "required": [
+            "action",
+            "blueprintPath",
+            "variableNames"
+          ],
+          "additionalProperties": false
+        },
+        "output": {
+          "$schema": "https://json-schema.org/draft/2020-12/schema",
+          "type": "object",
+          "properties": {
+            "success": {
+              "type": "boolean",
+              "description": "Whether the action succeeded."
+            },
+            "message": {
+              "type": "string",
+              "description": "Human-readable result message."
+            },
+            "details": {
+              "type": "object",
+              "x-unreal-reflection-boundary": true,
+              "description": "Additional handler result fields not named by the contract."
+            },
+            "blueprintPath": {
+              "type": "string",
+              "description": "Canonical /Game Blueprint asset path."
+            },
+            "variableNames": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "fieldNotify": {
+              "type": "boolean",
+              "description": "What the variables are now."
+            },
+            "compiled": {
+              "type": "boolean",
+              "description": "Whether the Blueprint compiled afterwards."
+            },
+            "saved": {
+              "type": "boolean",
+              "description": "Whether it was saved."
+            },
+            "undo": {
+              "type": "object",
+              "additionalProperties": true,
+              "x-unreal-reflection-boundary": true,
+              "description": "What editor undo takes back: {undoable, transactionScope, steps}; the edit is one step."
+            }
+          },
+          "required": [
+            "success"
+          ],
+          "additionalProperties": false
+        }
+      },
+      "examples": [
+        {
+          "title": "Turn FieldNotify on (default) or off for Blueprint variables, as the variable's FieldNotify box does: a FieldNotify variable tells its listeners each time a Set node changes it, which is what a viewmodel binding reads. Works on a viewmodel Blueprint (parent class MVVMViewModelBase) and on a Widget Blueprint; any other Blueprint is NOT_NOTIFYING. A name that is no variable of it is VARIABLE_NOT_FOUND (with the variables it has). One undo step; compiled and saved.",
+          "input": {
+            "action": "set_field_notify",
+            "blueprintPath": "/Game/UI/VM_Health",
+            "variableNames": [
+              "Health"
+            ]
+          },
+          "output": {
+            "success": true,
+            "blueprintPath": "/Game/UI/VM_Health",
+            "variableNames": [
+              "Health"
+            ],
+            "fieldNotify": true,
+            "compiled": true,
+            "saved": true
+          }
+        }
+      ],
+      "availability": {
+        "requiredPlugins": [
+          "EditorScriptingUtilities",
+          "UMG",
+          "ModelViewViewModel"
+        ],
+        "editorStates": [
+          "edit"
+        ],
+        "minEngineVersion": "5.4"
+      },
+      "behavior": {
+        "effect": "write",
+        "idempotency": "non-idempotent",
+        "longRunning": false,
+        "safeToRetry": false
+      },
+      "policy": {
+        "requiredScope": "write",
+        "consent": "none",
+        "dataAccess": "project-write"
+      },
+      "cost": {
+        "latency": "interactive",
+        "resources": "low"
+      },
+      "routing": {
+        "parentTool": "manage_blueprint",
+        "dispatchAction": "set_field_notify"
+      },
+      "hashes": {
+        "algorithm": "sha256",
+        "schema": "1c1ec2b418433210230439eb9755beddacc01a5c59441e8f38b412edb75faac2",
+        "content": "9da6371b59d5282cd52eaba7672874295f07966ccb7a004214d08313439e4d4e"
       }
     },
     {

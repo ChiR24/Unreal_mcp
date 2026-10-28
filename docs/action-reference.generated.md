@@ -4,7 +4,7 @@
 
 # Action reference
 
-Catalog revision: `6db177880986060d`
+Catalog revision: `94fd21c4f38c089f`
 
 Both transports expose exactly ONE public MCP tool, `unreal`, with the four
 operations `search` / `describe` / `execute` / `configure`. The parent tools
@@ -13,7 +13,7 @@ by `tools/list` and a direct `tools/call` on one returns a
 `DIRECT_TOOL_CALL_REMOVED` receipt rather than executing
 (`src/server/gateway/direct-call-migration.ts`).
 
-The catalog declares 463 capabilities across
+The catalog declares 469 capabilities across
 23 internal parent tools.
 Every row is derived from the capability record that the gateway actually
 validates against, so `execute` cannot accept an action this table omits.
@@ -47,7 +47,7 @@ validates against, so `execute` cannot accept an action this table omits.
 | `manage_ai` | 17 | 3 | 14 | 0 | manage ai |
 | `manage_asset` | 53 | 14 | 34 | 5 | asset, datatable, enum, material, struct, texture |
 | `manage_audio` | 17 | 5 | 12 | 0 | audio |
-| `manage_blueprint` | 37 | 10 | 20 | 7 | blueprint, widget |
+| `manage_blueprint` | 43 | 12 | 23 | 8 | blueprint, widget |
 | `manage_character` | 10 | 2 | 8 | 0 | manage character |
 | `manage_combat` | 6 | 1 | 5 | 0 | manage combat |
 | `manage_effect` | 13 | 2 | 9 | 2 | manage effect |
@@ -65,7 +65,7 @@ validates against, so `execute` cannot accept an action this table omits.
 
 ## Capabilities requiring consent
 
-72 of 463 capabilities require consent.
+73 of 469 capabilities require consent.
 
 | Capability | Tool | Action | Effect | Consent |
 | --- | --- | --- | --- | --- |
@@ -92,6 +92,7 @@ validates against, so `execute` cannot accept an action this table omits.
 | `blueprint.remove_scs_component` | `manage_blueprint` | `remove_scs_component` | destructive | explicit |
 | `blueprint.remove_variable` | `manage_blueprint` | `remove_variable` | destructive | explicit |
 | `blueprint.remove_widget` | `manage_blueprint` | `remove_widget` | destructive | explicit |
+| `blueprint.remove_widget_viewmodel` | `manage_blueprint` | `remove_widget_viewmodel` | destructive | explicit |
 | `blueprint.write_graph_from_code` | `manage_blueprint` | `write_graph_from_code` | destructive | explicit |
 | `build_environment.delete` | `build_environment` | `delete` | destructive | explicit |
 | `build_environment.remove_foliage` | `build_environment` | `remove_foliage` | destructive | explicit |
@@ -206,9 +207,11 @@ validates against, so `execute` cannot accept an action this table omits.
 | `blueprint.add_function` | `manage_blueprint` | `add_function` | write | write | none | `manage_blueprint.add_function` `manage_blueprint.add_event` |
 | `blueprint.add_game_widget` | `manage_blueprint` | `add_health_bar` | write | write | none | `manage_blueprint.add_game_widget` `manage_blueprint.add_health_bar` `manage_blueprint.add_ammo_counter` `manage_blueprint.add_crosshair` `manage_blueprint.add_minimap` `manage_blueprint.add_compass` `manage_blueprint.add_damage_indicator` `manage_blueprint.add_interaction_prompt` `manage_blueprint.add_objective_tracker` `manage_blueprint.add_quest_tracker` |
 | `blueprint.add_panel_widget` | `manage_blueprint` | `add_canvas_panel` | write | write | none | `manage_blueprint.add_panel_widget` `manage_blueprint.add_canvas_panel` `manage_blueprint.add_overlay` `manage_blueprint.add_vertical_box` `manage_blueprint.add_horizontal_box` `manage_blueprint.add_grid_panel` `manage_blueprint.add_uniform_grid` `manage_blueprint.add_wrap_box` `manage_blueprint.add_border` `manage_blueprint.add_scroll_box` `manage_blueprint.add_size_box` `manage_blueprint.add_scale_box` `manage_blueprint.add_spacer` `manage_blueprint.add_safe_zone` `manage_blueprint.add_widget_switcher` `manage_blueprint.add_widget_tree` |
+| `blueprint.add_widget_viewmodel` | `manage_blueprint` | `add_widget_viewmodel` | write | write | none | `manage_blueprint.add_widget_viewmodel` |
 | `blueprint.arrange_widgets` | `manage_blueprint` | `arrange_widgets` | write | write | none | `manage_blueprint.arrange_widgets` |
 | `blueprint.audit_widget` | `manage_blueprint` | `audit_widget` | read | read | none | `manage_blueprint.audit_widget` |
 | `blueprint.bind_widget` | `manage_blueprint` | `bind_text` | write | write | none | `manage_blueprint.bind_widget` `manage_blueprint.bind_text` `manage_blueprint.bind_color` `manage_blueprint.bind_enabled` `manage_blueprint.bind_percent` `manage_blueprint.bind_visibility` `manage_blueprint.bind_on_clicked` `manage_blueprint.bind_on_hovered` `manage_blueprint.bind_on_value_changed` `manage_blueprint.bind_localized_text` `manage_blueprint.set_localization_key` |
+| `blueprint.bind_widget_viewmodel` | `manage_blueprint` | `bind_widget_viewmodel` | write | write | none | `manage_blueprint.bind_widget_viewmodel` |
 | `blueprint.compile` | `manage_blueprint` | `compile` | write | write | none | `manage_blueprint.compile` |
 | `blueprint.create` | `manage_blueprint` | `create` | write | write | none | `manage_blueprint.create` `manage_blueprint.create_blueprint` `manage_blueprint.ensure_exists` |
 | `blueprint.create_widget_template` | `manage_blueprint` | `create_main_menu` | write | write | none | `manage_blueprint.create_widget_template` `manage_blueprint.create_main_menu` `manage_blueprint.create_pause_menu` `manage_blueprint.create_settings_menu` `manage_blueprint.create_loading_screen` `manage_blueprint.create_hud_widget` `manage_blueprint.create_dialog_widget` `manage_blueprint.create_inventory_ui` `manage_blueprint.create_radial_menu` `manage_blueprint.create_credits_screen` `manage_blueprint.create_shop_ui` |
@@ -228,13 +231,17 @@ validates against, so `execute` cannot accept an action this table omits.
 | `blueprint.implement_interface` | `manage_blueprint` | `implement_interface` | write | write | none | `manage_blueprint.implement_interface` |
 | `blueprint.inspect_graph` | `manage_blueprint` | `get_graph_details` | read | read | none | `manage_blueprint.inspect_graph` `manage_blueprint.get_graph_details` `manage_blueprint.get_node_details` `manage_blueprint.get_pin_details` `manage_blueprint.list_node_types` `manage_blueprint.find_functions` |
 | `blueprint.lint_blueprint` | `manage_blueprint` | `lint_blueprint` | read | read | none | `manage_blueprint.lint_blueprint` |
+| `blueprint.list_viewmodels` | `manage_blueprint` | `list_viewmodels` | read | read | none | `manage_blueprint.list_viewmodels` |
 | `blueprint.preview_widget` | `manage_blueprint` | `preview_widget` | read | read | none | `manage_blueprint.preview_widget` |
 | `blueprint.probe_handle` | `manage_blueprint` | `probe_handle` | read | read | none | `manage_blueprint.probe_handle` |
 | `blueprint.read_graph_as_code` | `manage_blueprint` | `read_graph_as_code` | read | read | none | `manage_blueprint.read_graph_as_code` |
+| `blueprint.read_widget_viewmodels` | `manage_blueprint` | `read_widget_viewmodels` | read | read | none | `manage_blueprint.read_widget_viewmodels` |
 | `blueprint.remove_function` | `manage_blueprint` | `remove_function` | destructive | destructive | explicit | `manage_blueprint.remove_function` `manage_blueprint.remove_event` |
 | `blueprint.remove_scs_component` | `manage_blueprint` | `remove_scs_component` | destructive | destructive | explicit | `manage_blueprint.remove_scs_component` |
 | `blueprint.remove_variable` | `manage_blueprint` | `remove_variable` | destructive | destructive | explicit | `manage_blueprint.remove_variable` |
 | `blueprint.remove_widget` | `manage_blueprint` | `remove_widget` | destructive | destructive | explicit | `manage_blueprint.remove_widget` |
+| `blueprint.remove_widget_viewmodel` | `manage_blueprint` | `remove_widget_viewmodel` | destructive | destructive | explicit | `manage_blueprint.remove_widget_viewmodel` |
+| `blueprint.set_field_notify` | `manage_blueprint` | `set_field_notify` | write | write | none | `manage_blueprint.set_field_notify` |
 | `blueprint.set_font` | `manage_blueprint` | `set_font` | write | write | none | `manage_blueprint.set_font` `manage_blueprint.set_margin` |
 | `blueprint.set_widget_layout` | `manage_blueprint` | `set_anchor` | write | write | none | `manage_blueprint.set_widget_layout` `manage_blueprint.set_anchor` `manage_blueprint.set_position` `manage_blueprint.set_size` `manage_blueprint.set_alignment` `manage_blueprint.set_padding` `manage_blueprint.set_z_order` `manage_blueprint.set_visibility` `manage_blueprint.set_clipping` `manage_blueprint.set_render_transform` `manage_blueprint.set_style` |
 | `blueprint.write_graph_from_code` | `manage_blueprint` | `write_graph_from_code` | destructive | destructive | explicit | `manage_blueprint.write_graph_from_code` |

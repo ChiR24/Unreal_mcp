@@ -40,4 +40,6 @@ bool HandleWidgetAuthoringHudElements(UEngineWireSubsystem& Subsystem, const FSt
 bool HandleWidgetAuthoringTreeBuild(UEngineWireSubsystem& Subsystem, const FString& RequestId, const FString& SubAction, const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> RequestingSocket, TSharedPtr<FJsonObject> ResultJson);
 bool HandleWidgetAuthoringScreens(UEngineWireSubsystem& Subsystem, const FString& RequestId, const FString& SubAction, const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> RequestingSocket, TSharedPtr<FJsonObject> ResultJson);
 bool HandleWidgetAuthoringPropertyBindings(UEngineWireSubsystem& Subsystem, const FString& RequestId, const FString& SubAction, const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> RequestingSocket, TSharedPtr<FJsonObject> ResultJson);
+// Viewmodels (MVVM): ViewModel/McpWidgetViewModel.h.
+bool HandleWidgetAuthoringViewModels(UEngineWireSubsystem& Subsystem, const FString& RequestId, const FString& SubAction, const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> RequestingSocket, TSharedPtr<FJsonObject> ResultJson);
 }

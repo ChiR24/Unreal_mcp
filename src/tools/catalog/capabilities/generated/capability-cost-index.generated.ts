@@ -906,6 +906,7 @@ export const CAPABILITY_COST_INDEX: Readonly<Record<string, string>> = {
   "manage_blueprint::add_widget_component": "interactive|low",
   "manage_blueprint::add_widget_switcher": "interactive|low",
   "manage_blueprint::add_widget_tree": "interactive|low",
+  "manage_blueprint::add_widget_viewmodel": "interactive|low",
   "manage_blueprint::add_wrap_box": "interactive|low",
   "manage_blueprint::arrange_nodes": "interactive|medium",
   "manage_blueprint::arrange_widgets": "interactive|medium",
@@ -920,6 +921,7 @@ export const CAPABILITY_COST_INDEX: Readonly<Record<string, string>> = {
   "manage_blueprint::bind_text": "interactive|low",
   "manage_blueprint::bind_visibility": "interactive|low",
   "manage_blueprint::bind_widget": "interactive|low",
+  "manage_blueprint::bind_widget_viewmodel": "interactive|low",
   "manage_blueprint::break_pin_links": "interactive|low",
   "manage_blueprint::build_graph": "interactive|medium",
   "manage_blueprint::compile": "long-running|high",
@@ -967,15 +969,18 @@ export const CAPABILITY_COST_INDEX: Readonly<Record<string, string>> = {
   "manage_blueprint::inspect_graph": "interactive|medium",
   "manage_blueprint::lint_blueprint": "interactive|low",
   "manage_blueprint::list_node_types": "interactive|medium",
+  "manage_blueprint::list_viewmodels": "interactive|low",
   "manage_blueprint::modify_scs": "interactive|low",
   "manage_blueprint::preview_widget": "interactive|medium",
   "manage_blueprint::probe_handle": "instant|low",
   "manage_blueprint::read_graph_as_code": "interactive|low",
+  "manage_blueprint::read_widget_viewmodels": "instant|low",
   "manage_blueprint::remove_event": "interactive|low",
   "manage_blueprint::remove_function": "interactive|low",
   "manage_blueprint::remove_scs_component": "interactive|low",
   "manage_blueprint::remove_variable": "interactive|low",
   "manage_blueprint::remove_widget": "interactive|low",
+  "manage_blueprint::remove_widget_viewmodel": "interactive|low",
   "manage_blueprint::rename_variable": "interactive|low",
   "manage_blueprint::rename_widget": "interactive|low",
   "manage_blueprint::reparent_scs_component": "interactive|low",
@@ -984,6 +989,7 @@ export const CAPABILITY_COST_INDEX: Readonly<Record<string, string>> = {
   "manage_blueprint::set_anchor": "instant|low",
   "manage_blueprint::set_clipping": "instant|low",
   "manage_blueprint::set_default": "interactive|low",
+  "manage_blueprint::set_field_notify": "interactive|low",
   "manage_blueprint::set_font": "interactive|low",
   "manage_blueprint::set_localization_key": "interactive|low",
   "manage_blueprint::set_margin": "interactive|low",
@@ -1661,4 +1667,4 @@ export const CAPABILITY_COST_INDEX: Readonly<Record<string, string>> = {
   "system_control::write_snapshot": "interactive|medium"
 };
 
-export const CAPABILITY_COST_INDEX_KEY_COUNT = 1648;
+export const CAPABILITY_COST_INDEX_KEY_COUNT = 1654;

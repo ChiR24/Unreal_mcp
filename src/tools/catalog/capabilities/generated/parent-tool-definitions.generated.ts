@@ -16162,6 +16162,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           ],
           "description": "Which add behaviour variant to run.\nhealth: Give an actor health: Health and MaxHealth variables, damage from any source (ApplyDamage, a pain causing volume, a projectile) lowers it and negative damage heals, a Heal function, OnHealthChanged and OnDied dispatchers, and optional destroy on death.\ndamage_on_touch: Make an actor damage whatever touches it: ApplyDamage with TouchDamage on each overlap, which an actor with health loses (a negative amount heals); with knockback a touching Character is also launched away from it. It fires on overlap, so the actor needs a component that overlaps pawns (a sphere or box with the Trigger or OverlapAllDynamic profile).\npickup: Make an actor a pickup: a pawn that touches it collects it, which heals the pawn (heal) or adds to a number variable of the collector class (coins, keys, ammo), plays a sound and destroys the pickup. It fires on overlap, so the actor needs a component that overlaps pawns (a sphere or box with the Trigger or OverlapAllDynamic profile).\nsprint: Give a Character a sprint: while the key is held its MaxWalkSpeed is sprintSpeed, and on release the walk speed it had at BeginPlay comes back. The key gets an Input Action and a mapping, registered when the character is possessed.\nshoot: Give a pawn a key that shoots: each press spawns projectileClass in front of it, facing its way and owned by it, and launches it at projectileSpeed, at most fireRate shots a minute. The key gets an Input Action and a mapping, registered when the pawn is possessed.\nchase: Make a pawn chase the player: every quarter second, while the player is within chaseRange, its AI controller moves it toward the player and stops stopDistance away; out of range it stops. The pawn is set to be possessed by an AI controller when placed or spawned.\npatrol: Make a pawn patrol: its AI controller walks it to each of points in turn (offsets from where it starts), it waits waitTime at each and the route loops; with chaseRange it chases the player who comes that close and goes back to its route after. A chase the pawn already has is taken over. The pawn is set to be possessed by an AI controller when placed or spawned.\nturret: Make an actor a turret: every frame, while the player is within range, it turns about its vertical axis to face the player and fires projectileClass at them at projectileSpeed, at most fireRate shots a minute; each projectile is owned by the actor, so it never hits it. Nothing checks line of sight: a wall between them stops the shots.\nstomp: Make an enemy the player defeats by landing on it: a player-controlled Character that lands on top of the actor bounces up at bounceSpeed and the actor dies (with the health behaviour it takes damage enough to die, else it is destroyed); one that bumps it from the side or below takes sideDamage, at most once a second.\nexplosive: Make an actor with health explode when it dies: every actor within explosionRadius with a clear line to it takes up to explosionDamage (less with distance), effectPath plays and soundPath sounds at the spot, and the actor is gone. An explosive the blast kills explodes in turn.\nmoving_platform: Make an actor a moving platform or an elevator: it travels to each of points in turn (offsets from where it starts) at speed, waits waitTime at each, and loops; a Character standing on it rides along. Its root must be movable (a Blueprint made with manage_blueprint create is).\ncontrols: Give a Character the controls a player steers it with: WASD or the left stick walk it relative to where the controller faces, the mouse or the right stick turn the view, and the jump key jumps (held longer, higher). It makes IA_Move and IA_Look (Axis2D) and IA_Jump next to the Blueprint, maps the keys and registers the context when the character is possessed.\nrespawn: Make a pawn come back when it falls off the level or dies: to its start, or to where it last touched an actor tagged checkpointTag (a checkpoint), once it falls fallHeight below that point, and when it dies (back at full health) if it has the health behaviour. Respawn, SetRespawnPoint and OnRespawned are left for other logic.\ngoal: Make an actor the goal of a level: the first time the player touches it, OnGoalReached fires and soundPath plays there, and with nextLevel that level opens delay seconds later. It fires on overlap, so the actor needs a component that overlaps pawns (a sphere or box with the Trigger or OverlapAllDynamic profile).\nlaunch_pad: Make an actor launch a Character that touches it: LaunchCharacter with launchVelocity, replacing its vertical speed so every bounce reaches the same height (overrideXY replaces its horizontal speed too), and soundPath plays at the pad. It fires on overlap, so the actor needs a component that overlaps pawns (a sphere or box with the Trigger or OverlapAllDynamic profile).\nteleporter: Make an actor a teleporter: a pawn that touches it is moved to TeleportTarget, keeping its rotation, and soundPath plays where it arrives. Set TeleportTarget on each placed teleporter to the actor to arrive at (control_actor spawn variables, or set_blueprint_variables, with that actor name); a target that is a teleporter of the same class ignores pawns for cooldown seconds first, so a pair of pads does not send the pawn straight back. It fires on overlap, so the actor needs a component that overlaps pawns (a sphere or box with the Trigger or OverlapAllDynamic profile).\nfalling_platform: Make an actor a falling platform: the first pawn that lands on top of it starts it shaking, fallDelay seconds later it drops with gravity, and respawnTime seconds after the drop began it is back in place and ready again. A bump from the side or below does not set it off. The actor must block pawns, and its root must be movable (a Blueprint made with manage_blueprint create is).\ncountdown: Give an actor a time limit: at BeginPlay TimeLeft starts at seconds and drops by one every second; at zero OnTimeUp fires and, with killAtZero, the actor takes damage enough to die, so a pawn with the health behaviour dies and its game over or respawn follows. Show the time with behaviour counter_hud variableName TimeLeft.\nspawner: Make an actor a spawner: every interval seconds, while fewer than maxAlive of the actors it spawned are alive, it spawns spawnClass at a random point up to radius across from itself, counts each until it is destroyed, and fires OnSpawned with it. A pawn class set to be possessed by AI when spawned (the chase behaviour sets that) moves on its own.\ndash: Give a Character a dash: each press of the key launches it dashSpeed along where it faces, with a small lift so the dash carries before the ground slows it, at most once every cooldown seconds. The key gets an Input Action and a mapping, and the context is registered when the character is possessed.\nhealth_hud: Show the health of a pawn on screen: while a local player controls it, a widget is on the screen with a bar filled to Health / MaxHealth, refilled whenever OnHealthChanged fires, and taken off when the pawn loses that player or is destroyed. Needs the health behaviour. With no widgetPath it makes UI/WBP_HealthBar next to the Blueprint.\ncounter_hud: Show a number of a pawn on screen (Coins, Score): while a local player controls it, a text at the top right reads label: value, the variable rounded to a whole number and refreshed every 0.1 seconds, taken off when the pawn loses that player or is destroyed. With no widgetPath it makes UI/WBP_<variable>Counter next to the Blueprint; each further counter sits a row lower.\nhint: Show a message on the player's screen while the player is in the actor's area: when a locally controlled pawn starts to overlap the actor, a widget shows message at the bottom of that player's view, and it goes when the pawn leaves, or hideAfter seconds later. Each placed copy can say its own text (HintMessage is instance editable). It fires on overlap, so the actor needs a component that overlaps pawns (a sphere or box with the Trigger or OverlapAllDynamic profile).\ngame_over: Give the player a game over: when the pawn dies (health behaviour) while a local player controls it, that player input stops, a widget shows message over a dark shade, and the current level opens again restartDelay seconds later. The pawn stays when it dies, so the restart can run. With no widgetPath it makes UI/WBP_GameOver next to the Blueprint."
         },
+        "bindingId": {
+          "type": "string",
+          "description": "The binding's id, as read_widget_viewmodels lists it."
+        },
         "bindingKind": {
           "type": "string",
           "enum": [
@@ -16318,6 +16322,14 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "description": "Which create variant to run; omit for 'create'.\ncreate: Create a Blueprint asset named name in savePath (default /Game) and save it (saved). parentClass is a native class as /Script/Module.Class or a short name (Actor, Pawn, Character, PlayerController), or a Blueprint class path ending in _C; blueprintType Actor, Pawn, Character or FunctionLibrary stands in for a missing parentClass, and Interface without one makes a Blueprint Interface. A parent that resolves to nothing is CLASS_NOT_FOUND, naming classes of that name. properties sets class defaults, Component.Property and struct members by dotted path, reported as appliedProperties and failedProperties (the create stands either way). A Blueprint already at the path is answered with alreadyExists and left unchanged; one with another parent class is ASSET_ALREADY_EXISTS.\nblueprint: Same as create: a Blueprint named name in savePath from parentClass, or from blueprintType when parentClass is left out.\nensure: Make sure a Blueprint of parentClass is at savePath/name: one already there is answered with alreadyExists and left unchanged (another parent class is ASSET_ALREADY_EXISTS); otherwise it is created as create does, unless createIfMissing is false, which only reports whether it exists.",
           "default": "create"
         },
+        "creation": {
+          "type": "string",
+          "enum": [
+            "create_instance",
+            "manual"
+          ],
+          "description": "create_instance: the widget makes its own (default; an abstract class cannot be made, and is manual); manual: the game sets one."
+        },
         "currency": {
           "type": "string",
           "description": "Currency name in the shop header, shown as \"<currency>: 0\" (default Gold)."
@@ -16353,6 +16365,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "delta": {
           "type": "number",
           "description": "Spinbox increment."
+        },
+        "destination": {
+          "type": "string",
+          "description": "The value bound to, usually a widget property (HealthBar.Percent)."
         },
         "destroyOnDeath": {
           "type": "boolean",
@@ -16921,9 +16937,19 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "number",
           "description": "Minimum slider/spinbox value."
         },
+        "mode": {
+          "type": "string",
+          "enum": [
+            "one_way",
+            "two_way",
+            "one_time",
+            "to_source"
+          ],
+          "description": "Default one_way."
+        },
         "name": {
           "type": "string",
-          "description": "Name for the new Blueprint or asset."
+          "description": "Its name in the widget, which binding paths start with (default the editor's)."
         },
         "namespace": {
           "type": "string",
@@ -16987,6 +17013,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "oldName": {
           "type": "string",
           "description": "Current name of the variable or component."
+        },
+        "on": {
+          "type": "boolean",
+          "description": "false turns FieldNotify off (default true)."
         },
         "onHoveredFunction": {
           "type": "string",
@@ -17499,6 +17529,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "string",
           "description": "Sound asset played at the actor: where a pickup was collected, a goal when the player reaches it, a pad on each launch, where a teleported pawn arrives, or an explosive blows up."
         },
+        "source": {
+          "type": "string",
+          "description": "The value bound from, usually the viewmodel side: Head.Field...: the head is a viewmodel of the widget (by its name), a widget of its tree, or Self (the Widget Blueprint), then the fields one after another (Health.Current, HealthBar.Percent, Player.Stats.Armor). A field is a property or a getter function."
+        },
         "sourceNode": {
           "type": "string",
           "description": "Source node id accepted in place of fromNodeId."
@@ -17715,6 +17749,15 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
                 "type": "string"
               },
               "description": "Several variables to remove in one call, in place of or besides variableName. Every name must exist (any letter case), or nothing is removed and the reply lists the Blueprint's variables."
+            },
+            {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "minItems": 1,
+              "maxItems": 32,
+              "description": "The variables."
             }
           ],
           "description": "Several variables to give the same metadata in one call (one compile and save), in place of or besides variableName."
@@ -17722,6 +17765,14 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "variableType": {
           "type": "string",
           "description": "Variable type, any case. Basic: Boolean, Byte, Integer, Int64, Float, Double, String, Name, Text, Vector, Vector2D, Vector4, Rotator, Transform, Color, LinearColor. References: Object or Class (any UObject), or Object:<class>, Class:<class>, SoftObject:<class>, SoftClass:<class> with a class name or path (Actor, /Script/UMG.Widget, /Game/Blueprints/BP_Door); a bare class name or path is an object reference to that class. Structs: struct:<path> (struct:/Game/Data/F_Item), a /Script path (/Script/Engine.HitResult) or a struct name (HitResult). Enums: enum:<object path> (enum:/Script/Engine.ECollisionChannel, enum:/Game/Enums/E_State.E_State). Containers: Array<T>, Set<T> or Map<Key,Value> (also Array:T, Set:T, Map:Key,Value); a map key is Byte, Integer, Int64, Name, String or an enum. Example: Array<Object:/Script/UMG.Widget>. An unknown spelling is refused with TYPE_RESOLUTION_FAILED and the reason."
+        },
+        "viewModel": {
+          "type": "string",
+          "description": "The viewmodel's name in the widget."
+        },
+        "viewModelClass": {
+          "type": "string",
+          "description": "The viewmodel: a class path (/Script/MyGame.HealthViewModel, /Game/UI/VM_Health.VM_Health_C) or a Blueprint asset (/Game/UI/VM_Health)."
         },
         "visibility": {
           "type": "string",
@@ -17844,7 +17895,13 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             "get_widget_animation",
             "get_widget_info",
             "add_game_widget",
-            "create_widget_template"
+            "create_widget_template",
+            "list_viewmodels",
+            "read_widget_viewmodels",
+            "add_widget_viewmodel",
+            "bind_widget_viewmodel",
+            "remove_widget_viewmodel",
+            "set_field_notify"
           ],
           "description": "Action to invoke on manage_blueprint."
         }
@@ -17955,17 +18012,81 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "boolean",
           "description": "Whether it starts on its own."
         },
+        "binding": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "id": {
+              "type": "string",
+              "description": "What remove_widget_viewmodel bindingId takes."
+            },
+            "source": {
+              "type": "string",
+              "description": "Head.Field...: a viewmodel, a widget of the tree, or Self, then its fields."
+            },
+            "destination": {
+              "type": "string"
+            },
+            "mode": {
+              "type": "string",
+              "description": "one_way (source to destination whenever it changes), two_way, one_time, to_source."
+            },
+            "enabled": {
+              "type": "boolean"
+            },
+            "conversion": {
+              "type": "boolean",
+              "description": "true: the binding runs a conversion function."
+            }
+          }
+        },
         "bindingGuid": {
           "type": "string",
           "description": "MovieScene possessable GUID bound to the widget."
         },
         "bindings": {
-          "type": "array",
-          "items": {
-            "type": "object",
-            "additionalProperties": true,
-            "x-unreal-reflection-boundary": true
-          },
+          "oneOf": [
+            {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {
+                  "id": {
+                    "type": "string",
+                    "description": "What remove_widget_viewmodel bindingId takes."
+                  },
+                  "source": {
+                    "type": "string",
+                    "description": "Head.Field...: a viewmodel, a widget of the tree, or Self, then its fields."
+                  },
+                  "destination": {
+                    "type": "string"
+                  },
+                  "mode": {
+                    "type": "string",
+                    "description": "one_way (source to destination whenever it changes), two_way, one_time, to_source."
+                  },
+                  "enabled": {
+                    "type": "boolean"
+                  },
+                  "conversion": {
+                    "type": "boolean",
+                    "description": "true: the binding runs a conversion function."
+                  }
+                }
+              }
+            },
+            {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "additionalProperties": true,
+                "x-unreal-reflection-boundary": true
+              },
+              "description": "Event binds: per event, its name, functionName, createdFunction, createdEvent, nodeId and callNodeId."
+            }
+          ],
           "description": "Event binds: per event, its name, functionName, createdFunction, createdEvent, nodeId and callNodeId."
         },
         "blueprintCount": {
@@ -17986,6 +18107,45 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
               "type": "array",
               "items": {
                 "type": "object",
+                "additionalProperties": false,
+                "properties": {
+                  "class": {
+                    "type": "string",
+                    "description": "The class path, which add_widget_viewmodel takes."
+                  },
+                  "assetPath": {
+                    "type": "string",
+                    "description": "The Blueprint asset (Blueprint viewmodels)."
+                  },
+                  "fields": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "additionalProperties": false,
+                      "properties": {
+                        "name": {
+                          "type": "string"
+                        },
+                        "type": {
+                          "type": "string",
+                          "description": "Its C++ type (float, int32, FText, bool...)."
+                        },
+                        "function": {
+                          "type": "boolean",
+                          "description": "true: a getter function the class notifies through."
+                        }
+                      }
+                    },
+                    "description": "The fields marked FieldNotify, which a binding reads changes from."
+                  }
+                }
+              },
+              "description": "Blueprint viewmodels under folder."
+            },
+            {
+              "type": "array",
+              "items": {
+                "type": "object",
                 "additionalProperties": true,
                 "x-unreal-reflection-boundary": true
               },
@@ -18002,7 +18162,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
               "description": "folder: each Blueprint that failed or carries warnings: blueprintPath, compiled, compilerStatus, errorCount, warningCount and diagnostics. One that compiled clean is only counted."
             }
           ],
-          "description": "With path: each matching Blueprint as blueprintPath and components (componentName, componentType; inherited and ownerClass on one it inherits), in path order."
+          "description": "Blueprint viewmodels under folder."
         },
         "bottom": {
           "type": "number",
@@ -18374,6 +18534,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             "type": "string"
           },
           "description": "Each properties name that was not set, as \"Name: reason\"; the Blueprint is created anyway."
+        },
+        "fieldNotify": {
+          "type": "boolean",
+          "description": "What the variables are now."
         },
         "findingCount": {
           "type": "number",
@@ -18791,6 +18955,45 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "string",
           "description": "Localization namespace owning the key."
         },
+        "native": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "class": {
+                "type": "string",
+                "description": "The class path, which add_widget_viewmodel takes."
+              },
+              "assetPath": {
+                "type": "string",
+                "description": "The Blueprint asset (Blueprint viewmodels)."
+              },
+              "fields": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "properties": {
+                    "name": {
+                      "type": "string"
+                    },
+                    "type": {
+                      "type": "string",
+                      "description": "Its C++ type (float, int32, FText, bool...)."
+                    },
+                    "function": {
+                      "type": "boolean",
+                      "description": "true: a getter function the class notifies through."
+                    }
+                  }
+                },
+                "description": "The fields marked FieldNotify, which a binding reads changes from."
+              }
+            }
+          },
+          "description": "Native viewmodel classes, any module."
+        },
         "newName": {
           "type": "string",
           "description": "New name for a renamed variable, function, or component."
@@ -19054,6 +19257,12 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             {
               "type": "number",
               "description": "Nodes of the old bodies removed."
+            },
+            {
+              "type": "object",
+              "additionalProperties": true,
+              "x-unreal-reflection-boundary": true,
+              "description": "The binding or viewmodel removed, as read_widget_viewmodels showed it."
             }
           ],
           "description": "Guids of the nodes that were deleted."
@@ -19251,9 +19460,20 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "description": "Present and true when nodes or links stopped at their limit."
         },
         "undo": {
-          "type": "object",
-          "additionalProperties": true,
-          "x-unreal-reflection-boundary": true,
+          "oneOf": [
+            {
+              "type": "object",
+              "additionalProperties": true,
+              "x-unreal-reflection-boundary": true,
+              "description": "What editor undo takes back: {undoable, transactionScope, steps}; all the moves are one step. Absent under dryRun."
+            },
+            {
+              "type": "object",
+              "additionalProperties": true,
+              "x-unreal-reflection-boundary": true,
+              "description": "What editor undo takes back: {undoable, transactionScope, steps}; the edit is one step."
+            }
+          ],
           "description": "What editor undo takes back: {undoable, transactionScope, steps}; all the moves are one step. Absent under dryRun."
         },
         "unmoved": {
@@ -19293,6 +19513,12 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
                 "type": "string"
               },
               "description": "Every variable that took the metadata."
+            },
+            {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
             }
           ],
           "description": "Every variable removed, in the Blueprint's own spelling."
@@ -19322,6 +19548,49 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "verifiedValue": {
           "description": "Value to assign to the property. An object or class reference takes a path (a Blueprint class path ends in _C); null or \"None\" clears it."
+        },
+        "viewModel": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "name": {
+              "type": "string",
+              "description": "Its name in the widget, the head of a binding path."
+            },
+            "class": {
+              "type": "string"
+            },
+            "id": {
+              "type": "string"
+            },
+            "creation": {
+              "type": "string",
+              "description": "How the widget gets it: CreateInstance (makes its own), Manual (the game sets it), or another of the editor's creation types."
+            }
+          }
+        },
+        "viewModels": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "name": {
+                "type": "string",
+                "description": "Its name in the widget, the head of a binding path."
+              },
+              "class": {
+                "type": "string"
+              },
+              "id": {
+                "type": "string"
+              },
+              "creation": {
+                "type": "string",
+                "description": "How the widget gets it: CreateInstance (makes its own), Manual (the game sets it), or another of the editor's creation types."
+              }
+            }
+          }
         },
         "visibility": {
           "type": "string",

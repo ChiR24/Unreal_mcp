@@ -794,4 +794,8 @@ export const PLAIN_PROBE: readonly PlainProbeCase[] = [
   { query: 'read the editor ui', accepted: ['control_editor.read_editor_ui'] },
   { query: 'click a button in the editor', accepted: ['control_editor.use_editor_ui'] },
   { query: 'type into a text field in the editor', accepted: ['control_editor.use_editor_ui'] },
+  // Viewmodels (MVVM): one added to a widget, a widget property bound to its field, a variable made to notify.
+  { query: 'add a viewmodel to a widget', accepted: ['blueprint.add_widget_viewmodel'] },
+  { query: 'bind a widget to a viewmodel', accepted: ['blueprint.bind_widget_viewmodel'] },
+  { query: 'make a variable field notify', accepted: ['blueprint.set_field_notify'] },
 ];

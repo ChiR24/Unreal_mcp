@@ -42,7 +42,9 @@ inline const TArray<FString>& WidgetAuthoring()
 		TEXT("create_loading_screen"), TEXT("create_hud_widget"),
 		TEXT("create_dialog_widget"), TEXT("create_inventory_ui"),
 		TEXT("create_radial_menu"), TEXT("create_credits_screen"),
-		TEXT("create_shop_ui")
+		TEXT("create_shop_ui"),
+		TEXT("list_viewmodels"), TEXT("read_widget_viewmodels"), TEXT("add_widget_viewmodel"),
+		TEXT("bind_widget_viewmodel"), TEXT("remove_widget_viewmodel"), TEXT("set_field_notify")
 	};
 	return Actions;
 }
