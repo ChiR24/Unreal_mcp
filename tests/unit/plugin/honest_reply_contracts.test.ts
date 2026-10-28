@@ -1143,21 +1143,31 @@ describe('simulated keys and focused PIE widgets', () => {
     expect(widgetInput).toMatch(/if \(!ViewportWidget\.IsValid\(\) \|\| !SlateApp\.HasUserFocusedDescendants\(ViewportWidget\.ToSharedRef\(\), 0\)\) \{\s*return false;\s*\}/u);
     expect(widgetInput).toContain('bOutHandled = InputEvent == IE_Released ? SlateApp.ProcessKeyUpEvent(KeyEvent) : SlateApp.ProcessKeyDownEvent(KeyEvent);');
     const routing = code('ControlEditor', 'McpEditorInputRouting.cpp');
-    expect(routing).toMatch(/bRoutedToPIE = RouteKeyToFocusedPieWidgetForMcp\(InputKey, InputEvent, bHandledBySlate, FocusNote\) \|\|\s*RouteKeyToPIEForMcp\(InputKey, InputEvent, bHandledByPIE\);/u);
+    expect(routing).toMatch(/bRoutedToPIE = Target != EMcpKeyTarget::Editor &&\s*\(RouteKeyToFocusedPieWidgetForMcp\(InputKey, InputEvent, bHandledBySlate, FocusNote\) \|\|\s*RouteKeyToPIEForMcp\(InputKey, InputEvent, bHandledByPIE\)\);/u);
   });
 
   // A key no play session took went to the focused editor panel, sample_motion's inputs (declared read) too, where
   // Delete or End runs that panel's command; a key held into the game and released after Stop let go there as well.
   it('hands a key to the editor only when the caller allows it, never from sample_motion or a game key\'s release', () => {
-    expect(code('ControlEditor', 'McpEditorInputRouting.cpp')).toContain('if (!bRoutedToPIE && bEditorFallback) {');
-    expect(code('ControlEditor', 'McpEditorSupport.h')).toContain('FString &Message, bool bEditorFallback = true);');
+    expect(code('ControlEditor', 'McpEditorInputRouting.cpp')).toContain('if (!bRoutedToPIE && Target != EMcpKeyTarget::Game) {');
+    expect(code('ControlEditor', 'McpEditorSupport.h')).toContain('FString &Message, EMcpKeyTarget Target = EMcpKeyTarget::Any);');
     const motion = code('ControlActor', 'McpActorMotionInputs.cpp');
-    expect(motion).toContain('MakeShared<FJsonObject>(), bOk, bRouted, bPIE, bSlate, Message, false);');
+    expect(motion).toContain('MakeShared<FJsonObject>(), bOk, bRouted, bPIE, bSlate, Message, EMcpKeyTarget::Game);');
     expect(motion).toContain('Input.bRouted = McpSendMotionKey(Input.Key, true);');
     expect(motion).toContain('Entry->SetBoolField(TEXT("routedToPIE"), false);');
+    expect(code('ControlEditor', 'McpEditorInput.cpp')).toContain('ScheduleKeyReleaseForMcp(Key, HoldSeconds, bRoutedToPIE);');
+  });
+
+  // A release went to whatever took keys when it fired: a key pressed in the editor let go into a game started since,
+  // and a key pressed into a game let go into the world that replaced it (a level reload).
+  it('lets a held key go only where it went down, and not at all once that play world is gone', () => {
     const input = code('ControlEditor', 'McpEditorInput.cpp');
-    expect(input).toContain('SimulateEditorInputForMcp(TEXT("key_up"), Key, Payload, bOk, bRouted, bPIE, bSlate, Unused, !bPressRouted);');
-    expect(input).toContain('ScheduleKeyReleaseForMcp(Key, HoldSeconds, Payload, bRoutedToPIE);');
+    const drop = input.indexOf('if (!bPressRouted || !bWorldGone) {');
+    expect(drop, 'a game press whose world stopped or was replaced sends no release').toBeGreaterThan(-1);
+    expect(input.indexOf('bPressRouted ? EMcpKeyTarget::Game : EMcpKeyTarget::Editor', drop)).toBeGreaterThan(drop);
+    const motion = code('ControlActor', 'McpActorMotionInputs.cpp');
+    expect(motion).toContain('Input.PressWorld = GEditor ? GEditor->PlayWorld.Get() : nullptr;');
+    expect(motion).toMatch(/if \(Input\.bRouted && Input\.PressWorld\.IsValid\(\) && GEditor && Input\.PressWorld\.Get\(\) == GEditor->PlayWorld\.Get\(\)\) \{\s*McpSendMotionKey\(Input\.Key, false\);/u);
   });
 });
 

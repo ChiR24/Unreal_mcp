@@ -45,7 +45,18 @@ FString NormalizeForContainment(const FString& Value)
 FMcpAuthorizationDecision CheckScope(
 	const FMcpCapabilityPrincipal& Principal, const FMcpCapabilityDemand& Demand)
 {
-	if (Principal.IsScopeAuthorized(Demand.RequiredScope))
+	// RequiredScope, then each scope a sent parameter added; the first one missing is the one named.
+	EMcpCapabilityScope Missing = Demand.RequiredScope;
+	bool bAllowed = Principal.IsScopeAuthorized(Missing);
+	for (const EMcpCapabilityScope Also : Demand.AlsoRequiredScopes)
+	{
+		if (bAllowed && !Principal.IsScopeAuthorized(Also))
+		{
+			bAllowed = false;
+			Missing = Also;
+		}
+	}
+	if (bAllowed)
 	{
 		return FMcpAuthorizationDecision::Allow();
 	}
@@ -58,10 +69,10 @@ FMcpAuthorizationDecision CheckScope(
 		McpAuthorizationCodes::ScopeNotGranted,
 		FString::Printf(
 			TEXT("Scope '%s' is required for '%s'; this principal holds [%s]."),
-			*McpCapabilityPrincipal::ScopeToString(Demand.RequiredScope),
+			*McpCapabilityPrincipal::ScopeToString(Missing),
 			Demand.CapabilityId.IsEmpty() ? TEXT("this action") : *Demand.CapabilityId,
 			Granted.Num() > 0 ? *FString::Join(Granted, TEXT(",")) : TEXT("none")));
-	Decision.RequiredScope = McpCapabilityPrincipal::ScopeToString(Demand.RequiredScope);
+	Decision.RequiredScope = McpCapabilityPrincipal::ScopeToString(Missing);
 	Decision.GrantedScopes = MoveTemp(Granted);
 	return Decision;
 }
@@ -195,8 +206,11 @@ FMcpAuthorizationDecision CheckPathCoverage(
 			TEXT("This payload is too large or too deeply nested for path confinement to "
 				 "verify completely, so it was refused. Send fewer values or flatten it."));
 	}
-	const bool bMutating = Demand.RequiredScope == EMcpCapabilityScope::Write ||
-		Demand.RequiredScope == EMcpCapabilityScope::Destructive;
+	const auto Mutates = [](EMcpCapabilityScope Scope)
+	{
+		return Scope == EMcpCapabilityScope::Write || Scope == EMcpCapabilityScope::Destructive;
+	};
+	const bool bMutating = Mutates(Demand.RequiredScope) || Demand.AlsoRequiredScopes.ContainsByPredicate(Mutates);
 	if (!bMutating || !Demand.bDeclaresPathParameter || Scan.Paths.Num() > 0)
 	{
 		return FMcpAuthorizationDecision::Allow();

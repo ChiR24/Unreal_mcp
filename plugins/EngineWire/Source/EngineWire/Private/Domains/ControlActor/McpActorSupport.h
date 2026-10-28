@@ -279,6 +279,7 @@ struct FMcpMotionInput {
   double At = 0.0, Hold = 0.1, DownAt = -1.0, UpAt = -1.0;
   uint64 DownFrame = 0;
   bool bRouted = false; // the key-down reached the game; nothing else is sent anywhere
+  TWeakObjectPtr<UWorld> PressWorld; // the play world the key went down in, the only one its release goes to
   // The game widget that held keyboard focus when the key went down (a menu's button takes it first).
   FString Focused;
 };

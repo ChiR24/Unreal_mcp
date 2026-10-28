@@ -15,13 +15,12 @@ constexpr int32 McpMaxMotionInputs = 32;
 
 // The same path simulate_input takes, so a key that moves the pawn there
 // moves it here, but into the game only: a key no play session took is not
-// handed to the focused editor panel (false), and a release after Play
-// stopped goes nowhere.
+// handed to the focused editor panel.
 bool McpSendMotionKey(const FString &Key, bool bDown) {
   bool bOk = false, bRouted = false, bPIE = false, bSlate = false;
   FString Message;
   SimulateEditorInputForMcp(bDown ? TEXT("key_down") : TEXT("key_up"), Key,
-                            MakeShared<FJsonObject>(), bOk, bRouted, bPIE, bSlate, Message, false);
+                            MakeShared<FJsonObject>(), bOk, bRouted, bPIE, bSlate, Message, EMcpKeyTarget::Game);
   return bRouted;
 }
 
@@ -216,12 +215,17 @@ void McpApplyMotionInputs(TArray<FMcpMotionInput> &Inputs, double Elapsed, bool 
     if (!bRunEnded && Input.DownAt < 0.0 && Elapsed >= Input.At) {
       Input.Focused = FocusedPieWidgetForMcp();
       Input.bRouted = McpSendMotionKey(Input.Key, true);
+      Input.PressWorld = GEditor ? GEditor->PlayWorld.Get() : nullptr;
       Input.DownAt = Elapsed;
       Input.DownFrame = GFrameCounter;
     }
     const bool bDue = bRunEnded || (Elapsed >= Input.At + Input.Hold && GFrameCounter >= Input.DownFrame + 2);
     if (Input.DownAt >= 0.0 && Input.UpAt < 0.0 && bDue) {
-      McpSendMotionKey(Input.Key, false);
+      // Only into the play world that took the press: a key that reached no game, or whose world stopped or was
+      // replaced (a level reload ends the run), is held by nothing, and a new world must not see a release alone.
+      if (Input.bRouted && Input.PressWorld.IsValid() && GEditor && Input.PressWorld.Get() == GEditor->PlayWorld.Get()) {
+        McpSendMotionKey(Input.Key, false);
+      }
       Input.UpAt = Elapsed;
     }
   }

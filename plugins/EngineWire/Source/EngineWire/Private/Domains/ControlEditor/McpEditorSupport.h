@@ -71,13 +71,20 @@ bool RefuseCameraMoveWhilePieFollowsPawnForMcp(UEngineWireSubsystem *Bridge,
                                                const FString &RequestId, const TCHAR *What);
 FString NormalizeSimulatedInputTypeForMcp(
     const TSharedPtr<FJsonObject> &Payload);
-// bEditorFallback false: a key no play session takes is sent nowhere (bRoutedToPIE false) instead of to the editor
-// widget with keyboard focus.
+// Where a simulated key may go. Any: the running game, else the editor widget with keyboard focus. Game: the game
+// only, so a key no play session takes is sent nowhere (bRoutedToPIE false). Editor: the editor only.
+enum class EMcpKeyTarget : uint8 { Any, Game, Editor };
 void SimulateEditorInputForMcp(const FString &InputType, const FString &Key,
                                const TSharedPtr<FJsonObject> &Payload,
                                bool &bSuccess, bool &bRoutedToPIE,
                                bool &bHandledByPIE, bool &bHandledBySlate,
-                               FString &Message, bool bEditorFallback = true);
+                               FString &Message, EMcpKeyTarget Target = EMcpKeyTarget::Any);
+// Lets go of a held key where it went down: the game, or the editor.
+inline void ReleaseKeyForMcp(const FString &Key, EMcpKeyTarget Target) {
+  bool bOk = false, bRouted = false, bPIE = false, bSlate = false;
+  FString Unused;
+  SimulateEditorInputForMcp(TEXT("key_up"), Key, MakeShared<FJsonObject>(), bOk, bRouted, bPIE, bSlate, Unused, Target);
+}
 void AddInputPawnForMcp(const TSharedPtr<FJsonObject> &Resp);
 // widget_list / widget_click: drive the PIE session's live UMG by reflection
 // instead of the OS cursor. Fills Resp and returns whether the call succeeded.

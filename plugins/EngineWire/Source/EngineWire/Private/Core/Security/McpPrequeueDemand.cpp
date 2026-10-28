@@ -91,10 +91,10 @@ void ReadPolicy(const FMcpCapabilityRecord& Record, EMcpCapabilityScope& OutScop
 }
 
 // A parameter the record lists under policy.raisedBy turns the call into more than its own scope: sample_motion
-// watches (read), but its inputs press keys in the game, and Escape stops Play. Sending one demands that scope.
-// Presence counts, an empty value included, and the demand only ever goes up.
+// watches (read), but its inputs press keys in the game, and Escape stops Play. Sending one demands that scope as
+// well as the record's own (CheckScope needs every one). Presence counts, an empty value included.
 void RaiseForPayload(const FMcpCapabilityRecord& Record, const TSharedPtr<FJsonObject>& Payload,
-                     EMcpCapabilityScope& InOutScope)
+                     TArray<EMcpCapabilityScope>& OutAlsoRequired)
 {
 	const TSharedPtr<FJsonObject>* RaisedBy = nullptr;
 	if (!Payload.IsValid() || !Record.Policy.IsValid() ||
@@ -110,13 +110,9 @@ void RaiseForPayload(const FMcpCapabilityRecord& Record, const TSharedPtr<FJsonO
 		}
 		// An unreadable entry demands Admin, as an unknown scope string does.
 		FString ScopeText;
-		const EMcpCapabilityScope Raised = Pair.Value.IsValid() && Pair.Value->TryGetString(ScopeText)
+		OutAlsoRequired.AddUnique(Pair.Value.IsValid() && Pair.Value->TryGetString(ScopeText)
 			? ScopeFromString(ScopeText)
-			: EMcpCapabilityScope::Admin;
-		if (ScopeStrictness(Raised) > ScopeStrictness(InOutScope))
-		{
-			InOutScope = Raised;
-		}
+			: EMcpCapabilityScope::Admin);
 	}
 }
 
@@ -178,7 +174,7 @@ bool FindById(const FString& Id, const TSharedPtr<FJsonObject>& Payload, const F
 		if (Record.Id.Equals(Id, ESearchCase::CaseSensitive))
 		{
 			ReadPolicy(Record, OutDemand.RequiredScope, OutDemand.ConsentMode);
-			RaiseForPayload(Record, Payload, OutDemand.RequiredScope);
+			RaiseForPayload(Record, Payload, OutDemand.AlsoRequiredScopes);
 			OutDemand.CapabilityId = Record.Id;
 			CollectConsentNames(Record, OutDemand.ConsentNames);
 			OutDemand.bDeclaresPathParameter = DeclaresPathParameter(Record);
@@ -270,7 +266,7 @@ FMcpCapabilityDemand ResolveDemand(const FMcpPrequeueRequest& Request)
 		EMcpCapabilityScope Scope = EMcpCapabilityScope::Admin;
 		FString Consent;
 		ReadPolicy(*Record, Scope, Consent);
-		RaiseForPayload(*Record, Request.Payload, Scope);
+		RaiseForPayload(*Record, Request.Payload, Demand.AlsoRequiredScopes);
 		if (ScopeStrictness(Scope) > BestScope)
 		{
 			BestScope = ScopeStrictness(Scope);

@@ -57,6 +57,19 @@ bool FMcpCapabilityAuthorizationScopeConsentTest::RunTest(const FString& Paramet
 	TestEqual(TEXT("grantedScopes carried"), Denied.GrantedScopes.Num(), 1);
 	TestFalse(TEXT("refusal never carries a token"), Denied.Message.Contains(TEXT("secret")));
 
+	// A sent parameter's raised scope (policy.raisedBy) is needed as well as the capability's own, never instead:
+	// a write-only token sending sample_motion inputs still lacks the read that watching needs.
+	FMcpCapabilityDemand ReadPlusWrite = MakeDemand(EMcpCapabilityScope::Read, TEXT("none"));
+	ReadPlusWrite.AlsoRequiredScopes = { EMcpCapabilityScope::Write };
+	const FMcpCapabilityPrincipal Reader = McpTestPrincipal(TEXT("scoped:test"), { EMcpCapabilityScope::Read });
+	const FMcpCapabilityPrincipal Driver =
+		McpTestPrincipal(TEXT("scoped:test"), { EMcpCapabilityScope::Read, EMcpCapabilityScope::Write });
+	TestEqual(TEXT("a raised write still needs the base read"), CheckScope(Writer, ReadPlusWrite).RequiredScope,
+		FString(TEXT("read")));
+	TestEqual(TEXT("read alone lacks the raised write"), CheckScope(Reader, ReadPlusWrite).RequiredScope,
+		FString(TEXT("write")));
+	TestTrue(TEXT("read and write satisfy both"), CheckScope(Driver, ReadPlusWrite).bAllowed);
+
 	// Consent is never inferred: only a grant naming THIS capability counts.
 	FMcpAuthorizationGrant None;
 	FMcpAuthorizationGrant Explicit;
@@ -89,7 +102,7 @@ bool FMcpCapabilityAuthorizationScopeConsentTest::RunTest(const FString& Paramet
 	// refusal already knew.
 	TestTrue(TEXT("refusal spells out the grant to re-send"),
 		CheckConsent(ConsentExplicit, None).Message.Contains(
-			TEXT("{\"capability\":\"control_actor.delete\",\"acknowledge\":\"explicit\"}")));
+			TEXT("{\"capability\":\"control_actor.delete\",\"acknowledge\":\"explicit\",\"nonce\":")));
 
 	return true;
 }
