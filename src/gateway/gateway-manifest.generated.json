@@ -20335,6 +20335,7 @@
         "validate_assets",
         "lumen_update_scene",
         "list_plugins",
+        "get_plugin_info",
         "enable_plugin",
         "run_script",
         "save_recipe",
@@ -20514,7 +20515,7 @@
           },
           "assetPath": {
             "type": "string",
-            "description": "Single asset path to validate."
+            "description": "An asset or folder path (/SomePlugin/Meshes/SM_Rock): the plugin that mounts its first segment is read."
           },
           "autoExposure": {
             "type": "boolean",
@@ -20941,7 +20942,7 @@
           },
           "pluginName": {
             "type": "string",
-            "description": "Plugin name exactly as reported by list_plugins (the .uplugin name, not the friendly name)."
+            "description": "Plugin name as list_plugins reports it (the .uplugin name, not the friendly name)."
           },
           "pluginState": {
             "type": "string",
@@ -20949,7 +20950,7 @@
               "enable",
               "disable"
             ],
-            "description": "Which enable plugin variant to run; omit for 'enable'.\nenable: Enable a plugin for this project by writing it into the .uproject, or limit it to some build targets (targets [\"Editor\"] keeps an editor-only plugin out of a packaged game). A plugin on only because another plugin needs it is written into the project file. A plugin the editor has not loaded yet needs a restart, so the response reports restartRequired.\ndisable: Disable a plugin for this project by removing it from the .uproject. Assets that depend on it fail to load after the restart, so confirm dependents first.",
+            "description": "Which enable plugin variant to run; omit for 'enable'.\nenable: Enable a plugin for this project by writing it into the .uproject, or limit it to some build targets (targets [\"Editor\"] keeps an editor-only plugin out of a packaged game). A plugin on only because another plugin needs it is written into the project file. A plugin the editor has not loaded yet needs a restart, so the response reports restartRequired.\ndisable: Disable a plugin for this project by removing it from the .uproject. Assets that depend on it fail to load after the restart, so confirm dependents first (get_plugin_info lists the plugins that need it).",
             "default": "enable"
           },
           "poolSize": {
@@ -21240,6 +21241,7 @@
               "validate_assets",
               "lumen_update_scene",
               "list_plugins",
+              "get_plugin_info",
               "enable_plugin",
               "run_script",
               "save_recipe",

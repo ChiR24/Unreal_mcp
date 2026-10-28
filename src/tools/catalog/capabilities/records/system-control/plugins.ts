@@ -1,5 +1,5 @@
 /**
- * Plugin management records (3): list_plugins, enable_plugin, disable_plugin.
+ * Plugin management records (4): list_plugins, get_plugin_info, enable_plugin, disable_plugin.
  *
  * Migrated content frequently depends on a plugin that ships with the engine
  * but is off in this project — the advanced vehicle template needs
@@ -63,6 +63,50 @@ export const PLUGIN_RECORDS: readonly CapabilityRecordSource[] = [
   }),
   buildCoreRecord({
     parentTool: PT,
+    action: 'get_plugin_info',
+    domain: 'project',
+    family: 'plugin',
+    topics: ['plugin details', 'plugin dependencies', 'what depends on this plugin', 'which plugin owns this asset', 'plugin modules', 'plugin version'],
+    summary: 'Read one plugin from its descriptor: name, description, category, version, author, enabled state and its default, type (engine, project, ...), beta and experimental flags, mounted content path, its modules (type, loading phase), the plugins it needs (dependencies) and the installed plugins that need it (dependents, a disabled one marked). assetPath instead finds the plugin whose content holds that asset; one under /Game, /Engine or /Script is no plugin\'s and is refused PLUGIN_NOT_FOUND, as is a name no installed plugin has.',
+    whenToUse: [
+      'A plugin is about to be disabled and what would break must be known first (dependents).',
+      'An asset path starts with a plugin mount (/SomePlugin/...) and its plugin, version or author is needed.',
+      'Which modules or other plugins a plugin brings in must be known before enabling it.',
+    ],
+    whenNotToUse: ['Every plugin is to be listed or searched by name or category (use list_plugins).'],
+    inputProps: {
+      pluginName: { type: 'string', description: 'Plugin name as list_plugins reports it (the .uplugin name, not the friendly name).' },
+      assetPath: { type: 'string', description: 'An asset or folder path (/SomePlugin/Meshes/SM_Rock): the plugin that mounts its first segment is read.' },
+    },
+    requiredOneOf: ['pluginName', 'assetPath'],
+    outputProps: {
+      pluginName: { type: 'string', description: 'The .uplugin name.' },
+      friendlyName: { type: 'string', description: 'Display name.' },
+      description: { type: 'string', description: 'Descriptor description.' },
+      category: { type: 'string', description: 'Plugins browser category.' },
+      versionName: { type: 'string', description: 'Version string.' },
+      version: { type: 'number', description: 'Version number.' },
+      createdBy: { type: 'string', description: 'Author.' },
+      docsURL: { type: 'string', description: 'Documentation link, often empty.' },
+      enabled: { type: 'boolean', description: 'Enabled for this project now.' },
+      enabledByDefault: { type: 'string', enum: ['enabled', 'disabled', 'unspecified'], description: 'What the descriptor asks for when a project does not say.' },
+      type: { type: 'string', enum: ['engine', 'enterprise', 'project', 'external', 'mod'], description: 'Where the plugin is installed.' },
+      beta: { type: 'boolean', description: 'Marked beta.' },
+      experimental: { type: 'boolean', description: 'Marked experimental.' },
+      explicitlyLoaded: { type: 'boolean', description: 'Loads only when asked for (game feature plugins), not at startup.' },
+      canContainContent: { type: 'boolean', description: 'Ships a Content folder.' },
+      mountedContentPath: { type: 'string', description: 'Content root (/SomePlugin/), empty when it ships no content.' },
+      modules: { type: 'array', items: { type: 'object', additionalProperties: false, properties: { name: { type: 'string' }, type: { type: 'string', description: 'Runtime, Editor, Developer, ...' }, loadingPhase: { type: 'string' } } }, description: 'Code modules the plugin declares.' },
+      dependencies: { type: 'array', items: { type: 'object', additionalProperties: false, properties: { name: { type: 'string' }, enabled: { type: 'boolean' }, optional: { type: 'boolean' } } }, description: 'Plugins its descriptor lists.' },
+      dependents: { type: 'array', items: { type: 'string' }, description: 'Installed plugins whose descriptor needs this one, a disabled one marked "(disabled)".' },
+    },
+    effect: 'read',
+    dispatchAction: 'system_control',
+    exampleInput: { action: 'get_plugin_info', pluginName: 'ChaosVehiclesPlugin' },
+    exampleOutput: { success: true, pluginName: 'ChaosVehiclesPlugin', enabled: true, type: 'engine', dependents: [] },
+  }),
+  buildCoreRecord({
+    parentTool: PT,
     action: 'enable_plugin',
     domain: 'project',
     family: 'plugin',
@@ -102,7 +146,7 @@ export const PLUGIN_RECORDS: readonly CapabilityRecordSource[] = [
     action: 'disable_plugin',
     domain: 'project',
     family: 'plugin',
-    summary: 'Disable a plugin for this project by removing it from the .uproject. Assets that depend on it fail to load after the restart, so confirm dependents first.',
+    summary: 'Disable a plugin for this project by removing it from the .uproject. Assets that depend on it fail to load after the restart, so confirm dependents first (get_plugin_info lists the plugins that need it).',
     whenToUse: ['A plugin enabled for a since-removed experiment should no longer load.'],
     whenNotToUse: ['Project content still references the plugin\'s classes or assets.'],
     inputProps: {

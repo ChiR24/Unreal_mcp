@@ -774,4 +774,8 @@ export const PLAIN_PROBE: readonly PlainProbeCase[] = [
   { query: 'add varaible', accepted: ['blueprint.edit_variable'] },
   { query: 'lsit actors', accepted: ['control_actor.list'] },
   { query: 'take a screenshto', accepted: ['control_editor.screenshot'] },
+  // A plugin read from its descriptor: what it needs, what needs it, which one an asset belongs to.
+  { query: 'what depends on this plugin', accepted: ['system_control.get_plugin_info'] },
+  { query: 'which plugin does this asset come from', accepted: ['system_control.get_plugin_info'] },
+  { query: 'plugin dependencies', accepted: ['system_control.get_plugin_info'] },
 ];

@@ -28593,7 +28593,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "assetPath": {
           "type": "string",
-          "description": "Single asset path to validate."
+          "description": "An asset or folder path (/SomePlugin/Meshes/SM_Rock): the plugin that mounts its first segment is read."
         },
         "autoExposure": {
           "type": "boolean",
@@ -29020,7 +29020,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "pluginName": {
           "type": "string",
-          "description": "Plugin name exactly as reported by list_plugins (the .uplugin name, not the friendly name)."
+          "description": "Plugin name as list_plugins reports it (the .uplugin name, not the friendly name)."
         },
         "pluginState": {
           "type": "string",
@@ -29028,7 +29028,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             "enable",
             "disable"
           ],
-          "description": "Which enable plugin variant to run; omit for 'enable'.\nenable: Enable a plugin for this project by writing it into the .uproject, or limit it to some build targets (targets [\"Editor\"] keeps an editor-only plugin out of a packaged game). A plugin on only because another plugin needs it is written into the project file. A plugin the editor has not loaded yet needs a restart, so the response reports restartRequired.\ndisable: Disable a plugin for this project by removing it from the .uproject. Assets that depend on it fail to load after the restart, so confirm dependents first.",
+          "description": "Which enable plugin variant to run; omit for 'enable'.\nenable: Enable a plugin for this project by writing it into the .uproject, or limit it to some build targets (targets [\"Editor\"] keeps an editor-only plugin out of a packaged game). A plugin on only because another plugin needs it is written into the project file. A plugin the editor has not loaded yet needs a restart, so the response reports restartRequired.\ndisable: Disable a plugin for this project by removing it from the .uproject. Assets that depend on it fail to load after the restart, so confirm dependents first (get_plugin_info lists the plugins that need it).",
           "default": "enable"
         },
         "poolSize": {
@@ -29319,6 +29319,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             "validate_assets",
             "lumen_update_scene",
             "list_plugins",
+            "get_plugin_info",
             "enable_plugin",
             "run_script",
             "save_recipe",
@@ -29352,6 +29353,18 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "archiveDirectory": {
           "type": "string",
           "description": "Resolved absolute archive directory."
+        },
+        "beta": {
+          "type": "boolean",
+          "description": "Marked beta."
+        },
+        "canContainContent": {
+          "type": "boolean",
+          "description": "Ships a Content folder."
+        },
+        "category": {
+          "type": "string",
+          "description": "Plugins browser category."
         },
         "changed": {
           "oneOf": [
@@ -29444,6 +29457,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "boolean",
           "description": "True when the slot did not exist and was created from saveGameClass."
         },
+        "createdBy": {
+          "type": "string",
+          "description": "Author."
+        },
         "deleted": {
           "type": "boolean",
           "description": "With deleteSlot: true when the slot is gone."
@@ -29451,6 +29468,36 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "deletedCount": {
           "type": "number",
           "description": "With paths: how many files were deleted."
+        },
+        "dependencies": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "name": {
+                "type": "string"
+              },
+              "enabled": {
+                "type": "boolean"
+              },
+              "optional": {
+                "type": "boolean"
+              }
+            }
+          },
+          "description": "Plugins its descriptor lists."
+        },
+        "dependents": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Installed plugins whose descriptor needs this one, a disabled one marked \"(disabled)\"."
+        },
+        "description": {
+          "type": "string",
+          "description": "Descriptor description."
         },
         "destination": {
           "type": "string",
@@ -29461,13 +29508,26 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "x-unreal-reflection-boundary": true,
           "description": "Additional handler result fields not named by the contract."
         },
+        "docsURL": {
+          "type": "string",
+          "description": "Documentation link, often empty."
+        },
         "elapsedSeconds": {
           "type": "number",
           "description": "Seconds so far while running, total runtime once finished."
         },
         "enabled": {
           "type": "boolean",
-          "description": "Enabled state now recorded in the .uproject."
+          "description": "Enabled for this project now."
+        },
+        "enabledByDefault": {
+          "type": "string",
+          "enum": [
+            "enabled",
+            "disabled",
+            "unspecified"
+          ],
+          "description": "What the descriptor asks for when a project does not say."
         },
         "error": {
           "type": "string",
@@ -29497,6 +29557,14 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "number",
           "description": "launch_build only: the exit code of a game that quit before its run ended."
         },
+        "experimental": {
+          "type": "boolean",
+          "description": "Marked experimental."
+        },
+        "explicitlyLoaded": {
+          "type": "boolean",
+          "description": "Loads only when asked for (game feature plugins), not at startup."
+        },
         "failed": {
           "type": "number",
           "description": "Tests that failed or timed out."
@@ -29513,6 +29581,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             "x-unreal-reflection-boundary": true
           },
           "description": "Each file: path (project-relative, what delete_output_file takes), sizeBytes, modified (ISO 8601). Newest first."
+        },
+        "friendlyName": {
+          "type": "string",
+          "description": "Display name."
         },
         "gameLogPath": {
           "type": "string",
@@ -29598,6 +29670,30 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "moduleName": {
           "type": "string",
           "description": "The module the class went into."
+        },
+        "modules": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "name": {
+                "type": "string"
+              },
+              "type": {
+                "type": "string",
+                "description": "Runtime, Editor, Developer, ..."
+              },
+              "loadingPhase": {
+                "type": "string"
+              }
+            }
+          },
+          "description": "Code modules the plugin declares."
+        },
+        "mountedContentPath": {
+          "type": "string",
+          "description": "Content root (/SomePlugin/), empty when it ships no content."
         },
         "name": {
           "type": "string",
@@ -29943,6 +30039,17 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "string",
           "description": "Trace system status (e.g. available, tracing_to_file)."
         },
+        "type": {
+          "type": "string",
+          "enum": [
+            "engine",
+            "enterprise",
+            "project",
+            "external",
+            "mod"
+          ],
+          "description": "Where the plugin is installed."
+        },
         "uatResult": {
           "type": "string",
           "description": "UAT's own result word once the task finished."
@@ -29957,6 +30064,14 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "value": {
           "type": "string",
           "description": "Value of the requested key."
+        },
+        "version": {
+          "type": "number",
+          "description": "Version number."
+        },
+        "versionName": {
+          "type": "string",
+          "description": "Version string."
         }
       },
       "additionalProperties": true

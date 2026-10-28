@@ -4,7 +4,7 @@
 
 # Action reference
 
-Catalog revision: `d7952fc33aab3d96`
+Catalog revision: `cf4ceeef69dd0e32`
 
 Both transports expose exactly ONE public MCP tool, `unreal`, with the four
 operations `search` / `describe` / `execute` / `configure`. The parent tools
@@ -13,7 +13,7 @@ by `tools/list` and a direct `tools/call` on one returns a
 `DIRECT_TOOL_CALL_REMOVED` receipt rather than executing
 (`src/server/gateway/direct-call-migration.ts`).
 
-The catalog declares 453 capabilities across
+The catalog declares 454 capabilities across
 23 internal parent tools.
 Every row is derived from the capability record that the gateway actually
 validates against, so `execute` cannot accept an action this table omits.
@@ -61,11 +61,11 @@ validates against, so `execute` cannot accept an action this table omits.
 | `manage_pcg` | 3 | 0 | 3 | 0 | world |
 | `manage_sequence` | 22 | 2 | 19 | 1 | cinematics, media, movie_render, replay, sequence, take_recorder |
 | `manage_tools` | 9 | 4 | 5 | 0 | tools |
-| `system_control` | 33 | 10 | 19 | 4 | audio, build, console, insights, logs, performance, project, python, render, system, viewport, widget |
+| `system_control` | 34 | 11 | 19 | 4 | audio, build, console, insights, logs, performance, project, python, render, system, viewport, widget |
 
 ## Capabilities requiring consent
 
-69 of 453 capabilities require consent.
+69 of 454 capabilities require consent.
 
 | Capability | Tool | Action | Effect | Consent |
 | --- | --- | --- | --- | --- |
@@ -569,6 +569,7 @@ validates against, so `execute` cannot accept an action this table omits.
 | `system_control.edit_save_game` | `system_control` | `edit_save_game` | destructive | destructive | explicit | `system_control.edit_save_game` |
 | `system_control.enable_plugin` | `system_control` | `system_control` | write | write | none | `system_control.enable_plugin` `system_control.disable_plugin` |
 | `system_control.execute_python` | `system_control` | `system_control` | write | write | explicit | `system_control.execute_python` |
+| `system_control.get_plugin_info` | `system_control` | `system_control` | read | read | none | `system_control.get_plugin_info` |
 | `system_control.get_project_settings` | `system_control` | `system_control` | read | read | none | `system_control.get_project_settings` |
 | `system_control.get_trace_status` | `system_control` | `manage_insights` | read | read | none | `system_control.get_trace_status` `system_control.analyze_trace` |
 | `system_control.launch_build` | `system_control` | `system_control` | write | write | none | `system_control.launch_build` |

@@ -11,7 +11,7 @@ Editor-only UE 5.0-5.8 plugin. It owns the native `/mcp` HTTP/SSE server (the on
 | Lint validator | `Source/EngineWireValidation/` | lint_blueprint's rules as a Data Validation validator (Validate Assets, saves, commandlets); its own module because a validator UCLASS needs DataValidation at compile time; LoadingPhase None, loaded by EngineWire's startup only where DataValidation is on |
 | Public API/settings | `Source/EngineWire/Public/` | Subsystem, settings, connection manager, queue fairness |
 | Core | `Private/Core/` (41) | Queue, game-thread drain, the one handler table, pre-queue gate — nested `AGENTS.md` |
-| Domains | `Private/Domains/` (1,432 files, 58 domains; counts include subfolders, 2026-10-28) | Action implementations — nested `AGENTS.md` |
+| Domains | `Private/Domains/` (1,433 files, 58 domains; counts include subfolders, 2026-10-28) | Action implementations — nested `AGENTS.md` |
 | Shared helpers | `Private/Foundation/` (142) | Reflection, Blueprint, path, JSON, response helpers — nested `AGENTS.md` |
 | Native MCP | `Private/MCP/` (160) | Registry/session/transport, generated shards — nested `AGENTS.md` |
 | Hazardous UE ops | `Private/Safety/` (19) | Save/load/delete wrappers — nested `AGENTS.md` |

@@ -84,6 +84,17 @@ const testCases = [
   // === ACTION ===
   // system_control.restart_editor is an alias of control_editor's (the name callers invent for it): validateOnly only lists.
   { scenario: 'INFO: restart_editor under system_control (an alias) lists the unsaved packages', toolName: 'system_control', arguments: { action: 'restart_editor', validateOnly: true }, consent: { capability: 'control_editor.restart_editor', acknowledge: 'explicit' }, expected: 'success' },
+  // get_plugin_info reads one plugin's descriptor with what it needs and what needs it.
+  { scenario: 'INFO: get_plugin_info reads a plugin and the plugins that need it', toolName: 'system_control', arguments: { action: 'get_plugin_info', pluginName: 'PythonScriptPlugin' }, expected: 'success', assertions: [
+    { path: 'structuredContent.result.pluginName', equals: 'PythonScriptPlugin', label: 'the plugin asked for' },
+    { path: 'structuredContent.result.type', equals: 'engine', label: 'installed with the engine' },
+    { path: 'structuredContent.result.dependents', includes: 'EngineWire', label: 'this bridge needs it' },
+  ] },
+  { scenario: 'INFO: get_plugin_info finds the plugin an asset path belongs to', toolName: 'system_control', arguments: { action: 'get_plugin_info', assetPath: '/Niagara/DefaultAssets' }, expected: 'success', assertions: [
+    { path: 'structuredContent.result.pluginName', equals: 'Niagara', label: 'the plugin mounting /Niagara/' },
+  ] },
+  { scenario: 'ERROR: get_plugin_info on project content', toolName: 'system_control', arguments: { action: 'get_plugin_info', assetPath: '/Game/Maps' }, expected: 'error|PLUGIN_NOT_FOUND' },
+  { scenario: 'ERROR: get_plugin_info on a plugin nobody installed', toolName: 'system_control', arguments: { action: 'get_plugin_info', pluginName: 'NoSuchPluginAnywhere' }, expected: 'error|PLUGIN_NOT_FOUND' },
   { scenario: 'ACTION: profile', toolName: 'system_control', arguments: { action: 'profile', profileType: 'CPU' }, expected: 'success' },
   { scenario: 'ACTION: show_fps', toolName: 'system_control', arguments: { action: 'show_fps', enabled: true }, expected: 'success' },
   // === CONFIG ===

@@ -81,6 +81,9 @@ bool HandleManagePlugins(UEngineWireSubsystem* Self,
                          const FString& SubAction,
                          const TSharedPtr<FJsonObject>& Payload,
                          FSystemControlSocket RequestingSocket);
+// get_plugin_info: one plugin's descriptor, modules, dependencies and dependents (Plugins/McpPluginInfo.cpp).
+bool HandlePluginInfo(UEngineWireSubsystem* Self, const FString& RequestId, const TSharedPtr<FJsonObject>& Payload,
+                      FSystemControlSocket RequestingSocket);
 // create_cpp_class: a header and .cpp from a parent class in a project module, the editor's New C++ Class.
 bool HandleCreateCppClass(UEngineWireSubsystem* Self,
                           const FString& RequestId,
