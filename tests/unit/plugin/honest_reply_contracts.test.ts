@@ -10,6 +10,7 @@ import { describe, expect, it } from 'vitest';
 import { capabilityIndex } from '../support/capability-index.js';
 import { validateAgainstCapabilitySchema } from '../support/schema-validate.js';
 import { isRecord } from '../../../src/utils/validation/type-guards.js';
+import { countPureLines, sliceBetween } from './plugin-contract-fixtures.js';
 
 const DOMAINS = join('plugins', 'EngineWire', 'Source', 'EngineWire', 'Private', 'Domains');
 
@@ -1304,6 +1305,18 @@ describe('tapped keys while the game is paused', () => {
     expect(source).not.toContain('!Live->IsPaused()');
     expect(source).toContain('PlayWorld && PlayWorld->bDebugPauseExecution');
     expect(source).toContain('editor\'s pause until step_frame or resume runs it');
+  });
+});
+
+describe('tapped keys with no play session', () => {
+  // A key_tap sent with no PIE running crashed the editor on the next tick: its release read the world settings of a
+  // play world that was null, since a key pressed outside PIE never counts game time.
+  it('the release of an editor key reads no play world', () => {
+    // Up to the function's own closing brace: code() strips the "// namespace" after it.
+    const source = sliceBetween(code('ControlEditor', 'McpEditorInput.cpp'), 'void ScheduleKeyReleaseForMcp(', '\n}');
+    expect(countPureLines(source)).toBeLessThan(60); // the function alone, never the rest of the file
+    expect(source).toContain('const AWorldSettings *Settings = (bGameTime && !bWorldGone) ? Live->GetWorldSettings() : nullptr;');
+    expect(source).not.toContain('bWorldGone ? nullptr : Live->GetWorldSettings()');
   });
 });
 
