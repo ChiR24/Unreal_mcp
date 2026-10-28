@@ -111,6 +111,14 @@ const testCases = [
   { scenario: 'ERROR: remove_plugin on a plugin still loaded', toolName: 'system_control', arguments: { action: 'remove_plugin', pluginName: 'McpScratchPlugin' }, expected: 'error|PLUGIN_LOADED' },
   { scenario: 'ERROR: remove_plugin on an engine plugin', toolName: 'system_control', arguments: { action: 'remove_plugin', pluginName: 'Niagara' }, expected: 'error|PLUGIN_NOT_REMOVABLE' },
   { scenario: 'CLEANUP: disable_plugin so the next run removes the scratch plugin', toolName: 'system_control', arguments: { action: 'disable_plugin', pluginName: 'McpScratchPlugin' }, expected: 'success' },
+  // A game feature plugin needs the GameFeatures plugin, which a new project leaves off: there each game feature call
+  // answers GAME_FEATURES_DISABLED. Where it is on, the plugin is made and activated, read back, deactivated, and turned
+  // off so the next run removes it, as for the content-only plugin above.
+  { scenario: 'CLEANUP: remove_plugin clears the scratch game feature an earlier run left', toolName: 'system_control', arguments: { action: 'remove_plugin', pluginName: 'McpScratchFeature' }, expected: 'success|not found' },
+  { scenario: 'CREATE: create_plugin makes a game feature plugin', toolName: 'system_control', arguments: { action: 'create_plugin', pluginName: 'McpScratchFeature', template: 'game_feature' }, expected: { condition: 'success', errorPattern: 'GAME_FEATURES_DISABLED' } },
+  { scenario: 'INFO: list_game_features', toolName: 'system_control', arguments: { action: 'list_game_features' }, expected: { condition: 'success', errorPattern: 'GAME_FEATURES_DISABLED' } },
+  { scenario: 'ACTION: set_game_feature_active deactivates the scratch game feature', toolName: 'system_control', arguments: { action: 'set_game_feature_active', pluginName: 'McpScratchFeature', active: false }, expected: { condition: 'success', errorPattern: 'GAME_FEATURES_DISABLED' } },
+  { scenario: 'CLEANUP: disable_plugin so the next run removes the scratch game feature', toolName: 'system_control', arguments: { action: 'disable_plugin', pluginName: 'McpScratchFeature' }, expected: 'success|not found' },
   { scenario: 'ACTION: profile', toolName: 'system_control', arguments: { action: 'profile', profileType: 'CPU' }, expected: 'success' },
   { scenario: 'ACTION: show_fps', toolName: 'system_control', arguments: { action: 'show_fps', enabled: true }, expected: 'success' },
   // === CONFIG ===

@@ -20339,6 +20339,8 @@
         "create_plugin",
         "remove_plugin",
         "enable_plugin",
+        "list_game_features",
+        "set_game_feature_active",
         "run_script",
         "save_recipe",
         "run_recipe",
@@ -20350,6 +20352,7 @@
         "screenshot"
       ],
       "parameterNames": [
+        "active",
         "actors",
         "antiAliasing",
         "archiveDirectory",
@@ -20468,6 +20471,7 @@
         "summary",
         "target",
         "targets",
+        "template",
         "text",
         "timeoutSeconds",
         "traceFile",
@@ -20486,6 +20490,10 @@
       "inputSchema": {
         "type": "object",
         "properties": {
+          "active": {
+            "type": "boolean",
+            "description": "true activates (default), false deactivates."
+          },
           "actors": {
             "type": "array",
             "items": {
@@ -21166,6 +21174,14 @@
             },
             "description": "Build targets the plugin is enabled for, every other build leaving it out: [\"Editor\"] keeps it in the editor and out of a packaged game. An empty list lifts the limit."
           },
+          "template": {
+            "type": "string",
+            "enum": [
+              "content_only",
+              "game_feature"
+            ],
+            "description": "content_only (default): content that loads with the project; game_feature: a game feature plugin under Plugins/GameFeatures that the Game Features subsystem loads and activates (category default Game Features)."
+          },
           "text": {
             "type": "string",
             "description": "Optional text for text-bearing components."
@@ -21262,6 +21278,8 @@
               "create_plugin",
               "remove_plugin",
               "enable_plugin",
+              "list_game_features",
+              "set_game_feature_active",
               "run_script",
               "save_recipe",
               "run_recipe",

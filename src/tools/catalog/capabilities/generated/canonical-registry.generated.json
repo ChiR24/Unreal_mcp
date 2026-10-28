@@ -1,6 +1,6 @@
 {
-  "catalogRevision": "204d79695ba40f9c",
-  "recordCount": 456,
+  "catalogRevision": "be4c39edc7d214c8",
+  "recordCount": 458,
   "records": [
     {
       "id": "animation_physics.analyze_animation",
@@ -109621,9 +109621,10 @@
           "make a plugin",
           "content plugin",
           "content only plugin",
-          "modular content"
+          "modular content",
+          "new game feature plugin"
         ],
-        "summary": "Make a content-only plugin in this project's Plugins folder (the Plugins browser's Content Only template: a descriptor, a Content folder and the template icon), mount it and enable it in the project at once, so assets can go under its mountedContentPath (/Name/) straight away. A plugin with code is not made (it needs a build). A name taken by any installed plugin, or by a folder, is PLUGIN_EXISTS; a name that is no valid identifier is INVALID_ARGUMENT; nothing is created then.",
+        "summary": "Make a content-only plugin in this project's Plugins folder (the Plugins browser's Content Only template: a descriptor, a Content folder and the template icon), mount it and enable it in the project at once, so assets can go under its mountedContentPath (/Name/) straight away. template game_feature makes a game feature plugin instead (the Game Feature (Content Only) template): under Plugins/GameFeatures, loaded by the Game Features subsystem rather than at startup, with its GameFeatureData asset made and saved (gameFeatureData), and activated at once (list_game_features shows when it gets there); it needs the GameFeatures plugin (GAME_FEATURES_DISABLED; GAME_FEATURES_UNAVAILABLE in a build of EngineWire without its game features module, such as the Fab one; ENGINE_VERSION_UNSUPPORTED on UE 5.0). A plugin with code is not made (it needs a build). A name taken by any installed plugin, or by a folder, is PLUGIN_EXISTS; a name that is no valid identifier is INVALID_ARGUMENT; nothing is created then.",
         "whenToUse": [
           "Content should live in its own plugin (to share between projects, to ship separately, or to keep a feature's assets apart)."
         ],
@@ -109660,6 +109661,14 @@
             "createdBy": {
               "type": "string",
               "description": "Author."
+            },
+            "template": {
+              "type": "string",
+              "enum": [
+                "content_only",
+                "game_feature"
+              ],
+              "description": "content_only (default): content that loads with the project; game_feature: a game feature plugin under Plugins/GameFeatures that the Game Features subsystem loads and activates (category default Game Features)."
             }
           },
           "required": [
@@ -109700,6 +109709,10 @@
             "enabled": {
               "type": "boolean",
               "description": "Enabled in the project."
+            },
+            "gameFeatureData": {
+              "type": "string",
+              "description": "template game_feature: its GameFeatureData asset (/Name/Name), where its game feature actions go."
             }
           },
           "required": [
@@ -109710,7 +109723,7 @@
       },
       "examples": [
         {
-          "title": "Make a content-only plugin in this project's Plugins folder (the Plugins browser's Content Only template: a descriptor, a Content folder and the template icon), mount it and enable it in the project at once, so assets can go under its mountedContentPath (/Name/) straight away. A plugin with code is not made (it needs a build). A name taken by any installed plugin, or by a folder, is PLUGIN_EXISTS; a name that is no valid identifier is INVALID_ARGUMENT; nothing is created then.",
+          "title": "Make a content-only plugin in this project's Plugins folder (the Plugins browser's Content Only template: a descriptor, a Content folder and the template icon), mount it and enable it in the project at once, so assets can go under its mountedContentPath (/Name/) straight away. template game_feature makes a game feature plugin instead (the Game Feature (Content Only) template): under Plugins/GameFeatures, loaded by the Game Features subsystem rather than at startup, with its GameFeatureData asset made and saved (gameFeatureData), and activated at once (list_game_features shows when it gets there); it needs the GameFeatures plugin (GAME_FEATURES_DISABLED; GAME_FEATURES_UNAVAILABLE in a build of EngineWire without its game features module, such as the Fab one; ENGINE_VERSION_UNSUPPORTED on UE 5.0). A plugin with code is not made (it needs a build). A name taken by any installed plugin, or by a folder, is PLUGIN_EXISTS; a name that is no valid identifier is INVALID_ARGUMENT; nothing is created then.",
           "input": {
             "action": "create_plugin",
             "pluginName": "ForestKit",
@@ -109751,8 +109764,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "694d0ac51f7862cdf2f76667c21ee28a9eaf2ffb787f5323b6011fac6caa0e01",
-        "content": "42d078be6c229af7462bd681298f79eeeba7f764e91d6a38e7033427784340d5"
+        "schema": "bc2f1d46ae08b7bc1040dcfdc50cc3398654d315ada4d47e9dc9fa6f05807192",
+        "content": "3fda7a782ed4efa54fac98607d1f696bae9971afd884994be1e3a4d1e91c679c"
       }
     },
     {
@@ -111398,6 +111411,149 @@
         "algorithm": "sha256",
         "schema": "5d69139058a5b20d39e5806257b81f0ec910c2f649c6a3707839b5a5d6ccd82b",
         "content": "2a41ccb0afd4fb544b3470b8c2db74df5579788e7a7e67aa8a348b3e4552c87b"
+      }
+    },
+    {
+      "id": "system_control.list_game_features",
+      "aliases": [],
+      "legacyIds": [
+        {
+          "tool": "system_control",
+          "action": "list_game_features"
+        }
+      ],
+      "discovery": {
+        "domain": "project",
+        "family": "game_feature",
+        "topics": [
+          "list_game_features",
+          "game feature plugins",
+          "game features",
+          "modular gameplay",
+          "which game features are active",
+          "game feature state"
+        ],
+        "summary": "List the game feature plugins the Game Features subsystem knows (plugins under Plugins/GameFeatures that load on demand), each with its state (installed, registered, loaded or active, else the engine's own name for a step on the way, such as Activating, or an error, such as ErrorRegistering) and the state its descriptor asks for at startup (initialState). Needs the GameFeatures plugin: GAME_FEATURES_DISABLED otherwise (GAME_FEATURES_UNAVAILABLE in a build of EngineWire without its game features module, such as the Fab one).",
+        "whenToUse": [
+          "Which game features exist, or which are active now, must be known before activating one or adding content to it."
+        ],
+        "whenNotToUse": [
+          "Plugins in general are listed (use list_plugins)."
+        ]
+      },
+      "schemas": {
+        "input": {
+          "$schema": "https://json-schema.org/draft/2020-12/schema",
+          "type": "object",
+          "properties": {
+            "action": {
+              "type": "string",
+              "description": "The action to execute on the parent tool."
+            }
+          },
+          "required": [
+            "action"
+          ],
+          "additionalProperties": false
+        },
+        "output": {
+          "$schema": "https://json-schema.org/draft/2020-12/schema",
+          "type": "object",
+          "properties": {
+            "success": {
+              "type": "boolean",
+              "description": "Whether the action succeeded."
+            },
+            "message": {
+              "type": "string",
+              "description": "Human-readable result message."
+            },
+            "details": {
+              "type": "object",
+              "x-unreal-reflection-boundary": true,
+              "description": "Additional handler result fields not named by the contract."
+            },
+            "gameFeatures": {
+              "type": "array",
+              "description": "Name-sorted.",
+              "items": {
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {
+                  "pluginName": {
+                    "type": "string",
+                    "description": "The plugin."
+                  },
+                  "state": {
+                    "type": "string",
+                    "description": "installed, registered, loaded or active; else the engine's name for a step on the way or an error."
+                  },
+                  "initialState": {
+                    "type": "string",
+                    "description": "What its descriptor asks for at startup (BuiltInInitialFeatureState), absent when it says nothing."
+                  }
+                }
+              }
+            }
+          },
+          "required": [
+            "success"
+          ],
+          "additionalProperties": false
+        }
+      },
+      "examples": [
+        {
+          "title": "List the game feature plugins the Game Features subsystem knows (plugins under Plugins/GameFeatures that load on demand), each with its state (installed, registered, loaded or active, else the engine's own name for a step on the way, such as Activating, or an error, such as ErrorRegistering) and the state its descriptor asks for at startup (initialState). Needs the GameFeatures plugin: GAME_FEATURES_DISABLED otherwise (GAME_FEATURES_UNAVAILABLE in a build of EngineWire without its game features module, such as the Fab one).",
+          "input": {
+            "action": "list_game_features"
+          },
+          "output": {
+            "success": true,
+            "gameFeatures": [
+              {
+                "pluginName": "ShooterCore",
+                "state": "active",
+                "initialState": "Active"
+              }
+            ]
+          }
+        }
+      ],
+      "availability": {
+        "requiredPlugins": [
+          "GameFeatures"
+        ],
+        "editorStates": [
+          "edit",
+          "pie",
+          "simulate"
+        ],
+        "minEngineVersion": "5.1"
+      },
+      "behavior": {
+        "effect": "read",
+        "idempotency": "idempotent",
+        "longRunning": false,
+        "safeToRetry": true
+      },
+      "policy": {
+        "requiredScope": "read",
+        "consent": "none",
+        "dataAccess": "project-read"
+      },
+      "cost": {
+        "latency": "instant",
+        "resources": "low"
+      },
+      "routing": {
+        "parentTool": "system_control",
+        "dispatchAction": "system_control"
+      },
+      "hashes": {
+        "algorithm": "sha256",
+        "schema": "a6e4e24ddcb953c99fb900429551d33e5c2cbea3d4a09d5231a14bd0b0862e33",
+        "content": "adba05f50d82c15a2c6632e8d23b742eaef0d460bd884fb1e1b20f66ff2e36e5"
       }
     },
     {
@@ -114206,6 +114362,145 @@
         "algorithm": "sha256",
         "schema": "6a53472f5e9cd7815b80ea69d197a829b5434f291e7782489552d26f247e1947",
         "content": "fac2cfb35b907a615eca6e8bf987c717c036a2bb59293c294918bcc9783bb15d"
+      }
+    },
+    {
+      "id": "system_control.set_game_feature_active",
+      "aliases": [],
+      "legacyIds": [
+        {
+          "tool": "system_control",
+          "action": "set_game_feature_active"
+        }
+      ],
+      "discovery": {
+        "domain": "project",
+        "family": "game_feature",
+        "topics": [
+          "set_game_feature_active",
+          "activate game feature",
+          "deactivate game feature",
+          "turn on a game feature",
+          "load game feature plugin"
+        ],
+        "summary": "Activate a game feature plugin (its content loads and its actions run in the game: components added, abilities granted, input mapped) or deactivate it (active false). The reply comes when the subsystem has finished, with the state reached, or after 20 seconds with GAME_FEATURE_PENDING while it is still on its way; one already in the asked state answers changed false. A name the subsystem does not know is GAME_FEATURE_NOT_FOUND; GAME_FEATURES_DISABLED when the project leaves the GameFeatures plugin off (GAME_FEATURES_UNAVAILABLE in a build of EngineWire without its game features module).",
+        "whenToUse": [
+          "A game feature's content or actions must take effect in the editor or Play (or stop)."
+        ],
+        "whenNotToUse": [
+          "A plugin that is no game feature is turned on or off (use enable_plugin, which needs a restart)."
+        ]
+      },
+      "schemas": {
+        "input": {
+          "$schema": "https://json-schema.org/draft/2020-12/schema",
+          "type": "object",
+          "properties": {
+            "action": {
+              "type": "string",
+              "description": "The action to execute on the parent tool."
+            },
+            "pluginName": {
+              "type": "string",
+              "description": "The game feature plugin, as list_game_features names it."
+            },
+            "active": {
+              "type": "boolean",
+              "description": "true activates (default), false deactivates."
+            }
+          },
+          "required": [
+            "action",
+            "pluginName"
+          ],
+          "additionalProperties": false
+        },
+        "output": {
+          "$schema": "https://json-schema.org/draft/2020-12/schema",
+          "type": "object",
+          "properties": {
+            "success": {
+              "type": "boolean",
+              "description": "Whether the action succeeded."
+            },
+            "message": {
+              "type": "string",
+              "description": "Human-readable result message."
+            },
+            "details": {
+              "type": "object",
+              "x-unreal-reflection-boundary": true,
+              "description": "Additional handler result fields not named by the contract."
+            },
+            "pluginName": {
+              "type": "string",
+              "description": "The plugin."
+            },
+            "state": {
+              "type": "string",
+              "description": "Its state now."
+            },
+            "changed": {
+              "type": "boolean",
+              "description": "False when it was in the asked state already."
+            }
+          },
+          "required": [
+            "success"
+          ],
+          "additionalProperties": false
+        }
+      },
+      "examples": [
+        {
+          "title": "Activate a game feature plugin (its content loads and its actions run in the game: components added, abilities granted, input mapped) or deactivate it (active false). The reply comes when the subsystem has finished, with the state reached, or after 20 seconds with GAME_FEATURE_PENDING while it is still on its way; one already in the asked state answers changed false. A name the subsystem does not know is GAME_FEATURE_NOT_FOUND; GAME_FEATURES_DISABLED when the project leaves the GameFeatures plugin off (GAME_FEATURES_UNAVAILABLE in a build of EngineWire without its game features module).",
+          "input": {
+            "action": "set_game_feature_active",
+            "pluginName": "ShooterCore",
+            "active": true
+          },
+          "output": {
+            "success": true,
+            "pluginName": "ShooterCore",
+            "state": "active",
+            "changed": true
+          }
+        }
+      ],
+      "availability": {
+        "requiredPlugins": [
+          "GameFeatures"
+        ],
+        "editorStates": [
+          "edit",
+          "pie",
+          "simulate"
+        ],
+        "minEngineVersion": "5.1"
+      },
+      "behavior": {
+        "effect": "write",
+        "idempotency": "non-idempotent",
+        "longRunning": false,
+        "safeToRetry": false
+      },
+      "policy": {
+        "requiredScope": "write",
+        "consent": "none",
+        "dataAccess": "project-write"
+      },
+      "cost": {
+        "latency": "interactive",
+        "resources": "low"
+      },
+      "routing": {
+        "parentTool": "system_control",
+        "dispatchAction": "system_control"
+      },
+      "hashes": {
+        "algorithm": "sha256",
+        "schema": "72946f390bfde47e5de601a0a71ef25f5531a6a359c2233e44c71e48a00e08f2",
+        "content": "1a0f9dc175a1c2eccfb4bc2ec679b468b629a5a199e040206b376e2a0fd04d67"
       }
     },
     {

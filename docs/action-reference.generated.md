@@ -4,7 +4,7 @@
 
 # Action reference
 
-Catalog revision: `204d79695ba40f9c`
+Catalog revision: `be4c39edc7d214c8`
 
 Both transports expose exactly ONE public MCP tool, `unreal`, with the four
 operations `search` / `describe` / `execute` / `configure`. The parent tools
@@ -13,7 +13,7 @@ by `tools/list` and a direct `tools/call` on one returns a
 `DIRECT_TOOL_CALL_REMOVED` receipt rather than executing
 (`src/server/gateway/direct-call-migration.ts`).
 
-The catalog declares 456 capabilities across
+The catalog declares 458 capabilities across
 23 internal parent tools.
 Every row is derived from the capability record that the gateway actually
 validates against, so `execute` cannot accept an action this table omits.
@@ -61,11 +61,11 @@ validates against, so `execute` cannot accept an action this table omits.
 | `manage_pcg` | 3 | 0 | 3 | 0 | world |
 | `manage_sequence` | 22 | 2 | 19 | 1 | cinematics, media, movie_render, replay, sequence, take_recorder |
 | `manage_tools` | 9 | 4 | 5 | 0 | tools |
-| `system_control` | 36 | 11 | 20 | 5 | audio, build, console, insights, logs, performance, project, python, render, system, viewport, widget |
+| `system_control` | 38 | 12 | 21 | 5 | audio, build, console, insights, logs, performance, project, python, render, system, viewport, widget |
 
 ## Capabilities requiring consent
 
-70 of 456 capabilities require consent.
+70 of 458 capabilities require consent.
 
 | Capability | Tool | Action | Effect | Consent |
 | --- | --- | --- | --- | --- |
@@ -575,6 +575,7 @@ validates against, so `execute` cannot accept an action this table omits.
 | `system_control.get_project_settings` | `system_control` | `system_control` | read | read | none | `system_control.get_project_settings` |
 | `system_control.get_trace_status` | `system_control` | `manage_insights` | read | read | none | `system_control.get_trace_status` `system_control.analyze_trace` |
 | `system_control.launch_build` | `system_control` | `system_control` | write | write | none | `system_control.launch_build` |
+| `system_control.list_game_features` | `system_control` | `system_control` | read | read | none | `system_control.list_game_features` |
 | `system_control.list_output_files` | `system_control` | `list_output_files` | read | read | none | `system_control.list_output_files` |
 | `system_control.list_plugins` | `system_control` | `system_control` | read | read | none | `system_control.list_plugins` |
 | `system_control.list_recipes` | `system_control` | `list_recipes` | read | read | none | `system_control.list_recipes` |
@@ -592,6 +593,7 @@ validates against, so `execute` cannot accept an action this table omits.
 | `system_control.run_script` | `system_control` | `run_script` | destructive | destructive | elevated | `system_control.run_script` |
 | `system_control.save_recipe` | `system_control` | `save_recipe` | write | write | none | `system_control.save_recipe` |
 | `system_control.screenshot` | `system_control` | `control_editor` | read | read | none | `system_control.screenshot` |
+| `system_control.set_game_feature_active` | `system_control` | `system_control` | write | write | none | `system_control.set_game_feature_active` |
 | `system_control.set_project_setting` | `system_control` | `system_control` | write | write | none | `system_control.set_project_setting` |
 | `system_control.start_session` | `system_control` | `manage_insights` | write | write | none | `system_control.start_session` `system_control.stop_session` `system_control.pause_session` `system_control.resume_session` `system_control.capture_insights_trace` `system_control.send_snapshot` `system_control.write_snapshot` `system_control.start_unreal_insights` |
 | `system_control.subscribe` | `system_control` | `manage_logs` | write | write | none | `system_control.subscribe` `system_control.unsubscribe` `system_control.spawn_category` |

@@ -6,6 +6,7 @@
 class FJsonObject;
 class FJsonValue;
 class FMcpBridgeWebSocket;
+class IMcpGameFeaturesProvider;
 class UEngineWireSubsystem;
 namespace McpPackageJobs { struct FJob; }
 
@@ -89,6 +90,15 @@ bool HandleCreatePlugin(UEngineWireSubsystem* Self, const FString& RequestId, co
                         FSystemControlSocket RequestingSocket);
 bool HandleRemovePlugin(UEngineWireSubsystem* Self, const FString& RequestId, const TSharedPtr<FJsonObject>& Payload,
                         FSystemControlSocket RequestingSocket);
+// The game feature adapter (module EngineWireGameFeatures) where the project enables the GameFeatures plugin, else null.
+IMcpGameFeaturesProvider* GameFeaturesProvider();
+// The refusal when no adapter answered: GAME_FEATURES_DISABLED, GAME_FEATURES_UNAVAILABLE where this build has no adapter
+// module, ENGINE_VERSION_UNSUPPORTED on 5.0; Tail is appended.
+void SendGameFeaturesMissing(UEngineWireSubsystem* Self, const FString& RequestId, FSystemControlSocket RequestingSocket,
+                             const TCHAR* Tail);
+// list_game_features and set_game_feature_active, through the game feature adapter module (Plugins/McpGameFeatures.cpp).
+bool HandleGameFeatures(UEngineWireSubsystem* Self, const FString& RequestId, const FString& SubAction,
+                        const TSharedPtr<FJsonObject>& Payload, FSystemControlSocket RequestingSocket);
 // create_cpp_class: a header and .cpp from a parent class in a project module, the editor's New C++ Class.
 bool HandleCreateCppClass(UEngineWireSubsystem* Self,
                           const FString& RequestId,

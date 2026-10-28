@@ -41,6 +41,13 @@ public:
         {
             FModuleManager::Get().LoadModule(TEXT("EngineWireValidation"));
         }
+        // The same for the game feature adapter: the .uplugin names GameFeatures without turning it on, so its module
+        // exists only in a project that enables that plugin itself. A build of this plugin may leave the adapter out.
+        if (FModuleManager::Get().ModuleExists(TEXT("EngineWireGameFeatures")) && FModuleManager::Get().ModuleExists(TEXT("GameFeatures")) &&
+            FModuleManager::Get().LoadModule(TEXT("GameFeatures")))
+        {
+            FModuleManager::Get().LoadModule(TEXT("EngineWireGameFeatures"));
+        }
     }
 
     /**

@@ -782,4 +782,8 @@ export const PLAIN_PROBE: readonly PlainProbeCase[] = [
   { query: 'create a plugin', accepted: ['system_control.create_plugin'] },
   { query: 'delete a plugin', accepted: ['system_control.remove_plugin'] },
   { query: 'turn off a plugin', accepted: ['system_control.enable_plugin'] },
+  // Game feature plugins: listed with their state, one activated, one made.
+  { query: 'list game features', accepted: ['system_control.list_game_features'] },
+  { query: 'activate a game feature', accepted: ['system_control.set_game_feature_active'] },
+  { query: 'create a game feature plugin', accepted: ['system_control.create_plugin'] },
 ];

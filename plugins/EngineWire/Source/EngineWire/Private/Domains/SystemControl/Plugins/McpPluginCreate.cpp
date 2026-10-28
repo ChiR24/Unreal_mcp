@@ -11,13 +11,16 @@
 #include "Dom/JsonObject.h"
 #include "EngineWireSubsystem.h"
 #include "Foundation/HandlerUtils/McpHandlerUtils.h"
+#include "Dom/JsonValue.h"
 #include "HAL/FileManager.h"
 #include "Interfaces/IPluginManager.h"
 #include "Interfaces/IProjectManager.h"
+#include "McpGameFeaturesProvider.h"
 #include "Misc/Paths.h"
 #include "PluginDescriptor.h"
 #include "ProjectDescriptor.h"
 #include "Runtime/Launch/Resources/Version.h"
+#include "Safety/McpSafeOperations.h"
 
 namespace
 {
@@ -53,12 +56,13 @@ bool PluginCreateValidName(const FString& Name)
 	return true;
 }
 
-// Copies the icon the Plugins browser gives a content-only plugin, when this engine has it.
-void PluginCreateCopyIcon(const FString& Folder)
+// Copies the icon the template gives such a plugin (the Plugins browser's Content Only one, or Game Features' own), when
+// this engine has it.
+void PluginCreateCopyIcon(const FString& Folder, bool bGameFeature)
 {
-	const TSharedPtr<IPlugin> Browser = IPluginManager::Get().FindPlugin(TEXT("PluginBrowser"));
+	const TSharedPtr<IPlugin> Owner = IPluginManager::Get().FindPlugin(bGameFeature ? TEXT("GameFeatures") : TEXT("PluginBrowser"));
 	// Joined in parts: one literal holding a slash before Content reads as a path alias to the source contracts.
-	const FString Icon = Browser.IsValid() ? Browser->GetBaseDir() / TEXT("Templates") / TEXT("ContentOnly") / TEXT("Resources/Icon128.png") : FString();
+	const FString Icon = Owner.IsValid() ? Owner->GetBaseDir() / TEXT("Templates") / (bGameFeature ? TEXT("GameFeaturePluginContentOnly") : TEXT("ContentOnly")) / TEXT("Resources/Icon128.png") : FString();
 	if (FPaths::FileExists(Icon))
 	{
 		IFileManager::Get().Copy(*(Folder / TEXT("Resources/Icon128.png")), *Icon);
@@ -95,13 +99,23 @@ namespace McpSystemControlHandlers
 bool HandleCreatePlugin(UEngineWireSubsystem* Self, const FString& RequestId, const TSharedPtr<FJsonObject>& Payload,
                         FSystemControlSocket RequestingSocket)
 {
-	FString Name, FriendlyName, Description, Category, CreatedBy;
+	FString Name, FriendlyName, Description, Category, CreatedBy, Template;
 	Payload->TryGetStringField(TEXT("pluginName"), Name);
 	Payload->TryGetStringField(TEXT("friendlyName"), FriendlyName);
 	Payload->TryGetStringField(TEXT("description"), Description);
 	Payload->TryGetStringField(TEXT("category"), Category);
 	Payload->TryGetStringField(TEXT("createdBy"), CreatedBy);
-	const FString Folder = PluginCreateRoot() + Name;
+	Payload->TryGetStringField(TEXT("template"), Template);
+	// A game feature plugin is the Game Feature (Content Only) template's: under Plugins/GameFeatures, loaded on demand
+	// and active from the start, given its GameFeatureData asset by the game features module.
+	const bool bGameFeature = Template == TEXT("game_feature");
+	IMcpGameFeaturesProvider* GameFeatures = bGameFeature ? GameFeaturesProvider() : nullptr;
+	if (bGameFeature && !GameFeatures)
+	{
+		SendGameFeaturesMissing(Self, RequestId, RequestingSocket, TEXT(" Nothing was created."));
+		return true;
+	}
+	const FString Folder = PluginCreateRoot() + (bGameFeature ? TEXT("GameFeatures/") : TEXT("")) + Name;
 	const FString Refusal = !PluginCreateValidName(Name)
 		? FString::Printf(TEXT("'%s' is no plugin name: a letter, then letters, digits or underscores (64 at most)."), *Name)
 		: IPluginManager::Get().FindPlugin(Name).IsValid() ? FString::Printf(TEXT("A plugin named %s already exists."), *Name)
@@ -116,11 +130,16 @@ bool HandleCreatePlugin(UEngineWireSubsystem* Self, const FString& RequestId, co
 	FPluginDescriptor Descriptor;
 	Descriptor.FriendlyName = FriendlyName.IsEmpty() ? Name : FriendlyName;
 	Descriptor.Description = Description;
-	Descriptor.Category = Category.IsEmpty() ? FString(TEXT("Other")) : Category;
+	Descriptor.Category = !Category.IsEmpty() ? Category : bGameFeature ? FString(TEXT("Game Features")) : FString(TEXT("Other"));
 	Descriptor.CreatedBy = CreatedBy;
 	Descriptor.Version = 1;
 	Descriptor.VersionName = TEXT("1.0");
 	Descriptor.bCanContainContent = true;
+	if (bGameFeature)
+	{
+		Descriptor.bExplicitlyLoaded = true;
+		Descriptor.AdditionalFieldsToWrite.Add(TEXT("BuiltInInitialFeatureState"), MakeShared<FJsonValueString>(TEXT("Active")));
+	}
 	const FString File = Folder / (Name + TEXT(".uplugin"));
 	FText Fail;
 	const bool bWritten = IFileManager::Get().MakeDirectory(*(Folder / TEXT("Content")), /*Tree=*/true) && Descriptor.Save(File, &Fail);
@@ -131,7 +150,7 @@ bool HandleCreatePlugin(UEngineWireSubsystem* Self, const FString& RequestId, co
 			"on disk."), *Name, bWritten ? *Fail.ToString() : TEXT("its folder or descriptor could not be written.")), TEXT("CREATE_FAILED"));
 		return true;
 	}
-	PluginCreateCopyIcon(Folder);
+	PluginCreateCopyIcon(Folder, bGameFeature);
 	if (!IProjectManager::Get().SetPluginEnabled(Name, true, Fail) ||
 		(IProjectManager::Get().IsCurrentProjectDirty() && !IProjectManager::Get().SaveCurrentProjectToDisk(Fail)))
 	{
@@ -151,8 +170,21 @@ bool HandleCreatePlugin(UEngineWireSubsystem* Self, const FString& RequestId, co
 	Result->SetStringField(TEXT("folder"), PluginCreateShown(Folder));
 	Result->SetStringField(TEXT("mountedContentPath"), Root);
 	Result->SetBoolField(TEXT("enabled"), Plugin.IsValid() && Plugin->IsEnabled());
+	// Its GameFeatureData, saved first (the subsystem registers a plugin only when that package is on disk); then the
+	// subsystem registers the plugin and activates it as its descriptor asks over the next frames.
+	if (GameFeatures && !GameFeatures->AdoptNewPlugin(Name, [](UObject* Data) { return McpSafeAssetSave(Data); }))
+	{
+		Self->SendAutomationError(RequestingSocket, RequestId, FString::Printf(TEXT("%s is created and enabled, but its "
+			"GameFeatureData asset could not be made and saved, so no game feature runs from it."), *Name), TEXT("GAME_FEATURE_FAILED"));
+		return true;
+	}
+	if (GameFeatures)
+	{
+		Result->SetStringField(TEXT("gameFeatureData"), Root + Name);
+	}
 	Self->SendAutomationResponse(RequestingSocket, RequestId, true, FString::Printf(
-		TEXT("Created %s and enabled it in the project; its assets go under %s."), *Name, *Root), Result);
+		TEXT("Created %s and enabled it in the project; its assets go under %s.%s"), *Name, *Root,
+		GameFeatures ? TEXT(" It is a game feature plugin, activating now (list_game_features shows its state).") : TEXT("")), Result);
 	return true;
 }
 
@@ -202,6 +234,12 @@ bool HandleRemovePlugin(UEngineWireSubsystem* Self, const FString& RequestId, co
 		Self->SendAutomationError(RequestingSocket, RequestId, FString::Printf(TEXT("%s could not be moved out of the project "
 			"(a file in it is open?). Nothing was changed."), *PluginCreateShown(Folder)), TEXT("MOVE_FAILED"));
 		return true;
+	}
+	// The subfolder of Plugins the move left empty goes too (create_plugin made Plugins/GameFeatures for a game feature
+	// plugin); without Tree, DeleteDirectory removes only an empty folder, so one holding anything stays.
+	if (FPaths::GetPath(Folder).Len() >= Root.Len())
+	{
+		IFileManager::Get().DeleteDirectory(*FPaths::GetPath(Folder), /*RequireExists=*/false, /*Tree=*/false);
 	}
 	bool bDropped = false;
 	FString Error;

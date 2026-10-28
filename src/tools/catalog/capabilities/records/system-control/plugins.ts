@@ -110,8 +110,8 @@ export const PLUGIN_RECORDS: readonly CapabilityRecordSource[] = [
     action: 'create_plugin',
     domain: 'project',
     family: 'plugin',
-    topics: ['new plugin', 'make a plugin', 'content plugin', 'content only plugin', 'modular content'],
-    summary: 'Make a content-only plugin in this project\'s Plugins folder (the Plugins browser\'s Content Only template: a descriptor, a Content folder and the template icon), mount it and enable it in the project at once, so assets can go under its mountedContentPath (/Name/) straight away. A plugin with code is not made (it needs a build). A name taken by any installed plugin, or by a folder, is PLUGIN_EXISTS; a name that is no valid identifier is INVALID_ARGUMENT; nothing is created then.',
+    topics: ['new plugin', 'make a plugin', 'content plugin', 'content only plugin', 'modular content', 'new game feature plugin'],
+    summary: 'Make a content-only plugin in this project\'s Plugins folder (the Plugins browser\'s Content Only template: a descriptor, a Content folder and the template icon), mount it and enable it in the project at once, so assets can go under its mountedContentPath (/Name/) straight away. template game_feature makes a game feature plugin instead (the Game Feature (Content Only) template): under Plugins/GameFeatures, loaded by the Game Features subsystem rather than at startup, with its GameFeatureData asset made and saved (gameFeatureData), and activated at once (list_game_features shows when it gets there); it needs the GameFeatures plugin (GAME_FEATURES_DISABLED; GAME_FEATURES_UNAVAILABLE in a build of EngineWire without its game features module, such as the Fab one; ENGINE_VERSION_UNSUPPORTED on UE 5.0). A plugin with code is not made (it needs a build). A name taken by any installed plugin, or by a folder, is PLUGIN_EXISTS; a name that is no valid identifier is INVALID_ARGUMENT; nothing is created then.',
     whenToUse: [
       'Content should live in its own plugin (to share between projects, to ship separately, or to keep a feature\'s assets apart).',
     ],
@@ -125,6 +125,7 @@ export const PLUGIN_RECORDS: readonly CapabilityRecordSource[] = [
       description: { type: 'string', description: 'Descriptor description.' },
       category: { type: 'string', description: 'Plugins browser category (default Other).' },
       createdBy: { type: 'string', description: 'Author.' },
+      template: { type: 'string', enum: ['content_only', 'game_feature'], description: 'content_only (default): content that loads with the project; game_feature: a game feature plugin under Plugins/GameFeatures that the Game Features subsystem loads and activates (category default Game Features).' },
     },
     required: ['pluginName'],
     outputProps: {
@@ -132,6 +133,7 @@ export const PLUGIN_RECORDS: readonly CapabilityRecordSource[] = [
       folder: { type: 'string', description: 'Its folder, relative to the project.' },
       mountedContentPath: { type: 'string', description: 'Its content root (/Name/), mounted now.' },
       enabled: { type: 'boolean', description: 'Enabled in the project.' },
+      gameFeatureData: { type: 'string', description: 'template game_feature: its GameFeatureData asset (/Name/Name), where its game feature actions go.' },
     },
     effect: 'write',
     costLatency: 'interactive',

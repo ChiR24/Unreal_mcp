@@ -4,6 +4,7 @@
 import { type CapabilityRecordSource } from '../../model.js';
 
 import { CONSOLE_RECORDS } from './console.js';
+import { GAME_FEATURE_RECORDS } from './game-features.js';
 import { INSIGHTS_RECORDS } from './insights.js';
 import { PERFORMANCE_RECORDS } from './performance.js';
 import { PLUGIN_RECORDS } from './plugins.js';
@@ -19,6 +20,7 @@ export const SYSTEM_CONTROL_UNFOLDED_SOURCES: readonly CapabilityRecordSource[] 
   ...CONSOLE_RECORDS,
   ...PERFORMANCE_RECORDS,  ...SYSTEM_OPS_RECORDS,
   ...PLUGIN_RECORDS,
+  ...GAME_FEATURE_RECORDS,
   ...SCRIPT_RECORDS,
   ...RECIPE_RECORDS,
   ...INSIGHTS_RECORDS,

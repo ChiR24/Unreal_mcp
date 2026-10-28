@@ -28559,6 +28559,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
     "inputSchema": {
       "type": "object",
       "properties": {
+        "active": {
+          "type": "boolean",
+          "description": "true activates (default), false deactivates."
+        },
         "actors": {
           "type": "array",
           "items": {
@@ -29239,6 +29243,14 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           },
           "description": "Build targets the plugin is enabled for, every other build leaving it out: [\"Editor\"] keeps it in the editor and out of a packaged game. An empty list lifts the limit."
         },
+        "template": {
+          "type": "string",
+          "enum": [
+            "content_only",
+            "game_feature"
+          ],
+          "description": "content_only (default): content that loads with the project; game_feature: a game feature plugin under Plugins/GameFeatures that the Game Features subsystem loads and activates (category default Game Features)."
+        },
         "text": {
           "type": "string",
           "description": "Optional text for text-bearing components."
@@ -29335,6 +29347,8 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             "create_plugin",
             "remove_plugin",
             "enable_plugin",
+            "list_game_features",
+            "set_game_feature_active",
             "run_script",
             "save_recipe",
             "run_recipe",
@@ -29391,10 +29405,14 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             },
             {
               "type": "boolean",
+              "description": "False when it was in the asked state already."
+            },
+            {
+              "type": "boolean",
               "description": "False when the plugin was already in the requested state and nothing was written."
             }
           ],
-          "description": "False when the plugin was already in the requested state and nothing was written."
+          "description": "False when it was in the asked state already."
         },
         "checkedCount": {
           "type": "number",
@@ -29603,6 +29621,32 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "friendlyName": {
           "type": "string",
           "description": "Display name."
+        },
+        "gameFeatureData": {
+          "type": "string",
+          "description": "template game_feature: its GameFeatureData asset (/Name/Name), where its game feature actions go."
+        },
+        "gameFeatures": {
+          "type": "array",
+          "description": "Name-sorted.",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "pluginName": {
+                "type": "string",
+                "description": "The plugin."
+              },
+              "state": {
+                "type": "string",
+                "description": "installed, registered, loaded or active; else the engine's name for a step on the way or an error."
+              },
+              "initialState": {
+                "type": "string",
+                "description": "What its descriptor asks for at startup (BuiltInInitialFeatureState), absent when it says nothing."
+              }
+            }
+          }
         },
         "gameLogPath": {
           "type": "string",
@@ -29997,6 +30041,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             "x-unreal-reflection-boundary": true
           },
           "description": "Without slotName: each slot as {slotName, sizeBytes, modified (ISO 8601)}, newest first."
+        },
+        "state": {
+          "type": "string",
+          "description": "Its state now."
         },
         "status": {
           "type": "string",

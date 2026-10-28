@@ -60,6 +60,7 @@ bool UEngineWireSubsystem::HandleSystemControlAction(
       !bLogSubscriptionAction &&
       Lower != TEXT("validate_assets") &&
       Lower != TEXT("get_plugin_info") && Lower != TEXT("create_plugin") && Lower != TEXT("remove_plugin") &&
+      Lower != TEXT("list_game_features") && Lower != TEXT("set_game_feature_active") &&
       Lower != TEXT("create_cpp_class") &&
       Lower != TEXT("execute_python") &&
       Lower != TEXT("run_script") &&
@@ -90,6 +91,9 @@ bool UEngineWireSubsystem::HandleSystemControlAction(
   }
   if (Lower == TEXT("remove_plugin")) {
     return McpSystemControlHandlers::HandleRemovePlugin(this, RequestId, Payload, RequestingSocket);
+  }
+  if (Lower == TEXT("list_game_features") || Lower == TEXT("set_game_feature_active")) {
+    return McpSystemControlHandlers::HandleGameFeatures(this, RequestId, Lower, Payload, RequestingSocket);
   }
 
   if (bInsightsAction) {
