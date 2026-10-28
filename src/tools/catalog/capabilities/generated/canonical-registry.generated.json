@@ -1,6 +1,6 @@
 {
-  "catalogRevision": "cf4ceeef69dd0e32",
-  "recordCount": 454,
+  "catalogRevision": "204d79695ba40f9c",
+  "recordCount": 456,
   "records": [
     {
       "id": "animation_physics.analyze_animation",
@@ -109604,6 +109604,158 @@
       }
     },
     {
+      "id": "system_control.create_plugin",
+      "aliases": [],
+      "legacyIds": [
+        {
+          "tool": "system_control",
+          "action": "create_plugin"
+        }
+      ],
+      "discovery": {
+        "domain": "project",
+        "family": "plugin",
+        "topics": [
+          "create_plugin",
+          "new plugin",
+          "make a plugin",
+          "content plugin",
+          "content only plugin",
+          "modular content"
+        ],
+        "summary": "Make a content-only plugin in this project's Plugins folder (the Plugins browser's Content Only template: a descriptor, a Content folder and the template icon), mount it and enable it in the project at once, so assets can go under its mountedContentPath (/Name/) straight away. A plugin with code is not made (it needs a build). A name taken by any installed plugin, or by a folder, is PLUGIN_EXISTS; a name that is no valid identifier is INVALID_ARGUMENT; nothing is created then.",
+        "whenToUse": [
+          "Content should live in its own plugin (to share between projects, to ship separately, or to keep a feature's assets apart)."
+        ],
+        "whenNotToUse": [
+          "The plugin needs C++ code (create_cpp_class and a build are a different path).",
+          "An installed plugin only needs turning on (use enable_plugin)."
+        ]
+      },
+      "schemas": {
+        "input": {
+          "$schema": "https://json-schema.org/draft/2020-12/schema",
+          "type": "object",
+          "properties": {
+            "action": {
+              "type": "string",
+              "description": "The action to execute on the parent tool."
+            },
+            "pluginName": {
+              "type": "string",
+              "description": "The plugin's name: its folder, its .uplugin and its content root /Name/. Letters, digits and underscores, starting with a letter."
+            },
+            "friendlyName": {
+              "type": "string",
+              "description": "Display name in the Plugins browser (default the name)."
+            },
+            "description": {
+              "type": "string",
+              "description": "Descriptor description."
+            },
+            "category": {
+              "type": "string",
+              "description": "Plugins browser category (default Other)."
+            },
+            "createdBy": {
+              "type": "string",
+              "description": "Author."
+            }
+          },
+          "required": [
+            "action",
+            "pluginName"
+          ],
+          "additionalProperties": false
+        },
+        "output": {
+          "$schema": "https://json-schema.org/draft/2020-12/schema",
+          "type": "object",
+          "properties": {
+            "success": {
+              "type": "boolean",
+              "description": "Whether the action succeeded."
+            },
+            "message": {
+              "type": "string",
+              "description": "Human-readable result message."
+            },
+            "details": {
+              "type": "object",
+              "x-unreal-reflection-boundary": true,
+              "description": "Additional handler result fields not named by the contract."
+            },
+            "pluginName": {
+              "type": "string",
+              "description": "The plugin made."
+            },
+            "folder": {
+              "type": "string",
+              "description": "Its folder, relative to the project."
+            },
+            "mountedContentPath": {
+              "type": "string",
+              "description": "Its content root (/Name/), mounted now."
+            },
+            "enabled": {
+              "type": "boolean",
+              "description": "Enabled in the project."
+            }
+          },
+          "required": [
+            "success"
+          ],
+          "additionalProperties": false
+        }
+      },
+      "examples": [
+        {
+          "title": "Make a content-only plugin in this project's Plugins folder (the Plugins browser's Content Only template: a descriptor, a Content folder and the template icon), mount it and enable it in the project at once, so assets can go under its mountedContentPath (/Name/) straight away. A plugin with code is not made (it needs a build). A name taken by any installed plugin, or by a folder, is PLUGIN_EXISTS; a name that is no valid identifier is INVALID_ARGUMENT; nothing is created then.",
+          "input": {
+            "action": "create_plugin",
+            "pluginName": "ForestKit",
+            "description": "Trees and rocks for the forest levels."
+          },
+          "output": {
+            "success": true,
+            "pluginName": "ForestKit",
+            "mountedContentPath": "/ForestKit/",
+            "enabled": true
+          }
+        }
+      ],
+      "availability": {
+        "requiredPlugins": [],
+        "editorStates": [
+          "edit"
+        ]
+      },
+      "behavior": {
+        "effect": "write",
+        "idempotency": "non-idempotent",
+        "longRunning": false,
+        "safeToRetry": false
+      },
+      "policy": {
+        "requiredScope": "write",
+        "consent": "none",
+        "dataAccess": "project-write"
+      },
+      "cost": {
+        "latency": "interactive",
+        "resources": "low"
+      },
+      "routing": {
+        "parentTool": "system_control",
+        "dispatchAction": "system_control"
+      },
+      "hashes": {
+        "algorithm": "sha256",
+        "schema": "694d0ac51f7862cdf2f76667c21ee28a9eaf2ffb787f5323b6011fac6caa0e01",
+        "content": "42d078be6c229af7462bd681298f79eeeba7f764e91d6a38e7033427784340d5"
+      }
+    },
+    {
       "id": "system_control.create_widget",
       "aliases": [
         "system_control.add_widget_child",
@@ -110203,7 +110355,9 @@
           "enable_plugin",
           "editor only plugin",
           "plugin out of packaged game",
-          "plugin build targets"
+          "plugin build targets",
+          "turn off a plugin",
+          "stop a plugin loading"
         ],
         "summary": "Enable or disable a plugin, or limit it to some build targets: targets [\"Editor\"] keeps an editor-only plugin out of the packaged game.",
         "whenToUse": [
@@ -110362,7 +110516,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "3708914ddd79576efbaa85b9fd9607243767a967a6592c699c1076bf2896d105",
-        "content": "6110dd46463ed277bdfcd8f7d337d89df3efea72ab64096462d3a724e7d08f01"
+        "content": "eec0632a4ad86a73481af694a524fdf203acf33df4402e341152e1df1db50fc9"
       }
     },
     {
@@ -110636,7 +110790,7 @@
                 "external",
                 "mod"
               ],
-              "description": "Where the plugin is installed."
+              "description": "Where the plugin is installed; one create_plugin made this session reads external until the editor restarts."
             },
             "beta": {
               "type": "boolean",
@@ -110754,8 +110908,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "609607549da1b88e3be0ee98aff00734acdb2a7cba6d7d6193d87a0590937eff",
-        "content": "1d3846b5df8f548d4b9acbe1ffe4065a736a64d7080f00457f2a06212317967a"
+        "schema": "3ac0a5496a711d034c41420347762e80cc711d1fd14b2ab34de2836533c48806",
+        "content": "ca5a64f77fcf80c671ae81444c5789f2ea18fa9c8619d1acf5b07e7f6fa5c801"
       }
     },
     {
@@ -113014,6 +113168,134 @@
         "algorithm": "sha256",
         "schema": "3c48a327260ec1f2462b2adb66c27682b96ab9d4f4a1a93b43b8d79f28351a71",
         "content": "970e4b55c5f82f74b7e98e9abbc580929d7afcaafbb58c22cf1098a4bd3d10a5"
+      }
+    },
+    {
+      "id": "system_control.remove_plugin",
+      "aliases": [],
+      "legacyIds": [
+        {
+          "tool": "system_control",
+          "action": "remove_plugin"
+        }
+      ],
+      "discovery": {
+        "domain": "project",
+        "family": "plugin",
+        "topics": [
+          "remove_plugin",
+          "delete plugin",
+          "remove a plugin from the project"
+        ],
+        "summary": "Take a plugin that no longer loads out of this project: its folder moves to Saved/EngineWire/RemovedPlugins/<name> (delete it there for good, or move it back to restore it) and the .uproject drops it. A plugin this editor has loaded is refused PLUGIN_LOADED (only a restart unloads one: disable_plugin it, restart the editor, then remove it). Only a plugin in this project's Plugins folder with no code is removed; an engine or marketplace plugin, or one with code (modules or a Source folder), is refused PLUGIN_NOT_REMOVABLE. A refusal changes nothing; MOVE_FAILED (a file in it is open) leaves the project as it was.",
+        "whenToUse": [
+          "A content plugin made by mistake, or no longer wanted, should leave the project and the disk (after disable_plugin and a restart)."
+        ],
+        "whenNotToUse": [
+          "The plugin should only stop loading (use disable_plugin: its files stay).",
+          "Other content still uses its assets (they break)."
+        ]
+      },
+      "schemas": {
+        "input": {
+          "$schema": "https://json-schema.org/draft/2020-12/schema",
+          "type": "object",
+          "properties": {
+            "action": {
+              "type": "string",
+              "description": "The action to execute on the parent tool."
+            },
+            "pluginName": {
+              "type": "string",
+              "description": "The plugin to remove, as list_plugins names it."
+            }
+          },
+          "required": [
+            "action",
+            "pluginName"
+          ],
+          "additionalProperties": false
+        },
+        "output": {
+          "$schema": "https://json-schema.org/draft/2020-12/schema",
+          "type": "object",
+          "properties": {
+            "success": {
+              "type": "boolean",
+              "description": "Whether the action succeeded."
+            },
+            "message": {
+              "type": "string",
+              "description": "Human-readable result message."
+            },
+            "details": {
+              "type": "object",
+              "x-unreal-reflection-boundary": true,
+              "description": "Additional handler result fields not named by the contract."
+            },
+            "pluginName": {
+              "type": "string",
+              "description": "The plugin removed."
+            },
+            "movedTo": {
+              "type": "string",
+              "description": "Where its folder is now, relative to the project."
+            },
+            "referenceRemoved": {
+              "type": "boolean",
+              "description": "True when the .uproject named it and no longer does."
+            }
+          },
+          "required": [
+            "success"
+          ],
+          "additionalProperties": false
+        }
+      },
+      "examples": [
+        {
+          "title": "Take a plugin that no longer loads out of this project: its folder moves to Saved/EngineWire/RemovedPlugins/<name> (delete it there for good, or move it back to restore it) and the .uproject drops it. A plugin this editor has loaded is refused PLUGIN_LOADED (only a restart unloads one: disable_plugin it, restart the editor, then remove it). Only a plugin in this project's Plugins folder with no code is removed; an engine or marketplace plugin, or one with code (modules or a Source folder), is refused PLUGIN_NOT_REMOVABLE. A refusal changes nothing; MOVE_FAILED (a file in it is open) leaves the project as it was.",
+          "input": {
+            "action": "remove_plugin",
+            "pluginName": "ForestKit"
+          },
+          "output": {
+            "success": true,
+            "pluginName": "ForestKit",
+            "movedTo": "Saved/EngineWire/RemovedPlugins/ForestKit",
+            "referenceRemoved": true
+          }
+        }
+      ],
+      "availability": {
+        "requiredPlugins": [],
+        "editorStates": [
+          "edit"
+        ]
+      },
+      "behavior": {
+        "effect": "destructive",
+        "idempotency": "non-idempotent",
+        "longRunning": false,
+        "safeToRetry": false
+      },
+      "policy": {
+        "requiredScope": "destructive",
+        "consent": "explicit",
+        "dataAccess": "project-write"
+      },
+      "cost": {
+        "latency": "interactive",
+        "resources": "low"
+      },
+      "routing": {
+        "parentTool": "system_control",
+        "dispatchAction": "system_control"
+      },
+      "hashes": {
+        "algorithm": "sha256",
+        "schema": "beb6d5d3990830f94a47486c2e254eb4476ce6e27852a05df954c97da84d6e7e",
+        "content": "ad8581eecd13a8af18dd414ea3b2ef8e54c89558a4d556ef72a7de85c21f1e9e"
       }
     },
     {

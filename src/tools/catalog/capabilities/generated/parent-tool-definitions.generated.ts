@@ -28680,6 +28680,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           ],
           "description": "Which profile performance variant to run.\nstart: Start recording every stat group to a .uestats file under Saved/Profiling (stat startfile), for Unreal Insights or the Session Frontend to open; no MCP action reads it. duration stops it by itself after that many seconds, else it runs until control=stop. To find what makes a frame slow, inspect get_stats with stats frame answers directly.\nstop: Stop the stats file capture control=start began (stat stopfile); the file stays under Saved/Profiling.\nbenchmark: Measure the editor as it runs now, over duration seconds (default 10), sampling every frame: frames, averageFps, and with type cpu or all (the default) averageFrameMs, worstFrameMs, bestFrameMs, gameThreadMs and renderThreadMs, with gpu or all gpuMs. A minimized or unfocused editor is throttled and measures slow: focus it, or run during Play to measure the game. A call longer than the client allows answers as a task to poll.\nmemory_report: Generate an engine memory report, optionally detailed.\nshow_stats: Show or hide a stat HUD overlay (e.g. Unit, GPU) in the active editor viewport; the call sets the state rather than toggling it."
         },
+        "createdBy": {
+          "type": "string",
+          "description": "Author."
+        },
         "cvar": {
           "type": "string",
           "description": "Alternate CVar name field."
@@ -28708,6 +28712,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "deleteSlot": {
           "type": "boolean",
           "description": "true deletes the slot instead; properties are then ignored."
+        },
+        "description": {
+          "type": "string",
+          "description": "Descriptor description."
         },
         "destructive": {
           "oneOf": [
@@ -28780,6 +28788,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "forceRecompile": {
           "type": "boolean",
           "description": "Recompile every shader, overriding mode (default false); slow on a large project."
+        },
+        "friendlyName": {
+          "type": "string",
+          "description": "Display name in the Plugins browser (default the name)."
         },
         "globalIllumination": {
           "type": "string",
@@ -29320,6 +29332,8 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             "lumen_update_scene",
             "list_plugins",
             "get_plugin_info",
+            "create_plugin",
+            "remove_plugin",
             "enable_plugin",
             "run_script",
             "save_recipe",
@@ -29582,6 +29596,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           },
           "description": "Each file: path (project-relative, what delete_output_file takes), sizeBytes, modified (ISO 8601). Newest first."
         },
+        "folder": {
+          "type": "string",
+          "description": "Its folder, relative to the project."
+        },
         "friendlyName": {
           "type": "string",
           "description": "Display name."
@@ -29694,6 +29712,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "mountedContentPath": {
           "type": "string",
           "description": "Content root (/SomePlugin/), empty when it ships no content."
+        },
+        "movedTo": {
+          "type": "string",
+          "description": "Where its folder is now, relative to the project."
         },
         "name": {
           "type": "string",
@@ -29820,6 +29842,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             "x-unreal-reflection-boundary": true
           },
           "description": "Each {name, summary, paramNames, destructive, verified}."
+        },
+        "referenceRemoved": {
+          "type": "boolean",
+          "description": "True when the .uproject named it and no longer does."
         },
         "removed": {
           "type": "boolean",
@@ -30048,7 +30074,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             "external",
             "mod"
           ],
-          "description": "Where the plugin is installed."
+          "description": "Where the plugin is installed; one create_plugin made this session reads external until the editor restarts."
         },
         "uatResult": {
           "type": "string",

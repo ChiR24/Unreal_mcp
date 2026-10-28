@@ -20336,6 +20336,8 @@
         "lumen_update_scene",
         "list_plugins",
         "get_plugin_info",
+        "create_plugin",
+        "remove_plugin",
         "enable_plugin",
         "run_script",
         "save_recipe",
@@ -20369,10 +20371,12 @@
         "configuration",
         "connectionType",
         "control",
+        "createdBy",
         "cvar",
         "dataValidation",
         "deadlineMs",
         "deleteSlot",
+        "description",
         "destructive",
         "detailed",
         "duration",
@@ -20387,6 +20391,7 @@
         "filter",
         "forceLOD",
         "forceRecompile",
+        "friendlyName",
         "globalIllumination",
         "hardwareRayTracing",
         "height",
@@ -20602,6 +20607,10 @@
             ],
             "description": "Which profile performance variant to run.\nstart: Start recording every stat group to a .uestats file under Saved/Profiling (stat startfile), for Unreal Insights or the Session Frontend to open; no MCP action reads it. duration stops it by itself after that many seconds, else it runs until control=stop. To find what makes a frame slow, inspect get_stats with stats frame answers directly.\nstop: Stop the stats file capture control=start began (stat stopfile); the file stays under Saved/Profiling.\nbenchmark: Measure the editor as it runs now, over duration seconds (default 10), sampling every frame: frames, averageFps, and with type cpu or all (the default) averageFrameMs, worstFrameMs, bestFrameMs, gameThreadMs and renderThreadMs, with gpu or all gpuMs. A minimized or unfocused editor is throttled and measures slow: focus it, or run during Play to measure the game. A call longer than the client allows answers as a task to poll.\nmemory_report: Generate an engine memory report, optionally detailed.\nshow_stats: Show or hide a stat HUD overlay (e.g. Unit, GPU) in the active editor viewport; the call sets the state rather than toggling it."
           },
+          "createdBy": {
+            "type": "string",
+            "description": "Author."
+          },
           "cvar": {
             "type": "string",
             "description": "Alternate CVar name field."
@@ -20630,6 +20639,10 @@
           "deleteSlot": {
             "type": "boolean",
             "description": "true deletes the slot instead; properties are then ignored."
+          },
+          "description": {
+            "type": "string",
+            "description": "Descriptor description."
           },
           "destructive": {
             "oneOf": [
@@ -20702,6 +20715,10 @@
           "forceRecompile": {
             "type": "boolean",
             "description": "Recompile every shader, overriding mode (default false); slow on a large project."
+          },
+          "friendlyName": {
+            "type": "string",
+            "description": "Display name in the Plugins browser (default the name)."
           },
           "globalIllumination": {
             "type": "string",
@@ -21242,6 +21259,8 @@
               "lumen_update_scene",
               "list_plugins",
               "get_plugin_info",
+              "create_plugin",
+              "remove_plugin",
               "enable_plugin",
               "run_script",
               "save_recipe",

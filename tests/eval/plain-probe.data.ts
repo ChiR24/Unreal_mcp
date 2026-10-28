@@ -778,4 +778,8 @@ export const PLAIN_PROBE: readonly PlainProbeCase[] = [
   { query: 'what depends on this plugin', accepted: ['system_control.get_plugin_info'] },
   { query: 'which plugin does this asset come from', accepted: ['system_control.get_plugin_info'] },
   { query: 'plugin dependencies', accepted: ['system_control.get_plugin_info'] },
+  // A content-only plugin made, one taken out of the project, one turned off.
+  { query: 'create a plugin', accepted: ['system_control.create_plugin'] },
+  { query: 'delete a plugin', accepted: ['system_control.remove_plugin'] },
+  { query: 'turn off a plugin', accepted: ['system_control.enable_plugin'] },
 ];

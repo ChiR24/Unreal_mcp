@@ -95,6 +95,22 @@ const testCases = [
   ] },
   { scenario: 'ERROR: get_plugin_info on project content', toolName: 'system_control', arguments: { action: 'get_plugin_info', assetPath: '/Game/Maps' }, expected: 'error|PLUGIN_NOT_FOUND' },
   { scenario: 'ERROR: get_plugin_info on a plugin nobody installed', toolName: 'system_control', arguments: { action: 'get_plugin_info', pluginName: 'NoSuchPluginAnywhere' }, expected: 'error|PLUGIN_NOT_FOUND' },
+  // create_plugin makes a content-only plugin and enables it; remove_plugin deletes one that no longer loads (after
+  // disable_plugin and an editor restart), so the first case clears the scratch plugin an earlier run left disabled.
+  { scenario: 'CLEANUP: remove_plugin clears the scratch plugin an earlier run left', toolName: 'system_control', arguments: { action: 'remove_plugin', pluginName: 'McpScratchPlugin' }, expected: 'success|not found' },
+  { scenario: 'CREATE: create_plugin makes a content-only plugin and enables it', toolName: 'system_control', arguments: { action: 'create_plugin', pluginName: 'McpScratchPlugin', friendlyName: 'MCP Scratch Plugin', description: 'Made by the integration tests.', category: 'Testing', createdBy: 'EngineWire tests' }, expected: 'success', assertions: [
+    { path: 'structuredContent.result.mountedContentPath', equals: '/McpScratchPlugin/', label: 'its content root is mounted' },
+    { path: 'structuredContent.result.enabled', equals: true, label: 'enabled in the project' },
+  ] },
+  { scenario: 'INFO: the new plugin reads back with its descriptor and content', toolName: 'system_control', arguments: { action: 'get_plugin_info', pluginName: 'McpScratchPlugin' }, expected: 'success', assertions: [
+    { path: 'structuredContent.result.friendlyName', equals: 'MCP Scratch Plugin', label: 'the descriptor written' },
+    { path: 'structuredContent.result.canContainContent', equals: true, label: 'with a Content folder' },
+  ] },
+  { scenario: 'ERROR: create_plugin on a name that is taken', toolName: 'system_control', arguments: { action: 'create_plugin', pluginName: 'McpScratchPlugin' }, expected: 'error|PLUGIN_EXISTS' },
+  { scenario: 'ERROR: create_plugin with a name that is no identifier', toolName: 'system_control', arguments: { action: 'create_plugin', pluginName: '9 bad name' }, expected: 'error|INVALID_ARGUMENT' },
+  { scenario: 'ERROR: remove_plugin on a plugin still loaded', toolName: 'system_control', arguments: { action: 'remove_plugin', pluginName: 'McpScratchPlugin' }, expected: 'error|PLUGIN_LOADED' },
+  { scenario: 'ERROR: remove_plugin on an engine plugin', toolName: 'system_control', arguments: { action: 'remove_plugin', pluginName: 'Niagara' }, expected: 'error|PLUGIN_NOT_REMOVABLE' },
+  { scenario: 'CLEANUP: disable_plugin so the next run removes the scratch plugin', toolName: 'system_control', arguments: { action: 'disable_plugin', pluginName: 'McpScratchPlugin' }, expected: 'success' },
   { scenario: 'ACTION: profile', toolName: 'system_control', arguments: { action: 'profile', profileType: 'CPU' }, expected: 'success' },
   { scenario: 'ACTION: show_fps', toolName: 'system_control', arguments: { action: 'show_fps', enabled: true }, expected: 'success' },
   // === CONFIG ===

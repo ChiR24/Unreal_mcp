@@ -1,5 +1,5 @@
 /**
- * Plugin management records (4): list_plugins, get_plugin_info, enable_plugin, disable_plugin.
+ * Plugin management records (6): list_plugins, get_plugin_info, create_plugin, remove_plugin, enable_plugin, disable_plugin.
  *
  * Migrated content frequently depends on a plugin that ships with the engine
  * but is off in this project — the advanced vehicle template needs
@@ -90,7 +90,7 @@ export const PLUGIN_RECORDS: readonly CapabilityRecordSource[] = [
       docsURL: { type: 'string', description: 'Documentation link, often empty.' },
       enabled: { type: 'boolean', description: 'Enabled for this project now.' },
       enabledByDefault: { type: 'string', enum: ['enabled', 'disabled', 'unspecified'], description: 'What the descriptor asks for when a project does not say.' },
-      type: { type: 'string', enum: ['engine', 'enterprise', 'project', 'external', 'mod'], description: 'Where the plugin is installed.' },
+      type: { type: 'string', enum: ['engine', 'enterprise', 'project', 'external', 'mod'], description: 'Where the plugin is installed; one create_plugin made this session reads external until the editor restarts.' },
       beta: { type: 'boolean', description: 'Marked beta.' },
       experimental: { type: 'boolean', description: 'Marked experimental.' },
       explicitlyLoaded: { type: 'boolean', description: 'Loads only when asked for (game feature plugins), not at startup.' },
@@ -104,6 +104,67 @@ export const PLUGIN_RECORDS: readonly CapabilityRecordSource[] = [
     dispatchAction: 'system_control',
     exampleInput: { action: 'get_plugin_info', pluginName: 'ChaosVehiclesPlugin' },
     exampleOutput: { success: true, pluginName: 'ChaosVehiclesPlugin', enabled: true, type: 'engine', dependents: [] },
+  }),
+  buildCoreRecord({
+    parentTool: PT,
+    action: 'create_plugin',
+    domain: 'project',
+    family: 'plugin',
+    topics: ['new plugin', 'make a plugin', 'content plugin', 'content only plugin', 'modular content'],
+    summary: 'Make a content-only plugin in this project\'s Plugins folder (the Plugins browser\'s Content Only template: a descriptor, a Content folder and the template icon), mount it and enable it in the project at once, so assets can go under its mountedContentPath (/Name/) straight away. A plugin with code is not made (it needs a build). A name taken by any installed plugin, or by a folder, is PLUGIN_EXISTS; a name that is no valid identifier is INVALID_ARGUMENT; nothing is created then.',
+    whenToUse: [
+      'Content should live in its own plugin (to share between projects, to ship separately, or to keep a feature\'s assets apart).',
+    ],
+    whenNotToUse: [
+      'The plugin needs C++ code (create_cpp_class and a build are a different path).',
+      'An installed plugin only needs turning on (use enable_plugin).',
+    ],
+    inputProps: {
+      pluginName: { type: 'string', description: 'The plugin\'s name: its folder, its .uplugin and its content root /Name/. Letters, digits and underscores, starting with a letter.' },
+      friendlyName: { type: 'string', description: 'Display name in the Plugins browser (default the name).' },
+      description: { type: 'string', description: 'Descriptor description.' },
+      category: { type: 'string', description: 'Plugins browser category (default Other).' },
+      createdBy: { type: 'string', description: 'Author.' },
+    },
+    required: ['pluginName'],
+    outputProps: {
+      pluginName: { type: 'string', description: 'The plugin made.' },
+      folder: { type: 'string', description: 'Its folder, relative to the project.' },
+      mountedContentPath: { type: 'string', description: 'Its content root (/Name/), mounted now.' },
+      enabled: { type: 'boolean', description: 'Enabled in the project.' },
+    },
+    effect: 'write',
+    costLatency: 'interactive',
+    dispatchAction: 'system_control',
+    exampleInput: { action: 'create_plugin', pluginName: 'ForestKit', description: 'Trees and rocks for the forest levels.' },
+    exampleOutput: { success: true, pluginName: 'ForestKit', mountedContentPath: '/ForestKit/', enabled: true },
+  }),
+  buildCoreRecord({
+    parentTool: PT,
+    action: 'remove_plugin',
+    domain: 'project',
+    family: 'plugin',
+    topics: ['delete plugin', 'remove a plugin from the project'],
+    summary: 'Take a plugin that no longer loads out of this project: its folder moves to Saved/EngineWire/RemovedPlugins/<name> (delete it there for good, or move it back to restore it) and the .uproject drops it. A plugin this editor has loaded is refused PLUGIN_LOADED (only a restart unloads one: disable_plugin it, restart the editor, then remove it). Only a plugin in this project\'s Plugins folder with no code is removed; an engine or marketplace plugin, or one with code (modules or a Source folder), is refused PLUGIN_NOT_REMOVABLE. A refusal changes nothing; MOVE_FAILED (a file in it is open) leaves the project as it was.',
+    whenToUse: ['A content plugin made by mistake, or no longer wanted, should leave the project and the disk (after disable_plugin and a restart).'],
+    whenNotToUse: [
+      'The plugin should only stop loading (use disable_plugin: its files stay).',
+      'Other content still uses its assets (they break).',
+    ],
+    inputProps: {
+      pluginName: { type: 'string', description: 'The plugin to remove, as list_plugins names it.' },
+    },
+    required: ['pluginName'],
+    outputProps: {
+      pluginName: { type: 'string', description: 'The plugin removed.' },
+      movedTo: { type: 'string', description: 'Where its folder is now, relative to the project.' },
+      referenceRemoved: { type: 'boolean', description: 'True when the .uproject named it and no longer does.' },
+    },
+    effect: 'destructive',
+    costLatency: 'interactive',
+    dispatchAction: 'system_control',
+    exampleInput: { action: 'remove_plugin', pluginName: 'ForestKit' },
+    exampleOutput: { success: true, pluginName: 'ForestKit', movedTo: 'Saved/EngineWire/RemovedPlugins/ForestKit', referenceRemoved: true },
   }),
   buildCoreRecord({
     parentTool: PT,
@@ -146,6 +207,7 @@ export const PLUGIN_RECORDS: readonly CapabilityRecordSource[] = [
     action: 'disable_plugin',
     domain: 'project',
     family: 'plugin',
+    topics: ['turn off a plugin', 'stop a plugin loading'],
     summary: 'Disable a plugin for this project by removing it from the .uproject. Assets that depend on it fail to load after the restart, so confirm dependents first (get_plugin_info lists the plugins that need it).',
     whenToUse: ['A plugin enabled for a since-removed experiment should no longer load.'],
     whenNotToUse: ['Project content still references the plugin\'s classes or assets.'],

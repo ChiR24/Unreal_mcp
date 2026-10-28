@@ -59,7 +59,7 @@ bool UEngineWireSubsystem::HandleSystemControlAction(
       !bInsightsAction &&
       !bLogSubscriptionAction &&
       Lower != TEXT("validate_assets") &&
-      Lower != TEXT("get_plugin_info") &&
+      Lower != TEXT("get_plugin_info") && Lower != TEXT("create_plugin") && Lower != TEXT("remove_plugin") &&
       Lower != TEXT("create_cpp_class") &&
       Lower != TEXT("execute_python") &&
       Lower != TEXT("run_script") &&
@@ -84,6 +84,12 @@ bool UEngineWireSubsystem::HandleSystemControlAction(
   }
   if (Lower == TEXT("get_plugin_info")) {
     return McpSystemControlHandlers::HandlePluginInfo(this, RequestId, Payload, RequestingSocket);
+  }
+  if (Lower == TEXT("create_plugin")) {
+    return McpSystemControlHandlers::HandleCreatePlugin(this, RequestId, Payload, RequestingSocket);
+  }
+  if (Lower == TEXT("remove_plugin")) {
+    return McpSystemControlHandlers::HandleRemovePlugin(this, RequestId, Payload, RequestingSocket);
   }
 
   if (bInsightsAction) {
