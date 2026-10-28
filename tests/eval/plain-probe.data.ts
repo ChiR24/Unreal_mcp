@@ -786,4 +786,8 @@ export const PLAIN_PROBE: readonly PlainProbeCase[] = [
   { query: 'list game features', accepted: ['system_control.list_game_features'] },
   { query: 'activate a game feature', accepted: ['system_control.set_game_feature_active'] },
   { query: 'create a game feature plugin', accepted: ['system_control.create_plugin'] },
+  // Data registries: listed, one read, one made over data tables.
+  { query: 'list data registries', accepted: ['datatable.list_data_registries'] },
+  { query: 'read a data registry', accepted: ['datatable.get_data_registry'] },
+  { query: 'create a data registry', accepted: ['datatable.create_data_registry'] },
 ];

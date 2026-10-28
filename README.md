@@ -355,6 +355,7 @@ The bridge declares its engine-plugin dependencies, so Unreal enables them toget
 | **Geometry Scripting**, **Geometry Processing**, **Mesh Modeling Toolset**, **Procedural Mesh Component** | `manage_geometry` (Catmull-Clark, Loop and bilinear subdivision need Mesh Modeling Toolset) |
 | **PCG** | `manage_pcg`, compiled in only when the project itself enables the PCG plugin |
 | **Game Features** | `system_control`: game feature plugins (listed, activated, made with `create_plugin`) through the `EngineWireGameFeatures` module, loaded only when the project itself enables Game Features (EngineWire never turns it on) |
+| **Data Registry** | `manage_asset`: data registries listed, read and made over data tables, by reflection when the project itself enables Data Registry (EngineWire never turns it on) |
 | **MetaSound**, **Synthesis** | `manage_audio`: MetaSound authoring |
 | **Enhanced Input**, **Online Subsystem**, **Online Subsystem Utils** | `manage_networking`: input mappings, sessions |
 | **Interchange**, **Interchange OpenUSD**, **Data Validation**, **StructUtils** | Import/export, validation, struct helpers |

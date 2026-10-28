@@ -1,6 +1,6 @@
 {
-  "catalogRevision": "be4c39edc7d214c8",
-  "recordCount": 458,
+  "catalogRevision": "287e2225ef4f2c83",
+  "recordCount": 461,
   "records": [
     {
       "id": "animation_physics.analyze_animation",
@@ -49084,6 +49084,159 @@
       }
     },
     {
+      "id": "datatable.create_data_registry",
+      "aliases": [],
+      "legacyIds": [
+        {
+          "tool": "manage_asset",
+          "action": "create_data_registry"
+        }
+      ],
+      "discovery": {
+        "domain": "datatable",
+        "family": "datatable",
+        "topics": [
+          "create_data_registry",
+          "make a data registry",
+          "new data registry",
+          "create data registry"
+        ],
+        "summary": "Make a data registry over data tables: the asset at assetPath with registryType (the name the game looks items up by, one registry each) and one DataTable source per table, in the order given (the first holding an item serves it), its item struct the tables' shared row struct; saved. The game sets up only registries under the DataRegistry settings' DirectoriesToScan, so scanned says whether this one is (the project settings stay as they are). Nothing is made on a refusal: INVALID_ARGUMENT, ASSET_EXISTS, DATA_REGISTRY_EXISTS (the type is another registry's), DATA_TABLE_NOT_FOUND, ROW_STRUCT_MISMATCH; DATA_REGISTRY_DISABLED when the project leaves the DataRegistry plugin off.",
+        "whenToUse": [
+          "Game code looks items up through a data registry, and one must be made over existing data tables."
+        ],
+        "whenNotToUse": [
+          "A data table itself is made (use datatable.edit_data_table with edit create)."
+        ]
+      },
+      "schemas": {
+        "input": {
+          "$schema": "https://json-schema.org/draft/2020-12/schema",
+          "type": "object",
+          "properties": {
+            "assetPath": {
+              "type": "string",
+              "description": "The new registry asset (/Game/Data/DR_Weapons)."
+            },
+            "registryType": {
+              "type": "string",
+              "description": "The name the game looks its items up by; no other registry may have it."
+            },
+            "dataTables": {
+              "type": "array",
+              "minItems": 1,
+              "maxItems": 16,
+              "items": {
+                "type": "string"
+              },
+              "description": "Data tables to read items from, in lookup order (1-16, one row struct)."
+            }
+          },
+          "required": [
+            "assetPath",
+            "registryType",
+            "dataTables"
+          ],
+          "additionalProperties": false
+        },
+        "output": {
+          "$schema": "https://json-schema.org/draft/2020-12/schema",
+          "type": "object",
+          "properties": {
+            "success": {
+              "type": "boolean",
+              "description": "Operation succeeded."
+            },
+            "assetPath": {
+              "type": "string",
+              "description": "The registry made."
+            },
+            "registryType": {
+              "type": "string",
+              "description": "Its type."
+            },
+            "itemStruct": {
+              "type": "string",
+              "description": "Its item struct, the tables' row struct."
+            },
+            "dataTables": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "description": "Its tables, in lookup order."
+            },
+            "saved": {
+              "type": "boolean",
+              "description": "Saved to disk."
+            },
+            "scanned": {
+              "type": "boolean",
+              "description": "Whether the game sets it up: only registries under the DataRegistry settings' DirectoriesToScan are."
+            }
+          },
+          "required": [
+            "success"
+          ],
+          "additionalProperties": false
+        }
+      },
+      "examples": [
+        {
+          "title": "A weapons registry over two tables",
+          "input": {
+            "assetPath": "/Game/Data/DR_Weapons",
+            "registryType": "Weapons",
+            "dataTables": [
+              "/Game/Data/DT_Melee",
+              "/Game/Data/DT_Ranged"
+            ]
+          },
+          "output": {
+            "success": true,
+            "assetPath": "/Game/Data/DR_Weapons",
+            "registryType": "Weapons",
+            "itemStruct": "/Game/Data/S_Weapon.S_Weapon",
+            "saved": true,
+            "scanned": true
+          }
+        }
+      ],
+      "availability": {
+        "requiredPlugins": [
+          "EditorScriptingUtilities",
+          "DataRegistry"
+        ],
+        "editorStates": [
+          "edit"
+        ]
+      },
+      "behavior": {
+        "effect": "write",
+        "idempotency": "non-idempotent",
+        "longRunning": false,
+        "safeToRetry": false
+      },
+      "policy": {
+        "requiredScope": "write",
+        "consent": "explicit",
+        "dataAccess": "project-write"
+      },
+      "cost": {
+        "latency": "interactive",
+        "resources": "medium"
+      },
+      "routing": {
+        "parentTool": "manage_asset",
+        "dispatchAction": "create_data_registry"
+      },
+      "hashes": {
+        "algorithm": "sha256",
+        "schema": "227bef56cfa772f5e37d21a5b919751ba0ef29607b24eafb306a525fa437c249",
+        "content": "354622bd0813aeb7bbc236adc99d0c3d8c2ee7efe7bef722ffad7958dc8c50fc"
+      }
+    },
+    {
       "id": "datatable.delete_data_table_row",
       "aliases": [
         "datatable.clear_data_table_rows"
@@ -49588,6 +49741,213 @@
       }
     },
     {
+      "id": "datatable.get_data_registry",
+      "aliases": [],
+      "legacyIds": [
+        {
+          "tool": "manage_asset",
+          "action": "get_data_registry"
+        }
+      ],
+      "discovery": {
+        "domain": "datatable",
+        "family": "datatable",
+        "topics": [
+          "get_data_registry",
+          "read a data registry",
+          "data registry items",
+          "data registry schema",
+          "registry item values"
+        ],
+        "summary": "Read one data registry, by asset path or by its registryType: its item struct and schema (each field's name and type), id format tag, sources (each source's class and the table it reads), whether the game sets it up (scanned) and whether the registry has set up its runtime sources (initialized: then meta sources show the tables they found), every item name in lookup order (the first source holding a name serves it; up to 500 named, itemCount counts all), and the values of up to 50 items asked for by name (items: a curve table's row is named, not read; names no source holds are in itemsNotFound). DATA_REGISTRY_NOT_FOUND names nothing found; DATA_REGISTRY_DISABLED when the project leaves the DataRegistry plugin off.",
+        "whenToUse": [
+          "A registry's items, their values or its sources must be read (what the game gets for an item id)."
+        ],
+        "whenNotToUse": [
+          "One data table's rows are read (use datatable.inspect_data_table)."
+        ]
+      },
+      "schemas": {
+        "input": {
+          "$schema": "https://json-schema.org/draft/2020-12/schema",
+          "type": "object",
+          "properties": {
+            "registry": {
+              "type": "string",
+              "description": "The registry: its asset path (/Game/Data/DR_Weapons) or its registryType (Weapons)."
+            },
+            "items": {
+              "type": "array",
+              "maxItems": 50,
+              "items": {
+                "type": "string"
+              },
+              "description": "Item names whose values to read (up to 50)."
+            }
+          },
+          "required": [
+            "registry"
+          ],
+          "additionalProperties": false
+        },
+        "output": {
+          "$schema": "https://json-schema.org/draft/2020-12/schema",
+          "type": "object",
+          "properties": {
+            "success": {
+              "type": "boolean",
+              "description": "Operation succeeded."
+            },
+            "assetPath": {
+              "type": "string",
+              "description": "The registry asset."
+            },
+            "registryType": {
+              "type": "string",
+              "description": "The name the game looks its items up by."
+            },
+            "itemStruct": {
+              "type": "string",
+              "description": "The struct of its items."
+            },
+            "idFormatTag": {
+              "type": "string",
+              "description": "Its id format's base gameplay tag, empty when it has none."
+            },
+            "scanned": {
+              "type": "boolean",
+              "description": "Whether the game sets it up: only registries under the DataRegistry settings' DirectoriesToScan are."
+            },
+            "initialized": {
+              "type": "boolean",
+              "description": "The registry has set up its runtime sources."
+            },
+            "schema": {
+              "type": "array",
+              "description": "The item struct's fields.",
+              "items": {
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {
+                  "name": {
+                    "type": "string",
+                    "description": "The field."
+                  },
+                  "type": {
+                    "type": "string",
+                    "description": "Its C++ type."
+                  }
+                }
+              }
+            },
+            "sources": {
+              "type": "array",
+              "description": "The sources as authored, in order.",
+              "items": {
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {
+                  "class": {
+                    "type": "string",
+                    "description": "The source class (DataRegistrySource_DataTable, DataRegistrySource_CurveTable, a meta source...)."
+                  },
+                  "table": {
+                    "type": "string",
+                    "description": "The table it reads; empty for a source of another kind."
+                  }
+                }
+              }
+            },
+            "itemNames": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "description": "Item names in lookup order, up to 500."
+            },
+            "itemCount": {
+              "type": "number",
+              "description": "Items in all."
+            },
+            "items": {
+              "type": "object",
+              "x-unreal-reflection-boundary": true,
+              "description": "Each asked item's field values by name."
+            },
+            "itemsNotFound": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "description": "Asked names no source holds."
+            }
+          },
+          "required": [
+            "success"
+          ],
+          "additionalProperties": false
+        }
+      },
+      "examples": [
+        {
+          "title": "Read two weapons",
+          "input": {
+            "registry": "Weapons",
+            "items": [
+              "Sword",
+              "Bow"
+            ]
+          },
+          "output": {
+            "success": true,
+            "registryType": "Weapons",
+            "itemCount": 12,
+            "items": {
+              "Sword": {
+                "Damage": 40
+              },
+              "Bow": {
+                "Damage": 25
+              }
+            }
+          }
+        }
+      ],
+      "availability": {
+        "requiredPlugins": [
+          "EditorScriptingUtilities",
+          "DataRegistry"
+        ],
+        "editorStates": [
+          "edit"
+        ]
+      },
+      "behavior": {
+        "effect": "read",
+        "idempotency": "idempotent",
+        "longRunning": false,
+        "safeToRetry": true
+      },
+      "policy": {
+        "requiredScope": "read",
+        "consent": "none",
+        "dataAccess": "project-read"
+      },
+      "cost": {
+        "latency": "interactive",
+        "resources": "medium"
+      },
+      "routing": {
+        "parentTool": "manage_asset",
+        "dispatchAction": "get_data_registry"
+      },
+      "hashes": {
+        "algorithm": "sha256",
+        "schema": "02508924623555aa2d2fd53c372583ed101c77c17c3f45096351398306422824",
+        "content": "2d85cd4f42573c9ae5faafd9e9f50d5e04395c275ab1ec7002620e53288ca04a"
+      }
+    },
+    {
       "id": "datatable.inspect_data_table",
       "aliases": [
         "datatable.get_data_table_row",
@@ -49758,6 +50118,148 @@
         "algorithm": "sha256",
         "schema": "7dfd884dee7a7159448f687fb16d0e52b2bd489a642d9c95fafc7b204042c14c",
         "content": "3e188291f2f045f040a95a777eaa4d3e173d717792a843a75a840bdf532e33d5"
+      }
+    },
+    {
+      "id": "datatable.list_data_registries",
+      "aliases": [],
+      "legacyIds": [
+        {
+          "tool": "manage_asset",
+          "action": "list_data_registries"
+        }
+      ],
+      "discovery": {
+        "domain": "datatable",
+        "family": "datatable",
+        "topics": [
+          "list_data_registries",
+          "data registries",
+          "list data registries",
+          "registry types",
+          "data registry assets"
+        ],
+        "summary": "List the project's data registries (DataRegistry assets, found through the asset registry without loading them), each with its registryType (the name the game looks its items up by), itemStruct and scanned: the game sets up only registries under the DataRegistry settings' directoriesToScan (in the reply, with initializeAllLoaded). A project that leaves the DataRegistry plugin off answers DATA_REGISTRY_DISABLED.",
+        "whenToUse": [
+          "Which data registries a project has, and whether the game will find them, must be known before reading one."
+        ],
+        "whenNotToUse": [
+          "Data tables are listed (use asset.list with class DataTable)."
+        ]
+      },
+      "schemas": {
+        "input": {
+          "$schema": "https://json-schema.org/draft/2020-12/schema",
+          "type": "object",
+          "properties": {},
+          "required": [],
+          "additionalProperties": false
+        },
+        "output": {
+          "$schema": "https://json-schema.org/draft/2020-12/schema",
+          "type": "object",
+          "properties": {
+            "success": {
+              "type": "boolean",
+              "description": "Operation succeeded."
+            },
+            "dataRegistries": {
+              "type": "array",
+              "description": "By asset path.",
+              "items": {
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {
+                  "assetPath": {
+                    "type": "string",
+                    "description": "The registry asset."
+                  },
+                  "registryType": {
+                    "type": "string",
+                    "description": "The name the game looks its items up by."
+                  },
+                  "itemStruct": {
+                    "type": "string",
+                    "description": "The struct of its items."
+                  },
+                  "scanned": {
+                    "type": "boolean",
+                    "description": "Whether the game sets it up: only registries under the DataRegistry settings' DirectoriesToScan are."
+                  }
+                }
+              }
+            },
+            "directoriesToScan": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "description": "The DataRegistry settings' folders whose registries the game sets up."
+            },
+            "initializeAllLoaded": {
+              "type": "boolean",
+              "description": "The settings set up every registry that loads, wherever it is."
+            }
+          },
+          "required": [
+            "success"
+          ],
+          "additionalProperties": false
+        }
+      },
+      "examples": [
+        {
+          "title": "List the registries",
+          "input": {},
+          "output": {
+            "success": true,
+            "dataRegistries": [
+              {
+                "assetPath": "/Game/Data/DR_Weapons",
+                "registryType": "Weapons",
+                "itemStruct": "/Game/Data/S_Weapon.S_Weapon",
+                "scanned": true
+              }
+            ],
+            "directoriesToScan": [
+              "/Game/Data"
+            ],
+            "initializeAllLoaded": false
+          }
+        }
+      ],
+      "availability": {
+        "requiredPlugins": [
+          "EditorScriptingUtilities",
+          "DataRegistry"
+        ],
+        "editorStates": [
+          "edit"
+        ]
+      },
+      "behavior": {
+        "effect": "read",
+        "idempotency": "idempotent",
+        "longRunning": false,
+        "safeToRetry": true
+      },
+      "policy": {
+        "requiredScope": "read",
+        "consent": "none",
+        "dataAccess": "project-read"
+      },
+      "cost": {
+        "latency": "instant",
+        "resources": "low"
+      },
+      "routing": {
+        "parentTool": "manage_asset",
+        "dispatchAction": "list_data_registries"
+      },
+      "hashes": {
+        "algorithm": "sha256",
+        "schema": "af78bfe37ff1e79ed7986b7fa604535ccbc77ca61ab62521e9072c9c0c59c781",
+        "content": "1d7738ae0c73c06a63e8acf1c663a045189552d69c4a5fef64ea179a271ac934"
       }
     },
     {

@@ -7725,6 +7725,9 @@
         "edit_data_table",
         "inspect_data_table",
         "delete_data_table_row",
+        "list_data_registries",
+        "get_data_registry",
+        "create_data_registry",
         "edit_enum",
         "delete_enum",
         "get_enum"
@@ -7774,6 +7777,7 @@
         "cursor",
         "curvePoints",
         "dataTablePath",
+        "dataTables",
         "defaultValue",
         "deleteScope",
         "depth",
@@ -7829,6 +7833,7 @@
         "inputs",
         "instances",
         "io",
+        "items",
         "justification",
         "key",
         "kind",
@@ -7922,6 +7927,8 @@
         "recursivePaths",
         "redTexture",
         "referencers",
+        "registry",
+        "registryType",
         "relativeTo",
         "renames",
         "renderTargetPath",
@@ -8288,6 +8295,15 @@
             "type": "string",
             "description": "Asset path of the DataTable (e.g. /Game/DataTables/DT_MyTable)."
           },
+          "dataTables": {
+            "type": "array",
+            "minItems": 1,
+            "maxItems": 16,
+            "items": {
+              "type": "string"
+            },
+            "description": "Data tables to read items from, in lookup order (1-16, one row struct)."
+          },
           "defaultValue": {
             "oneOf": [
               {
@@ -8630,6 +8646,14 @@
               "output"
             ],
             "description": "Which add function io variant to run.\ninput: Add a function input to a material function.\noutput: Add a function output to a material function."
+          },
+          "items": {
+            "type": "array",
+            "maxItems": 50,
+            "items": {
+              "type": "string"
+            },
+            "description": "Item names whose values to read (up to 50)."
           },
           "justification": {
             "type": "string",
@@ -9315,6 +9339,14 @@
             "type": "boolean",
             "description": "List the packages that USE this asset (Blueprints that spawn it, levels that place it) instead of the ones it uses; check this before deleting or replacing an asset."
           },
+          "registry": {
+            "type": "string",
+            "description": "The registry: its asset path (/Game/Data/DR_Weapons) or its registryType (Weapons)."
+          },
+          "registryType": {
+            "type": "string",
+            "description": "The name the game looks its items up by; no other registry may have it."
+          },
           "relativeTo": {
             "type": "string",
             "description": "Name or GUID of the member to place the moved member next to. Required for before and after; ignored for first and last."
@@ -9723,6 +9755,9 @@
               "edit_data_table",
               "inspect_data_table",
               "delete_data_table_row",
+              "list_data_registries",
+              "get_data_registry",
+              "create_data_registry",
               "edit_enum",
               "delete_enum",
               "get_enum"

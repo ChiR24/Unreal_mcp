@@ -10,6 +10,7 @@
 #include "Domains/AssetWorkflow/Rename/McpAssetRenameGuard.h"
 
 // Struct ecosystem (issue #struct-ecosystem) — Wave 1 handler shard headers.
+#include "Domains/AssetWorkflow/DataRegistries/McpDataRegistries.h"
 #include "Domains/AssetWorkflow/DataTables/Shared.h"
 #include "Domains/AssetWorkflow/Enums/Shared.h"
 namespace McpStructProperty
@@ -148,6 +149,8 @@ bool UEngineWireSubsystem::HandleAssetAction(
     return McpAssetQueryHandlers::HandleCaptionAssets(this, RequestId, Payload, RequestingSocket);
   if (Lower == TEXT("find_assets_like"))
     return McpAssetQueryHandlers::HandleFindAssetsLike(this, RequestId, Payload, RequestingSocket);
+  if (McpDataRegistries::Handle(this, RequestId, Lower, Payload, RequestingSocket))
+    return true;
 
   // Bulk Operations
   if (Lower == TEXT("fixup_redirectors"))

@@ -11747,6 +11747,15 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "string",
           "description": "Asset path of the DataTable (e.g. /Game/DataTables/DT_MyTable)."
         },
+        "dataTables": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 16,
+          "items": {
+            "type": "string"
+          },
+          "description": "Data tables to read items from, in lookup order (1-16, one row struct)."
+        },
         "defaultValue": {
           "oneOf": [
             {
@@ -12089,6 +12098,14 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             "output"
           ],
           "description": "Which add function io variant to run.\ninput: Add a function input to a material function.\noutput: Add a function output to a material function."
+        },
+        "items": {
+          "type": "array",
+          "maxItems": 50,
+          "items": {
+            "type": "string"
+          },
+          "description": "Item names whose values to read (up to 50)."
         },
         "justification": {
           "type": "string",
@@ -12774,6 +12791,14 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "boolean",
           "description": "List the packages that USE this asset (Blueprints that spawn it, levels that place it) instead of the ones it uses; check this before deleting or replacing an asset."
         },
+        "registry": {
+          "type": "string",
+          "description": "The registry: its asset path (/Game/Data/DR_Weapons) or its registryType (Weapons)."
+        },
+        "registryType": {
+          "type": "string",
+          "description": "The name the game looks its items up by; no other registry may have it."
+        },
         "relativeTo": {
           "type": "string",
           "description": "Name or GUID of the member to place the moved member next to. Required for before and after; ignored for first and last."
@@ -13182,6 +13207,9 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             "edit_data_table",
             "inspect_data_table",
             "delete_data_table_row",
+            "list_data_registries",
+            "get_data_registry",
+            "create_data_registry",
             "edit_enum",
             "delete_enum",
             "get_enum"
@@ -13532,6 +13560,39 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           ],
           "description": "Opaque cursor for the current page, or null when the page was requested without one."
         },
+        "dataRegistries": {
+          "type": "array",
+          "description": "By asset path.",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "assetPath": {
+                "type": "string",
+                "description": "The registry asset."
+              },
+              "registryType": {
+                "type": "string",
+                "description": "The name the game looks its items up by."
+              },
+              "itemStruct": {
+                "type": "string",
+                "description": "The struct of its items."
+              },
+              "scanned": {
+                "type": "boolean",
+                "description": "Whether the game sets it up: only registries under the DataRegistry settings' DirectoriesToScan are."
+              }
+            }
+          }
+        },
+        "dataTables": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Its tables, in lookup order."
+        },
         "deleted": {
           "type": "array",
           "items": {
@@ -13572,6 +13633,13 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             }
           ],
           "description": "Additional handler result fields not named by the contract."
+        },
+        "directoriesToScan": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "The DataRegistry settings' folders whose registries the game sets up."
         },
         "distributionMethod": {
           "type": "string",
@@ -13801,6 +13869,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "number",
           "description": "Picture height in pixels."
         },
+        "idFormatTag": {
+          "type": "string",
+          "description": "Its id format's base gameplay tag, empty when it has none."
+        },
         "identical": {
           "type": "boolean",
           "description": "True when nothing differs."
@@ -13828,6 +13900,14 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "indexPath": {
           "type": "string",
           "description": "Path of the uassetsData.json index."
+        },
+        "initializeAllLoaded": {
+          "type": "boolean",
+          "description": "The settings set up every registry that loads, wherever it is."
+        },
+        "initialized": {
+          "type": "boolean",
+          "description": "The registry has set up its runtime sources."
         },
         "inkBounds": {
           "type": "object",
@@ -13897,6 +13977,33 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "isTwoSided": {
           "type": "boolean",
           "description": "True when the material renders two-sided."
+        },
+        "itemCount": {
+          "type": "number",
+          "description": "Items in all."
+        },
+        "itemNames": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Item names in lookup order, up to 500."
+        },
+        "itemStruct": {
+          "type": "string",
+          "description": "Its item struct, the tables' row struct."
+        },
+        "items": {
+          "type": "object",
+          "x-unreal-reflection-boundary": true,
+          "description": "Each asked item's field values by name."
+        },
+        "itemsNotFound": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Asked names no source holds."
         },
         "libraryDirectory": {
           "type": "string",
@@ -14296,6 +14403,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           },
           "description": "Entries that were refused, each {index (its position in materials), slot (as given), materialPath, code, reason}: a slot index out of range, an unknown slot name, a material that does not load. A refused entry changes nothing, the call fails (MATERIAL_SLOTS_PARTIAL, or MATERIAL_SLOTS_REFUSED when no entry was valid) and the valid entries stay applied."
         },
+        "registryType": {
+          "type": "string",
+          "description": "Its type."
+        },
         "relocated": {
           "type": "boolean",
           "description": "Present when the add asked for destinationPath or assetName: true when assets were moved or renamed."
@@ -14393,9 +14504,31 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "x-unreal-reflection-boundary": true,
           "description": "kind=parameter_collection: every scalar parameter of the collection after the call, {name, default}."
         },
+        "scanned": {
+          "type": "boolean",
+          "description": "Whether the game sets it up: only registries under the DataRegistry settings' DirectoriesToScan are."
+        },
         "scannedAssets": {
           "type": "number",
           "description": "Blueprints, DataTables and String Tables searched."
+        },
+        "schema": {
+          "type": "array",
+          "description": "The item struct's fields.",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "name": {
+                "type": "string",
+                "description": "The field."
+              },
+              "type": {
+                "type": "string",
+                "description": "Its C++ type."
+              }
+            }
+          }
         },
         "seller": {
           "type": "string",
@@ -14438,11 +14571,34 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "description": "Folder: the folder copied."
         },
         "sources": {
-          "type": "array",
-          "items": {
-            "type": "object",
-            "x-unreal-reflection-boundary": true
-          },
+          "oneOf": [
+            {
+              "type": "array",
+              "description": "The sources as authored, in order.",
+              "items": {
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {
+                  "class": {
+                    "type": "string",
+                    "description": "The source class (DataRegistrySource_DataTable, DataRegistrySource_CurveTable, a meta source...)."
+                  },
+                  "table": {
+                    "type": "string",
+                    "description": "The table it reads; empty for a source of another kind."
+                  }
+                }
+              }
+            },
+            {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "x-unreal-reflection-boundary": true
+              },
+              "description": "Discovered sources. Each entry carries sourceRoot, sourceId, kind (template | featurePack | megascansPack | plugin | contentFolder), hasContentFolder, migratable, and packageCount when requested."
+            }
+          ],
           "description": "Discovered sources. Each entry carries sourceRoot, sourceId, kind (template | featurePack | megascansPack | plugin | contentFolder), hasContentFolder, migratable, and packageCount when requested."
         },
         "succeeded": {

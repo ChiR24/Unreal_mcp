@@ -4,7 +4,7 @@
 
 # Action reference
 
-Catalog revision: `be4c39edc7d214c8`
+Catalog revision: `287e2225ef4f2c83`
 
 Both transports expose exactly ONE public MCP tool, `unreal`, with the four
 operations `search` / `describe` / `execute` / `configure`. The parent tools
@@ -13,7 +13,7 @@ by `tools/list` and a direct `tools/call` on one returns a
 `DIRECT_TOOL_CALL_REMOVED` receipt rather than executing
 (`src/server/gateway/direct-call-migration.ts`).
 
-The catalog declares 458 capabilities across
+The catalog declares 461 capabilities across
 23 internal parent tools.
 Every row is derived from the capability record that the gateway actually
 validates against, so `execute` cannot accept an action this table omits.
@@ -45,7 +45,7 @@ validates against, so `execute` cannot accept an action this table omits.
 | `control_editor` | 26 | 9 | 14 | 3 | editor |
 | `inspect` | 27 | 22 | 4 | 1 | inspect |
 | `manage_ai` | 17 | 3 | 14 | 0 | manage ai |
-| `manage_asset` | 50 | 12 | 33 | 5 | asset, datatable, enum, material, struct, texture |
+| `manage_asset` | 53 | 14 | 34 | 5 | asset, datatable, enum, material, struct, texture |
 | `manage_audio` | 17 | 5 | 12 | 0 | audio |
 | `manage_blueprint` | 37 | 10 | 20 | 7 | blueprint, widget |
 | `manage_character` | 10 | 2 | 8 | 0 | manage character |
@@ -65,7 +65,7 @@ validates against, so `execute` cannot accept an action this table omits.
 
 ## Capabilities requiring consent
 
-70 of 458 capabilities require consent.
+71 of 461 capabilities require consent.
 
 | Capability | Tool | Action | Effect | Consent |
 | --- | --- | --- | --- | --- |
@@ -101,6 +101,7 @@ validates against, so `execute` cannot accept an action this table omits.
 | `control_editor.call_editor_tool_destructive` | `control_editor` | `control_editor` | destructive | elevated |
 | `control_editor.invoke_reflected_function` | `control_editor` | `control_editor` | destructive | elevated |
 | `control_editor.restart_editor` | `control_editor` | `restart_editor` | destructive | explicit |
+| `datatable.create_data_registry` | `manage_asset` | `create_data_registry` | write | explicit |
 | `datatable.delete_data_table_row` | `manage_asset` | `delete_data_table_row` | destructive | elevated |
 | `datatable.edit_data_table` | `manage_asset` | `create_data_table` | write | explicit |
 | `enum.delete_enum` | `manage_asset` | `delete_enum` | destructive | elevated |
@@ -334,9 +335,12 @@ validates against, so `execute` cannot accept an action this table omits.
 | `control_editor.simulate_input` | `control_editor` | `simulate_input` | write | write | none | `control_editor.simulate_input` |
 | `control_editor.start_recording` | `control_editor` | `start_recording` | write | write | none | `control_editor.start_recording` `control_editor.stop_recording` |
 | `control_editor.undo` | `control_editor` | `undo` | write | write | none | `control_editor.undo` `control_editor.redo` `control_editor.restore_point` |
+| `datatable.create_data_registry` | `manage_asset` | `create_data_registry` | write | write | explicit | `manage_asset.create_data_registry` |
 | `datatable.delete_data_table_row` | `manage_asset` | `delete_data_table_row` | destructive | destructive | elevated | `manage_asset.delete_data_table_row` `manage_asset.clear_data_table_rows` |
 | `datatable.edit_data_table` | `manage_asset` | `create_data_table` | write | write | explicit | `manage_asset.edit_data_table` `manage_asset.create_data_table` `manage_asset.create_row_struct` `manage_asset.add_data_table_row` `manage_asset.update_data_table_row` `manage_asset.import_data_table_rows` `manage_asset.set_data_table_row_struct` `manage_asset.set_struct_as_row_struct` |
+| `datatable.get_data_registry` | `manage_asset` | `get_data_registry` | read | read | none | `manage_asset.get_data_registry` |
 | `datatable.inspect_data_table` | `manage_asset` | `get_data_table_row` | read | read | none | `manage_asset.inspect_data_table` `manage_asset.get_data_table_row` `manage_asset.list_data_table_rows` `manage_asset.get_row_struct` |
+| `datatable.list_data_registries` | `manage_asset` | `list_data_registries` | read | read | none | `manage_asset.list_data_registries` |
 | `enum.delete_enum` | `manage_asset` | `delete_enum` | destructive | destructive | elevated | `manage_asset.delete_enum` `manage_asset.remove_enum_value` |
 | `enum.edit_enum` | `manage_asset` | `create_enum` | write | write | explicit | `manage_asset.edit_enum` `manage_asset.create_enum` `manage_asset.add_enum_value` `manage_asset.rename_enum_value` `manage_asset.reorder_enum_values` `manage_asset.set_enum_value_metadata` `manage_asset.split_enum` |
 | `enum.get_enum` | `manage_asset` | `get_enum` | read | read | none | `manage_asset.get_enum` |

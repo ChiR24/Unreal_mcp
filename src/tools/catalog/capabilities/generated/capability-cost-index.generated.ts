@@ -603,6 +603,7 @@ export const CAPABILITY_COST_INDEX: Readonly<Record<string, string>> = {
   "manage_asset::connect_material_pins": "instant|low",
   "manage_asset::connect_nodes": "instant|low",
   "manage_asset::create_ao_from_mesh": "long-running|high",
+  "manage_asset::create_data_registry": "interactive|medium",
   "manage_asset::create_data_table": "interactive|medium",
   "manage_asset::create_decal_material": "interactive|medium",
   "manage_asset::create_enum": "interactive|medium",
@@ -654,6 +655,7 @@ export const CAPABILITY_COST_INDEX: Readonly<Record<string, string>> = {
   "manage_asset::generate_thumbnail": "long-running|high",
   "manage_asset::get_asset_graph": "interactive|medium",
   "manage_asset::get_connected_subgraph": "instant|low",
+  "manage_asset::get_data_registry": "interactive|medium",
   "manage_asset::get_data_table_row": "instant|low",
   "manage_asset::get_dependencies": "interactive|medium",
   "manage_asset::get_enum": "instant|low",
@@ -682,6 +684,7 @@ export const CAPABILITY_COST_INDEX: Readonly<Record<string, string>> = {
   "manage_asset::invert": "interactive|medium",
   "manage_asset::list": "interactive|medium",
   "manage_asset::list_content_sources": "interactive|medium",
+  "manage_asset::list_data_registries": "instant|low",
   "manage_asset::list_data_table_rows": "instant|low",
   "manage_asset::list_fab_downloads": "interactive|medium",
   "manage_asset::list_fab_library": "interactive|medium",
@@ -1656,4 +1659,4 @@ export const CAPABILITY_COST_INDEX: Readonly<Record<string, string>> = {
   "system_control::write_snapshot": "interactive|medium"
 };
 
-export const CAPABILITY_COST_INDEX_KEY_COUNT = 1643;
+export const CAPABILITY_COST_INDEX_KEY_COUNT = 1646;
