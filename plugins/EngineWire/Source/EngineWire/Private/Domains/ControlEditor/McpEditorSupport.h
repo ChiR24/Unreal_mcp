@@ -98,6 +98,8 @@ bool SimulateLiveWidgetInputForMcp(const FString &InputType,
 bool RouteKeyToFocusedPieWidgetForMcp(const FKey &Key, EInputEvent InputEvent, bool &bOutHandled, FString &OutNote);
 // Owner.Name of the live game widget that holds keyboard focus (a title screen's Play button), empty when none.
 FString FocusedPieWidgetForMcp();
+// True while the play viewport, or a widget inside it, holds keyboard focus: Slate would hand a key to the game.
+bool PieViewportHasFocusForMcp();
 // Drop every live Enhanced Input hold. The holds run on the core ticker, which
 // outlives this module, so a delegate still registered when the module unloads
 // would call into code that is no longer there -- and Live Coding unloads this

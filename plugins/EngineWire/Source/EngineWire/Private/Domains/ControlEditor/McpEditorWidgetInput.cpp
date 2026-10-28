@@ -246,6 +246,14 @@ bool RouteKeyToFocusedPieWidgetForMcp(const FKey &Key, const EInputEvent InputEv
   return true;
 }
 
+// The play viewport itself, or a widget inside it, holds keyboard focus, so a key sent through Slate reaches the game.
+bool PieViewportHasFocusForMcp() {
+  UWorld *PlayWorld = GEditor ? GEditor->PlayWorld.Get() : nullptr;
+  UGameViewportClient *Viewport = PlayWorld ? PlayWorld->GetGameViewport() : nullptr;
+  const TSharedPtr<SViewport> ViewportWidget = Viewport ? Viewport->GetGameViewportWidget() : nullptr;
+  return ViewportWidget.IsValid() && ViewportWidget->HasAnyUserFocusOrFocusedDescendants();
+}
+
 // A title screen left up with its Play button focused took every jump key as a press, and the replies only said
 // the pawn never moved.
 FString FocusedPieWidgetForMcp() {

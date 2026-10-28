@@ -149,8 +149,10 @@ void SimulateKeyInputForMcp(const FString &Key, const EInputEvent InputEvent, co
                  (RouteKeyToFocusedPieWidgetForMcp(InputKey, InputEvent, bHandledBySlate, FocusNote) ||
                   RouteKeyToPIEForMcp(InputKey, InputEvent, bHandledByPIE));
   // For the game only, a key no play session took goes nowhere: Delete or End on a focused editor panel runs that
-  // panel's command, which a caller driving the game never asked for.
-  if (!bRoutedToPIE && Target != EMcpKeyTarget::Game) {
+  // panel's command, which a caller driving the game never asked for. For the editor only, nothing goes through
+  // Slate while the play viewport holds focus (Play started after an editor press): Slate would hand it to the game.
+  if (!bRoutedToPIE && Target != EMcpKeyTarget::Game &&
+      !(Target == EMcpKeyTarget::Editor && PieViewportHasFocusForMcp())) {
     FSlateApplication &SlateApp = FSlateApplication::Get();
     FKeyEvent KeyEvent(InputKey, FModifierKeysState(), 0, false, 0, 0);
     bHandledBySlate = InputEvent == IE_Released

@@ -1149,7 +1149,7 @@ describe('simulated keys and focused PIE widgets', () => {
   // A key no play session took went to the focused editor panel, sample_motion's inputs (declared read) too, where
   // Delete or End runs that panel's command; a key held into the game and released after Stop let go there as well.
   it('hands a key to the editor only when the caller allows it, never from sample_motion or a game key\'s release', () => {
-    expect(code('ControlEditor', 'McpEditorInputRouting.cpp')).toContain('if (!bRoutedToPIE && Target != EMcpKeyTarget::Game) {');
+    expect(code('ControlEditor', 'McpEditorInputRouting.cpp')).toMatch(/if \(!bRoutedToPIE && Target != EMcpKeyTarget::Game &&\s*!\(Target == EMcpKeyTarget::Editor && PieViewportHasFocusForMcp\(\)\)\) \{/u);
     expect(code('ControlEditor', 'McpEditorSupport.h')).toContain('FString &Message, EMcpKeyTarget Target = EMcpKeyTarget::Any);');
     const motion = code('ControlActor', 'McpActorMotionInputs.cpp');
     expect(motion).toContain('MakeShared<FJsonObject>(), bOk, bRouted, bPIE, bSlate, Message, EMcpKeyTarget::Game);');
@@ -1165,6 +1165,9 @@ describe('simulated keys and focused PIE widgets', () => {
     const drop = input.indexOf('if (!bPressRouted || !bWorldGone) {');
     expect(drop, 'a game press whose world stopped or was replaced sends no release').toBeGreaterThan(-1);
     expect(input.indexOf('bPressRouted ? EMcpKeyTarget::Game : EMcpKeyTarget::Editor', drop)).toBeGreaterThan(drop);
+    // An editor release never reaches the game through Slate once the play viewport has focus.
+    expect(code('ControlEditor', 'McpEditorInputRouting.cpp')).toContain('!(Target == EMcpKeyTarget::Editor && PieViewportHasFocusForMcp())');
+    expect(code('ControlEditor', 'McpEditorWidgetInput.cpp')).toContain('ViewportWidget->HasAnyUserFocusOrFocusedDescendants()');
     const motion = code('ControlActor', 'McpActorMotionInputs.cpp');
     expect(motion).toContain('Input.PressWorld = GEditor ? GEditor->PlayWorld.Get() : nullptr;');
     expect(motion).toMatch(/if \(Input\.bRouted && Input\.PressWorld\.IsValid\(\) && GEditor && Input\.PressWorld\.Get\(\) == GEditor->PlayWorld\.Get\(\)\) \{\s*McpSendMotionKey\(Input\.Key, false\);/u);
