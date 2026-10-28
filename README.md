@@ -200,6 +200,8 @@ Add this to your client's MCP configuration, for example Claude Desktop's `claud
 }
 ```
 
+Or let the package write it: `npx unreal-engine-mcp-server init claude --project C:/Path/To/YourProject` shows the entry for Claude Code's `.mcp.json` (also `cursor`, `vscode`, `gemini` and `codex`), keeping the file's other servers, and `--write` saves it. `npx unreal-engine-mcp-server doctor` checks Node, the token (never shown), the editor's answer and that both sides run the same version.
+
 `UE_PROJECT_PATH` (the project folder or its `.uproject`) is how the proxy finds the capability token (`MCP_AUTOMATION_CAPABILITY_TOKEN` overrides it). `UNREAL_MCP_URL` points it at another endpoint (default `http://127.0.0.1:3000/mcp`). Pair it with a 0.6 plugin; a 0.5.x plugin serves its 23 separate tools instead of the `unreal` gateway.
 
 ### 3. Try it

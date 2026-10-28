@@ -9,7 +9,7 @@ Area-specific guidance lives in nested `AGENTS.md` files (see **AREA GUIDES** be
 ./
 |-- src/                         # NodeNext ESM (strict): the stdio proxy + the contract records
 |   |-- cli.ts constants.ts      # bin entry -> proxy/
-|   |-- proxy/               (1) # stdio in front of the plugin's native /mcp (the whole runtime)
+|   |-- proxy/               (3) # stdio in front of the plugin's native /mcp (the whole runtime) + doctor/init
 |   |-- gateway/             (2) # generated gateway manifest DATA + its types
 |   |-- services/            (1) # telemetry schema (a generator input)
 |   |-- tools/                   # catalog/ (records = contracts, generated/), definitions/
@@ -35,6 +35,7 @@ There is no TypeScript gateway or action layer: search, describe, execute and co
 | Task | Location | Notes |
 |------|----------|-------|
 | The stdio server | `src/cli.ts` -> `src/proxy/native-proxy.ts` | Relays to `UNREAL_MCP_URL` (default `http://127.0.0.1:3000/mcp`): NOT_CONNECTED while the editor is down, a new upstream session after a restart, cached tool list, 2026-07-28 requests sent sessionless |
+| The `doctor` / `init` commands | `src/cli.ts` -> `src/proxy/doctor.ts`, `src/proxy/init.ts` | One-shot terminal commands: Node, token source (never the value), the editor's initialize and versions; a client's MCP config shown, saved only with `--write` |
 | Add/change a tool contract | `src/tools/catalog/capabilities/records/<parent>/` + `records/parent-metadata.ts` | **THE source of truth.** Every `*.generated.*` is an OUTPUT. See `src/tools/catalog/AGENTS.md` |
 | Regenerate contract artifacts | `npm run registry:generate`, then `registry:check` / `manifest:check` | Records -> generated defs + gateway manifest + native registry/shards + action reference doc |
 | Change gateway routing | `.../Private/MCP/Gateway/`, `.../Private/MCP/Execute/` | Native search/describe/execute/configure |
