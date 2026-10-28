@@ -1143,7 +1143,7 @@ describe('simulated keys and focused PIE widgets', () => {
     expect(widgetInput).toMatch(/if \(!ViewportWidget\.IsValid\(\) \|\| !SlateApp\.HasUserFocusedDescendants\(ViewportWidget\.ToSharedRef\(\), 0\)\) \{\s*return false;\s*\}/u);
     expect(widgetInput).toContain('bOutHandled = InputEvent == IE_Released ? SlateApp.ProcessKeyUpEvent(KeyEvent) : SlateApp.ProcessKeyDownEvent(KeyEvent);');
     const routing = code('ControlEditor', 'McpEditorInputRouting.cpp');
-    expect(routing).toMatch(/bRoutedToPIE = Target != EMcpKeyTarget::Editor &&\s*\(RouteKeyToFocusedPieWidgetForMcp\(InputKey, InputEvent, bHandledBySlate, FocusNote\) \|\|\s*RouteKeyToPIEForMcp\(InputKey, InputEvent, bHandledByPIE\)\);/u);
+    expect(routing).toMatch(/bRoutedToPIE = !bWorldGone && Target != EMcpKeyTarget::Editor &&\s*\(RouteKeyToFocusedPieWidgetForMcp\(InputKey, InputEvent, bHandledBySlate, FocusNote\) \|\|\s*RouteKeyToPIEForMcp\(InputKey, InputEvent, bHandledByPIE\)\);/u);
   });
 
   // A key no play session took went to the focused editor panel, sample_motion's inputs (declared read) too, where
@@ -1170,11 +1170,13 @@ describe('simulated keys and focused PIE widgets', () => {
     expect(routing).toContain('!(Target == EMcpKeyTarget::Editor && PieViewportHasFocusForMcp())');
     expect(code('ControlEditor', 'McpEditorWidgetInput.cpp')).toContain('ViewportWidget->HasAnyUserFocusOrFocusedDescendants()');
     // A key_up the caller sends itself names no target: it goes where that key went down, chosen before routing.
-    const recall = routing.indexOf('if (InputEvent == IE_Released && Target == EMcpKeyTarget::Any) {');
+    const recall = routing.indexOf('const FPress Press = bRecall ? PressedTo.FindRef(Key) : FPress{Target, PlayWorld};');
     expect(recall).toBeGreaterThan(-1);
-    expect(recall, 'the press destination is applied before the key is routed').toBeLessThan(routing.indexOf('bRoutedToPIE = Target != EMcpKeyTarget::Editor &&'));
-    expect(routing).toContain('Target = PressedTo.FindRef(Key);');
-    expect(routing).toContain('PressedTo.Add(Key, bRoutedToPIE ? EMcpKeyTarget::Game : EMcpKeyTarget::Editor);');
+    expect(routing).toContain('const bool bRecall = InputEvent == IE_Released && Target == EMcpKeyTarget::Any;');
+    expect(recall, 'the press destination is applied before the key is routed').toBeLessThan(routing.indexOf('bRoutedToPIE = !bWorldGone && Target != EMcpKeyTarget::Editor &&'));
+    // A game press keeps its play world: after Stop and a new Play, its release reaches neither session.
+    expect(routing).toContain('const bool bWorldGone = Press.Target == EMcpKeyTarget::Game && Press.World.Get() != PlayWorld;');
+    expect(routing).toContain('PressedTo.Add(Key, bRoutedToPIE ? FPress{EMcpKeyTarget::Game, PlayWorld} : FPress{EMcpKeyTarget::Editor});');
     const motion = code('ControlActor', 'McpActorMotionInputs.cpp');
     expect(motion).toContain('Input.PressWorld = GEditor ? GEditor->PlayWorld.Get() : nullptr;');
     expect(motion).toMatch(/if \(Input\.bRouted && Input\.PressWorld\.IsValid\(\) && GEditor && Input\.PressWorld\.Get\(\) == GEditor->PlayWorld\.Get\(\)\) \{\s*McpSendMotionKey\(Input\.Key, false\);/u);

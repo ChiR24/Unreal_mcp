@@ -142,14 +142,19 @@ void SimulateKeyInputForMcp(const FString &Key, const EInputEvent InputEvent, co
   }
 
   // A release that names no target goes where its press went, not wherever input goes now: a key pressed in the
-  // editor was let go into a game started since, and one pressed into a game into the editor once Play stopped.
-  static TMap<FString, EMcpKeyTarget> PressedTo;
-  if (InputEvent == IE_Released && Target == EMcpKeyTarget::Any) {
-    Target = PressedTo.FindRef(Key);
-  }
+  // editor was let go into a game started since, and one pressed into a game into the editor once Play stopped. A
+  // game press keeps its play world, and once that world stopped or was replaced there is nothing left to let go.
+  // A release with no recorded press (a module reload lost it) is still routed as asked, so no key stays stuck.
+  struct FPress { EMcpKeyTarget Target = EMcpKeyTarget::Any; TWeakObjectPtr<UWorld> World; };
+  static TMap<FString, FPress> PressedTo;
+  UWorld *const PlayWorld = GEditor ? GEditor->PlayWorld.Get() : nullptr;
+  const bool bRecall = InputEvent == IE_Released && Target == EMcpKeyTarget::Any;
+  const FPress Press = bRecall ? PressedTo.FindRef(Key) : FPress{Target, PlayWorld};
+  const bool bWorldGone = Press.Target == EMcpKeyTarget::Game && Press.World.Get() != PlayWorld;
+  Target = Press.Target;
   // A menu widget the game focused takes the key through Slate first, as a real key reaches it.
   FString FocusNote;
-  bRoutedToPIE = Target != EMcpKeyTarget::Editor &&
+  bRoutedToPIE = !bWorldGone && Target != EMcpKeyTarget::Editor &&
                  (RouteKeyToFocusedPieWidgetForMcp(InputKey, InputEvent, bHandledBySlate, FocusNote) ||
                   RouteKeyToPIEForMcp(InputKey, InputEvent, bHandledByPIE));
   // For the game only, a key no play session took goes nowhere: Delete or End on a focused editor panel runs that
@@ -166,7 +171,7 @@ void SimulateKeyInputForMcp(const FString &Key, const EInputEvent InputEvent, co
   if (InputEvent == IE_Released || !(bRoutedToPIE || bToEditor)) {
     PressedTo.Remove(Key);
   } else {
-    PressedTo.Add(Key, bRoutedToPIE ? EMcpKeyTarget::Game : EMcpKeyTarget::Editor);
+    PressedTo.Add(Key, bRoutedToPIE ? FPress{EMcpKeyTarget::Game, PlayWorld} : FPress{EMcpKeyTarget::Editor});
   }
   bSuccess = true;
   Message = bRoutedToPIE
@@ -283,14 +288,11 @@ void SimulateEditorInputForMcp(const FString &InputType, const FString &Key, con
     SlateApp.ProcessMouseMoveEvent(PreClickMove);
     SyntheticCursorPosForMcp() = Position;
 
-    FPointerEvent MouseDownEvent(0, Position, Position, PressedButtons,
-                                 MouseButtonKey, 0.0f, FModifierKeysState());
-    const bool bDownHandled =
-        SlateApp.ProcessMouseButtonDownEvent(nullptr, MouseDownEvent);
+    FPointerEvent MouseDownEvent(0, Position, Position, PressedButtons, MouseButtonKey, 0.0f, FModifierKeysState());
+    const bool bDownHandled = SlateApp.ProcessMouseButtonDownEvent(nullptr, MouseDownEvent);
 
     TSet<FKey> ReleasedButtons;
-    FPointerEvent MouseUpEvent(0, Position, Position, ReleasedButtons,
-                               MouseButtonKey, 0.0f, FModifierKeysState());
+    FPointerEvent MouseUpEvent(0, Position, Position, ReleasedButtons, MouseButtonKey, 0.0f, FModifierKeysState());
     const bool bUpHandled = SlateApp.ProcessMouseButtonUpEvent(MouseUpEvent);
     if (PlatformCursor.IsValid()) {
       PlatformCursor->SetPosition(static_cast<int32>(RestoreCursorTo.X),
