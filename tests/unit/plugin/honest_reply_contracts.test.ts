@@ -10,7 +10,7 @@ import { describe, expect, it } from 'vitest';
 import { capabilityIndex } from '../support/capability-index.js';
 import { validateAgainstCapabilitySchema } from '../support/schema-validate.js';
 import { isRecord } from '../../../src/utils/validation/type-guards.js';
-import { sliceBetween } from './plugin-contract-fixtures.js';
+import { countPureLines, sliceBetween } from './plugin-contract-fixtures.js';
 
 const DOMAINS = join('plugins', 'EngineWire', 'Source', 'EngineWire', 'Private', 'Domains');
 
@@ -1278,6 +1278,7 @@ describe('tapped keys with no play session', () => {
   it('the release of an editor key reads no play world', () => {
     // Up to the function's own closing brace: code() strips the "// namespace" after it.
     const source = sliceBetween(code('ControlEditor', 'McpEditorInput.cpp'), 'void ScheduleKeyReleaseForMcp(', '\n}');
+    expect(countPureLines(source)).toBeLessThan(60); // the function alone, never the rest of the file
     expect(source).toContain('const AWorldSettings *Settings = (bGameTime && !bWorldGone) ? Live->GetWorldSettings() : nullptr;');
     expect(source).not.toContain('bWorldGone ? nullptr : Live->GetWorldSettings()');
   });
