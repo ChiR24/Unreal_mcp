@@ -1,5 +1,5 @@
 {
-  "catalogRevision": "64478f6dcbec006f",
+  "catalogRevision": "69718273ee2a3d8c",
   "recordCount": 453,
   "records": [
     {
@@ -41521,7 +41521,7 @@
                 ],
                 "additionalProperties": false
               },
-              "description": "Keys pressed and released at exact game times during the run (at most 32), e.g. [{\"key\":\"D\",\"atSeconds\":0,\"holdSeconds\":2},{\"key\":\"SpaceBar\",\"atSeconds\":0.6,\"holdSeconds\":0.2}]. A key still held when the run ends is released. Keys go to the game only (a focused game widget, else its viewport and player), never to an editor panel: a key no play session takes is sent nowhere and marked routedToPIE false, and a release after Play stopped is dropped."
+              "description": "Keys pressed and released at exact game times during the run (at most 32), e.g. [{\"key\":\"D\",\"atSeconds\":0,\"holdSeconds\":2},{\"key\":\"SpaceBar\",\"atSeconds\":0.6,\"holdSeconds\":0.2}]. A key still held when the run ends is released. Keys go to the game only (a focused game widget, else its viewport and player), never to an editor panel: a key no play session takes is sent nowhere and marked routedToPIE false, and a release after Play stopped is dropped. Pressing keys acts on the game (Escape stops Play), so a call that sends inputs needs the write scope, unlike watching alone, and is not safe to retry: a retry presses them again."
             },
             "points": {
               "type": "array",
@@ -41793,7 +41793,10 @@
       "policy": {
         "requiredScope": "read",
         "consent": "none",
-        "dataAccess": "project-read"
+        "dataAccess": "project-read",
+        "raisedBy": {
+          "inputs": "write"
+        }
       },
       "cost": {
         "latency": "interactive",
@@ -41862,8 +41865,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "195aee7639756fb81ee78c3bd670a9946048121ca4ea6ebe0ba26e1bf2169455",
-        "content": "d845b44c5b52f4c9ed22e4e744e31d6b58fe87335327c64e1c09a61d769404e1"
+        "schema": "98426688a0daccefcb332d83e57a6f919cb8cc9ded05cd1a5ea5e003f1f404a5",
+        "content": "e1925daac623eef2123a5e36b084f598f36226985a7099d079aa246acd3a77c6"
       }
     },
     {

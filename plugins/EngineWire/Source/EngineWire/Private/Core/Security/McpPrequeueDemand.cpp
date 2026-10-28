@@ -90,6 +90,36 @@ void ReadPolicy(const FMcpCapabilityRecord& Record, EMcpCapabilityScope& OutScop
 	}
 }
 
+// A parameter the record lists under policy.raisedBy turns the call into more than its own scope: sample_motion
+// watches (read), but its inputs press keys in the game, and Escape stops Play. Sending one demands that scope.
+// Presence counts, an empty value included, and the demand only ever goes up.
+void RaiseForPayload(const FMcpCapabilityRecord& Record, const TSharedPtr<FJsonObject>& Payload,
+                     EMcpCapabilityScope& InOutScope)
+{
+	const TSharedPtr<FJsonObject>* RaisedBy = nullptr;
+	if (!Payload.IsValid() || !Record.Policy.IsValid() ||
+		!Record.Policy->TryGetObjectField(TEXT("raisedBy"), RaisedBy) || !RaisedBy)
+	{
+		return;
+	}
+	for (const TPair<FString, TSharedPtr<FJsonValue>> Pair : (*RaisedBy)->Values)
+	{
+		if (!Payload->HasField(Pair.Key))
+		{
+			continue;
+		}
+		// An unreadable entry demands Admin, as an unknown scope string does.
+		FString ScopeText;
+		const EMcpCapabilityScope Raised = Pair.Value.IsValid() && Pair.Value->TryGetString(ScopeText)
+			? ScopeFromString(ScopeText)
+			: EMcpCapabilityScope::Admin;
+		if (ScopeStrictness(Raised) > ScopeStrictness(InOutScope))
+		{
+			InOutScope = Raised;
+		}
+	}
+}
+
 // Does this capability declare somewhere to write? Answered from the canonical
 // record's own input schema, using the SAME key predicate payload collection
 // uses, so "path parameter" cannot mean two different things on the two sides of
@@ -140,13 +170,15 @@ void CollectConsentNames(const FMcpCapabilityRecord& Record, TArray<FString>& Ou
 	}
 }
 
-bool FindById(const FString& Id, const FMcpCapabilityStore& Store, FMcpCapabilityDemand& OutDemand)
+bool FindById(const FString& Id, const TSharedPtr<FJsonObject>& Payload, const FMcpCapabilityStore& Store,
+              FMcpCapabilityDemand& OutDemand)
 {
 	for (const FMcpCapabilityRecord& Record : Store.GetRecords())
 	{
 		if (Record.Id.Equals(Id, ESearchCase::CaseSensitive))
 		{
 			ReadPolicy(Record, OutDemand.RequiredScope, OutDemand.ConsentMode);
+			RaiseForPayload(Record, Payload, OutDemand.RequiredScope);
 			OutDemand.CapabilityId = Record.Id;
 			CollectConsentNames(Record, OutDemand.ConsentNames);
 			OutDemand.bDeclaresPathParameter = DeclaresPathParameter(Record);
@@ -171,7 +203,7 @@ FMcpCapabilityDemand ResolveDemand(const FMcpPrequeueRequest& Request)
 
 	if (!Request.CapabilityId.IsEmpty())
 	{
-		FindById(Request.CapabilityId, Store, Demand);
+		FindById(Request.CapabilityId, Request.Payload, Store, Demand);
 		return Demand;
 	}
 
@@ -238,6 +270,7 @@ FMcpCapabilityDemand ResolveDemand(const FMcpPrequeueRequest& Request)
 		EMcpCapabilityScope Scope = EMcpCapabilityScope::Admin;
 		FString Consent;
 		ReadPolicy(*Record, Scope, Consent);
+		RaiseForPayload(*Record, Request.Payload, Scope);
 		if (ScopeStrictness(Scope) > BestScope)
 		{
 			BestScope = ScopeStrictness(Scope);

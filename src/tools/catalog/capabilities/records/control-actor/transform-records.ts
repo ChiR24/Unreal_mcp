@@ -244,7 +244,7 @@ export const TRANSFORM_RECORDS: readonly CapabilityRecordSource[] = [
             required: ['key'],
             additionalProperties: false,
           },
-          description: 'Keys pressed and released at exact game times during the run (at most 32), e.g. [{"key":"D","atSeconds":0,"holdSeconds":2},{"key":"SpaceBar","atSeconds":0.6,"holdSeconds":0.2}]. A key still held when the run ends is released. Keys go to the game only (a focused game widget, else its viewport and player), never to an editor panel: a key no play session takes is sent nowhere and marked routedToPIE false, and a release after Play stopped is dropped.',
+          description: 'Keys pressed and released at exact game times during the run (at most 32), e.g. [{"key":"D","atSeconds":0,"holdSeconds":2},{"key":"SpaceBar","atSeconds":0.6,"holdSeconds":0.2}]. A key still held when the run ends is released. Keys go to the game only (a focused game widget, else its viewport and player), never to an editor panel: a key no play session takes is sent nowhere and marked routedToPIE false, and a release after Play stopped is dropped. Pressing keys acts on the game (Escape stops Play), so a call that sends inputs needs the write scope, unlike watching alone, and is not safe to retry: a retry presses them again.',
         },
         points: {
           type: 'array', items: { type: 'string' }, maxItems: 8,
@@ -302,6 +302,8 @@ export const TRANSFORM_RECORDS: readonly CapabilityRecordSource[] = [
       },
       outputRequired: [],
       effect: 'read',
+      // Watching is a read; pressing keys acts on the game.
+      policyOverride: { raisedBy: { inputs: 'write' } },
       costLatency: 'interactive',
       exampleInput: { action: 'sample_motion', actorName: 'PlayerPawn', durationSeconds: 1.5, propertyNames: ['bDead'] },
       exampleOutput: {

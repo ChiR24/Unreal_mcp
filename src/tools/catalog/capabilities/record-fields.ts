@@ -62,7 +62,8 @@ const behaviorSchema = z.strictObject({
 const policySchema = z.strictObject({
   requiredScope: z.enum(POLICY_SCOPES),
   consent: z.enum(CONSENT_MODES),
-  dataAccess: z.enum(DATA_ACCESS_CLASSES)
+  dataAccess: z.enum(DATA_ACCESS_CLASSES),
+  raisedBy: z.record(z.string().min(1), z.enum(POLICY_SCOPES)).optional()
 });
 
 const costSchema = z.strictObject({

@@ -12,6 +12,9 @@ import { sameJson, unique } from './fold-support.js';
 const isStringList = (value: unknown): value is readonly string[] => Array.isArray(value);
 
 const actionOf = (record: CapabilityRecordSource): string => String(record.legacyIds[0]?.action ?? '');
+// policy.raisedBy belongs to the member that declares the parameter and is merged into the family (fold-build), so
+// it may differ; it only ever tightens a call, so it cannot widen the family's policy.
+const basePolicy = ({ policy }: CapabilityRecordSource) => ({ requiredScope: policy.requiredScope, consent: policy.consent, dataAccess: policy.dataAccess });
 const namespaceOf = (id: string): string => id.slice(0, id.lastIndexOf('.'));
 
 export function entriesOf(spec: FoldSpec): readonly MemberEntry[] {
@@ -58,7 +61,7 @@ export function assertFoldable(spec: FoldSpec, members: readonly CapabilityRecor
     }
     const facets: ReadonlyArray<readonly [string, unknown, unknown]> = [
       ['behavior.effect', first.behavior.effect, member.behavior.effect],
-      ['policy', first.policy, member.policy],
+      ['policy', basePolicy(first), basePolicy(member)],
       ['availability', first.availability, member.availability],
       ['discovery.family', first.discovery.family, member.discovery.family],
       ['discovery.domain', first.discovery.domain, member.discovery.domain],
