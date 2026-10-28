@@ -131,9 +131,7 @@ void SimulateKeyInputForMcp(const FString &Key, const EInputEvent InputEvent, co
                             bool &bSuccess, bool &bRoutedToPIE, bool &bHandledByPIE, bool &bHandledBySlate,
                             FString &Message) {
   if (Key.IsEmpty()) {
-    Message =
-        InputEvent == IE_Released ? TEXT("Key parameter required for key_up")
-                                  : TEXT("Key parameter required for key_down");
+    Message = InputEvent == IE_Released ? TEXT("Key parameter required for key_up") : TEXT("Key parameter required for key_down");
     return;
   }
 
@@ -143,6 +141,12 @@ void SimulateKeyInputForMcp(const FString &Key, const EInputEvent InputEvent, co
     return;
   }
 
+  // A release that names no target goes where its press went, not wherever input goes now: a key pressed in the
+  // editor was let go into a game started since, and one pressed into a game into the editor once Play stopped.
+  static TMap<FString, EMcpKeyTarget> PressedTo;
+  if (InputEvent == IE_Released && Target == EMcpKeyTarget::Any) {
+    Target = PressedTo.FindRef(Key);
+  }
   // A menu widget the game focused takes the key through Slate first, as a real key reaches it.
   FString FocusNote;
   bRoutedToPIE = Target != EMcpKeyTarget::Editor &&
@@ -151,13 +155,18 @@ void SimulateKeyInputForMcp(const FString &Key, const EInputEvent InputEvent, co
   // For the game only, a key no play session took goes nowhere: Delete or End on a focused editor panel runs that
   // panel's command, which a caller driving the game never asked for. For the editor only, nothing goes through
   // Slate while the play viewport holds focus (Play started after an editor press): Slate would hand it to the game.
-  if (!bRoutedToPIE && Target != EMcpKeyTarget::Game &&
-      !(Target == EMcpKeyTarget::Editor && PieViewportHasFocusForMcp())) {
+  const bool bToEditor = !bRoutedToPIE && Target != EMcpKeyTarget::Game &&
+                         !(Target == EMcpKeyTarget::Editor && PieViewportHasFocusForMcp());
+  if (bToEditor) {
     FSlateApplication &SlateApp = FSlateApplication::Get();
     FKeyEvent KeyEvent(InputKey, FModifierKeysState(), 0, false, 0, 0);
-    bHandledBySlate = InputEvent == IE_Released
-                          ? SlateApp.ProcessKeyUpEvent(KeyEvent)
-                          : SlateApp.ProcessKeyDownEvent(KeyEvent);
+    bHandledBySlate = InputEvent == IE_Released ? SlateApp.ProcessKeyUpEvent(KeyEvent) : SlateApp.ProcessKeyDownEvent(KeyEvent);
+  }
+  // A press that reached nothing leaves no destination behind, and a release forgets it.
+  if (InputEvent == IE_Released || !(bRoutedToPIE || bToEditor)) {
+    PressedTo.Remove(Key);
+  } else {
+    PressedTo.Add(Key, bRoutedToPIE ? EMcpKeyTarget::Game : EMcpKeyTarget::Editor);
   }
   bSuccess = true;
   Message = bRoutedToPIE
@@ -263,18 +272,14 @@ void SimulateEditorInputForMcp(const FString &InputType, const FString &Key, con
     // made automation unusable alongside other work, so put it back where the
     // person left it as soon as the release has been routed: they see at most a
     // single-frame blip instead of losing their pointer.
-    TSharedPtr<ICursor> PlatformCursor =
-        SlateApp.GetPlatformCursor().IsValid() ? SlateApp.GetPlatformCursor() : nullptr;
-    const FVector2D RestoreCursorTo =
-        PlatformCursor.IsValid() ? FVector2D(PlatformCursor->GetPosition()) : Position;
+    TSharedPtr<ICursor> PlatformCursor = SlateApp.GetPlatformCursor();
+    const FVector2D RestoreCursorTo = PlatformCursor.IsValid() ? FVector2D(PlatformCursor->GetPosition()) : Position;
     if (PlatformCursor.IsValid()) {
       PlatformCursor->SetPosition(static_cast<int32>(Position.X),
                                   static_cast<int32>(Position.Y));
     }
     TSet<FKey> NoButtons;
-    FPointerEvent PreClickMove(0, Position, SyntheticCursorPosForMcp(),
-                               NoButtons, EKeys::Invalid, 0.0f,
-                               FModifierKeysState());
+    FPointerEvent PreClickMove(0, Position, SyntheticCursorPosForMcp(), NoButtons, EKeys::Invalid, 0.0f, FModifierKeysState());
     SlateApp.ProcessMouseMoveEvent(PreClickMove);
     SyntheticCursorPosForMcp() = Position;
 
