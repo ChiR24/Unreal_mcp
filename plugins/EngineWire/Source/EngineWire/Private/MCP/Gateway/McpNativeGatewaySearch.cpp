@@ -202,7 +202,8 @@ TSharedPtr<FJsonObject> McpGatewaySearchCapabilities(
 	const bool bConfident = !Query.IsEmpty() && Offset == 0 && Scored.Num() > 0 && Scored[0].Score > 0 &&
 		(Scored.Num() == 1 || Scored[1].Score * 100 <= Scored[0].Score * McpSearchConfidentRatioPercent) &&
 		Scored[0].Record->Policy.IsValid() && Scored[0].Record->Policy->TryGetStringField(TEXT("consent"), TopConsent) &&
-		TopConsent.Equals(TEXT("none"), ESearchCase::CaseSensitive) && IsToolEnabled(Scored[0].Record->Parent);
+		TopConsent.Equals(TEXT("none"), ESearchCase::CaseSensitive) && IsToolEnabled(Scored[0].Record->Parent) &&
+		McpRunsOnThisEngine(*Scored[0].Record);
 
 	const int32 Total = Scored.Num();
 	TArray<TSharedPtr<FJsonValue>> Results;

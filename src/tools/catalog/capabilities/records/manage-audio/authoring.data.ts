@@ -106,7 +106,7 @@ export const AUDIO_AUTHORING_RECORDS: readonly CapabilityRecordSource[] = [
   a('disconnect_metasound_nodes', 'Remove a link from a MetaSound graph: the one into targetNodeId.targetInputName, or every link out of sourceNodeId.sourceOutputName; with both ends given, that exact link. Refused when there is no such link.', ['assetPath', 'sourceNodeId', 'sourceOutputName', 'targetNodeId', 'targetInputName', 'save'], ['assetPath'], ['edgesRemoved', 'saved'], ['edgesRemoved'], META, ['targetNodeId', 'sourceNodeId']),
   { ...withTopics(utilityRecord({
     tool: T, action: 'get_metasound_graph', family: 'metasound', summary: 'Read a MetaSound graph: every node with its input literals, the links by pin name, and the graph inputs and outputs.',
-    params: ['assetPath'], required: ['assetPath'], effect: 'read', plugins: META,
+    params: ['assetPath'], required: ['assetPath'], effect: 'read', plugins: META, minEngineVersion: '5.5',
     outputs: ['assetPath', 'nodeCount', 'edgeCount', 'nodes', 'edges', 'graphInputs', 'graphOutputs'], outputRequired: ['nodes', 'edges'],
   }), ['read metasound graph', 'metasound nodes', 'inspect metasound', 'metasound links']), examples: [{ title: 'Read a one-oscillator MetaSound', ...GET_METASOUND_GRAPH_EXAMPLE }] },
   // A node's class name was a guess until add_node refused it: nothing listed what the registry holds.

@@ -8,6 +8,7 @@
 #include "MCP/Gateway/McpNativeGatewayDescribe.h"
 #include "MCP/Gateway/McpNativeGatewayGuidance.h"
 #include "MCP/Gateway/McpNativeGatewayCapabilityStore.h"
+#include "MCP/Gateway/McpNativeGatewayCatalog.h"
 #include "MCP/Registry/McpToolDefinition.h"
 #include "MCP/Registry/McpToolRegistry.h"
 
@@ -148,7 +149,8 @@ TSharedPtr<FJsonObject> DescribeFamily(const FMcpCapabilityStore& Store, const F
 		Row->SetStringField(TEXT("action"), McpCapabilityPublicAction(*Record));
 		Row->SetStringField(TEXT("summary"), Record->Summary);
 		Row->SetStringField(TEXT("effect"), Record->Effect);
-		Row->SetStringField(TEXT("availability"), IsToolEnabled(Record->Parent) ? TEXT("available") : TEXT("disabled"));
+		Row->SetStringField(TEXT("availability"), !IsToolEnabled(Record->Parent) ? TEXT("disabled")
+			: McpRunsOnThisEngine(*Record) ? TEXT("available") : TEXT("unavailable"));
 		const TSharedPtr<FJsonObject> Next = GatewayBuildNextCall(TEXT("describe"), FString(), FString(), FString());
 		Next->SetStringField(TEXT("capability"), Record->Id);
 		Row->SetObjectField(TEXT("nextCall"), Next);

@@ -76,6 +76,12 @@ export type CapabilityExample = {
 export type CapabilityAvailability = {
   readonly requiredPlugins: readonly string[];
   readonly editorStates: readonly (typeof EDITOR_STATES)[number][];
+  /**
+   * The first engine ("5.4") whose build of the plugin has this capability's handler, when an older 5.x compiles it
+   * out. The plugin compares it with the engine it runs in: search and describe read the capability unavailable
+   * there and execute refuses it ENGINE_VERSION_UNSUPPORTED. Absent when every supported 5.x has it.
+   */
+  readonly minEngineVersion?: string;
 };
 
 /** How to reverse a successful call: an inverse capability, or a manual cleanup note. */

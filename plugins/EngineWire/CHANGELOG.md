@@ -6,7 +6,8 @@ All notable changes to the EngineWire plugin (formerly McpAutomationBridge) will
 
 ## [Unreleased]
 
-_Nothing yet._
+### Added
+- **Engine version gate**: a record's `availability.minEngineVersion` is compared with the running engine; below it search and describe read the capability `unavailable` (reason `engine_version`, not runnable, no confident-hit `executeCall`) and execute refuses it `ENGINE_VERSION_UNSUPPORTED` before dispatch. Declared by `manage_geometry` (5.1), `get_metasound_graph` and `skin_mesh_to_skeleton` (5.5) and `setup_retargeting` (5.8), whose handlers compile out below those versions.
 
 ## [0.6.0] - 2026-10-27
 

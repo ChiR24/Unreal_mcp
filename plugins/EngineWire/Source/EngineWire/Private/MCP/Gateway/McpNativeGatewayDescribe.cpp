@@ -199,7 +199,7 @@ TSharedPtr<FJsonObject> CapabilityContract(
 	Out->SetArrayField(TEXT("parameters"), Parameters);
 	Out->SetStringField(TEXT("parentTool"), Record.Parent);
 	SetObjectOrEmpty(Out, TEXT("policy"), Record.Policy);
-	Out->SetBoolField(TEXT("runnable"), bAvailable);
+	Out->SetBoolField(TEXT("runnable"), bAvailable && McpRunsOnThisEngine(Record));
 	Out->SetStringField(TEXT("scope"), TEXT("capability"));
 	Out->SetBoolField(TEXT("success"), true);
 	Out->SetStringField(TEXT("summary"), Record.Summary);

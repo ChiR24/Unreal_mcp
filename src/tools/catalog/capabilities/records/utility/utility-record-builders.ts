@@ -30,6 +30,8 @@ export type UtilityRecordSpec = {
   readonly outputRequired?: readonly string[];
   readonly plugins?: readonly string[];
   readonly states?: readonly ('edit' | 'pie' | 'simulate')[];
+  /** The first engine ("5.5") whose build has the handler, when older 5.x builds compile it out. */
+  readonly minEngineVersion?: string;
   readonly effect?: Effect;
   readonly safeToRetry?: boolean;
   readonly supportsUndo?: boolean;
@@ -73,6 +75,7 @@ export function utilityRecord(spec: UtilityRecordSpec): CapabilityRecordSource {
     availability: {
       requiredPlugins: [...(spec.plugins ?? [])],
       editorStates: [...(spec.states ?? ['edit'])],
+      ...(spec.minEngineVersion === undefined ? {} : { minEngineVersion: spec.minEngineVersion }),
     },
     behavior: behavior(effect, { safeToRetry: spec.safeToRetry }),
     policy: policy(effect),

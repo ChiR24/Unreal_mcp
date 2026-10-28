@@ -151,15 +151,14 @@ TSharedPtr<FJsonObject> ValidateAndResolveGatewayExecute(
 			GatewaySchemaViolationGuidance(ParentTool, LegacyAction, Violation.Pointer, InputSchema));
 	}
 
-	// Editor-state gate (dogfood #91): a capability whose editorStates exclude
-	// "edit" needs a running world; refuse it up front in plain edit mode.
+	// Availability gate: an engine older than the record's minEngineVersion, or (dogfood #91) a capability whose
+	// editorStates exclude "edit" with no running world; refused up front instead of failing deep in a handler.
 	{
-		FString EditorStateMessage;
-		if (!McpCheckEditorStateGate(*Request.Record, EditorStateMessage))
+		FString GateCode;
+		FString GateMessage;
+		if (!McpCheckAvailabilityGate(*Request.Record, GateCode, GateMessage))
 		{
-			return McpBuildErrorReceipt(Request.CapabilityId,
-				McpValidationError(TEXT("EDITOR_STATE_MISMATCH"), EditorStateMessage),
-				Context, nullptr);
+			return McpBuildErrorReceipt(Request.CapabilityId, McpValidationError(GateCode, GateMessage), Context, nullptr);
 		}
 	}
 	// Pre-dispatch policy seam: a client that pinned the catalog revision
