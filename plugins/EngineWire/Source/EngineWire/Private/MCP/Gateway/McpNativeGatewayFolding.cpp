@@ -43,6 +43,7 @@ bool ParseLegacyPairs(const TSharedPtr<FJsonObject>& Record, FMcpCapabilityRecor
 		{
 			Parsed.FoldedPins = *Folded;
 		}
+		(*Pair)->TryGetStringArrayField(TEXT("aliases"), Parsed.Aliases);
 		Out.LegacyPairs.Add(MoveTemp(Parsed));
 	}
 	// The first pair is the advertised primary; folding it would leave the
@@ -148,15 +149,25 @@ const FMcpLegacyPair* McpFindLegacyPair(const FMcpCapabilityRecord& Record, cons
 	return nullptr;
 }
 
-FString McpRequestedLegacyAction(const TSharedPtr<FJsonObject>& GatewayParams, const FString& RecordId)
+FString McpRequestedLegacyAction(const TSharedPtr<FJsonObject>& GatewayParams, const FMcpCapabilityRecord& Record)
 {
 	const FString Action = FoldingReadString(GatewayParams, TEXT("action"));
+	const FString Capability = FoldingReadString(GatewayParams, TEXT("capability"));
+	// An alias a fold member declared names that member's pair (blueprint.add_component_to_blueprint is
+	// add_scs_component), in the capability field or written as tool and action; its last segment names no pair, so
+	// the family's primary ran, or a required selector refused it. A pair the action names still wins.
+	const FString Named = Capability.IsEmpty() ? FoldingReadString(GatewayParams, TEXT("tool")) + TEXT(".") + Action : Capability;
+	const FMcpLegacyPair* Carrier = Record.LegacyPairs.FindByPredicate(
+		[&Named](const FMcpLegacyPair& Pair) { return Pair.Aliases.Contains(Named); });
+	if (Carrier && !McpFindLegacyPair(Record, Action))
+	{
+		return Carrier->Action;
+	}
 	if (!Action.IsEmpty())
 	{
 		return Action;
 	}
-	const FString Capability = FoldingReadString(GatewayParams, TEXT("capability"));
-	if (Capability.IsEmpty() || Capability.Equals(RecordId, ESearchCase::CaseSensitive))
+	if (Capability.IsEmpty() || Capability.Equals(Record.Id, ESearchCase::CaseSensitive))
 	{
 		return FString();
 	}

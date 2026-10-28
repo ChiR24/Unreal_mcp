@@ -4,10 +4,12 @@
 // pair — these pin the merge rules directly, independent of any one fold.
 import { describe, expect, it } from 'vitest';
 import type { CapabilityRecordSource, JsonObject } from '../../../src/tools/catalog/capabilities/model.js';
+import { CapabilityAliasSchema } from '../../../src/tools/catalog/capabilities/identifiers.js';
 import { createCapabilityRecord } from '../../../src/tools/catalog/capabilities/parser.js';
 import { buildCoreRecord } from '../../../src/tools/catalog/capabilities/records/core/builder.js';
 import { applyFolds, byName, type FoldSpec } from '../../../src/tools/catalog/capabilities/records/shared/fold.js';
 import { ALL_CAPABILITY_RECORDS } from '../../../src/tools/catalog/capabilities/records/aggregate.js';
+import { ALL_UNFOLDED_CAPABILITY_SOURCES } from '../../../src/tools/catalog/capabilities/records/unfolded.js';
 
 const member = (
   action: string,
@@ -346,6 +348,73 @@ describe('applyFolds position math and throw paths', () => {
 
   it('byName derives selector values from the actions themselves', () => {
     expect(byName(['a', 'b'])).toEqual({ a: 'a', b: 'b' });
+  });
+});
+
+// The gateway reads an alias's variant off the pair carrying it: gathered on the folded record alone, an alias a
+// member declared (blueprint.add_component_to_blueprint, add_scs_component's) ran the family's primary, or was
+// refused for a selector edit_scs requires.
+describe('an alias a folded member declared names that member', () => {
+  const aliased = (action: string, aliases: readonly string[]): CapabilityRecordSource => ({
+    ...member(action, {}, []),
+    aliases: aliases.map((alias) => CapabilityAliasSchema.parse(alias)),
+  });
+  const pairOf = (record: CapabilityRecordSource, action: string) =>
+    record.legacyIds.find((legacy) => String(legacy.action) === action);
+
+  it('rides on that member\'s pair beside its pins', () => {
+    const record = applyFolds([aliased('q_one', []), aliased('q_two', ['system_control.find_two'])], [FOLD], 'system_control')[0] as CapabilityRecordSource;
+    expect(pairOf(record, 'q_two')).toEqual({ tool: 'system_control', action: 'q_two', folded: { which: 'two' }, aliases: ['system_control.find_two'] });
+    expect(pairOf(record, 'q_one')?.aliases).toBeUndefined();
+    expect(record.aliases.map(String)).toContain('system_control.find_two');
+    expect(() => createCapabilityRecord(record)).not.toThrow();
+  });
+
+  it('leaves the primary member\'s aliases on the record alone: they run the primary already', () => {
+    const record = applyFolds(
+      [aliased('q_one', ['system_control.find_one']), aliased('q_two', [])],
+      [{ ...FOLD, primary: 'q_one' }],
+      'system_control',
+    )[0] as CapabilityRecordSource;
+    expect(record.legacyIds[0]?.aliases).toBeUndefined();
+    expect(record.aliases.map(String)).toContain('system_control.find_one');
+  });
+
+  it('gives a name standing in with another member\'s record none of that member\'s aliases', () => {
+    const record = applyFolds(
+      [aliased('q_one', []), aliased('q_two', ['system_control.find_two'])],
+      [{ ...FOLD, aliasMembers: { two: 'invented_name' } }],
+      'system_control',
+    )[0] as CapabilityRecordSource;
+    expect(pairOf(record, 'invented_name')?.aliases).toBeUndefined();
+    expect(pairOf(record, 'q_two')?.aliases?.map(String)).toEqual(['system_control.find_two']);
+  });
+
+  it('is refused on a pair when the record does not carry the alias, or on the primary pair', () => {
+    const record = applyFolds([aliased('q_one', []), aliased('q_two', ['system_control.find_two'])], [FOLD], 'system_control')[0] as CapabilityRecordSource;
+    expect(() => createCapabilityRecord({ ...record, aliases: [] })).toThrow(/only a folded pair carries aliases/);
+    const onPrimary = record.legacyIds.map((legacy, position) => (position === 0 ? { ...legacy, aliases: record.aliases } : legacy));
+    expect(() => createCapabilityRecord({ ...record, legacyIds: onPrimary })).toThrow(/only a folded pair carries aliases/);
+  });
+
+  it('reaches the shipped catalog: every alias a non-primary member declared is on that member\'s pair', () => {
+    const family = new Map(ALL_CAPABILITY_RECORDS.flatMap((record) => record.aliases.map((alias) => [String(alias), record] as const)));
+    const misrouted: string[] = [];
+    for (const source of ALL_UNFOLDED_CAPABILITY_SOURCES) {
+      const action = String(source.legacyIds[0]?.action);
+      for (const alias of source.aliases.map(String)) {
+        const record = family.get(alias);
+        if (record === undefined || record.legacyIds.length < 2) continue;
+        const carrier = record.legacyIds.find((legacy) => legacy.aliases?.map(String).includes(alias));
+        const expected = String(record.legacyIds[0]?.action) === action ? undefined : action;
+        if ((carrier === undefined ? undefined : String(carrier.action)) !== expected) misrouted.push(`${alias} (${action})`);
+      }
+    }
+    expect(misrouted).toEqual([]);
+    const scs = ALL_CAPABILITY_RECORDS.find((record) => String(record.id) === 'blueprint.edit_scs');
+    expect(scs === undefined ? undefined : pairOf(scs, 'add_scs_component')).toMatchObject({
+      folded: { edit: 'add_scs_component' }, aliases: ['blueprint.add_component_to_blueprint'],
+    });
   });
 });
 

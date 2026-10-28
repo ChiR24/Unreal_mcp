@@ -1,5 +1,5 @@
 {
-  "catalogRevision": "e3e9606420123395",
+  "catalogRevision": "6db177880986060d",
   "recordCount": 463,
   "records": [
     {
@@ -12608,7 +12608,10 @@
           "action": "search_assets",
           "folded": {
             "lookup": "search"
-          }
+          },
+          "aliases": [
+            "asset.find_assets"
+          ]
         },
         {
           "tool": "manage_asset",
@@ -13115,7 +13118,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "fc8acbeb4ae9a8a6c999416790ccd43c314af461f90517e3b0758c244cb3f2f0",
-        "content": "13e5587af72345dff9d60fa3472aa0684f2401f8b77f670ea5bdd3a56ee1dac5"
+        "content": "4221ec46478100a8fd087e861790bc954494ce33b54657f781752f4588a65643"
       }
     },
     {
@@ -21104,7 +21107,10 @@
           "action": "add_scs_component",
           "folded": {
             "edit": "add_scs_component"
-          }
+          },
+          "aliases": [
+            "blueprint.add_component_to_blueprint"
+          ]
         },
         {
           "tool": "manage_blueprint",
@@ -21548,7 +21554,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "5898084de793f7394402fb4aa522e6280924c31b6a13a7a7fb92e974d7790aae",
-        "content": "3967742cb84ffa2cc5220b9f10e626d1a3725f0f8d675c1071c16ed5893c4de8"
+        "content": "0cda3481b6a792e001497fea252dfbde06579d517155014b1e6dffcf2d629ec5"
       }
     },
     {
@@ -21810,7 +21816,10 @@
           "action": "set_default",
           "folded": {
             "edit": "set_default"
-          }
+          },
+          "aliases": [
+            "blueprint.set_default_value"
+          ]
         }
       ],
       "discovery": {
@@ -22115,7 +22124,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "cf83e591c2ec71883c3760247dda7296dde6114b8ed85b8d9b69946b7cfbad68",
-        "content": "67f0c094a8179a2a3720597d773402065fe9b62cda41a4122be405b371045322"
+        "content": "cefa51f4955d7317b8e84c5ff86384ac8954def5dcf422d89d0930d0db9296d0"
       }
     },
     {
@@ -22470,7 +22479,10 @@
           "action": "create_widget_blueprint",
           "folded": {
             "edit": "create"
-          }
+          },
+          "aliases": [
+            "blueprint.create_widget"
+          ]
         },
         {
           "tool": "manage_blueprint",
@@ -22765,7 +22777,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "eb65c44f110b3c45836787647803da6dd081a239bb9a489fe3d3e48674d17fc0",
-        "content": "60605b35746cc8a7e436e648e13a2f2810b474c7c0481b8fc3cddec807a4f3bb"
+        "content": "b61e5504786111b8b17616bc926ab2f1c1bf78a0d7820d2c7521e7cf2fed0330"
       }
     },
     {
@@ -26103,7 +26115,10 @@
           "action": "set_visibility",
           "folded": {
             "layoutProperty": "visibility"
-          }
+          },
+          "aliases": [
+            "blueprint.hide_widget"
+          ]
         },
         {
           "tool": "manage_blueprint",
@@ -26642,7 +26657,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "460bbbe8aba77513a85e6575e112ea66182d809d218341f5243a4b37cd929dba",
-        "content": "1024be0c5830b98f084feb50c74fda15c9de9dbaf7181c03739e1e16ab4c234d"
+        "content": "93a8a6e1745add4d5269a758e5a624bcb6c14134f1c5755c738722100ac3749d"
       }
     },
     {
@@ -91922,7 +91937,11 @@
           "action": "set_property_replicated",
           "folded": {
             "setting": "property"
-          }
+          },
+          "aliases": [
+            "manage_networking.replicate_variable",
+            "manage_networking.enable_replication"
+          ]
         },
         {
           "tool": "manage_networking",
@@ -92455,7 +92474,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "8e17b6ed9bcb99015ae286d59e0947ec8184ba8b6820665b2c15fa8ec0f9f021",
-        "content": "5ab9b7f6446747eb8afbe67eb0c6a2182aa0daeb9758b2c2af36b2ea488c3395"
+        "content": "d3e2c8ff3f16322e6a39b25492d7fc77f8e144449a18c05f820a4e95c23ebb64"
       }
     },
     {

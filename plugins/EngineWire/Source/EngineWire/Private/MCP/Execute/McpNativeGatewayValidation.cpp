@@ -89,7 +89,8 @@ TSharedPtr<FJsonObject> ValidateAndResolveGatewayExecute(
 	// (mirror of applyFoldedPins in gateway-execute.ts). A caller who names the
 	// old action AND sends a disagreeing selector value is contradictory, not
 	// legacy — refuse instead of letting the mismatch ride into the handler.
-	const FString RequestedAction = McpRequestedLegacyAction(GatewayParams, Request.CapabilityId);
+	// An alias a member declared stands for that member's old name.
+	const FString RequestedAction = McpRequestedLegacyAction(GatewayParams, *Request.Record);
 	TSharedPtr<FJsonObject> SentParams = MakeShared<FJsonObject>();
 	if (Request.Params.IsValid())
 	{

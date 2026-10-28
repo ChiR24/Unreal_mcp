@@ -24,13 +24,16 @@ enum class EMcpCapabilityStoreStatus : uint8
  * One {tool, action} pair a capability answers to. A folded pair is a former
  * action name the record replaced: FoldedPins carries the selector values that
  * name implied, so a call by the old name validates against the folded
- * contract and dispatches unchanged. Mirror of `legacyIds[]` in TypeScript.
+ * contract and dispatches unchanged, and Aliases are the record aliases that
+ * former action declared, which a call may name it by. Mirror of `legacyIds[]`
+ * in TypeScript.
  */
 struct FMcpLegacyPair
 {
 	FString Tool;
 	FString Action;
 	TSharedPtr<FJsonObject> FoldedPins;
+	TArray<FString> Aliases;
 	bool IsFolded() const { return FoldedPins.IsValid(); }
 };
 

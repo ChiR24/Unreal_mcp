@@ -12,6 +12,8 @@ import { isRecord } from '../../../utils/validation/type-guards.js';
  *     honours the property's enum when it declares one;
  *   - a pair folded under a REQUIRED selector pins that selector, so a call by
  *     the old name can satisfy validation;
+ *   - only a folded pair carries aliases, each one of the record's own and
+ *     carried by that pair alone, so an alias names one variant;
  *   - routing.dispatchBy names a declared input property whose enum values
  *     are exactly the map's keys, every mapped action is one of the record's
  *     legacy pairs, and a mapped pair's pin agrees with the value mapping to
@@ -41,6 +43,20 @@ export function verifyFolding(record: Record<string, unknown>, ctx: z.Refinement
   for (const entry of legacyIds) {
     if (isRecord(entry) && typeof entry.action === 'string') pairActions.add(entry.action);
   }
+  const recordAliases = readField(record, 'aliases');
+  const carried = new Set<unknown>();
+  legacyIds.forEach((entry, position) => {
+    if (!isRecord(entry) || !Array.isArray(entry.aliases)) return;
+    const owned = entry.aliases.every((alias) => Array.isArray(recordAliases) && recordAliases.includes(alias) && !carried.has(alias));
+    if (position === 0 || !isRecord(entry.folded) || !owned) {
+      ctx.addIssue({
+        code: 'custom',
+        path: ['legacyIds', position, 'aliases'],
+        message: 'only a folded pair carries aliases, each one of the record\'s aliases and on no other pair'
+      });
+    }
+    entry.aliases.forEach((alias) => carried.add(alias));
+  });
   legacyIds.forEach((entry, position) => {
     if (!isRecord(entry) || !isRecord(entry.folded)) return;
     if (position === 0) {

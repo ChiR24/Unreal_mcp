@@ -210,7 +210,10 @@ catalog used to call `create_noise_texture`. Nothing was retired:
   runs the old handler, because the pair pins the selector value it implied
   (`kind: "noise"`). A caller-supplied value is never overridden.
 - The former capability ids (`texture.create_noise_texture`) are declared
-  aliases of the family, so the canonical form accepts them too.
+  aliases of the family, so the canonical form accepts them too. So are the
+  aliases a member declared, and each runs that member as its old pair does
+  (`blueprint.add_component_to_blueprint` is `add_scs_component`, with
+  `edit: "add_scs_component"` pinned).
 - A family whose primary is one of its members keeps the selector optional and
   defaults it to that member (`manage_asset.list` without `kind` still lists
   assets). A family under a new name requires the selector; `describe` shows

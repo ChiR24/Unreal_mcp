@@ -84,4 +84,4 @@ npm run test:params
 ```
 
 - Source contracts under `tests/unit/plugin/` read the C++ as text; behaviour is checked live through the `unreal` tool.
-- Folded families: `McpNativeGatewayValidation.cpp` applies `McpApplyFoldedPins` before defaults and schema validation and `McpResolveDispatchAction` after them; `FindByParentAction` falls back to any legacy pair, so every former name still resolves. A consent grant may name the capability by its canonical id, an alias, or a folded `tool.action` pair (`FMcpCapabilityDemand::ConsentNames`).
+- Folded families: `McpNativeGatewayValidation.cpp` applies `McpApplyFoldedPins` before defaults and schema validation and `McpResolveDispatchAction` after them; `FindByParentAction` falls back to any legacy pair, so every former name still resolves. An alias a member declared rides on that member's pair (`legacyIds[n].aliases`), and `McpRequestedLegacyAction` names the pair for a call by it, so it runs that variant. A consent grant may name the capability by its canonical id, an alias, or a folded `tool.action` pair (`FMcpCapabilityDemand::ConsentNames`).

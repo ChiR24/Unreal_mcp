@@ -25,6 +25,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 </details>
 
+<details>
+<summary><b>🔧 Fixed</b></summary>
+
+- **An alias a family member declared runs that member**: `blueprint.add_component_to_blueprint`, `set_default_value`, `create_widget`, `hide_widget`, `asset.find_assets` and `manage_networking.replicate_variable`/`enable_replication` ran the family's default or were refused for its selector.
+
+</details>
+
 ---
 
 ## 🏷️ [0.6.0] - 2026-10-27

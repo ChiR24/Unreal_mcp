@@ -51,6 +51,12 @@ export type LegacyCapabilityId = {
    * parent action enum.
    */
   readonly folded?: JsonObject;
+  /**
+   * The record aliases the folded member declared: a call by one of them runs
+   * this pair, as a call by the old name does. Without it an alias such as
+   * blueprint.add_component_to_blueprint named no variant of its family.
+   */
+  readonly aliases?: readonly CapabilityAlias[];
 };
 
 export type CapabilityDiscovery = {

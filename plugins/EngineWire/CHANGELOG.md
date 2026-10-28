@@ -17,6 +17,9 @@ All notable changes to the EngineWire plugin (formerly McpAutomationBridge) will
 - **Aliases as tool + action**: `FMcpCanonicalRecordIndex::FindByAliasPair` resolves a `{tool, action}` naming none of the tool's actions but one record's `tool.action` alias, on execute and describe; the blueprint graph handler runs `connect_nodes` (a folded name of `edit_graph`) as `connect_pins`.
 - **Abstract interpretation in `lint_blueprint`** (`Lint/Interp/`): intervals with bounds against array lengths, and differences between variables a check compared, run to a fixpoint per event or function through Sets, Branches, Sequences and loops; six rules: `divide_by_zero`, `index_out_of_range`, `out_of_range` (Value Range), `float_equality`, `constant_condition`, `endless_loop`. A divisor always 0 or an index always outside its array is an error and fails Data Validation.
 
+### Fixed
+- **Fold aliases**: a folded pair carries the aliases its member declared (`legacyIds[n].aliases`) and `McpRequestedLegacyAction` names that pair for a call by one, so its pins and its own action apply; the alias's last segment named no pair, so seven ran the family's default or were refused for a required selector.
+
 ## [0.6.0] - 2026-10-27
 
 Plugin-side changes since the `v0.6.0-beta-f` tag, from the code diff. The server-side view is in the root `CHANGELOG.md`.

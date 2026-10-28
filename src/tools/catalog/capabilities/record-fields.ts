@@ -101,7 +101,8 @@ const routingSchema = z.strictObject({
 const legacyIdSchema = z.strictObject({
   tool: LegacyToolNameSchema,
   action: LegacyActionNameSchema,
-  folded: jsonObjectSchema.optional()
+  folded: jsonObjectSchema.optional(),
+  aliases: z.array(CapabilityAliasSchema).min(1).optional()
 });
 
 // The parent action enum and the gateway's legacy-pair index are derived from

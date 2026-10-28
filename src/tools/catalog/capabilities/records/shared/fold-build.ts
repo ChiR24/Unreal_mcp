@@ -174,6 +174,7 @@ export function buildFolded(
   const outputProperties = mergeProperties(members, 'output', context);
   const output = objectSchema(first.schemas.output, outputProperties, unique(['success', ...intersectRequired(members, 'output')]));
 
+  const id = CapabilityIdSchema.parse(`${namespace}.${spec.primary}`);
   const legacyIds: LegacyCapabilityId[] = [];
   const primaryPair = members[primaryIndex]?.legacyIds[0];
   legacyIds.push(primaryPair !== undefined
@@ -181,14 +182,21 @@ export function buildFolded(
     : { tool, action: LegacyActionNameSchema.parse(spec.primary) });
   entries.forEach((entry, index) => {
     if (index === primaryIndex) return;
+    // A member's own aliases go on its pair, so a call by one runs that variant as its old name does: gathered on
+    // the record alone, blueprint.add_component_to_blueprint (add_scs_component's) named no variant and edit_scs
+    // refused it for the missing selector. A name standing in with another member's record declared none of them.
+    const member = members[index];
+    const own = member !== undefined && String(member.legacyIds[0]?.action) === entry.action
+      ? member.aliases.filter((alias) => String(alias) !== String(id))
+      : [];
     legacyIds.push({
       tool,
       action: LegacyActionNameSchema.parse(entry.action),
       folded: selector === undefined || entry.pin === undefined ? {} : { [selector]: entry.pin },
+      ...(own.length === 0 ? {} : { aliases: own }),
     });
   });
 
-  const id = CapabilityIdSchema.parse(`${namespace}.${spec.primary}`);
   const aliases = unique(
     members.flatMap((member, index) => [
       ...(index === primaryIndex ? [] : [`${namespace}.${entries[index]?.action ?? ''}`]),

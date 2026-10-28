@@ -7,9 +7,10 @@
 // single record. The primary operation carries the union of their parameters
 // plus an enum-typed selector; `routing.dispatchBy` maps each value to the old
 // bridge action; every old name stays callable as a folded legacy pair whose
-// pins supply the value it implied. Handlers on both doors keep receiving
-// exactly the actions they already implement, so no C++ or TypeScript
-// handler changes for a fold.
+// pins supply the value it implied, and the aliases a member declared ride on
+// its pair, so a call by one runs that member. Handlers on both doors keep
+// receiving exactly the actions they already implement, so no C++ or
+// TypeScript handler changes for a fold.
 //
 // When the primary is itself one of the members, the selector is optional and
 // defaults to that member's value, so every call that worked before the fold

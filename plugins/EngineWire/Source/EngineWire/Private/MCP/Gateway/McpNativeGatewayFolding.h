@@ -1,12 +1,14 @@
 // McpNativeGatewayFolding.h — folded capability families on the native door
 //
 // A folded record stands for a set of bridge actions that differ only by one
-// selector value. Two data fields on the record drive the fold at execute time
-// and nothing else does:
+// selector value. These data fields on the record drive the fold at execute
+// time and nothing else does:
 //   routing.dispatchBy    selector value -> bridge action, for a call that names
 //                         the primary operation;
 //   legacyIds[n].folded   the selector values an old name implied, for a call
-//                         that still names the old action (or its alias id).
+//                         that still names the old action (or its alias id);
+//   legacyIds[n].aliases  the aliases that old action declared, which name
+//                         its pair as the old action does.
 // Both doors apply the same two steps in the same order: the pins are injected
 // before schema validation, the action is chosen after it. Mirror of
 // src/server/gateway/gateway-dispatch-by.ts.
@@ -26,11 +28,13 @@ bool McpParseRecordFolding(
 const FMcpLegacyPair* McpFindLegacyPair(const FMcpCapabilityRecord& Record, const FString& Action);
 
 /**
- * The action the caller actually named: `action` of the generated form, or the
- * action segment of a `capability` that resolved through an alias. Empty when
- * the caller named the record by its own id.
+ * The action the caller actually named: the pair carrying the alias the call
+ * used (in `capability`, or as `tool`.`action`) unless `action` names a pair
+ * itself, else `action` of the generated form, or the action segment of a
+ * `capability` that resolved through an alias. Empty when the caller named the
+ * record by its own id.
  */
-FString McpRequestedLegacyAction(const TSharedPtr<FJsonObject>& GatewayParams, const FString& RecordId);
+FString McpRequestedLegacyAction(const TSharedPtr<FJsonObject>& GatewayParams, const FMcpCapabilityRecord& Record);
 
 /**
  * Inject the pins a folded old name implies, never overriding what the caller
