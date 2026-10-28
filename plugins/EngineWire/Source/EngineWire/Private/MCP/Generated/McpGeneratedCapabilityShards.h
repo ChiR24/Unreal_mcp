@@ -10,7 +10,7 @@
  * pure-ASCII JSON payload carrying the COMPLETE CapabilityRecord for native
  * discovery (aliases, legacyIds, discovery, schemas.input/output, examples,
  * availability, behavior/policy, normalization, deprecation, hashes).
- * 23 shards, 461 records total.
+ * 23 shards, 463 records total.
  *
  * Chunks are bounded so no single string literal approaches the MSVC 65,535-byte
  * ceiling; concatenating a shard's chunks in order yields its exact JSON.
@@ -22,7 +22,7 @@ namespace Detail
 	extern const TCHAR* const MCP_CAP_SHARD_ANIMATION_PHYSICS_CHUNKS[];	// animation_physics (32)
 	extern const TCHAR* const MCP_CAP_SHARD_BUILD_ENVIRONMENT_CHUNKS[];	// build_environment (43)
 	extern const TCHAR* const MCP_CAP_SHARD_CONTROL_ACTOR_CHUNKS[];	// control_actor (29)
-	extern const TCHAR* const MCP_CAP_SHARD_CONTROL_EDITOR_CHUNKS[];	// control_editor (26)
+	extern const TCHAR* const MCP_CAP_SHARD_CONTROL_EDITOR_CHUNKS[];	// control_editor (28)
 	extern const TCHAR* const MCP_CAP_SHARD_INSPECT_CHUNKS[];	// inspect (27)
 	extern const TCHAR* const MCP_CAP_SHARD_MANAGE_AI_CHUNKS[];	// manage_ai (17)
 	extern const TCHAR* const MCP_CAP_SHARD_MANAGE_ASSET_CHUNKS[];	// manage_asset (53)
@@ -60,7 +60,7 @@ inline const FMcpCapabilityShard& At(int32 Index)
 		{ TEXT("animation_physics"), Detail::MCP_CAP_SHARD_ANIMATION_PHYSICS_CHUNKS, 53, 32 },
 		{ TEXT("build_environment"), Detail::MCP_CAP_SHARD_BUILD_ENVIRONMENT_CHUNKS, 70, 43 },
 		{ TEXT("control_actor"), Detail::MCP_CAP_SHARD_CONTROL_ACTOR_CHUNKS, 46, 29 },
-		{ TEXT("control_editor"), Detail::MCP_CAP_SHARD_CONTROL_EDITOR_CHUNKS, 32, 26 },
+		{ TEXT("control_editor"), Detail::MCP_CAP_SHARD_CONTROL_EDITOR_CHUNKS, 35, 28 },
 		{ TEXT("inspect"), Detail::MCP_CAP_SHARD_INSPECT_CHUNKS, 45, 27 },
 		{ TEXT("manage_ai"), Detail::MCP_CAP_SHARD_MANAGE_AI_CHUNKS, 33, 17 },
 		{ TEXT("manage_asset"), Detail::MCP_CAP_SHARD_MANAGE_ASSET_CHUNKS, 94, 53 },
@@ -85,7 +85,7 @@ inline const FMcpCapabilityShard& At(int32 Index)
 	return Table[Index];
 }
 
-inline int32 TotalRecordCount() { return 461; }
+inline int32 TotalRecordCount() { return 463; }
 
-inline const TCHAR* CatalogRevision() { return TEXT("287e2225ef4f2c83"); }
+inline const TCHAR* CatalogRevision() { return TEXT("e3e9606420123395"); }
 }

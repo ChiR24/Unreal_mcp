@@ -1,5 +1,6 @@
 #include "Domains/ControlEditor/McpEditorSupport.h"
 #include "Domains/ControlEditor/Checkpoint/McpEditorCheckpoint.h"
+#include "Domains/ControlEditor/EditorUi/McpEditorUi.h"
 #include "Domains/ControlEditor/Toolsets/McpEditorToolsets.h"
 #include "Domains/Play/McpExplore.h"
 #include "Domains/Play/McpPlaytest.h"
@@ -95,6 +96,10 @@ bool UEngineWireSubsystem::HandleControlEditorAction(
     return HandleControlEditorRestoreWindow(RequestId, Payload, RequestingSocket);
   if (LowerSub == TEXT("set_viewport_realtime"))
     return HandleControlEditorSetViewportRealtime(RequestId, Payload, RequestingSocket);
+  if (LowerSub == TEXT("read_editor_ui"))
+    return McpEditorUi::HandleRead(this, RequestId, Payload, RequestingSocket);
+  if (LowerSub == TEXT("use_editor_ui"))
+    return McpEditorUi::HandleUse(this, RequestId, Payload, RequestingSocket);
   if (LowerSub == TEXT("simulate_input"))
     return HandleControlEditorSimulateInput(RequestId, Payload, RequestingSocket);
   // Additional actions for test compatibility

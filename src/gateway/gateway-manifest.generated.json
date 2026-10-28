@@ -5003,7 +5003,9 @@
         "simulate_input",
         "undo",
         "playtest",
-        "explore_level"
+        "explore_level",
+        "read_editor_ui",
+        "use_editor_ui"
       ],
       "parameterNames": [
         "acceptRadius",
@@ -5024,8 +5026,10 @@
         "control",
         "delaySeconds",
         "deltaTime",
+        "depth",
         "detail",
         "discardUnsaved",
+        "do",
         "durationSeconds",
         "enabled",
         "fallCm",
@@ -5033,6 +5037,7 @@
         "filter",
         "fov",
         "frameRate",
+        "from",
         "functionName",
         "goal",
         "goalActor",
@@ -5052,6 +5057,7 @@
         "limit",
         "location",
         "maxSeconds",
+        "maxWidgets",
         "metadata",
         "minimize",
         "mode",
@@ -5062,6 +5068,7 @@
         "preferences",
         "query",
         "realtime",
+        "ref",
         "relaunch",
         "resolution",
         "returnBase64",
@@ -5073,7 +5080,9 @@
         "stat",
         "steps",
         "stuckSeconds",
+        "submit",
         "tabId",
+        "text",
         "toolName",
         "toolset",
         "track",
@@ -5191,6 +5200,12 @@
             "type": "number",
             "description": "Seconds every frame advances the running game, however long the frame really took (deterministic runs); 0 turns fixed stepping off. It also ends when PIE stops."
           },
+          "depth": {
+            "type": "number",
+            "minimum": 1,
+            "maximum": 40,
+            "description": "Nesting levels of listed widgets (default 12)."
+          },
           "detail": {
             "type": "boolean",
             "description": "read and stop: list the archive, each cell as {cell, where, parent, chosen, leads, flags}, at most 200."
@@ -5198,6 +5213,21 @@
           "discardUnsaved": {
             "type": "boolean",
             "description": "Restart even though packages have unsaved changes, discarding them. Omitted, a restart with unsaved work is refused."
+          },
+          "do": {
+            "type": "string",
+            "enum": [
+              "click",
+              "double_click",
+              "right_click",
+              "hover",
+              "focus",
+              "type",
+              "press_key",
+              "check",
+              "uncheck"
+            ],
+            "description": "What to do with it."
           },
           "durationSeconds": {
             "type": "number",
@@ -5226,6 +5256,10 @@
           "frameRate": {
             "type": "number",
             "description": "Replay frames recorded per second, 1 to 120 (sets demo.RecordHz; the engine default is 8)."
+          },
+          "from": {
+            "type": "string",
+            "description": "A ref: only that widget's branch."
           },
           "functionName": {
             "type": "string",
@@ -5375,6 +5409,12 @@
             "type": "number",
             "description": "Game seconds the leg may take (default 15, at most 60; at most 25 real seconds)."
           },
+          "maxWidgets": {
+            "type": "number",
+            "minimum": 1,
+            "maximum": 1000,
+            "description": "Most lines in the outline (default 300)."
+          },
           "metadata": {
             "type": "object",
             "description": "An object of your own, such as a label or a step number, returned under metadata when includeMetadata is true; the capture itself never reads it.",
@@ -5428,6 +5468,10 @@
           "realtime": {
             "type": "boolean",
             "description": "Whether realtime rendering is enabled."
+          },
+          "ref": {
+            "type": "string",
+            "description": "The widget, as read_editor_ui named it (e12)."
           },
           "relaunch": {
             "type": "boolean",
@@ -5524,9 +5568,17 @@
             "type": "number",
             "description": "Game seconds without getting nearer that count as stuck (default 2)."
           },
+          "submit": {
+            "type": "boolean",
+            "description": "type: press Enter after the text (default false)."
+          },
           "tabId": {
             "type": "string",
             "description": "Registered nomad tab id, for example \"BridgeTab\" (Quixel Bridge); \"Fab\" opens a new Fab tab."
+          },
+          "text": {
+            "type": "string",
+            "description": "Only branches holding these words (any case), with the widgets above them."
           },
           "toolName": {
             "type": "string",
@@ -5584,7 +5636,7 @@
               "integer",
               "string"
             ],
-            "description": "With mode full_editor_window, which window to capture: a list index (2, or \"2\") or a case-insensitive substring of its title (\"WBP_HubUI\"). Omit for the main editor frame, which is then always what is captured: a minimized main frame is restored without taking focus, and when that is not possible the call fails with EDITOR_WINDOW_MINIMIZED instead of capturing another window. A window restored for the capture is minimized again right after it. Every response lists the open windows under windows[], so read that to pick one."
+            "description": "A window by its index in windows or part of its title (default every window)."
           },
           "x": {
             "type": "number",
@@ -5626,7 +5678,9 @@
               "simulate_input",
               "undo",
               "playtest",
-              "explore_level"
+              "explore_level",
+              "read_editor_ui",
+              "use_editor_ui"
             ],
             "description": "Action to invoke on control_editor."
           }

@@ -6621,6 +6621,12 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "number",
           "description": "Seconds every frame advances the running game, however long the frame really took (deterministic runs); 0 turns fixed stepping off. It also ends when PIE stops."
         },
+        "depth": {
+          "type": "number",
+          "minimum": 1,
+          "maximum": 40,
+          "description": "Nesting levels of listed widgets (default 12)."
+        },
         "detail": {
           "type": "boolean",
           "description": "read and stop: list the archive, each cell as {cell, where, parent, chosen, leads, flags}, at most 200."
@@ -6628,6 +6634,21 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "discardUnsaved": {
           "type": "boolean",
           "description": "Restart even though packages have unsaved changes, discarding them. Omitted, a restart with unsaved work is refused."
+        },
+        "do": {
+          "type": "string",
+          "enum": [
+            "click",
+            "double_click",
+            "right_click",
+            "hover",
+            "focus",
+            "type",
+            "press_key",
+            "check",
+            "uncheck"
+          ],
+          "description": "What to do with it."
         },
         "durationSeconds": {
           "type": "number",
@@ -6656,6 +6677,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "frameRate": {
           "type": "number",
           "description": "Replay frames recorded per second, 1 to 120 (sets demo.RecordHz; the engine default is 8)."
+        },
+        "from": {
+          "type": "string",
+          "description": "A ref: only that widget's branch."
         },
         "functionName": {
           "type": "string",
@@ -6805,6 +6830,12 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "number",
           "description": "Game seconds the leg may take (default 15, at most 60; at most 25 real seconds)."
         },
+        "maxWidgets": {
+          "type": "number",
+          "minimum": 1,
+          "maximum": 1000,
+          "description": "Most lines in the outline (default 300)."
+        },
         "metadata": {
           "type": "object",
           "description": "An object of your own, such as a label or a step number, returned under metadata when includeMetadata is true; the capture itself never reads it.",
@@ -6858,6 +6889,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "realtime": {
           "type": "boolean",
           "description": "Whether realtime rendering is enabled."
+        },
+        "ref": {
+          "type": "string",
+          "description": "The widget, as read_editor_ui named it (e12)."
         },
         "relaunch": {
           "type": "boolean",
@@ -6954,9 +6989,17 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "number",
           "description": "Game seconds without getting nearer that count as stuck (default 2)."
         },
+        "submit": {
+          "type": "boolean",
+          "description": "type: press Enter after the text (default false)."
+        },
         "tabId": {
           "type": "string",
           "description": "Registered nomad tab id, for example \"BridgeTab\" (Quixel Bridge); \"Fab\" opens a new Fab tab."
+        },
+        "text": {
+          "type": "string",
+          "description": "Only branches holding these words (any case), with the widgets above them."
         },
         "toolName": {
           "type": "string",
@@ -7014,7 +7057,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             "integer",
             "string"
           ],
-          "description": "With mode full_editor_window, which window to capture: a list index (2, or \"2\") or a case-insensitive substring of its title (\"WBP_HubUI\"). Omit for the main editor frame, which is then always what is captured: a minimized main frame is restored without taking focus, and when that is not possible the call fails with EDITOR_WINDOW_MINIMIZED instead of capturing another window. A window restored for the capture is minimized again right after it. Every response lists the open windows under windows[], so read that to pick one."
+          "description": "A window by its index in windows or part of its title (default every window)."
         },
         "x": {
           "type": "number",
@@ -7056,7 +7099,9 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             "simulate_input",
             "undo",
             "playtest",
-            "explore_level"
+            "explore_level",
+            "read_editor_ui",
+            "use_editor_ui"
           ],
           "description": "Action to invoke on control_editor."
         }
@@ -7295,6 +7340,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "x-unreal-reflection-boundary": true,
           "description": "Additional handler result fields not named by the contract."
         },
+        "did": {
+          "type": "string",
+          "description": "What was done (\"nothing: check already\" when a check box already was)."
+        },
         "discardedPackageCount": {
           "type": "integer",
           "description": "Unsaved packages discarded by this restart."
@@ -7323,6 +7372,25 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             "x-unreal-reflection-boundary": true
           },
           "description": "What was found, each {kind (escape_killz, escape_bounds, trap, script_error), text, where [x, y, z], cell (the first cell of its round: explore from it to see it again), t (game seconds)}; one per kind and floor-plan cell, at most 64."
+        },
+        "focus": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "ref": {
+              "type": "string",
+              "description": "Its ref."
+            },
+            "type": {
+              "type": "string",
+              "description": "Its Slate type (SButton, SEditableTextBox...)."
+            },
+            "text": {
+              "type": "string",
+              "description": "What it says."
+            }
+          },
+          "description": "Where the virtual user's keyboard focus is after."
         },
         "frames": {
           "type": "number",
@@ -7384,6 +7452,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "number",
           "description": "Game seconds the steps advanced, when a fixed delta time is set (set_game_speed fixed_delta_time): steps x deltaTime x game speed."
         },
+        "handled": {
+          "type": "boolean",
+          "description": "The widget (or one around it) took the input."
+        },
         "handledByPIE": {
           "type": "boolean",
           "description": "PIE actually consumed the event. False here with routedToPIE true means the key reached the game and nothing bound it: no active input mapping context maps that key (inject the action with inputAction instead)."
@@ -7436,6 +7508,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           },
           "description": "With assetPaths: the other packages that still hold unsaved changes, left as they were."
         },
+        "listed": {
+          "type": "number",
+          "description": "Lines in the outline."
+        },
         "locationApplied": {
           "type": "boolean",
           "description": "Whether the viewport took the requested location; false (with CAMERA_NOT_APPLIED) when it is locked to an actor, piloting or orthographic."
@@ -7467,6 +7543,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "opened": {
           "type": "boolean",
           "description": "True when the tab manager returned a live tab."
+        },
+        "outline": {
+          "type": "string",
+          "description": "The widgets, one a line: ref, type, \"text\" and [disabled] [focused] [checked]/[unchecked]."
         },
         "output": {
           "oneOf": [
@@ -7630,6 +7710,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "number",
           "description": "How far it moved, in cm."
         },
+        "truncated": {
+          "type": "boolean",
+          "description": "More widgets were left out past maxWidgets."
+        },
         "unsavedCount": {
           "type": "integer",
           "description": "How many packages have unsaved changes."
@@ -7680,8 +7764,32 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "description": "Whether the main window was minimized before the call."
         },
         "widget": {
-          "type": "string",
-          "description": "widget_click: the widget that was driven, as Owner.Name."
+          "oneOf": [
+            {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "ref": {
+                  "type": "string",
+                  "description": "Its ref."
+                },
+                "type": {
+                  "type": "string",
+                  "description": "Its Slate type (SButton, SEditableTextBox...)."
+                },
+                "text": {
+                  "type": "string",
+                  "description": "What it says."
+                }
+              },
+              "description": "The widget, as it is after."
+            },
+            {
+              "type": "string",
+              "description": "widget_click: the widget that was driven, as Owner.Name."
+            }
+          ],
+          "description": "The widget, as it is after."
         },
         "widgetType": {
           "type": "string",
@@ -7713,13 +7821,54 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "description": "full_editor_window: true when the window was minimized and was put back on screen, without taking focus, for the capture. It is minimized again right after the capture, so windows[] shows it minimized."
         },
         "windows": {
+          "oneOf": [
+            {
+              "type": "array",
+              "description": "Every editor window.",
+              "items": {
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {
+                  "index": {
+                    "type": "number",
+                    "description": "What window takes."
+                  },
+                  "title": {
+                    "type": "string",
+                    "description": "Its title; empty for a menu or popup."
+                  },
+                  "ref": {
+                    "type": "string",
+                    "description": "Its ref."
+                  }
+                }
+              }
+            },
+            {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "additionalProperties": true,
+                "x-unreal-reflection-boundary": true
+              },
+              "description": "Every visible editor window: index, title, x, y, width, height, isActive, isMinimized, isModal. Pass an index or a title substring back as the window parameter to capture a different one; x/y are screen coordinates for simulate_input."
+            }
+          ],
+          "description": "Every editor window."
+        },
+        "windowsClosed": {
           "type": "array",
           "items": {
-            "type": "object",
-            "additionalProperties": true,
-            "x-unreal-reflection-boundary": true
+            "type": "string"
           },
-          "description": "Every visible editor window: index, title, x, y, width, height, isActive, isMinimized, isModal. Pass an index or a title substring back as the window parameter to capture a different one; x/y are screen coordinates for simulate_input."
+          "description": "Windows that closed."
+        },
+        "windowsOpened": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Windows that opened: titles; an untitled menu or popup by its ref."
         },
         "wouldRestart": {
           "type": "boolean",

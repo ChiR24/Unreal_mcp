@@ -4,7 +4,7 @@
 
 # Action reference
 
-Catalog revision: `287e2225ef4f2c83`
+Catalog revision: `e3e9606420123395`
 
 Both transports expose exactly ONE public MCP tool, `unreal`, with the four
 operations `search` / `describe` / `execute` / `configure`. The parent tools
@@ -13,7 +13,7 @@ by `tools/list` and a direct `tools/call` on one returns a
 `DIRECT_TOOL_CALL_REMOVED` receipt rather than executing
 (`src/server/gateway/direct-call-migration.ts`).
 
-The catalog declares 461 capabilities across
+The catalog declares 463 capabilities across
 23 internal parent tools.
 Every row is derived from the capability record that the gateway actually
 validates against, so `execute` cannot accept an action this table omits.
@@ -42,7 +42,7 @@ validates against, so `execute` cannot accept an action this table omits.
 | `animation_physics` | 32 | 5 | 25 | 2 | animation physics |
 | `build_environment` | 43 | 5 | 35 | 3 | environment |
 | `control_actor` | 29 | 9 | 18 | 2 | actor |
-| `control_editor` | 26 | 9 | 14 | 3 | editor |
+| `control_editor` | 28 | 10 | 14 | 4 | editor |
 | `inspect` | 27 | 22 | 4 | 1 | inspect |
 | `manage_ai` | 17 | 3 | 14 | 0 | manage ai |
 | `manage_asset` | 53 | 14 | 34 | 5 | asset, datatable, enum, material, struct, texture |
@@ -65,7 +65,7 @@ validates against, so `execute` cannot accept an action this table omits.
 
 ## Capabilities requiring consent
 
-71 of 461 capabilities require consent.
+72 of 463 capabilities require consent.
 
 | Capability | Tool | Action | Effect | Consent |
 | --- | --- | --- | --- | --- |
@@ -101,6 +101,7 @@ validates against, so `execute` cannot accept an action this table omits.
 | `control_editor.call_editor_tool_destructive` | `control_editor` | `control_editor` | destructive | elevated |
 | `control_editor.invoke_reflected_function` | `control_editor` | `control_editor` | destructive | elevated |
 | `control_editor.restart_editor` | `control_editor` | `restart_editor` | destructive | explicit |
+| `control_editor.use_editor_ui` | `control_editor` | `use_editor_ui` | destructive | elevated |
 | `datatable.create_data_registry` | `manage_asset` | `create_data_registry` | write | explicit |
 | `datatable.delete_data_table_row` | `manage_asset` | `delete_data_table_row` | destructive | elevated |
 | `datatable.edit_data_table` | `manage_asset` | `create_data_table` | write | explicit |
@@ -326,6 +327,7 @@ validates against, so `execute` cannot accept an action this table omits.
 | `control_editor.open_level` | `control_editor` | `open_level` | write | write | none | `control_editor.open_level` |
 | `control_editor.play` | `control_editor` | `play` | write | write | none | `control_editor.play` `control_editor.pause` `control_editor.resume` `control_editor.stop` `control_editor.eject` `control_editor.possess` `control_editor.stop_pie` |
 | `control_editor.playtest` | `control_editor` | `playtest` | write | write | none | `control_editor.playtest` |
+| `control_editor.read_editor_ui` | `control_editor` | `read_editor_ui` | read | read | none | `control_editor.read_editor_ui` |
 | `control_editor.restart_editor` | `control_editor` | `restart_editor` | destructive | destructive | explicit | `control_editor.restart_editor` |
 | `control_editor.save_all` | `control_editor` | `save_all` | write | write | none | `control_editor.save_all` |
 | `control_editor.screenshot` | `control_editor` | `screenshot` | read | read | none | `control_editor.screenshot` `control_editor.take_screenshot` |
@@ -335,6 +337,7 @@ validates against, so `execute` cannot accept an action this table omits.
 | `control_editor.simulate_input` | `control_editor` | `simulate_input` | write | write | none | `control_editor.simulate_input` |
 | `control_editor.start_recording` | `control_editor` | `start_recording` | write | write | none | `control_editor.start_recording` `control_editor.stop_recording` |
 | `control_editor.undo` | `control_editor` | `undo` | write | write | none | `control_editor.undo` `control_editor.redo` `control_editor.restore_point` |
+| `control_editor.use_editor_ui` | `control_editor` | `use_editor_ui` | destructive | destructive | elevated | `control_editor.use_editor_ui` |
 | `datatable.create_data_registry` | `manage_asset` | `create_data_registry` | write | write | explicit | `manage_asset.create_data_registry` |
 | `datatable.delete_data_table_row` | `manage_asset` | `delete_data_table_row` | destructive | destructive | elevated | `manage_asset.delete_data_table_row` `manage_asset.clear_data_table_rows` |
 | `datatable.edit_data_table` | `manage_asset` | `create_data_table` | write | write | explicit | `manage_asset.edit_data_table` `manage_asset.create_data_table` `manage_asset.create_row_struct` `manage_asset.add_data_table_row` `manage_asset.update_data_table_row` `manage_asset.import_data_table_rows` `manage_asset.set_data_table_row_struct` `manage_asset.set_struct_as_row_struct` |

@@ -19,6 +19,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **`create_plugin`** makes a content-only plugin, enabled and mounted at once; **`remove_plugin`** takes one that no longer loads out of the project (its folder moves to `Saved/EngineWire/RemovedPlugins`).
 - **`list_game_features`** and **`set_game_feature_active`** read and switch game feature plugins, and `create_plugin` `template: game_feature` makes one (UE 5.1+, where the project enables GameFeatures).
 - **`list_data_registries`**, **`get_data_registry`** and **`create_data_registry`** list data registries, read one (sources, schema, items in lookup order and their values) and make one over data tables (where the project enables DataRegistry).
+- **`read_editor_ui`** and **`use_editor_ui`** read the editor's own UI as an outline of widgets with refs and use one (click, type, keys, check boxes) for features no capability reaches, without ever moving the cursor.
 - **Names models invent land**: an alias sent as a tool and action resolves (`system_control` `restart_editor` runs `control_editor`'s), with five new ones mined from session transcripts (`call_function`, `save_all` under `manage_asset`, `set_blueprint_variables` under `manage_blueprint`, `connect_nodes` for a Blueprint's `connect_pins`).
 
 </details>

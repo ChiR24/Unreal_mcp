@@ -383,6 +383,7 @@ export const CAPABILITY_COST_INDEX: Readonly<Record<string, string>> = {
   "control_editor::play": "interactive|medium",
   "control_editor::playtest": "long-running|medium",
   "control_editor::possess": "interactive|medium",
+  "control_editor::read_editor_ui": "instant|low",
   "control_editor::redo": "instant|low",
   "control_editor::restart_editor": "long-running|high",
   "control_editor::restore_editor_window": "interactive|low",
@@ -415,6 +416,7 @@ export const CAPABILITY_COST_INDEX: Readonly<Record<string, string>> = {
   "control_editor::stop_recording": "interactive|low",
   "control_editor::take_screenshot": "interactive|low",
   "control_editor::undo": "instant|low",
+  "control_editor::use_editor_ui": "instant|low",
   "inspect::add_tag": "instant|low",
   "inspect::analyze_view": "interactive|low",
   "inspect::audit_materials": "interactive|low",
@@ -1659,4 +1661,4 @@ export const CAPABILITY_COST_INDEX: Readonly<Record<string, string>> = {
   "system_control::write_snapshot": "interactive|medium"
 };
 
-export const CAPABILITY_COST_INDEX_KEY_COUNT = 1646;
+export const CAPABILITY_COST_INDEX_KEY_COUNT = 1648;
