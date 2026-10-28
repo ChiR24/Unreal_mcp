@@ -1271,6 +1271,16 @@ describe('tapped keys while the game is paused', () => {
   });
 });
 
+describe('tapped keys with no play session', () => {
+  // A key_tap sent with no PIE running crashed the editor on the next tick: its release read the world settings of a
+  // play world that was null, since a key pressed outside PIE never counts game time.
+  it('the release of an editor key reads no play world', () => {
+    const source = code('ControlEditor', 'McpEditorInput.cpp');
+    expect(source).toContain('const AWorldSettings *Settings = (bGameTime && !bWorldGone) ? Live->GetWorldSettings() : nullptr;');
+    expect(source).not.toContain('bWorldGone ? nullptr : Live->GetWorldSettings()');
+  });
+});
+
 describe('actors moved from code', () => {
   // After set_transform moved and scaled a ground plane, foliage painted past its old end found no ground and
   // raycast_world missed it there: in the editor world a body moved from code kept its collision queries on the old

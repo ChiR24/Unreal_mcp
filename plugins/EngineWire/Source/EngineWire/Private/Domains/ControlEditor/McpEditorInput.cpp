@@ -58,8 +58,8 @@ void ScheduleKeyReleaseForMcp(const FString &Key, double HoldSeconds,
         // The game's own pause (a title or pause menu) keeps game time still, so a key tapped on its menu stayed
         // down for the whole 600 s grace and the focused button, which clicks on key up, never clicked. The
         // editor's pause is not that: step_frame runs game time through it, and a jump held across stepped
-        // frames let go on the wall clock before the first step.
-        const AWorldSettings *Settings = bWorldGone ? nullptr : Live->GetWorldSettings();
+        // frames let go on the wall clock before the first step. A key pressed with no PIE running has no play world.
+        const AWorldSettings *Settings = (bGameTime && !bWorldGone) ? Live->GetWorldSettings() : nullptr;
         const bool bGameClock = bGameTime && !bWorldGone && !(Settings && Settings->GetPauserPlayerState());
         const bool bHolding = !bWorldGone &&
             (GFrameCounter < MinReleaseFrame ||
