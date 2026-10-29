@@ -46,6 +46,22 @@ const testCases = [
   { scenario: 'CONFIG: configure_mesh_component', toolName: 'manage_character', arguments: { action: 'configure_mesh_component', blueprintPath: '${captured:blueprintPath}', skeletalMeshPath: TEST_SKELETAL_MESH_PATH, animBlueprintPath: '${captured:animBlueprintPath}', meshOffset: { x: 0, y: 0, z: -96 }, meshRotation: { pitch: 0, yaw: -90, roll: 0 } }, expected: 'success', assertions: [{ path: 'structuredContent.result.skeletalMeshAssigned', equals: true, label: 'skeletal mesh asset assigned' }, { path: 'structuredContent.result.animBlueprintAssigned', equals: true, label: 'animation blueprint assigned' }] },
   { scenario: 'CONFIG: configure_camera_component', toolName: 'manage_character', arguments: { action: 'configure_camera_component', blueprintPath: '${captured:blueprintPath}', springArmLength: 350, cameraUsePawnControlRotation: true, springArmLagEnabled: true, springArmLagSpeed: 12 }, expected: 'success', assertions: [{ path: 'structuredContent.result.springArmLength', equals: 350, label: 'spring arm length applied' }] },
   { scenario: 'CONFIG: configure_camera_component length only keeps the lag', toolName: 'manage_character', arguments: { action: 'configure_camera_component', blueprintPath: '${captured:blueprintPath}', springArmLength: 400 }, expected: 'success', assertions: [{ path: 'structuredContent.result.springArmLagEnabled', equals: true, label: 'camera lag left on' }, { path: 'structuredContent.result.springArmLagSpeed', equals: 12, label: 'lag speed left alone' }] },
+  { scenario: 'CONFIG: configure_camera_component first person turns the boom camera off', toolName: 'manage_character', arguments: { action: 'configure_camera_component', blueprintPath: '${captured:blueprintPath}', view: 'first_person', eyeHeight: 70 }, expected: 'success', assertions: [
+    { path: 'structuredContent.result.activeCamera', equals: 'FirstPersonCamera', label: 'the eyes camera is the one in use' },
+    { path: 'structuredContent.result.eyeHeight', equals: 70, label: 'at the height sent' },
+    { path: 'structuredContent.result.camerasTurnedOff', includes: 'FollowCamera', label: 'the boom camera stops activating' },
+    { path: 'structuredContent.result.orientToMovement', equals: false, label: 'the body turns with the aim' },
+    { path: 'structuredContent.result.bodyHiddenFromOwner', equals: true, label: 'the player does not look out through the head' },
+  ] },
+  { scenario: 'CONFIG: configure_camera_component back to third person', toolName: 'manage_character', arguments: { action: 'configure_camera_component', blueprintPath: '${captured:blueprintPath}', view: 'third_person' }, expected: 'success', assertions: [
+    { path: 'structuredContent.result.view', equals: 'third_person', label: 'the boom camera is back' },
+    { path: 'structuredContent.result.springArmLength', equals: 400, label: 'the arm as it was' },
+  ] },
+  { scenario: 'CREATE: a character with no camera yet', toolName: 'manage_character', arguments: { action: 'create_character_blueprint', name: `${CHARACTER_NAME}_Eyes`, path: TEST_FOLDER, parentClass: 'Character' }, expected: 'success', captureResult: { key: 'eyesBlueprintPath', fromField: 'result.assetPath' } },
+  { scenario: 'CONFIG: configure_camera_component first person on a character with no boom', toolName: 'manage_character', arguments: { action: 'configure_camera_component', blueprintPath: '${captured:eyesBlueprintPath}', view: 'first_person' }, expected: 'success', assertions: [
+    { path: 'structuredContent.result.activeCamera', equals: 'FirstPersonCamera', label: 'the eyes camera is made' },
+    { path: 'structuredContent.result.camerasTurnedOff', length: 0, label: 'no other camera to turn off' },
+  ] },
 
   // === MOVEMENT COMPONENT ===
   { scenario: 'CONFIG: configure_movement_speeds', toolName: 'manage_character', arguments: { action: 'configure_movement_speeds', blueprintPath: '${captured:blueprintPath}', runSpeed: 420, crouchSpeed: 180, swimSpeed: 320, flySpeed: 500, acceleration: 1400, deceleration: 1600, groundFriction: 7, jumpHeight: 650 }, expected: 'success', assertions: [{ path: 'structuredContent.result.runSpeedApplied', equals: true, label: 'runSpeed applied when walkSpeed omitted' }, { path: 'structuredContent.result.walkSpeed', equals: 420, label: 'runSpeed maps to max walk speed' }] },
@@ -69,6 +85,7 @@ const testCases = [
   // A non-Character blueprint (the anim blueprint's AnimInstance parent chain)
   // must be rejected by the prerequisite gate with zero mutation.
   { scenario: 'WRONG TARGET: configure_jump on an Animation Blueprint is refused', toolName: 'manage_character', arguments: { action: 'configure_jump', blueprintPath: '${captured:animBlueprintPath}', jumpHeight: 700 }, expected: 'error|NOT_A_CHARACTER' },
+  { scenario: 'WRONG TARGET: a first-person camera on an Animation Blueprint is refused', toolName: 'manage_character', arguments: { action: 'configure_camera_component', blueprintPath: '${captured:animBlueprintPath}', view: 'first_person' }, expected: 'error|NOT_A_CHARACTER' },
 
   // === INFO ===
   { scenario: 'INFO: get_character_info', toolName: 'manage_character', arguments: { action: 'get_character_info', blueprintPath: '${captured:blueprintPath}' }, expected: 'success', assertions: [

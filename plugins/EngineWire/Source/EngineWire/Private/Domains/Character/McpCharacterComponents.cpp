@@ -154,6 +154,15 @@ bool HandleConfigureCameraComponent(UEngineWireSubsystem* Self, const FString& R
         return true;
     }
 
+    // view first_person puts the player behind the eyes; an explicit third_person turns the boom's camera back on. With no
+    // view the active camera stays as it is, so a call that tunes the arm never switches views.
+    const FString View = GetJsonStringField(Payload, TEXT("view"));
+    if (View == TEXT("first_person"))
+    {
+        return HandleFirstPersonCamera(Self, RequestId, Payload, Socket, Blueprint);
+    }
+    const bool bThirdPerson = View == TEXT("third_person");
+
     // An existing boom changes only in the fields sent: every call used to
     // write all four with their defaults, so setting the arm length alone
     // turned lag off and reset its speed. A new boom starts from the
@@ -196,6 +205,7 @@ bool HandleConfigureCameraComponent(UEngineWireSubsystem* Self, const FString& R
                         ChildNode ? ChildNode->ComponentTemplate : nullptr))
                 {
                     Camera->bUsePawnControlRotation = false;
+                    Camera->bAutoActivate = Camera->bAutoActivate || bThirdPerson;
                 }
             }
         }
@@ -235,6 +245,23 @@ bool HandleConfigureCameraComponent(UEngineWireSubsystem* Self, const FString& R
         Self->SendAutomationError(Socket, RequestId, TEXT("Could not create the camera boom"), TEXT("COMPONENT_CREATION_FAILED"));
         return true;
     }
+    if (bThirdPerson)
+    {
+        // Back from first person: its camera stops activating and the player sees the body again.
+        for (USCS_Node* Node : Blueprint->SimpleConstructionScript->GetAllNodes())
+        {
+            UCameraComponent* Camera = Cast<UCameraComponent>(Node ? Node->ComponentTemplate : nullptr);
+            if (Camera && Node->GetVariableName() == FirstPersonCameraName())
+            {
+                Camera->bAutoActivate = false;
+            }
+        }
+        ACharacter* Character = Blueprint->GeneratedClass ? Cast<ACharacter>(Blueprint->GeneratedClass->GetDefaultObject()) : nullptr;
+        if (Character && Character->GetMesh())
+        {
+            Character->GetMesh()->SetOwnerNoSee(false);
+        }
+    }
     FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(Blueprint);
     if (!CommitCharacterEdit(Self, RequestId, Blueprint, Socket)) return true;
     TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
@@ -245,6 +272,10 @@ bool HandleConfigureCameraComponent(UEngineWireSubsystem* Self, const FString& R
     Result->SetBoolField(TEXT("springArmUsePawnControlRotation"), ConfiguredArm->bUsePawnControlRotation);
     Result->SetBoolField(TEXT("springArmLagEnabled"), ConfiguredArm->bEnableCameraLag);
     Result->SetNumberField(TEXT("springArmLagSpeed"), ConfiguredArm->CameraLagSpeed);
+    if (bThirdPerson)
+    {
+        Result->SetStringField(TEXT("view"), TEXT("third_person"));
+    }
     McpHandlerUtils::AddVerification(Result, Blueprint);
     Self->SendAutomationResponse(Socket, RequestId, true, TEXT("Camera configured"), Result);
     return true;

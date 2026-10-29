@@ -68,7 +68,7 @@ export const ASSET_RECORDS: readonly CapabilityRecordSource[] = [
   buildCoreRecord({
     parentTool: 'control_editor', action: 'open_asset', domain: D, family: F,
     topics: ['open blueprint editor', 'open asset editor', 'open in editor'],
-    summary: 'Open an asset\'s editor (a Blueprint, a material, a widget, a sequence) by asset path, loading the asset first; it must be known to the asset registry (ASSET_NOT_FOUND). Under -NullRHI it loads the asset and opens no window, and says so.',
+    summary: 'Open an asset\'s editor (a Blueprint, a material, a widget, a sequence, a skeletal mesh in Persona) by asset path, loading the asset first; it must be known to the asset registry (ASSET_NOT_FOUND). Under -NullRHI it loads the asset and opens no window, and says so.',
     whenToUse: ['An asset must be opened for the user to look at or edit by hand, or so focus reads what is open.'],
     whenNotToUse: ['The asset is already open.'],
     inputProps: { assetPath: P.assetPath },

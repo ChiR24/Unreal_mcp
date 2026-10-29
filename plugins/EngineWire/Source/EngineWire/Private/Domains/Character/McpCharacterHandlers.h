@@ -71,6 +71,10 @@ bool HandleCreateCharacterBlueprint(UEngineWireSubsystem* Self, const FString& R
 bool HandleConfigureCapsuleComponent(UEngineWireSubsystem* Self, const FString& RequestId, const TSharedPtr<FJsonObject>& Payload, FCharacterSocket Socket);
 bool HandleConfigureMeshComponent(UEngineWireSubsystem* Self, const FString& RequestId, const TSharedPtr<FJsonObject>& Payload, FCharacterSocket Socket);
 bool HandleConfigureCameraComponent(UEngineWireSubsystem* Self, const FString& RequestId, const TSharedPtr<FJsonObject>& Payload, FCharacterSocket Socket);
+// configure_camera_component view first_person (McpCharacterCameraView.cpp), and the camera it makes.
+bool HandleFirstPersonCamera(UEngineWireSubsystem* Self, const FString& RequestId, const TSharedPtr<FJsonObject>& Payload, FCharacterSocket Socket,
+                             UBlueprint* Blueprint);
+inline FName FirstPersonCameraName() { return FName(TEXT("FirstPersonCamera")); }
 bool HandleConfigureMovementSpeeds(UEngineWireSubsystem* Self, const FString& RequestId, const TSharedPtr<FJsonObject>& Payload, FCharacterSocket Socket);
 bool HandleConfigureJump(UEngineWireSubsystem* Self, const FString& RequestId, const TSharedPtr<FJsonObject>& Payload, FCharacterSocket Socket);
 bool HandleConfigureRotation(UEngineWireSubsystem* Self, const FString& RequestId, const TSharedPtr<FJsonObject>& Payload, FCharacterSocket Socket);

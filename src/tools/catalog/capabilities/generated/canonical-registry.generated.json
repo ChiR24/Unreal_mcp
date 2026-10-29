@@ -1,5 +1,5 @@
 {
-  "catalogRevision": "9ed702390e3e6c58",
+  "catalogRevision": "f851a79352377f4f",
   "recordCount": 472,
   "records": [
     {
@@ -47946,7 +47946,7 @@
           "open asset editor",
           "open in editor"
         ],
-        "summary": "Open an asset's editor (a Blueprint, a material, a widget, a sequence) by asset path, loading the asset first; it must be known to the asset registry (ASSET_NOT_FOUND). Under -NullRHI it loads the asset and opens no window, and says so.",
+        "summary": "Open an asset's editor (a Blueprint, a material, a widget, a sequence, a skeletal mesh in Persona) by asset path, loading the asset first; it must be known to the asset registry (ASSET_NOT_FOUND). Under -NullRHI it loads the asset and opens no window, and says so.",
         "whenToUse": [
           "An asset must be opened for the user to look at or edit by hand, or so focus reads what is open."
         ],
@@ -48000,7 +48000,7 @@
       },
       "examples": [
         {
-          "title": "Open an asset's editor (a Blueprint, a material, a widget, a sequence) by asset path, loading the asset first; it must be known to the asset registry (ASSET_NOT_FOUND). Under -NullRHI it loads the asset and opens no window, and says so.",
+          "title": "Open an asset's editor (a Blueprint, a material, a widget, a sequence, a skeletal mesh in Persona) by asset path, loading the asset first; it must be known to the asset registry (ASSET_NOT_FOUND). Under -NullRHI it loads the asset and opens no window, and says so.",
           "input": {
             "action": "open_asset",
             "assetPath": "/Game/Materials/M_Base"
@@ -48043,7 +48043,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "34aba8ae7de2a9142900e274781de5e7a335678b7322804a69856b571585e7bc",
-        "content": "b592b5a12b19084ba6d207162f7d456d851d50f4ad7af434b8d8f7e5f7769baa"
+        "content": "bb4f77585a546e542bbb0bec71ff5b0dcff2454c7be3303f7a7cf4a9dbbe2f72"
       }
     },
     {
@@ -69994,9 +69994,10 @@
           "change the player speed",
           "change the camera distance",
           "make the player float",
+          "switch to first person or third person",
           "double jump"
         ],
-        "summary": "Configure a Character Blueprint's defaults by setting: movement_speeds (walk, crouch, swim, fly, acceleration, braking, friction), jump (launch speed, hold, double jump, air control, gravity), crouch, rotation (orient to movement or face the aim), capsule_component, mesh_component (skeletal mesh, Animation Blueprint, offset), camera_component (a third-person spring arm and camera, made when missing) or nav_movement (AI agent size, avoidance). Each compiles and saves the Blueprint, changes only the fields sent and reads the values back; a Blueprint that is not a Character is refused (NOT_A_CHARACTER).",
+        "summary": "Configure a Character Blueprint's defaults by setting: movement_speeds (walk, crouch, swim, fly, acceleration, braking, friction), jump (launch speed, hold, double jump, air control, gravity), crouch, rotation (orient to movement or face the aim), capsule_component, mesh_component (skeletal mesh, Animation Blueprint, offset), camera_component (a third-person spring arm and camera, made when missing, or with view first_person a camera at the eyes) or nav_movement (AI agent size, avoidance). Each compiles and saves the Blueprint, changes only the fields sent and reads the values back; a Blueprint that is not a Character is refused (NOT_A_CHARACTER).",
         "whenToUse": [
           "setting=movement_speeds: A character must move, stop, crouch, swim or fly faster or slower, or several movement values change at once.",
           "setting=jump: A character jumps too high, too low or too floaty, needs a double jump, or must steer in the air.",
@@ -70005,6 +70006,7 @@
           "setting=capsule_component: A character is taller, wider or smaller than its capsule, or gets stuck in doorways it should fit through.",
           "setting=mesh_component: A character needs its body mesh or the Animation Blueprint that drives it, or its mesh floats, sinks or faces sideways.",
           "setting=camera_component: A Character needs a camera that follows it from behind; without one the game views from the eyes of the pawn.",
+          "setting=camera_component: The player should see through the character's eyes (first person), or switch back to the camera behind it.",
           "setting=nav_movement: An AI character paths through gaps too narrow for it, or AI characters walk into each other."
         ],
         "whenNotToUse": [
@@ -70153,6 +70155,18 @@
               },
               "additionalProperties": false
             },
+            "view": {
+              "type": "string",
+              "enum": [
+                "third_person",
+                "first_person"
+              ],
+              "description": "third_person: the boom camera behind the character, turned back on; first_person: the camera at its eyes. Omitted: the arm is tuned and the camera in use stays."
+            },
+            "eyeHeight": {
+              "type": "number",
+              "description": "first_person: the camera's height above the capsule centre in cm (default the character's BaseEyeHeight)."
+            },
             "springArmLength": {
               "type": "number",
               "description": "How far the camera sits behind the character, in cm (spring arm TargetArmLength; 300 on a new boom)."
@@ -70193,7 +70207,7 @@
                 "camera_component",
                 "nav_movement"
               ],
-              "description": "Which configure character variant to run.\nmovement_speeds: Set a Character Blueprint's Character Movement speeds in one call, then compile and save it: walkSpeed (MaxWalkSpeed, engine default 600), crouchSpeed (300), swimSpeed (300), flySpeed (600), acceleration (MaxAcceleration, 2048), deceleration (braking while walking, 2048) and groundFriction (8), plus the jump fields setting=jump takes. A value not sent keeps its own. A Character has one walk speed: runSpeed sets it only when walkSpeed is absent, otherwise the reply says runSpeedApplied false with a warning (a sprint is game logic that raises MaxWalkSpeed while a key is held). The reply reads back every speed and jump value.\njump: Set how a Character Blueprint jumps, then compile and save it: jumpHeight is the launch speed (JumpZVelocity, engine default 420; the apex is about v squared over 1960 cm at gravity scale 1, so 420 rises 0.9 m and 600 about 1.8 m), jumpHoldTime (seconds holding the button keeps lifting, default 0), maxJumpCount (2 for a double jump), airControl (0-1 steering while falling, default 0.05), gravityScale (default 1) and fallingLateralFriction (default 0). A value not sent keeps its own; the reply reads back all six, jumpHeight as jumpZVelocity.\ncrouch: Let a Character Blueprint crouch, then compile and save it: canCrouch (off on a new Character, so Crouch does nothing until it is on), crouchSpeed (MaxWalkSpeedCrouched, engine default 300) and crouchedHalfHeight (the capsule half-height while crouched, default 40); a field not sent keeps its value. The reply reads back all three. Crouching still needs input that calls Crouch and UnCrouch, and an Animation Blueprint that plays a crouch pose from the crouched state.\nrotation: Choose what turns a Character Blueprint, then compile and save it: orientToMovement turns it toward where it moves at rotationRate degrees per second (yaw; engine default 360); useControllerRotationYaw, Pitch and Roll make it face the controller's aim. A new Character faces the controller's yaw (useControllerRotationYaw true, orientToMovement false). A third-person character usually sets orientToMovement true and useControllerRotationYaw false; a strafing shooter the opposite. Keep only one of those two on: both on fight every frame. A value not sent keeps its own; the reply reads back all five.\ncapsule_component: Resize a Character Blueprint's collision capsule (capsuleRadius and capsuleHalfHeight in world units; a new Character starts at 34 by 88, the third-person template uses 42 by 96), then compile and save it; a size not sent keeps its value. The reply reads both sizes back; a Blueprint that is not a Character is refused (NOT_A_CHARACTER). Move the mesh with it: its meshOffset z is usually minus the half-height, so the feet sit on the capsule bottom.\nmesh_component: Set the inherited Mesh of a Character Blueprint, then compile and save it: skeletalMeshPath, animBlueprintPath (the Animation Blueprint that animates it), and meshOffset and meshRotation relative to the capsule; a field not sent keeps its value. Refused before anything changes: a path that does not load (ASSET_NOT_FOUND), and an Animation Blueprint made for a skeleton the mesh does not take (SKELETON_MISMATCH), which would leave the character in its rest pose. The reply names skeletalMeshAssigned and animBlueprintAssigned. A mannequin-style mesh usually needs meshOffset z at minus the capsule half-height and meshRotation yaw -90 to face forward (+X).\ncamera_component: Give a Character a third-person follow camera: a spring arm behind it with a camera on its end, made when missing; an existing arm changes only in the fields sent.\nnav_movement: Set how AI navigation sees a Character Blueprint, then compile and save it: navAgentRadius and navAgentHeight (the agent size its movement reports to pathfinding) and avoidanceEnabled (RVO avoidance, so moving characters steer around each other). By default a spawned character copies its capsule size over the nav agent size; sending a size turns that copy off so the size stays (navAgentFollowsCapsule false). A value not sent keeps its own; the reply reads back all three and navAgentFollowsCapsule. The navmesh itself is built for the agent sizes in the project's Navigation System settings."
+              "description": "Which configure character variant to run.\nmovement_speeds: Set a Character Blueprint's Character Movement speeds in one call, then compile and save it: walkSpeed (MaxWalkSpeed, engine default 600), crouchSpeed (300), swimSpeed (300), flySpeed (600), acceleration (MaxAcceleration, 2048), deceleration (braking while walking, 2048) and groundFriction (8), plus the jump fields setting=jump takes. A value not sent keeps its own. A Character has one walk speed: runSpeed sets it only when walkSpeed is absent, otherwise the reply says runSpeedApplied false with a warning (a sprint is game logic that raises MaxWalkSpeed while a key is held). The reply reads back every speed and jump value.\njump: Set how a Character Blueprint jumps, then compile and save it: jumpHeight is the launch speed (JumpZVelocity, engine default 420; the apex is about v squared over 1960 cm at gravity scale 1, so 420 rises 0.9 m and 600 about 1.8 m), jumpHoldTime (seconds holding the button keeps lifting, default 0), maxJumpCount (2 for a double jump), airControl (0-1 steering while falling, default 0.05), gravityScale (default 1) and fallingLateralFriction (default 0). A value not sent keeps its own; the reply reads back all six, jumpHeight as jumpZVelocity.\ncrouch: Let a Character Blueprint crouch, then compile and save it: canCrouch (off on a new Character, so Crouch does nothing until it is on), crouchSpeed (MaxWalkSpeedCrouched, engine default 300) and crouchedHalfHeight (the capsule half-height while crouched, default 40); a field not sent keeps its value. The reply reads back all three. Crouching still needs input that calls Crouch and UnCrouch, and an Animation Blueprint that plays a crouch pose from the crouched state.\nrotation: Choose what turns a Character Blueprint, then compile and save it: orientToMovement turns it toward where it moves at rotationRate degrees per second (yaw; engine default 360); useControllerRotationYaw, Pitch and Roll make it face the controller's aim. A new Character faces the controller's yaw (useControllerRotationYaw true, orientToMovement false). A third-person character usually sets orientToMovement true and useControllerRotationYaw false; a strafing shooter the opposite. Keep only one of those two on: both on fight every frame. A value not sent keeps its own; the reply reads back all five.\ncapsule_component: Resize a Character Blueprint's collision capsule (capsuleRadius and capsuleHalfHeight in world units; a new Character starts at 34 by 88, the third-person template uses 42 by 96), then compile and save it; a size not sent keeps its value. The reply reads both sizes back; a Blueprint that is not a Character is refused (NOT_A_CHARACTER). Move the mesh with it: its meshOffset z is usually minus the half-height, so the feet sit on the capsule bottom.\nmesh_component: Set the inherited Mesh of a Character Blueprint, then compile and save it: skeletalMeshPath, animBlueprintPath (the Animation Blueprint that animates it), and meshOffset and meshRotation relative to the capsule; a field not sent keeps its value. Refused before anything changes: a path that does not load (ASSET_NOT_FOUND), and an Animation Blueprint made for a skeleton the mesh does not take (SKELETON_MISMATCH), which would leave the character in its rest pose. The reply names skeletalMeshAssigned and animBlueprintAssigned. A mannequin-style mesh usually needs meshOffset z at minus the capsule half-height and meshRotation yaw -90 to face forward (+X).\ncamera_component: Give a Character its camera, then compile and save it. Third person (the default): a spring arm behind it with a camera on its end (FollowCamera), made when missing; an existing arm changes only in the fields sent, and with no view the camera in use stays the one in use. view first_person: the player looks through FirstPersonCamera at the eyes (eyeHeight above the capsule centre, default the character's BaseEyeHeight), turning with the aim; every other camera stops activating (none is deleted), the body turns with the aim (useControllerRotationYaw on, orientToMovement off) and the player no longer sees the character's own mesh; the arm fields are not read. view third_person turns the boom's camera back on, FirstPersonCamera off and the mesh visible to the player again, leaving the rotation as it is (setting=rotation orientToMovement makes it turn toward where it walks). The view itself shows only in Play.\nnav_movement: Set how AI navigation sees a Character Blueprint, then compile and save it: navAgentRadius and navAgentHeight (the agent size its movement reports to pathfinding) and avoidanceEnabled (RVO avoidance, so moving characters steer around each other). By default a spawned character copies its capsule size over the nav agent size; sending a size turns that copy off so the size stays (navAgentFollowsCapsule false). A value not sent keeps its own; the reply reads back all three and navAgentFollowsCapsule. The navmesh itself is built for the agent sizes in the project's Navigation System settings."
             }
           },
           "required": [
@@ -70228,7 +70242,7 @@
       },
       "examples": [
         {
-          "title": "Configure a Character Blueprint's defaults by setting: movement_speeds (walk, crouch, swim, fly, acceleration, braking, friction), jump (launch speed, hold, double jump, air control, gravity), crouch, rotation (orient to movement or face the aim), capsule_component, mesh_component (skeletal mesh, Animation Blueprint, offset), camera_component (a third-person spring arm and camera, made when missing) or nav_movement (AI agent size, avoidance). Each compiles and saves the Blueprint, changes only the fields sent and reads the values back; a Blueprint that is not a Character is refused (NOT_A_CHARACTER).",
+          "title": "Configure a Character Blueprint's defaults by setting: movement_speeds (walk, crouch, swim, fly, acceleration, braking, friction), jump (launch speed, hold, double jump, air control, gravity), crouch, rotation (orient to movement or face the aim), capsule_component, mesh_component (skeletal mesh, Animation Blueprint, offset), camera_component (a third-person spring arm and camera, made when missing, or with view first_person a camera at the eyes) or nav_movement (AI agent size, avoidance). Each compiles and saves the Blueprint, changes only the fields sent and reads the values back; a Blueprint that is not a Character is refused (NOT_A_CHARACTER).",
           "input": {
             "action": "configure_character",
             "blueprintPath": "/Game/BP_Char",
@@ -70366,6 +70380,12 @@
             "meshRotation": [
               "mesh_component"
             ],
+            "view": [
+              "camera_component"
+            ],
+            "eyeHeight": [
+              "camera_component"
+            ],
             "springArmLength": [
               "camera_component"
             ],
@@ -70392,8 +70412,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "575372bd717cd683d494bbbc58ba03dcc9f46fcd02e432c1095dd9b93be0e6b7",
-        "content": "bd167732b0620d2a7abb2a65c0962eff7817f081f4142a742ced4aafd11a2d07"
+        "schema": "f5b1d349c80165552eb31f67ec27b80672797918ebec0822101a82db4d1815cd",
+        "content": "52ef7e90275feeebe9f63698a4cef69190030f161be34b19fbdae08044ac76e6"
       }
     },
     {

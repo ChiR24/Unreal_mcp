@@ -869,4 +869,6 @@ export const PLAIN_PROBE: readonly PlainProbeCase[] = [
   { query: 'make a homing missile', accepted: ['manage_combat.configure_projectile'] },
   { query: 'animate the button', accepted: ['blueprint.edit_widget_animation'] },
   { query: 'make the title bounce', accepted: ['blueprint.edit_widget_animation'] },
+  // The player's view: a camera at the eyes, or behind the character.
+  { query: 'switch to first person', accepted: ['manage_character.configure_character'] },
 ];
