@@ -222,7 +222,7 @@ export const SPAWN_RECORDS: readonly CapabilityRecordSource[] = [
     action: 'duplicate',
     domain: DOMAIN,
     family: FAMILY_LIFECYCLE,
-    topics: ['clone actor', 'copy actor', 'make actor copy', 'duplicate a wall, a door or a prop'],
+    topics: ['clone actor', 'copy actor', 'make actor copy', 'duplicate a wall, a door or a prop', 'make a copy of an actor or a house'],
     summary:
       'Duplicate a placed actor: a copy with its components, properties, materials and tags at the original\'s transform moved by offset, labelled newName or numbered after the original, in one undo step.',
     whenToUse: [

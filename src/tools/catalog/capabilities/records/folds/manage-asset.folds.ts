@@ -140,7 +140,7 @@ export const MANAGE_ASSET_FOLDS: readonly FoldSpec[] = [
   {
     primary: 'add_material_node', selector: 'nodeKind',
     summary: 'Add a node to a material graph: any expression class by name, or a typed node (parameters, texture sample/coordinate, math, noise, panner, rotator, fresnel, switches, custom HLSL, function call, landscape layer), or build a whole graph (nodes, wires, material properties) in one batch.',
-    topics: ['material node', 'material expression', 'scalar parameter', 'vector parameter', 'texture sample', 'material function', 'custom expression', 'landscape layer', 'build material graph', 'create custom shader'],
+    topics: ['material node', 'material expression', 'scalar parameter', 'vector parameter', 'texture sample', 'material function', 'custom expression', 'landscape layer', 'build material graph', 'create custom shader', 'make a material scroll or pan'],
     members: {
       node: 'add_material_node', custom_expression: 'add_custom_expression', fresnel: 'add_fresnel', if: 'add_if', math: 'add_math_node',
       noise: 'add_noise', panner: 'add_panner', pixel_depth: 'add_pixel_depth', reflection_vector: 'add_reflection_vector', rotator: 'add_rotator',
@@ -160,7 +160,7 @@ export const MANAGE_ASSET_FOLDS: readonly FoldSpec[] = [
   {
     primary: 'create_material', selector: 'kind',
     summary: 'Create a material asset: a standard material, a decal, landscape or post-process material, a material function, or a Material Parameter Collection (values every material reading it shares).',
-    topics: ['create material', 'decal material', 'landscape material', 'post process material', 'material function', 'material parameter collection', 'emissive glow', 'glowing material', 'shiny metal material', 'make something look like glass'],
+    topics: ['create material', 'decal material', 'landscape material', 'post process material', 'material function', 'material parameter collection', 'emissive glow', 'glowing material', 'shiny metal material', 'make something look like glass', 'make a hologram material'],
     members: { material: 'create_material', decal: 'create_decal_material', landscape: 'create_landscape_material', post_process: 'create_post_process_material', function: 'create_material_function', parameter_collection: 'create_parameter_collection' },
   },
   { primary: 'connect_nodes', topics: ['connect texture to base color', 'connect node to base color'], summary: 'Wire an output of sourceNodeId (sourcePin: a name, an index or channel letters such as G or RG; default its first output) into targetPin of targetNodeId, replacing whatever fed that input. targetNodeId Main is the material output (BaseColor, Roughness, Normal, EmissiveColor...), or in a material function its output named targetPin (the first when left out). The material recompiles and is left unsaved (save_all keeps it). NODE_NOT_FOUND names Main when the target id is missing; INVALID_PIN or PIN_NOT_FOUND lists the inputs the node has.', members: ['connect_material_pins'] },

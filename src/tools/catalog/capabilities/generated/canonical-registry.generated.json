@@ -1,5 +1,5 @@
 {
-  "catalogRevision": "79a26b0116e7a1d2",
+  "catalogRevision": "eb298f4381cdc4a3",
   "recordCount": 482,
   "records": [
     {
@@ -28544,6 +28544,7 @@
           "scatter rocks or trees around an area",
           "plant trees around a building, a castle or a lake",
           "add trees to the hills",
+          "place rocks randomly on the landscape",
           "foliage",
           "vegetation",
           "grass",
@@ -28939,7 +28940,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "1d69a2ec3894703cfb5473af28e37c8f764811e72feee995d7335213b3db30fa",
-        "content": "0e5315a3e99a89e67bf7f32d560b6b2f60735335bfa042de4d25edd37a474374"
+        "content": "f61f8c0b293df87d759c379f4a750034de8b8e1665edda1a387cc0044501b8a0"
       }
     },
     {
@@ -29598,7 +29599,8 @@
           "add fog to the scene",
           "add a skybox",
           "make it look like sunset",
-          "add fog to the level or the map"
+          "add fog to the level or the map",
+          "make the fog thicker or thinner"
         ],
         "summary": "Configure the sky and atmosphere: sky atmosphere, sky light, sun position, directional light, height fog, volumetric clouds, time of day, sky/light color curves.",
         "whenToUse": [
@@ -29927,7 +29929,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "62d06760062b3abe69fafba24760b3764aef720dc72b85ccb7e20689ab3ffd17",
-        "content": "d1d6e9d2c2105ee06db7e64001e7e6eaa40c4511a5e91b084a60cf7d618fe45c"
+        "content": "a3cbe3172d38e99eb80aab5a12ef9156e84ba8a8da7e79d4b404505d46d7c359"
       }
     },
     {
@@ -30284,7 +30286,8 @@
           "scene is too dark",
           "level is too dark",
           "make the scene darker",
-          "turn the shadows off or on"
+          "turn the shadows off or on",
+          "add god rays or light shafts"
         ],
         "summary": "Change scene lighting, chosen by setting. global_illumination sets the dynamic GI method (LumenGI, ScreenSpace, None, Lightmass) for this editor session, or in DefaultEngine.ini as well with saveToProject; shadows sets engine-wide shadow quality, distance and features for the session, or the shadow settings of the actor actorName names; exposure and ambient_occlusion write overrides on a post-process volume (actorName, else the level's one unbound volume, spawned when there is none); volumetric_fog enables or disables volumetric fog on the level's height fog. exposure, ambient_occlusion and volumetric_fog refuse a call that sets nothing (NO_SETTING_SUPPLIED).",
         "whenToUse": [
@@ -30598,7 +30601,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "a731b276c513bdacc529bea41ff1f11f2625ea347fe73572496cbc8f3772426d",
-        "content": "732ebd197fda97802f7d5ac89517cebd50d408876e15e4e44d425f8c444c270a"
+        "content": "33c91042828c12213c2a7ae999b8a7d650e1000e9254e56125b07328dbbecf94"
       }
     },
     {
@@ -39725,7 +39728,8 @@
           "line up the actors",
           "align the tops of the shelves",
           "square up a row of crates",
-          "make the fronts flush"
+          "make the fronts flush",
+          "line up fence posts or pillars in a row"
         ],
         "summary": "Line actors up on one axis, as a level designer squares up a row of crates, the tops of shelves or the fronts of buildings: each actor moves along axis only, so the edge it is aligned by (the min, max or center of its bounds, or its pivot) lands on the first actor's, or on value. Every name is found before anything moves (ACTOR_NOT_FOUND changes nothing); the moves are one undo step (none when nothing moves), dryRun reports them without moving, and where an actor lands is checked like any move.",
         "whenToUse": [
@@ -39908,7 +39912,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "730704cab8396426959354690fac056e4cab1a7d0785ba99bba587be922347f8",
-        "content": "8f58a55a79c6bd3268ede0056b7591742c7f195b0944da34c6f5149fcdb153c4"
+        "content": "33be9ab65267d5c916904ef9068cc51ef3d5a368ed4f3decce933f15698563df"
       }
     },
     {
@@ -41777,7 +41781,8 @@
           "clone actor",
           "copy actor",
           "make actor copy",
-          "duplicate a wall, a door or a prop"
+          "duplicate a wall, a door or a prop",
+          "make a copy of an actor or a house"
         ],
         "summary": "Duplicate a placed actor: a copy with its components, properties, materials and tags at the original's transform moved by offset, labelled newName or numbered after the original, in one undo step.",
         "whenToUse": [
@@ -41897,7 +41902,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "325ccfd05f51b91aa27187b57988388402d0af00117e967ac21ea27c4b3379a6",
-        "content": "1cb4a0f05791de37212015c2095a3373cd0c509b25a8e11ca3db6f0f9991e664"
+        "content": "56d5b2b02b7b2f5f45de821169847c546a136a78f22fc87a332a0426dd2d2dbc"
       }
     },
     {
@@ -46000,6 +46005,7 @@
           "move or rotate the chair, the table or the lamp",
           "move a light",
           "mirror an actor",
+          "turn an actor around",
           "set position",
           "set rotation",
           "translate"
@@ -46360,7 +46366,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "6af5b619f64ce87631986e9ba9d0b1fec5c056e5aa571251d34e3202107f2ea4",
-        "content": "db75dd0643c7cf953b95a040297f7e565f721a72351096ae54a10023a1c4335b"
+        "content": "0aa09138b1c5ca497fda9aec768c7db9bf911eee56acaa89f276f8872cb651a0"
       }
     },
     {
@@ -46392,7 +46398,8 @@
           "hidden in game",
           "make actor invisible",
           "unhide actor",
-          "hide a light"
+          "hide a light",
+          "hide or show all the trees"
         ],
         "summary": "Show or hide an actor in the editor and in play (visible, default true), or many actors at once with actorNames, as one undo step. Collision follows visibility: hiding turns its collision off, and showing turns it back on, even where set_actor_collision had turned it off. Showing also shows every primitive component, including one hidden on purpose. The single form replies visible as read back plus actorName; the many form replies updatedActors, affectedActors and the names not found under missing. A name that matches nothing is ACTOR_NOT_FOUND; an actor that does not read back as asked is VISIBILITY_MISMATCH.",
         "whenToUse": [
@@ -46503,7 +46510,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "127a0b12e6f6500a252b87c15fadc2915c8b2428ed6cf5027ab0d09a9c8d0e79",
-        "content": "b45f6a76ba35df1561df6c8011ddbeb7e309e6968496fb92c433798a856c18f5"
+        "content": "5d229d594d9cff8ad5c40431891f5244df4483ddc60127fb820d96453514afba"
       }
     },
     {
@@ -48954,7 +48961,8 @@
         "domain": "editor",
         "family": "asset",
         "topics": [
-          "focus_actor"
+          "focus_actor",
+          "zoom to an actor or the player start"
         ],
         "summary": "Focus the viewport camera on a specific actor by name: the level viewport, or the free view of an ejected player.",
         "whenToUse": [
@@ -49049,7 +49057,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "1904d48f0fbed1b63c88abaa8d9d1cae0a59ba0b5647cee82c7a5c2d6257daaf",
-        "content": "183dff43b46eb7360d48f8e908421ecf9809db62dd3a4b80fc611a9299b458c2"
+        "content": "da2a68067e6001a4b6ad1eb281d5e77cf1f2a5659132e36edd2ce50c0da327da"
       }
     },
     {
@@ -77081,7 +77089,8 @@
           "particle lifetime",
           "static switch",
           "ribbon width",
-          "make the fire bigger or the smoke darker"
+          "make the fire bigger or the smoke darker",
+          "make an explosion bigger"
         ],
         "summary": "Edit a Niagara system: add an emitter (an asset, or a copy of another system's), user parameters or parameter bindings, set parameter values or dynamic inputs, emitter properties, GPU simulation, connect pins.",
         "whenToUse": [
@@ -77570,7 +77579,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "423896276d000fcc05fc7e5e53943411d53de159dd4008f545d073ce1f3fbd71",
-        "content": "1bfcf6a751f1571b3af9c3fd3a99207fe0fd19e48ad89dbe0c03f3eafc75ac46"
+        "content": "3dcabfa50b0ae3f1ab341051340770cc687083cd49bdc56df55387c2ce870757"
       }
     },
     {
@@ -101460,6 +101469,7 @@
           "landscape layer",
           "build material graph",
           "create custom shader",
+          "make a material scroll or pan",
           "batch material edit",
           "wire many material nodes",
           "material graph batch"
@@ -102163,7 +102173,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "24185924ce77af97127e7f4a8de587e279ebc86b68cc8cd9f21702120ec2cd74",
-        "content": "a88b38c93a5045411f908fc8a6bb7d45f7212d6841d33faa9f5dd3d07e7dc703"
+        "content": "ea10aa7120ab8e70448a29d67c714ad65ef32c7b8831c5fad87a3aed5ae93008"
       }
     },
     {
@@ -102693,6 +102703,7 @@
           "glowing material",
           "shiny metal material",
           "make something look like glass",
+          "make a hologram material",
           "new material",
           "make material",
           "material asset",
@@ -102956,7 +102967,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "ddb0f137f776b24373015bac1938e25ad09bd3ab03b7f86490acc94c1873ae5e",
-        "content": "bf2073b2306eca45c18505914c354e92800cede894781c3e00a04ad55866419d"
+        "content": "b52bd20ecf563b59b65a788e1ccaf847dbf13a7eee7a0545aead24398abb1d99"
       }
     },
     {
@@ -104896,7 +104907,8 @@
           "shot track",
           "subsequence",
           "fade to black",
-          "add skeletal animation to sequence"
+          "add skeletal animation to sequence",
+          "fade the cutscene in or out"
         ],
         "summary": "Add a cinematic track: camera cut, camera shake, transform, property, skeletal animation, material parameter, particle, event, fade, level visibility, shot, or subsequence.",
         "whenToUse": [
@@ -105384,7 +105396,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "a470c8957c44677e939bc0a2cf97b9ad4618bfdc5cca90d4967f87d99430fc15",
-        "content": "9e007b66376f3b3e5570411168cad587f330dc87011ec140cd2f5dfc90dd971e"
+        "content": "79005184dceec8d36996db3dcfdec21b134d9d7a7970c51ad63edf13d073c45e"
       }
     },
     {
@@ -119920,7 +119932,8 @@
           "missing usage flag",
           "default material in packaged game",
           "check materials before packaging",
-          "nanite material usage"
+          "nanite material usage",
+          "check the project for problems"
         ],
         "summary": "Check that assets load without error, with dataValidation that they pass the project's and the engine's Data Validation (the editor's Validate Assets), and with materialUsage that their meshes' materials carry the usage flags a cooked game needs: each asset path, or every asset under a folder (recursive by default); returns isValid, per-path results and the checked and invalid counts.",
         "whenToUse": [
@@ -120077,7 +120090,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "2a14bbed51cc97561b6758c369e473e71d1aee7cf605a9e6e2a00d7c3976f17b",
-        "content": "5c1d25b5d167f0a2800caa11e25adc795a1f8a4445e5ae6176d5d1c235eeca01"
+        "content": "12929ff6ec74a34f4fae88247cb057a08a91b6d62fc64e9b3a51dd737acba819"
       }
     },
     {

@@ -372,7 +372,7 @@ export const TRANSFORM_RECORDS: readonly CapabilityRecordSource[] = [
     action: 'align_actors',
     domain: DOMAIN,
     family: FAMILY_TRANSFORM,
-    topics: ['align actors', 'line up the actors', 'align the tops of the shelves', 'square up a row of crates', 'make the fronts flush'],
+    topics: ['align actors', 'line up the actors', 'align the tops of the shelves', 'square up a row of crates', 'make the fronts flush', 'line up fence posts or pillars in a row'],
     summary: 'Line actors up on one axis, as a level designer squares up a row of crates, the tops of shelves or the fronts of buildings: each actor moves along axis only, so the edge it is aligned by (the min, max or center of its bounds, or its pivot) lands on the first actor\'s, or on value. Every name is found before anything moves (ACTOR_NOT_FOUND changes nothing); the moves are one undo step (none when nothing moves), dryRun reports them without moving, and where an actor lands is checked like any move.',
     whenToUse: ['A row of props placed by hand should stand on one line.', 'Shelves, walls or buildings should share a top, a bottom or a front.'],
     whenNotToUse: ['The gaps between them should be even: use distribute_actors.', 'Positions should land on a grid: use snap_to_grid.', 'Actors should rest on the floor: use fix_placement.'],

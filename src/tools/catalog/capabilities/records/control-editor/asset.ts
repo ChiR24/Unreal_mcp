@@ -106,6 +106,7 @@ export const ASSET_RECORDS: readonly CapabilityRecordSource[] = [
   buildCoreRecord({
     parentTool: 'control_editor', action: 'focus_actor', domain: D, family: F,
     aliases: ['control_editor.move_camera_to_actor'],
+    topics: ['zoom to an actor or the player start'],
     summary: 'Focus the viewport camera on a specific actor by name: the level viewport, or the free view of an ejected player.',
     whenToUse: ['The viewport must frame a specific actor.'],
     whenNotToUse: ['The actor does not exist in the current level.',

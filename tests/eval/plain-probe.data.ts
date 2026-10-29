@@ -1014,4 +1014,18 @@ export const PLAIN_PROBE: readonly PlainProbeCase[] = [
   { query: 'turn down the volume of the explosion', accepted: ['manage_audio.set_sound_volume'] },
   { query: 'turn up the music', accepted: ['manage_audio.set_sound_volume'] },
   { query: 'set the volume of the sound', accepted: ['manage_audio.set_sound_volume'] },
+  // A cutscene fade, a scrolling or hologram material, a bigger explosion, project checks, fog, god rays, rocks; hiding trees, zooming to an actor, turning, lining up, copying.
+  { query: 'fade in at the start of the cutscene', accepted: ['sequence.cinematic.add_cinematic_track'] },
+  { query: 'make the material scroll', accepted: ['material.add_material_node'] },
+  { query: 'make a hologram material', accepted: ['material.create_material'] },
+  { query: 'make the explosion bigger', accepted: ['manage_effect.edit_niagara_system'] },
+  { query: 'check the project for problems', accepted: ['system_control.validate_assets'] },
+  { query: 'make the level fog thicker', accepted: ['build_environment.configure_atmosphere'] },
+  { query: 'add god rays', accepted: ['build_environment.configure_lighting'] },
+  { query: 'place rocks randomly on the landscape', accepted: ['build_environment.add_foliage'] },
+  { query: 'hide all the trees', accepted: ['control_actor.set_visibility'] },
+  { query: 'zoom to the player start', accepted: ['control_editor.focus_actor'] },
+  { query: 'turn the actor around', accepted: ['control_actor.set_transform'] },
+  { query: 'line up the fence posts', accepted: ['control_actor.align_actors'] },
+  { query: 'make a copy of the house', accepted: ['control_actor.duplicate'] },
 ];

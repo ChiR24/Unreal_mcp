@@ -47,7 +47,7 @@ export const MANAGE_SEQUENCE_FOLDS: readonly FoldSpec[] = [
   {
     primary: 'add_cinematic_track', selector: 'trackKind',
     summary: 'Add a cinematic track: camera cut, camera shake, transform, property, skeletal animation, material parameter, particle, event, fade, level visibility, shot, or subsequence.',
-    topics: ['camera cut track', 'camera shake', 'transform track', 'property track', 'animation track', 'fade track', 'shot track', 'subsequence', 'fade to black', 'add skeletal animation to sequence'],
+    topics: ['camera cut track', 'camera shake', 'transform track', 'property track', 'animation track', 'fade track', 'shot track', 'subsequence', 'fade to black', 'add skeletal animation to sequence', 'fade the cutscene in or out'],
     members: {
       ...byTarget('add_', ['add_camera_cut_track', 'add_camera_shake_track', 'add_transform_track', 'add_property_track', 'add_skeletal_animation_track',
         'add_material_parameter_track', 'add_particle_track', 'add_event_track', 'add_fade_track', 'add_level_visibility_track', 'add_shot_track'], '_track'),
