@@ -88,6 +88,10 @@ bool HandleArrangeByRelations(UEngineWireSubsystem* Bridge, const FString& Reque
 bool HandleSnapToGrid(UEngineWireSubsystem* Bridge, const FString& RequestId, const TSharedPtr<FJsonObject>& Payload,
                       TSharedPtr<FMcpBridgeWebSocket> Socket, TFunctionRef<AActor*(const FString&)> Find);
 
+/** control_actor distribute_actors (McpDistribute.cpp). */
+bool HandleDistributeActors(UEngineWireSubsystem* Bridge, const FString& RequestId, const TSharedPtr<FJsonObject>& Payload,
+                            TSharedPtr<FMcpBridgeWebSocket> Socket, TFunctionRef<AActor*(const FString&)> Find);
+
 /** The wider side of an item's footprint. */
 inline double Footprint(const FItem& Item)
 {

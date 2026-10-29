@@ -1,6 +1,6 @@
 {
-  "catalogRevision": "f851a79352377f4f",
-  "recordCount": 472,
+  "catalogRevision": "5198b6b742141754",
+  "recordCount": 473,
   "records": [
     {
       "id": "animation_physics.analyze_animation",
@@ -41051,6 +41051,202 @@
       }
     },
     {
+      "id": "control_actor.distribute_actors",
+      "aliases": [],
+      "legacyIds": [
+        {
+          "tool": "control_actor",
+          "action": "distribute_actors"
+        }
+      ],
+      "discovery": {
+        "domain": "actor",
+        "family": "find",
+        "topics": [
+          "distribute_actors",
+          "space the actors evenly",
+          "distribute actors evenly",
+          "equal spacing between actors",
+          "leave equal gaps between them"
+        ],
+        "summary": "Space actors evenly along one axis, as a level designer lines up pillars, crates or lamps: in their order along axis (default the one their centres spread across most) the first and last stay put and the ones between move so their centres are evenly spaced (stepCm), or with gapCm each sits gapCm past the one before it, measured between their bounds, from the first. Only that coordinate changes. Every name is found before anything moves (ACTOR_NOT_FOUND changes nothing); the moves are one undo step (none when nothing moves), dryRun reports them without moving, and where an actor lands is checked like any move.",
+        "whenToUse": [
+          "A row of actors placed by hand should have equal spacing, or equal gaps between them whatever their sizes."
+        ],
+        "whenNotToUse": [
+          "Positions should land on a grid: use snap_to_grid.",
+          "Actors should rest on, face or stand against each other: use arrange_by_relations.",
+          "New copies in a row are wanted: spawn them as a row."
+        ]
+      },
+      "schemas": {
+        "input": {
+          "$schema": "https://json-schema.org/draft/2020-12/schema",
+          "type": "object",
+          "properties": {
+            "action": {
+              "type": "string",
+              "description": "The action to execute on the parent tool."
+            },
+            "actorNames": {
+              "type": "array",
+              "minItems": 3,
+              "maxItems": 500,
+              "items": {
+                "type": "string"
+              },
+              "description": "The actors, by label or name: three or more."
+            },
+            "axis": {
+              "type": "string",
+              "enum": [
+                "x",
+                "y",
+                "z"
+              ],
+              "description": "The axis to space along (default the one their centres spread across most)."
+            },
+            "gapCm": {
+              "type": "number",
+              "minimum": 0,
+              "description": "Space between neighbours' bounds in cm, laid out from the first actor; omitted, the first and last stay and the centres between are evenly spaced."
+            },
+            "dryRun": {
+              "type": "boolean",
+              "description": "Report where each would go; nothing moves (default false)."
+            }
+          },
+          "required": [
+            "action",
+            "actorNames"
+          ],
+          "additionalProperties": false
+        },
+        "output": {
+          "$schema": "https://json-schema.org/draft/2020-12/schema",
+          "type": "object",
+          "properties": {
+            "success": {
+              "type": "boolean",
+              "description": "Whether the action succeeded."
+            },
+            "message": {
+              "type": "string",
+              "description": "Human-readable result message."
+            },
+            "details": {
+              "type": "object",
+              "x-unreal-reflection-boundary": true,
+              "description": "Additional handler result fields not named by the contract."
+            },
+            "actors": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "additionalProperties": true,
+                "x-unreal-reflection-boundary": true
+              },
+              "description": "Each actor in order along the axis as {actor, from [x, y, z], to [x, y, z], movedCm}."
+            },
+            "axis": {
+              "type": "string",
+              "description": "The axis spaced along."
+            },
+            "stepCm": {
+              "type": "number",
+              "description": "The centre-to-centre spacing (without gapCm)."
+            },
+            "moved": {
+              "type": "number",
+              "description": "Actors that moved (or would, under dryRun)."
+            },
+            "dryRun": {
+              "type": "boolean",
+              "description": "Whether nothing was moved."
+            },
+            "undo": {
+              "type": "object",
+              "additionalProperties": true,
+              "x-unreal-reflection-boundary": true,
+              "description": "What editor undo takes back: the moves are one step. Absent under dryRun and when nothing moved."
+            }
+          },
+          "required": [
+            "success"
+          ],
+          "additionalProperties": false
+        }
+      },
+      "examples": [
+        {
+          "title": "Space actors evenly along one axis, as a level designer lines up pillars, crates or lamps: in their order along axis (default the one their centres spread across most) the first and last stay put and the ones between move so their centres are evenly spaced (stepCm), or with gapCm each sits gapCm past the one before it, measured between their bounds, from the first. Only that coordinate changes. Every name is found before anything moves (ACTOR_NOT_FOUND changes nothing); the moves are one undo step (none when nothing moves), dryRun reports them without moving, and where an actor lands is checked like any move.",
+          "input": {
+            "action": "distribute_actors",
+            "actorNames": [
+              "Pillar_1",
+              "Pillar_2",
+              "Pillar_3",
+              "Pillar_4"
+            ]
+          },
+          "output": {
+            "success": true,
+            "message": "Spaced 2 of 4 actor(s) along x.",
+            "actors": [
+              {
+                "actor": "Pillar_2",
+                "from": [
+                  180,
+                  0,
+                  0
+                ],
+                "to": [
+                  250,
+                  0,
+                  0
+                ],
+                "movedCm": 70
+              }
+            ],
+            "axis": "x",
+            "stepCm": 250,
+            "moved": 2,
+            "dryRun": false
+          }
+        }
+      ],
+      "availability": {
+        "requiredPlugins": [],
+        "editorStates": [
+          "edit"
+        ]
+      },
+      "behavior": {
+        "effect": "write",
+        "idempotency": "non-idempotent",
+        "longRunning": false,
+        "safeToRetry": false
+      },
+      "policy": {
+        "requiredScope": "write",
+        "consent": "none",
+        "dataAccess": "project-write"
+      },
+      "cost": {
+        "latency": "instant",
+        "resources": "low"
+      },
+      "routing": {
+        "parentTool": "control_actor",
+        "dispatchAction": "distribute_actors"
+      },
+      "hashes": {
+        "algorithm": "sha256",
+        "schema": "e96e5a463616bb9f0c5fb56333ec8e11117a9f6ebd563f9fdf5a56ae5d0a25d2",
+        "content": "662ea95ba34110c29dd34d9ac52ab56c47f4378a2448dd45a244418bcf461f35"
+      }
+    },
+    {
       "id": "control_actor.duplicate",
       "aliases": [],
       "legacyIds": [
@@ -45224,7 +45420,8 @@
         ],
         "whenNotToUse": [
           "Actors should touch, rest on or face each other: use arrange_by_relations.",
-          "Sunk or floating actors must rest on the ground: use fix_placement."
+          "Sunk or floating actors must rest on the ground: use fix_placement.",
+          "Actors should be evenly spaced: use distribute_actors."
         ]
       },
       "schemas": {
@@ -45391,7 +45588,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "72e9f3047c603330fb8c652a07e5a539a8101595a3b283b2454b6bf16104411a",
-        "content": "74a27589a83e1e0dab546e674864a589fcbce4125734561bc66af00f48329f5d"
+        "content": "7e08dd5aeb9e6c8dba6e9169c2e3f2d4222a555a35775809a4eb86118e59f602"
       }
     },
     {

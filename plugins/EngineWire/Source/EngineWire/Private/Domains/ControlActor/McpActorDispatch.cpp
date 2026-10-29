@@ -152,6 +152,9 @@ bool UEngineWireSubsystem::HandleControlActorAction(
   if (LowerSub == TEXT("snap_to_grid"))
     return McpRelations::HandleSnapToGrid(this, RequestId, Payload, RequestingSocket,
                                           [this](const FString &Name) { return FindActorByName(Name, true); });
+  if (LowerSub == TEXT("distribute_actors"))
+    return McpRelations::HandleDistributeActors(this, RequestId, Payload, RequestingSocket,
+                                                [this](const FString &Name) { return FindActorByName(Name, true); });
   if (LowerSub == TEXT("settle_physics"))
     return McpSettle::Handle(*this, RequestId, Payload, RequestingSocket,
                              [this](const FString &Name) { return FindActorByName(Name, true); });

@@ -4787,6 +4787,15 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
                 "type": "string"
               },
               "description": "The actors to settle, by exact name (1-64). Each needs a root that is a body with physics collision (a static mesh with simple collision: the engine cubes and most props); a floor or landscape, an actor with Lock Actor Movement, an attached actor, or one whose root is no body comes back under skipped with the reason and stays put. A name that matches no actor refuses with ACTOR_NOT_FOUND (missing lists them); when none of them can fall it refuses with NOTHING_TO_SETTLE. Everything else in the level takes part in the simulation as it is (static actors are what the bodies land on)."
+            },
+            {
+              "type": "array",
+              "minItems": 3,
+              "maxItems": 500,
+              "items": {
+                "type": "string"
+              },
+              "description": "The actors, by label or name: three or more."
             }
           ],
           "description": "Actor names to act on (batch delete)."
@@ -4893,6 +4902,15 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "axes": {
           "type": "string",
           "description": "Which location axes snap: any of x, y and z (default xyz)."
+        },
+        "axis": {
+          "type": "string",
+          "enum": [
+            "x",
+            "y",
+            "z"
+          ],
+          "description": "The axis to space along (default the one their centres spread across most)."
         },
         "blueprintPath": {
           "type": "string",
@@ -5024,6 +5042,11 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "functionName": {
           "type": "string",
           "description": "Actor function name to call."
+        },
+        "gapCm": {
+          "type": "number",
+          "minimum": 0,
+          "description": "Space between neighbours' bounds in cm, laid out from the first actor; omitted, the first and last stay and the centres between are evenly spaced."
         },
         "gridCm": {
           "type": "number",
@@ -5540,6 +5563,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             "describe_relations",
             "arrange_by_relations",
             "snap_to_grid",
+            "distribute_actors",
             "attach",
             "detach",
             "set_blueprint_variables",
@@ -5603,6 +5627,15 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
                 "x-unreal-reflection-boundary": true
               },
               "description": "Each actor as {actor, from [x, y, z], to [x, y, z], rotation [pitch, yaw, roll] when rotationDeg is set, movedCm}."
+            },
+            {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "additionalProperties": true,
+                "x-unreal-reflection-boundary": true
+              },
+              "description": "Each actor in order along the axis as {actor, from [x, y, z], to [x, y, z], movedCm}."
             },
             {
               "type": "array",
@@ -5725,6 +5758,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             }
           ],
           "description": "The actors moved (not under dryRun); the receipt lists them as changes."
+        },
+        "axis": {
+          "type": "string",
+          "description": "The axis spaced along."
         },
         "blueprintPath": {
           "type": "string",
@@ -6444,6 +6481,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             "type": "number"
           },
           "description": "First sampled location."
+        },
+        "stepCm": {
+          "type": "number",
+          "description": "The centre-to-centre spacing (without gapCm)."
         },
         "steps": {
           "type": "number",

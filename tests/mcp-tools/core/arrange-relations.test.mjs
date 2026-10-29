@@ -13,6 +13,7 @@ const LAMP = `MCP_ArrangeLamp_${ts}`;
 const CHAIR = `MCP_ArrangeChair_${ts}`;
 const SHELF = `MCP_ArrangeShelf_${ts}`;
 const ROOM = [`${LAMP} on ${TABLE}`, `${CHAIR} nextTo ${TABLE}`, `${CHAIR} facing ${TABLE}`, `${SHELF} against ${WALL}`];
+const CRATES = ['A', 'B', 'C'].map((letter) => `MCP_ArrangeCrate${letter}_${ts}`);
 
 const testCases = [
   { scenario: 'Setup: a room set out wrong', toolName: 'control_actor', arguments: { action: 'spawn_batch', defaults: { classPath: '/Engine/BasicShapes/Cube', tags: [TAG] }, actors: [
@@ -22,6 +23,10 @@ const testCases = [
     { actorName: LAMP, location: { x: 29700, y: 29800, z: 35 }, scale: [0.3, 0.3, 0.5] },
     { actorName: CHAIR, location: { x: 30250, y: 29850, z: 55 }, scale: [0.5, 0.5, 0.9] },
     { actorName: SHELF, location: { x: 29700, y: 30120, z: 110 }, scale: [1.5, 0.4, 2] },
+    // A row of 100 cm crates spaced unevenly along x, for distribute_actors.
+    { actorName: CRATES[0], location: { x: 31000, y: 30000, z: 50 } },
+    { actorName: CRATES[1], location: { x: 31130, y: 30000, z: 50 } },
+    { actorName: CRATES[2], location: { x: 31600, y: 30000, z: 50 } },
   ] }, expected: 'success' },
   { scenario: 'READ: dryRun plans the room and moves nothing', toolName: 'control_actor', arguments: { action: 'arrange_by_relations', relations: ROOM, dryRun: true }, expected: 'success', assertions: [
     { path: 'structuredContent.result.dryRun', equals: true, label: 'a plan only' },
@@ -68,6 +73,26 @@ const testCases = [
   ] },
   { scenario: 'ERROR: snap_to_grid with an axis that is not one', toolName: 'control_actor', arguments: { action: 'snap_to_grid', actorNames: [SHELF], axes: 'xw' }, expected: 'error|INVALID_ARGUMENT' },
   { scenario: 'ERROR: snap_to_grid names an actor that is not there', toolName: 'control_actor', arguments: { action: 'snap_to_grid', actorNames: [`MCP_NoSuchActor_${ts}`] }, expected: 'error|ACTOR_NOT_FOUND' },
+  // distribute_actors: the crates at 31000, 31130 and 31600 along x.
+  { scenario: 'READ: distribute_actors dryRun reports and moves nothing', toolName: 'control_actor', arguments: { action: 'distribute_actors', actorNames: CRATES, dryRun: true }, expected: 'success', assertions: [
+    { path: 'structuredContent.result.axis', equals: 'x', label: 'the axis they spread along' },
+    { path: 'structuredContent.result.stepCm', equals: 300, label: 'the first and last stay, 600 apart' },
+    { path: 'structuredContent.result.moved', equals: 1, label: 'only the middle one would move' },
+  ] },
+  { scenario: 'UPDATE: distribute_actors centres the middle crate', toolName: 'control_actor', arguments: { action: 'distribute_actors', actorNames: CRATES }, expected: 'success', assertions: [
+    { path: 'structuredContent.result.actors.1.to.0', equals: 31300, label: 'the middle crate halfway' },
+    { path: 'structuredContent.result.undo.undoable', equals: true, label: 'one undo step' },
+  ] },
+  { scenario: 'READ: distribute_actors on an even row moves nothing and makes no undo step', toolName: 'control_actor', arguments: { action: 'distribute_actors', actorNames: CRATES, axis: 'x' }, expected: 'success', assertions: [
+    { path: 'structuredContent.result.moved', equals: 0, label: 'nothing moved' },
+    { path: 'structuredContent.result.undo', exists: false, label: 'and no undo step' },
+  ] },
+  { scenario: 'UPDATE: distribute_actors with gapCm lays them 50 cm apart from the first', toolName: 'control_actor', arguments: { action: 'distribute_actors', actorNames: CRATES, axis: 'x', gapCm: 50 }, expected: 'success', assertions: [
+    { path: 'structuredContent.result.actors.1.to.0', equals: 31150, label: 'the second 50 cm past the first' },
+    { path: 'structuredContent.result.actors.2.to.0', equals: 31300, label: 'the third 50 cm past the second' },
+  ] },
+  { scenario: 'ERROR: distribute_actors names an actor that is not there', toolName: 'control_actor', arguments: { action: 'distribute_actors', actorNames: [CRATES[0], CRATES[1], `MCP_NoSuchActor_${ts}`] }, expected: 'error|ACTOR_NOT_FOUND' },
+  { scenario: 'ERROR: distribute_actors with the same actor named three times', toolName: 'control_actor', arguments: { action: 'distribute_actors', actorNames: [CRATES[0], CRATES[0], CRATES[0]] }, expected: 'error|INVALID_ARGUMENT' },
   { scenario: 'DELETE: the room by its tag', toolName: 'control_actor', arguments: { action: 'delete_by_tag', tag: TAG }, expected: 'success' },
 ];
 

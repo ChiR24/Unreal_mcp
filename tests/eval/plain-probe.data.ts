@@ -871,4 +871,6 @@ export const PLAIN_PROBE: readonly PlainProbeCase[] = [
   { query: 'make the title bounce', accepted: ['blueprint.edit_widget_animation'] },
   // The player's view: a camera at the eyes, or behind the character.
   { query: 'switch to first person', accepted: ['manage_character.configure_character'] },
+  // A row of actors spaced evenly.
+  { query: 'space the actors evenly', accepted: ['control_actor.distribute_actors'] },
 ];
