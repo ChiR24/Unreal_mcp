@@ -37,6 +37,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Placing along a spline**: a `spawn_batch` item's `repeat` takes `alongSpline` (a road or a path) with a `count` or a `spacingCm`, a side offset and a height, and stands the copies along it, turned with it: lamps along a road, posts along a path.
 - **`group_actors`** groups actors as the editor's Ctrl+G does, so they select and move as one while the level is built, or breaks their groups up.
 - **`set_material` `color`** gives actors a flat colour by name or hex ("red", "#1e88e5") in one call, as one material instance per colour, made the first time and reused.
+- **`add_behaviour` `sound_trigger`** plays a sound when a player walks into an actor's area: 2D or at the actor, every time or only the first.
 - **Names models invent land**: an alias sent as a tool and action resolves (`system_control` `restart_editor` runs `control_editor`'s), with five new ones mined from session transcripts (`call_function`, `save_all` under `manage_asset`, `set_blueprint_variables` under `manage_blueprint`, `connect_nodes` for a Blueprint's `connect_pins`).
 - **`npx unreal-engine-mcp-server init <client>`** shows (and with `--write` saves) the server's entry in Claude Code's, Cursor's, VS Code's, Gemini's or Codex's MCP config; **`doctor`** checks Node, the token (never shown), the editor's answer and both versions.
 

@@ -1,5 +1,5 @@
 {
-  "catalogRevision": "a934f2b46b4d3890",
+  "catalogRevision": "fa1d39b201d3af04",
   "recordCount": 480,
   "records": [
     {
@@ -14827,6 +14827,7 @@
         "blueprint.add_countdown",
         "blueprint.add_spawner",
         "blueprint.add_dash",
+        "blueprint.add_sound_trigger",
         "blueprint.add_health_hud",
         "blueprint.add_counter_hud",
         "blueprint.add_hint",
@@ -14975,6 +14976,13 @@
           "action": "add_dash",
           "folded": {
             "behaviour": "dash"
+          }
+        },
+        {
+          "tool": "manage_blueprint",
+          "action": "add_sound_trigger",
+          "folded": {
+            "behaviour": "sound_trigger"
           }
         },
         {
@@ -15150,6 +15158,11 @@
           "dodge",
           "air dash",
           "burst of speed",
+          "sound zone",
+          "sound trigger",
+          "play a sound when the player enters an area or a room",
+          "a trigger that plays a sound",
+          "voice line or stinger when the player walks in",
           "health bar",
           "show health on screen",
           "health hud",
@@ -15180,7 +15193,7 @@
           "player death screen",
           "you died"
         ],
-        "summary": "Write gameplay logic into an Actor Blueprint in one call: health that takes damage and dies, damage on touch, a pickup that heals or counts (coins, keys), a sprint key for a Character, a key that shoots projectiles for a pawn, a pawn that chases the player or patrols a route, a turret that turns to the player and fires at them, an enemy the player defeats by jumping on it, a barrel that explodes when it dies, a moving platform or elevator, walk, look and jump controls for a Character, a pawn that respawns when it falls or dies (with checkpoints), a goal that ends the level when the player reaches it, a pad that launches a Character, a teleporter, a platform that falls when a pawn lands on it, a time limit, a spawner that keeps spawning an actor class, a dash key for a Character, the health of the player or a count such as coins or score on screen, a hint on screen while the player is in an area, or a game over screen that restarts the level when the player dies. Logic none of these covers is written with edit_graph.",
+        "summary": "Write gameplay logic into an Actor Blueprint in one call: health that takes damage and dies, damage on touch, a pickup that heals or counts (coins, keys), a sprint key for a Character, a key that shoots projectiles for a pawn, a pawn that chases the player or patrols a route, a turret that turns to the player and fires at them, an enemy the player defeats by jumping on it, a barrel that explodes when it dies, a moving platform or elevator, walk, look and jump controls for a Character, a pawn that respawns when it falls or dies (with checkpoints), a goal that ends the level when the player reaches it, a pad that launches a Character, a teleporter, a platform that falls when a pawn lands on it, a time limit, a spawner that keeps spawning an actor class, a dash key for a Character, a sound that plays when the player walks into an area, the health of the player or a count such as coins or score on screen, a hint on screen while the player is in an area, or a game over screen that restarts the level when the player dies. Logic none of these covers is written with edit_graph.",
         "whenToUse": [
           "behaviour=health: A player, enemy or breakable object must take damage and die; behaviour health_hud shows it on screen.",
           "behaviour=damage_on_touch: Spikes, lava, an enemy body or a fire must hurt what touches it.",
@@ -15203,6 +15216,7 @@
           "behaviour=countdown: A level or a run must be finished within a time limit.",
           "behaviour=spawner: Enemies, pickups or obstacles must keep appearing while the game runs.",
           "behaviour=dash: A player Character needs a quick burst of movement on a key: a dash, a dodge, an air dash.",
+          "behaviour=sound_trigger: A sound must play when the player enters a place: a stinger in a room, a voice line at a sign, a chime at a door.",
           "behaviour=health_hud: The player must see their own health: a health bar on the HUD.",
           "behaviour=counter_hud: The player must see a count: coins collected, score, keys, kills.",
           "behaviour=hint: A sign, a tutorial area or a talking spot must tell the player something (Press Space to jump).",
@@ -15231,6 +15245,8 @@
           "behaviour=countdown: Something must happen once after a delay (edit_graph with a Delay or a timer node).",
           "behaviour=spawner: Actors must be placed once, before play (use control_actor spawn).",
           "behaviour=dash: It must run faster while a key is held (use behaviour sprint).",
+          "behaviour=sound_trigger: A sound must loop in a place whoever is there (manage_audio create_audio_actor ambient_sound).",
+          "behaviour=sound_trigger: Music must play for the whole level (manage_audio play_sound).",
           "behaviour=health_hud: A bar floating over an actor in the world, such as over an enemy.",
           "behaviour=counter_hud: Health as a bar (behaviour health_hud).",
           "behaviour=hint: A value such as coins or a timer must stay on screen (behaviour counter_hud).",
@@ -15288,7 +15304,7 @@
             },
             "soundPath": {
               "type": "string",
-              "description": "Sound asset played at the actor: where a pickup was collected, a goal when the player reaches it, a pad on each launch, where a teleported pawn arrives, or an explosive blows up."
+              "description": "Sound asset played at the actor: where a pickup was collected, a goal when the player reaches it, a pad on each launch, where a teleported pawn arrives, or an explosive blows up; for sound_trigger (required there), the sound a player hears on walking in."
             },
             "sprintSpeed": {
               "type": "number",
@@ -15451,6 +15467,14 @@
               "type": "number",
               "description": "Launch speed along the facing, units per second (default 1500)."
             },
+            "once": {
+              "type": "boolean",
+              "description": "Play only the first time a player enters (default false: every time)."
+            },
+            "spatial": {
+              "type": "boolean",
+              "description": "Play at the actor, fading with distance (default false: a 2D sound)."
+            },
             "widgetPath": {
               "type": "string",
               "description": "A Widget Blueprint to show instead of the one made next to the Blueprint under UI/ (WBP_HealthBar, WBP_<variable>Counter, WBP_GameOver, WBP_Hint). One without the bar or the text gets it: the health bar HUD piece (add_game_widget), a text at the top right, a full-screen shade with the message, or a dark box at the bottom with the hint."
@@ -15502,12 +15526,13 @@
                 "countdown",
                 "spawner",
                 "dash",
+                "sound_trigger",
                 "health_hud",
                 "counter_hud",
                 "hint",
                 "game_over"
               ],
-              "description": "Which add behaviour variant to run.\nhealth: Give an actor health: Health and MaxHealth variables, damage from any source (ApplyDamage, a pain causing volume, a projectile) lowers it and negative damage heals, a Heal function, OnHealthChanged and OnDied dispatchers, and optional destroy on death.\ndamage_on_touch: Make an actor damage whatever touches it: ApplyDamage with TouchDamage on each overlap, which an actor with health loses (a negative amount heals); with knockback a touching Character is also launched away from it. It fires on overlap, so the actor needs a component that overlaps pawns (a sphere or box with the Trigger or OverlapAllDynamic profile).\npickup: Make an actor a pickup: a pawn that touches it collects it, which heals the pawn (heal) or adds to a number variable of the collector class (coins, keys, ammo), plays a sound and destroys the pickup. It fires on overlap, so the actor needs a component that overlaps pawns (a sphere or box with the Trigger or OverlapAllDynamic profile).\nsprint: Give a Character a sprint: while the key is held its MaxWalkSpeed is sprintSpeed, and on release the walk speed it had at BeginPlay comes back. The key gets an Input Action and a mapping, registered when the character is possessed.\nshoot: Give a pawn a key that shoots: each press spawns projectileClass in front of it, facing its way and owned by it, and launches it at projectileSpeed, at most fireRate shots a minute. The key gets an Input Action and a mapping, registered when the pawn is possessed.\nchase: Make a pawn chase the player: every quarter second, while the player is within chaseRange, its AI controller moves it toward the player and stops stopDistance away; out of range it stops. The pawn is set to be possessed by an AI controller when placed or spawned.\npatrol: Make a pawn patrol: its AI controller walks it to each of points in turn (offsets from where it starts), it waits waitTime at each and the route loops; with chaseRange it chases the player who comes that close and goes back to its route after. A chase the pawn already has is taken over. The pawn is set to be possessed by an AI controller when placed or spawned.\nturret: Make an actor a turret: every frame, while the player is within range, it turns about its vertical axis to face the player and fires projectileClass at them at projectileSpeed, at most fireRate shots a minute; each projectile is owned by the actor, so it never hits it. Nothing checks line of sight: a wall between them stops the shots.\nstomp: Make an enemy the player defeats by landing on it: a player-controlled Character that lands on top of the actor bounces up at bounceSpeed and the actor dies (with the health behaviour it takes damage enough to die, else it is destroyed); one that bumps it from the side or below takes sideDamage, at most once a second.\nexplosive: Make an actor with health explode when it dies: every actor within explosionRadius with a clear line to it takes up to explosionDamage (less with distance), effectPath plays and soundPath sounds at the spot, and the actor is gone. An explosive the blast kills explodes in turn.\nmoving_platform: Make an actor a moving platform or an elevator: it travels to each of points in turn (offsets from where it starts) at speed, waits waitTime at each, and loops; a Character standing on it rides along. Its root must be movable (a Blueprint made with manage_blueprint create is).\ncontrols: Give a Character the controls a player steers it with: WASD or the left stick walk it relative to where the controller faces, the mouse or the right stick turn the view, and the jump key jumps (held longer, higher). It makes IA_Move and IA_Look (Axis2D) and IA_Jump next to the Blueprint, maps the keys and registers the context when the character is possessed.\nrespawn: Make a pawn come back when it falls off the level or dies: to its start, or to where it last touched an actor tagged checkpointTag (a checkpoint), once it falls fallHeight below that point, and when it dies (back at full health) if it has the health behaviour. Respawn, SetRespawnPoint and OnRespawned are left for other logic.\ngoal: Make an actor the goal of a level: the first time the player touches it, OnGoalReached fires and soundPath plays there, and with nextLevel that level opens delay seconds later. It fires on overlap, so the actor needs a component that overlaps pawns (a sphere or box with the Trigger or OverlapAllDynamic profile).\nlaunch_pad: Make an actor launch a Character that touches it: LaunchCharacter with launchVelocity, replacing its vertical speed so every bounce reaches the same height (overrideXY replaces its horizontal speed too), and soundPath plays at the pad. It fires on overlap, so the actor needs a component that overlaps pawns (a sphere or box with the Trigger or OverlapAllDynamic profile).\nteleporter: Make an actor a teleporter: a pawn that touches it is moved to TeleportTarget, keeping its rotation, and soundPath plays where it arrives. Set TeleportTarget on each placed teleporter to the actor to arrive at (control_actor spawn variables, or set_blueprint_variables, with that actor name); a target that is a teleporter of the same class ignores pawns for cooldown seconds first, so a pair of pads does not send the pawn straight back. It fires on overlap, so the actor needs a component that overlaps pawns (a sphere or box with the Trigger or OverlapAllDynamic profile).\nfalling_platform: Make an actor a falling platform: the first pawn that lands on top of it starts it shaking, fallDelay seconds later it drops with gravity, and respawnTime seconds after the drop began it is back in place and ready again. A bump from the side or below does not set it off. The actor must block pawns, and its root must be movable (a Blueprint made with manage_blueprint create is).\ncountdown: Give an actor a time limit: at BeginPlay TimeLeft starts at seconds and drops by one every second; at zero OnTimeUp fires and, with killAtZero, the actor takes damage enough to die, so a pawn with the health behaviour dies and its game over or respawn follows. Show the time with behaviour counter_hud variableName TimeLeft.\nspawner: Make an actor a spawner: every interval seconds, while fewer than maxAlive of the actors it spawned are alive, it spawns spawnClass at a random point up to radius across from itself, counts each until it is destroyed, and fires OnSpawned with it. A pawn class set to be possessed by AI when spawned (the chase behaviour sets that) moves on its own.\ndash: Give a Character a dash: each press of the key launches it dashSpeed along where it faces, with a small lift so the dash carries before the ground slows it, at most once every cooldown seconds. The key gets an Input Action and a mapping, and the context is registered when the character is possessed.\nhealth_hud: Show the health of a pawn on screen: while a local player controls it, a widget is on the screen with a bar filled to Health / MaxHealth, refilled whenever OnHealthChanged fires, and taken off when the pawn loses that player or is destroyed. Needs the health behaviour. With no widgetPath it makes UI/WBP_HealthBar next to the Blueprint.\ncounter_hud: Show a number of a pawn on screen (Coins, Score): while a local player controls it, a text at the top right reads label: value, the variable rounded to a whole number and refreshed every 0.1 seconds, taken off when the pawn loses that player or is destroyed. With no widgetPath it makes UI/WBP_<variable>Counter next to the Blueprint; each further counter sits a row lower.\nhint: Show a message on the player's screen while the player is in the actor's area: when a locally controlled pawn starts to overlap the actor, a widget shows message at the bottom of that player's view, and it goes when the pawn leaves, or hideAfter seconds later. Each placed copy can say its own text (HintMessage is instance editable). It fires on overlap, so the actor needs a component that overlaps pawns (a sphere or box with the Trigger or OverlapAllDynamic profile).\ngame_over: Give the player a game over: when the pawn dies (health behaviour) while a local player controls it, that player input stops, a widget shows message over a dark shade, and the current level opens again restartDelay seconds later. The pawn stays when it dies, so the restart can run. With no widgetPath it makes UI/WBP_GameOver next to the Blueprint."
+              "description": "Which add behaviour variant to run.\nhealth: Give an actor health: Health and MaxHealth variables, damage from any source (ApplyDamage, a pain causing volume, a projectile) lowers it and negative damage heals, a Heal function, OnHealthChanged and OnDied dispatchers, and optional destroy on death.\ndamage_on_touch: Make an actor damage whatever touches it: ApplyDamage with TouchDamage on each overlap, which an actor with health loses (a negative amount heals); with knockback a touching Character is also launched away from it. It fires on overlap, so the actor needs a component that overlaps pawns (a sphere or box with the Trigger or OverlapAllDynamic profile).\npickup: Make an actor a pickup: a pawn that touches it collects it, which heals the pawn (heal) or adds to a number variable of the collector class (coins, keys, ammo), plays a sound and destroys the pickup. It fires on overlap, so the actor needs a component that overlaps pawns (a sphere or box with the Trigger or OverlapAllDynamic profile).\nsprint: Give a Character a sprint: while the key is held its MaxWalkSpeed is sprintSpeed, and on release the walk speed it had at BeginPlay comes back. The key gets an Input Action and a mapping, registered when the character is possessed.\nshoot: Give a pawn a key that shoots: each press spawns projectileClass in front of it, facing its way and owned by it, and launches it at projectileSpeed, at most fireRate shots a minute. The key gets an Input Action and a mapping, registered when the pawn is possessed.\nchase: Make a pawn chase the player: every quarter second, while the player is within chaseRange, its AI controller moves it toward the player and stops stopDistance away; out of range it stops. The pawn is set to be possessed by an AI controller when placed or spawned.\npatrol: Make a pawn patrol: its AI controller walks it to each of points in turn (offsets from where it starts), it waits waitTime at each and the route loops; with chaseRange it chases the player who comes that close and goes back to its route after. A chase the pawn already has is taken over. The pawn is set to be possessed by an AI controller when placed or spawned.\nturret: Make an actor a turret: every frame, while the player is within range, it turns about its vertical axis to face the player and fires projectileClass at them at projectileSpeed, at most fireRate shots a minute; each projectile is owned by the actor, so it never hits it. Nothing checks line of sight: a wall between them stops the shots.\nstomp: Make an enemy the player defeats by landing on it: a player-controlled Character that lands on top of the actor bounces up at bounceSpeed and the actor dies (with the health behaviour it takes damage enough to die, else it is destroyed); one that bumps it from the side or below takes sideDamage, at most once a second.\nexplosive: Make an actor with health explode when it dies: every actor within explosionRadius with a clear line to it takes up to explosionDamage (less with distance), effectPath plays and soundPath sounds at the spot, and the actor is gone. An explosive the blast kills explodes in turn.\nmoving_platform: Make an actor a moving platform or an elevator: it travels to each of points in turn (offsets from where it starts) at speed, waits waitTime at each, and loops; a Character standing on it rides along. Its root must be movable (a Blueprint made with manage_blueprint create is).\ncontrols: Give a Character the controls a player steers it with: WASD or the left stick walk it relative to where the controller faces, the mouse or the right stick turn the view, and the jump key jumps (held longer, higher). It makes IA_Move and IA_Look (Axis2D) and IA_Jump next to the Blueprint, maps the keys and registers the context when the character is possessed.\nrespawn: Make a pawn come back when it falls off the level or dies: to its start, or to where it last touched an actor tagged checkpointTag (a checkpoint), once it falls fallHeight below that point, and when it dies (back at full health) if it has the health behaviour. Respawn, SetRespawnPoint and OnRespawned are left for other logic.\ngoal: Make an actor the goal of a level: the first time the player touches it, OnGoalReached fires and soundPath plays there, and with nextLevel that level opens delay seconds later. It fires on overlap, so the actor needs a component that overlaps pawns (a sphere or box with the Trigger or OverlapAllDynamic profile).\nlaunch_pad: Make an actor launch a Character that touches it: LaunchCharacter with launchVelocity, replacing its vertical speed so every bounce reaches the same height (overrideXY replaces its horizontal speed too), and soundPath plays at the pad. It fires on overlap, so the actor needs a component that overlaps pawns (a sphere or box with the Trigger or OverlapAllDynamic profile).\nteleporter: Make an actor a teleporter: a pawn that touches it is moved to TeleportTarget, keeping its rotation, and soundPath plays where it arrives. Set TeleportTarget on each placed teleporter to the actor to arrive at (control_actor spawn variables, or set_blueprint_variables, with that actor name); a target that is a teleporter of the same class ignores pawns for cooldown seconds first, so a pair of pads does not send the pawn straight back. It fires on overlap, so the actor needs a component that overlaps pawns (a sphere or box with the Trigger or OverlapAllDynamic profile).\nfalling_platform: Make an actor a falling platform: the first pawn that lands on top of it starts it shaking, fallDelay seconds later it drops with gravity, and respawnTime seconds after the drop began it is back in place and ready again. A bump from the side or below does not set it off. The actor must block pawns, and its root must be movable (a Blueprint made with manage_blueprint create is).\ncountdown: Give an actor a time limit: at BeginPlay TimeLeft starts at seconds and drops by one every second; at zero OnTimeUp fires and, with killAtZero, the actor takes damage enough to die, so a pawn with the health behaviour dies and its game over or respawn follows. Show the time with behaviour counter_hud variableName TimeLeft.\nspawner: Make an actor a spawner: every interval seconds, while fewer than maxAlive of the actors it spawned are alive, it spawns spawnClass at a random point up to radius across from itself, counts each until it is destroyed, and fires OnSpawned with it. A pawn class set to be possessed by AI when spawned (the chase behaviour sets that) moves on its own.\ndash: Give a Character a dash: each press of the key launches it dashSpeed along where it faces, with a small lift so the dash carries before the ground slows it, at most once every cooldown seconds. The key gets an Input Action and a mapping, and the context is registered when the character is possessed.\nsound_trigger: Make an actor play a sound when a player walks into it: each time a pawn the player controls starts to overlap it, soundPath plays on that player's machine, as a 2D sound heard the same wherever the camera is (default) or at the actor with spatial, and only the first time with once. Each placed copy can set its own EnterSound, EnterSoundOnce and EnterSoundSpatial. It fires on overlap, so the actor needs a component that overlaps pawns (a sphere or box with the Trigger or OverlapAllDynamic profile).\nhealth_hud: Show the health of a pawn on screen: while a local player controls it, a widget is on the screen with a bar filled to Health / MaxHealth, refilled whenever OnHealthChanged fires, and taken off when the pawn loses that player or is destroyed. Needs the health behaviour. With no widgetPath it makes UI/WBP_HealthBar next to the Blueprint.\ncounter_hud: Show a number of a pawn on screen (Coins, Score): while a local player controls it, a text at the top right reads label: value, the variable rounded to a whole number and refreshed every 0.1 seconds, taken off when the pawn loses that player or is destroyed. With no widgetPath it makes UI/WBP_<variable>Counter next to the Blueprint; each further counter sits a row lower.\nhint: Show a message on the player's screen while the player is in the actor's area: when a locally controlled pawn starts to overlap the actor, a widget shows message at the bottom of that player's view, and it goes when the pawn leaves, or hideAfter seconds later. Each placed copy can say its own text (HintMessage is instance editable). It fires on overlap, so the actor needs a component that overlaps pawns (a sphere or box with the Trigger or OverlapAllDynamic profile).\ngame_over: Give the player a game over: when the pawn dies (health behaviour) while a local player controls it, that player input stops, a widget shows message over a dark shade, and the current level opens again restartDelay seconds later. The pawn stays when it dies, so the restart can run. With no widgetPath it makes UI/WBP_GameOver next to the Blueprint."
             }
           },
           "required": [
@@ -15596,7 +15621,7 @@
       },
       "examples": [
         {
-          "title": "Write gameplay logic into an Actor Blueprint in one call: health that takes damage and dies, damage on touch, a pickup that heals or counts (coins, keys), a sprint key for a Character, a key that shoots projectiles for a pawn, a pawn that chases the player or patrols a route, a turret that turns to the player and fires at them, an enemy the player defeats by jumping on it, a barrel that explodes when it dies, a moving platform or elevator, walk, look and jump controls for a Character, a pawn that respawns when it falls or dies (with checkpoints), a goal that ends the level when the player reaches it, a pad that launches a Character, a teleporter, a platform that falls when a pawn lands on it, a time limit, a spawner that keeps spawning an actor class, a dash key for a Character, the health of the player or a count such as coins or score on screen, a hint on screen while the player is in an area, or a game over screen that restarts the level when the player dies. Logic none of these covers is written with edit_graph.",
+          "title": "Write gameplay logic into an Actor Blueprint in one call: health that takes damage and dies, damage on touch, a pickup that heals or counts (coins, keys), a sprint key for a Character, a key that shoots projectiles for a pawn, a pawn that chases the player or patrols a route, a turret that turns to the player and fires at them, an enemy the player defeats by jumping on it, a barrel that explodes when it dies, a moving platform or elevator, walk, look and jump controls for a Character, a pawn that respawns when it falls or dies (with checkpoints), a goal that ends the level when the player reaches it, a pad that launches a Character, a teleporter, a platform that falls when a pawn lands on it, a time limit, a spawner that keeps spawning an actor class, a dash key for a Character, a sound that plays when the player walks into an area, the health of the player or a count such as coins or score on screen, a hint on screen while the player is in an area, or a game over screen that restarts the level when the player dies. Logic none of these covers is written with edit_graph.",
           "input": {
             "action": "add_behaviour",
             "blueprintPath": "/Game/Blueprints/BP_Enemy",
@@ -15658,6 +15683,7 @@
             "countdown": "add_countdown",
             "spawner": "add_spawner",
             "dash": "add_dash",
+            "sound_trigger": "add_sound_trigger",
             "health_hud": "add_health_hud",
             "counter_hud": "add_counter_hud",
             "hint": "add_hint",
@@ -15697,7 +15723,8 @@
               "explosive",
               "goal",
               "launch_pad",
-              "teleporter"
+              "teleporter",
+              "sound_trigger"
             ],
             "sprintSpeed": [
               "sprint"
@@ -15826,6 +15853,12 @@
             "dashSpeed": [
               "dash"
             ],
+            "once": [
+              "sound_trigger"
+            ],
+            "spatial": [
+              "sound_trigger"
+            ],
             "widgetPath": [
               "health_hud",
               "counter_hud",
@@ -15870,6 +15903,11 @@
                 "spawnClass"
               ]
             },
+            "add_sound_trigger": {
+              "required": [
+                "soundPath"
+              ]
+            },
             "add_counter_hud": {
               "required": [
                 "variableName"
@@ -15885,8 +15923,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "9bff184328c255a15ce476992b13f501f4fa6647710f8229beb7d1f8f9ad80e3",
-        "content": "3317eacb072194c3f706967675b2f1a9f6c6b893e09ed060656c9c183cbb444f"
+        "schema": "3b6742277acf02b1127167e0b20d3e3b9ccfe4eae1b5d1b2ea279b7db9e20b00",
+        "content": "853336e4421fc0286dd134662bb376d7845adb6513c04df2e41e8abddd6eba19"
       }
     },
     {
@@ -67745,7 +67783,8 @@
           "ambient sound",
           "audio component",
           "reverb zone",
-          "add background music"
+          "add background music",
+          "add a sound or music to the level or a room"
         ],
         "summary": "Place sound in the level being edited, chosen by kind. ambient_sound spawns an Ambient Sound actor playing soundPath at location (default 0,0,0), labelled name, at volume and pitch, with attenuationPath and concurrencyPath when given; it plays in the editor now and when the game starts. audio_component adds an audio component with soundPath to actorName, or to a new actor at location when actorName is left out (the reply names the actor), playing at once unless autoPlay is false. reverb_zone spawns an Audio Volume named name (DUPLICATE_NAME when taken) as a box of size (default 500 on each axis) around location, applying reverbEffect at volume (default 1) with fadeTime (default 2 s). A sound, attenuation, concurrency or reverb path that does not load is ASSET_NOT_FOUND before anything spawns; the ambient sound and the reverb zone are one undo step each.",
         "whenToUse": [
@@ -67994,7 +68033,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "76eef38d8f023e4c9e40ace6e657f6291acfe8aea568c2a9cc92ff370cffda64",
-        "content": "4074d995f5c02c86a591e7756520780dee76ce0cc94d7520686c663f17edff47"
+        "content": "4bfd80212ff87dd8026da62feaa8ab232b653b020f05e2e9e2ffa5508de5420a"
       }
     },
     {

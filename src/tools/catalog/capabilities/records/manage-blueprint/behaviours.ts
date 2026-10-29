@@ -1,6 +1,6 @@
 /**
  * Gameplay behaviours written into an Actor Blueprint from the plugin's recipe files
- * (McpBlueprintBehaviour::Author): health, damage on touch, pickups, sprint, shooting, chasing, patrolling, a turret, a stomp, an explosive, a moving platform, player controls, respawning, a goal, a launch pad, a teleporter, a falling platform, a time limit, a spawner, a dash, a health bar and counters on screen, a hint on screen, and a game over. Folded
+ * (McpBlueprintBehaviour::Author): health, damage on touch, pickups, sprint, shooting, chasing, patrolling, a turret, a stomp, an explosive, a moving platform, player controls, respawning, a goal, a launch pad, a teleporter, a falling platform, a time limit, a spawner, a dash, a sound on walking in, a health bar and counters on screen, a hint on screen, and a game over. Folded
  * into blueprint.add_behaviour (selector behaviour). Every one is all or nothing,
  * re-runnable (a second run replaces the first), compiled and saved.
  */
@@ -19,7 +19,7 @@ const BEHAVIOUR_OUTPUT = {
   dispatchers: { type: 'array', items: { type: 'string' }, description: 'Event dispatchers it added, which other logic can bind.' },
 } as const;
 
-const SOUND_PATH = { type: 'string', description: 'Sound asset played at the actor: where a pickup was collected, a goal when the player reaches it, a pad on each launch, where a teleported pawn arrives, or an explosive blows up.' } as const;
+const SOUND_PATH = { type: 'string', description: 'Sound asset played at the actor: where a pickup was collected, a goal when the player reaches it, a pad on each launch, where a teleported pawn arrives, or an explosive blows up; for sound_trigger (required there), the sound a player hears on walking in.' } as const;
 const COOLDOWN = { type: 'number', description: 'Seconds before it works again: before a Character can dash again, or before a teleporter takes a pawn after one arrived on it (default 1).' } as const;
 
 // A folded family keeps one description per shared parameter, so the key-driven behaviours share these texts.
@@ -540,6 +540,30 @@ export const BEHAVIOURS_RECORDS: readonly CapabilityRecordSource[] = [
     resources: 'medium',
     plugins: BP_PLUGINS,
     exampleInput: { action: 'add_dash', blueprintPath: '/Game/Blueprints/BP_Player', dashSpeed: 1800, cooldown: 0.8, key: 'Q' },
+  }),
+  buildRecord({
+    id: 'blueprint.add_sound_trigger',
+    action: 'add_sound_trigger',
+    family: FAMILY,
+    domain: DOMAIN,
+    topics: ['sound zone', 'sound trigger', 'play a sound when the player enters an area or a room', 'a trigger that plays a sound', 'voice line or stinger when the player walks in'],
+    summary: 'Make an actor play a sound when a player walks into it: each time a pawn the player controls starts to overlap it, soundPath plays on that player\'s machine, as a 2D sound heard the same wherever the camera is (default) or at the actor with spatial, and only the first time with once. Each placed copy can set its own EnterSound, EnterSoundOnce and EnterSoundSpatial. ' + OVERLAP_NOTE,
+    whenToUse: ['A sound must play when the player enters a place: a stinger in a room, a voice line at a sign, a chime at a door.'],
+    whenNotToUse: ['A sound must loop in a place whoever is there (manage_audio create_audio_actor ambient_sound).', 'Music must play for the whole level (manage_audio play_sound).'],
+    inputProps: {
+      blueprintPath: P.blueprintPath,
+      soundPath: SOUND_PATH,
+      once: { type: 'boolean', description: 'Play only the first time a player enters (default false: every time).' },
+      spatial: { type: 'boolean', description: 'Play at the actor, fading with distance (default false: a 2D sound).' },
+    },
+    required: ['blueprintPath', 'soundPath'],
+    outputProps: BEHAVIOUR_OUTPUT,
+    effect: 'write',
+    behavior: { idempotency: 'idempotent' },
+    latency: 'interactive',
+    resources: 'medium',
+    plugins: BP_PLUGINS,
+    exampleInput: { action: 'add_sound_trigger', blueprintPath: '/Game/Blueprints/BP_RoomTrigger', soundPath: '/Game/Audio/S_Stinger', once: true },
   }),
   buildRecord({
     id: 'blueprint.add_health_hud',

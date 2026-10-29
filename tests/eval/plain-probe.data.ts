@@ -835,6 +835,11 @@ export const PLAIN_PROBE: readonly PlainProbeCase[] = [
   { query: 'add smoke to the chimney', accepted: ['manage_effect.create_effect'] },
   { query: 'add snow falling', accepted: ['build_environment.configure_weather'] },
   { query: 'add trees around the castle', accepted: ['build_environment.add_foliage'] },
+  // A sound when the player walks into an area is add_behaviour's sound_trigger; music in a level an ambient sound.
+  { query: 'play a sound when the player enters the room', accepted: ['blueprint.add_behaviour'] },
+  { query: 'add a trigger that plays a sound', accepted: ['blueprint.add_behaviour'] },
+  { query: 'sound trigger', accepted: ['blueprint.add_behaviour'] },
+  { query: 'add music to the level', accepted: ['manage_audio.create_audio_actor'] },
   { query: 'how many cubes are there', accepted: ['control_actor.list'] },
   // Plain requests whose owner did not name their words.
   { query: 'duplicate the wall', accepted: ['control_actor.duplicate'] },

@@ -33,6 +33,10 @@ bool PlanExplosive(const TSharedPtr<FJsonObject> &Payload, const UBlueprint *Blu
 bool PlanStomp(const TSharedPtr<FJsonObject> &Payload, const UBlueprint *Blueprint, FBehaviourPlan &Plan, FString &OutError);
 bool PlanTurret(const TSharedPtr<FJsonObject> &Payload, const UBlueprint *Blueprint, FBehaviourPlan &Plan, FString &OutError);
 
+// A sound that plays when a player walks into the actor's area (McpBPBehaviourPlansWorld.cpp, recipe
+// Gameplay/SoundTrigger): soundPath (required), once and spatial.
+bool PlanSoundTrigger(const TSharedPtr<FJsonObject> &Payload, FBehaviourPlan &Plan, FString &OutError);
+
 // projectileClass, projectileSpeed and fireRate (default DefaultRate shots a minute) as the values ProjectileType,
 // ProjectileClass, ProjectileSpeed and FireRate that the Shoot and Turret recipes take; false with OutError.
 bool ReadProjectile(const TSharedPtr<FJsonObject> &Payload, const UBlueprint *Blueprint, double DefaultRate,

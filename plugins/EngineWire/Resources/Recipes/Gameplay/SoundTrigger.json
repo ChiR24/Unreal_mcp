@@ -1,0 +1,53 @@
+{
+  "description": "A sound that plays when a player walks into the actor's area: each time a locally controlled pawn starts to overlap the actor, EnterSound plays on that player's machine, as a 2D sound heard the same wherever the camera is, or at the actor (fading with distance) with EnterSoundSpatial; with EnterSoundOnce only the first time. Other actors pass without a sound. The actor needs a component that overlaps pawns.",
+  "tag": "SoundTrigger",
+  "placeholders": {
+    "Sound": "Object path of the sound to play.",
+    "Once": "true plays it only the first time a player enters.",
+    "Spatial": "true plays it at the actor, false as a 2D sound."
+  },
+  "variables": [
+    { "variableName": "EnterSound", "variableType": "Object:/Script/Engine.SoundBase", "defaultValue": "{{Sound}}", "category": "Enter Sound", "instanceEditable": true },
+    { "variableName": "EnterSoundOnce", "variableType": "Bool", "defaultValue": "{{Once}}", "category": "Enter Sound", "instanceEditable": true },
+    { "variableName": "EnterSoundSpatial", "variableType": "Bool", "defaultValue": "{{Spatial}}", "category": "Enter Sound", "instanceEditable": true },
+    { "variableName": "bEnterSoundPlayed", "variableType": "Bool", "defaultValue": false, "category": "Enter Sound" }
+  ],
+  "hooks": [
+    { "id": "trigEnter", "event": "ActorBeginOverlap" }
+  ],
+  "eventGraph": [
+    { "edit": "create_node", "id": "trigWho", "nodeType": "Cast", "targetClass": "/Script/Engine.Pawn" },
+    { "edit": "create_node", "id": "trigLocal", "nodeType": "CallFunction", "memberName": "IsLocallyControlled", "memberClass": "/Script/Engine.Pawn" },
+    { "edit": "create_node", "id": "trigOnce", "nodeType": "VariableGet", "memberName": "EnterSoundOnce" },
+    { "edit": "create_node", "id": "trigPlayed", "nodeType": "VariableGet", "memberName": "bEnterSoundPlayed" },
+    { "edit": "create_node", "id": "trigSpent", "nodeType": "CallFunction", "memberName": "BooleanAND", "memberClass": "/Script/Engine.KismetMathLibrary" },
+    { "edit": "create_node", "id": "trigFresh", "nodeType": "CallFunction", "memberName": "Not_PreBool", "memberClass": "/Script/Engine.KismetMathLibrary" },
+    { "edit": "create_node", "id": "trigBoth", "nodeType": "CallFunction", "memberName": "BooleanAND", "memberClass": "/Script/Engine.KismetMathLibrary" },
+    { "edit": "create_node", "id": "trigGo", "nodeType": "Branch" },
+    { "edit": "create_node", "id": "trigMark", "nodeType": "VariableSet", "memberName": "bEnterSoundPlayed", "pinDefaults": { "bEnterSoundPlayed": true } },
+    { "edit": "create_node", "id": "trigSpatial", "nodeType": "VariableGet", "memberName": "EnterSoundSpatial" },
+    { "edit": "create_node", "id": "trigWhere", "nodeType": "Branch" },
+    { "edit": "create_node", "id": "trigSound", "nodeType": "VariableGet", "memberName": "EnterSound" },
+    { "edit": "create_node", "id": "trigLocation", "nodeType": "CallFunction", "memberName": "K2_GetActorLocation", "memberClass": "/Script/Engine.Actor" },
+    { "edit": "create_node", "id": "trigAt", "nodeType": "CallFunction", "memberName": "PlaySoundAtLocation", "memberClass": "/Script/Engine.GameplayStatics" },
+    { "edit": "create_node", "id": "trigFlat", "nodeType": "CallFunction", "memberName": "PlaySound2D", "memberClass": "/Script/Engine.GameplayStatics" },
+    { "edit": "connect_pins", "from": "$trigEnter_event.OtherActor", "to": "$trigWho.Object" },
+    { "edit": "connect_pins", "from": "$trigWho.AsPawn", "to": "$trigLocal.self" },
+    { "edit": "connect_pins", "from": "$trigOnce.EnterSoundOnce", "to": "$trigSpent.A" },
+    { "edit": "connect_pins", "from": "$trigPlayed.bEnterSoundPlayed", "to": "$trigSpent.B" },
+    { "edit": "connect_pins", "from": "$trigSpent.ReturnValue", "to": "$trigFresh.A" },
+    { "edit": "connect_pins", "from": "$trigLocal.ReturnValue", "to": "$trigBoth.A" },
+    { "edit": "connect_pins", "from": "$trigFresh.ReturnValue", "to": "$trigBoth.B" },
+    { "edit": "connect_pins", "from": "$trigBoth.ReturnValue", "to": "$trigGo.Condition" },
+    { "edit": "connect_pins", "from": "$trigSpatial.EnterSoundSpatial", "to": "$trigWhere.Condition" },
+    { "edit": "connect_pins", "from": "$trigSound.EnterSound", "to": "$trigAt.Sound" },
+    { "edit": "connect_pins", "from": "$trigLocation.ReturnValue", "to": "$trigAt.Location" },
+    { "edit": "connect_pins", "from": "$trigSound.EnterSound", "to": "$trigFlat.Sound" },
+    { "edit": "connect_pins", "from": "$trigEnter.then", "to": "$trigWho.execute" },
+    { "edit": "connect_pins", "from": "$trigWho.then", "to": "$trigGo.execute" },
+    { "edit": "connect_pins", "from": "$trigGo.then", "to": "$trigMark.execute" },
+    { "edit": "connect_pins", "from": "$trigMark.then", "to": "$trigWhere.execute" },
+    { "edit": "connect_pins", "from": "$trigWhere.then", "to": "$trigAt.execute" },
+    { "edit": "connect_pins", "from": "$trigWhere.else", "to": "$trigFlat.execute" }
+  ]
+}
