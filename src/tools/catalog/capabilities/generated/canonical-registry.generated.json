@@ -1,5 +1,5 @@
 {
-  "catalogRevision": "a54921f222edfc73",
+  "catalogRevision": "ca9f8d26c3dd3459",
   "recordCount": 472,
   "records": [
     {
@@ -15159,6 +15159,7 @@
           "tutorial hint",
           "show a message on screen",
           "show text on screen",
+          "put text on the screen",
           "sign that shows text",
           "message when the player walks up",
           "game over",
@@ -15874,7 +15875,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "9bff184328c255a15ce476992b13f501f4fa6647710f8229beb7d1f8f9ad80e3",
-        "content": "d2097b8a743c24fd7471a8d359a787c8b2cc6160d3cc4b6affcd00991e567a4e"
+        "content": "67c513cd8d9c0869177c5dee63a8db6771f3c5da354e3ba8f540217ccc53771b"
       }
     },
     {
@@ -20785,6 +20786,7 @@
           "print string",
           "print to screen",
           "print a message",
+          "print a message on overlap",
           "pin default",
           "node property",
           "construction script",
@@ -21694,7 +21696,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "6f24f58d25fbdceb477ce3c41b65402b8ab690265a24b0b09e215b26cc470a98",
-        "content": "0838d7b340d94bd94334803dfe7644be33b439de8bba709664a5e32acb04edaa"
+        "content": "48b579baa7e4bc3833d3aab7a593459502bec2de81828b7bcf885a9a20738006"
       }
     },
     {
@@ -29293,7 +29295,8 @@
           "make it night",
           "make it foggy",
           "make it sunset or sunrise",
-          "add fog to the scene"
+          "add fog to the scene",
+          "add a skybox"
         ],
         "summary": "Configure the sky and atmosphere: sky atmosphere, sky light, sun position, directional light, height fog, volumetric clouds, time of day, sky/light color curves.",
         "whenToUse": [
@@ -29622,7 +29625,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "62d06760062b3abe69fafba24760b3764aef720dc72b85ccb7e20689ab3ffd17",
-        "content": "c23841230a939d285ceed69f947ebe3c82d2a326fa38400c6d683c4804f729ae"
+        "content": "c370f20e4476edf98c5692c867b472702a2ade1a6f1088f68f8da49a38cb3e6b"
       }
     },
     {
@@ -34612,7 +34615,8 @@
         "domain": "environment",
         "family": "lighting",
         "topics": [
-          "create_sky_light"
+          "create_sky_light",
+          "add a sky light"
         ],
         "summary": "Create a sky light (skyLightOp create, the default), or make sure the edited level has exactly one (ensure_single). create spawns one at location (default 0,0,500) as one undo step, lit by the captured scene or by cubemapPath (refused before anything spawns when that path holds no cube texture), at intensity; recapture captures the sky again now. During Play it spawns into the running game and is gone when play stops. ensure_single spawns a sky light labelled name (default SkyLight) when the level has none and relabels the only one to name; with several it refuses with MULTIPLE_SKY_LIGHTS, naming the one to keep (keep) and the ones to delete with control_actor delete (remove), and deletes nothing itself. It refuses during Play (PIE_ACTIVE), and its reply says spawned and relabelled.",
         "whenToUse": [
@@ -34790,7 +34794,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "dc1c01c5430fa57df8084e47d7638de959e04cba295f0b9b9f2eb168a50300c2",
-        "content": "a9a15c99b5d5275bbd6bc2e2d2deea7af5326886979eb2cc56fc04c5c19ef469"
+        "content": "547c0b23bc435cabfed6ad5cbbe3e05fee8c67f420e34c5e15f7aeabae7986ca"
       }
     },
     {
@@ -41048,7 +41052,8 @@
           "duplicate",
           "clone actor",
           "copy actor",
-          "make actor copy"
+          "make actor copy",
+          "duplicate a wall, a door or a prop"
         ],
         "summary": "Duplicate a placed actor: a copy with its components, properties, materials and tags at the original's transform moved by offset, labelled newName or numbered after the original, in one undo step.",
         "whenToUse": [
@@ -41168,7 +41173,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "325ccfd05f51b91aa27187b57988388402d0af00117e967ac21ea27c4b3379a6",
-        "content": "7e57f94f1e64d064d3cf6b5263a67f1a79824c600b3ae72d582c578e542aeb9f"
+        "content": "1cb4a0f05791de37212015c2095a3373cd0c509b25a8e11ca3db6f0f9991e664"
       }
     },
     {
@@ -43279,6 +43284,7 @@
           "level layout",
           "variable values of many actors",
           "how many actors",
+          "how many cubes are there",
           "count actors",
           "actors in the level",
           "actors near point",
@@ -43585,7 +43591,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "6e9d75f86e682ff04987647a57d7b51ace81a30d9800c2b9fe643eb66de6e19a",
-        "content": "7aa5c11f2de2a47e08d27f1395042ea52eebd4e03d6c707e4b88a86f4560e338"
+        "content": "029ecd3c2b4e7027120fb99a6c94c3f34a5e56f6375e8390a336838dda45e3a1"
       }
     },
     {
@@ -44458,6 +44464,7 @@
           "resize actor",
           "shrink actor",
           "scale up a tree or a rock",
+          "rotate a door or a wall by 90 degrees",
           "set position",
           "set rotation",
           "translate"
@@ -44818,7 +44825,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "6af5b619f64ce87631986e9ba9d0b1fec5c056e5aa571251d34e3202107f2ea4",
-        "content": "ddbcc908b7c0d84011c39e545ee14b715986482a99fd83823a528fe40263817e"
+        "content": "bee2587c4a9520637821088bea02ae8168171dd36ce4c99c3a0d35b0dbcc867a"
       }
     },
     {
@@ -45421,6 +45428,11 @@
           "spawn cube",
           "spawn static mesh",
           "instantiate class",
+          "add a cube to the level",
+          "place a cube on the floor",
+          "add a sphere to the level",
+          "place a sphere in the level",
+          "build a wall or a tower of cubes",
           "spawn blueprint actor",
           "place blueprint in level",
           "instantiate blueprint",
@@ -45814,7 +45826,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "83255eb7ee40ca38cadf51b0ef17d54b36cd77be9b26993e7212e6aad8e1d744",
-        "content": "82cfa60d7673a83e713b32cbd77ed5b7065ab79c91030a4f8a2480e6f307ae0d"
+        "content": "170b587a18b09675af2337f05d8dfd807ed86eb095a37ab66ae01a1264a33217"
       }
     },
     {
@@ -54383,7 +54395,8 @@
           "orthographic views of an actor",
           "check an actor from all sides",
           "turntable views of an actor",
-          "elevations of an actor"
+          "elevations of an actor",
+          "look at a cube or a prop from the side"
         ],
         "summary": "One image of an actor from several sides: front, back, left, right and top as true elevations (orthographic, in the actor's own turned frame, with a grid every round number of centimetres) and a three-quarter view, each tile labelled, the actor's size in the title. Shaded as clay from the geometry, the same whatever lights the level: the actor orange, everything else grey, and the parts of the actor hidden behind something (a foot sunk in the floor, a back against a wall) showing through it. Only the actor and the actors within reach of it are drawn, so a wall farther off never hides it while the floor it stands in stays. Returned as an image and written as a PNG under Saved/Captures; the level viewport is not moved.",
         "whenToUse": [
@@ -54589,7 +54602,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "0cb65bc762db9b962548f8ae09f188e8966b0466e2d24e104d39347d07fd5efc",
-        "content": "43a8d1ffcd01bb9956fa1d698f33907d206cee3fd63dc08d60ab38b2caec7ce3"
+        "content": "6561198b2a2300cab925719a6d70ffe5838cee27e547c19729fc13d024563c88"
       }
     },
     {
@@ -66323,7 +66336,8 @@
           "create_audio_actor",
           "ambient sound",
           "audio component",
-          "reverb zone"
+          "reverb zone",
+          "add background music"
         ],
         "summary": "Place sound in the level being edited, chosen by kind. ambient_sound spawns an Ambient Sound actor playing soundPath at location (default 0,0,0), labelled name, at volume and pitch, with attenuationPath and concurrencyPath when given; it plays in the editor now and when the game starts. audio_component adds an audio component with soundPath to actorName, or to a new actor at location when actorName is left out (the reply names the actor), playing at once unless autoPlay is false. reverb_zone spawns an Audio Volume named name (DUPLICATE_NAME when taken) as a box of size (default 500 on each axis) around location, applying reverbEffect at volume (default 1) with fadeTime (default 2 s). A sound, attenuation, concurrency or reverb path that does not load is ASSET_NOT_FOUND before anything spawns; the ambient sound and the reverb zone are one undo step each.",
         "whenToUse": [
@@ -66572,7 +66586,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "76eef38d8f023e4c9e40ace6e657f6291acfe8aea568c2a9cc92ff370cffda64",
-        "content": "f2109cfe9eeaadb7c944eaf4b3dce901154726b3ee7753ee38ebd134aa064183"
+        "content": "4074d995f5c02c86a591e7756520780dee76ce0cc94d7520686c663f17edff47"
       }
     },
     {
@@ -69956,6 +69970,7 @@
           "follow camera",
           "assign anim blueprint",
           "make the player run faster",
+          "change the player speed",
           "double jump"
         ],
         "summary": "Configure a Character Blueprint's defaults by setting: movement_speeds (walk, crouch, swim, fly, acceleration, braking, friction), jump (launch speed, hold, double jump, air control, gravity), crouch, rotation (orient to movement or face the aim), capsule_component, mesh_component (skeletal mesh, Animation Blueprint, offset), camera_component (a third-person spring arm and camera, made when missing) or nav_movement (AI agent size, avoidance). Each compiles and saves the Blueprint, changes only the fields sent and reads the values back; a Blueprint that is not a Character is refused (NOT_A_CHARACTER).",
@@ -70355,7 +70370,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "575372bd717cd683d494bbbc58ba03dcc9f46fcd02e432c1095dd9b93be0e6b7",
-        "content": "c66e46fda21db56e7972ed5a760f73570daa62b67d5bd675abdc6193be8b1a70"
+        "content": "4714d033ca5d14ebba5d9245d5dac7234dc1e2c8ad1952479fcb773a90b69d14"
       }
     },
     {
@@ -74360,6 +74375,7 @@
           "effect asset",
           "make an explosion",
           "add fire effect",
+          "add smoke or steam",
           "muzzle flash",
           "particle system",
           "vfx",
@@ -74705,7 +74721,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "332be23fa2be58488ecf91463343001eb63f4bcb2731c89022912790fc94502c",
-        "content": "0f3042e6eb532694fceeb4d258f8d55aa85409815ccea0e9e589c712c55733c9"
+        "content": "13bc7094f6ebf3d30eb59bfefe4f12e82e48a8d5bd462021d98cb94e4b5233f2"
       }
     },
     {
@@ -79207,6 +79223,7 @@
           "stairs",
           "torus",
           "make a cube or ramp",
+          "create a cube",
           "signed distance field",
           "smooth blend shapes",
           "organic mesh",
@@ -80054,7 +80071,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "48dc3aeda0cfc28ef5bf650e1d7ee3a40ec94f237850c3de3784d0c72dcb6f53",
-        "content": "64a961ac7b03704f9d9e0593061d04a91d9190517f9bcf8de473dc792fe66a0c"
+        "content": "49b254b2dc42b665b4fdc0935d0ae34927ce000f7dd22b4f2ff15f96c1d1e0d2"
       }
     },
     {
@@ -84664,7 +84681,7 @@
           "make a treasure chest",
           "add a light switch",
           "automatic door",
-          "door that opens when the player walks up",
+          "door that opens when the player walks up or gets close",
           "pressure plate",
           "floor button",
           "new door",
@@ -84949,7 +84966,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "dc114a31e6d890f61f96f54461d90d34d4e0aa238187be1214db35ee00e407d6",
-        "content": "9fd7e8cffb333e57cfc5b51f91e00e21cb2f21be79d7091a11f562d1c5e13ad8"
+        "content": "efe6d658fe8f2b5d14f6f8421dd4f3588699bbd248db2f6b53cd7a71069a97bf"
       }
     },
     {
@@ -100517,6 +100534,7 @@
           "emissive glow",
           "glowing material",
           "shiny metal material",
+          "make a cube or a wall red",
           "new material",
           "make material",
           "material asset",
@@ -100780,7 +100798,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "ddb0f137f776b24373015bac1938e25ad09bd3ab03b7f86490acc94c1873ae5e",
-        "content": "1216a3c8dfb6998f4b53e9686c80681cbc01e4836f9bceed56903e282500e915"
+        "content": "0b5a64ea4b037fbe4750a5dbedb1804060a892e1ee1698caa6016c576c7b5280"
       }
     },
     {
@@ -107196,7 +107214,8 @@
           "remove render job",
           "clear render queue",
           "cancel render",
-          "stop render"
+          "stop render",
+          "render the sequence to a video file"
         ],
         "summary": "Movie Render Queue: create a render job, queue it, start rendering, cancel a running render, or remove jobs from the queue.",
         "whenToUse": [
@@ -107559,7 +107578,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "36ee2cf6833b1e40063aee08e7ad1949b29236d11766ef92f944c570590ddce4",
-        "content": "d176a0a5878de4041f05d734fd6c74eb7508710d870b17603c2e1b34d0f9669b"
+        "content": "e7d7bb87ccf2428a7f9b30156a058999582909017b26aca4fe39b29a758e4e14"
       }
     },
     {

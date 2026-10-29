@@ -34,7 +34,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 <summary><b>🔧 Fixed</b></summary>
 
 - **An alias a family member declared runs that member**: `blueprint.add_component_to_blueprint`, `set_default_value`, `create_widget`, `hide_widget`, `asset.find_assets` and `manage_networking.replicate_variable`/`enable_replication` ran the family's default or were refused for its selector.
-- **Search: "undo last edit" and "take back the last action" find `undo`, "create a vehicle" `configure_vehicle`** (spline edits, the take recorder and sockets ranked first).
+- **Search: plain requests find their capability**: "undo last edit" finds `undo`, "create a vehicle" `configure_vehicle`, "create a cube", "place a sphere", "add a sky light", "add smoke" and seventeen more their owner (a scene capture, sockets and the take recorder ranked first).
 - **The directory report's reply carries its assets**: the record declared no outputs, so the list was cut from every reply.
 
 </details>

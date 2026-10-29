@@ -594,7 +594,7 @@ export const BEHAVIOURS_RECORDS: readonly CapabilityRecordSource[] = [
     action: 'add_hint',
     family: FAMILY,
     domain: DOMAIN,
-    topics: ['hint', 'tutorial hint', 'show a message on screen', 'show text on screen', 'sign that shows text', 'message when the player walks up'],
+    topics: ['hint', 'tutorial hint', 'show a message on screen', 'show text on screen', 'put text on the screen', 'sign that shows text', 'message when the player walks up'],
     summary: `Show a message on the player's screen while the player is in the actor's area: when a locally controlled pawn starts to overlap the actor, a widget shows message at the bottom of that player's view, and it goes when the pawn leaves, or hideAfter seconds later. Each placed copy can say its own text (HintMessage is instance editable). ${OVERLAP_NOTE}`,
     whenToUse: ['A sign, a tutorial area or a talking spot must tell the player something (Press Space to jump).'],
     whenNotToUse: ['A value such as coins or a timer must stay on screen (behaviour counter_hud).'],

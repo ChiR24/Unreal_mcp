@@ -35,7 +35,8 @@ export const SPAWN_RECORDS: readonly CapabilityRecordSource[] = [
     editorStates: ANY_EDITOR_STATE,
     domain: DOMAIN,
     family: FAMILY_SPAWN,
-    topics: ['spawn actor', 'place actor', 'add actor to level', 'create actor', 'spawn cube', 'spawn static mesh', 'instantiate class'],
+    topics: ['spawn actor', 'place actor', 'add actor to level', 'create actor', 'spawn cube', 'spawn static mesh', 'instantiate class',
+      'add a cube to the level', 'place a cube on the floor', 'add a sphere to the level', 'place a sphere in the level', 'build a wall or a tower of cubes'],
     summary:
       'Spawn a new actor instance from a class path into the current level, or a mesh actor from a mesh path alone.',
     whenToUse: [
@@ -216,7 +217,7 @@ export const SPAWN_RECORDS: readonly CapabilityRecordSource[] = [
     action: 'duplicate',
     domain: DOMAIN,
     family: FAMILY_LIFECYCLE,
-    topics: ['clone actor', 'copy actor', 'make actor copy'],
+    topics: ['clone actor', 'copy actor', 'make actor copy', 'duplicate a wall, a door or a prop'],
     summary:
       'Duplicate a placed actor: a copy with its components, properties, materials and tags at the original\'s transform moved by offset, labelled newName or numbered after the original, in one undo step.',
     whenToUse: [

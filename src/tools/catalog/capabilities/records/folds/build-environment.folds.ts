@@ -61,6 +61,7 @@ export const BUILD_ENVIRONMENT_FOLDS: readonly FoldSpec[] = [
   {
     primary: 'create_sky_light', selector: 'skyLightOp',
     summary: 'Create a sky light (skyLightOp create, the default), or make sure the edited level has exactly one (ensure_single). create spawns one at location (default 0,0,500) as one undo step, lit by the captured scene or by cubemapPath (refused before anything spawns when that path holds no cube texture), at intensity; recapture captures the sky again now. During Play it spawns into the running game and is gone when play stops. ensure_single spawns a sky light labelled name (default SkyLight) when the level has none and relabels the only one to name; with several it refuses with MULTIPLE_SKY_LIGHTS, naming the one to keep (keep) and the ones to delete with control_actor delete (remove), and deletes nothing itself. It refuses during Play (PIE_ACTIVE), and its reply says spawned and relabelled.',
+    topics: ['add a sky light'],
     members: { create: 'create_sky_light', ensure_single: 'ensure_single_sky_light' },
     aliasMembers: ['spawn_sky_light'],
   },
@@ -144,7 +145,7 @@ export const BUILD_ENVIRONMENT_FOLDS: readonly FoldSpec[] = [
   {
     primary: 'configure_atmosphere', selector: 'setting',
     summary: 'Configure the sky and atmosphere: sky atmosphere, sky light, sun position, directional light, height fog, volumetric clouds, time of day, sky/light color curves.',
-    topics: ['sky atmosphere', 'sun position', 'height fog', 'volumetric cloud', 'time of day', 'sky light', 'directional light', 'add fog', 'add sky', 'make it night', 'make it foggy', 'make it sunset or sunrise', 'add fog to the scene'],
+    topics: ['sky atmosphere', 'sun position', 'height fog', 'volumetric cloud', 'time of day', 'sky light', 'directional light', 'add fog', 'add sky', 'make it night', 'make it foggy', 'make it sunset or sunrise', 'add fog to the scene', 'add a skybox'],
     members: {
       sky_atmosphere: 'configure_sky_atmosphere', sky_light: 'configure_sky_light', sun_position: 'configure_sun_position', directional_light: 'configure_directional_light_atmosphere',
       height_fog: 'configure_exponential_height_fog', volumetric_cloud: 'configure_volumetric_cloud', time_of_day: 'set_time_of_day',

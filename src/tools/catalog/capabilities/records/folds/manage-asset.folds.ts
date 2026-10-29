@@ -160,7 +160,7 @@ export const MANAGE_ASSET_FOLDS: readonly FoldSpec[] = [
   {
     primary: 'create_material', selector: 'kind',
     summary: 'Create a material asset: a standard material, a decal, landscape or post-process material, a material function, or a Material Parameter Collection (values every material reading it shares).',
-    topics: ['create material', 'decal material', 'landscape material', 'post process material', 'material function', 'material parameter collection', 'emissive glow', 'glowing material', 'shiny metal material'],
+    topics: ['create material', 'decal material', 'landscape material', 'post process material', 'material function', 'material parameter collection', 'emissive glow', 'glowing material', 'shiny metal material', 'make a cube or a wall red'],
     members: { material: 'create_material', decal: 'create_decal_material', landscape: 'create_landscape_material', post_process: 'create_post_process_material', function: 'create_material_function', parameter_collection: 'create_parameter_collection' },
   },
   { primary: 'connect_nodes', topics: ['connect texture to base color', 'connect node to base color'], summary: 'Wire an output of sourceNodeId (sourcePin: a name, an index or channel letters such as G or RG; default its first output) into targetPin of targetNodeId, replacing whatever fed that input. targetNodeId Main is the material output (BaseColor, Roughness, Normal, EmissiveColor...), or in a material function its output named targetPin (the first when left out). The material recompiles and is left unsaved (save_all keeps it). NODE_NOT_FOUND names Main when the target id is missing; INVALID_PIN or PIN_NOT_FOUND lists the inputs the node has.', members: ['connect_material_pins'] },
