@@ -269,5 +269,7 @@ TSharedPtr<FJsonObject> HandleEffectActions(const FString& SubAction, const TSha
 TSharedPtr<FJsonObject> HandleAudioInfoActions(const FString& SubAction, const TSharedPtr<FJsonObject>& Params, TSharedPtr<FJsonObject> Response);
 // measure_loudness and normalize_loudness: EBU R128 loudness of Sound Waves, and their Volume set to a target (McpAudioLoudness).
 TSharedPtr<FJsonObject> HandleLoudnessActions(const FString& SubAction, const TSharedPtr<FJsonObject>& Params, TSharedPtr<FJsonObject> Response);
+// set_subtitles: a Sound Wave's subtitle cues, shown in the game while it plays (McpAudioSubtitles).
+TSharedPtr<FJsonObject> HandleSubtitleActions(const FString& SubAction, const TSharedPtr<FJsonObject>& Params, TSharedPtr<FJsonObject> Response);
 }
 

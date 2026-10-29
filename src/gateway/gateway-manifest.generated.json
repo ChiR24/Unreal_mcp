@@ -10104,6 +10104,7 @@
         "set_dialogue_context",
         "measure_loudness",
         "normalize_loudness",
+        "set_subtitles",
         "analyze_acoustics"
       ],
       "parameterNames": [
@@ -10221,6 +10222,7 @@
         "speakerPath",
         "spokenText",
         "startTime",
+        "subtitles",
         "targetInputName",
         "targetLufs",
         "targetNodeId",
@@ -10842,6 +10844,27 @@
             "type": "number",
             "description": "Playback start offset in seconds."
           },
+          "subtitles": {
+            "type": "array",
+            "maxItems": 200,
+            "description": "The cues, [{text, time}]: the words, and the seconds into the sound they show from (0 to the sound's length). [] takes them all off.",
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "text": {
+                  "type": "string"
+                },
+                "time": {
+                  "type": "number",
+                  "minimum": 0
+                }
+              },
+              "required": [
+                "text"
+              ]
+            }
+          },
           "targetInputName": {
             "type": "string",
             "description": "Input pin name on the target node."
@@ -10900,6 +10923,7 @@
               "set_dialogue_context",
               "measure_loudness",
               "normalize_loudness",
+              "set_subtitles",
               "analyze_acoustics"
             ],
             "description": "Action to invoke on manage_audio."

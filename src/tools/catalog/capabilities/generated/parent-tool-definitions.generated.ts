@@ -16029,6 +16029,27 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "number",
           "description": "Playback start offset in seconds."
         },
+        "subtitles": {
+          "type": "array",
+          "maxItems": 200,
+          "description": "The cues, [{text, time}]: the words, and the seconds into the sound they show from (0 to the sound's length). [] takes them all off.",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "text": {
+                "type": "string"
+              },
+              "time": {
+                "type": "number",
+                "minimum": 0
+              }
+            },
+            "required": [
+              "text"
+            ]
+          }
+        },
         "targetInputName": {
           "type": "string",
           "description": "Input pin name on the target node."
@@ -16087,6 +16108,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             "set_dialogue_context",
             "measure_loudness",
             "normalize_loudness",
+            "set_subtitles",
             "analyze_acoustics"
           ],
           "description": "Action to invoke on manage_audio."
@@ -16423,7 +16445,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "saved": {
           "type": "boolean",
-          "description": "Whether the asset was saved to disk."
+          "description": "The wave was saved."
         },
         "silent": {
           "type": "boolean",
@@ -16432,6 +16454,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "smoothing": {
           "type": "boolean",
           "description": "Whether the Doppler pitch change is smoothed."
+        },
+        "soundPath": {
+          "type": "string",
+          "description": "The wave changed."
         },
         "sounds": {
           "type": "array",
@@ -16486,6 +16512,25 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "number",
           "description": "Sounds play_sound had started that this call stopped."
         },
+        "subtitles": {
+          "type": "array",
+          "maxItems": 200,
+          "description": "The cues as the wave holds them now, in time order.",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "text": {
+                "type": "string",
+                "description": "The words shown."
+              },
+              "time": {
+                "type": "number",
+                "description": "Seconds into the sound the cue shows from; it stays until the next cue or the sound ends."
+              }
+            }
+          }
+        },
         "success": {
           "type": "boolean",
           "description": "Whether the action succeeded."
@@ -16521,10 +16566,21 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "description": "Kind of asset the bridge resolved, such as SoundCue, SoundWave or InputAction."
         },
         "undo": {
-          "type": "object",
-          "additionalProperties": true,
-          "x-unreal-reflection-boundary": true,
-          "description": "What editor undo takes back: {undoable, transactionScope, steps}; every Volume set is one step."
+          "oneOf": [
+            {
+              "type": "object",
+              "additionalProperties": true,
+              "x-unreal-reflection-boundary": true,
+              "description": "What editor undo takes back: {undoable, transactionScope, steps}."
+            },
+            {
+              "type": "object",
+              "additionalProperties": true,
+              "x-unreal-reflection-boundary": true,
+              "description": "What editor undo takes back: {undoable, transactionScope, steps}; every Volume set is one step."
+            }
+          ],
+          "description": "What editor undo takes back: {undoable, transactionScope, steps}."
         },
         "volume": {
           "type": "number",

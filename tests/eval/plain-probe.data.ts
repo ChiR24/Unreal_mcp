@@ -864,6 +864,10 @@ export const PLAIN_PROBE: readonly PlainProbeCase[] = [
   { query: 'make the game look like a film', accepted: ['build_environment.configure_post_process'] },
   { query: 'make it look like glass', accepted: ['material.create_material'] },
   { query: 'make the ball roll', accepted: ['animation_physics.setup_physics_simulation'] },
+  // Subtitles on a sound.
+  { query: 'add subtitles', accepted: ['manage_audio.set_subtitles'] },
+  { query: 'show subtitles in game', accepted: ['manage_audio.set_subtitles'] },
+  { query: 'add closed captions', accepted: ['manage_audio.set_subtitles'] },
   { query: 'how many cubes are there', accepted: ['control_actor.list'] },
   // Plain requests whose owner did not name their words.
   { query: 'duplicate the wall', accepted: ['control_actor.duplicate'] },
