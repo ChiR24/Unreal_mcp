@@ -1,5 +1,5 @@
 {
-  "catalogRevision": "eb298f4381cdc4a3",
+  "catalogRevision": "b49b6c5366c6d8a4",
   "recordCount": 482,
   "records": [
     {
@@ -2456,7 +2456,8 @@
           "surface friction",
           "make a ball bounce",
           "make a ball, a cube or a box bounce",
-          "make the ice slippery"
+          "make the ice slippery",
+          "ice the player slides on"
         ],
         "summary": "Create or tune a physical material: friction (an icy or slippery floor, a grippy one), bounce (restitution), density and how two touching surfaces combine them. A mesh takes it through control_actor edit_component property PhysMaterialOverride (edit_scs set_property on a class template).",
         "whenToUse": [
@@ -2601,7 +2602,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "8fc12fe57a87d5606b19d0d2839598bf362c09b8576d999dab20e9571ffe3aae",
-        "content": "345f10bc386b14cc5cdbe6339dde404b5eb475d2fc3b7aa31197af2d616870d3"
+        "content": "1ef0d5573f8245f5ed52a1d912984fc371059f805e6b2bf62403d5dfa749c01c"
       }
     },
     {
@@ -15067,6 +15068,10 @@
           "add behaviour",
           "gameplay logic",
           "make an npc talk when the player comes close",
+          "make collectible coins or gems",
+          "show how many coins or gems are left",
+          "make a checkpoint flag",
+          "make a bouncy mushroom or trampoline",
           "health",
           "take damage",
           "player health",
@@ -15969,7 +15974,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "3b6742277acf02b1127167e0b20d3e3b9ccfe4eae1b5d1b2ea279b7db9e20b00",
-        "content": "16dcb22e932760b60f248f28d02545aa90fcd9ac79e160cc83af2f4b294a3f53"
+        "content": "068080bd7c4c3014d263898996fdc2660feb23c1a14dd0943e78f9521e6cc58f"
       }
     },
     {
@@ -42951,7 +42956,8 @@
           "push intersecting actors apart",
           "snap actors to the floor",
           "floating above the floor or ground",
-          "snap an actor down to the surface below it"
+          "snap an actor down to the surface below it",
+          "put the actor on the floor"
         ],
         "summary": "Fix what audit_placement reports, judged by its own rules: a sunk actor moves up and a floating one down onto the surface under it, and intersecting actors are pushed apart the shortest way out of each other, measured on their collision (the smaller moves further; floors, landscapes, locked and attached actors never move). kinds names which of sunk, floating and overlapping to fix, since each can be deliberate. Every move is one undo step; a run checks what it moved again, up to three rounds, and dryRun lists the moves without making them.",
         "whenToUse": [
@@ -43169,7 +43175,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "20b65fcc68e07b80e37090de314deeca7e0bbc9c4e68582714c84201ce40c67b",
-        "content": "d72147562ec09527c82b68314eb8cc528a36b88e753bda83159282e8b99753fa"
+        "content": "9065c5732db7f3b33dee423235ee6b442e5ac593a9984011b8aef4f0b4dae59c"
       }
     },
     {
@@ -46006,6 +46012,7 @@
           "move a light",
           "mirror an actor",
           "turn an actor around",
+          "make an actor twice as big or half the size",
           "set position",
           "set rotation",
           "translate"
@@ -46366,7 +46373,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "6af5b619f64ce87631986e9ba9d0b1fec5c056e5aa571251d34e3202107f2ea4",
-        "content": "0aa09138b1c5ca497fda9aec768c7db9bf911eee56acaa89f276f8872cb651a0"
+        "content": "c111a69fad0a72c4303c2818dd68bf9ca57edc29007da41aba8c9e3660320ff7"
       }
     },
     {
@@ -86690,6 +86697,7 @@
           "pressure plate",
           "floor button",
           "a locked door that needs a key",
+          "a lever that turns on the lights",
           "new door",
           "door actor",
           "openable door",
@@ -86972,7 +86980,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "dc114a31e6d890f61f96f54461d90d34d4e0aa238187be1214db35ee00e407d6",
-        "content": "2698e29a69b5c903763b715a410200fedb8e9cb5accbbae0b4ab46169631ea2a"
+        "content": "84fb35784437f94ec837381f8eadf58940130e0067eb406b8984cffcc4e82231"
       }
     },
     {

@@ -1028,4 +1028,14 @@ export const PLAIN_PROBE: readonly PlainProbeCase[] = [
   { query: 'turn the actor around', accepted: ['control_actor.set_transform'] },
   { query: 'line up the fence posts', accepted: ['control_actor.align_actors'] },
   { query: 'make a copy of the house', accepted: ['control_actor.duplicate'] },
+  // Onto the floor, twice as big, a light lever, gems and their count, a checkpoint flag, sliding ice, a bouncy mushroom.
+  { query: 'put the actor on the floor', accepted: ['control_actor.fix_placement'] },
+  { query: 'make the actor twice as big', accepted: ['control_actor.set_transform'] },
+  { query: 'make the statue half the size', accepted: ['control_actor.set_transform'] },
+  { query: 'make a lever that turns on the lights', accepted: ['manage_interaction.create_interactable'] },
+  { query: 'make collectible gems', accepted: ['blueprint.add_behaviour'] },
+  { query: 'show how many gems are left', accepted: ['blueprint.add_behaviour'] },
+  { query: 'make a checkpoint flag', accepted: ['blueprint.add_behaviour'] },
+  { query: 'make ice that the player slides on', accepted: ['animation_physics.create_physical_material'] },
+  { query: 'make a bouncy mushroom', accepted: ['blueprint.add_behaviour'] },
 ];
