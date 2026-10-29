@@ -4786,6 +4786,15 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
               "items": {
                 "type": "string"
               },
+              "description": "The actors to replace, by label or name. A name not found refuses the call (ACTOR_NOT_FOUND), as does an actor the editor manages, such as the builder brush (ACTOR_NOT_REPLACEABLE); nothing changes."
+            },
+            {
+              "type": "array",
+              "minItems": 1,
+              "maxItems": 500,
+              "items": {
+                "type": "string"
+              },
               "description": "The actors, by label or name."
             },
             {
@@ -4923,7 +4932,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "blueprintPath": {
           "type": "string",
-          "description": "Audit the mesh parts of this actor Blueprint instead of the level: a preview instance (the level is untouched) has every visible static mesh part measured against every other and against its ground (a Character's capsule bottom). problems[] then lists componentName, kind (buried: inside otherComponent; sunk: below the ground), depth and severity in cm, insideShare and the issue; minSeverity is the tolerance (default 0.5 cm), and kinds, nameFilter and maxTilt are refused (INVALID_ARGUMENT). A part tagged mcp.placement.ok in its ComponentTags is a deliberate embed (an eyeball in its socket) and is left out; mcp.placement.ok:<component> accepts the embed in that one part only and keeps every other check. Blueprint component edits report the same for the parts they touch, as partWarnings."
+          "description": "An actor Blueprint to stand in their place (CLASS_NOT_FOUND when none loads there, CANNOT_PLACE when it is not actor based)."
         },
         "center": {
           "type": "object",
@@ -4955,7 +4964,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "classPath": {
           "type": "string",
-          "description": "Unreal class path (e.g. /Script/Engine.PointLight or /Game/Enemies/BP_Enemy) of the actors to find (alias of className)."
+          "description": "An actor class to stand in their place, such as /Script/Engine.PointLight (CLASS_NOT_FOUND; an abstract, deprecated or not placeable class is CANNOT_PLACE)."
         },
         "collisionEnabled": {
           "type": "boolean",
@@ -5231,7 +5240,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "meshPath": {
           "type": "string",
-          "description": "Canonical /Game mesh asset path to assign on spawn."
+          "description": "A static mesh to stand in their place, a Static Mesh Actor each (MESH_NOT_FOUND when no static mesh loads there)."
         },
         "minSeverity": {
           "type": "number",
@@ -5567,6 +5576,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             "spawn",
             "duplicate",
             "rename",
+            "replace_actors",
             "delete",
             "set_transform",
             "get_transform",
@@ -6225,6 +6235,13 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           },
           "description": "Actors that still do not read as asked: one inside a level instance that is not being edited always reads locked. Absent when every one does."
         },
+        "notReplaced": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Labels of actors the editor did not replace (the log says why), left as they were. Absent when every one was."
+        },
         "note": {
           "type": "string",
           "description": "Why the object name was kept, when renameObject could not rename it."
@@ -6360,6 +6377,15 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             "x-unreal-reflection-boundary": true
           },
           "description": "With actorNames, one row per actor in the order given: {actorName (as later calls should name it), oldLabel, label}."
+        },
+        "replaced": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": true,
+            "x-unreal-reflection-boundary": true
+          },
+          "description": "One row per actor replaced, in the order given: {from (the old label), actorName (the new actor as later calls should name it), class}."
         },
         "report": {
           "type": "string",
@@ -6601,6 +6627,12 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
               "additionalProperties": true,
               "x-unreal-reflection-boundary": true,
               "description": "What editor undo takes back: the rename is one step; with actorNames, absent when no label changed."
+            },
+            {
+              "type": "object",
+              "additionalProperties": true,
+              "x-unreal-reflection-boundary": true,
+              "description": "What editor undo takes back: the replacement is one step, which brings the old actors back."
             },
             {
               "type": "object",

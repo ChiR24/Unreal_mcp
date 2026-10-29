@@ -13,6 +13,8 @@ const DUPLICATE_ACTOR = `MCP_DuplicateActor_${ts}`;
 const DUPLICATE_COPY = `MCP_DuplicateActorCopy_${ts}`;
 const RENAMED_COPY = `MCP_RenamedCopy_${ts}`;
 const BATCH_LABEL = `MCP_Batch_${ts}_`;
+const SWAP_TAG = `MCPSwapTag_${ts}`;
+const swap = (i) => `MCP_Swap${i}_${ts}`;
 const MESH_ACTOR = `MCP_MeshActor_${ts}`;
 const PARENT_ACTOR = `MCP_ParentActor_${ts}`;
 const CHILD_ACTOR = `MCP_ChildActor_${ts}`;
@@ -219,6 +221,22 @@ const testCases = [
   { scenario: 'ERROR: rename refuses renameObject with actorNames', toolName: 'control_actor', arguments: { action: 'rename', actorNames: [DUPLICATE_ACTOR, DUPLICATE_COPY], newName: `${BATCH_LABEL}{n}`, renameObject: true }, expected: 'error|INVALID_ARGUMENT' },
   { scenario: 'ERROR: rename names an actor that does not exist and renames none', toolName: 'control_actor', arguments: { action: 'rename', actorNames: [DUPLICATE_ACTOR, `MCP_MissingActor_${ts}`], newName: `${BATCH_LABEL}{n}` }, expected: 'error|ACTOR_NOT_FOUND' },
   { scenario: 'ERROR: rename refuses the label None', toolName: 'control_actor', arguments: { action: 'rename', actorNames: [DUPLICATE_ACTOR], newName: 'None' }, expected: 'error|INVALID_NAME' },
+  // Placed actors swapped for another mesh, Blueprint or class where they stand, keeping label, tags and folder.
+  { scenario: 'Setup: three cubes to swap', toolName: 'control_actor', arguments: { action: 'spawn_batch', defaults: { classPath: '/Engine/BasicShapes/Cube', folder: 'MCPTest/Swap', tags: [SWAP_TAG, 'mcp.placement.ok'] }, actors: [{ actorName: swap(1), location: [0, 40000, 50] }, { actorName: swap(2), location: [300, 40000, 50] }, { actorName: swap(3), location: [600, 40000, 50] }] }, expected: 'success' },
+  { scenario: 'ACTION: replace_actors swaps two cubes for cylinders where they stand', toolName: 'control_actor', arguments: { action: 'replace_actors', actorNames: [swap(1), swap(2)], meshPath: '/Engine/BasicShapes/Cylinder' }, expected: 'success', assertions: [
+    { path: 'structuredContent.result.replaced', length: 2, label: 'both were replaced' },
+    { path: 'structuredContent.result.replaced.0.actorName', equals: swap(1), label: 'the new actor keeps the old label' },
+    { path: 'structuredContent.result.replaced.0.class', equals: 'StaticMeshActor', label: 'a static mesh actor' },
+    { path: 'structuredContent.result.undo.undoable', equals: true, label: 'one undo step' },
+  ] },
+  { scenario: 'ACTION: replace_actors swaps a cylinder for the test Blueprint', toolName: 'control_actor', arguments: { action: 'replace_actors', actorNames: [swap(2)], blueprintPath: BP_PATH }, expected: 'success', assertions: [{ path: 'structuredContent.result.replaced.0.class', equals: `${BP_NAME}_C`, label: 'an instance of the Blueprint' }] },
+  { scenario: 'ACTION: replace_actors swaps the third cube for a point light class', toolName: 'control_actor', arguments: { action: 'replace_actors', actorNames: [swap(3)], classPath: '/Script/Engine.PointLight' }, expected: 'success', assertions: [{ path: 'structuredContent.result.replaced.0.class', equals: 'PointLight', label: 'a point light now' }] },
+  { scenario: 'ERROR: replace_actors with two kinds of replacement', toolName: 'control_actor', arguments: { action: 'replace_actors', actorNames: [swap(1)], meshPath: '/Engine/BasicShapes/Cube', classPath: '/Script/Engine.PointLight' }, expected: 'error|INVALID_ARGUMENT' },
+  { scenario: 'ERROR: replace_actors with a mesh that is not there', toolName: 'control_actor', arguments: { action: 'replace_actors', actorNames: [swap(1)], meshPath: `${TEST_FOLDER}/SM_NoSuchMesh_${ts}` }, expected: 'error|MESH_NOT_FOUND' },
+  { scenario: 'ERROR: replace_actors with a class that is not there', toolName: 'control_actor', arguments: { action: 'replace_actors', actorNames: [swap(1)], classPath: '/Script/Engine.NoSuchActorClass' }, expected: 'error|CLASS_NOT_FOUND' },
+  { scenario: 'ERROR: replace_actors with an abstract class', toolName: 'control_actor', arguments: { action: 'replace_actors', actorNames: [swap(1)], classPath: '/Script/Engine.Info' }, expected: 'error|CANNOT_PLACE' },
+  { scenario: 'ERROR: replace_actors names an actor that is not there and replaces none', toolName: 'control_actor', arguments: { action: 'replace_actors', actorNames: [swap(1), `MCP_MissingActor_${ts}`], meshPath: '/Engine/BasicShapes/Cube' }, expected: 'error|ACTOR_NOT_FOUND' },
+  { scenario: 'DELETE: the swapped actors by the tag they kept', toolName: 'control_actor', arguments: { action: 'delete_by_tag', tag: SWAP_TAG }, expected: 'success', assertions: [{ path: 'structuredContent.result.details.deletedCount', equals: 3, label: 'every replacement kept the tag' }] },
   { scenario: 'CONFIG: set_transform', toolName: 'control_actor', arguments: actorArgs('set_transform', { location: { x: 10, y: 20, z: 130 }, rotation: { x: 0, y: 0, z: 15 }, scale: { x: 1.1, y: 1.1, z: 1.1 } }), expected: 'success' },
   { scenario: 'QUERY: list summary counts the level instead of listing it', toolName: 'control_actor', arguments: { action: 'list', summary: true }, expected: 'success', assertions: [{ path: 'structuredContent.result.count', equals: 0, label: 'no per-actor rows in a summary' }] },
   { scenario: 'CONFIG: set_transform on many actors, each its own transform', toolName: 'control_actor', arguments: { action: 'set_transform', actors: [{ actorName: MAIN_ACTOR, location: { x: 10, y: 20, z: 130 } }, { actorName: MESH_ACTOR, location: { x: 360, y: 160, z: 120 } }] }, expected: 'success', assertions: [{ path: 'structuredContent.result.movedActors', equals: 2, label: 'both actors moved' }, { path: 'structuredContent.result.results.1.location.2', approximately: 120, tolerance: 1, label: 'each item reports its read-back location' }, { path: 'structuredContent.receipt.changes', length: 2, label: 'the actors that moved are named' }, { path: 'structuredContent.receipt.changes.0', equals: MAIN_ACTOR, label: 'in the order the caller gave them' }, { path: 'structuredContent.receipt.handles', length: 2, label: 'and gives each an actor handle' }] },

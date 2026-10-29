@@ -1,6 +1,6 @@
 {
-  "catalogRevision": "cf2232efa0ba8964",
-  "recordCount": 476,
+  "catalogRevision": "6950026c1a40ba6d",
+  "recordCount": 477,
   "records": [
     {
       "id": "animation_physics.analyze_animation",
@@ -44389,6 +44389,183 @@
         "algorithm": "sha256",
         "schema": "9cdd93db1ffde13a933832a208063d594ae8e598e6fbc84e852a4c30aa072824",
         "content": "7732c952f7bb25eb5061f3347760df6222d650748c0ecd7ae1cccf9566455e66"
+      }
+    },
+    {
+      "id": "control_actor.replace_actors",
+      "aliases": [],
+      "legacyIds": [
+        {
+          "tool": "control_actor",
+          "action": "replace_actors"
+        }
+      ],
+      "discovery": {
+        "domain": "actor",
+        "family": "lifecycle",
+        "topics": [
+          "replace_actors",
+          "replace actors",
+          "replace the crates with barrels",
+          "swap actors for another mesh or blueprint",
+          "replace placeholder cubes with the real mesh"
+        ],
+        "summary": "Replace placed actors with a static mesh, a Blueprint or an actor class where they stand, as the editor's Replace Selected Actors with does: each new actor keeps the old one's transform, scale, mobility, label, tags, outliner folder, layers, attachments and the level's references to it, and a Blueprint whose class shares a native parent with the old actor's takes its property values. Every name and the asset are checked, and that the editor has an actor for it, before anything is replaced; one undo step brings the old actors back, and where each new actor stands is checked like any move.",
+        "whenToUse": [
+          "Placeholder actors (grey cubes) should become the real mesh or Blueprint.",
+          "Props should be swapped for another prop where they stand (crates for barrels)."
+        ],
+        "whenNotToUse": [
+          "Only the mesh shown should change, keeping the actor: set the StaticMesh of its StaticMeshComponent with edit_component.",
+          "Placed actors should become one Blueprint: use convert_actors_to_blueprint."
+        ]
+      },
+      "schemas": {
+        "input": {
+          "$schema": "https://json-schema.org/draft/2020-12/schema",
+          "type": "object",
+          "properties": {
+            "action": {
+              "type": "string",
+              "description": "The action to execute on the parent tool."
+            },
+            "actorNames": {
+              "type": "array",
+              "minItems": 1,
+              "maxItems": 500,
+              "items": {
+                "type": "string"
+              },
+              "description": "The actors to replace, by label or name. A name not found refuses the call (ACTOR_NOT_FOUND), as does an actor the editor manages, such as the builder brush (ACTOR_NOT_REPLACEABLE); nothing changes."
+            },
+            "meshPath": {
+              "type": "string",
+              "description": "A static mesh to stand in their place, a Static Mesh Actor each (MESH_NOT_FOUND when no static mesh loads there)."
+            },
+            "blueprintPath": {
+              "type": "string",
+              "description": "An actor Blueprint to stand in their place (CLASS_NOT_FOUND when none loads there, CANNOT_PLACE when it is not actor based)."
+            },
+            "classPath": {
+              "type": "string",
+              "description": "An actor class to stand in their place, such as /Script/Engine.PointLight (CLASS_NOT_FOUND; an abstract, deprecated or not placeable class is CANNOT_PLACE)."
+            }
+          },
+          "required": [
+            "action",
+            "actorNames"
+          ],
+          "additionalProperties": false,
+          "requiredOneOf": [
+            "meshPath",
+            "blueprintPath",
+            "classPath"
+          ]
+        },
+        "output": {
+          "$schema": "https://json-schema.org/draft/2020-12/schema",
+          "type": "object",
+          "properties": {
+            "success": {
+              "type": "boolean",
+              "description": "Whether the action succeeded."
+            },
+            "message": {
+              "type": "string",
+              "description": "Human-readable result message."
+            },
+            "details": {
+              "type": "object",
+              "x-unreal-reflection-boundary": true,
+              "description": "Additional handler result fields not named by the contract."
+            },
+            "replaced": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "additionalProperties": true,
+                "x-unreal-reflection-boundary": true
+              },
+              "description": "One row per actor replaced, in the order given: {from (the old label), actorName (the new actor as later calls should name it), class}."
+            },
+            "notReplaced": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "description": "Labels of actors the editor did not replace (the log says why), left as they were. Absent when every one was."
+            },
+            "undo": {
+              "type": "object",
+              "additionalProperties": true,
+              "x-unreal-reflection-boundary": true,
+              "description": "What editor undo takes back: the replacement is one step, which brings the old actors back."
+            }
+          },
+          "required": [
+            "success"
+          ],
+          "additionalProperties": false
+        }
+      },
+      "examples": [
+        {
+          "title": "Replace placed actors with a static mesh, a Blueprint or an actor class where they stand, as the editor's Replace Selected Actors with does: each new actor keeps the old one's transform, scale, mobility, label, tags, outliner folder, layers, attachments and the level's references to it, and a Blueprint whose class shares a native parent with the old actor's takes its property values. Every name and the asset are checked, and that the editor has an actor for it, before anything is replaced; one undo step brings the old actors back, and where each new actor stands is checked like any move.",
+          "input": {
+            "action": "replace_actors",
+            "actorNames": [
+              "Crate_01",
+              "Crate_02"
+            ],
+            "meshPath": "/Game/Props/SM_Barrel"
+          },
+          "output": {
+            "success": true,
+            "message": "Replaced 2 of 2 actor(s) with SM_Barrel.",
+            "replaced": [
+              {
+                "from": "Crate_01",
+                "actorName": "Crate_01",
+                "class": "StaticMeshActor"
+              },
+              {
+                "from": "Crate_02",
+                "actorName": "Crate_02",
+                "class": "StaticMeshActor"
+              }
+            ]
+          }
+        }
+      ],
+      "availability": {
+        "requiredPlugins": [],
+        "editorStates": [
+          "edit"
+        ]
+      },
+      "behavior": {
+        "effect": "destructive",
+        "idempotency": "non-idempotent",
+        "longRunning": false,
+        "safeToRetry": false
+      },
+      "policy": {
+        "requiredScope": "destructive",
+        "consent": "explicit",
+        "dataAccess": "project-write"
+      },
+      "cost": {
+        "latency": "instant",
+        "resources": "low"
+      },
+      "routing": {
+        "parentTool": "control_actor",
+        "dispatchAction": "replace_actors"
+      },
+      "hashes": {
+        "algorithm": "sha256",
+        "schema": "e845a9077057076e01a6869e4e5929e44c04762fbd1de4bf586a4a3f5ffb4472",
+        "content": "356885b3a3c943512a502621e7870393eb4ccc5808c1f46a16a3bb355ea047b2"
       }
     },
     {

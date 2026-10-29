@@ -4003,6 +4003,7 @@
         "spawn",
         "duplicate",
         "rename",
+        "replace_actors",
         "delete",
         "set_transform",
         "get_transform",
@@ -4236,6 +4237,15 @@
                 "items": {
                   "type": "string"
                 },
+                "description": "The actors to replace, by label or name. A name not found refuses the call (ACTOR_NOT_FOUND), as does an actor the editor manages, such as the builder brush (ACTOR_NOT_REPLACEABLE); nothing changes."
+              },
+              {
+                "type": "array",
+                "minItems": 1,
+                "maxItems": 500,
+                "items": {
+                  "type": "string"
+                },
                 "description": "The actors, by label or name."
               },
               {
@@ -4373,7 +4383,7 @@
           },
           "blueprintPath": {
             "type": "string",
-            "description": "Audit the mesh parts of this actor Blueprint instead of the level: a preview instance (the level is untouched) has every visible static mesh part measured against every other and against its ground (a Character's capsule bottom). problems[] then lists componentName, kind (buried: inside otherComponent; sunk: below the ground), depth and severity in cm, insideShare and the issue; minSeverity is the tolerance (default 0.5 cm), and kinds, nameFilter and maxTilt are refused (INVALID_ARGUMENT). A part tagged mcp.placement.ok in its ComponentTags is a deliberate embed (an eyeball in its socket) and is left out; mcp.placement.ok:<component> accepts the embed in that one part only and keeps every other check. Blueprint component edits report the same for the parts they touch, as partWarnings."
+            "description": "An actor Blueprint to stand in their place (CLASS_NOT_FOUND when none loads there, CANNOT_PLACE when it is not actor based)."
           },
           "center": {
             "type": "object",
@@ -4405,7 +4415,7 @@
           },
           "classPath": {
             "type": "string",
-            "description": "Unreal class path (e.g. /Script/Engine.PointLight or /Game/Enemies/BP_Enemy) of the actors to find (alias of className)."
+            "description": "An actor class to stand in their place, such as /Script/Engine.PointLight (CLASS_NOT_FOUND; an abstract, deprecated or not placeable class is CANNOT_PLACE)."
           },
           "collisionEnabled": {
             "type": "boolean",
@@ -4681,7 +4691,7 @@
           },
           "meshPath": {
             "type": "string",
-            "description": "Canonical /Game mesh asset path to assign on spawn."
+            "description": "A static mesh to stand in their place, a Static Mesh Actor each (MESH_NOT_FOUND when no static mesh loads there)."
           },
           "minSeverity": {
             "type": "number",
@@ -5017,6 +5027,7 @@
               "spawn",
               "duplicate",
               "rename",
+              "replace_actors",
               "delete",
               "set_transform",
               "get_transform",

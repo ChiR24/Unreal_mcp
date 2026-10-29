@@ -917,4 +917,7 @@ export const PLAIN_PROBE: readonly PlainProbeCase[] = [
   { query: 'add a path on the terrain', accepted: ['build_environment.plan_road'] },
   // Several actors numbered by one rename.
   { query: 'batch rename actors', accepted: ['control_actor.rename'] },
+  // Placed actors swapped for another prop where they stand.
+  { query: 'replace the crates with barrels', accepted: ['control_actor.replace_actors'] },
+  { query: 'replace placeholder cubes', accepted: ['control_actor.replace_actors'] },
 ];
