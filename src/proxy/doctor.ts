@@ -9,7 +9,8 @@ import { join } from 'node:path';
 
 import { PACKAGE } from '../constants.js';
 import { projectRootFromEnv } from '../utils/config/ini-reader.js';
-import { readCapabilityToken } from './native-proxy.js';
+import { oneLine } from '../utils/logging/logger.js';
+import { readCapabilityToken, sendsTokenTo } from './native-proxy.js';
 
 export interface DoctorLine { level: 'ok' | 'warn' | 'FAIL'; text: string }
 interface Reply { status: number; headers: IncomingHttpHeaders; text: string }
@@ -61,8 +62,13 @@ function initializeAnswer(text: string): Answer {
 }
 
 export async function doctorLines(url: string = process.env.UNREAL_MCP_URL ?? 'http://127.0.0.1:3000/mcp'): Promise<DoctorLine[]> {
-  const token = await readCapabilityToken();
-  const lines = [nodeLine(), tokenLine(token)];
+  const found = await readCapabilityToken();
+  const lines = [nodeLine(), tokenLine(found)];
+  // The proxy's own rule: the token rides plain HTTP to this machine only.
+  const token = sendsTokenTo(url) ? found : undefined;
+  if (found && !token) {
+    lines.push({ level: 'warn', text: `${url} is not this machine, so the token is not sent over plain HTTP; set UNREAL_MCP_ALLOW_REMOTE_TOKEN=1 to send it anyway` });
+  }
   const auth: Record<string, string> = token ? { 'X-MCP-Capability-Token': token } : {};
   const body = JSON.stringify({ jsonrpc: '2.0', id: 1, method: 'initialize', params: { protocolVersion: '2025-11-25',
     capabilities: {}, clientInfo: { name: `${PACKAGE.name} doctor`, version: PACKAGE.version } } });
@@ -80,14 +86,15 @@ export async function doctorLines(url: string = process.env.UNREAL_MCP_URL ?? 'h
   if (typeof session === 'string') await send(url, 'DELETE', { ...auth, 'Mcp-Session-Id': session }).catch(() => undefined);
   const { result, error } = initializeAnswer(hello.text);
   const server = result?.serverInfo;
+  // What the upstream says is printed on one line each: a line break in its name would forge a doctor line.
   if (hello.status === 401 || hello.status === 403) {
     lines.push({ level: 'FAIL', text: `The editor at ${url} refused this client (HTTP ${hello.status}): the token is missing or not this project's` });
   } else if (!server?.version) {
-    lines.push({ level: 'FAIL', text: `${url} answered HTTP ${hello.status}, ${error?.message ? `refusing: ${error.message}` : 'not an MCP initialize reply'}` });
+    lines.push({ level: 'FAIL', text: `${url} answered HTTP ${hello.status}, ${error?.message ? `refusing: ${oneLine(error.message)}` : 'not an MCP initialize reply'}` });
   } else {
-    lines.push({ level: 'ok', text: `Editor answers at ${url}: ${server.name ?? 'server'} ${server.version}, protocol ${result?.protocolVersion ?? '?'}` });
+    lines.push({ level: 'ok', text: `Editor answers at ${url}: ${oneLine(server.name ?? 'server')} ${oneLine(server.version)}, protocol ${oneLine(result?.protocolVersion ?? '?')}` });
     lines.push(server.version === PACKAGE.version ? { level: 'ok', text: `Proxy and plugin are both ${PACKAGE.version}` }
-      : { level: 'warn', text: `Proxy ${PACKAGE.version} and plugin ${server.version} differ: update the older one` });
+      : { level: 'warn', text: `Proxy ${PACKAGE.version} and plugin ${oneLine(server.version)} differ: update the older one` });
   }
   return lines;
 }

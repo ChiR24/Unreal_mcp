@@ -10,6 +10,7 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { PACKAGE } from '../../src/constants.js';
 import { doctorLines, nodeLine } from '../../src/proxy/doctor.js';
 import { launch, mergeJson, runInit, tomlBlock } from '../../src/proxy/init.js';
+import { sendsTokenTo } from '../../src/proxy/native-proxy.js';
 
 let folder = '';
 beforeEach(() => { folder = mkdtempSync(join(tmpdir(), 'ew-init-')); });
@@ -80,6 +81,23 @@ describe('doctor', () => {
     expect(nodeLine('22.1.0').level).toBe('ok');
     expect(nodeLine('20.18.3').level).toBe('FAIL');
     expect(nodeLine('18.20.0').level).toBe('FAIL');
+  });
+
+  // HTTP carries the token in clear text, so the proxy and doctor send it to this machine only unless the user opts in.
+  it('sends the token to a loopback upstream only, unless UNREAL_MCP_ALLOW_REMOTE_TOKEN is 1', () => {
+    const before = process.env.UNREAL_MCP_ALLOW_REMOTE_TOKEN;
+    delete process.env.UNREAL_MCP_ALLOW_REMOTE_TOKEN;
+    try {
+      expect(['http://127.0.0.1:3000/mcp', 'http://localhost:3000/mcp', 'http://[::1]:3000/mcp'].map((url) => sendsTokenTo(url)))
+        .toEqual([true, true, true]);
+      expect(sendsTokenTo('http://192.168.1.20:3000/mcp')).toBe(false);
+      expect(sendsTokenTo('http://127.0.0.1.example.com:3000/mcp')).toBe(false);
+      process.env.UNREAL_MCP_ALLOW_REMOTE_TOKEN = '1';
+      expect(sendsTokenTo('http://192.168.1.20:3000/mcp')).toBe(true);
+    } finally {
+      if (before === undefined) delete process.env.UNREAL_MCP_ALLOW_REMOTE_TOKEN;
+      else process.env.UNREAL_MCP_ALLOW_REMOTE_TOKEN = before;
+    }
   });
 
   it('fails when nothing answers, and never prints the token', async () => {

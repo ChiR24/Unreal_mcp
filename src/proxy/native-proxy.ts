@@ -83,6 +83,16 @@ export async function readCapabilityToken(): Promise<string | undefined> {
   }
 }
 
+/**
+ * Whether the capability token may go to this upstream. It is a bearer credential and HTTP carries it in clear text,
+ * so it goes to another machine only when the user says so (UNREAL_MCP_ALLOW_REMOTE_TOKEN=1), knowing anyone on the
+ * way can read it. Every sender (the proxy, doctor) asks this.
+ */
+export function sendsTokenTo(upstream: string): boolean {
+  const host = new URL(upstream).hostname.replace(/^\[|\]$/gu, '');
+  return /^(localhost|127(\.\d{1,3}){3}|::1)$/u.test(host) || process.env.UNREAL_MCP_ALLOW_REMOTE_TOKEN === '1';
+}
+
 export function startNativeProxy(options: NativeProxyOptions = {}): { close: () => void } {
   const upstream = options.upstream ?? process.env.UNREAL_MCP_URL ?? 'http://127.0.0.1:3000/mcp';
   // The cache is served to the client as its tool list and instructions, so it lives in the user's own cache folder:
@@ -93,10 +103,7 @@ export function startNativeProxy(options: NativeProxyOptions = {}): { close: () 
   const output = options.output ?? process.stdout;
   const log = new Logger('NativeProxy');
   const token = options.token ?? readCapabilityToken;
-  // The token is a bearer credential, and HTTP carries it in clear text: to another machine it goes only when the user
-  // says so (UNREAL_MCP_ALLOW_REMOTE_TOKEN=1), knowing anyone on the way can read it.
-  const upstreamHost = new URL(upstream).hostname.replace(/^\[|\]$/gu, '');
-  const sendsToken = /^(localhost|127(\.\d{1,3}){3}|::1)$/u.test(upstreamHost) || process.env.UNREAL_MCP_ALLOW_REMOTE_TOKEN === '1';
+  const sendsToken = sendsTokenTo(upstream);
   if (!sendsToken) log.warn(`${upstream} is not this machine, so the capability token is not sent over plain HTTP; set UNREAL_MCP_ALLOW_REMOTE_TOKEN=1 to send it anyway.`);
   const notConnected = `NOT_CONNECTED: the Unreal Editor is not running (nothing answers at ${upstream}). `
     + 'Start the editor and call again; this server stays connected, no reconnect is needed. If the editor is '
