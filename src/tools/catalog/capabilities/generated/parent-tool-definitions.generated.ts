@@ -11698,6 +11698,15 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
                 "type": "string"
               },
               "description": "Several static meshes, each turned on, rebuilt and saved in this one call (a whole imported pack, or every heavy mesh get_stats statsKind=frame lists); one mesh that fails does not stop the others."
+            },
+            {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "minItems": 1,
+              "maxItems": 50,
+              "description": "The assets to reimport (/Game/Textures/T_Crate)."
             }
           ],
           "description": "Absolute paths of the downloaded pack files. Used with folderName to synthesize a single-entry envelope when payload is omitted."
@@ -13093,6 +13102,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           ],
           "description": "Which source control variant to run.\ncheckout: Check out assets (paths, or assetPath) in the enabled revision-control provider so they can be edited and submitted. Paths that name no asset in the project are skipped and listed (skipped); none left is NO_VALID_ASSETS, and source control off is SOURCE_CONTROL_DISABLED (turn it on with sourceControlOp=enable). The reply gives checkedOut and assets.\nsubmit: Submit (check in) saved assets (paths, or assetPath) to the enabled provider with description as the change description. Paths that name no asset are skipped and listed (skipped); none left is NO_VALID_ASSETS, a provider refusal SUBMIT_FAILED, and source control off SOURCE_CONTROL_DISABLED. The reply gives submitted.\nenable: Turn revision control on with the provider named (Git, Perforce or Subversion, as the editor registers it), switching from another provider that is on; with that provider already on, or none named while one is on, it reports the current provider. A provider whose plugin is off or that cannot connect (Git needs a repository at the project root: sourceControlOp=init) is SOURCE_CONTROL_ENABLE_FAILED.\ninit: Put the project under Git: create a repository at the project root when there is none, write an Unreal .gitignore when there is none (Binaries, Intermediate, Saved, DerivedDataCache), stage everything, make the first commit (description, default \"Initial commit\") and turn the Git provider on. userName and userEmail go to the repository config only and cannot hold quotes or control characters. The reply gives committed, commit (short hash), provider and steps (each git command with its exit code and output); a failing step answers GIT_INIT_FAILED, GIT_ADD_FAILED or GIT_COMMIT_FAILED.\ncommit_all: Stage every change in the project (git add -A, honouring .gitignore) and commit it with description as the message; a clean tree answers success with alreadyClean true and committed false. Needs a repository (NO_REPOSITORY: sourceControlOp=init). userName and userEmail, when sent, go to the repository config and cannot hold quotes or control characters. The reply gives committed, commit and steps."
         },
+        "sourceFile": {
+          "type": "string",
+          "description": "One asset only: reimport it from this file instead, inside the project folder (relative to it, or absolute under it), which then becomes its source."
+        },
         "sourceId": {
           "type": "string",
           "description": "Relative id under sourceRoot, exactly as returned by list_content_sources (for example \"TP_VehicleAdvBP\"). Must be relative: no \"..\", no leading \"/\", no drive prefix. Omit to migrate the root itself."
@@ -13311,6 +13324,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "enum": [
             "list",
             "import",
+            "reimport",
             "duplicate",
             "rename",
             "move",
@@ -13484,6 +13498,32 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
                       "type": "number"
                     },
                     "description": "Its size as [x, y, z] in cm (meshes)."
+                  }
+                }
+              }
+            },
+            {
+              "type": "array",
+              "description": "One row per reimport tried.",
+              "items": {
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {
+                  "assetPath": {
+                    "type": "string",
+                    "description": "The asset."
+                  },
+                  "sourceFile": {
+                    "type": "string",
+                    "description": "The file it was reimported from."
+                  },
+                  "reimported": {
+                    "type": "boolean",
+                    "description": "Whether the importer took it."
+                  },
+                  "saved": {
+                    "type": "boolean",
+                    "description": "Whether it was saved."
                   }
                 }
               }
@@ -14315,6 +14355,28 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           },
           "description": "Root tokens whose directory does not exist on this machine."
         },
+        "missingSources": {
+          "type": "array",
+          "description": "Assets left as they are: their recorded source file is not on disk.",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "assetPath": {
+                "type": "string",
+                "description": "The asset."
+              },
+              "sourceFile": {
+                "type": "string",
+                "description": "The file it records."
+              },
+              "reason": {
+                "type": "string",
+                "description": "Why it was left out."
+              }
+            }
+          }
+        },
         "morphTargets": {
           "type": "number",
           "description": "Skeletal mesh: morph targets it carries."
@@ -14590,6 +14652,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "string",
           "description": "Its type."
         },
+        "reimported": {
+          "type": "number",
+          "description": "Assets reimported."
+        },
         "relocated": {
           "type": "boolean",
           "description": "Present when the add asked for destinationPath or assetName: true when assets were moved or renamed."
@@ -14797,7 +14863,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "success": {
           "type": "boolean",
-          "description": "False when nothing was deleted: every asset is used by others (ASSETS_REFERENCED), none of the paths exists (NO_VALID_ASSETS), or something loaded still holds them (BULK_DELETE_FAILED)."
+          "description": "Every asset with a source file on disk was reimported."
         },
         "supportsRunningEngine": {
           "type": "boolean",

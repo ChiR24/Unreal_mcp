@@ -11,6 +11,7 @@
 
 // Struct ecosystem (issue #struct-ecosystem) — Wave 1 handler shard headers.
 #include "Domains/AssetWorkflow/DataRegistries/McpDataRegistries.h"
+#include "Domains/AssetWorkflow/Reimport/McpAssetReimport.h"
 #include "Domains/AssetWorkflow/DataTables/Shared.h"
 #include "Domains/AssetWorkflow/Enums/Shared.h"
 namespace McpStructProperty
@@ -72,6 +73,8 @@ bool UEngineWireSubsystem::HandleAssetAction(
   // Asset Operations
   if (Lower == TEXT("import"))
     return HandleImportAsset(RequestId, Payload, RequestingSocket);
+  if (Lower == TEXT("reimport"))
+    return McpAssetReimport::Handle(*this, RequestId, Payload, RequestingSocket);
   if (Lower == TEXT("list_content_sources"))
     return HandleListContentSources(RequestId, Payload, RequestingSocket);
   if (Lower == TEXT("migrate_assets"))

@@ -1,6 +1,6 @@
 {
-  "catalogRevision": "cabcdb65a4b152b1",
-  "recordCount": 469,
+  "catalogRevision": "b19c56fe606480e3",
+  "recordCount": 470,
   "records": [
     {
       "id": "animation_physics.analyze_animation",
@@ -13878,6 +13878,181 @@
         "algorithm": "sha256",
         "schema": "f546543777d60d78ce7a14abeee49497f76e1d3bd4207b883a69d6ee0283c767",
         "content": "0ceb1839599d7c3e77d0bb3803cc4edd5e3bebedcfa761c197f3be617430d0e8"
+      }
+    },
+    {
+      "id": "asset.reimport",
+      "aliases": [
+        "asset.reimport_asset"
+      ],
+      "legacyIds": [
+        {
+          "tool": "manage_asset",
+          "action": "reimport"
+        }
+      ],
+      "discovery": {
+        "domain": "asset",
+        "family": "lifecycle",
+        "topics": [
+          "reimport",
+          "reimport asset",
+          "reimport texture",
+          "reimport mesh",
+          "update asset from source file",
+          "refresh imported asset",
+          "source file changed",
+          "reload from disk"
+        ],
+        "summary": "Bring assets up to date with their source files, as the Content Browser's Reimport does but with no dialog: each from the file it was imported from (its import data), or, for one asset, from sourceFile (a file inside the project, as import takes it). Every asset is checked before any is reimported: ASSET_NOT_FOUND, ENGINE_CONTENT, NOT_REIMPORTABLE (no source file recorded: made in the editor, or a kind never imported) SOURCE_FILE_MISSING (sourceFile not there) and SECURITY_VIOLATION (sourceFile outside the project) change nothing. An asset whose recorded file is gone is listed under missingSources and left as it is; when that leaves none, SOURCE_FILE_MISSING. Saved after (save, default true); editor undo does not take a reimport back. REIMPORT_FAILED names the ones the importer refused (the editor log says why).",
+        "whenToUse": [
+          "A source file (FBX, PNG, WAV) changed on disk and its asset must pick the change up.",
+          "An asset must take its content from another file in the project (sourceFile)."
+        ],
+        "whenNotToUse": [
+          "A new file must become a new asset (use asset.import)."
+        ]
+      },
+      "schemas": {
+        "input": {
+          "$schema": "https://json-schema.org/draft/2020-12/schema",
+          "type": "object",
+          "properties": {
+            "assetPaths": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "minItems": 1,
+              "maxItems": 50,
+              "description": "The assets to reimport (/Game/Textures/T_Crate)."
+            },
+            "sourceFile": {
+              "type": "string",
+              "description": "One asset only: reimport it from this file instead, inside the project folder (relative to it, or absolute under it), which then becomes its source."
+            },
+            "save": {
+              "type": "boolean",
+              "description": "Save each reimported asset (default true)."
+            }
+          },
+          "required": [
+            "assetPaths"
+          ],
+          "additionalProperties": false
+        },
+        "output": {
+          "$schema": "https://json-schema.org/draft/2020-12/schema",
+          "type": "object",
+          "properties": {
+            "success": {
+              "type": "boolean",
+              "description": "Every asset with a source file on disk was reimported."
+            },
+            "assets": {
+              "type": "array",
+              "description": "One row per reimport tried.",
+              "items": {
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {
+                  "assetPath": {
+                    "type": "string",
+                    "description": "The asset."
+                  },
+                  "sourceFile": {
+                    "type": "string",
+                    "description": "The file it was reimported from."
+                  },
+                  "reimported": {
+                    "type": "boolean",
+                    "description": "Whether the importer took it."
+                  },
+                  "saved": {
+                    "type": "boolean",
+                    "description": "Whether it was saved."
+                  }
+                }
+              }
+            },
+            "missingSources": {
+              "type": "array",
+              "description": "Assets left as they are: their recorded source file is not on disk.",
+              "items": {
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {
+                  "assetPath": {
+                    "type": "string",
+                    "description": "The asset."
+                  },
+                  "sourceFile": {
+                    "type": "string",
+                    "description": "The file it records."
+                  },
+                  "reason": {
+                    "type": "string",
+                    "description": "Why it was left out."
+                  }
+                }
+              }
+            },
+            "reimported": {
+              "type": "number",
+              "description": "Assets reimported."
+            }
+          },
+          "required": [
+            "success"
+          ],
+          "additionalProperties": false
+        }
+      },
+      "examples": [
+        {
+          "title": "Reimport a texture after its PNG changed",
+          "input": {
+            "assetPaths": [
+              "/Game/Textures/T_Crate"
+            ]
+          },
+          "output": {
+            "success": true,
+            "reimported": 1
+          }
+        }
+      ],
+      "availability": {
+        "requiredPlugins": [
+          "EditorScriptingUtilities"
+        ],
+        "editorStates": [
+          "edit"
+        ]
+      },
+      "behavior": {
+        "effect": "write",
+        "idempotency": "idempotent",
+        "longRunning": false,
+        "safeToRetry": true
+      },
+      "policy": {
+        "requiredScope": "write",
+        "consent": "explicit",
+        "dataAccess": "project-write"
+      },
+      "cost": {
+        "latency": "interactive",
+        "resources": "medium"
+      },
+      "routing": {
+        "parentTool": "manage_asset",
+        "dispatchAction": "reimport"
+      },
+      "hashes": {
+        "algorithm": "sha256",
+        "schema": "b4bea544e30dded62184ca2cce21d44cda645e9a92d62397c5907997ff440244",
+        "content": "a6de1b6f70724bf4a5819e725b3b92156cc2f91cf1cd57a8d9a027c0b99f59c8"
       }
     },
     {

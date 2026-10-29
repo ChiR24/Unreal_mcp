@@ -4,7 +4,7 @@
 
 # Action reference
 
-Catalog revision: `cabcdb65a4b152b1`
+Catalog revision: `b19c56fe606480e3`
 
 Both transports expose exactly ONE public MCP tool, `unreal`, with the four
 operations `search` / `describe` / `execute` / `configure`. The parent tools
@@ -13,7 +13,7 @@ by `tools/list` and a direct `tools/call` on one returns a
 `DIRECT_TOOL_CALL_REMOVED` receipt rather than executing
 (`src/server/gateway/direct-call-migration.ts`).
 
-The catalog declares 469 capabilities across
+The catalog declares 470 capabilities across
 23 internal parent tools.
 Every row is derived from the capability record that the gateway actually
 validates against, so `execute` cannot accept an action this table omits.
@@ -45,7 +45,7 @@ validates against, so `execute` cannot accept an action this table omits.
 | `control_editor` | 28 | 10 | 14 | 4 | editor |
 | `inspect` | 27 | 22 | 4 | 1 | inspect |
 | `manage_ai` | 17 | 3 | 14 | 0 | manage ai |
-| `manage_asset` | 53 | 14 | 34 | 5 | asset, datatable, enum, material, struct, texture |
+| `manage_asset` | 54 | 14 | 35 | 5 | asset, datatable, enum, material, struct, texture |
 | `manage_audio` | 17 | 5 | 12 | 0 | audio |
 | `manage_blueprint` | 43 | 12 | 23 | 8 | blueprint, widget |
 | `manage_character` | 10 | 2 | 8 | 0 | manage character |
@@ -65,7 +65,7 @@ validates against, so `execute` cannot accept an action this table omits.
 
 ## Capabilities requiring consent
 
-73 of 469 capabilities require consent.
+74 of 470 capabilities require consent.
 
 | Capability | Tool | Action | Effect | Consent |
 | --- | --- | --- | --- | --- |
@@ -83,6 +83,7 @@ validates against, so `execute` cannot accept an action this table omits.
 | `asset.move` | `manage_asset` | `move` | write | explicit |
 | `asset.nanite_rebuild_mesh` | `manage_asset` | `manage_render` | write | explicit |
 | `asset.process_asset` | `manage_asset` | `generate_thumbnail` | write | explicit |
+| `asset.reimport` | `manage_asset` | `reimport` | write | explicit |
 | `asset.rename` | `manage_asset` | `rename` | write | explicit |
 | `asset.set_metadata` | `manage_asset` | `set_metadata` | write | explicit |
 | `asset.source_control` | `manage_asset` | `source_control_checkout` | write | explicit |
@@ -198,6 +199,7 @@ validates against, so `execute` cannot accept an action this table omits.
 | `asset.process_asset` | `manage_asset` | `generate_thumbnail` | write | write | explicit | `manage_asset.process_asset` `manage_asset.create_thumbnail` `manage_asset.generate_lods` `manage_asset.set_mesh_materials` `manage_asset.set_mesh_collision` |
 | `asset.query_asset` | `manage_asset` | `exists` | read | read | none | `manage_asset.query_asset` `manage_asset.exists` `manage_asset.search_assets` `manage_asset.find_by_tag` `manage_asset.find_text` `manage_asset.analyze_graph` `manage_asset.get_material_stats` `manage_asset.get_source_control_state` |
 | `asset.query_marketplace` | `manage_asset` | `get_fab_listing_details` | read | read | none | `manage_asset.query_marketplace` `manage_asset.get_fab_listing_details` `manage_asset.list_fab_downloads` `manage_asset.list_fab_library` `manage_asset.search_fab_listings` `manage_asset.list_megascans_library` `manage_asset.get_fab_import_status` |
+| `asset.reimport` | `manage_asset` | `reimport` | write | write | explicit | `manage_asset.reimport` |
 | `asset.rename` | `manage_asset` | `rename` | write | write | explicit | `manage_asset.rename` `manage_asset.rename_asset` |
 | `asset.set_metadata` | `manage_asset` | `set_metadata` | write | write | explicit | `manage_asset.set_metadata` `manage_asset.set_tags` |
 | `asset.source_control` | `manage_asset` | `source_control_checkout` | write | write | explicit | `manage_asset.source_control` `manage_asset.source_control_checkout` `manage_asset.source_control_submit` `manage_asset.source_control_enable` `manage_asset.source_control_init` `manage_asset.source_control_commit_all` |

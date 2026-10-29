@@ -805,4 +805,7 @@ export const PLAIN_PROBE: readonly PlainProbeCase[] = [
   // Assets nothing uses: the directory report's unreferenced type.
   { query: 'find unused assets', accepted: ['asset.inspect_asset'] },
   { query: 'unreferenced assets', accepted: ['asset.inspect_asset'] },
+  // A changed source file picked up again.
+  { query: 'reimport texture', accepted: ['asset.reimport'] },
+  { query: 'source file changed', accepted: ['asset.reimport'] },
 ];

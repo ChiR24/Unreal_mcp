@@ -88,6 +88,27 @@ export const ASSET_LIFECYCLE_RECORDS: readonly RecordSpec[] = [
       examples: [ex('Import FBX', { sourcePath: '/tmp/mesh.fbx', destinationPath: '/Game/Imports/Mesh' }, { success: true }), ex('Import a mocap take onto an existing skeleton', { sourcePath: '/Game/../Imports/Mocap.fbx', destinationPath: '/Game/Anims/A_Mocap', importAnimations: true, skeletonPath: '/Game/Chars/SK_Hero_Skeleton' }, { success: true }), ex('Import a character onto an existing skeleton', { sourcePath: '/Game/../Imports/Hero.fbx', destinationPath: '/Game/Chars/SK_Hero.SK_Hero', skeletonPath: '/Game/Chars/SK_Mannequin_Skeleton', importMesh: true, createPhysicsAsset: false }, { success: true, assetPath: '/Game/Chars/SK_Hero', skeleton: '/Game/Chars/SK_Mannequin_Skeleton.SK_Mannequin_Skeleton', physicsAsset: '', bones: 68, morphTargets: 0 })] }
   ),
 
+  r('reimport', 'asset', 'Bring assets up to date with their source files, as the Content Browser\'s Reimport does but with no dialog: each from the file it was imported from (its import data), or, for one asset, from sourceFile (a file inside the project, as import takes it). Every asset is checked before any is reimported: ASSET_NOT_FOUND, ENGINE_CONTENT, NOT_REIMPORTABLE (no source file recorded: made in the editor, or a kind never imported) SOURCE_FILE_MISSING (sourceFile not there) and SECURITY_VIOLATION (sourceFile outside the project) change nothing. An asset whose recorded file is gone is listed under missingSources and left as it is; when that leaves none, SOURCE_FILE_MISSING. Saved after (save, default true); editor undo does not take a reimport back. REIMPORT_FAILED names the ones the importer refused (the editor log says why).',
+    schema({
+      assetPaths: { type: 'array', items: { type: 'string' }, minItems: 1, maxItems: 50, description: 'The assets to reimport (/Game/Textures/T_Crate).' },
+      sourceFile: str('One asset only: reimport it from this file instead, inside the project folder (relative to it, or absolute under it), which then becomes its source.'),
+      save: bool('Save each reimported asset (default true).'),
+    }, ['assetPaths']),
+    schema({
+      success: bool('Every asset with a source file on disk was reimported.'),
+      assets: { type: 'array', description: 'One row per reimport tried.', items: { type: 'object', additionalProperties: false, properties: {
+        assetPath: str('The asset.'), sourceFile: str('The file it was reimported from.'), reimported: bool('Whether the importer took it.'), saved: bool('Whether it was saved.') } } },
+      missingSources: { type: 'array', description: 'Assets left as they are: their recorded source file is not on disk.', items: { type: 'object', additionalProperties: false, properties: {
+        assetPath: str('The asset.'), sourceFile: str('The file it records.'), reason: str('Why it was left out.') } } },
+      reimported: num('Assets reimported.'),
+    }, ['success']),
+    WRITE, WRITE_POLICY, MEDIUM,
+    { aliases: ['asset.reimport_asset'], topics: ['reimport asset', 'reimport texture', 'reimport mesh', 'update asset from source file', 'refresh imported asset', 'source file changed', 'reload from disk'],
+      whenToUse: ['A source file (FBX, PNG, WAV) changed on disk and its asset must pick the change up.', 'An asset must take its content from another file in the project (sourceFile).'],
+      whenNotToUse: ['A new file must become a new asset (use asset.import).'],
+      examples: [ex('Reimport a texture after its PNG changed', { assetPaths: ['/Game/Textures/T_Crate'] }, { success: true, reimported: 1 })] }
+  ),
+
   r('duplicate', 'asset', 'Copy an asset, or a whole folder with its sub-folders, to a new path or name, and save the copies.',
     DUPLICATE_INPUT, DUPLICATE_OUTPUT, WRITE, WRITE_POLICY, MEDIUM,
     { topics: ['copy asset', 'clone asset', 'copy material', 'copy texture', 'duplicate material', 'duplicate blueprint', 'duplicate data table', 'make copy of asset', 'copy asset to another folder'],
