@@ -90,7 +90,7 @@ export const ASSET_RECORDS: readonly CapabilityRecordSource[] = [
   }),
   buildCoreRecord({
     parentTool: 'control_editor', action: 'open_level', domain: D, family: F,
-    topics: ['open map', 'open level asset'],
+    topics: ['open map', 'open level asset', 'open the menu level or another map'],
     summary: 'Open a level from disk by its path (/Game/Maps/Demo; an object path such as /Game/Maps/Demo.Demo, or a bare name read as /Game/<name>, works too), replacing the open level: Play In Editor is stopped and asset editors close. Unsaved levels are refused, never saved (DIRTY_PACKAGES); the reply waits for the level to settle (settledSeconds).',
     whenToUse: ['A different level must be loaded into the editor.'],
     whenNotToUse: ['The level is already loaded.',

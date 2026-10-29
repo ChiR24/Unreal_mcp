@@ -37,7 +37,7 @@ export const BUILD_ENVIRONMENT_FOLDS: readonly FoldSpec[] = [
     // led callers to ask for 120 instances in a 6000uu radius, get a
     // success back, and find an empty level.
     summary: 'Place foliage (trees, grass, bushes, rocks): create or update a foliage type asset, place explicit instances/transforms, or paint instances over a brush disc or a box area, dropped onto the ground. Placing and painting are one undo step each.',
-    topics: ['add foliage', 'paint foliage', 'foliage instances', 'scatter foliage', 'scatter grass', 'fill area with foliage', 'plant trees', 'place bushes', 'add trees, grass or flowers to the level', 'make a forest', 'scatter rocks', 'place trees or rocks randomly', 'scatter rocks or trees around an area', 'plant trees around a building, a castle or a lake', 'add trees to the hills', 'place rocks randomly on the landscape'],
+    topics: ['add foliage', 'paint foliage', 'foliage instances', 'scatter foliage', 'scatter grass', 'fill area with foliage', 'plant trees', 'place bushes', 'add trees, grass or flowers to the level', 'make a forest', 'scatter rocks', 'place trees or rocks randomly', 'scatter rocks or trees around an area', 'plant trees around a building, a castle or a lake', 'add trees to the hills', 'place rocks randomly on the landscape', 'spread rocks or trees around the level'],
     members: { scatter: 'add_foliage', instances: 'add_foliage_instances', paint: 'paint_foliage' },
   },
   {

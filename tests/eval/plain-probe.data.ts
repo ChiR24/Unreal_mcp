@@ -1043,4 +1043,15 @@ export const PLAIN_PROBE: readonly PlainProbeCase[] = [
   { query: 'make the sign glow', accepted: ['control_actor.set_material'] },
   { query: 'make the crystal glow blue', accepted: ['control_actor.set_material'] },
   { query: 'make the lamp glow', accepted: ['control_actor.set_material'] },
+  // Rocks around the level, rename and hide by name, a second level, a cutscene, walk faster, a falling cube, copies, a menu level.
+  { query: 'spread rocks around the level', accepted: ['build_environment.add_foliage'] },
+  { query: 'rename the cube', accepted: ['control_actor.rename'] },
+  { query: 'hide the wall', accepted: ['control_actor.set_visibility'] },
+  { query: 'add a second level', accepted: ['manage_level.create_level'] },
+  { query: 'add a cutscene at the start', accepted: ['sequence.create'] },
+  { query: 'make the character walk faster', accepted: ['manage_character.configure_character'] },
+  { query: 'make the cube fall', accepted: ['animation_physics.setup_physics_simulation'] },
+  { query: 'duplicate the tree 10 times', accepted: ['control_actor.duplicate'] },
+  { query: 'duplicate the tree', accepted: ['control_actor.duplicate'] },
+  { query: 'open the main menu level', accepted: ['control_editor.open_level'] },
 ];

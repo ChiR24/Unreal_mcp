@@ -17,7 +17,7 @@ export const TIMELINE_LIFECYCLE_RECORDS: readonly CapabilityRecordSource[] = [
     action: 'create',
     family: FAMILY,
     domain: DOMAIN,
-    topics: ['level sequence', 'new sequence', 'cinematic', 'sequencer', 'create cinematic', 'cutscene', 'make a cutscene', 'level sequence asset', 'create level sequence'],
+    topics: ['level sequence', 'new sequence', 'cinematic', 'sequencer', 'create cinematic', 'cutscene', 'make a cutscene', 'level sequence asset', 'create level sequence', 'add a cutscene at the start of the level'],
     aliases: ['sequence.create_level_sequence', 'sequence.create_cinematic'],
     summary: 'Create a Level Sequence asset and save it: name in the folder path names (default /Game), or path alone naming the sequence itself (/Game/Cinematics/SEQ_Shot). A Level Sequence already there is kept and answered with alreadyExists true; another asset there is ASSET_ALREADY_EXISTS, and a path outside the writable content roots SEQUENCE_PATH_NOT_WRITABLE. The new sequence is empty, with no bindings or camera, at the project\'s default display rate (30 fps out of the box) and 24000 ticks per second.',
     whenToUse: ['A new cinematic or animation sequence asset is needed.'],

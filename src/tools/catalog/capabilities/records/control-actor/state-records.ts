@@ -37,7 +37,7 @@ export const STATE_RECORDS: readonly CapabilityRecordSource[] = [
     action: 'set_visibility',
     domain: DOMAIN,
     family: FAMILY_VISIBILITY,
-    topics: ['hide actor', 'show actor', 'toggle visibility', 'hidden in game', 'make actor invisible', 'unhide actor', 'hide a light', 'hide or show all the trees'],
+    topics: ['hide actor', 'show actor', 'toggle visibility', 'hidden in game', 'make actor invisible', 'unhide actor', 'hide a light', 'hide or show all the trees', 'hide the wall or the door'],
     aliases: ['control_actor.hide_actor', 'control_actor.show_actor'],
     summary: 'Toggle the visibility of an actor in the level, or of many actors at once with actorNames.',
     whenToUse: ['An actor must be shown or hidden without being deleted.', 'Many actors must be shown or hidden together (actorNames does them in one call).'],

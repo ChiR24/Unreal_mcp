@@ -1,5 +1,5 @@
 {
-  "catalogRevision": "f149997592ffdbc8",
+  "catalogRevision": "9ca6e212a8fa74da",
   "recordCount": 482,
   "records": [
     {
@@ -8196,7 +8196,8 @@
           "physics crate",
           "falls and tumbles",
           "make an object physical",
-          "make a ball roll"
+          "make a ball roll",
+          "a cube or a crate that falls with gravity"
         ],
         "summary": "Make an actor simulate physics: a placed prop (actorName) falls, tumbles and can be pushed while the game plays, or a skeletal mesh gets a Physics Asset with bodies made for its bones.",
         "whenToUse": [
@@ -8329,7 +8330,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "cae143857f34759e96d587dc7e1684b44a7a945396aa83b0a77325a1e123aa6e",
-        "content": "ce8a9b286f2d148975bd2fd04e8532b238f7e09974238dc07976ad765b9905e1"
+        "content": "ec0fc706bdbc1a2cff49e8c8cca0b147aa80e16cbe56707210c6a7931f35f022"
       }
     },
     {
@@ -28550,6 +28551,7 @@
           "plant trees around a building, a castle or a lake",
           "add trees to the hills",
           "place rocks randomly on the landscape",
+          "spread rocks or trees around the level",
           "foliage",
           "vegetation",
           "grass",
@@ -28945,7 +28947,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "1d69a2ec3894703cfb5473af28e37c8f764811e72feee995d7335213b3db30fa",
-        "content": "f61f8c0b293df87d759c379f4a750034de8b8e1665edda1a387cc0044501b8a0"
+        "content": "fa254c3daaf7dfa582170ec24189c915e68a0e5813041f8c007d2c1e503c478b"
       }
     },
     {
@@ -41787,7 +41789,8 @@
           "copy actor",
           "make actor copy",
           "duplicate a wall, a door or a prop",
-          "make a copy of an actor or a house"
+          "make a copy of an actor or a house",
+          "duplicate a tree or a rock several times"
         ],
         "summary": "Duplicate a placed actor: a copy with its components, properties, materials and tags at the original's transform moved by offset, labelled newName or numbered after the original, in one undo step.",
         "whenToUse": [
@@ -41907,7 +41910,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "325ccfd05f51b91aa27187b57988388402d0af00117e967ac21ea27c4b3379a6",
-        "content": "56d5b2b02b7b2f5f45de821169847c546a136a78f22fc87a332a0426dd2d2dbc"
+        "content": "d01953a25ee114e3dced434f18d5f8e1c6bc50b7d5f1d434d6cae6f3147e2c99"
       }
     },
     {
@@ -44929,7 +44932,8 @@
           "change actor name",
           "rename several actors",
           "number the actors",
-          "batch rename"
+          "batch rename",
+          "rename the cube or the wall"
         ],
         "summary": "Rename an actor: its label (the name the Outliner and every other call use), and with renameObject its object name too, which is the name a cooked level ships. actorNames relabels several actors in one undo step, numbered in the order given by a {n} in newName (Crate_{n} -> Crate_01, Crate_02, ...).",
         "whenToUse": [
@@ -45108,7 +45112,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "9cdd93db1ffde13a933832a208063d594ae8e598e6fbc84e852a4c30aa072824",
-        "content": "7732c952f7bb25eb5061f3347760df6222d650748c0ecd7ae1cccf9566455e66"
+        "content": "c7355f4971e4345cb508f3f4b7e0711145de752876882fb9ee1efcc9f904e3f7"
       }
     },
     {
@@ -46416,7 +46420,8 @@
           "make actor invisible",
           "unhide actor",
           "hide a light",
-          "hide or show all the trees"
+          "hide or show all the trees",
+          "hide the wall or the door"
         ],
         "summary": "Show or hide an actor in the editor and in play (visible, default true), or many actors at once with actorNames, as one undo step. Collision follows visibility: hiding turns its collision off, and showing turns it back on, even where set_actor_collision had turned it off. Showing also shows every primitive component, including one hidden on purpose. The single form replies visible as read back plus actorName; the many form replies updatedActors, affectedActors and the names not found under missing. A name that matches nothing is ACTOR_NOT_FOUND; an actor that does not read back as asked is VISIBILITY_MISMATCH.",
         "whenToUse": [
@@ -46527,7 +46532,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "127a0b12e6f6500a252b87c15fadc2915c8b2428ed6cf5027ab0d09a9c8d0e79",
-        "content": "5d229d594d9cff8ad5c40431891f5244df4483ddc60127fb820d96453514afba"
+        "content": "94346571d9b3466ebc0b9a5ce6b4c79a5bfd01d8b7828bf16fb2062ec13948d3"
       }
     },
     {
@@ -49640,7 +49645,8 @@
         "topics": [
           "open_level",
           "open map",
-          "open level asset"
+          "open level asset",
+          "open the menu level or another map"
         ],
         "summary": "Open a level from disk by its path (/Game/Maps/Demo; an object path such as /Game/Maps/Demo.Demo, or a bare name read as /Game/<name>, works too), replacing the open level: Play In Editor is stopped and asset editors close. Unsaved levels are refused, never saved (DIRTY_PACKAGES); the reply waits for the level to settle (settledSeconds).",
         "whenToUse": [
@@ -49743,7 +49749,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "2d26f9eb5c1c7a01f4e40ae4ac9a8a7368ba514ebc09f829f28f1918432016d4",
-        "content": "fb90add350d91a3a0167e29b127b6ded1329e7900aaf78aa3aa84e6013103e4d"
+        "content": "b7cfc985c1ad536b7ac42495b6bc55ca245a0591929e2e7a75138a5274e7cd8a"
       }
     },
     {
@@ -71963,7 +71969,8 @@
           "switch to first person or third person",
           "double jump",
           "add a crouch",
-          "make the player faster or slower"
+          "make the player faster or slower",
+          "make the character walk or run faster"
         ],
         "summary": "Configure a Character Blueprint's defaults by setting: movement_speeds (walk, crouch, swim, fly, acceleration, braking, friction), jump (launch speed, hold, double jump, air control, gravity), crouch, rotation (orient to movement or face the aim), capsule_component, mesh_component (skeletal mesh, Animation Blueprint, offset), camera_component (a third-person spring arm and camera, made when missing, or with view first_person a camera at the eyes) or nav_movement (AI agent size, avoidance). Each compiles and saves the Blueprint, changes only the fields sent and reads the values back; a Blueprint that is not a Character is refused (NOT_A_CHARACTER).",
         "whenToUse": [
@@ -72381,7 +72388,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "f5b1d349c80165552eb31f67ec27b80672797918ebec0822101a82db4d1815cd",
-        "content": "aff658bf180b7d9be740ed55b28cdaf3e43065bc9152c5ffa78afaf4198abfe1"
+        "content": "14364b1f5dead6d227d5edbf324d5472c686b26be1da52e1f5cc26db48db749d"
       }
     },
     {
@@ -88769,7 +88776,8 @@
           "new map",
           "create map",
           "empty level",
-          "make a new map"
+          "make a new map",
+          "add a second level or another map"
         ],
         "summary": "Create a new empty level map, save it and open it in the editor in place of the open one: levelName in the levelPath folder (default /Game/Maps). A level already at that path is opened instead, not replaced (alreadyExists). Open levels with unsaved changes refuse the call (DIRTY_PACKAGES, listed in unsavedPackages; nothing is created) unless saveDirtyPackages saves them. The new level has no light, sky or floor, so it renders black until some are added. useWorldPartition makes it a World Partition level (default off); when that fails the reply warns and worldPartitionEnabled is false.",
         "whenToUse": [
@@ -88913,7 +88921,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "81130c2e10bff9be3ccf5840052552810f89b9b48b1878ecfc5528994674434d",
-        "content": "7efb35a5b749f49ce130e812476f123606599ed2d3e197d9e55201b69c25f171"
+        "content": "a57d1e97f15d97895494894c59a8b1816abe2ee2620f0e80503a117d72571900"
       }
     },
     {
@@ -106297,7 +106305,8 @@
           "cutscene",
           "make a cutscene",
           "level sequence asset",
-          "create level sequence"
+          "create level sequence",
+          "add a cutscene at the start of the level"
         ],
         "summary": "Create a level sequence (sequenceOp create, the default): name in the folder path (default /Game), or path naming the asset itself; it is saved (saved), and a level sequence already there is kept and answered with alreadyExists, while another asset there is ASSET_ALREADY_EXISTS. duplicate copies the sequence at path into the folder destinationPath as newName and saves the copy; rename gives the sequence at path the name newName in its folder (a path starting with / moves it), references following it; the engine saves it and leaves a redirector at the old path when other assets reference it. Only /Game paths are written (SEQUENCE_PATH_NOT_WRITABLE); a source that is not a level sequence is INVALID_SEQUENCE, and a taken destination ASSET_ALREADY_EXISTS.",
         "whenToUse": [
@@ -106488,7 +106497,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "07b908bab2635c907da30ba18c0ba01f44b79964eb7794a5c498ad516c5fca1d",
-        "content": "1a6e04866689bcb52f600f91e38680aded49b47e013362f61b59f9827f3550cb"
+        "content": "abb7e263d9440d39eba257e0f50c369f23a1306126edafe436fccecda042caf5"
       }
     },
     {

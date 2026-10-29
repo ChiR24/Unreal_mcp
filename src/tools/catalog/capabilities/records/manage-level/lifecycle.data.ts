@@ -77,7 +77,7 @@ export const LIFECYCLE_RECORDS: readonly CapabilityRecordSource[] = [
   buildCoreRecord({
     parentTool: 'manage_level', action: 'create_level', dispatchAction: 'manage_level_structure',
     domain: D, family: F,
-    topics: ['new level', 'new map', 'create map', 'empty level', 'make a new map'],
+    topics: ['new level', 'new map', 'create map', 'empty level', 'make a new map', 'add a second level or another map'],
     summary: 'Create a new empty level map, save it and open it in the editor in place of the open one: levelName in the levelPath folder (default /Game/Maps). A level already at that path is opened instead, not replaced (alreadyExists). Open levels with unsaved changes refuse the call (DIRTY_PACKAGES, listed in unsavedPackages; nothing is created) unless saveDirtyPackages saves them. The new level has no light, sky or floor, so it renders black until some are added. useWorldPartition makes it a World Partition level (default off); when that fails the reply warns and worldPartitionEnabled is false.',
     whenToUse: ['A brand-new level must be created and opened.'],
     whenNotToUse: ['An existing level should be loaded instead.', 'A copy of an existing level is wanted; use duplicate_level.'],
