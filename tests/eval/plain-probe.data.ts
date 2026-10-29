@@ -886,4 +886,6 @@ export const PLAIN_PROBE: readonly PlainProbeCase[] = [
   // Placed actors made into one Blueprint, the editor's prefab.
   { query: 'make a prefab', accepted: ['blueprint.convert_actors_to_blueprint'] },
   { query: 'turn these actors into a blueprint', accepted: ['blueprint.convert_actors_to_blueprint'] },
+  // Actors moved between the open level and its sublevels.
+  { query: 'move actors into a sublevel', accepted: ['manage_level.move_actors_to_level'] },
 ];

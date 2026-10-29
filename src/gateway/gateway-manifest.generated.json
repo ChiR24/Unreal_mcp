@@ -17094,9 +17094,11 @@
         "export_level",
         "import_level",
         "add_sublevel",
-        "remove_sublevel"
+        "remove_sublevel",
+        "move_actors_to_level"
       ],
       "parameterNames": [
+        "actorNames",
         "color",
         "destinationPath",
         "discardUnsaved",
@@ -17139,6 +17141,15 @@
       "inputSchema": {
         "type": "object",
         "properties": {
+          "actorNames": {
+            "type": "array",
+            "minItems": 1,
+            "maxItems": 500,
+            "items": {
+              "type": "string"
+            },
+            "description": "The actors to move, by label or name."
+          },
           "color": {
             "type": "array",
             "items": {
@@ -17347,7 +17358,8 @@
               "export_level",
               "import_level",
               "add_sublevel",
-              "remove_sublevel"
+              "remove_sublevel",
+              "move_actors_to_level"
             ],
             "description": "Action to invoke on manage_level."
           }

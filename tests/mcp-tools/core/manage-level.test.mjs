@@ -20,6 +20,7 @@ const RENAMED_LEVEL = `${TEST_FOLDER}/${RENAMED_LEVEL_NAME}`;
 const MOVED_LEVEL = `${TEST_FOLDER}/LevelMoved_${ts}`;
 const SAVE_VIA_SAVE_LEVEL = `${TEST_FOLDER}/LevelSaveViaSave_${ts}`;
 const TEST_ACTOR = `LevelActor_${ts}`;
+const MOVE_ACTOR = `LevelMoveCube_${ts}`;
 
 const testCases = [
   // === CREATE / SAVE / LOAD ===
@@ -57,6 +58,24 @@ const testCases = [
   { scenario: 'ACTION: unload', toolName: 'manage_level', arguments: { action: 'unload', levelPath: SUB_LEVEL }, expected: 'success|not loaded', assertions: [{ path: 'structuredContent.result.visible', equals: false, label: 'it is hidden' }, { path: 'structuredContent.result.loaded', equals: true, label: 'the editor keeps it loaded, and the reply warns' }] },
   { scenario: 'ACTION: unload_level alias', toolName: 'manage_level', arguments: { action: 'unload_level', levelName: `LevelSub_${ts}` }, expected: 'success|not loaded', assertions: [{ path: 'structuredContent.result.levelPath', equals: SUB_LEVEL, label: 'the name after the last slash finds it' }] },
   { scenario: 'ERROR: stream refuses a level that is not a sublevel', toolName: 'manage_level', arguments: { action: 'stream', levelPath: `${TEST_FOLDER}/NoSuchSub_${ts}` }, expected: 'error|STREAMING_LEVEL_NOT_FOUND' },
+
+  // === MOVE ACTORS between the open level and its sublevel ===
+  { scenario: 'Setup: a cube in the open level', toolName: 'control_actor', arguments: { action: 'spawn', classPath: '/Engine/BasicShapes/Cube', actorName: MOVE_ACTOR, location: { x: 0, y: 900, z: 50 } }, expected: 'success' },
+  { scenario: 'ACTION: move_actors_to_level puts the cube in the sublevel', toolName: 'manage_level', arguments: { action: 'move_actors_to_level', actorNames: [MOVE_ACTOR], levelPath: SUB_LEVEL }, expected: 'success', assertions: [
+    { path: 'structuredContent.result.levelPath', equals: SUB_LEVEL, label: 'the sublevel' },
+    { path: 'structuredContent.result.moved', includes: MOVE_ACTOR, label: 'the cube moved, its label kept' },
+    { path: 'structuredContent.result.undo.undoable', equals: true, label: 'one undo step' },
+  ] },
+  { scenario: 'INFO: moving it there again moves nothing', toolName: 'manage_level', arguments: { action: 'move_actors_to_level', actorNames: [MOVE_ACTOR], levelPath: SUB_LEVEL }, expected: 'success', assertions: [
+    { path: 'structuredContent.result.alreadyThere', includes: MOVE_ACTOR, label: 'already there' },
+    { path: 'structuredContent.result.moved', length: 0, label: 'nothing moved' },
+  ] },
+  { scenario: 'ACTION: move_actors_to_level persistent brings it back', toolName: 'manage_level', arguments: { action: 'move_actors_to_level', actorNames: [MOVE_ACTOR], levelPath: 'persistent' }, expected: 'success', assertions: [
+    { path: 'structuredContent.result.levelPath', equals: MAIN_LEVEL, label: 'the open level' },
+  ] },
+  { scenario: 'ERROR: move_actors_to_level into a level that is not a sublevel', toolName: 'manage_level', arguments: { action: 'move_actors_to_level', actorNames: [MOVE_ACTOR], levelPath: `${TEST_FOLDER}/NoSuchSub_${ts}` }, expected: 'error|SUBLEVEL_NOT_FOUND' },
+  { scenario: 'ERROR: move_actors_to_level names an actor that is not there', toolName: 'manage_level', arguments: { action: 'move_actors_to_level', actorNames: [`NoSuchActor_${ts}`], levelPath: SUB_LEVEL }, expected: 'error|ACTOR_NOT_FOUND' },
+  { scenario: 'Cleanup: delete the moved cube', toolName: 'control_actor', arguments: { action: 'delete', actorName: MOVE_ACTOR }, expected: 'success|not found' },
 
   // === REMOVE ===
   { scenario: 'ERROR: remove_sublevel refuses a level that is not a sublevel of the open one', toolName: 'manage_level', arguments: { action: 'remove_sublevel', subLevelPath: `${TEST_FOLDER}/NoSuchSub_${ts}` }, expected: 'error|SUBLEVEL_NOT_FOUND' },

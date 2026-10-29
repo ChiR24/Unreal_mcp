@@ -176,4 +176,25 @@ export const OPERATIONS_RECORDS: readonly CapabilityRecordSource[] = [
     effect: 'destructive', costLatency: 'interactive',
     exampleInput: { action: 'remove_sublevel', subLevelPath: '/Game/Maps/Sub01' },
   }),
+  buildCoreRecord({
+    parentTool: 'manage_level', action: 'move_actors_to_level', topics: ['move actors to another level', 'move actors into a sublevel', 'put actors in a sublevel'], dispatchAction: 'move_actors_to_level',
+    domain: D, family: 'sublevel',
+    summary: 'Move placed actors into another loaded level of the open world (one of its sublevels, or the open level itself with levelPath persistent), as the Levels panel\'s Move Selection to Level does: they are cut and pasted into it, the clipboard kept as it was, and soft references to them follow. One undo step; both levels then need saving. All or none: every name and the level are checked first (ACTOR_NOT_FOUND, SUBLEVEL_NOT_FOUND naming the loaded levels, LEVEL_NOT_LOADED, LEVEL_LOCKED), and an actor already in that level is left as it is and listed under alreadyThere.',
+    whenToUse: ['Actors placed in the open level belong in one of its sublevels (lighting, gameplay, a streaming area), or back in the open level.'],
+    whenNotToUse: ['Copies in the other level are wanted: duplicate the actors there instead.', 'A sublevel itself must be added or removed: use add_sublevel or remove_sublevel.'],
+    inputProps: {
+      actorNames: { type: 'array', minItems: 1, maxItems: 500, items: { type: 'string' }, description: 'The actors to move, by label or name.' },
+      levelPath: { ...P.levelPath, description: 'The level to move them into: a loaded sublevel\'s /Game package path or a name only one sublevel\'s path ends with, or persistent (the open level itself, as is its own path).' },
+    },
+    required: ['actorNames', 'levelPath'],
+    outputProps: {
+      levelPath: { type: 'string', description: 'The level the actors are in now.' },
+      moved: { type: 'array', items: { type: 'string' }, description: 'The actors moved, by their labels in the new level.' },
+      alreadyThere: { type: 'array', items: { type: 'string' }, description: 'Actors named that were in that level already, left as they were.' },
+      levels: { type: 'array', items: { type: 'string' }, description: 'With SUBLEVEL_NOT_FOUND or LEVEL_NOT_LOADED, the levels loaded in the open world.' },
+      undo: { type: 'object', additionalProperties: true, 'x-unreal-reflection-boundary': true, description: 'What editor undo takes back: the move, one step. Absent when nothing moved.' },
+    },
+    effect: 'destructive', costLatency: 'interactive',
+    exampleInput: { action: 'move_actors_to_level', actorNames: ['Lamp_1', 'Lamp_2'], levelPath: '/Game/Maps/Lighting' },
+  }),
 ];

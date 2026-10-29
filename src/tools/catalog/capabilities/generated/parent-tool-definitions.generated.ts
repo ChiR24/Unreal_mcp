@@ -24928,6 +24928,15 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
     "inputSchema": {
       "type": "object",
       "properties": {
+        "actorNames": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 500,
+          "items": {
+            "type": "string"
+          },
+          "description": "The actors to move, by label or name."
+        },
         "color": {
           "type": "array",
           "items": {
@@ -25136,7 +25145,8 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             "export_level",
             "import_level",
             "add_sublevel",
-            "remove_sublevel"
+            "remove_sublevel",
+            "move_actors_to_level"
           ],
           "description": "Action to invoke on manage_level."
         }
@@ -25186,6 +25196,13 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "alreadyLoaded": {
           "type": "boolean",
           "description": "True when levelPath was already the open level: nothing was loaded or reloaded, its unsaved changes were kept and a running Play In Editor session was left alone."
+        },
+        "alreadyThere": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Actors named that were in that level already, left as they were."
         },
         "appliedSettings": {
           "type": "array",
@@ -25308,6 +25325,13 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "string",
           "description": "Level asset path (e.g. /Game/Maps/Demo)."
         },
+        "levels": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "With SUBLEVEL_NOT_FOUND or LEVEL_NOT_LOADED, the levels loaded in the open world."
+        },
         "loaded": {
           "type": "boolean",
           "description": "Whether it is now the level open in the editor."
@@ -25325,6 +25349,13 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           },
           "x-unreal-reflection-boundary": true,
           "description": "One row per Map Check message: severity, message, actor and actorPath when it names one, code (the map error name)."
+        },
+        "moved": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "The actors moved, by their labels in the new level."
         },
         "noteCount": {
           "type": "number",
@@ -25408,6 +25439,12 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "truncated": {
           "type": "boolean",
           "description": "True when more than 200 messages were found."
+        },
+        "undo": {
+          "type": "object",
+          "additionalProperties": true,
+          "x-unreal-reflection-boundary": true,
+          "description": "What editor undo takes back: the move, one step. Absent when nothing moved."
         },
         "unsaved": {
           "type": "boolean",

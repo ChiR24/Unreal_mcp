@@ -4,7 +4,7 @@
 
 # Action reference
 
-Catalog revision: `82c2388f08dca538`
+Catalog revision: `5e43b663759362ee`
 
 Both transports expose exactly ONE public MCP tool, `unreal`, with the four
 operations `search` / `describe` / `execute` / `configure`. The parent tools
@@ -13,7 +13,7 @@ by `tools/list` and a direct `tools/call` on one returns a
 `DIRECT_TOOL_CALL_REMOVED` receipt rather than executing
 (`src/server/gateway/direct-call-migration.ts`).
 
-The catalog declares 475 capabilities across
+The catalog declares 476 capabilities across
 23 internal parent tools.
 Every row is derived from the capability record that the gateway actually
 validates against, so `execute` cannot accept an action this table omits.
@@ -55,7 +55,7 @@ validates against, so `execute` cannot accept an action this table omits.
 | `manage_geometry` | 16 | 2 | 14 | 0 | world |
 | `manage_interaction` | 3 | 1 | 2 | 0 | manage interaction |
 | `manage_inventory` | 6 | 1 | 5 | 0 | manage inventory |
-| `manage_level` | 19 | 5 | 12 | 2 | level |
+| `manage_level` | 20 | 5 | 12 | 3 | level |
 | `manage_level_structure` | 8 | 2 | 5 | 1 | world |
 | `manage_networking` | 21 | 5 | 13 | 3 | networking |
 | `manage_pcg` | 3 | 0 | 3 | 0 | world |
@@ -65,7 +65,7 @@ validates against, so `execute` cannot accept an action this table omits.
 
 ## Capabilities requiring consent
 
-75 of 475 capabilities require consent.
+76 of 476 capabilities require consent.
 
 | Capability | Tool | Action | Effect | Consent |
 | --- | --- | --- | --- | --- |
@@ -114,6 +114,7 @@ validates against, so `execute` cannot accept an action this table omits.
 | `manage_effect.cleanup` | `manage_effect` | `cleanup` | destructive | explicit |
 | `manage_effect.remove_niagara_node` | `manage_effect` | `remove_niagara_node` | destructive | explicit |
 | `manage_level.delete` | `manage_level` | `delete_level` | destructive | explicit |
+| `manage_level.move_actors_to_level` | `manage_level` | `move_actors_to_level` | destructive | explicit |
 | `manage_level.remove_sublevel` | `manage_level` | `remove_sublevel` | destructive | explicit |
 | `manage_level_structure.remove_volume` | `manage_level_structure` | `remove_volume` | destructive | explicit |
 | `manage_networking.remove_legacy_mapping` | `manage_networking` | `manage_input` | destructive | explicit |
@@ -494,6 +495,7 @@ validates against, so `execute` cannot accept an action this table omits.
 | `manage_level.import_level` | `manage_level` | `import_level` | write | write | none | `manage_level.import_level` |
 | `manage_level.list_levels` | `manage_level` | `list_levels` | read | read | none | `manage_level.list_levels` |
 | `manage_level.load` | `manage_level` | `load` | write | write | none | `manage_level.load` `manage_level.load_level` |
+| `manage_level.move_actors_to_level` | `manage_level` | `move_actors_to_level` | destructive | destructive | explicit | `manage_level.move_actors_to_level` |
 | `manage_level.remove_sublevel` | `manage_level` | `remove_sublevel` | destructive | destructive | explicit | `manage_level.remove_sublevel` |
 | `manage_level.run_map_check` | `manage_level` | `run_map_check` | read | read | none | `manage_level.run_map_check` |
 | `manage_level.save` | `manage_level` | `save` | write | write | none | `manage_level.save` `manage_level.save_as` `manage_level.save_level` `manage_level.save_level_as` |

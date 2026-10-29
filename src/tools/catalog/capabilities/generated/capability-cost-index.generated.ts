@@ -1301,6 +1301,7 @@ export const CAPABILITY_COST_INDEX: Readonly<Record<string, string>> = {
   "manage_level::load_level": "interactive|medium",
   "manage_level::manage_level_structure": "interactive|medium",
   "manage_level::manage_lighting": "long-running|high",
+  "manage_level::move_actors_to_level": "interactive|low",
   "manage_level::remove_sublevel": "interactive|low",
   "manage_level::rename_level": "interactive|medium",
   "manage_level::run_map_check": "interactive|low",
@@ -1673,4 +1674,4 @@ export const CAPABILITY_COST_INDEX: Readonly<Record<string, string>> = {
   "system_control::write_snapshot": "interactive|medium"
 };
 
-export const CAPABILITY_COST_INDEX_KEY_COUNT = 1660;
+export const CAPABILITY_COST_INDEX_KEY_COUNT = 1661;
