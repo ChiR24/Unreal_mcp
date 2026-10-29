@@ -1,5 +1,5 @@
 {
-  "catalogRevision": "2c79aab648f9cc17",
+  "catalogRevision": "a9ea5d8983d88938",
   "recordCount": 480,
   "records": [
     {
@@ -7464,7 +7464,8 @@
           "play_montage",
           "play animation",
           "play anim",
-          "trigger montage"
+          "trigger montage",
+          "play an animation on a character"
         ],
         "summary": "Play an animation montage on a placed skeletal actor (the playing one while Play In Editor runs): Montage_Play through its Anim Instance at playRate, or the montage as a single-node animation when the mesh has none, which switches that component's animation mode. The reply gives playMode and montageLength; outside play the actor does not tick, so nothing moves, playing is false and a warning says so.",
         "whenToUse": [
@@ -7568,7 +7569,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "261821b6f2c38f12b0da21ef2b61f9e99e11d3b5ac196e52fe545b00b0e5527f",
-        "content": "bfa0de55eaae3ab6c11bbadc189bc3487bdb89da8d0faa346a1421c5f6a618a6"
+        "content": "4ac516577bb19735fcee8ed8772fcf5279286f0ad3528ad89ae37ecdbd3d75c2"
       }
     },
     {
@@ -67140,7 +67141,8 @@
           "mix eq",
           "mix equalizer",
           "master volume",
-          "change the volume in the menu or the game"
+          "change the volume in the menu or the game",
+          "the music or the sounds louder or quieter"
         ],
         "summary": "Change a Sound Class or Sound Mix, chosen by setting, each saved: parent sets or clears a class's parent (a loop is refused), properties sets its volume, pitch, low-pass, LFE bleed and center-channel volume, mix_modifier adds or edits the adjuster a mix applies to a class (and the mix fades), mix_eq sets the mix's four EQ bands. A call that sets nothing is refused.",
         "whenToUse": [
@@ -67439,7 +67441,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "14113912f8cbf267c3b2eef484bf124b5f589ed209d2dc4a46404270cd8241aa",
-        "content": "e58ee51489585a1a71c0260909998c01ee6a549d6af82355796c1a03f9a6a53f"
+        "content": "1c4d95a193c36f6fcdd9e78607a8efaec02612c2120916d41d78a48bd2a9a557"
       }
     },
     {
@@ -109421,7 +109423,8 @@
           "drone shot",
           "smooth camera path",
           "camera move between points",
-          "camera path around the walls"
+          "camera path around the walls",
+          "move the camera along a path in a cutscene"
         ],
         "summary": "Fly a camera through points of the level and key the flight into a Level Sequence, never nearer to geometry than a clearance: between two points the camera goes straight when nothing is in the way, else round or over what is (a search through free space, cut short wherever a straight line is clear), and the corners are smoothed into one minimum-snap curve (unbroken in speed, acceleration and jerk) at rest at both ends, timed by distance over seconds (default the path length at 3 m/s). It faces lookAt (an actor) the whole way, else the way ahead. Keys every tenth of a second go on a transform track of its own (an earlier one of that camera is replaced: replacedTrack says so), with a camera cut to it over the flight and the playback range grown to hold it, all in one undo step, from the sequence's playback start; the camera is the actor named camera (default FlyCamera), or a CineCameraActor spawned under that label. dryRun answers the corners and the length without writing. Refused, changing nothing, with POINT_IN_SOLID (a point nearer to geometry than clearanceCm; point gives its index), NO_PATH (no way through free space joins two points, or the smoothed curve cannot be kept clear), ACTOR_NOT_FOUND (lookAt), INVALID_SEQUENCE, INVALID_ARGUMENT.",
         "whenToUse": [
@@ -109660,7 +109663,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "62e64d6aebf67246fa7353cb1f1fb38602db17e9e558642db71b694775d4dbe2",
-        "content": "753b848cdd33183ed7bf0628e394da1810c99f08df13b40c337a07181c836488"
+        "content": "f80b365ab751f544c9affc73c8e8f9d333a1a57f6e80c81feadf6a4f148c0f02"
       }
     },
     {

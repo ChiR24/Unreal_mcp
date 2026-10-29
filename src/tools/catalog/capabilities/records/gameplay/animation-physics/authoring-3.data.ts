@@ -22,7 +22,7 @@ const IK = ['ControlRig', 'IKRig', 'EditorScriptingUtilities'];
 
 export const ANIM_AUTHORED_3: readonly CapabilityRecordSource[] = [
   buildRecord({ parentTool: T, id: `${T}.play_montage`, action: 'play_montage', family: F,
-    topics: ['play animation', 'play anim', 'trigger montage'],
+    topics: ['play animation', 'play anim', 'trigger montage', 'play an animation on a character'],
     summary: 'Play an animation montage on a placed skeletal actor (the playing one while Play In Editor runs): Montage_Play through its Anim Instance at playRate, or the montage as a single-node animation when the mesh has none, which switches that component\'s animation mode. The reply gives playMode and montageLength; outside play the actor does not tick, so nothing moves, playing is false and a warning says so.',
     whenToUse: ['A montage (an attack, an emote, a hit reaction) must play on a character while the game runs, to see it or to test it.'],
     whenNotToUse: ['The game should play it: call Play Montage in the character\'s Blueprint (manage_blueprint edit_graph).', 'The montage asset itself must be made or edited.'],

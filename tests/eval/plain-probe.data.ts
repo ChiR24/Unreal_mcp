@@ -935,4 +935,7 @@ export const PLAIN_PROBE: readonly PlainProbeCase[] = [
   // The editor's actor groups (Ctrl+G).
   { query: 'group these actors', accepted: ['control_actor.group_actors'] },
   { query: 'ungroup the actors', accepted: ['control_actor.group_actors'] },
+  // A camera moved in a cutscene, and an animation played on a character.
+  { query: 'move the camera in the cutscene', accepted: ['sequence.planner.fly_through'] },
+  { query: 'play an animation on the character', accepted: ['animation_physics.play_montage'] },
 ];
