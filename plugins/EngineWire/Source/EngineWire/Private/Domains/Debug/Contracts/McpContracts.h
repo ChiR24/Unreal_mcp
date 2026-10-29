@@ -18,7 +18,7 @@ struct FNode;
 // to wait for); a failed one says what was found and, when known, the call that fixes it. A requirement not met stops
 // the call before its handler runs (PRECONDITION_FAILED: nothing changed, a consent grant is handed back). An
 // expectation never fails the call it judges: that call already changed the editor, and treating it as failed would
-// hand back a single-use grant and make a retry repeat the change; its verdicts and a warning ride on the reply.
+// make a retry repeat the change; its verdicts and a warning ride on the reply.
 namespace McpContracts
 {
 /** One assertion's verdict: ok, failed or unknown; what was found; and the call that fixes a failure, when known. */

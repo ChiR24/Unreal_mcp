@@ -246,9 +246,9 @@ FMcpAuthorizationDecision AuthorizeWithDemand(
 			NotIssued.ConsentScope = Demand.ConsentMode;
 			return NotIssued;
 		}
-		// Remember what this request burned. The handler runs later and may
-		// refuse without touching anything, and charging a single-use grant for
-		// a call that changed nothing made every typo cost a describe round trip.
+		// Remember what this request burned, so a request refused before its
+		// handler runs (a requirement not met, a dialog in the way) gets it back.
+		// NoteDispatchStarted drops the record once the handler starts.
 		RememberBurnedNonce(Request.RequestId, Grant.ConsentNonce);
 	}
 
@@ -277,16 +277,22 @@ FMcpAuthorizationDecision RequirePrincipal(const FMcpPrequeueRequest& Request)
 }
 } // namespace
 
+void NoteDispatchStarted(const FString& RequestId)
+{
+	// A handler can write a file, run a script or delete what no journal records, so a failed reply is no proof that
+	// nothing happened: from here the grant stays spent, whatever the request answers.
+	TakeBurnedNonce(RequestId);
+}
+
 void RefundConsentForRequest(const FString& RequestId)
 {
-	const FString Nonce = TakeBurnedNonce(RequestId);
-	if (!ChangedSinceDispatch(RequestId)) McpCapabilityAuthorization::FMcpConsentLedger::Get().Refund(Nonce);
+	// Only a request no handler ran still has its burn record.
+	McpCapabilityAuthorization::FMcpConsentLedger::Get().Refund(TakeBurnedNonce(RequestId));
 }
 
 void ForgetConsentForRequest(const FString& RequestId)
 {
 	TakeBurnedNonce(RequestId);
-	ChangedSinceDispatch(RequestId);
 }
 
 FMcpAuthorizationDecision Authorize(const FMcpPrequeueRequest& Request)

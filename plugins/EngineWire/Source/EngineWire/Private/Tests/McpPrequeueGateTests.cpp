@@ -290,6 +290,10 @@ bool FMcpPrequeueGateConsentNonceTest::RunTest(const FString& Parameters)
 	TestEqual(TEXT("its replay is refused"), With(Minted).ErrorCode, FString(TEXT("CONSENT_REUSED")));
 	McpPrequeueGate::RefundConsentForRequest(Request.RequestId);
 	TestTrue(TEXT("a refunded nonce is issued again"), With(Minted).bAllowed);
+	McpPrequeueGate::NoteDispatchStarted(Request.RequestId);
+	McpPrequeueGate::RefundConsentForRequest(Request.RequestId);
+	TestEqual(TEXT("a grant whose handler started stays spent after a failed reply"), With(Minted).ErrorCode,
+		FString(TEXT("CONSENT_REUSED")));
 	McpPrequeueGate::ForgetConsentForRequest(Request.RequestId);
 
 	Request.bRequireIssuedNonce = false;

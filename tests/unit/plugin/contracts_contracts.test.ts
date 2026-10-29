@@ -39,7 +39,7 @@ describe('action contracts', () => {
     expect(contracts).toContain('TEXT("PRECONDITION_FAILED")');
   });
 
-  // Answering failure would hand back a single-use grant for a destructive call that already ran.
+  // Answering failure for a call that already ran would make a retry repeat it.
   it('judges expectations after the reply\'s own warnings and never turns a success into a failure', () => {
     expect(responses.indexOf('McpContracts::AddExpectations(RequestId, EffectiveResult);')).toBeGreaterThan(
       responses.indexOf('McpValidateDelta::AddWarnings(RequestId, EffectiveResult);'),

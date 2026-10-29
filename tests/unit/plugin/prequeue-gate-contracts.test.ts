@@ -403,4 +403,18 @@ describe('consent nonces are minted by the server and required on native /mcp', 
     const ledger = privateSource('Core', 'Security', 'McpConsentLedger.cpp');
     expect(ledger).toContain('if (bRequireIssued && (!IssuedFor || !IssuedFor->Equals(CapabilityId, ESearchCase::CaseSensitive)))');
   });
+  // A failure is no proof of no effect: a handler can write a file or run a script no journal records.
+  it('a grant is refunded only for a request refused before its handler started', () => {
+    const gate = gateOrder();
+    const started = gate.slice(gate.indexOf('void NoteDispatchStarted('), gate.indexOf('void RefundConsentForRequest('));
+    expect(started).toContain('TakeBurnedNonce(RequestId);');
+    const process = privateSource('Core', 'Requests', 'McpProcessRequest.cpp');
+    expect(process.indexOf('McpPrequeueGate::NoteDispatchStarted(RequestId);')).toBeGreaterThan(-1);
+    expect(process.indexOf('McpPrequeueGate::NoteDispatchStarted(RequestId);')).toBeLessThan(process.indexOf('AutomationHandlers.Find(Action)'));
+  });
+  // The native door answers a queue refusal itself, outside the subsystem's reply funnel that refunds.
+  it('a native call the queue refuses gets its grant back', () => {
+    const stream = privateSource('MCP', 'Transport', 'McpNativeTransportGatewayStream.cpp');
+    expect(stream).toMatch(/if \(!bQueued\)\s*\{[^}]*McpPrequeueGate::RefundConsentForRequest\(CapturedRequestId\);/u);
+  });
 });

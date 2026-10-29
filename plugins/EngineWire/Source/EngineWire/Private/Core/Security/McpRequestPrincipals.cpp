@@ -1,6 +1,5 @@
 #include "Core/Security/McpPrequeueGate.h"
 
-#include "Core/Journal/McpChangeJournal.h"
 #include "Misc/ScopeLock.h"
 
 // RequestId -> the principal the gate allowed it for, until its reply forgets it. Bounded like the burned-nonce map
@@ -28,32 +27,7 @@ TArray<FString>& PrincipalOrder()
 	static TArray<FString> Order;
 	return Order;
 }
-
-// RequestId -> the change journal's number when its handler started, until its reply asks.
-TMap<FString, uint64>& DispatchSeqByRequest()
-{
-	static TMap<FString, uint64> Map;
-	return Map;
-}
 } // namespace
-
-void NoteDispatchStarted(const FString& RequestId)
-{
-	FScopeLock Lock(&PrincipalMutex());
-	if (DispatchSeqByRequest().Num() >= MaxRemembered)
-	{
-		DispatchSeqByRequest().Reset(); // a reply that never came; the requests these named are long gone
-	}
-	DispatchSeqByRequest().Add(RequestId, McpChangeJournal::LatestSeq());
-}
-
-bool ChangedSinceDispatch(const FString& RequestId)
-{
-	FScopeLock Lock(&PrincipalMutex());
-	uint64 Started = 0;
-	// A request refused before any handler ran changed nothing; one that ran changed something when the journal moved.
-	return DispatchSeqByRequest().RemoveAndCopyValue(RequestId, Started) && Started != McpChangeJournal::LatestSeq();
-}
 
 void RememberRequestPrincipal(const FString& RequestId, const FMcpCapabilityPrincipal& Principal)
 {

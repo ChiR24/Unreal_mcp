@@ -293,7 +293,7 @@ void UEngineWireSubsystem::ProcessAutomationRequest(
     // ---------------------------------------------------------
     // Check Handler Registry (O(1) dispatch)
     // ---------------------------------------------------------
-    McpPrequeueGate::NoteDispatchStarted(RequestId); // a failed reply refunds its consent only if nothing changed
+    McpPrequeueGate::NoteDispatchStarted(RequestId); // from here a failed reply keeps its consent grant spent
     if (const FAutomationHandler *Handler = AutomationHandlers.Find(Action)) {
       if ((*Handler)(RequestId, Action, Payload, RequestingSocket)) {
         bDispatchHandled = true;

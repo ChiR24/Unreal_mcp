@@ -1,6 +1,7 @@
 // McpNativeTransportGatewayStream.cpp — shared SSE streaming + subsystem queue path
 
 #include "MCP/Transport/McpNativeTransportPrivate.h"
+#include "Core/Security/McpPrequeueGate.h"
 #include "MCP/Transport/McpNativeTransportTimeoutPolicy.h"
 #include "MCP/Execute/McpNativeGatewayReceipt.h"
 #include "MCP/Protocol/McpModernRequest.h"
@@ -185,6 +186,12 @@ void FMcpNativeTransport::StreamToolCall(
 			SessionId, CapturedRequestId, CapturedDispatchAction,
 			CapturedArguments, bSessionActive, QueueRejection,
 			Context.ExpectedRevisions);
+		if (!bQueued)
+		{
+			// No handler ran, so the consent grant the gate burned goes back, as the subsystem's reply funnel does for a
+			// refusal it sends (EDITOR_BLOCKED says to send the same call again).
+			McpPrequeueGate::RefundConsentForRequest(CapturedRequestId);
+		}
 		if (!bSessionActive)
 		{
 			CompletePendingRequest(
