@@ -15478,6 +15478,12 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "boolean",
           "description": "Add the effect bypassed (default false)."
         },
+        "changeDb": {
+          "type": "number",
+          "minimum": -40,
+          "maximum": 24,
+          "description": "How many dB louder each gets from where it is (negative is quieter); in place of volume."
+        },
         "childIndex": {
           "type": "number",
           "description": "Input pin of the source node that receives the target (default 0); missing pins are added up to the node maximum."
@@ -15996,13 +16002,27 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "description": "Canonical /Game sound asset path (SoundWave, SoundCue or MetaSound)."
         },
         "soundPaths": {
-          "type": "array",
-          "minItems": 1,
-          "maxItems": 64,
-          "items": {
-            "type": "string"
-          },
-          "description": "The Sound Waves, by asset path (1-64). A Sound Cue or MetaSound is refused with ASSET_NOT_FOUND naming it: measure the waves it plays."
+          "oneOf": [
+            {
+              "type": "array",
+              "minItems": 1,
+              "maxItems": 64,
+              "items": {
+                "type": "string"
+              },
+              "description": "The Sound Waves, MetaSounds or Sound Cues, by asset path (1-64)."
+            },
+            {
+              "type": "array",
+              "minItems": 1,
+              "maxItems": 64,
+              "items": {
+                "type": "string"
+              },
+              "description": "The Sound Waves, by asset path (1-64). A Sound Cue or MetaSound is refused with ASSET_NOT_FOUND naming it: measure the waves it plays."
+            }
+          ],
+          "description": "The Sound Waves, MetaSounds or Sound Cues, by asset path (1-64)."
         },
         "soundWavePath": {
           "type": "string",
@@ -16085,8 +16105,19 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "description": "Share of the sound sent to the centre speaker (0 to 1)."
         },
         "volume": {
-          "type": "number",
-          "description": "Volume multiplier."
+          "oneOf": [
+            {
+              "type": "number",
+              "description": "Volume multiplier."
+            },
+            {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 4,
+              "description": "The volume to set: 1 as recorded, 0.5 half, 0 silent."
+            }
+          ],
+          "description": "The volume to set: 1 as recorded, 0.5 half, 0 silent."
         },
         "volumeAdjuster": {
           "type": "number",
@@ -16115,6 +16146,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             "set_dialogue_context",
             "measure_loudness",
             "normalize_loudness",
+            "set_sound_volume",
             "set_subtitles",
             "analyze_acoustics"
           ],
@@ -16467,45 +16499,72 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "description": "The wave changed."
         },
         "sounds": {
-          "type": "array",
-          "description": "Each Sound Wave, in the order given.",
-          "items": {
-            "type": "object",
-            "additionalProperties": false,
-            "properties": {
-              "soundPath": {
-                "type": "string"
-              },
-              "lufs": {
-                "type": "number",
-                "description": "Its integrated loudness in LUFS (EBU R128: K-weighted, gated at -70 LUFS and 10 LU under the mean), from its own samples."
-              },
-              "playsAtLufs": {
-                "type": "number",
-                "description": "The loudness it plays at through its Volume (lufs plus 20 log10 of the Volume)."
-              },
-              "volume": {
-                "type": "number",
-                "description": "Its Volume (the wave's own gain, 1 as recorded)."
-              },
-              "peakDb": {
-                "type": "number",
-                "description": "Its sample peak in dBFS."
-              },
-              "peakAtVolumeDb": {
-                "type": "number",
-                "description": "The sample peak through its Volume; above 0 it is louder than full scale before the mix."
-              },
-              "note": {
-                "type": "string",
-                "description": "Silent, or under 400 ms of sound: it has no loudness (its Volume is left alone)."
-              },
-              "saved": {
-                "type": "boolean",
-                "description": "normalize_loudness: the wave was saved."
+          "oneOf": [
+            {
+              "type": "array",
+              "description": "Each Sound Wave, in the order given.",
+              "items": {
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {
+                  "soundPath": {
+                    "type": "string"
+                  },
+                  "lufs": {
+                    "type": "number",
+                    "description": "Its integrated loudness in LUFS (EBU R128: K-weighted, gated at -70 LUFS and 10 LU under the mean), from its own samples."
+                  },
+                  "playsAtLufs": {
+                    "type": "number",
+                    "description": "The loudness it plays at through its Volume (lufs plus 20 log10 of the Volume)."
+                  },
+                  "volume": {
+                    "type": "number",
+                    "description": "Its Volume (the wave's own gain, 1 as recorded)."
+                  },
+                  "peakDb": {
+                    "type": "number",
+                    "description": "Its sample peak in dBFS."
+                  },
+                  "peakAtVolumeDb": {
+                    "type": "number",
+                    "description": "The sample peak through its Volume; above 0 it is louder than full scale before the mix."
+                  },
+                  "note": {
+                    "type": "string",
+                    "description": "Silent, or under 400 ms of sound: it has no loudness (its Volume is left alone)."
+                  },
+                  "saved": {
+                    "type": "boolean",
+                    "description": "normalize_loudness: the wave was saved."
+                  }
+                }
+              }
+            },
+            {
+              "type": "array",
+              "description": "Each sound changed.",
+              "items": {
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {
+                  "soundPath": {
+                    "type": "string"
+                  },
+                  "previousVolume": {
+                    "type": "number"
+                  },
+                  "volume": {
+                    "type": "number"
+                  },
+                  "saved": {
+                    "type": "boolean"
+                  }
+                }
               }
             }
-          }
+          ],
+          "description": "Each Sound Wave, in the order given."
         },
         "spatialize": {
           "type": "boolean",

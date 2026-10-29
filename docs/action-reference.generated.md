@@ -4,7 +4,7 @@
 
 # Action reference
 
-Catalog revision: `1310c62323b8607a`
+Catalog revision: `79a26b0116e7a1d2`
 
 Both transports expose exactly ONE public MCP tool, `unreal`, with the four
 operations `search` / `describe` / `execute` / `configure`. The parent tools
@@ -13,7 +13,7 @@ by `tools/list` and a direct `tools/call` on one returns a
 `DIRECT_TOOL_CALL_REMOVED` receipt rather than executing
 (`src/server/gateway/direct-call-migration.ts`).
 
-The catalog declares 481 capabilities across
+The catalog declares 482 capabilities across
 23 internal parent tools.
 Every row is derived from the capability record that the gateway actually
 validates against, so `execute` cannot accept an action this table omits.
@@ -46,7 +46,7 @@ validates against, so `execute` cannot accept an action this table omits.
 | `inspect` | 27 | 22 | 4 | 1 | inspect |
 | `manage_ai` | 17 | 3 | 14 | 0 | manage ai |
 | `manage_asset` | 54 | 14 | 35 | 5 | asset, datatable, enum, material, struct, texture |
-| `manage_audio` | 18 | 5 | 13 | 0 | audio |
+| `manage_audio` | 19 | 5 | 14 | 0 | audio |
 | `manage_blueprint` | 44 | 12 | 23 | 9 | blueprint, widget |
 | `manage_character` | 10 | 2 | 8 | 0 | manage character |
 | `manage_combat` | 6 | 1 | 5 | 0 | manage combat |
@@ -65,7 +65,7 @@ validates against, so `execute` cannot accept an action this table omits.
 
 ## Capabilities requiring consent
 
-77 of 481 capabilities require consent.
+77 of 482 capabilities require consent.
 
 | Capability | Tool | Action | Effect | Consent |
 | --- | --- | --- | --- | --- |
@@ -428,6 +428,7 @@ validates against, so `execute` cannot accept an action this table omits.
 | `manage_audio.normalize_loudness` | `manage_audio` | `manage_audio` | write | write | none | `manage_audio.normalize_loudness` |
 | `manage_audio.play_sound` | `manage_audio` | `manage_audio` | write | write | none | `manage_audio.play_sound` `manage_audio.play_sound_2d` `manage_audio.play_sound_at_location` `manage_audio.spawn_sound_at_location` `manage_audio.play_sound_attached` `manage_audio.prime_sound` `manage_audio.play_sound_measure` |
 | `manage_audio.set_dialogue_context` | `manage_audio` | `manage_audio` | write | write | none | `manage_audio.set_dialogue_context` |
+| `manage_audio.set_sound_volume` | `manage_audio` | `manage_audio` | write | write | none | `manage_audio.set_sound_volume` |
 | `manage_audio.set_subtitles` | `manage_audio` | `manage_audio` | write | write | none | `manage_audio.set_subtitles` |
 | `manage_audio.stop_sound` | `manage_audio` | `manage_audio` | write | write | none | `manage_audio.stop_sound` `manage_audio.pause_sound` `manage_audio.resume_sound` |
 | `manage_character.build_metahuman` | `manage_character` | `build_metahuman` | write | write | none | `manage_character.build_metahuman` |

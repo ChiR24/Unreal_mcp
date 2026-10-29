@@ -448,9 +448,9 @@ export const PLAIN_PROBE: readonly PlainProbeCase[] = [
   { query: 'looping music', accepted: ['manage_audio.play_sound'] },
   { query: 'music that loops', accepted: ['manage_audio.play_sound'] },
   { query: 'set master volume', accepted: ['manage_audio.configure_sound_class'] },
-  { query: 'turn down the music volume', accepted: ['manage_audio.fade_sound', 'manage_audio.configure_sound_class'] },
-  { query: 'music volume', accepted: ['manage_audio.fade_sound', 'manage_audio.configure_sound_class'] },
-  { query: 'make the music quieter', accepted: ['manage_audio.fade_sound', 'manage_audio.configure_sound_class'] },
+  { query: 'turn down the music volume', accepted: ['manage_audio.fade_sound', 'manage_audio.configure_sound_class', 'manage_audio.set_sound_volume'] },
+  { query: 'music volume', accepted: ['manage_audio.fade_sound', 'manage_audio.configure_sound_class', 'manage_audio.set_sound_volume'] },
+  { query: 'make the music quieter', accepted: ['manage_audio.fade_sound', 'manage_audio.configure_sound_class', 'manage_audio.set_sound_volume'] },
   { query: 'enemy chases player', accepted: ['manage_ai.edit_behavior_tree', 'blueprint.add_behaviour'] },
   { query: 'chase player', accepted: ['manage_ai.edit_behavior_tree', 'blueprint.add_behaviour'] },
   { query: 'set a timer', accepted: ['blueprint.edit_graph'] },
@@ -1009,4 +1009,9 @@ export const PLAIN_PROBE: readonly PlainProbeCase[] = [
   { query: 'slow down the run animation', accepted: ['animation_physics.edit_animation'] },
   { query: 'speed up the animation', accepted: ['animation_physics.edit_animation'] },
   { query: 'play the animation slower', accepted: ['animation_physics.edit_animation'] },
+  // A sound made louder or quieter.
+  { query: 'make the sound louder', accepted: ['manage_audio.set_sound_volume'] },
+  { query: 'turn down the volume of the explosion', accepted: ['manage_audio.set_sound_volume'] },
+  { query: 'turn up the music', accepted: ['manage_audio.set_sound_volume'] },
+  { query: 'set the volume of the sound', accepted: ['manage_audio.set_sound_volume'] },
 ];

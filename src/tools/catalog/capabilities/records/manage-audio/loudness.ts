@@ -83,4 +83,28 @@ export const LOUDNESS_RECORDS: readonly CapabilityRecordSource[] = [
     },
     outputRequired: ['sounds'],
   }),
+  buildCoreRecord({
+    parentTool: 'manage_audio', action: 'set_sound_volume', dispatchAction: 'manage_audio', domain: 'audio', family: 'authoring',
+    summary: 'Make sounds louder or quieter: each Sound Wave\'s Volume (a MetaSound\'s too) or Sound Cue\'s Volume Multiplier set to volume (1 as recorded, 0.5 half, 0 silent) or changed by changeDb (6 is about twice as loud in level, -6 half; negative is quieter), every sound checked first, in one undo step, each saved unless save is false. The reply gives each one\'s volume before and after. To make several play at one loudness by ear, use normalize_loudness. Refused, changing nothing: ASSET_NOT_FOUND (not a Sound Wave, MetaSound or Sound Cue), ENGINE_CONTENT (an engine sound: duplicate it into /Game first), INVALID_ARGUMENT (both volume and changeDb; neither is MISSING_REQUIRED_ONEOF).',
+    topics: ['make a sound louder or quieter', 'turn the music or a sound up or down', 'set sound volume'],
+    whenToUse: ['A sound, a music track or a Sound Cue plays too loud or too quiet.'],
+    whenNotToUse: ['Many sounds should play at one loudness: use normalize_loudness.', 'A whole category (music, effects) should change at play time: use a Sound Class or a Sound Mix.'],
+    inputProps: {
+      soundPaths: { type: 'array', minItems: 1, maxItems: 64, items: { type: 'string' }, description: 'The Sound Waves, MetaSounds or Sound Cues, by asset path (1-64).' },
+      volume: { type: 'number', minimum: 0, maximum: 4, description: 'The volume to set: 1 as recorded, 0.5 half, 0 silent.' },
+      changeDb: { type: 'number', minimum: -40, maximum: 24, description: 'How many dB louder each gets from where it is (negative is quieter); in place of volume.' },
+      save: { type: 'boolean', description: 'Save each changed sound (default true); false leaves the change in memory only.' },
+    },
+    required: ['soundPaths'], requiredOneOf: ['volume', 'changeDb'],
+    effect: 'write',
+    costLatency: 'interactive',
+    exampleInput: { action: 'set_sound_volume', soundPaths: ['/Game/Audio/SW_Music_Main'], changeDb: -6 },
+    exampleOutput: { success: true, message: 'Set the volume of 1 sound(s).', sounds: [{ soundPath: '/Game/Audio/SW_Music_Main.SW_Music_Main', previousVolume: 1, volume: 0.501, saved: true }] },
+    outputProps: {
+      sounds: { type: 'array', description: 'Each sound changed.', items: { type: 'object', additionalProperties: false, properties: {
+        soundPath: { type: 'string' }, previousVolume: { type: 'number' }, volume: { type: 'number' }, saved: { type: 'boolean' } } } },
+      undo: { type: 'object', additionalProperties: true, 'x-unreal-reflection-boundary': true, description: 'What editor undo takes back: {undoable, transactionScope, steps}.' },
+    },
+    outputRequired: ['sounds'],
+  }),
 ];

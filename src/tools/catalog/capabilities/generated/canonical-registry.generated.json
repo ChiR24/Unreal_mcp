@@ -1,6 +1,6 @@
 {
-  "catalogRevision": "1310c62323b8607a",
-  "recordCount": 481,
+  "catalogRevision": "79a26b0116e7a1d2",
+  "recordCount": 482,
   "records": [
     {
       "id": "animation_physics.analyze_animation",
@@ -71127,6 +71127,186 @@
         "algorithm": "sha256",
         "schema": "38e8499a2c50562b41c32c1891319b3fc37731526d4d6e2c0b427f8e1f1daabf",
         "content": "0c612f0c591404bce7efa65a24d9be1ce8f808da79efef666c1219d967a53a88"
+      }
+    },
+    {
+      "id": "manage_audio.set_sound_volume",
+      "aliases": [],
+      "legacyIds": [
+        {
+          "tool": "manage_audio",
+          "action": "set_sound_volume"
+        }
+      ],
+      "discovery": {
+        "domain": "audio",
+        "family": "authoring",
+        "topics": [
+          "set_sound_volume",
+          "make a sound louder or quieter",
+          "turn the music or a sound up or down",
+          "set sound volume"
+        ],
+        "summary": "Make sounds louder or quieter: each Sound Wave's Volume (a MetaSound's too) or Sound Cue's Volume Multiplier set to volume (1 as recorded, 0.5 half, 0 silent) or changed by changeDb (6 is about twice as loud in level, -6 half; negative is quieter), every sound checked first, in one undo step, each saved unless save is false. The reply gives each one's volume before and after. To make several play at one loudness by ear, use normalize_loudness. Refused, changing nothing: ASSET_NOT_FOUND (not a Sound Wave, MetaSound or Sound Cue), ENGINE_CONTENT (an engine sound: duplicate it into /Game first), INVALID_ARGUMENT (both volume and changeDb; neither is MISSING_REQUIRED_ONEOF).",
+        "whenToUse": [
+          "A sound, a music track or a Sound Cue plays too loud or too quiet."
+        ],
+        "whenNotToUse": [
+          "Many sounds should play at one loudness: use normalize_loudness.",
+          "A whole category (music, effects) should change at play time: use a Sound Class or a Sound Mix."
+        ]
+      },
+      "schemas": {
+        "input": {
+          "$schema": "https://json-schema.org/draft/2020-12/schema",
+          "type": "object",
+          "properties": {
+            "action": {
+              "type": "string",
+              "description": "The action to execute on the parent tool."
+            },
+            "soundPaths": {
+              "type": "array",
+              "minItems": 1,
+              "maxItems": 64,
+              "items": {
+                "type": "string"
+              },
+              "description": "The Sound Waves, MetaSounds or Sound Cues, by asset path (1-64)."
+            },
+            "volume": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 4,
+              "description": "The volume to set: 1 as recorded, 0.5 half, 0 silent."
+            },
+            "changeDb": {
+              "type": "number",
+              "minimum": -40,
+              "maximum": 24,
+              "description": "How many dB louder each gets from where it is (negative is quieter); in place of volume."
+            },
+            "save": {
+              "type": "boolean",
+              "description": "Save each changed sound (default true); false leaves the change in memory only."
+            }
+          },
+          "required": [
+            "action",
+            "soundPaths"
+          ],
+          "additionalProperties": false,
+          "requiredOneOf": [
+            "volume",
+            "changeDb"
+          ]
+        },
+        "output": {
+          "$schema": "https://json-schema.org/draft/2020-12/schema",
+          "type": "object",
+          "properties": {
+            "success": {
+              "type": "boolean",
+              "description": "Whether the action succeeded."
+            },
+            "message": {
+              "type": "string",
+              "description": "Human-readable result message."
+            },
+            "details": {
+              "type": "object",
+              "x-unreal-reflection-boundary": true,
+              "description": "Additional handler result fields not named by the contract."
+            },
+            "sounds": {
+              "type": "array",
+              "description": "Each sound changed.",
+              "items": {
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {
+                  "soundPath": {
+                    "type": "string"
+                  },
+                  "previousVolume": {
+                    "type": "number"
+                  },
+                  "volume": {
+                    "type": "number"
+                  },
+                  "saved": {
+                    "type": "boolean"
+                  }
+                }
+              }
+            },
+            "undo": {
+              "type": "object",
+              "additionalProperties": true,
+              "x-unreal-reflection-boundary": true,
+              "description": "What editor undo takes back: {undoable, transactionScope, steps}."
+            }
+          },
+          "required": [
+            "success",
+            "sounds"
+          ],
+          "additionalProperties": false
+        }
+      },
+      "examples": [
+        {
+          "title": "Make sounds louder or quieter: each Sound Wave's Volume (a MetaSound's too) or Sound Cue's Volume Multiplier set to volume (1 as recorded, 0.5 half, 0 silent) or changed by changeDb (6 is about twice as loud in level, -6 half; negative is quieter), every sound checked first, in one undo step, each saved unless save is false. The reply gives each one's volume before and after. To make several play at one loudness by ear, use normalize_loudness. Refused, changing nothing: ASSET_NOT_FOUND (not a Sound Wave, MetaSound or Sound Cue), ENGINE_CONTENT (an engine sound: duplicate it into /Game first), INVALID_ARGUMENT (both volume and changeDb; neither is MISSING_REQUIRED_ONEOF).",
+          "input": {
+            "action": "set_sound_volume",
+            "soundPaths": [
+              "/Game/Audio/SW_Music_Main"
+            ],
+            "changeDb": -6
+          },
+          "output": {
+            "success": true,
+            "message": "Set the volume of 1 sound(s).",
+            "sounds": [
+              {
+                "soundPath": "/Game/Audio/SW_Music_Main.SW_Music_Main",
+                "previousVolume": 1,
+                "volume": 0.501,
+                "saved": true
+              }
+            ]
+          }
+        }
+      ],
+      "availability": {
+        "requiredPlugins": [],
+        "editorStates": [
+          "edit"
+        ]
+      },
+      "behavior": {
+        "effect": "write",
+        "idempotency": "non-idempotent",
+        "longRunning": false,
+        "safeToRetry": false
+      },
+      "policy": {
+        "requiredScope": "write",
+        "consent": "none",
+        "dataAccess": "project-write"
+      },
+      "cost": {
+        "latency": "interactive",
+        "resources": "low"
+      },
+      "routing": {
+        "parentTool": "manage_audio",
+        "dispatchAction": "manage_audio"
+      },
+      "hashes": {
+        "algorithm": "sha256",
+        "schema": "c9313f5c2a176ad760fbf2af9616791d1e633a78f702cb70f2c53da1a2f0b528",
+        "content": "9d7f4698c66b029faf5593287dcabf634b8e325d68f482d157e228702ec5f4f1"
       }
     },
     {

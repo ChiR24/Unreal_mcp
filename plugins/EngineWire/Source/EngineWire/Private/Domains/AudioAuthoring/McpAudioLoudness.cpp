@@ -55,10 +55,77 @@ FLoudnessRow LoudnessOfWave(USoundWave* Wave)
     Row.PeakDb = LoudnessDb(Peak);
     return Row;
 }
+// set_sound_volume: a Sound Wave's Volume (a MetaSound's too) or a Sound Cue's Volume Multiplier, set to volume or
+// changed by changeDb, every sound checked first, in one undo step.
+TSharedPtr<FJsonObject> SetSoundVolume(const TSharedPtr<FJsonObject>& Params, TSharedPtr<FJsonObject> Response)
+{
+    double Volume = 0.0, ChangeDb = 0.0;
+    const bool bSet = Params->TryGetNumberField(TEXT("volume"), Volume);
+    if (bSet == Params->TryGetNumberField(TEXT("changeDb"), ChangeDb))
+    {
+        return McpHandlerUtils::BuildErrorResponse(TEXT("INVALID_ARGUMENT"), TEXT("Give volume (the multiplier to set, 1 as recorded) or changeDb "
+            "(how many dB louder; negative is quieter), one of them."));
+    }
+    TArray<UObject*> Sounds;
+    for (const FString& Path : McpHandlerUtils::GetStringArrayField(Params, TEXT("soundPaths")))
+    {
+        UObject* Sound = StaticLoadObject(USoundBase::StaticClass(), nullptr, *NormalizeAudioPath(Path));
+        if (!Cast<USoundWave>(Sound) && !Cast<USoundCue>(Sound))
+        {
+            return McpHandlerUtils::BuildErrorResponse(TEXT("ASSET_NOT_FOUND"), FString::Printf(TEXT("%s is not a Sound Wave, MetaSound or Sound Cue. "
+                "Nothing was changed."), *Path));
+        }
+        if (Sound->GetPathName().StartsWith(TEXT("/Engine/")))
+        {
+            return McpHandlerUtils::BuildErrorResponse(TEXT("ENGINE_CONTENT"), FString::Printf(TEXT("%s is engine content, which is never changed: "
+                "duplicate it into /Game first. Nothing was changed."), *Sound->GetPathName()));
+        }
+        Sounds.AddUnique(Sound);
+    }
+    if (Sounds.Num() == 0)
+    {
+        return McpHandlerUtils::BuildErrorResponse(TEXT("INVALID_ARGUMENT"), TEXT("soundPaths names the sounds to change (1-64)."));
+    }
+    TArray<float> Before;
+    {
+        const FMcpScopedEditorTransaction Transaction(NSLOCTEXT("McpLoudness", "Volume", "Set Sound Volume"), EMcpMutationDurability::EditorStateOnly, Sounds);
+        for (UObject* Sound : Sounds)
+        {
+            USoundWave* Wave = Cast<USoundWave>(Sound);
+            float& Field = Wave ? Wave->Volume : CastChecked<USoundCue>(Sound)->VolumeMultiplier;
+            Before.Add(Field);
+            Sound->Modify();
+            Field = float(FMath::Max(0.0, bSet ? Volume : Field * FMath::Pow(10.0, ChangeDb / 20.0)));
+            Sound->PostEditChange();
+        }
+        Transaction.DescribeInto(Response);
+    }
+    const bool bSave = GetJsonBoolField(Params, TEXT("save"), true);
+    TArray<TSharedPtr<FJsonValue>> Rows;
+    for (int32 Index = 0; Index < Sounds.Num(); ++Index)
+    {
+        USoundWave* Wave = Cast<USoundWave>(Sounds[Index]);
+        const float Now = Wave ? Wave->Volume : CastChecked<USoundCue>(Sounds[Index])->VolumeMultiplier;
+        TSharedPtr<FJsonObject> Row = MakeShared<FJsonObject>();
+        Row->SetStringField(TEXT("soundPath"), Sounds[Index]->GetPathName());
+        Row->SetNumberField(TEXT("previousVolume"), FMath::RoundToDouble(Before[Index] * 1000.0) / 1000.0);
+        Row->SetNumberField(TEXT("volume"), FMath::RoundToDouble(Now * 1000.0) / 1000.0);
+        Row->SetBoolField(TEXT("saved"), SaveAudioAsset(Sounds[Index], bSave) && bSave);
+        Rows.Add(MakeShared<FJsonValueObject>(Row));
+    }
+    Response->SetArrayField(TEXT("sounds"), Rows);
+    Response->SetStringField(TEXT("message"), FString::Printf(TEXT("Set the volume of %d sound(s)."), Rows.Num()));
+    Response->SetBoolField(TEXT("success"), true);
+    return Response;
+}
 } // namespace
 
 TSharedPtr<FJsonObject> HandleLoudnessActions(const FString& SubAction, const TSharedPtr<FJsonObject>& Params, TSharedPtr<FJsonObject> Response)
 {
+    if (SubAction == TEXT("set_sound_volume"))
+    {
+        return SetSoundVolume(Params, Response);
+    }
     const bool bNormalize = SubAction == TEXT("normalize_loudness");
     if (!bNormalize && SubAction != TEXT("measure_loudness"))
     {

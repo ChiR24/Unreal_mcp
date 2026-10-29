@@ -24,6 +24,14 @@ const testCases = [
   { scenario: 'READ: measured again, within 1 LU', toolName: 'manage_audio', arguments: { action: 'measure_loudness', soundPaths: [SUCCESS, FAILED] }, expected: 'success', assertions: [
     { path: 'structuredContent.result.spreadLu', approximately: 0, tolerance: 1, label: 'within one loudness unit' },
   ] },
+  { scenario: 'UPDATE: one copy set to half volume', toolName: 'manage_audio', arguments: { action: 'set_sound_volume', soundPaths: [FAILED], volume: 0.5, save: false }, expected: 'success', assertions: [
+    { path: 'structuredContent.result.sounds.0.volume', approximately: 0.5, tolerance: 0.001, label: 'the volume read back' },
+  ] },
+  { scenario: 'UPDATE: then 6 dB louder', toolName: 'manage_audio', arguments: { action: 'set_sound_volume', soundPaths: [FAILED], changeDb: 6 }, expected: 'success', assertions: [
+    { path: 'structuredContent.result.sounds.0.volume', approximately: 0.998, tolerance: 0.01, label: 'half volume plus 6 dB is about 1' },
+  ] },
+  { scenario: 'ERROR: volume and changeDb together', toolName: 'manage_audio', arguments: { action: 'set_sound_volume', soundPaths: [FAILED], volume: 1, changeDb: 3 }, expected: 'error|INVALID_ARGUMENT' },
+  { scenario: 'ERROR: an engine sound is never changed', toolName: 'manage_audio', arguments: { action: 'set_sound_volume', soundPaths: ['/Engine/EditorSounds/Notifications/CompileSuccess_Cue'], volume: 1 }, expected: 'error|ENGINE_CONTENT' },
   { scenario: 'ERROR: engine content is never changed', toolName: 'manage_audio', arguments: { action: 'normalize_loudness', soundPaths: ['/Engine/EditorSounds/Notifications/CompileSuccess'], targetLufs: -20 }, expected: 'error|ENGINE_CONTENT' },
   { scenario: 'ERROR: a Sound Cue is not a wave', toolName: 'manage_audio', arguments: { action: 'measure_loudness', soundPaths: ['/Engine/EditorSounds/Notifications/CompileSuccess_Cue'] }, expected: 'error|ASSET_NOT_FOUND' },
   { scenario: 'Cleanup: delete the copies', toolName: 'manage_asset', arguments: { action: 'delete', paths: [SUCCESS, FAILED], force: true }, expected: 'success|not found' },
