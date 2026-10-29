@@ -1,13 +1,12 @@
 // Copyright (c) 2024 EngineWire Contributors
 #include "Domains/ControlActor/Materials/McpColorMaterial.h"
 
-#include "AssetRegistry/AssetRegistryModule.h"
-#include "Factories/MaterialInstanceConstantFactoryNew.h"
+#include "Domains/ControlActor/Materials/McpMaterialBuild.h"
 #include "GameFramework/Actor.h"
+#include "Materials/MaterialExpressionMultiply.h"
+#include "Materials/MaterialExpressionScalarParameter.h"
+#include "Materials/MaterialExpressionVectorParameter.h"
 #include "Materials/MaterialInstanceConstant.h"
-#include "Misc/PackageName.h"
-#include "Safety/McpSafeOperations.h"
-#include "UObject/Package.h"
 
 namespace McpColorMaterial
 {
@@ -16,6 +15,8 @@ namespace
 const TCHAR* const ColorFolder = TEXT("/Game/Materials/Colors/");
 const TCHAR* const ParentPath = TEXT("/Engine/BasicShapes/BasicShapeMaterial.BasicShapeMaterial");
 const TCHAR* const ColorParameter = TEXT("Color"); // the vector parameter BasicShapeMaterial feeds its base colour
+const TCHAR* const GlowBaseName = TEXT("M_ColorGlow"); // base colour Color, emissive Color x Glow
+const TCHAR* const GlowParameter = TEXT("Glow");
 
 struct FNamedColor
 {
@@ -59,33 +60,73 @@ bool ReadColor(const FString& Text, FColor& Out)
     return true;
 }
 
-UMaterialInterface* MakeInstance(const FString& PackagePath, const FString& Name, const FColor& Color, FString& Error)
+FHashedMaterialParameterInfo NamedParam(const TCHAR* Name)
 {
-    UMaterialInterface* Parent = LoadObject<UMaterialInterface>(nullptr, ParentPath);
-    FLinearColor Default;
-    if (!Parent ||
-        !Parent->GetVectorParameterValue(FHashedMaterialParameterInfo(FMaterialParameterInfo(FName(ColorParameter))),
-                                         Default))
+    return FHashedMaterialParameterInfo(FMaterialParameterInfo(FName(Name)));
+}
+
+// The glowing colours' parent, made once: base colour Color, emissive Color x Glow (white and 1 unless set).
+UMaterialInterface* MakeGlowBase()
+{
+    UMaterial* Material = McpNewMaterial(ColorFolder, GlowBaseName);
+    if (!Material)
     {
-        Error = TEXT("the engine's /Engine/BasicShapes/BasicShapeMaterial with its Color parameter did not load");
         return nullptr;
     }
-    UMaterialInstanceConstantFactoryNew* Factory = NewObject<UMaterialInstanceConstantFactoryNew>();
-    Factory->InitialParent = Parent;
-    UPackage* Package = CreatePackage(*PackagePath);
-    UMaterialInstanceConstant* Instance = Package ? Cast<UMaterialInstanceConstant>(Factory->FactoryCreateNew(
-        UMaterialInstanceConstant::StaticClass(), Package, FName(*Name), RF_Public | RF_Standalone, nullptr, GWarn))
-                                                  : nullptr;
+    UMaterialExpressionVectorParameter* Color =
+        McpAddMaterialExpression<UMaterialExpressionVectorParameter>(Material, -500, 0);
+    Color->ParameterName = ColorParameter;
+    Color->DefaultValue = FLinearColor::White;
+    UMaterialExpressionScalarParameter* Glow =
+        McpAddMaterialExpression<UMaterialExpressionScalarParameter>(Material, -500, 250);
+    Glow->ParameterName = GlowParameter;
+    Glow->DefaultValue = 1.0f;
+    UMaterialExpressionMultiply* Emissive = McpAddMaterialExpression<UMaterialExpressionMultiply>(Material, -250, 150);
+    Color->ConnectExpression(&Emissive->A, 0); // output 0 is RGB
+    Glow->ConnectExpression(&Emissive->B, 0);
+    Color->ConnectExpression(&MCP_GET_MATERIAL_INPUT(Material, BaseColor), 0);
+    Emissive->ConnectExpression(&MCP_GET_MATERIAL_INPUT(Material, EmissiveColor), 0);
+    McpSaveNewMaterial(Material);
+    return Material;
+}
+
+// The instances' parent: the engine's BasicShapeMaterial for a flat colour, the glow material for a glowing one; null
+// with Error when it is missing or lacks a parameter the instance sets.
+UMaterialInterface* FindParent(bool bGlow, FString& Error)
+{
+    UMaterialInterface* Parent = bGlow ? McpFindMaterialAsset(ColorFolder, GlowBaseName)
+                                       : LoadObject<UMaterialInterface>(nullptr, ParentPath);
+    Parent = Parent || !bGlow ? Parent : MakeGlowBase();
+    FLinearColor Color;
+    float Glow = 0.0f;
+    if (!Parent || !Parent->GetVectorParameterValue(NamedParam(ColorParameter), Color) ||
+        (bGlow && !Parent->GetScalarParameterValue(NamedParam(GlowParameter), Glow)))
+    {
+        Error = bGlow
+            ? FString::Printf(TEXT("the glow material %s%s could not be made or has no Color and Glow parameters"),
+                              ColorFolder, GlowBaseName)
+            : TEXT("the engine's /Engine/BasicShapes/BasicShapeMaterial with its Color parameter did not load");
+        return nullptr;
+    }
+    return Parent;
+}
+
+// The instance Name of Parent with this colour (and glow strength in tenths, 0 for none), made and saved.
+UMaterialInterface* MakeInstance(UMaterialInterface* Parent, const FString& Name, const FColor& Color,
+                                 int32 GlowTenths, FString& Error)
+{
+    UMaterialInstanceConstant* Instance = McpNewMaterialInstance(Parent, ColorFolder, Name);
     if (!Instance)
     {
-        Error = FString::Printf(TEXT("could not make the material instance %s"), *PackagePath);
+        Error = FString::Printf(TEXT("could not make the material instance %s%s"), ColorFolder, *Name);
         return nullptr;
     }
     Instance->SetVectorParameterValueEditorOnly(FName(ColorParameter), FLinearColor(Color)); // sRGB to linear
-    Instance->PostEditChange();
-    Instance->MarkPackageDirty();
-    FAssetRegistryModule::AssetCreated(Instance);
-    McpSafeAssetSave(Instance);
+    if (GlowTenths > 0)
+    {
+        Instance->SetScalarParameterValueEditorOnly(FName(GlowParameter), GlowTenths / 10.0f);
+    }
+    McpSaveNewMaterial(Instance);
     return Instance;
 }
 
@@ -116,17 +157,27 @@ bool Resolve(const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FJsonObject>& Ou
              FString& Error, TFunctionRef<AActor*(const FString&)> Find)
 {
     OutPayload = Payload;
-    FString Text;
-    if (!Payload.IsValid() || !Payload->TryGetStringField(TEXT("color"), Text))
+    FString Text = TEXT("white"); // a glow with no colour glows white
+    double Glow = 0.0;
+    const bool bColor = Payload.IsValid() && Payload->TryGetStringField(TEXT("color"), Text);
+    const bool bGlow = Payload.IsValid() && Payload->TryGetNumberField(TEXT("glow"), Glow);
+    if (!bColor && !bGlow)
     {
         return true;
     }
     ErrorCode = TEXT("INVALID_ARGUMENT");
     if (Payload->HasField(TEXT("materialPath")) || Payload->HasField(TEXT("materials")))
     {
-        Error = TEXT("color takes the place of materialPath and materials: send one of them");
+        Error = TEXT("color and glow take the place of materialPath and materials: send one of them");
         return false;
     }
+    // The glow is absolute brightness: under a physically bright sun it takes tens of thousands to show.
+    if (bGlow && !(Glow >= 0.1 && Glow <= 100000.0))
+    {
+        Error = TEXT("glow is a strength from 0.1 to 100000");
+        return false;
+    }
+    const int32 GlowTenths = bGlow ? FMath::RoundToInt(Glow * 10.0) : 0;
     FColor Color;
     if (!ReadColor(Text, Color))
     {
@@ -145,17 +196,13 @@ bool Resolve(const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FJsonObject>& Ou
         Error = TEXT("Actor not found");
         return false;
     }
-    const FString Name = FString::Printf(TEXT("MI_Color_%02X%02X%02X"), Color.R, Color.G, Color.B);
-    const FString PackagePath = FString(ColorFolder) + Name;
-    const FString ObjectPath = PackagePath + TEXT(".") + Name;
-    UMaterialInterface* Material = FindObject<UMaterialInterface>(nullptr, *ObjectPath);
-    if (!Material && FPackageName::DoesPackageExist(PackagePath))
-    {
-        Material = LoadObject<UMaterialInterface>(nullptr, *ObjectPath);
-    }
+    const FString Hex = FString::Printf(TEXT("%02X%02X%02X"), Color.R, Color.G, Color.B);
+    const FString Name = bGlow ? FString::Printf(TEXT("MI_Glow_%s_G%d"), *Hex, GlowTenths) : TEXT("MI_Color_") + Hex;
+    UMaterialInterface* Material = McpFindMaterialAsset(ColorFolder, Name);
     if (!Material)
     {
-        Material = MakeInstance(PackagePath, Name, Color, Error);
+        UMaterialInterface* Parent = FindParent(bGlow, Error);
+        Material = Parent ? MakeInstance(Parent, Name, Color, GlowTenths, Error) : nullptr;
     }
     if (!Material)
     {
@@ -165,6 +212,7 @@ bool Resolve(const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FJsonObject>& Ou
     OutPayload = MakeShared<FJsonObject>();
     OutPayload->Values = Payload->Values;
     OutPayload->RemoveField(TEXT("color"));
+    OutPayload->RemoveField(TEXT("glow"));
     OutPayload->SetStringField(TEXT("materialPath"), Material->GetPathName());
     return true;
 }

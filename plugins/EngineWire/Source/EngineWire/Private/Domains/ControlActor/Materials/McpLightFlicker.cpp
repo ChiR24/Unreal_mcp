@@ -1,12 +1,10 @@
 // Copyright (c) 2024 EngineWire Contributors
 #include "Domains/ControlActor/Materials/McpLightFlicker.h"
 
-#include "AssetRegistry/AssetRegistryModule.h"
 #include "Components/LightComponent.h"
 #include "Core/Compatibility/McpVersionCompatibility.h"
+#include "Domains/ControlActor/Materials/McpMaterialBuild.h"
 #include "EngineWireSubsystem.h"
-#include "Factories/MaterialFactoryNew.h"
-#include "Factories/MaterialInstanceConstantFactoryNew.h"
 #include "Foundation/BridgeHelpers/Responses/McpJsonFields.h"
 #include "Foundation/HandlerUtils/McpHandlerUtils.h"
 #include "Foundation/McpScopedEditorTransaction.h"
@@ -20,9 +18,6 @@
 #include "Materials/MaterialExpressionSine.h"
 #include "Materials/MaterialExpressionTime.h"
 #include "Materials/MaterialInstanceConstant.h"
-#include "Misc/PackageName.h"
-#include "Safety/McpSafeOperations.h"
-#include "UObject/Package.h"
 #if __has_include("MaterialDomain.h")
 #include "MaterialDomain.h"
 #endif
@@ -35,20 +30,10 @@ const TCHAR* const Folder = TEXT("/Game/Materials/Lights/");
 const TCHAR* const BaseName = TEXT("MLF_Flicker");
 const TCHAR* const InstancePrefix = TEXT("MI_LightFlicker_");
 
-template <typename T>
-T* AddExpression(UMaterial* Material, int32 X, int32 Y)
-{
-    T* Expression = NewObject<T>(Material, NAME_None, RF_Transactional);
-    Expression->MaterialExpressionEditorX = X;
-    Expression->MaterialExpressionEditorY = Y;
-    MCP_GET_MATERIAL_EXPRESSIONS(Material).Add(Expression);
-    return Expression;
-}
-
 UMaterialExpressionMultiply* Multiply(UMaterial* Material, UMaterialExpression* A, UMaterialExpression* B, float ConstB,
                                       int32 X, int32 Y)
 {
-    UMaterialExpressionMultiply* Node = AddExpression<UMaterialExpressionMultiply>(Material, X, Y);
+    UMaterialExpressionMultiply* Node = McpAddMaterialExpression<UMaterialExpressionMultiply>(Material, X, Y);
     Node->A.Expression = A;
     Node->B.Expression = B;
     Node->ConstB = ConstB;
@@ -59,53 +44,38 @@ UMaterialExpressionMultiply* Multiply(UMaterial* Material, UMaterialExpression* 
 // against each other, between 1 - FlickerDepth and 1, so the light dips at uneven moments.
 UMaterial* MakeBase(FString& Error)
 {
-    const FString Name = BaseName;
-    UMaterialFactoryNew* Factory = NewObject<UMaterialFactoryNew>();
-    UPackage* Package = CreatePackage(*(FString(Folder) + Name));
-    UMaterial* Material = Package ? Cast<UMaterial>(Factory->FactoryCreateNew(
-        UMaterial::StaticClass(), Package, FName(*Name), RF_Public | RF_Standalone, nullptr, GWarn)) : nullptr;
+    UMaterial* Material = McpNewMaterial(Folder, BaseName);
     if (!Material)
     {
-        Error = FString::Printf(TEXT("could not make the light function material %s%s"), Folder, *Name);
+        Error = FString::Printf(TEXT("could not make the light function material %s%s"), Folder, BaseName);
         return nullptr;
     }
     Material->MaterialDomain = MD_LightFunction;
-    UMaterialExpressionTime* Time = AddExpression<UMaterialExpressionTime>(Material, -1200, 0);
-    UMaterialExpressionScalarParameter* Speed = AddExpression<UMaterialExpressionScalarParameter>(Material, -1200, 120);
+    UMaterialExpressionTime* Time = McpAddMaterialExpression<UMaterialExpressionTime>(Material, -1200, 0);
+    UMaterialExpressionScalarParameter* Speed =
+        McpAddMaterialExpression<UMaterialExpressionScalarParameter>(Material, -1200, 120);
     Speed->ParameterName = TEXT("FlickerSpeed");
     Speed->DefaultValue = 8.0f;
-    UMaterialExpressionScalarParameter* Depth = AddExpression<UMaterialExpressionScalarParameter>(Material, -1200, 320);
+    UMaterialExpressionScalarParameter* Depth =
+        McpAddMaterialExpression<UMaterialExpressionScalarParameter>(Material, -1200, 320);
     Depth->ParameterName = TEXT("FlickerDepth");
     Depth->DefaultValue = 0.6f;
     UMaterialExpressionMultiply* T = Multiply(Material, Time, Speed, 1.0f, -1000, 40);
-    UMaterialExpressionSine* First = AddExpression<UMaterialExpressionSine>(Material, -800, 0);
+    UMaterialExpressionSine* First = McpAddMaterialExpression<UMaterialExpressionSine>(Material, -800, 0);
     First->Input.Expression = T;
-    UMaterialExpressionSine* Second = AddExpression<UMaterialExpressionSine>(Material, -600, 120);
+    UMaterialExpressionSine* Second = McpAddMaterialExpression<UMaterialExpressionSine>(Material, -600, 120);
     Second->Input.Expression = Multiply(Material, T, nullptr, 2.31f, -800, 120);
     UMaterialExpressionMultiply* Half = Multiply(Material, Depth, nullptr, 0.5f, -1000, 320);
-    UMaterialExpressionOneMinus* Floor = AddExpression<UMaterialExpressionOneMinus>(Material, -600, 320);
+    UMaterialExpressionOneMinus* Floor = McpAddMaterialExpression<UMaterialExpressionOneMinus>(Material, -600, 320);
     Floor->Input.Expression = Half;
     UMaterialExpressionMultiply* Swing =
         Multiply(Material, Half, Multiply(Material, First, Second, 1.0f, -400, 60), 1.0f, -200, 200);
-    UMaterialExpressionAdd* Brightness = AddExpression<UMaterialExpressionAdd>(Material, 0, 200);
+    UMaterialExpressionAdd* Brightness = McpAddMaterialExpression<UMaterialExpressionAdd>(Material, 0, 200);
     Brightness->A.Expression = Floor;
     Brightness->B.Expression = Swing;
     MCP_GET_MATERIAL_INPUT(Material, EmissiveColor).Expression = Brightness;
-    Material->PostEditChange();
-    Material->MarkPackageDirty();
-    FAssetRegistryModule::AssetCreated(Material);
-    McpSafeAssetSave(Material);
+    McpSaveNewMaterial(Material);
     return Material;
-}
-
-UMaterialInterface* FindAsset(const FString& Name)
-{
-    const FString PackagePath = FString(Folder) + Name;
-    const FString ObjectPath = PackagePath + TEXT(".") + Name;
-    UMaterialInterface* Found = FindObject<UMaterialInterface>(nullptr, *ObjectPath);
-    return Found ? Found
-                 : FPackageName::DoesPackageExist(PackagePath) ? LoadObject<UMaterialInterface>(nullptr, *ObjectPath)
-                                                                : nullptr;
 }
 
 // The instance for this speed and depth, made (with the base material) when missing.
@@ -113,22 +83,17 @@ UMaterialInterface* FindOrMakeInstance(double Speed, double Depth, FString& Erro
 {
     const FString Name = FString::Printf(TEXT("%sS%d_D%d"), InstancePrefix, FMath::RoundToInt(Speed * 10.0),
                                          FMath::RoundToInt(Depth * 100.0));
-    if (UMaterialInterface* Existing = FindAsset(Name))
+    if (UMaterialInterface* Existing = McpFindMaterialAsset(Folder, Name))
     {
         return Existing;
     }
-    UMaterialInterface* Base = FindAsset(BaseName);
+    UMaterialInterface* Base = McpFindMaterialAsset(Folder, BaseName);
     Base = Base ? Base : MakeBase(Error);
     if (!Base)
     {
         return nullptr;
     }
-    UMaterialInstanceConstantFactoryNew* Factory = NewObject<UMaterialInstanceConstantFactoryNew>();
-    Factory->InitialParent = Base;
-    UPackage* Package = CreatePackage(*(FString(Folder) + Name));
-    UMaterialInstanceConstant* Instance = Package ? Cast<UMaterialInstanceConstant>(Factory->FactoryCreateNew(
-        UMaterialInstanceConstant::StaticClass(), Package, FName(*Name), RF_Public | RF_Standalone, nullptr, GWarn))
-                                                  : nullptr;
+    UMaterialInstanceConstant* Instance = McpNewMaterialInstance(Base, Folder, Name);
     if (!Instance)
     {
         Error = FString::Printf(TEXT("could not make the material instance %s%s"), Folder, *Name);
@@ -136,10 +101,7 @@ UMaterialInterface* FindOrMakeInstance(double Speed, double Depth, FString& Erro
     }
     Instance->SetScalarParameterValueEditorOnly(FName(TEXT("FlickerSpeed")), static_cast<float>(Speed));
     Instance->SetScalarParameterValueEditorOnly(FName(TEXT("FlickerDepth")), static_cast<float>(Depth));
-    Instance->PostEditChange();
-    Instance->MarkPackageDirty();
-    FAssetRegistryModule::AssetCreated(Instance);
-    McpSafeAssetSave(Instance);
+    McpSaveNewMaterial(Instance);
     return Instance;
 }
 

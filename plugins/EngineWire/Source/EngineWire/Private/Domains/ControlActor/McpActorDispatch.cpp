@@ -83,7 +83,8 @@ bool UEngineWireSubsystem::HandleControlActorAction(
   if (LowerSub == TEXT("set_material") ||
       LowerSub == TEXT("set_actor_material") ||
       LowerSub == TEXT("apply_material")) {
-    // color: the material instance of that colour, made when missing, then the same assignment as a materialPath.
+    // color or glow: the material instance of that colour and glow, made when
+    // missing, then the same assignment as a materialPath.
     TSharedPtr<FJsonObject> MaterialPayload;
     FString Code, Error;
     if (!McpColorMaterial::Resolve(Payload, MaterialPayload, Code, Error,

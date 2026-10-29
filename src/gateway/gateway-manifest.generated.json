@@ -4083,6 +4083,7 @@
         "force",
         "functionName",
         "gapCm",
+        "glow",
         "gridCm",
         "groundTrace",
         "info",
@@ -4471,7 +4472,7 @@
           "color": {
             "type": "string",
             "maxLength": 32,
-            "description": "A flat colour in place of materialPath: \"#rrggbb\", \"#rgb\" or a name (red, orange, yellow, green, blue, cyan, teal, purple, pink, magenta, brown, gray or grey, white, black). It becomes the material instance /Game/Materials/Colors/MI_Color_RRGGBB, the engine's BasicShapeMaterial with that Color, made and saved the first time and reused after (the reply's materialPath names it). It replaces the slot's material, so a textured mesh turns one flat colour. A colour it cannot read, or color with materialPath or materials, is INVALID_ARGUMENT; no instance is made when no actor named resolves (ACTOR_NOT_FOUND)."
+            "description": "A flat colour in place of materialPath: \"#rrggbb\", \"#rgb\" or a name (red, orange, yellow, green, blue, cyan, teal, purple, pink, magenta, brown, gray or grey, white, black). It becomes the material instance /Game/Materials/Colors/MI_Color_RRGGBB, the engine's BasicShapeMaterial with that Color, made and saved the first time and reused after (the reply's materialPath names it). It replaces the slot's material, so a textured mesh turns one flat colour. With glow the colour glows. A colour it cannot read, or color with materialPath or materials, is INVALID_ARGUMENT; no instance is made when no actor named resolves (ACTOR_NOT_FOUND)."
           },
           "componentName": {
             "type": "string",
@@ -4595,6 +4596,12 @@
             "type": "number",
             "minimum": 0,
             "description": "Space between neighbours' bounds in cm, laid out from the first actor; omitted, the first and last stay and the centres between are evenly spaced."
+          },
+          "glow": {
+            "type": "number",
+            "minimum": 0.1,
+            "maximum": 100000,
+            "description": "Make it glow, in place of materialPath: the colour of color (white when color is not given) lit from within at this strength, kept to a tenth. It becomes the material instance /Game/Materials/Colors/MI_Glow_RRGGBB_G<glow x 10> of M_ColorGlow in the same folder (base colour Color, emissive Color x Glow), both made and saved the first time and reused after; like color it replaces the slot's material. The strength is absolute, so the scene's light decides how it looks: under a sun of S lux, about S / 3 is as bright as a white surface in that sun and several times that glows. Under the engine's default 10 lux sun 5 glows softly and 20 or more shines and blooms; a physically bright sun (75,000 lux) needs tens of thousands; in a dark scene 1 already glows."
           },
           "gridCm": {
             "type": "number",

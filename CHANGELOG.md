@@ -36,7 +36,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **`align_actors`** lines actors up on one axis by the min, max or center of their bounds or by their pivots, on the first actor or on a value, in one undo step.
 - **Placing along a spline**: a `spawn_batch` item's `repeat` takes `alongSpline` (a road or a path) with a `count` or a `spacingCm`, a side offset and a height, and stands the copies along it, turned with it: lamps along a road, posts along a path.
 - **`group_actors`** groups actors as the editor's Ctrl+G does, so they select and move as one while the level is built, or breaks their groups up.
-- **`set_material` `color`** gives actors a flat colour by name or hex ("red", "#1e88e5") in one call, as one material instance per colour, made the first time and reused.
+- **`set_material` `color` and `glow`** give actors a flat colour by name or hex ("red", "#1e88e5") or make them glow (white unless a colour is given) in one call, as one material instance per colour and strength, made the first time and reused.
 - **`add_behaviour` `sound_trigger`** plays a sound when a player walks into an actor's area: 2D or at the actor, every time or only the first.
 - **`configure_viewport` `show_flags`** shows or hides the grid, collision, bounds, the navigation mesh, fog or any other show flag of the level viewport by name.
 - **`edit_component` `flicker`** makes a placed light flicker (a torch, a candle, a broken lamp) at a chosen speed and depth, or stops it.

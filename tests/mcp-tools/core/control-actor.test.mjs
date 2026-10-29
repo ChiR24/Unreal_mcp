@@ -67,6 +67,8 @@ const ENGINE_BASIC_MATERIAL = '/Engine/BasicShapes/BasicShapeMaterial.BasicShape
 // The instances set_material's color makes: teal is #00897B, and #abc is #AABBCC.
 const TEAL_MATERIAL = '/Game/Materials/Colors/MI_Color_00897B.MI_Color_00897B';
 const SHORT_HEX_MATERIAL = '/Game/Materials/Colors/MI_Color_AABBCC.MI_Color_AABBCC';
+const WHITE_GLOW_MATERIAL = '/Game/Materials/Colors/MI_Glow_EEEEEE_G50.MI_Glow_EEEEEE_G50';
+const TEAL_GLOW_MATERIAL = '/Game/Materials/Colors/MI_Glow_00897B_G5.MI_Glow_00897B_G5';
 const FLICKER_LIGHT = `MCP_FlickerLight_${ts}`;
 
 const cubeSpawn = (scenario, actorName, location) => ({
@@ -311,6 +313,13 @@ const testCases = [
   { scenario: 'ERROR: set_material refuses a colour it cannot read', toolName: 'control_actor', arguments: { action: 'set_material', actorName: DUPLICATE_COPY, color: 'reddish' }, expected: 'error|INVALID_ARGUMENT' },
   { scenario: 'ERROR: set_material refuses color with materialPath', toolName: 'control_actor', arguments: { action: 'set_material', actorName: DUPLICATE_COPY, color: 'red', materialPath: ENGINE_BASIC_MATERIAL }, expected: 'error|INVALID_ARGUMENT' },
   { scenario: 'ERROR: set_material color for an actor that does not exist makes nothing', toolName: 'control_actor', arguments: { action: 'set_material', actorName: `MCP_Missing_${ts}`, color: '#13579b' }, expected: 'error|ACTOR_NOT_FOUND' },
+  // glow: the colour (white without color) glowing, an instance of M_ColorGlow named by its hex and glow x 10.
+  { scenario: 'CONFIG: set_material glow alone makes the actor glow white', toolName: 'control_actor', arguments: { action: 'set_material', actorName: DUPLICATE_COPY, glow: 5 }, expected: 'success', assertions: [{ path: 'structuredContent.result.materialPath', equals: WHITE_GLOW_MATERIAL, label: 'white is #EEEEEE and glow 5 is G50' }, { path: 'structuredContent.result.undo.undoable', equals: true, label: 'the assignment is one undo step' }] },
+  { scenario: 'INFO: the glow instance holds the strength asked', toolName: 'manage_asset', arguments: { action: 'get_material_info', assetPath: WHITE_GLOW_MATERIAL }, expected: 'success', assertions: [{ path: 'structuredContent.result.parameterOverrides', includesObject: { name: 'Glow', value: 5 }, label: 'Glow is 5' }, { path: 'structuredContent.result.parent', equals: '/Game/Materials/Colors/M_ColorGlow.M_ColorGlow', label: 'its parent is the glow material' }] },
+  { scenario: 'CONFIG: set_material glow with a colour on a list of actors', toolName: 'control_actor', arguments: { action: 'set_material', actorNames: [DUPLICATE_COPY], color: 'teal', glow: 0.5 }, expected: 'success', assertions: [{ path: 'structuredContent.result.applied', equals: 1, label: 'the actor took it' }] },
+  { scenario: 'INFO: find_by_material finds the actor by its glow\'s instance', toolName: 'control_actor', arguments: { action: 'find_by_material', materialPath: TEAL_GLOW_MATERIAL }, expected: 'success', assertions: [{ path: 'structuredContent.result.actors', includesObject: { label: DUPLICATE_COPY }, label: 'teal glowing at 0.5 is MI_Glow_00897B_G5' }] },
+  { scenario: 'ERROR: set_material refuses glow with materialPath', toolName: 'control_actor', arguments: { action: 'set_material', actorName: DUPLICATE_COPY, glow: 3, materialPath: ENGINE_BASIC_MATERIAL }, expected: 'error|INVALID_ARGUMENT' },
+  { scenario: 'ERROR: set_material refuses a glow under 0.1', toolName: 'control_actor', arguments: { action: 'set_material', actorName: DUPLICATE_COPY, glow: 0 }, expected: 'error|OUT_OF_RANGE' },
   // flicker: a light function material on a placed light; the instance is named by its speed x 10 and depth x 100.
   { scenario: 'Setup: a point light to flicker', toolName: 'control_actor', arguments: { action: 'spawn', classPath: 'PointLight', actorName: FLICKER_LIGHT, location: { x: 32000, y: 32000, z: 300 } }, expected: 'success' },
   { scenario: 'CONFIG: set_light_flicker gives the light a flicker', toolName: 'control_actor', arguments: { action: 'set_light_flicker', actorName: FLICKER_LIGHT }, expected: 'success', assertions: [{ path: 'structuredContent.result.materialPath', equals: '/Game/Materials/Lights/MI_LightFlicker_S80_D60.MI_LightFlicker_S80_D60', label: 'the default speed 8 and depth 0.6 name the instance' }, { path: 'structuredContent.result.changed', length: 1, label: 'its one light component took it' }, { path: 'structuredContent.result.undo.undoable', equals: true, label: 'one undo step' }] },
@@ -438,7 +447,7 @@ const testCases = [
 
   // === CLEANUP ===
   { scenario: 'Cleanup: delete spawned actors', toolName: 'control_actor', arguments: { action: 'delete', actorNames: [MAIN_ACTOR, DUPLICATE_ACTOR, DUPLICATE_COPY, MESH_ACTOR, PARENT_ACTOR, CHILD_ACTOR, BP_ACTOR, NEAR_ACTOR, FAR_ACTOR, `MCP_SpawnSphere_${ts}`, `MCP_SpawnCylinder_${ts}`] }, expected: 'success|not found' },
-  { scenario: 'Cleanup: the colour instances', toolName: 'manage_asset', arguments: { action: 'delete', paths: ['/Game/Materials/Colors/MI_Color_00897B', '/Game/Materials/Colors/MI_Color_AABBCC'], force: true }, expected: 'success|not found' },
+  { scenario: 'Cleanup: the colour instances', toolName: 'manage_asset', arguments: { action: 'delete', paths: ['/Game/Materials/Colors/MI_Color_00897B', '/Game/Materials/Colors/MI_Color_AABBCC', '/Game/Materials/Colors/MI_Glow_EEEEEE_G50', '/Game/Materials/Colors/MI_Glow_00897B_G5', '/Game/Materials/Colors/M_ColorGlow'], force: true }, expected: 'success|not found' },
   { scenario: 'Cleanup: the flickering light', toolName: 'control_actor', arguments: { action: 'delete', actorName: FLICKER_LIGHT }, expected: 'success|not found' },
   { scenario: 'Cleanup: the flicker materials', toolName: 'manage_asset', arguments: { action: 'delete', paths: ['/Game/Materials/Lights/MI_LightFlicker_S80_D60', '/Game/Materials/Lights/MI_LightFlicker_S120_D40', '/Game/Materials/Lights/MLF_Flicker'], force: true }, expected: 'success|not found' },
 ];

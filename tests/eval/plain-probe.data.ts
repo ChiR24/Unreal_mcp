@@ -1038,4 +1038,9 @@ export const PLAIN_PROBE: readonly PlainProbeCase[] = [
   { query: 'make a checkpoint flag', accepted: ['blueprint.add_behaviour'] },
   { query: 'make ice that the player slides on', accepted: ['animation_physics.create_physical_material'] },
   { query: 'make a bouncy mushroom', accepted: ['blueprint.add_behaviour'] },
+  // Something made to glow takes set_material glow.
+  { query: 'make the cube glow', accepted: ['control_actor.set_material'] },
+  { query: 'make the sign glow', accepted: ['control_actor.set_material'] },
+  { query: 'make the crystal glow blue', accepted: ['control_actor.set_material'] },
+  { query: 'make the lamp glow', accepted: ['control_actor.set_material'] },
 ];

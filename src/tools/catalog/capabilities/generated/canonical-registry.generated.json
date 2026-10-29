@@ -1,5 +1,5 @@
 {
-  "catalogRevision": "b49b6c5366c6d8a4",
+  "catalogRevision": "f149997592ffdbc8",
   "recordCount": 482,
   "records": [
     {
@@ -45795,13 +45795,17 @@
           "color an actor red, blue or green",
           "white, black, yellow, orange, purple, pink, brown or gray",
           "change the color of an actor",
-          "paint or tint a mesh a colour"
+          "paint or tint a mesh a colour",
+          "make the cube or the sign glow",
+          "a glowing or emissive mesh",
+          "make a lamp, crystal or sword glow"
         ],
-        "summary": "Put a material on an actor, or a flat colour with color (\"#rrggbb\", \"#rgb\" or a name such as red or white: a material instance of the engine's BasicShapeMaterial, made once under /Game/Materials/Colors and reused, which replaces the slot's material, textures and all): slot materialSlot (default 0) of its first mesh component that has that slot, of componentName, or of every one with allComponents; materials sets slot i from entry i (\"\" skips one), and actorNames gives many actors the same material. One undo step. Refusals: MATERIAL_NOT_FOUND, ACTOR_NOT_FOUND, COMPONENT_NOT_FOUND, MATERIAL_SLOT_NOT_FOUND (no component has the slot), INVALID_ARGUMENT (a colour it cannot read, or color with materialPath); a list that partly failed answers MATERIAL_BATCH_INCOMPLETE naming each failure. While Play runs it changes the playing copy, gone when play stops.",
+        "summary": "Put a material on an actor, or a flat colour with color (\"#rrggbb\", \"#rgb\" or a name such as red or white: a material instance of the engine's BasicShapeMaterial, made once under /Game/Materials/Colors and reused, which replaces the slot's material, textures and all), or a glowing one with glow (that colour, white without color, lit from within at that strength: an instance of M_ColorGlow in the same folder): slot materialSlot (default 0) of its first mesh component that has that slot, of componentName, or of every one with allComponents; materials sets slot i from entry i (\"\" skips one), and actorNames gives many actors the same material. One undo step. Refusals: MATERIAL_NOT_FOUND, ACTOR_NOT_FOUND, COMPONENT_NOT_FOUND, MATERIAL_SLOT_NOT_FOUND (no component has the slot), INVALID_ARGUMENT (a colour it cannot read, or color or glow with materialPath); a list that partly failed answers MATERIAL_BATCH_INCOMPLETE naming each failure. While Play runs it changes the playing copy, gone when play stops.",
         "whenToUse": [
           "A material must be assigned to an actor mesh component.",
           "A mesh with several material slots (an SDF part) needs a material in each: materials sets them all in one call.",
-          "An actor must take a plain colour (red, \"#1e88e5\") with no material made first: color."
+          "An actor must take a plain colour (red, \"#1e88e5\") with no material made first: color.",
+          "An actor must glow (a sign, a lamp shade, a crystal): glow, with color for its colour."
         ],
         "whenNotToUse": [
           "The mesh has no material slots (the assignment is a no-op)."
@@ -45859,7 +45863,13 @@
             "color": {
               "type": "string",
               "maxLength": 32,
-              "description": "A flat colour in place of materialPath: \"#rrggbb\", \"#rgb\" or a name (red, orange, yellow, green, blue, cyan, teal, purple, pink, magenta, brown, gray or grey, white, black). It becomes the material instance /Game/Materials/Colors/MI_Color_RRGGBB, the engine's BasicShapeMaterial with that Color, made and saved the first time and reused after (the reply's materialPath names it). It replaces the slot's material, so a textured mesh turns one flat colour. A colour it cannot read, or color with materialPath or materials, is INVALID_ARGUMENT; no instance is made when no actor named resolves (ACTOR_NOT_FOUND)."
+              "description": "A flat colour in place of materialPath: \"#rrggbb\", \"#rgb\" or a name (red, orange, yellow, green, blue, cyan, teal, purple, pink, magenta, brown, gray or grey, white, black). It becomes the material instance /Game/Materials/Colors/MI_Color_RRGGBB, the engine's BasicShapeMaterial with that Color, made and saved the first time and reused after (the reply's materialPath names it). It replaces the slot's material, so a textured mesh turns one flat colour. With glow the colour glows. A colour it cannot read, or color with materialPath or materials, is INVALID_ARGUMENT; no instance is made when no actor named resolves (ACTOR_NOT_FOUND)."
+            },
+            "glow": {
+              "type": "number",
+              "minimum": 0.1,
+              "maximum": 100000,
+              "description": "Make it glow, in place of materialPath: the colour of color (white when color is not given) lit from within at this strength, kept to a tenth. It becomes the material instance /Game/Materials/Colors/MI_Glow_RRGGBB_G<glow x 10> of M_ColorGlow in the same folder (base colour Color, emissive Color x Glow), both made and saved the first time and reused after; like color it replaces the slot's material. The strength is absolute, so the scene's light decides how it looks: under a sun of S lux, about S / 3 is as bright as a white surface in that sun and several times that glows. Under the engine's default 10 lux sun 5 glows softly and 20 or more shines and blooms; a physically bright sun (75,000 lux) needs tens of thousands; in a dark scene 1 already glows."
             }
           },
           "required": [
@@ -45897,7 +45907,7 @@
       },
       "examples": [
         {
-          "title": "Put a material on an actor, or a flat colour with color (\"#rrggbb\", \"#rgb\" or a name such as red or white: a material instance of the engine's BasicShapeMaterial, made once under /Game/Materials/Colors and reused, which replaces the slot's material, textures and all): slot materialSlot (default 0) of its first mesh component that has that slot, of componentName, or of every one with allComponents; materials sets slot i from entry i (\"\" skips one), and actorNames gives many actors the same material. One undo step. Refusals: MATERIAL_NOT_FOUND, ACTOR_NOT_FOUND, COMPONENT_NOT_FOUND, MATERIAL_SLOT_NOT_FOUND (no component has the slot), INVALID_ARGUMENT (a colour it cannot read, or color with materialPath); a list that partly failed answers MATERIAL_BATCH_INCOMPLETE naming each failure. While Play runs it changes the playing copy, gone when play stops.",
+          "title": "Put a material on an actor, or a flat colour with color (\"#rrggbb\", \"#rgb\" or a name such as red or white: a material instance of the engine's BasicShapeMaterial, made once under /Game/Materials/Colors and reused, which replaces the slot's material, textures and all), or a glowing one with glow (that colour, white without color, lit from within at that strength: an instance of M_ColorGlow in the same folder): slot materialSlot (default 0) of its first mesh component that has that slot, of componentName, or of every one with allComponents; materials sets slot i from entry i (\"\" skips one), and actorNames gives many actors the same material. One undo step. Refusals: MATERIAL_NOT_FOUND, ACTOR_NOT_FOUND, COMPONENT_NOT_FOUND, MATERIAL_SLOT_NOT_FOUND (no component has the slot), INVALID_ARGUMENT (a colour it cannot read, or color or glow with materialPath); a list that partly failed answers MATERIAL_BATCH_INCOMPLETE naming each failure. While Play runs it changes the playing copy, gone when play stops.",
           "input": {
             "action": "set_material",
             "actorName": "Cube1",
@@ -45936,8 +45946,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "1b5a04e868eb336eab87ef5fc9b12a3d8d62452c27c115347b4610454d535715",
-        "content": "f322a70309f791a42833aa614c4aac7dc4b403afab2e40f737c84ae3073e25ce"
+        "schema": "44ae4908841017bf0acad0366a8ed36fd6e9af50621a3ab81ba7e6c82d63b363",
+        "content": "8f666c73bdba08ba5b1f36756c18e22a32c8a8b6a30d1915567d4511ff385c4f"
       }
     },
     {
