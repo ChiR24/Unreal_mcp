@@ -5,7 +5,7 @@ export const CONTROL_ACTOR_FOLDS: readonly FoldSpec[] = [
   {
     primary: 'spawn', selector: 'spawnKind',
     summary: 'Place actors in the level, or in the running game during Play (gone when Play stops), chosen by spawnKind; each call is one undo step. class spawns classPath (or actorClass), such as /Script/Engine.PointLight or a Blueprint class, or with meshPath alone a Movable static or skeletal mesh actor showing that mesh; blueprint spawns blueprintPath; batch places up to 500 items (1000 once repeat rows are unrolled) in one call, each a spawn payload that can also take materialPath, variables, properties, folder and tags, with shared defaults. location and rotation default to zero and scale to 1; folder files the actor in the outliner and tags tag it. The actor is labelled actorName, else after its mesh or class; when another actor has the same label, the reply\'s actorName is the actor\'s unique object name, which later calls must use. An unknown class or mesh is refused (CLASS_NOT_FOUND, MESH_NOT_FOUND), and an actor that destroys itself at once is SPAWNED_THEN_DESTROYED. The reply checks the placement: groundZ and groundClearance, and placementWarning with suggestedLocation for an actor sunk, floating or intersecting (tag mcp.placement.ok to mark one deliberate).',
-    topics: ['spawn actor', 'spawn blueprint', 'place actor', 'add actor to level', 'spawn many actors', 'add player start', 'spawn enemy', 'spawn actors in a row', 'spawn actors in a grid'],
+    topics: ['spawn actor', 'spawn blueprint', 'place actor', 'add actor to level', 'spawn many actors', 'add player start', 'spawn enemy', 'spawn actors in a row', 'spawn actors in a grid', 'a row of trees, lamps or posts', 'fill a room with props or furniture'],
     members: { class: 'spawn', blueprint: 'spawn_blueprint', batch: 'spawn_batch' },
     aliasMembers: ['spawn_actor'],
   },
@@ -19,7 +19,7 @@ export const CONTROL_ACTOR_FOLDS: readonly FoldSpec[] = [
   {
     primary: 'get_transform', selector: 'readMode',
     summary: 'Read where an actor is (the player\'s pawn too): its transform now, or watch it over game time in PIE (motion): location, velocity, rotation, chosen properties and points on it (bones, sockets, components, with their height over the ground) at every interval, to prove a jump, launch, patrol, fall, foot plant or a rocking hull in one call.',
-    topics: ['actor location', 'where is the actor', 'where is the player', 'player location', 'actor position', 'sample motion', 'record trajectory', 'track actor over time', 'foot sliding', 'feet slide', 'foot contact', 'bone position over time'],
+    topics: ['actor location', 'where is the actor', 'where is the player', 'player location', 'actor position', 'sample motion', 'record trajectory', 'track actor over time', 'foot sliding', 'feet slide', 'foot contact', 'bone position over time', 'copy an actor\'s transform or position'],
     members: { transform: 'get_transform', motion: 'sample_motion' },
     aliasMembers: ['get_actor_transform'],
   },
@@ -48,7 +48,7 @@ export const CONTROL_ACTOR_FOLDS: readonly FoldSpec[] = [
   {
     primary: 'delete', selector: 'deleteScope',
     summary: 'Delete actors (deleteScope actors, the default: actorName or actorNames, exact names only, so TestActor never takes TestActor_Copy) or every actor carrying tag or any of tags (by_tag), in one undo step; every actor of a kind (all the cubes) goes by the names find lists. While Play runs they leave the running game, which nothing saves or undoes. Replies deletedCount and deleted; names not found refuse with NOT_FOUND, or DELETE_PARTIAL when some went, both carrying the deleted and missing lists.',
-    topics: ['delete actor', 'destroy actor', 'remove actor', 'delete by tag', 'delete spawned actor', 'delete selected actor', 'remove actor from level', 'delete all cubes or all lights'],
+    topics: ['delete actor', 'destroy actor', 'remove actor', 'delete by tag', 'delete spawned actor', 'delete selected actor', 'remove actor from level', 'delete all cubes or all lights', 'delete everything in the level'],
     members: { actors: 'delete', by_tag: 'delete_by_tag' },
     aliasMembers: ['destroy_actor'],
   },

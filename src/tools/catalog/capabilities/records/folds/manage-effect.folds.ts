@@ -12,7 +12,7 @@ export const MANAGE_EFFECT_FOLDS: readonly FoldSpec[] = [
   {
     primary: 'create_effect', selector: 'kind',
     summary: 'Create an effect: a Niagara system or emitter, a ribbon, particle trail, impact or environment effect, volumetric fog, or spawn a preset particle/niagara effect.',
-    topics: ['niagara system', 'niagara emitter', 'ribbon', 'particle trail', 'impact effect', 'volumetric fog', 'effect asset', 'make an explosion', 'add fire effect', 'add smoke or steam', 'water fountain', 'muzzle flash', 'a campfire, fireflies or falling leaves'],
+    topics: ['niagara system', 'niagara emitter', 'ribbon', 'particle trail', 'impact effect', 'volumetric fog', 'effect asset', 'make an explosion', 'add fire effect', 'add smoke or steam', 'water fountain', 'muzzle flash', 'a campfire, fireflies, falling leaves or a waterfall'],
     members: {
       niagara_system: 'create_niagara_system', niagara_emitter: 'create_niagara_emitter', niagara_ribbon: 'create_niagara_ribbon', particle_trail: 'create_particle_trail',
       impact: 'create_impact_effect', environment: 'create_environment_effect', volumetric_fog: 'create_volumetric_fog', niagara: 'niagara', particle: 'particle',

@@ -6,7 +6,7 @@ export const MANAGE_COMBAT_FOLDS: readonly FoldSpec[] = [
   {
     primary: 'create_combat_asset', selector: 'kind',
     summary: 'Create a combat Blueprint named name in path (default /Game), chosen by kind; it is saved, and a path an asset already holds is refused. weapon_blueprint is an Actor with a WeaponMesh component (weaponMeshPath) and BaseDamage, FireRate, Range and Spread variables (defaults 25, 600, 10000, 2), and no firing logic of its own. projectile_blueprint flies (projectileSpeed, default 5000; projectileGravityScale, default 0), stops on what it meets with a collisionRadius sphere (default 5), applies damage (default 20) to it and is destroyed, never hits the actor that fired it, and is gone 5 s after firing when it meets nothing; projectileMeshPath is its mesh. A mesh path that does not load is refused before anything is made. damage_type (damage_type_setup) is a DamageType Blueprint for ApplyDamage to name.',
-    topics: ['weapon blueprint', 'projectile blueprint', 'damage type', 'create weapon', 'gun'],
+    topics: ['weapon blueprint', 'projectile blueprint', 'damage type', 'create weapon', 'gun', 'give the player a gun or a weapon'],
     members: { weapon_blueprint: 'create_weapon_blueprint', projectile_blueprint: 'create_projectile_blueprint', damage_type: 'create_damage_type', damage_type_setup: 'setup_damage_type' },
   },
   {

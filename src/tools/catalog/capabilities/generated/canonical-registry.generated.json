@@ -1,5 +1,5 @@
 {
-  "catalogRevision": "9bd3290b8f1f55f1",
+  "catalogRevision": "cf2232efa0ba8964",
   "recordCount": 476,
   "records": [
     {
@@ -28449,6 +28449,7 @@
           "make a forest",
           "scatter rocks",
           "place trees or rocks randomly",
+          "scatter rocks or trees around an area",
           "foliage",
           "vegetation",
           "grass",
@@ -28844,7 +28845,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "1d69a2ec3894703cfb5473af28e37c8f764811e72feee995d7335213b3db30fa",
-        "content": "bb493e9daa325085f2e54c6f455e8320470c323cd10a287e7519af9b10b9a79c"
+        "content": "3103f25439c77c32ac25320fe889a1a8c02482d536829a229e18fb4f7fe5d5a8"
       }
     },
     {
@@ -30965,7 +30966,7 @@
           "screen tint",
           "change screen tint",
           "add bloom or depth of field",
-          "make the room or the scene darker"
+          "make the room, the scene or the level darker or brighter"
         ],
         "summary": "Set post-process values on a PostProcessVolume, chosen by setting: bloom, exposure, depth of field, motion blur, tonemapper, color grading, LUT, white balance, vignette, grain, chromatic aberration, lens flare, SSAO/GTAO, screen-space and Lumen reflections, blend (screen_percentage sets r.ScreenPercentage instead). The volume is actorName, else the level's unbound (whole level) volume, the persistent level's first; a level with none gets one, named actorName when given. A name no volume has is ACTOR_NOT_FOUND listing the volumes, several unbound volumes AMBIGUOUS. Each value is the FPostProcessSettings field it names and turns that field's override on; settings takes any field by engine name. A value outside the engine's limits, an unknown name and a call that sets nothing are refused, and nothing is written unless every value is taken. One undo step; the level is left unsaved. blendWeight (0-1) and infiniteUnbound set the volume itself with any variant.",
         "whenToUse": [
@@ -31447,7 +31448,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "6e0499250b33a73ef4c234087fc992a568d3d5d48c155fa859237578f2a2736b",
-        "content": "210c2db97d5415d5cf09819e13325458332c1d623e97a253e47ba39c883319fb"
+        "content": "2b831be8dd226320a01c4fbe5a5f008ff62324e485432832aa44166cce103522"
       }
     },
     {
@@ -35644,7 +35645,8 @@
           "add a lake or ocean",
           "add a river",
           "create a river",
-          "make a river"
+          "make a river",
+          "water the player can swim in"
         ],
         "summary": "Create a water body (ocean, lake, river or custom) with the Water plugin: real water that takes the editor's default materials and, for an ocean or lake, its default waves, as placing one in the editor does (listed under defaultsApplied).",
         "whenToUse": [
@@ -35826,7 +35828,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "bb2f8a7363e8c91d97b745cd557a928b63a1f04664fef394176ecbeccc3513ee",
-        "content": "d8b15d7e2d26e9ed212ea28f3e027288f6acbb50a02da917789bcf81eeb9c829"
+        "content": "bd5beb9acd8acb3f571f96532954fd7d50f5aaf301eef168e8cbb91669812d84"
       }
     },
     {
@@ -38336,7 +38338,8 @@
           "road route",
           "road up a hill",
           "switchback road",
-          "route a road around obstacles"
+          "route a road around obstacles",
+          "add a path or a road on the terrain"
         ],
         "summary": "Find a road between from and to that a vehicle could drive: no grade over maxGradePercent anywhere along it (default 10), every obstacle and gap kept half its width away (width, default 600 cm), and no corner tighter than turnRadius (default 1500 cm), so a slope too steep to take straight is climbed in turns and switchbacks (up a cone-shaped hill whose sides pass about three times the limit its straight runs may find no way to the top: NO_ROUTE then says how steep a route would be). The ground under a grid turned so both ends sit on its points (a margin of half their distance, or of half the road their difference in height needs at that grade, at least 50 m; cells of about half the turn radius, at most 400 a side) is read by vertical traces: a landscape is ground, or the actors in groundActors (with neither, the actor under from); anything else solid standing anywhere in a cell up to 3.3 m above the ground is an obstacle (a post or a thin wall included), and a place with no collision at all is a gap (a create_primitive mesh has none until configure_mesh_collision). The route is searched over every cell and the heading it is entered by (16 headings), then straightened wherever grade, clearance and radius still hold and the straight road stays within 25 cm of the ground. Reads only. The reply gives points (world cm, the first at from and the last at to, each 10 cm above the ground and higher where the ground between it and a neighbour rises above the straight road joining them or where a lifted neighbour would leave the road between them steeper than the limit, so the middle of the road laid on them never dips in; across its width a level road still cuts into a side slope), lengthM, climbM, maxGradePercent (the steeper of the ground under the road and the road between the lifted points) and minTurnRadiusM measured on those points, maxLiftCm, switchbacks, groundGapCm (the farthest the straight road between two points strays from the ground), and two ready calls: nextCall lays the road with create_road_spline (a road slab named Road; rename it there), and on a landscape landscapeSplineCall makes the same route a landscape spline that shapes the terrain to it (flat across the road's width at its height, blended beyond, in one undo step). Refused: POINT_BLOCKED (from or to on an obstacle or a gap), NO_ROUTE (only a route steeper than the limit reaches, with how steep; obstacles and gaps cut the ends apart; or the search ran out of time), ACTOR_NOT_FOUND (a groundActors name), INVALID_ARGUMENT.",
         "whenToUse": [
@@ -38558,7 +38561,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "1dea19642a352d17a16f6fc874a23e75531db46f8e74b32b9b5e1c5d14aaded6",
-        "content": "37e0a92a3b5b3f9aac1a3e9135bf555b78846202e16970403ab035a994d19ed5"
+        "content": "7d7203422c8a14b4bd6a65444d56520a76af5f694f7e0c3a937b0f9cf41d5c27"
       }
     },
     {
@@ -40158,7 +40161,9 @@
           "unfinished content",
           "default grid material",
           "placeholder text",
-          "two copies in the same place"
+          "two copies in the same place",
+          "find actors stacked on top of each other",
+          "find actors sunk below the floor"
         ],
         "summary": "Sweep every actor in the level and report the ones that interpenetrate another actor, sit sunk below the surface under them, float above it, lean off vertical, or have a face in the same plane as another surface (z-fighting flicker), and the unfinished content they show (a slot on the engine's default grid material, a text still reading \"Text\", a copy pasted onto the original); or, with blueprintPath, the mesh parts of one actor Blueprint that are buried in each other or sunk below its capsule.",
         "whenToUse": [
@@ -40338,7 +40343,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "0560abba1e4013aea0ed52d9e2edf48081c38acd766c58a0276096c153ce7906",
-        "content": "66b99639694122a09cb08dfe4a033a8a3d1022643527ccb63aa9b8d5c2b05ddc"
+        "content": "d9f268897548a9f6d9e682249b3bd654d18372ec2cf77a611b33e162519d13e2"
       }
     },
     {
@@ -40630,6 +40635,7 @@
           "delete selected actor",
           "remove actor from level",
           "delete all cubes or all lights",
+          "delete everything in the level",
           "delete object"
         ],
         "summary": "Delete actors (deleteScope actors, the default: actorName or actorNames, exact names only, so TestActor never takes TestActor_Copy) or every actor carrying tag or any of tags (by_tag), in one undo step; every actor of a kind (all the cubes) goes by the names find lists. While Play runs they leave the running game, which nothing saves or undoes. Replies deletedCount and deleted; names not found refuse with NOT_FOUND, or DELETE_PARTIAL when some went, both carrying the deleted and missing lists.",
@@ -40804,7 +40810,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "8c3e23695164965208c5d990f589d52dc9b26bdec26c9270f0c1789ab528ced5",
-        "content": "b4694615f52f6efe376828895afebe434f7e53fb7d8e43a99e1489be54c692c6"
+        "content": "bfbc35d67705106007a5579ec5b76e24e6b4c19d2b5ac938495a34e6a29f3787"
       }
     },
     {
@@ -43235,6 +43241,7 @@
           "feet slide",
           "foot contact",
           "bone position over time",
+          "copy an actor's transform or position",
           "read actor location",
           "actor rotation",
           "watch actor move",
@@ -43665,7 +43672,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "7f47f2d2caeab7706d35225925b9d6b7b931810a776b1647ad10afc35c61a122",
-        "content": "525db42876b5028186af7395fe05adba87becf6b84a34bb97d504b33b93f68d6"
+        "content": "4e3cdab95da59b92a4e497a5c211c263e530fbb9bc8fa6b116d6be60a5d3df14"
       }
     },
     {
@@ -46056,6 +46063,8 @@
           "spawn enemy",
           "spawn actors in a row",
           "spawn actors in a grid",
+          "a row of trees, lamps or posts",
+          "fill a room with props or furniture",
           "create actor",
           "spawn cube",
           "spawn static mesh",
@@ -46459,7 +46468,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "83255eb7ee40ca38cadf51b0ef17d54b36cd77be9b26993e7212e6aad8e1d744",
-        "content": "9f6111b8b07c6bd1c4e2466811a6edc61924ef9d7ff4144850392b252618c7ac"
+        "content": "942c7a523b231ebc6a6465388b88fb901514af2f7fd85f5cf40f4355f1ab478e"
       }
     },
     {
@@ -70611,7 +70620,8 @@
           "change the camera distance",
           "make the player float",
           "switch to first person or third person",
-          "double jump"
+          "double jump",
+          "add a crouch"
         ],
         "summary": "Configure a Character Blueprint's defaults by setting: movement_speeds (walk, crouch, swim, fly, acceleration, braking, friction), jump (launch speed, hold, double jump, air control, gravity), crouch, rotation (orient to movement or face the aim), capsule_component, mesh_component (skeletal mesh, Animation Blueprint, offset), camera_component (a third-person spring arm and camera, made when missing, or with view first_person a camera at the eyes) or nav_movement (AI agent size, avoidance). Each compiles and saves the Blueprint, changes only the fields sent and reads the values back; a Blueprint that is not a Character is refused (NOT_A_CHARACTER).",
         "whenToUse": [
@@ -71029,7 +71039,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "f5b1d349c80165552eb31f67ec27b80672797918ebec0822101a82db4d1815cd",
-        "content": "52ef7e90275feeebe9f63698a4cef69190030f161be34b19fbdae08044ac76e6"
+        "content": "908f9fcfccc813664387fb92f9db8af64b54d43bfa6672be2f022864f02c9d04"
       }
     },
     {
@@ -73246,6 +73256,7 @@
           "damage type",
           "create weapon",
           "gun",
+          "give the player a gun or a weapon",
           "weapon",
           "firearm",
           "new weapon"
@@ -73468,7 +73479,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "5d67e7065be2a29cd33726013d3ef19e4a5af27decf5b4e7e8912453db59a8b4",
-        "content": "356792dc441d61f584d842a278466755009d9d04d10a4c4f13f15a6aea9bf21c"
+        "content": "dd4734017051c411269b38940bcd4555f4bed0df2fb2225beadc9e6c6db44ae4"
       }
     },
     {
@@ -75038,7 +75049,7 @@
           "add smoke or steam",
           "water fountain",
           "muzzle flash",
-          "a campfire, fireflies or falling leaves",
+          "a campfire, fireflies, falling leaves or a waterfall",
           "particle system",
           "vfx",
           "particle effect",
@@ -75383,7 +75394,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "332be23fa2be58488ecf91463343001eb63f4bcb2731c89022912790fc94502c",
-        "content": "cb732b05fc5010756cb6d5c10819cc693047778b2e89933f9354cddc746e8a8c"
+        "content": "96354b9e2dbfdb887a28faa22333d809033a38808efb7dcae63ce849e1b74f9f"
       }
     },
     {
@@ -115767,7 +115778,8 @@
         "domain": "performance",
         "family": "performance",
         "topics": [
-          "merge_actors"
+          "merge_actors",
+          "merge the walls or the floor into one mesh"
         ],
         "summary": "Merge the static meshes of two or more placed actors into one saved static mesh asset named SM_<name>, materials kept as separate slots and lightmap UVs generated. A name that matches no actor, fewer than two static mesh components, or an asset already at the path is refused. replaceSourceActors places the merged mesh where the merge centred it and removes the sources in one undo step (actorName is the new actor); without it the level is left as it is.",
         "whenToUse": [
@@ -115880,7 +115892,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "b1c4d1d8fbbe233e7b841ca4b7ab390b0b8b463186a503723326909676e53f6a",
-        "content": "87e169861fd75acabaf4b095fc8e8d646cda992452f0cafe585c120600a734ad"
+        "content": "4a4fb47d693d20008f9b66936dea02a45b20001aa89eb30bd51fc4fde1b79aa6"
       }
     },
     {

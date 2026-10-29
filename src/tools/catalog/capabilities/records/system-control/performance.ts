@@ -251,6 +251,7 @@ export const PERFORMANCE_RECORDS: readonly CapabilityRecordSource[] = [
     action: 'merge_actors',
     domain: DOM,
     family: FAM,
+    topics: ['merge the walls or the floor into one mesh'],
     summary: 'Merge the static meshes of two or more placed actors into one saved static mesh asset named SM_<name>, materials kept as separate slots and lightmap UVs generated. A name that matches no actor, fewer than two static mesh components, or an asset already at the path is refused. replaceSourceActors places the merged mesh where the merge centred it and removes the sources in one undo step (actorName is the new actor); without it the level is left as it is.',
     whenToUse: ['Two or more actors must be merged into one mesh asset.'],
     whenNotToUse: ['Fewer than two actors are provided, or only instancing is needed (use optimize_draw_calls).'],
