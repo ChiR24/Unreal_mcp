@@ -6,7 +6,7 @@ export const MANAGE_GEOMETRY_FOLDS: readonly FoldSpec[] = [
   {
     primary: 'create_primitive', selector: 'primitive',
     summary: 'Create a primitive mesh actor: box, sphere, cylinder, cone, capsule, plane, disc, ring, torus, pipe, arch, ramp, stairs, spiral stairs, a hip roof over any footprint, or one smooth organic mesh from blended shapes (sdf) with soft fillets where they meet. Each is a DynamicMeshActor with no collision: traces and players pass through it, and what stands on it reads "nothing below it", until configure_mesh_collision gives it some. Each is one undo step.',
-    topics: ['create box', 'create sphere', 'create cylinder', 'create plane', 'box mesh', 'primitive mesh', 'stairs', 'torus', 'make a cube or ramp', 'create a cube', 'add stairs or a ramp',
+    topics: ['create box', 'create sphere', 'create cylinder', 'create plane', 'box mesh', 'primitive mesh', 'stairs', 'torus', 'make a cube or ramp', 'create a cube', 'add stairs, a staircase or a ramp',
       'signed distance field', 'smooth blend shapes', 'organic mesh'],
     members: byTarget('create_', ['create_box', 'create_sphere', 'create_cylinder', 'create_cone', 'create_capsule', 'create_plane', 'create_disc',
       'create_ring', 'create_torus', 'create_pipe', 'create_arch', 'create_ramp', 'create_stairs', 'create_spiral_stairs', 'create_roof', 'create_sdf']),
@@ -14,7 +14,7 @@ export const MANAGE_GEOMETRY_FOLDS: readonly FoldSpec[] = [
   {
     primary: 'boolean_mesh', selector: 'booleanOp',
     summary: 'Combine placed dynamic mesh actors, chosen by booleanOp, editing targetActor\'s mesh in place in world space: union adds toolActor, subtract cuts it out, intersection keeps only the overlap, trim cuts by trimActorName (keepInside keeps the inside), self_union resolves a mesh\'s own overlaps. keepTool (default true) keeps the tool actor; a result that would be empty or change nothing is refused (EMPTY_RESULT, NO_EFFECT) with the target as it was and the tool kept to move. Triangle counts before and after come back, and the edit is one undo step.',
-    topics: ['boolean', 'union', 'subtract', 'intersection', 'trim mesh', 'csg', 'cut a hole in a mesh'],
+    topics: ['boolean', 'union', 'subtract', 'intersection', 'trim mesh', 'csg', 'cut a hole in a mesh or a wall'],
     members: { union: 'boolean_union', subtract: 'boolean_subtract', intersection: 'boolean_intersection', trim: 'boolean_trim', self_union: 'self_union' },
   },
   {

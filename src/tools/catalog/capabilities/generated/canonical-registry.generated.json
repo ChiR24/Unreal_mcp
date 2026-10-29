@@ -1,5 +1,5 @@
 {
-  "catalogRevision": "5e43b663759362ee",
+  "catalogRevision": "c1646d1ec8fdf17e",
   "recordCount": 476,
   "records": [
     {
@@ -2453,7 +2453,8 @@
           "slippery surface",
           "make the floor slippery",
           "restitution",
-          "surface friction"
+          "surface friction",
+          "make a ball bounce"
         ],
         "summary": "Create or tune a physical material: friction (an icy or slippery floor, a grippy one), bounce (restitution), density and how two touching surfaces combine them. A mesh takes it through control_actor edit_component property PhysMaterialOverride (edit_scs set_property on a class template).",
         "whenToUse": [
@@ -2598,7 +2599,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "8fc12fe57a87d5606b19d0d2839598bf362c09b8576d999dab20e9571ffe3aae",
-        "content": "bb04f298ac4d78b9fc905e62b5ffc82d4ad7e6b482dab88b0ca4cc9f44676458"
+        "content": "11c46a60649f7da3405b0708b92d923e5f85d4e52da01e677dd840af32db5acc"
       }
     },
     {
@@ -28447,6 +28448,7 @@
           "add trees, grass or flowers to the level",
           "make a forest",
           "scatter rocks",
+          "place trees or rocks randomly",
           "foliage",
           "vegetation",
           "grass",
@@ -28842,7 +28844,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "1d69a2ec3894703cfb5473af28e37c8f764811e72feee995d7335213b3db30fa",
-        "content": "ddb33e0dd3499ece839ebee236f1b5b25980ae22bc12a6710815461a163d2f35"
+        "content": "bb493e9daa325085f2e54c6f455e8320470c323cd10a287e7519af9b10b9a79c"
       }
     },
     {
@@ -28867,7 +28869,8 @@
           "dungeon or maze generator",
           "make a dungeon or a maze",
           "modular building kit",
-          "snap modular pieces together"
+          "snap modular pieces together",
+          "build a house or a castle from a kit"
         ],
         "summary": "Lay a modular kit out over a grid of cells so that every face where two pieces meet fits, by wave function collapse, and spawn the layout as one actor (an instanced static mesh component per piece, one undo step). Each piece is a static mesh made to fill one cell of cellSize; pivot says where its own origin sits in the cell (corner: the cell's lowest corner; center; bottom_center: the middle of its floor), and a piece reaching outside that box is refused. Each face of each piece, at each quarter turn about Z when rotations is on (half turns when the cell is not square), is read from the mesh's source geometry as 16 x 16 squares (each read by 4 x 4 rays cast in from just outside, so a wall as thin as 1/40 of the cell shows): two cells sit side by side only where the faces between them match, both empty or covering the same squares to 90% (a corridor 3 squares wide never meets one 4 wide). emptyWeight adds an empty cell (0 forbids it). The grid's outer faces must be empty except on openSides (default -Z: the pieces stand on the ground). A piece whose face nothing in the kit can meet is never placed and unmatchedFaces names it: a wall reaching the top of its cell needs +Z open or a piece to stack on it, and an outer wall needs a piece to stand back to back with or that side open. Instances collide where the piece's mesh has collision. dryRun lays the kit out and spawns nothing. Refused, placing nothing: NO_SOLUTION (no layout: why, and the faces nothing meets), MESH_NOT_FOUND (not a static mesh with source geometry), INVALID_ARGUMENT (a piece outside its cell box, more than 4096 cells, or pieces whose faces take more than 10 s to read).",
         "whenToUse": [
@@ -29172,7 +29175,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "70488f7880894beec77636e81741c67dc258ff3b0d25e09e24ea686166afb988",
-        "content": "c31bb22bc0a2345278c2d4608bb1015456746ad423d31370df9a1c1506822d10"
+        "content": "1e59cb1750d432d27a81f0dffa4f599c64eeff94464e90f5766a506bec86af7f"
       }
     },
     {
@@ -30961,7 +30964,8 @@
           "add bloom",
           "screen tint",
           "change screen tint",
-          "add bloom or depth of field"
+          "add bloom or depth of field",
+          "make the room or the scene darker"
         ],
         "summary": "Set post-process values on a PostProcessVolume, chosen by setting: bloom, exposure, depth of field, motion blur, tonemapper, color grading, LUT, white balance, vignette, grain, chromatic aberration, lens flare, SSAO/GTAO, screen-space and Lumen reflections, blend (screen_percentage sets r.ScreenPercentage instead). The volume is actorName, else the level's unbound (whole level) volume, the persistent level's first; a level with none gets one, named actorName when given. A name no volume has is ACTOR_NOT_FOUND listing the volumes, several unbound volumes AMBIGUOUS. Each value is the FPostProcessSettings field it names and turns that field's override on; settings takes any field by engine name. A value outside the engine's limits, an unknown name and a call that sets nothing are refused, and nothing is written unless every value is taken. One undo step; the level is left unsaved. blendWeight (0-1) and infiniteUnbound set the volume itself with any variant.",
         "whenToUse": [
@@ -31443,7 +31447,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "6e0499250b33a73ef4c234087fc992a568d3d5d48c155fa859237578f2a2736b",
-        "content": "76b32e5dbdb65febcd0865c250283fbfaab98032f169538eddef50b090d670c6"
+        "content": "210c2db97d5415d5cf09819e13325458332c1d623e97a253e47ba39c883319fb"
       }
     },
     {
@@ -34189,7 +34193,8 @@
           "street lamp light",
           "light intensity",
           "light color",
-          "add lights to a dungeon or a room"
+          "add lights to a dungeon or a room",
+          "a spotlight on a statue"
         ],
         "summary": "Create a light actor in the level being edited: point, spot, directional, rect or sky (or any light class), at location (default 0, 0, 300), made Movable, with intensity, color and, in properties, shadow, radius and cone settings. The reply lists what was applied, refused (a setting this kind of light lacks) or adjusted; the spawn is one undo step and the level is left unsaved. During Play it still goes into the edited level, not the running game.",
         "whenToUse": [
@@ -34408,7 +34413,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "9b6d84190c55a5e3cb18427d985a4bec0689dcf9f8e749e3d86228e7b65f785d",
-        "content": "5cb3f76cf8b84b1da4c1717ecb792c52baafcf189f59bf44ee371f34571bf9fe"
+        "content": "9763f954749ea1fc1fbe98050b22380cf3f1a42efc3196c3edfec461495465d4"
       }
     },
     {
@@ -39760,7 +39765,8 @@
           "push the shelf against the wall",
           "place furniture",
           "solve a layout",
-          "move actors until relations hold"
+          "move actors until relations hold",
+          "turn a chair to face a desk"
         ],
         "summary": "Move actors until the relations stated hold, overlapping nothing, in one undo step: say where things go ([\"Lamp on Table\", \"Chair_1 nextTo Table\", \"Chair_1 facing Table\", \"Shelf against Wall\"]) instead of computing coordinates. The relations are those execute's expect judges: A on B (resting on its top), A inside B, A nextTo B (side by side, touching), A against B (touching, its back to B, its front away), A facing B (the line ahead of its front, its X axis, meets B or points within 20 degrees of the centre of B; beside a side of B it turns square to it) and A near B within d (cm, default 100). A solver plans from where the actors stand now, keeping a rough placement wherever it already fits: each actor is a box turned about Z (what it draws), and their places and turns are annealed over how far each relation misses, how deep they overlap each other or the scene around them, and how far they wander; then each contact is snapped exact. What rests on a moved actor moves with it. Each relation is then judged by the engine as expect judges it.",
         "whenToUse": [
@@ -39950,7 +39956,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "f774e8f426b54affae6b80939e25eac3620da88b1771487b341d49f90cd0449f",
-        "content": "f03340761ec4edd93a49befa1c444088d17d3d9665f585e2a7178f67929ba66d"
+        "content": "7706f74dabaf2998e7767386571db1c12b547ad5757b084a4f4fed746bbf8efc"
       }
     },
     {
@@ -42580,7 +42586,8 @@
           "fix overlapping actors",
           "push intersecting actors apart",
           "snap actors to the floor",
-          "floating above the floor or ground"
+          "floating above the floor or ground",
+          "snap an actor down to the surface below it"
         ],
         "summary": "Fix what audit_placement reports, judged by its own rules: a sunk actor moves up and a floating one down onto the surface under it, and intersecting actors are pushed apart the shortest way out of each other, measured on their collision (the smaller moves further; floors, landscapes, locked and attached actors never move). kinds names which of sunk, floating and overlapping to fix, since each can be deliberate. Every move is one undo step; a run checks what it moved again, up to three rounds, and dryRun lists the moves without making them.",
         "whenToUse": [
@@ -42798,7 +42805,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "20b65fcc68e07b80e37090de314deeca7e0bbc9c4e68582714c84201ce40c67b",
-        "content": "4b04fecd76175425722dfb069babb10d36a4cd3e50d5379765cc705eeaeb24ef"
+        "content": "d72147562ec09527c82b68314eb8cc528a36b88e753bda83159282e8b99753fa"
       }
     },
     {
@@ -45043,9 +45050,10 @@
           "shrink actor",
           "scale up a tree or a rock",
           "rotate a door or a wall by 90 degrees",
-          "move the box, the crate or the barrel",
+          "move the box, the crate, the barrel or the statue",
           "move or rotate the chair, the table or the lamp",
           "move a light",
+          "mirror an actor",
           "set position",
           "set rotation",
           "translate"
@@ -45406,7 +45414,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "6af5b619f64ce87631986e9ba9d0b1fec5c056e5aa571251d34e3202107f2ea4",
-        "content": "35012fdb4863c9fc4234d9f9e807a04db6ee9537f9f61b235f1d7f53e2c674cf"
+        "content": "db75dd0643c7cf953b95a040297f7e565f721a72351096ae54a10023a1c4335b"
       }
     },
     {
@@ -74988,6 +74996,7 @@
           "add smoke or steam",
           "water fountain",
           "muzzle flash",
+          "a campfire, fireflies or falling leaves",
           "particle system",
           "vfx",
           "particle effect",
@@ -75332,7 +75341,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "332be23fa2be58488ecf91463343001eb63f4bcb2731c89022912790fc94502c",
-        "content": "111b44e9bd1c48dd86f79dafc2775070182233b6b91b8c4b9ddf210342ca0430"
+        "content": "cb732b05fc5010756cb6d5c10819cc693047778b2e89933f9354cddc746e8a8c"
       }
     },
     {
@@ -78646,7 +78655,7 @@
           "intersection",
           "trim mesh",
           "csg",
-          "cut a hole in a mesh"
+          "cut a hole in a mesh or a wall"
         ],
         "summary": "Combine placed dynamic mesh actors, chosen by booleanOp, editing targetActor's mesh in place in world space: union adds toolActor, subtract cuts it out, intersection keeps only the overlap, trim cuts by trimActorName (keepInside keeps the inside), self_union resolves a mesh's own overlaps. keepTool (default true) keeps the tool actor; a result that would be empty or change nothing is refused (EMPTY_RESULT, NO_EFFECT) with the target as it was and the tool kept to move. Triangle counts before and after come back, and the edit is one undo step.",
         "whenToUse": [
@@ -78847,7 +78856,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "990842cc21739f98b3e0b1dc0c04063fce343ee11604d2a5ff13b96ed61a5dfd",
-        "content": "3494ba9ed62e049c29e57439f94700202348473997abb42fd89ce4a934de455f"
+        "content": "a2f505534c1688017c9cb36e214895840951e9cebc7c231ef86898b2d9319ba9"
       }
     },
     {
@@ -79835,7 +79844,7 @@
           "torus",
           "make a cube or ramp",
           "create a cube",
-          "add stairs or a ramp",
+          "add stairs, a staircase or a ramp",
           "signed distance field",
           "smooth blend shapes",
           "organic mesh",
@@ -80683,7 +80692,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "48dc3aeda0cfc28ef5bf650e1d7ee3a40ec94f237850c3de3784d0c72dcb6f53",
-        "content": "1115fb6bf86195d4ac11e12aa2a2f4f852b960aa808a6e2ccd241ca5df01895f"
+        "content": "e8a72e1e3c100da8f5887e36bd1bbb0669c72693444b9eb225dbced3b905cf5b"
       }
     },
     {

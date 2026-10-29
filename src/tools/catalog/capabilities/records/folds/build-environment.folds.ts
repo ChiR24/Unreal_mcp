@@ -37,7 +37,7 @@ export const BUILD_ENVIRONMENT_FOLDS: readonly FoldSpec[] = [
     // led callers to ask for 120 instances in a 6000uu radius, get a
     // success back, and find an empty level.
     summary: 'Place foliage (trees, grass, bushes, rocks): create or update a foliage type asset, place explicit instances/transforms, or paint instances over a brush disc or a box area, dropped onto the ground. Placing and painting are one undo step each.',
-    topics: ['add foliage', 'paint foliage', 'foliage instances', 'scatter foliage', 'scatter grass', 'fill area with foliage', 'plant trees', 'place bushes', 'add trees, grass or flowers to the level', 'make a forest', 'scatter rocks'],
+    topics: ['add foliage', 'paint foliage', 'foliage instances', 'scatter foliage', 'scatter grass', 'fill area with foliage', 'plant trees', 'place bushes', 'add trees, grass or flowers to the level', 'make a forest', 'scatter rocks', 'place trees or rocks randomly'],
     members: { scatter: 'add_foliage', instances: 'add_foliage_instances', paint: 'paint_foliage' },
   },
   {
@@ -55,7 +55,7 @@ export const BUILD_ENVIRONMENT_FOLDS: readonly FoldSpec[] = [
   // lighting
   {
     primary: 'create_light', summary: LIGHT_SUMMARY, whenToUse: LIGHT_WHEN_TO_USE, whenNotToUse: LIGHT_WHEN_NOT_TO_USE,
-    topics: ['add point light', 'add spot light', 'add a light', 'place a light', 'rect light', 'spotlight', 'street lamp light', 'light intensity', 'light color', 'add lights to a dungeon or a room'],
+    topics: ['add point light', 'add spot light', 'add a light', 'place a light', 'rect light', 'spotlight', 'street lamp light', 'light intensity', 'light color', 'add lights to a dungeon or a room', 'a spotlight on a statue'],
     members: ['create_dynamic_light', 'spawn_light'],
   },
   {
@@ -86,7 +86,7 @@ export const BUILD_ENVIRONMENT_FOLDS: readonly FoldSpec[] = [
   {
     primary: 'configure_post_process', selector: 'setting',
     summary: 'Set post-process values on a PostProcessVolume, chosen by setting: bloom, exposure, depth of field, motion blur, tonemapper, color grading, LUT, white balance, vignette, grain, chromatic aberration, lens flare, SSAO/GTAO, screen-space and Lumen reflections, blend (screen_percentage sets r.ScreenPercentage instead). The volume is actorName, else the level\'s unbound (whole level) volume, the persistent level\'s first; a level with none gets one, named actorName when given. A name no volume has is ACTOR_NOT_FOUND listing the volumes, several unbound volumes AMBIGUOUS. Each value is the FPostProcessSettings field it names and turns that field\'s override on; settings takes any field by engine name. A value outside the engine\'s limits, an unknown name and a call that sets nothing are refused, and nothing is written unless every value is taken. One undo step; the level is left unsaved. blendWeight (0-1) and infiniteUnbound set the volume itself with any variant.',
-    topics: ['post process', 'bloom', 'exposure', 'auto exposure', 'eye adaptation', 'depth of field', 'motion blur', 'tonemapper', 'color grading', 'vignette', 'add bloom', 'screen tint', 'change screen tint', 'add bloom or depth of field'],
+    topics: ['post process', 'bloom', 'exposure', 'auto exposure', 'eye adaptation', 'depth of field', 'motion blur', 'tonemapper', 'color grading', 'vignette', 'add bloom', 'screen tint', 'change screen tint', 'add bloom or depth of field', 'make the room or the scene darker'],
     members: byName(['configure_bloom', 'set_bloom_intensity', 'set_bloom_threshold', 'configure_exposure', 'set_exposure_compensation', 'set_exposure_method',
       'set_exposure_min_max', 'configure_dof', 'set_dof_method', 'set_focal_distance', 'set_aperture', 'configure_bokeh', 'configure_motion_blur',
       'set_motion_blur_amount', 'set_motion_blur_max', 'configure_tonemapper', 'set_tonemapper_type', 'set_pp_color_grading', 'set_pp_lut',

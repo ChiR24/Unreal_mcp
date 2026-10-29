@@ -39,7 +39,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 <summary><b>🔧 Fixed</b></summary>
 
 - **An alias a family member declared runs that member**: `blueprint.add_component_to_blueprint`, `set_default_value`, `create_widget`, `hide_widget`, `asset.find_assets` and `manage_networking.replicate_variable`/`enable_replication` ran the family's default or were refused for its selector.
-- **Search: plain requests find their capability**: a "why" question reads before it writes, "move the crate" moves the actor (a record naming the verb only in passing no longer takes it), "change the volume" finds the sound class instead of deleting a volume, and "create a cube", "add a sky light", "make a dungeon", "make an exe" and forty-nine more find their owner, as "undo last edit" finds `undo` and "create a vehicle" `configure_vehicle`.
+- **Search: plain requests find their capability**: a "why" question reads before it writes, "move the crate" moves the actor (a record naming the verb only in passing no longer takes it), "change the volume" finds the sound class instead of deleting a volume, and "create a cube", "add a sky light", "make a dungeon", "add a campfire", "make an exe" and sixty-one more find their owner, as "undo last edit" finds `undo` and "create a vehicle" `configure_vehicle`.
 - **The directory report's reply carries its assets**: the record declared no outputs, so the list was cut from every reply.
 
 </details>

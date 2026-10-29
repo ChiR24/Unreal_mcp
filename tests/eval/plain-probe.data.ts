@@ -888,4 +888,18 @@ export const PLAIN_PROBE: readonly PlainProbeCase[] = [
   { query: 'turn these actors into a blueprint', accepted: ['blueprint.convert_actors_to_blueprint'] },
   // Actors moved between the open level and its sublevels.
   { query: 'move actors into a sublevel', accepted: ['manage_level.move_actors_to_level'] },
+  // What a level designer types, each met by one natural topic on its owner.
+  { query: 'add a campfire', accepted: ['manage_effect.create_effect'] },
+  { query: 'add fireflies', accepted: ['manage_effect.create_effect'] },
+  { query: 'build a house', accepted: ['build_environment.assemble_modules'] },
+  { query: 'make a staircase', accepted: ['manage_geometry.create_primitive'] },
+  { query: 'make the room darker', accepted: ['build_environment.configure_post_process'] },
+  { query: 'place trees randomly', accepted: ['build_environment.add_foliage'] },
+  { query: 'add a spotlight on the statue', accepted: ['build_environment.create_light'] },
+  { query: 'move the statue', accepted: ['control_actor.set_transform'] },
+  { query: 'snap the actor to the surface below', accepted: ['control_actor.fix_placement'] },
+  { query: 'cut a hole in the wall', accepted: ['manage_geometry.boolean_mesh'] },
+  { query: 'turn the chair to face the desk', accepted: ['control_actor.arrange_by_relations'] },
+  { query: 'mirror the actor', accepted: ['control_actor.set_transform'] },
+  { query: 'make the ball bounce', accepted: ['animation_physics.create_physical_material'] },
 ];
