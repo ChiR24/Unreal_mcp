@@ -5177,6 +5177,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "maxItems": 3,
           "description": "World or relative location as [x, y, z]."
         },
+        "locked": {
+          "type": "boolean",
+          "description": "true locks (default), false unlocks."
+        },
         "materialIndex": {
           "type": "number",
           "description": "Alias of materialSlot accepted by the material handlers (normalizeArgs alias)."
@@ -5564,6 +5568,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             "arrange_by_relations",
             "snap_to_grid",
             "distribute_actors",
+            "lock_actors",
             "attach",
             "detach",
             "set_blueprint_variables",
@@ -5627,6 +5632,15 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
                 "x-unreal-reflection-boundary": true
               },
               "description": "Each actor as {actor, from [x, y, z], to [x, y, z], rotation [pitch, yaw, roll] when rotationDeg is set, movedCm}."
+            },
+            {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "additionalProperties": true,
+                "x-unreal-reflection-boundary": true
+              },
+              "description": "Each actor as {actor, locked (read back), changed}."
             },
             {
               "type": "array",
@@ -5846,6 +5860,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           },
           "description": "summary: matching actors per actor tag, as {name, count} rows sorted by name."
         },
+        "changed": {
+          "type": "number",
+          "description": "Actors whose lock changed."
+        },
         "components": {
           "type": "array",
           "items": {
@@ -6056,6 +6074,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           ],
           "description": "World location [x, y, z] read back off the actor after the write."
         },
+        "locked": {
+          "type": "boolean",
+          "description": "The state asked for."
+        },
         "massKg": {
           "type": "number",
           "description": "Mass of the body pushed: the root when it is a physics body, else a part that simulates, else the first mesh."
@@ -6175,6 +6197,13 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "nextOffset": {
           "type": "number",
           "description": "The offset of the next page; present only when hasMore."
+        },
+        "notAsAsked": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Actors that still do not read as asked: one inside a level instance that is not being edited always reads locked. Absent when every one does."
         },
         "note": {
           "type": "string",
@@ -6530,6 +6559,12 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
               "type": "object",
               "additionalProperties": true,
               "x-unreal-reflection-boundary": true,
+              "description": "What editor undo takes back: the changes are one step. Absent when nothing changed."
+            },
+            {
+              "type": "object",
+              "additionalProperties": true,
+              "x-unreal-reflection-boundary": true,
               "description": "What editor undo takes back: the moves are one step. Absent under dryRun and when nothing moved."
             },
             {
@@ -6551,7 +6586,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
               "description": "Whether editor undo takes the spawn back: {undoable: true, transactionScope: \"Spawn Actors\"} (control_editor undo removes every actor the call made), or {undoable: false, reasonCode, reason}."
             }
           ],
-          "description": "What editor undo takes back: the moves are one step. Absent under dryRun and when nothing moved."
+          "description": "What editor undo takes back: the changes are one step. Absent when nothing changed."
         },
         "unmet": {
           "type": "number",

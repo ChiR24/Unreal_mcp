@@ -93,6 +93,25 @@ const testCases = [
   ] },
   { scenario: 'ERROR: distribute_actors names an actor that is not there', toolName: 'control_actor', arguments: { action: 'distribute_actors', actorNames: [CRATES[0], CRATES[1], `MCP_NoSuchActor_${ts}`] }, expected: 'error|ACTOR_NOT_FOUND' },
   { scenario: 'ERROR: distribute_actors with the same actor named three times', toolName: 'control_actor', arguments: { action: 'distribute_actors', actorNames: [CRATES[0], CRATES[0], CRATES[0]] }, expected: 'error|INVALID_ARGUMENT' },
+  // lock_actors: the shelf and the lamp locked; fix_placement then leaves the lamp where it is.
+  { scenario: 'UPDATE: lock_actors locks the shelf and the lamp', toolName: 'control_actor', arguments: { action: 'lock_actors', actorNames: [SHELF, LAMP] }, expected: 'success', assertions: [
+    { path: 'structuredContent.result.changed', equals: 2, label: 'both locked' },
+    { path: 'structuredContent.result.actors.1.locked', equals: true, label: 'read back locked' },
+    { path: 'structuredContent.result.undo.undoable', equals: true, label: 'one undo step' },
+  ] },
+  { scenario: 'READ: locking them again changes nothing and makes no undo step', toolName: 'control_actor', arguments: { action: 'lock_actors', actorNames: [SHELF, LAMP] }, expected: 'success', assertions: [
+    { path: 'structuredContent.result.changed', equals: 0, label: 'already locked' },
+    { path: 'structuredContent.result.undo', exists: false, label: 'and no undo step' },
+  ] },
+  { scenario: 'READ: fix_placement leaves the locked lamp where it is', toolName: 'control_actor', arguments: { action: 'fix_placement', kinds: ['sunk', 'floating'], actorNames: [LAMP], dryRun: true }, expected: 'success', assertions: [
+    { path: 'structuredContent.result.skipped.0.actorName', equals: LAMP, label: 'the lamp is skipped' },
+    { path: 'structuredContent.result.skipped.0.reason', includes: 'Lock Actor Movement', label: 'because it is locked' },
+  ] },
+  { scenario: 'UPDATE: lock_actors with locked false unlocks the lamp', toolName: 'control_actor', arguments: { action: 'lock_actors', actorNames: [LAMP], locked: false }, expected: 'success', assertions: [
+    { path: 'structuredContent.result.actors.0.locked', equals: false, label: 'unlocked' },
+    { path: 'structuredContent.result.changed', equals: 1, label: 'only the lamp changed' },
+  ] },
+  { scenario: 'ERROR: lock_actors names an actor that is not there', toolName: 'control_actor', arguments: { action: 'lock_actors', actorNames: [LAMP, `MCP_NoSuchActor_${ts}`] }, expected: 'error|ACTOR_NOT_FOUND' },
   { scenario: 'DELETE: the room by its tag', toolName: 'control_actor', arguments: { action: 'delete_by_tag', tag: TAG }, expected: 'success' },
 ];
 

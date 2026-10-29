@@ -4,7 +4,7 @@
 
 # Action reference
 
-Catalog revision: `12e2da800ff89bb0`
+Catalog revision: `0a3bf588f124a744`
 
 Both transports expose exactly ONE public MCP tool, `unreal`, with the four
 operations `search` / `describe` / `execute` / `configure`. The parent tools
@@ -13,7 +13,7 @@ by `tools/list` and a direct `tools/call` on one returns a
 `DIRECT_TOOL_CALL_REMOVED` receipt rather than executing
 (`src/server/gateway/direct-call-migration.ts`).
 
-The catalog declares 473 capabilities across
+The catalog declares 474 capabilities across
 23 internal parent tools.
 Every row is derived from the capability record that the gateway actually
 validates against, so `execute` cannot accept an action this table omits.
@@ -41,7 +41,7 @@ validates against, so `execute` cannot accept an action this table omits.
 | --- | --- | --- | --- | --- | --- |
 | `animation_physics` | 32 | 5 | 25 | 2 | animation physics |
 | `build_environment` | 43 | 5 | 35 | 3 | environment |
-| `control_actor` | 31 | 9 | 20 | 2 | actor |
+| `control_actor` | 32 | 9 | 21 | 2 | actor |
 | `control_editor` | 29 | 10 | 15 | 4 | editor |
 | `inspect` | 27 | 22 | 4 | 1 | inspect |
 | `manage_ai` | 17 | 3 | 14 | 0 | manage ai |
@@ -65,7 +65,7 @@ validates against, so `execute` cannot accept an action this table omits.
 
 ## Capabilities requiring consent
 
-74 of 473 capabilities require consent.
+74 of 474 capabilities require consent.
 
 | Capability | Tool | Action | Effect | Consent |
 | --- | --- | --- | --- | --- |
@@ -311,6 +311,7 @@ validates against, so `execute` cannot accept an action this table omits.
 | `control_actor.get_components` | `control_actor` | `get_components` | read | read | none | `control_actor.get_components` `control_actor.get_actor_bounds` `control_actor.get_actor_components` |
 | `control_actor.get_transform` | `control_actor` | `get_transform` | read | read | none | `control_actor.get_transform` `control_actor.sample_motion` `control_actor.get_actor_transform` |
 | `control_actor.list` | `control_actor` | `list` | read | read | none | `control_actor.list` |
+| `control_actor.lock_actors` | `control_actor` | `lock_actors` | write | write | none | `control_actor.lock_actors` |
 | `control_actor.rename` | `control_actor` | `rename` | write | write | none | `control_actor.rename` |
 | `control_actor.set_actor_collision` | `control_actor` | `set_actor_collision` | write | write | none | `control_actor.set_actor_collision` |
 | `control_actor.set_blueprint_variables` | `control_actor` | `set_blueprint_variables` | write | write | none | `control_actor.set_blueprint_variables` |

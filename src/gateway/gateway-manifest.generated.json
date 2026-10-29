@@ -4024,6 +4024,7 @@
         "arrange_by_relations",
         "snap_to_grid",
         "distribute_actors",
+        "lock_actors",
         "attach",
         "detach",
         "set_blueprint_variables",
@@ -4073,6 +4074,7 @@
         "kinds",
         "limit",
         "location",
+        "locked",
         "materialIndex",
         "materialPath",
         "materialSlot",
@@ -4623,6 +4625,10 @@
             "maxItems": 3,
             "description": "World or relative location as [x, y, z]."
           },
+          "locked": {
+            "type": "boolean",
+            "description": "true locks (default), false unlocks."
+          },
           "materialIndex": {
             "type": "number",
             "description": "Alias of materialSlot accepted by the material handlers (normalizeArgs alias)."
@@ -5010,6 +5016,7 @@
               "arrange_by_relations",
               "snap_to_grid",
               "distribute_actors",
+              "lock_actors",
               "attach",
               "detach",
               "set_blueprint_variables",

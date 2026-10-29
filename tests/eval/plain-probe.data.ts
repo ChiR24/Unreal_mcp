@@ -878,4 +878,9 @@ export const PLAIN_PROBE: readonly PlainProbeCase[] = [
   { query: 'move the chair', accepted: ['control_actor.set_transform'] },
   { query: 'move the barrel', accepted: ['control_actor.set_transform'] },
   { query: 'rotate the lamp', accepted: ['control_actor.set_transform'] },
+  // An actor locked against moving in the editor, and a door locked in the game.
+  { query: 'lock the floor', accepted: ['control_actor.lock_actors'] },
+  { query: 'unlock the actor', accepted: ['control_actor.lock_actors'] },
+  { query: 'lock the door', accepted: ['manage_interaction.configure_interactable'] },
+  { query: 'make a locked door', accepted: ['manage_interaction.create_interactable'] },
 ];
