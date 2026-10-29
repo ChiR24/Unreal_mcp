@@ -1,6 +1,6 @@
 {
-  "catalogRevision": "21dd6a84f123f08e",
-  "recordCount": 471,
+  "catalogRevision": "a54921f222edfc73",
+  "recordCount": 472,
   "records": [
     {
       "id": "animation_physics.analyze_animation",
@@ -50129,6 +50129,170 @@
         "algorithm": "sha256",
         "schema": "4c96dad63e9505184070f33c00268fe209de2dc4fba37cae9f851b1942c6a822",
         "content": "bf3a878318e93187682b82af7f4bb6beb3dd825d2b541cc359493ff9401245a8"
+      }
+    },
+    {
+      "id": "control_editor.set_selected_actors",
+      "aliases": [],
+      "legacyIds": [
+        {
+          "tool": "control_editor",
+          "action": "set_selected_actors"
+        }
+      ],
+      "discovery": {
+        "domain": "editor",
+        "family": "asset",
+        "topics": [
+          "set_selected_actors",
+          "select actors in the editor",
+          "select all cubes or all lights",
+          "deselect actors",
+          "clear the selection",
+          "select more actors",
+          "select in the outliner"
+        ],
+        "summary": "Set which actors the editor has selected, as clicking them in the viewport or the Outliner does (the Details panel shows them): mode replace (the default) makes actorNames the selection, add adds them, remove takes them off; replace with no actorNames clears it. Names are labels, object names or paths, matched exactly; one that matches nothing refuses with ACTOR_NOT_FOUND and the selection stays as it was. A change is one undo step; a call that leaves the selection as it was makes none. The reply lists the selection after the call by label (get_selected_actors lists object names).",
+        "whenToUse": [
+          "The user should see certain actors selected, or edit them together in the Details panel.",
+          "An editor command that acts on the selection needs these actors selected.",
+          "The selection must be cleared."
+        ],
+        "whenNotToUse": [
+          "Only reading what is selected: use get_selected_actors.",
+          "The viewport should also frame an actor: focus_actor selects it and moves the camera to it."
+        ]
+      },
+      "schemas": {
+        "input": {
+          "$schema": "https://json-schema.org/draft/2020-12/schema",
+          "type": "object",
+          "properties": {
+            "action": {
+              "type": "string",
+              "description": "The action to execute on the parent tool."
+            },
+            "actorNames": {
+              "type": "array",
+              "maxItems": 500,
+              "items": {
+                "type": "string"
+              },
+              "description": "The actors, by label, object name or path; with mode replace, none clears the selection."
+            },
+            "mode": {
+              "type": "string",
+              "enum": [
+                "replace",
+                "add",
+                "remove"
+              ],
+              "description": "replace (default): these actors become the selection; add: they join it; remove: they leave it. add and remove need actorNames."
+            }
+          },
+          "required": [
+            "action"
+          ],
+          "additionalProperties": false
+        },
+        "output": {
+          "$schema": "https://json-schema.org/draft/2020-12/schema",
+          "type": "object",
+          "properties": {
+            "success": {
+              "type": "boolean",
+              "description": "Whether the action succeeded."
+            },
+            "message": {
+              "type": "string",
+              "description": "Human-readable result message."
+            },
+            "details": {
+              "type": "object",
+              "x-unreal-reflection-boundary": true,
+              "description": "Additional handler result fields not named by the contract."
+            },
+            "selected": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "description": "Labels of the actors selected after the call (the first 100)."
+            },
+            "selectedCount": {
+              "type": "number",
+              "description": "How many actors are selected after the call."
+            },
+            "notSelected": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "description": "Named actors the editor would not select or deselect: one in a locked level, or one it selects through its parent actor."
+            },
+            "undo": {
+              "type": "object",
+              "additionalProperties": true,
+              "x-unreal-reflection-boundary": true,
+              "description": "What editor undo takes back: the change is one step. Absent when the selection was already what was asked."
+            }
+          },
+          "required": [
+            "success"
+          ],
+          "additionalProperties": false
+        }
+      },
+      "examples": [
+        {
+          "title": "Set which actors the editor has selected, as clicking them in the viewport or the Outliner does (the Details panel shows them): mode replace (the default) makes actorNames the selection, add adds them, remove takes them off; replace with no actorNames clears it. Names are labels, object names or paths, matched exactly; one that matches nothing refuses with ACTOR_NOT_FOUND and the selection stays as it was. A change is one undo step; a call that leaves the selection as it was makes none. The reply lists the selection after the call by label (get_selected_actors lists object names).",
+          "input": {
+            "action": "set_selected_actors",
+            "actorNames": [
+              "Wall_1",
+              "Wall_2"
+            ]
+          },
+          "output": {
+            "success": true,
+            "message": "2 actor(s) selected.",
+            "selected": [
+              "Wall_1",
+              "Wall_2"
+            ],
+            "selectedCount": 2
+          }
+        }
+      ],
+      "availability": {
+        "requiredPlugins": [],
+        "editorStates": [
+          "edit"
+        ]
+      },
+      "behavior": {
+        "effect": "write",
+        "idempotency": "non-idempotent",
+        "longRunning": false,
+        "safeToRetry": false
+      },
+      "policy": {
+        "requiredScope": "write",
+        "consent": "none",
+        "dataAccess": "project-write"
+      },
+      "cost": {
+        "latency": "instant",
+        "resources": "low"
+      },
+      "routing": {
+        "parentTool": "control_editor",
+        "dispatchAction": "set_selected_actors"
+      },
+      "hashes": {
+        "algorithm": "sha256",
+        "schema": "5aaec3f5e692d2fbed4e2744066e7c079149e822ad38577ca6d4d011c3c939a7",
+        "content": "97d7c4357a157f8dc00e86abd0ae01f2903c267e479f64f70d8b0e22493932a6"
       }
     },
     {

@@ -126,6 +126,29 @@ const testCases = [
   // Live UMG is driven by reflection, not the cursor; outside PIE nothing is on screen.
   { scenario: 'ACTION: simulate_input widget click', toolName: 'control_editor', arguments: { action: 'simulate_input', type: 'widget_click', widget: 'PlayButton' }, expected: 'success|No live widget' },
   { scenario: 'ACTION: focus_actor', toolName: 'control_editor', arguments: { action: 'focus_actor', actorName: FOCUS_ACTOR }, expected: 'success' },
+  // set_selected_actors: focus_actor left the focus actor selected.
+  { scenario: 'ACTION: set_selected_actors replaces the selection', toolName: 'control_editor', arguments: { action: 'set_selected_actors', actorNames: [PIE_PAWN] }, expected: 'success', assertions: [
+    { path: 'structuredContent.result.selected.0', equals: PIE_PAWN, label: 'the pawn is selected' },
+    { path: 'structuredContent.result.selectedCount', equals: 1, label: 'and nothing else' },
+    { path: 'structuredContent.result.undo.undoable', equals: true, label: 'one undo step' },
+  ] },
+  { scenario: 'ACTION: undo puts the earlier selection back', toolName: 'control_editor', arguments: { action: 'undo' }, expected: 'success' },
+  { scenario: 'READ: set_selected_actors adding what is selected changes nothing', toolName: 'control_editor', arguments: { action: 'set_selected_actors', actorNames: [FOCUS_ACTOR], mode: 'add' }, expected: 'success', assertions: [
+    { path: 'structuredContent.result.selectedCount', equals: 1, label: 'the focus actor alone, as undo left it' },
+    { path: 'structuredContent.result.undo', exists: false, label: 'and no undo step' },
+  ] },
+  { scenario: 'ACTION: set_selected_actors adds to the selection', toolName: 'control_editor', arguments: { action: 'set_selected_actors', actorNames: [PIE_PAWN], mode: 'add' }, expected: 'success', assertions: [
+    { path: 'structuredContent.result.selectedCount', equals: 2, label: 'both selected' },
+  ] },
+  { scenario: 'ACTION: set_selected_actors takes one off the selection', toolName: 'control_editor', arguments: { action: 'set_selected_actors', actorNames: [FOCUS_ACTOR], mode: 'remove' }, expected: 'success', assertions: [
+    { path: 'structuredContent.result.selected.0', equals: PIE_PAWN, label: 'the pawn stays' },
+    { path: 'structuredContent.result.selectedCount', equals: 1, label: 'alone' },
+  ] },
+  { scenario: 'ACTION: set_selected_actors with no names clears the selection', toolName: 'control_editor', arguments: { action: 'set_selected_actors' }, expected: 'success', assertions: [
+    { path: 'structuredContent.result.selectedCount', equals: 0, label: 'nothing selected' },
+  ] },
+  { scenario: 'ERROR: set_selected_actors names an actor that is not there', toolName: 'control_editor', arguments: { action: 'set_selected_actors', actorNames: [`MCP_NoSuchActor_${ts}`] }, expected: 'error|ACTOR_NOT_FOUND' },
+  { scenario: 'ERROR: set_selected_actors add with no names', toolName: 'control_editor', arguments: { action: 'set_selected_actors', mode: 'add' }, expected: 'error|INVALID_ARGUMENT' },
 
   // === EDITOR DISPLAY / MODE / HISTORY ===
   // The game clock exists only while PIE runs; in edit mode set_game_speed used to

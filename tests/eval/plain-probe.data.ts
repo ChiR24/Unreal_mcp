@@ -811,4 +811,8 @@ export const PLAIN_PROBE: readonly PlainProbeCase[] = [
   // Pieces lined up on a grid.
   { query: 'snap to grid', accepted: ['control_actor.snap_to_grid'] },
   { query: 'align actors to the grid', accepted: ['control_actor.snap_to_grid'] },
+  // The editor's selection: set by the write, read by the read ("selected" folds to "select").
+  { query: 'select the cubes', accepted: ['control_editor.set_selected_actors'] },
+  { query: 'clear the selection', accepted: ['control_editor.set_selected_actors'] },
+  { query: 'selected actors', accepted: ['inspect.get_editor_state'] },
 ];

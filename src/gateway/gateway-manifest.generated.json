@@ -5027,6 +5027,7 @@
         "close_asset",
         "open_level",
         "focus_actor",
+        "set_selected_actors",
         "save_all",
         "simulate_input",
         "undo",
@@ -5038,6 +5039,7 @@
       "parameterNames": [
         "acceptRadius",
         "actorName",
+        "actorNames",
         "arguments",
         "assetPath",
         "assetPaths",
@@ -5138,6 +5140,14 @@
           "actorName": {
             "type": "string",
             "description": "Name of the actor to target."
+          },
+          "actorNames": {
+            "type": "array",
+            "maxItems": 500,
+            "items": {
+              "type": "string"
+            },
+            "description": "The actors, by label, object name or path; with mode replace, none clears the selection."
           },
           "arguments": {
             "type": "object",
@@ -5702,6 +5712,7 @@
               "close_asset",
               "open_level",
               "focus_actor",
+              "set_selected_actors",
               "save_all",
               "simulate_input",
               "undo",

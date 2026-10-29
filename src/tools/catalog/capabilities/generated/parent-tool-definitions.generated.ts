@@ -6579,6 +6579,14 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "string",
           "description": "Name of the actor to target."
         },
+        "actorNames": {
+          "type": "array",
+          "maxItems": 500,
+          "items": {
+            "type": "string"
+          },
+          "description": "The actors, by label, object name or path; with mode replace, none clears the selection."
+        },
         "arguments": {
           "type": "object",
           "x-unreal-reflection-boundary": true,
@@ -7142,6 +7150,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             "close_asset",
             "open_level",
             "focus_actor",
+            "set_selected_actors",
             "save_all",
             "simulate_input",
             "undo",
@@ -7587,6 +7596,13 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "string",
           "description": "Screenshot source that was captured."
         },
+        "notSelected": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Named actors the editor would not select or deselect: one in a locked level, or one it selects through its parent actor."
+        },
         "opened": {
           "type": "boolean",
           "description": "True when the tab manager returned a live tab."
@@ -7667,6 +7683,17 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             "type": "string"
           },
           "description": "Blueprint runtime errors during the leg, each with the node that raised it."
+        },
+        "selected": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Labels of the actors selected after the call (the first 100)."
+        },
+        "selectedCount": {
+          "type": "number",
+          "description": "How many actors are selected after the call."
         },
         "settledSeconds": {
           "type": "number",
@@ -7760,6 +7787,12 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "truncated": {
           "type": "boolean",
           "description": "More widgets were left out past maxWidgets."
+        },
+        "undo": {
+          "type": "object",
+          "additionalProperties": true,
+          "x-unreal-reflection-boundary": true,
+          "description": "What editor undo takes back: the change is one step. Absent when the selection was already what was asked."
         },
         "unsavedCount": {
           "type": "integer",

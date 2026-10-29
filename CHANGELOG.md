@@ -24,6 +24,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Assets nothing uses**: `inspect_asset` `lookup: report` with `reportType: unreferenced` lists the assets under a folder that no saved package refers to (levels and redirectors left out).
 - **`reimport`** brings assets up to date with their source files, without a dialog: each from the file it was imported from, or one from a new file in the project; an asset whose file is gone is listed and left as it is.
 - **`snap_to_grid`** moves actors onto a grid (the editor's own step by default) and can square their rotations, in one undo step.
+- **`set_selected_actors`** sets the editor's selection (replace, add, remove or clear), one undo step when it changes.
 - **Names models invent land**: an alias sent as a tool and action resolves (`system_control` `restart_editor` runs `control_editor`'s), with five new ones mined from session transcripts (`call_function`, `save_all` under `manage_asset`, `set_blueprint_variables` under `manage_blueprint`, `connect_nodes` for a Blueprint's `connect_pins`).
 - **`npx unreal-engine-mcp-server init <client>`** shows (and with `--write` saves) the server's entry in Claude Code's, Cursor's, VS Code's, Gemini's or Codex's MCP config; **`doctor`** checks Node, the token (never shown), the editor's answer and both versions.
 

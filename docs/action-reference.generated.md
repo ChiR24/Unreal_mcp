@@ -4,7 +4,7 @@
 
 # Action reference
 
-Catalog revision: `21dd6a84f123f08e`
+Catalog revision: `a54921f222edfc73`
 
 Both transports expose exactly ONE public MCP tool, `unreal`, with the four
 operations `search` / `describe` / `execute` / `configure`. The parent tools
@@ -13,7 +13,7 @@ by `tools/list` and a direct `tools/call` on one returns a
 `DIRECT_TOOL_CALL_REMOVED` receipt rather than executing
 (`src/server/gateway/direct-call-migration.ts`).
 
-The catalog declares 471 capabilities across
+The catalog declares 472 capabilities across
 23 internal parent tools.
 Every row is derived from the capability record that the gateway actually
 validates against, so `execute` cannot accept an action this table omits.
@@ -42,7 +42,7 @@ validates against, so `execute` cannot accept an action this table omits.
 | `animation_physics` | 32 | 5 | 25 | 2 | animation physics |
 | `build_environment` | 43 | 5 | 35 | 3 | environment |
 | `control_actor` | 30 | 9 | 19 | 2 | actor |
-| `control_editor` | 28 | 10 | 14 | 4 | editor |
+| `control_editor` | 29 | 10 | 15 | 4 | editor |
 | `inspect` | 27 | 22 | 4 | 1 | inspect |
 | `manage_ai` | 17 | 3 | 14 | 0 | manage ai |
 | `manage_asset` | 54 | 14 | 35 | 5 | asset, datatable, enum, material, struct, texture |
@@ -65,7 +65,7 @@ validates against, so `execute` cannot accept an action this table omits.
 
 ## Capabilities requiring consent
 
-74 of 471 capabilities require consent.
+74 of 472 capabilities require consent.
 
 | Capability | Tool | Action | Effect | Consent |
 | --- | --- | --- | --- | --- |
@@ -343,6 +343,7 @@ validates against, so `execute` cannot accept an action this table omits.
 | `control_editor.screenshot` | `control_editor` | `screenshot` | read | read | none | `control_editor.screenshot` `control_editor.take_screenshot` |
 | `control_editor.set_camera` | `control_editor` | `set_camera` | read | read | none | `control_editor.set_camera` `control_editor.set_camera_fov` `control_editor.set_view_target` `control_editor.set_camera_position` `control_editor.set_viewport_camera` `control_editor.set_game_view_target` |
 | `control_editor.set_game_speed` | `control_editor` | `set_game_speed` | write | write | none | `control_editor.set_game_speed` `control_editor.set_fixed_delta_time` `control_editor.step_frame` `control_editor.single_frame_step` |
+| `control_editor.set_selected_actors` | `control_editor` | `set_selected_actors` | write | write | none | `control_editor.set_selected_actors` |
 | `control_editor.set_viewport_resolution` | `control_editor` | `console_command` | read | read | none | `control_editor.set_viewport_resolution` |
 | `control_editor.simulate_input` | `control_editor` | `simulate_input` | write | write | none | `control_editor.simulate_input` |
 | `control_editor.start_recording` | `control_editor` | `start_recording` | write | write | none | `control_editor.start_recording` `control_editor.stop_recording` |

@@ -1,6 +1,7 @@
 #include "Domains/ControlEditor/McpEditorSupport.h"
 #include "Domains/ControlEditor/Checkpoint/McpEditorCheckpoint.h"
 #include "Domains/ControlEditor/EditorUi/McpEditorUi.h"
+#include "Domains/ControlEditor/Selection/McpEditorSelection.h"
 #include "Domains/ControlEditor/Toolsets/McpEditorToolsets.h"
 #include "Domains/Play/McpExplore.h"
 #include "Domains/Play/McpPlaytest.h"
@@ -49,6 +50,8 @@ bool UEngineWireSubsystem::HandleControlEditorAction(
     return HandleControlEditorSetViewTarget(RequestId, Payload, RequestingSocket);
   if (LowerSub == TEXT("focus_actor"))
     return HandleControlEditorFocusActor(RequestId, Payload, RequestingSocket);
+  if (LowerSub == TEXT("set_selected_actors"))
+    return McpEditorSelection::Handle(this, RequestId, Payload, RequestingSocket);
   if (LowerSub == TEXT("set_camera") ||
       LowerSub == TEXT("set_camera_position") ||
       LowerSub == TEXT("set_viewport_camera"))

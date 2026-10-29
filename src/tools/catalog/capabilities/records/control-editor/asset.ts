@@ -1,6 +1,6 @@
 /**
  * Asset and level navigation records: open_asset, close_asset, open_level,
- * focus_actor, save_all.
+ * focus_actor, set_selected_actors, save_all.
  */
 import type { CapabilityRecordSource, JsonObject } from '../../model.js';
 import { buildCoreRecord } from '../core/builder.js';
@@ -115,6 +115,28 @@ export const ASSET_RECORDS: readonly CapabilityRecordSource[] = [
     effect: 'read',
    
     exampleInput: { action: 'focus_actor', actorName: 'BP_PlayerStart' },
+  }),
+  buildCoreRecord({
+    parentTool: 'control_editor', action: 'set_selected_actors', domain: D, family: F,
+    topics: ['select actors in the editor', 'select all cubes or all lights', 'deselect actors', 'clear the selection', 'select more actors', 'select in the outliner'],
+    summary: 'Set which actors the editor has selected, as clicking them in the viewport or the Outliner does (the Details panel shows them): mode replace (the default) makes actorNames the selection, add adds them, remove takes them off; replace with no actorNames clears it. Names are labels, object names or paths, matched exactly; one that matches nothing refuses with ACTOR_NOT_FOUND and the selection stays as it was. A change is one undo step; a call that leaves the selection as it was makes none. The reply lists the selection after the call by label (get_selected_actors lists object names).',
+    whenToUse: ['The user should see certain actors selected, or edit them together in the Details panel.', 'An editor command that acts on the selection needs these actors selected.', 'The selection must be cleared.'],
+    whenNotToUse: ['Only reading what is selected: use get_selected_actors.', 'The viewport should also frame an actor: focus_actor selects it and moves the camera to it.'],
+    inputProps: {
+      actorNames: { type: 'array', maxItems: 500, items: { type: 'string' }, description: 'The actors, by label, object name or path; with mode replace, none clears the selection.' },
+      mode: { type: 'string', enum: ['replace', 'add', 'remove'], description: 'replace (default): these actors become the selection; add: they join it; remove: they leave it. add and remove need actorNames.' },
+    },
+    required: [],
+    outputProps: {
+      selected: { type: 'array', items: { type: 'string' }, description: 'Labels of the actors selected after the call (the first 100).' },
+      selectedCount: { type: 'number', description: 'How many actors are selected after the call.' },
+      notSelected: { type: 'array', items: { type: 'string' }, description: 'Named actors the editor would not select or deselect: one in a locked level, or one it selects through its parent actor.' },
+      undo: { type: 'object', additionalProperties: true, 'x-unreal-reflection-boundary': true, description: 'What editor undo takes back: the change is one step. Absent when the selection was already what was asked.' },
+    },
+    outputRequired: [],
+    effect: 'write',
+    exampleInput: { action: 'set_selected_actors', actorNames: ['Wall_1', 'Wall_2'] },
+    exampleOutput: { success: true, message: '2 actor(s) selected.', selected: ['Wall_1', 'Wall_2'], selectedCount: 2 },
   }),
   buildCoreRecord({
     parentTool: 'control_editor', action: 'save_all', domain: D, family: F,

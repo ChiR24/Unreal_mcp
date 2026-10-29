@@ -402,6 +402,7 @@ export const CAPABILITY_COST_INDEX: Readonly<Record<string, string>> = {
   "control_editor::set_game_view_target": "instant|low",
   "control_editor::set_immersive_mode": "instant|low",
   "control_editor::set_preferences": "interactive|low",
+  "control_editor::set_selected_actors": "instant|low",
   "control_editor::set_view_mode": "instant|low",
   "control_editor::set_view_target": "instant|low",
   "control_editor::set_viewport_camera": "instant|low",
@@ -1669,4 +1670,4 @@ export const CAPABILITY_COST_INDEX: Readonly<Record<string, string>> = {
   "system_control::write_snapshot": "interactive|medium"
 };
 
-export const CAPABILITY_COST_INDEX_KEY_COUNT = 1656;
+export const CAPABILITY_COST_INDEX_KEY_COUNT = 1657;
