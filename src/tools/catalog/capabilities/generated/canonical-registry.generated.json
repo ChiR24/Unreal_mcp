@@ -1,5 +1,5 @@
 {
-  "catalogRevision": "3cfcd2571393d176",
+  "catalogRevision": "6c7af0b4778e38fd",
   "recordCount": 478,
   "records": [
     {
@@ -39757,7 +39757,7 @@
       ],
       "discovery": {
         "domain": "actor",
-        "family": "find",
+        "family": "relations",
         "topics": [
           "arrange_by_relations",
           "arrange actors by relations",
@@ -39959,7 +39959,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "f774e8f426b54affae6b80939e25eac3620da88b1771487b341d49f90cd0449f",
-        "content": "7706f74dabaf2998e7767386571db1c12b547ad5757b084a4f4fed746bbf8efc"
+        "content": "ba9d4c15ef5431e44b86c8a856c7787044971aa748dcff21e707a0c72d471e8b"
       }
     },
     {
@@ -40824,7 +40824,7 @@
       ],
       "discovery": {
         "domain": "actor",
-        "family": "find",
+        "family": "relations",
         "topics": [
           "describe_relations",
           "spatial relations",
@@ -40839,7 +40839,8 @@
           "objects arranged in a grid",
           "which props stand in a row",
           "is the shelf against the wall",
-          "what is the chair facing"
+          "what is the chair facing",
+          "find actors arranged in a row, a grid or a ring"
         ],
         "summary": "Read the level back as relations between its actors, the way one describes a room: what rests on what (on), what hangs on a wall (mounted), what stands inside what (inside), what touches what side by side (nextTo) and what each actor's front points at (faces); which actors stand together (groups), which copies of one prop line up in rows or grids or stand in a ring; and the scene's roles: the ground, the sun's elevation and azimuth, the sky actors, player starts, cameras and the navigation area. Read only.",
         "whenToUse": [
@@ -41134,7 +41135,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "7ad734a5052fb4cfa62c78800ef838ef2f304d18bf18fc2e8b9532a1894ae6d3",
-        "content": "29f340794d9fdbd1675338c2eca43ae2d27d3e762e5723dc2e9bbccaaab37a0d"
+        "content": "bf2d045ed20c6759ea87d1f7b8d027c1899fcdbb5188b1ade1e829a9286c3d2e"
       }
     },
     {
@@ -41267,7 +41268,7 @@
       ],
       "discovery": {
         "domain": "actor",
-        "family": "find",
+        "family": "relations",
         "topics": [
           "distribute_actors",
           "space the actors evenly",
@@ -41449,7 +41450,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "e96e5a463616bb9f0c5fb56333ec8e11117a9f6ebd563f9fdf5a56ae5d0a25d2",
-        "content": "662ea95ba34110c29dd34d9ac52ab56c47f4378a2448dd45a244418bcf461f35"
+        "content": "5a54a787a97a586c639b5cf9df19511956f55059162d28472212d06e499ab30b"
       }
     },
     {
@@ -44025,7 +44026,7 @@
       ],
       "discovery": {
         "domain": "actor",
-        "family": "find",
+        "family": "relations",
         "topics": [
           "lock_actors",
           "lock an actor",
@@ -44183,7 +44184,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "bf9f537b85bf9a6013a9a4c9b67c12537d3f9199d14e8334da8ad0790e66d1c8",
-        "content": "1c9445fe8c3c2090c4ccbf5b9bf3b44e16fc60e7e80d3e4e9915aa08379d01a5"
+        "content": "5c878b6b3905284ff1a584712d3026df40f45c90f285cef3950e2f479627890a"
       }
     },
     {
@@ -46205,7 +46206,7 @@
       ],
       "discovery": {
         "domain": "actor",
-        "family": "find",
+        "family": "relations",
         "topics": [
           "snap_to_grid",
           "snap to grid",
@@ -46387,7 +46388,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "72e9f3047c603330fb8c652a07e5a539a8101595a3b283b2454b6bf16104411a",
-        "content": "7e08dd5aeb9e6c8dba6e9169c2e3f2d4222a555a35775809a4eb86118e59f602"
+        "content": "18de9c69204f7b8477bcea6c56f427d1ec2a4719195338025c75fbf983ff5cc8"
       }
     },
     {

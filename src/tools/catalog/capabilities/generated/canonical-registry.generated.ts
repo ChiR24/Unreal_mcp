@@ -7,7 +7,7 @@ import type { CapabilityRecord } from '../model.js';
 import { parseCapabilityCatalog } from '../parser.js';
 
 export const CANONICAL_CAPABILITY_RECORD_COUNT = 478;
-export const CATALOG_REVISION = "3cfcd2571393d176";
+export const CATALOG_REVISION = "6c7af0b4778e38fd";
 export const CANONICAL_CAPABILITY_RECORDS: readonly CapabilityRecord[] = parseCapabilityCatalog(registry.records);
 
 export type { CapabilityRecord };

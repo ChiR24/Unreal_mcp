@@ -923,4 +923,7 @@ export const PLAIN_PROBE: readonly PlainProbeCase[] = [
   // Scattered copies varied from a seed so they do not look repeated.
   { query: 'randomize the rotation of the trees', accepted: ['control_actor.randomize_transforms'] },
   { query: 'random rotation for the rocks', accepted: ['control_actor.randomize_transforms'] },
+  // "find" names find, not the relations tools that once sat in a family called "find".
+  { query: 'find the table', accepted: ['control_actor.find'] },
+  { query: 'find the chair', accepted: ['control_actor.find'] },
 ];

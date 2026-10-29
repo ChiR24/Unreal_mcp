@@ -5,7 +5,7 @@ import type { CapabilityRecordSource } from '../../model.js';
 import { buildCoreRecord } from '../core/builder.js';
 import { DOMAIN } from './properties.js';
 
-const FAMILY_FIND = 'find';
+const FAMILY_RELATIONS = 'relations';
 
 const KINDS = ['on', 'mounted', 'inside', 'nextTo', 'faces', 'groups', 'rows', 'rings', 'roles'];
 
@@ -21,8 +21,8 @@ export const RELATIONS_RECORDS: readonly CapabilityRecordSource[] = [
     parentTool: 'control_actor',
     action: 'describe_relations',
     domain: DOMAIN,
-    family: FAMILY_FIND,
-    topics: ['spatial relations', 'scene graph', 'what rests on what', 'what is on the table', 'which actors touch each other', 'actors in a row', 'actors in a ring', 'what faces what', 'describe the room layout', 'objects arranged in a grid', 'which props stand in a row', 'is the shelf against the wall', 'what is the chair facing'],
+    family: FAMILY_RELATIONS,
+    topics: ['spatial relations', 'scene graph', 'what rests on what', 'what is on the table', 'which actors touch each other', 'actors in a row', 'actors in a ring', 'what faces what', 'describe the room layout', 'objects arranged in a grid', 'which props stand in a row', 'is the shelf against the wall', 'what is the chair facing', 'find actors arranged in a row, a grid or a ring'],
     summary: 'Read the level back as relations between its actors, the way one describes a room: what rests on what (on), what hangs on a wall (mounted), what stands inside what (inside), what touches what side by side (nextTo) and what each actor\'s front points at (faces); which actors stand together (groups), which copies of one prop line up in rows or grids or stand in a ring; and the scene\'s roles: the ground, the sun\'s elevation and azimuth, the sky actors, player starts, cameras and the navigation area. Read only.',
     whenToUse: [
       'Checking that a layout reads as intended (the lamp on the table, the chairs facing it, the shelf against the wall) without reading coordinates.',
@@ -66,7 +66,7 @@ export const RELATIONS_RECORDS: readonly CapabilityRecordSource[] = [
     parentTool: 'control_actor',
     action: 'arrange_by_relations',
     domain: DOMAIN,
-    family: FAMILY_FIND,
+    family: FAMILY_RELATIONS,
     topics: ['arrange actors by relations', 'lay out a room', 'put the lamp on the table', 'chairs facing the table', 'make the chair face the table', 'push the shelf against the wall', 'place furniture', 'solve a layout', 'move actors until relations hold', 'turn a chair to face a desk'],
     summary: 'Move actors until the relations stated hold, overlapping nothing, in one undo step: say where things go (["Lamp on Table", "Chair_1 nextTo Table", "Chair_1 facing Table", "Shelf against Wall"]) instead of computing coordinates. The relations are those execute\'s expect judges: A on B (resting on its top), A inside B, A nextTo B (side by side, touching), A against B (touching, its back to B, its front away), A facing B (the line ahead of its front, its X axis, meets B or points within 20 degrees of the centre of B; beside a side of B it turns square to it) and A near B within d (cm, default 100). A solver plans from where the actors stand now, keeping a rough placement wherever it already fits: each actor is a box turned about Z (what it draws), and their places and turns are annealed over how far each relation misses, how deep they overlap each other or the scene around them, and how far they wander; then each contact is snapped exact. What rests on a moved actor moves with it. Each relation is then judged by the engine as expect judges it.',
     whenToUse: [
@@ -104,7 +104,7 @@ export const RELATIONS_RECORDS: readonly CapabilityRecordSource[] = [
     parentTool: 'control_actor',
     action: 'snap_to_grid',
     domain: DOMAIN,
-    family: FAMILY_FIND,
+    family: FAMILY_RELATIONS,
     topics: ['snap to grid', 'grid snapping', 'align actors to the grid', 'round actor positions'],
     summary: 'Move actors onto a grid, as the editor\'s grid snapping places a dragged actor: each location axis in axes (default xyz; xy keeps heights) rounded to the nearest multiple of gridCm (default the editor\'s own position grid size), and with rotationDeg each rotation axis to a multiple of that. Every name is found before anything moves (ACTOR_NOT_FOUND changes nothing); the moves are one undo step, dryRun reports them without moving, and where an actor lands is checked like any move (sunk, floating, overlapping).',
     whenToUse: ['Modular pieces placed by hand or by coordinates must line up exactly: walls and floors on a 100 cm grid, turns in 90 degree steps.'],
@@ -135,7 +135,7 @@ export const RELATIONS_RECORDS: readonly CapabilityRecordSource[] = [
     parentTool: 'control_actor',
     action: 'distribute_actors',
     domain: DOMAIN,
-    family: FAMILY_FIND,
+    family: FAMILY_RELATIONS,
     topics: ['space the actors evenly', 'distribute actors evenly', 'equal spacing between actors', 'leave equal gaps between them'],
     summary: 'Space actors evenly along one axis, as a level designer lines up pillars, crates or lamps: in their order along axis (default the one their centres spread across most) the first and last stay put and the ones between move so their centres are evenly spaced (stepCm), or with gapCm each sits gapCm past the one before it, measured between their bounds, from the first. Only that coordinate changes. Every name is found before anything moves (ACTOR_NOT_FOUND changes nothing); the moves are one undo step (none when nothing moves), dryRun reports them without moving, and where an actor lands is checked like any move.',
     whenToUse: ['A row of actors placed by hand should have equal spacing, or equal gaps between them whatever their sizes.'],
@@ -166,7 +166,7 @@ export const RELATIONS_RECORDS: readonly CapabilityRecordSource[] = [
     parentTool: 'control_actor',
     action: 'lock_actors',
     domain: DOMAIN,
-    family: FAMILY_FIND,
+    family: FAMILY_RELATIONS,
     topics: ['lock an actor', 'unlock an actor', 'lock the floor and the walls'],
     summary: 'Lock or unlock actors in the editor, as Lock Actor Movement in the Transform menu does: a locked actor cannot be dragged in the viewport, and fix_placement, arrange_by_relations and settle_physics leave it where it is (listed under skipped); set_transform still moves it. Every name is found before anything changes (ACTOR_NOT_FOUND changes nothing); the actors whose lock changes are one undo step, none when every one already is as asked. Saved with the level.',
     whenToUse: ['Floors, walls and set pieces must stay put while the props around them are arranged, settled or fixed.', 'A tool skipped an actor because its movement is locked and it should move after all: unlock it.'],
