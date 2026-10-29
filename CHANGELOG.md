@@ -34,6 +34,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **`replace_actors`** swaps placed actors for a static mesh, a Blueprint or an actor class where they stand, as Replace Selected Actors with does, keeping their labels, tags and folders, in one undo step.
 - **`randomize_transforms`** gives placed actors seeded random turns, tilts, sizes and nudges, so scattered rocks, trees and props do not look repeated.
 - **`align_actors`** lines actors up on one axis by the min, max or center of their bounds or by their pivots, on the first actor or on a value, in one undo step.
+- **Placing along a spline**: a `spawn_batch` item's `repeat` takes `alongSpline` (a road or a path) with a `count` or a `spacingCm`, a side offset and a height, and stands the copies along it, turned with it: lamps along a road, posts along a path.
 - **Names models invent land**: an alias sent as a tool and action resolves (`system_control` `restart_editor` runs `control_editor`'s), with five new ones mined from session transcripts (`call_function`, `save_all` under `manage_asset`, `set_blueprint_variables` under `manage_blueprint`, `connect_nodes` for a Blueprint's `connect_pins`).
 - **`npx unreal-engine-mcp-server init <client>`** shows (and with `--write` saves) the server's entry in Claude Code's, Cursor's, VS Code's, Gemini's or Codex's MCP config; **`doctor`** checks Node, the token (never shown), the editor's answer and both versions.
 

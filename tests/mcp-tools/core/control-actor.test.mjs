@@ -14,6 +14,8 @@ const DUPLICATE_COPY = `MCP_DuplicateActorCopy_${ts}`;
 const RENAMED_COPY = `MCP_RenamedCopy_${ts}`;
 const BATCH_LABEL = `MCP_Batch_${ts}_`;
 const SWAP_TAG = `MCPSwapTag_${ts}`;
+const PATH_SPLINE = `MCP_Path_${ts}`;
+const PATH_TAG = `MCPPathTag_${ts}`;
 const swap = (i) => `MCP_Swap${i}_${ts}`;
 const MESH_ACTOR = `MCP_MeshActor_${ts}`;
 const PARENT_ACTOR = `MCP_ParentActor_${ts}`;
@@ -245,6 +247,19 @@ const testCases = [
   { scenario: 'ERROR: randomize_transforms with a scale range upside down', toolName: 'control_actor', arguments: { action: 'randomize_transforms', actorNames: [swap(1)], scale: [2, 1] }, expected: 'error|INVALID_ARGUMENT' },
   { scenario: 'ERROR: randomize_transforms names an actor that is not there', toolName: 'control_actor', arguments: { action: 'randomize_transforms', actorNames: [`MCP_MissingActor_${ts}`], yaw: 90 }, expected: 'error|ACTOR_NOT_FOUND' },
   { scenario: 'DELETE: the swapped actors by the tag they kept', toolName: 'control_actor', arguments: { action: 'delete_by_tag', tag: SWAP_TAG }, expected: 'success', assertions: [{ path: 'structuredContent.result.details.deletedCount', equals: 3, label: 'every replacement kept the tag' }] },
+  // Copies placed along a spline: three posts from its start to its end, two metres to its right.
+  { scenario: 'Setup: a 10 m path to place along', toolName: 'build_environment', arguments: { action: 'create_spline', kind: 'actor', name: PATH_SPLINE, location: { x: 0, y: 42000, z: 0 }, points: [{ position: { x: 0, y: 0, z: 0 } }, { position: { x: 1000, y: 0, z: 0 } }] }, expected: 'success' },
+  { scenario: 'CREATE: spawn_batch repeat alongSpline stands posts along the path', toolName: 'control_actor', arguments: { action: 'spawn_batch', defaults: { classPath: '/Engine/BasicShapes/Cube', tags: [PATH_TAG, 'mcp.placement.ok'] }, actors: [{ actorName: `MCP_Post_${ts}`, repeat: { alongSpline: PATH_SPLINE, count: 3, sideOffsetCm: 200, heightCm: 50 } }] }, expected: 'success', assertions: [
+    { path: 'structuredContent.result.spawned', equals: 3, label: 'three posts, the first and last on the ends' },
+    { path: 'structuredContent.receipt.changes.2', equals: `MCP_Post_${ts}_3`, label: 'numbered along the path' },
+  ] },
+  { scenario: 'CREATE: spawn_batch repeat alongSpline with spacingCm stands one every 5 m', toolName: 'control_actor', arguments: { action: 'spawn_batch', defaults: { classPath: '/Engine/BasicShapes/Cube', tags: [PATH_TAG, 'mcp.placement.ok'] }, actors: [{ actorName: `MCP_Lamp_${ts}`, repeat: { alongSpline: PATH_SPLINE, spacingCm: 500, startCm: 0, sideOffsetCm: -200, alignToSpline: false } }] }, expected: 'success', assertions: [
+    { path: 'structuredContent.result.spawned', equals: 3, label: 'at 0, 5 and 10 m' },
+  ] },
+  { scenario: 'ERROR: repeat alongSpline names no actor', toolName: 'control_actor', arguments: { action: 'spawn_batch', defaults: { classPath: '/Engine/BasicShapes/Cube' }, actors: [{ actorName: `MCP_Stray_${ts}`, repeat: { alongSpline: `MCP_NoSuchPath_${ts}`, count: 3 } }] }, expected: 'error|INVALID_ARGUMENT' },
+  { scenario: 'ERROR: repeat alongSpline with count and spacingCm both', toolName: 'control_actor', arguments: { action: 'spawn_batch', defaults: { classPath: '/Engine/BasicShapes/Cube' }, actors: [{ actorName: `MCP_Stray_${ts}`, repeat: { alongSpline: PATH_SPLINE, count: 3, spacingCm: 100 } }] }, expected: 'error|INVALID_ARGUMENT' },
+  { scenario: 'DELETE: the posts and lamps placed along the path', toolName: 'control_actor', arguments: { action: 'delete_by_tag', tag: PATH_TAG }, expected: 'success', assertions: [{ path: 'structuredContent.result.details.deletedCount', equals: 6, label: 'three posts and three lamps' }] },
+  { scenario: 'DELETE: the path', toolName: 'control_actor', arguments: { action: 'delete', actorName: PATH_SPLINE }, expected: 'success|not found' },
   { scenario: 'CONFIG: set_transform', toolName: 'control_actor', arguments: actorArgs('set_transform', { location: { x: 10, y: 20, z: 130 }, rotation: { x: 0, y: 0, z: 15 }, scale: { x: 1.1, y: 1.1, z: 1.1 } }), expected: 'success' },
   { scenario: 'QUERY: list summary counts the level instead of listing it', toolName: 'control_actor', arguments: { action: 'list', summary: true }, expected: 'success', assertions: [{ path: 'structuredContent.result.count', equals: 0, label: 'no per-actor rows in a summary' }] },
   { scenario: 'CONFIG: set_transform on many actors, each its own transform', toolName: 'control_actor', arguments: { action: 'set_transform', actors: [{ actorName: MAIN_ACTOR, location: { x: 10, y: 20, z: 130 } }, { actorName: MESH_ACTOR, location: { x: 360, y: 160, z: 120 } }] }, expected: 'success', assertions: [{ path: 'structuredContent.result.movedActors', equals: 2, label: 'both actors moved' }, { path: 'structuredContent.result.results.1.location.2', approximately: 120, tolerance: 1, label: 'each item reports its read-back location' }, { path: 'structuredContent.receipt.changes', length: 2, label: 'the actors that moved are named' }, { path: 'structuredContent.receipt.changes.0', equals: MAIN_ACTOR, label: 'in the order the caller gave them' }, { path: 'structuredContent.receipt.handles', length: 2, label: 'and gives each an actor handle' }] },

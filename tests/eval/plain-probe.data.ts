@@ -929,4 +929,7 @@ export const PLAIN_PROBE: readonly PlainProbeCase[] = [
   // Actors lined up on one axis by an edge of their bounds.
   { query: 'line up the actors', accepted: ['control_actor.align_actors'] },
   { query: 'align the tops of the shelves', accepted: ['control_actor.align_actors'] },
+  // Copies of a prop stood along a spline (a road, a path) by spawn_batch's repeat.
+  { query: 'place lamps along the road', accepted: ['control_actor.spawn'] },
+  { query: 'place props along a path', accepted: ['control_actor.spawn'] },
 ];

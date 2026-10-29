@@ -83,7 +83,7 @@ bool UEngineWireSubsystem::HandleControlActorSpawnBatch(
     if (!Value.IsValid() || !Value->TryGetObject(ItemObj)) {
       Expanded.Add(nullptr);
     } else if (!McpSpawnRepeat::Expand(MergeSpawnItem(Defaults, *ItemObj), MaxSpawnBatchActors, Expanded,
-                                       RepeatError)) {
+                                       RepeatError, [this](const FString &Name) { return FindActorByName(Name, true); })) {
       SendStandardErrorResponse(this, Socket, RequestId, TEXT("INVALID_ARGUMENT"), RepeatError, nullptr);
       return true;
     }

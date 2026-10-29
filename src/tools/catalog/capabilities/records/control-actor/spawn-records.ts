@@ -149,8 +149,13 @@ export const SPAWN_RECORDS: readonly CapabilityRecordSource[] = [
           + 'as edit_component sets them: a light\'s Intensity, LightColor and AttenuationRadius), folder (outliner folder path), tags '
           + '(actor tags; delete_by_tag removes the batch again), repeat ({count, offset [x, y, z], rows, rowOffset '
           + '[x, y, z]}: count x rows copies of the item, each moved from its location by offset per copy and rowOffset '
-          + 'per row, actorName numbered _1, _2, ...; a row of racks, a grid of lights; at most 1000 actors once '
-          + 'unrolled). Items that fail are reported; the rest still spawn. Parts meant to hang in the air or sit inside another (ceiling ducts, lights, a flange on a pipe) take the tag mcp.placement.ok (defaults.tags covers the whole batch), so the reply keeps only what needs fixing.',
+          + 'per row, actorName numbered _1, _2, ...; a row of racks, a grid of lights; or {alongSpline, count or spacingCm, '
+          + 'startCm, sideOffsetCm, heightCm, alignToSpline}: copies standing on the spline of the actor alongSpline names '
+          + '(a road or a path from create_spline), count of them from startCm to its end or one every spacingCm, '
+          + 'sideOffsetCm to the right of its direction (negative: left) and heightCm up, turned with the spline unless '
+          + 'alignToSpline is false; the item\'s rotation turns each further and its location is not used: lamps along a '
+          + 'road, fence posts along a path; a name with no spline, or count and spacingCm together, is INVALID_ARGUMENT; '
+          + 'at most 1000 actors once unrolled). Items that fail are reported; the rest still spawn. Parts meant to hang in the air or sit inside another (ceiling ducts, lights, a flange on a pipe) take the tag mcp.placement.ok (defaults.tags covers the whole batch), so the reply keeps only what needs fixing.',
       },
       defaults: {
         type: 'object',
