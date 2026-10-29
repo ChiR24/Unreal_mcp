@@ -1,5 +1,6 @@
 #include "Domains/ControlActor/McpActorSupport.h"
 #include "Domains/ControlActor/Find/McpFindByAsset.h"
+#include "Domains/ControlActor/Materials/McpColorMaterial.h"
 #include "Domains/ControlActor/Placement/McpCoplanarFaces.h"
 #include "Domains/ControlActor/Placement/Fix/McpPlacementFix.h"
 #include "Domains/ControlActor/Relations/McpRelations.h"
@@ -80,8 +81,17 @@ bool UEngineWireSubsystem::HandleControlActorAction(
                                                     RequestingSocket);
   if (LowerSub == TEXT("set_material") ||
       LowerSub == TEXT("set_actor_material") ||
-      LowerSub == TEXT("apply_material"))
-    return HandleControlActorSetMaterial(RequestId, Payload, RequestingSocket);
+      LowerSub == TEXT("apply_material")) {
+    // color: the material instance of that colour, made when missing, then the same assignment as a materialPath.
+    TSharedPtr<FJsonObject> MaterialPayload;
+    FString Code, Error;
+    if (!McpColorMaterial::Resolve(Payload, MaterialPayload, Code, Error,
+                                   [this](const FString &Name) { return FindActorByName(Name); })) {
+      SendStandardErrorResponse(this, RequestingSocket, RequestId, Code, Error, nullptr);
+      return true;
+    }
+    return HandleControlActorSetMaterial(RequestId, MaterialPayload, RequestingSocket);
+  }
   if (LowerSub == TEXT("get_components") ||
       LowerSub == TEXT("get_actor_components"))
     return HandleControlActorGetComponents(RequestId, Payload,

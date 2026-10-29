@@ -1,5 +1,5 @@
 {
-  "catalogRevision": "a9ea5d8983d88938",
+  "catalogRevision": "69934b29c3c5ad16",
   "recordCount": 480,
   "records": [
     {
@@ -45632,12 +45632,18 @@
           "change the floor material",
           "put material on mesh",
           "replace mesh material",
-          "set material slot"
+          "set material slot",
+          "make the cube or the wall red",
+          "color an actor red, blue or green",
+          "white, black, yellow, orange, purple, pink, brown or gray",
+          "change the color of an actor",
+          "paint or tint a mesh a colour"
         ],
-        "summary": "Put a material on an actor: slot materialSlot (default 0) of its first mesh component that has that slot, of componentName, or of every one with allComponents; materials sets slot i from entry i (\"\" skips one), and actorNames gives many actors the same material. One undo step. Refusals: MATERIAL_NOT_FOUND, ACTOR_NOT_FOUND, COMPONENT_NOT_FOUND, MATERIAL_SLOT_NOT_FOUND (no component has the slot); a list that partly failed answers MATERIAL_BATCH_INCOMPLETE naming each failure. While Play runs it changes the playing copy, gone when play stops.",
+        "summary": "Put a material on an actor, or a flat colour with color (\"#rrggbb\", \"#rgb\" or a name such as red or white: a material instance of the engine's BasicShapeMaterial, made once under /Game/Materials/Colors and reused, which replaces the slot's material, textures and all): slot materialSlot (default 0) of its first mesh component that has that slot, of componentName, or of every one with allComponents; materials sets slot i from entry i (\"\" skips one), and actorNames gives many actors the same material. One undo step. Refusals: MATERIAL_NOT_FOUND, ACTOR_NOT_FOUND, COMPONENT_NOT_FOUND, MATERIAL_SLOT_NOT_FOUND (no component has the slot), INVALID_ARGUMENT (a colour it cannot read, or color with materialPath); a list that partly failed answers MATERIAL_BATCH_INCOMPLETE naming each failure. While Play runs it changes the playing copy, gone when play stops.",
         "whenToUse": [
           "A material must be assigned to an actor mesh component.",
-          "A mesh with several material slots (an SDF part) needs a material in each: materials sets them all in one call."
+          "A mesh with several material slots (an SDF part) needs a material in each: materials sets them all in one call.",
+          "An actor must take a plain colour (red, \"#1e88e5\") with no material made first: color."
         ],
         "whenNotToUse": [
           "The mesh has no material slots (the assignment is a no-op)."
@@ -45691,6 +45697,11 @@
               "minItems": 1,
               "maxItems": 64,
               "description": "One material per slot in place of materialPath and materialSlot: entry i goes into slot i, \"\" leaves that slot as it is. Every slot is reported under slots, in one undo step; the call fails naming any slot that did not take its material. A mesh made with several material ids (an SDF part) needs this once instead of one call per slot."
+            },
+            "color": {
+              "type": "string",
+              "maxLength": 32,
+              "description": "A flat colour in place of materialPath: \"#rrggbb\", \"#rgb\" or a name (red, orange, yellow, green, blue, cyan, teal, purple, pink, magenta, brown, gray or grey, white, black). It becomes the material instance /Game/Materials/Colors/MI_Color_RRGGBB, the engine's BasicShapeMaterial with that Color, made and saved the first time and reused after (the reply's materialPath names it). It replaces the slot's material, so a textured mesh turns one flat colour. A colour it cannot read, or color with materialPath or materials, is INVALID_ARGUMENT; no instance is made when no actor named resolves (ACTOR_NOT_FOUND)."
             }
           },
           "required": [
@@ -45728,7 +45739,7 @@
       },
       "examples": [
         {
-          "title": "Put a material on an actor: slot materialSlot (default 0) of its first mesh component that has that slot, of componentName, or of every one with allComponents; materials sets slot i from entry i (\"\" skips one), and actorNames gives many actors the same material. One undo step. Refusals: MATERIAL_NOT_FOUND, ACTOR_NOT_FOUND, COMPONENT_NOT_FOUND, MATERIAL_SLOT_NOT_FOUND (no component has the slot); a list that partly failed answers MATERIAL_BATCH_INCOMPLETE naming each failure. While Play runs it changes the playing copy, gone when play stops.",
+          "title": "Put a material on an actor, or a flat colour with color (\"#rrggbb\", \"#rgb\" or a name such as red or white: a material instance of the engine's BasicShapeMaterial, made once under /Game/Materials/Colors and reused, which replaces the slot's material, textures and all): slot materialSlot (default 0) of its first mesh component that has that slot, of componentName, or of every one with allComponents; materials sets slot i from entry i (\"\" skips one), and actorNames gives many actors the same material. One undo step. Refusals: MATERIAL_NOT_FOUND, ACTOR_NOT_FOUND, COMPONENT_NOT_FOUND, MATERIAL_SLOT_NOT_FOUND (no component has the slot), INVALID_ARGUMENT (a colour it cannot read, or color with materialPath); a list that partly failed answers MATERIAL_BATCH_INCOMPLETE naming each failure. While Play runs it changes the playing copy, gone when play stops.",
           "input": {
             "action": "set_material",
             "actorName": "Cube1",
@@ -45767,8 +45778,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "e99c52e4680efc5021bcada6cf52ebcb1092ee7091e37e2eaa7d6cab87b3097c",
-        "content": "a7cda9ffae5b662a55c222be4a36926357745aba8837524ca483fdde1a44686b"
+        "schema": "1b5a04e868eb336eab87ef5fc9b12a3d8d62452c27c115347b4610454d535715",
+        "content": "f322a70309f791a42833aa614c4aac7dc4b403afab2e40f737c84ae3073e25ce"
       }
     },
     {
@@ -102114,7 +102125,6 @@
           "emissive glow",
           "glowing material",
           "shiny metal material",
-          "make a cube or a wall red",
           "new material",
           "make material",
           "material asset",
@@ -102378,7 +102388,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "ddb0f137f776b24373015bac1938e25ad09bd3ab03b7f86490acc94c1873ae5e",
-        "content": "0b5a64ea4b037fbe4750a5dbedb1804060a892e1ee1698caa6016c576c7b5280"
+        "content": "1216a3c8dfb6998f4b53e9686c80681cbc01e4836f9bceed56903e282500e915"
       }
     },
     {

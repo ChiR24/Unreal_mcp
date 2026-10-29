@@ -12,7 +12,7 @@ Editor-only UE 5.0-5.8 plugin. It owns the native `/mcp` HTTP/SSE server (the on
 | Game features adapter | `Source/EngineWireGameFeatures/` | list_game_features, set_game_feature_active and create_plugin's game_feature template behind `Public/McpGameFeaturesProvider.h` (the Game Features subsystem has no reflected functions); depends on GameFeatures, named in the .uplugin as an optional plugin it does not turn on (`Enabled: false`); LoadingPhase None, loaded by EngineWire's startup only where GameFeatures is on; registers nothing on 5.0 (state enum private) |
 | Public API/settings | `Source/EngineWire/Public/` | Subsystem, settings, connection manager, queue fairness |
 | Core | `Private/Core/` (41) | Queue, game-thread drain, the one handler table, pre-queue gate — nested `AGENTS.md` |
-| Domains | `Private/Domains/` (1,465 files, 58 domains; counts include subfolders, 2026-10-29) | Action implementations — nested `AGENTS.md` |
+| Domains | `Private/Domains/` (1,467 files, 58 domains; counts include subfolders, 2026-10-29) | Action implementations — nested `AGENTS.md` |
 | Shared helpers | `Private/Foundation/` (142) | Reflection, Blueprint, path, JSON, response helpers — nested `AGENTS.md` |
 | Native MCP | `Private/MCP/` (160) | Registry/session/transport, generated shards — nested `AGENTS.md` |
 | Hazardous UE ops | `Private/Safety/` (19) | Save/load/delete wrappers — nested `AGENTS.md` |

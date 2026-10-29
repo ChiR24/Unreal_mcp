@@ -157,7 +157,7 @@ bool UEngineWireSubsystem::HandleControlActorSetMaterial(
   }
   if (MaterialPath.IsEmpty()) {
     SendStandardErrorResponse(this, Socket, RequestId, TEXT("INVALID_ARGUMENT"),
-                              TEXT("materialPath required"), nullptr);
+                              TEXT("materialPath, materials or color required"), nullptr);
     return true;
   }
 

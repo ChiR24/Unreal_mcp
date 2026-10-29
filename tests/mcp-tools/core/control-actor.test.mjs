@@ -64,6 +64,9 @@ const relation = (subject, kind, object) => ({ 0: subject, 1: kind, 2: object })
 const COMPONENT_NAME = `MCPPointLight_${ts}`;
 const MESH_COMPONENT = `MCPConeMesh_${ts}`;
 const ENGINE_BASIC_MATERIAL = '/Engine/BasicShapes/BasicShapeMaterial.BasicShapeMaterial';
+// The instances set_material's color makes: teal is #00897B, and #abc is #AABBCC.
+const TEAL_MATERIAL = '/Game/Materials/Colors/MI_Color_00897B.MI_Color_00897B';
+const SHORT_HEX_MATERIAL = '/Game/Materials/Colors/MI_Color_AABBCC.MI_Color_AABBCC';
 
 const cubeSpawn = (scenario, actorName, location) => ({
   scenario,
@@ -299,6 +302,14 @@ const testCases = [
   { scenario: 'CONFIG: apply_material all components', toolName: 'control_actor', arguments: actorArgs('apply_material', { materialPath: ENGINE_BASIC_MATERIAL, materialSlot: 0, allComponents: true }), expected: 'success' },
   { scenario: 'CONFIG: set_material on several actors', toolName: 'control_actor', arguments: { action: 'set_material', actorNames: [MAIN_ACTOR, DUPLICATE_COPY], materialPath: ENGINE_BASIC_MATERIAL, materialSlot: 0 }, expected: 'success', assertions: [{ path: 'structuredContent.result.applied', equals: 2, label: 'both actors took the material' }, { path: 'structuredContent.result.undo.undoable', equals: true, label: 'one transaction holds every actor, so the whole list is one undo step' }, { path: 'structuredContent.receipt.changes', length: 2, label: 'the actors that took it are named' }, { path: 'structuredContent.receipt.changes.0', equals: MAIN_ACTOR, label: 'in the order the caller gave them' }, { path: 'structuredContent.receipt.handles', length: 2, label: 'and gives each an actor handle' }, { path: 'structuredContent.receipt.handles.0.ref', equals: MAIN_ACTOR, label: 'the first one is the first actor the caller named' }] },
   { scenario: 'ERROR: set_material names the actor it could not find', toolName: 'control_actor', arguments: { action: 'set_material', actorNames: [MAIN_ACTOR, `MCP_Missing_${ts}`], materialPath: ENGINE_BASIC_MATERIAL }, expected: 'error|MATERIAL_BATCH_INCOMPLETE' },
+  // color: a flat colour as the material instance /Game/Materials/Colors/MI_Color_RRGGBB, made the first time and reused.
+  { scenario: 'CONFIG: set_material color by name gives the actor that colour\'s instance', toolName: 'control_actor', arguments: { action: 'set_material', actorName: DUPLICATE_COPY, color: 'teal' }, expected: 'success', assertions: [{ path: 'structuredContent.result.materialPath', equals: TEAL_MATERIAL, label: 'teal is #00897B, and its instance is named by that hex' }, { path: 'structuredContent.result.undo.undoable', equals: true, label: 'the assignment is one undo step' }] },
+  { scenario: 'CONFIG: set_material color as #rrggbb reuses the same instance', toolName: 'control_actor', arguments: { action: 'set_material', actorName: DUPLICATE_COPY, color: '#00897b' }, expected: 'success', assertions: [{ path: 'structuredContent.result.materialPath', equals: TEAL_MATERIAL, label: 'the hex of a name lands on the name\'s instance' }] },
+  { scenario: 'CONFIG: set_material color as #rgb on a list of actors', toolName: 'control_actor', arguments: { action: 'set_material', actorNames: [DUPLICATE_COPY], color: '#abc' }, expected: 'success', assertions: [{ path: 'structuredContent.result.applied', equals: 1, label: 'the actor took the colour' }] },
+  { scenario: 'INFO: find_by_material finds the actor by its colour\'s instance', toolName: 'control_actor', arguments: { action: 'find_by_material', materialPath: SHORT_HEX_MATERIAL }, expected: 'success', assertions: [{ path: 'structuredContent.result.actors', includesObject: { label: DUPLICATE_COPY }, label: '#abc is #AABBCC' }] },
+  { scenario: 'ERROR: set_material refuses a colour it cannot read', toolName: 'control_actor', arguments: { action: 'set_material', actorName: DUPLICATE_COPY, color: 'reddish' }, expected: 'error|INVALID_ARGUMENT' },
+  { scenario: 'ERROR: set_material refuses color with materialPath', toolName: 'control_actor', arguments: { action: 'set_material', actorName: DUPLICATE_COPY, color: 'red', materialPath: ENGINE_BASIC_MATERIAL }, expected: 'error|INVALID_ARGUMENT' },
+  { scenario: 'ERROR: set_material color for an actor that does not exist makes nothing', toolName: 'control_actor', arguments: { action: 'set_material', actorName: `MCP_Missing_${ts}`, color: '#13579b' }, expected: 'error|ACTOR_NOT_FOUND' },
 
   // === COMPONENTS ===
   { scenario: 'ADD: add_component', toolName: 'control_actor', arguments: actorArgs('add_component', { componentType: '/Script/Engine.PointLightComponent', componentName: COMPONENT_NAME, properties: { Intensity: 1250 } }), expected: 'success|already exists' },
@@ -417,6 +428,7 @@ const testCases = [
 
   // === CLEANUP ===
   { scenario: 'Cleanup: delete spawned actors', toolName: 'control_actor', arguments: { action: 'delete', actorNames: [MAIN_ACTOR, DUPLICATE_ACTOR, DUPLICATE_COPY, MESH_ACTOR, PARENT_ACTOR, CHILD_ACTOR, BP_ACTOR, NEAR_ACTOR, FAR_ACTOR, `MCP_SpawnSphere_${ts}`, `MCP_SpawnCylinder_${ts}`] }, expected: 'success|not found' },
+  { scenario: 'Cleanup: the colour instances', toolName: 'manage_asset', arguments: { action: 'delete', paths: ['/Game/Materials/Colors/MI_Color_00897B', '/Game/Materials/Colors/MI_Color_AABBCC'], force: true }, expected: 'success|not found' },
 ];
 
 runToolTests('control-actor', testCases, { folder: TEST_FOLDER });

@@ -16,8 +16,9 @@ const MATERIAL_INPUT = {
     actorNames: { type: 'array', items: { type: 'string' }, description: 'Several actors to give the same material in one call and one undo step, in place of actorName; each is reported under results, and the actors changed under affectedActors (which the receipt lists as changes, with an actor handle each); the call fails naming any that did not take it.' },
     materialPath: P.materialPath, componentName: P.componentName, materialSlot: P.materialSlot, materialIndex: P.materialIndex, allComponents: P.allComponents,
     materials: { type: 'array', items: { type: 'string' }, minItems: 1, maxItems: 64, description: 'One material per slot in place of materialPath and materialSlot: entry i goes into slot i, "" leaves that slot as it is. Every slot is reported under slots, in one undo step; the call fails naming any slot that did not take its material. A mesh made with several material ids (an SDF part) needs this once instead of one call per slot.' },
+    color: { type: 'string', maxLength: 32, description: 'A flat colour in place of materialPath: "#rrggbb", "#rgb" or a name (red, orange, yellow, green, blue, cyan, teal, purple, pink, magenta, brown, gray or grey, white, black). It becomes the material instance /Game/Materials/Colors/MI_Color_RRGGBB, the engine\'s BasicShapeMaterial with that Color, made and saved the first time and reused after (the reply\'s materialPath names it). It replaces the slot\'s material, so a textured mesh turns one flat colour. A colour it cannot read, or color with materialPath or materials, is INVALID_ARGUMENT; no instance is made when no actor named resolves (ACTOR_NOT_FOUND).' },
   },
-  // materialPath or materials; the handler refuses a call with neither.
+  // materialPath, materials or color; the handler refuses a call with none of them.
   requiredOneOf: ['actorName', 'actorNames'],
 } as const;
 // set_component_property and its alias take one actor or many (a dozen fire lights each took a call for one property).
@@ -116,9 +117,12 @@ export const COMPONENT_RECORDS: readonly CapabilityRecordSource[] = [
     action: 'set_material',
     domain: DOMAIN,
     family: FAMILY_MATERIAL,
-    topics: ['assign material to mesh', 'apply material to actor', 'change actor material', 'change the floor material', 'put material on mesh', 'replace mesh material', 'set material slot'],
+    // The colour topics hold the colour names and paint/tint: an alias set_color took "change material color" from
+    // set_material_parameter, and "make a cube" in a topic took "make a cube" from create_primitive.
+    topics: ['assign material to mesh', 'apply material to actor', 'change actor material', 'change the floor material', 'put material on mesh', 'replace mesh material', 'set material slot',
+      'make the cube or the wall red', 'color an actor red, blue or green', 'white, black, yellow, orange, purple, pink, brown or gray', 'change the color of an actor', 'paint or tint a mesh a colour'],
     summary: 'Apply a material asset to a mesh component on an actor, optionally per slot, or a material to every slot in one call (materials).',
-    whenToUse: ['A material must be assigned to an actor mesh component.', 'A mesh with several material slots (an SDF part) needs a material in each: materials sets them all in one call.'],
+    whenToUse: ['A material must be assigned to an actor mesh component.', 'A mesh with several material slots (an SDF part) needs a material in each: materials sets them all in one call.', 'An actor must take a plain colour (red, "#1e88e5") with no material made first: color.'],
     whenNotToUse: ['The mesh has no material slots (the assignment is a no-op).'],
     ...MATERIAL_INPUT,
     effect: 'write',

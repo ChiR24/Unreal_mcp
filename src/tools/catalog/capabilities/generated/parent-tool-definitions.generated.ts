@@ -4997,6 +4997,11 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "boolean",
           "description": "Turn collision on (true) or off (false). Omitted with profile or responses, the mode stays as the preset sets it."
         },
+        "color": {
+          "type": "string",
+          "maxLength": 32,
+          "description": "A flat colour in place of materialPath: \"#rrggbb\", \"#rgb\" or a name (red, orange, yellow, green, blue, cyan, teal, purple, pink, magenta, brown, gray or grey, white, black). It becomes the material instance /Game/Materials/Colors/MI_Color_RRGGBB, the engine's BasicShapeMaterial with that Color, made and saved the first time and reused after (the reply's materialPath names it). It replaces the slot's material, so a textured mesh turns one flat colour. A colour it cannot read, or color with materialPath or materials, is INVALID_ARGUMENT; no instance is made when no actor named resolves (ACTOR_NOT_FOUND)."
+        },
         "componentName": {
           "type": "string",
           "description": "Call the function on this component of the actor instead of on the actor itself (refused with COMPONENT_NOT_FOUND when the actor has none of that name)."

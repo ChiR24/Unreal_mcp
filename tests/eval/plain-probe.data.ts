@@ -821,7 +821,12 @@ export const PLAIN_PROBE: readonly PlainProbeCase[] = [
   { query: 'add a sphere', accepted: ['control_actor.spawn'] },
   { query: 'build a wall of cubes', accepted: ['control_actor.spawn'] },
   { query: 'look at the cube from the side', accepted: ['inspect.contact_sheet'] },
-  { query: 'make the cube red', accepted: ['material.create_material'] },
+  { query: 'make the cube red', accepted: ['control_actor.set_material'] },
+  // A flat colour on an actor is set_material's color.
+  { query: 'color the walls blue', accepted: ['control_actor.set_material'] },
+  { query: 'paint the floor green', accepted: ['control_actor.set_material'] },
+  { query: 'change the color of the cube', accepted: ['control_actor.set_material'] },
+  { query: 'make the walls white', accepted: ['control_actor.set_material'] },
   { query: 'how many cubes are there', accepted: ['control_actor.list'] },
   // Plain requests whose owner did not name their words.
   { query: 'duplicate the wall', accepted: ['control_actor.duplicate'] },
