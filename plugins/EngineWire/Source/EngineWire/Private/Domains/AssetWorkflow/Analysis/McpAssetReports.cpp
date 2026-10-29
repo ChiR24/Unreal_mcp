@@ -1,6 +1,7 @@
 // Copyright (c) 2024 EngineWire Contributors
 
 #include "Foundation/BridgeHelpers/Security/McpAssetPathCanonical.h"
+#include "Foundation/BridgeHelpers/Security/McpProjectFileWrite.h"
 #include "EngineWireSubsystem.h"
 #include "Foundation/BridgeHelpers/McpHelpers.h"
 #include "Foundation/HandlerUtils/McpHandlerUtils.h"
@@ -108,15 +109,13 @@ bool UEngineWireSubsystem::HandleGenerateReport(
       return true;
     }
 
-    const FString DirPath = FPaths::GetPath(AbsoluteOutput);
-    IPlatformFile &PlatformFile =
-        FPlatformFileManager::Get().GetPlatformFile();
-    PlatformFile.CreateDirectoryTree(*DirPath);
-
     FString FileContents;
     FJsonSerializer::Serialize(Resp.ToSharedRef(), TJsonWriterFactory<>::Create(&FileContents));
-    bFileWritten =
-        FFileHelper::SaveStringToFile(FileContents, *AbsoluteOutput);
+    FString WriteError;
+    bFileWritten = McpWriteProjectText(AbsoluteOutput, FileContents, WriteError);
+    if (!bFileWritten) {
+      UE_LOG(LogEngineWireSubsystem, Warning, TEXT("%s"), *WriteError); // the reply's warnings say why
+    }
   }
 
   if (!OutputPath.IsEmpty()) {

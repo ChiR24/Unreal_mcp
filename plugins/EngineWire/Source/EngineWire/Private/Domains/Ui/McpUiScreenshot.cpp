@@ -13,6 +13,7 @@
 #include "IImageWrapper.h"
 #include "IImageWrapperModule.h"
 #include "Foundation/BridgeHelpers/McpHelpers.h"
+#include "Foundation/BridgeHelpers/Security/McpProjectFileWrite.h"
 #include "Foundation/McpScreenshotResample.h"
 #include "Domains/Ui/McpUiScreenshotSlate.h"
 #include "Domains/Ui/McpUiScreenshotSupport.h"
@@ -246,10 +247,11 @@ bool HandleScreenshotAction(
   // Same keepFile as control_editor.screenshot: no file left behind.
   bool bKeepFile = true;
   Payload->TryGetBoolField(TEXT("keepFile"), bKeepFile);
-  if (bKeepFile) {
-    IFileManager::Get().MakeDirectory(*ScreenshotPath, true);
+  FString SaveError;
+  const bool bSaved = bKeepFile && McpWriteProjectFile(FullPath, PngData, SaveError);
+  if (!SaveError.IsEmpty()) {
+    UE_LOG(LogEngineWireSubsystem, Warning, TEXT("%s"), *SaveError); // the reply's warnings say why
   }
-  const bool bSaved = bKeepFile && FFileHelper::SaveArrayToFile(PngData, *FullPath);
 
   bSuccess = true;
   Message = FString::Printf(TEXT("Screenshot captured (%dx%d)"), Width, Height);

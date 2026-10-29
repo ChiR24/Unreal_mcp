@@ -5,6 +5,7 @@
 #include "Engine/StaticMesh.h"
 #include "Exporters/Exporter.h"
 #include "Foundation/BridgeHelpers/Responses/McpOutputCapture.h"
+#include "Foundation/BridgeHelpers/Security/McpProjectFileWrite.h"
 #include "Misc/FileHelper.h"
 #include "UObject/MetaData.h"
 
@@ -176,9 +177,9 @@ bool HandleInspectActorQueryAction(
             {
                 return Fail(PathError, TEXT("INVALID_PATH"));
             }
-            if (!FFileHelper::SaveStringToFile(Text, *AbsolutePath))
+            if (!McpWriteProjectText(AbsolutePath, Text, PathError))
             {
-                return Fail(FString::Printf(TEXT("Failed to write export to %s"), *AbsolutePath), TEXT("EXPORT_WRITE_FAILED"));
+                return Fail(PathError, TEXT("EXPORT_WRITE_FAILED"));
             }
             Resp->SetStringField(TEXT("filePath"), AbsolutePath);
             Resp->SetStringField(TEXT("relativePath"), SafePath);

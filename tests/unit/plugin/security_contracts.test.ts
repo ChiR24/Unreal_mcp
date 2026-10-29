@@ -45,6 +45,26 @@ describe('plugin security contracts', () => {
     );
   });
 
+  // A link made after the resolver's check carried a plain path write outside the project; the checked writer opens
+  // the file first and refuses one that is not where the path says.
+  it('writes a file the caller places through the checked writer', () => {
+    const writers = [
+      ['Domains', 'AssetWorkflow', 'Analysis', 'McpAssetReports.cpp'],
+      ['Domains', 'AssetWorkflow', 'Operations', 'McpAssetThumbnails.cpp'],
+      ['Domains', 'Environment', 'McpEnvBuildSnapshots.cpp'],
+      ['Domains', 'Environment', 'Landscape', 'McpEnvLandscapeHeightmap.cpp'],
+      ['Domains', 'Environment', 'Inspection', 'McpEnvInspectActorQuery.cpp'],
+      ['Domains', 'Environment', 'Inspection', 'McpEnvInspectCapturePasses.cpp'],
+      ['Domains', 'ControlEditor', 'McpEditorScreenshotSupport.cpp'],
+      ['Domains', 'Ui', 'McpUiScreenshot.cpp'],
+    ];
+    for (const parts of writers) {
+      const source = privateSource(...parts);
+      expect(source, parts.join('/')).toMatch(/McpWriteProject(File|Text)\(/u);
+      expect(source, parts.join('/')).not.toMatch(/FFileHelper::Save(String|Array)ToFile/u);
+    }
+  });
+
   it('compares capability tokens in constant time on both transports', () => {
     // The shared helper exists and performs a length-safe, byte-wise constant
     // comparison (no data-dependent early exit that would leak match length).

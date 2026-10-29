@@ -2,6 +2,7 @@
 
 #include "EngineWireSubsystem.h"
 #include "Foundation/BridgeHelpers/McpHelpers.h"
+#include "Foundation/BridgeHelpers/Security/McpProjectFileWrite.h"
 #include "Foundation/HandlerUtils/McpHandlerUtils.h"
 
 #include "Dom/JsonObject.h"
@@ -129,6 +130,7 @@ bool UEngineWireSubsystem::HandleGenerateThumbnail(
     Package->MarkPackageDirty();
   }
 
+  FString WriteError;
   if (bSuccess && !OutputPath.IsEmpty()) {
     const TArray<uint8> &ImageData = ObjectThumbnail.GetUncompressedImageData();
 
@@ -176,7 +178,7 @@ bool UEngineWireSubsystem::HandleGenerateThumbnail(
       // A PNG, as promised: from 5.1 ThumbnailCompressImageArray writes the JPEG a package stores, so the .png held JPEG.
       TArray64<uint8> CompressedData;
       FImageUtils::PNGCompressImageArray(Width, Height, TArrayView64<const FColor>(ColorData.GetData(), ColorData.Num()), CompressedData);
-      bSuccess = FFileHelper::SaveArrayToFile(CompressedData, *AbsolutePath);
+      bSuccess = McpWriteProjectFile(AbsolutePath, CompressedData, WriteError);
     }
   }
 
@@ -196,9 +198,9 @@ bool UEngineWireSubsystem::HandleGenerateThumbnail(
 
   SendAutomationResponse(
       RequestingSocket, RequestId, bSuccess,
-      !bSuccess ? TEXT("Thumbnail generation failed")
-      : bCached ? TEXT("Thumbnail stored in the asset, which is left unsaved")
-                : TEXT("Thumbnail rendered; engine content keeps its own thumbnail"),
+      !bSuccess ? (WriteError.IsEmpty() ? FString(TEXT("Thumbnail generation failed")) : WriteError)
+      : bCached ? FString(TEXT("Thumbnail stored in the asset, which is left unsaved"))
+                : FString(TEXT("Thumbnail rendered; engine content keeps its own thumbnail")),
       Result, bSuccess ? FString() : TEXT("THUMBNAIL_GENERATION_FAILED"));
 
   return true;

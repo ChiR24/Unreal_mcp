@@ -1,5 +1,6 @@
 #include "Domains/Environment/McpEnvShared.h"
 #include "Domains/Environment/McpEnvSnapshotPaths.h"
+#include "Foundation/BridgeHelpers/Security/McpProjectFileWrite.h"
 
 #include "HAL/FileManager.h"
 #include "HAL/PlatformFileManager.h"
@@ -63,10 +64,10 @@ bool ExportSnapshot(FEnvironmentBuildContext &Context, const FString &AbsolutePa
         MarkActorConfigurationResult(Context, false, SecurityError, TEXT("SECURITY_VIOLATION"));
         return true;
     }
-    if (!FFileHelper::SaveStringToFile(JsonText, *AbsolutePath, FFileHelper::EEncodingOptions::ForceUTF8WithoutBOM))
+    FString WriteError;
+    if (!McpWriteProjectText(AbsolutePath, JsonText, WriteError))
     {
-        MarkActorConfigurationResult(Context, false, TEXT("Failed to write environment snapshot"),
-            TEXT("SNAPSHOT_WRITE_FAILED"));
+        MarkActorConfigurationResult(Context, false, WriteError, TEXT("SNAPSHOT_WRITE_FAILED"));
         return true;
     }
 

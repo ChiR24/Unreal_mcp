@@ -60,6 +60,9 @@ Every domain that touches properties funnels through it.
   to project roots (`/Game/...`, mount points), rejects `..`, `:`, `//`.
   `McpResolveProjectFilePath` is the one resolver for a file the plugin writes (containment, device names, no
   link on the way); `McpFileNameCase` is how this platform compares names (case-sensitive on Linux).
+- `BridgeHelpers/Security/McpProjectFileWrite.h`: `McpWriteProjectFile` / `McpWriteProjectText` write a file the
+  caller placed, refusing it when the file as opened is not the resolved path (a link made after the check). Use
+  them, not `FFileHelper::Save*ToFile`, for a caller-chosen path.
 - `McpCapabilityPrincipal.h`: the principal of the request whose handler runs now (`ActiveRequestPrincipal`,
   set by `FActiveRequestScope` around each dispatch). A handler that reaches a package the request did not name
   asks `ActiveRequestPermitsPath` / `ActiveRequestPermitsObject` (an actor counts as its level's map) or

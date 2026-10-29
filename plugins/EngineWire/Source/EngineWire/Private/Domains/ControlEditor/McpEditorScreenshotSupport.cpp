@@ -1,5 +1,7 @@
 #include "Domains/ControlEditor/McpEditorScreenshotSupport.h"
 
+#include "EngineWireLog.h"
+#include "Foundation/BridgeHelpers/Security/McpProjectFileWrite.h"
 #include "Misc/FileHelper.h"
 
 FString MakeSafeScreenshotFilenameForMcp(
@@ -68,8 +70,9 @@ void SendScreenshotReceiptForMcp(UEngineWireSubsystem *Subsystem,
   // Saved/Screenshots: a look at the screen should not litter the project.
   bool bKeepFile = true;
   Payload->TryGetBoolField(TEXT("keepFile"), bKeepFile);
-  const bool bSaved = bKeepFile && FFileHelper::SaveArrayToFile(
-      TArrayView<const uint8>(PngData, static_cast<int32>(PngBytes)), *FullPath);
+  FString SaveError;
+  const bool bSaved = bKeepFile && McpWriteProjectFile(
+      FullPath, TArrayView<const uint8>(PngData, static_cast<int32>(PngBytes)), SaveError);
   // The image comes back inline unless returnBase64 is false: a plain capture that
   // answered only a file path showed a model caller nothing. The default used to be
   // off because a native-size PNG blew the base64 cap; with no resolution given, an
@@ -84,6 +87,8 @@ void SendScreenshotReceiptForMcp(UEngineWireSubsystem *Subsystem,
   if (bSaved) {
     Resp->SetStringField(TEXT("path"), FullPath);
     Resp->SetStringField(TEXT("screenshotPath"), FPaths::ConvertRelativePathToFull(FullPath));
+  } else if (bKeepFile) {
+    UE_LOG(LogEngineWireSubsystem, Warning, TEXT("%s"), *SaveError); // the reply's warnings say why
   }
   AddScreenshotMetadataForMcp(Resp, Payload);
   // Pixels drawn while shaders compile show the default material; say how many were still compiling.

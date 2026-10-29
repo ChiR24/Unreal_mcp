@@ -1,6 +1,7 @@
 #include "Domains/Environment/McpEnvShared.h"
 #include "Domains/Environment/Inspection/McpEnvInspectViewIds.h"
 #include "Domains/ControlEditor/McpEditorScreenshotSupport.h"
+#include "Foundation/BridgeHelpers/Security/McpProjectFileWrite.h"
 
 #include "Components/SceneCaptureComponent2D.h"
 #include "EditorViewportClient.h"
@@ -55,7 +56,8 @@ TArray<FLinearColor> McpCapturePass(UWorld *World, const FVector &Location, cons
 namespace {
 bool McpWriteFile(const FString &Path, const TArray64<uint8> &Bytes)
 {
-    return Bytes.Num() > 0 && FFileHelper::SaveArrayToFile(Bytes, *Path);
+    FString Error; // a pass not written is left out of files
+    return Bytes.Num() > 0 && McpWriteProjectFile(Path, Bytes, Error);
 }
 
 FString McpHex(const FColor &Color)

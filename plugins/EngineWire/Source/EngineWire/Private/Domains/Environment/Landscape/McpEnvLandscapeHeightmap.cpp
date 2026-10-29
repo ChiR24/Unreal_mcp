@@ -1,5 +1,6 @@
 #include "Domains/Environment/McpEnvShared.h"
 #include "Domains/Landscape/McpLandscapeLookup.h"
+#include "Foundation/BridgeHelpers/Security/McpProjectFileWrite.h"
 
 namespace McpEnvironmentHandlers {
 
@@ -65,9 +66,8 @@ bool McpExportLandscapeHeightmap(const TSharedPtr<FJsonObject> &Payload, TShared
     TArray<uint8> Bytes;
     Bytes.SetNumUninitialized(Heights.Num() * sizeof(uint16));
     FMemory::Memcpy(Bytes.GetData(), Heights.GetData(), Bytes.Num());
-    if (!FFileHelper::SaveArrayToFile(Bytes, *AbsolutePath))
+    if (!McpWriteProjectFile(AbsolutePath, Bytes, OutMessage))
     {
-        OutMessage = TEXT("Failed to write heightmap file");
         OutErrorCode = TEXT("WRITE_FAILED");
         return false;
     }
