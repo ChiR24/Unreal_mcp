@@ -18,7 +18,7 @@ IMPLEMENT_SIMPLE_AUTOMATION_TEST(
 bool FMcpNiagaraEmitterNameTest::RunTest(const FString& Parameters)
 {
 	(void)Parameters;
-#if MCP_HAS_NIAGARA_EMITTER_FACTORY_NEW
+#if MCP_HAS_NIAGARA_EMITTER_FACTORY_NEW && (ENGINE_MAJOR_VERSION > 5 || ENGINE_MINOR_VERSION >= 3)
 	// A name ending in "_<number>" is the case that used to be renamed; the leading-zero and plain names never were.
 	const TCHAR* Names[] = { TEXT("NE_McpNameProbe_0"), TEXT("NE_McpNameProbe_7"), TEXT("NE_McpNameProbe_01"), TEXT("NE_McpNameProbe") };
 	const FString Root = FString::Printf(TEXT("/Temp/McpEmitterName_%s/"), *FGuid::NewGuid().ToString(EGuidFormats::Digits));
@@ -49,7 +49,7 @@ bool FMcpNiagaraEmitterNameTest::RunTest(const FString& Parameters)
 		Package->MarkAsGarbage();
 	}
 #else
-	AddInfo(TEXT("create_niagara_emitter names the emitter only where UNiagaraEmitterFactoryNew exists (UE 5.1+)."));
+	AddInfo(TEXT("This test calls UNiagaraEmitterFactoryNew::InitializeEmitter, which is exported only from UE 5.3."));
 #endif
 	return true;
 }
