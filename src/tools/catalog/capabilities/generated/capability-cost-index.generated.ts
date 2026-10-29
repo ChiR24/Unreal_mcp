@@ -301,6 +301,7 @@ export const CAPABILITY_COST_INDEX: Readonly<Record<string, string>> = {
   "build_environment::spawn_sky_light": "interactive|low",
   "control_actor::add_component": "interactive|low",
   "control_actor::add_tag": "instant|low",
+  "control_actor::align_actors": "instant|low",
   "control_actor::apply_force": "interactive|low",
   "control_actor::apply_material": "instant|low",
   "control_actor::arrange_by_relations": "interactive|medium",
@@ -1676,4 +1677,4 @@ export const CAPABILITY_COST_INDEX: Readonly<Record<string, string>> = {
   "system_control::write_snapshot": "interactive|medium"
 };
 
-export const CAPABILITY_COST_INDEX_KEY_COUNT = 1663;
+export const CAPABILITY_COST_INDEX_KEY_COUNT = 1664;

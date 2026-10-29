@@ -93,6 +93,21 @@ const testCases = [
   ] },
   { scenario: 'ERROR: distribute_actors names an actor that is not there', toolName: 'control_actor', arguments: { action: 'distribute_actors', actorNames: [CRATES[0], CRATES[1], `MCP_NoSuchActor_${ts}`] }, expected: 'error|ACTOR_NOT_FOUND' },
   { scenario: 'ERROR: distribute_actors with the same actor named three times', toolName: 'control_actor', arguments: { action: 'distribute_actors', actorNames: [CRATES[0], CRATES[0], CRATES[0]] }, expected: 'error|INVALID_ARGUMENT' },
+  // align_actors: the crates' tops put at 150 cm; their centres already share y, so lining them up there moves nothing.
+  { scenario: 'READ: align_actors dryRun reports and moves nothing', toolName: 'control_actor', arguments: { action: 'align_actors', actorNames: CRATES, axis: 'z', edge: 'max', value: 150, dryRun: true }, expected: 'success', assertions: [
+    { path: 'structuredContent.result.moved', equals: 3, label: 'all three would move' },
+    { path: 'structuredContent.result.dryRun', equals: true, label: 'and nothing did' },
+  ] },
+  { scenario: 'UPDATE: align_actors puts the crates\' tops at 150 cm', toolName: 'control_actor', arguments: { action: 'align_actors', actorNames: CRATES, axis: 'z', edge: 'max', value: 150 }, expected: 'success', assertions: [
+    { path: 'structuredContent.result.line', equals: 150, label: 'the line is the value given' },
+    { path: 'structuredContent.result.actors.0.to.2', approximately: 100, tolerance: 0.5, label: 'a 100 cm crate\'s centre rises to 100' },
+    { path: 'structuredContent.result.undo.undoable', equals: true, label: 'one undo step' },
+  ] },
+  { scenario: 'READ: align_actors on a line already shared moves nothing and makes no undo step', toolName: 'control_actor', arguments: { action: 'align_actors', actorNames: CRATES, axis: 'y' }, expected: 'success', assertions: [
+    { path: 'structuredContent.result.moved', equals: 0, label: 'their centres already share y' },
+  ] },
+  { scenario: 'ERROR: align_actors with one actor and no value', toolName: 'control_actor', arguments: { action: 'align_actors', actorNames: [CRATES[0]], axis: 'x' }, expected: 'error|INVALID_ARGUMENT' },
+  { scenario: 'ERROR: align_actors names an actor that is not there', toolName: 'control_actor', arguments: { action: 'align_actors', actorNames: [CRATES[0], `MCP_NoSuchActor_${ts}`], axis: 'x' }, expected: 'error|ACTOR_NOT_FOUND' },
   // lock_actors: the shelf and the lamp locked; fix_placement then leaves the lamp where it is.
   { scenario: 'UPDATE: lock_actors locks the shelf and the lamp', toolName: 'control_actor', arguments: { action: 'lock_actors', actorNames: [SHELF, LAMP] }, expected: 'success', assertions: [
     { path: 'structuredContent.result.changed', equals: 2, label: 'both locked' },

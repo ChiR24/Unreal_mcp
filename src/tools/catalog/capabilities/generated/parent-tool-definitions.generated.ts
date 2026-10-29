@@ -4809,6 +4809,15 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             {
               "type": "array",
               "minItems": 1,
+              "maxItems": 500,
+              "items": {
+                "type": "string"
+              },
+              "description": "The actors, by label or name; the first is the one the others line up with, unless value is given (then one is enough, else INVALID_ARGUMENT)."
+            },
+            {
+              "type": "array",
+              "minItems": 1,
               "maxItems": 64,
               "items": {
                 "type": "string"
@@ -4937,7 +4946,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             "y",
             "z"
           ],
-          "description": "The axis to space along (default the one their centres spread across most)."
+          "description": "The axis they line up on: each actor moves along it only (z lines up tops or bottoms)."
         },
         "blueprintPath": {
           "type": "string",
@@ -5030,6 +5039,16 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "durationSeconds": {
           "type": "number",
           "description": "Game seconds to watch (default 2, at most 30). Game time, so a clock slowed with set_game_speed still covers the same span of play; a run that needs more wall-clock time than maxRealSeconds stops there (endedBecause realTimeCap)."
+        },
+        "edge": {
+          "type": "string",
+          "enum": [
+            "min",
+            "max",
+            "center",
+            "pivot"
+          ],
+          "description": "What lines up: the low side of the bounds (min), the high side (max: the tops on z), their center (default), or the actor's pivot."
         },
         "edit": {
           "type": "string",
@@ -5596,6 +5615,15 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "default": "transform"
         },
         "value": {
+          "oneOf": [
+            {
+              "description": "Property value (any type)."
+            },
+            {
+              "type": "number",
+              "description": "The coordinate in cm the edge lands on, in place of the first actor's."
+            }
+          ],
           "description": "Property value (any type)."
         },
         "variables": {
@@ -5626,6 +5654,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             "get_transform",
             "apply_force",
             "randomize_transforms",
+            "align_actors",
             "edit_component",
             "get_component_property",
             "set_material",
@@ -5698,6 +5727,15 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
                   }
                 }
               }
+            },
+            {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "additionalProperties": true,
+                "x-unreal-reflection-boundary": true
+              },
+              "description": "Each actor as {actor, from [x, y, z], to [x, y, z], movedCm}."
             },
             {
               "type": "array",
@@ -5803,7 +5841,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
               "description": "Matched actors."
             }
           ],
-          "description": "Each actor as {actor, from [x, y, z], to [x, y, z], rotation [pitch, yaw, roll] when rotationDeg is set, movedCm}."
+          "description": "Each actor as {actor, from [x, y, z], to [x, y, z], movedCm}."
         },
         "actorsExamined": {
           "type": "number",
@@ -6136,6 +6174,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "label": {
           "type": "string",
           "description": "The label now."
+        },
+        "line": {
+          "type": "number",
+          "description": "The coordinate the edges were lined up on."
         },
         "location": {
           "oneOf": [

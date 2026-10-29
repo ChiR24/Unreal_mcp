@@ -2,7 +2,7 @@
  * Transform and physics records: set_transform and its five aliases
  * (teleport_actor, set_actor_location, set_actor_rotation, set_actor_scale,
  * set_actor_transform), get_transform and its alias (get_actor_transform),
- * apply_force and randomize_transforms.
+ * apply_force, randomize_transforms and align_actors.
  */
 import type { CapabilityRecordSource } from '../../model.js';
 import { ANY_EDITOR_STATE, buildCoreRecord } from '../core/builder.js';
@@ -366,5 +366,36 @@ export const TRANSFORM_RECORDS: readonly CapabilityRecordSource[] = [
     costResources: 'low',
     exampleInput: { action: 'randomize_transforms', actorNames: ['Rock_1', 'Rock_2', 'Rock_3'], yaw: 180, scale: [0.8, 1.25], seed: 7 },
     exampleOutput: { success: true, message: 'Randomized 3 actor(s).', actors: [{ actor: 'Rock_1', location: [0, 0, 0], rotation: [0, 112.4, 0], scale: [1.13, 1.13, 1.13] }] },
+  }),
+  buildCoreRecord({
+    parentTool: 'control_actor',
+    action: 'align_actors',
+    domain: DOMAIN,
+    family: FAMILY_TRANSFORM,
+    topics: ['align actors', 'line up the actors', 'align the tops of the shelves', 'square up a row of crates', 'make the fronts flush'],
+    summary: 'Line actors up on one axis, as a level designer squares up a row of crates, the tops of shelves or the fronts of buildings: each actor moves along axis only, so the edge it is aligned by (the min, max or center of its bounds, or its pivot) lands on the first actor\'s, or on value. Every name is found before anything moves (ACTOR_NOT_FOUND changes nothing); the moves are one undo step (none when nothing moves), dryRun reports them without moving, and where an actor lands is checked like any move.',
+    whenToUse: ['A row of props placed by hand should stand on one line.', 'Shelves, walls or buildings should share a top, a bottom or a front.'],
+    whenNotToUse: ['The gaps between them should be even: use distribute_actors.', 'Positions should land on a grid: use snap_to_grid.', 'Actors should rest on the floor: use fix_placement.'],
+    inputProps: {
+      actorNames: { type: 'array', minItems: 1, maxItems: 500, items: { type: 'string' }, description: 'The actors, by label or name; the first is the one the others line up with, unless value is given (then one is enough, else INVALID_ARGUMENT).' },
+      axis: { type: 'string', enum: ['x', 'y', 'z'], description: 'The axis they line up on: each actor moves along it only (z lines up tops or bottoms).' },
+      edge: { type: 'string', enum: ['min', 'max', 'center', 'pivot'], description: 'What lines up: the low side of the bounds (min), the high side (max: the tops on z), their center (default), or the actor\'s pivot.' },
+      value: { type: 'number', description: 'The coordinate in cm the edge lands on, in place of the first actor\'s.' },
+      dryRun: { type: 'boolean', description: 'Report where each would go; nothing moves (default false).' },
+    },
+    required: ['actorNames', 'axis'],
+    outputProps: {
+      actors: { type: 'array', items: { type: 'object', additionalProperties: true, 'x-unreal-reflection-boundary': true }, description: 'Each actor as {actor, from [x, y, z], to [x, y, z], movedCm}.' },
+      line: { type: 'number', description: 'The coordinate the edges were lined up on.' },
+      moved: { type: 'number', description: 'Actors that moved (or would, under dryRun).' },
+      dryRun: { type: 'boolean', description: 'Whether nothing was moved.' },
+      undo: { type: 'object', additionalProperties: true, 'x-unreal-reflection-boundary': true, description: 'What editor undo takes back: the moves are one step. Absent under dryRun and when nothing moved.' },
+    },
+    outputRequired: [],
+    effect: 'write',
+    costLatency: 'instant',
+    costResources: 'low',
+    exampleInput: { action: 'align_actors', actorNames: ['Shelf_1', 'Shelf_2', 'Shelf_3'], axis: 'z', edge: 'max' },
+    exampleOutput: { success: true, message: 'Aligned 2 of 3 actor(s): their max on z = 210.0.', actors: [{ actor: 'Shelf_2', from: [300, 0, 95], to: [300, 0, 105], movedCm: 10 }], line: 210, moved: 2, dryRun: false },
   }),
 ];

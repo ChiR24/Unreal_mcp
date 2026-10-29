@@ -4009,6 +4009,7 @@
         "get_transform",
         "apply_force",
         "randomize_transforms",
+        "align_actors",
         "edit_component",
         "get_component_property",
         "set_material",
@@ -4061,6 +4062,7 @@
         "distance",
         "dryRun",
         "durationSeconds",
+        "edge",
         "edit",
         "fallCm",
         "filter",
@@ -4264,6 +4266,15 @@
               {
                 "type": "array",
                 "minItems": 1,
+                "maxItems": 500,
+                "items": {
+                  "type": "string"
+                },
+                "description": "The actors, by label or name; the first is the one the others line up with, unless value is given (then one is enough, else INVALID_ARGUMENT)."
+              },
+              {
+                "type": "array",
+                "minItems": 1,
                 "maxItems": 64,
                 "items": {
                   "type": "string"
@@ -4392,7 +4403,7 @@
               "y",
               "z"
             ],
-            "description": "The axis to space along (default the one their centres spread across most)."
+            "description": "The axis they line up on: each actor moves along it only (z lines up tops or bottoms)."
           },
           "blueprintPath": {
             "type": "string",
@@ -4485,6 +4496,16 @@
           "durationSeconds": {
             "type": "number",
             "description": "Game seconds to watch (default 2, at most 30). Game time, so a clock slowed with set_game_speed still covers the same span of play; a run that needs more wall-clock time than maxRealSeconds stops there (endedBecause realTimeCap)."
+          },
+          "edge": {
+            "type": "string",
+            "enum": [
+              "min",
+              "max",
+              "center",
+              "pivot"
+            ],
+            "description": "What lines up: the low side of the bounds (min), the high side (max: the tops on z), their center (default), or the actor's pivot."
           },
           "edit": {
             "type": "string",
@@ -5051,6 +5072,15 @@
             "default": "transform"
           },
           "value": {
+            "oneOf": [
+              {
+                "description": "Property value (any type)."
+              },
+              {
+                "type": "number",
+                "description": "The coordinate in cm the edge lands on, in place of the first actor's."
+              }
+            ],
             "description": "Property value (any type)."
           },
           "variables": {
@@ -5081,6 +5111,7 @@
               "get_transform",
               "apply_force",
               "randomize_transforms",
+              "align_actors",
               "edit_component",
               "get_component_property",
               "set_material",

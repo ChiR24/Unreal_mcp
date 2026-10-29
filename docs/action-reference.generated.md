@@ -4,7 +4,7 @@
 
 # Action reference
 
-Catalog revision: `6c7af0b4778e38fd`
+Catalog revision: `e2395c007cfb07c4`
 
 Both transports expose exactly ONE public MCP tool, `unreal`, with the four
 operations `search` / `describe` / `execute` / `configure`. The parent tools
@@ -13,7 +13,7 @@ by `tools/list` and a direct `tools/call` on one returns a
 `DIRECT_TOOL_CALL_REMOVED` receipt rather than executing
 (`src/server/gateway/direct-call-migration.ts`).
 
-The catalog declares 478 capabilities across
+The catalog declares 479 capabilities across
 23 internal parent tools.
 Every row is derived from the capability record that the gateway actually
 validates against, so `execute` cannot accept an action this table omits.
@@ -41,7 +41,7 @@ validates against, so `execute` cannot accept an action this table omits.
 | --- | --- | --- | --- | --- | --- |
 | `animation_physics` | 32 | 5 | 25 | 2 | animation physics |
 | `build_environment` | 43 | 5 | 35 | 3 | environment |
-| `control_actor` | 34 | 9 | 22 | 3 | actor |
+| `control_actor` | 35 | 9 | 23 | 3 | actor |
 | `control_editor` | 29 | 10 | 15 | 4 | editor |
 | `inspect` | 27 | 22 | 4 | 1 | inspect |
 | `manage_ai` | 17 | 3 | 14 | 0 | manage ai |
@@ -65,7 +65,7 @@ validates against, so `execute` cannot accept an action this table omits.
 
 ## Capabilities requiring consent
 
-77 of 478 capabilities require consent.
+77 of 479 capabilities require consent.
 
 | Capability | Tool | Action | Effect | Consent |
 | --- | --- | --- | --- | --- |
@@ -295,6 +295,7 @@ validates against, so `execute` cannot accept an action this table omits.
 | `build_environment.sculpt` | `build_environment` | `sculpt_landscape` | write | write | none | `build_environment.sculpt` `build_environment.modify_heightmap` `build_environment.set_landscape_material` `build_environment.sculpt_landscape` |
 | `build_environment.set_light_channel` | `build_environment` | `set_light_channel` | write | write | none | `build_environment.set_light_channel` `build_environment.set_actor_light_channel` |
 | `control_actor.add_tag` | `control_actor` | `add_tag` | write | write | none | `control_actor.add_tag` `control_actor.remove_tag` |
+| `control_actor.align_actors` | `control_actor` | `align_actors` | write | write | none | `control_actor.align_actors` |
 | `control_actor.apply_force` | `control_actor` | `apply_force` | write | write | none | `control_actor.apply_force` |
 | `control_actor.arrange_by_relations` | `control_actor` | `arrange_by_relations` | write | write | none | `control_actor.arrange_by_relations` |
 | `control_actor.attach` | `control_actor` | `attach` | write | write | none | `control_actor.attach` `control_actor.attach_actor` |

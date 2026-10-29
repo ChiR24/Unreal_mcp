@@ -926,4 +926,7 @@ export const PLAIN_PROBE: readonly PlainProbeCase[] = [
   // "find" names find, not the relations tools that once sat in a family called "find".
   { query: 'find the table', accepted: ['control_actor.find'] },
   { query: 'find the chair', accepted: ['control_actor.find'] },
+  // Actors lined up on one axis by an edge of their bounds.
+  { query: 'line up the actors', accepted: ['control_actor.align_actors'] },
+  { query: 'align the tops of the shelves', accepted: ['control_actor.align_actors'] },
 ];

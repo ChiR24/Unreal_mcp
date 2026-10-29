@@ -1,6 +1,6 @@
 {
-  "catalogRevision": "6c7af0b4778e38fd",
-  "recordCount": 478,
+  "catalogRevision": "e2395c007cfb07c4",
+  "recordCount": 479,
   "records": [
     {
       "id": "animation_physics.analyze_animation",
@@ -39603,6 +39603,210 @@
         "algorithm": "sha256",
         "schema": "eca1680d47e872ab9a775627a6176b7c512539a08fa374a3fb72914a281a2482",
         "content": "f1ec7f1567cd1a2e58e50bd0f3d3f2fa59b7a0f0b423e70aa54484d040126122"
+      }
+    },
+    {
+      "id": "control_actor.align_actors",
+      "aliases": [],
+      "legacyIds": [
+        {
+          "tool": "control_actor",
+          "action": "align_actors"
+        }
+      ],
+      "discovery": {
+        "domain": "actor",
+        "family": "transform",
+        "topics": [
+          "align_actors",
+          "align actors",
+          "line up the actors",
+          "align the tops of the shelves",
+          "square up a row of crates",
+          "make the fronts flush"
+        ],
+        "summary": "Line actors up on one axis, as a level designer squares up a row of crates, the tops of shelves or the fronts of buildings: each actor moves along axis only, so the edge it is aligned by (the min, max or center of its bounds, or its pivot) lands on the first actor's, or on value. Every name is found before anything moves (ACTOR_NOT_FOUND changes nothing); the moves are one undo step (none when nothing moves), dryRun reports them without moving, and where an actor lands is checked like any move.",
+        "whenToUse": [
+          "A row of props placed by hand should stand on one line.",
+          "Shelves, walls or buildings should share a top, a bottom or a front."
+        ],
+        "whenNotToUse": [
+          "The gaps between them should be even: use distribute_actors.",
+          "Positions should land on a grid: use snap_to_grid.",
+          "Actors should rest on the floor: use fix_placement."
+        ]
+      },
+      "schemas": {
+        "input": {
+          "$schema": "https://json-schema.org/draft/2020-12/schema",
+          "type": "object",
+          "properties": {
+            "action": {
+              "type": "string",
+              "description": "The action to execute on the parent tool."
+            },
+            "actorNames": {
+              "type": "array",
+              "minItems": 1,
+              "maxItems": 500,
+              "items": {
+                "type": "string"
+              },
+              "description": "The actors, by label or name; the first is the one the others line up with, unless value is given (then one is enough, else INVALID_ARGUMENT)."
+            },
+            "axis": {
+              "type": "string",
+              "enum": [
+                "x",
+                "y",
+                "z"
+              ],
+              "description": "The axis they line up on: each actor moves along it only (z lines up tops or bottoms)."
+            },
+            "edge": {
+              "type": "string",
+              "enum": [
+                "min",
+                "max",
+                "center",
+                "pivot"
+              ],
+              "description": "What lines up: the low side of the bounds (min), the high side (max: the tops on z), their center (default), or the actor's pivot."
+            },
+            "value": {
+              "type": "number",
+              "description": "The coordinate in cm the edge lands on, in place of the first actor's."
+            },
+            "dryRun": {
+              "type": "boolean",
+              "description": "Report where each would go; nothing moves (default false)."
+            }
+          },
+          "required": [
+            "action",
+            "actorNames",
+            "axis"
+          ],
+          "additionalProperties": false
+        },
+        "output": {
+          "$schema": "https://json-schema.org/draft/2020-12/schema",
+          "type": "object",
+          "properties": {
+            "success": {
+              "type": "boolean",
+              "description": "Whether the action succeeded."
+            },
+            "message": {
+              "type": "string",
+              "description": "Human-readable result message."
+            },
+            "details": {
+              "type": "object",
+              "x-unreal-reflection-boundary": true,
+              "description": "Additional handler result fields not named by the contract."
+            },
+            "actors": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "additionalProperties": true,
+                "x-unreal-reflection-boundary": true
+              },
+              "description": "Each actor as {actor, from [x, y, z], to [x, y, z], movedCm}."
+            },
+            "line": {
+              "type": "number",
+              "description": "The coordinate the edges were lined up on."
+            },
+            "moved": {
+              "type": "number",
+              "description": "Actors that moved (or would, under dryRun)."
+            },
+            "dryRun": {
+              "type": "boolean",
+              "description": "Whether nothing was moved."
+            },
+            "undo": {
+              "type": "object",
+              "additionalProperties": true,
+              "x-unreal-reflection-boundary": true,
+              "description": "What editor undo takes back: the moves are one step. Absent under dryRun and when nothing moved."
+            }
+          },
+          "required": [
+            "success"
+          ],
+          "additionalProperties": false
+        }
+      },
+      "examples": [
+        {
+          "title": "Line actors up on one axis, as a level designer squares up a row of crates, the tops of shelves or the fronts of buildings: each actor moves along axis only, so the edge it is aligned by (the min, max or center of its bounds, or its pivot) lands on the first actor's, or on value. Every name is found before anything moves (ACTOR_NOT_FOUND changes nothing); the moves are one undo step (none when nothing moves), dryRun reports them without moving, and where an actor lands is checked like any move.",
+          "input": {
+            "action": "align_actors",
+            "actorNames": [
+              "Shelf_1",
+              "Shelf_2",
+              "Shelf_3"
+            ],
+            "axis": "z",
+            "edge": "max"
+          },
+          "output": {
+            "success": true,
+            "message": "Aligned 2 of 3 actor(s): their max on z = 210.0.",
+            "actors": [
+              {
+                "actor": "Shelf_2",
+                "from": [
+                  300,
+                  0,
+                  95
+                ],
+                "to": [
+                  300,
+                  0,
+                  105
+                ],
+                "movedCm": 10
+              }
+            ],
+            "line": 210,
+            "moved": 2,
+            "dryRun": false
+          }
+        }
+      ],
+      "availability": {
+        "requiredPlugins": [],
+        "editorStates": [
+          "edit"
+        ]
+      },
+      "behavior": {
+        "effect": "write",
+        "idempotency": "non-idempotent",
+        "longRunning": false,
+        "safeToRetry": false
+      },
+      "policy": {
+        "requiredScope": "write",
+        "consent": "none",
+        "dataAccess": "project-write"
+      },
+      "cost": {
+        "latency": "instant",
+        "resources": "low"
+      },
+      "routing": {
+        "parentTool": "control_actor",
+        "dispatchAction": "align_actors"
+      },
+      "hashes": {
+        "algorithm": "sha256",
+        "schema": "730704cab8396426959354690fac056e4cab1a7d0785ba99bba587be922347f8",
+        "content": "8f58a55a79c6bd3268ede0056b7591742c7f195b0944da34c6f5149fcdb153c4"
       }
     },
     {
