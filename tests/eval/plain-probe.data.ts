@@ -846,6 +846,11 @@ export const PLAIN_PROBE: readonly PlainProbeCase[] = [
   { query: 'show collision', accepted: ['control_editor.configure_viewport'] },
   { query: 'show bounds', accepted: ['control_editor.configure_viewport'] },
   { query: 'show the navigation mesh', accepted: ['control_editor.configure_viewport'] },
+  // A flickering light is edit_component's flicker (a light function material).
+  { query: 'make the light flicker', accepted: ['control_actor.edit_component'] },
+  { query: 'flickering torch', accepted: ['control_actor.edit_component'] },
+  { query: 'candle flicker', accepted: ['control_actor.edit_component'] },
+  { query: 'stop the light flickering', accepted: ['control_actor.edit_component'] },
   { query: 'how many cubes are there', accepted: ['control_actor.list'] },
   // Plain requests whose owner did not name their words.
   { query: 'duplicate the wall', accepted: ['control_actor.duplicate'] },

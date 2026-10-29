@@ -4,7 +4,7 @@
 
 # Action reference
 
-Catalog revision: `c911c1cd8d97427d`
+Catalog revision: `a9ac3809e91d5b59`
 
 Both transports expose exactly ONE public MCP tool, `unreal`, with the four
 operations `search` / `describe` / `execute` / `configure`. The parent tools
@@ -307,7 +307,7 @@ validates against, so `execute` cannot accept an action this table omits.
 | `control_actor.detach` | `control_actor` | `detach` | write | write | none | `control_actor.detach` `control_actor.detach_actor` |
 | `control_actor.distribute_actors` | `control_actor` | `distribute_actors` | write | write | none | `control_actor.distribute_actors` |
 | `control_actor.duplicate` | `control_actor` | `duplicate` | write | write | none | `control_actor.duplicate` |
-| `control_actor.edit_component` | `control_actor` | `add_component` | write | write | none | `control_actor.edit_component` `control_actor.add_component` `control_actor.remove_component` `control_actor.set_component_property` `control_actor.set_component_properties` |
+| `control_actor.edit_component` | `control_actor` | `add_component` | write | write | none | `control_actor.edit_component` `control_actor.add_component` `control_actor.remove_component` `control_actor.set_component_property` `control_actor.set_component_properties` `control_actor.set_light_flicker` |
 | `control_actor.find` | `control_actor` | `find_by_class` | read | read | none | `control_actor.find` `control_actor.find_by_class` `control_actor.find_by_name` `control_actor.find_by_mesh` `control_actor.find_by_material` `control_actor.find_actors_by_class` `control_actor.find_actors_by_name` |
 | `control_actor.find_by_tag` | `control_actor` | `find_by_tag` | read | read | none | `control_actor.find_by_tag` `control_actor.find_actors_by_tag` |
 | `control_actor.fix_coplanar` | `control_actor` | `fix_coplanar` | write | write | none | `control_actor.fix_coplanar` |

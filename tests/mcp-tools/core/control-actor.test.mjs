@@ -67,6 +67,7 @@ const ENGINE_BASIC_MATERIAL = '/Engine/BasicShapes/BasicShapeMaterial.BasicShape
 // The instances set_material's color makes: teal is #00897B, and #abc is #AABBCC.
 const TEAL_MATERIAL = '/Game/Materials/Colors/MI_Color_00897B.MI_Color_00897B';
 const SHORT_HEX_MATERIAL = '/Game/Materials/Colors/MI_Color_AABBCC.MI_Color_AABBCC';
+const FLICKER_LIGHT = `MCP_FlickerLight_${ts}`;
 
 const cubeSpawn = (scenario, actorName, location) => ({
   scenario,
@@ -310,6 +311,15 @@ const testCases = [
   { scenario: 'ERROR: set_material refuses a colour it cannot read', toolName: 'control_actor', arguments: { action: 'set_material', actorName: DUPLICATE_COPY, color: 'reddish' }, expected: 'error|INVALID_ARGUMENT' },
   { scenario: 'ERROR: set_material refuses color with materialPath', toolName: 'control_actor', arguments: { action: 'set_material', actorName: DUPLICATE_COPY, color: 'red', materialPath: ENGINE_BASIC_MATERIAL }, expected: 'error|INVALID_ARGUMENT' },
   { scenario: 'ERROR: set_material color for an actor that does not exist makes nothing', toolName: 'control_actor', arguments: { action: 'set_material', actorName: `MCP_Missing_${ts}`, color: '#13579b' }, expected: 'error|ACTOR_NOT_FOUND' },
+  // flicker: a light function material on a placed light; the instance is named by its speed x 10 and depth x 100.
+  { scenario: 'Setup: a point light to flicker', toolName: 'control_actor', arguments: { action: 'spawn', classPath: 'PointLight', actorName: FLICKER_LIGHT, location: { x: 32000, y: 32000, z: 300 } }, expected: 'success' },
+  { scenario: 'CONFIG: set_light_flicker gives the light a flicker', toolName: 'control_actor', arguments: { action: 'set_light_flicker', actorName: FLICKER_LIGHT }, expected: 'success', assertions: [{ path: 'structuredContent.result.materialPath', equals: '/Game/Materials/Lights/MI_LightFlicker_S80_D60.MI_LightFlicker_S80_D60', label: 'the default speed 8 and depth 0.6 name the instance' }, { path: 'structuredContent.result.changed', length: 1, label: 'its one light component took it' }, { path: 'structuredContent.result.undo.undoable', equals: true, label: 'one undo step' }] },
+  { scenario: 'CONFIG: set_light_flicker with its own speed and depth', toolName: 'control_actor', arguments: { action: 'set_light_flicker', actorName: FLICKER_LIGHT, speed: 12, depth: 0.4 }, expected: 'success', assertions: [{ path: 'structuredContent.result.materialPath', equals: '/Game/Materials/Lights/MI_LightFlicker_S120_D40.MI_LightFlicker_S120_D40', label: 'another pair is another instance' }] },
+  { scenario: 'CONFIG: set_light_flicker enabled false stops it', toolName: 'control_actor', arguments: { action: 'set_light_flicker', actorName: FLICKER_LIGHT, enabled: false }, expected: 'success', assertions: [{ path: 'structuredContent.result.changed', length: 1, label: 'the flicker came off' }] },
+  { scenario: 'CONFIG: set_light_flicker enabled false again changes nothing', toolName: 'control_actor', arguments: { action: 'set_light_flicker', actorName: FLICKER_LIGHT, enabled: false }, expected: 'success', assertions: [{ path: 'structuredContent.result.changed', length: 0, label: 'no flicker of ours is left to take off' }] },
+  { scenario: 'Setup: the light made Static', toolName: 'control_actor', arguments: { action: 'set_component_property', actorName: FLICKER_LIGHT, componentName: 'LightComponent0', propertyName: 'Mobility', value: 'Static' }, expected: 'success' },
+  { scenario: 'ERROR: set_light_flicker on a Static light', toolName: 'control_actor', arguments: { action: 'set_light_flicker', actorName: FLICKER_LIGHT }, expected: 'error|LIGHT_IS_STATIC' },
+  { scenario: 'ERROR: set_light_flicker on an actor with no light', toolName: 'control_actor', arguments: { action: 'set_light_flicker', actorName: MAIN_ACTOR }, expected: 'error|COMPONENT_NOT_FOUND' },
 
   // === COMPONENTS ===
   { scenario: 'ADD: add_component', toolName: 'control_actor', arguments: actorArgs('add_component', { componentType: '/Script/Engine.PointLightComponent', componentName: COMPONENT_NAME, properties: { Intensity: 1250 } }), expected: 'success|already exists' },
@@ -429,6 +439,8 @@ const testCases = [
   // === CLEANUP ===
   { scenario: 'Cleanup: delete spawned actors', toolName: 'control_actor', arguments: { action: 'delete', actorNames: [MAIN_ACTOR, DUPLICATE_ACTOR, DUPLICATE_COPY, MESH_ACTOR, PARENT_ACTOR, CHILD_ACTOR, BP_ACTOR, NEAR_ACTOR, FAR_ACTOR, `MCP_SpawnSphere_${ts}`, `MCP_SpawnCylinder_${ts}`] }, expected: 'success|not found' },
   { scenario: 'Cleanup: the colour instances', toolName: 'manage_asset', arguments: { action: 'delete', paths: ['/Game/Materials/Colors/MI_Color_00897B', '/Game/Materials/Colors/MI_Color_AABBCC'], force: true }, expected: 'success|not found' },
+  { scenario: 'Cleanup: the flickering light', toolName: 'control_actor', arguments: { action: 'delete', actorName: FLICKER_LIGHT }, expected: 'success|not found' },
+  { scenario: 'Cleanup: the flicker materials', toolName: 'manage_asset', arguments: { action: 'delete', paths: ['/Game/Materials/Lights/MI_LightFlicker_S80_D60', '/Game/Materials/Lights/MI_LightFlicker_S120_D40', '/Game/Materials/Lights/MLF_Flicker'], force: true }, expected: 'success|not found' },
 ];
 
 runToolTests('control-actor', testCases, { folder: TEST_FOLDER });

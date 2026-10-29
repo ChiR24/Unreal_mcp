@@ -1,5 +1,5 @@
 {
-  "catalogRevision": "c911c1cd8d97427d",
+  "catalogRevision": "a9ac3809e91d5b59",
   "recordCount": 480,
   "records": [
     {
@@ -41849,7 +41849,8 @@
         "control_actor.add_component",
         "control_actor.remove_component",
         "control_actor.set_component_property",
-        "control_actor.set_component_properties"
+        "control_actor.set_component_properties",
+        "control_actor.set_light_flicker"
       ],
       "legacyIds": [
         {
@@ -41882,6 +41883,13 @@
           "action": "set_component_properties",
           "folded": {
             "edit": "set_properties"
+          }
+        },
+        {
+          "tool": "control_actor",
+          "action": "set_light_flicker",
+          "folded": {
+            "edit": "flicker"
           }
         }
       ],
@@ -41920,17 +41928,21 @@
           "world text",
           "floating text above actor",
           "text above head",
+          "make a light flicker",
+          "a flickering torch, candle or lamp",
+          "a broken light flickering or stop it flickering",
           "add component to actor",
           "attach component to actor"
         ],
-        "summary": "Add a component to a placed actor (edit add: componentType, componentName, meshPath, properties; attached under its root, a light made Movable), remove one (remove), or set one or more of its properties (set_property, set_properties: a placed mesh's StaticMesh or OverrideMaterials, a light's Intensity or LightColor to turn on a light, dim it or make it brighter, a TextRender's Text). remove takes the exact name, refused with COMPONENT_NOT_FOUND naming the nearest, and only a component added to this actor: one from its class or Blueprint, or its root, is COMPONENT_NOT_REMOVABLE (a Blueprint component comes out with edit_scs). Each is one undo step and leaves the level unsaved; while Play runs they change the playing copy.",
+        "summary": "Add a component to a placed actor (edit add: componentType, componentName, meshPath, properties; attached under its root, a light made Movable), remove one (remove), or set one or more of its properties (set_property, set_properties: a placed mesh's StaticMesh or OverrideMaterials, a light's Intensity or LightColor to turn on a light, dim it or make it brighter, a TextRender's Text), or make its lights flicker (flicker: speed and depth, enabled false stops it). remove takes the exact name, refused with COMPONENT_NOT_FOUND naming the nearest, and only a component added to this actor: one from its class or Blueprint, or its root, is COMPONENT_NOT_REMOVABLE (a Blueprint component comes out with edit_scs). Each is one undo step and leaves the level unsaved; while Play runs they change the playing copy.",
         "whenToUse": [
           "edit=add: A component must be attached to an existing actor.",
           "edit=add: A placed actor must spin or travel by itself, like a platform: add a RotatingMovementComponent (properties RotationRate {pitch, yaw, roll} in degrees per second) or an InterpToMovementComponent (ControlPoints: two or more {PositionControlPoint {x, y, z}, bPositionIsRelative}, Duration in seconds, and BehaviourType PingPong or Loop: the default OneShot stops at the last point).",
           "edit=remove: A component must be permanently detached and removed from an actor.",
           "edit=set_property: Component properties must be changed via a properties object or propertyName/value pair.",
           "edit=set_property: Several placed actors need the same component values (a row of lights' colour or light function): actorNames does them in one call.",
-          "edit=set_properties: Preferred when callers use the plural set_component_properties verb."
+          "edit=set_properties: Preferred when callers use the plural set_component_properties verb.",
+          "edit=flicker: A light must flicker: a torch, a candle, a broken lamp, a fire's glow."
         ],
         "whenNotToUse": [
           "edit=set_property: The property should only be read (use get_component_property)."
@@ -41981,15 +41993,32 @@
             "value": {
               "description": "Property value (any type)."
             },
+            "enabled": {
+              "type": "boolean",
+              "description": "false stops the flicker this capability gave the light (default true)."
+            },
+            "speed": {
+              "type": "number",
+              "minimum": 0.5,
+              "maximum": 30,
+              "description": "How fast it flickers, about that many dips a second (default 8)."
+            },
+            "depth": {
+              "type": "number",
+              "minimum": 0.05,
+              "maximum": 1,
+              "description": "How far its brightness dips: 0.6 (the default) to 40% of it, 1 to dark."
+            },
             "edit": {
               "type": "string",
               "enum": [
                 "add",
                 "remove",
                 "set_property",
-                "set_properties"
+                "set_properties",
+                "flicker"
               ],
-              "description": "Which edit component variant to run.\nadd: Add a new component of a given type to an actor. If any requested property (or meshPath) does not apply, the call fails naming what did not, although the component was added.\nremove: Remove a component that was added to this actor (edit=add, or by hand in the editor), by its exact name, in one undo step, leaving the level unsaved. A near miss is refused with COMPONENT_NOT_FOUND naming the closest component; a component of the actor class or its Blueprint, or the root, is refused with COMPONENT_NOT_REMOVABLE (a Blueprint one comes out with edit_scs).\nset_property: Set one or more properties on a named actor component. For RelativeScale3D/RelativeLocation, note that a child inherits its parent's scale: Unreal multiplies parent and child scale COMPONENT-WISE in the child's own local axes, and rotation does NOT permute which axis each factor lands on. World size = ParentScale * ChildScale * MeshExtent per local axis, and world offset = ParentScale * RelativeLocation. Under a parent scaled non-uniformly, divide the offset you want by the parent scale on that axis.\nset_properties: Alias of edit=set_property. The bridge dispatches both names to the same handler."
+              "description": "Which edit component variant to run.\nadd: Add a new component of a given type to an actor. If any requested property (or meshPath) does not apply, the call fails naming what did not, although the component was added.\nremove: Remove a component that was added to this actor (edit=add, or by hand in the editor), by its exact name, in one undo step, leaving the level unsaved. A near miss is refused with COMPONENT_NOT_FOUND naming the closest component; a component of the actor class or its Blueprint, or the root, is refused with COMPONENT_NOT_REMOVABLE (a Blueprint one comes out with edit_scs).\nset_property: Set one or more properties on a named actor component. For RelativeScale3D/RelativeLocation, note that a child inherits its parent's scale: Unreal multiplies parent and child scale COMPONENT-WISE in the child's own local axes, and rotation does NOT permute which axis each factor lands on. World size = ParentScale * ChildScale * MeshExtent per local axis, and world offset = ParentScale * RelativeLocation. Under a parent scaled non-uniformly, divide the offset you want by the parent scale on that axis.\nset_properties: Alias of edit=set_property. The bridge dispatches both names to the same handler.\nflicker: Make a placed light flicker, or stop it (enabled false): every light component of actorName (or componentName) gets a light function material that dips its brightness at uneven moments, speed times a second (default 8) down to 1 - depth of its brightness (default 0.6; 1 goes dark). It works on a native PointLight, SpotLight or RectLight as on a Blueprint's light. The material is /Game/Materials/Lights/MLF_Flicker, made once, and each speed and depth pair an instance of it (MI_LightFlicker_S<speed x 10>_D<depth x 100>), made once and reused; stopping takes off only a flicker this made. One undo step. At Low shadow quality the engine draws no light functions (r.LightFunctionQuality 0): the light shines steady there and the reply warns. Refusals: ACTOR_NOT_FOUND, COMPONENT_NOT_FOUND (no light component), LIGHT_IS_STATIC (a baked light cannot flicker: make it Movable first)."
             }
           },
           "required": [
@@ -42024,7 +42053,7 @@
       },
       "examples": [
         {
-          "title": "Add a component to a placed actor (edit add: componentType, componentName, meshPath, properties; attached under its root, a light made Movable), remove one (remove), or set one or more of its properties (set_property, set_properties: a placed mesh's StaticMesh or OverrideMaterials, a light's Intensity or LightColor to turn on a light, dim it or make it brighter, a TextRender's Text). remove takes the exact name, refused with COMPONENT_NOT_FOUND naming the nearest, and only a component added to this actor: one from its class or Blueprint, or its root, is COMPONENT_NOT_REMOVABLE (a Blueprint component comes out with edit_scs). Each is one undo step and leaves the level unsaved; while Play runs they change the playing copy.",
+          "title": "Add a component to a placed actor (edit add: componentType, componentName, meshPath, properties; attached under its root, a light made Movable), remove one (remove), or set one or more of its properties (set_property, set_properties: a placed mesh's StaticMesh or OverrideMaterials, a light's Intensity or LightColor to turn on a light, dim it or make it brighter, a TextRender's Text), or make its lights flicker (flicker: speed and depth, enabled false stops it). remove takes the exact name, refused with COMPONENT_NOT_FOUND naming the nearest, and only a component added to this actor: one from its class or Blueprint, or its root, is COMPONENT_NOT_REMOVABLE (a Blueprint component comes out with edit_scs). Each is one undo step and leaves the level unsaved; while Play runs they change the playing copy.",
           "input": {
             "action": "edit_component",
             "actorName": "Cube1",
@@ -42067,7 +42096,8 @@
             "add": "add_component",
             "remove": "remove_component",
             "set_property": "set_component_property",
-            "set_properties": "set_component_properties"
+            "set_properties": "set_component_properties",
+            "flicker": "set_light_flicker"
           },
           "declaredBy": {
             "componentType": [
@@ -42092,6 +42122,15 @@
             "value": [
               "set_property",
               "set_properties"
+            ],
+            "enabled": [
+              "flicker"
+            ],
+            "speed": [
+              "flicker"
+            ],
+            "depth": [
+              "flicker"
             ]
           },
           "requires": {
@@ -42124,14 +42163,19 @@
                 "actorName",
                 "actorNames"
               ]
+            },
+            "set_light_flicker": {
+              "required": [
+                "actorName"
+              ]
             }
           }
         }
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "69e79858af54388ed2d9ba3c0204692e449c302b83a944f7a5a66ee405d99e10",
-        "content": "51c68a7120cb594560482ed18b3664e69b6ea4a27f7930670d249b488a690964"
+        "schema": "6a1af5d36036625ba61910405e6e77df29e8cc620eb543fef4810449a49c2d16",
+        "content": "597baef06bf68a6843f9934b27eb7cec5cc15997a6b172805d2716d7db7e6ba5"
       }
     },
     {

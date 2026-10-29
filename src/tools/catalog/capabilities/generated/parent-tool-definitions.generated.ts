@@ -5036,6 +5036,12 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "description": "Which delete variant to run; omit for 'actors'.\nactors: Permanently delete one actor or a batch of actors by name.\nby_tag: Permanently delete every actor matching a gameplay tag, or any of several tags in one call.",
           "default": "actors"
         },
+        "depth": {
+          "type": "number",
+          "minimum": 0.05,
+          "maximum": 1,
+          "description": "How far its brightness dips: 0.6 (the default) to 40% of it, 1 to dark."
+        },
         "digits": {
           "type": "integer",
           "minimum": 1,
@@ -5070,9 +5076,14 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             "add",
             "remove",
             "set_property",
-            "set_properties"
+            "set_properties",
+            "flicker"
           ],
-          "description": "Which edit component variant to run.\nadd: Add a new component of a given type to an actor. If any requested property (or meshPath) does not apply, the call fails naming what did not, although the component was added.\nremove: Remove a component that was added to this actor (edit=add, or by hand in the editor), by its exact name, in one undo step, leaving the level unsaved. A near miss is refused with COMPONENT_NOT_FOUND naming the closest component; a component of the actor class or its Blueprint, or the root, is refused with COMPONENT_NOT_REMOVABLE (a Blueprint one comes out with edit_scs).\nset_property: Set one or more properties on a named actor component. For RelativeScale3D/RelativeLocation, note that a child inherits its parent's scale: Unreal multiplies parent and child scale COMPONENT-WISE in the child's own local axes, and rotation does NOT permute which axis each factor lands on. World size = ParentScale * ChildScale * MeshExtent per local axis, and world offset = ParentScale * RelativeLocation. Under a parent scaled non-uniformly, divide the offset you want by the parent scale on that axis.\nset_properties: Alias of edit=set_property. The bridge dispatches both names to the same handler."
+          "description": "Which edit component variant to run.\nadd: Add a new component of a given type to an actor. If any requested property (or meshPath) does not apply, the call fails naming what did not, although the component was added.\nremove: Remove a component that was added to this actor (edit=add, or by hand in the editor), by its exact name, in one undo step, leaving the level unsaved. A near miss is refused with COMPONENT_NOT_FOUND naming the closest component; a component of the actor class or its Blueprint, or the root, is refused with COMPONENT_NOT_REMOVABLE (a Blueprint one comes out with edit_scs).\nset_property: Set one or more properties on a named actor component. For RelativeScale3D/RelativeLocation, note that a child inherits its parent's scale: Unreal multiplies parent and child scale COMPONENT-WISE in the child's own local axes, and rotation does NOT permute which axis each factor lands on. World size = ParentScale * ChildScale * MeshExtent per local axis, and world offset = ParentScale * RelativeLocation. Under a parent scaled non-uniformly, divide the offset you want by the parent scale on that axis.\nset_properties: Alias of edit=set_property. The bridge dispatches both names to the same handler.\nflicker: Make a placed light flicker, or stop it (enabled false): every light component of actorName (or componentName) gets a light function material that dips its brightness at uneven moments, speed times a second (default 8) down to 1 - depth of its brightness (default 0.6; 1 goes dark). It works on a native PointLight, SpotLight or RectLight as on a Blueprint's light. The material is /Game/Materials/Lights/MLF_Flicker, made once, and each speed and depth pair an instance of it (MI_LightFlicker_S<speed x 10>_D<depth x 100>), made once and reused; stopping takes off only a flicker this made. One undo step. At Low shadow quality the engine draws no light functions (r.LightFunctionQuality 0): the light shines steady there and the reply warns. Refusals: ACTOR_NOT_FOUND, COMPONENT_NOT_FOUND (no light component), LIGHT_IS_STATIC (a baked light cannot flicker: make it Movable first)."
+        },
+        "enabled": {
+          "type": "boolean",
+          "description": "false stops the flicker this capability gave the light (default true)."
         },
         "fallCm": {
           "type": "number",
@@ -5545,6 +5556,12 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "spawnWaitSeconds": {
           "type": "number",
           "description": "With spawnOf: game seconds to wait for the spawn (default 10, at most 30); nothing spawned ends with endedBecause spawnTimeout and no samples. The wait comes out of maxRealSeconds, so the wait and the run still answer inside it."
+        },
+        "speed": {
+          "type": "number",
+          "minimum": 0.5,
+          "maximum": 30,
+          "description": "How fast it flickers, about that many dips a second (default 8)."
         },
         "start": {
           "type": "integer",

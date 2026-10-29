@@ -1,6 +1,7 @@
 #include "Domains/ControlActor/McpActorSupport.h"
 #include "Domains/ControlActor/Find/McpFindByAsset.h"
 #include "Domains/ControlActor/Materials/McpColorMaterial.h"
+#include "Domains/ControlActor/Materials/McpLightFlicker.h"
 #include "Domains/ControlActor/Placement/McpCoplanarFaces.h"
 #include "Domains/ControlActor/Placement/Fix/McpPlacementFix.h"
 #include "Domains/ControlActor/Relations/McpRelations.h"
@@ -92,6 +93,9 @@ bool UEngineWireSubsystem::HandleControlActorAction(
     }
     return HandleControlActorSetMaterial(RequestId, MaterialPayload, RequestingSocket);
   }
+  if (LowerSub == TEXT("set_light_flicker"))
+    return McpLightFlicker::Handle(this, RequestId, Payload, RequestingSocket,
+                                   [this](const FString &Name) { return FindActorByName(Name); });
   if (LowerSub == TEXT("get_components") ||
       LowerSub == TEXT("get_actor_components"))
     return HandleControlActorGetComponents(RequestId, Payload,
