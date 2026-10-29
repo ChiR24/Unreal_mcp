@@ -1,5 +1,5 @@
 {
-  "catalogRevision": "3f9fb4d1de513d82",
+  "catalogRevision": "e6f02b94e0851668",
   "recordCount": 481,
   "records": [
     {
@@ -2455,7 +2455,8 @@
           "restitution",
           "surface friction",
           "make a ball bounce",
-          "make a ball, a cube or a box bounce"
+          "make a ball, a cube or a box bounce",
+          "make the ice slippery"
         ],
         "summary": "Create or tune a physical material: friction (an icy or slippery floor, a grippy one), bounce (restitution), density and how two touching surfaces combine them. A mesh takes it through control_actor edit_component property PhysMaterialOverride (edit_scs set_property on a class template).",
         "whenToUse": [
@@ -2600,7 +2601,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "8fc12fe57a87d5606b19d0d2839598bf362c09b8576d999dab20e9571ffe3aae",
-        "content": "51e61b2b329b16320d9d46e34536a9737acb23b70146c64ce2445852520114ae"
+        "content": "345f10bc386b14cc5cdbe6339dde404b5eb475d2fc3b7aa31197af2d616870d3"
       }
     },
     {
@@ -15023,6 +15024,7 @@
           "gameplay behaviour",
           "add behaviour",
           "gameplay logic",
+          "make an npc talk when the player comes close",
           "health",
           "take damage",
           "player health",
@@ -15925,7 +15927,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "3b6742277acf02b1127167e0b20d3e3b9ccfe4eae1b5d1b2ea279b7db9e20b00",
-        "content": "853336e4421fc0286dd134662bb376d7845adb6513c04df2e41e8abddd6eba19"
+        "content": "16dcb22e932760b60f248f28d02545aa90fcd9ac79e160cc83af2f4b294a3f53"
       }
     },
     {
@@ -20006,7 +20008,10 @@
           "settings screen",
           "start screen",
           "make a start screen",
-          "build menu"
+          "build menu",
+          "pause the game with escape",
+          "add a settings menu with volume and graphics",
+          "add a shop screen"
         ],
         "summary": "Create a new Widget Blueprint holding a ready-made screen: main menu, pause menu, settings menu, loading screen, HUD, dialog box, inventory, radial menu, credits or shop.",
         "whenToUse": [
@@ -20366,7 +20371,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "af1cfbf6f1ef858806d877546051ad79202eaa79b254d8d58bc04aaf786edd5e",
-        "content": "ce2bbf39a02bfc28bfbe0bcd099f5090277ebbb698a8e03f1e479b27811d1749"
+        "content": "b7c6907a08d0e7b0ea8e741dc378a8b02cf50dc2e393c789e53e89c6dc6eb787"
       }
     },
     {
@@ -21063,6 +21068,7 @@
           "cast to player",
           "event dispatcher",
           "bind event to dispatcher",
+          "print a message when the game starts",
           "add node",
           "place node",
           "graph node",
@@ -21940,7 +21946,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "6f24f58d25fbdceb477ce3c41b65402b8ab690265a24b0b09e215b26cc470a98",
-        "content": "48b579baa7e4bc3833d3aab7a593459502bec2de81828b7bcf885a9a20738006"
+        "content": "5acf546e48dae5743e2e1a61426c368f2b2661a2374cc7ffe56ac571cb7c1027"
       }
     },
     {
@@ -28495,6 +28501,7 @@
           "place trees or rocks randomly",
           "scatter rocks or trees around an area",
           "plant trees around a building, a castle or a lake",
+          "add trees to the hills",
           "foliage",
           "vegetation",
           "grass",
@@ -28890,7 +28897,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "1d69a2ec3894703cfb5473af28e37c8f764811e72feee995d7335213b3db30fa",
-        "content": "9cafb3b6f6e88c5df6d4d7cc4f2b4ee9ccadcb80b63011be42e268b1e1666b28"
+        "content": "0e5315a3e99a89e67bf7f32d560b6b2f60735335bfa042de4d25edd37a474374"
       }
     },
     {
@@ -30234,7 +30241,8 @@
           "brighten the scene",
           "scene is too dark",
           "level is too dark",
-          "make the scene darker"
+          "make the scene darker",
+          "turn the shadows off or on"
         ],
         "summary": "Change scene lighting, chosen by setting. global_illumination sets the dynamic GI method (LumenGI, ScreenSpace, None, Lightmass) for this editor session, or in DefaultEngine.ini as well with saveToProject; shadows sets engine-wide shadow quality, distance and features for the session, or the shadow settings of the actor actorName names; exposure and ambient_occlusion write overrides on a post-process volume (actorName, else the level's one unbound volume, spawned when there is none); volumetric_fog enables or disables volumetric fog on the level's height fog. exposure, ambient_occlusion and volumetric_fog refuse a call that sets nothing (NO_SETTING_SUPPLIED).",
         "whenToUse": [
@@ -30548,7 +30556,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "a731b276c513bdacc529bea41ff1f11f2625ea347fe73572496cbc8f3772426d",
-        "content": "8d1253ec8f7ecea5a1f9d7a2860f921e590391025a6885b0f3cfbc1ce365bae4"
+        "content": "732ebd197fda97802f7d5ac89517cebd50d408876e15e4e44d425f8c444c270a"
       }
     },
     {
@@ -34243,7 +34251,8 @@
           "light intensity",
           "light color",
           "add lights to a dungeon or a room",
-          "a spotlight on a statue"
+          "a spotlight on a statue",
+          "light up the stage with a spotlight"
         ],
         "summary": "Create a light actor in the level being edited: point, spot, directional, rect or sky (or any light class), at location (default 0, 0, 300), made Movable, with intensity, color and, in properties, shadow, radius and cone settings. The reply lists what was applied, refused (a setting this kind of light lacks) or adjusted; the spawn is one undo step and the level is left unsaved. During Play it still goes into the edited level, not the running game.",
         "whenToUse": [
@@ -34462,7 +34471,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "9b6d84190c55a5e3cb18427d985a4bec0689dcf9f8e749e3d86228e7b65f785d",
-        "content": "9763f954749ea1fc1fbe98050b22380cf3f1a42efc3196c3edfec461495465d4"
+        "content": "7b8f989a7065ce819cc5140f75ef63037b32b9bb75eb65aa73ae97d6a1c50ace"
       }
     },
     {
@@ -37105,7 +37114,8 @@
           "hydraulic erosion",
           "rivers and valleys",
           "natural terrain",
-          "terrain drains"
+          "terrain drains",
+          "carve valleys and river beds"
         ],
         "summary": "Wear a landscape down the way water wears ground, so that every cell drains: fillDepressions (default true) raises each pit to where it would spill (its basin becomes a flat lake bed), valleys cuts valleys by stream power, droplets wash gullies into the slopes, talusAngle slumps what is steeper, and the pits that leaves are filled again. region limits it to some of the landscape's vertices (default all), its border held so the result joins the ground around it. Written into the landscape's edit layer (the one being edited, else the first, as sculpt writes) as one undo step and merged before the reply; dryRun computes all of it and writes nothing. The reply gives drains (every cell has a path to the border that never climbs, judged on the heights written; undrainedCells when not), depressionsFilled, maxLoweredCm, maxRaisedCm, changedCells, dropletsRun (the same seed and droplets give the same ground), editLayers (with more than one, the others still add on top of this one) and rivers: up to 20, largest catchment first, each {catchmentM2, lengthM, points} with its course in world cm from source to mouth (at most 64 points; a river crossing a filled lake runs straight over it), for water bodies, splines and roads. Refused, changing nothing: LANDSCAPE_NOT_FOUND, INVALID_REGION (outside the landscape, or under 5 vertices a side), INVALID_ARGUMENT (more than 4,194,304 vertices at once: name a region).",
         "whenToUse": [
@@ -37338,7 +37348,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "91722e46b2a8c8c01a48ca457ead64518a6617a8a6fa526d5b3c98af97cc6b52",
-        "content": "1c4745854ee0c0e70de9a498ec798d7931ca10ea1eb5e364e926d045504bab3a"
+        "content": "96537f7e91ac354edeff7fb29cc4100ff765441769da5177797ef9e80a26189e"
       }
     },
     {
@@ -39006,7 +39016,8 @@
           "landscape material",
           "raise or flatten the terrain or ground",
           "make a mountain or a hill",
-          "smooth the terrain"
+          "smooth the terrain",
+          "smooth or flatten the hills"
         ],
         "summary": "Shape a landscape, chosen by sculptOp: sculpt raises, lowers or flattens the ground under a round brush at a world location; heightmap sets, raises, lowers, flattens or smooths a region of its vertices (raw heights or centimetres); material sets the material it renders with. sculpt and heightmap count the vertices that changed, write the landscape's edit layer (the one being edited, else the first) as one undo step, and merge the layers before the reply so rendering and collision follow; an unknown tool or operation is refused.",
         "whenToUse": [
@@ -39288,7 +39299,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "292f95bde1c7f0c3acef7d6c8b78df86a79bbe5b457d29d5157235330c8ec417",
-        "content": "156f7d88f3e4f6e4cd1e1f16e92f4ae3a8c21a771bc9774d5c6b60c5910d1f3d"
+        "content": "67d935d94d83269cd314656a2e581c4352c0d04a3d3094e099bda6d8007e502e"
       }
     },
     {
@@ -42255,6 +42266,7 @@
           "lookup actor by name",
           "search actor",
           "get actor by name",
+          "find all the lights or cameras in the level",
           "actors drawing a static mesh",
           "actors with a mesh",
           "instances of a mesh",
@@ -42524,7 +42536,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "f918ef106f95e678d89b6a2c593f4c835b5ad680795a2148b9ee8afbdac8f4f9",
-        "content": "bbcf2ca33bea6186912e4df4080aa0d20e07ef1e8b3d79068d6be5f82c750cd2"
+        "content": "1126feff6857ab4b82604bc3412704fdfb169292835e0378b43297f419e857a5"
       }
     },
     {
@@ -54690,7 +54702,8 @@
           "colour palette of the shot",
           "key to fill ratio",
           "is the lighting flat",
-          "which actors are expensive to shade"
+          "which actors are expensive to shade",
+          "is the level or the scene too dark"
         ],
         "summary": "Judge the level viewport's picture as a reviewer would, in numbers: saliency (where the eye goes: how strongly each actor draws it, the focus point, and a named subject's rank), palette (five colours with their shares, the hue template of Cohen-Or et al. they fit best and how far the rest stray from it, and the colour cast of surfaces that should be grey), light (a lightness histogram, clipped and crushed shares, contrast, exposure, flat lighting and, on a subject lit by the sun, its key to fill ratio in stops) and cost (how much of the frame, and of each actor, the shader complexity view draws at a high cost). Read only: the camera moves only when location or rotation is given, and cost puts the viewport's view mode back after one frame in the shader complexity view.",
         "whenToUse": [
@@ -54934,7 +54947,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "84fed90dbf8efb7e1676ecaa97fca6018c109c083bcd62b49461cd65136c21ba",
-        "content": "6f4aba1c0a2e315ca6fd6e7ed44d3b1423488de5426fb0a8974ea75518869397"
+        "content": "6dd40a952f6bcda46ed30732f40c046d6a09bd3fe241e3aa7eae8eae1116e751"
       }
     },
     {
@@ -60049,7 +60062,8 @@
           "line of sight",
           "does it block",
           "collision test",
-          "trace channel"
+          "trace channel",
+          "what is under or in front of the player or an actor"
         ],
         "summary": "Trace lines through the level against collision and read what each one hits first: the point, the surface normal, the distance, the actor and the component. Finds the ground under a point, checks a line of sight, and proves a wall, floor or volume really blocks. Traces the running game while Play In Editor runs.",
         "whenToUse": [
@@ -60265,7 +60279,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "fcfc574144bbd2cfa5d2529181a3d29dd9a05075549cdfca0d9d7394e62480ad",
-        "content": "25af669f8b2d1eaa75a93970edf75a9a8b8b57ecc4e8d2afb058a08c2d25e1b5"
+        "content": "0f7b3094299d89d51d5a6999457acf082cacc77ff320e8cf5e582c51d13f59aa"
       }
     },
     {
@@ -66082,7 +66096,8 @@
           "perception team",
           "sight range",
           "enemy sees the player",
-          "enemy hears the player"
+          "enemy hears the player",
+          "make the enemy see or hear the player"
         ],
         "summary": "Set up AI perception on an AI controller or pawn Blueprint, chosen by setting, each saved: setup adds the component and several senses at once, add_component only the component (kept when present), sight, hearing and damage tune one sense and keep what is not sent, team stores a team id variable (the engine team itself needs C++), controller is setup for an AIController path. An actor with no team is neutral, so a sense must detect neutrals to notice the player.",
         "whenToUse": [
@@ -66444,7 +66459,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "b5ac626c3f017c63df45d25aa412705e5d52f083c6e81a1608a7ed1767e67221",
-        "content": "792ed33daee4c4facf2f19f3a5baf1fab2f0ac73ceca9596d69cfca182c62a0a"
+        "content": "e9db2b858dbd680890d9bfaeb5ca62b54a8651379997c9ae5e6fa526b790954c"
       }
     },
     {
@@ -67863,7 +67878,8 @@
           "audio component",
           "reverb zone",
           "add background music",
-          "add a sound or music to the level or a room"
+          "add a sound or music to the level or a room",
+          "add echo to a cave or a hall"
         ],
         "summary": "Place sound in the level being edited, chosen by kind. ambient_sound spawns an Ambient Sound actor playing soundPath at location (default 0,0,0), labelled name, at volume and pitch, with attenuationPath and concurrencyPath when given; it plays in the editor now and when the game starts. audio_component adds an audio component with soundPath to actorName, or to a new actor at location when actorName is left out (the reply names the actor), playing at once unless autoPlay is false. reverb_zone spawns an Audio Volume named name (DUPLICATE_NAME when taken) as a box of size (default 500 on each axis) around location, applying reverbEffect at volume (default 1) with fadeTime (default 2 s). A sound, attenuation, concurrency or reverb path that does not load is ASSET_NOT_FOUND before anything spawns; the ambient sound and the reverb zone are one undo step each.",
         "whenToUse": [
@@ -68112,7 +68128,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "76eef38d8f023e4c9e40ace6e657f6291acfe8aea568c2a9cc92ff370cffda64",
-        "content": "4bfd80212ff87dd8026da62feaa8ab232b653b020f05e2e9e2ffa5508de5420a"
+        "content": "9a879d31a8f1cd40d10196c37a573ce9ffc6bc064ca7a11762d69c99b64cd5fd"
       }
     },
     {
@@ -76842,7 +76858,8 @@
           "gpu particles",
           "particle lifetime",
           "static switch",
-          "ribbon width"
+          "ribbon width",
+          "make the fire bigger or the smoke darker"
         ],
         "summary": "Edit a Niagara system: add an emitter (an asset, or a copy of another system's), user parameters or parameter bindings, set parameter values or dynamic inputs, emitter properties, GPU simulation, connect pins.",
         "whenToUse": [
@@ -77331,7 +77348,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "423896276d000fcc05fc7e5e53943411d53de159dd4008f545d073ce1f3fbd71",
-        "content": "94133ff4527272d86719f008fd49a375d04c758fa26b095a4320ebcf89655338"
+        "content": "1bfcf6a751f1571b3af9c3fd3a99207fe0fd19e48ad89dbe0c03f3eafc75ac46"
       }
     },
     {
@@ -109763,7 +109780,8 @@
           "smooth camera path",
           "camera move between points",
           "camera path around the walls",
-          "move the camera along a path in a cutscene"
+          "move the camera along a path in a cutscene",
+          "add a camera that follows a path"
         ],
         "summary": "Fly a camera through points of the level and key the flight into a Level Sequence, never nearer to geometry than a clearance: between two points the camera goes straight when nothing is in the way, else round or over what is (a search through free space, cut short wherever a straight line is clear), and the corners are smoothed into one minimum-snap curve (unbroken in speed, acceleration and jerk) at rest at both ends, timed by distance over seconds (default the path length at 3 m/s). It faces lookAt (an actor) the whole way, else the way ahead. Keys every tenth of a second go on a transform track of its own (an earlier one of that camera is replaced: replacedTrack says so), with a camera cut to it over the flight and the playback range grown to hold it, all in one undo step, from the sequence's playback start; the camera is the actor named camera (default FlyCamera), or a CineCameraActor spawned under that label. dryRun answers the corners and the length without writing. Refused, changing nothing, with POINT_IN_SOLID (a point nearer to geometry than clearanceCm; point gives its index), NO_PATH (no way through free space joins two points, or the smoothed curve cannot be kept clear), ACTOR_NOT_FOUND (lookAt), INVALID_SEQUENCE, INVALID_ARGUMENT.",
         "whenToUse": [
@@ -110002,7 +110020,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "62e64d6aebf67246fa7353cb1f1fb38602db17e9e558642db71b694775d4dbe2",
-        "content": "f80b365ab751f544c9affc73c8e8f9d333a1a57f6e80c81feadf6a4f148c0f02"
+        "content": "274caee271022e16206166807e825001f5a7191838c394eb782536d77f3663c7"
       }
     },
     {
@@ -113345,7 +113363,8 @@
           "occlusion culling",
           "texture streaming",
           "performance",
-          "texture streaming pool"
+          "texture streaming pool",
+          "make the game run at 60 fps"
         ],
         "summary": "Configure performance settings, chosen by setting: scalability levels or a baseline profile (saved, kept across restarts); session-only console settings (frame rate cap, resolution scale, vsync, LOD and mip bias, Nanite, occlusion culling, texture streaming, draw-call batching, GPU timing), each set as the console does and read back, with appliedCVars and notSet in the reply and CVAR_UNAVAILABLE when none took; World Partition streaming and grid; a shader recompile.",
         "whenToUse": [
@@ -113630,7 +113649,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "23c4374d96bc58fddee4f1e7b20d22a19ed6a996b4edf79ced293811064b1fb9",
-        "content": "d88b738b3d950b5a107da1693b40549d328463cd6ae24342b4bf10a4353b123e"
+        "content": "7302e94468c5e5e0e78588fb3ef1087c68de8c105e7102f0b582cda9026020ce"
       }
     },
     {

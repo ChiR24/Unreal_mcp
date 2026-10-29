@@ -14,7 +14,7 @@ export const BUILD_ENVIRONMENT_FOLDS: readonly FoldSpec[] = [
   {
     primary: 'sculpt', selector: 'sculptOp',
     summary: 'Shape a landscape, chosen by sculptOp: sculpt raises, lowers or flattens the ground under a round brush at a world location; heightmap sets, raises, lowers, flattens or smooths a region of its vertices (raw heights or centimetres); material sets the material it renders with. sculpt and heightmap count the vertices that changed, write the landscape\'s edit layer (the one being edited, else the first) as one undo step, and merge the layers before the reply so rendering and collision follow; an unknown tool or operation is refused.',
-    topics: ['sculpt landscape', 'heightmap', 'landscape material', 'raise or flatten the terrain or ground', 'make a mountain or a hill', 'smooth the terrain'],
+    topics: ['sculpt landscape', 'heightmap', 'landscape material', 'raise or flatten the terrain or ground', 'make a mountain or a hill', 'smooth the terrain', 'smooth or flatten the hills'],
     members: { sculpt: 'sculpt', heightmap: 'modify_heightmap', material: 'set_landscape_material' },
     aliasMembers: ['sculpt_landscape'],
   },
@@ -37,7 +37,7 @@ export const BUILD_ENVIRONMENT_FOLDS: readonly FoldSpec[] = [
     // led callers to ask for 120 instances in a 6000uu radius, get a
     // success back, and find an empty level.
     summary: 'Place foliage (trees, grass, bushes, rocks): create or update a foliage type asset, place explicit instances/transforms, or paint instances over a brush disc or a box area, dropped onto the ground. Placing and painting are one undo step each.',
-    topics: ['add foliage', 'paint foliage', 'foliage instances', 'scatter foliage', 'scatter grass', 'fill area with foliage', 'plant trees', 'place bushes', 'add trees, grass or flowers to the level', 'make a forest', 'scatter rocks', 'place trees or rocks randomly', 'scatter rocks or trees around an area', 'plant trees around a building, a castle or a lake'],
+    topics: ['add foliage', 'paint foliage', 'foliage instances', 'scatter foliage', 'scatter grass', 'fill area with foliage', 'plant trees', 'place bushes', 'add trees, grass or flowers to the level', 'make a forest', 'scatter rocks', 'place trees or rocks randomly', 'scatter rocks or trees around an area', 'plant trees around a building, a castle or a lake', 'add trees to the hills'],
     members: { scatter: 'add_foliage', instances: 'add_foliage_instances', paint: 'paint_foliage' },
   },
   {
@@ -55,7 +55,7 @@ export const BUILD_ENVIRONMENT_FOLDS: readonly FoldSpec[] = [
   // lighting
   {
     primary: 'create_light', summary: LIGHT_SUMMARY, whenToUse: LIGHT_WHEN_TO_USE, whenNotToUse: LIGHT_WHEN_NOT_TO_USE,
-    topics: ['add point light', 'add spot light', 'add a light', 'place a light', 'rect light', 'spotlight', 'street lamp light', 'light intensity', 'light color', 'add lights to a dungeon or a room', 'a spotlight on a statue'],
+    topics: ['add point light', 'add spot light', 'add a light', 'place a light', 'rect light', 'spotlight', 'street lamp light', 'light intensity', 'light color', 'add lights to a dungeon or a room', 'a spotlight on a statue', 'light up the stage with a spotlight'],
     members: ['create_dynamic_light', 'spawn_light'],
   },
   {
@@ -68,7 +68,7 @@ export const BUILD_ENVIRONMENT_FOLDS: readonly FoldSpec[] = [
   {
     primary: 'configure_lighting', selector: 'setting',
     summary: 'Change scene lighting, chosen by setting. global_illumination sets the dynamic GI method (LumenGI, ScreenSpace, None, Lightmass) for this editor session, or in DefaultEngine.ini as well with saveToProject; shadows sets engine-wide shadow quality, distance and features for the session, or the shadow settings of the actor actorName names; exposure and ambient_occlusion write overrides on a post-process volume (actorName, else the level\'s one unbound volume, spawned when there is none); volumetric_fog enables or disables volumetric fog on the level\'s height fog. exposure, ambient_occlusion and volumetric_fog refuse a call that sets nothing (NO_SETTING_SUPPLIED).',
-    topics: ['shadows', 'ambient occlusion', 'exposure', 'global illumination', 'lumen', 'volumetric fog', 'turn on lumen', 'brighten the scene', 'scene is too dark', 'level is too dark', 'make the scene darker'],
+    topics: ['shadows', 'ambient occlusion', 'exposure', 'global illumination', 'lumen', 'volumetric fog', 'turn on lumen', 'brighten the scene', 'scene is too dark', 'level is too dark', 'make the scene darker', 'turn the shadows off or on'],
     members: { shadows: 'configure_shadows', ambient_occlusion: 'set_ambient_occlusion', exposure: 'set_exposure', global_illumination: 'setup_global_illumination', volumetric_fog: 'setup_volumetric_fog' },
   },
   {

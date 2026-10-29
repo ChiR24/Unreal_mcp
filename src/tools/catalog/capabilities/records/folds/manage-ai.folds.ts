@@ -39,7 +39,7 @@ export const MANAGE_AI_FOLDS: readonly FoldSpec[] = [
   {
     primary: 'setup_perception', selector: 'setting',
     summary: 'Set up AI perception on an AI controller or pawn Blueprint, chosen by setting, each saved: setup adds the component and several senses at once, add_component only the component (kept when present), sight, hearing and damage tune one sense and keep what is not sent, team stores a team id variable (the engine team itself needs C++), controller is setup for an AIController path. An actor with no team is neutral, so a sense must detect neutrals to notice the player.',
-    topics: ['ai perception', 'sight config', 'hearing config', 'damage sense', 'perception team', 'sight range', 'enemy sees the player', 'enemy hears the player'],
+    topics: ['ai perception', 'sight config', 'hearing config', 'damage sense', 'perception team', 'sight range', 'enemy sees the player', 'enemy hears the player', 'make the enemy see or hear the player'],
     members: {
       setup: 'setup_perception', add_component: 'add_ai_perception_component', sight: 'configure_sight_config', hearing: 'configure_hearing_config',
       damage: 'configure_damage_sense_config', team: 'set_perception_team', controller: 'set_ai_perception',

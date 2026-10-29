@@ -170,7 +170,7 @@ export const SEARCH_RECORDS: readonly CapabilityRecordSource[] = [
     action: 'find_by_name',
     domain: DOMAIN,
     family: FAMILY_FIND,
-    topics: ['find actor', 'lookup actor by name', 'search actor', 'get actor by name'],
+    topics: ['find actor', 'lookup actor by name', 'search actor', 'get actor by name', 'find all the lights or cameras in the level'],
     summary: 'Find the actors in the level whose label, object name or path contains a query (case-insensitive; a full object path is cut to its actor name), each with label, name, path and class: the first limit (default 200), with truncated and totalCount when more match. With no match, similar offers labels that match once case, separators and leading zeros are ignored.',
     whenToUse: ['One or more actors must be located by name or substring.'],
     whenNotToUse: ['Actors should be located by tag (use find_by_tag).'],

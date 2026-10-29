@@ -253,7 +253,7 @@ export const OBJECT_PROPERTY_RECORDS: readonly CapabilityRecordSource[] = [
     parentTool: 'inspect', action: 'analyze_view', dispatchAction: 'analyze_view', domain: D, family: 'object',
     editorStates: ['edit', 'simulate'],
     summary: 'Judge the level viewport\'s picture as a reviewer would, in numbers: saliency (where the eye goes: how strongly each actor draws it, the focus point, and a named subject\'s rank), palette (five colours with their shares, the hue template of Cohen-Or et al. they fit best and how far the rest stray from it, and the colour cast of surfaces that should be grey), light (a lightness histogram, clipped and crushed shares, contrast, exposure, flat lighting and, on a subject lit by the sun, its key to fill ratio in stops) and cost (how much of the frame, and of each actor, the shader complexity view draws at a high cost). Read only: the camera moves only when location or rotation is given, and cost puts the viewport\'s view mode back after one frame in the shader complexity view.',
-    topics: ['analyze view', 'judge the shot', 'where does the eye go', 'saliency', 'composition of the shot', 'colour harmony', 'colour palette of the shot', 'key to fill ratio', 'is the lighting flat', 'which actors are expensive to shade'],
+    topics: ['analyze view', 'judge the shot', 'where does the eye go', 'saliency', 'composition of the shot', 'colour harmony', 'colour palette of the shot', 'key to fill ratio', 'is the lighting flat', 'which actors are expensive to shade', 'is the level or the scene too dark'],
     whenToUse: [
       'Checking whether a shot draws the eye to its subject, without looking at it.',
       'Judging a scene\'s palette and colour cast, or whether its lighting is flat, too dark or blown out.',
@@ -416,7 +416,7 @@ export const OBJECT_PROPERTY_RECORDS: readonly CapabilityRecordSource[] = [
     parentTool: 'inspect', action: 'raycast_world', dispatchAction: 'raycast_world', domain: D, family: 'object',
     editorStates: ANY_EDITOR_STATE,
     summary: 'Trace lines through the level against collision and read what each one hits first: the point, the surface normal, the distance, the actor and the component. Finds the ground under a point, checks a line of sight, and proves a wall, floor or volume really blocks. Traces the running game while Play In Editor runs.',
-    topics: ['line trace', 'raycast world', 'what is below', 'ground height', 'line of sight', 'does it block', 'collision test', 'trace channel'],
+    topics: ['line trace', 'raycast world', 'what is below', 'ground height', 'line of sight', 'does it block', 'collision test', 'trace channel', 'what is under or in front of the player or an actor'],
     whenToUse: [
       'The ground height under a point, or what a jump or a drop would land on, must be known.',
       'A line of sight between two points (a camera, an enemy, the player) must be checked.',
