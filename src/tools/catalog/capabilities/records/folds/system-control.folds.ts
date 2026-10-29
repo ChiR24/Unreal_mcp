@@ -6,7 +6,7 @@ export const SYSTEM_CONTROL_FOLDS: readonly FoldSpec[] = [
   {
     primary: 'configure_display', selector: 'setting',
     summary: 'Configure display and rendering variables: resolution, fullscreen, quality, a console variable, FPS counter, profiling overlay.',
-    topics: ['set cvar', 'console variable', 'resolution', 'fullscreen', 'quality settings', 'show fps', 'profile', 'change quality settings'],
+    topics: ['set cvar', 'console variable', 'resolution', 'fullscreen', 'make the game fullscreen', 'quality settings', 'show fps', 'profile', 'change quality settings'],
     members: { resolution: 'set_resolution', fullscreen: 'set_fullscreen', quality: 'set_quality', cvar: 'set_cvar', fps: 'show_fps', profile: 'profile' },
   },
   {

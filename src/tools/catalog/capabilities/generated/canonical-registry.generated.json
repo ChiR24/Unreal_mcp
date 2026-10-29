@@ -1,5 +1,5 @@
 {
-  "catalogRevision": "ca9f8d26c3dd3459",
+  "catalogRevision": "9ed702390e3e6c58",
   "recordCount": 472,
   "records": [
     {
@@ -1274,7 +1274,8 @@
           "skeleton socket",
           "add socket",
           "modify socket",
-          "create socket"
+          "create socket",
+          "socket on the spine bone"
         ],
         "summary": "Sockets on a skeleton (skeletonPath; a skeletal mesh path uses its skeleton), chosen by socketOp; each change is saved unless save is false (saved). create (add) puts socketName on attachBoneName, which both require, at relativeLocation, relativeRotation and relativeScale (default zero, zero and one); a bone the skeleton lacks is BONE_NOT_FOUND and a taken name SOCKET_EXISTS. configure (modify) changes an existing socket: attachBoneName moves it, and relativeLocation, relativeRotation and relativeScale replace only the parts given; a missing socket is SOCKET_NOT_FOUND and a call naming nothing to change is refused.",
         "whenToUse": [
@@ -1459,7 +1460,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "e25cac3cbf35a620719228ac50fb8b3a92f04bd893fcdb8df20ced3ca3bc813a",
-        "content": "eb360e55511274a0f1e5551d5c7781b0bcc471394310ce12a012b325d256ff16"
+        "content": "8bb3566a78463329df1a26d887c22f1c158cb646167c3f8786e13c96a6abaf4b"
       }
     },
     {
@@ -11618,7 +11619,8 @@
           "refresh blueprints",
           "fix redirectors",
           "rename multiple assets",
-          "batch rename"
+          "batch rename",
+          "clean up the project"
         ],
         "summary": "Content maintenance: bulk-rename assets, fix up redirectors, refresh the nodes of every Blueprint in a folder, or migrate packages from another content source.",
         "whenToUse": [
@@ -11973,7 +11975,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "ec6264c1fa85c028c3d06a0ace5dae280a8b9071b49f1d867cdc68e3a6865783",
-        "content": "62dffe7c3015ae79b48f68ef3b41976ccfae6758a3782c2ebc3740707f9788a2"
+        "content": "d71370e7f91a87f0ed8b82bc47cf2c66c957cc60daf15c57f48fd65ee13c1dba"
       }
     },
     {
@@ -15030,6 +15032,7 @@
           "collect coins",
           "item pickup",
           "pick up a key",
+          "heal the player",
           "sprint",
           "hold shift to sprint",
           "sprint key",
@@ -15043,6 +15046,7 @@
           "enemy chases the player",
           "enemy follows the player",
           "follow the player",
+          "make the enemy attack the player",
           "patrol",
           "ai patrol",
           "enemy patrol",
@@ -15127,6 +15131,7 @@
           "level timer",
           "timer runs out",
           "race against the clock",
+          "count down from ten to zero",
           "spawner",
           "enemy spawner",
           "spawn enemies every few seconds",
@@ -15875,7 +15880,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "9bff184328c255a15ce476992b13f501f4fa6647710f8229beb7d1f8f9ad80e3",
-        "content": "67c513cd8d9c0869177c5dee63a8db6771f3c5da354e3ba8f540217ccc53771b"
+        "content": "3317eacb072194c3f706967675b2f1a9f6c6b893e09ed060656c9c183cbb444f"
       }
     },
     {
@@ -22788,7 +22793,9 @@
           "widget scale animation",
           "pulse widget",
           "pop a widget",
-          "fade in widget"
+          "fade in widget",
+          "animate a button or a title",
+          "make a title bounce"
         ],
         "summary": "Build a widget animation, chosen by edit, each saved: create makes a named animation of a given length (a taken name is refused), add_track gives one widget an opacity, color or render-transform track, add_keyframe keys a value at a time on a widget (adding the track and binding when missing) or a whole animation across several widgets in one call (keys, all checked before any is written). get_widget_animation reads it back.",
         "whenToUse": [
@@ -23070,7 +23077,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "534cce3c215e57236a5a1607e8eb10846ebfca14c185003d673ec9b682fbb990",
-        "content": "31192f933b02e665e4cbca35eed7e51c71c8214e62eaef7cc7464f8326bde20d"
+        "content": "99fc91de145ba796e8276be6d48553f3cf4d9d5f14a1bd46526a36057092ea5e"
       }
     },
     {
@@ -28664,6 +28671,7 @@
           "assemble modular pieces",
           "pieces that join up",
           "dungeon or maze generator",
+          "make a dungeon or a maze",
           "modular building kit",
           "snap modular pieces together"
         ],
@@ -28970,7 +28978,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "70488f7880894beec77636e81741c67dc258ff3b0d25e09e24ea686166afb988",
-        "content": "ed661c7c670a8c23a9aa58db55b8b6262c7a872eb657f9aaaa304a270600b558"
+        "content": "c31bb22bc0a2345278c2d4608bb1015456746ad423d31370df9a1c1506822d10"
       }
     },
     {
@@ -29296,7 +29304,8 @@
           "make it foggy",
           "make it sunset or sunrise",
           "add fog to the scene",
-          "add a skybox"
+          "add a skybox",
+          "make it look like sunset"
         ],
         "summary": "Configure the sky and atmosphere: sky atmosphere, sky light, sun position, directional light, height fog, volumetric clouds, time of day, sky/light color curves.",
         "whenToUse": [
@@ -29625,7 +29634,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "62d06760062b3abe69fafba24760b3764aef720dc72b85ccb7e20689ab3ffd17",
-        "content": "c370f20e4476edf98c5692c867b472702a2ade1a6f1088f68f8da49a38cb3e6b"
+        "content": "9a2f6f91e12178b91454858de71b8a2f7332f8181dd1577adadd88cc40e690f9"
       }
     },
     {
@@ -32324,7 +32333,9 @@
           "add snow",
           "add rain, snow, wind or lightning",
           "make it rain",
-          "wind on trees"
+          "wind on trees",
+          "make a storm with rain and lightning",
+          "make the trees sway in the wind"
         ],
         "summary": "Configure a weather actor: rain, snow or lightning set a Cascade particle system (particleSystemPath) on an Emitter labelled WeatherEmitter, SnowEmitter or LightningEmitter; wind spawns or tunes a WindDirectionalSource (direction as its rotation, speed and other settings by property name). Nothing is simulated beyond what those actors do; not saved.",
         "whenToUse": [
@@ -32530,7 +32541,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "ed77f76bcae66a3710d7d472fc890a0029a37770f1ab267b41e9c26dacfd5efa",
-        "content": "9613f3c6cca58fefe382cc4bb1fa85fc49bedfa32cca61608542e43cd7ce825b"
+        "content": "b5c252b64e712f60010c0bf990febac579f5ff318ea920b7b97f5c0ad445399a"
       }
     },
     {
@@ -33983,7 +33994,8 @@
           "spotlight",
           "street lamp light",
           "light intensity",
-          "light color"
+          "light color",
+          "add lights to a dungeon or a room"
         ],
         "summary": "Create a light actor in the level being edited: point, spot, directional, rect or sky (or any light class), at location (default 0, 0, 300), made Movable, with intensity, color and, in properties, shadow, radius and cone settings. The reply lists what was applied, refused (a setting this kind of light lacks) or adjusted; the spawn is one undo step and the level is left unsaved. During Play it still goes into the edited level, not the running game.",
         "whenToUse": [
@@ -34202,7 +34214,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "9b6d84190c55a5e3cb18427d985a4bec0689dcf9f8e749e3d86228e7b65f785d",
-        "content": "de601a9d077e1a59cfccb67449066a16bb5347e4cb22d67e19927587be5cf570"
+        "content": "5cb3f76cf8b84b1da4c1717ecb792c52baafcf189f59bf44ee371f34571bf9fe"
       }
     },
     {
@@ -38741,7 +38753,9 @@
           "sculpt landscape",
           "heightmap",
           "landscape material",
-          "raise or flatten the terrain or ground"
+          "raise or flatten the terrain or ground",
+          "make a mountain or a hill",
+          "smooth the terrain"
         ],
         "summary": "Shape a landscape, chosen by sculptOp: sculpt raises, lowers or flattens the ground under a round brush at a world location; heightmap sets, raises, lowers, flattens or smooths a region of its vertices (raw heights or centimetres); material sets the material it renders with. sculpt and heightmap count the vertices that changed, write the landscape's edit layer (the one being edited, else the first) as one undo step, and merge the layers before the reply so rendering and collision follow; an unknown tool or operation is refused.",
         "whenToUse": [
@@ -39023,7 +39037,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "292f95bde1c7f0c3acef7d6c8b78df86a79bbe5b457d29d5157235330c8ec417",
-        "content": "3a450a4b819f4799141e4ac57308e3a156c17e534ec400edc37390b19bf3c2d8"
+        "content": "156f7d88f3e4f6e4cd1e1f16e92f4ae3a8c21a771bc9774d5c6b60c5910d1f3d"
       }
     },
     {
@@ -41244,6 +41258,8 @@
           "moving platform",
           "spin an object",
           "rotate an object forever",
+          "make a spinning coin or platform",
+          "make an actor movable or static",
           "light color",
           "light radius",
           "change light color",
@@ -41462,7 +41478,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "69e79858af54388ed2d9ba3c0204692e449c302b83a944f7a5a66ee405d99e10",
-        "content": "b2b588a6e77ee3e2b054ab847147fbfc42fe2917a056d18a0ab03d1879435669"
+        "content": "51c68a7120cb594560482ed18b3664e69b6ea4a27f7930670d249b488a690964"
       }
     },
     {
@@ -45433,6 +45449,7 @@
           "add a sphere to the level",
           "place a sphere in the level",
           "build a wall or a tower of cubes",
+          "set the player spawn point",
           "spawn blueprint actor",
           "place blueprint in level",
           "instantiate blueprint",
@@ -45826,7 +45843,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "83255eb7ee40ca38cadf51b0ef17d54b36cd77be9b26993e7212e6aad8e1d744",
-        "content": "170b587a18b09675af2337f05d8dfd807ed86eb095a37ab66ae01a1264a33217"
+        "content": "9f6111b8b07c6bd1c4e2466811a6edc61924ef9d7ff4144850392b252618c7ac"
       }
     },
     {
@@ -50160,6 +50177,7 @@
           "select actors in the editor",
           "select all cubes or all lights",
           "deselect actors",
+          "reselect actors",
           "clear the selection",
           "select more actors",
           "select in the outliner"
@@ -50304,7 +50322,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "5aaec3f5e692d2fbed4e2744066e7c079149e822ad38577ca6d4d011c3c939a7",
-        "content": "97d7c4357a157f8dc00e86abd0ae01f2903c267e479f64f70d8b0e22493932a6"
+        "content": "df4862ed018a025fb38618114ddf871be451d50360505d929e12b12722f50459"
       }
     },
     {
@@ -54939,7 +54957,8 @@
           "what changed in the view",
           "compare the view before and after",
           "visual diff of the frame",
-          "did the edit change the picture"
+          "did the edit change the picture",
+          "compare two screenshots"
         ],
         "summary": "Describe what the level viewport's camera sees, as text: each actor in view with its share of the frame, its box on screen, how bright it is drawn and its distance, the share that is background (sky, void), and the frame's brightness; or only the actors named, with what hides each one that is not seen. points names what is under spots of the frame and where they are in the world; labels returns the frame with each listed actor boxed and numbered; saveAs keeps the frame under a name and compareWith says what changed in the picture since, region by region, with the actors drawn there before and after. location and rotation place the camera first, as control_editor screenshot takes them.",
         "whenToUse": [
@@ -55284,7 +55303,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "d6889ea4c612ebd7203600f7787a807141bd17c49050ba498a59b252f4fa1623",
-        "content": "3a367a12b82398537903e4ea4fa45e34608ed18833cb1a0c4254cba09d932d96"
+        "content": "862af9d30e37dd0a1e15f858288362b97d80105e39da2c72ade75a51325a97df"
       }
     },
     {
@@ -56884,7 +56903,8 @@
           "why is the game slow",
           "performance bottleneck",
           "gpu bound",
-          "check performance"
+          "check performance",
+          "profile the level"
         ],
         "summary": "Read performance (FPS, frame rate and time, thread and GPU ms), memory usage (used, available, peak), scene statistics (actors by category, components, hidden actors), or frame cost: the thread that bounds the frame and what in view weighs on it (movable shadow-casting lights, heavy meshes, translucency, ticking actors).",
         "whenToUse": [
@@ -57224,7 +57244,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "5c8aef33da1ba706f4616c8270a6eede0aacc32933d57dcb42b54510ee48f99e",
-        "content": "2960110fc6d99c740effaab3ac7bdd02d962cb8f14fe7c07e5dc0b98f50ef4ca"
+        "content": "8cde2e13f51584a40a137358eaaeca7a9e792454356587cb70a6d406017ccaa1"
       }
     },
     {
@@ -65755,7 +65775,8 @@
           "mix modifier",
           "mix eq",
           "mix equalizer",
-          "master volume"
+          "master volume",
+          "change the volume in the menu or the game"
         ],
         "summary": "Change a Sound Class or Sound Mix, chosen by setting, each saved: parent sets or clears a class's parent (a loop is refused), properties sets its volume, pitch, low-pass, LFE bleed and center-channel volume, mix_modifier adds or edits the adjuster a mix applies to a class (and the mix fades), mix_eq sets the mix's four EQ bands. A call that sets nothing is refused.",
         "whenToUse": [
@@ -66054,7 +66075,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "14113912f8cbf267c3b2eef484bf124b5f589ed209d2dc4a46404270cd8241aa",
-        "content": "f66e234d37bbe01b7b6a8c79cddae7c99d4c2646621f7824652922c4cdd7fc7f"
+        "content": "e58ee51489585a1a71c0260909998c01ee6a549d6af82355796c1a03f9a6a53f"
       }
     },
     {
@@ -69971,6 +69992,8 @@
           "assign anim blueprint",
           "make the player run faster",
           "change the player speed",
+          "change the camera distance",
+          "make the player float",
           "double jump"
         ],
         "summary": "Configure a Character Blueprint's defaults by setting: movement_speeds (walk, crouch, swim, fly, acceleration, braking, friction), jump (launch speed, hold, double jump, air control, gravity), crouch, rotation (orient to movement or face the aim), capsule_component, mesh_component (skeletal mesh, Animation Blueprint, offset), camera_component (a third-person spring arm and camera, made when missing) or nav_movement (AI agent size, avoidance). Each compiles and saves the Blueprint, changes only the fields sent and reads the values back; a Blueprint that is not a Character is refused (NOT_A_CHARACTER).",
@@ -70370,7 +70393,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "575372bd717cd683d494bbbc58ba03dcc9f46fcd02e432c1095dd9b93be0e6b7",
-        "content": "4714d033ca5d14ebba5d9245d5dac7234dc1e2c8ad1952479fcb773a90b69d14"
+        "content": "bd167732b0620d2a7abb2a65c0962eff7817f081f4142a742ced4aafd11a2d07"
       }
     },
     {
@@ -72109,6 +72132,7 @@
           "projectile movement",
           "projectile collision",
           "homing",
+          "make a homing missile",
           "weapon fires projectiles",
           "gun that shoots"
         ],
@@ -72308,7 +72332,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "a0a82e4f10df48e6b8e4ad630279ddfb3bd2623c79326344ea55dc555c2a996a",
-        "content": "f6bf6b058aebe01ad6e24349aaa042ca1ddc65ec77de05b5b77e53ef77defd1b"
+        "content": "c877afe82ead3af076bcca37ffa15c29da70f94f9b1873b9c0c266130efe12e3"
       }
     },
     {
@@ -74376,6 +74400,7 @@
           "make an explosion",
           "add fire effect",
           "add smoke or steam",
+          "water fountain",
           "muzzle flash",
           "particle system",
           "vfx",
@@ -74721,7 +74746,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "332be23fa2be58488ecf91463343001eb63f4bcb2731c89022912790fc94502c",
-        "content": "13bc7094f6ebf3d30eb59bfefe4f12e82e48a8d5bd462021d98cb94e4b5233f2"
+        "content": "111b44e9bd1c48dd86f79dafc2775070182233b6b91b8c4b9ddf210342ca0430"
       }
     },
     {
@@ -79224,6 +79249,7 @@
           "torus",
           "make a cube or ramp",
           "create a cube",
+          "add stairs or a ramp",
           "signed distance field",
           "smooth blend shapes",
           "organic mesh",
@@ -80071,7 +80097,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "48dc3aeda0cfc28ef5bf650e1d7ee3a40ec94f237850c3de3784d0c72dcb6f53",
-        "content": "49b254b2dc42b665b4fdc0935d0ae34927ce000f7dd22b4f2ff15f96c1d1e0d2"
+        "content": "1115fb6bf86195d4ac11e12aa2a2f4f852b960aa808a6e2ccd241ca5df01895f"
       }
     },
     {
@@ -83789,6 +83815,7 @@
           "flip normals",
           "decimate",
           "reduce triangles",
+          "make a mesh lower poly",
           "catmull clark",
           "smooth subdivision",
           "fillet",
@@ -84093,7 +84120,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "030b77fcb6e635fab035bdc1e23fcbff26aee58ee79cfed832e9a83cb83e5cd3",
-        "content": "a63a3193bff85df0cd8a64dba1965ed93b827b9f9a0c91c1359709ab073394bd"
+        "content": "b6adb9db4e72ba554361270eb1a2d6a7a47be448323adf5dbed55dffce4b0898"
       }
     },
     {
@@ -84682,6 +84709,7 @@
           "add a light switch",
           "automatic door",
           "door that opens when the player walks up or gets close",
+          "a lever that opens a gate",
           "pressure plate",
           "floor button",
           "new door",
@@ -84966,7 +84994,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "dc114a31e6d890f61f96f54461d90d34d4e0aa238187be1214db35ee00e407d6",
-        "content": "efe6d658fe8f2b5d14f6f8421dd4f3588699bbd248db2f6b53cd7a71069a97bf"
+        "content": "05f2977871407273dac8565cf72c3140d773dc2aadaf9b95b5fd69678cdb4148"
       }
     },
     {
@@ -92235,7 +92263,8 @@
         "domain": "networking",
         "family": "session",
         "topics": [
-          "add_local_player"
+          "add_local_player",
+          "add a second player"
         ],
         "summary": "Add a local (split-screen) player to the running game for a gamepad controllerId, spawning a player controller for it; the reply gives its playerIndex. Needs Play In Editor (NOT_IN_PLAY); local players end when play stops.",
         "whenToUse": [
@@ -92337,7 +92366,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "4b44ad05a5f7c16c01074dd3bcda84369f732c90d8935fd2f27c98444bc7de5f",
-        "content": "f6ec9303615a0199925758f6b2ca48226bfe29cedfc902a98b9a3ffc250dfe12"
+        "content": "6856159bb1fc56bff8dd293ca778508c4207d4c821f95829c0c31163fc4a7824"
       }
     },
     {
@@ -92941,6 +92970,7 @@
           "input modifier",
           "bind space to jump",
           "wasd movement input",
+          "press w to move forward",
           "remap a key",
           "change a key",
           "new input action",
@@ -93209,7 +93239,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "047a315774edea706b24c596cdbc2782e39ed1b2f774d5f83c0aa7b59ebe46c9",
-        "content": "d401dd24266ae70df99e599c41e75febf86483f315bf81bcd3bba9275c283b62"
+        "content": "2ab35369eabe9c7864ad67ae7f7bb6097c00968afcff57a50ec0f19895cdd76e"
       }
     },
     {
@@ -107215,7 +107245,8 @@
           "clear render queue",
           "cancel render",
           "stop render",
-          "render the sequence to a video file"
+          "render the sequence to a video file",
+          "export the movie"
         ],
         "summary": "Movie Render Queue: create a render job, queue it, start rendering, cancel a running render, or remove jobs from the queue.",
         "whenToUse": [
@@ -107578,7 +107609,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "36ee2cf6833b1e40063aee08e7ad1949b29236d11766ef92f944c570590ddce4",
-        "content": "e7d7bb87ccf2428a7f9b30156a058999582909017b26aca4fe39b29a758e4e14"
+        "content": "b3e5225908975205691dfe355fac236def3510e06b7bf30a0685466c7574081d"
       }
     },
     {
@@ -111055,6 +111086,7 @@
           "console variable",
           "resolution",
           "fullscreen",
+          "make the game fullscreen",
           "quality settings",
           "show fps",
           "profile",
@@ -111293,7 +111325,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "aaba65641f15345853a2ea5c2667d837897ef6215f9ec4a214aef8c05d7a9743",
-        "content": "6729bc595210488cbb6c5587b6f933f5deee47315ca2a43bb0d7e7e114180924"
+        "content": "85d7f3279c1c65e4327a2ff671b675fd3a03505fc52d3977d49a2d97af279570"
       }
     },
     {
@@ -115077,7 +115109,8 @@
           "package for windows",
           "cook content",
           "name the game executable",
-          "exe name"
+          "exe name",
+          "make an exe"
         ],
         "summary": "Start a project package (cook, stage, pak, archive), optionally under its own executable name, and return a jobId to poll; the build runs asynchronously in the editor.",
         "whenToUse": [
@@ -115245,7 +115278,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "ca46671a5c75f472692ce5668bddcea1703aaf62b8617e10c5517b27ea554810",
-        "content": "cfb0fb02b583a4bbaedb6ccc67a292e48fb1e552c915226173a1a986a6e7947a"
+        "content": "0f04cbfc2c1adb7ba5adae0224a0cccfded04f1283cd24629facfdf1c42ae87e"
       }
     },
     {
@@ -117744,6 +117777,7 @@
           "fail to load",
           "content folder",
           "find broken assets",
+          "find broken references",
           "verify assets",
           "data validation",
           "run validators",
@@ -117908,7 +117942,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "2a14bbed51cc97561b6758c369e473e71d1aee7cf605a9e6e2a00d7c3976f17b",
-        "content": "387b1bbb2515995db9c061fffec7822a66506d4f6fcc97d9e8df6578d0b19a34"
+        "content": "5c1d25b5d167f0a2800caa11e25adc795a1f8a4445e5ae6176d5d1c235eeca01"
       }
     },
     {

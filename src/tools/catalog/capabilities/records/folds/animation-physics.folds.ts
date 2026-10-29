@@ -60,7 +60,7 @@ export const ANIMATION_PHYSICS_FOLDS: readonly FoldSpec[] = [
   {
     primary: 'configure_socket', selector: 'socketOp',
     summary: 'Sockets on a skeleton (skeletonPath; a skeletal mesh path uses its skeleton), chosen by socketOp; each change is saved unless save is false (saved). create (add) puts socketName on attachBoneName, which both require, at relativeLocation, relativeRotation and relativeScale (default zero, zero and one); a bone the skeleton lacks is BONE_NOT_FOUND and a taken name SOCKET_EXISTS. configure (modify) changes an existing socket: attachBoneName moves it, and relativeLocation, relativeRotation and relativeScale replace only the parts given; a missing socket is SOCKET_NOT_FOUND and a call naming nothing to change is refused.',
-    topics: ['skeleton socket', 'add socket', 'modify socket', 'create socket'],
+    topics: ['skeleton socket', 'add socket', 'modify socket', 'create socket', 'socket on the spine bone'],
     members: { configure: 'configure_socket', add: 'add_socket', create: 'create_socket', modify: 'modify_socket' },
   },
   {

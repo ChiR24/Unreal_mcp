@@ -84,7 +84,7 @@ export const SYSTEM_OPS_RECORDS: readonly CapabilityRecordSource[] = [
     // "maps to cook packaging settings" found nothing here: "packaging" folds to "packag", which
     // never matches "package", and cooking had no name of its own.
     aliases: ['system_control.cook_maps'],
-    topics: ['package project', 'packaging the game', 'build game', 'maps to cook', 'shipping build', 'package for windows', 'cook content', 'name the game executable', 'exe name'],
+    topics: ['package project', 'packaging the game', 'build game', 'maps to cook', 'shipping build', 'package for windows', 'cook content', 'name the game executable', 'exe name', 'make an exe'],
     summary: 'Start a project package (cook, stage, pak, archive), optionally under its own executable name, and return a jobId to poll; the build runs asynchronously in the editor.',
     whenToUse: ['A cooked, staged, archived build of the project is needed.'],
     whenNotToUse: ['Only a code target must be compiled (use run_ubt).', 'The result of an already-started package is wanted (use package_status).'],
@@ -591,7 +591,7 @@ export const SYSTEM_OPS_RECORDS: readonly CapabilityRecordSource[] = [
     action: 'validate_assets',
     domain: 'project',
     family: 'project',
-    topics: ['check they load', 'broken', 'fail to load', 'content folder', 'find broken assets', 'verify assets', 'data validation', 'run validators', 'material usage flags', 'missing usage flag', 'default material in packaged game', 'check materials before packaging', 'nanite material usage'],
+    topics: ['check they load', 'broken', 'fail to load', 'content folder', 'find broken assets', 'find broken references', 'verify assets', 'data validation', 'run validators', 'material usage flags', 'missing usage flag', 'default material in packaged game', 'check materials before packaging', 'nanite material usage'],
     summary: 'Check that assets load without error, with dataValidation that they pass the project\'s and the engine\'s Data Validation (the editor\'s Validate Assets), and with materialUsage that their meshes\' materials carry the usage flags a cooked game needs: each asset path, or every asset under a folder (recursive by default); returns isValid, per-path results and the checked and invalid counts.',
     whenToUse: ['Asset references must be validated before use.', 'Assets must pass Data Validation (the editor\'s Validate Assets) before they are relied on or shipped.', 'Before packaging: materialUsage finds the meshes a cooked game would draw with the default material.'],
     whenNotToUse: ['A single asset must be imported or created (use manage_asset).'],

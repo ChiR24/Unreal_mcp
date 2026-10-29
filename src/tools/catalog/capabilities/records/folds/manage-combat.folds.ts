@@ -20,7 +20,7 @@ export const MANAGE_COMBAT_FOLDS: readonly FoldSpec[] = [
   {
     primary: 'configure_projectile', selector: 'setting',
     summary: 'Configure projectiles: give a weapon a Fire function that shoots a projectile class, or set a projectile movement, collision or homing.',
-    topics: ['projectile', 'projectile movement', 'projectile collision', 'homing', 'weapon fires projectiles', 'gun that shoots'],
+    topics: ['projectile', 'projectile movement', 'projectile collision', 'homing', 'make a homing missile', 'weapon fires projectiles', 'gun that shoots'],
     members: { projectile: 'configure_projectile', movement: 'configure_projectile_movement', collision: 'configure_projectile_collision', homing: 'configure_projectile_homing' },
   },
   {

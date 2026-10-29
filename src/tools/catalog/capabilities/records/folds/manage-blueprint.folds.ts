@@ -137,7 +137,7 @@ export const MANAGE_BLUEPRINT_FOLDS: readonly FoldSpec[] = [
   {
     primary: 'edit_widget_animation', selector: 'edit',
     summary: 'Build a widget animation, chosen by edit, each saved: create makes a named animation of a given length (a taken name is refused), add_track gives one widget an opacity, color or render-transform track, add_keyframe keys a value at a time on a widget (adding the track and binding when missing) or a whole animation across several widgets in one call (keys, all checked before any is written). get_widget_animation reads it back.',
-    topics: ['widget animation', 'animation track', 'animation keyframe', 'animate widget', 'slide in menu', 'animate widget scale', 'widget scale animation', 'pulse widget', 'pop a widget', 'fade in widget'],
+    topics: ['widget animation', 'animation track', 'animation keyframe', 'animate widget', 'slide in menu', 'animate widget scale', 'widget scale animation', 'pulse widget', 'pop a widget', 'fade in widget', 'animate a button or a title', 'make a title bounce'],
     members: { create: 'create_widget_animation', add_track: 'add_animation_track', add_keyframe: 'add_animation_keyframe' },
   },
   {

@@ -33,12 +33,12 @@ const TCHAR* const FunctionWords[] = {
 };
 
 // Words that open a request to READ something, matched against the first word as
-// typed (before folding). Same list as RETRIEVAL_READ_INTENT_WORDS in the
-// TypeScript retrieval constants; verbs that also open changes (view, look, see,
-// check, print) are left out.
+// typed (before folding); the eval ranker (tests/eval/native-ranker.ts) reads this
+// list from here. Verbs that also open changes (view, look, see, check, print) are
+// left out, and so is "when", which opens event logic ("when the player overlaps, ...").
 const TCHAR* const ReadIntentWords[] = {
 	TEXT("get"), TEXT("read"), TEXT("list"), TEXT("inspect"), TEXT("query"), TEXT("describe"), TEXT("find"), TEXT("count"),
-	TEXT("show"), TEXT("what"), TEXT("which"), TEXT("where"), TEXT("who"), TEXT("how"), TEXT("is"), TEXT("does"),
+	TEXT("show"), TEXT("what"), TEXT("which"), TEXT("where"), TEXT("who"), TEXT("why"), TEXT("how"), TEXT("is"), TEXT("does"),
 };
 
 bool IsAsciiAlnum(TCHAR Ch)

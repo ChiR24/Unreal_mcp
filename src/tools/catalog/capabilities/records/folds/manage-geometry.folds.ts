@@ -6,7 +6,7 @@ export const MANAGE_GEOMETRY_FOLDS: readonly FoldSpec[] = [
   {
     primary: 'create_primitive', selector: 'primitive',
     summary: 'Create a primitive mesh actor: box, sphere, cylinder, cone, capsule, plane, disc, ring, torus, pipe, arch, ramp, stairs, spiral stairs, a hip roof over any footprint, or one smooth organic mesh from blended shapes (sdf) with soft fillets where they meet. Each is a DynamicMeshActor with no collision: traces and players pass through it, and what stands on it reads "nothing below it", until configure_mesh_collision gives it some. Each is one undo step.',
-    topics: ['create box', 'create sphere', 'create cylinder', 'create plane', 'box mesh', 'primitive mesh', 'stairs', 'torus', 'make a cube or ramp', 'create a cube',
+    topics: ['create box', 'create sphere', 'create cylinder', 'create plane', 'box mesh', 'primitive mesh', 'stairs', 'torus', 'make a cube or ramp', 'create a cube', 'add stairs or a ramp',
       'signed distance field', 'smooth blend shapes', 'organic mesh'],
     members: byTarget('create_', ['create_box', 'create_sphere', 'create_cylinder', 'create_cone', 'create_capsule', 'create_plane', 'create_disc',
       'create_ring', 'create_torus', 'create_pipe', 'create_arch', 'create_ramp', 'create_stairs', 'create_spiral_stairs', 'create_roof', 'create_sdf']),
@@ -33,7 +33,7 @@ export const MANAGE_GEOMETRY_FOLDS: readonly FoldSpec[] = [
   {
     primary: 'optimize_mesh', selector: 'optimization',
     summary: 'Optimize, smooth or repair a mesh: simplify, remesh (uniform or voxel), subdivide (pn tessellation, or Catmull-Clark, Loop and bilinear surfaces from a polygroup cage), morphology (voxel offset: dilate, contract, close to fillet where unioned parts meet, open), merge or weld vertices, remove degenerates, fill holes, flip or recalculate normals, recompute tangents.',
-    topics: ['simplify mesh', 'remesh', 'subdivide', 'weld vertices', 'fill holes', 'recalculate normals', 'flip normals', 'decimate', 'reduce triangles', 'catmull clark', 'smooth subdivision', 'fillet'],
+    topics: ['simplify mesh', 'remesh', 'subdivide', 'weld vertices', 'fill holes', 'recalculate normals', 'flip normals', 'decimate', 'reduce triangles', 'make a mesh lower poly', 'catmull clark', 'smooth subdivision', 'fillet'],
     members: byName(['simplify_mesh', 'remesh_uniform', 'remesh_voxel', 'subdivide', 'morphology', 'merge_vertices', 'weld_vertices', 'remove_degenerates', 'fill_holes',
       'flip_normals', 'recalculate_normals', 'recompute_tangents']),
   },

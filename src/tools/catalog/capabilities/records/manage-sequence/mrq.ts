@@ -59,7 +59,7 @@ const OUTPUT_ONLY_SETTINGS = {
 export const MRQ_RECORDS: readonly CapabilityRecordSource[] = [
   buildRecord({
     id: 'sequence.mrq.create_render_job', action: 'create_render_job', family: F, domain: D,
-    topics: ['render the sequence to a video file'],
+    topics: ['render the sequence to a video file', 'export the movie'],
     summary: 'Create a Movie Render Queue job for sequencePath on mapPath (default: the open level), named renderJobName, with a PNG image sequence output and a deferred render pass, plus any output settings sent (outputDirectory, fileNameFormat, resolution, frameRate, a frame range, settings.handleFrameCount and zeroPadFrameNumbers), all checked before the job is made. The job lives in this editor session queue, not on disk; render it with control start.',
     whenToUse: ['A new render job must be created for a cinematic sequence.'],
     whenNotToUse: ['A render job already exists for the sequence.'],

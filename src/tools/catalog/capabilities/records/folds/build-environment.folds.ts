@@ -14,7 +14,7 @@ export const BUILD_ENVIRONMENT_FOLDS: readonly FoldSpec[] = [
   {
     primary: 'sculpt', selector: 'sculptOp',
     summary: 'Shape a landscape, chosen by sculptOp: sculpt raises, lowers or flattens the ground under a round brush at a world location; heightmap sets, raises, lowers, flattens or smooths a region of its vertices (raw heights or centimetres); material sets the material it renders with. sculpt and heightmap count the vertices that changed, write the landscape\'s edit layer (the one being edited, else the first) as one undo step, and merge the layers before the reply so rendering and collision follow; an unknown tool or operation is refused.',
-    topics: ['sculpt landscape', 'heightmap', 'landscape material', 'raise or flatten the terrain or ground'],
+    topics: ['sculpt landscape', 'heightmap', 'landscape material', 'raise or flatten the terrain or ground', 'make a mountain or a hill', 'smooth the terrain'],
     members: { sculpt: 'sculpt', heightmap: 'modify_heightmap', material: 'set_landscape_material' },
     aliasMembers: ['sculpt_landscape'],
   },
@@ -55,7 +55,7 @@ export const BUILD_ENVIRONMENT_FOLDS: readonly FoldSpec[] = [
   // lighting
   {
     primary: 'create_light', summary: LIGHT_SUMMARY, whenToUse: LIGHT_WHEN_TO_USE, whenNotToUse: LIGHT_WHEN_NOT_TO_USE,
-    topics: ['add point light', 'add spot light', 'add a light', 'place a light', 'rect light', 'spotlight', 'street lamp light', 'light intensity', 'light color'],
+    topics: ['add point light', 'add spot light', 'add a light', 'place a light', 'rect light', 'spotlight', 'street lamp light', 'light intensity', 'light color', 'add lights to a dungeon or a room'],
     members: ['create_dynamic_light', 'spawn_light'],
   },
   {
@@ -145,7 +145,7 @@ export const BUILD_ENVIRONMENT_FOLDS: readonly FoldSpec[] = [
   {
     primary: 'configure_atmosphere', selector: 'setting',
     summary: 'Configure the sky and atmosphere: sky atmosphere, sky light, sun position, directional light, height fog, volumetric clouds, time of day, sky/light color curves.',
-    topics: ['sky atmosphere', 'sun position', 'height fog', 'volumetric cloud', 'time of day', 'sky light', 'directional light', 'add fog', 'add sky', 'make it night', 'make it foggy', 'make it sunset or sunrise', 'add fog to the scene', 'add a skybox'],
+    topics: ['sky atmosphere', 'sun position', 'height fog', 'volumetric cloud', 'time of day', 'sky light', 'directional light', 'add fog', 'add sky', 'make it night', 'make it foggy', 'make it sunset or sunrise', 'add fog to the scene', 'add a skybox', 'make it look like sunset'],
     members: {
       sky_atmosphere: 'configure_sky_atmosphere', sky_light: 'configure_sky_light', sun_position: 'configure_sun_position', directional_light: 'configure_directional_light_atmosphere',
       height_fog: 'configure_exponential_height_fog', volumetric_cloud: 'configure_volumetric_cloud', time_of_day: 'set_time_of_day',
@@ -162,7 +162,7 @@ export const BUILD_ENVIRONMENT_FOLDS: readonly FoldSpec[] = [
   {
     primary: 'configure_weather', selector: 'setting',
     summary: 'Configure a weather actor: rain, snow or lightning set a Cascade particle system (particleSystemPath) on an Emitter labelled WeatherEmitter, SnowEmitter or LightningEmitter; wind spawns or tunes a WindDirectionalSource (direction as its rotation, speed and other settings by property name). Nothing is simulated beyond what those actors do; not saved.',
-    topics: ['rain', 'snow', 'lightning', 'wind', 'weather', 'add snow', 'add rain, snow, wind or lightning', 'make it rain', 'wind on trees'],
+    topics: ['rain', 'snow', 'lightning', 'wind', 'weather', 'add snow', 'add rain, snow, wind or lightning', 'make it rain', 'wind on trees', 'make a storm with rain and lightning', 'make the trees sway in the wind'],
     members: { rain: 'configure_rain_particles', snow: 'configure_snow_particles', lightning: 'configure_lightning', wind: 'configure_wind' },
   },
   // water
