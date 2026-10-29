@@ -2,7 +2,7 @@
  * Transform and physics records: set_transform and its five aliases
  * (teleport_actor, set_actor_location, set_actor_rotation, set_actor_scale,
  * set_actor_transform), get_transform and its alias (get_actor_transform),
- * and apply_force.
+ * apply_force and randomize_transforms.
  */
 import type { CapabilityRecordSource } from '../../model.js';
 import { ANY_EDITOR_STATE, buildCoreRecord } from '../core/builder.js';
@@ -337,5 +337,34 @@ export const TRANSFORM_RECORDS: readonly CapabilityRecordSource[] = [
       velocityChange: { type: 'array', items: { type: 'number' }, description: 'Speed [x, y, z] in cm/s the push gave it (force / massKg); friction and gravity act on it from the next frame.' },
     },
     exampleInput: { action: 'apply_force', actorName: 'Crate1', force: [30000, 0, 0] },
+  }),
+  buildCoreRecord({
+    parentTool: 'control_actor',
+    action: 'randomize_transforms',
+    domain: DOMAIN,
+    family: FAMILY_TRANSFORM,
+    topics: ['randomize rotation', 'random scale', 'randomize the rotation of the trees', 'vary the rocks so no two look the same'],
+    summary: 'Give placed actors seeded random turns, tilts, sizes and nudges around where they stand, so scattered rocks, trees and props do not look set by hand: yaw turned by up to yaw degrees either way, pitch and roll by up to tilt, scale multiplied by a factor between scale[0] and scale[1], location moved by up to offset cm along X and Y. The same seed and the same actors in the same order give the same result. Every name is found before anything is touched; one undo step, and where each actor ends up is checked like any move.',
+    whenToUse: ['Copies of a prop (rocks, trees, crates, barrels) placed in a row or a grid look repeated and should vary.'],
+    whenNotToUse: ['Exact values are wanted: use set_transform.', 'Actors should rest on the ground afterwards: run fix_placement.'],
+    inputProps: {
+      actorNames: { type: 'array', minItems: 1, maxItems: 1000, items: { type: 'string' }, description: 'The actors, by label or name.' },
+      yaw: { type: 'number', minimum: 0, maximum: 180, description: 'Most degrees each actor turns about Z, either way (180 faces it anywhere; default 0).' },
+      tilt: { type: 'number', minimum: 0, maximum: 90, description: 'Most degrees pitch and roll each change, either way (default 0).' },
+      scale: { type: 'array', items: { type: 'number' }, minItems: 2, maxItems: 2, description: '[min, max]: each actor\'s scale is multiplied by a factor between them (default [1, 1]; 0 < min <= max, else INVALID_ARGUMENT).' },
+      offset: { type: 'number', minimum: 0, description: 'Most cm each actor moves along X and along Y (default 0). A call that varies nothing is INVALID_ARGUMENT.' },
+      seed: { type: 'integer', description: 'The random seed (default 1): the same seed gives the same result.' },
+    },
+    required: ['actorNames'],
+    outputProps: {
+      actors: { type: 'array', items: { type: 'object', additionalProperties: true, 'x-unreal-reflection-boundary': true }, description: 'Each actor as {actor, location [x, y, z], rotation [pitch, yaw, roll], scale [x, y, z]}, read back.' },
+      undo: { type: 'object', additionalProperties: true, 'x-unreal-reflection-boundary': true, description: 'What editor undo takes back: the changes are one step.' },
+    },
+    outputRequired: [],
+    effect: 'write',
+    costLatency: 'instant',
+    costResources: 'low',
+    exampleInput: { action: 'randomize_transforms', actorNames: ['Rock_1', 'Rock_2', 'Rock_3'], yaw: 180, scale: [0.8, 1.25], seed: 7 },
+    exampleOutput: { success: true, message: 'Randomized 3 actor(s).', actors: [{ actor: 'Rock_1', location: [0, 0, 0], rotation: [0, 112.4, 0], scale: [1.13, 1.13, 1.13] }] },
   }),
 ];

@@ -4782,6 +4782,15 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             {
               "type": "array",
               "minItems": 1,
+              "maxItems": 1000,
+              "items": {
+                "type": "string"
+              },
+              "description": "The actors, by label or name."
+            },
+            {
+              "type": "array",
+              "minItems": 1,
               "maxItems": 500,
               "items": {
                 "type": "string"
@@ -5290,9 +5299,14 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             {
               "type": "number",
               "description": "Skip this many matching actors; the next page starts at nextOffset from the previous reply."
+            },
+            {
+              "type": "number",
+              "minimum": 0,
+              "description": "Most cm each actor moves along X and along Y (default 0). A call that varies nothing is INVALID_ARGUMENT."
             }
           ],
-          "description": "Move by [dx, dy, dz] from where the actor stands now, instead of to an absolute location; give one or the other."
+          "description": "Most cm each actor moves along X and along Y (default 0). A call that varies nothing is INVALID_ARGUMENT."
         },
         "overlaps": {
           "type": "boolean",
@@ -5431,17 +5445,35 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "description": "Also turn each rotation axis to a multiple of this many degrees (90 squares a piece up); 0 or omitted leaves rotations."
         },
         "scale": {
-          "type": "array",
-          "items": {
-            "type": "number"
-          },
-          "minItems": 3,
-          "maxItems": 3,
+          "oneOf": [
+            {
+              "type": "array",
+              "items": {
+                "type": "number"
+              },
+              "minItems": 2,
+              "maxItems": 2,
+              "description": "[min, max]: each actor's scale is multiplied by a factor between them (default [1, 1]; 0 < min <= max, else INVALID_ARGUMENT)."
+            },
+            {
+              "type": "array",
+              "items": {
+                "type": "number"
+              },
+              "minItems": 3,
+              "maxItems": 3,
+              "description": "Scale as [x, y, z]."
+            }
+          ],
           "description": "Scale as [x, y, z]."
         },
         "seconds": {
           "type": "number",
           "description": "At most this much physics time (0.5-10, default 3): the run stops sooner once every body sleeps. A body still moving at the end comes back under unstable with its pose at that moment, which is kept."
+        },
+        "seed": {
+          "type": "integer",
+          "description": "The random seed (default 1): the same seed gives the same result."
         },
         "snapToTarget": {
           "type": "boolean",
@@ -5545,6 +5577,12 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           ],
           "description": "Actor tags for the new actor: delete_by_tag removes them again, and mcp.placement.ok marks a deliberate overlap before the placement is judged."
         },
+        "tilt": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 90,
+          "description": "Most degrees pitch and roll each change, either way (default 0)."
+        },
         "transformMode": {
           "type": "string",
           "enum": [
@@ -5570,6 +5608,12 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "boolean",
           "description": "Desired visibility state."
         },
+        "yaw": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 180,
+          "description": "Most degrees each actor turns about Z, either way (180 faces it anywhere; default 0)."
+        },
         "action": {
           "type": "string",
           "enum": [
@@ -5581,6 +5625,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             "set_transform",
             "get_transform",
             "apply_force",
+            "randomize_transforms",
             "edit_component",
             "get_component_property",
             "set_material",
@@ -5662,6 +5707,15 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
                 "x-unreal-reflection-boundary": true
               },
               "description": "Each actor as {actor, from [x, y, z], to [x, y, z], rotation [pitch, yaw, roll] when rotationDeg is set, movedCm}."
+            },
+            {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "additionalProperties": true,
+                "x-unreal-reflection-boundary": true
+              },
+              "description": "Each actor as {actor, location [x, y, z], rotation [pitch, yaw, roll], scale [x, y, z]}, read back."
             },
             {
               "type": "array",
@@ -6620,6 +6674,12 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
               "type": "object",
               "additionalProperties": true,
               "x-unreal-reflection-boundary": true,
+              "description": "What editor undo takes back: the changes are one step."
+            },
+            {
+              "type": "object",
+              "additionalProperties": true,
+              "x-unreal-reflection-boundary": true,
               "description": "What editor undo takes back: the moves are one step. Absent under dryRun and when nothing moved."
             },
             {
@@ -6653,7 +6713,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
               "description": "Whether editor undo takes the spawn back: {undoable: true, transactionScope: \"Spawn Actors\"} (control_editor undo removes every actor the call made), or {undoable: false, reasonCode, reason}."
             }
           ],
-          "description": "What editor undo takes back: the changes are one step. Absent when nothing changed."
+          "description": "What editor undo takes back: the changes are one step."
         },
         "unmet": {
           "type": "number",

@@ -920,4 +920,7 @@ export const PLAIN_PROBE: readonly PlainProbeCase[] = [
   // Placed actors swapped for another prop where they stand.
   { query: 'replace the crates with barrels', accepted: ['control_actor.replace_actors'] },
   { query: 'replace placeholder cubes', accepted: ['control_actor.replace_actors'] },
+  // Scattered copies varied from a seed so they do not look repeated.
+  { query: 'randomize the rotation of the trees', accepted: ['control_actor.randomize_transforms'] },
+  { query: 'random rotation for the rocks', accepted: ['control_actor.randomize_transforms'] },
 ];

@@ -236,6 +236,14 @@ const testCases = [
   { scenario: 'ERROR: replace_actors with a class that is not there', toolName: 'control_actor', arguments: { action: 'replace_actors', actorNames: [swap(1)], classPath: '/Script/Engine.NoSuchActorClass' }, expected: 'error|CLASS_NOT_FOUND' },
   { scenario: 'ERROR: replace_actors with an abstract class', toolName: 'control_actor', arguments: { action: 'replace_actors', actorNames: [swap(1)], classPath: '/Script/Engine.Info' }, expected: 'error|CANNOT_PLACE' },
   { scenario: 'ERROR: replace_actors names an actor that is not there and replaces none', toolName: 'control_actor', arguments: { action: 'replace_actors', actorNames: [swap(1), `MCP_MissingActor_${ts}`], meshPath: '/Engine/BasicShapes/Cube' }, expected: 'error|ACTOR_NOT_FOUND' },
+  // The swapped actors varied from a seed: turned, tilted, sized and nudged in one undo step.
+  { scenario: 'ACTION: randomize_transforms turns, tilts, sizes and nudges actors from a seed', toolName: 'control_actor', arguments: { action: 'randomize_transforms', actorNames: [swap(1), swap(3)], yaw: 180, tilt: 10, scale: [0.5, 2], offset: 50, seed: 7 }, expected: 'success', assertions: [
+    { path: 'structuredContent.result.actors', length: 2, label: 'both actors varied' },
+    { path: 'structuredContent.result.undo.undoable', equals: true, label: 'one undo step' },
+  ] },
+  { scenario: 'ERROR: randomize_transforms with nothing to vary', toolName: 'control_actor', arguments: { action: 'randomize_transforms', actorNames: [swap(1)] }, expected: 'error|INVALID_ARGUMENT' },
+  { scenario: 'ERROR: randomize_transforms with a scale range upside down', toolName: 'control_actor', arguments: { action: 'randomize_transforms', actorNames: [swap(1)], scale: [2, 1] }, expected: 'error|INVALID_ARGUMENT' },
+  { scenario: 'ERROR: randomize_transforms names an actor that is not there', toolName: 'control_actor', arguments: { action: 'randomize_transforms', actorNames: [`MCP_MissingActor_${ts}`], yaw: 90 }, expected: 'error|ACTOR_NOT_FOUND' },
   { scenario: 'DELETE: the swapped actors by the tag they kept', toolName: 'control_actor', arguments: { action: 'delete_by_tag', tag: SWAP_TAG }, expected: 'success', assertions: [{ path: 'structuredContent.result.details.deletedCount', equals: 3, label: 'every replacement kept the tag' }] },
   { scenario: 'CONFIG: set_transform', toolName: 'control_actor', arguments: actorArgs('set_transform', { location: { x: 10, y: 20, z: 130 }, rotation: { x: 0, y: 0, z: 15 }, scale: { x: 1.1, y: 1.1, z: 1.1 } }), expected: 'success' },
   { scenario: 'QUERY: list summary counts the level instead of listing it', toolName: 'control_actor', arguments: { action: 'list', summary: true }, expected: 'success', assertions: [{ path: 'structuredContent.result.count', equals: 0, label: 'no per-actor rows in a summary' }] },
