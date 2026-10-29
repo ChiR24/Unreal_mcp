@@ -55,8 +55,13 @@ bool Store(const FString& Name, const TSharedPtr<FJsonObject>& Recipe)
     return FFileHelper::SaveStringToFile(Text, *PathOf(Name));
 }
 
+FString Quoted(const FString& Text)
+{
+    return TEXT("\"") + Text.Replace(TEXT("\\"), TEXT("\\\\")).Replace(TEXT("\""), TEXT("\\\"")) + TEXT("\"");
+}
+
 // A JSON value as the script language writes it: numbers and true/false as they are, text quoted, arrays as (list ...),
-// objects as (obj :key value ...).
+// objects as (obj :"key" value ...). A key is quoted too: written bare, one holding a space and a paren became a call.
 FString ToScript(const TSharedPtr<FJsonValue>& Value)
 {
     switch (Value.IsValid() ? Value->Type : EJson::Null)
@@ -66,7 +71,7 @@ FString ToScript(const TSharedPtr<FJsonValue>& Value)
     case EJson::Boolean:
         return Value->AsBool() ? TEXT("true") : TEXT("false");
     case EJson::String:
-        return TEXT("\"") + Value->AsString().Replace(TEXT("\\"), TEXT("\\\\")).Replace(TEXT("\""), TEXT("\\\"")) + TEXT("\"");
+        return Quoted(Value->AsString());
     case EJson::Array:
     {
         FString Out = TEXT("(list");
@@ -81,7 +86,7 @@ FString ToScript(const TSharedPtr<FJsonValue>& Value)
         FString Out = TEXT("(obj");
         for (const TPair<FString, TSharedPtr<FJsonValue>>& Field : Value->AsObject()->Values)
         {
-            Out += FString::Printf(TEXT(" :%s %s"), *FString(Field.Key), *ToScript(Field.Value));
+            Out += FString::Printf(TEXT(" :%s %s"), *Quoted(FString(Field.Key)), *ToScript(Field.Value));
         }
         return Out + TEXT(")");
     }

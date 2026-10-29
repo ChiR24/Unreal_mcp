@@ -8,13 +8,11 @@ void FMcpConnectionManager::SetOnAutomationRequestCancelled(
 bool FMcpConnectionManager::IsCancelAllowedForSocket(
     TSharedPtr<FMcpBridgeWebSocket> Socket, const FString& RequestId) const {
   FScopeLock Lock(&PendingRequestsMutex);
-  if (const TSharedPtr<FMcpBridgeWebSocket>* Owner =
-          PendingRequestsToSockets.Find(RequestId)) {
-    // Tracked request: only the owning socket may cancel it.
-    return Owner->Get() == Socket.Get();
-  }
-  // Untracked (legacy/untracked) request: forward for backward compatibility.
-  return true;
+  // Only the socket that sent a request may cancel it. An untracked id is not this socket's: the entry goes when the
+  // reply is sent, when its socket disconnects, or never existed (a native request), and forwarding those let any
+  // authenticated client cancel another's queued work by naming its id.
+  const TSharedPtr<FMcpBridgeWebSocket>* Owner = PendingRequestsToSockets.Find(RequestId);
+  return Owner && Owner->Get() == Socket.Get();
 }
 
 void FMcpConnectionManager::HandleCancelRequest(
@@ -52,10 +50,10 @@ void FMcpConnectionManager::HandleCancelRequest(
   // request to stop one authenticated client cancelling another's request.
   if (!IsCancelAllowedForSocket(Socket, RequestId)) {
     UE_LOG(LogEngineWireSubsystem, Warning,
-           TEXT("cancel_request rejected: RequestId=%s is owned by a "
-                "different authenticated socket; cancelling another client's "
+           TEXT("cancel_request rejected: RequestId=%s is not an in-flight "
+                "request of this socket; cancelling another client's "
                 "request is not permitted."),
-           *RequestId);
+           *EngineWireSubsystemResponse::SanitizeForLog(RequestId));
     return;
   }
 

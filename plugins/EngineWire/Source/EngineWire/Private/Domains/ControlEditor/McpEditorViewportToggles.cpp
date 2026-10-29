@@ -28,6 +28,16 @@ bool McpReadStatNames(const TSharedPtr<FJsonObject> &Payload, const TArray<FStri
       return false;
     }
   }
+  // The Stat command's own verbs act instead of drawing: a file capture is start_profiling's (a write), dumps log.
+  // ponytail: the verbs of the engine's StatsCommand.cpp by prefix; an allowlist of stat groups if one slips past.
+  for (const TCHAR *Verb : {TEXT("startfile"), TEXT("stopfile"), TEXT("testfile"), TEXT("testdisable"), TEXT("dump"),
+                            TEXT("toggledebug"), TEXT("namedmarker")}) {
+    if (Stat.StartsWith(Verb, ESearchCase::IgnoreCase)) {
+      OutError = FString::Printf(TEXT("'%s' is a stats command, not a stat to show (system_control start_profiling "
+                                      "records a stats file)"), *Stat);
+      return false;
+    }
+  }
   Out.Add(Stat);
   return true;
 }

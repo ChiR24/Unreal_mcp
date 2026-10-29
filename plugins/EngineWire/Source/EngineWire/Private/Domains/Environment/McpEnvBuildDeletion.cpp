@@ -153,7 +153,9 @@ bool HandleBuildSnapshotAndDeletionAction(const FString &LowerSub, FEnvironmentB
         return true;
     }
 
-    const TArray<AActor *> Actors = ActorSubsystem->GetAllLevelActors();
+    // A label names an actor in any level: a path-restricted caller deletes only actors of a level inside its prefixes.
+    const TArray<AActor *> Actors = ActorSubsystem->GetAllLevelActors().FilterByPredicate(
+        [](const AActor *Actor) { return McpCapabilityPrincipal::ActiveRequestPermitsObject(Actor); });
     TArray<FString> DeletedTargets;
     TArray<FString> MissingTargets;
     TArray<FString> AmbiguousTargets;

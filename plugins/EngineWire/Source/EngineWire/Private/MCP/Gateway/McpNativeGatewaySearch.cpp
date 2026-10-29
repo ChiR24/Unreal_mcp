@@ -81,9 +81,13 @@ TSharedPtr<FJsonObject> McpGatewaySearchCapabilities(
 {
 	if (!Store.IsReady()) return McpGatewayCatalogUnavailable(TEXT("search"), Store);
 
+	// A search is a few words; past this the query is cut (before the typo pass as well), so a 5 MB one cannot keep a
+	// socket worker busy ranking every record against a million words.
+	constexpr int32 McpSearchMaxQueryChars = 512;
 	// A word no record could match is a typo of the nearest catalog word (Search/McpSearchTypos.cpp): "spwan actor".
 	TArray<FMcpQueryCorrection> Corrections;
-	const FString Query = McpCorrectQuery(Input.Query.TrimStartAndEnd().ToLower(), Store, Corrections);
+	const FString Query =
+		McpCorrectQuery(Input.Query.Left(McpSearchMaxQueryChars).TrimStartAndEnd().ToLower(), Store, Corrections);
 	const int32 Limit = FMath::Clamp(Input.Limit, 1, McpSearchMaxLimit);
 	int32 Offset = FMath::Max(0, Input.Offset);
 	const FString& Revision = Store.GetCatalogRevision();

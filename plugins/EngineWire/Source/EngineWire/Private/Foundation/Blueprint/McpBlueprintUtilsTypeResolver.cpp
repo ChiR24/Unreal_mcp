@@ -26,7 +26,8 @@ bool ResolveBaseType(
 
 static FTypeResolutionResult ResolvePinTypeRecursive(
     const FString& TypeSpec,
-    const FName& InSelfStructPath)
+    const FName& InSelfStructPath,
+    bool bInContainer = false)
 {
     FTypeResolutionResult Result;
     FString Clean = TypeSpec;
@@ -40,9 +41,20 @@ static FTypeResolutionResult ResolvePinTypeRecursive(
 
     const FString Lower = Clean.ToLower();
 
+    // A pin holds one container of plain values (FEdGraphPinType has one ContainerType): Array<Array<int>> came out as
+    // Array<int>, and a type nested thousands deep recursed once a level, copying the rest of the text each time.
+    for (const TCHAR* Prefix : {TEXT("array:"), TEXT("set:"), TEXT("map:"), TEXT("array<"), TEXT("set<"), TEXT("map<")})
+    {
+        if (bInContainer && Lower.StartsWith(Prefix))
+        {
+            Result.OutError = FString::Printf(TEXT("'%s' is a container inside a container, which no Blueprint pin holds"), *Clean);
+            return Result;
+        }
+    }
+
     if (Lower.StartsWith(TEXT("array:")))
     {
-        FTypeResolutionResult Inner = ResolvePinTypeRecursive(Clean.Mid(6), InSelfStructPath);
+        FTypeResolutionResult Inner = ResolvePinTypeRecursive(Clean.Mid(6), InSelfStructPath, true);
         if (!Inner.bSuccess) { Result.OutError = Inner.OutError; return Result; }
         Inner.PinType.ContainerType = EPinContainerType::Array;
         Result.bSuccess = true; Result.PinType = Inner.PinType;
@@ -50,7 +62,7 @@ static FTypeResolutionResult ResolvePinTypeRecursive(
     }
     if (Lower.StartsWith(TEXT("set:")))
     {
-        FTypeResolutionResult Inner = ResolvePinTypeRecursive(Clean.Mid(4), InSelfStructPath);
+        FTypeResolutionResult Inner = ResolvePinTypeRecursive(Clean.Mid(4), InSelfStructPath, true);
         if (!Inner.bSuccess) { Result.OutError = Inner.OutError; return Result; }
         Inner.PinType.ContainerType = EPinContainerType::Set;
         Result.bSuccess = true; Result.PinType = Inner.PinType;
@@ -94,9 +106,9 @@ static FTypeResolutionResult ResolvePinTypeRecursive(
             return Result;
         }
 
-        FTypeResolutionResult KeyPin = ResolvePinTypeRecursive(KeyStr, InSelfStructPath);
+        FTypeResolutionResult KeyPin = ResolvePinTypeRecursive(KeyStr, InSelfStructPath, true);
         if (!KeyPin.bSuccess) { Result.OutError = KeyPin.OutError; return Result; }
-        FTypeResolutionResult ValuePin = ResolvePinTypeRecursive(ValueStr, InSelfStructPath);
+        FTypeResolutionResult ValuePin = ResolvePinTypeRecursive(ValueStr, InSelfStructPath, true);
         if (!ValuePin.bSuccess) { Result.OutError = ValuePin.OutError; return Result; }
 
         const FName KC = KeyPin.PinType.PinCategory;
@@ -130,18 +142,18 @@ static FTypeResolutionResult ResolvePinTypeRecursive(
     if (Lower.StartsWith(TEXT("array<")) && Clean.EndsWith(TEXT(">")))
     {
         return ResolvePinTypeRecursive(
-            FString(TEXT("Array:")) + Clean.Mid(6, Clean.Len() - 7), InSelfStructPath);
+            FString(TEXT("Array:")) + Clean.Mid(6, Clean.Len() - 7), InSelfStructPath, bInContainer);
     }
     if (Lower.StartsWith(TEXT("set<")) && Clean.EndsWith(TEXT(">")))
     {
         return ResolvePinTypeRecursive(
-            FString(TEXT("Set:")) + Clean.Mid(4, Clean.Len() - 5), InSelfStructPath);
+            FString(TEXT("Set:")) + Clean.Mid(4, Clean.Len() - 5), InSelfStructPath, bInContainer);
     }
     if (Lower.StartsWith(TEXT("map<")) && Clean.EndsWith(TEXT(">")))
     {
         FString Inner = Clean.Mid(4, Clean.Len() - 5);
         return ResolvePinTypeRecursive(
-            FString(TEXT("Map:")) + Inner, InSelfStructPath);
+            FString(TEXT("Map:")) + Inner, InSelfStructPath, bInContainer);
     }
 
     if (!ResolveBaseType(Clean, Result.PinType, InSelfStructPath, Result.OutError))

@@ -193,9 +193,11 @@ bool UEngineWireSubsystem::HandleControlEditorSaveAll(
       return;
     }
     ProcessedPackages.Add(Package);
-    if (OnlyPackages.Num() > 0 && !OnlyPackages.Contains(Package->GetName())) {
+    // A path-restricted caller saves only packages inside its prefixes; the rest stay dirty, counted but not named.
+    const bool bOthers = !McpCapabilityPrincipal::ActiveRequestPermitsPath(Package->GetName());
+    if (bOthers || (OnlyPackages.Num() > 0 && !OnlyPackages.Contains(Package->GetName()))) {
       LeftDirty++;
-      LeftDirtyPackages.Add(Package->GetName());
+      if (!bOthers) LeftDirtyPackages.Add(Package->GetName());
       return;
     }
     TotalDirty++;

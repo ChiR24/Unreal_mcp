@@ -94,16 +94,18 @@ describe('plugin security contracts', () => {
     expect(store).not.toMatch(/\*Token\b.*UE_LOG|UE_LOG.*\bToken\b/);
   });
 
-  it('refuses non-loopback native startup unless capability token is required (fail-closed)', () => {
+  it('refuses every non-loopback native startup: it has no TLS (fail-closed)', () => {
     const lifecycle = privateSource(
       'MCP',
       'Transport',
       'McpNativeTransportLifecycle.cpp',
     );
-    // The non-loopback bind branch couples LAN exposure to token auth and
-    // refuses to start (return false) when the token is not required.
-    expect(lifecycle).toContain('SECURITY: refusing to bind native MCP to non-loopback');
-    expect(lifecycle).toContain('bRequireCapabilityToken');
+    // An allowed non-loopback host refuses to start (return false) whatever the token setting: the token would cross
+    // the network in clear text, so remote clients come in through a tunnel to loopback.
+    const refusal = lifecycle.indexOf('SECURITY: refusing to bind native MCP to non-loopback');
+    expect(refusal).toBeGreaterThan(-1);
+    expect(lifecycle.slice(lifecycle.lastIndexOf('else if (!bIsLoopback)', refusal), refusal)).not.toContain('bRequireCapabilityToken');
+    expect(lifecycle.slice(refusal, lifecycle.indexOf('McpSetNativeListenerLoopback', refusal))).toMatch(/return false;\s*\}\s*$/u);
     // Disallowed-host loopback fallback must be preserved (separate branch).
     expect(lifecycle).toContain('falling back to 127.0.0.1');
   });

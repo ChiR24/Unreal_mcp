@@ -143,6 +143,12 @@ bool FMcpPrequeueGatePathConfinementTest::RunTest(const FString& Parameters)
 		Allows(Confined, McpTestFields({ { TEXT("folderPath"), TEXT("TeamB/Secret") } })));
 	TestFalse(TEXT("bare single token under a path key is confined"),
 		Allows(Confined, McpTestFields({ { TEXT("packagePath"), TEXT("Secret") } })));
+	// A handler may root a relative value at / (Game/TeamB/X) or search the registry for it, so even one /Game/
+	// would root inside the prefix names no single package and is refused.
+	TestFalse(TEXT("a relative path is refused even when /Game/ would root it inside the prefix"),
+		Allows(Confined, McpTestFields({ { TEXT("assetPath"), TEXT("TeamA/Thing") } })));
+	TestFalse(TEXT("a relative Game/... path is refused"),
+		Allows(Confined, McpTestFields({ { TEXT("assetPaths"), TEXT("Game/TeamB/BP_Target") } })));
 	TestFalse(TEXT("doubled separators do not evade confinement"),
 		Allows(Confined, McpTestFields({ { TEXT("folderPath"), TEXT("//Content//TeamB") } })));
 	TestFalse(TEXT("traversal out of the prefix is refused"),

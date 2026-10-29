@@ -177,7 +177,7 @@ Every setting, including the Movie Render Queue and Take Recorder limits: [Confi
 
 ## Security
 
-- **Loopback by default.** Both listeners, the WebSocket bridge and the native HTTP server, bind `127.0.0.1`. A LAN address needs **Allow Non Loopback**, and neither listener binds off-loopback unless **Require Capability Token** is also on.
+- **Loopback by default.** Both listeners, the WebSocket bridge and the native HTTP server, bind `127.0.0.1`. The native HTTP server never binds off-loopback: it has no TLS, so a remote client comes in through an SSH tunnel or a TLS proxy. The WebSocket bridge binds a LAN address only with **Allow Non Loopback**, **Require Capability Token** and **Enable Tls** all on.
 - **Capability token, on by default.** The plugin generates a random 32-byte token per project at `<Project>/Saved/MCP/capability-token` and compares it in constant time on both routes. A token typed into **Capability Token** overrides the file. Delete the file and restart the editor to rotate it.
 - **Consent for destructive work.** Deletes and some other writes need a per-call consent grant, which the plugin checks itself.
 - **Guard rails.** Asset paths are limited to `/Game`, `/Engine`, `/Script`, `/Temp`, `/Niagara` and the content mounts the editor reports; console commands that chain or quit the editor are blocked; file paths are checked for traversal and symbolic links; the plugin's own settings are out of reach of automation.

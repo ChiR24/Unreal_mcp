@@ -18,6 +18,10 @@ inline constexpr uint8 OpCodePong = 0xA;
 inline constexpr uint64 MaxWebSocketMessageBytes = 5ULL * 1024ULL * 1024ULL;
 inline constexpr uint64 MaxWebSocketFramePayloadBytes =
     MaxWebSocketMessageBytes;
+// Connected clients one listener serves at once (each has a worker thread and a receive buffer).
+inline constexpr int32 MaxWebSocketClients = 32;
+// A frame's payload is read in pieces of this size, so a declared length reserves nothing that has not arrived.
+inline constexpr uint64 WebSocketReceiveChunkBytes = 64ULL * 1024ULL;
 inline constexpr int32 WebSocketCloseCodeAbnormalClosure = 4000;
 inline constexpr int32 WebSocketCloseCodeMessageTooBig = 1009;
 

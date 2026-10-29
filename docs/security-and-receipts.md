@@ -14,11 +14,21 @@ no socket of its own: it is an HTTP client of the native `/mcp`.
 
 | Surface | Non-loopback opt-in | Notes |
 | --- | --- | --- |
-| Plugin WebSocket listener | `bAllowNonLoopback` | plugin project setting |
-| Plugin native `/mcp` transport | `bAllowNonLoopback` **and** `bRequireCapabilityToken` | the transport **refuses to bind** non-loopback without the token requirement |
+| Plugin WebSocket listener | `bAllowNonLoopback`, `bRequireCapabilityToken` **and** `bEnableTls` | **refuses to bind** non-loopback without the token requirement, and without TLS: the token travels in `bridge_hello` |
+| Plugin native `/mcp` transport | none | **never binds** non-loopback: it is plain HTTP, so a token sent over a network is readable by anyone on the path. A remote client comes in through an SSH tunnel (`ssh -L 3000:127.0.0.1:3000`) or a TLS proxy that forwards to loopback |
+| stdio proxy (`UNREAL_MCP_URL`) | `UNREAL_MCP_ALLOW_REMOTE_TOKEN=1` | sends the capability token only to a loopback upstream unless this is set |
 
-The native transport's fail-closed coupling means a LAN-exposed native surface
-can never start unauthenticated. The WebSocket listener has no such interlock.
+The fail-closed coupling means a LAN-exposed surface can never start
+unauthenticated, and no token crosses a network in clear text.
+
+The WebSocket listener accepts at most 32 clients; a client that stops reading
+is disconnected after a 2 s write stall instead of holding the game thread, and
+a heartbeat timeout closes only the socket that missed it. A connection whose
+token authority changed (a settings edit, a token file replaced) must say
+`bridge_hello` again (`REAUTHENTICATION_REQUIRED`); a `requestId` still in
+flight is refused (`REQUEST_ID_IN_USE`), and a cancel names only a request that
+socket sent. Payload keys starting with `_` belong to the server (a handler's
+own retry state) and are dropped at that door.
 
 > **Loopback default-allow is a real exposure.** Once any surface is reachable
 > from the LAN without a capability token, any client on that network can call
@@ -44,6 +54,14 @@ so an unknown action is refused by default.
 
 Each capability's required scope is published per-row in
 [`action-reference.generated.md`](action-reference.generated.md).
+
+A parameter can demand more as well (`policy.raisedBy`): sending it adds that
+scope to the capability's own. `sample_motion`'s `inputs` press keys (Write);
+a screenshot's `path` and `export_mesh`'s `outputPath` pick where a file is
+replaced (Write; the default folders hold only captures and exports). Inside a
+folded family a name raises every sibling, so `set_view_target` checks its own
+case in the handler: `location` or `rotation` move the target actor, which a
+read-only caller is refused (`SCOPE_NOT_GRANTED`).
 
 ### Predicates vs composition
 
@@ -74,7 +92,9 @@ Consent arrives as an **execute-envelope sibling — never a handler parameter**
 ```
 
 A grant is honored **only when it names that capability**. Consent is
-re-validated plugin-side.
+re-validated plugin-side. A failed request gives its nonce back only when the
+change journal shows nothing changed since its dispatch began; a handler that
+changed something and then failed spent it.
 
 > Never infer consent from loopback, from a prior call, from an idempotency
 > key, or from a preview. None of those are consent.
@@ -100,7 +120,22 @@ truncated scan proves nothing, so it fails closed.**
 folder/name joins, an omitted optional path parameter that hits a server-side
 default, bare-relative values. A path-restricted principal running a mutating
 capability that declares a path parameter must present at least one provable
-in-prefix target from a scan that **ran to completion**.
+in-prefix target from a scan that **ran to completion**, and names every path
+in full: a relative one under a path key is refused, not read as `/Game/...`.
+
+The gate sees what a request names; a handler can still reach other packages
+(a default folder, an actor by label, a reference, a dependent). So the request's
+principal stays active while its handler runs
+(`McpCapabilityPrincipal::FActiveRequestScope`, a latent reply included), and
+the shared sinks ask it before they act: the asset save, level save and delete
+wrappers, the reflection target check (`McpSafeReflectionTarget::IsAddressable`,
+every object-reference hop of a property walk too), new-asset package creation,
+and the actor finders, searches and listings, which leave out what lies outside
+the prefixes. An actor counts as its level's map package. An action whose effect
+spreads past what it names refuses before changing anything when the spread
+leaves the prefixes (`recompile_struct` with a user of the struct elsewhere),
+and `save_all` leaves another prefix's dirty packages unsaved, counted but not
+named.
 
 ## Scoped tokens and quota
 
@@ -252,8 +287,8 @@ user's project files is outside the transport's remote-client threat model).
 Tighten directory ACLs if `Saved/` sits on a shared location.
 
 Security semantics are otherwise unchanged: constant-time comparison
-(`McpConstantTimeTokenEquals`), fail-closed LAN coupling (native `/mcp` refuses
-non-loopback without token auth enabled), loopback-first binding, and a
+(`McpConstantTimeTokenEquals`), fail-closed LAN posture (native `/mcp` never
+binds non-loopback; the WebSocket bridge only with token auth and TLS), loopback-first binding, and a
 browser `Origin` the endpoint does not allow is refused. `bEnableNativeMCP` is on
 by default, because the npm package is now only a stdio proxy in front of
 `/mcp`. The token value is never logged, never

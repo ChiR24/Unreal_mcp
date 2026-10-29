@@ -4,7 +4,7 @@
 
 # Action reference
 
-Catalog revision: `22c4c10a576539e2`
+Catalog revision: `a934f2b46b4d3890`
 
 Both transports expose exactly ONE public MCP tool, `unreal`, with the four
 operations `search` / `describe` / `execute` / `configure`. The parent tools
@@ -55,7 +55,7 @@ validates against, so `execute` cannot accept an action this table omits.
 | `manage_geometry` | 16 | 2 | 14 | 0 | world |
 | `manage_interaction` | 3 | 1 | 2 | 0 | manage interaction |
 | `manage_inventory` | 6 | 1 | 5 | 0 | manage inventory |
-| `manage_level` | 20 | 5 | 12 | 3 | level |
+| `manage_level` | 20 | 4 | 13 | 3 | level |
 | `manage_level_structure` | 8 | 2 | 5 | 1 | world |
 | `manage_networking` | 21 | 5 | 13 | 3 | networking |
 | `manage_pcg` | 3 | 0 | 3 | 0 | world |
@@ -495,7 +495,7 @@ validates against, so `execute` cannot accept an action this table omits.
 | `manage_level.create_light` | `manage_level` | `manage_lighting` | write | write | none | `manage_level.create_light` |
 | `manage_level.delete` | `manage_level` | `delete_level` | destructive | destructive | explicit | `manage_level.delete` `manage_level.delete_level` |
 | `manage_level.duplicate_level` | `manage_level` | `duplicate` | write | write | none | `manage_level.duplicate_level` `manage_level.rename_level` |
-| `manage_level.export_level` | `manage_level` | `export_level` | read | read | none | `manage_level.export_level` |
+| `manage_level.export_level` | `manage_level` | `export_level` | write | write | none | `manage_level.export_level` |
 | `manage_level.get_summary` | `manage_level` | `get_summary` | read | read | none | `manage_level.get_summary` `manage_level.get_current_level` |
 | `manage_level.import_level` | `manage_level` | `import_level` | write | write | none | `manage_level.import_level` |
 | `manage_level.list_levels` | `manage_level` | `list_levels` | read | read | none | `manage_level.list_levels` |

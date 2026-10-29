@@ -58,6 +58,12 @@ Every domain that touches properties funnels through it.
   bridge and native `/mcp`. Never replace with `==` / `Equals` (contract test fails).
 - `BridgeHelpers/Security/McpProjectPaths.h`: confines paths
   to project roots (`/Game/...`, mount points), rejects `..`, `:`, `//`.
+  `McpResolveProjectFilePath` is the one resolver for a file the plugin writes (containment, device names, no
+  link on the way); `McpFileNameCase` is how this platform compares names (case-sensitive on Linux).
+- `McpCapabilityPrincipal.h`: the principal of the request whose handler runs now (`ActiveRequestPrincipal`,
+  set by `FActiveRequestScope` around each dispatch). A handler that reaches a package the request did not name
+  asks `ActiveRequestPermitsPath` / `ActiveRequestPermitsObject` (an actor counts as its level's map) or
+  `ActiveRequestHoldsScope`; the save, delete and reflection sinks already do.
 - `BridgeHelpers/Security/McpCommandValidate.h`: blocklist
   of `&&`, `||`, `;`, `|`, backtick, `<`, `>`, newline, CR for console/UBT args.
 - Hazardous editor ops (save/load/delete) live in `../Safety/`; include

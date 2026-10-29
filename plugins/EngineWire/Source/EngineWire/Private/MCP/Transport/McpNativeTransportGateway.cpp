@@ -10,6 +10,8 @@
 #include "MCP/Gateway/McpNativeGatewayDirectCallMigration.h"
 #include "MCP/Gateway/McpNativeGatewayGuidance.h"
 #include "MCP/Execute/McpNativeGatewayCanonicalRecords.h"
+#include "Core/Security/McpPrequeueGate.h"
+#include "Misc/App.h"
 
 
 void FMcpNativeTransport::HandleGatewayCall(
@@ -101,8 +103,11 @@ void FMcpNativeTransport::HandleGatewayCall(
 		DiscoveryQuery.Limit = McpSearchDefaultLimit;
 		ReadBounded(TEXT("limit"), 1, McpSearchMaxLimit, DiscoveryQuery.Limit);
 		ReadBounded(TEXT("maxBytes"), 512, 262144, DiscoveryQuery.MaxBytes);
-		// Saved recipes ride on search only for a caller that may read them (Write does not imply Read).
-		DiscoveryQuery.bMayReadProject = GetSessionPrincipal(SessionId).IsScopeAuthorized(EMcpCapabilityScope::Read);
+		// Saved recipes ride on search only for a caller that may read them (Write does not imply Read) in this
+		// project: a token whose AllowedProjects leaves it out reads none of its recipes.
+		const FMcpCapabilityPrincipal Searcher = GetSessionPrincipal(SessionId);
+		DiscoveryQuery.bMayReadProject = Searcher.IsScopeAuthorized(EMcpCapabilityScope::Read) &&
+			McpCapabilityAuthorization::CheckProject(Searcher, FApp::GetProjectName()).bAllowed;
 		SendDiscoveryResult(McpGatewaySearchCapabilities(DiscoveryQuery, CapabilityStore, IsToolEnabled));
 		return;
 	}
@@ -216,6 +221,24 @@ void FMcpNativeTransport::HandleGatewayCall(
 			ManageArgs->Values = (*Nested)->Values;
 		}
 		ManageArgs->SetStringField(TEXT("action"), Action);
+		// The tool manager's state is shared by every session, so configure is held to the same policy as executing
+		// manage_tools.<action>: a read-only principal could otherwise disable tools for everyone.
+		{
+			const FMcpCapabilityPrincipal Principal = GetSessionPrincipal(SessionId);
+			TSharedPtr<FJsonObject> AuthPayload = MakeShared<FJsonObject>();
+			AuthPayload->Values = ManageArgs->Values;
+			AuthPayload->SetStringField(TEXT("subAction"), Action);
+			FMcpPrequeueRequest AuthRequest;
+			AuthRequest.Principal = &Principal;
+			AuthRequest.DispatchAction = TEXT("manage_tools");
+			AuthRequest.Payload = AuthPayload;
+			const FMcpAuthorizationDecision Decision = McpPrequeueGate::Authorize(AuthRequest);
+			if (!Decision.bAllowed)
+			{
+				SendOneShot(FMcpJsonRpc::BuildToolResult(false, Decision.Message, nullptr, Decision.ErrorCode));
+				return;
+			}
+		}
 		TSharedPtr<FJsonObject> Result = ToolManager.HandleAction(Action, ManageArgs);
 		bool bOk = false;
 		if (Result.IsValid()) Result->TryGetBoolField(TEXT("success"), bOk);

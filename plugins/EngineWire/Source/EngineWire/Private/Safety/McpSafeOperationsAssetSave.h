@@ -1,6 +1,7 @@
 #pragma once
 
 #include "Core/Compatibility/McpVersionCompatibility.h"
+#include "Foundation/McpCapabilityPrincipal.h"
 #include "Safety/McpSafeOperationsLog.h"
 #include "PackageTools.h"
 
@@ -83,6 +84,13 @@ inline bool McpSafeAssetSave(UObject* Asset)
     if (PackageName.StartsWith(TEXT("/Engine/")))
     {
         UE_LOG(LogMcpSafeOperations, Warning, TEXT("McpSafeAssetSave: %s is engine content and was not saved; edit a copy under /Game instead."), *PackageName);
+        return false;
+    }
+    // A path-restricted caller persists only inside its prefixes. The gate checks the paths a request names; this
+    // holds what else the handler reached (a default folder, an actor's asset, a dependent package) to the same rule.
+    if (!McpCapabilityPrincipal::ActiveRequestPermitsPath(PackageName))
+    {
+        UE_LOG(LogMcpSafeOperations, Warning, TEXT("McpSafeAssetSave: %s is outside the caller's allowed paths and was not saved."), *PackageName);
         return false;
     }
 

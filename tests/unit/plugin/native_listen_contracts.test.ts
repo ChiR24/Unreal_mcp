@@ -32,7 +32,8 @@ describe('native subscriptions to ue://changes', () => {
   it('starts a stream from the current journal number, and answers its limit in band', () => {
     expect(handler).toContain('Stream->ChangesSeq = McpChangeJournal::LatestSeq();');
     expect(handler).toContain('FMcpJsonRpc::ErrorInternalError, TEXT("Subscription limit reached")');
-    expect(handler.indexOf('SendSSEHeaders(ClientSocket, FString(), HttpReq.Origin)')).toBeGreaterThan(-1);
+    // Through the published stream, under its write lock: teardown may close that socket once the stream is listed.
+    expect(handler.indexOf('SendSSEHeaders(Stream->Socket, FString(), HttpReq.Origin)')).toBeGreaterThan(-1);
   });
 
   it('ends each listen with its own result before the stream closes at shutdown', () => {

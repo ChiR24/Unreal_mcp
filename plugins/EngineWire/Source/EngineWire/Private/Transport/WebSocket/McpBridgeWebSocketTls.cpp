@@ -29,6 +29,7 @@
 #include <winsock2.h>
 #include "Windows/HideWindowsPlatformTypes.h"
 #else
+#include <sys/socket.h>
 #include <unistd.h>
 #endif
 
@@ -209,6 +210,18 @@ void FMcpBridgeWebSocket::CloseNativeSocket() {
   NativeSocketHandle = 0;
 }
 
+// Wakes a worker blocked in SSL_read on the native socket without freeing anything it is using.
+void FMcpBridgeWebSocket::InterruptNativeSocket() {
+  if (NativeSocketHandle == 0) {
+    return;
+  }
+#if PLATFORM_WINDOWS
+  shutdown(static_cast<SOCKET>(NativeSocketHandle), SD_BOTH);
+#else
+  shutdown(static_cast<int>(NativeSocketHandle), SHUT_RDWR);
+#endif
+}
+
 #else
 
 bool FMcpBridgeWebSocket::InitializeTlsContext(bool bServer) {
@@ -231,5 +244,7 @@ bool FMcpBridgeWebSocket::EstablishTls(bool bServer) {
 void FMcpBridgeWebSocket::ShutdownTls() {}
 
 void FMcpBridgeWebSocket::CloseNativeSocket() {}
+
+void FMcpBridgeWebSocket::InterruptNativeSocket() {}
 
 #endif

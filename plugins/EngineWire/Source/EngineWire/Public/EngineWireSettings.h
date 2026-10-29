@@ -48,9 +48,10 @@ public:
     UPROPERTY(config, EditAnywhere, Category = "Security")
     bool bRequireCapabilityToken;
 
-    /** SECURITY WARNING: When enabled, allows the WebSocket and native MCP
-     * transports to bind to non-loopback addresses. This exposes editor
-     * automation to the local network. Default: false.
+    /** SECURITY WARNING: When enabled, allows the WebSocket transport to bind to
+     * non-loopback addresses (it also needs Require Capability Token and Enable Tls).
+     * This exposes editor automation to the local network. Native MCP never binds
+     * off-loopback: it has no TLS, so reach it through an SSH tunnel. Default: false.
      */
     UPROPERTY(config, EditAnywhere, Category = "Security")
     bool bAllowNonLoopback;

@@ -1,5 +1,6 @@
 #pragma once
 
+#include "Foundation/McpCapabilityPrincipal.h"
 #include "Safety/McpSafeOperationsDeleteCompilation.h"
 #include "Safety/McpSafeOperationsMaterial.h"
 
@@ -55,9 +56,14 @@ inline bool McpRemoveLeftoverPackageFile(const FString& PackageName)
     return bDeleted || !FPackageName::DoesPackageExist(PackageName);
 }
 
-/** Runs the engine delete, then removes a file it left behind. */
+/** Runs the engine delete, then removes a file it left behind. A path-restricted caller deletes only in its prefixes. */
 inline bool McpDeleteAssetAndFile(const FString& AssetPath)
 {
+    if (!McpCapabilityPrincipal::ActiveRequestPermitsPath(AssetPath))
+    {
+        UE_LOG(LogMcpSafeOperations, Warning, TEXT("McpDeleteAssetAndFile: %s is outside the caller's allowed paths and was not deleted."), *AssetPath);
+        return false;
+    }
     return UEditorAssetLibrary::DeleteAsset(AssetPath)
         && McpRemoveLeftoverPackageFile(FPackageName::ObjectPathToPackageName(AssetPath));
 }

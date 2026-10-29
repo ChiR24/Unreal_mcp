@@ -44,7 +44,8 @@ AActor *FindActorByNameInWorldForMcp(UWorld *World, const FString &Target,
   TArray<AActor *> FuzzyMatches;
   for (TActorIterator<AActor> It(World); It; ++It) {
     AActor *Actor = *It;
-    if (!Actor) {
+    // A label names an actor in any level; a path-restricted caller finds only those in a level inside its prefixes.
+    if (!Actor || !McpCapabilityPrincipal::ActiveRequestPermitsObject(Actor)) {
       continue;
     }
 

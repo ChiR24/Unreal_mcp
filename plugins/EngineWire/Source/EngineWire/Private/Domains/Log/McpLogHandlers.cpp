@@ -276,16 +276,26 @@ bool UEngineWireSubsystem::HandleLogAction(
                 FString::Printf(TEXT("No log from %d editor run(s) back was found."), Run), TEXT("NOT_FOUND"));
             return true;
         }
+        // Every line is searched once per alternative: a few is what a reader types.
+        constexpr int32 MaxLogFilterAlternatives = 16;
+        const FString Filter = GetJsonStringField(Payload, TEXT("filter"));
+        TArray<FString> Alternatives;
+        if (Filter.ParseIntoArray(Alternatives, TEXT("|"), true) > MaxLogFilterAlternatives || Filter.Len() > 1024)
+        {
+            SendAutomationError(RequestingSocket, RequestId,
+                FString::Printf(TEXT("filter takes at most %d alternatives and 1024 characters."), MaxLogFilterAlternatives),
+                TEXT("INVALID_ARGUMENT"));
+            return true;
+        }
+        // Lines come back as a reply shows them (redacted), and the filter is matched against that form.
         const TArray<FString> Lines = !FilePath.IsEmpty()
-            ? FMcpLogHistory::ReadFileTail(FilePath, MaxLines, GetJsonStringField(Payload, TEXT("filter")), Matched)
-            : FMcpLogHistory::Get().Read(
-                  MaxLines, GetJsonStringField(Payload, TEXT("filter")),
-                  GetJsonStringField(Payload, TEXT("category")), MinVerbosity, Matched);
+            ? FMcpLogHistory::ReadFileTail(FilePath, MaxLines, Filter, Matched)
+            : FMcpLogHistory::Get().Read(MaxLines, Filter, GetJsonStringField(Payload, TEXT("category")), MinVerbosity,
+                                         Matched);
         TArray<TSharedPtr<FJsonValue>> LineValues;
         for (const FString& Line : Lines)
         {
-            LineValues.Add(MakeShared<FJsonValueString>(
-                SanitizeEngineErrorForResponse(FMcpLogHistory::KeepDiagnosticFileName(Line))));
+            LineValues.Add(MakeShared<FJsonValueString>(Line));
         }
         TSharedRef<FJsonObject> Result = MakeShared<FJsonObject>();
         Result->SetBoolField(TEXT("success"), true);

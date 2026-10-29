@@ -10,6 +10,7 @@
 #include "Domains/Input/McpInputAssetResolve.h"
 #include "Domains/Input/McpInputKeyResolve.h"
 #include "Foundation/BridgeHelpers/Responses/McpJsonFields.h"
+#include "Foundation/McpCapabilityPrincipal.h"
 #include "GameFramework/Pawn.h"
 #include "GameFramework/PlayerController.h"
 #include "InputAction.h"
@@ -113,6 +114,16 @@ bool PlanInput(UBlueprint* Blueprint, const TSharedPtr<FJsonObject>& Recipe, FPl
         Plan.ActionPath = InputObjectPath(Default);
     }
     Plan.ActionPath = Action ? Action->GetPathName() : Plan.ActionPath;
+    // The context and action can come from the Blueprint's own wiring or the shared defaults rather than from paths
+    // the request named: a path-restricted caller maps keys into, and creates, only assets inside its prefixes.
+    OutCode = TEXT("PATH_NOT_PERMITTED");
+    OutError = TEXT("input: the mapping context or input action it would use is outside the caller's allowed paths; "
+                    "pass mappingContextPath and inputActionPath inside them.");
+    if (!McpCapabilityPrincipal::ActiveRequestPermitsPath(Plan.ContextPath) ||
+        (!Plan.ActionPath.IsEmpty() && !McpCapabilityPrincipal::ActiveRequestPermitsPath(Plan.ActionPath)))
+    {
+        return false;
+    }
     OutCode = TEXT("INVALID_RECIPE");
     OutError = TEXT("input names no action, no key and registerContext false: it would author nothing.");
     if (Plan.ActionPath.IsEmpty() && !bRegister)

@@ -12,6 +12,10 @@ const TCHAR* const Operators[] = {TEXT("=="), TEXT("!="), TEXT("<"), TEXT("<="),
 // Equal by value: numbers by number, arrays and objects member by member.
 bool Same(const TSharedPtr<FJsonValue>& A, const TSharedPtr<FJsonValue>& B)
 {
+    if (A == B) // one value bound twice: equal without walking it
+    {
+        return true;
+    }
     const EJson TypeA = A.IsValid() ? A->Type : EJson::Null;
     const EJson TypeB = B.IsValid() ? B->Type : EJson::Null;
     if (TypeA != TypeB)

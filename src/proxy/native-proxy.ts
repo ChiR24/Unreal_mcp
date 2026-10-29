@@ -8,7 +8,7 @@
  * Env: UNREAL_MCP_URL (default http://127.0.0.1:3000/mcp); UNREAL_MCP_PROXY_CACHE (the editor's last tool
  * list, instructions and capabilities, so a session that starts before the editor still gets the real tool);
  * the capability token (MCP_AUTOMATION_CAPABILITY_TOKEN, else the plugin's token file under UE_PROJECT_PATH),
- * sent as X-MCP-Capability-Token.
+ * sent as X-MCP-Capability-Token, to another machine only with UNREAL_MCP_ALLOW_REMOTE_TOKEN=1 (HTTP is clear text).
  */
 import { request } from 'node:http';
 import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
@@ -93,6 +93,11 @@ export function startNativeProxy(options: NativeProxyOptions = {}): { close: () 
   const output = options.output ?? process.stdout;
   const log = new Logger('NativeProxy');
   const token = options.token ?? readCapabilityToken;
+  // The token is a bearer credential, and HTTP carries it in clear text: to another machine it goes only when the user
+  // says so (UNREAL_MCP_ALLOW_REMOTE_TOKEN=1), knowing anyone on the way can read it.
+  const upstreamHost = new URL(upstream).hostname.replace(/^\[|\]$/gu, '');
+  const sendsToken = /^(localhost|127(\.\d{1,3}){3}|::1)$/u.test(upstreamHost) || process.env.UNREAL_MCP_ALLOW_REMOTE_TOKEN === '1';
+  if (!sendsToken) log.warn(`${upstream} is not this machine, so the capability token is not sent over plain HTTP; set UNREAL_MCP_ALLOW_REMOTE_TOKEN=1 to send it anyway.`);
   const notConnected = `NOT_CONNECTED: the Unreal Editor is not running (nothing answers at ${upstream}). `
     + 'Start the editor and call again; this server stays connected, no reconnect is needed. If the editor is '
     + 'running, turn on Project Settings > EngineWire > Enable Native MCP Server and restart it.';
@@ -128,7 +133,7 @@ export function startNativeProxy(options: NativeProxyOptions = {}): { close: () 
       'Content-Length': Buffer.byteLength(payload),
       ...modern
     };
-    const capabilityToken = await token();
+    const capabilityToken = sendsToken ? await token() : undefined;
     if (capabilityToken) headers['X-MCP-Capability-Token'] = capabilityToken;
     if (current) {
       headers['Mcp-Session-Id'] = current.id;
@@ -140,6 +145,9 @@ export function startNativeProxy(options: NativeProxyOptions = {}): { close: () 
         let reply: Message | undefined;
         let text = '';
         let pending = '';
+        // Where the next search for an event's end starts: searching the whole unfinished event again on every chunk
+        // grew with the square of its size.
+        let scanned = 0;
         const take = (message: Message): void => {
           if (message.id !== undefined && message.id === body.id && ('result' in message || 'error' in message)) reply = message;
           else if (message.method && message.id === undefined) onNotification?.(message);
@@ -153,10 +161,11 @@ export function startNativeProxy(options: NativeProxyOptions = {}): { close: () 
           if (!sse) { text += chunk; return; }
           if (text.length < 2000) text += chunk;
           pending += chunk.replace(/\r/g, '');
-          for (let cut = pending.indexOf('\n\n'); cut >= 0; cut = pending.indexOf('\n\n')) {
+          for (let cut = pending.indexOf('\n\n', scanned); cut >= 0; cut = pending.indexOf('\n\n')) {
             takeEvent(pending.slice(0, cut));
             pending = pending.slice(cut + 2);
           }
+          scanned = Math.max(0, pending.length - 1); // a \n last may pair with one first in the next chunk
         });
         res.on('end', () => {
           if (sse && pending.trim()) takeEvent(pending);

@@ -173,6 +173,13 @@ UWidgetBlueprint* McpCreateTemplateWidgetBlueprint(UEngineWireSubsystem& Subsyst
         return nullptr;
     }
     const FString PackagePath = Folder / Name;
+    // The folder may be the /Game/UI default, chosen after the gate looked at a widgetPath this ignores.
+    if (!McpCapabilityPrincipal::ActiveRequestPermitsPath(PackagePath))
+    {
+        Subsystem.SendAutomationError(Socket, RequestId, FString::Printf(
+            TEXT("%s is outside the caller's allowed paths; pass path or folder inside them."), *PackagePath), TEXT("PATH_NOT_PERMITTED"));
+        return nullptr;
+    }
     if (FindObject<UWidgetBlueprint>(nullptr, *(PackagePath + TEXT(".") + Name)) ||
         FPackageName::DoesPackageExist(PackagePath))
     {

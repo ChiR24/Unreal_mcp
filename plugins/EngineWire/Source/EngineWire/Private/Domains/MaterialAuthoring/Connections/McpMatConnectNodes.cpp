@@ -216,21 +216,13 @@ bool HandleConnectNodes(UEngineWireSubsystem* Bridge, const FString& RequestId, 
       return true;
     }
 
-    // Find the input property
-    FProperty *Prop =
-        TargetExpr->GetClass()->FindPropertyByName(FName(*InputName));
-    if (Prop) {
-      if (FStructProperty *StructProp = CastField<FStructProperty>(Prop)) {
-        FExpressionInput *InputPtr =
-            StructProp->ContainerPtrToValuePtr<FExpressionInput>(TargetExpr);
-        if (InputPtr) {
-          Wire(*InputPtr);
-          FINALIZE_HOST();
-          Bridge->SendAutomationResponse(Socket, RequestId, true,
-                                 TEXT("Nodes connected."), McpMaterialHostResult(HostOuter));
-          return true;
-        }
-      }
+    // The input by its property name.
+    if (FExpressionInput *InputPtr = FindMaterialInputProperty(TargetExpr, InputName)) {
+      Wire(*InputPtr);
+      FINALIZE_HOST();
+      Bridge->SendAutomationResponse(Socket, RequestId, true,
+                             TEXT("Nodes connected."), McpMaterialHostResult(HostOuter));
+      return true;
     }
 
     // A custom node's or a function call's inputs are not properties at all. Match

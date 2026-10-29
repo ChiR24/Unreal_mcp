@@ -60,10 +60,7 @@ bool HandleDisconnectNodes(UEngineWireSubsystem* Bridge, const FString& RequestI
 
     // By property name first, then by label as connect_nodes matches them: a custom node's or a
     // function call's inputs ("OB", "UVs (Vector2)") are not properties, so they never unplugged.
-    FExpressionInput *Target = nullptr;
-    if (FStructProperty *StructProp = CastField<FStructProperty>(TargetExpr->GetClass()->FindPropertyByName(FName(*PinName)))) {
-      Target = StructProp->ContainerPtrToValuePtr<FExpressionInput>(TargetExpr);
-    }
+    FExpressionInput *Target = FindMaterialInputProperty(TargetExpr, PinName);
     FString Available;
     for (int32 InputIndex = 0; !Target && TargetExpr->GetInput(InputIndex); ++InputIndex) {
       const FString Label = TargetExpr->GetInputName(InputIndex).ToString();

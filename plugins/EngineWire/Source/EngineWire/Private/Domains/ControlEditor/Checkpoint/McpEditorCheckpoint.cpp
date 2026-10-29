@@ -7,6 +7,7 @@
 #include "Domains/ControlEditor/McpEditorSupport.h"
 #include "Editor/TransBuffer.h"
 #include "Editor/Transactor.h"
+#include "Foundation/McpCapabilityPrincipal.h"
 #include "Modules/ModuleManager.h"
 #include "UObject/ObjectSaveContext.h"
 #include "UObject/Package.h"
@@ -20,6 +21,7 @@ constexpr int32 MaxListed = 200;
 struct FCheckpoint
 {
     bool bOpen = false;
+    FString OpenedBy; // the request that opened it (run_script opens and rolls back its own within one request)
     FString Label;
     FGuid Marker; // the live step on top at begin; invalid when the stack was empty
     TArray<FString> Added, Removed, Saved;
@@ -118,6 +120,7 @@ void OpenCheckpoint(UEngineWireSubsystem* Self, TSharedPtr<FMcpBridgeWebSocket> 
     }
     Unbind();
     GPoint.bOpen = true;
+    GPoint.OpenedBy = RequestId;
     GPoint.Label = GetJsonStringField(Payload, TEXT("label"), TEXT("restore point"));
     const int32 Live = Trans.GetQueueLength() - Trans.GetUndoCount();
     const FTransaction* Top = Live > 0 ? Trans.GetTransaction(Live - 1) : nullptr;
@@ -241,6 +244,15 @@ bool Handle(UEngineWireSubsystem* Self, const FString& RequestId, const TSharedP
     }
     if (Op == TEXT("rollback"))
     {
+        // The steps since the marker are every caller's through this server, and which packages each touched is not
+        // recorded: a path-restricted caller rolls back only a point its own request opened (a script's own run).
+        const FMcpCapabilityPrincipal* Caller = McpCapabilityPrincipal::ActiveRequestPrincipal();
+        if (Caller && Caller->IsPathRestricted() && GPoint.OpenedBy != RequestId)
+        {
+            Refuse(Self, Socket, RequestId, TEXT("PATH_NOT_PERMITTED"),
+                   TEXT("A path-restricted principal cannot roll back steps other calls made; nothing was undone."));
+            return true;
+        }
         Rollback(Self, Socket, RequestId, Steps, Foreign, bIntact, Result);
         return true;
     }

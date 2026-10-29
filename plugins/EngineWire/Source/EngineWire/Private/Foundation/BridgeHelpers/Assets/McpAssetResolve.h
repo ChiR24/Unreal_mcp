@@ -8,6 +8,7 @@
 // - Reference: Engine/Source/Runtime/CoreUObject/Public/Misc/PackageName.h
 #include "Misc/PackageName.h"
 #include "Foundation/BridgeHelpers/Blueprints/McpBPPaths.h"
+#include "Foundation/McpCapabilityPrincipal.h"
 // UEditorAssetLibrary is used below. It reached this header only through the
 // PCH, which an installed-engine build does not guarantee; include it here with
 // the same guard the PCH uses so the header is self-contained.
@@ -113,9 +114,11 @@ static inline FString ResolveAssetPath(const FString &InputPath) {
 
     TArray<FAssetData> AllGameAssets;
     AssetRegistry.GetAssetsByPath(FName(TEXT("/Game")), AllGameAssets, /*bRecursive=*/true);
-    // First case-insensitive name match; every candidate is already under /Game.
+    // First case-insensitive name match; every candidate is already under /Game, and a path-restricted caller's
+    // stays inside its prefixes: the gate checked /Game/<name>, not where the name was found.
     for (const FAssetData &Asset : AllGameAssets) {
-      if (Asset.AssetName.ToString().Equals(ShortName, ESearchCase::IgnoreCase)) {
+      if (Asset.AssetName.ToString().Equals(ShortName, ESearchCase::IgnoreCase) &&
+          McpCapabilityPrincipal::ActiveRequestPermitsPath(Asset.PackageName.ToString())) {
         return Asset.PackageName.ToString();
       }
     }

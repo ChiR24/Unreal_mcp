@@ -74,10 +74,18 @@ FPlaces RankOrder(int32 Count, TFunctionRef<TOptional<double>(int32)> Score)
 // BM25 of each candidate's weighted words for Words; candidates holding none of them are not ranked.
 FPlaces RankWords(const TArray<TMap<FString, double>>& Fields, const TArray<FString>& Asked)
 {
-    TArray<FString> Words; // each word once: a repeated one counted twice in Holding gave it a negative idf
+    // Each word once (a repeated one counted twice in Holding gave it a negative idf), through a set, and the first 64:
+    // AddUnique made a long query quadratic, and every candidate is scored once per word.
+    TArray<FString> Words;
+    TSet<FString> Seen;
     for (const FString& Word : Asked)
     {
-        Words.AddUnique(Word);
+        bool bSeen = false;
+        Seen.Add(Word, &bSeen);
+        if (!bSeen && Words.Add(Word) == 63)
+        {
+            break;
+        }
     }
     double Average = 0.0;
     TMap<FString, int32> Holding;

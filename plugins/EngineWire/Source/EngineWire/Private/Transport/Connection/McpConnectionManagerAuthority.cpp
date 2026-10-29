@@ -14,10 +14,8 @@ bool FMcpConnectionManager::AuthenticateSocketPrincipal(
 	FMcpPrincipalResolveRequest Request;
 	Request.PresentedToken = PresentedToken;
 	Request.bRequireToken = Settings->bRequireCapabilityToken;
-	// The listen socket binds loopback-only unless bAllowNonLoopback is set (and
-	// the bind gate then forces a token), so a no-token connection only ever
-	// reaches here on loopback.
-	Request.bIsLoopback = !Settings->bAllowNonLoopback;
+	// From the listener's real bind: bAllowNonLoopback can be switched off while a LAN listener is still up.
+	Request.bIsLoopback = SocketPtr && SocketPtr->IsListenerLoopback();
 
 	const FMcpCapabilityPrincipal Principal =
 	    McpCapabilityPrincipal::Resolve(Request, *Settings);
@@ -142,6 +140,21 @@ bool FMcpConnectionManager::AuthorizeAutomationRequest(
 	RootObj->TryGetStringField(TEXT("action"), Action);
 
 	const FMcpCapabilityPrincipal Principal = GetSocketPrincipal(Socket.Get());
+
+	// Resolved at bridge_hello and kept on the socket: after a settings edit (a narrowed profile) or a replaced token
+	// file it may carry authority its token no longer has, so the socket authenticates again before it acts.
+	if (Principal.AuthorityRevision != McpCapabilityPrincipal::AuthorityRevision(*GetDefault<UEngineWireSettings>()))
+	{
+		{
+			FScopeLock Lock(&AuthSocketsMutex);
+			AuthenticatedSockets.Remove(Socket.Get());
+		}
+		ForgetSocketPrincipal(Socket.Get());
+		SendAutomationResponse(Socket, RequestId, false,
+			TEXT("The plugin's security settings or its capability token changed since this connection authenticated; send bridge_hello again."),
+			nullptr, TEXT("REAUTHENTICATION_REQUIRED"));
+		return false;
+	}
 
 	FMcpPrequeueRequest Request;
 	Request.Principal = &Principal;

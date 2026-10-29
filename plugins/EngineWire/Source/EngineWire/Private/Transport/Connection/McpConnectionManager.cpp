@@ -126,14 +126,24 @@ bool FMcpConnectionManager::Tick(float DeltaTime) {
     }
   }
 
-  // Heartbeat monitoring
-  if (bHeartbeatTrackingEnabled && HeartbeatTimeoutSeconds > 0.0f &&
-      LastHeartbeatTimestamp > 0.0) {
+  // Heartbeat monitoring: a socket whose own pings stopped is closed, once; the others and the listeners stay up.
+  if (HeartbeatTimeoutSeconds > 0.0f) {
     const double Now = FPlatformTime::Seconds();
-    if ((Now - LastHeartbeatTimestamp) > HeartbeatTimeoutSeconds) {
-      UE_LOG(LogEngineWireSubsystem, Warning,
-             TEXT("Heartbeat timed out; forcing reconnect."));
-      ForceReconnect(TEXT("Heartbeat timeout"));
+    TArray<FMcpBridgeWebSocket*> Expired;
+    {
+      FScopeLock Lock(&AuthSocketsMutex);
+      for (auto It = LastHeartbeatBySocket.CreateIterator(); It; ++It) {
+        if (Now - It->Value > HeartbeatTimeoutSeconds) {
+          Expired.Add(It->Key);
+          It.RemoveCurrent();
+        }
+      }
+    }
+    for (const TSharedPtr<FMcpBridgeWebSocket> &Socket : TArray<TSharedPtr<FMcpBridgeWebSocket>>(ActiveSockets)) {
+      if (Socket.IsValid() && Expired.Contains(Socket.Get())) {
+        UE_LOG(LogEngineWireSubsystem, Warning, TEXT("Heartbeat timed out; closing that connection."));
+        Socket->Close(4000, TEXT("Heartbeat timeout"));
+      }
     }
   }
 

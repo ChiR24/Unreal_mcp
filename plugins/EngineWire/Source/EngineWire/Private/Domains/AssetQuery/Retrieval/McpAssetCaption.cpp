@@ -6,6 +6,7 @@
 #include "Domains/AssetQuery/McpAssetQueryPrivate.h"
 #include "Domains/AssetQuery/Retrieval/McpAssetIndex.h"
 #include "Foundation/BridgeHelpers/Responses/McpResponses.h"
+#include "Foundation/McpCapabilityPrincipal.h"
 #include "Misc/Paths.h"
 
 namespace McpAssetQueryHandlers
@@ -27,7 +28,9 @@ bool HandleCaptionAssets(UEngineWireSubsystem* Bridge, const FString& RequestId,
         const TSharedPtr<FJsonObject> Entry = Value.IsValid() ? Value->AsObject() : nullptr;
         const FString Raw = Entry.IsValid() ? GetJsonStringField(Entry, TEXT("assetPath")) : FString();
         const FString Path = FPackageName::ObjectPathToPackageName(SanitizeProjectRelativePath(Raw));
-        if (Path.IsEmpty())
+        // The package the caption is kept under, held to a path-restricted caller's prefixes: the sanitizer roots a
+        // relative value its own way (Engine/BasicShapes/Cube became /Engine/...).
+        if (Path.IsEmpty() || !McpCapabilityPrincipal::ActiveRequestPermitsPath(Path))
         {
             Bridge->SendAutomationError(Socket, RequestId, McpPathRefusalMessage(TEXT("assetPath"), Raw), TEXT("INVALID_PATH"));
             return true;

@@ -12,6 +12,7 @@ using McpGraphCode::FSExpr;
 namespace ScriptRunParts
 {
 constexpr int32 MaxRange = 1000;
+constexpr int32 MaxValueNodes = 1000000;
 
 UWorld* JudgedWorld()
 {
@@ -31,6 +32,35 @@ bool FRunner::Fail(int32 Line, const FString& Code, const FString& Message)
 bool FRunner::Run(const TArray<FSExpr>& Forms)
 {
     return Stmts(Forms, 0, FNames());
+}
+
+int64 FRunner::SizeOf(const TSharedPtr<FJsonValue>& Value)
+{
+    if (const int64* Known = Sizes.Find(Value))
+    {
+        return *Known;
+    }
+    int64 Nodes = 1;
+    const EJson Type = Value.IsValid() ? Value->Type : EJson::Null;
+    if (Type == EJson::Array)
+    {
+        for (const TSharedPtr<FJsonValue>& Item : Value->AsArray())
+        {
+            Nodes += SizeOf(Item);
+        }
+    }
+    else if (Type == EJson::Object)
+    {
+        for (const auto& Field : Value->AsObject()->Values)
+        {
+            Nodes += SizeOf(Field.Value);
+        }
+    }
+    if (Type == EJson::Array || Type == EJson::Object)
+    {
+        Sizes.Add(Value, Nodes);
+    }
+    return Nodes;
 }
 
 bool FRunner::Stmts(const TArray<FSExpr>& Body, int32 From, FNames Names)
@@ -183,19 +213,33 @@ bool FRunner::Eval(const FSExpr& Expr, const FNames& Names, TSharedPtr<FJsonValu
         Out = MakeShared<FJsonValueBoolean>(bShortCircuit ? IsTrue(Args.Last()) : !IsTrue(Args[0]));
         return true;
     }
-    if (HeadIs(Expr, TEXT("list")))
+    if (HeadIs(Expr, TEXT("list")) || HeadIs(Expr, TEXT("obj")))
     {
-        Out = MakeShared<FJsonValueArray>(Args);
-        return true;
-    }
-    if (HeadIs(Expr, TEXT("obj")))
-    {
-        TSharedPtr<FJsonObject> Object = MakeShared<FJsonObject>();
-        for (int32 Index = 0; Index < Args.Num(); ++Index)
+        // Counted whole, a value used twice counted twice: a few lines of (let b (list a a)) built one that no walk of
+        // it (==, the reply, a call's validation) would finish.
+        int64 Nodes = 1;
+        for (const TSharedPtr<FJsonValue>& Arg : Args)
         {
-            Object->SetField(Expr.Items[1 + Index * 2].Text.Mid(1), Args[Index]);
+            Nodes += SizeOf(Arg);
         }
-        Out = MakeShared<FJsonValueObject>(Object);
+        if (Nodes > MaxValueNodes)
+        {
+            return Fail(Expr.Line, TEXT("SCRIPT_BUDGET"), FString::Printf(TEXT("the value would hold over %d items, a value used twice counting twice."), MaxValueNodes));
+        }
+        if (HeadIs(Expr, TEXT("list")))
+        {
+            Out = MakeShared<FJsonValueArray>(Args);
+        }
+        else
+        {
+            TSharedPtr<FJsonObject> Object = MakeShared<FJsonObject>();
+            for (int32 Index = 0; Index < Args.Num(); ++Index)
+            {
+                Object->SetField(Expr.Items[1 + Index * 2].Text.Mid(1), Args[Index]);
+            }
+            Out = MakeShared<FJsonValueObject>(Object);
+        }
+        Sizes.Add(Out, Nodes);
         return true;
     }
     if (HeadIs(Expr, TEXT("range")))
@@ -207,10 +251,13 @@ bool FRunner::Eval(const FSExpr& Expr, const FNames& Names, TSharedPtr<FJsonValu
         {
             return Fail(Expr.Line, TEXT("SCRIPT_TYPE"), FString::Printf(TEXT("(range n) or (range from to) takes whole numbers, at most %d apart."), MaxRange));
         }
+        // Counted, not stepped: past 2^53 adding 1 left a double where it was, and the loop never ended.
+        const double Start = FMath::CeilToDouble(From);
+        const int32 Count = To > Start ? FMath::Min(MaxRange, static_cast<int32>(FMath::CeilToDouble(To - Start))) : 0;
         TArray<TSharedPtr<FJsonValue>> Items;
-        for (double Value = FMath::CeilToDouble(From); Value < To; Value += 1.0)
+        for (int32 Index = 0; Index < Count; ++Index)
         {
-            Items.Add(MakeShared<FJsonValueNumber>(Value));
+            Items.Add(MakeShared<FJsonValueNumber>(Start + Index));
         }
         Out = MakeShared<FJsonValueArray>(Items);
         return true;

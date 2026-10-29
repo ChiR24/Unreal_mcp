@@ -18,6 +18,7 @@
 #include "Core/Security/McpPrequeueGate.h"
 #include "Foundation/McpIdempotencyLedger.h"
 #include "HAL/PlatformTime.h"
+#include "Misc/App.h"
 #include "Serialization/JsonReader.h"
 #include "Serialization/JsonSerializer.h"
 
@@ -101,8 +102,12 @@ void FMcpNativeTransport::HandleGatewayExecute(
 		ScopeRequest.CapabilityId = Plan.CapabilityId;
 		ScopeRequest.DispatchAction = Plan.DispatchAction;
 		ScopeRequest.Payload = Plan.Arguments;
-		const FMcpAuthorizationDecision Scope =
+		FMcpAuthorizationDecision Scope =
 			McpCapabilityAuthorization::CheckScope(Principal, McpPrequeueGate::ResolveDemand(ScopeRequest));
+		// The project and the paths as well: a principal narrowed since the first page reads none it may no longer.
+		if (Scope.bAllowed) Scope = McpCapabilityAuthorization::CheckProject(Principal, FApp::GetProjectName());
+		if (Scope.bAllowed) Scope = McpCapabilityAuthorization::CheckPaths(Principal,
+			McpCapabilityAuthorization::CollectPayloadPaths(Plan.Arguments, Principal.IsPathRestricted()).Paths);
 		if (!Scope.bAllowed)
 		{
 			SendReceipt(McpBuildErrorReceipt(Plan.CapabilityId, McpAuthorizationSemanticError(Scope), Context));

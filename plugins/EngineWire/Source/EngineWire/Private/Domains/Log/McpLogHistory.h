@@ -20,8 +20,9 @@ public:
     bool CanBeUsedOnAnyThread() const override { return true; }
     bool CanBeUsedOnMultipleThreads() const override { return true; }
 
-    // The newest MaxLines lines that pass every filter, oldest first. OutMatched
-    // counts every buffered match, so a caller can tell the cap cut some off.
+    // The newest MaxLines lines that pass every filter, oldest first, as a reply shows them (redacted); the text
+    // filter matches that form, not the raw line. OutMatched counts every buffered match, so a caller can tell the
+    // cap cut some off.
     TArray<FString> Read(int32 MaxLines, const FString& Contains, const FString& Category,
                          ELogVerbosity::Type MinVerbosity, int32& OutMatched) const;
 

@@ -12,6 +12,15 @@ function normalizeLogLevel(value: unknown, fallback: LogLevel): LogLevel {
   return Object.hasOwn(LOG_LEVEL_ORDER, normalized) ? normalized as LogLevel : fallback;
 }
 
+// One record per call: a control character inside a string (a line break in an upstream's server name) started a line
+// that read as a diagnostic of its own. Tabs stay.
+export function oneLine(text: string): string {
+  return Array.from(text, (c) => {
+    const code = c.charCodeAt(0);
+    return (code < 0x20 && c !== '\t') || code === 0x7f ? `\\u${code.toString(16).padStart(4, '0')}` : c;
+  }).join('');
+}
+
 // Every level writes to stderr: stdout carries the MCP JSON-RPC stream.
 export class Logger {
   private level: LogLevel;
@@ -25,7 +34,7 @@ export class Logger {
   }
 
   private write(level: LogLevel, args: unknown[]) {
-    if (this.isEnabled(level)) console.error(`[${this.scope}]`, ...args);
+    if (this.isEnabled(level)) console.error(`[${this.scope}]`, ...args.map((arg) => typeof arg === 'string' ? oneLine(arg) : arg));
   }
 
   debug(...args: unknown[]) { this.write('debug', args); }

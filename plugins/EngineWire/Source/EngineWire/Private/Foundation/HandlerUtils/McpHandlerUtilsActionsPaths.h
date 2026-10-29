@@ -5,6 +5,7 @@
 #include "EngineUtils.h"
 #include "Misc/Paths.h"
 #include "Foundation/HandlerUtils/McpHandlerUtilsTransforms.h"
+#include "Foundation/McpCapabilityPrincipal.h"
 
 class FMcpBridgeWebSocket;
 class AActor;
@@ -90,9 +91,11 @@ T* FindActorOfClassForMcp(UWorld* World, const FString& Target)
 	}
 	for (TActorIterator<T> It(World); It; ++It)
 	{
-		if (It->GetActorLabel().Equals(Target, ESearchCase::IgnoreCase) ||
+		// A path-restricted caller finds only actors in a level inside its prefixes.
+		if ((It->GetActorLabel().Equals(Target, ESearchCase::IgnoreCase) ||
 			It->GetName().Equals(Target, ESearchCase::IgnoreCase) ||
-			It->GetPathName().Equals(Target, ESearchCase::IgnoreCase))
+			It->GetPathName().Equals(Target, ESearchCase::IgnoreCase)) &&
+			McpCapabilityPrincipal::ActiveRequestPermitsObject(*It))
 		{
 			return *It;
 		}

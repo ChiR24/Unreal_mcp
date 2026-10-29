@@ -1,5 +1,6 @@
 #include "Core/Compatibility/McpVersionCompatibility.h"
 #include "Foundation/BridgeHelpers/Blueprints/McpBPPaths.h"
+#include "Foundation/McpCapabilityPrincipal.h"
 #include "Domains/Audio/McpAudioPrivate.h"
 
 namespace McpAudioHandlers
@@ -38,8 +39,10 @@ USoundBase *ResolveSoundAsset(const FString &SoundPath) {
   Filter.PackagePaths.Add(TEXT("/Game"));
   AssetRegistryModule.Get().GetAssets(Filter, AssetData);
 
+  // A bare name matches anywhere under /Game; a path-restricted caller's match stays inside its prefixes.
   for (const FAssetData &Data : AssetData) {
-    if (Data.AssetName.ToString().Equals(AssetName, ESearchCase::IgnoreCase)) {
+    if (Data.AssetName.ToString().Equals(AssetName, ESearchCase::IgnoreCase) &&
+        McpCapabilityPrincipal::ActiveRequestPermitsPath(Data.PackageName.ToString())) {
       Sound = Cast<USoundBase>(Data.GetAsset());
       if (Sound) {
         UE_LOG(LogMcpAudioHandlers, Log,
@@ -103,7 +106,8 @@ USoundMix *ResolveSoundMix(const FString &MixPath) {
   AssetRegistryModule.Get().GetAssets(Filter, AssetData);
 
   for (const FAssetData &Data : AssetData) {
-    if (Data.AssetName.ToString().Equals(AssetName, ESearchCase::IgnoreCase)) {
+    if (Data.AssetName.ToString().Equals(AssetName, ESearchCase::IgnoreCase) &&
+        McpCapabilityPrincipal::ActiveRequestPermitsPath(Data.PackageName.ToString())) {
       Mix = Cast<USoundMix>(Data.GetAsset());
       if (Mix)
         return Mix;
@@ -158,7 +162,8 @@ USoundClass *ResolveSoundClass(const FString &ClassPath) {
   AssetRegistryModule.Get().GetAssets(Filter, AssetData);
 
   for (const FAssetData &Data : AssetData) {
-    if (Data.AssetName.ToString().Equals(AssetName, ESearchCase::IgnoreCase)) {
+    if (Data.AssetName.ToString().Equals(AssetName, ESearchCase::IgnoreCase) &&
+        McpCapabilityPrincipal::ActiveRequestPermitsPath(Data.PackageName.ToString())) {
       Class = Cast<USoundClass>(Data.GetAsset());
       if (Class)
         return Class;

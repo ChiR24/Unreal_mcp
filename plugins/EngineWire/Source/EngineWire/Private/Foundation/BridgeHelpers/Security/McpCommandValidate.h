@@ -71,18 +71,30 @@ static inline bool McpIsBlockedUbtOverrideArgument(const FString &Value) {
     return false;
   }
 
-  FString WithoutPrefix = Trimmed;
-  while (WithoutPrefix.StartsWith(TEXT("-")) || WithoutPrefix.StartsWith(TEXT("/"))) {
-    WithoutPrefix.RightChopInline(1);
+  // The option name: past the leading - and / (by index: chopping them one at a time copied the rest each time), up to
+  // the first '=' or ':'.
+  int32 Start = 0;
+  while (Start < Trimmed.Len() && (Trimmed[Start] == TEXT('-') || Trimmed[Start] == TEXT('/'))) {
+    ++Start;
   }
-  int32 SeparatorIndex = 0; // first '=' or ':', else the whole token
-  while (SeparatorIndex < WithoutPrefix.Len() && WithoutPrefix[SeparatorIndex] != TEXT('=') &&
-         WithoutPrefix[SeparatorIndex] != TEXT(':')) {
-    ++SeparatorIndex;
+  int32 End = Start;
+  while (End < Trimmed.Len() && Trimmed[End] != TEXT('=') && Trimmed[End] != TEXT(':')) {
+    ++End;
   }
-  const FString OptionName = WithoutPrefix.Left(SeparatorIndex);
-  return OptionName == TEXT("project") || OptionName == TEXT("projectfile") ||
-         OptionName == TEXT("target") || OptionName == TEXT("mode");
+  const FString OptionName = Trimmed.Mid(Start, End - Start);
+  // UBT's -Mode, and the switches its GlobalOptions take as another spelling of it: -Clean deletes the target's build
+  // products, the rest generate project files.
+  static const TCHAR *const Blocked[] = {
+      TEXT("project"), TEXT("projectfile"), TEXT("target"), TEXT("mode"), TEXT("clean"), TEXT("projectfiles"),
+      TEXT("projectfileformat"), TEXT("makefile"), TEXT("cmakefile"), TEXT("qmakefile"), TEXT("kdevelopfile"),
+      TEXT("codelitefiles"), TEXT("xcodeprojectfiles"), TEXT("eddieprojectfiles"), TEXT("vscode"), TEXT("vsmac"),
+      TEXT("clion"), TEXT("rider")};
+  for (const TCHAR *Name : Blocked) {
+    if (OptionName == Name) {
+      return true;
+    }
+  }
+  return false;
 }
 
 static inline bool McpIsSafeUbtExtraArgumentToken(const FString &Value) {

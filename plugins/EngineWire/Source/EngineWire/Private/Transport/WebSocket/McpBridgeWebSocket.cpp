@@ -164,6 +164,13 @@ void FMcpBridgeWebSocket::Close(int32 StatusCode, const FString &Reason) {
 
   SendCloseFrame(StatusCode, Reason);
 
+  // A running worker may be inside Recv or SSL_read on this socket right now: freeing it from this thread (the game
+  // thread, on a refused request) freed it under that call. Wake the worker instead; its TearDown frees it there.
+  if (bWorkerRunning && Thread && FPlatformTLS::GetCurrentThreadId() != Thread->GetThreadID()) {
+    InterruptNativeSocket();
+    return;
+  }
+
   if (FSocket *LocalSocket = DetachSocket()) {
     LocalSocket->Close();
     ISocketSubsystem::Get(PLATFORM_SOCKETSUBSYSTEM)->DestroySocket(LocalSocket);
@@ -200,7 +207,10 @@ bool FMcpBridgeWebSocket::IsListening() const { return bListening; }
 bool FMcpBridgeWebSocket::Init() { return true; }
 
 uint32 FMcpBridgeWebSocket::Run() {
-  return bServerMode ? RunServer() : RunClient();
+  bWorkerRunning = true;
+  const uint32 Result = bServerMode ? RunServer() : RunClient();
+  bWorkerRunning = false;
+  return Result;
 }
 
 void FMcpBridgeWebSocket::Stop() {
@@ -213,9 +223,14 @@ void FMcpBridgeWebSocket::Stop() {
 void FMcpBridgeWebSocket::TearDown(const FString &Reason, bool bWasClean,
                                    int32 StatusCode) {
   SendCloseFrame(StatusCode, Reason);
-  if (FSocket *LocalSocket = DetachSocket()) {
-    LocalSocket->Close();
-    ISocketSubsystem::Get(PLATFORM_SOCKETSUBSYSTEM)->DestroySocket(LocalSocket);
+  {
+    // Send runs on the game thread under SendMutex, so the socket goes under it too. The TLS state waits for the
+    // destructor, which runs once the server and the connection manager drop this connection.
+    FScopeLock Guard(&SendMutex);
+    if (FSocket *LocalSocket = DetachSocket()) {
+      LocalSocket->Close();
+      ISocketSubsystem::Get(PLATFORM_SOCKETSUBSYSTEM)->DestroySocket(LocalSocket);
+    }
   }
 
   const bool bWasConnected = bConnected;

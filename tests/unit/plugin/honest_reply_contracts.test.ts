@@ -1818,7 +1818,7 @@ describe('a graph batch checks its expressions before any step runs', () => {
   // Every caller wrote vec(-170, 10, z) or 0.5 * -x first and got a refusal: the node has no unary minus.
   it('writes a unary minus as a subtraction from zero before the node parses it, in the single set and the batch', () => {
     const minus = code('BlueprintGraph', 'Expression', 'McpBPGraphMathExprMinus.cpp');
-    expect(minus).toContain('FString RewriteUnaryMinus(const FString& Expression)');
+    expect(minus).toContain('FString RewriteUnaryMinus(const FString& Expression, int32 Depth)');
     expect(minus).toContain('TEXT("(0 - %s)")');
     expect(minus, 'only after a bracket, a comma or an operator').toContain('FCString::Strchr(TEXT("(,+-*/%<>=!&|"), Prev)');
     expect(minus, '1e-5 keeps its exponent').toContain("FChar::ToLower(Text[End - 1]) == TEXT('e')");
@@ -2166,7 +2166,8 @@ describe('a property write with markDirty false leaves the package clean', () =>
 describe('save_all names the packages it left unsaved', () => {
   it('lists them under leftDirtyPackages', () => {
     const source = code('ControlEditor', 'McpEditorAssets.cpp');
-    expect(source).toMatch(/LeftDirty\+\+;\s*LeftDirtyPackages\.Add\(Package->GetName\(\)\);/u);
+    // Named, except a package outside a path-restricted caller's prefixes: counted, never named to it.
+    expect(source).toMatch(/LeftDirty\+\+;\s*if \(!bOthers\) LeftDirtyPackages\.Add\(Package->GetName\(\)\);/u);
     expect(source).toContain('Resp->SetArrayField(TEXT("leftDirtyPackages"), MakeStringArray(LeftDirtyPackages));');
   });
 

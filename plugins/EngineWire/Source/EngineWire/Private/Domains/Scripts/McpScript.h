@@ -93,6 +93,9 @@ private:
     TSet<FString> Allowed;
     FRunLimits Limits;
     bool bReturned = false;
+    // Each list or object's node count, a value held twice counted twice (SizeOf): what a list or obj may hold.
+    TMap<TSharedPtr<FJsonValue>, int64> Sizes;
+    int64 SizeOf(const TSharedPtr<FJsonValue>& Value);
 
     bool Fail(int32 Line, const FString& Code, const FString& Message);
     bool Stmts(const TArray<McpGraphCode::FSExpr>& Body, int32 From, FNames Names);

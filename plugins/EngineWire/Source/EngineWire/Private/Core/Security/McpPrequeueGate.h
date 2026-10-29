@@ -64,11 +64,19 @@ namespace McpPrequeueGate
 FMcpCapabilityDemand ResolveDemand(const FMcpPrequeueRequest& Request);
 
 // Called from the response path. Refund hands back the single-use grant this
-// request burned, for a handler that refused without doing any work; Forget
-// drops the record for a request that did work. Both are no-ops for a request
-// that presented no nonce.
+// request burned, for a failure that changed nothing; Forget drops the record
+// for a request that did work. Both are no-ops for a request that presented no
+// nonce. A failure is not proof of no effect (a batch delete that removed one
+// actor and missed another answers DELETE_PARTIAL), so Refund keeps the grant
+// burned once the change journal moved after the handler started.
 void RefundConsentForRequest(const FString& RequestId);
 void ForgetConsentForRequest(const FString& RequestId);
+
+// The handler for RequestId starts now (ProcessAutomationRequest); ChangedSinceDispatch answers once, at its reply,
+// whether the change journal moved since (McpRequestPrincipals.cpp). False for a request no handler ran.
+// ponytail: only what the journal records counts (assets, level actors); a file a script wrote alone is not seen.
+void NoteDispatchStarted(const FString& RequestId);
+bool ChangedSinceDispatch(const FString& RequestId);
 
 // Full gate in refusal order: scope, consent, project, path, console command,
 // then quota. Quota is charged last so a request refused on authorization does

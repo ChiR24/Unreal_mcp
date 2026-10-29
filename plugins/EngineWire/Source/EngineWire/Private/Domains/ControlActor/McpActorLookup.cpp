@@ -33,7 +33,8 @@ AActor *UEngineWireSubsystem::FindActorByName(const FString &Target, bool bExact
   TArray<AActor *> FuzzyMatches;
 
   for (AActor *A : AllActors) {
-    if (!A)
+    // A label names an actor in any level; a path-restricted caller finds only those in a level inside its prefixes.
+    if (!A || !McpCapabilityPrincipal::ActiveRequestPermitsObject(A))
       continue;
     if (A->GetActorLabel().Equals(Target, ESearchCase::IgnoreCase) ||
         A->GetName().Equals(Target, ESearchCase::IgnoreCase) ||

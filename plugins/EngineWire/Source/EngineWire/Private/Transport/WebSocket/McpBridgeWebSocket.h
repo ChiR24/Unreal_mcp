@@ -45,6 +45,10 @@ public:
 
     int32 GetPort() const { return Port; }
 
+    // Whether the listener this connection came in on is bound to loopback only: read from its real bind, not from
+    // bAllowNonLoopback, which can change while a LAN listener stays up. False (fail closed) when unknown.
+    bool IsListenerLoopback() const { return bListenerLoopback; }
+
     // Delegates
     FMcpBridgeWebSocketConnectedEvent ConnectedDelegate;
     FMcpBridgeWebSocketConnectionErrorEvent ConnectionErrorDelegate;
@@ -90,6 +94,7 @@ private:
     bool EstablishTls(bool bServer);
     void ShutdownTls();
     void CloseNativeSocket();
+    void InterruptNativeSocket();
     FSocket* DetachSocket();
     void CloseListenSocket();
     void DestroyListenSocket();
@@ -121,9 +126,12 @@ private:
     // Connection state
     bool bConnected = false;
     bool bListening = false;
+    bool bListenerLoopback = false;
     bool bStopping = false;
     TAtomic<bool> bCloseStarted{false};
     TAtomic<bool> bCloseFrameSent{false};
+    // Run() is executing: the worker owns Socket and the TLS state until it returns.
+    TAtomic<bool> bWorkerRunning{false};
 
     bool bUseTls = false;
     bool bTlsServer = true;

@@ -188,9 +188,11 @@ UObject *LoadMaterialOrFunction(const FString &AssetPath,
   // (e.g. UMaterialFunctionInstance) is not directly editable here.
   if (UMaterialFunctionInterface *AsIface =
           Cast<UMaterialFunctionInterface>(Loaded)) {
-    // Resolve to the underlying parent function when possible.
+    // Resolve to the underlying parent function when possible: a different package than the one the request named,
+    // so a path-restricted caller reaches it only inside its prefixes.
     if (UMaterialFunction *Parent =
-            Cast<UMaterialFunction>(AsIface->GetBaseFunction())) {
+            Cast<UMaterialFunction>(AsIface->GetBaseFunction());
+        Parent && McpCapabilityPrincipal::ActiveRequestPermitsObject(Parent)) {
       OutFunction = Parent;
       return Parent;
     }

@@ -35,6 +35,11 @@ bool HandleStructSerializationActions(UEngineWireSubsystem& Bridge, const FStrin
         TArray<TSharedPtr<FJsonValue>> Arr;
         for (const FAssetData& AssetData : StructAssets)
         {
+            // A path-restricted caller lists only its own prefixes (the default path is /Game/Structs).
+            if (!McpCapabilityPrincipal::ActiveRequestPermitsPath(AssetData.PackageName.ToString()))
+            {
+                continue;
+            }
             // Use the asset registry's path/name directly — no LoadObject needed,
             // so unloaded structs are still discovered without materializing them.
             TSharedPtr<FJsonObject> O = MakeShared<FJsonObject>();

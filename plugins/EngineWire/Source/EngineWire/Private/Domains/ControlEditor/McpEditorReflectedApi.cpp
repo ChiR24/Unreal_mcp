@@ -3,6 +3,7 @@
 #include "EngineWireSubsystem.h"
 #include "Foundation/HandlerUtils/McpHandlerUtils.h"
 #include "Foundation/BridgeHelpers/Reflection/McpClassResolve.h"
+#include "Foundation/McpCapabilityPrincipal.h"
 
 #include "Dom/JsonObject.h"
 
@@ -37,8 +38,9 @@ UObject* FindLiveInstanceByClassName(const FString& ClassName)
 	for (TObjectIterator<UObject> ObjectIt; ObjectIt; ++ObjectIt)
 	{
 		UObject* Candidate = *ObjectIt;
+		// A path-restricted caller is pointed only at an instance inside its prefixes (else the class default).
 		if (Candidate->GetClass() == Target && !Candidate->HasAnyFlags(RF_ClassDefaultObject)
-			&& IsValid(Candidate))
+			&& IsValid(Candidate) && McpCapabilityPrincipal::ActiveRequestPermitsObject(Candidate))
 		{
 			return Candidate;
 		}

@@ -4,6 +4,21 @@
 #include "MCP/Transport/McpNativeTransportPrivate.h"
 #include "EngineWireSettings.h"
 
+#include <atomic>
+
+namespace
+{
+// Whether the running listener is bound to loopback only (set by Start from its real bind). Read from the settings,
+// switching bAllowNonLoopback and bRequireCapabilityToken off while a LAN listener stayed up handed remote, token-free
+// requests the loopback Admin principal. False (fail closed) until Start binds.
+std::atomic<bool> GListenerLoopback{false};
+}
+
+void McpSetNativeListenerLoopback(bool bLoopback)
+{
+	GListenerLoopback.store(bLoopback);
+}
+
 FMcpCapabilityPrincipal McpResolveNativePrincipal(const FString& PresentedToken)
 {
 	const UEngineWireSettings* Settings = GetDefault<UEngineWireSettings>();
@@ -11,9 +26,7 @@ FMcpCapabilityPrincipal McpResolveNativePrincipal(const FString& PresentedToken)
 	FMcpPrincipalResolveRequest Request;
 	Request.PresentedToken = PresentedToken;
 	Request.bRequireToken = Settings->bRequireCapabilityToken;
-	// The native transport refuses to bind non-loopback unless a token is also
-	// required, so a no-token connection only ever reaches here on loopback.
-	Request.bIsLoopback = !Settings->bAllowNonLoopback;
+	Request.bIsLoopback = GListenerLoopback.load();
 
 	return McpCapabilityPrincipal::Resolve(Request, *Settings);
 }
@@ -140,5 +153,18 @@ bool FMcpNativeTransport::VerifySessionPrincipal(
 		}
 		Bound = *Found;
 	}
-	return !McpIsNativePrincipalSwap(Bound, McpResolveNativePrincipal(PresentedToken));
+	const FMcpCapabilityPrincipal Presented = McpResolveNativePrincipal(PresentedToken);
+	if (McpIsNativePrincipalSwap(Bound, Presented))
+	{
+		return false;
+	}
+	// Same identity, so the same caller: take its authority as it is NOW. The session kept the scopes, prefixes and
+	// quotas of the moment it was created, so a profile narrowed in the settings kept its old reach on every session
+	// opened before the edit. Quota state is keyed by identity, so nothing resets.
+	FScopeLock Lock(&SessionMutex);
+	if (SessionPrincipals.Contains(SessionId))
+	{
+		SessionPrincipals.Add(SessionId, Presented);
+	}
+	return true;
 }

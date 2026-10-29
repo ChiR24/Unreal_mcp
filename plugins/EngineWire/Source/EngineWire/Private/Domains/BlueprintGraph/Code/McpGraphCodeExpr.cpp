@@ -41,6 +41,14 @@ FString FDecompiler::Source(int32 NodeIndex, int32 Out, const FBindings& Binding
         Warnings.AddUnique(FString::Printf(TEXT("%s feeds its own input; printed as _."), *Node.Id));
         return TEXT("_");
     }
+    // A pure output is printed whole at every read, so a chain of nodes that each read the one before twice doubled
+    // the text at every link. Past this many printed nodes the rest is _.
+    constexpr int32 MaxPrinted = 200000;
+    if (++Printed > MaxPrinted)
+    {
+        Warnings.AddUnique(FString::Printf(TEXT("The graph's expressions print past %d nodes (an output read twice prints twice); the rest is printed as _."), MaxPrinted));
+        return TEXT("_");
+    }
     Placed.Add(NodeIndex);
     if (Node.Kind == EKind::Self)
     {

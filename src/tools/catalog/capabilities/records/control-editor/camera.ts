@@ -13,7 +13,7 @@ export const CAMERA_RECORDS: readonly CapabilityRecordSource[] = [
   buildCoreRecord({
     parentTool: 'control_editor', action: 'set_view_target', domain: D, family: F,
     editorStates: ANY_EDITOR_STATE,
-    summary: 'Set the PIE view target to a specific actor by name.',
+    summary: 'Set the PIE view target to a specific actor by name; location and rotation also move that actor there, which needs the write scope (SCOPE_NOT_GRANTED otherwise).',
     whenToUse: ['The camera must follow or focus on a specific actor in PIE.'],
     whenNotToUse: ['A fixed camera position is preferred (use set_camera).'],
     inputProps: { actorName: P.actorName, name: P.name, objectPath: P.objectPath, location: P.location, rotation: P.rotation, blendTime: P.blendTime },

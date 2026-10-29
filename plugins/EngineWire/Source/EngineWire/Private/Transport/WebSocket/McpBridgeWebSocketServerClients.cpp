@@ -23,6 +23,7 @@ void FMcpBridgeWebSocket::HandleAcceptedClient(FSocket* ClientSocket) {
       ClientSocket, bUseTls, TlsCertificatePath, TlsPrivateKeyPath);
   ClientWebSocket->bServerMode = false;
   ClientWebSocket->bServerAcceptedConnection = true;
+  ClientWebSocket->bListenerLoopback = bListenerLoopback;
   ClientWebSocket->Port = Port;
 
   {
@@ -31,13 +32,17 @@ void FMcpBridgeWebSocket::HandleAcceptedClient(FSocket* ClientSocket) {
   }
 
   TWeakPtr<FMcpBridgeWebSocket> LocalWeakThis = AsWeak();
-  auto RemoveFromClientList = [LocalWeakThis, ClientWebSocket] {
-    if (TSharedPtr<FMcpBridgeWebSocket> Pinned = LocalWeakThis.Pin()) {
+  // Weak: these callbacks are stored on the client itself, so a strong capture kept every closed client (and its
+  // TLS state and native socket) alive for the life of the editor.
+  TWeakPtr<FMcpBridgeWebSocket> WeakClient = ClientWebSocket;
+  auto RemoveFromClientList = [LocalWeakThis, WeakClient] {
+    const TSharedPtr<FMcpBridgeWebSocket> Client = WeakClient.Pin();
+    if (TSharedPtr<FMcpBridgeWebSocket> Pinned = LocalWeakThis.Pin(); Pinned && Client) {
       FScopeLock Lock(&Pinned->ClientSocketsMutex);
       UE_LOG(LogEngineWireSubsystem, VeryVerbose,
              TEXT("Removing client socket from server tracking (remaining before remove: %d)."),
              Pinned->ClientSockets.Num());
-      Pinned->ClientSockets.Remove(ClientWebSocket);
+      Pinned->ClientSockets.Remove(Client);
     }
   };
 

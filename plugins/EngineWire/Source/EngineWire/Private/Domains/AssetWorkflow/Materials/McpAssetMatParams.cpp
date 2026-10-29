@@ -257,13 +257,17 @@ bool UEngineWireSubsystem::HandleListMaterialInstances(
 
   // We need to check the parent. Loading the asset is safest but slow.
   // Checking tags is faster. MICs usually have "Parent" tag.
+  const FString ParentPackage = FPackageName::ObjectPathToPackageName(AssetPath);
   for (const FAssetData &Asset : AssetList) {
     // Check tag first
     FString ParentTag;
     if (Asset.GetTagValue(TEXT("Parent"), ParentTag)) {
-      // Tag value might be "Material'Path'" or just "Path"
-      // It's usually formatted string.
-      if (ParentTag.Contains(AssetPath)) {
+      // Tag value might be "Material'Path'" or just "Path". Its package, compared whole: a substring match took the
+      // instances of M_Base_Old (or of any path holding the text) for those of M_Base. A path-restricted caller
+      // hears only of instances inside its prefixes.
+      const FString TagPackage = FPackageName::ObjectPathToPackageName(FPackageName::ExportTextPathToObjectPath(ParentTag));
+      if (TagPackage.Equals(ParentPackage, ESearchCase::IgnoreCase) &&
+          McpCapabilityPrincipal::ActiveRequestPermitsPath(Asset.PackageName.ToString())) {
 #if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 1
         Instances.Add(
             MakeShared<FJsonValueString>(Asset.GetSoftObjectPath().ToString()));

@@ -51,7 +51,9 @@ bool UEngineWireSubsystem::HandleGetSourceControlState(
       Registry.GetDependencies(FName(*FPackageName::ObjectPathToPackageName(SanitizeProjectRelativePath(AssetPaths[Index]))), Dependencies);
       for (const FName &Dependency : Dependencies) {
         const FString DependencyName = Dependency.ToString();
-        if (DependencyName.StartsWith(TEXT("/Game/")) && !Seen.Contains(DependencyName)) {
+        // A dependency outside a path-restricted caller's prefixes is neither walked nor reported.
+        if (DependencyName.StartsWith(TEXT("/Game/")) && !Seen.Contains(DependencyName) &&
+            McpCapabilityPrincipal::ActiveRequestPermitsPath(DependencyName)) {
           Seen.Add(DependencyName);
           AssetPaths.Add(DependencyName);
         }

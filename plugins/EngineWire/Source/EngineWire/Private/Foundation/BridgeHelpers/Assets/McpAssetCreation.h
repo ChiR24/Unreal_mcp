@@ -4,6 +4,7 @@
 // than relied upon transitively so this header resolves in any unity-build blob.
 #include "Foundation/BridgeHelpers/Security/McpProjectPaths.h"
 #include "Foundation/BridgeHelpers/Blueprints/McpBPPaths.h"
+#include "Foundation/McpCapabilityPrincipal.h"
 #include "ObjectTools.h"
 
 static inline bool IsValidAssetPath(const FString &Path) {
@@ -72,6 +73,11 @@ static inline bool ValidateAssetCreationPath(
     OutError = FString::Printf(TEXT("Invalid asset path after normalization: %s"), *OutFullPath);
     return false;
   }
+  // The folder may be a handler's default (/Game/Enums, /Game/DataTables), chosen after the gate looked.
+  if (!McpCapabilityPrincipal::ActiveRequestPermitsPath(OutFullPath)) {
+    OutError = FString::Printf(TEXT("%s is outside the caller's allowed paths; name a folder inside them."), *OutFullPath);
+    return false;
+  }
 
   return true;
 }
@@ -82,6 +88,14 @@ static inline bool ValidateAssetCreationPath(
 // place (everything in it lost once saved) or, for another class, brought the editor down.
 static inline UPackage *McpCreatePackageForNewAsset(const FString &PackagePath, FString &OutError, FString &OutCode)
 {
+  // A default folder (/Game/Enums, /Game/AI) or a name joined to it is chosen here, after the gate checked the paths
+  // the request named: a path-restricted caller creates only inside its prefixes.
+  if (!McpCapabilityPrincipal::ActiveRequestPermitsPath(PackagePath))
+  {
+    OutError = FString::Printf(TEXT("%s is outside the caller's allowed paths; name a folder inside them. Nothing was created."), *PackagePath);
+    OutCode = TEXT("PATH_NOT_PERMITTED");
+    return nullptr;
+  }
   const UPackage *Loaded = FindPackage(nullptr, *PackagePath);
   if (McpAssetExists(PackagePath) || (Loaded && Loaded->FindAssetInPackage()))
   {

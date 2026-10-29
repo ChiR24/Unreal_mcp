@@ -120,8 +120,10 @@ FString FMcpNativeTransport::EnsureModernSession(const FString& PresentedToken)
 		RateState.ClientRateKey = SessionId;
 		RateState.InitializationCompletedAt = Now;
 		SessionRateStates.Add(SessionId, RateState);
-		SessionPrincipals.Add(SessionId, Principal);
 	}
+	// Every request, not only the first: the session is keyed by identity and kept the authority it was created
+	// with, so a profile narrowed in the settings kept its old scopes here.
+	SessionPrincipals.Add(SessionId, Principal);
 	return SessionId;
 }
 

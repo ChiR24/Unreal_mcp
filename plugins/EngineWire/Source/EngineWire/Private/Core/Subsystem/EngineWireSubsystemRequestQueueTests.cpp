@@ -101,11 +101,11 @@ bool FMcpCancelScopeTest::RunTest(const FString &Parameters) {
   TestEqual(TEXT("non-owner cancel is rejected (not forwarded)"),
             CancelledCount, 1);
 
-  // Untracked (legacy/untracked) request: forwarded for backward compatibility.
+  // An untracked id is not this socket's request (its reply went, its socket closed, or it is a native request), so
+  // forwarding it let one client cancel another's queued work.
   CancelledCount = 0;
   Manager.HandleCancelRequest(Owner, TEXT("unknown-req"));
-  TestEqual(TEXT("untracked cancel is forwarded for backward compatibility"),
-            CancelledCount, 1);
+  TestEqual(TEXT("untracked cancel is refused"), CancelledCount, 0);
 
   // Unauthenticated socket: rejected before any scoping decision.
   TSharedPtr<FMcpBridgeWebSocket> Stranger = MakeShared<FMcpBridgeWebSocket>(0);
@@ -123,13 +123,12 @@ bool FMcpCancelScopeTest::RunTest(const FString &Parameters) {
       Manager.PendingRequestsToSockets.Contains(TEXT("req-owner-close")));
 
   // A cancel for the now-orphaned request, arriving from a different
-  // authenticated socket, must be treated as untracked (forwarded), never
-  // attributed to the stale (closed) owner.
+  // authenticated socket, is untracked: refused, never attributed to it.
   CancelledCount = 0;
   Manager.HandleCancelRequest(Intruder, TEXT("req-owner-close"));
   TestEqual(
-      TEXT("cancel for closed-owner request is untracked (forwarded)"),
-      CancelledCount, 1);
+      TEXT("cancel for closed-owner request is refused"),
+      CancelledCount, 0);
 
   return true;
 }

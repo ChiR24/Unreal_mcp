@@ -177,10 +177,13 @@ bool HandleStructLifecycleActions(UEngineWireSubsystem& Bridge, const FString& R
             if (!Resolved)
             {
                 // Fallback: scan loaded script structs for a name match (covers
-                // modules that are loaded but not yet resolvable by package).
+                // modules that are loaded but not yet resolvable by package). Native
+                // ones only: a user-defined struct of that name lives in a content
+                // package the /Script path the request named never covered.
                 for (TObjectIterator<UScriptStruct> It; It; ++It)
                 {
-                    if (It->GetName() == StructName)
+                    if (It->GetName() == StructName && !It->IsA<UUserDefinedStruct>() &&
+                        It->GetOutermost()->GetName().StartsWith(TEXT("/Script/")))
                     {
                         Resolved = *It;
                         break;

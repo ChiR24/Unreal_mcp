@@ -99,29 +99,12 @@ bool UEngineWireSubsystem::HandleGenerateReport(
 
   bool bFileWritten = false;
   if (!OutputPath.IsEmpty()) {
-    // SECURITY: Sanitize and validate the output path to prevent path traversal
-    FString SafeOutputPath = SanitizeProjectFilePath(OutputPath);
-    if (SafeOutputPath.IsEmpty()) {
-      SendAutomationError(Socket, RequestId,
-                          FString::Printf(TEXT("Invalid or unsafe output path: %s"), *OutputPath),
-                          TEXT("SECURITY_VIOLATION"));
-      return true;
-    }
-
-    FString AbsoluteOutput = FPaths::ProjectDir() / SafeOutputPath;
-    AbsoluteOutput = FPaths::ConvertRelativePathToFull(AbsoluteOutput);
-    FPaths::NormalizeFilename(AbsoluteOutput);
-
-    FString NormalizedProjectDir = FPaths::ConvertRelativePathToFull(FPaths::ProjectDir());
-    FPaths::NormalizeDirectoryName(NormalizedProjectDir);
-    if (!NormalizedProjectDir.EndsWith(TEXT("/"))) {
-      NormalizedProjectDir += TEXT("/");
-    }
-
-    if (!AbsoluteOutput.StartsWith(NormalizedProjectDir, ESearchCase::IgnoreCase)) {
-      SendAutomationError(Socket, RequestId,
-                          FString::Printf(TEXT("Output path escapes project directory: %s"), *OutputPath),
-                          TEXT("SECURITY_VIOLATION"));
+    // The shared project-file resolver: traversal, device names, containment, and no link on the way (a checked
+    // spelling alone let a symbolic link under the project carry the report outside it).
+    FString AbsoluteOutput;
+    FString PathError;
+    if (!McpResolveProjectFilePath(OutputPath, AbsoluteOutput, PathError)) {
+      SendAutomationError(Socket, RequestId, PathError, TEXT("SECURITY_VIOLATION"));
       return true;
     }
 

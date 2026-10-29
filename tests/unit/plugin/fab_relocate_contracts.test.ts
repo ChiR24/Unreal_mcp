@@ -50,6 +50,7 @@ describe('what a relocation may touch', () => {
     expect(rules).toContain('Parts.Num() > (bMegascans ? 4 : 2)');
     expect(relocate).toMatch(/for \(FString Current = Folder; IsListingFolder\(Current\); Current = FPaths::GetPath\(Current\)\)/u);
     expect(relocate).toMatch(/Left\.Num\(\) > 0 \|\| !McpSafeOperations::McpSafeDeleteFolder\(Current\)/u);
+    expect(relocate, 'a file of no package this import moved keeps its folder').toMatch(/bForeign \|\| Left\.Num\(\) > 0 \|\| !McpSafeOperations::McpSafeDeleteFolder\(Current\)/u);
   });
 });
 

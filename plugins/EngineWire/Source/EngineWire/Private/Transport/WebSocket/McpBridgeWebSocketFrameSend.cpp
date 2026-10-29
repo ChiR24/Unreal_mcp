@@ -7,6 +7,8 @@
 #include "Math/UnrealMathUtility.h"
 #include "Misc/ByteSwap.h"
 #include "Misc/ScopeLock.h"
+#include "Misc/Timespan.h"
+#include "Sockets.h"
 
 using namespace McpBridgeWebSocket;
 
@@ -41,6 +43,13 @@ bool FMcpBridgeWebSocket::SendFrame(const TArray<uint8> &Frame) {
   const int32 TotalBytesToSend = Frame.Num();
 
   while (TotalBytesSent < TotalBytesToSend) {
+    // Sends run on the game thread (replies, log lines to subscribers). A peer that stops reading fills the send
+    // buffer, and a blocking send then held the editor until it read again: past a short wait the connection ends.
+    if (Socket && !Socket->Wait(ESocketWaitConditions::WaitForWrite, FTimespan::FromSeconds(2.0))) {
+      UE_LOG(LogEngineWireSubsystem, Warning, TEXT("A client stopped reading for 2 s; closing its connection."));
+      Stop();
+      return false;
+    }
     int32 BytesSent = 0;
     if (!SendRaw(Frame.GetData() + TotalBytesSent,
                  TotalBytesToSend - TotalBytesSent, BytesSent)) {

@@ -122,6 +122,8 @@ bool HandleFindAssetsLike(UEngineWireSubsystem* Bridge, const FString& RequestId
     }
     TArray<FString> Paths;
     const int32 Pending = McpAssetRetrieval::Refresh(Index, Folder, Class, FPlatformTime::Seconds() + FindRefreshSeconds, Paths);
+    // A path-restricted caller ranks only its own prefixes, whatever folder the search ran from (/Game when omitted).
+    Paths.RemoveAll([](const FString& Path) { return !McpCapabilityPrincipal::ActiveRequestPermitsPath(Path); });
     if (Index.bDirty)
     {
         McpAssetRetrieval::SaveIndex(Index);

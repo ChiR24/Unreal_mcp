@@ -67,7 +67,7 @@ bool IsWithinProfilingRoot(const FString& Path)
     }
     FString Normalized = FPaths::ConvertRelativePathToFull(Path);
     FPaths::NormalizeFilename(Normalized);
-    return Normalized.StartsWith(Profiling, ESearchCase::IgnoreCase);
+    return Normalized.StartsWith(Profiling, McpFileNameCase);
 }
 
 bool HasUnsafePathText(const FString& Path)

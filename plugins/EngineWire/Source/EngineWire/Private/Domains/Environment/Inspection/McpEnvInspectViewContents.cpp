@@ -52,6 +52,14 @@ bool HandleInspectViewContentsAction(
     const TSharedPtr<FJsonObject> &Payload,
     TSharedPtr<FMcpBridgeWebSocket> RequestingSocket)
 {
+    // Each named actor is found by a walk of the level, and one that drew nothing has its screen box scanned.
+    const TArray<TSharedPtr<FJsonValue>> *Requested = nullptr;
+    Payload->TryGetArrayField(TEXT("actors"), Requested);
+    if (Requested && Requested->Num() > 100)
+    {
+        Bridge.SendAutomationError(RequestingSocket, RequestId, TEXT("actors names at most 100 actors"), TEXT("INVALID_ARGUMENT"));
+        return true;
+    }
     // saveAs and compareWith read the frame as the game draws it: a selection outline or a gizmo is no change.
     const FString SaveAs = GetJsonStringField(Payload, TEXT("saveAs"));
     const bool bDiff = !SaveAs.IsEmpty() || !GetJsonStringField(Payload, TEXT("compareWith")).IsEmpty();
@@ -115,8 +123,6 @@ bool HandleInspectViewContentsAction(
     Rows.Sort([](const FMcpViewActor &A, const FMcpViewActor &B) { return A.Pixels > B.Pixels; });
     // actors: only the actors the caller names, and why each one that drew nothing is not seen. Checking one prop
     // from a camera meant reading every row of a full frame.
-    const TArray<TSharedPtr<FJsonValue>> *Requested = nullptr;
-    Payload->TryGetArrayField(TEXT("actors"), Requested);
     TSet<AActor *> Named;
     TArray<TSharedPtr<FJsonValue>> NotVisible, NotFound;
     for (int32 Index = 0; Requested && Index < Requested->Num(); ++Index)
@@ -128,8 +134,9 @@ bool HandleInspectViewContentsAction(
             NotFound.Add(MakeShared<FJsonValueString>(Name));
             continue;
         }
-        Named.Add(Actor);
-        if (!Seen.Contains(Actor))
+        bool bNamedTwice = false;
+        Named.Add(Actor, &bNamedTwice);
+        if (!bNamedTwice && !Seen.Contains(Actor))
         {
             NotVisible.Add(MakeShared<FJsonValueObject>(McpDescribeUnseenActor(Actor, *Client, Size, Ids, Proxies)));
         }

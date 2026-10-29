@@ -73,7 +73,7 @@ TSharedPtr<FJsonObject> DeleteOneOutputFile(const FString& Project, FString Path
     FPaths::CollapseRelativeDirectories(Full);
     bool bInsideRoot = false;
     for (const TCHAR* Root : OutputRoots) {
-      bInsideRoot |= Full.StartsWith(Project / Root + TEXT("/"), ESearchCase::IgnoreCase);
+      bInsideRoot |= Full.StartsWith(Project / Root + TEXT("/"), McpFileNameCase);
     }
     if (!bInsideRoot) {
       OutErrorCode = TEXT("PATH_OUTSIDE_OUTPUT_ROOTS");

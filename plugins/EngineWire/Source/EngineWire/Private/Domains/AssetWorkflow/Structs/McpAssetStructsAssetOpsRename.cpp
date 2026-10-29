@@ -263,6 +263,17 @@ static bool HandleStructAssetAction_Rename(UEngineWireSubsystem& Bridge, const F
             return true;
         }
 
+        // AssetTools saves what it moves itself, past McpSafeAssetSave: a path-restricted caller's struct and its new
+        // home are held to its prefixes here (newStructPath may have been relative, rooted by this handler).
+        if (!McpCapabilityPrincipal::ActiveRequestPermitsPath(S->GetOutermost()->GetName()) ||
+            !McpCapabilityPrincipal::ActiveRequestPermitsPath(NewPackagePath / NewNameOnly))
+        {
+            Bridge.SendAutomationError(RequestingSocket, RequestId,
+                TEXT("The struct or its destination is outside the caller's allowed paths; nothing was renamed."),
+                TEXT("PATH_NOT_PERMITTED"));
+            return true;
+        }
+
         // Supported, editor-side rename. AssetTools::RenameAssets moves the
         // asset, leaves a UObjectRedirector at the old path automatically when
         // the struct is referenced, fixes up soft references, and saves the

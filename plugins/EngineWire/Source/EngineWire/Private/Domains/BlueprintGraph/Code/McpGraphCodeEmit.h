@@ -74,6 +74,7 @@ private:
     TArray<FKey> Path;
     TSet<int32> Placed;
     TArray<FString> Warnings;
+    int32 Printed = 0; // expression nodes printed so far (Source): what a graph's text may grow to
 
     // McpGraphCodeExpr.cpp
     FString Expr(const FPin& Pin, const FBindings& Bindings);

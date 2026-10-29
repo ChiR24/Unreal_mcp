@@ -1,5 +1,6 @@
 #pragma once
 
+#include "Foundation/McpCapabilityPrincipal.h"
 #include "Safety/McpSafeOperationsLog.h"
 
 #include "CoreGlobals.h"
@@ -59,6 +60,14 @@ inline bool McpSafeLevelSave(ULevel* Level, const FString& FullPath, int32 MaxRe
     if (PackagePath.Contains(TEXT(".")))
     {
         PackagePath = PackagePath.Left(PackagePath.Find(TEXT(".")));
+    }
+
+    // As McpSafeAssetSave: a path-restricted caller saves only a level inside its prefixes.
+    if (!McpCapabilityPrincipal::ActiveRequestPermitsPath(PackagePath))
+    {
+        UE_LOG(LogMcpSafeOperations, Error,
+            TEXT("McpSafeLevelSave: %s is outside the caller's allowed paths and was not saved."), *PackagePath);
+        return false;
     }
 
     {

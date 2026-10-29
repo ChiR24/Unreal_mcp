@@ -10,7 +10,7 @@ const D = 'editor';
 
 const SCREENSHOT_PROPS = {
   filename: P.filename,
-  path: { type: 'string', description: 'Directory to save the PNG in, inside the project (relative to it, or absolute under it). Default Saved/Screenshots (game_viewport: Saved/Screenshots/WindowsEditor). A path outside the project is refused.' },
+  path: { type: 'string', description: 'Directory to save the PNG in, inside the project (relative to it, or absolute under it); naming one needs the write scope, since a file already there is replaced. Default Saved/Screenshots (game_viewport: Saved/Screenshots/WindowsEditor). A path outside the project is refused.' },
   // Not P.resolution: this is a resample of one already-rendered frame, not a
   // re-render, so WxH is a bounding box rather than an exact output size --
   // aspect ratio is preserved and a box larger than the frame changes nothing.
@@ -87,6 +87,8 @@ export const SCREENSHOT_RECORDS: readonly CapabilityRecordSource[] = [
     required: [],
     outputProps: SCREENSHOT_OUTPUT,
     effect: 'read',
+    // A folder of the caller's choosing reaches any PNG in the project; the default folder holds only captures.
+    policyOverride: { raisedBy: { path: 'write' } },
     costLatency: 'interactive',
     exampleInput: { action: 'screenshot', mode: 'editor_viewport', filename: 'viewport' },
     exampleOutput: { success: true, screenshotPath: '/Game/Screenshots/viewport.png', mode: 'editor_viewport' },

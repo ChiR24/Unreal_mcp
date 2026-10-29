@@ -8,7 +8,8 @@ namespace
 // unary minus with its own operand. INDEX_NONE when none starts there.
 int32 MinusOperandEnd(const FString& Text, int32 Index)
 {
-  while (Index < Text.Len() && FChar::IsWhitespace(Text[Index]))
+  // Further unary minuses belong to the operand (- -x): skipped in this loop, where following each one used to recurse.
+  while (Index < Text.Len() && (FChar::IsWhitespace(Text[Index]) || Text[Index] == TEXT('-')))
   {
     ++Index;
   }
@@ -34,10 +35,6 @@ int32 MinusOperandEnd(const FString& Text, int32 Index)
   {
     return CloseOf(Index);
   }
-  if (First == TEXT('-'))
-  {
-    return MinusOperandEnd(Text, Index + 1);
-  }
   if (!FChar::IsAlnum(First) && First != TEXT('_') && First != TEXT('.'))
   {
     return INDEX_NONE;
@@ -60,8 +57,13 @@ int32 MinusOperandEnd(const FString& Text, int32 Index)
 }
 }
 
-FString RewriteUnaryMinus(const FString& Expression)
+FString RewriteUnaryMinus(const FString& Expression, int32 Depth)
 {
+  // Each nested minus copies its operand and rewrites it again; past this the rest stays as written (and fails to parse).
+  if (Depth >= 32)
+  {
+    return Expression;
+  }
   FString Out;
   TCHAR Prev = 0;
   for (int32 Index = 0; Index < Expression.Len(); ++Index)
@@ -77,7 +79,7 @@ FString RewriteUnaryMinus(const FString& Expression)
       continue;
     }
     const FString Operand = Expression.Mid(Index + 1, End - Index - 1).TrimStartAndEnd();
-    Out += FString::Printf(TEXT("(0 - %s)"), *RewriteUnaryMinus(Operand));
+    Out += FString::Printf(TEXT("(0 - %s)"), *RewriteUnaryMinus(Operand, Depth + 1));
     Prev = TEXT(')');
     Index = End - 1;
   }

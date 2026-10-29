@@ -3,7 +3,11 @@
 
 #include "EngineWireLog.h"
 #include "EngineWireSettings.h"
+#include "Components/ActorComponent.h"
+#include "Engine/Level.h"
+#include "Foundation/McpCapabilityAuthorization.h"
 #include "Foundation/McpSecureTokenCompare.h"
+#include "GameFramework/Actor.h"
 
 bool FMcpCapabilityPrincipal::IsScopeAuthorized(EMcpCapabilityScope Required) const
 {
@@ -41,7 +45,7 @@ struct FCandidate
 // token then maps explicitly to Admin (deprecated) only if still unclaimed. A
 // scoped entry with an empty token/profile, an Admin scope, or a duplicate
 // profile/token is invalid and ignored with a token-free warning.
-TArray<FCandidate> BuildCandidates(const UEngineWireSettings& Settings)
+TArray<FCandidate> BuildCandidates(const UEngineWireSettings& Settings, const FString& StoreToken)
 {
 	TArray<FCandidate> Candidates;
 	TSet<FString> SeenProfiles;
@@ -103,9 +107,8 @@ TArray<FCandidate> BuildCandidates(const UEngineWireSettings& Settings)
 	};
 	AddLegacy(Settings.CapabilityToken, TEXT("legacy"));
 	// The store's effective token (explicit, persisted, or auto-generated once) so
-	// native /mcp matches the same token the bridge uses. GetCandidateTable caches
-	// this table per settings revision, so the token file is read once per revision.
-	AddLegacy(McpCapabilityTokenStore::ResolveEffectiveToken(&Settings), TEXT("legacy-store"));
+	// native /mcp matches the same token the bridge uses.
+	AddLegacy(StoreToken, TEXT("legacy-store"));
 
 	return Candidates;
 }
@@ -117,12 +120,15 @@ using FCandidateTableRef = TSharedPtr<const FCandidateTable, ESPMode::ThreadSafe
 // request re-ran validation — and so re-logged every warning for a malformed
 // entry — on every single call, forever, and allocated the whole table each time.
 // A shared immutable snapshot is handed out, so a concurrent rebuild can never
-// mutate a table another thread is scanning.
-FCandidateTableRef GetCandidateTable(const UEngineWireSettings& Settings)
+// mutate a table another thread is scanning. OutRevision counts the rebuilds, read
+// under the same lock as the table it numbers.
+FCandidateTableRef GetCandidateTable(const UEngineWireSettings& Settings, uint32& OutRevision)
 {
 	static FCriticalSection CacheMutex;
 	static FCandidateTableRef Cached;
 	static int32 CachedGeneration = -1;
+	static FString CachedStoreToken;
+	static uint32 Revision = 0;
 	// Weak, not raw. A raw pointer identifies an address, not an object: once a
 	// settings object is collected, the next NewObject can land on that address
 	// and — because GetEditGeneration() counts editor property edits and plain
@@ -131,38 +137,93 @@ FCandidateTableRef GetCandidateTable(const UEngineWireSettings& Settings)
 	// serial number, so a recycled address reads as a miss and rebuilds.
 	static TWeakObjectPtr<const UEngineWireSettings> CachedSettings;
 
-	// Cheap, non-secret staleness key: the settings revision counter and the
-	// object identity. A token value is never part of it. Do NOT fold in entry
-	// counts as a packed int — Num()*1000 + Len() aliases, and the revision
-	// counter already changes on every edit.
-	//
-	// ROTATION GAP: GetEditGeneration() counts editor property edits only, so
-	// rotating the on-disk token file (Saved/MCP/capability-token) to revoke a
-	// leaked credential does NOT invalidate this cache — the stale table (with
-	// the old token's principal mapping) persists until an editor property edit
-	// bumps the generation or the editor restarts. If immediate revocation is
-	// required, call GetCandidateTable after deleting/rewriting the token file
-	// and force a rebuild by temporarily toggling a settings property, or clear
-	// the cache by restarting the editor. A future fix could add the token
-	// file's modification time to the staleness key.
+	// Staleness key: the settings revision counter, the object identity, and the
+	// store's effective token. GetEditGeneration() counts editor property edits
+	// only, so a token file rotated on disk to revoke a leaked credential kept the
+	// old token authenticating until the next edit or restart. The file is read
+	// here on every call (native /mcp already reads it per request); compared with
+	// the copy the table was built from, it never leaves this function. Do NOT
+	// fold in entry counts as a packed int: Num()*1000 + Len() aliases.
 	const int32 Generation = UEngineWireSettings::GetEditGeneration();
+	const FString StoreToken = McpCapabilityTokenStore::ResolveEffectiveToken(&Settings);
 
 	FScopeLock Lock(&CacheMutex);
-	if (!Cached.IsValid() || CachedGeneration != Generation || CachedSettings.Get() != &Settings)
+	if (!Cached.IsValid() || CachedGeneration != Generation || CachedSettings.Get() != &Settings ||
+		!CachedStoreToken.Equals(StoreToken, ESearchCase::CaseSensitive))
 	{
-		Cached = MakeShared<const FCandidateTable, ESPMode::ThreadSafe>(BuildCandidates(Settings));
+		Cached = MakeShared<const FCandidateTable, ESPMode::ThreadSafe>(BuildCandidates(Settings, StoreToken));
 		CachedGeneration = Generation;
 		CachedSettings = &Settings;
+		CachedStoreToken = StoreToken;
+		++Revision;
 	}
+	OutRevision = Revision;
 	return Cached;
 }
+
+// The running request's principal (game thread only; see ActiveRequestPrincipal).
+const FMcpCapabilityPrincipal* GActiveRequestPrincipal = nullptr;
 } // namespace
+
+uint32 AuthorityRevision(const UEngineWireSettings& Settings)
+{
+	uint32 Revision = 0;
+	GetCandidateTable(Settings, Revision);
+	return Revision;
+}
+
+const FMcpCapabilityPrincipal* ActiveRequestPrincipal()
+{
+	return IsInGameThread() ? GActiveRequestPrincipal : nullptr;
+}
+
+FActiveRequestScope::FActiveRequestScope(const FMcpCapabilityPrincipal* Principal)
+	: Previous(GActiveRequestPrincipal)
+{
+	check(IsInGameThread());
+	GActiveRequestPrincipal = Principal;
+}
+
+FActiveRequestScope::~FActiveRequestScope()
+{
+	GActiveRequestPrincipal = Previous;
+}
+
+bool ActiveRequestPermitsPath(const FString& PackageName)
+{
+	const FMcpCapabilityPrincipal* Principal = ActiveRequestPrincipal();
+	return !Principal || !Principal->IsPathRestricted() ||
+		Principal->AllowedPathPrefixes.ContainsByPredicate([&PackageName](const FString& Prefix)
+		{
+			return McpCapabilityAuthorization::IsPathWithinPrefix(PackageName, Prefix);
+		});
+}
+
+bool ActiveRequestPermitsObject(const UObject* Object)
+{
+	const FMcpCapabilityPrincipal* Principal = ActiveRequestPrincipal();
+	if (!Object || !Principal || !Principal->IsPathRestricted())
+	{
+		return true;
+	}
+	const UActorComponent* Component = Cast<UActorComponent>(Object);
+	const AActor* Actor = Component ? Component->GetOwner() : Cast<AActor>(Object);
+	const UObject* Packaged = Actor && Actor->GetLevel() ? static_cast<const UObject*>(Actor->GetLevel()) : Object;
+	return ActiveRequestPermitsPath(Packaged->GetOutermost()->GetName());
+}
+
+bool ActiveRequestHoldsScope(EMcpCapabilityScope Scope)
+{
+	const FMcpCapabilityPrincipal* Principal = ActiveRequestPrincipal();
+	return !Principal || Principal->IsScopeAuthorized(Scope);
+}
 
 FMcpCapabilityPrincipal Resolve(
 	const FMcpPrincipalResolveRequest& Request,
 	const UEngineWireSettings& Settings)
 {
-	const FCandidateTableRef TableRef = GetCandidateTable(Settings);
+	uint32 Revision = 0;
+	const FCandidateTableRef TableRef = GetCandidateTable(Settings, Revision);
 	const FCandidateTable& Candidates = *TableRef;
 
 	// Constant-time scan: compare the presented token against EVERY candidate with
@@ -178,20 +239,20 @@ FMcpCapabilityPrincipal Resolve(
 		}
 	}
 
+	FMcpCapabilityPrincipal Principal;
 	if (MatchIndex != INDEX_NONE)
 	{
-		return Candidates[MatchIndex].Principal;
+		Principal = Candidates[MatchIndex].Principal;
 	}
-
 	// No candidate matched. Loopback with no token presented and none required
 	// binds admin (preserves the loopback default); every other case is unauthenticated.
-	FMcpCapabilityPrincipal Principal;
-	if (!Request.bRequireToken && Request.bIsLoopback && Request.PresentedToken.IsEmpty())
+	else if (!Request.bRequireToken && Request.bIsLoopback && Request.PresentedToken.IsEmpty())
 	{
 		Principal.Identity = TEXT("loopback");
 		Principal.Scopes = { EMcpCapabilityScope::Admin };
 		Principal.bAuthenticated = true;
 	}
+	Principal.AuthorityRevision = Revision;
 	return Principal;
 }
 } // namespace McpCapabilityPrincipal

@@ -57,6 +57,7 @@ bool HandleEnumLifecycleActions(
         // The initial values (`values`, names or {name} objects), checked before anything is made: two entries of one
         // name break the enum.
         TArray<FString> ValueNames;
+        TSet<FString> Named; // the duplicate check, by hash: a search of the list per value grew with its square
         const TArray<TSharedPtr<FJsonValue>>* InitValues = nullptr;
         if (Params->TryGetArrayField(TEXT("values"), InitValues) && InitValues)
         {
@@ -67,7 +68,9 @@ bool HandleEnumLifecycleActions(
                 if (V->Type == EJson::Object && V->TryGetObject(Obj) && *Obj) { (*Obj)->TryGetStringField(TEXT("name"), ValName); }
                 else if (V->Type != EJson::Object) { ValName = V->AsString(); }
                 if (ValName.IsEmpty()) { continue; }
-                if (ValueNames.Contains(ValName))
+                bool bTwice = false;
+                Named.Add(ValName, &bTwice);
+                if (bTwice)
                 {
                     SetEnumResultFields(OutResult, false, FString::Printf(TEXT("values names '%s' twice; nothing was created."), *ValName), TEXT("INVALID_ARGUMENT"));
                     return true;

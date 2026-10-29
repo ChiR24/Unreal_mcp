@@ -213,6 +213,14 @@ bool McpApplyEnvironmentSnapshot(
         OutErrorCode = TEXT("LIGHT_NOT_FOUND");
         return false;
     }
+    // The lights are named by the file's contents, which the gate never read: a path-restricted caller changes only
+    // lights in a level inside its prefixes.
+    if (!McpCapabilityPrincipal::ActiveRequestPermitsObject(SunActor) || !McpCapabilityPrincipal::ActiveRequestPermitsObject(SkyActor))
+    {
+        OutMessage = TEXT("The snapshot's lights are in a level outside the caller's allowed paths; nothing was changed.");
+        OutErrorCode = TEXT("PATH_NOT_PERMITTED");
+        return false;
+    }
 
     SunActor->Modify();
     SunComponent->Modify();

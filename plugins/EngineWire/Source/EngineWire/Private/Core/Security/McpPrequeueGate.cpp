@@ -279,12 +279,14 @@ FMcpAuthorizationDecision RequirePrincipal(const FMcpPrequeueRequest& Request)
 
 void RefundConsentForRequest(const FString& RequestId)
 {
-	McpCapabilityAuthorization::FMcpConsentLedger::Get().Refund(TakeBurnedNonce(RequestId));
+	const FString Nonce = TakeBurnedNonce(RequestId);
+	if (!ChangedSinceDispatch(RequestId)) McpCapabilityAuthorization::FMcpConsentLedger::Get().Refund(Nonce);
 }
 
 void ForgetConsentForRequest(const FString& RequestId)
 {
 	TakeBurnedNonce(RequestId);
+	ChangedSinceDispatch(RequestId);
 }
 
 FMcpAuthorizationDecision Authorize(const FMcpPrequeueRequest& Request)

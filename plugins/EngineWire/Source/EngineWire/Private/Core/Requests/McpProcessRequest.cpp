@@ -65,7 +65,8 @@ namespace EngineWire
                 const bool bOwn = !ForRequestId.IsEmpty() && ForRequestId == GInFlightRequestId;
                 Work = FString::Printf(TEXT("%s %s for %.0f s"), bOwn ? TEXT("working on") : TEXT("busy with"),
                     *GInFlightAction, Now - GInFlightStart);
-                if (!GInFlightProgress.IsEmpty())
+                // Progress names what the request works on (asset paths, folders): only its own caller hears it.
+                if (bOwn && !GInFlightProgress.IsEmpty())
                 {
                     Work += GInFlightPercent >= 0.0f
                         ? FString::Printf(TEXT(", %.0f%% done: %s"), GInFlightPercent, *GInFlightProgress)
@@ -276,6 +277,12 @@ void UEngineWireSubsystem::ProcessAutomationRequest(
       ConnectionManager->RegisterRequestSocket(RequestId, RequestingSocket);
     }
 
+    // The caller the gate allowed this for: the shared sinks (saves, deletes, the property walk) hold the handler to
+    // that caller's paths for whatever it reaches beyond the paths the request named.
+    FMcpCapabilityPrincipal Caller;
+    const bool bKnownCaller = McpPrequeueGate::FindRequestPrincipal(RequestId, Caller);
+    const McpCapabilityPrincipal::FActiveRequestScope CallerScope(bKnownCaller ? &Caller : nullptr);
+
     // What the call requires (options.require) is judged here, inside the request's brackets, so a refusal is
     // answered like any reply and nothing has run.
     if (!McpContracts::Admit(*this, RequestId, RequestingSocket)) {
@@ -286,6 +293,7 @@ void UEngineWireSubsystem::ProcessAutomationRequest(
     // ---------------------------------------------------------
     // Check Handler Registry (O(1) dispatch)
     // ---------------------------------------------------------
+    McpPrequeueGate::NoteDispatchStarted(RequestId); // a failed reply refunds its consent only if nothing changed
     if (const FAutomationHandler *Handler = AutomationHandlers.Find(Action)) {
       if ((*Handler)(RequestId, Action, Payload, RequestingSocket)) {
         bDispatchHandled = true;
@@ -314,6 +322,10 @@ void UEngineWireSubsystem::RunLatentReply(const FString &RequestId, const FStrin
     Work(); // inside a dispatch already: its brackets are open, and opening them again would end them
     return;
   }
+  // The caller's principal, as for a dispatch: the save and property sinks hold a latent edit to its paths too.
+  FMcpCapabilityPrincipal Caller;
+  const bool bKnownCaller = McpPrequeueGate::FindRequestPrincipal(RequestId, Caller);
+  const McpCapabilityPrincipal::FActiveRequestScope CallerScope(bKnownCaller ? &Caller : nullptr);
   // As for a dispatch: a dialog the edit raises answers its default instead of blocking the game thread.
   TGuardValue<bool> UnattendedScriptGuard(GIsRunningUnattendedScript, true);
   bProcessingAutomationRequest = true;

@@ -40,6 +40,7 @@
 #pragma once
 
 #include "CoreMinimal.h"
+#include "Foundation/McpCapabilityPrincipal.h"
 #include "UObject/Object.h"
 #include "UObject/Package.h"
 #include "UObject/UObjectGlobals.h"
@@ -49,9 +50,9 @@ namespace McpSafeReflectionTarget
 /** Shared refusal message, so every call site reports the boundary identically. */
 inline const TCHAR* DenyMessage()
 {
-	return TEXT("Objects in /Script packages are not addressable through the property "
-	            "reflection surface. Address project content (/Game/...), a spawned "
-	            "actor, or a Blueprint CDO via blueprintPath instead.");
+	return TEXT("This object is not addressable through the property reflection surface: objects in /Script "
+	            "packages never are, and a path-restricted caller reaches only its allowed paths. Address project "
+	            "content (/Game/...), a spawned actor, or a Blueprint CDO via blueprintPath instead.");
 }
 
 /** Stable error code for a refusal, distinct from OBJECT_NOT_FOUND so a caller can
@@ -81,8 +82,11 @@ inline bool IsAddressable(const UObject* Object)
 		return false;
 	}
 	const FString PackageName = Outermost->GetName();
+	// A path-restricted caller also reaches only its own prefixes: an actor named by its label, or an object behind
+	// a reference, is held to them like a path the request named.
 	return !PackageName.Equals(TEXT("/Script"), ESearchCase::IgnoreCase)
-		&& !PackageName.StartsWith(TEXT("/Script/"), ESearchCase::IgnoreCase);
+		&& !PackageName.StartsWith(TEXT("/Script/"), ESearchCase::IgnoreCase)
+		&& McpCapabilityPrincipal::ActiveRequestPermitsObject(Object);
 }
 
 }  // namespace McpSafeReflectionTarget

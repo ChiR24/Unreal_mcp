@@ -31,7 +31,7 @@ Editor-only UE 5.0-5.8 plugin. It owns the native `/mcp` HTTP/SSE server (the on
 
 ## VERSION AND SECURITY
 - Defaults: `127.0.0.1`, native `/mcp` on at port `3000`, WebSocket ports `8090,8091`, non-loopback disabled.
-- LAN binding requires explicit `bAllowNonLoopback`; never add an implicit `0.0.0.0` fallback. Both listeners refuse non-loopback unless `bRequireCapabilityToken` is also on.
+- LAN binding requires explicit `bAllowNonLoopback`; never add an implicit `0.0.0.0` fallback. Native `/mcp` refuses every non-loopback bind (no TLS); the WebSocket listener binds one only with `bRequireCapabilityToken` and `bEnableTls` also on.
 - `bRequireCapabilityToken` is on by default: the plugin generates a per-install token at `<ProjectRoot>/Saved/MCP/capability-token` (64 lowercase hex chars); the stdio proxy reads it and never writes it. A token set in Project Settings wins. Both transports compare with `McpConstantTimeTokenEquals`.
 - Cancellation is advisory for in-flight work: queued requests are dropped, an executing editor operation runs to completion.
 

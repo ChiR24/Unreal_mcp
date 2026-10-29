@@ -18,7 +18,9 @@ ALandscape *McpFindLandscape(const TSharedPtr<FJsonObject> &Payload)
         for (TActorIterator<ALandscape> It(World); It; ++It)
         {
             ALandscape *Landscape = *It;
-            if (!Landscape)
+            // A label (or no selector at all) finds a landscape in any level: a path-restricted caller's stays in
+            // a level inside its prefixes, whatever landscapePath it also sent.
+            if (!Landscape || !McpCapabilityPrincipal::ActiveRequestPermitsObject(Landscape))
             {
                 continue;
             }
@@ -37,11 +39,13 @@ ALandscape *McpFindLandscape(const TSharedPtr<FJsonObject> &Payload)
 
         if (LandscapeName.IsEmpty() && LandscapePath.IsEmpty())
         {
-            // with neither a name nor a path, the first landscape in the world
-            TActorIterator<ALandscape> First(World);
-            if (First)
+            // with neither a name nor a path, the first landscape in the world the caller may touch
+            for (TActorIterator<ALandscape> First(World); First; ++First)
             {
-                return *First;
+                if (McpCapabilityPrincipal::ActiveRequestPermitsObject(*First))
+                {
+                    return *First;
+                }
             }
         }
     }

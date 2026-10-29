@@ -52,6 +52,8 @@ TArray<UMaterialInterface *> McpNaniteUnflagged(const UStaticMesh *StaticMesh) {
 TArray<TSharedPtr<FJsonValue>> McpNaniteFlagMaterials(const TArray<UMaterialInterface *> &Unflagged) {
   TArray<TSharedPtr<FJsonValue>> Flagged;
   for (UMaterialInterface *Owner : Unflagged) {
+    // Found through the mesh, not named: a path-restricted caller flags only materials inside its prefixes.
+    if (!McpCapabilityPrincipal::ActiveRequestPermitsObject(Owner)) continue;
     if (!McpNaniteHasFlag(Owner)) McpNaniteSetFlag(Owner);
     const FString Package = Owner->GetOutermost()->GetName();
     if (!Package.StartsWith(TEXT("/Engine/")) && McpSafeAssetSave(Owner)) Flagged.Add(MakeShared<FJsonValueString>(Package));

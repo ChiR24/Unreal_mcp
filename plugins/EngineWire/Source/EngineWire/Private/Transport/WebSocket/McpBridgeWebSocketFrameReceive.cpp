@@ -82,10 +82,14 @@ bool FMcpBridgeWebSocket::ReceiveFrame() {
 
   TArray<uint8> Payload;
   if (PayloadLength > 0) {
-    Payload.SetNumUninitialized(static_cast<int32>(PayloadLength));
-    if (!ReceiveExact(Payload.GetData(), PayloadLength)) {
-      TearDown(TEXT("Failed to read WebSocket payload."), false, 4001);
-      return false;
+    // Grown as bytes arrive: reserving the declared length up front let a bare header hold 5 MiB per connection.
+    while (static_cast<uint64>(Payload.Num()) < PayloadLength) {
+      const int32 Chunk = static_cast<int32>(FMath::Min<uint64>(PayloadLength - Payload.Num(), WebSocketReceiveChunkBytes));
+      const int32 At = Payload.AddUninitialized(Chunk);
+      if (!ReceiveExact(Payload.GetData() + At, Chunk)) {
+        TearDown(TEXT("Failed to read WebSocket payload."), false, 4001);
+        return false;
+      }
     }
     if (bMasked) {
       for (uint64 Index = 0; Index < PayloadLength; ++Index) {
@@ -116,8 +120,8 @@ bool FMcpBridgeWebSocket::ReceiveFrame() {
       // HandleClientConnected and unbinds it in Stop/HandleConnectionError, so
       // broadcasting here raced the multicast invocation list. The receiver
       // (FMcpConnectionManager::HandleHeartbeat) also writes
-      // LastHeartbeatTimestamp / bHeartbeatTrackingEnabled, which Tick() reads
-      // on the game thread -- unsynchronized from here, ordinary from there.
+      // LastHeartbeatBySocket, which Tick() reads on the game thread --
+      // unsynchronized from here, ordinary from there.
       DispatchOnGameThread([WeakThis = AsWeak()] {
         if (TSharedPtr<FMcpBridgeWebSocket> Pinned = WeakThis.Pin()) {
           Pinned->HeartbeatDelegate.Broadcast(Pinned);

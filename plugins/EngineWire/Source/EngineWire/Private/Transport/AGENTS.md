@@ -29,12 +29,12 @@ Connection/
 
 ## CONNECTION LIFECYCLE
 
-1. **Bind gate** — `McpBridgeWebSocketServer.cpp` computes `bIsLoopback` (127.0.0.1 / ::1; `localhost` normalizes to 127.0.0.1). Loopback binds. Non-loopback binds ONLY if `bAllowNonLoopback` AND `bRequireCapabilityToken` both set; else destroys the listen socket and returns 0. No implicit `0.0.0.0` fallback.
+1. **Bind gate** — `McpBridgeWebSocketServer.cpp` computes `bIsLoopback` (127.0.0.1 / ::1; `localhost` normalizes to 127.0.0.1). Loopback binds. Non-loopback binds ONLY if `bAllowNonLoopback` AND `bRequireCapabilityToken` AND `bEnableTls` are set (the token travels in `bridge_hello`); else destroys the listen socket and returns 0. No implicit `0.0.0.0` fallback. The listener's own loopback-ness rides on each client socket (`IsListenerLoopback`): the authority hop reads that, never the peer address. At most `MaxWebSocketClients` (32) at once.
 2. **Upgrade / origin** — `ServerHandshake` validates the HTTP upgrade. Any non-empty `Origin` header is rejected with close 4403 BEFORE `101 Switching Protocols`.
 3. **bridge_hello** — client MUST send `bridge_hello` first. Missing `capabilityToken` when required => `INVALID_CAPABILITY_TOKEN`, close 4005. Socket joins `AuthenticatedSockets`. The `bridge_ack` also carries `contentRoots` (the editor's mount table); mounts and dismounts are pushed as a `content_roots_changed` automation_event from the ticker, never from inside the engine's mount callback.
 4. **Token** — compared with `McpConstantTimeTokenEquals` (full UTF-8 span, XOR-accumulate, length folded in, no early exit).
-5. **Request** — `automation_request` before auth => `HANDSHAKE_REQUIRED`, close 4004. RequestId/Action mapped to socket for routing.
-6. **Response / heartbeat** — responses routed ONLY to the originating socket (never broadcast). Heartbeats cleaned up on disconnect.
+5. **Request** — `automation_request` before auth => `HANDSHAKE_REQUIRED`, close 4004. Payload keys starting with `_` are dropped (a handler's own retry markers). A `requestId` still in flight is refused (`REQUEST_ID_IN_USE`) before authorization. A principal resolved under an older authority revision (settings edit, token file replaced) de-authenticates the socket (`REAUTHENTICATION_REQUIRED`). RequestId/Action mapped to socket for routing; a cancel is honoured only for a request that socket sent and that is still tracked.
+6. **Response / heartbeat** — responses routed ONLY to the originating socket (never broadcast). Heartbeats are per authenticated socket; a timeout closes only that socket (4000). A frame write waits at most 2 s for the socket, then stops it, so a client that stops reading cannot hold the game thread. Teardown destroys the socket under `SendMutex`.
 7. **Teardown** — delegates unbound, per-socket rate state removed, pending requests cleared.
 
 ## SECURITY INVARIANTS (non-negotiable)

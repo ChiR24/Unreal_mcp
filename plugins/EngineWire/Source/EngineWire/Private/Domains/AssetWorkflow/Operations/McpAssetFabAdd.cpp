@@ -3,6 +3,7 @@
 #include "EngineWireSubsystem.h"
 #include "Foundation/BridgeHelpers/McpHelpers.h"
 #include "Foundation/HandlerUtils/McpHandlerUtils.h"
+#include "Foundation/McpCapabilityPrincipal.h"
 #include "Domains/AssetWorkflow/Fab/McpFabImportJson.h"
 #include "Domains/AssetWorkflow/Fab/McpFabPostImport.h"
 #include "Domains/AssetWorkflow/Fab/McpFabRelocate.h"
@@ -48,6 +49,16 @@ bool UEngineWireSubsystem::HandleAddFabAssetToProject(
   if (!Payload->TryGetStringField(TEXT("listingId"), ListingId) || ListingId.IsEmpty()) {
     SendAutomationResponse(Socket, RequestId, false, TEXT("'listingId' is required."),
                            nullptr, TEXT("INVALID_ARGUMENT"));
+    return true;
+  }
+
+  // Fab picks where the pack lands (and shared /Game/Fab folders) and saves it later, off this request, so no
+  // destinationPath can keep a path-restricted caller's import inside its prefixes.
+  const FMcpCapabilityPrincipal *Caller = McpCapabilityPrincipal::ActiveRequestPrincipal();
+  if (Caller && Caller->IsPathRestricted()) {
+    SendAutomationResponse(Socket, RequestId, false,
+                           TEXT("A path-restricted principal cannot add Fab content: Fab chooses the folders it imports to."),
+                           nullptr, TEXT("PATH_NOT_PERMITTED"));
     return true;
   }
 

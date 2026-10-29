@@ -3,6 +3,7 @@
 #include "CoreMinimal.h"
 #include "Components/ActorComponent.h"
 #include "GameFramework/Actor.h"
+#include "Safety/McpSafeReflectionTarget.h"
 #include "UObject/UnrealType.h"
 
 // Up to 8 property names of Scope sharing a word (3+ letters, split at capitals) with Wanted, so a
@@ -147,6 +148,15 @@ static inline FProperty *ResolveNestedPropertyPath(UObject *RootObject,
         OutError = FString::Printf(
             TEXT("Object property '%s' is null (segment %d of %d)"), *Segment,
             Index + 1, PathSegments.Num());
+        return nullptr;
+      }
+      // The root was checked before the walk; a reference can lead anywhere, so each object it enters is checked
+      // too: a /Script settings CDO (bRequireCapabilityToken, the tokens) is never reachable this way, nor a
+      // package outside a path-restricted caller's prefixes.
+      if (!McpSafeReflectionTarget::IsAddressable(NextObject)) {
+        OutError = FString::Printf(
+            TEXT("Object property '%s' references %s, which the property walk may not enter (segment %d of %d)"),
+            *Segment, *NextObject->GetPathName(), Index + 1, PathSegments.Num());
         return nullptr;
       }
       CurrentContainer = NextObject;

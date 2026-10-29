@@ -72,9 +72,22 @@ bool HandleInspectRaycastWorldAction(
     const TArray<TSharedPtr<FJsonValue>> *Ignore = nullptr;
     if (Payload->TryGetArrayField(TEXT("ignoreActors"), Ignore) && Ignore)
     {
+        // Each name is found by a walk of the level: a few names, each once.
+        if (Ignore->Num() > 100)
+        {
+            Bridge.SendAutomationError(RequestingSocket, RequestId, TEXT("ignoreActors names at most 100 actors."), TEXT("INVALID_ARGUMENT"));
+            return true;
+        }
+        TSet<FString> Looked;
         for (const TSharedPtr<FJsonValue> &Name : *Ignore)
         {
             const FString ActorName = Name.IsValid() ? Name->AsString() : FString();
+            bool bAgain = false;
+            Looked.Add(ActorName, &bAgain);
+            if (bAgain)
+            {
+                continue;
+            }
             AActor *Actor = McpHandlerUtils::FindActorByName(ActorName);
             if (!Actor)
             {

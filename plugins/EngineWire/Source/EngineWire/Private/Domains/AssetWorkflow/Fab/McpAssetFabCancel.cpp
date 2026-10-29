@@ -2,6 +2,7 @@
 
 #include "EngineWireSubsystem.h"
 #include "Foundation/HandlerUtils/McpHandlerUtils.h"
+#include "Foundation/McpCapabilityPrincipal.h"
 #include "Domains/AssetWorkflow/Fab/McpFabImportJson.h"
 #include "McpFabProvider.h"
 
@@ -26,6 +27,16 @@ bool UEngineWireSubsystem::HandleCancelFabImport(
         Socket, RequestId, false,
         TEXT("Fab support is not loaded in this editor, so there is no import to cancel."),
         nullptr, TEXT("NOT_SUPPORTED"));
+    return true;
+  }
+
+  // A path-restricted principal cannot start a Fab import (add_fab_asset_to_project refuses it), so every import is
+  // someone else's: its folders are unknown to this call, and a path the request names does not cover them.
+  const FMcpCapabilityPrincipal *Caller = McpCapabilityPrincipal::ActiveRequestPrincipal();
+  if (Caller && Caller->IsPathRestricted()) {
+    SendAutomationResponse(Socket, RequestId, false,
+                           TEXT("A path-restricted principal cannot cancel a Fab import: it can start none."),
+                           nullptr, TEXT("PATH_NOT_PERMITTED"));
     return true;
   }
 

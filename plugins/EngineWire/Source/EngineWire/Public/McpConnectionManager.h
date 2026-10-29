@@ -177,13 +177,14 @@ private:
 	// silently allowing unauthenticated access.
 	bool bRequireCapabilityToken = true;
 	bool bEnableTls = false;
-	bool bHeartbeatTrackingEnabled = false;
 
 	// State
 	bool bBridgeAvailable = false;
 	bool bReconnectEnabled = true;
 	float TimeUntilReconnect = 0.0f;
-	double LastHeartbeatTimestamp = 0.0;
+	// When each authenticated socket last answered a ping. Per socket: one manager-wide stamp let any connection
+	// (an unauthenticated one included) arm a timeout that then closed every other connection, again on every tick.
+	TMap<FMcpBridgeWebSocket*, double> LastHeartbeatBySocket;
 	int32 MaxMessagesPerMinute = 0;
 	int32 MaxAutomationRequestsPerMinute = 0;
 

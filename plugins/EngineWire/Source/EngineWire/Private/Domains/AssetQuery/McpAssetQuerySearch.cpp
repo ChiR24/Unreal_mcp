@@ -194,6 +194,11 @@ bool HandleSearchAssets(
 
     TArray<FAssetData> AssetDataList;
     AssetRegistry.GetAssets(Filter, AssetDataList);
+    // A path-restricted caller sees only its own prefixes, whatever root the search ran from (/Game when omitted).
+    AssetDataList.RemoveAll([](const FAssetData& Data)
+    {
+        return !McpCapabilityPrincipal::ActiveRequestPermitsPath(Data.PackageName.ToString());
+    });
 
     if (!SearchText.IsEmpty())
     {

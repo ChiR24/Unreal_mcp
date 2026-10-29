@@ -69,10 +69,12 @@ bool HandleThumbnailSheet(UEngineWireSubsystem* Bridge, const FString& RequestId
     const int32 Limit = FMath::Clamp(static_cast<int32>(GetJsonNumberField(Payload, TEXT("limit"), 12)), 1, 16);
     const McpAssetRetrieval::FIndex& Index = McpAssetRetrieval::TheIndex();
     TArray<FAssetData> Assets = McpAssetRetrieval::AssetsUnder(Folder, Class);
-    if (bUncaptioned)
+    // A path-restricted caller sees only its own prefixes, whatever folder the sheet ran from (/Game when omitted).
+    Assets.RemoveAll([&Index, bUncaptioned](const FAssetData& Data)
     {
-        Assets.RemoveAll([&Index](const FAssetData& Data) { return Index.Captions.Contains(Data.PackageName.ToString()); });
-    }
+        return (bUncaptioned && Index.Captions.Contains(Data.PackageName.ToString())) ||
+               !McpCapabilityPrincipal::ActiveRequestPermitsPath(Data.PackageName.ToString());
+    });
     TArray<McpPerception::Sheet::FTile> Tiles;
     TArray<TSharedPtr<FJsonValue>> Rows;
     int32 Missing = 0;

@@ -5,6 +5,7 @@
 #include "AssetRegistry/AssetRegistryModule.h"
 #include "AssetToolsModule.h"
 #include "Domains/AssetWorkflow/Rename/McpAssetRenameFollowSupport.h"
+#include "Foundation/McpCapabilityPrincipal.h"
 #include "UObject/SoftObjectPtr.h"
 #include "UObject/UObjectIterator.h"
 #include "UObject/UnrealType.h"
@@ -193,6 +194,15 @@ bool RenameWithSettingsFollow(const TArray<FAssetRenameData>& RenameData, const 
     {
         if (const UObject* Asset = Data.Asset.Get())
         {
+            // A path-restricted caller moves only inside its prefixes, both ends: the gate saw the paths it sent, not
+            // a short name resolved elsewhere or a destination built from newName beside a folder.
+            if (!McpCapabilityPrincipal::ActiveRequestPermitsPath(Asset->GetOutermost()->GetName()) ||
+                !McpCapabilityPrincipal::ActiveRequestPermitsPath(Data.NewPackagePath / Data.NewName))
+            {
+                OutFailure = FString::Printf(TEXT("Moving %s to %s leaves the caller's allowed paths; nothing was renamed."),
+                                             *Asset->GetOutermost()->GetName(), *(Data.NewPackagePath / Data.NewName));
+                return false;
+            }
             Follow.ByPackage.Add(Asset->GetOutermost()->GetFName(),
                                  FMcpRenameTarget{Asset->GetName(), Data.NewPackagePath / Data.NewName + TEXT(".") + Data.NewName});
         }

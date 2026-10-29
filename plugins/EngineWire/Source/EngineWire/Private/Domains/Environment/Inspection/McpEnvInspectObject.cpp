@@ -1,5 +1,6 @@
 #include "Domains/Environment/McpEnvShared.h"
 #include "Foundation/HandlerUtils/McpHandlerUtilsTransforms.h"
+#include "Safety/McpSafeReflectionTarget.h"
 #include "Components/SkeletalMeshComponent.h"
 #include "Components/StaticMeshComponent.h"
 #include "Engine/SkeletalMesh.h"
@@ -134,6 +135,12 @@ bool HandleInspectObjectAction(
             ObjectPath = Mesh->GetPathName();
         }
     }
+    // A short name or an actor label resolves anywhere; a path-restricted caller reads only inside its prefixes.
+    if (!McpCapabilityPrincipal::ActiveRequestPermitsObject(TargetObject))
+    {
+        Bridge.SendAutomationError(RequestingSocket, RequestId, McpSafeReflectionTarget::DenyMessage(), McpSafeReflectionTarget::DenyCode());
+        return true;
+    }
     const FString Wanted = McpInspectWrongTypeReason(Action, TargetObject);
     if (!Wanted.IsEmpty())
     {
@@ -256,6 +263,13 @@ bool HandleInspectObjectAction(
     const TArray<FString> PropertyNames = McpReadStringListField(Payload, TEXT("propertyNames"), TEXT("propertyName"));
     if (PropertyNames.Num() > 0 || GetJsonBoolField(Payload, TEXT("detailed"), false))
     {
+        // The boundary get_property reads through: a /Script settings CDO (/Script/EngineWire.Default__EngineWire
+        // Settings holds CapabilityToken and the scoped tokens) never has its properties dumped.
+        if (!McpSafeReflectionTarget::IsAddressable(DumpTarget))
+        {
+            Bridge.SendAutomationError(RequestingSocket, RequestId, McpSafeReflectionTarget::DenyMessage(), McpSafeReflectionTarget::DenyCode());
+            return true;
+        }
         McpAppendPropertyDump(DumpTarget, PropertyNames, Resp);
     }
     // Material / mesh / texture / Blueprint specifics; a no-op for other objects.

@@ -3,6 +3,7 @@
 #include "EngineWireSubsystem.h"
 #include "Domains/AssetWorkflow/Operations/McpAssetContentSourceRoots.h"
 #include "Foundation/HandlerUtils/McpHandlerUtils.h"
+#include "Foundation/McpCapabilityPrincipal.h"
 
 #include "Dom/JsonObject.h"
 #include "HAL/FileManager.h"
@@ -75,6 +76,22 @@ bool UEngineWireSubsystem::HandleMigrateAssets(
     }
     const FString Scoped = FPaths::Combine(ContentDir, SubPath);
     ContentDir = IFileManager::Get().DirectoryExists(*Scoped) ? Scoped : ScopedDir;
+  }
+
+  // The project's own content is read here as files, past the packages the gate checks: a path-restricted caller
+  // copies from it only inside its prefixes, and from the project's plugins not at all.
+  const FMcpCapabilityPrincipal *Caller = McpCapabilityPrincipal::ActiveRequestPrincipal();
+  if (Caller && Caller->IsPathRestricted() && (SourceRoot == TEXT("projectPlugins") || SourceRoot == TEXT("projectContent"))) {
+    FString SourcePackage = TEXT("/Game");
+    for (const FString *Part : {&SourceId, &SubPath}) {
+      SourcePackage = Part->IsEmpty() ? SourcePackage : SourcePackage / *Part;
+    }
+    if (SourceRoot == TEXT("projectPlugins") || !McpCapabilityPrincipal::ActiveRequestPermitsPath(SourcePackage)) {
+      SendAutomationResponse(Socket, RequestId, false,
+                             TEXT("This project's own content outside the allowed paths is not a migration source for a path-restricted principal."),
+                             nullptr, TEXT("PATH_NOT_PERMITTED"));
+      return true;
+    }
   }
 
   TArray<FString> RelativeFiles;

@@ -3,6 +3,7 @@
 #include "EngineWireSubsystem.h"
 #include "Foundation/BridgeHelpers/McpHelpers.h"
 #include "Foundation/HandlerUtils/McpHandlerUtils.h"
+#include "Foundation/McpCapabilityPrincipal.h"
 
 #include "Async/Async.h"
 #include "Dom/JsonObject.h"
@@ -104,6 +105,15 @@ bool UEngineWireSubsystem::HandleSourceControlRepo(
         return true;
       }
     }
+  }
+
+  // git add -A stages the whole project: no subtree a path-restricted caller names confines it.
+  const FMcpCapabilityPrincipal *Caller = McpCapabilityPrincipal::ActiveRequestPrincipal();
+  if (Caller && Caller->IsPathRestricted()) {
+    SendAutomationError(RequestingSocket, RequestId,
+        TEXT("A path-restricted principal cannot initialize or commit the whole repository; nothing was run."),
+        TEXT("PATH_NOT_PERMITTED"));
+    return true;
   }
 
   const bool bRepoExists = FPaths::DirectoryExists(FPaths::Combine(ProjectDir, TEXT(".git")));

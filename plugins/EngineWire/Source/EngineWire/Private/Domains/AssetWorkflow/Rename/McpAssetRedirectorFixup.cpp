@@ -111,6 +111,13 @@ void FixupRedirectorsIn(const FString& Folder, int32& OutFound, int32& OutFixed,
             {
                 continue;
             }
+            // A referrer outside a path-restricted caller's prefixes is neither loaded nor rewritten; the redirector it
+            // still reads through is kept.
+            if (!McpCapabilityPrincipal::ActiveRequestPermitsPath(Name.ToString()))
+            {
+                Fix.bKeep = true;
+                continue;
+            }
             UPackage* Package = FindPackage(nullptr, *Name.ToString());
             if (!Package)
             {

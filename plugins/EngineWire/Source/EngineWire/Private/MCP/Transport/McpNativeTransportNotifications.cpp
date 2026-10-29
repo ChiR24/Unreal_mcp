@@ -148,9 +148,19 @@ void FMcpNativeTransport::HandleGetMcp(FSocket* ClientSocket, const FString& Ses
 		bool bClosed;
 		{ FScopeLock L(&SessionMutex); bClosed = !ActiveSessions.Contains(SessionId); }
 		if (bClosed) {
-			FScopeLock L(&NotificationStreamsMutex);
-			NotificationStreams.Remove(Stream->StreamId);
-			bSessionInvalid = true;
+			{
+				FScopeLock L(&NotificationStreamsMutex);
+				NotificationStreams.Remove(Stream->StreamId);
+			}
+			// Published, so a concurrent DELETE may already have closed and destroyed the socket through the stream:
+			// answer through Stream->Socket under its lock, never through the raw ClientSocket alias.
+			FScopeLock WriteLock(&Stream->WriteMutex);
+			if (Stream->Socket)
+			{
+				SendHttpResponse(Stream->Socket, 404, TEXT("text/plain"), TEXT("Invalid or expired session ID"), {}, CorsOrigin);
+				CloseSocket(Stream->Socket);
+			}
+			return;
 		}
 	}
 	if (bSessionInvalid)

@@ -10,6 +10,7 @@
 #include "Dom/JsonObject.h"
 #include "Engine/SkeletalMesh.h"
 #include "Engine/StaticMesh.h"
+#include "HAL/PlatformFileManager.h"
 #include "Materials/MaterialInstance.h"
 #include "Misc/PackageName.h"
 #include "Misc/Paths.h"
@@ -131,15 +132,29 @@ bool Plan(const FString& Destination, const FString& AssetName, const FString& O
 	return true;
 }
 
-/** The folders the moved assets left empty, from the deepest up; the folders every import shares stay. */
-void PruneEmptyFolders(const FString& Folder)
+/** The folders the moved assets left empty, from the deepest up; the folders every import shares stay. Moved holds the
+ *  packages that left: their files on disk may go with a folder, nothing else may. */
+void PruneEmptyFolders(const FString& Folder, const TSet<FString>& Moved)
 {
 	IAssetRegistry& Registry = FModuleManager::LoadModuleChecked<FAssetRegistryModule>(TEXT("AssetRegistry")).Get();
 	for (FString Current = Folder; IsListingFolder(Current); Current = FPaths::GetPath(Current))
 	{
 		TArray<FAssetData> Left;
 		Registry.GetAssetsByPath(FName(*Current), Left, /*bRecursive=*/true);
-		if (Left.Num() > 0 || !McpSafeOperations::McpSafeDeleteFolder(Current))
+		// The registry knows the packages it scanned: a file of anything else (a readme, a source texture, a package
+		// nobody scanned) keeps the folder, which the folder delete would have taken with the rest, recursively.
+		FString Disk;
+		TArray<FString> Files;
+		if (FPackageName::TryConvertLongPackageNameToFilename(Current, Disk))
+		{
+			FPlatformFileManager::Get().GetPlatformFile().FindFilesRecursively(Files, *Disk, nullptr);
+		}
+		const bool bForeign = Files.ContainsByPredicate([&Moved](const FString& File)
+		{
+			FString Package;
+			return !FPackageName::TryConvertFilenameToLongPackageName(File, Package) || !Moved.Contains(Package);
+		});
+		if (bForeign || Left.Num() > 0 || !McpSafeOperations::McpSafeDeleteFolder(Current))
 		{
 			return;
 		}
@@ -244,6 +259,11 @@ void Apply(const FString& Destination, const FString& AssetName, FMcpFabAddResul
 	int32 Found = 0;
 	int32 Fixed = 0;
 	McpAssetRename::FixupRedirectorsIn(OldRoot, Found, Fixed);
-	PruneEmptyFolders(OldRoot);
+	TSet<FString> Moved;
+	for (const FMove& Move : Moves)
+	{
+		Moved.Add(Move.OldPackage());
+	}
+	PruneEmptyFolders(OldRoot, Moved);
 }
 } // namespace McpFabRelocate

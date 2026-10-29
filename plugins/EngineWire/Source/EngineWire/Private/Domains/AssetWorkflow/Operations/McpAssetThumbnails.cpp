@@ -146,11 +146,12 @@ bool UEngineWireSubsystem::HandleGenerateThumbnail(
         ColorData.Add(Color);
       }
 
-      // SECURITY: Sanitize and validate the output path to prevent path traversal
+      // SECURITY: Sanitize and validate the output path to prevent path traversal. A .png only: any project file was
+      // writable here, so a config or source file could be replaced with image bytes.
       FString SafeOutputPath = SanitizeProjectFilePath(OutputPath);
-      if (SafeOutputPath.IsEmpty()) {
+      if (SafeOutputPath.IsEmpty() || !SafeOutputPath.EndsWith(TEXT(".png"), ESearchCase::IgnoreCase)) {
         SendAutomationResponse(RequestingSocket, RequestId, false,
-                               FString::Printf(TEXT("Invalid or unsafe output path: %s"), *OutputPath),
+                               FString::Printf(TEXT("outputPath must name a .png file inside the project: %s"), *OutputPath),
                                nullptr, TEXT("SECURITY_VIOLATION"));
         return true;
       }

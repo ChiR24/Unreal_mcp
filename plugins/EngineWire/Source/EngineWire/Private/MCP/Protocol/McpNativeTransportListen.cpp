@@ -101,6 +101,7 @@ void FMcpNativeTransport::HandleSubscriptionsListen(FSocket* ClientSocket, const
 	Stream->ListenId = Rpc.Id;
 	Stream->bListenChanges = Uris.Contains(McpResourceCatalog::ChangesUri());
 	Stream->ChangesSeq = McpChangeJournal::LatestSeq();
+	bool bPublished = false;
 	{
 		// The same caps as GET /mcp streams; modern clients share one session per principal, so this is per token.
 		FScopeLock Lock(&NotificationStreamsMutex);
@@ -117,17 +118,16 @@ void FMcpNativeTransport::HandleSubscriptionsListen(FSocket* ClientSocket, const
 				}
 			}
 		}
-		if (Total < MaxTotalNotificationStreams && Mine < MaxNotificationStreamsPerSession)
+		bPublished = Total < MaxTotalNotificationStreams && Mine < MaxNotificationStreamsPerSession;
+		if (bPublished)
 		{
 			NotificationStreams.Add(Stream->StreamId, Stream);
 		}
-		else
-		{
-			Stream->Socket = nullptr;
-		}
 	}
-	if (!Stream->Socket)
+	// Once published, teardown may close the socket through the stream at any moment; until then it is ours alone.
+	if (!bPublished)
 	{
+		Stream->Socket = nullptr;
 		Refuse(FMcpJsonRpc::BuildError(Rpc.Id, FMcpJsonRpc::ErrorInternalError, TEXT("Subscription limit reached")));
 		return;
 	}
@@ -150,7 +150,7 @@ void FMcpNativeTransport::HandleSubscriptionsListen(FSocket* ClientSocket, const
 	bool bOpened = false;
 	{
 		FScopeLock WriteLock(&Stream->WriteMutex);
-		bOpened = SendSSEHeaders(ClientSocket, FString(), HttpReq.Origin) && SendSSEFrame(ClientSocket, Ack);
+		bOpened = Stream->Socket && SendSSEHeaders(Stream->Socket, FString(), HttpReq.Origin) && SendSSEFrame(Stream->Socket, Ack);
 		if (!bOpened)
 		{
 			CloseSocket(Stream->Socket);

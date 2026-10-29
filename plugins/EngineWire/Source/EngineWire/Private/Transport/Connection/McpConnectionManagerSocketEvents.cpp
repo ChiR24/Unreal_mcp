@@ -110,11 +110,10 @@ void FMcpConnectionManager::HandleClosed(TSharedPtr<FMcpBridgeWebSocket> Socket,
 
 void FMcpConnectionManager::HandleHeartbeat(
     TSharedPtr<FMcpBridgeWebSocket> Socket) {
-  LastHeartbeatTimestamp = FPlatformTime::Seconds();
-  if (!bHeartbeatTrackingEnabled) {
-    bHeartbeatTrackingEnabled = true;
-    UE_LOG(LogEngineWireSubsystem, Verbose,
-           TEXT("Heartbeat tracking enabled."));
+  // Only a socket past bridge_hello is tracked, and only it is closed when its own pings stop (Tick).
+  FScopeLock Lock(&AuthSocketsMutex);
+  if (Socket.IsValid() && AuthenticatedSockets.Contains(Socket.Get())) {
+    LastHeartbeatBySocket.Add(Socket.Get(), FPlatformTime::Seconds());
   }
 }
 
@@ -122,6 +121,7 @@ void FMcpConnectionManager::ForgetSocket(const TSharedPtr<FMcpBridgeWebSocket> &
   {
     FScopeLock Lock(&AuthSocketsMutex);
     AuthenticatedSockets.Remove(Socket.Get());
+    LastHeartbeatBySocket.Remove(Socket.Get());
   }
   ForgetSocketPrincipal(Socket.Get());
   {
@@ -153,6 +153,7 @@ void FMcpConnectionManager::ForgetAllSockets() {
   {
     FScopeLock Lock(&AuthSocketsMutex);
     AuthenticatedSockets.Empty();
+    LastHeartbeatBySocket.Empty();
     // Principals are security state keyed by a raw socket pointer; they must not
     // outlive the sockets just released.
     SocketPrincipals.Empty();

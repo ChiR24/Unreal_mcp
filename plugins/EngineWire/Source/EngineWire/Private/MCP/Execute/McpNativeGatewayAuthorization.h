@@ -16,6 +16,10 @@
 // accept exactly the same tokens with exactly the same authority.
 FMcpCapabilityPrincipal McpResolveNativePrincipal(const FString& PresentedToken);
 
+// Start records whether its listener is bound to loopback only; a token-free request gets the loopback principal only
+// from such a listener, whatever bAllowNonLoopback says by then.
+void McpSetNativeListenerLoopback(bool bLoopback);
+
 // True when the presented token resolves to a DIFFERENT principal than the one
 // bound to the session — a token swap, which is refused with 401 before the
 // session is used for anything.

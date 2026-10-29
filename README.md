@@ -316,7 +316,7 @@ Most setups touch one setting: `UE_PROJECT_PATH` for Route B; Route A needs none
 
 ## Security
 
-- **Local by default.** Both routes listen on `127.0.0.1` only. LAN access needs **Allow Non Loopback**, and the native server refuses to bind off-loopback unless **Require Capability Token** is on.
+- **Local by default.** Both routes listen on `127.0.0.1` only. The native server never binds off-loopback: it has no TLS, so reach it from another machine through an SSH tunnel (`ssh -L 3000:127.0.0.1:3000`) or a TLS proxy. The WebSocket bridge binds a LAN address only with **Allow Non Loopback**, **Require Capability Token** and **Enable Tls** all on. The proxy sends the token to another machine only with `UNREAL_MCP_ALLOW_REMOTE_TOKEN=1`.
 - **Capability token.** Generated per project at `<Project>/Saved/MCP/capability-token` (a value typed into **Capability Token** overrides it) and compared in constant time. Delete the file and restart the editor to rotate it.
 - **Consent for destructive work.** Deletes and some other writes need a per-call consent grant, which the plugin checks itself.
 - **Guard rails.** Asset paths are limited to `/Game`, `/Engine`, `/Script`, `/Temp` and `/Niagara`, and a content path may also sit under a mount the connected editor reports; arguments the server treats as files (such as `filePath`, and `outputPath` even where it names an asset) never use the reported mounts; console commands that chain or quit the editor are blocked; the plugin's own settings are out of reach of automation.

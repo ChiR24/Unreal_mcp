@@ -81,15 +81,24 @@ bool UEngineWireSubsystem::HandleControlEditorSetViewTarget(
     return true;
   }
 
+  // Pointing the view is a read; moving its target is an actor edit, which a read-scoped caller may not make.
+  const bool bMayMove = McpCapabilityPrincipal::ActiveRequestHoldsScope(EMcpCapabilityScope::Write);
+  const bool bHasLocation = Payload->HasField(TEXT("location"));
+  const bool bHasRotation = Payload->HasField(TEXT("rotation"));
+  if ((bHasLocation || bHasRotation) && !bMayMove) {
+    SendStandardErrorResponse(this, Socket, RequestId, TEXT("SCOPE_NOT_GRANTED"),
+                              TEXT("location and rotation move the view target, which needs the write scope; "
+                                   "send set_view_target without them to only point the view"),
+                              nullptr);
+    return true;
+  }
   const bool bTargetInPIE = TargetActor->GetWorld() == PlayWorld;
   const bool bCanSyncFromEditor =
-      bTargetInPIE && EditorSourceActor && EditorSourceActor != TargetActor;
+      bMayMove && bTargetInPIE && EditorSourceActor && EditorSourceActor != TargetActor;
   const FTransform SourceTransform = bCanSyncFromEditor
       ? EditorSourceActor->GetActorTransform()
       : TargetActor->GetActorTransform();
 
-  const bool bHasLocation = Payload->HasField(TEXT("location"));
-  const bool bHasRotation = Payload->HasField(TEXT("rotation"));
   const FVector Location =
       ExtractVectorField(Payload, TEXT("location"), SourceTransform.GetLocation());
   const FRotator Rotation =

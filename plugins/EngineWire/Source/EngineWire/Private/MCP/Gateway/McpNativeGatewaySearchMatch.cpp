@@ -166,14 +166,13 @@ void McpSearchWords(const FString& Text, TArray<FString>& OutWords)
 
 void McpSearchContentWords(const TArray<FString>& AllWords, TArray<FString>& OutContent)
 {
+	// A set beside the ordered list: scanning the list for each word was quadratic in a long query. Words arrive
+	// lower-cased (McpSearchWords), so the set's case-blind compare is the exact one.
+	TSet<FString> Seen;
 	for (const FString& Word : AllWords)
 	{
-		if (IsFunctionWord(Word)) continue;
-		bool bSeen = false;
-		for (const FString& Kept : OutContent)
-		{
-			if (Kept.Equals(Word, ESearchCase::CaseSensitive)) { bSeen = true; break; }
-		}
+		bool bSeen = IsFunctionWord(Word);
+		if (!bSeen) Seen.Add(Word, &bSeen);
 		if (!bSeen) OutContent.Add(Word);
 	}
 }

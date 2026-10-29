@@ -101,3 +101,18 @@ inline void ForEachExpressionInput(UMaterialExpression* Expr, TVisitor&& Visit)
     }
   }
 }
+
+// The input of Expression a reflected property names, or null. Only storage the engine's own input list holds is an
+// input: a vector parameter's DefaultValue is a struct property too, and wiring it as an input wrote over the colour.
+inline FExpressionInput* FindMaterialInputProperty(UMaterialExpression* Expression, const FString& Name)
+{
+  const FStructProperty* Prop = CastField<FStructProperty>(Expression->GetClass()->FindPropertyByName(FName(*Name)));
+  FExpressionInput* Storage = Prop ? Prop->ContainerPtrToValuePtr<FExpressionInput>(Expression) : nullptr;
+  for (int32 Index = 0; Storage; ++Index) {
+    FExpressionInput* Input = Expression->GetInput(Index);
+    if (!Input || Input == Storage) {
+      return Input;
+    }
+  }
+  return nullptr;
+}

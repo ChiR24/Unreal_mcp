@@ -18,6 +18,10 @@
 #include "Misc/PackageName.h"
 #include "Misc/Paths.h"
 
+/** How this platform's file system compares names, for a check that a file lies under a folder: Linux tells "proj"
+ *  from "Proj", so a case-blind check let a caller reach a sibling folder spelled with other capitals. */
+static constexpr ESearchCase::Type McpFileNameCase = PLATFORM_UNIX ? ESearchCase::CaseSensitive : ESearchCase::IgnoreCase;
+
 /** Why SanitizeProjectRelativePath refused a path. */
 enum class EMcpPathRejection : uint8 {
   None,
@@ -249,7 +253,7 @@ static inline bool McpValidateProjectSnapshotFilePath(const FString &AbsolutePat
 
   const FString NormalizedProjectDir = McpProjectRootDir();
 
-  if (!NormalizedAbsolute.StartsWith(NormalizedProjectDir, ESearchCase::IgnoreCase)) {
+  if (!NormalizedAbsolute.StartsWith(NormalizedProjectDir, McpFileNameCase)) {
     OutError = TEXT("SECURITY_VIOLATION: Snapshot path escapes project directory");
     return false;
   }

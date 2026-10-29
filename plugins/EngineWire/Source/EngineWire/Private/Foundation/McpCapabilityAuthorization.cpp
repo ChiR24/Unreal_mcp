@@ -167,6 +167,13 @@ FMcpAuthorizationDecision CheckPaths(
 				McpAuthorizationCodes::PathNotPermitted,
 				TEXT("A path in this request is not in canonical form and was refused."));
 		}
+		// Collection carries a relative path-parameter value raw: handlers root it differently, so it names no
+		// one package this check could hold to a prefix.
+		if (!Path.StartsWith(TEXT("/")))
+		{
+			return FMcpAuthorizationDecision::Deny(McpAuthorizationCodes::PathNotPermitted, FString::Printf(
+				TEXT("Path '%s' is relative; a path-restricted principal names each path in full (/Game/...)."), *Path));
+		}
 		bool bPermitted = false;
 		for (const FString& Prefix : Principal.AllowedPathPrefixes)
 		{

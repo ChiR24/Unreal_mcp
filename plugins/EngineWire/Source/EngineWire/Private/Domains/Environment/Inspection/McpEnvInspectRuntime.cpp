@@ -92,7 +92,8 @@ bool HandleInspectRuntimeReportAction(
                     continue;
                 }
                 ++TotalActorCount;
-                if (!bIsPIE || !bListActors)
+                // A path-restricted caller reads only actors of a level inside its prefixes.
+                if (!bIsPIE || !bListActors || !McpCapabilityPrincipal::ActiveRequestPermitsObject(Actor))
                 {
                     continue;
                 }

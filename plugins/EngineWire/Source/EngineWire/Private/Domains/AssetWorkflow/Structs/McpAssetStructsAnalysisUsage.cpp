@@ -1,5 +1,6 @@
 #include "Domains/AssetWorkflow/Structs/McpAssetStructsShared.h"
 #include "Domains/AssetWorkflow/Structs/McpAssetStructsAnalysis.h"
+#include "Foundation/McpCapabilityPrincipal.h"
 #include "Engine/DataAsset.h"
 #include "Kismet2/CompilerResultsLog.h"
 
@@ -17,7 +18,8 @@ bool HandleStructAnalysisSearchUsage(UEngineWireSubsystem& Bridge, const FString
     FString SearchScope = GetJsonStringField(Payload, TEXT("searchScope"));
     ForEachReferencingAsset(S, [&](UObject* Asset)
     {
-        if (!Asset) return;
+        // A path-restricted caller hears only of the users inside its prefixes.
+        if (!Asset || !McpCapabilityPrincipal::ActiveRequestPermitsObject(Asset)) return;
         if (!SearchScope.IsEmpty() && !Asset->GetPathName().StartsWith(SearchScope))
         {
             return;
@@ -60,6 +62,24 @@ bool HandleStructAnalysisRecompile(UEngineWireSubsystem& Bridge, const FString& 
     UUserDefinedStruct* S = LoadStructOrReply(Bridge, RequestId, RequestingSocket, StructPath);
     if (!S)
     {
+        return true;
+    }
+
+    // Recompiling a struct rebuilds and saves everything that uses it: a path-restricted caller may only when all of
+    // that lies inside its prefixes, or a Blueprint elsewhere is rebuilt on its behalf. Checked before anything changes;
+    // the user elsewhere is not named, as the usage listing does not name it either.
+    bool bOutside = false;
+    const auto NoteOutside = [&bOutside](const UObject* User)
+    {
+        bOutside |= User && !McpCapabilityPrincipal::ActiveRequestPermitsObject(User);
+    };
+    ForEachReferencingAsset(S, [&NoteOutside](UObject* Asset) { NoteOutside(Asset); });
+    ForEachReferencingBlueprint(S, [&NoteOutside](UBlueprint* BP) { NoteOutside(BP); });
+    if (bOutside)
+    {
+        Bridge.SendAutomationError(RequestingSocket, RequestId,
+            TEXT("An asset that uses this struct lies outside the caller's allowed paths; nothing was recompiled."),
+            TEXT("PATH_NOT_PERMITTED"));
         return true;
     }
 

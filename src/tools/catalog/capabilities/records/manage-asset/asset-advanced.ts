@@ -143,7 +143,7 @@ export const ASSET_ADVANCED_RECORDS: readonly RecordSpec[] = [
     schema({
       assetPath: str('Asset to export, e.g. /Game/Meshes/SM_Rock or /Engine/BasicShapes/Cube. A skeletal mesh is written with its skeleton; an animation sequence is written on its skeleton\'s preview mesh.'),
       format: { type: 'string', enum: ['glb', 'gltf', 'fbx', 'obj'], description: 'File format; default glb, or the extension outputPath ends in. glb and gltf are scaled to meters with materials converted to glTF PBR; fbx and obj keep centimeters.' },
-      outputPath: str('Where to write, inside the project, project-relative or absolute: a file (Saved/Exports/Rocks/SM_Rock.glb) or a folder, which gets <asset name>.<format>. A file already there is replaced.'),
+      outputPath: str('Where to write, inside the project, project-relative or absolute: a file (Saved/Exports/Rocks/SM_Rock.glb) or a folder, which gets <asset name>.<format>. A file already there is replaced, so naming one needs the write scope.'),
     }, ['assetPath']),
     schema({
       success: bool('Operation succeeded.'),
@@ -154,7 +154,8 @@ export const ASSET_ADVANCED_RECORDS: readonly RecordSpec[] = [
       otherFiles: arrObj('Files the export wrote beside it, each {name, bytes}: a gltf\'s .bin buffers and textures, obj\'s UV and collision variants.'),
       details: { type: 'object', 'x-unreal-reflection-boundary': true, description: 'Operation details.' },
     }, ['success']),
-    READ, READ_POLICY, MEDIUM,
+    // A destination of the caller's choosing reaches any file in the project; Saved/Exports holds only exports.
+    READ, { ...READ_POLICY, raisedBy: { outputPath: 'write' } }, MEDIUM,
     { topics: ['export mesh', 'export gltf', 'export glb', 'export fbx', 'export obj', 'save mesh to file', 'mesh to blender', 'export model'],
       whenToUse: [
         'A mesh must leave the editor as a file: for Blender or another DCC tool, a web viewer, a mesh checker or a 3D printer.',

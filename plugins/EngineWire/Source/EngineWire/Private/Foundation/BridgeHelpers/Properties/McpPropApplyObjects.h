@@ -6,6 +6,7 @@
 #include "Dom/JsonObject.h"
 #include "Engine/StaticMesh.h"
 #include "JsonObjectConverter.h"
+#include "Foundation/McpCapabilityPrincipal.h"
 #include "Foundation/Reflection/McpPropertyReflectionPrivate.h"
 #include "Serialization/JsonReader.h"
 #include "Serialization/JsonSerializer.h"
@@ -122,6 +123,12 @@ static inline bool ApplyJsonObjectValueToProperty(void *TargetContainer, FProper
       if (!Res) {
         OutError =
             FString::Printf(TEXT("Failed to load object at path: %s"), *Path);
+        return false;
+      }
+      // A path decoded from a JSON-encoded array value never met the gate's scan: a path-restricted caller
+      // references only what lies inside its prefixes, as the paths it sends plainly are held to.
+      if (!McpCapabilityPrincipal::ActiveRequestPermitsObject(Res)) {
+        OutError = FString::Printf(TEXT("%s is outside the caller's allowed paths"), *Path);
         return false;
       }
       // Stored as-is, an object of the wrong class crashes whatever reads it later.

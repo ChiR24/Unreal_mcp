@@ -1,5 +1,5 @@
 {
-  "catalogRevision": "22c4c10a576539e2",
+  "catalogRevision": "a934f2b46b4d3890",
   "recordCount": 480,
   "records": [
     {
@@ -9849,7 +9849,7 @@
             },
             "outputPath": {
               "type": "string",
-              "description": "Where to write, inside the project, project-relative or absolute: a file (Saved/Exports/Rocks/SM_Rock.glb) or a folder, which gets <asset name>.<format>. A file already there is replaced."
+              "description": "Where to write, inside the project, project-relative or absolute: a file (Saved/Exports/Rocks/SM_Rock.glb) or a folder, which gets <asset name>.<format>. A file already there is replaced, so naming one needs the write scope."
             }
           },
           "required": [
@@ -9933,7 +9933,10 @@
       "policy": {
         "requiredScope": "read",
         "consent": "none",
-        "dataAccess": "project-read"
+        "dataAccess": "project-read",
+        "raisedBy": {
+          "outputPath": "write"
+        }
       },
       "cost": {
         "latency": "interactive",
@@ -9945,8 +9948,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "f11c40d9eaa6700b6d3829ad8867ad550bf9699e08e07b77c0b69900e7693d47",
-        "content": "1d223cb6110977f590a20b3197a0df37d7ea80b3dfbc9d72a9b1ec00fb1bd39e"
+        "schema": "d8757b08eeb81d173dff63d4efdee4c9c82239f440bdac0f5ac9e54c5fbd31c7",
+        "content": "2f56909bdb45c7eecf03889f7ed027352a01ee750d4620c0120e0e767fa33390"
       }
     },
     {
@@ -50748,7 +50751,7 @@
             },
             "path": {
               "type": "string",
-              "description": "Directory to save the PNG in, inside the project (relative to it, or absolute under it). Default Saved/Screenshots (game_viewport: Saved/Screenshots/WindowsEditor). A path outside the project is refused."
+              "description": "Directory to save the PNG in, inside the project (relative to it, or absolute under it); naming one needs the write scope, since a file already there is replaced. Default Saved/Screenshots (game_viewport: Saved/Screenshots/WindowsEditor). A path outside the project is refused."
             },
             "resolution": {
               "type": "string",
@@ -50979,7 +50982,10 @@
       "policy": {
         "requiredScope": "read",
         "consent": "none",
-        "dataAccess": "project-read"
+        "dataAccess": "project-read",
+        "raisedBy": {
+          "path": "write"
+        }
       },
       "cost": {
         "latency": "interactive",
@@ -50991,8 +50997,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "5a8953cc2baaae257b2246c0294dc8e002e928fad31520f4a0c68e99accda056",
-        "content": "927843a2293eea342963b6ad052659956f6a1833369ae4915d0c862fbf93fbe4"
+        "schema": "a576b1d513f4af1b44c58537b473bfcf4bcba1f063a2b1fff1c70eeef6527e43",
+        "content": "c8266fcecb8d8ed3c58bd6dd3dfc4dafbb4c9e3f9c6fe4b2b0e77f6630fada08"
       }
     },
     {
@@ -51147,7 +51153,7 @@
                 "fov",
                 "view_target"
               ],
-              "description": "Which set camera variant to run; omit for 'transform'.\ntransform: Set the viewport camera position and rotation: the level viewport, or, while Play In Editor runs with the player ejected (control_editor play control=eject), the free camera the game view is drawn from.\nfov: Set the camera field of view of the view on screen: the level viewport, the free view of an ejected player, or while the player plays the running game's camera (method player_camera_manager; locked to the value until play stops).\nview_target: Set the PIE view target to a specific actor by name.",
+              "description": "Which set camera variant to run; omit for 'transform'.\ntransform: Set the viewport camera position and rotation: the level viewport, or, while Play In Editor runs with the player ejected (control_editor play control=eject), the free camera the game view is drawn from.\nfov: Set the camera field of view of the view on screen: the level viewport, the free view of an ejected player, or while the player plays the running game's camera (method player_camera_manager; locked to the value until play stops).\nview_target: Set the PIE view target to a specific actor by name; location and rotation also move that actor there, which needs the write scope (SCOPE_NOT_GRANTED otherwise).",
               "default": "transform"
             }
           },
@@ -51327,8 +51333,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "6b25a23541e3f71f17d660b01765491ae873b1a2907db2c497add1aa5e0237aa",
-        "content": "a17183f0f78d2a227bec55775e6cc554d6e3265be5b3819aefcfe6abe5cf95a4"
+        "schema": "bf33575fc483265653abc1107dc894751f8b27e42618e70c910f37760bce2724",
+        "content": "6314b2c8aa948bba006a5c3b9d370844ea3e8a65b577cfc4a13efffcb240f673"
       }
     },
     {
@@ -56368,7 +56374,7 @@
               "items": {
                 "type": "string"
               },
-              "description": "Only these actors (label, name or path): their rows under actors (a row whose box nearer actors partly cover names them under coveredBy, as a sign half behind a row of blocks), and under notVisible each one that drew no pixel with its reason, outside the frame or hidden, with hiddenBy naming the actors drawn over its box (up to three, by share of the box). Names that match no actor are listed under notFound. limit does not apply."
+              "description": "Only these actors (label, name or path): their rows under actors (a row whose box nearer actors partly cover names them under coveredBy, as a sign half behind a row of blocks), and under notVisible each one that drew no pixel with its reason, outside the frame or hidden, with hiddenBy naming the actors drawn over its box (up to three, by share of the box). Names that match no actor are listed under notFound. limit does not apply; at most 100 names."
             },
             "location": {
               "type": "object",
@@ -56682,8 +56688,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "d6889ea4c612ebd7203600f7787a807141bd17c49050ba498a59b252f4fa1623",
-        "content": "862af9d30e37dd0a1e15f858288362b97d80105e39da2c72ade75a51325a97df"
+        "schema": "3c67116f1e9790ea32b247624022263bf5934d60a5eced10d530cc72c8abeb3f",
+        "content": "dff9c544875d910b87ab581870c7990b044de59dc0cf82ad5d097f147ff863cc"
       }
     },
     {
@@ -59989,7 +59995,7 @@
               "items": {
                 "type": "string"
               },
-              "description": "Actors (label, name or path) the lines pass through, such as the player pawn a line starts inside; an unknown name is refused."
+              "description": "Actors (label, name or path) the lines pass through, such as the player pawn a line starts inside; an unknown name is refused, and so are more than 100."
             }
           },
           "required": [
@@ -60141,8 +60147,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "1ab3314b4bf07117180fb9623cedf7112cc81606dc685334887f869415560da4",
-        "content": "9b256f888773194cdd625dc401d75e8ebeb4b93bfc0ff91391c1f77be4acf00f"
+        "schema": "fcfc574144bbd2cfa5d2529181a3d29dd9a05075549cdfca0d9d7394e62480ad",
+        "content": "25af669f8b2d1eaa75a93970edf75a9a8b8b57ecc4e8d2afb058a08c2d25e1b5"
       }
     },
     {
@@ -88896,15 +88902,15 @@
         ]
       },
       "behavior": {
-        "effect": "read",
-        "idempotency": "idempotent",
+        "effect": "write",
+        "idempotency": "non-idempotent",
         "longRunning": false,
-        "safeToRetry": true
+        "safeToRetry": false
       },
       "policy": {
-        "requiredScope": "read",
+        "requiredScope": "write",
         "consent": "none",
-        "dataAccess": "project-read"
+        "dataAccess": "project-write"
       },
       "cost": {
         "latency": "interactive",
@@ -88917,7 +88923,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "3c9248f90a6522d6123ecbed054d953ccbec99903b670cb25831dcf2cd62e74d",
-        "content": "4af73cff5a285d5f56344ad95e6add9221bbb0785f3da79ddfc9f792fd18d0c2"
+        "content": "ebfd67c7d6cb054c467ed12c8abf23c5e57972c7cc3d328f10871550dc1852b0"
       }
     },
     {
@@ -117441,7 +117447,7 @@
             },
             "filter": {
               "type": "string",
-              "description": "Case-insensitive plain text (not a regex) a line must contain; separate alternatives with | to match any of them (LoadMap|Bringing World)."
+              "description": "Case-insensitive plain text (not a regex) a line must contain, as the reply shows it (host paths redacted); separate up to 16 alternatives with | to match any of them (LoadMap|Bringing World). At most 1024 characters."
             },
             "category": {
               "type": "string",
@@ -117567,8 +117573,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "3c48a327260ec1f2462b2adb66c27682b96ab9d4f4a1a93b43b8d79f28351a71",
-        "content": "970e4b55c5f82f74b7e98e9abbc580929d7afcaafbb58c22cf1098a4bd3d10a5"
+        "schema": "dc26f651c08a7dc77e115d5dfebf475e9fea9bfa83568db67ecc898af67767e7",
+        "content": "d4c8b48fb29019838711595c76e45745884190077d5c514027a64a07c2e49940"
       }
     },
     {
@@ -118519,7 +118525,7 @@
             },
             "path": {
               "type": "string",
-              "description": "game_viewport mode only: project-relative folder to write the PNG into (default Saved/Screenshots/WindowsEditor)."
+              "description": "Project-relative folder to write the PNG into (default Saved/Screenshots; game_viewport Saved/Screenshots/WindowsEditor); naming one needs the write scope, since a file already there is replaced."
             },
             "returnBase64": {
               "type": "boolean",
@@ -118593,7 +118599,10 @@
       "policy": {
         "requiredScope": "read",
         "consent": "none",
-        "dataAccess": "project-read"
+        "dataAccess": "project-read",
+        "raisedBy": {
+          "path": "write"
+        }
       },
       "cost": {
         "latency": "interactive",
@@ -118605,8 +118614,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "6a53472f5e9cd7815b80ea69d197a829b5434f291e7782489552d26f247e1947",
-        "content": "fac2cfb35b907a615eca6e8bf987c717c036a2bb59293c294918bcc9783bb15d"
+        "schema": "920ac91974b5fce44329d6332f77470a7b01609aec5dc1e82a368fcf6dfc829f",
+        "content": "7d4e2e380de884b35006fae4d0a27419c44a273772641f57373758edf9b1d64d"
       }
     },
     {

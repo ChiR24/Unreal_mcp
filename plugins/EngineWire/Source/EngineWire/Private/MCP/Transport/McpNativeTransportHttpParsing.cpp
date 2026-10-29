@@ -158,27 +158,24 @@ bool FMcpNativeTransport::ReadHttpRequest(FSocket* Socket, FParsedHttpRequest& O
 				return false;
 			}
 
+			// Only Recv what is already there, as the header loop does: a blocking Recv on a peer that sent its headers
+			// and then nothing never returned, so the deadline above was never checked again and the worker was held.
+			if (!Socket->HasPendingData(PendingData))
+			{
+				FPlatformProcess::Sleep(0.001f);
+				continue;
+			}
 			int32 BytesRead = 0;
 			if (Socket->Recv(BodyBuf.GetData() + TotalRead,
-				OutRequest.ContentLength - TotalRead, BytesRead))
+				static_cast<int32>(FMath::Min<uint32>(PendingData, static_cast<uint32>(OutRequest.ContentLength - TotalRead))), BytesRead) &&
+				BytesRead > 0)
 			{
-				if (BytesRead > 0)
-				{
-					TotalRead += BytesRead;
-				}
-				else if (!Socket->HasPendingData(PendingData))
-				{
-					UE_LOG(LogMcpNativeTransport, Warning, TEXT("HTTP body read: peer closed connection (read %d/%d)"), TotalRead, OutRequest.ContentLength);
-					return false;
-				}
-				else
-				{
-					FPlatformProcess::Sleep(0.001f);
-				}
+				TotalRead += BytesRead;
 			}
 			else
 			{
-				FPlatformProcess::Sleep(0.001f);
+				UE_LOG(LogMcpNativeTransport, Warning, TEXT("HTTP body read: peer closed connection (read %d/%d)"), TotalRead, OutRequest.ContentLength);
+				return false;
 			}
 		}
 

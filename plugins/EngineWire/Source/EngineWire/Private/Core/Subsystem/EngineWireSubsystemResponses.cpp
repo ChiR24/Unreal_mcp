@@ -2,6 +2,7 @@
 
 #include "Editor.h"
 #include "MCP/Transport/McpNativeTransport.h"
+#include "MCP/Execute/McpNativeReceiptRedaction.h"
 #include "Core/Journal/McpChangeJournal.h"
 #include "Core/Requests/McpRequestOriginRegistry.h"
 #include "Core/Requests/McpResponseCaptureRegistry.h"
@@ -92,8 +93,8 @@ void UEngineWireSubsystem::SendAutomationResponse(
     // runs, so a handler that refuses -- a misspelled component name, a path
     // that resolves to nothing -- used to cost the grant for a call that
     // changed nothing, and the retry needed a fresh describe. Hand it back on
-    // any failure; a call that succeeded keeps the burn, so replay protection
-    // is unchanged.
+    // a failure that changed nothing (a partial delete keeps it burned); a call
+    // that succeeded keeps the burn, so replay protection is unchanged.
     if (bSuccess) { McpPrequeueGate::ForgetConsentForRequest(RequestId); }
     else { McpPrequeueGate::RefundConsentForRequest(RequestId); }
     McpPrequeueGate::ForgetRequestPrincipal(RequestId);
@@ -237,6 +238,9 @@ void UEngineWireSubsystem::SendAutomationResponse(
     }
     if (ConnectionManager.IsValid())
     {
+        // The masking native receipts get (McpNativeReceiptRedaction): a credential a handler echoed never leaves on
+        // the bridge either.
+        if (EffectiveResult.IsValid()) { McpMaskSecretsDeep(EffectiveResult); }
         ConnectionManager->SendAutomationResponse(
             TargetSocket,
             RequestId,

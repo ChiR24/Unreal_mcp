@@ -1,6 +1,5 @@
 #include "Domains/Blueprint/McpBPActionContext.h"
 #include "Foundation/BridgeHelpers/Blueprints/McpScsLookup.h"
-#include "Domains/Blueprint/Components/McpBPSubobjectTraits.h"
 #include "Domains/Blueprint/Components/McpBPScsParentResolve.h"
 
 #include "Engine/Blueprint.h"
@@ -10,63 +9,6 @@
 
 namespace McpBlueprintHandlers {
 namespace {
-void ApplyModifyScsRemoveComponent(UBlueprint *LocalBP, USimpleConstructionScript *LocalSCS, const TSharedPtr<FJsonObject> &Op, TSharedPtr<FJsonObject> OpSummary) {
-FString ComponentName;
-Op->TryGetStringField(TEXT("componentName"), ComponentName);
-bool bRemoved = false;
-USubobjectDataSubsystem *Subsystem = nullptr;
-if (GEngine)
-  Subsystem = GEngine->GetEngineSubsystem<USubobjectDataSubsystem>();
-if (Subsystem) {
-  TArray<FSubobjectDataHandle> ExistingHandles;
-  Subsystem->K2_GatherSubobjectDataForBlueprint(LocalBP,
-                                                ExistingHandles);
-  FSubobjectDataHandle FoundHandle;
-  bool bFound = false;
-  const UScriptStruct *HandleStruct =
-      FSubobjectDataHandle::StaticStruct();
-  for (const FSubobjectDataHandle &H : ExistingHandles) {
-    if (!HandleStruct)
-      continue;
-    FString HText;
-    HandleStruct->ExportText(HText, &H, nullptr, nullptr, PPF_None,
-                             nullptr);
-    if (HText.Contains(ComponentName, ESearchCase::IgnoreCase)) {
-      FoundHandle = H;
-      bFound = true;
-      break;
-    }
-  }
-
-  if (bFound) {
-    constexpr bool bHasDelete =
-        EngineWire::THasDeleteSubobject<
-            USubobjectDataSubsystem>::value;
-    if constexpr (bHasDelete) {
-      FSubobjectDataHandle ContextHandle =
-          ExistingHandles.Num() > 0 ? ExistingHandles[0] : FoundHandle;
-      Subsystem->DeleteSubobject(ContextHandle, FoundHandle, LocalBP);
-      bRemoved = true;
-    }
-  }
-}
-if (bRemoved) {
-  OpSummary->SetBoolField(TEXT("success"), true);
-  OpSummary->SetStringField(TEXT("componentName"), ComponentName);
-} else {
-  if (USCS_Node *TargetNode =
-          FindScsNodeByName(LocalSCS, ComponentName)) {
-    LocalSCS->RemoveNodeAndPromoteChildren(TargetNode);
-    OpSummary->SetBoolField(TEXT("success"), true);
-    OpSummary->SetStringField(TEXT("componentName"), ComponentName);
-  } else {
-    OpSummary->SetBoolField(TEXT("success"), false);
-    OpSummary->SetStringField(
-        TEXT("warning"), TEXT("Component not found; remove skipped"));
-  }
-}
-}
-
 void ApplyModifyScsAttachComponent(UBlueprint *LocalBP, USimpleConstructionScript *LocalSCS, const TSharedPtr<FJsonObject> &Op, TSharedPtr<FJsonObject> OpSummary) {
 FString AttachComponentName;
 Op->TryGetStringField(TEXT("componentName"), AttachComponentName);
@@ -96,14 +38,18 @@ void ApplyModifyScsOperation(UBlueprint *LocalBP, USimpleConstructionScript *Loc
   if (NormalizedType == TEXT("modify_component") || NormalizedType == TEXT("add_component")) {
     ApplyModifyScsComponentOperation(LocalBP, LocalSCS, NormalizedType, Op, OpSummary);
   } else if (NormalizedType == TEXT("remove_component")) {
-    ApplyModifyScsRemoveComponent(LocalBP, LocalSCS, Op, OpSummary);
+    // modify_scs is a write: removing a component is the destructive remove_scs_component, which asks the destructive
+    // scope and consent this batch never checked.
+    OpSummary->SetBoolField(TEXT("success"), false);
+    OpSummary->SetStringField(TEXT("warning"), TEXT("remove_component is not a modify_scs operation: remove a component "
+                                                    "with manage_blueprint remove_scs_component (destructive, with consent)"));
   } else if (NormalizedType == TEXT("attach_component") || NormalizedType == TEXT("reparent")) {
     ApplyModifyScsAttachComponent(LocalBP, LocalSCS, Op, OpSummary);
   } else {
     OpSummary->SetBoolField(TEXT("success"), false);
     OpSummary->SetStringField(TEXT("warning"), FString::Printf(
-        TEXT("Unknown operation type '%s'; use add_component, modify_component, "
-             "attach_component (or reparent) or remove_component"),
+        TEXT("Unknown operation type '%s'; use add_component, modify_component "
+             "or attach_component (or reparent)"),
         *NormalizedType));
   }
 }

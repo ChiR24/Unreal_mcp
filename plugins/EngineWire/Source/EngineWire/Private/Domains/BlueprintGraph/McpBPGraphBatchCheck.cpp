@@ -70,7 +70,10 @@ TSharedPtr<FJsonObject> BuildStepPayload(const TSharedPtr<FJsonObject>& Batch,
     {
         // One Blueprint per batch: the pre-check, compile and save all use the
         // batch's, so a step naming another would edit it and never save it.
-        if (Pair.Key != TEXT("blueprintPath") && Pair.Key != TEXT("assetPath"))
+        // requestedPath and the candidate lists name one too, and requestedPath
+        // even wins over blueprintPath in ResolveBlueprintRequestedPath.
+        if (Pair.Key != TEXT("blueprintPath") && Pair.Key != TEXT("assetPath") && Pair.Key != TEXT("requestedPath") &&
+            Pair.Key != TEXT("blueprintCandidates") && Pair.Key != TEXT("candidates"))
         {
             Out->SetField(Pair.Key, Pair.Value);
         }

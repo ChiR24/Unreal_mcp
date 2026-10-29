@@ -18,7 +18,8 @@ export const OPERATIONS_IO_RECORDS: readonly CapabilityRecordSource[] = [
     inputProps: { levelPath: P.levelPath, exportPath: P.exportPath, destinationPath: P.destinationPath },
     required: [],
     requiredOneOf: ['exportPath', 'destinationPath'],
-    effect: 'read', costLatency: 'interactive', costResources: 'medium',
+    // Both forms write: a file in the project, or a saved copy of the level under /Game.
+    effect: 'write', costLatency: 'interactive', costResources: 'medium',
     exampleInput: { action: 'export_level', exportPath: 'Saved/Exports/Demo.t3d' },
   }),
   buildCoreRecord({

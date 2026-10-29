@@ -238,6 +238,15 @@ bool UEngineWireSubsystem::HandleDuplicateAsset(
     return true;
   }
 
+  // The destination may have been derived here (newName beside the source's parent), after the gate looked: a
+  // path-restricted caller's copy lands only inside its prefixes.
+  if (!McpCapabilityPrincipal::ActiveRequestPermitsPath(DestinationPath)) {
+    SendAutomationResponse(Socket, RequestId, false,
+                           FString::Printf(TEXT("%s is outside the caller's allowed paths; nothing was duplicated."), *DestinationPath),
+                           nullptr, TEXT("PATH_NOT_PERMITTED"));
+    return true;
+  }
+
   // If the source path is a directory, perform a deep duplication of all
   // assets under that folder into the destination folder, preserving
   // relative structure. This powers the "Deep Duplication - Duplicate
@@ -246,9 +255,7 @@ bool UEngineWireSubsystem::HandleDuplicateAsset(
     // Ensure the destination root exists
     UEditorAssetLibrary::MakeDirectory(DestinationPath);
 
-    FAssetRegistryModule &AssetRegistryModule =
-        FModuleManager::LoadModuleChecked<FAssetRegistryModule>(
-            TEXT("AssetRegistry"));
+    FAssetRegistryModule &AssetRegistryModule = FModuleManager::LoadModuleChecked<FAssetRegistryModule>(TEXT("AssetRegistry"));
     FARFilter Filter;
     Filter.PackagePaths.Add(FName(*SourcePath));
     Filter.bRecursivePaths = true;
@@ -267,16 +274,12 @@ bool UEngineWireSubsystem::HandleDuplicateAsset(
       // /Game/Tests/DeepCopy/Source/M_Source)
       const FString SourceAssetPath = Asset.PackageName.ToString();
 
-      FString RelativePath;
-      if (SourceAssetPath.StartsWith(SourcePath)) {
-        RelativePath = SourceAssetPath.RightChop(SourcePath.Len());
-      } else {
-        // Should not happen for the filtered set, but skip if it does.
-        continue;
+      if (!SourceAssetPath.StartsWith(SourcePath)) {
+        continue; // should not happen for the filtered set, but skip if it does
       }
+      const FString RelativePath = SourceAssetPath.RightChop(SourcePath.Len());
 
-      const FString TargetAssetPath =
-          DestinationPath + RelativePath; // preserves any subfolders
+      const FString TargetAssetPath = DestinationPath + RelativePath; // preserves any subfolders
       const FString TargetFolderPath = FPaths::GetPath(TargetAssetPath);
       if (!TargetFolderPath.IsEmpty()) {
         UEditorAssetLibrary::MakeDirectory(TargetFolderPath);

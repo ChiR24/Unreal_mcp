@@ -107,6 +107,14 @@ uint32 FMcpBridgeWebSocket::RunServer() {
       DestroyListenSocket();
       return 0;
     }
+    // The token travels in bridge_hello: over plain TCP on a network anyone on it can read and reuse it.
+    if (!bUseTls) {
+      UE_LOG(LogEngineWireSubsystem, Error,
+             TEXT("SECURITY: refusing to bind WebSocket bridge to non-loopback '%s' without TLS; enable Enable Tls (with a certificate and key) or keep the host loopback"),
+             *HostToBind);
+      DestroyListenSocket();
+      return 0;
+    }
 
     UE_LOG(LogEngineWireSubsystem, Warning,
            TEXT("SECURITY: Binding to non-loopback address '%s' requires capability token. The automation bridge is exposed to your local network."),
@@ -169,6 +177,8 @@ uint32 FMcpBridgeWebSocket::RunServer() {
   }
 
   ListenAddr->SetPort(Port);
+  // Only the middle branch above binds off loopback; its DNS fallback to 127.0.0.1 counts as LAN (fail closed).
+  bListenerLoopback = bIsLoopback || !bAllowNonLoopback;
 
   if (!ListenSocket->Bind(*ListenAddr)) {
     return Fail(TEXT("Failed to bind listen socket"));
@@ -202,7 +212,18 @@ uint32 FMcpBridgeWebSocket::RunServer() {
       break;
     }
 
-    if (ClientSocket) {
+    int32 Clients = 0;
+    {
+      FScopeLock Lock(&ClientSocketsMutex);
+      Clients = ClientSockets.Num();
+    }
+    // Each client takes a worker thread and a receive buffer before it authenticates (bridge_hello comes later), so
+    // a flood of idle connections took them without bound.
+    if (ClientSocket && Clients >= MaxWebSocketClients) {
+      UE_LOG(LogEngineWireSubsystem, Warning, TEXT("Refusing an automation client: %d are connected already."), Clients);
+      ClientSocket->Close();
+      SocketSubsystem->DestroySocket(ClientSocket);
+    } else if (ClientSocket) {
       HandleAcceptedClient(ClientSocket);
     } else {
       FPlatformProcess::Sleep(AcceptSleepSeconds > 0.0f ? AcceptSleepSeconds

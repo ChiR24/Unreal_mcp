@@ -264,7 +264,8 @@ export function nativeCorrectQuery(query: string): { readonly query: string; rea
 
 /** Every record the native door ranks for a query, best first, with its score. */
 export function nativeScored(intent: string): readonly { readonly id: string; readonly score: number }[] {
-  const query = nativeCorrectQuery(intent.trim().toLowerCase()).query;
+  // The native door reads at most McpSearchMaxQueryChars (512) characters of a query, before its typo pass.
+  const query = nativeCorrectQuery(intent.slice(0, 512).trim().toLowerCase()).query;
   const all = searchWords(query);
   const content = [...new Set(all.filter((word) => !RETRIEVAL_FUNCTION_WORDS.has(word)))];
   const leadIsAction = content.length >= 2 && nativeWholeActions().has(content[0] ?? '');

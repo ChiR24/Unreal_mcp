@@ -41,6 +41,7 @@
 #include "HAL/PlatformProcess.h"
 
 #include "Foundation/BridgeHelpers/Security/McpAssetPathCanonical.h"
+#include "Foundation/McpCapabilityPrincipal.h"
 #include "Foundation/BridgeHelpers/Security/McpProjectPaths.h"
 #include "Foundation/BridgeHelpers/Security/McpCommandValidate.h"
 #include "Foundation/BridgeHelpers/Assets/McpAssetCreation.h"

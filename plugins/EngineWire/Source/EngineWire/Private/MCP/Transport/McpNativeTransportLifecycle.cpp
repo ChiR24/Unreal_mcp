@@ -1,4 +1,5 @@
 #include "MCP/Transport/McpNativeTransportPrivate.h"
+#include "MCP/Execute/McpNativeGatewayAuthorization.h"
 #include "Interfaces/IPluginManager.h"
 
 DEFINE_LOG_CATEGORY(LogMcpNativeTransport);
@@ -51,25 +52,18 @@ bool FMcpNativeTransport::Start(int32 Port, const FString& PluginDir, bool bLoad
 	}
 	else if (!bIsLoopback)
 	{
-		// Fail-closed LAN/token coupling. A non-loopback bind exposes the native
-		// MCP surface to the network. The default-allow loopback posture means a
-		// LAN bind without capability-token auth would let any network client
-		// call any tool unauthenticated, so refuse to start unless the token is
-		// required. The disallowed-host loopback fallback above is preserved: a
-		// host that is NOT explicitly allowed still degrades to 127.0.0.1.
-		const UEngineWireSettings* Settings = GetDefault<UEngineWireSettings>();
-		if (!Settings || !Settings->bRequireCapabilityToken)
-		{
-			UE_LOG(LogMcpNativeTransport, Error,
-				TEXT("SECURITY: refusing to bind native MCP to non-loopback %s without RequireCapabilityToken; "
-					"enable the capability token or keep the host loopback"),
-				*ListenHost);
-			return false;
-		}
-		UE_LOG(LogMcpNativeTransport, Warning,
-			TEXT("SECURITY: native MCP binding to non-loopback %s requires capability token"),
+		// Native /mcp is plain HTTP with no TLS of its own, so on a network every request would carry its bearer token
+		// (whatever the token setting, nothing authenticates it safely) where anyone on the path reads and reuses it.
+		// It listens on this machine only: a remote client comes in through an encrypted tunnel
+		// (ssh -L 3000:127.0.0.1:3000) or a TLS proxy that forwards to loopback. The disallowed-host fallback above is
+		// preserved: a host that is NOT explicitly allowed still degrades to 127.0.0.1.
+		UE_LOG(LogMcpNativeTransport, Error,
+			TEXT("SECURITY: refusing to bind native MCP to non-loopback %s: it has no TLS, so a capability token would "
+				"cross the network in clear text; keep the host loopback and reach it through an SSH tunnel or a TLS proxy"),
 			*ListenHost);
+		return false;
 	}
+	McpSetNativeListenerLoopback(ListenHost == TEXT("127.0.0.1") || ListenHost == TEXT("::1"));
 
 	// Load server identity & instructions from server-info.json
 	{

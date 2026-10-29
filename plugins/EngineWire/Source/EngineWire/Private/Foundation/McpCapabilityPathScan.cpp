@@ -35,15 +35,36 @@ struct FScanState
 	// bare-relative values and to path-shaped values with no trustworthy
 	// canonical form, so an unrestricted principal keeps its previous behaviour.
 	bool bStrict = false;
+	TSet<FString> Seen;
 };
+
+void AddPath(const FString& Path, FScanState& State)
+{
+	// A set beside the ordered list: AddUnique searched the whole list per value, quadratic in a large payload.
+	bool bSeen = false;
+	State.Seen.Add(Path, &bSeen);
+	if (!bSeen)
+	{
+		State.Out->Paths.Add(Path);
+	}
+}
 
 void CollectString(const FString& Text, const FString& Key, FScanState& State)
 {
 	const bool bAssumeGameRoot = State.bStrict && IsPathParameterKey(Key);
-	const FString Canonical = McpCanonicalizeContentPath(Text, bAssumeGameRoot);
+	// A RELATIVE value under a path parameter has no single meaning: one handler roots it at /Game/, another at /
+	// (Game/TeamB/X), another looks the name up anywhere in the registry. Rooting it at /Game/ here checked a path
+	// the handler never used, so for a restricted principal it is carried raw and containment refuses it.
+	const FString Trimmed = Text.TrimStartAndEnd();
+	if (bAssumeGameRoot && !Trimmed.IsEmpty() && !Trimmed.StartsWith(TEXT("/")) && !Trimmed.StartsWith(TEXT("\\")))
+	{
+		AddPath(Trimmed, State);
+		return;
+	}
+	const FString Canonical = McpCanonicalizeContentPath(Text, false);
 	if (!Canonical.IsEmpty())
 	{
-		State.Out->Paths.AddUnique(Canonical);
+		AddPath(Canonical, State);
 		return;
 	}
 	if (!State.bStrict)
@@ -53,17 +74,11 @@ void CollectString(const FString& Text, const FString& Key, FScanState& State)
 	// Canonicalization refused this value (traversal or colon) but the executor
 	// could still root it. Carry the raw string so containment refuses it,
 	// instead of dropping it and admitting the request by default.
+	// A value already absolute under a non-UE root (an OS import source) never
+	// becomes a content path, so it stays outside confinement.
 	if (McpIsUnrealRootedCandidate(Text))
 	{
-		State.Out->Paths.AddUnique(Text);
-		return;
-	}
-	// A value under a path key that is RELATIVE would be rooted at /Game by the
-	// handler. One that is already absolute under a non-UE root (an OS import
-	// source) never becomes a content path, so it stays outside confinement.
-	if (bAssumeGameRoot && !Text.StartsWith(TEXT("/")) && !Text.StartsWith(TEXT("\\")))
-	{
-		State.Out->Paths.AddUnique(Text);
+		AddPath(Text, State);
 	}
 }
 
@@ -166,7 +181,28 @@ bool IsPathParameterKey(const FString& Key)
 			return true;
 		}
 	}
-	return false;
+	// Every other key named for a path or folder names content as well (newStructPath, mappingContextPath,
+	// sourcePaths, behaviorTreePath): a relative value there was rooted by its handler and never checked. Keys for
+	// a reflection member, a class, an actor or component, or a file on disk stay out.
+	static const TCHAR* const NotContent[] = {
+		TEXT("propertypath"), TEXT("objectpath"), TEXT("objectpaths"), TEXT("classpath"), TEXT("componentpath"),
+		TEXT("actorpath"), TEXT("trackpath"), TEXT("categorypath"), TEXT("filepath"), TEXT("filepaths"),
+		TEXT("configpath"), TEXT("cpppath"), TEXT("headerpath"), TEXT("logpath"), TEXT("projectpath"),
+		TEXT("buildpath"), TEXT("indexpath"), TEXT("heightmappath"), TEXT("imagepath"), TEXT("screenshotpath"),
+		TEXT("snapshotpath"), TEXT("reportpath"), TEXT("subpath"), TEXT("externalpath"), TEXT("subfolder")
+	};
+	if (!Lower.EndsWith(TEXT("path")) && !Lower.EndsWith(TEXT("paths")) && !Lower.EndsWith(TEXT("folder")))
+	{
+		return false;
+	}
+	for (const TCHAR* const Suffix : NotContent)
+	{
+		if (Lower.EndsWith(Suffix))
+		{
+			return false;
+		}
+	}
+	return true;
 }
 
 FMcpPayloadPathScan CollectPayloadPaths(const TSharedPtr<FJsonObject>& Payload, bool bStrict)

@@ -205,18 +205,21 @@ bool HandleRenderSceneCaptureAction(
         }
         if (!Capture2D)
         {
-            Subsystem->SendAutomationError(
-                RequestingSocket, RequestId,
-                TEXT("Only SceneCapture2D supports TextureRenderTarget2D resolution."),
-                TEXT("UNSUPPORTED_TARGET"));
+            Subsystem->SendAutomationError(RequestingSocket, RequestId, TEXT("Only SceneCapture2D supports TextureRenderTarget2D resolution."), TEXT("UNSUPPORTED_TARGET"));
             return true;
         }
         if (!Capture2D->TextureTarget)
         {
-            Subsystem->SendAutomationError(
-                RequestingSocket, RequestId,
-                TEXT("Assign a render target before configuring capture resolution."),
-                TEXT("RENDER_TARGET_NOT_ASSIGNED"));
+            Subsystem->SendAutomationError(RequestingSocket, RequestId, TEXT("Assign a render target before configuring capture resolution."), TEXT("RENDER_TARGET_NOT_ASSIGNED"));
+            return true;
+        }
+        // The asset is reached through the actor, not named by the request: a path-restricted caller resizes only one
+        // inside its prefixes.
+        if (!McpCapabilityPrincipal::ActiveRequestPermitsObject(Capture2D->TextureTarget.Get()))
+        {
+            Subsystem->SendAutomationError(RequestingSocket, RequestId,
+                TEXT("The capture's render target is outside the caller's allowed paths; nothing was resized."),
+                TEXT("PATH_NOT_PERMITTED"));
             return true;
         }
         // The render target asset is what changes (every capture drawing into it), so it is what undo must restore.
@@ -267,9 +270,7 @@ bool HandleRenderSceneCaptureAction(
         }
         Result->SetBoolField(TEXT("captured"), true);
     }
-    Result->SetStringField(TEXT("renderTargetPath"), Capture2D && Capture2D->TextureTarget
-        ? Capture2D->TextureTarget->GetPathName()
-        : TEXT(""));
+    Result->SetStringField(TEXT("renderTargetPath"), Capture2D && Capture2D->TextureTarget ? Capture2D->TextureTarget->GetPathName() : TEXT(""));
     McpHandlerUtils::AddVerification(Result, Actor);
     Subsystem->SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Scene capture action applied."), Result);
     return true;

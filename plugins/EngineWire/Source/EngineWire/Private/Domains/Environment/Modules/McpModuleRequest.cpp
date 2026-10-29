@@ -38,7 +38,9 @@ bool ReadRequest(const TSharedPtr<FJsonObject>& Payload, FModuleRequest& Out, FS
     const TArray<TSharedPtr<FJsonValue>>* Entries = nullptr;
     Why = Out.Cell.X <= 0.0 || Out.Cell.Y <= 0.0 || Out.Cell.Z <= 0.0 ? FString(TEXT("cellSize must be {x, y, z} above 0, in cm"))
         : Pivot != TEXT("corner") && Pivot != TEXT("center") && Pivot != TEXT("bottom_center") ? FString(TEXT("pivot must be corner, center or bottom_center"))
-        : Out.In.Size.X < 1 || Out.In.Size.Y < 1 || Out.In.Size.Z < 1 || int64(Out.In.Size.X) * Out.In.Size.Y * Out.In.Size.Z > ModuleMaxCells
+        // Each side bounded first: three sides of 2^21 multiplied past int64 and came out under the cap.
+        : FMath::Min3(Out.In.Size.X, Out.In.Size.Y, Out.In.Size.Z) < 1 || FMath::Max3(Out.In.Size.X, Out.In.Size.Y, Out.In.Size.Z) > ModuleMaxCells
+            || int64(Out.In.Size.X) * Out.In.Size.Y * Out.In.Size.Z > ModuleMaxCells
             ? FString::Printf(TEXT("size must be at least 1 cell a side and %d cells in all"), ModuleMaxCells)
         : !Payload->TryGetArrayField(TEXT("modules"), Entries) || !Entries || Entries->Num() < 1 || Entries->Num() > 32
             ? FString(TEXT("modules must list 1-32 pieces {meshPath, weight}"))

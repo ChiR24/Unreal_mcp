@@ -6907,7 +6907,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             "fov",
             "view_target"
           ],
-          "description": "Which set camera variant to run; omit for 'transform'.\ntransform: Set the viewport camera position and rotation: the level viewport, or, while Play In Editor runs with the player ejected (control_editor play control=eject), the free camera the game view is drawn from.\nfov: Set the camera field of view of the view on screen: the level viewport, the free view of an ejected player, or while the player plays the running game's camera (method player_camera_manager; locked to the value until play stops).\nview_target: Set the PIE view target to a specific actor by name.",
+          "description": "Which set camera variant to run; omit for 'transform'.\ntransform: Set the viewport camera position and rotation: the level viewport, or, while Play In Editor runs with the player ejected (control_editor play control=eject), the free camera the game view is drawn from.\nfov: Set the camera field of view of the view on screen: the level viewport, the free view of an ejected player, or while the player plays the running game's camera (method player_camera_manager; locked to the value until play stops).\nview_target: Set the PIE view target to a specific actor by name; location and rotation also move that actor there, which needs the write scope (SCOPE_NOT_GRANTED otherwise).",
           "default": "transform"
         },
         "category": {
@@ -7218,7 +7218,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "path": {
           "type": "string",
-          "description": "Directory to save the PNG in, inside the project (relative to it, or absolute under it). Default Saved/Screenshots (game_viewport: Saved/Screenshots/WindowsEditor). A path outside the project is refused."
+          "description": "Directory to save the PNG in, inside the project (relative to it, or absolute under it); naming one needs the write scope, since a file already there is replaced. Default Saved/Screenshots (game_viewport: Saved/Screenshots/WindowsEditor). A path outside the project is refused."
         },
         "preferences": {
           "type": "object",
@@ -8274,7 +8274,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "items": {
             "type": "string"
           },
-          "description": "Only these actors (label, name or path): their rows under actors (a row whose box nearer actors partly cover names them under coveredBy, as a sign half behind a row of blocks), and under notVisible each one that drew no pixel with its reason, outside the frame or hidden, with hiddenBy naming the actors drawn over its box (up to three, by share of the box). Names that match no actor are listed under notFound. limit does not apply."
+          "description": "Only these actors (label, name or path): their rows under actors (a row whose box nearer actors partly cover names them under coveredBy, as a sign half behind a row of blocks), and under notVisible each one that drew no pixel with its reason, outside the frame or hidden, with hiddenBy naming the actors drawn over its box (up to three, by share of the box). Names that match no actor are listed under notFound. limit does not apply; at most 100 names."
         },
         "aspects": {
           "type": "array",
@@ -8389,7 +8389,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "items": {
             "type": "string"
           },
-          "description": "Actors (label, name or path) the lines pass through, such as the player pawn a line starts inside; an unknown name is refused."
+          "description": "Actors (label, name or path) the lines pass through, such as the player pawn a line starts inside; an unknown name is refused, and so are more than 100."
         },
         "info": {
           "type": "string",
@@ -29929,7 +29929,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "filter": {
           "type": "string",
-          "description": "Case-insensitive plain text (not a regex) a line must contain; separate alternatives with | to match any of them (LoadMap|Bringing World)."
+          "description": "Case-insensitive plain text (not a regex) a line must contain, as the reply shows it (host paths redacted); separate up to 16 alternatives with | to match any of them (LoadMap|Bringing World). At most 1024 characters."
         },
         "forceLOD": {
           "type": "number",

@@ -1,6 +1,23 @@
 #include "Transport/Connection/McpConnectionManagerPrivate.h"
 
+#include "Core/Security/McpPrequeueGate.h"
+
 namespace {
+// An automation_response refusal to this socket only. SendAutomationResponse also drops the id's reply route, which
+// for a refused duplicate id is the first request's route.
+void SendRefusalKeepingRoute(const TSharedPtr<FMcpBridgeWebSocket> &Socket, const FString &RequestId,
+                             const TCHAR *Code, const TCHAR *Message) {
+  TSharedRef<FJsonObject> Response = MakeShared<FJsonObject>();
+  Response->SetStringField(TEXT("type"), TEXT("automation_response"));
+  Response->SetStringField(TEXT("requestId"), RequestId);
+  Response->SetBoolField(TEXT("success"), false);
+  Response->SetStringField(TEXT("message"), Message);
+  Response->SetStringField(TEXT("error"), Code);
+  FString Serialized;
+  FJsonSerializer::Serialize(Response, TJsonWriterFactory<>::Create(&Serialized));
+  Socket->Send(Serialized);
+}
+
 // Sends {type: bridge_error, error: Code[, message]} and closes the socket with CloseCode.
 void SendBridgeErrorAndClose(const TSharedPtr<FMcpBridgeWebSocket> &Socket, const TCHAR *Code,
                              const FString &Message, int32 CloseCode, const TCHAR *CloseReason) {
@@ -67,6 +84,17 @@ void FMcpConnectionManager::HandleMessage(
         RootObj->Values.Find(TEXT("payload"));
     if (PayloadVal && (*PayloadVal)->Type == EJson::Object) {
       Payload = (*PayloadVal)->AsObject();
+      // A leading underscore marks a field a handler sets for its own retry (_settleRound, _windowRestoredForCapture):
+      // the native door refuses one as undeclared, and this door drops it, so a caller cannot forge the server's state.
+      TArray<FString> Internal;
+      for (const auto &Field : Payload->Values) {
+        if (Field.Key.Len() > 0 && (*Field.Key)[0] == TEXT('_')) {
+          Internal.Emplace(*Field.Key);
+        }
+      }
+      for (const FString &Key : Internal) {
+        Payload->RemoveField(Key);
+      }
     } else if (PayloadVal) {
       UE_LOG(LogEngineWireSubsystem, Warning,
              TEXT("automation_request payload must be a JSON object."));
@@ -110,6 +138,20 @@ void FMcpConnectionManager::HandleMessage(
              TEXT("Request: %s %s"),
              *Action,
              *PayloadPreview.Left(200));
+    }
+
+    // A requestId names one request until its reply. A second request under the same id took over the first's reply
+    // route and cancellation, and replaced the principal the first one's in-process steps are authorized for.
+    FMcpCapabilityPrincipal InFlight;
+    bool bIdInUse = McpPrequeueGate::FindRequestPrincipal(RequestId, InFlight);
+    {
+      FScopeLock Lock(&PendingRequestsMutex);
+      bIdInUse |= PendingRequestsToSockets.Contains(RequestId);
+    }
+    if (bIdInUse) {
+      SendRefusalKeepingRoute(Socket, RequestId, TEXT("REQUEST_ID_IN_USE"),
+                              TEXT("A request with this requestId is still running; send each request under a new id."));
+      return;
     }
 
     if (!AuthorizeAutomationRequest(Socket, RootObj)) {
