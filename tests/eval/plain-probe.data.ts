@@ -883,4 +883,7 @@ export const PLAIN_PROBE: readonly PlainProbeCase[] = [
   { query: 'unlock the actor', accepted: ['control_actor.lock_actors'] },
   { query: 'lock the door', accepted: ['manage_interaction.configure_interactable'] },
   { query: 'make a locked door', accepted: ['manage_interaction.create_interactable'] },
+  // Placed actors made into one Blueprint, the editor's prefab.
+  { query: 'make a prefab', accepted: ['blueprint.convert_actors_to_blueprint'] },
+  { query: 'turn these actors into a blueprint', accepted: ['blueprint.convert_actors_to_blueprint'] },
 ];

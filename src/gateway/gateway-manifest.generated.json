@@ -10752,6 +10752,7 @@
         "create",
         "get_blueprint",
         "compile",
+        "convert_actors_to_blueprint",
         "edit_scs",
         "get_scs",
         "remove_scs_component",
@@ -10797,6 +10798,7 @@
         "actionPath",
         "activeIndex",
         "actorName",
+        "actorNames",
         "alignment",
         "alwaysShowScrollbar",
         "amount",
@@ -10999,6 +11001,7 @@
         "relations",
         "remove",
         "renderOpacity",
+        "replace",
         "resolution",
         "resolutions",
         "respawnTime",
@@ -11096,6 +11099,15 @@
           "actorName": {
             "type": "string",
             "description": "For nodeType K2Node_ActorBoundEvent or K2Node_Literal, which belong in a level Blueprint: the placed actor of its level (label, name or object path) the event fires for, with eventName one of its event dispatchers (OnActorBeginOverlap), or the node references. Without it, or outside a level Blueprint, the node is refused."
+          },
+          "actorNames": {
+            "type": "array",
+            "minItems": 1,
+            "maxItems": 500,
+            "items": {
+              "type": "string"
+            },
+            "description": "The placed actors, by label or name."
           },
           "alignment": {
             "type": "object",
@@ -11959,6 +11971,9 @@
           "mode": {
             "type": "string",
             "enum": [
+              "harvest",
+              "child_actors",
+              "subclass",
               "one_way",
               "two_way",
               "one_time",
@@ -12352,6 +12367,10 @@
           "renderOpacity": {
             "type": "number",
             "description": "Render opacity (0-1) applied to the widget and everything under it."
+          },
+          "replace": {
+            "type": "boolean",
+            "description": "Replace the actors in the level with one instance of the new Blueprint (default true); false leaves them as they are."
           },
           "resolution": {
             "type": "string",
@@ -12881,6 +12900,7 @@
               "create",
               "get_blueprint",
               "compile",
+              "convert_actors_to_blueprint",
               "edit_scs",
               "get_scs",
               "remove_scs_component",

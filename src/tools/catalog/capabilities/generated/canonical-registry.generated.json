@@ -1,6 +1,6 @@
 {
-  "catalogRevision": "0a3bf588f124a744",
-  "recordCount": 474,
+  "catalogRevision": "82c2388f08dca538",
+  "recordCount": 475,
   "records": [
     {
       "id": "animation_physics.analyze_animation",
@@ -19394,6 +19394,200 @@
         "algorithm": "sha256",
         "schema": "d4fb546b1725226bbcac9350ad71cb1f4f028a5efd298fd6a265f5c99d9e1cf0",
         "content": "7a83f255263ec466b1bc031eda168f6d7b8f0f7a1bd94f3796a378b427ab03f6"
+      }
+    },
+    {
+      "id": "blueprint.convert_actors_to_blueprint",
+      "aliases": [],
+      "legacyIds": [
+        {
+          "tool": "manage_blueprint",
+          "action": "convert_actors_to_blueprint"
+        }
+      ],
+      "discovery": {
+        "domain": "blueprint",
+        "family": "lifecycle",
+        "topics": [
+          "convert_actors_to_blueprint",
+          "convert actors to a blueprint",
+          "create or make a prefab from actors",
+          "turn placed actors into a blueprint",
+          "blueprint from the selected actors"
+        ],
+        "summary": "Turn placed actors into a Blueprint class named name in savePath, as the editor's Convert Selection to Blueprint Class does (a prefab): mode harvest (default) copies every component of every actor into one Blueprint, child_actors keeps each actor whole as a Child Actor component, subclass makes a Blueprint subclass of one actor's class that keeps its property values. With replace (default true) the actors give way to one instance of the new Blueprint where they stood (replacedWith), one undo step; the Blueprint itself stays (delete it to take it back). Every name and the path are checked before anything is made; the Blueprint is compiled and saved.",
+        "whenToUse": [
+          "A group of placed actors (a lamp post with its light, a table set) should become one reusable Blueprint.",
+          "One configured actor should become a Blueprint class with its settings as defaults (subclass)."
+        ],
+        "whenNotToUse": [
+          "A new empty Blueprint of a parent class: use create.",
+          "More copies of actors in the level: use control_actor duplicate."
+        ]
+      },
+      "schemas": {
+        "input": {
+          "$schema": "https://json-schema.org/draft/2020-12/schema",
+          "type": "object",
+          "properties": {
+            "action": {
+              "type": "string",
+              "description": "The action to execute on the parent tool."
+            },
+            "actorNames": {
+              "type": "array",
+              "minItems": 1,
+              "maxItems": 500,
+              "items": {
+                "type": "string"
+              },
+              "description": "The placed actors, by label or name."
+            },
+            "name": {
+              "type": "string",
+              "description": "Name for the new Blueprint or asset."
+            },
+            "savePath": {
+              "type": "string",
+              "description": "Destination /Game folder for a new Blueprint."
+            },
+            "mode": {
+              "type": "string",
+              "enum": [
+                "harvest",
+                "child_actors",
+                "subclass"
+              ],
+              "description": "harvest (default): every actor's components copied into one Blueprint; child_actors: each actor kept whole as a Child Actor component; subclass: one actor's class subclassed with its property values (exactly one actor)."
+            },
+            "replace": {
+              "type": "boolean",
+              "description": "Replace the actors in the level with one instance of the new Blueprint (default true); false leaves them as they are."
+            }
+          },
+          "required": [
+            "action",
+            "actorNames",
+            "name",
+            "savePath"
+          ],
+          "additionalProperties": false
+        },
+        "output": {
+          "$schema": "https://json-schema.org/draft/2020-12/schema",
+          "type": "object",
+          "properties": {
+            "success": {
+              "type": "boolean",
+              "description": "Whether the action succeeded."
+            },
+            "message": {
+              "type": "string",
+              "description": "Human-readable result message."
+            },
+            "details": {
+              "type": "object",
+              "x-unreal-reflection-boundary": true,
+              "description": "Additional handler result fields not named by the contract."
+            },
+            "blueprintPath": {
+              "type": "string",
+              "description": "Canonical /Game Blueprint asset path."
+            },
+            "mode": {
+              "type": "string",
+              "description": "The mode used."
+            },
+            "actors": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "description": "The actors made into the Blueprint."
+            },
+            "components": {
+              "type": "number",
+              "description": "Components in the new Blueprint's construction script; a subclass inherits its class's components and adds none, so it reads 0."
+            },
+            "replacedWith": {
+              "type": "string",
+              "description": "The instance placed where the actors stood (replace)."
+            },
+            "saved": {
+              "type": "boolean",
+              "description": "Whether the new Blueprint reached disk."
+            },
+            "undo": {
+              "type": "object",
+              "additionalProperties": true,
+              "x-unreal-reflection-boundary": true,
+              "description": "What editor undo takes back: the replacement in the level, one step. Absent without replace."
+            }
+          },
+          "required": [
+            "success",
+            "blueprintPath"
+          ],
+          "additionalProperties": false
+        }
+      },
+      "examples": [
+        {
+          "title": "Turn placed actors into a Blueprint class named name in savePath, as the editor's Convert Selection to Blueprint Class does (a prefab): mode harvest (default) copies every component of every actor into one Blueprint, child_actors keeps each actor whole as a Child Actor component, subclass makes a Blueprint subclass of one actor's class that keeps its property values. With replace (default true) the actors give way to one instance of the new Blueprint where they stood (replacedWith), one undo step; the Blueprint itself stays (delete it to take it back). Every name and the path are checked before anything is made; the Blueprint is compiled and saved.",
+          "input": {
+            "action": "convert_actors_to_blueprint",
+            "actorNames": [
+              "LampPost",
+              "LampLight"
+            ],
+            "name": "BP_LampPost",
+            "savePath": "/Game/Blueprints"
+          },
+          "output": {
+            "success": true,
+            "blueprintPath": "/Game/Blueprints/BP_LampPost",
+            "mode": "harvest",
+            "actors": [
+              "LampPost",
+              "LampLight"
+            ],
+            "components": 3,
+            "replacedWith": "BP_LampPost",
+            "saved": true
+          }
+        }
+      ],
+      "availability": {
+        "requiredPlugins": [
+          "EditorScriptingUtilities"
+        ],
+        "editorStates": [
+          "edit"
+        ]
+      },
+      "behavior": {
+        "effect": "destructive",
+        "idempotency": "non-idempotent",
+        "longRunning": false,
+        "safeToRetry": false
+      },
+      "policy": {
+        "requiredScope": "destructive",
+        "consent": "explicit",
+        "dataAccess": "project-write"
+      },
+      "cost": {
+        "latency": "interactive",
+        "resources": "low"
+      },
+      "routing": {
+        "parentTool": "manage_blueprint",
+        "dispatchAction": "convert_actors_to_blueprint"
+      },
+      "hashes": {
+        "algorithm": "sha256",
+        "schema": "9c2eca544d8370d82f7f9489afc3c0707e239a058e88ebcd1bfe7202060d1d31",
+        "content": "47255dc1a5a56f9e8774b9f6733359cb0f566417f2cae083e90a23baab8941d8"
       }
     },
     {

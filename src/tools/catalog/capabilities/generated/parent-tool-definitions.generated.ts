@@ -16341,6 +16341,15 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "string",
           "description": "For nodeType K2Node_ActorBoundEvent or K2Node_Literal, which belong in a level Blueprint: the placed actor of its level (label, name or object path) the event fires for, with eventName one of its event dispatchers (OnActorBeginOverlap), or the node references. Without it, or outside a level Blueprint, the node is refused."
         },
+        "actorNames": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 500,
+          "items": {
+            "type": "string"
+          },
+          "description": "The placed actors, by label or name."
+        },
         "alignment": {
           "type": "object",
           "additionalProperties": true,
@@ -17203,6 +17212,9 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "mode": {
           "type": "string",
           "enum": [
+            "harvest",
+            "child_actors",
+            "subclass",
             "one_way",
             "two_way",
             "one_time",
@@ -17596,6 +17608,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "renderOpacity": {
           "type": "number",
           "description": "Render opacity (0-1) applied to the widget and everything under it."
+        },
+        "replace": {
+          "type": "boolean",
+          "description": "Replace the actors in the level with one instance of the new Blueprint (default true); false leaves them as they are."
         },
         "resolution": {
           "type": "string",
@@ -18125,6 +18141,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             "create",
             "get_blueprint",
             "compile",
+            "convert_actors_to_blueprint",
             "edit_scs",
             "get_scs",
             "remove_scs_component",
@@ -18180,6 +18197,13 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "activeIndex": {
           "type": "number",
           "description": "Index shown first by a widget switcher."
+        },
+        "actors": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "The actors made into the Blueprint."
         },
         "alreadyExists": {
           "type": "boolean",
@@ -18578,14 +18602,23 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "description": "Resolved widget class name, which may differ from the requested componentType."
         },
         "components": {
-          "type": "array",
-          "items": {
-            "type": "object",
-            "additionalProperties": true,
-            "x-unreal-reflection-boundary": true
-          },
-          "description": "SCS node descriptors with name, class, and parent.",
-          "x-unreal-reflection-boundary": true
+          "oneOf": [
+            {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "additionalProperties": true,
+                "x-unreal-reflection-boundary": true
+              },
+              "description": "SCS node descriptors with name, class, and parent.",
+              "x-unreal-reflection-boundary": true
+            },
+            {
+              "type": "number",
+              "description": "Components in the new Blueprint's construction script; a subclass inherits its class's components and adds none, so it reads 0."
+            }
+          ],
+          "description": "Components in the new Blueprint's construction script; a subclass inherits its class's components and adds none, so it reads 0."
         },
         "connected": {
           "type": "boolean",
@@ -19201,6 +19234,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "string",
           "description": "image/png."
         },
+        "mode": {
+          "type": "string",
+          "description": "The mode used."
+        },
         "moved": {
           "type": "array",
           "items": {
@@ -19562,6 +19599,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "x-unreal-reflection-boundary": true,
           "description": "Links the new one replaced, each {nodeId, nodeTitle, pinName}: a pin that holds one link (an exec output, a data input) drops its old link to take the new one. Absent when nothing was replaced."
         },
+        "replacedWith": {
+          "type": "string",
+          "description": "The instance placed where the actors stood (replace)."
+        },
         "respawnOnDeath": {
           "type": "boolean",
           "description": "The pawn has the health behaviour, so dying respawns it too; add health first, then respawn again, to get it. False on a pawn with a game over, which restarts the level when it dies."
@@ -19728,6 +19769,12 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
               "type": "object",
               "additionalProperties": true,
               "x-unreal-reflection-boundary": true,
+              "description": "What editor undo takes back: the replacement in the level, one step. Absent without replace."
+            },
+            {
+              "type": "object",
+              "additionalProperties": true,
+              "x-unreal-reflection-boundary": true,
               "description": "What editor undo takes back: {undoable, transactionScope, steps}; all the moves are one step. Absent under dryRun."
             },
             {
@@ -19737,7 +19784,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
               "description": "What editor undo takes back: {undoable, transactionScope, steps}; the edit is one step."
             }
           ],
-          "description": "What editor undo takes back: {undoable, transactionScope, steps}; all the moves are one step. Absent under dryRun."
+          "description": "What editor undo takes back: the replacement in the level, one step. Absent without replace."
         },
         "unmoved": {
           "type": "array",

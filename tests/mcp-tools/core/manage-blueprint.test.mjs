@@ -28,6 +28,12 @@ const CODE_BP_NAME = `BP_CodeProbe_${ts}`;
 const CODE_BP_PATH = `${TEST_FOLDER}/${CODE_BP_NAME}`;
 const VALUES_BP_NAME = `BP_LintValues_${ts}`;
 const VALUES_BP_PATH = `${TEST_FOLDER}/${VALUES_BP_NAME}`;
+const CONVERT_TAG = `MCPConvertTag_${ts}`;
+const CONVERT_CUBES = ['A', 'B', 'C'].map((letter) => `MCP_ConvertCube${letter}_${ts}`);
+const CONVERT_BP_NAME = `BP_Converted_${ts}`;
+const CONVERT_BP_PATH = `${TEST_FOLDER}/${CONVERT_BP_NAME}`;
+const SUBCLASS_BP_NAME = `BP_ConvertedSubclass_${ts}`;
+const SUBCLASS_BP_PATH = `${TEST_FOLDER}/${SUBCLASS_BP_NAME}`;
 const VALUE_RULES = ['divide_by_zero', 'index_out_of_range', 'out_of_range', 'float_equality', 'constant_condition', 'endless_loop'];
 // Each planted mistake beside a twin that guards it: only the mistakes may be found.
 const VALUES_CODE = [
@@ -509,6 +515,33 @@ const testCases = [
   { scenario: 'ERROR: create_node refuses a menu id the graph does not offer', toolName: 'manage_blueprint', arguments: { action: 'create_node', blueprintPath: CODE_BP_PATH, graphName: 'EventGraph', menuId: 'Development|NoSuchNodeTitle' }, expected: 'error|MENU_ID_NOT_FOUND' },
   { scenario: 'ERROR: write_graph_from_code refuses unbalanced code', toolName: 'manage_blueprint', arguments: { action: 'write_graph_from_code', blueprintPath: CODE_BP_PATH, code: '(event Custom|OnCodeProbe' }, expected: 'error|CODE_PARSE_ERROR' },
   { scenario: 'Cleanup: delete the code probe blueprint', toolName: 'manage_asset', arguments: { action: 'delete', path: CODE_BP_PATH, force: true }, expected: 'success|not found' },
+
+  // === CONVERT: placed actors made into a Blueprint (a prefab) ===
+  { scenario: 'Setup: three cubes to convert', toolName: 'control_actor', arguments: { action: 'spawn_batch', defaults: { classPath: '/Engine/BasicShapes/Cube', tags: [CONVERT_TAG] }, actors: [
+    { actorName: CONVERT_CUBES[0], location: { x: 42000, y: 42000, z: 50 } },
+    { actorName: CONVERT_CUBES[1], location: { x: 42200, y: 42000, z: 50 } },
+    { actorName: CONVERT_CUBES[2], location: { x: 42400, y: 42000, z: 50 } },
+  ] }, expected: 'success' },
+  { scenario: 'CONVERT: convert_actors_to_blueprint harvests two cubes into one Blueprint in their place', toolName: 'manage_blueprint', arguments: { action: 'convert_actors_to_blueprint', actorNames: [CONVERT_CUBES[0], CONVERT_CUBES[1]], name: CONVERT_BP_NAME, savePath: TEST_FOLDER }, expected: 'success', captureResult: { key: 'convertedInstance', fromField: 'result.replacedWith' }, assertions: [
+    { path: 'structuredContent.result.blueprintPath', equals: CONVERT_BP_PATH, label: 'the Blueprint where asked' },
+    { path: 'structuredContent.result.components', gte: 2, label: 'both cubes\' meshes in it' },
+    { path: 'structuredContent.result.replacedWith', exists: true, label: 'one instance where they stood' },
+    { path: 'structuredContent.result.undo.undoable', equals: true, label: 'the replacement is one undo step' },
+    { path: 'structuredContent.result.saved', equals: true, label: 'saved' },
+  ] },
+  { scenario: 'READ: the converted cubes left the level', toolName: 'control_actor', arguments: { action: 'get_transform', actorName: CONVERT_CUBES[0] }, expected: 'error|ACTOR_NOT_FOUND' },
+  { scenario: 'CONVERT: subclass keeps the third cube and makes its class a Blueprint', toolName: 'manage_blueprint', arguments: { action: 'convert_actors_to_blueprint', actorNames: [CONVERT_CUBES[2]], name: SUBCLASS_BP_NAME, savePath: TEST_FOLDER, mode: 'subclass', replace: false }, expected: 'success', assertions: [
+    { path: 'structuredContent.result.mode', equals: 'subclass', label: 'a subclass' },
+    { path: 'structuredContent.result.replacedWith', exists: false, label: 'nothing replaced' },
+  ] },
+  { scenario: 'READ: the third cube is still in the level', toolName: 'control_actor', arguments: { action: 'get_transform', actorName: CONVERT_CUBES[2] }, expected: 'success' },
+  { scenario: 'ERROR: convert_actors_to_blueprint onto a Blueprint that exists', toolName: 'manage_blueprint', arguments: { action: 'convert_actors_to_blueprint', actorNames: [CONVERT_CUBES[2]], name: CONVERT_BP_NAME, savePath: TEST_FOLDER }, expected: 'error|ASSET_ALREADY_EXISTS' },
+  { scenario: 'ERROR: subclass of two actors', toolName: 'manage_blueprint', arguments: { action: 'convert_actors_to_blueprint', actorNames: [CONVERT_CUBES[2], '${captured:convertedInstance}'], name: `BP_ConvertTwo_${ts}`, savePath: TEST_FOLDER, mode: 'subclass' }, expected: 'error|INVALID_ARGUMENT' },
+  { scenario: 'ERROR: convert_actors_to_blueprint names an actor that is not there', toolName: 'manage_blueprint', arguments: { action: 'convert_actors_to_blueprint', actorNames: [`MCP_NoSuchActor_${ts}`], name: `BP_ConvertNone_${ts}`, savePath: TEST_FOLDER }, expected: 'error|ACTOR_NOT_FOUND' },
+  { scenario: 'Cleanup: delete the converted instance', toolName: 'control_actor', arguments: { action: 'delete', actorName: '${captured:convertedInstance}' }, expected: 'success|not found' },
+  { scenario: 'Cleanup: delete the third cube', toolName: 'control_actor', arguments: { action: 'delete_by_tag', tag: CONVERT_TAG }, expected: 'success|not found' },
+  { scenario: 'Cleanup: delete the converted Blueprint', toolName: 'manage_asset', arguments: { action: 'delete', path: CONVERT_BP_PATH, force: true }, expected: 'success|not found' },
+  { scenario: 'Cleanup: delete the subclass Blueprint', toolName: 'manage_asset', arguments: { action: 'delete', path: SUBCLASS_BP_PATH, force: true }, expected: 'success|not found' },
 
   // === BATCH: dryRun checks a batch and runs none of it ===
   { scenario: 'BATCH: build_graph dryRun checks every step and runs none', toolName: 'manage_blueprint', arguments: { action: 'build_graph', blueprintPath: BP_PATH, graphName: 'EventGraph', dryRun: true, operations: [

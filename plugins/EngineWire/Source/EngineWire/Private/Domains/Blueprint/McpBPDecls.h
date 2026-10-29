@@ -190,6 +190,8 @@ bool HandleBlueprintCompile(const FBlueprintActionContext &Context);
 // compile with folder: every Blueprint under it, answered with the ones the compiler or the graph checks flag.
 void McpCompileBlueprintFolder(const FBlueprintActionContext &Context, const FString &Folder);
 bool HandleBlueprintCreateExists(const FBlueprintActionContext &Context);
+// convert_actors_to_blueprint (BlueprintCreation/McpBPConvertActors.cpp).
+bool HandleBlueprintConvertActors(const FBlueprintActionContext &Context);
 bool HandleBlueprintGet(const FBlueprintActionContext &Context);
 bool HandleBlueprintAddNode(const FBlueprintActionContext &Context);
 bool HandleBlueprintEnsureProbe(const FBlueprintActionContext &Context);

@@ -4,7 +4,7 @@
 
 # Action reference
 
-Catalog revision: `0a3bf588f124a744`
+Catalog revision: `82c2388f08dca538`
 
 Both transports expose exactly ONE public MCP tool, `unreal`, with the four
 operations `search` / `describe` / `execute` / `configure`. The parent tools
@@ -13,7 +13,7 @@ by `tools/list` and a direct `tools/call` on one returns a
 `DIRECT_TOOL_CALL_REMOVED` receipt rather than executing
 (`src/server/gateway/direct-call-migration.ts`).
 
-The catalog declares 474 capabilities across
+The catalog declares 475 capabilities across
 23 internal parent tools.
 Every row is derived from the capability record that the gateway actually
 validates against, so `execute` cannot accept an action this table omits.
@@ -47,7 +47,7 @@ validates against, so `execute` cannot accept an action this table omits.
 | `manage_ai` | 17 | 3 | 14 | 0 | manage ai |
 | `manage_asset` | 54 | 14 | 35 | 5 | asset, datatable, enum, material, struct, texture |
 | `manage_audio` | 17 | 5 | 12 | 0 | audio |
-| `manage_blueprint` | 43 | 12 | 23 | 8 | blueprint, widget |
+| `manage_blueprint` | 44 | 12 | 23 | 9 | blueprint, widget |
 | `manage_character` | 10 | 2 | 8 | 0 | manage character |
 | `manage_combat` | 6 | 1 | 5 | 0 | manage combat |
 | `manage_effect` | 13 | 2 | 9 | 2 | manage effect |
@@ -65,7 +65,7 @@ validates against, so `execute` cannot accept an action this table omits.
 
 ## Capabilities requiring consent
 
-74 of 474 capabilities require consent.
+75 of 475 capabilities require consent.
 
 | Capability | Tool | Action | Effect | Consent |
 | --- | --- | --- | --- | --- |
@@ -87,6 +87,7 @@ validates against, so `execute` cannot accept an action this table omits.
 | `asset.rename` | `manage_asset` | `rename` | write | explicit |
 | `asset.set_metadata` | `manage_asset` | `set_metadata` | write | explicit |
 | `asset.source_control` | `manage_asset` | `source_control_checkout` | write | explicit |
+| `blueprint.convert_actors_to_blueprint` | `manage_blueprint` | `convert_actors_to_blueprint` | destructive | explicit |
 | `blueprint.delete_animation` | `manage_blueprint` | `delete_animation` | destructive | explicit |
 | `blueprint.delete_node` | `manage_blueprint` | `delete_node` | destructive | explicit |
 | `blueprint.remove_function` | `manage_blueprint` | `remove_function` | destructive | explicit |
@@ -215,6 +216,7 @@ validates against, so `execute` cannot accept an action this table omits.
 | `blueprint.bind_widget` | `manage_blueprint` | `bind_text` | write | write | none | `manage_blueprint.bind_widget` `manage_blueprint.bind_text` `manage_blueprint.bind_color` `manage_blueprint.bind_enabled` `manage_blueprint.bind_percent` `manage_blueprint.bind_visibility` `manage_blueprint.bind_on_clicked` `manage_blueprint.bind_on_hovered` `manage_blueprint.bind_on_value_changed` `manage_blueprint.bind_localized_text` `manage_blueprint.set_localization_key` |
 | `blueprint.bind_widget_viewmodel` | `manage_blueprint` | `bind_widget_viewmodel` | write | write | none | `manage_blueprint.bind_widget_viewmodel` |
 | `blueprint.compile` | `manage_blueprint` | `compile` | write | write | none | `manage_blueprint.compile` |
+| `blueprint.convert_actors_to_blueprint` | `manage_blueprint` | `convert_actors_to_blueprint` | destructive | destructive | explicit | `manage_blueprint.convert_actors_to_blueprint` |
 | `blueprint.create` | `manage_blueprint` | `create` | write | write | none | `manage_blueprint.create` `manage_blueprint.create_blueprint` `manage_blueprint.ensure_exists` |
 | `blueprint.create_widget_template` | `manage_blueprint` | `create_main_menu` | write | write | none | `manage_blueprint.create_widget_template` `manage_blueprint.create_main_menu` `manage_blueprint.create_pause_menu` `manage_blueprint.create_settings_menu` `manage_blueprint.create_loading_screen` `manage_blueprint.create_hud_widget` `manage_blueprint.create_dialog_widget` `manage_blueprint.create_inventory_ui` `manage_blueprint.create_radial_menu` `manage_blueprint.create_credits_screen` `manage_blueprint.create_shop_ui` |
 | `blueprint.delete_animation` | `manage_blueprint` | `delete_animation` | destructive | destructive | explicit | `manage_blueprint.delete_animation` |

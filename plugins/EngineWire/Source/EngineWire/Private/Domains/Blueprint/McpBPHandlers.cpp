@@ -42,6 +42,7 @@ bool UEngineWireSubsystem::HandleBlueprintAction(
       McpBlueprintHandlers::HandleBlueprintAddHint,
       McpBlueprintHandlers::HandleBlueprintCompile,
       McpBlueprintHandlers::HandleBlueprintCreateExists,
+      McpBlueprintHandlers::HandleBlueprintConvertActors,
       McpBlueprintHandlers::HandleBlueprintGet,
       McpBlueprintHandlers::HandleBlueprintAddNode,
       McpBlueprintHandlers::HandleBlueprintEnsureProbe,
