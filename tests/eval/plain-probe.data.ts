@@ -840,6 +840,12 @@ export const PLAIN_PROBE: readonly PlainProbeCase[] = [
   { query: 'add a trigger that plays a sound', accepted: ['blueprint.add_behaviour'] },
   { query: 'sound trigger', accepted: ['blueprint.add_behaviour'] },
   { query: 'add music to the level', accepted: ['manage_audio.create_audio_actor'] },
+  // The viewport's Show menu is configure_viewport's show_flags.
+  { query: 'hide the grid', accepted: ['control_editor.configure_viewport'] },
+  { query: 'turn off the grid', accepted: ['control_editor.configure_viewport'] },
+  { query: 'show collision', accepted: ['control_editor.configure_viewport'] },
+  { query: 'show bounds', accepted: ['control_editor.configure_viewport'] },
+  { query: 'show the navigation mesh', accepted: ['control_editor.configure_viewport'] },
   { query: 'how many cubes are there', accepted: ['control_actor.list'] },
   // Plain requests whose owner did not name their words.
   { query: 'duplicate the wall', accepted: ['control_actor.duplicate'] },

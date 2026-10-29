@@ -1,5 +1,5 @@
 {
-  "catalogRevision": "fa1d39b201d3af04",
+  "catalogRevision": "c911c1cd8d97427d",
   "recordCount": 480,
   "records": [
     {
@@ -47900,7 +47900,8 @@
         "control_editor.set_immersive_mode",
         "control_editor.set_viewport_realtime",
         "control_editor.show_stats",
-        "control_editor.hide_stats"
+        "control_editor.hide_stats",
+        "control_editor.set_show_flags"
       ],
       "legacyIds": [
         {
@@ -47955,6 +47956,13 @@
           "folded": {
             "setting": "hide_stats"
           }
+        },
+        {
+          "tool": "control_editor",
+          "action": "set_show_flags",
+          "folded": {
+            "setting": "show_flags"
+          }
         }
       ],
       "discovery": {
@@ -47968,9 +47976,14 @@
           "immersive mode",
           "realtime viewport",
           "viewport stats",
-          "show stats"
+          "show stats",
+          "show or hide the grid",
+          "turn the grid on or off",
+          "show collision in the viewport",
+          "show bounds or the navigation mesh in the viewport",
+          "hide fog or editor icons in the viewport"
         ],
-        "summary": "Change what the editor viewport shows, chosen by setting: view_mode (any engine view mode by name: Lit, Unlit, Wireframe, LightingOnly, ShaderComplexity, CollisionPawn, PathTracing and the rest; the running game's view while Play runs), editor_mode (activate a mode such as EM_Landscape, EM_Foliage or EM_Default, checked active), game_view (hide editor icons), immersive_mode (the viewport fills its window), realtime (keep effects and animated materials moving), show_stats or hide_stats (stat overlays: FPS and Unit by default; hide_stats with no stat hides them all). Each answers with the state it reads back; with no level viewport open, NO_VIEWPORT.",
+        "summary": "Change what the editor viewport shows, chosen by setting: view_mode (any engine view mode by name: Lit, Unlit, Wireframe, LightingOnly, ShaderComplexity, CollisionPawn, PathTracing and the rest; the running game's view while Play runs), editor_mode (activate a mode such as EM_Landscape, EM_Foliage or EM_Default, checked active), game_view (hide editor icons), immersive_mode (the viewport fills its window), realtime (keep effects and animated materials moving), show_stats or hide_stats (stat overlays: FPS and Unit by default; hide_stats with no stat hides them all), show_flags (the Show menu by name: flags {\"Grid\": false, \"Collision\": true}, every name checked before any is set, each read back). Each answers with the state it reads back; with no level viewport open, NO_VIEWPORT.",
         "whenToUse": [
           "setting=view_mode: The viewport render mode must be changed for debugging or visualization.",
           "setting=editor_mode: A specific editor mode must be activated.",
@@ -47979,7 +47992,8 @@
           "setting=realtime: Realtime rendering must be enabled or disabled.",
           "setting=realtime: A screenshot warned that the level viewport is not realtime, so effects stood still in it.",
           "setting=show_stats: A debug stat must be displayed.",
-          "setting=hide_stats: A debug stat must be hidden."
+          "setting=hide_stats: A debug stat must be hidden.",
+          "setting=show_flags: The grid, collision shapes, bounds, the navigation mesh, fog or another layer of the viewport must be shown or hidden."
         ],
         "whenNotToUse": [
           "setting=view_mode: The default Lit mode is acceptable.",
@@ -48021,6 +48035,13 @@
               "type": "string",
               "description": "One stat to show or hide (FPS, Unit, Game, SceneRendering...). show_stats without it shows FPS and Unit; hide_stats without it hides every stat. A stat already in the wanted state is left alone, so repeating a call never toggles it back."
             },
+            "flags": {
+              "type": "object",
+              "additionalProperties": {
+                "type": "boolean"
+              },
+              "description": "Show flag names, each true (shown) or false (hidden): {\"Grid\": false}. Names as the engine has them, case ignored: Grid, Collision, Bounds, Navigation, Fog, PostProcessing, Lighting, Particles, Decals, Volumes, Splines, Landscape, Foliage, StaticMeshes, SkeletalMeshes, Translucency, Atmosphere, BillboardSprites and the rest."
+            },
             "setting": {
               "type": "string",
               "enum": [
@@ -48030,9 +48051,10 @@
                 "immersive_mode",
                 "realtime",
                 "show_stats",
-                "hide_stats"
+                "hide_stats",
+                "show_flags"
               ],
-              "description": "Which configure viewport variant to run.\nview_mode: Set the rendering view mode of the view on screen (the level viewport, or the running game's view while the player plays: method game_viewport) by any engine view mode name, its enum name or display name with case, spaces and underscores ignored: Lit, Unlit, Wireframe, DetailLighting, LightingOnly, LightComplexity, ShaderComplexity, LightmapDensity, ReflectionOverride, PathTracing, RayTracingDebug, CollisionPawn, CollisionVisibility, LODColoration, VisualizeNanite, VisualizeLumen, VisualizeVirtualShadowMap and the rest of this engine version's list. An unknown name is refused with that list; with no level viewport open, NO_VIEWPORT.\neditor_mode: Activate an editor mode by id (EM_Landscape, EM_Foliage, EM_MeshPaint, EM_Default) and confirm it is active.\ngame_view: Toggle game view (no editor icons) in the level viewport, or in the free view of an ejected player.\nimmersive_mode: Turn immersive viewport mode on or off (fails with NO_VIEWPORT when no level viewport is open).\nrealtime: Toggle realtime rendering in the editor viewport: particles and animated materials move only in a realtime viewport. When another system holds the viewport off realtime the request is put on top of it (overrode names it); while the editor is in the background with Use Less CPU when in Background on, realtime stays off (heldBy, realtime false) until control_editor configure_editor setting=window unthrottle lifts the throttle.\nshow_stats: Show a stat overlay in the viewport (FPS and Unit when no stat is named); a stat already shown stays shown.\nhide_stats: Hide one stat overlay, or every stat when none is named; a stat already hidden stays hidden."
+              "description": "Which configure viewport variant to run.\nview_mode: Set the rendering view mode of the view on screen (the level viewport, or the running game's view while the player plays: method game_viewport) by any engine view mode name, its enum name or display name with case, spaces and underscores ignored: Lit, Unlit, Wireframe, DetailLighting, LightingOnly, LightComplexity, ShaderComplexity, LightmapDensity, ReflectionOverride, PathTracing, RayTracingDebug, CollisionPawn, CollisionVisibility, LODColoration, VisualizeNanite, VisualizeLumen, VisualizeVirtualShadowMap and the rest of this engine version's list. An unknown name is refused with that list; with no level viewport open, NO_VIEWPORT.\neditor_mode: Activate an editor mode by id (EM_Landscape, EM_Foliage, EM_MeshPaint, EM_Default) and confirm it is active.\ngame_view: Toggle game view (no editor icons) in the level viewport, or in the free view of an ejected player.\nimmersive_mode: Turn immersive viewport mode on or off (fails with NO_VIEWPORT when no level viewport is open).\nrealtime: Toggle realtime rendering in the editor viewport: particles and animated materials move only in a realtime viewport. When another system holds the viewport off realtime the request is put on top of it (overrode names it); while the editor is in the background with Use Less CPU when in Background on, realtime stays off (heldBy, realtime false) until control_editor configure_editor setting=window unthrottle lifts the throttle.\nshow_stats: Show a stat overlay in the viewport (FPS and Unit when no stat is named); a stat already shown stays shown.\nhide_stats: Hide one stat overlay, or every stat when none is named; a stat already hidden stays hidden.\nshow_flags: Show or hide parts of the level viewport by the engine's show flag names, as its Show menu does: flags {\"Grid\": false, \"Collision\": true}, with names such as Grid, Collision, Bounds, Navigation, Fog, PostProcessing, Lighting, Particles, Decals, Volumes, Splines, Landscape, Foliage, StaticMeshes, SkeletalMeshes, Translucency, Atmosphere and BillboardSprites (the editor icons). Each flag is read back (flags) with how many changed; a name that is no show flag refuses the whole call and changes nothing (INVALID_ARGUMENT, naming it). Refused while the player plays and is not ejected (PIE_VIEW_NOT_EJECTED) and with no level viewport (NO_VIEWPORT)."
             }
           },
           "required": [
@@ -48067,7 +48089,7 @@
       },
       "examples": [
         {
-          "title": "Change what the editor viewport shows, chosen by setting: view_mode (any engine view mode by name: Lit, Unlit, Wireframe, LightingOnly, ShaderComplexity, CollisionPawn, PathTracing and the rest; the running game's view while Play runs), editor_mode (activate a mode such as EM_Landscape, EM_Foliage or EM_Default, checked active), game_view (hide editor icons), immersive_mode (the viewport fills its window), realtime (keep effects and animated materials moving), show_stats or hide_stats (stat overlays: FPS and Unit by default; hide_stats with no stat hides them all). Each answers with the state it reads back; with no level viewport open, NO_VIEWPORT.",
+          "title": "Change what the editor viewport shows, chosen by setting: view_mode (any engine view mode by name: Lit, Unlit, Wireframe, LightingOnly, ShaderComplexity, CollisionPawn, PathTracing and the rest; the running game's view while Play runs), editor_mode (activate a mode such as EM_Landscape, EM_Foliage or EM_Default, checked active), game_view (hide editor icons), immersive_mode (the viewport fills its window), realtime (keep effects and animated materials moving), show_stats or hide_stats (stat overlays: FPS and Unit by default; hide_stats with no stat hides them all), show_flags (the Show menu by name: flags {\"Grid\": false, \"Collision\": true}, every name checked before any is set, each read back). Each answers with the state it reads back; with no level viewport open, NO_VIEWPORT.",
           "input": {
             "action": "configure_viewport",
             "viewMode": "Wireframe",
@@ -48111,7 +48133,8 @@
             "immersive_mode": "set_immersive_mode",
             "realtime": "set_viewport_realtime",
             "show_stats": "show_stats",
-            "hide_stats": "hide_stats"
+            "hide_stats": "hide_stats",
+            "show_flags": "set_show_flags"
           },
           "declaredBy": {
             "viewMode": [
@@ -48131,6 +48154,9 @@
             "stat": [
               "show_stats",
               "hide_stats"
+            ],
+            "flags": [
+              "show_flags"
             ]
           },
           "requires": {
@@ -48143,14 +48169,19 @@
               "required": [
                 "mode"
               ]
+            },
+            "set_show_flags": {
+              "required": [
+                "flags"
+              ]
             }
           }
         }
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "ad21e64a018f830ef1fe08fa9577590638a2ebcdcd4569c74a85527753c0231e",
-        "content": "150376dcfaa16e881959a1bc19da97e569f3b001ebbc1f77ac90e93707e62ace"
+        "schema": "63aef81e440b996173cea725ff418e600a6b8cb6eff0d206da4a718d425be0ac",
+        "content": "32af01af651aa4c6975e828613593e36b9617091796dbfc3d05bf59e1565def3"
       }
     },
     {

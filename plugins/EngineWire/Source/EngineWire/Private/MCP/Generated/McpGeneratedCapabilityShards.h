@@ -60,7 +60,7 @@ inline const FMcpCapabilityShard& At(int32 Index)
 		{ TEXT("animation_physics"), Detail::MCP_CAP_SHARD_ANIMATION_PHYSICS_CHUNKS, 53, 32 },
 		{ TEXT("build_environment"), Detail::MCP_CAP_SHARD_BUILD_ENVIRONMENT_CHUNKS, 71, 43 },
 		{ TEXT("control_actor"), Detail::MCP_CAP_SHARD_CONTROL_ACTOR_CHUNKS, 55, 36 },
-		{ TEXT("control_editor"), Detail::MCP_CAP_SHARD_CONTROL_EDITOR_CHUNKS, 36, 29 },
+		{ TEXT("control_editor"), Detail::MCP_CAP_SHARD_CONTROL_EDITOR_CHUNKS, 37, 29 },
 		{ TEXT("inspect"), Detail::MCP_CAP_SHARD_INSPECT_CHUNKS, 45, 27 },
 		{ TEXT("manage_ai"), Detail::MCP_CAP_SHARD_MANAGE_AI_CHUNKS, 33, 17 },
 		{ TEXT("manage_asset"), Detail::MCP_CAP_SHARD_MANAGE_ASSET_CHUNKS, 96, 54 },
@@ -87,5 +87,5 @@ inline const FMcpCapabilityShard& At(int32 Index)
 
 inline int32 TotalRecordCount() { return 480; }
 
-inline const TCHAR* CatalogRevision() { return TEXT("fa1d39b201d3af04"); }
+inline const TCHAR* CatalogRevision() { return TEXT("c911c1cd8d97427d"); }
 }

@@ -3,6 +3,7 @@
 #include "Domains/ControlEditor/EditorUi/McpEditorUi.h"
 #include "Domains/ControlEditor/Selection/McpEditorSelection.h"
 #include "Domains/ControlEditor/Toolsets/McpEditorToolsets.h"
+#include "Domains/ControlEditor/Viewport/McpEditorShowFlags.h"
 #include "Domains/Play/McpExplore.h"
 #include "Domains/Play/McpPlaytest.h"
 
@@ -128,6 +129,8 @@ bool UEngineWireSubsystem::HandleControlEditorAction(
     return HandleControlEditorSetGameView(RequestId, Payload, RequestingSocket);
   if (LowerSub == TEXT("set_immersive_mode"))
     return HandleControlEditorSetImmersiveMode(RequestId, Payload, RequestingSocket);
+  if (LowerSub == TEXT("set_show_flags"))
+    return McpEditorShowFlags::Handle(this, RequestId, Payload, RequestingSocket);
   if (LowerSub == TEXT("single_frame_step"))
     return HandleControlEditorStepFrame(RequestId, Payload, RequestingSocket);
   if (LowerSub == TEXT("set_fixed_delta_time"))

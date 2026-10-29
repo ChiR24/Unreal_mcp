@@ -5238,6 +5238,7 @@
         "fallCm",
         "filename",
         "filter",
+        "flags",
         "fov",
         "frameRate",
         "from",
@@ -5459,6 +5460,13 @@
           "filter": {
             "type": "string",
             "description": "Case-sensitive substring matched against function names."
+          },
+          "flags": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "boolean"
+            },
+            "description": "Show flag names, each true (shown) or false (hidden): {\"Grid\": false}. Names as the engine has them, case ignored: Grid, Collision, Bounds, Navigation, Fog, PostProcessing, Lighting, Particles, Decals, Volumes, Splines, Landscape, Foliage, StaticMeshes, SkeletalMeshes, Translucency, Atmosphere, BillboardSprites and the rest."
           },
           "fov": {
             "type": "number",
@@ -5759,7 +5767,8 @@
               "immersive_mode",
               "realtime",
               "show_stats",
-              "hide_stats"
+              "hide_stats",
+              "show_flags"
             ],
             "description": "Which configure editor variant to run.\nopen_tab: Open a registered editor tab by id via FGlobalTabmanager, the same path the Window menu uses. Content-source plugins register their windows globally — Bridge as \"BridgeTab\" — so this reaches them without depending on either plugin. Fab registers no fixed id (it numbers each tab Fab1, Fab2, ...), so tabId \"Fab\" opens a new Fab tab through the Fab browser API (UE 5.8+). This is also the correct way to authenticate against those services: each owns its own sign-in and persists its own session, so opening its window lets it log in on its own terms rather than reimplementing a login.\npreferences: Set editor preferences, preferences {name: value} in a category: a key naming a console variable is set as the console sets it and read back; any other is a property of the category's settings class (EditorPerformanceSettings, LevelEditorPlaySettings, LevelEditorViewportSettings and the like, the U prefix and Settings suffix optional), written through the property's own text import, saved to the settings ini and applied at once; LevelEditor RealtimeAudio mutes or unmutes editor audio. Keys that did not apply are listed under failed with why, and the call answers PREFERENCES_PARTIALLY_APPLIED or PREFERENCES_NOT_APPLIED. This plugin's own settings are refused. Distinct from system_control set_project_setting.\nwindow: Restore or minimize the main editor window without giving it focus. Restoring also stops the editor throttling itself while in the background (a minimized editor runs Play In Editor at about 3 fps, which makes every timed test lie); minimize puts the window away and turns the throttle back on, so an editor kept out of the way costs the machine next to nothing."
           },

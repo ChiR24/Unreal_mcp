@@ -1,7 +1,7 @@
 /**
  * Viewport display records: set_view_mode, set_viewport_resolution,
  * set_viewport_realtime, set_editor_mode, set_immersive_mode,
- * set_game_view, show_stats, hide_stats.
+ * set_game_view, show_stats, hide_stats, set_show_flags.
  */
 import type { CapabilityRecordSource } from '../../model.js';
 import { buildCoreRecord } from '../core/builder.js';
@@ -102,5 +102,15 @@ export const VIEWPORT_RECORDS: readonly CapabilityRecordSource[] = [
     effect: 'read',
    
     exampleInput: { action: 'hide_stats', stat: 'fps' },
+  }),
+  buildCoreRecord({
+    parentTool: 'control_editor', action: 'set_show_flags', domain: D, family: F,
+    summary: 'Show or hide parts of the level viewport by the engine\'s show flag names, as its Show menu does: flags {"Grid": false, "Collision": true}, with names such as Grid, Collision, Bounds, Navigation, Fog, PostProcessing, Lighting, Particles, Decals, Volumes, Splines, Landscape, Foliage, StaticMeshes, SkeletalMeshes, Translucency, Atmosphere and BillboardSprites (the editor icons). Each flag is read back (flags) with how many changed; a name that is no show flag refuses the whole call and changes nothing (INVALID_ARGUMENT, naming it). Refused while the player plays and is not ejected (PIE_VIEW_NOT_EJECTED) and with no level viewport (NO_VIEWPORT).',
+    whenToUse: ['The grid, collision shapes, bounds, the navigation mesh, fog or another layer of the viewport must be shown or hidden.'],
+    whenNotToUse: ['The whole render mode must change (set_view_mode: Wireframe, Unlit, LightingOnly).', 'Every editor icon must go (set_game_view).'],
+    inputProps: { flags: { type: 'object', additionalProperties: { type: 'boolean' }, description: 'Show flag names, each true (shown) or false (hidden): {"Grid": false}. Names as the engine has them, case ignored: Grid, Collision, Bounds, Navigation, Fog, PostProcessing, Lighting, Particles, Decals, Volumes, Splines, Landscape, Foliage, StaticMeshes, SkeletalMeshes, Translucency, Atmosphere, BillboardSprites and the rest.' } },
+    required: ['flags'],
+    effect: 'read',
+    exampleInput: { action: 'set_show_flags', flags: { Grid: false, Collision: true } },
   }),
 ];

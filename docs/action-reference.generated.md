@@ -4,7 +4,7 @@
 
 # Action reference
 
-Catalog revision: `fa1d39b201d3af04`
+Catalog revision: `c911c1cd8d97427d`
 
 Both transports expose exactly ONE public MCP tool, `unreal`, with the four
 operations `search` / `describe` / `execute` / `configure`. The parent tools
@@ -334,7 +334,7 @@ validates against, so `execute` cannot accept an action this table omits.
 | `control_editor.call_editor_tool_destructive` | `control_editor` | `control_editor` | destructive | destructive | elevated | `control_editor.call_editor_tool_destructive` |
 | `control_editor.close_asset` | `control_editor` | `close_asset` | write | write | none | `control_editor.close_asset` |
 | `control_editor.configure_editor` | `control_editor` | `control_editor` | write | write | none | `control_editor.configure_editor` `control_editor.open_editor_tab` `control_editor.set_preferences` `control_editor.restore_editor_window` |
-| `control_editor.configure_viewport` | `control_editor` | `set_view_mode` | read | read | none | `control_editor.configure_viewport` `control_editor.set_view_mode` `control_editor.set_editor_mode` `control_editor.set_game_view` `control_editor.set_immersive_mode` `control_editor.set_viewport_realtime` `control_editor.show_stats` `control_editor.hide_stats` |
+| `control_editor.configure_viewport` | `control_editor` | `set_view_mode` | read | read | none | `control_editor.configure_viewport` `control_editor.set_view_mode` `control_editor.set_editor_mode` `control_editor.set_game_view` `control_editor.set_immersive_mode` `control_editor.set_viewport_realtime` `control_editor.show_stats` `control_editor.hide_stats` `control_editor.set_show_flags` |
 | `control_editor.console_command` | `control_editor` | `console_command` | write | write | none | `control_editor.console_command` `control_editor.execute_command` |
 | `control_editor.create_bookmark` | `control_editor` | `create_bookmark` | write | write | none | `control_editor.create_bookmark` |
 | `control_editor.describe_reflected_api` | `control_editor` | `control_editor` | read | read | none | `control_editor.describe_reflected_api` |

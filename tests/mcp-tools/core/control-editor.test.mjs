@@ -157,6 +157,10 @@ const testCases = [
   { scenario: 'ACTION: show_stats', toolName: 'control_editor', arguments: { action: 'show_stats', stat: 'fps' }, expected: 'success' },
   { scenario: 'ACTION: show_stats again leaves it shown', toolName: 'control_editor', arguments: { action: 'show_stats', stat: 'fps' }, expected: 'success', assertions: [{ path: 'structuredContent.result.alreadyShown.0', equals: 'fps', label: 'a second show does not toggle the stat off' }] },
   { scenario: 'ACTION: hide_stats', toolName: 'control_editor', arguments: { action: 'hide_stats', stat: 'fps' }, expected: 'success' },
+  // show_flags: the level viewport's Show menu by name; each flag is read back under the engine's spelling.
+  { scenario: 'CONFIG: set_show_flags hides the grid and shows collision', toolName: 'control_editor', arguments: { action: 'set_show_flags', flags: { Grid: false, collision: true } }, expected: 'success', assertions: [{ path: 'structuredContent.result.flags.Grid', equals: false, label: 'the grid reads back hidden' }, { path: 'structuredContent.result.flags.Collision', equals: true, label: 'a name in any case reads back as the engine spells it' }] },
+  { scenario: 'CONFIG: set_show_flags puts them back', toolName: 'control_editor', arguments: { action: 'set_show_flags', flags: { Grid: true, Collision: false } }, expected: 'success', assertions: [{ path: 'structuredContent.result.flags.Grid', equals: true, label: 'the grid is back' }] },
+  { scenario: 'ERROR: set_show_flags refuses a name that is no show flag', toolName: 'control_editor', arguments: { action: 'set_show_flags', flags: { Grid: false, NoSuchFlag: true } }, expected: 'error|NoSuchFlag' },
   { scenario: 'CONFIG: set_editor_mode', toolName: 'control_editor', arguments: { action: 'set_editor_mode', mode: 'EM_Default' }, expected: 'success' },
   { scenario: 'ERROR: set_editor_mode unknown mode', toolName: 'control_editor', arguments: { action: 'set_editor_mode', mode: 'NoSuchMode' }, expected: 'error|MODE_NOT_ACTIVATED' },
   { scenario: 'CONFIG: set_immersive_mode', toolName: 'control_editor', arguments: { action: 'set_immersive_mode', enabled: false }, expected: 'success' },
