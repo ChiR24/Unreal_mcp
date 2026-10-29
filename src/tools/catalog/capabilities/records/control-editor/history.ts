@@ -10,7 +10,7 @@ const D = 'editor';
 export const HISTORY_RECORDS: readonly CapabilityRecordSource[] = [
   buildCoreRecord({
     parentTool: 'control_editor', action: 'undo', domain: D, family: F,
-    topics: ['undo last change', 'revert last action', 'ctrl z'],
+    topics: ['undo last change', 'revert last action', 'ctrl z', 'undo last edit', 'take back the last action'],
     summary: 'Undo the last editor transaction; the reply names it, and NOTHING_TO_UNDO means there was none.',
     whenToUse: ['The most recent editor action must be reversed.'],
     whenNotToUse: ['There is nothing to undo.'],

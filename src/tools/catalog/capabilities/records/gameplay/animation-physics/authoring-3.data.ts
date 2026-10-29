@@ -46,7 +46,7 @@ export const ANIM_AUTHORED_3: readonly CapabilityRecordSource[] = [
     latency: 'interactive', resources: 'low', plugins: ESU,
     outputProps: { ragdollActive: P.bool_, hasPhysicsAsset: P.bool_ }, outputRequired: ['ragdollActive'],
     exampleInput: { action: 'activate_ragdoll', actorName: 'Char_1', activate: true }, exampleOutput: { success: true, message: 'Ragdoll activation state changed', ragdollActive: true, hasPhysicsAsset: true } }),
-  buildRecord({ parentTool: T, id: `${T}.configure_vehicle`, action: 'configure_vehicle', topics: ['set up vehicle'], family: F,
+  buildRecord({ parentTool: T, id: `${T}.configure_vehicle`, action: 'configure_vehicle', topics: ['set up vehicle', 'create a vehicle', 'make a car drive'], family: F,
     summary: 'Make a placed skeletal-mesh actor drive as a wheeled vehicle (Chaos Vehicles): adds an MCP_VehicleMovement4W movement component when it has none, then sets the wheels (replacing them), engine, transmission, mass and drag. Each value is set by name, so one an engine version lacks is skipped without a word; only that actor changes, and nothing is saved until its level is.',
     whenToUse: ['A car or truck actor (a skeletal mesh with wheel bones) must be set up to drive.'],
     whenNotToUse: ['A skeletal mesh only has to simulate physics, not drive (use setup_physics_simulation).', 'Every copy of a vehicle Blueprint should drive: add the vehicle movement component in the Blueprint (manage_blueprint edit_scs).'],

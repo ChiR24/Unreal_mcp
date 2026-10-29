@@ -1,5 +1,5 @@
 {
-  "catalogRevision": "94fd21c4f38c089f",
+  "catalogRevision": "cabcdb65a4b152b1",
   "recordCount": 469,
   "records": [
     {
@@ -1476,7 +1476,9 @@
         "family": "physics",
         "topics": [
           "configure_vehicle",
-          "set up vehicle"
+          "set up vehicle",
+          "create a vehicle",
+          "make a car drive"
         ],
         "summary": "Make a placed skeletal-mesh actor drive as a wheeled vehicle (Chaos Vehicles): adds an MCP_VehicleMovement4W movement component when it has none, then sets the wheels (replacing them), engine, transmission, mass and drag. Each value is set by name, so one an engine version lacks is skipped without a word; only that actor changes, and nothing is saved until its level is.",
         "whenToUse": [
@@ -1659,7 +1661,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "04e2a8d02b4107691ef7269803fde158f4cdfa9dd20865cd8a1df0f564420761",
-        "content": "e310002a4d2eab3b147b40148178274cb0b996895c9904223b8a31cc8649f5ab"
+        "content": "9799851a39ac75a534710a6390df4bfdf8a1f9112d6f37b5c56b86286f283598"
       }
     },
     {
@@ -10877,9 +10879,12 @@
           "which assets use this",
           "what uses this material",
           "unsaved changes",
-          "compare assets"
+          "compare assets",
+          "find unused assets",
+          "unreferenced assets",
+          "assets nothing uses"
         ],
-        "summary": "Inspect an asset: metadata, what it uses or what uses it (referencers), its dependency graph, an exists-and-loads check, a directory report, or a diff: its unsaved changes against the saved file, or a compare with another asset.",
+        "summary": "Inspect an asset: metadata, what it uses or what uses it (referencers), its dependency graph, an exists-and-loads check, a directory report (every asset under a folder, or with reportType unreferenced only those nothing uses), or a diff: its unsaved changes against the saved file, or a compare with another asset.",
         "whenToUse": [
           "lookup=metadata: What was recorded on an asset must be read back: its registry tags and the package metadata that asset.set_metadata writes, tags included (a tag set with kind=tags shows under metadata as \"true\").",
           "lookup=dependencies: Before deleting or replacing an asset, the packages, Blueprints and levels that use it must be listed.",
@@ -10887,6 +10892,7 @@
           "lookup=graph: The reference graph of an asset must be walked several levels deep in one call (depth is capped at 8).",
           "lookup=validate: An asset must be confirmed to exist and load before other calls rely on it (no content, reference or data checks are run).",
           "lookup=report: Every asset under a directory, with name, path and class, must be listed in one reply, optionally saved as a JSON file in the project.",
+          "lookup=report: Cleanup: which assets does nothing use (reportType unreferenced)?",
           "lookup=diff: What changed in an asset since it was last saved must be known before saving or discarding it.",
           "lookup=diff: Two versions of an asset must be compared, such as a backup copy and the current one."
         ],
@@ -10897,6 +10903,7 @@
           "lookup=graph: A material's package references are wanted; a plain material answers here with its expression nodes (use lookup=dependencies).",
           "lookup=validate: Every asset in a folder must be checked for load errors (use system_control.validate_assets).",
           "lookup=report: A paged view of one folder is enough (use asset.list); the report returns the whole tree unpaged.",
+          "lookup=report: One asset's users are wanted (lookup dependencies with referencers).",
           "lookup=diff: The asset's current values are wanted (use blueprint.get_blueprint or inspect.get_property).",
           "lookup=diff: A level or another kind of asset must be compared; only Blueprints, DataTables and data assets are."
         ]
@@ -10920,15 +10927,15 @@
             },
             "directory": {
               "type": "string",
-              "description": "Directory to report on."
+              "description": "Directory to report on (default /Game)."
             },
             "reportType": {
               "type": "string",
-              "description": "Report type."
+              "description": "summary (default): every asset; unreferenced: only the assets nothing refers to."
             },
             "outputPath": {
               "type": "string",
-              "description": "Output file path."
+              "description": "A project-relative file to write the report to as JSON."
             },
             "againstPath": {
               "type": "string",
@@ -10944,7 +10951,7 @@
                 "report",
                 "diff"
               ],
-              "description": "Which inspect asset variant to run.\nmetadata: Retrieve metadata and tags for an asset.\ndependencies: List the packages an asset uses, or with referencers the packages that use it. Direct packages only; lookup \"graph\" walks dependencies recursively.\ngraph: Retrieve the asset reference graph directly via the lookup=graph bridge action.\nvalidate: Confirm an asset exists and loads. It runs no content, reference or data checks.\nreport: Generate an asset report for a directory.\ndiff: Compare a Blueprint, DataTable or data asset with its saved file (its unsaved edits) or with another asset: changed, added and removed properties and class defaults, Blueprint components and graph changes, DataTable rows. Read-only."
+              "description": "Which inspect asset variant to run.\nmetadata: Retrieve metadata and tags for an asset.\ndependencies: List the packages an asset uses, or with referencers the packages that use it. Direct packages only; lookup \"graph\" walks dependencies recursively.\ngraph: Retrieve the asset reference graph directly via the lookup=graph bridge action.\nvalidate: Confirm an asset exists and loads. It runs no content, reference or data checks.\nreport: Report the assets under a directory (default /Game, subfolders included): reportType summary (default) lists every one with name, path and class; unreferenced lists only those no other package refers to, hard or soft, as the saved packages record it (levels and redirectors left out): candidates to delete, though a primary asset the asset manager cooks, or one code loads by path, can still be in use. outputPath also writes the report as a JSON file in the project.\ndiff: Compare a Blueprint, DataTable or data asset with its saved file (its unsaved edits) or with another asset: changed, added and removed properties and class defaults, Blueprint components and graph changes, DataTable rows. Read-only."
             }
           },
           "required": [
@@ -10996,6 +11003,52 @@
               "type": "boolean",
               "description": "True when the walk hit the depth or node ceiling and the graph is partial."
             },
+            "directory": {
+              "type": "string",
+              "description": "The directory reported on."
+            },
+            "reportType": {
+              "type": "string",
+              "description": "The report made."
+            },
+            "assetCount": {
+              "type": "number",
+              "description": "Assets listed."
+            },
+            "scanned": {
+              "type": "number",
+              "description": "Assets under the directory."
+            },
+            "assets": {
+              "type": "array",
+              "description": "The assets.",
+              "items": {
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {
+                  "name": {
+                    "type": "string",
+                    "description": "Asset name."
+                  },
+                  "path": {
+                    "type": "string",
+                    "description": "Object path."
+                  },
+                  "class": {
+                    "type": "string",
+                    "description": "Class path."
+                  }
+                }
+              }
+            },
+            "outputPath": {
+              "type": "string",
+              "description": "The file written, when outputPath was given."
+            },
+            "fileWritten": {
+              "type": "boolean",
+              "description": "Whether that file was written."
+            },
             "against": {
               "type": "string",
               "description": "What the asset was compared with: \"saved file\", or the againstPath asset."
@@ -11045,7 +11098,7 @@
       },
       "examples": [
         {
-          "title": "Inspect an asset: metadata, what it uses or what uses it (referencers), its dependency graph, an exists-and-loads check, a directory report, or a diff: its unsaved changes against the saved file, or a compare with another asset.",
+          "title": "Inspect an asset: metadata, what it uses or what uses it (referencers), its dependency graph, an exists-and-loads check, a directory report (every asset under a folder, or with reportType unreferenced only those nothing uses), or a diff: its unsaved changes against the saved file, or a compare with another asset.",
           "input": {
             "assetPath": "/Game/Meshes/SM_Crate",
             "action": "inspect_asset",
@@ -11154,8 +11207,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "60fa8d7f6e156d54c9fc6c8f5a6f7539d31a59d2b42527d65d91d5d0e0f537ac",
-        "content": "92f041512594f352a95ca1c4f12cdc31c287d6f2138f1e76c15db701c9e83bc9"
+        "schema": "2b6b595b13ce8326b0523b86145b117105d52ea23322948e7bd9e4aa1e658da7",
+        "content": "49be1285beb1507be0420c945a2b15bf54e9ef26c6bb9e070b04d059553d174c"
       }
     },
     {
@@ -50259,6 +50312,8 @@
           "undo last change",
           "revert last action",
           "ctrl z",
+          "undo last edit",
+          "take back the last action",
           "roll back my changes",
           "undo everything since",
           "savepoint",
@@ -50392,7 +50447,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "6f32156669fa0baa1e674a8ed15882b96a52fc942957081b7b56ebb5805be731",
-        "content": "b80f51670c4c9d1df05227267a4d8f94e3e5daedc584d69b2b0f3ef553ee4db5"
+        "content": "5b89813a4c1ec309830db6646ec8d4d20a22edd163a8dcb7398ce8b305b7be0d"
       }
     },
     {

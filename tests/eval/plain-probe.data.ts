@@ -798,4 +798,11 @@ export const PLAIN_PROBE: readonly PlainProbeCase[] = [
   { query: 'add a viewmodel to a widget', accepted: ['blueprint.add_widget_viewmodel'] },
   { query: 'bind a widget to a viewmodel', accepted: ['blueprint.bind_widget_viewmodel'] },
   { query: 'make a variable field notify', accepted: ['blueprint.set_field_notify'] },
+  // Said plainly: "edit" and "take" pulled spline edits and the take recorder first, "create" a socket.
+  { query: 'undo last edit', accepted: ['control_editor.undo'] },
+  { query: 'take back the last action', accepted: ['control_editor.undo'] },
+  { query: 'create a vehicle', accepted: ['animation_physics.configure_vehicle'] },
+  // Assets nothing uses: the directory report's unreferenced type.
+  { query: 'find unused assets', accepted: ['asset.inspect_asset'] },
+  { query: 'unreferenced assets', accepted: ['asset.inspect_asset'] },
 ];

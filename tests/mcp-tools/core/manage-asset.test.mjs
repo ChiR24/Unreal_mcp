@@ -136,6 +136,10 @@ const testCases = [
   { scenario: 'INFO: find_by_tag', toolName: 'manage_asset', arguments: { action: 'find_by_tag', tag: TAG_KEY }, expected: 'success' },
   { scenario: 'ACTION: generate_report', toolName: 'manage_asset', arguments: { action: 'generate_report', directory: TEST_FOLDER, reportType: 'Summary' }, expected: 'success' },
   { scenario: 'OPTIONAL: generate_report with outputPath', toolName: 'manage_asset', arguments: { action: 'generate_report', directory: TEST_FOLDER, reportType: 'Summary', outputPath: `${TEST_FOLDER}/AssetReport_${ts}.json` }, expected: 'success' },
+  { scenario: 'ACTION: generate_report unreferenced lists only what nothing uses', toolName: 'manage_asset', arguments: { action: 'generate_report', directory: TEST_FOLDER, reportType: 'unreferenced' }, expected: 'success', assertions: [
+    { path: 'structuredContent.result.reportType', equals: 'unreferenced', label: 'the unreferenced report' },
+    { path: 'structuredContent.result.scanned', gte: 1, label: 'the folder was read' },
+  ] },
 
   // === MATERIAL / MESH ACTIONS ===
   { scenario: 'CREATE: create_material', toolName: 'manage_asset', arguments: { action: 'create_material', name: `M_CreateAction_${ts}`, path: TEST_FOLDER }, expected: 'success|already exists' },

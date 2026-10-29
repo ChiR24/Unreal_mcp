@@ -99,7 +99,7 @@ export const MANAGE_ASSET_FOLDS: readonly FoldSpec[] = [
   },
   {
     primary: 'inspect_asset', selector: 'lookup',
-    summary: 'Inspect an asset: metadata, what it uses or what uses it (referencers), its dependency graph, an exists-and-loads check, a directory report, or a diff: its unsaved changes against the saved file, or a compare with another asset.',
+    summary: 'Inspect an asset: metadata, what it uses or what uses it (referencers), its dependency graph, an exists-and-loads check, a directory report (every asset under a folder, or with reportType unreferenced only those nothing uses), or a diff: its unsaved changes against the saved file, or a compare with another asset.',
     topics: ['asset metadata', 'asset dependencies', 'asset referencers', 'what uses this asset', 'find references', 'asset graph', 'validate asset', 'asset report', 'asset used', 'show asset details', 'look at asset', 'meshes using a material', 'which assets use this', 'what uses this material', 'unsaved changes', 'compare assets'],
     members: { metadata: 'get_metadata', dependencies: 'get_dependencies', graph: 'get_asset_graph', validate: 'validate', report: 'generate_report', diff: 'diff_asset' },
   },

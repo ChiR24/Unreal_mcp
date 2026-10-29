@@ -198,11 +198,23 @@ export const ASSET_QUERY_RECORDS: readonly RecordSpec[] = [
       examples: [ex('Find every Blueprint by its ParentClass registry tag', { tag: 'ParentClass' }, { success: true })] }
   ),
 
-  r('generate_report', 'asset', 'Generate an asset report for a directory.',
-    schema({ directory: str('Directory to report on.'), reportType: str('Report type.'), outputPath: str('Output file path.') }, []),
-    OK, READ, READ_POLICY, MEDIUM,
-    { whenToUse: ['Every asset under a directory, with name, path and class, must be listed in one reply, optionally saved as a JSON file in the project.'],
-      whenNotToUse: ['A paged view of one folder is enough (use asset.list); the report returns the whole tree unpaged.'],
-      examples: [ex('Report on the Meshes directory', { directory: '/Game/Meshes', reportType: 'summary', outputPath: '/Game/Reports/Meshes' }, { success: true })] }
+  r('generate_report', 'asset', 'Report the assets under a directory (default /Game, subfolders included): reportType summary (default) lists every one with name, path and class; unreferenced lists only those no other package refers to, hard or soft, as the saved packages record it (levels and redirectors left out): candidates to delete, though a primary asset the asset manager cooks, or one code loads by path, can still be in use. outputPath also writes the report as a JSON file in the project.',
+    schema({ directory: str('Directory to report on (default /Game).'), reportType: str('summary (default): every asset; unreferenced: only the assets nothing refers to.'), outputPath: str('A project-relative file to write the report to as JSON.') }, []),
+    schema({
+      success: bool('Operation succeeded.'),
+      directory: str('The directory reported on.'),
+      reportType: str('The report made.'),
+      assetCount: num('Assets listed.'),
+      scanned: num('Assets under the directory.'),
+      assets: { type: 'array', description: 'The assets.', items: { type: 'object', additionalProperties: false, properties: { name: str('Asset name.'), path: str('Object path.'), class: str('Class path.') } } },
+      outputPath: str('The file written, when outputPath was given.'),
+      fileWritten: bool('Whether that file was written.'),
+    }, ['success']),
+    READ, READ_POLICY, MEDIUM,
+    { topics: ['find unused assets', 'unreferenced assets', 'assets nothing uses'],
+      whenToUse: ['Every asset under a directory, with name, path and class, must be listed in one reply, optionally saved as a JSON file in the project.', 'Cleanup: which assets does nothing use (reportType unreferenced)?'],
+      whenNotToUse: ['A paged view of one folder is enough (use asset.list); the report returns the whole tree unpaged.', 'One asset\'s users are wanted (lookup dependencies with referencers).'],
+      examples: [ex('Report on the Meshes directory', { directory: '/Game/Meshes', reportType: 'summary', outputPath: '/Game/Reports/Meshes' }, { success: true }),
+        ex('Find the assets nothing uses under /Game/Props', { directory: '/Game/Props', reportType: 'unreferenced' }, { success: true })] }
   )
 ];

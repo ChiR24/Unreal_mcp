@@ -11985,7 +11985,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "directory": {
           "type": "string",
-          "description": "Directory to report on."
+          "description": "Directory to report on (default /Game)."
         },
         "directoryPath": {
           "type": "string",
@@ -12391,7 +12391,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             "report",
             "diff"
           ],
-          "description": "Which inspect asset variant to run.\nmetadata: Retrieve metadata and tags for an asset.\ndependencies: List the packages an asset uses, or with referencers the packages that use it. Direct packages only; lookup \"graph\" walks dependencies recursively.\ngraph: Retrieve the asset reference graph directly via the lookup=graph bridge action.\nvalidate: Confirm an asset exists and loads. It runs no content, reference or data checks.\nreport: Generate an asset report for a directory.\ndiff: Compare a Blueprint, DataTable or data asset with its saved file (its unsaved edits) or with another asset: changed, added and removed properties and class defaults, Blueprint components and graph changes, DataTable rows. Read-only."
+          "description": "Which inspect asset variant to run.\nmetadata: Retrieve metadata and tags for an asset.\ndependencies: List the packages an asset uses, or with referencers the packages that use it. Direct packages only; lookup \"graph\" walks dependencies recursively.\ngraph: Retrieve the asset reference graph directly via the lookup=graph bridge action.\nvalidate: Confirm an asset exists and loads. It runs no content, reference or data checks.\nreport: Report the assets under a directory (default /Game, subfolders included): reportType summary (default) lists every one with name, path and class; unreferenced lists only those no other package refers to, hard or soft, as the saved packages record it (levels and redirectors left out): candidates to delete, though a primary asset the asset manager cooks, or one code loads by path, can still be in use. outputPath also writes the report as a JSON file in the project.\ndiff: Compare a Blueprint, DataTable or data asset with its saved file (its unsaved edits) or with another asset: changed, added and removed properties and class defaults, Blueprint components and graph changes, DataTable rows. Read-only."
         },
         "maintenance": {
           "type": "string",
@@ -12683,7 +12683,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "outputPath": {
           "type": "string",
-          "description": "Full output asset path, e.g. /Game/Textures/T_Noise; replaces name and path."
+          "description": "A project-relative file to write the report to as JSON."
         },
         "outputType": {
           "type": "string",
@@ -12988,7 +12988,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "reportType": {
           "type": "string",
-          "description": "Report type."
+          "description": "summary (default): every asset; unreferenced: only the assets nothing refers to."
         },
         "rowData": {
           "type": "object",
@@ -13429,7 +13429,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "assetCount": {
           "type": "number",
-          "description": "Entries returned."
+          "description": "Assets listed."
         },
         "assetFormats": {
           "type": "array",
@@ -13484,6 +13484,28 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
                       "type": "number"
                     },
                     "description": "Its size as [x, y, z] in cm (meshes)."
+                  }
+                }
+              }
+            },
+            {
+              "type": "array",
+              "description": "The assets.",
+              "items": {
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {
+                  "name": {
+                    "type": "string",
+                    "description": "Asset name."
+                  },
+                  "path": {
+                    "type": "string",
+                    "description": "Object path."
+                  },
+                  "class": {
+                    "type": "string",
+                    "description": "Class path."
                   }
                 }
               }
@@ -13790,6 +13812,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           },
           "description": "The DataRegistry settings' folders whose registries the game sets up."
         },
+        "directory": {
+          "type": "string",
+          "description": "The directory reported on."
+        },
         "distributionMethod": {
           "type": "string",
           "description": "How Fab distributes a unreal-engine listing: asset_pack (content for a project) or complete_project (a whole project). Present only for a listing that ships unreal-engine."
@@ -13937,6 +13963,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "fileName": {
           "type": "string",
           "description": "The file Fab downloads (source formats only)."
+        },
+        "fileWritten": {
+          "type": "boolean",
+          "description": "Whether that file was written."
         },
         "finished": {
           "type": "boolean",
@@ -14367,6 +14397,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "string",
           "description": "Pin name, for a function output."
         },
+        "outputPath": {
+          "type": "string",
+          "description": "The file written, when outputPath was given."
+        },
         "overlappingNodes": {
           "oneOf": [
             {
@@ -14591,6 +14625,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "number",
           "description": "How many nodes were deleted."
         },
+        "reportType": {
+          "type": "string",
+          "description": "The report made."
+        },
         "requested": {
           "type": "number",
           "description": "Assets found to delete, the kept ones included."
@@ -14654,8 +14692,11 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "description": "kind=parameter_collection: every scalar parameter of the collection after the call, {name, default}."
         },
         "scanned": {
-          "type": "boolean",
-          "description": "Whether the game sets it up: only registries under the DataRegistry settings' DirectoriesToScan are."
+          "type": [
+            "boolean",
+            "number"
+          ],
+          "description": "Assets under the directory."
         },
         "scannedAssets": {
           "type": "number",

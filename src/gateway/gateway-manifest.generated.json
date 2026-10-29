@@ -8438,7 +8438,7 @@
           },
           "directory": {
             "type": "string",
-            "description": "Directory to report on."
+            "description": "Directory to report on (default /Game)."
           },
           "directoryPath": {
             "type": "string",
@@ -8844,7 +8844,7 @@
               "report",
               "diff"
             ],
-            "description": "Which inspect asset variant to run.\nmetadata: Retrieve metadata and tags for an asset.\ndependencies: List the packages an asset uses, or with referencers the packages that use it. Direct packages only; lookup \"graph\" walks dependencies recursively.\ngraph: Retrieve the asset reference graph directly via the lookup=graph bridge action.\nvalidate: Confirm an asset exists and loads. It runs no content, reference or data checks.\nreport: Generate an asset report for a directory.\ndiff: Compare a Blueprint, DataTable or data asset with its saved file (its unsaved edits) or with another asset: changed, added and removed properties and class defaults, Blueprint components and graph changes, DataTable rows. Read-only."
+            "description": "Which inspect asset variant to run.\nmetadata: Retrieve metadata and tags for an asset.\ndependencies: List the packages an asset uses, or with referencers the packages that use it. Direct packages only; lookup \"graph\" walks dependencies recursively.\ngraph: Retrieve the asset reference graph directly via the lookup=graph bridge action.\nvalidate: Confirm an asset exists and loads. It runs no content, reference or data checks.\nreport: Report the assets under a directory (default /Game, subfolders included): reportType summary (default) lists every one with name, path and class; unreferenced lists only those no other package refers to, hard or soft, as the saved packages record it (levels and redirectors left out): candidates to delete, though a primary asset the asset manager cooks, or one code loads by path, can still be in use. outputPath also writes the report as a JSON file in the project.\ndiff: Compare a Blueprint, DataTable or data asset with its saved file (its unsaved edits) or with another asset: changed, added and removed properties and class defaults, Blueprint components and graph changes, DataTable rows. Read-only."
           },
           "maintenance": {
             "type": "string",
@@ -9136,7 +9136,7 @@
           },
           "outputPath": {
             "type": "string",
-            "description": "Full output asset path, e.g. /Game/Textures/T_Noise; replaces name and path."
+            "description": "A project-relative file to write the report to as JSON."
           },
           "outputType": {
             "type": "string",
@@ -9441,7 +9441,7 @@
           },
           "reportType": {
             "type": "string",
-            "description": "Report type."
+            "description": "summary (default): every asset; unreferenced: only the assets nothing refers to."
           },
           "rowData": {
             "type": "object",

@@ -21,6 +21,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **`list_data_registries`**, **`get_data_registry`** and **`create_data_registry`** list data registries, read one (sources, schema, items in lookup order and their values) and make one over data tables (where the project enables DataRegistry).
 - **`read_editor_ui`** and **`use_editor_ui`** read the editor's own UI as an outline of widgets with refs and use one (click, type, keys, check boxes) for features no capability reaches, without ever moving the cursor.
 - **Viewmodels (MVVM)**: **`list_viewmodels`**, **`read_widget_viewmodels`**, **`add_widget_viewmodel`**, **`bind_widget_viewmodel`**, **`remove_widget_viewmodel`** and **`set_field_notify`** find viewmodels, add one to a Widget Blueprint and bind its fields to widget properties; a binding the MVVM compiler rejects is taken out again (UE 5.4+, where the project enables ModelViewViewModel).
+- **Assets nothing uses**: `inspect_asset` `lookup: report` with `reportType: unreferenced` lists the assets under a folder that no saved package refers to (levels and redirectors left out).
 - **Names models invent land**: an alias sent as a tool and action resolves (`system_control` `restart_editor` runs `control_editor`'s), with five new ones mined from session transcripts (`call_function`, `save_all` under `manage_asset`, `set_blueprint_variables` under `manage_blueprint`, `connect_nodes` for a Blueprint's `connect_pins`).
 - **`npx unreal-engine-mcp-server init <client>`** shows (and with `--write` saves) the server's entry in Claude Code's, Cursor's, VS Code's, Gemini's or Codex's MCP config; **`doctor`** checks Node, the token (never shown), the editor's answer and both versions.
 
@@ -30,6 +31,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 <summary><b>🔧 Fixed</b></summary>
 
 - **An alias a family member declared runs that member**: `blueprint.add_component_to_blueprint`, `set_default_value`, `create_widget`, `hide_widget`, `asset.find_assets` and `manage_networking.replicate_variable`/`enable_replication` ran the family's default or were refused for its selector.
+- **Search: "undo last edit" and "take back the last action" find `undo`, "create a vehicle" `configure_vehicle`** (spline edits, the take recorder and sockets ranked first).
+- **The directory report's reply carries its assets**: the record declared no outputs, so the list was cut from every reply.
 
 </details>
 

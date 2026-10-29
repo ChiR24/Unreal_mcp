@@ -14,6 +14,7 @@
 #include "Misc/Paths.h"
 
 #include "AssetRegistry/AssetRegistryModule.h"
+#include "Engine/World.h"
 
 bool UEngineWireSubsystem::HandleGenerateReport(
     const FString &RequestId, const TSharedPtr<FJsonObject> &Payload,
@@ -57,6 +58,21 @@ bool UEngineWireSubsystem::HandleGenerateReport(
   // will NOT appear. Use Content Browser "Rescan" or rescan_content_directory.
   TArray<FAssetData> AssetList;
   AssetRegistryModule.Get().GetAssets(Filter, AssetList);
+  const int32 Scanned = AssetList.Num();
+  // unreferenced: only the assets no other package uses, hard or soft, as the packages on disk record it. A level is
+  // where play starts and a redirector stands in for a moved asset, so neither is listed.
+  if (ReportType.Equals(TEXT("unreferenced"), ESearchCase::IgnoreCase)) {
+    IAssetRegistry &Registry = AssetRegistryModule.Get();
+    AssetList.RemoveAll([&Registry](const FAssetData &Asset) {
+      if (Asset.IsRedirector() || Asset.GetClass() == UWorld::StaticClass()) {
+        return true;
+      }
+      TArray<FName> Referencers;
+      Registry.GetReferencers(Asset.PackageName, Referencers);
+      Referencers.Remove(Asset.PackageName);
+      return Referencers.Num() > 0;
+    });
+  }
 
   TArray<TSharedPtr<FJsonValue>> AssetsArray;
   for (const FAssetData &Asset : AssetList) {
@@ -78,6 +94,7 @@ bool UEngineWireSubsystem::HandleGenerateReport(
   Resp->SetStringField(TEXT("directory"), Directory);
   Resp->SetStringField(TEXT("reportType"), ReportType);
   Resp->SetNumberField(TEXT("assetCount"), AssetList.Num());
+  Resp->SetNumberField(TEXT("scanned"), Scanned);
   Resp->SetArrayField(TEXT("assets"), AssetsArray);
 
   bool bFileWritten = false;
@@ -124,7 +141,9 @@ bool UEngineWireSubsystem::HandleGenerateReport(
     Resp->SetBoolField(TEXT("fileWritten"), bFileWritten);
   }
 
-  SendAutomationResponse(Socket, RequestId, true,
-                         TEXT("Asset report generated"), Resp, FString());
+  const FString Message = !ReportType.Equals(TEXT("unreferenced"), ESearchCase::IgnoreCase) ? FString(TEXT("Asset report generated"))
+      : FString::Printf(TEXT("%d of %d asset(s) under %s are unreferenced: no saved package refers to them. A primary asset the "
+                             "asset manager cooks, or one code loads by path, can still be in use."), AssetList.Num(), Scanned, *Directory);
+  SendAutomationResponse(Socket, RequestId, true, Message, Resp, FString());
   return true;
 }
