@@ -1,6 +1,6 @@
 {
-  "catalogRevision": "b19c56fe606480e3",
-  "recordCount": 470,
+  "catalogRevision": "21dd6a84f123f08e",
+  "recordCount": 471,
   "records": [
     {
       "id": "animation_physics.analyze_animation",
@@ -45174,6 +45174,201 @@
         "algorithm": "sha256",
         "schema": "e9256bf3bde273d9932b0c5459e98e0d736c75e43495b552253fe976a9a90880",
         "content": "8aff188fc2e139d640c33b8b145a4423c6167552ecc4c2981aa2a70338bbb6c8"
+      }
+    },
+    {
+      "id": "control_actor.snap_to_grid",
+      "aliases": [],
+      "legacyIds": [
+        {
+          "tool": "control_actor",
+          "action": "snap_to_grid"
+        }
+      ],
+      "discovery": {
+        "domain": "actor",
+        "family": "find",
+        "topics": [
+          "snap_to_grid",
+          "snap to grid",
+          "grid snapping",
+          "align actors to the grid",
+          "round actor positions"
+        ],
+        "summary": "Move actors onto a grid, as the editor's grid snapping places a dragged actor: each location axis in axes (default xyz; xy keeps heights) rounded to the nearest multiple of gridCm (default the editor's own position grid size), and with rotationDeg each rotation axis to a multiple of that. Every name is found before anything moves (ACTOR_NOT_FOUND changes nothing); the moves are one undo step, dryRun reports them without moving, and where an actor lands is checked like any move (sunk, floating, overlapping).",
+        "whenToUse": [
+          "Modular pieces placed by hand or by coordinates must line up exactly: walls and floors on a 100 cm grid, turns in 90 degree steps."
+        ],
+        "whenNotToUse": [
+          "Actors should touch, rest on or face each other: use arrange_by_relations.",
+          "Sunk or floating actors must rest on the ground: use fix_placement."
+        ]
+      },
+      "schemas": {
+        "input": {
+          "$schema": "https://json-schema.org/draft/2020-12/schema",
+          "type": "object",
+          "properties": {
+            "action": {
+              "type": "string",
+              "description": "The action to execute on the parent tool."
+            },
+            "actorNames": {
+              "type": "array",
+              "minItems": 1,
+              "maxItems": 500,
+              "items": {
+                "type": "string"
+              },
+              "description": "The actors, by label or name."
+            },
+            "gridCm": {
+              "type": "number",
+              "minimum": 0.01,
+              "description": "Grid step in cm (default the editor's position grid size)."
+            },
+            "axes": {
+              "type": "string",
+              "description": "Which location axes snap: any of x, y and z (default xyz)."
+            },
+            "rotationDeg": {
+              "type": "number",
+              "minimum": 0,
+              "description": "Also turn each rotation axis to a multiple of this many degrees (90 squares a piece up); 0 or omitted leaves rotations."
+            },
+            "dryRun": {
+              "type": "boolean",
+              "description": "Report where each would go; nothing moves (default false)."
+            }
+          },
+          "required": [
+            "action",
+            "actorNames"
+          ],
+          "additionalProperties": false
+        },
+        "output": {
+          "$schema": "https://json-schema.org/draft/2020-12/schema",
+          "type": "object",
+          "properties": {
+            "success": {
+              "type": "boolean",
+              "description": "Whether the action succeeded."
+            },
+            "message": {
+              "type": "string",
+              "description": "Human-readable result message."
+            },
+            "details": {
+              "type": "object",
+              "x-unreal-reflection-boundary": true,
+              "description": "Additional handler result fields not named by the contract."
+            },
+            "actors": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "additionalProperties": true,
+                "x-unreal-reflection-boundary": true
+              },
+              "description": "Each actor as {actor, from [x, y, z], to [x, y, z], rotation [pitch, yaw, roll] when rotationDeg is set, movedCm}."
+            },
+            "gridCm": {
+              "type": "number",
+              "description": "The grid step used."
+            },
+            "moved": {
+              "type": "number",
+              "description": "Actors that moved (or would, under dryRun)."
+            },
+            "dryRun": {
+              "type": "boolean",
+              "description": "Whether nothing was moved."
+            },
+            "undo": {
+              "type": "object",
+              "additionalProperties": true,
+              "x-unreal-reflection-boundary": true,
+              "description": "What editor undo takes back: the moves are one step. Absent under dryRun and when nothing moved."
+            }
+          },
+          "required": [
+            "success"
+          ],
+          "additionalProperties": false
+        }
+      },
+      "examples": [
+        {
+          "title": "Move actors onto a grid, as the editor's grid snapping places a dragged actor: each location axis in axes (default xyz; xy keeps heights) rounded to the nearest multiple of gridCm (default the editor's own position grid size), and with rotationDeg each rotation axis to a multiple of that. Every name is found before anything moves (ACTOR_NOT_FOUND changes nothing); the moves are one undo step, dryRun reports them without moving, and where an actor lands is checked like any move (sunk, floating, overlapping).",
+          "input": {
+            "action": "snap_to_grid",
+            "actorNames": [
+              "Wall_1",
+              "Wall_2"
+            ],
+            "gridCm": 100,
+            "rotationDeg": 90
+          },
+          "output": {
+            "success": true,
+            "message": "Snapped 2 of 2 actor(s) onto the 100 cm grid and 90 degree steps.",
+            "actors": [
+              {
+                "actor": "Wall_1",
+                "from": [
+                  103,
+                  498,
+                  0
+                ],
+                "to": [
+                  100,
+                  500,
+                  0
+                ],
+                "rotation": [
+                  0,
+                  90,
+                  0
+                ],
+                "movedCm": 3.6
+              }
+            ],
+            "gridCm": 100,
+            "moved": 2,
+            "dryRun": false
+          }
+        }
+      ],
+      "availability": {
+        "requiredPlugins": [],
+        "editorStates": [
+          "edit"
+        ]
+      },
+      "behavior": {
+        "effect": "write",
+        "idempotency": "non-idempotent",
+        "longRunning": false,
+        "safeToRetry": false
+      },
+      "policy": {
+        "requiredScope": "write",
+        "consent": "none",
+        "dataAccess": "project-write"
+      },
+      "cost": {
+        "latency": "instant",
+        "resources": "low"
+      },
+      "routing": {
+        "parentTool": "control_actor",
+        "dispatchAction": "snap_to_grid"
+      },
+      "hashes": {
+        "algorithm": "sha256",
+        "schema": "72e9f3047c603330fb8c652a07e5a539a8101595a3b283b2454b6bf16104411a",
+        "content": "74a27589a83e1e0dab546e674864a589fcbce4125734561bc66af00f48329f5d"
       }
     },
     {

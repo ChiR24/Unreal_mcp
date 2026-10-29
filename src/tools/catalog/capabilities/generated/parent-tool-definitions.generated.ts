@@ -4773,6 +4773,15 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             {
               "type": "array",
               "minItems": 1,
+              "maxItems": 500,
+              "items": {
+                "type": "string"
+              },
+              "description": "The actors, by label or name."
+            },
+            {
+              "type": "array",
+              "minItems": 1,
               "maxItems": 64,
               "items": {
                 "type": "string"
@@ -4880,6 +4889,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "arguments": {
           "description": "Function arguments (any type)."
+        },
+        "axes": {
+          "type": "string",
+          "description": "Which location axes snap: any of x, y and z (default xyz)."
         },
         "blueprintPath": {
           "type": "string",
@@ -5011,6 +5024,11 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "functionName": {
           "type": "string",
           "description": "Actor function name to call."
+        },
+        "gridCm": {
+          "type": "number",
+          "minimum": 0.01,
+          "description": "Grid step in cm (default the editor's position grid size)."
         },
         "groundTrace": {
           "type": "boolean",
@@ -5356,6 +5374,11 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "maxItems": 3,
           "description": "Rotation as [pitch, yaw, roll] in degrees."
         },
+        "rotationDeg": {
+          "type": "number",
+          "minimum": 0,
+          "description": "Also turn each rotation axis to a multiple of this many degrees (90 squares a piece up); 0 or omitted leaves rotations."
+        },
         "scale": {
           "type": "array",
           "items": {
@@ -5516,6 +5539,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             "fix_placement",
             "describe_relations",
             "arrange_by_relations",
+            "snap_to_grid",
             "attach",
             "detach",
             "set_blueprint_variables",
@@ -5570,6 +5594,15 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
                   }
                 }
               }
+            },
+            {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "additionalProperties": true,
+                "x-unreal-reflection-boundary": true
+              },
+              "description": "Each actor as {actor, from [x, y, z], to [x, y, z], rotation [pitch, yaw, roll] when rotationDeg is set, movedCm}."
             },
             {
               "type": "array",
@@ -5639,7 +5672,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
               "description": "Matched actors."
             }
           ],
-          "description": "Each actor simulated as {actorName, to [x, y, z], rotation [pitch, yaw, roll], moved (cm), turned (degrees), resting (asleep at the end), fell, peakSpeed (cm/s)}."
+          "description": "Each actor as {actor, from [x, y, z], to [x, y, z], rotation [pitch, yaw, roll] when rotationDeg is set, movedCm}."
         },
         "actorsExamined": {
           "type": "number",
@@ -5908,6 +5941,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "number",
           "description": "Game time covered."
         },
+        "gridCm": {
+          "type": "number",
+          "description": "The grid step used."
+        },
         "grids": {
           "type": "array",
           "description": "Copies of one prop in rows and columns, each {members, columns, rows, spacing [x, y] in cm, even}; their rows are not listed again under rows. members names at most 24; memberCount says how many there are when more.",
@@ -6078,9 +6115,13 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
                 "x-unreal-reflection-boundary": true
               },
               "description": "Each actor moved (or that would move under dryRun) as {actorName, from [x, y, z], to [x, y, z], turned (degrees about Z)}."
+            },
+            {
+              "type": "number",
+              "description": "Actors that moved (or would, under dryRun)."
             }
           ],
-          "description": "Each actor moved (or that would move under dryRun) as {actorName, from [x, y, z], to [x, y, z], turned (degrees about Z)}."
+          "description": "Actors that moved (or would, under dryRun)."
         },
         "movedActors": {
           "type": "number",
@@ -6448,6 +6489,12 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
               "type": "object",
               "additionalProperties": true,
               "x-unreal-reflection-boundary": true,
+              "description": "What editor undo takes back: the moves are one step. Absent under dryRun and when nothing moved."
+            },
+            {
+              "type": "object",
+              "additionalProperties": true,
+              "x-unreal-reflection-boundary": true,
               "description": "What editor undo takes back: {undoable, transactionScope, steps}; every move of the call is one step. Absent under dryRun."
             },
             {
@@ -6463,7 +6510,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
               "description": "Whether editor undo takes the spawn back: {undoable: true, transactionScope: \"Spawn Actors\"} (control_editor undo removes every actor the call made), or {undoable: false, reasonCode, reason}."
             }
           ],
-          "description": "What editor undo takes back: {undoable, transactionScope, steps}; every move of the call is one step. Absent under dryRun."
+          "description": "What editor undo takes back: the moves are one step. Absent under dryRun and when nothing moved."
         },
         "unmet": {
           "type": "number",

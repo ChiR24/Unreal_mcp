@@ -808,4 +808,7 @@ export const PLAIN_PROBE: readonly PlainProbeCase[] = [
   // A changed source file picked up again.
   { query: 'reimport texture', accepted: ['asset.reimport'] },
   { query: 'source file changed', accepted: ['asset.reimport'] },
+  // Pieces lined up on a grid.
+  { query: 'snap to grid', accepted: ['control_actor.snap_to_grid'] },
+  { query: 'align actors to the grid', accepted: ['control_actor.snap_to_grid'] },
 ];

@@ -53,6 +53,21 @@ const testCases = [
   { scenario: 'ERROR: a comparison is no relation', toolName: 'control_actor', arguments: { action: 'arrange_by_relations', relations: [`${LAMP}.location.z > 5`] }, expected: 'error|INVALID_ARGUMENT' },
   { scenario: 'ERROR: an unknown actor moves nothing', toolName: 'control_actor', arguments: { action: 'arrange_by_relations', relations: [`MCP_NoSuchActor_${ts} on ${TABLE}`] }, expected: 'error|ACTOR_NOT_FOUND' },
   { scenario: 'ERROR: a floor never moves', toolName: 'control_actor', arguments: { action: 'arrange_by_relations', relations: [`${FLOOR} on ${TABLE}`] }, expected: 'error|NOTHING_TO_MOVE' },
+  // snap_to_grid: the shelf (set out at 29700, 30120, 110) onto a 100 cm grid on x and y, its height kept.
+  { scenario: 'READ: snap_to_grid dryRun reports and moves nothing', toolName: 'control_actor', arguments: { action: 'snap_to_grid', actorNames: [SHELF], gridCm: 100, axes: 'xy', dryRun: true }, expected: 'success', assertions: [
+    { path: 'structuredContent.result.dryRun', equals: true, label: 'a report only' },
+  ] },
+  { scenario: 'UPDATE: snap_to_grid puts the shelf on the 100 cm grid, squared to 90 degrees', toolName: 'control_actor', arguments: { action: 'snap_to_grid', actorNames: [SHELF], gridCm: 100, axes: 'xy', rotationDeg: 90 }, expected: 'success', assertions: [
+    { path: 'structuredContent.result.actors.0.to.0', equals: 29700, label: 'x on the grid' },
+    { path: 'structuredContent.result.actors.0.to.1', equals: 30100, label: 'y on the grid' },
+    { path: 'structuredContent.result.undo.undoable', equals: true, label: 'one undo step' },
+  ] },
+  { scenario: 'READ: snap_to_grid on the grid already moves nothing and makes no undo step', toolName: 'control_actor', arguments: { action: 'snap_to_grid', actorNames: [SHELF], gridCm: 100, axes: 'xy', rotationDeg: 90 }, expected: 'success', assertions: [
+    { path: 'structuredContent.result.moved', equals: 0, label: 'nothing moved' },
+    { path: 'structuredContent.result.undo', exists: false, label: 'and no undo step' },
+  ] },
+  { scenario: 'ERROR: snap_to_grid with an axis that is not one', toolName: 'control_actor', arguments: { action: 'snap_to_grid', actorNames: [SHELF], axes: 'xw' }, expected: 'error|INVALID_ARGUMENT' },
+  { scenario: 'ERROR: snap_to_grid names an actor that is not there', toolName: 'control_actor', arguments: { action: 'snap_to_grid', actorNames: [`MCP_NoSuchActor_${ts}`] }, expected: 'error|ACTOR_NOT_FOUND' },
   { scenario: 'DELETE: the room by its tag', toolName: 'control_actor', arguments: { action: 'delete_by_tag', tag: TAG }, expected: 'success' },
 ];
 

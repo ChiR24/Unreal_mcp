@@ -4,7 +4,7 @@
 
 # Action reference
 
-Catalog revision: `b19c56fe606480e3`
+Catalog revision: `21dd6a84f123f08e`
 
 Both transports expose exactly ONE public MCP tool, `unreal`, with the four
 operations `search` / `describe` / `execute` / `configure`. The parent tools
@@ -13,7 +13,7 @@ by `tools/list` and a direct `tools/call` on one returns a
 `DIRECT_TOOL_CALL_REMOVED` receipt rather than executing
 (`src/server/gateway/direct-call-migration.ts`).
 
-The catalog declares 470 capabilities across
+The catalog declares 471 capabilities across
 23 internal parent tools.
 Every row is derived from the capability record that the gateway actually
 validates against, so `execute` cannot accept an action this table omits.
@@ -41,7 +41,7 @@ validates against, so `execute` cannot accept an action this table omits.
 | --- | --- | --- | --- | --- | --- |
 | `animation_physics` | 32 | 5 | 25 | 2 | animation physics |
 | `build_environment` | 43 | 5 | 35 | 3 | environment |
-| `control_actor` | 29 | 9 | 18 | 2 | actor |
+| `control_actor` | 30 | 9 | 19 | 2 | actor |
 | `control_editor` | 28 | 10 | 14 | 4 | editor |
 | `inspect` | 27 | 22 | 4 | 1 | inspect |
 | `manage_ai` | 17 | 3 | 14 | 0 | manage ai |
@@ -65,7 +65,7 @@ validates against, so `execute` cannot accept an action this table omits.
 
 ## Capabilities requiring consent
 
-74 of 470 capabilities require consent.
+74 of 471 capabilities require consent.
 
 | Capability | Tool | Action | Effect | Consent |
 | --- | --- | --- | --- | --- |
@@ -318,6 +318,7 @@ validates against, so `execute` cannot accept an action this table omits.
 | `control_actor.set_transform` | `control_actor` | `set_transform` | write | write | none | `control_actor.set_transform` `control_actor.set_actor_location` `control_actor.set_actor_rotation` `control_actor.set_actor_scale` `control_actor.teleport_actor` `control_actor.set_actor_transform` |
 | `control_actor.set_visibility` | `control_actor` | `set_visibility` | write | write | none | `control_actor.set_visibility` `control_actor.set_actor_visible` |
 | `control_actor.settle_physics` | `control_actor` | `settle_physics` | write | write | none | `control_actor.settle_physics` |
+| `control_actor.snap_to_grid` | `control_actor` | `snap_to_grid` | write | write | none | `control_actor.snap_to_grid` |
 | `control_actor.spawn` | `control_actor` | `spawn` | write | write | none | `control_actor.spawn` `control_actor.spawn_blueprint` `control_actor.spawn_batch` `control_actor.spawn_actor` |
 | `control_editor.call_editor_tool` | `control_editor` | `control_editor` | write | write | none | `control_editor.call_editor_tool` |
 | `control_editor.call_editor_tool_destructive` | `control_editor` | `control_editor` | destructive | destructive | elevated | `control_editor.call_editor_tool_destructive` |
