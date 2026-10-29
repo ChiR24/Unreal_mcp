@@ -827,6 +827,14 @@ export const PLAIN_PROBE: readonly PlainProbeCase[] = [
   { query: 'paint the floor green', accepted: ['control_actor.set_material'] },
   { query: 'change the color of the cube', accepted: ['control_actor.set_material'] },
   { query: 'make the walls white', accepted: ['control_actor.set_material'] },
+  // Fog on a level, a bouncing cube, effects on a torch or a chimney, falling snow, trees round a landmark.
+  { query: 'add fog to the level', accepted: ['build_environment.configure_atmosphere'] },
+  { query: 'make the level foggy', accepted: ['build_environment.configure_atmosphere'] },
+  { query: 'make the cube bounce', accepted: ['animation_physics.create_physical_material'] },
+  { query: 'add sparks to the torch', accepted: ['manage_effect.create_effect'] },
+  { query: 'add smoke to the chimney', accepted: ['manage_effect.create_effect'] },
+  { query: 'add snow falling', accepted: ['build_environment.configure_weather'] },
+  { query: 'add trees around the castle', accepted: ['build_environment.add_foliage'] },
   { query: 'how many cubes are there', accepted: ['control_actor.list'] },
   // Plain requests whose owner did not name their words.
   { query: 'duplicate the wall', accepted: ['control_actor.duplicate'] },

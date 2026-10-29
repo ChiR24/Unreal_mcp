@@ -1,5 +1,5 @@
 {
-  "catalogRevision": "69934b29c3c5ad16",
+  "catalogRevision": "22c4c10a576539e2",
   "recordCount": 480,
   "records": [
     {
@@ -2454,7 +2454,8 @@
           "make the floor slippery",
           "restitution",
           "surface friction",
-          "make a ball bounce"
+          "make a ball bounce",
+          "make a ball, a cube or a box bounce"
         ],
         "summary": "Create or tune a physical material: friction (an icy or slippery floor, a grippy one), bounce (restitution), density and how two touching surfaces combine them. A mesh takes it through control_actor edit_component property PhysMaterialOverride (edit_scs set_property on a class template).",
         "whenToUse": [
@@ -2599,7 +2600,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "8fc12fe57a87d5606b19d0d2839598bf362c09b8576d999dab20e9571ffe3aae",
-        "content": "11c46a60649f7da3405b0708b92d923e5f85d4e52da01e677dd840af32db5acc"
+        "content": "51e61b2b329b16320d9d46e34536a9737acb23b70146c64ce2445852520114ae"
       }
     },
     {
@@ -28451,6 +28452,7 @@
           "scatter rocks",
           "place trees or rocks randomly",
           "scatter rocks or trees around an area",
+          "plant trees around a building, a castle or a lake",
           "foliage",
           "vegetation",
           "grass",
@@ -28846,7 +28848,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "1d69a2ec3894703cfb5473af28e37c8f764811e72feee995d7335213b3db30fa",
-        "content": "3103f25439c77c32ac25320fe889a1a8c02482d536829a229e18fb4f7fe5d5a8"
+        "content": "9cafb3b6f6e88c5df6d4d7cc4f2b4ee9ccadcb80b63011be42e268b1e1666b28"
       }
     },
     {
@@ -29504,7 +29506,8 @@
           "make it sunset or sunrise",
           "add fog to the scene",
           "add a skybox",
-          "make it look like sunset"
+          "make it look like sunset",
+          "add fog to the level or the map"
         ],
         "summary": "Configure the sky and atmosphere: sky atmosphere, sky light, sun position, directional light, height fog, volumetric clouds, time of day, sky/light color curves.",
         "whenToUse": [
@@ -29833,7 +29836,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "62d06760062b3abe69fafba24760b3764aef720dc72b85ccb7e20689ab3ffd17",
-        "content": "9a2f6f91e12178b91454858de71b8a2f7332f8181dd1577adadd88cc40e690f9"
+        "content": "d1d6e9d2c2105ee06db7e64001e7e6eaa40c4511a5e91b084a60cf7d618fe45c"
       }
     },
     {
@@ -32535,7 +32538,8 @@
           "make it rain",
           "wind on trees",
           "make a storm with rain and lightning",
-          "make the trees sway in the wind"
+          "make the trees sway in the wind",
+          "snow or rain falling"
         ],
         "summary": "Configure a weather actor: rain, snow or lightning set a Cascade particle system (particleSystemPath) on an Emitter labelled WeatherEmitter, SnowEmitter or LightningEmitter; wind spawns or tunes a WindDirectionalSource (direction as its rotation, speed and other settings by property name). Nothing is simulated beyond what those actors do; not saved.",
         "whenToUse": [
@@ -32741,7 +32745,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "ed77f76bcae66a3710d7d472fc890a0029a37770f1ab267b41e9c26dacfd5efa",
-        "content": "b5c252b64e712f60010c0bf990febac579f5ff318ea920b7b97f5c0ad445399a"
+        "content": "8ef0d3304dd2827af1e2f903eabc00e9541b868cfcd0dda46310224d6e94980e"
       }
     },
     {
@@ -75806,7 +75810,8 @@
           "vfx",
           "particle effect",
           "new niagara system",
-          "spawn sparks"
+          "spawn sparks",
+          "add sparks, fire or smoke to a torch or a chimney"
         ],
         "summary": "Create an effect: a Niagara system or emitter, a ribbon, particle trail, impact or environment effect, volumetric fog, or spawn a preset particle/niagara effect.",
         "whenToUse": [
@@ -76146,7 +76151,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "332be23fa2be58488ecf91463343001eb63f4bcb2731c89022912790fc94502c",
-        "content": "96354b9e2dbfdb887a28faa22333d809033a38808efb7dcae63ce849e1b74f9f"
+        "content": "14651ee7eae2a1404a2d3969c5f1c80aaac7f7849a5c2cb16514cf7bbb51515b"
       }
     },
     {
