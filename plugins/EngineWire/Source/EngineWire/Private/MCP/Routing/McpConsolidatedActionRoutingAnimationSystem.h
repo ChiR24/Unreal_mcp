@@ -10,7 +10,7 @@ inline const TArray<FString>& AnimationAuthoring()
 		TEXT("add_notify"), TEXT("create_animation_sequence"), TEXT("set_sequence_length"),
 		TEXT("add_bone_track"), TEXT("set_bone_key"), TEXT("set_curve_key"),
 		TEXT("add_notify_state"), TEXT("add_sync_marker"),
-		TEXT("set_root_motion_settings"), TEXT("set_additive_settings"),
+		TEXT("set_root_motion_settings"), TEXT("set_additive_settings"), TEXT("set_play_rate"),
 		TEXT("create_montage"), TEXT("add_montage_section"),
 		TEXT("add_montage_slot"), TEXT("set_section_timing"),
 		TEXT("add_montage_notify"), TEXT("set_blend_in"),

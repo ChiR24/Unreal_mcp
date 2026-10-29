@@ -1,5 +1,6 @@
 #include "Core/Compatibility/McpVersionCompatibility.h"
 #include "Domains/AnimationAuthoring/McpAnimSupport.h"
+#include "Foundation/McpScopedEditorTransaction.h"
 
 namespace McpAnimationAuthoring {
 
@@ -136,6 +137,38 @@ TSharedPtr<FJsonObject> HandleSequenceSettingsActions(const FString& SubAction, 
         SaveAnimAsset(Sequence, bSave);
 
         ANIM_SUCCESS_RESPONSE(TEXT("Additive settings updated"));
+        McpHandlerUtils::AddVerification(Response, Sequence);
+        return Response;
+    }
+
+    if (SubAction == TEXT("set_play_rate"))
+    {
+        const FString AssetPath = NormalizeAnimPath(GetJsonStringField(Params, TEXT("assetPath"), TEXT("")));
+        double Rate = 0.0;
+        // 0 freezes the clip on its first frame wherever it plays; a negative rate plays it backwards.
+        if (!Params->TryGetNumberField(TEXT("rateScale"), Rate) || Rate == 0.0 || FMath::Abs(Rate) > 10.0)
+        {
+            ANIM_ERROR_RESPONSE(TEXT("rateScale is how fast the clip plays: 2 twice as fast, 0.5 half as fast, -1 backwards (not 0, at most 10 either way)"), TEXT("INVALID_ARGUMENT"));
+        }
+        UAnimSequence* Sequence = LoadAnimSequenceFromPath(AssetPath);
+        if (!Sequence)
+        {
+            ANIM_ERROR_RESPONSE(FString::Printf(TEXT("Could not load animation sequence: %s"), *AssetPath), TEXT("SEQUENCE_NOT_FOUND"));
+        }
+        const float Before = Sequence->RateScale;
+        {
+            FMcpScopedEditorTransaction Transaction(FText::FromString(TEXT("Set Play Rate")), EMcpMutationDurability::EditorStateOnly, TArray<UObject*>{Sequence});
+            Sequence->Modify();
+            Sequence->RateScale = static_cast<float>(Rate);
+            Sequence->PostEditChange();
+            Transaction.DescribeInto(Response);
+        }
+        const bool bSave = GetJsonBoolField(Params, TEXT("save"), true);
+        Response->SetBoolField(TEXT("saved"), SaveAnimAsset(Sequence, bSave) && bSave);
+        ANIM_SUCCESS_RESPONSE(FString::Printf(TEXT("%s plays at %gx (was %gx): %.2f s a loop"), *Sequence->GetName(), Sequence->RateScale, Before,
+                                              Sequence->GetPlayLength() / FMath::Abs(Sequence->RateScale)));
+        Response->SetNumberField(TEXT("rateScale"), Sequence->RateScale);
+        Response->SetNumberField(TEXT("previousRateScale"), Before);
         McpHandlerUtils::AddVerification(Response, Sequence);
         return Response;
     }

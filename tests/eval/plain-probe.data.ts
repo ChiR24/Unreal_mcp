@@ -1004,4 +1004,9 @@ export const PLAIN_PROBE: readonly PlainProbeCase[] = [
   { query: 'add a settings menu with volume', accepted: ['blueprint.create_widget_template'] },
   { query: 'add a shop', accepted: ['blueprint.create_widget_template'] },
   { query: 'make the npc talk when the player is close', accepted: ['blueprint.add_behaviour'] },
+  // An animation played faster or slower everywhere.
+  { query: 'make the walk animation faster', accepted: ['animation_physics.edit_animation'] },
+  { query: 'slow down the run animation', accepted: ['animation_physics.edit_animation'] },
+  { query: 'speed up the animation', accepted: ['animation_physics.edit_animation'] },
+  { query: 'play the animation slower', accepted: ['animation_physics.edit_animation'] },
 ];

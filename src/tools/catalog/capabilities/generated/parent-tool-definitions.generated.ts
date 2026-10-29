@@ -365,6 +365,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             "set_additive_settings",
             "set_root_motion_settings",
             "set_sequence_length",
+            "set_play_rate",
             "add_aim_offset_sample",
             "add_layered_blend_per_bone",
             "set_value",
@@ -863,6 +864,12 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           ],
           "description": "Which setup ragdoll variant to run; omit for 'setup'.\nsetup: Enable runtime ragdoll physics on a skeletal actor; requires an assigned PhysicsAsset and an editor build.\nactivate: Switch ragdoll simulation on/off at runtime on a skeletal actor via the distinct native ragdoll=activate action (editor build).",
           "default": "setup"
+        },
+        "rateScale": {
+          "type": "number",
+          "minimum": -10,
+          "maximum": 10,
+          "description": "How fast the clip plays: 2 twice as fast, 0.5 half as fast, -1 backwards; 0 is refused (it would freeze on the first frame)."
         },
         "rebuildBlendParameters": {
           "type": "boolean",

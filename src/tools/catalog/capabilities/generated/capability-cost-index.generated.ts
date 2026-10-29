@@ -116,6 +116,7 @@ export const CAPABILITY_COST_INDEX: Readonly<Record<string, string>> = {
   "animation_physics::set_morph_target_value": "long-running|high",
   "animation_physics::set_physics_asset": "interactive|medium",
   "animation_physics::set_physics_constraint": "interactive|medium",
+  "animation_physics::set_play_rate": "interactive|low",
   "animation_physics::set_retarget_chain_mapping": "interactive|medium",
   "animation_physics::set_root_motion_settings": "interactive|low",
   "animation_physics::set_section_timing": "interactive|low",
@@ -1682,4 +1683,4 @@ export const CAPABILITY_COST_INDEX: Readonly<Record<string, string>> = {
   "system_control::write_snapshot": "interactive|medium"
 };
 
-export const CAPABILITY_COST_INDEX_KEY_COUNT = 1669;
+export const CAPABILITY_COST_INDEX_KEY_COUNT = 1670;

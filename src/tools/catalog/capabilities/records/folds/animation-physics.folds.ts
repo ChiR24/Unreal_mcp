@@ -21,10 +21,10 @@ export const ANIMATION_PHYSICS_FOLDS: readonly FoldSpec[] = [
   },
   {
     primary: 'edit_animation', selector: 'edit',
-    summary: 'Edit an animation sequence: bone tracks and keys, curve keys, notifies, sync markers, additive and root-motion settings, length, aim-offset samples.',
-    topics: ['add notify', 'add sync marker', 'set bone key', 'root motion', 'sequence length', 'edit animation sequence'],
+    summary: 'Edit an animation sequence: bone tracks and keys, curve keys, notifies, sync markers, additive and root-motion settings, length, play rate, aim-offset samples.',
+    topics: ['add notify', 'add sync marker', 'set bone key', 'root motion', 'sequence length', 'edit animation sequence', 'make an animation play faster or slower', 'slow down or speed up an animation'],
     members: byName(['add_bone_track', 'set_bone_key', 'set_curve_key', 'add_notify', 'add_notify_state', 'add_sync_marker',
-      'set_additive_settings', 'set_root_motion_settings', 'set_sequence_length', 'add_aim_offset_sample']),
+      'set_additive_settings', 'set_root_motion_settings', 'set_sequence_length', 'set_play_rate', 'add_aim_offset_sample']),
   },
   {
     primary: 'edit_montage', selector: 'edit',
