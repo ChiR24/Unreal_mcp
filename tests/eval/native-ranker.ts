@@ -1,6 +1,6 @@
 // tests/eval/native-ranker.ts
 // A TypeScript copy of the native gateway's search ranker
-// (Private/MCP/Gateway/McpNativeGatewaySearchMatch.cpp and McpNativeGatewaySearch.cpp),
+// (Private/MCP/Gateway/McpNativeGatewaySearchMatch.cpp, McpNativeGatewaySearch.cpp and Search/),
 // so the eval gate measures search without an editor. Its word lists are read from
 // the C++ source; native-gate.test.ts pins its weights to it, so a constant changed
 // on one side only fails there.
@@ -12,20 +12,22 @@ import { compareAscii } from '../../src/utils/serialization/ordering.js';
 import { finalRegistryRecords } from './fixtures.js';
 import type { GatewayRanker } from './measure-retrieval.js';
 
-const NATIVE_MATCH_SOURCE = readFileSync(
-  join('plugins', 'EngineWire', 'Source', 'EngineWire', 'Private', 'MCP', 'Gateway', 'McpNativeGatewaySearchMatch.cpp'), 'utf8');
+const GATEWAY = join('plugins', 'EngineWire', 'Source', 'EngineWire', 'Private', 'MCP', 'Gateway');
+const NATIVE_MATCH_FILE = 'McpNativeGatewaySearchMatch.cpp';
+const NATIVE_INTENT_FILE = join('Search', 'McpSearchIntent.cpp');
 
 /** One `const TCHAR* const <name>[] = { TEXT("..."), ... };` array of the C++ ranker. */
-function nativeWordList(name: string): ReadonlySet<string> {
-  const start = NATIVE_MATCH_SOURCE.indexOf(`${name}[]`);
-  if (start < 0) throw new Error(`${name}[] is not in McpNativeGatewaySearchMatch.cpp`);
-  const block = NATIVE_MATCH_SOURCE.slice(start, NATIVE_MATCH_SOURCE.indexOf('};', start));
+function nativeWordList(file: string, name: string): ReadonlySet<string> {
+  const source = readFileSync(join(GATEWAY, file), 'utf8');
+  const start = source.indexOf(`${name}[]`);
+  if (start < 0) throw new Error(`${name}[] is not in ${file}`);
+  const block = source.slice(start, source.indexOf('};', start));
   return new Set([...block.matchAll(/TEXT\("([a-z]+)"\)/gu)].map((match) => String(match[1])));
 }
 
-const RETRIEVAL_FUNCTION_WORDS = nativeWordList('FunctionWords');
-const RETRIEVAL_READ_INTENT_WORDS = nativeWordList('ReadIntentWords');
-const RETRIEVAL_DELETE_INTENT_WORDS = nativeWordList('DeleteIntentWords');
+const RETRIEVAL_FUNCTION_WORDS = nativeWordList(NATIVE_MATCH_FILE, 'FunctionWords');
+const RETRIEVAL_READ_INTENT_WORDS = nativeWordList(NATIVE_INTENT_FILE, 'ReadIntentWords');
+const RETRIEVAL_DELETE_INTENT_WORDS = nativeWordList(NATIVE_INTENT_FILE, 'DeleteIntentWords');
 
 export const NATIVE_RULE_WEIGHTS = {
   'id-exact': 100, id: 50, family: 20, domain: 15, topic: 12, summary: 8, parent: 5,
@@ -84,7 +86,14 @@ function actionEquals(record: NativeRecord, key: string): boolean {
   return key !== '' && (actionKey(record.id) === key || record.aliases.some((alias) => actionKey(alias) === key));
 }
 
-function scoreRecord(record: NativeRecord, query: string, all: readonly string[], content: readonly string[]): number | null {
+/** McpSearchLeadTied: the record's action, an alias or a topic holds the first content word and another one. */
+function leadTied(record: NativeRecord, content: readonly string[]): boolean {
+  const holds = (words: readonly string[]): boolean => words.includes(content[0] ?? '') && content.slice(1).some((word) => words.includes(word));
+  return content.length < 2 || [record.id, ...record.aliases].some((name) => holds(searchWords(lastSegment(name))))
+    || record.topics.some((topic) => holds(searchWords(topic)));
+}
+
+function scoreRecord(record: NativeRecord, query: string, all: readonly string[], content: readonly string[], leadIsAction: boolean): number | null {
   let score = 0;
   let fired = false;
   const fire = (rule: keyof typeof NATIVE_RULE_WEIGHTS): void => { score += NATIVE_RULE_WEIGHTS[rule]; fired = true; };
@@ -98,7 +107,8 @@ function scoreRecord(record: NativeRecord, query: string, all: readonly string[]
   }
   let matched = 0;
   let named = 0;
-  for (const word of content) {
+  let leadNamed = false;
+  for (const [index, word] of content.entries()) {
     const hits: [keyof typeof NATIVE_RULE_WEIGHTS, boolean][] = [
       ['id', actionHasWord(record, word)],
       ['family', containsWord(record.family, word)],
@@ -115,9 +125,12 @@ function scoreRecord(record: NativeRecord, query: string, all: readonly string[]
     }
     if (any) matched += 1;
     if (hits.some(([rule, hit]) => hit && rule !== 'summary' && rule !== 'parent')) named += 1;
+    if (index === 0) leadNamed = hits.some(([rule, hit]) => hit && (rule === 'id' || rule === 'family' || rule === 'domain'));
   }
   score += matched * NATIVE_WORD_COVERAGE_BONUS;
-  if (content.length >= 2 && named === content.length) score += NATIVE_FULL_COVERAGE_BONUS;
+  const first = query.match(/[a-z0-9]+/u)?.[0] ?? '';
+  const tieLead = (leadIsAction && !leadNamed) || (RETRIEVAL_DELETE_INTENT_WORDS.has(first) && record.effect !== 'destructive');
+  if (content.length >= 2 && named === content.length && (!tieLead || leadTied(record, content))) score += NATIVE_FULL_COVERAGE_BONUS;
   const own = searchWords(lastSegment(record.id));
   const ownCovered = own.length >= 2 && own.every((word) => content.includes(word));
   const run = ` ${content.join(' ')} `;
@@ -127,7 +140,6 @@ function scoreRecord(record: NativeRecord, query: string, all: readonly string[]
   });
   if (matched === content.length && (ownCovered || aliasRun)) score += NATIVE_ACTION_COVERED_BONUS;
   if (!fired) return null;
-  const first = query.match(/[a-z0-9]+/u)?.[0] ?? '';
   if (record.effect === 'read' && RETRIEVAL_READ_INTENT_WORDS.has(first)) score += NATIVE_READ_INTENT_BONUS;
   else if (record.effect === 'destructive' && RETRIEVAL_DELETE_INTENT_WORDS.has(first)) score += NATIVE_DELETE_INTENT_BONUS;
   return score;
@@ -145,6 +157,13 @@ function nativeRecords(): readonly NativeRecord[] {
     parent: record.routing.parentTool,
     effect: record.behavior.effect,
   }));
+}
+
+let wholeActions: ReadonlySet<string> | undefined;
+/** McpSearchIsWholeAction's set: every word that is the whole action of an id or an alias ("move", "delete"). */
+export function nativeWholeActions(): ReadonlySet<string> {
+  return wholeActions ??= new Set(nativeRecords().flatMap((record) => [record.id, ...record.aliases])
+    .map((name) => searchWords(lastSegment(name))).filter((words) => words.length === 1).map((words) => words[0] ?? ''));
 }
 
 /** The native door's typo correction (Private/MCP/Gateway/Search/McpSearchTypos.cpp), copied for the eval. */
@@ -248,8 +267,9 @@ export function nativeScored(intent: string): readonly { readonly id: string; re
   const query = nativeCorrectQuery(intent.trim().toLowerCase()).query;
   const all = searchWords(query);
   const content = [...new Set(all.filter((word) => !RETRIEVAL_FUNCTION_WORDS.has(word)))];
+  const leadIsAction = content.length >= 2 && nativeWholeActions().has(content[0] ?? '');
   return nativeRecords()
-    .map((record) => ({ id: record.id, score: scoreRecord(record, query, all, content) }))
+    .map((record) => ({ id: record.id, score: scoreRecord(record, query, all, content, leadIsAction) }))
     .filter((entry): entry is { id: string; score: number } => entry.score !== null)
     .sort((left, right) => right.score - left.score || compareAscii(left.id, right.id));
 }

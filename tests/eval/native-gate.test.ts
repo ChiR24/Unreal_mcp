@@ -13,13 +13,14 @@ import { measureRetrieval } from './measure-retrieval.js';
 import {
   NATIVE_ACTION_COVERED_BONUS, NATIVE_DELETE_INTENT_BONUS, NATIVE_FULL_COVERAGE_BONUS, NATIVE_PHRASE_TOPIC_BONUS, NATIVE_READ_INTENT_BONUS,
   NATIVE_RULE_WEIGHTS, NATIVE_TYPO_LONG_LENGTH, NATIVE_TYPO_MIN_LENGTH, NATIVE_TYPO_SWAP_LENGTH, NATIVE_WORD_COVERAGE_BONUS,
-  nativeCorrectQuery, nativeEditDistance, nativeSearchRanker,
+  nativeCorrectQuery, nativeEditDistance, nativeSearchRanker, nativeWholeActions,
 } from './native-ranker.js';
 
 const GATEWAY = join('plugins', 'EngineWire', 'Source', 'EngineWire', 'Private', 'MCP', 'Gateway');
 const nativeMatch = readFileSync(join(GATEWAY, 'McpNativeGatewaySearchMatch.cpp'), 'utf8');
 const nativeHeader = readFileSync(join(GATEWAY, 'McpNativeGatewaySearch.h'), 'utf8');
 const nativeTypos = readFileSync(join(GATEWAY, 'Search', 'McpSearchTypos.cpp'), 'utf8');
+const nativeIntent = readFileSync(join(GATEWAY, 'Search', 'McpSearchIntent.cpp'), 'utf8');
 
 const headerConstant = (name: string): number => Number(nativeHeader.match(new RegExp(`constexpr int32 ${name} = (\\d+);`, 'u'))?.[1]);
 
@@ -47,6 +48,35 @@ describe('the TypeScript copy matches the native source', () => {
     expect(typoConstant('McpTypoMinLength')).toBe(NATIVE_TYPO_MIN_LENGTH);
     expect(typoConstant('McpTypoLongLength')).toBe(NATIVE_TYPO_LONG_LENGTH);
     expect(nativeTypos).toContain('AreNeighbourKeys(A[I - 1], B[J - 1]) ? 1 : 2');
+  });
+
+  it('ties a lead verb to its object under the same conditions', () => {
+    expect(nativeMatch).toContain('(!bTieLead || McpSearchLeadTied(Record, ContentWords))');
+    expect(nativeMatch).toContain('const bool bTieLead = (bLeadIsAction && !bLeadNamed) ||');
+    expect(nativeIntent).toContain('if (Words.Num() == 1)');
+  });
+});
+
+// A verb that is some record's whole action leads the request; a record that names it only in a topic, or does not
+// delete and is asked to, covers the request only where one of its names or topics holds the verb and the object
+// (EngineWire.Gateway.SearchIntent holds the C++ to the same).
+describe('lead verbs', () => {
+  it('reads these words as whole actions: a single-word alias joins the list and moves rankings', () => {
+    expect([...nativeWholeActions()].sort()).toEqual([
+      'activate', 'attach', 'bend', 'bevel', 'blur', 'bridge', 'chamfer', 'cleanup', 'compile', 'create', 'cylindrify',
+      'deactivate', 'delete', 'desaturate', 'detach', 'difference', 'duplicate', 'eject', 'exist', 'explain', 'export',
+      'extrude', 'find', 'get', 'import', 'inset', 'invert', 'list', 'load', 'loft', 'mirror', 'morphology', 'move',
+      'niagara', 'open', 'outset', 'particle', 'pause', 'play', 'playtest', 'poke', 'possess', 'profile', 'quadrangulate',
+      'redo', 'reimport', 'relax', 'rename', 'reset', 'resume', 'revolve', 'save', 'screenshot', 'sculpt', 'set', 'sharpen',
+      'shell', 'smooth', 'spawn', 'spherify', 'stop', 'stream', 'stretch', 'subdivide', 'subscribe', 'sweep', 'taper',
+      'twist', 'undo', 'unload', 'unsubscribe', 'validate',
+    ]);
+  });
+
+  it('keeps a verb named in passing from covering another object', () => {
+    expect(nativeSearchRanker('move a vertex', 1)).toEqual(['manage_geometry.edit_dynamic_mesh']);
+    expect(nativeSearchRanker('delete triangles', 1)).toEqual(['manage_geometry.edit_dynamic_mesh']);
+    expect(nativeSearchRanker('delete the crate', 3)).not.toContain('manage_geometry.edit_dynamic_mesh');
   });
 });
 

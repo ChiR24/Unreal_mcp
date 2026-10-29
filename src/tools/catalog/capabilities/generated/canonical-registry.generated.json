@@ -1,5 +1,5 @@
 {
-  "catalogRevision": "5198b6b742141754",
+  "catalogRevision": "12e2da800ff89bb0",
   "recordCount": 473,
   "records": [
     {
@@ -44677,6 +44677,9 @@
           "shrink actor",
           "scale up a tree or a rock",
           "rotate a door or a wall by 90 degrees",
+          "move the box, the crate or the barrel",
+          "move or rotate the chair, the table or the lamp",
+          "move a light",
           "set position",
           "set rotation",
           "translate"
@@ -45037,7 +45040,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "6af5b619f64ce87631986e9ba9d0b1fec5c056e5aa571251d34e3202107f2ea4",
-        "content": "bee2587c4a9520637821088bea02ae8168171dd36ce4c99c3a0d35b0dbcc867a"
+        "content": "35012fdb4863c9fc4234d9f9e807a04db6ee9537f9f61b235f1d7f53e2c674cf"
       }
     },
     {
@@ -47368,7 +47371,7 @@
           "explore_level",
           "explore the level",
           "find where the player can fall out",
-          "holes the player falls through",
+          "find holes the player falls through",
           "automatic play test",
           "find unreachable areas",
           "level coverage",
@@ -47579,7 +47582,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "03ee7dd47e579809de91c969fdd58893efb7138606e732ccc8f6b3ac30ee94f4",
-        "content": "e21930e01b037a0b57fdfd8fcdf74961451f8acf839406c931b0fd322b8dd8b5"
+        "content": "469d9b2e02d2cff3d8ae64e54e4e2bb7fb7d21ba5e12301db2ce123254627867"
       }
     },
     {

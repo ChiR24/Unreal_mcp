@@ -873,4 +873,9 @@ export const PLAIN_PROBE: readonly PlainProbeCase[] = [
   { query: 'switch to first person', accepted: ['manage_character.configure_character'] },
   // A row of actors spaced evenly.
   { query: 'space the actors evenly', accepted: ['control_actor.distribute_actors'] },
+  // A verb that is a whole action ("move") and a prop another record names only in passing.
+  { query: 'move the crate', accepted: ['control_actor.set_transform'] },
+  { query: 'move the chair', accepted: ['control_actor.set_transform'] },
+  { query: 'move the barrel', accepted: ['control_actor.set_transform'] },
+  { query: 'rotate the lamp', accepted: ['control_actor.set_transform'] },
 ];

@@ -1,14 +1,14 @@
 // McpNativeGatewaySearchMatch.h — word-level match rules for the native gateway search
 //
-// The native door's own rule-based ranker (the TypeScript door ranks with BM25 in
-// src/tools/catalog/capabilities/retrieval/scoring.ts); the two share the function
-// words and the read-intent words, which tests/unit/tools/search-read-intent-parity
-// .test.ts pins. Matching is WORD-level, never substring: "move" must not hit
-// `remove_*`, and a namespace word must not make every record under it look
-// like a hit. A record's declared aliases are its own names, so a verb the
-// action does not carry ("move actor" -> control_actor.move_actor) still lands.
-// Function words are dropped from the query, and regular plurals/inflections
-// fold on both the query and the record text, so "list actors" meets "actor".
+// The gateway's own rule-based ranker, copied for the eval gate by
+// tests/eval/native-ranker.ts, which reads the function words here and the
+// intent words in Search/McpSearchIntent.cpp. Matching is WORD-level, never
+// substring: "move" must not hit `remove_*`, and a namespace word must not make
+// every record under it look like a hit. A record's declared aliases are its own
+// names, so a verb the action does not carry ("move actor" ->
+// control_actor.move_actor) still lands. Function words are dropped from the
+// query, and regular plurals/inflections fold on both the query and the record
+// text, so "list actors" meets "actor".
 
 #pragma once
 
@@ -31,10 +31,11 @@ struct FMcpSearchMatch
 
 /**
  * Score one record against the lowercase trimmed Query, its full word list and
- * its content words. Returns false when no rule fired, in which case the record
- * is not a result at all.
+ * its content words. bLeadIsAction: the first content word is some record's whole
+ * action (McpSearchIsWholeAction). Returns false when no rule fired, in which case
+ * the record is not a result at all.
  */
 bool McpSearchScoreRecord(
 	const FMcpCapabilityRecord& Record, const FString& Query,
-	const TArray<FString>& AllWords, const TArray<FString>& ContentWords,
+	const TArray<FString>& AllWords, const TArray<FString>& ContentWords, bool bLeadIsAction,
 	FMcpSearchMatch& Out);

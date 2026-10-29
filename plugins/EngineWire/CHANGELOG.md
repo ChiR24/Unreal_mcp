@@ -25,6 +25,7 @@ All notable changes to the EngineWire plugin (formerly McpAutomationBridge) will
 - **Abstract interpretation in `lint_blueprint`** (`Lint/Interp/`): intervals with bounds against array lengths, and differences between variables a check compared, run to a fixpoint per event or function through Sets, Branches, Sequences and loops; six rules: `divide_by_zero`, `index_out_of_range`, `out_of_range` (Value Range), `float_equality`, `constant_condition`, `endless_loop`. A divisor always 0 or an index always outside its array is an error and fails Data Validation.
 
 ### Fixed
+- **Search lead verbs** (`MCP/Gateway/Search/McpSearchIntent.cpp`): when a request opens with a word that is some record's whole action ("move", "delete") or asks a record that does not delete to delete, a record earns the full-coverage bonus only where one of its names or topics holds that verb with another query word ('move a vertex' + 'stack of crates' no longer cover "move the crate"); the read and delete intent words moved there.
 - **Fold aliases**: a folded pair carries the aliases its member declared (`legacyIds[n].aliases`) and `McpRequestedLegacyAction` names that pair for a call by one, so its pins and its own action apply; the alias's last segment named no pair, so seven ran the family's default or were refused for a required selector.
 
 ## [0.6.0] - 2026-10-27

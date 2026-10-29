@@ -3,6 +3,7 @@
 #include "MCP/Gateway/McpNativeGatewaySearchMatch.h"
 #include "MCP/Gateway/McpNativeGatewayCapabilityStore.h"
 #include "MCP/Gateway/McpNativeGatewaySearch.h"
+#include "MCP/Gateway/Search/McpSearchIntent.h"
 
 namespace
 {
@@ -32,42 +33,9 @@ const TCHAR* const FunctionWords[] = {
 	TEXT("can"), TEXT("could"), TEXT("should"), TEXT("would"), TEXT("will"), TEXT("want"), TEXT("need"), TEXT("if"), TEXT("whether"), TEXT("s"), TEXT("t"),
 };
 
-// Words that open a request to READ something, matched against the first word as
-// typed (before folding); the eval ranker (tests/eval/native-ranker.ts) reads this
-// list from here. Verbs that also open changes (view, look, see, check, print) are
-// left out, and so is "when", which opens event logic ("when the player overlaps, ...").
-const TCHAR* const ReadIntentWords[] = {
-	TEXT("get"), TEXT("read"), TEXT("list"), TEXT("inspect"), TEXT("query"), TEXT("describe"), TEXT("find"), TEXT("count"),
-	TEXT("show"), TEXT("what"), TEXT("which"), TEXT("where"), TEXT("who"), TEXT("why"), TEXT("how"), TEXT("is"), TEXT("does"),
-};
-
 bool IsAsciiAlnum(TCHAR Ch)
 {
 	return (Ch >= TEXT('a') && Ch <= TEXT('z')) || (Ch >= TEXT('0') && Ch <= TEXT('9'));
-}
-
-// Words that open a request to DELETE something (RETRIEVAL_DELETE_INTENT_WORDS):
-// "delete the spawned actor" used to rank spawn first, since "spawned" folds to spawn.
-const TCHAR* const DeleteIntentWords[] = { TEXT("delete"), TEXT("remove"), TEXT("destroy"), TEXT("erase") };
-
-/** The effect the query's first word, as typed, asks for: "read", "destructive" or empty. */
-FString IntendedEffect(const FString& LowerQuery)
-{
-	FString First;
-	for (const TCHAR Ch : LowerQuery)
-	{
-		if (IsAsciiAlnum(Ch)) First.AppendChar(Ch);
-		else if (!First.IsEmpty()) break;
-	}
-	for (const TCHAR* Word : ReadIntentWords)
-	{
-		if (First.Equals(Word, ESearchCase::CaseSensitive)) return TEXT("read");
-	}
-	for (const TCHAR* Word : DeleteIntentWords)
-	{
-		if (First.Equals(Word, ESearchCase::CaseSensitive)) return TEXT("destructive");
-	}
-	return FString();
 }
 
 bool IsFunctionWord(const FString& Word)
@@ -212,7 +180,7 @@ void McpSearchContentWords(const TArray<FString>& AllWords, TArray<FString>& Out
 
 bool McpSearchScoreRecord(
 	const FMcpCapabilityRecord& Record, const FString& Query,
-	const TArray<FString>& AllWords, const TArray<FString>& ContentWords,
+	const TArray<FString>& AllWords, const TArray<FString>& ContentWords, bool bLeadIsAction,
 	FMcpSearchMatch& Out)
 {
 	bool Fired[RuleCount] = {};
@@ -247,6 +215,7 @@ bool McpSearchScoreRecord(
 	// through its domain and parent, at their own weights.
 	int32 Matched = 0;
 	int32 Named = 0;
+	bool bLeadNamed = false;
 	for (const FString& Word : ContentWords)
 	{
 		bool Hits[RuleCount] = {};
@@ -268,9 +237,19 @@ bool McpSearchScoreRecord(
 		// Named by the action, aliases, family, domain or topics; summary prose also
 		// holds filler words ("one", "another") and does not count.
 		if (Hits[RuleId] || Hits[RuleFamily] || Hits[RuleDomain] || Hits[RuleTopic]) ++Named;
+		bLeadNamed = bLeadNamed || (&Word == &ContentWords[0] && (Hits[RuleId] || Hits[RuleFamily] || Hits[RuleDomain]));
 	}
 	Score += Matched * McpSearchWordCoverageBonus;
-	if (ContentWords.Num() >= 2 && Named == ContentWords.Num()) Score += McpSearchFullCoverageBonus;
+	// A lead verb that is some record's whole action ("move the crate") is the operation asked for, and so is a delete
+	// asked of a record that does not delete: a record naming that verb only in passing ('move a vertex', the alias
+	// delete_triangles) covers the request only where one name or topic ties the verb to the object.
+	const FString Intended = McpSearchIntendedEffect(Query);
+	const bool bTieLead = (bLeadIsAction && !bLeadNamed) ||
+		(Intended.Equals(TEXT("destructive"), ESearchCase::CaseSensitive) && !Record.Effect.Equals(Intended, ESearchCase::CaseSensitive));
+	if (ContentWords.Num() >= 2 && Named == ContentWords.Num() && (!bTieLead || McpSearchLeadTied(Record, ContentWords)))
+	{
+		Score += McpSearchFullCoverageBonus;
+	}
 	TArray<FString> OwnAction;
 	McpSearchWords(McpLastDottedSegment(Record.Id), OwnAction);
 	bool bOwnCovered = OwnAction.Num() >= 2;
@@ -295,8 +274,7 @@ bool McpSearchScoreRecord(
 		if (Fired[Rule]) Out.Reasons.Add(MatchRules[Rule].Reason);
 	}
 	// Reorders matches only: a record no rule fired for is still not a result.
-	const FString Intended = Out.Reasons.Num() > 0 ? IntendedEffect(Query) : FString();
-	if (!Intended.IsEmpty() && Record.Effect.Equals(Intended, ESearchCase::CaseSensitive))
+	if (Out.Reasons.Num() > 0 && !Intended.IsEmpty() && Record.Effect.Equals(Intended, ESearchCase::CaseSensitive))
 	{
 		Score += Intended == TEXT("read") ? McpSearchReadIntentBonus : McpSearchDeleteIntentBonus;
 	}

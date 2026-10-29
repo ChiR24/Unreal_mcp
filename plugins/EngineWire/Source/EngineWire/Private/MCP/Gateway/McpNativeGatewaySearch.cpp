@@ -7,6 +7,7 @@
 #include "MCP/Gateway/McpNativeGatewayCatalog.h"
 #include "MCP/Gateway/McpNativeGatewayGuidance.h"
 #include "MCP/Gateway/McpNativeGatewaySearchMatch.h"
+#include "MCP/Gateway/Search/McpSearchIntent.h"
 #include "MCP/Gateway/Search/McpSearchTypos.h"
 #include "MCP/Execute/McpNativeGatewayCanonicalRecords.h"
 #include "MCP/Execute/Request/McpFoldVariantRules.h"
@@ -160,6 +161,7 @@ TSharedPtr<FJsonObject> McpGatewaySearchCapabilities(
 	McpSearchWords(Query, AllWords);
 	TArray<FString> ContentWords;
 	McpSearchContentWords(AllWords, ContentWords);
+	const bool bLeadIsAction = ContentWords.Num() >= 2 && McpSearchIsWholeAction(ContentWords[0], Store);
 
 	TArray<FScoredRecord> Scored;
 	for (const FMcpCapabilityRecord& Record : Store.GetRecords())
@@ -186,7 +188,7 @@ TSharedPtr<FJsonObject> McpGatewaySearchCapabilities(
 			continue;
 		}
 		FMcpSearchMatch Match;
-		if (!McpSearchScoreRecord(Record, Query, AllWords, ContentWords, Match)) continue;
+		if (!McpSearchScoreRecord(Record, Query, AllWords, ContentWords, bLeadIsAction, Match)) continue;
 		Entry.Score = Match.Score;
 		Scored.Add(MoveTemp(Entry));
 	}
