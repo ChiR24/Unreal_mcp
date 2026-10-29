@@ -147,6 +147,10 @@ public:
   // Work that edits after its handler returned (a ticker) and then answers: run inside this, it gets the brackets a
   // dispatch opens (error capture, change watch, undo ledger, journal), so its reply is enriched as a direct one is.
   void RunLatentReply(const FString& RequestId, const FString& Action, TFunctionRef<void()> Work);
+  // Work that calls an engine wait which ticks the core ticker itself (the material baker waiting on mip streaming):
+  // nested inside this subsystem's own ticker callback, that tick asserts. It runs on the editor's next tick instead,
+  // outside the core ticker, as the request's latent reply, with no other request dispatched in the middle of it.
+  void RunOutsideTicker(const FString& RequestId, const FString& Action, TFunction<void()> Work);
 
   struct FRequestErrorCapture
   {

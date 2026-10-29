@@ -2785,6 +2785,15 @@ describe('export_mesh writes a file through the editor exporters, unattended', (
     const assets = code('AssetWorkflow', 'McpAssetHandlers.cpp');
     expect(assets).toContain('return McpMeshExport::HandleExportMesh(this, RequestId, Payload, RequestingSocket);');
   });
+
+  // The glTF bake ticks the core ticker while it waits for mips; nested in a handler's ticker callback, that asserted.
+  it('runs a glTF export outside the core ticker, with no other request dispatched in the middle of it', () => {
+    const exporter = code('AssetWorkflow', 'Export', 'McpAssetMeshExport.cpp');
+    expect(exporter).toMatch(/if \(Format == TEXT\("glb"\) \|\| Format == TEXT\("gltf"\)\)\s*\{[^}]*Bridge->RunOutsideTicker\(/u);
+    const outside = code('..', 'Core', 'Requests', 'McpRunOutsideTicker.cpp');
+    expect(outside).toContain('GEditor->GetTimerManager()->SetTimerForNextTick(');
+    expect(outside).toMatch(/TGuardValue<bool> Drain\(Self->QueueFairness\.bDraining, true\);\s*Self->RunLatentReply\(RequestId, Action, Work\);/u);
+  });
 });
 
 // A Control Rig could be created but its graph and hierarchy could not be edited or read.

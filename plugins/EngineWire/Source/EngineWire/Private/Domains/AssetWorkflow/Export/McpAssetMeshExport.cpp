@@ -31,6 +31,68 @@ TMap<FString, FDateTime> McpFolderFiles(const FString& Folder)
     }
     return Files;
 }
+
+// Runs the editor's exporter for Asset into File, inside the project already checked, and answers.
+void ExportAndReply(UEngineWireSubsystem* Bridge, const FString& RequestId, TSharedPtr<FMcpBridgeWebSocket> Socket,
+                    UObject* Asset, const FString& Format, const FString& File)
+{
+    const FString Folder = FPaths::GetPath(File);
+    IFileManager::Get().MakeDirectory(*Folder, true);
+
+    UAssetExportTask* Task = NewObject<UAssetExportTask>();
+    FGCObjectScopeGuard TaskGuard(Task);
+    Task->Object = Asset;
+    Task->Filename = File;
+    Task->bSelected = false;
+    Task->bReplaceIdentical = true;
+    Task->bPrompt = false;
+    Task->bAutomated = true;
+
+    const TMap<FString, FDateTime> Before = McpFolderFiles(Folder);
+    bool bExported = false;
+    {
+        // The FBX and glTF exporters ask for options in a dialog, and the glTF one opens its message log after a
+        // warning, unless the editor runs unattended: this call is unattended.
+        TGuardValue<bool> Unattended(GIsAutomationTesting, true);
+        bExported = UExporter::RunAssetExportTask(Task);
+    }
+
+    TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
+    Result->SetStringField(TEXT("assetPath"), Asset->GetPathName());
+    Result->SetStringField(TEXT("format"), Format);
+    Result->SetStringField(TEXT("path"), File);
+    const int64 Bytes = IFileManager::Get().FileSize(*File);
+    if (!bExported || Bytes <= 0)
+    {
+        const FString Why = Task->Errors.Num() > 0 ? TEXT(": ") + Task->Errors[0] : FString(TEXT("."));
+        Bridge->SendAutomationResponse(Socket, RequestId, false,
+            FString::Printf(TEXT("%s was not exported as %s%s"), *Asset->GetName(), *Format, *Why), Result, TEXT("EXPORT_FAILED"));
+        return;
+    }
+    Result->SetNumberField(TEXT("bytes"), static_cast<double>(Bytes));
+
+    // A .gltf keeps its buffers and textures in files beside it, and OBJ writes its UV and collision variants.
+    TArray<TSharedPtr<FJsonValue>> Written;
+    for (const TPair<FString, FDateTime>& Now : McpFolderFiles(Folder))
+    {
+        const FDateTime* Was = Before.Find(Now.Key);
+        const FString Path = Folder / Now.Key;
+        if (Path != File && (!Was || *Was != Now.Value) && Written.Num() < McpMaxListedFiles)
+        {
+            const TSharedPtr<FJsonObject> Entry = MakeShared<FJsonObject>();
+            Entry->SetStringField(TEXT("name"), Now.Key);
+            Entry->SetNumberField(TEXT("bytes"), static_cast<double>(IFileManager::Get().FileSize(*Path)));
+            Written.Add(MakeShared<FJsonValueObject>(Entry));
+        }
+    }
+    if (Written.Num() > 0)
+    {
+        Result->SetArrayField(TEXT("otherFiles"), Written);
+    }
+    McpHandlerUtils::MarkNoAssetsChanged(Result);
+    Bridge->SendAutomationResponse(Socket, RequestId, true,
+        FString::Printf(TEXT("Exported %s to %s (%lld bytes)."), *Asset->GetName(), *File, Bytes), Result);
+}
 } // namespace
 
 bool HandleExportMesh(UEngineWireSubsystem* Bridge, const FString& RequestId,
@@ -87,61 +149,24 @@ bool HandleExportMesh(UEngineWireSubsystem* Bridge, const FString& RequestId,
         return Fail(FString::Printf(TEXT("outputPath '%s' must stay inside the project: %s."), *Requested, *PathError),
                     TEXT("SECURITY_VIOLATION"));
     }
-    const FString Folder = FPaths::GetPath(File);
-    IFileManager::Get().MakeDirectory(*Folder, true);
 
-    UAssetExportTask* Task = NewObject<UAssetExportTask>();
-    FGCObjectScopeGuard TaskGuard(Task);
-    Task->Object = Asset;
-    Task->Filename = File;
-    Task->bSelected = false;
-    Task->bReplaceIdentical = true;
-    Task->bPrompt = false;
-    Task->bAutomated = true;
-
-    const TMap<FString, FDateTime> Before = McpFolderFiles(Folder);
-    bool bExported = false;
+    // glTF bakes materials, and the baker ticks the core ticker while it waits for mips: inside this request's own
+    // ticker callback that nested tick asserted and took the editor down. It runs outside the ticker instead.
+    if (Format == TEXT("glb") || Format == TEXT("gltf"))
     {
-        // The FBX and glTF exporters ask for options in a dialog, and the glTF one opens its message log after a
-        // warning, unless the editor runs unattended: this call is unattended.
-        TGuardValue<bool> Unattended(GIsAutomationTesting, true);
-        bExported = UExporter::RunAssetExportTask(Task);
+        const TWeakObjectPtr<UObject> Weak(Asset);
+        Bridge->RunOutsideTicker(RequestId, TEXT("manage_asset export_mesh"), [Bridge, RequestId, Socket, Weak, Format, File]() {
+            if (UObject* Live = Weak.Get())
+            {
+                ExportAndReply(Bridge, RequestId, Socket, Live, Format, File);
+                return;
+            }
+            Bridge->SendAutomationResponse(Socket, RequestId, false, TEXT("The asset was unloaded before its export ran."),
+                                           nullptr, TEXT("EXPORT_FAILED"));
+        });
+        return true;
     }
-
-    TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
-    Result->SetStringField(TEXT("assetPath"), Asset->GetPathName());
-    Result->SetStringField(TEXT("format"), Format);
-    Result->SetStringField(TEXT("path"), File);
-    const int64 Bytes = IFileManager::Get().FileSize(*File);
-    if (!bExported || Bytes <= 0)
-    {
-        const FString Why = Task->Errors.Num() > 0 ? TEXT(": ") + Task->Errors[0] : FString(TEXT("."));
-        return Fail(FString::Printf(TEXT("%s was not exported as %s%s"), *Asset->GetName(), *Format, *Why),
-                    TEXT("EXPORT_FAILED"), Result);
-    }
-    Result->SetNumberField(TEXT("bytes"), static_cast<double>(Bytes));
-
-    // A .gltf keeps its buffers and textures in files beside it, and OBJ writes its UV and collision variants.
-    TArray<TSharedPtr<FJsonValue>> Written;
-    for (const TPair<FString, FDateTime>& Now : McpFolderFiles(Folder))
-    {
-        const FDateTime* Was = Before.Find(Now.Key);
-        const FString Path = Folder / Now.Key;
-        if (Path != File && (!Was || *Was != Now.Value) && Written.Num() < McpMaxListedFiles)
-        {
-            const TSharedPtr<FJsonObject> Entry = MakeShared<FJsonObject>();
-            Entry->SetStringField(TEXT("name"), Now.Key);
-            Entry->SetNumberField(TEXT("bytes"), static_cast<double>(IFileManager::Get().FileSize(*Path)));
-            Written.Add(MakeShared<FJsonValueObject>(Entry));
-        }
-    }
-    if (Written.Num() > 0)
-    {
-        Result->SetArrayField(TEXT("otherFiles"), Written);
-    }
-    McpHandlerUtils::MarkNoAssetsChanged(Result);
-    Bridge->SendAutomationResponse(Socket, RequestId, true,
-        FString::Printf(TEXT("Exported %s to %s (%lld bytes)."), *Asset->GetName(), *File, Bytes), Result);
+    ExportAndReply(Bridge, RequestId, Socket, Asset, Format, File);
     return true;
 }
 } // namespace McpMeshExport
