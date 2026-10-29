@@ -144,7 +144,10 @@ Full negotiation and header-guard behavior: [`protocol.md`](protocol.md).
 A consent grant from `describe` carries a single-use `nonce`, minted for that
 capability and required: the same grant sent again is refused with
 `CONSENT_REUSED`, and a grant whose nonce this server did not mint for the
-capability (missing, made up, or too old) with `CONSENT_NOT_ISSUED`. A refused execute carries its typed
+capability (missing, made up, or too old) with `CONSENT_NOT_ISSUED`. A call
+refused before its handler runs (an unmet `options.require`, a dialog in the
+way) gets its grant back; once the handler starts, the grant is spent whatever
+the call answers. A refused execute carries its typed
 error as `typedError`, and `maxBytes` counts the result rows.
 
 ## Discovery is progressive, never a schema dump
@@ -292,8 +295,8 @@ predicates (`A exists`, `A hidden`, `A visible`, `/Game/BP_Door compiles`) and
 `expectations[]` gives each one's verdict (`ok`, `failed`, or `unknown` when it
 cannot be observed yet), what was found, and for a failure the call that fixes
 it; a failure also adds a warning. An expectation never fails the call it
-judges: the change was made, and answering failure would hand back a
-single-use consent grant and make a retry repeat it.
+judges: the change was made, and answering failure would make a retry repeat
+it.
 
 `options.require` lists assertions that must hold before the call runs. They
 are judged on the game thread just before the handler: when one fails or

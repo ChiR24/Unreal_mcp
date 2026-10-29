@@ -92,9 +92,10 @@ Consent arrives as an **execute-envelope sibling — never a handler parameter**
 ```
 
 A grant is honored **only when it names that capability**. Consent is
-re-validated plugin-side. A failed request gives its nonce back only when the
-change journal shows nothing changed since its dispatch began; a handler that
-changed something and then failed spent it.
+re-validated plugin-side. A request refused before its handler starts (an unmet
+`options.require`, a dialog in the way) gives its nonce back; once the handler
+starts, the nonce is spent whatever the reply says, since a handler can write a
+file or run a script that no change journal records.
 
 > Never infer consent from loopback, from a prior call, from an idempotency
 > key, or from a preview. None of those are consent.
@@ -136,6 +137,15 @@ spreads past what it names refuses before changing anything when the spread
 leaves the prefixes (`recompile_struct` with a user of the struct elsewhere),
 and `save_all` leaves another prefix's dirty packages unsaved, counted but not
 named.
+
+A file a caller places on disk (a report, a screenshot, a thumbnail, a snapshot,
+a heightmap, an exported object, capture passes) is resolved by
+`McpResolveProjectFilePath`: inside the project, no device name, no link on the
+way. The write itself goes through `McpWriteProjectFile`, which opens the file
+first and refuses it when the opened file is not that path, so a link made
+between the check and the write cannot carry it outside the project. Files an
+engine exporter opens itself (`export_mesh`, Movie Render Queue output) are
+resolved the same way but written by the engine.
 
 ## Scoped tokens and quota
 
