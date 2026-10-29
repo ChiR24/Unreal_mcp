@@ -851,6 +851,19 @@ export const PLAIN_PROBE: readonly PlainProbeCase[] = [
   { query: 'flickering torch', accepted: ['control_actor.edit_component'] },
   { query: 'candle flicker', accepted: ['control_actor.edit_component'] },
   { query: 'stop the light flickering', accepted: ['control_actor.edit_component'] },
+  // Water on a level or a map, and a faster or slower player.
+  { query: 'add water to the level', accepted: ['build_environment.create_water_body'] },
+  { query: 'add water to the map', accepted: ['build_environment.create_water_body'] },
+  { query: 'make the player faster', accepted: ['manage_character.configure_character'] },
+  { query: 'make the player slower', accepted: ['manage_character.configure_character'] },
+  // Stacking things on top of each other.
+  { query: 'stack the crates', accepted: ['control_actor.arrange_by_relations'] },
+  { query: 'stack the cubes', accepted: ['control_actor.arrange_by_relations'] },
+  { query: 'put the boxes on top of each other', accepted: ['control_actor.arrange_by_relations'] },
+  // A film look, a glass look and a rolling ball.
+  { query: 'make the game look like a film', accepted: ['build_environment.configure_post_process'] },
+  { query: 'make it look like glass', accepted: ['material.create_material'] },
+  { query: 'make the ball roll', accepted: ['animation_physics.setup_physics_simulation'] },
   { query: 'how many cubes are there', accepted: ['control_actor.list'] },
   // Plain requests whose owner did not name their words.
   { query: 'duplicate the wall', accepted: ['control_actor.duplicate'] },

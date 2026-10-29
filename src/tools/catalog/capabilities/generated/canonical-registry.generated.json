@@ -1,5 +1,5 @@
 {
-  "catalogRevision": "a9ac3809e91d5b59",
+  "catalogRevision": "6920460981e90e10",
   "recordCount": 480,
   "records": [
     {
@@ -8151,7 +8151,8 @@
           "pushable crate",
           "physics crate",
           "falls and tumbles",
-          "make an object physical"
+          "make an object physical",
+          "make a ball roll"
         ],
         "summary": "Make an actor simulate physics: a placed prop (actorName) falls, tumbles and can be pushed while the game plays, or a skeletal mesh gets a Physics Asset with bodies made for its bones.",
         "whenToUse": [
@@ -8284,7 +8285,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "cae143857f34759e96d587dc7e1684b44a7a945396aa83b0a77325a1e123aa6e",
-        "content": "8a27f38abf86376d238d253cb841a748057290ce5e3218023b80cdec9928424e"
+        "content": "ce8a9b286f2d148975bd2fd04e8532b238f7e09974238dc07976ad765b9905e1"
       }
     },
     {
@@ -31011,7 +31012,8 @@
           "screen tint",
           "change screen tint",
           "add bloom or depth of field",
-          "make the room, the scene or the level darker or brighter"
+          "make the room, the scene or the level darker or brighter",
+          "make the game look like a film"
         ],
         "summary": "Set post-process values on a PostProcessVolume, chosen by setting: bloom, exposure, depth of field, motion blur, tonemapper, color grading, LUT, white balance, vignette, grain, chromatic aberration, lens flare, SSAO/GTAO, screen-space and Lumen reflections, blend (screen_percentage sets r.ScreenPercentage instead). The volume is actorName, else the level's unbound (whole level) volume, the persistent level's first; a level with none gets one, named actorName when given. A name no volume has is ACTOR_NOT_FOUND listing the volumes, several unbound volumes AMBIGUOUS. Each value is the FPostProcessSettings field it names and turns that field's override on; settings takes any field by engine name. A value outside the engine's limits, an unknown name and a call that sets nothing are refused, and nothing is written unless every value is taken. One undo step; the level is left unsaved. blendWeight (0-1) and infiniteUnbound set the volume itself with any variant.",
         "whenToUse": [
@@ -31493,7 +31495,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "6e0499250b33a73ef4c234087fc992a568d3d5d48c155fa859237578f2a2736b",
-        "content": "2b831be8dd226320a01c4fbe5a5f008ff62324e485432832aa44166cce103522"
+        "content": "dc33397c02c294286106c1fd6fabb64fc4c7a53aeb86df9ddfa2061c31acd4d7"
       }
     },
     {
@@ -35692,7 +35694,8 @@
           "add a river",
           "create a river",
           "make a river",
-          "water the player can swim in"
+          "water the player can swim in",
+          "add water to the level or a map"
         ],
         "summary": "Create a water body (ocean, lake, river or custom) with the Water plugin: real water that takes the editor's default materials and, for an ocean or lake, its default waves, as placing one in the editor does (listed under defaultsApplied).",
         "whenToUse": [
@@ -35874,7 +35877,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "bb2f8a7363e8c91d97b745cd557a928b63a1f04664fef394176ecbeccc3513ee",
-        "content": "bd5beb9acd8acb3f571f96532954fd7d50f5aaf301eef168e8cbb91669812d84"
+        "content": "cec560aa3f270e591adf75a7c99bfaf59dccff0e074427386f3bcff6ebbc38b1"
       }
     },
     {
@@ -40019,7 +40022,8 @@
           "place furniture",
           "solve a layout",
           "move actors until relations hold",
-          "turn a chair to face a desk"
+          "turn a chair to face a desk",
+          "stack boxes, crates or cubes on top of each other"
         ],
         "summary": "Move actors until the relations stated hold, overlapping nothing, in one undo step: say where things go ([\"Lamp on Table\", \"Chair_1 nextTo Table\", \"Chair_1 facing Table\", \"Shelf against Wall\"]) instead of computing coordinates. The relations are those execute's expect judges: A on B (resting on its top), A inside B, A nextTo B (side by side, touching), A against B (touching, its back to B, its front away), A facing B (the line ahead of its front, its X axis, meets B or points within 20 degrees of the centre of B; beside a side of B it turns square to it) and A near B within d (cm, default 100). A solver plans from where the actors stand now, keeping a rough placement wherever it already fits: each actor is a box turned about Z (what it draws), and their places and turns are annealed over how far each relation misses, how deep they overlap each other or the scene around them, and how far they wander; then each contact is snapped exact. What rests on a moved actor moves with it. Each relation is then judged by the engine as expect judges it.",
         "whenToUse": [
@@ -40209,7 +40213,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "f774e8f426b54affae6b80939e25eac3620da88b1771487b341d49f90cd0449f",
-        "content": "ba9d4c15ef5431e44b86c8a856c7787044971aa748dcff21e707a0c72d471e8b"
+        "content": "1d2345d1ed44c61e23782de2d41b915e0a308c9ca18ed9ad8bb74a6d64e700d2"
       }
     },
     {
@@ -71497,7 +71501,8 @@
           "make the player float",
           "switch to first person or third person",
           "double jump",
-          "add a crouch"
+          "add a crouch",
+          "make the player faster or slower"
         ],
         "summary": "Configure a Character Blueprint's defaults by setting: movement_speeds (walk, crouch, swim, fly, acceleration, braking, friction), jump (launch speed, hold, double jump, air control, gravity), crouch, rotation (orient to movement or face the aim), capsule_component, mesh_component (skeletal mesh, Animation Blueprint, offset), camera_component (a third-person spring arm and camera, made when missing, or with view first_person a camera at the eyes) or nav_movement (AI agent size, avoidance). Each compiles and saves the Blueprint, changes only the fields sent and reads the values back; a Blueprint that is not a Character is refused (NOT_A_CHARACTER).",
         "whenToUse": [
@@ -71915,7 +71920,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "f5b1d349c80165552eb31f67ec27b80672797918ebec0822101a82db4d1815cd",
-        "content": "908f9fcfccc813664387fb92f9db8af64b54d43bfa6672be2f022864f02c9d04"
+        "content": "aff658bf180b7d9be740ed55b28cdaf3e43065bc9152c5ffa78afaf4198abfe1"
       }
     },
     {
@@ -102250,6 +102255,7 @@
           "emissive glow",
           "glowing material",
           "shiny metal material",
+          "make something look like glass",
           "new material",
           "make material",
           "material asset",
@@ -102513,7 +102519,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "ddb0f137f776b24373015bac1938e25ad09bd3ab03b7f86490acc94c1873ae5e",
-        "content": "1216a3c8dfb6998f4b53e9686c80681cbc01e4836f9bceed56903e282500e915"
+        "content": "bf2073b2306eca45c18505914c354e92800cede894781c3e00a04ad55866419d"
       }
     },
     {

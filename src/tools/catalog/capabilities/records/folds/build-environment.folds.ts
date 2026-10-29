@@ -86,7 +86,7 @@ export const BUILD_ENVIRONMENT_FOLDS: readonly FoldSpec[] = [
   {
     primary: 'configure_post_process', selector: 'setting',
     summary: 'Set post-process values on a PostProcessVolume, chosen by setting: bloom, exposure, depth of field, motion blur, tonemapper, color grading, LUT, white balance, vignette, grain, chromatic aberration, lens flare, SSAO/GTAO, screen-space and Lumen reflections, blend (screen_percentage sets r.ScreenPercentage instead). The volume is actorName, else the level\'s unbound (whole level) volume, the persistent level\'s first; a level with none gets one, named actorName when given. A name no volume has is ACTOR_NOT_FOUND listing the volumes, several unbound volumes AMBIGUOUS. Each value is the FPostProcessSettings field it names and turns that field\'s override on; settings takes any field by engine name. A value outside the engine\'s limits, an unknown name and a call that sets nothing are refused, and nothing is written unless every value is taken. One undo step; the level is left unsaved. blendWeight (0-1) and infiniteUnbound set the volume itself with any variant.',
-    topics: ['post process', 'bloom', 'exposure', 'auto exposure', 'eye adaptation', 'depth of field', 'motion blur', 'tonemapper', 'color grading', 'vignette', 'add bloom', 'screen tint', 'change screen tint', 'add bloom or depth of field', 'make the room, the scene or the level darker or brighter'],
+    topics: ['post process', 'bloom', 'exposure', 'auto exposure', 'eye adaptation', 'depth of field', 'motion blur', 'tonemapper', 'color grading', 'vignette', 'add bloom', 'screen tint', 'change screen tint', 'add bloom or depth of field', 'make the room, the scene or the level darker or brighter', 'make the game look like a film'],
     members: byName(['configure_bloom', 'set_bloom_intensity', 'set_bloom_threshold', 'configure_exposure', 'set_exposure_compensation', 'set_exposure_method',
       'set_exposure_min_max', 'configure_dof', 'set_dof_method', 'set_focal_distance', 'set_aperture', 'configure_bokeh', 'configure_motion_blur',
       'set_motion_blur_amount', 'set_motion_blur_max', 'configure_tonemapper', 'set_tonemapper_type', 'set_pp_color_grading', 'set_pp_lut',
@@ -169,7 +169,7 @@ export const BUILD_ENVIRONMENT_FOLDS: readonly FoldSpec[] = [
   {
     primary: 'create_water_body', selector: 'kind',
     summary: 'Create a water body (ocean, lake, river or custom) with the Water plugin: real water that takes the editor\'s default materials and, for an ocean or lake, its default waves, as placing one in the editor does (listed under defaultsApplied).',
-    topics: ['water body', 'ocean', 'lake', 'river', 'add a lake or ocean', 'add a river', 'create a river', 'make a river', 'water the player can swim in'],
+    topics: ['water body', 'ocean', 'lake', 'river', 'add a lake or ocean', 'add a river', 'create a river', 'make a river', 'water the player can swim in', 'add water to the level or a map'],
     members: byTarget('create_water_body_', ['create_water_body_ocean', 'create_water_body_lake', 'create_water_body_river', 'create_water_body_custom']),
   },
   {
