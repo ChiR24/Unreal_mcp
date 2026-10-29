@@ -30,6 +30,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **`lock_actors`** locks or unlocks actors in the editor (Lock Actor Movement), which `fix_placement`, `arrange_by_relations` and `settle_physics` respect; "lock the door" still finds the door's own lock.
 - **`convert_actors_to_blueprint`** makes placed actors one Blueprint (the editor's prefab: components harvested, child actors, or one actor's subclass) and can replace them with its instance.
 - **`move_actors_to_level`** moves actors into another loaded level (a sublevel, or back to the open level) as Move Selection to Level does, in one undo step.
+- **`rename`** with `actorNames` relabels several actors in one undo step, numbered in order by a `{n}` in `newName` (`Crate_{n}`: Crate_01, Crate_02, ...).
 - **Names models invent land**: an alias sent as a tool and action resolves (`system_control` `restart_editor` runs `control_editor`'s), with five new ones mined from session transcripts (`call_function`, `save_all` under `manage_asset`, `set_blueprint_variables` under `manage_blueprint`, `connect_nodes` for a Blueprint's `connect_pins`).
 - **`npx unreal-engine-mcp-server init <client>`** shows (and with `--write` saves) the server's entry in Claude Code's, Cursor's, VS Code's, Gemini's or Codex's MCP config; **`doctor`** checks Node, the token (never shown), the editor's answer and both versions.
 

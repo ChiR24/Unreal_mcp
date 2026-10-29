@@ -96,6 +96,10 @@ bool HandleDistributeActors(UEngineWireSubsystem* Bridge, const FString& Request
 bool HandleLockActors(UEngineWireSubsystem* Bridge, const FString& RequestId, const TSharedPtr<FJsonObject>& Payload,
                       TSharedPtr<FMcpBridgeWebSocket> Socket, TFunctionRef<AActor*(const FString&)> Find);
 
+/** control_actor rename with actorNames: several actors relabelled and numbered (McpRenameActors.cpp). */
+bool HandleRenameActors(UEngineWireSubsystem* Bridge, const FString& RequestId, const TSharedPtr<FJsonObject>& Payload,
+                        TSharedPtr<FMcpBridgeWebSocket> Socket, TFunctionRef<AActor*(const FString&)> Find);
+
 /** The wider side of an item's footprint. */
 inline double Footprint(const FItem& Item)
 {

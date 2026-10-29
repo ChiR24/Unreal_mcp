@@ -89,7 +89,10 @@ bool UEngineWireSubsystem::HandleControlActorAction(
   if (LowerSub == TEXT("duplicate"))
     return HandleControlActorDuplicate(RequestId, Payload, RequestingSocket);
   if (LowerSub == TEXT("rename"))
-    return HandleControlActorRename(RequestId, Payload, RequestingSocket);
+    return Payload->HasField(TEXT("actorNames"))
+               ? McpRelations::HandleRenameActors(this, RequestId, Payload, RequestingSocket,
+                                                  [this](const FString &Name) { return FindActorByName(Name, true); })
+               : HandleControlActorRename(RequestId, Payload, RequestingSocket);
   if (LowerSub == TEXT("attach") || LowerSub == TEXT("attach_actor"))
     return HandleControlActorAttach(RequestId, Payload, RequestingSocket);
   if (LowerSub == TEXT("detach") || LowerSub == TEXT("detach_actor"))

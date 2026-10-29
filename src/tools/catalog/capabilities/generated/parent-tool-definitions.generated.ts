@@ -4772,6 +4772,15 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             },
             {
               "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "minItems": 1,
+              "maxItems": 500,
+              "description": "Several actors to relabel in one call and one undo step, in place of actorName, numbered in this order. Every name is found and every new label checked before anything changes (ACTOR_NOT_FOUND, INVALID_NAME rename nothing); actors already labelled as asked make no undo step. Labels only: renameObject is refused with actorNames."
+            },
+            {
+              "type": "array",
               "minItems": 1,
               "maxItems": 500,
               "items": {
@@ -4985,6 +4994,12 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           ],
           "description": "Which delete variant to run; omit for 'actors'.\nactors: Permanently delete one actor or a batch of actors by name.\nby_tag: Permanently delete every actor matching a gameplay tag, or any of several tags in one call.",
           "default": "actors"
+        },
+        "digits": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 6,
+          "description": "With actorNames, numbers are zero-padded to this many digits (default 2: 01, 02 ... 10)."
         },
         "distance": {
           "type": "number",
@@ -5376,7 +5391,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "renameObject": {
           "type": "boolean",
-          "description": "Also rename the object itself to newName, made valid and unique (default false: the label only). The label is editor-only; the object name ships in the cooked level. References from inside the same level follow the rename, a Level Sequence binding or a soft reference by the old path does not. An actor saved in its own package (World Partition) keeps its object name, with a note."
+          "description": "Also rename the object itself to newName, made valid and unique (default false: the label only). The label is editor-only; the object name ships in the cooked level. References from inside the same level follow the rename, a Level Sequence binding or a soft reference by the old path does not. An actor saved in its own package (World Partition) keeps its object name, with a note. One actor only (actorName)."
         },
         "report": {
           "type": "string",
@@ -5448,6 +5463,11 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "spawnWaitSeconds": {
           "type": "number",
           "description": "With spawnOf: game seconds to wait for the spawn (default 10, at most 30); nothing spawned ends with endedBecause spawnTimeout and no samples. The wait comes out of maxRealSeconds, so the wait and the run still answer inside it."
+        },
+        "start": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "The first number with actorNames (default 1)."
         },
         "startWhen": {
           "type": "object",
@@ -6332,6 +6352,15 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "number",
           "description": "Coplanar pairs still found afterwards; run audit_placement with kinds [\"coplanar\"] to see them."
         },
+        "renamed": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": true,
+            "x-unreal-reflection-boundary": true
+          },
+          "description": "With actorNames, one row per actor in the order given: {actorName (as later calls should name it), oldLabel, label}."
+        },
         "report": {
           "type": "string",
           "description": "Echoes report when it narrowed results."
@@ -6566,6 +6595,12 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
               "additionalProperties": true,
               "x-unreal-reflection-boundary": true,
               "description": "What editor undo takes back: the moves are one step. Absent under dryRun and when nothing moved."
+            },
+            {
+              "type": "object",
+              "additionalProperties": true,
+              "x-unreal-reflection-boundary": true,
+              "description": "What editor undo takes back: the rename is one step; with actorNames, absent when no label changed."
             },
             {
               "type": "object",

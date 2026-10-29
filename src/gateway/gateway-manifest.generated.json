@@ -4055,6 +4055,7 @@
         "contactCm",
         "defaults",
         "deleteScope",
+        "digits",
         "distance",
         "dryRun",
         "durationSeconds",
@@ -4115,6 +4116,7 @@
         "spawnKind",
         "spawnOf",
         "spawnWaitSeconds",
+        "start",
         "startWhen",
         "summary",
         "tag",
@@ -4217,6 +4219,15 @@
                 "minItems": 1,
                 "maxItems": 500,
                 "description": "Many actors given the same change: the location, offset, rotation or scale beside it (forty frost caps rescaled by one scale, a group raised by one offset). Reported as actors is."
+              },
+              {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                },
+                "minItems": 1,
+                "maxItems": 500,
+                "description": "Several actors to relabel in one call and one undo step, in place of actorName, numbered in this order. Every name is found and every new label checked before anything changes (ACTOR_NOT_FOUND, INVALID_NAME rename nothing); actors already labelled as asked make no undo step. Labels only: renameObject is refused with actorNames."
               },
               {
                 "type": "array",
@@ -4433,6 +4444,12 @@
             ],
             "description": "Which delete variant to run; omit for 'actors'.\nactors: Permanently delete one actor or a batch of actors by name.\nby_tag: Permanently delete every actor matching a gameplay tag, or any of several tags in one call.",
             "default": "actors"
+          },
+          "digits": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 6,
+            "description": "With actorNames, numbers are zero-padded to this many digits (default 2: 01, 02 ... 10)."
           },
           "distance": {
             "type": "number",
@@ -4824,7 +4841,7 @@
           },
           "renameObject": {
             "type": "boolean",
-            "description": "Also rename the object itself to newName, made valid and unique (default false: the label only). The label is editor-only; the object name ships in the cooked level. References from inside the same level follow the rename, a Level Sequence binding or a soft reference by the old path does not. An actor saved in its own package (World Partition) keeps its object name, with a note."
+            "description": "Also rename the object itself to newName, made valid and unique (default false: the label only). The label is editor-only; the object name ships in the cooked level. References from inside the same level follow the rename, a Level Sequence binding or a soft reference by the old path does not. An actor saved in its own package (World Partition) keeps its object name, with a note. One actor only (actorName)."
           },
           "report": {
             "type": "string",
@@ -4896,6 +4913,11 @@
           "spawnWaitSeconds": {
             "type": "number",
             "description": "With spawnOf: game seconds to wait for the spawn (default 10, at most 30); nothing spawned ends with endedBecause spawnTimeout and no samples. The wait comes out of maxRealSeconds, so the wait and the run still answer inside it."
+          },
+          "start": {
+            "type": "integer",
+            "minimum": 0,
+            "description": "The first number with actorNames (default 1)."
           },
           "startWhen": {
             "type": "object",

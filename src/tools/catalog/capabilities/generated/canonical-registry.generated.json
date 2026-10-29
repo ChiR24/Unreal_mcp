@@ -1,5 +1,5 @@
 {
-  "catalogRevision": "c1646d1ec8fdf17e",
+  "catalogRevision": "9bd3290b8f1f55f1",
   "recordCount": 476,
   "records": [
     {
@@ -44199,11 +44199,15 @@
           "outliner name",
           "actor object name",
           "give actor a new name",
-          "change actor name"
+          "change actor name",
+          "rename several actors",
+          "number the actors",
+          "batch rename"
         ],
-        "summary": "Rename an actor: its label (the name the Outliner and every other call use), and with renameObject its object name too, which is the name a cooked level ships.",
+        "summary": "Rename an actor: its label (the name the Outliner and every other call use), and with renameObject its object name too, which is the name a cooked level ships. actorNames relabels several actors in one undo step, numbered in the order given by a {n} in newName (Crate_{n} -> Crate_01, Crate_02, ...).",
         "whenToUse": [
           "An actor should go by a different name.",
+          "Several actors should be numbered in order (Lamp_01 to Lamp_12): actorNames with a {n} in newName.",
           "A Blueprint class was renamed and its placed actors still carry the old class in their object names (BP_OldName_C_3): rename each with renameObject, then save the level."
         ],
         "whenNotToUse": [
@@ -44223,21 +44227,44 @@
               "type": "string",
               "description": "Target actor name in the current level."
             },
+            "actorNames": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "minItems": 1,
+              "maxItems": 500,
+              "description": "Several actors to relabel in one call and one undo step, in place of actorName, numbered in this order. Every name is found and every new label checked before anything changes (ACTOR_NOT_FOUND, INVALID_NAME rename nothing); actors already labelled as asked make no undo step. Labels only: renameObject is refused with actorNames."
+            },
             "newName": {
               "type": "string",
-              "description": "The new label; letters, digits, spaces and underscores are safe."
+              "description": "The new label; letters, digits, spaces and underscores are safe. With actorNames, {n} marks where each actor's number goes (Crate_{n}); several actors without {n} are refused (INVALID_ARGUMENT). \"None\" is refused (INVALID_NAME)."
+            },
+            "start": {
+              "type": "integer",
+              "minimum": 0,
+              "description": "The first number with actorNames (default 1)."
+            },
+            "digits": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 6,
+              "description": "With actorNames, numbers are zero-padded to this many digits (default 2: 01, 02 ... 10)."
             },
             "renameObject": {
               "type": "boolean",
-              "description": "Also rename the object itself to newName, made valid and unique (default false: the label only). The label is editor-only; the object name ships in the cooked level. References from inside the same level follow the rename, a Level Sequence binding or a soft reference by the old path does not. An actor saved in its own package (World Partition) keeps its object name, with a note."
+              "description": "Also rename the object itself to newName, made valid and unique (default false: the label only). The label is editor-only; the object name ships in the cooked level. References from inside the same level follow the rename, a Level Sequence binding or a soft reference by the old path does not. An actor saved in its own package (World Partition) keeps its object name, with a note. One actor only (actorName)."
             }
           },
           "required": [
             "action",
-            "actorName",
             "newName"
           ],
-          "additionalProperties": false
+          "additionalProperties": false,
+          "requiredOneOf": [
+            "actorName",
+            "actorNames"
+          ]
         },
         "output": {
           "$schema": "https://json-schema.org/draft/2020-12/schema",
@@ -44283,6 +44310,21 @@
             "note": {
               "type": "string",
               "description": "Why the object name was kept, when renameObject could not rename it."
+            },
+            "renamed": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "additionalProperties": true,
+                "x-unreal-reflection-boundary": true
+              },
+              "description": "With actorNames, one row per actor in the order given: {actorName (as later calls should name it), oldLabel, label}."
+            },
+            "undo": {
+              "type": "object",
+              "additionalProperties": true,
+              "x-unreal-reflection-boundary": true,
+              "description": "What editor undo takes back: the rename is one step; with actorNames, absent when no label changed."
             }
           },
           "required": [
@@ -44293,7 +44335,7 @@
       },
       "examples": [
         {
-          "title": "Rename an actor: its label (the name the Outliner and every other call use), and with renameObject its object name too, which is the name a cooked level ships.",
+          "title": "Rename an actor: its label (the name the Outliner and every other call use), and with renameObject its object name too, which is the name a cooked level ships. actorNames relabels several actors in one undo step, numbered in the order given by a {n} in newName (Crate_{n} -> Crate_01, Crate_02, ...).",
           "input": {
             "action": "rename",
             "actorName": "BP_OldEnemy_C_6",
@@ -44338,8 +44380,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "56283eb9b03b7a6236f304b828d86f22cacd06c02b71a1a061b3cff5ea54cb3f",
-        "content": "6a468f95fe994c7835a8f525577e758bbf05a5d4851cca316304c56e5ad45592"
+        "schema": "9cdd93db1ffde13a933832a208063d594ae8e598e6fbc84e852a4c30aa072824",
+        "content": "7732c952f7bb25eb5061f3347760df6222d650748c0ecd7ae1cccf9566455e66"
       }
     },
     {

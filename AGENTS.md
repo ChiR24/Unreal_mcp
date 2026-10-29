@@ -16,7 +16,7 @@ Area-specific guidance lives in nested `AGENTS.md` files (see **AREA GUIDES** be
 |   `-- utils/                   # commands (console policy rules), config, logging, serialization, validation
 |-- plugins/EngineWire/ # the ONLY plugin; editor-only UE (bridge + native MCP + Fab, lint and game feature adapters)
 |   |-- Source/EngineWire/{Public (22), Private/}
-|   |   Private/ (source files, subfolders included, 2026-10-29): Core(41) Domains(1460 / 58 domains) Foundation(142) MCP(162) Safety(19) Transport(23) Tests(40) UI(2)
+|   |   Private/ (source files, subfolders included, 2026-10-29): Core(41) Domains(1461 / 58 domains) Foundation(142) MCP(162) Safety(19) Transport(23) Tests(40) UI(2)
 |   |-- Source/EngineWireFab/     # Fab asset-store adapter module (delay-loaded, optional)
 |   |-- Source/EngineWireValidation/ # lint_blueprint's rules as a Data Validation validator
 |   `-- Source/EngineWireGameFeatures/ # game feature plugins for system_control (loaded where GameFeatures is on)
