@@ -4,7 +4,7 @@
 
 # Action reference
 
-Catalog revision: `24bf1f30112733fd`
+Catalog revision: `2c79aab648f9cc17`
 
 Both transports expose exactly ONE public MCP tool, `unreal`, with the four
 operations `search` / `describe` / `execute` / `configure`. The parent tools
@@ -13,7 +13,7 @@ by `tools/list` and a direct `tools/call` on one returns a
 `DIRECT_TOOL_CALL_REMOVED` receipt rather than executing
 (`src/server/gateway/direct-call-migration.ts`).
 
-The catalog declares 479 capabilities across
+The catalog declares 480 capabilities across
 23 internal parent tools.
 Every row is derived from the capability record that the gateway actually
 validates against, so `execute` cannot accept an action this table omits.
@@ -41,7 +41,7 @@ validates against, so `execute` cannot accept an action this table omits.
 | --- | --- | --- | --- | --- | --- |
 | `animation_physics` | 32 | 5 | 25 | 2 | animation physics |
 | `build_environment` | 43 | 5 | 35 | 3 | environment |
-| `control_actor` | 35 | 9 | 23 | 3 | actor |
+| `control_actor` | 36 | 9 | 24 | 3 | actor |
 | `control_editor` | 29 | 10 | 15 | 4 | editor |
 | `inspect` | 27 | 22 | 4 | 1 | inspect |
 | `manage_ai` | 17 | 3 | 14 | 0 | manage ai |
@@ -65,7 +65,7 @@ validates against, so `execute` cannot accept an action this table omits.
 
 ## Capabilities requiring consent
 
-77 of 479 capabilities require consent.
+77 of 480 capabilities require consent.
 
 | Capability | Tool | Action | Effect | Consent |
 | --- | --- | --- | --- | --- |
@@ -315,6 +315,7 @@ validates against, so `execute` cannot accept an action this table omits.
 | `control_actor.get_component_property` | `control_actor` | `get_component_property` | read | read | none | `control_actor.get_component_property` |
 | `control_actor.get_components` | `control_actor` | `get_components` | read | read | none | `control_actor.get_components` `control_actor.get_actor_bounds` `control_actor.get_actor_components` |
 | `control_actor.get_transform` | `control_actor` | `get_transform` | read | read | none | `control_actor.get_transform` `control_actor.sample_motion` `control_actor.get_actor_transform` |
+| `control_actor.group_actors` | `control_actor` | `group_actors` | write | write | none | `control_actor.group_actors` |
 | `control_actor.list` | `control_actor` | `list` | read | read | none | `control_actor.list` |
 | `control_actor.lock_actors` | `control_actor` | `lock_actors` | write | write | none | `control_actor.lock_actors` |
 | `control_actor.randomize_transforms` | `control_actor` | `randomize_transforms` | write | write | none | `control_actor.randomize_transforms` |

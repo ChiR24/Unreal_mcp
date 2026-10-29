@@ -1,6 +1,6 @@
 {
-  "catalogRevision": "24bf1f30112733fd",
-  "recordCount": 479,
+  "catalogRevision": "2c79aab648f9cc17",
+  "recordCount": 480,
   "records": [
     {
       "id": "animation_physics.analyze_animation",
@@ -43878,6 +43878,166 @@
         "algorithm": "sha256",
         "schema": "7f47f2d2caeab7706d35225925b9d6b7b931810a776b1647ad10afc35c61a122",
         "content": "4e3cdab95da59b92a4e497a5c211c263e530fbb9bc8fa6b116d6be60a5d3df14"
+      }
+    },
+    {
+      "id": "control_actor.group_actors",
+      "aliases": [],
+      "legacyIds": [
+        {
+          "tool": "control_actor",
+          "action": "group_actors"
+        }
+      ],
+      "discovery": {
+        "domain": "actor",
+        "family": "tags",
+        "topics": [
+          "group_actors",
+          "group actors",
+          "ungroup actors",
+          "group the table and the chairs",
+          "make actors move together in the editor"
+        ],
+        "summary": "Group actors as the editor's Group (Ctrl+G) does, so they select and move as one while the level is built (a locked group actor holds them, in their shared outliner folder), or with op ungroup break up the outermost groups they belong to. Each is the engine's own undo step. The actors must share a level (DIFFERENT_LEVELS) and the editor's grouping must be on (GROUPING_OFF); every name is found first, so a refusal changes nothing. Groups are an editor aid: in the game the actors are not attached.",
+        "whenToUse": [
+          "A set of props (a table and its chairs) should select and move as one while the level is built."
+        ],
+        "whenNotToUse": [
+          "The actors should move together in the game too: attach them (attach).",
+          "They should become one reusable piece: use convert_actors_to_blueprint."
+        ]
+      },
+      "schemas": {
+        "input": {
+          "$schema": "https://json-schema.org/draft/2020-12/schema",
+          "type": "object",
+          "properties": {
+            "action": {
+              "type": "string",
+              "description": "The action to execute on the parent tool."
+            },
+            "actorNames": {
+              "type": "array",
+              "minItems": 1,
+              "maxItems": 500,
+              "items": {
+                "type": "string"
+              },
+              "description": "The actors, by label or name: two or more to group (else INVALID_ARGUMENT), any member of the groups to break up (NOT_GROUPED when none is in a group)."
+            },
+            "op": {
+              "type": "string",
+              "enum": [
+                "group",
+                "ungroup"
+              ],
+              "description": "group (default) or ungroup."
+            }
+          },
+          "required": [
+            "action",
+            "actorNames"
+          ],
+          "additionalProperties": false
+        },
+        "output": {
+          "$schema": "https://json-schema.org/draft/2020-12/schema",
+          "type": "object",
+          "properties": {
+            "success": {
+              "type": "boolean",
+              "description": "Whether the action succeeded."
+            },
+            "message": {
+              "type": "string",
+              "description": "Human-readable result message."
+            },
+            "details": {
+              "type": "object",
+              "x-unreal-reflection-boundary": true,
+              "description": "Additional handler result fields not named by the contract."
+            },
+            "group": {
+              "type": "string",
+              "description": "The group actor made, as later calls should name it."
+            },
+            "members": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "description": "The actors grouped, in the order given."
+            },
+            "ungrouped": {
+              "type": "number",
+              "description": "Groups broken up (op ungroup)."
+            },
+            "undo": {
+              "type": "object",
+              "additionalProperties": true,
+              "x-unreal-reflection-boundary": true,
+              "description": "What editor undo takes back: the grouping or the ungrouping is one step."
+            }
+          },
+          "required": [
+            "success"
+          ],
+          "additionalProperties": false
+        }
+      },
+      "examples": [
+        {
+          "title": "Group actors as the editor's Group (Ctrl+G) does, so they select and move as one while the level is built (a locked group actor holds them, in their shared outliner folder), or with op ungroup break up the outermost groups they belong to. Each is the engine's own undo step. The actors must share a level (DIFFERENT_LEVELS) and the editor's grouping must be on (GROUPING_OFF); every name is found first, so a refusal changes nothing. Groups are an editor aid: in the game the actors are not attached.",
+          "input": {
+            "action": "group_actors",
+            "actorNames": [
+              "Table",
+              "Chair_1",
+              "Chair_2"
+            ]
+          },
+          "output": {
+            "success": true,
+            "message": "Grouped 3 actor(s) as GroupActor.",
+            "group": "GroupActor",
+            "members": [
+              "Table",
+              "Chair_1",
+              "Chair_2"
+            ]
+          }
+        }
+      ],
+      "availability": {
+        "requiredPlugins": [],
+        "editorStates": [
+          "edit"
+        ]
+      },
+      "behavior": {
+        "effect": "write",
+        "idempotency": "non-idempotent",
+        "longRunning": false,
+        "safeToRetry": false
+      },
+      "policy": {
+        "requiredScope": "write",
+        "consent": "none",
+        "dataAccess": "project-write"
+      },
+      "cost": {
+        "latency": "instant",
+        "resources": "low"
+      },
+      "routing": {
+        "parentTool": "control_actor",
+        "dispatchAction": "group_actors"
+      },
+      "hashes": {
+        "algorithm": "sha256",
+        "schema": "9e720854c1e80e3d6acb2e23f8a8f5f3c7ca1bae4421d62f2ffa940f7788e35d",
+        "content": "47de503f3d14ba6b487ccf48fd0addfe05e06a836d392ac7ade7c21d1240b269"
       }
     },
     {

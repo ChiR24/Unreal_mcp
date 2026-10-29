@@ -4813,6 +4813,15 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
               "items": {
                 "type": "string"
               },
+              "description": "The actors, by label or name: two or more to group (else INVALID_ARGUMENT), any member of the groups to break up (NOT_GROUPED when none is in a group)."
+            },
+            {
+              "type": "array",
+              "minItems": 1,
+              "maxItems": 500,
+              "items": {
+                "type": "string"
+              },
               "description": "The actors, by label or name; the first is the one the others line up with, unless value is given (then one is enough, else INVALID_ARGUMENT)."
             },
             {
@@ -5327,6 +5336,14 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           ],
           "description": "Most cm each actor moves along X and along Y (default 0). A call that varies nothing is INVALID_ARGUMENT."
         },
+        "op": {
+          "type": "string",
+          "enum": [
+            "group",
+            "ungroup"
+          ],
+          "description": "group (default) or ungroup."
+        },
         "overlaps": {
           "type": "boolean",
           "description": "Also watch which actors overlap the watched one, checked every frame: a sample names those that began (overlapsBegan) or stopped (overlapsEnded) touching it since the sample before, and overlapped lists every actor it touched. Finds what killed a pawn, what a pickup or trigger fired on, or an enemy wandering into a spawn point."
@@ -5668,6 +5685,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             "audit_placement",
             "fix_coplanar",
             "fix_placement",
+            "group_actors",
             "describe_relations",
             "arrange_by_relations",
             "snap_to_grid",
@@ -6140,6 +6158,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "number",
           "description": "With blueprintPath: the ground the parts were measured against (the capsule bottom of the preview instance); absent when the root is not a capsule."
         },
+        "group": {
+          "type": "string",
+          "description": "The group actor made, as later calls should name it."
+        },
         "groups": {
           "type": "array",
           "description": "Actors standing together, each {members, center, size}: every member within about a footprint of another, as a table with its chairs and the lamp on it. A level that is one group lists none. members names at most 24; memberCount says how many there are when more.",
@@ -6214,6 +6236,13 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             "type": "number"
           },
           "description": "Largest x, y and z sampled (the peak height is max[2])."
+        },
+        "members": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "The actors grouped, in the order given."
         },
         "message": {
           "type": "string",
@@ -6722,6 +6751,12 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
               "type": "object",
               "additionalProperties": true,
               "x-unreal-reflection-boundary": true,
+              "description": "What editor undo takes back: the grouping or the ungrouping is one step."
+            },
+            {
+              "type": "object",
+              "additionalProperties": true,
+              "x-unreal-reflection-boundary": true,
               "description": "What editor undo takes back: the moves are one step. Absent under dryRun and when nothing moved."
             },
             {
@@ -6756,6 +6791,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             }
           ],
           "description": "What editor undo takes back: the changes are one step."
+        },
+        "ungrouped": {
+          "type": "number",
+          "description": "Groups broken up (op ungroup)."
         },
         "unmet": {
           "type": "number",

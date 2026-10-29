@@ -127,6 +127,17 @@ const testCases = [
     { path: 'structuredContent.result.changed', equals: 1, label: 'only the lamp changed' },
   ] },
   { scenario: 'ERROR: lock_actors names an actor that is not there', toolName: 'control_actor', arguments: { action: 'lock_actors', actorNames: [LAMP, `MCP_NoSuchActor_${ts}`] }, expected: 'error|ACTOR_NOT_FOUND' },
+  // group_actors: the table and the lamp grouped as the editor's Ctrl+G does, then the group broken up.
+  { scenario: 'UPDATE: group_actors groups the table and the lamp', toolName: 'control_actor', arguments: { action: 'group_actors', actorNames: [TABLE, LAMP] }, expected: 'success', assertions: [
+    { path: 'structuredContent.result.members', length: 2, label: 'both are members' },
+    { path: 'structuredContent.result.members.0', equals: TABLE, label: 'in the order given' },
+  ] },
+  { scenario: 'UPDATE: group_actors op ungroup breaks the group up', toolName: 'control_actor', arguments: { action: 'group_actors', actorNames: [TABLE], op: 'ungroup' }, expected: 'success', assertions: [
+    { path: 'structuredContent.result.ungrouped', equals: 1, label: 'one group broken up' },
+  ] },
+  { scenario: 'ERROR: group_actors ungroups actors in no group', toolName: 'control_actor', arguments: { action: 'group_actors', actorNames: [TABLE], op: 'ungroup' }, expected: 'error|NOT_GROUPED' },
+  { scenario: 'ERROR: group_actors with one actor', toolName: 'control_actor', arguments: { action: 'group_actors', actorNames: [TABLE] }, expected: 'error|INVALID_ARGUMENT' },
+  { scenario: 'ERROR: group_actors names an actor that is not there', toolName: 'control_actor', arguments: { action: 'group_actors', actorNames: [TABLE, `MCP_NoSuchActor_${ts}`] }, expected: 'error|ACTOR_NOT_FOUND' },
   { scenario: 'DELETE: the room by its tag', toolName: 'control_actor', arguments: { action: 'delete_by_tag', tag: TAG }, expected: 'success' },
 ];
 

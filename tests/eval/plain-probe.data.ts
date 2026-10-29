@@ -932,4 +932,7 @@ export const PLAIN_PROBE: readonly PlainProbeCase[] = [
   // Copies of a prop stood along a spline (a road, a path) by spawn_batch's repeat.
   { query: 'place lamps along the road', accepted: ['control_actor.spawn'] },
   { query: 'place props along a path', accepted: ['control_actor.spawn'] },
+  // The editor's actor groups (Ctrl+G).
+  { query: 'group these actors', accepted: ['control_actor.group_actors'] },
+  { query: 'ungroup the actors', accepted: ['control_actor.group_actors'] },
 ];

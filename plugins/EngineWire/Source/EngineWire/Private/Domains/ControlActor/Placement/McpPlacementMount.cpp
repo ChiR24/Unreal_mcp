@@ -28,6 +28,8 @@ bool IsBoundsOnlyActor(const AActor *Actor) {
          // PIE spawns one per player; every teleport in a play session read
          // "intersects GameplayDebuggerCategoryReplicator0 by 64 units".
          ClassName.Contains(TEXT("GameplayDebugger")) ||
+         // An editor group (Ctrl+G) draws nothing and its bounds are its members': a new group read "nothing below it".
+         ClassName == TEXT("GroupActor") ||
          ClassName.EndsWith(TEXT("SubsystemRenderingActor"));
 }
 

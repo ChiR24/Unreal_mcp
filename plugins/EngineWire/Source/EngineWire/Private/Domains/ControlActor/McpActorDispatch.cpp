@@ -170,6 +170,9 @@ bool UEngineWireSubsystem::HandleControlActorAction(
   if (LowerSub == TEXT("align_actors"))
     return McpRelations::HandleAlignActors(this, RequestId, Payload, RequestingSocket,
                                            [this](const FString &Name) { return FindActorByName(Name, true); });
+  if (LowerSub == TEXT("group_actors"))
+    return McpRelations::HandleGroupActors(this, RequestId, Payload, RequestingSocket,
+                                           [this](const FString &Name) { return FindActorByName(Name, true); });
   if (LowerSub == TEXT("settle_physics"))
     return McpSettle::Handle(*this, RequestId, Payload, RequestingSocket,
                              [this](const FString &Name) { return FindActorByName(Name, true); });
