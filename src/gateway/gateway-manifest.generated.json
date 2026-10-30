@@ -140,6 +140,7 @@
         "machineName",
         "markerName",
         "mass",
+        "massKg",
         "maxSamples",
         "maxValue",
         "meshLodIndex",
@@ -925,6 +926,12 @@
           "mass": {
             "type": "number",
             "description": "Body mass in kg, above 0: sets the body's mass override (without one its mass comes from density and volume)."
+          },
+          "massKg": {
+            "type": "number",
+            "minimum": 0.01,
+            "maximum": 100000,
+            "description": "A placed prop only: the mass in kg its simulating part takes, in place of the one its collision shapes and physical material give it (the engine raises that to the power 0.75, so a 1 m cube of the default material weighs about 178 kg). With a skeleton, a skeletal mesh or a skeletal mesh actor it is INVALID_ARGUMENT: their bodies are weighed in the Physics Asset (configure_physics_body)."
           },
           "maxSamples": {
             "type": "number",

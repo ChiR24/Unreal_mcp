@@ -1,5 +1,6 @@
 #include "Domains/Animation/McpAnimActionContext.h"
 #include "Domains/Animation/McpAnimActionDecls.h"
+#include "Domains/Animation/Physics/McpAnimPhysicsProp.h"
 #include "Core/Module/EngineWireGlobals.h"
 #include "Foundation/HandlerUtils/McpHandlerUtils.h"
 
@@ -70,7 +71,7 @@ bool UEngineWireSubsystem::HandleAnimationPhysicsAction(
       {TEXT("create_state_machine"), McpAnimationHandlers::HandleAnimationCreateStateMachineAction},
       {TEXT("setup_ik"), McpAnimationHandlers::HandleAnimationSetupIKAction},
       {TEXT("configure_vehicle"), McpAnimationHandlers::HandleAnimationConfigureVehicleAction},
-      {TEXT("setup_physics_simulation"), McpAnimationHandlers::HandleAnimationSetupPhysicsSimulationAction},
+      {TEXT("setup_physics_simulation"), McpAnimationHandlers::HandleSetupPhysicsSimulation},
       {TEXT("create_physical_material"), McpAnimationHandlers::HandleAnimationCreatePhysicalMaterialAction},
       {TEXT("create_animation_asset"), McpAnimationHandlers::HandleAnimationCreateAnimationAssetAction},
       {TEXT("create_pose_library"), McpAnimationHandlers::HandleAnimationCreatePoseLibraryAction},

@@ -1054,4 +1054,8 @@ export const PLAIN_PROBE: readonly PlainProbeCase[] = [
   { query: 'duplicate the tree 10 times', accepted: ['control_actor.duplicate'] },
   { query: 'duplicate the tree', accepted: ['control_actor.duplicate'] },
   { query: 'open the main menu level', accepted: ['control_editor.open_level'] },
+  // A prop made heavier or lighter takes setup_physics_simulation massKg.
+  { query: 'make the crate heavier', accepted: ['animation_physics.setup_physics_simulation'] },
+  { query: 'make the box lighter', accepted: ['animation_physics.setup_physics_simulation'] },
+  { query: 'set the mass of the crate', accepted: ['animation_physics.setup_physics_simulation'] },
 ];

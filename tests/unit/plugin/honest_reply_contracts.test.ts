@@ -3314,13 +3314,28 @@ describe('setup_physics_simulation makes the actor or mesh it is given simulate'
   // A crate given by actorName was refused for having no skeletal mesh, though search offers this call for a pushable object.
   it('makes a placed prop simulate, as one undo step, and says when the part is not the root', () => {
     const setup = code('Animation', 'Physics', 'McpAnimSetupPhysicsSimulation.cpp');
-    expect(setup).toMatch(/\} else if \(SimulatePlacedProp\(Context, FoundActor\)\) \{\s*return false;/u);
+    expect(setup).toMatch(/\} else if \(SimulatePlacedProp\(Context, FoundActor, Payload\)\) \{\s*return false;/u);
     const prop = code('Animation', 'Physics', 'McpAnimPhysicsProp.cpp');
     expect(prop).toContain('EMcpMutationDurability::EditorStateOnly, {Body});');
     expect(prop).toContain('Body->SetSimulatePhysics(true);');
     expect(prop).toContain('!Mesh->GetStaticMesh()->GetBodySetup()');
     expect(prop).toContain('if (Body != Actor->GetRootComponent()) {');
     expect(prop).toContain('Transaction.DescribeInto(Context.Resp);');
+  });
+
+  // "make the crate heavier" had no call; massKg weighs the prop inside the same undo step, and the reply weighs it.
+  it('weighs a placed prop by massKg, and refuses a mass for a skeletal mesh before anything runs', () => {
+    const prop = code('Animation', 'Physics', 'McpAnimPhysicsProp.cpp');
+    const transaction = prop.indexOf('FMcpScopedEditorTransaction Transaction(');
+    const override = prop.indexOf('Body->SetMassOverrideInKg(NAME_None, static_cast<float>(MassKg), true);');
+    expect(override, 'the override is set inside the transaction').toBeGreaterThan(transaction);
+    expect(override).toBeLessThan(prop.indexOf('Transaction.DescribeInto(Context.Resp);'));
+    expect(prop).toContain('Context.Resp->SetNumberField(TEXT("massKg"), FMath::RoundToDouble(Body->CalculateMass() * 100.0) / 100.0);');
+    expect(prop).toContain('(Actor && Actor->FindComponentByClass<USkeletalMeshComponent>())');
+    expect(prop.indexOf('return HandleAnimationSetupPhysicsSimulationAction(Context, Payload);'), 'refusals come first')
+      .toBeGreaterThan(prop.indexOf('Context.Fail(TEXT("INVALID_ARGUMENT"), Refusal);'));
+    const routes = code('Animation', 'McpAnimHandlers.cpp');
+    expect(routes).toContain('{TEXT("setup_physics_simulation"), McpAnimationHandlers::HandleSetupPhysicsSimulation},');
   });
 });
 

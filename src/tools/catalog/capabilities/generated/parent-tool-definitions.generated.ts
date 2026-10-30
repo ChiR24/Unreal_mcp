@@ -693,6 +693,12 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "number",
           "description": "Body mass in kg, above 0: sets the body's mass override (without one its mass comes from density and volume)."
         },
+        "massKg": {
+          "type": "number",
+          "minimum": 0.01,
+          "maximum": 100000,
+          "description": "A placed prop only: the mass in kg its simulating part takes, in place of the one its collision shapes and physical material give it (the engine raises that to the power 0.75, so a 1 m cube of the default material weighs about 178 kg). With a skeleton, a skeletal mesh or a skeletal mesh actor it is INVALID_ARGUMENT: their bodies are weighed in the Physics Asset (configure_physics_body)."
+        },
         "maxSamples": {
           "type": "number",
           "description": "Frames sampled, spread evenly with the first and last always in (default 300, at most 2000; a shorter clip samples every frame)."
@@ -1868,6 +1874,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             "additionalProperties": false
           },
           "description": "Every target chain with the source chain now driving it (None when unmapped)."
+        },
+        "massKg": {
+          "type": "number",
+          "description": "A placed prop: the mass in kg its simulating part now has (massKg when given, else what its shapes and material give it)."
         },
         "matched": {
           "type": "number",

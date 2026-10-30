@@ -1,5 +1,5 @@
 {
-  "catalogRevision": "9ca6e212a8fa74da",
+  "catalogRevision": "a372da95102a33da",
   "recordCount": 482,
   "records": [
     {
@@ -8197,11 +8197,14 @@
           "falls and tumbles",
           "make an object physical",
           "make a ball roll",
-          "a cube or a crate that falls with gravity"
+          "a cube or a crate that falls with gravity",
+          "make a crate heavier or lighter",
+          "set the mass of a crate or a prop in kg"
         ],
-        "summary": "Make an actor simulate physics: a placed prop (actorName) falls, tumbles and can be pushed while the game plays, or a skeletal mesh gets a Physics Asset with bodies made for its bones.",
+        "summary": "Make an actor simulate physics: a placed prop (actorName) falls, tumbles and can be pushed while the game plays, weighing massKg when given (the reply gives its mass either way), or a skeletal mesh gets a Physics Asset with bodies made for its bones.",
         "whenToUse": [
           "A placed prop such as a crate or a barrel must fall, tumble or be pushable.",
+          "A prop should be heavier or lighter to push or knock over: massKg (send twice the massKg a first call reported to make it twice as heavy).",
           "A skeletal mesh must simulate physics."
         ],
         "whenNotToUse": [
@@ -8217,6 +8220,12 @@
             "actorName": {
               "type": "string",
               "description": "A placed actor: a prop simulates on its root when that is a physics body, else on its first static mesh; a skeletal mesh actor gets a Physics Asset for its mesh."
+            },
+            "massKg": {
+              "type": "number",
+              "minimum": 0.01,
+              "maximum": 100000,
+              "description": "A placed prop only: the mass in kg its simulating part takes, in place of the one its collision shapes and physical material give it (the engine raises that to the power 0.75, so a 1 m cube of the default material weighs about 178 kg). With a skeleton, a skeletal mesh or a skeletal mesh actor it is INVALID_ARGUMENT: their bodies are weighed in the Physics Asset (configure_physics_body)."
             },
             "skeletonPath": {
               "type": "string",
@@ -8274,6 +8283,10 @@
             "bodyCount": {
               "type": "number",
               "description": "Physics bodies made for the skeletal mesh."
+            },
+            "massKg": {
+              "type": "number",
+              "description": "A placed prop: the mass in kg its simulating part now has (massKg when given, else what its shapes and material give it)."
             }
           },
           "required": [
@@ -8284,7 +8297,7 @@
       },
       "examples": [
         {
-          "title": "Make an actor simulate physics: a placed prop (actorName) falls, tumbles and can be pushed while the game plays, or a skeletal mesh gets a Physics Asset with bodies made for its bones.",
+          "title": "Make an actor simulate physics: a placed prop (actorName) falls, tumbles and can be pushed while the game plays, weighing massKg when given (the reply gives its mass either way), or a skeletal mesh gets a Physics Asset with bodies made for its bones.",
           "input": {
             "action": "setup_physics_simulation",
             "skeletalMeshPath": "/Game/SKM_Char",
@@ -8329,8 +8342,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "cae143857f34759e96d587dc7e1684b44a7a945396aa83b0a77325a1e123aa6e",
-        "content": "ec0fc706bdbc1a2cff49e8c8cca0b147aa80e16cbe56707210c6a7931f35f022"
+        "schema": "066ae4c2d420764b5d9fabbe780b96da9f8f10338d05ca7ae05dd576591bb610",
+        "content": "7e1c86dad91a5ae91f09ad37fa5058f9002ca27224a35722b71931db2bdf10e5"
       }
     },
     {

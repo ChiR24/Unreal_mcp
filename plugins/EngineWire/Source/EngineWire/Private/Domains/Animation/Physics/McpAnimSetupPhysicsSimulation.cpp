@@ -75,7 +75,7 @@ bool HandleAnimationSetupPhysicsSimulationAction(FActionContext &Context,
             UE_LOG(LogEngineWireSubsystem, Error, TEXT("%s"),
                    *Message);
           }
-        } else if (SimulatePlacedProp(Context, FoundActor)) {
+        } else if (SimulatePlacedProp(Context, FoundActor, Payload)) {
           return false;
         } else {
           Message = FString::Printf(
