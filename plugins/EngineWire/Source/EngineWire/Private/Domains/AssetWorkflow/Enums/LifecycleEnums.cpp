@@ -95,8 +95,10 @@ bool HandleEnumLifecycleActions(
             return true;
         }
 
+        // Transactional, as the editor's own factory makes an enum (and as every enum is once loaded): without it the
+        // enum editor's edits of a new enum kept no undo step until the editor restarted.
         UUserDefinedEnum* Enum = Cast<UUserDefinedEnum>(FEnumEditorUtils::CreateUserDefinedEnum(
-            Package, FName(*SanitizedName), RF_Public | RF_Standalone));
+            Package, FName(*SanitizedName), RF_Public | RF_Standalone | RF_Transactional));
         if (!Enum)
         {
             SetEnumResultFields(OutResult, false, TEXT("Failed to create user defined enum"));

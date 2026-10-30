@@ -51,6 +51,7 @@ const testCases = [
     expected: 'success',
     captureResult: { key: 'redIndex', fromField: 'result.index' },
     assertions: [
+      { path: 'structuredContent.result.undo.undoable', equals: true, label: 'one undo step on every UE 5.x' },
       { path: 'structuredContent.result.valueName', equals: 'Red', label: 'added value name reported' },
     ],
   },
@@ -94,6 +95,7 @@ const testCases = [
     },
     expected: 'success',
     assertions: [
+      { path: 'structuredContent.result.undo.undoable', equals: true, label: 'one undo step on every UE 5.x' },
       { path: 'structuredContent.result.valueName', equals: 'Crimson', label: 'renamed value reported' },
     ],
   },
@@ -109,6 +111,61 @@ const testCases = [
       { path: 'structuredContent.result.values.0.displayName', equals: 'Crimson', label: 'shown name changed' },
       { path: 'structuredContent.result.values.0.name', equals: 'Red', label: 'internal name kept for stored values' },
     ],
+  },
+  // Every enum edit undoes and redoes, from UE 5.7 too, where restoring an enum's saved state crashes the editor: the
+  // edit records the enum as a change undo writes back.
+  {
+    scenario: 'ENUM: undo takes the rename back',
+    toolName: 'control_editor',
+    arguments: { action: 'undo' },
+    expected: 'success',
+    assertions: [{ path: 'structuredContent.result.transaction', equals: 'Rename Enum Value', label: 'the rename was one step' }],
+  },
+  {
+    scenario: 'ENUM: get_enum shows the old name after the undo',
+    toolName: 'manage_asset',
+    arguments: { action: 'get_enum', enumPath: '${captured:enumPath}' },
+    expected: 'success',
+    assertions: [{ path: 'structuredContent.result.values.0.displayName', equals: 'Red', label: 'the shown name is back' }],
+  },
+  {
+    scenario: 'ENUM: redo renames it again',
+    toolName: 'control_editor',
+    arguments: { action: 'redo' },
+    expected: 'success',
+    assertions: [{ path: 'structuredContent.result.transaction', equals: 'Rename Enum Value', label: 'the rename is redone' }],
+  },
+  {
+    scenario: 'ENUM: set_property gives the enum a description',
+    toolName: 'inspect',
+    arguments: {
+      action: 'set_property',
+      objectPath: '${captured:enumPath}',
+      propertyName: 'EnumDescription',
+      value: 'Colours for the test',
+    },
+    expected: 'success',
+  },
+  {
+    scenario: 'ENUM: undo takes the description back (a property set on an enum undoes too)',
+    toolName: 'control_editor',
+    arguments: { action: 'undo' },
+    expected: 'success',
+    assertions: [{ path: 'structuredContent.result.transaction', equals: 'Set Property', label: 'the property set was the step undone' }],
+  },
+  {
+    scenario: 'ENUM: get_property reads the description gone after the undo',
+    toolName: 'inspect',
+    arguments: { action: 'get_property', objectPath: '${captured:enumPath}', propertyName: 'EnumDescription' },
+    expected: 'success',
+    assertions: [{ path: 'structuredContent.result.value', equals: '', label: 'the description is empty again' }],
+  },
+  {
+    scenario: 'ENUM: get_enum keeps the renamed value through the description undo',
+    toolName: 'manage_asset',
+    arguments: { action: 'get_enum', enumPath: '${captured:enumPath}' },
+    expected: 'success',
+    assertions: [{ path: 'structuredContent.result.values.0.displayName', equals: 'Crimson', label: 'only the description was undone' }],
   },
   {
     scenario: 'ENUM ERROR: add_enum_value refuses a name the enum has',
@@ -148,8 +205,37 @@ const testCases = [
     },
     expected: 'success',
     assertions: [
+      { path: 'structuredContent.result.undo.undoable', equals: true, label: 'one undo step on every UE 5.x' },
       { path: 'structuredContent.result.reordered', equals: true, label: 'reorder applied' },
     ],
+  },
+  {
+    scenario: 'ENUM: undo puts the old order back in one step',
+    toolName: 'control_editor',
+    arguments: { action: 'undo' },
+    expected: 'success',
+    assertions: [{ path: 'structuredContent.result.transaction', equals: 'Reorder Enum Values', label: 'every move of the reorder was one step' }],
+  },
+  {
+    scenario: 'ENUM: get_enum reads the old order after the undo',
+    toolName: 'manage_asset',
+    arguments: { action: 'get_enum', enumPath: '${captured:enumPath}' },
+    expected: 'success',
+    assertions: [{ path: 'structuredContent.result.values.0.name', equals: 'Red', label: 'Crimson (internally Red) is first again' }],
+  },
+  {
+    scenario: 'ENUM: redo reorders again',
+    toolName: 'control_editor',
+    arguments: { action: 'redo' },
+    expected: 'success',
+    assertions: [{ path: 'structuredContent.result.transaction', equals: 'Reorder Enum Values', label: 'the reorder is redone' }],
+  },
+  {
+    scenario: 'ENUM: get_enum reads the new order after the redo',
+    toolName: 'manage_asset',
+    arguments: { action: 'get_enum', enumPath: '${captured:enumPath}' },
+    expected: 'success',
+    assertions: [{ path: 'structuredContent.result.values.0.name', equals: 'Green', label: 'Green is first again' }],
   },
   {
     scenario: 'ENUM: remove_enum_value (Blue)',
@@ -162,8 +248,30 @@ const testCases = [
     },
     expected: 'success',
     assertions: [
+      { path: 'structuredContent.result.undo.undoable', equals: true, label: 'one undo step on every UE 5.x' },
       { path: 'structuredContent.result.removed', equals: true, label: 'value removed flag' },
     ],
+  },
+  {
+    scenario: 'ENUM: undo brings the removed value back',
+    toolName: 'control_editor',
+    arguments: { action: 'undo' },
+    expected: 'success',
+    assertions: [{ path: 'structuredContent.result.transaction', equals: 'Remove Enum Value', label: 'the remove was one step' }],
+  },
+  {
+    scenario: 'ENUM: get_enum counts three values after the undo',
+    toolName: 'manage_asset',
+    arguments: { action: 'get_enum', enumPath: '${captured:enumPath}' },
+    expected: 'success',
+    assertions: [{ path: 'structuredContent.result.valueCount', equals: 3, label: 'Blue is back' }],
+  },
+  {
+    scenario: 'ENUM: redo removes it again',
+    toolName: 'control_editor',
+    arguments: { action: 'redo' },
+    expected: 'success',
+    assertions: [{ path: 'structuredContent.result.transaction', equals: 'Remove Enum Value', label: 'the remove is redone' }],
   },
   {
     scenario: 'ENUM: split_enum (extract Green + Crimson)',

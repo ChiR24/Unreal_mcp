@@ -64,7 +64,7 @@ bool HandleEnumSplit(
     UPackage* Package = McpCreatePackageForNewAsset(PackageName, CreateError, CreateCode);
     if (!Package) { SetEnumResultFields(OutResult, false, CreateError, *CreateCode); return true; }
 
-    UUserDefinedEnum* NewEnum = Cast<UUserDefinedEnum>(FEnumEditorUtils::CreateUserDefinedEnum(Package, FName(*SanitizedName), RF_Public | RF_Standalone));
+    UUserDefinedEnum* NewEnum = Cast<UUserDefinedEnum>(FEnumEditorUtils::CreateUserDefinedEnum(Package, FName(*SanitizedName), RF_Public | RF_Standalone | RF_Transactional));
     if (!NewEnum) { SetEnumResultFields(OutResult, false, TEXT("Failed to create split enum")); return true; }
 
     TArray<TPair<FName, int64>> NewNames;

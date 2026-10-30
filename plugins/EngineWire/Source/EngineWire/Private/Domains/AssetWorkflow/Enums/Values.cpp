@@ -39,15 +39,18 @@ bool HandleEnumValueActions(
         if (ValueName.IsEmpty()) { SetEnumResultFields(OutResult, false, TEXT("Missing required parameter: valueName"), TEXT("MISSING_PARAMETER")); return true; }
         if (RefuseTakenValueName(Enum, ValueName, INDEX_NONE, OutResult)) { return true; }
 
-        Enum->Modify();
-        TArray<TPair<FName, int64>> Names = GetEnumDisplayNamePairs(Enum);
-        const FString FullNameStr = Enum->GenerateFullEnumName(*ValueName);
-        Names.Emplace(*FullNameStr, 0);
-        for (int32 i = 0; i < Names.Num(); ++i) { Names[i].Value = i; }
-        MCP_SET_ENUMS(Enum, Names, Enum->GetCppForm());
-        FinalizeEnum(Enum, EnumSaveRequested(Params));
-
         TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
+        TArray<TPair<FName, int64>> Names = GetEnumDisplayNamePairs(Enum);
+        {
+            // Modify with no transaction open recorded nothing: Ctrl+Z undid the edit before this one.
+            const FMcpEnumEdit Edit(TEXT("Add Enum Value"), Enum, Result);
+            const FString FullNameStr = Enum->GenerateFullEnumName(*ValueName);
+            Names.Emplace(*FullNameStr, 0);
+            for (int32 i = 0; i < Names.Num(); ++i) { Names[i].Value = i; }
+            MCP_SET_ENUMS(Enum, Names, Enum->GetCppForm());
+            CommitEnum(Enum);
+        }
+        Result->SetBoolField(TEXT("saved"), EnumSaveRequested(Params) && McpSafeAssetSave(Enum));
         Result->SetStringField(TEXT("valueName"), ValueName);
         Result->SetNumberField(TEXT("index"), static_cast<double>(Names.Num() - 1));
         Result->SetNumberField(TEXT("valueCount"), Names.Num());
@@ -74,10 +77,13 @@ bool HandleEnumValueActions(
             return true;
         }
         const int32 Before = GetEnumDisplayNamePairs(Enum).Num();
-        FEnumEditorUtils::RemoveEnumeratorFromUserDefinedEnum(Enum, Index);
-        FinalizeEnum(Enum, EnumSaveRequested(Params));
-
         TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
+        {
+            const FMcpEnumEdit Edit(TEXT("Remove Enum Value"), Enum, Result);
+            FEnumEditorUtils::RemoveEnumeratorFromUserDefinedEnum(Enum, Index);
+            CommitEnum(Enum);
+        }
+        Result->SetBoolField(TEXT("saved"), EnumSaveRequested(Params) && McpSafeAssetSave(Enum));
         Result->SetStringField(TEXT("valueName"), ValueName);
         Result->SetBoolField(TEXT("removed"), true);
         Result->SetNumberField(TEXT("valueCount"), Before - 1);
@@ -105,15 +111,18 @@ bool HandleEnumValueActions(
 
         // The display name, as the enum editor renames: stored values (defaults, pins, table cells) name the entry by
         // its internal name, so renaming that left every one of them reading as nothing.
-        Enum->Modify();
-        if (!FEnumEditorUtils::SetEnumeratorDisplayName(Enum, Index, FText::FromString(NewValueName)))
-        {
-            SetEnumResultFields(OutResult, false, FString::Printf(TEXT("'%s' is not a valid enum value name."), *NewValueName), TEXT("INVALID_ARGUMENT"));
-            return true;
-        }
-        FinalizeEnum(Enum, EnumSaveRequested(Params));
-
         TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
+        {
+            // A name the engine refuses changes nothing, and the editor keeps no empty step.
+            const FMcpEnumEdit Edit(TEXT("Rename Enum Value"), Enum, Result);
+            if (!FEnumEditorUtils::SetEnumeratorDisplayName(Enum, Index, FText::FromString(NewValueName)))
+            {
+                SetEnumResultFields(OutResult, false, FString::Printf(TEXT("'%s' is not a valid enum value name."), *NewValueName), TEXT("INVALID_ARGUMENT"));
+                return true;
+            }
+            CommitEnum(Enum);
+        }
+        Result->SetBoolField(TEXT("saved"), EnumSaveRequested(Params) && McpSafeAssetSave(Enum));
         Result->SetStringField(TEXT("valueName"), NewValueName);
         Result->SetStringField(TEXT("internalName"), Enum->GetNameStringByIndex(Index));
         OutResult = Result;
@@ -165,17 +174,21 @@ bool HandleEnumValueActions(
             return true;
         }
 
-        // One engine move per misplaced value: each move remaps the loaded objects and pins holding the moved
-        // values by name, where renumbering by hand changed what every stored value meant.
-        for (int32 Target = 0; Target < NewNames.Num(); ++Target)
-        {
-            const int32 From = GetEnumDisplayNamePairs(Enum).IndexOfByPredicate(
-                [&NewNames, Target](const TPair<FName, int64>& Pair) { return Pair.Key == NewNames[Target].Key; });
-            if (From != Target) { FEnumEditorUtils::MoveEnumeratorInUserDefinedEnum(Enum, From, Target); }
-        }
-        FinalizeEnum(Enum, EnumSaveRequested(Params));
-
         TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
+        {
+            // One undo step for the whole order, however many moves it takes.
+            const FMcpEnumEdit Edit(TEXT("Reorder Enum Values"), Enum, Result);
+            // One engine move per misplaced value: each move remaps the loaded objects and pins holding the moved
+            // values by name, where renumbering by hand changed what every stored value meant.
+            for (int32 Target = 0; Target < NewNames.Num(); ++Target)
+            {
+                const int32 From = GetEnumDisplayNamePairs(Enum).IndexOfByPredicate(
+                    [&NewNames, Target](const TPair<FName, int64>& Pair) { return Pair.Key == NewNames[Target].Key; });
+                if (From != Target) { FEnumEditorUtils::MoveEnumeratorInUserDefinedEnum(Enum, From, Target); }
+            }
+            CommitEnum(Enum);
+        }
+        Result->SetBoolField(TEXT("saved"), EnumSaveRequested(Params) && McpSafeAssetSave(Enum));
         Result->SetBoolField(TEXT("reordered"), true);
         Result->SetBoolField(TEXT("noOp"), false);
         OutResult = Result;

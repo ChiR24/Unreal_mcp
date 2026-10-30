@@ -41,6 +41,8 @@
 #include "Subsystems/UnrealEditorSubsystem.h"
 #include "LevelEditor.h"
 #include "Settings/LevelEditorPlaySettings.h"
+#include "Editor/Transactor.h"
+#include "Safety/McpSafeOperationsEnumUndo.h"
 #if ENGINE_MAJOR_VERSION > 5 ||  (ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 1)
 #include "GenericPlatform/GenericPlatformInputDeviceMapper.h"
 #define MCP_CONTROL_HAS_INPUT_DEVICE_ID 1
@@ -105,3 +107,18 @@ bool PieViewportHasFocusForMcp();
 // would call into code that is no longer there -- and Live Coding unloads this
 // module routinely. Call from subsystem shutdown.
 void StopAllEnhancedInputHoldsForMcp();
+// From UE 5.7 applying an undo step that holds an enum's saved state crashes the editor: restoring the enum loads its
+// values over the ones it holds, which UEnum::FNameData::Initialize asserts against. The enum editor makes such a step
+// for each of its edits; undo, redo and a rollback refuse it instead. An edit through this server records the enum as a
+// change it can apply (McpSafeOperations::FMcpEnumUndo), and its step passes.
+inline bool McpStepRestoresEnum(const FTransaction *Step) {
+#if ENGINE_MAJOR_VERSION > 5 || (ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 7)
+  TArray<UObject *> Objects;
+  if (Step && !McpSafeOperations::McpEnumChangeSteps().Contains(Step->GetContext().TransactionId)) {
+    Step->GetTransactionObjects(Objects);
+  }
+  return Objects.ContainsByPredicate([](const UObject *Object) { return Object && Object->IsA<UEnum>(); });
+#else
+  return false;
+#endif
+}

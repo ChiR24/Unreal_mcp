@@ -15,6 +15,24 @@
 #include "Dom/JsonValue.h"
 
 #include "Engine/UserDefinedEnum.h"
+#include "Foundation/McpScopedEditorTransaction.h"
+#include "Safety/McpSafeOperationsEnumUndo.h"
+
+// One undo step for an edit of an enum's values on every 5.x: the transaction opens with nothing recorded, the engine's
+// own nested steps (remove, move, display name) join it, and the enum's change is recorded as it closes by
+// FMcpEnumUndo, never as the enum's saved state (restoring that crashes the editor from UE 5.7). The undo block goes
+// into the reply. Members close in reverse: the change is stored while the transaction is still open.
+struct FMcpEnumEdit
+{
+    FMcpScopedEditorTransaction Transaction;
+    McpSafeOperations::FMcpEnumUndo Undo;
+    TSharedPtr<FJsonObject> Response;
+    FMcpEnumEdit(const TCHAR* Title, UUserDefinedEnum* Enum, const TSharedPtr<FJsonObject>& InResponse)
+        : Transaction(FText::FromString(Title), EMcpMutationDurability::EditorStateOnly, {}), Undo(Enum), Response(InResponse)
+    {
+    }
+    ~FMcpEnumEdit() { Transaction.DescribeInto(Response); }
+};
 
 // Mirror the struct/datatable handlers' JSON payload accessors
 // (GetJsonStringField / GetJsonBoolField / GetJsonNumberField live in
@@ -96,12 +114,18 @@ inline bool EnumSaveRequested(const TSharedPtr<FJsonObject>& Params)
     return GetJsonBoolField(Params, TEXT("save"), true);
 }
 
-// Commit a UUserDefinedEnum mutation: refresh editor state, mark the package
-// dirty, and persist through the safe save wrapper when bSave is set. True when it was saved.
-inline bool FinalizeEnum(UUserDefinedEnum* Enum, bool bSave)
+// Commit a UUserDefinedEnum mutation: refresh editor state and mark the package dirty. An edit of an existing enum does
+// this inside its undo step and saves after the step closes.
+inline void CommitEnum(UUserDefinedEnum* Enum)
 {
     Enum->PostEditChange();
     Enum->GetOutermost()->MarkPackageDirty();
+}
+
+// CommitEnum, then persist through the safe save wrapper when bSave is set. True when it was saved.
+inline bool FinalizeEnum(UUserDefinedEnum* Enum, bool bSave)
+{
+    CommitEnum(Enum);
     return bSave && McpSafeAssetSave(Enum);
 }
 

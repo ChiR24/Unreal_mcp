@@ -156,6 +156,15 @@ void Rollback(UEngineWireSubsystem* Self, TSharedPtr<FMcpBridgeWebSocket> Socket
                                *Foreign->GetContext().Title.ToString()), Result);
         return;
     }
+    if (const FTransaction* const* Enum = Steps.FindByPredicate(&McpStepRestoresEnum))
+    {
+        Refuse(Self, Socket, RequestId, TEXT("UNDO_WOULD_CRASH"),
+               FString::Printf(TEXT("'%s' holds an enum's saved state (the enum editor records one), and undoing it crashes "
+                                    "this engine version. Nothing was undone; change the enum back with an edit, or end the "
+                                    "checkpoint."),
+                               *(*Enum)->GetContext().Title.ToString()), Result);
+        return;
+    }
     TArray<TSharedPtr<FJsonValue>> Undone;
     for (const FTransaction* Step : Steps)
     {

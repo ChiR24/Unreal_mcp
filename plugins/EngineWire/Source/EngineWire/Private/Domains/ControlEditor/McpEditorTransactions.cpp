@@ -19,6 +19,14 @@ void RunUndoRedo(UEngineWireSubsystem *Bridge, const FString &RequestId,
     return;
   }
   const FString Title = (bUndo ? Trans->GetUndoContext() : Trans->GetRedoContext()).Title.ToString();
+  if (McpStepRestoresEnum(Trans->GetTransaction(Trans->GetQueueLength() - Trans->GetUndoCount() - (bUndo ? 1 : 0)))) {
+    SendStandardErrorResponse(Bridge, Socket, RequestId, TEXT("UNDO_WOULD_CRASH"),
+                              FString::Printf(TEXT("'%s' holds an enum's saved state (the enum editor records one), and "
+                                                   "applying it crashes this engine version (it asserts when it restores the "
+                                                   "enum's values). Change the enum back with an edit instead."), *Title),
+                              nullptr);
+    return;
+  }
   const bool bDone = bUndo ? GEditor->UndoTransaction() : GEditor->RedoTransaction();
   TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
   Resp->SetStringField(TEXT("command"), bUndo ? TEXT("Undo") : TEXT("Redo"));

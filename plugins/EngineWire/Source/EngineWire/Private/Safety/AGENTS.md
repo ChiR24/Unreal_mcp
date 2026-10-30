@@ -14,6 +14,7 @@ Hazardous UE editor APIs live here behind wrappers. Every domain handler that sa
 | `McpDeleteAssetAndFile` | bare `UEditorAssetLibrary::DeleteAsset` | The engine delete can succeed and leave the `.uasset` (a Blueprint loaded from disk came back on the next start). Removes a surviving file only once its package has unloaded; true only when the file is gone. | `McpSafeOperationsAssetDelete.h` |
 | `McpSafeDeleteFolder` (+`FolderDeleteAssets.h`/`FolderDeleteVerify.h`) | `UEditorAssetLibrary::DeleteDirectory` | Partitions world vs non-world assets, switches away from open worlds, verifies afterwards. | `McpSafeOperationsFolderDelete.h` |
 | `UnloadLoadedPackagesForAssets` | delete-while-loaded | Quiesces compilation and the asset-editor subsystem. Prevents delete-while-compiling crashes. | `McpSafeOperationsDeleteCompilation.h` |
+| `FMcpEnumUndo` | `Enum->Modify()` inside a transaction (and the engine's enum edits, which call it) | Records an enum edit as one `FCommandChange` (values and reflected properties before and after, applied with `SetEnums`), the enum not transactional while the edit runs. From UE 5.7 applying a step that holds an enum's saved state asserts in `UEnum::FNameData::Initialize` and takes the editor down; `McpEnumChangeSteps()` lets the undo guard pass the steps it recorded. | `McpSafeOperationsEnumUndo.h` |
 
 ## WHEN TO ADD A NEW WRAPPER
 

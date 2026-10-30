@@ -11,6 +11,7 @@
 #include "EngineWireSubsystem.h"
 #include "Foundation/HandlerUtils/McpHandlerUtils.h"
 #include "Foundation/Reflection/McpPropertyReflection.h"
+#include "Safety/McpSafeOperationsEnumUndo.h"
 #include "Safety/McpSafeReflectionTarget.h"
 
 #include "Components/ActorComponent.h"
@@ -176,6 +177,13 @@ bool UEngineWireSubsystem::HandleSetObjectProperty(
   // undo cannot record (a running game's) leaves no step, which the reply's undo block then says.
   TOptional<FScopedTransaction> Transaction;
   Transaction.Emplace(FText::FromString(TEXT("Set Property")));
+  // An enum goes into the step as a change undo can apply: restoring its saved state crashes the editor from UE 5.7.
+  // Declared after the transaction, so a return closes it first, while the step is still open.
+  TOptional<McpSafeOperations::FMcpEnumUndo> EnumUndo;
+  if (UEnum* Enum = Cast<UEnum>(RootObject))
+  {
+      EnumUndo.Emplace(Enum);
+  }
   RootObject->Modify(bMarkDirty);
 
   FString ConversionError;
@@ -211,6 +219,7 @@ bool UEngineWireSubsystem::HandleSetObjectProperty(
   RootObject->PostEditChangeProperty(Changed);
   McpRefreshComponentAfterEdit(Cast<UActorComponent>(RootObject));
   McpPropertyTarget::NotifyOwners(RootObject);
+  EnumUndo.Reset();
   Transaction.Reset();
   // A value the object's own change handling put back was never applied (a StaticMeshActor's mesh restored a raw
   // CollisionEnabled from its mesh's default collision), and the reply read the old value back while it said success.

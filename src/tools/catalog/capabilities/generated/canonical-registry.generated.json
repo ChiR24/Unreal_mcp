@@ -1,5 +1,5 @@
 {
-  "catalogRevision": "f67320b07a51a009",
+  "catalogRevision": "bf86757ca28130c2",
   "recordCount": 483,
   "records": [
     {
@@ -52602,7 +52602,7 @@
                 "redo",
                 "restore_point"
               ],
-              "description": "Which undo variant to run; omit for 'undo'.\nundo: Undo the last editor transaction; the reply names it, and NOTHING_TO_UNDO means there was none.\nredo: Redo the last undone editor transaction; the reply names it, and NOTHING_TO_REDO means there was none.\nrestore_point: Mark a restore point to roll the editor back to, undoing only what calls through this server changed, chosen by op. begin opens it (one at a time; label names it); status lists the editor's transactions since it, newest first, each with byMcp, and the assets created, removed or saved since (assetsCreated, assetsRemoved, packagesSaved); rollback undoes every step since it and refuses before undoing anything when a step was not made through this server (USER_STEP_SINCE_RESTORE_POINT names it) or the editor's history was cleared since (UNDO_HISTORY_CLEARED: a Blueprint compile or a level load clears it); end closes it. Undo deletes no created asset and restores no saved file: status and rollback list them, and cleanupCall is the manage_asset bulk_delete of the assets calls through this server created that are still there, ready to send (it asks for consent); an asset made by hand in the editor is listed but never in it. A rollback is refused while Play runs (PIE_RUNNING).",
+              "description": "Which undo variant to run; omit for 'undo'.\nundo: Undo the last editor transaction; the reply names it, and NOTHING_TO_UNDO means there was none. From UE 5.7 a step the enum editor made is refused (UNDO_WOULD_CRASH): it holds the enum's saved state, and applying it crashes the editor; enum edits through this server undo and redo.\nredo: Redo the last undone editor transaction; the reply names it, and NOTHING_TO_REDO means there was none. From UE 5.7 a step the enum editor made is refused (UNDO_WOULD_CRASH): it holds the enum's saved state, and applying it crashes the editor; enum edits through this server undo and redo.\nrestore_point: Mark a restore point to roll the editor back to, undoing only what calls through this server changed, chosen by op. begin opens it (one at a time; label names it); status lists the editor's transactions since it, newest first, each with byMcp, and the assets created, removed or saved since (assetsCreated, assetsRemoved, packagesSaved); rollback undoes every step since it and refuses before undoing anything when a step was not made through this server (USER_STEP_SINCE_RESTORE_POINT names it) or the editor's history was cleared since (UNDO_HISTORY_CLEARED: a Blueprint compile or a level load clears it), or, from UE 5.7, a step the enum editor made (UNDO_WOULD_CRASH: undoing it crashes the editor); end closes it. Undo deletes no created asset and restores no saved file: status and rollback list them, and cleanupCall is the manage_asset bulk_delete of the assets calls through this server created that are still there, ready to send (it asks for consent); an asset made by hand in the editor is listed but never in it. A rollback is refused while Play runs (PIE_RUNNING).",
               "default": "undo"
             }
           },
@@ -52690,8 +52690,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "6f32156669fa0baa1e674a8ed15882b96a52fc942957081b7b56ebb5805be731",
-        "content": "5b89813a4c1ec309830db6646ec8d4d20a22edd163a8dcb7398ce8b305b7be0d"
+        "schema": "a13c57ef5da27be8d644edf6e7c2da1dfc195bf0ba4a8f1ebe3a3cd7e5cdc7c7",
+        "content": "5a6ab24c838f743193aaf97ac5e60f1e8b49044d5ee10b4e3aaf5d5f0ddfb618"
       }
     },
     {
@@ -54116,7 +54116,7 @@
         "topics": [
           "delete_enum"
         ],
-        "summary": "Delete an enum asset (deleteScope enum, the default; refused with DELETE_FAILED, naming referencedBy, while anything still uses it) or remove one of its values (value: the later values move up one while loaded Blueprints and assets holding them keep their entries, remapped by name as the enum editor does, and pins set to the removed one are reset to the first entry). Saved unless save is false.",
+        "summary": "Delete an enum asset (deleteScope enum, the default; refused with DELETE_FAILED, naming referencedBy, while anything still uses it) or remove one of its values (value: the later values move up one while loaded Blueprints and assets holding them keep their entries, remapped by name as the enum editor does, and pins set to the removed one are reset to the first entry; one undo step). Saved unless save is false.",
         "whenToUse": [
           "deleteScope=enum: An obsolete enum asset must be deleted from the project; while anything still uses it the delete is refused (DELETE_FAILED) and referencedBy names what does.",
           "deleteScope=value: One entry must be dropped from an enum. The entries after it move up one, as in the enum editor: loaded Blueprints and assets holding them keep their entries (remapped by name), graph pins set to the dropped entry are reset to the first one, and nodes that list the entries are rebuilt."
@@ -54181,7 +54181,7 @@
       },
       "examples": [
         {
-          "title": "Delete an enum asset (deleteScope enum, the default; refused with DELETE_FAILED, naming referencedBy, while anything still uses it) or remove one of its values (value: the later values move up one while loaded Blueprints and assets holding them keep their entries, remapped by name as the enum editor does, and pins set to the removed one are reset to the first entry). Saved unless save is false.",
+          "title": "Delete an enum asset (deleteScope enum, the default; refused with DELETE_FAILED, naming referencedBy, while anything still uses it) or remove one of its values (value: the later values move up one while loaded Blueprints and assets holding them keep their entries, remapped by name as the enum editor does, and pins set to the removed one are reset to the first entry; one undo step). Saved unless save is false.",
           "input": {
             "enumPath": "/Game/Enums/E_Deprecated",
             "action": "delete_enum",
@@ -54244,7 +54244,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "74b653ca89ebe5c3a22fb6d5aa46de8f67a52f14d9aa3d89c9231ec7f9b2b9f8",
-        "content": "ea2910406dc053f45ad5bd67ffeead535053c3fdf8c324e1f2a4845290a6ac18"
+        "content": "4e224c0f79b081d08bda913d9a3dc5d5de96b13477ec8d658327a1043be76088"
       }
     },
     {
@@ -54318,7 +54318,7 @@
           "new enum",
           "define enum"
         ],
-        "summary": "Create a user enum or edit its values, chosen by edit. create makes it (name and path, default /Game/Enums, or enumPath) with values in order; a name given twice is refused and nothing is made. add_value appends valueName (index and valueCount answer where). rename_value changes the name the editor shows and keeps the internal name every stored value (defaults, pins, table cells) holds, answered as internalName. reorder_values takes order, every value once, and moves them as the enum editor does, so stored values keep their entries (the order it already has changes nothing). set_value_metadata sets key to value on one entry, such as its ToolTip. split copies the named values, or every value from index on, into a new enum newEnumName (in path, default /Game/Enums) and leaves the source as it is. A value is named by its internal or its shown name; a name the enum already has is VALUE_EXISTS and one it lacks NOT_FOUND. Every edit saves unless save is false.",
+        "summary": "Create a user enum or edit its values, chosen by edit. create makes it (name and path, default /Game/Enums, or enumPath) with values in order; a name given twice is refused and nothing is made. add_value appends valueName (index and valueCount answer where). rename_value changes the name the editor shows and keeps the internal name every stored value (defaults, pins, table cells) holds, answered as internalName. reorder_values takes order, every value once, and moves them as the enum editor does, so stored values keep their entries (the order it already has changes nothing). set_value_metadata sets key to value on one entry, such as its ToolTip. split copies the named values, or every value from index on, into a new enum newEnumName (in path, default /Game/Enums) and leaves the source as it is. A value is named by its internal or its shown name; a name the enum already has is VALUE_EXISTS and one it lacks NOT_FOUND. add_value, rename_value and reorder_values are one undo step each. Every edit saves unless save is false.",
         "whenToUse": [
           "edit=create: A new Blueprint enum is needed for a fixed set of named choices; pass values for its entries. It is saved unless save is false.",
           "edit=add_value: One more named entry must be appended to the end of an existing enum.",
@@ -54434,7 +54434,7 @@
       },
       "examples": [
         {
-          "title": "Create a user enum or edit its values, chosen by edit. create makes it (name and path, default /Game/Enums, or enumPath) with values in order; a name given twice is refused and nothing is made. add_value appends valueName (index and valueCount answer where). rename_value changes the name the editor shows and keeps the internal name every stored value (defaults, pins, table cells) holds, answered as internalName. reorder_values takes order, every value once, and moves them as the enum editor does, so stored values keep their entries (the order it already has changes nothing). set_value_metadata sets key to value on one entry, such as its ToolTip. split copies the named values, or every value from index on, into a new enum newEnumName (in path, default /Game/Enums) and leaves the source as it is. A value is named by its internal or its shown name; a name the enum already has is VALUE_EXISTS and one it lacks NOT_FOUND. Every edit saves unless save is false.",
+          "title": "Create a user enum or edit its values, chosen by edit. create makes it (name and path, default /Game/Enums, or enumPath) with values in order; a name given twice is refused and nothing is made. add_value appends valueName (index and valueCount answer where). rename_value changes the name the editor shows and keeps the internal name every stored value (defaults, pins, table cells) holds, answered as internalName. reorder_values takes order, every value once, and moves them as the enum editor does, so stored values keep their entries (the order it already has changes nothing). set_value_metadata sets key to value on one entry, such as its ToolTip. split copies the named values, or every value from index on, into a new enum newEnumName (in path, default /Game/Enums) and leaves the source as it is. A value is named by its internal or its shown name; a name the enum already has is VALUE_EXISTS and one it lacks NOT_FOUND. add_value, rename_value and reorder_values are one undo step each. Every edit saves unless save is false.",
           "input": {
             "name": "E_WeaponType",
             "path": "/Game/Enums",
@@ -54568,7 +54568,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "c52ed9df8ca80466b65b56d41a347aba62e5afc1e408afc5cf84198183f772d9",
-        "content": "62cd5b1be1367be0fdef20f7f66d7462dab8f9a9ab1664513436abdbad6fb55b"
+        "content": "efbb8a29eb99686189774d70fbda7f8324a1c6ee2af5b0fa83cd46c52bb4262b"
       }
     },
     {
