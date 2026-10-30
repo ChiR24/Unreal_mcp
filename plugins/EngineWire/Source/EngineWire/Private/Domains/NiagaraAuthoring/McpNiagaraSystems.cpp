@@ -1,5 +1,6 @@
 #include "Domains/NiagaraAuthoring/McpNiagaraContext.h"
 #include "Domains/NiagaraAuthoring/McpNiagaraCreatePackage.h"
+#include "Domains/NiagaraAuthoring/McpNiagaraEmitterName.h"
 
 namespace McpNiagaraAuthoringHandlers
 {
@@ -94,7 +95,7 @@ static bool CreateNiagaraEmitter(FActionContext& Context)
     Factory->bAddDefaultModulesAndRenderersToEmptyEmitter = true;
     UNiagaraEmitter* NewEmitter = Cast<UNiagaraEmitter>(static_cast<UFactory*>(Factory)->FactoryCreateNew(
         UNiagaraEmitter::StaticClass(), Package, FName(*Context.Name), EmitterFlags, nullptr, GWarn));
-    if (NewEmitter) { NewEmitter->SetUniqueEmitterName(Context.Name); }
+    if (NewEmitter) { McpNameNewEmitterAsset(*NewEmitter); }
 #else
     UNiagaraEmitter* NewEmitter = NewObject<UNiagaraEmitter>(Package, FName(*Context.Name), EmitterFlags);
 #endif
@@ -106,7 +107,7 @@ static bool CreateNiagaraEmitter(FActionContext& Context)
 #if MCP_HAS_NIAGARA_EMITTER_FACTORY_NEW && (ENGINE_MAJOR_VERSION > 5 || ENGINE_MINOR_VERSION >= 3)
     FModuleManager::Get().LoadModule(TEXT("NiagaraEditor"));
     UNiagaraEmitterFactoryNew::InitializeEmitter(NewEmitter, true);
-    NewEmitter->SetUniqueEmitterName(Context.Name);
+    McpNameNewEmitterAsset(*NewEmitter);
 #endif
     FAssetRegistryModule::AssetCreated(NewEmitter);
     if (Context.bSave)
