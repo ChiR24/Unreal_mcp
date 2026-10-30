@@ -14,6 +14,7 @@
 #include "BehaviorTree/BlackboardData.h"
 #include "Foundation/BridgeHelpers/Blueprints/McpBPPaths.h"
 #include "Foundation/BridgeHelpers/Reflection/McpClassResolve.h"
+#include "Foundation/McpScopedEditorTransaction.h"
 
 namespace
 {
@@ -97,37 +98,42 @@ bool HandleAddBlackboardKey(UEngineWireSubsystem* Self, const FString& RequestId
         return Fail(FString::Printf(TEXT("Enum not found: %s; pass its path, e.g. /Game/Enums/E_State or /Script/Engine.ECollisionChannel."), *EnumPath), TEXT("NOT_FOUND"));
     }
 
-    Blackboard->Modify();
+    TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
     FBlackboardEntry Entry;
     Entry.EntryName = FName(*KeyName);
-    Entry.KeyType = NewObject<UBlackboardKeyType>(Blackboard, KeyClass);
     Entry.bInstanceSynced = GetJsonBoolField(Payload, TEXT("isInstanceSynced"), false);
     UClass* KeptBaseClass = nullptr;
-    // An Object key keeps the engine's base class Object unless told otherwise; actor filters such as MoveTo's skip it.
-    if (UBlackboardKeyType_Object* ObjectKey = Cast<UBlackboardKeyType_Object>(Entry.KeyType))
+    int32 KeyIndex = INDEX_NONE;
     {
-        if (BaseClass)
+        // Modify with no transaction open recorded nothing: Ctrl+Z undid the edit before this one.
+        const FMcpAssetEdit Edit(TEXT("Add Blackboard Key"), {Blackboard}, Result);
+        // Transactional, so a later set_value records the key's own default.
+        Entry.KeyType = NewObject<UBlackboardKeyType>(Blackboard, KeyClass, NAME_None, RF_Transactional);
+        // An Object key keeps the engine's base class Object unless told otherwise; actor filters such as MoveTo's skip it.
+        if (UBlackboardKeyType_Object* ObjectKey = Cast<UBlackboardKeyType_Object>(Entry.KeyType))
         {
-            ObjectKey->BaseClass = BaseClass;
+            if (BaseClass)
+            {
+                ObjectKey->BaseClass = BaseClass;
+            }
+            KeptBaseClass = ObjectKey->BaseClass.Get();
         }
-        KeptBaseClass = ObjectKey->BaseClass.Get();
-    }
-    else if (UBlackboardKeyType_Class* ClassKey = Cast<UBlackboardKeyType_Class>(Entry.KeyType))
-    {
-        if (BaseClass)
+        else if (UBlackboardKeyType_Class* ClassKey = Cast<UBlackboardKeyType_Class>(Entry.KeyType))
         {
-            ClassKey->BaseClass = BaseClass;
+            if (BaseClass)
+            {
+                ClassKey->BaseClass = BaseClass;
+            }
+            KeptBaseClass = ClassKey->BaseClass.Get();
         }
-        KeptBaseClass = ClassKey->BaseClass.Get();
+        else if (UBlackboardKeyType_Enum* EnumKey = Cast<UBlackboardKeyType_Enum>(Entry.KeyType))
+        {
+            EnumKey->EnumType = EnumType;
+        }
+        KeyIndex = Blackboard->Keys.Add(Entry);
+        NotifyBlackboardKeysChanged(Blackboard);
     }
-    else if (UBlackboardKeyType_Enum* EnumKey = Cast<UBlackboardKeyType_Enum>(Entry.KeyType))
-    {
-        EnumKey->EnumType = EnumType;
-    }
-    const int32 KeyIndex = Blackboard->Keys.Add(Entry);
-    NotifyBlackboardKeysChanged(Blackboard);
 
-    TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
     Result->SetNumberField(TEXT("keyIndex"), KeyIndex);
     Result->SetStringField(TEXT("keyName"), KeyName);
     Result->SetStringField(TEXT("keyType"), KeyClass->GetName().Replace(TEXT("BlackboardKeyType_"), TEXT("")));
@@ -171,9 +177,11 @@ bool HandleSetKeyInstanceSynced(UEngineWireSubsystem* Self, const FString& Reque
         return true;
     }
 
-    Blackboard->Modify();
-    Key->bInstanceSynced = bSynced;
-    NotifyBlackboardKeysChanged(Blackboard);
+    {
+        const FMcpAssetEdit Edit(TEXT("Set Key Instance Synced"), {Blackboard}, Result);
+        Key->bInstanceSynced = bSynced;
+        NotifyBlackboardKeysChanged(Blackboard);
+    }
     Result->SetBoolField(TEXT("saved"), McpSafeAssetSave(Blackboard));
     McpHandlerUtils::AddVerification(Result, Blackboard);
     Self->SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Key instance sync updated"), Result);

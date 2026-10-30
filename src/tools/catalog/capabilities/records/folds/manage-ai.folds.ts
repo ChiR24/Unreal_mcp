@@ -20,7 +20,7 @@ export const MANAGE_AI_FOLDS: readonly FoldSpec[] = [
   },
   {
     primary: 'edit_blackboard', selector: 'edit',
-    summary: 'Edit a Blackboard asset (blackboardPath), chosen by edit, each saved: add_key adds keyName of keyType (an Object key a MoveTo target uses wants baseObjectClass /Script/Engine.Actor; an Enum key takes enumType), set_value sets the default a key starts with (UE 5.4+, Enum, Object and Class keys 5.5+), set_key_instance_synced shares one value across every AI. A taken name (NAME_TAKEN), a value of the wrong kind, a key of a parent Blackboard (KEY_IN_PARENT) and engine content are refused.',
+    summary: 'Edit a Blackboard asset (blackboardPath), chosen by edit, each saved: add_key adds keyName of keyType (an Object key a MoveTo target uses wants baseObjectClass /Script/Engine.Actor; an Enum key takes enumType), set_value sets the default a key starts with (UE 5.4+, Enum, Object and Class keys 5.5+), set_key_instance_synced shares one value across every AI. A taken name (NAME_TAKEN), a value of the wrong kind, a key of a parent Blackboard (KEY_IN_PARENT) and engine content are refused. Each edit is one undo step.',
     topics: ['blackboard key', 'blackboard value', 'instance synced'],
     members: { add_key: 'add_blackboard_key', set_value: 'set_blackboard_value', set_key_instance_synced: 'set_key_instance_synced' },
   },

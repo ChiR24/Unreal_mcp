@@ -1,5 +1,5 @@
 {
-  "catalogRevision": "cd79ebb4101fac1d",
+  "catalogRevision": "f67320b07a51a009",
   "recordCount": 483,
   "records": [
     {
@@ -63432,7 +63432,7 @@
           "blackboard value",
           "instance synced"
         ],
-        "summary": "Edit a Blackboard asset (blackboardPath), chosen by edit, each saved: add_key adds keyName of keyType (an Object key a MoveTo target uses wants baseObjectClass /Script/Engine.Actor; an Enum key takes enumType), set_value sets the default a key starts with (UE 5.4+, Enum, Object and Class keys 5.5+), set_key_instance_synced shares one value across every AI. A taken name (NAME_TAKEN), a value of the wrong kind, a key of a parent Blackboard (KEY_IN_PARENT) and engine content are refused.",
+        "summary": "Edit a Blackboard asset (blackboardPath), chosen by edit, each saved: add_key adds keyName of keyType (an Object key a MoveTo target uses wants baseObjectClass /Script/Engine.Actor; an Enum key takes enumType), set_value sets the default a key starts with (UE 5.4+, Enum, Object and Class keys 5.5+), set_key_instance_synced shares one value across every AI. A taken name (NAME_TAKEN), a value of the wrong kind, a key of a parent Blackboard (KEY_IN_PARENT) and engine content are refused. Each edit is one undo step.",
         "whenToUse": [
           "edit=add_key: A Blackboard needs a new typed entry, such as the actor an AI chases or the place it moves to.",
           "edit=set_value: A Blackboard key needs a different authored default, such as a speed or a starting state.",
@@ -63543,7 +63543,7 @@
       },
       "examples": [
         {
-          "title": "Edit a Blackboard asset (blackboardPath), chosen by edit, each saved: add_key adds keyName of keyType (an Object key a MoveTo target uses wants baseObjectClass /Script/Engine.Actor; an Enum key takes enumType), set_value sets the default a key starts with (UE 5.4+, Enum, Object and Class keys 5.5+), set_key_instance_synced shares one value across every AI. A taken name (NAME_TAKEN), a value of the wrong kind, a key of a parent Blackboard (KEY_IN_PARENT) and engine content are refused.",
+          "title": "Edit a Blackboard asset (blackboardPath), chosen by edit, each saved: add_key adds keyName of keyType (an Object key a MoveTo target uses wants baseObjectClass /Script/Engine.Actor; an Enum key takes enumType), set_value sets the default a key starts with (UE 5.4+, Enum, Object and Class keys 5.5+), set_key_instance_synced shares one value across every AI. A taken name (NAME_TAKEN), a value of the wrong kind, a key of a parent Blackboard (KEY_IN_PARENT) and engine content are refused. Each edit is one undo step.",
           "input": {
             "action": "edit_blackboard",
             "blackboardPath": "/Game/AI/BB_Enemy",
@@ -63626,7 +63626,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "edfa2df42a6ffa75c2842f4b8a4cddaa611f04ef1e38c248ad16f1849bf85b85",
-        "content": "010072b540a516f92282d1b0f9485639957e7fe08946ae121c2f8d865d754f24"
+        "content": "40e635f88b41c8d3e6ae819a41593538d7f5468e938070fc308d1dfd4a4c2b78"
       }
     },
     {
@@ -65631,7 +65631,7 @@
                 "assign_tree",
                 "assign_blackboard"
               ],
-              "description": "Which run behavior tree variant to run; omit for 'run'.\nrun: Make an AIController Blueprint run a Behavior Tree whenever it possesses a pawn: its On Possess event calls Run Behavior Tree (which also starts the Blackboard) with its BehaviorTree variable, set to behaviorTreePath as control=assign_tree does. Engine nodes in the Blueprint, compiled and saved, so it works in a packaged game, for every pawn whose AI Controller Class is this one and whose Auto Possess AI covers how it enters the level. Re-running replaces it; control=stop takes it out. NOT_AI_CONTROLLER for another Blueprint, NOT_FOUND for a missing tree, and refused during Play.\nstop: Take out the Run Behavior Tree logic control=run wrote into an AIController Blueprint, so possessing a pawn no longer starts a tree (its BehaviorTree variable and On Possess event stay), compiled and saved; removed false, and nothing changed, when there was none.\nassign_tree: Put a Behavior Tree in an AIController Blueprint: its BehaviorTree variable (one it declares, else a new instance-editable DefaultBehaviorTree) holds behaviorTreePath by default, compiled and saved. Nothing runs the tree until control=run writes Run Behavior Tree on possess, or the controller calls it itself. NOT_AI_CONTROLLER for another Blueprint, NOT_FOUND for a missing tree.\nassign_blackboard: Assign a Blackboard to an AIController or Behavior Tree asset.",
+              "description": "Which run behavior tree variant to run; omit for 'run'.\nrun: Make an AIController Blueprint run a Behavior Tree whenever it possesses a pawn: its On Possess event calls Run Behavior Tree (which also starts the Blackboard) with its BehaviorTree variable, set to behaviorTreePath as control=assign_tree does. Engine nodes in the Blueprint, compiled and saved, so it works in a packaged game, for every pawn whose AI Controller Class is this one and whose Auto Possess AI covers how it enters the level. Re-running replaces it; control=stop takes it out. NOT_AI_CONTROLLER for another Blueprint, NOT_FOUND for a missing tree, and refused during Play.\nstop: Take out the Run Behavior Tree logic control=run wrote into an AIController Blueprint, so possessing a pawn no longer starts a tree (its BehaviorTree variable and On Possess event stay), compiled and saved; removed false, and nothing changed, when there was none.\nassign_tree: Put a Behavior Tree in an AIController Blueprint: its BehaviorTree variable (one it declares, else a new instance-editable DefaultBehaviorTree) holds behaviorTreePath by default, compiled and saved. Nothing runs the tree until control=run writes Run Behavior Tree on possess, or the controller calls it itself. NOT_AI_CONTROLLER for another Blueprint, NOT_FOUND for a missing tree.\nassign_blackboard: Assign a Blackboard to an AIController or Behavior Tree asset; on a tree it is one undo step.",
               "default": "run"
             }
           },
@@ -65803,8 +65803,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "c61390f7483022b18cd16717e8e47d20c80d466184e8757dd5a5341ff6f06a1e",
-        "content": "34d078ce1f3976abd798fec206e8c4d76dcbf20844e1ca517c1bb2389632f435"
+        "schema": "53f828cfc26b8076b0e31182cb8ea5e700e3c9f30db9468b50fe731cdf3b4601",
+        "content": "e67ba1bc969c0f185b0147205be807ff87ba196b7f018f897cbaaf43b2ab284f"
       }
     },
     {
@@ -67469,8 +67469,8 @@
         ],
         "summary": "Change a Sound Class or Sound Mix, chosen by setting, each saved: parent sets or clears a class's parent (a loop is refused), properties sets its volume, pitch, low-pass, LFE bleed and center-channel volume, mix_modifier adds or edits the adjuster a mix applies to a class (and the mix fades), mix_eq sets the mix's four EQ bands. A call that sets nothing is refused.",
         "whenToUse": [
-          "setting=parent: Use it to set the parent of a Sound Class, or clear it with an empty parentClass, keeping both classes' child lists in step (a mix modifier applying to children walks them). A parent that does not load (PARENT_NOT_FOUND), or that is the class itself or one of its children (CYCLIC_PARENT), is refused. Saved unless save is false.",
-          "setting=properties: Use it to set the properties of a Sound Class, each only when sent: volume and pitch (multipliers, 1 leaves them as authored), lowPassFilterFrequency (Hz; 20000 leaves the sound unfiltered), lfeBleed and voiceCenterChannelVolume (0-1). The reply lists all five; a call that sends none is refused. Saved unless save is false.",
+          "setting=parent: Use it to set the parent of a Sound Class, or clear it with an empty parentClass, keeping both classes' child lists in step (a mix modifier applying to children walks them). A parent that does not load (PARENT_NOT_FOUND), or that is the class itself or one of its children (CYCLIC_PARENT), is refused. One undo step for the class and both parents; saved unless save is false.",
+          "setting=properties: Use it to set the properties of a Sound Class, each only when sent: volume and pitch (multipliers, 1 leaves them as authored), lowPassFilterFrequency (Hz; 20000 leaves the sound unfiltered), lfeBleed and voiceCenterChannelVolume (0-1). The reply lists all five; a call that sends none is refused. One undo step; saved unless save is false.",
           "setting=mix_modifier: Use it to add a Sound Class modifier to a Sound Mix, or edit the one the mix already has for that class (replaced true), keeping what is not sent: volumeAdjuster and pitchAdjuster (multipliers; a new modifier starts at 1) and applyToChildren (default true). fadeInTime and fadeOutTime set the fades of the mix itself. Saved unless save is false.",
           "setting=mix_eq: Use it to configure Sound Mix equalization: the four bands through eqSettings (frequencyCenterN, gainN, bandwidthN for N 0-3), or the low, mid, highMid and high fields on top of them. Sending a band switches the EQ on unless applyEQ is false; eqPriority ranks the mix against other active mixes. Values are clamped (gain 0-4, frequency 0-20000 Hz, bandwidth 0-2) and the reply lists every band after clamping; a call that sets nothing is refused."
         ],
@@ -67595,7 +67595,7 @@
                 "mix_modifier",
                 "mix_eq"
               ],
-              "description": "Which configure sound class variant to run.\nparent: Set the parent of a Sound Class, or clear it with an empty parentClass, keeping both classes' child lists in step (a mix modifier applying to children walks them). A parent that does not load (PARENT_NOT_FOUND), or that is the class itself or one of its children (CYCLIC_PARENT), is refused. Saved unless save is false.\nproperties: Set the properties of a Sound Class, each only when sent: volume and pitch (multipliers, 1 leaves them as authored), lowPassFilterFrequency (Hz; 20000 leaves the sound unfiltered), lfeBleed and voiceCenterChannelVolume (0-1). The reply lists all five; a call that sends none is refused. Saved unless save is false.\nmix_modifier: Add a Sound Class modifier to a Sound Mix, or edit the one the mix already has for that class (replaced true), keeping what is not sent: volumeAdjuster and pitchAdjuster (multipliers; a new modifier starts at 1) and applyToChildren (default true). fadeInTime and fadeOutTime set the fades of the mix itself. Saved unless save is false.\nmix_eq: Configure Sound Mix equalization: the four bands through eqSettings (frequencyCenterN, gainN, bandwidthN for N 0-3), or the low, mid, highMid and high fields on top of them. Sending a band switches the EQ on unless applyEQ is false; eqPriority ranks the mix against other active mixes. Values are clamped (gain 0-4, frequency 0-20000 Hz, bandwidth 0-2) and the reply lists every band after clamping; a call that sets nothing is refused."
+              "description": "Which configure sound class variant to run.\nparent: Set the parent of a Sound Class, or clear it with an empty parentClass, keeping both classes' child lists in step (a mix modifier applying to children walks them). A parent that does not load (PARENT_NOT_FOUND), or that is the class itself or one of its children (CYCLIC_PARENT), is refused. One undo step for the class and both parents; saved unless save is false.\nproperties: Set the properties of a Sound Class, each only when sent: volume and pitch (multipliers, 1 leaves them as authored), lowPassFilterFrequency (Hz; 20000 leaves the sound unfiltered), lfeBleed and voiceCenterChannelVolume (0-1). The reply lists all five; a call that sends none is refused. One undo step; saved unless save is false.\nmix_modifier: Add a Sound Class modifier to a Sound Mix, or edit the one the mix already has for that class (replaced true), keeping what is not sent: volumeAdjuster and pitchAdjuster (multipliers; a new modifier starts at 1) and applyToChildren (default true). fadeInTime and fadeOutTime set the fades of the mix itself. Saved unless save is false.\nmix_eq: Configure Sound Mix equalization: the four bands through eqSettings (frequencyCenterN, gainN, bandwidthN for N 0-3), or the low, mid, highMid and high fields on top of them. Sending a band switches the EQ on unless applyEQ is false; eqPriority ranks the mix against other active mixes. Values are clamped (gain 0-4, frequency 0-20000 Hz, bandwidth 0-2) and the reply lists every band after clamping; a call that sets nothing is refused."
             }
           },
           "required": [
@@ -67763,8 +67763,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "14113912f8cbf267c3b2eef484bf124b5f589ed209d2dc4a46404270cd8241aa",
-        "content": "4f655f655c6cd2f20436e74162336df140a09d9dfea1258bb639bb57a119898b"
+        "schema": "511be21cd528f368736b12d6aeb0c719bcf26ad4fce533311d20b56173596824",
+        "content": "1e0d24cbd2264cc7f7fdaee2e48b852fd897966170f5574da590cb2535125892"
       }
     },
     {

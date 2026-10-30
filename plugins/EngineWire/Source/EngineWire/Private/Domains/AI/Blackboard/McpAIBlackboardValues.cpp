@@ -2,6 +2,7 @@
 #include "Domains/AI/Blackboard/McpAIBlackboardDefaults.h"
 
 #include "BehaviorTree/BlackboardData.h"
+#include "Foundation/McpScopedEditorTransaction.h"
 
 namespace McpAIHandlers
 {
@@ -26,16 +27,28 @@ bool HandleSetBlackboardValue(UEngineWireSubsystem* Self, const FString& Request
         Code = TEXT("INVALID_ARGUMENT");
         Key = nullptr;
     }
-    if (!Key || !WriteBlackboardKeyDefault(Key->KeyType, Value, Error, Code))
+    TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
+    bool bWritten = false;
+    if (Key)
+    {
+        // The default lives on the key's type object; a key made before keys were transactional gets the flag here.
+        Key->KeyType->SetFlags(RF_Transactional);
+        // A value refused below leaves the step with nothing in it, and the editor keeps no empty step.
+        const FMcpAssetEdit Edit(TEXT("Set Blackboard Key Default"), {Blackboard, Key->KeyType}, Result);
+        bWritten = WriteBlackboardKeyDefault(Key->KeyType, Value, Error, Code);
+        if (bWritten)
+        {
+            NotifyBlackboardKeysChanged(Blackboard);
+        }
+    }
+    if (!bWritten)
     {
         Self->SendAutomationError(RequestingSocket, RequestId, Error, Code);
         return true;
     }
-    NotifyBlackboardKeysChanged(Blackboard);
 
     FString Stored;
     ReadBlackboardKeyDefault(Key->KeyType, Stored);
-    TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
     Result->SetStringField(TEXT("blackboardPath"), Blackboard->GetPathName());
     Result->SetStringField(TEXT("keyName"), Key->EntryName.ToString());
     Result->SetStringField(TEXT("keyType"), Key->KeyType->GetClass()->GetName().Replace(TEXT("BlackboardKeyType_"), TEXT("")));

@@ -58,7 +58,8 @@ const testCases = [
                  blackboardPath: '${captured:bbPath}' },
     expected: 'success',
     assertions: [
-      { path: 'structuredContent.result.saved', equals: true, label: 'BT blackboard binding saved' }
+      { path: 'structuredContent.result.saved', equals: true, label: 'BT blackboard binding saved' },
+      { path: 'structuredContent.result.undo.undoable', equals: true, label: 'one undo step' }
     ] },
 
   // === Build: Root -> Selector -> Sequence -> Wait ===

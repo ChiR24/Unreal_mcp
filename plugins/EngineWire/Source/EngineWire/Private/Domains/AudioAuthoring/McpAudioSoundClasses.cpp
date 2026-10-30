@@ -1,5 +1,6 @@
 #include "Core/Compatibility/McpVersionCompatibility.h"
 #include "Domains/AudioAuthoring/McpAudioAuthoringPrivate.h"
+#include "Foundation/McpScopedEditorTransaction.h"
 
 namespace McpAudioAuthoring
 {
@@ -19,9 +20,23 @@ static TSharedPtr<FJsonObject> ResolveParentSoundClass(const TSharedPtr<FJsonObj
 	return nullptr;
 }
 
-// Moves SoundClass under NewParent, keeping both ChildClasses lists in step (a mix modifier's
-// applyToChildren walks them); nullptr on success, an error response on a cycle.
-static TSharedPtr<FJsonObject> ReparentSoundClass(USoundClass* SoundClass, USoundClass* NewParent, bool bSave)
+// Moves SoundClass under NewParent, keeping both ChildClasses lists in step (a mix modifier's applyToChildren walks
+// them). The caller records the classes for undo.
+static void LinkSoundClass(USoundClass* SoundClass, USoundClass* NewParent)
+{
+	if (USoundClass* OldParent = SoundClass->ParentClass)
+	{
+		OldParent->ChildClasses.Remove(SoundClass);
+	}
+	SoundClass->ParentClass = NewParent;
+	if (NewParent)
+	{
+		NewParent->ChildClasses.AddUnique(SoundClass);
+	}
+}
+
+// An error response when NewParent is SoundClass itself or one of its children; nullptr otherwise.
+static TSharedPtr<FJsonObject> RefuseCyclicParent(USoundClass* SoundClass, USoundClass* NewParent)
 {
 	for (USoundClass* Ancestor = NewParent; Ancestor; Ancestor = Ancestor->ParentClass)
 	{
@@ -29,20 +44,6 @@ static TSharedPtr<FJsonObject> ReparentSoundClass(USoundClass* SoundClass, USoun
 		{
 			return McpHandlerUtils::BuildErrorResponse(TEXT("CYCLIC_PARENT"), FString::Printf(TEXT("%s is %s itself or one of its children"), *NewParent->GetPathName(), *SoundClass->GetName()));
 		}
-	}
-	if (USoundClass* OldParent = SoundClass->ParentClass)
-	{
-		OldParent->Modify();
-		OldParent->ChildClasses.Remove(SoundClass);
-		SaveAudioAsset(OldParent, bSave);
-	}
-	SoundClass->Modify();
-	SoundClass->ParentClass = NewParent;
-	if (NewParent)
-	{
-		NewParent->Modify();
-		NewParent->ChildClasses.AddUnique(SoundClass);
-		SaveAudioAsset(NewParent, bSave);
 	}
 	return nullptr;
 }
@@ -87,7 +88,12 @@ TSharedPtr<FJsonObject> HandleSoundClassActions(const FString& SubAction, const 
 
 		NewClass->Properties.Volume = static_cast<float>(GetJsonNumberField(Params, TEXT("volume"), 1.0));
 		NewClass->Properties.Pitch = static_cast<float>(GetJsonNumberField(Params, TEXT("pitch"), 1.0));
-		ReparentSoundClass(NewClass, ParentClass, bSave);
+		LinkSoundClass(NewClass, ParentClass);
+		if (ParentClass)
+		{
+			ParentClass->MarkPackageDirty();
+			SaveAudioAsset(ParentClass, bSave);
+		}
 		Response->SetBoolField(TEXT("saved"), SaveAudioAsset(NewClass, bSave));
 		Response->SetStringField(TEXT("assetPath"), NewClass->GetPathName());
 		Response->SetStringField(TEXT("parentClass"), ParentClass ? ParentClass->GetPathName() : TEXT(""));
@@ -122,13 +128,19 @@ TSharedPtr<FJsonObject> HandleSoundClassActions(const FString& SubAction, const 
 		{
 			return McpHandlerUtils::BuildErrorResponse(TEXT("INVALID_ARGUMENT"), TEXT("Nothing to set: send volume, pitch, lowPassFilterFrequency, lfeBleed or voiceCenterChannelVolume."));
 		}
-		SoundClass->Modify();
+		{
+			// Modify with no transaction open recorded nothing: Ctrl+Z undid the edit before this one.
+			const FMcpAssetEdit Edit(TEXT("Set Sound Class Properties"), {SoundClass}, Response);
+			for (const TPair<const TCHAR*, float*>& Field : Fields)
+			{
+				if (Params->HasField(Field.Key))
+				{
+					*Field.Value = static_cast<float>(GetJsonNumberField(Params, Field.Key));
+				}
+			}
+		}
 		for (const TPair<const TCHAR*, float*>& Field : Fields)
 		{
-			if (Params->HasField(Field.Key))
-			{
-				*Field.Value = static_cast<float>(GetJsonNumberField(Params, Field.Key));
-			}
 			Response->SetNumberField(Field.Key, *Field.Value);
 		}
 		Response->SetBoolField(TEXT("saved"), SaveAudioAsset(SoundClass, bSave));
@@ -159,11 +171,32 @@ TSharedPtr<FJsonObject> HandleSoundClassActions(const FString& SubAction, const 
 		TSharedPtr<FJsonObject> Error = ResolveParentSoundClass(Params, ParentClass);
 		if (!Error.IsValid())
 		{
-			Error = ReparentSoundClass(SoundClass, ParentClass, bSave);
+			Error = RefuseCyclicParent(SoundClass, ParentClass);
 		}
 		if (Error.IsValid())
 		{
 			return Error;
+		}
+		USoundClass* OldParent = SoundClass->ParentClass;
+		TArray<UObject*> Edited = {SoundClass};
+		for (USoundClass* Parent : {OldParent, ParentClass})
+		{
+			if (Parent && !Edited.Contains(Parent))
+			{
+				Edited.Add(Parent);
+			}
+		}
+		{
+			// The class and both parents' child lists change together: one undo step, the parents saved after it.
+			const FMcpAssetEdit Edit(TEXT("Set Sound Class Parent"), Edited, Response);
+			LinkSoundClass(SoundClass, ParentClass);
+		}
+		for (USoundClass* Parent : {OldParent, ParentClass})
+		{
+			if (Parent)
+			{
+				SaveAudioAsset(Parent, bSave);
+			}
 		}
 		Response->SetBoolField(TEXT("saved"), SaveAudioAsset(SoundClass, bSave));
 		Response->SetStringField(TEXT("parentPath"), SoundClass->ParentClass ? SoundClass->ParentClass->GetPathName() : TEXT(""));

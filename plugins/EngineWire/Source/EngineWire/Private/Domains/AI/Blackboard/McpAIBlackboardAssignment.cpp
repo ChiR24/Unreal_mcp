@@ -7,6 +7,7 @@
 #include "BehaviorTree/BlackboardData.h"
 #include "EdGraphSchema_K2.h"
 #include "Engine/Blueprint.h"
+#include "Foundation/McpScopedEditorTransaction.h"
 #include "Kismet2/BlueprintEditorUtils.h"
 #include "UObject/UnrealType.h"
 
@@ -38,28 +39,44 @@ bool HandleAssignBlackboard(UEngineWireSubsystem* Self, const FString& RequestId
             return true;
         }
 
-        BT->Modify();
-        BT->BlackboardAsset = BB;
-
+        // The tree's asset field and its graph's root node both name the Blackboard: one undo step for both.
+        TArray<UObject*> Edited = {BT};
 #if MCP_AI_HAS_BEHAVIOR_TREE_GRAPH
-        if (UBehaviorTreeGraph* BTGraph = Cast<UBehaviorTreeGraph>(BT->BTGraph))
+        UBehaviorTreeGraph* BTGraph = Cast<UBehaviorTreeGraph>(BT->BTGraph);
+        UBehaviorTreeGraphNode_Root* RootNode = nullptr;
+        if (BTGraph)
         {
             UClass* BTRootNodeClass = FindObject<UClass>(nullptr, TEXT("/Script/BehaviorTreeEditor.BehaviorTreeGraphNode_Root"));
-            BTGraph->Modify();
             for (UEdGraphNode* GraphNode : BTGraph->Nodes)
             {
                 if (BTRootNodeClass && GraphNode && GraphNode->GetClass()->IsChildOf(BTRootNodeClass))
                 {
-                    UBehaviorTreeGraphNode_Root* RootNode = static_cast<UBehaviorTreeGraphNode_Root*>(GraphNode);
-                    RootNode->Modify();
-                    RootNode->BlackboardAsset = BB;
-                    BTGraph->UpdateBlackboardChange();
+                    RootNode = static_cast<UBehaviorTreeGraphNode_Root*>(GraphNode);
                     break;
+                }
+            }
+            for (UObject* Object : TArray<UObject*>{BTGraph, RootNode})
+            {
+                if (Object)
+                {
+                    Object->SetFlags(RF_Transactional);
+                    Edited.Add(Object);
                 }
             }
         }
 #endif
-        BT->MarkPackageDirty();
+        {
+            const FMcpAssetEdit Edit(TEXT("Assign Blackboard"), Edited, Result);
+            BT->BlackboardAsset = BB;
+#if MCP_AI_HAS_BEHAVIOR_TREE_GRAPH
+            if (RootNode)
+            {
+                RootNode->BlackboardAsset = BB;
+                BTGraph->UpdateBlackboardChange();
+            }
+#endif
+            BT->MarkPackageDirty();
+        }
         bool bSaved = McpSafeAssetSave(BT);
 
         Result->SetStringField(TEXT("behaviorTreePath"), BehaviorTreePath);

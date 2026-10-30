@@ -29,7 +29,7 @@ export const AI_CONFIGURE_RECORDS: readonly CapabilityRecordSource[] = [
     result: 'Behavior Tree assigned',
   }),
   aiRecord({
-    action: 'assign_blackboard', summary: 'Assign a Blackboard to an AIController or Behavior Tree asset.',
+    action: 'assign_blackboard', summary: 'Assign a Blackboard to an AIController or Behavior Tree asset; on a tree it is one undo step.',
     use: 'A controller or Behavior Tree needs its Blackboard bound.',
     avoid: 'Use add_blackboard_key to author the Blackboard contents.',
     props: {
