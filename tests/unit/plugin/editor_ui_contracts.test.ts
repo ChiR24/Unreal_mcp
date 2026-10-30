@@ -1,33 +1,28 @@
-// read_editor_ui and use_editor_ui drive the editor's own Slate UI. Standing rule: automation never moves the system
-// cursor and never activates a window. Input goes as a Slate virtual user down the widget's own path, so nothing here
-// may touch the platform cursor or hit-test the screen.
+// read_editor_ui reads the editor's own Slate UI as an outline. It only reads: nothing in it moves the system cursor,
+// activates a window, hit-tests the screen or sends input. use_editor_ui, which clicked and typed into that UI, was
+// removed: the capabilities do the editor's work.
 
 import { readdirSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 
 import { describe, expect, it } from 'vitest';
 
-const FOLDER = join('plugins', 'EngineWire', 'Source', 'EngineWire', 'Private', 'Domains', 'ControlEditor', 'EditorUi');
-const read = (file: string): string => readFileSync(join(FOLDER, file), 'utf8').replace(/\r\n/gu, '\n');
+const EDITOR = join('plugins', 'EngineWire', 'Source', 'EngineWire', 'Private', 'Domains', 'ControlEditor');
+const FOLDER = join(EDITOR, 'EditorUi');
+const read = (file: string): string => readFileSync(file, 'utf8').replace(/\r\n/gu, '\n');
 
-describe('editor UI automation', () => {
-  it('never moves the cursor, activates a window or hit-tests the screen', () => {
+describe('editor UI reading', () => {
+  it('never moves the cursor, activates a window, hit-tests the screen or sends input', () => {
     for (const file of readdirSync(FOLDER)) {
-      const source = read(file);
-      expect(source, file).not.toMatch(/GetPlatformCursor|SetCursorPos|->SetPosition\(|BringToFront|HACK_ForceToFront|ProcessMouseButtonDownEvent|LocateWindowUnderMouse/u);
+      expect(read(join(FOLDER, file)), file).not.toMatch(
+        /GetPlatformCursor|SetCursorPos|->SetPosition\(|BringToFront|HACK_ForceToFront|ProcessMouseButtonDownEvent|LocateWindowUnderMouse|FindOrCreateVirtualUser|RoutePointer\w*Event|ProcessKey\w*Event|SetUserFocus/u,
+      );
     }
   });
 
-  it('delivers input as a virtual user down the widget\'s own path', () => {
-    const use = read('McpEditorUiUse.cpp');
-    expect(use).toContain('FindOrCreateVirtualUser(UiVirtualUser)');
-    expect(use).toContain('FindPathToWidget(Widget.ToSharedRef(), Path)');
-    // An arranged path has no pointer slot per widget, and routing reads one for each: the editor asserted (index out
-    // of bounds) on the first click before the path was rebuilt as a hit-test path.
-    expect(use).toContain('Widgets.Add(FWidgetAndPointer(Arranged.Widgets[Index]));');
-    expect(use).toContain('const FWidgetPath Path = UiPointerPath(Arranged);');
-    for (const route of ['RoutePointerMoveEvent(Path,', 'RoutePointerDownEvent(Path,', 'RoutePointerUpEvent(Path,']) {
-      expect(use).toContain(route);
-    }
+  it('control_editor routes read_editor_ui and nothing that uses the UI', () => {
+    const dispatch = read(join(EDITOR, 'McpEditorDispatch.cpp'));
+    expect(dispatch).toContain('McpEditorUi::HandleRead(');
+    expect(dispatch).not.toMatch(/use_editor_ui|HandleUse/u);
   });
 });

@@ -177,15 +177,11 @@ const testCases = [
   // A listed path that is not dirty saves nothing and still succeeds.
   { scenario: 'ACTION: save_all assetPaths', toolName: 'control_editor', arguments: { action: 'save_all', assetPaths: ['/Game/NoSuchAsset'] }, expected: 'success' },
 
-  // === EDITOR UI === the editor's own Slate UI read as an outline, and used through harmless input only (a hover, an
-  // Escape key) on the main window; refusals for a ref no read handed out and for check on what is no check box.
+  // === EDITOR UI === the editor's own Slate UI read as an outline (it only reads); a ref no read handed out is refused.
   { scenario: 'INFO: read_editor_ui lists the windows and an outline', toolName: 'control_editor', arguments: { action: 'read_editor_ui', maxWidgets: 20 }, expected: 'success', captureResult: { key: 'mainWindowRef', fromField: 'result.windows.0.ref' } },
   { scenario: 'INFO: read_editor_ui of one window, words filtered', toolName: 'control_editor', arguments: { action: 'read_editor_ui', window: '0', text: 'Content', depth: 30, maxWidgets: 40 }, expected: 'success' },
   { scenario: 'INFO: read_editor_ui of one branch', toolName: 'control_editor', arguments: { action: 'read_editor_ui', from: '${captured:mainWindowRef}', depth: 2 }, expected: 'success' },
-  { scenario: 'ACTION: use_editor_ui hovers the main window', toolName: 'control_editor', arguments: { action: 'use_editor_ui', ref: '${captured:mainWindowRef}', do: 'hover' }, expected: 'success' },
-  { scenario: 'ACTION: use_editor_ui presses Escape on the main window', toolName: 'control_editor', arguments: { action: 'use_editor_ui', ref: '${captured:mainWindowRef}', do: 'press_key', key: 'Escape' }, expected: 'success' },
-  { scenario: 'ERROR: use_editor_ui with a ref no read handed out', toolName: 'control_editor', arguments: { action: 'use_editor_ui', ref: 'e99999999', do: 'type', text: 'x', submit: false }, expected: 'error|WIDGET_NOT_FOUND' },
-  { scenario: 'ERROR: use_editor_ui check on what is no check box', toolName: 'control_editor', arguments: { action: 'use_editor_ui', ref: '${captured:mainWindowRef}', do: 'check' }, expected: 'error|INVALID_ARGUMENT' },
+  { scenario: 'ERROR: read_editor_ui from a ref no read handed out', toolName: 'control_editor', arguments: { action: 'read_editor_ui', from: 'e99999999' }, expected: 'error|WIDGET_NOT_FOUND' },
 
   // === CLEANUP ===
   { scenario: 'Cleanup: delete spawned actors', toolName: 'control_actor', arguments: { action: 'delete', actorNames: [FOCUS_ACTOR, PIE_PAWN] }, expected: 'success|not found' },

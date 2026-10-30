@@ -5273,8 +5273,7 @@
         "undo",
         "playtest",
         "explore_level",
-        "read_editor_ui",
-        "use_editor_ui"
+        "read_editor_ui"
       ],
       "parameterNames": [
         "acceptRadius",
@@ -5299,7 +5298,6 @@
         "depth",
         "detail",
         "discardUnsaved",
-        "do",
         "durationSeconds",
         "enabled",
         "fallCm",
@@ -5339,7 +5337,6 @@
         "preferences",
         "query",
         "realtime",
-        "ref",
         "relaunch",
         "resolution",
         "returnBase64",
@@ -5351,7 +5348,6 @@
         "stat",
         "steps",
         "stuckSeconds",
-        "submit",
         "tabId",
         "text",
         "toolName",
@@ -5492,21 +5488,6 @@
           "discardUnsaved": {
             "type": "boolean",
             "description": "Restart even though packages have unsaved changes, discarding them. Omitted, a restart with unsaved work is refused."
-          },
-          "do": {
-            "type": "string",
-            "enum": [
-              "click",
-              "double_click",
-              "right_click",
-              "hover",
-              "focus",
-              "type",
-              "press_key",
-              "check",
-              "uncheck"
-            ],
-            "description": "What to do with it."
           },
           "durationSeconds": {
             "type": "number",
@@ -5755,10 +5736,6 @@
             "type": "boolean",
             "description": "Whether realtime rendering is enabled."
           },
-          "ref": {
-            "type": "string",
-            "description": "The widget, as read_editor_ui named it (e12)."
-          },
           "relaunch": {
             "type": "boolean",
             "description": "false closes the editor instead of relaunching it (default true). Unsaved packages are refused the same way."
@@ -5854,10 +5831,6 @@
           "stuckSeconds": {
             "type": "number",
             "description": "Game seconds without getting nearer that count as stuck (default 2)."
-          },
-          "submit": {
-            "type": "boolean",
-            "description": "type: press Enter after the text (default false)."
           },
           "tabId": {
             "type": "string",
@@ -5967,8 +5940,7 @@
               "undo",
               "playtest",
               "explore_level",
-              "read_editor_ui",
-              "use_editor_ui"
+              "read_editor_ui"
             ],
             "description": "Action to invoke on control_editor."
           }

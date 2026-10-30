@@ -790,10 +790,8 @@ export const PLAIN_PROBE: readonly PlainProbeCase[] = [
   { query: 'list data registries', accepted: ['datatable.list_data_registries'] },
   { query: 'read a data registry', accepted: ['datatable.get_data_registry'] },
   { query: 'create a data registry', accepted: ['datatable.create_data_registry'] },
-  // The editor's own UI: read as an outline, a button clicked, a field typed into.
+  // The editor's own UI, read as an outline.
   { query: 'read the editor ui', accepted: ['control_editor.read_editor_ui'] },
-  { query: 'click a button in the editor', accepted: ['control_editor.use_editor_ui'] },
-  { query: 'type into a text field in the editor', accepted: ['control_editor.use_editor_ui'] },
   // Viewmodels (MVVM): one added to a widget, a widget property bound to its field, a variable made to notify.
   { query: 'add a viewmodel to a widget', accepted: ['blueprint.add_widget_viewmodel'] },
   { query: 'bind a widget to a viewmodel', accepted: ['blueprint.bind_widget_viewmodel'] },

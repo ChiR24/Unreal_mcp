@@ -102,8 +102,6 @@ bool UEngineWireSubsystem::HandleControlEditorAction(
     return HandleControlEditorSetViewportRealtime(RequestId, Payload, RequestingSocket);
   if (LowerSub == TEXT("read_editor_ui"))
     return McpEditorUi::HandleRead(this, RequestId, Payload, RequestingSocket);
-  if (LowerSub == TEXT("use_editor_ui"))
-    return McpEditorUi::HandleUse(this, RequestId, Payload, RequestingSocket);
   if (LowerSub == TEXT("simulate_input"))
     return HandleControlEditorSimulateInput(RequestId, Payload, RequestingSocket);
   // Additional actions for test compatibility

@@ -1,8 +1,5 @@
-// The editor's own Slate UI, read and used: control_editor read_editor_ui (its windows and widgets as an outline, each
-// listed widget with a ref) and use_editor_ui (a click, a key or typed text delivered to one of those widgets). The last
-// resort behind real capabilities, for features that have no API. Input goes through a Slate virtual user down the
-// widget's own path, so the system cursor never moves, no window is activated and nothing is hit-tested on screen (the
-// editor may be minimized); a request runs unattended, so a modal dialog a click opens is cancelled, never waited on.
+// The editor's own Slate UI, read: control_editor read_editor_ui (its windows and widgets as an outline, each listed
+// widget with a ref that from takes to read one branch). It only reads; the capabilities do the editor's work.
 
 #pragma once
 
@@ -19,7 +16,6 @@ namespace McpEditorUi
 using FUiSocket = TSharedPtr<FMcpBridgeWebSocket>;
 
 bool HandleRead(UEngineWireSubsystem* Self, const FString& RequestId, const TSharedPtr<FJsonObject>& Payload, FUiSocket Socket);
-bool HandleUse(UEngineWireSubsystem* Self, const FString& RequestId, const TSharedPtr<FJsonObject>& Payload, FUiSocket Socket);
 
 // The ref of a widget ("e12"), the same for as long as the widget lives this session.
 FString RefOf(const TSharedRef<SWidget>& Widget);

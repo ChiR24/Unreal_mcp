@@ -7043,21 +7043,6 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "boolean",
           "description": "Restart even though packages have unsaved changes, discarding them. Omitted, a restart with unsaved work is refused."
         },
-        "do": {
-          "type": "string",
-          "enum": [
-            "click",
-            "double_click",
-            "right_click",
-            "hover",
-            "focus",
-            "type",
-            "press_key",
-            "check",
-            "uncheck"
-          ],
-          "description": "What to do with it."
-        },
         "durationSeconds": {
           "type": "number",
           "description": "Stop the recording by itself after this many seconds of game time."
@@ -7305,10 +7290,6 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "boolean",
           "description": "Whether realtime rendering is enabled."
         },
-        "ref": {
-          "type": "string",
-          "description": "The widget, as read_editor_ui named it (e12)."
-        },
         "relaunch": {
           "type": "boolean",
           "description": "false closes the editor instead of relaunching it (default true). Unsaved packages are refused the same way."
@@ -7404,10 +7385,6 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "stuckSeconds": {
           "type": "number",
           "description": "Game seconds without getting nearer that count as stuck (default 2)."
-        },
-        "submit": {
-          "type": "boolean",
-          "description": "type: press Enter after the text (default false)."
         },
         "tabId": {
           "type": "string",
@@ -7517,8 +7494,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             "undo",
             "playtest",
             "explore_level",
-            "read_editor_ui",
-            "use_editor_ui"
+            "read_editor_ui"
           ],
           "description": "Action to invoke on control_editor."
         }
@@ -7757,10 +7733,6 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "x-unreal-reflection-boundary": true,
           "description": "Additional handler result fields not named by the contract."
         },
-        "did": {
-          "type": "string",
-          "description": "What was done (\"nothing: check already\" when a check box already was)."
-        },
         "discardedPackageCount": {
           "type": "integer",
           "description": "Unsaved packages discarded by this restart."
@@ -7789,25 +7761,6 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             "x-unreal-reflection-boundary": true
           },
           "description": "What was found, each {kind (escape_killz, escape_bounds, trap, script_error), text, where [x, y, z], cell (the first cell of its round: explore from it to see it again), t (game seconds)}; one per kind and floor-plan cell, at most 64."
-        },
-        "focus": {
-          "type": "object",
-          "additionalProperties": false,
-          "properties": {
-            "ref": {
-              "type": "string",
-              "description": "Its ref."
-            },
-            "type": {
-              "type": "string",
-              "description": "Its Slate type (SButton, SEditableTextBox...)."
-            },
-            "text": {
-              "type": "string",
-              "description": "What it says."
-            }
-          },
-          "description": "Where the virtual user's keyboard focus is after."
         },
         "frames": {
           "type": "number",
@@ -7868,10 +7821,6 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "gameSeconds": {
           "type": "number",
           "description": "Game seconds the steps advanced, when a fixed delta time is set (set_game_speed fixed_delta_time): steps x deltaTime x game speed."
-        },
-        "handled": {
-          "type": "boolean",
-          "description": "The widget (or one around it) took the input."
         },
         "handledByPIE": {
           "type": "boolean",
@@ -8205,32 +8154,8 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "description": "Whether the main window was minimized before the call."
         },
         "widget": {
-          "oneOf": [
-            {
-              "type": "object",
-              "additionalProperties": false,
-              "properties": {
-                "ref": {
-                  "type": "string",
-                  "description": "Its ref."
-                },
-                "type": {
-                  "type": "string",
-                  "description": "Its Slate type (SButton, SEditableTextBox...)."
-                },
-                "text": {
-                  "type": "string",
-                  "description": "What it says."
-                }
-              },
-              "description": "The widget, as it is after."
-            },
-            {
-              "type": "string",
-              "description": "widget_click: the widget that was driven, as Owner.Name."
-            }
-          ],
-          "description": "The widget, as it is after."
+          "type": "string",
+          "description": "widget_click: the widget that was driven, as Owner.Name."
         },
         "widgetType": {
           "type": "string",
@@ -8296,20 +8221,6 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             }
           ],
           "description": "Every editor window."
-        },
-        "windowsClosed": {
-          "type": "array",
-          "items": {
-            "type": "string"
-          },
-          "description": "Windows that closed."
-        },
-        "windowsOpened": {
-          "type": "array",
-          "items": {
-            "type": "string"
-          },
-          "description": "Windows that opened: titles; an untitled menu or popup by its ref."
         },
         "wouldRestart": {
           "type": "boolean",

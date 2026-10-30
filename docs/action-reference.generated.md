@@ -4,7 +4,7 @@
 
 # Action reference
 
-Catalog revision: `b5da5b9c5f4a3db5`
+Catalog revision: `6379eb865ac7be21`
 
 Both transports expose exactly ONE public MCP tool, `unreal`, with the four
 operations `search` / `describe` / `execute` / `configure`. The parent tools
@@ -13,7 +13,7 @@ by `tools/list` and a direct `tools/call` on one returns a
 `DIRECT_TOOL_CALL_REMOVED` receipt rather than executing
 (`src/server/gateway/direct-call-migration.ts`).
 
-The catalog declares 483 capabilities across
+The catalog declares 482 capabilities across
 23 internal parent tools.
 Every row is derived from the capability record that the gateway actually
 validates against, so `execute` cannot accept an action this table omits.
@@ -42,7 +42,7 @@ validates against, so `execute` cannot accept an action this table omits.
 | `animation_physics` | 32 | 5 | 25 | 2 | animation physics |
 | `build_environment` | 43 | 5 | 35 | 3 | environment |
 | `control_actor` | 36 | 9 | 24 | 3 | actor |
-| `control_editor` | 29 | 10 | 15 | 4 | editor |
+| `control_editor` | 28 | 10 | 15 | 3 | editor |
 | `inspect` | 27 | 22 | 4 | 1 | inspect |
 | `manage_ai` | 17 | 3 | 14 | 0 | manage ai |
 | `manage_asset` | 54 | 14 | 35 | 5 | asset, datatable, enum, material, struct, texture |
@@ -65,7 +65,7 @@ validates against, so `execute` cannot accept an action this table omits.
 
 ## Capabilities requiring consent
 
-77 of 483 capabilities require consent.
+76 of 482 capabilities require consent.
 
 | Capability | Tool | Action | Effect | Consent |
 | --- | --- | --- | --- | --- |
@@ -105,7 +105,6 @@ validates against, so `execute` cannot accept an action this table omits.
 | `control_editor.call_editor_tool_destructive` | `control_editor` | `control_editor` | destructive | elevated |
 | `control_editor.invoke_reflected_function` | `control_editor` | `control_editor` | destructive | elevated |
 | `control_editor.restart_editor` | `control_editor` | `restart_editor` | destructive | explicit |
-| `control_editor.use_editor_ui` | `control_editor` | `use_editor_ui` | destructive | elevated |
 | `datatable.create_data_registry` | `manage_asset` | `create_data_registry` | write | explicit |
 | `datatable.delete_data_table_row` | `manage_asset` | `delete_data_table_row` | destructive | elevated |
 | `datatable.edit_data_table` | `manage_asset` | `create_data_table` | write | explicit |
@@ -358,7 +357,6 @@ validates against, so `execute` cannot accept an action this table omits.
 | `control_editor.simulate_input` | `control_editor` | `simulate_input` | write | write | none | `control_editor.simulate_input` |
 | `control_editor.start_recording` | `control_editor` | `start_recording` | write | write | none | `control_editor.start_recording` `control_editor.stop_recording` |
 | `control_editor.undo` | `control_editor` | `undo` | write | write | none | `control_editor.undo` `control_editor.redo` `control_editor.restore_point` |
-| `control_editor.use_editor_ui` | `control_editor` | `use_editor_ui` | destructive | destructive | elevated | `control_editor.use_editor_ui` |
 | `datatable.create_data_registry` | `manage_asset` | `create_data_registry` | write | write | explicit | `manage_asset.create_data_registry` |
 | `datatable.delete_data_table_row` | `manage_asset` | `delete_data_table_row` | destructive | destructive | elevated | `manage_asset.delete_data_table_row` `manage_asset.clear_data_table_rows` |
 | `datatable.edit_data_table` | `manage_asset` | `create_data_table` | write | write | explicit | `manage_asset.edit_data_table` `manage_asset.create_data_table` `manage_asset.create_row_struct` `manage_asset.add_data_table_row` `manage_asset.update_data_table_row` `manage_asset.import_data_table_rows` `manage_asset.set_data_table_row_struct` `manage_asset.set_struct_as_row_struct` |
