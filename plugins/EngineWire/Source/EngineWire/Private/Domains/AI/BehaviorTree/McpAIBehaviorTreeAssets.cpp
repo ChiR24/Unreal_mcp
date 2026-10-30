@@ -11,6 +11,7 @@
 #include "BehaviorTree/Tasks/BTTask_MoveTo.h"
 #include "BehaviorTree/Tasks/BTTask_Wait.h"
 #include "Domains/BehaviorTree/McpBTPrivate.h"
+#include "Foundation/McpScopedEditorTransaction.h"
 #include "Misc/PackageName.h"
 
 namespace
@@ -156,17 +157,28 @@ bool HandleAddCompositeNode(UEngineWireSubsystem* Self, const FString& RequestId
                                 TEXT("PARENT_NOT_FOUND"));
             return true;
         }
-        if (!Parent && !BT->RootNode)
+        // One undo step: the tree and the composite that takes the node (a subobject, made transactional).
+        UBTCompositeNode* Holder = Parent ? Parent : BT->RootNode.Get();
+        TArray<UObject*> Edited = {BT};
+        if (Holder)
         {
-            BT->RootNode = NewNode;
+            Holder->SetFlags(RF_Transactional);
+            Edited.Add(Holder);
         }
-        else
         {
-            FBTCompositeChild Child;
-            Child.ChildComposite = NewNode;
-            (Parent ? Parent : BT->RootNode.Get())->Children.Add(Child);
+            const FMcpAssetEdit Edit(TEXT("Add Behavior Tree Composite"), Edited, Result);
+            if (!Holder)
+            {
+                BT->RootNode = NewNode;
+            }
+            else
+            {
+                FBTCompositeChild Child;
+                Child.ChildComposite = NewNode;
+                Holder->Children.Add(Child);
+            }
+            BT->MarkPackageDirty();
         }
-        BT->MarkPackageDirty();
         McpSafeAssetSave(BT);
 
         // Return an addressable identifier so the node can be referenced by
@@ -241,10 +253,8 @@ bool HandleAddTaskNode(UEngineWireSubsystem* Self, const FString& RequestId, con
 
     if (NewTask)
     {
-        // Resolve the attach point BEFORE touching the editor graph. Creating a
-        // BehaviorTree graph for an asset that has no root composite drives
-        // BehaviorTreeEditor into an empty-array dereference (dogfood #63), so the
-        // root/parent guard must come first and the graph is built only on success.
+        // Resolve the attach point before touching the editor graph: a task with
+        // nowhere to hang is refused and leaves the tree and its graph as they were.
         const FString ParentNodeId = GetJsonStringField(Payload, TEXT("parentNodeId"));
         UBTCompositeNode* Parent = ParentNodeId.IsEmpty() ? BT->RootNode.Get() : FindCompositeById(BT->RootNode, ParentNodeId);
         if (!Parent)
@@ -258,10 +268,14 @@ bool HandleAddTaskNode(UEngineWireSubsystem* Self, const FString& RequestId, con
         }
         UEdGraph* Graph = nullptr;
         McpBehaviorTreeHandlers::EnsureBehaviorTreeGraph(BT, Graph);
-        FBTCompositeChild Child;
-        Child.ChildTask = NewTask;
-        Parent->Children.Add(Child);
-        BT->MarkPackageDirty();
+        Parent->SetFlags(RF_Transactional);
+        {
+            const FMcpAssetEdit Edit(TEXT("Add Behavior Tree Task"), {BT, Parent}, Result);
+            FBTCompositeChild Child;
+            Child.ChildTask = NewTask;
+            Parent->Children.Add(Child);
+            BT->MarkPackageDirty();
+        }
         McpSafeAssetSave(BT);
         Result->SetStringField(TEXT("nodeId"), NewTask->GetName());
         Result->SetStringField(TEXT("taskType"), TaskType);

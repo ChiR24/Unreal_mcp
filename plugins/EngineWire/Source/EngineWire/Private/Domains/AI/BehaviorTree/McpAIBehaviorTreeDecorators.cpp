@@ -10,6 +10,7 @@
 #include "BehaviorTree/Decorators/BTDecorator_Loop.h"
 #include "BehaviorTree/Services/BTService_DefaultFocus.h"
 #include "Domains/BehaviorTree/McpBTPrivate.h"
+#include "Foundation/McpScopedEditorTransaction.h"
 
 namespace
 {
@@ -20,9 +21,9 @@ bool MatchesDecoratorTarget(const UBTNode* Node, const FString& Id)
                     Node->GetNodeName().Equals(Id, ESearchCase::IgnoreCase));
 }
 
-// The composite-child slot whose composite or task is Id: a decorator on a node lives in the
-// entry its parent keeps for it, not on the node itself.
-FBTCompositeChild* FindDecoratorSlot(UBTCompositeNode* Composite, const FString& Id)
+// The composite-child slot whose composite or task is Id, and the composite that keeps it: a decorator on a node lives
+// in the entry its parent keeps for it, not on the node itself.
+FBTCompositeChild* FindDecoratorSlot(UBTCompositeNode* Composite, const FString& Id, UBTCompositeNode*& OutOwner)
 {
     if (!Composite)
     {
@@ -32,9 +33,10 @@ FBTCompositeChild* FindDecoratorSlot(UBTCompositeNode* Composite, const FString&
     {
         if (MatchesDecoratorTarget(Child.ChildComposite, Id) || MatchesDecoratorTarget(Child.ChildTask, Id))
         {
+            OutOwner = Composite;
             return &Child;
         }
-        if (FBTCompositeChild* Found = FindDecoratorSlot(Child.ChildComposite, Id))
+        if (FBTCompositeChild* Found = FindDecoratorSlot(Child.ChildComposite, Id, OutOwner))
         {
             return Found;
         }
@@ -104,7 +106,8 @@ bool HandleAddDecorator(UEngineWireSubsystem* Self, const FString& RequestId, co
         }
         const bool bRoot = ParentNodeId.IsEmpty() || ParentNodeId.Equals(TEXT("root"), ESearchCase::IgnoreCase) ||
                            MatchesDecoratorTarget(BT->RootNode, ParentNodeId);
-        FBTCompositeChild* Slot = bRoot ? nullptr : FindDecoratorSlot(BT->RootNode, ParentNodeId);
+        UBTCompositeNode* Owner = nullptr;
+        FBTCompositeChild* Slot = bRoot ? nullptr : FindDecoratorSlot(BT->RootNode, ParentNodeId, Owner);
         if (!bRoot && !Slot)
         {
             Self->SendAutomationError(RequestingSocket, RequestId,
@@ -112,16 +115,26 @@ bool HandleAddDecorator(UEngineWireSubsystem* Self, const FString& RequestId, co
                                 TEXT("PARENT_NOT_FOUND"));
             return true;
         }
-        if (Slot)
+        // One undo step: the tree (root decorators) or the composite that keeps the node's entry.
+        TArray<UObject*> Edited = {BT};
+        if (Owner)
         {
-            Slot->Decorators.Add(NewDecorator);
+            Owner->SetFlags(RF_Transactional);
+            Edited.Add(Owner);
         }
-        else
         {
-            BT->RootDecorators.Add(NewDecorator);
+            const FMcpAssetEdit Edit(TEXT("Add Behavior Tree Decorator"), Edited, Result);
+            if (Slot)
+            {
+                Slot->Decorators.Add(NewDecorator);
+            }
+            else
+            {
+                BT->RootDecorators.Add(NewDecorator);
+            }
+            BT->MarkPackageDirty();
         }
         Result->SetStringField(TEXT("attachedTo"), bRoot ? TEXT("root") : ParentNodeId);
-        BT->MarkPackageDirty();
         McpSafeAssetSave(BT);
         Result->SetStringField(TEXT("nodeId"), NewDecorator->GetName());
         Result->SetStringField(TEXT("decoratorType"), DecoratorType);
@@ -171,10 +184,8 @@ bool HandleAddService(UEngineWireSubsystem* Self, const FString& RequestId, cons
 
     if (NewService)
     {
-        // Guard the root before building the graph: creating a BehaviorTree graph
-        // for a rootless asset dereferences an empty array in BehaviorTreeEditor
-        // (dogfood #63). A null root used to fall through and report success
-        // while the service was silently dropped.
+        // A service needs the root composite to run on: a null root used to fall
+        // through and report success while the service was silently dropped.
         if (!BT->RootNode)
         {
             Self->SendAutomationError(RequestingSocket, RequestId,
@@ -182,8 +193,12 @@ bool HandleAddService(UEngineWireSubsystem* Self, const FString& RequestId, cons
                                 TEXT("NO_ROOT"));
             return true;
         }
-        BT->RootNode->Services.Add(NewService);
-        BT->MarkPackageDirty();
+        BT->RootNode->SetFlags(RF_Transactional);
+        {
+            const FMcpAssetEdit Edit(TEXT("Add Behavior Tree Service"), {BT, BT->RootNode.Get()}, Result);
+            BT->RootNode->Services.Add(NewService);
+            BT->MarkPackageDirty();
+        }
         McpSafeAssetSave(BT);
         Result->SetStringField(TEXT("nodeId"), NewService->GetName());
         Result->SetStringField(TEXT("serviceType"), ServiceType);

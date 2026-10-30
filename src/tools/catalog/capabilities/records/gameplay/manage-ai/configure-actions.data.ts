@@ -59,16 +59,16 @@ export const AI_CONFIGURE_RECORDS: readonly CapabilityRecordSource[] = [
     example: { controllerPath: '/Game/AI/AIC_Enemy' }, result: 'Focus cleared',
   }),
   aiRecord({
-    action: 'configure_bt_node', summary: 'Configure a Behavior Tree node.',
+    action: 'configure_bt_node', summary: 'Set properties of a Behavior Tree node by name and save it, in one undo step: nodeId is the node\'s nodeId or nodeName, Root, or the index get_tree lists; a Blackboard key selector takes a key name the tree\'s Blackboard has. A property that cannot be set is listed in skippedProperties; a call with no properties is refused (INVALID_ARGUMENT), and one whose properties all fail is PROPERTY_NOT_FOUND.',
     use: 'An existing Behavior Tree node needs property edits.',
     avoid: 'Use set_node_properties for the graph route.',
     props: {
       behaviorTreePath: A.behaviorTreePath,
       nodeId: A.nodeId, properties: A.properties,
     },
-    required: ['behaviorTreePath', 'nodeId'], plugins: BT,
+    required: ['behaviorTreePath', 'nodeId', 'properties'], plugins: BT,
     out: { assetPath: A.assetPath },
-    example: { behaviorTreePath: '/Game/AI/BT_Enemy', nodeId: 'Root' }, result: 'Node configured',
+    example: { behaviorTreePath: '/Game/AI/BT_Enemy', nodeId: 'Root', properties: { NodeName: 'Choose Action' } }, result: 'Node configured',
   }),
   aiRecord({
     action: 'configure_damage_sense_config', summary: 'Set the damage sense of an AIPerception component (added when missing) and save: damageConfig.maxAge, the seconds a hit is remembered (a new sense starts at 10; 0 is forever). Hits reach it only through Report Damage Event, not from Apply Damage alone.',
@@ -201,7 +201,7 @@ export const AI_CONFIGURE_RECORDS: readonly CapabilityRecordSource[] = [
     example: { queryPath: '/Game/AI/EQS_Cover', testIndex: 0, testSettings: { scoringEquation: 'InverseLinear' } }, result: 'Test scoring configured',
   }),
   aiRecord({
-    action: 'connect_nodes', summary: 'Connect Behavior Tree graph nodes.',
+    action: 'connect_nodes', summary: 'Connect Behavior Tree graph nodes, in one undo step: parentNodeId BehaviorTreeGraphNode_Root_0 (the graph\'s Root node) makes the child composite the tree\'s root.',
     use: 'A parent graph node must be linked to a child.',
     avoid: 'Use break_connections to detach them again.',
     props: {

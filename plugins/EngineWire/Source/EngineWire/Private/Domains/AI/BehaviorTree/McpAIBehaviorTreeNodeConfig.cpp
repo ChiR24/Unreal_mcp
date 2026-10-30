@@ -9,6 +9,7 @@
 #include "BehaviorTree/BTNode.h"
 #include "BehaviorTree/BTService.h"
 #include "BehaviorTree/BTTaskNode.h"
+#include "Foundation/McpScopedEditorTransaction.h"
 #include "UObject/UnrealType.h"
 
 namespace McpAIHandlers
@@ -163,13 +164,21 @@ bool HandleConfigureBehaviorTreeNode(UEngineWireSubsystem* Self, const FString& 
         return true;
     }
 
+    // A call that set nothing answered success; it is refused like the other edits that set nothing.
+    const TSharedPtr<FJsonObject>* PropertiesObject = nullptr;
+    if (!Payload->TryGetObjectField(TEXT("properties"), PropertiesObject) || !PropertiesObject || !PropertiesObject->IsValid() || (*PropertiesObject)->Values.Num() == 0)
+    {
+        Self->SendAutomationError(RequestingSocket, RequestId, TEXT("properties is required: the node's properties to set, by name."), TEXT("INVALID_ARGUMENT"));
+        return true;
+    }
     int32 ConfiguredPropertyCount = 0;
     TArray<FString> ConfiguredProperties;
     TArray<FString> SuppliedProperties;
     TArray<FString> SkippedReasons;
-    const TSharedPtr<FJsonObject>* PropertiesObject = nullptr;
-    if (Payload->TryGetObjectField(TEXT("properties"), PropertiesObject) && PropertiesObject && PropertiesObject->IsValid())
     {
+        // One undo step for the properties applied; a skipped one changes nothing.
+        TargetNode->SetFlags(RF_Transactional);
+        const FMcpAssetEdit Edit(TEXT("Configure Behavior Tree Node"), {BT, TargetNode}, Result);
         for (const auto& Pair : (*PropertiesObject)->Values)
         {
             const FString PropertyName(*Pair.Key);
@@ -274,11 +283,7 @@ bool HandleConfigureBehaviorTreeNode(UEngineWireSubsystem* Self, const FString& 
     }
     McpHandlerUtils::AddVerification(Result, BT);
 
-    Self->SendAutomationResponse(RequestingSocket, RequestId, true,
-                           ConfiguredPropertyCount > 0
-                               ? TEXT("Behavior Tree node configured")
-                               : TEXT("Behavior Tree node resolved; no properties supplied"),
-                           Result);
+    Self->SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Behavior Tree node configured"), Result);
     return true;
 }
 }

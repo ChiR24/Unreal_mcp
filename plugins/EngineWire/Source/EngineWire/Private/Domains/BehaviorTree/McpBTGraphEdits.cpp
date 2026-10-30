@@ -1,6 +1,7 @@
 #include "Core/Compatibility/McpVersionCompatibility.h"
 #include "Domains/BehaviorTree/McpBTPrivate.h"
 
+#include "Foundation/BridgeHelpers/McpHelpers.h"
 #include "Foundation/HandlerUtils/McpHandlerUtils.h"
 #include "EdGraphSchema_BehaviorTree.h"
 
@@ -28,16 +29,18 @@ bool HandleUnlinkNode(UEngineWireSubsystem* Subsystem,
     return true;
   }
 
-  GraphContext.BehaviorTree->Modify();
-  GraphContext.Graph->Modify();
-  TargetNode->Modify();
-  GraphContext.Graph->GetSchema()->BreakNodeLinks(*TargetNode);
-  if (bRemove) {
-    GraphContext.Graph->RemoveNode(TargetNode);
-  }
-  UpdateBehaviorTreeAsset(GraphContext);
-
+  // One undo step: breaking a link modifies the nodes on both ends, which the engine records inside the step.
   TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
+  {
+    const FMcpAssetEdit Edit(bRemove ? TEXT("Remove Behavior Tree Node") : TEXT("Break Behavior Tree Node Links"),
+                             BehaviorTreeEditObjects(GraphContext, {TargetNode}), Result);
+    GraphContext.Graph->GetSchema()->BreakNodeLinks(*TargetNode);
+    if (bRemove) {
+      GraphContext.Graph->RemoveNode(TargetNode);
+    }
+    UpdateBehaviorTreeAsset(GraphContext);
+  }
+  McpSafeAssetSave(GraphContext.BehaviorTree);
   McpHandlerUtils::AddVerification(Result, GraphContext.BehaviorTree);
   Subsystem->SendAutomationResponse(Context.RequestingSocket,
                                     Context.RequestId, true,

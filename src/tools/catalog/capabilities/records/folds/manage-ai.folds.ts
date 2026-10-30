@@ -11,7 +11,7 @@ export const MANAGE_AI_FOLDS: readonly FoldSpec[] = [
   },
   {
     primary: 'edit_behavior_tree', selector: 'edit',
-    summary: 'Edit a Behavior Tree graph: add composite, task, decorator, service or generic nodes and subnodes, connect or break connections, configure or remove nodes.',
+    summary: 'Edit a Behavior Tree graph: add composite, task, decorator, service or generic nodes and subnodes, connect or break connections, configure or remove nodes. Each edit is one undo step.',
     topics: ['behavior tree node', 'composite node', 'task node', 'decorator', 'service', 'bt node', 'enemy chases player', 'chase the player', 'enemy that follows the player'],
     members: {
       add_composite: 'add_composite_node', add_task: 'add_task_node', add_decorator: 'add_decorator', add_service: 'add_service', add_node: 'add_node', add_subnode: 'add_subnode',

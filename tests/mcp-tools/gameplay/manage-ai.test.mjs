@@ -75,16 +75,16 @@ const testCases = [
   { scenario: 'INFO: get_blackboard_value', toolName: 'manage_ai', arguments: { action: 'get_blackboard_value', blackboardPath: '${captured:blackboardPath}', keyName: blackboardKeyName }, expected: 'success' },
 
   // === BEHAVIOR TREE ===
-  { scenario: 'ADD: add_composite_node', toolName: 'manage_ai', arguments: { action: 'add_composite_node', behaviorTreePath: '${captured:behaviorTreePath}', compositeType: 'Sequence' }, expected: 'success' },
+  { scenario: 'ADD: add_composite_node', toolName: 'manage_ai', arguments: { action: 'add_composite_node', behaviorTreePath: '${captured:behaviorTreePath}', compositeType: 'Sequence' }, expected: 'success', assertions: [{ path: 'structuredContent.result.undo.undoable', equals: true, label: 'one undo step' }] },
   { scenario: 'ADD: add_composite_node named', toolName: 'manage_ai', arguments: { action: 'add_composite_node', behaviorTreePath: '${captured:behaviorTreePath}', compositeType: 'Selector', nodeName: 'RootSelector' }, expected: 'success' },
   { scenario: 'ADD: add_composite_node SimpleParallel', toolName: 'manage_ai', arguments: { action: 'add_composite_node', behaviorTreePath: '${captured:behaviorTreePath}', compositeType: 'SimpleParallel', parentNodeId: 'RootSelector' }, expected: 'success' },
-  { scenario: 'ADD: add_task_node', toolName: 'manage_ai', arguments: { action: 'add_task_node', behaviorTreePath: '${captured:behaviorTreePath}', taskType: 'Wait' }, expected: 'success' },
-  { scenario: 'ADD: add_decorator', toolName: 'manage_ai', arguments: { action: 'add_decorator', behaviorTreePath: '${captured:behaviorTreePath}', decoratorType: 'Blackboard' }, expected: 'success' },
-  { scenario: 'ADD: add_decorator on a named node', toolName: 'manage_ai', arguments: { action: 'add_decorator', behaviorTreePath: '${captured:behaviorTreePath}', decoratorType: 'Cooldown', parentNodeId: 'RootSelector' }, expected: 'success', assertions: [{ path: 'structuredContent.result.attachedTo', equals: 'RootSelector' }] },
+  { scenario: 'ADD: add_task_node', toolName: 'manage_ai', arguments: { action: 'add_task_node', behaviorTreePath: '${captured:behaviorTreePath}', taskType: 'Wait' }, expected: 'success', assertions: [{ path: 'structuredContent.result.undo.undoable', equals: true, label: 'one undo step' }] },
+  { scenario: 'ADD: add_decorator', toolName: 'manage_ai', arguments: { action: 'add_decorator', behaviorTreePath: '${captured:behaviorTreePath}', decoratorType: 'Blackboard' }, expected: 'success', assertions: [{ path: 'structuredContent.result.undo.undoable', equals: true, label: 'one undo step' }] },
+  { scenario: 'ADD: add_decorator on a named node', toolName: 'manage_ai', arguments: { action: 'add_decorator', behaviorTreePath: '${captured:behaviorTreePath}', decoratorType: 'Cooldown', parentNodeId: 'RootSelector' }, expected: 'success', assertions: [{ path: 'structuredContent.result.attachedTo', equals: 'RootSelector' }, { path: 'structuredContent.result.undo.undoable', equals: true, label: 'one undo step' }] },
   { scenario: 'ADD: add_task_node MoveTo', toolName: 'manage_ai', arguments: { action: 'add_task_node', behaviorTreePath: '${captured:behaviorTreePath}', taskType: 'MoveTo' }, expected: 'success', captureResult: { key: 'moveToNodeId', fromField: 'result.nodeId' } },
-  { scenario: 'CONFIG: configure_bt_node sets a key selector by key name', toolName: 'manage_ai', arguments: { action: 'configure_bt_node', behaviorTreePath: '${captured:behaviorTreePath}', nodeId: '${captured:moveToNodeId}', properties: { BlackboardKey: moveGoalKeyName } }, expected: 'success' },
-  { scenario: 'ADD: add_service', toolName: 'manage_ai', arguments: { action: 'add_service', behaviorTreePath: '${captured:behaviorTreePath}', serviceType: 'DefaultFocus' }, expected: 'success' },
-  { scenario: 'CONFIG: configure_bt_node', toolName: 'manage_ai', arguments: { action: 'configure_bt_node', behaviorTreePath: '${captured:behaviorTreePath}', nodeId: 'Root' }, expected: 'success' },
+  { scenario: 'CONFIG: configure_bt_node sets a key selector by key name', toolName: 'manage_ai', arguments: { action: 'configure_bt_node', behaviorTreePath: '${captured:behaviorTreePath}', nodeId: '${captured:moveToNodeId}', properties: { BlackboardKey: moveGoalKeyName } }, expected: 'success', assertions: [{ path: 'structuredContent.result.undo.undoable', equals: true, label: 'one undo step' }] },
+  { scenario: 'ADD: add_service', toolName: 'manage_ai', arguments: { action: 'add_service', behaviorTreePath: '${captured:behaviorTreePath}', serviceType: 'DefaultFocus' }, expected: 'success', assertions: [{ path: 'structuredContent.result.undo.undoable', equals: true, label: 'one undo step' }] },
+  { scenario: 'ERROR: configure_bt_node refuses a call that sets nothing', toolName: 'manage_ai', arguments: { action: 'configure_bt_node', behaviorTreePath: '${captured:behaviorTreePath}', nodeId: 'Root', properties: {} }, expected: 'error|INVALID_ARGUMENT' },
   { scenario: 'ACTION: run_behavior_tree', toolName: 'manage_ai', arguments: { action: 'run_behavior_tree', controllerPath: '${captured:controllerPath}', behaviorTreePath: '${captured:behaviorTreePath}' }, expected: 'success', assertions: [{ path: 'structuredContent.result.compiled', equals: true, label: 'On Possess runs the tree and the Blueprint compiles' }, { path: 'structuredContent.result.variable', equals: 'DefaultBehaviorTree', label: 'it reads the variable assign_behavior_tree set' }] },
   { scenario: 'PLAYBACK: stop_behavior_tree', toolName: 'manage_ai', arguments: { action: 'stop_behavior_tree', controllerPath: '${captured:controllerPath}' }, expected: 'success', assertions: [{ path: 'structuredContent.result.removed', equals: true, label: 'the run logic came out' }] },
   { scenario: 'PLAYBACK: stop_behavior_tree again finds nothing to take out', toolName: 'manage_ai', arguments: { action: 'stop_behavior_tree', controllerPath: '${captured:controllerPath}' }, expected: 'success', assertions: [{ path: 'structuredContent.result.removed', equals: false, label: 'nothing was installed, and it says so' }] },
@@ -230,9 +230,12 @@ const testCases = [
       expected: 'success',
       captureResult: { key: 'behaviorTreePath', fromField: 'assetPath' }
     },
+    // The graph route builds a tree from nothing, as the editor does: nodes first, then the Root node linked to a
+    // composite. A tree with no root composite was refused ("requires UE 5.3+" on every version).
     // === ADD ===
     {
       scenario: 'ADD: add sequence node',
+      assertions: [{ path: 'structuredContent.result.undo.undoable', equals: true, label: 'one undo step' }],
       toolName: 'manage_ai',
       arguments: { action: 'add_node', assetPath: '${captured:behaviorTreePath}', nodeType: 'Sequence', x: 0, y: 0 },
       expected: 'success',
@@ -247,7 +250,33 @@ const testCases = [
     },
     // === CONNECT ===
     {
+      scenario: 'CONNECT: the Root node to the Sequence makes it the tree root',
+      toolName: 'manage_ai',
+      arguments: {
+        action: 'connect_nodes',
+        assetPath: '${captured:behaviorTreePath}',
+        parentNodeId: 'BehaviorTreeGraphNode_Root_0',
+        childNodeId: '${captured:sequenceNodeId}'
+      },
+      expected: 'success'
+    },
+    {
+      scenario: 'CONNECT: undo takes the root link back in one step',
+      toolName: 'control_editor',
+      arguments: { action: 'undo' },
+      expected: 'success',
+      assertions: [{ path: 'structuredContent.result.transaction', equals: 'Connect Behavior Tree Nodes', label: 'the link was the step undone' }]
+    },
+    {
+      scenario: 'CONNECT: redo links it again',
+      toolName: 'control_editor',
+      arguments: { action: 'redo' },
+      expected: 'success',
+      assertions: [{ path: 'structuredContent.result.transaction', equals: 'Connect Behavior Tree Nodes', label: 'the link is redone' }]
+    },
+    {
       scenario: 'CONNECT: connect_nodes',
+      assertions: [{ path: 'structuredContent.result.undo.undoable', equals: true, label: 'one undo step' }],
       toolName: 'manage_ai',
       arguments: {
         action: 'connect_nodes',
@@ -260,6 +289,7 @@ const testCases = [
     // === CONFIG ===
     {
       scenario: 'CONFIG: set_node_properties',
+      assertions: [{ path: 'structuredContent.result.undo.undoable', equals: true, label: 'one undo step' }],
       toolName: 'manage_ai',
       arguments: {
         action: 'set_node_properties',
@@ -282,9 +312,17 @@ const testCases = [
       },
       expected: 'success'
     },
+    // A call that sets nothing (a property the node lacks) is refused instead of answering success.
+    {
+      scenario: 'ERROR: set_node_properties refuses a call that sets nothing',
+      toolName: 'manage_ai',
+      arguments: { action: 'set_node_properties', assetPath: '${captured:behaviorTreePath}', nodeId: '${captured:waitNodeId}', properties: { NoSuchProperty: 1 } },
+      expected: 'error|PROPERTY_NOT_FOUND'
+    },
     // === ACTION ===
     {
       scenario: 'ACTION: break_connections',
+      assertions: [{ path: 'structuredContent.result.undo.undoable', equals: true, label: 'one undo step' }],
       toolName: 'manage_ai',
       arguments: { action: 'break_connections', assetPath: '${captured:behaviorTreePath}', nodeId: '${captured:sequenceNodeId}' },
       expected: 'success'
@@ -292,6 +330,7 @@ const testCases = [
     // === DELETE ===
     {
       scenario: 'DELETE: remove_node',
+      assertions: [{ path: 'structuredContent.result.undo.undoable', equals: true, label: 'one undo step' }],
       toolName: 'manage_ai',
       arguments: { action: 'remove_node', assetPath: '${captured:behaviorTreePath}', nodeId: '${captured:waitNodeId}' },
       expected: 'success'

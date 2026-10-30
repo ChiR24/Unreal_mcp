@@ -138,7 +138,7 @@ export const AI_SET_RECORDS: readonly CapabilityRecordSource[] = [
     example: { actorName: 'NavLinkProxy_0', linkType: 'smart' }, result: 'Nav link type set',
   }),
   aiRecord({
-    action: 'set_node_properties', summary: 'Set Behavior Tree graph node properties.',
+    action: 'set_node_properties', summary: 'Set a Behavior Tree graph node\'s comment and its node\'s properties (numbers, booleans, text, names, a Blackboard key selector by key name), in one undo step; a call that sets nothing is refused (PROPERTY_NOT_FOUND).',
     use: 'A graph node needs property or comment edits.',
     avoid: 'Use configure_bt_node for the asset-level route.',
     props: {

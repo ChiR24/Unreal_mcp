@@ -1,6 +1,7 @@
 #include "Core/Compatibility/McpVersionCompatibility.h"
 #include "Domains/BehaviorTree/McpBTPrivate.h"
 
+#include "Foundation/BridgeHelpers/McpHelpers.h"
 #include "Foundation/HandlerUtils/McpHandlerUtils.h"
 #include "Foundation/BridgeHelpers/Reflection/McpClassResolve.h"
 #include "BehaviorTree/BTDecorator.h"
@@ -221,18 +222,23 @@ bool HandleAddSubnode(UEngineWireSubsystem* Subsystem,
     return true;
   }
 
-  NewSubnode->ClassData = FGraphNodeClassData(NodeInstanceClass, FString());
-  NewSubnode->NodeInstance = NewObject<UBTNode>(NewSubnode, NodeInstanceClass);
-  NewSubnode->CreateNewGuid();
-  // Allocate pins BEFORE PostPlacedNewNode(): checked pin accessors inside
-  // PostPlacedNewNode() assert when the pin list is still empty (same root cause
-  // as the level-blueprint node path — EdGraphNode.h:586).
-  if (NewSubnode->Pins.Num() == 0) { NewSubnode->AllocateDefaultPins(); }
-  NewSubnode->PostPlacedNewNode();
-  ParentNode->AddSubNode(NewSubnode, GraphContext.Graph);
-  UpdateBehaviorTreeAsset(GraphContext);
-
   TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
+  {
+    // One undo step for the subnode, its parent and the tree the graph rebuilds (AddSubNode's own step nests in it).
+    const FMcpAssetEdit Edit(TEXT("Add Behavior Tree Subnode"),
+                             BehaviorTreeEditObjects(GraphContext, {ParentNode, NewSubnode}), Result);
+    NewSubnode->ClassData = FGraphNodeClassData(NodeInstanceClass, FString());
+    NewSubnode->NodeInstance = NewObject<UBTNode>(NewSubnode, NodeInstanceClass);
+    NewSubnode->CreateNewGuid();
+    // Allocate pins BEFORE PostPlacedNewNode(): checked pin accessors inside
+    // PostPlacedNewNode() assert when the pin list is still empty (same root cause
+    // as the level-blueprint node path — EdGraphNode.h:586).
+    if (NewSubnode->Pins.Num() == 0) { NewSubnode->AllocateDefaultPins(); }
+    NewSubnode->PostPlacedNewNode();
+    ParentNode->AddSubNode(NewSubnode, GraphContext.Graph);
+    UpdateBehaviorTreeAsset(GraphContext);
+  }
+  McpSafeAssetSave(GraphContext.BehaviorTree);
   Result->SetStringField(TEXT("nodeId"),
                          NewSubnode->NodeGuid.ToString(EGuidFormats::DigitsWithHyphens));
   Result->SetStringField(TEXT("nodeClass"), NodeInstanceClass->GetName());

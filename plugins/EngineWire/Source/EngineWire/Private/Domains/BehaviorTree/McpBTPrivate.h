@@ -3,6 +3,7 @@
 
 #include "EngineWireSubsystem.h"
 #include "Dom/JsonObject.h"
+#include "Foundation/McpScopedEditorTransaction.h"
 
 #include "BehaviorTree/BehaviorTree.h"
 #include "EdGraph/EdGraph.h"
@@ -55,7 +56,23 @@ inline FString ReadBehaviorTreePath(const TSharedPtr<FJsonObject>& Payload)
 }
 // Spawns graph nodes for asset-route composites/tasks that have none; returns the count spawned.
 int32 SyncBehaviorTreeGraphFromAsset(UBehaviorTree* BehaviorTree, UEdGraph* Graph);
+// Rebuilds the tree from its graph and marks it dirty, inside the edit's undo step; the caller saves after the step
+// closes (a save inside it is a write the undo cannot take back). Undo rebuilds the tree again (the graph's PostEditUndo).
 void UpdateBehaviorTreeAsset(const FGraphContext& Context);
+// The tree, its graph and the graph nodes a graph-route edit changes, for one FMcpAssetEdit: the graph and nodes are made
+// transactional first (a graph EngineWire made before was not, so its changes reached no undo step).
+inline TArray<UObject*> BehaviorTreeEditObjects(const FGraphContext& Context, std::initializer_list<UObject*> Nodes)
+{
+  TArray<UObject*> Objects = {Context.BehaviorTree, Context.Graph};
+  Context.Graph->SetFlags(RF_Transactional);
+  for (UObject* Node : Nodes) {
+    if (Node) {
+      Node->SetFlags(RF_Transactional);
+      Objects.Add(Node);
+    }
+  }
+  return Objects;
+}
 UEdGraphNode* FindGraphNodeByIdOrName(UEdGraph* Graph,
                                       const FString& IdOrName);
 bool HandleAddNode(UEngineWireSubsystem* Subsystem,

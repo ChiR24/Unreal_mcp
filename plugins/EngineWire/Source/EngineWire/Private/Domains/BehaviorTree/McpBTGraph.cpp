@@ -48,9 +48,10 @@ bool EnsureBehaviorTreeGraph(UBehaviorTree*& BehaviorTree, UEdGraph*& OutGraph)
   {
     return false;
   }
-  // Never fabricate or touch an editor graph for a tree without a root composite:
-  // BehaviorTreeEditor dereferences an empty node array in that state (dogfood #63).
-  if (!BehaviorTree->RootNode)
+  // A tree with no root composite is what the editor holds until its Root node is linked, and the graph route builds
+  // one that way. Root decorators with no root composite to hang on are not: the engine's graph build dereferences the
+  // missing composite's node for them (SpawnMissingDecoratorNodes, dogfood #63), and its rebuild discards them.
+  if (!BehaviorTree->RootNode && BehaviorTree->RootDecorators.Num() > 0)
   {
     OutGraph = nullptr;
     return false;
@@ -64,12 +65,11 @@ bool EnsureBehaviorTreeGraph(UBehaviorTree*& BehaviorTree, UEdGraph*& OutGraph)
   if (OutGraph)
   {
 #if MCP_HAS_BEHAVIOR_TREE_GRAPH
-    // The RootNode guard above is not sufficient: a Behavior Tree can own a BTGraph
-    // that exists but has NO nodes (typically a tree created programmatically and
-    // never opened in the editor). BehaviorTreeEditor's graph helpers index Nodes[0]
-    // in that state and hard-assert, which takes the whole editor down mid-request.
-    // Seed the default nodes first, and refuse the edit rather than crash if the
-    // graph still has none.
+    // A Behavior Tree can own a BTGraph that exists but has NO nodes (typically a
+    // tree created programmatically and never opened in the editor).
+    // BehaviorTreeEditor's graph helpers index Nodes[0] in that state and
+    // hard-assert, which takes the whole editor down mid-request. Seed the default
+    // nodes first, and refuse the edit rather than crash if the graph still has none.
     if (OutGraph->Nodes.Num() == 0)
     {
       if (const UEdGraphSchema* Schema = OutGraph->GetSchema())
@@ -106,7 +106,8 @@ bool EnsureBehaviorTreeGraph(UBehaviorTree*& BehaviorTree, UEdGraph*& OutGraph)
 #if MCP_HAS_BEHAVIOR_TREE_GRAPH
 UEdGraph* CreateBehaviorTreeGraph(UBehaviorTree* BehaviorTree)
 {
-  UEdGraph* NewGraph = NewObject<UBehaviorTreeGraph>(BehaviorTree, TEXT("BehaviorTree"));
+  // Transactional, as the editor makes a graph: a graph without the flag records nothing for undo.
+  UEdGraph* NewGraph = NewObject<UBehaviorTreeGraph>(BehaviorTree, TEXT("BehaviorTree"), RF_Transactional);
   NewGraph->Schema = UEdGraphSchema_BehaviorTree::StaticClass();
   BehaviorTree->BTGraph = NewGraph;
   NewGraph->GetSchema()->CreateDefaultNodesForGraph(*NewGraph);
@@ -142,9 +143,18 @@ bool LoadBehaviorTreeForGraph(UEngineWireSubsystem* Subsystem,
   // Always run the ensure step: besides creating a missing graph it syncs asset-route nodes
   // (add_composite_node / add_task_node) into an existing graph (dogfood #60).
   if (!EnsureBehaviorTreeGraph(BehaviorTree, Graph)) {
+#if MCP_HAS_BEHAVIOR_TREE_GRAPH
+    // Every refusal said "requires UE 5.3+", on every version.
+    const bool bLooseDecorators = !BehaviorTree->RootNode && BehaviorTree->RootDecorators.Num() > 0;
     Subsystem->SendAutomationError(Context.RequestingSocket, Context.RequestId,
-                                   TEXT("Behavior Tree graph editing requires UE 5.3+."),
-                                   TEXT("NOT_SUPPORTED"));
+                                   bLooseDecorators
+                                       ? TEXT("The Behavior Tree has root decorators but no root composite to hang them on; add one with add_composite_node first.")
+                                       : TEXT("The Behavior Tree's editor graph has no nodes, and its schema made none."),
+                                   bLooseDecorators ? TEXT("NO_ROOT") : TEXT("GRAPH_NOT_READY"));
+#else
+    Subsystem->SendAutomationError(Context.RequestingSocket, Context.RequestId,
+                                   TEXT("Behavior Tree graph editing requires UE 5.3+."), TEXT("NOT_SUPPORTED"));
+#endif
     return false;
   }
 
@@ -162,7 +172,6 @@ void UpdateBehaviorTreeAsset(const FGraphContext& Context)
 #endif
   Context.Graph->NotifyGraphChanged();
   Context.BehaviorTree->MarkPackageDirty();
-  McpSafeAssetSave(Context.BehaviorTree);
 }
 
 UEdGraphNode* FindGraphNodeByIdOrName(UEdGraph* Graph,
@@ -262,20 +271,19 @@ bool HandleConnectNodes(UEngineWireSubsystem* Subsystem,
     return true;
   }
 
-  if (!GraphContext.Graph->GetSchema()->TryCreateConnection(OutputPin,
-                                                            InputPin)) {
-    Subsystem->SendAutomationError(Context.RequestingSocket, Context.RequestId,
-                                   TEXT("Failed to connect nodes."),
-                                   TEXT("CONNECT_FAILED"));
-    return true;
-  }
-
-  GraphContext.BehaviorTree->Modify();
-  GraphContext.Graph->Modify();
-  Parent->Modify();
-  Child->Modify();
-  UpdateBehaviorTreeAsset(GraphContext);
+  // One undo step, opened before the link (the pins live on both nodes); a link the schema refuses changes nothing.
   TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
+  {
+    const FMcpAssetEdit Edit(TEXT("Connect Behavior Tree Nodes"), BehaviorTreeEditObjects(GraphContext, {Parent, Child}), Result);
+    if (!GraphContext.Graph->GetSchema()->TryCreateConnection(OutputPin, InputPin)) {
+      Subsystem->SendAutomationError(Context.RequestingSocket, Context.RequestId,
+                                     TEXT("Failed to connect nodes."),
+                                     TEXT("CONNECT_FAILED"));
+      return true;
+    }
+    UpdateBehaviorTreeAsset(GraphContext);
+  }
+  McpSafeAssetSave(GraphContext.BehaviorTree);
   McpHandlerUtils::AddVerification(Result, GraphContext.BehaviorTree);
   Subsystem->SendAutomationResponse(Context.RequestingSocket,
                                     Context.RequestId, true,

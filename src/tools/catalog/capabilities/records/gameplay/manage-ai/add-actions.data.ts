@@ -35,7 +35,7 @@ export const AI_ADD_RECORDS: readonly CapabilityRecordSource[] = [
     result: 'Blackboard key added',
   }),
   aiRecord({
-    action: 'add_composite_node', summary: 'Add a composite to a Behavior Tree and save it: compositeType Selector (runs its children until one succeeds), Sequence (until one fails) or SimpleParallel (Parallel is the same: its first child is the main task, the second runs beside it). It goes under parentNodeId (a composite by nodeId or nodeName), else under the root, and a tree with no root takes it as the root (isRoot). nodeName names it; nodeId and nodeName in the reply address it for add_task_node, add_decorator and add_service. Another compositeType is refused (INVALID_ARGUMENT), as is a parent that is not found (PARENT_NOT_FOUND).',
+    action: 'add_composite_node', summary: 'Add a composite to a Behavior Tree and save it: compositeType Selector (runs its children until one succeeds), Sequence (until one fails) or SimpleParallel (Parallel is the same: its first child is the main task, the second runs beside it). It goes under parentNodeId (a composite by nodeId or nodeName), else under the root, and a tree with no root takes it as the root (isRoot). nodeName names it; nodeId and nodeName in the reply address it for add_task_node, add_decorator and add_service. Another compositeType is refused (INVALID_ARGUMENT), as is a parent that is not found (PARENT_NOT_FOUND). One undo step.',
     use: 'A Behavior Tree needs a Selector, Sequence or Simple Parallel branch.',
     avoid: 'Use add_task_node for leaf behavior.',
     // `nodeName` names the created node, and the response now returns the
@@ -58,7 +58,7 @@ export const AI_ADD_RECORDS: readonly CapabilityRecordSource[] = [
     result: 'Composite node added',
   }),
   aiRecord({
-    action: 'add_decorator', summary: 'Add a decorator to a Behavior Tree node, or to the root when no node is named.',
+    action: 'add_decorator', summary: 'Add a decorator to a Behavior Tree node, or to the root when no node is named, in one undo step.',
     use: 'A Behavior Tree branch needs a conditional gate.',
     avoid: 'Use add_service for recurring background ticks.',
     props: {
@@ -116,7 +116,7 @@ export const AI_ADD_RECORDS: readonly CapabilityRecordSource[] = [
     result: 'Mass spawner placed',
   }),
   aiRecord({
-    action: 'add_node', summary: 'Add a node through the Behavior Tree graph route.',
+    action: 'add_node', summary: 'Add a node through the Behavior Tree graph route, in one undo step. It joins the tree once connect_nodes links it under a parent; on a tree with no root composite yet, link the graph\'s Root node (BehaviorTreeGraphNode_Root_0) to a composite to make it the root.',
     use: 'A Behavior Tree graph needs a node placed at explicit coordinates.',
     avoid: 'Use add_task_node or add_composite_node for the asset-level route.',
     props: {
@@ -129,7 +129,7 @@ export const AI_ADD_RECORDS: readonly CapabilityRecordSource[] = [
     result: 'Graph node added',
   }),
   aiRecord({
-    action: 'add_service', summary: 'Add a service to a Behavior Tree asset.',
+    action: 'add_service', summary: 'Add a service to the root composite of a Behavior Tree asset, in one undo step.',
     use: 'A Behavior Tree branch needs recurring background work.',
     avoid: 'Use add_decorator for a pass/fail condition.',
     props: { behaviorTreePath: A.behaviorTreePath, serviceType: A.serviceType },
@@ -207,7 +207,7 @@ export const AI_ADD_RECORDS: readonly CapabilityRecordSource[] = [
     result: 'Subnode added',
   }),
   aiRecord({
-    action: 'add_task_node', summary: 'Add a task node to a Behavior Tree asset.',
+    action: 'add_task_node', summary: 'Add a task node to a Behavior Tree asset, in one undo step.',
     use: 'A Behavior Tree branch needs a leaf task. An enemy that chases the player is a Sequence with a MoveTo task whose Blackboard key (an Object key such as TargetActor) holds the player, run on its AI controller with run_behavior_tree.',
     avoid: 'Use add_composite_node for flow control.',
     props: { behaviorTreePath: A.behaviorTreePath, taskType: A.taskType, parentNodeId: A.parentNodeId },

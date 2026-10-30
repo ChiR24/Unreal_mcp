@@ -2,6 +2,7 @@
 #include "Domains/BehaviorTree/McpBTPrivate.h"
 
 #include "Core/Module/EngineWireGlobals.h"
+#include "Foundation/BridgeHelpers/McpHelpers.h"
 #include "Foundation/HandlerUtils/McpHandlerUtils.h"
 #include "BehaviorTree/BlackboardData.h"
 #include "BehaviorTree/BehaviorTreeTypes.h"
@@ -9,39 +10,17 @@
 
 namespace McpBehaviorTreeHandlers {
 
-bool HandleSetNodeProperties(UEngineWireSubsystem* Subsystem,
-                             const FRequestContext& Context,
-                             const FGraphContext& GraphContext)
+#if MCP_HAS_BEHAVIOR_TREE_GRAPH
+namespace {
+// Sets the payload's comment on the graph node and its properties on the node instance; false with OutError when a
+// Blackboard key is not in the tree's Blackboard.
+bool ApplyNodeEdits(const FRequestContext& Context, const FGraphContext& GraphContext, UEdGraphNode* TargetNode,
+                    UBehaviorTreeGraphNode* BTNode, bool& bModified, FString& OutError)
 {
-#if !MCP_HAS_BEHAVIOR_TREE_GRAPH
-  Subsystem->SendAutomationError(Context.RequestingSocket, Context.RequestId,
-                                 TEXT("Behavior Tree graph editing requires UE 5.3+"),
-                                 TEXT("NOT_SUPPORTED"));
-  return true;
-#else
-  FString NodeId;
-  Context.Payload->TryGetStringField(TEXT("nodeId"), NodeId);
-  UEdGraphNode* TargetNode =
-      FindGraphNodeByIdOrName(GraphContext.Graph, NodeId);
-  if (!TargetNode) {
-    Subsystem->SendAutomationError(Context.RequestingSocket, Context.RequestId,
-                                   TEXT("Node not found."),
-                                   TEXT("NODE_NOT_FOUND"));
-    return true;
-  }
-
-  bool bModified = false;
   FString Comment;
   if (Context.Payload->TryGetStringField(TEXT("comment"), Comment)) {
     TargetNode->NodeComment = Comment;
     bModified = true;
-  }
-
-  UBehaviorTreeGraphNode* BTNode = nullptr;
-  UClass* BTNodeClass =
-      FindObject<UClass>(nullptr, TEXT("/Script/BehaviorTreeEditor.BehaviorTreeGraphNode"));
-  if (BTNodeClass && TargetNode->GetClass()->IsChildOf(BTNodeClass)) {
-    BTNode = static_cast<UBehaviorTreeGraphNode*>(TargetNode);
   }
 
   const TSharedPtr<FJsonObject>* Props = nullptr;
@@ -101,14 +80,9 @@ bool HandleSetNodeProperties(UEngineWireSubsystem* Subsystem,
                   GraphContext.BehaviorTree->BlackboardAsset) {
             Selector->ResolveSelectedKey(*Blackboard);
             if (!Selector->IsSet()) {
-              Subsystem->SendAutomationError(
-                  Context.RequestingSocket,
-                  Context.RequestId,
-                  FString::Printf(TEXT("BlackboardKey '%s' not found in BT's assigned BB '%s' (typo or missing add_blackboard_key call?)"),
-                                  *Pair.Value->AsString(),
-                                  *Blackboard->GetPathName()),
-                  TEXT("BB_KEY_NOT_FOUND"));
-              return true;
+              OutError = FString::Printf(TEXT("BlackboardKey '%s' not found in BT's assigned BB '%s' (typo or missing add_blackboard_key call?)"),
+                                         *Pair.Value->AsString(), *Blackboard->GetPathName());
+              return false;
             }
           } else {
             UE_LOG(LogEngineWireSubsystem, Warning,
@@ -124,15 +98,66 @@ bool HandleSetNodeProperties(UEngineWireSubsystem* Subsystem,
       }
     }
   }
+  return true;
+}
+}
+#endif
 
-  if (bModified) {
-    GraphContext.BehaviorTree->Modify();
-    GraphContext.Graph->Modify();
-    TargetNode->Modify();
-    UpdateBehaviorTreeAsset(GraphContext);
+bool HandleSetNodeProperties(UEngineWireSubsystem* Subsystem,
+                             const FRequestContext& Context,
+                             const FGraphContext& GraphContext)
+{
+#if !MCP_HAS_BEHAVIOR_TREE_GRAPH
+  Subsystem->SendAutomationError(Context.RequestingSocket, Context.RequestId,
+                                 TEXT("Behavior Tree graph editing requires UE 5.3+"),
+                                 TEXT("NOT_SUPPORTED"));
+  return true;
+#else
+  FString NodeId;
+  Context.Payload->TryGetStringField(TEXT("nodeId"), NodeId);
+  UEdGraphNode* TargetNode =
+      FindGraphNodeByIdOrName(GraphContext.Graph, NodeId);
+  if (!TargetNode) {
+    Subsystem->SendAutomationError(Context.RequestingSocket, Context.RequestId,
+                                   TEXT("Node not found."),
+                                   TEXT("NODE_NOT_FOUND"));
+    return true;
   }
 
+  UBehaviorTreeGraphNode* BTNode = nullptr;
+  UClass* BTNodeClass =
+      FindObject<UClass>(nullptr, TEXT("/Script/BehaviorTreeEditor.BehaviorTreeGraphNode"));
+  if (BTNodeClass && TargetNode->GetClass()->IsChildOf(BTNodeClass)) {
+    BTNode = static_cast<UBehaviorTreeGraphNode*>(TargetNode);
+  }
+  UObject* Instance = nullptr;
+  if (BTNode) {
+    Instance = BTNode->NodeInstance;
+  }
+
+  bool bModified = false;
   TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
+  {
+    // One undo step: the graph node (its comment), its node instance (the properties) and the tree the graph rebuilds.
+    const FMcpAssetEdit Edit(TEXT("Set Behavior Tree Node Properties"),
+                             BehaviorTreeEditObjects(GraphContext, {TargetNode, Instance}), Result);
+    FString Error;
+    if (!ApplyNodeEdits(Context, GraphContext, TargetNode, BTNode, bModified, Error)) {
+      Subsystem->SendAutomationError(Context.RequestingSocket, Context.RequestId, Error, TEXT("BB_KEY_NOT_FOUND"));
+      return true;
+    }
+    if (bModified) {
+      UpdateBehaviorTreeAsset(GraphContext);
+    }
+  }
+  // Nothing set (no comment, and no property the node has with a value of its type) answered success.
+  if (!bModified) {
+    Subsystem->SendAutomationError(Context.RequestingSocket, Context.RequestId,
+                                   TEXT("Nothing was set: pass comment, or properties the node has, each with a value of its type."),
+                                   TEXT("PROPERTY_NOT_FOUND"));
+    return true;
+  }
+  McpSafeAssetSave(GraphContext.BehaviorTree);
   McpHandlerUtils::AddVerification(Result, GraphContext.BehaviorTree);
   Subsystem->SendAutomationResponse(Context.RequestingSocket,
                                     Context.RequestId, true,

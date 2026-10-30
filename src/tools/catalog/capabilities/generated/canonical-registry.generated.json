@@ -1,5 +1,5 @@
 {
-  "catalogRevision": "bf86757ca28130c2",
+  "catalogRevision": "b5da5b9c5f4a3db5",
   "recordCount": 483,
   "records": [
     {
@@ -62983,7 +62983,7 @@
           "chase the player",
           "enemy that follows the player"
         ],
-        "summary": "Edit a Behavior Tree graph: add composite, task, decorator, service or generic nodes and subnodes, connect or break connections, configure or remove nodes.",
+        "summary": "Edit a Behavior Tree graph: add composite, task, decorator, service or generic nodes and subnodes, connect or break connections, configure or remove nodes. Each edit is one undo step.",
         "whenToUse": [
           "edit=add_composite: A Behavior Tree needs a Selector, Sequence or Simple Parallel branch.",
           "edit=add_task: A Behavior Tree branch needs a leaf task. An enemy that chases the player is a Sequence with a MoveTo task whose Blackboard key (an Object key such as TargetActor) holds the player, run on its AI controller with run_behavior_tree.",
@@ -63139,7 +63139,7 @@
                 "set_node_properties",
                 "remove_node"
               ],
-              "description": "Which edit behavior tree variant to run.\nadd_composite: Add a composite to a Behavior Tree and save it: compositeType Selector (runs its children until one succeeds), Sequence (until one fails) or SimpleParallel (Parallel is the same: its first child is the main task, the second runs beside it). It goes under parentNodeId (a composite by nodeId or nodeName), else under the root, and a tree with no root takes it as the root (isRoot). nodeName names it; nodeId and nodeName in the reply address it for edit=add_task, edit=add_decorator and edit=add_service. Another compositeType is refused (INVALID_ARGUMENT), as is a parent that is not found (PARENT_NOT_FOUND).\nadd_task: Add a task node to a Behavior Tree asset.\nadd_decorator: Add a decorator to a Behavior Tree node, or to the root when no node is named.\nadd_service: Add a service to a Behavior Tree asset.\nadd_node: Add a node through the Behavior Tree graph route.\nadd_subnode: Add a Behavior Tree decorator or service subnode.\nconnect: Connect Behavior Tree graph nodes.\nbreak_connections: Break Behavior Tree graph connections.\nconfigure_node: Configure a Behavior Tree node.\nset_node_properties: Set Behavior Tree graph node properties.\nremove_node: Remove a Behavior Tree graph node."
+              "description": "Which edit behavior tree variant to run.\nadd_composite: Add a composite to a Behavior Tree and save it: compositeType Selector (runs its children until one succeeds), Sequence (until one fails) or SimpleParallel (Parallel is the same: its first child is the main task, the second runs beside it). It goes under parentNodeId (a composite by nodeId or nodeName), else under the root, and a tree with no root takes it as the root (isRoot). nodeName names it; nodeId and nodeName in the reply address it for edit=add_task, edit=add_decorator and edit=add_service. Another compositeType is refused (INVALID_ARGUMENT), as is a parent that is not found (PARENT_NOT_FOUND). One undo step.\nadd_task: Add a task node to a Behavior Tree asset, in one undo step.\nadd_decorator: Add a decorator to a Behavior Tree node, or to the root when no node is named, in one undo step.\nadd_service: Add a service to the root composite of a Behavior Tree asset, in one undo step.\nadd_node: Add a node through the Behavior Tree graph route, in one undo step. It joins the tree once edit=connect links it under a parent; on a tree with no root composite yet, link the graph's Root node (BehaviorTreeGraphNode_Root_0) to a composite to make it the root.\nadd_subnode: Add a Behavior Tree decorator or service subnode.\nconnect: Connect Behavior Tree graph nodes, in one undo step: parentNodeId BehaviorTreeGraphNode_Root_0 (the graph's Root node) makes the child composite the tree's root.\nbreak_connections: Break Behavior Tree graph connections.\nconfigure_node: Set properties of a Behavior Tree node by name and save it, in one undo step: nodeId is the node's nodeId or nodeName, Root, or the index get_tree lists; a Blackboard key selector takes a key name the tree's Blackboard has. A property that cannot be set is listed in skippedProperties; a call with no properties is refused (INVALID_ARGUMENT), and one whose properties all fail is PROPERTY_NOT_FOUND.\nset_node_properties: Set a Behavior Tree graph node's comment and its node's properties (numbers, booleans, text, names, a Blackboard key selector by key name), in one undo step; a call that sets nothing is refused (PROPERTY_NOT_FOUND).\nremove_node: Remove a Behavior Tree graph node."
             }
           },
           "required": [
@@ -63189,7 +63189,7 @@
       },
       "examples": [
         {
-          "title": "Edit a Behavior Tree graph: add composite, task, decorator, service or generic nodes and subnodes, connect or break connections, configure or remove nodes.",
+          "title": "Edit a Behavior Tree graph: add composite, task, decorator, service or generic nodes and subnodes, connect or break connections, configure or remove nodes. Each edit is one undo step.",
           "input": {
             "action": "edit_behavior_tree",
             "behaviorTreePath": "/Game/AI/BT_Enemy",
@@ -63365,7 +63365,8 @@
             "configure_bt_node": {
               "required": [
                 "behaviorTreePath",
-                "nodeId"
+                "nodeId",
+                "properties"
               ]
             },
             "set_node_properties": {
@@ -63385,8 +63386,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "280c0b27eddddddefc8311399b4b94a34d17aefd3611b05827d38502cc604cc1",
-        "content": "bb3cc0820bc1a8cc59b536ac4ea15cf6702986f4733d49db5c6455d2efd27d2a"
+        "schema": "ff85f46981e9678a0675b0cc3e782321436e0860d8e2377f6beda3f7058a4221",
+        "content": "4b22e468783a45eae941bfc4face5721b067ceea007ba6a7e7788bf6403c6218"
       }
     },
     {

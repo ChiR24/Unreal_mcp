@@ -150,36 +150,38 @@ bool HandleAddNode(UEngineWireSubsystem* Subsystem,
 
   UBehaviorTreeGraphNode* NewNode =
       static_cast<UBehaviorTreeGraphNode*>(NewNodeObj);
-  GraphContext.BehaviorTree->Modify();
-  GraphContext.Graph->Modify();
-  NewNode->Modify();
-  NewNode->CreateNewGuid();
-  if (NodeInstanceClass) {
-    NewNode->ClassData = FGraphNodeClassData(NodeInstanceClass, TEXT(""));
-  }
-  FGuid NewGuid;
-  if (!ProvidedNodeId.IsEmpty() && FGuid::Parse(ProvidedNodeId, NewGuid)) {
-    NewNode->NodeGuid = NewGuid;
-  }
-  NewNode->NodePosX = X;
-  NewNode->NodePosY = Y;
-  GraphContext.Graph->AddNode(NewNode, true, false);
-  // Allocate pins BEFORE PostPlacedNewNode(): checked pin accessors inside
-  // PostPlacedNewNode() assert when the pin list is still empty (EdGraphNode.h:586).
-  if (NewNode->Pins.Num() == 0) { NewNode->AllocateDefaultPins(); }
-  NewNode->PostPlacedNewNode();
-
-  if (NodeInstanceClass && !NewNode->NodeInstance) {
-    GraphContext.Graph->RemoveNode(NewNode);
-    Subsystem->SendAutomationError(
-        Context.RequestingSocket, Context.RequestId,
-        TEXT("Failed to initialize Behavior Tree node instance."),
-        TEXT("CREATE_FAILED"));
-    return true;
-  }
-
-  UpdateBehaviorTreeAsset(GraphContext);
   TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
+  {
+    // One undo step for the node, its place in the graph and the tree the graph rebuilds.
+    const FMcpAssetEdit Edit(TEXT("Add Behavior Tree Node"), BehaviorTreeEditObjects(GraphContext, {NewNode}), Result);
+    NewNode->CreateNewGuid();
+    if (NodeInstanceClass) {
+      NewNode->ClassData = FGraphNodeClassData(NodeInstanceClass, TEXT(""));
+    }
+    FGuid NewGuid;
+    if (!ProvidedNodeId.IsEmpty() && FGuid::Parse(ProvidedNodeId, NewGuid)) {
+      NewNode->NodeGuid = NewGuid;
+    }
+    NewNode->NodePosX = X;
+    NewNode->NodePosY = Y;
+    GraphContext.Graph->AddNode(NewNode, true, false);
+    // Allocate pins BEFORE PostPlacedNewNode(): checked pin accessors inside
+    // PostPlacedNewNode() assert when the pin list is still empty (EdGraphNode.h:586).
+    if (NewNode->Pins.Num() == 0) { NewNode->AllocateDefaultPins(); }
+    NewNode->PostPlacedNewNode();
+
+    if (NodeInstanceClass && !NewNode->NodeInstance) {
+      GraphContext.Graph->RemoveNode(NewNode);
+      Subsystem->SendAutomationError(
+          Context.RequestingSocket, Context.RequestId,
+          TEXT("Failed to initialize Behavior Tree node instance."),
+          TEXT("CREATE_FAILED"));
+      return true;
+    }
+
+    UpdateBehaviorTreeAsset(GraphContext);
+  }
+  McpSafeAssetSave(GraphContext.BehaviorTree);
   Result->SetStringField(TEXT("nodeId"), NewNode->NodeGuid.ToString());
   McpHandlerUtils::AddVerification(Result, GraphContext.BehaviorTree);
   Subsystem->SendAutomationResponse(Context.RequestingSocket,

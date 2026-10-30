@@ -63,6 +63,8 @@ const testCases = [
     ] },
 
   // === Build: Root -> Selector -> Sequence -> Wait ===
+  // All through the graph route, from a tree with no root composite: linking the Root node to the Selector makes it the
+  // tree's root, as in the editor.
   { scenario: 'Build: add Selector', toolName: 'manage_ai',
     arguments: { action: 'add_node', assetPath: '${captured:btPath}', nodeType: 'Selector' },
     expected: 'success',
@@ -100,7 +102,8 @@ const testCases = [
     expected: 'success',
     captureResult: { key: 'serviceId', fromField: 'result.nodeId' },
     assertions: [
-      { path: 'structuredContent.result.nodeClass', equals: 'BTService_DefaultFocus', label: 'service nodeClass echoed back' }
+      { path: 'structuredContent.result.nodeClass', equals: 'BTService_DefaultFocus', label: 'service nodeClass echoed back' },
+      { path: 'structuredContent.result.undo.undoable', equals: true, label: 'one undo step' }
     ] },
 
   { scenario: 'Service: set BlackboardKey=TargetActor', toolName: 'manage_ai',
