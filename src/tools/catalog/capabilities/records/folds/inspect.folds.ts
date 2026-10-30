@@ -34,7 +34,7 @@ export const INSPECT_FOLDS: readonly FoldSpec[] = [
   {
     primary: 'get_editor_state', selector: 'editorState',
     summary: 'Read editor state: selected actors, viewport, world settings (with whether the game is playing or paused), project settings, editor settings, or focus: what the user is working on (open editors, a Blueprint\'s selected nodes, recent errors).',
-    topics: ['selected actors', 'what is selected', 'viewport info', 'world settings', 'project settings', 'editor settings', 'is the game paused', 'what is open', 'selected nodes', 'this node', 'editor focus'],
+    topics: ['selected actors', 'what is selected', 'viewport info', 'world settings', 'project settings', 'editor settings', 'is the game paused', 'what is open', 'selected nodes', 'this node', 'editor focus', 'what is this actor or this asset', 'what am i looking at'],
     members: { selected_actors: 'get_selected_actors', viewport: 'get_viewport_info', world_settings: 'get_world_settings', project_settings: 'get_project_settings', editor_settings: 'get_editor_settings', focus: 'get_editor_focus' },
   },
   {

@@ -122,7 +122,7 @@ export const COMPONENT_RECORDS: readonly CapabilityRecordSource[] = [
     // set_material_parameter, and "make a cube" in a topic took "make a cube" from create_primitive.
     topics: ['assign material to mesh', 'apply material to actor', 'change actor material', 'change the floor material', 'put material on mesh', 'replace mesh material', 'set material slot',
       'make the cube or the wall red', 'color an actor red, blue or green', 'white, black, yellow, orange, purple, pink, brown or gray', 'change the color of an actor', 'paint or tint a mesh a colour',
-      'make the cube or the sign glow', 'a glowing or emissive mesh', 'make a lamp, crystal or sword glow'],
+      'make the cube or the sign glow', 'a glowing or emissive mesh', 'make a lamp, crystal or sword glow', 'make the character red or change its color', 'the player or an enemy glowing'],
     summary: 'Apply a material asset to a mesh component on an actor, optionally per slot, or a material to every slot in one call (materials).',
     whenToUse: ['A material must be assigned to an actor mesh component.', 'A mesh with several material slots (an SDF part) needs a material in each: materials sets them all in one call.', 'An actor must take a plain colour (red, "#1e88e5") with no material made first: color.', 'An actor must glow (a sign, a lamp shade, a crystal): glow, with color for its colour.'],
     whenNotToUse: ['The mesh has no material slots (the assignment is a no-op).'],

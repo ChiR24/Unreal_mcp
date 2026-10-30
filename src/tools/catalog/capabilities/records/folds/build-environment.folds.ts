@@ -162,7 +162,7 @@ export const BUILD_ENVIRONMENT_FOLDS: readonly FoldSpec[] = [
   {
     primary: 'configure_weather', selector: 'setting',
     summary: 'Configure a weather actor: rain, snow or lightning set a Cascade particle system (particleSystemPath) on an Emitter labelled WeatherEmitter, SnowEmitter or LightningEmitter; wind spawns or tunes a WindDirectionalSource (direction as its rotation, speed and other settings by property name). Nothing is simulated beyond what those actors do; not saved.',
-    topics: ['rain', 'snow', 'lightning', 'wind', 'weather', 'add snow', 'add rain, snow, wind or lightning', 'make it rain', 'wind on trees', 'make a storm with rain and lightning', 'make the trees sway in the wind', 'snow or rain falling'],
+    topics: ['rain', 'snow', 'lightning', 'wind', 'weather', 'add snow', 'add rain, snow, wind or lightning', 'make it rain', 'wind on trees', 'make a storm with rain and lightning', 'make the trees sway in the wind', 'snow or rain falling', 'make the grass and the trees move in the wind'],
     members: { rain: 'configure_rain_particles', snow: 'configure_snow_particles', lightning: 'configure_lightning', wind: 'configure_wind' },
   },
   // water
@@ -175,7 +175,7 @@ export const BUILD_ENVIRONMENT_FOLDS: readonly FoldSpec[] = [
   {
     primary: 'configure_water', selector: 'setting',
     summary: 'Change a water body, chosen by setting: the one named by waterBodyName, targetActor or actorName, else the level\'s first. waves gives it Gerstner waves (waveHeight, waveLength, steepness, direction) that its surface and anything floating on it follow, and fails when the body does not keep them; material sets the material that draws its surface (its WaterMaterial, read back as waterMaterial; a material without the Used with Water usage gains it and is left unsaved); collision turns collision on its components on or off (collisionEnabled); settings writes water body actor properties by engine name. material and collision are one undo step; a call with nothing to set, or whose settings name nothing the body has, is refused, and a material that does not load fails the call.',
-    topics: ['water waves', 'water material', 'water collision'],
+    topics: ['water waves', 'water material', 'water collision', 'make the water calmer or the waves bigger'],
     members: byTarget('configure_water_', ['configure_water_waves', 'configure_water_material', 'configure_water_collision']),
   },
 ];

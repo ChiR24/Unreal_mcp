@@ -1,5 +1,5 @@
 {
-  "catalogRevision": "05523e384555cc83",
+  "catalogRevision": "07cffdcfee84cdf3",
   "recordCount": 483,
   "records": [
     {
@@ -32396,7 +32396,8 @@
           "configure_water",
           "water waves",
           "water material",
-          "water collision"
+          "water collision",
+          "make the water calmer or the waves bigger"
         ],
         "summary": "Change a water body, chosen by setting: the one named by waterBodyName, targetActor or actorName, else the level's first. waves gives it Gerstner waves (waveHeight, waveLength, steepness, direction) that its surface and anything floating on it follow, and fails when the body does not keep them; material sets the material that draws its surface (its WaterMaterial, read back as waterMaterial; a material without the Used with Water usage gains it and is left unsaved); collision turns collision on its components on or off (collisionEnabled); settings writes water body actor properties by engine name. material and collision are one undo step; a call with nothing to set, or whose settings name nothing the body has, is refused, and a material that does not load fails the call.",
         "whenToUse": [
@@ -32594,7 +32595,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "0f683dc23316c34a1cafbbb315044b6a059cc4b202060edcdf1f50436965e901",
-        "content": "0784632d575a41c3a2e04809e24ccf171fbb664ecd2245aec4c0ac155883682d"
+        "content": "06b09c1a4287bd047cace8efe50922c24be1ee347504128ec9e9803b6bd4eb56"
       }
     },
     {
@@ -32655,7 +32656,8 @@
           "wind on trees",
           "make a storm with rain and lightning",
           "make the trees sway in the wind",
-          "snow or rain falling"
+          "snow or rain falling",
+          "make the grass and the trees move in the wind"
         ],
         "summary": "Configure a weather actor: rain, snow or lightning set a Cascade particle system (particleSystemPath) on an Emitter labelled WeatherEmitter, SnowEmitter or LightningEmitter; wind spawns or tunes a WindDirectionalSource (direction as its rotation, speed and other settings by property name). Nothing is simulated beyond what those actors do; not saved.",
         "whenToUse": [
@@ -32861,7 +32863,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "ed77f76bcae66a3710d7d472fc890a0029a37770f1ab267b41e9c26dacfd5efa",
-        "content": "8ef0d3304dd2827af1e2f903eabc00e9541b868cfcd0dda46310224d6e94980e"
+        "content": "bbd5fae1a28e670ceedc823c827a4fd8bbc7df093ff50ab597b43c39c7d41222"
       }
     },
     {
@@ -42014,6 +42016,8 @@
           "make a light flicker",
           "a flickering torch, candle or lamp",
           "a broken light flickering or stop it flickering",
+          "turn off the sun or a lamp",
+          "a blue or warmer light colour",
           "add component to actor",
           "attach component to actor"
         ],
@@ -42258,7 +42262,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "6a1af5d36036625ba61910405e6e77df29e8cc620eb543fef4810449a49c2d16",
-        "content": "597baef06bf68a6843f9934b27eb7cec5cc15997a6b172805d2716d7db7e6ba5"
+        "content": "4c961fe51c3da6b23849661eeceeacfdc31e1474a580d1638dd0abda8a4cb7bd"
       }
     },
     {
@@ -45815,7 +45819,9 @@
           "paint or tint a mesh a colour",
           "make the cube or the sign glow",
           "a glowing or emissive mesh",
-          "make a lamp, crystal or sword glow"
+          "make a lamp, crystal or sword glow",
+          "make the character red or change its color",
+          "the player or an enemy glowing"
         ],
         "summary": "Put a material on an actor, or a flat colour with color (\"#rrggbb\", \"#rgb\" or a name such as red or white: a material instance of the engine's BasicShapeMaterial, made once under /Game/Materials/Colors and reused, which replaces the slot's material, textures and all), or a glowing one with glow (that colour, white without color, lit from within at that strength: an instance of M_ColorGlow in the same folder): slot materialSlot (default 0) of its first mesh component that has that slot, of componentName, or of every one with allComponents; materials sets slot i from entry i (\"\" skips one), and actorNames gives many actors the same material. One undo step. Refusals: MATERIAL_NOT_FOUND, ACTOR_NOT_FOUND, COMPONENT_NOT_FOUND, MATERIAL_SLOT_NOT_FOUND (no component has the slot), INVALID_ARGUMENT (a colour it cannot read, or color or glow with materialPath); a list that partly failed answers MATERIAL_BATCH_INCOMPLETE naming each failure. While Play runs it changes the playing copy, gone when play stops.",
         "whenToUse": [
@@ -45964,7 +45970,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "44ae4908841017bf0acad0366a8ed36fd6e9af50621a3ab81ba7e6c82d63b363",
-        "content": "8f666c73bdba08ba5b1f36756c18e22a32c8a8b6a30d1915567d4511ff385c4f"
+        "content": "d0ec0a73076980566ebb8c119f5316bd52ae46165803d4c8aaa2a7f23371f5be"
       }
     },
     {
@@ -46040,6 +46046,8 @@
           "mirror an actor",
           "turn an actor around",
           "make an actor twice as big or half the size",
+          "make an actor bigger or smaller",
+          "make the sword or the enemy bigger",
           "set position",
           "set rotation",
           "translate"
@@ -46400,7 +46408,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "6af5b619f64ce87631986e9ba9d0b1fec5c056e5aa571251d34e3202107f2ea4",
-        "content": "c111a69fad0a72c4303c2818dd68bf9ca57edc29007da41aba8c9e3660320ff7"
+        "content": "b7d651a5c1d34c6583ba14e15c31fead60c6ef5874833a7a405b6aa8c9e95ff1"
       }
     },
     {
@@ -50941,7 +50949,9 @@
           "look from here",
           "camera screenshot",
           "game view screenshot",
-          "screenshot hud"
+          "screenshot hud",
+          "show me the level from above",
+          "take a picture of the level"
         ],
         "summary": "Capture a screenshot of the level viewport (optionally from a camera location and rotation given in the same call), of the running game view, or of the whole editor window with the game UI.",
         "whenToUse": [
@@ -51213,7 +51223,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "a576b1d513f4af1b44c58537b473bfcf4bcba1f063a2b1fff1c70eeef6527e43",
-        "content": "c8266fcecb8d8ed3c58bd6dd3dfc4dafbb4c9e3f9c6fe4b2b0e77f6630fada08"
+        "content": "1636f6f2c3979424e8df6090a0d0d8c7e65f86fc9f7de1ac50b94f12c386f0f2"
       }
     },
     {
@@ -57909,6 +57919,8 @@
           "selected nodes",
           "this node",
           "editor focus",
+          "what is this actor or this asset",
+          "what am i looking at",
           "selection",
           "current selection",
           "editor selection",
@@ -58242,7 +58254,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "3589de428fa6e342cbe54a6bb4d5b870342d4886e93b25367bdeb1d1c2e53226",
-        "content": "4ddb53cea56ba3f796a5806e7c345438d13d7f6cd56d9a81d5191bc2940e5256"
+        "content": "b8c3871ba40ff4ae264ef89d36d5ab600f19bc77e33c0e8527de3a25910ceb02"
       }
     },
     {

@@ -43,7 +43,7 @@ export const CONTROL_EDITOR_FOLDS: readonly FoldSpec[] = [
   },
   {
     primary: 'screenshot', summary: 'Capture a screenshot of the level viewport (optionally from a camera location and rotation given in the same call), of the running game view, or of the whole editor window with the game UI.', members: ['take_screenshot'],
-    topics: ['capture viewport', 'screen capture', 'viewport image', 'snapshot', 'take picture', 'look from here', 'camera screenshot', 'game view screenshot', 'screenshot hud'],
+    topics: ['capture viewport', 'screen capture', 'viewport image', 'snapshot', 'take picture', 'look from here', 'camera screenshot', 'game view screenshot', 'screenshot hud', 'show me the level from above', 'take a picture of the level'],
   },
   {
     primary: 'undo', selector: 'history',
