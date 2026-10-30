@@ -58,6 +58,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Search: plain requests find their capability**: a "why" question reads before it writes, "move the crate" moves the actor (a record naming the verb only in passing no longer takes it), "change the volume" finds the sound class instead of deleting a volume, "delete everything in the level" deletes actors and no longer the level itself, "find the table" finds the actor instead of reading the room's relations, and "create a cube", "add a sky light", "make a dungeon", "add a campfire", "make an exe" and two hundred and thirty-seven more find their owner, as "undo last edit" finds `undo` and "create a vehicle" `configure_vehicle`.
 - **The directory report's reply carries its assets**: the record declared no outputs, so the list was cut from every reply.
 - **A behaviour run again updates placed copies**: a copy in the level still on the old value takes the behaviour's new one, as a default changed in the Blueprint editor does (a sound trigger switched to play once kept playing every time).
+- **Animation edits undo**: notifies, sync markers, root-motion and additive settings, montage sections, slots, links and blends, and Aim Offset samples are one undo step each (Ctrl+Z undid the edit before them instead, and the reply said nothing about undo); an Aim Offset sample the engine refuses is refused, not answered "added", and a sync marker past the clip's end is refused.
 
 </details>
 

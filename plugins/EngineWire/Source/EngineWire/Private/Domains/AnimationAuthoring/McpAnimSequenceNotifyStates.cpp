@@ -124,28 +124,24 @@ TSharedPtr<FJsonObject> HandleSequenceNotifyStateAction(const TSharedPtr<FJsonOb
     float EndTime = static_cast<float>(EndFrame) / FrameRate;
     float Duration = EndTime - StartTime;
 
-    FAnimNotifyEvent& NotifyEvent = AnimAsset->Notifies.AddDefaulted_GetRef();
-    NotifyEvent.Link(AnimAsset, StartTime);
-    NotifyEvent.SetDuration(Duration);
-    NotifyEvent.EndLink.Link(AnimAsset, EndTime);
-    NotifyEvent.TrackIndex = TrackIndex;
-    NotifyEvent.NotifyName = FName(*NotifyName);
-
-    if (ResolvedNotifyStateClass)
+    // The notify state object first, so a refusal leaves the asset as it was.
+    UAnimNotifyState* NewNotifyState = ResolvedNotifyStateClass
+        ? NewObject<UAnimNotifyState>(AnimAsset, ResolvedNotifyStateClass, NAME_None, RF_Transactional) : nullptr;
+    if (ResolvedNotifyStateClass && !NewNotifyState)
     {
-        UAnimNotifyState* NewNotifyState = NewObject<UAnimNotifyState>(AnimAsset, ResolvedNotifyStateClass);
-        if (!NewNotifyState)
-        {
-            AnimAsset->Notifies.Pop();
-            ANIM_ERROR_RESPONSE(
-                FString::Printf(TEXT("Failed to create AnimNotifyState instance of class '%s'"), *NotifyClass),
-                TEXT("INSTANTIATION_FAILED")
-            );
-        }
-        NotifyEvent.NotifyStateClass = NewNotifyState;
+        ANIM_ERROR_RESPONSE(FString::Printf(TEXT("Failed to create AnimNotifyState instance of class '%s'"), *NotifyClass), TEXT("INSTANTIATION_FAILED"));
     }
-
-    AnimAsset->RefreshCacheData();
+    {
+        const FMcpAnimEdit Edit(TEXT("Add Notify State"), AnimAsset, Response);
+        FAnimNotifyEvent& NotifyEvent = AnimAsset->Notifies.AddDefaulted_GetRef();
+        NotifyEvent.Link(AnimAsset, StartTime);
+        NotifyEvent.SetDuration(Duration);
+        NotifyEvent.EndLink.Link(AnimAsset, EndTime);
+        NotifyEvent.TrackIndex = TrackIndex;
+        NotifyEvent.NotifyName = FName(*NotifyName);
+        NotifyEvent.NotifyStateClass = NewNotifyState;
+        AnimAsset->RefreshCacheData();
+    }
     SaveAnimAsset(AnimAsset, bSave);
 
     ANIM_SUCCESS_RESPONSE(FString::Printf(TEXT("Notify state '%s' added at %.3fs"), *NotifyName, StartTime));

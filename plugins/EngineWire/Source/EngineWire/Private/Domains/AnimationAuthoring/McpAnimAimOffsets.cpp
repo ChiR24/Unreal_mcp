@@ -80,44 +80,34 @@ TSharedPtr<FJsonObject> HandleAimOffsetActions(const FString& SubAction, const T
         float Pitch = static_cast<float>(GetJsonNumberField(Params, TEXT("pitch"), 0.0));
         bool bSave = GetJsonBoolField(Params, TEXT("save"), true);
 
-        UAimOffsetBlendSpace* AimOffset = Cast<UAimOffsetBlendSpace>(StaticLoadObject(UAimOffsetBlendSpace::StaticClass(), nullptr, *AssetPath));
-        if (!AimOffset)
+        // An Aim Offset is a Blend Space; a plain Blend Space takes the sample at (yaw, pitch) too.
+        UBlendSpace* Target = Cast<UBlendSpace>(StaticLoadObject(UBlendSpace::StaticClass(), nullptr, *AssetPath));
+        if (!Target)
         {
-            // Try as regular blend space
-            UBlendSpace* BlendSpace = Cast<UBlendSpace>(StaticLoadObject(UBlendSpace::StaticClass(), nullptr, *AssetPath));
-            if (BlendSpace)
-            {
-                UAnimSequence* Animation = LoadAnimSequenceFromPath(AnimationPath);
-                if (!Animation)
-                {
-                    ANIM_ERROR_RESPONSE(FString::Printf(TEXT("Could not load animation: %s"), *AnimationPath), TEXT("ANIMATION_NOT_FOUND"));
-                }
-
-                FVector SampleValue(Yaw, Pitch, 0.0f);
-                BlendSpace->AddSample(Animation, SampleValue);
-
-                SaveAnimAsset(BlendSpace, bSave);
-
-                ANIM_SUCCESS_RESPONSE(TEXT("Aim offset sample added"));
-                return Response;
-            }
-
             ANIM_ERROR_RESPONSE(FString::Printf(TEXT("Could not load aim offset: %s"), *AssetPath), TEXT("AIMOFFSET_NOT_FOUND"));
         }
-
         UAnimSequence* Animation = LoadAnimSequenceFromPath(AnimationPath);
         if (!Animation)
         {
             ANIM_ERROR_RESPONSE(FString::Printf(TEXT("Could not load animation: %s"), *AnimationPath), TEXT("ANIMATION_NOT_FOUND"));
         }
-
-        // Add sample with yaw/pitch coordinates
-        FVector SampleValue(Yaw, Pitch, 0.0f);
-        AimOffset->AddSample(Animation, SampleValue);
-
-        SaveAnimAsset(AimOffset, bSave);
-
-        ANIM_SUCCESS_RESPONSE(TEXT("Aim offset sample added"));
+        // AddSample refuses these (and widened the axes first): the call answered "added" with no sample added.
+        const FVector SampleValue(Yaw, Pitch, 0.0f);
+        if (!Target->ValidateAnimationSequence(Animation) || Target->IsTooCloseToExistingSamplePoint(SampleValue, INDEX_NONE))
+        {
+            ANIM_ERROR_RESPONSE(FString::Printf(TEXT("%s takes no %s at yaw %g, pitch %g: a sample already exists there, or the clip's "
+                "skeleton or additive type does not fit (an Aim Offset takes mesh-space additive clips: set_additive_settings). "
+                "Nothing was added."), *Target->GetName(), *Animation->GetName(), Yaw, Pitch), TEXT("SAMPLE_REJECTED"));
+        }
+        int32 SampleIndex = INDEX_NONE;
+        {
+            const FMcpAnimEdit Edit(TEXT("Add Aim Offset Sample"), Target, Response);
+            SampleIndex = Target->AddSample(Animation, SampleValue);
+        }
+        SaveAnimAssetAndReport(Target, bSave, Response);
+        Response->SetNumberField(TEXT("sampleIndex"), SampleIndex);
+        ANIM_SUCCESS_RESPONSE(FString::Printf(TEXT("Sample %d added to %s"), SampleIndex, *Target->GetName()));
+        McpHandlerUtils::AddVerification(Response, Target);
         return Response;
     }
 

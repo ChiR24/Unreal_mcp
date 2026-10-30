@@ -1,5 +1,5 @@
 {
-  "catalogRevision": "e3bb13fcfbbb057a",
+  "catalogRevision": "a41748362c16f2c5",
   "recordCount": 483,
   "records": [
     {
@@ -3477,26 +3477,25 @@
           "edit=add_bone_track: A bone must be animated.",
           "edit=set_bone_key: Keyframe a bone pose.",
           "edit=set_curve_key: Animate a curve.",
-          "edit=add_notify: Frame event in a sequence.",
-          "edit=add_notify_state: A ranged notify is needed.",
-          "edit=add_sync_marker: Sync groups needed.",
-          "edit=set_additive_settings: Additive layering needed.",
+          "edit=add_notify: Something should happen at one moment of a clip: a sound, an effect, an event an Animation Blueprint reacts to.",
+          "edit=add_notify_state: Something should last over part of a clip: a weapon trail, a timed effect, a window an Animation Blueprint checks.",
+          "edit=add_sync_marker: Two clips that blend (a walk and a run) should keep their feet in step.",
+          "edit=set_additive_settings: A clip should play on top of another (a lean, a breath, an aim pose) instead of replacing it.",
           "edit=set_additive_settings: A hand-keyed move (an arm raise, a head turn) must play on top of a mocap clip: key it as a procedural clip relative to the reference pose, then make it LocalSpaceAdditive with basePoseType RefPose.",
           "edit=set_root_motion_settings: Root motion locomotion needed.",
           "edit=set_sequence_length: Clip duration must change.",
           "edit=set_play_rate: A walk, a run or an idle plays too fast or too slow everywhere it is used.",
           "edit=add_footsteps: A character should make a sound with each step of a walk or a run.",
-          "edit=add_aim_offset_sample: Aim sample must be added."
+          "edit=add_aim_offset_sample: An aim pose (looking up, down, left, right) should join an Aim Offset."
         ],
         "whenNotToUse": [
           "edit=add_bone_track: Track exists.",
-          "edit=add_notify: Use add_montage_notify.",
-          "edit=add_sync_marker: No sync required.",
+          "edit=add_notify: A montage: add_montage_notify.",
           "edit=set_additive_settings: Absolute pose.",
           "edit=set_root_motion_settings: In-place animation.",
           "edit=set_sequence_length: Use create_animation_sequence.",
           "edit=set_play_rate: Only one use of it should play faster: set the rate where it plays (a Sequencer section, a montage, play_montage playRate).",
-          "edit=add_aim_offset_sample: Use create_aim_offset."
+          "edit=add_aim_offset_sample: The Aim Offset does not exist yet: create_aim_offset."
         ]
       },
       "schemas": {
@@ -3688,7 +3687,7 @@
                 "add_footsteps",
                 "add_aim_offset_sample"
               ],
-              "description": "Which edit animation variant to run.\nadd_bone_track: Add an empty transform track for boneName to an animation sequence (assetPath, or animationPath), to key with edit=set_bone_key. A bone its skeleton lacks is BONE_NOT_FOUND_IN_SKELETON, listing bones. A track the sequence already has is left as it is and answered with alreadyExists true and nothing saved; otherwise the sequence is saved unless save is false (saved).\nset_bone_key: Set a bone transform key at a frame; a location, rotation or scale left out keeps the value the bone has there (the key of its track, or the reference pose for a bone with no track yet). Frame 0 is the first key and the sequence's frame count its last (a 1 s clip at 30 fps keys frames 0 to 30); past either end is FRAME_OUT_OF_RANGE.\nset_curve_key: Set a key of the float curve curveName in an animation sequence at frame (default 0) to value: a curve the sequence lacks is added (curveCreated) unless createIfMissing is false, which refuses it (CURVE_NOT_FOUND), and a key the engine does not take is CURVE_KEY_FAILED. The reply reads the curve back at that frame (value) and says whether it saved (saved, unless save is false). Curves drive morph targets and material parameters, and AnimBlueprints read them by name.\nadd_notify: Add a frame notify to a sequence (authoring).\nadd_notify_state: Add a notify state spanning a frame range.\nadd_sync_marker: Add a sync marker to a sequence.\nset_additive_settings: Configure additive animation settings.\nset_root_motion_settings: Configure root motion on an animation sequence: whether the motion of the root bone moves the character (enableRootMotion), which pose the root is locked to while that motion is taken out (rootMotionRootLock), and whether the root is locked even without root motion (forceRootLock). Saved unless save is false; SEQUENCE_NOT_FOUND when no sequence loads.\nset_sequence_length: Set the length of an Animation Sequence.\nset_play_rate: Make an animation sequence play faster or slower wherever it plays (its Rate Scale): rateScale 2 plays it twice as fast, 0.5 half as fast, -1 backwards (not 0, at most 10 either way). One undo step, saved unless save is false; the reply gives the rate before and after and how long one loop now lasts. SEQUENCE_NOT_FOUND when no sequence loads.\nadd_footsteps: Give a walk or run cycle footstep sounds: a Play Sound notify of soundPath wherever a foot is set down, found from the clip's own frames (a foot is down within contactHeight, default 5 cm, of its lowest point; one already down when the loop wraps round counts once). feet names the foot bones (default every bone named like a foot that is no IK bone). A run again replaces the footsteps an earlier run added. One undo step, saved unless save is false; the reply lists each step (foot, time in seconds). An idle, which never lifts a foot, gets none and says so. Refusals: SEQUENCE_NOT_FOUND, SOUND_NOT_FOUND, BONE_NOT_FOUND (a foot the skeleton lacks, or no bone named like a foot), EMPTY_ANIMATION.\nadd_aim_offset_sample: Add a sample pose to an Aim Offset."
+              "description": "Which edit animation variant to run.\nadd_bone_track: Add an empty transform track for boneName to an animation sequence (assetPath, or animationPath), to key with edit=set_bone_key. A bone its skeleton lacks is BONE_NOT_FOUND_IN_SKELETON, listing bones. A track the sequence already has is left as it is and answered with alreadyExists true and nothing saved; otherwise the sequence is saved unless save is false (saved).\nset_bone_key: Set a bone transform key at a frame; a location, rotation or scale left out keeps the value the bone has there (the key of its track, or the reference pose for a bone with no track yet). Frame 0 is the first key and the sequence's frame count its last (a 1 s clip at 30 fps keys frames 0 to 30); past either end is FRAME_OUT_OF_RANGE.\nset_curve_key: Set a key of the float curve curveName in an animation sequence at frame (default 0) to value: a curve the sequence lacks is added (curveCreated) unless createIfMissing is false, which refuses it (CURVE_NOT_FOUND), and a key the engine does not take is CURVE_KEY_FAILED. The reply reads the curve back at that frame (value) and says whether it saved (saved, unless save is false). Curves drive morph targets and material parameters, and AnimBlueprints read them by name.\nadd_notify: Add a notify to an animation sequence at frame (or at time in seconds when frame is left out): an instance of notifyClass (AnimNotify_PlaySound, a Blueprint notify; the AnimNotify_ prefix may be left off) or a named notify event notifyName that an Animation Blueprint reacts to, on notify track trackIndex. One undo step, saved unless save is false; the reply gives its time, frame and index. Refusals: MISSING_NOTIFY_PARAMS, CLASS_NOT_FOUND, ABSTRACT_CLASS_ERROR, ASSET_NOT_FOUND.\nadd_notify_state: Add a notify state to an animation sequence from startFrame to endFrame (default 0 to 10): an instance of notifyClass (AnimNotifyState_Trail, AnimNotifyState_TimedNiagaraEffect, a Blueprint notify state; the AnimNotifyState_ prefix may be left off) or a named state notifyName, on notify track trackIndex. One undo step, saved unless save is false; the reply gives its start and end in seconds. Refusals: INVALID_FRAME_RANGE (endFrame before startFrame), MISSING_NOTIFY_PARAMS, CLASS_NOT_FOUND, ABSTRACT_CLASS_ERROR, ASSET_NOT_FOUND.\nadd_sync_marker: Add a sync marker markerName to an animation sequence at frame (0 to its last frame: past it INVALID_ARGUMENT). Clips in one sync group line up by their markers (a walk and a run blending keep their feet together when both mark each foot plant, FootL and FootR). One undo step, saved unless save is false.\nset_additive_settings: Make an animation sequence additive or a full pose again: additiveAnimType (NoAdditive, LocalSpaceAdditive, MeshSpaceAdditive: what an Aim Offset takes) against basePoseType (RefPose, AnimScaled or AnimFrame of basePoseAnimation, at basePoseFrame). One undo step, saved unless save is false. Refusals: SEQUENCE_NOT_FOUND, ANIMATION_NOT_FOUND (basePoseAnimation), INVALID_ARGUMENT (an unknown type).\nset_root_motion_settings: Configure root motion on an animation sequence: whether the motion of the root bone moves the character (enableRootMotion), which pose the root is locked to while that motion is taken out (rootMotionRootLock), and whether the root is locked even without root motion (forceRootLock). Saved unless save is false; SEQUENCE_NOT_FOUND when no sequence loads.\nset_sequence_length: Set the length of an Animation Sequence.\nset_play_rate: Make an animation sequence play faster or slower wherever it plays (its Rate Scale): rateScale 2 plays it twice as fast, 0.5 half as fast, -1 backwards (not 0, at most 10 either way). One undo step, saved unless save is false; the reply gives the rate before and after and how long one loop now lasts. SEQUENCE_NOT_FOUND when no sequence loads.\nadd_footsteps: Give a walk or run cycle footstep sounds: a Play Sound notify of soundPath wherever a foot is set down, found from the clip's own frames (a foot is down within contactHeight, default 5 cm, of its lowest point; one already down when the loop wraps round counts once). feet names the foot bones (default every bone named like a foot that is no IK bone). A run again replaces the footsteps an earlier run added. One undo step, saved unless save is false; the reply lists each step (foot, time in seconds). An idle, which never lifts a foot, gets none and says so. Refusals: SEQUENCE_NOT_FOUND, SOUND_NOT_FOUND, BONE_NOT_FOUND (a foot the skeleton lacks, or no bone named like a foot), EMPTY_ANIMATION.\nadd_aim_offset_sample: Add animationPath to an Aim Offset (or a Blend Space) as the pose at yaw and pitch, widening its axes when the sample lies outside them. One undo step, saved unless save is false; the reply gives the new sample's index. An Aim Offset takes mesh-space additive clips (edit=set_additive_settings additiveAnimType MeshSpaceAdditive). Refusals: AIMOFFSET_NOT_FOUND, ANIMATION_NOT_FOUND, SAMPLE_REJECTED (a sample already there, or a clip whose skeleton or additive type does not fit)."
             }
           },
           "required": [
@@ -3793,19 +3792,6 @@
             "boneName": [
               "add_bone_track",
               "set_bone_key"
-            ],
-            "save": [
-              "add_bone_track",
-              "set_bone_key",
-              "set_curve_key",
-              "add_notify",
-              "add_notify_state",
-              "add_sync_marker",
-              "set_additive_settings",
-              "set_root_motion_settings",
-              "set_sequence_length",
-              "set_play_rate",
-              "add_footsteps"
             ],
             "frame": [
               "set_bone_key",
@@ -3960,8 +3946,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "8bc48c65753550afc387a5e033e10c824badd7ffa4c506d7f6df4993190dc5de",
-        "content": "9c640b98a65112b4991ba4f22d7198598ea2d64f9b701b4212e6598922745bf7"
+        "schema": "b311868e66e718a1a51f7667fcc7bb5b3da51508081be6851a071a6a4edd2eae",
+        "content": "a2024c245a21d3433d9fd123aacedd4f2855998a47f31f7e29603c9ad149724c"
       }
     },
     {
@@ -4654,7 +4640,7 @@
           "link sections",
           "blend in time"
         ],
-        "summary": "Edit an animation montage, chosen by edit; each change is saved unless save is false (saved). add_montage_section adds a section at startTime (a name already there is SECTION_EXISTS) and set_section_timing moves one; link_sections makes fromSection play into toSection (SECTION_NOT_FOUND lists the sections); add_montage_slot adds an animation of a skeleton the montage takes as a segment of a slot, refused where it would overlap one already there, and grows the montage to fit; add_montage_notify adds a notify of notifyClass, or a named notify event, at a time within the montage; set_blend_in and set_blend_out set blendTime and blendOption, refusing a call with neither.",
+        "summary": "Edit an animation montage, chosen by edit; each change is saved unless save is false (saved). add_montage_section adds a section at startTime (a name already there is SECTION_EXISTS) and set_section_timing moves one; link_sections makes fromSection play into toSection (SECTION_NOT_FOUND lists the sections); add_montage_slot adds an animation of a skeleton the montage takes as a segment of a slot, refused where it would overlap one already there, and grows the montage to fit; add_montage_notify adds a notify of notifyClass, or a named notify event, at a time within the montage; set_blend_in and set_blend_out set blendTime and blendOption, refusing a call with neither. Each edit is one undo step.",
         "whenToUse": [
           "edit=add_montage_notify: Timed event needed in montage.",
           "edit=add_montage_section: Montage needs a section.",
@@ -4785,7 +4771,7 @@
       },
       "examples": [
         {
-          "title": "Edit an animation montage, chosen by edit; each change is saved unless save is false (saved). add_montage_section adds a section at startTime (a name already there is SECTION_EXISTS) and set_section_timing moves one; link_sections makes fromSection play into toSection (SECTION_NOT_FOUND lists the sections); add_montage_slot adds an animation of a skeleton the montage takes as a segment of a slot, refused where it would overlap one already there, and grows the montage to fit; add_montage_notify adds a notify of notifyClass, or a named notify event, at a time within the montage; set_blend_in and set_blend_out set blendTime and blendOption, refusing a call with neither.",
+          "title": "Edit an animation montage, chosen by edit; each change is saved unless save is false (saved). add_montage_section adds a section at startTime (a name already there is SECTION_EXISTS) and set_section_timing moves one; link_sections makes fromSection play into toSection (SECTION_NOT_FOUND lists the sections); add_montage_slot adds an animation of a skeleton the montage takes as a segment of a slot, refused where it would overlap one already there, and grows the montage to fit; add_montage_notify adds a notify of notifyClass, or a named notify event, at a time within the montage; set_blend_in and set_blend_out set blendTime and blendOption, refusing a call with neither. Each edit is one undo step.",
           "input": {
             "action": "edit_montage",
             "assetPath": "/Game/MT_Slash",
@@ -4913,7 +4899,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "f1e81ad401da98032d31d49ade328b69e0f42d82a977f96fe68ece6e1ba1307c",
-        "content": "2eeb2b05bd2d642fd050f71c291def9f0f502c7dc1297e7fde5373176271ec0e"
+        "content": "8c33194ea1ba97fd0bf415bc5b2c30e83b253a76217d3397410b9c6935488137"
       }
     },
     {

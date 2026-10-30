@@ -2,6 +2,7 @@
 
 #include "Core/Compatibility/McpVersionCompatibility.h"  // MUST be first
 #include "Foundation/HandlerUtils/McpHandlerUtils.h"
+#include "Foundation/McpScopedEditorTransaction.h"
 
 #include "Dom/JsonObject.h"
 #include "Foundation/BridgeHelpers/McpHelpers.h"
@@ -204,6 +205,20 @@ inline void SaveAnimAssetAndReport(UObject* Asset, bool bSave, const TSharedPtr<
     const bool bSaved = SaveAnimAsset(Asset, bSave) && bSave;
     Response->SetBoolField(TEXT("saved"), bSaved);
 }
+// One undo step for an edit of one animation asset: opened (and the asset Modify'd) before the change, its undo block
+// written into the reply as the scope closes. Refuse before opening one; save after it closes. Notifies, sync markers,
+// montage sections and blends were changed with no transaction: Ctrl+Z did nothing and the reply said NOTHING_CHANGED.
+struct FMcpAnimEdit
+{
+    FMcpScopedEditorTransaction Transaction;
+    TSharedPtr<FJsonObject> Response;
+    FMcpAnimEdit(const TCHAR* Title, UObject* Asset, const TSharedPtr<FJsonObject>& InResponse)
+        : Transaction(FText::FromString(Title), EMcpMutationDurability::EditorStateOnly, TArray<UObject*>{Asset}), Response(InResponse)
+    {
+        Asset->Modify();
+    }
+    ~FMcpAnimEdit() { Transaction.DescribeInto(Response); }
+};
 // Axis Index (0 horizontal, 1 vertical) of a blend space; BlendParameters is protected, so through reflection.
 inline bool McpSetBlendSpaceAxis(UBlendSpace* BlendSpace, int32 Index, const FString& Name, float Min, float Max)
 {

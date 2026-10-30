@@ -137,28 +137,23 @@ TSharedPtr<FJsonObject> HandleSequenceEventActions(const FString& SubAction, con
             Frame = FMath::RoundToInt(TriggerTime * FrameRate);
         }
 
-        FAnimNotifyEvent& NotifyEvent = AnimAsset->Notifies.AddDefaulted_GetRef();
-        // Link the event to the asset: SetTime alone leaves LinkedSequence null and
-        // GetTime() reads back 0 (every notify landed at 0.00s, dogfood #81).
-        NotifyEvent.Link(AnimAsset, TriggerTime);
-        NotifyEvent.TrackIndex = TrackIndex;
-        NotifyEvent.NotifyName = FName(*NotifyName);
-
-        if (ResolvedNotifyClass)
+        // The notify object first, so a refusal leaves the asset as it was.
+        UAnimNotify* NewNotify = ResolvedNotifyClass ? NewObject<UAnimNotify>(AnimAsset, ResolvedNotifyClass, NAME_None, RF_Transactional) : nullptr;
+        if (ResolvedNotifyClass && !NewNotify)
         {
-            UAnimNotify* NewNotify = NewObject<UAnimNotify>(AnimAsset, ResolvedNotifyClass);
-            if (!NewNotify)
-            {
-                AnimAsset->Notifies.Pop();
-                ANIM_ERROR_RESPONSE(
-                    FString::Printf(TEXT("Failed to create AnimNotify instance of class '%s'"), *NotifyClass),
-                    TEXT("INSTANTIATION_FAILED")
-                );
-            }
-            NotifyEvent.Notify = NewNotify;
+            ANIM_ERROR_RESPONSE(FString::Printf(TEXT("Failed to create AnimNotify instance of class '%s'"), *NotifyClass), TEXT("INSTANTIATION_FAILED"));
         }
-
-        AnimAsset->RefreshCacheData();
+        {
+            const FMcpAnimEdit Edit(TEXT("Add Notify"), AnimAsset, Response);
+            FAnimNotifyEvent& NotifyEvent = AnimAsset->Notifies.AddDefaulted_GetRef();
+            // Link the event to the asset: SetTime alone leaves LinkedSequence null and
+            // GetTime() reads back 0 (every notify landed at 0.00s, dogfood #81).
+            NotifyEvent.Link(AnimAsset, TriggerTime);
+            NotifyEvent.TrackIndex = TrackIndex;
+            NotifyEvent.NotifyName = FName(*NotifyName);
+            NotifyEvent.Notify = NewNotify;
+            AnimAsset->RefreshCacheData();
+        }
         SaveAnimAsset(AnimAsset, bSave);
 
         ANIM_SUCCESS_RESPONSE(FString::Printf(TEXT("Notify '%s' added at %.3fs"), *NotifyName, TriggerTime));

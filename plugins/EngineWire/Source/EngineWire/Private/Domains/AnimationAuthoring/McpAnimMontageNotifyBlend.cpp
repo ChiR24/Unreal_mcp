@@ -118,39 +118,28 @@ if (SubAction == TEXT("add_montage_notify"))
             Montage->GetPlayLength()), TEXT("INVALID_ARGUMENT"));
     }
 
+    // The notify object first, so a refusal leaves the montage as it was.
+    UAnimNotify* NewNotify = ResolvedNotifyClass ? NewObject<UAnimNotify>(Montage, ResolvedNotifyClass, NAME_None, RF_Transactional) : nullptr;
+    if (ResolvedNotifyClass && !NewNotify)
     {
+        ANIM_ERROR_RESPONSE(FString::Printf(TEXT("Failed to create AnimNotify instance of class '%s'"), *NotifyClass), TEXT("INSTANTIATION_FAILED"));
+    }
+    {
+        const FMcpAnimEdit Edit(TEXT("Add Montage Notify"), Montage, Response);
         while (!Montage->AnimNotifyTracks.IsValidIndex(TrackIndex))
         {
-            Montage->AnimNotifyTracks.Add(
-                FAnimNotifyTrack(*FString::FromInt(Montage->AnimNotifyTracks.Num() + 1), FLinearColor::White)
-            );
+            Montage->AnimNotifyTracks.Add(FAnimNotifyTrack(*FString::FromInt(Montage->AnimNotifyTracks.Num() + 1), FLinearColor::White));
         }
-    }
-
-    FAnimNotifyEvent& NotifyEvent = Montage->Notifies.AddDefaulted_GetRef();
-    NotifyEvent.Link(Montage, Time);
-    NotifyEvent.TrackIndex = TrackIndex;
-
-    if (!NotifyName.IsEmpty())
-    {
-        NotifyEvent.NotifyName = FName(*NotifyName);
-    }
-
-    if (ResolvedNotifyClass)
-    {
-        UAnimNotify* NewNotify = NewObject<UAnimNotify>(Montage, ResolvedNotifyClass);
-        if (!NewNotify)
+        FAnimNotifyEvent& NotifyEvent = Montage->Notifies.AddDefaulted_GetRef();
+        NotifyEvent.Link(Montage, Time);
+        NotifyEvent.TrackIndex = TrackIndex;
+        if (!NotifyName.IsEmpty())
         {
-            Montage->Notifies.Pop();
-            ANIM_ERROR_RESPONSE(
-                FString::Printf(TEXT("Failed to create AnimNotify instance of class '%s'"), *NotifyClass),
-                TEXT("INSTANTIATION_FAILED")
-            );
+            NotifyEvent.NotifyName = FName(*NotifyName);
         }
         NotifyEvent.Notify = NewNotify;
-    }
-
         Montage->RefreshCacheData();
+    }
         SaveAnimAssetAndReport(Montage, bSave, Response);
 
         ANIM_SUCCESS_RESPONSE(TEXT("Montage notify added"));
@@ -169,10 +158,16 @@ if (SubAction == TEXT("add_montage_notify"))
             ANIM_ERROR_RESPONSE(FString::Printf(TEXT("Could not load montage: %s"), *AssetPath), TEXT("MONTAGE_NOT_FOUND"));
         }
 
+        // Worked out on a copy, so a refusal leaves the montage as it was.
+        FAlphaBlend Blend = Montage->BlendIn;
         FString BlendError;
-        if (!ApplyMcpMontageBlend(Montage->BlendIn, Params, BlendError))
+        if (!ApplyMcpMontageBlend(Blend, Params, BlendError))
         {
             ANIM_ERROR_RESPONSE(BlendError, TEXT("INVALID_ARGUMENT"));
+        }
+        {
+            const FMcpAnimEdit Edit(TEXT("Set Blend In"), Montage, Response);
+            Montage->BlendIn = Blend;
         }
 
         SaveAnimAssetAndReport(Montage, bSave, Response);
@@ -193,10 +188,15 @@ if (SubAction == TEXT("add_montage_notify"))
             ANIM_ERROR_RESPONSE(FString::Printf(TEXT("Could not load montage: %s"), *AssetPath), TEXT("MONTAGE_NOT_FOUND"));
         }
 
+        FAlphaBlend Blend = Montage->BlendOut;
         FString BlendError;
-        if (!ApplyMcpMontageBlend(Montage->BlendOut, Params, BlendError))
+        if (!ApplyMcpMontageBlend(Blend, Params, BlendError))
         {
             ANIM_ERROR_RESPONSE(BlendError, TEXT("INVALID_ARGUMENT"));
+        }
+        {
+            const FMcpAnimEdit Edit(TEXT("Set Blend Out"), Montage, Response);
+            Montage->BlendOut = Blend;
         }
 
         SaveAnimAssetAndReport(Montage, bSave, Response);
@@ -231,8 +231,10 @@ if (SubAction == TEXT("add_montage_notify"))
             ANIM_ERROR_RESPONSE(FString::Printf(TEXT("Section '%s' is not in this montage (sections: %s); nothing was linked."),
                 *(FromSectionIndex == INDEX_NONE ? FromSection : ToSection), *McpMontageSectionNames(Montage)), TEXT("SECTION_NOT_FOUND"));
         }
-        Montage->CompositeSections[FromSectionIndex].NextSectionName = FName(*ToSection);
-
+        {
+            const FMcpAnimEdit Edit(TEXT("Link Sections"), Montage, Response);
+            Montage->CompositeSections[FromSectionIndex].NextSectionName = FName(*ToSection);
+        }
         SaveAnimAssetAndReport(Montage, bSave, Response);
 
         ANIM_SUCCESS_RESPONSE(FString::Printf(TEXT("Linked '%s' to '%s'"), *FromSection, *ToSection));

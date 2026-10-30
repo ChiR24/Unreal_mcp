@@ -119,13 +119,16 @@ TSharedPtr<FJsonObject> HandleMontageAssetActions(const FString& SubAction, cons
             ANIM_ERROR_RESPONSE(FString::Printf(TEXT("startTime must lie in 0..%.3f s (the montage's length); nothing was added."),
                 Montage->GetPlayLength()), TEXT("INVALID_ARGUMENT"));
         }
-        const int32 SectionIndex = Montage->AddAnimCompositeSection(FName(*SectionName), StartTime);
-        if (SectionIndex == INDEX_NONE)
+        if (Montage->GetSectionIndex(FName(*SectionName)) != INDEX_NONE)
         {
             ANIM_ERROR_RESPONSE(FString::Printf(TEXT("Section '%s' already exists (sections: %s); pick another name. Nothing was added."),
                 *SectionName, *McpMontageSectionNames(Montage)), TEXT("SECTION_EXISTS"));
         }
-
+        int32 SectionIndex = INDEX_NONE;
+        {
+            const FMcpAnimEdit Edit(TEXT("Add Montage Section"), Montage, Response);
+            SectionIndex = Montage->AddAnimCompositeSection(FName(*SectionName), StartTime);
+        }
         SaveAnimAssetAndReport(Montage, bSave, Response);
 
         ANIM_SUCCESS_RESPONSE(FString::Printf(TEXT("Section '%s' added at index %d"), *SectionName, SectionIndex));
@@ -194,27 +197,28 @@ TSharedPtr<FJsonObject> HandleMontageAssetActions(const FString& SubAction, cons
                 *SlotName, SlotEnd, SlotEnd), TEXT("SEGMENT_OVERLAP"));
         }
 
-        if (!SlotTrack)
         {
-            SlotTrack = &Montage->SlotAnimTracks.AddDefaulted_GetRef();
-            SlotTrack->SlotName = FName(*SlotName);
-        }
-
-        // Add animation to slot track
-        FAnimSegment& Segment = SlotTrack->AnimTrack.AnimSegments.AddDefaulted_GetRef();
+            const FMcpAnimEdit Edit(TEXT("Add Montage Slot"), Montage, Response);
+            if (!SlotTrack)
+            {
+                SlotTrack = &Montage->SlotAnimTracks.AddDefaulted_GetRef();
+                SlotTrack->SlotName = FName(*SlotName);
+            }
+            FAnimSegment& Segment = SlotTrack->AnimTrack.AnimSegments.AddDefaulted_GetRef();
 #if ENGINE_MINOR_VERSION >= 1
-        Segment.SetAnimReference(Animation);
+            Segment.SetAnimReference(Animation);
 #else
-        // UE 5.0: Direct member access
-        Segment.AnimReference = Animation;
+            // UE 5.0: Direct member access
+            Segment.AnimReference = Animation;
 #endif
-        Segment.StartPos = StartTime;
-        Segment.AnimStartTime = 0.0f;
-        Segment.AnimEndTime = Animation->GetPlayLength();
-        Segment.AnimPlayRate = 1.0f;
-        Segment.LoopingCount = 1;
-        // The montage plays for its stored length: a segment past it was cut off.
-        Montage->SetCompositeLength(Montage->CalculateSequenceLength());
+            Segment.StartPos = StartTime;
+            Segment.AnimStartTime = 0.0f;
+            Segment.AnimEndTime = Animation->GetPlayLength();
+            Segment.AnimPlayRate = 1.0f;
+            Segment.LoopingCount = 1;
+            // The montage plays for its stored length: a segment past it was cut off.
+            Montage->SetCompositeLength(Montage->CalculateSequenceLength());
+        }
         Response->SetNumberField(TEXT("montageLength"), Montage->GetPlayLength());
 
         SaveAnimAssetAndReport(Montage, bSave, Response);
@@ -258,8 +262,10 @@ TSharedPtr<FJsonObject> HandleMontageAssetActions(const FString& SubAction, cons
             ANIM_ERROR_RESPONSE(FString::Printf(TEXT("startTime must lie in 0..%.3f s (the montage's length); nothing was moved."),
                 Montage->GetPlayLength()), TEXT("INVALID_ARGUMENT"));
         }
-        Montage->CompositeSections[SectionIndex].SetTime(StartTime);
-
+        {
+            const FMcpAnimEdit Edit(TEXT("Set Section Timing"), Montage, Response);
+            Montage->CompositeSections[SectionIndex].SetTime(StartTime);
+        }
         SaveAnimAssetAndReport(Montage, bSave, Response);
 
         ANIM_SUCCESS_RESPONSE(TEXT("Section timing updated"));

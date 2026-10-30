@@ -24,19 +24,24 @@ TSharedPtr<FJsonObject> HandleSequenceSettingsActions(const FString& SubAction, 
             ANIM_ERROR_RESPONSE(FString::Printf(TEXT("Could not load animation sequence: %s"), *AssetPath), TEXT("SEQUENCE_NOT_FOUND"));
         }
 
-        // Calculate time from frame
-        float FrameRate = 30.0f;
-        FrameRate = Sequence->GetSamplingFrameRate().AsDecimal();
-        float Time = static_cast<float>(Frame) / FrameRate;
-
-        // Add sync marker
-        FAnimSyncMarker NewMarker;
-        NewMarker.MarkerName = FName(*MarkerName);
-        NewMarker.Time = Time;
-
-        Sequence->AuthoredSyncMarkers.Add(NewMarker);
-        Sequence->RefreshSyncMarkerDataFromAuthored();
-
+        // A sequence with no sampled frames reports a 0 rate (the time was divided by zero), and a marker past the end
+        // never syncs.
+        const double Rate = Sequence->GetSamplingFrameRate().AsDecimal();
+        const double FrameRate = Rate > KINDA_SMALL_NUMBER ? Rate : 30.0;
+        const float Time = static_cast<float>(Frame / FrameRate);
+        if (Frame < 0 || Time > Sequence->GetPlayLength() + KINDA_SMALL_NUMBER)
+        {
+            ANIM_ERROR_RESPONSE(FString::Printf(TEXT("frame must lie in 0..%d (the sequence's last frame); nothing was added."),
+                FMath::RoundToInt(Sequence->GetPlayLength() * FrameRate)), TEXT("INVALID_ARGUMENT"));
+        }
+        {
+            const FMcpAnimEdit Edit(TEXT("Add Sync Marker"), Sequence, Response);
+            FAnimSyncMarker NewMarker;
+            NewMarker.MarkerName = FName(*MarkerName);
+            NewMarker.Time = Time;
+            Sequence->AuthoredSyncMarkers.Add(NewMarker);
+            Sequence->RefreshSyncMarkerDataFromAuthored();
+        }
         SaveAnimAsset(Sequence, bSave);
 
         ANIM_SUCCESS_RESPONSE(FString::Printf(TEXT("Sync marker '%s' added"), *MarkerName));
@@ -58,23 +63,13 @@ TSharedPtr<FJsonObject> HandleSequenceSettingsActions(const FString& SubAction, 
             ANIM_ERROR_RESPONSE(FString::Printf(TEXT("Could not load animation sequence: %s"), *AssetPath), TEXT("SEQUENCE_NOT_FOUND"));
         }
 
-        Sequence->bEnableRootMotion = bEnableRootMotion;
-        Sequence->bForceRootLock = bForceRootLock;
-
-        // Set root motion lock type
-        if (RootMotionRootLock == TEXT("AnimFirstFrame"))
         {
-            Sequence->RootMotionRootLock = ERootMotionRootLock::AnimFirstFrame;
+            const FMcpAnimEdit Edit(TEXT("Set Root Motion Settings"), Sequence, Response);
+            Sequence->bEnableRootMotion = bEnableRootMotion;
+            Sequence->bForceRootLock = bForceRootLock;
+            Sequence->RootMotionRootLock = RootMotionRootLock == TEXT("AnimFirstFrame") ? ERootMotionRootLock::AnimFirstFrame
+                : RootMotionRootLock == TEXT("Zero") ? ERootMotionRootLock::Zero : ERootMotionRootLock::RefPose;
         }
-        else if (RootMotionRootLock == TEXT("Zero"))
-        {
-            Sequence->RootMotionRootLock = ERootMotionRootLock::Zero;
-        }
-        else
-        {
-            Sequence->RootMotionRootLock = ERootMotionRootLock::RefPose;
-        }
-
         SaveAnimAsset(Sequence, bSave);
 
         ANIM_SUCCESS_RESPONSE(TEXT("Root motion settings updated"));
@@ -118,22 +113,23 @@ TSharedPtr<FJsonObject> HandleSequenceSettingsActions(const FString& SubAction, 
         {
             ANIM_ERROR_RESPONSE(TEXT("additiveAnimType must be NoAdditive, LocalSpaceAdditive or MeshSpaceAdditive, and basePoseType RefPose, AnimScaled or AnimFrame"), TEXT("INVALID_ARGUMENT"));
         }
-        Sequence->Modify();
-        Sequence->AdditiveAnimType = bLocal ? AAT_LocalSpaceBase : (bMesh ? AAT_RotationOffsetMeshSpace : AAT_None);
-        Sequence->RefPoseType = bFrame ? ABPT_AnimFrame : (bScaled ? ABPT_AnimScaled : ABPT_RefPose);
-        if (bFrame)
         {
-            Sequence->RefFrameIndex = BasePoseFrame;
+            const FMcpAnimEdit Edit(TEXT("Set Additive Settings"), Sequence, Response);
+            Sequence->AdditiveAnimType = bLocal ? AAT_LocalSpaceBase : (bMesh ? AAT_RotationOffsetMeshSpace : AAT_None);
+            Sequence->RefPoseType = bFrame ? ABPT_AnimFrame : (bScaled ? ABPT_AnimScaled : ABPT_RefPose);
+            if (bFrame)
+            {
+                Sequence->RefFrameIndex = BasePoseFrame;
+            }
+            if (BaseAnim)
+            {
+                Sequence->RefPoseSeq = BaseAnim;
+            }
+            // Only the change event for these properties rebuilds the compressed data as deltas; without it the clip
+            // played its absolute pose on top of the base until the editor restarted.
+            FPropertyChangedEvent AdditiveChanged(FindFProperty<FProperty>(UAnimSequence::StaticClass(), GET_MEMBER_NAME_CHECKED(UAnimSequence, AdditiveAnimType)));
+            Sequence->PostEditChangeProperty(AdditiveChanged);
         }
-        if (BaseAnim)
-        {
-            Sequence->RefPoseSeq = BaseAnim;
-        }
-        // Only the change event for these properties rebuilds the compressed data as deltas; without it the clip
-        // played its absolute pose on top of the base until the editor restarted.
-        FPropertyChangedEvent AdditiveChanged(FindFProperty<FProperty>(UAnimSequence::StaticClass(), GET_MEMBER_NAME_CHECKED(UAnimSequence, AdditiveAnimType)));
-        Sequence->PostEditChangeProperty(AdditiveChanged);
-
         SaveAnimAsset(Sequence, bSave);
 
         ANIM_SUCCESS_RESPONSE(TEXT("Additive settings updated"));
