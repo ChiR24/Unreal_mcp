@@ -1,5 +1,5 @@
 {
-  "catalogRevision": "c022540df064dcf1",
+  "catalogRevision": "c53e2bb83c782a2b",
   "recordCount": 483,
   "records": [
     {
@@ -3363,6 +3363,7 @@
         "animation_physics.set_root_motion_settings",
         "animation_physics.set_sequence_length",
         "animation_physics.set_play_rate",
+        "animation_physics.add_footsteps",
         "animation_physics.add_aim_offset_sample"
       ],
       "legacyIds": [
@@ -3442,6 +3443,13 @@
         },
         {
           "tool": "animation_physics",
+          "action": "add_footsteps",
+          "folded": {
+            "edit": "add_footsteps"
+          }
+        },
+        {
+          "tool": "animation_physics",
           "action": "add_aim_offset_sample",
           "folded": {
             "edit": "add_aim_offset_sample"
@@ -3460,9 +3468,11 @@
           "sequence length",
           "edit animation sequence",
           "make an animation play faster or slower",
-          "slow down or speed up an animation"
+          "slow down or speed up an animation",
+          "add footsteps to an animation",
+          "footstep sounds"
         ],
-        "summary": "Edit an animation sequence: bone tracks and keys, curve keys, notifies, sync markers, additive and root-motion settings, length, play rate, aim-offset samples.",
+        "summary": "Edit an animation sequence: bone tracks and keys, curve keys, notifies, footstep sounds, sync markers, additive and root-motion settings, length, play rate, aim-offset samples.",
         "whenToUse": [
           "edit=add_bone_track: A bone must be animated.",
           "edit=set_bone_key: Keyframe a bone pose.",
@@ -3475,6 +3485,7 @@
           "edit=set_root_motion_settings: Root motion locomotion needed.",
           "edit=set_sequence_length: Clip duration must change.",
           "edit=set_play_rate: A walk, a run or an idle plays too fast or too slow everywhere it is used.",
+          "edit=add_footsteps: A character should make a sound with each step of a walk or a run.",
           "edit=add_aim_offset_sample: Aim sample must be added."
         ],
         "whenNotToUse": [
@@ -3635,6 +3646,24 @@
               "maximum": 10,
               "description": "How fast the clip plays: 2 twice as fast, 0.5 half as fast, -1 backwards; 0 is refused (it would freeze on the first frame)."
             },
+            "soundPath": {
+              "type": "string",
+              "description": "The sound each step plays: a Sound Wave, Sound Cue or MetaSound."
+            },
+            "feet": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "maxItems": 8,
+              "description": "The foot bones (default every bone whose name holds \"foot\" and not \"ik\")."
+            },
+            "contactHeight": {
+              "type": "number",
+              "minimum": 0.1,
+              "maximum": 50,
+              "description": "How near its lowest point a foot counts as set down, in cm (default 5)."
+            },
             "yaw": {
               "type": "number",
               "description": "Aim offset yaw in degrees."
@@ -3656,9 +3685,10 @@
                 "set_root_motion_settings",
                 "set_sequence_length",
                 "set_play_rate",
+                "add_footsteps",
                 "add_aim_offset_sample"
               ],
-              "description": "Which edit animation variant to run.\nadd_bone_track: Add an empty transform track for boneName to an animation sequence (assetPath, or animationPath), to key with edit=set_bone_key. A bone its skeleton lacks is BONE_NOT_FOUND_IN_SKELETON, listing bones. A track the sequence already has is left as it is and answered with alreadyExists true and nothing saved; otherwise the sequence is saved unless save is false (saved).\nset_bone_key: Set a bone transform key at a frame; a location, rotation or scale left out keeps the value the bone has there (the key of its track, or the reference pose for a bone with no track yet). Frame 0 is the first key and the sequence's frame count its last (a 1 s clip at 30 fps keys frames 0 to 30); past either end is FRAME_OUT_OF_RANGE.\nset_curve_key: Set a key of the float curve curveName in an animation sequence at frame (default 0) to value: a curve the sequence lacks is added (curveCreated) unless createIfMissing is false, which refuses it (CURVE_NOT_FOUND), and a key the engine does not take is CURVE_KEY_FAILED. The reply reads the curve back at that frame (value) and says whether it saved (saved, unless save is false). Curves drive morph targets and material parameters, and AnimBlueprints read them by name.\nadd_notify: Add a frame notify to a sequence (authoring).\nadd_notify_state: Add a notify state spanning a frame range.\nadd_sync_marker: Add a sync marker to a sequence.\nset_additive_settings: Configure additive animation settings.\nset_root_motion_settings: Configure root motion on an animation sequence: whether the motion of the root bone moves the character (enableRootMotion), which pose the root is locked to while that motion is taken out (rootMotionRootLock), and whether the root is locked even without root motion (forceRootLock). Saved unless save is false; SEQUENCE_NOT_FOUND when no sequence loads.\nset_sequence_length: Set the length of an Animation Sequence.\nset_play_rate: Make an animation sequence play faster or slower wherever it plays (its Rate Scale): rateScale 2 plays it twice as fast, 0.5 half as fast, -1 backwards (not 0, at most 10 either way). One undo step, saved unless save is false; the reply gives the rate before and after and how long one loop now lasts. SEQUENCE_NOT_FOUND when no sequence loads.\nadd_aim_offset_sample: Add a sample pose to an Aim Offset."
+              "description": "Which edit animation variant to run.\nadd_bone_track: Add an empty transform track for boneName to an animation sequence (assetPath, or animationPath), to key with edit=set_bone_key. A bone its skeleton lacks is BONE_NOT_FOUND_IN_SKELETON, listing bones. A track the sequence already has is left as it is and answered with alreadyExists true and nothing saved; otherwise the sequence is saved unless save is false (saved).\nset_bone_key: Set a bone transform key at a frame; a location, rotation or scale left out keeps the value the bone has there (the key of its track, or the reference pose for a bone with no track yet). Frame 0 is the first key and the sequence's frame count its last (a 1 s clip at 30 fps keys frames 0 to 30); past either end is FRAME_OUT_OF_RANGE.\nset_curve_key: Set a key of the float curve curveName in an animation sequence at frame (default 0) to value: a curve the sequence lacks is added (curveCreated) unless createIfMissing is false, which refuses it (CURVE_NOT_FOUND), and a key the engine does not take is CURVE_KEY_FAILED. The reply reads the curve back at that frame (value) and says whether it saved (saved, unless save is false). Curves drive morph targets and material parameters, and AnimBlueprints read them by name.\nadd_notify: Add a frame notify to a sequence (authoring).\nadd_notify_state: Add a notify state spanning a frame range.\nadd_sync_marker: Add a sync marker to a sequence.\nset_additive_settings: Configure additive animation settings.\nset_root_motion_settings: Configure root motion on an animation sequence: whether the motion of the root bone moves the character (enableRootMotion), which pose the root is locked to while that motion is taken out (rootMotionRootLock), and whether the root is locked even without root motion (forceRootLock). Saved unless save is false; SEQUENCE_NOT_FOUND when no sequence loads.\nset_sequence_length: Set the length of an Animation Sequence.\nset_play_rate: Make an animation sequence play faster or slower wherever it plays (its Rate Scale): rateScale 2 plays it twice as fast, 0.5 half as fast, -1 backwards (not 0, at most 10 either way). One undo step, saved unless save is false; the reply gives the rate before and after and how long one loop now lasts. SEQUENCE_NOT_FOUND when no sequence loads.\nadd_footsteps: Give a walk or run cycle footstep sounds: a Play Sound notify of soundPath wherever a foot is set down, found from the clip's own frames (a foot is down within contactHeight, default 5 cm, of its lowest point; one already down when the loop wraps round counts once). feet names the foot bones (default every bone named like a foot that is no IK bone). A run again replaces the footsteps an earlier run added. One undo step, saved unless save is false; the reply lists each step (foot, time in seconds). An idle, which never lifts a foot, gets none and says so. Refusals: SEQUENCE_NOT_FOUND, SOUND_NOT_FOUND, BONE_NOT_FOUND (a foot the skeleton lacks, or no bone named like a foot), EMPTY_ANIMATION.\nadd_aim_offset_sample: Add a sample pose to an Aim Offset."
             }
           },
           "required": [
@@ -3692,7 +3722,7 @@
       },
       "examples": [
         {
-          "title": "Edit an animation sequence: bone tracks and keys, curve keys, notifies, sync markers, additive and root-motion settings, length, play rate, aim-offset samples.",
+          "title": "Edit an animation sequence: bone tracks and keys, curve keys, notifies, footstep sounds, sync markers, additive and root-motion settings, length, play rate, aim-offset samples.",
           "input": {
             "action": "edit_animation",
             "assetPath": "/Game/A_Run",
@@ -3744,6 +3774,7 @@
             "set_root_motion_settings": "set_root_motion_settings",
             "set_sequence_length": "set_sequence_length",
             "set_play_rate": "set_play_rate",
+            "add_footsteps": "add_footsteps",
             "add_aim_offset_sample": "add_aim_offset_sample"
           },
           "declaredBy": {
@@ -3773,7 +3804,8 @@
               "set_additive_settings",
               "set_root_motion_settings",
               "set_sequence_length",
-              "set_play_rate"
+              "set_play_rate",
+              "add_footsteps"
             ],
             "frame": [
               "set_bone_key",
@@ -3856,6 +3888,15 @@
             "rateScale": [
               "set_play_rate"
             ],
+            "soundPath": [
+              "add_footsteps"
+            ],
+            "feet": [
+              "add_footsteps"
+            ],
+            "contactHeight": [
+              "add_footsteps"
+            ],
             "yaw": [
               "add_aim_offset_sample"
             ],
@@ -3903,6 +3944,12 @@
                 "rateScale"
               ]
             },
+            "add_footsteps": {
+              "required": [
+                "assetPath",
+                "soundPath"
+              ]
+            },
             "add_aim_offset_sample": {
               "required": [
                 "assetPath"
@@ -3913,8 +3960,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "91b3c667dc2b8e1ef7ff406f91bd2798efce78307ee29f2c2014d2930e3907d7",
-        "content": "f0529a7ee21235f5ffb998456cad042920b72761b9dbf23e3b5b77e6f6acd677"
+        "schema": "8bc48c65753550afc387a5e033e10c824badd7ffa4c506d7f6df4993190dc5de",
+        "content": "9c640b98a65112b4991ba4f22d7198598ea2d64f9b701b4212e6598922745bf7"
       }
     },
     {

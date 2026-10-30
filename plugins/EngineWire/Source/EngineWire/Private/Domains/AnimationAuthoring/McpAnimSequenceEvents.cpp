@@ -173,6 +173,11 @@ TSharedPtr<FJsonObject> HandleSequenceEventActions(const FString& SubAction, con
         return Response;
     }
 
+    if (SubAction == TEXT("add_footsteps"))
+    {
+        return HandleAddFootsteps(Params, Response);
+    }
+
     if (SubAction == TEXT("add_notify_state"))
     {
         // Lives in McpAnimSequenceNotifyStates.cpp

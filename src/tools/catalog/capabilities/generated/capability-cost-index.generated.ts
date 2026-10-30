@@ -18,6 +18,7 @@ export const CAPABILITY_COST_INDEX: Readonly<Record<string, string>> = {
   "animation_physics::add_bone": "interactive|low",
   "animation_physics::add_bone_track": "interactive|low",
   "animation_physics::add_cached_pose": "interactive|low",
+  "animation_physics::add_footsteps": "interactive|low",
   "animation_physics::add_layered_blend_per_bone": "interactive|low",
   "animation_physics::add_montage_notify": "interactive|low",
   "animation_physics::add_montage_section": "interactive|low",
@@ -1685,4 +1686,4 @@ export const CAPABILITY_COST_INDEX: Readonly<Record<string, string>> = {
   "system_control::write_snapshot": "interactive|medium"
 };
 
-export const CAPABILITY_COST_INDEX_KEY_COUNT = 1672;
+export const CAPABILITY_COST_INDEX_KEY_COUNT = 1673;

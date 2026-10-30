@@ -275,8 +275,19 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "description": "Name of the created physics constraint."
         },
         "contactHeight": {
-          "type": "number",
-          "description": "cm above a foot's lowest point that still counts as planted (default 5)."
+          "oneOf": [
+            {
+              "type": "number",
+              "description": "cm above a foot's lowest point that still counts as planted (default 5)."
+            },
+            {
+              "type": "number",
+              "minimum": 0.1,
+              "maximum": 50,
+              "description": "How near its lowest point a foot counts as set down, in cm (default 5)."
+            }
+          ],
+          "description": "How near its lowest point a foot counts as set down, in cm (default 5)."
         },
         "controlType": {
           "type": "string",
@@ -366,6 +377,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             "set_root_motion_settings",
             "set_sequence_length",
             "set_play_rate",
+            "add_footsteps",
             "add_aim_offset_sample",
             "add_layered_blend_per_bone",
             "set_value",
@@ -455,6 +467,14 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
                 "type": "string"
               },
               "description": "Foot bones to check (default every bone whose name holds foot but not ik, e.g. foot_l and foot_r)."
+            },
+            {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "maxItems": 8,
+              "description": "The foot bones (default every bone whose name holds \"foot\" and not \"ik\")."
             }
           ],
           "description": "Foot bones read for an in-place clip (default every bone whose name holds foot but not ik, e.g. foot_l and foot_r)."
@@ -1054,6 +1074,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           ],
           "description": "Which configure socket variant to run; omit for 'configure'.\nconfigure: Change an existing socket of a skeleton (skeletonPath; a skeletal mesh path uses its skeleton): attachBoneName moves it to another bone, and relativeLocation, relativeRotation and relativeScale replace only the parts given. A missing socket is SOCKET_NOT_FOUND, an unknown bone BONE_NOT_FOUND, and a call naming nothing to change is refused. The skeleton is saved unless save is false (saved).\nadd: Put a socket named socketName on attachBoneName of a skeleton (skeletonPath; a skeletal mesh path uses its skeleton), at relativeLocation, relativeRotation and relativeScale (default zero, zero and one). A bone the skeleton lacks is BONE_NOT_FOUND and a name already taken SOCKET_EXISTS. The skeleton is saved unless save is false (saved).\ncreate: Put a socket named socketName on attachBoneName of a skeleton (skeletonPath; a skeletal mesh path uses its skeleton), at relativeLocation, relativeRotation and relativeScale (default zero, zero and one). A bone the skeleton lacks is BONE_NOT_FOUND and a name already taken SOCKET_EXISTS. The skeleton is saved unless save is false (saved).\nmodify: Change an existing socket of a skeleton (skeletonPath; a skeletal mesh path uses its skeleton): attachBoneName moves it to another bone, and relativeLocation, relativeRotation and relativeScale replace only the parts given. A missing socket is SOCKET_NOT_FOUND, an unknown bone BONE_NOT_FOUND, and a call naming nothing to change is refused. The skeleton is saved unless save is false (saved).",
           "default": "configure"
+        },
+        "soundPath": {
+          "type": "string",
+          "description": "The sound each step plays: a Sound Wave, Sound Cue or MetaSound."
         },
         "sourceAnimationPath": {
           "type": "string",

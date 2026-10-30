@@ -14,6 +14,20 @@ namespace McpAnimLocomotion
 /** The feet to check: the bones Params names in feet, else every bone whose name holds "foot" but not "ik". */
 TArray<FName> FeetOf(const TSharedPtr<FJsonObject>& Params, const TArray<FName>& Bones);
 
+/** Where the root and each foot are over up to 120 frames spread evenly, the first and the last included. */
+struct FFeetSample
+{
+    TArray<FName> Feet;
+    TArray<TArray<FVector>> Paths; // per foot, component space
+    TArray<double> Times;          // seconds, per sample
+    FVector RootFirst = FVector::ZeroVector;
+    FVector RootLast = FVector::ZeroVector;
+    FString Error;                 // set when the clip could not be read
+    FString ErrorCode;
+};
+
+FFeetSample SampleFeet(UAnimSequence* Sequence, const TSharedPtr<FJsonObject>& Params);
+
 struct FMotion
 {
     FVector2D Velocity = FVector2D::ZeroVector; // component space, cm/s

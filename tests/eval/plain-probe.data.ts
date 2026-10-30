@@ -1106,4 +1106,9 @@ export const PLAIN_PROBE: readonly PlainProbeCase[] = [
   { query: 'make the sound quieter far away', accepted: ['manage_audio.configure_sound_attenuation'] },
   { query: 'add a floor', accepted: ['control_actor.spawn'] },
   { query: 'add a ceiling', accepted: ['control_actor.spawn'] },
+  // Footstep sounds on a walk or run cycle take edit_animation add_footsteps.
+  { query: 'add footstep sounds', accepted: ['animation_physics.edit_animation'] },
+  { query: 'footstep sounds', accepted: ['animation_physics.edit_animation'] },
+  { query: 'add footsteps', accepted: ['animation_physics.edit_animation'] },
+  { query: 'add footsteps to the run animation', accepted: ['animation_physics.edit_animation'] },
 ];

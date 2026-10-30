@@ -43,6 +43,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **`set_subtitles`** gives a Sound Wave subtitles, shown at the bottom of the game's screen while it plays.
 - **`set_sound_volume`** makes sounds louder or quieter: a Sound Wave's or MetaSound's Volume, or a Sound Cue's, set or changed by some dB.
 - **`set_sound_looping`** makes Sound Waves loop, or play once again.
+- **`edit_animation` `add_footsteps`** gives a walk or run cycle a footstep sound wherever a foot is set down.
 - **`setup_physics_simulation` `massKg`** makes a placed prop heavier or lighter, and the reply gives its mass.
 - **`edit_animation` `set_play_rate`** makes an animation sequence play faster or slower (or backwards) wherever it plays.
 - **Names models invent land**: an alias sent as a tool and action resolves (`system_control` `restart_editor` runs `control_editor`'s), with five new ones mined from session transcripts (`call_function`, `save_all` under `manage_asset`, `set_blueprint_variables` under `manage_blueprint`, `connect_nodes` for a Blueprint's `connect_pins`).

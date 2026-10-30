@@ -63,61 +63,70 @@ TArray<FName> FeetOf(const TSharedPtr<FJsonObject>& Params, const TArray<FName>&
     return Feet;
 }
 
-FMotion Measure(UAnimSequence* Sequence, const TSharedPtr<FJsonObject>& Params, double ContactHeight)
+FFeetSample SampleFeet(UAnimSequence* Sequence, const TSharedPtr<FJsonObject>& Params)
 {
-    FMotion Motion;
+    FFeetSample Sample;
     const int32 Keys = Sequence->GetNumberOfSampledKeys();
     const double Length = Sequence->GetPlayLength();
     if (!Sequence->GetSkeleton() || Keys < 2 || Length <= 0.0)
     {
-        Motion.ErrorCode = TEXT("EMPTY_ANIMATION");
-        Motion.Error = FString::Printf(TEXT("%s has no skeleton or fewer than two frames to read its motion from."), *Sequence->GetName());
-        return Motion;
+        Sample.ErrorCode = TEXT("EMPTY_ANIMATION");
+        Sample.Error = FString::Printf(TEXT("%s has no skeleton or fewer than two frames to read its motion from."), *Sequence->GetName());
+        return Sample;
     }
     const int32 Count = FMath::Min(Keys, LocomotionSamples);
     const FName Root = Sequence->GetSkeleton()->GetReferenceSkeleton().GetBoneName(0);
     FAnimPoseEvaluationOptions Options;
     Options.bExtractRootMotion = false; // the root bone keeps its travel
     FAnimPose Pose;
-    TArray<FName> Feet;
-    TArray<TArray<FVector>> Paths;
-    TArray<double> Times;
-    FVector RootFirst = FVector::ZeroVector;
-    FVector RootLast = FVector::ZeroVector;
-    for (int32 Sample = 0; Sample < Count; ++Sample)
+    for (int32 Index = 0; Index < Count; ++Index)
     {
         // Spread evenly, the first and the last frame always in.
-        const int32 Frame = FMath::RoundToInt(double(Sample) * (Keys - 1) / (Count - 1));
+        const int32 Frame = FMath::RoundToInt(double(Index) * (Keys - 1) / (Count - 1));
         UAnimPoseExtensions::GetAnimPoseAtFrame(Sequence, Frame, Options, Pose);
-        if (Sample == 0)
+        if (Index == 0)
         {
             TArray<FName> Bones;
             UAnimPoseExtensions::GetBoneNames(Pose, Bones);
-            Feet = FeetOf(Params, Bones);
-            for (const FName& Foot : Feet)
+            Sample.Feet = FeetOf(Params, Bones);
+            for (const FName& Foot : Sample.Feet)
             {
                 if (!Bones.Contains(Foot))
                 {
-                    Motion.ErrorCode = TEXT("BONE_NOT_FOUND");
-                    Motion.Error = FString::Printf(TEXT("bone '%s' is not in %s's skeleton; list_bones lists its bones."), *Foot.ToString(), *Sequence->GetName());
-                    return Motion;
+                    Sample.ErrorCode = TEXT("BONE_NOT_FOUND");
+                    Sample.Error = FString::Printf(TEXT("bone '%s' is not in %s's skeleton; list_bones lists its bones."), *Foot.ToString(), *Sequence->GetName());
+                    return Sample;
                 }
             }
-            Paths.SetNum(Feet.Num());
+            Sample.Paths.SetNum(Sample.Feet.Num());
         }
-        Times.Add(Frame * Length / (Keys - 1));
-        RootLast = UAnimPoseExtensions::GetBonePose(Pose, Root, EAnimPoseSpaces::World).GetLocation();
-        RootFirst = Sample == 0 ? RootLast : RootFirst;
-        for (int32 Foot = 0; Foot < Feet.Num(); ++Foot)
+        Sample.Times.Add(Frame * Length / (Keys - 1));
+        Sample.RootLast = UAnimPoseExtensions::GetBonePose(Pose, Root, EAnimPoseSpaces::World).GetLocation();
+        Sample.RootFirst = Index == 0 ? Sample.RootLast : Sample.RootFirst;
+        for (int32 Foot = 0; Foot < Sample.Feet.Num(); ++Foot)
         {
-            Paths[Foot].Add(UAnimPoseExtensions::GetBonePose(Pose, Feet[Foot], EAnimPoseSpaces::World).GetLocation());
+            Sample.Paths[Foot].Add(UAnimPoseExtensions::GetBonePose(Pose, Sample.Feet[Foot], EAnimPoseSpaces::World).GetLocation());
         }
+    }
+    return Sample;
+}
+
+FMotion Measure(UAnimSequence* Sequence, const TSharedPtr<FJsonObject>& Params, double ContactHeight)
+{
+    FMotion Motion;
+    const FFeetSample Sample = SampleFeet(Sequence, Params);
+    if (!Sample.ErrorCode.IsEmpty())
+    {
+        Motion.ErrorCode = Sample.ErrorCode;
+        Motion.Error = Sample.Error;
+        return Motion;
     }
     // A root that travels is the clip's motion (its feet ride on it, planted or not); a root that stays is an in-place
     // clip, whose planted feet slide backward at the ground speed.
-    const FVector2D RootVelocity((RootLast.X - RootFirst.X) / Length, (RootLast.Y - RootFirst.Y) / Length);
+    const double Length = Sequence->GetPlayLength();
+    const FVector2D RootVelocity((Sample.RootLast.X - Sample.RootFirst.X) / Length, (Sample.RootLast.Y - Sample.RootFirst.Y) / Length);
     Motion.bFromFeet = RootVelocity.Size() < LocomotionRootTravel;
-    Motion.Velocity = Motion.bFromFeet ? -LocomotionSlide(Paths, Times, ContactHeight) : RootVelocity;
+    Motion.Velocity = Motion.bFromFeet ? -LocomotionSlide(Sample.Paths, Sample.Times, ContactHeight) : RootVelocity;
     return Motion;
 }
 } // namespace McpAnimLocomotion

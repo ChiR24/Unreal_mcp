@@ -251,6 +251,8 @@ inline FString McpMontageSectionNames(const UAnimMontage* Montage)
 TSharedPtr<FJsonObject> HandleAnalyzeAnimation(const TSharedPtr<FJsonObject>& Params, TSharedPtr<FJsonObject> Response);
 // auto_blend_space (Analysis/McpAnimAutoBlendSpace.cpp): a locomotion blend space laid out from its clips' own motion.
 TSharedPtr<FJsonObject> HandleAutoBlendSpace(const TSharedPtr<FJsonObject>& Params, TSharedPtr<FJsonObject> Response);
+// add_footsteps (Analysis/McpAnimFootsteps.cpp): a Play Sound notify wherever a foot is set down in a walk or run cycle.
+TSharedPtr<FJsonObject> HandleAddFootsteps(const TSharedPtr<FJsonObject>& Params, TSharedPtr<FJsonObject> Response);
 
 UEdGraph* GetAnimGraphFromBlueprint(UAnimBlueprint* AnimBP);
 UAnimGraphNode_StateMachine* FindStateMachineNode(UEdGraph* Graph, const FString& Name);
