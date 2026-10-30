@@ -9,6 +9,7 @@
 #include "EngineWireSubsystem.h"
 #include "Transport/WebSocket/McpBridgeWebSocket.h"
 #include "Foundation/HandlerUtils/McpHandlerUtils.h"
+#include "Foundation/McpScopedEditorTransaction.h"
 #include "Misc/Paths.h"
 #include "PhysicsEngine/PhysicsAsset.h"
 #include "UObject/Package.h"
@@ -229,11 +230,12 @@ bool UEngineWireSubsystem::HandleSetPhysicsAsset(
         return true;
     }
 
-    Mesh->Modify();
-    Mesh->SetPhysicsAsset(PhysAsset);
-    Mesh->MarkPackageDirty();
-
     TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
+    {
+        // Modify with no transaction open recorded nothing: Ctrl+Z undid the edit before this one.
+        const FMcpAssetEdit Edit(TEXT("Assign Physics Asset"), {Mesh}, Result);
+        Mesh->SetPhysicsAsset(PhysAsset);
+    }
     Result->SetStringField(TEXT("skeletalMeshPath"), SkeletalMeshPath);
     Result->SetStringField(TEXT("physicsAssetPath"), PhysicsAssetPath);
     Result->SetStringField(TEXT("physicsAssetName"), PhysAsset->GetName());

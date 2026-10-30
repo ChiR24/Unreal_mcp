@@ -1,8 +1,9 @@
 // Every animation and skeleton edit is one undo step: notifies, sync markers, root-motion and additive settings, montage
-// sections, slots, links and blends, Aim Offset and blend space samples, blend space axes and smoothing, sockets and
-// virtual bones. They changed the asset with no transaction (a Modify with none open records nothing), so Ctrl+Z undid
-// the edit before them and the reply said nothing about undo. Behaviour belongs to the integration cases in
-// tests/mcp-tools/gameplay/animation-physics*.test.mjs, which assert undo.undoable on each.
+// sections, slots, links and blends, Aim Offset and blend space samples, blend space axes and smoothing, sockets,
+// virtual bones, physics asset bodies and constraints, and the physics asset a mesh uses. They changed the asset with
+// no transaction (a Modify with none open records nothing), so Ctrl+Z undid the edit before them and the reply said
+// nothing about undo. Behaviour belongs to the integration cases in tests/mcp-tools/gameplay/animation-physics*.test.mjs,
+// which assert undo.undoable on each.
 
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
@@ -12,6 +13,7 @@ import { describe, expect, it } from 'vitest';
 const PRIVATE = join('plugins', 'EngineWire', 'Source', 'EngineWire', 'Private');
 const AUTHORING = join(PRIVATE, 'Domains', 'AnimationAuthoring');
 const BONES = join(PRIVATE, 'Domains', 'Skeleton', 'Bones');
+const PHYSICS = join(PRIVATE, 'Domains', 'Skeleton', 'Physics');
 
 /** Block and line comments removed, so no assertion can be satisfied by prose. */
 const read = (file: string): string =>
@@ -28,6 +30,10 @@ const EDITS: Record<string, readonly string[]> = {
   [join(BONES, 'McpSkeletonSockets.cpp')]: ['Add Socket', 'Configure Socket'],
   [join(BONES, 'McpSkeletonSocketRemoval.cpp')]: ['Delete Socket'],
   [join(BONES, 'McpSkeletonVirtualBones.cpp')]: ['Add Virtual Bone', 'Rename Virtual Bone', 'Delete Virtual Bone'],
+  [join(PHYSICS, 'McpSkeletonPhysicsBodies.cpp')]: ['Add Physics Body', 'Configure Physics Body'],
+  [join(PHYSICS, 'McpSkeletonPhysicsBodyRemoval.cpp')]: ['Remove Physics Body'],
+  [join(PHYSICS, 'McpSkeletonPhysicsConstraints.cpp')]: ['Configure Constraint Limits'],
+  [join(PHYSICS, 'McpSkeletonPhysicsAssets.cpp')]: ['Assign Physics Asset'],
 };
 
 describe('animation and skeleton edits are one undo step', () => {
@@ -44,7 +50,7 @@ describe('animation and skeleton edits are one undo step', () => {
         expect(source).toContain(`const FMcpAssetEdit Edit(TEXT("${title}")`);
       }
       // A Modify with no transaction open records nothing: every one belongs to an edit.
-      expect(source).not.toMatch(/(Skeleton|BlendSpace|Sequence|Montage|AnimAsset)->Modify\(\);/u);
+      expect(source).not.toMatch(/(Skeleton|BlendSpace|Sequence|Montage|AnimAsset|PhysicsAsset|PhysAsset|BodySetup|Constraint|Mesh)->Modify\(\);/u);
     });
   }
 
@@ -68,5 +74,16 @@ describe('animation and skeleton edits are one undo step', () => {
     expect(read(join(BONES, 'McpSkeletonSockets.cpp'))).toMatch(/Socket->SetFlags\(RF_Transactional\);\s*const FMcpAssetEdit Edit\(TEXT\("Configure Socket"\), \{Skeleton, Socket\}/u);
     const bones = read(join(BONES, 'McpSkeletonVirtualBones.cpp'));
     expect(bones.indexOf('VIRTUAL_BONE_FAILED')).toBeLessThan(bones.indexOf('const FMcpAssetEdit Edit(TEXT("Add Virtual Bone")'));
+  });
+
+  it('records the body or constraint an edit changes, not only the physics asset that holds it', () => {
+    const bodies = read(join(PHYSICS, 'McpSkeletonPhysicsBodies.cpp'));
+    // A shape added to a bone that has a body goes into that body's geometry.
+    expect(bodies).toMatch(/BodySetup->SetFlags\(RF_Transactional\);\s*Edited\.Add\(BodySetup\);/u);
+    expect(bodies).toMatch(/BodySetup->SetFlags\(RF_Transactional\);\s*\{\s*const FMcpAssetEdit Edit\(TEXT\("Configure Physics Body"\), \{BodySetup\}/u);
+    const constraints = read(join(PHYSICS, 'McpSkeletonPhysicsConstraints.cpp'));
+    expect(constraints).toMatch(/Constraint->SetFlags\(RF_Transactional\);\s*Edited\.Add\(Constraint\);/u);
+    expect(constraints).toContain('const FMcpAssetEdit Edit(bUpsert ? TEXT("Set Physics Constraint") : TEXT("Add Physics Constraint"), Edited, Result);');
+    expect(constraints).toMatch(/Constraint->SetFlags\(RF_Transactional\);\s*\{\s*const FMcpAssetEdit Edit\(TEXT\("Configure Constraint Limits"\), \{Constraint\}/u);
   });
 });

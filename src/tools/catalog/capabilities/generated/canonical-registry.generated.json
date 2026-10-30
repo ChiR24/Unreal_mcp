@@ -1,5 +1,5 @@
 {
-  "catalogRevision": "890a5971a63a52f7",
+  "catalogRevision": "cf8030d64f3c5079",
   "recordCount": 483,
   "records": [
     {
@@ -5358,7 +5358,7 @@
           "add collision to bones",
           "assign physics asset to mesh"
         ],
-        "summary": "Create a physics asset or edit it, chosen by edit; each change is saved unless save is false (saved). create builds bodies and joints from skeletalMeshPath as the editor's Create Physics Asset does, at outputPath (or name in path; default <mesh>_PhysicsAsset beside the mesh): geomType Capsule (default), Box, Sphere, TaperedCapsule (cloth only), SingleConvexHull or MultiConvexHull, any other name refused; bones shorter than minBoneSize get no body unless bodyForAll; createConstraints joins the bodies; assignToMesh (default false) makes the mesh use it; a build that makes no body is refused (BODY_GENERATION_FAILED). add_body gives boneName a Capsule (default), Sphere or Box shape sized by radius and length or width, depth and height, placed by center and rotation; a bone that already has a body gets the shape added to it (created false), and a bone the skeleton lacks is BONE_NOT_FOUND. configure_body (modify_body) sets mass (kg, above 0, as the body's mass override), linearDamping, angularDamping, collisionEnabled and simulatePhysics (true simulates with the ragdoll, false is Kinematic and follows the animation), and refuses a call that sets none of them. add_constraint joins bodyA and bodyB with a joint Limited to 45 degrees on every axis (both bodies must exist, BODY_NOT_FOUND; a second joint on the pair is CONSTRAINT_EXISTS); set_constraint changes the pair's joint or makes one; configure_constraint_limits sets swing1, swing2 and twist angles and motions from limits. assign makes skeletalMeshPath (or meshPath) use physicsAssetPath and saves the mesh.",
+        "summary": "Create a physics asset or edit it, chosen by edit; each change is saved unless save is false (saved). create builds bodies and joints from skeletalMeshPath as the editor's Create Physics Asset does, at outputPath (or name in path; default <mesh>_PhysicsAsset beside the mesh): geomType Capsule (default), Box, Sphere, TaperedCapsule (cloth only), SingleConvexHull or MultiConvexHull, any other name refused; bones shorter than minBoneSize get no body unless bodyForAll; createConstraints joins the bodies; assignToMesh (default false) makes the mesh use it; a build that makes no body is refused (BODY_GENERATION_FAILED). add_body gives boneName a Capsule (default), Sphere or Box shape sized by radius and length or width, depth and height, placed by center and rotation; a bone that already has a body gets the shape added to it (created false), and a bone the skeleton lacks is BONE_NOT_FOUND. configure_body (modify_body) sets mass (kg, above 0, as the body's mass override), linearDamping, angularDamping, collisionEnabled and simulatePhysics (true simulates with the ragdoll, false is Kinematic and follows the animation), and refuses a call that sets none of them. add_constraint joins bodyA and bodyB with a joint Limited to 45 degrees on every axis (both bodies must exist, BODY_NOT_FOUND; a second joint on the pair is CONSTRAINT_EXISTS); set_constraint changes the pair's joint or makes one; configure_constraint_limits sets swing1, swing2 and twist angles and motions from limits. assign makes skeletalMeshPath (or meshPath) use physicsAssetPath, saving the mesh. Every edit but create is one undo step.",
         "whenToUse": [
           "edit=create: Ragdoll/physics needed.",
           "edit=add_body: A bone needs a collision body.",
@@ -5552,7 +5552,7 @@
                 "configure_constraint_limits",
                 "assign"
               ],
-              "description": "Which edit physics asset variant to run.\ncreate: Create a PhysicsAsset for a skeletal mesh.\nadd_body: Add a physics body to a PhysicsAsset.\nconfigure_body: Configure the physics body of boneName in a Physics Asset, each field only when sent: mass in kg (the mass override), linearDamping, angularDamping, collisionEnabled (query and physics, or none), simulatePhysics (simulate with the ragdoll, or follow the animation as Kinematic). A call sending none is refused; the reply gives mass, damping and physicsType after the change, and saved.\nmodify_body: The edit=modify_body spelling of edit=configure_body: set a body's mass (kg), damping, collision or whether it simulates, each only when sent; a call sending none is refused and the reply gives the values after the change.\nadd_constraint: Add a physics constraint between two bodies; refuses a pair that already has one.\nset_constraint: Create or update the constraint between two physics bodies: an existing pair is edited in place, not duplicated.\nconfigure_constraint_limits: Configure constraint angular/linear limits.\nassign: Assign a Physics Asset to a Skeletal Mesh."
+              "description": "Which edit physics asset variant to run.\ncreate: Create a PhysicsAsset for a skeletal mesh.\nadd_body: Add a physics body to a PhysicsAsset.\nconfigure_body: Configure the physics body of boneName in a Physics Asset, each field only when sent: mass in kg (the mass override), linearDamping, angularDamping, collisionEnabled (query and physics, or none), simulatePhysics (simulate with the ragdoll, or follow the animation as Kinematic). A call sending none is refused; the reply gives mass, damping and physicsType after the change, and saved.\nmodify_body: The edit=modify_body spelling of edit=configure_body: set a body's mass (kg), damping, collision or whether it simulates, each only when sent; a call sending none is refused and the reply gives the values after the change.\nadd_constraint: Add a physics constraint between two bodies; refuses a pair that already has one.\nset_constraint: Create or update the constraint between two physics bodies: an existing pair is edited in place, not duplicated.\nconfigure_constraint_limits: Change the angular limits of the joint between bodyA and bodyB: limits holds swing1LimitAngle, swing2LimitAngle and twistLimitAngle in degrees, with swing1Motion, swing2Motion and twistMotion (Free, Limited or Locked); an angle sent without its motion means Limited, and an axis not named keeps its setting. A pair with no joint is CONSTRAINT_NOT_FOUND. One undo step; saved unless save is false.\nassign: Assign a Physics Asset to a Skeletal Mesh in one undo step; the mesh is saved unless save is false (saved)."
             }
           },
           "required": [
@@ -5602,7 +5602,7 @@
       },
       "examples": [
         {
-          "title": "Create a physics asset or edit it, chosen by edit; each change is saved unless save is false (saved). create builds bodies and joints from skeletalMeshPath as the editor's Create Physics Asset does, at outputPath (or name in path; default <mesh>_PhysicsAsset beside the mesh): geomType Capsule (default), Box, Sphere, TaperedCapsule (cloth only), SingleConvexHull or MultiConvexHull, any other name refused; bones shorter than minBoneSize get no body unless bodyForAll; createConstraints joins the bodies; assignToMesh (default false) makes the mesh use it; a build that makes no body is refused (BODY_GENERATION_FAILED). add_body gives boneName a Capsule (default), Sphere or Box shape sized by radius and length or width, depth and height, placed by center and rotation; a bone that already has a body gets the shape added to it (created false), and a bone the skeleton lacks is BONE_NOT_FOUND. configure_body (modify_body) sets mass (kg, above 0, as the body's mass override), linearDamping, angularDamping, collisionEnabled and simulatePhysics (true simulates with the ragdoll, false is Kinematic and follows the animation), and refuses a call that sets none of them. add_constraint joins bodyA and bodyB with a joint Limited to 45 degrees on every axis (both bodies must exist, BODY_NOT_FOUND; a second joint on the pair is CONSTRAINT_EXISTS); set_constraint changes the pair's joint or makes one; configure_constraint_limits sets swing1, swing2 and twist angles and motions from limits. assign makes skeletalMeshPath (or meshPath) use physicsAssetPath and saves the mesh.",
+          "title": "Create a physics asset or edit it, chosen by edit; each change is saved unless save is false (saved). create builds bodies and joints from skeletalMeshPath as the editor's Create Physics Asset does, at outputPath (or name in path; default <mesh>_PhysicsAsset beside the mesh): geomType Capsule (default), Box, Sphere, TaperedCapsule (cloth only), SingleConvexHull or MultiConvexHull, any other name refused; bones shorter than minBoneSize get no body unless bodyForAll; createConstraints joins the bodies; assignToMesh (default false) makes the mesh use it; a build that makes no body is refused (BODY_GENERATION_FAILED). add_body gives boneName a Capsule (default), Sphere or Box shape sized by radius and length or width, depth and height, placed by center and rotation; a bone that already has a body gets the shape added to it (created false), and a bone the skeleton lacks is BONE_NOT_FOUND. configure_body (modify_body) sets mass (kg, above 0, as the body's mass override), linearDamping, angularDamping, collisionEnabled and simulatePhysics (true simulates with the ragdoll, false is Kinematic and follows the animation), and refuses a call that sets none of them. add_constraint joins bodyA and bodyB with a joint Limited to 45 degrees on every axis (both bodies must exist, BODY_NOT_FOUND; a second joint on the pair is CONSTRAINT_EXISTS); set_constraint changes the pair's joint or makes one; configure_constraint_limits sets swing1, swing2 and twist angles and motions from limits. assign makes skeletalMeshPath (or meshPath) use physicsAssetPath, saving the mesh. Every edit but create is one undo step.",
           "input": {
             "action": "edit_physics_asset",
             "skeletalMeshPath": "/Game/SM_Char",
@@ -5686,15 +5686,6 @@
             ],
             "assignToMesh": [
               "create"
-            ],
-            "save": [
-              "create",
-              "add_body",
-              "configure_body",
-              "modify_body",
-              "add_constraint",
-              "set_constraint",
-              "configure_constraint_limits"
             ],
             "physicsAssetPath": [
               "add_body",
@@ -5831,8 +5822,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "4f97f0682abc556155ac8ca89620e3027bd668b5c70b837bb2334ea4f6130a22",
-        "content": "98db6f8adf39647a1b6e95feb2aa349b000a3af564c5fb4bef04913cf59ec7dc"
+        "schema": "d0e7b53be63a5b982e5a9914226ecb3210a8bdbea81813d86020e703dd6e22ca",
+        "content": "18e67b975211876916ae17be5b03b7f6a0f286327b8d913e5c9f31fd29576395"
       }
     },
     {
@@ -7692,7 +7683,7 @@
           "remove socket",
           "remove physics body"
         ],
-        "summary": "Remove part of a skeleton or physics asset, chosen by element. bone removes boneName from the skeleton: with removeChildren its whole branch goes, otherwise its children move up to its parent and keep their place in the reference pose; the only root a skeleton has is refused. socket removes socketName from the skeleton (a socket defined on a mesh is not found here). physics_body removes the body of boneName from physicsAssetPath together with every constraint that uses it. A missing bone, socket or body is refused. Saved unless save is false (saved).",
+        "summary": "Remove part of a skeleton or physics asset, chosen by element. bone removes boneName from the skeleton: with removeChildren its whole branch goes, otherwise its children move up to its parent and keep their place in the reference pose; the only root a skeleton has is refused. socket removes socketName from the skeleton (a socket defined on a mesh is not found here). physics_body removes the body of boneName from physicsAssetPath together with every constraint that uses it. A missing bone, socket or body is refused; each removal is one undo step. Saved unless save is false (saved).",
         "whenToUse": [
           "element=bone: A bone must be removed.",
           "element=socket: An attach point must be taken off a skeleton.",
@@ -7744,7 +7735,7 @@
                 "socket",
                 "physics_body"
               ],
-              "description": "Which remove skeleton element variant to run.\nbone: Remove boneName from a skeleton, with its children when removeChildren is true; otherwise its children move up to its parent and keep their place in the reference pose. A virtual bone is BONE_NOT_FOUND (delete_virtual_bone removes it). The only root a skeleton has is refused (CANNOT_REMOVE_ROOT); a second root is removed like any bone. One undo step (the reply's undo block says so), saved unless save is false; the reply gives boneCount.\nsocket: Remove a socket from a skeleton or skeletal mesh, in one undo step.\nphysics_body: Remove a physics body from a Physics Asset."
+              "description": "Which remove skeleton element variant to run.\nbone: Remove boneName from a skeleton, with its children when removeChildren is true; otherwise its children move up to its parent and keep their place in the reference pose. A virtual bone is BONE_NOT_FOUND (delete_virtual_bone removes it). The only root a skeleton has is refused (CANNOT_REMOVE_ROOT); a second root is removed like any bone. One undo step (the reply's undo block says so), saved unless save is false; the reply gives boneCount.\nsocket: Remove a socket from a skeleton or skeletal mesh, in one undo step.\nphysics_body: Remove the body of boneName from a Physics Asset, with every constraint that uses it, in one undo step; saved unless save is false (saved)."
             }
           },
           "required": [
@@ -7802,7 +7793,7 @@
       },
       "examples": [
         {
-          "title": "Remove part of a skeleton or physics asset, chosen by element. bone removes boneName from the skeleton: with removeChildren its whole branch goes, otherwise its children move up to its parent and keep their place in the reference pose; the only root a skeleton has is refused. socket removes socketName from the skeleton (a socket defined on a mesh is not found here). physics_body removes the body of boneName from physicsAssetPath together with every constraint that uses it. A missing bone, socket or body is refused. Saved unless save is false (saved).",
+          "title": "Remove part of a skeleton or physics asset, chosen by element. bone removes boneName from the skeleton: with removeChildren its whole branch goes, otherwise its children move up to its parent and keep their place in the reference pose; the only root a skeleton has is refused. socket removes socketName from the skeleton (a socket defined on a mesh is not found here). physics_body removes the body of boneName from physicsAssetPath together with every constraint that uses it. A missing bone, socket or body is refused; each removal is one undo step. Saved unless save is false (saved).",
           "input": {
             "action": "remove_skeleton_element",
             "skeletonPath": "/Game/SK_Char",
@@ -7863,7 +7854,8 @@
               "bone"
             ],
             "save": [
-              "bone"
+              "bone",
+              "physics_body"
             ],
             "socketName": [
               "socket"
@@ -7902,8 +7894,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "bb271aee4e3a986f4652727e696d21d283ad484d52e7087001403e8ab48cb0ab",
-        "content": "9cd8baefdf12f8d7b420e2d1644445d77cc0f9df3657dd799022493eaf92859e"
+        "schema": "605b447ecbc29a9c5b576cb910bfd56edf4f60c24fe001ce683a5db87fb532e6",
+        "content": "dca3d09f795b96a237835f07e15a0173917639a168446c6e9a5754c2e31d8d73"
       }
     },
     {

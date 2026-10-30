@@ -35,7 +35,7 @@ export const SKELETON_PHYSICS_MORPH_RECORDS: readonly CapabilityRecordSource[] =
     exampleInput: { action: 'add_physics_constraint', physicsAssetPath: '/Game/PA_Char', bodyA: 'spine_01', bodyB: 'spine_02', constraintName: 'Spine' },
     exampleOutput: { success: true, message: 'Constraint added' } }),
   buildRecord({ parentTool: T, id: `${T}.configure_constraint_limits`, action: 'configure_constraint_limits', family: F,
-    summary: 'Configure constraint angular/linear limits.', whenToUse: ['Joint limits must change.'], whenNotToUse: ['Use add_physics_constraint.'],
+    summary: 'Change the angular limits of the joint between bodyA and bodyB: limits holds swing1LimitAngle, swing2LimitAngle and twistLimitAngle in degrees, with swing1Motion, swing2Motion and twistMotion (Free, Limited or Locked); an angle sent without its motion means Limited, and an axis not named keeps its setting. A pair with no joint is CONSTRAINT_NOT_FOUND. One undo step; saved unless save is false.', whenToUse: ['Joint limits must change.'], whenNotToUse: ['Use add_physics_constraint.'],
     inputProps: { physicsAssetPath: P.physicsAssetPath, bodyA: P.bodyA, bodyB: P.bodyB, limits: A.limits, save: A.save }, required: ['physicsAssetPath', 'bodyA', 'bodyB'],
     effect: 'write', behavior: { idempotency: 'idempotent' }, latency: 'interactive', resources: 'low', plugins: ESU,
     exampleInput: { action: 'configure_constraint_limits', physicsAssetPath: '/Game/PA_Char', bodyA: 'spine_01', bodyB: 'spine_02', limits: { swing1LimitAngle: 30 } },

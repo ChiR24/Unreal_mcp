@@ -8,6 +8,7 @@
 #include "EngineWireSubsystem.h"
 #include "Transport/WebSocket/McpBridgeWebSocket.h"
 #include "Foundation/HandlerUtils/McpHandlerUtils.h"
+#include "Foundation/McpScopedEditorTransaction.h"
 #include "PhysicsEngine/BodySetup.h"
 #include "PhysicsEngine/PhysicsAsset.h"
 #include "ReferenceSkeleton.h"
@@ -76,30 +77,6 @@ bool UEngineWireSubsystem::HandleAddPhysicsBody(
         }
     }
 
-    int32 BodyIndex = PhysicsAsset->FindBodyIndex(FName(*BoneName));
-    USkeletalBodySetup* BodySetup = nullptr;
-    bool bCreated = false;
-
-    PhysicsAsset->Modify();
-    if (BodyIndex == INDEX_NONE)
-    {
-        BodySetup = NewObject<USkeletalBodySetup>(PhysicsAsset, NAME_None, RF_Transactional);
-        if (!BodySetup)
-        {
-            SendAutomationError(RequestingSocket, RequestId, TEXT("Failed to create physics body setup"), TEXT("CREATION_FAILED"));
-            return true;
-        }
-        BodySetup->BoneName = FName(*BoneName);
-        PhysicsAsset->SkeletalBodySetups.Add(BodySetup);
-        bCreated = true;
-        BodyIndex = PhysicsAsset->SkeletalBodySetups.Num() - 1;
-    }
-    else
-    {
-        BodySetup = PhysicsAsset->SkeletalBodySetups[BodyIndex];
-        BodySetup->Modify();
-    }
-
     if (BodyType.IsEmpty()) BodyType = TEXT("Capsule");
 
     double Radius = 10.0;
@@ -115,38 +92,58 @@ bool UEngineWireSubsystem::HandleAddPhysicsBody(
     FVector Center = ExtractVectorField(Payload, TEXT("center"), FVector::ZeroVector);
     FRotator Rotation = ExtractRotatorField(Payload, TEXT("rotation"), FRotator::ZeroRotator);
 
-    if (BodyType.Equals(TEXT("Sphere"), ESearchCase::IgnoreCase))
+    int32 BodyIndex = PhysicsAsset->FindBodyIndex(FName(*BoneName));
+    const bool bCreated = BodyIndex == INDEX_NONE;
+    USkeletalBodySetup* BodySetup = nullptr;
+    TArray<UObject*> Edited = {PhysicsAsset};
+    if (!bCreated)
     {
-        FKSphereElem SphereElem;
-        SphereElem.Radius = static_cast<float>(Radius);
-        SphereElem.Center = Center;
-        BodySetup->AggGeom.SphereElems.Add(SphereElem);
+        // The shape goes into the body's own geometry, so the body is in the undo step too.
+        BodySetup = PhysicsAsset->SkeletalBodySetups[BodyIndex];
+        BodySetup->SetFlags(RF_Transactional);
+        Edited.Add(BodySetup);
     }
-    else if (BodyType.Equals(TEXT("Box"), ESearchCase::IgnoreCase))
-    {
-        FKBoxElem BoxElem;
-        BoxElem.X = static_cast<float>(Width);
-        BoxElem.Y = static_cast<float>(Depth);
-        BoxElem.Z = static_cast<float>(Height);
-        BoxElem.Center = Center;
-        BoxElem.Rotation = Rotation;
-        BodySetup->AggGeom.BoxElems.Add(BoxElem);
-    }
-    else
-    {
-        // Capsule/Sphyl, and the default for any other bodyType.
-        FKSphylElem CapsuleElem;
-        CapsuleElem.Radius = static_cast<float>(Radius);
-        CapsuleElem.Length = static_cast<float>(Length);
-        CapsuleElem.Center = Center;
-        CapsuleElem.Rotation = Rotation;
-        BodySetup->AggGeom.SphylElems.Add(CapsuleElem);
-    }
-
-    PhysicsAsset->UpdateBodySetupIndexMap();
-    PhysicsAsset->UpdateBoundsBodiesArray();
-
     TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
+    {
+        // Modify with no transaction open recorded nothing: Ctrl+Z undid the edit before this one.
+        const FMcpAssetEdit Edit(TEXT("Add Physics Body"), Edited, Result);
+        if (bCreated)
+        {
+            BodySetup = NewObject<USkeletalBodySetup>(PhysicsAsset, NAME_None, RF_Transactional);
+            BodySetup->BoneName = FName(*BoneName);
+            BodyIndex = PhysicsAsset->SkeletalBodySetups.Add(BodySetup);
+        }
+        if (BodyType.Equals(TEXT("Sphere"), ESearchCase::IgnoreCase))
+        {
+            FKSphereElem SphereElem;
+            SphereElem.Radius = static_cast<float>(Radius);
+            SphereElem.Center = Center;
+            BodySetup->AggGeom.SphereElems.Add(SphereElem);
+        }
+        else if (BodyType.Equals(TEXT("Box"), ESearchCase::IgnoreCase))
+        {
+            FKBoxElem BoxElem;
+            BoxElem.X = static_cast<float>(Width);
+            BoxElem.Y = static_cast<float>(Depth);
+            BoxElem.Z = static_cast<float>(Height);
+            BoxElem.Center = Center;
+            BoxElem.Rotation = Rotation;
+            BodySetup->AggGeom.BoxElems.Add(BoxElem);
+        }
+        else
+        {
+            // Capsule/Sphyl, and the default for any other bodyType.
+            FKSphylElem CapsuleElem;
+            CapsuleElem.Radius = static_cast<float>(Radius);
+            CapsuleElem.Length = static_cast<float>(Length);
+            CapsuleElem.Center = Center;
+            CapsuleElem.Rotation = Rotation;
+            BodySetup->AggGeom.SphylElems.Add(CapsuleElem);
+        }
+        PhysicsAsset->UpdateBodySetupIndexMap();
+        PhysicsAsset->UpdateBoundsBodiesArray();
+    }
+
     Result->SetStringField(TEXT("boneName"), BoneName);
     Result->SetStringField(TEXT("bodyType"), BodyType);
     Result->SetNumberField(TEXT("bodyIndex"), BodyIndex);
@@ -213,41 +210,42 @@ bool UEngineWireSubsystem::HandleConfigurePhysicsBody(
         SendAutomationError(RequestingSocket, RequestId, TEXT("mass must be above 0 kg. Nothing was changed."), TEXT("INVALID_ARGUMENT"));
         return true;
     }
-    PhysicsAsset->Modify();
-    BodySetup->Modify();
-    if (Payload->HasField(TEXT("mass")))
-    {
-        // It turned the override on and never wrote the mass, so the body took the default override instead.
-        BodySetup->DefaultInstance.SetMassOverride(static_cast<float>(Mass), true);
-    }
-
-    double LinearDamping = 0.0;
-    if (Payload->TryGetNumberField(TEXT("linearDamping"), LinearDamping))
-    {
-        BodySetup->DefaultInstance.LinearDamping = static_cast<float>(LinearDamping);
-    }
-
-    double AngularDamping = 0.0;
-    if (Payload->TryGetNumberField(TEXT("angularDamping"), AngularDamping))
-    {
-        BodySetup->DefaultInstance.AngularDamping = static_cast<float>(AngularDamping);
-    }
-
-    bool bCollisionEnabled = true;
-    if (Payload->TryGetBoolField(TEXT("collisionEnabled"), bCollisionEnabled))
-    {
-        BodySetup->DefaultInstance.SetCollisionEnabled(bCollisionEnabled ? ECollisionEnabled::QueryAndPhysics : ECollisionEnabled::NoCollision);
-    }
-
-    bool bSimulatePhysics = true;
-    if (Payload->TryGetBoolField(TEXT("simulatePhysics"), bSimulatePhysics))
-    {
-        // A physics asset decides per body through PhysicsType: Default simulates when the mesh does (a ragdoll), Kinematic
-        // follows the animation. DefaultInstance.bSimulatePhysics, which this wrote, is not read for its bodies.
-        BodySetup->PhysicsType = bSimulatePhysics ? EPhysicsType::PhysType_Default : EPhysicsType::PhysType_Kinematic;
-    }
-
     TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
+    BodySetup->SetFlags(RF_Transactional);
+    {
+        const FMcpAssetEdit Edit(TEXT("Configure Physics Body"), {BodySetup}, Result);
+        if (Payload->HasField(TEXT("mass")))
+        {
+            // It turned the override on and never wrote the mass, so the body took the default override instead.
+            BodySetup->DefaultInstance.SetMassOverride(static_cast<float>(Mass), true);
+        }
+
+        double LinearDamping = 0.0;
+        if (Payload->TryGetNumberField(TEXT("linearDamping"), LinearDamping))
+        {
+            BodySetup->DefaultInstance.LinearDamping = static_cast<float>(LinearDamping);
+        }
+
+        double AngularDamping = 0.0;
+        if (Payload->TryGetNumberField(TEXT("angularDamping"), AngularDamping))
+        {
+            BodySetup->DefaultInstance.AngularDamping = static_cast<float>(AngularDamping);
+        }
+
+        bool bCollisionEnabled = true;
+        if (Payload->TryGetBoolField(TEXT("collisionEnabled"), bCollisionEnabled))
+        {
+            BodySetup->DefaultInstance.SetCollisionEnabled(bCollisionEnabled ? ECollisionEnabled::QueryAndPhysics : ECollisionEnabled::NoCollision);
+        }
+
+        bool bSimulatePhysics = true;
+        if (Payload->TryGetBoolField(TEXT("simulatePhysics"), bSimulatePhysics))
+        {
+            // A physics asset decides per body through PhysicsType: Default simulates when the mesh does (a ragdoll),
+            // Kinematic follows the animation. DefaultInstance.bSimulatePhysics, which this wrote, is not read for its bodies.
+            BodySetup->PhysicsType = bSimulatePhysics ? EPhysicsType::PhysType_Default : EPhysicsType::PhysType_Kinematic;
+        }
+    }
     SaveAndReport(PhysicsAsset, Payload, Result);
     Result->SetStringField(TEXT("boneName"), BoneName);
     Result->SetNumberField(TEXT("bodyIndex"), BodyIndex);

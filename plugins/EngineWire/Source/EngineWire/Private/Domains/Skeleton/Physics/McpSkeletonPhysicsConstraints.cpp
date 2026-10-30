@@ -6,6 +6,7 @@
 #include "EngineWireSubsystem.h"
 #include "Transport/WebSocket/McpBridgeWebSocket.h"
 #include "Foundation/HandlerUtils/McpHandlerUtils.h"
+#include "Foundation/McpScopedEditorTransaction.h"
 #include "PhysicsEngine/PhysicsAsset.h"
 #include "PhysicsEngine/PhysicsConstraintTemplate.h"
 
@@ -133,40 +134,45 @@ bool UEngineWireSubsystem::HandleAddPhysicsConstraint(
             TEXT("CONSTRAINT_EXISTS"));
         return true;
     }
-    PhysicsAsset->Modify();
     const bool bCreated = Constraint == nullptr;
-    if (bCreated)
+    TArray<UObject*> Edited = {PhysicsAsset};
+    if (!bCreated)
     {
-        Constraint = NewObject<UPhysicsConstraintTemplate>(PhysicsAsset, NAME_None, RF_Transactional);
-        if (!Constraint)
-        {
-            SendAutomationError(RequestingSocket, RequestId, TEXT("Failed to create physics constraint"), TEXT("CREATION_FAILED"));
-            return true;
-        }
-        Constraint->DefaultInstance.ConstraintBone1 = FName(*BodyA);
-        Constraint->DefaultInstance.ConstraintBone2 = FName(*BodyB);
-        // A new joint starts at 45 degrees Limited on every axis; limits refines it.
-        Constraint->DefaultInstance.SetAngularSwing1Limit(EAngularConstraintMotion::ACM_Limited, 45.0f);
-        Constraint->DefaultInstance.SetAngularSwing2Limit(EAngularConstraintMotion::ACM_Limited, 45.0f);
-        Constraint->DefaultInstance.SetAngularTwistLimit(EAngularConstraintMotion::ACM_Limited, 45.0f);
-        PhysicsAsset->ConstraintSetup.Add(Constraint);
+        // Its name and limits are the constraint's own fields, so it is in the undo step too.
+        Constraint->SetFlags(RF_Transactional);
+        Edited.Add(Constraint);
     }
-
-    // Set default constraint profile name via JointName (ProfileName removed in UE 5.7)
-    if (!ConstraintName.IsEmpty())
-    {
-        Constraint->DefaultInstance.JointName = FName(*ConstraintName);
-    }
-
-    const TSharedPtr<FJsonObject>* LimitsObj = nullptr;
-    if (Payload->TryGetObjectField(TEXT("limits"), LimitsObj) && LimitsObj)
-    {
-        ApplyMcpConstraintLimits(Constraint->DefaultInstance, *LimitsObj);
-    }
-
-    PhysicsAsset->UpdateBodySetupIndexMap();
-
     TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
+    {
+        // Modify with no transaction open recorded nothing: Ctrl+Z undid the edit before this one.
+        const FMcpAssetEdit Edit(bUpsert ? TEXT("Set Physics Constraint") : TEXT("Add Physics Constraint"), Edited, Result);
+        if (bCreated)
+        {
+            Constraint = NewObject<UPhysicsConstraintTemplate>(PhysicsAsset, NAME_None, RF_Transactional);
+            Constraint->DefaultInstance.ConstraintBone1 = FName(*BodyA);
+            Constraint->DefaultInstance.ConstraintBone2 = FName(*BodyB);
+            // A new joint starts at 45 degrees Limited on every axis; limits refines it.
+            Constraint->DefaultInstance.SetAngularSwing1Limit(EAngularConstraintMotion::ACM_Limited, 45.0f);
+            Constraint->DefaultInstance.SetAngularSwing2Limit(EAngularConstraintMotion::ACM_Limited, 45.0f);
+            Constraint->DefaultInstance.SetAngularTwistLimit(EAngularConstraintMotion::ACM_Limited, 45.0f);
+            PhysicsAsset->ConstraintSetup.Add(Constraint);
+        }
+
+        // Set default constraint profile name via JointName (ProfileName removed in UE 5.7)
+        if (!ConstraintName.IsEmpty())
+        {
+            Constraint->DefaultInstance.JointName = FName(*ConstraintName);
+        }
+
+        const TSharedPtr<FJsonObject>* LimitsObj = nullptr;
+        if (Payload->TryGetObjectField(TEXT("limits"), LimitsObj) && LimitsObj)
+        {
+            ApplyMcpConstraintLimits(Constraint->DefaultInstance, *LimitsObj);
+        }
+
+        PhysicsAsset->UpdateBodySetupIndexMap();
+    }
+
     Result->SetStringField(TEXT("bodyA"), BodyA);
     Result->SetStringField(TEXT("bodyB"), BodyB);
     Result->SetNumberField(TEXT("constraintIndex"), PhysicsAsset->ConstraintSetup.IndexOfByKey(Constraint));
@@ -216,13 +222,16 @@ bool UEngineWireSubsystem::HandleConfigureConstraintLimits(
         return true;
     }
 
-    // limits carries the fields; without it they are read from the request itself.
-    PhysicsAsset->Modify();
-    const TSharedPtr<FJsonObject>* LimitsObj = nullptr;
-    const bool bHasLimits = Payload->TryGetObjectField(TEXT("limits"), LimitsObj) && LimitsObj;
-    ApplyMcpConstraintLimits(Constraint->DefaultInstance, bHasLimits ? *LimitsObj : Payload);
-
+    // limits carries the fields; without it they are read from the request itself. The limits live on the constraint,
+    // which the physics asset's Modify never recorded: undo restored nothing.
     TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
+    Constraint->SetFlags(RF_Transactional);
+    {
+        const FMcpAssetEdit Edit(TEXT("Configure Constraint Limits"), {Constraint}, Result);
+        const TSharedPtr<FJsonObject>* LimitsObj = nullptr;
+        const bool bHasLimits = Payload->TryGetObjectField(TEXT("limits"), LimitsObj) && LimitsObj;
+        ApplyMcpConstraintLimits(Constraint->DefaultInstance, bHasLimits ? *LimitsObj : Payload);
+    }
     Result->SetStringField(TEXT("bodyA"), BodyA);
     Result->SetStringField(TEXT("bodyB"), BodyB);
     SaveAndReport(PhysicsAsset, Payload, Result);

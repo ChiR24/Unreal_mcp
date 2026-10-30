@@ -5,6 +5,7 @@
 #include "EngineWireSubsystem.h"
 #include "Transport/WebSocket/McpBridgeWebSocket.h"
 #include "Foundation/HandlerUtils/McpHandlerUtils.h"
+#include "Foundation/McpScopedEditorTransaction.h"
 #include "PhysicsEngine/PhysicsAsset.h"
 #include "PhysicsEngine/PhysicsConstraintTemplate.h"
 #if __has_include("PhysicsEngine/SkeletalBodySetup.h")
@@ -47,28 +48,29 @@ bool UEngineWireSubsystem::HandleRemovePhysicsBody(
         return true;
     }
 
-    PhysAsset->Modify();
-
-    FName BoneFName(*BoneName);
-    for (int32 i = PhysAsset->ConstraintSetup.Num() - 1; i >= 0; --i)
+    TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
     {
-        UPhysicsConstraintTemplate* Constraint = PhysAsset->ConstraintSetup[i];
-        if (Constraint)
+        // Modify with no transaction open recorded nothing: Ctrl+Z undid the edit before this one.
+        const FMcpAssetEdit Edit(TEXT("Remove Physics Body"), {PhysAsset}, Result);
+        FName BoneFName(*BoneName);
+        for (int32 i = PhysAsset->ConstraintSetup.Num() - 1; i >= 0; --i)
         {
-            FConstraintInstance& CI = Constraint->DefaultInstance;
-            if (CI.ConstraintBone1 == BoneFName || CI.ConstraintBone2 == BoneFName)
+            UPhysicsConstraintTemplate* Constraint = PhysAsset->ConstraintSetup[i];
+            if (Constraint)
             {
-                PhysAsset->ConstraintSetup.RemoveAt(i);
+                FConstraintInstance& CI = Constraint->DefaultInstance;
+                if (CI.ConstraintBone1 == BoneFName || CI.ConstraintBone2 == BoneFName)
+                {
+                    PhysAsset->ConstraintSetup.RemoveAt(i);
+                }
             }
         }
+
+        PhysAsset->SkeletalBodySetups.RemoveAt(BodyIndex);
+        PhysAsset->UpdateBoundsBodiesArray();
+        PhysAsset->UpdateBodySetupIndexMap();
     }
 
-    PhysAsset->SkeletalBodySetups.RemoveAt(BodyIndex);
-    PhysAsset->UpdateBoundsBodiesArray();
-    PhysAsset->UpdateBodySetupIndexMap();
-    PhysAsset->MarkPackageDirty();
-
-    TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
     Result->SetStringField(TEXT("physicsAssetPath"), PhysicsAssetPath);
     Result->SetStringField(TEXT("boneName"), BoneName);
     Result->SetNumberField(TEXT("remainingBodies"), PhysAsset->SkeletalBodySetups.Num());
