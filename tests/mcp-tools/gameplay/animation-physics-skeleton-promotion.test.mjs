@@ -36,9 +36,9 @@ const testCases = [
   { scenario: 'Setup: spawn morph target actor', toolName: 'control_actor', arguments: { action: 'spawn_actor', classPath: '/Script/Engine.SkeletalMeshActor', meshPath: MESH_PATH, actorName: MORPH_ACTOR, location: { x: 0, y: 0, z: 100 } }, expected: 'success|already exists' },
 
   // === SOCKETS (alias spellings of create_socket / configure_socket) ===
-  { scenario: 'SOCKET: add_socket with full transform', toolName: 'animation_physics', arguments: skel('add_socket', { socketName: SOCKET_NAME, attachBoneName: ROOT_BONE, relativeLocation: [1, 2, 3], relativeRotation: [0, 0, 0], relativeScale: [1, 1, 1], save: true }), expected: 'success|already exists' },
+  { scenario: 'SOCKET: add_socket with full transform', toolName: 'animation_physics', arguments: skel('add_socket', { socketName: SOCKET_NAME, attachBoneName: ROOT_BONE, relativeLocation: [1, 2, 3], relativeRotation: [0, 0, 0], relativeScale: [1, 1, 1], save: true }), expected: 'success|already exists', assertions: [{ path: 'structuredContent.result.undo.undoable', equals: true, label: 'one undo step' }] },
   { scenario: 'SOCKET: add_socket with required fields only', toolName: 'animation_physics', arguments: skel('add_socket', { socketName: `${SOCKET_NAME}_Min`, attachBoneName: ROOT_BONE }), expected: 'success|already exists' },
-  { scenario: 'SOCKET: modify_socket retargets the offset', toolName: 'animation_physics', arguments: skel('modify_socket', { socketName: SOCKET_NAME, attachBoneName: ROOT_BONE, relativeLocation: [4, 5, 6], relativeRotation: [0, 90, 0], relativeScale: [2, 2, 2], save: true }), expected: 'success|not found' },
+  { scenario: 'SOCKET: modify_socket retargets the offset', toolName: 'animation_physics', arguments: skel('modify_socket', { socketName: SOCKET_NAME, attachBoneName: ROOT_BONE, relativeLocation: [4, 5, 6], relativeRotation: [0, 90, 0], relativeScale: [2, 2, 2], save: true }), expected: 'success|not found', assertions: [{ path: 'structuredContent.result.undo.undoable', equals: true, label: 'one undo step' }] },
   // A call naming nothing to change saved the skeleton and answered "configured".
   { scenario: 'ERROR: modify_socket with nothing to change', toolName: 'animation_physics', arguments: skel('modify_socket', { socketName: SOCKET_NAME, save: false }), expected: 'error|INVALID_ARGUMENT' },
 
@@ -65,7 +65,7 @@ const testCases = [
   { scenario: 'BONE: list_virtual_bones via skeletalMeshPath', toolName: 'animation_physics', arguments: { action: 'list_virtual_bones', skeletalMeshPath: MESH_PATH }, expected: 'success|not found' },
 
   // === SOCKET REMOVAL (last: it consumes the socket the cases above rely on) ===
-  { scenario: 'SOCKET: remove_socket via skeletonPath', toolName: 'animation_physics', arguments: skel('remove_socket', { socketName: SOCKET_NAME }), expected: 'success|not found' },
+  { scenario: 'SOCKET: remove_socket via skeletonPath', toolName: 'animation_physics', arguments: skel('remove_socket', { socketName: SOCKET_NAME }), expected: 'success|not found', assertions: [{ path: 'structuredContent.result.undo.undoable', equals: true, label: 'one undo step' }] },
   { scenario: 'SOCKET: remove_socket via skeletalMeshPath', toolName: 'animation_physics', arguments: { action: 'remove_socket', skeletalMeshPath: MESH_PATH, socketName: SOCKET_NAME }, expected: 'success|not found' },
 
   // === CLEANUP ===

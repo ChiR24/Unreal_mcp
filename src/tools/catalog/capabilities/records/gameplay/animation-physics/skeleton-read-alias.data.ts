@@ -141,7 +141,7 @@ export const SKELETON_READ_ALIAS_RECORDS: readonly CapabilityRecordSource[] = [
     exampleInput: { action: 'set_physics_constraint', physicsAssetPath: '/Game/PA_Char', bodyA: 'spine_01', bodyB: 'spine_02', constraintName: 'Spine' },
     exampleOutput: { success: true, message: 'Constraint added' } }),
   buildRecord({ parentTool: T, id: `${T}.remove_socket`, action: 'remove_socket', family: F,
-    summary: 'Remove a socket from a skeleton or skeletal mesh.', whenToUse: ['An attach point must be taken off a skeleton.'], whenNotToUse: ['The socket transform should change; use configure_socket.'],
+    summary: 'Remove a socket from a skeleton or skeletal mesh, in one undo step.', whenToUse: ['An attach point must be taken off a skeleton.'], whenNotToUse: ['The socket transform should change; use configure_socket.'],
     inputProps: { socketName: P.socketName, skeletonPath: P.skeletonPath, skeletalMeshPath: P.skeletalMeshPath },
     required: ['socketName'], requiredOneOf: ['skeletonPath', 'skeletalMeshPath'],
     outputProps: { socketName: P.socketName, skeletonPath: P.skeletonPath, remainingSockets: REMAINING('sockets') }, outputRequired: [],

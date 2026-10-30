@@ -4124,8 +4124,9 @@ describe('no save rewrites engine content', () => {
 describe('blend spaces, skeletons and ragdolls answer for what they did', () => {
   it('a refused blend sample is an error, and axis edits need a known axis, a field and a forward range', () => {
     const samples = code('AnimationAuthoring', 'McpAnimBlendSpaceSamples.cpp');
-    expect(samples).toContain('const int32 SampleIndex = BlendSpace->AddSample(Animation, SampleValue);');
-    expect(samples.indexOf('if (SampleIndex == INDEX_NONE)')).toBeLessThan(samples.indexOf('BlendSpace->PostEditChange();'));
+    // Refused before AddSample, which widened the axes and then refused: the refusal changes nothing.
+    expect(samples).toContain('SampleIndex = BlendSpace->AddSample(Animation, SampleValue);');
+    expect(samples.indexOf('SAMPLE_REJECTED')).toBeLessThan(samples.indexOf('SampleIndex = BlendSpace->AddSample(Animation, SampleValue);'));
     expect(samples).toContain('(bVertical && BlendSpace->IsA<UBlendSpace1D>()) || !bAnyField');
     expect(samples.indexOf('if (Updated.Min >= Updated.Max || Updated.GridNum < 1)')).toBeLessThan(samples.indexOf('BlendParams[bVertical ? 1 : 0] = Updated;'));
   });

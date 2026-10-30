@@ -126,7 +126,7 @@ TSharedPtr<FJsonObject> HandleMontageAssetActions(const FString& SubAction, cons
         }
         int32 SectionIndex = INDEX_NONE;
         {
-            const FMcpAnimEdit Edit(TEXT("Add Montage Section"), Montage, Response);
+            const FMcpAssetEdit Edit(TEXT("Add Montage Section"), {Montage}, Response);
             SectionIndex = Montage->AddAnimCompositeSection(FName(*SectionName), StartTime);
         }
         SaveAnimAssetAndReport(Montage, bSave, Response);
@@ -198,7 +198,7 @@ TSharedPtr<FJsonObject> HandleMontageAssetActions(const FString& SubAction, cons
         }
 
         {
-            const FMcpAnimEdit Edit(TEXT("Add Montage Slot"), Montage, Response);
+            const FMcpAssetEdit Edit(TEXT("Add Montage Slot"), {Montage}, Response);
             if (!SlotTrack)
             {
                 SlotTrack = &Montage->SlotAnimTracks.AddDefaulted_GetRef();
@@ -263,7 +263,7 @@ TSharedPtr<FJsonObject> HandleMontageAssetActions(const FString& SubAction, cons
                 Montage->GetPlayLength()), TEXT("INVALID_ARGUMENT"));
         }
         {
-            const FMcpAnimEdit Edit(TEXT("Set Section Timing"), Montage, Response);
+            const FMcpAssetEdit Edit(TEXT("Set Section Timing"), {Montage}, Response);
             Montage->CompositeSections[SectionIndex].SetTime(StartTime);
         }
         SaveAnimAssetAndReport(Montage, bSave, Response);

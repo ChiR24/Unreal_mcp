@@ -8,6 +8,7 @@
 #include "EngineWireSubsystem.h"
 #include "Transport/WebSocket/McpBridgeWebSocket.h"
 #include "Foundation/HandlerUtils/McpHandlerUtils.h"
+#include "Foundation/McpScopedEditorTransaction.h"
 
 using namespace McpSkeletonHandlers;
 
@@ -95,7 +96,7 @@ bool UEngineWireSubsystem::HandleCreateSocket(
         }
     }
 
-    USkeletalMeshSocket* NewSocket = NewObject<USkeletalMeshSocket>(Skeleton);
+    USkeletalMeshSocket* NewSocket = NewObject<USkeletalMeshSocket>(Skeleton, NAME_None, RF_Transactional);
     if (!NewSocket)
     {
         SendAutomationError(RequestingSocket, RequestId, TEXT("Failed to create socket object"), TEXT("CREATION_FAILED"));
@@ -107,12 +108,12 @@ bool UEngineWireSubsystem::HandleCreateSocket(
     NewSocket->RelativeScale = ExtractVectorField(Payload, TEXT("relativeScale"), FVector::OneVector);
     NewSocket->BoneName = FName(*BoneName);
 
-    // delete_socket already calls Modify() before it mutates Sockets; without
-    // it here the add is saved but cannot be undone.
-    Skeleton->Modify();
-    Skeleton->Sockets.Add(NewSocket);
-
     TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
+    {
+        // Modify alone, with no transaction open, recorded nothing: Ctrl+Z undid the edit before this one.
+        const FMcpAssetEdit Edit(TEXT("Add Socket"), {Skeleton}, Result);
+        Skeleton->Sockets.Add(NewSocket);
+    }
     Result->SetStringField(TEXT("socketName"), SocketName);
     Result->SetStringField(TEXT("boneName"), BoneName);
     Result->SetStringField(TEXT("skeletonPath"), Skeleton->GetPathName());
@@ -172,29 +173,28 @@ bool UEngineWireSubsystem::HandleConfigureSocket(
         return true;
     }
 
-    Skeleton->Modify();
-    if (!NewBoneName.IsEmpty())
-    {
-        Socket->BoneName = FName(*NewBoneName);
-    }
-
-    if (Payload->HasField(TEXT("relativeLocation")))
-    {
-        Socket->RelativeLocation = ExtractVectorField(Payload, TEXT("relativeLocation"), FVector::ZeroVector);
-    }
-
-    if (Payload->HasField(TEXT("relativeRotation")))
-    {
-        Socket->RelativeRotation = ExtractRotatorField(Payload, TEXT("relativeRotation"), FRotator::ZeroRotator);
-    }
-
-    if (Payload->HasField(TEXT("relativeScale")))
-    {
-        Socket->RelativeScale = ExtractVectorField(Payload, TEXT("relativeScale"), FVector::OneVector);
-    }
-
-
     TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
+    {
+        // The socket is an object of its own: Modify on the skeleton alone left its fields out of the undo step.
+        Socket->SetFlags(RF_Transactional);
+        const FMcpAssetEdit Edit(TEXT("Configure Socket"), {Skeleton, Socket}, Result);
+        if (!NewBoneName.IsEmpty())
+        {
+            Socket->BoneName = FName(*NewBoneName);
+        }
+        if (Payload->HasField(TEXT("relativeLocation")))
+        {
+            Socket->RelativeLocation = ExtractVectorField(Payload, TEXT("relativeLocation"), FVector::ZeroVector);
+        }
+        if (Payload->HasField(TEXT("relativeRotation")))
+        {
+            Socket->RelativeRotation = ExtractRotatorField(Payload, TEXT("relativeRotation"), FRotator::ZeroRotator);
+        }
+        if (Payload->HasField(TEXT("relativeScale")))
+        {
+            Socket->RelativeScale = ExtractVectorField(Payload, TEXT("relativeScale"), FVector::OneVector);
+        }
+    }
     Result->SetStringField(TEXT("socketName"), SocketName);
     Result->SetStringField(TEXT("skeletonPath"), Skeleton->GetPathName());
 

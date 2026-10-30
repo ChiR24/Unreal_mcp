@@ -144,7 +144,7 @@ TSharedPtr<FJsonObject> HandleSequenceEventActions(const FString& SubAction, con
             ANIM_ERROR_RESPONSE(FString::Printf(TEXT("Failed to create AnimNotify instance of class '%s'"), *NotifyClass), TEXT("INSTANTIATION_FAILED"));
         }
         {
-            const FMcpAnimEdit Edit(TEXT("Add Notify"), AnimAsset, Response);
+            const FMcpAssetEdit Edit(TEXT("Add Notify"), {AnimAsset}, Response);
             FAnimNotifyEvent& NotifyEvent = AnimAsset->Notifies.AddDefaulted_GetRef();
             // Link the event to the asset: SetTime alone leaves LinkedSequence null and
             // GetTime() reads back 0 (every notify landed at 0.00s, dogfood #81).

@@ -35,7 +35,7 @@ TSharedPtr<FJsonObject> HandleSequenceSettingsActions(const FString& SubAction, 
                 FMath::RoundToInt(Sequence->GetPlayLength() * FrameRate)), TEXT("INVALID_ARGUMENT"));
         }
         {
-            const FMcpAnimEdit Edit(TEXT("Add Sync Marker"), Sequence, Response);
+            const FMcpAssetEdit Edit(TEXT("Add Sync Marker"), {Sequence}, Response);
             FAnimSyncMarker NewMarker;
             NewMarker.MarkerName = FName(*MarkerName);
             NewMarker.Time = Time;
@@ -64,7 +64,7 @@ TSharedPtr<FJsonObject> HandleSequenceSettingsActions(const FString& SubAction, 
         }
 
         {
-            const FMcpAnimEdit Edit(TEXT("Set Root Motion Settings"), Sequence, Response);
+            const FMcpAssetEdit Edit(TEXT("Set Root Motion Settings"), {Sequence}, Response);
             Sequence->bEnableRootMotion = bEnableRootMotion;
             Sequence->bForceRootLock = bForceRootLock;
             Sequence->RootMotionRootLock = RootMotionRootLock == TEXT("AnimFirstFrame") ? ERootMotionRootLock::AnimFirstFrame
@@ -114,7 +114,7 @@ TSharedPtr<FJsonObject> HandleSequenceSettingsActions(const FString& SubAction, 
             ANIM_ERROR_RESPONSE(TEXT("additiveAnimType must be NoAdditive, LocalSpaceAdditive or MeshSpaceAdditive, and basePoseType RefPose, AnimScaled or AnimFrame"), TEXT("INVALID_ARGUMENT"));
         }
         {
-            const FMcpAnimEdit Edit(TEXT("Set Additive Settings"), Sequence, Response);
+            const FMcpAssetEdit Edit(TEXT("Set Additive Settings"), {Sequence}, Response);
             Sequence->AdditiveAnimType = bLocal ? AAT_LocalSpaceBase : (bMesh ? AAT_RotationOffsetMeshSpace : AAT_None);
             Sequence->RefPoseType = bFrame ? ABPT_AnimFrame : (bScaled ? ABPT_AnimScaled : ABPT_RefPose);
             if (bFrame)
@@ -153,11 +153,9 @@ TSharedPtr<FJsonObject> HandleSequenceSettingsActions(const FString& SubAction, 
         }
         const float Before = Sequence->RateScale;
         {
-            FMcpScopedEditorTransaction Transaction(FText::FromString(TEXT("Set Play Rate")), EMcpMutationDurability::EditorStateOnly, TArray<UObject*>{Sequence});
-            Sequence->Modify();
+            const FMcpAssetEdit Edit(TEXT("Set Play Rate"), {Sequence}, Response);
             Sequence->RateScale = static_cast<float>(Rate);
             Sequence->PostEditChange();
-            Transaction.DescribeInto(Response);
         }
         const bool bSave = GetJsonBoolField(Params, TEXT("save"), true);
         Response->SetBoolField(TEXT("saved"), SaveAnimAsset(Sequence, bSave) && bSave);

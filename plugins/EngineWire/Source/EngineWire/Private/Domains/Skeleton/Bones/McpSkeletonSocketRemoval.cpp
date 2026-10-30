@@ -8,6 +8,7 @@
 #include "EngineWireSubsystem.h"
 #include "Transport/WebSocket/McpBridgeWebSocket.h"
 #include "Foundation/HandlerUtils/McpHandlerUtils.h"
+#include "Foundation/McpScopedEditorTransaction.h"
 
 using namespace McpSkeletonHandlers;
 
@@ -36,10 +37,11 @@ bool UEngineWireSubsystem::HandleDeleteSocket(
         return true;
     }
 
-    Skeleton->Modify();
-    Skeleton->Sockets.RemoveAt(SocketIndex);
-
     TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
+    {
+        const FMcpAssetEdit Edit(TEXT("Delete Socket"), {Skeleton}, Result);
+        Skeleton->Sockets.RemoveAt(SocketIndex);
+    }
     Result->SetStringField(TEXT("socketName"), SocketName);
     Result->SetStringField(TEXT("skeletonPath"), Skeleton->GetPathName());
     Result->SetNumberField(TEXT("remainingSockets"), Skeleton->Sockets.Num());

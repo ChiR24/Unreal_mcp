@@ -1,5 +1,5 @@
 {
-  "catalogRevision": "a41748362c16f2c5",
+  "catalogRevision": "890a5971a63a52f7",
   "recordCount": 483,
   "records": [
     {
@@ -1277,7 +1277,7 @@
           "create socket",
           "socket on the spine bone"
         ],
-        "summary": "Sockets on a skeleton (skeletonPath; a skeletal mesh path uses its skeleton), chosen by socketOp; each change is saved unless save is false (saved). create (add) puts socketName on attachBoneName, which both require, at relativeLocation, relativeRotation and relativeScale (default zero, zero and one); a bone the skeleton lacks is BONE_NOT_FOUND and a taken name SOCKET_EXISTS. configure (modify) changes an existing socket: attachBoneName moves it, and relativeLocation, relativeRotation and relativeScale replace only the parts given; a missing socket is SOCKET_NOT_FOUND and a call naming nothing to change is refused.",
+        "summary": "Sockets on a skeleton (skeletonPath; a skeletal mesh path uses its skeleton), chosen by socketOp; each change is saved unless save is false (saved). create (add) puts socketName on attachBoneName, which both require, at relativeLocation, relativeRotation and relativeScale (default zero, zero and one); a bone the skeleton lacks is BONE_NOT_FOUND and a taken name SOCKET_EXISTS. configure (modify) changes an existing socket: attachBoneName moves it, and relativeLocation, relativeRotation and relativeScale replace only the parts given; a missing socket is SOCKET_NOT_FOUND and a call naming nothing to change is refused. Each change is one undo step.",
         "whenToUse": [
           "socketOp=configure|modify: Socket offset must change.",
           "socketOp=add|create: An attach point is needed."
@@ -1390,7 +1390,7 @@
       },
       "examples": [
         {
-          "title": "Sockets on a skeleton (skeletonPath; a skeletal mesh path uses its skeleton), chosen by socketOp; each change is saved unless save is false (saved). create (add) puts socketName on attachBoneName, which both require, at relativeLocation, relativeRotation and relativeScale (default zero, zero and one); a bone the skeleton lacks is BONE_NOT_FOUND and a taken name SOCKET_EXISTS. configure (modify) changes an existing socket: attachBoneName moves it, and relativeLocation, relativeRotation and relativeScale replace only the parts given; a missing socket is SOCKET_NOT_FOUND and a call naming nothing to change is refused.",
+          "title": "Sockets on a skeleton (skeletonPath; a skeletal mesh path uses its skeleton), chosen by socketOp; each change is saved unless save is false (saved). create (add) puts socketName on attachBoneName, which both require, at relativeLocation, relativeRotation and relativeScale (default zero, zero and one); a bone the skeleton lacks is BONE_NOT_FOUND and a taken name SOCKET_EXISTS. configure (modify) changes an existing socket: attachBoneName moves it, and relativeLocation, relativeRotation and relativeScale replace only the parts given; a missing socket is SOCKET_NOT_FOUND and a call naming nothing to change is refused. Each change is one undo step.",
           "input": {
             "action": "configure_socket",
             "skeletonPath": "/Game/SK_Char",
@@ -1460,7 +1460,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "e25cac3cbf35a620719228ac50fb8b3a92f04bd893fcdb8df20ced3ca3bc813a",
-        "content": "8bb3566a78463329df1a26d887c22f1c158cb646167c3f8786e13c96a6abaf4b"
+        "content": "57d6c3178bd8eb5bb0475208ef4499a433d2bc634f96b645cc62cf3cda00b0dc"
       }
     },
     {
@@ -4002,7 +4002,7 @@
           "interpolation settings",
           "rebuild blend space"
         ],
-        "summary": "Edit a Blend Space or Aim Offset (assetPath), chosen by edit. add_sample places animationPath at sampleValue (a number on a 1D blend space, {x, y} on a 2D one; the axis range grows to fit) and returns sampleIndex; a position another sample holds, or an animation of another skeleton or additive type, is refused (SAMPLE_REJECTED). set_axis_settings changes one axis (Horizontal, the default, or Vertical; a 1D blend space has Horizontal only): only the axisName, minValue, maxValue and gridDivisions sent change, minValue stays below maxValue, and the reply gives the axis as it now is. set_interpolation_settings sets input smoothing on every axis and the sample weight speed, only the fields sent. rebuild drops invalid samples, rebuilds the grid and recompiles the Animation Blueprints that use it (compileReferencers, default true), listing any that fail. Saved unless save is false (saved).",
+        "summary": "Edit a Blend Space or Aim Offset (assetPath), chosen by edit. add_sample places animationPath at sampleValue (a number on a 1D blend space, {x, y} on a 2D one; the axis range grows to fit) and returns sampleIndex; a position another sample holds, or an animation of another skeleton or additive type, is refused (SAMPLE_REJECTED). set_axis_settings changes one axis (Horizontal, the default, or Vertical; a 1D blend space has Horizontal only): only the axisName, minValue, maxValue and gridDivisions sent change, minValue stays below maxValue, and the reply gives the axis as it now is. set_interpolation_settings sets input smoothing on every axis and the sample weight speed, only the fields sent. rebuild drops invalid samples, rebuilds the grid and recompiles the Animation Blueprints that use it (compileReferencers, default true), listing any that fail. Saved unless save is false (saved); add_sample, set_axis_settings and set_interpolation_settings are one undo step each.",
         "whenToUse": [
           "edit=add_sample: Blend sample needed.",
           "edit=set_axis_settings: Axis labels/ranges must change.",
@@ -4140,7 +4140,7 @@
       },
       "examples": [
         {
-          "title": "Edit a Blend Space or Aim Offset (assetPath), chosen by edit. add_sample places animationPath at sampleValue (a number on a 1D blend space, {x, y} on a 2D one; the axis range grows to fit) and returns sampleIndex; a position another sample holds, or an animation of another skeleton or additive type, is refused (SAMPLE_REJECTED). set_axis_settings changes one axis (Horizontal, the default, or Vertical; a 1D blend space has Horizontal only): only the axisName, minValue, maxValue and gridDivisions sent change, minValue stays below maxValue, and the reply gives the axis as it now is. set_interpolation_settings sets input smoothing on every axis and the sample weight speed, only the fields sent. rebuild drops invalid samples, rebuilds the grid and recompiles the Animation Blueprints that use it (compileReferencers, default true), listing any that fail. Saved unless save is false (saved).",
+          "title": "Edit a Blend Space or Aim Offset (assetPath), chosen by edit. add_sample places animationPath at sampleValue (a number on a 1D blend space, {x, y} on a 2D one; the axis range grows to fit) and returns sampleIndex; a position another sample holds, or an animation of another skeleton or additive type, is refused (SAMPLE_REJECTED). set_axis_settings changes one axis (Horizontal, the default, or Vertical; a 1D blend space has Horizontal only): only the axisName, minValue, maxValue and gridDivisions sent change, minValue stays below maxValue, and the reply gives the axis as it now is. set_interpolation_settings sets input smoothing on every axis and the sample weight speed, only the fields sent. rebuild drops invalid samples, rebuilds the grid and recompiles the Animation Blueprints that use it (compileReferencers, default true), listing any that fail. Saved unless save is false (saved); add_sample, set_axis_settings and set_interpolation_settings are one undo step each.",
           "input": {
             "action": "edit_blend_space",
             "assetPath": "/Game/BS_Locomotion",
@@ -4237,7 +4237,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "65585c2c5288e19d3dc5def55eff96c80976032aa94588137979e28ec5decab8",
-        "content": "10907b93bcd9c9c45931d6faf8a135a033dfe3979d00a1df1af2d8043bced530"
+        "content": "4e21e9ca7f6a3123706647e514da8a56c43e0918699f743a9ff5f9aa2b936888"
       }
     },
     {
@@ -5902,15 +5902,14 @@
           "edit=rename_bone: A virtual bone needs renaming.",
           "edit=set_bone_parent: Bone hierarchy must change.",
           "edit=set_bone_transform: A bone rest pose must change.",
-          "edit=create_virtual_bone: A virtual bone is needed for IK."
+          "edit=create_virtual_bone: An IK or aim target should follow one bone toward another (a hand IK target, a look-at point)."
         ],
         "whenNotToUse": [
           "edit=add_bone: Bone already exists.",
           "edit=rename_bone: Name is correct.",
           "edit=rename_bone: The bone is a real skeleton bone.",
           "edit=set_bone_parent: Hierarchy is correct.",
-          "edit=set_bone_transform: Use runtime animation.",
-          "edit=create_virtual_bone: Use a real bone."
+          "edit=set_bone_transform: Use runtime animation."
         ]
       },
       "schemas": {
@@ -5980,7 +5979,7 @@
                 "set_bone_transform",
                 "create_virtual_bone"
               ],
-              "description": "Which edit skeleton variant to run.\nadd_bone: Add boneName to a skeleton under parentBoneName at location, rotation and scale relative to its parent (scale a number for uniform, or {x, y, z}); a skeleton with bones refuses a new root (PARENT_REQUIRED), and a taken name is BONE_EXISTS. One undo step (the reply's undo block says so), saved unless save is false; the reply gives boneCount.\nrename_bone: Rename a virtual bone on a skeleton (real skeleton bones cannot be renamed and answer OPERATION_NOT_SUPPORTED).\nset_bone_parent: Move boneName, with its children, under the existing bone parentBoneName, where it keeps its place in the reference pose; the reply gives newBoneIndex (bones can be reordered) and changed. The parent it already has answers changed false and writes nothing; the bone itself or one of its descendants as parent is INVALID_ARGUMENT, a bone not in the skeleton BONE_NOT_FOUND or PARENT_NOT_FOUND. One undo step (the reply's undo block says so), saved unless save is false.\nset_bone_transform: Set the rest transform of a bone.\ncreate_virtual_bone: Create a virtual bone between two bones."
+              "description": "Which edit skeleton variant to run.\nadd_bone: Add boneName to a skeleton under parentBoneName at location, rotation and scale relative to its parent (scale a number for uniform, or {x, y, z}); a skeleton with bones refuses a new root (PARENT_REQUIRED), and a taken name is BONE_EXISTS. One undo step (the reply's undo block says so), saved unless save is false; the reply gives boneCount.\nrename_bone: Rename a virtual bone on a skeleton, in one undo step (the VB prefix is added when newBoneName lacks it; real skeleton bones cannot be renamed and answer OPERATION_NOT_SUPPORTED).\nset_bone_parent: Move boneName, with its children, under the existing bone parentBoneName, where it keeps its place in the reference pose; the reply gives newBoneIndex (bones can be reordered) and changed. The parent it already has answers changed false and writes nothing; the bone itself or one of its descendants as parent is INVALID_ARGUMENT, a bone not in the skeleton BONE_NOT_FOUND or PARENT_NOT_FOUND. One undo step (the reply's undo block says so), saved unless save is false.\nset_bone_transform: Set the rest transform of a bone.\ncreate_virtual_bone: Add a virtual bone to a skeleton: a bone that follows sourceBoneName and points at targetBoneName (an IK or aim target that moves with the animation), named VB sourceBoneName_targetBoneName or boneName, in one undo step, saved unless save is false. A bone the skeleton lacks is BONE_NOT_FOUND, and a virtual bone from the same source to the same target already there VIRTUAL_BONE_FAILED."
             }
           },
           "required": [
@@ -6136,8 +6135,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "b354dd98cd7f89138ded430b31c22b1cd8cff16825c57df1a25c85c38d5b081a",
-        "content": "003ee549e3d8e152073b85dc0f4b7a4d8810f53c934daa76dba88aaed5b5983f"
+        "schema": "969887c305960eb1e5013c947b3db2ddf49f3f850ab653aa0788b44444d6b882",
+        "content": "cae2aa4c013969b06ec977e6ec9edcf892fb230791ffd100700d8fab3f955148"
       }
     },
     {
@@ -7745,7 +7744,7 @@
                 "socket",
                 "physics_body"
               ],
-              "description": "Which remove skeleton element variant to run.\nbone: Remove boneName from a skeleton, with its children when removeChildren is true; otherwise its children move up to its parent and keep their place in the reference pose. A virtual bone is BONE_NOT_FOUND (delete_virtual_bone removes it). The only root a skeleton has is refused (CANNOT_REMOVE_ROOT); a second root is removed like any bone. One undo step (the reply's undo block says so), saved unless save is false; the reply gives boneCount.\nsocket: Remove a socket from a skeleton or skeletal mesh.\nphysics_body: Remove a physics body from a Physics Asset."
+              "description": "Which remove skeleton element variant to run.\nbone: Remove boneName from a skeleton, with its children when removeChildren is true; otherwise its children move up to its parent and keep their place in the reference pose. A virtual bone is BONE_NOT_FOUND (delete_virtual_bone removes it). The only root a skeleton has is refused (CANNOT_REMOVE_ROOT); a second root is removed like any bone. One undo step (the reply's undo block says so), saved unless save is false; the reply gives boneCount.\nsocket: Remove a socket from a skeleton or skeletal mesh, in one undo step.\nphysics_body: Remove a physics body from a Physics Asset."
             }
           },
           "required": [
@@ -7903,8 +7902,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "31348441c34c189586e364179432ddd4dfd575bf8261d04b63ed2c2d7696c8f2",
-        "content": "25023ea0a51e3a221e6dff9266b9662c528daa513b51b08470cd036ec4f67129"
+        "schema": "bb271aee4e3a986f4652727e696d21d283ad484d52e7087001403e8ab48cb0ab",
+        "content": "9cd8baefdf12f8d7b420e2d1644445d77cc0f9df3657dd799022493eaf92859e"
       }
     },
     {

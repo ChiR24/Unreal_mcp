@@ -247,15 +247,15 @@ const testCases = [
 { scenario: 'CREATE: create_anim_blueprint infers skeleton from skeletalMeshPath', toolName: 'animation_physics', arguments: {"action": "create_anim_blueprint", "name": "Testanim_blueprint_from_mesh", "path": TEST_FOLDER, "skeletalMeshPath": "/Engine/EngineMeshes/SkeletalCube", "save": true}, expected: 'success|already exists' },
 
 // === ADD (Blend Sample - needs assetPath and animationPath) ===
-{ scenario: 'ADD: add_blend_sample', toolName: 'animation_physics', arguments: {"action": "add_blend_sample", "assetPath": `${TEST_FOLDER}/Testblend_space_1d`, "animationPath": `${TEST_FOLDER}/Testanimation_sequence`, "sampleValue": 100, "save": true}, expected: 'success|already exists' },
+{ scenario: 'ADD: add_blend_sample', toolName: 'animation_physics', arguments: {"action": "add_blend_sample", "assetPath": `${TEST_FOLDER}/Testblend_space_1d`, "animationPath": `${TEST_FOLDER}/Testanimation_sequence`, "sampleValue": 100, "save": true}, expected: 'success|already exists', assertions: [{ path: 'structuredContent.result.undo.undoable', equals: true, label: 'one undo step' }] },
 
 // === CONFIG (Axis Settings - needs assetPath) ===
-{ scenario: 'CONFIG: set_axis_settings', toolName: 'animation_physics', arguments: {"action": "set_axis_settings", "assetPath": `${TEST_FOLDER}/Testblend_space_1d`, "axis": "X", "axisName": "Speed", "minValue": 0, "maxValue": 600, "gridDivisions": 4, "save": true}, expected: 'success' },
+{ scenario: 'CONFIG: set_axis_settings', toolName: 'animation_physics', arguments: {"action": "set_axis_settings", "assetPath": `${TEST_FOLDER}/Testblend_space_1d`, "axis": "X", "axisName": "Speed", "minValue": 0, "maxValue": 600, "gridDivisions": 4, "save": true}, expected: 'success', assertions: [{ path: 'structuredContent.result.undo.undoable', equals: true, label: 'one undo step' }] },
 
 { scenario: 'ACTION: force_rebuild_blend_space', toolName: 'animation_physics', arguments: {"action": "force_rebuild_blend_space", "assetPath": `${TEST_FOLDER}/Testblend_space_1d`, "rebuildBlendParameters": true, "compileReferencers": false, "save": false}, expected: 'success' },
 
 // === CONFIG (Interpolation Settings - needs assetPath) ===
-{ scenario: 'CONFIG: set_interpolation_settings', toolName: 'animation_physics', arguments: {"action": "set_interpolation_settings", "assetPath": `${TEST_FOLDER}/Testblend_space_1d`, "interpolationType": "SpringDamper", "interpolationTime": 0.2, "targetWeightInterpolationSpeed": 5, "save": true}, expected: 'success' },
+{ scenario: 'CONFIG: set_interpolation_settings', toolName: 'animation_physics', arguments: {"action": "set_interpolation_settings", "assetPath": `${TEST_FOLDER}/Testblend_space_1d`, "interpolationType": "SpringDamper", "interpolationTime": 0.2, "targetWeightInterpolationSpeed": 5, "save": true}, expected: 'success', assertions: [{ path: 'structuredContent.result.undo.undoable', equals: true, label: 'one undo step' }] },
 { scenario: 'ACTION: force_rebuild_blend_space', toolName: 'animation_physics', arguments: {"action": "force_rebuild_blend_space", "assetPath": `${TEST_FOLDER}/Testblend_space_1d`, "rebuildBlendParameters": true, "compileReferencers": false, "save": true}, expected: 'success|ASSET_NOT_FOUND|not found' },
 
 // === ACTION (Retargeting - needs sourceSkeleton and targetSkeleton) ===
@@ -331,8 +331,8 @@ const testCases = [
 
     // === SKELETON STRUCTURE ===
     { scenario: 'ADD: add child bone', toolName: 'animation_physics', arguments: { action: 'add_bone', skeletonPath: SKELETON_PATH, boneName: CHILD_BONE, parentBoneName: ROOT_BONE, location: [10, 0, 0], rotation: [0, 0, 0], scale: 1, save: true }, expected: 'success|already exists' },
-    { scenario: 'CREATE: create virtual bone', toolName: 'animation_physics', arguments: { action: 'create_virtual_bone', skeletonPath: SKELETON_PATH, sourceBoneName: ROOT_BONE, targetBoneName: CHILD_BONE, boneName: VIRTUAL_BONE, save: true }, expected: 'success|already exists' },
-    { scenario: 'ACTION: rename virtual bone', toolName: 'animation_physics', arguments: { action: 'rename_bone', skeletonPath: SKELETON_PATH, boneName: VIRTUAL_BONE, newBoneName: RENAMED_VIRTUAL_BONE, save: true }, expected: 'success' },
+    { scenario: 'CREATE: create virtual bone', toolName: 'animation_physics', arguments: { action: 'create_virtual_bone', skeletonPath: SKELETON_PATH, sourceBoneName: ROOT_BONE, targetBoneName: CHILD_BONE, boneName: VIRTUAL_BONE, save: true }, expected: 'success|already exists', assertions: [{ path: 'structuredContent.result.undo.undoable', equals: true, label: 'one undo step' }] },
+    { scenario: 'ACTION: rename virtual bone', toolName: 'animation_physics', arguments: { action: 'rename_bone', skeletonPath: SKELETON_PATH, boneName: VIRTUAL_BONE, newBoneName: RENAMED_VIRTUAL_BONE, save: true }, expected: 'success', assertions: [{ path: 'structuredContent.result.undo.undoable', equals: true, label: 'one undo step' }] },
     { scenario: 'CONFIG: set mesh bone transform', toolName: 'animation_physics', arguments: { action: 'set_bone_transform', skeletalMeshPath: SKELETAL_MESH_PATH, boneName: MESH_BONE_A, location: [0, 0, 0], rotation: [0, 0, 0], scale: [1, 1, 1], save: false }, expected: 'success' },
     { scenario: 'ADD: add temp bone', toolName: 'animation_physics', arguments: { action: 'add_bone', skeletonPath: SKELETON_PATH, boneName: TEMP_BONE, parentBoneName: ROOT_BONE, location: [0, 10, 0], save: true }, expected: 'success|already exists' },
     { scenario: 'CONFIG: set temp bone parent', toolName: 'animation_physics', arguments: { action: 'set_bone_parent', skeletonPath: SKELETON_PATH, boneName: TEMP_BONE, parentBoneName: CHILD_BONE, save: true }, expected: 'success' },
@@ -341,8 +341,8 @@ const testCases = [
     { scenario: 'DELETE: remove temp bone', toolName: 'animation_physics', arguments: { action: 'remove_bone', skeletonPath: SKELETON_PATH, boneName: TEMP_BONE, removeChildren: true, save: true }, expected: 'success|not found' },
 
     // === SOCKETS ===
-    { scenario: 'CREATE: create socket', toolName: 'animation_physics', arguments: { action: 'create_socket', skeletonPath: SKELETON_PATH, socketName: SOCKET_NAME, attachBoneName: CHILD_BONE, relativeLocation: [1, 2, 3], relativeRotation: [0, 45, 0], relativeScale: [1, 1, 1], save: true }, expected: 'success|already exists' },
-    { scenario: 'CONFIG: configure socket', toolName: 'animation_physics', arguments: { action: 'configure_socket', skeletonPath: SKELETON_PATH, socketName: SOCKET_NAME, attachBoneName: CHILD_BONE, relativeLocation: [4, 5, 6], relativeRotation: [0, 90, 0], relativeScale: [1.25, 1.25, 1.25], save: true }, expected: 'success' },
+    { scenario: 'CREATE: create socket', toolName: 'animation_physics', arguments: { action: 'create_socket', skeletonPath: SKELETON_PATH, socketName: SOCKET_NAME, attachBoneName: CHILD_BONE, relativeLocation: [1, 2, 3], relativeRotation: [0, 45, 0], relativeScale: [1, 1, 1], save: true }, expected: 'success|already exists', assertions: [{ path: 'structuredContent.result.undo.undoable', equals: true, label: 'one undo step' }] },
+    { scenario: 'CONFIG: configure socket', toolName: 'animation_physics', arguments: { action: 'configure_socket', skeletonPath: SKELETON_PATH, socketName: SOCKET_NAME, attachBoneName: CHILD_BONE, relativeLocation: [4, 5, 6], relativeRotation: [0, 90, 0], relativeScale: [1.25, 1.25, 1.25], save: true }, expected: 'success', assertions: [{ path: 'structuredContent.result.undo.undoable', equals: true, label: 'one undo step' }] },
     { scenario: 'INFO: list sockets', toolName: 'animation_physics', arguments: { action: 'list_sockets', skeletonPath: SKELETON_PATH }, expected: 'success' },
 
     // === SKELETON INFO ===

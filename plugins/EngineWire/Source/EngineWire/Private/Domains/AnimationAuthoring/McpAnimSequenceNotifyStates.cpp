@@ -132,7 +132,7 @@ TSharedPtr<FJsonObject> HandleSequenceNotifyStateAction(const TSharedPtr<FJsonOb
         ANIM_ERROR_RESPONSE(FString::Printf(TEXT("Failed to create AnimNotifyState instance of class '%s'"), *NotifyClass), TEXT("INSTANTIATION_FAILED"));
     }
     {
-        const FMcpAnimEdit Edit(TEXT("Add Notify State"), AnimAsset, Response);
+        const FMcpAssetEdit Edit(TEXT("Add Notify State"), {AnimAsset}, Response);
         FAnimNotifyEvent& NotifyEvent = AnimAsset->Notifies.AddDefaulted_GetRef();
         NotifyEvent.Link(AnimAsset, StartTime);
         NotifyEvent.SetDuration(Duration);

@@ -119,3 +119,16 @@ private:
 
 	TUniquePtr<class FScopedTransaction> Transaction;
 };
+
+/**
+ * One undo step for an edit of an asset and its subobjects: the transaction opened and each object Modify'd before
+ * the change, the undo block written into the reply as the scope closes. Refuse before opening one; save after it
+ * closes. A subobject (a socket) must carry RF_Transactional, as the gate refuses one that does not.
+ */
+struct FMcpAssetEdit
+{
+	FMcpScopedEditorTransaction Transaction;
+	TSharedPtr<FJsonObject> Response;
+	FMcpAssetEdit(const TCHAR* Title, const TArray<UObject*>& Objects, const TSharedPtr<FJsonObject>& InResponse);
+	~FMcpAssetEdit() { Transaction.DescribeInto(Response); }
+};

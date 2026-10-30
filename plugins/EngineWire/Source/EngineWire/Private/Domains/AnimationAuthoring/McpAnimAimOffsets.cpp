@@ -101,7 +101,7 @@ TSharedPtr<FJsonObject> HandleAimOffsetActions(const FString& SubAction, const T
         }
         int32 SampleIndex = INDEX_NONE;
         {
-            const FMcpAnimEdit Edit(TEXT("Add Aim Offset Sample"), Target, Response);
+            const FMcpAssetEdit Edit(TEXT("Add Aim Offset Sample"), {Target}, Response);
             SampleIndex = Target->AddSample(Animation, SampleValue);
         }
         SaveAnimAssetAndReport(Target, bSave, Response);

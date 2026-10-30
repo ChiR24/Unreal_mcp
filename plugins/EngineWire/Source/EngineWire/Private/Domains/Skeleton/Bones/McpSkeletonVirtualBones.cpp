@@ -7,6 +7,7 @@
 #include "EngineWireSubsystem.h"
 #include "Transport/WebSocket/McpBridgeWebSocket.h"
 #include "Foundation/HandlerUtils/McpHandlerUtils.h"
+#include "Foundation/McpScopedEditorTransaction.h"
 
 using namespace McpSkeletonHandlers;
 
@@ -63,25 +64,27 @@ bool UEngineWireSubsystem::HandleCreateVirtualBone(
         }
     }
 
-    FName NewVirtualBoneName;
-    bool bSuccess = Skeleton->AddNewVirtualBone(FName(*SourceBone), FName(*TargetBone), NewVirtualBoneName);
-
-    if (!bSuccess)
+    // AddNewVirtualBone refuses only a pair it already has; refused here, before anything changes.
+    if (Skeleton->GetVirtualBones().ContainsByPredicate([&SourceBone, &TargetBone](const FVirtualBone& VB)
+            { return VB.SourceBoneName == FName(*SourceBone) && VB.TargetBoneName == FName(*TargetBone); }))
     {
         SendAutomationError(RequestingSocket, RequestId,
-            TEXT("Failed to create virtual bone. Check that source and target bones exist."),
+            FString::Printf(TEXT("A virtual bone from %s to %s already exists (list_virtual_bones)."), *SourceBone, *TargetBone),
             TEXT("VIRTUAL_BONE_FAILED"));
         return true;
     }
-
-    // Rename if custom name provided
-    if (!VirtualBoneName.IsEmpty() && NewVirtualBoneName.ToString() != VirtualBoneName)
-    {
-        Skeleton->RenameVirtualBone(NewVirtualBoneName, FName(*VirtualBoneName));
-        NewVirtualBoneName = FName(*VirtualBoneName);
-    }
-
+    FName NewVirtualBoneName;
     TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
+    {
+        // The skeleton's own Modify recorded nothing with no transaction open: Ctrl+Z undid the edit before this one.
+        const FMcpAssetEdit Edit(TEXT("Add Virtual Bone"), {Skeleton}, Result);
+        Skeleton->AddNewVirtualBone(FName(*SourceBone), FName(*TargetBone), NewVirtualBoneName);
+        if (!VirtualBoneName.IsEmpty() && NewVirtualBoneName.ToString() != VirtualBoneName)
+        {
+            Skeleton->RenameVirtualBone(NewVirtualBoneName, FName(*VirtualBoneName));
+            NewVirtualBoneName = FName(*VirtualBoneName);
+        }
+    }
     Result->SetStringField(TEXT("virtualBoneName"), NewVirtualBoneName.ToString());
     Result->SetStringField(TEXT("sourceBone"), SourceBone);
     Result->SetStringField(TEXT("targetBone"), TargetBone);
@@ -121,10 +124,11 @@ bool UEngineWireSubsystem::HandleRenameBone(
     if (Skeleton->GetVirtualBones().ContainsByPredicate([&BoneFName](const FVirtualBone& VB) { return VB.VirtualBoneName == BoneFName; }))
     {
         const FString NewVirtualName = NewBoneName.StartsWith(TEXT("VB ")) ? NewBoneName : VirtualBoneNameHelpers::AddVirtualBonePrefix(NewBoneName);
-        Skeleton->Modify();
-        Skeleton->RenameVirtualBone(FName(*BoneName), FName(*NewVirtualName));
-
         TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
+        {
+            const FMcpAssetEdit Edit(TEXT("Rename Virtual Bone"), {Skeleton}, Result);
+            Skeleton->RenameVirtualBone(FName(*BoneName), FName(*NewVirtualName));
+        }
         Result->SetStringField(TEXT("oldName"), BoneName);
         Result->SetStringField(TEXT("newName"), NewVirtualName);
         Result->SetBoolField(TEXT("isVirtualBone"), true);
@@ -217,11 +221,11 @@ bool UEngineWireSubsystem::HandleDeleteVirtualBone(
         return true;
     }
 
-    TArray<FName> BonesToRemove;
-    BonesToRemove.Add(FName(*VirtualBoneName));
-    Skeleton->RemoveVirtualBones(BonesToRemove);
-
     TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
+    {
+        const FMcpAssetEdit Edit(TEXT("Delete Virtual Bone"), {Skeleton}, Result);
+        Skeleton->RemoveVirtualBones(TArray<FName>{FName(*VirtualBoneName)});
+    }
     Result->SetStringField(TEXT("skeletonPath"), SkeletonPath);
     Result->SetStringField(TEXT("virtualBoneName"), VirtualBoneName);
     Result->SetNumberField(TEXT("remainingVirtualBones"), Skeleton->GetVirtualBones().Num());

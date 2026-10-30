@@ -125,7 +125,7 @@ if (SubAction == TEXT("add_montage_notify"))
         ANIM_ERROR_RESPONSE(FString::Printf(TEXT("Failed to create AnimNotify instance of class '%s'"), *NotifyClass), TEXT("INSTANTIATION_FAILED"));
     }
     {
-        const FMcpAnimEdit Edit(TEXT("Add Montage Notify"), Montage, Response);
+        const FMcpAssetEdit Edit(TEXT("Add Montage Notify"), {Montage}, Response);
         while (!Montage->AnimNotifyTracks.IsValidIndex(TrackIndex))
         {
             Montage->AnimNotifyTracks.Add(FAnimNotifyTrack(*FString::FromInt(Montage->AnimNotifyTracks.Num() + 1), FLinearColor::White));
@@ -166,7 +166,7 @@ if (SubAction == TEXT("add_montage_notify"))
             ANIM_ERROR_RESPONSE(BlendError, TEXT("INVALID_ARGUMENT"));
         }
         {
-            const FMcpAnimEdit Edit(TEXT("Set Blend In"), Montage, Response);
+            const FMcpAssetEdit Edit(TEXT("Set Blend In"), {Montage}, Response);
             Montage->BlendIn = Blend;
         }
 
@@ -195,7 +195,7 @@ if (SubAction == TEXT("add_montage_notify"))
             ANIM_ERROR_RESPONSE(BlendError, TEXT("INVALID_ARGUMENT"));
         }
         {
-            const FMcpAnimEdit Edit(TEXT("Set Blend Out"), Montage, Response);
+            const FMcpAssetEdit Edit(TEXT("Set Blend Out"), {Montage}, Response);
             Montage->BlendOut = Blend;
         }
 
@@ -232,7 +232,7 @@ if (SubAction == TEXT("add_montage_notify"))
                 *(FromSectionIndex == INDEX_NONE ? FromSection : ToSection), *McpMontageSectionNames(Montage)), TEXT("SECTION_NOT_FOUND"));
         }
         {
-            const FMcpAnimEdit Edit(TEXT("Link Sections"), Montage, Response);
+            const FMcpAssetEdit Edit(TEXT("Link Sections"), {Montage}, Response);
             Montage->CompositeSections[FromSectionIndex].NextSectionName = FName(*ToSection);
         }
         SaveAnimAssetAndReport(Montage, bSave, Response);

@@ -241,3 +241,12 @@ void FMcpScopedEditorTransaction::DescribeInto(const TSharedPtr<FJsonObject>& Re
 	}
 	Result->SetObjectField(TEXT("undo"), Undo);
 }
+
+FMcpAssetEdit::FMcpAssetEdit(const TCHAR* InTitle, const TArray<UObject*>& Objects, const TSharedPtr<FJsonObject>& InResponse)
+	: Transaction(FText::FromString(InTitle), EMcpMutationDurability::EditorStateOnly, Objects), Response(InResponse)
+{
+	for (UObject* Object : Objects)
+	{
+		Object->Modify();
+	}
+}
