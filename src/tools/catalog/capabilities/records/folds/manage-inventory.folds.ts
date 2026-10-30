@@ -5,7 +5,7 @@ export const MANAGE_INVENTORY_FOLDS: readonly FoldSpec[] = [
   {
     primary: 'create_inventory_asset', selector: 'kind',
     summary: 'Create an inventory asset, chosen by kind. item_data_asset, item_category, loot_table and crafting_recipe make generic data assets: the configure actions store their fields and get_inventory_info reads them back. They are data only, for gameplay to read; nothing runs on its own. crafting_station makes an Actor Blueprint with a StationMesh and an InteractionBox. name goes in path (defaults /Game/Items, /Game/Items/Categories, /Game/Data/LootTables, /Game/Data/Recipes and /Game/Blueprints/CraftingStations). An asset already there is refused (ASSET_ALREADY_EXISTS), never replaced. A recipe needs outputItemPath, an existing item. Saved unless save is false (saved).',
-    topics: ['item data asset', 'item category', 'loot table', 'crafting recipe', 'crafting station', 'make an item'],
+    topics: ['item data asset', 'item category', 'loot table', 'crafting recipe', 'crafting station', 'make an item', 'add an inventory or items'],
     members: { item_data_asset: 'create_item_data_asset', item_category: 'create_item_category', loot_table: 'create_loot_table', crafting_recipe: 'create_crafting_recipe', crafting_station: 'create_crafting_station' },
   },
   {

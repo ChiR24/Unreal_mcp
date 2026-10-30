@@ -22,7 +22,7 @@ const AREAS = {
 
 export const FOLIAGE_RECORDS: readonly CapabilityRecordSource[] = [
   buildRecord({
-    id: 'build_environment.add_foliage', action: 'add_foliage', family: F,
+    id: 'build_environment.add_foliage', action: 'add_foliage', family: F, aliases: ['build_environment.add_grass'],
     topics: ['foliage', 'vegetation', 'grass', 'trees', 'scatter foliage', 'plants'],
     summary: 'Add foliage: with only meshPath (+ name) create or update a foliage type asset; with a foliage type or a placement (locations, position, location + radius + count) scatter instances onto the ground, a bare meshPath standing in for its auto foliage type.',
     whenToUse: WU, whenNotToUse: ['A procedural foliage volume should be used for large areas.'],

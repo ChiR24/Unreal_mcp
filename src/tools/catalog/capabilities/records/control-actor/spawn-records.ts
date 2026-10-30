@@ -36,7 +36,7 @@ export const SPAWN_RECORDS: readonly CapabilityRecordSource[] = [
     domain: DOMAIN,
     family: FAMILY_SPAWN,
     topics: ['spawn actor', 'place actor', 'add actor to level', 'create actor', 'spawn cube', 'spawn static mesh', 'instantiate class',
-      'add a cube to the level', 'place a cube on the floor', 'add a sphere to the level', 'place a sphere in the level', 'build a wall or a tower of cubes', 'set the player spawn point', 'add a floor or add a ceiling'],
+      'add a cube to the level', 'place a cube on the floor', 'add a sphere to the level', 'place a sphere in the level', 'build a wall or a tower of cubes', 'set the player spawn point', 'add a floor or add a ceiling', 'add a bridge over a gap or a river'],
     summary:
       'Spawn a new actor instance from a class path into the current level, or a mesh actor from a mesh path alone.',
     whenToUse: [

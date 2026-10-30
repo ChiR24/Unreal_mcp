@@ -365,7 +365,7 @@ export const SYSTEM_OPS_RECORDS: readonly CapabilityRecordSource[] = [
     action: 'list_save_games',
     domain: 'project',
     family: 'save-games',
-    topics: ['save game', 'save slot', 'savegame file', 'read save file', 'saved best score'],
+    topics: ['save game', 'save slot', 'savegame file', 'read save file', 'saved best score', 'load the game or a save slot'],
     summary: 'List the game\'s SaveGame slots (Saved/SaveGames), or read one slot as the game loads it: its SaveGame class and every saved property value.',
     whenToUse: [
       'What a game saved must be checked, such as a best score or the settings SaveGameToSlot wrote.',

@@ -1,5 +1,5 @@
 {
-  "catalogRevision": "c53e2bb83c782a2b",
+  "catalogRevision": "386a3e58d821204b",
   "recordCount": 483,
   "records": [
     {
@@ -28567,6 +28567,7 @@
     {
       "id": "build_environment.add_foliage",
       "aliases": [
+        "build_environment.add_grass",
         "build_environment.add_foliage_instances",
         "build_environment.paint_foliage"
       ],
@@ -28612,6 +28613,7 @@
           "add trees to the hills",
           "place rocks randomly on the landscape",
           "spread rocks or trees around the level",
+          "add grass to the landscape or the ground",
           "foliage",
           "vegetation",
           "grass",
@@ -29007,7 +29009,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "1d69a2ec3894703cfb5473af28e37c8f764811e72feee995d7335213b3db30fa",
-        "content": "fa254c3daaf7dfa582170ec24189c915e68a0e5813041f8c007d2c1e503c478b"
+        "content": "9c20367faf738a3492e0d8967fc729f7df12d3d8f10c916182deee9a298f26f7"
       }
     },
     {
@@ -31136,7 +31138,8 @@
           "change screen tint",
           "add bloom or depth of field",
           "make the room, the scene or the level darker or brighter",
-          "make the game look like a film"
+          "make the game look like a film",
+          "add a blur effect to the screen"
         ],
         "summary": "Set post-process values on a PostProcessVolume, chosen by setting: bloom, exposure, depth of field, motion blur, tonemapper, color grading, LUT, white balance, vignette, grain, chromatic aberration, lens flare, SSAO/GTAO, screen-space and Lumen reflections, blend (screen_percentage sets r.ScreenPercentage instead). The volume is actorName, else the level's unbound (whole level) volume, the persistent level's first; a level with none gets one, named actorName when given. A name no volume has is ACTOR_NOT_FOUND listing the volumes, several unbound volumes AMBIGUOUS. Each value is the FPostProcessSettings field it names and turns that field's override on; settings takes any field by engine name. A value outside the engine's limits, an unknown name and a call that sets nothing are refused, and nothing is written unless every value is taken. One undo step; the level is left unsaved. blendWeight (0-1) and infiniteUnbound set the volume itself with any variant.",
         "whenToUse": [
@@ -31618,7 +31621,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "6e0499250b33a73ef4c234087fc992a568d3d5d48c155fa859237578f2a2736b",
-        "content": "dc33397c02c294286106c1fd6fabb64fc4c7a53aeb86df9ddfa2061c31acd4d7"
+        "content": "b51828a426ea7ff43f103914f7a7108630434b46e7d84bd9ffcdc71890d349fb"
       }
     },
     {
@@ -34371,7 +34374,8 @@
           "a spotlight on a statue",
           "light up the stage with a spotlight",
           "a ceiling light",
-          "a red or warm coloured light"
+          "a red or warm coloured light",
+          "add a spotlight on the player"
         ],
         "summary": "Create a light actor in the level being edited: point, spot, directional, rect or sky (or any light class), at location (default 0, 0, 300), made Movable, with intensity, color and, in properties, shadow, radius and cone settings. The reply lists what was applied, refused (a setting this kind of light lacks) or adjusted; the spawn is one undo step and the level is left unsaved. During Play it still goes into the edited level, not the running game.",
         "whenToUse": [
@@ -34590,7 +34594,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "9b6d84190c55a5e3cb18427d985a4bec0689dcf9f8e749e3d86228e7b65f785d",
-        "content": "2f1fe4e9c79879e4c7babaafd02fa92a1c4170f2fc162ecb63ee3188b27d049c"
+        "content": "fd2c8bd9f4bf3a1991fb6823c234477ea869ab11efc666fb72059c088599b1a9"
       }
     },
     {
@@ -35274,7 +35278,9 @@
           "river spline",
           "make a spline",
           "add a cable",
-          "add a fence along a path"
+          "add a fence along a path",
+          "add a wall around the level or an area",
+          "add a rope or a cable"
         ],
         "summary": "Create a spline actor, a spline mesh component, or in one call a typed spline with a mesh drawn along its route: road and river (a flat slab, 400 wide), wall and fence (standing on the route, 20x300 and 10x100), pipe and cable (round, 50 and 4 across). meshPath swaps in a mesh fitted to width (and height for a wall or fence); every span collides.",
         "whenToUse": [
@@ -35764,7 +35770,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "f79e19abc0fda91fee483abde52b6f6f8a38cb3bc7bbaf35d603bfd1fdb55325",
-        "content": "f38c9c62d78c4543688788208dd49bbb23b1bb6822ec290c86030c3717710ecd"
+        "content": "9aa88fbdbb0da90cca0e11ecb6cfacf91c072077f9f08e9133048741b53380b3"
       }
     },
     {
@@ -42072,6 +42078,7 @@
           "turn off the sun or a lamp",
           "a blue or warmer light colour",
           "a light made smaller or reaching further",
+          "make the cube spin or rotate",
           "add component to actor",
           "attach component to actor"
         ],
@@ -42316,7 +42323,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "6a1af5d36036625ba61910405e6e77df29e8cc620eb543fef4810449a49c2d16",
-        "content": "549bbaa1c70caa04c13e836c91bb7d8acdb9ee52b96d99ac6e0c8892237601fd"
+        "content": "1f194658fc93258b0dc0a8b550edd596b5ed03ca431feaeb62fa6209c39410ee"
       }
     },
     {
@@ -47078,6 +47085,7 @@
           "build a wall or a tower of cubes",
           "set the player spawn point",
           "add a floor or add a ceiling",
+          "add a bridge over a gap or a river",
           "spawn blueprint actor",
           "place blueprint in level",
           "instantiate blueprint",
@@ -47471,7 +47479,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "fb05155ddec0c61d867d3540276173cb9307a64ce5e8324a2024d0be782ea2aa",
-        "content": "c3e74e104c03a56f38460ce6e3a4190446d7d509ca5364299dae5edb447a796c"
+        "content": "642043c823005243aa02f5acb6ed2a553715580e55a9d51ee771b837c2bdd553"
       }
     },
     {
@@ -67449,7 +67457,8 @@
           "mix equalizer",
           "master volume",
           "change the volume in the menu or the game",
-          "the music or the sounds louder or quieter"
+          "the music or the sounds louder or quieter",
+          "change the volume in the settings or the menu"
         ],
         "summary": "Change a Sound Class or Sound Mix, chosen by setting, each saved: parent sets or clears a class's parent (a loop is refused), properties sets its volume, pitch, low-pass, LFE bleed and center-channel volume, mix_modifier adds or edits the adjuster a mix applies to a class (and the mix fades), mix_eq sets the mix's four EQ bands. A call that sets nothing is refused.",
         "whenToUse": [
@@ -67748,7 +67757,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "14113912f8cbf267c3b2eef484bf124b5f589ed209d2dc4a46404270cd8241aa",
-        "content": "1c4d95a193c36f6fcdd9e78607a8efaec02612c2120916d41d78a48bd2a9a557"
+        "content": "4f655f655c6cd2f20436e74162336df140a09d9dfea1258bb639bb57a119898b"
       }
     },
     {
@@ -88164,7 +88173,8 @@
           "loot table",
           "crafting recipe",
           "crafting station",
-          "make an item"
+          "make an item",
+          "add an inventory or items"
         ],
         "summary": "Create an inventory asset, chosen by kind. item_data_asset, item_category, loot_table and crafting_recipe make generic data assets: the configure actions store their fields and get_inventory_info reads them back. They are data only, for gameplay to read; nothing runs on its own. crafting_station makes an Actor Blueprint with a StationMesh and an InteractionBox. name goes in path (defaults /Game/Items, /Game/Items/Categories, /Game/Data/LootTables, /Game/Data/Recipes and /Game/Blueprints/CraftingStations). An asset already there is refused (ASSET_ALREADY_EXISTS), never replaced. A recipe needs outputItemPath, an existing item. Saved unless save is false (saved).",
         "whenToUse": [
@@ -88335,7 +88345,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "f21d132802adfbf77ef77e905bf75305e4132c7727988090fd505901a81fa5d4",
-        "content": "46afd96edf42d63d6e71394ee36331a2abc9b6ec85f3ee134e4f850541777357"
+        "content": "1c948ba487a88c2c6b16445cf7ea74a7eeee0674401fd9c82a3a0ed0cba600f6"
       }
     },
     {
@@ -117137,7 +117147,8 @@
           "save slot",
           "savegame file",
           "read save file",
-          "saved best score"
+          "saved best score",
+          "load the game or a save slot"
         ],
         "summary": "List the game's SaveGame slots (Saved/SaveGames), or read one slot as the game loads it: its SaveGame class and every saved property value.",
         "whenToUse": [
@@ -117271,7 +117282,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "e15c0a9705aa2c560c66eaa526fe67b3f73257c7404e4e351815928b20cb10fd",
-        "content": "6abad142f1809531b12c59e1e081830b43b6507f26718f9bef47941e20751395"
+        "content": "f38bf48d4e21be96c2d6d449ef8ce65b01b9c25d348c0a1b7312a1e37f7f6159"
       }
     },
     {

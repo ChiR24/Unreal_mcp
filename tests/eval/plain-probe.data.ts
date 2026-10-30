@@ -1111,4 +1111,15 @@ export const PLAIN_PROBE: readonly PlainProbeCase[] = [
   { query: 'footstep sounds', accepted: ['animation_physics.edit_animation'] },
   { query: 'add footsteps', accepted: ['animation_physics.edit_animation'] },
   { query: 'add footsteps to the run animation', accepted: ['animation_physics.edit_animation'] },
+  // Grass on a landscape, a blur, a spotlight on the player, a wall round the level, a rope, loading a save, the settings volume, a spinning cube, an inventory, a bridge.
+  { query: 'add grass to the landscape', accepted: ['build_environment.add_foliage'] },
+  { query: 'add a blur effect', accepted: ['build_environment.configure_post_process'] },
+  { query: 'add a spotlight on the player', accepted: ['build_environment.create_light'] },
+  { query: 'add a wall around the level', accepted: ['build_environment.create_spline'] },
+  { query: 'add a rope', accepted: ['build_environment.create_spline'] },
+  { query: 'load the game', accepted: ['system_control.list_save_games'] },
+  { query: 'change the volume in the settings', accepted: ['manage_audio.configure_sound_class'] },
+  { query: 'make the cube spin', accepted: ['control_actor.edit_component'] },
+  { query: 'add an inventory', accepted: ['manage_inventory.create_inventory_asset'] },
+  { query: 'add a bridge', accepted: ['control_actor.spawn'] },
 ];
