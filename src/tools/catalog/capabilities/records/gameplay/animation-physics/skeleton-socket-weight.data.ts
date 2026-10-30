@@ -16,7 +16,7 @@ const MESH_REQUIRED = ['skeletalMeshPath'];
 // What every source-data weight edit reports: per-bone influenced-vertex counts, morphs a rebuild dropped, the save.
 const TRANSFER_OUT = {
   boneVertexCounts: { type: 'object', additionalProperties: true, 'x-unreal-reflection-boundary': true, description: 'before and after: bone name to the number of vertices it influences, read back from the source data.' },
-  morphTargetsDropped: { type: 'array', items: { type: 'string' }, description: 'Render-only morph targets (made by create_morph_target or set_morph_target_deltas) the rebuild removed, only with dropRenderOnlyMorphs true; import_morph_targets writes morphs that survive.' },
+  morphTargetsDropped: { type: 'array', items: { type: 'string' }, description: 'Morph targets the mesh had in its render data alone that the rebuild removed, only with dropRenderOnlyMorphs true; create_morph_target, set_morph_target_deltas and import_morph_targets write morphs that survive.' },
   saved: { type: 'boolean', description: 'Whether the mesh was saved.' },
 };
 

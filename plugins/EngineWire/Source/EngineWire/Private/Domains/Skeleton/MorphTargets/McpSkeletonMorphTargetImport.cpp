@@ -63,7 +63,7 @@ bool HandleImportMorphTargetsAction(UEngineWireSubsystem* Subsystem, const FStri
         TArray<FString> AvailableText;
         for (const FName& Name : Available) AvailableText.Add(Name.ToString());
         Subsystem->SendAutomationError(Socket, RequestId, FString::Printf(
-            TEXT("%s has no source-data morph target %s. Source-data morphs: %s. Render-only morphs (made by set_morph_target_deltas, which a rebuild drops, so they cannot be transferred): %s."),
+            TEXT("%s has no source-data morph target %s. Source-data morphs: %s. Render-only morphs (in its render data alone, which a rebuild drops, so they cannot be transferred): %s."),
             *SourceMesh->GetName(), Missing.Num() > 0 ? *FString::Join(Missing, TEXT(", ")) : TEXT("at all"),
             AvailableText.Num() > 0 ? *FString::Join(AvailableText, TEXT(", ")) : TEXT("none"),
             RenderOnly.Num() > 0 ? *FString::Join(RenderOnly, TEXT(", ")) : TEXT("none")), TEXT("NO_MORPH_TARGETS"));

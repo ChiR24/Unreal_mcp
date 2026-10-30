@@ -59,6 +59,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **The directory report's reply carries its assets**: the record declared no outputs, so the list was cut from every reply.
 - **A behaviour run again updates placed copies**: a copy in the level still on the old value takes the behaviour's new one, as a default changed in the Blueprint editor does (a sound trigger switched to play once kept playing every time).
 - **Animation and skeleton edits undo**: notifies, sync markers, root-motion and additive settings, montage sections, slots, links and blends, Aim Offset and blend space samples, blend space axes and smoothing, sockets, virtual bones, physics bodies and joints, and the physics asset a mesh uses are one undo step each (Ctrl+Z undid the edit before them instead, and the reply said nothing about undo); an Aim Offset sample the engine refuses is refused, not answered "added", and a sync marker past the clip's end is refused.
+- **A morph target made from deltas lasts**: create_morph_target and set_morph_target_deltas answered success while the mesh kept no morph (the rebuild that registering one starts dropped it); they now write it into the mesh's source data, so it exists after the rebuild and every later one, import_morph_targets can take it, and a vertex the mesh lacks or deltas that move nothing are refused.
 
 </details>
 

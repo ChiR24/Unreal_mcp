@@ -86,6 +86,12 @@ public:
         return Best;
     }
 
+    // Every point within Radius of Query, added to Out.
+    void FindAll(const FVector3f& Query, float Radius, TArray<int32>& Out) const
+    {
+        Grid.FindPointsInBall(Query, Radius, [this, &Query](const int32& Index) { return FVector3f::DistSquared(Points[Index], Query); }, Out);
+    }
+
 private:
     const TArray<FVector3f>& Points;
     float CellSize;

@@ -81,7 +81,7 @@ export const ANIMATION_PHYSICS_FOLDS: readonly FoldSpec[] = [
   },
   {
     primary: 'edit_morph_target', selector: 'edit',
-    summary: 'Create a morph target, set its deltas, import morph targets from another mesh, or set a morph target value on an actor.',
+    summary: 'Create a morph target from vertex deltas, replace its deltas, import morph targets from another mesh, or set a morph target value on an actor. create, set_deltas and import write the mesh\'s source data, so the morph targets last through every rebuild.',
     topics: ['morph target', 'morph target deltas', 'import morph targets', 'morph target value'],
     members: { create: 'create_morph_target', set_deltas: 'set_morph_target_deltas', import: 'import_morph_targets', set_value: 'set_morph_target_value' },
   },

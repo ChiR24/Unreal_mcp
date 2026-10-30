@@ -343,7 +343,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "dropRenderOnlyMorphs": {
           "type": "boolean",
-          "description": "The edit rebuilds the mesh from its source data, which deletes morph targets that exist only in render data (made by create_morph_target or set_morph_target_deltas). Without true, a mesh that has any is refused with RENDER_ONLY_MORPHS naming them and nothing changes (default false)."
+          "description": "The edit rebuilds the mesh from its source data, which deletes morph targets that exist only in its render data, not its source data (left by tools that wrote render data alone). Without true, a mesh that has any is refused with RENDER_ONLY_MORPHS naming them and nothing changes (default false)."
         },
         "dryRun": {
           "type": "boolean",
@@ -1950,7 +1950,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
               "items": {
                 "type": "string"
               },
-              "description": "Render-only morph targets (made by create_morph_target or set_morph_target_deltas) the rebuild removed, only with dropRenderOnlyMorphs true; import_morph_targets writes morphs that survive."
+              "description": "Morph targets the mesh had in its render data alone that the rebuild removed, only with dropRenderOnlyMorphs true; create_morph_target, set_morph_target_deltas and import_morph_targets write morphs that survive."
             },
             {
               "type": "array",
@@ -1960,7 +1960,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
               "description": "Render-only morph targets the rebuild removed, only with dropRenderOnlyMorphs true."
             }
           ],
-          "description": "Render-only morph targets (made by create_morph_target or set_morph_target_deltas) the rebuild removed, only with dropRenderOnlyMorphs true; import_morph_targets writes morphs that survive."
+          "description": "Morph targets the mesh had in its render data alone that the rebuild removed, only with dropRenderOnlyMorphs true; create_morph_target, set_morph_target_deltas and import_morph_targets write morphs that survive."
         },
         "nodeId": {
           "type": "string",

@@ -1,5 +1,5 @@
 {
-  "catalogRevision": "cf8030d64f3c5079",
+  "catalogRevision": "7e1926ed99e5f221",
   "recordCount": 483,
   "records": [
     {
@@ -4956,7 +4956,7 @@
           "transfer blend shapes",
           "copy morph targets"
         ],
-        "summary": "Create a morph target, set its deltas, import morph targets from another mesh, or set a morph target value on an actor.",
+        "summary": "Create a morph target from vertex deltas, replace its deltas, import morph targets from another mesh, or set a morph target value on an actor. create, set_deltas and import write the mesh's source data, so the morph targets last through every rebuild.",
         "whenToUse": [
           "edit=create: Facial/shape blending needed.",
           "edit=set_deltas: Morph shape must be authored.",
@@ -4994,6 +4994,10 @@
               "type": "number",
               "description": "Skeletal mesh LOD index (default 0)."
             },
+            "dropRenderOnlyMorphs": {
+              "type": "boolean",
+              "description": "The edit rebuilds the mesh from its source data, which deletes morph targets that exist only in its render data, not its source data (left by tools that wrote render data alone). Without true, a mesh that has any is refused with RENDER_ONLY_MORPHS naming them and nothing changes (default false)."
+            },
             "save": {
               "type": "boolean",
               "description": "Save the asset to disk after the change (default true). With false the change stays in memory only and is lost when the editor restarts."
@@ -5008,10 +5012,6 @@
                 "type": "string"
               },
               "description": "Names to import (default all the source mesh has in its source data)."
-            },
-            "dropRenderOnlyMorphs": {
-              "type": "boolean",
-              "description": "The edit rebuilds the mesh from its source data, which deletes morph targets that exist only in render data (made by create_morph_target or set_morph_target_deltas). Without true, a mesh that has any is refused with RENDER_ONLY_MORPHS naming them and nothing changes (default false)."
             },
             "actorName": {
               "type": "string",
@@ -5028,7 +5028,7 @@
                 "import",
                 "set_value"
               ],
-              "description": "Which edit morph target variant to run.\ncreate: Create a morph target on a skeletal mesh.\nset_deltas: Set vertex deltas for a morph target.\nimport: Copy morph targets (blend shapes) from another skeletal mesh into this mesh's source data, each vertex taking the delta of the nearest source vertex, so they survive every rebuild.\nset_value: Set a morph target weight (value 0 to 1, clamped) on the skeletal mesh component of a placed actor for this editor session (not saved with the level); a weight of 0 clears it. The morph must exist on the mesh (MORPH_TARGET_NOT_FOUND otherwise); the reply gives the weight the component holds and every active morph."
+              "description": "Which edit morph target variant to run.\ncreate: Create morph target morphTargetName on a skeletal mesh from deltas: each moves vertexIndex (a vertex of LOD lodIndex, default 0) by positionDelta in cm, mesh space, every other vertex staying put. It is written into the mesh's source data, so the rebuild that follows makes it and every later rebuild keeps it (a mesh with no source data gets it in its render data only). A name the mesh has is answered alreadyExists and left alone (edit=set_deltas changes it); a vertexIndex the LOD lacks is INVALID_ARGUMENT, deltas that move nothing INVALID_MORPH_DATA, and morph targets the mesh has only in render data are refused (RENDER_ONLY_MORPHS) unless dropRenderOnlyMorphs. Saved unless save is false (saved).\nset_deltas: Replace the deltas of morph target morphTargetName (made when the mesh lacks it) with deltas: each moves vertexIndex (a vertex of LOD lodIndex, default 0) by positionDelta in cm, mesh space, every other vertex staying put. Written into the mesh's source data and rebuilt, so the shape lasts through every later rebuild; created says whether the morph was made. A vertexIndex the LOD lacks is INVALID_ARGUMENT, deltas that move nothing INVALID_MORPH_DATA, and morph targets the mesh has only in render data are refused (RENDER_ONLY_MORPHS) unless dropRenderOnlyMorphs. Saved unless save is false (saved).\nimport: Copy morph targets (blend shapes) from another skeletal mesh into this mesh's source data, each vertex taking the delta of the nearest source vertex, so they survive every rebuild.\nset_value: Set a morph target weight (value 0 to 1, clamped) on the skeletal mesh component of a placed actor for this editor session (not saved with the level); a weight of 0 clears it. The morph must exist on the mesh (MORPH_TARGET_NOT_FOUND otherwise); the reply gives the weight the component holds and every active morph."
             }
           },
           "required": [
@@ -5137,7 +5137,7 @@
       },
       "examples": [
         {
-          "title": "Create a morph target, set its deltas, import morph targets from another mesh, or set a morph target value on an actor.",
+          "title": "Create a morph target from vertex deltas, replace its deltas, import morph targets from another mesh, or set a morph target value on an actor. create, set_deltas and import write the mesh's source data, so the morph targets last through every rebuild.",
           "input": {
             "action": "edit_morph_target",
             "skeletalMeshPath": "/Game/SM_Char",
@@ -5214,6 +5214,11 @@
               "set_deltas",
               "import"
             ],
+            "dropRenderOnlyMorphs": [
+              "create",
+              "set_deltas",
+              "import"
+            ],
             "save": [
               "create",
               "set_deltas",
@@ -5223,9 +5228,6 @@
               "import"
             ],
             "morphTargets": [
-              "import"
-            ],
-            "dropRenderOnlyMorphs": [
               "import"
             ],
             "actorName": [
@@ -5265,8 +5267,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "da208674bb00774ba7e3fdad572a1522f5ca5a43c91c8a9270eadb5febf3e7f0",
-        "content": "9660523ab1aa2ddfde394afb0c68dc43e1dc59b714a9689eb62506431b2938bc"
+        "schema": "a27d07901b778f2c9d00768a8d9e8183476e095a02f20ce5c3e578b62b7a1916",
+        "content": "b6fb95c90043e3d44b99bcc7f607fd4bfca6e90fd10db5e9a9dea9c944ba8b80"
       }
     },
     {
@@ -6256,7 +6258,7 @@
             },
             "dropRenderOnlyMorphs": {
               "type": "boolean",
-              "description": "The edit rebuilds the mesh from its source data, which deletes morph targets that exist only in render data (made by create_morph_target or set_morph_target_deltas). Without true, a mesh that has any is refused with RENDER_ONLY_MORPHS naming them and nothing changes (default false)."
+              "description": "The edit rebuilds the mesh from its source data, which deletes morph targets that exist only in its render data, not its source data (left by tools that wrote render data alone). Without true, a mesh that has any is refused with RENDER_ONLY_MORPHS naming them and nothing changes (default false)."
             },
             "axis": {
               "type": "string",
@@ -6315,7 +6317,7 @@
               "items": {
                 "type": "string"
               },
-              "description": "Render-only morph targets (made by create_morph_target or set_morph_target_deltas) the rebuild removed, only with dropRenderOnlyMorphs true; import_morph_targets writes morphs that survive."
+              "description": "Morph targets the mesh had in its render data alone that the rebuild removed, only with dropRenderOnlyMorphs true; create_morph_target, set_morph_target_deltas and import_morph_targets write morphs that survive."
             },
             "saved": {
               "type": "boolean",
@@ -6506,8 +6508,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "97831ace1a519bd3ee448ffba26a02f4c5fd789eea6500a1548fc12c4fd7321d",
-        "content": "527bd0c816afccc08d4ab84cf8158a77c3fef603a540e78d248baea848e5e1aa"
+        "schema": "e7e009c71c8df866318b79b2466df80e6678a6374ea0fe3bd16dac99b8ade0c6",
+        "content": "211feae1b7d74ec8685c482c56e7d4ff2378c20e148523817d7b000772aff562"
       }
     },
     {
