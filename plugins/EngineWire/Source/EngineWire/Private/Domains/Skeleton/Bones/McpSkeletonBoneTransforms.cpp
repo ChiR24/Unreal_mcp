@@ -7,6 +7,7 @@
 #include "EngineWireSubsystem.h"
 #include "Transport/WebSocket/McpBridgeWebSocket.h"
 #include "Foundation/HandlerUtils/McpHandlerUtils.h"
+#include "Foundation/McpScopedEditorTransaction.h"
 #include "ReferenceSkeleton.h"
 
 using namespace McpSkeletonHandlers;
@@ -64,17 +65,19 @@ bool UEngineWireSubsystem::HandleSetBoneTransform(
         return true;
     }
 
-    Mesh->Modify();
-    {
-        // The modifier rebuilds the bone maps when it leaves scope.
-        FReferenceSkeletonModifier Modifier(RefSkeleton, Mesh->GetSkeleton());
-        Modifier.UpdateRefPoseTransform(BoneIndex, NewTransform);
-    }
-    Mesh->CalculateInvRefMatrices();
-    Mesh->PostEditChange();
-    Mesh->MarkPackageDirty();
-
     TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
+    {
+        // Modify with no transaction open recorded nothing: Ctrl+Z undid the edit before this one. The mesh's undo
+        // record holds its reference skeleton and inverse reference matrices.
+        const FMcpAssetEdit Edit(TEXT("Set Bone Transform"), {Mesh}, Result);
+        {
+            // The modifier rebuilds the bone maps when it leaves scope.
+            FReferenceSkeletonModifier Modifier(RefSkeleton, Mesh->GetSkeleton());
+            Modifier.UpdateRefPoseTransform(BoneIndex, NewTransform);
+        }
+        Mesh->CalculateInvRefMatrices();
+        Mesh->PostEditChange();
+    }
     Result->SetStringField(TEXT("boneName"), BoneName);
     Result->SetNumberField(TEXT("boneIndex"), BoneIndex);
     Result->SetStringField(TEXT("skeletalMeshPath"), Mesh->GetPathName());

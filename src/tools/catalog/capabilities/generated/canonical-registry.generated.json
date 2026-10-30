@@ -1,5 +1,5 @@
 {
-  "catalogRevision": "7e1926ed99e5f221",
+  "catalogRevision": "46468ecfcc651d8a",
   "recordCount": 483,
   "records": [
     {
@@ -5889,7 +5889,7 @@
           "bone transform",
           "virtual bone"
         ],
-        "summary": "Edit a skeleton (skeletonPath), chosen by edit. add_bone adds boneName under parentBoneName (needed once the skeleton has bones; a taken name is BONE_EXISTS) at location, rotation and scale relative to the parent. set_bone_parent moves boneName, with its children, under parentBoneName, where it keeps its place in the reference pose: its own descendants are refused, and the parent it already has changes nothing (changed false). Both change the skeleton asset only; the skeletal meshes on it keep their own bones. set_bone_transform rewrites boneName in the reference pose of the skeletal mesh (skeletalMeshPath, or the skeleton's preview mesh), only the location, rotation or scale sent. create_virtual_bone adds a virtual bone from sourceBoneName to targetBoneName named boneName, or VB <source>_<target>; the engine's VB prefix is added when missing. rename_bone renames virtual bones only; a real bone takes a reimport of the mesh (OPERATION_NOT_SUPPORTED). Saved unless save is false (saved).",
+        "summary": "Edit a skeleton (skeletonPath), chosen by edit. add_bone adds boneName under parentBoneName (needed once the skeleton has bones; a taken name is BONE_EXISTS) at location, rotation and scale relative to the parent. set_bone_parent moves boneName, with its children, under parentBoneName, where it keeps its place in the reference pose: its own descendants are refused, and the parent it already has changes nothing (changed false). Both change the skeleton asset only; the skeletal meshes on it keep their own bones. set_bone_transform rewrites boneName in the reference pose of the skeletal mesh (skeletalMeshPath, or the skeleton's preview mesh), only the location, rotation or scale sent, in one undo step. create_virtual_bone adds a virtual bone from sourceBoneName to targetBoneName named boneName, or VB <source>_<target>; the engine's VB prefix is added when missing. rename_bone renames virtual bones only; a real bone takes a reimport of the mesh (OPERATION_NOT_SUPPORTED). Saved unless save is false (saved).",
         "whenToUse": [
           "edit=add_bone: A skeleton, bone, socket, physics body or morph target must be authored.",
           "edit=rename_bone: A virtual bone needs renaming.",
@@ -6006,7 +6006,7 @@
       },
       "examples": [
         {
-          "title": "Edit a skeleton (skeletonPath), chosen by edit. add_bone adds boneName under parentBoneName (needed once the skeleton has bones; a taken name is BONE_EXISTS) at location, rotation and scale relative to the parent. set_bone_parent moves boneName, with its children, under parentBoneName, where it keeps its place in the reference pose: its own descendants are refused, and the parent it already has changes nothing (changed false). Both change the skeleton asset only; the skeletal meshes on it keep their own bones. set_bone_transform rewrites boneName in the reference pose of the skeletal mesh (skeletalMeshPath, or the skeleton's preview mesh), only the location, rotation or scale sent. create_virtual_bone adds a virtual bone from sourceBoneName to targetBoneName named boneName, or VB <source>_<target>; the engine's VB prefix is added when missing. rename_bone renames virtual bones only; a real bone takes a reimport of the mesh (OPERATION_NOT_SUPPORTED). Saved unless save is false (saved).",
+          "title": "Edit a skeleton (skeletonPath), chosen by edit. add_bone adds boneName under parentBoneName (needed once the skeleton has bones; a taken name is BONE_EXISTS) at location, rotation and scale relative to the parent. set_bone_parent moves boneName, with its children, under parentBoneName, where it keeps its place in the reference pose: its own descendants are refused, and the parent it already has changes nothing (changed false). Both change the skeleton asset only; the skeletal meshes on it keep their own bones. set_bone_transform rewrites boneName in the reference pose of the skeletal mesh (skeletalMeshPath, or the skeleton's preview mesh), only the location, rotation or scale sent, in one undo step. create_virtual_bone adds a virtual bone from sourceBoneName to targetBoneName named boneName, or VB <source>_<target>; the engine's VB prefix is added when missing. rename_bone renames virtual bones only; a real bone takes a reimport of the mesh (OPERATION_NOT_SUPPORTED). Saved unless save is false (saved).",
           "input": {
             "action": "edit_skeleton",
             "skeletonPath": "/Game/SK_Char",
@@ -6129,7 +6129,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "969887c305960eb1e5013c947b3db2ddf49f3f850ab653aa0788b44444d6b882",
-        "content": "cae2aa4c013969b06ec977e6ec9edcf892fb230791ffd100700d8fab3f955148"
+        "content": "938879957b9b9506e87b3a5136c3a455e498e206ff1ddf189f35b29608e18bc7"
       }
     },
     {

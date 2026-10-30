@@ -1,6 +1,6 @@
 // Every animation and skeleton edit is one undo step: notifies, sync markers, root-motion and additive settings, montage
 // sections, slots, links and blends, Aim Offset and blend space samples, blend space axes and smoothing, sockets,
-// virtual bones, physics asset bodies and constraints, and the physics asset a mesh uses. They changed the asset with
+// virtual bones, physics asset bodies and constraints, the physics asset a mesh uses, and a mesh bone's reference pose. They changed the asset with
 // no transaction (a Modify with none open records nothing), so Ctrl+Z undid the edit before them and the reply said
 // nothing about undo. Behaviour belongs to the integration cases in tests/mcp-tools/gameplay/animation-physics*.test.mjs,
 // which assert undo.undoable on each.
@@ -30,6 +30,7 @@ const EDITS: Record<string, readonly string[]> = {
   [join(BONES, 'McpSkeletonSockets.cpp')]: ['Add Socket', 'Configure Socket'],
   [join(BONES, 'McpSkeletonSocketRemoval.cpp')]: ['Delete Socket'],
   [join(BONES, 'McpSkeletonVirtualBones.cpp')]: ['Add Virtual Bone', 'Rename Virtual Bone', 'Delete Virtual Bone'],
+  [join(BONES, 'McpSkeletonBoneTransforms.cpp')]: ['Set Bone Transform'],
   [join(PHYSICS, 'McpSkeletonPhysicsBodies.cpp')]: ['Add Physics Body', 'Configure Physics Body'],
   [join(PHYSICS, 'McpSkeletonPhysicsBodyRemoval.cpp')]: ['Remove Physics Body'],
   [join(PHYSICS, 'McpSkeletonPhysicsConstraints.cpp')]: ['Configure Constraint Limits'],
