@@ -30,7 +30,7 @@ export const MANAGE_AUDIO_FOLDS: readonly FoldSpec[] = [
   {
     primary: 'create_audio_actor', selector: 'kind',
     summary: 'Place sound in the level being edited, chosen by kind. ambient_sound spawns an Ambient Sound actor playing soundPath at location (default 0,0,0), labelled name, at volume and pitch, with attenuationPath and concurrencyPath when given; it plays in the editor now and when the game starts. audio_component adds an audio component with soundPath to actorName, or to a new actor at location when actorName is left out (the reply names the actor), playing at once unless autoPlay is false. reverb_zone spawns an Audio Volume named name (DUPLICATE_NAME when taken) as a box of size (default 500 on each axis) around location, applying reverbEffect at volume (default 1) with fadeTime (default 2 s). A sound, attenuation, concurrency or reverb path that does not load is ASSET_NOT_FOUND before anything spawns; the ambient sound and the reverb zone are one undo step each.',
-    topics: ['ambient sound', 'audio component', 'reverb zone', 'add background music', 'add a sound or music to the level or a room', 'add echo to a cave or a hall'],
+    topics: ['ambient sound', 'audio component', 'reverb zone', 'add background music', 'add a sound or music to the level or a room', 'add echo to a cave or a hall', 'add rain, wind or bird sounds', 'play music when the game starts'],
     members: { ambient_sound: 'create_ambient_sound', audio_component: 'create_audio_component', reverb_zone: 'create_reverb_zone' },
   },
   {
@@ -52,7 +52,7 @@ export const MANAGE_AUDIO_FOLDS: readonly FoldSpec[] = [
   {
     primary: 'configure_sound_attenuation', selector: 'setting',
     summary: 'Configure sound attenuation: distance falloff and air absorption, spatialization, occlusion, reverb send, or a named attenuation preset.',
-    topics: ['attenuation', 'spatialization', 'occlusion', 'reverb send', 'falloff distance', 'make sound 3d', 'sound blocked by walls', 'air absorption', 'muffled with distance'],
+    topics: ['attenuation', 'spatialization', 'occlusion', 'reverb send', 'falloff distance', 'make sound 3d', 'sound blocked by walls', 'air absorption', 'muffled with distance', 'make a sound quieter far away'],
     members: {
       distance: 'configure_distance_attenuation', spatialization: 'configure_spatialization', occlusion: 'configure_occlusion', reverb_send: 'configure_reverb_send',
       audio_occlusion: 'set_audio_occlusion', preset: 'set_sound_attenuation',

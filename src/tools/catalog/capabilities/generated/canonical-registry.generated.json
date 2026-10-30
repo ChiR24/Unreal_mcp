@@ -1,5 +1,5 @@
 {
-  "catalogRevision": "07cffdcfee84cdf3",
+  "catalogRevision": "c022540df064dcf1",
   "recordCount": 483,
   "records": [
     {
@@ -29620,7 +29620,10 @@
           "add a skybox",
           "make it look like sunset",
           "add fog to the level or the map",
-          "make the fog thicker or thinner"
+          "make the fog thicker or thinner",
+          "move the sun or change the time of day",
+          "make it daytime, morning or evening",
+          "longer shadows from a lower sun"
         ],
         "summary": "Configure the sky and atmosphere: sky atmosphere, sky light, sun position, directional light, height fog, volumetric clouds, time of day, sky/light color curves.",
         "whenToUse": [
@@ -29949,7 +29952,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "62d06760062b3abe69fafba24760b3764aef720dc72b85ccb7e20689ab3ffd17",
-        "content": "a3cbe3172d38e99eb80aab5a12ef9156e84ba8a8da7e79d4b404505d46d7c359"
+        "content": "1cff7095278780707ce214cf3e62d0eb2beb21a03752afc5ab59c7171b4bb668"
       }
     },
     {
@@ -34319,7 +34322,9 @@
           "light color",
           "add lights to a dungeon or a room",
           "a spotlight on a statue",
-          "light up the stage with a spotlight"
+          "light up the stage with a spotlight",
+          "a ceiling light",
+          "a red or warm coloured light"
         ],
         "summary": "Create a light actor in the level being edited: point, spot, directional, rect or sky (or any light class), at location (default 0, 0, 300), made Movable, with intensity, color and, in properties, shadow, radius and cone settings. The reply lists what was applied, refused (a setting this kind of light lacks) or adjusted; the spawn is one undo step and the level is left unsaved. During Play it still goes into the edited level, not the running game.",
         "whenToUse": [
@@ -34538,7 +34543,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "9b6d84190c55a5e3cb18427d985a4bec0689dcf9f8e749e3d86228e7b65f785d",
-        "content": "7b8f989a7065ce819cc5140f75ef63037b32b9bb75eb65aa73ae97d6a1c50ace"
+        "content": "2f1fe4e9c79879e4c7babaafd02fa92a1c4170f2fc162ecb63ee3188b27d049c"
       }
     },
     {
@@ -40969,6 +40974,7 @@
           "remove actor from level",
           "delete all cubes or all lights",
           "delete everything in the level",
+          "remove the fog, the sky or the clouds",
           "delete object"
         ],
         "summary": "Delete actors (deleteScope actors, the default: actorName or actorNames, exact names only, so TestActor never takes TestActor_Copy) or every actor carrying tag or any of tags (by_tag), in one undo step; every actor of a kind (all the cubes) goes by the names find lists. While Play runs they leave the running game, which nothing saves or undoes. Replies deletedCount and deleted; names not found refuse with NOT_FOUND, or DELETE_PARTIAL when some went, both carrying the deleted and missing lists.",
@@ -41143,7 +41149,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "8c3e23695164965208c5d990f589d52dc9b26bdec26c9270f0c1789ab528ced5",
-        "content": "bfbc35d67705106007a5579ec5b76e24e6b4c19d2b5ac938495a34e6a29f3787"
+        "content": "6ef18ce34396e4a36f1521cdb508fffad21cd00e4491f4d2a3d3e3af06d89865"
       }
     },
     {
@@ -42018,6 +42024,7 @@
           "a broken light flickering or stop it flickering",
           "turn off the sun or a lamp",
           "a blue or warmer light colour",
+          "a light made smaller or reaching further",
           "add component to actor",
           "attach component to actor"
         ],
@@ -42262,7 +42269,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "6a1af5d36036625ba61910405e6e77df29e8cc620eb543fef4810449a49c2d16",
-        "content": "4c961fe51c3da6b23849661eeceeacfdc31e1474a580d1638dd0abda8a4cb7bd"
+        "content": "549bbaa1c70caa04c13e836c91bb7d8acdb9ee52b96d99ac6e0c8892237601fd"
       }
     },
     {
@@ -47023,6 +47030,7 @@
           "place a sphere in the level",
           "build a wall or a tower of cubes",
           "set the player spawn point",
+          "add a floor or add a ceiling",
           "spawn blueprint actor",
           "place blueprint in level",
           "instantiate blueprint",
@@ -47416,7 +47424,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "fb05155ddec0c61d867d3540276173cb9307a64ce5e8324a2024d0be782ea2aa",
-        "content": "dfaec5337e9c0d3c39f710e4fe9074e6fcc0f21e4c41e788ccd1ce8b632f95b5"
+        "content": "c3e74e104c03a56f38460ce6e3a4190446d7d509ca5364299dae5edb447a796c"
       }
     },
     {
@@ -66964,7 +66972,8 @@
           "make sound 3d",
           "sound blocked by walls",
           "air absorption",
-          "muffled with distance"
+          "muffled with distance",
+          "make a sound quieter far away"
         ],
         "summary": "Configure sound attenuation: distance falloff and air absorption, spatialization, occlusion, reverb send, or a named attenuation preset.",
         "whenToUse": [
@@ -67336,7 +67345,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "4b995f1b2b1eefba15b40fde593fb309b9ddb82cba216ae3b41a6400efd3a60d",
-        "content": "042531230cec6cda0f0737474bd9c56a76dabebb0954b43222429e4602efe970"
+        "content": "1107838b72661e7d0f20723b02705fed991d39e3a4949e776b3f99d26cd2b2d0"
       }
     },
     {
@@ -67977,7 +67986,9 @@
           "reverb zone",
           "add background music",
           "add a sound or music to the level or a room",
-          "add echo to a cave or a hall"
+          "add echo to a cave or a hall",
+          "add rain, wind or bird sounds",
+          "play music when the game starts"
         ],
         "summary": "Place sound in the level being edited, chosen by kind. ambient_sound spawns an Ambient Sound actor playing soundPath at location (default 0,0,0), labelled name, at volume and pitch, with attenuationPath and concurrencyPath when given; it plays in the editor now and when the game starts. audio_component adds an audio component with soundPath to actorName, or to a new actor at location when actorName is left out (the reply names the actor), playing at once unless autoPlay is false. reverb_zone spawns an Audio Volume named name (DUPLICATE_NAME when taken) as a box of size (default 500 on each axis) around location, applying reverbEffect at volume (default 1) with fadeTime (default 2 s). A sound, attenuation, concurrency or reverb path that does not load is ASSET_NOT_FOUND before anything spawns; the ambient sound and the reverb zone are one undo step each.",
         "whenToUse": [
@@ -68226,7 +68237,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "76eef38d8f023e4c9e40ace6e657f6291acfe8aea568c2a9cc92ff370cffda64",
-        "content": "9a879d31a8f1cd40d10196c37a573ce9ffc6bc064ca7a11762d69c99b64cd5fd"
+        "content": "7f4badb749cb101f07392c8091a5fb9f835ec4ce02fd1cb9b32b887622cfb38b"
       }
     },
     {
@@ -75215,7 +75226,8 @@
           "reset effect",
           "niagara component",
           "restart particle effect",
-          "reset niagara system"
+          "reset niagara system",
+          "stop or start a fire or an effect"
         ],
         "summary": "Activate (restarting from age 0 unless reset is false), deactivate or reset the Niagara component on a placed actor (actorName), or with assetPath the one playing that system, on actorName or anywhere in the level; the running game's copy while Play runs. The reply says active, false while its system is still compiling or loading. A miss names what was not found: the actor, its Niagara component, or a component playing assetPath (SYSTEM_NOT_FOUND).",
         "whenToUse": [
@@ -75384,7 +75396,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "b406959306783f1a68af89029d835f55260d673cb07fb0d617f0492217a9f3a4",
-        "content": "f3c62f48f36e71fb07653e30a61213c50712ae0a9e66f0b8864e99e2a8fdc3c8"
+        "content": "93323939fa094ce57156a6191f32fd692e1f1c04f36004c7fe5e7fb8631c1b51"
       }
     },
     {
@@ -76596,7 +76608,8 @@
           "particle effect",
           "new niagara system",
           "spawn sparks",
-          "add sparks, fire or smoke to a torch or a chimney"
+          "add sparks, fire or smoke to a torch or a chimney",
+          "add a fire or a campfire"
         ],
         "summary": "Create an effect: a Niagara system or emitter, a ribbon, particle trail, impact or environment effect, volumetric fog, or spawn a preset particle/niagara effect.",
         "whenToUse": [
@@ -76936,7 +76949,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "332be23fa2be58488ecf91463343001eb63f4bcb2731c89022912790fc94502c",
-        "content": "14651ee7eae2a1404a2d3969c5f1c80aaac7f7849a5c2cb16514cf7bbb51515b"
+        "content": "f34d4847d47ccef537d9a8c4735a00b29e47a297cbdb22c92ea7c1b8fb953529"
       }
     },
     {

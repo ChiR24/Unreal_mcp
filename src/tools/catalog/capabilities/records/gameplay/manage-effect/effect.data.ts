@@ -65,7 +65,7 @@ export const EFFECT_RECORDS: readonly CapabilityRecordSource[] = [
     effect: 'write', editorStates: ['edit', 'pie'], latency: 'interactive', resources: 'low',
     exampleInput: { action: 'create_dynamic_light', name: 'Light_1', lightType: 'Point', intensity: 750 } }),
   buildRecord({ parentTool: T, id: `${T}.create_niagara_system`, action: 'create_niagara_system', family: F,
-    topics: ['niagara', 'particle system', 'vfx', 'particle effect', 'new niagara system', 'spawn sparks', 'add sparks, fire or smoke to a torch or a chimney'],
+    topics: ['niagara', 'particle system', 'vfx', 'particle effect', 'new niagara system', 'spawn sparks', 'add sparks, fire or smoke to a torch or a chimney', 'add a fire or a campfire'],
     summary: 'Create an empty Niagara System named name in path (or savePath; default /Game), compiled and saved unless save is false: it has its system scripts and no emitter yet, so it draws nothing until add_emitter_to_system adds one. A name already taken is ASSET_ALREADY_EXISTS, nothing changed. The reply gives systemPath.', whenToUse: W, whenNotToUse: ['Use niagara.'],
     inputProps: { name: P.name, path: P.path, savePath: E.savePath, save: SAVE }, required: ['name'],
     effect: 'write', latency: 'interactive', resources: 'medium', plugins: NIAGARA,

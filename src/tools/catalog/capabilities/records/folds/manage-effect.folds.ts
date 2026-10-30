@@ -6,7 +6,7 @@ export const MANAGE_EFFECT_FOLDS: readonly FoldSpec[] = [
   {
     primary: 'activate', selector: 'control',
     summary: 'Activate (restarting from age 0 unless reset is false), deactivate or reset the Niagara component on a placed actor (actorName), or with assetPath the one playing that system, on actorName or anywhere in the level; the running game\'s copy while Play runs. The reply says active, false while its system is still compiling or loading. A miss names what was not found: the actor, its Niagara component, or a component playing assetPath (SYSTEM_NOT_FOUND).',
-    topics: ['activate effect', 'deactivate effect', 'stop effect', 'reset effect', 'niagara component', 'restart particle effect', 'reset niagara system'],
+    topics: ['activate effect', 'deactivate effect', 'stop effect', 'reset effect', 'niagara component', 'restart particle effect', 'reset niagara system', 'stop or start a fire or an effect'],
     members: { activate: 'activate', deactivate: 'deactivate', reset: 'reset', effect: 'activate_effect' },
   },
   {

@@ -55,7 +55,7 @@ export const BUILD_ENVIRONMENT_FOLDS: readonly FoldSpec[] = [
   // lighting
   {
     primary: 'create_light', summary: LIGHT_SUMMARY, whenToUse: LIGHT_WHEN_TO_USE, whenNotToUse: LIGHT_WHEN_NOT_TO_USE,
-    topics: ['add point light', 'add spot light', 'add a light', 'place a light', 'rect light', 'spotlight', 'street lamp light', 'light intensity', 'light color', 'add lights to a dungeon or a room', 'a spotlight on a statue', 'light up the stage with a spotlight'],
+    topics: ['add point light', 'add spot light', 'add a light', 'place a light', 'rect light', 'spotlight', 'street lamp light', 'light intensity', 'light color', 'add lights to a dungeon or a room', 'a spotlight on a statue', 'light up the stage with a spotlight', 'a ceiling light', 'a red or warm coloured light'],
     members: ['create_dynamic_light', 'spawn_light'],
   },
   {
@@ -145,7 +145,7 @@ export const BUILD_ENVIRONMENT_FOLDS: readonly FoldSpec[] = [
   {
     primary: 'configure_atmosphere', selector: 'setting',
     summary: 'Configure the sky and atmosphere: sky atmosphere, sky light, sun position, directional light, height fog, volumetric clouds, time of day, sky/light color curves.',
-    topics: ['sky atmosphere', 'sun position', 'height fog', 'volumetric cloud', 'time of day', 'sky light', 'directional light', 'add fog', 'add sky', 'make it night', 'make it foggy', 'make it sunset or sunrise', 'add fog to the scene', 'add a skybox', 'make it look like sunset', 'add fog to the level or the map', 'make the fog thicker or thinner'],
+    topics: ['sky atmosphere', 'sun position', 'height fog', 'volumetric cloud', 'time of day', 'sky light', 'directional light', 'add fog', 'add sky', 'make it night', 'make it foggy', 'make it sunset or sunrise', 'add fog to the scene', 'add a skybox', 'make it look like sunset', 'add fog to the level or the map', 'make the fog thicker or thinner', 'move the sun or change the time of day', 'make it daytime, morning or evening', 'longer shadows from a lower sun'],
     members: {
       sky_atmosphere: 'configure_sky_atmosphere', sky_light: 'configure_sky_light', sun_position: 'configure_sun_position', directional_light: 'configure_directional_light_atmosphere',
       height_fog: 'configure_exponential_height_fog', volumetric_cloud: 'configure_volumetric_cloud', time_of_day: 'set_time_of_day',
