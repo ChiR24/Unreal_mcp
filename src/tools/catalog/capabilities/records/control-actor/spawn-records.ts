@@ -222,7 +222,7 @@ export const SPAWN_RECORDS: readonly CapabilityRecordSource[] = [
     action: 'duplicate',
     domain: DOMAIN,
     family: FAMILY_LIFECYCLE,
-    topics: ['clone actor', 'copy actor', 'make actor copy', 'duplicate a wall, a door or a prop', 'make a copy of an actor or a house', 'duplicate a tree or a rock several times'],
+    topics: ['clone actor', 'copy actor', 'make actor copy', 'duplicate a wall, a door or a prop', 'make a copy of an actor or a house', 'duplicate a tree or a rock several times', 'duplicate the selected actors'],
     summary:
       'Duplicate a placed actor: a copy with its components, properties, materials and tags at the original\'s transform moved by offset, labelled newName or numbered after the original, in one undo step.',
     whenToUse: [
@@ -254,7 +254,7 @@ export const SPAWN_RECORDS: readonly CapabilityRecordSource[] = [
     domain: DOMAIN,
     family: FAMILY_LIFECYCLE,
     topics: ['rename actor', 'actor label', 'relabel actor', 'outliner name', 'actor object name', 'give actor a new name', 'change actor name',
-      'rename several actors', 'number the actors', 'batch rename', 'rename the cube or the wall'],
+      'rename several actors', 'number the actors', 'batch rename', 'rename the cube or the wall', 'rename all the trees or the lights'],
     // No prop names here: with "change" in 'change actor name', 'rename the crates' made "change the crate" a rename.
     summary: 'Rename an actor: its label (the name the Outliner and every other call use), and with renameObject its object name too, which is the name a cooked level ships. actorNames relabels several actors in one undo step, numbered in the order given by a {n} in newName (Crate_{n} -> Crate_01, Crate_02, ...).',
     whenToUse: [

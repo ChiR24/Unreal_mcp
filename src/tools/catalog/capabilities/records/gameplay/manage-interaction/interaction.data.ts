@@ -132,7 +132,7 @@ export const INTERACTION_RECORDS: readonly CapabilityRecordSource[] = [
   }),
   interactionRecord({
     action: 'create_door_actor',
-    topics: ['door', 'new door', 'door actor', 'openable door', 'door that opens'],
+    topics: ['door', 'new door', 'door actor', 'openable door', 'door that opens', 'add a puzzle with switches or levers'],
     summary: 'Create a door actor Blueprint asset that opens when a pawn comes near.',
     whenToUse: ['A door Blueprint is needed with a pivot, a door mesh and a trigger box, plus open-angle, timing, lock and key variables; the door swings open (yaw, over openTime) while a pawn overlaps the trigger and it is unlocked, and autoClose shuts it autoCloseDelay seconds after the last pawn leaves. Calling it again on an existing door adds that opening logic.'],
     whenNotToUse: [

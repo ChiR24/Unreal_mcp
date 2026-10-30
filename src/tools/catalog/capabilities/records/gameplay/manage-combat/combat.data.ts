@@ -18,7 +18,7 @@ const PROJECTILE = '/Game/BP_Bullet';
 
 export const COMBAT_RECORDS: readonly CapabilityRecordSource[] = [
   buildRecord({ parentTool: T, id: `${T}.create_weapon_blueprint`, action: 'create_weapon_blueprint', family: F,
-    topics: ['weapon', 'gun', 'weapon blueprint', 'firearm', 'new weapon'],
+    topics: ['weapon', 'gun', 'weapon blueprint', 'firearm', 'new weapon', 'add a bullet projectile'],
     summary: 'Create an Actor Blueprint named name in path (default /Game) for a weapon: a WeaponMesh component showing weaponMeshPath, and BaseDamage, FireRate, Range and Spread variables set to baseDamage, fireRate, range and spread (defaults 25, 600, 10000, 2). It has no firing logic of its own. A mesh that does not load, or a path an asset already holds, is refused before anything is made; the Blueprint is compiled and saved.', whenToUse: ['A new weapon actor must be authored.'], whenNotToUse: ['Use create_projectile_blueprint for the projectile it fires.'],
     inputProps: { name: P.name, path: P.path, baseDamage: C.baseDamage, fireRate: C.fireRate, range: C.range, spread: C.spread, weaponMeshPath: { type: 'string', description: 'Static mesh assigned to the new WeaponMesh component; a path that does not load fails the call.' } }, required: ['name'],
     effect: 'write', latency: 'interactive', resources: 'medium',

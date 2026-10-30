@@ -86,7 +86,7 @@ export const BUILD_ENVIRONMENT_FOLDS: readonly FoldSpec[] = [
   {
     primary: 'configure_post_process', selector: 'setting',
     summary: 'Set post-process values on a PostProcessVolume, chosen by setting: bloom, exposure, depth of field, motion blur, tonemapper, color grading, LUT, white balance, vignette, grain, chromatic aberration, lens flare, SSAO/GTAO, screen-space and Lumen reflections, blend (screen_percentage sets r.ScreenPercentage instead). The volume is actorName, else the level\'s unbound (whole level) volume, the persistent level\'s first; a level with none gets one, named actorName when given. A name no volume has is ACTOR_NOT_FOUND listing the volumes, several unbound volumes AMBIGUOUS. Each value is the FPostProcessSettings field it names and turns that field\'s override on; settings takes any field by engine name. A value outside the engine\'s limits, an unknown name and a call that sets nothing are refused, and nothing is written unless every value is taken. One undo step; the level is left unsaved. blendWeight (0-1) and infiniteUnbound set the volume itself with any variant.',
-    topics: ['post process', 'bloom', 'exposure', 'auto exposure', 'eye adaptation', 'depth of field', 'motion blur', 'tonemapper', 'color grading', 'vignette', 'add bloom', 'screen tint', 'change screen tint', 'add bloom or depth of field', 'make the room, the scene or the level darker or brighter', 'make the game look like a film', 'add a blur effect to the screen'],
+    topics: ['post process', 'bloom', 'exposure', 'auto exposure', 'eye adaptation', 'depth of field', 'motion blur', 'tonemapper', 'color grading', 'vignette', 'add bloom', 'screen tint', 'change screen tint', 'add bloom or depth of field', 'make the room, the scene or the level darker or brighter', 'make the game look like a film', 'add a blur effect to the screen', 'make the hallway or the corridor dark'],
     members: byName(['configure_bloom', 'set_bloom_intensity', 'set_bloom_threshold', 'configure_exposure', 'set_exposure_compensation', 'set_exposure_method',
       'set_exposure_min_max', 'configure_dof', 'set_dof_method', 'set_focal_distance', 'set_aperture', 'configure_bokeh', 'configure_motion_blur',
       'set_motion_blur_amount', 'set_motion_blur_max', 'configure_tonemapper', 'set_tonemapper_type', 'set_pp_color_grading', 'set_pp_lut',
@@ -123,7 +123,7 @@ export const BUILD_ENVIRONMENT_FOLDS: readonly FoldSpec[] = [
   {
     primary: 'create_spline', selector: 'kind',
     summary: 'Create a spline actor, a spline mesh component, or in one call a typed spline with a mesh drawn along its route: road and river (a flat slab, 400 wide), wall and fence (standing on the route, 20x300 and 10x100), pipe and cable (round, 50 and 4 across). meshPath swaps in a mesh fitted to width (and height for a wall or fence); every span collides.',
-    topics: ['spline actor', 'spline mesh', 'road spline', 'wall spline', 'fence', 'pipe', 'cable', 'river spline', 'make a spline', 'add a cable', 'add a fence along a path', 'add a wall around the level or an area', 'add a rope or a cable'],
+    topics: ['spline actor', 'spline mesh', 'road spline', 'wall spline', 'fence', 'pipe', 'cable', 'river spline', 'make a spline', 'add a cable', 'add a fence along a path', 'add a wall around the level or an area', 'add a rope or a cable', 'make a race track or a road loop'],
     members: {
       actor: 'create_spline_actor', mesh_component: 'create_spline_mesh_component', road: 'create_road_spline', wall: 'create_wall_spline',
       fence: 'create_fence_spline', pipe: 'create_pipe_spline', cable: 'create_cable_spline', river: 'create_river_spline',
@@ -145,7 +145,7 @@ export const BUILD_ENVIRONMENT_FOLDS: readonly FoldSpec[] = [
   {
     primary: 'configure_atmosphere', selector: 'setting',
     summary: 'Configure the sky and atmosphere: sky atmosphere, sky light, sun position, directional light, height fog, volumetric clouds, time of day, sky/light color curves.',
-    topics: ['sky atmosphere', 'sun position', 'height fog', 'volumetric cloud', 'time of day', 'sky light', 'directional light', 'add fog', 'add sky', 'make it night', 'make it foggy', 'make it sunset or sunrise', 'add fog to the scene', 'add a skybox', 'make it look like sunset', 'add fog to the level or the map', 'make the fog thicker or thinner', 'move the sun or change the time of day', 'make it daytime, morning or evening', 'longer shadows from a lower sun'],
+    topics: ['sky atmosphere', 'sun position', 'height fog', 'volumetric cloud', 'time of day', 'sky light', 'directional light', 'add fog', 'add sky', 'make it night', 'make it foggy', 'make it sunset or sunrise', 'add fog to the scene', 'add a skybox', 'make it look like sunset', 'add fog to the level or the map', 'make the fog thicker or thinner', 'move the sun or change the time of day', 'make it daytime, morning or evening', 'longer shadows from a lower sun', 'add stars to the night sky'],
     members: {
       sky_atmosphere: 'configure_sky_atmosphere', sky_light: 'configure_sky_light', sun_position: 'configure_sun_position', directional_light: 'configure_directional_light_atmosphere',
       height_fog: 'configure_exponential_height_fog', volumetric_cloud: 'configure_volumetric_cloud', time_of_day: 'set_time_of_day',

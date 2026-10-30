@@ -120,7 +120,7 @@ export const MANAGE_BLUEPRINT_FOLDS: readonly FoldSpec[] = [
   {
     primary: 'add_game_widget', selector: 'widgetKind',
     summary: 'Add a ready-made HUD piece to a Widget Blueprint: health bar, ammo counter, crosshair, minimap, compass, damage indicator, interaction prompt, objective or quest tracker.',
-    topics: ['health bar', 'ammo counter', 'crosshair', 'minimap', 'compass', 'damage indicator', 'interaction prompt', 'objective tracker', 'quest tracker', 'hud element'],
+    topics: ['health bar', 'ammo counter', 'crosshair', 'minimap', 'compass', 'damage indicator', 'interaction prompt', 'objective tracker', 'quest tracker', 'hud element', 'show the ammo on screen', 'a hit marker on the crosshair'],
     members: byTarget('add_', ['add_health_bar', 'add_ammo_counter', 'add_crosshair', 'add_minimap', 'add_compass', 'add_damage_indicator',
       'add_interaction_prompt', 'add_objective_tracker', 'add_quest_tracker']),
   },

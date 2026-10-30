@@ -1,5 +1,5 @@
 {
-  "catalogRevision": "386a3e58d821204b",
+  "catalogRevision": "4db3028a6f87668b",
   "recordCount": 483,
   "records": [
     {
@@ -8246,7 +8246,8 @@
           "make a ball roll",
           "a cube or a crate that falls with gravity",
           "make a crate heavier or lighter",
-          "set the mass of a crate or a prop in kg"
+          "set the mass of a crate or a prop in kg",
+          "add a box the player can push"
         ],
         "summary": "Make an actor simulate physics: a placed prop (actorName) falls, tumbles and can be pushed while the game plays, weighing massKg when given (the reply gives its mass either way), or a skeletal mesh gets a Physics Asset with bodies made for its bones.",
         "whenToUse": [
@@ -8390,7 +8391,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "066ae4c2d420764b5d9fabbe780b96da9f8f10338d05ca7ae05dd576591bb610",
-        "content": "7e1c86dad91a5ae91f09ad37fa5058f9002ca27224a35722b71931db2bdf10e5"
+        "content": "e7b7d99037b775b2591a5b14224031d149d1825874130345b7d0c01d1d6d8314"
       }
     },
     {
@@ -15139,6 +15140,8 @@
           "enemy health",
           "die when health is zero",
           "invincible after getting hit",
+          "health of a castle, a base or a building",
+          "make the enemy die when shot or hit",
           "damage on touch",
           "hazard",
           "spikes",
@@ -15158,6 +15161,7 @@
           "item pickup",
           "pick up a key",
           "heal the player",
+          "add a health potion or a health pack",
           "sprint",
           "hold shift to sprint",
           "sprint key",
@@ -15167,6 +15171,7 @@
           "fire projectiles",
           "shoot fireballs",
           "click to shoot",
+          "make bullets or projectiles hurt enemies",
           "chase the player",
           "enemy chases the player",
           "enemy follows the player",
@@ -15263,6 +15268,7 @@
           "spawn actors over time",
           "wave of enemies",
           "keep spawning enemies",
+          "add a spawn volume for enemies or an enemy spawn area",
           "dash",
           "dash key",
           "quick dash",
@@ -15274,6 +15280,7 @@
           "play a sound when the player enters an area or a room",
           "a trigger that plays a sound",
           "voice line or stinger when the player walks in",
+          "a creepy or scary sound in a room",
           "health bar",
           "show health on screen",
           "health hud",
@@ -15290,6 +15297,9 @@
           "show the score",
           "count coins",
           "how many coins",
+          "add a score for each enemy killed or coin collected",
+          "show the wave number or a count on screen",
+          "add a lives counter or a lap counter",
           "hint",
           "tutorial hint",
           "show a message on screen",
@@ -15297,6 +15307,7 @@
           "put text on the screen",
           "sign that shows text",
           "message when the player walks up",
+          "add an npc with dialogue that talks",
           "game over",
           "game over screen",
           "show game over when the player dies",
@@ -16035,7 +16046,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "3b6742277acf02b1127167e0b20d3e3b9ccfe4eae1b5d1b2ea279b7db9e20b00",
-        "content": "068080bd7c4c3014d263898996fdc2660feb23c1a14dd0943e78f9521e6cc58f"
+        "content": "ed78b5a966221da17c22d366bb73010ba084589863b92b9cc2055c2f96f5cbdd"
       }
     },
     {
@@ -16972,7 +16983,9 @@
           "interaction prompt",
           "objective tracker",
           "quest tracker",
-          "hud element"
+          "hud element",
+          "show the ammo on screen",
+          "a hit marker on the crosshair"
         ],
         "summary": "Add a ready-made HUD piece to a Widget Blueprint: health bar, ammo counter, crosshair, minimap, compass, damage indicator, interaction prompt, objective or quest tracker.",
         "whenToUse": [
@@ -17270,7 +17283,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "215b4bc498be8d5998ed964cc7592058e0e727edc03653d6b0838bbceaa46449",
-        "content": "29feaedbef703cd95b57f76606d24f2a7c789f346e7059130ee55762ee869f09"
+        "content": "137b78638de7e38838212ff169e65543811e532597e77a2c3acb63f5fd72618d"
       }
     },
     {
@@ -29672,7 +29685,8 @@
           "make the fog thicker or thinner",
           "move the sun or change the time of day",
           "make it daytime, morning or evening",
-          "longer shadows from a lower sun"
+          "longer shadows from a lower sun",
+          "add stars to the night sky"
         ],
         "summary": "Configure the sky and atmosphere: sky atmosphere, sky light, sun position, directional light, height fog, volumetric clouds, time of day, sky/light color curves.",
         "whenToUse": [
@@ -30001,7 +30015,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "62d06760062b3abe69fafba24760b3764aef720dc72b85ccb7e20689ab3ffd17",
-        "content": "1cff7095278780707ce214cf3e62d0eb2beb21a03752afc5ab59c7171b4bb668"
+        "content": "b1c6300a8a3d20ff1dd7c84d94650e21f5e51b17d0b2d3bb39b169c28b588275"
       }
     },
     {
@@ -31139,7 +31153,8 @@
           "add bloom or depth of field",
           "make the room, the scene or the level darker or brighter",
           "make the game look like a film",
-          "add a blur effect to the screen"
+          "add a blur effect to the screen",
+          "make the hallway or the corridor dark"
         ],
         "summary": "Set post-process values on a PostProcessVolume, chosen by setting: bloom, exposure, depth of field, motion blur, tonemapper, color grading, LUT, white balance, vignette, grain, chromatic aberration, lens flare, SSAO/GTAO, screen-space and Lumen reflections, blend (screen_percentage sets r.ScreenPercentage instead). The volume is actorName, else the level's unbound (whole level) volume, the persistent level's first; a level with none gets one, named actorName when given. A name no volume has is ACTOR_NOT_FOUND listing the volumes, several unbound volumes AMBIGUOUS. Each value is the FPostProcessSettings field it names and turns that field's override on; settings takes any field by engine name. A value outside the engine's limits, an unknown name and a call that sets nothing are refused, and nothing is written unless every value is taken. One undo step; the level is left unsaved. blendWeight (0-1) and infiniteUnbound set the volume itself with any variant.",
         "whenToUse": [
@@ -31621,7 +31636,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "6e0499250b33a73ef4c234087fc992a568d3d5d48c155fa859237578f2a2736b",
-        "content": "b51828a426ea7ff43f103914f7a7108630434b46e7d84bd9ffcdc71890d349fb"
+        "content": "f119ce06c2a29eb8581ed62dd4d2060afbc5dd0e31f4bc89a1a0d7b89f811811"
       }
     },
     {
@@ -35280,7 +35295,8 @@
           "add a cable",
           "add a fence along a path",
           "add a wall around the level or an area",
-          "add a rope or a cable"
+          "add a rope or a cable",
+          "make a race track or a road loop"
         ],
         "summary": "Create a spline actor, a spline mesh component, or in one call a typed spline with a mesh drawn along its route: road and river (a flat slab, 400 wide), wall and fence (standing on the route, 20x300 and 10x100), pipe and cable (round, 50 and 4 across). meshPath swaps in a mesh fitted to width (and height for a wall or fence); every span collides.",
         "whenToUse": [
@@ -35770,7 +35786,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "f79e19abc0fda91fee483abde52b6f6f8a38cb3bc7bbaf35d603bfd1fdb55325",
-        "content": "9aa88fbdbb0da90cca0e11ecb6cfacf91c072077f9f08e9133048741b53380b3"
+        "content": "57600e0926ab9772440d4ce7fb74ad2b78f8ed850f9c0d9c47214a1ac144c03b"
       }
     },
     {
@@ -41864,7 +41880,8 @@
           "make actor copy",
           "duplicate a wall, a door or a prop",
           "make a copy of an actor or a house",
-          "duplicate a tree or a rock several times"
+          "duplicate a tree or a rock several times",
+          "duplicate the selected actors"
         ],
         "summary": "Duplicate a placed actor: a copy with its components, properties, materials and tags at the original's transform moved by offset, labelled newName or numbered after the original, in one undo step.",
         "whenToUse": [
@@ -41984,7 +42001,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "325ccfd05f51b91aa27187b57988388402d0af00117e967ac21ea27c4b3379a6",
-        "content": "d01953a25ee114e3dced434f18d5f8e1c6bc50b7d5f1d434d6cae6f3147e2c99"
+        "content": "0bd6457e01e80c28f4111ccbcd35a0af19039c25783f93121d3f640e4d019636"
       }
     },
     {
@@ -45011,7 +45028,8 @@
           "rename several actors",
           "number the actors",
           "batch rename",
-          "rename the cube or the wall"
+          "rename the cube or the wall",
+          "rename all the trees or the lights"
         ],
         "summary": "Rename an actor: its label (the name the Outliner and every other call use), and with renameObject its object name too, which is the name a cooked level ships. actorNames relabels several actors in one undo step, numbered in the order given by a {n} in newName (Crate_{n} -> Crate_01, Crate_02, ...).",
         "whenToUse": [
@@ -45190,7 +45208,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "9cdd93db1ffde13a933832a208063d594ae8e598e6fbc84e852a4c30aa072824",
-        "content": "c7355f4971e4345cb508f3f4b7e0711145de752876882fb9ee1efcc9f904e3f7"
+        "content": "7a169b6fcb5ab12ef442d8be6e7d259df9dc5e316ee8ea2551d7159038049e53"
       }
     },
     {
@@ -45882,7 +45900,9 @@
           "a glowing or emissive mesh",
           "make a lamp, crystal or sword glow",
           "make the character red or change its color",
-          "the player or an enemy glowing"
+          "the player or an enemy glowing",
+          "make the enemies or the props different colors",
+          "make the wall look like brick, wood or stone"
         ],
         "summary": "Put a material on an actor, or a flat colour with color (\"#rrggbb\", \"#rgb\" or a name such as red or white: a material instance of the engine's BasicShapeMaterial, made once under /Game/Materials/Colors and reused, which replaces the slot's material, textures and all), or a glowing one with glow (that colour, white without color, lit from within at that strength: an instance of M_ColorGlow in the same folder): slot materialSlot (default 0) of its first mesh component that has that slot, of componentName, or of every one with allComponents; materials sets slot i from entry i (\"\" skips one), and actorNames gives many actors the same material. One undo step. Refusals: MATERIAL_NOT_FOUND, ACTOR_NOT_FOUND, COMPONENT_NOT_FOUND, MATERIAL_SLOT_NOT_FOUND (no component has the slot), INVALID_ARGUMENT (a colour it cannot read, or color or glow with materialPath); a list that partly failed answers MATERIAL_BATCH_INCOMPLETE naming each failure. While Play runs it changes the playing copy, gone when play stops.",
         "whenToUse": [
@@ -46031,7 +46051,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "44ae4908841017bf0acad0366a8ed36fd6e9af50621a3ab81ba7e6c82d63b363",
-        "content": "d0ec0a73076980566ebb8c119f5316bd52ae46165803d4c8aaa2a7f23371f5be"
+        "content": "89146f7e1f2dc203a7fb08c01bc0fbc053607866334f046d3b9fa771521d07aa"
       }
     },
     {
@@ -46109,6 +46129,7 @@
           "make an actor twice as big or half the size",
           "make an actor bigger or smaller",
           "make the sword or the enemy bigger",
+          "make the player taller or smaller",
           "set position",
           "set rotation",
           "translate"
@@ -46469,7 +46490,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "6af5b619f64ce87631986e9ba9d0b1fec5c056e5aa571251d34e3202107f2ea4",
-        "content": "b7d651a5c1d34c6583ba14e15c31fead60c6ef5874833a7a405b6aa8c9e95ff1"
+        "content": "11879d1eda68c2380f209cbd38f1393e4cfd9f15ac2e05eeee10205f845c621e"
       }
     },
     {
@@ -49068,7 +49089,8 @@
         "family": "asset",
         "topics": [
           "focus_actor",
-          "zoom to an actor or the player start"
+          "zoom to an actor or the player start",
+          "focus on the selected actor"
         ],
         "summary": "Focus the viewport camera on a specific actor by name: the level viewport, or the free view of an ejected player.",
         "whenToUse": [
@@ -49163,7 +49185,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "1904d48f0fbed1b63c88abaa8d9d1cae0a59ba0b5647cee82c7a5c2d6257daaf",
-        "content": "da2a68067e6001a4b6ad1eb281d5e77cf1f2a5659132e36edd2ce50c0da327da"
+        "content": "3f97d6d583d22095321bdff77bdb4618910979bb0f556f2f282794e6fdf7639c"
       }
     },
     {
@@ -72229,7 +72251,8 @@
           "double jump",
           "add a crouch",
           "make the player faster or slower",
-          "make the character walk or run faster"
+          "make the character walk or run faster",
+          "change the player model or mesh"
         ],
         "summary": "Configure a Character Blueprint's defaults by setting: movement_speeds (walk, crouch, swim, fly, acceleration, braking, friction), jump (launch speed, hold, double jump, air control, gravity), crouch, rotation (orient to movement or face the aim), capsule_component, mesh_component (skeletal mesh, Animation Blueprint, offset), camera_component (a third-person spring arm and camera, made when missing, or with view first_person a camera at the eyes) or nav_movement (AI agent size, avoidance). Each compiles and saves the Blueprint, changes only the fields sent and reads the values back; a Blueprint that is not a Character is refused (NOT_A_CHARACTER).",
         "whenToUse": [
@@ -72647,7 +72670,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "f5b1d349c80165552eb31f67ec27b80672797918ebec0822101a82db4d1815cd",
-        "content": "14364b1f5dead6d227d5edbf324d5472c686b26be1da52e1f5cc26db48db749d"
+        "content": "98615e9716f5a68b601c9915949e93dec01c141d02fe8f2a4f77172a132366f3"
       }
     },
     {
@@ -74867,7 +74890,8 @@
           "give the player a gun or a weapon",
           "weapon",
           "firearm",
-          "new weapon"
+          "new weapon",
+          "add a bullet projectile"
         ],
         "summary": "Create a combat Blueprint named name in path (default /Game), chosen by kind; it is saved, and a path an asset already holds is refused. weapon_blueprint is an Actor with a WeaponMesh component (weaponMeshPath) and BaseDamage, FireRate, Range and Spread variables (defaults 25, 600, 10000, 2), and no firing logic of its own. projectile_blueprint flies (projectileSpeed, default 5000; projectileGravityScale, default 0), stops on what it meets with a collisionRadius sphere (default 5), applies damage (default 20) to it and is destroyed, never hits the actor that fired it, and is gone 5 s after firing when it meets nothing; projectileMeshPath is its mesh. A mesh path that does not load is refused before anything is made. damage_type (damage_type_setup) is a DamageType Blueprint for ApplyDamage to name.",
         "whenToUse": [
@@ -75087,7 +75111,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "5d67e7065be2a29cd33726013d3ef19e4a5af27decf5b4e7e8912453db59a8b4",
-        "content": "dd4734017051c411269b38940bcd4555f4bed0df2fb2225beadc9e6c6db44ae4"
+        "content": "006b7133cf4023881f26d726450a538ba6838753b910d57d19782342f5688fae"
       }
     },
     {
@@ -86979,7 +87003,8 @@
           "new door",
           "door actor",
           "openable door",
-          "door that opens"
+          "door that opens",
+          "add a puzzle with switches or levers"
         ],
         "summary": "Create an interactable: a door or chest that opens when a pawn comes near, a switch or lever a pawn presses (it fires OnSwitchChanged), a trigger actor, an interactable interface, or an interaction component.",
         "whenToUse": [
@@ -87258,7 +87283,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "dc114a31e6d890f61f96f54461d90d34d4e0aa238187be1214db35ee00e407d6",
-        "content": "84fb35784437f94ec837381f8eadf58940130e0067eb406b8984cffcc4e82231"
+        "content": "b51555617293a966fecae97438fcb9f96091704fbe9b9e3b91e841c2949e7fe7"
       }
     },
     {
@@ -102999,7 +103024,9 @@
           "mpc",
           "global material parameter",
           "shared material value",
-          "level wide material value"
+          "level wide material value",
+          "make the floor or a surface shiny",
+          "add a decal"
         ],
         "summary": "Create a material asset: a standard material, a decal, landscape or post-process material, a material function, or a Material Parameter Collection (values every material reading it shares).",
         "whenToUse": [
@@ -103255,7 +103282,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "ddb0f137f776b24373015bac1938e25ad09bd3ab03b7f86490acc94c1873ae5e",
-        "content": "b52bd20ecf563b59b65a788e1ccaf847dbf13a7eee7a0545aead24398abb1d99"
+        "content": "27db4c7926330c75ed6f24b988c5a79ee93a9563b4a10578edb930ab6f302e10"
       }
     },
     {
@@ -106568,7 +106595,9 @@
           "make a cutscene",
           "level sequence asset",
           "create level sequence",
-          "add a cutscene at the start of the level"
+          "add a cutscene at the start of the level",
+          "make a cutscene of the castle, the level or a place",
+          "make a trailer or a cinematic"
         ],
         "summary": "Create a level sequence (sequenceOp create, the default): name in the folder path (default /Game), or path naming the asset itself; it is saved (saved), and a level sequence already there is kept and answered with alreadyExists, while another asset there is ASSET_ALREADY_EXISTS. duplicate copies the sequence at path into the folder destinationPath as newName and saves the copy; rename gives the sequence at path the name newName in its folder (a path starting with / moves it), references following it; the engine saves it and leaves a redirector at the old path when other assets reference it. Only /Game paths are written (SEQUENCE_PATH_NOT_WRITABLE); a source that is not a level sequence is INVALID_SEQUENCE, and a taken destination ASSET_ALREADY_EXISTS.",
         "whenToUse": [
@@ -106759,7 +106788,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "07b908bab2635c907da30ba18c0ba01f44b79964eb7794a5c498ad516c5fca1d",
-        "content": "abb7e263d9440d39eba257e0f50c369f23a1306126edafe436fccecda042caf5"
+        "content": "5be5657ae20166671e11d7b5fba137a39ed1fec44024ac28c04723ad0529c485"
       }
     },
     {

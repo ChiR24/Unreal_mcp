@@ -69,7 +69,7 @@ export const MATERIAL_CREATE_RECORDS: readonly RecordSpec[] = [
     WRITE, WRITE_POLICY, MEDIUM,
     { whenToUse: ['One value must drive many materials at once, set once at runtime (a level-wide wetness, wind strength, time of day or flash): a material reads it with a CollectionParameter node (material.add_material_node nodeType CollectionParameter with collectionPath and name), and a Blueprint sets it with SetScalarParameterValue or SetVectorParameterValue of the Kismet Material Library, the collection on its Collection pin.', 'An existing collection needs another parameter or new defaults: send it again; parameters are never removed, since materials read them by id.'],
       whenNotToUse: ['The value differs per object (use a material instance and material.set_material_parameter, or a dynamic material instance per actor).'],
-      topics: ['material parameter collection', 'mpc', 'global material parameter', 'shared material value', 'level wide material value'],
+      topics: ['material parameter collection', 'mpc', 'global material parameter', 'shared material value', 'level wide material value', 'make the floor or a surface shiny', 'add a decal'],
       examples: [ex('A collection for level-wide weather', { name: 'MPC_Weather', path: '/Game/Materials', scalars: [{ name: 'Wetness', default: 0 }, { name: 'WindStrength', default: 0.3 }], vectors: [{ name: 'FogTint', default: [0.6, 0.7, 0.8, 1] }] },
         { success: true, assetPath: '/Game/Materials/MPC_Weather.MPC_Weather', created: true, added: ['Wetness', 'WindStrength', 'FogTint'], saved: true })] }
   ),
