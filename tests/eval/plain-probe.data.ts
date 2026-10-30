@@ -446,7 +446,7 @@ export const PLAIN_PROBE: readonly PlainProbeCase[] = [
   { query: 'rotating platform', accepted: ['control_actor.edit_component'] },
   { query: 'moving platform', accepted: ['control_actor.edit_component', 'blueprint.add_behaviour'] },
   { query: 'looping music', accepted: ['manage_audio.play_sound'] },
-  { query: 'music that loops', accepted: ['manage_audio.play_sound'] },
+  { query: 'music that loops', accepted: ['manage_audio.play_sound', 'manage_audio.set_sound_looping'] },
   { query: 'set master volume', accepted: ['manage_audio.configure_sound_class'] },
   { query: 'turn down the music volume', accepted: ['manage_audio.fade_sound', 'manage_audio.configure_sound_class', 'manage_audio.set_sound_volume'] },
   { query: 'music volume', accepted: ['manage_audio.fade_sound', 'manage_audio.configure_sound_class', 'manage_audio.set_sound_volume'] },
@@ -1058,4 +1058,9 @@ export const PLAIN_PROBE: readonly PlainProbeCase[] = [
   { query: 'make the crate heavier', accepted: ['animation_physics.setup_physics_simulation'] },
   { query: 'make the box lighter', accepted: ['animation_physics.setup_physics_simulation'] },
   { query: 'set the mass of the crate', accepted: ['animation_physics.setup_physics_simulation'] },
+  // A sound made to loop, or to stop looping, takes set_sound_looping.
+  { query: 'make the music loop', accepted: ['manage_audio.set_sound_looping'] },
+  { query: 'loop the background music', accepted: ['manage_audio.set_sound_looping'] },
+  { query: 'stop the sound from looping', accepted: ['manage_audio.set_sound_looping'] },
+  { query: 'loop a sound', accepted: ['manage_audio.set_sound_looping'] },
 ];

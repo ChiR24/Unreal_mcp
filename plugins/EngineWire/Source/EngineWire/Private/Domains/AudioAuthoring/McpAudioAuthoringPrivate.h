@@ -271,5 +271,7 @@ TSharedPtr<FJsonObject> HandleAudioInfoActions(const FString& SubAction, const T
 TSharedPtr<FJsonObject> HandleLoudnessActions(const FString& SubAction, const TSharedPtr<FJsonObject>& Params, TSharedPtr<FJsonObject> Response);
 // set_subtitles: a Sound Wave's subtitle cues, shown in the game while it plays (McpAudioSubtitles).
 TSharedPtr<FJsonObject> HandleSubtitleActions(const FString& SubAction, const TSharedPtr<FJsonObject>& Params, TSharedPtr<FJsonObject> Response);
+// set_sound_looping: Sound Waves made to loop or to play once (McpAudioLooping).
+TSharedPtr<FJsonObject> HandleLoopingActions(const FString& SubAction, const TSharedPtr<FJsonObject>& Params, TSharedPtr<FJsonObject> Response);
 }
 

@@ -34,6 +34,20 @@ const testCases = [
   { scenario: 'ERROR: an engine sound is never changed', toolName: 'manage_audio', arguments: { action: 'set_sound_volume', soundPaths: ['/Engine/EditorSounds/Notifications/CompileSuccess_Cue'], volume: 1 }, expected: 'error|ENGINE_CONTENT' },
   { scenario: 'ERROR: engine content is never changed', toolName: 'manage_audio', arguments: { action: 'normalize_loudness', soundPaths: ['/Engine/EditorSounds/Notifications/CompileSuccess'], targetLufs: -20 }, expected: 'error|ENGINE_CONTENT' },
   { scenario: 'ERROR: a Sound Cue is not a wave', toolName: 'manage_audio', arguments: { action: 'measure_loudness', soundPaths: ['/Engine/EditorSounds/Notifications/CompileSuccess_Cue'] }, expected: 'error|ASSET_NOT_FOUND' },
+  { scenario: 'UPDATE: a copy made to loop', toolName: 'manage_audio', arguments: { action: 'set_sound_looping', soundPaths: [SUCCESS] }, expected: 'success', assertions: [
+    { path: 'structuredContent.result.sounds.0.wasLooping', equals: false, label: 'it played once' },
+    { path: 'structuredContent.result.sounds.0.looping', equals: true, label: 'and loops now' },
+    { path: 'structuredContent.result.undo.undoable', equals: true, label: 'in one undo step' },
+  ] },
+  { scenario: 'UPDATE: asked again, nothing changes', toolName: 'manage_audio', arguments: { action: 'set_sound_looping', soundPaths: [SUCCESS], looping: true }, expected: 'success', assertions: [
+    { path: 'structuredContent.result.sounds.0.wasLooping', equals: true, label: 'it looped already' },
+    { path: 'structuredContent.result.sounds.0.saved', equals: false, label: 'so nothing was saved' },
+  ] },
+  { scenario: 'UPDATE: back to playing once', toolName: 'manage_audio', arguments: { action: 'set_sound_looping', soundPaths: [SUCCESS], looping: false, save: false }, expected: 'success', assertions: [
+    { path: 'structuredContent.result.sounds.0.looping', equals: false, label: 'it plays once again' },
+  ] },
+  { scenario: 'ERROR: a Sound Cue loops through its own graph', toolName: 'manage_audio', arguments: { action: 'set_sound_looping', soundPaths: ['/Engine/EditorSounds/Notifications/CompileSuccess_Cue'] }, expected: 'error|INVALID_ARGUMENT' },
+  { scenario: 'ERROR: an engine wave never loops by this', toolName: 'manage_audio', arguments: { action: 'set_sound_looping', soundPaths: ['/Engine/EditorSounds/Notifications/CompileSuccess'] }, expected: 'error|ENGINE_CONTENT' },
   { scenario: 'Cleanup: delete the copies', toolName: 'manage_asset', arguments: { action: 'delete', paths: [SUCCESS, FAILED], force: true }, expected: 'success|not found' },
 ];
 

@@ -107,4 +107,27 @@ export const LOUDNESS_RECORDS: readonly CapabilityRecordSource[] = [
     },
     outputRequired: ['sounds'],
   }),
+  buildCoreRecord({
+    parentTool: 'manage_audio', action: 'set_sound_looping', dispatchAction: 'manage_audio', domain: 'audio', family: 'authoring',
+    summary: 'Make Sound Waves loop, or stop looping (looping false): each wave\'s Looping flag, which loops it wherever it is played by itself (play_sound, an Ambient Sound, a Blueprint\'s Play Sound), every wave checked first, in one undo step, each saved unless save is false. The reply gives each one\'s looping before and after. A Sound Cue loops through a Looping node in its graph (edit_sound_cue) and a MetaSound through its own graph, so both are refused. Refused, changing nothing: ASSET_NOT_FOUND (not a Sound Wave), INVALID_ARGUMENT (a Sound Cue or a MetaSound), ENGINE_CONTENT (an engine sound: duplicate it into /Game first).',
+    topics: ['make the music loop', 'loop a sound or stop it looping', 'background music that repeats'],
+    whenToUse: ['Music or an ambient sound should repeat by itself, or a sound that loops should play once.'],
+    whenNotToUse: ['A Sound Cue should loop: add a Looping node with edit_sound_cue.', 'A sound should loop only while something happens: play it from a Blueprint and stop it with stop_sound.'],
+    inputProps: {
+      soundPaths: { type: 'array', minItems: 1, maxItems: 64, items: { type: 'string' }, description: 'The Sound Waves, by asset path (1-64).' },
+      looping: { type: 'boolean', description: 'true (the default) loops each wave; false plays it once.' },
+      save: { type: 'boolean', description: 'Save each changed sound (default true); false leaves the change in memory only.' },
+    },
+    required: ['soundPaths'],
+    effect: 'write',
+    costLatency: 'interactive',
+    exampleInput: { action: 'set_sound_looping', soundPaths: ['/Game/Audio/SW_Music_Main'] },
+    exampleOutput: { success: true, message: 'Set 1 sound(s) to loop.', sounds: [{ soundPath: '/Game/Audio/SW_Music_Main.SW_Music_Main', wasLooping: false, looping: true, saved: true }] },
+    outputProps: {
+      sounds: { type: 'array', description: 'Each sound changed.', items: { type: 'object', additionalProperties: false, properties: {
+        soundPath: { type: 'string' }, wasLooping: { type: 'boolean' }, looping: { type: 'boolean' }, saved: { type: 'boolean' } } } },
+      undo: { type: 'object', additionalProperties: true, 'x-unreal-reflection-boundary': true, description: 'What editor undo takes back: {undoable, transactionScope, steps}.' },
+    },
+    outputRequired: ['sounds'],
+  }),
 ];

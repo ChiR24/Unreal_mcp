@@ -86,7 +86,7 @@ inline const TArray<FString>& AudioAuthoring()
 		TEXT("create_dialogue_wave"), TEXT("set_dialogue_context"),
 		TEXT("create_reverb_effect"), TEXT("create_source_effect_chain"),
 		TEXT("add_source_effect"), TEXT("create_submix_effect"),
-		TEXT("get_audio_info"), TEXT("measure_loudness"), TEXT("normalize_loudness"), TEXT("set_subtitles"), TEXT("set_sound_volume")
+		TEXT("get_audio_info"), TEXT("measure_loudness"), TEXT("normalize_loudness"), TEXT("set_subtitles"), TEXT("set_sound_volume"), TEXT("set_sound_looping")
 	};
 	return Actions;
 }

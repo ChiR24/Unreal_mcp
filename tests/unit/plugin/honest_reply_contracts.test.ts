@@ -3339,6 +3339,18 @@ describe('setup_physics_simulation makes the actor or mesh it is given simulate'
   });
 });
 
+describe('set_sound_looping changes only the waves that change', () => {
+  // A transaction marks every object it holds as edited, so a wave that already looped would be left unsaved for nothing.
+  it('opens its undo step over the changing waves alone and refuses cues and MetaSounds before anything changes', () => {
+    const looping = code('AudioAuthoring', 'McpAudioLooping.cpp');
+    expect(looping).toContain('if ((Wave->bLooping != 0) != bLoop)');
+    expect(looping).toContain('EMcpMutationDurability::EditorStateOnly, Changing);');
+    expect(looping.indexOf('Cast<USoundWaveProcedural>(Sound)'), 'refusals come before the transaction')
+      .toBeLessThan(looping.indexOf('FMcpScopedEditorTransaction Transaction('));
+    expect(looping).toContain('Row->SetBoolField(TEXT("saved"), bChanged && bSave && SaveAudioAsset(Wave, true));');
+  });
+});
+
 describe('widget_list says what a widget reads and where a nested one sits', () => {
   // An inventory filled at runtime listed its three rows with no text and no link to the panel holding them.
   it('lists the visible texts that are no button label, and the owner and panel of a widget added to another', () => {

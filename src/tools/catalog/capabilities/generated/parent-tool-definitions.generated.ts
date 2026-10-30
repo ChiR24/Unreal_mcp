@@ -16036,6 +16036,15 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
                 "type": "string"
               },
               "description": "The Sound Waves, by asset path (1-64). A Sound Cue or MetaSound is refused with ASSET_NOT_FOUND naming it: measure the waves it plays."
+            },
+            {
+              "type": "array",
+              "minItems": 1,
+              "maxItems": 64,
+              "items": {
+                "type": "string"
+              },
+              "description": "The Sound Waves, by asset path (1-64)."
             }
           ],
           "description": "The Sound Waves, MetaSounds or Sound Cues, by asset path (1-64)."
@@ -16163,6 +16172,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             "measure_loudness",
             "normalize_loudness",
             "set_sound_volume",
+            "set_sound_looping",
             "set_subtitles",
             "analyze_acoustics"
           ],
@@ -16572,6 +16582,28 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
                   },
                   "volume": {
                     "type": "number"
+                  },
+                  "saved": {
+                    "type": "boolean"
+                  }
+                }
+              }
+            },
+            {
+              "type": "array",
+              "description": "Each sound changed.",
+              "items": {
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {
+                  "soundPath": {
+                    "type": "string"
+                  },
+                  "wasLooping": {
+                    "type": "boolean"
+                  },
+                  "looping": {
+                    "type": "boolean"
                   },
                   "saved": {
                     "type": "boolean"
