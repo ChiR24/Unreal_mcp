@@ -57,7 +57,7 @@ export const NETWORKING_FRAMEWORK_RECORDS: readonly CapabilityRecordSource[] = [
     params: ['playerStartName', 'playerStartTag', 'teamIndex'], requiredOneOf: ['playerStartTag', 'teamIndex'],
     outputs: ['playerStart', 'playerStartTag', 'previousTag'], outputRequired: ['playerStart', 'playerStartTag', 'previousTag'],
     dispatchAction: 'manage_game_framework',
-  }), ['player start', 'player start tag', 'team spawn point', 'spawn point tag']),
+  }), ['player start', 'player start tag', 'team spawn point', 'spawn point tag', 'make the player spawn here or at a place']),
   withTopics(f('get_game_framework_info', 'Read which game mode is in use and its default classes (pawn, player controller, game state, player state, HUD), from a game mode Blueprint or from the live world, the level override or the project default.', ['gameModeBlueprint', 'blueprintPath'], [], ['gameFrameworkInfo'], ['gameFrameworkInfo'], true),
     ['which mode is used', 'default pawn class', 'default classes', 'read game mode', 'game mode settings']),
 ];

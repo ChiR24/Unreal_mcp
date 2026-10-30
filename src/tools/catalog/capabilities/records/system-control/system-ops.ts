@@ -496,7 +496,7 @@ export const SYSTEM_OPS_RECORDS: readonly CapabilityRecordSource[] = [
     domain: 'project',
     family: 'project',
     summary: 'Set one setting (section and key): applied to the live settings object and saved where the editor itself saves that class, the project Default<Config>.ini for a project setting, the user Saved config for a per-user one (EditorPerProjectUserSettings). configFile names the file written.',
-    topics: ['set start level', 'change default map', 'startup map', 'change project settings', 'change the game name'],
+    topics: ['set start level', 'change default map', 'startup map', 'change project settings', 'change the game name', 'make the main menu the first level'],
     whenToUse: [
       'A single project setting value must be written.',
       'The level the game or the editor opens first must change: section GameMapsSettings, key GameDefaultMap (the game and a packaged build) or EditorStartupMap (the editor), value the level as /Game/Maps/L_Main.L_Main.',

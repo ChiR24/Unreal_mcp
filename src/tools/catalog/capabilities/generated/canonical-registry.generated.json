@@ -1,5 +1,5 @@
 {
-  "catalogRevision": "4db3028a6f87668b",
+  "catalogRevision": "e3bb13fcfbbb057a",
   "recordCount": 483,
   "records": [
     {
@@ -41044,6 +41044,8 @@
           "delete all cubes or all lights",
           "delete everything in the level",
           "remove the fog, the sky or the clouds",
+          "remove all the enemies or the props",
+          "clear the level",
           "delete object"
         ],
         "summary": "Delete actors (deleteScope actors, the default: actorName or actorNames, exact names only, so TestActor never takes TestActor_Copy) or every actor carrying tag or any of tags (by_tag), in one undo step; every actor of a kind (all the cubes) goes by the names find lists. While Play runs they leave the running game, which nothing saves or undoes. Replies deletedCount and deleted; names not found refuse with NOT_FOUND, or DELETE_PARTIAL when some went, both carrying the deleted and missing lists.",
@@ -41218,7 +41220,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "8c3e23695164965208c5d990f589d52dc9b26bdec26c9270f0c1789ab528ced5",
-        "content": "6ef18ce34396e4a36f1521cdb508fffad21cd00e4491f4d2a3d3e3af06d89865"
+        "content": "12e48ba4c925eec11bc305d73550e1340fe4500d66dfadbf49ff6ca5b6baa20c"
       }
     },
     {
@@ -46130,6 +46132,7 @@
           "make an actor bigger or smaller",
           "make the sword or the enemy bigger",
           "make the player taller or smaller",
+          "turn or rotate the cube around",
           "set position",
           "set rotation",
           "translate"
@@ -46490,7 +46493,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "6af5b619f64ce87631986e9ba9d0b1fec5c056e5aa571251d34e3202107f2ea4",
-        "content": "11879d1eda68c2380f209cbd38f1393e4cfd9f15ac2e05eeee10205f845c621e"
+        "content": "95bd999a2daf509d08e331345087d3beba98172717564c9e80a122057969c056"
       }
     },
     {
@@ -49936,6 +49939,7 @@
           "possess",
           "possess a character",
           "quit game",
+          "play the level or the game",
           "pie",
           "start game",
           "run game",
@@ -50121,7 +50125,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "9a2b96f68ca89f0a4536ed7d547af79bbafddc21251a63e9907e877b8e1e76dd",
-        "content": "77afafd965edc9c04d2a30a88c703796da30352d2927e26a68b78c9f6318b993"
+        "content": "504b8d6989d57081d40f9f8032e1fd7343c604779f8f0e1e5b5bd84fb59d5674"
       }
     },
     {
@@ -66029,7 +66033,8 @@
         "family": "ai",
         "topics": [
           "set_focus",
-          "make look player"
+          "make look player",
+          "rotate the enemy to face the player or look at it"
         ],
         "summary": "Make an AIController Blueprint keep its focus on the player 0 pawn (focusPlayer) or the first actor carrying focusTag, finding it again each frame it has none (focusOp set, the default), or take that logic out (clear). Written into the Blueprint as engine nodes, compiled and saved, so it works in a packaged game.",
         "whenToUse": [
@@ -66206,7 +66211,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "2c01637c5a4783c8d24978f009e66e680fe9deba620f9789e3bf5e4399f15ae1",
-        "content": "279e00d3320942370d1fc96928813840f371b96c308bd7067ba72bc9e65eafa7"
+        "content": "3e78225527e7c15ef8236acec688d88c1e9f0bb9735464ad0ac2a6d6a3780a85"
       }
     },
     {
@@ -72252,7 +72257,10 @@
           "add a crouch",
           "make the player faster or slower",
           "make the character walk or run faster",
-          "change the player model or mesh"
+          "change the player model or mesh",
+          "set the camera to first person or third person",
+          "set the camera behind the player or closer to it",
+          "move the camera closer to the player or further away"
         ],
         "summary": "Configure a Character Blueprint's defaults by setting: movement_speeds (walk, crouch, swim, fly, acceleration, braking, friction), jump (launch speed, hold, double jump, air control, gravity), crouch, rotation (orient to movement or face the aim), capsule_component, mesh_component (skeletal mesh, Animation Blueprint, offset), camera_component (a third-person spring arm and camera, made when missing, or with view first_person a camera at the eyes) or nav_movement (AI agent size, avoidance). Each compiles and saves the Blueprint, changes only the fields sent and reads the values back; a Blueprint that is not a Character is refused (NOT_A_CHARACTER).",
         "whenToUse": [
@@ -72670,7 +72678,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "f5b1d349c80165552eb31f67ec27b80672797918ebec0822101a82db4d1815cd",
-        "content": "98615e9716f5a68b601c9915949e93dec01c141d02fe8f2a4f77172a132366f3"
+        "content": "6b29fd6c366681613c10726ff4fc08d3488ee978252cbefd7b4113993f814432"
       }
     },
     {
@@ -95709,7 +95717,8 @@
           "player start",
           "player start tag",
           "team spawn point",
-          "spawn point tag"
+          "spawn point tag",
+          "make the player spawn here or at a place"
         ],
         "summary": "Set the PlayerStartTag of a PlayerStart in the open level: an explicit tag, or TeamN for teamIndex N. The engine only matches the tag against a ?Portal=<tag> travel option; team spawning needs a game mode that reads it. Undoable; the level is left modified, not saved.",
         "whenToUse": [
@@ -95833,7 +95842,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "0944b6ddf7de293f887bfded50c802f6a033ddb557795699e4194d09abaeb494",
-        "content": "41c0474cfd6c817055581b2e2c08d6e799c24c6a5ee82e4a2d537074ee9c8908"
+        "content": "ffffad925cbc170343f46c525acfd3040fdda1db6edbf9118f5496af8484c6e5"
       }
     },
     {
@@ -119665,7 +119674,8 @@
           "change default map",
           "startup map",
           "change project settings",
-          "change the game name"
+          "change the game name",
+          "make the main menu the first level"
         ],
         "summary": "Set one setting (section and key): applied to the live settings object and saved where the editor itself saves that class, the project Default<Config>.ini for a project setting, the user Saved config for a per-user one (EditorPerProjectUserSettings). configFile names the file written.",
         "whenToUse": [
@@ -119771,7 +119781,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "ebac35b79dda99a9b748e9df5cc12895f96a08f572cc0c883a5bff89225ea463",
-        "content": "a7b85cccb05f3016b28c121764be89c8288b56b1e0acfd18eb42790318eee780"
+        "content": "968b03889233eaa1e6dae0858a79dbdb31bdfefbbe4fdc12c0430cdeb4c998d7"
       }
     },
     {

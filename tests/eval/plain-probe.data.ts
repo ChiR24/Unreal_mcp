@@ -1154,4 +1154,16 @@ export const PLAIN_PROBE: readonly PlainProbeCase[] = [
   { query: 'make the player taller', accepted: ['control_actor.set_transform'] },
   { query: 'make the player smaller', accepted: ['control_actor.set_transform'] },
   { query: 'add stars', accepted: ['build_environment.configure_atmosphere'] },
+  // The game camera (not the editor view), facing the player, clearing enemies, playing, the first level, the player start.
+  { query: 'turn the cube around', accepted: ['control_actor.set_transform'] },
+  { query: 'set the camera to first person', accepted: ['manage_character.configure_character'] },
+  { query: 'set the camera to third person', accepted: ['manage_character.configure_character'] },
+  { query: 'set the camera behind the player', accepted: ['manage_character.configure_character'] },
+  { query: 'move the camera closer to the player', accepted: ['manage_character.configure_character'] },
+  { query: 'rotate the enemy to face the player', accepted: ['manage_ai.set_focus'] },
+  { query: 'remove all the enemies', accepted: ['control_actor.delete'] },
+  { query: 'clear the level', accepted: ['control_actor.delete'] },
+  { query: 'play the level', accepted: ['control_editor.play'] },
+  { query: 'make the main menu the first level', accepted: ['system_control.set_project_setting'] },
+  { query: 'make the player spawn here', accepted: ['manage_networking.configure_player_start'] },
 ];

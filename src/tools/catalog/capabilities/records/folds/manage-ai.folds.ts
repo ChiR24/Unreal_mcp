@@ -61,7 +61,7 @@ export const MANAGE_AI_FOLDS: readonly FoldSpec[] = [
     members: { link_proxy: 'create_nav_link_proxy', smart_link: 'create_smart_link', modifier: 'create_nav_modifier', modifier_component: 'create_nav_modifier_component' },
   },
   {
-    primary: 'set_focus', topics: ['make look player'], selector: 'focusOp',
+    primary: 'set_focus', topics: ['make look player', 'rotate the enemy to face the player or look at it'], selector: 'focusOp',
     summary: 'Make an AIController Blueprint keep its focus on the player 0 pawn (focusPlayer) or the first actor carrying focusTag, finding it again each frame it has none (focusOp set, the default), or take that logic out (clear). Written into the Blueprint as engine nodes, compiled and saved, so it works in a packaged game.',
     members: { set: 'set_focus', clear: 'clear_focus' },
   },
