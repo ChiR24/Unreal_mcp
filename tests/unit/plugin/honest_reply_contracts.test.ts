@@ -4466,7 +4466,7 @@ describe('sounds, landscape receipts, skeleton saves and UV projections answer w
 
   it('skeleton edits report the save they made', () => {
     for (const file of [['Bones', 'McpSkeletonSockets.cpp'], ['MorphTargets', 'McpSkeletonMorphTargetEditing.cpp'],
-      ['SkinWeights', 'McpSkeletonWeightProfiles.cpp']]) {
+      ['SkinWeights', 'McpSkeletonWeightProfiles.cpp'], ['SkinWeights', 'McpSkeletonWeightProfileSet.cpp']]) {
       const source = code('Skeleton', ...file);
       expect(source, file.join('/')).not.toMatch(/^\s*SaveIfRequested\(\w+, Payload\);/mu);
       expect(source, file.join('/')).toContain('SaveAndReport(');

@@ -1,5 +1,5 @@
 {
-  "catalogRevision": "46468ecfcc651d8a",
+  "catalogRevision": "cd79ebb4101fac1d",
   "recordCount": 483,
   "records": [
     {
@@ -6248,6 +6248,10 @@
               },
               "description": "Per-vertex skin weight descriptors with bone influences."
             },
+            "dropRenderOnlyMorphs": {
+              "type": "boolean",
+              "description": "The edit rebuilds the mesh from its source data, which deletes morph targets that exist only in its render data, not its source data (left by tools that wrote render data alone). Without true, a mesh that has any is refused with RENDER_ONLY_MORPHS naming them and nothing changes (default false)."
+            },
             "sourceMeshPath": {
               "type": "string",
               "description": "Skinned mesh to copy the weights FROM (its LOD 0)."
@@ -6255,10 +6259,6 @@
             "targetMeshPath": {
               "type": "string",
               "description": "Skeletal mesh whose weights are replaced in place."
-            },
-            "dropRenderOnlyMorphs": {
-              "type": "boolean",
-              "description": "The edit rebuilds the mesh from its source data, which deletes morph targets that exist only in its render data, not its source data (left by tools that wrote render data alone). Without true, a mesh that has any is refused with RENDER_ONLY_MORPHS naming them and nothing changes (default false)."
             },
             "axis": {
               "type": "string",
@@ -6281,7 +6281,7 @@
                 "mirror",
                 "prune"
               ],
-              "description": "Which edit skin weights variant to run.\nauto: Recompute LOD 0 skin weights of a skeletal mesh by smooth binding to its own skeleton (UE 5.5+ with GeometryScripting).\nset: Set explicit vertex skin weights.\ncopy: Replace the skin weights of an existing skeletal mesh with those of another skinned mesh (for example the body under a garment), vertex by nearest vertex, mapping bones by name; the mesh keeps its geometry, physics asset, sockets and LODs.\nmirror: Mirror the skin weights of one side of a skeletal mesh onto the other, swapping left and right bones by name (_l and _r, Left and Right, .L and .R); vertices on the symmetry plane keep their weights.\nprune: Remove skin influences below a weight threshold (each vertex keeps its strongest bone) and renormalize; a mesh with nothing below it is left untouched."
+              "description": "Which edit skin weights variant to run.\nauto: Recompute LOD 0 skin weights of a skeletal mesh by smooth binding to its own skeleton (UE 5.5+ with GeometryScripting).\nset: Set the weights of vertices in a skin weight profile of a skeletal mesh (profileName, default CustomWeights; 'Default' is the mesh's own weights and is refused): each weights entry gives vertexIndex (a vertex of LOD lodIndex, default 0) its influences, boneIndex (the mesh's reference skeleton) with a weight 0 to 1, normalized on build; every other vertex keeps its weights in the profile (a new profile starts as a copy of the mesh's own). From UE 5.4 the profile is written into the mesh's source data and rebuilt, so it lasts; the reply reads it back (PROFILE_NOT_BUILT when the rebuild made none). A vertex or bone the mesh lacks, or influences that are all 0, are INVALID_ARGUMENT, and morph targets the mesh has only in render data RENDER_ONLY_MORPHS unless dropRenderOnlyMorphs. Saved unless save is false (saved).\ncopy: Replace the skin weights of an existing skeletal mesh with those of another skinned mesh (for example the body under a garment), vertex by nearest vertex, mapping bones by name; the mesh keeps its geometry, physics asset, sockets and LODs.\nmirror: Mirror the skin weights of one side of a skeletal mesh onto the other, swapping left and right bones by name (_l and _r, Left and Right, .L and .R); vertices on the symmetry plane keep their weights.\nprune: Remove skin influences below a weight threshold (each vertex keeps its strongest bone) and renormalize; a mesh with nothing below it is left untouched."
             }
           },
           "required": [
@@ -6455,16 +6455,17 @@
             "weights": [
               "set"
             ],
+            "dropRenderOnlyMorphs": [
+              "set",
+              "copy",
+              "mirror",
+              "prune"
+            ],
             "sourceMeshPath": [
               "copy"
             ],
             "targetMeshPath": [
               "copy"
-            ],
-            "dropRenderOnlyMorphs": [
-              "copy",
-              "mirror",
-              "prune"
             ],
             "axis": [
               "mirror"
@@ -6508,8 +6509,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "e7e009c71c8df866318b79b2466df80e6678a6374ea0fe3bd16dac99b8ade0c6",
-        "content": "211feae1b7d74ec8685c482c56e7d4ff2378c20e148523817d7b000772aff562"
+        "schema": "041634220fa03de89e83c0b8ac0711622a806cf93e4e1501c12aa5959aafb383",
+        "content": "ee5aa09e8e5be2ce3507c311dbc4479fd94cb36f1788147a2c014850c1878598"
       }
     },
     {

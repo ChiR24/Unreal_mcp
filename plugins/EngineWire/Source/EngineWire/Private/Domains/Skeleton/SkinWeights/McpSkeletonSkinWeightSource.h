@@ -28,11 +28,14 @@ struct FSourceMesh
     TMap<FName, TArray<FVector3f>> Morphs; // per-vertex position deltas, zero where a morph leaves a vertex alone
 };
 
-// Reads LOD of Mesh. False, with OutCode and OutError, when the mesh has no source data there.
-bool Read(USkeletalMesh* Mesh, int32 LOD, bool bWithMorphs, FSourceMesh& Out, FString& OutCode, FString& OutError);
-// Writes In.Weights (when bWeights) and the Morphs named in MorphNames into the source data, rebuilds the mesh
-// (which normalizes and caps the influences) and waits for the build. Positions are never written.
-bool Write(USkeletalMesh* Mesh, int32 LOD, const FSourceMesh& In, bool bWeights, const TArray<FName>& MorphNames, FString& OutError);
+// Reads LOD of Mesh. False, with OutCode and OutError, when the mesh has no source data there. With a Profile, the
+// weights are that skin weight profile's when the source data has it, else the default ones (UE 5.4+ only: before,
+// the source data keeps no profile this can write, PROFILE_UNSUPPORTED).
+bool Read(USkeletalMesh* Mesh, int32 LOD, bool bWithMorphs, FSourceMesh& Out, FString& OutCode, FString& OutError, FName Profile = NAME_None);
+// Writes In.Weights (when bWeights; into skin weight profile Profile when one is named, registered when missing) and
+// the Morphs named in MorphNames into the source data, rebuilds the mesh (which normalizes and caps the influences)
+// and waits for the build. Positions are never written.
+bool Write(USkeletalMesh* Mesh, int32 LOD, const FSourceMesh& In, bool bWeights, const TArray<FName>& MorphNames, FString& OutError, FName Profile = NAME_None);
 // The bone of TargetBones that stands in for SourceBone: the same name, else the nearest ancestor in
 // SourceRef that TargetBones has, else the first target bone (the root).
 FName MapBone(const FReferenceSkeleton& SourceRef, const TArray<FName>& TargetBones, FName SourceBone);

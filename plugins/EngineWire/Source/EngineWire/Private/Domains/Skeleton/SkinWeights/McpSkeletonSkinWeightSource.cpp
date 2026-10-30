@@ -43,12 +43,29 @@ bool CheckSourceLod(USkeletalMesh* Mesh, int32 LOD, FString& OutCode, FString& O
     }
     return true;
 }
+
+// Before UE 5.4 the source data keeps an alternate skin weight profile as a whole imported mesh, which nothing here
+// writes; from 5.4 a profile is a vertex attribute of the mesh description.
+bool CheckProfile(FName Profile, FString& OutCode, FString& OutError)
+{
+#if MCP_SKIN_SOURCE_IS_MESH_DESCRIPTION
+    return true;
+#else
+    if (Profile.IsNone())
+    {
+        return true;
+    }
+    OutCode = TEXT("PROFILE_UNSUPPORTED");
+    OutError = TEXT("This engine version keeps a skin weight profile in the mesh's source data as a whole imported mesh, which this edit does not write (UE 5.4 and later keep it as vertex weights).");
+    return false;
+#endif
+}
 }
 
-bool Read(USkeletalMesh* Mesh, int32 LOD, bool bWithMorphs, FSourceMesh& Out, FString& OutCode, FString& OutError)
+bool Read(USkeletalMesh* Mesh, int32 LOD, bool bWithMorphs, FSourceMesh& Out, FString& OutCode, FString& OutError, FName Profile)
 {
     Out = FSourceMesh();
-    if (!CheckSourceLod(Mesh, LOD, OutCode, OutError))
+    if (!CheckSourceLod(Mesh, LOD, OutCode, OutError) || !CheckProfile(Profile, OutCode, OutError))
     {
         return false;
     }
@@ -77,7 +94,9 @@ bool Read(USkeletalMesh* Mesh, int32 LOD, bool bWithMorphs, FSourceMesh& Out, FS
             Out.Bones.Add(Mesh->GetRefSkeleton().GetBoneName(Bone));
         }
     }
-    const FSkinWeightsVertexAttributesConstRef SkinWeights = Attributes.GetVertexSkinWeights();
+    // A profile the source data lacks starts as a copy of the default weights.
+    const bool bHasProfile = !Profile.IsNone() && Attributes.GetSkinWeightProfileNames().Contains(Profile);
+    const FSkinWeightsVertexAttributesConstRef SkinWeights = Attributes.GetVertexSkinWeights(bHasProfile ? Profile : NAME_None);
     for (const FVertexID VertexID : Description->Vertices().GetElementIDs())
     {
         Out.VertexIds.Add(VertexID.GetValue());
@@ -149,10 +168,10 @@ bool Read(USkeletalMesh* Mesh, int32 LOD, bool bWithMorphs, FSourceMesh& Out, FS
     return true;
 }
 
-bool Write(USkeletalMesh* Mesh, int32 LOD, const FSourceMesh& In, bool bWeights, const TArray<FName>& MorphNames, FString& OutError)
+bool Write(USkeletalMesh* Mesh, int32 LOD, const FSourceMesh& In, bool bWeights, const TArray<FName>& MorphNames, FString& OutError, FName Profile)
 {
     FString Code;
-    if (!CheckSourceLod(Mesh, LOD, Code, OutError))
+    if (!CheckSourceLod(Mesh, LOD, Code, OutError) || !CheckProfile(Profile, Code, OutError))
     {
         return false;
     }
@@ -167,7 +186,12 @@ bool Write(USkeletalMesh* Mesh, int32 LOD, const FSourceMesh& In, bool bWeights,
     FSkeletalMeshAttributes Attributes(*Description);
     if (bWeights)
     {
-        FSkinWeightsVertexAttributesRef SkinWeights = Attributes.GetVertexSkinWeights();
+        if (!Profile.IsNone() && !Attributes.GetSkinWeightProfileNames().Contains(Profile) && !Attributes.RegisterSkinWeightAttribute(Profile))
+        {
+            OutError = FString::Printf(TEXT("'%s' cannot name a skin weight profile."), *Profile.ToString());
+            return false;
+        }
+        FSkinWeightsVertexAttributesRef SkinWeights = Attributes.GetVertexSkinWeights(Profile);
         for (int32 Index = 0; Index < In.VertexIds.Num(); ++Index)
         {
             TArray<UE::AnimationCore::FBoneWeight> BoneWeights;
