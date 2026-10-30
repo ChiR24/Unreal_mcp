@@ -40,6 +40,18 @@ inline bool McpPackageHasBackingFile(const FString& PackageName)
     return false;
 }
 
+// Announces Asset to the Asset Registry as made, only while its package has no file on disk. AssetCreated broadcasts
+// the registry's asset-added event and flags the package newly created, so a save helper that called it every time told
+// a restore point (its created list and cleanup call), the change journal and the Content Browser that an asset saved
+// again had just been made.
+inline void McpAnnounceIfNew(UObject* Asset)
+{
+    if (Asset && !McpPackageHasBackingFile(Asset->GetOutermost()->GetName()))
+    {
+        FAssetRegistryModule::AssetCreated(Asset);
+    }
+}
+
 inline bool McpSafeAssetSave(UObject* Asset)
 {
     if (!Asset)
@@ -98,7 +110,7 @@ inline bool McpSafeAssetSave(UObject* Asset)
     if (AssetToSave && AssetToSave != Package)
     {
         AssetToSave->MarkPackageDirty();
-        FAssetRegistryModule::AssetCreated(AssetToSave);
+        McpAnnounceIfNew(AssetToSave);
     }
 
     // Nobody can answer a modal during an MCP call. A save that failed opened the

@@ -121,7 +121,6 @@ bool SaveTextureAsset(UTexture2D* Texture)
 
     Texture->PostEditChange();
     FlushRenderingCommands();
-    FAssetRegistryModule::AssetCreated(Texture);
     Texture->MarkPackageDirty();
     // McpSafeAssetSave tries every save route and says yes only when one of them wrote the file. The
     // second round of the same routes that used to follow answered yes whenever an older version was

@@ -4119,6 +4119,22 @@ describe('no save rewrites engine content', () => {
     expect(save).toMatch(/if \(PackageName\.StartsWith\(TEXT\("\/Engine\/"\)\)\)\s*\{[\s\S]*?return false;/u);
     expect(save.indexOf('PackageName.StartsWith(TEXT("/Engine/"))')).toBeLessThan(save.indexOf('Package->SetDirtyFlag(true);'));
   });
+
+  // AssetCreated on every save told a restore point (and its cleanup call), the journal and the Content Browser that
+  // an asset saved again had just been made.
+  it('the save helpers announce an asset as made only before its package is on disk', () => {
+    const save = code('..', 'Safety', 'McpSafeOperationsAssetSave.h');
+    expect(save).toMatch(/inline void McpAnnounceIfNew\(UObject\* Asset\)\s*\{\s*if \(Asset && !McpPackageHasBackingFile\(Asset->GetOutermost\(\)->GetName\(\)\)\)\s*\{\s*FAssetRegistryModule::AssetCreated\(Asset\);/u);
+    expect(save.match(/FAssetRegistryModule::AssetCreated\(/gu)).toHaveLength(1);
+    expect(save).toContain('McpAnnounceIfNew(AssetToSave);');
+    // The domain save helpers announced every asset they saved; audio and texture save through McpSafeAssetSave.
+    expect(code('AudioAuthoring', 'McpAudioAssetSupport.cpp')).not.toContain('AssetCreated(');
+    const texture = code('Texture', 'McpTextureAssets.cpp');
+    const saveTexture = texture.slice(texture.indexOf('bool SaveTextureAsset('), texture.indexOf('return McpSafeAssetSave(Texture);'));
+    expect(saveTexture.length).toBeGreaterThan(0);
+    expect(saveTexture).not.toContain('AssetCreated(');
+    expect(code('AnimationAuthoring', 'McpAnimSupport.cpp')).toMatch(/McpSafeOperations::McpAnnounceIfNew\(Asset\);\s*const bool bSaved = SaveLoadedAssetThrottled\(Asset, true\);/u);
+  });
 });
 
 describe('blend spaces, skeletons and ragdolls answer for what they did', () => {

@@ -87,7 +87,6 @@ bool SaveAudioAsset(UObject* Asset, bool bShouldSave)
 	{
 		return true;
 	}
-	FAssetRegistryModule::AssetCreated(Asset);
 	// Dirtying the package is not saving it. This returned true after marking
 	// the asset dirty and registering it, so every `save: true` across the
 	// authoring surface -- attenuation, sound classes, cues, dialogue -- reported

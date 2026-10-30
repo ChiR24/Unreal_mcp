@@ -2,6 +2,7 @@
 
 #include "Core/Compatibility/McpVersionCompatibility.h"
 #include "Foundation/BridgeHelpers/Security/McpAssetPathCanonical.h"
+#include "Safety/McpSafeOperationsAssetSave.h"
 
 namespace McpAnimationAuthoring {
 
@@ -62,7 +63,7 @@ bool SaveAnimAsset(UObject* Asset, bool bShouldSave)
     {
         return true;
     }
-    FAssetRegistryModule::AssetCreated(Asset);
+    McpSafeOperations::McpAnnounceIfNew(Asset);
 
     const bool bSaved = SaveLoadedAssetThrottled(Asset, true);
     if (bSaved)
