@@ -32,6 +32,16 @@ describe('options.aggregate', () => {
     expect(build).toContain('Receipt->SetObjectField(TEXT("aggregate"), AggregateBlock);');
   });
 
+  it('counts and pages a list a handler sends inside its data payload', () => {
+    // The standard envelope ({success, data, warnings}) keeps the list in data: counted at the root alone, a find counted
+    // the envelope's empty warnings, and a long one could not page.
+    const build = read('Gateway', 'McpNativeGatewayExecuteReceiptBuild.cpp');
+    const lift = build.indexOf('TSharedPtr<FJsonObject> Published = McpLiftReplyPayload(Result);');
+    expect(lift).toBeGreaterThan(-1);
+    expect(build.indexOf('McpExecuteAggregate::Apply(', lift)).toBeGreaterThan(lift);
+    expect(build.indexOf('McpFirstResultPage(Published', lift)).toBeGreaterThan(lift);
+  });
+
   it('is part of the idempotency fingerprint', () => {
     expect(read('Execute', 'McpNativeTransportGatewayExecute.cpp')).toContain('McpExecuteAggregate::FingerprintPart(ExecOptions)');
   });

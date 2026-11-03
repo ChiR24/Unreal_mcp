@@ -113,15 +113,16 @@ TSharedPtr<FJsonObject> McpBuildGatewayExecuteReceipt(
 	// length to the flat 100000. The rest of the reply is still held to 100k, and an image
 	// past its own ceiling is refused. Mirrors resultCharBudget() in
 	// src/server/gateway/gateway-execute-dispatch.ts.
+	// A list a handler sends inside its data payload is aggregated and paged as one at the root (the projection reads both).
+	TSharedPtr<FJsonObject> Published = McpLiftReplyPayload(Result);
 	int32 ResultCharBudget = 100000;
 	FString ImageBase64;
-	if (Result.IsValid() && Result->TryGetStringField(TEXT("imageBase64"), ImageBase64) && ImageBase64.Len() <= 6000000)
+	if (Published.IsValid() && Published->TryGetStringField(TEXT("imageBase64"), ImageBase64) && ImageBase64.Len() <= 6000000)
 	{
 		ResultCharBudget += ImageBase64.Len();
 	}
 
 	int64 SerializedChars = 0;
-	TSharedPtr<FJsonObject> Published = Result;
 	TSharedPtr<FJsonObject> PageBlock;
 	// options.aggregate counts a list in the plugin instead of sending it (Request/McpExecuteAggregate.cpp).
 	const TSharedPtr<FJsonObject> AggregateBlock = Context.Aggregate.IsValid() && Result.IsValid()

@@ -27,6 +27,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 <summary><b>🔧 Fixed</b></summary>
 
 - **Search**: plain requests find their capability (about 250 more), and an alias a family member declared runs that member.
+- **Long replies page** when the list sits in the reply's `data` (a big `find` answered `RESULT_TOO_LARGE`), and `options.aggregate` counts that list.
 - **Undo**: asset edits (animation, skeleton, physics, Blackboard, Behavior Tree, sound class, enum) are one undo step each, an edit that changes nothing or that the engine refuses is refused instead of answered done, and enum undo no longer crashes UE 5.7+.
 - **Behavior Trees**: the graph route builds a tree from its Root node.
 - **Placed copies** take a behaviour's or variable's new default; the directory report's reply carries its assets; saving an asset again no longer announces it as new.

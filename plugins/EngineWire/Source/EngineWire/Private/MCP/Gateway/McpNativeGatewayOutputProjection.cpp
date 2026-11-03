@@ -85,3 +85,23 @@ TSharedPtr<FJsonObject> McpProjectCanonicalOutput(
 	}
 	return Projected;
 }
+
+TSharedPtr<FJsonObject> McpLiftReplyPayload(const TSharedPtr<FJsonObject>& Result)
+{
+	const TSharedPtr<FJsonObject>* Payload = nullptr;
+	if (!Result.IsValid() || !Result->TryGetObjectField(TEXT("data"), Payload) || !Payload)
+	{
+		return Result;
+	}
+	TSharedPtr<FJsonObject> Lifted = MakeShared<FJsonObject>();
+	Lifted->Values = Result->Values;
+	Lifted->RemoveField(TEXT("data"));
+	for (const auto& Entry : (*Payload)->Values)
+	{
+		if (!Lifted->Values.Contains(Entry.Key))
+		{
+			Lifted->Values.Add(Entry.Key, Entry.Value);
+		}
+	}
+	return Lifted;
+}

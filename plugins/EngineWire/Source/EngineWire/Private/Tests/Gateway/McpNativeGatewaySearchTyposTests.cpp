@@ -3,6 +3,7 @@
 
 #include "MCP/Gateway/Search/McpSearchTypos.h"
 #include "MCP/Execute/Request/McpExecuteAggregate.h"
+#include "MCP/Execute/McpNativeGatewayValidation.h"
 #include "MCP/Gateway/McpNativeGatewayCapabilityStore.h"
 
 #if WITH_DEV_AUTOMATION_TESTS
@@ -84,6 +85,22 @@ bool FMcpExecuteAggregateTest::RunTest(const FString& Parameters)
 		McpExecuteAggregate::Apply(Spec, nullptr, Page)->GetStringField(TEXT("note")).Contains(TEXT("this page only")));
 	Spec->SetStringField(TEXT("field"), TEXT("missing"));
 	TestTrue(TEXT("a list the reply lacks is said"), McpExecuteAggregate::Apply(Spec, nullptr, Result)->HasField(TEXT("note")));
+
+	// The standard envelope ({success, data, warnings}): the list in data is the one counted, as the receipt build lifts it.
+	TSharedPtr<FJsonObject> Payload = MakeShared<FJsonObject>();
+	Payload->SetArrayField(TEXT("actors"), Actors);
+	Payload->SetNumberField(TEXT("count"), 3);
+	TSharedPtr<FJsonObject> Envelope = MakeShared<FJsonObject>();
+	Envelope->SetBoolField(TEXT("success"), true);
+	Envelope->SetObjectField(TEXT("data"), Payload);
+	Envelope->SetArrayField(TEXT("warnings"), TArray<TSharedPtr<FJsonValue>>());
+	TSharedPtr<FJsonObject> Lifted = McpLiftReplyPayload(Envelope);
+	TestFalse(TEXT("the payload is no longer wrapped"), Lifted->HasField(TEXT("data")));
+	TestEqual(TEXT("its fields sit at the root"), static_cast<int32>(Lifted->GetNumberField(TEXT("count"))), 3);
+	Spec->RemoveField(TEXT("field"));
+	TestEqual(TEXT("the payload's list is counted, not the envelope's empty warnings"),
+		McpExecuteAggregate::Apply(Spec, nullptr, Lifted)->GetStringField(TEXT("field")), FString(TEXT("actors")));
+	TestTrue(TEXT("a reply with no payload is the same object"), McpLiftReplyPayload(Result) == Result);
 	return true;
 }
 

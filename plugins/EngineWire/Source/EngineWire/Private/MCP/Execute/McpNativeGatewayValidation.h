@@ -67,6 +67,14 @@ TSharedPtr<FJsonObject> McpProjectCanonicalOutput(
 	const TSharedPtr<FJsonObject>& Result, const TSharedPtr<FJsonObject>& OutputSchema);
 
 /**
+ * The handler result with its `data` payload's fields beside the root's (a root field wins, as in the projection) and
+ * no `data` wrapper; Result itself when it has no payload. A handler answering through the standard envelope
+ * ({success, data, warnings}) keeps its lists in `data`, where options.aggregate and paging, which pick a top-level
+ * list, did not look.
+ */
+TSharedPtr<FJsonObject> McpLiftReplyPayload(const TSharedPtr<FJsonObject>& Result);
+
+/**
  * Validate a projected canonical output against the capability output schema.
  *
  * Returns nullptr when the canonical output conforms; otherwise the error
