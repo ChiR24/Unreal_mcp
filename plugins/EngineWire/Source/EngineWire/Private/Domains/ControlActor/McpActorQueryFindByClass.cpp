@@ -71,6 +71,7 @@ bool UEngineWireSubsystem::HandleControlActorFindByClass(
           TSharedPtr<FJsonObject> ActorObj = McpHandlerUtils::CreateResultObject();
           ActorObj->SetStringField(TEXT("name"), McpActorRef(Actor));
           ActorObj->SetStringField(TEXT("path"), Actor->GetPathName());
+          ActorObj->SetObjectField(TEXT("location"), McpHandlerUtils::VectorToJson(Actor->GetActorLocation()));
           ActorsArray.Add(MakeShared<FJsonValueObject>(ActorObj));
         }
       }

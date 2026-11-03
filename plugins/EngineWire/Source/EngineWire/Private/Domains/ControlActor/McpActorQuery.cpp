@@ -89,6 +89,7 @@ bool UEngineWireSubsystem::HandleControlActorFindByName(
       Entry->SetStringField(TEXT("class"),
                             Actor->GetClass() ? Actor->GetClass()->GetPathName()
                                               : TEXT(""));
+      Entry->SetObjectField(TEXT("location"), McpHandlerUtils::VectorToJson(Actor->GetActorLocation()));
       Matches.Add(MakeShared<FJsonValueObject>(Entry));
     }
   }

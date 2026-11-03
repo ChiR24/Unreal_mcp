@@ -1,5 +1,5 @@
 {
-  "catalogRevision": "7747cd7b4b957be6",
+  "catalogRevision": "e59ff8dc3a4f4f17",
   "recordCount": 483,
   "records": [
     {
@@ -42791,7 +42791,7 @@
           "actors showing a material",
           "actors with a material in a slot"
         ],
-        "summary": "Find actors by class, by name, by the static mesh they draw (mesh) or by a material in any of their slots (material); the mesh and material finds name the matching components.",
+        "summary": "Find actors by class, by name, by the static mesh they draw (mesh) or by a material in any of their slots (material), each with its location; the mesh and material finds name the matching components.",
         "whenToUse": [
           "findBy=class: All instances of a class must be located.",
           "findBy=name: One or more actors must be located by name or substring.",
@@ -42885,7 +42885,7 @@
             },
             "actors": {
               "type": "array",
-              "description": "Matched actors.",
+              "description": "Matched actors, each with where it is.",
               "items": {
                 "type": "object",
                 "x-unreal-reflection-boundary": true,
@@ -42905,6 +42905,22 @@
                   "class": {
                     "type": "string",
                     "description": "Actor class."
+                  },
+                  "location": {
+                    "type": "object",
+                    "properties": {
+                      "x": {
+                        "type": "number"
+                      },
+                      "y": {
+                        "type": "number"
+                      },
+                      "z": {
+                        "type": "number"
+                      }
+                    },
+                    "additionalProperties": false,
+                    "description": "Where the actor is, {x, y, z} in world cm."
                   }
                 }
               }
@@ -42941,7 +42957,7 @@
       },
       "examples": [
         {
-          "title": "Find actors by class, by name, by the static mesh they draw (mesh) or by a material in any of their slots (material); the mesh and material finds name the matching components.",
+          "title": "Find actors by class, by name, by the static mesh they draw (mesh) or by a material in any of their slots (material), each with its location; the mesh and material finds name the matching components.",
           "input": {
             "action": "find",
             "className": "PointLight",
@@ -43052,8 +43068,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "f918ef106f95e678d89b6a2c593f4c835b5ad680795a2148b9ee8afbdac8f4f9",
-        "content": "1126feff6857ab4b82604bc3412704fdfb169292835e0378b43297f419e857a5"
+        "schema": "f9e840e8fbbe190d914b94f35b848c02c590c02a43461652d2c0e20610c17a3c",
+        "content": "a61fb5f371ef52e8fce882282f9b240aeb550646c6a8e79fc95568622d87e26a"
       }
     },
     {
@@ -43149,12 +43165,28 @@
                   "class": {
                     "type": "string",
                     "description": "Actor class."
+                  },
+                  "location": {
+                    "type": "object",
+                    "properties": {
+                      "x": {
+                        "type": "number"
+                      },
+                      "y": {
+                        "type": "number"
+                      },
+                      "z": {
+                        "type": "number"
+                      }
+                    },
+                    "additionalProperties": false,
+                    "description": "Where the actor is, {x, y, z} in world cm."
                   }
                 },
                 "additionalProperties": true,
                 "x-unreal-reflection-boundary": true
               },
-              "description": "Matched actors."
+              "description": "Matched actors, each with where it is."
             },
             "count": {
               "type": "number",
@@ -43222,8 +43254,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "952ffe50ddf18b4bf3dba79aa9758af10334033b39ad20cf8df3ded96b5b09ff",
-        "content": "7e0a39c6ea043a46d2de25c285c557c85e6e6f10f82d33990660d703908837b5"
+        "schema": "5decd084293ddf377c3997ccebeb940fe33ae7c1bb656a8418473ae9eea3bbe0",
+        "content": "f353db50dbe71967c030e36100b86b631e0c6c3ab42678aee38ab12698f58a7f"
       }
     },
     {
@@ -44817,6 +44849,22 @@
                     "type": "string",
                     "description": "Actor class."
                   },
+                  "location": {
+                    "type": "object",
+                    "properties": {
+                      "x": {
+                        "type": "number"
+                      },
+                      "y": {
+                        "type": "number"
+                      },
+                      "z": {
+                        "type": "number"
+                      }
+                    },
+                    "additionalProperties": false,
+                    "description": "Where the actor is, {x, y, z} in world cm."
+                  },
                   "distance": {
                     "type": "number",
                     "description": "With near: world units from the point to the actor's bounding box, 0 when the box contains it. Rows are sorted by it, nearest first; of equally near actors the smaller box comes first, so the level-wide foliage actor, which contains every point, trails."
@@ -44999,8 +45047,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "6e9d75f86e682ff04987647a57d7b51ace81a30d9800c2b9fe643eb66de6e19a",
-        "content": "029ecd3c2b4e7027120fb99a6c94c3f34a5e56f6375e8390a336838dda45e3a1"
+        "schema": "b6fd42d4e69b08443dad9ec792bd685cba282958908b0229d79f08c39853e391",
+        "content": "2d6eefbdb9edf07ecffe08f3122a3a816735b7ade70c1691226a5c868dc63054"
       }
     },
     {

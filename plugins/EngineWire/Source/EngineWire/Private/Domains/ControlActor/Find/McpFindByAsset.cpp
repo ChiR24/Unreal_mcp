@@ -78,6 +78,7 @@ bool Scan(UEngineWireSubsystem* Bridge, const FString& RequestId, const TSharedP
             Row->SetStringField(TEXT("name"), Actor->GetName());
             Row->SetStringField(TEXT("path"), Actor->GetPathName());
             Row->SetStringField(TEXT("class"), Actor->GetClass()->GetPathName());
+            Row->SetObjectField(TEXT("location"), McpHandlerUtils::VectorToJson(Actor->GetActorLocation()));
             Row->SetArrayField(TEXT("components"), Matched);
             Actors.Add(MakeShared<FJsonValueObject>(Row));
         }

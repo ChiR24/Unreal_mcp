@@ -34,6 +34,7 @@ const FIND_BY_ASSET_OUTPUT = {
         name: { type: 'string', description: 'Actor name.' },
         path: { type: 'string', description: 'Actor path.' },
         class: { type: 'string', description: 'Actor class.' },
+        location: P.actors.items.properties.location,
         components: {
           type: 'array',
           items: { type: 'object', additionalProperties: true, 'x-unreal-reflection-boundary': true },

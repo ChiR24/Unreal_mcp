@@ -68,11 +68,17 @@ export const P = {
         name: str('Actor name.'),
         path: str('Actor path.'),
         class: str('Actor class.'),
+        location: {
+          type: 'object',
+          properties: { x: { type: 'number' }, y: { type: 'number' }, z: { type: 'number' } },
+          additionalProperties: false,
+          description: 'Where the actor is, {x, y, z} in world cm.',
+        },
       },
       additionalProperties: true,
       'x-unreal-reflection-boundary': true,
     },
-    description: 'Matched actors.',
+    description: 'Matched actors, each with where it is.',
   },
   components: {
     type: 'array',

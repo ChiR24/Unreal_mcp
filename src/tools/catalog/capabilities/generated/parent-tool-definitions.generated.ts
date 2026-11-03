@@ -5993,7 +5993,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "oneOf": [
             {
               "type": "array",
-              "description": "Matched actors.",
+              "description": "Matched actors, each with where it is.",
               "items": {
                 "type": "object",
                 "x-unreal-reflection-boundary": true,
@@ -6013,6 +6013,22 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
                   "class": {
                     "type": "string",
                     "description": "Actor class."
+                  },
+                  "location": {
+                    "type": "object",
+                    "properties": {
+                      "x": {
+                        "type": "number"
+                      },
+                      "y": {
+                        "type": "number"
+                      },
+                      "z": {
+                        "type": "number"
+                      }
+                    },
+                    "additionalProperties": false,
+                    "description": "Where the actor is, {x, y, z} in world cm."
                   }
                 }
               }
@@ -6092,6 +6108,22 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
                     "type": "string",
                     "description": "Actor class."
                   },
+                  "location": {
+                    "type": "object",
+                    "properties": {
+                      "x": {
+                        "type": "number"
+                      },
+                      "y": {
+                        "type": "number"
+                      },
+                      "z": {
+                        "type": "number"
+                      }
+                    },
+                    "additionalProperties": false,
+                    "description": "Where the actor is, {x, y, z} in world cm."
+                  },
                   "distance": {
                     "type": "number",
                     "description": "With near: world units from the point to the actor's bounding box, 0 when the box contains it. Rows are sorted by it, nearest first; of equally near actors the smaller box comes first, so the level-wide foliage actor, which contains every point, trails."
@@ -6122,12 +6154,28 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
                   "class": {
                     "type": "string",
                     "description": "Actor class."
+                  },
+                  "location": {
+                    "type": "object",
+                    "properties": {
+                      "x": {
+                        "type": "number"
+                      },
+                      "y": {
+                        "type": "number"
+                      },
+                      "z": {
+                        "type": "number"
+                      }
+                    },
+                    "additionalProperties": false,
+                    "description": "Where the actor is, {x, y, z} in world cm."
                   }
                 },
                 "additionalProperties": true,
                 "x-unreal-reflection-boundary": true
               },
-              "description": "Matched actors."
+              "description": "Matched actors, each with where it is."
             }
           ],
           "description": "Each actor as {actor, from [x, y, z], to [x, y, z], movedCm}."
