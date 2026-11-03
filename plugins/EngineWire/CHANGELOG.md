@@ -34,6 +34,7 @@ All notable changes to the EngineWire plugin (formerly McpAutomationBridge) will
 - **Geometry undo** (`McpGeometryUndo.cpp`): a change is found with `FDynamicMesh3::IsSameAs`, every attribute compared (a hash of positions, triangles, UVs and normals let material id and PolyGroup edits record no step).
 - **Contact sheet** (`McpPerceptionSheet.cpp`): a box reaching more than 250 m past the actor no longer pushes the elevation camera out (a 40 km water zone put the actor past the far plane).
 - **Output files** (`McpSystemOutputFiles.cpp`): Saved/Captures and Saved/EngineWire are output roots, and a delete prunes the folders it leaves empty, up to its root.
+- **Change journal** (`McpChangeJournal.cpp`): a Modify, or a change notice naming no property, that leaves its package clean outside undo and redo is not recorded (a static mesh announces a finished compile that way).
 
 ## [0.6.0] - 2026-10-27
 
@@ -61,6 +62,7 @@ Plugin-side changes since the `v0.6.0-beta-f` tag, from the code diff. The serve
 - **Loop guard** on `/mcp`: a call failing three times unchanged is refused (`REPEATED_FAILURE`).
 - **`dryRun`** on `build_graph`, `build_material_graph` and `add_widget_tree`, which check every step first; **`run_script`** runs capability calls with loops and conditions in one request, each step checked as a direct execute is, rolled back on a failure; **recipes** (`save_recipe`, `run_recipe`, `list_recipes`) keep such a script in the project with parameters, and search lists the ones a request names.
 - **`run_map_check`**, **`fix_placement`**, **`describe_relations`**, **`arrange_by_relations`**, **`arrange_widgets`** (a Canvas Panel's children placed by relations, solved by Cassowary, anchored to hold at every screen size), **`playtest`** (a pawn walked to a goal in Play, judged with evidence), **`settle_physics`** (props dropped and kept where they come to rest), **`explore_level`** (a pawn explores the level: falls, traps, unreachable areas), and execute's `options.expect` (after the call) and `options.require` (before it).
+- **Change journal**: `changes_since` and `ue://changes` subscriptions list what changed since a cursor and who changed it.
 - **Domain playbooks as MCP prompts**: nine (`blueprint-logic`, `input-setup`, `widget-ui`, `niagara-vfx`, `material-authoring`, `world-building`, `animation-setup`, `cinematics`, `play-testing`), each the capabilities to reach for in order and the traps of its domain; a unit test holds every prompt step to a capability the catalog has.
 - **`remove_sublevel`**: the Levels panel's Remove, without the undo reset that turns a reference still held to the removed world into a Fatal; locked, unsaved (`discardUnsaved`) and Level Instance levels are refused before the engine would open a dialog.
 

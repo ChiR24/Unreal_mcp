@@ -97,12 +97,22 @@ int32 EditedPackageEntry(UPackage* Package)
     return Index;
 }
 
+// The engine says an object changed when nothing did: a static mesh that finished compiling announces itself with an
+// empty property-changed event (to refresh its registry tags), and loads and builds call Modify where the editor will not
+// dirty the package. A change the editor would save leaves its package dirty (Modify dirties it before it tells anyone).
+// Inside a request these read as the call's own: the first map switch after a launch listed 39 meshes that finished
+// compiling as changed by create_level. Undo and redo are judged as before: they set dirty flags their own way.
+bool LeftClean(const UObject* Object)
+{
+    return !GIsTransacting && Object && Object->GetPackage() && !Object->GetPackage()->IsDirty();
+}
+
 // The engine edits on its own all the time (loading, compiling, rebuilding derived data): a dozen meshes a startup read as
 // changed and buried every real one, so only an edit this server or the user made is kept. Asked before anything else,
 // it is also what keeps the hot path cheap.
 void OnModified(UObject* Object)
 {
-    const int32 Index = CurrentBy() == JournalByEditor ? INDEX_NONE : EditedEntry(Object);
+    const int32 Index = CurrentBy() == JournalByEditor || LeftClean(Object) ? INDEX_NONE : EditedEntry(Object);
     if (Index != INDEX_NONE)
     {
         Touch(Index, JournalModified);
@@ -111,7 +121,9 @@ void OnModified(UObject* Object)
 
 void OnPropertyChanged(UObject* Object, FPropertyChangedEvent& Event)
 {
-    const int32 Index = CurrentBy() == JournalByEditor ? INDEX_NONE : EditedEntry(Object);
+    // A notice with no property on a clean package is the engine's; an edit names its property or dirtied the package.
+    const bool bNotice = !Event.Property && !Event.MemberProperty && LeftClean(Object);
+    const int32 Index = CurrentBy() == JournalByEditor || bNotice ? INDEX_NONE : EditedEntry(Object);
     if (Index == INDEX_NONE)
     {
         return;

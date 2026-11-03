@@ -47,11 +47,18 @@ describe('change journal', () => {
 
   // A dozen meshes the engine touched at startup read as changed and buried every real change.
   it('keeps no edit the engine made on its own, and asks that before any lookup', () => {
-    const edits = recorder.match(/CurrentBy\(\) == JournalByEditor \? INDEX_NONE : EditedEntry\(Object\)/gu) ?? [];
-    expect(edits).toHaveLength(2);
+    expect(recorder).toContain('CurrentBy() == JournalByEditor || LeftClean(Object) ? INDEX_NONE : EditedEntry(Object)');
+    expect(recorder).toContain('CurrentBy() == JournalByEditor || bNotice ? INDEX_NONE : EditedEntry(Object)');
     // Nor an actor it added or removed on its own: a new level's world settings, navigation data.
     const actors = recorder.match(/CurrentBy\(\) != JournalByEditor && !GIsReinstancing && IsLevelActor\(Actor\)/gu) ?? [];
     expect(actors).toHaveLength(2);
+  });
+
+  // A mesh that finished compiling broadcasts an empty property change, and loads call Modify where the editor will not
+  // dirty the package: inside the first create_level after a launch, 39 meshes read as the call's changes.
+  it('keeps no change that leaves its package clean outside undo, and no property-less notice on one', () => {
+    expect(recorder).toMatch(/bool LeftClean\(const UObject\* Object\)\s*\{\s*return !GIsTransacting && Object && Object->GetPackage\(\) && !Object->GetPackage\(\)->IsDirty\(\);/u);
+    expect(recorder).toContain('const bool bNotice = !Event.Property && !Event.MemberProperty && LeftClean(Object);');
   });
 
   const events = code('Core', 'Journal', 'McpChangeJournalEvents.cpp');
