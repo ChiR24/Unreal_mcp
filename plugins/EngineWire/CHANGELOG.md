@@ -27,6 +27,7 @@ All notable changes to the EngineWire plugin (formerly McpAutomationBridge) will
 ### Fixed
 - **Search**: lead verbs (`McpSearchIntent.cpp`) and fold aliases run the member they name.
 - **Paging and aggregate read the data payload**: the receipt build lifts a `{success, data, warnings}` reply's fields to the root (`McpLiftReplyPayload`, a root field wins as in the projection) before `options.aggregate` and paging pick a list.
+- **Aggregate page note** (`McpExecuteAggregate.cpp`): a page with a known total names it ("of 108 in all") instead of saying the reply has more.
 - **Contact sheet title** (`McpPerceptionSheetDraw.cpp`): the sheet is at least as wide as its title, measured with the editor font, tiles centred.
 - **Variable defaults reach placed copies** still on the old value, before the compile.
 - **Asset edits are one undo step** (animation, skeleton, physics, Blackboard, Behavior Tree, sound class, enum); an enum edit is recorded as a command change, since restoring an enum asserts from 5.7, and older enum steps are refused `UNDO_WOULD_CRASH`.

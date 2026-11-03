@@ -167,15 +167,16 @@ TSharedPtr<FJsonObject> Apply(const TSharedPtr<FJsonObject>& Spec, const TShared
     const bool bGroup = Spec->TryGetStringField(TEXT("groupBy"), GroupBy);
     Block->SetStringField(TEXT("field"), Field);
     Block->SetNumberField(TEXT("total"), Items->Num());
-    // A paged list counts its page only: say so, or a caller reads the page's counts as the whole.
+    // A paged list counts its page only: say so, or a caller reads the page's counts as the whole. The last page of a
+    // list has no next page, so a known total is named instead (offset 50 of 108 read "the reply has more").
     bool bMore = false;
     double Whole = 0.0;
-    if ((InOutResult->TryGetBoolField(TEXT("hasMore"), bMore) && bMore) ||
-        (InOutResult->TryGetNumberField(TEXT("totalCount"), Whole) && Whole > Items->Num()))
+    const bool bPartOfWhole = InOutResult->TryGetNumberField(TEXT("totalCount"), Whole) && Whole > Items->Num();
+    if ((InOutResult->TryGetBoolField(TEXT("hasMore"), bMore) && bMore) || bPartOfWhole)
     {
-        Block->SetStringField(TEXT("note"), FString::Printf(
-            TEXT("Counted the %d on this page only; the reply has more. Raise the call's limit, or read the next pages, to count them all."),
-            Items->Num()));
+        Block->SetStringField(TEXT("note"), bPartOfWhole
+            ? FString::Printf(TEXT("Counted the %d on this page only, of %.0f in all. Raise the call's limit, or read the other pages, to count them all."), Items->Num(), Whole)
+            : FString::Printf(TEXT("Counted the %d on this page only; the list goes on. Raise the call's limit, or read the next pages, to count them all."), Items->Num()));
     }
     TArray<TPair<FString, TArray<TSharedPtr<FJsonValue>>>> Groups;
     TMap<FString, int32> Where;

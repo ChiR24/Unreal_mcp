@@ -82,7 +82,7 @@ bool FMcpExecuteAggregateTest::RunTest(const FString& Parameters)
 	Page->SetArrayField(TEXT("actors"), Actors);
 	Page->SetNumberField(TEXT("totalCount"), 10);
 	TestTrue(TEXT("a page of a longer list says it counted the page"),
-		McpExecuteAggregate::Apply(Spec, nullptr, Page)->GetStringField(TEXT("note")).Contains(TEXT("this page only")));
+		McpExecuteAggregate::Apply(Spec, nullptr, Page)->GetStringField(TEXT("note")).Contains(TEXT("this page only, of 10 in all")));
 	Spec->SetStringField(TEXT("field"), TEXT("missing"));
 	TestTrue(TEXT("a list the reply lacks is said"), McpExecuteAggregate::Apply(Spec, nullptr, Result)->HasField(TEXT("note")));
 
