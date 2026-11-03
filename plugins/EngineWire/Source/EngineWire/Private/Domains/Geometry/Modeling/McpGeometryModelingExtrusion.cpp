@@ -75,6 +75,42 @@ bool HandleInsetOutset(UEngineWireSubsystem* Self, const FString& RequestId,
     return true;
 }
 
+namespace
+{
+// The material id most of the triangles carry (every triangle when Triangles is null), lowest first on a tie: a bevel
+// face takes it. The engine infers a face's id from the two faces it joins only on a flat cut (its rounded strips are
+// rows its check does not count), and otherwise sets one id for all, 0 by default.
+int32 CommonMaterialId(UDynamicMesh* Mesh, const TArray<int32>* Triangles)
+{
+    TMap<int32, int32> Counts;
+    Mesh->ProcessMesh([&](const UE::Geometry::FDynamicMesh3& ReadMesh)
+    {
+        const UE::Geometry::FDynamicMeshMaterialAttribute* Ids = ReadMesh.HasAttributes() ? ReadMesh.Attributes()->GetMaterialID() : nullptr;
+        const auto Count = [&](int32 TriangleId) { ++Counts.FindOrAdd(Ids ? Ids->GetValue(TriangleId) : 0); };
+        if (!Triangles)
+        {
+            for (const int32 TriangleId : ReadMesh.TriangleIndicesItr()) Count(TriangleId);
+            return;
+        }
+        for (const int32 TriangleId : *Triangles)
+        {
+            if (ReadMesh.IsTriangle(TriangleId)) Count(TriangleId);
+        }
+    });
+    int32 Best = 0;
+    int32 BestCount = 0;
+    for (const TPair<int32, int32>& Entry : Counts)
+    {
+        if (Entry.Value > BestCount || (Entry.Value == BestCount && Entry.Key < Best))
+        {
+            Best = Entry.Key;
+            BestCount = Entry.Value;
+        }
+    }
+    return Best;
+}
+} // namespace
+
 bool HandleBevel(UEngineWireSubsystem* Self, const FString& RequestId,
                         const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> Socket)
 {
@@ -94,34 +130,50 @@ bool HandleBevel(UEngineWireSubsystem* Self, const FString& RequestId,
     if (!Target) return true;
     auto [TargetActor, DMC, Mesh] = *Target;
 
-    FGeometryScriptMeshBevelOptions BevelOptions;
-    BevelOptions.BevelDistance = BevelDistance;
-#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 4
-    BevelOptions.Subdivisions = Subdivisions;
-#endif
-
     FGeometryScriptMeshSelection BevelSelection;
     bool bHasBevelSelection = false;
-    if (!ReadTriangleSelection(Self, RequestId, Socket, Mesh, Payload, BevelSelection, bHasBevelSelection)) return true;
-    // Before UE 5.2 the polygroup bevel takes no selection, so it always works the whole mesh.
-    int32 TrianglesSelected = Mesh->GetTriangleCount();
-#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 2
-    TrianglesSelected = SelectedTriangleCount(Mesh, BevelSelection, bHasBevelSelection);
+    TArray<int32> Picked;
+    if (!ReadTriangleSelection(Self, RequestId, Socket, Mesh, Payload, BevelSelection, bHasBevelSelection, &Picked)) return true;
+    const int32 TrianglesSelected = SelectedTriangleCount(Mesh, BevelSelection, bHasBevelSelection);
+    const int32 TrianglesBefore = Mesh->GetTriangleCount();
+    // A flat cut between two faces of one material id takes that id; every other bevel face the commonest id of the
+    // faces worked on (the engine set id 0 on them all).
+    const int32 MaterialId = CommonMaterialId(Mesh, bHasBevelSelection ? &Picked : nullptr);
     if (bHasBevelSelection)
     {
+        // Every PolyGroup edge of the picked faces, as with no selection for the whole mesh. The engine's TriangleArea
+        // mode bevels only where picked meets unpicked, so whole parts picked (a box's six faces, a material id) got none.
         FGeometryScriptMeshBevelSelectionOptions SelectionOptions;
-        SelectionOptions.BevelDistance = BevelOptions.BevelDistance;
+        SelectionOptions.BevelDistance = BevelDistance;
+        SelectionOptions.bInferMaterialID = true;
+        SelectionOptions.SetMaterialID = MaterialId;
 #if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 4
         SelectionOptions.Subdivisions = Subdivisions;
 #endif
         UGeometryScriptLibrary_MeshModelingFunctions::ApplyMeshBevelSelection(
-            Mesh, BevelSelection, EGeometryScriptMeshBevelSelectionMode::TriangleArea, SelectionOptions, nullptr);
+            Mesh, BevelSelection, EGeometryScriptMeshBevelSelectionMode::AllPolygroupEdges, SelectionOptions, nullptr);
     }
     else
-#endif
     {
-        UGeometryScriptLibrary_MeshModelingFunctions::ApplyMeshPolygroupBevel(
-            Mesh, BevelOptions, nullptr);
+        FGeometryScriptMeshBevelOptions BevelOptions;
+        BevelOptions.BevelDistance = BevelDistance;
+        BevelOptions.bInferMaterialID = true;
+        BevelOptions.SetMaterialID = MaterialId;
+#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 4
+        BevelOptions.Subdivisions = Subdivisions;
+#endif
+        UGeometryScriptLibrary_MeshModelingFunctions::ApplyMeshPolygroupBevel(Mesh, BevelOptions, nullptr);
+    }
+    // Each beveled edge adds a strip of faces, so a count that did not move means nothing was beveled.
+    const int32 TrianglesAdded = Mesh->GetTriangleCount() - TrianglesBefore;
+    if (TrianglesAdded == 0)
+    {
+        Self->SendAutomationError(Socket, RequestId, FString::Printf(TEXT(
+            "Nothing was beveled: the %d triangle(s) worked on have no PolyGroup edge, the line where one PolyGroup meets "
+            "another, which is what bevel and chamfer cut (a mesh whose triangles all share one PolyGroup has none). The mesh "
+            "is unchanged. Meshes built by create_box, append_polygons, append_cuboids or append_loft give each face its own "
+            "PolyGroup."), TrianglesSelected), TEXT("NOTHING_BEVELED"));
+        return true;
     }
 
     DMC->NotifyMeshUpdated();
@@ -131,6 +183,8 @@ bool HandleBevel(UEngineWireSubsystem* Self, const FString& RequestId,
     Result->SetNumberField(TEXT("distance"), BevelDistance);
     Result->SetNumberField(TEXT("segments"), Subdivisions);
     Result->SetNumberField(TEXT("trianglesSelected"), TrianglesSelected);
+    Result->SetNumberField(TEXT("trianglesAdded"), TrianglesAdded);
+    Result->SetNumberField(TEXT("triangleCount"), Mesh->GetTriangleCount());
     Self->SendAutomationResponse(Socket, RequestId, true, TEXT("Bevel applied"), Result);
     return true;
 }

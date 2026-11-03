@@ -21,6 +21,13 @@ const CAP = { type: 'boolean', description: 'Close open ends: the tube ends of a
 // The face operators report how many triangles their selection (triangleIndices or region) picked.
 const TRIANGLES_SELECTED = { type: 'integer', description: 'Triangles the operation worked on: the triangleIndices or region selection, else every triangle of the mesh.' };
 const SELECTION_OUTPUT = { trianglesSelected: TRIANGLES_SELECTED };
+// bevel and chamfer cut PolyGroup edges, and a pick takes in every PolyGroup it touches.
+const BEVEL_TEXT = 'every PolyGroup edge (where one PolyGroup meets another, such as the rim of a box face) of the faces triangleIndices or a region picks, or of the whole mesh with neither; a pick takes in each PolyGroup it touches, so whole parts picked by materialIds or groupIds have all their edges cut. The new faces take the material id of the faces worked on (the commonest where they differ; a flat cut between two faces of one id takes that one). Nothing to cut (the faces have no PolyGroup edge: every triangle around them in one PolyGroup) is NOTHING_BEVELED, the mesh unchanged.';
+const BEVEL_OUTPUT = {
+  ...SELECTION_OUTPUT,
+  trianglesAdded: { type: 'integer', description: 'Triangles the bevel faces added (always more than 0: a cut that adds none is NOTHING_BEVELED).' },
+  triangleCount: { type: 'integer', description: 'Triangles in the mesh after the call.' },
+};
 
 export const GEOMETRY_OPERATIONS_RECORDS: readonly CapabilityRecordSource[] = [
   buildWorldRecord({
@@ -76,9 +83,9 @@ export const GEOMETRY_OPERATIONS_RECORDS: readonly CapabilityRecordSource[] = [
   }),
   buildWorldRecord({
     parentTool: 'manage_geometry', action: 'bevel', plugins: PLUGIN,
-    family: F, summary: 'Bevel selected edges of a dynamic mesh.', whenToUse: ['Edges must be beveled; pick the faces whose edges bevel with triangleIndices or a region.'], whenNotToUse: ['Edges must be split; use edge_split.'],
+    family: F, summary: `Bevel edges of a dynamic mesh: ${BEVEL_TEXT}`, whenToUse: ['Edges must be beveled or rounded (segments); pick the faces whose edges bevel with triangleIndices or a region.'], whenNotToUse: ['Edges must be split; use edge_split.'],
     inputProps: { actorName: P.actorName, targetActor: P.targetActor, triangleIndices: P.triangleIndices, region: P.region, distance: BEVEL_DISTANCE, segments: BEVEL_SEGMENTS }, required: [], requiredOneOf: ['actorName', 'targetActor'], effect: 'write', costLatency: 'interactive', costResources: 'low',
-    outputProps: SELECTION_OUTPUT,
+    outputProps: BEVEL_OUTPUT,
     exampleInput: { action: 'bevel', targetActor: 'DM_A' },
   }),
   buildWorldRecord({
@@ -117,9 +124,9 @@ export const GEOMETRY_OPERATIONS_RECORDS: readonly CapabilityRecordSource[] = [
   }),
   buildWorldRecord({
     parentTool: 'manage_geometry', action: 'chamfer', plugins: PLUGIN,
-    family: F, summary: 'Chamfer selected edges of a dynamic mesh.', whenToUse: ['Edges must be chamfered; pick the faces whose edges chamfer with triangleIndices or a region.'], whenNotToUse: ['Edges must be beveled; use bevel.'],
+    family: F, summary: `Chamfer (a flat bevel) edges of a dynamic mesh: ${BEVEL_TEXT}`, whenToUse: ['Edges must be chamfered; pick the faces whose edges chamfer with triangleIndices or a region.'], whenNotToUse: ['Edges must be beveled; use bevel.'],
     inputProps: { actorName: P.actorName, targetActor: P.targetActor, triangleIndices: P.triangleIndices, region: P.region, distance: BEVEL_DISTANCE, segments: BEVEL_SEGMENTS }, required: [], requiredOneOf: ['actorName', 'targetActor'], effect: 'write', costLatency: 'interactive', costResources: 'low',
-    outputProps: SELECTION_OUTPUT,
+    outputProps: BEVEL_OUTPUT,
     exampleInput: { action: 'chamfer', targetActor: 'DM_A' },
   }),
   buildWorldRecord({

@@ -15,6 +15,7 @@ const SETUP = `DM_RegionSetup_${ts}`;
 const CAGE = `DM_RegionCage_${ts}`;
 const SCRATCH = `DM_RegionScratch_${ts}`;
 const SHAPE = `DM_RegionShape_${ts}`;
+const ONEGROUP = `DM_RegionOneGroup_${ts}`;
 
 const CUBE_VERTICES = [
   { x: -50, y: -50, z: -50 }, { x: 50, y: -50, z: -50 }, { x: 50, y: 50, z: -50 }, { x: -50, y: 50, z: -50 },
@@ -82,8 +83,19 @@ const testCases = [
   },
   { scenario: 'REGION: outset the faces of material id 0', toolName: 'manage_geometry', arguments: { action: 'outset', actorName: SHAPE, distance: 1, region: { materialIds: [0] } }, expected: 'success', assertions: [{ path: 'structuredContent.result.trianglesSelected', gte: 1, label: 'every triangle is material 0' }] },
   { scenario: 'REGION: offset_faces facing +X', toolName: 'manage_geometry', arguments: { action: 'offset_faces', actorName: SHAPE, distance: 2, region: { normal: { x: 1, y: 0, z: 0 }, normalAngle: 20 } }, expected: 'success' },
-  { scenario: 'REGION: bevel the faces facing +Y', toolName: 'manage_geometry', arguments: { action: 'bevel', actorName: SHAPE, distance: 2, region: { normal: { x: 0, y: 1, z: 0 }, normalAngle: 20 } }, expected: 'success' },
-  { scenario: 'REGION: chamfer the faces of the box polygroups', toolName: 'manage_geometry', arguments: { action: 'chamfer', actorName: SHAPE, distance: 1, region: { groupIds: [0, 1, 2, 3, 4, 5, 6] } }, expected: 'success' },
+  {
+    scenario: 'REGION: bevel the faces facing +Y', toolName: 'manage_geometry',
+    arguments: { action: 'bevel', actorName: SHAPE, distance: 2, region: { normal: { x: 0, y: 1, z: 0 }, normalAngle: 20 } }, expected: 'success',
+    assertions: [{ path: 'structuredContent.result.trianglesAdded', gte: 1, label: 'the +Y face rim was cut' }],
+  },
+  {
+    scenario: 'REGION: chamfer every edge of the faces of the box polygroups', toolName: 'manage_geometry',
+    arguments: { action: 'chamfer', actorName: SHAPE, distance: 1, region: { groupIds: [0, 1, 2, 3, 4, 5, 6] } }, expected: 'success',
+    assertions: [{ path: 'structuredContent.result.trianglesAdded', gte: 1, label: 'whole faces picked still have their edges cut' }],
+  },
+  { scenario: 'Setup: create a mesh that is one PolyGroup', toolName: 'manage_geometry', arguments: create(ONEGROUP), expected: 'success' },
+  { scenario: 'Setup: a closed cube whose six faces share PolyGroup 0', toolName: 'manage_geometry', arguments: { action: 'append_polygons', actorName: ONEGROUP, vertices: CUBE_VERTICES, faces: CUBE_FACES, faceGroups: [0, 0, 0, 0, 0, 0] }, expected: 'success' },
+  { scenario: 'REGION: a bevel with no PolyGroup edge to cut is NOTHING_BEVELED', toolName: 'manage_geometry', arguments: { action: 'bevel', actorName: ONEGROUP, distance: 2, region: { materialIds: [0] } }, expected: 'error|NOTHING_BEVELED' },
   {
     scenario: 'REGION: poke the faces facing -Z', toolName: 'manage_geometry',
     arguments: { action: 'poke', actorName: SHAPE, distance: 5, region: { normal: { x: 0, y: 0, z: -1 }, normalAngle: 20 } }, expected: 'success',
@@ -97,7 +109,7 @@ const testCases = [
   { scenario: 'Cleanup: delete the fold twin copy of the setup mesh', toolName: 'control_actor', arguments: { action: 'delete', actorName: SETUP }, expected: 'success|not found' },
   // create_box is a create_primitive member, so its fold twin made a second box under the SHAPE label too.
   { scenario: 'Cleanup: delete the fold twin copy of the box', toolName: 'control_actor', arguments: { action: 'delete', actorName: SHAPE }, expected: 'success|not found' },
-  ...[SETUP, CAGE, SCRATCH, SHAPE].map((actorName) => (
+  ...[SETUP, CAGE, SCRATCH, SHAPE, ONEGROUP].map((actorName) => (
     { scenario: `Cleanup: delete ${actorName}`, toolName: 'control_actor', arguments: { action: 'delete', actorName }, expected: 'success|not found' }
   )),
 ];

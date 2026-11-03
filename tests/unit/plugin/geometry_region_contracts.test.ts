@@ -42,6 +42,22 @@ describe('region picks triangles for the face operators and set_material_id', ()
     }
   });
 
+  // TriangleArea bevels only where picked meets unpicked: whole parts picked (a box's six faces) beveled nothing and
+  // answered "Bevel applied". The picked faces' PolyGroup edges are what a bevel with no selection cuts for the mesh.
+  it('bevel and chamfer cut the picked faces\' PolyGroup edges, keep the faces\' material id, and say when nothing was cut', () => {
+    const body = sliceBetween(read('Modeling', 'McpGeometryModelingExtrusion.cpp'), 'bool HandleBevel(', '\n} // namespace');
+    expect(body).toContain('EGeometryScriptMeshBevelSelectionMode::AllPolygroupEdges');
+    expect(body).not.toContain('TriangleArea');
+    expect(body).toContain('SelectionOptions.bInferMaterialID = true;');
+    expect(body).toContain('BevelOptions.bInferMaterialID = true;');
+    // A rounded bevel's rows escape the engine's inference, which then sets one id on every face: id 0 by default.
+    expect(body).toContain('const int32 MaterialId = CommonMaterialId(Mesh, bHasBevelSelection ? &Picked : nullptr);');
+    expect(body).toContain('SelectionOptions.SetMaterialID = MaterialId;');
+    expect(body).toContain('BevelOptions.SetMaterialID = MaterialId;');
+    expect(body).toMatch(/if \(TrianglesAdded == 0\)\s*\{[\s\S]*?TEXT\("NOTHING_BEVELED"\)\);\s*return true;\s*\}\s*DMC->NotifyMeshUpdated\(\);/u);
+    expect(body).toContain('Result->SetNumberField(TEXT("trianglesAdded"), TrianglesAdded);');
+  });
+
   it('poke takes the ids from the shared selection, so a region pokes the same triangles', () => {
     const body = sliceBetween(read('Topology', 'McpGeometryTopologyFaces.cpp'), 'bool HandlePoke(', '\nbool ');
     expect(body).toContain('ReadTriangleSelection(Self, RequestId, Socket, Mesh, Payload, Selection, bHasSelection, &Requested)');

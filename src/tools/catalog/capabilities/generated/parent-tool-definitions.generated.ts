@@ -23412,7 +23412,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             "extrude_along_spline",
             "duplicate_along_spline"
           ],
-          "description": "Which model mesh variant to run.\nextrude: Extrude selected faces of a dynamic mesh.\ninset: Inset selected faces of a dynamic mesh.\noutset: Outset selected faces of a dynamic mesh.\noffset_faces: Offset selected faces of a dynamic mesh.\nbevel: Bevel selected edges of a dynamic mesh.\nchamfer: Chamfer selected edges of a dynamic mesh.\nbridge: Bridge two edge loops of a dynamic mesh.\nloft: Loft between two or more profile curves.\nsweep: Sweep a profile along a path of a dynamic mesh.\nrevolve: Turn a profile of {radius, height} points around the vertical axis into a new dynamic mesh actor: a vase, column, bottle, tower or dome.\nshell: Create a shell (inner offset) of a dynamic mesh.\nloop_cut: Insert evenly spaced edge loops across a dynamic mesh, perpendicular to an axis.\nedge_split: Split edges of a dynamic mesh at their midpoints.\npoke: Poke faces of a dynamic mesh: add a centre vertex to each triangle (optionally pushed out along its normal) and fan it into three triangles.\nquadrangulate: Group pairs of adjacent triangles of a dynamic mesh into quad PolyGroups, so PolyGroup edits (extrude, inset, bevel by group) act on quads. The mesh itself stays triangles.\nextrude_along_spline: Extrude a profile along a spline actor.\nduplicate_along_spline: Duplicate a mesh along a spline actor."
+          "description": "Which model mesh variant to run.\nextrude: Extrude selected faces of a dynamic mesh.\ninset: Inset selected faces of a dynamic mesh.\noutset: Outset selected faces of a dynamic mesh.\noffset_faces: Offset selected faces of a dynamic mesh.\nbevel: Bevel edges of a dynamic mesh: every PolyGroup edge (where one PolyGroup meets another, such as the rim of a box face) of the faces triangleIndices or a region picks, or of the whole mesh with neither; a pick takes in each PolyGroup it touches, so whole parts picked by materialIds or groupIds have all their edges cut. The new faces take the material id of the faces worked on (the commonest where they differ; a flat cut between two faces of one id takes that one). Nothing to cut (the faces have no PolyGroup edge: every triangle around them in one PolyGroup) is NOTHING_BEVELED, the mesh unchanged.\nchamfer: Chamfer (a flat bevel) edges of a dynamic mesh: every PolyGroup edge (where one PolyGroup meets another, such as the rim of a box face) of the faces triangleIndices or a region picks, or of the whole mesh with neither; a pick takes in each PolyGroup it touches, so whole parts picked by materialIds or groupIds have all their edges cut. The new faces take the material id of the faces worked on (the commonest where they differ; a flat cut between two faces of one id takes that one). Nothing to cut (the faces have no PolyGroup edge: every triangle around them in one PolyGroup) is NOTHING_BEVELED, the mesh unchanged.\nbridge: Bridge two edge loops of a dynamic mesh.\nloft: Loft between two or more profile curves.\nsweep: Sweep a profile along a path of a dynamic mesh.\nrevolve: Turn a profile of {radius, height} points around the vertical axis into a new dynamic mesh actor: a vase, column, bottle, tower or dome.\nshell: Create a shell (inner offset) of a dynamic mesh.\nloop_cut: Insert evenly spaced edge loops across a dynamic mesh, perpendicular to an axis.\nedge_split: Split edges of a dynamic mesh at their midpoints.\npoke: Poke faces of a dynamic mesh: add a centre vertex to each triangle (optionally pushed out along its normal) and fan it into three triangles.\nquadrangulate: Group pairs of adjacent triangles of a dynamic mesh into quad PolyGroups, so PolyGroup edits (extrude, inset, bevel by group) act on quads. The mesh itself stays triangles.\nextrude_along_spline: Extrude a profile along a spline actor.\nduplicate_along_spline: Duplicate a mesh along a spline actor."
         },
         "name": {
           "type": "string",
@@ -24899,9 +24899,22 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "additionalProperties": false
         },
         "triangleCount": {
-          "type": [
-            "integer",
-            "number"
+          "oneOf": [
+            {
+              "description": "Triangles in the mesh after the call."
+            },
+            {
+              "type": "integer",
+              "description": "Triangles in the mesh."
+            },
+            {
+              "type": "integer",
+              "description": "With meshPath: triangles copied from the asset."
+            },
+            {
+              "type": "number",
+              "description": "Triangle count."
+            }
           ],
           "description": "Triangle count."
         },
@@ -24915,7 +24928,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "trianglesAdded": {
           "type": "integer",
-          "description": "Triangles the faces came to once larger polygons were triangulated."
+          "description": "Triangles the bevel faces added (always more than 0: a cut that adds none is NOTHING_BEVELED)."
         },
         "trianglesAfter": {
           "type": [
