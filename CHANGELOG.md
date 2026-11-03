@@ -48,6 +48,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **`edit_animation` `set_play_rate`** makes an animation sequence play faster or slower (or backwards) wherever it plays.
 - **Names models invent land**: an alias sent as a tool and action resolves (`system_control` `restart_editor` runs `control_editor`'s), with five new ones mined from session transcripts (`call_function`, `save_all` under `manage_asset`, `set_blueprint_variables` under `manage_blueprint`, `connect_nodes` for a Blueprint's `connect_pins`).
 - **`npx unreal-engine-mcp-server init <client>`** shows (and with `--write` saves) the server's entry in Claude Code's, Cursor's, VS Code's, Gemini's or Codex's MCP config; **`doctor`** checks Node, the token (never shown), the editor's answer and both versions.
+- **`place_decals`** lays decals flat onto surfaces (stains, cracks, moss, puddles, posters): traced from points or scattered over a disc, on the surface a mesh draws (not a collision box around it), texture upright, sized and turned, in one undo step.
 
 </details>
 

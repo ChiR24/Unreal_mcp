@@ -1145,7 +1145,7 @@ export const PLAIN_PROBE: readonly PlainProbeCase[] = [
   { query: 'rename all the trees', accepted: ['control_actor.rename'] },
   { query: 'focus on the selected actor', accepted: ['control_editor.focus_actor'] },
   { query: 'make the floor shiny', accepted: ['material.create_material'] },
-  { query: 'add a decal', accepted: ['material.create_material'] },
+  { query: 'add a decal', accepted: ['build_environment.place_decals', 'material.create_material'] },
   { query: 'change the player model', accepted: ['manage_character.configure_character'] },
   { query: 'make a cutscene of the castle', accepted: ['sequence.create'] },
   { query: 'make a trailer', accepted: ['sequence.create'] },
@@ -1167,4 +1167,7 @@ export const PLAIN_PROBE: readonly PlainProbeCase[] = [
   { query: 'change material instance parent', accepted: ['asset.edit_material_instance'] },
   { query: 'reparent material instance', accepted: ['asset.edit_material_instance'] },
   { query: 'material instance uses the wrong parent', accepted: ['asset.edit_material_instance'] },
+  { query: 'place decal on the floor', accepted: ['build_environment.place_decals'] },
+  { query: 'scatter dirt decals', accepted: ['build_environment.place_decals'] },
+  { query: 'stain on the floor', accepted: ['build_environment.place_decals'] },
 ];

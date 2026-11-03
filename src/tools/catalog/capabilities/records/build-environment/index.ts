@@ -1,11 +1,11 @@
 /**
- * build_environment catalog: 150 authored CapabilityRecordSource entries
+ * build_environment catalog: 151 authored CapabilityRecordSource entries
  * aggregated from family-sharded data files, folded by BUILD_ENVIRONMENT_FOLDS
- * into the 40 shipped records.
+ * into the 41 shipped records.
  *
  * Each authored entry is a CapabilityRecordSource (hashes are computed at parse
  * time by createCapabilityRecord / parseCapabilityCatalog). The authored set
- * equals the 150-action source set from the normalization inventory; the folded
+ * equals the 151-action source set from the normalization inventory; the folded
  * records count toward ALL_CAPABILITY_RECORD_COUNT (records/aggregate.ts), which
  * throws on any drift.
  *
@@ -13,11 +13,12 @@
  *   landscape      16   foliage       14   procedural      5
  *   lighting       15   render-raytrace 18  render-postprocess 22
  *   render-screen  13   spline        22   atmosphere     12
- *   weather         5   water          8
- *   Total: 150
+ *   weather         5   water          8   decal           1
+ *   Total: 151
  */
 import type { CapabilityRecordSource } from '../../model.js';
 import { ATMOSPHERE_RECORDS } from './atmosphere.data.js';
+import { DECAL_RECORDS } from './decal.data.js';
 import { FOLIAGE_RECORDS } from './foliage.data.js';
 import { LANDSCAPE_RECORDS } from './landscape.data.js';
 import { LIGHTING_RECORDS } from './lighting.data.js';
@@ -44,6 +45,7 @@ export const BUILD_ENVIRONMENT_UNFOLDED_SOURCES: readonly CapabilityRecordSource
   ...ATMOSPHERE_RECORDS,
   ...WEATHER_RECORDS,
   ...WATER_RECORDS,
+  ...DECAL_RECORDS,
 ];
 
 export const BUILD_ENVIRONMENT_SOURCES: readonly CapabilityRecordSource[] = applyFolds(BUILD_ENVIRONMENT_UNFOLDED_SOURCES, BUILD_ENVIRONMENT_FOLDS, 'build_environment');

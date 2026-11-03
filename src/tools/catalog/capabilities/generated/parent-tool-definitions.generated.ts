@@ -2308,58 +2308,114 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "number",
           "description": "Same as waveHeight; waveHeight wins when both are given."
         },
+        "angle": {
+          "type": "number",
+          "description": "Turn about the surface in degrees, counter-clockwise as seen from outside (default 0 for points, random per decal for area)."
+        },
         "aperture": {
           "type": "number",
           "description": "f-stop, 1 to 32."
         },
         "area": {
-          "type": "object",
-          "description": "A box min..max. Painting: instances spread evenly over min..max in X and Y, and each drops onto the ground found between 500 above max.z and 1000 below min.z. Removing: only the instances whose location lies inside min..max on all three axes (a pit or a path), every type unless foliageType names one.",
-          "properties": {
-            "min": {
+          "oneOf": [
+            {
               "type": "object",
-              "description": "Minimum corner.",
+              "additionalProperties": false,
+              "required": [
+                "center",
+                "radius",
+                "count"
+              ],
               "properties": {
-                "x": {
-                  "type": "number",
-                  "description": "X"
+                "center": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": [
+                    "x",
+                    "y",
+                    "z"
+                  ],
+                  "properties": {
+                    "x": {
+                      "type": "number"
+                    },
+                    "y": {
+                      "type": "number"
+                    },
+                    "z": {
+                      "type": "number"
+                    }
+                  }
                 },
-                "y": {
+                "radius": {
                   "type": "number",
-                  "description": "Y"
+                  "minimum": 1,
+                  "description": "Disc radius in cm."
                 },
-                "z": {
-                  "type": "number",
-                  "description": "Z"
+                "count": {
+                  "type": "integer",
+                  "minimum": 1,
+                  "maximum": 200,
+                  "description": "Decals to scatter (fewer when the disc has no room for them half a decal apart)."
+                },
+                "seed": {
+                  "type": "integer",
+                  "description": "Seed (default 1): the same seed gives the same points, turns and sizes."
                 }
               },
-              "additionalProperties": false
+              "description": "Scatter instead of points: count points in the disc of radius around center facing direction (level at its height for a trace down or up; upright, across and up, for a trace into a wall), each traced along direction."
             },
-            "max": {
+            {
               "type": "object",
-              "description": "Maximum corner.",
+              "description": "A box min..max. Painting: instances spread evenly over min..max in X and Y, and each drops onto the ground found between 500 above max.z and 1000 below min.z. Removing: only the instances whose location lies inside min..max on all three axes (a pit or a path), every type unless foliageType names one.",
               "properties": {
-                "x": {
-                  "type": "number",
-                  "description": "X"
+                "min": {
+                  "type": "object",
+                  "description": "Minimum corner.",
+                  "properties": {
+                    "x": {
+                      "type": "number",
+                      "description": "X"
+                    },
+                    "y": {
+                      "type": "number",
+                      "description": "Y"
+                    },
+                    "z": {
+                      "type": "number",
+                      "description": "Z"
+                    }
+                  },
+                  "additionalProperties": false
                 },
-                "y": {
-                  "type": "number",
-                  "description": "Y"
-                },
-                "z": {
-                  "type": "number",
-                  "description": "Z"
+                "max": {
+                  "type": "object",
+                  "description": "Maximum corner.",
+                  "properties": {
+                    "x": {
+                      "type": "number",
+                      "description": "X"
+                    },
+                    "y": {
+                      "type": "number",
+                      "description": "Y"
+                    },
+                    "z": {
+                      "type": "number",
+                      "description": "Z"
+                    }
+                  },
+                  "additionalProperties": false
                 }
               },
+              "required": [
+                "min",
+                "max"
+              ],
               "additionalProperties": false
             }
-          },
-          "required": [
-            "min",
-            "max"
           ],
-          "additionalProperties": false
+          "description": "A box min..max. Painting: instances spread evenly over min..max in X and Y, and each drops onto the ground found between 500 above max.z and 1000 below min.z. Removing: only the instances whose location lies inside min..max on all three axes (a pit or a path), every type unless foliageType names one."
         },
         "areas": {
           "type": "array",
@@ -2672,8 +2728,34 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "number",
           "description": "Fog density, the height fog's FogDensity (0.02 a light haze, 0.05 and up a thick fog)."
         },
+        "depth": {
+          "type": "number",
+          "minimum": 1,
+          "description": "How far it projects through the surface, in cm (default half its smaller side, at least 20)."
+        },
         "direction": {
           "oneOf": [
+            {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "x",
+                "y",
+                "z"
+              ],
+              "properties": {
+                "x": {
+                  "type": "number"
+                },
+                "y": {
+                  "type": "number"
+                },
+                "z": {
+                  "type": "number"
+                }
+              },
+              "description": "Direction the points are traced in (default {0, 0, -1}: down); {0, 1, 0} finds a wall in +Y."
+            },
             {
               "type": "object",
               "description": "Direction rotation.",
@@ -2765,6 +2847,11 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "boolean",
           "description": "Indirect lighting cache on (point sampled) or off for each primitive."
         },
+        "fadeScreenSize": {
+          "type": "number",
+          "minimum": 0,
+          "description": "Screen size below which the decal fades out (engine default 0.01; 0 never fades)."
+        },
         "falloff": {
           "type": "number",
           "description": "Brush falloff (0-1)."
@@ -2787,6 +2874,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "fillDepressions": {
           "type": "boolean",
           "description": "Raise every pit to where it would spill, so all ground drains (default true). false keeps basins: rivers then end in them, and drains is false."
+        },
+        "folder": {
+          "type": "string",
+          "description": "Outliner folder (default Decals)."
         },
         "foliageOp": {
           "type": "string",
@@ -2858,7 +2949,18 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "description": "Landscape layer hardness (0-1)."
         },
         "height": {
-          "type": "number",
+          "oneOf": [
+            {
+              "type": "number",
+              "description": "Height in world units, over 0 (default 300 for a wall, 100 for a fence); the mesh's bottom stands on the route. With meshPath, omit it to keep the mesh's own height."
+            },
+            {
+              "type": "number",
+              "minimum": 1,
+              "maximum": 100000,
+              "description": "Height of the texture on the surface (up a wall), in cm (default 200)."
+            }
+          ],
           "description": "Height in world units, over 0 (default 300 for a wall, 100 for a fence); the mesh's bottom stands on the route. With meshPath, omit it to keep the mesh's own height."
         },
         "heightData": {
@@ -3002,6 +3104,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             "procedural"
           ],
           "description": "Which create atmosphere actor variant to run.\nsky_sphere: Create the sky lighting rig in the level being edited: a Sky Atmosphere, a sun (Directional Light) and a Sky Light, labelled <name>_Atmosphere, <name>_Sun and <name>_SkyLight (SkyAtmosphere, DirectionalLight and SkyLight without a name). An actor already carrying one of those labels is reused and set up rather than doubled, but a sun or atmosphere labelled otherwise is not found, so the level gets a second one. No sky sphere mesh, clouds or fog: add those with configure_volumetric_cloud and kind=fog_volume. Replies createdActorCount (0 when all three existed) and the three actor names.\nfog_volume: Create an Exponential Height Fog actor in the level being edited, or set up the one already labelled name (default ExponentialHeightFog), with density and settings (properties of its fog component). It is height fog over the whole level, not a local volume, and a fog labelled otherwise is not found, so the level gets a second one.\ntime_of_day_system: Create one actor, TimeOfDaySystem (or name), carrying its own sun (a directional light at intensity 10, the atmosphere sun), sky light (intensity 1) and sky atmosphere, all movable, with the sun at noon; an actor already labelled so gets the missing parts. Nothing animates it, no curves and no day cycle: move the sun with set_time_of_day. A level that already has a sun or sky atmosphere (kind=sky_sphere, the default level template) ends up with two of each, so use one rig or the other."
+        },
+        "label": {
+          "type": "string",
+          "description": "Label prefix (default Decal)."
         },
         "landscapeActorPath": {
           "type": "string",
@@ -3257,7 +3363,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "materialPath": {
           "type": "string",
-          "description": "Canonical /Game material asset path."
+          "description": "A decal material (Deferred Decal domain) or an instance of one."
         },
         "maxBrightness": {
           "type": "number",
@@ -3348,6 +3454,14 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "numLODs": {
           "type": "integer",
           "description": "Number of LODs to generate."
+        },
+        "onActors": {
+          "type": "array",
+          "maxItems": 100,
+          "items": {
+            "type": "string"
+          },
+          "description": "Labels or names of the only actors a decal may land on."
         },
         "openSides": {
           "type": "array",
@@ -3652,6 +3766,32 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
                 "additionalProperties": false
               },
               "description": "Spline points."
+            },
+            {
+              "type": "array",
+              "minItems": 1,
+              "maxItems": 200,
+              "items": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "x",
+                  "y",
+                  "z"
+                ],
+                "properties": {
+                  "x": {
+                    "type": "number"
+                  },
+                  "y": {
+                    "type": "number"
+                  },
+                  "z": {
+                    "type": "number"
+                  }
+                }
+              },
+              "description": "World points {x, y, z} in cm, one decal each, traced along direction from 200 cm before the point."
             }
           ],
           "description": "Spline points."
@@ -3929,6 +4069,12 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "boolean",
           "description": "Also write the method to Project Settings > Rendering (DefaultEngine.ini), so it survives an editor restart and reaches the packaged game (default false: this session only)."
         },
+        "scaleJitter": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 0.5,
+          "description": "Each decal is scaled by up to this share up or down (default 0)."
+        },
         "screenPercentage": {
           "type": "number",
           "description": "Screen percentage (0-100)."
@@ -4180,6 +4326,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "boolean",
           "description": "Drop each point onto the first static surface below it (default true). Points with no surface below - over a pit or off the level - are skipped and reported as skippedNoSurface."
         },
+        "sortOrder": {
+          "type": "integer",
+          "description": "Draw order among overlapping decals: higher draws on top (default 0)."
+        },
         "spacing": {
           "type": "number",
           "description": "Mesh spacing along the spline."
@@ -4254,6 +4404,12 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "tool": {
           "type": "string",
           "description": "Sculpt tool: Raise (default), Lower or Flatten (towards the location's z). Any other name is refused."
+        },
+        "traceCm": {
+          "type": "number",
+          "minimum": 1,
+          "maximum": 100000,
+          "description": "How far past each point to look for a surface (default 1000)."
         },
         "transforms": {
           "type": "array",
@@ -4379,6 +4535,12 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             },
             {
               "type": "number",
+              "minimum": 1,
+              "maximum": 100000,
+              "description": "Width of the texture on the surface, in cm (default 200)."
+            },
+            {
+              "type": "number",
               "minimum": 100,
               "maximum": 5000,
               "description": "Road width in cm (default 600): obstacles and gaps stay half of it away, and the ready calls lay it this wide."
@@ -4431,7 +4593,8 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             "configure_weather",
             "create_water_body",
             "configure_water",
-            "create_buoyancy_component"
+            "create_buoyancy_component",
+            "place_decals"
           ],
           "description": "Action to invoke on build_environment."
         }
@@ -4504,6 +4667,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "integer",
           "description": "Droplets run (fewer than asked only when a time guard stopped them)."
         },
+        "dryRun": {
+          "type": "boolean",
+          "description": "True when nothing was placed on purpose."
+        },
         "editLayers": {
           "type": "integer",
           "description": "The landscape's edit layers (0 without them)."
@@ -4570,6 +4737,16 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "number",
           "description": "Tightest corner on the points, in m (absent on a straight road)."
         },
+        "missed": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": true,
+            "x-unreal-reflection-boundary": true,
+            "description": "{index, point, reason (no_surface, not_listed, spawn_failed), hitActor}."
+          },
+          "description": "Points that got no decal, and why."
+        },
         "nextCall": {
           "type": "object",
           "additionalProperties": true,
@@ -4581,14 +4758,33 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "description": "Faces where the layout meets a neighbour or the outside it does not match: always 0 on success."
         },
         "placed": {
-          "type": "array",
-          "description": "Each piece and how many cells it fills.",
-          "items": {
-            "type": "object",
-            "additionalProperties": true,
-            "x-unreal-reflection-boundary": true,
-            "description": "{meshPath, count}."
-          }
+          "oneOf": [
+            {
+              "type": "array",
+              "description": "Each piece and how many cells it fills.",
+              "items": {
+                "type": "object",
+                "additionalProperties": true,
+                "x-unreal-reflection-boundary": true,
+                "description": "{meshPath, count}."
+              }
+            },
+            {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "additionalProperties": true,
+                "x-unreal-reflection-boundary": true,
+                "description": "{index, name, hitActor, location [x, y, z], normal, rotation [pitch, yaw, roll]}."
+              },
+              "description": "The decals placed (under dryRun, the ones that would be)."
+            }
+          ],
+          "description": "Each piece and how many cells it fills."
+        },
+        "placedCount": {
+          "type": "integer",
+          "description": "How many were placed."
         },
         "placedInstances": {
           "type": "number",
@@ -4680,6 +4876,12 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
               "type": "object",
               "additionalProperties": true,
               "x-unreal-reflection-boundary": true,
+              "description": "What editor undo takes back: every decal of the call is one step. Absent under dryRun."
+            },
+            {
+              "type": "object",
+              "additionalProperties": true,
+              "x-unreal-reflection-boundary": true,
               "description": "What editor undo takes back: {undoable, transactionScope}."
             },
             {
@@ -4689,7 +4891,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
               "description": "What editor undo takes back: {undoable, transactionScope}; the whole layout is one step. Absent under dryRun."
             }
           ],
-          "description": "What editor undo takes back: {undoable, transactionScope}."
+          "description": "What editor undo takes back: every decal of the call is one step. Absent under dryRun."
         },
         "undrainedCells": {
           "type": "integer",

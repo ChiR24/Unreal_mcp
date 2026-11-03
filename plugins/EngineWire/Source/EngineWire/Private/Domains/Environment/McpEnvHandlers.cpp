@@ -1,4 +1,5 @@
 #include "Domains/Environment/McpEnvShared.h"
+#include "Domains/Environment/Decals/McpDecalPlacement.h"
 #include "Domains/Environment/Modules/McpModuleKit.h"
 #include "Domains/Environment/Roads/McpRoadPlan.h"
 #include "Domains/Landscape/Erosion/McpTerrainErosion.h"
@@ -179,6 +180,10 @@ bool UEngineWireSubsystem::HandleBuildEnvironmentAction(
     else if (LowerSub == TEXT("plan_road"))
     {
         return McpRoadPlanning::HandlePlanRoad(*this, RequestId, Payload, RequestingSocket);
+    }
+    else if (LowerSub == TEXT("place_decals"))
+    {
+        return McpDecalPlacement::HandlePlaceDecals(*this, RequestId, Payload, RequestingSocket);
     }
     else if (LowerSub == TEXT("erode_landscape"))
     {
