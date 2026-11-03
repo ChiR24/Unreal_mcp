@@ -314,7 +314,10 @@ such as `class`) each value's `count`, most common first, at most 50 groups
 (`otherGroups` counts the rest), each with a `sample` of up to `sample` items
 (0-10, default 3) named by their `name`, `label`, `actorName`, `assetPath`,
 `path` or `id`. "How many actors of each class" is one call:
-`{ ..., "options": { "aggregate": { "groupBy": "class" } } }`. It counts what
+`{ ..., "options": { "aggregate": { "groupBy": "class" } } }`. Grouped by
+`label`, `name` or `actorName`, a value counts by its stem: the number the editor
+gives each copy is dropped, so `Wall_12` and `Wall_3` count as `Wall` and a
+level reads as what it is made of. It counts what
 the call returned: a paged list counts its page, and `aggregate.note` says so,
 so raise the call's own `limit` to count everything at once (the actor list
 takes 1000). A reply without that list keeps its data and `aggregate.note` says

@@ -13,7 +13,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 <summary><b>✨ Added</b></summary>
 
 - **Engine versions**: a capability an older engine cannot run reads `unavailable` and is refused `ENGINE_VERSION_UNSUPPORTED` (Geometry Script 5.1, `get_metasound_graph` and `skin_mesh_to_skeleton` 5.5, `setup_retargeting` 5.8).
-- **Search and execute**: a typo is read as the word meant ("spwan actor"; the reply's `corrected`), `options.aggregate` counts a long list by group, and an alias sent as tool + action resolves, with five new ones (`call_function`, `save_all`, `set_blueprint_variables`, `connect_nodes`, `restart_editor` under `system_control`).
+- **Search and execute**: a typo is read as the word meant ("spwan actor"; the reply's `corrected`), `options.aggregate` counts a long list by group (by label, numbered copies as one: `Wall_3` counts as `Wall`), and an alias sent as tool + action resolves, with five new ones (`call_function`, `save_all`, `set_blueprint_variables`, `connect_nodes`, `restart_editor` under `system_control`).
 - **Blueprints**: `lint_blueprint` follows values (a divisor that can be 0, an index past the end, a Set outside a Value Range, `==` on computed floats, a decided Branch, an endless While); viewmodels (MVVM) found, added and bound (UE 5.4+).
 - **Plugins and project**: `get_plugin_info`, `create_plugin` / `remove_plugin`, game features (UE 5.1+), data registries, and assets nothing uses (`inspect_asset` `reportType: unreferenced`).
 - **Editor**: `read_editor_ui`, `set_selected_actors`, `configure_viewport` `show_flags`, `reimport` without a dialog, and `screenshot` `renderSize` draws the view at the size asked for ("1920x1080": the game's 16:9 frame, not the wider editor viewport).

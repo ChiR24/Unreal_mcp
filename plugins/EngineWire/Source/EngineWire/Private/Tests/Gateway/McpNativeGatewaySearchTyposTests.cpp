@@ -111,6 +111,27 @@ bool FMcpExecuteAggregateTest::RunTest(const FString& Parameters)
 	const TArray<TSharedPtr<FJsonValue>> Sampled =
 		McpExecuteAggregate::Apply(MakeShared<FJsonObject>(), nullptr, Listed)->GetArrayField(TEXT("sample"));
 	TestTrue(TEXT("an actor is sampled by its label"), Sampled.Num() == 1 && Sampled[0]->AsString() == TEXT("Crate_A"));
+
+	// Counting by label counts copies together: the number the editor gives each one is dropped, nothing else is.
+	TArray<TSharedPtr<FJsonValue>> Copies;
+	for (const TCHAR* Label : {TEXT("Wall_12"), TEXT("Wall_3"), TEXT("Wall"), TEXT("Stage01"), TEXT("Card_C03"), TEXT("_7")})
+	{
+		TSharedPtr<FJsonObject> Row = MakeShared<FJsonObject>();
+		Row->SetStringField(TEXT("label"), Label);
+		Copies.Add(MakeShared<FJsonValueObject>(Row));
+	}
+	TSharedPtr<FJsonObject> Level = MakeShared<FJsonObject>();
+	Level->SetArrayField(TEXT("actors"), Copies);
+	TSharedPtr<FJsonObject> ByLabel = MakeShared<FJsonObject>();
+	ByLabel->SetStringField(TEXT("groupBy"), TEXT("label"));
+	TMap<FString, int32> Counted;
+	for (const TSharedPtr<FJsonValue>& Group : McpExecuteAggregate::Apply(ByLabel, nullptr, Level)->GetArrayField(TEXT("groups")))
+	{
+		Counted.Add(Group->AsObject()->GetStringField(TEXT("value")), static_cast<int32>(Group->AsObject()->GetNumberField(TEXT("count"))));
+	}
+	TestEqual(TEXT("Wall_12, Wall_3 and Wall count as Wall"), Counted.FindRef(TEXT("Wall")), 3);
+	TestTrue(TEXT("a number that is part of the name stays"), Counted.Contains(TEXT("Stage01")) && Counted.Contains(TEXT("Card_C03")));
+	TestTrue(TEXT("a label that is all number stays whole"), Counted.Contains(TEXT("_7")));
 	return true;
 }
 

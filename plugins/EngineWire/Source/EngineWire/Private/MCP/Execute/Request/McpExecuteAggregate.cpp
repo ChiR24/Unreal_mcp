@@ -67,6 +67,18 @@ TSharedPtr<FJsonValue> Handle(const TSharedPtr<FJsonValue>& Item)
     return Item;
 }
 
+// A label or a name counts by its stem: the number the editor gives each copy is dropped (Hall_DuctBracket_12 and
+// Hall_DuctBracket_3 count as Hall_DuctBracket), or counting a level by label gave one group per actor.
+FString LabelStem(const FString& Text)
+{
+    int32 Cut = Text.Len();
+    while (Cut > 0 && FChar::IsDigit(Text[Cut - 1]))
+    {
+        --Cut;
+    }
+    return Cut > 1 && Cut < Text.Len() && Text[Cut - 1] == TEXT('_') ? Text.Left(Cut - 1) : Text;
+}
+
 FString GroupValue(const TSharedPtr<FJsonValue>& Item, const FString& GroupBy)
 {
     const TSharedPtr<FJsonObject>* Object = nullptr;
@@ -76,7 +88,11 @@ FString GroupValue(const TSharedPtr<FJsonValue>& Item, const FString& GroupBy)
         return TEXT("(none)");
     }
     FString Text;
-    return Field->TryGetString(Text) ? Text : Field->Type == EJson::Boolean ? (Field->AsBool() ? TEXT("true") : TEXT("false")) : TEXT("(other)");
+    if (Field->TryGetString(Text))
+    {
+        return GroupBy == TEXT("label") || GroupBy == TEXT("name") || GroupBy == TEXT("actorName") ? LabelStem(Text) : Text;
+    }
+    return Field->Type == EJson::Boolean ? (Field->AsBool() ? TEXT("true") : TEXT("false")) : TEXT("(other)");
 }
 } // namespace
 

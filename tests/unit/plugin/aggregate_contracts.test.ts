@@ -45,4 +45,11 @@ describe('options.aggregate', () => {
   it('is part of the idempotency fingerprint', () => {
     expect(read('Execute', 'McpNativeTransportGatewayExecute.cpp')).toContain('McpExecuteAggregate::FingerprintPart(ExecOptions)');
   });
+
+  // Counting a level by label gave one group per actor (Hall_DuctBracket_1 .. _27): copies count by their stem.
+  it('counts a label, name or actorName by its stem, dropping only a trailing _<number>', () => {
+    const aggregate = read('Execute', 'Request', 'McpExecuteAggregate.cpp');
+    expect(aggregate).toContain('return Cut > 1 && Cut < Text.Len() && Text[Cut - 1] == TEXT(\'_\') ? Text.Left(Cut - 1) : Text;');
+    expect(aggregate).toContain('return GroupBy == TEXT("label") || GroupBy == TEXT("name") || GroupBy == TEXT("actorName") ? LabelStem(Text) : Text;');
+  });
 });

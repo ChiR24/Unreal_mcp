@@ -91,7 +91,8 @@ TSharedPtr<FJsonObject> BuildUnrealGatewayToolDefinition()
 						[](FMcpSchemaBuilder& Aggregate)
 						{
 							Aggregate.String(TEXT("field"), TEXT("The list to count; default the largest list in the reply."), 1, 64)
-								.String(TEXT("groupBy"), TEXT("A field of the list's items to count by, such as class or type."), 1, 64)
+								.String(TEXT("groupBy"), TEXT("A field of the list's items to count by, such as class or type. label, name and "
+									"actorName count by their stem: Wall_12 and Wall_3 count as Wall."), 1, 64)
 								.Integer(TEXT("sample"), TEXT("Items named per group (or in all, without groupBy): 0-10, default 3."), 0, 10);
 						});
 			})
