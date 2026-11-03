@@ -12,62 +12,26 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 <details>
 <summary><b>✨ Added</b></summary>
 
-- **Capabilities an older engine cannot run say so**: search and describe read them `unavailable` (`engine_version`, `minEngineVersion`) and execute refuses them `ENGINE_VERSION_UNSUPPORTED`; Geometry Script tools need 5.1, `get_metasound_graph` and `skin_mesh_to_skeleton` 5.5, `setup_retargeting` 5.8.
-- **`lint_blueprint` follows what values can be**: a divisor that can be 0, an array index past the end (a ForLoop to Length), a Set outside a Value Range, `==` on computed floats, a Branch already decided, a While Loop nothing ends.
-- **Search reads a typo as the word meant** ("spwan actor" finds spawn; the reply's `corrected` says so), and execute's **`options.aggregate`** counts a long list by group instead of sending it.
-- **`get_plugin_info`**: one plugin's descriptor, modules, the plugins it needs and the plugins that need it, or the plugin an asset path belongs to.
-- **`create_plugin`** makes a content-only plugin, enabled and mounted at once; **`remove_plugin`** takes one that no longer loads out of the project (its folder moves to `Saved/EngineWire/RemovedPlugins`).
-- **`list_game_features`** and **`set_game_feature_active`** read and switch game feature plugins, and `create_plugin` `template: game_feature` makes one (UE 5.1+, where the project enables GameFeatures).
-- **`list_data_registries`**, **`get_data_registry`** and **`create_data_registry`** list data registries, read one (sources, schema, items in lookup order and their values) and make one over data tables (where the project enables DataRegistry).
-- **`read_editor_ui`** reads the editor's own UI (its windows, panels, menus and dialogs) as an outline of widgets with refs.
-- **Viewmodels (MVVM)**: **`list_viewmodels`**, **`read_widget_viewmodels`**, **`add_widget_viewmodel`**, **`bind_widget_viewmodel`**, **`remove_widget_viewmodel`** and **`set_field_notify`** find viewmodels, add one to a Widget Blueprint and bind its fields to widget properties; a binding the MVVM compiler rejects is taken out again (UE 5.4+, where the project enables ModelViewViewModel).
-- **Assets nothing uses**: `inspect_asset` `lookup: report` with `reportType: unreferenced` lists the assets under a folder that no saved package refers to (levels and redirectors left out).
-- **`reimport`** brings assets up to date with their source files, without a dialog: each from the file it was imported from, or one from a new file in the project; an asset whose file is gone is listed and left as it is.
-- **`snap_to_grid`** moves actors onto a grid (the editor's own step by default) and can square their rotations, in one undo step.
-- **`set_selected_actors`** sets the editor's selection (replace, add, remove or clear), one undo step when it changes.
-- **First-person view**: `configure_camera_component` `view: first_person` puts a character's camera at its eyes; `third_person` switches back.
-- **`distribute_actors`** spaces actors evenly along an axis (or a set gap apart), one undo step when anything moves.
-- **`lock_actors`** locks or unlocks actors in the editor (Lock Actor Movement), which `fix_placement`, `arrange_by_relations` and `settle_physics` respect; "lock the door" still finds the door's own lock.
-- **`convert_actors_to_blueprint`** makes placed actors one Blueprint (the editor's prefab: components harvested, child actors, or one actor's subclass) and can replace them with its instance.
-- **`move_actors_to_level`** moves actors into another loaded level (a sublevel, or back to the open level) as Move Selection to Level does, in one undo step.
-- **`rename`** with `actorNames` relabels several actors in one undo step, numbered in order by a `{n}` in `newName` (`Crate_{n}`: Crate_01, Crate_02, ...).
-- **`replace_actors`** swaps placed actors for a static mesh, a Blueprint or an actor class where they stand, as Replace Selected Actors with does, keeping their labels, tags and folders, in one undo step.
-- **`randomize_transforms`** gives placed actors seeded random turns, tilts, sizes and nudges, so scattered rocks, trees and props do not look repeated.
-- **`align_actors`** lines actors up on one axis by the min, max or center of their bounds or by their pivots, on the first actor or on a value, in one undo step.
-- **Placing along a spline**: a `spawn_batch` item's `repeat` takes `alongSpline` (a road or a path) with a `count` or a `spacingCm`, a side offset and a height, and stands the copies along it, turned with it: lamps along a road, posts along a path.
-- **`group_actors`** groups actors as the editor's Ctrl+G does, so they select and move as one while the level is built, or breaks their groups up.
-- **`set_material` `color` and `glow`** give actors a flat colour by name or hex ("red", "#1e88e5") or make them glow (white unless a colour is given) in one call, as one material instance per colour and strength, made the first time and reused.
-- **`add_behaviour` `sound_trigger`** plays a sound when a player walks into an actor's area: 2D or at the actor, every time or only the first.
-- **`configure_viewport` `show_flags`** shows or hides the grid, collision, bounds, the navigation mesh, fog or any other show flag of the level viewport by name.
-- **`edit_component` `flicker`** makes a placed light flicker (a torch, a candle, a broken lamp) at a chosen speed and depth, or stops it.
-- **`set_subtitles`** gives a Sound Wave subtitles, shown at the bottom of the game's screen while it plays.
-- **`set_sound_volume`** makes sounds louder or quieter: a Sound Wave's or MetaSound's Volume, or a Sound Cue's, set or changed by some dB.
-- **`set_sound_looping`** makes Sound Waves loop, or play once again.
-- **`edit_animation` `add_footsteps`** gives a walk or run cycle a footstep sound wherever a foot is set down.
-- **`setup_physics_simulation` `massKg`** makes a placed prop heavier or lighter, and the reply gives its mass.
-- **`edit_animation` `set_play_rate`** makes an animation sequence play faster or slower (or backwards) wherever it plays.
-- **Names models invent land**: an alias sent as a tool and action resolves (`system_control` `restart_editor` runs `control_editor`'s), with five new ones mined from session transcripts (`call_function`, `save_all` under `manage_asset`, `set_blueprint_variables` under `manage_blueprint`, `connect_nodes` for a Blueprint's `connect_pins`).
-- **`npx unreal-engine-mcp-server init <client>`** shows (and with `--write` saves) the server's entry in Claude Code's, Cursor's, VS Code's, Gemini's or Codex's MCP config; **`doctor`** checks Node, the token (never shown), the editor's answer and both versions.
-- **`place_decals`** lays decals flat onto surfaces (stains, cracks, moss, puddles, posters): traced from points or scattered over a disc, on the surface a mesh draws (not a collision box around it), texture upright, sized and turned, in one undo step.
-- **`find` rows say where each actor is** (by class, name, tag, mesh or material), as `list` rows do.
+- **Engine versions**: a capability an older engine cannot run reads `unavailable` and is refused `ENGINE_VERSION_UNSUPPORTED` (Geometry Script 5.1, `get_metasound_graph` and `skin_mesh_to_skeleton` 5.5, `setup_retargeting` 5.8).
+- **Search and execute**: a typo is read as the word meant ("spwan actor"; the reply's `corrected`), `options.aggregate` counts a long list by group, and an alias sent as tool + action resolves, with five new ones (`call_function`, `save_all`, `set_blueprint_variables`, `connect_nodes`, `restart_editor` under `system_control`).
+- **Blueprints**: `lint_blueprint` follows values (a divisor that can be 0, an index past the end, a Set outside a Value Range, `==` on computed floats, a decided Branch, an endless While); viewmodels (MVVM) found, added and bound (UE 5.4+).
+- **Plugins and project**: `get_plugin_info`, `create_plugin` / `remove_plugin`, game features (UE 5.1+), data registries, and assets nothing uses (`inspect_asset` `reportType: unreferenced`).
+- **Editor**: `read_editor_ui`, `set_selected_actors`, `configure_viewport` `show_flags`, `reimport` without a dialog.
+- **Actors**: `snap_to_grid`, `distribute_actors`, `align_actors`, `lock_actors`, `group_actors`, `randomize_transforms`, `replace_actors`, `convert_actors_to_blueprint`, `move_actors_to_level`, numbered batch `rename`, copies along a spline, `place_decals`, and `find` rows that say where each actor is.
+- **Look and sound**: `set_material` `color` / `glow`, light `flicker`, a first-person camera view, `add_behaviour` `sound_trigger`, `set_subtitles`, `set_sound_volume`, `set_sound_looping`, footstep sounds on a walk cycle, animation play rate, a prop's `massKg`.
+- **Proxy CLI**: `init <client>` writes a client's MCP config; `doctor` checks the setup (the token is never shown).
 
 </details>
 
 <details>
 <summary><b>🔧 Fixed</b></summary>
 
-- **An alias a family member declared runs that member**: `blueprint.add_component_to_blueprint`, `set_default_value`, `create_widget`, `hide_widget`, `asset.find_assets` and `manage_networking.replicate_variable`/`enable_replication` ran the family's default or were refused for its selector.
-- **Search: plain requests find their capability**: a "why" question reads before it writes, "move the crate" moves the actor (a record naming the verb only in passing no longer takes it), "change the volume" finds the sound class instead of deleting a volume, "delete everything in the level" deletes actors and no longer the level itself, "find the table" finds the actor instead of reading the room's relations, and "create a cube", "add a sky light", "make a dungeon", "add a campfire", "make an exe" and two hundred and thirty-seven more find their owner, as "undo last edit" finds `undo` and "create a vehicle" `configure_vehicle`.
-- **The directory report's reply carries its assets**: the record declared no outputs, so the list was cut from every reply.
-- **A behaviour run again updates placed copies**: a copy in the level still on the old value takes the behaviour's new one, as a default changed in the Blueprint editor does (a sound trigger switched to play once kept playing every time).
-- **Asset edits undo**: animation notifies, sync markers, root-motion and additive settings, montage sections, slots, links and blends, Aim Offset and blend space samples, blend space axes and smoothing, sockets, virtual bones, physics bodies and joints, the physics asset a mesh uses, a mesh bone's reference pose, Blackboard keys and their defaults, the Blackboard a Behavior Tree uses, a tree's nodes, subnodes, links and node properties (both the asset and the graph route), sound class properties and parents, a user enum's value edits and a property set on an enum are one undo step each (Ctrl+Z undid the edit before them instead, and the reply said nothing about undo); configure_bt_node with no properties and set_node_properties that sets nothing are refused instead of answering success; an Aim Offset sample the engine refuses is refused, not answered "added", and a sync marker past the clip's end is refused.
-- **Enum edits undo without crashing**: from UE 5.7 restoring an enum's saved state from the undo buffer crashes the editor (an engine assert); edits through this server record the enum as a change undo writes back, and control_editor undo and redo and a restore point's rollback refuse a step the enum editor made (UNDO_WOULD_CRASH).
-- **The Behavior Tree graph route builds a new tree**: add_node and connect_nodes on a tree with no root composite yet answered "requires UE 5.3+" on every version; linking the graph's Root node to a composite makes it the root, as in the editor.
-- **A save is not a new asset**: saving an asset that was already on disk announced it as just made, so a restore point listed it as created and its cleanup call offered to delete it, and the change journal said it was added.
-- **A material instance draws its new parent**: one with shaders of its own (a static switch or a base property override) kept drawing its old parent after `set_property` `Parent`; it is compiled for the new one now, on undo and redo too, and `edit_material_instance` `edit: reparent` reparents directly.
-- **Material edits reach their instances**: an instance with shaders of its own kept drawing the material's old graph after a node, wire, Custom node or parameter default edit; every material edit now recompiles those instances, as the material editor's Apply does.
-- **A morph target made from deltas lasts**: create_morph_target and set_morph_target_deltas answered success while the mesh kept no morph (the rebuild that registering one starts dropped it); they now write it into the mesh's source data, so it exists after the rebuild and every later one, import_morph_targets can take it, and a vertex the mesh lacks or deltas that move nothing are refused.
-- **Vertex weights set in a skin weight profile last**: set_vertex_weights said the weights were set while the mesh's own rebuild wiped them; from UE 5.4 they are written into the mesh's source data and read back, every other vertex keeps its weights in the profile, and a vertex or bone the mesh lacks, all-zero influences and the name 'Default' are refused.
+- **Search**: plain requests find their capability (about 250 more), and an alias a family member declared runs that member.
+- **Undo**: asset edits (animation, skeleton, physics, Blackboard, Behavior Tree, sound class, enum) are one undo step each, an edit that changes nothing or that the engine refuses is refused instead of answered done, and enum undo no longer crashes UE 5.7+.
+- **Behavior Trees**: the graph route builds a tree from its Root node.
+- **Placed copies** take a behaviour's or variable's new default; the directory report's reply carries its assets; saving an asset again no longer announces it as new.
+- **Materials**: an instance draws the parent it is given and picks up its material's edits.
+- **Meshes**: morph targets made from deltas and skin weight profile weights last through rebuilds.
 
 </details>
 
