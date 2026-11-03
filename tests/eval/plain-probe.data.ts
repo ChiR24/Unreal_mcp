@@ -1164,4 +1164,7 @@ export const PLAIN_PROBE: readonly PlainProbeCase[] = [
   { query: 'play the level', accepted: ['control_editor.play'] },
   { query: 'make the main menu the first level', accepted: ['system_control.set_project_setting'] },
   { query: 'make the player spawn here', accepted: ['manage_networking.configure_player_start'] },
+  { query: 'change material instance parent', accepted: ['asset.edit_material_instance'] },
+  { query: 'reparent material instance', accepted: ['asset.edit_material_instance'] },
+  { query: 'material instance uses the wrong parent', accepted: ['asset.edit_material_instance'] },
 ];

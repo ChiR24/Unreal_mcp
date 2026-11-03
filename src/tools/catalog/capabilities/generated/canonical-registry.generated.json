@@ -1,5 +1,5 @@
 {
-  "catalogRevision": "6379eb865ac7be21",
+  "catalogRevision": "d41e15f4980d1233",
   "recordCount": 482,
   "records": [
     {
@@ -9711,7 +9711,8 @@
       "id": "asset.edit_material_instance",
       "aliases": [
         "asset.add_material_parameter",
-        "asset.reset_instance_parameters"
+        "asset.reset_instance_parameters",
+        "asset.reparent_instance"
       ],
       "legacyIds": [
         {
@@ -9731,6 +9732,13 @@
           "folded": {
             "edit": "reset_parameters"
           }
+        },
+        {
+          "tool": "manage_asset",
+          "action": "reparent_instance",
+          "folded": {
+            "edit": "reparent"
+          }
         }
       ],
       "discovery": {
@@ -9739,18 +9747,25 @@
         "topics": [
           "edit_material_instance",
           "material parameter expression",
-          "reset instance parameters"
+          "reset instance parameters",
+          "material instance parent",
+          "reparent material instance",
+          "change parent material"
         ],
-        "summary": "Add a parameter expression to a material or material function, or reset every parameter override on a material instance. To override a parameter value on an instance, use set_material_parameter.",
+        "summary": "Add a parameter expression to a material or material function, reset every parameter override on a material instance, or give an instance another parent material (reparent: its own shaders are compiled again for it). To override a parameter value on an instance, use set_material_parameter.",
         "whenToUse": [
           "edit=add_parameter: A new scalar, vector, texture or static-switch parameter must be introduced on a material or material function.",
-          "edit=reset_parameters: A material instance must return to its parent's values by dropping every parameter override."
+          "edit=reset_parameters: A material instance must return to its parent's values by dropping every parameter override.",
+          "edit=reparent: A material instance must take its look from another material while every mesh slot that uses it keeps it.",
+          "edit=reparent: An instance draws its old parent although its Parent names the new one: naming that parent again rebuilds it."
         ],
         "whenNotToUse": [
           "edit=add_parameter: An existing parameter needs a new value on a material instance (use material.set_material_parameter).",
           "edit=add_parameter: Another kind of node must be added to the material graph (use material.add_material_node).",
           "edit=reset_parameters: Only some overrides need new values (use material.set_material_parameter).",
-          "edit=reset_parameters: A fresh instance of the parent is wanted instead (use material.create_material_instance)."
+          "edit=reset_parameters: A fresh instance of the parent is wanted instead (use material.create_material_instance).",
+          "edit=reparent: A new instance of a material is wanted (use material.create_material_instance).",
+          "edit=reparent: Only parameter values must change (use material.set_material_parameter)."
         ]
       },
       "schemas": {
@@ -9760,7 +9775,7 @@
           "properties": {
             "assetPath": {
               "type": "string",
-              "description": "Material asset path."
+              "description": "The material or material function (add_parameter), or the material instance (reset_parameters, reparent)."
             },
             "parameterName": {
               "type": "string",
@@ -9773,13 +9788,18 @@
             "value": {
               "description": "Parameter value."
             },
+            "parentPath": {
+              "type": "string",
+              "description": "The new parent: a Material or Material Instance asset path, never the instance itself or one of its children (INVALID_PARENT)."
+            },
             "edit": {
               "type": "string",
               "enum": [
                 "add_parameter",
-                "reset_parameters"
+                "reset_parameters",
+                "reparent"
               ],
-              "description": "Which edit material instance variant to run.\nadd_parameter: Add a parameter to a material.\nreset_parameters: Reset all parameter overrides on a material instance."
+              "description": "Which edit material instance variant to run.\nadd_parameter: Add a parameter to a material.\nreset_parameters: Reset all parameter overrides on a material instance.\nreparent: Give a material instance another parent (a Material or a Material Instance) as the material instance editor does: an instance that compiles shaders of its own (a static switch or a base property override) has them compiled again for the new parent, and whatever draws it is redrawn. Its parameter overrides are kept, so one the new parent also has keeps its value there (reset_parameters drops them all). One undo step, and the instance is saved. Naming its current parent again rebuilds it from that parent."
             }
           },
           "required": [
@@ -9800,6 +9820,32 @@
               "type": "object",
               "x-unreal-reflection-boundary": true,
               "description": "Operation details."
+            },
+            "assetPath": {
+              "type": "string",
+              "description": "The instance."
+            },
+            "parent": {
+              "type": "string",
+              "description": "The parent it now has."
+            },
+            "previousParent": {
+              "type": "string",
+              "description": "The parent it had (empty when it had none)."
+            },
+            "ownShaders": {
+              "type": "boolean",
+              "description": "True when the instance compiles shaders of its own, which were compiled again for the new parent."
+            },
+            "saved": {
+              "type": "boolean",
+              "description": "Whether the instance was saved."
+            },
+            "undo": {
+              "type": "object",
+              "additionalProperties": true,
+              "x-unreal-reflection-boundary": true,
+              "description": "What editor undo takes back: the new parent is one step, and undo or redo compiles the instance for the parent it gets back."
             }
           },
           "required": [
@@ -9810,7 +9856,7 @@
       },
       "examples": [
         {
-          "title": "Add a parameter expression to a material or material function, or reset every parameter override on a material instance. To override a parameter value on an instance, use set_material_parameter.",
+          "title": "Add a parameter expression to a material or material function, reset every parameter override on a material instance, or give an instance another parent material (reparent: its own shaders are compiled again for it). To override a parameter value on an instance, use set_material_parameter.",
           "input": {
             "assetPath": "/Game/Materials/M_Base",
             "parameterName": "Roughness",
@@ -9854,7 +9900,8 @@
           "param": "edit",
           "actions": {
             "add_parameter": "add_material_parameter",
-            "reset_parameters": "reset_instance_parameters"
+            "reset_parameters": "reset_instance_parameters",
+            "reparent": "reparent_instance"
           },
           "declaredBy": {
             "parameterName": [
@@ -9865,6 +9912,9 @@
             ],
             "value": [
               "add_parameter"
+            ],
+            "parentPath": [
+              "reparent"
             ]
           },
           "requires": {
@@ -9872,14 +9922,19 @@
               "required": [
                 "parameterName"
               ]
+            },
+            "reparent_instance": {
+              "required": [
+                "parentPath"
+              ]
             }
           }
         }
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "e2727ec8aaac9eba75b36b57d17792f9a6a2fc6db89450a557c631688650e68b",
-        "content": "9ad9c2f898975521c01eeb6b0b695856fb09ac24637b958a1b91fea9b65b3255"
+        "schema": "194cd88e5d92f2dba7b7a5b9ec2ee6eee91e03f975aee5a4ea0b334aba284261",
+        "content": "8b9831a90821269015831c9949ec27a19f9361a7fa5db70c4b2e20e9215a5298"
       }
     },
     {
@@ -60867,7 +60922,8 @@
           "A single property value must be written.",
           "Several properties of one target must be written in one call (properties).",
           "The same property must be written on several objects in one call (objectPaths), e.g. one volume on every ambient sound.",
-          "A placed actor's component property must be written (\"StaticMeshComponent0.StaticMesh\", \"Mesh.BodyInstance.CollisionEnabled\"): a StaticMesh, collision, SimulatePhysics or Mobility key goes through the component's own setter, as control_actor edit_component writes it."
+          "A placed actor's component property must be written (\"StaticMeshComponent0.StaticMesh\", \"Mesh.BodyInstance.CollisionEnabled\"): a StaticMesh, collision, SimulatePhysics or Mobility key goes through the component's own setter, as control_actor edit_component writes it.",
+          "A material instance's Parent: it takes the new parent as asset.edit_material_instance edit=reparent gives one (its own shaders compiled again); the instance itself or one of its children is refused (INVALID_PARENT)."
         ],
         "whenNotToUse": [
           "The property is read-only or the target is a packed asset.",
@@ -61081,7 +61137,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "7e5e2b8103d78ef1097817ff41fd75cd74aec1e5d1d4fdcf7efc17b9ddb94db0",
-        "content": "286c3ea711bf9c50734b78037296713eee40666a4e272747ebcc96a57f60133c"
+        "content": "12af25bbbd9fb0c2da47add1e654ca958e3c3c5bc593f58bc4f6a7ab8cb05b58"
       }
     },
     {
@@ -104114,6 +104170,7 @@
         "whenNotToUse": [
           "The parameter is not on the base material yet (add it there with asset.edit_material_instance edit=add_parameter or material.add_material_node).",
           "parameterKind=parameter: Every override on an instance must be cleared back to its parent (use asset.edit_material_instance edit=reset_parameters).",
+          "parameterKind=parameter: An instance must take another parent material (use asset.edit_material_instance edit=reparent).",
           "parameterKind=texture: The texture asset itself needs other compression or LOD settings (use texture.configure_texture)."
         ]
       },
@@ -104315,7 +104372,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "a1dd08b986e70ae90f65833c95e3a85ed0bf723dc153507dd5dff584f2653612",
-        "content": "246ce64504426273650d37562871faf07256f4f68d7097e1870022a663116f41"
+        "content": "8f16523550e83d459df87766b75c3b53813d23166be3155492bed0f07ef8abf9"
       }
     },
     {

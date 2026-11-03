@@ -168,7 +168,7 @@ export const ASSET_ADVANCED_RECORDS: readonly RecordSpec[] = [
       examples: [ex('Export a mesh as glTF binary', { assetPath: '/Engine/BasicShapes/Cube' }, { success: true, assetPath: '/Engine/BasicShapes/Cube.Cube', format: 'glb', path: 'X:/Games/MyGame/Saved/Exports/Cube.glb', bytes: 41764 })] }
   ),
   r('add_material_parameter', 'asset', 'Add a parameter to a material.',
-    schema({ assetPath: str('Material asset path.'), parameterName: str('Parameter name.'), parameterType: str('Parameter type.'), value: { description: 'Parameter value.' } }, ['assetPath', 'parameterName']),
+    schema({ assetPath: str('The material or material function (add_parameter), or the material instance (reset_parameters, reparent).'), parameterName: str('Parameter name.'), parameterType: str('Parameter type.'), value: { description: 'Parameter value.' } }, ['assetPath', 'parameterName']),
     OK, WRITE, WRITE_POLICY, LOW,
     { whenToUse: ['A new scalar, vector, texture or static-switch parameter must be introduced on a material or material function.'],
       whenNotToUse: [
@@ -191,6 +191,25 @@ export const ASSET_ADVANCED_RECORDS: readonly RecordSpec[] = [
         'A fresh instance of the parent is wanted instead (use material.create_material_instance).',
       ],
       examples: [ex('Drop every override on an instance', { assetPath: '/Game/Materials/MI_Base_Rusty' }, { success: true })] }
+  ),
+  r('reparent_instance', 'asset', 'Give a material instance another parent (a Material or a Material Instance) as the material instance editor does: an instance that compiles shaders of its own (a static switch or a base property override) has them compiled again for the new parent, and whatever draws it is redrawn. Its parameter overrides are kept, so one the new parent also has keeps its value there (reset_parameters drops them all). One undo step, and the instance is saved. Naming its current parent again rebuilds it from that parent.',
+    schema({ assetPath: str('Material instance asset path.'), parentPath: str('The new parent: a Material or Material Instance asset path, never the instance itself or one of its children (INVALID_PARENT).') }, ['assetPath', 'parentPath']),
+    schema({
+      success: bool('Operation succeeded.'),
+      assetPath: str('The instance.'),
+      parent: str('The parent it now has.'),
+      previousParent: str('The parent it had (empty when it had none).'),
+      ownShaders: bool('True when the instance compiles shaders of its own, which were compiled again for the new parent.'),
+      saved: bool('Whether the instance was saved.'),
+      undo: { type: 'object', additionalProperties: true, 'x-unreal-reflection-boundary': true, description: 'What editor undo takes back: the new parent is one step, and undo or redo compiles the instance for the parent it gets back.' },
+    }, ['success']),
+    WRITE, WRITE_POLICY, LOW,
+    { whenToUse: ['A material instance must take its look from another material while every mesh slot that uses it keeps it.', 'An instance draws its old parent although its Parent names the new one: naming that parent again rebuilds it.'],
+      whenNotToUse: [
+        'A new instance of a material is wanted (use material.create_material_instance).',
+        'Only parameter values must change (use material.set_material_parameter).',
+      ],
+      examples: [ex('Move an instance onto a new master material', { assetPath: '/Game/Materials/MI_Grass', parentPath: '/Game/Materials/M_Grass' }, { success: true, parent: '/Game/Materials/M_Grass.M_Grass', previousParent: '/Game/Materials/M_Plastic.M_Plastic', ownShaders: true, saved: true })] }
   ),
   r('exists', 'asset', 'Check whether an asset exists at a given path, or which of several do.',
     schema({ assetPath: ASSET_PATH, assetPaths: arr('Several asset paths checked in one call; the reply maps each to true or false under existsByPath.') }, [], ['assetPath', 'assetPaths']),

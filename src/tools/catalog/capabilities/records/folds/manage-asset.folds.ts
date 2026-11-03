@@ -35,11 +35,11 @@ export const MANAGE_ASSET_FOLDS: readonly FoldSpec[] = [
     primary: 'edit_material_instance', selector: 'edit',
     // add_parameter adds a parameter EXPRESSION to a material graph, so it needs a
     // Material or Material Function; a material instance has no graph and is refused.
-    // Only reset_parameters takes an instance. The old summary promised instance
+    // reset_parameters and reparent take an instance. The old summary promised instance
     // parameter overrides from both, which is what set_material_parameter does.
-    summary: 'Add a parameter expression to a material or material function, or reset every parameter override on a material instance. To override a parameter value on an instance, use set_material_parameter.',
-    topics: ['material parameter expression', 'reset instance parameters'],
-    members: { add_parameter: 'add_material_parameter', reset_parameters: 'reset_instance_parameters' },
+    summary: 'Add a parameter expression to a material or material function, reset every parameter override on a material instance, or give an instance another parent material (reparent: its own shaders are compiled again for it). To override a parameter value on an instance, use set_material_parameter.',
+    topics: ['material parameter expression', 'reset instance parameters', 'material instance parent', 'reparent material instance', 'change parent material'],
+    members: { add_parameter: 'add_material_parameter', reset_parameters: 'reset_instance_parameters', reparent: 'reparent_instance' },
   },
   // lifecycle (action-mode reads)
   {

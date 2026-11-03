@@ -8216,6 +8216,7 @@
         "parameterType",
         "parameters",
         "parentMaterial",
+        "parentPath",
         "path",
         "paths",
         "pattern",
@@ -8737,6 +8738,7 @@
             "enum": [
               "add_parameter",
               "reset_parameters",
+              "reparent",
               "create",
               "add_value",
               "rename_value",
@@ -9484,6 +9486,10 @@
           "parentMaterial": {
             "type": "string",
             "description": "The parent, as a /Game path: a Material, or another Material Instance for a child instance."
+          },
+          "parentPath": {
+            "type": "string",
+            "description": "The new parent: a Material or Material Instance asset path, never the instance itself or one of its children (INVALID_PARENT)."
           },
           "path": {
             "oneOf": [

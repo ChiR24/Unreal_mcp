@@ -7,6 +7,7 @@
 #include "Domains/AssetQuery/McpAssetQueryPrivate.h"
 #include "Domains/AssetWorkflow/Analysis/McpAssetDiff.h"
 #include "Domains/AssetWorkflow/Materials/McpAssetMeshMats.h"
+#include "Domains/AssetWorkflow/Materials/McpMaterialParent.h"
 #include "Domains/AssetWorkflow/Rename/McpAssetRenameGuard.h"
 
 // Struct ecosystem (issue #struct-ecosystem) — Wave 1 handler shard headers.
@@ -136,6 +137,8 @@ bool UEngineWireSubsystem::HandleAssetAction(
     return HandleListMaterialInstances(RequestId, Payload, RequestingSocket);
   if (Lower == TEXT("reset_instance_parameters"))
     return HandleResetInstanceParameters(RequestId, Payload, RequestingSocket);
+  if (Lower == TEXT("reparent_instance"))
+    return McpMaterialParent::HandleSetParent(this, RequestId, Payload, RequestingSocket);
   if (Lower == TEXT("exists"))
     return HandleDoesAssetExist(RequestId, Payload, RequestingSocket);
   if (Lower == TEXT("get_material_stats"))

@@ -1,5 +1,6 @@
 #include "Core/Compatibility/McpVersionCompatibility.h"
 
+#include "Domains/AssetWorkflow/Materials/McpMaterialParent.h"
 #include "Domains/Property/McpPropActorAccess.h"
 #include "Domains/Property/McpPropCdoComponents.h"
 #include "Domains/Property/McpPropCdoPropagation.h"
@@ -184,6 +185,7 @@ bool UEngineWireSubsystem::HandleSetObjectProperty(
   {
       EnumUndo.Emplace(Enum);
   }
+  UMaterialInterface* const ParentBefore = McpMaterialParent::HeldParent(RootObject);
   RootObject->Modify(bMarkDirty);
 
   FString ConversionError;
@@ -191,6 +193,12 @@ bool UEngineWireSubsystem::HandleSetObjectProperty(
   {
       CreatedOverride.Rollback();
       SendAutomationError(RequestingSocket, RequestId, ConversionError, TEXT("PROPERTY_CONVERSION_FAILED"));
+      return true;
+  }
+  // A material instance takes a written parent as its editor gives one (its own shaders compiled for it), or keeps its own.
+  if (!McpMaterialParent::ApplyWrittenParent(RootObject, ResolvedPath, ParentBefore, ConversionError))
+  {
+      SendAutomationError(RequestingSocket, RequestId, ConversionError, TEXT("INVALID_PARENT"));
       return true;
   }
   const int32 FollowersUpdated = McpPropertyCdoPropagation::ApplyToFollowers(Followers, ResolvedPath, ValueField);

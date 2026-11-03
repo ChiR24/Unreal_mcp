@@ -534,6 +534,7 @@ export const OBJECT_PROPERTY_RECORDS: readonly CapabilityRecordSource[] = [
       'Several properties of one target must be written in one call (properties).',
       'The same property must be written on several objects in one call (objectPaths), e.g. one volume on every ambient sound.',
       'A placed actor\'s component property must be written ("StaticMeshComponent0.StaticMesh", "Mesh.BodyInstance.CollisionEnabled"): a StaticMesh, collision, SimulatePhysics or Mobility key goes through the component\'s own setter, as control_actor edit_component writes it.',
+      'A material instance\'s Parent: it takes the new parent as asset.edit_material_instance edit=reparent gives one (its own shaders compiled again); the instance itself or one of its children is refused (INVALID_PARENT).',
     ],
     whenNotToUse: [
       'The property is read-only or the target is a packed asset.',

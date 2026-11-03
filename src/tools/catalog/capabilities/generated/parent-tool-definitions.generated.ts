@@ -12374,6 +12374,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "enum": [
             "add_parameter",
             "reset_parameters",
+            "reparent",
             "create",
             "add_value",
             "rename_value",
@@ -13121,6 +13122,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "parentMaterial": {
           "type": "string",
           "description": "The parent, as a /Game path: a Material, or another Material Instance for a child instance."
+        },
+        "parentPath": {
+          "type": "string",
+          "description": "The new parent: a Material or Material Instance asset path, never the instance itself or one of its children (INVALID_PARENT)."
         },
         "path": {
           "oneOf": [
@@ -14834,6 +14839,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           ],
           "description": "Names of existing expressions whose estimated bounds intersect this one. Absent when placement is clear."
         },
+        "ownShaders": {
+          "type": "boolean",
+          "description": "True when the instance compiles shaders of its own, which were compiled again for the new parent."
+        },
         "packagePaths": {
           "type": "array",
           "items": {
@@ -14912,6 +14921,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "posY": {
           "type": "number",
           "description": "Y coordinate the node now sits at."
+        },
+        "previousParent": {
+          "type": "string",
+          "description": "The parent it had (empty when it had none)."
         },
         "price": {
           "type": "number",
@@ -15315,6 +15328,12 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             "type": "string"
           },
           "description": "Every face the font has."
+        },
+        "undo": {
+          "type": "object",
+          "additionalProperties": true,
+          "x-unreal-reflection-boundary": true,
+          "description": "What editor undo takes back: the new parent is one step, and undo or redo compiles the instance for the parent it gets back."
         },
         "unresolvedColumnTypes": {
           "type": "array",

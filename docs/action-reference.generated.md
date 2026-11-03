@@ -4,7 +4,7 @@
 
 # Action reference
 
-Catalog revision: `6379eb865ac7be21`
+Catalog revision: `d41e15f4980d1233`
 
 Both transports expose exactly ONE public MCP tool, `unreal`, with the four
 operations `search` / `describe` / `execute` / `configure`. The parent tools
@@ -188,7 +188,7 @@ validates against, so `execute` cannot accept an action this table omits.
 | `asset.create_render_target` | `manage_asset` | `manage_texture` | write | write | explicit | `manage_asset.create_render_target` |
 | `asset.delete` | `manage_asset` | `delete` | destructive | destructive | elevated | `manage_asset.delete` `manage_asset.delete_asset` `manage_asset.delete_assets` |
 | `asset.duplicate` | `manage_asset` | `duplicate` | write | write | explicit | `manage_asset.duplicate` `manage_asset.duplicate_asset` |
-| `asset.edit_material_instance` | `manage_asset` | `add_material_parameter` | write | write | explicit | `manage_asset.edit_material_instance` `manage_asset.add_material_parameter` `manage_asset.reset_instance_parameters` |
+| `asset.edit_material_instance` | `manage_asset` | `add_material_parameter` | write | write | explicit | `manage_asset.edit_material_instance` `manage_asset.add_material_parameter` `manage_asset.reset_instance_parameters` `manage_asset.reparent_instance` |
 | `asset.export_mesh` | `manage_asset` | `export_mesh` | read | read | none | `manage_asset.export_mesh` |
 | `asset.find_assets_like` | `manage_asset` | `find_assets_like` | read | read | none | `manage_asset.find_assets_like` |
 | `asset.import` | `manage_asset` | `import` | write | write | explicit | `manage_asset.import` |
