@@ -30,6 +30,7 @@ const testCases = [
     { path: 'structuredContent.result.change.regions.0.before', includesObject: { name: SUBJECT }, label: 'the cube was drawn there' },
   ] },
   { scenario: 'ERROR: a comparison from another camera', toolName: 'inspect', arguments: { action: 'describe_view', compareWith: BEFORE, location: { x: 54000, y: 55000, z: 160 } }, expected: 'error|CAMERA_MOVED' },
+  { scenario: 'ERROR: a comparison at another field of view', toolName: 'inspect', arguments: { action: 'describe_view', compareWith: BEFORE, fov: 40 }, expected: 'error|CAMERA_MOVED' },
   { scenario: 'ERROR: a name never saved', toolName: 'inspect', arguments: { action: 'describe_view', compareWith: `never_saved_${ts}` }, expected: 'error|VIEW_BASELINE_NOT_FOUND' },
   // Straight down from 30 m, the floor's +Y edge is at 0.667 across: a spot just past it is the void beyond.
   { scenario: 'READ: a spot just past the floor\'s edge is background', toolName: 'inspect', arguments: { action: 'describe_view', location: { x: 55000, y: 55000, z: 3000 }, rotation: { pitch: -90, yaw: 0, roll: 0 }, points: [{ x: 0.669, y: 0.5 }] }, expected: 'success', assertions: [

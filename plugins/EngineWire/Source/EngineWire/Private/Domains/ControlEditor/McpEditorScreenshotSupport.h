@@ -71,6 +71,10 @@ void AppendEditorWindowListForMcp(const TSharedPtr<FJsonObject> &Resp);
 // Draws the viewport Frames times, each after World sends its pending render updates, so a component edited or a
 // particle system advanced since the last frame shows in the picture (it drew the old state). World may be null.
 void DrawViewportFramesForMcp(FViewport *Viewport, UWorld *World, int32 Frames);
+// A capture's location, rotation and fov (degrees across) put the level viewport's camera there first, where it stays;
+// the field of view resets when the editor restarts, so a framing check names it. True when any was given: the old
+// view's occlusion lingers for a few frames, so the caller draws a few before reading.
+bool PlaceViewCameraForMcp(FEditorViewportClient *Client, const TSharedPtr<FJsonObject> &Payload);
 // True when the frame about to be read matches the one Payload recorded on the capture's previous pass (Camera/
 // McpViewSettle.cpp); false, after recording this one, when the capture should be taken again a beat later, so
 // streaming that lands over engine ticks (Nanite pages, texture mips) is in the picture. At most five passes.

@@ -220,10 +220,8 @@ bool McpCaptureView(const TSharedPtr<FJsonObject> &Payload, const TCHAR *What, b
         return Fail(TEXT("No level viewport with a size is open."), TEXT("VIEWPORT_NOT_AVAILABLE"));
     }
     // The first frames after a camera move still carry the old view's occlusion; a few frames later they match.
-    const bool bMoved = Payload->HasField(TEXT("location")) || Payload->HasField(TEXT("rotation"));
     const bool bSwitch = bGameView && !Out.Client->IsInGameView();
-    Out.Client->SetViewLocation(ExtractVectorField(Payload, TEXT("location"), Out.Client->GetViewLocation()));
-    Out.Client->SetViewRotation(ExtractRotatorField(Payload, TEXT("rotation"), Out.Client->GetViewRotation()));
+    const bool bMoved = PlaceViewCameraForMcp(Out.Client, Payload);
     if (bSwitch)
     {
         Out.Client->SetGameView(true);

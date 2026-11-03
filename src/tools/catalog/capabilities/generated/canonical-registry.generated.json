@@ -1,5 +1,5 @@
 {
-  "catalogRevision": "face84d0ef4d477d",
+  "catalogRevision": "9778a7ef8e1a46ca",
   "recordCount": 485,
   "records": [
     {
@@ -51546,6 +51546,12 @@
               "description": "editor_viewport (and game_viewport while the player is ejected): turn that camera to this first ({pitch, yaw, roll}), in the same call. Refused like location while Play In Editor runs and the player is not ejected.",
               "additionalProperties": false
             },
+            "fov": {
+              "type": "number",
+              "minimum": 5,
+              "maximum": 170,
+              "description": "editor_viewport (and game_viewport while the player is ejected): that camera's horizontal field of view in degrees (5-170), set first in the same call; it stays. The editor resets it to 90 when it restarts, so a picture framed like a game camera names it. Refused like location while Play In Editor runs and the player is not ejected."
+            },
             "returnBase64": {
               "type": "boolean",
               "description": "Return the PNG inline as an image (default true); a capture also saves a file unless keepFile is false. With no resolution, an inline image is downscaled to fit 1600x900. false returns only the saved path and metadata, at the full viewport size."
@@ -51732,8 +51738,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "1af3d16ddd6143713e3d046a53fa16fb75a82763a838c93e3a4aa8ab7a8ba01b",
-        "content": "9ce0e14c955537e97c8560bfcb21192357a45e51c609111f491ee57abacf0ffb"
+        "schema": "998ac68baa941115d83e06454fde0c6aec7f863d847999c440b3458c7331dbff",
+        "content": "5df0f275505f01c2dfb48ec23562c5f06ab5195638023b4e314890d5f0c665a1"
       }
     },
     {
@@ -55092,7 +55098,7 @@
           "which actors are expensive to shade",
           "is the level or the scene too dark"
         ],
-        "summary": "Judge the level viewport's picture as a reviewer would, in numbers: saliency (where the eye goes: how strongly each actor draws it, the focus point, and a named subject's rank), palette (five colours with their shares, the hue template of Cohen-Or et al. they fit best and how far the rest stray from it, and the colour cast of surfaces that should be grey), light (a lightness histogram, clipped and crushed shares, contrast, exposure, flat lighting and, on a subject lit by the sun, its key to fill ratio in stops) and cost (how much of the frame, and of each actor, the shader complexity view draws at a high cost). Read only: the camera moves only when location or rotation is given, and cost puts the viewport's view mode back after one frame in the shader complexity view.",
+        "summary": "Judge the level viewport's picture as a reviewer would, in numbers: saliency (where the eye goes: how strongly each actor draws it, the focus point, and a named subject's rank), palette (five colours with their shares, the hue template of Cohen-Or et al. they fit best and how far the rest stray from it, and the colour cast of surfaces that should be grey), light (a lightness histogram, clipped and crushed shares, contrast, exposure, flat lighting and, on a subject lit by the sun, its key to fill ratio in stops) and cost (how much of the frame, and of each actor, the shader complexity view draws at a high cost). Read only: the camera moves only when location, rotation or fov is given, and cost puts the viewport's view mode back after one frame in the shader complexity view.",
         "whenToUse": [
           "Checking whether a shot draws the eye to its subject, without looking at it.",
           "Judging a scene's palette and colour cast, or whether its lighting is flat, too dark or blown out.",
@@ -55161,6 +55167,12 @@
               },
               "additionalProperties": false,
               "description": "Camera rotation {pitch, yaw, roll} in degrees; omitted, the viewport's current one."
+            },
+            "fov": {
+              "type": "number",
+              "minimum": 5,
+              "maximum": 170,
+              "description": "Horizontal field of view in degrees (5-170), set with the camera; omitted, the viewport's current one, which the editor resets to 90 when it restarts. It stays."
             }
           },
           "required": [
@@ -55240,7 +55252,7 @@
       },
       "examples": [
         {
-          "title": "Judge the level viewport's picture as a reviewer would, in numbers: saliency (where the eye goes: how strongly each actor draws it, the focus point, and a named subject's rank), palette (five colours with their shares, the hue template of Cohen-Or et al. they fit best and how far the rest stray from it, and the colour cast of surfaces that should be grey), light (a lightness histogram, clipped and crushed shares, contrast, exposure, flat lighting and, on a subject lit by the sun, its key to fill ratio in stops) and cost (how much of the frame, and of each actor, the shader complexity view draws at a high cost). Read only: the camera moves only when location or rotation is given, and cost puts the viewport's view mode back after one frame in the shader complexity view.",
+          "title": "Judge the level viewport's picture as a reviewer would, in numbers: saliency (where the eye goes: how strongly each actor draws it, the focus point, and a named subject's rank), palette (five colours with their shares, the hue template of Cohen-Or et al. they fit best and how far the rest stray from it, and the colour cast of surfaces that should be grey), light (a lightness histogram, clipped and crushed shares, contrast, exposure, flat lighting and, on a subject lit by the sun, its key to fill ratio in stops) and cost (how much of the frame, and of each actor, the shader complexity view draws at a high cost). Read only: the camera moves only when location, rotation or fov is given, and cost puts the viewport's view mode back after one frame in the shader complexity view.",
           "input": {
             "action": "analyze_view",
             "subject": "Statue",
@@ -55333,8 +55345,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "84fed90dbf8efb7e1676ecaa97fca6018c109c083bcd62b49461cd65136c21ba",
-        "content": "6dd40a952f6bcda46ed30732f40c046d6a09bd3fe241e3aa7eae8eae1116e751"
+        "schema": "0303417e540139771a897ed01e494c35af4216af834114a6aa41157bfdcbea02",
+        "content": "7ad80bb0bda1726a550f9c64227ba76ecbe2324422c6d0b00f3d0ea9d72bc465"
       }
     },
     {
@@ -55364,7 +55376,7 @@
           "meshes to instance",
           "material review"
         ],
-        "summary": "Check the materials in the level viewport's view the way a technical artist would. pbr: the viewport is drawn in the Buffer Visualization view mode for base colour, metallic and roughness (the values the G-buffer holds, so tints and constants in the material count) and each lit, opaque actor in view is judged: too_dark (base colour under sRGB 30, darker than charcoal, on a quarter of it), too_bright (a non-metal over sRGB 240, whiter than snow; a metal's base colour is its reflectance, silver near 250), dark_metal (a metal's base colour under sRGB 155: metals reflect at least about a third of light), partial_metallic (metallic between 0.1 and 0.9 on a quarter: a surface is metal or not), mirror_roughness (roughness under 0.05 on half); an actor with an unlit or translucent material is listed under skipped with why. texel_density: each material slot of the static meshes in view at its sharpest 2D texture, as the texture streamer reckons it (texture size times the material's UV tiling for it over the mesh's UV density times the actor's scale), against the view's median: too_sharp (four times or more: memory spent on detail nobody sees) or too_blurry (a quarter or less). Only a slot whose material holds texture streaming data for the texture is judged, and the median is theirs when there are any; one without (a world-aligned material such as the engine's grid, or data never built) is listed with approximate and its ratio. instancing: static mesh actors of the level drawing one mesh with the same materials, groups of 8 or more, worth turning into one instanced mesh. Read only: the camera moves only when location or rotation is given, and the viewport's view mode and buffer are put back.",
+        "summary": "Check the materials in the level viewport's view the way a technical artist would. pbr: the viewport is drawn in the Buffer Visualization view mode for base colour, metallic and roughness (the values the G-buffer holds, so tints and constants in the material count) and each lit, opaque actor in view is judged: too_dark (base colour under sRGB 30, darker than charcoal, on a quarter of it), too_bright (a non-metal over sRGB 240, whiter than snow; a metal's base colour is its reflectance, silver near 250), dark_metal (a metal's base colour under sRGB 155: metals reflect at least about a third of light), partial_metallic (metallic between 0.1 and 0.9 on a quarter: a surface is metal or not), mirror_roughness (roughness under 0.05 on half); an actor with an unlit or translucent material is listed under skipped with why. texel_density: each material slot of the static meshes in view at its sharpest 2D texture, as the texture streamer reckons it (texture size times the material's UV tiling for it over the mesh's UV density times the actor's scale), against the view's median: too_sharp (four times or more: memory spent on detail nobody sees) or too_blurry (a quarter or less). Only a slot whose material holds texture streaming data for the texture is judged, and the median is theirs when there are any; one without (a world-aligned material such as the engine's grid, or data never built) is listed with approximate and its ratio. instancing: static mesh actors of the level drawing one mesh with the same materials, groups of 8 or more, worth turning into one instanced mesh. Read only: the camera moves only when location, rotation or fov is given, and the viewport's view mode and buffer are put back.",
         "whenToUse": [
           "Reviewing a scene's materials for physically based values before lighting it: base colours too dark or too bright, half-metal surfaces, mirror-smooth roughness.",
           "Finding a texture stretched or crammed compared to its neighbours, or a slot spending a 4K texture on a pebble.",
@@ -55428,6 +55440,12 @@
               },
               "additionalProperties": false,
               "description": "Camera rotation {pitch, yaw, roll} in degrees; omitted, the viewport's current one."
+            },
+            "fov": {
+              "type": "number",
+              "minimum": 5,
+              "maximum": 170,
+              "description": "Horizontal field of view in degrees (5-170), set with the camera; omitted, the viewport's current one, which the editor resets to 90 when it restarts. It stays."
             }
           },
           "required": [
@@ -55491,7 +55509,7 @@
       },
       "examples": [
         {
-          "title": "Check the materials in the level viewport's view the way a technical artist would. pbr: the viewport is drawn in the Buffer Visualization view mode for base colour, metallic and roughness (the values the G-buffer holds, so tints and constants in the material count) and each lit, opaque actor in view is judged: too_dark (base colour under sRGB 30, darker than charcoal, on a quarter of it), too_bright (a non-metal over sRGB 240, whiter than snow; a metal's base colour is its reflectance, silver near 250), dark_metal (a metal's base colour under sRGB 155: metals reflect at least about a third of light), partial_metallic (metallic between 0.1 and 0.9 on a quarter: a surface is metal or not), mirror_roughness (roughness under 0.05 on half); an actor with an unlit or translucent material is listed under skipped with why. texel_density: each material slot of the static meshes in view at its sharpest 2D texture, as the texture streamer reckons it (texture size times the material's UV tiling for it over the mesh's UV density times the actor's scale), against the view's median: too_sharp (four times or more: memory spent on detail nobody sees) or too_blurry (a quarter or less). Only a slot whose material holds texture streaming data for the texture is judged, and the median is theirs when there are any; one without (a world-aligned material such as the engine's grid, or data never built) is listed with approximate and its ratio. instancing: static mesh actors of the level drawing one mesh with the same materials, groups of 8 or more, worth turning into one instanced mesh. Read only: the camera moves only when location or rotation is given, and the viewport's view mode and buffer are put back.",
+          "title": "Check the materials in the level viewport's view the way a technical artist would. pbr: the viewport is drawn in the Buffer Visualization view mode for base colour, metallic and roughness (the values the G-buffer holds, so tints and constants in the material count) and each lit, opaque actor in view is judged: too_dark (base colour under sRGB 30, darker than charcoal, on a quarter of it), too_bright (a non-metal over sRGB 240, whiter than snow; a metal's base colour is its reflectance, silver near 250), dark_metal (a metal's base colour under sRGB 155: metals reflect at least about a third of light), partial_metallic (metallic between 0.1 and 0.9 on a quarter: a surface is metal or not), mirror_roughness (roughness under 0.05 on half); an actor with an unlit or translucent material is listed under skipped with why. texel_density: each material slot of the static meshes in view at its sharpest 2D texture, as the texture streamer reckons it (texture size times the material's UV tiling for it over the mesh's UV density times the actor's scale), against the view's median: too_sharp (four times or more: memory spent on detail nobody sees) or too_blurry (a quarter or less). Only a slot whose material holds texture streaming data for the texture is judged, and the median is theirs when there are any; one without (a world-aligned material such as the engine's grid, or data never built) is listed with approximate and its ratio. instancing: static mesh actors of the level drawing one mesh with the same materials, groups of 8 or more, worth turning into one instanced mesh. Read only: the camera moves only when location, rotation or fov is given, and the viewport's view mode and buffer are put back.",
           "input": {
             "action": "audit_materials",
             "checks": [
@@ -55569,8 +55587,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "07ee5cc6fbae2353f531bd123e2f01e2893db97360fd33316a4db75c844f856d",
-        "content": "f38bae5463e9e5919310f3bd4a25521e075310f98be4a23d6d5b21bd82977f35"
+        "schema": "fb1a40b7c9cdd68832c4e2dbc60623a7c8395a86264e2c8b3fe99b39f15a0474",
+        "content": "4a7027aa6bf0e6d98a075a4e1ab1b105891ede5afcbde30ad40cb841d8878260"
       }
     },
     {
@@ -55597,7 +55615,7 @@
           "segmentation mask",
           "render passes"
         ],
-        "summary": "Capture the level viewport's view as machine-readable passes, aligned pixel for pixel: id (a PNG with one colour per actor, and the legend naming each colour's actor), depth (an EXR of the distance in cm) and normal (a PNG of the world normal, RGB = normal x 0.5 + 0.5), with a summary of each. location and rotation place the camera first, as describe_view and control_editor screenshot take them.",
+        "summary": "Capture the level viewport's view as machine-readable passes, aligned pixel for pixel: id (a PNG with one colour per actor, and the legend naming each colour's actor), depth (an EXR of the distance in cm) and normal (a PNG of the world normal, RGB = normal x 0.5 + 0.5), with a summary of each. location, rotation and fov place the camera first, as describe_view and control_editor screenshot take them.",
         "whenToUse": [
           "A frame must be analysed by a script, a probe or a model: which actor covers a region (id), how far each pixel is (depth), which way surfaces face (normal).",
           "Regions of a screenshot must be attributed to actors, or distances in a shot measured."
@@ -55648,6 +55666,12 @@
               },
               "additionalProperties": false,
               "description": "Camera rotation {pitch, yaw, roll} in degrees; omitted, the viewport's current one."
+            },
+            "fov": {
+              "type": "number",
+              "minimum": 5,
+              "maximum": 170,
+              "description": "Horizontal field of view in degrees (5-170), set with the camera; omitted, the viewport's current one, which the editor resets to 90 when it restarts. It stays."
             },
             "passes": {
               "type": "array",
@@ -55790,7 +55814,7 @@
       },
       "examples": [
         {
-          "title": "Capture the level viewport's view as machine-readable passes, aligned pixel for pixel: id (a PNG with one colour per actor, and the legend naming each colour's actor), depth (an EXR of the distance in cm) and normal (a PNG of the world normal, RGB = normal x 0.5 + 0.5), with a summary of each. location and rotation place the camera first, as describe_view and control_editor screenshot take them.",
+          "title": "Capture the level viewport's view as machine-readable passes, aligned pixel for pixel: id (a PNG with one colour per actor, and the legend naming each colour's actor), depth (an EXR of the distance in cm) and normal (a PNG of the world normal, RGB = normal x 0.5 + 0.5), with a summary of each. location, rotation and fov place the camera first, as describe_view and control_editor screenshot take them.",
           "input": {
             "action": "capture_passes",
             "location": {
@@ -55882,8 +55906,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "bb79ce10e9a5c62a7e237b209a10c9bd8c526065a0b156904bb79aa42a6e531e",
-        "content": "3e1dffc8f33dfd267b8b63e5873449d20e4ee95fb72367a208b82236eddeb8a1"
+        "schema": "cb8c9dc17f5aee8ba25295d9f7e2ee25777318b83f3067b6585816e157abeb79",
+        "content": "7038dc0c93e94713c47dddaea2fab356562b5484fa2e8a2c47dd91738b10d5e6"
       }
     },
     {
@@ -56867,7 +56891,7 @@
           "did the edit change the picture",
           "compare two screenshots"
         ],
-        "summary": "Describe what the level viewport's camera sees, as text: each actor in view with its share of the frame, its box on screen, how bright it is drawn and its distance, the share that is background (sky, void), and the frame's brightness; or only the actors named, with what hides each one that is not seen. points names what is under spots of the frame and where they are in the world; labels returns the frame with each listed actor boxed and numbered; saveAs keeps the frame under a name and compareWith says what changed in the picture since, region by region, with the actors drawn there before and after. location and rotation place the camera first, as control_editor screenshot takes them.",
+        "summary": "Describe what the level viewport's camera sees, as text: each actor in view with its share of the frame, its box on screen, how bright it is drawn and its distance, the share that is background (sky, void), and the frame's brightness; or only the actors named, with what hides each one that is not seen. points names what is under spots of the frame and where they are in the world; labels returns the frame with each listed actor boxed and numbered; saveAs keeps the frame under a name and compareWith says what changed in the picture since, region by region, with the actors drawn there before and after. location, rotation and fov place the camera first, as control_editor screenshot takes them.",
         "whenToUse": [
           "A shot must be checked without looking at a picture: is the subject in view, how much of the frame it fills, where it sits, whether it is lit or lost in the dark.",
           "A camera placement must be compared or tuned by numbers (subject coverage, sky share, brightness).",
@@ -56929,6 +56953,12 @@
               "additionalProperties": false,
               "description": "Camera rotation {pitch, yaw, roll} in degrees; omitted, the viewport's current one."
             },
+            "fov": {
+              "type": "number",
+              "minimum": 5,
+              "maximum": 170,
+              "description": "Horizontal field of view in degrees (5-170), set with the camera; omitted, the viewport's current one, which the editor resets to 90 when it restarts. It stays."
+            },
             "limit": {
               "type": "number",
               "description": "Most actors to list, largest share first (default 20, at most 100); visibleActors counts them all."
@@ -56977,7 +57007,7 @@
             "compareWith": {
               "type": "string",
               "maxLength": 64,
-              "description": "Compare this frame with the one saved under that name, taken again from its camera: change lists what changed beyond the renderer's own noise. Refused with VIEW_BASELINE_NOT_FOUND for a name not saved, VIEW_SIZE_CHANGED when the viewport changed size, and CAMERA_MOVED when location or rotation (or the field of view) differs from the saved camera. With saveAs in the same call, the comparison comes first."
+              "description": "Compare this frame with the one saved under that name, taken again from its camera (its field of view too): change lists what changed beyond the renderer's own noise. Refused with VIEW_BASELINE_NOT_FOUND for a name not saved, VIEW_SIZE_CHANGED when the viewport changed size, and CAMERA_MOVED when location, rotation or fov differs from the saved camera. With saveAs in the same call, the comparison comes first."
             }
           },
           "required": [
@@ -57113,7 +57143,7 @@
       },
       "examples": [
         {
-          "title": "Describe what the level viewport's camera sees, as text: each actor in view with its share of the frame, its box on screen, how bright it is drawn and its distance, the share that is background (sky, void), and the frame's brightness; or only the actors named, with what hides each one that is not seen. points names what is under spots of the frame and where they are in the world; labels returns the frame with each listed actor boxed and numbered; saveAs keeps the frame under a name and compareWith says what changed in the picture since, region by region, with the actors drawn there before and after. location and rotation place the camera first, as control_editor screenshot takes them.",
+          "title": "Describe what the level viewport's camera sees, as text: each actor in view with its share of the frame, its box on screen, how bright it is drawn and its distance, the share that is background (sky, void), and the frame's brightness; or only the actors named, with what hides each one that is not seen. points names what is under spots of the frame and where they are in the world; labels returns the frame with each listed actor boxed and numbered; saveAs keeps the frame under a name and compareWith says what changed in the picture since, region by region, with the actors drawn there before and after. location, rotation and fov place the camera first, as control_editor screenshot takes them.",
           "input": {
             "action": "describe_view",
             "location": {
@@ -57209,8 +57239,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "a473c19d30ad5271b908cd5a9e0ce43edf4168db86ef71ef8e1fd87739b481c1",
-        "content": "2b7b1a74834ef88a0d5e22409da884c6b92986f46739611fc99b4dcf3f377f1c"
+        "schema": "590694a0d1676414d0ff60494762db054eab374f9abe05b17c419df14aa249a4",
+        "content": "db16c8db388525d41b3972479b0c36b54646be7632a17403caaaaea8e8c47aa2"
       }
     },
     {

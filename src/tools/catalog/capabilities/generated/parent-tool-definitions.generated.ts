@@ -7321,7 +7321,18 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "description": "Show flag names, each true (shown) or false (hidden): {\"Grid\": false}. Names as the engine has them, case ignored: Grid, Collision, Bounds, Navigation, Fog, PostProcessing, Lighting, Particles, Decals, Volumes, Splines, Landscape, Foliage, StaticMeshes, SkeletalMeshes, Translucency, Atmosphere, BillboardSprites and the rest."
         },
         "fov": {
-          "type": "number",
+          "oneOf": [
+            {
+              "type": "number",
+              "description": "Camera field of view in degrees."
+            },
+            {
+              "type": "number",
+              "minimum": 5,
+              "maximum": 170,
+              "description": "editor_viewport (and game_viewport while the player is ejected): that camera's horizontal field of view in degrees (5-170), set first in the same call; it stays. The editor resets it to 90 when it restarts, so a picture framed like a game camera names it. Refused like location while Play In Editor runs and the player is not ejected."
+            }
+          ],
           "description": "Camera field of view in degrees."
         },
         "frameRate": {
@@ -8557,7 +8568,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "compareWith": {
           "type": "string",
           "maxLength": 64,
-          "description": "Compare this frame with the one saved under that name, taken again from its camera: change lists what changed beyond the renderer's own noise. Refused with VIEW_BASELINE_NOT_FOUND for a name not saved, VIEW_SIZE_CHANGED when the viewport changed size, and CAMERA_MOVED when location or rotation (or the field of view) differs from the saved camera. With saveAs in the same call, the comparison comes first."
+          "description": "Compare this frame with the one saved under that name, taken again from its camera (its field of view too): change lists what changed beyond the renderer's own noise. Refused with VIEW_BASELINE_NOT_FOUND for a name not saved, VIEW_SIZE_CHANGED when the viewport changed size, and CAMERA_MOVED when location, rotation or fov differs from the saved camera. With saveAs in the same call, the comparison comes first."
         },
         "componentName": {
           "type": "string",
@@ -8620,6 +8631,12 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "format": {
           "type": "string",
           "description": "Exporter format by file extension, default T3D (the text form of the object); fails with EXPORT_FAILED when no exporter for that format handles the object."
+        },
+        "fov": {
+          "type": "number",
+          "minimum": 5,
+          "maximum": 170,
+          "description": "Horizontal field of view in degrees (5-170), set with the camera; omitted, the viewport's current one, which the editor resets to 90 when it restarts. It stays."
         },
         "ignoreActors": {
           "type": "array",

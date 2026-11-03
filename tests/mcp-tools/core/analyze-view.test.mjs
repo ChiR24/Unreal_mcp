@@ -16,7 +16,7 @@ const testCases = [
     { actorName: SUBJECT, location: { x: 40000, y: 40000, z: 60 } },
   ] }, expected: 'success' },
   { scenario: 'Setup: a sun, so the scene is lit', toolName: 'control_actor', arguments: { action: 'spawn', classPath: '/Script/Engine.DirectionalLight', actorName: `MCP_AnalyzeSun_${ts}`, location: { x: 40000, y: 40000, z: 800 }, rotation: { pitch: -40, yaw: 150, roll: 0 }, tags: [TAG] }, expected: 'success' },
-  { scenario: 'READ: the eye goes to the cube', toolName: 'inspect', arguments: { action: 'analyze_view', subject: SUBJECT, aspects: ['saliency'], ...CAMERA }, expected: 'success', assertions: [
+  { scenario: 'READ: the eye goes to the cube', toolName: 'inspect', arguments: { action: 'analyze_view', subject: SUBJECT, aspects: ['saliency'], ...CAMERA, fov: 90 }, expected: 'success', assertions: [
     { path: 'structuredContent.result.saliency.subject.rank', equals: 1, label: 'the cube draws the most attention' },
     { path: 'structuredContent.result.saliency.top', minLength: 1, label: 'actors ranked by attention' },
   ] },

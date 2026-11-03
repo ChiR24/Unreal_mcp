@@ -21,6 +21,7 @@ All notable changes to the EngineWire plugin (formerly McpAutomationBridge) will
 - **remove_cpp_class** (`SystemControl/McpSystemCppClassRemove.cpp`): deletes a project module's `<Name>.h`/`.cpp` after checking loaded objects, derived classes, Blueprint parent tags, the packages that use the module (loaded, searched with `FReferenceFinder`) and the project's source; read-only files are never forced.
 - **Sheets can leave no file** (`Perception/McpPerceptionSheetDraw.cpp` `Deliver`): contact and thumbnail sheets write their PNG only when `keepFile` asks or the reply cannot carry it.
 - **Bake coverage** (`Geometry/Mesh/McpGeometryVertexColorBake.cpp`): the share of the surface in triangles longer than `aoDistance` (`coarseShare`), with a warning past a quarter.
+- **Camera placement** (`PlaceViewCameraForMcp`): every viewport capture places the camera through one function, `fov` included; `compareWith` retakes at the saved field of view.
 
 ### Fixed
 - **Search**: lead verbs (`McpSearchIntent.cpp`) and fold aliases run the member they name.

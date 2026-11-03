@@ -45,6 +45,20 @@ describe('screenshot renderSize', () => {
     }
   });
 
+  // The editor resets the viewport's field of view when it restarts: a picture framed like a game camera came out at
+  // 90 degrees across. Every capture that places the camera does it through one function, which takes fov too.
+  it('places the camera of every capture through one function that takes the field of view', () => {
+    const place = read('McpEditorScreenshotWindows.cpp');
+    expect(place).toMatch(/if \(Payload->TryGetNumberField\(TEXT\("fov"\), Fov\)\) \{\s*Client->ViewFOV = static_cast<float>\(FMath::Clamp\(Fov, 5\.0, 170\.0\)\);/u);
+    expect(read('McpEditorScreenshot.cpp')).toContain('PlaceViewCameraForMcp(CaptureClient, Payload);');
+    const inspection = join('..', 'Environment', 'Inspection');
+    expect(read(join(inspection, 'McpEnvInspectViewPoints.cpp'))).toContain('const bool bMoved = PlaceViewCameraForMcp(Out.Client, Payload);');
+    expect(read(join(inspection, 'McpEnvInspectCapturePasses.cpp'))).toContain('const bool bMoved = PlaceViewCameraForMcp(Client, Payload);');
+    for (const file of ['McpEditorScreenshot.cpp', join(inspection, 'McpEnvInspectViewPoints.cpp'), join(inspection, 'McpEnvInspectCapturePasses.cpp')]) {
+      expect(read(file), file).not.toContain('SetViewRotation(');
+    }
+  });
+
   it('sets the automation flag only around the one synchronous draw', () => {
     // UE 5.0 and 5.1 hand the frame to listeners only under it, and it keeps the "screenshot saved" toast away.
     const source = render();

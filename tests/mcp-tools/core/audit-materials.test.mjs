@@ -45,7 +45,7 @@ const testCases = [
     { actorName: SMALL, location: [80400, 80800, 15], scale: [0.1, 0.1, 0.1], materialPath: GRID },
     { actorName: `MCP_AuditBall_${ts}`, classPath: '/Engine/BasicShapes/Sphere', location: [78000, 80000, 60], repeat: { count: 10, offset: [0, 150, 0] } },
   ] }, expected: 'success' },
-  { scenario: 'READ: physically based values as the G-buffer holds them', toolName: 'inspect', arguments: { action: 'audit_materials', checks: ['pbr'], ...CAMERA }, expected: 'success', assertions: [
+  { scenario: 'READ: physically based values as the G-buffer holds them', toolName: 'inspect', arguments: { action: 'audit_materials', checks: ['pbr'], ...CAMERA, fov: 90 }, expected: 'success', assertions: [
     { path: 'structuredContent.result.pbr.actors', includesObject: { actorName: BLACK, findings: { 0: 'too_dark' } }, label: 'the black cube is darker than charcoal' },
     { path: 'structuredContent.result.pbr.actors', includesObject: { actorName: HALF_METAL, findings: { 0: 'partial_metallic' } }, label: 'the half metal is named' },
     { path: 'structuredContent.result.pbr.actors', includesObject: { actorName: GREY, findings: { length: 0 } }, label: 'the mid grey dielectric is fine' },

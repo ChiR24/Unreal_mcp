@@ -121,9 +121,7 @@ bool HandleInspectCapturePassesAction(
     }
     const FString Base = Probe.LeftChop(7);
 
-    const bool bMoved = Payload->HasField(TEXT("location")) || Payload->HasField(TEXT("rotation"));
-    Client->SetViewLocation(ExtractVectorField(Payload, TEXT("location"), Client->GetViewLocation()));
-    Client->SetViewRotation(ExtractRotatorField(Payload, TEXT("rotation"), Client->GetViewRotation()));
+    const bool bMoved = PlaceViewCameraForMcp(Client, Payload);
     Client->Invalidate();
     DrawViewportFramesForMcp(Viewport, Client->GetWorld(), bMoved ? 3 : 1);
     const int32 Width = FMath::Clamp(GetJsonIntField(Payload, TEXT("width"), 960), 64, 4096);

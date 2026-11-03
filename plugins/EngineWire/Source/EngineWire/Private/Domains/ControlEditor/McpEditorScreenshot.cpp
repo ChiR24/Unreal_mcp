@@ -41,12 +41,12 @@ bool UEngineWireSubsystem::HandleControlEditorScreenshot(
     Mode = TEXT("editor_viewport");
   }
 
-  // location/rotation place the camera the picture is taken from. While Play In Editor runs that is only possible once
-  // the player is ejected; a pawn's camera cannot be moved, and a picture from somewhere else is not what was asked for.
-  if ((Mode == TEXT("editor_viewport") || Mode == TEXT("game_viewport")) &&
-      (Payload->HasField(TEXT("location")) || Payload->HasField(TEXT("rotation"))) &&
+  // location/rotation/fov place the camera the picture is taken from. While Play In Editor runs that is only possible
+  // once the player is ejected; a pawn's camera cannot be moved, and a picture from somewhere else is not what was asked.
+  const bool bCameraPlaced = Payload->HasField(TEXT("location")) || Payload->HasField(TEXT("rotation")) || Payload->HasField(TEXT("fov"));
+  if ((Mode == TEXT("editor_viewport") || Mode == TEXT("game_viewport")) && bCameraPlaced &&
       RefuseCameraMoveWhilePieFollowsPawnForMcp(this, Socket, RequestId,
-                                                TEXT("screenshot with location or rotation"))) {
+                                                TEXT("screenshot with location, rotation or fov"))) {
     return true;
   }
 
@@ -208,10 +208,9 @@ bool UEngineWireSubsystem::HandleControlEditorScreenshot(
     // that gets moved is provably the viewport that gets photographed.
     CaptureClient = GetActiveEditorViewportClientForMcp();
     if (CaptureClient) {
-      // location/rotation place the camera and take the picture in one call; set_camera and then a
+      // location/rotation/fov place the camera and take the picture in one call; set_camera and then a
       // screenshot could photograph a frame drawn before the move.
-      CaptureClient->SetViewLocation(ExtractVectorField(Payload, TEXT("location"), CaptureClient->GetViewLocation()));
-      CaptureClient->SetViewRotation(ExtractRotatorField(Payload, TEXT("rotation"), CaptureClient->GetViewRotation()));
+      PlaceViewCameraForMcp(CaptureClient, Payload);
       Viewport = CaptureClient->Viewport;
       CaptureClient->Invalidate();
     }
@@ -234,7 +233,7 @@ bool UEngineWireSubsystem::HandleControlEditorScreenshot(
 
   // The first frames after a camera move still use the occlusion results of the old view, which hide small things
   // (a sign's text, a tree) the new view shows; a few frames later the picture is what the camera sees.
-  const bool bCameraMoved = CaptureClient && (Payload->HasField(TEXT("location")) || Payload->HasField(TEXT("rotation")));
+  const bool bCameraMoved = CaptureClient && bCameraPlaced;
   DrawViewportFramesForMcp(Viewport, CaptureClient ? CaptureClient->GetWorld() : nullptr, bCameraMoved ? 3 : 1);
   if (!ViewFrameSettledForMcp(Viewport, Payload)) { RetryLater(); return true; }
 

@@ -295,3 +295,14 @@ void DrawViewportFramesForMcp(FViewport *Viewport, UWorld *World, int32 Frames) 
     FlushRenderingCommands();
   }
 }
+
+bool PlaceViewCameraForMcp(FEditorViewportClient *Client, const TSharedPtr<FJsonObject> &Payload) {
+  Client->SetViewLocation(ExtractVectorField(Payload, TEXT("location"), Client->GetViewLocation()));
+  Client->SetViewRotation(ExtractRotatorField(Payload, TEXT("rotation"), Client->GetViewRotation()));
+  double Fov = 0.0;
+  if (Payload->TryGetNumberField(TEXT("fov"), Fov)) {
+    Client->ViewFOV = static_cast<float>(FMath::Clamp(Fov, 5.0, 170.0));
+    Client->FOVAngle = Client->ViewFOV;
+  }
+  return Payload->HasField(TEXT("location")) || Payload->HasField(TEXT("rotation")) || Payload->HasField(TEXT("fov"));
+}

@@ -44,18 +44,23 @@ bool PrepareViewDiff(const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FJsonObj
         OutCode = TEXT("VIEW_BASELINE_NOT_FOUND");
         return false;
     }
+    double Fov = Saved->Fov;
     if (!ExtractVectorField(Payload, TEXT("location"), Saved->Location).Equals(Saved->Location, 0.5) ||
-        !ExtractRotatorField(Payload, TEXT("rotation"), Saved->Rotation).Equals(Saved->Rotation, 0.05f))
+        !ExtractRotatorField(Payload, TEXT("rotation"), Saved->Rotation).Equals(Saved->Rotation, 0.05f) ||
+        (Payload->TryGetNumberField(TEXT("fov"), Fov) && !FMath::IsNearlyEqual(Fov, double(Saved->Fov), 0.01)))
     {
         OutError = FString::Printf(TEXT("'%s' was taken from location (%.0f, %.0f, %.0f), rotation (pitch %.1f, yaw %.1f, roll "
-                                        "%.1f); leave location and rotation out to compare from there."), *Name, Saved->Location.X,
-                                   Saved->Location.Y, Saved->Location.Z, Saved->Rotation.Pitch, Saved->Rotation.Yaw, Saved->Rotation.Roll);
+                                        "%.1f), fov %.1f; leave location, rotation and fov out to compare from there."), *Name,
+                                   Saved->Location.X, Saved->Location.Y, Saved->Location.Z, Saved->Rotation.Pitch, Saved->Rotation.Yaw,
+                                   Saved->Rotation.Roll, Saved->Fov);
         OutCode = TEXT("CAMERA_MOVED");
         return false;
     }
-    OutCamera = MakeShared<FJsonObject>(); // the capture reads only these two
+    // The capture reads only these three; the field of view too, since the editor resets it when it restarts.
+    OutCamera = MakeShared<FJsonObject>();
     OutCamera->SetObjectField(TEXT("location"), McpHandlerUtils::VectorToJson(Saved->Location));
     OutCamera->SetObjectField(TEXT("rotation"), McpHandlerUtils::RotatorToJson(Saved->Rotation));
+    OutCamera->SetNumberField(TEXT("fov"), Saved->Fov);
     return true;
 }
 

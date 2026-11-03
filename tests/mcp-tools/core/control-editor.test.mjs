@@ -89,7 +89,7 @@ const testCases = [
   // === COMMANDS / CAPTURE / RECORDING ===
   { scenario: 'ACTION: console_command', toolName: 'control_editor', arguments: { action: 'console_command', command: 'stat fps' }, expected: 'success' },
   { scenario: 'ACTION: execute_command', toolName: 'control_editor', arguments: { action: 'execute_command', command: 'stat unit' }, expected: 'success' },
-  { scenario: 'ACTION: screenshot', toolName: 'control_editor', arguments: { action: 'screenshot', filename: SCREENSHOT_NAME, resolution: '640x360', mode: 'editor_viewport', returnBase64: false, includeMetadata: true, metadata: { source: 'control-editor-suite' } }, expected: 'success' },
+  { scenario: 'ACTION: screenshot', toolName: 'control_editor', arguments: { action: 'screenshot', filename: SCREENSHOT_NAME, resolution: '640x360', mode: 'editor_viewport', fov: 90, returnBase64: false, includeMetadata: true, metadata: { source: 'control-editor-suite' } }, expected: 'success' },
   { scenario: 'ACTION: take_screenshot', toolName: 'control_editor', arguments: { action: 'take_screenshot', filename: `${SCREENSHOT_NAME}_Alias`, resolution: '640x360' }, expected: 'success' },
   { scenario: 'OPTIONAL: screenshot into a chosen project directory', toolName: 'control_editor', arguments: { action: 'screenshot', filename: `${SCREENSHOT_NAME}_Path`, path: 'Saved/Screenshots/MCPTest', resolution: '320x180' }, expected: 'success' },
   { scenario: 'OPTIONAL: screenshot of a named editor window', toolName: 'control_editor', arguments: { action: 'screenshot', filename: `${SCREENSHOT_NAME}_Window`, mode: 'full_editor_window', window: '0', resolution: '640x360' }, expected: 'success' },
