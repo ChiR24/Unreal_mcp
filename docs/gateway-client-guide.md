@@ -317,7 +317,8 @@ such as `class`) each value's `count`, most common first, at most 50 groups
 `{ ..., "options": { "aggregate": { "groupBy": "class" } } }`. Grouped by
 `label`, `name` or `actorName`, a value counts by its stem: the number the editor
 gives each copy is dropped, so `Wall_12` and `Wall_3` count as `Wall` and a
-level reads as what it is made of. It counts what
+level reads as what it is made of; a row with no `label` (a find row names its
+actor by `name`) counts by its name. It counts what
 the call returned: a paged list counts its page, and `aggregate.note` says so,
 so raise the call's own `limit` to count everything at once (the actor list
 takes 1000). A reply without that list keeps its data and `aggregate.note` says

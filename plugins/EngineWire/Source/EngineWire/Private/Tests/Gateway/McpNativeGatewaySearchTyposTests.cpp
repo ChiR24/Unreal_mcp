@@ -120,6 +120,10 @@ bool FMcpExecuteAggregateTest::RunTest(const FString& Parameters)
 		Row->SetStringField(TEXT("label"), Label);
 		Copies.Add(MakeShared<FJsonValueObject>(Row));
 	}
+	// A find row names its actor by name alone: grouped by label, it counts by that name.
+	TSharedPtr<FJsonObject> FindRow = MakeShared<FJsonObject>();
+	FindRow->SetStringField(TEXT("name"), TEXT("Wall_40"));
+	Copies.Add(MakeShared<FJsonValueObject>(FindRow));
 	TSharedPtr<FJsonObject> Level = MakeShared<FJsonObject>();
 	Level->SetArrayField(TEXT("actors"), Copies);
 	TSharedPtr<FJsonObject> ByLabel = MakeShared<FJsonObject>();
@@ -129,7 +133,7 @@ bool FMcpExecuteAggregateTest::RunTest(const FString& Parameters)
 	{
 		Counted.Add(Group->AsObject()->GetStringField(TEXT("value")), static_cast<int32>(Group->AsObject()->GetNumberField(TEXT("count"))));
 	}
-	TestEqual(TEXT("Wall_12, Wall_3 and Wall count as Wall"), Counted.FindRef(TEXT("Wall")), 3);
+	TestEqual(TEXT("Wall_12, Wall_3, Wall and a row named Wall_40 count as Wall"), Counted.FindRef(TEXT("Wall")), 4);
 	TestTrue(TEXT("a number that is part of the name stays"), Counted.Contains(TEXT("Stage01")) && Counted.Contains(TEXT("Card_C03")));
 	TestTrue(TEXT("a label that is all number stays whole"), Counted.Contains(TEXT("_7")));
 	return true;

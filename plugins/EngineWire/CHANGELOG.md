@@ -8,7 +8,7 @@ All notable changes to the EngineWire plugin (formerly McpAutomationBridge) will
 
 ### Added
 - **Engine version gate**: a record's `availability.minEngineVersion` makes the capability `unavailable` below it in search and describe, and execute refuses it `ENGINE_VERSION_UNSUPPORTED`.
-- **Gateway**: search corrects a typo to the nearest capability word (`MCP/Gateway/Search/`, reply `corrected`); `options.aggregate` counts a reply's list by group (a label or name by its stem, the editor's `_<n>` dropped); an alias sent as tool + action resolves (`FindByAliasPair`).
+- **Gateway**: search corrects a typo to the nearest capability word (`MCP/Gateway/Search/`, reply `corrected`); `options.aggregate` counts a reply's list by group (a label or name by its stem, the editor's `_<n>` dropped; a row without a label by its name); an alias sent as tool + action resolves (`FindByAliasPair`).
 - **Blueprint lint values** (`Lint/Interp/`): abstract interpretation adds `divide_by_zero`, `index_out_of_range`, `out_of_range`, `float_equality`, `constant_condition` and `endless_loop`; a certain error fails Data Validation.
 - **Plugins** (`SystemControl/Plugins/`): `get_plugin_info`, `create_plugin` (content-only, or a game feature), `remove_plugin` (folder moved to `Saved/EngineWire/RemovedPlugins`), and game features through module `EngineWireGameFeatures`, loaded only where GameFeatures is on.
 - **Data registries and viewmodels by reflection** (`AssetWorkflow/DataRegistries/`, `WidgetAuthoring/ViewModel/`): list, read and make them with no link to the DataRegistry or ModelViewViewModel plugins.

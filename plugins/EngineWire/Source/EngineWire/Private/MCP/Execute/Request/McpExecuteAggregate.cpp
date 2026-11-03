@@ -82,7 +82,12 @@ FString LabelStem(const FString& Text)
 FString GroupValue(const TSharedPtr<FJsonValue>& Item, const FString& GroupBy)
 {
     const TSharedPtr<FJsonObject>* Object = nullptr;
-    const TSharedPtr<FJsonValue> Field = Item.IsValid() && Item->TryGetObject(Object) && Object ? (*Object)->TryGetField(GroupBy) : nullptr;
+    TSharedPtr<FJsonValue> Field = Item.IsValid() && Item->TryGetObject(Object) && Object ? (*Object)->TryGetField(GroupBy) : nullptr;
+    // A find row names its actor by name alone (a list row has label too): label falls back to it, as the sample does.
+    if (!Field.IsValid() && Object && GroupBy == TEXT("label"))
+    {
+        Field = (*Object)->TryGetField(TEXT("name"));
+    }
     if (!Field.IsValid() || Field->Type == EJson::Null)
     {
         return TEXT("(none)");

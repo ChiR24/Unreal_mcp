@@ -52,4 +52,11 @@ describe('options.aggregate', () => {
     expect(aggregate).toContain('return Cut > 1 && Cut < Text.Len() && Text[Cut - 1] == TEXT(\'_\') ? Text.Left(Cut - 1) : Text;');
     expect(aggregate).toContain('return GroupBy == TEXT("label") || GroupBy == TEXT("name") || GroupBy == TEXT("actorName") ? LabelStem(Text) : Text;');
   });
+
+  // A find row names its actor by name alone, so grouping a find by label counted every actor as "(none)".
+  it('groups by label on rows that carry only a name', () => {
+    expect(read('Execute', 'Request', 'McpExecuteAggregate.cpp')).toMatch(
+      /if \(!Field\.IsValid\(\) && Object && GroupBy == TEXT\("label"\)\)\s*\{\s*Field = \(\*Object\)->TryGetField\(TEXT\("name"\)\);/u,
+    );
+  });
 });
