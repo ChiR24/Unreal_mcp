@@ -4,7 +4,7 @@
 
 # Action reference
 
-Catalog revision: `eb0d6621fe376007`
+Catalog revision: `226f8aaf67d82960`
 
 Both transports expose exactly ONE public MCP tool, `unreal`, with the four
 operations `search` / `describe` / `execute` / `configure`. The parent tools
@@ -13,7 +13,7 @@ by `tools/list` and a direct `tools/call` on one returns a
 `DIRECT_TOOL_CALL_REMOVED` receipt rather than executing
 (`src/server/gateway/direct-call-migration.ts`).
 
-The catalog declares 483 capabilities across
+The catalog declares 484 capabilities across
 23 internal parent tools.
 Every row is derived from the capability record that the gateway actually
 validates against, so `execute` cannot accept an action this table omits.
@@ -43,7 +43,7 @@ validates against, so `execute` cannot accept an action this table omits.
 | `build_environment` | 44 | 5 | 36 | 3 | environment |
 | `control_actor` | 36 | 9 | 24 | 3 | actor |
 | `control_editor` | 28 | 10 | 15 | 3 | editor |
-| `inspect` | 27 | 22 | 4 | 1 | inspect |
+| `inspect` | 28 | 23 | 4 | 1 | inspect |
 | `manage_ai` | 17 | 3 | 14 | 0 | manage ai |
 | `manage_asset` | 54 | 14 | 35 | 5 | asset, datatable, enum, material, struct, texture |
 | `manage_audio` | 20 | 5 | 15 | 0 | audio |
@@ -65,7 +65,7 @@ validates against, so `execute` cannot accept an action this table omits.
 
 ## Capabilities requiring consent
 
-76 of 483 capabilities require consent.
+76 of 484 capabilities require consent.
 
 | Capability | Tool | Action | Effect | Consent |
 | --- | --- | --- | --- | --- |
@@ -382,6 +382,7 @@ validates against, so `execute` cannot accept an action this table omits.
 | `inspect.get_blueprint_details` | `inspect` | `blueprint_get` | read | read | none | `inspect.get_blueprint_details` |
 | `inspect.get_component_details` | `inspect` | `control_actor` | read | read | none | `inspect.get_component_details` `inspect.get_component_property` |
 | `inspect.get_components` | `inspect` | `get_components` | read | read | none | `inspect.get_components` |
+| `inspect.get_console_variables` | `inspect` | `get_console_variables` | read | read | none | `inspect.get_console_variables` |
 | `inspect.get_editor_state` | `inspect` | `get_selected_actors` | read | read | none | `inspect.get_editor_state` `inspect.get_selected_actors` `inspect.get_viewport_info` `inspect.get_world_settings` `inspect.get_project_settings` `inspect.get_editor_settings` `inspect.get_editor_focus` |
 | `inspect.get_property` | `inspect` | `get_property` | read | read | none | `inspect.get_property` |
 | `inspect.get_stats` | `inspect` | `get_performance_stats` | read | read | none | `inspect.get_stats` `inspect.get_performance_stats` `inspect.get_memory_stats` `inspect.get_scene_stats` `inspect.get_frame_cost` |

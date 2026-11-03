@@ -6159,6 +6159,7 @@
         "runtime_report",
         "get_editor_state",
         "changes_since",
+        "get_console_variables",
         "get_stats",
         "explain",
         "read_logpoints"
@@ -6196,6 +6197,7 @@
         "maxHits",
         "meshPath",
         "name",
+        "names",
         "nodeIds",
         "objectKind",
         "objectPath",
@@ -6478,6 +6480,16 @@
           "name": {
             "type": "string",
             "description": "Actor name identifier (alias of actorName)."
+          },
+          "names": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "maxLength": 128
+            },
+            "minItems": 1,
+            "maxItems": 50,
+            "description": "Console variable names to read, exactly as the console takes them (r.ScreenPercentage), 1 to 50."
           },
           "nodeIds": {
             "type": "array",
@@ -6875,6 +6887,7 @@
               "runtime_report",
               "get_editor_state",
               "changes_since",
+              "get_console_variables",
               "get_stats",
               "explain",
               "read_logpoints"

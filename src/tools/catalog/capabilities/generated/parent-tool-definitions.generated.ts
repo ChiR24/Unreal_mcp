@@ -8737,6 +8737,16 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "string",
           "description": "Actor name identifier (alias of actorName)."
         },
+        "names": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "maxLength": 128
+          },
+          "minItems": 1,
+          "maxItems": 50,
+          "description": "Console variable names to read, exactly as the console takes them (r.ScreenPercentage), 1 to 50."
+        },
         "nodeIds": {
           "type": "array",
           "maxItems": 32,
@@ -9133,6 +9143,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             "runtime_report",
             "get_editor_state",
             "changes_since",
+            "get_console_variables",
             "get_stats",
             "explain",
             "read_logpoints"
@@ -9960,11 +9971,23 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "description": "normal: percent of the drawn pixels facing up (normal z above 0.7), down (below -0.7) and sideways."
         },
         "notFound": {
-          "type": "array",
-          "items": {
-            "type": "string"
-          },
-          "description": "With actors: the names that match no actor."
+          "oneOf": [
+            {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "description": "Names asked for that match no console variable (a console command is not one)."
+            },
+            {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "description": "With actors: the names that match no actor."
+            }
+          ],
+          "description": "Names asked for that match no console variable (a console command is not one)."
         },
         "notVisible": {
           "type": "array",
@@ -10448,6 +10471,15 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "value": {
           "description": "The value read; its type follows the property."
+        },
+        "variables": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": true,
+            "x-unreal-reflection-boundary": true
+          },
+          "description": "One row per variable found, in the order asked: name, value (as the console prints it; absent when withheld), withheld (true when its name reads like a credential), type, setBy and help."
         },
         "vertices": {
           "type": "number",

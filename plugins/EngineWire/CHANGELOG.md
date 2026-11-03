@@ -17,6 +17,7 @@ All notable changes to the EngineWire plugin (formerly McpAutomationBridge) will
 - **Look and sound**: colour and glow material instances, light flicker (a light function), first-person camera, the sound trigger behaviour, subtitles, sound volume and looping, footstep notifies, prop mass, animation play rate.
 - **Decals** (`Environment/Decals/`): place_decals onto the surface the hit mesh draws (`FDynamicMeshAABBTree3`), texture upright, one transaction.
 - **Find rows carry location** (`GetActorLocation`) for find by class, name, tag, mesh and material.
+- **Console variables** (`ConsoleCommand/McpConsoleVariables.cpp`): get_console_variables reads each named `IConsoleVariable`'s value, type, set-by layer (`GetConsoleVariableSetByName` from 5.3, the version's own enumerators before) and help; a name with a credential word keeps its value back.
 
 ### Fixed
 - **Search**: lead verbs (`McpSearchIntent.cpp`) and fold aliases run the member they name.

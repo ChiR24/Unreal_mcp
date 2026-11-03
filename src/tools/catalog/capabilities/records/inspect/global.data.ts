@@ -1,12 +1,12 @@
 /**
- * Global inspection records (7 actions): project/world/editor settings,
+ * Global inspection records (8 actions): project/world/editor settings, console variables,
  * viewport info, editor selection.
  *
  * get_project_settings is the primary canonical occurrence of
  * cap:shared:get_project_settings (class A, shared with system_control).
  */
 import type { CapabilityRecordSource } from '../../model.js';
-import { buildCoreRecord } from '../core/builder.js';
+import { ANY_EDITOR_STATE, buildCoreRecord } from '../core/builder.js';
 
 const D = 'inspect';
 
@@ -164,6 +164,50 @@ export const GLOBAL_RECORDS: readonly CapabilityRecordSource[] = [
       count: { type: 'number', description: 'Changes listed.' },
       truncated: { type: 'boolean', description: 'More changes are left after these: call again with the cursor returned.' },
       changes: { type: 'array', items: { type: 'object', additionalProperties: true, 'x-unreal-reflection-boundary': true }, description: 'One row per changed object, oldest change first: object (an actor\'s label, or an asset\'s package path), path, kind (actor, asset or level), events (added, modified, deleted, saved, renamed, removed, opened), by (mcp, user, editor), properties (the properties edited, at most 8), values (each edited property with from, its value before the first change kept, when the edit announced it beforehand as the Details panel does, and to, its value after the latest; a property changed back is left out), transform (for a live actor that stands elsewhere than when its first change was kept: location, rotation and scale that differ, each {from, to} as [x, y, z] or [pitch, yaw, roll]), actions (the calls through this server that changed it) and oldPath for a renamed asset.' },
+    },
+  }),
+  // console_command reads a variable typed alone, but it is a write: a client holding only the read scope could not see
+  // how the engine is set.
+  buildCoreRecord({
+    parentTool: 'inspect', action: 'get_console_variables', dispatchAction: 'get_console_variables', domain: D, family: 'global',
+    editorStates: ANY_EDITOR_STATE,
+    topics: ['read console variable', 'cvar value', 'get cvar', 'check console variable', 'engine setting value'],
+    summary: 'Read console variables by name (r.ScreenPercentage, sg.ShadowQuality, r.Lumen.DiffuseIndirect.Allow): each one\'s value, type (bool, int, float, string), the layer that set it last (Constructor, Scalability, ProjectSetting, SystemSettingsIni, DeviceProfile, ConsoleVariablesIni, Commandline, Code, Console and the like) and the first line of its help, without running a command. Names it does not know come back in notFound; a name that is not one (letters, digits, dots and underscores) is refused with INVALID_ARGUMENT. A variable whose name has a credential word in it (key, token, secret, password, auth or credential, as in net.EncryptionKey) keeps its value back (withheld).',
+    whenToUse: [
+      'How the engine is set must be checked: a quality, scalability or rendering setting, before or after changing it.',
+      'Only the read scope is held, which console_command (a write) needs more than.',
+    ],
+    whenNotToUse: [
+      'A variable must be changed (use system_control configure_display setting cvar, or console_command).',
+      'The value is a project or editor setting rather than a console variable (use get_editor_state).',
+    ],
+    inputProps: {
+      names: {
+        type: 'array',
+        items: { type: 'string', maxLength: 128 },
+        minItems: 1,
+        maxItems: 50,
+        description: 'Console variable names to read, exactly as the console takes them (r.ScreenPercentage), 1 to 50.',
+      },
+    },
+    required: ['names'],
+    effect: 'read',
+    exampleInput: { action: 'get_console_variables', names: ['r.ScreenPercentage', 'sg.ShadowQuality'] },
+    exampleOutput: {
+      success: true, message: 'Read 2 console variable(s).',
+      variables: [
+        { name: 'r.ScreenPercentage', value: '100', type: 'float', setBy: 'Constructor', help: 'To render in lower resolution and upscale for better performance (combined up with the blenable post process setting).' },
+        { name: 'sg.ShadowQuality', value: '0', type: 'int', setBy: 'Scalability', help: 'Scalability quality state (internally used by scalability system, ini load/save or using SCALABILITY console command)' },
+      ],
+      notFound: [],
+    },
+    outputProps: {
+      variables: {
+        type: 'array',
+        items: { type: 'object', additionalProperties: true, 'x-unreal-reflection-boundary': true },
+        description: 'One row per variable found, in the order asked: name, value (as the console prints it; absent when withheld), withheld (true when its name reads like a credential), type, setBy and help.',
+      },
+      notFound: { type: 'array', items: { type: 'string' }, description: 'Names asked for that match no console variable (a console command is not one).' },
     },
   }),
 ];

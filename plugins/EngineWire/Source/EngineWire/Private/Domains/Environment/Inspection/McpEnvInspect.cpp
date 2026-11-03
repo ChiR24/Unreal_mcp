@@ -1,5 +1,6 @@
 #include "Domains/Environment/McpEnvShared.h"
 #include "Core/Journal/McpChangeJournal.h"
+#include "Domains/ConsoleCommand/McpConsolePrivate.h"
 #include "Domains/Debug/Explain/McpExplain.h"
 #include "Domains/Debug/Logpoints/McpLogpoints.h"
 #include "Domains/Perception/McpPerception.h"
@@ -115,6 +116,10 @@ bool UEngineWireSubsystem::HandleInspectAction(
     if (LowerSubAction.Equals(TEXT("get_frame_cost")))
     {
         return HandleInspectFrameCostAction(*this, RequestId, RequestingSocket);
+    }
+    if (LowerSubAction.Equals(TEXT("get_console_variables")))
+    {
+        return McpConsoleVariables::HandleGet(*this, RequestId, Payload, RequestingSocket);
     }
     if (LowerSubAction.StartsWith(TEXT("explain_")))
     {
