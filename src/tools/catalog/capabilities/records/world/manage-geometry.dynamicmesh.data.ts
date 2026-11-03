@@ -417,7 +417,8 @@ export const GEOMETRY_DYNAMICMESH_RECORDS: readonly CapabilityRecordSource[] = [
     whenToUse: ['A material needs masks (dirt in crevices, wear on edges, a height gradient) without textures: bake once the shape is final, then convert_to_static_mesh or convert_to_nanite.',
       'Channels: R is ambient occlusion (1 open, 0 occluded); G is 1 minus the convex edge (1 on flat or concave surface, lower along an outward fold such as a rim); B is 1 minus the concave cavity (1 on flat or convex surface, lower in a crease); A is height (0 at the bottom of the bounds, 1 at the top, along local Z).',
       'White means no effect for every channel except height, so a mesh that was never baked, which reads (1, 1, 1, 1), behaves like one whose masks are all quiet.',
-      'The values reach the static mesh unchanged: the conversion cancels the sRGB encoding the static-mesh build applies (UE 5.1 and later), so a material\'s VertexColor node reads the baked value and a stored byte is the value times 255.'],
+      'The values reach the static mesh unchanged: the conversion cancels the sRGB encoding the static-mesh build applies (UE 5.1 and later), so a material\'s VertexColor node reads the baked value and a stored byte is the value times 255.',
+      'A large flat face (a wall, a deck) needs vertices inside it first: a triangle takes its masks from its three corners, so a face longer than aoDistance reads as dark, or as edged, as the places it meets its neighbours. loop_cut adds them; coarseShare in the reply says how much of the surface is still that coarse, and a warning says so past a quarter.'],
     whenNotToUse: ['One flat colour on every vertex is wanted; use set_vertex_color.', 'The mesh will be rebuilt afterwards by morphology or remesh_voxel, which drop vertex colours; bake after them.'],
     inputProps: {
       actorName: P.actorName,
@@ -436,6 +437,7 @@ export const GEOMETRY_DYNAMICMESH_RECORDS: readonly CapabilityRecordSource[] = [
       blurIterations: int('Blur passes that ran.'),
       averages: { type: 'object', description: 'Mean of each channel over the vertices, {r, g, b, a}, to see at a glance whether a mask did anything.', properties: { r: { type: 'number' }, g: { type: 'number' }, b: { type: 'number' }, a: { type: 'number' } }, additionalProperties: false },
       channels: { type: 'string', description: 'What each channel holds.' },
+      coarseShare: { type: 'number', description: 'Share of the surface, 0 to 1, in triangles longer than aoDistance: their masks are blends of their three corners. Past 0.25 a warning names it.' },
     },
     outputRequired: ['actorName', 'vertexCount', 'aoRays', 'aoDistance'],
     exampleInput: { action: 'bake_vertex_colors', actorName: 'DM_Cage', aoRays: 64, blurIterations: 2 },

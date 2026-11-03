@@ -24,6 +24,8 @@ static constexpr int32 DefaultAoRays = 32;
 static constexpr int32 MaxBakeBlurIterations = 16;
 // Vertices times rays one bake may trace; past that the rays are cut (never below the minimum) to keep the call short.
 static constexpr int64 MaxAoRayTests = 16000000;
+// Above this share of the surface in triangles longer than the occlusion reach, the reply warns (BakeCoarseShare).
+static constexpr double CoarseShareWarning = 0.25;
 static constexpr double BakePi = 3.14159265358979323846;
 
 // Area-weighted vertex normals, indexed by vertex id; a vertex no triangle uses stays zero.
@@ -123,6 +125,23 @@ static void BakeFolds(const UE::Geometry::FDynamicMesh3& Mesh, TArray<float>& Ou
     }
 }
 
+// The share of the surface in triangles longer than Distance: such a triangle takes its masks from its three corners
+// alone, so a large flat face reads as dark, or as edged, as the places it meets its neighbours.
+static double BakeCoarseShare(const UE::Geometry::FDynamicMesh3& Mesh, double Distance)
+{
+    double Area = 0.0;
+    double Coarse = 0.0;
+    for (const int32 TriangleId : Mesh.TriangleIndicesItr())
+    {
+        FVector3d A, B, C;
+        Mesh.GetTriVertices(TriangleId, A, B, C);
+        const double TriangleArea = Mesh.GetTriArea(TriangleId);
+        Area += TriangleArea;
+        Coarse += FMath::Max3((B - A).SquaredLength(), (C - B).SquaredLength(), (A - C).SquaredLength()) > Distance * Distance ? TriangleArea : 0.0;
+    }
+    return Area > 0.0 ? Coarse / Area : 0.0;
+}
+
 // Averages every vertex with its one-ring neighbours, Iterations times, over the three masks stored as a vector.
 static void BakeBlurMasks(const UE::Geometry::FDynamicMesh3& Mesh, int32 Iterations, TArray<FVector3f>& InOutMasks)
 {
@@ -169,6 +188,7 @@ bool HandleBakeVertexColors(UEngineWireSubsystem* Self, const FString& RequestId
     TArray<FVector4f> Colors;
     double Distance = 0.0;
     int32 VertexCount = 0;
+    double CoarseShare = 0.0;
     FVector4f Mean(0.0f, 0.0f, 0.0f, 0.0f);
     Target->Mesh->ProcessMesh([&](const UE::Geometry::FDynamicMesh3& Source)
     {
@@ -176,6 +196,7 @@ bool HandleBakeVertexColors(UEngineWireSubsystem* Self, const FString& RequestId
         VertexCount = Source.VertexCount();
         Distance = Payload->HasField(TEXT("aoDistance")) ? GetJsonNumberField(Payload, TEXT("aoDistance"), 0.0) : (Bounds.Max - Bounds.Min).Length() * 0.15;
         Rays = static_cast<int32>(FMath::Clamp<int64>(MaxAoRayTests / FMath::Max(1, VertexCount), MinAoRays, Rays));
+        CoarseShare = BakeCoarseShare(Source, Distance);
 
         TArray<FVector3d> Normals;
         TArray<float> Openness;
@@ -246,6 +267,14 @@ bool HandleBakeVertexColors(UEngineWireSubsystem* Self, const FString& RequestId
     Result->SetNumberField(TEXT("blurIterations"), Blur);
     Result->SetObjectField(TEXT("averages"), Averages);
     Result->SetStringField(TEXT("channels"), TEXT("r ambient occlusion (1 open), g 1 minus convex edge, b 1 minus concave cavity, a height (0 bottom, 1 top); white means no effect except in height"));
+    Result->SetNumberField(TEXT("coarseShare"), FMath::RoundToDouble(CoarseShare * 100.0) / 100.0);
+    if (CoarseShare > CoarseShareWarning)
+    {
+        Result->SetArrayField(TEXT("warnings"), McpHandlerUtils::ToJsonStringArray({FString::Printf(
+            TEXT("%.0f%% of the surface lies in triangles longer than aoDistance (%.0f cm): each takes its masks from its three corners, "
+                 "so a large flat face reads as dark or as edged as the places it meets its neighbours. Add vertices inside the large "
+                 "faces (loop_cut) and bake again."), CoarseShare * 100.0, Distance)}));
+    }
     McpHandlerUtils::AddVerification(Result, Target->Actor);
     Self->SendAutomationResponse(Socket, RequestId, true, TEXT("Vertex colours baked"), Result);
     return true;

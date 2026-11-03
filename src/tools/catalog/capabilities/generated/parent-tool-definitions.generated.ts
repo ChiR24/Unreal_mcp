@@ -24649,6 +24649,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "string",
           "description": "Class of the spawned actor."
         },
+        "coarseShare": {
+          "type": "number",
+          "description": "Share of the surface, 0 to 1, in triangles longer than aoDistance: their masks are blends of their three corners. Past 0.25 a warning names it."
+        },
         "collision": {
           "type": "string",
           "description": "Collision the asset got."

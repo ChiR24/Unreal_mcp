@@ -68,6 +68,15 @@ describe('bake_vertex_colors writes masks the material reads, white meaning no e
     expect(bake()).toContain('GetJsonIntField(Payload, TEXT("blurIterations"), 1), 0, MaxBakeBlurIterations');
   });
 
+  // A big flat face takes its masks from its corners: a house wall read as dark as the deck lips it met.
+  it('measures the surface in triangles longer than the occlusion reach and warns past a quarter', () => {
+    const source = bake();
+    expect(source).toContain('Coarse += FMath::Max3((B - A).SquaredLength(), (C - B).SquaredLength(), (A - C).SquaredLength()) > Distance * Distance ? TriangleArea : 0.0;');
+    expect(source).toContain('CoarseShare = BakeCoarseShare(Source, Distance);');
+    expect(source).toContain('static constexpr double CoarseShareWarning = 0.25;');
+    expect(source).toMatch(/if \(CoarseShare > CoarseShareWarning\)\s*\{\s*Result->SetArrayField\(TEXT\("warnings"\)/u);
+  });
+
   it('the dispatcher routes bake_vertex_colors to HandleBakeVertexColors', () => {
     expect(read('McpGeometryHandlers.cpp')).toContain('if (SubAction == TEXT("bake_vertex_colors")) return HandleBakeVertexColors(this, RequestId, Payload, RequestingSocket);');
   });

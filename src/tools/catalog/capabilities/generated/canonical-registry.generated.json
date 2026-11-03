@@ -1,5 +1,5 @@
 {
-  "catalogRevision": "049b2b5c6e0b7335",
+  "catalogRevision": "face84d0ef4d477d",
   "recordCount": 485,
   "records": [
     {
@@ -83350,6 +83350,7 @@
           "edit=bake_vertex_colors: Channels: R is ambient occlusion (1 open, 0 occluded); G is 1 minus the convex edge (1 on flat or concave surface, lower along an outward fold such as a rim); B is 1 minus the concave cavity (1 on flat or convex surface, lower in a crease); A is height (0 at the bottom of the bounds, 1 at the top, along local Z).",
           "edit=bake_vertex_colors: White means no effect for every channel except height, so a mesh that was never baked, which reads (1, 1, 1, 1), behaves like one whose masks are all quiet.",
           "edit=bake_vertex_colors: The values reach the static mesh unchanged: the conversion cancels the sRGB encoding the static-mesh build applies (UE 5.1 and later), so a material's VertexColor node reads the baked value and a stored byte is the value times 255.",
+          "edit=bake_vertex_colors: A large flat face (a wall, a deck) needs vertices inside it first: a triangle takes its masks from its three corners, so a face longer than aoDistance reads as dark, or as edged, as the places it meets its neighbours. loop_cut adds them; coarseShare in the reply says how much of the surface is still that coarse, and a warning says so past a quarter.",
           "edit=set_material_id: One mesh needs several materials: give each part an id (0 is the default), then bake with convert_to_static_mesh or convert_to_nanite and list one material per id in materials; entry i is the material of id i.",
           "edit=set_material_id: Triangles must be picked by where they are: region.box, region.normal (the top faces are {x:0,y:0,z:1}), region.groupIds or region.materialIds.",
           "edit=set_uvs: An authored vertex needs an exact UV rather than a generated one.",
@@ -84429,6 +84430,10 @@
               "type": "string",
               "description": "What each channel holds."
             },
+            "coarseShare": {
+              "type": "number",
+              "description": "Share of the surface, 0 to 1, in triangles longer than aoDistance: their masks are blends of their three corners. Past 0.25 a warning names it."
+            },
             "materialId": {
               "type": "integer",
               "description": "Material id that was set."
@@ -84794,8 +84799,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "80c4ca68a8283282c06caa9cef3063143609caba534670aedbe27032a27ab45f",
-        "content": "6cfaa9bc578dd5ce88a29acf863873b02ec34f8314ed4db84e3e103e1769d22b"
+        "schema": "d5d8e5c006430b76497dfaa160ee835ad5099a421cae66aa2f3451bd2d390131",
+        "content": "d9e0d2f82e51b2d7c3ee3a3e2665327be240574d71e8fb0d36bf247db58412aa"
       }
     },
     {

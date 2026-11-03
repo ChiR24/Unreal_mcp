@@ -45,6 +45,7 @@ const testCases = [
       { path: 'structuredContent.result.averages.g', approximately: 0, tolerance: 0.001, label: 'every cube vertex is on a quarter-turn convex edge' },
       { path: 'structuredContent.result.averages.b', approximately: 1, tolerance: 0.001, label: 'a convex cube has no cavities' },
       { path: 'structuredContent.result.averages.a', approximately: 0.5, tolerance: 0.01, label: 'half the vertices are at the top' },
+      { path: 'structuredContent.result.coarseShare', equals: 1, label: 'every face is longer than the occlusion reach (15% of the diagonal)' },
     ],
   },
   {
@@ -64,6 +65,11 @@ const testCases = [
       { path: 'structuredContent.result.averages.g', approximately: 1, tolerance: 0.001, label: 'no edge mask' },
       { path: 'structuredContent.result.averages.b', approximately: 1, tolerance: 0.001, label: 'no cavity mask' },
     ],
+  },
+  {
+    scenario: 'BAKE: an occlusion reach longer than every face leaves no coarse surface', toolName: 'manage_geometry',
+    arguments: { action: 'bake_vertex_colors', actorName: FLAT, aoDistance: 200 }, expected: 'success', timeoutMs: 30000,
+    assertions: [{ path: 'structuredContent.result.coarseShare', equals: 0, label: 'no triangle edge is longer than 200 cm' }],
   },
   { scenario: 'BAKE: aoRays outside 8-256 is clamped', toolName: 'manage_geometry', arguments: { action: 'bake_vertex_colors', actorName: FLAT, aoRays: 5000 }, expected: 'success', timeoutMs: 30000, assertions: [{ path: 'structuredContent.result.aoRays', equals: 256, label: 'clamped to the maximum' }] },
 
