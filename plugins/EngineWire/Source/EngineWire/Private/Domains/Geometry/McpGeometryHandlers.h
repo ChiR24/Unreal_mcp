@@ -200,7 +200,6 @@ public:
 private:
 	TWeakObjectPtr<UDynamicMeshComponent> Component;
 	TSharedPtr<const UE::Geometry::FDynamicMesh3, ESPMode::ThreadSafe> Before;
-	uint32 BeforeHash = 0;
 };
 UTexture2D* ResolveGeometryTexture(const FString& TexturePath, FString& OutResolvedPath);
 bool SampleTextureLuminance(UTexture2D* Texture, double U, double V, double& OutLuminance);

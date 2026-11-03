@@ -36,6 +36,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Materials**: an instance draws the parent it is given and picks up its material's edits.
 - **Meshes**: morph targets made from deltas and skin weight profile weights last through rebuilds.
 - **Frame readers** (`describe_view`, `analyze_view`, `audit_materials`) warn while shaders, meshes or textures are still building: water still building read as background.
+- **Geometry**: a material id or PolyGroup edit is its own undo step (the next undo took back the edit before it).
 
 </details>
 

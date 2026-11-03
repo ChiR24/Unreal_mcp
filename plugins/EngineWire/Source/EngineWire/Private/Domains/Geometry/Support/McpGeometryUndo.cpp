@@ -8,43 +8,6 @@
 
 namespace McpGeometryHandlers
 {
-namespace
-{
-// Positions, triangles and the primary UV and normal layers: what a geometry edit changes. Change stamps would be
-// cheaper, but from 5.7 they are off by default and reading one fires an ensure.
-uint32 MeshFingerprint(const UE::Geometry::FDynamicMesh3& Mesh)
-{
-    uint32 Hash = HashCombine(GetTypeHash(Mesh.VertexCount()), GetTypeHash(Mesh.TriangleCount()));
-    for (const int32 Vertex : Mesh.VertexIndicesItr())
-    {
-        Hash = HashCombine(Hash, GetTypeHash(Mesh.GetVertex(Vertex)));
-    }
-    for (const int32 Triangle : Mesh.TriangleIndicesItr())
-    {
-        const UE::Geometry::FIndex3i Tri = Mesh.GetTriangle(Triangle);
-        Hash = HashCombine(HashCombine(HashCombine(Hash, GetTypeHash(Tri.A)), GetTypeHash(Tri.B)), GetTypeHash(Tri.C));
-    }
-    if (const UE::Geometry::FDynamicMeshAttributeSet* Attributes = Mesh.Attributes())
-    {
-        if (const UE::Geometry::FDynamicMeshUVOverlay* UVs = Attributes->PrimaryUV())
-        {
-            for (const int32 Element : UVs->ElementIndicesItr())
-            {
-                Hash = HashCombine(Hash, GetTypeHash(UVs->GetElement(Element)));
-            }
-        }
-        if (const UE::Geometry::FDynamicMeshNormalOverlay* Normals = Attributes->PrimaryNormals())
-        {
-            for (const int32 Element : Normals->ElementIndicesItr())
-            {
-                Hash = HashCombine(Hash, GetTypeHash(Normals->GetElement(Element)));
-            }
-        }
-    }
-    return Hash;
-}
-}
-
 FMcpGeometryUndoScope::FMcpGeometryUndoScope(const TSharedPtr<FJsonObject>& Payload)
 {
     // Only an actor that is there before the request: a create makes its own, and spawning is its own undo step.
@@ -59,7 +22,6 @@ FMcpGeometryUndoScope::FMcpGeometryUndoScope(const TSharedPtr<FJsonObject>& Payl
     Target->GetDynamicMesh()->ProcessMesh([this](const UE::Geometry::FDynamicMesh3& Mesh)
     {
         Before = MakeShared<UE::Geometry::FDynamicMesh3, ESPMode::ThreadSafe>(Mesh);
-        BeforeHash = MeshFingerprint(Mesh);
     });
 }
 
@@ -73,7 +35,12 @@ FMcpGeometryUndoScope::~FMcpGeometryUndoScope()
     TSharedPtr<const UE::Geometry::FDynamicMesh3, ESPMode::ThreadSafe> After;
     Target->GetDynamicMesh()->ProcessMesh([this, &After](const UE::Geometry::FDynamicMesh3& Mesh)
     {
-        if (MeshFingerprint(Mesh) != BeforeHash)
+        // Every part a request can change: positions, triangles, polygroups and each attribute layer (UVs, normals,
+        // colours, material ids). Comparing positions, triangles, UVs and normals alone missed set_material_id and
+        // polygroup edits: they recorded no step, and the next undo rolled back the step before them, edit and all.
+        UE::Geometry::FDynamicMesh3::FSameAsOptions Same;
+        Same.bCheckNormals = Same.bCheckColors = Same.bCheckUVs = Same.bCheckGroups = Same.bCheckAttributes = true;
+        if (!Mesh.IsSameAs(*Before, Same))
         {
             After = MakeShared<UE::Geometry::FDynamicMesh3, ESPMode::ThreadSafe>(Mesh);
         }

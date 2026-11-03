@@ -4402,6 +4402,15 @@ describe('physics bodies, heightmaps and geometry edits do what they say', () =>
     expect(code('Geometry', 'McpGeometryHandlers.cpp')).toContain('const FMcpGeometryUndoScope Undo(Payload);');
     expect(code('Geometry', 'Support', 'McpGeometryUndo.cpp')).toContain('GUndo->StoreUndo(Target, MakeUnique<FMeshReplacementChange>(Before, After))');
   });
+
+  // A hash of positions, triangles, UVs and normals missed a material id or polygroup edit: no step was recorded, and
+  // the next undo rolled back the edit before it, taking the unrecorded one along.
+  it('a geometry edit that changes only material ids or polygroups records its undo step too', () => {
+    const undo = code('Geometry', 'Support', 'McpGeometryUndo.cpp');
+    expect(undo).toContain('Same.bCheckNormals = Same.bCheckColors = Same.bCheckUVs = Same.bCheckGroups = Same.bCheckAttributes = true;');
+    expect(undo).toContain('if (!Mesh.IsSameAs(*Before, Same))');
+    expect(undo).not.toContain('MeshFingerprint');
+  });
 });
 
 describe('landscape edits reach the merged landscape, physics and texture settings refuse what they cannot set', () => {

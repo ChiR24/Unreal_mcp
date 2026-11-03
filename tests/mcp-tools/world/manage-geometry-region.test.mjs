@@ -62,6 +62,10 @@ const testCases = [
   { scenario: 'MATERIAL: a region that matches nothing is refused with the local bounds', toolName: 'manage_geometry', arguments: mat({ materialId: 1, region: { box: { min: { x: 1000, y: 1000, z: 1000 }, max: { x: 2000, y: 2000, z: 2000 } } } }), expected: 'error|REGION_EMPTY' },
   { scenario: 'MATERIAL: triangleIndices and region together are refused', toolName: 'manage_geometry', arguments: mat({ materialId: 1, triangleIndices: [0], region: { groupIds: [0] } }), expected: 'error|INVALID_SELECTION' },
   { scenario: 'MATERIAL: an empty region is refused', toolName: 'manage_geometry', arguments: mat({ materialId: 1, region: {} }), expected: 'error|INVALID_REGION' },
+  // set_material_id changes only the material id layer: its undo step must take that back, and nothing else.
+  { scenario: 'UNDO: set_material_id 9 on every triangle of the cage', toolName: 'manage_geometry', arguments: { action: 'set_material_id', actorName: CAGE, materialId: 9 }, expected: 'success' },
+  { scenario: 'UNDO: undo takes the material id edit back in one step', toolName: 'control_editor', arguments: { action: 'undo' }, expected: 'success', assertions: [{ path: 'structuredContent.result.transaction', equals: 'Edit Dynamic Mesh', label: 'the geometry edit step' }] },
+  { scenario: 'UNDO: no triangle is material 9 after the undo', toolName: 'manage_geometry', arguments: mat({ materialId: 1, region: { materialIds: [9] } }), expected: 'error|REGION_EMPTY' },
   { scenario: 'MATERIAL: a missing materialId is refused', toolName: 'manage_geometry', arguments: { action: 'set_material_id', actorName: CAGE }, expected: 'error|MISSING_PARAMETER' },
 
   // === REGION on the face operators: extrude, inset, outset, offset_faces, bevel, chamfer, poke ===
