@@ -101,6 +101,16 @@ bool FMcpExecuteAggregateTest::RunTest(const FString& Parameters)
 	TestEqual(TEXT("the payload's list is counted, not the envelope's empty warnings"),
 		McpExecuteAggregate::Apply(Spec, nullptr, Lifted)->GetStringField(TEXT("field")), FString(TEXT("actors")));
 	TestTrue(TEXT("a reply with no payload is the same object"), McpLiftReplyPayload(Result) == Result);
+
+	// An actor row names its object (StaticMeshActor_3) and its label (Crate_A): the sample is the label.
+	TSharedPtr<FJsonObject> Labelled = MakeShared<FJsonObject>();
+	Labelled->SetStringField(TEXT("name"), TEXT("StaticMeshActor_3"));
+	Labelled->SetStringField(TEXT("label"), TEXT("Crate_A"));
+	TSharedPtr<FJsonObject> Listed = MakeShared<FJsonObject>();
+	Listed->SetArrayField(TEXT("actors"), TArray<TSharedPtr<FJsonValue>>({MakeShared<FJsonValueObject>(Labelled)}));
+	const TArray<TSharedPtr<FJsonValue>> Sampled =
+		McpExecuteAggregate::Apply(MakeShared<FJsonObject>(), nullptr, Listed)->GetArrayField(TEXT("sample"));
+	TestTrue(TEXT("an actor is sampled by its label"), Sampled.Num() == 1 && Sampled[0]->AsString() == TEXT("Crate_A"));
 	return true;
 }
 

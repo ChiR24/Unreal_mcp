@@ -50,9 +50,11 @@ FString ChooseField(const TSharedPtr<FJsonObject>& Spec, const TSharedPtr<FJsonO
     return Best;
 }
 
+// An actor row's label is the name the outliner and every actor call use; its "name" is the object name
+// (StaticMeshActor_12), so a label wins.
 TSharedPtr<FJsonValue> Handle(const TSharedPtr<FJsonValue>& Item)
 {
-    static const TCHAR* const Handles[] = {TEXT("name"), TEXT("label"), TEXT("actorName"), TEXT("assetPath"), TEXT("path"), TEXT("id")};
+    static const TCHAR* const Handles[] = {TEXT("label"), TEXT("name"), TEXT("actorName"), TEXT("assetPath"), TEXT("path"), TEXT("id")};
     const TSharedPtr<FJsonObject>* Object = nullptr;
     FString Value;
     for (const TCHAR* Field : Handles)
