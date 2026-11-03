@@ -30,6 +30,9 @@ constexpr int32 ShownLimit = 64;           // actors drawn besides the subject
 constexpr double SheetMargin = 1.15;       // the subject fills a tile less this much
 constexpr float ThreeQuarterFov = 40.f;
 constexpr double GridLinesAcross = 6.0;
+// The farthest an elevation stands back, well inside the orthographic far plane (65504 cm at the least under
+// r.Ortho.AutoPlanes, the engine's world limit without it).
+constexpr double MaxBeyond = 25000.0;
 
 struct FSheetView
 {
@@ -137,12 +140,15 @@ bool HandleContactSheet(UEngineWireSubsystem& Bridge, const FString& RequestId, 
         const FVector Right = Axes.GetScaledAxis(EAxis::Y), Up = Axes.GetScaledAxis(EAxis::Z);
         const double Half = FMath::Max(FMath::Abs(Right.X) * Extent.X + FMath::Abs(Right.Y) * Extent.Y + FMath::Abs(Right.Z) * Extent.Z,
                                        FMath::Abs(Up.X) * Extent.X + FMath::Abs(Up.Y) * Extent.Y + FMath::Abs(Up.Z) * Extent.Z) * SheetMargin + 5.0;
-        // An elevation looks from outside everything drawn: from inside a floor slab none of its faces show.
+        // An elevation looks from outside everything drawn: from inside a floor slab none of its faces show. A box it
+        // cannot leave within MaxBeyond is left standing around it: a water zone's spans kilometres, and from beyond it
+        // the subject lay past the far plane, so every elevation beside water came back empty.
         const FVector Toward = Frame.TransformVector(View->Toward.GetSafeNormal());
         double Beyond = Extent.Size();
         for (const FBox& Box : ShownBoxes)
         {
-            Beyond = FMath::Max(Beyond, FVector::DotProduct(Box.GetCenter() - Middle, Toward) + FVector::DotProduct(Box.GetExtent(), Toward.GetAbs()));
+            const double Far = FVector::DotProduct(Box.GetCenter() - Middle, Toward) + FVector::DotProduct(Box.GetExtent(), Toward.GetAbs());
+            Beyond = Far <= MaxBeyond ? FMath::Max(Beyond, Far) : Beyond;
         }
         const double Distance = bOrtho ? Beyond + 100.0 : Extent.Size() * SheetMargin / FMath::Sin(FMath::DegreesToRadians(ThreeQuarterFov * 0.5));
         const FVector Camera = Middle + Toward * Distance;

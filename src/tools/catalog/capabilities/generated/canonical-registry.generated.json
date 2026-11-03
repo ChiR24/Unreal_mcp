@@ -1,5 +1,5 @@
 {
-  "catalogRevision": "1c5040907b3e46e9",
+  "catalogRevision": "cf5cc2c5e8799090",
   "recordCount": 485,
   "records": [
     {
@@ -56315,7 +56315,7 @@
           "elevations of an actor",
           "look at a cube or a prop from the side"
         ],
-        "summary": "One image of an actor from several sides: front, back, left, right and top as true elevations (orthographic, in the actor's own turned frame, with a grid every round number of centimetres) and a three-quarter view, each tile labelled, the actor's size in the title. Shaded as clay from the geometry, the same whatever lights the level: the actor orange, everything else grey, and the parts of the actor hidden behind something (a foot sunk in the floor, a back against a wall) showing through it. Only the actor and the actors within reach of it are drawn, so a wall farther off never hides it while the floor it stands in stays. Returned as an image and written as a PNG under Saved/Captures; the level viewport is not moved.",
+        "summary": "One image of an actor from several sides: front, back, left, right and top as true elevations (orthographic, in the actor's own turned frame, with a grid every round number of centimetres) and a three-quarter view, each tile labelled, the actor's size in the title. Shaded as clay from the geometry, the same whatever lights the level: the actor orange, everything else grey, and the parts of the actor hidden behind something (a foot sunk in the floor, a back against a wall) showing through it. Only the actor and the actors within reach of it are drawn, so a wall farther off never hides it while the floor it stands in stays. Each elevation is taken from outside what it draws, except something reaching more than 250 m past the actor (a water zone, a landscape), which it is taken from inside, so the sides of that one may not show. Returned as an image and written as a PNG under Saved/Captures; the level viewport is not moved.",
         "whenToUse": [
           "Checking an actor from every side at once: sunk into the floor or floating, a missing back, a wrong size against the grid, a part poking through another.",
           "Reviewing a prop or character after placing it, without moving the level viewport."
@@ -56448,7 +56448,7 @@
       },
       "examples": [
         {
-          "title": "One image of an actor from several sides: front, back, left, right and top as true elevations (orthographic, in the actor's own turned frame, with a grid every round number of centimetres) and a three-quarter view, each tile labelled, the actor's size in the title. Shaded as clay from the geometry, the same whatever lights the level: the actor orange, everything else grey, and the parts of the actor hidden behind something (a foot sunk in the floor, a back against a wall) showing through it. Only the actor and the actors within reach of it are drawn, so a wall farther off never hides it while the floor it stands in stays. Returned as an image and written as a PNG under Saved/Captures; the level viewport is not moved.",
+          "title": "One image of an actor from several sides: front, back, left, right and top as true elevations (orthographic, in the actor's own turned frame, with a grid every round number of centimetres) and a three-quarter view, each tile labelled, the actor's size in the title. Shaded as clay from the geometry, the same whatever lights the level: the actor orange, everything else grey, and the parts of the actor hidden behind something (a foot sunk in the floor, a back against a wall) showing through it. Only the actor and the actors within reach of it are drawn, so a wall farther off never hides it while the floor it stands in stays. Each elevation is taken from outside what it draws, except something reaching more than 250 m past the actor (a water zone, a landscape), which it is taken from inside, so the sides of that one may not show. Returned as an image and written as a PNG under Saved/Captures; the level viewport is not moved.",
           "input": {
             "action": "contact_sheet",
             "actorName": "Crate",
@@ -56519,7 +56519,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "0cb65bc762db9b962548f8ae09f188e8966b0466e2d24e104d39347d07fd5efc",
-        "content": "6561198b2a2300cab925719a6d70ffe5838cee27e547c19729fc13d024563c88"
+        "content": "fd5b96d9953808f3247cc666142611149e24c70ff3e49185e503fea1dcbb102f"
       }
     },
     {

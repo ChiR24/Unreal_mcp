@@ -183,9 +183,12 @@ describe('contact_sheet', () => {
   });
 
   // From inside the floor slab a cube was sunk into, none of the slab's faces showed, and the cube read as resting.
-  it('takes each elevation from outside everything it draws', () => {
+  // A water zone's box spans kilometres: from beyond it the subject lay past the orthographic far plane, and every
+  // elevation of a stage beside water came back empty.
+  it('takes each elevation from outside everything it draws, short of a box no camera leaves within the far plane', () => {
     expect(sheet).toContain('const double Distance = bOrtho ? Beyond + 100.0');
-    expect(sheet).toMatch(/for \(const FBox& Box : ShownBoxes\)\s*\{\s*Beyond = FMath::Max\(Beyond,/u);
+    expect(sheet).toContain('constexpr double MaxBeyond = 25000.0;');
+    expect(sheet).toMatch(/for \(const FBox& Box : ShownBoxes\)\s*\{\s*const double Far = [^;]+;\s*Beyond = Far <= MaxBeyond \? FMath::Max\(Beyond, Far\) : Beyond;/u);
   });
 
   it('measures the elevations in the actor\'s own turned frame, orthographic', () => {

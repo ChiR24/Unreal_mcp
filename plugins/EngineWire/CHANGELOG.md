@@ -32,6 +32,7 @@ All notable changes to the EngineWire plugin (formerly McpAutomationBridge) will
 - **Frame readers warn while assets build** (`McpWarnFrameStillBuilding`): shader jobs and `FAssetCompilingManager` builds; a water body whose mesh was still building drew nothing and read as background.
 - **Bevel and chamfer** (`McpGeometryModelingExtrusion.cpp`): a selection cuts its PolyGroup edges (`AllPolygroupEdges`: `TriangleArea` cut only its border, so whole parts got nothing), bevel faces take the material id of the faces worked on (the engine set id 0 on rounded ones), and `NOTHING_BEVELED` answers a cut that adds no triangle.
 - **Geometry undo** (`McpGeometryUndo.cpp`): a change is found with `FDynamicMesh3::IsSameAs`, every attribute compared (a hash of positions, triangles, UVs and normals let material id and PolyGroup edits record no step).
+- **Contact sheet** (`McpPerceptionSheet.cpp`): a box reaching more than 250 m past the actor no longer pushes the elevation camera out (a 40 km water zone put the actor past the far plane).
 
 ## [0.6.0] - 2026-10-27
 
