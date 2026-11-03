@@ -7544,6 +7544,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "boolean",
           "description": "false closes the editor instead of relaunching it (default true). Unsaved packages are refused the same way."
         },
+        "renderSize": {
+          "type": "string",
+          "description": "editor_viewport (and game_viewport while the player is ejected): draw the level viewport's view off-screen at this WxH, 64 to 3840 a side, instead of reading the viewport as it is on screen: \"1920x1080\" is what a 16:9 game window shows. The horizontal field of view is kept, so a 16:9 frame from a viewport wider than that shows more above and below. Drawn through the engine's high resolution screenshot (16 frames first, so lighting and anti-aliasing settle; selection and gizmos left out), which takes a moment longer. resolution still bounds the image returned. Refused for full_editor_window (INVALID_ARGUMENT) and while the player plays (PIE_VIEW_NOT_EJECTED)."
+        },
         "resolution": {
           "type": "string",
           "description": "Maximum WxH for the returned PNG (e.g. \"1280x720\"). The capture is downscaled to fit inside this box with its aspect ratio preserved; a box at least as large as the viewport leaves the image untouched. Without it an image returned inline fits 1600x900, and a file-only capture (returnBase64 false) keeps the viewport size."
@@ -8397,7 +8401,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "viewportWidth": {
           "type": "number",
-          "description": "Width in pixels of the viewport (or, for full_editor_window, the window) the picture was taken at. Present only when the image was downscaled (a resolution, or the 1600x900 inline default), so width/height differ from it."
+          "description": "Width in pixels of the viewport (for full_editor_window the window, with renderSize the size drawn) the picture was taken at. Present only when the image was downscaled (a resolution, or the 1600x900 inline default), so width/height differ from it."
         },
         "wasMinimized": {
           "type": "boolean",

@@ -37,6 +37,7 @@ const testCases = [
   // The game draws its view target's camera until the player is ejected: there is no free camera to move, and the refusal names the fix.
   { scenario: 'ERROR: set_camera while the player is not ejected', toolName: 'control_editor', arguments: { action: 'set_camera', location: cameraLocation, rotation: cameraRotation }, expected: 'error|PIE_VIEW_NOT_EJECTED' },
   { scenario: 'ERROR: screenshot from a camera while the player is not ejected', toolName: 'control_editor', arguments: { action: 'screenshot', mode: 'editor_viewport', resolution: '320x180', location: cameraLocation, rotation: cameraRotation }, expected: 'error|PIE_VIEW_NOT_EJECTED' },
+  { scenario: 'ERROR: screenshot renderSize while the player is not ejected', toolName: 'control_editor', arguments: { action: 'screenshot', mode: 'game_viewport', renderSize: '640x360' }, expected: 'error|PIE_VIEW_NOT_EJECTED' },
   // The other level-viewport moves and toggles refuse the same way, and the view settings reach the game on screen.
   { scenario: 'ERROR: focus_actor while the player is not ejected', toolName: 'control_editor', arguments: { action: 'focus_actor', actorName: FOCUS_ACTOR }, expected: 'error|PIE_VIEW_NOT_EJECTED' },
   { scenario: 'ERROR: set_game_view while the player is not ejected', toolName: 'control_editor', arguments: { action: 'set_game_view', enabled: true }, expected: 'error|PIE_VIEW_NOT_EJECTED' },
@@ -98,6 +99,10 @@ const testCases = [
   { scenario: 'OPTIONAL: screenshot that leaves no file behind', toolName: 'control_editor', arguments: { action: 'screenshot', mode: 'full_editor_window', resolution: '320x180', returnBase64: true, keepFile: false }, expected: 'success' },
   { scenario: 'OPTIONAL: screenshot from a camera placed in the same call', toolName: 'control_editor', arguments: { action: 'screenshot', mode: 'editor_viewport', resolution: '320x180', location: { x: 0, y: -600, z: 300 }, rotation: { pitch: -15, yaw: 90, roll: 0 } }, expected: 'success', assertions: [{ path: 'structuredContent.result.cameraLocation.y', approximately: -600, tolerance: 1, label: 'the picture was taken from the given place' }] },
   { scenario: 'OPTIONAL: keepFile false with returnBase64 false is refused', toolName: 'control_editor', arguments: { action: 'screenshot', mode: 'editor_viewport', keepFile: false, returnBase64: false }, expected: 'error|INVALID_ARGUMENT' },
+  // renderSize draws the view off-screen at that size, whatever shape the viewport has on screen.
+  { scenario: 'ACTION: screenshot drawn at a size of its own', toolName: 'control_editor', arguments: { action: 'screenshot', mode: 'editor_viewport', renderSize: '640x360', keepFile: false }, expected: 'success', assertions: [{ path: 'structuredContent.result.width', equals: 640, label: 'as wide as asked' }, { path: 'structuredContent.result.height', equals: 360, label: 'as tall as asked' }] },
+  { scenario: 'ERROR: screenshot renderSize of a window', toolName: 'control_editor', arguments: { action: 'screenshot', mode: 'full_editor_window', renderSize: '640x360' }, expected: 'error|INVALID_ARGUMENT' },
+  { scenario: 'ERROR: screenshot renderSize too small', toolName: 'control_editor', arguments: { action: 'screenshot', mode: 'editor_viewport', renderSize: '32x18' }, expected: 'error|INVALID_ARGUMENT' },
   // A replay records the running game, so outside PIE there is nothing to record.
   { scenario: 'ERROR: start_recording outside PIE', toolName: 'control_editor', arguments: { action: 'start_recording', name: `Recording_NoPie_${ts}` }, expected: 'error|NO_ACTIVE_SESSION' },
   { scenario: 'ERROR: stop_recording with nothing recording', toolName: 'control_editor', arguments: { action: 'stop_recording' }, expected: 'error|NOT_RECORDING' },

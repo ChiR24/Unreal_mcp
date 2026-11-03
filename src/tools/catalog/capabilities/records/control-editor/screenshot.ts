@@ -19,6 +19,12 @@ const SCREENSHOT_PROPS = {
     type: 'string',
     description: 'Maximum WxH for the returned PNG (e.g. "1280x720"). The capture is downscaled to fit inside this box with its aspect ratio preserved; a box at least as large as the viewport leaves the image untouched. Without it an image returned inline fits 1600x900, and a file-only capture (returnBase64 false) keeps the viewport size.'
   },
+  // The level viewport is as wide as the editor's layout makes it, so a picture from the game's camera showed another
+  // slice of the scene than a 16:9 game window does.
+  renderSize: {
+    type: 'string',
+    description: 'editor_viewport (and game_viewport while the player is ejected): draw the level viewport\'s view off-screen at this WxH, 64 to 3840 a side, instead of reading the viewport as it is on screen: "1920x1080" is what a 16:9 game window shows. The horizontal field of view is kept, so a 16:9 frame from a viewport wider than that shows more above and below. Drawn through the engine\'s high resolution screenshot (16 frames first, so lighting and anti-aliasing settle; selection and gizmos left out), which takes a moment longer. resolution still bounds the image returned. Refused for full_editor_window (INVALID_ARGUMENT) and while the player plays (PIE_VIEW_NOT_EJECTED).'
+  },
   // P.mode is shared with set_editor_mode and named no screenshot source, so
   // the one choice that decides whether UMG shows up was undiscoverable.
   mode: {
@@ -57,7 +63,7 @@ const SCREENSHOT_OUTPUT = {
   mimeType: { type: 'string', description: 'Image MIME type.' },
   width: { type: 'number', description: 'Width in pixels of the PNG actually returned.' },
   height: { type: 'number', description: 'Height in pixels of the PNG actually returned.' },
-  viewportWidth: { type: 'number', description: 'Width in pixels of the viewport (or, for full_editor_window, the window) the picture was taken at. Present only when the image was downscaled (a resolution, or the 1600x900 inline default), so width/height differ from it.' },
+  viewportWidth: { type: 'number', description: 'Width in pixels of the viewport (for full_editor_window the window, with renderSize the size drawn) the picture was taken at. Present only when the image was downscaled (a resolution, or the 1600x900 inline default), so width/height differ from it.' },
   viewportHeight: { type: 'number', description: 'Height in pixels of the viewport or window the picture was taken at. Present only when the image was downscaled.' },
   sizeBytes: { type: 'integer', description: 'Image size in bytes.' },
   screenshotPath: { type: 'string', description: 'Saved screenshot file path.' },

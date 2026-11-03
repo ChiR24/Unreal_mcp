@@ -5511,6 +5511,7 @@
         "query",
         "realtime",
         "relaunch",
+        "renderSize",
         "resolution",
         "returnBase64",
         "rotation",
@@ -5912,6 +5913,10 @@
           "relaunch": {
             "type": "boolean",
             "description": "false closes the editor instead of relaunching it (default true). Unsaved packages are refused the same way."
+          },
+          "renderSize": {
+            "type": "string",
+            "description": "editor_viewport (and game_viewport while the player is ejected): draw the level viewport's view off-screen at this WxH, 64 to 3840 a side, instead of reading the viewport as it is on screen: \"1920x1080\" is what a 16:9 game window shows. The horizontal field of view is kept, so a 16:9 frame from a viewport wider than that shows more above and below. Drawn through the engine's high resolution screenshot (16 frames first, so lighting and anti-aliasing settle; selection and gizmos left out), which takes a moment longer. resolution still bounds the image returned. Refused for full_editor_window (INVALID_ARGUMENT) and while the player plays (PIE_VIEW_NOT_EJECTED)."
           },
           "resolution": {
             "type": "string",

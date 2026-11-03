@@ -52,6 +52,7 @@ bool UEngineWireSubsystem::HandleControlEditorScreenshot(
 
   // An ejected player no longer feeds the game viewport: the picture of the game is the editor viewport that draws it.
   const bool bEjectedView = GetEjectedPieViewportClientForMcp() != nullptr;
+  if (RefuseRenderSizeForMcp(this, Socket, RequestId, Payload, Mode, bEjectedView)) { return true; }
   if (Mode == TEXT("game_viewport") && !bEjectedView) {
     // The UI handler gates on the payload's own subAction, which still carries
     // whichever ALIAS the caller used. `take_screenshot` therefore fell past
@@ -237,24 +238,21 @@ bool UEngineWireSubsystem::HandleControlEditorScreenshot(
   DrawViewportFramesForMcp(Viewport, CaptureClient ? CaptureClient->GetWorld() : nullptr, bCameraMoved ? 3 : 1);
   if (!ViewFrameSettledForMcp(Viewport, Payload)) { RetryLater(); return true; }
 
+  // The viewport's own pixels, or with renderSize its view drawn off-screen at that size (FrameSize).
   TArray<FColor> Bitmap;
-  const FReadSurfaceDataFlags ReadFlags(RCM_UNorm);
-  if (!Viewport->ReadPixels(Bitmap, ReadFlags) || Bitmap.Num() == 0) {
-    SendStandardErrorResponse(this, Socket, RequestId, TEXT("CAPTURE_FAILED"),
-                              TEXT("Failed to read pixels from viewport"), nullptr);
+  FIntPoint FrameSize = ViewportSize;
+  FString FrameCode, FrameError;
+  if (!ReadViewFrameForMcp(Viewport, Payload, Bitmap, FrameSize, FrameCode, FrameError)) {
+    SendStandardErrorResponse(this, Socket, RequestId, FrameCode, FrameError, nullptr);
     return true;
-  }
-
-  for (FColor& Pixel : Bitmap) {
-    Pixel.A = 255;
   }
 
   // "resolution" was declared on this capability but never read, so a 4K
   // viewport could only ever answer IMAGE_TOO_LARGE no matter what the caller
   // asked for. Resample here and the parameter means what the schema says.
-  FIntPoint OutputSize = ViewportSize;
+  FIntPoint OutputSize = FrameSize;
   FString ResolutionError;
-  if (!ResolveScreenshotResolutionForMcp(Payload, ViewportSize, OutputSize,
+  if (!ResolveScreenshotResolutionForMcp(Payload, FrameSize, OutputSize,
                                          ResolutionError)) {
     SendStandardErrorResponse(this, Socket, RequestId, TEXT("INVALID_ARGUMENT"),
                               ResolutionError, nullptr);
@@ -262,12 +260,12 @@ bool UEngineWireSubsystem::HandleControlEditorScreenshot(
   }
 
   TArray<FColor> ResampledBitmap;
-  if (OutputSize != ViewportSize &&
-      Bitmap.Num() >= ViewportSize.X * ViewportSize.Y) {
-    ResampleBitmapForMcp(Bitmap, ViewportSize, ResampledBitmap, OutputSize);
+  if (OutputSize != FrameSize &&
+      Bitmap.Num() >= FrameSize.X * FrameSize.Y) {
+    ResampleBitmapForMcp(Bitmap, FrameSize, ResampledBitmap, OutputSize);
     Bitmap = MoveTemp(ResampledBitmap);
   } else {
-    OutputSize = ViewportSize;
+    OutputSize = FrameSize;
   }
 
   TArray64<uint8> PngData;
@@ -294,13 +292,13 @@ bool UEngineWireSubsystem::HandleControlEditorScreenshot(
     Resp->SetStringField(TEXT("mode"), Mode);
   }
   // width/height describe the PNG actually returned. When a resample happened
-  // the untouched viewport size rides alongside, so a caller comparing the two
-  // can tell a downscaled frame from a native-resolution one.
+  // the size the frame was taken at rides alongside, so a caller comparing the
+  // two can tell a downscaled frame from a native-resolution one.
   Resp->SetNumberField(TEXT("width"), OutputSize.X);
   Resp->SetNumberField(TEXT("height"), OutputSize.Y);
-  if (OutputSize != ViewportSize) {
-    Resp->SetNumberField(TEXT("viewportWidth"), ViewportSize.X);
-    Resp->SetNumberField(TEXT("viewportHeight"), ViewportSize.Y);
+  if (OutputSize != FrameSize) {
+    Resp->SetNumberField(TEXT("viewportWidth"), FrameSize.X);
+    Resp->SetNumberField(TEXT("viewportHeight"), FrameSize.Y);
   }
   // Ship the camera with the picture. Without it a caller cannot tell a correct
   // frame from a frame taken somewhere else entirely, which is exactly how a

@@ -1,0 +1,55 @@
+// Wiring contracts of control_editor screenshot renderSize that no unit test can reach by running it (it draws a
+// viewport). Behaviour belongs to the integration cases in tests/mcp-tools/core/control-editor.test.mjs.
+
+import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
+
+import { describe, expect, it } from 'vitest';
+
+const EDITOR = join('plugins', 'EngineWire', 'Source', 'EngineWire', 'Private', 'Domains', 'ControlEditor');
+
+/** Block and line comments removed, so no assertion can be satisfied by prose. */
+const read = (file: string): string =>
+  readFileSync(join(EDITOR, file), 'utf8').replace(/\/\*[\s\S]*?\*\//gu, ' ').replace(/\/\/[^\n]*/gu, ' ');
+
+describe('screenshot renderSize', () => {
+  const render = (): string => read(join('Camera', 'McpViewRender.cpp'));
+
+  it('refuses a renderSize it cannot honour before the capture, and reads every frame through one helper', () => {
+    const handler = read('McpEditorScreenshot.cpp');
+    expect(handler).toMatch(/if \(RefuseRenderSizeForMcp\(this, Socket, RequestId, Payload, Mode, bEjectedView\)\) \{ return true; \}/u);
+    expect(handler).toContain('ReadViewFrameForMcp(Viewport, Payload, Bitmap, FrameSize, FrameCode, FrameError)');
+    expect(handler).not.toContain('ReadPixels(');
+  });
+
+  it('puts back the engine state it borrows on every path', () => {
+    // The high resolution screenshot state is the editor's own dialog's, and the automation flag changes what the
+    // engine does on every later draw: a path that skipped the restore would leak both.
+    const source = render();
+    const exit = source.slice(source.indexOf('ON_SCOPE_EXIT'));
+    for (const restored of [
+      'Config.CaptureRegion = OldRegion;',
+      'Config.UnscaledCaptureRegion = OldUnscaledRegion;',
+      'Config.bMaskEnabled = bOldMask;',
+      'Config.bCaptureHDR = bOldHdr;',
+      'Config.bDumpBufferVisualizationTargets = bOldDump;',
+      'Config.FilenameOverride = OldFilename;',
+      'GScreenshotResolutionX = OldX;',
+      'GScreenshotResolutionY = OldY;',
+      'GIsHighResScreenshot = false;',
+      'GIsAutomationTesting = bOldAutomation;',
+      'FScreenshotRequest::OnScreenshotCaptured().Remove(Listener);',
+      'IFileManager::Get().Delete(*Scratch, false, true, true);',
+    ]) {
+      expect(exit).toContain(restored);
+    }
+  });
+
+  it('sets the automation flag only around the one synchronous draw', () => {
+    // UE 5.0 and 5.1 hand the frame to listeners only under it, and it keeps the "screenshot saved" toast away.
+    const source = render();
+    const set = source.indexOf('GIsAutomationTesting = true;');
+    expect(set).toBeGreaterThan(source.indexOf('ON_SCOPE_EXIT'));
+    expect(source.slice(set)).toMatch(/^GIsAutomationTesting = true;\s*if \(Viewport->TakeHighResScreenShot\(\)\)\s*\{\s*Viewport->Draw\(\);\s*\}\s*return bCaptured;/u);
+  });
+});

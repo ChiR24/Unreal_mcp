@@ -78,6 +78,14 @@ bool ViewFrameSettledForMcp(FViewport *Viewport, const TSharedPtr<FJsonObject> &
 
 // What a level viewport capture cannot show as it is: a viewport that is not realtime, video memory over budget.
 TArray<TSharedPtr<FJsonValue>> ViewCaptureWarningsForMcp(const FEditorViewportClient *Client);
+// Camera/McpViewRender.cpp, screenshot renderSize ("WxH"): sends the refusal of a renderSize the capture cannot honour
+// (malformed, a window capture, a player in the game) and returns true when it did.
+bool RefuseRenderSizeForMcp(UEngineWireSubsystem *Bridge, TSharedPtr<FMcpBridgeWebSocket> Socket, const FString &RequestId,
+                            const TSharedPtr<FJsonObject> &Payload, const FString &Mode, bool bEjectedView);
+// The frame a viewport capture returns: the viewport's own pixels, or with renderSize its view drawn off-screen at that
+// size, alpha opaque; InOutSize comes back as the frame's size. False with a code and message when no frame came back.
+bool ReadViewFrameForMcp(FViewport *Viewport, const TSharedPtr<FJsonObject> &Payload, TArray<FColor> &OutPixels,
+                         FIntPoint &InOutSize, FString &OutCode, FString &OutError);
 // Resolves a window by list index or case-insensitive title substring.
 TSharedPtr<SWindow> FindEditorSlateWindowForMcp(const FString &Query,
                                                 FString &OutResolvedTitle,
