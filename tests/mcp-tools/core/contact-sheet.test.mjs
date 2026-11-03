@@ -15,10 +15,11 @@ const testCases = [
     { actorName: CUBE, location: { x: 62000, y: 62000, z: 10 } },
   ] }, expected: 'success' },
   { scenario: 'Setup: a sun, so the views are lit', toolName: 'control_actor', arguments: { action: 'spawn', classPath: '/Script/Engine.DirectionalLight', actorName: `MCP_SheetSun_${ts}`, location: { x: 62000, y: 62000, z: 800 }, rotation: { pitch: -40, yaw: 150, roll: 0 }, tags: [TAG] }, expected: 'success' },
-  { scenario: 'READ: the cube from the front and the top', toolName: 'inspect', arguments: { action: 'contact_sheet', actorName: CUBE, views: ['front', 'top'], tileSize: 256 }, expected: 'success', assertions: [
+  { scenario: 'READ: the cube from the front and the top', toolName: 'inspect', arguments: { action: 'contact_sheet', actorName: CUBE, views: ['front', 'top'], tileSize: 256, keepFile: false }, expected: 'success', assertions: [
     { path: 'structuredContent.result.mimeType', equals: 'image/png', label: 'the sheet came back as a PNG' },
     { path: 'structuredContent.result.views', length: 2, label: 'one tile per view asked' },
     { path: 'structuredContent.result.size.z', equals: 100, label: 'the cube is 100 cm tall' },
+    { path: 'structuredContent.result.file', exists: false, label: 'keepFile false leaves no file' },
     { path: 'structuredContent.result.shown.0', equals: `MCP_SheetFloor_${ts}`, label: 'the floor it stands in is drawn too' },
   ] },
   { scenario: 'Setup: a marker that draws only an editor icon', toolName: 'control_actor', arguments: { action: 'spawn', classPath: '/Script/Engine.TargetPoint', actorName: MARKER, location: { x: 62000, y: 62400, z: 100 }, tags: [TAG] }, expected: 'success' },

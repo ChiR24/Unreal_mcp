@@ -19,6 +19,7 @@ All notable changes to the EngineWire plugin (formerly McpAutomationBridge) will
 - **Find rows carry location** (`GetActorLocation`) for find by class, name, tag, mesh and material.
 - **Console variables** (`ConsoleCommand/McpConsoleVariables.cpp`): get_console_variables reads each named `IConsoleVariable`'s value, type, set-by layer (`GetConsoleVariableSetByName` from 5.3, the version's own enumerators before) and help; a name with a credential word keeps its value back.
 - **remove_cpp_class** (`SystemControl/McpSystemCppClassRemove.cpp`): deletes a project module's `<Name>.h`/`.cpp` after checking loaded objects, derived classes, Blueprint parent tags, the packages that use the module (loaded, searched with `FReferenceFinder`) and the project's source; read-only files are never forced.
+- **Sheets can leave no file** (`Perception/McpPerceptionSheetDraw.cpp` `Deliver`): contact and thumbnail sheets write their PNG only when `keepFile` asks or the reply cannot carry it.
 
 ### Fixed
 - **Search**: lead verbs (`McpSearchIntent.cpp`) and fold aliases run the member they name.

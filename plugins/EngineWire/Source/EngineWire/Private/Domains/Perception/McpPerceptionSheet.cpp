@@ -12,14 +12,10 @@
 
 #include "Algo/Find.h"
 #include "Domains/ControlActor/Placement/McpPlacementMount.h"
-#include "Domains/ControlEditor/McpEditorScreenshotSupport.h"
 #include "Domains/Environment/Inspection/McpEnvInspectViewIds.h"
 #include "Domains/Environment/McpEnvShared.h"
 #include "Domains/Perception/McpPerception.h"
 #include "EngineUtils.h"
-#include "ImageUtils.h"
-#include "Misc/Base64.h"
-#include "Misc/FileHelper.h"
 #include "Misc/Paths.h"
 
 namespace McpPerception
@@ -184,15 +180,10 @@ bool HandleContactSheet(UEngineWireSubsystem& Bridge, const FString& RequestId, 
     const FString Title = FString::Printf(TEXT("%s   %.0f x %.0f x %.0f cm"), *Subject->GetActorLabel(), 2.0 * Extent.X, 2.0 * Extent.Y, 2.0 * Extent.Z);
     int32 Width = 0, Height = 0;
     const TArray<FColor> Pixels = Sheet::Compose(Title, Tiles, TileSize, Width, Height);
-    TArray64<uint8> Png;
-    FImageUtils::PNGCompressImageArray(Width, Height, TArrayView64<const FColor>(Pixels.GetData(), Pixels.Num()), Png);
-    const FString File = FPaths::ConvertRelativePathToFull(FPaths::ProjectSavedDir() / TEXT("Captures") /
-        FString::Printf(TEXT("ContactSheet_%s_%s.png"), *FPaths::MakeValidFileName(Subject->GetActorLabel()), *FDateTime::Now().ToString(TEXT("%Y%m%d_%H%M%S"))));
     TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
-    if (FFileHelper::SaveArrayToFile(Png, *File))
-    {
-        Result->SetStringField(TEXT("file"), File);
-    }
+    bool bKeepFile = true;
+    Payload->TryGetBoolField(TEXT("keepFile"), bKeepFile);
+    Sheet::Deliver(Pixels, Width, Height, TEXT("ContactSheet_") + FPaths::MakeValidFileName(Subject->GetActorLabel()), bKeepFile, Result);
     TSharedPtr<FJsonObject> Size = MakeShared<FJsonObject>();
     Size->SetNumberField(TEXT("x"), FMath::RoundToDouble(2.0 * Extent.X));
     Size->SetNumberField(TEXT("y"), FMath::RoundToDouble(2.0 * Extent.Y));
@@ -200,13 +191,6 @@ bool HandleContactSheet(UEngineWireSubsystem& Bridge, const FString& RequestId, 
     Result->SetObjectField(TEXT("size"), Size);
     Result->SetArrayField(TEXT("views"), Rows);
     Result->SetArrayField(TEXT("shown"), Beside);
-    Result->SetNumberField(TEXT("width"), Width);
-    Result->SetNumberField(TEXT("height"), Height);
-    if (Png.Num() <= MaxScreenshotPngBytesForBase64ForMcp)
-    {
-        Result->SetStringField(TEXT("imageBase64"), FBase64::Encode(Png.GetData(), static_cast<uint32>(Png.Num())));
-        Result->SetStringField(TEXT("mimeType"), TEXT("image/png"));
-    }
     McpHandlerUtils::MarkNoAssetsChanged(Result);
     Bridge.SendAutomationResponse(Socket, RequestId, true, FString::Printf(TEXT("Contact sheet of %s: %d view(s), %d x %d."),
         *Subject->GetActorLabel(), Tiles.Num(), Width, Height), Result, FString());

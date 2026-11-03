@@ -19,10 +19,11 @@ const testCases = [
   { scenario: 'Setup: the first rock\'s thumbnail', toolName: 'manage_asset', arguments: { action: 'create_thumbnail', assetPath: ROCK_1, width: 256, height: 256 }, expected: 'success' },
   { scenario: 'Setup: the second rock\'s thumbnail', toolName: 'manage_asset', arguments: { action: 'create_thumbnail', assetPath: ROCK_2, width: 256, height: 256 }, expected: 'success' },
   { scenario: 'Setup: the ball\'s thumbnail', toolName: 'manage_asset', arguments: { action: 'create_thumbnail', assetPath: BALL, width: 256, height: 256 }, expected: 'success' },
-  { scenario: 'READ: a page of two of the three meshes, with their thumbnails', toolName: 'manage_asset', arguments: { action: 'thumbnail_sheet', folder: FOLDER, class: 'StaticMesh', uncaptionedOnly: false, offset: 0, limit: 2 }, expected: 'success', assertions: [
+  { scenario: 'READ: a page of two of the three meshes, with their thumbnails', toolName: 'manage_asset', arguments: { action: 'thumbnail_sheet', folder: FOLDER, class: 'StaticMesh', uncaptionedOnly: false, offset: 0, limit: 2, keepFile: false }, expected: 'success', assertions: [
     { path: 'structuredContent.result.total', equals: 3, label: 'three meshes in the folder' },
     { path: 'structuredContent.result.assets', length: 2, label: 'two on the page' },
     { path: 'structuredContent.result.assets.0.thumbnail', equals: true, label: 'drawn from its thumbnail' },
+    { path: 'structuredContent.result.file', exists: false, label: 'keepFile false leaves no file' },
     { path: 'structuredContent.result.nextOffset', equals: 2, label: 'the next page starts at the third' },
   ] },
   { scenario: 'UPDATE: the ball is captioned', toolName: 'manage_asset', arguments: { action: 'caption_assets', captions: [{ assetPath: BALL, caption: 'a smooth round ball', tags: ['sphere', 'toy'] }] }, expected: 'success', assertions: [

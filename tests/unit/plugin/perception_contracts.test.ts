@@ -213,4 +213,15 @@ describe('contact_sheet', () => {
     expect(draw).toMatch(/if \(Near >= Empty\)\s*\{\s*Out\[Index\] = TileBackground;/u);
     expect(draw).not.toContain('Normal.SizeSquared()');
   });
+
+  // Every sheet left a PNG under Saved/Captures, wanted or not: keepFile false leaves none, unless the reply cannot
+  // carry the picture. thumbnail_sheet hands its picture back through the same code.
+  it('writes the file only when keepFile asks for it or the picture is too large for the reply', () => {
+    expect(draw).toContain('const bool bInReply = Png.Num() <= MaxScreenshotPngBytesForBase64ForMcp;');
+    expect(draw).toMatch(/if \(bKeepFile \|\| !bInReply\)\s*\{\s*const FString File = /u);
+    expect(sheet).toContain('Sheet::Deliver(Pixels, Width, Height, TEXT("ContactSheet_") + FPaths::MakeValidFileName(Subject->GetActorLabel()), bKeepFile, Result);');
+    expect(code('Domains', 'AssetQuery', 'Retrieval', 'McpAssetSheet.cpp')).toContain(
+      'McpPerception::Sheet::Deliver(Pixels, Width, Height, TEXT("ThumbnailSheet"), bKeepFile, Result);',
+    );
+  });
 });

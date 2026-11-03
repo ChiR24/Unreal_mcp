@@ -1,5 +1,5 @@
 {
-  "catalogRevision": "208d4332c55138a8",
+  "catalogRevision": "049b2b5c6e0b7335",
   "recordCount": 485,
   "records": [
     {
@@ -14780,7 +14780,7 @@
           "preview assets",
           "thumbnail grid"
         ],
-        "summary": "Show a page of a folder's assets as one numbered picture: each tile is the thumbnail the editor keeps for the asset (stored in its package when it was saved from the editor, or made this session), labelled with its number and name, three across; an asset with none shows a plain grey tile and thumbnail false in its row (none is rendered: that would load the asset; asset.process_asset process=thumbnail makes one). By default only assets without a caption are shown (uncaptionedOnly), so captioning a page with caption_assets and asking again brings the next ones. Rows give each number its assetPath and class; nextOffset is the next page. The picture is saved under Saved/Captures (file) and returned as an image.",
+        "summary": "Show a page of a folder's assets as one numbered picture: each tile is the thumbnail the editor keeps for the asset (stored in its package when it was saved from the editor, or made this session), labelled with its number and name, three across; an asset with none shows a plain grey tile and thumbnail false in its row (none is rendered: that would load the asset; asset.process_asset process=thumbnail makes one). By default only assets without a caption are shown (uncaptionedOnly), so captioning a page with caption_assets and asking again brings the next ones. Rows give each number its assetPath and class; nextOffset is the next page. The picture is returned as an image and saved under Saved/Captures (file), unless keepFile is false.",
         "whenToUse": [
           "An agent must see what a folder of assets holds (a pack whose names say little) before captioning or choosing them.",
           "Captioning a library: show a page, caption it with caption_assets, show the next."
@@ -14817,6 +14817,10 @@
               "minimum": 1,
               "maximum": 16,
               "description": "Assets on the page (1-16, default 12)."
+            },
+            "keepFile": {
+              "type": "boolean",
+              "description": "false: hand the picture back without leaving a file (default true); one too large to hand back, past 3 MB, is written anyway."
             }
           },
           "required": [],
@@ -14866,7 +14870,7 @@
             },
             "file": {
               "type": "string",
-              "description": "The picture's file under Saved/Captures."
+              "description": "The picture's file under Saved/Captures; absent with keepFile false."
             },
             "width": {
               "type": "number",
@@ -14943,8 +14947,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "7ca68617755727371dc44225c41ac7d27b2bfd7a8765206a2edae3cdeac46a2a",
-        "content": "0f27e7d70aa2ca7cb608d9ea9b60f94f2699e4e1bc36d96a6f21c3a93c046075"
+        "schema": "da65c95fbbd94630492f92fe8181be7cac000e97005608d71ba6a6043684af88",
+        "content": "2c7f4952fe3144375e8d564cf1bd41e2a6065e3c3b3b00918612758c89246339"
       }
     },
     {
@@ -56315,7 +56319,7 @@
           "elevations of an actor",
           "look at a cube or a prop from the side"
         ],
-        "summary": "One image of an actor from several sides: front, back, left, right and top as true elevations (orthographic, in the actor's own turned frame, with a grid every round number of centimetres) and a three-quarter view, each tile labelled, the actor's size in the title. Shaded as clay from the geometry, the same whatever lights the level: the actor orange, everything else grey, and the parts of the actor hidden behind something (a foot sunk in the floor, a back against a wall) showing through it. Only the actor and the actors within reach of it are drawn, so a wall farther off never hides it while the floor it stands in stays. Each elevation is taken from outside what it draws, except something reaching more than 250 m past the actor (a water zone, a landscape), which it is taken from inside, so the sides of that one may not show. Returned as an image and written as a PNG under Saved/Captures; the level viewport is not moved.",
+        "summary": "One image of an actor from several sides: front, back, left, right and top as true elevations (orthographic, in the actor's own turned frame, with a grid every round number of centimetres) and a three-quarter view, each tile labelled, the actor's size in the title. Shaded as clay from the geometry, the same whatever lights the level: the actor orange, everything else grey, and the parts of the actor hidden behind something (a foot sunk in the floor, a back against a wall) showing through it. Only the actor and the actors within reach of it are drawn, so a wall farther off never hides it while the floor it stands in stays. Each elevation is taken from outside what it draws, except something reaching more than 250 m past the actor (a water zone, a landscape), which it is taken from inside, so the sides of that one may not show. Returned as an image and written as a PNG under Saved/Captures (keepFile false leaves no file); the level viewport is not moved.",
         "whenToUse": [
           "Checking an actor from every side at once: sunk into the floor or floating, a missing back, a wrong size against the grid, a part poking through another.",
           "Reviewing a prop or character after placing it, without moving the level viewport."
@@ -56358,6 +56362,10 @@
               "minimum": 128,
               "maximum": 480,
               "description": "Side of each square tile in pixels (default 320); the sheet is three tiles across."
+            },
+            "keepFile": {
+              "type": "boolean",
+              "description": "false: hand the sheet back without leaving a file (default true); one too large to hand back, past 3 MB, is written anyway."
             }
           },
           "required": [
@@ -56385,7 +56393,7 @@
             },
             "file": {
               "type": "string",
-              "description": "Absolute path of the PNG written."
+              "description": "Absolute path of the PNG written; absent with keepFile false."
             },
             "size": {
               "type": "object",
@@ -56448,7 +56456,7 @@
       },
       "examples": [
         {
-          "title": "One image of an actor from several sides: front, back, left, right and top as true elevations (orthographic, in the actor's own turned frame, with a grid every round number of centimetres) and a three-quarter view, each tile labelled, the actor's size in the title. Shaded as clay from the geometry, the same whatever lights the level: the actor orange, everything else grey, and the parts of the actor hidden behind something (a foot sunk in the floor, a back against a wall) showing through it. Only the actor and the actors within reach of it are drawn, so a wall farther off never hides it while the floor it stands in stays. Each elevation is taken from outside what it draws, except something reaching more than 250 m past the actor (a water zone, a landscape), which it is taken from inside, so the sides of that one may not show. Returned as an image and written as a PNG under Saved/Captures; the level viewport is not moved.",
+          "title": "One image of an actor from several sides: front, back, left, right and top as true elevations (orthographic, in the actor's own turned frame, with a grid every round number of centimetres) and a three-quarter view, each tile labelled, the actor's size in the title. Shaded as clay from the geometry, the same whatever lights the level: the actor orange, everything else grey, and the parts of the actor hidden behind something (a foot sunk in the floor, a back against a wall) showing through it. Only the actor and the actors within reach of it are drawn, so a wall farther off never hides it while the floor it stands in stays. Each elevation is taken from outside what it draws, except something reaching more than 250 m past the actor (a water zone, a landscape), which it is taken from inside, so the sides of that one may not show. Returned as an image and written as a PNG under Saved/Captures (keepFile false leaves no file); the level viewport is not moved.",
           "input": {
             "action": "contact_sheet",
             "actorName": "Crate",
@@ -56518,8 +56526,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "0cb65bc762db9b962548f8ae09f188e8966b0466e2d24e104d39347d07fd5efc",
-        "content": "fd5b96d9953808f3247cc666142611149e24c70ff3e49185e503fea1dcbb102f"
+        "schema": "51b72387e472d7b189c6f584006194e1956836b6a55eb4df0d48c4e3da8d41ab",
+        "content": "eaa74c5b49501f933b8f1bc0332550aa2e315084b18870342bf1d62fce7e046d"
       }
     },
     {

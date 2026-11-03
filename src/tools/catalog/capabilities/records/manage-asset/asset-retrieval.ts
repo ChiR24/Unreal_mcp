@@ -14,13 +14,14 @@ const FOLDER = str('Folder to look in, recursively (default /Game).');
 const CLASS = str('Only assets of this class, by its name (StaticMesh, Texture2D, MaterialInstanceConstant, SoundWave, Blueprint...).');
 
 export const ASSET_RETRIEVAL_RECORDS: readonly RecordSpec[] = [
-  r('thumbnail_sheet', 'asset', 'Show a page of a folder\'s assets as one numbered picture: each tile is the thumbnail the editor keeps for the asset (stored in its package when it was saved from the editor, or made this session), labelled with its number and name, three across; an asset with none shows a plain grey tile and thumbnail false in its row (none is rendered: that would load the asset; asset.process_asset process=thumbnail makes one). By default only assets without a caption are shown (uncaptionedOnly), so captioning a page with caption_assets and asking again brings the next ones. Rows give each number its assetPath and class; nextOffset is the next page. The picture is saved under Saved/Captures (file) and returned as an image.',
+  r('thumbnail_sheet', 'asset', 'Show a page of a folder\'s assets as one numbered picture: each tile is the thumbnail the editor keeps for the asset (stored in its package when it was saved from the editor, or made this session), labelled with its number and name, three across; an asset with none shows a plain grey tile and thumbnail false in its row (none is rendered: that would load the asset; asset.process_asset process=thumbnail makes one). By default only assets without a caption are shown (uncaptionedOnly), so captioning a page with caption_assets and asking again brings the next ones. Rows give each number its assetPath and class; nextOffset is the next page. The picture is returned as an image and saved under Saved/Captures (file), unless keepFile is false.',
     schema({
       folder: FOLDER,
       class: CLASS,
       uncaptionedOnly: bool('Only assets with no caption yet (default true); false shows every asset.'),
       offset: { type: 'number', minimum: 0, description: 'How many assets of the list to skip (default 0): the previous reply\'s nextOffset.' },
       limit: { type: 'number', minimum: 1, maximum: 16, description: 'Assets on the page (1-16, default 12).' },
+      keepFile: bool('false: hand the picture back without leaving a file (default true); one too large to hand back, past 3 MB, is written anyway.'),
     }),
     schema({
       success: bool('Operation succeeded.'),
@@ -32,7 +33,7 @@ export const ASSET_RETRIEVAL_RECORDS: readonly RecordSpec[] = [
       } } },
       total: num('Assets in the whole list (after uncaptionedOnly).'),
       nextOffset: num('The offset of the next page; absent on the last.'),
-      file: str('The picture\'s file under Saved/Captures.'),
+      file: str('The picture\'s file under Saved/Captures; absent with keepFile false.'),
       width: num('Picture width in pixels.'),
       height: num('Picture height in pixels.'),
       imageBase64: str('The picture as a PNG, base64, returned as an image; left out past 3 MB (the file has it).'),

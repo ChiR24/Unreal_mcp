@@ -5,7 +5,13 @@
 
 #include "Domains/Perception/McpPerceptionSheet.h"
 
+#include "Dom/JsonObject.h"
+#include "Domains/ControlEditor/McpEditorScreenshotSupport.h"
 #include "Domains/Texture/McpTextRaster.h"
+#include "ImageUtils.h"
+#include "Misc/Base64.h"
+#include "Misc/FileHelper.h"
+#include "Misc/Paths.h"
 #include "Styling/CoreStyle.h"
 
 namespace McpPerception::Sheet
@@ -132,5 +138,29 @@ TArray<FColor> Compose(const FString& Title, const TArray<FTile>& Tiles, int32 T
     }
     DrawLabel(Sheet, OutWidth, FIntRect(0, 0, OutWidth, StripHeight), Title);
     return Sheet;
+}
+
+void Deliver(const TArray<FColor>& Pixels, int32 Width, int32 Height, const FString& Stem, bool bKeepFile, const TSharedPtr<FJsonObject>& Result)
+{
+    TArray64<uint8> Png;
+    FImageUtils::PNGCompressImageArray(Width, Height, TArrayView64<const FColor>(Pixels.GetData(), Pixels.Num()), Png);
+    const bool bInReply = Png.Num() <= MaxScreenshotPngBytesForBase64ForMcp;
+    // A sheet too large for the reply is written whatever keepFile says, or nothing of it would be left.
+    if (bKeepFile || !bInReply)
+    {
+        const FString File = FPaths::ConvertRelativePathToFull(FPaths::ProjectSavedDir() / TEXT("Captures") /
+            FString::Printf(TEXT("%s_%s.png"), *Stem, *FDateTime::Now().ToString(TEXT("%Y%m%d_%H%M%S"))));
+        if (FFileHelper::SaveArrayToFile(Png, *File))
+        {
+            Result->SetStringField(TEXT("file"), File);
+        }
+    }
+    Result->SetNumberField(TEXT("width"), Width);
+    Result->SetNumberField(TEXT("height"), Height);
+    if (bInReply)
+    {
+        Result->SetStringField(TEXT("imageBase64"), FBase64::Encode(Png.GetData(), static_cast<uint32>(Png.Num())));
+        Result->SetStringField(TEXT("mimeType"), TEXT("image/png"));
+    }
 }
 } // namespace McpPerception::Sheet

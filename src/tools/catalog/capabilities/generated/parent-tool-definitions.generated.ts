@@ -8637,6 +8637,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "description": "Which get component details variant to run; omit for 'details'.\ndetails: Return a single component of a world actor (TS dispatches get_components to control_actor and filters locally).\nproperty: Read a property on a world actor component (cross-parent to control_actor).",
           "default": "details"
         },
+        "keepFile": {
+          "type": "boolean",
+          "description": "false: hand the sheet back without leaving a file (default true); one too large to hand back, past 3 MB, is written anyway."
+        },
         "key": {
           "type": "string",
           "description": "The key pressed, by engine key name (SpaceBar, E, Gamepad_FaceButton_Bottom); omitted, any key mapped to the action counts."
@@ -9515,7 +9519,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "file": {
           "type": "string",
-          "description": "Absolute path of the PNG written."
+          "description": "Absolute path of the PNG written; absent with keepFile false."
         },
         "files": {
           "type": "object",
@@ -12907,6 +12911,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "justification": {
           "type": "string",
           "description": "Line alignment of multi-line text: left, center (default) or right."
+        },
+        "keepFile": {
+          "type": "boolean",
+          "description": "false: hand the picture back without leaving a file (default true); one too large to hand back, past 3 MB, is written anyway."
         },
         "key": {
           "type": "string",

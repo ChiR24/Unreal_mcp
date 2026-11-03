@@ -6185,6 +6185,7 @@
         "format",
         "ignoreActors",
         "info",
+        "keepFile",
         "key",
         "kind",
         "labels",
@@ -6380,6 +6381,10 @@
             ],
             "description": "Which get component details variant to run; omit for 'details'.\ndetails: Return a single component of a world actor (TS dispatches get_components to control_actor and filters locally).\nproperty: Read a property on a world actor component (cross-parent to control_actor).",
             "default": "details"
+          },
+          "keepFile": {
+            "type": "boolean",
+            "description": "false: hand the sheet back without leaving a file (default true); one too large to hand back, past 3 MB, is written anyway."
           },
           "key": {
             "type": "string",
@@ -8341,6 +8346,7 @@
         "io",
         "items",
         "justification",
+        "keepFile",
         "key",
         "kind",
         "lacunarity",
@@ -9176,6 +9182,10 @@
           "justification": {
             "type": "string",
             "description": "Line alignment of multi-line text: left, center (default) or right."
+          },
+          "keepFile": {
+            "type": "boolean",
+            "description": "false: hand the picture back without leaving a file (default true); one too large to hand back, past 3 MB, is written anyway."
           },
           "key": {
             "type": "string",

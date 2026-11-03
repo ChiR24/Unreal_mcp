@@ -5,12 +5,7 @@
 
 #include "Domains/AssetQuery/McpAssetQueryPrivate.h"
 #include "Domains/AssetQuery/Retrieval/McpAssetIndex.h"
-#include "Domains/ControlEditor/McpEditorScreenshotSupport.h"
 #include "Domains/Perception/McpPerceptionSheet.h"
-#include "ImageUtils.h"
-#include "Misc/Base64.h"
-#include "Misc/FileHelper.h"
-#include "Misc/Paths.h"
 
 namespace McpAssetQueryHandlers
 {
@@ -120,21 +115,9 @@ bool HandleThumbnailSheet(UEngineWireSubsystem* Bridge, const FString& RequestId
     const FString Title = FString::Printf(TEXT("%s   %d-%d of %d %s"), *Folder, Offset + 1, Offset + Tiles.Num(), Assets.Num(), *Which);
     int32 Width = 0, Height = 0;
     const TArray<FColor> Pixels = McpPerception::Sheet::Compose(Title, Tiles, SheetTile, Width, Height);
-    TArray64<uint8> Png;
-    FImageUtils::PNGCompressImageArray(Width, Height, TArrayView64<const FColor>(Pixels.GetData(), Pixels.Num()), Png);
-    const FString File = FPaths::ConvertRelativePathToFull(FPaths::ProjectSavedDir() / TEXT("Captures") /
-        FString::Printf(TEXT("ThumbnailSheet_%s.png"), *FDateTime::Now().ToString(TEXT("%Y%m%d_%H%M%S"))));
-    if (FFileHelper::SaveArrayToFile(Png, *File))
-    {
-        Result->SetStringField(TEXT("file"), File);
-    }
-    Result->SetNumberField(TEXT("width"), Width);
-    Result->SetNumberField(TEXT("height"), Height);
-    if (Png.Num() <= MaxScreenshotPngBytesForBase64ForMcp)
-    {
-        Result->SetStringField(TEXT("imageBase64"), FBase64::Encode(Png.GetData(), static_cast<uint32>(Png.Num())));
-        Result->SetStringField(TEXT("mimeType"), TEXT("image/png"));
-    }
+    bool bKeepFile = true;
+    Payload->TryGetBoolField(TEXT("keepFile"), bKeepFile);
+    McpPerception::Sheet::Deliver(Pixels, Width, Height, TEXT("ThumbnailSheet"), bKeepFile, Result);
     McpHandlerUtils::MarkNoAssetsChanged(Result);
     Bridge->SendAutomationResponse(Socket, RequestId, true,
         FString::Printf(TEXT("Sheet of %d %s under %s (%d-%d of %d)%s."), Tiles.Num(), *Which, *Folder, Offset + 1, Offset + Tiles.Num(), Assets.Num(),
