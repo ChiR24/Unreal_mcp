@@ -44,9 +44,12 @@ bool AppendPolygonFaces(UE::Geometry::FDynamicMesh3& EditMesh, const FAppendPoly
     }
     TArray<int32> GroupOfFace;
     GroupOfFace.Reserve(Input.Faces.Num());
+    TMap<int32, int32> GroupOfKey;
     for (int32 FaceIndex = 0; FaceIndex < Input.Faces.Num(); ++FaceIndex)
     {
-        GroupOfFace.Add(Input.FaceGroups.Num() > 0 ? Input.FaceGroups[FaceIndex] : EditMesh.AllocateTriangleGroup());
+        const int32 Group = Input.FaceGroups.Num() > 0 ? Input.FaceGroups[FaceIndex] : EditMesh.AllocateTriangleGroup();
+        const int32* Fresh = Input.bFreshGroups ? GroupOfKey.Find(Group) : nullptr;
+        GroupOfFace.Add(!Input.bFreshGroups ? Group : Fresh ? *Fresh : GroupOfKey.Add(Group, EditMesh.AllocateTriangleGroup()));
     }
     for (int32 TriangleIndex = 0; TriangleIndex < Input.Triangles.Num(); ++TriangleIndex)
     {
@@ -98,9 +101,10 @@ bool HandleAppendPolygons(UEngineWireSubsystem* Self, const FString& RequestId,
     FString Error;
     const bool bBoxes = Edit == TEXT("append_cuboids");
     const bool bLoft = Edit == TEXT("append_loft");
-    const TCHAR* Code = bBoxes ? TEXT("INVALID_CUBOIDS") : bLoft ? TEXT("INVALID_LOFT") : TEXT("INVALID_POLYGONS");
+    const bool bTubes = Edit == TEXT("append_tubes");
+    const TCHAR* Code = bBoxes ? TEXT("INVALID_CUBOIDS") : bLoft ? TEXT("INVALID_LOFT") : bTubes ? TEXT("INVALID_TUBES") : TEXT("INVALID_POLYGONS");
     if (!(bBoxes ? ParseAppendBoxesInput(Payload, Input, Error) : bLoft ? ParseAppendLoftInput(Payload, Input, Error)
-                 : ParseAppendPolygonsInput(Payload, Input, Error)))
+                 : bTubes ? ParseAppendTubesInput(Payload, Input, Error) : ParseAppendPolygonsInput(Payload, Input, Error)))
     {
         Self->SendAutomationError(Socket, RequestId, Error, Code);
         return true;
@@ -144,6 +148,7 @@ bool HandleAppendPolygons(UEngineWireSubsystem* Self, const FString& RequestId,
     McpHandlerUtils::AddVerification(Result, TargetActor);
     const FString What = bBoxes ? FString::Printf(TEXT("%d cuboids"), Input.BoxCount)
                        : bLoft ? FString::Printf(TEXT("a loft of %d faces"), Input.Faces.Num())
+                       : bTubes ? FString::Printf(TEXT("%d tube%s of %d faces"), Input.TubeCount, Input.TubeCount == 1 ? TEXT("") : TEXT("s"), Input.Faces.Num())
                                : FString::Printf(TEXT("%d faces"), Input.Faces.Num());
     Self->SendAutomationResponse(Socket, RequestId, true,
         FString::Printf(TEXT("Appended %s (%d triangles)"), *What, Input.Triangles.Num()), Result);

@@ -1,5 +1,5 @@
 /**
- * DynamicMesh authoring records (17 actions), promoted from raw native routes.
+ * DynamicMesh authoring records (18 actions), promoted from raw native routes.
  *
  * These edit a UDynamicMeshComponent on a placed actor vertex by vertex, rather
  * than running a modeling operator over a whole mesh, so they address the mesh
@@ -97,6 +97,28 @@ const LOFT_SECTIONS = {
   maxItems: 256,
   items: { type: 'array', items: POINT, minItems: 2, maxItems: 256 },
   description: 'Cross sections in order along the shape, 2 to 256, each a list of {x, y, z} points in the mesh\'s local space, the same count in every section (3 or more for a closed loop). Point k of one section joins point k of the next, so list every section in the same turning order from the same starting place. A section need not be flat (a raked bow); a section a few cm across gives a blunt end, endPoint a sharp one.',
+};
+const TUBE_RADIUS = (d: string): JsonObject => ({ type: 'number', minimum: 0.01, maximum: 10000, description: d });
+const TUBES = {
+  type: 'array',
+  minItems: 1,
+  maxItems: 500,
+  items: {
+    type: 'object',
+    properties: {
+      points: { type: 'array', items: POINT, minItems: 2, maxItems: 256, description: 'The path the tube follows, 2 to 256 {x, y, z} points in the mesh\'s local space (3 or more when closed): two make a straight pipe or rod, more a bent pipe or a hanging cable. Consecutive points must differ, and a turn sharper than 150 degrees is refused (add a point to round it).' },
+      radius: TUBE_RADIUS('Radius of the tube at its first point, in cm (above 0, at most 10000).'),
+      endRadius: TUBE_RADIUS('Radius at its last point (default radius): the radius runs between the two along the path, for a tapered horn, a cone or a funnel.'),
+      sides: { type: 'integer', minimum: 3, maximum: 64, description: 'Points round each ring (default 12): 6 to 8 for thin cables and rods, 12 to 16 for pipes seen up close.' },
+      closed: { type: 'boolean', description: 'Join the last point back to the first (default false): a ring, a torus, a valve wheel rim, a loop of cable. A closed tube has no caps.' },
+      caps: { type: 'boolean', description: 'Close an open tube\'s two ends with flat faces (default true), on points of their own so the rims stay crisp; false leaves them open (the ends sit inside a wall).' },
+      materialId: { ...MATERIAL_ID, description: 'Material id of the tube and its caps (default 0); a baked asset gets one slot per id.' },
+      repeat: REPEAT('tube'),
+    },
+    required: ['points', 'radius'],
+    additionalProperties: false,
+  },
+  description: 'Tubes to append, at most 500 (and 20000 points once rings and repeats are laid out): each a ring of sides points carried along points without twisting (rotation-minimizing frames), widened at a joint so a corner keeps the tube\'s width. A tube\'s sides share one polygroup and each cap has its own.',
 };
 const PLACEMENTS = {
   type: 'array',
@@ -336,6 +358,27 @@ export const GEOMETRY_DYNAMICMESH_RECORDS: readonly CapabilityRecordSource[] = [
       endPoint: { x: 1200, y: 0, z: 300 },
     },
     exampleOutput: { success: true, actorName: 'DM_Hull', verticesAdded: 9, facesAdded: 9, trianglesAdded: 14, vertexCount: 9, triangleCount: 14, groupCount: 9 },
+  }),
+  buildWorldRecord({
+    parentTool: 'manage_geometry', action: 'append_tubes', plugins: PLUGIN,
+    topics: ['pipes along a wall', 'cables and wires', 'bent pipe or hose', 'rods and rails', 'ring or torus', 'hanging cable'],
+    family: F, summary: 'Append tubes to a DynamicMesh actor in one call, each a ring of points carried along a path without twisting: straight pipes and rods from two points, bent pipes, hanging cables and hoses from more, rings and valve wheels when closed, tapered with endRadius, capped or open, repeated along up to three axes.',
+    whenToUse: ['A model has round parts along a line or a curve: pipes and conduits, cables in a tray, rails, handrails, rods, hoses, chains of rings.',
+      'A ring is wanted (a clamp, a flange, a wheel rim, a torus): closed true joins the path into a loop.',
+      'The same tube repeats (a row of rungs, posts, bars): repeat lays it out count x rows x layers times in the same call.'],
+    whenNotToUse: ['The cross section changes shape along the length (a hull, a car body): use append_loft.',
+      'The part is a plain box: use append_cuboids.'],
+    inputProps: { actorName: P.actorName, tubes: TUBES },
+    required: ['actorName', 'tubes'], effect: 'write', costLatency: 'interactive', costResources: 'medium',
+    outputProps: APPEND_OUT, outputRequired: APPEND_OUT_REQUIRED,
+    exampleInput: {
+      action: 'append_tubes', actorName: 'DM_Pipes',
+      tubes: [
+        { points: [{ x: 0, y: 0, z: 0 }, { x: 400, y: 0, z: 0 }, { x: 400, y: 0, z: 200 }], radius: 10, sides: 12, materialId: 1 },
+        { points: [{ x: 0, y: 30, z: 40 }, { x: 0, y: 30, z: -40 }, { x: 0, y: -30, z: -40 }, { x: 0, y: -30, z: 40 }], radius: 2, sides: 6, closed: true, repeat: { count: 4, offset: { x: 100 } } },
+      ],
+    },
+    exampleOutput: { success: true, actorName: 'DM_Pipes', verticesAdded: 156, facesAdded: 122, trianglesAdded: 260, vertexCount: 156, triangleCount: 260, groupCount: 7 },
   }),
   buildWorldRecord({
     parentTool: 'manage_geometry', action: 'append_mesh', plugins: PLUGIN,

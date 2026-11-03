@@ -10,11 +10,6 @@
 
 namespace McpGeometryHandlers
 {
-namespace
-{
-constexpr int32 MaxShapePoints = 20000;
-constexpr int32 MaxRepeat = 1000;
-
 bool ReadPointValue(const TSharedPtr<FJsonValue>& Value, FVector3d& Out)
 {
     const TSharedPtr<FJsonObject>* Point = nullptr;
@@ -28,6 +23,20 @@ bool ReadPointValue(const TSharedPtr<FJsonValue>& Value, FVector3d& Out)
     Out = FVector3d(X, Y, Z);
     return true;
 }
+
+bool ReadCount(const TSharedPtr<FJsonObject>& Object, const TCHAR* Field, int32 Default, int32 Min, int32 Max, int32& Out)
+{
+    double Number = Default;
+    if (Object->HasField(Field) && !Object->TryGetNumberField(Field, Number)) return false;
+    if (!FMath::IsFinite(Number) || Number != FMath::FloorToDouble(Number) || Number < Min || Number > Max) return false;
+    Out = static_cast<int32>(Number);
+    return true;
+}
+
+namespace
+{
+constexpr int32 MaxShapePoints = 20000;
+constexpr int32 MaxRepeat = 1000;
 
 // An optional {x, y, z} field; false only when it is present and malformed.
 bool ReadOptionalPoint(const TSharedPtr<FJsonObject>& Object, const TCHAR* Field, FVector3d& Out, bool& bOutFound)
@@ -49,16 +58,6 @@ bool ReadOffset(const TSharedPtr<FJsonObject>& Object, const TCHAR* Field, FVect
         if ((*Step)->HasField(Axes[Axis]) && (!(*Step)->TryGetNumberField(Axes[Axis], Value) || !FMath::IsFinite(Value))) return false;
         Out[Axis] = Value;
     }
-    return true;
-}
-
-// A whole number in [Min, Max] when present, else Default.
-bool ReadCount(const TSharedPtr<FJsonObject>& Object, const TCHAR* Field, int32 Default, int32 Min, int32 Max, int32& Out)
-{
-    double Number = Default;
-    if (Object->HasField(Field) && !Object->TryGetNumberField(Field, Number)) return false;
-    if (!FMath::IsFinite(Number) || Number != FMath::FloorToDouble(Number) || Number < Min || Number > Max) return false;
-    Out = static_cast<int32>(Number);
     return true;
 }
 

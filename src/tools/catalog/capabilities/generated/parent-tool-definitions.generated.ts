@@ -23174,6 +23174,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             "append_polygons",
             "append_cuboids",
             "append_loft",
+            "append_tubes",
             "append_mesh",
             "delete_triangles",
             "set_vertex_position",
@@ -23185,7 +23186,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             "translate",
             "difference"
           ],
-          "description": "Which edit dynamic mesh variant to run.\ncreate: Spawn a DynamicMesh actor to author geometry into: empty, or a copy of a static mesh asset. One undo step.\nappend_vertex: Append one vertex to a DynamicMesh actor and return its index.\nappend_triangle: Append a triangle to a DynamicMesh actor from three corner positions.\nappend_polygons: Author a polygon cage on a DynamicMesh actor in one call: new vertices and faces of three or more corners, each with its own polygroup and material id.\nappend_cuboids: Append axis-aligned boxes to a DynamicMesh actor in one call, each with a material id, faces left open and a repeat along up to three axes (a railing, a stack of crates, a grid of windows, shelves, pillars), wound outward for you.\nappend_loft: Append a surface lofted through cross sections to a DynamicMesh actor: each section a loop of points (the same count in every one), joined in order with every face turned outward, the ends capped flat or closed to a tip point.\nappend_mesh: Copy a static mesh asset into a DynamicMesh actor at placements, each repeated along up to three axes, with its material slots mapped to the target's material ids (a list cycles copy by copy for colour variety): a model assembled from detailed parts in one call, its copies keeping the asset's normals and UVs.\ndelete_triangles: Delete the triangles of a DynamicMesh actor that triangleIndices or a region picks (by box, facing direction, polygroup or material id), with the points only they used.\nset_vertex_position: Move one vertex of a DynamicMesh actor to a new position.\nset_vertex_color: Set the vertex colour on one vertex, or on every vertex, of a DynamicMesh actor.\nbake_vertex_colors: Bake ambient occlusion, convex-edge, concave-cavity and height masks into the vertex colours of a DynamicMesh actor, for a material to read through its VertexColor node.\nset_material_id: Set the material id (the static-mesh material slot) of triangles of a DynamicMesh actor: every triangle, the triangleIndices you list, or a region.\nset_uvs: Set the UV coordinate of one vertex on a UV channel of a DynamicMesh actor.\nsplit_normals: Split the normals of a DynamicMesh actor above an angle threshold to harden edges.\ntranslate: Translate every vertex of a DynamicMesh actor, leaving the actor transform alone.\ndifference: Subtract a tool mesh from a target mesh under the difference spelling of boolean_subtract."
+          "description": "Which edit dynamic mesh variant to run.\ncreate: Spawn a DynamicMesh actor to author geometry into: empty, or a copy of a static mesh asset. One undo step.\nappend_vertex: Append one vertex to a DynamicMesh actor and return its index.\nappend_triangle: Append a triangle to a DynamicMesh actor from three corner positions.\nappend_polygons: Author a polygon cage on a DynamicMesh actor in one call: new vertices and faces of three or more corners, each with its own polygroup and material id.\nappend_cuboids: Append axis-aligned boxes to a DynamicMesh actor in one call, each with a material id, faces left open and a repeat along up to three axes (a railing, a stack of crates, a grid of windows, shelves, pillars), wound outward for you.\nappend_loft: Append a surface lofted through cross sections to a DynamicMesh actor: each section a loop of points (the same count in every one), joined in order with every face turned outward, the ends capped flat or closed to a tip point.\nappend_tubes: Append tubes to a DynamicMesh actor in one call, each a ring of points carried along a path without twisting: straight pipes and rods from two points, bent pipes, hanging cables and hoses from more, rings and valve wheels when closed, tapered with endRadius, capped or open, repeated along up to three axes.\nappend_mesh: Copy a static mesh asset into a DynamicMesh actor at placements, each repeated along up to three axes, with its material slots mapped to the target's material ids (a list cycles copy by copy for colour variety): a model assembled from detailed parts in one call, its copies keeping the asset's normals and UVs.\ndelete_triangles: Delete the triangles of a DynamicMesh actor that triangleIndices or a region picks (by box, facing direction, polygroup or material id), with the points only they used.\nset_vertex_position: Move one vertex of a DynamicMesh actor to a new position.\nset_vertex_color: Set the vertex colour on one vertex, or on every vertex, of a DynamicMesh actor.\nbake_vertex_colors: Bake ambient occlusion, convex-edge, concave-cavity and height masks into the vertex colours of a DynamicMesh actor, for a material to read through its VertexColor node.\nset_material_id: Set the material id (the static-mesh material slot) of triangles of a DynamicMesh actor: every triangle, the triangleIndices you list, or a region.\nset_uvs: Set the UV coordinate of one vertex on a UV channel of a DynamicMesh actor.\nsplit_normals: Split the normals of a DynamicMesh actor above an angle threshold to harden edges.\ntranslate: Translate every vertex of a DynamicMesh actor, leaving the actor transform alone.\ndifference: Subtract a tool mesh from a target mesh under the difference spelling of boolean_subtract."
         },
         "enableCollision": {
           "type": "boolean",
@@ -24408,6 +24409,168 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "trimActorName": {
           "type": "string",
           "description": "Trim actor name for boolean trim."
+        },
+        "tubes": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 500,
+          "items": {
+            "type": "object",
+            "properties": {
+              "points": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "x": {
+                      "type": "number",
+                      "description": "X"
+                    },
+                    "y": {
+                      "type": "number",
+                      "description": "Y"
+                    },
+                    "z": {
+                      "type": "number",
+                      "description": "Z"
+                    }
+                  },
+                  "required": [
+                    "x",
+                    "y",
+                    "z"
+                  ],
+                  "additionalProperties": false
+                },
+                "minItems": 2,
+                "maxItems": 256,
+                "description": "The path the tube follows, 2 to 256 {x, y, z} points in the mesh's local space (3 or more when closed): two make a straight pipe or rod, more a bent pipe or a hanging cable. Consecutive points must differ, and a turn sharper than 150 degrees is refused (add a point to round it)."
+              },
+              "radius": {
+                "type": "number",
+                "minimum": 0.01,
+                "maximum": 10000,
+                "description": "Radius of the tube at its first point, in cm (above 0, at most 10000)."
+              },
+              "endRadius": {
+                "type": "number",
+                "minimum": 0.01,
+                "maximum": 10000,
+                "description": "Radius at its last point (default radius): the radius runs between the two along the path, for a tapered horn, a cone or a funnel."
+              },
+              "sides": {
+                "type": "integer",
+                "minimum": 3,
+                "maximum": 64,
+                "description": "Points round each ring (default 12): 6 to 8 for thin cables and rods, 12 to 16 for pipes seen up close."
+              },
+              "closed": {
+                "type": "boolean",
+                "description": "Join the last point back to the first (default false): a ring, a torus, a valve wheel rim, a loop of cable. A closed tube has no caps."
+              },
+              "caps": {
+                "type": "boolean",
+                "description": "Close an open tube's two ends with flat faces (default true), on points of their own so the rims stay crisp; false leaves them open (the ends sit inside a wall)."
+              },
+              "materialId": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 255,
+                "description": "Material id of the tube and its caps (default 0); a baked asset gets one slot per id."
+              },
+              "repeat": {
+                "type": "object",
+                "properties": {
+                  "count": {
+                    "type": "integer",
+                    "minimum": 1,
+                    "maximum": 1000,
+                    "description": "Copies along offset, the tube itself included (default 1)."
+                  },
+                  "offset": {
+                    "type": "object",
+                    "properties": {
+                      "x": {
+                        "type": "number",
+                        "description": "X"
+                      },
+                      "y": {
+                        "type": "number",
+                        "description": "Y"
+                      },
+                      "z": {
+                        "type": "number",
+                        "description": "Z"
+                      }
+                    },
+                    "required": [],
+                    "additionalProperties": false,
+                    "description": "Step from one copy to the next, e.g. {x: 200} for one every 2 m."
+                  },
+                  "rows": {
+                    "type": "integer",
+                    "minimum": 1,
+                    "maximum": 1000,
+                    "description": "Rows of those copies (default 1)."
+                  },
+                  "rowOffset": {
+                    "type": "object",
+                    "properties": {
+                      "x": {
+                        "type": "number",
+                        "description": "X"
+                      },
+                      "y": {
+                        "type": "number",
+                        "description": "Y"
+                      },
+                      "z": {
+                        "type": "number",
+                        "description": "Z"
+                      }
+                    },
+                    "required": [],
+                    "additionalProperties": false,
+                    "description": "Step from one row to the next."
+                  },
+                  "layers": {
+                    "type": "integer",
+                    "minimum": 1,
+                    "maximum": 1000,
+                    "description": "Layers of those rows (default 1), e.g. the tiers of a stack."
+                  },
+                  "layerOffset": {
+                    "type": "object",
+                    "properties": {
+                      "x": {
+                        "type": "number",
+                        "description": "X"
+                      },
+                      "y": {
+                        "type": "number",
+                        "description": "Y"
+                      },
+                      "z": {
+                        "type": "number",
+                        "description": "Z"
+                      }
+                    },
+                    "required": [],
+                    "additionalProperties": false,
+                    "description": "Step from one layer to the next."
+                  }
+                },
+                "additionalProperties": false,
+                "description": "Lay the tube out count x rows x layers times, each copy moved by offset per step, rowOffset per row and layerOffset per layer. A step larger than the tube leaves a gap between copies."
+              }
+            },
+            "required": [
+              "points",
+              "radius"
+            ],
+            "additionalProperties": false
+          },
+          "description": "Tubes to append, at most 500 (and 20000 points once rings and repeats are laid out): each a ring of sides points carried along points without twisting (rotation-minimizing frames), widened at a joint so a corner keeps the tube's width. A tube's sides share one polygroup and each cap has its own."
         },
         "u": {
           "type": "number",

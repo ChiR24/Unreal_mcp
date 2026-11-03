@@ -181,7 +181,7 @@ bool HandleAppendMesh(UEngineWireSubsystem* Self, const FString& RequestId,
     Result->SetArrayField(TEXT("materialIdsInUse"), MaterialIdsInUseJson(Mesh));
     McpHandlerUtils::AddVerification(Result, TargetActor);
     Self->SendAutomationResponse(Socket, RequestId, true,
-        FString::Printf(TEXT("Appended %lld copies of %s (%lld triangles)"), Copies, *MeshPath, PartTriangles * Copies), Result);
+        FString::Printf(TEXT("Appended %lld %s of %s (%lld triangles)"), Copies, Copies == 1 ? TEXT("copy") : TEXT("copies"), *MeshPath, PartTriangles * Copies), Result);
     return true;
 }
 } // namespace McpGeometryHandlers

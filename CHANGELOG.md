@@ -21,6 +21,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **`remove_cpp_class`** removes a project C++ class (its header and .cpp) once nothing uses it, and names what does when something still does.
 - **`contact_sheet` and `thumbnail_sheet`** take `keepFile: false` to hand the picture back without leaving a file under `Saved/Captures`.
 - **`bake_vertex_colors`** reports `coarseShare` and warns when large faces can only take their masks from their corners (add vertices with `loop_cut` first).
+- **`append_tubes`** lays pipes, cables, rods and rings along paths in one call: rings carried without twisting, mitred corners, a taper, caps and repeats.
 - **`screenshot`, `describe_view`, `analyze_view`, `audit_materials` and `capture_passes`** take `fov` beside `location` and `rotation` (the editor resets its own on restart); `compareWith` retakes at the saved one.
 - **Actors**: `snap_to_grid`, `distribute_actors`, `align_actors`, `lock_actors`, `group_actors`, `randomize_transforms`, `replace_actors`, `convert_actors_to_blueprint`, `move_actors_to_level`, numbered batch `rename`, copies along a spline, `place_decals`, and `find` rows that say where each actor is.
 - **Look and sound**: `set_material` `color` / `glow`, light `flicker`, a first-person camera view, `add_behaviour` `sound_trigger`, `set_subtitles`, `set_sound_volume`, `set_sound_looping`, footstep sounds on a walk cycle, animation play rate, a prop's `massKg`.

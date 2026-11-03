@@ -77,9 +77,31 @@ describe('append_polygons validates everything before it touches the mesh', () =
     expect(source).toContain('Result->SetNumberField(TEXT("verticesAdded"), VerticesAdded);');
   });
 
-  it('the dispatcher routes append_polygons, append_cuboids and append_loft to HandleAppendPolygons', () => {
+  it('the dispatcher routes append_polygons, append_cuboids, append_loft and append_tubes to HandleAppendPolygons', () => {
     expect(read('McpGeometryHandlers.cpp')).toMatch(
-      /SubAction == TEXT\("append_polygons"\) \|\| SubAction == TEXT\("append_cuboids"\) \|\| SubAction == TEXT\("append_loft"\)\)\s*return HandleAppendPolygons\(this, RequestId, Payload, RequestingSocket, SubAction\);/u);
+      /SubAction == TEXT\("append_polygons"\) \|\| SubAction == TEXT\("append_cuboids"\) \|\| SubAction == TEXT\("append_loft"\) \|\| SubAction == TEXT\("append_tubes"\)\)\s*return HandleAppendPolygons\(this, RequestId, Payload, RequestingSocket, SubAction\);/u);
+  });
+});
+
+// Pipes and cables took one loft each, with every ring point computed by the caller; append_tubes builds the rings itself.
+describe('append_tubes carries rings along a path and appends them as a validated cage', () => {
+  const tubes = read('Modeling', 'McpGeometryAppendTubes.cpp');
+
+  it('frames the rings by double reflection and spreads a closed loop\'s turn back along it', () => {
+    expect(tubes).toContain('const FVector3d RL = R - (2.0 / C1) * V1.Dot(R) * V1;');
+    expect(tubes).toContain('const double Turn = FMath::Atan2(T[0].Dot(Back.Cross(R[0])), Back.Dot(R[0]));');
+  });
+
+  it('refuses zero-length segments and turns past 150 degrees, and caps the points before the mesh is touched', () => {
+    expect(tubes).toContain('constexpr double MinTubeTurnCos = -0.866;');
+    expect(tubes).toContain('if (OutInput.Vertices.Num() + Points > MaxTubeVertices)');
+    expect(tubes).toContain('return FinishAppendPolygonsInput(OutInput, OutError);');
+  });
+
+  // A tube's sides share a polygroup; given as keys, the groups are allocated at append time and never merge with the mesh's.
+  it('gives each tube side and cap a fresh polygroup when appended', () => {
+    expect(tubes).toContain('OutInput.bFreshGroups = true;');
+    expect(read('Modeling', 'McpGeometryAppendPolygons.cpp')).toContain('GroupOfKey.Add(Group, EditMesh.AllocateTriangleGroup())');
   });
 });
 

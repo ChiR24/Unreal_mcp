@@ -5,8 +5,8 @@
  * Covers the happy path (a six-quad cube, one polygroup per face by default), every parameter the record
  * declares (vertices, faces, faceGroups, faceMaterials), the ear clipping of a concave face, and the refusals a
  * bad cage owes its author: each names the face at fault and leaves the mesh as it was. The cage builders that
- * share its validation (append_cuboids, append_loft), copies of an asset (append_mesh) and delete_triangles
- * follow.
+ * share its validation (append_cuboids, append_loft, append_tubes), copies of an asset (append_mesh) and
+ * delete_triangles follow.
  */
 
 import { runToolTests } from '../../test-runner.mjs';
@@ -159,6 +159,38 @@ const testCases = [
   },
   { scenario: 'LOFT: sections of different point counts are refused', toolName: 'manage_geometry', arguments: { action: 'append_loft', actorName: SETUP, sections: [[{ x: 0, y: 0, z: 0 }, { x: 0, y: 1, z: 0 }, { x: 0, y: 0, z: 1 }], [{ x: 1, y: 0, z: 0 }, { x: 1, y: 1, z: 0 }]] }, expected: 'error|INVALID_LOFT' },
   { scenario: 'LOFT: a tip point on an open sheet is refused', toolName: 'manage_geometry', arguments: { action: 'append_loft', actorName: SETUP, closed: false, endPoint: { x: 5, y: 0, z: 0 }, sections: [[{ x: 0, y: 0, z: 0 }, { x: 0, y: 1, z: 0 }], [{ x: 1, y: 0, z: 0 }, { x: 1, y: 1, z: 0 }]] }, expected: 'error|INVALID_LOFT' },
+
+  // === TUBES: rings carried along a path without twisting, capped on points of their own ===
+  {
+    scenario: 'TUBES: append_tubes lays a bent capped pipe and a closed square ring repeated four times', toolName: 'manage_geometry',
+    arguments: {
+      action: 'append_tubes', actorName: SCRATCH,
+      tubes: [
+        { points: [{ x: 0, y: 0, z: 0 }, { x: 400, y: 0, z: 0 }, { x: 400, y: 0, z: 200 }], radius: 10, sides: 12, materialId: 1 },
+        { points: [{ x: 0, y: 30, z: 40 }, { x: 0, y: 30, z: -40 }, { x: 0, y: -30, z: -40 }, { x: 0, y: -30, z: 40 }], radius: 2, sides: 6, closed: true, repeat: { count: 4, offset: { x: 100 } } },
+      ],
+    },
+    expected: 'success',
+    assertions: [
+      { path: 'structuredContent.result.facesAdded', equals: 122, label: '24 quads and two caps for the pipe, 24 quads per ring' },
+      { path: 'structuredContent.result.trianglesAdded', equals: 260, label: 'quads are two triangles, a 12-sided cap ten' },
+      { path: 'structuredContent.result.verticesAdded', equals: 156, label: 'three rings and two cap rims for the pipe, four rings per ring tube' },
+    ],
+  },
+  {
+    scenario: 'TUBES: a tapered horn (endRadius) left open at both ends (caps false)', toolName: 'manage_geometry',
+    arguments: { action: 'append_tubes', actorName: SCRATCH, tubes: [{ points: [{ x: 0, y: 500, z: 0 }, { x: 0, y: 500, z: 300 }], radius: 20, endRadius: 5, sides: 8, caps: false }] },
+    expected: 'success',
+    assertions: [{ path: 'structuredContent.result.facesAdded', equals: 8, label: 'one quad per side, no caps' }],
+  },
+  { scenario: 'TUBES: a closed tube of two points is refused (a loop needs three)', toolName: 'manage_geometry', arguments: { action: 'append_tubes', actorName: SCRATCH, tubes: [{ points: [{ x: 0, y: 0, z: 0 }, { x: 100, y: 0, z: 0 }], radius: 5, closed: true }] }, expected: 'error|INVALID_TUBES' },
+  { scenario: 'TUBES: two points in the same place are refused', toolName: 'manage_geometry', arguments: { action: 'append_tubes', actorName: SCRATCH, tubes: [{ points: [{ x: 0, y: 0, z: 0 }, { x: 0, y: 0, z: 0 }], radius: 5 }] }, expected: 'error|INVALID_TUBES' },
+  { scenario: 'TUBES: a path that turns back on itself is refused', toolName: 'manage_geometry', arguments: { action: 'append_tubes', actorName: SCRATCH, tubes: [{ points: [{ x: 0, y: 0, z: 0 }, { x: 100, y: 0, z: 0 }, { x: 0, y: 0, z: 5 }], radius: 5 }] }, expected: 'error|INVALID_TUBES' },
+  {
+    scenario: 'TUBES: rings and repeats past 20000 points are refused before the mesh is touched', toolName: 'manage_geometry',
+    arguments: { action: 'append_tubes', actorName: SCRATCH, tubes: [{ points: Array.from({ length: 200 }, (_, i) => ({ x: i * 10, y: 900, z: 0 })), radius: 3, sides: 64, repeat: { count: 2, offset: { y: 50 } } }] },
+    expected: 'error|INVALID_TUBES',
+  },
 
   // === MESH: copies of a static mesh asset, repeated, their slots mapped to cycling ids ===
   { scenario: 'Setup: create the kitbash actor', toolName: 'manage_geometry', arguments: create(KIT), expected: 'success' },

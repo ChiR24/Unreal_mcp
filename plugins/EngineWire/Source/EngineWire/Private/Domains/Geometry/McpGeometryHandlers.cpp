@@ -77,7 +77,7 @@ bool UEngineWireSubsystem::HandleGeometryAction(
     if (SubAction == TEXT("append_triangle")) return HandleAppendTriangle(this, RequestId, Payload, RequestingSocket);
     if (SubAction == TEXT("append_mesh")) return HandleAppendMesh(this, RequestId, Payload, RequestingSocket);
     if (SubAction == TEXT("delete_triangles")) return HandleDeleteTriangles(this, RequestId, Payload, RequestingSocket);
-    if (SubAction == TEXT("append_polygons") || SubAction == TEXT("append_cuboids") || SubAction == TEXT("append_loft"))
+    if (SubAction == TEXT("append_polygons") || SubAction == TEXT("append_cuboids") || SubAction == TEXT("append_loft") || SubAction == TEXT("append_tubes"))
         return HandleAppendPolygons(this, RequestId, Payload, RequestingSocket, SubAction);
 
     // Booleans
