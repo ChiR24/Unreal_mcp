@@ -1,9 +1,9 @@
 /**
- * System operations records (19): run_ubt, package_project, package_status,
+ * System operations records (20): run_ubt, package_project, package_status,
  * launch_build, run_tests, subscribe, unsubscribe, read_log, list_output_files,
  * delete_output_file, list_save_games, edit_save_game, spawn_category, execute_python,
  * set_project_setting, get_project_settings, validate_assets, lumen_update_scene,
- * create_cpp_class.
+ * create_cpp_class, remove_cpp_class.
  */
 import type { CapabilityRecordSource } from '../../model.js';
 import { buildCoreRecord } from '../core/builder.js';
@@ -47,6 +47,40 @@ export const SYSTEM_OPS_RECORDS: readonly CapabilityRecordSource[] = [
     costResources: 'high',
     exampleInput: { action: 'create_cpp_class', className: 'PickupBase', parentClass: 'Actor', subfolder: 'Gameplay' },
     exampleOutput: { success: true, message: 'Created APickupBase in MyGame', className: 'APickupBase', moduleName: 'MyGame', headerPath: 'C:/Projects/MyGame/Source/MyGame/Public/Gameplay/PickupBase.h', cppPath: 'C:/Projects/MyGame/Source/MyGame/Private/Gameplay/PickupBase.cpp', classPath: '/Script/MyGame.PickupBase', compiled: true },
+  }),
+  // A class create_cpp_class added could leave the project only through a shell reaching into Source, so a class made
+  // to try something stayed under C++ Classes for good.
+  buildCoreRecord({
+    parentTool: PT,
+    action: 'remove_cpp_class',
+    domain: 'build',
+    family: 'build',
+    topics: ['remove c++ class', 'delete c++ class', 'delete cpp file', 'remove native class', 'delete c++ source files', 'remove an unused c++ class'],
+    summary: 'Remove a C++ class from a project module once nothing uses it: its header and .cpp (<Name>.h and <Name>.cpp, as create_cpp_class names them) are deleted. Refused, nothing deleted, while something uses it (CLASS_IN_USE, the users named): an object of it is loaded (an actor placed in an open level), a Blueprint or a C++ class derives from it, an asset on disk points at it (the packages that use its module are loaded and searched), or another source file of the project includes its header or names it. A header that declares other reflected types too is refused (FILE_HOLDS_MORE), and so is a module more than 50 packages use (TOO_MANY_PACKAGES). The class stays loaded in this editor until the editor target is built with the editor closed and the editor opens again.',
+    whenToUse: ['A C++ class made to try something, or no longer wanted, must leave the project source.'],
+    whenNotToUse: [
+      'An engine or plugin class: only the project\'s own Source modules are searched (CLASS_NOT_FOUND).',
+      'A Blueprint class must go (use manage_asset delete).',
+    ],
+    inputProps: {
+      className: { type: 'string', description: 'The class: its name with or without the prefix (MyActor or AMyActor), or its path /Script/<Module>.MyActor. Its files are found by name under the module\'s source folder.' },
+      moduleName: { type: 'string', description: 'The project module that holds it; default every project module (files of that name in two modules are refused AMBIGUOUS_CLASS: name the module). A wrong name lists the modules (MODULE_NOT_FOUND).' },
+    },
+    required: ['className'],
+    outputProps: {
+      className: { type: 'string', description: 'The class with its prefix (AMyActor).' },
+      moduleName: { type: 'string', description: 'The module that held it.' },
+      classPath: { type: 'string', description: 'Its path (/Script/<Module>.<Name>) while it is loaded in this editor.' },
+      deleted: { type: 'array', items: { type: 'string' }, description: 'The files deleted, absolute paths.' },
+      notDeleted: { type: 'array', items: { type: 'string' }, description: 'With DELETE_FAILED: the files that could not be deleted (read-only, such as checked in to source control, or open elsewhere); they are never forced.' },
+      users: { type: 'array', items: { type: 'string' }, description: 'With CLASS_IN_USE: what uses it, up to 20 (actor X in /Game/Maps/L_Main, Blueprint /Game/BP_Door is built on it, /Game/BP_Spawner points at it, <file> includes or names it).' },
+      note: { type: 'string', description: 'What happens next: the class stays loaded until a build of the editor target and a restart.' },
+    },
+    outputRequired: [],
+    effect: 'destructive',
+    costLatency: 'interactive',
+    exampleInput: { action: 'remove_cpp_class', className: 'AProbeActor' },
+    exampleOutput: { success: true, message: 'Removed AProbeActor from MyGame: deleted C:/Projects/MyGame/Source/MyGame/ProbeActor.h, C:/Projects/MyGame/Source/MyGame/ProbeActor.cpp.', className: 'AProbeActor', moduleName: 'MyGame', classPath: '/Script/MyGame.ProbeActor', deleted: ['C:/Projects/MyGame/Source/MyGame/ProbeActor.h', 'C:/Projects/MyGame/Source/MyGame/ProbeActor.cpp'] },
   }),
   buildCoreRecord({
     parentTool: PT,

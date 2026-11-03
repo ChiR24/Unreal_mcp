@@ -8,6 +8,7 @@ class FJsonValue;
 class FMcpBridgeWebSocket;
 class IMcpGameFeaturesProvider;
 class UEngineWireSubsystem;
+struct FModuleContextInfo;
 namespace McpPackageJobs { struct FJob; }
 
 namespace McpSystemControlHandlers {
@@ -104,5 +105,15 @@ bool HandleCreateCppClass(UEngineWireSubsystem* Self,
                           const FString& RequestId,
                           const TSharedPtr<FJsonObject>& Payload,
                           FSystemControlSocket RequestingSocket);
+// remove_cpp_class: a project module's class files deleted once nothing uses the class (McpSystemCppClassRemove.cpp).
+bool HandleRemoveCppClass(UEngineWireSubsystem* Self,
+                          const FString& RequestId,
+                          const TSharedPtr<FJsonObject>& Payload,
+                          FSystemControlSocket RequestingSocket);
+// Shared by both: a C++ identifier (letters, digits, _, not leading with a digit, at most 64); the project module of
+// that name (or, with none asked for, the one named after the project, else its first runtime module); their names.
+bool McpIsCppIdentifier(const FString& Name);
+const FModuleContextInfo* McpFindProjectModule(const FString& Wanted);
+FString McpProjectModuleNames();
 
 }

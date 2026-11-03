@@ -14,8 +14,7 @@
 // create_cpp_class: the editor's New C++ Class, without its dialog. There was no way to add code to a project through
 // the tool at all, so every C++ gameplay class meant leaving it for the editor's wizard or an IDE.
 namespace McpSystemControlHandlers {
-namespace {
-bool IsCppIdentifier(const FString &Name) {
+bool McpIsCppIdentifier(const FString &Name) {
   if (Name.IsEmpty() || Name.Len() > 64 || FChar::IsDigit(Name[0])) {
     return false;
   }
@@ -27,19 +26,7 @@ bool IsCppIdentifier(const FString &Name) {
   return true;
 }
 
-// A folder under the module, built of name characters: never absolute, never "..".
-bool IsSafeSubfolder(const FString &Folder) {
-  TArray<FString> Parts;
-  Folder.ParseIntoArray(Parts, TEXT("/"));
-  for (const FString &Part : Parts) {
-    if (!IsCppIdentifier(Part.Replace(TEXT("-"), TEXT("_")))) {
-      return false;
-    }
-  }
-  return true;
-}
-
-const FModuleContextInfo *FindModule(const FString &Wanted) {
+const FModuleContextInfo *McpFindProjectModule(const FString &Wanted) {
   const TArray<FModuleContextInfo> &Modules = GameProjectUtils::GetCurrentProjectModules();
   const FString Name = Wanted.IsEmpty() ? FString(FApp::GetProjectName()) : Wanted;
   for (const FModuleContextInfo &Module : Modules) {
@@ -56,12 +43,25 @@ const FModuleContextInfo *FindModule(const FString &Wanted) {
   return nullptr;
 }
 
-FString ModuleNames() {
+FString McpProjectModuleNames() {
   TArray<FString> Names;
   for (const FModuleContextInfo &Module : GameProjectUtils::GetCurrentProjectModules()) {
     Names.Add(Module.ModuleName);
   }
   return Names.Num() > 0 ? FString::Join(Names, TEXT(", ")) : FString(TEXT("none"));
+}
+
+namespace {
+// A folder under the module, built of name characters: never absolute, never "..".
+bool IsSafeSubfolder(const FString &Folder) {
+  TArray<FString> Parts;
+  Folder.ParseIntoArray(Parts, TEXT("/"));
+  for (const FString &Part : Parts) {
+    if (!McpIsCppIdentifier(Part.Replace(TEXT("-"), TEXT("_")))) {
+      return false;
+    }
+  }
+  return true;
 }
 } // namespace
 
@@ -78,7 +78,7 @@ bool HandleCreateCppClass(UEngineWireSubsystem *Self, const FString &RequestId,
     Self->SendAutomationError(Socket, RequestId, Message, Code);
     return true;
   };
-  if (!IsCppIdentifier(ClassName)) {
+  if (!McpIsCppIdentifier(ClassName)) {
     return Refuse(FString::Printf(TEXT("className '%s' is not a C++ class name: letters, digits and _, not starting "
                                        "with a digit, without the prefix (MyActor makes AMyActor)."), *ClassName),
                   TEXT("INVALID_ARGUMENT"));
@@ -91,9 +91,9 @@ bool HandleCreateCppClass(UEngineWireSubsystem *Self, const FString &RequestId,
       !Location.Equals(TEXT("private"), ESearchCase::IgnoreCase)) {
     return Refuse(FString::Printf(TEXT("classLocation '%s' is public or private."), *Location), TEXT("INVALID_ARGUMENT"));
   }
-  const FModuleContextInfo *Found = FindModule(ModuleName);
+  const FModuleContextInfo *Found = McpFindProjectModule(ModuleName);
   if (!Found) {
-    return Refuse(FString::Printf(TEXT("The project has no module '%s'. Its modules: %s."), *ModuleName, *ModuleNames()),
+    return Refuse(FString::Printf(TEXT("The project has no module '%s'. Its modules: %s."), *ModuleName, *McpProjectModuleNames()),
                   TEXT("MODULE_NOT_FOUND"));
   }
   // A copy: adding a class that needs another module dependency rewrites and reloads the project file, which empties

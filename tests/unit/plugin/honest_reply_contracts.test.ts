@@ -1841,7 +1841,7 @@ describe('create_cpp_class adds a class the way the editor\'s New C++ Class does
     expect(guard, 'a wizard message box would block the game thread').toBeGreaterThan(-1);
     expect(guard).toBeLessThan(source.indexOf('GameProjectUtils::AddCodeToProject('));
     // A subfolder of a module without Public/Private got #include "Sub/X.h" from the engine, which did not compile.
-    for (const check of ['if (!IsCppIdentifier(ClassName))', 'if (!IsSafeSubfolder(Subfolder))', 'GameProjectUtils::IsValidBaseClassForCreation(ParentClass, Module)', '!ParentClass->HasAnyClassFlags(CLASS_Native)', 'if (!bSplit && !Subfolder.IsEmpty())']) {
+    for (const check of ['if (!McpIsCppIdentifier(ClassName))', 'if (!IsSafeSubfolder(Subfolder))', 'GameProjectUtils::IsValidBaseClassForCreation(ParentClass, Module)', '!ParentClass->HasAnyClassFlags(CLASS_Native)', 'if (!bSplit && !Subfolder.IsEmpty())']) {
       expect(source.indexOf(check), check).toBeGreaterThan(-1);
       expect(source.indexOf(check), check).toBeLessThan(guard);
     }

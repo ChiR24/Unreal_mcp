@@ -1,6 +1,6 @@
 {
-  "catalogRevision": "5d82570c79f4e378",
-  "recordCount": 484,
+  "catalogRevision": "7f0939c6b6042c9f",
+  "recordCount": 485,
   "records": [
     {
       "id": "animation_physics.analyze_animation",
@@ -9437,6 +9437,7 @@
           "delete folder",
           "delete mesh",
           "delete asset from project",
+          "delete a blueprint class",
           "destroy asset"
         ],
         "summary": "Delete one or more assets, or whole folders. A folder of thousands of assets can take minutes and reports how far it has got as it goes; when the call answers before the delete is done (task.state running), the delete carries on, so check the folder with asset.list instead of deleting again.",
@@ -9541,7 +9542,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "58109949e9c4c4ac840a8e1b522a001d5461d95c383124f22c00e5cfd25f43a9",
-        "content": "e93973b355e2626e4276f65d987f4b58fc68863a060ad7fc56f7cf07a00a414d"
+        "content": "a86cd4593a6d15cefa1148c1e43ce8002377f183de8c3fc48a757b3ddc081727"
       }
     },
     {
@@ -118835,6 +118836,172 @@
         "algorithm": "sha256",
         "schema": "dc26f651c08a7dc77e115d5dfebf475e9fea9bfa83568db67ecc898af67767e7",
         "content": "d4c8b48fb29019838711595c76e45745884190077d5c514027a64a07c2e49940"
+      }
+    },
+    {
+      "id": "system_control.remove_cpp_class",
+      "aliases": [],
+      "legacyIds": [
+        {
+          "tool": "system_control",
+          "action": "remove_cpp_class"
+        }
+      ],
+      "discovery": {
+        "domain": "build",
+        "family": "build",
+        "topics": [
+          "remove_cpp_class",
+          "remove c++ class",
+          "delete c++ class",
+          "delete cpp file",
+          "remove native class",
+          "delete c++ source files",
+          "remove an unused c++ class"
+        ],
+        "summary": "Remove a C++ class from a project module once nothing uses it: its header and .cpp (<Name>.h and <Name>.cpp, as create_cpp_class names them) are deleted. Refused, nothing deleted, while something uses it (CLASS_IN_USE, the users named): an object of it is loaded (an actor placed in an open level), a Blueprint or a C++ class derives from it, an asset on disk points at it (the packages that use its module are loaded and searched), or another source file of the project includes its header or names it. A header that declares other reflected types too is refused (FILE_HOLDS_MORE), and so is a module more than 50 packages use (TOO_MANY_PACKAGES). The class stays loaded in this editor until the editor target is built with the editor closed and the editor opens again.",
+        "whenToUse": [
+          "A C++ class made to try something, or no longer wanted, must leave the project source."
+        ],
+        "whenNotToUse": [
+          "An engine or plugin class: only the project's own Source modules are searched (CLASS_NOT_FOUND).",
+          "A Blueprint class must go (use manage_asset delete)."
+        ]
+      },
+      "schemas": {
+        "input": {
+          "$schema": "https://json-schema.org/draft/2020-12/schema",
+          "type": "object",
+          "properties": {
+            "action": {
+              "type": "string",
+              "description": "The action to execute on the parent tool."
+            },
+            "className": {
+              "type": "string",
+              "description": "The class: its name with or without the prefix (MyActor or AMyActor), or its path /Script/<Module>.MyActor. Its files are found by name under the module's source folder."
+            },
+            "moduleName": {
+              "type": "string",
+              "description": "The project module that holds it; default every project module (files of that name in two modules are refused AMBIGUOUS_CLASS: name the module). A wrong name lists the modules (MODULE_NOT_FOUND)."
+            }
+          },
+          "required": [
+            "action",
+            "className"
+          ],
+          "additionalProperties": false
+        },
+        "output": {
+          "$schema": "https://json-schema.org/draft/2020-12/schema",
+          "type": "object",
+          "properties": {
+            "success": {
+              "type": "boolean",
+              "description": "Whether the action succeeded."
+            },
+            "message": {
+              "type": "string",
+              "description": "Human-readable result message."
+            },
+            "details": {
+              "type": "object",
+              "x-unreal-reflection-boundary": true,
+              "description": "Additional handler result fields not named by the contract."
+            },
+            "className": {
+              "type": "string",
+              "description": "The class with its prefix (AMyActor)."
+            },
+            "moduleName": {
+              "type": "string",
+              "description": "The module that held it."
+            },
+            "classPath": {
+              "type": "string",
+              "description": "Its path (/Script/<Module>.<Name>) while it is loaded in this editor."
+            },
+            "deleted": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "description": "The files deleted, absolute paths."
+            },
+            "notDeleted": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "description": "With DELETE_FAILED: the files that could not be deleted (read-only, such as checked in to source control, or open elsewhere); they are never forced."
+            },
+            "users": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "description": "With CLASS_IN_USE: what uses it, up to 20 (actor X in /Game/Maps/L_Main, Blueprint /Game/BP_Door is built on it, /Game/BP_Spawner points at it, <file> includes or names it)."
+            },
+            "note": {
+              "type": "string",
+              "description": "What happens next: the class stays loaded until a build of the editor target and a restart."
+            }
+          },
+          "required": [
+            "success"
+          ],
+          "additionalProperties": false
+        }
+      },
+      "examples": [
+        {
+          "title": "Remove a C++ class from a project module once nothing uses it: its header and .cpp (<Name>.h and <Name>.cpp, as create_cpp_class names them) are deleted. Refused, nothing deleted, while something uses it (CLASS_IN_USE, the users named): an object of it is loaded (an actor placed in an open level), a Blueprint or a C++ class derives from it, an asset on disk points at it (the packages that use its module are loaded and searched), or another source file of the project includes its header or names it. A header that declares other reflected types too is refused (FILE_HOLDS_MORE), and so is a module more than 50 packages use (TOO_MANY_PACKAGES). The class stays loaded in this editor until the editor target is built with the editor closed and the editor opens again.",
+          "input": {
+            "action": "remove_cpp_class",
+            "className": "AProbeActor"
+          },
+          "output": {
+            "success": true,
+            "message": "Removed AProbeActor from MyGame: deleted C:/Projects/MyGame/Source/MyGame/ProbeActor.h, C:/Projects/MyGame/Source/MyGame/ProbeActor.cpp.",
+            "className": "AProbeActor",
+            "moduleName": "MyGame",
+            "classPath": "/Script/MyGame.ProbeActor",
+            "deleted": [
+              "C:/Projects/MyGame/Source/MyGame/ProbeActor.h",
+              "C:/Projects/MyGame/Source/MyGame/ProbeActor.cpp"
+            ]
+          }
+        }
+      ],
+      "availability": {
+        "requiredPlugins": [],
+        "editorStates": [
+          "edit"
+        ]
+      },
+      "behavior": {
+        "effect": "destructive",
+        "idempotency": "non-idempotent",
+        "longRunning": false,
+        "safeToRetry": false
+      },
+      "policy": {
+        "requiredScope": "destructive",
+        "consent": "explicit",
+        "dataAccess": "project-write"
+      },
+      "cost": {
+        "latency": "interactive",
+        "resources": "low"
+      },
+      "routing": {
+        "parentTool": "system_control",
+        "dispatchAction": "remove_cpp_class"
+      },
+      "hashes": {
+        "algorithm": "sha256",
+        "schema": "cf3ee09829139dd8c6a4747f6cc382ccbda3bd53b1269752d6e941c8d2b1e9aa",
+        "content": "577e63076f1034135d3cb6c834b5d069e39dc266f84604c854567ec398b2f9f0"
       }
     },
     {

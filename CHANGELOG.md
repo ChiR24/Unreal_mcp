@@ -18,6 +18,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Plugins and project**: `get_plugin_info`, `create_plugin` / `remove_plugin`, game features (UE 5.1+), data registries, and assets nothing uses (`inspect_asset` `reportType: unreferenced`).
 - **Editor**: `read_editor_ui`, `set_selected_actors`, `configure_viewport` `show_flags`, `reimport` without a dialog, and `screenshot` `renderSize` draws the view at the size asked for ("1920x1080": the game's 16:9 frame, not the wider editor viewport).
 - **`get_console_variables`** reads console variables by name (value, type, what set it last) with the read scope alone.
+- **`remove_cpp_class`** removes a project C++ class (its header and .cpp) once nothing uses it, and names what does when something still does.
 - **Actors**: `snap_to_grid`, `distribute_actors`, `align_actors`, `lock_actors`, `group_actors`, `randomize_transforms`, `replace_actors`, `convert_actors_to_blueprint`, `move_actors_to_level`, numbered batch `rename`, copies along a spline, `place_decals`, and `find` rows that say where each actor is.
 - **Look and sound**: `set_material` `color` / `glow`, light `flicker`, a first-person camera view, `add_behaviour` `sound_trigger`, `set_subtitles`, `set_sound_volume`, `set_sound_looping`, footstep sounds on a walk cycle, animation play rate, a prop's `massKg`.
 - **Proxy CLI**: `init <client>` writes a client's MCP config; `doctor` checks the setup (the token is never shown).

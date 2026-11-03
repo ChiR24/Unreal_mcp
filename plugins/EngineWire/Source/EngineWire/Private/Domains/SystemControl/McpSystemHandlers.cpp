@@ -61,7 +61,7 @@ bool UEngineWireSubsystem::HandleSystemControlAction(
       Lower != TEXT("validate_assets") &&
       Lower != TEXT("get_plugin_info") && Lower != TEXT("create_plugin") && Lower != TEXT("remove_plugin") &&
       Lower != TEXT("list_game_features") && Lower != TEXT("set_game_feature_active") &&
-      Lower != TEXT("create_cpp_class") &&
+      Lower != TEXT("create_cpp_class") && Lower != TEXT("remove_cpp_class") &&
       Lower != TEXT("execute_python") &&
       Lower != TEXT("run_script") &&
       Lower != TEXT("save_recipe") && Lower != TEXT("run_recipe") && Lower != TEXT("list_recipes")) {
@@ -126,6 +126,10 @@ bool UEngineWireSubsystem::HandleSystemControlAction(
   }
   if (Lower == TEXT("create_cpp_class")) {
     return McpSystemControlHandlers::HandleCreateCppClass(this, RequestId, Payload,
+                                                          RequestingSocket);
+  }
+  if (Lower == TEXT("remove_cpp_class")) {
+    return McpSystemControlHandlers::HandleRemoveCppClass(this, RequestId, Payload,
                                                           RequestingSocket);
   }
   if (Lower == TEXT("run_ubt")) {

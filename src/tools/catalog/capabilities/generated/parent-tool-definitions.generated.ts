@@ -30916,6 +30916,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             "configure_performance",
             "merge_actors",
             "create_cpp_class",
+            "remove_cpp_class",
             "run_build",
             "package_project",
             "package_status",
@@ -31014,7 +31015,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "classPath": {
           "type": "string",
-          "description": "The class's path once compiled (/Script/<Module>.<Name>), for a class with a UObject parent."
+          "description": "Its path (/Script/<Module>.<Name>) while it is loaded in this editor."
         },
         "cleanupCall": {
           "oneOf": [
@@ -31084,8 +31085,24 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "description": "Author."
         },
         "deleted": {
-          "type": "boolean",
-          "description": "With deleteSlot: true when the slot is gone."
+          "oneOf": [
+            {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "description": "The files deleted, absolute paths."
+            },
+            {
+              "type": "boolean",
+              "description": "With deleteSlot: true when the slot is gone."
+            },
+            {
+              "type": "boolean",
+              "description": "With path: true when the file is gone."
+            }
+          ],
+          "description": "The files deleted, absolute paths."
         },
         "deletedCount": {
           "type": "number",
@@ -31321,7 +31338,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "moduleName": {
           "type": "string",
-          "description": "The module the class went into."
+          "description": "The module that held it."
         },
         "modules": {
           "type": "array",
@@ -31358,6 +31375,13 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "nextOffset": {
           "type": "number",
           "description": "The offset of the next page; present only when hasMore is true."
+        },
+        "notDeleted": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "With DELETE_FAILED: the files that could not be deleted (read-only, such as checked in to source control, or open elsewhere); they are never forced."
         },
         "notRun": {
           "type": "number",
@@ -31724,6 +31748,13 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             "type": "string"
           },
           "description": "Settings this engine version does not have; nothing was written for them."
+        },
+        "users": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "With CLASS_IN_USE: what uses it, up to 20 (actor X in /Game/Maps/L_Main, Blueprint /Game/BP_Door is built on it, /Game/BP_Spawner points at it, <file> includes or names it)."
         },
         "value": {
           "type": "string",

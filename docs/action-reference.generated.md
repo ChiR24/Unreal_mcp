@@ -4,7 +4,7 @@
 
 # Action reference
 
-Catalog revision: `5d82570c79f4e378`
+Catalog revision: `7f0939c6b6042c9f`
 
 Both transports expose exactly ONE public MCP tool, `unreal`, with the four
 operations `search` / `describe` / `execute` / `configure`. The parent tools
@@ -13,7 +13,7 @@ by `tools/list` and a direct `tools/call` on one returns a
 `DIRECT_TOOL_CALL_REMOVED` receipt rather than executing
 (`src/server/gateway/direct-call-migration.ts`).
 
-The catalog declares 484 capabilities across
+The catalog declares 485 capabilities across
 23 internal parent tools.
 Every row is derived from the capability record that the gateway actually
 validates against, so `execute` cannot accept an action this table omits.
@@ -61,11 +61,11 @@ validates against, so `execute` cannot accept an action this table omits.
 | `manage_pcg` | 3 | 0 | 3 | 0 | world |
 | `manage_sequence` | 22 | 2 | 19 | 1 | cinematics, media, movie_render, replay, sequence, take_recorder |
 | `manage_tools` | 9 | 4 | 5 | 0 | tools |
-| `system_control` | 38 | 12 | 21 | 5 | audio, build, console, insights, logs, performance, project, python, render, system, viewport, widget |
+| `system_control` | 39 | 12 | 21 | 6 | audio, build, console, insights, logs, performance, project, python, render, system, viewport, widget |
 
 ## Capabilities requiring consent
 
-76 of 484 capabilities require consent.
+77 of 485 capabilities require consent.
 
 | Capability | Tool | Action | Effect | Consent |
 | --- | --- | --- | --- | --- |
@@ -139,6 +139,7 @@ validates against, so `execute` cannot accept an action this table omits.
 | `system_control.delete_output_file` | `system_control` | `delete_output_file` | destructive | explicit |
 | `system_control.edit_save_game` | `system_control` | `edit_save_game` | destructive | explicit |
 | `system_control.execute_python` | `system_control` | `system_control` | write | explicit |
+| `system_control.remove_cpp_class` | `system_control` | `remove_cpp_class` | destructive | explicit |
 | `system_control.remove_plugin` | `system_control` | `system_control` | destructive | explicit |
 | `system_control.run_recipe` | `system_control` | `run_recipe` | destructive | elevated |
 | `system_control.run_script` | `system_control` | `run_script` | destructive | elevated |
@@ -619,6 +620,7 @@ validates against, so `execute` cannot accept an action this table omits.
 | `system_control.play_sound` | `system_control` | `play_sound_2d` | write | write | none | `system_control.play_sound` |
 | `system_control.profile_performance` | `system_control` | `start_profiling` | write | write | none | `system_control.profile_performance` `system_control.start_profiling` `system_control.stop_profiling` `system_control.run_benchmark` `system_control.generate_memory_report` `system_control.show_stats` |
 | `system_control.read_log` | `system_control` | `manage_logs` | read | read | none | `system_control.read_log` |
+| `system_control.remove_cpp_class` | `system_control` | `remove_cpp_class` | destructive | destructive | explicit | `system_control.remove_cpp_class` |
 | `system_control.remove_plugin` | `system_control` | `system_control` | destructive | destructive | explicit | `system_control.remove_plugin` |
 | `system_control.run_build` | `system_control` | `manage_tests` | write | write | none | `system_control.run_build` `system_control.run_tests` `system_control.run_ubt` |
 | `system_control.run_recipe` | `system_control` | `run_recipe` | destructive | destructive | elevated | `system_control.run_recipe` |
