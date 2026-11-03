@@ -214,6 +214,13 @@ describe('contact_sheet', () => {
     expect(draw).not.toContain('Normal.SizeSquared()');
   });
 
+  // One top view at 128 px cut its title to "Foremast 12 x 12 x 90": the sheet is as wide as the title, tiles centred.
+  it('makes the sheet at least as wide as its title and centres the tiles under it', () => {
+    expect(draw).toContain('OutWidth = FMath::Max(TilesWidth, TitleWidth(Title));');
+    expect(draw).toContain('const int32 Left = Inset + (Index % SheetColumns) * TileSize;');
+    expect(draw).toContain('Renderer->GetFontMeasureService()->Measure(Title, LabelFont()).X');
+  });
+
   // Every sheet left a PNG under Saved/Captures, wanted or not: keepFile false leaves none, unless the reply cannot
   // carry the picture. thumbnail_sheet hands its picture back through the same code.
   it('writes the file only when keepFile asks for it or the picture is too large for the reply', () => {

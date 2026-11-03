@@ -41,6 +41,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Frame readers** (`describe_view`, `analyze_view`, `audit_materials`) warn while shaders, meshes or textures are still building: water still building read as background.
 - **Geometry**: `bevel` and `chamfer` cut every edge of whole parts a region picks (they cut nothing and answered "Bevel applied"), keep the faces' material, and answer `NOTHING_BEVELED` when nothing can be cut; a material id or PolyGroup edit is its own undo step (the next undo took back the edit before it).
 - **`contact_sheet`** elevations beside water draw the actor again (a water zone's box sent the camera past the far plane).
+- **`contact_sheet`** of one or two small tiles shows its whole title (the sheet was as narrow as its tiles).
 - **`list_output_files` / `delete_output_file`** reach contact sheets and captures (Saved/Captures) and EngineWire's own files (Saved/EngineWire, plugins `remove_plugin` moved aside included); a delete removes the folders it empties.
 - **Change journal**: a mesh that finished compiling, or the engine's own load fix-ups, no longer read as changes of the call they happened during (the first `create_level` after a launch listed 39 meshes).
 

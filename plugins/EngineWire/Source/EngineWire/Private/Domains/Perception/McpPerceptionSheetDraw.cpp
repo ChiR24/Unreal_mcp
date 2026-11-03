@@ -8,10 +8,13 @@
 #include "Dom/JsonObject.h"
 #include "Domains/ControlEditor/McpEditorScreenshotSupport.h"
 #include "Domains/Texture/McpTextRaster.h"
+#include "Fonts/FontMeasure.h"
+#include "Framework/Application/SlateApplication.h"
 #include "ImageUtils.h"
 #include "Misc/Base64.h"
 #include "Misc/FileHelper.h"
 #include "Misc/Paths.h"
+#include "Rendering/SlateRenderer.h"
 #include "Styling/CoreStyle.h"
 
 namespace McpPerception::Sheet
@@ -41,11 +44,24 @@ FColor Over(const FColor& Under, const FColor& Colour, float Alpha)
                   uint8(FMath::Lerp(float(Under.B), float(Colour.B), Alpha)), 255);
 }
 
+const FSlateFontInfo& LabelFont()
+{
+    static const FSlateFontInfo Font = FCoreStyle::GetDefaultFontStyle("Regular", 10);
+    return Font;
+}
+
+// The title's width in pixels at the label font, with a margin; 0 where Slate draws nothing (no renderer).
+int32 TitleWidth(const FString& Title)
+{
+    FSlateRenderer* Renderer = FSlateApplication::IsInitialized() ? FSlateApplication::Get().GetRenderer() : nullptr;
+    return Renderer ? FMath::CeilToInt(Renderer->GetFontMeasureService()->Measure(Title, LabelFont()).X) + 24 : 0;
+}
+
 // White text centred in a band of the sheet, by its coverage from the editor's own text renderer.
 void DrawLabel(TArray<FColor>& Sheet, int32 SheetWidth, const FIntRect& Band, const FString& Text)
 {
     TArray<FColor> Coverage;
-    if (!McpTextureHandlers::McpRasterizeText(Text, FCoreStyle::GetDefaultFontStyle("Regular", 10), ETextJustify::Center,
+    if (!McpTextureHandlers::McpRasterizeText(Text, LabelFont(), ETextJustify::Center,
                                               Band.Size(), Coverage))
     {
         return;
@@ -99,14 +115,17 @@ TArray<FColor> Shade(const TArray<FLinearColor>& Normals, const TArray<FLinearCo
 
 TArray<FColor> Compose(const FString& Title, const TArray<FTile>& Tiles, int32 TileSize, int32& OutWidth, int32& OutHeight)
 {
-    OutWidth = FMath::Min(Tiles.Num(), SheetColumns) * TileSize;
+    // One or two small tiles are narrower than the title: the sheet widens to fit it, the tiles centred under it.
+    const int32 TilesWidth = FMath::Min(Tiles.Num(), SheetColumns) * TileSize;
+    OutWidth = FMath::Max(TilesWidth, TitleWidth(Title));
+    const int32 Inset = (OutWidth - TilesWidth) / 2;
     OutHeight = StripHeight + FMath::DivideAndRoundUp(Tiles.Num(), SheetColumns) * (StripHeight + TileSize);
     TArray<FColor> Sheet;
     Sheet.Init(SheetBackground, OutWidth * OutHeight);
     for (int32 Index = 0; Index < Tiles.Num(); ++Index)
     {
         const FTile& Tile = Tiles[Index];
-        const int32 Left = (Index % SheetColumns) * TileSize;
+        const int32 Left = Inset + (Index % SheetColumns) * TileSize;
         const int32 LabelTop = StripHeight + (Index / SheetColumns) * (StripHeight + TileSize);
         const int32 Top = LabelTop + StripHeight;
         for (int32 Y = 0; Y < TileSize; ++Y)
