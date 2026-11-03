@@ -1,5 +1,5 @@
 {
-  "catalogRevision": "cf5cc2c5e8799090",
+  "catalogRevision": "208d4332c55138a8",
   "recordCount": 485,
   "records": [
     {
@@ -115532,7 +115532,7 @@
           "delete snapshot file",
           "clean up output files"
         ],
-        "summary": "Delete files the MCP wrote (screenshots or environment snapshots), one path or a list of paths; nothing outside Saved/Screenshots, Saved/unreal-mcp, tmp/unreal-mcp or temp/unreal-mcp can be reached.",
+        "summary": "Delete files the MCP wrote (screenshots, captures, EngineWire's own files, environment snapshots), one path or a list of paths; a folder a delete leaves empty goes too, so deleting every file of a plugin remove_plugin moved aside removes its folder. Nothing outside Saved/Screenshots, Saved/Captures, Saved/EngineWire, Saved/unreal-mcp, tmp/unreal-mcp or temp/unreal-mcp can be reached.",
         "whenToUse": [
           "A screenshot or snapshot the task created is no longer needed."
         ],
@@ -115627,7 +115627,7 @@
       },
       "examples": [
         {
-          "title": "Delete files the MCP wrote (screenshots or environment snapshots), one path or a list of paths; nothing outside Saved/Screenshots, Saved/unreal-mcp, tmp/unreal-mcp or temp/unreal-mcp can be reached.",
+          "title": "Delete files the MCP wrote (screenshots, captures, EngineWire's own files, environment snapshots), one path or a list of paths; a folder a delete leaves empty goes too, so deleting every file of a plugin remove_plugin moved aside removes its folder. Nothing outside Saved/Screenshots, Saved/Captures, Saved/EngineWire, Saved/unreal-mcp, tmp/unreal-mcp or temp/unreal-mcp can be reached.",
           "input": {
             "action": "delete_output_file",
             "path": "Saved/Screenshots/check.png"
@@ -115669,7 +115669,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "cfdea18a30719ec00fa5da8e372eb8e5402c5633e8885f65c8e27c9ce445717d",
-        "content": "0dcc5b291b719f689d8bc6c26585d1883669f499e9114d53ea8767e89a1d8086"
+        "content": "58c4661a1391ffbbb19b6e3cb26f83348f3c64e503359587fb7061f18cedd8a5"
       }
     },
     {
@@ -117085,9 +117085,11 @@
           "list screenshots",
           "screenshot files",
           "snapshot files",
-          "output files"
+          "output files",
+          "contact sheet files",
+          "removed plugin folders"
         ],
-        "summary": "List the files the MCP itself wrote: screenshots (Saved/Screenshots) and environment snapshots (Saved/unreal-mcp, tmp/unreal-mcp, temp/unreal-mcp).",
+        "summary": "List the files the MCP itself wrote: screenshots (Saved/Screenshots), captures and contact sheets (Saved/Captures), EngineWire's own files (Saved/EngineWire: recipes, the asset index and captions, level layout images, plugins remove_plugin moved aside) and environment snapshots (Saved/unreal-mcp, tmp/unreal-mcp, temp/unreal-mcp).",
         "whenToUse": [
           "Screenshots or snapshots taken during a task must be found or cleaned up."
         ],
@@ -117119,11 +117121,13 @@
               "type": "string",
               "enum": [
                 "Saved/Screenshots",
+                "Saved/Captures",
+                "Saved/EngineWire",
                 "Saved/unreal-mcp",
                 "tmp/unreal-mcp",
                 "temp/unreal-mcp"
               ],
-              "description": "Search only this output folder (default all four)."
+              "description": "Search only this output folder (default all six)."
             },
             "extension": {
               "type": "string",
@@ -117194,7 +117198,7 @@
       },
       "examples": [
         {
-          "title": "List the files the MCP itself wrote: screenshots (Saved/Screenshots) and environment snapshots (Saved/unreal-mcp, tmp/unreal-mcp, temp/unreal-mcp).",
+          "title": "List the files the MCP itself wrote: screenshots (Saved/Screenshots), captures and contact sheets (Saved/Captures), EngineWire's own files (Saved/EngineWire: recipes, the asset index and captions, level layout images, plugins remove_plugin moved aside) and environment snapshots (Saved/unreal-mcp, tmp/unreal-mcp, temp/unreal-mcp).",
           "input": {
             "action": "list_output_files",
             "root": "Saved/Screenshots",
@@ -117246,8 +117250,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "418c94107d0dabae1e6f894d92039bd1679d665bc5aecaf007cf96c04ecb8cdb",
-        "content": "73e23d78d49615fa2f49278a351aa41f7a47384dd098ca180f8cb170cb6371e7"
+        "schema": "298aa58094f3bc055c4e68ddd6650a8bf8531582c7ef66925da16db9769c2b4a",
+        "content": "00e49b5487ab207b0a0a0d5cb6d9882abd9e91a0a8a10b932f4e7d999e222558"
       }
     },
     {
@@ -119024,7 +119028,7 @@
           "delete plugin",
           "remove a plugin from the project"
         ],
-        "summary": "Take a plugin that no longer loads out of this project: its folder moves to Saved/EngineWire/RemovedPlugins/<name> (delete it there for good, or move it back to restore it) and the .uproject drops it. A plugin this editor has loaded is refused PLUGIN_LOADED (only a restart unloads one: disable_plugin it, restart the editor, then remove it). Only a plugin in this project's Plugins folder with no code is removed; an engine or marketplace plugin, or one with code (modules or a Source folder), is refused PLUGIN_NOT_REMOVABLE. A refusal changes nothing; MOVE_FAILED (a file in it is open) leaves the project as it was.",
+        "summary": "Take a plugin that no longer loads out of this project: its folder moves to Saved/EngineWire/RemovedPlugins/<name> (delete_output_file deletes its files there for good; moving it back restores it) and the .uproject drops it. A plugin this editor has loaded is refused PLUGIN_LOADED (only a restart unloads one: disable_plugin it, restart the editor, then remove it). Only a plugin in this project's Plugins folder with no code is removed; an engine or marketplace plugin, or one with code (modules or a Source folder), is refused PLUGIN_NOT_REMOVABLE. A refusal changes nothing; MOVE_FAILED (a file in it is open) leaves the project as it was.",
         "whenToUse": [
           "A content plugin made by mistake, or no longer wanted, should leave the project and the disk (after disable_plugin and a restart)."
         ],
@@ -119091,7 +119095,7 @@
       },
       "examples": [
         {
-          "title": "Take a plugin that no longer loads out of this project: its folder moves to Saved/EngineWire/RemovedPlugins/<name> (delete it there for good, or move it back to restore it) and the .uproject drops it. A plugin this editor has loaded is refused PLUGIN_LOADED (only a restart unloads one: disable_plugin it, restart the editor, then remove it). Only a plugin in this project's Plugins folder with no code is removed; an engine or marketplace plugin, or one with code (modules or a Source folder), is refused PLUGIN_NOT_REMOVABLE. A refusal changes nothing; MOVE_FAILED (a file in it is open) leaves the project as it was.",
+          "title": "Take a plugin that no longer loads out of this project: its folder moves to Saved/EngineWire/RemovedPlugins/<name> (delete_output_file deletes its files there for good; moving it back restores it) and the .uproject drops it. A plugin this editor has loaded is refused PLUGIN_LOADED (only a restart unloads one: disable_plugin it, restart the editor, then remove it). Only a plugin in this project's Plugins folder with no code is removed; an engine or marketplace plugin, or one with code (modules or a Source folder), is refused PLUGIN_NOT_REMOVABLE. A refusal changes nothing; MOVE_FAILED (a file in it is open) leaves the project as it was.",
           "input": {
             "action": "remove_plugin",
             "pluginName": "ForestKit"
@@ -119132,7 +119136,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "beb6d5d3990830f94a47486c2e254eb4476ce6e27852a05df954c97da84d6e7e",
-        "content": "ad8581eecd13a8af18dd414ea3b2ef8e54c89558a4d556ef72a7de85c21f1e9e"
+        "content": "6549f29fbacbbf9785244c479385f3011f321bd55e88aa007d4439161e2faa73"
       }
     },
     {

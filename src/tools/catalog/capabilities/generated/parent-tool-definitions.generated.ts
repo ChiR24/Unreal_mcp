@@ -30722,11 +30722,13 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "string",
           "enum": [
             "Saved/Screenshots",
+            "Saved/Captures",
+            "Saved/EngineWire",
             "Saved/unreal-mcp",
             "tmp/unreal-mcp",
             "temp/unreal-mcp"
           ],
-          "description": "Search only this output folder (default all four)."
+          "description": "Search only this output folder (default all six)."
         },
         "runsBack": {
           "type": "number",

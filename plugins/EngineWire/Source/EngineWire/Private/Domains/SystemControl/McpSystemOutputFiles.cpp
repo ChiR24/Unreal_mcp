@@ -8,7 +8,7 @@
 #include "EngineWireSubsystem.h"
 #include "Misc/Paths.h"
 
-// Screenshots and environment snapshots are files the MCP writes itself, and
+// Screenshots, captures and environment snapshots are files the MCP writes itself, and
 // nothing in the tool could remove them again: cleaning up after a check meant
 // reaching into the project from a shell. These two actions reach exactly the
 // folders the MCP writes into and nothing else.
@@ -24,10 +24,11 @@ FString ProjectRootFull() {
   return Root;
 }
 
-// The screenshot folder plus the three snapshot roots the snapshot path check
-// accepts (EnvironmentSnapshotPaths), project-relative.
-const TCHAR* const OutputRoots[] = {TEXT("Saved/Screenshots"), TEXT("Saved/unreal-mcp"),
-                                    TEXT("tmp/unreal-mcp"), TEXT("temp/unreal-mcp")};
+// The screenshot folder, the captures folder (contact sheets, capture passes), EngineWire's own folder (recipes,
+// the asset index and captions, level layout images, plugins remove_plugin moved aside) and the three snapshot roots
+// the snapshot path check accepts (EnvironmentSnapshotPaths), project-relative.
+const TCHAR* const OutputRoots[] = {TEXT("Saved/Screenshots"), TEXT("Saved/Captures"), TEXT("Saved/EngineWire"),
+                                    TEXT("Saved/unreal-mcp"), TEXT("tmp/unreal-mcp"), TEXT("temp/unreal-mcp")};
 
 FString RootsText() {
   TArray<FString> Roots;
@@ -71,11 +72,11 @@ TSharedPtr<FJsonObject> DeleteOneOutputFile(const FString& Project, FString Path
     Full = FPaths::ConvertRelativePathToFull(Project / Path);
     FPaths::NormalizeFilename(Full);
     FPaths::CollapseRelativeDirectories(Full);
-    bool bInsideRoot = false;
+    FString RootFull;
     for (const TCHAR* Root : OutputRoots) {
-      bInsideRoot |= Full.StartsWith(Project / Root + TEXT("/"), McpFileNameCase);
+      RootFull = Full.StartsWith(Project / Root + TEXT("/"), McpFileNameCase) ? Project / Root : RootFull;
     }
-    if (!bInsideRoot) {
+    if (RootFull.IsEmpty()) {
       OutErrorCode = TEXT("PATH_OUTSIDE_OUTPUT_ROOTS");
       OutError = FString::Printf(TEXT("Only files the MCP writes can be deleted here (%s); %s is outside them."),
                                  *RootsText(), *Path);
@@ -85,6 +86,12 @@ TSharedPtr<FJsonObject> DeleteOneOutputFile(const FString& Project, FString Path
     } else {
       const bool bDeleted = IFileManager::Get().Delete(*Full, false, false, true);
       const bool bExistsAfter = IFileManager::Get().FileExists(*Full);
+      // A folder the delete leaves empty goes too, up to its root: a moved-aside plugin's folders went with its last
+      // file. A folder still holding anything refuses a delete that is not a tree delete, which ends the walk.
+      for (FString Dir = FPaths::GetPath(Full); !bExistsAfter && Dir.Len() > RootFull.Len() &&
+                                                IFileManager::Get().DeleteDirectory(*Dir, false, false);
+           Dir = FPaths::GetPath(Dir)) {
+      }
       Entry->SetBoolField(TEXT("deleted"), bDeleted && !bExistsAfter);
       Entry->SetBoolField(TEXT("existsAfter"), bExistsAfter);
       if (!bDeleted || bExistsAfter) {

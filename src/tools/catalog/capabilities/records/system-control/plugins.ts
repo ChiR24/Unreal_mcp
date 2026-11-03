@@ -147,7 +147,7 @@ export const PLUGIN_RECORDS: readonly CapabilityRecordSource[] = [
     domain: 'project',
     family: 'plugin',
     topics: ['delete plugin', 'remove a plugin from the project'],
-    summary: 'Take a plugin that no longer loads out of this project: its folder moves to Saved/EngineWire/RemovedPlugins/<name> (delete it there for good, or move it back to restore it) and the .uproject drops it. A plugin this editor has loaded is refused PLUGIN_LOADED (only a restart unloads one: disable_plugin it, restart the editor, then remove it). Only a plugin in this project\'s Plugins folder with no code is removed; an engine or marketplace plugin, or one with code (modules or a Source folder), is refused PLUGIN_NOT_REMOVABLE. A refusal changes nothing; MOVE_FAILED (a file in it is open) leaves the project as it was.',
+    summary: 'Take a plugin that no longer loads out of this project: its folder moves to Saved/EngineWire/RemovedPlugins/<name> (delete_output_file deletes its files there for good; moving it back restores it) and the .uproject drops it. A plugin this editor has loaded is refused PLUGIN_LOADED (only a restart unloads one: disable_plugin it, restart the editor, then remove it). Only a plugin in this project\'s Plugins folder with no code is removed; an engine or marketplace plugin, or one with code (modules or a Source folder), is refused PLUGIN_NOT_REMOVABLE. A refusal changes nothing; MOVE_FAILED (a file in it is open) leaves the project as it was.',
     whenToUse: ['A content plugin made by mistake, or no longer wanted, should leave the project and the disk (after disable_plugin and a restart).'],
     whenNotToUse: [
       'The plugin should only stop loading (use disable_plugin: its files stay).',

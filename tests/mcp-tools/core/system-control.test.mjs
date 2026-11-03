@@ -157,6 +157,8 @@ const testCases = [
   { scenario: 'CLEANUP: delete_output_file paths the suite screenshot', toolName: 'system_control', arguments: { action: 'delete_output_file', paths: ['Saved/Screenshots/SystemControl_NullRHI.png'] }, expected: 'success|PARTIAL_DELETE' },
   { scenario: 'CLEANUP: delete_output_file the suite screenshot', toolName: 'system_control', arguments: { action: 'delete_output_file', path: 'Saved/Screenshots/SystemControl_NullRHI.png' }, expected: 'success|not found' },
   { scenario: 'CLEANUP: delete_output_file reports each of several paths', toolName: 'system_control', arguments: { action: 'delete_output_file', paths: ['Saved/Screenshots/SystemControl_NullRHI.png', 'Config/DefaultGame.ini'] }, expected: 'error|PARTIAL_DELETE' },
+  { scenario: 'READ: list_output_files reaches the captures folder', toolName: 'system_control', arguments: { action: 'list_output_files', root: 'Saved/Captures', limit: 5 }, expected: 'success', assertions: [{ path: 'structuredContent.result.roots', equals: 'Saved/Captures', label: 'the captures root is searched' }] },
+  { scenario: 'CLEANUP: delete_output_file reaches EngineWire\'s own folder', toolName: 'system_control', arguments: { action: 'delete_output_file', path: 'Saved/EngineWire/NoSuchFile_MCP.png' }, expected: 'error|FILE_NOT_FOUND' },
   { scenario: 'CLEANUP: delete_output_file refuses a project file', toolName: 'system_control', arguments: { action: 'delete_output_file', path: 'Config/DefaultGame.ini' }, expected: 'error|PATH_OUTSIDE_OUTPUT_ROOTS' },
   // A save slot round trip on a Blueprint SaveGame the suite makes (SaveGame itself is abstract):
   // create the slot with its defaults, set a value, list and read it, refuse bad edits, then delete it.
