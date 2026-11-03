@@ -54,7 +54,7 @@ void SetMaterialParameterValue(UEngineWireSubsystem* Bridge, const FString& Requ
           TEXT("PARAMETER_NOT_FOUND"));
       return;
     }
-    BaseMaterial->PostEditChange();
+    McpRecompileMaterialHost(BaseMaterial);
     BaseMaterial->MarkPackageDirty();
     // Whether the write reached disk: save false, or a save the editor refused, leaves it in memory only.
     const bool bSaved = bSave && McpSafeAssetSave(BaseMaterial);

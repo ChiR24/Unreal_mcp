@@ -8,6 +8,7 @@
 #include "Foundation/HandlerUtils/McpHandlerUtilsTransforms.h"
 #include "Foundation/BridgeHelpers/Responses/McpJsonFields.h"
 #include "Foundation/BridgeHelpers/Actors/McpActorMove.h"
+#include "Foundation/BridgeHelpers/Assets/McpMaterialRecompile.h"
 #include "Foundation/McpScopedEditorTransaction.h"
 
 #include "Engine/World.h"
@@ -174,7 +175,7 @@ bool RefreshMaterialHostAfterEdit(UObject* Edited)
         return false;
     }
     Host->PreEditChange(nullptr);
-    Host->PostEditChange();
+    McpRecompileMaterialHost(Host);
     return true;
 }
 

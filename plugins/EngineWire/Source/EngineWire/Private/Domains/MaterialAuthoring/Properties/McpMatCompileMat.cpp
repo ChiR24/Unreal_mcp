@@ -67,7 +67,7 @@ bool HandleCompileMaterial(UEngineWireSubsystem* Bridge, const FString& RequestI
     // Force recompile / update
     UObject *Host = Material ? static_cast<UObject*>(Material) : static_cast<UObject*>(Function);
     Host->PreEditChange(nullptr);
-    Host->PostEditChange();
+    McpRecompileMaterialHost(Host);
     Host->MarkPackageDirty();
     // A material that fails to compile renders as the default material, and this used to answer "compiled"
     // regardless.

@@ -94,7 +94,7 @@ bool HandleConfigureLayerBlend(UEngineWireSubsystem* Bridge, const FString& Requ
       return true;
     }
     MCP_GET_MATERIAL_EXPRESSIONS(Material).Add(BlendNode);
-    Material->PostEditChange();
+    McpRecompileMaterialHost(Material);
     Material->MarkPackageDirty();
 
     bool bSave = true;

@@ -376,7 +376,7 @@ describe('handlers answer what they did', () => {
     const batch = code('MaterialAuthoring', 'McpMatGraphBatch.cpp');
     const compile = code('MaterialAuthoring', 'Properties', 'McpMatCompileMat.cpp');
 
-    expect(header).toMatch(/inline void McpFinishMaterialEdit\(const FString &RequestId, UObject \*Host\) \{\s*if \(Host && !FMcpResponseCaptureRegistry::Get\(\)\.IsBatchStep\(RequestId\)\) \{ Host->PostEditChange\(\); \}\s*if \(Host\) \{ Host->MarkPackageDirty\(\); \}\s*\}/u);
+    expect(header).toMatch(/inline void McpFinishMaterialEdit\(const FString &RequestId, UObject \*Host\) \{\s*if \(Host && !FMcpResponseCaptureRegistry::Get\(\)\.IsBatchStep\(RequestId\)\) \{ McpRecompileMaterialHost\(Host\); \}\s*if \(Host\) \{ Host->MarkPackageDirty\(\); \}\s*\}/u);
     expect(header).toContain('#define FINALIZE_HOST() McpFinishMaterialEdit(RequestId, Material ? static_cast<UObject *>(Material) : static_cast<UObject *>(Function))');
     for (const file of [
       ['Nodes', 'McpMatAddMatNode.cpp'],
@@ -388,7 +388,7 @@ describe('handlers answer what they did', () => {
       expect(source, file[1]).toContain('McpFinishMaterialEdit(RequestId, ');
       expect(source, `${file[1]} recompiles only through the helper`).not.toMatch(/(?:HostOuter|Material|Func|Function)->PostEditChange\(\)/u);
     }
-    expect(compile, 'the compile that ends the batch always recompiles').toContain('Host->PostEditChange();');
+    expect(compile, 'the compile that ends the batch always recompiles').toContain('McpRecompileMaterialHost(Host);');
     expect(compile).not.toContain('McpFinishMaterialEdit');
     expect(batch, 'the steps before a failing one were applied without a compile of their own').toContain('if (Index > 0) { McpFinishMaterialEdit(RequestId, HostOuter); }');
     expect(batch.indexOf('if (Index > 0) { McpFinishMaterialEdit(RequestId, HostOuter); }')).toBeLessThan(batch.indexOf('TEXT("build_material_graph stopped at operations[%d]'));
@@ -507,8 +507,8 @@ describe('handlers answer what they did', () => {
     const set = code('Property', 'McpPropObjectSet.cpp');
     const compile = code('MaterialAuthoring', 'Properties', 'McpMatCompileMat.cpp');
 
-    expect(access).toMatch(/bool RefreshMaterialHostAfterEdit\(UObject\* Edited\)\s*\{\s*UObject\* Host = Edited \? Edited->GetTypedOuter<UMaterial>\(\) : nullptr;\s*if \(!Host && Edited\)\s*\{\s*Host = Edited->GetTypedOuter<UMaterialFunction>\(\);\s*\}\s*if \(!Host\)\s*\{\s*return false;\s*\}\s*Host->PreEditChange\(nullptr\);\s*Host->PostEditChange\(\);\s*return true;\s*\}/u);
-    expect(compile, 'the same two calls compile_material makes').toMatch(/Host->PreEditChange\(nullptr\);\s*Host->PostEditChange\(\);/u);
+    expect(access).toMatch(/bool RefreshMaterialHostAfterEdit\(UObject\* Edited\)\s*\{\s*UObject\* Host = Edited \? Edited->GetTypedOuter<UMaterial>\(\) : nullptr;\s*if \(!Host && Edited\)\s*\{\s*Host = Edited->GetTypedOuter<UMaterialFunction>\(\);\s*\}\s*if \(!Host\)\s*\{\s*return false;\s*\}\s*Host->PreEditChange\(nullptr\);\s*McpRecompileMaterialHost\(Host\);\s*return true;\s*\}/u);
+    expect(compile, 'the same two calls compile_material makes').toMatch(/Host->PreEditChange\(nullptr\);\s*McpRecompileMaterialHost\(Host\);/u);
     expect(set).toMatch(/RefreshK2NodeTitleCacheIfNeeded\(RootObject\);\s*const bool bMaterialRebuilt = McpPropertyActorAccess::RefreshMaterialHostAfterEdit\(RootObject\);/u);
     expect(set.indexOf('RefreshMaterialHostAfterEdit(RootObject)'), 'before the save, so the saved material is the rebuilt one').toBeLessThan(set.indexOf('McpPropertyTarget::SaveAfterWrite('));
     expect(set).toMatch(/if \(bMaterialRebuilt\) \{\s*ResultPayload->SetBoolField\(TEXT\("materialRebuilt"\), true\);\s*\}/u);
