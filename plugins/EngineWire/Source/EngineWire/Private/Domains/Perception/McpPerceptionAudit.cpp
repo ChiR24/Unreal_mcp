@@ -80,13 +80,7 @@ bool HandleAuditMaterials(UEngineWireSubsystem& Bridge, const FString& RequestId
         Said.Add(FString::Printf(TEXT("%d group(s) of repeated meshes to instance"), Instancing->TryGetArrayField(TEXT("groups"), Groups) ? Groups->Num() : 0));
     }
     // Until a material's shaders finish compiling it draws as the engine's stand-in, and its buffers read the stand-in's.
-    if (const int32 Jobs = McpShaderJobsRemaining())
-    {
-        TArray<TSharedPtr<FJsonValue>> Warnings;
-        Warnings.Add(MakeShared<FJsonValueString>(FString::Printf(TEXT("%d shader job(s) were still compiling: what they cover drew "
-            "with the engine's stand-in material; call again when they finish."), Jobs)));
-        Result->SetArrayField(TEXT("warnings"), Warnings);
-    }
+    McpWarnFrameStillBuilding(Result);
     McpHandlerUtils::MarkNoAssetsChanged(Result);
     Bridge.SendAutomationResponse(Socket, RequestId, true, FString::Join(Said, TEXT("; ")) + TEXT("."), Result, FString());
     return true;

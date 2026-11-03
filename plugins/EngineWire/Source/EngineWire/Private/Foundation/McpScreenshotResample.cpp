@@ -2,6 +2,7 @@
 
 #include "Foundation/BridgeHelpers/Security/McpProjectPaths.h"
 
+#include "AssetCompilingManager.h"
 #include "Containers/Ticker.h"
 #include "HAL/PlatformTime.h"
 #include "ShaderCompiler.h"
@@ -187,6 +188,25 @@ void McpAddShaderCompileState(const TSharedPtr<FJsonObject> &Resp,
         Jobs)));
     Resp->SetArrayField(TEXT("warnings"), Warnings);
   }
+}
+
+void McpWarnFrameStillBuilding(const TSharedPtr<FJsonObject> &Resp) {
+  const int32 Shaders = McpShaderJobsRemaining();
+  const int32 Assets = FAssetCompilingManager::Get().GetNumRemainingAssets();
+  if (!Resp.IsValid() || Shaders + Assets == 0) {
+    return;
+  }
+  TArray<TSharedPtr<FJsonValue>> Warnings;
+  const TArray<TSharedPtr<FJsonValue>> *Existing = nullptr;
+  if (Resp->TryGetArrayField(TEXT("warnings"), Existing) && Existing) {
+    Warnings = *Existing;
+  }
+  Warnings.Add(MakeShared<FJsonValueString>(FString::Printf(
+      TEXT("%d shader job(s) and %d asset build(s) (meshes, textures) were still running: until they finish a ")
+      TEXT("material draws as the engine's stand-in and a mesh still building may be missing or coarse, so this frame ")
+      TEXT("is not the final one; call again when they finish."),
+      Shaders, Assets)));
+  Resp->SetArrayField(TEXT("warnings"), Warnings);
 }
 
 // Jobs done compiling still have to be applied to their shader maps on a later tick: until then the material

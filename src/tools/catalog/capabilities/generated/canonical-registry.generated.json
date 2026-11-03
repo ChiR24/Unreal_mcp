@@ -1,5 +1,5 @@
 {
-  "catalogRevision": "226f8aaf67d82960",
+  "catalogRevision": "5d82570c79f4e378",
   "recordCount": 484,
   "records": [
     {
@@ -57020,7 +57020,7 @@
             },
             "background": {
               "type": "number",
-              "description": "Percent of the frame where no object was drawn (sky, void)."
+              "description": "Percent of the frame where nothing with an id was drawn: sky, void, and the ocean a water zone draws past its edge (the engine draws that far mesh without one). While shaders compile or meshes and textures still build, what they cover may be missing from the frame or drawn with a stand-in, and a warning says so."
             },
             "other": {
               "type": "number",
@@ -57200,8 +57200,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "3c67116f1e9790ea32b247624022263bf5934d60a5eced10d530cc72c8abeb3f",
-        "content": "dff9c544875d910b87ab581870c7990b044de59dc0cf82ad5d097f147ff863cc"
+        "schema": "a473c19d30ad5271b908cd5a9e0ce43edf4168db86ef71ef8e1fd87739b481c1",
+        "content": "2b7b1a74834ef88a0d5e22409da884c6b92986f46739611fc99b4dcf3f377f1c"
       }
     },
     {

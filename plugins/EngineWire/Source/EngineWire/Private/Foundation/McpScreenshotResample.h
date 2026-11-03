@@ -56,6 +56,14 @@ bool ResolveScreenshotDirectoryForMcp(const TSharedPtr<FJsonObject> &Payload,
 /** Shader compile jobs still outstanding (GShaderCompilingManager); 0 when none, or when there is no manager. */
 int32 McpShaderJobsRemaining();
 
+/**
+ * A reply that read a frame of the level viewport (describe_view, analyze_view, audit_materials) gets a warning while
+ * shader jobs or asset builds (meshes, textures: FAssetCompilingManager) are still running: until they finish a
+ * material draws as the engine's stand-in, and a mesh still building may be missing or coarse (a water body whose mesh
+ * is still building is left out of the water), so the frame is not the final one. Nothing when all is built.
+ */
+void McpWarnFrameStillBuilding(const TSharedPtr<FJsonObject> &Resp);
+
 /** The longest a waitForShaders capture waits: the bridge's client gives up on a call at 30 s. */
 constexpr double McpShaderWaitMaxSeconds = 25.0;
 

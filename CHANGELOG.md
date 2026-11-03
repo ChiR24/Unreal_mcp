@@ -34,6 +34,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Placed copies** take a behaviour's or variable's new default; the directory report's reply carries its assets; saving an asset again no longer announces it as new.
 - **Materials**: an instance draws the parent it is given and picks up its material's edits.
 - **Meshes**: morph targets made from deltas and skin weight profile weights last through rebuilds.
+- **Frame readers** (`describe_view`, `analyze_view`, `audit_materials`) warn while shaders, meshes or textures are still building: water still building read as background.
 
 </details>
 

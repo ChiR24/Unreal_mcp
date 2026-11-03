@@ -2,6 +2,7 @@
 #include "Domains/Environment/Inspection/McpEnvInspectViewIds.h"
 #include "Domains/ControlEditor/McpEditorScreenshotSupport.h"
 #include "Domains/Perception/McpPerception.h"
+#include "Foundation/McpScreenshotResample.h"
 
 #include "Components/InstancedStaticMeshComponent.h"
 #include "EditorViewportClient.h"
@@ -239,6 +240,8 @@ bool HandleInspectViewContentsAction(
         Result->SetStringField(TEXT("imageBase64"), McpLabelledViewPng(Colors, Size, ListedBoxes));
         Result->SetStringField(TEXT("mimeType"), TEXT("image/png"));
     }
+    // A water body whose mesh was still building drew nothing, and the harbour read as background with no word why.
+    McpWarnFrameStillBuilding(Result);
     McpHandlerUtils::MarkNoAssetsChanged(Result);
     const FString Message = Requested
         ? FString::Printf(TEXT("%d of %d named actor(s) in view."), Listed.Num(), Requested->Num())

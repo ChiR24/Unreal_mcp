@@ -92,7 +92,7 @@ describe('analyze_view', () => {
     const cost = code('Domains', 'Perception', 'McpPerceptionCost.cpp');
     expect(cost).toMatch(/GShaderCompilingManager->IsCompiling\(\) && FPlatformTime::Seconds\(\) < Until;\)\s*\{\s*GShaderCompilingManager->ProcessAsyncResults\(false, false\);/u);
     expect(cost.indexOf('GShaderCompilingManager->ProcessAsyncResults')).toBeLessThan(cost.indexOf('Viewport->ReadPixels'));
-    expect(handler).toMatch(/if \(const int32 Jobs = McpShaderJobsRemaining\(\)\)\s*\{\s*TArray<TSharedPtr<FJsonValue>> Warnings;/u);
+    expect(handler).toContain('McpWarnFrameStillBuilding(Result);');
   });
 
   it('scores harmony only: nothing is recoloured', () => {
@@ -137,6 +137,27 @@ describe('describe_view saveAs and compareWith', () => {
   it('refuses a frame of another size or field of view instead of comparing it', () => {
     expect(saved).toContain('OutCode = TEXT("VIEW_SIZE_CHANGED");');
     expect(saved).toContain('if (!FMath::IsNearlyEqual(Saved->Fov, View.Client->ViewFOV, 0.01f))');
+  });
+});
+
+// A harbour read as background with no word why: the water body's mesh was still building, so nothing drew there.
+// Every reader of the level viewport's frame warns through one helper while shaders or asset builds are running.
+describe('frame readers warn while the frame is still being built', () => {
+  it('counts shader jobs and asset builds (meshes, textures) in one warning', () => {
+    const helper = code('Foundation', 'McpScreenshotResample.cpp');
+    expect(helper).toContain('const int32 Shaders = McpShaderJobsRemaining();');
+    expect(helper).toContain('const int32 Assets = FAssetCompilingManager::Get().GetNumRemainingAssets();');
+  });
+
+  it.each([
+    ['describe_view', ['Domains', 'Environment', 'Inspection', 'McpEnvInspectViewContents.cpp']],
+    ['analyze_view', ['Domains', 'Perception', 'McpPerceptionAnalyze.cpp']],
+    ['audit_materials', ['Domains', 'Perception', 'McpPerceptionAudit.cpp']],
+  ])('%s warns before it replies', (_name, path) => {
+    const source = code(...path);
+    expect(source).toContain('McpWarnFrameStillBuilding(Result);');
+    expect(source.indexOf('McpWarnFrameStillBuilding(Result);')).toBeLessThan(source.lastIndexOf('SendAutomationResponse('));
+    expect(source).not.toContain('McpShaderJobsRemaining()');
   });
 });
 

@@ -9248,7 +9248,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "background": {
           "type": "number",
-          "description": "Percent of the frame where no object was drawn (sky, void)."
+          "description": "Percent of the frame where nothing with an id was drawn: sky, void, and the ocean a water zone draws past its edge (the engine draws that far mesh without one). While shaders compile or meshes and textures still build, what they cover may be missing from the frame or drawn with a stand-in, and a warning says so."
         },
         "blueprintCompiled": {
           "type": "boolean",

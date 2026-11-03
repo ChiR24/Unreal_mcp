@@ -28,6 +28,7 @@ All notable changes to the EngineWire plugin (formerly McpAutomationBridge) will
 - **A save is not a new asset**: `AssetCreated` only for a package with no file yet (`McpAnnounceIfNew`).
 - **Morph targets and skin weight profiles** are written into the mesh's source data, so rebuilds keep them.
 - **Material instances**: a new parent compiles the instance's own shaders (`SetParentEditorOnly`, undoable), and material edits recompile their instances (`FMaterialUpdateContext`).
+- **Frame readers warn while assets build** (`McpWarnFrameStillBuilding`): shader jobs and `FAssetCompilingManager` builds; a water body whose mesh was still building drew nothing and read as background.
 
 ## [0.6.0] - 2026-10-27
 
