@@ -4,6 +4,7 @@
  */
 import type { CapabilityRecordSource } from '../../model.js';
 import { ANY_EDITOR_STATE, buildCoreRecord } from '../core/builder.js';
+import { CONSOLE_FILTER } from '../system-control/console.js';
 import { P } from './properties.js';
 
 const F = 'command';
@@ -214,10 +215,10 @@ export const COMMAND_RECORDS: readonly CapabilityRecordSource[] = [
     summary: 'Execute an Unreal console command via cross-parent dispatch to the console_command bridge action.',
     whenToUse: ['A console command must be run from the editor context.'],
     whenNotToUse: ['A dedicated action exists for the operation.'],
-    inputProps: { command: P.command },
+    inputProps: { command: P.command, filter: CONSOLE_FILTER },
     required: ['command'],
     effect: 'write',
-   
+
     exampleInput: { action: 'console_command', command: 'r.SetRes 1920x1080' },
   }),
   buildCoreRecord({

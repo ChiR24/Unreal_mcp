@@ -10,8 +10,14 @@ const PT = 'system_control';
 const CONSOLE_OUTPUT = {
   type: 'string',
   maxLength: 4096,
-  description: 'What the command printed, kept short: the first 30 lines and any Error: or Warning: line after them, at most three lines that open with the same two words, and (+N more lines) where lines were left out. What the engine logged meanwhile comes back the same way under details.log.',
+  description: 'What the command printed, kept short: the first 30 lines and any Error: or Warning: line after them, at most three lines that open with the same two words, and (+N more lines) where lines were left out; with filter, only the lines that contain it. What the engine logged meanwhile comes back the same way under details.log.',
 };
+// Shared by both members of the fold (a folded family keeps one description per parameter) and control_editor's
+// console_command, which reaches the same handler.
+export const CONSOLE_FILTER = {
+  type: 'string',
+  description: 'Keep only the lines of output and log that contain this text (case ignored), before they are shortened; a last line says how many lines were left out. A busy level prints more than 30 lines of au.DumpActiveSounds: give the sound\'s name to find it.',
+} as const;
 
 export const CONSOLE_RECORDS: readonly CapabilityRecordSource[] = [
   buildCoreRecord({
@@ -71,7 +77,7 @@ export const CONSOLE_RECORDS: readonly CapabilityRecordSource[] = [
     summary: 'Execute a single validated console command string on the engine.',
     whenToUse: ['An arbitrary console command must be run and its result returned.'],
     whenNotToUse: ['A dedicated system_control action exists for the operation.'],
-    inputProps: { command: { type: 'string', description: 'The console command string to execute.' } },
+    inputProps: { command: { type: 'string', description: 'The console command string to execute.' }, filter: CONSOLE_FILTER },
     required: ['command'],
     effect: 'write',
     dispatchAction: 'console_command',
@@ -88,9 +94,9 @@ export const CONSOLE_RECORDS: readonly CapabilityRecordSource[] = [
     family: 'console',
     summary: 'Execute a validated, non-empty console command (empty input is rejected).',
     topics: ['active sounds', 'live coding', 'compile c++', 'recompile code', 'hot reload'],
-    whenToUse: ['A console command must be run with explicit empty-input rejection.', 'The sounds playing right now must be listed (is the music still on, did a loop stop): au.DumpActiveSounds puts each one with its asset, owner and volume in log.', 'C++ must be recompiled while the editor runs: LiveCoding.Compile (read_log shows the result; a Live Coding patch is lost when the editor restarts, so a lasting change needs a full build with the editor closed).'],
+    whenToUse: ['A console command must be run with explicit empty-input rejection.', 'The sounds playing right now must be listed (is the music still on, did a loop stop): au.DumpActiveSounds puts each one with its asset, owner and volume in log; filter with a sound\'s name to find one.', 'C++ must be recompiled while the editor runs: LiveCoding.Compile (read_log shows the result; a Live Coding patch is lost when the editor restarts, so a lasting change needs a full build with the editor closed).'],
     whenNotToUse: ['The command is empty or whitespace-only.'],
-    inputProps: { command: { type: 'string', description: 'The non-empty console command to execute.' } },
+    inputProps: { command: { type: 'string', description: 'The non-empty console command to execute.' }, filter: CONSOLE_FILTER },
     required: ['command'],
     effect: 'write',
     dispatchAction: 'console_command',

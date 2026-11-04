@@ -1,5 +1,5 @@
 {
-  "catalogRevision": "d2d9fb04c13cb553",
+  "catalogRevision": "84c63d5aca769550",
   "recordCount": 487,
   "records": [
     {
@@ -49033,6 +49033,10 @@
             "command": {
               "type": "string",
               "description": "Console command string."
+            },
+            "filter": {
+              "type": "string",
+              "description": "Keep only the lines of output and log that contain this text (case ignored), before they are shortened; a last line says how many lines were left out. A busy level prints more than 30 lines of au.DumpActiveSounds: give the sound's name to find it."
             }
           },
           "required": [
@@ -49106,8 +49110,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "a0a3d862a77ce05433d1e54cb53f6c2ca70ac88330e6fb6cfc99ac292231e6c4",
-        "content": "385b60828ebb656c945e098133842e6d31acc4394d2527059d5685177d6e1ba9"
+        "schema": "0dc8900a400d464a8968a61530f6517c9c7c97557adf4fba5a921cefc084eb87",
+        "content": "c1060ab46ca5fbe1a629fd6446da9108ef533ace917ab0b7933265a6d83ca318"
       }
     },
     {
@@ -115471,7 +115475,7 @@
         "summary": "Run one console command against the editor world, or through the first player while Play In Editor runs, and return what it printed (output) and what the engine logged meanwhile (log), each kept short: the first 30 lines and any Error: or Warning: line after them, at most three lines that open with the same two words, and (+N more lines) where lines were left out; at most 4096 characters. A command the engine does not recognise fails (EXEC_FAILED); one holding ;, |, &&, a backtick or several lines, or a blocked name (quit, exit, py, crash and the like), is refused (COMMAND_BLOCKED). Success means the engine ran it, not that it had the effect wanted.",
         "whenToUse": [
           "A console command must be run with explicit empty-input rejection.",
-          "The sounds playing right now must be listed (is the music still on, did a loop stop): au.DumpActiveSounds puts each one with its asset, owner and volume in log.",
+          "The sounds playing right now must be listed (is the music still on, did a loop stop): au.DumpActiveSounds puts each one with its asset, owner and volume in log; filter with a sound's name to find one.",
           "C++ must be recompiled while the editor runs: LiveCoding.Compile (read_log shows the result; a Live Coding patch is lost when the editor restarts, so a lasting change needs a full build with the editor closed).",
           "An arbitrary console command must be run and its result returned."
         ],
@@ -115492,6 +115496,10 @@
             "command": {
               "type": "string",
               "description": "The non-empty console command to execute."
+            },
+            "filter": {
+              "type": "string",
+              "description": "Keep only the lines of output and log that contain this text (case ignored), before they are shortened; a last line says how many lines were left out. A busy level prints more than 30 lines of au.DumpActiveSounds: give the sound's name to find it."
             }
           },
           "required": [
@@ -115524,7 +115532,7 @@
             "output": {
               "type": "string",
               "maxLength": 4096,
-              "description": "What the command printed, kept short: the first 30 lines and any Error: or Warning: line after them, at most three lines that open with the same two words, and (+N more lines) where lines were left out. What the engine logged meanwhile comes back the same way under details.log."
+              "description": "What the command printed, kept short: the first 30 lines and any Error: or Warning: line after them, at most three lines that open with the same two words, and (+N more lines) where lines were left out; with filter, only the lines that contain it. What the engine logged meanwhile comes back the same way under details.log."
             }
           },
           "required": [
@@ -115578,8 +115586,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "b49b1e361aed5d63fdb0008cd1c347bb4455b05327691ee54cefed6c57f34869",
-        "content": "33f6b3cb616f3b38c933993a5c184daaf109e78ec4bf056fdd71ad1cee4b782c"
+        "schema": "ce0c2f54f0d15b4cce0d4e9faa403debf466bfe8ba5b60bdfb330774381acb2a",
+        "content": "47ffa8caa3f7a894ff02c8efbf80448fec2de6ddd082a97ea6c33ef6b78264fd"
       }
     },
     {

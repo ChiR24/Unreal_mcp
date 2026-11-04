@@ -19,7 +19,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Cutscene shots without Play**: `camera` looks through a camera actor as it is now (`screenshot`, `describe_view`, `analyze_view`, `audit_materials`), and `pause` and `list_track_keys` name the camera each cut shows.
 - **Views**: `screenshot` `renderSize` draws the game's frame size; `fov` beside `location` and `rotation` on every view read.
 - **Plugins and project**: `get_plugin_info`, `create_plugin` / `remove_plugin`, game features (UE 5.1+), data registries, an unused-asset report, `set_project_thumbnail`, `get_console_variables`, `remove_cpp_class`.
-- **Editor**: `read_editor_ui`, `set_selected_actors`, viewport `show_flags`, `reimport` without a dialog, `set_current_level`.
+- **Editor**: `read_editor_ui`, `set_selected_actors`, viewport `show_flags`, `reimport` without a dialog, `set_current_level`; `console_command` `filter` keeps only the lines holding a word.
 - **Actors**: snap to grid, distribute, align, lock, group, randomize, replace, convert to a Blueprint, move to a level, numbered batch rename, copies along a spline, `place_decals`; `list` `bounds` and `find` rows with locations.
 - **Sequences**: `add_actors` `rebind` points a sequence copied with its level at the new level's actors; `add_behaviour` `sequence_trigger` plays one when the player walks into an area, in cinematic mode until it ends.
 - **Geometry**: `append_tubes`, `append_polygons` `repeat`, and `bake_vertex_colors` `coarseShare`.

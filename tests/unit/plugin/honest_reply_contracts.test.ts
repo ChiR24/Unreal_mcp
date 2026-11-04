@@ -5420,7 +5420,13 @@ describe('console_command replies stay lean', () => {
     expect(lines).toBeLessThanOrEqual(50);
     expect(shape).toBeGreaterThan(0);
     expect(shape).toBeLessThanOrEqual(5);
-    const lean = sliceBetween(handler, 'FString LeanConsoleText(const FString& Text)', 'return Lean;');
+    const lean = sliceBetween(handler, 'FString LeanConsoleText(const FString& Text, const FString& Filter)', 'return Lean;');
+    // filter keeps only the lines holding it (FString::Contains ignores case by default), before any line is counted
+    // against the limits, and says how many it left out.
+    expect(lean.indexOf('if (!Filter.IsEmpty() && !Line.Contains(Filter))')).toBeGreaterThan(-1);
+    expect(lean.indexOf('if (!Filter.IsEmpty() && !Line.Contains(Filter))')).toBeLessThan(lean.indexOf('const int32 Seen ='));
+    expect(lean).toContain('TEXT("(%d lines without \\"%s\\" left out)")');
+    expect(handler).toContain('Payload->TryGetStringField(TEXT("filter"), Filter);');
     expect(lean).toContain('const int32 Seen = ++Shapes.FindOrAdd(Words.Num() < 2 ? Line : Words[0] + TEXT(" ") + Words[1]);');
     expect(lean).toContain('if (Seen > kMaxConsoleShape || (Shown >= kMaxConsoleLines && !bProblem))');
     expect(lean).toContain('Line.StartsWith(TEXT("Error: ")) || Line.StartsWith(TEXT("Warning: "))');

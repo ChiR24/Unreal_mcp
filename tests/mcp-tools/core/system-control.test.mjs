@@ -133,6 +133,7 @@ const testCases = [
   // === ACTION ===
   { scenario: 'ACTION: execute_command', toolName: 'system_control', arguments: { action: 'execute_command', command: 'stat unit' }, expected: 'success' },
   { scenario: 'ACTION: console_command', toolName: 'system_control', arguments: { action: 'console_command', command: 'stat fps' }, expected: 'success' },
+  { scenario: 'ACTION: console_command filter keeps only the lines holding it, case ignored, and counts the rest', toolName: 'system_control', arguments: { action: 'console_command', command: 'au.DumpActiveSounds', filter: 'sound count' }, expected: 'success', assertions: [{ path: 'structuredContent.result.details.log', includes: 'Active Sound Count', label: 'the count line is kept' }, { path: 'structuredContent.result.details.log', includes: 'lines without "sound count" left out', label: 'the other lines are counted' }] },
   { scenario: 'ACTION: run_ubt', toolName: 'system_control', arguments: { action: 'run_ubt', target: 'MCPtestEditor', platform: 'Linux', configuration: 'Development', arguments: '-NoHotReload' }, expected: 'success' },
   { scenario: 'ACTION: package_project', toolName: 'system_control', arguments: { action: 'package_project', platform: 'Win64', configuration: 'Development', archiveDirectory: 'D:/Tmp/Packaged', maps: ['/Game/Maps/L_Hub'], pak: true, build: false }, expected: 'success' },
   // executableName names the game target; a name that is not an identifier is refused before anything is written or built.

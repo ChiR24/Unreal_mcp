@@ -35,8 +35,10 @@ constexpr int32 kMaxConsoleShape = 3;
 // words only the first kMaxConsoleShape are kept, wherever they fall, at most kMaxConsoleLines lines in all, and an
 // Error: or Warning: line (FMcpOutputCapture marks the engine's) past that limit too; each gap is counted where it was
 // cut. Kept lines get read_log's per-line sanitizer before the text is cut to kMaxConsoleOutputChars, so a cut never
-// leaves part of an identity the sanitizer would have hidden.
-FString LeanConsoleText(const FString& Text)
+// leaves part of an identity the sanitizer would have hidden. A Filter keeps only the lines holding it (case ignored)
+// before any of that, and says how many it left out: in a busy level au.DumpActiveSounds printed over 40 lines and
+// the sound asked about fell past the first 30.
+FString LeanConsoleText(const FString& Text, const FString& Filter)
 {
     TArray<FString> Lines;
     Text.ParseIntoArrayLines(Lines, false);
@@ -44,6 +46,7 @@ FString LeanConsoleText(const FString& Text)
     TMap<FString, int32> Shapes;
     int32 Shown = 0;
     int32 Skipped = 0;
+    int32 Unmatched = 0;
     auto NoteSkipped = [&Kept, &Skipped]()
     {
         if (Skipped > 0)
@@ -54,6 +57,11 @@ FString LeanConsoleText(const FString& Text)
     };
     for (const FString& Line : Lines)
     {
+        if (!Filter.IsEmpty() && !Line.Contains(Filter))
+        {
+            ++Unmatched;
+            continue;
+        }
         TArray<FString> Words;
         Line.ParseIntoArrayWS(Words);
         const int32 Seen = ++Shapes.FindOrAdd(Words.Num() < 2 ? Line : Words[0] + TEXT(" ") + Words[1]);
@@ -68,6 +76,10 @@ FString LeanConsoleText(const FString& Text)
         ++Shown;
     }
     NoteSkipped();
+    if (Unmatched > 0)
+    {
+        Kept.Add(FString::Printf(TEXT("(%d lines without \"%s\" left out)"), Unmatched, *Filter));
+    }
     FString Lean = FString::Join(Kept, TEXT("\n"));
     if (Lean.Len() > kMaxConsoleOutputChars)
     {
@@ -301,9 +313,12 @@ bool UEngineWireSubsystem::HandleConsoleCommandAction(
         // Captured engine text is log text, so it gets read_log's per-line
         // sanitizer: an identity or host path the engine printed during the
         // command came back verbatim in `log` while the message was redacted.
-        const FString BoundedOutput = LeanConsoleText(OutputCapture.TrimStartAndEnd());
+        FString Filter;
+        Payload->TryGetStringField(TEXT("filter"), Filter);
+        Filter.TrimStartAndEndInline();
+        const FString BoundedOutput = LeanConsoleText(OutputCapture.TrimStartAndEnd(), Filter);
         const FString BoundedLog =
-            LeanConsoleText(FString::Join(LogCapture.Consume(), TEXT("\n")).TrimStartAndEnd());
+            LeanConsoleText(FString::Join(LogCapture.Consume(), TEXT("\n")).TrimStartAndEnd(), Filter);
 
         TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
         Result->SetStringField(TEXT("command"), Command);
