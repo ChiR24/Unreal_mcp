@@ -24,6 +24,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **`append_tubes`** lays pipes, cables, rods and rings along paths in one call: rings carried without twisting, mitred corners, a taper, caps and repeats.
 - **`append_polygons`** takes `repeat`: one face laid out in rows (stripes, slats, fins) instead of every copy by hand.
 - **`read_graph_as_code`** takes `entry`: one event or function alone, its nodes and links only (one event of a 500-node graph came with the rest).
+- **`write_graph_from_code`** reads back only the events and functions it wrote (their code, nodes and links), as `read_graph_as_code` `entry` reads one.
 - **Sequences**: `add_actors` `rebind` points a sequence copied with its level at the new level's actors (in Play it animated nothing and never took the camera).
 - **Variables**: `add_variable` takes `exposeToCinematics`, so Sequencer can key the variable on placed actors.
 - **Cutscene shots without Play**: `screenshot` `camera` looks through a camera actor as it is now, and `pause` with `startTime` names the camera the cut shows then (`cameraCut`), as `list_track_keys` now does for every cut.

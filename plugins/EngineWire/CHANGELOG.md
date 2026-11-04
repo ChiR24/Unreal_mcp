@@ -32,6 +32,7 @@ All notable changes to the EngineWire plugin (formerly McpAutomationBridge) will
 - **run_script value if** (`Scripts/McpScriptCheck.cpp`, `McpScriptRun.cpp`): `(if cond a b)` where a value goes, only the picked value evaluated; one without both values is refused before anything runs (`SCRIPT_INVALID`).
 - **Current level** (`Level/World/McpLevelSetCurrent.cpp`): `UWorld::SetCurrentLevel` and `NewCurrentLevel`, refusing Play, unknown, Level Instance, unloaded and locked levels; `add_sublevel` puts back the level `AddLevelToWorld` made current.
 - **Graph code entry** (`BlueprintGraph/Code/McpGraphCodeRead.cpp`): read_graph_as_code `entry` keeps the one (event or (fn form by name (`KeepEntry`) and lists the nodes `Reach` finds from its head (the writer's own old-body walk).
+- **Graph code read-back**: the write reply comes from `ReadAsCode`, the reader read_graph_as_code uses; `KeepEntry` takes several entry names.
 
 ### Fixed
 - **Search**: lead verbs (`McpSearchIntent.cpp`) and fold aliases run the member they name.

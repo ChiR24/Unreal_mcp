@@ -543,6 +543,8 @@ const testCases = [
   { scenario: 'CODE: write_graph_from_code goes on into a node of an event it leaves alone', toolName: 'manage_blueprint', arguments: { action: 'write_graph_from_code', blueprintPath: CODE_BP_PATH, graphName: 'EventGraph', code: '(event Custom|OnCodeGoto\n  (goto ${captured:codePrintId}))' }, expected: 'success', assertions: [
     { path: 'structuredContent.result.forms.0.entryMade', equals: true, label: 'the new event was made' },
     { path: 'structuredContent.result.code', includes: '(goto n', label: 'it runs on into the print the loop event keeps' },
+    { path: 'structuredContent.result.code', notIncludes: '(event Custom|OnCodeProbe', label: 'the reply reads back only the event written' },
+    { path: 'structuredContent.result.nodes', minLength: 2, label: 'with the nodes it runs: itself and that print' },
   ] },
   { scenario: 'Setup: a function with an input and a return value', toolName: 'manage_blueprint', arguments: { action: 'add_function', blueprintPath: CODE_BP_PATH, functionName: 'Twice', inputs: [{ name: 'Value', type: 'Integer' }], outputs: [{ name: 'Result', type: 'Integer' }] }, expected: 'success' },
   { scenario: 'CODE: write_graph_from_code writes a function body that returns a value', toolName: 'manage_blueprint', arguments: { action: 'write_graph_from_code', blueprintPath: CODE_BP_PATH, code: '(fn Twice (Value)\n  (return (* Value 2)))' }, expected: 'success', assertions: [

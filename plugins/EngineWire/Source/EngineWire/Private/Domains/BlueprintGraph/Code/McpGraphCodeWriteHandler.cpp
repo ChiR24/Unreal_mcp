@@ -42,25 +42,33 @@ TArray<TSharedPtr<FJsonValue>> MessagesByLine(const TMap<UEdGraphNode*, int32>& 
     return Rows;
 }
 
-// The written graphs read back, as read_graph_as_code prints them.
-FString ReadBack(UBlueprint* Blueprint, const TArray<UEdGraph*>& Graphs)
+// The entries the code wrote read back into Result as read_graph_as_code reads them by entry (code, nodes, links and their
+// counts): the whole graphs read back made a one-form edit of a 64-node event graph answer with all 64 nodes.
+void ReadBack(UBlueprint* Blueprint, const TArray<Write::FGraphPlan>& Plans, FJsonObject& Result)
 {
-    TArray<FGraph> Reads;
-    for (UEdGraph* Graph : Graphs)
+    TArray<UEdGraph*> Graphs;
+    TArray<FString> Written;
+    for (const Write::FGraphPlan& Plan : Plans)
     {
-        Reads.Add(Snapshot(Graph));
+        Graphs.Add(Plan.Graph);
+        for (const UEdGraphNode* Entry : Plan.Entries)
+        {
+            if (const UK2Node* Node = Cast<UK2Node>(Entry))
+            {
+                Written.Add(EntryName(TypeIdOf(Node)));
+            }
+        }
     }
-    ShortenIds(Reads);
-    ExpandTypeIds(Blueprint, Graphs, Reads);
-    TArray<FString> Code;
-    TArray<FString> Warnings;
-    for (int32 At = 0; At < Graphs.Num(); ++At)
+    const TSharedPtr<FJsonObject> Read = MakeShared<FJsonObject>();
+    TArray<FString> Names;
+    ReadAsCode(Blueprint, Graphs, Written, *Read, Names);
+    for (const TCHAR* Field : {TEXT("code"), TEXT("nodes"), TEXT("links"), TEXT("nodeCount"), TEXT("linkCount"), TEXT("truncated")})
     {
-        TSet<int32> Placed;
-        Code.Add(TEXT("; graph ") + Graphs[At]->GetName());
-        Code.Add(Decompile(Reads[At], Placed, Warnings));
+        if (const TSharedPtr<FJsonValue> Value = Read->TryGetField(Field))
+        {
+            Result.SetField(Field, Value);
+        }
     }
-    return FString::Join(Code, TEXT("\n"));
 }
 
 void Rollback(UBlueprint* Blueprint, const McpBlueprintBehaviour::FSnapshot& Before)
@@ -153,7 +161,6 @@ bool HandleWriteGraphFromCode(const McpBlueprintGraphHandlers::FActionContext& C
     // (BuildForms gathers them again for the same reason after making a custom event).
     TArray<FMenuEntry> Candidates = MenuCandidates(Titles);
     TMap<UEdGraphNode*, int32> Made;
-    TArray<UEdGraph*> Graphs;
     TArray<TSharedPtr<FJsonValue>> FormRows;
     for (FGraphPlan& Plan : Plans)
     {
@@ -163,7 +170,6 @@ bool HandleWriteGraphFromCode(const McpBlueprintGraphHandlers::FActionContext& C
             Context.SendError(Error + TEXT(" Nothing was written."), TEXT("CODE_INVALID"));
             return true;
         }
-        Graphs.Add(Plan.Graph);
         // A function keeps its old return nodes when the code makes none: they hold its return values.
         bool bReturns = false;
         for (const TPair<UEdGraphNode*, int32>& Each : Made)
@@ -216,7 +222,7 @@ bool HandleWriteGraphFromCode(const McpBlueprintGraphHandlers::FActionContext& C
     {
         Result->SetArrayField(TEXT("compileMessages"), Messages);
     }
-    Result->SetStringField(TEXT("code"), ReadBack(Blueprint, Graphs));
+    ReadBack(Blueprint, Plans, *Result);
     Result->SetArrayField(TEXT("forms"), FormRows);
     Result->SetNumberField(TEXT("created"), Made.Num() - Kept);
     Result->SetNumberField(TEXT("kept"), Kept);

@@ -19293,7 +19293,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "code": {
           "type": "string",
-          "description": "The text: each graph after a \"; graph Name\" comment line, its events and functions top to bottom (with entry, only that one)."
+          "description": "The events and functions the code wrote, read back as read_graph_as_code prints them (each after its graph's comment line) with the new nodes' ids; the rest of their graphs is left out."
         },
         "compileMessages": {
           "type": "array",
@@ -19940,10 +19940,22 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "description": "Wires out of those nodes, listed or not."
         },
         "links": {
-          "type": "array",
-          "items": {
-            "type": "string"
-          },
+          "oneOf": [
+            {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "description": "Every wire as \"id.OutPin -> id.InPin\". At most 1000."
+            },
+            {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "description": "The wires out of those nodes as \"id.OutPin -> id.InPin\". At most 1000."
+            }
+          ],
           "description": "Every wire as \"id.OutPin -> id.InPin\". At most 1000."
         },
         "literalNodeId": {
@@ -20125,6 +20137,16 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
               },
               "x-unreal-reflection-boundary": true,
               "description": "Every node: id (as the code names it), nodeId (its GUID) and type (its action-menu id). At most 500."
+            },
+            {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "additionalProperties": true,
+                "x-unreal-reflection-boundary": true
+              },
+              "x-unreal-reflection-boundary": true,
+              "description": "The nodes those events and functions run and the values those read: id (as the code names it), nodeId (its GUID) and type (its action-menu id). At most 500."
             }
           ],
           "description": "Every node: id (as the code names it), nodeId (its GUID) and type (its action-menu id). At most 500."

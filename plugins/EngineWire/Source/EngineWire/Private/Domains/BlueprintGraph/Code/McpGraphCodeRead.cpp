@@ -29,10 +29,10 @@ void TagsOf(const FString& Line, TSet<FString>& OutIds)
     }
 }
 
-// The forms of Text whose (event Name / (fn Name is Entry (a custom event's Custom|Name too), each after its graph's
-// comment line, and the ids their head lines name (the entry nodes); empty when no form is, OutNames then listing every
-// entry there is. A 543-node event graph read whole to see one custom event cost tens of thousands of characters.
-FString KeepEntry(const FString& Text, const FString& Entry, TSet<FString>& OutHeads, TArray<FString>& OutNames)
+// The forms of Text whose (event Name / (fn Name is one of Entries (a custom event's Custom|Name too), each after its
+// graph's comment line, and the ids their head lines name (the entry nodes); empty when no form is, OutNames then listing
+// every entry there is. A 543-node event graph read whole to see one custom event cost tens of thousands of characters.
+FString KeepEntry(const FString& Text, const TArray<FString>& Entries, TSet<FString>& OutHeads, TArray<FString>& OutNames)
 {
     TArray<FString> Lines;
     Text.ParseIntoArrayLines(Lines, false);
@@ -53,7 +53,8 @@ FString KeepEntry(const FString& Text, const FString& Entry, TSet<FString>& OutH
             FString Short = Name;
             Name.Split(TEXT("|"), nullptr, &Short, ESearchCase::IgnoreCase, ESearchDir::FromEnd);
             OutNames.Add(Name);
-            bKeep = Name.Equals(Entry, ESearchCase::IgnoreCase) || Short.Equals(Entry, ESearchCase::IgnoreCase);
+            bKeep = Entries.ContainsByPredicate([&Name, &Short](const FString& Entry)
+                                                { return Name.Equals(Entry, ESearchCase::IgnoreCase) || Short.Equals(Entry, ESearchCase::IgnoreCase); });
             Kept += bKeep && !GraphLine.IsEmpty() ? GraphLine + TEXT("\n") : FString();
             GraphLine = bKeep ? FString() : GraphLine;
             if (bKeep)
@@ -75,25 +76,9 @@ FString KeepEntry(const FString& Text, const FString& Entry, TSet<FString>& OutH
 }
 } // namespace
 
-bool HandleReadGraphAsCode(const McpBlueprintGraphHandlers::FActionContext& Context)
+int32 ReadAsCode(UBlueprint* Blueprint, const TArray<UEdGraph*>& Graphs, const TArray<FString>& Entries, FJsonObject& Result,
+                 TArray<FString>& OutNames)
 {
-    if (Context.SubAction != TEXT("read_graph_as_code"))
-    {
-        return false;
-    }
-    UBlueprint* Blueprint = Context.Blueprint;
-    TArray<UEdGraph*> Graphs;
-    if (Context.Payload->HasField(TEXT("graphName")))
-    {
-        Graphs.Add(Context.TargetGraph);
-    }
-    else
-    {
-        Graphs.Append(Blueprint->UbergraphPages);
-        Graphs.Append(Blueprint->FunctionGraphs);
-    }
-    Graphs.RemoveAll([](const UEdGraph* Graph) { return Graph == nullptr; });
-
     TArray<FString> Code;
     TArray<FString> Warnings;
     TArray<TSharedPtr<FJsonValue>> GraphRows;
@@ -116,17 +101,13 @@ bool HandleReadGraphAsCode(const McpBlueprintGraphHandlers::FActionContext& Cont
         Code.Add(Decompile(Reads[GraphAt], PlacedIn.AddDefaulted_GetRef(), Warnings));
     }
     FString Text = FString::Join(Code, TEXT("\n"));
-    FString Entry;
     TSet<FString> Heads;
-    if (Context.Payload->TryGetStringField(TEXT("entry"), Entry) && !Entry.IsEmpty())
+    if (Entries.Num() > 0)
     {
-        TArray<FString> Names;
-        Text = KeepEntry(Text, Entry, Heads, Names);
+        Text = KeepEntry(Text, Entries, Heads, OutNames);
         if (Text.IsEmpty())
         {
-            Context.SendError(FString::Printf(TEXT("%s has no event or function '%s'. Its entries: %s."), *Blueprint->GetName(), *Entry,
-                                              *FString::Join(Names, TEXT(", "))), TEXT("ENTRY_NOT_FOUND"));
-            return true;
+            return INDEX_NONE;
         }
     }
     for (int32 GraphAt = 0; GraphAt < Graphs.Num(); ++GraphAt)
@@ -134,11 +115,11 @@ bool HandleReadGraphAsCode(const McpBlueprintGraphHandlers::FActionContext& Cont
         UEdGraph* Graph = Graphs[GraphAt];
         const FGraph& Read = Reads[GraphAt];
         const TSet<int32>& Placed = PlacedIn[GraphAt];
-        // With an entry, the nodes listed are what runs from it and the values that reads.
+        // With entries, the nodes listed are what runs from them and the values that reads.
         TSet<int32> Shown;
         for (int32 At = 0; At < Read.Nodes.Num(); ++At)
         {
-            if (Entry.IsEmpty())
+            if (Entries.Num() == 0)
             {
                 Shown.Add(At);
             }
@@ -147,7 +128,7 @@ bool HandleReadGraphAsCode(const McpBlueprintGraphHandlers::FActionContext& Cont
                 Shown.Append(Write::WritePlanParts::Reach(Read, At));
             }
         }
-        if (!Entry.IsEmpty() && Shown.Num() == 0)
+        if (Entries.Num() > 0 && Shown.Num() == 0)
         {
             continue;
         }
@@ -156,7 +137,7 @@ bool HandleReadGraphAsCode(const McpBlueprintGraphHandlers::FActionContext& Cont
         {
             const FNode& Node = Read.Nodes[At];
             // A reroute is never printed: the text runs through it.
-            if (!Placed.Contains(At) && Node.Kind != EKind::Knot && Entry.IsEmpty())
+            if (!Placed.Contains(At) && Node.Kind != EKind::Knot && Entries.Num() == 0)
             {
                 Missing.Add(MakeShared<FJsonValueString>(Node.Id));
             }
@@ -201,16 +182,15 @@ bool HandleReadGraphAsCode(const McpBlueprintGraphHandlers::FActionContext& Cont
         NotInCode += Missing.Num();
     }
 
-    TSharedPtr<FJsonObject> Result = MakeShared<FJsonObject>();
-    Result->SetStringField(TEXT("code"), Text);
-    Result->SetArrayField(TEXT("graphs"), GraphRows);
-    Result->SetArrayField(TEXT("nodes"), NodeRows);
-    Result->SetArrayField(TEXT("links"), LinkRows);
-    Result->SetNumberField(TEXT("nodeCount"), NodeCount);
-    Result->SetNumberField(TEXT("linkCount"), LinkCount);
+    Result.SetStringField(TEXT("code"), Text);
+    Result.SetArrayField(TEXT("graphs"), GraphRows);
+    Result.SetArrayField(TEXT("nodes"), NodeRows);
+    Result.SetArrayField(TEXT("links"), LinkRows);
+    Result.SetNumberField(TEXT("nodeCount"), NodeCount);
+    Result.SetNumberField(TEXT("linkCount"), LinkCount);
     if (NodeRows.Num() < NodeCount || LinkRows.Num() < LinkCount)
     {
-        Result->SetBoolField(TEXT("truncated"), true);
+        Result.SetBoolField(TEXT("truncated"), true);
     }
     if (Warnings.Num() > 0)
     {
@@ -219,11 +199,48 @@ bool HandleReadGraphAsCode(const McpBlueprintGraphHandlers::FActionContext& Cont
         {
             Rows.Add(MakeShared<FJsonValueString>(Warning));
         }
-        Result->SetArrayField(TEXT("warnings"), Rows);
+        Result.SetArrayField(TEXT("warnings"), Rows);
+    }
+    return NotInCode;
+}
+
+bool HandleReadGraphAsCode(const McpBlueprintGraphHandlers::FActionContext& Context)
+{
+    if (Context.SubAction != TEXT("read_graph_as_code"))
+    {
+        return false;
+    }
+    UBlueprint* Blueprint = Context.Blueprint;
+    TArray<UEdGraph*> Graphs;
+    if (Context.Payload->HasField(TEXT("graphName")))
+    {
+        Graphs.Add(Context.TargetGraph);
+    }
+    else
+    {
+        Graphs.Append(Blueprint->UbergraphPages);
+        Graphs.Append(Blueprint->FunctionGraphs);
+    }
+    Graphs.RemoveAll([](const UEdGraph* Graph) { return Graph == nullptr; });
+    FString Entry;
+    TArray<FString> Entries;
+    if (Context.Payload->TryGetStringField(TEXT("entry"), Entry) && !Entry.IsEmpty())
+    {
+        Entries.Add(Entry);
+    }
+    TSharedPtr<FJsonObject> Result = MakeShared<FJsonObject>();
+    TArray<FString> Names;
+    const int32 NotInCode = ReadAsCode(Blueprint, Graphs, Entries, *Result, Names);
+    if (NotInCode == INDEX_NONE)
+    {
+        Context.SendError(FString::Printf(TEXT("%s has no event or function '%s'. Its entries: %s."), *Blueprint->GetName(), *Entry,
+                                          *FString::Join(Names, TEXT(", "))), TEXT("ENTRY_NOT_FOUND"));
+        return true;
     }
     Context.NameBlueprint(Result, false);
     const FString Unreached = NotInCode > 0 ? FString::Printf(TEXT(", %d not reached from any event or function"), NotInCode) : FString();
-    Context.SendResponse(FString::Printf(TEXT("%s as code: %d graph(s), %d node(s)%s."), *Blueprint->GetName(), GraphRows.Num(), NodeCount, *Unreached), Result);
+    Context.SendResponse(FString::Printf(TEXT("%s as code: %d graph(s), %d node(s)%s."), *Blueprint->GetName(), Result->GetArrayField(TEXT("graphs")).Num(),
+                                         static_cast<int32>(Result->GetNumberField(TEXT("nodeCount"))), *Unreached), Result);
     return true;
 }
 } // namespace McpGraphCode

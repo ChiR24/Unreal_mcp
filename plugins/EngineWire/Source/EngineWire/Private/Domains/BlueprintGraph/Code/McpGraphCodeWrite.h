@@ -146,8 +146,9 @@ UEdGraph* FindFunction(UBlueprint* Blueprint, const FString& Name);
 /** The menu titles (lower case, as MenuEntries takes them) the forms name, and those of the nodes the writer makes itself. */
 TSet<FString> CodeTitles(const TArray<FSExpr>& Forms);
 
-/** A graph's share of a write: its forms, the entry each names (null: one is made), and the old body the write removes,
- *  which is what the rewritten entries reach (their flow and the values it reads) less what any other entry reaches. */
+/** A graph's share of a write: its forms, the entry each names (null: one is made, which BuildForms puts there), and the
+ *  old body the write removes, which is what the rewritten entries reach (their flow and the values it reads) less what
+ *  any other entry reaches. */
 struct FGraphPlan
 {
     UEdGraph* Graph = nullptr;

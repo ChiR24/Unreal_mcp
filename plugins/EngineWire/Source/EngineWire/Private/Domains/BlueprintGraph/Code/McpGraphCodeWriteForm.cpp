@@ -267,6 +267,7 @@ bool BuildForms(UBlueprint* Blueprint, const TArray<FSExpr>& Forms, TArray<FMenu
             Spot.Y = Bottom + 200.0f;
         }
     }
+    Plan.Entries = Entries;
     Made.Append(Transpiler.Made);
     return true;
 }

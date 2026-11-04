@@ -49,8 +49,9 @@ describe('read_graph_as_code', () => {
 
   it('with entry, keeps that form alone and lists only what it runs and the values those read', () => {
     const read = code(join(CODE, 'McpGraphCodeRead.cpp'));
-    expect(read).toMatch(/TryGetStringField\(TEXT\("entry"\), Entry\)[\s\S]*Text = KeepEntry\(Text, Entry, Heads, Names\);[\s\S]*TEXT\("ENTRY_NOT_FOUND"\)/u);
+    expect(read).toMatch(/Text = KeepEntry\(Text, Entries, Heads, OutNames\);\s*if \(Text\.IsEmpty\(\)\)\s*\{\s*return INDEX_NONE;/u);
     expect(read).toMatch(/Heads\.Contains\(Read\.Nodes\[At\]\.Id\)\)\s*\{\s*Shown\.Append\(Write::WritePlanParts::Reach\(Read, At\)\);/u);
+    expect(read).toMatch(/TryGetStringField\(TEXT\("entry"\), Entry\)[\s\S]*ReadAsCode\(Blueprint, Graphs, Entries, \*Result, Names\);[\s\S]*TEXT\("ENTRY_NOT_FOUND"\)/u);
   });
 });
 
@@ -82,6 +83,12 @@ describe('write_graph_from_code', () => {
     for (const file of readdirSync(CODE).filter((name) => name.startsWith('McpGraphCodeWrite'))) {
       expect(code(join(CODE, file)), file).not.toMatch(/DataPins\([^;]*\)\s*\.\s*(FindByPredicate|Find|GetData)\(/u);
     }
+  });
+
+  it('reads back only the entries it wrote, through the reader read_graph_as_code reads one entry with', () => {
+    expect(handler).toMatch(/Written\.Add\(EntryName\(TypeIdOf\(Node\)\)\);[\s\S]*ReadAsCode\(Blueprint, Graphs, Written, \*Read, Names\);/u);
+    expect(handler).not.toContain('Decompile(');
+    expect(code(join(CODE, 'McpGraphCodeWriteForm.cpp'))).toContain('Plan.Entries = Entries;');
   });
 
   it('puts the Blueprint back on every refusal after the snapshot', () => {
