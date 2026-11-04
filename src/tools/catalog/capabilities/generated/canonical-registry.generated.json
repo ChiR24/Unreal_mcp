@@ -1,5 +1,5 @@
 {
-  "catalogRevision": "1d652a2a7a8906c6",
+  "catalogRevision": "60fe2f02b902eeb0",
   "recordCount": 487,
   "records": [
     {
@@ -98660,9 +98660,9 @@
           "read game mode",
           "game mode settings"
         ],
-        "summary": "Read which game mode is in use and its default classes (pawn, player controller, game state, player state, HUD), from a game mode Blueprint or from the live world, the level override or the project default.",
+        "summary": "Read which game mode is in use and its default classes (pawn, player controller, game state, player state, HUD), from a game mode Blueprint or from the live world, the level override or the project default; a role it spawns nothing for (a default pawn set to None) reads \"None\".",
         "whenToUse": [
-          "Use it to read which game mode is in use and its default classes (pawn, player controller, game state, player state, HUD), from a game mode Blueprint or from the live world, the level override or the project default."
+          "Use it to read which game mode is in use and its default classes (pawn, player controller, game state, player state, HUD), from a game mode Blueprint or from the live world, the level override or the project default; a role it spawns nothing for (a default pawn set to None) reads \"None\"."
         ],
         "whenNotToUse": []
       },
@@ -98722,7 +98722,7 @@
       },
       "examples": [
         {
-          "title": "Read which game mode is in use and its default classes (pawn, player controller, game state, player state, HUD), from a game mode Blueprint or from the live world, the level override or the project default.",
+          "title": "Read which game mode is in use and its default classes (pawn, player controller, game state, player state, HUD), from a game mode Blueprint or from the live world, the level override or the project default; a role it spawns nothing for (a default pawn set to None) reads \"None\".",
           "input": {
             "action": "get_game_framework_info"
           },
@@ -98766,7 +98766,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "41f9bed5d32982418a3eaf081163a7cbb4e1ca1a319d93371f59d5307b5951b9",
-        "content": "9bfadbcbdac66667dea95dd4b4660f6446a9f110887e8f592c61137b35636b6f"
+        "content": "74e52e81b5479882c57d4c80c1e86a4726727b64cbd2c35251864ad429544247"
       }
     },
     {

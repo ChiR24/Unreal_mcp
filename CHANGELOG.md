@@ -44,6 +44,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Long replies page** when the list sits in the reply's `data` (a big `find` answered `RESULT_TOO_LARGE`), and `options.aggregate` counts that list.
 - **Undo**: asset edits (animation, skeleton, physics, Blackboard, Behavior Tree, sound class, enum) are one undo step each, an edit that changes nothing or that the engine refuses is refused instead of answered done, and enum undo no longer crashes UE 5.7+.
 - **Behavior Trees**: the graph route builds a tree from its Root node.
+- **`get_game_framework_info`** reads a role the game mode spawns nothing for as "None" (a cleared default pawn was left out).
 - **Placed copies** take a behaviour's or variable's new default; the directory report's reply carries its assets; saving an asset again no longer announces it as new.
 - **Materials**: an instance draws the parent it is given and picks up its material's edits.
 - **Meshes**: morph targets made from deltas and skin weight profile weights last through rebuilds.

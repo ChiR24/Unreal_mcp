@@ -2,25 +2,28 @@
 
 namespace McpGameFrameworkHandlers
 {
+// A role the game mode spawns nothing for (a default pawn set to None) reads "None", as configure_game_mode names it;
+// left out, it read as a value nobody had looked up.
+static FString ClassPathOrNone(const UClass* Class)
+{
+    return Class ? Class->GetPathName() : FString(TEXT("None"));
+}
+
 static void AddGeneratedClassProperty(UClass* Class, UObject* CDO, const FName& PropertyName, const FString& ResponseName, TSharedPtr<FJsonObject>& InfoObj)
 {
     FClassProperty* Property = CastField<FClassProperty>(Class->FindPropertyByName(PropertyName));
     if (!Property) return;
 
-    UClass* Value = Cast<UClass>(Property->GetPropertyValue_InContainer(CDO));
-    if (Value)
-    {
-        InfoObj->SetStringField(ResponseName, Value->GetPathName());
-    }
+    InfoObj->SetStringField(ResponseName, ClassPathOrNone(Cast<UClass>(Property->GetPropertyValue_InContainer(CDO))));
 }
 
 static void AddGameModeDefaults(const AGameModeBase* CDO, TSharedPtr<FJsonObject>& InfoObj)
 {
-    if (CDO->DefaultPawnClass) InfoObj->SetStringField(TEXT("defaultPawnClass"), CDO->DefaultPawnClass->GetPathName());
-    if (CDO->PlayerControllerClass) InfoObj->SetStringField(TEXT("playerControllerClass"), CDO->PlayerControllerClass->GetPathName());
-    if (CDO->GameStateClass) InfoObj->SetStringField(TEXT("gameStateClass"), CDO->GameStateClass->GetPathName());
-    if (CDO->PlayerStateClass) InfoObj->SetStringField(TEXT("playerStateClass"), CDO->PlayerStateClass->GetPathName());
-    if (CDO->HUDClass) InfoObj->SetStringField(TEXT("hudClass"), CDO->HUDClass->GetPathName());
+    InfoObj->SetStringField(TEXT("defaultPawnClass"), ClassPathOrNone(CDO->DefaultPawnClass.Get()));
+    InfoObj->SetStringField(TEXT("playerControllerClass"), ClassPathOrNone(CDO->PlayerControllerClass.Get()));
+    InfoObj->SetStringField(TEXT("gameStateClass"), ClassPathOrNone(CDO->GameStateClass.Get()));
+    InfoObj->SetStringField(TEXT("playerStateClass"), ClassPathOrNone(CDO->PlayerStateClass.Get()));
+    InfoObj->SetStringField(TEXT("hudClass"), ClassPathOrNone(CDO->HUDClass.Get()));
 }
 
 static bool AddBlueprintInfo(FActionContext& Context, TSharedPtr<FJsonObject>& InfoObj)
