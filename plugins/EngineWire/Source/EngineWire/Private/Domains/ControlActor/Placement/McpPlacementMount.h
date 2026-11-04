@@ -44,6 +44,13 @@ AActor *FindMount(UWorld *World, AActor *Actor, const FBox &ActorBox, double Tou
 /** FindMount's test for one pair: whether the actor bounded by ActorBox hangs on OtherBox from the side. */
 bool HangsOn(const FBox &ActorBox, const FBox &OtherBox, double Touch);
 
+/**
+ * The actor Actor sits on that has no collision, or null: one whose box tops out within Touch of Actor's underside, under
+ * it. The ground trace passes through such a mesh, so a crate stacked on crates without collision read "floating" over
+ * the floor, and dropping it there sinks it into them.
+ */
+AActor *FindBodilessSupport(UWorld *World, AActor *Actor, const FBox &ActorBox, double Touch);
+
 /** Recomputes the bounds of Actor's parts, which a part reshaped this frame keeps stale until the frame ends. */
 void McpRefreshBounds(AActor *Actor);
 
@@ -52,6 +59,13 @@ void McpRefreshBounds(AActor *Actor);
  * way, and a level assembles them by STACKING them into each other.
  */
 bool McpIsSlab(const FVector &Extent);
+
+/**
+ * Whether Floor, struck on a face turned up by ImpactNormal, is the floor of a room or a building made as one mesh: its
+ * footprint holds Box's. Such a mesh is no slab, and its floor is thinner than a crate is tall, so a crate sunk 32 into a
+ * garage read "nothing below it" and the audit passed it.
+ */
+bool McpIsEnclosingFloor(const AActor *Floor, const FVector &ImpactNormal, const FBox &Box);
 
 /**
  * One place the ground under an actor is traced: the bottom of Box is the actor's underside there and its centre the

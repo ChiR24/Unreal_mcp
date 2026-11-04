@@ -3,7 +3,9 @@
 #include "Foundation/BridgeHelpers/Blueprints/McpBPAssetLoad.h"
 
 #include "AssetRegistry/AssetRegistryModule.h"
+#include "Components/InstancedStaticMeshComponent.h"
 #include "Components/SceneComponent.h"
+#include "Components/StaticMeshComponent.h"
 #include "Engine/Blueprint.h"
 #include "GameFramework/Actor.h"
 #include "Engine/StaticMesh.h"
@@ -34,8 +36,26 @@ TSharedPtr<FJsonObject> IssueToJson(const FPartIssue& Issue)
     return Object;
 }
 
-void NoteInheritedScale(AActor* Actor, const TSet<FString>& Focus, TArray<FString>& OutNotes)
+void NoteParts(AActor* Actor, const TSet<FString>& Focus, TArray<FString>& OutNotes)
 {
+    TArray<FString> Hidden;
+    TInlineComponentArray<UStaticMeshComponent*> Meshes(Actor);
+    for (const UStaticMeshComponent* Mesh : Meshes)
+    {
+        if (Mesh && Mesh->GetStaticMesh() && !Mesh->IsVisible() && !Mesh->IsA<UInstancedStaticMeshComponent>() &&
+            !Mesh->ComponentHasTag(TEXT("mcp.placement.ok")) && (Focus.Num() == 0 || Focus.Contains(Mesh->GetName())))
+        {
+            Hidden.Add(Mesh->GetName());
+        }
+    }
+    if (Hidden.Num() > 0)
+    {
+        OutNotes.Add(FString::Printf(
+            TEXT("%d part(s) were not judged: the Blueprint hides them when it is built (its construction script or "
+                 "their own visibility): %s. A part the game shows later (a rider, a held item) is judged only while it "
+                 "shows: set what shows it (a variable the construction script reads) and audit again."),
+            Hidden.Num(), *FString::Join(Hidden, TEXT(", "))));
+    }
     TInlineComponentArray<USceneComponent*> Components(Actor);
     for (const USceneComponent* Component : Components)
     {
@@ -194,6 +214,15 @@ TSharedPtr<FJsonObject> BuildBlueprintAuditReply(const FString& BlueprintPath, d
     if (Audit.bHasGround)
     {
         Data->SetNumberField(TEXT("groundZ"), FMath::RoundToDouble(Audit.GroundZ * 10.0) / 10.0);
+    }
+    TArray<TSharedPtr<FJsonValue>> Notes;
+    for (const FString& Note : Audit.Notes)
+    {
+        Notes.Add(MakeShared<FJsonValueString>(Note));
+    }
+    if (Notes.Num() > 0)
+    {
+        Data->SetArrayField(TEXT("warnings"), Notes);
     }
     return Data;
 }

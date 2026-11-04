@@ -47,6 +47,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **`contact_sheet`** elevations beside water draw the actor again (a water zone's box sent the camera past the far plane).
 - **`contact_sheet`** of one or two small tiles shows its whole title (the sheet was as narrow as its tiles).
 - **`write_graph_from_code`**: `%` makes the integer or float modulo and `==` on text the exact string compare (both found no node), a call used as a value takes the node that gives one (IsValid as a condition wrote the macro and left its branch unwired), an id that differs from the menu only in underscores resolves, and an asset path that loads nothing is refused instead of written as None.
+- **Placement checks**: a prop sunk into the floor of a room built as one mesh reads as sunk (it read clean); one resting on a mesh with no collision names that mesh instead of reading only "floating", and `fix_placement` no longer drops it into the mesh; a Blueprint audit names the parts its construction script hides, which it does not judge.
 - **`list_output_files` / `delete_output_file`** reach contact sheets and captures (Saved/Captures) and EngineWire's own files (Saved/EngineWire, plugins `remove_plugin` moved aside included); a delete removes the folders it empties.
 - **Change journal**: a mesh that finished compiling, or the engine's own load fix-ups, no longer read as changes of the call they happened during (the first `create_level` after a launch listed 39 meshes).
 

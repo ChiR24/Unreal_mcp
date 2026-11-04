@@ -70,7 +70,7 @@ describe('Blueprint parts that sink are named', () => {
   // neither the edit nor get_components said so.
   it('says when a part it touched takes an uneven scale from its parent, and get_components shows the world scale', () => {
     const reply = code('Domains/ControlActor/Placement/McpPartPlacementReply.cpp');
-    expect(audit).toContain('NoteInheritedScale(Actor, Focus, Audit.Notes);');
+    expect(audit).toContain('NoteParts(Actor, Focus, Audit.Notes);');
     expect(reply).toContain('const FVector Inherited = Parent->GetComponentScale();');
     expect(reply).toContain('Inherited.GetAbsMax() <= Inherited.GetAbsMin() * 1.05');
     expect(reply).toContain('Component->IsUsingAbsoluteScale()');
@@ -79,6 +79,16 @@ describe('Blueprint parts that sink are named', () => {
     const components = code('Domains/ControlActor/McpActorComponents.cpp');
     expect(components).toContain('!Found->HasAnyFlags(RF_ClassDefaultObject) && !SceneComp->GetComponentScale().Equals(Scale, 1e-3)');
     expect(components).toContain('TEXT("worldScale")');
+  });
+
+  // A cutscene mount's construction script hid its rider when no one rode, so the audit judged the mount alone and the
+  // rider's legs, through the mount's body and out of its eye sockets, read clean.
+  it('names the parts the Blueprint hides when it is built, and the Blueprint audit passes its notes on', () => {
+    const reply = code('Domains/ControlActor/Placement/McpPartPlacementReply.cpp');
+    expect(audit, 'hidden parts are still not judged').toContain('Component->GetStaticMesh() && Component->IsVisible() &&');
+    expect(reply).toContain('if (Mesh && Mesh->GetStaticMesh() && !Mesh->IsVisible() && !Mesh->IsA<UInstancedStaticMeshComponent>() &&');
+    expect(reply).toContain('part(s) were not judged: the Blueprint hides them when it is built');
+    expect(reply).toContain('Data->SetArrayField(TEXT("warnings"), Notes);');
   });
 
   it('answers audit_placement with blueprintPath before sweeping the level', () => {

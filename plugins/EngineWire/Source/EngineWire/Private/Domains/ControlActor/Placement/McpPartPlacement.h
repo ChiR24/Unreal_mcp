@@ -70,8 +70,9 @@ int32 AppendMeshUserWarnings(UStaticMesh* Mesh, const TSharedPtr<FJsonObject>& R
 TSharedPtr<FJsonObject> IssueToJson(const FPartIssue& Issue);
 
 // Adds a sentence for each Focus part attached to a parent scaled unevenly in the world: the part takes that scale
-// too, so its size and offsets are stretched the same way.
-void NoteInheritedScale(AActor* Actor, const TSet<FString>& Focus, TArray<FString>& OutNotes);
+// too, so its size and offsets are stretched the same way. And one naming the mesh parts the Blueprint hides when it
+// is built, which are not judged: a rider hidden by a construction script had its legs through its mount unseen.
+void NoteParts(AActor* Actor, const TSet<FString>& Focus, TArray<FString>& OutNotes);
 
 // For an edit's reply: partWarnings[] plus one warnings[] sentence per issue involving Focus.
 // Returns the number of issues found (the reply lists the worst eight).

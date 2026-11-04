@@ -124,7 +124,9 @@ bool McpGroundUnder(UWorld *World, AActor *Actor, double TopZ, const FMcpGroundS
     // A floor is floor-shaped, or it reaches down past the actor's base to hold
     // it up: a side-scroller's ground strip, a stair block, a crate. The slab
     // shape alone left nearly every actor in a platformer "nothing below it".
-    if (!McpIsGroundLike(HitActor) && HitBottomZ > BottomZ) {
+    // Or it is the floor of a room made as one mesh, walls and all.
+    if (!McpIsGroundLike(HitActor) && HitBottomZ > BottomZ &&
+        !McpIsEnclosingFloor(HitActor, Candidate.ImpactNormal, Sample.Box)) {
       continue;
     }
     // A road section's line starts at the road's top, through the canopies and roofs over that section: above the part
@@ -342,6 +344,10 @@ void DescribePlacement(AActor *Actor, const TSharedPtr<FJsonObject> &Data) {
       // read "floating" by the height of the wall it hangs on. Held from the side, it is mounted.
       if (AActor *Mount = FindMount(World, Actor, SelfBox, IgnoreBelow)) {
         Data->SetStringField(TEXT("mountedOn"), McpActorRef(Mount));
+      } else if (AActor *Bodiless = FindBodilessSupport(World, Actor, SelfBox, IgnoreBelow)) {
+        Notes.Add(FString::Printf(TEXT("floating %.0f units above the surface under it: it sits on '%s', which has no "
+                                       "collision, so traces and characters pass through it"),
+                                  Clearance, *McpActorRef(Bodiless)));
       } else {
         Notes.Add(FString::Printf(
             TEXT("floating %.0f units above the surface under it"), Clearance));

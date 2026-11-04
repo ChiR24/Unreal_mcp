@@ -209,7 +209,8 @@ describe('the placement check does not call a wall-mounted actor floating', () =
 
     expect(source).toContain('#include "Domains/ControlActor/Placement/McpPlacementMount.h"');
     expect(source).toContain('} else if (Clearance > 50.0) {');
-    expect(source).toContain('if (AActor *Mount = FindMount(World, Actor, SelfBox, IgnoreBelow)) { Data->SetStringField(TEXT("mountedOn"), McpActorRef(Mount)); } else { Notes.Add(FString::Printf( TEXT("floating %.0f units above the surface under it"), Clearance)); }');
+    expect(source).toContain('if (AActor *Mount = FindMount(World, Actor, SelfBox, IgnoreBelow)) { Data->SetStringField(TEXT("mountedOn"), McpActorRef(Mount)); } else if (AActor *Bodiless = FindBodilessSupport(World, Actor, SelfBox, IgnoreBelow)) {');
+    expect(source).toContain('} else { Notes.Add(FString::Printf( TEXT("floating %.0f units above the surface under it"), Clearance)); }');
     // A floor or a platform over a pit (slab-shaped) is ground itself: the first floor of every new level read
     // "nothing below it - it may be outside the playable area".
     expect(source).toContain('} else if (AActor *Mount = FindMount(World, Actor, SelfBox, IgnoreBelow)) { Data->SetStringField(TEXT("mountedOn"), McpActorRef(Mount)); } else if (!McpIsGroundLike(Actor)) {');
@@ -262,5 +263,33 @@ describe('the placement check does not call a wall-mounted actor floating', () =
 
   it('audit_placement does not count the floor under a mounted actor as its error', () => {
     expect(read('McpActorPlacementAudit.cpp')).toContain('if (!Entry->HasField(TEXT("mountedOn")) && Entry->TryGetNumberField(TEXT("groundClearance"), Clearance)) {');
+  });
+});
+
+// A garage built as one mesh (floor and walls) is no slab and its floor is 10 thick: crates sunk 32 into it read
+// "nothing below it" and the audit passed them. The crate stacked on them read "floating 64" over the floor, since a mesh
+// made with no collision is struck by no trace, and fix_placement would have dropped it into the crates under it.
+describe('the placement check sees a room floor and a support with no collision', () => {
+  const root = 'plugins/EngineWire/Source/EngineWire/Private/Domains/ControlActor';
+  const read = (...segments: string[]): string => readFileSync(resolve(process.cwd(), root, ...segments), 'utf8');
+  const flat = (source: string): string => source.split(/\s+/u).join(' ');
+
+  it('takes an upward face of a mesh whose footprint holds the actor for its floor', () => {
+    expect(flat(placementCheck())).toContain(
+      'if (!McpIsGroundLike(HitActor) && HitBottomZ > BottomZ && !McpIsEnclosingFloor(HitActor, Candidate.ImpactNormal, Sample.Box)) {');
+    const ground = flat(read('Placement', 'McpPlacementGround.cpp'));
+    expect(ground).toContain('if (!Floor || ImpactNormal.Z < 0.7) { return false; }');
+    expect(ground).toContain('return Footprint.Min.X <= Box.Min.X && Footprint.Max.X >= Box.Max.X && Footprint.Min.Y <= Box.Min.Y && Footprint.Max.Y >= Box.Max.Y;');
+  });
+
+  it('names a support with no collision under a floating actor, and fix_placement leaves that actor where it is', () => {
+    const mount = flat(read('Placement', 'McpPlacementMount.cpp'));
+    expect(mount).toContain('bSolid |= Part->IsCollisionEnabled() && McpHasBody(Part) && McpBlocksSolids(Part);');
+    expect(mount).toContain('const bool bUnder = Box.IsValid && FMath::Abs(Box.Max.Z - ActorBox.Min.Z) <= Touch &&');
+    // The check's note and the fix's test are one text: the note is two literals the compiler joins.
+    expect(flat(placementCheck())).toContain('it sits on \'%s\', which has no " "collision, so traces and characters pass through it"');
+    const fix = flat(read('Placement', 'Fix', 'McpPlacementFixRound.cpp'));
+    expect(fix).toContain('!Finding.Warning.Contains(TEXT("which has no collision"));');
+    expect(fix, 'and says so in skipped').toContain('if (Kinds.Contains(TEXT("floating")) && Finding.Warning.Contains(TEXT("which has no collision"))) { Skip(Actor,');
   });
 });

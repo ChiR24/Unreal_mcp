@@ -68,6 +68,18 @@ bool McpIsSlab(const FVector &Extent) {
   return Extent.Z * 4.0 < FMath::Min(Extent.X, Extent.Y);
 }
 
+bool McpIsEnclosingFloor(const AActor *Floor, const FVector &ImpactNormal, const FBox &Box) {
+  if (!Floor || ImpactNormal.Z < 0.7) {
+    return false;
+  }
+  FVector Origin = FVector::ZeroVector;
+  FVector Extent = FVector::ZeroVector;
+  Floor->GetActorBounds(true, Origin, Extent);
+  const FBox Footprint = FBox::BuildAABB(Origin, Extent);
+  return Footprint.Min.X <= Box.Min.X && Footprint.Max.X >= Box.Max.X && Footprint.Min.Y <= Box.Min.Y &&
+         Footprint.Max.Y >= Box.Max.Y;
+}
+
 // Ignore a graze: meshes are authored to touch, and a shared edge is not a bug. The floor scales with the part so a large
 // building is not flagged for the same absolute overlap that matters on a character. A slab set into the tier below it
 // is inlay work; only a slab swallowed deeper than its own thickness is actually lost in the geometry.

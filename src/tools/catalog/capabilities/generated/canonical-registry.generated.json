@@ -1,5 +1,5 @@
 {
-  "catalogRevision": "7658296d1da5892a",
+  "catalogRevision": "fa8c5681e1e5ce4d",
   "recordCount": 486,
   "records": [
     {
@@ -40942,7 +40942,7 @@
           "find actors stacked on top of each other",
           "find actors sunk below the floor"
         ],
-        "summary": "Sweep every actor in the level and report the ones that interpenetrate another actor, sit sunk below the surface under them, float above it, lean off vertical, or have a face in the same plane as another surface (z-fighting flicker), and the unfinished content they show (a slot on the engine's default grid material, a text still reading \"Text\", a copy pasted onto the original); or, with blueprintPath, the mesh parts of one actor Blueprint that are buried in each other or sunk below its capsule.",
+        "summary": "Sweep every actor in the level and report the ones that interpenetrate another actor, sit sunk below the surface under them, float above it, lean off vertical, or have a face in the same plane as another surface (z-fighting flicker), and the unfinished content they show (a slot on the engine's default grid material, a text still reading \"Text\", a copy pasted onto the original); or, with blueprintPath, the mesh parts of one actor Blueprint that are buried in each other or sunk below its capsule (a part the Blueprint hides when it is built, such as a rider its construction script shows only while riding, is not judged: warnings names it). What an actor stands on can be part of a room built as one mesh, walls and all; one resting on a mesh with no collision reads floating, and the warning names that mesh.",
         "whenToUse": [
           "A level was assembled programmatically and needs checking before anyone looks at it.",
           "Actors appear to clip through each other, stand in the ground, or lie on their side.",
@@ -41076,7 +41076,7 @@
       },
       "examples": [
         {
-          "title": "Sweep every actor in the level and report the ones that interpenetrate another actor, sit sunk below the surface under them, float above it, lean off vertical, or have a face in the same plane as another surface (z-fighting flicker), and the unfinished content they show (a slot on the engine's default grid material, a text still reading \"Text\", a copy pasted onto the original); or, with blueprintPath, the mesh parts of one actor Blueprint that are buried in each other or sunk below its capsule.",
+          "title": "Sweep every actor in the level and report the ones that interpenetrate another actor, sit sunk below the surface under them, float above it, lean off vertical, or have a face in the same plane as another surface (z-fighting flicker), and the unfinished content they show (a slot on the engine's default grid material, a text still reading \"Text\", a copy pasted onto the original); or, with blueprintPath, the mesh parts of one actor Blueprint that are buried in each other or sunk below its capsule (a part the Blueprint hides when it is built, such as a rider its construction script shows only while riding, is not judged: warnings names it). What an actor stands on can be part of a room built as one mesh, walls and all; one resting on a mesh with no collision reads floating, and the warning names that mesh.",
           "input": {
             "action": "audit_placement",
             "nameFilter": "HubNPC_"
@@ -41120,7 +41120,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "0560abba1e4013aea0ed52d9e2edf48081c38acd766c58a0276096c153ce7906",
-        "content": "d9f268897548a9f6d9e682249b3bd654d18372ec2cf77a611b33e162519d13e2"
+        "content": "958fa9917a8ad62cb3807d3640111391d80947a0bdaf9cc56cc3b54e18b64e70"
       }
     },
     {
@@ -43461,7 +43461,7 @@
           "snap an actor down to the surface below it",
           "put the actor on the floor"
         ],
-        "summary": "Fix what audit_placement reports, judged by its own rules: a sunk actor moves up and a floating one down onto the surface under it, and intersecting actors are pushed apart the shortest way out of each other, measured on their collision (the smaller moves further; floors, landscapes, locked and attached actors never move). kinds names which of sunk, floating and overlapping to fix, since each can be deliberate. Every move is one undo step; a run checks what it moved again, up to three rounds, and dryRun lists the moves without making them.",
+        "summary": "Fix what audit_placement reports, judged by its own rules: a sunk actor moves up and a floating one down onto the surface under it (not one resting on a mesh with no collision: dropped there it would sink into that mesh, so it is listed under skipped), and intersecting actors are pushed apart the shortest way out of each other, measured on their collision (the smaller moves further; floors, landscapes, locked and attached actors never move). kinds names which of sunk, floating and overlapping to fix, since each can be deliberate. Every move is one undo step; a run checks what it moved again, up to three rounds, and dryRun lists the moves without making them.",
         "whenToUse": [
           "audit_placement, or the warnings of a spawn or a move, reported actors sunk into the floor, floating above it or intersecting each other.",
           "A layout built by spawning at guessed heights must be settled onto its floor and pulled out of itself in one call."
@@ -43613,7 +43613,7 @@
       },
       "examples": [
         {
-          "title": "Fix what audit_placement reports, judged by its own rules: a sunk actor moves up and a floating one down onto the surface under it, and intersecting actors are pushed apart the shortest way out of each other, measured on their collision (the smaller moves further; floors, landscapes, locked and attached actors never move). kinds names which of sunk, floating and overlapping to fix, since each can be deliberate. Every move is one undo step; a run checks what it moved again, up to three rounds, and dryRun lists the moves without making them.",
+          "title": "Fix what audit_placement reports, judged by its own rules: a sunk actor moves up and a floating one down onto the surface under it (not one resting on a mesh with no collision: dropped there it would sink into that mesh, so it is listed under skipped), and intersecting actors are pushed apart the shortest way out of each other, measured on their collision (the smaller moves further; floors, landscapes, locked and attached actors never move). kinds names which of sunk, floating and overlapping to fix, since each can be deliberate. Every move is one undo step; a run checks what it moved again, up to three rounds, and dryRun lists the moves without making them.",
           "input": {
             "action": "fix_placement",
             "kinds": [
@@ -43677,7 +43677,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "20b65fcc68e07b80e37090de314deeca7e0bbc9c4e68582714c84201ce40c67b",
-        "content": "9065c5732db7f3b33dee423235ee6b442e5ac593a9984011b8aef4f0b4dae59c"
+        "content": "74b28200b6ec8c6cec6edf15e6a537189c2b255334832c031565302a6482b2ca"
       }
     },
     {

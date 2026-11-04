@@ -1,6 +1,7 @@
 // Copyright (c) 2024 EngineWire Contributors
 
 #include "Domains/ControlActor/Placement/McpPlacementMount.h"
+#include "Domains/ControlActor/Placement/McpPlacementShapes.h"
 
 #include "Components/PrimitiveComponent.h"
 #include "Engine/World.h"
@@ -83,6 +84,28 @@ AActor *FindMount(UWorld *World, AActor *Actor, const FBox &ActorBox, const doub
     FVector Extent = FVector::ZeroVector;
     Other->GetActorBounds(true, Origin, Extent);
     if (HangsOn(ActorBox, FBox::BuildAABB(Origin, Extent), Touch)) {
+      return Other;
+    }
+  }
+  return nullptr;
+}
+
+AActor *FindBodilessSupport(UWorld *World, AActor *Actor, const FBox &ActorBox, const double Touch) {
+  for (TActorIterator<AActor> It(World); It; ++It) {
+    AActor *Other = *It;
+    if (!Other || Other == Actor || Other->IsHidden() || IsBoundsOnlyActor(Other)) {
+      continue;
+    }
+    const FBox Box = DrawnBounds(*Other);
+    const bool bUnder = Box.IsValid && FMath::Abs(Box.Max.Z - ActorBox.Min.Z) <= Touch && Box.Min.X < ActorBox.Max.X &&
+                        Box.Max.X > ActorBox.Min.X && Box.Min.Y < ActorBox.Max.Y && Box.Max.Y > ActorBox.Min.Y;
+    // A mesh made with no collision has no body: no trace strikes it, as none strikes one with collision off.
+    bool bSolid = false;
+    TInlineComponentArray<UPrimitiveComponent *> Parts(Other);
+    for (const UPrimitiveComponent *Part : Parts) {
+      bSolid |= Part->IsCollisionEnabled() && McpHasBody(Part) && McpBlocksSolids(Part);
+    }
+    if (bUnder && !bSolid) {
       return Other;
     }
   }

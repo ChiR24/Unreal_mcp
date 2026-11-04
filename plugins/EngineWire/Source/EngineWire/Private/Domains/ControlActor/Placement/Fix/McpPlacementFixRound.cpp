@@ -34,8 +34,10 @@ FFinding ReadFinding(AActor* Actor, const TSet<FString>& Kinds)
     double Clearance = 0.0;
     const bool bClearance = Entry->TryGetNumberField(TEXT("groundClearance"), Clearance);
     // The audit says sunk only with a suggestedLocation, and floating in its warning; either way the clearance is the move.
+    // Not for one sitting on a mesh with no collision: dropped to the floor under it, it would sink into that mesh.
     const bool bSunk = Kinds.Contains(TEXT("sunk")) && Entry->HasField(TEXT("suggestedLocation"));
-    const bool bFloating = Kinds.Contains(TEXT("floating")) && Finding.Warning.Contains(TEXT("floating"));
+    const bool bFloating = Kinds.Contains(TEXT("floating")) && Finding.Warning.Contains(TEXT("floating")) &&
+                           !Finding.Warning.Contains(TEXT("which has no collision"));
     if (bClearance && (bSunk || bFloating))
     {
         Finding.Lift = -Clearance;
@@ -98,6 +100,11 @@ TArray<AActor*> FFixRun::Round(const TArray<AActor*>& Check, bool bDryRun, TFunc
         const FFinding Finding = ReadFinding(Actor, Kinds);
         if (Finding.Kinds.Num() == 0)
         {
+            if (Kinds.Contains(TEXT("floating")) && Finding.Warning.Contains(TEXT("which has no collision")))
+            {
+                Skip(Actor, TEXT("it sits on a mesh with no collision (audit_placement names it), so the floor under it lies "
+                                 "under that mesh: dropped there, it would sink into the mesh"));
+            }
             continue;
         }
         if (OutFlagged)
