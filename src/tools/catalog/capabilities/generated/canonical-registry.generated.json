@@ -1,5 +1,5 @@
 {
-  "catalogRevision": "01685211230893c9",
+  "catalogRevision": "eb873120b39e7d7c",
   "recordCount": 487,
   "records": [
     {
@@ -109181,6 +109181,10 @@
                           "type": "string",
                           "description": "The clip an animation section plays."
                         },
+                        "camera": {
+                          "type": "string",
+                          "description": "A camera cut section: the camera binding it cuts to, by its name in the sequence (the bound actor's label), so the track reads as which camera shows when."
+                        },
                         "channels": {
                           "type": "array",
                           "description": "Channels and their keys.",
@@ -109371,8 +109375,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "7c53eee436aa3876c16affea342963e5498a3b4665826458d703cceb4b991c7c",
-        "content": "235bd5f26ebe06d8c8874777f8eed752bbc51b76dc5023c507a07b4cfc640be9"
+        "schema": "d81b70a82915a4f3ecfad7dd4599291c0b0eac33fb13645edef317f58d245d5d",
+        "content": "6e1754a296ac83e356ed4609385f8c91cdd4adb72dd4ba9d17875440c56b1fce"
       }
     },
     {

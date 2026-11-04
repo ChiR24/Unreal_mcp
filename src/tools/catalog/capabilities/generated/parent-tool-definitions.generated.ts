@@ -30171,6 +30171,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
                       "type": "string",
                       "description": "The clip an animation section plays."
                     },
+                    "camera": {
+                      "type": "string",
+                      "description": "A camera cut section: the camera binding it cuts to, by its name in the sequence (the bound actor's label), so the track reads as which camera shows when."
+                    },
                     "channels": {
                       "type": "array",
                       "description": "Channels and their keys.",

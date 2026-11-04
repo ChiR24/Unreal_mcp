@@ -19,6 +19,7 @@
 #include "Channels/MovieSceneFloatChannel.h"
 #include "Channels/MovieSceneIntegerChannel.h"
 #include "MovieSceneSection.h"
+#include "Sections/MovieSceneCameraCutSection.h"
 #include "Sections/MovieSceneParticleSection.h"
 #include "Sections/MovieSceneSkeletalAnimationSection.h"
 
@@ -82,7 +83,7 @@ void DescribeChannels(const UMovieScene *MovieScene,
 }
 
 /** One section: its range plus every channel's keys. */
-TSharedPtr<FJsonObject> DescribeSectionKeys(const UMovieScene *MovieScene,
+TSharedPtr<FJsonObject> DescribeSectionKeys(UMovieScene *MovieScene,
                                             UMovieSceneSection *Section,
                                             int32 &OutKeyCount) {
   TSharedPtr<FJsonObject> Obj = McpHandlerUtils::CreateResultObject();
@@ -114,6 +115,10 @@ TSharedPtr<FJsonObject> DescribeSectionKeys(const UMovieScene *MovieScene,
     if (Clip->Params.Animation) {
       Obj->SetStringField(TEXT("animation"), Clip->Params.Animation->GetPathName());
     }
+  }
+  // A cut shows a camera no channel holds: its binding, by the name the sequence's bindings go by.
+  if (const UMovieSceneCameraCutSection *Cut = Cast<UMovieSceneCameraCutSection>(Section)) {
+    Obj->SetStringField(TEXT("camera"), GetBindingLabel(MovieScene, Cut->GetCameraBindingID().GetGuid()));
   }
   TArray<TSharedPtr<FJsonValue>> ChannelsArray;
   FMovieSceneChannelProxy &Proxy = Section->GetChannelProxy();

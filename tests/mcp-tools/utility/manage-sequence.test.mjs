@@ -171,6 +171,7 @@ const testCases = [
   { scenario: 'CINEMATICS: add_camera_cut_track optional', toolName: 'manage_sequence', arguments: { action: 'add_camera_cut_track', path: SEQUENCE_PATH, actorPath: CINE_CAM, rowIndex: 0, startFrame: 45, endFrame: 90, save: true }, expected: 'success|already exists' },
   // The level viewport does not follow a held sequence's camera cut: pause names the cut camera, screenshot looks through it.
   { scenario: 'PLAYBACK: pause names the camera the cut shows then', toolName: 'manage_sequence', arguments: { action: 'pause', path: SEQUENCE_PATH, startTime: 2 }, expected: 'success', assertions: [{ path: 'structuredContent.result.cameraCut', equals: CINE_CAM, label: 'the cut camera at that moment' }] },
+  { scenario: 'INFO: list_track_keys names the camera of each cut', toolName: 'manage_sequence', arguments: { action: 'list_track_keys', path: SEQUENCE_PATH, trackName: 'CameraCut' }, expected: 'success', assertions: [{ path: 'structuredContent.result.trackKeys.0.sections.0.camera', equals: CINE_CAM, label: 'the cut section says which camera it shows' }] },
   { scenario: 'SCREENSHOT: through a cine camera, at its own frame shape', toolName: 'control_editor', arguments: { action: 'screenshot', camera: CINE_CAM_2 }, expected: 'success', assertions: [
     { path: 'structuredContent.result.cameraLocation.z', equals: 200, label: 'the view stands where the camera stands' },
     { path: 'structuredContent.result.viewportHeight', equals: 1280, label: 'drawn at the 36 x 24 filmback, 1920 wide' },
