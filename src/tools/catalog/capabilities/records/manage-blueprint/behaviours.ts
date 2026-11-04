@@ -1,6 +1,6 @@
 /**
  * Gameplay behaviours written into an Actor Blueprint from the plugin's recipe files
- * (McpBlueprintBehaviour::Author): health, damage on touch, pickups, sprint, shooting, chasing, patrolling, a turret, a stomp, an explosive, a moving platform, player controls, respawning, a goal, a launch pad, a teleporter, a falling platform, a time limit, a spawner, a dash, a sound on walking in, a health bar and counters on screen, a hint on screen, and a game over. Folded
+ * (McpBlueprintBehaviour::Author): health, damage on touch, pickups, sprint, shooting, chasing, patrolling, a turret, a stomp, an explosive, a moving platform, player controls, respawning, a goal, a launch pad, a teleporter, a falling platform, a time limit, a spawner, a dash, a sound or a cutscene on walking in, a health bar and counters on screen, a hint on screen, and a game over. Folded
  * into blueprint.add_behaviour (selector behaviour). Every one is all or nothing,
  * re-runnable (a second run replaces the first), compiled and saved.
  */
@@ -21,6 +21,8 @@ const BEHAVIOUR_OUTPUT = {
 
 const SOUND_PATH = { type: 'string', description: 'Sound asset played at the actor: where a pickup was collected, a goal when the player reaches it, a pad on each launch, where a teleported pawn arrives, or an explosive blows up; for sound_trigger (required there), the sound a player hears on walking in.' } as const;
 const COOLDOWN = { type: 'number', description: 'Seconds before it works again: before a Character can dash again, or before a teleporter takes a pawn after one arrived on it (default 1).' } as const;
+// Sound and sequence triggers share it: a folded family keeps one description per shared parameter.
+const ONCE = { type: 'boolean', description: 'Play only the first time a player walks in: the sound of sound_trigger (default false: every time), the cutscene of sequence_trigger (default true).' } as const;
 
 // A folded family keeps one description per shared parameter, so the key-driven behaviours share these texts.
 const KEY = { type: 'string', description: 'The key that drives it: held to sprint (default LeftShift), pressed to shoot (default LeftMouseButton) or to dash (default Q). Any key name works: SpaceBar, Gamepad_RightTrigger, Gamepad_FaceButton_Right.' } as const;
@@ -553,7 +555,7 @@ export const BEHAVIOURS_RECORDS: readonly CapabilityRecordSource[] = [
     inputProps: {
       blueprintPath: P.blueprintPath,
       soundPath: SOUND_PATH,
-      once: { type: 'boolean', description: 'Play only the first time a player enters (default false: every time).' },
+      once: ONCE,
       spatial: { type: 'boolean', description: 'Play at the actor, fading with distance (default false: a 2D sound).' },
     },
     required: ['blueprintPath', 'soundPath'],
@@ -564,6 +566,30 @@ export const BEHAVIOURS_RECORDS: readonly CapabilityRecordSource[] = [
     resources: 'medium',
     plugins: BP_PLUGINS,
     exampleInput: { action: 'add_sound_trigger', blueprintPath: '/Game/Blueprints/BP_RoomTrigger', soundPath: '/Game/Audio/S_Stinger', once: true },
+  }),
+  buildRecord({
+    id: 'blueprint.add_sequence_trigger',
+    action: 'add_sequence_trigger',
+    family: FAMILY,
+    domain: DOMAIN,
+    topics: ['cutscene trigger', 'level sequence trigger', 'cutscene when the player walks into an area or a room', 'boss intro cutscene when the player enters the arena', 'story cutscene at a trigger'],
+    summary: 'Make an actor play a cutscene when a player walks into it: when a pawn the player controls starts to overlap it, a Level Sequence player is made for sequencePath and played in the level on that player\'s machine, and the sequence\'s camera cuts take the view; only the first time unless once is false. With cinematic (default true) that player cannot move or turn and the HUD stops drawing (widgets on the screen stay) until the sequence finishes, then control comes back; the pawn stays visible, since an in-level cutscene shows the place the player stands in. Nothing starts while it still plays. Each placed copy can set its own EnterSequence, EnterSequenceOnce and EnterSequenceCinematic. A sequencePath that is not a Level Sequence is SEQUENCE_NOT_FOUND, before anything is written. ' + OVERLAP_NOTE,
+    whenToUse: ['A cutscene must play in the level when the player reaches a place: a boss intro at an arena door, a story beat at a landmark.'],
+    whenNotToUse: ['A sequence must be previewed in the editor viewport (manage_sequence play).', 'A sound must play there (behaviour sound_trigger).'],
+    inputProps: {
+      blueprintPath: P.blueprintPath,
+      sequencePath: { type: 'string', description: 'The Level Sequence to play (manage_sequence create makes one); its camera cut track decides what the player sees.' },
+      once: ONCE,
+      cinematic: { type: 'boolean', description: 'Hold the player still while it plays (default true): no moving or turning and the HUD not drawn (widgets on the screen stay), the pawn still visible, all back when it finishes. False plays it while the player keeps control.' },
+    },
+    required: ['blueprintPath', 'sequencePath'],
+    outputProps: BEHAVIOUR_OUTPUT,
+    effect: 'write',
+    behavior: { idempotency: 'idempotent' },
+    latency: 'interactive',
+    resources: 'medium',
+    plugins: BP_PLUGINS,
+    exampleInput: { action: 'add_sequence_trigger', blueprintPath: '/Game/Blueprints/BP_ArenaTrigger', sequencePath: '/Game/Cinematics/SEQ_BossIntro' },
   }),
   buildRecord({
     id: 'blueprint.add_health_hud',

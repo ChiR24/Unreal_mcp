@@ -846,6 +846,10 @@ export const PLAIN_PROBE: readonly PlainProbeCase[] = [
   { query: 'add a trigger that plays a sound', accepted: ['blueprint.add_behaviour'] },
   { query: 'sound trigger', accepted: ['blueprint.add_behaviour'] },
   { query: 'add music to the level', accepted: ['manage_audio.create_audio_actor'] },
+  // A cutscene when the player walks into an area is add_behaviour's sequence_trigger; previewing one is manage_sequence play.
+  { query: 'play a cutscene when the player enters the room', accepted: ['blueprint.add_behaviour'] },
+  { query: 'trigger a cutscene when the player enters', accepted: ['blueprint.add_behaviour'] },
+  { query: 'boss intro cutscene', accepted: ['blueprint.add_behaviour'] },
   // The viewport's Show menu is configure_viewport's show_flags.
   { query: 'hide the grid', accepted: ['control_editor.configure_viewport'] },
   { query: 'turn off the grid', accepted: ['control_editor.configure_viewport'] },

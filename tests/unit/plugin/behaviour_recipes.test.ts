@@ -142,6 +142,17 @@ describe('Blueprint behaviour recipe files', () => {
     expect(filter).not.toMatch(/^\s*-\s*\/Resources/imu);
   });
 
+  // SetCinematicMode only turns off what it is told to: leaving with other flags than it entered with keeps the
+  // player's moving or turning off for good.
+  it('takes the player out of cinematic mode the way SequenceTrigger put them in', () => {
+    const recipe = JSON.parse(readFileSync(join(recipeRoot, 'Gameplay', 'SequenceTrigger.json'), 'utf8')) as Json;
+    const [enter, leave] = objectsIn(isObject(recipe) ? recipe.eventGraph : undefined)
+      .filter((step) => step.memberName === 'SetCinematicMode')
+      .map((step) => (isObject(step.pinDefaults) ? step.pinDefaults : {}));
+    expect(enter?.bInCinematicMode).toBe(true);
+    expect(leave).toEqual({ ...enter, bInCinematicMode: false });
+  });
+
   it('catches each recipe mistake it is there for', () => {
     const problems = recipeProblems({
       description: 'd', tag: 't', colour: 'red', placeholders: { Speed: 'walk speed' },

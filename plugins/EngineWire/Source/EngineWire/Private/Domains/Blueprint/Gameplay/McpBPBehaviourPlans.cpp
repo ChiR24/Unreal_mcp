@@ -245,6 +245,8 @@ bool PlanBehaviour(const FString &Action, const TSharedPtr<FJsonObject> &Payload
     return PlanDash(Payload, Blueprint, Plan, OutError);
   } else if (Action == TEXT("add_sound_trigger")) {
     return PlanSoundTrigger(Payload, Plan, OutError);
+  } else if (Action == TEXT("add_sequence_trigger")) {
+    return PlanSequenceTrigger(Payload, Plan, OutError);
   } else {
     const UClass *Parent = Blueprint->GeneratedClass ? Blueprint->GeneratedClass.Get() : Blueprint->ParentClass.Get();
     const double SprintSpeed = GetJsonNumberField(Payload, TEXT("sprintSpeed"), 1000.0);

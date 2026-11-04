@@ -22,7 +22,7 @@ export const TIMELINE_PLAYBACK_RECORDS: readonly CapabilityRecordSource[] = [
     topics: ['play sequence', 'play cinematic', 'preview sequence', 'play cutscene', 'preview cutscene'],
     summary: 'Open a Level Sequence (path) in Sequencer and play it as an editor preview in the level viewport. startTime jumps there first; without it play carries on from the playhead (from the start when it sits at the end). loopMode once or loop sets the Sequencer\'s own loop setting, which stays for later previews. The reply reads back startTime (seconds), currentFrame and playbackStart/playbackEnd in display frames. Nothing in the asset or level changes. A time past the playback range or another loopMode is INVALID_ARGUMENT; a path that is not a Level Sequence is SEQUENCE_NOT_FOUND.',
     whenToUse: ['A sequence must be previewed in the editor viewport.', 'A screenshot must show the scene moving through a shot: play, then pause with startTime to hold one moment.'],
-    whenNotToUse: ['The sequence must play in game or Play In Editor: that runs through a level sequence actor placed for it, not the Sequencer preview.'],
+    whenNotToUse: ['The sequence must play in game or Play In Editor: that runs through a level sequence actor placed for it, not the Sequencer preview; to play it when the player walks into an area, manage_blueprint add_behaviour sequence_trigger.'],
     inputProps: { path: P.path, startTime: START_TIME, loopMode: { type: 'string', enum: ['once', 'loop'], description: 'Sequencer loop mode for the preview: once or loop.' } },
     required: ['path'],
     effect: 'write', latency: 'instant', resources: 'low', plugins: SEQ_PLUGINS,

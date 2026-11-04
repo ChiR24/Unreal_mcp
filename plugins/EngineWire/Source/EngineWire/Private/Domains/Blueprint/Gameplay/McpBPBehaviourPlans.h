@@ -14,6 +14,7 @@ struct FBehaviourPlan {
   FString Recipe;
   TMap<FString, TSharedPtr<FJsonValue>> Values;
   TArray<FString> Replaces; // tags of behaviours this one takes over: removed first, under the same snapshot
+  FString ErrorCode = TEXT("INVALID_ARGUMENT"); // what a refused plan answers
 };
 
 // The recipe and its values for an add_<behaviour> action, checked against what the Blueprint is; false with
@@ -36,6 +37,9 @@ bool PlanTurret(const TSharedPtr<FJsonObject> &Payload, const UBlueprint *Bluepr
 // A sound that plays when a player walks into the actor's area (McpBPBehaviourPlansWorld.cpp, recipe
 // Gameplay/SoundTrigger): soundPath (required), once and spatial.
 bool PlanSoundTrigger(const TSharedPtr<FJsonObject> &Payload, FBehaviourPlan &Plan, FString &OutError);
+// A cutscene that plays there (recipe Gameplay/SequenceTrigger): sequencePath (required, a Level Sequence, else
+// SEQUENCE_NOT_FOUND), once and cinematic.
+bool PlanSequenceTrigger(const TSharedPtr<FJsonObject> &Payload, FBehaviourPlan &Plan, FString &OutError);
 
 // projectileClass, projectileSpeed and fireRate (default DefaultRate shots a minute) as the values ProjectileType,
 // ProjectileClass, ProjectileSpeed and FireRate that the Shoot and Turret recipes take; false with OutError.

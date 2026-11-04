@@ -16,7 +16,7 @@ All notable changes to the EngineWire plugin (formerly McpAutomationBridge) will
 - **Actor tools**: snap, distribute, align, lock, group, randomize, replace, batch rename, copies along a spline, convert to a Blueprint, move to a level, decals, list bounds and find locations.
 - **Geometry**: tubes along paths, repeated polygons and bake coverage.
 - **Look and sound**: material colour and glow, light flicker, a first-person camera, the sound trigger behaviour, subtitles, sound volume and looping, footsteps, prop mass and play rate.
-- **Sequences and variables**: a copied sequence's possessables rebind by label; `add_variable` sets Expose to Cinematics.
+- **Sequences and variables**: a copied sequence's possessables rebind by label; `add_variable` sets Expose to Cinematics; the sequence trigger behaviour plays a Level Sequence on a local player's overlap, cinematic mode on until OnFinished.
 - **Graph as code**: read `entry` and `codeOnly`; the write reply reads back only the entries written.
 - **Scripts and sheets**: run_script takes `(if cond a b)` as a value; sheets can leave no file.
 
