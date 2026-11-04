@@ -1,5 +1,5 @@
 {
-  "catalogRevision": "e469682583640d78",
+  "catalogRevision": "6b1fb0cc80e3d136",
   "recordCount": 487,
   "records": [
     {
@@ -55283,6 +55283,10 @@
               "minimum": 5,
               "maximum": 170,
               "description": "Horizontal field of view in degrees (5-170), set with the camera; omitted, the viewport's current one, which the editor resets to 90 when it restarts. It stays."
+            },
+            "camera": {
+              "type": "string",
+              "description": "Look through this camera actor (label or name: a cine camera, a camera or any actor with a camera component) as it is now, a moment held with manage_sequence pause startTime included (its reply's cameraCut names the shot's camera): the view takes the camera's place, turn and field of view, stays there, and is read in game view. The frame keeps the viewport's own shape, so a shot narrower than the viewport is seen cropped at its top and bottom. Not with location, rotation or fov (INVALID_ARGUMENT); ACTOR_NOT_FOUND when no actor has that name; INVALID_ARGUMENT when it has no perspective camera."
             }
           },
           "required": [
@@ -55455,8 +55459,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "0303417e540139771a897ed01e494c35af4216af834114a6aa41157bfdcbea02",
-        "content": "7ad80bb0bda1726a550f9c64227ba76ecbe2324422c6d0b00f3d0ea9d72bc465"
+        "schema": "17d4d3c5684927409c62ea0c252ccc7eefb075cf0f428ab42aabb52e5a9d2f5b",
+        "content": "bf0f9456d64daea6324ae8ab7ff488c7426296d431b2927f4cd5e666d99fed19"
       }
     },
     {
@@ -55556,6 +55560,10 @@
               "minimum": 5,
               "maximum": 170,
               "description": "Horizontal field of view in degrees (5-170), set with the camera; omitted, the viewport's current one, which the editor resets to 90 when it restarts. It stays."
+            },
+            "camera": {
+              "type": "string",
+              "description": "Look through this camera actor (label or name: a cine camera, a camera or any actor with a camera component) as it is now, a moment held with manage_sequence pause startTime included (its reply's cameraCut names the shot's camera): the view takes the camera's place, turn and field of view, stays there, and is read in game view. The frame keeps the viewport's own shape, so a shot narrower than the viewport is seen cropped at its top and bottom. Not with location, rotation or fov (INVALID_ARGUMENT); ACTOR_NOT_FOUND when no actor has that name; INVALID_ARGUMENT when it has no perspective camera."
             }
           },
           "required": [
@@ -55697,8 +55705,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "fb1a40b7c9cdd68832c4e2dbc60623a7c8395a86264e2c8b3fe99b39f15a0474",
-        "content": "4a7027aa6bf0e6d98a075a4e1ab1b105891ede5afcbde30ad40cb841d8878260"
+        "schema": "cd8aa8ce5efa26b85e0c0cd3834642221f4af6314e5bf1341f5d75caab329ce6",
+        "content": "adb8a31b99182a1ce39f1e1323e1589e877dd00385984f9be9a31c527744e9ac"
       }
     },
     {
@@ -57069,6 +57077,10 @@
               "maximum": 170,
               "description": "Horizontal field of view in degrees (5-170), set with the camera; omitted, the viewport's current one, which the editor resets to 90 when it restarts. It stays."
             },
+            "camera": {
+              "type": "string",
+              "description": "Look through this camera actor (label or name: a cine camera, a camera or any actor with a camera component) as it is now, a moment held with manage_sequence pause startTime included (its reply's cameraCut names the shot's camera): the view takes the camera's place, turn and field of view, stays there, and is read in game view. The frame keeps the viewport's own shape, so a shot narrower than the viewport is seen cropped at its top and bottom. Not with location, rotation or fov (INVALID_ARGUMENT); ACTOR_NOT_FOUND when no actor has that name; INVALID_ARGUMENT when it has no perspective camera."
+            },
             "limit": {
               "type": "number",
               "description": "Most actors to list, largest share first (default 20, at most 100); visibleActors counts them all."
@@ -57349,8 +57361,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "590694a0d1676414d0ff60494762db054eab374f9abe05b17c419df14aa249a4",
-        "content": "db16c8db388525d41b3972479b0c36b54646be7632a17403caaaaea8e8c47aa2"
+        "schema": "af29827fef282aa509b0c1a3e9b937c6199ae4fc392037e20af0fd03c6cde0a6",
+        "content": "1b8d26e98f6ceaaa9208d298566c33bcd44ae18c15717944b7eb05e92565df1d"
       }
     },
     {

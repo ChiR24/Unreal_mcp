@@ -212,6 +212,13 @@ bool McpCaptureView(const TSharedPtr<FJsonObject> &Payload, const TCHAR *What, b
         return Fail(TEXT("The level viewport was under another tab and has been brought forward; call again to read it."),
                     TEXT("VIEWPORT_NOT_READY"));
     }
+    // camera: the view of a camera actor (a cutscene shot), seen as a player sees it, so in game view.
+    FString CameraCode;
+    if (!TakeCameraViewForMcp(Payload, true, CameraCode, OutError))
+    {
+        OutCode = CameraCode;
+        return false;
+    }
     Out.Client = GetActiveEditorViewportClientForMcp();
     FViewport *Viewport = Out.Client ? Out.Client->Viewport : nullptr;
     Out.Size = Viewport ? Viewport->GetSizeXY() : FIntPoint::ZeroValue;
@@ -220,7 +227,7 @@ bool McpCaptureView(const TSharedPtr<FJsonObject> &Payload, const TCHAR *What, b
         return Fail(TEXT("No level viewport with a size is open."), TEXT("VIEWPORT_NOT_AVAILABLE"));
     }
     // The first frames after a camera move still carry the old view's occlusion; a few frames later they match.
-    const bool bSwitch = bGameView && !Out.Client->IsInGameView();
+    const bool bSwitch = (bGameView || Payload->HasField(TEXT("_cameraView"))) && !Out.Client->IsInGameView();
     const bool bMoved = PlaceViewCameraForMcp(Out.Client, Payload);
     if (bSwitch)
     {

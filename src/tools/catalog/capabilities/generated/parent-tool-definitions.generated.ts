@@ -8555,6 +8555,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "string",
           "description": "Blueprint asset /Game path (for CDO/component inspection without spawning)."
         },
+        "camera": {
+          "type": "string",
+          "description": "Look through this camera actor (label or name: a cine camera, a camera or any actor with a camera component) as it is now, a moment held with manage_sequence pause startTime included (its reply's cameraCut names the shot's camera): the view takes the camera's place, turn and field of view, stays there, and is read in game view. The frame keeps the viewport's own shape, so a shot narrower than the viewport is seen cropped at its top and bottom. Not with location, rotation or fov (INVALID_ARGUMENT); ACTOR_NOT_FOUND when no actor has that name; INVALID_ARGUMENT when it has no perspective camera."
+        },
         "channel": {
           "type": "string",
           "description": "Collision channel traced: Visibility (default), Camera, WorldStatic, WorldDynamic, Pawn, PhysicsBody, Vehicle, Destructible, or a project trace channel by its name. What blocks depends on each component's response to that channel: most meshes block Visibility, a character capsule blocks Pawn."

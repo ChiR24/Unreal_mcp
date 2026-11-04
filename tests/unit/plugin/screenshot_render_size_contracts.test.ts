@@ -78,11 +78,19 @@ describe('screenshot renderSize', () => {
     expect(take).toBeLessThan(handler.indexOf('const bool bCameraPlaced ='));
     expect(take).toBeLessThan(handler.indexOf('RefuseRenderSizeForMcp('));
     const support = read('McpEditorViewportSupport.cpp');
-    expect(support).toMatch(/Payload->HasField\(TEXT\("_cameraView"\)\)\) \{\s*return false;/u);
+    expect(support).toMatch(/Payload->HasField\(TEXT\("_cameraView"\)\)\) \{\s*return true;/u);
     expect(support).toContain('Camera->GetCameraView(0.f, View);');
     for (const field of ['location', 'rotation', 'fov', 'renderSize', '_cameraView']) {
       expect(support).toContain(`Payload->Set${field === 'fov' ? 'Number' : field === 'renderSize' ? 'String' : field === '_cameraView' ? 'Bool' : 'Object'}Field(TEXT("${field}")`);
     }
+    // describe_view, analyze_view and audit_materials read the view through McpCaptureView, which takes the camera the
+    // same way (refusals as codes, not replies) before it places the view, and reads a camera's shot in game view.
+    const capture = read(join('..', 'Environment', 'Inspection', 'McpEnvInspectViewPoints.cpp'));
+    const takeInCapture = capture.indexOf('if (!TakeCameraViewForMcp(Payload, true, CameraCode, OutError))');
+    expect(takeInCapture).toBeGreaterThan(0);
+    expect(takeInCapture).toBeLessThan(capture.indexOf('const bool bMoved = PlaceViewCameraForMcp(Out.Client, Payload);'));
+    expect(capture).toContain('const bool bSwitch = (bGameView || Payload->HasField(TEXT("_cameraView"))) && !Out.Client->IsInGameView();');
+    expect(support).toMatch(/if \(TakeCameraViewForMcp\(Payload, Mode == TEXT\("editor_viewport"\), Code, Error\)\) \{\s*return false;\s*\}\s*SendStandardErrorResponse/u);
     // The shot is what a player sees: game view while its frames are drawn and read, the viewport's own setting after.
     expect(handler.indexOf('const FMcpCameraGameViewScope GameView(CaptureClient, Payload);')).toBeLessThan(handler.indexOf('DrawViewportFramesForMcp('));
     expect(support).toMatch(/bWasGameView = Client->IsInGameView\(\);\s*Client->SetGameView\(true\);/u);

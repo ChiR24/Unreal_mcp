@@ -8,6 +8,7 @@ const ts = Date.now();
 const TAG = `MCPAnalyzeTag_${ts}`;
 const SUBJECT = `MCP_AnalyzeCube_${ts}`;
 const CAMERA = { location: { x: 39400, y: 40000, z: 160 }, rotation: { pitch: -5, yaw: 0, roll: 0 } };
+const CAMERA_ACTOR = `MCP_AnalyzeCamera_${ts}`;
 
 const testCases = [
   { scenario: 'Setup: a cube before a wall', toolName: 'control_actor', arguments: { action: 'spawn_batch', defaults: { classPath: '/Engine/BasicShapes/Cube', tags: [TAG] }, actors: [
@@ -25,6 +26,14 @@ const testCases = [
     { path: 'structuredContent.result.light.subject.keyFill', gte: 0, label: 'its sunlit side brighter than its shadowed side' },
     { path: 'structuredContent.result.light.histogram', length: 8, label: 'eight lightness bins' },
   ] },
+  // A shot's own camera: the view through a camera actor standing where the case above put the viewport.
+  { scenario: 'Setup: a camera actor at that view', toolName: 'control_actor', arguments: { action: 'spawn', classPath: '/Script/Engine.CameraActor', actorName: CAMERA_ACTOR, ...CAMERA, tags: [TAG] }, expected: 'success' },
+  { scenario: 'READ: through the camera actor, the eye still goes to the cube', toolName: 'inspect', arguments: { action: 'analyze_view', subject: SUBJECT, aspects: ['saliency'], camera: CAMERA_ACTOR }, expected: 'success', assertions: [
+    { path: 'structuredContent.result.saliency.subject.rank', equals: 1, label: 'the cube draws the most attention in the shot' },
+  ] },
+  { scenario: 'READ: describe_view through the camera actor', toolName: 'inspect', arguments: { action: 'describe_view', camera: CAMERA_ACTOR }, expected: 'success' },
+  { scenario: 'READ: audit_materials through the camera actor', toolName: 'inspect', arguments: { action: 'audit_materials', checks: ['pbr'], camera: CAMERA_ACTOR }, expected: 'success' },
+  { scenario: 'ERROR: a camera actor and a location at once', toolName: 'inspect', arguments: { action: 'analyze_view', camera: CAMERA_ACTOR, location: CAMERA.location }, expected: 'error|INVALID_ARGUMENT' },
   { scenario: 'READ: shader cost of the view, the view mode put back', toolName: 'inspect', arguments: { action: 'analyze_view', aspects: ['cost'] }, expected: 'success', assertions: [
     { path: 'structuredContent.result.cost.high', gte: 0, label: 'a share at high cost' },
   ] },

@@ -81,6 +81,10 @@ bool PlaceViewCameraForMcp(FEditorViewportClient *Client, const TSharedPtr<FJson
 // than editor_viewport, location/rotation/fov given too, no such actor, or no perspective camera on it.
 bool RefuseOrTakeCameraViewForMcp(UEngineWireSubsystem *Bridge, TSharedPtr<FMcpBridgeWebSocket> Socket,
                                   const FString &RequestId, const TSharedPtr<FJsonObject> &Payload, const FString &Mode);
+// Its core for a capture that sends its own refusals (McpCaptureView: describe_view, analyze_view, audit_materials):
+// true when Payload names no camera or the camera's view was taken into it; false with OutCode and OutError when not.
+// bLevelViewport false refuses any camera (a capture that is not of the level viewport).
+bool TakeCameraViewForMcp(const TSharedPtr<FJsonObject> &Payload, bool bLevelViewport, FString &OutCode, FString &OutError);
 // A shot taken through a camera (Payload marked by RefuseOrTakeCameraViewForMcp) is drawn as a player sees it: the
 // viewport is in game view (no editor icons, camera meshes or selection) while this lives, and as it was after.
 struct FMcpCameraGameViewScope {

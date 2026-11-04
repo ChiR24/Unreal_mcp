@@ -7,6 +7,12 @@ import { P } from './properties.js';
 
 const D = 'inspect';
 
+// A cutscene shot could only be judged in Play: the level viewport does not follow a held sequence's camera cut.
+const CAMERA_VIEW = {
+  type: 'string',
+  description: 'Look through this camera actor (label or name: a cine camera, a camera or any actor with a camera component) as it is now, a moment held with manage_sequence pause startTime included (its reply\'s cameraCut names the shot\'s camera): the view takes the camera\'s place, turn and field of view, stays there, and is read in game view. The frame keeps the viewport\'s own shape, so a shot narrower than the viewport is seen cropped at its top and bottom. Not with location, rotation or fov (INVALID_ARGUMENT); ACTOR_NOT_FOUND when no actor has that name; INVALID_ARGUMENT when it has no perspective camera.',
+} as const;
+
 /**
  * What HandleInspectObjectAction actually returns
  * (Private/Domains/Environment/Inspection/McpEnvInspectObject.cpp).
@@ -211,6 +217,7 @@ export const OBJECT_PROPERTY_RECORDS: readonly CapabilityRecordSource[] = [
       location: { type: 'object', properties: { x: { type: 'number' }, y: { type: 'number' }, z: { type: 'number' } }, additionalProperties: false, description: 'Camera location {x, y, z} in cm; omitted, the viewport\'s current one. The camera stays there.' },
       rotation: { type: 'object', properties: { pitch: { type: 'number' }, yaw: { type: 'number' }, roll: { type: 'number' } }, additionalProperties: false, description: 'Camera rotation {pitch, yaw, roll} in degrees; omitted, the viewport\'s current one.' },
       fov: { type: 'number', minimum: 5, maximum: 170, description: 'Horizontal field of view in degrees (5-170), set with the camera; omitted, the viewport\x27s current one, which the editor resets to 90 when it restarts. It stays.' },
+      camera: CAMERA_VIEW,
       limit: { type: 'number', description: 'Most actors to list, largest share first (default 20, at most 100); visibleActors counts them all.' },
       points: { type: 'array', minItems: 1, maxItems: 64, items: { type: 'object', required: ['x', 'y'], additionalProperties: false, properties: { x: { type: 'number', minimum: 0, maximum: 1 }, y: { type: 'number', minimum: 0, maximum: 1 } } }, description: 'Spots of the frame as {x, y} from 0 to 1 (x from the left, y from the top; 0.5, 0.5 is the middle): each answers under points at the same index with what is drawn there and what the line from the camera through it hits. A perspective viewport only.' },
       labels: { type: 'boolean', description: 'Also return the frame (at most 960 px wide) with each actor listed under actors boxed in its own colour and numbered from 1 in list order, as an image (imageBase64).' },
@@ -271,6 +278,7 @@ export const OBJECT_PROPERTY_RECORDS: readonly CapabilityRecordSource[] = [
       location: { type: 'object', properties: { x: { type: 'number' }, y: { type: 'number' }, z: { type: 'number' } }, additionalProperties: false, description: 'Camera location {x, y, z} in cm; omitted, the viewport\'s current one. The camera stays there afterwards, as describe_view leaves it.' },
       rotation: { type: 'object', properties: { pitch: { type: 'number' }, yaw: { type: 'number' }, roll: { type: 'number' } }, additionalProperties: false, description: 'Camera rotation {pitch, yaw, roll} in degrees; omitted, the viewport\'s current one.' },
       fov: { type: 'number', minimum: 5, maximum: 170, description: 'Horizontal field of view in degrees (5-170), set with the camera; omitted, the viewport\x27s current one, which the editor resets to 90 when it restarts. It stays.' },
+      camera: CAMERA_VIEW,
     },
     required: [],
     effect: 'read',
@@ -356,6 +364,7 @@ export const OBJECT_PROPERTY_RECORDS: readonly CapabilityRecordSource[] = [
       location: { type: 'object', properties: { x: { type: 'number' }, y: { type: 'number' }, z: { type: 'number' } }, additionalProperties: false, description: 'Camera location {x, y, z} in cm; omitted, the viewport\'s current one. The camera stays there afterwards, as describe_view leaves it.' },
       rotation: { type: 'object', properties: { pitch: { type: 'number' }, yaw: { type: 'number' }, roll: { type: 'number' } }, additionalProperties: false, description: 'Camera rotation {pitch, yaw, roll} in degrees; omitted, the viewport\'s current one.' },
       fov: { type: 'number', minimum: 5, maximum: 170, description: 'Horizontal field of view in degrees (5-170), set with the camera; omitted, the viewport\x27s current one, which the editor resets to 90 when it restarts. It stays.' },
+      camera: CAMERA_VIEW,
     },
     required: [],
     effect: 'read',

@@ -109,9 +109,19 @@ FEditorViewportClient *GetActiveEditorViewportClientForMcp() {
 
 bool RefuseOrTakeCameraViewForMcp(UEngineWireSubsystem *Bridge, TSharedPtr<FMcpBridgeWebSocket> Socket,
                                   const FString &RequestId, const TSharedPtr<FJsonObject> &Payload, const FString &Mode) {
+  FString Code;
+  FString Error;
+  if (TakeCameraViewForMcp(Payload, Mode == TEXT("editor_viewport"), Code, Error)) {
+    return false;
+  }
+  SendStandardErrorResponse(Bridge, Socket, RequestId, Code, Error, nullptr);
+  return true;
+}
+
+bool TakeCameraViewForMcp(const TSharedPtr<FJsonObject> &Payload, bool bLevelViewport, FString &OutCode, FString &OutError) {
   FString Label;
   if (!Payload->TryGetStringField(TEXT("camera"), Label) || Payload->HasField(TEXT("_cameraView"))) {
-    return false;
+    return true;
   }
   FEditorViewportClient *Client = GetActiveEditorViewportClientForMcp();
   AActor *Actor = Client ? FindActorByNameInWorldForMcp(Client->GetWorld(), Label, true) : nullptr;
@@ -122,21 +132,19 @@ bool RefuseOrTakeCameraViewForMcp(UEngineWireSubsystem *Bridge, TSharedPtr<FMcpB
   if (Camera) {
     Camera->GetCameraView(0.f, View);
   }
-  const TCHAR *Code = TEXT("INVALID_ARGUMENT");
-  FString Error;
-  if (Mode != TEXT("editor_viewport")) {
-    Error = TEXT("camera looks through a camera actor in the level viewport: use it with mode editor_viewport.");
+  OutCode = TEXT("INVALID_ARGUMENT");
+  if (!bLevelViewport) {
+    OutError = TEXT("camera looks through a camera actor in the level viewport: use it with mode editor_viewport.");
   } else if (Payload->HasField(TEXT("location")) || Payload->HasField(TEXT("rotation")) || Payload->HasField(TEXT("fov"))) {
-    Error = TEXT("camera gives the view its place, turn and field of view: leave location, rotation and fov out.");
+    OutError = TEXT("camera gives the view its place, turn and field of view: leave location, rotation and fov out.");
   } else if (!Actor) {
-    Code = TEXT("ACTOR_NOT_FOUND");
-    Error = FString::Printf(TEXT("No actor '%s' in the level the viewport shows."), *Label);
+    OutCode = TEXT("ACTOR_NOT_FOUND");
+    OutError = FString::Printf(TEXT("No actor '%s' in the level the viewport shows."), *Label);
   } else if (!Camera || View.ProjectionMode != ECameraProjectionMode::Perspective) {
-    Error = FString::Printf(TEXT("'%s' has no perspective camera component to look through."), *Label);
+    OutError = FString::Printf(TEXT("'%s' has no perspective camera component to look through."), *Label);
   }
-  if (!Error.IsEmpty()) {
-    SendStandardErrorResponse(Bridge, Socket, RequestId, Code, Error, nullptr);
-    return true;
+  if (!OutError.IsEmpty()) {
+    return false;
   }
   Payload->SetObjectField(TEXT("location"), McpHandlerUtils::VectorToJson(View.Location));
   Payload->SetObjectField(TEXT("rotation"), McpHandlerUtils::RotatorToJson(View.Rotation));
@@ -147,7 +155,7 @@ bool RefuseOrTakeCameraViewForMcp(UEngineWireSubsystem *Bridge, TSharedPtr<FMcpB
     Payload->SetStringField(TEXT("renderSize"), FString::Printf(TEXT("1920x%d"), Height));
   }
   Payload->SetBoolField(TEXT("_cameraView"), true); // a capture taken again a beat later reuses this view
-  return false;
+  return true;
 }
 
 FMcpCameraGameViewScope::FMcpCameraGameViewScope(FEditorViewportClient *InClient, const TSharedPtr<FJsonObject> &Payload)
