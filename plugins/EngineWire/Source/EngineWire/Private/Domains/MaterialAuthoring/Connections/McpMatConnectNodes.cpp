@@ -226,16 +226,12 @@ bool HandleConnectNodes(UEngineWireSubsystem* Bridge, const FString& RequestId, 
     }
 
     // A custom node's or a function call's inputs are not properties at all. Match
-    // every input by its label (a function call labels them "Name (Type)"), and list
-    // the labels on a miss.
+    // every input by its label (a function call labels them "Name (Type)") or the
+    // short name the graph shows, and list the labels on a miss.
     FString Available;
     for (int32 InputIndex = 0; FExpressionInput *Input = TargetExpr->GetInput(InputIndex); ++InputIndex) {
       const FString Label = TargetExpr->GetInputName(InputIndex).ToString();
-      FString Plain;
-      if (!Label.Split(TEXT(" ("), &Plain, nullptr)) {
-        Plain = Label;
-      }
-      if (Label.Equals(InputName, ESearchCase::IgnoreCase) || Plain.Equals(InputName, ESearchCase::IgnoreCase)) {
+      if (McpMaterialInputNamed(Label, InputName)) {
         Wire(*Input);
         FINALIZE_HOST();
         Bridge->SendAutomationResponse(Socket, RequestId, true, TEXT("Nodes connected."), McpMaterialHostResult(HostOuter));

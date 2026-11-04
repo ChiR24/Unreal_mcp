@@ -47,3 +47,15 @@ describe('build_material_graph checks the batch before a step runs', () => {
     expect(source).not.toContain('StartsWith(TEXT("add_"))');
   });
 });
+
+describe('material pins by the names the graph shows', () => {
+  // A batch wiring "$tex.UVs", the texture sample's pin as the material editor shows it, stopped with "Its inputs:
+  // Coordinates, Apply View MipBias".
+  it('connect and disconnect match an input by the short name the editor shows', () => {
+    const inputs = code('McpMatMainInputs.h');
+    expect(inputs).toContain('const FName Shown = UMaterialGraphNode::GetShortenPinName(FName(*Label));');
+    expect(inputs).toContain('#include "MaterialGraph/MaterialGraphNode.h"');
+    expect(code(join('Connections', 'McpMatConnectNodes.cpp'))).toContain('if (McpMaterialInputNamed(Label, InputName)) {');
+    expect(code(join('Connections', 'McpMatDisconnectNodes.cpp'))).toContain('if (!PinName.IsEmpty() && McpMaterialInputNamed(Label, PinName)) {');
+  });
+});

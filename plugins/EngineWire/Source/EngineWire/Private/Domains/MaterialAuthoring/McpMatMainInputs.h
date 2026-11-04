@@ -1,6 +1,7 @@
 #pragma once
 
 #include "Core/Compatibility/McpVersionCompatibility.h"
+#include "MaterialGraph/MaterialGraphNode.h"
 #include "Materials/Material.h"
 #include "Materials/MaterialExpression.h"
 #include "Materials/MaterialExpressionCustom.h"
@@ -115,4 +116,18 @@ inline FExpressionInput* FindMaterialInputProperty(UMaterialExpression* Expressi
     }
   }
   return nullptr;
+}
+
+// Whether Wanted names the input labelled Label: by the label, by a function call's label before " (Type)", or by the
+// short name the material editor shows on the pin (Coordinates as UVs, TextureObject as Tex, Exponent as Exp): a
+// texture sample's "UVs", as the graph shows it, was refused with "Its inputs: Coordinates".
+inline bool McpMaterialInputNamed(const FString& Label, const FString& Wanted)
+{
+  FString Plain;
+  if (!Label.Split(TEXT(" ("), &Plain, nullptr)) {
+    Plain = Label;
+  }
+  const FName Shown = UMaterialGraphNode::GetShortenPinName(FName(*Label));
+  return Label.Equals(Wanted, ESearchCase::IgnoreCase) || Plain.Equals(Wanted, ESearchCase::IgnoreCase) ||
+         (Shown != NAME_None && Shown.ToString().Equals(Wanted, ESearchCase::IgnoreCase));
 }

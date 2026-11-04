@@ -64,11 +64,7 @@ bool HandleDisconnectNodes(UEngineWireSubsystem* Bridge, const FString& RequestI
     FString Available;
     for (int32 InputIndex = 0; !Target && TargetExpr->GetInput(InputIndex); ++InputIndex) {
       const FString Label = TargetExpr->GetInputName(InputIndex).ToString();
-      FString Plain;
-      if (!Label.Split(TEXT(" ("), &Plain, nullptr)) {
-        Plain = Label;
-      }
-      if (!PinName.IsEmpty() && (Label.Equals(PinName, ESearchCase::IgnoreCase) || Plain.Equals(PinName, ESearchCase::IgnoreCase))) {
+      if (!PinName.IsEmpty() && McpMaterialInputNamed(Label, PinName)) {
         Target = TargetExpr->GetInput(InputIndex);
       }
       Available += FString::Printf(TEXT("%s%s"), Available.IsEmpty() ? TEXT("") : TEXT(", "), *Label);
