@@ -17415,6 +17415,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           },
           "description": "Credits entries in order; default is four placeholder sections."
         },
+        "entry": {
+          "type": "string",
+          "description": "Only this event or function, by the name its (event or (fn form gives (EventBeginPlay, a custom event such as QuitToTitle, a function): code, nodes and links hold only it, so one event of a 500-node graph is read without the rest. ENTRY_NOT_FOUND lists the entries there are."
+        },
         "enumPath": {
           "type": "string",
           "description": "For SwitchOnEnum, ForEachElementInEnum, GetNumEnumEntries, EnumLiteral and CastByteToEnum: the enum whose values become the node's pins (a Switch on Enum's outputs are named after them), a Blueprint enum asset (/Game/Data/E_Phase) or a native one (/Script/Engine.ECollisionChannel); without it the node is refused."
@@ -19252,7 +19256,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "code": {
           "type": "string",
-          "description": "The text: each graph after a \"; graph Name\" comment line, its events and functions top to bottom."
+          "description": "The text: each graph after a \"; graph Name\" comment line, its events and functions top to bottom (with entry, only that one)."
         },
         "compileMessages": {
           "type": "array",
@@ -19802,7 +19806,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             "x-unreal-reflection-boundary": true
           },
           "x-unreal-reflection-boundary": true,
-          "description": "One row per graph read: name, kind (event_graph, function, macro or graph), nodes, and notInCode (the ids of nodes no event or function reaches, so the code leaves them out; reroutes are never printed)."
+          "description": "One row per graph read (with entry, only the graph holding it): name, kind (event_graph, function, macro or graph), nodes, and notInCode (the ids of nodes no event or function reaches, so the code leaves them out; reroutes are never printed; not given with entry)."
         },
         "graphsChecked": {
           "type": "number",
@@ -19896,7 +19900,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "linkCount": {
           "type": "number",
-          "description": "Wires in the graphs read, listed or not."
+          "description": "Wires out of those nodes, listed or not."
         },
         "links": {
           "type": "array",
@@ -20008,7 +20012,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "nodeCount": {
           "type": "number",
-          "description": "Nodes in the graphs read, listed or not."
+          "description": "Nodes in the graphs read, listed or not (with entry, the nodes it runs and the values those read)."
         },
         "nodeGuid": {
           "type": "string",

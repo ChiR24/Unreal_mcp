@@ -492,6 +492,13 @@ const testCases = [
   ] },
   { scenario: 'INFO: read_graph_as_code reads every event graph and function by default', toolName: 'manage_blueprint', arguments: { action: 'read_graph_as_code', blueprintPath: CODE_BP_PATH }, expected: 'success', assertions: [{ path: 'structuredContent.result.graphs', length: 2, label: 'the event graph and the construction script' }, { path: 'structuredContent.result.graphs.1.kind', equals: 'function', label: 'the construction script is a function' }] },
   { scenario: 'ERROR: read_graph_as_code names the graphs when one is missing', toolName: 'manage_blueprint', arguments: { action: 'read_graph_as_code', blueprintPath: CODE_BP_PATH, graphName: 'NoSuchGraph' }, expected: 'error|GRAPH_NOT_FOUND' },
+  { scenario: 'INFO: read_graph_as_code reads one event alone by entry', toolName: 'manage_blueprint', arguments: { action: 'read_graph_as_code', blueprintPath: CODE_BP_PATH, entry: 'OnCodeProbe' }, expected: 'success', assertions: [
+    { path: 'structuredContent.result.code', includes: '(event Custom|OnCodeProbe', label: 'the event asked for' },
+    { path: 'structuredContent.result.code', notIncludes: '(fn ConstructionScript', label: 'and no other entry' },
+    { path: 'structuredContent.result.nodes', length: 4, label: 'only its nodes are listed' },
+    { path: 'structuredContent.result.graphs', length: 1, label: 'only the graph holding it' },
+  ] },
+  { scenario: 'ERROR: read_graph_as_code names the entries when one is missing', toolName: 'manage_blueprint', arguments: { action: 'read_graph_as_code', blueprintPath: CODE_BP_PATH, entry: 'NoSuchEvent' }, expected: 'error|ENTRY_NOT_FOUND' },
   // === CODE: write_graph_from_code writes such text back as nodes ===
   { scenario: 'CODE: write_graph_from_code replaces the event body with a loop', toolName: 'manage_blueprint', arguments: { action: 'write_graph_from_code', blueprintPath: CODE_BP_PATH, graphName: 'EventGraph', code: '(event Custom|OnCodeProbe\n  (for _ (range 3)\n    (Development|PrintString "loop")))' }, expected: 'success', assertions: [
     { path: 'structuredContent.result.code', includes: '(for _ (range 3)', label: 'the event reads back as written' },

@@ -26,6 +26,7 @@ All notable changes to the EngineWire plugin (formerly McpAutomationBridge) will
 - **List bounds** (`ControlActor/List/McpActorList.cpp`): `bounds` gives each row the box its drawn components span (`McpListedActorBox`, the box `near` measures to).
 - **Polygon repeat** (`Geometry/Modeling/McpGeometryPolygonInput.cpp`): append_polygons copies its cage over the repeat grid before triangulating, faceGroups and faceMaterials kept per copy.
 - **Project thumbnail** (`Ui/McpUiProjectThumbnail.cpp`): set_project_thumbnail draws the level view in game view at a square size (`ReadViewFrameForMcp`) and writes `<ProjectDir>/<ProjectName>.png` through `McpWriteProjectFile`.
+- **Graph code entry** (`BlueprintGraph/Code/McpGraphCodeRead.cpp`): read_graph_as_code `entry` keeps the one (event or (fn form by name (`KeepEntry`) and lists the nodes `Reach` finds from its head (the writer's own old-body walk).
 
 ### Fixed
 - **Search**: lead verbs (`McpSearchIntent.cpp`) and fold aliases run the member they name.

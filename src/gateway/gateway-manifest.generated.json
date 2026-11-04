@@ -11345,6 +11345,7 @@
         "effectPath",
         "elements",
         "entries",
+        "entry",
         "enumPath",
         "eventName",
         "eventType",
@@ -11978,6 +11979,10 @@
               "additionalProperties": false
             },
             "description": "Credits entries in order; default is four placeholder sections."
+          },
+          "entry": {
+            "type": "string",
+            "description": "Only this event or function, by the name its (event or (fn form gives (EventBeginPlay, a custom event such as QuitToTitle, a function): code, nodes and links hold only it, so one event of a 500-node graph is read without the rest. ENTRY_NOT_FOUND lists the entries there are."
           },
           "enumPath": {
             "type": "string",

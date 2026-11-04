@@ -1,5 +1,5 @@
 {
-  "catalogRevision": "fa8c5681e1e5ce4d",
+  "catalogRevision": "7a2d53eb2c2c15df",
   "recordCount": 486,
   "records": [
     {
@@ -26296,6 +26296,10 @@
             "graphName": {
               "type": "string",
               "description": "One graph: EventGraph, a function's name, or a macro or collapsed graph by name (GRAPH_NOT_FOUND lists the graphs). Default: every event graph and function."
+            },
+            "entry": {
+              "type": "string",
+              "description": "Only this event or function, by the name its (event or (fn form gives (EventBeginPlay, a custom event such as QuitToTitle, a function): code, nodes and links hold only it, so one event of a 500-node graph is read without the rest. ENTRY_NOT_FOUND lists the entries there are."
             }
           },
           "required": [
@@ -26323,7 +26327,7 @@
             },
             "code": {
               "type": "string",
-              "description": "The text: each graph after a \"; graph Name\" comment line, its events and functions top to bottom."
+              "description": "The text: each graph after a \"; graph Name\" comment line, its events and functions top to bottom (with entry, only that one)."
             },
             "graphs": {
               "type": "array",
@@ -26333,7 +26337,7 @@
                 "x-unreal-reflection-boundary": true
               },
               "x-unreal-reflection-boundary": true,
-              "description": "One row per graph read: name, kind (event_graph, function, macro or graph), nodes, and notInCode (the ids of nodes no event or function reaches, so the code leaves them out; reroutes are never printed)."
+              "description": "One row per graph read (with entry, only the graph holding it): name, kind (event_graph, function, macro or graph), nodes, and notInCode (the ids of nodes no event or function reaches, so the code leaves them out; reroutes are never printed; not given with entry)."
             },
             "nodes": {
               "type": "array",
@@ -26354,11 +26358,11 @@
             },
             "nodeCount": {
               "type": "number",
-              "description": "Nodes in the graphs read, listed or not."
+              "description": "Nodes in the graphs read, listed or not (with entry, the nodes it runs and the values those read)."
             },
             "linkCount": {
               "type": "number",
-              "description": "Wires in the graphs read, listed or not."
+              "description": "Wires out of those nodes, listed or not."
             },
             "truncated": {
               "type": "boolean",
@@ -26440,8 +26444,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "a5496089aa634a688329349ab3fa780ececc569c662c2b5e60d32ef196b29a77",
-        "content": "678f24f840b996157eea30fafa4aaf958a113482443b2aa45663886078097b03"
+        "schema": "8765d94abe70a2d4b44cc9ff93b252b71debb650abc5f3261d442f4ac90770b1",
+        "content": "651fb8d8fea6302eaf56e619c95153730719a77a57a39a18a196c08deee19ed1"
       }
     },
     {

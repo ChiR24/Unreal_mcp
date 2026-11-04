@@ -46,6 +46,12 @@ describe('read_graph_as_code', () => {
     const stmts = code(join(CODE, 'McpGraphCodeStmts.cpp'));
     expect(stmts).toMatch(/if \(Visited\.Contains\(Index\)\)\s*\{\s*Goto\(At, State\);\s*return;/u);
   });
+
+  it('with entry, keeps that form alone and lists only what it runs and the values those read', () => {
+    const read = code(join(CODE, 'McpGraphCodeRead.cpp'));
+    expect(read).toMatch(/TryGetStringField\(TEXT\("entry"\), Entry\)[\s\S]*Text = KeepEntry\(Text, Entry, Heads, Names\);[\s\S]*TEXT\("ENTRY_NOT_FOUND"\)/u);
+    expect(read).toMatch(/Heads\.Contains\(Read\.Nodes\[At\]\.Id\)\)\s*\{\s*Shown\.Append\(Write::WritePlanParts::Reach\(Read, At\)\);/u);
+  });
 });
 
 describe('write_graph_from_code', () => {
