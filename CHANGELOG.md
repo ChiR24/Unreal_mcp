@@ -58,6 +58,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Placement checks**: a prop standing on the floor of a room built as one mesh reads clean (it read as intersecting the room by its own size); inside such a room the depth reported is the shapes' real overlap.
 - **Dry runs**: a `build_graph` dry run no longer compiles, saves or clears the undo history of a Blueprint left uncompiled (a new Animation Blueprint), nor says it did.
 - **Blueprint compiles** leave the skeletal meshes of placed copies posed in the editor (every bone sat at the actor's origin until the level ticked, which a minimized editor never does).
+- **Fab imports**: the import status warns about each imported material instance left with no parent (it draws the grid), naming the likely cause and the reparent call.
 - **Unused-asset report**: assets only a config file names (the default map, a game mode, an importer's parent materials) are no longer offered for deletion; they come under `configReferenced` with the files that name them.
 - **`list_output_files` / `delete_output_file`** reach contact sheets and captures (Saved/Captures) and EngineWire's own files (Saved/EngineWire, plugins `remove_plugin` moved aside included); a delete removes the folders it empties.
 - **Change journal**: a mesh that finished compiling, or the engine's own load fix-ups, no longer read as changes of the call they happened during (the first `create_level` after a launch listed 39 meshes).

@@ -41,6 +41,19 @@ FString NextStep(const FMcpFabImportStatus &Status) {
   return Warning.IsEmpty() ? StepFor(Status) : Warning + TEXT(" ") + StepFor(Status);
 }
 
+/** One warning per imported material instance left with no parent: it draws the engine's default grid. */
+TArray<TSharedPtr<FJsonValue>> ParentlessWarnings(const FMcpFabAddResult &Result) {
+  TArray<TSharedPtr<FJsonValue>> Warnings;
+  for (const FString &Path : Result.ParentlessInstances) {
+    Warnings.Add(MakeShared<FJsonValueString>(FString::Printf(
+        TEXT("%s has no parent material, so it renders with the engine's default grid material. Fab's importer most likely "
+             "could not copy its parent materials into the project: the folder its settings name for them may no longer "
+             "exist. Reparenting it fixes it: asset.edit_material_instance edit=reparent with this assetPath and a parentPath."),
+        *Path)));
+  }
+  return Warnings;
+}
+
 /** One line of the queue: enough to tell the imports apart and see how far each has come. */
 TSharedPtr<FJsonValue> QueueRow(const FMcpFabImportStatus &Entry) {
   TSharedPtr<FJsonObject> Row = MakeShared<FJsonObject>();
@@ -197,6 +210,10 @@ bool UEngineWireSubsystem::HandleGetFabImportStatus(
       Lines.Add(MakeShared<FJsonValueString>(Line));
     }
     Data->SetArrayField(TEXT("fabErrors"), Lines);
+  }
+  // Nothing else in the reply showed a material instance the import left drawing the default grid.
+  if (Result.ParentlessInstances.Num() > 0) {
+    Data->SetArrayField(TEXT("warnings"), ParentlessWarnings(Result));
   }
   const TCHAR *TaskState = Status.Phase == TEXT("done")     ? TEXT("completed")
                            : Status.Phase == TEXT("failed") ? TEXT("failed")

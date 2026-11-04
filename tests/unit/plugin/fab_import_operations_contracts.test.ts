@@ -236,6 +236,34 @@ describe('what the engine finishes after the registry went quiet', () => {
   });
 });
 
+// Fab's importer parents each material instance to master materials it first copies into the project, from the folders
+// its settings name. With those folders deleted the copy failed, every later import brought in instances with no parent
+// that drew the default grid, and the status read said nothing.
+describe('material instances an import left with no parent', () => {
+  const post = code(core('Private/Domains/AssetWorkflow/Fab/McpFabPostImport.cpp'));
+  const status = code(core('Private/Domains/AssetWorkflow/Fab/McpAssetFabImportStatus.cpp'));
+
+  it('are read from what the import holds in memory, never loaded just to look', () => {
+    const note = post.slice(post.indexOf('void NoteParentless('), post.indexOf('void Run('));
+    expect(note).toContain('FindObject<UMaterialInstance>(nullptr, *ObjectPath)');
+    expect(note).toContain('Instance->Parent.Get() == nullptr');
+    expect(note).toContain('Result.ParentlessInstances.Reset();');
+    expect(note).not.toMatch(/LoadObject|McpLoadAsset|LoadPackage|TryLoad/u);
+  });
+
+  it('are found after the settle and again at every late save, where they are by then', () => {
+    expect(post.match(/SaveImported\(Result, ImportedPaths\);\s*NoteParentless\(Result, ImportedPaths\);/gu)).toHaveLength(2);
+  });
+
+  it('are named in the status read\'s warnings, with the likely cause and the call that fixes each', () => {
+    expect(status).toMatch(/if \(Result\.ParentlessInstances\.Num\(\) > 0\) \{\s*Data->SetArrayField\(TEXT\("warnings"\), ParentlessWarnings\(Result\)\);/u);
+    const warnings = status.slice(status.indexOf('ParentlessWarnings(const FMcpFabAddResult &Result)'), status.indexOf('} // namespace'));
+    expect(warnings).toContain('for (const FString &Path : Result.ParentlessInstances)');
+    expect(warnings).toContain('could not copy its parent materials into the project');
+    expect(warnings).toContain('asset.edit_material_instance edit=reparent');
+  });
+});
+
 describe('the Fab add queue', () => {
   const store = code(fab('Import/McpFabImportOperations.cpp'));
 

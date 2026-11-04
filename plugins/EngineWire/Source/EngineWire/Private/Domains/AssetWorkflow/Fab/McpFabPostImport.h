@@ -17,8 +17,9 @@ namespace McpFabPostImport
 /**
  * Relocates the import when the add named a destinationPath or an assetName (McpFabRelocate), then saves
  * the packages it left dirty, at the paths they have by then, through McpSafeAssetSave, and records the
- * count and the names of any it could not save. DestinationFolder and AssetName are empty when not asked for.
- * ImportedPaths is rewritten to where the assets are afterwards.
+ * count and the names of any it could not save, and the material instances it left with no parent material
+ * (ParentlessInstances, which the status read turns into warnings). DestinationFolder and AssetName are empty
+ * when not asked for. ImportedPaths is rewritten to where the assets are afterwards.
  */
 void Run(FMcpFabAddResult& Result, TArray<FString>& ImportedPaths, const FString& DestinationFolder,
 	const FString& AssetName);
@@ -26,7 +27,8 @@ void Run(FMcpFabAddResult& Result, TArray<FString>& ImportedPaths, const FString
 /**
  * Saves what the import's packages hold dirty now, and starts the unsaved list over: the engine finishes
  * an import (a mesh builds, a material compiles) after the registry went quiet, and can mark a package
- * dirty then. The adapter runs this again shortly after Run and stores the result each time.
+ * dirty then. The material instances with no parent are read again. The adapter runs this again shortly
+ * after Run and stores the result each time.
  */
 void SaveAgain(FMcpFabAddResult& Result, const TArray<FString>& ImportedPaths);
 } // namespace McpFabPostImport

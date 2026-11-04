@@ -75,6 +75,8 @@ struct FMcpFabAddResult
 	int32 MovedCount = 0;
 	/** What it did not do, and why, in words; empty when everything asked for was done. */
 	FString RelocationNote;
+	/** Material instances the import left with no parent material, by object path: each draws the engine's default grid. */
+	TArray<FString> ParentlessInstances;
 };
 
 /** What the caller asked the add to do beyond importing the listing. */

@@ -4,6 +4,7 @@
 #include "Domains/AssetWorkflow/Fab/McpFabRelocate.h"
 #include "Safety/McpSafeOperations.h"
 
+#include "Materials/MaterialInstance.h"
 #include "Misc/PackageName.h"
 #include "UObject/Package.h"
 #include "UObject/UObjectGlobals.h"
@@ -43,6 +44,23 @@ void SaveImported(FMcpFabAddResult& Result, const TArray<FString>& ImportedPaths
 	}
 	Result.bSaveRan = true;
 }
+
+// Fab's importer parents each material instance to master materials it first copies into the project, from the folders
+// its settings name. When those are gone the copy fails, and the instance is left with no parent and draws the engine's
+// default grid, with nothing in the reply to say so. Only what the import holds in memory is read: a unreal-engine
+// pack is copied from disk and is not loaded just to look.
+void NoteParentless(FMcpFabAddResult& Result, const TArray<FString>& ImportedPaths)
+{
+	Result.ParentlessInstances.Reset();
+	for (const FString& ObjectPath : ImportedPaths)
+	{
+		const UMaterialInstance* Instance = FindObject<UMaterialInstance>(nullptr, *ObjectPath);
+		if (Instance != nullptr && Instance->Parent.Get() == nullptr)
+		{
+			Result.ParentlessInstances.Add(ObjectPath);
+		}
+	}
+}
 } // namespace
 
 void Run(FMcpFabAddResult& Result, TArray<FString>& ImportedPaths, const FString& DestinationFolder,
@@ -54,6 +72,7 @@ void Run(FMcpFabAddResult& Result, TArray<FString>& ImportedPaths, const FString
 		McpFabRelocate::Apply(DestinationFolder, AssetName, Result, ImportedPaths);
 	}
 	SaveImported(Result, ImportedPaths);
+	NoteParentless(Result, ImportedPaths);
 }
 
 void SaveAgain(FMcpFabAddResult& Result, const TArray<FString>& ImportedPaths)
@@ -61,5 +80,7 @@ void SaveAgain(FMcpFabAddResult& Result, const TArray<FString>& ImportedPaths)
 	// A package that failed before and is dirty still fails again and is listed again; one that saved is not.
 	Result.UnsavedPackages.Reset();
 	SaveImported(Result, ImportedPaths);
+	// Read again too: the engine may finish an instance after the registry went quiet.
+	NoteParentless(Result, ImportedPaths);
 }
 } // namespace McpFabPostImport
