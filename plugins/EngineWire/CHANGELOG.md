@@ -46,6 +46,7 @@ All notable changes to the EngineWire plugin (formerly McpAutomationBridge) will
 - **No default pawn** (`McpGameFrameworkClassConfig.cpp`): "None" or an empty pawnClass writes no class instead of looking one up.
 - **Lean console text** (`McpConsoleHandlers.cpp`): `LeanConsoleText` trims `output` and `log`; `FMcpOutputCapture` marks Error and Warning lines.
 - **Consent text** (`McpNativeGatewayDefinition.cpp`, `server-info.json`): names describe with `param` as the cheap way to a new grant.
+- **Deferred steps** (`McpScriptCall.cpp`): the STEP_DEFERRED message names a read-back for work that lands later.
 - **Config-named assets** (`AssetWorkflow/Analysis/McpAssetReports.cpp`): `ReportConfigNamedPackages` reads the project's Config and Saved/Config `.ini` files through `McpResolveProjectFilePath` for `/Game/` package names and moves those assets from the unreferenced list to `configReferenced` (`configFiles`); no config value is kept or returned.
 - **One compile path** (`Foundation/BridgeHelpers/Blueprints/McpBPCompileHelpers.h`): `McpCompileBlueprint` compiles, then re-initialises the skeletal meshes of the Blueprint's placed copies (children's included) with `McpRefreshComponentAfterEdit`; the three compile helpers and five direct callers use it.
 - **Dry-run replies** (`McpBPGraphBatch.cpp`): `RunGraphBatch` sets `bDeferCompile` before `AnswerDryRun`, so `SendResponse` no longer compiles, saves or lists a dirty Blueprint as changed.

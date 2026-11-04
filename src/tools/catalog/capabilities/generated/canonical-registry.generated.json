@@ -1,5 +1,5 @@
 {
-  "catalogRevision": "4e3db8a9e66449c9",
+  "catalogRevision": "411d96e4ad7912f7",
   "recordCount": 486,
   "records": [
     {
@@ -119985,7 +119985,7 @@
             },
             "script": {
               "type": "string",
-              "description": "The script, statements one after another (; starts a comment to the end of the line). A string in double quotes takes only \\\" and \\\\ as escapes: \\n is no line break but a backslash and an n (a label \"A\\nB\" shows them); a line break inside the quotes is a line break. Refused before anything runs: SCRIPT_PARSE_ERROR, SCRIPT_INVALID, UNKNOWN_CAPABILITY (a name search does not find), UNDECLARED_PARAMETER and MISSING_REQUIRED_PARAMETER (checked against the capability's contract), SCRIPT_UNBOUND_NAME, CONSENT_NOT_LISTED, SCRIPT_STEP_REFUSED. Stopped and rolled back while running: the failed call's own error code, SCRIPT_TYPE (an operator or for over the wrong kind of value), SCRIPT_VALUE (a path into a result that holds no such field: the fields it has are named), EXPECTATION_FAILED, ENGINE_ERROR (the engine logged an error during a call), STEP_DEFERRED (a call that answers later cannot run in a script), SCRIPT_BUDGET, SCRIPT_DEADLINE."
+              "description": "The script, statements one after another (; starts a comment to the end of the line). A string in double quotes takes only \\\" and \\\\ as escapes: \\n is no line break but a backslash and an n (a label \"A\\nB\" shows them); a line break inside the quotes is a line break. Refused before anything runs: SCRIPT_PARSE_ERROR, SCRIPT_INVALID, UNKNOWN_CAPABILITY (a name search does not find), UNDECLARED_PARAMETER and MISSING_REQUIRED_PARAMETER (checked against the capability's contract), SCRIPT_UNBOUND_NAME, CONSENT_NOT_LISTED, SCRIPT_STEP_REFUSED. Stopped and rolled back while running: the failed call's own error code, SCRIPT_TYPE (an operator or for over the wrong kind of value), SCRIPT_VALUE (a path into a result that holds no such field: the fields it has are named), EXPECTATION_FAILED, ENGINE_ERROR (the engine logged an error during a call), STEP_DEFERRED (a call that answers later, such as an import: the script stops there, but that call's work goes on past the rollback and may finish after the script returns, so read back what it makes, such as asset.list on its folder, before running it again), SCRIPT_BUDGET, SCRIPT_DEADLINE."
             },
             "destructive": {
               "type": "array",
@@ -120116,8 +120116,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "bb42c91931a89b77b5fa46f6d3111bfea4291d47ed96fb1cf7f7a8b1263fe9e0",
-        "content": "74df76d2235b79bce35a710914b0f4e1053b2347242540cd604837c409f6c298"
+        "schema": "aa3730a01b60601fbf669ce14cec3153455b27b4437ac820886b81bbbff41313",
+        "content": "390aa2eb93fe4469ed5abc7d91f823b1d8896550fded87f55239378e238c8ff4"
       }
     },
     {

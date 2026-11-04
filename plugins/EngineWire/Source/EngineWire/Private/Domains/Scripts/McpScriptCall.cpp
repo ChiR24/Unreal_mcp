@@ -98,7 +98,10 @@ bool FRunner::Dispatch(int32 Line, const FMcpGatewayExecutePlan& Plan, const FSt
             Capture.Begin(StepId, false);
         }
         Step.ErrorCode = bTaken ? TEXT("STEP_DEFERRED") : TEXT("UNKNOWN_ACTION");
-        Step.Message = bTaken ? TEXT("it answers later, once the editor has worked on it: run it as its own call") : TEXT("no handler takes it");
+        // Its work goes on past this reply and past the rollback (an import's asset lands afterwards), so running the
+        // call again unread repeats it: say what to read back first.
+        Step.Message = bTaken ? TEXT("it answers later, so the script stopped here, but its work goes on and may finish after the script returns (an import still lands its assets): read back what it makes, such as asset.list on its folder, before running it again as its own call")
+                              : TEXT("no handler takes it");
         return Fail(Line, Step.ErrorCode, FString::Printf(TEXT("%s: %s."), *Plan.CapabilityId, *Step.Message));
     }
     // An error the engine logged turns a success into ENGINE_ERROR, as it would for a direct execute.

@@ -38,6 +38,19 @@ describe('run_script steps', () => {
     expect(call).toMatch(/if \(!Reply\.bCaptured\)[\s\S]*?if \(bTaken\)\s*\{\s*Capture\.Begin\(StepId, false\);/u);
   });
 
+  // An import in a script failed it with STEP_DEFERRED in words that read as if nothing had happened and asked for the
+  // call to be run again, while its asset landed after the script returned: a second run imported it twice.
+  it('say a step that answers later may still finish after the script returns, and what to read back first', () => {
+    expect(call).toContain('Step.ErrorCode = bTaken ? TEXT("STEP_DEFERRED")');
+    const message = call.match(/Step\.Message = bTaken \? TEXT\("([^"]*)"\)/u)?.[1] ?? '';
+    expect(message).toContain('may finish after the script returns');
+    expect(message).toMatch(/read back what it makes.*before running it again/u);
+    const handler = code(join(SCRIPTS, 'McpScriptHandler.cpp'));
+    expect(handler).toContain("Runner.bDeferred ? TEXT(\" Undo reached the steps before it, not that step's work.\")");
+    // Never claimed rolled back while that step's work goes on.
+    expect(handler).toContain('Result->SetBoolField(TEXT("rolledBack"), Undone.bSuccess && !Runner.bDeferred && !bCreated);');
+  });
+
   it('are captured as no batch step, so each handler keeps its own undo step and recompile as a direct call does', () => {
     expect(call).toMatch(/Capture\.Begin\(StepId, false\);\s*const bool bTaken = Subsystem\.RunHandlerInProcess\(/u);
     // Where a handler leaves its undo step or recompile to a batch, it asks IsBatchStep, never IsCapturing: a captured

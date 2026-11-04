@@ -170,7 +170,7 @@ bool HandleRunScript(UEngineWireSubsystem& Subsystem, const FString& RequestId, 
     const bool bUndid = Undone.Result.IsValid() && Undone.Result->TryGetArrayField(TEXT("undone"), UndoneSteps) && UndoneSteps &&
                         UndoneSteps->Num() > 0;
     const bool bAnyStep = Runner.Steps.ContainsByPredicate([](const FStep& Step) { return Step.bSuccess; });
-    const FString After = Runner.bDeferred ? TEXT(" Undo reached what had run, but the last step still works on and lands after it.")
+    const FString After = Runner.bDeferred ? TEXT(" Undo reached the steps before it, not that step's work.")
                         : !Undone.bSuccess ? TEXT(" It could not all be undone: rollback says why.")
                         : bCreated ? TEXT(" Undo reverted the rest, but the assets the script created stay: cleanupCall deletes them.")
                         : bUndid ? TEXT(" What the script changed was undone.")
