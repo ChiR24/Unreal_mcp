@@ -292,4 +292,15 @@ describe('the placement check sees a room floor and a support with no collision'
     expect(fix).toContain('!Finding.Warning.Contains(TEXT("which has no collision"));');
     expect(fix, 'and says so in skipped').toContain('if (Kinds.Contains(TEXT("floating")) && Finding.Warning.Contains(TEXT("which has no collision"))) { Skip(Actor,');
   });
+
+  // The room's box holds every prop, so the boxes overlapped by each prop's own size, and the room's triangles struck a
+  // desk only standing on its floor: "intersects the room by 54".
+  it('inside a room built as one mesh, the shapes measure the depth, and a prop on its floor is clean', () => {
+    const check = flat(placementCheck());
+    expect(check).toContain('const double Shell = McpShellDepth(Actor, Other, SelfBox, OtherBox);');
+    expect(check).toContain('const double Depth = Shell >= 0.0 ? Shell : McpPenetrationDepth(SelfBox, OtherBox); if (Depth <= IgnoreBelow) {');
+    const shapes = flat(read('Placement', 'McpPlacementShapes.cpp'));
+    expect(shapes, 'either way round: the room judged against a chair too').toContain(
+      'if ((!OtherBox.IsInside(SelfBox) && !SelfBox.IsInside(OtherBox)) || !McpMeasurePush(Actor, Other, FVector::ZeroVector, Push, Calls)) { return -1.0; }');
+  });
 });

@@ -258,7 +258,9 @@ void DescribePlacement(AActor *Actor, const TSharedPtr<FJsonObject> &Data) {
     }
 
     const FBox OtherBox = FBox::BuildAABB(OtherOrigin, OtherExtent);
-    const double Depth = McpPenetrationDepth(SelfBox, OtherBox);
+    // Inside a room built as one mesh, the boxes say only that the actor is in the room: the shapes give the depth.
+    const double Shell = McpShellDepth(Actor, Other, SelfBox, OtherBox);
+    const double Depth = Shell >= 0.0 ? Shell : McpPenetrationDepth(SelfBox, OtherBox);
     if (Depth <= IgnoreBelow) {
       continue;
     }

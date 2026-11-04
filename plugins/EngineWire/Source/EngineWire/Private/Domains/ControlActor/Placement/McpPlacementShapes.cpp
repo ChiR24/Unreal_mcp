@@ -189,4 +189,18 @@ bool McpMeasurePush(AActor *Actor, AActor *Other, const FVector &Offset, FVector
   return bMeasured;
 }
 
+// A room built as one mesh holds every prop inside its box, so the boxes overlap by the prop's own size, and its
+// triangles strike a prop that only stands on its floor: a desk, a tool chest and a gas bottle each read "intersects
+// the room by 21-66", and the room "intersects the chair by 76". Where one box holds the other, only what the shapes
+// push each other by is a depth.
+double McpShellDepth(AActor *Actor, AActor *Other, const FBox &SelfBox, const FBox &OtherBox) {
+  FVector Push;
+  int32 Calls = 0;
+  if ((!OtherBox.IsInside(SelfBox) && !SelfBox.IsInside(OtherBox)) ||
+      !McpMeasurePush(Actor, Other, FVector::ZeroVector, Push, Calls)) {
+    return -1.0;
+  }
+  return Push.Size();
+}
+
 } // namespace McpPlacement

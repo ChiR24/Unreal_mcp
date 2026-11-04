@@ -28,4 +28,9 @@ bool McpShapesApart(AActor *Actor, AActor *Other);
  * engine queries made.
  */
 bool McpMeasurePush(AActor *Actor, AActor *Other, const FVector &Offset, FVector &OutPush, int32 &InOutCalls);
+/**
+ * When one box holds the other whole (a room built as one mesh around a prop), how deep the two actors' shapes
+ * really interpenetrate, measured as McpMeasurePush does; -1 otherwise, or when no pair could be measured.
+ */
+double McpShellDepth(AActor *Actor, AActor *Other, const FBox &SelfBox, const FBox &OtherBox);
 } // namespace McpPlacement
