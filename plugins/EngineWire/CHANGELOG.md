@@ -31,7 +31,7 @@ All notable changes to the EngineWire plugin (formerly McpAutomationBridge) will
 - **Camera view** (`McpEditorViewportSupport.cpp` `RefuseOrTakeCameraViewForMcp`): screenshot `camera` writes the actor's `GetCameraView` (place, turn, field of view; renderSize at a kept aspect) into the capture's placement; pause's `cameraCut` names the cut camera (the sequence's own binding lookup, `LocateBindingObjects`), and list_track_keys gives each cut section its `camera` (`McpSeqTrackKeys.cpp`).
 - **run_script value if** (`Scripts/McpScriptCheck.cpp`, `McpScriptRun.cpp`): `(if cond a b)` where a value goes, only the picked value evaluated; one without both values is refused before anything runs (`SCRIPT_INVALID`).
 - **Current level** (`Level/World/McpLevelSetCurrent.cpp`): `UWorld::SetCurrentLevel` and `NewCurrentLevel`, refusing Play, unknown, Level Instance, unloaded and locked levels; `add_sublevel` puts back the level `AddLevelToWorld` made current.
-- **Graph code entry** (`BlueprintGraph/Code/McpGraphCodeRead.cpp`): read_graph_as_code `entry` keeps the one (event or (fn form by name (`KeepEntry`) and lists the nodes `Reach` finds from its head (the writer's own old-body walk).
+- **Graph code entry** (`BlueprintGraph/Code/McpGraphCodeRead.cpp`): read_graph_as_code `entry` keeps the one (event or (fn form by name (`KeepEntry`) and lists the nodes `Reach` finds from its head (the writer's own old-body walk); `codeOnly` builds no node or link rows, the counts stay.
 - **Graph code read-back**: the write reply comes from `ReadAsCode`, the reader read_graph_as_code uses; `KeepEntry` takes several entry names.
 
 ### Fixed

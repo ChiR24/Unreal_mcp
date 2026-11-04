@@ -1,5 +1,5 @@
 {
-  "catalogRevision": "df76250dce665608",
+  "catalogRevision": "d66ed6f77290061e",
   "recordCount": 487,
   "records": [
     {
@@ -26311,7 +26311,7 @@
           "blueprint to text",
           "what does this blueprint do"
         ],
-        "summary": "Read a Blueprint's event graphs and functions as text, in the S-expression grammar of Epic's UE 5.8 Blueprint DSL (read_graph_dsl / write_graph_dsl), on every UE 5.x: one (event Name (Params) ...) or (fn Name (Params) ...) per event or function; a statement per node that runs, (Category|Title args...) named by the node's action-menu id (Development|PrintString, Variables|Default|SetHealth), with trailing arguments still at their defaults left out; (bind var (Call ...)) where an output is read later (by output position, _ for one not read); (if cond ... (elif cond ...) (else ...)), (for i (range n) ...), (for elem array ...), (while cond ...), (break), (switch Type value (:Case ...)), (return ...); pure nodes inline: (+ a b), (== a b), (and a b), (not x), (select cond a b), (.x vector), (.yaw rotator), (.location transform), self, literals (\"text\", 5, true); a node with named exec outputs takes (:Pin ...) continuations (pin names with spaces quoted). Every statement ends with a ; comment naming its node by id: n and the first hex digits of the node's GUID (6, more where two nodes read together share them), so ids do not change between reads; nodes gives each id its nodeId (the full GUID other graph actions take) and type, links every wire as \"id.Pin -> id.Pin\". Where a path runs on into a node already printed, (goto id) says so (Epic's own reader leaves that path out); a pure value two statements read is bound once at the top, tagged \"pure, runs at each read\" (Blueprint works it out again at each read). Reads only: nothing is created, compiled or changed. The first read after the editor starts takes several seconds while the editor builds its node menu.",
+        "summary": "Read a Blueprint's event graphs and functions as text, in the S-expression grammar of Epic's UE 5.8 Blueprint DSL (read_graph_dsl / write_graph_dsl), on every UE 5.x: one (event Name (Params) ...) or (fn Name (Params) ...) per event or function; a statement per node that runs, (Category|Title args...) named by the node's action-menu id (Development|PrintString, Variables|Default|SetHealth), with trailing arguments still at their defaults left out; (bind var (Call ...)) where an output is read later (by output position, _ for one not read); (if cond ... (elif cond ...) (else ...)), (for i (range n) ...), (for elem array ...), (while cond ...), (break), (switch Type value (:Case ...)), (return ...); pure nodes inline: (+ a b), (== a b), (and a b), (not x), (select cond a b), (.x vector), (.yaw rotator), (.location transform), self, literals (\"text\", 5, true); a node with named exec outputs takes (:Pin ...) continuations (pin names with spaces quoted). Every statement ends with a ; comment naming its node by id: n and the first hex digits of the node's GUID (6, more where two nodes read together share them), so ids do not change between reads; nodes gives each id its nodeId (the full GUID other graph actions take) and type, links every wire as \"id.Pin -> id.Pin\" (codeOnly leaves both out). Where a path runs on into a node already printed, (goto id) says so (Epic's own reader leaves that path out); a pure value two statements read is bound once at the top, tagged \"pure, runs at each read\" (Blueprint works it out again at each read). Reads only: nothing is created, compiled or changed. The first read after the editor starts takes several seconds while the editor builds its node menu.",
         "whenToUse": [
           "What a Blueprint does must be read or reviewed in one call, instead of node by node.",
           "Before editing a graph: the code shows what runs and in what order, and the node ids to edit.",
@@ -26342,6 +26342,10 @@
             "entry": {
               "type": "string",
               "description": "Only this event or function, by the name its (event or (fn form gives (EventBeginPlay, a custom event such as QuitToTitle, a function): code, nodes and links hold only it, so one event of a 500-node graph is read without the rest. ENTRY_NOT_FOUND lists the entries there are."
+            },
+            "codeOnly": {
+              "type": "boolean",
+              "description": "Only the code (default false): nodes and links are left out, nodeCount and linkCount stay. For a big graph whose node and link lists dwarf the text when the node GUIDs are not needed."
             }
           },
           "required": [
@@ -26389,14 +26393,14 @@
                 "x-unreal-reflection-boundary": true
               },
               "x-unreal-reflection-boundary": true,
-              "description": "Every node: id (as the code names it), nodeId (its GUID) and type (its action-menu id). At most 500."
+              "description": "Every node: id (as the code names it), nodeId (its GUID) and type (its action-menu id). At most 500; not given with codeOnly."
             },
             "links": {
               "type": "array",
               "items": {
                 "type": "string"
               },
-              "description": "Every wire as \"id.OutPin -> id.InPin\". At most 1000."
+              "description": "Every wire as \"id.OutPin -> id.InPin\". At most 1000; not given with codeOnly."
             },
             "nodeCount": {
               "type": "number",
@@ -26420,7 +26424,7 @@
       },
       "examples": [
         {
-          "title": "Read a Blueprint's event graphs and functions as text, in the S-expression grammar of Epic's UE 5.8 Blueprint DSL (read_graph_dsl / write_graph_dsl), on every UE 5.x: one (event Name (Params) ...) or (fn Name (Params) ...) per event or function; a statement per node that runs, (Category|Title args...) named by the node's action-menu id (Development|PrintString, Variables|Default|SetHealth), with trailing arguments still at their defaults left out; (bind var (Call ...)) where an output is read later (by output position, _ for one not read); (if cond ... (elif cond ...) (else ...)), (for i (range n) ...), (for elem array ...), (while cond ...), (break), (switch Type value (:Case ...)), (return ...); pure nodes inline: (+ a b), (== a b), (and a b), (not x), (select cond a b), (.x vector), (.yaw rotator), (.location transform), self, literals (\"text\", 5, true); a node with named exec outputs takes (:Pin ...) continuations (pin names with spaces quoted). Every statement ends with a ; comment naming its node by id: n and the first hex digits of the node's GUID (6, more where two nodes read together share them), so ids do not change between reads; nodes gives each id its nodeId (the full GUID other graph actions take) and type, links every wire as \"id.Pin -> id.Pin\". Where a path runs on into a node already printed, (goto id) says so (Epic's own reader leaves that path out); a pure value two statements read is bound once at the top, tagged \"pure, runs at each read\" (Blueprint works it out again at each read). Reads only: nothing is created, compiled or changed. The first read after the editor starts takes several seconds while the editor builds its node menu.",
+          "title": "Read a Blueprint's event graphs and functions as text, in the S-expression grammar of Epic's UE 5.8 Blueprint DSL (read_graph_dsl / write_graph_dsl), on every UE 5.x: one (event Name (Params) ...) or (fn Name (Params) ...) per event or function; a statement per node that runs, (Category|Title args...) named by the node's action-menu id (Development|PrintString, Variables|Default|SetHealth), with trailing arguments still at their defaults left out; (bind var (Call ...)) where an output is read later (by output position, _ for one not read); (if cond ... (elif cond ...) (else ...)), (for i (range n) ...), (for elem array ...), (while cond ...), (break), (switch Type value (:Case ...)), (return ...); pure nodes inline: (+ a b), (== a b), (and a b), (not x), (select cond a b), (.x vector), (.yaw rotator), (.location transform), self, literals (\"text\", 5, true); a node with named exec outputs takes (:Pin ...) continuations (pin names with spaces quoted). Every statement ends with a ; comment naming its node by id: n and the first hex digits of the node's GUID (6, more where two nodes read together share them), so ids do not change between reads; nodes gives each id its nodeId (the full GUID other graph actions take) and type, links every wire as \"id.Pin -> id.Pin\" (codeOnly leaves both out). Where a path runs on into a node already printed, (goto id) says so (Epic's own reader leaves that path out); a pure value two statements read is bound once at the top, tagged \"pure, runs at each read\" (Blueprint works it out again at each read). Reads only: nothing is created, compiled or changed. The first read after the editor starts takes several seconds while the editor builds its node menu.",
           "input": {
             "action": "read_graph_as_code",
             "blueprintPath": "/Game/Blueprints/BP_Door",
@@ -26486,8 +26490,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "8765d94abe70a2d4b44cc9ff93b252b71debb650abc5f3261d442f4ac90770b1",
-        "content": "651fb8d8fea6302eaf56e619c95153730719a77a57a39a18a196c08deee19ed1"
+        "schema": "0fa360178c446e9169451b8ca972fe5d3895ca0b1f67c7fdb521128f50677b57",
+        "content": "f92eb2404a0f31dd7857ada2b5be0fb253948128cdb7a81c3f9c3ada5eda8dba"
       }
     },
     {

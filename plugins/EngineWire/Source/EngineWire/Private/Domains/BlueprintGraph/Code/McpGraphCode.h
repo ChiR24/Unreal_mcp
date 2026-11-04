@@ -147,12 +147,12 @@ TArray<FString> OfferedIds(UBlueprint* Blueprint, UEdGraph* Graph, const TArray<
  *  the ids OfferedIds finds. */
 UEdGraphNode* CreateByMenuId(UBlueprint* Blueprint, UEdGraph* Graph, const FString& MenuId, const FVector2D& At, FString& OutError);
 
-/** Graphs read as read_graph_as_code replies, into Result: code, graphs, nodes, links, nodeCount, linkCount, truncated and
- *  warnings. With Entries, only those events and functions (by the name their (event or (fn head gives) and what they run.
- *  Returns how many nodes no event or function reaches (not counted with Entries), INDEX_NONE when none of Entries is
- *  there, OutNames then listing every entry there is (McpGraphCodeRead.cpp). */
-int32 ReadAsCode(UBlueprint* Blueprint, const TArray<UEdGraph*>& Graphs, const TArray<FString>& Entries, FJsonObject& Result,
-                 TArray<FString>& OutNames);
+/** Graphs read as read_graph_as_code replies, into Result: code, graphs, nodes and links (not with bCodeOnly), nodeCount,
+ *  linkCount, truncated and warnings. With Entries, only those events and functions (by the name their (event or (fn head
+ *  gives) and what they run. Returns how many nodes no event or function reaches (not counted with Entries), INDEX_NONE
+ *  when none of Entries is there, OutNames then listing every entry there is (McpGraphCodeRead.cpp). */
+int32 ReadAsCode(UBlueprint* Blueprint, const TArray<UEdGraph*>& Graphs, const TArray<FString>& Entries, bool bCodeOnly,
+                 FJsonObject& Result, TArray<FString>& OutNames);
 
 /** False for any other sub-action. */
 bool HandleReadGraphAsCode(const McpBlueprintGraphHandlers::FActionContext& Context);

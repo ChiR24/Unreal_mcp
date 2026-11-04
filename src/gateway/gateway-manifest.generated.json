@@ -11318,6 +11318,7 @@
         "checkpointTag",
         "clipping",
         "code",
+        "codeOnly",
         "collectorClass",
         "colorAndOpacity",
         "columnCount",
@@ -11775,6 +11776,10 @@
           "code": {
             "type": "string",
             "description": "One or more (event Name [(Params)] stmts...) and (fn Name (Params) stmts...) forms, as read_graph_as_code prints them; ; comments are ignored except the node ids gotos name."
+          },
+          "codeOnly": {
+            "type": "boolean",
+            "description": "Only the code (default false): nodes and links are left out, nodeCount and linkCount stay. For a big graph whose node and link lists dwarf the text when the node GUIDs are not needed."
           },
           "collectorClass": {
             "type": "string",

@@ -17238,6 +17238,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "string",
           "description": "One or more (event Name [(Params)] stmts...) and (fn Name (Params) stmts...) forms, as read_graph_as_code prints them; ; comments are ignored except the node ids gotos name."
         },
+        "codeOnly": {
+          "type": "boolean",
+          "description": "Only the code (default false): nodes and links are left out, nodeCount and linkCount stay. For a big graph whose node and link lists dwarf the text when the node GUIDs are not needed."
+        },
         "collectorClass": {
           "type": "string",
           "description": "Instead of heal: the class that collects it (a Blueprint path such as /Game/Blueprints/BP_Player), whose variableName goes up by amount."
@@ -19946,7 +19950,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
               "items": {
                 "type": "string"
               },
-              "description": "Every wire as \"id.OutPin -> id.InPin\". At most 1000."
+              "description": "Every wire as \"id.OutPin -> id.InPin\". At most 1000; not given with codeOnly."
             },
             {
               "type": "array",
@@ -19956,7 +19960,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
               "description": "The wires out of those nodes as \"id.OutPin -> id.InPin\". At most 1000."
             }
           ],
-          "description": "Every wire as \"id.OutPin -> id.InPin\". At most 1000."
+          "description": "Every wire as \"id.OutPin -> id.InPin\". At most 1000; not given with codeOnly."
         },
         "literalNodeId": {
           "type": "string",
@@ -20136,7 +20140,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
                 "x-unreal-reflection-boundary": true
               },
               "x-unreal-reflection-boundary": true,
-              "description": "Every node: id (as the code names it), nodeId (its GUID) and type (its action-menu id). At most 500."
+              "description": "Every node: id (as the code names it), nodeId (its GUID) and type (its action-menu id). At most 500; not given with codeOnly."
             },
             {
               "type": "array",
@@ -20149,7 +20153,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
               "description": "The nodes those events and functions run and the values those read: id (as the code names it), nodeId (its GUID) and type (its action-menu id). At most 500."
             }
           ],
-          "description": "Every node: id (as the code names it), nodeId (its GUID) and type (its action-menu id). At most 500."
+          "description": "Every node: id (as the code names it), nodeId (its GUID) and type (its action-menu id). At most 500; not given with codeOnly."
         },
         "note": {
           "type": "string",

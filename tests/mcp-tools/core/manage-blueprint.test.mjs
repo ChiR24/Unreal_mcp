@@ -505,6 +505,12 @@ const testCases = [
     { path: 'structuredContent.result.nodes', length: 4, label: 'only its nodes are listed' },
     { path: 'structuredContent.result.graphs', length: 1, label: 'only the graph holding it' },
   ] },
+  { scenario: 'INFO: read_graph_as_code leaves the node and link lists out with codeOnly', toolName: 'manage_blueprint', arguments: { action: 'read_graph_as_code', blueprintPath: CODE_BP_PATH, entry: 'OnCodeProbe', codeOnly: true }, expected: 'success', assertions: [
+    { path: 'structuredContent.result.code', includes: '(event Custom|OnCodeProbe', label: 'the code is all there' },
+    { path: 'structuredContent.result.nodes', exists: false, label: 'no node list' },
+    { path: 'structuredContent.result.links', exists: false, label: 'no link list' },
+    { path: 'structuredContent.result.nodeCount', equals: 4, label: 'the node count stays' },
+  ] },
   { scenario: 'ERROR: read_graph_as_code names the entries when one is missing', toolName: 'manage_blueprint', arguments: { action: 'read_graph_as_code', blueprintPath: CODE_BP_PATH, entry: 'NoSuchEvent' }, expected: 'error|ENTRY_NOT_FOUND' },
   // === CODE: write_graph_from_code writes such text back as nodes ===
   { scenario: 'CODE: write_graph_from_code replaces the event body with a loop', toolName: 'manage_blueprint', arguments: { action: 'write_graph_from_code', blueprintPath: CODE_BP_PATH, graphName: 'EventGraph', code: '(event Custom|OnCodeProbe\n  (for _ (range 3)\n    (Development|PrintString "loop")))' }, expected: 'success', assertions: [

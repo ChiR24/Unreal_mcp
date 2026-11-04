@@ -51,7 +51,15 @@ describe('read_graph_as_code', () => {
     const read = code(join(CODE, 'McpGraphCodeRead.cpp'));
     expect(read).toMatch(/Text = KeepEntry\(Text, Entries, Heads, OutNames\);\s*if \(Text\.IsEmpty\(\)\)\s*\{\s*return INDEX_NONE;/u);
     expect(read).toMatch(/Heads\.Contains\(Read\.Nodes\[At\]\.Id\)\)\s*\{\s*Shown\.Append\(Write::WritePlanParts::Reach\(Read, At\)\);/u);
-    expect(read).toMatch(/TryGetStringField\(TEXT\("entry"\), Entry\)[\s\S]*ReadAsCode\(Blueprint, Graphs, Entries, \*Result, Names\);[\s\S]*TEXT\("ENTRY_NOT_FOUND"\)/u);
+    expect(read).toMatch(/TryGetStringField\(TEXT\("entry"\), Entry\)[\s\S]*ReadAsCode\(Blueprint, Graphs, Entries, bCodeOnly, \*Result, Names\);[\s\S]*TEXT\("ENTRY_NOT_FOUND"\)/u);
+  });
+
+  it('with codeOnly, leaves the node and link lists out and keeps their counts', () => {
+    const read = code(join(CODE, 'McpGraphCodeRead.cpp'));
+    expect(read).toContain('Context.Payload->TryGetBoolField(TEXT("codeOnly"), bCodeOnly);');
+    expect(read).toMatch(/if \(!bCodeOnly\)\s*\{\s*Result\.SetArrayField\(TEXT\("nodes"\), NodeRows\);\s*Result\.SetArrayField\(TEXT\("links"\), LinkRows\);/u);
+    expect(read.indexOf('Result.SetNumberField(TEXT("nodeCount")')).toBeLessThan(read.indexOf('if (!bCodeOnly)\n'));
+    expect(code(join(CODE, 'McpGraphCodeWriteHandler.cpp'))).toContain('ReadAsCode(Blueprint, Graphs, Written, false, *Read, Names);');
   });
 });
 
@@ -86,7 +94,7 @@ describe('write_graph_from_code', () => {
   });
 
   it('reads back only the entries it wrote, through the reader read_graph_as_code reads one entry with', () => {
-    expect(handler).toMatch(/Written\.Add\(EntryName\(TypeIdOf\(Node\)\)\);[\s\S]*ReadAsCode\(Blueprint, Graphs, Written, \*Read, Names\);/u);
+    expect(handler).toMatch(/Written\.Add\(EntryName\(TypeIdOf\(Node\)\)\);[\s\S]*ReadAsCode\(Blueprint, Graphs, Written, false, \*Read, Names\);/u);
     expect(handler).not.toContain('Decompile(');
     expect(code(join(CODE, 'McpGraphCodeWriteForm.cpp'))).toContain('Plan.Entries = Entries;');
   });

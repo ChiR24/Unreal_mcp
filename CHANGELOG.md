@@ -23,7 +23,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **`bake_vertex_colors`** reports `coarseShare` and warns when large faces can only take their masks from their corners (add vertices with `loop_cut` first).
 - **`append_tubes`** lays pipes, cables, rods and rings along paths in one call: rings carried without twisting, mitred corners, a taper, caps and repeats.
 - **`append_polygons`** takes `repeat`: one face laid out in rows (stripes, slats, fins) instead of every copy by hand.
-- **`read_graph_as_code`** takes `entry`: one event or function alone, its nodes and links only (one event of a 500-node graph came with the rest).
+- **`read_graph_as_code`** takes `entry`: one event or function alone, its nodes and links only (one event of a 500-node graph came with the rest), and `codeOnly`: the code without the node and link lists.
 - **`write_graph_from_code`** reads back only the events and functions it wrote (their code, nodes and links), as `read_graph_as_code` `entry` reads one.
 - **Sequences**: `add_actors` `rebind` points a sequence copied with its level at the new level's actors (in Play it animated nothing and never took the camera).
 - **Variables**: `add_variable` takes `exposeToCinematics`, so Sequencer can key the variable on placed actors.

@@ -61,7 +61,7 @@ void ReadBack(UBlueprint* Blueprint, const TArray<Write::FGraphPlan>& Plans, FJs
     }
     const TSharedPtr<FJsonObject> Read = MakeShared<FJsonObject>();
     TArray<FString> Names;
-    ReadAsCode(Blueprint, Graphs, Written, *Read, Names);
+    ReadAsCode(Blueprint, Graphs, Written, false, *Read, Names);
     for (const TCHAR* Field : {TEXT("code"), TEXT("nodes"), TEXT("links"), TEXT("nodeCount"), TEXT("linkCount"), TEXT("truncated")})
     {
         if (const TSharedPtr<FJsonValue> Value = Read->TryGetField(Field))

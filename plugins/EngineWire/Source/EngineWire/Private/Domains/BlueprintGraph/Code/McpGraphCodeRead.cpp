@@ -76,8 +76,8 @@ FString KeepEntry(const FString& Text, const TArray<FString>& Entries, TSet<FStr
 }
 } // namespace
 
-int32 ReadAsCode(UBlueprint* Blueprint, const TArray<UEdGraph*>& Graphs, const TArray<FString>& Entries, FJsonObject& Result,
-                 TArray<FString>& OutNames)
+int32 ReadAsCode(UBlueprint* Blueprint, const TArray<UEdGraph*>& Graphs, const TArray<FString>& Entries, bool bCodeOnly,
+                 FJsonObject& Result, TArray<FString>& OutNames)
 {
     TArray<FString> Code;
     TArray<FString> Warnings;
@@ -146,7 +146,7 @@ int32 ReadAsCode(UBlueprint* Blueprint, const TArray<UEdGraph*>& Graphs, const T
                 continue;
             }
             ++NodeCount;
-            if (NodeRows.Num() < ReadLimits::MaxListedNodes)
+            if (!bCodeOnly && NodeRows.Num() < ReadLimits::MaxListedNodes)
             {
                 TSharedPtr<FJsonObject> Row = MakeShared<FJsonObject>();
                 Row->SetStringField(TEXT("id"), Node.Id);
@@ -159,7 +159,7 @@ int32 ReadAsCode(UBlueprint* Blueprint, const TArray<UEdGraph*>& Graphs, const T
                 for (const FPinRef& To : Pin.Links)
                 {
                     ++LinkCount;
-                    if (LinkRows.Num() < ReadLimits::MaxListedLinks)
+                    if (!bCodeOnly && LinkRows.Num() < ReadLimits::MaxListedLinks)
                     {
                         const FNode& Target = Read.Nodes[To.Node];
                         LinkRows.Add(MakeShared<FJsonValueString>(
@@ -184,13 +184,17 @@ int32 ReadAsCode(UBlueprint* Blueprint, const TArray<UEdGraph*>& Graphs, const T
 
     Result.SetStringField(TEXT("code"), Text);
     Result.SetArrayField(TEXT("graphs"), GraphRows);
-    Result.SetArrayField(TEXT("nodes"), NodeRows);
-    Result.SetArrayField(TEXT("links"), LinkRows);
     Result.SetNumberField(TEXT("nodeCount"), NodeCount);
     Result.SetNumberField(TEXT("linkCount"), LinkCount);
-    if (NodeRows.Num() < NodeCount || LinkRows.Num() < LinkCount)
+    // With codeOnly the lists, up to 1500 rows beside the text, are left out; the counts stay.
+    if (!bCodeOnly)
     {
-        Result.SetBoolField(TEXT("truncated"), true);
+        Result.SetArrayField(TEXT("nodes"), NodeRows);
+        Result.SetArrayField(TEXT("links"), LinkRows);
+        if (NodeRows.Num() < NodeCount || LinkRows.Num() < LinkCount)
+        {
+            Result.SetBoolField(TEXT("truncated"), true);
+        }
     }
     if (Warnings.Num() > 0)
     {
@@ -228,9 +232,11 @@ bool HandleReadGraphAsCode(const McpBlueprintGraphHandlers::FActionContext& Cont
     {
         Entries.Add(Entry);
     }
+    bool bCodeOnly = false;
+    Context.Payload->TryGetBoolField(TEXT("codeOnly"), bCodeOnly);
     TSharedPtr<FJsonObject> Result = MakeShared<FJsonObject>();
     TArray<FString> Names;
-    const int32 NotInCode = ReadAsCode(Blueprint, Graphs, Entries, *Result, Names);
+    const int32 NotInCode = ReadAsCode(Blueprint, Graphs, Entries, bCodeOnly, *Result, Names);
     if (NotInCode == INDEX_NONE)
     {
         Context.SendError(FString::Printf(TEXT("%s has no event or function '%s'. Its entries: %s."), *Blueprint->GetName(), *Entry,
