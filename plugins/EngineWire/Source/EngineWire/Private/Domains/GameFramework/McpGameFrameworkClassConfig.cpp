@@ -62,16 +62,18 @@ int32 ApplyGameModeClassOverrides(FActionContext& Context, UBlueprint* Blueprint
     return Applied;
 }
 
+// bNone empties the slot (DefaultPawnClass None: the game mode spawns no pawn) instead of loading ClassPath.
 static bool SetGameModeClass(
     FActionContext& Context,
     const FString& ClassPath,
     const FName& PropertyName,
     const FString& MissingMessage,
     const FString& NotFoundLabel,
-    const FString& SuccessLabel)
+    const FString& SuccessLabel,
+    const bool bNone = false)
 {
     if (!RequireGameModePath(Context)) return true;
-    if (ClassPath.IsEmpty())
+    if (ClassPath.IsEmpty() && !bNone)
     {
         Context.SendError(MissingMessage, TEXT("INVALID_ARGUMENT"));
         return true;
@@ -80,12 +82,13 @@ static bool SetGameModeClass(
     UBlueprint* Blueprint = LoadRequiredGameMode(Context);
     if (!Blueprint) return true;
 
-    UClass* ClassToSet = LoadClassFromPath(ClassPath);
-    if (!ClassToSet)
+    UClass* ClassToSet = bNone ? nullptr : LoadClassFromPath(ClassPath);
+    if (!ClassToSet && !bNone)
     {
         Context.SendError(FString::Printf(TEXT("Failed to load %s class: %s"), *NotFoundLabel, *ClassPath), TEXT("NOT_FOUND"));
         return true;
     }
+    const FString SetTo = bNone ? FString(TEXT("None (no pawn is spawned)")) : ClassPath;
 
     FString Error;
     if (!SetClassProperty(Blueprint, PropertyName, ClassToSet, Error))
@@ -104,7 +107,7 @@ static bool SetGameModeClass(
     {
         Context.SendError(FString::Printf(
             TEXT("Set %s to %s, but %s could not be written to DefaultEngine.ini as the project default game mode (is the file read-only?)."),
-            *SuccessLabel, *ClassPath, *Blueprint->GetName()), TEXT("CONFIG_WRITE_FAILED"));
+            *SuccessLabel, *SetTo, *Blueprint->GetName()), TEXT("CONFIG_WRITE_FAILED"));
         return true;
     }
 
@@ -112,7 +115,7 @@ static bool SetGameModeClass(
     Response->SetBoolField(TEXT("madeDefault"), bMakeDefault);
     ReportEffectiveGameMode(Response, Blueprint);
     const bool bEffective = Response->GetBoolField(TEXT("effectiveInOpenLevel"));
-    Response->SetStringField(TEXT("message"), FString::Printf(TEXT("Set %s to %s on %s.%s"), *SuccessLabel, *ClassPath,
+    Response->SetStringField(TEXT("message"), FString::Printf(TEXT("Set %s to %s on %s.%s"), *SuccessLabel, *SetTo,
         *Blueprint->GetName(),
         bMakeDefault ? TEXT(" It is now the project default game mode.")
         : bEffective ? TEXT("")
@@ -198,15 +201,21 @@ bool HandleGameModeConfigAction(FActionContext& Context)
         if (Context.SubAction == Setter.SubAction)
         {
             const bool bPawn = Setter.Property == FString(TEXT("DefaultPawnClass"));
+            const FString ClassPath = bPawn ? McpGetFirstStringField(Context.Payload, {TEXT("pawnClass"), TEXT("defaultPawnClass")})
+                                            : GetStringField(Context.Payload, Setter.Field);
+            // A game mode may spawn no pawn: "None", as the editor's class picker shows an empty slot, or an empty
+            // pawnClass clears it. Any other class that does not load stays NOT_FOUND.
+            const bool bNoPawn = bPawn && (ClassPath.Equals(TEXT("None"), ESearchCase::IgnoreCase) ||
+                (ClassPath.IsEmpty() && (Context.Payload->HasField(TEXT("pawnClass")) || Context.Payload->HasField(TEXT("defaultPawnClass")))));
             return SetGameModeClass(
                 Context,
-                bPawn ? McpGetFirstStringField(Context.Payload, {TEXT("pawnClass"), TEXT("defaultPawnClass")})
-                      : GetStringField(Context.Payload, Setter.Field),
+                ClassPath,
                 Setter.Property,
                 bPawn ? FString(TEXT("Missing 'pawnClass' or 'defaultPawnClass'."))
                       : FString::Printf(TEXT("Missing '%s'."), Setter.Field),
                 Setter.Label,
-                Setter.Property);
+                Setter.Property,
+                bNoPawn);
         }
     }
     if (Context.SubAction == TEXT("configure_game_rules"))

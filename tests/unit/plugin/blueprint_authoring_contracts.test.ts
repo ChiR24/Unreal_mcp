@@ -804,3 +804,30 @@ describe('add_variable exposes a variable to cinematics as the editor\'s checkbo
     expect(paramDescription('blueprint.edit_graph', 'operations')).toMatch(/exposeOnSpawn, exposeToCinematics, category/u);
   });
 });
+
+// configure_game_mode default_pawn_class "None" answered NOT_FOUND, so a game mode's default pawn could not be cleared.
+describe('the default pawn can be cleared to None', () => {
+  const config = (): string => read('Domains', 'GameFramework', 'McpGameFrameworkClassConfig.cpp');
+
+  it('takes "None", or an empty pawnClass that was sent, as no pawn, for the default pawn only', () => {
+    const source = config();
+    expect(source).toMatch(/const bool bNoPawn = bPawn && \(ClassPath\.Equals\(TEXT\("None"\), ESearchCase::IgnoreCase\) \|\|/u);
+    expect(source).toMatch(/ClassPath\.IsEmpty\(\) && \(Context\.Payload->HasField\(TEXT\("pawnClass"\)\) \|\| Context\.Payload->HasField\(TEXT\("defaultPawnClass"\)\)\)/u);
+    expect(source).toMatch(/Setter\.Property,\s*bNoPawn\);/u);
+  });
+
+  it('writes no class for None and still refuses a class that does not load', () => {
+    const set = sliceBetween(config(), 'static bool SetGameModeClass(', 'static bool ConfigureGameRules(');
+    expect(set).toContain('if (ClassPath.IsEmpty() && !bNone)');
+    expect(set).toContain('UClass* ClassToSet = bNone ? nullptr : LoadClassFromPath(ClassPath);');
+    expect(set).toMatch(/if \(!ClassToSet && !bNone\)\s*\{\s*Context\.SendError\([^;]*TEXT\("NOT_FOUND"\)\);/u);
+    expect(set).toContain('SetClassProperty(Blueprint, PropertyName, ClassToSet, Error)');
+    expect(set, 'the reply names the empty slot').toMatch(/Set %s to %s on %s\.%s"\), \*SuccessLabel, \*SetTo,/u);
+    // SetClassProperty checks the meta class only for a class it was given, so nullptr empties the slot.
+    expect(read('Domains', 'GameFramework', 'McpGameFrameworkUtils.cpp')).toContain('if (ClassToSet && MetaClass && !ClassToSet->IsChildOf(MetaClass))');
+  });
+
+  it('the contract says so', () => {
+    expect(paramDescription('manage_networking.configure_game_mode', 'pawnClass')).toMatch(/"None" \(or an empty pawnClass\)/u);
+  });
+});

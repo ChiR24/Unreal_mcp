@@ -1,5 +1,5 @@
 {
-  "catalogRevision": "71d4a4776c77a80e",
+  "catalogRevision": "1042455cf80f0b00",
   "recordCount": 486,
   "records": [
     {
@@ -95824,9 +95824,9 @@
           "respawn time",
           "enable spectator mode"
         ],
-        "summary": "Change a game mode Blueprint (gameModeBlueprint or blueprintPath), chosen by setting, then compile and save it: default_pawn_class (pawnClass), player_controller_class, game_state_class, player_state_class and hud_class set the class it spawns for that role (a class that does not load is NOT_FOUND); rules sets bDelayedStart, respawn sets respawnDelay (both on GameMode children only, a GameModeBase child is NOT_SUPPORTED), spectating sets spectatorClass. A class setting never changes which game mode plays: makeDefault true makes this one the project default (DefaultEngine.ini), and the reply says whether the open level plays with it (effectiveInOpenLevel, openLevelGameMode).",
+        "summary": "Change a game mode Blueprint (gameModeBlueprint or blueprintPath), chosen by setting, then compile and save it: default_pawn_class (pawnClass; \"None\" for no default pawn), player_controller_class, game_state_class, player_state_class and hud_class set the class it spawns for that role (a class that does not load is NOT_FOUND); rules sets bDelayedStart, respawn sets respawnDelay (both on GameMode children only, a GameModeBase child is NOT_SUPPORTED), spectating sets spectatorClass. A class setting never changes which game mode plays: makeDefault true makes this one the project default (DefaultEngine.ini), and the reply says whether the open level plays with it (effectiveInOpenLevel, openLevelGameMode).",
         "whenToUse": [
-          "setting=default_pawn_class: Use it to set a GameMode default pawn class. Pass makeDefault: true to also make this game mode the project default; the reply says whether the open level runs it (effectiveInOpenLevel).",
+          "setting=default_pawn_class: Use it to set a GameMode default pawn class. \"None\" (or an empty pawnClass) leaves the game mode with no default pawn; the reply says so. Pass makeDefault: true to also make this game mode the project default; the reply says whether the open level runs it (effectiveInOpenLevel).",
           "setting=player_controller_class: Use it to set a GameMode PlayerController class. Pass makeDefault: true to also make this game mode the project default; the reply says whether the open level runs it (effectiveInOpenLevel).",
           "setting=game_state_class: Use it to set a GameMode GameState class. Pass makeDefault: true to also make this game mode the project default; the reply says whether the open level runs it (effectiveInOpenLevel).",
           "setting=player_state_class: Use it to set a GameMode PlayerState class. Pass makeDefault: true to also make this game mode the project default; the reply says whether the open level runs it (effectiveInOpenLevel).",
@@ -95858,7 +95858,7 @@
             },
             "pawnClass": {
               "type": "string",
-              "description": "The default pawn class (a class path or Blueprint path); required, or send it as defaultPawnClass."
+              "description": "The default pawn class (a class path or Blueprint path); required, or send it as defaultPawnClass. \"None\" (or an empty pawnClass) leaves the game mode with no default pawn; the reply says so."
             },
             "defaultPawnClass": {
               "type": "string",
@@ -95912,7 +95912,7 @@
                 "respawn",
                 "spectating"
               ],
-              "description": "Which configure game mode variant to run.\ndefault_pawn_class: Set a GameMode default pawn class. Pass makeDefault: true to also make this game mode the project default; the reply says whether the open level runs it (effectiveInOpenLevel).\nplayer_controller_class: Set a GameMode PlayerController class. Pass makeDefault: true to also make this game mode the project default; the reply says whether the open level runs it (effectiveInOpenLevel).\ngame_state_class: Set a GameMode GameState class. Pass makeDefault: true to also make this game mode the project default; the reply says whether the open level runs it (effectiveInOpenLevel).\nplayer_state_class: Set a GameMode PlayerState class. Pass makeDefault: true to also make this game mode the project default; the reply says whether the open level runs it (effectiveInOpenLevel).\nhud_class: Set a GameMode HUD class. Pass makeDefault: true to also make this game mode the project default; the reply says whether the open level runs it (effectiveInOpenLevel).\nrules: Set a GameMode's bDelayedStart match rule; only GameMode (AGameMode) children have it, a GameModeBase child is refused with NOT_SUPPORTED.\nrespawn: Set the game mode's minimum respawn delay (AGameMode::MinRespawnDelay); a GameModeBase child is refused with NOT_SUPPORTED.\nspectating: Set the GameMode spectator pawn class (SpectatorClass)."
+              "description": "Which configure game mode variant to run.\ndefault_pawn_class: Set a GameMode default pawn class. \"None\" (or an empty pawnClass) leaves the game mode with no default pawn; the reply says so. Pass makeDefault: true to also make this game mode the project default; the reply says whether the open level runs it (effectiveInOpenLevel).\nplayer_controller_class: Set a GameMode PlayerController class. Pass makeDefault: true to also make this game mode the project default; the reply says whether the open level runs it (effectiveInOpenLevel).\ngame_state_class: Set a GameMode GameState class. Pass makeDefault: true to also make this game mode the project default; the reply says whether the open level runs it (effectiveInOpenLevel).\nplayer_state_class: Set a GameMode PlayerState class. Pass makeDefault: true to also make this game mode the project default; the reply says whether the open level runs it (effectiveInOpenLevel).\nhud_class: Set a GameMode HUD class. Pass makeDefault: true to also make this game mode the project default; the reply says whether the open level runs it (effectiveInOpenLevel).\nrules: Set a GameMode's bDelayedStart match rule; only GameMode (AGameMode) children have it, a GameModeBase child is refused with NOT_SUPPORTED.\nrespawn: Set the game mode's minimum respawn delay (AGameMode::MinRespawnDelay); a GameModeBase child is refused with NOT_SUPPORTED.\nspectating: Set the GameMode spectator pawn class (SpectatorClass)."
             }
           },
           "required": [
@@ -95963,7 +95963,7 @@
       },
       "examples": [
         {
-          "title": "Change a game mode Blueprint (gameModeBlueprint or blueprintPath), chosen by setting, then compile and save it: default_pawn_class (pawnClass), player_controller_class, game_state_class, player_state_class and hud_class set the class it spawns for that role (a class that does not load is NOT_FOUND); rules sets bDelayedStart, respawn sets respawnDelay (both on GameMode children only, a GameModeBase child is NOT_SUPPORTED), spectating sets spectatorClass. A class setting never changes which game mode plays: makeDefault true makes this one the project default (DefaultEngine.ini), and the reply says whether the open level plays with it (effectiveInOpenLevel, openLevelGameMode).",
+          "title": "Change a game mode Blueprint (gameModeBlueprint or blueprintPath), chosen by setting, then compile and save it: default_pawn_class (pawnClass; \"None\" for no default pawn), player_controller_class, game_state_class, player_state_class and hud_class set the class it spawns for that role (a class that does not load is NOT_FOUND); rules sets bDelayedStart, respawn sets respawnDelay (both on GameMode children only, a GameModeBase child is NOT_SUPPORTED), spectating sets spectatorClass. A class setting never changes which game mode plays: makeDefault true makes this one the project default (DefaultEngine.ini), and the reply says whether the open level plays with it (effectiveInOpenLevel, openLevelGameMode).",
           "input": {
             "action": "configure_game_mode",
             "gameModeBlueprint": "/Game/Blueprints/Framework/BP_ArenaGameMode",
@@ -96088,8 +96088,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "a56b2ba3f83714cffabe59ff9b658eb07c573851d41431fec4d97344a9b360be",
-        "content": "06f411c5d4edb7de993dad97163245cd97df07b8a0fdaff4fa6319b823817359"
+        "schema": "5a44407b62ce2776def37cd01d3a23db988af1650e09507b345640b3e370337c",
+        "content": "17dc91df368c6feaadfb7127f078a92d41e0dc2fed5c4dbbef0a4097e9196794"
       }
     },
     {

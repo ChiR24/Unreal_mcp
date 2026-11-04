@@ -23,10 +23,11 @@ const create = (action: string, label: string, parent: string, extra: readonly s
 const EFFECTIVE = ' Pass makeDefault: true to also make this game mode the project default; the reply says whether the open level runs it (effectiveInOpenLevel).';
 // "set class defaults" (a Blueprint's CDO values) ranked these first through their set/default/class names.
 const GAME_MODE = ['gameModeBlueprint', 'blueprintPath'];
-const setClass = (action: string, label: string, field: string, alias: readonly string[] = []): CapabilityRecordSource => withWhenNotToUse(f(
-  action, `Set a GameMode ${label} class.${EFFECTIVE}`, [...GAME_MODE, field, ...alias, 'makeDefault', 'save'], alias.length > 0 ? [] : [field],
+// none: the sentence saying how the slot is emptied, for a slot that may be (the default pawn).
+const setClass = (action: string, label: string, field: string, alias: readonly string[] = [], none = ''): CapabilityRecordSource => withWhenNotToUse(f(
+  action, `Set a GameMode ${label} class.${none}${EFFECTIVE}`, [...GAME_MODE, field, ...alias, 'makeDefault', 'save'], alias.length > 0 ? [] : [field],
   ['madeDefault', 'effectiveInOpenLevel', 'openLevelGameMode'], [], false,
-  alias.length > 0 ? { [field]: { type: 'string', description: `The ${label} class (a class path or Blueprint path); required, or send it as ${alias.join(' or ')}.` } } : {}, GAME_MODE,
+  alias.length > 0 ? { [field]: { type: 'string', description: `The ${label} class (a class path or Blueprint path); required, or send it as ${alias.join(' or ')}.${none}` } } : {}, GAME_MODE,
 ), ['A Blueprint\'s own class default values (its CDO) must be set (use blueprint.edit_variable edit=set_default).']);
 
 export const NETWORKING_FRAMEWORK_RECORDS: readonly CapabilityRecordSource[] = [
@@ -37,7 +38,8 @@ export const NETWORKING_FRAMEWORK_RECORDS: readonly CapabilityRecordSource[] = [
   create('create_player_state', 'PlayerState', 'PlayerState'),
   create('create_game_instance', 'GameInstance', 'GameInstance'),
   create('create_hud_class', 'HUD', 'HUD'),
-  setClass('set_default_pawn_class', 'default pawn', 'pawnClass', ['defaultPawnClass']),
+  setClass('set_default_pawn_class', 'default pawn', 'pawnClass', ['defaultPawnClass'],
+    ' "None" (or an empty pawnClass) leaves the game mode with no default pawn; the reply says so.'),
   setClass('set_player_controller_class', 'PlayerController', 'playerControllerClass'),
   setClass('set_game_state_class', 'GameState', 'gameStateClass'),
   setClass('set_player_state_class', 'PlayerState', 'playerStateClass'),
