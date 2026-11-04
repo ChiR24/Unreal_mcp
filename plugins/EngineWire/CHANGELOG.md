@@ -7,70 +7,28 @@ All notable changes to the EngineWire plugin (formerly McpAutomationBridge) will
 ## [Unreleased]
 
 ### Added
-- **Engine version gate**: a record's `availability.minEngineVersion` makes the capability `unavailable` below it in search and describe, and execute refuses it `ENGINE_VERSION_UNSUPPORTED`.
-- **Gateway**: search corrects a typo to the nearest capability word (`MCP/Gateway/Search/`, reply `corrected`); `options.aggregate` counts a reply's list by group (a label or name by its stem, the editor's `_<n>` dropped; a row without a label by its name); an alias sent as tool + action resolves (`FindByAliasPair`).
-- **Blueprint lint values** (`Lint/Interp/`): abstract interpretation adds `divide_by_zero`, `index_out_of_range`, `out_of_range`, `float_equality`, `constant_condition` and `endless_loop`; a certain error fails Data Validation.
-- **Plugins** (`SystemControl/Plugins/`): `get_plugin_info`, `create_plugin` (content-only, or a game feature), `remove_plugin` (folder moved to `Saved/EngineWire/RemovedPlugins`), and game features through module `EngineWireGameFeatures`, loaded only where GameFeatures is on.
-- **Data registries and viewmodels by reflection** (`AssetWorkflow/DataRegistries/`, `WidgetAuthoring/ViewModel/`): list, read and make them with no link to the DataRegistry or ModelViewViewModel plugins.
-- **Editor**: `read_editor_ui` (`ControlEditor/EditorUi/`), the selection, viewport show flags, `reimport` (`FReimportManager`, no dialog) and the unreferenced-asset report; screenshot `renderSize` (`Camera/McpViewRender.cpp`) draws the view through the engine's high resolution screenshot under the automation flag (the frame reaches listeners on 5.0/5.1 and no toast opens), every borrowed setting put back.
-- **Actor tools**, one transaction each (`ControlActor/Relations/`): snap to grid, distribute, align, lock, group, randomize, replace, batch rename; copies along a spline (`McpSpawnRepeat.cpp`), actors to a Blueprint (`McpBPConvertActors.cpp`) or to another level (`McpLevelMoveActors.cpp`).
-- **Look and sound**: colour and glow material instances, light flicker (a light function), first-person camera, the sound trigger behaviour, subtitles, sound volume and looping, footstep notifies, prop mass, animation play rate.
-- **Decals** (`Environment/Decals/`): place_decals onto the surface the hit mesh draws (`FDynamicMeshAABBTree3`), texture upright, one transaction.
-- **Find rows carry location** (`GetActorLocation`) for find by class, name, tag, mesh and material.
-- **Console variables** (`ConsoleCommand/McpConsoleVariables.cpp`): get_console_variables reads each named `IConsoleVariable`'s value, type, set-by layer (`GetConsoleVariableSetByName` from 5.3, the version's own enumerators before) and help; a name with a credential word keeps its value back.
-- **remove_cpp_class** (`SystemControl/McpSystemCppClassRemove.cpp`): deletes a project module's `<Name>.h`/`.cpp` after checking loaded objects, derived classes, Blueprint parent tags, the packages that use the module (loaded, searched with `FReferenceFinder`) and the project's source; read-only files are never forced.
-- **Sheets can leave no file** (`Perception/McpPerceptionSheetDraw.cpp` `Deliver`): contact and thumbnail sheets write their PNG only when `keepFile` asks or the reply cannot carry it.
-- **Bake coverage** (`Geometry/Mesh/McpGeometryVertexColorBake.cpp`): the share of the surface in triangles longer than `aoDistance` (`coarseShare`), with a warning past a quarter.
-- **Camera placement** (`PlaceViewCameraForMcp`): every viewport capture places the camera through one function, `fov` included; `compareWith` retakes at the saved field of view.
-- **Tubes** (`Geometry/Modeling/McpGeometryAppendTubes.cpp`): append_tubes carries a ring along each path by double-reflection frames (a closed loop's turn spread back along it), mitres the joints, caps on points of their own, and appends through append_polygons' checks; a tube's sides share a polygroup allocated at append time (`bFreshGroups`).
-- **List bounds** (`ControlActor/List/McpActorList.cpp`): `bounds` gives each row the box its drawn components span (`McpListedActorBox`, the box `near` measures to).
-- **Polygon repeat** (`Geometry/Modeling/McpGeometryPolygonInput.cpp`): append_polygons copies its cage over the repeat grid before triangulating, faceGroups and faceMaterials kept per copy.
-- **Project thumbnail** (`Ui/McpUiProjectThumbnail.cpp`): set_project_thumbnail draws the level view in game view at a square size (`ReadViewFrameForMcp`) and writes `<ProjectDir>/<ProjectName>.png` through `McpWriteProjectFile`.
-- **Sequence rebind** (`Sequence/Cinematics/McpSeqCineRebind.cpp`): `RebindPossessableByName` unbinds and rebinds the possessable of the actor's label to it, GUID and tracks kept; add_actor forwards `rebind` to add_actors.
-- **Expose to Cinematics** (`McpBPAddVariable.cpp`): `add_variable` sets `CPF_Interp` as `SetInterpFlag` does, in one undo step; the reply and recipe variables read and take it.
-- **Camera view** (`McpEditorViewportSupport.cpp` `RefuseOrTakeCameraViewForMcp`): screenshot `camera` writes the actor's `GetCameraView` (place, turn, field of view; renderSize at a kept aspect) into the capture's placement, and `McpCaptureView` takes it through the same core (`TakeCameraViewForMcp`) for describe_view, analyze_view and audit_materials, in game view; pause's `cameraCut` names the cut camera (the sequence's own binding lookup, `LocateBindingObjects`), and list_track_keys gives each cut section its `camera` (`McpSeqTrackKeys.cpp`).
-- **run_script value if** (`Scripts/McpScriptCheck.cpp`, `McpScriptRun.cpp`): `(if cond a b)` where a value goes, only the picked value evaluated; one without both values is refused before anything runs (`SCRIPT_INVALID`).
-- **Current level** (`Level/World/McpLevelSetCurrent.cpp`): `UWorld::SetCurrentLevel` and `NewCurrentLevel`, refusing Play, unknown, Level Instance, unloaded and locked levels; `add_sublevel` puts back the level `AddLevelToWorld` made current.
-- **Graph code entry** (`BlueprintGraph/Code/McpGraphCodeRead.cpp`): read_graph_as_code `entry` keeps the one (event or (fn form by name (`KeepEntry`) and lists the nodes `Reach` finds from its head (the writer's own old-body walk); `codeOnly` builds no node or link rows, the counts stay.
-- **Graph code read-back**: the write reply comes from `ReadAsCode`, the reader read_graph_as_code uses; `KeepEntry` takes several entry names.
+- **Engine version gate**: a record's `availability.minEngineVersion` hides the capability from search and describe below it, and execute refuses it `ENGINE_VERSION_UNSUPPORTED`.
+- **Gateway**: search corrects typos to catalog words, `options.aggregate` counts a reply's list by group, and an alias sent as tool + action resolves.
+- **Blueprint lint values**: abstract interpretation finds a divisor that can be 0, an index out of range, a Set outside a Value Range, `==` on computed floats, a decided Branch and an endless While.
+- **Plugins and data**: plugin info, create and remove; game features through an optional module loaded only where GameFeatures is on; data registries and MVVM viewmodels by reflection.
+- **Editor**: editor UI reading, selection, viewport show flags, dialog-free reimport, the unreferenced-asset report, `renderSize` captures, the current level, the project thumbnail, console variables and C++ class removal.
+- **Camera views**: every capture places its camera through one function (`fov` included); `camera` looks through a camera actor (`TakeCameraViewForMcp`) for screenshots and view reads, in game view; sequence pause and key listings name each cut's camera.
+- **Actor tools**: snap, distribute, align, lock, group, randomize, replace, batch rename, copies along a spline, convert to a Blueprint, move to a level, decals, list bounds and find locations.
+- **Geometry**: tubes along paths, repeated polygons and bake coverage.
+- **Look and sound**: material colour and glow, light flicker, a first-person camera, the sound trigger behaviour, subtitles, sound volume and looping, footsteps, prop mass and play rate.
+- **Sequences and variables**: a copied sequence's possessables rebind by label; `add_variable` sets Expose to Cinematics.
+- **Graph as code**: read `entry` and `codeOnly`; the write reply reads back only the entries written.
+- **Scripts and sheets**: run_script takes `(if cond a b)` as a value; sheets can leave no file.
 
 ### Fixed
-- **Search**: lead verbs (`McpSearchIntent.cpp`) and fold aliases run the member they name.
-- **Paging and aggregate read the data payload**: the receipt build lifts a `{success, data, warnings}` reply's fields to the root (`McpLiftReplyPayload`, a root field wins as in the projection) before `options.aggregate` and paging pick a list.
-- **Aggregate page note** (`McpExecuteAggregate.cpp`): a page with a known total names it ("of 108 in all") instead of saying the reply has more.
-- **Game framework info** (`McpGameFrameworkInfo.cpp`): a class role holding no class reads "None" instead of being left out.
-- **fix_coplanar** (`ControlActor/Placement/McpCoplanarPlan.cpp`): one pass plans every face pair and keeps a move only when the moved piece meets no new face (else the other way, the other piece, twice the distance); Blueprint parts share the planner, and pairs left are named with why.
-- **Contact sheet title** (`McpPerceptionSheetDraw.cpp`): the sheet is at least as wide as its title, measured with the editor font, tiles centred.
-- **Graph code writer** (`BlueprintGraph/Code/`): `%` and string `==` are typed by their operands (`TypedOperator`, `McpGraphCodeWriteValues.cpp`), a value takes a menu entry whose function returns one (`FindMenuEntry`) and a call with no output is refused there, menu titles match without spaces or underscores (`TitleKey`), and an object or class pin whose path loads nothing is refused (`SetValue`).
-- **Placement check** (`ControlActor/Placement/`): an upward face of a mesh whose footprint holds the actor is its floor (`McpIsEnclosingFloor`: a room mesh is no slab and its floor is thinner than a prop can be sunk); a floating actor on a mesh with no body names it (`FindBodilessSupport`) and fix_placement skips it; the part audit names the hidden parts it does not judge (`NoteParts`) and the Blueprint audit passes its notes on as warnings.
-- **FBX import with options** (`McpAssetFbxImportOptions.h`): `bConvertSceneUnit` on the mesh and take import data, as Interchange converts; `McpImportAndCollect` lists what the factory made in the destination folder and `McpSaveImports` saves it; `McpTakeScaleWarnings` compares each take's root scale at frame 0 with the reference pose and warns past 2x either way.
-- **Skeletal mesh writes** (`McpPropApplyObjects.h`, `McpBPScsPropagate.h`): `McpSkeletalMeshOwner` (matched by type: `SkeletalMesh` in 5.0, `SkeletalMeshAsset` later) sends a skeletal mesh component's mesh through `SetSkeletalMesh`, so its bone buffers follow.
-- **Live Coding gate** (`McpNativeGatewayCatalog.cpp`): `McpCheckAvailabilityGate` refuses a non-read capability while `IsReloadActive()` (LIVE_CODING_ACTIVE), since `MarkPackageDirty` skips then.
-- **Material pin names** (`McpMatMainInputs.h`): `McpMaterialInputNamed` matches an input by its label, a function call's label before " (Type)" or `UMaterialGraphNode::GetShortenPinName` (UVs, Tex, Exp), for connect and disconnect alike.
-- **Room-shell overlaps** (`McpActorPlacementCheck.cpp`, `McpPlacementShapes.cpp`): when another actor's box holds the actor whole, `McpShellDepth` measures the shapes' push (`McpMeasurePush`) instead of the box overlap, so resting on the room's floor is a graze.
-- **Parentless Fab instances** (`AssetWorkflow/Fab/McpFabPostImport.cpp`, `McpAssetFabImportStatus.cpp`): `NoteParentless` records loaded imported material instances with no `Parent` after the import and each late save, and the status turns them into warnings.
-- **No default pawn** (`McpGameFrameworkClassConfig.cpp`): "None" or an empty pawnClass writes no class instead of looking one up.
-- **Lean console text** (`McpConsoleHandlers.cpp`): `LeanConsoleText` trims `output` and `log`; `FMcpOutputCapture` marks Error and Warning lines.
-- **Consent text** (`McpNativeGatewayDefinition.cpp`, `server-info.json`): names describe with `param` as the cheap way to a new grant.
-- **Deferred steps** (`McpScriptCall.cpp`): the STEP_DEFERRED message names a read-back for work that lands later.
-- **Graph code round trip** (`BlueprintGraph/Code/`): `BuildForms` makes entries first and rebuilds the skeleton and menu after a new custom event; `TypeIdOf` uses the menu title; `Fill` re-reads inputs per argument; refusals list ids by title prefix.
-- **Self call targets** (`IsSelfTarget`, `McpGraphCodeSnapshot.cpp`): `Fill` leaves an impure call's self pin unwired unless every input gets an argument; the reader keeps every argument after a target it prints.
-- **Config-named assets** (`AssetWorkflow/Analysis/McpAssetReports.cpp`): `ReportConfigNamedPackages` reads the project's Config and Saved/Config `.ini` files through `McpResolveProjectFilePath` for `/Game/` package names and moves those assets from the unreferenced list to `configReferenced` (`configFiles`); no config value is kept or returned.
-- **One compile path** (`Foundation/BridgeHelpers/Blueprints/McpBPCompileHelpers.h`): `McpCompileBlueprint` compiles, then re-initialises the skeletal meshes of the Blueprint's placed copies (children's included) with `McpRefreshComponentAfterEdit`; the three compile helpers and five direct callers use it.
-- **Dry-run replies** (`McpBPGraphBatch.cpp`): `RunGraphBatch` sets `bDeferCompile` before `AnswerDryRun`, so `SendResponse` no longer compiles, saves or lists a dirty Blueprint as changed.
-- **Sublevel saves** (`McpSafeOperationsLevelSave.h`): the existing-level check compares the level's own package (`GetOutermost`), not its world's (a sublevel's world is the level that streams it in).
-- **Variable defaults reach placed copies** still on the old value, before the compile.
-- **Asset edits are one undo step** (animation, skeleton, physics, Blackboard, Behavior Tree, sound class, enum); an enum edit is recorded as a command change, since restoring an enum asserts from 5.7, and older enum steps are refused `UNDO_WOULD_CRASH`.
-- **Behavior Tree graph route** builds a tree from its Root node (it answered "requires UE 5.3+").
-- **A save is not a new asset**: `AssetCreated` only for a package with no file yet (`McpAnnounceIfNew`).
-- **Morph targets and skin weight profiles** are written into the mesh's source data, so rebuilds keep them.
-- **Material instances**: a new parent compiles the instance's own shaders (`SetParentEditorOnly`, undoable), and material edits recompile their instances (`FMaterialUpdateContext`).
-- **Frame readers warn while assets build** (`McpWarnFrameStillBuilding`): shader jobs and `FAssetCompilingManager` builds; a water body whose mesh was still building drew nothing and read as background.
-- **Bevel and chamfer** (`McpGeometryModelingExtrusion.cpp`): a selection cuts its PolyGroup edges (`AllPolygroupEdges`: `TriangleArea` cut only its border, so whole parts got nothing), bevel faces take the material id of the faces worked on (the engine set id 0 on rounded ones), and `NOTHING_BEVELED` answers a cut that adds no triangle.
-- **Geometry undo** (`McpGeometryUndo.cpp`): a change is found with `FDynamicMesh3::IsSameAs`, every attribute compared (a hash of positions, triangles, UVs and normals let material id and PolyGroup edits record no step).
-- **Contact sheet** (`McpPerceptionSheet.cpp`): a box reaching more than 250 m past the actor no longer pushes the elevation camera out (a 40 km water zone put the actor past the far plane).
-- **Output files** (`McpSystemOutputFiles.cpp`): Saved/Captures and Saved/EngineWire are output roots, and a delete prunes the folders it leaves empty, up to its root.
-- **Change journal** (`McpChangeJournal.cpp`): a Modify, or a change notice naming no property, that leaves its package clean outside undo and redo is not recorded (a static mesh announces a finished compile that way).
+- **Search and replies**: lead verbs and fold aliases run their member; paging and aggregate read a reply's `data`; console text stays lean; the consent and deferred-step messages say what to do next.
+- **Graph code writer**: typed `%` and string `==`, calls used as values, title matching, unloadable paths refused, calls to custom events made in the same code, other classes' variables, expose-on-spawn pins and self call targets.
+- **Placement**: a room mesh's floor and shell judged as such, a support with no body named, hidden Blueprint parts noted, and a coplanar planner that checks each move against the others.
+- **Assets**: FBX imports with options convert units and list what they made; skeletal meshes go through the engine's setter; parentless Fab instances warned; config-named assets kept out of the unused report; morph targets and skin weight profiles survive rebuilds; material instances follow their parent; a save is not announced as new.
+- **Editor state**: a Live Coding compile refuses writes; sublevels save; dry runs have no side effects; one compile path re-poses placed skeletal meshes; variable defaults reach placed copies; asset edits are one undo step (enum by command change); Behavior Trees build from Root; engine fix-ups stay out of the change journal.
+- **Captures and geometry**: frame readers warn while assets build; contact sheets handle water and long titles; output files reach captures and EngineWire's folders; bevel and chamfer cut whole parts; geometry undo compares every attribute.
+- **Game framework**: no default pawn writes no class, and an empty role reads "None".
+- **Material pins**: connect and disconnect take the editor's short pin names.
 
 ## [0.6.0] - 2026-10-27
 

@@ -12,29 +12,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 <details>
 <summary><b>✨ Added</b></summary>
 
-- **Engine versions**: a capability an older engine cannot run reads `unavailable` and is refused `ENGINE_VERSION_UNSUPPORTED` (Geometry Script 5.1, `get_metasound_graph` and `skin_mesh_to_skeleton` 5.5, `setup_retargeting` 5.8).
-- **Search and execute**: a typo is read as the word meant ("spwan actor"; the reply's `corrected`), `options.aggregate` counts a long list by group (by label, numbered copies as one: `Wall_3` counts as `Wall`; a find row by its name), and an alias sent as tool + action resolves, with five new ones (`call_function`, `save_all`, `set_blueprint_variables`, `connect_nodes`, `restart_editor` under `system_control`).
-- **Blueprints**: `lint_blueprint` follows values (a divisor that can be 0, an index past the end, a Set outside a Value Range, `==` on computed floats, a decided Branch, an endless While); viewmodels (MVVM) found, added and bound (UE 5.4+).
-- **Plugins and project**: `get_plugin_info`, `create_plugin` / `remove_plugin`, game features (UE 5.1+), data registries, and assets nothing uses (`inspect_asset` `reportType: unreferenced`).
-- **Editor**: `read_editor_ui`, `set_selected_actors`, `configure_viewport` `show_flags`, `reimport` without a dialog, and `screenshot` `renderSize` draws the view at the size asked for ("1920x1080": the game's 16:9 frame, not the wider editor viewport).
-- **`get_console_variables`** reads console variables by name (value, type, what set it last) with the read scope alone.
-- **`remove_cpp_class`** removes a project C++ class (its header and .cpp) once nothing uses it, and names what does when something still does.
-- **`contact_sheet` and `thumbnail_sheet`** take `keepFile: false` to hand the picture back without leaving a file under `Saved/Captures`.
-- **`bake_vertex_colors`** reports `coarseShare` and warns when large faces can only take their masks from their corners (add vertices with `loop_cut` first).
-- **`append_tubes`** lays pipes, cables, rods and rings along paths in one call: rings carried without twisting, mitred corners, a taper, caps and repeats.
-- **`append_polygons`** takes `repeat`: one face laid out in rows (stripes, slats, fins) instead of every copy by hand.
-- **`read_graph_as_code`** takes `entry`: one event or function alone, its nodes and links only (one event of a 500-node graph came with the rest), and `codeOnly`: the code without the node and link lists.
-- **`write_graph_from_code`** reads back only the events and functions it wrote (their code, nodes and links), as `read_graph_as_code` `entry` reads one.
-- **Sequences**: `add_actors` `rebind` points a sequence copied with its level at the new level's actors (in Play it animated nothing and never took the camera).
-- **Variables**: `add_variable` takes `exposeToCinematics`, so Sequencer can key the variable on placed actors.
-- **Cutscene shots without Play**: `screenshot` `camera` looks through a camera actor as it is now (so do `describe_view`, `analyze_view` and `audit_materials`), and `pause` with `startTime` names the camera the cut shows then (`cameraCut`), as `list_track_keys` now does for every cut.
-- **run_script**: `(if cond a b)` works as a value (a let, a call's parameter, an operator) and evaluates only the value it picks.
-- **Levels**: `set_current_level` picks the level new actors are spawned into; `add_sublevel` keeps the current level and says which it is.
-- **`set_project_thumbnail`** sets the picture the Epic Games Launcher shows for the project: the level view from the camera given, in game view, as a square.
-- **`control_actor list`** takes `bounds`: each row's world box, the extents of a level's floors, walls and props in one call.
-- **`screenshot`, `describe_view`, `analyze_view`, `audit_materials` and `capture_passes`** take `fov` beside `location` and `rotation` (the editor resets its own on restart); `compareWith` retakes at the saved one.
-- **Actors**: `snap_to_grid`, `distribute_actors`, `align_actors`, `lock_actors`, `group_actors`, `randomize_transforms`, `replace_actors`, `convert_actors_to_blueprint`, `move_actors_to_level`, numbered batch `rename`, copies along a spline, `place_decals`, and `find` rows that say where each actor is.
-- **Look and sound**: `set_material` `color` / `glow`, light `flicker`, a first-person camera view, `add_behaviour` `sound_trigger`, `set_subtitles`, `set_sound_volume`, `set_sound_looping`, footstep sounds on a walk cycle, animation play rate, a prop's `massKg`.
+- **Engine versions**: a capability an older engine cannot run reads `unavailable` and is refused `ENGINE_VERSION_UNSUPPORTED` (Geometry Script 5.1, MetaSound graph reads and skinning 5.5, retargeting 5.8).
+- **Search and execute**: a typo is read as the word meant (`corrected`), `options.aggregate` counts a long list by group, and an alias sent as tool + action resolves (five new aliases).
+- **Blueprints**: `lint_blueprint` follows values (a divisor that can be 0, an index past the end, a Set outside a Value Range, `==` on computed floats, a decided Branch, an endless While); MVVM viewmodels (UE 5.4+); `add_variable` `exposeToCinematics`.
+- **Graph as code**: `read_graph_as_code` `entry` (one event or function) and `codeOnly` (no node and link lists); `write_graph_from_code` reads back only what it wrote.
+- **Cutscene shots without Play**: `camera` looks through a camera actor as it is now (`screenshot`, `describe_view`, `analyze_view`, `audit_materials`), and `pause` and `list_track_keys` name the camera each cut shows.
+- **Views**: `screenshot` `renderSize` draws the game's frame size; `fov` beside `location` and `rotation` on every view read.
+- **Plugins and project**: `get_plugin_info`, `create_plugin` / `remove_plugin`, game features (UE 5.1+), data registries, an unused-asset report, `set_project_thumbnail`, `get_console_variables`, `remove_cpp_class`.
+- **Editor**: `read_editor_ui`, `set_selected_actors`, viewport `show_flags`, `reimport` without a dialog, `set_current_level`.
+- **Actors**: snap to grid, distribute, align, lock, group, randomize, replace, convert to a Blueprint, move to a level, numbered batch rename, copies along a spline, `place_decals`; `list` `bounds` and `find` rows with locations.
+- **Sequences**: `add_actors` `rebind` points a sequence copied with its level at the new level's actors.
+- **Geometry**: `append_tubes`, `append_polygons` `repeat`, and `bake_vertex_colors` `coarseShare`.
+- **Look and sound**: material `color` / `glow`, light `flicker`, a first-person view, `sound_trigger`, subtitles, sound volume and looping, footstep sounds, animation play rate, `massKg`.
+- **Scripts and sheets**: `run_script` takes `(if cond a b)` as a value; contact and thumbnail sheets take `keepFile: false`.
 - **Proxy CLI**: `init <client>` writes a client's MCP config; `doctor` checks the setup (the token is never shown).
 
 </details>
@@ -42,39 +32,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 <details>
 <summary><b>🔧 Fixed</b></summary>
 
-- **Search**: plain requests find their capability (about 250 more), and an alias a family member declared runs that member.
-- **Long replies page** when the list sits in the reply's `data` (a big `find` answered `RESULT_TOO_LARGE`), and `options.aggregate` counts that list.
-- **Undo**: asset edits (animation, skeleton, physics, Blackboard, Behavior Tree, sound class, enum) are one undo step each, an edit that changes nothing or that the engine refuses is refused instead of answered done, and enum undo no longer crashes UE 5.7+.
-- **Behavior Trees**: the graph route builds a tree from its Root node.
-- **`get_game_framework_info`** reads a role the game mode spawns nothing for as "None" (a cleared default pawn was left out).
-- **fix_coplanar** settles pieces that share planes with each other (walls meeting at a room's corners): each move is checked against the moves before it, Blueprint parts included, and a pair it cannot part is named under skipped with why.
-- **Placed copies** take a behaviour's or variable's new default; the directory report's reply carries its assets; saving an asset again no longer announces it as new.
-- **Materials**: an instance draws the parent it is given and picks up its material's edits.
-- **Meshes**: morph targets made from deltas and skin weight profile weights last through rebuilds.
-- **Frame readers** (`describe_view`, `analyze_view`, `audit_materials`) warn while shaders, meshes or textures are still building: water still building read as background.
-- **Geometry**: `bevel` and `chamfer` cut every edge of whole parts a region picks (they cut nothing and answered "Bevel applied"), keep the faces' material, and answer `NOTHING_BEVELED` when nothing can be cut; a material id or PolyGroup edit is its own undo step (the next undo took back the edit before it).
-- **`contact_sheet`** elevations beside water draw the actor again (a water zone's box sent the camera past the far plane).
-- **`contact_sheet`** of one or two small tiles shows its whole title (the sheet was as narrow as its tiles).
-- **`write_graph_from_code`**: `%` makes the integer or float modulo and `==` on text the exact string compare (both found no node), a call used as a value takes the node that gives one (IsValid as a condition wrote the macro and left its branch unwired), an id that differs from the menu only in underscores resolves, and an asset path that loads nothing is refused instead of written as None.
-- **Placement checks**: a prop sunk into the floor of a room built as one mesh reads as sunk (it read clean); one resting on a mesh with no collision names that mesh instead of reading only "floating", and `fix_placement` no longer drops it into the mesh; a Blueprint audit names the parts its construction script hides, which it does not judge.
-- **Import**: an FBX imported with options (takes, a skeleton) converts its units as a plain import does (a character exported in metres came in at a hundredth of its size); the reply lists and saves the takes, materials and skeleton it made, and warns when the takes play the character at another size than its mesh (a Blender armature carrying the file's unit scale).
-- **Skeletal meshes**: a component's new mesh, in a Blueprint and on its placed copies, goes through the engine's setter (a placed character kept the old mesh's bones and drew only its head).
-- **Live Coding**: a call that changes the editor is refused with `LIVE_CODING_ACTIVE` while a Live Coding compile runs (the engine marks nothing unsaved then, so such a change was silently lost on the next level load).
-- **Material pins**: `connect_nodes` and `disconnect_nodes` take an input by the short name the material editor shows (a texture sample's `UVs`, a texture object's `Tex`).
-- **Saving**: `save_all` saves a streaming sublevel with unsaved changes (it refused each one as a save over another level).
-- **Placement checks**: a prop standing on the floor of a room built as one mesh reads clean (it read as intersecting the room by its own size); inside such a room the depth reported is the shapes' real overlap.
-- **Dry runs**: a `build_graph` dry run no longer compiles, saves or clears the undo history of a Blueprint left uncompiled (a new Animation Blueprint), nor says it did.
-- **Blueprint compiles** leave the skeletal meshes of placed copies posed in the editor (every bone sat at the actor's origin until the level ticked, which a minimized editor never does).
-- **Game modes**: `configure_game_mode` `default_pawn_class` takes `None` (or empty) for no default pawn (it answered NOT_FOUND).
-- **Console replies** stay short: the first 30 lines, any error or warning after them, at most three lines that start alike, and a count of the rest (`scalability 0` returned ~6 KB).
-- **Consent and scripts**: the tool says a `describe` with `param` hands a fresh consent grant cheaply, and that script strings take only `\"` and `\\` as escapes.
-- **run_script**: a step that finishes later (an import) says its work may still land after the script returns.
-- **`write_graph_from_code`** takes back what `read_graph_as_code` prints: calls to a custom event the same code makes, Sets and Gets of another class's variables, and Spawn Actor / Create Widget / Construct Object with expose-on-spawn inputs; an unknown node id lists the menu ids starting with its title.
-- **`write_graph_from_code`** writes a call to the Blueprint's own function with arguments: they fill its inputs and the Target stays self (the first argument went into the Target and the write was refused).
-- **Fab imports**: the import status warns about each imported material instance left with no parent (it draws the grid), naming the likely cause and the reparent call.
-- **Unused-asset report**: assets only a config file names (the default map, a game mode, an importer's parent materials) are no longer offered for deletion; they come under `configReferenced` with the files that name them.
-- **`list_output_files` / `delete_output_file`** reach contact sheets and captures (Saved/Captures) and EngineWire's own files (Saved/EngineWire, plugins `remove_plugin` moved aside included); a delete removes the folders it empties.
-- **Change journal**: a mesh that finished compiling, or the engine's own load fix-ups, no longer read as changes of the call they happened during (the first `create_level` after a launch listed 39 meshes).
+- **Search**: about 250 more plain requests find their capability, and an alias a family member declared runs that member.
+- **Replies**: long lists page and aggregate from the reply's `data`; console replies stay short; a script step that finishes later says so; the tool says how to get a fresh consent grant and how script strings escape.
+- **Undo**: asset edits are one step each, an edit that changes nothing is refused instead of answered done, and enum undo no longer crashes UE 5.7+.
+- **Graph as code**: `%`, `==` on text, calls used as values, ids with underscores, custom event calls, other classes' variables, expose-on-spawn inputs and calls on the Blueprint itself write as `read_graph_as_code` prints them; a path that loads nothing is refused, and an unknown id lists the near ones.
+- **Placement**: props in a room built as one mesh read sunk, resting or overlapping as they are; a support with no collision is named; Blueprint audits name the parts they cannot judge; `fix_coplanar` settles pieces that share planes pairwise.
+- **Views**: frame readers warn while shaders, meshes or textures still build; `contact_sheet` draws beside water and titles small sheets in full.
+- **Geometry**: `bevel` and `chamfer` cut whole parts (`NOTHING_BEVELED` when nothing can be cut), and material and PolyGroup edits are their own undo steps.
+- **Assets**: material instances draw their parent and its edits; morph targets and skin weight profiles survive rebuilds; FBX imports with options convert units and list what they made; Fab imports warn about parentless instances; config-named assets stay out of the unused report; placed copies take new defaults; output files reach captures and EngineWire's own files.
+- **Editor state**: calls that change the editor are refused during a Live Coding compile; `save_all` saves streaming sublevels; dry runs no longer compile or save; Blueprint compiles leave placed skeletal meshes posed, and a new skeletal mesh goes through the engine's setter; the change journal ignores engine fix-ups; Behavior Trees build from their Root.
+- **Game framework**: `default_pawn_class` takes `None`, and `get_game_framework_info` reads an empty role as "None".
+- **Material pins**: connect and disconnect take the short pin names the material editor shows.
 
 </details>
 
