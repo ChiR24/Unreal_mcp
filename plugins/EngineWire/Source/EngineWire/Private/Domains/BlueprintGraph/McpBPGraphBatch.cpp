@@ -185,6 +185,10 @@ bool RunGraphBatch(FActionContext& Context, int32 MaxSteps, bool bCompile)
     }
     if (bDryRun)
     {
+        // A dry run is a read. SendResponse compiles and saves a Blueprint it finds dirty, so one an earlier call left
+        // dirty (an Animation Blueprint fresh from create_animation_blueprint) was compiled, saved and had the undo
+        // history cleared by a reply that said nothing ran.
+        Context.bDeferCompile = true;
         return AnswerDryRun(Context, *Steps);
     }
 

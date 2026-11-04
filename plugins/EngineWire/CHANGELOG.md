@@ -40,6 +40,7 @@ All notable changes to the EngineWire plugin (formerly McpAutomationBridge) will
 - **Live Coding gate** (`McpNativeGatewayCatalog.cpp`): `McpCheckAvailabilityGate` refuses a non-read capability while `IsReloadActive()` (LIVE_CODING_ACTIVE), since `MarkPackageDirty` skips then.
 - **Material pin names** (`McpMatMainInputs.h`): `McpMaterialInputNamed` matches an input by its label, a function call's label before " (Type)" or `UMaterialGraphNode::GetShortenPinName` (UVs, Tex, Exp), for connect and disconnect alike.
 - **Room-shell overlaps** (`McpActorPlacementCheck.cpp`, `McpPlacementShapes.cpp`): when another actor's box holds the actor whole, `McpShellDepth` measures the shapes' push (`McpMeasurePush`) instead of the box overlap, so resting on the room's floor is a graze.
+- **Dry-run replies** (`McpBPGraphBatch.cpp`): `RunGraphBatch` sets `bDeferCompile` before `AnswerDryRun`, so `SendResponse` no longer compiles, saves or lists a dirty Blueprint as changed.
 - **Sublevel saves** (`McpSafeOperationsLevelSave.h`): the existing-level check compares the level's own package (`GetOutermost`), not its world's (a sublevel's world is the level that streams it in).
 - **Variable defaults reach placed copies** still on the old value, before the compile.
 - **Asset edits are one undo step** (animation, skeleton, physics, Blackboard, Behavior Tree, sound class, enum); an enum edit is recorded as a command change, since restoring an enum asserts from 5.7, and older enum steps are refused `UNDO_WOULD_CRASH`.

@@ -34,6 +34,9 @@ const CONVERT_BP_NAME = `BP_Converted_${ts}`;
 const CONVERT_BP_PATH = `${TEST_FOLDER}/${CONVERT_BP_NAME}`;
 const SUBCLASS_BP_NAME = `BP_ConvertedSubclass_${ts}`;
 const SUBCLASS_BP_PATH = `${TEST_FOLDER}/${SUBCLASS_BP_NAME}`;
+const DRY_ABP_NAME = `ABP_DryRun_${ts}`;
+const DRY_ABP_PATH = `${TEST_FOLDER}/${DRY_ABP_NAME}`;
+const ENGINE_SKELETON = '/Engine/EngineMeshes/SkeletalCube_Skeleton';
 const VALUE_RULES = ['divide_by_zero', 'index_out_of_range', 'out_of_range', 'float_equality', 'constant_condition', 'endless_loop'];
 // Each planted mistake beside a twin that guards it: only the mistakes may be found.
 const VALUES_CODE = [
@@ -578,6 +581,23 @@ const testCases = [
     { edit: 'connect_pins', from: '$missingA.then', to: '$gate.execute' },
     { edit: 'connect_pins', from: '$gate.then', to: '$missingB.execute' },
   ] }, expected: 'error|2 step(s) would fail', assertions: [{ path: 'structuredContent.errorCode', equals: 'INVALID_OPERATION', label: 'an id no earlier step defines' }, { path: 'structuredContent.message', includes: 'first operations[1]', label: 'both found in one reply, the first named' }] },
+  // A new Animation Blueprint is left dirty (structurally modified, never compiled): a dry run on one compiled it,
+  // saved it and cleared the undo history while answering that nothing ran.
+  { scenario: 'Setup: create an Animation Blueprint for the dry run', toolName: 'animation_physics', arguments: { action: 'create_animation_blueprint', name: DRY_ABP_NAME, path: TEST_FOLDER, skeletonPath: ENGINE_SKELETON, parentClass: 'AnimInstance' }, expected: 'success' },
+  { scenario: 'BATCH: build_graph dryRun on an Animation Blueprint compiles and saves nothing', toolName: 'manage_blueprint', arguments: { action: 'build_graph', blueprintPath: DRY_ABP_PATH, graphName: 'EventGraph', dryRun: true, operations: [
+    { edit: 'add_variable', variableName: 'DryRunSpeed', variableType: 'float' },
+    { edit: 'create_node', id: 'dryGet', nodeType: 'VariableGet', memberName: 'DryRunSpeed' },
+    { edit: 'create_node', id: 'drySet', nodeType: 'VariableSet', memberName: 'DryRunSpeed' },
+    { edit: 'connect_pins', from: '$dryGet.DryRunSpeed', to: '$drySet.DryRunSpeed' },
+  ] }, expected: 'success', assertions: [
+    { path: 'structuredContent.result.dryRun', equals: true, label: 'nothing ran' },
+    { path: 'structuredContent.result.wouldCreate', equals: 2, label: 'the two nodes it would make' },
+    { path: 'structuredContent.result.compiled', exists: false, label: 'nothing compiled' },
+    { path: 'structuredContent.result.saved', exists: false, label: 'nothing saved' },
+    { path: 'structuredContent.result.undoBufferReset', exists: false, label: 'the undo history kept' },
+    { path: 'structuredContent.result.undo', exists: false, label: 'no undo step, no history cleared' },
+  ] },
+  { scenario: 'Cleanup: delete the dry-run Animation Blueprint', toolName: 'manage_asset', arguments: { action: 'delete', path: DRY_ABP_PATH, force: true }, expected: 'success|not found' },
 
   // === BATCH: a link between nodes of a function made in the same batch needs no graphName ===
   { scenario: 'BATCH: build_graph links a new function body without naming its graph', toolName: 'manage_blueprint', arguments: { action: 'build_graph', blueprintPath: BP_PATH, graphName: 'EventGraph', operations: [

@@ -737,4 +737,27 @@ describe('build_graph dryRun checks the batch and runs nothing', () => {
       expect(dry, mutation).not.toContain(mutation);
     }
   });
+
+  // SendResponse compiles and saves a Blueprint it finds dirty unless the reply is a read's (bDeferCompile). A new
+  // Animation Blueprint is dirty (structurally modified, never compiled), and a dry run on one answered "Nothing ran."
+  // with compiled, saved and undoBufferReset true: the compile cleared the undo history.
+  it('answers as a read: it returns before anything compiles, saves, opens a transaction or clears the undo history', () => {
+    const run = sliceBetween(batch(), 'bool RunGraphBatch(', 'bool HandleGraphBatchAction(');
+    expect(sliceBetween(run, 'if (bDryRun)', 'return AnswerDryRun(Context, *Steps);')).toContain('Context.bDeferCompile = true;');
+    const answer = run.indexOf('return AnswerDryRun(Context, *Steps);');
+    for (const effect of ['TakeSnapshot(', 'FMcpDeferAssetSaves', 'UndoBatch(', 'McpCompileBlueprintWithDiagnostics(', 'SaveLoadedAssetThrottled(']) {
+      expect(run.indexOf(effect), effect).toBeGreaterThan(answer);
+    }
+    const reply = sliceBetween(read('Domains', 'BlueprintGraph', 'Context', 'McpBPGraphContextShared.cpp'),
+      'void FActionContext::SendResponse(', 'bool ValidateProvidedPaths(');
+    const gate = reply.indexOf('if (!bDeferCompile && Blueprint && Blueprint->Status == BS_Dirty && Result.IsValid())');
+    expect(gate).toBeGreaterThan(-1);
+    expect(reply.indexOf('McpCompileBlueprintWithDiagnostics(')).toBeGreaterThan(gate);
+    expect(reply.indexOf('SaveLoadedAssetThrottled(')).toBeGreaterThan(gate);
+    expect(reply).toContain('NameBlueprint(Result, !bDeferCompile && Blueprint && Blueprint->Status == BS_Dirty);');
+    const dry = sliceBetween(check(), 'bool AnswerDryRun(', '} // namespace McpBlueprintGraphHandlers::GraphBatch');
+    for (const effect of ['Transaction', 'Trans->', 'MarkBlueprintAs', 'MarkPackageDirty(', 'SetDirtyFlag(', 'CompileBlueprint(']) {
+      expect(dry, effect).not.toContain(effect);
+    }
+  });
 });
