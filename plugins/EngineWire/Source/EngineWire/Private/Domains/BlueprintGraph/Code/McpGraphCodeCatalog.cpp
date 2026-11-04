@@ -22,12 +22,19 @@ bool IsStale(FBlueprintActionInfo& Info)
     const UClass* Owner = Function ? Function->GetOwnerClass() : Property ? Property->GetOwnerClass() : nullptr;
     return Owner && (Owner->HasAnyClassFlags(CLASS_NewerVersionExists) || Owner->GetOutermost() == GetTransientPackage());
 }
+
+// A title without spaces and underscores, lower case: a node's own title can differ from its menu entry's in those only
+// (the node reads SetInputMode_GameOnly where the menu shows Set Input Mode Game Only).
+FString TitleKey(const FString& Title)
+{
+    return Title.Replace(TEXT(" "), TEXT("")).Replace(TEXT("_"), TEXT("")).ToLower();
+}
 } // namespace CatalogParts
 
 FString MenuTitleKey(const FString& MenuId)
 {
     int32 Bar = INDEX_NONE;
-    return (MenuId.FindLastChar(TEXT('|'), Bar) ? MenuId.Mid(Bar + 1) : MenuId).Replace(TEXT(" "), TEXT("")).ToLower();
+    return CatalogParts::TitleKey(MenuId.FindLastChar(TEXT('|'), Bar) ? MenuId.Mid(Bar + 1) : MenuId);
 }
 
 TArray<FMenuEntry> MenuCandidates(const TSet<FString>& Titles)
@@ -46,8 +53,8 @@ TArray<FMenuEntry> MenuCandidates(const TSet<FString>& Titles)
             {
                 continue;
             }
-            const FString Title = Spawner->PrimeDefaultUiSpec().MenuName.ToString().Replace(TEXT(" "), TEXT(""));
-            if (Title.IsEmpty() || Titles.Contains(Title.ToLower()))
+            const FString Title = CatalogParts::TitleKey(Spawner->PrimeDefaultUiSpec().MenuName.ToString());
+            if (Title.IsEmpty() || Titles.Contains(Title))
             {
                 Candidates.Add(FMenuEntry{Owner, Spawner, FString()});
             }
@@ -71,7 +78,7 @@ TArray<FMenuEntry> MenuEntries(UBlueprint* Blueprint, UEdGraph* Graph, const TAr
         }
         const FBlueprintActionUiSpec Spec = Candidate.Spawner->GetUiSpec(Filter.Context, Info.GetBindings());
         const FString Title = Spec.MenuName.ToString().Replace(TEXT(" "), TEXT(""));
-        if (Titles.Contains(Title.ToLower()))
+        if (Titles.Contains(CatalogParts::TitleKey(Title)))
         {
             Entries.Add(FMenuEntry{Candidate.Owner, Candidate.Spawner, Spec.Category.ToString().Replace(TEXT(" "), TEXT("")) + TEXT("|") + Title});
         }
@@ -85,14 +92,57 @@ TArray<FMenuEntry> MenuEntries(UBlueprint* Blueprint, UEdGraph* Graph, const TAr
     return Entries;
 }
 
-// Epic's create_node_from_name: the spawner whose menu entry in this graph is MenuId (exact case first, as
-// canonicalize then matches any case), invoked at At. Several spawners showing one id: the first by owner path.
+const FMenuEntry* FindMenuEntry(const TArray<FMenuEntry>& Entries, const FString& TypeId, bool bValue)
+{
+    const auto GivesValue = [](const FMenuEntry& Entry)
+    {
+        FBlueprintActionInfo Info(Entry.Owner, Entry.Spawner);
+        const UFunction* Function = Info.GetAssociatedFunction();
+        return Function && (Function->GetReturnProperty() || Function->HasAnyFunctionFlags(FUNC_HasOutParms));
+    };
+    for (const ESearchCase::Type Case : {ESearchCase::CaseSensitive, ESearchCase::IgnoreCase})
+    {
+        const FMenuEntry* First = nullptr;
+        for (const FMenuEntry& Entry : Entries)
+        {
+            if (Entry.Id.Equals(TypeId, Case) && (!bValue || GivesValue(Entry)))
+            {
+                return &Entry;
+            }
+            First = !First && Entry.Id.Equals(TypeId, Case) ? &Entry : First;
+        }
+        if (First)
+        {
+            return First;
+        }
+    }
+    int32 Bar = INDEX_NONE;
+    const FString Category = TypeId.FindLastChar(TEXT('|'), Bar) ? TypeId.Left(Bar) : FString();
+    const FMenuEntry* Only = nullptr;
+    for (const FMenuEntry& Entry : Entries)
+    {
+        int32 EntryBar = INDEX_NONE;
+        const bool bCategory = !Category.IsEmpty() && Entry.Id.FindLastChar(TEXT('|'), EntryBar) && Entry.Id.Left(EntryBar).Equals(Category, ESearchCase::IgnoreCase);
+        if (!bCategory || MenuTitleKey(Entry.Id) != MenuTitleKey(TypeId))
+        {
+            continue;
+        }
+        if (Only && !Only->Id.Equals(Entry.Id, ESearchCase::CaseSensitive))
+        {
+            return nullptr; // two menu titles fit: neither is taken for the other
+        }
+        Only = Only ? Only : &Entry;
+    }
+    return Only;
+}
+
+// Epic's create_node_from_name: the spawner whose menu entry in this graph is MenuId (FindMenuEntry), invoked at At.
+// Several spawners showing one id: the first by owner path.
 UEdGraphNode* CreateByMenuId(UBlueprint* Blueprint, UEdGraph* Graph, const FString& MenuId, const FVector2D& At, FString& OutError)
 {
     const TSet<FString> Titles = {MenuTitleKey(MenuId)};
     const TArray<FMenuEntry> Entries = MenuEntries(Blueprint, Graph, MenuCandidates(Titles), Titles);
-    const FMenuEntry* Found = Entries.FindByPredicate([&MenuId](const FMenuEntry& Entry) { return Entry.Id.Equals(MenuId, ESearchCase::CaseSensitive); });
-    Found = Found ? Found : Entries.FindByPredicate([&MenuId](const FMenuEntry& Entry) { return Entry.Id.Equals(MenuId, ESearchCase::IgnoreCase); });
+    const FMenuEntry* Found = FindMenuEntry(Entries, MenuId, false);
     if (!Found)
     {
         TArray<FString> Offered;

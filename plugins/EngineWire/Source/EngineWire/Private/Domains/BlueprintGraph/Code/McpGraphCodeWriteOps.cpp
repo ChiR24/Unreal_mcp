@@ -48,7 +48,9 @@ bool FTranspiler::BinOp(const FSExpr& Call, const FBindings& Bindings, FFlow& Fl
             return false;
         }
     }
-    UEdGraphNode* Node = Create(bNot ? TEXT("Math|Boolean|NOTBoolean") : bAppend ? TEXT("Utilities|String|Append") : OperatorTypeId(Op));
+    const FString TypeId = bNot ? FString(TEXT("Math|Boolean|NOTBoolean")) : bAppend ? FString(TEXT("Utilities|String|Append"))
+        : TypedOperator(Op, OperandCategory(Call.Items[1], Pre[0], Bindings), OperandCategory(Call.Items[2], Pre[1], Bindings));
+    UEdGraphNode* Node = Create(TypeId, true);
     const TArray<UEdGraphPin*> Ins = DataPins(Node, true);
     for (int32 At = 0; Node && At < Pre.Num() && At < Ins.Num(); ++At)
     {

@@ -8,7 +8,8 @@ class UEdGraphPin;
 
 // The writer behind write_graph_from_code: a port of Transpiler in Epic's blueprint_dsl.py (UE 5.8), making live nodes
 // through the action menu (McpGraphCodeCatalog.cpp) as Epic's create_node does, so each step reads the pins the node
-// really has (a wildcard taking a MakeLiteral, a switch growing case pins). Nodes in McpGraphCodeWriteNodes.cpp,
+// really has (a wildcard taking a MakeLiteral, a switch growing case pins). Nodes in McpGraphCodeWriteNodes.cpp, literals
+// and typed operators in McpGraphCodeWriteValues.cpp,
 // expressions in McpGraphCodeWriteExpr.cpp and McpGraphCodeWriteOps.cpp, statements in McpGraphCodeWriteStmts.cpp and
 // McpGraphCodeWriteFlow.cpp, which graph and entry each form goes to in McpGraphCodeWritePlan.cpp, a form's entry and
 // body in McpGraphCodeWriteForm.cpp, the request in McpGraphCodeWriteHandler.cpp. A step that fails sets Error (with
@@ -72,8 +73,11 @@ private:
     /** The Reusable node StatementTag names when it is of TypeId's kind: kept, its links cut and its inputs reset to
      *  their defaults so the statement wires it afresh (McpGraphCodeWriteForm.cpp). */
     UEdGraphNode* Reuse(const FString& TypeId);
-    UEdGraphNode* Create(const FString& TypeId);
+    /** bValue: the node gives a value, so a menu entry calling a function with a result goes first (FindMenuEntry). */
+    UEdGraphNode* Create(const FString& TypeId, bool bValue = false);
     bool Connect(UEdGraphPin* Out, UEdGraphPin* In);
+    // McpGraphCodeWriteValues.cpp: a literal as a pin's value (refused when an object pin's path loads nothing), and a
+    // Make Literal node for a pin with no type yet.
     bool SetValue(UEdGraphPin* Pin, const FString& Value);
     UEdGraphPin* MakeLiteral(const FSExpr& Value);
     bool WireExec(UEdGraphNode* Node, FFlow& Flow);
@@ -83,7 +87,7 @@ private:
 
     // McpGraphCodeWriteExpr.cpp and McpGraphCodeWriteOps.cpp
     bool Expr(const FSExpr& Value, const FBindings& Bindings, FFlow& Flow, UEdGraphPin*& Out);
-    UEdGraphNode* CallNode(const FSExpr& Call, const FBindings& Bindings, FFlow& Flow, const TArray<FString>& BindNames);
+    UEdGraphNode* CallNode(const FSExpr& Call, const FBindings& Bindings, FFlow& Flow, const TArray<FString>& BindNames, bool bValue = false);
     bool BinOp(const FSExpr& Call, const FBindings& Bindings, FFlow& Flow, UEdGraphPin*& Out);
     bool Component(const FSExpr& Call, const FBindings& Bindings, FFlow& Flow, UEdGraphPin*& Out);
     bool Select(const FSExpr& Call, const FBindings& Bindings, FFlow& Flow, UEdGraphPin*& Out);
@@ -109,6 +113,14 @@ UEdGraphPin* DataPin(UEdGraphNode* Node, bool bInput, const TCHAR* Name);
 UEdGraphPin* ExecPin(UEdGraphNode* Node, bool bInput, const FString& Name);
 /** The node type id of an operator symbol (+, ==, and...), or null (McpGraphCodeWriteExpr.cpp). */
 const TCHAR* OperatorTypeId(const FString& Symbol);
+// ---- McpGraphCodeWriteValues.cpp ----
+/** Epic's _format_literal: a pin default as Blueprint stores it. */
+FString LiteralText(const FSExpr& Value);
+/** The pin category an operand brings: the pin it comes from (Pre, or the name it binds), else its literal's kind. */
+FName OperandCategory(const FSExpr& Value, UEdGraphPin* Pre, const FBindings& Bindings);
+/** The node an operator makes for operands of these pin categories: % is the modulo of their type (no promotable modulo
+ *  exists), == and != on text the string compare (the promotable Equal takes no string); others OperatorTypeId. */
+FString TypedOperator(const FString& Op, FName A, FName B);
 /** One more exec output: the case Name on a switch on string or name, the next case on another switch, the next output
  *  on a sequence; false when the node takes none. */
 bool AddPin(UEdGraphNode* Node, const FString& Name);

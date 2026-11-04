@@ -24,7 +24,8 @@ const TCHAR* const Builtins[] = {
     TEXT("Math|Boolean|NOTBoolean"), TEXT("Utilities|String|Append"), TEXT("Math|Vector|BreakVector"), TEXT("Math|Rotator|BreakRotator"),
     TEXT("Math|Transform|BreakTransform"), TEXT("Math|Boolean|MakeLiteralBool"), TEXT("Math|Integer|MakeLiteralInt"),
     TEXT("Math|Float|MakeLiteralFloat"), TEXT("Utilities|String|MakeLiteralString"), TEXT("|AddReturnNode..."),
-    TEXT("Variables|Getareferencetoself")};
+    TEXT("Variables|Getareferencetoself"), TEXT("Math|Float|%(Float)"), TEXT("Math|Integer64|%(integer64)"),
+    TEXT("Utilities|String|EqualExactly(String)"), TEXT("Utilities|String|NotEqualExactly(String)")};
 
 // (event Name (A B) ...): as Epic tells a parameter list from a statement, a list of symbols with no | and no reserved word.
 bool IsParamList(const FSExpr& Item)

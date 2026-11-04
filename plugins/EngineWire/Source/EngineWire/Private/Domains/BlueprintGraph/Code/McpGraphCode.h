@@ -118,8 +118,13 @@ TArray<FMenuEntry> MenuCandidates(const TSet<FString>& Titles);
 /** Of Candidates, those this graph's menu offers with a title in Titles, each with the id the menu shows there. */
 TArray<FMenuEntry> MenuEntries(UBlueprint* Blueprint, UEdGraph* Graph, const TArray<FMenuEntry>& Candidates, const TSet<FString>& Titles);
 
-/** The title part of a menu id (after its last |), lower case, as Titles hold it. */
+/** The title part of a menu id (after its last |), without spaces and underscores, lower case, as Titles hold it. */
 FString MenuTitleKey(const FString& MenuId);
+
+/** Of Entries, the one whose id is TypeId (exact case first, then any case), else the only one in TypeId's category whose
+ *  title differs from TypeId's in spaces, underscores or case alone; with bValue, an entry calling a function that gives a
+ *  value goes before one that does not (IsValid is a macro with exec outputs and a pure function under one id). */
+const FMenuEntry* FindMenuEntry(const TArray<FMenuEntry>& Entries, const FString& TypeId, bool bValue);
 
 /** The node MenuId names in this graph's menu, made at At by its spawner (McpGraphCodeCatalog.cpp); null with OutError naming
  *  the ids the menu offers for that title. */

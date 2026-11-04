@@ -14,24 +14,6 @@ namespace Write
 {
 namespace WriteNodeParts
 {
-// Epic's _WILDCARD_LITERAL_NODES: the node that makes a literal for a pin with no type yet.
-const TCHAR* LiteralNode(FSExpr::EType Type)
-{
-    switch (Type)
-    {
-    case FSExpr::EType::Bool: return TEXT("Math|Boolean|MakeLiteralBool");
-    case FSExpr::EType::Int: return TEXT("Math|Integer|MakeLiteralInt");
-    case FSExpr::EType::Float: return TEXT("Math|Float|MakeLiteralFloat");
-    default: return TEXT("Utilities|String|MakeLiteralString");
-    }
-}
-
-// Epic's _format_literal: a pin default as Blueprint stores it.
-FString LiteralText(const FSExpr& Value)
-{
-    return Value.Type == FSExpr::EType::Bool ? FString(Value.bTrue ? TEXT("true") : TEXT("false")) : Value.Text;
-}
-
 // A loop or gate the action menu does not name: the StandardMacros graph of that title.
 UEdGraphNode* StandardMacro(UEdGraph* Graph, const FString& TitleKey)
 {
@@ -43,7 +25,7 @@ UEdGraphNode* StandardMacro(UEdGraph* Graph, const FString& TitleKey)
     }
     for (UEdGraph* Each : Macros->MacroGraphs)
     {
-        if (Each && Each->GetName().ToLower() == TitleKey)
+        if (Each && MenuTitleKey(Each->GetName()) == TitleKey)
         {
             Macro = Each;
             break;
@@ -116,9 +98,9 @@ bool FTranspiler::Fail(const FString& Message)
     return false;
 }
 
-// Epic's create_node: a named custom event, else the menu entry with that id (any case when no exact one), else a
-// StandardMacros graph of that title.
-UEdGraphNode* FTranspiler::Create(const FString& TypeId)
+// Epic's create_node: a named custom event, else the menu entry with that id (FindMenuEntry: any case when no exact one,
+// a value-giving function first for a value), else a StandardMacros graph of that title.
+UEdGraphNode* FTranspiler::Create(const FString& TypeId, bool bValue)
 {
     if (UEdGraphNode* Reused = Reuse(TypeId))
     {
@@ -136,8 +118,7 @@ UEdGraphNode* FTranspiler::Create(const FString& TypeId)
     }
     else
     {
-        const FMenuEntry* Found = Menu.FindByPredicate([&TypeId](const FMenuEntry& Entry) { return Entry.Id.Equals(TypeId, ESearchCase::CaseSensitive); });
-        Found = Found ? Found : Menu.FindByPredicate([&TypeId](const FMenuEntry& Entry) { return Entry.Id.Equals(TypeId, ESearchCase::IgnoreCase); });
+        const FMenuEntry* Found = FindMenuEntry(Menu, TypeId, bValue);
         if (Found)
         {
             const FBlueprintActionInfo Info(Found->Owner, Found->Spawner);
@@ -172,24 +153,6 @@ bool FTranspiler::Connect(UEdGraphPin* Out, UEdGraphPin* In)
     return Fail(FString::Printf(TEXT("%s.%s cannot be wired to %s.%s."), Out ? *Out->GetOwningNode()->GetNodeTitle(ENodeTitleType::ListView).ToString() : TEXT("?"),
                                 Out ? *Out->PinName.ToString() : TEXT("?"), In ? *In->GetOwningNode()->GetNodeTitle(ENodeTitleType::ListView).ToString() : TEXT("?"),
                                 In ? *In->PinName.ToString() : TEXT("?")));
-}
-
-bool FTranspiler::SetValue(UEdGraphPin* Pin, const FString& Value)
-{
-    Graph->GetSchema()->TrySetDefaultValue(*Pin, Value);
-    return true;
-}
-
-UEdGraphPin* FTranspiler::MakeLiteral(const FSExpr& Value)
-{
-    UEdGraphNode* Node = Create(LiteralNode(Value.Type));
-    const TArray<UEdGraphPin*> Ins = DataPins(Node, true);
-    const TArray<UEdGraphPin*> Outs = DataPins(Node, false);
-    if (Ins.Num() > 0)
-    {
-        SetValue(Ins[0], LiteralText(Value));
-    }
-    return Outs.Num() > 0 ? Outs[0] : nullptr;
 }
 
 // Every exec output the flow waits on into the node's exec input; false when it has none or nothing waits.

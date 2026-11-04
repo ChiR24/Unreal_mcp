@@ -18,11 +18,12 @@ struct FOperator
     const TCHAR* Symbol;
     const TCHAR* TypeId;
 };
-// Epic's _BIN_OPS.
+// Epic's _BIN_OPS, but %: the engine has no promotable modulo (Epic's Utilities|Operators|Modulo is on no menu), so it
+// is the integer one here and TypedOperator picks the float one for float operands.
 const FOperator Operators[] = {
     {TEXT("+"), TEXT("Utilities|Operators|Add")}, {TEXT("-"), TEXT("Utilities|Operators|Subtract")},
     {TEXT("*"), TEXT("Utilities|Operators|Multiply")}, {TEXT("/"), TEXT("Utilities|Operators|Divide")},
-    {TEXT("%"), TEXT("Utilities|Operators|Modulo")}, {TEXT("xor"), TEXT("Math|Boolean|XORBoolean")},
+    {TEXT("%"), TEXT("Math|Integer|%(Integer)")}, {TEXT("xor"), TEXT("Math|Boolean|XORBoolean")},
     {TEXT("=="), TEXT("Utilities|Operators|Equal(==)")}, {TEXT("!="), TEXT("Utilities|Operators|NotEqual(!=)")},
     {TEXT("<"), TEXT("Utilities|Operators|Less(<)")}, {TEXT("<="), TEXT("Utilities|Operators|LessEqual(<=)")},
     {TEXT(">"), TEXT("Utilities|Operators|Greater(>)")}, {TEXT(">="), TEXT("Utilities|Operators|GreaterEqual(>=)")},
@@ -112,15 +113,17 @@ bool FTranspiler::Expr(const FSExpr& Value, const FBindings& Bindings, FFlow& Fl
     {
         return BinOp(Value, Bindings, Flow, Out);
     }
-    UEdGraphNode* Node = CallNode(Value, Bindings, Flow, {});
+    UEdGraphNode* Node = CallNode(Value, Bindings, Flow, {}, true);
     const TArray<UEdGraphPin*> Outs = DataPins(Node, false);
     Out = Outs.Num() > 0 ? Outs[0] : nullptr;
-    return Node != nullptr;
+    // A value made by a node with no output (a macro with exec outputs only) left its consumer unwired and wrote it anyway.
+    return Node && !Out ? Fail(FString::Printf(TEXT("(%s ...) gives no value here: it has no output pin; call it as a statement."), *Head.Text))
+                        : Node != nullptr;
 }
 
 // Epic's _create_call_node: positional arguments, then :Pin value keywords, then (:ExecOut stmts...) continuations, whose
 // bodies see the node's outputs as _pin_name (and as the names a bind gave them).
-UEdGraphNode* FTranspiler::CallNode(const FSExpr& Call, const FBindings& Bindings, FFlow& Flow, const TArray<FString>& BindNames)
+UEdGraphNode* FTranspiler::CallNode(const FSExpr& Call, const FBindings& Bindings, FFlow& Flow, const TArray<FString>& BindNames, bool bValue)
 {
     const FString TypeId = Call.Items[0].Text;
     TArray<const FSExpr*> Positional;
@@ -172,7 +175,7 @@ UEdGraphNode* FTranspiler::CallNode(const FSExpr& Call, const FBindings& Binding
             return nullptr;
         }
     }
-    UEdGraphNode* Node = Create(TypeId);
+    UEdGraphNode* Node = Create(TypeId, bValue);
     if (!Node)
     {
         return nullptr;

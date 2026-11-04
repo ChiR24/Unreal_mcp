@@ -82,4 +82,23 @@ describe('write_graph_from_code', () => {
     expect(handler.match(/Rollback\(Blueprint, Before\);/gu)).toHaveLength(2);
     expect(handler).toContain('McpBlueprintBehaviour::UndoBatch(');
   });
+
+  it('makes a value only from a node that gives one, preferring a menu entry with a result under a shared id', () => {
+    const expr = code(join(CODE, 'McpGraphCodeWriteExpr.cpp'));
+    expect(expr).toContain('CallNode(Value, Bindings, Flow, {}, true)');
+    expect(expr).toMatch(/return Node && !Out \? Fail\(/u);
+    const catalog = code(join(CODE, 'McpGraphCodeCatalog.cpp'));
+    expect(catalog).toMatch(/Function->GetReturnProperty\(\) \|\| Function->HasAnyFunctionFlags\(FUNC_HasOutParms\)/u);
+    expect(catalog).toMatch(/Entry\.Id\.Equals\(TypeId, Case\) && \(!bValue \|\| GivesValue\(Entry\)\)/u);
+    expect(code(join(CODE, 'McpGraphCodeWriteNodes.cpp'))).toContain('FindMenuEntry(Menu, TypeId, bValue)');
+  });
+
+  it('types % and string compares by their operands, and refuses an object path that loads nothing', () => {
+    const values = code(join(CODE, 'McpGraphCodeWriteValues.cpp'));
+    expect(values).toContain('TEXT("Math|Float|%(Float)")');
+    expect(values).toContain('TEXT("Utilities|String|EqualExactly(String)")');
+    expect(values).toMatch(/if \(bObject && !Pin->DefaultObject && !Trimmed\.IsEmpty\(\)/u);
+    expect(code(join(CODE, 'McpGraphCodeWriteExpr.cpp'))).not.toContain('Utilities|Operators|Modulo');
+    expect(code(join(CODE, 'McpGraphCodeWriteOps.cpp'))).toMatch(/TypedOperator\(Op, OperandCategory\(Call\.Items\[1\], Pre\[0\], Bindings\)/u);
+  });
 });
