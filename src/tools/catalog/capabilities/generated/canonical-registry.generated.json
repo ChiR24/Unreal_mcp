@@ -1,5 +1,5 @@
 {
-  "catalogRevision": "995463955e49f0e9",
+  "catalogRevision": "e469682583640d78",
   "recordCount": 487,
   "records": [
     {
@@ -22223,7 +22223,7 @@
           "add camera component",
           "blueprint component"
         ],
-        "summary": "Change the components a Blueprint adds (its Simple Construction Script), chosen by edit; each edit saves the Blueprint unless save is false. add_scs_component (add_component is the same) adds componentName of componentClass under parentComponent (its own part, a parent Blueprint's, or the native root; by default the root), with meshPath and materialPath (refused when they do not load or the class shows no mesh or material), location, rotation, scale and properties, and compiles; a taken name is refused, as is an add during Play. modify applies operations in order (add, modify, attach) or edits one component, naming each failed one in warnings (the call fails when none applied), and compiles only with compile or applyAndSave true; reparent moves a component under another; set_property and set_transform change one template and compile, and placed copies that kept the old value follow (instancesUpdated).",
+        "summary": "Change the components a Blueprint adds (its Simple Construction Script), chosen by edit; each edit saves the Blueprint unless save is false. add_scs_component (add_component is the same) adds componentName of componentClass under parentComponent (its own part, a parent Blueprint's, or the native root; by default the root), with meshPath and materialPath (refused when they do not load or the class shows no mesh or material), location, rotation, scale and properties, and compiles; a taken name is refused, as is an add during Play. modify applies operations in order (each {type: add_component, modify_component or attach_component, ...}) or edits one component, naming each failed one in warnings (the call fails when none applied), and compiles only with compile or applyAndSave true; reparent moves a component under another; set_property and set_transform change one template and compile, and placed copies that kept the old value follow (instancesUpdated).",
         "whenToUse": [
           "edit=add_scs_component: A component template must be owned by the SCS tree for instanced property overrides.",
           "edit=add_component: A component must be added to a Blueprint under the add_component verb.",
@@ -22428,7 +22428,7 @@
       },
       "examples": [
         {
-          "title": "Change the components a Blueprint adds (its Simple Construction Script), chosen by edit; each edit saves the Blueprint unless save is false. add_scs_component (add_component is the same) adds componentName of componentClass under parentComponent (its own part, a parent Blueprint's, or the native root; by default the root), with meshPath and materialPath (refused when they do not load or the class shows no mesh or material), location, rotation, scale and properties, and compiles; a taken name is refused, as is an add during Play. modify applies operations in order (add, modify, attach) or edits one component, naming each failed one in warnings (the call fails when none applied), and compiles only with compile or applyAndSave true; reparent moves a component under another; set_property and set_transform change one template and compile, and placed copies that kept the old value follow (instancesUpdated).",
+          "title": "Change the components a Blueprint adds (its Simple Construction Script), chosen by edit; each edit saves the Blueprint unless save is false. add_scs_component (add_component is the same) adds componentName of componentClass under parentComponent (its own part, a parent Blueprint's, or the native root; by default the root), with meshPath and materialPath (refused when they do not load or the class shows no mesh or material), location, rotation, scale and properties, and compiles; a taken name is refused, as is an add during Play. modify applies operations in order (each {type: add_component, modify_component or attach_component, ...}) or edits one component, naming each failed one in warnings (the call fails when none applied), and compiles only with compile or applyAndSave true; reparent moves a component under another; set_property and set_transform change one template and compile, and placed copies that kept the old value follow (instancesUpdated).",
           "input": {
             "action": "edit_scs",
             "blueprintPath": "/Game/Blueprints/BP_Test",
@@ -22607,7 +22607,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "5898084de793f7394402fb4aa522e6280924c31b6a13a7a7fb92e974d7790aae",
-        "content": "0cda3481b6a792e001497fea252dfbde06579d517155014b1e6dffcf2d629ec5"
+        "content": "62c7e29e930a39bd605225b83b3a06647165b96bf7acbef6240368af0ed6d7f3"
       }
     },
     {
