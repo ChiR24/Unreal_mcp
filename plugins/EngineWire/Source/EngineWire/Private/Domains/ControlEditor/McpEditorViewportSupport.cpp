@@ -1,6 +1,7 @@
 #include "Domains/ControlEditor/McpEditorScreenshotSupport.h"
 #include "Domains/ControlEditor/McpEditorSupport.h"
 
+#include "Camera/CameraComponent.h"
 #include "Widgets/Docking/SDockTab.h"
 #include "LevelEditorViewport.h"
 
@@ -104,6 +105,63 @@ FEditorViewportClient *GetActiveEditorViewportClientForMcp() {
         GEditor->GetActiveViewport()->GetClient());
   }
   return HiddenPerspective;
+}
+
+bool RefuseOrTakeCameraViewForMcp(UEngineWireSubsystem *Bridge, TSharedPtr<FMcpBridgeWebSocket> Socket,
+                                  const FString &RequestId, const TSharedPtr<FJsonObject> &Payload, const FString &Mode) {
+  FString Label;
+  if (!Payload->TryGetStringField(TEXT("camera"), Label) || Payload->HasField(TEXT("_cameraView"))) {
+    return false;
+  }
+  FEditorViewportClient *Client = GetActiveEditorViewportClientForMcp();
+  AActor *Actor = Client ? FindActorByNameInWorldForMcp(Client->GetWorld(), Label, true) : nullptr;
+  UCameraComponent *Camera = Actor ? Actor->FindComponentByClass<UCameraComponent>() : nullptr;
+  // The view the camera would hand a player now: a paused sequence's keys on it included, and a cine camera's field
+  // of view worked out from its focal length and filmback.
+  FMinimalViewInfo View;
+  if (Camera) {
+    Camera->GetCameraView(0.f, View);
+  }
+  const TCHAR *Code = TEXT("INVALID_ARGUMENT");
+  FString Error;
+  if (Mode != TEXT("editor_viewport")) {
+    Error = TEXT("camera looks through a camera actor in the level viewport: use it with mode editor_viewport.");
+  } else if (Payload->HasField(TEXT("location")) || Payload->HasField(TEXT("rotation")) || Payload->HasField(TEXT("fov"))) {
+    Error = TEXT("camera gives the view its place, turn and field of view: leave location, rotation and fov out.");
+  } else if (!Actor) {
+    Code = TEXT("ACTOR_NOT_FOUND");
+    Error = FString::Printf(TEXT("No actor '%s' in the level the viewport shows."), *Label);
+  } else if (!Camera || View.ProjectionMode != ECameraProjectionMode::Perspective) {
+    Error = FString::Printf(TEXT("'%s' has no perspective camera component to look through."), *Label);
+  }
+  if (!Error.IsEmpty()) {
+    SendStandardErrorResponse(Bridge, Socket, RequestId, Code, Error, nullptr);
+    return true;
+  }
+  Payload->SetObjectField(TEXT("location"), McpHandlerUtils::VectorToJson(View.Location));
+  Payload->SetObjectField(TEXT("rotation"), McpHandlerUtils::RotatorToJson(View.Rotation));
+  Payload->SetNumberField(TEXT("fov"), View.FOV);
+  // A camera that keeps its own frame shape (a cine camera's filmback) is drawn at that shape, as a player sees it.
+  if (View.bConstrainAspectRatio && View.AspectRatio > 0.1f && !Payload->HasField(TEXT("renderSize"))) {
+    const int32 Height = FMath::Clamp(FMath::RoundToInt(1920.f / View.AspectRatio), 64, 3840);
+    Payload->SetStringField(TEXT("renderSize"), FString::Printf(TEXT("1920x%d"), Height));
+  }
+  Payload->SetBoolField(TEXT("_cameraView"), true); // a capture taken again a beat later reuses this view
+  return false;
+}
+
+FMcpCameraGameViewScope::FMcpCameraGameViewScope(FEditorViewportClient *InClient, const TSharedPtr<FJsonObject> &Payload)
+    : Client(InClient && Payload->HasField(TEXT("_cameraView")) ? InClient : nullptr) {
+  if (Client) {
+    bWasGameView = Client->IsInGameView();
+    Client->SetGameView(true);
+  }
+}
+
+FMcpCameraGameViewScope::~FMcpCameraGameViewScope() {
+  if (Client) {
+    Client->SetGameView(bWasGameView);
+  }
 }
 
 bool BringLevelEditorTabToFrontForMcp() {

@@ -7224,6 +7224,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "string",
           "description": "Mouse button for simulate_input."
         },
+        "camera": {
+          "type": "string",
+          "description": "editor_viewport: look through this camera actor (label or name: a CineCameraActor, a CameraActor or any actor with a camera component) as it is now, so the picture is that camera's shot. A sequence held with manage_sequence pause startTime counts: its pause reply names the camera its camera cut shows then (cameraCut), and that camera's keyed place, turn and lens at that moment are what is seen. The viewport takes the camera's place, turn and field of view (a cine camera's from its focal length and filmback) and stays there, as with location; a camera that keeps its own frame shape (a cine camera's filmback) is drawn at that shape, 1920 wide, unless renderSize is given, and the shot is drawn in game view (no editor icons, camera meshes or selection; the viewport's own setting comes back after). The camera's own post-process (depth of field, exposure) is not applied. Not with location, rotation or fov, nor another mode (INVALID_ARGUMENT); ACTOR_NOT_FOUND when no actor in the level has that name; INVALID_ARGUMENT when it has no perspective camera."
+        },
         "cameraOp": {
           "type": "string",
           "enum": [
@@ -29678,7 +29682,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "description": "The camera's label."
         },
         "cameraCut": {
-          "type": "boolean",
+          "type": [
+            "boolean",
+            "string"
+          ],
           "description": "A camera cut to the camera covers the flight."
         },
         "camerasUsed": {
@@ -29725,6 +29732,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "crossings": {
           "type": "number",
           "description": "Cuts that cross the line between the first two subjects (0 unless no other edit fits)."
+        },
+        "currentFrame": {
+          "type": "number",
+          "description": "The display-rate frame the playhead is on, read back."
         },
         "cuts": {
           "type": "number",

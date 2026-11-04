@@ -75,6 +75,20 @@ void DrawViewportFramesForMcp(FViewport *Viewport, UWorld *World, int32 Frames);
 // the field of view resets when the editor restarts, so a framing check names it. True when any was given: the old
 // view's occlusion lingers for a few frames, so the caller draws a few before reading.
 bool PlaceViewCameraForMcp(FEditorViewportClient *Client, const TSharedPtr<FJsonObject> &Payload);
+// screenshot camera: writes the view of the camera actor it names (as it is now, a paused sequence's keys included)
+// into Payload as location, rotation and fov, plus renderSize at the camera's own frame shape when it keeps one and
+// none was asked for, so the capture shows that camera's shot. True when it refused instead (reply sent): a mode other
+// than editor_viewport, location/rotation/fov given too, no such actor, or no perspective camera on it.
+bool RefuseOrTakeCameraViewForMcp(UEngineWireSubsystem *Bridge, TSharedPtr<FMcpBridgeWebSocket> Socket,
+                                  const FString &RequestId, const TSharedPtr<FJsonObject> &Payload, const FString &Mode);
+// A shot taken through a camera (Payload marked by RefuseOrTakeCameraViewForMcp) is drawn as a player sees it: the
+// viewport is in game view (no editor icons, camera meshes or selection) while this lives, and as it was after.
+struct FMcpCameraGameViewScope {
+  FEditorViewportClient *Client = nullptr;
+  bool bWasGameView = false;
+  FMcpCameraGameViewScope(FEditorViewportClient *InClient, const TSharedPtr<FJsonObject> &Payload);
+  ~FMcpCameraGameViewScope();
+};
 // True when the frame about to be read matches the one Payload recorded on the capture's previous pass (Camera/
 // McpViewSettle.cpp); false, after recording this one, when the capture should be taken again a beat later, so
 // streaming that lands over engine ticks (Nanite pages, texture mips) is in the picture. At most five passes.

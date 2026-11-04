@@ -28,6 +28,7 @@ All notable changes to the EngineWire plugin (formerly McpAutomationBridge) will
 - **Project thumbnail** (`Ui/McpUiProjectThumbnail.cpp`): set_project_thumbnail draws the level view in game view at a square size (`ReadViewFrameForMcp`) and writes `<ProjectDir>/<ProjectName>.png` through `McpWriteProjectFile`.
 - **Sequence rebind** (`Sequence/Cinematics/McpSeqCineRebind.cpp`): `RebindPossessableByName` unbinds and rebinds the possessable of the actor's label to it, GUID and tracks kept; add_actor forwards `rebind` to add_actors.
 - **Expose to Cinematics** (`McpBPAddVariable.cpp`): `add_variable` sets `CPF_Interp` as `SetInterpFlag` does, in one undo step; the reply and recipe variables read and take it.
+- **Camera view** (`McpEditorViewportSupport.cpp` `RefuseOrTakeCameraViewForMcp`): screenshot `camera` writes the actor's `GetCameraView` (place, turn, field of view; renderSize at a kept aspect) into the capture's placement; pause's `cameraCut` names the cut camera (the sequence's own binding lookup, `LocateBindingObjects`).
 - **Current level** (`Level/World/McpLevelSetCurrent.cpp`): `UWorld::SetCurrentLevel` and `NewCurrentLevel`, refusing Play, unknown, Level Instance, unloaded and locked levels; `add_sublevel` puts back the level `AddLevelToWorld` made current.
 - **Graph code entry** (`BlueprintGraph/Code/McpGraphCodeRead.cpp`): read_graph_as_code `entry` keeps the one (event or (fn form by name (`KeepEntry`) and lists the nodes `Reach` finds from its head (the writer's own old-body walk).
 

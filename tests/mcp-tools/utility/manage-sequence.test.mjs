@@ -169,6 +169,14 @@ const testCases = [
   // add_camera_cut_track
   { scenario: 'CINEMATICS: add_camera_cut_track', toolName: 'manage_sequence', arguments: { action: 'add_camera_cut_track', path: SEQUENCE_PATH, cameraName: CINE_CAM }, expected: 'success|already exists' },
   { scenario: 'CINEMATICS: add_camera_cut_track optional', toolName: 'manage_sequence', arguments: { action: 'add_camera_cut_track', path: SEQUENCE_PATH, actorPath: CINE_CAM, rowIndex: 0, startFrame: 45, endFrame: 90, save: true }, expected: 'success|already exists' },
+  // The level viewport does not follow a held sequence's camera cut: pause names the cut camera, screenshot looks through it.
+  { scenario: 'PLAYBACK: pause names the camera the cut shows then', toolName: 'manage_sequence', arguments: { action: 'pause', path: SEQUENCE_PATH, startTime: 2 }, expected: 'success', assertions: [{ path: 'structuredContent.result.cameraCut', equals: CINE_CAM, label: 'the cut camera at that moment' }] },
+  { scenario: 'SCREENSHOT: through a cine camera, at its own frame shape', toolName: 'control_editor', arguments: { action: 'screenshot', camera: CINE_CAM_2 }, expected: 'success', assertions: [
+    { path: 'structuredContent.result.cameraLocation.z', equals: 200, label: 'the view stands where the camera stands' },
+    { path: 'structuredContent.result.viewportHeight', equals: 1280, label: 'drawn at the 36 x 24 filmback, 1920 wide' },
+  ] },
+  { scenario: 'ERROR: screenshot camera with a location too', toolName: 'control_editor', arguments: { action: 'screenshot', camera: CINE_CAM_2, location: { x: 0, y: 0, z: 0 } }, expected: 'error|INVALID_ARGUMENT' },
+  { scenario: 'ERROR: screenshot camera naming no actor', toolName: 'control_editor', arguments: { action: 'screenshot', camera: `NoSuchCamera_${ts}` }, expected: 'error|ACTOR_NOT_FOUND' },
   // add_camera_shake_track
   { scenario: 'CINEMATICS: add_camera_shake_track', toolName: 'manage_sequence', arguments: { action: 'add_camera_shake_track', path: SEQUENCE_PATH, cameraShakePath: SHAKE_PATH }, expected: 'success|already exists' },
   { scenario: 'CINEMATICS: add_camera_shake_track bound to a camera', toolName: 'manage_sequence', arguments: { action: 'add_camera_shake_track', path: SEQUENCE_PATH, cameraShakeClass: SHAKE_PATH, cameraName: CINE_CAM, startFrame: 0, durationFrames: 30, endFrame: 30, rowIndex: 0, save: true }, expected: 'success|already exists' },

@@ -68,6 +68,27 @@ describe('screenshot renderSize', () => {
     expect(thumbnail).toContain('FString(FApp::GetProjectName()) + TEXT(".png")');
   });
 
+  // camera is turned into location, rotation and fov (and renderSize) before anything reads them, so the Play refusal,
+  // the occlusion settle and the placement see a camera given that way exactly as one given by place; a capture taken
+  // again a beat later keeps the view the first pass took.
+  it('takes a camera actor\'s view into the placement fields before the capture reads them', () => {
+    const handler = read('McpEditorScreenshot.cpp');
+    const take = handler.indexOf('if (RefuseOrTakeCameraViewForMcp(this, Socket, RequestId, Payload, Mode)) { return true; }');
+    expect(take).toBeGreaterThan(handler.indexOf('Mode = TEXT("editor_viewport");'));
+    expect(take).toBeLessThan(handler.indexOf('const bool bCameraPlaced ='));
+    expect(take).toBeLessThan(handler.indexOf('RefuseRenderSizeForMcp('));
+    const support = read('McpEditorViewportSupport.cpp');
+    expect(support).toMatch(/Payload->HasField\(TEXT\("_cameraView"\)\)\) \{\s*return false;/u);
+    expect(support).toContain('Camera->GetCameraView(0.f, View);');
+    for (const field of ['location', 'rotation', 'fov', 'renderSize', '_cameraView']) {
+      expect(support).toContain(`Payload->Set${field === 'fov' ? 'Number' : field === 'renderSize' ? 'String' : field === '_cameraView' ? 'Bool' : 'Object'}Field(TEXT("${field}")`);
+    }
+    // The shot is what a player sees: game view while its frames are drawn and read, the viewport's own setting after.
+    expect(handler.indexOf('const FMcpCameraGameViewScope GameView(CaptureClient, Payload);')).toBeLessThan(handler.indexOf('DrawViewportFramesForMcp('));
+    expect(support).toMatch(/bWasGameView = Client->IsInGameView\(\);\s*Client->SetGameView\(true\);/u);
+    expect(support).toMatch(/~FMcpCameraGameViewScope\(\) \{\s*if \(Client\) \{\s*Client->SetGameView\(bWasGameView\);/u);
+  });
+
   it('sets the automation flag only around the one synchronous draw', () => {
     // UE 5.0 and 5.1 hand the frame to listeners only under it, and it keeps the "screenshot saved" toast away.
     const source = render();

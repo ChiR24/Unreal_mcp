@@ -1,11 +1,14 @@
 #include "Core/Compatibility/McpVersionCompatibility.h"
 #include "Foundation/BridgeHelpers/Blueprints/McpBPPaths.h"
 #include "Domains/Sequence/McpSeqEditorSupport.h"
+#include "Domains/Sequence/Cinematics/McpSeqCine.h"
 #include "Foundation/McpScopedEditorTransaction.h"
 #include "Domains/Sequence/Validation/McpSeqFrameMath.h"
 #include "Components/SkeletalMeshComponent.h"
 #include "EngineUtils.h"
 #include "LevelSequenceActor.h"
+#include "Sections/MovieSceneCameraCutSection.h"
+#include "Tracks/MovieSceneCameraCutTrack.h"
 #include "SequencerSettings.h"
 #include "UObject/UObjectIterator.h"
 
@@ -61,6 +64,31 @@ int32 McpPlayheadFrame(const TSharedPtr<ISequencer> &Sequencer, UMovieScene *Mov
 // 999.99999 ticks, so the playhead sat a hair before the frame asked for and read back as the frame before it.
 FFrameTime McpTickAt(const UMovieScene *MovieScene, double Seconds) {
   return FFrameTime(MovieScene->GetTickResolution().AsFrameTime(Seconds).RoundToFrame());
+}
+
+// The label of the camera actor the camera cut track shows at the playhead (the actor bound in the editor level, so it
+// is the name screenshot's camera takes); empty when no cut covers that moment or its camera is not in the level. The
+// sequence resolves its own binding: Sequencer's bound-object cache answered nothing for a sequence just opened. A cut
+// track added as an ordinary top-level track plays all the same, so those are searched beside the camera cut slot.
+FString McpCameraCutLabel(const TSharedPtr<ISequencer> &Sequencer, ULevelSequence *Sequence, UMovieScene *MovieScene) {
+  TArray<UMovieSceneTrack *> Tracks = MCP_GET_MOVIESCENE_TRACKS(MovieScene);
+  Tracks.Add(MovieScene->GetCameraCutTrack());
+  const FFrameNumber At = Sequencer->GetLocalTime().Time.FloorToFrame();
+  for (const UMovieSceneTrack *Track : Tracks) {
+    for (const UMovieSceneSection *Section : Track && Track->IsA<UMovieSceneCameraCutTrack>() ? Track->GetAllSections() : TArray<UMovieSceneSection *>()) {
+      const UMovieSceneCameraCutSection *Cut = Cast<UMovieSceneCameraCutSection>(Section);
+      TArray<UObject *, TInlineAllocator<1>> Bound;
+      if (Cut && Cut->IsActive() && Cut->GetRange().Contains(At)) {
+        McpSequenceCinematics::LocateBindingObjects(Sequence, Cut->GetCameraBindingID().GetGuid(), GEditor->GetEditorWorldContext().World(), Bound);
+      }
+      for (const UObject *Object : Bound) {
+        if (const AActor *Camera = Cast<AActor>(Object)) {
+          return Camera->GetActorLabel();
+        }
+      }
+    }
+  }
+  return FString();
 }
 }
 
@@ -233,6 +261,8 @@ bool UEngineWireSubsystem::HandleSequencePause(
         McpSeekPaused(Sequencer, McpTickAt(MovieScene, HoldAt));
       }
       Resp->SetNumberField(TEXT("currentFrame"), McpPlayheadFrame(Sequencer, MovieScene));
+      const FString Cut = McpCameraCutLabel(Sequencer, LevelSeq, MovieScene);
+      if (!Cut.IsEmpty()) { Resp->SetStringField(TEXT("cameraCut"), Cut); }
     }
     SendAutomationResponse(Socket, RequestId, true, TEXT("Sequence paused"), Resp);
     return true;

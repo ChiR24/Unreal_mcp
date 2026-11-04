@@ -1,5 +1,5 @@
 {
-  "catalogRevision": "7fee9664e3fb330b",
+  "catalogRevision": "1d652a2a7a8906c6",
   "recordCount": 487,
   "records": [
     {
@@ -51515,7 +51515,7 @@
           "show me the level from above",
           "take a picture of the level"
         ],
-        "summary": "Capture a screenshot of the level viewport (optionally from a camera location and rotation given in the same call), of the running game view, or of the whole editor window with the game UI.",
+        "summary": "Capture a screenshot of the level viewport (optionally from a camera location and rotation given in the same call, or through a camera actor: a cutscene shot at a held sequence moment), of the running game view, or of the whole editor window with the game UI.",
         "whenToUse": [
           "A visual snapshot of the editor or game viewport is needed."
         ],
@@ -51607,6 +51607,10 @@
               "minimum": 5,
               "maximum": 170,
               "description": "editor_viewport (and game_viewport while the player is ejected): that camera's horizontal field of view in degrees (5-170), set first in the same call; it stays. The editor resets it to 90 when it restarts, so a picture framed like a game camera names it. Refused like location while Play In Editor runs and the player is not ejected."
+            },
+            "camera": {
+              "type": "string",
+              "description": "editor_viewport: look through this camera actor (label or name: a CineCameraActor, a CameraActor or any actor with a camera component) as it is now, so the picture is that camera's shot. A sequence held with manage_sequence pause startTime counts: its pause reply names the camera its camera cut shows then (cameraCut), and that camera's keyed place, turn and lens at that moment are what is seen. The viewport takes the camera's place, turn and field of view (a cine camera's from its focal length and filmback) and stays there, as with location; a camera that keeps its own frame shape (a cine camera's filmback) is drawn at that shape, 1920 wide, unless renderSize is given, and the shot is drawn in game view (no editor icons, camera meshes or selection; the viewport's own setting comes back after). The camera's own post-process (depth of field, exposure) is not applied. Not with location, rotation or fov, nor another mode (INVALID_ARGUMENT); ACTOR_NOT_FOUND when no actor in the level has that name; INVALID_ARGUMENT when it has no perspective camera."
             },
             "returnBase64": {
               "type": "boolean",
@@ -51749,7 +51753,7 @@
       },
       "examples": [
         {
-          "title": "Capture a screenshot of the level viewport (optionally from a camera location and rotation given in the same call), of the running game view, or of the whole editor window with the game UI.",
+          "title": "Capture a screenshot of the level viewport (optionally from a camera location and rotation given in the same call, or through a camera actor: a cutscene shot at a held sequence moment), of the running game view, or of the whole editor window with the game UI.",
           "input": {
             "action": "screenshot",
             "mode": "editor_viewport",
@@ -51794,8 +51798,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "998ac68baa941115d83e06454fde0c6aec7f863d847999c440b3458c7331dbff",
-        "content": "5df0f275505f01c2dfb48ec23562c5f06ab5195638023b4e314890d5f0c665a1"
+        "schema": "fe666a4cd30963ed276817656f5ebd1450bf632f91427eb27f78656a3a24f32c",
+        "content": "6ab13563a39789e6822d993bb2c21797dc5eb551c3e9aa0c0d60b7d46d643576"
       }
     },
     {
@@ -111826,7 +111830,7 @@
           "control=play: A sequence must be previewed in the editor viewport.",
           "control=play: A screenshot must show the scene moving through a shot: play, then pause with startTime to hold one moment.",
           "control=pause: Sequence playback must be paused.",
-          "control=pause: A pose, camera or effect must be checked at one moment of the sequence: pause with startTime, then take a screenshot.",
+          "control=pause: A pose, camera or effect must be checked at one moment of the sequence: pause with startTime, then take a screenshot (through cameraCut to see the shot itself).",
           "control=stop: Sequence playback must be stopped and the playhead reset to the start."
         ],
         "whenNotToUse": [
@@ -111866,7 +111870,7 @@
                 "pause",
                 "stop"
               ],
-              "description": "Which play variant to run; omit for 'play'.\nplay: Open a Level Sequence (path) in Sequencer and play it as an editor preview in the level viewport. startTime jumps there first; without it play carries on from the playhead (from the start when it sits at the end). loopMode once or loop sets the Sequencer's own loop setting, which stays for later previews. The reply reads back startTime (seconds), currentFrame and playbackStart/playbackEnd in display frames. Nothing in the asset or level changes. A time past the playback range or another loopMode is INVALID_ARGUMENT; a path that is not a Level Sequence is SEQUENCE_NOT_FOUND.\npause: Pause the Sequencer preview of a Level Sequence, or hold it at one moment to inspect it: startTime (seconds) moves the playhead there and poses the animated meshes at once, so a screenshot taken next shows that moment even with the editor in the background; a sequence not open is opened first. The reply reads back currentFrame in display frames. Without startTime a sequence not open in Sequencer is EDITOR_NOT_OPEN; a time past the playback range is INVALID_ARGUMENT. Nothing in the asset changes.\nstop: Stop the Sequencer preview of a Level Sequence and put the playhead back on the start of its playback range (where Jump to Start goes, not frame 0), posing the animated meshes there. The reply reads back currentFrame in display frames. A sequence not open in Sequencer is EDITOR_NOT_OPEN; nothing in the asset changes.",
+              "description": "Which play variant to run; omit for 'play'.\nplay: Open a Level Sequence (path) in Sequencer and play it as an editor preview in the level viewport. startTime jumps there first; without it play carries on from the playhead (from the start when it sits at the end). loopMode once or loop sets the Sequencer's own loop setting, which stays for later previews. The reply reads back startTime (seconds), currentFrame and playbackStart/playbackEnd in display frames. Nothing in the asset or level changes. A time past the playback range or another loopMode is INVALID_ARGUMENT; a path that is not a Level Sequence is SEQUENCE_NOT_FOUND.\npause: Pause the Sequencer preview of a Level Sequence, or hold it at one moment to inspect it: startTime (seconds) moves the playhead there and poses the animated meshes at once, so a screenshot taken next shows that moment even with the editor in the background; a sequence not open is opened first. The reply reads back currentFrame in display frames and cameraCut, the camera actor the camera cut track shows at that moment. The level viewport keeps its own camera: to see the shot, take control_editor screenshot with camera set to cameraCut. Without startTime a sequence not open in Sequencer is EDITOR_NOT_OPEN; a time past the playback range is INVALID_ARGUMENT. Nothing in the asset changes.\nstop: Stop the Sequencer preview of a Level Sequence and put the playhead back on the start of its playback range (where Jump to Start goes, not frame 0), posing the animated meshes there. The reply reads back currentFrame in display frames. A sequence not open in Sequencer is EDITOR_NOT_OPEN; nothing in the asset changes.",
               "default": "play"
             }
           },
@@ -111892,6 +111896,14 @@
               "type": "object",
               "x-unreal-reflection-boundary": true,
               "description": "Additional handler result fields not named by the contract."
+            },
+            "currentFrame": {
+              "type": "number",
+              "description": "The display-rate frame the playhead is on, read back."
+            },
+            "cameraCut": {
+              "type": "string",
+              "description": "Label of the camera actor the camera cut track shows at that frame (the name control_editor screenshot camera takes). Absent when no cut covers that moment or its camera is not in the open level."
             }
           },
           "required": [
@@ -111959,8 +111971,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "7e9f511207225a0006b6ae1cb53d0a9132ae7d744bb2b92e0a969eb94b4c5899",
-        "content": "3a5869904e06170ac39bf7622652e31496c47820d9b864d5888a490bee67353a"
+        "schema": "718378c31cc6c246cf7495007965996a4ea02830ae69498d176a5a9bc2a7a520",
+        "content": "ed7a5fc65f96126dd31d82b9a32c29a01825a61074aba8ddb4f0f24d561a2418"
       }
     },
     {

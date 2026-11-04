@@ -31,11 +31,15 @@ export const TIMELINE_PLAYBACK_RECORDS: readonly CapabilityRecordSource[] = [
   buildRecord({
     id: 'sequence.pause', action: 'pause', family: F, domain: D,
     topics: ['sequencer playhead', 'scrub sequence', 'set sequence time', 'go to frame', 'hold a frame'],
-    summary: 'Pause the Sequencer preview of a Level Sequence, or hold it at one moment to inspect it: startTime (seconds) moves the playhead there and poses the animated meshes at once, so a screenshot taken next shows that moment even with the editor in the background; a sequence not open is opened first. The reply reads back currentFrame in display frames. Without startTime a sequence not open in Sequencer is EDITOR_NOT_OPEN; a time past the playback range is INVALID_ARGUMENT. Nothing in the asset changes.',
-    whenToUse: ['Sequence playback must be paused.', 'A pose, camera or effect must be checked at one moment of the sequence: pause with startTime, then take a screenshot.'],
+    summary: 'Pause the Sequencer preview of a Level Sequence, or hold it at one moment to inspect it: startTime (seconds) moves the playhead there and poses the animated meshes at once, so a screenshot taken next shows that moment even with the editor in the background; a sequence not open is opened first. The reply reads back currentFrame in display frames and cameraCut, the camera actor the camera cut track shows at that moment. The level viewport keeps its own camera: to see the shot, take control_editor screenshot with camera set to cameraCut. Without startTime a sequence not open in Sequencer is EDITOR_NOT_OPEN; a time past the playback range is INVALID_ARGUMENT. Nothing in the asset changes.',
+    whenToUse: ['Sequence playback must be paused.', 'A pose, camera or effect must be checked at one moment of the sequence: pause with startTime, then take a screenshot (through cameraCut to see the shot itself).'],
     whenNotToUse: ['The sequence is not open in Sequencer (play opens it).'],
     inputProps: { path: P.path, startTime: START_TIME },
     required: ['path'],
+    outputProps: {
+      currentFrame: { type: 'number', description: 'The display-rate frame the playhead is on, read back.' },
+      cameraCut: { type: 'string', description: 'Label of the camera actor the camera cut track shows at that frame (the name control_editor screenshot camera takes). Absent when no cut covers that moment or its camera is not in the open level.' },
+    },
     effect: 'write', behavior: { idempotency: 'idempotent' }, latency: 'instant', resources: 'low', plugins: SEQ_PLUGINS,
     exampleInput: { action: 'pause', path: '/Game/Cinematics/SEQ_Master' },
   }),

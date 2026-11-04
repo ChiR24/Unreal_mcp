@@ -40,6 +40,7 @@ bool UEngineWireSubsystem::HandleControlEditorScreenshot(
   if (Mode.IsEmpty()) {
     Mode = TEXT("editor_viewport");
   }
+  if (RefuseOrTakeCameraViewForMcp(this, Socket, RequestId, Payload, Mode)) { return true; }
 
   // location/rotation/fov place the camera the picture is taken from. While Play In Editor runs that is only possible
   // once the player is ejected; a pawn's camera cannot be moved, and a picture from somewhere else is not what was asked.
@@ -233,6 +234,7 @@ bool UEngineWireSubsystem::HandleControlEditorScreenshot(
 
   // The first frames after a camera move still use the occlusion results of the old view, which hide small things
   // (a sign's text, a tree) the new view shows; a few frames later the picture is what the camera sees.
+  const FMcpCameraGameViewScope GameView(CaptureClient, Payload);
   const bool bCameraMoved = CaptureClient && bCameraPlaced;
   DrawViewportFramesForMcp(Viewport, CaptureClient ? CaptureClient->GetWorld() : nullptr, bCameraMoved ? 3 : 1);
   if (!ViewFrameSettledForMcp(Viewport, Payload)) { RetryLater(); return true; }
