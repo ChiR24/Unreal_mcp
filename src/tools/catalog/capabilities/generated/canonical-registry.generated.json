@@ -1,5 +1,5 @@
 {
-  "catalogRevision": "3cfd0f67352a7440",
+  "catalogRevision": "4e3db8a9e66449c9",
   "recordCount": 486,
   "records": [
     {
@@ -119985,7 +119985,7 @@
             },
             "script": {
               "type": "string",
-              "description": "The script, statements one after another (; starts a comment to the end of the line). Refused before anything runs: SCRIPT_PARSE_ERROR, SCRIPT_INVALID, UNKNOWN_CAPABILITY (a name search does not find), UNDECLARED_PARAMETER and MISSING_REQUIRED_PARAMETER (checked against the capability's contract), SCRIPT_UNBOUND_NAME, CONSENT_NOT_LISTED, SCRIPT_STEP_REFUSED. Stopped and rolled back while running: the failed call's own error code, SCRIPT_TYPE (an operator or for over the wrong kind of value), SCRIPT_VALUE (a path into a result that holds no such field: the fields it has are named), EXPECTATION_FAILED, ENGINE_ERROR (the engine logged an error during a call), STEP_DEFERRED (a call that answers later cannot run in a script), SCRIPT_BUDGET, SCRIPT_DEADLINE."
+              "description": "The script, statements one after another (; starts a comment to the end of the line). A string in double quotes takes only \\\" and \\\\ as escapes: \\n is no line break but a backslash and an n (a label \"A\\nB\" shows them); a line break inside the quotes is a line break. Refused before anything runs: SCRIPT_PARSE_ERROR, SCRIPT_INVALID, UNKNOWN_CAPABILITY (a name search does not find), UNDECLARED_PARAMETER and MISSING_REQUIRED_PARAMETER (checked against the capability's contract), SCRIPT_UNBOUND_NAME, CONSENT_NOT_LISTED, SCRIPT_STEP_REFUSED. Stopped and rolled back while running: the failed call's own error code, SCRIPT_TYPE (an operator or for over the wrong kind of value), SCRIPT_VALUE (a path into a result that holds no such field: the fields it has are named), EXPECTATION_FAILED, ENGINE_ERROR (the engine logged an error during a call), STEP_DEFERRED (a call that answers later cannot run in a script), SCRIPT_BUDGET, SCRIPT_DEADLINE."
             },
             "destructive": {
               "type": "array",
@@ -120116,8 +120116,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "5b52c503e817d5d109010cdbf37f1c90325d8870cbd9917aef84289b7436d1a2",
-        "content": "775c8f3cdaf508b565d056fc608345301828a726655a50086f1df849b94776b5"
+        "schema": "bb42c91931a89b77b5fa46f6d3111bfea4291d47ed96fb1cf7f7a8b1263fe9e0",
+        "content": "74df76d2235b79bce35a710914b0f4e1053b2347242540cd604837c409f6c298"
       }
     },
     {
@@ -120168,7 +120168,7 @@
             },
             "script": {
               "type": "string",
-              "description": "The script, in run_script's language; it reads each of paramNames as a variable."
+              "description": "The script, in run_script's language; it reads each of paramNames as a variable. Its strings take only \\\" and \\\\ as escapes, as there: \\n stays a backslash and an n, and a line break inside the quotes is a line break."
             },
             "paramNames": {
               "type": "array",
@@ -120281,8 +120281,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "5186a6c6fbca8cda780fd83556ab1c23166fbd9fc80c0ed11be5509c6a38fe54",
-        "content": "f690a130dcaec2ccedcdaa65fc50f2261b661559fae59d3ee1a60537e0382a12"
+        "schema": "b644207169890067500280e70542ec52a62624a4ab5a22b44d33189d9109c5e1",
+        "content": "a99c71d02cc715247a89f125f150c8f457be96bfee8f396a5a03d0eea2d3b661"
       }
     },
     {

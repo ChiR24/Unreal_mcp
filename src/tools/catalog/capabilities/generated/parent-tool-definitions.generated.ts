@@ -31120,7 +31120,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "script": {
           "type": "string",
-          "description": "The script, in run_script's language; it reads each of paramNames as a variable."
+          "description": "The script, in run_script's language; it reads each of paramNames as a variable. Its strings take only \\\" and \\\\ as escapes, as there: \\n stays a backslash and an n, and a line break inside the quotes is a line break."
         },
         "seconds": {
           "type": "number",

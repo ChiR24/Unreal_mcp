@@ -6,10 +6,8 @@
 
 TSharedPtr<FJsonObject> BuildUnrealGatewayToolDefinition()
 {
-	// Field for field the TypeScript unrealGatewayToolDefinition.inputSchema: unreal-gateway-guidance-contract.test.ts
-	// rebuilds this chain and diffs the two, and the consent nonce is their one difference. Closed at the gateway level
-	// and for consent and options (execute refuses any other option key as UNSUPPORTED_OPTION anyway); params stays
-	// open because its keys are per-action.
+	// Closed at the gateway level and for consent and options (execute refuses any other option key as
+	// UNSUPPORTED_OPTION anyway); params stays open because its keys are per-action.
 	auto InputSchema = FMcpSchemaBuilder()
 		.StringEnum(TEXT("operation"),
 			{ TEXT("search"), TEXT("describe"), TEXT("execute"), TEXT("configure") },
@@ -25,14 +23,15 @@ TSharedPtr<FJsonObject> BuildUnrealGatewayToolDefinition()
 			TEXT("Filter search results by declared behavior effect."))
 		.String(TEXT("tool"), TEXT("Exact parent tool name copied from a search row (parentTool) or a describe response. Always paired with action; never guessed."))
 		.String(TEXT("action"), TEXT("Exact action name copied from a search row or describe response. For configure, this is a manage_tools action."))
-		.String(TEXT("param"), TEXT("Exact parameter name to inspect on one capability. Use with describe plus tool and action; returns that single parameter's schema plus the consent grant, when the capability needs one."))
+		.String(TEXT("param"), TEXT("Exact parameter name to inspect on one capability. Use with describe plus capability (or tool and action); returns that single parameter's schema plus, when the capability needs consent, a fresh consentGrant, in a reply far smaller than a full describe: the cheap way to a new grant after CONSENT_REUSED."))
 		.OpenObject(TEXT("params"), TEXT("Parameters for execute or configure: an object whose keys are exactly the parameter names describe listed for this action, with the same casing. Never include action or subAction here."))
 		.ClosedObject(TEXT("consent"),
 			TEXT("Per-call consent grant for a capability whose policy.consent is not 'none'. Bound to one "
 				"capability and one call; never persisted, inherited or reused. Read the exact grant from "
 				"describe.consentGrant — including its nonce — and echo it back verbatim. Replaying a grant "
 				"is refused with CONSENT_REUSED, and one whose nonce this server did not mint for that capability "
-				"with CONSENT_NOT_ISSUED. Use with execute only."),
+				"with CONSENT_NOT_ISSUED. A fresh grant needs no full describe: describe with capability and param "
+				"(any one parameter it takes) returns one in a small reply. Use with execute only."),
 			[](FMcpSchemaBuilder& Sub)
 			{
 				Sub.String(TEXT("capability"),
@@ -43,7 +42,7 @@ TSharedPtr<FJsonObject> BuildUnrealGatewayToolDefinition()
 					.String(TEXT("nonce"),
 						TEXT("Single-use token describe minted for this capability. Required: echo it back "
 							"exactly as received. One already used is CONSENT_REUSED; a missing, made-up or "
-							"too old one is CONSENT_NOT_ISSUED (run describe again)."))
+							"too old one is CONSENT_NOT_ISSUED (describe again: with param, the reply is small)."))
 					.Required({ TEXT("capability"), TEXT("acknowledge"), TEXT("nonce") });
 			})
 		// Read by McpNativeGatewayExecuteRequest.cpp; undeclared here, a schema-driven

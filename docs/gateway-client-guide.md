@@ -147,7 +147,10 @@ capability and required: the same grant sent again is refused with
 capability (missing, made up, or too old) with `CONSENT_NOT_ISSUED`. A call
 refused before its handler runs (an unmet `options.require`, a dialog in the
 way) gets its grant back; once the handler starts, the grant is spent whatever
-the call answers. A refused execute carries its typed
+the call answers. A fresh grant needs no full contract: `describe { capability,
+param }`, with any one parameter the capability takes, returns `consentGrant`
+beside that one parameter's schema, a reply a fraction of a full describe's
+size (`McpNativeGatewayDescribe.cpp`). A refused execute carries its typed
 error as `typedError`, and `maxBytes` counts the result rows.
 
 ## Discovery is progressive, never a schema dump
@@ -163,10 +166,10 @@ error as `typedError`, and `maxBytes` counts the result rows.
 | `describe { domain }` | that domain's families |
 | `describe { domain?, family }` | the capabilities in the family |
 | `describe { capability }` | one exact contract |
-| `describe { capability, param }` | one parameter's schema |
+| `describe { capability, param }` | one parameter's schema, plus a fresh `consentGrant` when the capability needs consent |
 | `describe { tool }` | parent summary + action list (every name unless `limit` is sent, no `inputSchema` body) + a `browse` call: `search` filtered to that tool, whose rows carry per-action summaries |
 | `describe { tool, action }` | the exact contract of the capability that pair resolves to |
-| `describe { tool, action, param }` | one parameter's full schema |
+| `describe { tool, action, param }` | one parameter's full schema, plus `consentGrant` as above |
 
 The three browse levels show 50 rows unless `limit` is sent; `offset` pages
 every listing.

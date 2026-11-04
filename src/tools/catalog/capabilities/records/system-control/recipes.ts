@@ -23,7 +23,7 @@ export const RECIPE_RECORDS: readonly CapabilityRecordSource[] = [
     inputProps: {
       name: NAME,
       summary: { type: 'string', maxLength: 300, description: 'What the recipe does, in a sentence: search and list_recipes match its words.' },
-      script: { type: 'string', description: 'The script, in run_script\'s language; it reads each of paramNames as a variable.' },
+      script: { type: 'string', description: 'The script, in run_script\'s language; it reads each of paramNames as a variable. Its strings take only \\" and \\\\ as escapes, as there: \\n stays a backslash and an n, and a line break inside the quotes is a line break.' },
       paramNames: { type: 'array', items: { type: 'string' }, description: 'The parameter names (at most 16), each bound by run_recipe\'s args before the script runs.' },
       destructive: { type: 'array', items: { type: 'string' }, description: 'The destructive capabilities the script calls, as run_script takes them.' },
       overwrite: { type: 'boolean', description: 'Replace a recipe of the same name (default false).' },
