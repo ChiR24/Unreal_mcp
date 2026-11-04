@@ -50,6 +50,12 @@ bool HandleProjectSettingsAction(const FString &LowerSub,
                                  const TSharedPtr<FJsonObject> &Resp,
                                  bool &bSuccess, FString &Message,
                                  FString &ErrorCode);
+// set_project_thumbnail (McpUiProjectThumbnail.cpp).
+bool HandleProjectThumbnailAction(const FString &LowerSub,
+                                  const TSharedPtr<FJsonObject> &Payload,
+                                  const TSharedPtr<FJsonObject> &Resp,
+                                  bool &bSuccess, FString &Message,
+                                  FString &ErrorCode);
 // configure_rendering (McpUiRenderSettings.cpp).
 bool HandleRenderSettingsAction(const FString &LowerSub,
                                 const TSharedPtr<FJsonObject> &Payload,

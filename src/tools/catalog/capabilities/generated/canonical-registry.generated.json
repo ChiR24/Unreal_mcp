@@ -1,6 +1,6 @@
 {
-  "catalogRevision": "e9fa2d77d9dd3ec5",
-  "recordCount": 485,
+  "catalogRevision": "7658296d1da5892a",
+  "recordCount": 486,
   "records": [
     {
       "id": "animation_physics.analyze_animation",
@@ -120650,6 +120650,190 @@
         "algorithm": "sha256",
         "schema": "ebac35b79dda99a9b748e9df5cc12895f96a08f572cc0c883a5bff89225ea463",
         "content": "968b03889233eaa1e6dae0858a79dbdb31bdfefbbe4fdc12c0430cdeb4c998d7"
+      }
+    },
+    {
+      "id": "system_control.set_project_thumbnail",
+      "aliases": [],
+      "legacyIds": [
+        {
+          "tool": "system_control",
+          "action": "set_project_thumbnail"
+        }
+      ],
+      "discovery": {
+        "domain": "project",
+        "family": "project",
+        "topics": [
+          "set_project_thumbnail",
+          "project thumbnail",
+          "project picture",
+          "launcher thumbnail",
+          "project icon",
+          "set project image"
+        ],
+        "summary": "Set the project's thumbnail, the picture the Epic Games Launcher and the project browser show for it: the level viewport's view (from location, rotation and fov when given; they stay) drawn in game view (no editor icons or gizmos) as a square of size pixels and written to <ProjectDir>/<ProjectName>.png, the file the editor's own Capture Project Thumbnail writes. The reply shows the picture. Refused during Play In Editor (PIE_RUNNING).",
+        "whenToUse": [
+          "The project should show a picture of the game in the Epic Games Launcher or the project browser."
+        ],
+        "whenNotToUse": [
+          "A picture to look at is wanted (use control_editor screenshot)."
+        ]
+      },
+      "schemas": {
+        "input": {
+          "$schema": "https://json-schema.org/draft/2020-12/schema",
+          "type": "object",
+          "properties": {
+            "action": {
+              "type": "string",
+              "description": "The action to execute on the parent tool."
+            },
+            "location": {
+              "type": "object",
+              "properties": {
+                "x": {
+                  "type": "number"
+                },
+                "y": {
+                  "type": "number"
+                },
+                "z": {
+                  "type": "number"
+                }
+              },
+              "additionalProperties": false,
+              "description": "Put the level viewport camera here first ({x, y, z}); it stays there."
+            },
+            "rotation": {
+              "type": "object",
+              "properties": {
+                "pitch": {
+                  "type": "number"
+                },
+                "yaw": {
+                  "type": "number"
+                },
+                "roll": {
+                  "type": "number"
+                }
+              },
+              "additionalProperties": false,
+              "description": "Turn that camera to this first ({pitch, yaw, roll}); it stays."
+            },
+            "fov": {
+              "type": "number",
+              "minimum": 5,
+              "maximum": 170,
+              "description": "That camera's horizontal field of view in degrees (5-170), set first; it stays until the editor restarts. The square shows as much across as down."
+            },
+            "size": {
+              "type": "integer",
+              "minimum": 64,
+              "maximum": 1024,
+              "description": "Side of the square picture in pixels (default 512; the editor's own capture writes 192)."
+            }
+          },
+          "required": [
+            "action"
+          ],
+          "additionalProperties": false
+        },
+        "output": {
+          "$schema": "https://json-schema.org/draft/2020-12/schema",
+          "type": "object",
+          "properties": {
+            "success": {
+              "type": "boolean",
+              "description": "Whether the action succeeded."
+            },
+            "message": {
+              "type": "string",
+              "description": "Human-readable result message."
+            },
+            "details": {
+              "type": "object",
+              "x-unreal-reflection-boundary": true,
+              "description": "Additional handler result fields not named by the contract."
+            },
+            "path": {
+              "type": "string",
+              "description": "The file written: <ProjectDir>/<ProjectName>.png."
+            },
+            "width": {
+              "type": "number",
+              "description": "Width of the picture in pixels."
+            },
+            "height": {
+              "type": "number",
+              "description": "Height of the picture in pixels."
+            },
+            "imageBase64": {
+              "type": "string",
+              "description": "The picture as PNG, base64; returned as an image."
+            },
+            "mimeType": {
+              "type": "string",
+              "description": "image/png."
+            }
+          },
+          "required": [
+            "success"
+          ],
+          "additionalProperties": false
+        }
+      },
+      "examples": [
+        {
+          "title": "Set the project's thumbnail, the picture the Epic Games Launcher and the project browser show for it: the level viewport's view (from location, rotation and fov when given; they stay) drawn in game view (no editor icons or gizmos) as a square of size pixels and written to <ProjectDir>/<ProjectName>.png, the file the editor's own Capture Project Thumbnail writes. The reply shows the picture. Refused during Play In Editor (PIE_RUNNING).",
+          "input": {
+            "action": "set_project_thumbnail",
+            "location": {
+              "x": 0,
+              "y": -900,
+              "z": 400
+            },
+            "rotation": {
+              "pitch": -15,
+              "yaw": 90,
+              "roll": 0
+            },
+            "size": 512
+          },
+          "output": {
+            "success": true
+          }
+        }
+      ],
+      "availability": {
+        "requiredPlugins": [],
+        "editorStates": [
+          "edit"
+        ]
+      },
+      "behavior": {
+        "effect": "write",
+        "idempotency": "non-idempotent",
+        "longRunning": false,
+        "safeToRetry": false
+      },
+      "policy": {
+        "requiredScope": "write",
+        "consent": "none",
+        "dataAccess": "project-write"
+      },
+      "cost": {
+        "latency": "interactive",
+        "resources": "low"
+      },
+      "routing": {
+        "parentTool": "system_control",
+        "dispatchAction": "system_control"
+      },
+      "hashes": {
+        "algorithm": "sha256",
+        "schema": "6663f5ceff1d0d549372ecac550d102135691c74faa617ad0caa259dfc2bcd73",
+        "content": "0cf22161d6a8bc7c5c09677fdeb1c32fe60f30b17e77ca96e025c9313b4ac9cb"
       }
     },
     {

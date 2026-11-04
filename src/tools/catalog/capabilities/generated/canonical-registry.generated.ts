@@ -6,8 +6,8 @@ import registry from './canonical-registry.generated.json' with { type: 'json' }
 import type { CapabilityRecord } from '../model.js';
 import { parseCapabilityCatalog } from '../parser.js';
 
-export const CANONICAL_CAPABILITY_RECORD_COUNT = 485;
-export const CATALOG_REVISION = "e9fa2d77d9dd3ec5";
+export const CANONICAL_CAPABILITY_RECORD_COUNT = 486;
+export const CATALOG_REVISION = "7658296d1da5892a";
 export const CANONICAL_CAPABILITY_RECORDS: readonly CapabilityRecord[] = parseCapabilityCatalog(registry.records);
 
 export type { CapabilityRecord };

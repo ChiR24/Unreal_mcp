@@ -21373,6 +21373,7 @@
         "edit_save_game",
         "execute_python",
         "set_project_setting",
+        "set_project_thumbnail",
         "get_project_settings",
         "configure_rendering",
         "validate_assets",
@@ -21437,6 +21438,7 @@
         "filter",
         "forceLOD",
         "forceRecompile",
+        "fov",
         "friendlyName",
         "globalIllumination",
         "hardwareRayTracing",
@@ -21452,6 +21454,7 @@
         "level",
         "limit",
         "lines",
+        "location",
         "lodBias",
         "map",
         "maps",
@@ -21495,6 +21498,7 @@
         "resolution",
         "returnBase64",
         "root",
+        "rotation",
         "runsBack",
         "saveGameClass",
         "savePath",
@@ -21504,6 +21508,7 @@
         "section",
         "setting",
         "shadows",
+        "size",
         "slotName",
         "snapshotPath",
         "soundPath",
@@ -21767,6 +21772,12 @@
             "type": "boolean",
             "description": "Recompile every shader, overriding mode (default false); slow on a large project."
           },
+          "fov": {
+            "type": "number",
+            "minimum": 5,
+            "maximum": 170,
+            "description": "That camera's horizontal field of view in degrees (5-170), set first; it stays until the editor restarts. The square shows as much across as down."
+          },
           "friendlyName": {
             "type": "string",
             "description": "Display name in the Plugins browser (default the name)."
@@ -21842,6 +21853,22 @@
           "lines": {
             "type": "number",
             "description": "How many of the newest matching lines to return, oldest first (default 100, max 1000)."
+          },
+          "location": {
+            "type": "object",
+            "properties": {
+              "x": {
+                "type": "number"
+              },
+              "y": {
+                "type": "number"
+              },
+              "z": {
+                "type": "number"
+              }
+            },
+            "additionalProperties": false,
+            "description": "Put the level viewport camera here first ({x, y, z}); it stays there."
           },
           "lodBias": {
             "type": "number",
@@ -22101,6 +22128,22 @@
             ],
             "description": "Search only this output folder (default all six)."
           },
+          "rotation": {
+            "type": "object",
+            "properties": {
+              "pitch": {
+                "type": "number"
+              },
+              "yaw": {
+                "type": "number"
+              },
+              "roll": {
+                "type": "number"
+              }
+            },
+            "additionalProperties": false,
+            "description": "Turn that camera to this first ({pitch, yaw, roll}); it stays."
+          },
           "runsBack": {
             "type": "number",
             "description": "With source previous: how many editor runs back to read (default 1, max 20). After a crash and one more restart, the crashed run is 2."
@@ -22161,6 +22204,12 @@
               "maps"
             ],
             "description": "Shadow map method: virtual shadow maps or classic shadow maps."
+          },
+          "size": {
+            "type": "integer",
+            "minimum": 64,
+            "maximum": 1024,
+            "description": "Side of the square picture in pixels (default 512; the editor's own capture writes 192)."
           },
           "slotName": {
             "type": "string",
@@ -22315,6 +22364,7 @@
               "edit_save_game",
               "execute_python",
               "set_project_setting",
+              "set_project_thumbnail",
               "get_project_settings",
               "configure_rendering",
               "validate_assets",

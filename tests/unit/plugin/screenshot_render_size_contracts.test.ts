@@ -59,6 +59,15 @@ describe('screenshot renderSize', () => {
     }
   });
 
+  it('draws the project thumbnail through the same placement and frame helpers, in game view, into the checked writer', () => {
+    const thumbnail = read(join('..', 'Ui', 'McpUiProjectThumbnail.cpp'));
+    expect(thumbnail).toMatch(/if \(GEditor->PlayWorld\)\s*\{\s*return Refuse\(TEXT\("PIE_RUNNING"\)/u);
+    expect(thumbnail).toMatch(/PlaceViewCameraForMcp\(Client, Payload\);\s*const bool bWasGameView = Client->IsInGameView\(\);\s*Client->SetGameView\(true\);/u);
+    expect(thumbnail).toMatch(/ReadViewFrameForMcp\(Viewport, Render, Pixels, Size, Code, Error\);\s*Client->SetGameView\(bWasGameView\);/u);
+    expect(thumbnail).toContain('McpWriteProjectFile(Path,');
+    expect(thumbnail).toContain('FString(FApp::GetProjectName()) + TEXT(".png")');
+  });
+
   it('sets the automation flag only around the one synchronous draw', () => {
     // UE 5.0 and 5.1 hand the frame to listeners only under it, and it keeps the "screenshot saved" toast away.
     const source = render();

@@ -60,6 +60,8 @@ bool UEngineWireSubsystem::HandleUiAction(
           ScreenshotFallback) ||
       McpUiHandlers::HandleProjectSettingsAction(LowerSub, Payload, Resp,
                                                  bSuccess, Message, ErrorCode) ||
+      McpUiHandlers::HandleProjectThumbnailAction(LowerSub, Payload, Resp,
+                                                  bSuccess, Message, ErrorCode) ||
       McpUiHandlers::HandleRenderSettingsAction(LowerSub, Payload, Resp,
                                                 bSuccess, Message, ErrorCode);
 

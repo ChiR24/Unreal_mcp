@@ -25,6 +25,7 @@ All notable changes to the EngineWire plugin (formerly McpAutomationBridge) will
 - **Tubes** (`Geometry/Modeling/McpGeometryAppendTubes.cpp`): append_tubes carries a ring along each path by double-reflection frames (a closed loop's turn spread back along it), mitres the joints, caps on points of their own, and appends through append_polygons' checks; a tube's sides share a polygroup allocated at append time (`bFreshGroups`).
 - **List bounds** (`ControlActor/List/McpActorList.cpp`): `bounds` gives each row the box its drawn components span (`McpListedActorBox`, the box `near` measures to).
 - **Polygon repeat** (`Geometry/Modeling/McpGeometryPolygonInput.cpp`): append_polygons copies its cage over the repeat grid before triangulating, faceGroups and faceMaterials kept per copy.
+- **Project thumbnail** (`Ui/McpUiProjectThumbnail.cpp`): set_project_thumbnail draws the level view in game view at a square size (`ReadViewFrameForMcp`) and writes `<ProjectDir>/<ProjectName>.png` through `McpWriteProjectFile`.
 
 ### Fixed
 - **Search**: lead verbs (`McpSearchIntent.cpp`) and fold aliases run the member they name.

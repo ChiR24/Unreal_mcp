@@ -30683,6 +30683,12 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "boolean",
           "description": "Recompile every shader, overriding mode (default false); slow on a large project."
         },
+        "fov": {
+          "type": "number",
+          "minimum": 5,
+          "maximum": 170,
+          "description": "That camera's horizontal field of view in degrees (5-170), set first; it stays until the editor restarts. The square shows as much across as down."
+        },
         "friendlyName": {
           "type": "string",
           "description": "Display name in the Plugins browser (default the name)."
@@ -30758,6 +30764,22 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "lines": {
           "type": "number",
           "description": "How many of the newest matching lines to return, oldest first (default 100, max 1000)."
+        },
+        "location": {
+          "type": "object",
+          "properties": {
+            "x": {
+              "type": "number"
+            },
+            "y": {
+              "type": "number"
+            },
+            "z": {
+              "type": "number"
+            }
+          },
+          "additionalProperties": false,
+          "description": "Put the level viewport camera here first ({x, y, z}); it stays there."
         },
         "lodBias": {
           "type": "number",
@@ -31017,6 +31039,22 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           ],
           "description": "Search only this output folder (default all six)."
         },
+        "rotation": {
+          "type": "object",
+          "properties": {
+            "pitch": {
+              "type": "number"
+            },
+            "yaw": {
+              "type": "number"
+            },
+            "roll": {
+              "type": "number"
+            }
+          },
+          "additionalProperties": false,
+          "description": "Turn that camera to this first ({pitch, yaw, roll}); it stays."
+        },
         "runsBack": {
           "type": "number",
           "description": "With source previous: how many editor runs back to read (default 1, max 20). After a crash and one more restart, the crashed run is 2."
@@ -31077,6 +31115,12 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             "maps"
           ],
           "description": "Shadow map method: virtual shadow maps or classic shadow maps."
+        },
+        "size": {
+          "type": "integer",
+          "minimum": 64,
+          "maximum": 1024,
+          "description": "Side of the square picture in pixels (default 512; the editor's own capture writes 192)."
         },
         "slotName": {
           "type": "string",
@@ -31231,6 +31275,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             "edit_save_game",
             "execute_python",
             "set_project_setting",
+            "set_project_thumbnail",
             "get_project_settings",
             "configure_rendering",
             "validate_assets",
@@ -31569,9 +31614,17 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "string",
           "description": "Absolute path of the new header."
         },
+        "height": {
+          "type": "number",
+          "description": "Height of the picture in pixels."
+        },
         "hint": {
           "type": "string",
           "description": "How to get a full section dump."
+        },
+        "imageBase64": {
+          "type": "string",
+          "description": "The picture as PNG, base64; returned as an image."
         },
         "invalidCount": {
           "type": "number",
@@ -31637,6 +31690,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "message": {
           "type": "string",
           "description": "Human-readable result message."
+        },
+        "mimeType": {
+          "type": "string",
+          "description": "image/png."
         },
         "moduleName": {
           "type": "string",
@@ -32069,6 +32126,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "versionName": {
           "type": "string",
           "description": "Version string."
+        },
+        "width": {
+          "type": "number",
+          "description": "Width of the picture in pixels."
         }
       },
       "additionalProperties": true

@@ -1,8 +1,8 @@
 /**
- * System operations records (20): run_ubt, package_project, package_status,
+ * System operations records (21): run_ubt, package_project, package_status,
  * launch_build, run_tests, subscribe, unsubscribe, read_log, list_output_files,
  * delete_output_file, list_save_games, edit_save_game, spawn_category, execute_python,
- * set_project_setting, get_project_settings, validate_assets, lumen_update_scene,
+ * set_project_setting, set_project_thumbnail, get_project_settings, validate_assets, lumen_update_scene,
  * create_cpp_class, remove_cpp_class.
  */
 import type { CapabilityRecordSource } from '../../model.js';
@@ -546,6 +546,37 @@ export const SYSTEM_OPS_RECORDS: readonly CapabilityRecordSource[] = [
     costLatency: 'interactive',
     dispatchAction: 'system_control',
     exampleInput: { action: 'set_project_setting', section: '/Script/EngineSettings.GeneralProjectSettings', key: 'ProjectName', value: 'MyProject' },
+  }),
+  // The project's picture in the launcher had no capability: only the editor's viewport menu (Capture Project
+  // Thumbnail) wrote it, from whatever the viewport showed, gizmos and icons included.
+  buildCoreRecord({
+    parentTool: PT,
+    action: 'set_project_thumbnail',
+    domain: 'project',
+    family: 'project',
+    summary: 'Set the project\'s thumbnail, the picture the Epic Games Launcher and the project browser show for it: the level viewport\'s view (from location, rotation and fov when given; they stay) drawn in game view (no editor icons or gizmos) as a square of size pixels and written to <ProjectDir>/<ProjectName>.png, the file the editor\'s own Capture Project Thumbnail writes. The reply shows the picture. Refused during Play In Editor (PIE_RUNNING).',
+    topics: ['project thumbnail', 'project picture', 'launcher thumbnail', 'project icon', 'set project image'],
+    whenToUse: ['The project should show a picture of the game in the Epic Games Launcher or the project browser.'],
+    whenNotToUse: ['A picture to look at is wanted (use control_editor screenshot).'],
+    inputProps: {
+      location: { type: 'object', properties: { x: { type: 'number' }, y: { type: 'number' }, z: { type: 'number' } }, additionalProperties: false, description: 'Put the level viewport camera here first ({x, y, z}); it stays there.' },
+      rotation: { type: 'object', properties: { pitch: { type: 'number' }, yaw: { type: 'number' }, roll: { type: 'number' } }, additionalProperties: false, description: 'Turn that camera to this first ({pitch, yaw, roll}); it stays.' },
+      fov: { type: 'number', minimum: 5, maximum: 170, description: 'That camera\'s horizontal field of view in degrees (5-170), set first; it stays until the editor restarts. The square shows as much across as down.' },
+      size: { type: 'integer', minimum: 64, maximum: 1024, description: 'Side of the square picture in pixels (default 512; the editor\'s own capture writes 192).' },
+    },
+    required: [],
+    outputProps: {
+      path: { type: 'string', description: 'The file written: <ProjectDir>/<ProjectName>.png.' },
+      width: { type: 'number', description: 'Width of the picture in pixels.' },
+      height: { type: 'number', description: 'Height of the picture in pixels.' },
+      imageBase64: { type: 'string', description: 'The picture as PNG, base64; returned as an image.' },
+      mimeType: { type: 'string', description: 'image/png.' },
+    },
+    outputRequired: [],
+    effect: 'write',
+    costLatency: 'interactive',
+    dispatchAction: 'system_control',
+    exampleInput: { action: 'set_project_thumbnail', location: { x: 0, y: -900, z: 400 }, rotation: { pitch: -15, yaw: 90, roll: 0 }, size: 512 },
   }),
   buildCoreRecord({
     parentTool: PT,

@@ -1669,6 +1669,7 @@ export const CAPABILITY_COST_INDEX: Readonly<Record<string, string>> = {
   "system_control::set_fullscreen": "instant|low",
   "system_control::set_game_feature_active": "interactive|low",
   "system_control::set_project_setting": "interactive|low",
+  "system_control::set_project_thumbnail": "interactive|low",
   "system_control::set_quality": "instant|low",
   "system_control::set_resolution": "instant|low",
   "system_control::set_resolution_scale": "interactive|medium",
@@ -1690,4 +1691,4 @@ export const CAPABILITY_COST_INDEX: Readonly<Record<string, string>> = {
   "system_control::write_snapshot": "interactive|medium"
 };
 
-export const CAPABILITY_COST_INDEX_KEY_COUNT = 1677;
+export const CAPABILITY_COST_INDEX_KEY_COUNT = 1678;
