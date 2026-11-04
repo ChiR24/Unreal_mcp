@@ -115,6 +115,9 @@ struct FDefaults
         // A mesh through SetStaticMesh, as the JSON writer sets the template's: a raw copy left KnownStaticMesh stale.
         if (UStaticMeshComponent *Mesh = McpStaticMeshOwner(Prop, Container))
           Mesh->SetStaticMesh(McpStaticMeshOwner(TemplateProp, TemplateContainer)->GetStaticMesh());
+        // A skeletal mesh likewise: a raw copy kept the bone buffers of the mesh before.
+        else if (USkeletalMeshComponent *Skeletal = McpSkeletalMeshOwner(Prop, Container))
+          Skeletal->SetSkeletalMesh(Cast<USkeletalMesh>(CastField<FObjectProperty>(TemplateProp)->GetObjectPropertyValue_InContainer(TemplateContainer)), true);
         // An instanced subobject must not be shared with the template, so those
         // still go through text (which resolves to a reference, as before).
         else if (Prop->HasAnyPropertyFlags(CPF_InstancedReference | CPF_ContainsInstancedReference))

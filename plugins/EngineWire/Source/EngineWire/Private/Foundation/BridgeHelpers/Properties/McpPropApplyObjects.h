@@ -2,8 +2,10 @@
 
 #include "CoreMinimal.h"
 #include "Misc/ScopeExit.h"
+#include "Components/SkeletalMeshComponent.h"
 #include "Components/StaticMeshComponent.h"
 #include "Dom/JsonObject.h"
+#include "Engine/SkeletalMesh.h"
 #include "Engine/StaticMesh.h"
 #include "JsonObjectConverter.h"
 #include "Foundation/McpCapabilityPrincipal.h"
@@ -23,6 +25,20 @@ static inline UStaticMeshComponent *McpStaticMeshOwner(const FProperty *Property
   return Owner && Owner->IsChildOf(UStaticMeshComponent::StaticClass()) &&
                  Property->GetFName() == FName(TEXT("StaticMesh"))
              ? static_cast<UStaticMeshComponent *>(Container)
+             : nullptr;
+}
+
+/**
+ * The skeletal mesh component whose mesh this property is (SkeletalMesh on the skinned base in 5.0, SkeletalMeshAsset
+ * from 5.1), or null. That mesh goes through SetSkeletalMesh: a raw write kept the bone buffers of the mesh before, so
+ * a placed character drew the new mesh from stale bone transforms (only its head showed, at its feet).
+ */
+static inline USkeletalMeshComponent *McpSkeletalMeshOwner(const FProperty *Property, void *Container) {
+  const UClass *Owner = Property ? Cast<UClass>(Property->GetOwnerUField()) : nullptr;
+  const FObjectProperty *Object = CastField<FObjectProperty>(Property);
+  return Owner && Object && Object->PropertyClass && Owner->IsChildOf(USkinnedMeshComponent::StaticClass()) &&
+                 Object->PropertyClass->IsChildOf(USkeletalMesh::StaticClass())
+             ? Cast<USkeletalMeshComponent>(static_cast<UObject *>(Container))
              : nullptr;
 }
 
@@ -97,7 +113,12 @@ static inline bool ApplyJsonObjectValueToProperty(void *TargetContainer, FProper
   // Object reference (a class reference is one too)
   if (FObjectProperty *OP = CastField<FObjectProperty>(Property)) {
     UStaticMeshComponent *MeshOwner = McpStaticMeshOwner(OP, TargetContainer);
-    const auto Assign = [OP, TargetContainer, MeshOwner, &OutError](UObject *Value) {
+    USkeletalMeshComponent *SkeletalOwner = McpSkeletalMeshOwner(OP, TargetContainer);
+    const auto Assign = [OP, TargetContainer, MeshOwner, SkeletalOwner, &OutError](UObject *Value) {
+      if (SkeletalOwner) {
+        SkeletalOwner->SetSkeletalMesh(Cast<USkeletalMesh>(Value), true);
+        return true;
+      }
       if (!MeshOwner) {
         OP->SetObjectPropertyValue_InContainer(TargetContainer, Value);
         return true;

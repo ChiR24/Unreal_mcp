@@ -1468,6 +1468,31 @@ describe('skeletal mesh import', () => {
     expect(options).toContain('OutErrorCode = TEXT("PHYSICS_ASSET_NOT_FOUND");');
   });
 
+  it('converts the file units as the plain import does, so a character lands at the size of its props', () => {
+    const options = code('AssetWorkflow', 'Operations', 'McpAssetFbxImportOptions.h');
+    expect(options).toContain('Fbx->ImportUI->SkeletalMeshImportData->bConvertSceneUnit = true;');
+    expect(options).toContain('Fbx->ImportUI->AnimSequenceImportData->bConvertSceneUnit = true;');
+  });
+
+  it('lists and saves the takes the factory made beside the mesh', () => {
+    const handler = code('AssetWorkflow', 'Operations', 'McpAssetImportDuplicate.cpp');
+    expect(handler).toContain('TArray<UObject *> ImportedAssets = McpImportAndCollect(AssetTools, ImportData, DestPath);');
+    expect(handler).toContain('bSave && McpSaveImports(ImportedAsset, Asset, ImportedAssets)');
+    const options = code('AssetWorkflow', 'Operations', 'McpAssetFbxImportOptions.h');
+    expect(options).toMatch(/const TSet<FString> Before = McpAssetPathsIn\(DestPath\);\s*TArray<UObject \*> Imported = AssetTools\.ImportAssetsAutomated\(ImportData\);/u);
+    expect(options).toContain('if (Other && Other != Primary && !McpSafeAssetSave(Other)) {');
+  });
+
+  // A Blender character exported in metres came in at the right size and played every take as a 1 cm blob, silently.
+  it('warns of a take whose root bone plays at another scale than the mesh\'s reference pose', () => {
+    const options = code('AssetWorkflow', 'Operations', 'McpAssetFbxImportOptions.h');
+    expect(options).toContain('UAnimPoseExtensions::GetBonePose(Pose, Ref.GetBoneName(0), EAnimPoseSpaces::Local).GetScale3D().GetAbsMax() / RefScale;');
+    expect(options).toContain('const double TakeRatio =');
+    expect(options).toContain('if (TakeRatio < 0.5 || TakeRatio > 2.0) {');
+    expect(options, 'one warning naming every take, not one per take').toContain('*FString::Join(Takes, TEXT(", "))');
+    expect(options).toContain('const TArray<TSharedPtr<FJsonValue>> Warnings = McpTakeScaleWarnings(*Mesh, Imported);');
+  });
+
   it('answers with the mesh and what it is bound to, not the first asset listed', () => {
     const options = code('AssetWorkflow', 'Operations', 'McpAssetFbxImportOptions.h');
     expect(options).toContain('for (UClass *Kind : {USkeletalMesh::StaticClass(), UStaticMesh::StaticClass(), UAnimSequence::StaticClass(), UObject::StaticClass()})');
@@ -2309,6 +2334,16 @@ describe('a component mesh goes through SetStaticMesh', () => {
     expect(writer).toContain('return Assign(nullptr);');
     expect(code('Blueprint', 'Components', 'McpBPScsPropagate.h'))
       .toContain('Mesh->SetStaticMesh(McpStaticMeshOwner(TemplateProp, TemplateContainer)->GetStaticMesh());');
+  });
+
+  // A placed character whose Blueprint's skeletal mesh changed drew the new mesh from the old mesh's bone buffers.
+  it('a skeletal mesh component takes its mesh through SetSkeletalMesh, in the writer and in the push', () => {
+    const writer = readFileSync(join(DOMAINS, '..', 'Foundation', 'BridgeHelpers', 'Properties', 'McpPropApplyObjects.h'), 'utf8');
+    expect(writer, 'SkeletalMesh in 5.0 and SkeletalMeshAsset later: matched by type, not name')
+      .toContain('Object->PropertyClass->IsChildOf(USkeletalMesh::StaticClass())');
+    expect(writer).toContain('SkeletalOwner->SetSkeletalMesh(Cast<USkeletalMesh>(Value), true);');
+    expect(code('Blueprint', 'Components', 'McpBPScsPropagate.h'))
+      .toContain('else if (USkeletalMeshComponent *Skeletal = McpSkeletalMeshOwner(Prop, Container))');
   });
 });
 

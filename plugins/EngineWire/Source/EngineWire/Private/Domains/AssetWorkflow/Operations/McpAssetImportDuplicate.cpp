@@ -125,8 +125,7 @@ bool UEngineWireSubsystem::HandleImportAsset(
                                                SetupError, nullptr, SetupCode);
             return;
           }
-          TArray<UObject *> ImportedAssets =
-              AssetTools.ImportAssetsAutomated(ImportData);
+          TArray<UObject *> ImportedAssets = McpImportAndCollect(AssetTools, ImportData, DestPath);
 
           // ImportAssetsAutomated can return nullptr entries, and its order puts no mesh first.
           UObject *Asset = McpPickPrimaryImport(ImportedAssets);
@@ -161,7 +160,7 @@ bool UEngineWireSubsystem::HandleImportAsset(
               McpHandlerUtils::AddVerification(Resp, ImportedAsset);
             }
             McpDescribeImport(ImportedAssets, Asset, ImportedAsset, Resp);
-            Resp->SetBoolField(TEXT("saved"), bSave && ImportedAsset && McpSafeAssetSave(ImportedAsset));
+            Resp->SetBoolField(TEXT("saved"), bSave && McpSaveImports(ImportedAsset, Asset, ImportedAssets));
             StrongThis->SendAutomationResponse(
                 Socket, RequestId, true,
                 bRenameSucceeded ? TEXT("Asset imported")

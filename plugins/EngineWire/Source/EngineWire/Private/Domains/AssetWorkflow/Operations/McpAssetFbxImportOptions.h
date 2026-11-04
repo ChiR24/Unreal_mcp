@@ -2,7 +2,9 @@
 
 #include "Animation/AnimSequence.h"
 #include "Animation/Skeleton.h"
+#include "AnimPose.h"
 #include "AssetRegistry/AssetRegistryModule.h"
+#include "Core/Compatibility/McpVersionCompatibility.h"
 #include "Dom/JsonObject.h"
 #include "Engine/SkeletalMesh.h"
 #include "Engine/StaticMesh.h"
@@ -15,7 +17,9 @@
 #include "Factories/FbxAnimSequenceImportData.h"
 #include "Factories/FbxFactory.h"
 #include "Factories/FbxImportUI.h"
+#include "IAssetTools.h"
 #include "Misc/Paths.h"
+#include "Safety/McpSafeOperationsAssetSave.h"
 #include "Modules/ModuleManager.h"
 #include "ObjectTools.h"
 #include "UObject/SoftObjectPath.h"
@@ -97,6 +101,11 @@ inline UFactory *McpMakeFbxFactory(UAutomatedAssetImportData *Owner,
   if (Options.ImportMorphTargets.IsSet()) {
     Fbx->ImportUI->SkeletalMeshImportData->bImportMorphTargets = Options.ImportMorphTargets.GetValue();
   }
+  // Interchange, which takes every import without these options, honours the units the file was written in; this
+  // factory leaves them unconverted by default, so a character exported in metres (Blender) came in at a hundredth
+  // of the size its static meshes did. A file already in centimetres is untouched either way.
+  Fbx->ImportUI->SkeletalMeshImportData->bConvertSceneUnit = true;
+  Fbx->ImportUI->AnimSequenceImportData->bConvertSceneUnit = true;
   // Mocap rarely lands on a whole frame, and the importer rejects a take that
   // does not, with nobody here to answer the prompt it would otherwise raise.
 #if ENGINE_MAJOR_VERSION > 5 || ENGINE_MINOR_VERSION >= 1
@@ -178,6 +187,86 @@ inline UObject *McpPickPrimaryImport(const TArray<UObject *> &Imported) {
   return nullptr;
 }
 
+// Object paths of the assets directly in a folder.
+inline TSet<FString> McpAssetPathsIn(const FString &Folder) {
+  TArray<FAssetData> Found;
+  FModuleManager::LoadModuleChecked<FAssetRegistryModule>("AssetRegistry").Get().GetAssetsByPath(FName(*Folder), Found,
+                                                                                                  false);
+  TSet<FString> Paths;
+  for (const FAssetData &Data : Found) {
+    Paths.Add(MCP_ASSET_DATA_GET_SOFT_PATH(Data));
+  }
+  return Paths;
+}
+
+// The FBX factory hands back the mesh alone: the takes it made beside it were neither listed nor saved, so they were
+// gone after a restart. What appeared in the folder during the import joins the list.
+inline void McpAddFolderNewcomers(const FString &Folder, const TSet<FString> &Before, TArray<UObject *> &Imported) {
+  for (const FString &Path : McpAssetPathsIn(Folder)) {
+    UObject *Object = Before.Contains(Path) ? nullptr : FSoftObjectPath(Path).ResolveObject();
+    if (Object && !Imported.Contains(Object)) {
+      Imported.Add(Object);
+    }
+  }
+}
+
+// Imports the file; with the FBX factory, what appeared in the folder joins what the factory handed back.
+inline TArray<UObject *> McpImportAndCollect(IAssetTools &AssetTools, UAutomatedAssetImportData *ImportData,
+                                             const FString &DestPath) {
+  const TSet<FString> Before = McpAssetPathsIn(DestPath);
+  TArray<UObject *> Imported = AssetTools.ImportAssetsAutomated(ImportData);
+  if (ImportData->Factory != nullptr) {
+    McpAddFolderNewcomers(DestPath, Before, Imported);
+  }
+  return Imported;
+}
+
+// Saves the primary asset (reloaded under its final name) and everything imported beside it: true when all were
+// written.
+inline bool McpSaveImports(UObject *Reloaded, const UObject *Primary, const TArray<UObject *> &Imported) {
+  bool bSaved = Reloaded && McpSafeAssetSave(Reloaded);
+  for (UObject *Other : Imported) {
+    if (Other && Other != Primary && !McpSafeAssetSave(Other)) {
+      bSaved = false;
+    }
+  }
+  return bSaved;
+}
+
+// A take whose root bone plays at another scale than the mesh's reference pose draws the character that much bigger or
+// smaller. Blender's FBX "Armature" node does it: the importer leaves it out of the bones, so a metre file's unit scale
+// on it reaches the mesh's root but not the takes, which are read relative to it (a 93 cm character played as a blob).
+inline TArray<TSharedPtr<FJsonValue>> McpTakeScaleWarnings(const USkeletalMesh &Mesh, const TArray<UObject *> &Imported) {
+  TArray<FString> Takes;
+  double Ratio = 1.0;
+  const FReferenceSkeleton &Ref = Mesh.GetRefSkeleton();
+  const double RefScale = Ref.GetNum() > 0 ? Ref.GetRefBonePose()[0].GetScale3D().GetAbsMax() : 0.0;
+  for (UObject *Object : Imported) {
+    UAnimSequence *Take = Cast<UAnimSequence>(Object);
+    if (!Take || RefScale <= 0.0 || Take->GetSkeleton() != Mesh.GetSkeleton()) {
+      continue;
+    }
+    FAnimPose Pose;
+    UAnimPoseExtensions::GetAnimPoseAtFrame(Take, 0, FAnimPoseEvaluationOptions(), Pose);
+    const double TakeRatio =
+        UAnimPoseExtensions::GetBonePose(Pose, Ref.GetBoneName(0), EAnimPoseSpaces::Local).GetScale3D().GetAbsMax() / RefScale;
+    if (TakeRatio < 0.5 || TakeRatio > 2.0) {
+      Ratio = Takes.Num() == 0 ? TakeRatio : Ratio;
+      Takes.Add(Take->GetName());
+    }
+  }
+  TArray<TSharedPtr<FJsonValue>> Warnings;
+  if (Takes.Num() > 0) {
+    Warnings.Add(MakeShared<FJsonValueString>(FString::Printf(
+        TEXT("%d take(s) play the character at %g times its size (%s): their root bone is read relative to a node the "
+             "mesh's reference pose includes (Blender's Armature node carrying the file's unit scale). Export the "
+             "character in centimetres with that node at scale 1 (Blender: unit scale 0.01, the armature's scale "
+             "applied), then import it again."),
+        Takes.Num(), Ratio, *FString::Join(Takes, TEXT(", ")))));
+  }
+  return Warnings;
+}
+
 // Everything the import made besides the primary asset, and for a skeletal mesh the skeleton, physics asset, bone and
 // morph target counts it ended up with, so the next call can use them without searching.
 inline void McpDescribeImport(const TArray<UObject *> &Imported, const UObject *Primary, UObject *Reloaded,
@@ -196,5 +285,9 @@ inline void McpDescribeImport(const TArray<UObject *> &Imported, const UObject *
     Resp->SetStringField(TEXT("physicsAsset"), Mesh->GetPhysicsAsset() ? Mesh->GetPhysicsAsset()->GetPathName() : FString());
     Resp->SetNumberField(TEXT("bones"), Mesh->GetRefSkeleton().GetNum());
     Resp->SetNumberField(TEXT("morphTargets"), Mesh->GetMorphTargets().Num());
+    const TArray<TSharedPtr<FJsonValue>> Warnings = McpTakeScaleWarnings(*Mesh, Imported);
+    if (Warnings.Num() > 0) {
+      Resp->SetArrayField(TEXT("warnings"), Warnings);
+    }
   }
 }
