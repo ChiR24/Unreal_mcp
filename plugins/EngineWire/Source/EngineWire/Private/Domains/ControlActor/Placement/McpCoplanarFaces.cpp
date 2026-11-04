@@ -14,37 +14,36 @@ namespace McpCoplanar
 {
 namespace
 {
-// Planes closer than this are one plane to the depth buffer at play distance.
-constexpr double McpCoplanarPlaneTolerance = 0.5;
 // An overlap thinner than this is two faces meeting along an edge, not a patch anyone sees.
 constexpr double McpCoplanarMinOverlap = 1.0;
 
-struct FMcpCoplanarFace
+// A mesh kept out of the main view cannot flicker in it: one drawn outside the main pass, and a water body's two info
+// meshes, which its own scene proxy hides from every pass but the water info texture's (an ocean was reported as one
+// coplanar pair of them). Matched by class name so the plugin needs no link to the Water module.
+bool McpCoplanarDrawnInView(const UStaticMeshComponent* Component)
 {
-    FVector Center = FVector::ZeroVector;
-    FVector Normal = FVector::ZeroVector;
-    FVector U = FVector::ZeroVector;
-    FVector V = FVector::ZeroVector;
-    double HalfU = 0.0;
-    double HalfV = 0.0;
-};
+    return Component->bRenderInMainPass && Component->GetClass()->GetFName() != TEXT("WaterBodyInfoMeshComponent");
+}
 
-struct FMcpCoplanarPiece
+// Two undersides with something solid right below them are seen from nowhere: carpet trims whose bottoms lay in the
+// carpet's plane on the floor were reported, and fixed, as flicker no camera could show.
+bool McpCoplanarHiddenUnderside(UWorld* World, const FVector& Normal, const FVector& Center, const AActor* A, const AActor* B)
 {
-    AActor* Actor = nullptr;
-    const UStaticMeshComponent* Component = nullptr;
-    FBox Bounds = FBox(ForceInit);
-    double Volume = 0.0;
-    bool bNamed = true;
-    TArray<FMcpCoplanarFace, TInlineAllocator<6>> Faces;
-};
+    if (Normal.Z > -0.99)
+    {
+        return false;
+    }
+    FCollisionQueryParams Params(SCENE_QUERY_STAT(McpCoplanarUnderside), true);
+    Params.AddIgnoredActor(A);
+    Params.AddIgnoredActor(B);
+    FHitResult Hit;
+    return World->LineTraceSingleByChannel(Hit, Center + FVector(0.0, 0.0, 0.5), Center - FVector(0.0, 0.0, 2.0), ECC_Visibility, Params);
+}
+} // namespace
 
-// The world-space faces a component's mesh really fills.
-void McpCoplanarAddFaces(const UStaticMeshComponent* Component, const FMcpCoplanarFill& Fill, FMcpCoplanarPiece& Piece)
+void AddBoxFaces(const FBox& Box, const FTransform& Transform, const FMcpCoplanarFill& Fill, FMcpCoplanarPiece& Piece)
 {
-    const FBox Box = Component->GetStaticMesh()->GetBoundingBox();
     const FVector Extent = Box.GetExtent();
-    const FTransform& Transform = Component->GetComponentTransform();
     for (int32 Side = 0; Side < 6; ++Side)
     {
         if (Fill.Share[Side] < 0.5)
@@ -75,8 +74,7 @@ void McpCoplanarAddFaces(const UStaticMeshComponent* Component, const FMcpCoplan
     }
 }
 
-// Whether B lies in A's plane, faces the same way and overlaps it by more than an edge.
-bool McpCoplanarOverlap(const FMcpCoplanarFace& A, const FMcpCoplanarFace& B, double& OutGap, double& OutU, double& OutV)
+bool FacesInOnePlane(const FMcpCoplanarFace& A, const FMcpCoplanarFace& B, double& OutGap, double& OutU, double& OutV)
 {
     if (FVector::DotProduct(A.Normal, B.Normal) < 0.9995)
     {
@@ -98,30 +96,7 @@ bool McpCoplanarOverlap(const FMcpCoplanarFace& A, const FMcpCoplanarFace& B, do
     return OutU > McpCoplanarMinOverlap && OutV > McpCoplanarMinOverlap;
 }
 
-// A mesh kept out of the main view cannot flicker in it: one drawn outside the main pass, and a water body's two info
-// meshes, which its own scene proxy hides from every pass but the water info texture's (an ocean was reported as one
-// coplanar pair of them). Matched by class name so the plugin needs no link to the Water module.
-bool McpCoplanarDrawnInView(const UStaticMeshComponent* Component)
-{
-    return Component->bRenderInMainPass && Component->GetClass()->GetFName() != TEXT("WaterBodyInfoMeshComponent");
-}
-
-// Two undersides with something solid right below them are seen from nowhere: carpet trims whose bottoms lay in the
-// carpet's plane on the floor were reported, and fixed, as flicker no camera could show.
-bool McpCoplanarHiddenUnderside(UWorld* World, const FVector& Normal, const FVector& Center, const AActor* A, const AActor* B)
-{
-    if (Normal.Z > -0.99)
-    {
-        return false;
-    }
-    FCollisionQueryParams Params(SCENE_QUERY_STAT(McpCoplanarUnderside), true);
-    Params.AddIgnoredActor(A);
-    Params.AddIgnoredActor(B);
-    FHitResult Hit;
-    return World->LineTraceSingleByChannel(Hit, Center + FVector(0.0, 0.0, 0.5), Center - FVector(0.0, 0.0, 2.0), ECC_Visibility, Params);
-}
-
-TArray<FMcpCoplanarPiece> McpCoplanarCollect(UWorld* World, const FString& NameFilter, const TArray<AActor*>* Focus)
+TArray<FMcpCoplanarPiece> CollectPieces(UWorld* World, const FString& NameFilter, const TArray<AActor*>* Focus)
 {
     TArray<FMcpCoplanarPiece> Pieces;
     TMap<const UStaticMesh*, FMcpCoplanarFill> Fills;
@@ -134,6 +109,7 @@ TArray<FMcpCoplanarPiece> McpCoplanarCollect(UWorld* World, const FString& NameF
             Near.Add(Actor->GetComponentsBoundingBox(true).ExpandBy(McpCoplanarPlaneTolerance + 1.0));
         }
     }
+    int32 Owner = 0;
     for (TActorIterator<AActor> It(World); It; ++It)
     {
         AActor* Actor = *It;
@@ -141,12 +117,14 @@ TArray<FMcpCoplanarPiece> McpCoplanarCollect(UWorld* World, const FString& NameF
         {
             continue;
         }
+        ++Owner;
         // Also the object name: actors sharing a label are reported by it.
         const bool bNamed = Focus ? Focus->Contains(Actor)
                                   : NameFilter.IsEmpty() || Actor->GetActorLabel().Contains(NameFilter) ||
                                         Actor->GetName().Contains(NameFilter);
         TArray<UStaticMeshComponent*> Components;
         Actor->GetComponents<UStaticMeshComponent>(Components);
+        const int32 First = Pieces.Num();
         for (const UStaticMeshComponent* Component : Components)
         {
             // Instanced components hold many transforms under one; their bounds are not one mesh. A spline mesh bends its
@@ -174,19 +152,103 @@ TArray<FMcpCoplanarPiece> McpCoplanarCollect(UWorld* World, const FString& NameF
             FMcpCoplanarPiece Piece;
             Piece.Actor = Actor;
             Piece.Component = Component;
+            Piece.Owner = Owner;
             Piece.Bounds = Bounds;
             Piece.Volume = Piece.Bounds.GetVolume();
             Piece.bNamed = bNamed;
-            McpCoplanarAddFaces(Component, *Fill, Piece);
+            AddBoxFaces(Mesh->GetBoundingBox(), Component->GetComponentTransform(), *Fill, Piece);
             if (Piece.Faces.Num() > 0)
             {
                 Pieces.Add(MoveTemp(Piece));
             }
         }
+        for (int32 Part = First; Part < Pieces.Num(); ++Part)
+        {
+            for (int32 Other = First; Other < Pieces.Num(); ++Other)
+            {
+                if (Other != Part && Pieces[Other].Component->IsAttachedTo(Pieces[Part].Component))
+                {
+                    Pieces[Part].Carried.Add(Other);
+                }
+            }
+        }
     }
     return Pieces;
 }
-} // namespace
+
+TArray<FMcpCoplanarPair> FindPairs(const TArray<FMcpCoplanarPiece>& Pieces, bool bBestOnly)
+{
+    TArray<FMcpCoplanarPair> Pairs;
+    // Sweep along X: only pieces whose boxes meet can share a face. A stable order keeps equal pieces as they came.
+    TArray<int32> Order;
+    for (int32 Index = 0; Index < Pieces.Num(); ++Index)
+    {
+        Order.Add(Index);
+    }
+    Order.StableSort([&Pieces](int32 A, int32 B) { return Pieces[A].Bounds.Min.X < Pieces[B].Bounds.Min.X; });
+    const FVector Slack(McpCoplanarPlaneTolerance);
+    for (int32 I = 0; I < Order.Num(); ++I)
+    {
+        const FMcpCoplanarPiece& A = Pieces[Order[I]];
+        const FBox Reach(A.Bounds.Min - Slack, A.Bounds.Max + Slack);
+        for (int32 J = I + 1; J < Order.Num() && Pieces[Order[J]].Bounds.Min.X <= Reach.Max.X; ++J)
+        {
+            const FMcpCoplanarPiece& B = Pieces[Order[J]];
+            if ((!A.bNamed && !B.bNamed) || !Reach.Intersect(B.Bounds))
+            {
+                continue;
+            }
+            // The smaller piece is the one to move: nudging a pillar beats shifting the ground under the level.
+            const bool bASmaller = A.Volume <= B.Volume;
+            FMcpCoplanarPair Best;
+            for (int32 FaceA = 0; FaceA < A.Faces.Num(); ++FaceA)
+            {
+                for (int32 FaceB = 0; FaceB < B.Faces.Num(); ++FaceB)
+                {
+                    FMcpCoplanarPair Pair;
+                    if (!FacesInOnePlane(A.Faces[FaceA], B.Faces[FaceB], Pair.Gap, Pair.OverlapU, Pair.OverlapV))
+                    {
+                        continue;
+                    }
+                    const FMcpCoplanarFace& Mine = bASmaller ? A.Faces[FaceA] : B.Faces[FaceB];
+                    Pair.Piece = Order[bASmaller ? I : J];
+                    Pair.Other = Order[bASmaller ? J : I];
+                    Pair.Face = bASmaller ? FaceA : FaceB;
+                    Pair.OtherFace = bASmaller ? FaceB : FaceA;
+                    Pair.Normal = A.Faces[FaceA].Normal;
+                    Pair.FaceArea = 4.0 * Mine.HalfU * Mine.HalfV;
+                    if (!bBestOnly)
+                    {
+                        Pairs.Add(Pair);
+                    }
+                    else if (Pair.OverlapU * Pair.OverlapV > Best.OverlapU * Best.OverlapV)
+                    {
+                        Best = Pair;
+                    }
+                }
+            }
+            if (Best.OverlapU > 0.0)
+            {
+                Pairs.Add(Best);
+            }
+        }
+    }
+    Pairs.StableSort([](const FMcpCoplanarPair& A, const FMcpCoplanarPair& B) { return A.OverlapU * A.OverlapV > B.OverlapU * B.OverlapV; });
+    return Pairs;
+}
+
+TArray<FMcpCoplanarPair> FindVisiblePairs(UWorld* World, const TArray<FMcpCoplanarPiece>& Pieces, bool bBestOnly)
+{
+    TArray<FMcpCoplanarPair> Pairs = FindPairs(Pieces, bBestOnly);
+    Pairs.RemoveAll([World, &Pieces](const FMcpCoplanarPair& Pair)
+    {
+        const FMcpCoplanarFace& Mine = Pieces[Pair.Piece].Faces[Pair.Face];
+        const FMcpCoplanarFace& Theirs = Pieces[Pair.Other].Faces[Pair.OtherFace];
+        const FVector Smaller = Mine.HalfU * Mine.HalfV <= Theirs.HalfU * Theirs.HalfV ? Mine.Center : Theirs.Center;
+        return McpCoplanarHiddenUnderside(World, Pair.Normal, Smaller, Pieces[Pair.Piece].Actor, Pieces[Pair.Other].Actor);
+    });
+    return Pairs;
+}
 
 TArray<FMcpCoplanarHit> FindCoplanarFaces(UWorld* World, const FString& NameFilter, const TArray<AActor*>* Focus)
 {
@@ -195,61 +257,19 @@ TArray<FMcpCoplanarHit> FindCoplanarFaces(UWorld* World, const FString& NameFilt
     {
         return Hits;
     }
-    TArray<FMcpCoplanarPiece> Pieces = McpCoplanarCollect(World, NameFilter, Focus);
-    // Sweep along X: only pieces whose boxes meet can share a face.
-    Pieces.Sort([](const FMcpCoplanarPiece& A, const FMcpCoplanarPiece& B) { return A.Bounds.Min.X < B.Bounds.Min.X; });
-    const FVector Slack(McpCoplanarPlaneTolerance);
-    for (int32 I = 0; I < Pieces.Num(); ++I)
+    const TArray<FMcpCoplanarPiece> Pieces = CollectPieces(World, NameFilter, Focus);
+    for (const FMcpCoplanarPair& Pair : FindVisiblePairs(World, Pieces, true))
     {
-        const FMcpCoplanarPiece& A = Pieces[I];
-        const FBox Reach(A.Bounds.Min - Slack, A.Bounds.Max + Slack);
-        for (int32 J = I + 1; J < Pieces.Num() && Pieces[J].Bounds.Min.X <= Reach.Max.X; ++J)
-        {
-            const FMcpCoplanarPiece& B = Pieces[J];
-            if ((!A.bNamed && !B.bNamed) || !Reach.Intersect(B.Bounds))
-            {
-                continue;
-            }
-            FMcpCoplanarHit Best;
-            double AreaA = 0.0;
-            double AreaB = 0.0;
-            FVector SmallerCenter = FVector::ZeroVector;
-            for (const FMcpCoplanarFace& FaceA : A.Faces)
-            {
-                for (const FMcpCoplanarFace& FaceB : B.Faces)
-                {
-                    double Gap = 0.0;
-                    double U = 0.0;
-                    double V = 0.0;
-                    if (McpCoplanarOverlap(FaceA, FaceB, Gap, U, V) && U * V > Best.OverlapU * Best.OverlapV)
-                    {
-                        Best.Normal = FaceA.Normal;
-                        Best.Gap = Gap;
-                        Best.OverlapU = U;
-                        Best.OverlapV = V;
-                        AreaA = 4.0 * FaceA.HalfU * FaceA.HalfV;
-                        AreaB = 4.0 * FaceB.HalfU * FaceB.HalfV;
-                        SmallerCenter = AreaA <= AreaB ? FaceA.Center : FaceB.Center;
-                    }
-                }
-            }
-            if (Best.OverlapU <= 0.0 || McpCoplanarHiddenUnderside(World, Best.Normal, SmallerCenter, A.Actor, B.Actor))
-            {
-                continue;
-            }
-            // The smaller piece is the one to move: nudging a pillar beats shifting the ground under the level.
-            const bool bASmaller = A.Volume <= B.Volume;
-            const FMcpCoplanarPiece& Subject = bASmaller ? A : B;
-            const FMcpCoplanarPiece& Other = bASmaller ? B : A;
-            Best.Actor = Subject.Actor;
-            Best.OtherActor = Other.Actor;
-            Best.Component = Subject.Component->GetName();
-            Best.OtherComponent = Other.Component->GetName();
-            Best.FaceArea = bASmaller ? AreaA : AreaB;
-            Hits.Add(Best);
-        }
+        FMcpCoplanarHit& Hit = Hits.AddDefaulted_GetRef();
+        Hit.Actor = Pieces[Pair.Piece].Actor;
+        Hit.OtherActor = Pieces[Pair.Other].Actor;
+        Hit.Component = Pieces[Pair.Piece].Component->GetName();
+        Hit.OtherComponent = Pieces[Pair.Other].Component->GetName();
+        Hit.Normal = Pair.Normal;
+        Hit.Gap = Pair.Gap;
+        Hit.OverlapU = Pair.OverlapU;
+        Hit.OverlapV = Pair.OverlapV;
     }
-    Hits.Sort([](const FMcpCoplanarHit& A, const FMcpCoplanarHit& B) { return A.OverlapU * A.OverlapV > B.OverlapU * B.OverlapV; });
     return Hits;
 }
 } // namespace McpCoplanar

@@ -2105,11 +2105,11 @@ describe('a struct member default lands on its own member', () => {
 describe('a row of flush pieces is parted in one pass', () => {
   it('2-colours the touching faces and moves only one colour', () => {
     const plan = code('ControlActor', 'Placement', 'McpCoplanarPlan.cpp');
-    expect(plan).toContain('const TMap<FMcpFaceKey, bool> Moves = McpCoplanarColour(Hits, Sides);');
+    expect(plan).toContain('const TMap<FMcpFaceKey, bool> Moves = McpCoplanarColour(Pieces, Pairs, Sides);');
     expect(plan).toMatch(/Moves\.Add\(Next, !bMoves\);/u);
-    expect(plan).toMatch(/Swap\(Mover, Still\);\s*Shift = -Shift;/u);
+    expect(plan).toMatch(/Swap\(First, Second\);\s*Shift = -Shift;/u);
     expect(code('ControlActor', 'Placement', 'McpCoplanarFix.cpp'))
-      .toContain('const TMap<AActor*, FMcpCoplanarPlan> Plans = PlanCoplanarPass(Hits, Distance, Inside);');
+      .toContain('const FMcpCoplanarSettle Settle = SettleCoplanar(Pieces, Targets, Distance);');
   });
 
   // A variable added but not compiled lives only on the Blueprint's list, so diff_asset called the edit identical.
@@ -2137,8 +2137,8 @@ describe('a row of flush pieces is parted in one pass', () => {
   // A carpet laid over six floor tiles lay partly inside each and was sent under the floor.
   it('judges a piece by its overlaps with all its neighbours together', () => {
     const plan = code('ControlActor', 'Placement', 'McpCoplanarPlan.cpp');
-    expect(plan).toContain('Covered.FindOrAdd(FMcpFaceKey(Hits[Index].Actor, Sides[Index])) += Hits[Index].OverlapU * Hits[Index].OverlapV;');
-    expect(plan).toContain('const bool bApplied = Hit.FaceArea > 0.0 && Overlap >= 0.95 * Hit.FaceArea;');
+    expect(plan).toMatch(/Covered\.FindOrAdd\(FMcpFaceKey\(McpMover\(Pieces, Pairs\[Index\], Pairs\[Index\]\.Piece\), Sides\[Index\]\)\) \+=\s*Pairs\[Index\]\.OverlapU \* Pairs\[Index\]\.OverlapV;/u);
+    expect(plan).toContain('const bool bApplied = Pair.FaceArea > 0.0 && Overlap >= 0.95 * Pair.FaceArea;');
   });
 
   // An ocean was reported as a coplanar pair of its two water info meshes, which no view ever draws.
@@ -3687,7 +3687,31 @@ describe('coplanar faces no camera can see', () => {
   it('leaves out two undersides with something solid right below them', () => {
     const faces = code('ControlActor', 'Placement', 'McpCoplanarFaces.cpp');
     expect(faces).toContain('if (Normal.Z > -0.99)');
-    expect(faces).toContain('if (Best.OverlapU <= 0.0 || McpCoplanarHiddenUnderside(World, Best.Normal, SmallerCenter, A.Actor, B.Actor))');
+    expect(faces).toContain('return McpCoplanarHiddenUnderside(World, Pair.Normal, Smaller, Pieces[Pair.Piece].Actor, Pieces[Pair.Other].Actor);');
+    // The audit, the spawn rows and fix_coplanar all take their pairs through the one filter.
+    expect(faces).toContain('for (const FMcpCoplanarPair& Pair : FindVisiblePairs(World, Pieces, true))');
+    expect(code('ControlActor', 'Placement', 'McpCoplanarFix.cpp')).toContain('TArray<FMcpCoplanarPair> Targets = FindVisiblePairs(World, Pieces, false);');
+  });
+});
+
+// fix_coplanar did not converge on a room Blueprint whose four walls meet at the corners: each pass moved a wall off one
+// neighbour's plane into another's, the next moved it back, and the call ended with pairs left and no word on them.
+describe('fix_coplanar converges or names what it leaves', () => {
+  it('keeps a move only when its pair is parted and the moved piece meets no face it did not meet before', () => {
+    const plan = code('ControlActor', 'Placement', 'McpCoplanarPlan.cpp');
+    expect(plan).toContain('for (int32 Try = 0; Try < 8 && !bKept; ++Try)');
+    expect(plan).toMatch(/bKept = !After\.Contains\(Target\) &&\s*!After\.ContainsByPredicate\(\[&Before\]\(const FMcpTouch& Touch\) \{ return !Before\.Contains\(Touch\); \}\);/u);
+    expect(plan).toContain('Settle.Left.Emplace(Index, McpLeftWhy(Pieces, Pair, bParts, bParted, Distance));');
+  });
+
+  it('plans the parts of a Blueprint with the same check, and names every pair still found', () => {
+    const fix = code('ControlActor', 'Placement', 'McpCoplanarFix.cpp');
+    expect(fix.indexOf('PrepareParts(Pieces, Targets, PinnedBlueprints);')).toBeLessThan(fix.indexOf('SettleCoplanar(Pieces, Targets, Distance)'));
+    expect(fix).toContain('MovePartsInBlueprints(PartMoves, bDryRun, PinnedBlueprints, BlueprintsFixed, BlueprintSkips);');
+    expect(fix).toMatch(/for \(const FMcpCoplanarPair& Pair : FindVisiblePairs\(World, Pieces, false\)\)\s*\{\s*const FString Name = McpCoplanarPairName\(Pieces, Pair\);/u);
+    const test = readFileSync(join(DOMAINS, '..', 'Tests', 'Placement', 'McpCoplanarPlanTests.cpp'), 'utf8');
+    expect(test).toContain('"EngineWire.ControlActor.CoplanarPlan"');
+    expect(test).toContain('McpCoplanar::SettleCoplanar(Pieces, McpCoplanar::FindPairs(Pieces, false), 1.0)');
   });
 });
 

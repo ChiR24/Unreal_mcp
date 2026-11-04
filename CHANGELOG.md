@@ -46,6 +46,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Undo**: asset edits (animation, skeleton, physics, Blackboard, Behavior Tree, sound class, enum) are one undo step each, an edit that changes nothing or that the engine refuses is refused instead of answered done, and enum undo no longer crashes UE 5.7+.
 - **Behavior Trees**: the graph route builds a tree from its Root node.
 - **`get_game_framework_info`** reads a role the game mode spawns nothing for as "None" (a cleared default pawn was left out).
+- **fix_coplanar** settles pieces that share planes with each other (walls meeting at a room's corners): each move is checked against the moves before it, Blueprint parts included, and a pair it cannot part is named under skipped with why.
 - **Placed copies** take a behaviour's or variable's new default; the directory report's reply carries its assets; saving an asset again no longer announces it as new.
 - **Materials**: an instance draws the parent it is given and picks up its material's edits.
 - **Meshes**: morph targets made from deltas and skin weight profile weights last through rebuilds.

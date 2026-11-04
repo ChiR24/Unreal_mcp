@@ -6632,7 +6632,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "oneOf": [
             {
               "type": "array",
-              "description": "One entry per actor: actorName, offset {x, y, z} it moved by, resized when both of its faces on one axis moved (for example \"grew 2.0 units along X\"), and pairs, each face with the other actor and whether it was brought forward or pulled back.",
+              "description": "One entry per actor: actorName, offset {x, y, z} it moved by, and pairs, each face with the other actor and whether it was brought forward or pulled back.",
               "items": {
                 "type": "object",
                 "additionalProperties": true,
@@ -6753,7 +6753,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "passes": {
           "type": "number",
-          "description": "Passes made: a move can line an actor up with a neighbour that moved the same way, so the fix repeats (at most four passes; one under dryRun)."
+          "description": "Passes made: one pass plans every pair, so a second normally finds nothing; the fix repeats for what a plan cannot see, such as a placed copy of a Blueprint that keeps a part where it was (at most four passes; one under dryRun)."
         },
         "physicsSeconds": {
           "type": "number",
@@ -6821,7 +6821,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "remainingPairs": {
           "type": "number",
-          "description": "Coplanar pairs still found afterwards; run audit_placement with kinds [\"coplanar\"] to see them."
+          "description": "Coplanar pairs still found afterwards, each named under skipped."
         },
         "renamed": {
           "type": "array",
@@ -7000,7 +7000,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
               "items": {
                 "type": "string"
               },
-              "description": "Pairs left alone, each with the reason and what to do instead."
+              "description": "Every pair left in one plane, each with why and what to do instead: no move of either piece parts it without putting one in the plane of another face it touches, neither part can move in its Blueprint (its root, a part added at runtime), or a placed copy keeps a location of its own. Under dryRun, the pairs the plan could not part."
             }
           ],
           "description": "Actors left alone, each {actorName, reason}: one that never moves, a pair whose collision cannot be measured (instanced, skeletal or landscape bodies: separate those by hand) or whose collision does not touch (only their bounding boxes overlap)."
