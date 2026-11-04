@@ -117,6 +117,11 @@ bool UEngineWireSubsystem::HandleSequenceAddSection(
     }
   }
 
+  // A track caches the field it is evaluated from and rebuilds it only when its own signature changes, and the
+  // engine's AddNewSoundOnRow and AddSection change neither the signature nor the undo record. A track compiled
+  // before this call (a sequence open in Sequencer, a Play) kept a field without the new section, saved with the
+  // asset, so the section never played, in the editor or the game. Modify the track first, as Sequencer does.
+  Track->Modify();
   // AddNewSoundOnRow sizes the section to the sound (one second for a looping
   // one), picks a free row and adds it to the track itself.
   UMovieSceneSection *NewSection =

@@ -75,6 +75,29 @@ describe('sequence add_section soundPath: a sound on an audio track', () => {
     expect(code).toMatch(/if \(!Sound\) \{\s*Track->AddSection\(\*NewSection\);\s*\}/u);
   });
 
+  // A track rebuilds its cached evaluation field only when its own signature changes, and the engine's
+  // AddNewSoundOnRow, AddSection and FindOrAddSection change neither it nor the undo record: a track compiled before
+  // the call (a sequence open in Sequencer, a Play) kept a field without the new section, so a sound never played.
+  it('modifies the track before every section is added to it', () => {
+    const code = source();
+    const modify = code.indexOf('Track->Modify();');
+    expect(modify).toBeGreaterThan(-1);
+    expect(modify).toBeLessThan(code.indexOf('AddNewSoundOnRow('));
+    expect(modify).toBeLessThan(code.indexOf('Track->AddSection(*NewSection)'));
+
+    const others: Array<[string, string]> = [
+      [join(SEQUENCE_DIR, 'Cinematics', 'McpSeqCine.cpp'), 'Track->AddSection(*Section)'],
+      [join(SEQUENCE_DIR, 'McpSeqKeyframeHelpers.cpp'), 'Track->FindOrAddSection('],
+      [join(PRIVATE, 'Domains', 'WidgetAuthoring', 'Support', 'McpWidgetAnimKeysInternal.h'), 'Track->AddSection(*Section)'],
+    ];
+    for (const [file, add] of others) {
+      const text = stripComments(readFileSync(file, 'utf8'));
+      const at = text.indexOf(add);
+      expect(at, file).toBeGreaterThan(-1);
+      expect(text.lastIndexOf('Track->Modify();', at), file).toBeGreaterThan(-1);
+    }
+  });
+
   it('keeps the sound\'s own length without an end, and the given range with one', () => {
     const code = source();
 

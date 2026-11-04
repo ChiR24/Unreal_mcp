@@ -211,6 +211,8 @@ void RemoveTrackAfterSectionFailure(UMovieScene *MovieScene,
 UMovieSceneSection *AddTrackSection(UMovieScene *MovieScene, UMovieSceneTrack *Track, bool bTrackCreated) {
   UMovieSceneSection *Section = Track ? Track->CreateNewSection() : nullptr;
   if (Section) {
+    // The engine's AddSection leaves the track's signature as it was: Modify first (see McpSeqSections.cpp).
+    Track->Modify();
     Track->AddSection(*Section);
   } else {
     RemoveTrackAfterSectionFailure(MovieScene, Track, bTrackCreated);

@@ -43,6 +43,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Editor state**: calls that change the editor are refused during a Live Coding compile; `save_all` saves streaming sublevels; dry runs no longer compile or save; Blueprint compiles leave placed skeletal meshes posed, and a new skeletal mesh goes through the engine's setter; the change journal ignores engine fix-ups; Behavior Trees build from their Root.
 - **Game framework**: `default_pawn_class` takes `None`, and `get_game_framework_info` reads an empty role as "None".
 - **Material pins**: connect and disconnect take the short pin names the material editor shows.
+- **Sequence sections**: a sound `add_section` adds plays in the editor and the game (its track kept the field it was compiled with before), and adding a section is one undo step.
 
 </details>
 

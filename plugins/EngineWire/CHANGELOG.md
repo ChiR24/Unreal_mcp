@@ -29,6 +29,7 @@ All notable changes to the EngineWire plugin (formerly McpAutomationBridge) will
 - **Captures and geometry**: frame readers warn while assets build; contact sheets handle water and long titles; output files reach captures and EngineWire's folders; bevel and chamfer cut whole parts; geometry undo compares every attribute.
 - **Game framework**: no default pawn writes no class, and an empty role reads "None".
 - **Material pins**: connect and disconnect take the editor's short pin names.
+- **Sequence sections**: the track is modified before a section is added (AddNewSoundOnRow and AddSection change neither its signature nor the undo record, so a track compiled before kept a field without the section and its sound never played).
 
 ## [0.6.0] - 2026-10-27
 

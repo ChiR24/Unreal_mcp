@@ -37,6 +37,10 @@ bool ReadKeyInterpolation(const TSharedPtr<FJsonObject> &Payload, ERichCurveInte
 UMovieSceneSection *FindOrAddKeySection(UMovieScene *MovieScene, UMovieScenePropertyTrack *Track,
                                         FFrameNumber TickFrame, bool *bOutAdded) {
   bool bSectionAdded = false;
+  if (Track) {
+    // FindOrAddSection adds a section without Modify, so undo would keep it: record the track first.
+    Track->Modify();
+  }
   UMovieSceneSection *Section = Track ? Track->FindOrAddSection(0, bSectionAdded) : nullptr;
   if (bOutAdded) {
     *bOutAdded = bSectionAdded;

@@ -49,6 +49,9 @@ inline UMovieSceneSection* FindOrAddSection(UMovieSceneTrack* Track)
         return nullptr;
     }
     Section->SetRange(TRange<FFrameNumber>::All());
+    // AddSection leaves the track's signature and undo record as they were: a track compiled before kept a field
+    // without this section (McpSeqSections.cpp).
+    Track->Modify();
     Track->AddSection(*Section);
     return Section;
 }
