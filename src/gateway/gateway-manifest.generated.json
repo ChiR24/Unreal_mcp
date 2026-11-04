@@ -17852,7 +17852,8 @@
         "import_level",
         "add_sublevel",
         "remove_sublevel",
-        "move_actors_to_level"
+        "move_actors_to_level",
+        "set_current_level"
       ],
       "parameterNames": [
         "actorNames",
@@ -18116,7 +18117,8 @@
               "import_level",
               "add_sublevel",
               "remove_sublevel",
-              "move_actors_to_level"
+              "move_actors_to_level",
+              "set_current_level"
             ],
             "description": "Action to invoke on manage_level."
           }

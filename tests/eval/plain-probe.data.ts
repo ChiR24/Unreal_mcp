@@ -940,6 +940,11 @@ export const PLAIN_PROBE: readonly PlainProbeCase[] = [
   { query: 'turn these actors into a blueprint', accepted: ['blueprint.convert_actors_to_blueprint'] },
   // Actors moved between the open level and its sublevels.
   { query: 'move actors into a sublevel', accepted: ['manage_level.move_actors_to_level'] },
+  // The level new actors are spawned into: the editor's current level.
+  { query: 'set the current level', accepted: ['manage_level.set_current_level'] },
+  { query: 'make a sublevel current', accepted: ['manage_level.set_current_level'] },
+  { query: 'make the persistent level current', accepted: ['manage_level.set_current_level'] },
+  { query: 'spawn into a sublevel', accepted: ['manage_level.set_current_level'] },
   // What a level designer types, each met by one natural topic on its owner.
   { query: 'add a campfire', accepted: ['manage_effect.create_effect'] },
   { query: 'add fireflies', accepted: ['manage_effect.create_effect'] },

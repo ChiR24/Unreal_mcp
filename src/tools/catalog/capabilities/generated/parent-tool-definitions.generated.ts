@@ -26146,7 +26146,8 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             "import_level",
             "add_sublevel",
             "remove_sublevel",
-            "move_actors_to_level"
+            "move_actors_to_level",
+            "set_current_level"
           ],
           "description": "Action to invoke on manage_level."
         }
@@ -26218,6 +26219,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "assetName": {
           "type": "string",
           "description": "Asset name (asset-registry lookup)."
+        },
+        "currentLevel": {
+          "type": "string",
+          "description": "The editor's current level after the call, the one new actors are spawned into: the level that was current before, which adding a sublevel keeps (set_current_level makes the sublevel current)."
         },
         "currentLevelPath": {
           "type": "string",
@@ -26326,10 +26331,22 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "description": "Level asset path (e.g. /Game/Maps/Demo)."
         },
         "levels": {
-          "type": "array",
-          "items": {
-            "type": "string"
-          },
+          "oneOf": [
+            {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "description": "With SUBLEVEL_NOT_FOUND or LEVEL_NOT_LOADED, the levels loaded in the open world."
+            },
+            {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "description": "With SUBLEVEL_NOT_FOUND, AMBIGUOUS_LEVEL, NOT_A_SUBLEVEL or LEVEL_NOT_LOADED, the levels loaded in the open world."
+            }
+          ],
           "description": "With SUBLEVEL_NOT_FOUND or LEVEL_NOT_LOADED, the levels loaded in the open world."
         },
         "loaded": {
@@ -26373,6 +26390,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "number",
           "description": "Performance warnings."
         },
+        "previousLevel": {
+          "type": "string",
+          "description": "The level that was current before the call."
+        },
         "reloaded": {
           "type": "boolean",
           "description": "Whether this call loaded the level from disk (false when alreadyLoaded)."
@@ -26392,6 +26413,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "settledSeconds": {
           "type": "number",
           "description": "How long the reply waited for the level to settle (its water, streamed textures and effects drawn), so a screenshot right after shows the level as it looks."
+        },
+        "shown": {
+          "type": "boolean",
+          "description": "True when the level was hidden in the editor and is shown now, as the editor shows the level it makes current."
         },
         "streamingMethod": {
           "type": "string",

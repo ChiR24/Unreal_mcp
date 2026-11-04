@@ -22,6 +22,7 @@ export const ADD_SUBLEVEL_OUT = {
   world: { type: 'string', description: 'Name of the open level it belongs to.' },
   streamingMethod: { type: 'string', enum: ['Blueprint', 'AlwaysLoaded'], description: 'How it streams: the method asked for, or for alreadyExists the one it already had.' },
   alreadyExists: { type: 'boolean', description: 'True when it was already a sublevel of the open level; nothing was added.' },
+  currentLevel: { type: 'string', description: 'The editor\'s current level after the call, the one new actors are spawned into: the level that was current before, which adding a sublevel keeps (set_current_level makes the sublevel current).' },
 };
 
 export const OPERATIONS_RECORDS: readonly CapabilityRecordSource[] = [
@@ -130,7 +131,7 @@ export const OPERATIONS_RECORDS: readonly CapabilityRecordSource[] = [
   buildCoreRecord({
     parentTool: 'manage_level', action: 'add_sublevel', topics: ['add streaming level'], dispatchAction: 'add_sublevel',
     domain: D, family: 'sublevel',
-    summary: 'Add an existing level map to the level open in the editor as a streaming sublevel, loaded and shown in the editor at once. streamingMethod Blueprint (the default) is not loaded when the game starts until something streams it in (stream during Play, or a Load Stream Level node); AlwaysLoaded loads with the open level. A sublevel already there answers alreadyExists with the method it streams with. The add is not undoable and leaves the open level unsaved: save it to keep the sublevel, or load the level again with discardUnsaved to drop it (and every other unsaved change). Refusals: PARENT_LEVEL_NOT_LOADED (parentLevel is not the open level), PACKAGE_NOT_FOUND or FILE_NOT_FOUND (no such map; nothing is left behind).',
+    summary: 'Add an existing level map to the level open in the editor as a streaming sublevel, loaded and shown in the editor at once. streamingMethod Blueprint (the default) is not loaded when the game starts until something streams it in (stream during Play, or a Load Stream Level node); AlwaysLoaded loads with the open level. A sublevel already there answers alreadyExists with the method it streams with. The level that was current stays current, so new actors are still spawned where they were (currentLevel names it): the editor\'s own Add makes the new sublevel current, and this puts the previous one back; set_current_level makes the sublevel current. The add is not undoable and leaves the open level unsaved: save it to keep the sublevel, or load the level again with discardUnsaved to drop it (and every other unsaved change). Refusals: PARENT_LEVEL_NOT_LOADED (parentLevel is not the open level), PACKAGE_NOT_FOUND or FILE_NOT_FOUND (no such map; nothing is left behind).',
     whenToUse: ['An existing level map must become a sublevel of the open level.'],
     whenNotToUse: ['The sublevel is already added and should be streamed in or out, or shown or hidden; use stream.', 'A new empty level is needed first; use create_level.'],
     // `sublevelPath` used to sit here beside `subLevelPath` as a case-variant
@@ -196,5 +197,32 @@ export const OPERATIONS_RECORDS: readonly CapabilityRecordSource[] = [
     },
     effect: 'destructive', costLatency: 'interactive',
     exampleInput: { action: 'move_actors_to_level', actorNames: ['Lamp_1', 'Lamp_2'], levelPath: '/Game/Maps/Lighting' },
+  }),
+  // Its own record: a write, while its sublevel siblings remove and move are destructive, and a fold takes its
+  // effect and policy from its first member. Its name already holds "current level", so the summary leaves the words
+  // out: with them it ranked within 10% of save on "save the current level to disk", which then lost its signature.
+  buildCoreRecord({
+    parentTool: 'manage_level', action: 'set_current_level', dispatchAction: 'set_current_level',
+    topics: ['make a sublevel current', 'spawn into a sublevel'],
+    domain: D, family: 'sublevel',
+    summary: 'Choose the loaded level of the open world that the editor spawns and pastes actors into, as the Levels panel does: one of its sublevels, or the open level itself with levelPath persistent. A hidden level is shown (shown). The reply names that level before (previousLevel) and after (currentLevel); undo does not restore the earlier one, so calling this again with previousLevel puts it back. Refusals: PIE_ACTIVE (stop Play first), SUBLEVEL_NOT_FOUND or AMBIGUOUS_LEVEL (naming the loaded levels), NOT_A_SUBLEVEL (a Level Instance\'s level: edit its Level Instance instead), LEVEL_NOT_LOADED, LEVEL_LOCKED (unlock it in the Levels panel first).',
+    whenToUse: ['New actors must be spawned or pasted into a sublevel instead of the open level, or into the open level again: this makes that level the editor\'s current level, as the Levels panel\'s Make Current does.'],
+    whenNotToUse: ['Actors already placed belong in another level: use move_actors_to_level.', 'Another level must be opened in the editor: use load.'],
+    inputProps: {
+      levelPath: { ...P.levelPath, description: 'The level to make current: a loaded sublevel\'s /Game package path (an object path or .umap name is cut to the package) or a name only one sublevel\'s path ends with, or persistent (the open level itself, as is its own path).' },
+    },
+    required: ['levelPath'],
+    outputProps: {
+      previousLevel: { type: 'string', description: 'The level that was current before the call.' },
+      currentLevel: { type: 'string', description: 'The level current now, where new actors are spawned and pasted.' },
+      shown: { type: 'boolean', description: 'True when the level was hidden in the editor and is shown now, as the editor shows the level it makes current.' },
+      levels: { type: 'array', items: { type: 'string' }, description: 'With SUBLEVEL_NOT_FOUND, AMBIGUOUS_LEVEL, NOT_A_SUBLEVEL or LEVEL_NOT_LOADED, the levels loaded in the open world.' },
+    },
+    effect: 'write', behavior: { idempotency: 'idempotent' },
+    exampleInput: { action: 'set_current_level', levelPath: '/Game/Maps/Sub01' },
+    exampleOutput: {
+      success: true, message: '/Game/Maps/Sub01 is the current level now, in place of /Game/Maps/Demo: new actors are spawned and pasted into it.',
+      previousLevel: '/Game/Maps/Demo', currentLevel: '/Game/Maps/Sub01', shown: false,
+    },
   }),
 ];

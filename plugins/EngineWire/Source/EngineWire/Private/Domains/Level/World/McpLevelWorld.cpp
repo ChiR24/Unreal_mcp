@@ -39,4 +39,8 @@ TArray<ULevelStreaming*> FindStreamingLevels(UWorld* World, const FString& Name)
   }
   return Matches;
 }
+
+bool IsUserSublevel(const ULevelStreaming* Streaming) {
+  return !Streaming->HasAnyFlags(RF_Transient) && !Streaming->GetClass()->HasAnyClassFlags(CLASS_Transient);
+}
 } // namespace McpLevelHandlers

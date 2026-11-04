@@ -32,12 +32,6 @@ TArray<FString> UnsavedPackagesOf(ULevel* Level) {
   }
   return Out;
 }
-
-// A Level Instance's level (or one loaded at run time) streams through a transient entry the open level never saves:
-// the Levels panel leaves it out, and removing it would pull the level from under its Level Instance actor.
-bool IsUserSublevel(const ULevelStreaming* Streaming) {
-  return !Streaming->HasAnyFlags(RF_Transient) && !Streaming->GetClass()->HasAnyClassFlags(CLASS_Transient);
-}
 } // namespace
 
 bool HandleRemoveSublevelAction(UEngineWireSubsystem& Subsystem, const FString& RequestId, const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> RequestingSocket) {

@@ -95,6 +95,11 @@ bool HandleAddSublevelAction(UEngineWireSubsystem& Subsystem, const FString& Req
                              TEXT("NO_WORLD"));
       return true;
     }
+    // Where new actors are spawned after the call: adding a sublevel keeps it (see below).
+    const auto CurrentLevelPath = [World]() {
+      const ULevel* Current = World->GetCurrentLevel();
+      return Current ? Current->GetOutermost()->GetName() : FString();
+    };
 
     // A sub-level can only be added to the persistent level open in the
     // editor. parentLevel names that parent; a different one is refused rather
@@ -133,6 +138,7 @@ bool HandleAddSublevelAction(UEngineWireSubsystem& Subsystem, const FString& Req
             Result->SetStringField(TEXT("streamingMethod"),
                 ExistingStreamingLevel->IsA<ULevelStreamingAlwaysLoaded>() ? TEXT("AlwaysLoaded") : TEXT("Blueprint"));
             Result->SetBoolField(TEXT("alreadyExists"), true);
+            Result->SetStringField(TEXT("currentLevel"), CurrentLevelPath());
             Subsystem.SendAutomationResponse(RequestingSocket, RequestId, true,
                                    FString::Printf(TEXT("Sublevel already in world: %s"), *SubLevelPath), Result);
             return true;
@@ -150,8 +156,15 @@ bool HandleAddSublevelAction(UEngineWireSubsystem& Subsystem, const FString& Req
     UClass *StreamingClass = bAlwaysLoaded ? ULevelStreamingAlwaysLoaded::StaticClass()
                                            : ULevelStreamingDynamic::StaticClass();
 
+    // AddLevelToWorld makes the level it adds the current one, as the Levels panel's Add does, so spawns meant for the
+    // open level landed in the sublevel without a word: the level that was current stays current (set_current_level
+    // makes the sublevel current).
+    ULevel* const CurrentBefore = World->GetCurrentLevel();
     ULevelStreaming *NewLevel = UEditorLevelUtils::AddLevelToWorld(
         World, *SubLevelPath, StreamingClass);
+    if (CurrentBefore && World->SetCurrentLevel(CurrentBefore)) {
+      FEditorDelegates::NewCurrentLevel.Broadcast();
+    }
     if (NewLevel) {
       // AddLevelToWorld loads the level before it returns (RefreshStreamingLevels), so a null level here is a
       // file that did not load; the sleep that used to sit here only held the game thread for 100 ms.
@@ -164,8 +177,11 @@ bool HandleAddSublevelAction(UEngineWireSubsystem& Subsystem, const FString& Req
         Result->SetStringField(TEXT("subLevelPath"), SubLevelPath);
         Result->SetStringField(TEXT("world"), World->GetName());
         Result->SetStringField(TEXT("streamingMethod"), StreamingMethod);
+        Result->SetStringField(TEXT("currentLevel"), CurrentLevelPath());
         Subsystem.SendAutomationResponse(RequestingSocket, RequestId, true,
-                               TEXT("Sublevel added successfully"), Result);
+            FString::Printf(TEXT("Sublevel added; %s is still the current level, where new actors are spawned "
+                                 "(set_current_level makes the sublevel current)."), *CurrentLevelPath()),
+            Result);
       } else {
         // The level file did not load: take back the entry AddLevelToWorld made, so a refused call leaves
         // no broken sublevel in the open level.

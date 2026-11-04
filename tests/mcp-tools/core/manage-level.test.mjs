@@ -21,6 +21,13 @@ const MOVED_LEVEL = `${TEST_FOLDER}/LevelMoved_${ts}`;
 const SAVE_VIA_SAVE_LEVEL = `${TEST_FOLDER}/LevelSaveViaSave_${ts}`;
 const TEST_ACTOR = `LevelActor_${ts}`;
 const MOVE_ACTOR = `LevelMoveCube_${ts}`;
+// A second level named as the sublevel, in another folder: the bare name then names two sublevels.
+const TWIN_LEVEL = `${TEST_FOLDER}/Twin_${ts}/LevelSub_${ts}`;
+const CURRENT_ACTOR = `LevelCurrentCube_${ts}`;
+const LEVEL_INSTANCE = `LevelInstance_${ts}`;
+const TEMPLATE_MAP = '/Engine/Maps/Templates/Template_Default';
+// The open level's own ULevel: with no streaming entry of its own, its bLocked is the lock the Levels panel sets.
+const MAIN_PERSISTENT_LEVEL = `${MAIN_LEVEL}.LevelMain_${ts}:PersistentLevel`;
 
 const testCases = [
   // === CREATE / SAVE / LOAD ===
@@ -31,6 +38,7 @@ const testCases = [
   { scenario: 'ACTION: save_as', toolName: 'manage_level', arguments: { action: 'save_as', savePath: SAVE_AS_LEVEL }, expected: 'success' },
   { scenario: 'ACTION: save_level_as', toolName: 'manage_level', arguments: { action: 'save_level_as', savePath: SAVE_LEVEL_AS }, expected: 'success' },
   { scenario: 'ACTION: save with savePath saves as', toolName: 'manage_level', arguments: { action: 'save', savePath: SAVE_VIA_SAVE_LEVEL }, expected: 'success' },
+  { scenario: 'Setup: a level named as the sublevel, in another folder', toolName: 'manage_level', arguments: { action: 'create_level', levelName: `LevelSub_${ts}`, levelPath: `${TEST_FOLDER}/Twin_${ts}`, useWorldPartition: false, saveDirtyPackages: true }, expected: 'success|already exists' },
   { scenario: 'Setup: create sublevel', toolName: 'manage_level', arguments: { action: 'create_level', levelName: `LevelSub_${ts}`, levelPath: TEST_FOLDER, useWorldPartition: false, saveDirtyPackages: true }, expected: 'success|already exists' },
   // The sub-level create_level just made is the open one, so this is a real load.
   { scenario: 'ACTION: load', toolName: 'manage_level', arguments: { action: 'load', levelPath: MAIN_LEVEL, streaming: false, saveDirtyPackages: true }, expected: 'success', assertions: [{ path: 'structuredContent.result.reloaded', equals: true, label: 'the level was loaded from disk' }, { path: 'structuredContent.result.alreadyLoaded', equals: false, label: 'it was not the open one' }] },
@@ -44,7 +52,8 @@ const testCases = [
   { scenario: 'Setup: back to the main level', toolName: 'manage_level', arguments: { action: 'load', levelPath: MAIN_LEVEL, streaming: false, saveDirtyPackages: true }, expected: 'success' },
   { scenario: 'INFO: the dropped spawn is gone', toolName: 'control_actor', arguments: { action: 'find_by_name', name: TEST_ACTOR }, expected: 'success', assertions: [{ path: 'structuredContent.result.count', equals: 0, label: 'discardUnsaved dropped it' }] },
 
-  { scenario: 'ADD: add_sublevel', toolName: 'manage_level', arguments: { action: 'add_sublevel', subLevelPath: SUB_LEVEL, parentLevel: MAIN_LEVEL, streamingMethod: 'AlwaysLoaded' }, expected: 'success|already exists' },
+  // The editor's own Add makes the sublevel current, and spawns meant for the open level landed in it: add keeps the level that was current.
+  { scenario: 'ADD: add_sublevel', toolName: 'manage_level', arguments: { action: 'add_sublevel', subLevelPath: SUB_LEVEL, parentLevel: MAIN_LEVEL, streamingMethod: 'AlwaysLoaded' }, expected: 'success|already exists', assertions: [{ path: 'structuredContent.result.currentLevel', equals: MAIN_LEVEL, label: 'the open level is still current' }] },
   { scenario: 'ERROR: add_sublevel refuses a parentLevel that is not open', toolName: 'manage_level', arguments: { action: 'add_sublevel', subLevelPath: SUB_LEVEL, parentLevel: SAVE_AS_LEVEL }, expected: 'error|PARENT_LEVEL_NOT_LOADED' },
   { scenario: 'ADD: add_sublevel via levelPath alias', toolName: 'manage_level', arguments: { action: 'add_sublevel', levelPath: SUB_LEVEL, streamingMethod: 'AlwaysLoaded' }, expected: 'success|already exists' },
   { scenario: 'ACTION: load with streaming adds a sub-level', toolName: 'manage_level', arguments: { action: 'load', levelPath: SUB_LEVEL, streaming: true }, expected: 'success|already exists' },
@@ -76,6 +85,46 @@ const testCases = [
   { scenario: 'ERROR: move_actors_to_level into a level that is not a sublevel', toolName: 'manage_level', arguments: { action: 'move_actors_to_level', actorNames: [MOVE_ACTOR], levelPath: `${TEST_FOLDER}/NoSuchSub_${ts}` }, expected: 'error|SUBLEVEL_NOT_FOUND' },
   { scenario: 'ERROR: move_actors_to_level names an actor that is not there', toolName: 'manage_level', arguments: { action: 'move_actors_to_level', actorNames: [`NoSuchActor_${ts}`], levelPath: SUB_LEVEL }, expected: 'error|ACTOR_NOT_FOUND' },
   { scenario: 'Cleanup: delete the moved cube', toolName: 'control_actor', arguments: { action: 'delete', actorName: MOVE_ACTOR }, expected: 'success|not found' },
+
+  // === CURRENT LEVEL: the level new actors are spawned into ===
+  // The sublevel is still hidden by unload above, and the editor draws the level it makes current.
+  { scenario: 'ACTION: set_current_level makes the sublevel current and shows it', toolName: 'manage_level', arguments: { action: 'set_current_level', levelPath: SUB_LEVEL }, expected: 'success', assertions: [
+    { path: 'structuredContent.result.previousLevel', equals: MAIN_LEVEL, label: 'the open level was current' },
+    { path: 'structuredContent.result.currentLevel', equals: SUB_LEVEL, label: 'the sublevel is current now' },
+    { path: 'structuredContent.result.shown', equals: true, label: 'it was hidden and is shown' },
+  ] },
+  { scenario: 'INFO: get_current_level reads the sublevel', toolName: 'manage_level', arguments: { action: 'get_current_level' }, expected: 'success', assertions: [{ path: 'structuredContent.result.levelPath', equals: SUB_LEVEL, label: 'the editor\'s current level' }] },
+  { scenario: 'ACTION: set_current_level of the current level changes nothing', toolName: 'manage_level', arguments: { action: 'set_current_level', levelPath: `LevelSub_${ts}` }, expected: 'success', assertions: [
+    { path: 'structuredContent.result.previousLevel', equals: SUB_LEVEL, label: 'the name after the last slash finds it, current already' },
+    { path: 'structuredContent.result.shown', equals: false, label: 'visible already' },
+  ] },
+  { scenario: 'Setup: a cube spawned now', toolName: 'control_actor', arguments: { action: 'spawn', classPath: '/Engine/BasicShapes/Cube', actorName: CURRENT_ACTOR, location: { x: 0, y: -900, z: 50 } }, expected: 'success' },
+  { scenario: 'INFO: the cube went into the current level', toolName: 'manage_level', arguments: { action: 'move_actors_to_level', actorNames: [CURRENT_ACTOR], levelPath: SUB_LEVEL }, expected: 'success', assertions: [
+    { path: 'structuredContent.result.alreadyThere', includes: CURRENT_ACTOR, label: 'spawned into the sublevel' },
+    { path: 'structuredContent.result.moved', length: 0, label: 'nothing moved' },
+  ] },
+  { scenario: 'Cleanup: delete the cube spawned into the sublevel', toolName: 'control_actor', arguments: { action: 'delete', actorName: CURRENT_ACTOR }, expected: 'success|not found' },
+  { scenario: 'Setup: add the level that shares the sublevel\'s name', toolName: 'manage_level', arguments: { action: 'add_sublevel', subLevelPath: TWIN_LEVEL }, expected: 'success', assertions: [{ path: 'structuredContent.result.currentLevel', equals: SUB_LEVEL, label: 'adding a sublevel keeps the current level' }] },
+  { scenario: 'ERROR: set_current_level by a name two sublevels share', toolName: 'manage_level', arguments: { action: 'set_current_level', levelPath: `LevelSub_${ts}` }, expected: 'error|AMBIGUOUS_LEVEL' },
+  { scenario: 'Cleanup: take the second sublevel out', toolName: 'manage_level', arguments: { action: 'remove_sublevel', subLevelPath: TWIN_LEVEL, discardUnsaved: true }, expected: 'success' },
+  { scenario: 'Setup: lock the open level', toolName: 'inspect', arguments: { action: 'set_property', objectPath: MAIN_PERSISTENT_LEVEL, propertyName: 'bLocked', value: true }, expected: 'success' },
+  { scenario: 'ERROR: set_current_level refuses a locked level', toolName: 'manage_level', arguments: { action: 'set_current_level', levelPath: 'persistent' }, expected: 'error|LEVEL_LOCKED' },
+  { scenario: 'Cleanup: unlock the open level', toolName: 'inspect', arguments: { action: 'set_property', objectPath: MAIN_PERSISTENT_LEVEL, propertyName: 'bLocked', value: false }, expected: 'success' },
+  { scenario: 'ACTION: set_current_level persistent makes the open level current again', toolName: 'manage_level', arguments: { action: 'set_current_level', levelPath: 'persistent' }, expected: 'success', assertions: [
+    { path: 'structuredContent.result.previousLevel', equals: SUB_LEVEL, label: 'the sublevel was current' },
+    { path: 'structuredContent.result.currentLevel', equals: MAIN_LEVEL, label: 'the open level is current' },
+  ] },
+  // A Level Instance's level streams through an entry of its own, which is no sublevel.
+  { scenario: 'Setup: a Level Instance in the open level', toolName: 'manage_level_structure', arguments: { action: 'create_level_instance', levelAssetPath: TEMPLATE_MAP, label: LEVEL_INSTANCE, location: { x: 0, y: -5000, z: 0 }, save: false }, expected: 'success' },
+  { scenario: 'INFO: the Level Instance\'s level in the streaming list', toolName: 'manage_level', arguments: { action: 'list_levels' }, expected: 'success', captureResult: { key: 'instanceLevel', fromField: 'result.currentWorldLevels', where: { path: 'path', includes: '_LevelInstance_' }, selectField: 'path' } },
+  { scenario: 'ERROR: set_current_level refuses a Level Instance\'s level', toolName: 'manage_level', arguments: { action: 'set_current_level', levelPath: '${captured:instanceLevel}' }, expected: 'error|NOT_A_SUBLEVEL' },
+  // create_level_instance's fold twin placed a second one under the same label.
+  { scenario: 'Cleanup: delete the Level Instance', toolName: 'control_actor', arguments: { action: 'delete', actorName: LEVEL_INSTANCE }, expected: 'success|not found' },
+  { scenario: 'Cleanup: delete the twin\'s Level Instance', toolName: 'control_actor', arguments: { action: 'delete', actorName: LEVEL_INSTANCE }, expected: 'success|not found' },
+  { scenario: 'ERROR: set_current_level refuses a level that is not a sublevel', toolName: 'manage_level', arguments: { action: 'set_current_level', levelPath: `${TEST_FOLDER}/NoSuchSub_${ts}` }, expected: 'error|SUBLEVEL_NOT_FOUND' },
+  { scenario: 'Setup: start Play', toolName: 'control_editor', arguments: { action: 'play' }, expected: 'success', timeoutMs: 30000 },
+  { scenario: 'ERROR: set_current_level refuses while Play runs', toolName: 'manage_level', arguments: { action: 'set_current_level', levelPath: SUB_LEVEL }, expected: 'error|PIE_ACTIVE' },
+  { scenario: 'Cleanup: stop Play', toolName: 'control_editor', arguments: { action: 'stop' }, expected: 'success', timeoutMs: 30000 },
 
   // === REMOVE ===
   { scenario: 'ERROR: remove_sublevel refuses a level that is not a sublevel of the open one', toolName: 'manage_level', arguments: { action: 'remove_sublevel', subLevelPath: `${TEST_FOLDER}/NoSuchSub_${ts}` }, expected: 'error|SUBLEVEL_NOT_FOUND' },
