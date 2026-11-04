@@ -217,12 +217,49 @@ bool FinishAppendPolygonsInput(FAppendPolygonsInput& Input, FString& OutError)
     return TriangulateAppendFaces(Input, OutError) && CheckAppendEdges(Input, OutError);
 }
 
+// repeat: the whole cage laid out count x rows x layers times, each copy moved by its step (a row of stripes, louvre
+// slats, a ring of fins from one face). Copies keep the faceGroups and faceMaterials given.
+static bool RepeatAppendCage(const TSharedPtr<FJsonObject>& Payload, FAppendPolygonsInput& Input, FString& OutError)
+{
+    FMcpRepeatGrid Grid;
+    if (!ReadRepeatGrid(Payload, Grid))
+    {
+        OutError = TEXT("repeat takes count, rows and layers of 1 or more and offsets {x, y, z}");
+        return false;
+    }
+    const int32 VertexCount = Input.Vertices.Num(), FaceCount = Input.Faces.Num();
+    if (VertexCount * Grid.Num() > MaxAppendVertices)
+    {
+        OutError = FString::Printf(TEXT("the repeated cage comes to more than %d points; append it in several calls"), MaxAppendVertices);
+        return false;
+    }
+    for (int32 Copy = 1; Copy < static_cast<int32>(Grid.Num()); ++Copy)
+    {
+        const FVector3d Shift = Grid.At(Copy);
+        for (int32 Vertex = 0; Vertex < VertexCount; ++Vertex)
+        {
+            Input.Vertices.Add(Input.Vertices[Vertex] + Shift);
+        }
+        for (int32 Face = 0; Face < FaceCount; ++Face)
+        {
+            TArray<int32> Corners = Input.Faces[Face];
+            for (int32& Corner : Corners) Corner += Copy * VertexCount;
+            Input.Faces.Add(MoveTemp(Corners));
+            // An element of the array being added to may not be passed to its own Add: copy it out first.
+            if (Input.FaceGroups.Num() > 0) { const int32 Group = Input.FaceGroups[Face]; Input.FaceGroups.Add(Group); }
+            if (Input.FaceMaterials.Num() > 0) { const int32 Material = Input.FaceMaterials[Face]; Input.FaceMaterials.Add(Material); }
+        }
+    }
+    return true;
+}
+
 bool ParseAppendPolygonsInput(const TSharedPtr<FJsonObject>& Payload, FAppendPolygonsInput& OutInput, FString& OutError)
 {
     return ParseAppendVertices(Payload, OutInput.Vertices, OutError)
         && ParseAppendFaces(Payload, OutInput.Vertices.Num(), OutInput.Faces, OutError)
         && ParseAppendFaceIntegers(Payload, TEXT("faceGroups"), OutInput.Faces.Num(), MaxAppendGroupId, OutInput.FaceGroups, OutError)
         && ParseAppendFaceIntegers(Payload, TEXT("faceMaterials"), OutInput.Faces.Num(), MAX_MATERIAL_ID, OutInput.FaceMaterials, OutError)
+        && RepeatAppendCage(Payload, OutInput, OutError)
         && FinishAppendPolygonsInput(OutInput, OutError);
 }
 } // namespace McpGeometryHandlers

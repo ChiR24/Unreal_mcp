@@ -28,6 +28,15 @@ describe('append_polygons validates everything before it touches the mesh', () =
     expect(source).toContain('Corners->Num() < 3 || Corners->Num() > MaxAppendFaceCorners');
   });
 
+  it('repeats the whole cage within the point budget, before the cage is triangulated and checked', () => {
+    const source = input();
+    expect(source).toMatch(/&& RepeatAppendCage\(Payload, OutInput, OutError\)\s*&& FinishAppendPolygonsInput\(OutInput, OutError\);/u);
+    expect(source).toContain('if (VertexCount * Grid.Num() > MaxAppendVertices)');
+    // TArray::Add refuses an element of the array it grows: the group and material are copied out first.
+    expect(source).toContain('const int32 Group = Input.FaceGroups[Face]; Input.FaceGroups.Add(Group);');
+    expect(source).toContain('const int32 Material = Input.FaceMaterials[Face]; Input.FaceMaterials.Add(Material);');
+  });
+
   it('ear clips faces of more than three corners in the winding they were given', () => {
     // The block comment naming bOrientAsHoleFill is stripped before this reads, leaving only `false`: same winding, not a hole fill.
     expect(input()).toMatch(/PolygonTriangulation::TriangulateSimplePolygon\(Polygon, Local,\s+false\);/u);

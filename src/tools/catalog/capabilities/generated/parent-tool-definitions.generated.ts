@@ -23196,7 +23196,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             "translate",
             "difference"
           ],
-          "description": "Which edit dynamic mesh variant to run.\ncreate: Spawn a DynamicMesh actor to author geometry into: empty, or a copy of a static mesh asset. One undo step.\nappend_vertex: Append one vertex to a DynamicMesh actor and return its index.\nappend_triangle: Append a triangle to a DynamicMesh actor from three corner positions.\nappend_polygons: Author a polygon cage on a DynamicMesh actor in one call: new vertices and faces of three or more corners, each with its own polygroup and material id.\nappend_cuboids: Append axis-aligned boxes to a DynamicMesh actor in one call, each with a material id, faces left open and a repeat along up to three axes (a railing, a stack of crates, a grid of windows, shelves, pillars), wound outward for you.\nappend_loft: Append a surface lofted through cross sections to a DynamicMesh actor: each section a loop of points (the same count in every one), joined in order with every face turned outward, the ends capped flat or closed to a tip point.\nappend_tubes: Append tubes to a DynamicMesh actor in one call, each a ring of points carried along a path without twisting: straight pipes and rods from two points, bent pipes, hanging cables and hoses from more, rings and valve wheels when closed, tapered with endRadius, capped or open, repeated along up to three axes.\nappend_mesh: Copy a static mesh asset into a DynamicMesh actor at placements, each repeated along up to three axes, with its material slots mapped to the target's material ids (a list cycles copy by copy for colour variety): a model assembled from detailed parts in one call, its copies keeping the asset's normals and UVs.\ndelete_triangles: Delete the triangles of a DynamicMesh actor that triangleIndices or a region picks (by box, facing direction, polygroup or material id), with the points only they used.\nset_vertex_position: Move one vertex of a DynamicMesh actor to a new position.\nset_vertex_color: Set the vertex colour on one vertex, or on every vertex, of a DynamicMesh actor.\nbake_vertex_colors: Bake ambient occlusion, convex-edge, concave-cavity and height masks into the vertex colours of a DynamicMesh actor, for a material to read through its VertexColor node.\nset_material_id: Set the material id (the static-mesh material slot) of triangles of a DynamicMesh actor: every triangle, the triangleIndices you list, or a region.\nset_uvs: Set the UV coordinate of one vertex on a UV channel of a DynamicMesh actor.\nsplit_normals: Split the normals of a DynamicMesh actor above an angle threshold to harden edges.\ntranslate: Translate every vertex of a DynamicMesh actor, leaving the actor transform alone.\ndifference: Subtract a tool mesh from a target mesh under the difference spelling of boolean_subtract."
+          "description": "Which edit dynamic mesh variant to run.\ncreate: Spawn a DynamicMesh actor to author geometry into: empty, or a copy of a static mesh asset. One undo step.\nappend_vertex: Append one vertex to a DynamicMesh actor and return its index.\nappend_triangle: Append a triangle to a DynamicMesh actor from three corner positions.\nappend_polygons: Author a polygon cage on a DynamicMesh actor in one call: new vertices and faces of three or more corners, each with its own polygroup and material id, laid out once or repeated in rows (repeat: a run of stripes, slats or fins from one face).\nappend_cuboids: Append axis-aligned boxes to a DynamicMesh actor in one call, each with a material id, faces left open and a repeat along up to three axes (a railing, a stack of crates, a grid of windows, shelves, pillars), wound outward for you.\nappend_loft: Append a surface lofted through cross sections to a DynamicMesh actor: each section a loop of points (the same count in every one), joined in order with every face turned outward, the ends capped flat or closed to a tip point.\nappend_tubes: Append tubes to a DynamicMesh actor in one call, each a ring of points carried along a path without twisting: straight pipes and rods from two points, bent pipes, hanging cables and hoses from more, rings and valve wheels when closed, tapered with endRadius, capped or open, repeated along up to three axes.\nappend_mesh: Copy a static mesh asset into a DynamicMesh actor at placements, each repeated along up to three axes, with its material slots mapped to the target's material ids (a list cycles copy by copy for colour variety): a model assembled from detailed parts in one call, its copies keeping the asset's normals and UVs.\ndelete_triangles: Delete the triangles of a DynamicMesh actor that triangleIndices or a region picks (by box, facing direction, polygroup or material id), with the points only they used.\nset_vertex_position: Move one vertex of a DynamicMesh actor to a new position.\nset_vertex_color: Set the vertex colour on one vertex, or on every vertex, of a DynamicMesh actor.\nbake_vertex_colors: Bake ambient occlusion, convex-edge, concave-cavity and height masks into the vertex colours of a DynamicMesh actor, for a material to read through its VertexColor node.\nset_material_id: Set the material id (the static-mesh material slot) of triangles of a DynamicMesh actor: every triangle, the triangleIndices you list, or a region.\nset_uvs: Set the UV coordinate of one vertex on a UV channel of a DynamicMesh actor.\nsplit_normals: Split the normals of a DynamicMesh actor above an angle threshold to harden edges.\ntranslate: Translate every vertex of a DynamicMesh actor, leaving the actor transform alone.\ndifference: Subtract a tool mesh from a target mesh under the difference spelling of boolean_subtract."
         },
         "enableCollision": {
           "type": "boolean",
@@ -23941,6 +23941,91 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             }
           },
           "additionalProperties": false
+        },
+        "repeat": {
+          "type": "object",
+          "properties": {
+            "count": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 1000,
+              "description": "Copies along offset, the cage itself included (default 1)."
+            },
+            "offset": {
+              "type": "object",
+              "properties": {
+                "x": {
+                  "type": "number",
+                  "description": "X"
+                },
+                "y": {
+                  "type": "number",
+                  "description": "Y"
+                },
+                "z": {
+                  "type": "number",
+                  "description": "Z"
+                }
+              },
+              "required": [],
+              "additionalProperties": false,
+              "description": "Step from one copy to the next, e.g. {x: 200} for one every 2 m."
+            },
+            "rows": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 1000,
+              "description": "Rows of those copies (default 1)."
+            },
+            "rowOffset": {
+              "type": "object",
+              "properties": {
+                "x": {
+                  "type": "number",
+                  "description": "X"
+                },
+                "y": {
+                  "type": "number",
+                  "description": "Y"
+                },
+                "z": {
+                  "type": "number",
+                  "description": "Z"
+                }
+              },
+              "required": [],
+              "additionalProperties": false,
+              "description": "Step from one row to the next."
+            },
+            "layers": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 1000,
+              "description": "Layers of those rows (default 1), e.g. the tiers of a stack."
+            },
+            "layerOffset": {
+              "type": "object",
+              "properties": {
+                "x": {
+                  "type": "number",
+                  "description": "X"
+                },
+                "y": {
+                  "type": "number",
+                  "description": "Y"
+                },
+                "z": {
+                  "type": "number",
+                  "description": "Z"
+                }
+              },
+              "required": [],
+              "additionalProperties": false,
+              "description": "Step from one layer to the next."
+            }
+          },
+          "additionalProperties": false,
+          "description": "Lay the cage out count x rows x layers times, each copy moved by offset per step, rowOffset per row and layerOffset per layer. A step larger than the cage leaves a gap between copies."
         },
         "resolution": {
           "type": "integer",

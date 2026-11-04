@@ -26,6 +26,8 @@ const CUBE_VERTICES = [
 const CUBE_FACES = [[0, 3, 2, 1], [4, 5, 6, 7], [0, 1, 5, 4], [1, 2, 6, 5], [2, 3, 7, 6], [3, 0, 4, 7]];
 // An L-shaped hexagon: concave, so a fan would overlap and only ear clipping triangulates it.
 const L_VERTICES = [{ x: 0, y: 0, z: 0 }, { x: 100, y: 0, z: 0 }, { x: 100, y: 50, z: 0 }, { x: 50, y: 50, z: 0 }, { x: 50, y: 100, z: 0 }, { x: 0, y: 100, z: 0 }];
+// One upright quad, to repeat.
+const QUAD_VERTICES = [{ x: 0, y: 0, z: 0 }, { x: 100, y: 0, z: 0 }, { x: 100, y: 0, z: 100 }, { x: 0, y: 0, z: 100 }];
 
 const cage = (actorName, extra = {}) => ({ action: 'append_polygons', actorName, vertices: CUBE_VERTICES, faces: CUBE_FACES, ...extra });
 const create = (name) => ({ action: 'create_procedural_mesh', name, actorName: name });
@@ -70,6 +72,15 @@ const testCases = [
     arguments: { action: 'append_polygons', actorName: SETUP, vertices: CUBE_VERTICES, faces: [[0, 3, 2]] }, expected: 'success',
     assertions: [{ path: 'structuredContent.result.verticesAdded', equals: 3, label: 'only the three corners the face uses' }],
   },
+  {
+    scenario: 'APPEND: repeat lays the cage out count x rows times, each copy its own points', toolName: 'manage_geometry',
+    arguments: { action: 'append_polygons', actorName: SETUP, vertices: QUAD_VERTICES, faces: [[0, 1, 2, 3]], faceMaterials: [1], repeat: { count: 3, offset: { x: 150 }, rows: 2, rowOffset: { z: 150 } } }, expected: 'success',
+    assertions: [
+      { path: 'structuredContent.result.facesAdded', equals: 6, label: 'three copies in each of two rows' },
+      { path: 'structuredContent.result.verticesAdded', equals: 24, label: 'four points per copy' },
+      { path: 'structuredContent.result.trianglesAdded', equals: 12, label: 'two triangles per quad' },
+    ],
+  },
 
   // === REFUSALS: nothing is appended, and the message names the face ===
   { scenario: 'APPEND: a vertex index outside vertices is refused', toolName: 'manage_geometry', arguments: { action: 'append_polygons', actorName: SETUP, vertices: CUBE_VERTICES, faces: [[0, 1, 99]] }, expected: 'error|INVALID_POLYGONS' },
@@ -77,6 +88,7 @@ const testCases = [
   { scenario: 'APPEND: two faces wound the same way along a shared edge are refused', toolName: 'manage_geometry', arguments: { action: 'append_polygons', actorName: SETUP, vertices: CUBE_VERTICES, faces: [[0, 1, 2], [0, 1, 3]] }, expected: 'error|INVALID_POLYGONS' },
   { scenario: 'APPEND: faceGroups of the wrong length is refused', toolName: 'manage_geometry', arguments: cage(SETUP, { faceGroups: [0, 1] }), expected: 'error|INVALID_POLYGONS' },
   { scenario: 'APPEND: faceMaterials of the wrong length is refused', toolName: 'manage_geometry', arguments: cage(SETUP, { faceMaterials: [0] }), expected: 'error|INVALID_POLYGONS' },
+  { scenario: 'APPEND: a repeat past the point budget is refused', toolName: 'manage_geometry', arguments: { action: 'append_polygons', actorName: SETUP, vertices: QUAD_VERTICES, faces: [[0, 1, 2, 3]], repeat: { count: 1000, offset: { x: 150 }, rows: 10, rowOffset: { z: 150 } } }, expected: 'error|INVALID_POLYGONS' },
   { scenario: 'APPEND: a missing actor is refused', toolName: 'manage_geometry', arguments: cage(`NoSuchMesh_${ts}`), expected: 'error|ACTOR_NOT_FOUND' },
 
   // === BOXES: many boxes in one call, wound outward, repeated along up to three axes ===

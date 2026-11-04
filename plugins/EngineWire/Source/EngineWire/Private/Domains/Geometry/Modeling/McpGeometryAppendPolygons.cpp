@@ -146,7 +146,7 @@ bool HandleAppendPolygons(UEngineWireSubsystem* Self, const FString& RequestId,
     Result->SetNumberField(TEXT("triangleCount"), Mesh->GetTriangleCount());
     Result->SetNumberField(TEXT("groupCount"), GroupCount);
     McpHandlerUtils::AddVerification(Result, TargetActor);
-    const FString What = bBoxes ? FString::Printf(TEXT("%d cuboids"), Input.BoxCount)
+    const FString What = bBoxes ? FString::Printf(TEXT("%d cuboid%s"), Input.BoxCount, Input.BoxCount == 1 ? TEXT("") : TEXT("s"))
                        : bLoft ? FString::Printf(TEXT("a loft of %d faces"), Input.Faces.Num())
                        : bTubes ? FString::Printf(TEXT("%d tube%s of %d faces"), Input.TubeCount, Input.TubeCount == 1 ? TEXT("") : TEXT("s"), Input.Faces.Num())
                                : FString::Printf(TEXT("%d faces"), Input.Faces.Num());

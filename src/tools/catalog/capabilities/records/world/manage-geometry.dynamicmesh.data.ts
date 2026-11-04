@@ -293,11 +293,11 @@ export const GEOMETRY_DYNAMICMESH_RECORDS: readonly CapabilityRecordSource[] = [
   buildWorldRecord({
     parentTool: 'manage_geometry', action: 'append_polygons', plugins: PLUGIN,
     topics: ['polygon cage', 'author a mesh from vertices and faces', 'quad mesh', 'hard surface cage', 'low poly blockout mesh', 'subdivision cage'],
-    family: F, summary: 'Author a polygon cage on a DynamicMesh actor in one call: new vertices and faces of three or more corners, each with its own polygroup and material id.',
+    family: F, summary: 'Author a polygon cage on a DynamicMesh actor in one call: new vertices and faces of three or more corners, each with its own polygroup and material id, laid out once or repeated in rows (repeat: a run of stripes, slats or fins from one face).',
     whenToUse: ['A smooth, rounded model starts as a coarse cage: append its vertices and faces here (one polygroup per face), then optimize_mesh subdivide with scheme catmull_clark and iterations 2 or 3.',
       'Faces must be built from an explicit vertex list, quads and larger polygons included, with polygroups or material ids set up front.'],
     whenNotToUse: ['One triangle or one point is enough; use append_triangle or append_vertex.', 'A parametric shape is enough; use a create_* primitive.'],
-    inputProps: { actorName: P.actorName, vertices: POLYGON_VERTICES, faces: POLYGON_FACES, faceGroups: FACE_GROUPS, faceMaterials: FACE_MATERIALS },
+    inputProps: { actorName: P.actorName, vertices: POLYGON_VERTICES, faces: POLYGON_FACES, faceGroups: FACE_GROUPS, faceMaterials: FACE_MATERIALS, repeat: REPEAT('cage') },
     required: ['actorName', 'vertices', 'faces'], effect: 'write', costLatency: 'interactive', costResources: 'medium',
     outputProps: APPEND_OUT, outputRequired: APPEND_OUT_REQUIRED,
     exampleInput: {
