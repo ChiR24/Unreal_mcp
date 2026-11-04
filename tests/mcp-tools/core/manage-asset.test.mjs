@@ -13,6 +13,10 @@ const projectImportSource = path.join(
   `mcp-manage-asset-${ts}.obj`,
 );
 const relativeImportSource = `Saved/mcp-manage-asset-${ts}.obj`;
+// A per-user config file that names one test material, as an importer's settings name the parent materials it copies
+// from: no package refers to that material, yet the unreferenced report must not offer it for deletion.
+const CONFIG_NAMED_MATERIAL = `M_ConfigNamed_${ts}`;
+const configFixture = path.join(path.dirname(projectPath), 'Saved', 'Config', 'MCPTest', 'ConfigRefs.ini');
 
 // The parameter audit imports this suite only to read its cases; it must not write the fixture.
 if (!Array.isArray(globalThis.__capturedToolSuites)) {
@@ -25,6 +29,8 @@ if (!Array.isArray(globalThis.__capturedToolSuites)) {
     'f 1 2 3',
     ''
   ].join('\n'));
+  fs.mkdirSync(path.dirname(configFixture), { recursive: true });
+  fs.writeFileSync(configFixture, `[MCPTest]\nMaterial=${TEST_FOLDER}/${CONFIG_NAMED_MATERIAL}.${CONFIG_NAMED_MATERIAL}\n`);
 }
 
 const asset = (name) => `${TEST_FOLDER}/${name}`;
@@ -80,6 +86,7 @@ const testCases = [
   { scenario: 'Setup: create bulk rename source', ...createMaterial(`M_BulkRenameSource_${ts}`) },
   { scenario: 'Setup: create bulk delete action source', ...createMaterial(`M_BulkDeleteSource_${ts}`) },
   { scenario: 'Setup: create bulk folder rename source', toolName: 'manage_asset', arguments: { action: 'create_material', name: `M_BulkFolderSource_${ts}`, path: `${TEST_FOLDER}/BulkFolder` }, expected: 'success|already exists' },
+  { scenario: 'Setup: create the material only a config file names', ...createMaterial(CONFIG_NAMED_MATERIAL) },
 
   // === CORE ASSET ACTIONS ===
   { scenario: 'ACTION: list', toolName: 'manage_asset', arguments: { action: 'list', path: TEST_FOLDER, recursive: true }, expected: 'success' },
@@ -148,6 +155,7 @@ const testCases = [
   { scenario: 'ACTION: generate_report unreferenced lists only what nothing uses', toolName: 'manage_asset', arguments: { action: 'generate_report', directory: TEST_FOLDER, reportType: 'unreferenced' }, expected: 'success', assertions: [
     { path: 'structuredContent.result.reportType', equals: 'unreferenced', label: 'the unreferenced report' },
     { path: 'structuredContent.result.scanned', gte: 1, label: 'the folder was read' },
+    { path: 'structuredContent.result.configReferenced', includesObject: { name: CONFIG_NAMED_MATERIAL, configFiles: { length: 1 } }, label: 'the material only a config file names is held back from the candidates, with that file' },
   ] },
 
   // === MATERIAL / MESH ACTIONS ===

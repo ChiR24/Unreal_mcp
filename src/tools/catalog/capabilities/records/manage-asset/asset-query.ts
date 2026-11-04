@@ -198,15 +198,16 @@ export const ASSET_QUERY_RECORDS: readonly RecordSpec[] = [
       examples: [ex('Find every Blueprint by its ParentClass registry tag', { tag: 'ParentClass' }, { success: true })] }
   ),
 
-  r('generate_report', 'asset', 'Report the assets under a directory (default /Game, subfolders included): reportType summary (default) lists every one with name, path and class; unreferenced lists only those no other package refers to, hard or soft, as the saved packages record it (levels and redirectors left out): candidates to delete, though a primary asset the asset manager cooks, or one code loads by path, can still be in use. outputPath also writes the report as a JSON file in the project.',
-    schema({ directory: str('Directory to report on (default /Game).'), reportType: str('summary (default): every asset; unreferenced: only the assets nothing refers to.'), outputPath: str('A project-relative file to write the report to as JSON.') }, []),
+  r('generate_report', 'asset', 'Report the assets under a directory (default /Game, subfolders included): reportType summary (default) lists every one with name, path and class; unreferenced lists only those no other package refers to, hard or soft, as the saved packages record it, and that no project config file names (levels and redirectors left out): candidates to delete, though a primary asset the asset manager cooks, or one code loads by path, can still be in use. The asset registry never sees a reference from a config file (Config/*.ini and Saved/Config/*.ini, one folder down included: a default map or game mode, or the parent materials an importer copies from, kept in its per-user settings), so an asset only a config file names is never offered for deletion: it comes apart under configReferenced, with the files that name it. Only those asset paths and file names are reported, never another config value. outputPath also writes the report as a JSON file in the project.',
+    schema({ directory: str('Directory to report on (default /Game).'), reportType: str('summary (default): every asset; unreferenced: only the assets nothing refers to, neither a saved package nor a project config file (those only a config file names are listed apart under configReferenced).'), outputPath: str('A project-relative file to write the report to as JSON.') }, []),
     schema({
       success: bool('Operation succeeded.'),
       directory: str('The directory reported on.'),
       reportType: str('The report made.'),
       assetCount: num('Assets listed.'),
       scanned: num('Assets under the directory.'),
-      assets: { type: 'array', description: 'The assets.', items: { type: 'object', additionalProperties: false, properties: { name: str('Asset name.'), path: str('Object path.'), class: str('Class path.') } } },
+      assets: { type: 'array', description: 'The assets; with reportType unreferenced, the candidates to delete.', items: { type: 'object', additionalProperties: false, properties: { name: str('Asset name.'), path: str('Object path.'), class: str('Class path.') } } },
+      configReferenced: { type: 'array', description: 'reportType unreferenced: the assets no package refers to that a project config file names, so NOT candidates to delete (deleting one breaks the setting that names it, such as the parent materials an importer copies from). Each lists configFiles, the files that name it.', items: { type: 'object', additionalProperties: false, properties: { name: str('Asset name.'), path: str('Object path.'), class: str('Class path.'), configFiles: arr('The project-relative config files that name it, such as Config/DefaultEngine.ini or Saved/Config/WindowsEditor/<Plugin>.ini.') } } },
       outputPath: str('The file written, when outputPath was given.'),
       fileWritten: bool('Whether that file was written.'),
     }, ['success']),
