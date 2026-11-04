@@ -26,6 +26,8 @@ const ENGINE_SOUND = '/Engine/EditorSounds/Notifications/CompileSuccess.CompileS
 const SOUND_BP_NAME = `BP_SoundProbe_${ts}`;
 const CODE_BP_NAME = `BP_CodeProbe_${ts}`;
 const CODE_BP_PATH = `${TEST_FOLDER}/${CODE_BP_NAME}`;
+const CODE_SPAWNED_NAME = `BP_CodeSpawned_${ts}`;
+const CODE_SPAWNED_PATH = `${TEST_FOLDER}/${CODE_SPAWNED_NAME}`;
 const VALUES_BP_NAME = `BP_LintValues_${ts}`;
 const VALUES_BP_PATH = `${TEST_FOLDER}/${VALUES_BP_NAME}`;
 const CONVERT_TAG = `MCPConvertTag_${ts}`;
@@ -517,6 +519,26 @@ const testCases = [
     { path: 'structuredContent.result.created', equals: 0, label: 'nothing new was made' },
     { path: 'structuredContent.result.removed', equals: 0, label: 'nothing was removed' },
   ] },
+  // A spawn whose class adds inputs (exposed on spawn) reads back by its menu id and writes back: the class first, then the
+  // inputs it added; an object input that holds none reads as "".
+  { scenario: 'Setup: an actor to spawn with inputs exposed on spawn', toolName: 'manage_blueprint', arguments: { action: 'create_blueprint', name: CODE_SPAWNED_NAME, savePath: TEST_FOLDER, parentClass: 'Actor' }, expected: 'success|already exists' },
+  { scenario: 'Setup: an actor reference exposed on spawn', toolName: 'manage_blueprint', arguments: { action: 'add_variable', blueprintPath: CODE_SPAWNED_PATH, variableName: 'Buddy', variableType: 'Actor', exposeOnSpawn: true }, expected: 'success|already exists' },
+  { scenario: 'Setup: a flag exposed on spawn', toolName: 'manage_blueprint', arguments: { action: 'add_variable', blueprintPath: CODE_SPAWNED_PATH, variableName: 'bReady', variableType: 'Boolean', exposeOnSpawn: true }, expected: 'success|already exists' },
+  { scenario: 'Setup: an event that spawns it with the flag set', toolName: 'manage_blueprint', arguments: { action: 'build_graph', blueprintPath: CODE_BP_PATH, graphName: 'EventGraph', operations: [
+    { edit: 'create_node', id: 'ev', nodeType: 'CustomEvent', customEventName: 'OnCodeSpawn' },
+    { edit: 'create_node', id: 'where', nodeType: 'CallFunction', memberName: 'GetTransform', memberClass: 'Actor' },
+    { edit: 'create_node', id: 'spawn', nodeType: 'SpawnActorFromClass', targetClass: `${CODE_SPAWNED_PATH}.${CODE_SPAWNED_NAME}_C`, pinDefaults: { bReady: true } },
+    { edit: 'connect_pins', from: '$ev.then', to: '$spawn.execute' },
+    { edit: 'connect_pins', from: '$where.ReturnValue', to: '$spawn.SpawnTransform' },
+  ] }, expected: 'success' },
+  { scenario: 'INFO: read the spawn back as code', toolName: 'manage_blueprint', arguments: { action: 'read_graph_as_code', blueprintPath: CODE_BP_PATH, graphName: 'EventGraph' }, expected: 'success', captureResult: { key: 'codeSpawnText', fromField: 'result.code' }, assertions: [
+    { path: 'structuredContent.result.code', includes: '|SpawnActorfromClass "', label: 'the spawn by its menu id, not a title naming its class' },
+    { path: 'structuredContent.result.code', includes: '""', label: 'an object input that holds none reads as ""' },
+  ] },
+  { scenario: 'CODE: write_graph_from_code takes back a spawn whose class adds its exposed inputs', toolName: 'manage_blueprint', arguments: { action: 'write_graph_from_code', blueprintPath: CODE_BP_PATH, graphName: 'EventGraph', code: '${captured:codeSpawnText}' }, expected: 'success', assertions: [
+    { path: 'structuredContent.result.code', includes: ' true)', label: 'the flag set on spawn is set again' },
+    { path: 'structuredContent.result.compiled', equals: true, label: 'the Blueprint compiles' },
+  ] },
   { scenario: 'INFO: read the loop print node id', toolName: 'manage_blueprint', arguments: { action: 'read_graph_as_code', blueprintPath: CODE_BP_PATH, graphName: 'EventGraph' }, expected: 'success', captureResult: { key: 'codePrintId', fromField: 'result.nodes', where: { path: 'type', equals: 'Development|PrintString' }, selectField: 'id' } },
   { scenario: 'CODE: write_graph_from_code goes on into a node of an event it leaves alone', toolName: 'manage_blueprint', arguments: { action: 'write_graph_from_code', blueprintPath: CODE_BP_PATH, graphName: 'EventGraph', code: '(event Custom|OnCodeGoto\n  (goto ${captured:codePrintId}))' }, expected: 'success', assertions: [
     { path: 'structuredContent.result.forms.0.entryMade', equals: true, label: 'the new event was made' },
@@ -537,11 +559,18 @@ const testCases = [
     { path: 'structuredContent.result.compiled', equals: true, label: 'the Blueprint compiles' },
   ] },
   { scenario: 'CODE: write_graph_from_code takes an id whose title differs from the menu only in underscores', toolName: 'manage_blueprint', arguments: { action: 'write_graph_from_code', blueprintPath: CODE_BP_PATH, code: '(event Custom|OnCodeProbe\n  (Input|SetInputMode_GameOnly (Game|GetPlayerController 0)))' }, expected: 'success', assertions: [{ path: 'structuredContent.result.code', includes: 'Input|SetInputModeGameOnly', label: 'the menu entry is taken and read back by its menu id' }] },
+  { scenario: 'CODE: write_graph_from_code calls a custom event an earlier form of the same code makes', toolName: 'manage_blueprint', arguments: { action: 'write_graph_from_code', blueprintPath: CODE_BP_PATH, graphName: 'EventGraph', code: '(event Custom|OnCodeFinish\n  (Development|PrintString "done"))\n(event Custom|OnCodeProbe\n  (CallFunction|OnCodeFinish))' }, expected: 'success', assertions: [
+    { path: 'structuredContent.result.forms.0.entryMade', equals: true, label: 'the custom event was made' },
+    { path: 'structuredContent.result.code', includes: '(CallFunction|OnCodeFinish)', label: 'the call reads back by the id it was written with' },
+    { path: 'structuredContent.result.compiled', equals: true, label: 'the Blueprint compiles' },
+  ] },
+  { scenario: 'ERROR: write_graph_from_code names the menu ids whose title starts with an unknown one', toolName: 'manage_blueprint', arguments: { action: 'write_graph_from_code', blueprintPath: CODE_BP_PATH, code: '(event Custom|OnCodeProbe\n  (Math|Trig|Sin 1.0))' }, expected: 'error|CODE_INVALID', assertions: [{ path: 'structuredContent.error', includes: 'Sin(Radians)', label: 'Sin (Radians) is offered for Sin' }] },
   { scenario: 'ERROR: write_graph_from_code refuses an asset path that loads nothing', toolName: 'manage_blueprint', arguments: { action: 'write_graph_from_code', blueprintPath: CODE_BP_PATH, code: '(event Custom|OnCodeProbe\n  (Audio|PlaySound2D "/Game/NoSuchFolder/NoSuchSound.NoSuchSound"))' }, expected: 'error|CODE_INVALID' },
   { scenario: 'CODE: create_node makes a node by its action-menu id', toolName: 'manage_blueprint', arguments: { action: 'create_node', blueprintPath: CODE_BP_PATH, graphName: 'EventGraph', menuId: 'Development|PrintString', posX: 3000, posY: 3000 }, expected: 'success' },
   { scenario: 'ERROR: create_node refuses a menu id the graph does not offer', toolName: 'manage_blueprint', arguments: { action: 'create_node', blueprintPath: CODE_BP_PATH, graphName: 'EventGraph', menuId: 'Development|NoSuchNodeTitle' }, expected: 'error|MENU_ID_NOT_FOUND' },
   { scenario: 'ERROR: write_graph_from_code refuses unbalanced code', toolName: 'manage_blueprint', arguments: { action: 'write_graph_from_code', blueprintPath: CODE_BP_PATH, code: '(event Custom|OnCodeProbe' }, expected: 'error|CODE_PARSE_ERROR' },
   { scenario: 'Cleanup: delete the code probe blueprint', toolName: 'manage_asset', arguments: { action: 'delete', path: CODE_BP_PATH, force: true }, expected: 'success|not found' },
+  { scenario: 'Cleanup: delete the spawned actor blueprint', toolName: 'manage_asset', arguments: { action: 'delete', path: CODE_SPAWNED_PATH, force: true }, expected: 'success|not found' },
 
   // === CONVERT: placed actors made into a Blueprint (a prefab) ===
   { scenario: 'Setup: three cubes to convert', toolName: 'control_actor', arguments: { action: 'spawn_batch', defaults: { classPath: '/Engine/BasicShapes/Cube', tags: [CONVERT_TAG] }, actors: [

@@ -6,7 +6,9 @@
 #include "EdGraph/EdGraph.h"
 #include "Foundation/GraphLayout/McpGraphNodeExtent.h"
 #include "Foundation/GraphLayout/McpLayered.h"
+#include "K2Node_CustomEvent.h"
 #include "K2Node_FunctionResult.h"
+#include "Kismet2/BlueprintEditorUtils.h"
 
 namespace McpGraphCode
 {
@@ -133,10 +135,9 @@ UEdGraphNode* FTranspiler::Reuse(const FString& TypeId)
     UEdGraphNode* Found = nullptr;
     for (UEdGraphNode* Node : Reusable)
     {
-        const UK2Node* K2 = Cast<UK2Node>(Node);
-        const bool bKind = K2 && (K2->IsA<UK2Node_FunctionResult>() ? TypeId == TEXT("|AddReturnNode...")
-                                                                    : MenuTitleKey(TypeIdOf(K2)) == MenuTitleKey(TypeId));
-        if (bKind && Node->NodeGuid.ToString().ToLower().StartsWith(Prefix))
+        // The id first: a variable's kind is a menu lookup (TypeIdOf).
+        const UK2Node* K2 = Node->NodeGuid.ToString().ToLower().StartsWith(Prefix) ? Cast<UK2Node>(Node) : nullptr;
+        if (K2 && (K2->IsA<UK2Node_FunctionResult>() ? TypeId == TEXT("|AddReturnNode...") : MenuTitleKey(TypeIdOf(K2)) == MenuTitleKey(TypeId)))
         {
             Found = Node;
             break;
@@ -190,29 +191,48 @@ bool FTranspiler::ResolveGotos()
     return true;
 }
 
-bool BuildForms(UBlueprint* Blueprint, const TArray<FSExpr>& Forms, const TArray<FMenuEntry>& Candidates, const TSet<FString>& Titles,
+// Every entry before any body: a custom event the code makes has no function to call until the skeleton is regenerated,
+// and the menu gathered after that offers the calls to it (CallFunction|Name, as read_graph_as_code prints one).
+bool BuildForms(UBlueprint* Blueprint, const TArray<FSExpr>& Forms, TArray<FMenuEntry>& Candidates, const TSet<FString>& Titles,
                 FGraphPlan& Plan, TMap<UEdGraphNode*, int32>& Made, TArray<TSharedPtr<FJsonValue>>& FormRows, FString& OutError)
 {
     FTranspiler Transpiler(Blueprint, Plan.Graph, MenuEntries(Blueprint, Plan.Graph, Candidates, Titles));
     Transpiler.Reusable.Append(Plan.Old);
     FVector2D Spot = FreeSpot(Plan.Graph);
+    TArray<UEdGraphNode*> Entries;
+    bool bNewEvent = false;
+    for (int32 At = 0; At < Plan.Forms.Num(); ++At)
+    {
+        Entries.Add(Transpiler.Entry(Forms[Plan.Forms[At]], Plan.Entries[At]));
+        if (!Entries.Last())
+        {
+            OutError = Transpiler.Error;
+            return false;
+        }
+        bNewEvent = bNewEvent || (!Plan.Entries[At] && Entries.Last()->IsA<UK2Node_CustomEvent>());
+    }
+    if (bNewEvent)
+    {
+        FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(Blueprint);
+        Candidates = MenuCandidates(Titles);
+        Transpiler.Menu = MenuEntries(Blueprint, Plan.Graph, Candidates, Titles);
+    }
     TArray<TArray<UEdGraphNode*>> FormNodes;
     for (int32 At = 0; At < Plan.Forms.Num(); ++At)
     {
         const FSExpr& Form = Forms[Plan.Forms[At]];
         TSet<UEdGraphNode*> Earlier;
         Transpiler.Made.GetKeys(Earlier);
-        UEdGraphNode* Entry = Transpiler.Entry(Form, Plan.Entries[At]);
-        if (!Entry || (BodyStart(Form) < Form.Items.Num() && !Transpiler.Body(Form, Entry)))
+        if (BodyStart(Form) < Form.Items.Num() && !Transpiler.Body(Form, Entries[At]))
         {
             OutError = Transpiler.Error;
             return false;
         }
         TArray<UEdGraphNode*>& Nodes = FormNodes.AddDefaulted_GetRef();
-        Nodes.Add(Entry);
+        Nodes.Add(Entries[At]);
         for (const TPair<UEdGraphNode*, int32>& Each : Transpiler.Made)
         {
-            if (Each.Key != Entry && !Earlier.Contains(Each.Key))
+            if (!Earlier.Contains(Each.Key))
             {
                 Nodes.Add(Each.Key);
             }

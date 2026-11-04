@@ -1,8 +1,12 @@
 #include "Domains/BlueprintGraph/Code/McpGraphCode.h"
 
+#include "BlueprintActionDatabase.h"
+#include "BlueprintActionFilter.h"
+#include "BlueprintNodeSpawner.h"
 #include "EdGraph/EdGraph.h"
 #include "EdGraphSchema_K2.h"
 #include "Engine/Blueprint.h"
+#include "K2Node_ConstructObjectFromClass.h"
 #include "K2Node_CustomEvent.h"
 #include "K2Node_FunctionResult.h"
 #include "K2Node_IfThenElse.h"
@@ -11,6 +15,8 @@
 #include "K2Node_Select.h"
 #include "K2Node_Self.h"
 #include "K2Node_Switch.h"
+#include "K2Node_VariableGet.h"
+#include "K2Node_VariableSet.h"
 
 namespace McpGraphCode
 {
@@ -59,14 +65,43 @@ EKind KindOf(const UK2Node* Node)
     }
     return EKind::Call;
 }
+
+// The title of the menu entry that makes the node, where the node's own list title is another: a node made from a class
+// names it (SpawnActor BP_Enemy), its entry does not (Spawn Actor from Class); a variable's node names the variable as
+// declared (Set bShowMouseCursor), its entry as the editor shows it (Set Show Mouse Cursor), found among its owner's
+// actions. Else the list title. So the menu id ExpandTypeIds gives the node (Class|PlayerController|SetShowMouseCursor)
+// makes it back.
+FString MenuTitleOf(const UK2Node* Node)
+{
+    const ENodeTitleType::Type ListOrMenu = Node->IsA<UK2Node_ConstructObjectFromClass>() ? ENodeTitleType::MenuTitle : ENodeTitleType::ListView;
+    const FString Listed = Node->GetNodeTitle(ListOrMenu).ToString();
+    const UK2Node_Variable* Variable = (Node->IsA<UK2Node_VariableGet>() || Node->IsA<UK2Node_VariableSet>()) ? Cast<UK2Node_Variable>(Node) : nullptr;
+    const FProperty* Property = Variable ? Variable->GetPropertyForVariable() : nullptr;
+    const UClass* Owner = Property ? Property->GetOwnerClass() : nullptr;
+    // A Blueprint's members are listed under the Blueprint, a native class's under the class.
+    const UBlueprint* OwnerBlueprint = Owner ? UBlueprint::GetBlueprintFromClass(Owner) : nullptr;
+    const UObject* Key = OwnerBlueprint ? static_cast<const UObject*>(OwnerBlueprint) : Owner;
+    const auto* Actions = Key ? FBlueprintActionDatabase::Get().GetAllActions().Find(FObjectKey(Key)) : nullptr;
+    for (int32 At = 0; Actions && At < Actions->Num(); ++At)
+    {
+        const UBlueprintNodeSpawner* Spawner = (*Actions)[At];
+        const FProperty* Field = (Spawner && Spawner->NodeClass.Get() == Node->GetClass()) ? FBlueprintActionInfo(Key, Spawner).GetAssociatedProperty() : nullptr;
+        if (Field && Field->GetFName() == Property->GetFName())
+        {
+            return Spawner->PrimeDefaultUiSpec().MenuName.ToString();
+        }
+    }
+    return Listed;
+}
 } // namespace SnapshotParts
 
 using namespace SnapshotParts;
 
-// Epic's _get_node_type_id: menu category and list title, whitespace removed; a custom event is AddEvent|Custom|Name.
+// Epic's _get_node_type_id: menu category and list title, whitespace removed; a custom event is AddEvent|Custom|Name, and
+// a node whose menu entry is titled otherwise takes that entry's title (MenuTitleOf).
 FString TypeIdOf(const UK2Node* Node)
 {
-    const FString Title = WithoutWhitespace(Node->GetNodeTitle(ENodeTitleType::ListView).ToString());
+    const FString Title = WithoutWhitespace(MenuTitleOf(Node));
     return Node->IsA<UK2Node_CustomEvent>() ? TEXT("AddEvent|Custom|") + Title
                                             : WithoutWhitespace(Node->GetMenuCategory().ToString()) + TEXT("|") + Title;
 }
@@ -122,6 +157,11 @@ FGraph Snapshot(UEdGraph* Graph)
     Out.Name = Graph->GetName();
     TMap<const UEdGraphPin*, FPinRef> Where;
     TArray<const UK2Node*> Nodes;
+    // Printed quoted: strings, names and texts, and object and class references, so a reference that holds none reads as
+    // "", which the writer takes back as None (an unquoted 0 it refused).
+    const FName Quoted[] = {UEdGraphSchema_K2::PC_String, UEdGraphSchema_K2::PC_Name, UEdGraphSchema_K2::PC_Text,
+                            UEdGraphSchema_K2::PC_Object, UEdGraphSchema_K2::PC_Class, UEdGraphSchema_K2::PC_Interface,
+                            UEdGraphSchema_K2::PC_SoftObject, UEdGraphSchema_K2::PC_SoftClass};
     for (const UEdGraphNode* Each : Graph->Nodes)
     {
         const UK2Node* Node = Cast<UK2Node>(Each);
@@ -148,8 +188,7 @@ FGraph Snapshot(UEdGraph* Graph)
             Item.Name = Pin->PinName.ToString();
             Item.bExec = Type.PinCategory == UEdGraphSchema_K2::PC_Exec;
             Item.bBool = !Type.IsContainer() && Type.PinCategory == UEdGraphSchema_K2::PC_Boolean;
-            Item.bText = !Type.IsContainer() && (Type.PinCategory == UEdGraphSchema_K2::PC_String ||
-                                                 Type.PinCategory == UEdGraphSchema_K2::PC_Name || Type.PinCategory == UEdGraphSchema_K2::PC_Text);
+            Item.bText = !Type.IsContainer() && MakeArrayView(Quoted).Contains(Type.PinCategory);
             Item.Value = Pin->GetDefaultAsString();
             Item.bAtDefault = Pin->DoesDefaultValueMatchAutogenerated();
         }

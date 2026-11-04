@@ -80,6 +80,56 @@ bool FTranspiler::SetValue(UEdGraphPin* Pin, const FString& Value)
     return true;
 }
 
+// Epic's _create_call_node, past the node: positional arguments into the data inputs in order, then each :Pin by its name.
+// The inputs are read again for every argument, since one can add pins: a class set or wired into Create Widget, Spawn
+// Actor from Class or Construct Object from Class gives the node that class's expose-on-spawn pins (the node's
+// PinDefaultValueChanged, as in the editor), which the arguments after it fill. A :Pin the node has only once another
+// argument ran (a spawn pin named before :Class) waits for it.
+bool FTranspiler::Fill(UEdGraphNode* Node, const FString& TypeId, TArray<FArg> Args, const FBindings& Bindings, FFlow& Flow)
+{
+    const int32 Positional = Args.FilterByPredicate([](const FArg& Each) { return Each.Pin.IsEmpty(); }).Num();
+    int32 Next = 0;
+    for (int32 Pass = 0; Pass < 2; ++Pass)
+    {
+        for (int32 At = 0; At < Args.Num();)
+        {
+            const TArray<UEdGraphPin*> Ins = DataPins(Node, true);
+            const FArg& Arg = Args[At];
+            UEdGraphPin* Pin = nullptr;
+            for (int32 In = 0; In < Ins.Num(); ++In)
+            {
+                Pin = (Arg.Pin.IsEmpty() ? In == Next : Ins[In]->PinName.ToString() == Arg.Pin) ? Ins[In] : Pin;
+            }
+            if (!Pin && Arg.Pin.IsEmpty())
+            {
+                TArray<FString> Names;
+                for (const UEdGraphPin* Each : Ins)
+                {
+                    Names.Add(Each->PinName.ToString());
+                }
+                return Fail(FString::Printf(TEXT("%s took %d positional argument(s) but has %d data input(s): %s."), *TypeId, Positional, Ins.Num(),
+                                            *FString::Join(Names, TEXT(", "))));
+            }
+            if (!Pin && Pass == 0)
+            {
+                ++At;
+                continue;
+            }
+            if (!Pin)
+            {
+                return Fail(FString::Printf(TEXT("%s has no input pin %s."), *TypeId, *Arg.Pin));
+            }
+            Next += Arg.Pin.IsEmpty() ? 1 : 0;
+            if (!WireWithPre(*Arg.Value, Pin, Arg.Pre, Bindings, Flow))
+            {
+                return false;
+            }
+            Args.RemoveAt(At);
+        }
+    }
+    return true;
+}
+
 UEdGraphPin* FTranspiler::MakeLiteral(const FSExpr& Value)
 {
     UEdGraphNode* Node = Create(LiteralNode(Value.Type));

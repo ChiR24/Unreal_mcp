@@ -31,7 +31,7 @@ struct FFlow
 class FTranspiler
 {
 public:
-    FTranspiler(UBlueprint* InBlueprint, UEdGraph* InGraph, TArray<FMenuEntry> InMenu) : Blueprint(InBlueprint), Graph(InGraph), Menu(MoveTemp(InMenu)) {}
+    FTranspiler(UBlueprint* InBlueprint, UEdGraph* InGraph, TArray<FMenuEntry> InMenu) : Menu(MoveTemp(InMenu)), Blueprint(InBlueprint), Graph(InGraph) {}
 
     /** The entry a form names: Existing, else a new event from the menu; null with Error. */
     UEdGraphNode* Entry(const FSExpr& Form, UEdGraphNode* Existing);
@@ -47,11 +47,12 @@ public:
     // Old-body nodes a statement whose ; nID comment names one may keep (BuildForms fills it), and those it kept.
     TSet<UEdGraphNode*> Reusable;
     TSet<UEdGraphNode*> Kept;
+    // The graph's menu: BuildForms gathers it again once a custom event the code makes has a function to call.
+    TArray<FMenuEntry> Menu;
 
 private:
     UBlueprint* Blueprint;
     UEdGraph* Graph;
-    TArray<FMenuEntry> Menu;
     int32 Line = 0;
     // The node a tagged statement wired into the flow first (the tag of the statement under way waits in TagForExec),
     // and the gotos waiting for one.
@@ -80,6 +81,15 @@ private:
     // Make Literal node for a pin with no type yet.
     bool SetValue(UEdGraphPin* Pin, const FString& Value);
     UEdGraphPin* MakeLiteral(const FSExpr& Value);
+    // A call's argument: its :Pin name (empty when positional), its value, and the pin its expression made beforehand.
+    struct FArg
+    {
+        FString Pin;
+        const FSExpr* Value = nullptr;
+        UEdGraphPin* Pre = nullptr;
+    };
+    /** Args into Node's data inputs, read again for each (a class set adds its expose-on-spawn pins); false with Error. */
+    bool Fill(UEdGraphNode* Node, const FString& TypeId, TArray<FArg> Args, const FBindings& Bindings, FFlow& Flow);
     bool WireExec(UEdGraphNode* Node, FFlow& Flow);
     bool WireArg(const FSExpr& Value, UEdGraphPin* Pin, const FBindings& Bindings, FFlow& Flow);
     bool WireWithPre(const FSExpr& Value, UEdGraphPin* Pin, UEdGraphPin* Pre, const FBindings& Bindings, FFlow& Flow);
@@ -150,9 +160,11 @@ struct FGraphPlan
 /** Fills Entries and Old for Plan.Forms of Forms; false with OutError when two forms name one entry. */
 bool PlanGraph(const TArray<FSExpr>& Forms, FGraphPlan& Plan, FString& OutError);
 
-/** Plan's forms built into its graph: entries, bodies, gotos, then each form laid out in columns at its entry (a made one
- *  below the graph). Made gains every node with its line, FormRows a row per form; false with OutError (McpGraphCodeWriteForm.cpp). */
-bool BuildForms(UBlueprint* Blueprint, const TArray<FSExpr>& Forms, const TArray<FMenuEntry>& Candidates, const TSet<FString>& Titles,
+/** Plan's forms built into its graph: every entry, then the bodies, gotos, then each form laid out in columns at its entry (a
+ *  made one below the graph). A custom event made regenerates the skeleton and gathers Candidates again, so its calls are on
+ *  the menu of this plan and the next. Made gains every node with its line, FormRows a row per form; false with OutError
+ *  (McpGraphCodeWriteForm.cpp). */
+bool BuildForms(UBlueprint* Blueprint, const TArray<FSExpr>& Forms, TArray<FMenuEntry>& Candidates, const TSet<FString>& Titles,
                 FGraphPlan& Plan, TMap<UEdGraphNode*, int32>& Made, TArray<TSharedPtr<FJsonValue>>& FormRows, FString& OutError);
 } // namespace Write
 } // namespace McpGraphCode

@@ -56,6 +56,8 @@ bool FMcpGraphCodeParseTest::RunTest(const FString& Parameters)
     Pin.bText = true;
     Pin.Value = TEXT("MyName");
     TestEqual(TEXT("names and strings are quoted"), FormatDefault(Pin), FString(TEXT("\"MyName\"")));
+    Pin.Value.Reset();
+    TestEqual(TEXT("an empty quoted value (an object reference that holds none) is \"\""), FormatDefault(Pin), FString(TEXT("\"\"")));
     Pin.Value = TEXT("C:\\Temp\\");
     TestEqual(TEXT("a backslash is escaped"), FormatDefault(Pin), FString(TEXT("\"C:\\\\Temp\\\\\"")));
     TestEqual(TEXT("and reads back as it was"), ItemText(TEXT("(f ") + FormatDefault(Pin) + TEXT(")"), 1), FString(TEXT("C:\\Temp\\")));
@@ -87,6 +89,34 @@ bool FMcpGraphCodeParseTest::RunTest(const FString& Parameters)
     TestEqual(TEXT("ids sharing 8 digits take 9"), Graphs[0].Nodes[0].Id, FString(TEXT("nabcdef012")));
     TestEqual(TEXT("and differ there"), Graphs[0].Nodes[1].Id, FString(TEXT("nabcdef019")));
     TestEqual(TEXT("an id in another graph shares nothing and keeps 6"), Graphs[1].Nodes[0].Id, FString(TEXT("n123456")));
+    return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FMcpGraphCodeMenuIdTest, "EngineWire.BlueprintGraph.Code.MenuIds",
+                                 EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+// What refusing an id the menu lacks names: the ids with its title (spaces, underscores and case ignored), else those whose
+// title starts with it, its own category first, 8 at most.
+bool FMcpGraphCodeMenuIdTest::RunTest(const FString& Parameters)
+{
+    (void)Parameters;
+    using namespace McpGraphCode;
+    const auto Picked = [](const TArray<FString>& Ids, const TCHAR* TypeId) { return FString::Join(PickOffered(Ids, TypeId), TEXT(", ")); };
+    const TArray<FString> Menu = {TEXT("Collision|SingleSweep"), TEXT("Math|Trig|Sin(Degrees)"), TEXT("Math|Trig|Sin(Radians)"), TEXT("Math|Trig|Cos(Radians)")};
+    TestEqual(TEXT("no entry titled Sin: those that start with it, Math|Trig first"), Picked(Menu, TEXT("Math|Trig|Sin")),
+              FString(TEXT("Math|Trig|Sin(Degrees), Math|Trig|Sin(Radians), Collision|SingleSweep")));
+    TestEqual(TEXT("an entry with the title is named alone"), Picked({TEXT("Math|Trig|Sin(Degrees)"), TEXT("Math|Float|Sin")}, TEXT("Math|Trig|Sin")),
+              FString(TEXT("Math|Float|Sin")));
+    TestEqual(TEXT("a title differing in spaces, underscores and case is that title"),
+              Picked({TEXT("Input|SetInputModeGameAndUI"), TEXT("Input|SetInputModeGameOnly")}, TEXT("Input|Set_input_mode_game_only")),
+              FString(TEXT("Input|SetInputModeGameOnly")));
+    TestEqual(TEXT("nothing near it names nothing"), Picked(Menu, TEXT("Math|Trig|Tangent")), FString());
+    TArray<FString> Many;
+    for (int32 At = 0; At < 12; ++At)
+    {
+        Many.Add(FString::Printf(TEXT("Utilities|Set%d"), At));
+    }
+    TestEqual(TEXT("8 at most"), PickOffered(Many, TEXT("Utilities|Set")).Num(), 8);
     return true;
 }
 #endif

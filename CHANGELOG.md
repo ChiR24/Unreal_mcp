@@ -64,6 +64,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Console replies** stay short: the first 30 lines, any error or warning after them, at most three lines that start alike, and a count of the rest (`scalability 0` returned ~6 KB).
 - **Consent and scripts**: the tool says a `describe` with `param` hands a fresh consent grant cheaply, and that script strings take only `\"` and `\\` as escapes.
 - **run_script**: a step that finishes later (an import) says its work may still land after the script returns.
+- **`write_graph_from_code`** takes back what `read_graph_as_code` prints: calls to a custom event the same code makes, Sets and Gets of another class's variables, and Spawn Actor / Create Widget / Construct Object with expose-on-spawn inputs; an unknown node id lists the menu ids starting with its title.
 - **Fab imports**: the import status warns about each imported material instance left with no parent (it draws the grid), naming the likely cause and the reparent call.
 - **Unused-asset report**: assets only a config file names (the default map, a game mode, an importer's parent materials) are no longer offered for deletion; they come under `configReferenced` with the files that name them.
 - **`list_output_files` / `delete_output_file`** reach contact sheets and captures (Saved/Captures) and EngineWire's own files (Saved/EngineWire, plugins `remove_plugin` moved aside included); a delete removes the folders it empties.

@@ -108,3 +108,48 @@ describe('write_graph_from_code', () => {
     expect(code(join(CODE, 'McpGraphCodeWriteOps.cpp'))).toMatch(/TypedOperator\(Op, OperandCategory\(Call\.Items\[1\], Pre\[0\], Bindings\)/u);
   });
 });
+
+describe('read -> write round trips', () => {
+  it('calls a custom event the same code makes: every entry first, then the skeleton and the menu again, then the bodies', () => {
+    const form = code(join(CODE, 'McpGraphCodeWriteForm.cpp'));
+    const build = form.slice(form.indexOf('bool BuildForms('));
+    expect(build).toMatch(/Entries\.Add\(Transpiler\.Entry\([\s\S]*!Plan\.Entries\[At\] && Entries\.Last\(\)->IsA<UK2Node_CustomEvent>\(\)/u);
+    expect(build).toMatch(/if \(bNewEvent\)\s*\{\s*FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified\(Blueprint\);\s*Candidates = MenuCandidates\(Titles\);\s*Transpiler\.Menu = MenuEntries\(/u);
+    expect(build.indexOf('MarkBlueprintAsStructurallyModified')).toBeLessThan(build.indexOf('Transpiler.Body('));
+    // The event graph's plan is built first, so a function written in the same code finds the event's call too.
+    expect(code(join(CODE, 'McpGraphCodeWriteHandler.cpp'))).toContain('&Plans.InsertDefaulted_GetRef(0)');
+  });
+
+  it('prints a node by the title of the menu entry that makes it, so the menu id it gets makes it back', () => {
+    const snapshot = code(join(CODE, 'McpGraphCodeSnapshot.cpp'));
+    // A variable's node: the title of its owner's spawner for that property and node class (Set Show Mouse Cursor).
+    expect(snapshot).toMatch(/Spawner->NodeClass\.Get\(\) == Node->GetClass\(\)[\s\S]*GetAssociatedProperty\(\)[\s\S]*Field->GetFName\(\) == Property->GetFName\(\)[\s\S]*return Spawner->PrimeDefaultUiSpec\(\)\.MenuName\.ToString\(\);/u);
+    // A node made from a class: its menu title (Spawn Actor from Class), not the list title that names the class.
+    expect(snapshot).toContain('Node->IsA<UK2Node_ConstructObjectFromClass>() ? ENodeTitleType::MenuTitle : ENodeTitleType::ListView');
+    expect(snapshot).toContain('const FString Title = WithoutWhitespace(MenuTitleOf(Node));');
+  });
+
+  it('quotes an object or class reference, so one that holds none reads as "" and not as the 0 the writer refuses', () => {
+    const snapshot = code(join(CODE, 'McpGraphCodeSnapshot.cpp'));
+    for (const category of ['PC_Object', 'PC_Class', 'PC_Interface', 'PC_SoftObject', 'PC_SoftClass']) {
+      expect(snapshot).toContain(`UEdGraphSchema_K2::${category}`);
+    }
+    expect(snapshot).toContain('Item.bText = !Type.IsContainer() && MakeArrayView(Quoted).Contains(Type.PinCategory);');
+  });
+
+  it('fills a call\'s inputs read again for each argument, so a class set first adds the pins the rest fill', () => {
+    const fill = code(join(CODE, 'McpGraphCodeWriteValues.cpp'));
+    expect(fill).toMatch(/for \(int32 At = 0; At < Args\.Num\(\);\)\s*\{\s*const TArray<UEdGraphPin\*> Ins = DataPins\(Node, true\);/u);
+    expect(fill).toMatch(/if \(!Pin && Pass == 0\)\s*\{\s*\+\+At;\s*continue;/u);
+    const expr = code(join(CODE, 'McpGraphCodeWriteExpr.cpp'));
+    expect(expr).toContain('if (!Fill(Node, TypeId, Args, Bindings, Flow))');
+    expect(expr).not.toContain('DataPins(Node, true)');
+  });
+
+  it('names the ids whose title starts with an unknown one when none has its title, in both refusals', () => {
+    const catalog = code(join(CODE, 'McpGraphCodeCatalog.cpp'));
+    expect(catalog).toMatch(/if \(!Key\.IsEmpty\(\) && !Ids\.ContainsByPredicate[\s\S]*MenuEntries\(Blueprint, Graph, MenuCandidates\(Prefix, true\), Prefix, true\)/u);
+    expect(catalog).toMatch(/const TArray<FString> Offered = OfferedIds\(Blueprint, Graph, Entries, MenuId\);/u);
+    expect(code(join(CODE, 'McpGraphCodeWriteNodes.cpp'))).toContain('const TArray<FString> Offered = OfferedIds(Blueprint, Graph, Menu, TypeId);');
+  });
+});

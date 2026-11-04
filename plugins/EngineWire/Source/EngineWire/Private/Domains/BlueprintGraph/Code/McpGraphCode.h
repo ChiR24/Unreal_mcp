@@ -118,11 +118,14 @@ struct FMenuEntry
     FString Id;
 };
 
-/** Spawners whose default title (spaces removed, any case) is one of Titles (lower case), or that show none without a graph. */
-TArray<FMenuEntry> MenuCandidates(const TSet<FString>& Titles);
+/** Spawners whose default title (spaces removed, any case) is one of Titles (lower case), or that show none without a graph;
+ *  with bPrefix, those whose title starts with one. */
+TArray<FMenuEntry> MenuCandidates(const TSet<FString>& Titles, bool bPrefix = false);
 
-/** Of Candidates, those this graph's menu offers with a title in Titles, each with the id the menu shows there. */
-TArray<FMenuEntry> MenuEntries(UBlueprint* Blueprint, UEdGraph* Graph, const TArray<FMenuEntry>& Candidates, const TSet<FString>& Titles);
+/** Of Candidates, those this graph's menu offers with a title in Titles (with bPrefix, starting with one), each with the id
+ *  the menu shows there. */
+TArray<FMenuEntry> MenuEntries(UBlueprint* Blueprint, UEdGraph* Graph, const TArray<FMenuEntry>& Candidates, const TSet<FString>& Titles,
+                               bool bPrefix = false);
 
 /** The title part of a menu id (after its last |), without spaces and underscores, lower case, as Titles hold it. */
 FString MenuTitleKey(const FString& MenuId);
@@ -132,8 +135,15 @@ FString MenuTitleKey(const FString& MenuId);
  *  value goes before one that does not (IsValid is a macro with exec outputs and a pure function under one id). */
 const FMenuEntry* FindMenuEntry(const TArray<FMenuEntry>& Entries, const FString& TypeId, bool bValue);
 
+/** What a refusal of TypeId names, of the menu ids Ids: those with TypeId's title (spaces, underscores and case ignored),
+ *  else those whose title starts with it (Sin: Sin(Radians), Sin(Degrees)); TypeId's category first, 8 at most. */
+TArray<FString> PickOffered(const TArray<FString>& Ids, const FString& TypeId);
+
+/** PickOffered over Entries, and when none of them has TypeId's title, over this graph's menu ids whose title starts with it. */
+TArray<FString> OfferedIds(UBlueprint* Blueprint, UEdGraph* Graph, const TArray<FMenuEntry>& Entries, const FString& TypeId);
+
 /** The node MenuId names in this graph's menu, made at At by its spawner (McpGraphCodeCatalog.cpp); null with OutError naming
- *  the ids the menu offers for that title. */
+ *  the ids OfferedIds finds. */
 UEdGraphNode* CreateByMenuId(UBlueprint* Blueprint, UEdGraph* Graph, const FString& MenuId, const FVector2D& At, FString& OutError);
 
 /** False for any other sub-action. */

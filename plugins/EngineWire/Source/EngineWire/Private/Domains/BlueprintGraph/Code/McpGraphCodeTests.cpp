@@ -251,6 +251,14 @@ bool FMcpGraphCodeDecompileTest::RunTest(const FString& Parameters)
         Custom.Event(TEXT("AddEvent|Custom|OnDamageTaken"));
         TestEqual(TEXT("a custom event keeps its prefix"), Custom.Read(), FString(TEXT("(event Custom|OnDamageTaken)  ; n1\n")));
     }
+    {
+        // A class's expose-on-spawn pins follow its other inputs; an object reference that holds none is "", as the writer takes it.
+        FFakeGraph G;
+        const int32 Make = G.Add(TEXT("UserInterface|CreateWidget"), {ExecPin(TEXT("execute")), TextPin(TEXT("Class"), TEXT("/Game/UI/WBP_Panel.WBP_Panel_C")), TextPin(TEXT("OwningPlayer")),
+                                 TextPin(TEXT("Caller")), BoolPin(TEXT("bShown"), TEXT("true"))}, {ExecPin(TEXT("then"))});
+        G.Link(G.Event(), TEXT("then"), Make);
+        TestTrue(TEXT("a spawn pin left empty reads as \"\""), Has(G.Read(), TEXT("(UserInterface|CreateWidget \"/Game/UI/WBP_Panel.WBP_Panel_C\" \"\" \"\" true)")));
+    }
     return true;
 }
 #endif

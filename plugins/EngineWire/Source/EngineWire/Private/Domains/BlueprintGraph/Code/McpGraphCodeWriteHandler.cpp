@@ -101,7 +101,8 @@ bool RouteForms(const McpBlueprintGraphHandlers::FActionContext& Context, const 
             return false;
         }
         FGraphPlan* Plan = Plans.FindByPredicate([Graph](const FGraphPlan& Each) { return Each.Graph == Graph; });
-        Plan = Plan ? Plan : &Plans.AddDefaulted_GetRef();
+        // The event graph's plan is built first: a custom event it makes is then on the menu of each function written after.
+        Plan = Plan ? Plan : (bFunction ? &Plans.AddDefaulted_GetRef() : &Plans.InsertDefaulted_GetRef(0));
         Plan->Graph = Graph;
         Plan->Forms.Add(At);
     }
@@ -148,8 +149,9 @@ bool HandleWriteGraphFromCode(const McpBlueprintGraphHandlers::FActionContext& C
     }
     const TSet<FString> Titles = CodeTitles(Forms);
     const McpBlueprintBehaviour::FSnapshot Before = McpBlueprintBehaviour::TakeSnapshot(Blueprint);
-    // After the snapshot: a dirty Blueprint compiles there, and spawners gathered before name its old skeleton's members.
-    const TArray<FMenuEntry> Candidates = MenuCandidates(Titles);
+    // After the snapshot: a dirty Blueprint compiles there, and spawners gathered before name its old skeleton's members
+    // (BuildForms gathers them again for the same reason after making a custom event).
+    TArray<FMenuEntry> Candidates = MenuCandidates(Titles);
     TMap<UEdGraphNode*, int32> Made;
     TArray<UEdGraph*> Graphs;
     TArray<TSharedPtr<FJsonValue>> FormRows;

@@ -17894,7 +17894,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "menuId": {
           "type": "string",
-          "description": "In place of nodeType: any node by its action-menu id, Category|Title with spaces removed, as read_graph_as_code prints it (Development|PrintString, Utilities|FlowControl|Branch, Variables|GetHealth, Utilities|Operators|Add); AddEvent|Custom|Name makes a custom event named Name. An id this graph's menu does not offer is refused (MENU_ID_NOT_FOUND) with the ids it offers for that title."
+          "description": "In place of nodeType: any node by its action-menu id, Category|Title with spaces removed, as read_graph_as_code prints it (Development|PrintString, Utilities|FlowControl|Branch, Variables|GetHealth, Utilities|Operators|Add); AddEvent|Custom|Name makes a custom event named Name. An id this graph's menu does not offer is refused (MENU_ID_NOT_FOUND) with the ids it offers for that title, or else those starting with it."
         },
         "meshPath": {
           "type": "string",

@@ -126,51 +126,42 @@ bool FTranspiler::Expr(const FSExpr& Value, const FBindings& Bindings, FFlow& Fl
 UEdGraphNode* FTranspiler::CallNode(const FSExpr& Call, const FBindings& Bindings, FFlow& Flow, const TArray<FString>& BindNames, bool bValue)
 {
     const FString TypeId = Call.Items[0].Text;
-    TArray<const FSExpr*> Positional;
-    TArray<TPair<FString, const FSExpr*>> Keywords;
+    TArray<FArg> Args;
     TArray<const FSExpr*> Continuations;
+    bool bNamed = false;
     for (int32 At = 1; At < Call.Items.Num(); ++At)
     {
         const FSExpr& Arg = Call.Items[At];
         const bool bKeyword = Arg.Type == FSExpr::EType::Symbol && Arg.Text.StartsWith(TEXT(":"));
+        const FString Name = bKeyword ? Arg.Text.Mid(1) : FString();
         if (IsContinuation(Arg))
         {
             Continuations.Add(&Arg);
         }
-        else if (bKeyword && (At + 1 >= Call.Items.Num() || Keywords.ContainsByPredicate([&Arg](const TPair<FString, const FSExpr*>& Each) { return Each.Key == Arg.Text.Mid(1); })))
+        else if (bKeyword && (Name.IsEmpty() || At + 1 >= Call.Items.Num() || Args.ContainsByPredicate([&Name](const FArg& Each) { return Each.Pin == Name; })))
         {
             Fail(FString::Printf(TEXT("Keyword %s has no value, or comes twice, in (%s ...)."), *Arg.Text, *TypeId));
             return nullptr;
         }
         else if (bKeyword)
         {
-            Keywords.Emplace(Arg.Text.Mid(1), &Call.Items[++At]);
+            Args.Add(FArg{Name, &Call.Items[++At], nullptr});
+            bNamed = true;
         }
-        else if (Keywords.Num() > 0 || Continuations.Num() > 0)
+        else if (bNamed || Continuations.Num() > 0)
         {
             Fail(FString::Printf(TEXT("Positional argument after a keyword or a continuation in (%s ...)."), *TypeId));
             return nullptr;
         }
         else
         {
-            Positional.Add(&Arg);
+            Args.Add(FArg{FString(), &Arg, nullptr});
         }
     }
     // Argument expressions are made first, so their nodes sit left of the call.
-    TArray<UEdGraphPin*> Pre;
-    for (const FSExpr* Arg : Positional)
+    for (FArg& Arg : Args)
     {
-        UEdGraphPin*& Value = Pre.AddDefaulted_GetRef();
-        if (Arg->Type == FSExpr::EType::List && !Expr(*Arg, Bindings, Flow, Value))
-        {
-            return nullptr;
-        }
-    }
-    TArray<UEdGraphPin*> KeywordPre;
-    for (const TPair<FString, const FSExpr*>& Keyword : Keywords)
-    {
-        UEdGraphPin*& Value = KeywordPre.AddDefaulted_GetRef();
-        if (Keyword.Value->Type == FSExpr::EType::List && !Expr(*Keyword.Value, Bindings, Flow, Value))
+        if (Arg.Value->Type == FSExpr::EType::List && !Expr(*Arg.Value, Bindings, Flow, Arg.Pre))
         {
             return nullptr;
         }
@@ -186,36 +177,9 @@ UEdGraphNode* FTranspiler::CallNode(const FSExpr& Call, const FBindings& Binding
         UEdGraphPin* Then = Continuations.Num() > 0 ? nullptr : ExecPin(Node, false, TEXT("then"));
         Flow.Pending = Then ? TArray<UEdGraphPin*>{Then} : TArray<UEdGraphPin*>();
     }
-    const TArray<UEdGraphPin*> Ins = DataPins(Node, true);
-    if (Positional.Num() > Ins.Num())
+    if (!Fill(Node, TypeId, Args, Bindings, Flow))
     {
-        TArray<FString> Names;
-        for (const UEdGraphPin* Pin : Ins)
-        {
-            Names.Add(Pin->PinName.ToString());
-        }
-        Fail(FString::Printf(TEXT("%s took %d positional argument(s) but has %d data input(s): %s."), *TypeId, Positional.Num(), Ins.Num(), *FString::Join(Names, TEXT(", "))));
         return nullptr;
-    }
-    for (int32 At = 0; At < Positional.Num(); ++At)
-    {
-        if (!WireWithPre(*Positional[At], Ins[At], Pre[At], Bindings, Flow))
-        {
-            return nullptr;
-        }
-    }
-    for (int32 At = 0; At < Keywords.Num(); ++At)
-    {
-        UEdGraphPin* const* Pin = Ins.FindByPredicate([&Keywords, At](const UEdGraphPin* Each) { return Each->PinName.ToString() == Keywords[At].Key; });
-        if (!Pin)
-        {
-            Fail(FString::Printf(TEXT("%s has no input pin %s."), *TypeId, *Keywords[At].Key));
-            return nullptr;
-        }
-        if (!WireWithPre(*Keywords[At].Value, *Pin, KeywordPre[At], Bindings, Flow))
-        {
-            return nullptr;
-        }
     }
     if (Continuations.Num() == 0)
     {

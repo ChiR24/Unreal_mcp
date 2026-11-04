@@ -128,15 +128,8 @@ UEdGraphNode* FTranspiler::Create(const FString& TypeId, bool bValue)
     }
     if (!Node)
     {
-        TArray<FString> Offered;
-        for (const FMenuEntry& Entry : Menu)
-        {
-            if (Offered.Num() < 8 && MenuTitleKey(Entry.Id) == MenuTitleKey(TypeId))
-            {
-                Offered.AddUnique(Entry.Id);
-            }
-        }
-        Fail(Offered.Num() > 0 ? FString::Printf(TEXT("the menu of graph %s has no %s; it offers that title as %s."), *Graph->GetName(), *TypeId, *FString::Join(Offered, TEXT(", ")))
+        const TArray<FString> Offered = OfferedIds(Blueprint, Graph, Menu, TypeId);
+        Fail(Offered.Num() > 0 ? FString::Printf(TEXT("the menu of graph %s has no %s; it offers %s."), *Graph->GetName(), *TypeId, *FString::Join(Offered, TEXT(", ")))
                                : FString::Printf(TEXT("the menu of graph %s has no node %s (a type id is Category|Title, spaces removed, as read_graph_as_code prints it)."), *Graph->GetName(), *TypeId));
         return nullptr;
     }
