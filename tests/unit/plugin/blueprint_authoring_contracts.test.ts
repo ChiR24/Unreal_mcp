@@ -761,3 +761,46 @@ describe('build_graph dryRun checks the batch and runs nothing', () => {
     }
   });
 });
+
+// No variable could be exposed to cinematics (CPF_Interp), so Sequencer could not key a Blueprint's float on a placed
+// actor; and add_variable left no undo step.
+describe('add_variable exposes a variable to cinematics as the editor\'s checkbox does, in one undo step', () => {
+  const add = (): string => read('Domains', 'Blueprint', 'Variables', 'McpBPAddVariable.cpp');
+
+  it('sets CPF_Interp on the new variable when exposeToCinematics is true, before it is added', () => {
+    const source = add();
+    expect(source).toMatch(/if \(GetJsonBoolField\(LocalPayload, TEXT\("exposeToCinematics"\)\)\) \{\s*NewVar\.PropertyFlags \|= CPF_Interp;\s*\}/u);
+    expect(source.indexOf('NewVar.PropertyFlags |= CPF_Interp;')).toBeLessThan(source.indexOf('Blueprint->NewVariables.Add(NewVar);'));
+  });
+
+  it('adds the variable inside a gated transaction that closes before the compile and the save', () => {
+    const source = add();
+    const open = source.indexOf('FMcpScopedEditorTransaction Transaction(FText::FromString(TEXT("Add Variable")),');
+    const added = source.indexOf('Blueprint->NewVariables.Add(NewVar);');
+    const described = source.indexOf('Transaction.DescribeInto(Response);');
+    const compiled = source.indexOf('McpSafeCompileBlueprint(Blueprint);', described);
+    expect(open).toBeGreaterThan(-1);
+    expect(added).toBeGreaterThan(open);
+    expect(source.slice(open, added)).toContain('EMcpMutationDurability::EditorStateOnly, {Blueprint}');
+    expect(described).toBeGreaterThan(added);
+    expect(source.slice(described, compiled)).toMatch(/^Transaction\.DescribeInto\(Response\);\s*\}\s*$/u);
+    expect(source.indexOf('SaveLoadedAssetThrottled(Blueprint)')).toBeGreaterThan(compiled);
+    expect(source, 'no Modify() outside the transaction').not.toContain('Blueprint->Modify();');
+  });
+
+  it('reads the flag back in the reply\'s variable', () => {
+    expect(read('Domains', 'Blueprint', 'Variables', 'McpBPVariableIntrospection.cpp'))
+      .toContain('Obj->SetBoolField(TEXT("exposeToCinematics"), (VarDesc.PropertyFlags & CPF_Interp) != 0);');
+  });
+
+  it('a behaviour recipe variable takes the same flag, new or existing', () => {
+    const members = read('Domains', 'BlueprintGraph', 'Behaviour', 'McpBPBehaviourMembers.cpp');
+    expect(members).toMatch(/TEXT\("exposeOnSpawn"\),\s*TEXT\("exposeToCinematics"\), TEXT\("keepExisting"\)\}/u);
+    expect(members).toContain('Desc.PropertyFlags = bFlag ? (Desc.PropertyFlags | CPF_Interp) : (Desc.PropertyFlags & ~CPF_Interp);');
+  });
+
+  it('the contract declares it on add_variable and on the build_graph add_variable step', () => {
+    expect(paramDescription('blueprint.edit_variable', 'exposeToCinematics')).toMatch(/Sequencer/u);
+    expect(paramDescription('blueprint.edit_graph', 'operations')).toMatch(/exposeOnSpawn, exposeToCinematics, category/u);
+  });
+});

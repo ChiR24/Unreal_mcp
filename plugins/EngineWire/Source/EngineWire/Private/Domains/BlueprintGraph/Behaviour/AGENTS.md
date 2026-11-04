@@ -162,7 +162,7 @@ Top level (anything else is `INVALID_RECIPE`):
 | `input` | object | | One Enhanced Input binding (INPUT) |
 | `eventGraph` | array | | build_graph steps on the event graph (STEPS) |
 
-`variables[]`: `{variableName, variableType, defaultValue, category, isReplicated, instanceEditable, exposeOnSpawn, keepExisting}`
+`variables[]`: `{variableName, variableType, defaultValue, category, isReplicated, instanceEditable, exposeOnSpawn, exposeToCinematics, keepExisting}`
 - `variableType`: the add_variable grammar (`McpBlueprintUtils::ResolvePinType`): Bool, Byte, Int, Int64,
   Float, Double, String, Name, Text, Vector, Vector2D, Rotator, Transform, Color, LinearColor,
   `Struct:<path>`, `Enum:<path>`, `Object:<class>`, `Class:<class>`, `SoftObject:<class>`,
@@ -179,7 +179,8 @@ Top level (anything else is `INVALID_RECIPE`):
   existing one, is `DEFAULT_NOT_APPLIED` and rolls back. The compiler alone would only warn and
   keep the zero value.
 - `instanceEditable` (Instance Editable), `exposeOnSpawn` (Expose on Spawn; turns Instance Editable
-  on, so SpawnActor nodes grow the pin), `category`, `isReplicated` (false also clears RepNotify).
+  on, so SpawnActor nodes grow the pin), `exposeToCinematics` (Expose to Cinematics, `CPF_Interp`: Sequencer
+  can key it), `category`, `isReplicated` (false also clears RepNotify).
   These apply to an existing variable too, whenever the recipe gives them.
 
 `dispatchers[]`: `{name, parameters: [{name, type}]}`. What the editor's "+ Event Dispatcher" makes

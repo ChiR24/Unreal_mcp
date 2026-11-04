@@ -87,6 +87,8 @@ FEngineWire_BuildVariableJson(const UBlueprint *Blueprint,
   // isPublic sets; BlueprintReadOnly is a different flag.
   Obj->SetBoolField(TEXT("public"),
                     (VarDesc.PropertyFlags & CPF_DisableEditOnInstance) == 0);
+  // Expose to Cinematics (CPF_Interp), which add_variable's exposeToCinematics sets.
+  Obj->SetBoolField(TEXT("exposeToCinematics"), (VarDesc.PropertyFlags & CPF_Interp) != 0);
   const FString CategoryStr =
       VarDesc.Category.IsEmpty() ? FString() : VarDesc.Category.ToString();
   if (!CategoryStr.IsEmpty()) {

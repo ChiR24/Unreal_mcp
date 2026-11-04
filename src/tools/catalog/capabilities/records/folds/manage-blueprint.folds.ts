@@ -25,7 +25,7 @@ export const MANAGE_BLUEPRINT_FOLDS: readonly FoldSpec[] = [
   },
   {
     primary: 'edit_variable', selector: 'edit',
-    summary: 'Change a Blueprint\'s variables, chosen by edit. add_variable adds variableName of variableType with defaultValue, category and the isPublic, isReplicated and exposeOnSpawn flags (a taken name is VARIABLE_NAME_CONFLICT, a type that resolves to nothing TYPE_RESOLUTION_FAILED, a default the type refuses DEFAULT_NOT_APPLIED; nothing is added then); rename_variable renames a variable or a component and its graph nodes follow; set_variable_metadata sets a variable\'s tooltip, category or replication; set_metadata sets metadata pairs on the class or one variable; set_default writes a class default value, an inherited property included.',
+    summary: 'Change a Blueprint\'s variables, chosen by edit. add_variable adds variableName of variableType with defaultValue, category and the isPublic, isReplicated, exposeOnSpawn and exposeToCinematics flags (a taken name is VARIABLE_NAME_CONFLICT, a type that resolves to nothing TYPE_RESOLUTION_FAILED, a default the type refuses DEFAULT_NOT_APPLIED; nothing is added then); rename_variable renames a variable or a component and its graph nodes follow; set_variable_metadata sets a variable\'s tooltip, category or replication; set_metadata sets metadata pairs on the class or one variable; set_default writes a class default value, an inherited property included.',
     topics: ['add variable', 'blueprint variable', 'rename variable', 'default value', 'variable metadata', 'class defaults', 'expose on spawn', 'make variable public'],
     members: byName(['add_variable', 'rename_variable', 'set_variable_metadata', 'set_metadata', 'set_default']),
   },

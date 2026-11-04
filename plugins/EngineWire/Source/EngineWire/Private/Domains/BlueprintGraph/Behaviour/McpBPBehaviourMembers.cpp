@@ -101,7 +101,8 @@ bool PlanMembers(UBlueprint* Blueprint, const TSharedPtr<FJsonObject>& Recipe, F
         const FString Name = GetJsonStringField(Var, TEXT("variableName"));
         const int32 Existing = FBlueprintEditorUtils::FindNewVariableIndex(Blueprint, FName(*Name));
         if (!CheckKeys(Var, {TEXT("variableName"), TEXT("variableType"), TEXT("defaultValue"), TEXT("category"),
-                             TEXT("isReplicated"), TEXT("instanceEditable"), TEXT("exposeOnSpawn"), TEXT("keepExisting")},
+                             TEXT("isReplicated"), TEXT("instanceEditable"), TEXT("exposeOnSpawn"),
+                             TEXT("exposeToCinematics"), TEXT("keepExisting")},
                        Where, OutError) ||
             !Claim(Name, Where, Existing == INDEX_NONE))
         {
@@ -236,6 +237,11 @@ bool CommitVariables(UBlueprint* Blueprint, const FPlan& Plan, const FSnapshot& 
         else if (Var->HasField(TEXT("exposeOnSpawn")))
         {
             Desc.RemoveMetaData(FBlueprintMetadata::MD_ExposeOnSpawn);
+        }
+        // Expose to Cinematics, the flag FBlueprintEditorUtils::SetInterpFlag sets.
+        if (Var->TryGetBoolField(TEXT("exposeToCinematics"), bFlag))
+        {
+            Desc.PropertyFlags = bFlag ? (Desc.PropertyFlags | CPF_Interp) : (Desc.PropertyFlags & ~CPF_Interp);
         }
         // add_variable leaves a variable that already exists as it is; the recipe's flags still hold.
         if (Var->TryGetBoolField(TEXT("isReplicated"), bFlag))

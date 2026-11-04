@@ -1,5 +1,5 @@
 {
-  "catalogRevision": "f8102f38fab18590",
+  "catalogRevision": "71d4a4776c77a80e",
   "recordCount": 486,
   "records": [
     {
@@ -21481,7 +21481,7 @@
                 "x-unreal-reflection-boundary": true
               },
               "x-unreal-reflection-boundary": true,
-              "description": "Steps run in order, 1-200. Each is {edit, ...that edit's own params}. Member steps come before the nodes that use them: add_variable (variableName, variableType as add_variable takes it: basic, class, struct, enum and container types, defaultValue, isPublic, exposeOnSpawn, category), add_function (functionName, inputs, outputs, pure, isPublic; the create steps of its body set graphName to the function name, and a connect or pin step that leaves graphName out runs in the graph of the node it names; with an id, \"$id\" is its entry node and \"$id_return\" its return node, which exists when outputs are declared), add_event (customEventName and parameters, or componentName plus eventName for a component or Widget Blueprint widget delegate, e.g. PlayButton with OnClicked) and add_event_dispatcher (dispatcherName, parameters [{name, type}]). Node steps: create_node, connect_pins, set_pin_default_value, set_node_property, create_reroute_node. create_node also takes nodeType CallDelegate (memberName: a dispatcher, memberClass: another class's), BindEvent (the same: a Bind Event node and a custom event, eventName, wired to it; with an id, \"$id_event\" is that event, whose then pin runs when the dispatcher fires, and the object bound goes to \"$id.self\"), Message (memberClass: an interface, memberName: its function), AsyncTask (memberClass: the task or async-action class, memberName: its static factory; event graphs only), FunctionResult (one more return node in a function graph) and MathExpression with expression (the formula, checked and set as set_node_property Expression sets it, before pinDefaults, which can then name its inputs; a name in the formula that is one of the Blueprint's variables reads that variable and gets no input pin, any other name becomes an input pin). Optional per step: id (names the created node; later steps use \"$id\" in fromNodeId, toNodeId and nodeId), from and to (\"$id.PinName\" shorthand for connect_pins), pinDefaults (create_node only: {PinName: value} applied to the new node; a read-only pin such as Set Text's Value gets a MakeLiteral node wired into it). \"$entry\" is the graph's own entry node (a Construction Script or function graph starts there: from \"$entry.then\"). A pure node (math, a getter) runs again for each node that reads it, so after a Set node read the new value from the Set node's Output_Get pin, not from the math that computed it. A create step without posX and posY is auto-placed, and once every step ran it moves beside a node it is wired to (right of what runs it, below-left of what reads it); one whose posX and posY overlap an existing node is placed at the nearest free position instead, and its result says where in placementWarning, so a crowded row never stops the batch (a single create_node call still refuses an overlap). Every function, variable, dispatcher and async factory a step names is checked before any step runs, so a misspelled one fails the batch with nothing applied; any other failure stops the batch at that step and undoes the steps before it (members, nodes, links and pin defaults, in every graph), so a failed batch leaves the Blueprint as it was: fix that step and send the whole batch again. Only a set_node_property on a node that was already there stays, and the error names it."
+              "description": "Steps run in order, 1-200. Each is {edit, ...that edit's own params}. Member steps come before the nodes that use them: add_variable (variableName, variableType as add_variable takes it: basic, class, struct, enum and container types, defaultValue, isPublic, exposeOnSpawn, exposeToCinematics, category), add_function (functionName, inputs, outputs, pure, isPublic; the create steps of its body set graphName to the function name, and a connect or pin step that leaves graphName out runs in the graph of the node it names; with an id, \"$id\" is its entry node and \"$id_return\" its return node, which exists when outputs are declared), add_event (customEventName and parameters, or componentName plus eventName for a component or Widget Blueprint widget delegate, e.g. PlayButton with OnClicked) and add_event_dispatcher (dispatcherName, parameters [{name, type}]). Node steps: create_node, connect_pins, set_pin_default_value, set_node_property, create_reroute_node. create_node also takes nodeType CallDelegate (memberName: a dispatcher, memberClass: another class's), BindEvent (the same: a Bind Event node and a custom event, eventName, wired to it; with an id, \"$id_event\" is that event, whose then pin runs when the dispatcher fires, and the object bound goes to \"$id.self\"), Message (memberClass: an interface, memberName: its function), AsyncTask (memberClass: the task or async-action class, memberName: its static factory; event graphs only), FunctionResult (one more return node in a function graph) and MathExpression with expression (the formula, checked and set as set_node_property Expression sets it, before pinDefaults, which can then name its inputs; a name in the formula that is one of the Blueprint's variables reads that variable and gets no input pin, any other name becomes an input pin). Optional per step: id (names the created node; later steps use \"$id\" in fromNodeId, toNodeId and nodeId), from and to (\"$id.PinName\" shorthand for connect_pins), pinDefaults (create_node only: {PinName: value} applied to the new node; a read-only pin such as Set Text's Value gets a MakeLiteral node wired into it). \"$entry\" is the graph's own entry node (a Construction Script or function graph starts there: from \"$entry.then\"). A pure node (math, a getter) runs again for each node that reads it, so after a Set node read the new value from the Set node's Output_Get pin, not from the math that computed it. A create step without posX and posY is auto-placed, and once every step ran it moves beside a node it is wired to (right of what runs it, below-left of what reads it); one whose posX and posY overlap an existing node is placed at the nearest free position instead, and its result says where in placementWarning, so a crowded row never stops the batch (a single create_node call still refuses an overlap). Every function, variable, dispatcher and async factory a step names is checked before any step runs, so a misspelled one fails the batch with nothing applied; any other failure stops the batch at that step and undoes the steps before it (members, nodes, links and pin defaults, in every graph), so a failed batch leaves the Blueprint as it was: fix that step and send the whole batch again. Only a set_node_property on a node that was already there stays, and the error names it."
             },
             "dryRun": {
               "type": "boolean",
@@ -22135,8 +22135,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "6f24f58d25fbdceb477ce3c41b65402b8ab690265a24b0b09e215b26cc470a98",
-        "content": "5acf546e48dae5743e2e1a61426c368f2b2661a2374cc7ffe56ac571cb7c1027"
+        "schema": "cf031d4ee11f7e7424f61492c6af98e26b2f8fff3ac061ae28ca6abfdb07066b",
+        "content": "be7cc337398e376833d5c382879f4bcb929be5a21ca3d745eddc59ebafcf2b4f"
       }
     },
     {
@@ -22899,7 +22899,7 @@
           "variable default",
           "set property default"
         ],
-        "summary": "Change a Blueprint's variables, chosen by edit. add_variable adds variableName of variableType with defaultValue, category and the isPublic, isReplicated and exposeOnSpawn flags (a taken name is VARIABLE_NAME_CONFLICT, a type that resolves to nothing TYPE_RESOLUTION_FAILED, a default the type refuses DEFAULT_NOT_APPLIED; nothing is added then); rename_variable renames a variable or a component and its graph nodes follow; set_variable_metadata sets a variable's tooltip, category or replication; set_metadata sets metadata pairs on the class or one variable; set_default writes a class default value, an inherited property included.",
+        "summary": "Change a Blueprint's variables, chosen by edit. add_variable adds variableName of variableType with defaultValue, category and the isPublic, isReplicated, exposeOnSpawn and exposeToCinematics flags (a taken name is VARIABLE_NAME_CONFLICT, a type that resolves to nothing TYPE_RESOLUTION_FAILED, a default the type refuses DEFAULT_NOT_APPLIED; nothing is added then); rename_variable renames a variable or a component and its graph nodes follow; set_variable_metadata sets a variable's tooltip, category or replication; set_metadata sets metadata pairs on the class or one variable; set_default writes a class default value, an inherited property included.",
         "whenToUse": [
           "edit=add_variable: A Blueprint needs a new member variable with a type and default.",
           "edit=rename_variable: A member variable needs a new name.",
@@ -22954,6 +22954,10 @@
               "type": "boolean",
               "description": "Expose on Spawn: the variable becomes an input pin on SpawnActor and Create Widget nodes for this class, set as the actor is made (before its BeginPlay). Makes it instance-editable too, as the editor does."
             },
+            "exposeToCinematics": {
+              "type": "boolean",
+              "description": "Expose to Cinematics, as the variable's checkbox in the editor sets it: Sequencer can then key the variable on placed actors of this Blueprint. Default false."
+            },
             "oldName": {
               "type": "string",
               "description": "Current name of the variable or component."
@@ -22991,7 +22995,7 @@
                 "set_metadata",
                 "set_default"
               ],
-              "description": "Which edit variable variant to run.\nadd_variable: Add a member variable named variableName of variableType (basic types, object and class references, structs, enums, arrays, sets and maps, as variableType lists) with defaultValue, category, and the isPublic (instance editable), isReplicated and exposeOnSpawn flags, then compile and save the Blueprint (saved). A name the Blueprint or a parent class already uses is VARIABLE_NAME_CONFLICT, a type that resolves to nothing TYPE_RESOLUTION_FAILED, and a default its type refuses DEFAULT_NOT_APPLIED; nothing is added then.\nrename_variable: Rename a member variable or a component in a Blueprint; its graph nodes follow.\nset_variable_metadata: Set metadata (tooltip, category, replication) on a Blueprint member variable.\nset_metadata: Set arbitrary metadata key-value pairs on a Blueprint class, or on one member variable.\nset_default: Set a default property value on the Blueprint CDO (Class Default Object)."
+              "description": "Which edit variable variant to run.\nadd_variable: Add a member variable named variableName of variableType (basic types, object and class references, structs, enums, arrays, sets and maps, as variableType lists) with defaultValue, category, and the isPublic (instance editable), isReplicated, exposeOnSpawn and exposeToCinematics flags, as one undo step, then compile and save the Blueprint (saved); variable reads the flags back. A name the Blueprint or a parent class already uses is VARIABLE_NAME_CONFLICT, a type that resolves to nothing TYPE_RESOLUTION_FAILED, and a default its type refuses DEFAULT_NOT_APPLIED; nothing is added then.\nrename_variable: Rename a member variable or a component in a Blueprint; its graph nodes follow.\nset_variable_metadata: Set metadata (tooltip, category, replication) on a Blueprint member variable.\nset_metadata: Set arbitrary metadata key-value pairs on a Blueprint class, or on one member variable.\nset_default: Set a default property value on the Blueprint CDO (Class Default Object)."
             }
           },
           "required": [
@@ -23022,6 +23026,12 @@
               "type": "string",
               "description": "Variable name to add, remove, rename, or modify."
             },
+            "variable": {
+              "type": "object",
+              "additionalProperties": true,
+              "x-unreal-reflection-boundary": true,
+              "description": "The variable as the Blueprint holds it after the call: name, type, replicated, public (instance editable), exposeToCinematics, category and metadata. A variable that already existed is read back unchanged."
+            },
             "variableNames": {
               "type": "array",
               "items": {
@@ -23045,7 +23055,7 @@
       },
       "examples": [
         {
-          "title": "Change a Blueprint's variables, chosen by edit. add_variable adds variableName of variableType with defaultValue, category and the isPublic, isReplicated and exposeOnSpawn flags (a taken name is VARIABLE_NAME_CONFLICT, a type that resolves to nothing TYPE_RESOLUTION_FAILED, a default the type refuses DEFAULT_NOT_APPLIED; nothing is added then); rename_variable renames a variable or a component and its graph nodes follow; set_variable_metadata sets a variable's tooltip, category or replication; set_metadata sets metadata pairs on the class or one variable; set_default writes a class default value, an inherited property included.",
+          "title": "Change a Blueprint's variables, chosen by edit. add_variable adds variableName of variableType with defaultValue, category and the isPublic, isReplicated, exposeOnSpawn and exposeToCinematics flags (a taken name is VARIABLE_NAME_CONFLICT, a type that resolves to nothing TYPE_RESOLUTION_FAILED, a default the type refuses DEFAULT_NOT_APPLIED; nothing is added then); rename_variable renames a variable or a component and its graph nodes follow; set_variable_metadata sets a variable's tooltip, category or replication; set_metadata sets metadata pairs on the class or one variable; set_default writes a class default value, an inherited property included.",
           "input": {
             "action": "edit_variable",
             "blueprintPath": "/Game/Blueprints/BP_Test",
@@ -23121,6 +23131,9 @@
             "exposeOnSpawn": [
               "add_variable"
             ],
+            "exposeToCinematics": [
+              "add_variable"
+            ],
             "oldName": [
               "rename_variable"
             ],
@@ -23176,8 +23189,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "cf83e591c2ec71883c3760247dda7296dde6114b8ed85b8d9b69946b7cfbad68",
-        "content": "cefa51f4955d7317b8e84c5ff86384ac8954def5dcf422d89d0930d0db9296d0"
+        "schema": "0748858fa511dd91c818da3b903750ff528db6247a3c003c545c06e0a869adf2",
+        "content": "15d29d640e5aa5984d9dea3c3d0f021d85058067d80bccd4492f8168d95ffeae"
       }
     },
     {

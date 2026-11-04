@@ -22,7 +22,7 @@ const RECIPE_FIELDS = ['description', 'tag', 'replace', 'placeholders', 'variabl
   'functions', 'hooks', 'input', 'eventGraph'];
 const SECTION_FIELDS: Readonly<Record<string, readonly string[]>> = {
   variables: ['variableName', 'variableType', 'defaultValue', 'category', 'isReplicated', 'instanceEditable',
-    'exposeOnSpawn', 'keepExisting'],
+    'exposeOnSpawn', 'exposeToCinematics', 'keepExisting'],
   dispatchers: ['name', 'parameters'],
   customEvents: ['id', 'eventName', 'shared'],
   functions: ['id', 'functionName', 'inputs', 'outputs', 'pure', 'isPublic', 'operations'],

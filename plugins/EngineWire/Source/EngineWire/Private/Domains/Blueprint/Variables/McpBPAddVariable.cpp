@@ -13,6 +13,7 @@
 #include "Foundation/BridgeHelpers/Blueprints/McpBPPaths.h"
 #include "Foundation/BridgeHelpers/Responses/McpJsonFields.h"
 #include "Foundation/HandlerUtils/McpHandlerUtils.h"
+#include "Foundation/McpScopedEditorTransaction.h"
 #include "Misc/ScopeExit.h"
 
 #include "EdGraphSchema_K2.h"
@@ -161,8 +162,6 @@ bool HandleBlueprintAddVariable(const FBlueprintActionContext &Context) {
       return true;
     }
 
-    Blueprint->Modify();
-
     FBPVariableDescription NewVar;
     NewVar.VarName = FName(*VarName);
     NewVar.VarGuid = FGuid::NewGuid();
@@ -193,14 +192,26 @@ bool HandleBlueprintAddVariable(const FBlueprintActionContext &Context) {
       NewVar.PropertyFlags &= ~CPF_DisableEditOnInstance;
       NewVar.SetMetaData(FBlueprintMetadata::MD_ExposeOnSpawn, TEXT("true"));
     }
+    // Expose to Cinematics: the flag the editor's checkbox sets (FBlueprintEditorUtils::SetInterpFlag), so Sequencer
+    // can key the variable on placed actors. The structural mark below is the one SetInterpFlag makes.
+    if (GetJsonBoolField(LocalPayload, TEXT("exposeToCinematics"))) {
+      NewVar.PropertyFlags |= CPF_Interp;
+    }
     // Every default is written, and checked, after the first compile: an object
     // or array ({x,y,z}, a color, a list) has no string form until the property
     // exists, and the compiler only warns on scalar text it cannot parse.
     const bool bHasDefault = DefaultVal.IsValid() && DefaultVal->Type != EJson::Null;
     McpJsonScalarToString(DefaultVal, NewVar.DefaultValue);
 
-    Blueprint->NewVariables.Add(NewVar);
-    FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(Blueprint);
+    // The variable and its flags are one undo step, as the editor's Add Variable is. It closes before the compile,
+    // which reinstances placed actors, and before the save.
+    {
+      FMcpScopedEditorTransaction Transaction(FText::FromString(TEXT("Add Variable")),
+                                              EMcpMutationDurability::EditorStateOnly, {Blueprint});
+      Blueprint->NewVariables.Add(NewVar);
+      FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(Blueprint);
+      Transaction.DescribeInto(Response);
+    }
     McpSafeCompileBlueprint(Blueprint);
 
     // Matched by guid: a name that collides with another member (a component, a
