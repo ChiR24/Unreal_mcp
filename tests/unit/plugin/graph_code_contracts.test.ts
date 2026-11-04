@@ -161,6 +161,18 @@ describe('read -> write round trips', () => {
     expect(expr).not.toContain('DataPins(Node, true)');
   });
 
+  it('leaves the target of a call on the Blueprint itself unwired: the reader drops it, the writer skips it', () => {
+    const snapshot = code(join(CODE, 'McpGraphCodeSnapshot.cpp'));
+    expect(snapshot).toContain('Item.bSelfTarget = IsSelfTarget(Blueprint, Pin);');
+    expect(snapshot).toMatch(/PinSubCategory == UEdGraphSchema_K2::PSC_Self \|\| \(Self && Target && \(Self->IsChildOf\(Target\) \|\| Self->ImplementsInterface\(Target\)\)\)/u);
+    const expr = code(join(CODE, 'McpGraphCodeExpr.cpp'));
+    expect(expr).toMatch(/if \(Ins\.Num\(\) > 0 && Ins\[0\]->bSelfTarget && Ins\[0\]->Links\.Num\(\) == 0 && Ins\[0\]->Value\.IsEmpty\(\)\)\s*\{\s*Ins\.RemoveAt\(0\);/u);
+    // A target kept (wired or set) keeps every argument after it, so the writer sees one for every input.
+    expect(expr).toMatch(/const int32 Keep = Ins\.Num\(\) > 0 && Ins\[0\]->bSelfTarget \? Ins\.Num\(\) : 1;\s*while \(Args\.Num\(\) > Keep/u);
+    expect(code(join(CODE, 'McpGraphCodeWriteValues.cpp'))).toMatch(/const int32 Skipped = First\.Num\(\) > 0 && Positional < First\.Num\(\) && IsSelfTarget\(Blueprint, First\[0\]\) \? 1 : 0;\s*int32 Next = Skipped;/u);
+    expect(code(join(CODE, 'McpGraphCodeSelfCallTests.cpp'))).toContain('"EngineWire.BlueprintGraph.Code.SelfCall"');
+  });
+
   it('names the ids whose title starts with an unknown one when none has its title, in both refusals', () => {
     const catalog = code(join(CODE, 'McpGraphCodeCatalog.cpp'));
     expect(catalog).toMatch(/if \(!Key\.IsEmpty\(\) && !Ids\.ContainsByPredicate[\s\S]*MenuEntries\(Blueprint, Graph, MenuCandidates\(Prefix, true\), Prefix, true\)/u);

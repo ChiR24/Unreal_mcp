@@ -113,7 +113,7 @@ FString FDecompiler::CallInner(int32 NodeIndex, const FBindings& Bindings)
     const FNode& Node = Graph.Nodes[NodeIndex];
     TArray<const FPin*> Ins = DataIns(Node);
     // The implicit target of a call on the Blueprint itself: unwired and empty, it is not an argument.
-    if (Ins.Num() > 0 && Ins[0]->Name.Equals(TEXT("self"), ESearchCase::IgnoreCase) && Ins[0]->Links.Num() == 0 && Ins[0]->Value.IsEmpty())
+    if (Ins.Num() > 0 && Ins[0]->bSelfTarget && Ins[0]->Links.Num() == 0 && Ins[0]->Value.IsEmpty())
     {
         Ins.RemoveAt(0);
     }
@@ -122,8 +122,10 @@ FString FDecompiler::CallInner(int32 NodeIndex, const FBindings& Bindings)
     {
         Args.Add(Expr(*In, Bindings));
     }
-    // Trailing arguments still at the value the node was made with are left out; one always stays.
-    while (Args.Num() > 1 && Ins[Args.Num() - 1]->Links.Num() == 0 && Ins[Args.Num() - 1]->bAtDefault)
+    // Trailing arguments still at the value the node was made with are left out; one always stays, and every one after a
+    // target kept (wired or set): the writer gives that target the first argument only when every input has one.
+    const int32 Keep = Ins.Num() > 0 && Ins[0]->bSelfTarget ? Ins.Num() : 1;
+    while (Args.Num() > Keep && Ins[Args.Num() - 1]->Links.Num() == 0 && Ins[Args.Num() - 1]->bAtDefault)
     {
         Args.Pop();
     }

@@ -84,11 +84,15 @@ bool FTranspiler::SetValue(UEdGraphPin* Pin, const FString& Value)
 // The inputs are read again for every argument, since one can add pins: a class set or wired into Create Widget, Spawn
 // Actor from Class or Construct Object from Class gives the node that class's expose-on-spawn pins (the node's
 // PinDefaultValueChanged, as in the editor), which the arguments after it fill. A :Pin the node has only once another
-// argument ran (a spawn pin named before :Class) waits for it.
+// argument ran (a spawn pin named before :Class) waits for it. A call on the Blueprint itself keeps its target (self, an
+// impure call's first input) unwired, as read_graph_as_code leaves it out: the target takes the first positional argument
+// only when every input has one, and :self names it otherwise. Epic's writer gave it the first argument always.
 bool FTranspiler::Fill(UEdGraphNode* Node, const FString& TypeId, TArray<FArg> Args, const FBindings& Bindings, FFlow& Flow)
 {
     const int32 Positional = Args.FilterByPredicate([](const FArg& Each) { return Each.Pin.IsEmpty(); }).Num();
-    int32 Next = 0;
+    const TArray<UEdGraphPin*> First = DataPins(Node, true);
+    const int32 Skipped = First.Num() > 0 && Positional < First.Num() && IsSelfTarget(Blueprint, First[0]) ? 1 : 0;
+    int32 Next = Skipped;
     for (int32 Pass = 0; Pass < 2; ++Pass)
     {
         for (int32 At = 0; At < Args.Num();)
@@ -122,6 +126,10 @@ bool FTranspiler::Fill(UEdGraphNode* Node, const FString& TypeId, TArray<FArg> A
             Next += Arg.Pin.IsEmpty() ? 1 : 0;
             if (!WireWithPre(*Arg.Value, Pin, Arg.Pre, Bindings, Flow))
             {
+                // Code written with a target first and trailing defaults left out lands here: say why the target was skipped.
+                Error += Skipped && Arg.Pin.IsEmpty() && Next == 2 ? TEXT(" The call's Target (self) was left unwired, the Blueprint itself: a Target "
+                                                                          "takes the first argument only when every input has one, else :self names it.")
+                                                                   : TEXT("");
                 return false;
             }
             Args.RemoveAt(At);

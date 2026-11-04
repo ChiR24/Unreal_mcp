@@ -7,6 +7,7 @@ class UBlueprint;
 class UBlueprintNodeSpawner;
 class UEdGraph;
 class UEdGraphNode;
+class UEdGraphPin;
 class UK2Node;
 
 namespace McpBlueprintGraphHandlers
@@ -55,6 +56,8 @@ struct FPin
     bool bText = false;
     // Still the value the node was made with, so a trailing argument can be left out.
     bool bAtDefault = false;
+    // A call's target the Blueprint may leave unwired (IsSelfTarget).
+    bool bSelfTarget = false;
     FString Value;
     TArray<FPinRef> Links;
 };
@@ -102,6 +105,11 @@ FString TypeIdOf(const UK2Node* Node);
 
 /** A node the flow starts from: an exec output and no exec input (an event, a function entry). */
 bool IsEntry(const FNode& Node);
+
+/** A call's target (its self pin) that the Blueprint may leave unwired, the call then running on the Blueprint itself: of
+ *  its own class, a class it derives from or an interface it implements. Unwired, the reader leaves it out and the writer
+ *  gives it no positional argument, unless the call has one for every input (as the reader prints a target it keeps). */
+bool IsSelfTarget(const UBlueprint* Blueprint, const UEdGraphPin* Pin);
 
 /** The name an (event ...) or (fn ...) head gives an entry of this type id: an event's id past AddEvent|, else its title. */
 FString EntryName(const FString& TypeId);
