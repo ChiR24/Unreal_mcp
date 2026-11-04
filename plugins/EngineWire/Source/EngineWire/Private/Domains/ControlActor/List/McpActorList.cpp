@@ -12,24 +12,25 @@ struct FMcpListedActor {
   double BoundsSize = 0.0;
 };
 
-// How far the point is from the actor's world bounding box: 0 when the box contains it, so a big slab
-// under the point is at distance 0. The box is GetActorBounds' without debug-draw components: the gameplay
-// debugger's renderer claims a million-unit box round the origin, which put its replicator at distance 0
-// from every point in PIE. Editor-only components are left out too: a camera's frustum claims a world-sized box,
-// which put every camera at distance 0 in the editor. An actor with no bounds left (a camera, a target point) is
-// measured to its location, not to the world origin. OutBoundsSize is the box's
-// half-diagonal, which orders equally near actors: of those containing the point, the smallest is the
-// thing at that spot, and the foliage actor, whose box covers the level, comes last.
-double McpDistanceToActorBounds(const AActor *Actor, const FVector &Point, double &OutBoundsSize) {
+// The actor's world bounding box: GetActorBounds' without debug-draw components (the gameplay debugger's renderer
+// claims a million-unit box round the origin, which put its replicator at distance 0 from every point in PIE) and
+// without editor-only ones (a camera's frustum claims a world-sized box). An actor with no bounds left (a camera, a
+// target point) is the point at its location, not the world origin.
+FBox McpListedActorBox(const AActor *Actor) {
   FBox Box(ForceInit);
   Actor->ForEachComponent<UPrimitiveComponent>(false, [&Box](const UPrimitiveComponent *Primitive) {
     if (Primitive->IsRegistered() && !Primitive->IsEditorOnly() && !Primitive->IsA<UDebugDrawComponent>())
       Box += Primitive->Bounds.GetBox();
   });
-  if (!Box.IsValid)
-    Box = FBox(Actor->GetActorLocation(), Actor->GetActorLocation());
+  return Box.IsValid ? Box : FBox(Actor->GetActorLocation(), Actor->GetActorLocation());
+}
+
+// How far the point is from the actor's box: 0 when the box contains it, so a big slab under the point is at
+// distance 0. OutBoundsSize is the box's half-diagonal, which orders equally near actors: of those containing the
+// point, the smallest is the thing at that spot, and the foliage actor, whose box covers the level, comes last.
+double McpDistanceToActorBounds(const AActor *Actor, const FVector &Point, double &OutBoundsSize) {
   FVector Origin, Extent;
-  Box.GetCenterAndExtents(Origin, Extent);
+  McpListedActorBox(Actor).GetCenterAndExtents(Origin, Extent);
   OutBoundsSize = Extent.Size();
   const FVector Outside = (Point - Origin).GetAbs() - Extent;
   return FVector(FMath::Max(Outside.X, 0.0), FMath::Max(Outside.Y, 0.0), FMath::Max(Outside.Z, 0.0)).Size();
@@ -171,6 +172,10 @@ bool UEngineWireSubsystem::HandleControlActorList(
   // transforms per 100 actors, or a reply too large to return at all.
   bool bSummary = false;
   Payload->TryGetBoolField(TEXT("summary"), bSummary);
+  // bounds: each row's world box, so the extents of a level's blocks (a floor run, a pit wall) come in one call
+  // instead of one inspect per actor; scale alone says nothing of a mesh's own size.
+  bool bBounds = false;
+  Payload->TryGetBoolField(TEXT("bounds"), bBounds);
   TMap<FString, int32> ByClass, ByTag, ByFolder;
 
   // Second pass: count, page and describe.
@@ -203,6 +208,13 @@ bool UEngineWireSubsystem::HandleControlActorList(
       Entry->SetObjectField(TEXT("location"), McpHandlerUtils::VectorToJson(Transform.GetLocation()));
       Entry->SetObjectField(TEXT("rotation"), McpHandlerUtils::RotatorToJson(Transform.Rotator()));
       Entry->SetObjectField(TEXT("scale"), McpHandlerUtils::VectorToJson(Transform.GetScale3D()));
+    }
+    if (bBounds) {
+      const FBox Box = McpListedActorBox(Actor);
+      TSharedPtr<FJsonObject> Bounds = MakeShared<FJsonObject>();
+      Bounds->SetObjectField(TEXT("min"), McpHandlerUtils::VectorToJson(Box.Min));
+      Bounds->SetObjectField(TEXT("max"), McpHandlerUtils::VectorToJson(Box.Max));
+      Entry->SetObjectField(TEXT("bounds"), Bounds);
     }
     if (PropertyNames.Num() > 0) {
       TSharedPtr<FJsonObject> Properties = McpHandlerUtils::CreateResultObject();

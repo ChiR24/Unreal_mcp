@@ -1,5 +1,5 @@
 {
-  "catalogRevision": "23e6387c845e573b",
+  "catalogRevision": "620c03c36c8d0e77",
   "recordCount": 485,
   "records": [
     {
@@ -44742,7 +44742,7 @@
           "measure distance between actors",
           "actors near the player"
         ],
-        "summary": "List actors in the current level with their label, class, location, rotation and scale, plus any propertyNames values, narrowed by name filter, tag, class or outliner folder; page on with offset. near (a world point) with radius is how to find what is near a point, nearest first, each with its distance. summary counts the level by class, tag and folder instead.",
+        "summary": "List actors in the current level with their label, class, location, rotation and scale, plus any propertyNames values and, with bounds, each world bounding box, narrowed by name filter, tag, class or outliner folder; page on with offset. near (a world point) with radius is how to find what is near a point, nearest first, each with its distance. summary counts the level by class, tag and folder instead.",
         "whenToUse": [
           "The actors present in the level must be enumerated.",
           "Every actor with one tag, of one class or in one outliner folder must be found, for example to see what a delete_by_tag would remove.",
@@ -44809,6 +44809,10 @@
             "summary": {
               "type": "boolean",
               "description": "Count the matching actors by class, actor tag and outliner folder (byClass, byTag, byFolder) instead of listing them; limit and offset do not apply. The cheap first look at an unfamiliar level."
+            },
+            "bounds": {
+              "type": "boolean",
+              "description": "Give every row its world bounding box (bounds {min, max}): the extents of a level's floors, walls and props in one call, where scale alone says nothing of a mesh's own size."
             }
           },
           "required": [
@@ -44873,6 +44877,12 @@
                   "distance": {
                     "type": "number",
                     "description": "With near: world units from the point to the actor's bounding box, 0 when the box contains it. Rows are sorted by it, nearest first; of equally near actors the smaller box comes first, so the level-wide foliage actor, which contains every point, trails."
+                  },
+                  "bounds": {
+                    "type": "object",
+                    "additionalProperties": true,
+                    "x-unreal-reflection-boundary": true,
+                    "description": "With bounds: the actor's world bounding box, min and max {x, y, z}, from its drawn components (editor-only and debug-draw ones left out); an actor with nothing drawn is the point at its location."
                   }
                 },
                 "additionalProperties": true,
@@ -44987,7 +44997,7 @@
       },
       "examples": [
         {
-          "title": "List actors in the current level with their label, class, location, rotation and scale, plus any propertyNames values, narrowed by name filter, tag, class or outliner folder; page on with offset. near (a world point) with radius is how to find what is near a point, nearest first, each with its distance. summary counts the level by class, tag and folder instead.",
+          "title": "List actors in the current level with their label, class, location, rotation and scale, plus any propertyNames values and, with bounds, each world bounding box, narrowed by name filter, tag, class or outliner folder; page on with offset. near (a world point) with radius is how to find what is near a point, nearest first, each with its distance. summary counts the level by class, tag and folder instead.",
           "input": {
             "action": "list",
             "limit": 50,
@@ -45052,8 +45062,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "b6fd42d4e69b08443dad9ec792bd685cba282958908b0229d79f08c39853e391",
-        "content": "2d6eefbdb9edf07ecffe08f3122a3a816735b7ade70c1691226a5c868dc63054"
+        "schema": "b6ece9b20f1d9a1cd42249ec2c51a62c7108d32319f3b0e0ad391f9d60e26816",
+        "content": "167045ff44b37a209788193cc84961fc9acda762259635108be7a00efde8b28f"
       }
     },
     {

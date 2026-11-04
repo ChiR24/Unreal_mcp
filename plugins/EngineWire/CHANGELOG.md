@@ -23,6 +23,7 @@ All notable changes to the EngineWire plugin (formerly McpAutomationBridge) will
 - **Bake coverage** (`Geometry/Mesh/McpGeometryVertexColorBake.cpp`): the share of the surface in triangles longer than `aoDistance` (`coarseShare`), with a warning past a quarter.
 - **Camera placement** (`PlaceViewCameraForMcp`): every viewport capture places the camera through one function, `fov` included; `compareWith` retakes at the saved field of view.
 - **Tubes** (`Geometry/Modeling/McpGeometryAppendTubes.cpp`): append_tubes carries a ring along each path by double-reflection frames (a closed loop's turn spread back along it), mitres the joints, caps on points of their own, and appends through append_polygons' checks; a tube's sides share a polygroup allocated at append time (`bFreshGroups`).
+- **List bounds** (`ControlActor/List/McpActorList.cpp`): `bounds` gives each row the box its drawn components span (`McpListedActorBox`, the box `near` measures to).
 
 ### Fixed
 - **Search**: lead verbs (`McpSearchIntent.cpp`) and fold aliases run the member they name.

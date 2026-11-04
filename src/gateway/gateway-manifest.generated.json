@@ -4260,6 +4260,7 @@
         "axes",
         "axis",
         "blueprintPath",
+        "bounds",
         "center",
         "childActor",
         "class",
@@ -4637,6 +4638,10 @@
           "blueprintPath": {
             "type": "string",
             "description": "An actor Blueprint to stand in their place (CLASS_NOT_FOUND when none loads there, CANNOT_PLACE when it is not actor based)."
+          },
+          "bounds": {
+            "type": "boolean",
+            "description": "Give every row its world bounding box (bounds {min, max}): the extents of a level's floors, walls and props in one call, where scale alone says nothing of a mesh's own size."
           },
           "center": {
             "type": "object",

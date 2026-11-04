@@ -5204,6 +5204,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "string",
           "description": "An actor Blueprint to stand in their place (CLASS_NOT_FOUND when none loads there, CANNOT_PLACE when it is not actor based)."
         },
+        "bounds": {
+          "type": "boolean",
+          "description": "Give every row its world bounding box (bounds {min, max}): the extents of a level's floors, walls and props in one call, where scale alone says nothing of a mesh's own size."
+        },
         "center": {
           "type": "object",
           "properties": {
@@ -6127,6 +6131,12 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
                   "distance": {
                     "type": "number",
                     "description": "With near: world units from the point to the actor's bounding box, 0 when the box contains it. Rows are sorted by it, nearest first; of equally near actors the smaller box comes first, so the level-wide foliage actor, which contains every point, trails."
+                  },
+                  "bounds": {
+                    "type": "object",
+                    "additionalProperties": true,
+                    "x-unreal-reflection-boundary": true,
+                    "description": "With bounds: the actor's world bounding box, min and max {x, y, z}, from its drawn components (editor-only and debug-draw ones left out); an actor with nothing drawn is the point at its location."
                   }
                 },
                 "additionalProperties": true,

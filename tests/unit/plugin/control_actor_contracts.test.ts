@@ -47,7 +47,10 @@ describe('control_actor.list near and radius: what is close to a point, nearest 
     // components are skipped as well: a camera's frustum put every camera at distance 0 in the editor.
     expect(source).toMatch(/if \(Primitive->IsRegistered\(\) && !Primitive->IsEditorOnly\(\) && !Primitive->IsA<UDebugDrawComponent>\(\)\)\s*Box \+= Primitive->Bounds\.GetBox\(\);/u);
     // No bounds at all (a camera or target point): its location, not the world origin.
-    expect(source).toMatch(/if \(!Box\.IsValid\)\s*Box = FBox\(Actor->GetActorLocation\(\), Actor->GetActorLocation\(\)\);/u);
+    expect(source).toMatch(/return Box\.IsValid \? Box : FBox\(Actor->GetActorLocation\(\), Actor->GetActorLocation\(\)\);/u);
+    // The rows' bounds and the near distance read the same box.
+    expect(source).toContain('McpListedActorBox(Actor).GetCenterAndExtents(Origin, Extent);');
+    expect(source).toMatch(/if \(bBounds\) \{\s*const FBox Box = McpListedActorBox\(Actor\);/u);
     expect(source).not.toContain('GetActorBounds(');
     expect(source).toMatch(/const FVector Outside = \(Point - Origin\)\.GetAbs\(\) - Extent;/u);
     expect(source).toMatch(/return FVector\(FMath::Max\(Outside\.X, 0\.0\), FMath::Max\(Outside\.Y, 0\.0\), FMath::Max\(Outside\.Z, 0\.0\)\)\.Size\(\);/u);

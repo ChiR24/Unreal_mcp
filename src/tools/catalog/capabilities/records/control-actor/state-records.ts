@@ -20,6 +20,7 @@ const LISTED_ACTORS = {
     properties: {
       ...P.actors.items.properties,
       distance: { type: 'number', description: 'With near: world units from the point to the actor\'s bounding box, 0 when the box contains it. Rows are sorted by it, nearest first; of equally near actors the smaller box comes first, so the level-wide foliage actor, which contains every point, trails.' },
+      bounds: { type: 'object', additionalProperties: true, 'x-unreal-reflection-boundary': true, description: 'With bounds: the actor\'s world bounding box, min and max {x, y, z}, from its drawn components (editor-only and debug-draw ones left out); an actor with nothing drawn is the point at its location.' },
     },
   },
   description: 'Matched actors; with near, nearest first, each with its distance.',
@@ -113,7 +114,7 @@ export const STATE_RECORDS: readonly CapabilityRecordSource[] = [
     family: FAMILY_QUERY,
     topics: ['list actors', 'all actors in level', 'actors in scene', 'enumerate actors', 'world outliner', 'actors in level', 'level actors', 'actor positions', 'actor locations', 'actor transforms', 'level layout', 'variable values of many actors', 'how many actors', 'how many cubes are there', 'count actors', 'actors in the level', 'actors near point', 'actors in an area', 'nearby actors', 'actors within radius', 'actors around a location', 'count enemies', 'measure distance between actors', 'actors near the player'],
     aliases: ['control_actor.list_actors'],
-    summary: 'List actors in the current level with their label, class, location, rotation and scale, plus any propertyNames values, narrowed by name filter, tag, class or outliner folder; page on with offset. near (a world point) with radius is how to find what is near a point, nearest first, each with its distance. summary counts the level by class, tag and folder instead.',
+    summary: 'List actors in the current level with their label, class, location, rotation and scale, plus any propertyNames values and, with bounds, each world bounding box, narrowed by name filter, tag, class or outliner folder; page on with offset. near (a world point) with radius is how to find what is near a point, nearest first, each with its distance. summary counts the level by class, tag and folder instead.',
     whenToUse: ['The actors present in the level must be enumerated.', 'Every actor with one tag, of one class or in one outliner folder must be found, for example to see what a delete_by_tag would remove.', 'Something seen in a screenshot or at a coordinate must be identified: list the actors near that point, nearest first.'],
     whenNotToUse: ['A specific known actor name is already available (use find_by_name).'],
     inputProps: {
@@ -125,6 +126,7 @@ export const STATE_RECORDS: readonly CapabilityRecordSource[] = [
       near: { ...P.location, description: 'A world point as [x, y, z] (an {x, y, z} object works too): list what is close to it, nearest first, each row with its distance. With radius, only actors whose bounds come within radius of the point; without it, every matching actor sorted by distance. Combines with filter, tag, className and folder.' },
       radius: { type: 'number', minimum: 0, description: 'World units from near: an actor is listed when its bounding box comes within this distance of the point (the distance is 0 for a box that contains the point, such as a floor slab under it). Needs near.' },
       summary: { type: 'boolean', description: 'Count the matching actors by class, actor tag and outliner folder (byClass, byTag, byFolder) instead of listing them; limit and offset do not apply. The cheap first look at an unfamiliar level.' },
+      bounds: { type: 'boolean', description: 'Give every row its world bounding box (bounds {min, max}): the extents of a level\'s floors, walls and props in one call, where scale alone says nothing of a mesh\'s own size.' },
     },
     required: [],
     outputProps: {
