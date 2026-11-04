@@ -6,6 +6,12 @@ import type { CapabilityRecordSource } from '../../model.js';
 import { ANY_EDITOR_STATE, buildCoreRecord } from '../core/builder.js';
 
 const PT = 'system_control';
+// What console_command answers in output; the engine's log lines during the command come back the same way under details.log.
+const CONSOLE_OUTPUT = {
+  type: 'string',
+  maxLength: 4096,
+  description: 'What the command printed, kept short: the first 30 lines and any Error: or Warning: line after them, at most three lines that open with the same two words, and (+N more lines) where lines were left out. What the engine logged meanwhile comes back the same way under details.log.',
+};
 
 export const CONSOLE_RECORDS: readonly CapabilityRecordSource[] = [
   buildCoreRecord({
@@ -71,7 +77,7 @@ export const CONSOLE_RECORDS: readonly CapabilityRecordSource[] = [
     dispatchAction: 'console_command',
     exampleInput: { action: 'execute_command', command: 'stat unit' },
     exampleOutput: { success: true, message: 'Command executed', command: 'stat unit', output: 'Stat: 0.5ms' },
-    outputProps: { command: { type: 'string', description: 'The command that was executed.' }, output: { type: 'string', maxLength: 4096, description: 'Bounded console output captured from the command.' } },
+    outputProps: { command: { type: 'string', description: 'The command that was executed.' }, output: CONSOLE_OUTPUT },
     outputRequired: ['command'],
   }),
   buildCoreRecord({
@@ -82,7 +88,7 @@ export const CONSOLE_RECORDS: readonly CapabilityRecordSource[] = [
     family: 'console',
     summary: 'Execute a validated, non-empty console command (empty input is rejected).',
     topics: ['active sounds', 'live coding', 'compile c++', 'recompile code', 'hot reload'],
-    whenToUse: ['A console command must be run with explicit empty-input rejection.', 'The sounds playing right now must be listed (is the music still on, did a loop stop): au.DumpActiveSounds puts each one with its asset, owner and volume in output.', 'C++ must be recompiled while the editor runs: LiveCoding.Compile (read_log shows the result; a Live Coding patch is lost when the editor restarts, so a lasting change needs a full build with the editor closed).'],
+    whenToUse: ['A console command must be run with explicit empty-input rejection.', 'The sounds playing right now must be listed (is the music still on, did a loop stop): au.DumpActiveSounds puts each one with its asset, owner and volume in log.', 'C++ must be recompiled while the editor runs: LiveCoding.Compile (read_log shows the result; a Live Coding patch is lost when the editor restarts, so a lasting change needs a full build with the editor closed).'],
     whenNotToUse: ['The command is empty or whitespace-only.'],
     inputProps: { command: { type: 'string', description: 'The non-empty console command to execute.' } },
     required: ['command'],
@@ -90,7 +96,7 @@ export const CONSOLE_RECORDS: readonly CapabilityRecordSource[] = [
     dispatchAction: 'console_command',
     exampleInput: { action: 'console_command', command: 'r.ScreenPercentage 100' },
     exampleOutput: { success: true, message: 'Command executed', command: 'r.ScreenPercentage 100', output: '' },
-    outputProps: { command: { type: 'string', description: 'The command that was executed.' }, output: { type: 'string', maxLength: 4096, description: 'Bounded console output captured from the command.' } },
+    outputProps: { command: { type: 'string', description: 'The command that was executed.' }, output: CONSOLE_OUTPUT },
     outputRequired: ['command'],
   }),
   buildCoreRecord({

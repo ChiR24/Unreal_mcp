@@ -22,8 +22,62 @@
 
 DEFINE_LOG_CATEGORY(LogMcpConsoleHandlers);
 
-// Outer-result cap for captured console output (receipt DATA is further truncated to 2048 by redaction).
+// Cap on each captured text in the reply (output, log), after LeanConsoleText.
 constexpr int32 kMaxConsoleOutputChars = 4096;
+
+namespace
+{
+constexpr int32 kMaxConsoleLines = 30;
+constexpr int32 kMaxConsoleShape = 3;
+
+// What a command printed, kept lean: `scalability 0` echoed ~6 KB of "Set CVar [[name:value]]" lines, with an
+// "Applying CVar settings from Section ..." line between each group of them. Of the lines that open with the same two
+// words only the first kMaxConsoleShape are kept, wherever they fall, at most kMaxConsoleLines lines in all, and an
+// Error: or Warning: line (FMcpOutputCapture marks the engine's) past that limit too; each gap is counted where it was
+// cut. Kept lines get read_log's per-line sanitizer before the text is cut to kMaxConsoleOutputChars, so a cut never
+// leaves part of an identity the sanitizer would have hidden.
+FString LeanConsoleText(const FString& Text)
+{
+    TArray<FString> Lines;
+    Text.ParseIntoArrayLines(Lines, false);
+    TArray<FString> Kept;
+    TMap<FString, int32> Shapes;
+    int32 Shown = 0;
+    int32 Skipped = 0;
+    auto NoteSkipped = [&Kept, &Skipped]()
+    {
+        if (Skipped > 0)
+        {
+            Kept.Add(FString::Printf(TEXT("(+%d more lines)"), Skipped));
+            Skipped = 0;
+        }
+    };
+    for (const FString& Line : Lines)
+    {
+        TArray<FString> Words;
+        Line.ParseIntoArrayWS(Words);
+        const int32 Seen = ++Shapes.FindOrAdd(Words.Num() < 2 ? Line : Words[0] + TEXT(" ") + Words[1]);
+        const bool bProblem = Line.StartsWith(TEXT("Error: ")) || Line.StartsWith(TEXT("Warning: "));
+        if (Seen > kMaxConsoleShape || (Shown >= kMaxConsoleLines && !bProblem))
+        {
+            ++Skipped;
+            continue;
+        }
+        NoteSkipped();
+        Kept.Add(EngineWireSubsystemResponse::SanitizeEngineErrorForResponse(Line));
+        ++Shown;
+    }
+    NoteSkipped();
+    FString Lean = FString::Join(Kept, TEXT("\n"));
+    if (Lean.Len() > kMaxConsoleOutputChars)
+    {
+        // Never split a UTF-16 surrogate pair (high surrogates: 0xD800-0xDBFF).
+        const uint16 Last = static_cast<uint16>(Lean[kMaxConsoleOutputChars - 1]);
+        Lean = Lean.Left(Last >= 0xD800 && Last <= 0xDBFF ? kMaxConsoleOutputChars - 1 : kMaxConsoleOutputChars);
+    }
+    return Lean;
+}
+} // namespace
 
 namespace ConsoleCommandSecurity
 {
@@ -244,37 +298,12 @@ bool UEngineWireSubsystem::HandleConsoleCommandAction(
         }
         GLog->RemoveOutputDevice(&LogCapture);
 
-        auto BoundText = [](FString Text)
-        {
-            if (Text.Len() > kMaxConsoleOutputChars)
-            {
-                int32 CutPos = kMaxConsoleOutputChars;
-                // Avoid splitting a UTF-16 surrogate pair (high surrogates: 0xD800-0xDBFF).
-                if (static_cast<uint16>(Text[CutPos - 1]) >= 0xD800 &&
-                    static_cast<uint16>(Text[CutPos - 1]) <= 0xDBFF)
-                {
-                    --CutPos;
-                }
-                Text = Text.Left(CutPos);
-            }
-            return Text;
-        };
         // Captured engine text is log text, so it gets read_log's per-line
         // sanitizer: an identity or host path the engine printed during the
         // command came back verbatim in `log` while the message was redacted.
-        auto SanitizeLines = [](const FString& Text)
-        {
-            TArray<FString> Lines;
-            Text.ParseIntoArrayLines(Lines, false);
-            for (FString& Line : Lines)
-            {
-                Line = EngineWireSubsystemResponse::SanitizeEngineErrorForResponse(Line);
-            }
-            return FString::Join(Lines, TEXT("\n"));
-        };
-        const FString BoundedOutput = SanitizeLines(BoundText(OutputCapture.TrimStartAndEnd()));
+        const FString BoundedOutput = LeanConsoleText(OutputCapture.TrimStartAndEnd());
         const FString BoundedLog =
-            SanitizeLines(BoundText(FString::Join(LogCapture.Consume(), TEXT("\n")).TrimStartAndEnd()));
+            LeanConsoleText(FString::Join(LogCapture.Consume(), TEXT("\n")).TrimStartAndEnd());
 
         TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
         Result->SetStringField(TEXT("command"), Command);

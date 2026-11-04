@@ -36,9 +36,12 @@ const consoleCommand = readFileSync(
 describe('console_command output redaction contracts', () => {
   it('runs captured output and log text through the per-line engine sanitizer', () => {
     expect(consoleCommand).toContain('#include "Core/Subsystem/EngineWireSubsystemResponseSanitization.h"');
-    expect(consoleCommand).toContain('Line = EngineWireSubsystemResponse::SanitizeEngineErrorForResponse(Line);');
-    expect(consoleCommand).toContain('const FString BoundedOutput = SanitizeLines(BoundText(');
-    expect(consoleCommand).toMatch(/const FString BoundedLog =\s+SanitizeLines\(BoundText\(/);
+    expect(consoleCommand).toContain('Kept.Add(EngineWireSubsystemResponse::SanitizeEngineErrorForResponse(Line));');
+    expect(consoleCommand).toContain('const FString BoundedOutput = LeanConsoleText(');
+    expect(consoleCommand).toMatch(/const FString BoundedLog =\s+LeanConsoleText\(/);
+    // Sanitized before the character cut, so a cut cannot leave part of an identity the sanitizer would have hidden.
+    const lean = consoleCommand.slice(consoleCommand.indexOf('FString LeanConsoleText('));
+    expect(lean.indexOf('SanitizeEngineErrorForResponse(Line)')).toBeLessThan(lean.indexOf('Lean.Left('));
   });
 });
 

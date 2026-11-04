@@ -1,5 +1,5 @@
 {
-  "catalogRevision": "1042455cf80f0b00",
+  "catalogRevision": "3cfd0f67352a7440",
   "recordCount": 486,
   "records": [
     {
@@ -48925,7 +48925,7 @@
           "cheat command",
           "type a cheat code"
         ],
-        "summary": "Run one console command against the editor world, or through the first player while Play In Editor runs, and return what it printed (output, at most 4096 characters). A command the engine does not recognise fails (EXEC_FAILED); one holding ;, |, &&, a backtick or several lines, or a blocked name (quit, exit, py, crash and the like), is refused (COMMAND_BLOCKED). Success means the engine ran it, not that it had the effect wanted.",
+        "summary": "Run one console command against the editor world, or through the first player while Play In Editor runs, and return what it printed (output) and what the engine logged meanwhile (log), each kept short: the first 30 lines and any Error: or Warning: line after them, at most three lines that open with the same two words, and (+N more lines) where lines were left out; at most 4096 characters. A command the engine does not recognise fails (EXEC_FAILED); one holding ;, |, &&, a backtick or several lines, or a blocked name (quit, exit, py, crash and the like), is refused (COMMAND_BLOCKED). Success means the engine ran it, not that it had the effect wanted.",
         "whenToUse": [
           "A console command must be run from the editor context."
         ],
@@ -48979,7 +48979,7 @@
       },
       "examples": [
         {
-          "title": "Run one console command against the editor world, or through the first player while Play In Editor runs, and return what it printed (output, at most 4096 characters). A command the engine does not recognise fails (EXEC_FAILED); one holding ;, |, &&, a backtick or several lines, or a blocked name (quit, exit, py, crash and the like), is refused (COMMAND_BLOCKED). Success means the engine ran it, not that it had the effect wanted.",
+          "title": "Run one console command against the editor world, or through the first player while Play In Editor runs, and return what it printed (output) and what the engine logged meanwhile (log), each kept short: the first 30 lines and any Error: or Warning: line after them, at most three lines that open with the same two words, and (+N more lines) where lines were left out; at most 4096 characters. A command the engine does not recognise fails (EXEC_FAILED); one holding ;, |, &&, a backtick or several lines, or a blocked name (quit, exit, py, crash and the like), is refused (COMMAND_BLOCKED). Success means the engine ran it, not that it had the effect wanted.",
           "input": {
             "action": "console_command",
             "command": "r.SetRes 1920x1080"
@@ -49019,7 +49019,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "a0a3d862a77ce05433d1e54cb53f6c2ca70ac88330e6fb6cfc99ac292231e6c4",
-        "content": "c9218e4238cbc61eb2e09e3b6591d5058cc56d1860d403af3ef66068f23d1cf0"
+        "content": "385b60828ebb656c945e098133842e6d31acc4394d2527059d5685177d6e1ba9"
       }
     },
     {
@@ -115208,10 +115208,10 @@
           "recompile code",
           "hot reload"
         ],
-        "summary": "Run one console command against the editor world, or through the first player while Play In Editor runs, and return what it printed (output, at most 4096 characters). A command the engine does not recognise fails (EXEC_FAILED); one holding ;, |, &&, a backtick or several lines, or a blocked name (quit, exit, py, crash and the like), is refused (COMMAND_BLOCKED). Success means the engine ran it, not that it had the effect wanted.",
+        "summary": "Run one console command against the editor world, or through the first player while Play In Editor runs, and return what it printed (output) and what the engine logged meanwhile (log), each kept short: the first 30 lines and any Error: or Warning: line after them, at most three lines that open with the same two words, and (+N more lines) where lines were left out; at most 4096 characters. A command the engine does not recognise fails (EXEC_FAILED); one holding ;, |, &&, a backtick or several lines, or a blocked name (quit, exit, py, crash and the like), is refused (COMMAND_BLOCKED). Success means the engine ran it, not that it had the effect wanted.",
         "whenToUse": [
           "A console command must be run with explicit empty-input rejection.",
-          "The sounds playing right now must be listed (is the music still on, did a loop stop): au.DumpActiveSounds puts each one with its asset, owner and volume in output.",
+          "The sounds playing right now must be listed (is the music still on, did a loop stop): au.DumpActiveSounds puts each one with its asset, owner and volume in log.",
           "C++ must be recompiled while the editor runs: LiveCoding.Compile (read_log shows the result; a Live Coding patch is lost when the editor restarts, so a lasting change needs a full build with the editor closed).",
           "An arbitrary console command must be run and its result returned."
         ],
@@ -115264,7 +115264,7 @@
             "output": {
               "type": "string",
               "maxLength": 4096,
-              "description": "Bounded console output captured from the command."
+              "description": "What the command printed, kept short: the first 30 lines and any Error: or Warning: line after them, at most three lines that open with the same two words, and (+N more lines) where lines were left out. What the engine logged meanwhile comes back the same way under details.log."
             }
           },
           "required": [
@@ -115276,7 +115276,7 @@
       },
       "examples": [
         {
-          "title": "Run one console command against the editor world, or through the first player while Play In Editor runs, and return what it printed (output, at most 4096 characters). A command the engine does not recognise fails (EXEC_FAILED); one holding ;, |, &&, a backtick or several lines, or a blocked name (quit, exit, py, crash and the like), is refused (COMMAND_BLOCKED). Success means the engine ran it, not that it had the effect wanted.",
+          "title": "Run one console command against the editor world, or through the first player while Play In Editor runs, and return what it printed (output) and what the engine logged meanwhile (log), each kept short: the first 30 lines and any Error: or Warning: line after them, at most three lines that open with the same two words, and (+N more lines) where lines were left out; at most 4096 characters. A command the engine does not recognise fails (EXEC_FAILED); one holding ;, |, &&, a backtick or several lines, or a blocked name (quit, exit, py, crash and the like), is refused (COMMAND_BLOCKED). Success means the engine ran it, not that it had the effect wanted.",
           "input": {
             "action": "console_command",
             "command": "r.ScreenPercentage 100"
@@ -115318,8 +115318,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "60f83cf067f4f83dc8a574e8e06158c13fab777b793f916986a18de69d179b39",
-        "content": "b01a0bfd265707a18b3155a8926929b3fe91637e9e641a3847b2493d0aba8de4"
+        "schema": "b49b1e361aed5d63fdb0008cd1c347bb4455b05327691ee54cefed6c57f34869",
+        "content": "33f6b3cb616f3b38c933993a5c184daaf109e78ec4bf056fdd71ad1cee4b782c"
       }
     },
     {

@@ -5384,3 +5384,28 @@ describe('level saves', () => {
     expect(save).not.toContain('Level->GetWorld()');
   });
 });
+
+describe('console_command replies stay lean', () => {
+  // `scalability 0` answered ~6 KB of "Set CVar [[name:value]]" lines in output and log, for no use to the caller; a
+  // section header between each group of them kept them from ever forming one run.
+  it('keeps a few lines of each opening, a bounded count in all, every error and warning line, and counts each gap', () => {
+    const handler = code('ConsoleCommand', 'McpConsoleHandlers.cpp');
+    const lines = Number(handler.match(/constexpr int32 kMaxConsoleLines = (\d+);/u)?.[1]);
+    const shape = Number(handler.match(/constexpr int32 kMaxConsoleShape = (\d+);/u)?.[1]);
+    expect(lines).toBeGreaterThan(0);
+    expect(lines).toBeLessThanOrEqual(50);
+    expect(shape).toBeGreaterThan(0);
+    expect(shape).toBeLessThanOrEqual(5);
+    const lean = sliceBetween(handler, 'FString LeanConsoleText(const FString& Text)', 'return Lean;');
+    expect(lean).toContain('const int32 Seen = ++Shapes.FindOrAdd(Words.Num() < 2 ? Line : Words[0] + TEXT(" ") + Words[1]);');
+    expect(lean).toContain('if (Seen > kMaxConsoleShape || (Shown >= kMaxConsoleLines && !bProblem))');
+    expect(lean).toContain('Line.StartsWith(TEXT("Error: ")) || Line.StartsWith(TEXT("Warning: "))');
+    expect(lean).toContain('TEXT("(+%d more lines)")');
+    expect(handler).toContain('const FString BoundedOutput = LeanConsoleText(');
+    expect(handler).toMatch(/const FString BoundedLog =\s+LeanConsoleText\(/u);
+    // The log capture marks the engine's errors and warnings, as the engine's own log writes them.
+    const capture = privateCode('Foundation', 'BridgeHelpers', 'Responses', 'McpOutputCapture.h');
+    expect(capture).toMatch(/Level == ELogVerbosity::Error\s+\? TEXT\("Error: "\)/u);
+    expect(capture).toMatch(/Level == ELogVerbosity::Warning\s+\? TEXT\("Warning: "\)/u);
+  });
+});

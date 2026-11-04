@@ -31810,10 +31810,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             {
               "type": "string",
               "maxLength": 4096,
-              "description": "Bounded console output captured from the command."
+              "description": "What the command printed, kept short: the first 30 lines and any Error: or Warning: line after them, at most three lines that open with the same two words, and (+N more lines) where lines were left out. What the engine logged meanwhile comes back the same way under details.log."
             }
           ],
-          "description": "Bounded console output captured from the command."
+          "description": "Captured stdout from the script."
         },
         "parentName": {
           "type": "string",
