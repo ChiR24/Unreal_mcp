@@ -55,7 +55,7 @@ void McpRefreshStructDependents(UUserDefinedStruct* S,
     // 3) Recompile every directly- and transitively-referencing Blueprint.
     for (UBlueprint* BP : ReferencingBPs)
     {
-        FKismetEditorUtilities::CompileBlueprint(BP, EBlueprintCompileOptions::None);
+        McpCompileBlueprint(BP, nullptr, EBlueprintCompileOptions::None);
         if (OutBlueprints)
         {
             OutBlueprints->AddUnique(BP->GetPathName());

@@ -2,6 +2,7 @@
 
 #include "CoreMinimal.h"
 #include "Dom/JsonObject.h"
+#include "Foundation/BridgeHelpers/Blueprints/McpBPCompileHelpers.h"
 #include "Foundation/BridgeHelpers/Blueprints/McpBPSoundCheck.h"
 #include "Foundation/BridgeHelpers/Blueprints/McpBPGraphChecks.h"
 
@@ -40,10 +41,7 @@ inline bool McpCompileBlueprintWithDiagnostics(
   FCompilerResultsLog Results;
   Results.bSilentMode = true;
   Results.bLogInfoOnly = false;
-  FlushRenderingCommands();
-  FKismetEditorUtilities::CompileBlueprint(
-      Blueprint, EBlueprintCompileOptions::SkipGarbageCollection, &Results);
-  FlushRenderingCommands();
+  McpCompileBlueprint(Blueprint, &Results);
 
   TArray<TSharedPtr<FJsonValue>> Diagnostics;
   for (const TSharedRef<FTokenizedMessage> &Message : Results.Messages) {

@@ -105,7 +105,7 @@ bool HandleStructAnalysisRecompile(UEngineWireSubsystem& Bridge, const FString& 
         FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(BP);
 
         FCompilerResultsLog Results;
-        FKismetEditorUtilities::CompileBlueprint(BP, EBlueprintCompileOptions::None, &Results);
+        McpCompileBlueprint(BP, &Results, EBlueprintCompileOptions::None);
 
         ErrorCount += Results.NumErrors;
         for (const TSharedRef<FTokenizedMessage>& Msg : Results.Messages)

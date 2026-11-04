@@ -2,7 +2,7 @@
 
 #include "K2Node_CustomEvent.h"
 #include "K2Node_FunctionEntry.h"
-#include "Kismet2/KismetEditorUtilities.h"
+#include "Foundation/BridgeHelpers/Blueprints/McpBPCompileHelpers.h"
 #include "UObject/UnrealType.h"
 
 namespace McpBlueprintGraphHandlers
@@ -261,7 +261,7 @@ bool TryCreateCustomEventNode(
     TemporaryFunction->MarkAsGarbage();
     FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(
         Context.Blueprint);
-    FKismetEditorUtilities::CompileBlueprint(Context.Blueprint);
+    McpCompileBlueprint(Context.Blueprint, nullptr, EBlueprintCompileOptions::None);
     SaveLoadedAssetThrottled(Context.Blueprint);
 
     TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();

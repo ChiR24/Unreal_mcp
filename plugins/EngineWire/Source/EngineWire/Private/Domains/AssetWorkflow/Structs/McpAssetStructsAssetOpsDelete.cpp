@@ -70,7 +70,7 @@ static bool HandleStructAssetAction_Delete(UEngineWireSubsystem& Bridge, const F
             {
                 if (UBlueprint* BP = AssetData.IsAssetLoaded() ? Cast<UBlueprint>(AssetData.GetAsset()) : nullptr)
                 {
-                    FKismetEditorUtilities::CompileBlueprint(BP, EBlueprintCompileOptions::None);
+                    McpCompileBlueprint(BP, nullptr, EBlueprintCompileOptions::None);
                 }
             }
         }

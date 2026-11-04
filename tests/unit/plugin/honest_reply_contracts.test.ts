@@ -2292,7 +2292,7 @@ describe('a property write the object put back fails', () => {
     expect(before, 'taken before the write').toBeGreaterThan(-1);
     expect(before).toBeLessThan(source.indexOf('McpPropertyTarget::WriteValue(RootObject, EffectivePropertyName, Property, TargetContainer, ValueField, ConversionError)'));
     expect(after, 'after the object\'s own change handling').toBeGreaterThan(source.indexOf('RootObject->PostEditChangeProperty(Changed);'));
-    expect(after, 'and before a Blueprint compile replaces the object').toBeLessThan(source.indexOf('FKismetEditorUtilities::CompileBlueprint(ResolvedBlueprint);'));
+    expect(after, 'and before a Blueprint compile replaces the object').toBeLessThan(source.indexOf('McpCompileBlueprint(ResolvedBlueprint, nullptr, EBlueprintCompileOptions::None);'));
     expect(source).toMatch(/if \(bAdjusted && AfterText == BeforeText\)\s*\{\s*CreatedOverride\.Rollback\(\);/u);
     expect(source).toMatch(/the object works it out from another of its settings, so change that "\s*"one instead\./u);
     expect(source, 'an adjusted value is a success that names it').toContain('object\'s own change handling made it \'%s\'.');

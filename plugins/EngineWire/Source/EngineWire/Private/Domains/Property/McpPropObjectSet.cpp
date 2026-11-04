@@ -20,7 +20,7 @@
 
 #include "Engine/Blueprint.h"
 #include "Kismet2/BlueprintEditorUtils.h"
-#include "Kismet2/KismetEditorUtilities.h"
+#include "Foundation/BridgeHelpers/Blueprints/McpBPCompileHelpers.h"
 #include "ScopedTransaction.h"
 
 bool UEngineWireSubsystem::HandleSetObjectProperty(
@@ -249,7 +249,7 @@ bool UEngineWireSubsystem::HandleSetObjectProperty(
       // so a value written to the CDO does not reach instances spawned from the
       // class until something else recompiles. Compile here so the write means
       // what the caller asked for.
-      FKismetEditorUtilities::CompileBlueprint(ResolvedBlueprint);
+      McpCompileBlueprint(ResolvedBlueprint, nullptr, EBlueprintCompileOptions::None);
       bCompiledBlueprint = true;
       if (bDefaultObject)
       {

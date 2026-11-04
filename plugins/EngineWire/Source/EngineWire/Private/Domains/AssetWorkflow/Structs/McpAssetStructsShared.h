@@ -18,6 +18,7 @@
 #include MCP_USER_DEFINED_STRUCT_HEADER
 #include "Kismet2/BlueprintEditorUtils.h"
 #include "Kismet2/KismetEditorUtilities.h"
+#include "Foundation/BridgeHelpers/Blueprints/McpBPCompileHelpers.h"
 #include "Engine/Blueprint.h"
 #include "K2Node_MakeStruct.h"
 #include "K2Node_BreakStruct.h"

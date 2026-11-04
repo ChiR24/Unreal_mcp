@@ -38,7 +38,7 @@ describe('set_property on a Blueprint CDO reaches the Blueprint\'s current defau
     const flat = compact(setter());
     const apply = flat.indexOf('McpPropertyTarget::WriteValue(RootObject, EffectivePropertyName, Property, TargetContainer, ValueField, ConversionError)');
     const kept = flat.indexOf('McpPropertyTarget::KeepDeclaredDefault(ResolvedBlueprint, RootObject, ResolvedPath);');
-    const compile = flat.indexOf('FKismetEditorUtilities::CompileBlueprint(ResolvedBlueprint);');
+    const compile = flat.indexOf('McpCompileBlueprint(ResolvedBlueprint, nullptr, EBlueprintCompileOptions::None);');
 
     expect(keep).toContain('const FString Head = Dot == INDEX_NONE ? PropertyPath : PropertyPath.Left(Dot);');
     expect(keep, 'a member of a declared struct is a change to the whole variable').toContain('FindPropertyByName(FName(*Head))');
@@ -58,7 +58,7 @@ describe('set_property on a Blueprint CDO reaches the Blueprint\'s current defau
 
   it('after the compile the new default object is found again, and it is the one the reply, the value and the save describe', () => {
     const flat = compact(setter());
-    const compile = flat.indexOf('FKismetEditorUtilities::CompileBlueprint(ResolvedBlueprint);');
+    const compile = flat.indexOf('McpCompileBlueprint(ResolvedBlueprint, nullptr, EBlueprintCompileOptions::None);');
     const refresh = flat.indexOf('McpPropertyTarget::FindOnCurrentDefault(ResolvedBlueprint, ResolvedPath, RootObject, Property, TargetContainer)');
     const owning = flat.indexOf('McpPropertyTarget::SaveAfterWrite(RootObject, ResolvedBlueprint, bMarkDirty, SaveSkippedReason)');
     expect(compact(target())).toContain('UPackage* OwningPackage = (Blueprint ? static_cast<UObject*>(Blueprint) : Target)->GetOutermost();');
@@ -80,14 +80,14 @@ describe('set_property on a Blueprint CDO reaches the Blueprint\'s current defau
   });
 
   it('a value the compile did not keep is an error naming both values, never a success', () => {
-    const flat = compact(sliceBetween(setter(), 'FKismetEditorUtilities::CompileBlueprint(ResolvedBlueprint);', 'RefreshK2NodeTitleCacheIfNeeded('));
+    const flat = compact(sliceBetween(setter(), 'McpCompileBlueprint(ResolvedBlueprint, nullptr, EBlueprintCompileOptions::None);', 'RefreshK2NodeTitleCacheIfNeeded('));
 
     expect(flat).toContain('MCP_PROPERTY_EXPORT_TEXT(Property, KeptText, Property->ContainerPtrToValuePtr<void>(TargetContainer), nullptr, nullptr, PPF_None);');
     expect(flat).toContain('if (!bFound || (bCompare && KeptText != WrittenText)) {');
     expect(flat).toContain('TEXT("PROPERTY_SET_FAILED")');
     expect(flat).toContain("The Blueprint compile did not keep the write: '%s' reads '%s' on the Blueprint's default object afterwards, not '%s'.");
     const all = compact(setter());
-    expect(all.indexOf('const FString WrittenText = bCompare ? McpPropertyTarget::ValueText(Property, TargetContainer) : FString();'), 'the written value is taken before the compile').toBeLessThan(all.indexOf('FKismetEditorUtilities::CompileBlueprint(ResolvedBlueprint);'));
+    expect(all.indexOf('const FString WrittenText = bCompare ? McpPropertyTarget::ValueText(Property, TargetContainer) : FString();'), 'the written value is taken before the compile').toBeLessThan(all.indexOf('McpCompileBlueprint(ResolvedBlueprint, nullptr, EBlueprintCompileOptions::None);'));
   });
 });
 
