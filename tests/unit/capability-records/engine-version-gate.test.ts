@@ -44,3 +44,14 @@ describe('minEngineVersion', () => {
     expect(read('Gateway', 'McpNativeGatewayDescribeOverview.cpp')).toContain('McpRunsOnThisEngine(*Record)');
   });
 });
+
+describe('edits while Live Coding compiles', () => {
+  // The engine marks no package dirty while a reload is active: a sublevel's spawns and an interlude's mesh swaps made
+  // during a compile read "0 dirty" in save_all and were dropped by the next level load.
+  it('refuses every capability that is not a read until the compile ends', () => {
+    const catalog = read('Gateway', 'McpNativeGatewayCatalog.cpp');
+    expect(catalog).toContain('if (IsReloadActive() && !Record.Effect.Equals(TEXT("read"), ESearchCase::IgnoreCase))');
+    expect(catalog).toContain('OutCode = TEXT("LIVE_CODING_ACTIVE");');
+    expect(catalog).toContain('#include "Modules/ModuleManager.h"');
+  });
+});

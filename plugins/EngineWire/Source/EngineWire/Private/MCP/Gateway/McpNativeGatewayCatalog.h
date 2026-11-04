@@ -46,7 +46,8 @@ TSharedPtr<FJsonObject> McpSearchFilters(const FMcpDiscoveryQuery& Input);
 // record's content/schema hashes, so all three revision strings stay distinct and truthful.
 void McpSetReceiptRecordRevisions(const TSharedPtr<FJsonObject>& Receipt, const FString& CapabilityId);
 
-// Refuses (OutCode and OutMessage set) a capability this engine is too old for (ENGINE_VERSION_UNSUPPORTED), or
+// Refuses (OutCode and OutMessage set) a capability this engine is too old for (ENGINE_VERSION_UNSUPPORTED), one that
+// is not a read while a Live Coding compile runs (LIVE_CODING_ACTIVE: the engine marks nothing unsaved then), or one
 // whose editorStates exclude "edit" while no Play-In-Editor world runs (EDITOR_STATE_MISMATCH). Returns true when
 // the call may proceed. Lives here so the execute validation file stays under the pure-line ceiling.
 bool McpCheckAvailabilityGate(const FMcpCapabilityRecord& Record, FString& OutCode, FString& OutMessage);

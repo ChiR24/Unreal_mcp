@@ -4,6 +4,7 @@
 #include "Editor.h"
 #include "MCP/Gateway/McpNativeGatewayCapabilityStore.h"
 #include "MCP/Gateway/McpNativeGatewaySearch.h"
+#include "Modules/ModuleManager.h"
 #include "Runtime/Launch/Resources/Version.h"
 
 namespace
@@ -58,6 +59,15 @@ bool McpCheckAvailabilityGate(const FMcpCapabilityRecord& Record, FString& OutCo
 		OutCode = TEXT("ENGINE_VERSION_UNSUPPORTED");
 		OutMessage = FString::Printf(TEXT("'%s' needs Unreal Engine %s or later; this editor is %d.%d."),
 			*Record.Id, *McpRecordMinEngineVersion(Record), ENGINE_MAJOR_VERSION, ENGINE_MINOR_VERSION);
+		return false;
+	}
+	// While Live Coding compiles, the engine marks no package dirty (MarkPackageDirty skips while a reload is active):
+	// moves, spawns and mesh swaps made then read "nothing unsaved", save_all wrote nothing, and a level load dropped them.
+	if (IsReloadActive() && !Record.Effect.Equals(TEXT("read"), ESearchCase::IgnoreCase))
+	{
+		OutCode = TEXT("LIVE_CODING_ACTIVE");
+		OutMessage = FString::Printf(TEXT("'%s' changes the editor, and a Live Coding compile is running: until it ends the engine "
+			"marks nothing unsaved, so the change would be lost. Call again once the log says \"Live coding succeeded\"."), *Record.Id);
 		return false;
 	}
 	// Editor-state gate (dogfood #91): a capability whose editorStates exclude
