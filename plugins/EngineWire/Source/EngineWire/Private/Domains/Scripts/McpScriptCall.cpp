@@ -20,6 +20,21 @@ constexpr int32 MaxWarnings = 50;
 
 using namespace ScriptCallParts;
 
+bool FRunner::Pairs(const FSExpr& Form, const FNames& Names, TSharedPtr<FJsonObject>& Out)
+{
+    Out = MakeShared<FJsonObject>();
+    for (int32 At = 1; At + 1 < Form.Items.Num(); At += 2)
+    {
+        TSharedPtr<FJsonValue> Value;
+        if (!Eval(Form.Items[At + 1], Names, Value))
+        {
+            return false;
+        }
+        Out->SetField(Form.Items[At].Text.Mid(1), Value);
+    }
+    return true;
+}
+
 // A step as a direct execute would be: (capability.id :param value ...) becomes {capability, params}, held to the
 // gateway's own validation (capability, exact schema, folding, disabled tool groups) and to the gate for the caller's
 // principal (scope, project, paths, console policy, quota); consent is this run's grant, for what it listed.

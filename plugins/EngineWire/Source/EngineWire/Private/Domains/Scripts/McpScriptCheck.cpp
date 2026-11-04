@@ -10,9 +10,9 @@ using McpGraphCode::FSExpr;
 
 namespace ScriptCheckParts
 {
-const TCHAR* const Expressions = TEXT("a call (capability.id :param value ...), (not a), (and a b), (or a b), a comparison "
-                                      "(== a b) or (< a b), arithmetic (+ a b), (range n), (list ...), (obj :key value ...), "
-                                      "a literal or a name");
+const TCHAR* const Expressions = TEXT("a call (capability.id :param value ...), (not a), (and a b), (or a b), (if cond a b), "
+                                      "a comparison (== a b) or (< a b), arithmetic (+ a b), (range n), (list ...), "
+                                      "(obj :key value ...), a literal or a name");
 
 bool IsKey(const FSExpr& Item)
 {
@@ -169,12 +169,19 @@ bool FChecker::Expr(const FSExpr& Form, const TSet<FString>& Bound)
         return CallForm(Form, Bound);
     }
     const int32 Args = Form.Items.Num() - 1;
+    // Stmt takes the statement (if ...); in a value's place it is (if cond a b), the names in both values checked
+    // below though only one of them is evaluated.
+    if (HeadIs(Form, TEXT("if")) && (Args != 3 || HeadIs(Form.Items.Last(), TEXT("else"))))
+    {
+        return Fail(Form.Line, TEXT("SCRIPT_INVALID"), TEXT("(if cond a b) used as a value needs both values: a when cond is true, b when it "
+                                                            "is not (only the statement form takes (else ...))."));
+    }
     const bool bObj = HeadIs(Form, TEXT("obj"));
     const bool bShape = HeadIs(Form, TEXT("not")) ? Args == 1
                       : (HeadIs(Form, TEXT("and")) || HeadIs(Form, TEXT("or")) || IsOperator(Form)) ? Args == 2
                       : HeadIs(Form, TEXT("range")) ? (Args == 1 || Args == 2)
                       : bObj ? Args % 2 == 0
-                      : HeadIs(Form, TEXT("list"));
+                      : HeadIs(Form, TEXT("list")) || HeadIs(Form, TEXT("if"));
     if (!bShape)
     {
         const FString Head = Form.Items.Num() > 0 && Form.Items[0].Type == FSExpr::EType::Symbol ? Form.Items[0].Text : FString(TEXT("()"));

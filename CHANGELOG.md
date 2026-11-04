@@ -27,6 +27,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Sequences**: `add_actors` `rebind` points a sequence copied with its level at the new level's actors (in Play it animated nothing and never took the camera).
 - **Variables**: `add_variable` takes `exposeToCinematics`, so Sequencer can key the variable on placed actors.
 - **Cutscene shots without Play**: `screenshot` `camera` looks through a camera actor as it is now, and `pause` with `startTime` names the camera the cut shows then (`cameraCut`).
+- **run_script**: `(if cond a b)` works as a value (a let, a call's parameter, an operator) and evaluates only the value it picks.
 - **Levels**: `set_current_level` picks the level new actors are spawned into; `add_sublevel` keeps the current level and says which it is.
 - **`set_project_thumbnail`** sets the picture the Epic Games Launcher shows for the project: the level view from the camera given, in game view, as a square.
 - **`control_actor list`** takes `bounds`: each row's world box, the extents of a level's floors, walls and props in one call.

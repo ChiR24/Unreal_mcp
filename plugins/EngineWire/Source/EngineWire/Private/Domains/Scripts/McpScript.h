@@ -13,12 +13,12 @@ struct FMcpGatewayExecutePlan;
 
 // system_control run_script: a short script of capability calls run in one request, in the S-expression grammar of
 // read_graph_as_code (McpGraphCodeParse). (let name (capability.id :param value ...)) calls a capability and keeps its
-// result; name.field.0 reads into one; (for item list ...), (if cond ... (else ...)), (expect "assertion"),
-// (return value). Checked whole before anything runs (McpScriptCheck.cpp). Each call then goes through the gateway's
-// own validation, is authorized for the caller as a direct execute would be (consent aside: the script's grant covers
-// the capabilities it lists), and runs on its handler in-process under a captured id, inside this request's
-// change-watch, undo and error-capture brackets. A failed step or expectation rolls the script back through a restore
-// point, as far as undo reaches.
+// result; name.field.0 reads into one; (for item list ...), (if cond ... (else ...)) and, as a value, (if cond a b),
+// (expect "assertion"), (return value). Checked whole before anything runs (McpScriptCheck.cpp). Each call then goes
+// through the gateway's own validation, is authorized for the caller as a direct execute would be (consent aside: the
+// script's grant covers the capabilities it lists), and runs on its handler in-process under a captured id, inside this
+// request's change-watch, undo and error-capture brackets. A failed step or expectation rolls the script back through a
+// restore point, as far as undo reaches.
 namespace McpScript
 {
 using FNames = TMap<FString, TSharedPtr<FJsonValue>>;
@@ -101,8 +101,8 @@ private:
     bool Stmts(const TArray<McpGraphCode::FSExpr>& Body, int32 From, FNames Names);
     bool Stmt(const McpGraphCode::FSExpr& Form, FNames& Names);
     bool Eval(const McpGraphCode::FSExpr& Expr, const FNames& Names, TSharedPtr<FJsonValue>& Out);
+    // McpScriptCall.cpp: one capability call, its :param value pairs evaluated, validated, authorized and run in-process.
     bool Pairs(const McpGraphCode::FSExpr& Form, const FNames& Names, TSharedPtr<FJsonObject>& Out);
-    // McpScriptCall.cpp: one capability call, validated, authorized and run in-process.
     bool Call(const McpGraphCode::FSExpr& Form, const FNames& Names, TSharedPtr<FJsonValue>& Out);
     bool Dispatch(int32 Line, const FMcpGatewayExecutePlan& Plan, const FString& StepId, TSharedPtr<FJsonValue>& Out);
 };

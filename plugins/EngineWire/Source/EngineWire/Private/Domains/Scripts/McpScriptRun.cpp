@@ -162,21 +162,6 @@ bool FRunner::Stmt(const FSExpr& Form, FNames& Names)
     return Eval(Form, Names, Value);
 }
 
-bool FRunner::Pairs(const FSExpr& Form, const FNames& Names, TSharedPtr<FJsonObject>& Out)
-{
-    Out = MakeShared<FJsonObject>();
-    for (int32 At = 1; At + 1 < Form.Items.Num(); At += 2)
-    {
-        TSharedPtr<FJsonValue> Value;
-        if (!Eval(Form.Items[At + 1], Names, Value))
-        {
-            return false;
-        }
-        Out->SetField(Form.Items[At].Text.Mid(1), Value);
-    }
-    return true;
-}
-
 bool FRunner::Eval(const FSExpr& Expr, const FNames& Names, TSharedPtr<FJsonValue>& Out)
 {
     if (Expr.Type != FSExpr::EType::List)
@@ -191,6 +176,11 @@ bool FRunner::Eval(const FSExpr& Expr, const FNames& Names, TSharedPtr<FJsonValu
     if (Expr.Items.Num() == 0 || Expr.Items[0].Type != FSExpr::EType::Symbol)
     {
         return Fail(Expr.Line, TEXT("SCRIPT_INVALID"), TEXT("a list that is not a call or a form is not an expression."));
+    }
+    // (if cond a b) as a value: cond judged as the statement (if ...) judges it, and only the value it picks evaluated.
+    if (HeadIs(Expr, TEXT("if")))
+    {
+        return Eval(Expr.Items[1], Names, Out) && Eval(Expr.Items[IsTrue(Out) ? 2 : 3], Names, Out);
     }
     TArray<TSharedPtr<FJsonValue>> Args;
     const bool bShortCircuit = HeadIs(Expr, TEXT("and")) || HeadIs(Expr, TEXT("or"));

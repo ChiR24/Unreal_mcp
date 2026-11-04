@@ -29,6 +29,18 @@ const testCases = [
   { scenario: 'READ: the sunk crate stands at z 50', toolName: 'control_actor', arguments: { action: 'get_transform', actorName: B }, expected: 'success', assertions: [
     { path: 'structuredContent.result.location.2', approximately: 50, tolerance: 1, label: 'raised' },
   ] },
+  // The value not picked would fail if it ran: a call on an actor that does not exist, a field the list has not got.
+  { scenario: 'UPDATE: (if cond a b) as a value evaluates only the value it picks', toolName: 'system_control', arguments: run(`(let crates (control_actor.list :filter "${PREFIX}"))
+(let side (if (> crates.count 2) 31100 (control_actor.get_transform :actorName "MCP_NoSuchActor_${ts}")))
+(control_actor.set_transform :actorName "${C}" :location (obj :x 31400 :y side :z (if (== side 31100) 50 crates.nothing)))
+(return (if (< side 0) crates.nothing "picked"))`), expected: 'success', assertions: [
+    { path: 'structuredContent.result.returned', equals: 'picked', label: 'b for a false cond' },
+    { path: 'structuredContent.result.steps.length', equals: 2, label: 'the call in the value not picked never ran' },
+  ] },
+  { scenario: 'READ: crate C stands where the value ifs put it', toolName: 'control_actor', arguments: { action: 'get_transform', actorName: C }, expected: 'success', assertions: [
+    { path: 'structuredContent.result.location.1', approximately: 31100, tolerance: 1, label: 'y from (if (> crates.count 2) 31100 ...)' },
+  ] },
+  { scenario: 'ERROR: an (if ...) in a value\'s place without both values is refused before anything runs', toolName: 'system_control', arguments: run(`(control_actor.set_transform :actorName "${C}" :location (obj :x 31400 :y 31000 :z (if true 900)))`), expected: 'error|SCRIPT_INVALID' },
   { scenario: 'CREATE: a script spawns a row with range, joined names and computed positions', toolName: 'system_control', arguments: run(`(for i (range 2)
   (control_actor.spawn :classPath "/Engine/BasicShapes/Cube" :actorName (+ "${ROW}" i) :location (obj :x (+ 31000 (* i 200)) :y 31600 :z 50) :tags (list "${TAG}")))
 (return (+ "made " 2))`), expected: 'success', assertions: [
