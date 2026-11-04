@@ -1,5 +1,5 @@
 {
-  "catalogRevision": "7a2d53eb2c2c15df",
+  "catalogRevision": "c52d688b3bc27873",
   "recordCount": 486,
   "records": [
     {
@@ -107795,6 +107795,7 @@
         "whenToUse": [
           "edit=add_actor: An existing actor must be added to the sequence.",
           "edit=add_actors: Multiple actors must be bound at once.",
+          "edit=add_actors: A sequence was copied for a copied level: rebind its actors in the new level.",
           "edit=add_camera: A camera must be added to the sequence for cinematic shots.",
           "edit=add_spawnable: A spawnable actor must be created from a class.",
           "edit=remove_actors: Bound actors must be removed from the sequence."
@@ -107824,6 +107825,10 @@
               "type": "string",
               "description": "Actor name in the current level."
             },
+            "rebind": {
+              "type": "boolean",
+              "description": "Point the binding the sequence already has under the actor's label at this actor, its tracks kept (default false). A sequence copied beside a copied level still binds the first level's actors, so in Play nothing it animates moves and its camera cuts never take the view; rebind the copy in the new level. Without such a binding the actor is bound as without rebind."
+            },
             "actorNames": {
               "type": "array",
               "items": {
@@ -107849,7 +107854,7 @@
                 "add_spawnable",
                 "remove_actors"
               ],
-              "description": "Which edit sequence bindings variant to run.\nadd_actor: Bind a placed actor (actorName, its label) to a Level Sequence as a possessable, reusing the binding it already has; a missing actor fails with NO_ACTORS_BOUND. Answers results with the bindingGuid.\nadd_actors: Bind several placed actors (actorNames, their labels) to a Level Sequence as possessables, reusing bindings they already have; answers each in results (bindingGuid or error) with successful and failed, and fails with NO_ACTORS_BOUND only when none bound.\nadd_camera: Add a camera to a Level Sequence: by default a CameraActor placed at the world origin (actorName labels it, default SequenceCamera; move it with control_actor) and bound as a possessable; spawnable true adds a camera the sequence owns, which exists only while it plays. An asset that is not a Level Sequence is refused before anything is placed, and a camera that could not be bound is removed again (BIND_FAILED).\nadd_spawnable: Add a spawnable of className (a class path or name) to a Level Sequence: an actor the sequence creates while it plays and removes after. An unknown class is CLASS_NOT_FOUND; answers the className resolved and its bindingGuid.\nremove_actors: Remove the bindings of the named actors (actorNames) from a Level Sequence, with their tracks; answers removedActors and removed, and fails with NO_ACTORS_REMOVED when none of them was bound."
+              "description": "Which edit sequence bindings variant to run.\nadd_actor: Bind a placed actor (actorName, its label) to a Level Sequence as a possessable, reusing the binding it already has (rebind: the binding of that name, made in another level, now points here); a missing actor fails with NO_ACTORS_BOUND. Answers results with the bindingGuid.\nadd_actors: Bind several placed actors (actorNames, their labels) to a Level Sequence as possessables, reusing bindings they already have (rebind: the bindings of those names, made in another level, now point at these actors, as after copying a level and its sequence); answers each in results (bindingGuid, rebound, or error) with successful and failed, and fails with NO_ACTORS_BOUND only when none bound.\nadd_camera: Add a camera to a Level Sequence: by default a CameraActor placed at the world origin (actorName labels it, default SequenceCamera; move it with control_actor) and bound as a possessable; spawnable true adds a camera the sequence owns, which exists only while it plays. An asset that is not a Level Sequence is refused before anything is placed, and a camera that could not be bound is removed again (BIND_FAILED).\nadd_spawnable: Add a spawnable of className (a class path or name) to a Level Sequence: an actor the sequence creates while it plays and removes after. An unknown class is CLASS_NOT_FOUND; answers the className resolved and its bindingGuid.\nremove_actors: Remove the bindings of the named actors (actorNames) from a Level Sequence, with their tracks; answers removedActors and removed, and fails with NO_ACTORS_REMOVED when none of them was bound."
             }
           },
           "required": [
@@ -107971,6 +107976,10 @@
               "add_actor",
               "add_camera"
             ],
+            "rebind": [
+              "add_actor",
+              "add_actors"
+            ],
             "actorNames": [
               "add_actors",
               "remove_actors"
@@ -108008,8 +108017,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "1b20dcd006ba836ff26d50140e6529cbf5be3efae6a4442dba8ef20a00ca9171",
-        "content": "d737d56dc219f890cdcf45732e26749cfee738937610fa250706e10e20090169"
+        "schema": "8671411f12803bfca225d8a48341b6f5597738f769dee0f7830dabc47f2d8afa",
+        "content": "5db9d7f190145f4b8fc8c893149d3fac2a90bbac22d0f2e8fd95b4254822ca42"
       }
     },
     {

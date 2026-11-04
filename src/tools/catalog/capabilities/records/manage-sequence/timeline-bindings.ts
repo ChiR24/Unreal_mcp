@@ -11,6 +11,7 @@ import { buildRecord, P, SEQ_PLUGINS } from './helpers.js';
 
 const F = 'timeline';
 const D = 'sequence';
+const REBIND = { type: 'boolean', description: 'Point the binding the sequence already has under the actor\'s label at this actor, its tracks kept (default false). A sequence copied beside a copied level still binds the first level\'s actors, so in Play nothing it animates moves and its camera cuts never take the view; rebind the copy in the new level. Without such a binding the actor is bound as without rebind.' } as const;
 
 export const TIMELINE_BINDINGS_RECORDS: readonly CapabilityRecordSource[] = [
   buildRecord({
@@ -27,20 +28,20 @@ export const TIMELINE_BINDINGS_RECORDS: readonly CapabilityRecordSource[] = [
   }),
   buildRecord({
     id: 'sequence.add_actor', action: 'add_actor', family: F, domain: D,
-    summary: 'Bind a placed actor (actorName, its label) to a Level Sequence as a possessable, reusing the binding it already has; a missing actor fails with NO_ACTORS_BOUND. Answers results with the bindingGuid.',
+    summary: 'Bind a placed actor (actorName, its label) to a Level Sequence as a possessable, reusing the binding it already has (rebind: the binding of that name, made in another level, now points here); a missing actor fails with NO_ACTORS_BOUND. Answers results with the bindingGuid.',
     whenToUse: ['An existing actor must be added to the sequence.'],
     whenNotToUse: ['The actor does not exist in the current level.'],
-    inputProps: { path: P.path, actorName: P.actorName },
+    inputProps: { path: P.path, actorName: P.actorName, rebind: REBIND },
     required: ['path', 'actorName'],
     effect: 'write', latency: 'interactive', resources: 'low', plugins: SEQ_PLUGINS,
     exampleInput: { action: 'add_actor', path: '/Game/Cinematics/SEQ_Master', actorName: 'MyActor' },
   }),
   buildRecord({
     id: 'sequence.add_actors', action: 'add_actors', family: F, domain: D,
-    summary: 'Bind several placed actors (actorNames, their labels) to a Level Sequence as possessables, reusing bindings they already have; answers each in results (bindingGuid or error) with successful and failed, and fails with NO_ACTORS_BOUND only when none bound.',
-    whenToUse: ['Multiple actors must be bound at once.'],
+    summary: 'Bind several placed actors (actorNames, their labels) to a Level Sequence as possessables, reusing bindings they already have (rebind: the bindings of those names, made in another level, now point at these actors, as after copying a level and its sequence); answers each in results (bindingGuid, rebound, or error) with successful and failed, and fails with NO_ACTORS_BOUND only when none bound.',
+    whenToUse: ['Multiple actors must be bound at once.', 'A sequence was copied for a copied level: rebind its actors in the new level.'],
     whenNotToUse: ['Only a single actor is needed.'],
-    inputProps: { path: P.path, actorNames: P.actorNames },
+    inputProps: { path: P.path, actorNames: P.actorNames, rebind: REBIND },
     required: ['path', 'actorNames'],
     // Native HandleSequenceAddActors builds a per-actor results[] plus total/successful/failed
     // (SequenceHandlersBindings.cpp:198-216). Declaring none of it made output validation drop

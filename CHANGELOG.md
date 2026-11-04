@@ -24,6 +24,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **`append_tubes`** lays pipes, cables, rods and rings along paths in one call: rings carried without twisting, mitred corners, a taper, caps and repeats.
 - **`append_polygons`** takes `repeat`: one face laid out in rows (stripes, slats, fins) instead of every copy by hand.
 - **`read_graph_as_code`** takes `entry`: one event or function alone, its nodes and links only (one event of a 500-node graph came with the rest).
+- **Sequences**: `add_actors` `rebind` points a sequence copied with its level at the new level's actors (in Play it animated nothing and never took the camera).
 - **`set_project_thumbnail`** sets the picture the Epic Games Launcher shows for the project: the level view from the camera given, in game view, as a square.
 - **`control_actor list`** takes `bounds`: each row's world box, the extents of a level's floors, walls and props in one call.
 - **`screenshot`, `describe_view`, `analyze_view`, `audit_materials` and `capture_passes`** take `fov` beside `location` and `rotation` (the editor resets its own on restart); `compareWith` retakes at the saved one.

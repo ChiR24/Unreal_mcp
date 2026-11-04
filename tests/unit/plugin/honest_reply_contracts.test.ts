@@ -4764,6 +4764,17 @@ describe('a sequence camera is placed only when it can be bound', () => {
   });
 });
 
+describe('a copied sequence can be bound to the copied level', () => {
+  it('rebind points the possessable of the actor\'s label at it, keeping its GUID and tracks', () => {
+    const rebind = code('Sequence', 'Cinematics/McpSeqCineRebind.cpp');
+    expect(rebind).toMatch(/Possessable\.GetParent\(\)\.IsValid\(\) \|\| Possessable\.GetName\(\) != Label/u);
+    expect(rebind).toMatch(/UnbindPossessableObjects\(Guid\);\s*Sequence->BindPossessableObject\(Guid, \*Actor, Actor->GetWorld\(\)\);/u);
+    const bindings = code('Sequence', 'McpSeqBindings.cpp');
+    expect(bindings).toMatch(/bRebind \? McpSequenceCinematics::RebindPossessableByName\(LevelSeq, Found\) : FGuid\(\)/u);
+    expect(bindings).toMatch(/ForwardPayload->SetBoolField\(TEXT\("rebind"\)/u);
+  });
+});
+
 describe('cinematic camera and rig edits undo and read back', () => {
   it('camera settings modify the camera before writing, re-derive the lens and read back what it kept', () => {
     const cameras = code('Sequence', 'Cinematics', 'McpSeqCineCameras.cpp');

@@ -66,6 +66,9 @@ const testCases = [
   { scenario: 'ERROR: add_camera refuses an asset that is not a Level Sequence', toolName: 'manage_sequence', arguments: { action: 'add_camera', path: '/Engine/BasicShapes/Cube' }, expected: 'error|INVALID_SEQUENCE' },
   { scenario: 'ADD: add_actor', toolName: 'manage_sequence', arguments: { action: 'add_actor', path: SEQUENCE_PATH, actorName: ACTOR_A }, expected: 'success|already exists', captureResult: { key: 'actorBindingId', fromField: 'result.bindingGuid' } },
   { scenario: 'ADD: add_actors', toolName: 'manage_sequence', arguments: { action: 'add_actors', path: SEQUENCE_PATH, actorNames: [ACTOR_A, ACTOR_B] }, expected: 'success|already exists' },
+  // A sequence copied with its level binds the first level's actors: rebind points the bindings of those names here.
+  { scenario: 'ADD: add_actors rebind keeps the binding of that name', toolName: 'manage_sequence', arguments: { action: 'add_actors', path: SEQUENCE_PATH, actorNames: [ACTOR_A], rebind: true }, expected: 'success', assertions: [{ path: 'structuredContent.result.results.0.rebound', equals: true, label: 'the binding of that name now points at the actor' }, { path: 'structuredContent.result.successful', equals: 1, label: 'one actor bound' }] },
+  { scenario: 'ADD: add_actor rebind', toolName: 'manage_sequence', arguments: { action: 'add_actor', path: SEQUENCE_PATH, actorName: ACTOR_B, rebind: true }, expected: 'success' },
   { scenario: 'INFO: get_bindings', toolName: 'manage_sequence', arguments: { action: 'get_bindings', path: SEQUENCE_PATH }, expected: 'success' },
 
   // === PLAYBACK ===

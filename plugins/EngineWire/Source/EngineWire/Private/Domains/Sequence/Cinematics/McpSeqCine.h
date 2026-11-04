@@ -77,6 +77,9 @@ bool ApplyNumber(UObject *Object, const TSharedPtr<FJsonObject> &Params,
                  const TCHAR *Field, const TCHAR *PropertyPath, TArray<FString> &Applied);
 AActor *ResolveActor(const TSharedPtr<FJsonObject> &Params);
 FGuid ResolveOrCreateBinding(ULevelSequence *Sequence, AActor *Actor);
+// The possessable named like the actor's label, pointed at this actor with its tracks kept (McpSeqCineRebind.cpp):
+// a sequence copied beside a copied level still binds the first level's actors. Invalid when none has that name.
+FGuid RebindPossessableByName(ULevelSequence *Sequence, AActor *Actor);
 // bindingGuid, else the actorName actor's binding (created when missing); invalid when neither resolves.
 FGuid ResolveRequestBinding(const TSharedPtr<FJsonObject> &Params, ULevelSequence *Sequence);
 // LoadSequence plus ResolveRequestBinding; false with OutResult set (INVALID_ARGUMENT for a missing binding).

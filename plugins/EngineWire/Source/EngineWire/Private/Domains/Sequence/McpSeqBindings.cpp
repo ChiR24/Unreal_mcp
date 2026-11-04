@@ -114,6 +114,8 @@ bool UEngineWireSubsystem::HandleSequenceAddActor(
   TArray<TSharedPtr<FJsonValue>> NamesArray;
   NamesArray.Add(MakeShared<FJsonValueString>(ActorName));
   ForwardPayload->SetArrayField(TEXT("actorNames"), NamesArray);
+  bool bRebind = false;
+  ForwardPayload->SetBoolField(TEXT("rebind"), LocalPayload->TryGetBoolField(TEXT("rebind"), bRebind) && bRebind);
   return HandleSequenceAddActors(RequestId, ForwardPayload, Socket);
 }
 
@@ -138,6 +140,8 @@ bool UEngineWireSubsystem::HandleSequenceAddActors(
     return true;
   }
 
+  bool bRebind = false;
+  LocalPayload->TryGetBoolField(TEXT("rebind"), bRebind);
   TArray<FString> Names;
   Names.Reserve(Arr->Num());
   for (const TSharedPtr<FJsonValue> &V : *Arr) {
@@ -177,10 +181,13 @@ bool UEngineWireSubsystem::HandleSequenceAddActors(
           if (MovieScene) {
             LevelSeq->Modify();
             MovieScene->Modify();
-            // Reuses an existing binding of the actor instead of adding a duplicate possessable.
-            const FGuid BindingGuid = McpSequenceCinematics::ResolveOrCreateBinding(LevelSeq, Found);
+            // Reuses an existing binding of the actor instead of adding a duplicate possessable; rebind first points
+            // the possessable of the actor's name at it (a sequence copied with its level).
+            const FGuid Rebound = bRebind ? McpSequenceCinematics::RebindPossessableByName(LevelSeq, Found) : FGuid();
+            const FGuid BindingGuid = Rebound.IsValid() ? Rebound : McpSequenceCinematics::ResolveOrCreateBinding(LevelSeq, Found);
             if (BindingGuid.IsValid()) {
               LevelSeq->MarkPackageDirty();
+              Item->SetBoolField(TEXT("rebound"), Rebound.IsValid());
               Item->SetBoolField(TEXT("success"), true);
               Item->SetStringField(TEXT("bindingGuid"), BindingGuid.ToString());
             } else {
