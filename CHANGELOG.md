@@ -50,6 +50,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Placement checks**: a prop sunk into the floor of a room built as one mesh reads as sunk (it read clean); one resting on a mesh with no collision names that mesh instead of reading only "floating", and `fix_placement` no longer drops it into the mesh; a Blueprint audit names the parts its construction script hides, which it does not judge.
 - **Import**: an FBX imported with options (takes, a skeleton) converts its units as a plain import does (a character exported in metres came in at a hundredth of its size); the reply lists and saves the takes, materials and skeleton it made, and warns when the takes play the character at another size than its mesh (a Blender armature carrying the file's unit scale).
 - **Skeletal meshes**: a component's new mesh, in a Blueprint and on its placed copies, goes through the engine's setter (a placed character kept the old mesh's bones and drew only its head).
+- **Saving**: `save_all` saves a streaming sublevel with unsaved changes (it refused each one as a save over another level).
 - **`list_output_files` / `delete_output_file`** reach contact sheets and captures (Saved/Captures) and EngineWire's own files (Saved/EngineWire, plugins `remove_plugin` moved aside included); a delete removes the folders it empties.
 - **Change journal**: a mesh that finished compiling, or the engine's own load fix-ups, no longer read as changes of the call they happened during (the first `create_level` after a launch listed 39 meshes).
 

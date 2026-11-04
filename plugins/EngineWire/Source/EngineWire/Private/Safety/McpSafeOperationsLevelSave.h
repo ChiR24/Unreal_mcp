@@ -114,22 +114,20 @@ inline bool McpSafeLevelSave(ULevel* Level, const FString& FullPath, int32 MaxRe
 
         if (bLevelExists)
         {
-            UWorld* LevelWorld = Level ? Level->GetWorld() : nullptr;
-            if (LevelWorld)
+            // The level's own package, not its world's: a streaming sublevel's world is the open level
+            // that streams it in, which refused every save of a sublevel as a save over another level.
+            const FString OwnLevelPath = Level->GetOutermost()->GetName();
+            if (OwnLevelPath.Equals(PackagePath, ESearchCase::IgnoreCase))
             {
-                FString CurrentLevelPath = LevelWorld->GetOutermost()->GetName();
-                if (CurrentLevelPath.Equals(PackagePath, ESearchCase::IgnoreCase))
-                {
-                    UE_LOG(LogMcpSafeOperations, Log,
-                        TEXT("McpSafeLevelSave: Overwriting existing level: %s"), *PackagePath);
-                }
-                else
-                {
-                    UE_LOG(LogMcpSafeOperations, Warning,
-                        TEXT("McpSafeLevelSave: Level already exists at %s (current level is %s)"),
-                        *PackagePath, *CurrentLevelPath);
-                    return false;
-                }
+                UE_LOG(LogMcpSafeOperations, Log,
+                    TEXT("McpSafeLevelSave: Overwriting existing level: %s"), *PackagePath);
+            }
+            else
+            {
+                UE_LOG(LogMcpSafeOperations, Warning,
+                    TEXT("McpSafeLevelSave: Level already exists at %s (this level is %s)"),
+                    *PackagePath, *OwnLevelPath);
+                return false;
             }
         }
     }

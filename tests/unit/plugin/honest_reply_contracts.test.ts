@@ -5363,3 +5363,13 @@ describe('Niagara authoring builds what it reports', () => {
     expect(renderers).toContain('Context.Result->SetBoolField(TEXT("rendererCreated"), bCreated);');
   });
 });
+
+describe('level saves', () => {
+  // A streaming sublevel's GetWorld() is the open level: save_all refused every dirty sublevel as a save over another level.
+  it('a level is checked against its own package, so a sublevel saves', () => {
+    const save = privateCode('Safety', 'McpSafeOperationsLevelSave.h');
+    expect(save).toContain('const FString OwnLevelPath = Level->GetOutermost()->GetName();');
+    expect(save).toContain('if (OwnLevelPath.Equals(PackagePath, ESearchCase::IgnoreCase))');
+    expect(save).not.toContain('Level->GetWorld()');
+  });
+});
