@@ -1,5 +1,5 @@
 {
-  "catalogRevision": "007677535a6e6369",
+  "catalogRevision": "767a68be627f532a",
   "recordCount": 487,
   "records": [
     {
@@ -48454,6 +48454,7 @@
       "id": "control_editor.configure_editor",
       "aliases": [
         "control_editor.open_editor_tab",
+        "control_editor.close_tab",
         "control_editor.set_preferences",
         "control_editor.restore_editor_window"
       ],
@@ -48467,6 +48468,13 @@
           "action": "open_editor_tab",
           "folded": {
             "setting": "open_tab"
+          }
+        },
+        {
+          "tool": "control_editor",
+          "action": "close_tab",
+          "folded": {
+            "setting": "close_tab"
           }
         },
         {
@@ -48496,18 +48504,25 @@
           "minimize editor window",
           "editor minimized",
           "pie slow 3 fps",
-          "throttle"
+          "throttle",
+          "close tab",
+          "close message log",
+          "close the output log",
+          "close floating window"
         ],
-        "summary": "Open an editor tab, set editor preferences, or restore or minimize the main editor window without focus (restoring unthrottles Play In Editor).",
+        "summary": "Open or close an editor tab, set editor preferences, or restore or minimize the main editor window without focus (restoring unthrottles Play In Editor).",
         "whenToUse": [
           "setting=open_tab: A Quixel/Fab capability reported NOT_AUTHENTICATED and the owning window must be opened so the user can sign in.",
           "setting=open_tab: An editor panel registered by a plugin needs to be brought up.",
+          "setting=close_tab: A floating editor window (a Message Log or an Output Log) sits over the viewport or comes back at every editor start.",
+          "setting=close_tab: A tab opened with open_tab is no longer needed.",
           "setting=preferences: Editor preferences must be configured for a category.",
           "setting=window: Play In Editor crawls (about 3 fps) because the editor window is minimized or in the background.",
           "setting=window: The editor should stay out of the way while automation runs that needs no frames on screen: minimize it, and restore it for a timed run."
         ],
         "whenNotToUse": [
           "setting=open_tab: An asset editor should be opened for a specific asset (use open_asset).",
+          "setting=close_tab: Every editor open on an asset should close (use close_asset).",
           "setting=preferences: Project settings are needed (use system_control set_project_setting).",
           "setting=window: A screenshot or a sample_motion run is all that needs the window on screen (each restores a minimized editor by itself and minimizes it again afterwards)."
         ]
@@ -48523,7 +48538,7 @@
             },
             "tabId": {
               "type": "string",
-              "description": "Registered nomad tab id, for example \"BridgeTab\" (Quixel Bridge); \"Fab\" opens a new Fab tab."
+              "description": "The tab id, exact (the id the editor registered the tab under, not its title). To open: a registered nomad tab such as \"BridgeTab\" (Quixel Bridge); \"Fab\" opens a new Fab tab. To close: an open tab such as \"MessageLog\" or \"OutputLog\"."
             },
             "category": {
               "type": "string",
@@ -48547,10 +48562,11 @@
               "type": "string",
               "enum": [
                 "open_tab",
+                "close_tab",
                 "preferences",
                 "window"
               ],
-              "description": "Which configure editor variant to run.\nopen_tab: Open a registered editor tab by id via FGlobalTabmanager, the same path the Window menu uses. Content-source plugins register their windows globally — Bridge as \"BridgeTab\" — so this reaches them without depending on either plugin. Fab registers no fixed id (it numbers each tab Fab1, Fab2, ...), so tabId \"Fab\" opens a new Fab tab through the Fab browser API (UE 5.8+). This is also the correct way to authenticate against those services: each owns its own sign-in and persists its own session, so opening its window lets it log in on its own terms rather than reimplementing a login.\npreferences: Set editor preferences, preferences {name: value} in a category: a key naming a console variable is set as the console sets it and read back; any other is a property of the category's settings class (EditorPerformanceSettings, LevelEditorPlaySettings, LevelEditorViewportSettings and the like, the U prefix and Settings suffix optional), written through the property's own text import, saved to the settings ini and applied at once; LevelEditor RealtimeAudio mutes or unmutes editor audio. Keys that did not apply are listed under failed with why, and the call answers PREFERENCES_PARTIALLY_APPLIED or PREFERENCES_NOT_APPLIED. This plugin's own settings are refused. Distinct from system_control set_project_setting.\nwindow: Restore or minimize the main editor window without giving it focus. Restoring also stops the editor throttling itself while in the background (a minimized editor runs Play In Editor at about 3 fps, which makes every timed test lie); minimize puts the window away and turns the throttle back on, so an editor kept out of the way costs the machine next to nothing."
+              "description": "Which configure editor variant to run.\nopen_tab: Open a registered editor tab by id: a tab the level editor docks (the Output Log) goes back to its place there, any other opens through the global tab manager, as the Window menu does. Content-source plugins register their windows globally — Bridge as \"BridgeTab\" — so this reaches them without depending on either plugin. Fab registers no fixed id (it numbers each tab Fab1, Fab2, ...), so tabId \"Fab\" opens a new Fab tab through the Fab browser API (UE 5.8+). This is also the correct way to authenticate against those services: each owns its own sign-in and persists its own session, so opening its window lets it log in on its own terms rather than reimplementing a login.\nclose_tab: Close an open editor tab by id (MessageLog, OutputLog, BridgeTab and the like), as its own close button does: a floating tab or one the level editor docked (a tab inside an asset editor is not reached). A floating window left holding no tab closes with it, so the editor's saved layout stops reopening it at the next start. TAB_NOT_OPEN when no open tab has that id; TAB_CLOSE_REFUSED when the tab keeps itself open (unsaved work or a locked tab).\npreferences: Set editor preferences, preferences {name: value} in a category: a key naming a console variable is set as the console sets it and read back; any other is a property of the category's settings class (EditorPerformanceSettings, LevelEditorPlaySettings, LevelEditorViewportSettings and the like, the U prefix and Settings suffix optional), written through the property's own text import, saved to the settings ini and applied at once; LevelEditor RealtimeAudio mutes or unmutes editor audio. Keys that did not apply are listed under failed with why, and the call answers PREFERENCES_PARTIALLY_APPLIED or PREFERENCES_NOT_APPLIED. This plugin's own settings are refused. Distinct from system_control set_project_setting.\nwindow: Restore or minimize the main editor window without giving it focus. Restoring also stops the editor throttling itself while in the background (a minimized editor runs Play In Editor at about 3 fps, which makes every timed test lie); minimize puts the window away and turns the throttle back on, so an editor kept out of the way costs the machine next to nothing."
             }
           },
           "required": [
@@ -48584,6 +48600,10 @@
               "type": "boolean",
               "description": "True when the tab manager returned a live tab."
             },
+            "closed": {
+              "type": "boolean",
+              "description": "True when the tab closed."
+            },
             "wasMinimized": {
               "type": "boolean",
               "description": "Whether the main window was minimized before the call."
@@ -48609,7 +48629,7 @@
       },
       "examples": [
         {
-          "title": "Open an editor tab, set editor preferences, or restore or minimize the main editor window without focus (restoring unthrottles Play In Editor).",
+          "title": "Open or close an editor tab, set editor preferences, or restore or minimize the main editor window without focus (restoring unthrottles Play In Editor).",
           "input": {
             "action": "configure_editor",
             "tabId": "BridgeTab",
@@ -48651,12 +48671,14 @@
           "param": "setting",
           "actions": {
             "open_tab": "open_editor_tab",
+            "close_tab": "close_tab",
             "preferences": "set_preferences",
             "window": "restore_editor_window"
           },
           "declaredBy": {
             "tabId": [
-              "open_tab"
+              "open_tab",
+              "close_tab"
             ],
             "category": [
               "preferences"
@@ -48677,6 +48699,11 @@
                 "tabId"
               ]
             },
+            "close_tab": {
+              "required": [
+                "tabId"
+              ]
+            },
             "set_preferences": {
               "required": [
                 "category",
@@ -48688,8 +48715,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "97a7697a4eb73e8972420e70d41bb42ed4f97e3c79bd3b92437274194a403edd",
-        "content": "451eefbaf4a894863bcb870db288ece970ec4de5df0128f4d5d0a240ee4f8f7b"
+        "schema": "fee04cc4ef0daddcae4697656f0f286fc18f217ba8d3913658e242e5e41611e4",
+        "content": "7aa7500e2da64a13316612b477d2e4ab195cc4d6fba2d96cd79c47cce93b0514"
       }
     },
     {
@@ -51132,6 +51159,7 @@
           "relaunch editor",
           "quit editor",
           "close editor",
+          "close the editor",
           "exit editor",
           "unsaved packages",
           "list unsaved changes",
@@ -51299,7 +51327,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "cb0056eaee8d9453a451fa3cea2082b2a74361971bbc860485a9f95042074dec",
-        "content": "6732eee6dec021061c6807d24a4a6c80fa7e1613ebe6376d49559c1b00bb00f4"
+        "content": "0d8b553a0ae32f12d4649a20c7bd41930d2a8b4c4d0e9eea96cf1d79a8fa96cf"
       }
     },
     {

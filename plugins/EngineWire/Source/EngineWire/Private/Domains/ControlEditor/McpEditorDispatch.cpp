@@ -73,6 +73,8 @@ bool UEngineWireSubsystem::HandleControlEditorAction(
     return HandleControlEditorResume(RequestId, Payload, RequestingSocket);
   if (LowerSub == TEXT("open_editor_tab"))
     return HandleOpenEditorTab(RequestId, Payload, RequestingSocket);
+  if (LowerSub == TEXT("close_tab"))
+    return HandleCloseEditorTabForMcp(this, RequestId, Payload, RequestingSocket);
   if (LowerSub == TEXT("describe_reflected_api"))
     return HandleDescribeReflectedApi(RequestId, Payload, RequestingSocket);
   if (LowerSub == TEXT("invoke_reflected_function"))

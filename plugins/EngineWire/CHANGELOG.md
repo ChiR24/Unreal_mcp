@@ -11,7 +11,7 @@ All notable changes to the EngineWire plugin (formerly McpAutomationBridge) will
 - **Gateway**: search corrects typos to catalog words, `options.aggregate` counts a reply's list by group, and an alias sent as tool + action resolves.
 - **Blueprint lint values**: abstract interpretation finds a divisor that can be 0, an index out of range, a Set outside a Value Range, `==` on computed floats, a decided Branch and an endless While.
 - **Plugins and data**: plugin info, create and remove; game features through an optional module loaded only where GameFeatures is on; data registries and MVVM viewmodels by reflection.
-- **Editor**: editor UI reading, selection, viewport show flags, dialog-free reimport, the unreferenced-asset report, `renderSize` captures, the current level, the project thumbnail, console variables and C++ class removal; console output filtered to the lines holding a word.
+- **Editor**: editor UI reading, closing a tab by id, selection, viewport show flags, dialog-free reimport, the unreferenced-asset report, `renderSize` captures, the current level, the project thumbnail, console variables and C++ class removal; console output filtered to the lines holding a word.
 - **Camera views**: every capture places its camera through one function (`fov` included); `camera` looks through a camera actor (`TakeCameraViewForMcp`) for screenshots and view reads, in game view; sequence pause and key listings name each cut's camera.
 - **Actor tools**: snap, distribute, align, lock, group, randomize, replace, batch rename, copies along a spline, convert to a Blueprint, move to a level, decals, list bounds and find locations.
 - **Geometry**: tubes along paths, repeated polygons and bake coverage.

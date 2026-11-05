@@ -98,6 +98,10 @@ bool SimulateLiveWidgetInputForMcp(const FString &InputType,
 // key arrives) and returns true with bOutHandled and OutNote, a sentence naming the focused widget; returns false,
 // sending nothing, otherwise.
 bool RouteKeyToFocusedPieWidgetForMcp(const FKey &Key, EInputEvent InputEvent, bool &bOutHandled, FString &OutNote);
+// configure_editor close_tab (McpEditorTabs.cpp).
+bool HandleCloseEditorTabForMcp(UEngineWireSubsystem *Self, const FString &RequestId,
+                                const TSharedPtr<FJsonObject> &Payload,
+                                TSharedPtr<FMcpBridgeWebSocket> Socket);
 // Owner.Name of the live game widget that holds keyboard focus (a title screen's Play button), empty when none.
 FString FocusedPieWidgetForMcp();
 // True while the play viewport, or a widget inside it, holds keyboard focus: Slate would hand a key to the game.

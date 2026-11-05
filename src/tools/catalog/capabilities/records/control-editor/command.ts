@@ -188,14 +188,14 @@ export const COMMAND_RECORDS: readonly CapabilityRecordSource[] = [
     parentTool: 'control_editor', action: 'open_editor_tab', dispatchAction: 'control_editor',
     editorStates: ANY_EDITOR_STATE,
     domain: D, family: F,
-    summary: 'Open a registered editor tab by id via FGlobalTabmanager, the same path the Window menu uses. Content-source plugins register their windows globally — Bridge as "BridgeTab" — so this reaches them without depending on either plugin. Fab registers no fixed id (it numbers each tab Fab1, Fab2, ...), so tabId "Fab" opens a new Fab tab through the Fab browser API (UE 5.8+). This is also the correct way to authenticate against those services: each owns its own sign-in and persists its own session, so opening its window lets it log in on its own terms rather than reimplementing a login.',
+    summary: 'Open a registered editor tab by id: a tab the level editor docks (the Output Log) goes back to its place there, any other opens through the global tab manager, as the Window menu does. Content-source plugins register their windows globally — Bridge as "BridgeTab" — so this reaches them without depending on either plugin. Fab registers no fixed id (it numbers each tab Fab1, Fab2, ...), so tabId "Fab" opens a new Fab tab through the Fab browser API (UE 5.8+). This is also the correct way to authenticate against those services: each owns its own sign-in and persists its own session, so opening its window lets it log in on its own terms rather than reimplementing a login.',
     whenToUse: [
       'A Quixel/Fab capability reported NOT_AUTHENTICATED and the owning window must be opened so the user can sign in.',
       'An editor panel registered by a plugin needs to be brought up.',
     ],
     whenNotToUse: ['An asset editor should be opened for a specific asset (use open_asset).'],
     inputProps: {
-      tabId: { type: 'string', description: 'Registered nomad tab id, for example "BridgeTab" (Quixel Bridge); "Fab" opens a new Fab tab.' },
+      tabId: { type: 'string', description: 'The tab id, exact (the id the editor registered the tab under, not its title). To open: a registered nomad tab such as "BridgeTab" (Quixel Bridge); "Fab" opens a new Fab tab. To close: an open tab such as "MessageLog" or "OutputLog".' },
     },
     outputProps: {
       tabId: { type: 'string', description: 'Tab id acted on.' },
@@ -206,6 +206,30 @@ export const COMMAND_RECORDS: readonly CapabilityRecordSource[] = [
     costLatency: 'interactive',
     exampleInput: { action: 'open_editor_tab', tabId: 'BridgeTab' },
     exampleOutput: { success: true, opened: true },
+  }),
+  // A Message Log window floated once stayed in the editor's saved layout and came back over the viewport at every
+  // start; a tab could be opened by id but not closed again.
+  buildCoreRecord({
+    // Not close_editor_tab: its action words "close editor" took "close the editor" from restart_editor.
+    parentTool: 'control_editor', action: 'close_tab', dispatchAction: 'control_editor',
+    editorStates: ANY_EDITOR_STATE,
+    domain: D, family: F,
+    topics: ['close tab', 'close message log', 'close the output log', 'close floating window'],
+    summary: 'Close an open editor tab by id (MessageLog, OutputLog, BridgeTab and the like), as its own close button does: a floating tab or one the level editor docked (a tab inside an asset editor is not reached). A floating window left holding no tab closes with it, so the editor\'s saved layout stops reopening it at the next start. TAB_NOT_OPEN when no open tab has that id; TAB_CLOSE_REFUSED when the tab keeps itself open (unsaved work or a locked tab).',
+    whenToUse: ['A floating editor window (a Message Log or an Output Log) sits over the viewport or comes back at every editor start.', 'A tab opened with open_tab is no longer needed.'],
+    whenNotToUse: ['Every editor open on an asset should close (use close_asset).'],
+    inputProps: {
+      tabId: { type: 'string', description: 'The open tab\'s id, exact: "MessageLog", "OutputLog" and the like (the id the editor registered the tab under, not its title).' },
+    },
+    outputProps: {
+      tabId: { type: 'string', description: 'Tab id acted on.' },
+      closed: { type: 'boolean', description: 'True when the tab closed.' },
+    },
+    required: ['tabId'],
+    effect: 'write',
+    costLatency: 'interactive',
+    exampleInput: { action: 'close_tab', tabId: 'MessageLog' },
+    exampleOutput: { success: true, tabId: 'MessageLog', closed: true },
   }),
   buildCoreRecord({
     parentTool: 'control_editor', action: 'console_command', dispatchAction: 'console_command',

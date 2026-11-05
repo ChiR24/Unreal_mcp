@@ -6002,6 +6002,7 @@
             "type": "string",
             "enum": [
               "open_tab",
+              "close_tab",
               "preferences",
               "window",
               "view_mode",
@@ -6013,7 +6014,7 @@
               "hide_stats",
               "show_flags"
             ],
-            "description": "Which configure editor variant to run.\nopen_tab: Open a registered editor tab by id via FGlobalTabmanager, the same path the Window menu uses. Content-source plugins register their windows globally — Bridge as \"BridgeTab\" — so this reaches them without depending on either plugin. Fab registers no fixed id (it numbers each tab Fab1, Fab2, ...), so tabId \"Fab\" opens a new Fab tab through the Fab browser API (UE 5.8+). This is also the correct way to authenticate against those services: each owns its own sign-in and persists its own session, so opening its window lets it log in on its own terms rather than reimplementing a login.\npreferences: Set editor preferences, preferences {name: value} in a category: a key naming a console variable is set as the console sets it and read back; any other is a property of the category's settings class (EditorPerformanceSettings, LevelEditorPlaySettings, LevelEditorViewportSettings and the like, the U prefix and Settings suffix optional), written through the property's own text import, saved to the settings ini and applied at once; LevelEditor RealtimeAudio mutes or unmutes editor audio. Keys that did not apply are listed under failed with why, and the call answers PREFERENCES_PARTIALLY_APPLIED or PREFERENCES_NOT_APPLIED. This plugin's own settings are refused. Distinct from system_control set_project_setting.\nwindow: Restore or minimize the main editor window without giving it focus. Restoring also stops the editor throttling itself while in the background (a minimized editor runs Play In Editor at about 3 fps, which makes every timed test lie); minimize puts the window away and turns the throttle back on, so an editor kept out of the way costs the machine next to nothing."
+            "description": "Which configure editor variant to run.\nopen_tab: Open a registered editor tab by id: a tab the level editor docks (the Output Log) goes back to its place there, any other opens through the global tab manager, as the Window menu does. Content-source plugins register their windows globally — Bridge as \"BridgeTab\" — so this reaches them without depending on either plugin. Fab registers no fixed id (it numbers each tab Fab1, Fab2, ...), so tabId \"Fab\" opens a new Fab tab through the Fab browser API (UE 5.8+). This is also the correct way to authenticate against those services: each owns its own sign-in and persists its own session, so opening its window lets it log in on its own terms rather than reimplementing a login.\nclose_tab: Close an open editor tab by id (MessageLog, OutputLog, BridgeTab and the like), as its own close button does: a floating tab or one the level editor docked (a tab inside an asset editor is not reached). A floating window left holding no tab closes with it, so the editor's saved layout stops reopening it at the next start. TAB_NOT_OPEN when no open tab has that id; TAB_CLOSE_REFUSED when the tab keeps itself open (unsaved work or a locked tab).\npreferences: Set editor preferences, preferences {name: value} in a category: a key naming a console variable is set as the console sets it and read back; any other is a property of the category's settings class (EditorPerformanceSettings, LevelEditorPlaySettings, LevelEditorViewportSettings and the like, the U prefix and Settings suffix optional), written through the property's own text import, saved to the settings ini and applied at once; LevelEditor RealtimeAudio mutes or unmutes editor audio. Keys that did not apply are listed under failed with why, and the call answers PREFERENCES_PARTIALLY_APPLIED or PREFERENCES_NOT_APPLIED. This plugin's own settings are refused. Distinct from system_control set_project_setting.\nwindow: Restore or minimize the main editor window without giving it focus. Restoring also stops the editor throttling itself while in the background (a minimized editor runs Play In Editor at about 3 fps, which makes every timed test lie); minimize puts the window away and turns the throttle back on, so an editor kept out of the way costs the machine next to nothing."
           },
           "speed": {
             "type": "number",
@@ -6033,7 +6034,7 @@
           },
           "tabId": {
             "type": "string",
-            "description": "Registered nomad tab id, for example \"BridgeTab\" (Quixel Bridge); \"Fab\" opens a new Fab tab."
+            "description": "The tab id, exact (the id the editor registered the tab under, not its title). To open: a registered nomad tab such as \"BridgeTab\" (Quixel Bridge); \"Fab\" opens a new Fab tab. To close: an open tab such as \"MessageLog\" or \"OutputLog\"."
           },
           "text": {
             "type": "string",

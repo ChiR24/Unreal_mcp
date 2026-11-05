@@ -37,9 +37,9 @@ export const CONTROL_EDITOR_FOLDS: readonly FoldSpec[] = [
   { primary: 'console_command', summary: 'Run one console command against the editor world, or through the first player while Play In Editor runs, and return what it printed (output) and what the engine logged meanwhile (log), each kept short: the first 30 lines and any Error: or Warning: line after them, at most three lines that open with the same two words, and (+N more lines) where lines were left out; at most 4096 characters. A command the engine does not recognise fails (EXEC_FAILED); one holding ;, |, &&, a backtick or several lines, or a blocked name (quit, exit, py, crash and the like), is refused (COMMAND_BLOCKED). Success means the engine ran it, not that it had the effect wanted.', members: ['execute_command'] },
   {
     primary: 'configure_editor', selector: 'setting',
-    summary: 'Open an editor tab, set editor preferences, or restore or minimize the main editor window without focus (restoring unthrottles Play In Editor).',
+    summary: 'Open or close an editor tab, set editor preferences, or restore or minimize the main editor window without focus (restoring unthrottles Play In Editor).',
     topics: ['editor tab', 'editor preferences', 'open tab', 'restore editor window', 'minimize editor window', 'editor minimized', 'pie slow 3 fps', 'throttle'],
-    members: { open_tab: 'open_editor_tab', preferences: 'set_preferences', window: 'restore_editor_window' },
+    members: { open_tab: 'open_editor_tab', close_tab: 'close_tab', preferences: 'set_preferences', window: 'restore_editor_window' },
   },
   {
     primary: 'screenshot', summary: 'Capture a screenshot of the level viewport (optionally from a camera location and rotation given in the same call, or through a camera actor: a cutscene shot at a held sequence moment), of the running game view, or of the whole editor window with the game UI.', members: ['take_screenshot'],

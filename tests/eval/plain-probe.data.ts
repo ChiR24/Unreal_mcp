@@ -1187,4 +1187,7 @@ export const PLAIN_PROBE: readonly PlainProbeCase[] = [
   { query: 'place decal on the floor', accepted: ['build_environment.place_decals'] },
   { query: 'scatter dirt decals', accepted: ['build_environment.place_decals'] },
   { query: 'stain on the floor', accepted: ['build_environment.place_decals'] },
+  { query: 'close the message log', accepted: ['control_editor.configure_editor'] },
+  { query: 'close a floating editor window', accepted: ['control_editor.configure_editor'] },
+  { query: 'close the output log', accepted: ['control_editor.configure_editor'] },
 ];
