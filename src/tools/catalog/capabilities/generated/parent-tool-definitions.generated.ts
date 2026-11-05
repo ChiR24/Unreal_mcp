@@ -31163,11 +31163,13 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             "Saved/Screenshots",
             "Saved/Captures",
             "Saved/EngineWire",
+            "Saved/Exports",
+            "Saved/Thumbnails",
             "Saved/unreal-mcp",
             "tmp/unreal-mcp",
             "temp/unreal-mcp"
           ],
-          "description": "Search only this output folder (default all six)."
+          "description": "Search only this output folder (default all eight)."
         },
         "rotation": {
           "type": "object",

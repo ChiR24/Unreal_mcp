@@ -25,10 +25,12 @@ FString ProjectRootFull() {
 }
 
 // The screenshot folder, the captures folder (contact sheets, capture passes), EngineWire's own folder (recipes,
-// the asset index and captions, level layout images, plugins remove_plugin moved aside) and the three snapshot roots
-// the snapshot path check accepts (EnvironmentSnapshotPaths), project-relative.
+// the asset index and captions, level layout images, plugins remove_plugin moved aside), the exports folder
+// (export_mesh writes there unless told otherwise), the thumbnails folder (process_asset thumbnail's outputPath) and
+// the three snapshot roots the snapshot path check accepts (EnvironmentSnapshotPaths), project-relative.
 const TCHAR* const OutputRoots[] = {TEXT("Saved/Screenshots"), TEXT("Saved/Captures"), TEXT("Saved/EngineWire"),
-                                    TEXT("Saved/unreal-mcp"), TEXT("tmp/unreal-mcp"), TEXT("temp/unreal-mcp")};
+                                    TEXT("Saved/Exports"), TEXT("Saved/Thumbnails"), TEXT("Saved/unreal-mcp"),
+                                    TEXT("tmp/unreal-mcp"), TEXT("temp/unreal-mcp")};
 
 FString RootsText() {
   TArray<FString> Roots;
