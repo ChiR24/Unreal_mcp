@@ -50,16 +50,27 @@ const UEdGraphPin* ValueSource(const UEdGraphPin* Pin)
     return Source;
 }
 
-// A pin's value as this frame holds it: an input reads the output wired into it (the value it takes), an unwired input
-// its literal; the value lives in the running function's locals (the event graph's are its persistent frame), else in the
-// object itself (a variable, which a Get node reads).
+FString Capped(const FString& Text)
+{
+    return Text.Len() > MaxValueChars ? Text.Left(MaxValueChars) + TEXT("...") : Text;
+}
+
+// A pin's value as this frame holds it: an unwired input its literal, which the compiled code uses as a constant; an
+// input reads the output wired into it (the value it takes), held in the running function's locals (the event graph's
+// are its persistent frame), else in the object itself (a variable, which a Get node reads).
 FString PinValue(UBlueprint* Blueprint, const UObject* Object, const FFrame& Frame, const UEdGraphPin* Pin)
 {
+    // Before the property lookup: the debug data maps a Set node's value pin to the variable it writes, so a Set of a
+    // literal read the variable's old value (writing false logged true).
+    if (Pin->Direction == EGPD_Input && Pin->LinkedTo.Num() == 0)
+    {
+        return Capped(Pin->GetDefaultAsString());
+    }
     const UEdGraphPin* Source = ValueSource(Pin);
     const FProperty* Property = FKismetDebugUtilities::FindClassPropertyForPin(Blueprint, Source);
     if (!Property)
     {
-        return Source == Pin && Pin->Direction == EGPD_Input ? Pin->GetDefaultAsString() : FString(TEXT("(not kept by the compiler)"));
+        return TEXT("(not kept by the compiler)");
     }
     const UClass* Owner = Property->GetOwner<UClass>();
     const void* Base = Property->IsIn(Frame.Node) ? static_cast<const void*>(Frame.Locals)
@@ -70,7 +81,7 @@ FString PinValue(UBlueprint* Blueprint, const UObject* Object, const FFrame& Fra
     }
     FString Text;
     MCP_PROPERTY_EXPORT_TEXT(Property, Text, Property->ContainerPtrToValuePtr<void>(const_cast<void*>(Base)), nullptr, nullptr, PPF_None);
-    return Text.Len() > MaxValueChars ? Text.Left(MaxValueChars) + TEXT("...") : Text;
+    return Capped(Text);
 }
 
 TSharedPtr<FJsonObject> ReadPins(const FPoint& Point, const UObject* Object, const FFrame& Frame, EEdGraphPinDirection Direction)

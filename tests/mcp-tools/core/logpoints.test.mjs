@@ -13,21 +13,29 @@ const ACTOR = `MCP_LogpointActor_${ts}`;
 
 const testCases = [
   { scenario: 'Setup: a Blueprint of its own', toolName: 'manage_blueprint', arguments: { action: 'create_blueprint', name: BP_NAME, savePath: TEST_FOLDER, parentClass: 'Actor' }, expected: 'success' },
-  // A move with an output (ReturnValue) that runs on to the print: its outputs come from the wire trace after it.
-  { scenario: 'Setup: a custom event that moves the actor, then prints once', toolName: 'manage_blueprint', arguments: { action: 'build_graph', blueprintPath: BP_PATH, graphName: 'EventGraph', operations: [
+  // A move with an output (ReturnValue) that runs on to the print: its outputs come from the wire trace after it. Between
+  // them a Set writes false to a variable whose default is true: its value pin is mapped to the variable in the debug
+  // data, so it must read as the literal written, not the variable's value before the set.
+  { scenario: 'Setup: a custom event that moves the actor, sets a flag, then prints once', toolName: 'manage_blueprint', arguments: { action: 'build_graph', blueprintPath: BP_PATH, graphName: 'EventGraph', operations: [
+    { edit: 'add_variable', variableName: 'bProbed', variableType: 'bool', defaultValue: 'true' },
     { edit: 'add_event', id: 'ev', customEventName: 'OnLogProbe' },
     { edit: 'create_node', id: 'move', nodeType: 'CallFunction', memberName: 'K2_SetActorLocation', pinDefaults: { NewLocation: '34000,34000,150' } },
+    { edit: 'create_node', id: 'flag', nodeType: 'VariableSet', memberName: 'bProbed', pinDefaults: { bProbed: false } },
     { edit: 'create_node', id: 'print', nodeType: 'CallFunction', memberName: 'PrintString', pinDefaults: { InString: 'logpoint probe' } },
     { edit: 'connect_pins', from: '$ev.then', to: '$move.execute' },
-    { edit: 'connect_pins', from: '$move.then', to: '$print.execute' },
-  ] }, expected: 'success', captureResult: { key: 'logMoveId', fromField: 'result.nodeIds.move' } },
+    { edit: 'connect_pins', from: '$move.then', to: '$flag.execute' },
+    { edit: 'connect_pins', from: '$flag.then', to: '$print.execute' },
+  ] }, expected: 'success', captureResult: [
+    { key: 'logMoveId', fromField: 'result.nodeIds.move' },
+    { key: 'logFlagId', fromField: 'result.nodeIds.flag' },
+  ] },
   { scenario: 'INFO: the print node id from the graph code', toolName: 'manage_blueprint', arguments: { action: 'read_graph_as_code', blueprintPath: BP_PATH, graphName: 'EventGraph' }, expected: 'success', captureResult: { key: 'logPrintId', fromField: 'result.nodes', where: { path: 'type', equals: 'Development|PrintString' }, selectField: 'id' } },
   { scenario: 'Setup: one placed copy', toolName: 'control_actor', arguments: { action: 'spawn_blueprint', blueprintPath: BP_PATH, actorName: ACTOR, location: { x: 34000, y: 34000, z: 100 } }, expected: 'success' },
   { scenario: 'ACTION: mark the print by its graph-code tag', toolName: 'inspect', arguments: { action: 'set_logpoints', blueprintPath: BP_PATH, nodeIds: ['${captured:logPrintId}'], maxHits: 50 }, expected: 'success', assertions: [
     { path: 'structuredContent.result.logpoints.0.node', includes: 'PrintString', label: 'the print is marked (its list-view title, as the graph readers give it)' },
     { path: 'structuredContent.result.logpoints.0.runs', equals: 0, label: 'it has not run yet' },
   ] },
-  { scenario: 'ACTION: mark the move by its GUID', toolName: 'inspect', arguments: { action: 'set_logpoints', blueprintPath: BP_PATH, nodeIds: ['${captured:logMoveId}'] }, expected: 'success' },
+  { scenario: 'ACTION: mark the move and the Set by their GUIDs', toolName: 'inspect', arguments: { action: 'set_logpoints', blueprintPath: BP_PATH, nodeIds: ['${captured:logMoveId}', '${captured:logFlagId}'] }, expected: 'success' },
   { scenario: 'ERROR: an id no node has', toolName: 'inspect', arguments: { action: 'set_logpoints', blueprintPath: BP_PATH, nodeIds: ['nzzzzzz'] }, expected: 'error|NODE_NOT_FOUND' },
   // A plain game mode: a project's own (a title screen that pauses the game or reloads the level) never steers the run.
   { scenario: 'Setup: a plain game mode for the level', toolName: 'manage_level', arguments: { action: 'set_world_settings', gameMode: '/Script/Engine.GameModeBase' }, expected: 'success' },
@@ -42,12 +50,16 @@ const testCases = [
     { path: 'structuredContent.result.logpoints.0.timeline.0.out.ReturnValue', exists: true, label: 'its output, read after it ran' },
     { path: 'structuredContent.result.logpoints.0.timeline.0.in.NewLocation', includes: '34000', label: 'and the location it was given' },
   ] },
+  { scenario: 'READ: the Set mark recorded the literal it wrote, not the variable before it', toolName: 'inspect', arguments: { action: 'read_logpoints', nodeIds: ['${captured:logFlagId}'] }, expected: 'success', assertions: [
+    { path: 'structuredContent.result.logpoints.0.runs', equals: 1, label: 'one run' },
+    { path: 'structuredContent.result.logpoints.0.timeline.0.in.bProbed', equals: 'false', label: 'false, as written (the variable held true before)' },
+  ] },
   { scenario: 'PLAYBACK: stop', toolName: 'control_editor', arguments: { action: 'stop' }, expected: 'success', timeoutMs: 30000 },
   { scenario: 'READ: the timeline stays readable after Play', toolName: 'inspect', arguments: { action: 'read_logpoints', nodeIds: ['${captured:logPrintId}'] }, expected: 'success', assertions: [
     { path: 'structuredContent.result.logpoints.0.runs', equals: 1, label: 'still one run' },
   ] },
   { scenario: 'ACTION: clear the Blueprint\'s marks', toolName: 'inspect', arguments: { action: 'clear_logpoints', blueprintPath: BP_PATH }, expected: 'success', assertions: [
-    { path: 'structuredContent.result.cleared', equals: 2, label: 'both marks removed' },
+    { path: 'structuredContent.result.cleared', equals: 3, label: 'all three marks removed' },
   ] },
   { scenario: 'READ: nothing is marked any more', toolName: 'inspect', arguments: { action: 'read_logpoints', blueprintPath: BP_PATH }, expected: 'success', assertions: [
     { path: 'structuredContent.result.logpoints', length: 0, label: 'no marks' },

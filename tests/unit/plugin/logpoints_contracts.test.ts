@@ -56,6 +56,14 @@ describe('logpoints', () => {
     expect(trace).toContain('GetPassThroughPin(Out)');
   });
 
+  // The class debug data maps a Set node's value pin to the variable it writes: looked up first, an unwired value pin
+  // read the variable's old value instead of the literal being written.
+  it('reads an unwired input as its literal, before any property lookup', () => {
+    const body = trace.slice(trace.indexOf('FString PinValue('));
+    expect(body).toMatch(/if \(Pin->Direction == EGPD_Input && Pin->LinkedTo\.Num\(\) == 0\)\s*\{\s*return Capped\(Pin->GetDefaultAsString\(\)\);/u);
+    expect(body.indexOf('Pin->GetDefaultAsString()')).toBeLessThan(body.indexOf('FindClassPropertyForPin('));
+  });
+
   it('refuses a pure node: it has no tracepoint of its own', () => {
     expect(handler).toContain('K2->IsNodePure()');
     expect(handler).toContain('TEXT("PURE_NODE")');
