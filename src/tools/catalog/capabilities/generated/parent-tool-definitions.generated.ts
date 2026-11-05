@@ -7293,6 +7293,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "number",
           "description": "Seconds every frame advances the running game, however long the frame really took (deterministic runs); 0 turns fixed stepping off. It also ends when PIE stops."
         },
+        "denoise": {
+          "type": "boolean",
+          "description": "With pathTraced: denoise the image on its last sample (default true); false keeps the raw accumulation."
+        },
         "depth": {
           "type": "number",
           "minimum": 1,
@@ -7551,6 +7555,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "string",
           "description": "Directory to save the PNG in, inside the project (relative to it, or absolute under it); naming one needs the write scope, since a file already there is replaced. Default Saved/Screenshots (game_viewport: Saved/Screenshots/WindowsEditor). A path outside the project is refused."
         },
+        "pathTraced": {
+          "type": "boolean",
+          "description": "editor_viewport: draw the level viewport with the path tracer, in game view (no editor icons, grid or gizmos), until it has samples per pixel, denoise it, capture it, and put the view mode, game view and path tracing settings back: a review image without switching anything by hand. The path tracer draws the scene's ray tracing geometry, which can differ from what the viewport draws (anything with Visible in Ray Tracing off is left out; Nanite meshes are traced through their fallback meshes): when something seems missing, compare with a plain screenshot. The call answers once the samples are in, at most 22 seconds later; a shot cut short says so in warnings and is not denoised (the denoiser runs on the last sample). location, rotation and fov place the view first; not with camera, renderSize or another mode (INVALID_ARGUMENT), nor during Play (PIE_ACTIVE). Needs ray tracing: DirectX 12 and the project settings Support Hardware Ray Tracing and Support Path Tracing, else PATH_TRACING_UNAVAILABLE. The first shot after an editor start compiles the path tracer's shaders: SHADERS_COMPILING when no sample was drawn by the deadline, so call again. Default false."
+        },
         "preferences": {
           "type": "object",
           "description": "Editor preferences key-value pairs.",
@@ -7623,6 +7631,12 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             }
           ],
           "description": "3D rotation (pitch, yaw, roll)."
+        },
+        "samples": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 4096,
+          "description": "With pathTraced: samples per pixel to accumulate before the capture, 1-4096 (default 64). More is cleaner and slower; the viewport is drawn at its full size whatever resolution returns."
         },
         "seconds": {
           "type": "number",
@@ -8222,6 +8236,12 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "object",
           "x-unreal-reflection-boundary": true,
           "description": "Return value and out parameters, keyed by parameter name."
+        },
+        "pathTraced": {
+          "type": "object",
+          "additionalProperties": true,
+          "x-unreal-reflection-boundary": true,
+          "description": "With pathTraced: samples (drawn), samplesAsked, denoised (true only when every sample asked was drawn with denoise on) and seconds the accumulation took."
         },
         "pawn": {
           "type": "string",

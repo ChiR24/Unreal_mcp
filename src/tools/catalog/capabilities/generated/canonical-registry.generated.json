@@ -1,5 +1,5 @@
 {
-  "catalogRevision": "a3711814ccac2709",
+  "catalogRevision": "83942d6961d5a7d6",
   "recordCount": 487,
   "records": [
     {
@@ -51633,9 +51633,12 @@
           "game view screenshot",
           "screenshot hud",
           "show me the level from above",
-          "take a picture of the level"
+          "take a picture of the level",
+          "path traced screenshot",
+          "path tracer render",
+          "denoised render"
         ],
-        "summary": "Capture a screenshot of the level viewport (optionally from a camera location and rotation given in the same call, or through a camera actor: a cutscene shot at a held sequence moment), of the running game view, or of the whole editor window with the game UI.",
+        "summary": "Capture a screenshot of the level viewport (optionally from a camera location and rotation given in the same call, or through a camera actor: a cutscene shot at a held sequence moment), of the running game view, or of the whole editor window with the game UI; pathTraced renders the level viewport with the path tracer to a denoised review image.",
         "whenToUse": [
           "A visual snapshot of the editor or game viewport is needed."
         ],
@@ -51753,6 +51756,20 @@
               "description": "An object of your own, such as a label or a step number, returned under metadata when includeMetadata is true; the capture itself never reads it.",
               "additionalProperties": true,
               "x-unreal-reflection-boundary": true
+            },
+            "pathTraced": {
+              "type": "boolean",
+              "description": "editor_viewport: draw the level viewport with the path tracer, in game view (no editor icons, grid or gizmos), until it has samples per pixel, denoise it, capture it, and put the view mode, game view and path tracing settings back: a review image without switching anything by hand. The path tracer draws the scene's ray tracing geometry, which can differ from what the viewport draws (anything with Visible in Ray Tracing off is left out; Nanite meshes are traced through their fallback meshes): when something seems missing, compare with a plain screenshot. The call answers once the samples are in, at most 22 seconds later; a shot cut short says so in warnings and is not denoised (the denoiser runs on the last sample). location, rotation and fov place the view first; not with camera, renderSize or another mode (INVALID_ARGUMENT), nor during Play (PIE_ACTIVE). Needs ray tracing: DirectX 12 and the project settings Support Hardware Ray Tracing and Support Path Tracing, else PATH_TRACING_UNAVAILABLE. The first shot after an editor start compiles the path tracer's shaders: SHADERS_COMPILING when no sample was drawn by the deadline, so call again. Default false."
+            },
+            "samples": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 4096,
+              "description": "With pathTraced: samples per pixel to accumulate before the capture, 1-4096 (default 64). More is cleaner and slower; the viewport is drawn at its full size whatever resolution returns."
+            },
+            "denoise": {
+              "type": "boolean",
+              "description": "With pathTraced: denoise the image on its last sample (default true); false keeps the raw accumulation."
             }
           },
           "required": [
@@ -51863,6 +51880,12 @@
             "view": {
               "type": "string",
               "description": "Which view the picture is of: editor_viewport (the level viewport), pie_game (the running game as its possessed pawn sees it) or pie_ejected (the free camera of an ejected player). Absent for full_editor_window and for the game_viewport capture of a possessed game."
+            },
+            "pathTraced": {
+              "type": "object",
+              "additionalProperties": true,
+              "x-unreal-reflection-boundary": true,
+              "description": "With pathTraced: samples (drawn), samplesAsked, denoised (true only when every sample asked was drawn with denoise on) and seconds the accumulation took."
             }
           },
           "required": [
@@ -51873,7 +51896,7 @@
       },
       "examples": [
         {
-          "title": "Capture a screenshot of the level viewport (optionally from a camera location and rotation given in the same call, or through a camera actor: a cutscene shot at a held sequence moment), of the running game view, or of the whole editor window with the game UI.",
+          "title": "Capture a screenshot of the level viewport (optionally from a camera location and rotation given in the same call, or through a camera actor: a cutscene shot at a held sequence moment), of the running game view, or of the whole editor window with the game UI; pathTraced renders the level viewport with the path tracer to a denoised review image.",
           "input": {
             "action": "screenshot",
             "mode": "editor_viewport",
@@ -51918,8 +51941,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "fe666a4cd30963ed276817656f5ebd1450bf632f91427eb27f78656a3a24f32c",
-        "content": "6ab13563a39789e6822d993bb2c21797dc5eb551c3e9aa0c0d60b7d46d643576"
+        "schema": "c6964f286eeb527e03271f203c0ef8fd9fbfa763cc037973200b731d92958117",
+        "content": "2f54ba089f17ce8a9bfc24c96d9342c7b94542487e8fb3588217f2027bbcf0fb"
       }
     },
     {

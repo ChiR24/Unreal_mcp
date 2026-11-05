@@ -57,6 +57,14 @@ const SCREENSHOT_PROPS = {
   },
   includeMetadata: P.includeMetadata,
   metadata: P.metadata,
+  // A review image from the path tracer needed a view mode switch, two console variables and a guess at when the
+  // accumulation was done.
+  pathTraced: {
+    type: 'boolean',
+    description: 'editor_viewport: draw the level viewport with the path tracer, in game view (no editor icons, grid or gizmos), until it has samples per pixel, denoise it, capture it, and put the view mode, game view and path tracing settings back: a review image without switching anything by hand. The path tracer draws the scene\'s ray tracing geometry, which can differ from what the viewport draws (anything with Visible in Ray Tracing off is left out; Nanite meshes are traced through their fallback meshes): when something seems missing, compare with a plain screenshot. The call answers once the samples are in, at most 22 seconds later; a shot cut short says so in warnings and is not denoised (the denoiser runs on the last sample). location, rotation and fov place the view first; not with camera, renderSize or another mode (INVALID_ARGUMENT), nor during Play (PIE_ACTIVE). Needs ray tracing: DirectX 12 and the project settings Support Hardware Ray Tracing and Support Path Tracing, else PATH_TRACING_UNAVAILABLE. The first shot after an editor start compiles the path tracer\'s shaders: SHADERS_COMPILING when no sample was drawn by the deadline, so call again. Default false.'
+  },
+  samples: { type: 'integer', minimum: 1, maximum: 4096, description: 'With pathTraced: samples per pixel to accumulate before the capture, 1-4096 (default 64). More is cleaner and slower; the viewport is drawn at its full size whatever resolution returns.' },
+  denoise: { type: 'boolean', description: 'With pathTraced: denoise the image on its last sample (default true); false keeps the raw accumulation.' },
 };
 
 const SCREENSHOT_OUTPUT = {
@@ -83,13 +91,14 @@ const SCREENSHOT_OUTPUT = {
   cameraLocation: { type: 'object', additionalProperties: true, 'x-unreal-reflection-boundary': true, description: 'editor_viewport and an ejected game view: where the camera was for this picture.' },
   cameraRotation: { type: 'object', additionalProperties: true, 'x-unreal-reflection-boundary': true, description: 'editor_viewport and an ejected game view: how the camera was turned for this picture.' },
   view: { type: 'string', description: 'Which view the picture is of: editor_viewport (the level viewport), pie_game (the running game as its possessed pawn sees it) or pie_ejected (the free camera of an ejected player). Absent for full_editor_window and for the game_viewport capture of a possessed game.' },
+  pathTraced: { type: 'object', additionalProperties: true, 'x-unreal-reflection-boundary': true, description: 'With pathTraced: samples (drawn), samplesAsked, denoised (true only when every sample asked was drawn with denoise on) and seconds the accumulation took.' },
 };
 
 export const SCREENSHOT_RECORDS: readonly CapabilityRecordSource[] = [
   buildCoreRecord({
     parentTool: 'control_editor', action: 'screenshot', domain: D, family: F,
     editorStates: ANY_EDITOR_STATE,
-    summary: 'Capture a screenshot from the editor viewport, game viewport, or full editor window.',
+    summary: 'Capture a screenshot from the editor viewport, game viewport, or full editor window; pathTraced renders the level viewport with the path tracer, denoised, as a review image.',
     whenToUse: ['A visual snapshot of the editor or game viewport is needed.'],
     whenNotToUse: ['A real-time capture stream is needed.'],
     inputProps: SCREENSHOT_PROPS,

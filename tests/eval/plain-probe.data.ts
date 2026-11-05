@@ -1190,4 +1190,7 @@ export const PLAIN_PROBE: readonly PlainProbeCase[] = [
   { query: 'close the message log', accepted: ['control_editor.configure_editor'] },
   { query: 'close a floating editor window', accepted: ['control_editor.configure_editor'] },
   { query: 'close the output log', accepted: ['control_editor.configure_editor'] },
+  { query: 'path traced screenshot', accepted: ['control_editor.screenshot'] },
+  { query: 'render a denoised path traced image', accepted: ['control_editor.screenshot'] },
+  { query: 'take a path traced screenshot', accepted: ['control_editor.screenshot'] },
 ];

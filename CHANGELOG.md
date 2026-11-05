@@ -17,7 +17,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Blueprints**: `lint_blueprint` follows values (a divisor that can be 0, an index past the end, a Set outside a Value Range, `==` on computed floats, a decided Branch, an endless While); MVVM viewmodels (UE 5.4+); `add_variable` `exposeToCinematics`.
 - **Graph as code**: `read_graph_as_code` `entry` (one event or function) and `codeOnly` (no node and link lists); `write_graph_from_code` reads back only what it wrote.
 - **Cutscene shots without Play**: `camera` looks through a camera actor as it is now (`screenshot`, `describe_view`, `analyze_view`, `audit_materials`), and `pause` and `list_track_keys` name the camera each cut shows.
-- **Views**: `screenshot` `renderSize` draws the game's frame size; `fov` beside `location` and `rotation` on every view read.
+- **Views**: `screenshot` `renderSize` draws the game's frame size and `pathTraced` a denoised path-traced review image; `fov` beside `location` and `rotation` on every view read.
 - **Plugins and project**: `get_plugin_info`, `create_plugin` / `remove_plugin`, game features (UE 5.1+), data registries, an unused-asset report, `set_project_thumbnail`, `get_console_variables`, `remove_cpp_class`.
 - **Editor**: `read_editor_ui`, `configure_editor` `close_tab`, `set_selected_actors`, viewport `show_flags`, `reimport` without a dialog, `set_current_level`; `console_command` `filter` keeps only the lines holding a word.
 - **Actors**: snap to grid, distribute, align, lock, group, randomize, replace, convert to a Blueprint, move to a level, numbered batch rename, copies along a spline, `place_decals`; `list` `bounds` and `find` rows with locations.

@@ -42,8 +42,8 @@ export const CONTROL_EDITOR_FOLDS: readonly FoldSpec[] = [
     members: { open_tab: 'open_editor_tab', close_tab: 'close_tab', preferences: 'set_preferences', window: 'restore_editor_window' },
   },
   {
-    primary: 'screenshot', summary: 'Capture a screenshot of the level viewport (optionally from a camera location and rotation given in the same call, or through a camera actor: a cutscene shot at a held sequence moment), of the running game view, or of the whole editor window with the game UI.', members: ['take_screenshot'],
-    topics: ['capture viewport', 'screen capture', 'viewport image', 'snapshot', 'take picture', 'look from here', 'camera screenshot', 'game view screenshot', 'screenshot hud', 'show me the level from above', 'take a picture of the level'],
+    primary: 'screenshot', summary: 'Capture a screenshot of the level viewport (optionally from a camera location and rotation given in the same call, or through a camera actor: a cutscene shot at a held sequence moment), of the running game view, or of the whole editor window with the game UI; pathTraced renders the level viewport with the path tracer to a denoised review image.', members: ['take_screenshot'],
+    topics: ['capture viewport', 'screen capture', 'viewport image', 'snapshot', 'take picture', 'look from here', 'camera screenshot', 'game view screenshot', 'screenshot hud', 'show me the level from above', 'take a picture of the level', 'path traced screenshot', 'path tracer render', 'denoised render'],
   },
   {
     primary: 'undo', selector: 'history',

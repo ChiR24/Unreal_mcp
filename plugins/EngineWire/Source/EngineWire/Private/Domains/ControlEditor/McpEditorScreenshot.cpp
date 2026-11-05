@@ -1,4 +1,5 @@
 #include "Domains/ControlEditor/McpEditorScreenshotSupport.h"
+#include "Domains/ControlEditor/Viewport/McpPathTracedShot.h"
 
 bool UEngineWireSubsystem::HandleControlEditorScreenshot(
     const FString &RequestId, const TSharedPtr<FJsonObject> &Payload,
@@ -34,6 +35,7 @@ bool UEngineWireSubsystem::HandleControlEditorScreenshot(
         0.3f);
   };
 
+  if (McpPathTracedShot::Handle(this, RequestId, Payload, Socket)) { return true; }
   FString Mode;
   Payload->TryGetStringField(TEXT("mode"), Mode);
   Mode = Mode.TrimStartAndEnd().ToLower();
