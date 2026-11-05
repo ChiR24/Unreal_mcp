@@ -24,7 +24,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Sequences**: `add_actors` `rebind` points a sequence copied with its level at the new level's actors; `add_behaviour` `sequence_trigger` plays one when the player walks into an area, in cinematic mode until it ends.
 - **Geometry**: `append_tubes`, `append_polygons` `repeat`, and `bake_vertex_colors` `coarseShare`.
 - **Look and sound**: material `color` / `glow`, light `flicker`, a first-person view, `sound_trigger`, subtitles, sound volume and looping, footstep sounds, animation play rate, `massKg`.
-- **Scripts and sheets**: `run_script` takes `(if cond a b)` as a value; contact and thumbnail sheets take `keepFile: false`.
+- **Scripts and sheets**: `run_script` takes `(if cond a b)` as a value and waits within `deadlineMs` for a call that answers later, so one script can import a file and use the asset; contact and thumbnail sheets take `keepFile: false`.
 - **Proxy CLI**: `init <client>` writes a client's MCP config; `doctor` checks the setup (the token is never shown).
 
 </details>
@@ -33,8 +33,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 <summary><b>🔧 Fixed</b></summary>
 
 - **Search**: about 250 more plain requests find their capability, and an alias a family member declared runs that member.
-- **Replies**: long lists page and aggregate from the reply's `data`; console replies stay short; a script step that finishes later says so; the tool says how to get a fresh consent grant and how script strings escape.
-- **Undo**: asset edits are one step each, an edit that changes nothing is refused instead of answered done, and enum undo no longer crashes UE 5.7+.
+- **Replies**: long lists page and aggregate from the reply's `data`; console replies stay short; a script step still running at the deadline says so; the tool says how to get a fresh consent grant and how script strings escape.
+- **Undo**: asset edits are one step each, an edit that changes nothing is refused instead of answered done, enum undo no longer crashes UE 5.7+, and a script's rollback undoes only its own steps and offers the assets its imports made for deletion.
 - **Graph as code**: `%`, `==` on text, calls used as values, ids with underscores, custom event calls, other classes' variables, expose-on-spawn inputs and calls on the Blueprint itself write as `read_graph_as_code` prints them; a path that loads nothing is refused, and an unknown id lists the near ones.
 - **Placement**: props in a room built as one mesh read sunk, resting or overlapping as they are; a support with no collision is named; Blueprint audits name the parts they cannot judge; `fix_coplanar` settles pieces that share planes pairwise.
 - **Views**: frame readers warn while shaders, meshes or textures still build; `contact_sheet` draws beside water and titles small sheets in full.

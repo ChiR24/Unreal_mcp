@@ -18,12 +18,25 @@ void End();
 /**
  * Gives Result an `undo` block from the buffer: the steps the request left (undoable, transactionScope, steps), or
  * that the history was cleared. A handler's own block stands, except one claiming a step the buffer does not hold;
- * nothing is said while a transaction is still open, since what it records is not known yet.
+ * nothing is said while a transaction is still open, since what it records is not known yet. A request that answers
+ * in a later bracket (Park) counts the steps of every bracket, and those its steps left answering later.
  */
 void Describe(const FString& RequestId, const TSharedPtr<FJsonObject>& Result);
 
 /** Whether a transaction was left by a request through this server, this editor session (what a restore point undoes). */
 bool IsMcpStep(const FGuid& TransactionId);
+
+/**
+ * Whether RequestId left the transaction, or one of its steps did under its own id (<RequestId>#step<n>, a step of a
+ * script that answered later in a bracket of its own); IsMcpStep for an empty RequestId.
+ */
+bool IsStepOf(const FGuid& TransactionId, const FString& RequestId);
+
+/**
+ * The request answers in a later bracket (a script waiting on a step that answers later): that bracket's Begin goes on
+ * from where this one began, so its reply describes every step the request left. Called inside the request's bracket.
+ */
+void Park(const FString& RequestId);
 
 /**
  * Most handlers reply inside their scoped transaction, so what it leaves was unknown when Describe ran. The reply of

@@ -13,12 +13,22 @@ namespace McpScript
 {
 using McpGraphCode::FSExpr;
 
-namespace ScriptCallParts
+bool FRunner::Recall(TSharedPtr<FJsonValue>& Out)
 {
-constexpr int32 MaxWarnings = 50;
-} // namespace ScriptCallParts
+    if (Next >= Memo.Num())
+    {
+        return false;
+    }
+    Out = Memo[Next++];
+    return true;
+}
 
-using namespace ScriptCallParts;
+bool FRunner::Remember(const TSharedPtr<FJsonValue>& Out)
+{
+    Memo.Add(Out);
+    Next = Memo.Num();
+    return true;
+}
 
 bool FRunner::Pairs(const FSExpr& Form, const FNames& Names, TSharedPtr<FJsonObject>& Out)
 {
@@ -40,6 +50,18 @@ bool FRunner::Pairs(const FSExpr& Form, const FNames& Names, TSharedPtr<FJsonObj
 // principal (scope, project, paths, console policy, quota); consent is this run's grant, for what it listed.
 bool FRunner::Call(const FSExpr& Form, const FNames& Names, TSharedPtr<FJsonValue>& Out)
 {
+    // Its values first: a pass after a wait meets the calls inside them again, in the order the first pass met them.
+    TSharedPtr<FJsonObject> Params;
+    if (!Pairs(Form, Names, Params))
+    {
+        return false;
+    }
+    // Reached by an earlier pass (the run waited on a step and goes again from its first form): what it returned then.
+    // Nothing runs, is validated or is authorized twice.
+    if (Recall(Out))
+    {
+        return true;
+    }
     if (Steps.Num() >= Limits.MaxSteps)
     {
         return Fail(Form.Line, TEXT("SCRIPT_BUDGET"), FString::Printf(TEXT("the script reached its %d-step budget (maxSteps)."), Limits.MaxSteps));
@@ -48,10 +70,9 @@ bool FRunner::Call(const FSExpr& Form, const FNames& Names, TSharedPtr<FJsonValu
     {
         return Fail(Form.Line, TEXT("SCRIPT_DEADLINE"), TEXT("the script ran past its deadline (deadlineMs); no further step started."));
     }
-    TSharedPtr<FJsonObject> Params;
-    if (!Pairs(Form, Names, Params))
+    if (!Subsystem.NativeTransport.IsValid()) // a pass after a wait: the gateway may have stopped since the run began
     {
-        return false;
+        return Fail(Form.Line, TEXT("SCRIPT_UNAVAILABLE"), TEXT("a step is validated by the native MCP gateway, which is off (bEnableNativeMCP)."));
     }
     TSharedPtr<FJsonObject> Request = MakeShared<FJsonObject>();
     Request->SetStringField(TEXT("capability"), Form.Items[0].Text);
@@ -97,31 +118,65 @@ bool FRunner::Dispatch(int32 Line, const FMcpGatewayExecutePlan& Plan, const FSt
     EngineWire::ReportInFlightProgress(RequestId, -1.0f, FString::Printf(TEXT("script step %d (line %d): %s"), Steps.Num(), Line, *Plan.CapabilityId));
     const int32 ErrorsBefore = Subsystem.GetCapturedErrorCount();
     FMcpResponseCaptureRegistry& Capture = FMcpResponseCaptureRegistry::Get();
+    // The caller's principal under the step's id too: work a step does later in a bracket of its own (RunLatentReply, as
+    // an import does) is held to the caller's paths there, as the direct call's is.
+    McpPrequeueGate::RememberRequestPrincipal(StepId, Principal);
     // Captured but no batch step: the handler opens its own undo step and recompiles, as for a direct call; placement
     // is checked once for the whole script by this request's change watch.
     Capture.Begin(StepId, false);
     const bool bTaken = Subsystem.RunHandlerInProcess(StepId, Plan.DispatchAction, Plan.Arguments, Socket);
+    if (bTaken && !Capture.HasReply(StepId))
+    {
+        // It answers later (an import lands on a later tick): the run waits for it within the deadline, the capture open
+        // to take its reply (McpScriptAwait.cpp); Resume takes that reply, and the run goes on from its first form.
+        Waiting = StepId;
+        WaitSchema = Plan.OutputSchema;
+        return false;
+    }
+    McpPrequeueGate::ForgetRequestPrincipal(StepId);
     const FMcpCapturedResponse Reply = Capture.End(StepId);
+    if (!Reply.bCaptured)
+    {
+        Steps.Last().ErrorCode = TEXT("UNKNOWN_ACTION");
+        Steps.Last().Message = TEXT("no handler takes it");
+        return Fail(Line, Steps.Last().ErrorCode, FString::Printf(TEXT("%s: %s."), *Plan.CapabilityId, *Steps.Last().Message));
+    }
+    return Settle(Reply, Subsystem.GetCapturedErrorCount() - ErrorsBefore, Subsystem.GetCapturedErrorMessages(), Plan.OutputSchema, Out);
+}
+
+bool FRunner::Resume(const FMcpCapturedResponse& Reply)
+{
+    const FString StepId = Waiting;
+    Waiting.Reset();
     FStep& Step = Steps.Last();
     if (!Reply.bCaptured)
     {
-        // A handler that answers later still works on after this; its reply must never reach a transport.
-        // ponytail: the capture stays open to swallow it, one small entry per such step; a cancel hook if they add up.
-        bDeferred = bTaken;
-        if (bTaken)
-        {
-            Capture.Begin(StepId, false);
-        }
-        Step.ErrorCode = bTaken ? TEXT("STEP_DEFERRED") : TEXT("UNKNOWN_ACTION");
-        // Its work goes on past this reply and past the rollback (an import's asset lands afterwards), so running the
-        // call again unread repeats it: say what to read back first.
-        Step.Message = bTaken ? TEXT("it answers later, so the script stopped here, but its work goes on and may finish after the script returns (an import still lands its assets): read back what it makes, such as asset.list on its folder, before running it again as its own call")
-                              : TEXT("no handler takes it");
-        return Fail(Line, Step.ErrorCode, FString::Printf(TEXT("%s: %s."), *Plan.CapabilityId, *Step.Message));
+        // Still running at the deadline: its work goes on past this reply and past the rollback (an import's asset lands
+        // afterwards), so running the call again unread repeats it: say what to read back first.
+        bDeferred = true;
+        Step.ErrorCode = TEXT("STEP_DEFERRED");
+        Step.Message = TEXT("it answers later and was still running at the deadline (deadlineMs), so the script stopped here, but its work goes on and may finish after the script returns (an import still lands its assets): read back what it makes, such as asset.list on its folder, before running it again as its own call");
+        return Fail(Step.Line, TEXT("SCRIPT_DEADLINE"), FString::Printf(TEXT("%s: %s."), *Step.Capability, *Step.Message));
     }
-    // An error the engine logged turns a success into ENGINE_ERROR, as it would for a direct execute.
-    const int32 NewErrors = Subsystem.GetCapturedErrorCount() - ErrorsBefore;
-    const TArray<FString> Logged = Subsystem.GetCapturedErrorMessages();
+    McpPrequeueGate::ForgetRequestPrincipal(StepId);
+    // A reply sent outside every request's brackets: what made it was no request's, so undo may not reach it.
+    bOutside |= !Reply.bInRequest;
+    // Judged by the errors the engine logged in the brackets the reply came in, as an in-process step is by this one's.
+    TSharedPtr<FJsonValue> Out;
+    if (!Settle(Reply, Reply.LoggedErrors.Num(), Reply.LoggedErrors, WaitSchema, Out))
+    {
+        return false;
+    }
+    return FPlatformTime::Seconds() <= Limits.DeadlineSeconds ||
+           Fail(Step.Line, TEXT("SCRIPT_DEADLINE"), FString::Printf(TEXT("the script ran past its deadline (deadlineMs) while %s worked; nothing further ran."), *Step.Capability));
+}
+
+// A step's reply, at once or later: an error the engine logged turns a success into ENGINE_ERROR, as it would for a direct
+// execute; the step's own warnings are kept by line; what it returns is what a direct execute returns.
+bool FRunner::Settle(const FMcpCapturedResponse& Reply, int32 NewErrors, const TArray<FString>& Logged,
+                     const TSharedPtr<FJsonObject>& OutputSchema, TSharedPtr<FJsonValue>& Out)
+{
+    FStep& Step = Steps.Last();
     Step.bSuccess = Reply.bSuccess && NewErrors <= 0;
     Step.ErrorCode = Reply.bSuccess && NewErrors > 0 ? FString(TEXT("ENGINE_ERROR")) : Reply.ErrorCode;
     Step.Message = Reply.bSuccess && NewErrors > 0
@@ -134,19 +189,19 @@ bool FRunner::Dispatch(int32 Line, const FMcpGatewayExecutePlan& Plan, const FSt
         {
             if (Warnings.Num() < MaxWarnings && Warning.IsValid() && Warning->Type == EJson::String)
             {
-                Warnings.Add(FString::Printf(TEXT("line %d (%s): %s"), Line, *Plan.CapabilityId, *Warning->AsString()));
+                Warnings.Add(FString::Printf(TEXT("line %d (%s): %s"), Step.Line, *Step.Capability, *Warning->AsString()));
             }
         }
     }
     if (!Step.bSuccess)
     {
         Step.ErrorCode = Step.ErrorCode.IsEmpty() ? FString(TEXT("STEP_FAILED")) : Step.ErrorCode;
-        return Fail(Line, Step.ErrorCode, FString::Printf(TEXT("%s failed: %s"), *Plan.CapabilityId, *Step.Message));
+        return Fail(Step.Line, Step.ErrorCode, FString::Printf(TEXT("%s failed: %s"), *Step.Capability, *Step.Message));
     }
     // What a direct execute returns: the declared output fields, the rest under details.
     const TSharedPtr<FJsonObject> Projected =
-        McpProjectCanonicalOutput(Reply.Result.IsValid() ? Reply.Result : MakeShared<FJsonObject>(), Plan.OutputSchema);
+        McpProjectCanonicalOutput(Reply.Result.IsValid() ? Reply.Result : MakeShared<FJsonObject>(), OutputSchema);
     Out = MakeShared<FJsonValueObject>(Projected.IsValid() ? Projected : MakeShared<FJsonObject>());
-    return true;
+    return Remember(Out);
 }
 } // namespace McpScript

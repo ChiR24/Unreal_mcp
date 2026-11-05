@@ -1,7 +1,11 @@
 #!/usr/bin/env node
 // system_control run_script: capability calls in one request, checked whole before anything runs and rolled back on a
-// failure. Three crates far from everything else, one sunk below the floor line; every name is this run's.
+// failure. Three crates far from everything else, one sunk below the floor line; every name is this run's. A call that
+// answers later (asset.import lands its asset on a later tick) is waited for: one script imports files and reads back
+// what they made.
 
+import fs from 'node:fs';
+import path from 'node:path';
 import { runToolTests } from '../../test-runner.mjs';
 
 const ts = Date.now();
@@ -12,6 +16,25 @@ const B = `${PREFIX}_B`;
 const C = `${PREFIX}_C`;
 const ROW = `MCP_ScriptRow_${ts}_`;
 const run = (script, extra = {}) => ({ action: 'run_script', script, ...extra });
+
+// One triangle per file, each file named as its asset is (a folder destination keeps the file name, so nothing is renamed).
+const IMPORTS = `/Game/MCPTest/ScriptImports_${ts}`;
+const IMPORT_A = `SM_ScriptA_${ts}`;
+const IMPORT_B = `SM_ScriptB_${ts}`;
+const IMPORT_GONE = `SM_ScriptGone_${ts}`;
+const projectPath = process.env.UE_PROJECT_PATH ?? '/data/Game/MCPtest/MCPtest.uproject';
+// The parameter audit imports this suite only to read its cases; it must not write the fixtures.
+if (!Array.isArray(globalThis.__capturedToolSuites)) {
+  for (const name of [IMPORT_A, IMPORT_B, IMPORT_GONE]) {
+    const file = path.join(path.dirname(projectPath), 'Saved', `${name}.obj`);
+    fs.mkdirSync(path.dirname(file), { recursive: true });
+    fs.writeFileSync(file, [`o ${name}`, 'v 0 0 0', 'v 0 100 0', 'v 100 0 0', 'f 1 2 3', ''].join('\n'));
+  }
+}
+const IMPORT_AND_READ = `(let a (asset.import :sourcePath "Saved/${IMPORT_A}.obj" :destinationPath "${IMPORTS}" :save false))
+(let b (asset.import :sourcePath "Saved/${IMPORT_B}.obj" :destinationPath "${IMPORTS}" :save false))
+(let made (asset.list :path "${IMPORTS}" :recursive false))
+(return (obj :first a.assetPath :second b.assetPath :listed made.totalCount))`;
 
 const RAISE_SUNK = `(let crates (control_actor.list :filter "${PREFIX}"))
 (for c crates.actors
@@ -87,6 +110,23 @@ const testCases = [
   { scenario: 'UPDATE: a crate a script leaves floating is named in the script\'s warnings', toolName: 'system_control', arguments: run(`(control_actor.set_transform :actorName "${A}" :location (obj :x 31000 :y 31000 :z 400))`), expected: 'success', assertions: [
     { path: 'structuredContent.receipt.warnings.0', includes: A, label: 'placement is checked once for the script, never lost in a step reply' },
   ] },
+  // Each import answers on a later tick: the script waits for it, then goes on, and the list reads what both made.
+  { scenario: 'CREATE: a script imports two files and lists what they made, in one call', toolName: 'system_control', arguments: run(IMPORT_AND_READ, { deadlineMs: 25000 }), expected: 'success', assertions: [
+    { path: 'structuredContent.result.steps.length', equals: 3, label: 'two imports and the list, each ok' },
+    { path: 'structuredContent.result.returned.first', includes: IMPORT_A, label: 'the first import\'s asset' },
+    { path: 'structuredContent.result.returned.second', includes: IMPORT_B, label: 'the second import\'s asset' },
+    { path: 'structuredContent.result.returned.listed', gte: 2, label: 'listed after both imports landed' },
+  ] },
+  { scenario: 'READ: the imported asset is there after the script', toolName: 'manage_asset', arguments: { action: 'list', path: IMPORTS, recursive: false, filter: IMPORT_B }, expected: 'success', assertions: [
+    { path: 'structuredContent.result.count', equals: 1, label: 'the second import landed before the script answered' },
+  ] },
+  // Undo deletes no asset: the rollback after a step that failed past an awaited import offers that import's asset.
+  { scenario: 'ERROR: a step failing after an awaited import rolls back and offers the imported asset for deletion', toolName: 'system_control', arguments: run(`(asset.import :sourcePath "Saved/${IMPORT_GONE}.obj" :destinationPath "${IMPORTS}" :save false)
+(control_actor.set_transform :actorName "MCP_NoSuchActor_${ts}" :location (obj :x 0 :y 0 :z 0))`, { deadlineMs: 25000 }), expected: 'error|not found', assertions: [
+    { path: 'structuredContent.typedError.unrealDetail.rolledBack', equals: false, label: 'not claimed rolled back: the asset stays' },
+    { path: 'structuredContent.typedError.unrealDetail.cleanupCall.params.assetPaths', includes: `${IMPORTS}/${IMPORT_GONE}`, label: 'the import\'s asset is offered for deletion' },
+  ] },
+  { scenario: 'Cleanup: the imported assets', toolName: 'manage_asset', arguments: { action: 'delete', path: IMPORTS, force: true }, expected: 'success|not found' },
   { scenario: 'DELETE: the script scene by its tag', toolName: 'control_actor', arguments: { action: 'delete_by_tag', tag: TAG }, expected: 'success' },
 ];
 

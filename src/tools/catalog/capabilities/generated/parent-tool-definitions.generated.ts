@@ -30718,16 +30718,16 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
               "type": "integer",
               "minimum": 100,
               "maximum": 25000,
-              "description": "As run_script: milliseconds after which no further call starts; default 20000."
+              "description": "As run_script: milliseconds from the start after which no further call starts, a call that answers later waited for until then; default 20000."
             },
             {
               "type": "integer",
               "minimum": 100,
               "maximum": 25000,
-              "description": "Milliseconds after which no further call starts; default 20000, at most 25000 (a client gives up on a call at 30 s). Past it the script stops (SCRIPT_DEADLINE) and rolls back."
+              "description": "Milliseconds from the start after which no further call starts; default 20000, at most 25000 (a client gives up on a call at 30 s). A call that answers later (an import lands on a later tick) is waited for until then, and the script goes on from there: one call can import a file and the next use the asset it made. Past it the script stops (SCRIPT_DEADLINE) and rolls back."
             }
           ],
-          "description": "As run_script: milliseconds after which no further call starts; default 20000."
+          "description": "As run_script: milliseconds from the start after which no further call starts, a call that answers later waited for until then; default 20000."
         },
         "deleteSlot": {
           "type": "boolean",

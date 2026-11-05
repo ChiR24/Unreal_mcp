@@ -18,13 +18,13 @@ All notable changes to the EngineWire plugin (formerly McpAutomationBridge) will
 - **Look and sound**: material colour and glow, light flicker, a first-person camera, the sound trigger behaviour, subtitles, sound volume and looping, footsteps, prop mass and play rate.
 - **Sequences and variables**: a copied sequence's possessables rebind by label; `add_variable` sets Expose to Cinematics; the sequence trigger behaviour plays a Level Sequence on a local player's overlap, cinematic mode on until OnFinished.
 - **Graph as code**: read `entry` and `codeOnly`; the write reply reads back only the entries written.
-- **Scripts and sheets**: run_script takes `(if cond a b)` as a value; sheets can leave no file.
+- **Scripts and sheets**: run_script takes `(if cond a b)` as a value and awaits a step that answers later within its deadline, going on in the request's brackets again by replaying from a memo; sheets can leave no file.
 
 ### Fixed
 - **Search and replies**: lead verbs and fold aliases run their member; paging and aggregate read a reply's `data`; console text stays lean; the consent and deferred-step messages say what to do next.
 - **Graph code writer**: typed `%` and string `==`, calls used as values, title matching, unloadable paths refused, calls to custom events made in the same code, other classes' variables, expose-on-spawn pins and self call targets.
 - **Placement**: a room mesh's floor and shell judged as such, a support with no body named, hidden Blueprint parts noted, and a coplanar planner that checks each move against the others.
-- **Assets**: FBX imports with options convert units and list what they made; skeletal meshes go through the engine's setter; parentless Fab instances warned; config-named assets kept out of the unused report; morph targets and skin weight profiles survive rebuilds; material instances follow their parent; a save is not announced as new.
+- **Assets**: an import's deferred work runs in its request's brackets (journal, restore point, the caller's paths); FBX imports with options convert units and list what they made; skeletal meshes go through the engine's setter; parentless Fab instances warned; config-named assets kept out of the unused report; morph targets and skin weight profiles survive rebuilds; material instances follow their parent; a save is not announced as new.
 - **Editor state**: a Live Coding compile refuses writes; sublevels save; dry runs have no side effects; one compile path re-poses placed skeletal meshes; variable defaults reach placed copies; asset edits are one undo step (enum by command change); Behavior Trees build from Root; engine fix-ups stay out of the change journal.
 - **Captures and geometry**: frame readers warn while assets build; contact sheets handle water and long titles; output files reach captures and EngineWire's folders; bevel and chamfer cut whole parts; geometry undo compares every attribute.
 - **Game framework**: no default pawn writes no class, and an empty role reads "None".

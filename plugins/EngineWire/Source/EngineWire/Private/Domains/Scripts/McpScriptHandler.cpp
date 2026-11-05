@@ -16,7 +16,8 @@ constexpr int32 MaxSteps = 1000;
 constexpr double DefaultMs = 20000.0;
 constexpr double MaxMs = 25000.0; // under the client's 30 s limit
 
-// The restore point, driven in-process: begin, rollback or end.
+// The restore point, driven in-process: begin, rollback or end. It is this request's own (Run): its rollback undoes only
+// the script's steps, and no other call takes it while the script waits on a step.
 FMcpCapturedResponse RestorePoint(UEngineWireSubsystem& Subsystem, const FString& RequestId, const TCHAR* Op)
 {
     const FString Id = RequestId + TEXT("#restore-") + Op;
@@ -24,7 +25,7 @@ FMcpCapturedResponse RestorePoint(UEngineWireSubsystem& Subsystem, const FString
     Payload->SetStringField(TEXT("op"), Op);
     Payload->SetStringField(TEXT("label"), TEXT("run_script"));
     FMcpResponseCaptureRegistry::Get().Begin(Id);
-    McpEditorCheckpoint::Handle(&Subsystem, Id, Payload, nullptr);
+    McpEditorCheckpoint::Handle(&Subsystem, Id, Payload, nullptr, RequestId);
     return FMcpResponseCaptureRegistry::Get().End(Id);
 }
 
@@ -85,7 +86,7 @@ bool ReadAllowed(const TSharedPtr<FJsonObject>& Payload, TSet<FString>& OutAllow
 using namespace ScriptHandlerParts;
 
 bool HandleRunScript(UEngineWireSubsystem& Subsystem, const FString& RequestId, const TSharedPtr<FJsonObject>& Payload,
-                     const TSharedPtr<FMcpBridgeWebSocket>& Socket, bool* OutRan)
+                     const TSharedPtr<FMcpBridgeWebSocket>& Socket, TFunction<void(bool)> OnDone)
 {
     auto Refuse = [&](const FString& Code, const FString& Message)
     {
@@ -125,6 +126,7 @@ bool HandleRunScript(UEngineWireSubsystem& Subsystem, const FString& RequestId, 
     Payload->TryGetNumberField(TEXT("deadlineMs"), DeadlineMs);
     FRunLimits Limits;
     Limits.MaxSteps = FMath::Clamp(static_cast<int32>(Steps), 1, MaxSteps);
+    // From the start: waiting on a step that answers later is inside it too.
     Limits.DeadlineSeconds = FPlatformTime::Seconds() + FMath::Clamp(DeadlineMs, 100.0, MaxMs) / 1000.0;
     const FMcpCapturedResponse Opened = RestorePoint(Subsystem, RequestId, TEXT("begin"));
     if (!Opened.bSuccess)
@@ -132,12 +134,29 @@ bool HandleRunScript(UEngineWireSubsystem& Subsystem, const FString& RequestId, 
         return Refuse(Opened.ErrorCode.IsEmpty() ? FString(TEXT("RESTORE_POINT_OPEN")) : Opened.ErrorCode,
                       Opened.Message + TEXT(" A script runs under a restore point of its own, so it can roll back."));
     }
-    FRunner Runner(Subsystem, RequestId, Socket, Principal, Allowed, Limits);
-    const bool bRan = Runner.Run(Forms);
-    if (OutRan)
+    const TSharedRef<FScriptRun> Run = MakeShared<FScriptRun>(Subsystem, RequestId, Socket, Principal, Allowed, Limits);
+    Run->Forms = MoveTemp(Forms);
+    Run->Label = TEXT("system_control ") + GetJsonStringField(Payload, TEXT("subAction"), TEXT("run_script"));
+    Run->OnDone = MoveTemp(OnDone);
+    Pass(Subsystem, Run);
+    return true;
+}
+
+void Pass(UEngineWireSubsystem& Subsystem, const TSharedRef<FScriptRun>& Run)
+{
+    const bool bRan = Run->Runner.Run(Run->Forms);
+    if (Run->Runner.Waiting.IsEmpty())
     {
-        *OutRan = bRan;
+        Finish(Subsystem, *Run, bRan);
+        return;
     }
+    Wait(Subsystem, Run); // a step answers later: no reply yet, and the run goes on once it answers
+}
+
+void Finish(UEngineWireSubsystem& Subsystem, FScriptRun& Run, const bool bRan)
+{
+    const FRunner& Runner = Run.Runner;
+    const FString& RequestId = Run.RequestId;
     TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
     Result->SetArrayField(TEXT("steps"), Strings(StepRows(Runner.Steps)));
     if (Runner.Warnings.Num() > 0)
@@ -151,8 +170,12 @@ bool HandleRunScript(UEngineWireSubsystem& Subsystem, const FString& RequestId, 
         {
             Result->SetField(TEXT("returned"), Runner.Returned);
         }
-        Subsystem.SendAutomationResponse(Socket, RequestId, true, FString::Printf(TEXT("The script ran %d step(s)."), Runner.Steps.Num()), Result);
-        return true;
+        Subsystem.SendAutomationResponse(Run.Socket, RequestId, true, FString::Printf(TEXT("The script ran %d step(s)."), Runner.Steps.Num()), Result);
+        if (Run.OnDone)
+        {
+            Run.OnDone(true);
+        }
+        return;
     }
     const FMcpCapturedResponse Undone = RestorePoint(Subsystem, RequestId, TEXT("rollback"));
     RestorePoint(Subsystem, RequestId, TEXT("end"));
@@ -162,8 +185,9 @@ bool HandleRunScript(UEngineWireSubsystem& Subsystem, const FString& RequestId, 
     {
         Result->SetObjectField(TEXT("cleanupCall"), *Cleanup);
     }
-    // Rolled back only when nothing the script did is left: undo deletes no asset and stops no step still running.
-    Result->SetBoolField(TEXT("rolledBack"), Undone.bSuccess && !Runner.bDeferred && !bCreated);
+    // Rolled back only when nothing the script did is left: undo deletes no asset, stops no step still running and may not
+    // reach what a step that answered outside any request's brackets made.
+    Result->SetBoolField(TEXT("rolledBack"), Undone.bSuccess && !Runner.bDeferred && !Runner.bOutside && !bCreated);
     Result->SetStringField(TEXT("rollback"), Undone.Message);
     // What the rollback took back, not what ran: a script of reads ran steps and changed nothing.
     const TArray<TSharedPtr<FJsonValue>>* UndoneSteps = nullptr;
@@ -173,10 +197,14 @@ bool HandleRunScript(UEngineWireSubsystem& Subsystem, const FString& RequestId, 
     const FString After = Runner.bDeferred ? TEXT(" Undo reached the steps before it, not that step's work.")
                         : !Undone.bSuccess ? TEXT(" It could not all be undone: rollback says why.")
                         : bCreated ? TEXT(" Undo reverted the rest, but the assets the script created stay: cleanupCall deletes them.")
+                        : Runner.bOutside ? TEXT(" Undo reverted the steps it reached; a step that answered later did its work outside them, so read back what it made.")
                         : bUndid ? TEXT(" What the script changed was undone.")
                         : bAnyStep ? TEXT(" Its steps left nothing to undo.")
                         : TEXT(" Nothing had changed.");
-    Subsystem.SendAutomationResponse(Socket, RequestId, false, Sentence(Runner.Error) + After, Result, Runner.ErrorCode);
-    return true;
+    Subsystem.SendAutomationResponse(Run.Socket, RequestId, false, Sentence(Runner.Error) + After, Result, Runner.ErrorCode);
+    if (Run.OnDone)
+    {
+        Run.OnDone(false);
+    }
 }
 } // namespace McpScript

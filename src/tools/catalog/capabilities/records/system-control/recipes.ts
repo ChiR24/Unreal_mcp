@@ -49,7 +49,7 @@ export const RECIPE_RECORDS: readonly CapabilityRecordSource[] = [
       name: NAME,
       args: { type: 'object', additionalProperties: true, 'x-unreal-reflection-boundary': true, description: 'Each parameter\'s value by name: a number, text, true/false, a list or an object.' },
       maxSteps: { type: 'integer', minimum: 1, maximum: 1000, description: 'As run_script: calls the recipe may make; default 200.' },
-      deadlineMs: { type: 'integer', minimum: 100, maximum: 25000, description: 'As run_script: milliseconds after which no further call starts; default 20000.' },
+      deadlineMs: { type: 'integer', minimum: 100, maximum: 25000, description: 'As run_script: milliseconds from the start after which no further call starts, a call that answers later waited for until then; default 20000.' },
     },
     required: ['name'],
     outputProps: {

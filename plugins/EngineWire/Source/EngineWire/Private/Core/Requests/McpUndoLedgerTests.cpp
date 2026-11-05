@@ -113,6 +113,35 @@ bool FMcpUndoLedgerTest::RunTest(const FString& Parameters)
     TestTrue(TEXT("the flush sends it"), bSent);
     TestEqual(TEXT("with the step its closed transaction kept"), UndoVerdict(Held), FString(TEXT("undoable")));
 
+    // A request that answers in a later bracket (a script waiting on a step) counts there the steps of its first bracket
+    // and the one a step of it left in a bracket of its own, but not the one another call made in between.
+    const auto Tagged = [Probe](const TCHAR* By, const bool bPark)
+    {
+        McpUndoLedger::Begin(By);
+        {
+            FScopedTransaction Transaction(FText::FromString(TEXT("Mcp Ledger")));
+            Probe->Modify();
+            Probe->ComponentTags.Add(LedgerTag);
+        }
+        if (bPark)
+        {
+            McpUndoLedger::Park(By);
+        }
+        McpUndoLedger::End();
+    };
+    Tagged(TEXT("ledger-waits"), true);
+    Tagged(TEXT("ledger-waits#step2"), false);
+    Tagged(TEXT("ledger-between"), false);
+    McpUndoLedger::Begin(TEXT("ledger-waits"));
+    TSharedPtr<FJsonObject> Resumed = MakeShared<FJsonObject>();
+    McpUndoLedger::Describe(TEXT("ledger-waits"), Resumed);
+    McpUndoLedger::End();
+    const TSharedPtr<FJsonObject>* ResumedUndo = nullptr;
+    double ResumedSteps = 0.0;
+    TestTrue(TEXT("its steps across its brackets are reported"),
+             Resumed->TryGetObjectField(TEXT("undo"), ResumedUndo) && ResumedUndo && (*ResumedUndo)->TryGetNumberField(TEXT("steps"), ResumedSteps));
+    TestEqual(TEXT("two of them, not the other call's"), ResumedSteps, 2.0);
+
     // Another request's reply is never touched.
     TSharedPtr<FJsonObject> Other = MakeShared<FJsonObject>();
     McpUndoLedger::Describe(TEXT("ledger-other"), Other);

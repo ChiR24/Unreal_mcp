@@ -21,7 +21,8 @@ constexpr int32 MaxListed = 200;
 struct FCheckpoint
 {
     bool bOpen = false;
-    FString OpenedBy; // the request that opened it (run_script opens and rolls back its own within one request)
+    FString OpenedBy; // the request that opened it
+    FString Run;      // a script's own point: its request, the only one whose steps a rollback undoes
     FString Label;
     FGuid Marker; // the live step on top at begin; invalid when the stack was empty
     TArray<FString> Added, Removed, Saved;
@@ -29,11 +30,6 @@ struct FCheckpoint
     FDelegateHandle AddedHandle, RemovedHandle, SavedHandle;
 };
 FCheckpoint GPoint;
-
-UTransBuffer* Buffer()
-{
-    return GEditor ? Cast<UTransBuffer>(GEditor->Trans) : nullptr;
-}
 
 void Note(TArray<FString>& List, const FString& Path)
 {
@@ -110,7 +106,7 @@ void Refuse(UEngineWireSubsystem* Self, TSharedPtr<FMcpBridgeWebSocket> Socket, 
 }
 
 void OpenCheckpoint(UEngineWireSubsystem* Self, TSharedPtr<FMcpBridgeWebSocket> Socket, const FString& RequestId,
-           const TSharedPtr<FJsonObject>& Payload, UTransBuffer& Trans)
+           const TSharedPtr<FJsonObject>& Payload, UTransBuffer& Trans, const FString& Run)
 {
     if (GPoint.bOpen)
     {
@@ -121,6 +117,7 @@ void OpenCheckpoint(UEngineWireSubsystem* Self, TSharedPtr<FMcpBridgeWebSocket> 
     Unbind();
     GPoint.bOpen = true;
     GPoint.OpenedBy = RequestId;
+    GPoint.Run = Run;
     GPoint.Label = GetJsonStringField(Payload, TEXT("label"), TEXT("restore point"));
     const int32 Live = Trans.GetQueueLength() - Trans.GetUndoCount();
     const FTransaction* Top = Live > 0 ? Trans.GetTransaction(Live - 1) : nullptr;
@@ -151,9 +148,9 @@ void Rollback(UEngineWireSubsystem* Self, TSharedPtr<FMcpBridgeWebSocket> Socket
     if (Foreign)
     {
         Refuse(Self, Socket, RequestId, TEXT("USER_STEP_SINCE_RESTORE_POINT"),
-               FString::Printf(TEXT("'%s' was not made through this server: rolling back would undo it too. Nothing was "
-                                    "undone; undo it in the editor first, or end the checkpoint."),
-                               *Foreign->GetContext().Title.ToString()), Result);
+               FString::Printf(TEXT("'%s' was not made %s: rolling back would undo it too. Nothing was undone; undo it in "
+                                    "the editor first, or end the checkpoint."), *Foreign->GetContext().Title.ToString(),
+                               GPoint.Run.IsEmpty() ? TEXT("through this server") : TEXT("by this script (the user or another call made it while the script ran)")), Result);
         return;
     }
     if (const FTransaction* const* Enum = Steps.FindByPredicate(&McpStepRestoresEnum))
@@ -185,18 +182,25 @@ void Rollback(UEngineWireSubsystem* Self, TSharedPtr<FMcpBridgeWebSocket> Socket
 } // namespace
 
 bool Handle(UEngineWireSubsystem* Self, const FString& RequestId, const TSharedPtr<FJsonObject>& Payload,
-            TSharedPtr<FMcpBridgeWebSocket> Socket)
+            TSharedPtr<FMcpBridgeWebSocket> Socket, const FString& Run)
 {
     const FString Op = GetJsonStringField(Payload, TEXT("op"), TEXT("status")).ToLower();
-    UTransBuffer* Trans = Buffer();
+    UTransBuffer* Trans = GEditor ? Cast<UTransBuffer>(GEditor->Trans) : nullptr;
     if (!Trans)
     {
         Refuse(Self, Socket, RequestId, TEXT("UNDO_UNAVAILABLE"), TEXT("The editor has no undo buffer."));
         return true;
     }
+    // A script waiting on a step that answers later keeps its own point open until it answers: no other call takes it.
+    if (GPoint.bOpen && !GPoint.Run.IsEmpty() && GPoint.Run != Run && Op != TEXT("status"))
+    {
+        Refuse(Self, Socket, RequestId, TEXT("RESTORE_POINT_OPEN"), TEXT("A script is running under a restore point of its own "
+               "(it waits on a step that answers later): send this again once that script has answered."));
+        return true;
+    }
     if (Op == TEXT("begin"))
     {
-        OpenCheckpoint(Self, Socket, RequestId, Payload, *Trans);
+        OpenCheckpoint(Self, Socket, RequestId, Payload, *Trans, Run);
         return true;
     }
     if (Op != TEXT("status") && Op != TEXT("rollback") && Op != TEXT("end"))
@@ -224,12 +228,13 @@ bool Handle(UEngineWireSubsystem* Self, const FString& RequestId, const TSharedP
     const FTransaction* Foreign = nullptr;
     for (const FTransaction* Step : Steps)
     {
-        const bool bMcp = McpUndoLedger::IsMcpStep(Step->GetContext().TransactionId);
+        const FGuid Id = Step->GetContext().TransactionId;
         TSharedPtr<FJsonObject> Row = MakeShared<FJsonObject>();
         Row->SetStringField(TEXT("title"), Step->GetContext().Title.ToString());
-        Row->SetBoolField(TEXT("byMcp"), bMcp);
+        Row->SetBoolField(TEXT("byMcp"), McpUndoLedger::IsMcpStep(Id));
         Rows.Add(MakeShared<FJsonValueObject>(Row));
-        Foreign = Foreign ? Foreign : (bMcp ? nullptr : Step);
+        // A script's own point undoes only its steps: one another call made while it waited is in the way, as a user's.
+        Foreign = (Foreign || McpUndoLedger::IsStepOf(Id, GPoint.Run)) ? Foreign : Step;
     }
     Result->SetArrayField(TEXT("steps"), Rows);
     Result->SetBoolField(TEXT("historyIntact"), bIntact);
@@ -254,9 +259,10 @@ bool Handle(UEngineWireSubsystem* Self, const FString& RequestId, const TSharedP
     if (Op == TEXT("rollback"))
     {
         // The steps since the marker are every caller's through this server, and which packages each touched is not
-        // recorded: a path-restricted caller rolls back only a point its own request opened (a script's own run).
+        // recorded: a path-restricted caller rolls back only a point its own request opened, or its own script's (Run:
+        // the script's ops each go under an id of their own).
         const FMcpCapabilityPrincipal* Caller = McpCapabilityPrincipal::ActiveRequestPrincipal();
-        if (Caller && Caller->IsPathRestricted() && GPoint.OpenedBy != RequestId)
+        if (Caller && Caller->IsPathRestricted() && GPoint.OpenedBy != RequestId && (GPoint.Run.IsEmpty() || GPoint.Run != Run))
         {
             Refuse(Self, Socket, RequestId, TEXT("PATH_NOT_PERMITTED"),
                    TEXT("A path-restricted principal cannot roll back steps other calls made; nothing was undone."));

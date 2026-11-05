@@ -171,6 +171,9 @@ public:
   bool HasCapturedErrors() const;
   int32 GetCapturedErrorCount() const;
   TArray<FString> GetCapturedErrorMessages() const;
+  // What the request running now captured so far: a script that waits on a step keeps what this bracket's reply would
+  // have said of it, for the reply a later bracket sends.
+  FRequestErrorCapture CopyErrorCapture() const;
   // Drops captured log lines a later step supersedes; that step logs again if it still fails.
   void ForgetCapturedMessages(TFunctionRef<bool(const FString&)> Matches);
 

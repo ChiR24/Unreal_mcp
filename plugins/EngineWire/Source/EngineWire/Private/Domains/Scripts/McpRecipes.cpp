@@ -226,6 +226,7 @@ bool HandleRun(UEngineWireSubsystem& Bridge, const FString& RequestId, const TSh
     }
     // Run exactly as run_script runs a script: the same parse, check, per-step gate, consent list and rollback.
     TSharedPtr<FJsonObject> Run = MakeShared<FJsonObject>();
+    Run->SetStringField(TEXT("subAction"), TEXT("run_recipe")); // what the change journal names the call
     // A recipe without parameters runs without args: Args is then null.
     Run->SetStringField(TEXT("script"), Bound(Params, Args ? *Args : nullptr) + GetJsonStringField(Recipe, TEXT("script")));
     Run->SetArrayField(TEXT("destructive"), McpHandlerUtils::ToJsonStringArray(McpHandlerUtils::GetStringArrayField(Recipe, TEXT("destructive"))));
@@ -237,16 +238,18 @@ bool HandleRun(UEngineWireSubsystem& Bridge, const FString& RequestId, const TSh
             Run->SetNumberField(Limit, Value);
         }
     }
-    bool bRan = false;
-    McpScript::HandleRunScript(Bridge, RequestId, Run, Socket, &bRan);
-    if (bRan)
+    // Marked verified when the run ends with every step holding: now, or on a later tick after a step that answers later.
+    McpScript::HandleRunScript(Bridge, RequestId, Run, Socket, [Recipe, Name](const bool bRan)
     {
-        TSharedPtr<FJsonObject> Verified = MakeShared<FJsonObject>();
-        Verified->SetStringField(TEXT("engine"), FEngineVersion::Current().ToString(EVersionComponent::Patch));
-        Verified->SetStringField(TEXT("at"), FDateTime::UtcNow().ToIso8601());
-        Recipe->SetObjectField(TEXT("verified"), Verified);
-        Store(Name, Recipe);
-    }
+        if (bRan)
+        {
+            TSharedPtr<FJsonObject> Verified = MakeShared<FJsonObject>();
+            Verified->SetStringField(TEXT("engine"), FEngineVersion::Current().ToString(EVersionComponent::Patch));
+            Verified->SetStringField(TEXT("at"), FDateTime::UtcNow().ToIso8601());
+            Recipe->SetObjectField(TEXT("verified"), Verified);
+            Store(Name, Recipe);
+        }
+    });
     return true;
 }
 

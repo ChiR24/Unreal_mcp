@@ -21,9 +21,10 @@ describe('recipes', () => {
     }
   });
 
-  // One implementation of a script run: the per-step gate, the consent list and the rollback are run_script's own.
+  // One implementation of a script run: the per-step gate, the consent list and the rollback are run_script's own. It is
+  // marked verified when the run ends, which after a step that answers later is a later tick.
   it('runs a recipe through run_script', () => {
-    expect(recipes).toContain('McpScript::HandleRunScript(Bridge, RequestId, Run, Socket, &bRan);');
+    expect(recipes).toMatch(/McpScript::HandleRunScript\(Bridge, RequestId, Run, Socket, \[Recipe, Name\]\(const bool bRan\)\s*\{\s*if \(bRan\)/u);
   });
 
   // A recipe's name is its file name: anything but letters, digits and underscores could leave the folder.

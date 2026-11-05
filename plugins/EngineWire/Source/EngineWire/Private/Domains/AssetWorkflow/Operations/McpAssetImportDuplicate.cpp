@@ -96,11 +96,13 @@ bool UEngineWireSubsystem::HandleImportAsset(
 
   // Defer the import to the next tick to avoid TaskGraph recursion issues with
   // UE 5.7+ Interchange Framework. See issue #137.
-  // We use SetTimerForNextTick to ensure we're completely outside of any
-  // TaskGraph callback chain before invoking the import.
+  // RunOutsideTicker runs it on the editor's next tick, outside any TaskGraph
+  // callback chain, inside the request's brackets again: the journal and a
+  // restore point count what it makes as this server's (a run_script step's
+  // import shows in its rollback's cleanupCall), and it saves for the caller.
   if (GEditor) {
     TWeakObjectPtr<UEngineWireSubsystem> WeakThis(this);
-    GEditor->GetTimerManager()->SetTimerForNextTick(
+    RunOutsideTicker(RequestId, TEXT("manage_asset import"),
         [WeakThis, RequestId, ResolvedSourcePath, DestPath, DestName, Socket,
          FbxOptions, bOverwrite, bSave]() {
           UEngineWireSubsystem *StrongThis = WeakThis.Get();

@@ -168,6 +168,12 @@ void UEngineWireSubsystem::ForgetCapturedMessages(TFunctionRef<bool(const FStrin
     CurrentErrorCapture.WarningCount -= CurrentErrorCapture.WarningMessages.RemoveAll(Matches);
 }
 
+UEngineWireSubsystem::FRequestErrorCapture UEngineWireSubsystem::CopyErrorCapture() const
+{
+    FScopeLock Lock(&ErrorCaptureMutex);
+    return CurrentErrorCapture;
+}
+
 TArray<FString> UEngineWireSubsystem::GetCapturedErrorMessages() const
 {
     FScopeLock Lock(&ErrorCaptureMutex);

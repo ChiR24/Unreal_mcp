@@ -35,20 +35,28 @@ describe('run_script steps', () => {
   });
 
   it('keep a reply that comes later from ever reaching a transport', () => {
-    expect(call).toMatch(/if \(!Reply\.bCaptured\)[\s\S]*?if \(bTaken\)\s*\{\s*Capture\.Begin\(StepId, false\);/u);
+    // A step with no reply yet keeps its capture open while the run waits for it; it is ended only once a reply came, so
+    // one sent after the deadline is swallowed too.
+    expect(call).toMatch(/if \(bTaken && !Capture\.HasReply\(StepId\)\)\s*\{[^}]*Waiting = StepId;[^}]*return false;\s*\}/u);
+    const wait = code(join(SCRIPTS, 'McpScriptAwait.cpp'));
+    expect(wait).toContain('const FMcpCapturedResponse Reply = bCame ? Capture.End(Run->Runner.Waiting) : FMcpCapturedResponse();');
   });
 
   // An import in a script failed it with STEP_DEFERRED in words that read as if nothing had happened and asked for the
-  // call to be run again, while its asset landed after the script returned: a second run imported it twice.
-  it('say a step that answers later may still finish after the script returns, and what to read back first', () => {
-    expect(call).toContain('Step.ErrorCode = bTaken ? TEXT("STEP_DEFERRED")');
-    const message = call.match(/Step\.Message = bTaken \? TEXT\("([^"]*)"\)/u)?.[1] ?? '';
+  // call to be run again, while its asset landed after the script returned: a second run imported it twice. Now the
+  // script waits for it, and only a step still running at the deadline is reported so.
+  it('say a step still running at the deadline may finish after the script returns, and what to read back first', () => {
+    const resume = call.slice(call.indexOf('bool FRunner::Resume('), call.indexOf('bool FRunner::Settle('));
+    expect(resume).toMatch(/if \(!Reply\.bCaptured\)\s*\{\s*bDeferred = true;\s*Step\.ErrorCode = TEXT\("STEP_DEFERRED"\);/u);
+    const message = resume.match(/Step\.Message = TEXT\("([^"]*)"\)/u)?.[1] ?? '';
+    expect(message).toContain('still running at the deadline');
     expect(message).toContain('may finish after the script returns');
     expect(message).toMatch(/read back what it makes.*before running it again/u);
+    expect(resume).toContain('return Fail(Step.Line, TEXT("SCRIPT_DEADLINE")');
     const handler = code(join(SCRIPTS, 'McpScriptHandler.cpp'));
     expect(handler).toContain("Runner.bDeferred ? TEXT(\" Undo reached the steps before it, not that step's work.\")");
-    // Never claimed rolled back while that step's work goes on.
-    expect(handler).toContain('Result->SetBoolField(TEXT("rolledBack"), Undone.bSuccess && !Runner.bDeferred && !bCreated);');
+    // Never claimed rolled back while that step's work goes on, or when a step answered outside any request's brackets.
+    expect(handler).toContain('Result->SetBoolField(TEXT("rolledBack"), Undone.bSuccess && !Runner.bDeferred && !Runner.bOutside && !bCreated);');
   });
 
   it('are captured as no batch step, so each handler keeps its own undo step and recompile as a direct call does', () => {
@@ -104,17 +112,23 @@ describe('run_script consent and principal', () => {
 
   it('nothing runs before the whole script is checked and a restore point is open', () => {
     const handler = code(join(SCRIPTS, 'McpScriptHandler.cpp'));
-    const checked = handler.indexOf('if (!Check(Forms, Allowed, Error, Code))');
-    const opened = handler.indexOf('RestorePoint(Subsystem, RequestId, TEXT("begin"))');
-    const ran = handler.indexOf('Runner.Run(Forms)');
+    const entry = handler.slice(handler.indexOf('bool HandleRunScript('), handler.indexOf('void Pass('));
+    const checked = entry.indexOf('if (!Check(Forms, Allowed, Error, Code))');
+    const opened = entry.indexOf('RestorePoint(Subsystem, RequestId, TEXT("begin"))');
+    const ran = entry.indexOf('Pass(Subsystem, Run);');
     expect(checked).toBeGreaterThan(-1);
     expect(checked < opened && opened < ran).toBe(true);
+    expect(handler).toContain('Run->Runner.Run(Run->Forms)');
     expect(handler).toContain('RestorePoint(Subsystem, RequestId, TEXT("rollback"))');
   });
 
   it('a restore point opened inside a request rolls back that request\'s own steps', () => {
     const ledger = code(join(PRIVATE, 'Core', 'Requests', 'McpUndoLedger.cpp'));
-    expect(ledger).toMatch(/return GOwnedSet\.Contains\(TransactionId\) \|\|\s*\(GRecording && GSteps\.ContainsByPredicate/u);
+    expect(ledger).toMatch(/return GOwners\.Contains\(TransactionId\) \|\|\s*\(GRecording && GSteps\.ContainsByPredicate/u);
+    // The script's own point: only steps its request (or a step of it, <request>#step<n>) left are undone by it.
+    const handler = code(join(SCRIPTS, 'McpScriptHandler.cpp'));
+    expect(handler).toContain('McpEditorCheckpoint::Handle(&Subsystem, Id, Payload, nullptr, RequestId);');
+    expect(ledger).toContain('By.StartsWith(RequestId + TEXT("#"), ESearchCase::CaseSensitive)');
   });
 
   // A script of reads that ran past its deadline said "What the script changed was undone" over "Undid 0 of 0 step(s)".
@@ -122,5 +136,64 @@ describe('run_script consent and principal', () => {
     const handler = code(join(SCRIPTS, 'McpScriptHandler.cpp'));
     expect(handler).toContain('Undone.Result->TryGetArrayField(TEXT("undone"), UndoneSteps)');
     expect(handler).toMatch(/: bUndid \? TEXT\(" What the script changed was undone\."\)/u);
+  });
+});
+
+// A step that answers later (an import lands on a later tick) is awaited within the deadline: the run goes on from its
+// first form in the request's brackets again, every call and expectation an earlier pass reached taken from its memo.
+describe('run_script awaits a step that answers later', () => {
+  const call = code(join(SCRIPTS, 'McpScriptCall.cpp'));
+  const run = code(join(SCRIPTS, 'McpScriptRun.cpp'));
+  const wait = code(join(SCRIPTS, 'McpScriptAwait.cpp'));
+
+  // Its values first, so the calls inside them are met in the order the first pass met them; then the memo; and only
+  // past the memo the budget, the deadline, the gateway and the gate, so nothing an earlier pass ran runs twice.
+  it('takes a call an earlier pass reached from the memo, after its values and before anything that could run it', () => {
+    const body = call.slice(call.indexOf('bool FRunner::Call('), call.indexOf('bool FRunner::Dispatch('));
+    const values = body.indexOf('if (!Pairs(Form, Names, Params))');
+    const recalled = body.indexOf('if (Recall(Out))');
+    const budget = body.indexOf('Steps.Num() >= Limits.MaxSteps');
+    const validated = body.indexOf('ValidateAndResolveGatewayExecute(');
+    for (const at of [values, recalled, budget, validated]) {
+      expect(at).toBeGreaterThan(-1);
+    }
+    expect(values < recalled && recalled < budget && budget < validated).toBe(true);
+  });
+
+  // An expectation reads the editor, which the steps after it change: judged again, it read their work.
+  it('keeps the verdict an expectation had when first judged, and starts each pass afresh but for the memo', () => {
+    const expectation = run.slice(run.indexOf('HeadIs(Form, TEXT("expect"))'));
+    expect(expectation.indexOf('if (Recall(Held))')).toBeGreaterThan(-1);
+    expect(expectation.indexOf('if (Recall(Held))')).toBeLessThan(expectation.indexOf('McpContracts::Judge('));
+    expect(expectation).toMatch(/Verdict\.Verdict == TEXT\("ok"\) \? Remember\(nullptr\)/u);
+    expect(run).toMatch(/bool FRunner::Run\(const TArray<FSExpr>& Forms\)\s*\{\s*Next = 0;\s*bReturned = false;\s*Returned\.Reset\(\);\s*Sizes\.Reset\(\);/u);
+  });
+
+  // The pass that waits sends no reply. The run goes on in the request's brackets again (RunLatentReply), never inside
+  // other work that holds the queue, and no queued request runs in the middle of it.
+  it('goes on inside the request\'s brackets again once the reply came or the deadline passed', () => {
+    const handler = code(join(SCRIPTS, 'McpScriptHandler.cpp'));
+    expect(handler).toMatch(/if \(Run->Runner\.Waiting\.IsEmpty\(\)\)\s*\{\s*Finish\(Subsystem, \*Run, bRan\);\s*return;\s*\}\s*Wait\(Subsystem, Run\);/u);
+    expect(wait).toContain('McpUndoLedger::Park(Run->RequestId);');
+    expect(wait).toMatch(/if \(Self->QueueFairness\.bDraining \|\| \(!bCame && FPlatformTime::Seconds\(\) <= Run->Runner\.Deadline\(\)\)\)\s*\{\s*return true;/u);
+    expect(wait).toMatch(/TGuardValue<bool> Drain\(Self->QueueFairness\.bDraining, true\);\s*Self->RunLatentReply\(Run->RequestId, Run->Label,/u);
+  });
+
+  // A late reply gets the verdict a reply sent at once gets: an error the engine logged in the brackets it was sent in
+  // turns its success into ENGINE_ERROR. The deadline, counted from the start, covers the wait.
+  it('judges a late reply by the errors logged where it was sent, and the deadline covers the wait', () => {
+    expect(call).toContain('Settle(Reply, Reply.LoggedErrors.Num(), Reply.LoggedErrors, WaitSchema, Out)');
+    expect(call).toContain('Settle(Reply, Subsystem.GetCapturedErrorCount() - ErrorsBefore, Subsystem.GetCapturedErrorMessages(), Plan.OutputSchema, Out)');
+    const funnel = code(join(PRIVATE, 'Core', 'Subsystem', 'EngineWireSubsystemResponses.cpp'));
+    expect(funnel).toContain('bProcessingAutomationRequest, bProcessingAutomationRequest ? GetCapturedErrorMessages() : TArray<FString>())');
+    expect(call).toMatch(/return FPlatformTime::Seconds\(\) <= Limits\.DeadlineSeconds \|\|\s*Fail\(Step\.Line, TEXT\("SCRIPT_DEADLINE"\)/u);
+  });
+
+  // The import's asset was made on a later tick outside any request: a restore point listed it under assetsCreated only
+  // and offered no delete of it, so a script that failed after it said everything had been undone.
+  it('lands an import inside the request\'s brackets, so a restore point offers its asset for deletion', () => {
+    const importer = code(join(PRIVATE, 'Domains', 'AssetWorkflow', 'Operations', 'McpAssetImportDuplicate.cpp'));
+    expect(importer).toContain('RunOutsideTicker(RequestId, TEXT("manage_asset import"),');
+    expect(importer).not.toContain('SetTimerForNextTick');
   });
 });

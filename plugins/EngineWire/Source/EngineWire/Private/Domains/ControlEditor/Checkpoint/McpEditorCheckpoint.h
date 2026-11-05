@@ -11,9 +11,12 @@ class FMcpBridgeWebSocket;
 
 namespace McpEditorCheckpoint
 {
-// op begin | status | rollback | end; label names the restore point on begin.
+// op begin | status | rollback | end; label names the restore point on begin. Run names the request a script's own
+// restore point belongs to (run_script passes its request id): its rollback undoes only that request's steps, so a step
+// another call made while the script waited on a step that answers later is in the way as a user's is, and no other
+// call may begin, roll back or end it while the script runs.
 bool Handle(UEngineWireSubsystem* Self, const FString& RequestId, const TSharedPtr<FJsonObject>& Payload,
-            TSharedPtr<FMcpBridgeWebSocket> Socket);
+            TSharedPtr<FMcpBridgeWebSocket> Socket, const FString& Run = FString());
 
 // Closes an open restore point and unbinds its engine delegates: a module unload (Live Coding) must leave none behind.
 void Shutdown();

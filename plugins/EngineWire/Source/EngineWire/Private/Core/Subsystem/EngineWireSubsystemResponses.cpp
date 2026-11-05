@@ -81,8 +81,12 @@ void UEngineWireSubsystem::SendAutomationResponse(
     const FString& ErrorCode,
     ERequestOrigin Origin)
 {
-    // A batch running this handler in-process wants the reply as data, not on a wire.
-    if (FMcpResponseCaptureRegistry::Get().TryCapture(RequestId, bSuccess, Message, Result, ErrorCode)) { return; }
+    // A batch running this handler in-process wants the reply as data, not on a wire. A script awaiting a step that
+    // answers later also learns whether it came inside a request's brackets (what made it was attributed) and the errors
+    // the engine logged in them.
+    FMcpResponseCaptureRegistry& Capture = FMcpResponseCaptureRegistry::Get();
+    if (Capture.IsCapturing(RequestId) && Capture.TryCapture(RequestId, bSuccess, Message, Result, ErrorCode,
+        bProcessingAutomationRequest, bProcessingAutomationRequest ? GetCapturedErrorMessages() : TArray<FString>())) { return; }
     // A reply sent inside the handler's still-open transaction waits until the handler returns (McpUndoLedger::Hold).
     if (McpUndoLedger::Hold(RequestId, [this, TargetSocket, RequestId, bSuccess, Message, Result, ErrorCode, Origin]()
         { SendAutomationResponse(TargetSocket, RequestId, bSuccess, Message, Result, ErrorCode, Origin); })) { return; }

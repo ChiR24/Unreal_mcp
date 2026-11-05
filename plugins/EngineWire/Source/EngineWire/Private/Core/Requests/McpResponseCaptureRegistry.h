@@ -18,6 +18,10 @@ struct FMcpCapturedResponse
 	FString ErrorCode;
 	TSharedPtr<FJsonObject> Result;
 	bool bBatchStep = true;
+	/** Sent inside a request's brackets (a dispatch, or RunLatentReply): what led to it was this server's, as attributed. */
+	bool bInRequest = false;
+	/** The errors the engine logged in those brackets before it was sent (a step that answers later is judged by them). */
+	TArray<FString> LoggedErrors;
 };
 
 class FMcpResponseCaptureRegistry
@@ -32,10 +36,14 @@ public:
 
 	/** True when `RequestId` is being captured; the reply is stored and must not be delivered. */
 	bool TryCapture(const FString& RequestId, bool bSuccess, const FString& Message,
-	                const TSharedPtr<FJsonObject>& Result, const FString& ErrorCode);
+	                const TSharedPtr<FJsonObject>& Result, const FString& ErrorCode, bool bInRequest = false,
+	                const TArray<FString>& LoggedErrors = TArray<FString>());
 
 	/** Stop capturing and hand back what arrived (bCaptured false when nothing did). */
 	FMcpCapturedResponse End(const FString& RequestId);
+
+	/** True once a reply for `RequestId` arrived; it is held until End. A step that answers later is awaited by this. */
+	bool HasReply(const FString& RequestId) const;
 
 	/** True between Begin and End of `RequestId`: the handler runs as a step of a bigger call. */
 	bool IsCapturing(const FString& RequestId) const;

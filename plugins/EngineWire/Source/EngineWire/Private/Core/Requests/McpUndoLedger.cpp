@@ -22,12 +22,17 @@ TArray<FStep> GSteps;
 FGuid GTopAtBegin; // the live step on top when the request began; gone afterwards = the history was cleared
 TWeakObjectPtr<UTransBuffer> GBound;
 FDelegateHandle GStateHandle;
-// Every step a request through this server left, this editor session: what a restore point may undo.
+// Every step a request through this server left, this editor session, and which request left it: what a restore point
+// may undo (a script's own point, only that script's).
 constexpr int32 MaxOwned = 4096; // the plugin-side cap of the execute idempotency ledger
 TArray<FGuid> GOwned;            // oldest first, so the cap drops the oldest
-TSet<FGuid> GOwnedSet;
+TMap<FGuid, FString> GOwners;
 TFunction<void()> GHeld; // the request's reply, sent inside its handler's open transaction, waiting for it to close
 bool GFlushing = false;
+// A request that answers in a later bracket (a script waiting on a step), and the top it began at: that bracket goes on
+// from there, so its reply counts every step the request left.
+FString GParkedId;
+FGuid GParkedTop;
 
 UTransBuffer* Buffer()
 {
@@ -56,19 +61,6 @@ void OnTransactionState(const FTransactionContext& Context, const ETransactionSt
     GSteps.Add(MoveTemp(Step));
 }
 
-// Whether Id is in the buffer and not undone.
-bool OnStack(const UTransBuffer& Trans, const FGuid& Id)
-{
-    for (int32 Index = Trans.GetQueueLength() - Trans.GetUndoCount() - 1; Index >= 0; --Index)
-    {
-        if (IdAt(Trans, Index) == Id)
-        {
-            return true;
-        }
-    }
-    return false;
-}
-
 bool InBuffer(const UTransBuffer& Trans, const FGuid& Id)
 {
     for (int32 Index = Trans.GetQueueLength() - 1; Index >= 0; --Index)
@@ -81,13 +73,14 @@ bool InBuffer(const UTransBuffer& Trans, const FGuid& Id)
     return false;
 }
 
-void WriteBlock(const TSharedPtr<FJsonObject>& Result, const TArray<const FStep*>& Kept, const bool bCleared)
+// Kept: the titles of the steps the request left on the stack, newest first.
+void WriteBlock(const TSharedPtr<FJsonObject>& Result, const TArray<FString>& Kept, const bool bCleared)
 {
     TSharedPtr<FJsonObject> Undo = MakeShared<FJsonObject>();
     Undo->SetBoolField(TEXT("undoable"), Kept.Num() > 0);
     if (Kept.Num() > 0)
     {
-        Undo->SetStringField(TEXT("transactionScope"), Kept.Last()->Title);
+        Undo->SetStringField(TEXT("transactionScope"), Kept[0]);
         Undo->SetNumberField(TEXT("steps"), Kept.Num());
     }
     else if (bCleared)
@@ -124,6 +117,11 @@ void Begin(const FString& RequestId)
     // The top live step: an undone one above it is discarded by the next transaction, which is no clearing.
     const int32 Live = Trans ? Trans->GetQueueLength() - Trans->GetUndoCount() : 0;
     GTopAtBegin = Live > 0 ? IdAt(*Trans, Live - 1) : FGuid();
+    if (!GParkedId.IsEmpty() && GParkedId.Equals(RequestId, ESearchCase::CaseSensitive))
+    {
+        GTopAtBegin = GParkedTop; // a later bracket of a request that waited: it began where its first did
+        GParkedId.Reset();
+    }
     if (Trans)
     {
         GStateHandle = Trans->OnTransactionStateChanged().AddStatic(&OnTransactionState);
@@ -138,13 +136,13 @@ void End()
         Trans->OnTransactionStateChanged().Remove(GStateHandle);
         for (const FStep& Step : GSteps)
         {
-            if (!Step.bDropped && !GOwnedSet.Contains(Step.Id))
+            if (!Step.bDropped && !GOwners.Contains(Step.Id))
             {
                 GOwned.Add(Step.Id);
-                GOwnedSet.Add(Step.Id);
+                GOwners.Add(Step.Id, GRequestId);
                 if (GOwned.Num() > MaxOwned)
                 {
-                    GOwnedSet.Remove(GOwned[0]);
+                    GOwners.Remove(GOwned[0]);
                     GOwned.RemoveAt(0);
                 }
             }
@@ -157,9 +155,29 @@ void End()
 bool IsMcpStep(const FGuid& TransactionId)
 {
     // Or a step the request still running left: a script rolls its own steps back before its request ends.
-    return GOwnedSet.Contains(TransactionId) ||
+    return GOwners.Contains(TransactionId) ||
            (GRecording && GSteps.ContainsByPredicate([&TransactionId](const FStep& Step)
                                                      { return !Step.bDropped && Step.Id == TransactionId; }));
+}
+
+bool IsStepOf(const FGuid& TransactionId, const FString& RequestId)
+{
+    if (RequestId.IsEmpty())
+    {
+        return IsMcpStep(TransactionId);
+    }
+    const FString* Owner = GOwners.Find(TransactionId);
+    const FString By = Owner ? *Owner : IsMcpStep(TransactionId) ? GRequestId : FString(); // recording now: this request's
+    return By.Equals(RequestId, ESearchCase::CaseSensitive) || By.StartsWith(RequestId + TEXT("#"), ESearchCase::CaseSensitive);
+}
+
+void Park(const FString& RequestId)
+{
+    if (GRecording && GRequestId.Equals(RequestId, ESearchCase::CaseSensitive))
+    {
+        GParkedId = RequestId;
+        GParkedTop = GTopAtBegin;
+    }
 }
 
 bool Hold(const FString& RequestId, TFunction<void()> Send)
@@ -197,18 +215,25 @@ void Describe(const FString& RequestId, const TSharedPtr<FJsonObject>& Result)
     {
         return;
     }
-    TArray<const FStep*> Kept;
+    // The live steps above where the request began that it left, newest first: in this bracket, in one before it (a
+    // script that waited on a step answers in a later bracket, Park) or in a step of it that answered later.
+    TArray<FString> Kept;
+    for (int32 Index = Trans->GetQueueLength() - Trans->GetUndoCount() - 1; Index >= 0; --Index)
+    {
+        const FTransaction* Step = Trans->GetTransaction(Index);
+        if (!Step || (GTopAtBegin.IsValid() && Step->GetContext().TransactionId == GTopAtBegin))
+        {
+            break;
+        }
+        if (IsStepOf(Step->GetContext().TransactionId, RequestId))
+        {
+            Kept.Add(Step->GetContext().Title.ToString());
+        }
+    }
     bool bCleared = GTopAtBegin.IsValid() && !InBuffer(*Trans, GTopAtBegin);
     for (const FStep& Step : GSteps)
     {
-        if (OnStack(*Trans, Step.Id))
-        {
-            Kept.Add(&Step);
-        }
-        else if (!Step.bDropped)
-        {
-            bCleared |= !InBuffer(*Trans, Step.Id); // kept when it closed, gone now: cleared (an undone one is still in it)
-        }
+        bCleared |= !Step.bDropped && !InBuffer(*Trans, Step.Id); // kept when it closed, gone now (an undone one is still in it)
     }
     const TSharedPtr<FJsonObject>* Own = nullptr;
     if (Result->TryGetObjectField(TEXT("undo"), Own) && Own)

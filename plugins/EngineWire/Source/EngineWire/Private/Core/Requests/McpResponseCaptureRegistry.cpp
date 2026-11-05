@@ -19,7 +19,8 @@ void FMcpResponseCaptureRegistry::Begin(const FString& RequestId, bool bBatchSte
 bool FMcpResponseCaptureRegistry::TryCapture(const FString& RequestId, bool bSuccess,
                                              const FString& Message,
                                              const TSharedPtr<FJsonObject>& Result,
-                                             const FString& ErrorCode)
+                                             const FString& ErrorCode, bool bInRequest,
+                                             const TArray<FString>& LoggedErrors)
 {
 	FScopeLock Lock(&Mutex);
 	FMcpCapturedResponse* Slot = Pending.Find(RequestId);
@@ -32,6 +33,8 @@ bool FMcpResponseCaptureRegistry::TryCapture(const FString& RequestId, bool bSuc
 	Slot->Message = Message;
 	Slot->ErrorCode = ErrorCode;
 	Slot->Result = Result;
+	Slot->bInRequest = bInRequest;
+	Slot->LoggedErrors = LoggedErrors;
 	return true;
 }
 
@@ -41,6 +44,13 @@ FMcpCapturedResponse FMcpResponseCaptureRegistry::End(const FString& RequestId)
 	FMcpCapturedResponse Captured;
 	Pending.RemoveAndCopyValue(RequestId, Captured);
 	return Captured;
+}
+
+bool FMcpResponseCaptureRegistry::HasReply(const FString& RequestId) const
+{
+	FScopeLock Lock(&Mutex);
+	const FMcpCapturedResponse* Slot = Pending.Find(RequestId);
+	return Slot && Slot->bCaptured;
 }
 
 bool FMcpResponseCaptureRegistry::IsCapturing(const FString& RequestId) const

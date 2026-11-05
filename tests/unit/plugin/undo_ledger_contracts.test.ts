@@ -29,7 +29,18 @@ describe('every request records the transactions it closes, beside the change wa
 
   it('holds a reply sent inside the handler\'s open transaction, after a batch step\'s capture and before anything else', () => {
     const responses = code('Core', 'Subsystem', 'EngineWireSubsystemResponses.cpp');
-    expect(responses).toMatch(/TryCapture\(RequestId, bSuccess, Message, Result, ErrorCode\)\) \{ return; \}\s*if \(McpUndoLedger::Hold\(RequestId, /u);
+    expect(responses).toMatch(/Capture\.TryCapture\(RequestId, bSuccess, Message, Result, ErrorCode,[^;]*\)\) \{ return; \}\s*if \(McpUndoLedger::Hold\(RequestId, /u);
+  });
+
+  // A script that waits on a step answers in a later bracket: that bracket goes on from where its first began, and counts
+  // the steps the request left in each, and those a step of it left in a bracket of its own, but no other call's.
+  it('describes every bracket of a request that answers in a later one', () => {
+    const ledger = code('Core', 'Requests', 'McpUndoLedger.cpp');
+    expect(ledger).toMatch(/GTopAtBegin = GParkedTop;[^\n]*\n\s*GParkedId\.Reset\(\);/u);
+    const reply = ledger.slice(ledger.indexOf('void Describe('));
+    expect(reply).toMatch(/Step->GetContext\(\)\.TransactionId == GTopAtBegin\)\)\s*\{\s*break;/u);
+    expect(reply).toContain('if (IsStepOf(Step->GetContext().TransactionId, RequestId))');
+    expect(code('Core', 'Requests', 'McpUndoLedgerTests.cpp')).toContain('McpUndoLedger::Park(By);');
   });
 
   it('sends the held reply first on every exit, while the error capture, change watch and ledger still run', () => {

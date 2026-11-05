@@ -27,24 +27,35 @@ FMcpCapturedResponse Run(UEngineWireSubsystem* Subsystem, const FString& Op)
     return FMcpResponseCaptureRegistry::Get().End(Id);
 }
 
-// One step that tags the probe, made inside a recorded request when bMcp, outside any request (the user) otherwise.
-void Step(USceneComponent* Probe, const FName Tag, const bool bMcp)
+// One step that tags the probe, made inside the recorded request By, or outside any request (the user) when By is null.
+void Step(USceneComponent* Probe, const FName Tag, const TCHAR* By)
 {
     // The run_build request that runs this test may itself be recording: a user step is made outside any.
     McpUndoLedger::End();
-    if (bMcp)
+    if (By)
     {
-        McpUndoLedger::Begin(TEXT("checkpoint-test-step"));
+        McpUndoLedger::Begin(By);
     }
     {
         FScopedTransaction Transaction(FText::FromString(TEXT("Mcp Checkpoint Probe")));
         Probe->Modify();
         Probe->ComponentTags.Add(Tag);
     }
-    if (bMcp)
+    if (By)
     {
         McpUndoLedger::End();
     }
+}
+
+// An op on the restore point a script's request opens for its own run, as run_script sends it.
+FMcpCapturedResponse ScriptOp(UEngineWireSubsystem* Subsystem, const TCHAR* Op)
+{
+    const FString Id = FString::Printf(TEXT("checkpoint-run#restore-%s"), Op);
+    TSharedPtr<FJsonObject> Payload = MakeShared<FJsonObject>();
+    Payload->SetStringField(TEXT("op"), Op);
+    FMcpResponseCaptureRegistry::Get().Begin(Id);
+    McpEditorCheckpoint::Handle(Subsystem, Id, Payload, nullptr, TEXT("checkpoint-run"));
+    return FMcpResponseCaptureRegistry::Get().End(Id);
 }
 } // namespace
 
@@ -68,14 +79,14 @@ bool FMcpEditorCheckpointTest::RunTest(const FString& Parameters)
     TestTrue(TEXT("begin opens it"), Run(Subsystem, TEXT("begin")).bSuccess);
     TestEqual(TEXT("a second begin is refused"), Run(Subsystem, TEXT("begin")).ErrorCode, FString(TEXT("RESTORE_POINT_OPEN")));
 
-    Step(Probe, TEXT("McpA"), true);
-    Step(Probe, TEXT("McpB"), true);
+    Step(Probe, TEXT("McpA"), TEXT("checkpoint-test-step"));
+    Step(Probe, TEXT("McpB"), TEXT("checkpoint-test-step"));
     const FMcpCapturedResponse Status = Run(Subsystem, TEXT("status"));
     const TArray<TSharedPtr<FJsonValue>>* Steps = nullptr;
     TestTrue(TEXT("status lists the steps"), Status.Result.IsValid() && Status.Result->TryGetArrayField(TEXT("steps"), Steps) && Steps && Steps->Num() == 2);
 
     // A step the user made since: nothing is undone.
-    Step(Probe, TEXT("User"), false);
+    Step(Probe, TEXT("User"), nullptr);
     TestEqual(TEXT("a user step blocks the rollback"), Run(Subsystem, TEXT("rollback")).ErrorCode, FString(TEXT("USER_STEP_SINCE_RESTORE_POINT")));
     TestEqual(TEXT("the refusal undid nothing"), Probe->ComponentTags.Num(), 3);
 
@@ -85,6 +96,42 @@ bool FMcpEditorCheckpointTest::RunTest(const FString& Parameters)
     TestEqual(TEXT("both MCP steps are undone"), Probe->ComponentTags.Num(), 0);
 
     TestTrue(TEXT("end closes it"), Run(Subsystem, TEXT("end")).bSuccess);
+    GEditor->Trans->Reset(FText::FromString(TEXT("Mcp checkpoint test")));
+    return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FMcpEditorCheckpointRunTest, "EngineWire.ControlEditor.RestorePoint.ScriptPointUndoesOnlyItsRun",
+                                 EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+// A script's own restore point (run_script, which may wait on a step over several ticks): its rollback undoes the steps
+// its request and that request's steps left, and a step another call made meanwhile is in the way as a user's is.
+bool FMcpEditorCheckpointRunTest::RunTest(const FString& Parameters)
+{
+    (void)Parameters;
+    UEngineWireSubsystem* Subsystem = GEditor ? GEditor->GetEditorSubsystem<UEngineWireSubsystem>() : nullptr;
+    if (!Subsystem || !GEditor->Trans)
+    {
+        AddError(TEXT("No EngineWire subsystem or undo buffer."));
+        return false;
+    }
+    Run(Subsystem, TEXT("end")); // a checkpoint a previous run left open
+    GEditor->Trans->Reset(FText::FromString(TEXT("Mcp checkpoint test")));
+    USceneComponent* Probe = NewObject<USceneComponent>(GetTransientPackage(), NAME_None, RF_Transactional);
+
+    TestTrue(TEXT("the script opens its point"), ScriptOp(Subsystem, TEXT("begin")).bSuccess);
+    Step(Probe, TEXT("Own"), TEXT("checkpoint-run"));         // a step it ran in-process
+    Step(Probe, TEXT("Later"), TEXT("checkpoint-run#step2")); // a step of it that answered later, in a bracket of its own
+    TestEqual(TEXT("no other call ends it while the script runs"), Run(Subsystem, TEXT("end")).ErrorCode, FString(TEXT("RESTORE_POINT_OPEN")));
+    TestTrue(TEXT("though any may read it"), Run(Subsystem, TEXT("status")).bSuccess);
+    Step(Probe, TEXT("Other"), TEXT("checkpoint-other"));     // another call's, while the script waited
+    TestEqual(TEXT("another call's step blocks the rollback"), ScriptOp(Subsystem, TEXT("rollback")).ErrorCode,
+              FString(TEXT("USER_STEP_SINCE_RESTORE_POINT")));
+    TestEqual(TEXT("the refusal undid nothing"), Probe->ComponentTags.Num(), 3);
+
+    GEditor->UndoTransaction(); // that call's step taken back
+    TestTrue(TEXT("the rollback succeeds"), ScriptOp(Subsystem, TEXT("rollback")).bSuccess);
+    TestEqual(TEXT("both of the script's steps are undone"), Probe->ComponentTags.Num(), 0);
+    TestTrue(TEXT("the script ends it"), ScriptOp(Subsystem, TEXT("end")).bSuccess);
     GEditor->Trans->Reset(FText::FromString(TEXT("Mcp checkpoint test")));
     return true;
 }

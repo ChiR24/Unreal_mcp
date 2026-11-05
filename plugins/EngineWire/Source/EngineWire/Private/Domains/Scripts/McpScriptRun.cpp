@@ -31,6 +31,11 @@ bool FRunner::Fail(int32 Line, const FString& Code, const FString& Message)
 
 bool FRunner::Run(const TArray<FSExpr>& Forms)
 {
+    // A pass after a wait starts again from the first form: its values are made again, and Memo answers what it met.
+    Next = 0;
+    bReturned = false;
+    Returned.Reset();
+    Sizes.Reset();
     return Stmts(Forms, 0, FNames());
 }
 
@@ -70,7 +75,9 @@ bool FRunner::Stmts(const TArray<FSExpr>& Body, int32 From, FNames Names)
         // Every statement, not only every call: loops of plain statements must not hold the game thread past it either.
         if (FPlatformTime::Seconds() > Limits.DeadlineSeconds)
         {
-            return Fail(Body[At].Line, TEXT("SCRIPT_DEADLINE"), TEXT("the script ran past its deadline (deadlineMs); nothing further ran."));
+            return Fail(Body[At].Line, TEXT("SCRIPT_DEADLINE"), Next < Memo.Num()
+                ? TEXT("the script ran past its deadline (deadlineMs) going over the lines it ran before a step that answered later; nothing further ran.")
+                : TEXT("the script ran past its deadline (deadlineMs); nothing further ran."));
         }
         if (!Stmt(Body[At], Names))
         {
@@ -145,8 +152,13 @@ bool FRunner::Stmt(const FSExpr& Form, FNames& Names)
         {
             return Fail(Form.Line, TEXT("SCRIPT_INVALID"), Assertion.IsEmpty() ? FString(TEXT("(expect ...) takes assertion text.")) : FString::Printf(TEXT("'%s': %s"), *Assertion, *Why));
         }
+        TSharedPtr<FJsonValue> Held; // judged when first met: in a pass after a wait, later steps may have changed what it read
+        if (Recall(Held))
+        {
+            return true;
+        }
         const McpContracts::FVerdict Verdict = McpContracts::Judge(Root, JudgedWorld(), nullptr);
-        return Verdict.Verdict == TEXT("ok") ||
+        return Verdict.Verdict == TEXT("ok") ? Remember(nullptr) :
                Fail(Form.Line, TEXT("EXPECTATION_FAILED"), FString::Printf(TEXT("expected '%s': %s (%s)."), *Assertion, *Verdict.Verdict, *Verdict.Actual));
     }
     if (HeadIs(Form, TEXT("return")))

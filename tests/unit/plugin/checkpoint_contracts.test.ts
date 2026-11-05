@@ -22,7 +22,15 @@ describe('control_editor restore_point', () => {
 
   it('knows which steps are this server\'s from the undo ledger', () => {
     expect(checkpoint).toContain('McpUndoLedger::IsMcpStep(');
-    expect(code('Core', 'Requests', 'McpUndoLedger.cpp')).toMatch(/GOwnedSet\.Add\(Step\.Id\)/u);
+    expect(code('Core', 'Requests', 'McpUndoLedger.cpp')).toMatch(/GOwners\.Add\(Step\.Id, GRequestId\)/u);
+  });
+
+  // run_script may wait on a step over several ticks, while other calls run: its own point undoes only its steps.
+  it('rolls a script\'s own point back over only that script\'s steps, and lets no other call take it meanwhile', () => {
+    expect(checkpoint).toContain('Foreign = (Foreign || McpUndoLedger::IsStepOf(Id, GPoint.Run)) ? Foreign : Step;');
+    expect(checkpoint).toMatch(/if \(GPoint\.bOpen && !GPoint\.Run\.IsEmpty\(\) && GPoint\.Run != Run && Op != TEXT\("status"\)\)\s*\{\s*Refuse\(Self, Socket, RequestId, TEXT\("RESTORE_POINT_OPEN"\)/u);
+    // The script's ops each go under an id of their own: its rollback is its own run's for a path-restricted caller.
+    expect(checkpoint).toContain('GPoint.OpenedBy != RequestId && (GPoint.Run.IsEmpty() || GPoint.Run != Run)');
   });
 
   it('refuses before undoing anything', () => {
@@ -48,9 +56,9 @@ describe('control_editor restore_point', () => {
   });
 
   it('is pinned in-editor', () => {
-    expect(code('Domains', 'ControlEditor', 'Checkpoint', 'McpEditorCheckpointTests.cpp'))
-      .toContain('"EngineWire.ControlEditor.RestorePoint.RollsBackOnlyMcpSteps"');
-    expect(code('Domains', 'ControlEditor', 'Checkpoint', 'McpEditorCheckpointTests.cpp'))
-      .toContain('"EngineWire.ControlEditor.RestorePoint.CleansUpOnlyItsOwnAssets"');
+    const tests = code('Domains', 'ControlEditor', 'Checkpoint', 'McpEditorCheckpointTests.cpp');
+    expect(tests).toContain('"EngineWire.ControlEditor.RestorePoint.RollsBackOnlyMcpSteps"');
+    expect(tests).toContain('"EngineWire.ControlEditor.RestorePoint.CleansUpOnlyItsOwnAssets"');
+    expect(tests).toContain('"EngineWire.ControlEditor.RestorePoint.ScriptPointUndoesOnlyItsRun"');
   });
 });
