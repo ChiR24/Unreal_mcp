@@ -2,11 +2,12 @@
 // with no dialog (an automated reimport): each from the source file it was imported from, or from sourceFile, a file in
 // the project, for a single asset. Every asset is checked before any is reimported, so a refusal changes nothing; an
 // asset whose recorded file is gone is listed, not reimported. Saved after. A reimport writes the asset from disk, so
-// editor undo does not take it back.
+// editor undo does not take it back. A reimported mesh wound inside out in places is named in the warnings.
 
 #include "Domains/AssetWorkflow/Reimport/McpAssetReimport.h"
 
 #include "Dom/JsonObject.h"
+#include "Domains/Environment/Inspection/MeshCheck/McpMeshCheck.h"
 #include "EditorReimportHandler.h"
 #include "EngineWireSubsystem.h"
 #include "Foundation/BridgeHelpers/Responses/McpJsonFields.h"
@@ -104,7 +105,7 @@ bool Handle(UEngineWireSubsystem& Bridge, const FString& RequestId, const TShare
 	}
 	const bool bSave = GetJsonBoolField(Payload, TEXT("save"), true);
 	TArray<TSharedPtr<FJsonValue>> Rows;
-	int32 Reimported = 0;
+	TArray<UObject*> Done;
 	for (const FPlan& Plan : Plans)
 	{
 		// Automated: no dialog and no toast; another file only through sourceFile, never a file picker.
@@ -118,11 +119,16 @@ bool Handle(UEngineWireSubsystem& Bridge, const FString& RequestId, const TShare
 		{
 			Row->SetBoolField(TEXT("saved"), McpSafeOperations::McpSafeAssetSave(Plan.Asset));
 		}
-		Reimported += bDone ? 1 : 0;
+		if (bDone)
+		{
+			Done.Add(Plan.Asset);
+		}
 		Rows.Add(MakeShared<FJsonValueObject>(Row));
 	}
+	const int32 Reimported = Done.Num();
 	Result->SetArrayField(TEXT("assets"), Rows);
 	Result->SetNumberField(TEXT("reimported"), Reimported);
+	McpMeshCheck::AppendInsideOutWarnings(Done, Result);
 	const bool bAll = Reimported == Plans.Num();
 	const FString Missing = Skipped.Num() ? FString::Printf(TEXT("; %d left out, their source file gone (missingSources)"), Skipped.Num()) : FString();
 	Bridge.SendAutomationResponse(Socket, RequestId, bAll, bAll ? FString::Printf(TEXT("Reimported %d asset(s)%s."), Reimported, *Missing)

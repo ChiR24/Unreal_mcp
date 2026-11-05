@@ -2613,18 +2613,35 @@ describe('run_tests runs each test and answers with its result', () => {
 // A model cannot see a mesh: a hole, a crack, a fin or a face turned inside out passed every other check.
 describe('check_mesh reads the soundness of a mesh from its source topology', () => {
   it('counts open, non-manifold and flipped edges from the faces each source edge joins', () => {
-    const check = code('Environment', 'Inspection', 'McpEnvInspectMeshCheck.cpp');
-    expect(check).toContain('const FMeshDescription *Description = Mesh ? Mesh->GetMeshDescription(0) : nullptr;');
-    expect(check).toContain('const TArrayView<const FTriangleID> Faces = Description->GetEdgeConnectedTriangleIDs(Edge);');
-    expect(check).toContain('Flipped += First.From != First.To && First.From == Runs(Faces[1], From, To).From ? 1 : 0;');
+    const check = code('Environment', 'Inspection', 'MeshCheck', 'McpMeshCheck.cpp');
+    expect(check).toContain('FEdgeUse& Use = Edges.FindOrAdd(EdgeKey(From, To));');
+    expect(check).toContain('Report.FlippedEdges += Use.bSameWay && From != To ? 1 : 0;');
     // Faces split along a seam (corners at one place, not shared) are joined, not a hole, and still checked for winding.
-    expect(check).toContain('Flipped += Seen.Count == 1 && Seen.From == Run.From ? 1 : 0;');
-    expect(check).toContain('Weld[Vertex.GetValue()] = Found ? *Found : WeldIds.Add(Key, WeldIds.Num());');
+    expect(check).toContain('Report.FlippedEdges += Seen.Count == 1 && Seen.From == From ? 1 : 0;');
+    expect(check).toContain('Weld[Corner] = Found ? *Found : WeldIds.Add(Key, WeldIds.Num());');
     // Only a closed surface reports a volume.
-    expect(check).toContain('const bool bClosed = TriangleCount > 0 && Open == 0 && NonManifold == 0;');
-    expect(check).toContain('McpHandlerUtils::MarkNoAssetsChanged(Result);');
+    const header = code('Environment', 'Inspection', 'MeshCheck', 'McpMeshCheck.h');
+    expect(header).toContain('bool IsClosed() const { return Triangles > 0 && OpenEdges == 0 && NonManifoldEdges == 0; }');
+    const handler = code('Environment', 'Inspection', 'McpEnvInspectMeshCheck.cpp');
+    expect(handler).toContain('McpHandlerUtils::MarkNoAssetsChanged(Result);');
     const inspect = code('Environment', 'Inspection', 'McpEnvInspect.cpp');
     expect(inspect).toContain('return HandleInspectMeshCheckAction(*this, RequestId, Payload, RequestingSocket);');
+  });
+
+  // Unreal is left-handed: a face's outward normal is (C - A) x (B - A). In the textbook order every sound mesh reads
+  // inside out and every inside-out one sound.
+  it('judges each closed part by its own volume, in the order Unreal winds a front face', () => {
+    const check = code('Environment', 'Inspection', 'MeshCheck', 'McpMeshCheck.cpp');
+    expect(check).toContain('Part.Volume += FVector::DotProduct(A - O, FVector::CrossProduct(C - O, B - O)) / 6.0;');
+    expect(check).toContain('Part.bInsideOut = Part.bClosed && Part.Volume < -1e-9 * Size * Size * Size;');
+  });
+
+  // McpDescribeImport writes the import's warnings in place of any before them: an inside-out warning added earlier was lost.
+  it('adds the inside-out warnings after the import reply is described, and to the reimport reply', () => {
+    const imports = code('AssetWorkflow', 'Operations', 'McpAssetImportDuplicate.cpp');
+    expect(imports).toMatch(/McpDescribeImport\(ImportedAssets, Asset, ImportedAsset, Resp\);\s*McpMeshCheck::AppendInsideOutWarnings\(ImportedAssets, Resp\);/u);
+    const reimport = code('AssetWorkflow', 'Reimport', 'McpAssetReimport.cpp');
+    expect(reimport).toContain('McpMeshCheck::AppendInsideOutWarnings(Done, Result);');
   });
 });
 

@@ -8770,7 +8770,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "meshPath": {
           "type": "string",
-          "description": "Static mesh asset path, e.g. /Game/Meshes/SM_Rock. Its source triangles (LOD 0 as imported or built) are checked, so a Nanite mesh answers at full detail. A placed actor's mesh is named by get_components."
+          "description": "Static mesh asset path, e.g. /Game/Meshes/SM_Rock. Rays meet its source triangles, so a Nanite mesh answers at full detail."
         },
         "name": {
           "type": "string",
@@ -9608,7 +9608,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "flippedEdges": {
           "type": "number",
-          "description": "Edges (seams included) whose two faces wind the same way along them, so one of the two faces points inward (a face turned inside out renders dark or vanishes)."
+          "description": "Edges (seams included) whose two faces wind the same way along them, so one of the two faces points inward (a face turned inside out renders dark or vanishes). A piece wound inside out as a whole has none: insideOutParts counts those."
         },
         "fov": {
           "type": "number",
@@ -9779,6 +9779,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "string",
           "description": "The sheet as a PNG, base64, returned as an image; left out past 3 MB (the file has it)."
         },
+        "insideOutParts": {
+          "type": "number",
+          "description": "Closed parts wound inside out, each judged by the volume its own faces enclose (negative): their faces point inward, so the renderer culls the side you look at and draws the far inner wall, while a tool that draws both sides of every face (Blender) shows them whole. Flip their normals in the source and import again. Open parts are not judged; a separate inner shell of a hollow object (a cavity wall) reads inside out too."
+        },
         "instancesUpdated": {
           "type": "number",
           "description": "A write to a class default or component template: how many placed copies, and derived Blueprints' defaults with their own copies, still held the old default and took the new one, as the details panel does; one that overrides the value keeps it. Absent for any other target."
@@ -9868,7 +9872,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             "additionalProperties": true,
             "x-unreal-reflection-boundary": true
           },
-          "description": "Up to 8 pieces, largest first: triangles, size [x, y, z] and center [x, y, z] in cm, in the mesh's own space."
+          "description": "Up to 8 pieces, the inside-out ones first (insideOut: true), then the rest, largest first: triangles, size [x, y, z] and center [x, y, z] in cm, in the mesh's own space."
         },
         "levelName": {
           "type": "string",
@@ -10478,7 +10482,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "triangles": {
           "type": "number",
-          "description": "Source triangles (LOD 0)."
+          "description": "Source triangles (LOD 0; a skeletal mesh's in its reference pose)."
         },
         "truncated": {
           "type": "boolean",

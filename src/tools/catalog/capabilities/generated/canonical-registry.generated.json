@@ -1,5 +1,5 @@
 {
-  "catalogRevision": "f9dc993a2af8923b",
+  "catalogRevision": "8b384c9a530ba4c8",
   "recordCount": 487,
   "records": [
     {
@@ -10340,7 +10340,7 @@
           "import onto existing skeleton",
           "share a skeleton"
         ],
-        "summary": "Import a file inside the project folder (sourcePath, relative to the project or absolute under it; a path outside is SECURITY_VIOLATION, a missing file SOURCE_NOT_FOUND) as an asset at destinationPath: a folder keeps the file name, an object path names it. An asset already there is replaced only with overwrite (DESTINATION_OCCUPIED otherwise): a plain file replaces it in place, keeping what points at it, while an FBX with skeleton or animation options deletes it first (REPLACE_FAILED while something still uses it). skeletonPath imports an FBX animation take onto that skeleton, or with importMesh binds the imported skeletal mesh to it. The reply names assetPath (the mesh when the file holds one), alsoImported (its takes, materials and textures) and saved (default true).",
+        "summary": "Import a file inside the project folder (sourcePath, relative to the project or absolute under it; a path outside is SECURITY_VIOLATION, a missing file SOURCE_NOT_FOUND) as an asset at destinationPath: a folder keeps the file name, an object path names it. An asset already there is replaced only with overwrite (DESTINATION_OCCUPIED otherwise): a plain file replaces it in place, keeping what points at it, while an FBX with skeleton or animation options deletes it first (REPLACE_FAILED while something still uses it). skeletonPath imports an FBX animation take onto that skeleton, or with importMesh binds the imported skeletal mesh to it. The reply names assetPath (the mesh when the file holds one), alsoImported (its takes, materials and textures) and saved (default true); a static or skeletal mesh it made with closed parts wound inside out (up to 1 million triangles are checked) gets a warning naming it, the count and the inspect.check_mesh call that lists them.",
         "whenToUse": [
           "A source file inside the project folder (FBX, OBJ, PNG, WAV) must become an asset at a /Game path.",
           "An FBX animation take must be imported onto an existing skeleton without importing the mesh again.",
@@ -10526,7 +10526,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "0b20a43e5314064820da0a0f3130eac1aae51499e04cade0b9010734ea52266b",
-        "content": "5cdf4edebdbd77c8018eec289b8be497b7c9b8f51b578fb9f8acfc7143ea2d08"
+        "content": "f6b0ec26c445b9268bb3caeea4c68a10ae5bcf1f011862bb645c0ddaf0c91bea"
       }
     },
     {
@@ -14084,7 +14084,7 @@
           "source file changed",
           "reload from disk"
         ],
-        "summary": "Bring assets up to date with their source files, as the Content Browser's Reimport does but with no dialog: each from the file it was imported from (its import data), or, for one asset, from sourceFile (a file inside the project, as import takes it). Every asset is checked before any is reimported: ASSET_NOT_FOUND, ENGINE_CONTENT, NOT_REIMPORTABLE (no source file recorded: made in the editor, or a kind never imported) SOURCE_FILE_MISSING (sourceFile not there) and SECURITY_VIOLATION (sourceFile outside the project) change nothing. An asset whose recorded file is gone is listed under missingSources and left as it is; when that leaves none, SOURCE_FILE_MISSING. Saved after (save, default true); editor undo does not take a reimport back. REIMPORT_FAILED names the ones the importer refused (the editor log says why).",
+        "summary": "Bring assets up to date with their source files, as the Content Browser's Reimport does but with no dialog: each from the file it was imported from (its import data), or, for one asset, from sourceFile (a file inside the project, as import takes it). Every asset is checked before any is reimported: ASSET_NOT_FOUND, ENGINE_CONTENT, NOT_REIMPORTABLE (no source file recorded: made in the editor, or a kind never imported) SOURCE_FILE_MISSING (sourceFile not there) and SECURITY_VIOLATION (sourceFile outside the project) change nothing. An asset whose recorded file is gone is listed under missingSources and left as it is; when that leaves none, SOURCE_FILE_MISSING. Saved after (save, default true); editor undo does not take a reimport back. REIMPORT_FAILED names the ones the importer refused (the editor log says why). A reimported static or skeletal mesh with closed parts wound inside out gets a warning, as import gives.",
         "whenToUse": [
           "A source file (FBX, PNG, WAV) changed on disk and its asset must pick the change up.",
           "An asset must take its content from another file in the project (sourceFile)."
@@ -14232,7 +14232,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "b4bea544e30dded62184ca2cce21d44cda645e9a92d62397c5907997ff440244",
-        "content": "a6de1b6f70724bf4a5819e725b3b92156cc2f91cf1cd57a8d9a027c0b99f59c8"
+        "content": "19a3c022a315732070fe751ecb67fe85917ff85366b518607de7243f5e0ff15f"
       }
     },
     {
@@ -56274,10 +56274,11 @@
           "broken mesh",
           "mesh volume"
         ],
-        "summary": "Check whether a static mesh's geometry is sound, from its source triangles: closed (watertight) or open with how many holes, edges shared by three or more faces, faces turned inside out, faces with no area, seams where faces do not share their corners, and how many separate parts it is made of, with its size, surface area and (when closed) volume.",
+        "summary": "Check whether a static or skeletal mesh's geometry is sound, from its source triangles: closed (watertight) or open with how many holes, edges shared by three or more faces, faces turned inside out, closed parts wound inside out, faces with no area, seams where faces do not share their corners, and how many separate parts it is made of, with its size, surface area and (when closed) volume.",
         "whenToUse": [
           "An imported, downloaded or generated mesh must be proven sound before it is placed, merged, used for collision or booleans, or shipped.",
-          "A mesh shows see-through gaps, black or inside-out faces, or splits into loose pieces."
+          "A mesh shows see-through gaps, black or inside-out faces, or splits into loose pieces.",
+          "A mesh that looks right in Blender shows its own inside in Unreal (a head seen from within, parts missing from one side): a piece of it is wound inside out."
         ],
         "whenNotToUse": [
           "Only the mesh's size, pivot, slots or triangle counts per material are needed (use inspect_object objectKind mesh).",
@@ -56295,7 +56296,7 @@
             },
             "meshPath": {
               "type": "string",
-              "description": "Static mesh asset path, e.g. /Game/Meshes/SM_Rock. Its source triangles (LOD 0 as imported or built) are checked, so a Nanite mesh answers at full detail. A placed actor's mesh is named by get_components."
+              "description": "Static or skeletal mesh asset path, e.g. /Game/Meshes/SM_Rock. A static mesh's source triangles (LOD 0 as imported or built) are checked, so a Nanite mesh answers at full detail; a skeletal mesh's LOD 0 in its reference pose. A placed actor's mesh is named by get_components."
             }
           },
           "required": [
@@ -56327,7 +56328,7 @@
             },
             "triangles": {
               "type": "number",
-              "description": "Source triangles (LOD 0)."
+              "description": "Source triangles (LOD 0; a skeletal mesh's in its reference pose)."
             },
             "vertices": {
               "type": "number",
@@ -56370,11 +56371,15 @@
             },
             "flippedEdges": {
               "type": "number",
-              "description": "Edges (seams included) whose two faces wind the same way along them, so one of the two faces points inward (a face turned inside out renders dark or vanishes)."
+              "description": "Edges (seams included) whose two faces wind the same way along them, so one of the two faces points inward (a face turned inside out renders dark or vanishes). A piece wound inside out as a whole has none: insideOutParts counts those."
             },
             "degenerateTriangles": {
               "type": "number",
               "description": "Faces with no area (slivers or a repeated corner)."
+            },
+            "insideOutParts": {
+              "type": "number",
+              "description": "Closed parts wound inside out, each judged by the volume its own faces enclose (negative): their faces point inward, so the renderer culls the side you look at and draws the far inner wall, while a tool that draws both sides of every face (Blender) shows them whole. Flip their normals in the source and import again. Open parts are not judged; a separate inner shell of a hollow object (a cavity wall) reads inside out too."
             },
             "parts": {
               "type": "number",
@@ -56387,7 +56392,7 @@
                 "additionalProperties": true,
                 "x-unreal-reflection-boundary": true
               },
-              "description": "Up to 8 pieces, largest first: triangles, size [x, y, z] and center [x, y, z] in cm, in the mesh's own space."
+              "description": "Up to 8 pieces, the inside-out ones first (insideOut: true), then the rest, largest first: triangles, size [x, y, z] and center [x, y, z] in cm, in the mesh's own space."
             }
           },
           "required": [
@@ -56402,7 +56407,7 @@
       },
       "examples": [
         {
-          "title": "Check whether a static mesh's geometry is sound, from its source triangles: closed (watertight) or open with how many holes, edges shared by three or more faces, faces turned inside out, faces with no area, seams where faces do not share their corners, and how many separate parts it is made of, with its size, surface area and (when closed) volume.",
+          "title": "Check whether a static or skeletal mesh's geometry is sound, from its source triangles: closed (watertight) or open with how many holes, edges shared by three or more faces, faces turned inside out, closed parts wound inside out, faces with no area, seams where faces do not share their corners, and how many separate parts it is made of, with its size, surface area and (when closed) volume.",
           "input": {
             "action": "check_mesh",
             "meshPath": "/Engine/BasicShapes/Cube"
@@ -56427,6 +56432,7 @@
             "nonManifoldEdges": 0,
             "flippedEdges": 0,
             "degenerateTriangles": 0,
+            "insideOutParts": 0,
             "parts": 1,
             "largestParts": [
               {
@@ -56475,8 +56481,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "92cee7dd0377c5473c761e05a9c41adddc708c48ba3f9e89fecea570ee1a23c8",
-        "content": "58bb71da4a878fa15b50c474d391ea879b235560709ec9081b5916703d71e3c1"
+        "schema": "dd75c7d108d20866d177493d36c40338a4f3f13adf3f368ac996e3bb8514bdca",
+        "content": "434a6f4c22d7f67e5f9f3418549b8a2963f74d77863ffff354fa88568c38ee58"
       }
     },
     {

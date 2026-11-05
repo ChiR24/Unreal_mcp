@@ -164,16 +164,17 @@ export const OBJECT_PROPERTY_RECORDS: readonly CapabilityRecordSource[] = [
     },
   }),
   // A model cannot see a mesh: an imported or generated one with a hole, a crack between unwelded vertices, an edge
-  // shared by three faces or faces turned inside out passed every other check.
+  // shared by three faces or faces turned inside out passed every other check, and so did a piece wound inside out as a
+  // whole (a mirrored export), which a tool drawing both sides of every face shows whole.
   buildCoreRecord({
     parentTool: 'inspect', action: 'check_mesh', dispatchAction: 'check_mesh', domain: D, family: 'object',
     editorStates: ANY_EDITOR_STATE,
-    summary: 'Check whether a static mesh\'s geometry is sound, from its source triangles: closed (watertight) or open with how many holes, edges shared by three or more faces, faces turned inside out, faces with no area, seams where faces do not share their corners, and how many separate parts it is made of, with its size, surface area and (when closed) volume.',
+    summary: 'Check whether a static or skeletal mesh\'s geometry is sound, from its source triangles: closed (watertight) or open with how many holes, edges shared by three or more faces, faces turned inside out, closed parts wound inside out, faces with no area, seams where faces do not share their corners, and how many separate parts it is made of, with its size, surface area and (when closed) volume.',
     topics: ['check mesh', 'mesh holes', 'mesh has holes', 'watertight', 'non manifold edges', 'flipped normals', 'inside out faces', 'mesh parts', 'broken mesh', 'mesh volume'],
-    whenToUse: ['An imported, downloaded or generated mesh must be proven sound before it is placed, merged, used for collision or booleans, or shipped.', 'A mesh shows see-through gaps, black or inside-out faces, or splits into loose pieces.'],
+    whenToUse: ['An imported, downloaded or generated mesh must be proven sound before it is placed, merged, used for collision or booleans, or shipped.', 'A mesh shows see-through gaps, black or inside-out faces, or splits into loose pieces.', 'A mesh that looks right in Blender shows its own inside in Unreal (a head seen from within, parts missing from one side): a piece of it is wound inside out.'],
     whenNotToUse: ['Only the mesh\'s size, pivot, slots or triangle counts per material are needed (use inspect_object objectKind mesh).', 'The mesh must be cut into one asset per part (use manage_geometry split_mesh).'],
     inputProps: {
-      meshPath: { type: 'string', description: 'Static mesh asset path, e.g. /Game/Meshes/SM_Rock. Its source triangles (LOD 0 as imported or built) are checked, so a Nanite mesh answers at full detail. A placed actor\'s mesh is named by get_components.' },
+      meshPath: { type: 'string', description: 'Static or skeletal mesh asset path, e.g. /Game/Meshes/SM_Rock. A static mesh\'s source triangles (LOD 0 as imported or built) are checked, so a Nanite mesh answers at full detail; a skeletal mesh\'s LOD 0 in its reference pose. A placed actor\'s mesh is named by get_components.' },
     },
     required: ['meshPath'],
     effect: 'read',
@@ -182,12 +183,12 @@ export const OBJECT_PROPERTY_RECORDS: readonly CapabilityRecordSource[] = [
     exampleOutput: {
       success: true, message: 'Cube: 48 triangles in 1 part(s), closed.', meshPath: '/Engine/BasicShapes/Cube.Cube',
       triangles: 48, vertices: 26, size: [100, 100, 100], surfaceArea: 60000, closed: true, volume: 1000000,
-      openEdges: 0, holes: 0, seamEdges: 0, nonManifoldEdges: 0, flippedEdges: 0, degenerateTriangles: 0, parts: 1,
+      openEdges: 0, holes: 0, seamEdges: 0, nonManifoldEdges: 0, flippedEdges: 0, degenerateTriangles: 0, insideOutParts: 0, parts: 1,
       largestParts: [{ triangles: 48, size: [100, 100, 100], center: [0, 0, 0] }],
     },
     outputProps: {
       meshPath: { type: 'string', description: 'The mesh checked.' },
-      triangles: { type: 'number', description: 'Source triangles (LOD 0).' },
+      triangles: { type: 'number', description: 'Source triangles (LOD 0; a skeletal mesh\'s in its reference pose).' },
       vertices: { type: 'number', description: 'Distinct corner positions (to 0.01 cm): corners at one place count once, whether or not the source shares the vertex.' },
       size: { type: 'array', items: { type: 'number' }, description: 'Extent [x, y, z] in cm, in the mesh\'s own space.' },
       surfaceArea: { type: 'number', description: 'Total face area in cm².' },
@@ -197,10 +198,11 @@ export const OBJECT_PROPERTY_RECORDS: readonly CapabilityRecordSource[] = [
       holes: { type: 'number', description: 'Separate outlines those open edges form (one per hole or open rim).' },
       seamEdges: { type: 'number', description: 'Places where two faces meet without sharing their corners (split for flat shading or UV seams): the surface renders whole, but booleans, remeshing and collision built from the mesh need it welded.' },
       nonManifoldEdges: { type: 'number', description: 'Edges shared by three or more faces (fins, faces stacked on one edge); they break booleans, remeshing and collision generation.' },
-      flippedEdges: { type: 'number', description: 'Edges (seams included) whose two faces wind the same way along them, so one of the two faces points inward (a face turned inside out renders dark or vanishes).' },
+      flippedEdges: { type: 'number', description: 'Edges (seams included) whose two faces wind the same way along them, so one of the two faces points inward (a face turned inside out renders dark or vanishes). A piece wound inside out as a whole has none: insideOutParts counts those.' },
       degenerateTriangles: { type: 'number', description: 'Faces with no area (slivers or a repeated corner).' },
+      insideOutParts: { type: 'number', description: 'Closed parts wound inside out, each judged by the volume its own faces enclose (negative): their faces point inward, so the renderer culls the side you look at and draws the far inner wall, while a tool that draws both sides of every face (Blender) shows them whole. Flip their normals in the source and import again. Open parts are not judged; a separate inner shell of a hollow object (a cavity wall) reads inside out too.' },
       parts: { type: 'number', description: 'Separate pieces: groups of faces joined by corners at the same place.' },
-      largestParts: { type: 'array', items: { type: 'object', additionalProperties: true, 'x-unreal-reflection-boundary': true }, description: 'Up to 8 pieces, largest first: triangles, size [x, y, z] and center [x, y, z] in cm, in the mesh\'s own space.' },
+      largestParts: { type: 'array', items: { type: 'object', additionalProperties: true, 'x-unreal-reflection-boundary': true }, description: 'Up to 8 pieces, the inside-out ones first (insideOut: true), then the rest, largest first: triangles, size [x, y, z] and center [x, y, z] in cm, in the mesh\'s own space.' },
     },
     outputRequired: ['meshPath', 'triangles', 'closed', 'parts'],
   }),

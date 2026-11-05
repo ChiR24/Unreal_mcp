@@ -6513,7 +6513,7 @@
           },
           "meshPath": {
             "type": "string",
-            "description": "Static mesh asset path, e.g. /Game/Meshes/SM_Rock. Its source triangles (LOD 0 as imported or built) are checked, so a Nanite mesh answers at full detail. A placed actor's mesh is named by get_components."
+            "description": "Static mesh asset path, e.g. /Game/Meshes/SM_Rock. Rays meet its source triangles, so a Nanite mesh answers at full detail."
           },
           "name": {
             "type": "string",

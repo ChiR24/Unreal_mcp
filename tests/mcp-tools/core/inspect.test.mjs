@@ -16,6 +16,9 @@ const BP_PATH = `${TEST_FOLDER}/${BP_NAME}`;
 const TEST_MESH = '/Game/MCPTest/TestMesh';
 const TEST_MATERIAL = '/Game/MCPTest/TestMat';
 const ENGINE_DEFAULT_TEXTURE = '/Engine/EngineResources/DefaultTexture.DefaultTexture';
+const INSIDE_OUT_BOX = `MCP_InsideOutBox_${ts}`;
+const INSIDE_OUT_MESH = `${TEST_FOLDER}/SM_InsideOut_${ts}`;
+const INSIDE_OUT_IMPORT = `${TEST_FOLDER}/SM_InsideOutImport_${ts}`;
 
 const inspectActor = (action, extra = {}) => ({ action, actorName: ACTOR, ...extra });
 
@@ -41,9 +44,26 @@ const testCases = [
   { scenario: 'ERROR: raycast_mesh refuses a ray with neither form', toolName: 'inspect', arguments: { action: 'raycast_mesh', meshPath: '/Engine/BasicShapes/Cube', rays: [{ origin: { x: 200, y: 0, z: 0 } }] }, expected: 'error|INVALID_ARGUMENT' },
   { scenario: 'ERROR: raycast_mesh refuses a texture', toolName: 'inspect', arguments: { action: 'raycast_mesh', meshPath: ENGINE_DEFAULT_TEXTURE, rays: [{ origin: { x: 0, y: 0, z: 100 }, direction: { x: 0, y: 0, z: -1 } }] }, expected: 'error|NOT_FOUND' },
   // A cube is one closed part; a plane is one open sheet with a single rim.
-  { scenario: 'INFO: check_mesh finds the cube closed', toolName: 'inspect', arguments: { action: 'check_mesh', meshPath: '/Engine/BasicShapes/Cube' }, expected: 'success', assertions: [{ path: 'structuredContent.result.closed', equals: true, label: 'the cube is watertight' }, { path: 'structuredContent.result.parts', equals: 1, label: 'in one part' }] },
+  { scenario: 'INFO: check_mesh finds the cube closed', toolName: 'inspect', arguments: { action: 'check_mesh', meshPath: '/Engine/BasicShapes/Cube' }, expected: 'success', assertions: [{ path: 'structuredContent.result.closed', equals: true, label: 'the cube is watertight' }, { path: 'structuredContent.result.parts', equals: 1, label: 'in one part' }, { path: 'structuredContent.result.insideOutParts', equals: 0, label: 'wound outward' }] },
   { scenario: 'INFO: check_mesh finds the plane open', toolName: 'inspect', arguments: { action: 'check_mesh', meshPath: '/Engine/BasicShapes/Plane' }, expected: 'success', assertions: [{ path: 'structuredContent.result.closed', equals: false, label: 'a plane is a sheet' }, { path: 'structuredContent.result.holes', equals: 1, label: 'with one rim' }] },
   { scenario: 'ERROR: check_mesh refuses a texture', toolName: 'inspect', arguments: { action: 'check_mesh', meshPath: ENGINE_DEFAULT_TEXTURE }, expected: 'error|NOT_FOUND' },
+  // A piece wound inside out as a whole (a mirrored export) has no flipped edge: each closed part is judged by the volume
+  // its own faces enclose. The box is reversed by flip_normals, baked, then exported and imported again.
+  { scenario: 'Setup: a dynamic mesh box to wind inside out', toolName: 'manage_geometry', arguments: { action: 'create_primitive', primitive: 'box', name: INSIDE_OUT_BOX, width: 100, height: 100, depth: 100, location: { x: 0, y: 6000, z: 0 } }, expected: 'success' },
+  { scenario: 'Setup: reverse every face of the box', toolName: 'manage_geometry', arguments: { action: 'optimize_mesh', optimization: 'flip_normals', actorName: INSIDE_OUT_BOX }, expected: 'success' },
+  { scenario: 'Setup: bake the reversed box into a static mesh', toolName: 'manage_geometry', arguments: { action: 'convert_to_static_mesh', actorName: INSIDE_OUT_BOX, outputPath: INSIDE_OUT_MESH }, expected: 'success', timeoutMs: 30000 },
+  { scenario: 'INFO: check_mesh finds the reversed box inside out', toolName: 'inspect', arguments: { action: 'check_mesh', meshPath: INSIDE_OUT_MESH }, expected: 'success', assertions: [
+    { path: 'structuredContent.result.closed', equals: true, label: 'still watertight' },
+    { path: 'structuredContent.result.flippedEdges', equals: 0, label: 'its faces agree with each other' },
+    { path: 'structuredContent.result.insideOutParts', equals: 1, label: 'the box is wound inside out' },
+    { path: 'structuredContent.result.largestParts.0.insideOut', equals: true, label: 'and its part is marked' },
+  ] },
+  { scenario: 'Setup: export the reversed box as an FBX', toolName: 'manage_asset', arguments: { action: 'export_mesh', assetPath: INSIDE_OUT_MESH, format: 'fbx', outputPath: 'Saved/MCPTest/Exports' }, expected: 'success' },
+  { scenario: 'INFO: import warns of a mesh wound inside out', toolName: 'manage_asset', arguments: { action: 'import', sourcePath: `Saved/MCPTest/Exports/SM_InsideOut_${ts}.fbx`, destinationPath: `${INSIDE_OUT_IMPORT}.SM_InsideOutImport_${ts}`, save: false }, expected: 'success', timeoutMs: 30000, assertions: [{ path: 'structuredContent.receipt.warnings.0', includes: 'inside-out part', label: 'the reply names the mesh and its inside-out part' }] },
+  { scenario: 'INFO: reimport warns of it again', toolName: 'manage_asset', arguments: { action: 'reimport', assetPaths: [INSIDE_OUT_IMPORT], save: false }, expected: 'success', timeoutMs: 30000, assertions: [{ path: 'structuredContent.receipt.warnings.0', includes: 'inside-out part', label: 'the reimport reply names it too' }] },
+  { scenario: 'INFO: check_mesh reads a skeletal mesh in its reference pose', toolName: 'inspect', arguments: { action: 'check_mesh', meshPath: '/Engine/EngineMeshes/SkeletalCube' }, expected: 'success', assertions: [{ path: 'structuredContent.result.triangles', gte: 12, label: 'the skinned cube has its triangles' }, { path: 'structuredContent.result.insideOutParts', equals: 0, label: 'wound outward' }] },
+  { scenario: 'Cleanup: delete the reversed box', toolName: 'control_actor', arguments: { action: 'delete', actorName: INSIDE_OUT_BOX }, expected: 'success|not found' },
+  { scenario: 'Cleanup: delete the inside-out meshes', toolName: 'manage_asset', arguments: { action: 'delete', paths: [INSIDE_OUT_IMPORT, INSIDE_OUT_MESH], force: true }, expected: 'success|not found' },
   { scenario: 'INFO: describe_view reads what a camera sees', toolName: 'inspect', arguments: { action: 'describe_view', location: { x: 0, y: 0, z: 400 }, rotation: { pitch: -60, yaw: 0, roll: 0 }, fov: 70, limit: 5 }, expected: 'success', assertions: [{ path: 'structuredContent.result.background', gte: 0, label: 'the frame is accounted for' }] },
   { scenario: 'INFO: describe_view with actors says why a named actor is not seen', toolName: 'inspect', arguments: { action: 'describe_view', location: { x: 2000, y: 0, z: 400 }, rotation: { pitch: 0, yaw: 0, roll: 0 }, actors: [ACTOR, 'NoSuchActorForDescribeView'] }, expected: 'success', assertions: [{ path: 'structuredContent.result.notVisible.0.reason', equals: 'outside the frame', label: 'the cube behind the camera is outside the frame' }, { path: 'structuredContent.result.notFound.0', equals: 'NoSuchActorForDescribeView', label: 'an unknown name is listed' }] },
   { scenario: 'INFO: describe_view points names the cube under the middle of a shot straight down', toolName: 'inspect', arguments: { action: 'describe_view', location: { x: 0, y: 0, z: 400 }, rotation: { pitch: -90, yaw: 0, roll: 0 }, points: [{ x: 0.5, y: 0.5 }] }, expected: 'success', assertions: [{ path: 'structuredContent.result.points.0.actorName', equals: ACTOR, label: 'the cube is drawn there' }, { path: 'structuredContent.result.points.0.hit.location.z', approximately: 170, tolerance: 1, label: 'the line meets its top at z 170' }] },

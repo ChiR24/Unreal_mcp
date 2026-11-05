@@ -12,6 +12,7 @@
 #include "AutomatedAssetImportData.h"
 #include "Domains/AssetWorkflow/Operations/McpAssetFbxImportOptions.h"
 #include "Domains/BlueprintGraph/Expression/McpBPGraphMathExpr.h"
+#include "Domains/Environment/Inspection/MeshCheck/McpMeshCheck.h"
 #include "EditorAssetLibrary.h"
 #include "Engine/Blueprint.h"
 #include "IAssetTools.h"
@@ -162,6 +163,8 @@ bool UEngineWireSubsystem::HandleImportAsset(
               McpHandlerUtils::AddVerification(Resp, ImportedAsset);
             }
             McpDescribeImport(ImportedAssets, Asset, ImportedAsset, Resp);
+            // After McpDescribeImport, which sets the warnings: a mesh wound inside out is added to them.
+            McpMeshCheck::AppendInsideOutWarnings(ImportedAssets, Resp);
             Resp->SetBoolField(TEXT("saved"), bSave && McpSaveImports(ImportedAsset, Asset, ImportedAssets));
             StrongThis->SendAutomationResponse(
                 Socket, RequestId, true,
