@@ -7,6 +7,7 @@
 #include "Domains/AssetWorkflow/Reimport/McpAssetReimport.h"
 
 #include "Dom/JsonObject.h"
+#include "Domains/AssetWorkflow/Operations/McpAssetFbxImportOptions.h"
 #include "Domains/Environment/Inspection/MeshCheck/McpMeshCheck.h"
 #include "EditorReimportHandler.h"
 #include "EngineWireSubsystem.h"
@@ -108,7 +109,9 @@ bool Handle(UEngineWireSubsystem& Bridge, const FString& RequestId, const TShare
 	TArray<UObject*> Done;
 	for (const FPlan& Plan : Plans)
 	{
-		// Automated: no dialog and no toast; another file only through sourceFile, never a file picker.
+		// Automated: no dialog and no toast; another file only through sourceFile, never a file picker. No Message Log
+		// window either: an FBX reimport opens one for its messages otherwise.
+		const FMcpNoMessageLogWindow NoLogWindow;
 		const bool bDone = FReimportManager::Instance()->Reimport(Plan.Asset, false, false, OverrideFile, nullptr, INDEX_NONE,
 			!OverrideFile.IsEmpty(), true);
 		TSharedPtr<FJsonObject> Row = MakeShared<FJsonObject>();

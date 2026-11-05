@@ -1502,6 +1502,22 @@ describe('skeletal mesh import', () => {
   });
 });
 
+// An FBX import with options (the legacy factory) opened the Message Log on its FBX Import page for a mere warning, which
+// brought a minimized editor to the front over what the user was doing: its messages reach the reply's warnings anyway.
+describe('an import or reimport opens no Message Log window', () => {
+  it('runs the import, the legacy factory\'s included, and each reimport with the Message Log display held off', () => {
+    const options = code('AssetWorkflow', 'Operations', 'McpAssetFbxImportOptions.h');
+    expect(options).toMatch(/const FMcpNoMessageLogWindow NoLogWindow;\s*const TSet<FString> Before = McpAssetPathsIn\(DestPath\);\s*TArray<UObject \*> Imported = AssetTools\.ImportAssetsAutomated\(ImportData\);/u);
+    expect(options).toContain('FMcpNoMessageLogWindow() { Module().EnableMessageLogDisplay(false); }');
+    // Given back as the main frame set it at startup.
+    expect(options).toContain('~FMcpNoMessageLogWindow() { Module().EnableMessageLogDisplay(!FApp::IsUnattended()); }');
+    const handler = code('AssetWorkflow', 'Operations', 'McpAssetImportDuplicate.cpp');
+    expect(handler).toMatch(/ImportData->Factory = McpMakeFbxFactory\(ImportData, FbxOptions, SetupError, SetupCode\);[\s\S]*?TArray<UObject \*> ImportedAssets = McpImportAndCollect\(AssetTools, ImportData, DestPath\);/u);
+    const reimport = code('AssetWorkflow', 'Reimport', 'McpAssetReimport.cpp');
+    expect(reimport).toMatch(/const FMcpNoMessageLogWindow NoLogWindow;\s*const bool bDone = FReimportManager::Instance\(\)->Reimport\(/u);
+  });
+});
+
 describe('analyze_animation reads a sequence from its own frames', () => {
   // get_animation_info gave length, notifies and curves only; how a clip moves could not be read without playing it.
   it('samples every frame up to the cap, the first and last always in, with the root motion left on the root', () => {

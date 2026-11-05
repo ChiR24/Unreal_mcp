@@ -18,8 +18,10 @@
 #include "Factories/FbxFactory.h"
 #include "Factories/FbxImportUI.h"
 #include "IAssetTools.h"
+#include "MessageLogModule.h"
+#include "Misc/App.h"
 #include "Misc/Paths.h"
-#include "Safety/McpSafeOperationsAssetSave.h"
+#include "Safety/McpSafeOperations.h"
 #include "Modules/ModuleManager.h"
 #include "ObjectTools.h"
 #include "UObject/SoftObjectPath.h"
@@ -210,9 +212,24 @@ inline void McpAddFolderNewcomers(const FString &Folder, const TSet<FString> &Be
   }
 }
 
+// While one of these lives, no Message Log window opens. The legacy FBX importer (UFbxFactory, the FBX reimport factories)
+// keeps its messages for the Message Log's FBX Import page and opens that window when it is done (FFbxLogger's
+// destructor), on any message, a note that a file has no smoothing groups too: it brought a minimized editor to the front
+// over whatever the user was doing. The messages still go to that page, and through the request's log capture into the
+// reply's warnings; an error's window is held back as well. The display switch is the Message Log module's own, and the
+// main frame turns it on at startup as !FApp::IsUnattended() on every 5.0-5.8, which is what it is set back to. Not
+// FFbxLoggerSetter(Importer, true): it still opens the window on an error, and before 5.4 a plugin cannot link it
+// (FFbxImporter's SetLogger and ClearLogger are exported from UnrealEd only from 5.4 on).
+struct FMcpNoMessageLogWindow {
+  FMcpNoMessageLogWindow() { Module().EnableMessageLogDisplay(false); }
+  ~FMcpNoMessageLogWindow() { Module().EnableMessageLogDisplay(!FApp::IsUnattended()); }
+  static FMessageLogModule &Module() { return FModuleManager::LoadModuleChecked<FMessageLogModule>(TEXT("MessageLog")); }
+};
+
 // Imports the file; with the FBX factory, what appeared in the folder joins what the factory handed back.
 inline TArray<UObject *> McpImportAndCollect(IAssetTools &AssetTools, UAutomatedAssetImportData *ImportData,
                                              const FString &DestPath) {
+  const FMcpNoMessageLogWindow NoLogWindow;
   const TSet<FString> Before = McpAssetPathsIn(DestPath);
   TArray<UObject *> Imported = AssetTools.ImportAssetsAutomated(ImportData);
   if (ImportData->Factory != nullptr) {
