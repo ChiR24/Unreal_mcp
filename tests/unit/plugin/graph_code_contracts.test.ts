@@ -179,4 +179,15 @@ describe('read -> write round trips', () => {
     expect(catalog).toMatch(/const TArray<FString> Offered = OfferedIds\(Blueprint, Graph, Entries, MenuId\);/u);
     expect(code(join(CODE, 'McpGraphCodeWriteNodes.cpp'))).toContain('const TArray<FString> Offered = OfferedIds(Blueprint, Graph, Menu, TypeId);');
   });
+
+  // The reader prints an event bound to a delegate (Bind Event to OnFinished) as (AddEvent|Custom|Name); the writer made a
+  // second event of that name, read its outputs as a call's and refused "gives no value here".
+  it('takes an event id as a value for the delegate of the graph\'s own event, before any call is made', () => {
+    const expr = code(join(CODE, 'McpGraphCodeWriteExpr.cpp'));
+    expect(expr).toMatch(/Each->FindPin\(TEXT\("OutputDelegate"\), EGPD_Output\)[\s\S]*TypeIdOf\(Node\)\.Equals\(TypeId, ESearchCase::CaseSensitive\)/u);
+    const delegate = expr.indexOf('Out = EventDelegate(Graph, Head.Text);');
+    expect(delegate).toBeGreaterThan(0);
+    expect(delegate).toBeLessThan(expr.indexOf('UEdGraphNode* Node = CallNode(Value, Bindings, Flow, {}, true);'));
+    expect(expr).toMatch(/Value\.Items\.Num\(\) == 1 && Head\.Type == FSExpr::EType::Symbol && Head\.Text\.StartsWith\(TEXT\("AddEvent\|"\)/u);
+  });
 });

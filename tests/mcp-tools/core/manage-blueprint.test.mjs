@@ -583,6 +583,11 @@ const testCases = [
     { path: 'structuredContent.result.code', includes: '(CallFunction|OnCodeFinish)', label: 'the call reads back by the id it was written with' },
     { path: 'structuredContent.result.compiled', equals: true, label: 'the Blueprint compiles' },
   ] },
+  // read_graph_as_code prints an event bound to a delegate input as the event's id alone; the writer took it for a call.
+  { scenario: 'CODE: write_graph_from_code binds an event to a delegate input as read_graph_as_code prints it', toolName: 'manage_blueprint', arguments: { action: 'write_graph_from_code', blueprintPath: CODE_BP_PATH, graphName: 'EventGraph', code: '(event Custom|OnCodeTimer\n  (Development|PrintString "tick"))\n(event Custom|OnCodeProbe\n  (Utilities|Time|SetTimerbyEvent (AddEvent|Custom|OnCodeTimer) 1.0))' }, expected: 'success', assertions: [
+    { path: 'structuredContent.result.code', includes: '(Utilities|Time|SetTimerbyEvent (AddEvent|Custom|OnCodeTimer) 1.0)', label: 'the bound event reads back by its id' },
+    { path: 'structuredContent.result.compiled', equals: true, label: 'the Blueprint compiles' },
+  ] },
   { scenario: 'ERROR: write_graph_from_code names the menu ids whose title starts with an unknown one', toolName: 'manage_blueprint', arguments: { action: 'write_graph_from_code', blueprintPath: CODE_BP_PATH, code: '(event Custom|OnCodeProbe\n  (Math|Trig|Sin 1.0))' }, expected: 'error|CODE_INVALID', assertions: [{ path: 'structuredContent.error', includes: 'Sin(Radians)', label: 'Sin (Radians) is offered for Sin' }] },
   { scenario: 'ERROR: write_graph_from_code refuses an asset path that loads nothing', toolName: 'manage_blueprint', arguments: { action: 'write_graph_from_code', blueprintPath: CODE_BP_PATH, code: '(event Custom|OnCodeProbe\n  (Audio|PlaySound2D "/Game/NoSuchFolder/NoSuchSound.NoSuchSound"))' }, expected: 'error|CODE_INVALID' },
   { scenario: 'CODE: create_node makes a node by its action-menu id', toolName: 'manage_blueprint', arguments: { action: 'create_node', blueprintPath: CODE_BP_PATH, graphName: 'EventGraph', menuId: 'Development|PrintString', posX: 3000, posY: 3000 }, expected: 'success' },

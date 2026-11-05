@@ -2,6 +2,7 @@
 #include "Domains/BlueprintGraph/Code/McpGraphCodeWrite.h"
 
 #include "EdGraph/EdGraph.h"
+#include "K2Node.h"
 #include "K2Node_AddPinInterface.h"
 #include "K2Node_Switch.h"
 #include "K2Node_SwitchName.h"
@@ -37,6 +38,21 @@ bool IsContinuation(const FSExpr& Value)
 {
     return Value.Type == FSExpr::EType::List && Value.Items.Num() > 0 && Value.Items[0].Type == FSExpr::EType::Symbol &&
            Value.Items[0].Text.StartsWith(TEXT(":"));
+}
+
+// The delegate of the graph's event with this id, as the reader names an event wired into a delegate input.
+UEdGraphPin* EventDelegate(UEdGraph* Graph, const FString& TypeId)
+{
+    for (UEdGraphNode* Each : Graph->Nodes)
+    {
+        const UK2Node* Node = Cast<UK2Node>(Each);
+        UEdGraphPin* Delegate = Node ? Each->FindPin(TEXT("OutputDelegate"), EGPD_Output) : nullptr;
+        if (Delegate && TypeIdOf(Node).Equals(TypeId, ESearchCase::CaseSensitive))
+        {
+            return Delegate;
+        }
+    }
+    return nullptr;
 }
 } // namespace WriteExprParts
 
@@ -112,6 +128,16 @@ bool FTranspiler::Expr(const FSExpr& Value, const FBindings& Bindings, FFlow& Fl
     if (IsSymbol(Head, TEXT("not")) || (Head.Type == FSExpr::EType::Symbol && OperatorTypeId(Head.Text)))
     {
         return BinOp(Value, Bindings, Flow, Out);
+    }
+    // (AddEvent|Custom|Name) as a value is that event bound to a delegate (Bind Event to OnFinished): the reader prints it
+    // so. Its own form made it before any body ran; a custom event no form names is made. Making a second one of the same
+    // name and reading its outputs, as a call, refused the reader's own text.
+    if (Value.Items.Num() == 1 && Head.Type == FSExpr::EType::Symbol && Head.Text.StartsWith(TEXT("AddEvent|"), ESearchCase::CaseSensitive))
+    {
+        Out = EventDelegate(Graph, Head.Text);
+        UEdGraphNode* NewEvent = !Out && Head.Text.StartsWith(TEXT("AddEvent|Custom|"), ESearchCase::CaseSensitive) ? Create(Head.Text) : nullptr;
+        Out = NewEvent ? NewEvent->FindPin(TEXT("OutputDelegate"), EGPD_Output) : Out;
+        return Out ? true : Fail(FString::Printf(TEXT("%s names no event of graph %s whose delegate could be bound."), *Head.Text, *Graph->GetName()));
     }
     UEdGraphNode* Node = CallNode(Value, Bindings, Flow, {}, true);
     const TArray<UEdGraphPin*> Outs = DataPins(Node, false);
