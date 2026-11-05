@@ -21420,6 +21420,7 @@
         "profile_performance",
         "configure_performance",
         "merge_actors",
+        "fit_frame_budget",
         "create_cpp_class",
         "remove_cpp_class",
         "run_build",
@@ -21466,6 +21467,7 @@
         "assetPath",
         "autoExposure",
         "bloom",
+        "budgetMs",
         "build",
         "category",
         "categoryName",
@@ -21487,6 +21489,7 @@
         "description",
         "destructive",
         "detailed",
+        "dryRun",
         "duration",
         "enableBatching",
         "enableInstancing",
@@ -21511,6 +21514,7 @@
         "keepFile",
         "key",
         "kind",
+        "knobs",
         "launchViewer",
         "level",
         "limit",
@@ -21646,6 +21650,12 @@
           "bloom": {
             "type": "boolean",
             "description": "Bloom on by default."
+          },
+          "budgetMs": {
+            "type": "number",
+            "minimum": 2,
+            "maximum": 100,
+            "description": "The GPU frame time to fit, in milliseconds, 2-100 (16.7 is 60 frames a second, 33.3 is 30)."
           },
           "build": {
             "type": "boolean",
@@ -21784,6 +21794,10 @@
             "type": "boolean",
             "description": "Produce a detailed report."
           },
+          "dryRun": {
+            "type": "boolean",
+            "description": "Measure and pick only: nothing is kept (default false)."
+          },
           "duration": {
             "type": "number",
             "description": "Seconds after which the capture stops by itself (default: runs until stop_profiling)."
@@ -21834,9 +21848,20 @@
             "description": "Recompile every shader, overriding mode (default false); slow on a large project."
           },
           "fov": {
-            "type": "number",
-            "minimum": 5,
-            "maximum": 170,
+            "oneOf": [
+              {
+                "type": "number",
+                "minimum": 5,
+                "maximum": 170,
+                "description": "That camera's horizontal field of view in degrees (5-170), set first; it stays until the editor restarts. The square shows as much across as down."
+              },
+              {
+                "type": "number",
+                "minimum": 5,
+                "maximum": 170,
+                "description": "The level viewport camera's horizontal field of view in degrees (5-170), set first; it stays until the editor restarts."
+              }
+            ],
             "description": "That camera's horizontal field of view in degrees (5-170), set first; it stays until the editor restarts. The square shows as much across as down."
           },
           "friendlyName": {
@@ -21897,6 +21922,18 @@
             ],
             "description": "Which run build variant to run.\ntests: Run automation tests in the editor, one after another, and answer with each one's result: passed or not, its duration, and the errors and warnings it reported.\nubt: Run UnrealBuildTool for a target/platform/configuration, spawning UBT locally with a manage_pipeline bridge fallback."
           },
+          "knobs": {
+            "type": "array",
+            "minItems": 1,
+            "items": {
+              "type": "string",
+              "enum": [
+                "shadows",
+                "draw_distance"
+              ]
+            },
+            "description": "Which knobs to try (default both). shadows: one movable light's shadow casting off, for each movable light whose light reaches the view (directional lights included; at most 12, largest reach first); static and stationary lights have baked shadows and are left alone. draw_distance: the small meshes in the view (narrower than 2% of the view at their distance) not drawn beyond 20, 40 or 80 m, one distance at most, kept as their Desired Max Draw Distance."
+          },
           "launchViewer": {
             "type": "boolean",
             "description": "Open the Unreal Insights application on the trace: default true for control=launch_viewer (start_unreal_insights), false for the other variants."
@@ -21916,20 +21953,44 @@
             "description": "How many of the newest matching lines to return, oldest first (default 100, max 1000)."
           },
           "location": {
-            "type": "object",
-            "properties": {
-              "x": {
-                "type": "number"
+            "oneOf": [
+              {
+                "type": "object",
+                "properties": {
+                  "x": {
+                    "type": "number",
+                    "description": "x"
+                  },
+                  "y": {
+                    "type": "number",
+                    "description": "y"
+                  },
+                  "z": {
+                    "type": "number",
+                    "description": "z"
+                  }
+                },
+                "additionalProperties": false,
+                "description": "Put the level viewport camera here first ({x, y, z}), the view to measure from; it stays there."
               },
-              "y": {
-                "type": "number"
-              },
-              "z": {
-                "type": "number"
+              {
+                "type": "object",
+                "properties": {
+                  "x": {
+                    "type": "number"
+                  },
+                  "y": {
+                    "type": "number"
+                  },
+                  "z": {
+                    "type": "number"
+                  }
+                },
+                "additionalProperties": false,
+                "description": "Put the level viewport camera here first ({x, y, z}); it stays there."
               }
-            },
-            "additionalProperties": false,
-            "description": "Put the level viewport camera here first ({x, y, z}); it stays there."
+            ],
+            "description": "Put the level viewport camera here first ({x, y, z}), the view to measure from; it stays there."
           },
           "lodBias": {
             "type": "number",
@@ -22192,19 +22253,43 @@
             "description": "Search only this output folder (default all eight)."
           },
           "rotation": {
-            "type": "object",
-            "properties": {
-              "pitch": {
-                "type": "number"
+            "oneOf": [
+              {
+                "type": "object",
+                "properties": {
+                  "pitch": {
+                    "type": "number",
+                    "description": "pitch"
+                  },
+                  "yaw": {
+                    "type": "number",
+                    "description": "yaw"
+                  },
+                  "roll": {
+                    "type": "number",
+                    "description": "roll"
+                  }
+                },
+                "additionalProperties": false,
+                "description": "Turn the level viewport camera to this first ({pitch, yaw, roll}); it stays."
               },
-              "yaw": {
-                "type": "number"
-              },
-              "roll": {
-                "type": "number"
+              {
+                "type": "object",
+                "properties": {
+                  "pitch": {
+                    "type": "number"
+                  },
+                  "yaw": {
+                    "type": "number"
+                  },
+                  "roll": {
+                    "type": "number"
+                  }
+                },
+                "additionalProperties": false,
+                "description": "Turn that camera to this first ({pitch, yaw, roll}); it stays."
               }
-            },
-            "additionalProperties": false,
+            ],
             "description": "Turn that camera to this first ({pitch, yaw, roll}); it stays."
           },
           "runsBack": {
@@ -22413,6 +22498,7 @@
               "profile_performance",
               "configure_performance",
               "merge_actors",
+              "fit_frame_budget",
               "create_cpp_class",
               "remove_cpp_class",
               "run_build",

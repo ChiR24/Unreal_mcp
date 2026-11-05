@@ -26,6 +26,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Look and sound**: material `color` / `glow`, light `flicker`, a first-person view, `sound_trigger`, subtitles, sound volume and looping, footstep sounds, animation play rate, `massKg`.
 - **Scripts and sheets**: `run_script` takes `(if cond a b)` as a value and waits within `deadlineMs` for a call that answers later, so one script can import a file and use the asset; contact and thumbnail sheets take `keepFile: false`.
 - **Proxy CLI**: `init <client>` writes a client's MCP config; `doctor` checks the setup (the token is never shown).
+- **Frame budget**: `fit_frame_budget` measures which lights' shadows and far small meshes to turn down to meet a GPU frame time at the least change to the picture, and keeps them as one undo step.
 
 </details>
 

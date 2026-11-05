@@ -270,12 +270,16 @@ const testCases = [
   const MERGE_CHILD_ACTOR = `ChildActor_${ts}`;
   const MERGED_ACTOR_ASSET = `${TEST_FOLDER}/SM_PerformanceMerged_${ts}`;
   const MERGED_ACTOR_PACKAGE_ASSET = `${TEST_FOLDER}/SM_PerformanceMergedPackage_${ts}`;
+  const BUDGET_LIGHT = `BudgetLight_${ts}`;
+  // fit_frame_budget's view: from behind the merge cubes, the suite's movable light over them.
+  const BUDGET_VIEW = { location: { x: -800, y: 300, z: 300 }, rotation: { pitch: -15, yaw: 0, roll: 0 }, fov: 90 };
 
   testCases.push(
     // === SETUP ===
     { scenario: 'Setup: create test folder', toolName: 'manage_asset', arguments: { action: 'create_folder', path: TEST_FOLDER }, expected: 'success|already exists' },
     { scenario: 'Setup: spawn merge parent actor', toolName: 'control_actor', arguments: { action: 'spawn_actor', classPath: '/Script/Engine.StaticMeshActor', meshPath: '/Engine/BasicShapes/Cube.Cube', actorName: MERGE_PARENT_ACTOR, location: { x: 0, y: 300, z: 120 } }, expected: 'success|already exists' },
     { scenario: 'Setup: spawn merge child actor', toolName: 'control_actor', arguments: { action: 'spawn_actor', classPath: '/Script/Engine.StaticMeshActor', meshPath: '/Engine/BasicShapes/Cube.Cube', actorName: MERGE_CHILD_ACTOR, location: { x: 160, y: 300, z: 120 } }, expected: 'success|already exists' },
+    { scenario: 'Setup: a movable light casting shadows over the cubes', toolName: 'build_environment', arguments: { action: 'create_light', lightType: 'Point', name: BUDGET_LIGHT, location: { x: 80, y: 300, z: 400 }, properties: { castShadows: true, attenuationRadius: 2000 } }, expected: 'success' },
 
     // === ACTION ===
     { scenario: 'ACTION: start_profiling', toolName: 'system_control', arguments: {"action": "start_profiling", "duration": 1}, expected: 'success' },
@@ -327,8 +331,23 @@ const testCases = [
     { scenario: 'CONFIG: configure_nanite', toolName: 'system_control', arguments: {"action": "configure_nanite"}, expected: 'success' },
     { scenario: 'CONFIG: configure_world_partition', toolName: 'system_control', arguments: {"action": "configure_world_partition", "cellSize": 6400, "streamingDistance": 25600}, expected: { condition: 'success', errorPattern: 'WORLD_PARTITION_NOT_ENABLED' } },
     { scenario: 'CONFIG: configure_world_partition streaming switch', toolName: 'system_control', arguments: { action: 'configure_world_partition', enabled: true }, expected: { condition: 'success', errorPattern: 'WORLD_PARTITION_NOT_ENABLED' } },
+    // fit_frame_budget measures each knob for real, so a budget it must reach depends on the machine: the suite checks a
+    // dry run (nothing kept whatever it finds), a budget every view meets and the refusals; the knob picking is proven live.
+    // The suite left the editor at Low, where no dynamic shadows are drawn and lights are not tried: shadows go up meanwhile.
+    { scenario: 'Setup: shadows drawn for fit_frame_budget', toolName: 'system_control', arguments: { action: 'set_scalability', category: 'Shadow', level: 2 }, expected: 'success' },
+    { scenario: 'OPTIONAL: fit_frame_budget dryRun measures the light and keeps nothing', toolName: 'system_control', arguments: { action: 'fit_frame_budget', budgetMs: 2, knobs: ['shadows'], dryRun: true, ...BUDGET_VIEW }, expected: 'success', timeoutMs: 30000, assertions: [
+      { path: 'structuredContent.result.applied', equals: false, label: 'a dry run keeps nothing' },
+      { path: 'structuredContent.result.cameraLocation.x', approximately: -800, tolerance: 1, label: 'measured from the view given' },
+    ] },
+    { scenario: 'ACTION: fit_frame_budget with a budget the view already meets', toolName: 'system_control', arguments: { action: 'fit_frame_budget', budgetMs: 100, knobs: ['shadows', 'draw_distance'] }, expected: 'success', timeoutMs: 30000, assertions: [
+      { path: 'structuredContent.result.met', equals: true, label: 'within the budget' },
+      { path: 'structuredContent.result.applied', equals: false, label: 'nothing to change' },
+    ] },
+    { scenario: 'ERROR: fit_frame_budget refuses a budget under 2 ms', toolName: 'system_control', arguments: { action: 'fit_frame_budget', budgetMs: 1 }, expected: 'error|OUT_OF_RANGE' },
+    { scenario: 'Cleanup: shadows back to Low', toolName: 'system_control', arguments: { action: 'set_scalability', category: 'Shadow', level: 0 }, expected: 'success' },
 
     // === CLEANUP ===
+    { scenario: 'Cleanup: delete the budget light', toolName: 'control_actor', arguments: { action: 'delete', actorNames: [BUDGET_LIGHT] }, expected: 'success|not found' },
     { scenario: 'Cleanup: delete merged mesh asset', toolName: 'manage_asset', arguments: { action: 'delete', path: MERGED_ACTOR_ASSET, force: true }, expected: 'success|not found' },
     { scenario: 'Cleanup: delete packageName merged mesh asset', toolName: 'manage_asset', arguments: { action: 'delete', path: MERGED_ACTOR_PACKAGE_ASSET, force: true }, expected: 'success|not found' },
     { scenario: 'Cleanup: delete merge actors', toolName: 'control_actor', arguments: { action: 'delete', actorNames: [MERGE_PARENT_ACTOR, MERGE_CHILD_ACTOR] }, expected: 'success|not found' },

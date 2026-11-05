@@ -9,10 +9,10 @@ const RECORDS = ALL_UNFOLDED_CAPABILITY_RECORDS.filter((record) => record.routin
 const effectOf = (action: string) => RECORDS.find((record) => record.legacyIds[0].action === action)?.behavior.effect;
 
 describe('system_control security and long-running semantics', () => {
-	it('flags run_ubt, run_tests, run_benchmark, package_project, execute_python and create_cpp_class as long-running', () => {
+	it('flags run_ubt, run_tests, run_benchmark, package_project, execute_python, create_cpp_class and fit_frame_budget as long-running', () => {
 		const longRunning = new Set(RECORDS.filter((r) => r.behavior.longRunning).map((r) => r.legacyIds[0].action));
-		// create_cpp_class runs the editor's compile of the module it added to.
-		expect(longRunning).toEqual(new Set(['run_ubt', 'run_tests', 'run_benchmark', 'package_project', 'execute_python', 'create_cpp_class']));
+		// create_cpp_class runs the editor's compile of the module it added to; fit_frame_budget measures frame after frame.
+		expect(longRunning).toEqual(new Set(['run_ubt', 'run_tests', 'run_benchmark', 'package_project', 'execute_python', 'create_cpp_class', 'fit_frame_budget']));
 	});
 
 	it('validate_assets and export-adjacent records are read-only validations', () => {

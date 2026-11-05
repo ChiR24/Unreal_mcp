@@ -103,7 +103,7 @@ inline const TArray<FString>& Performance()
 		TEXT("apply_baseline_settings"), TEXT("optimize_draw_calls"),
 		TEXT("merge_actors"), TEXT("configure_occlusion_culling"),
 		TEXT("optimize_shaders"), TEXT("configure_nanite"),
-		TEXT("configure_world_partition")
+		TEXT("configure_world_partition"), TEXT("fit_frame_budget")
 	};
 	return Actions;
 }

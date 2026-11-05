@@ -30652,6 +30652,12 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "boolean",
           "description": "Bloom on by default."
         },
+        "budgetMs": {
+          "type": "number",
+          "minimum": 2,
+          "maximum": 100,
+          "description": "The GPU frame time to fit, in milliseconds, 2-100 (16.7 is 60 frames a second, 33.3 is 30)."
+        },
         "build": {
           "type": "boolean",
           "description": "Compile the game target first (default true)."
@@ -30789,6 +30795,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "boolean",
           "description": "Produce a detailed report."
         },
+        "dryRun": {
+          "type": "boolean",
+          "description": "Measure and pick only: nothing is kept (default false)."
+        },
         "duration": {
           "type": "number",
           "description": "Seconds after which the capture stops by itself (default: runs until stop_profiling)."
@@ -30839,9 +30849,20 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "description": "Recompile every shader, overriding mode (default false); slow on a large project."
         },
         "fov": {
-          "type": "number",
-          "minimum": 5,
-          "maximum": 170,
+          "oneOf": [
+            {
+              "type": "number",
+              "minimum": 5,
+              "maximum": 170,
+              "description": "That camera's horizontal field of view in degrees (5-170), set first; it stays until the editor restarts. The square shows as much across as down."
+            },
+            {
+              "type": "number",
+              "minimum": 5,
+              "maximum": 170,
+              "description": "The level viewport camera's horizontal field of view in degrees (5-170), set first; it stays until the editor restarts."
+            }
+          ],
           "description": "That camera's horizontal field of view in degrees (5-170), set first; it stays until the editor restarts. The square shows as much across as down."
         },
         "friendlyName": {
@@ -30902,6 +30923,18 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           ],
           "description": "Which run build variant to run.\ntests: Run automation tests in the editor, one after another, and answer with each one's result: passed or not, its duration, and the errors and warnings it reported.\nubt: Run UnrealBuildTool for a target/platform/configuration, spawning UBT locally with a manage_pipeline bridge fallback."
         },
+        "knobs": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "string",
+            "enum": [
+              "shadows",
+              "draw_distance"
+            ]
+          },
+          "description": "Which knobs to try (default both). shadows: one movable light's shadow casting off, for each movable light whose light reaches the view (directional lights included; at most 12, largest reach first); static and stationary lights have baked shadows and are left alone. draw_distance: the small meshes in the view (narrower than 2% of the view at their distance) not drawn beyond 20, 40 or 80 m, one distance at most, kept as their Desired Max Draw Distance."
+        },
         "launchViewer": {
           "type": "boolean",
           "description": "Open the Unreal Insights application on the trace: default true for control=launch_viewer (start_unreal_insights), false for the other variants."
@@ -30921,20 +30954,44 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "description": "How many of the newest matching lines to return, oldest first (default 100, max 1000)."
         },
         "location": {
-          "type": "object",
-          "properties": {
-            "x": {
-              "type": "number"
+          "oneOf": [
+            {
+              "type": "object",
+              "properties": {
+                "x": {
+                  "type": "number",
+                  "description": "x"
+                },
+                "y": {
+                  "type": "number",
+                  "description": "y"
+                },
+                "z": {
+                  "type": "number",
+                  "description": "z"
+                }
+              },
+              "additionalProperties": false,
+              "description": "Put the level viewport camera here first ({x, y, z}), the view to measure from; it stays there."
             },
-            "y": {
-              "type": "number"
-            },
-            "z": {
-              "type": "number"
+            {
+              "type": "object",
+              "properties": {
+                "x": {
+                  "type": "number"
+                },
+                "y": {
+                  "type": "number"
+                },
+                "z": {
+                  "type": "number"
+                }
+              },
+              "additionalProperties": false,
+              "description": "Put the level viewport camera here first ({x, y, z}); it stays there."
             }
-          },
-          "additionalProperties": false,
-          "description": "Put the level viewport camera here first ({x, y, z}); it stays there."
+          ],
+          "description": "Put the level viewport camera here first ({x, y, z}), the view to measure from; it stays there."
         },
         "lodBias": {
           "type": "number",
@@ -31197,19 +31254,43 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "description": "Search only this output folder (default all eight)."
         },
         "rotation": {
-          "type": "object",
-          "properties": {
-            "pitch": {
-              "type": "number"
+          "oneOf": [
+            {
+              "type": "object",
+              "properties": {
+                "pitch": {
+                  "type": "number",
+                  "description": "pitch"
+                },
+                "yaw": {
+                  "type": "number",
+                  "description": "yaw"
+                },
+                "roll": {
+                  "type": "number",
+                  "description": "roll"
+                }
+              },
+              "additionalProperties": false,
+              "description": "Turn the level viewport camera to this first ({pitch, yaw, roll}); it stays."
             },
-            "yaw": {
-              "type": "number"
-            },
-            "roll": {
-              "type": "number"
+            {
+              "type": "object",
+              "properties": {
+                "pitch": {
+                  "type": "number"
+                },
+                "yaw": {
+                  "type": "number"
+                },
+                "roll": {
+                  "type": "number"
+                }
+              },
+              "additionalProperties": false,
+              "description": "Turn that camera to this first ({pitch, yaw, roll}); it stays."
             }
-          },
-          "additionalProperties": false,
+          ],
           "description": "Turn that camera to this first ({pitch, yaw, roll}); it stays."
         },
         "runsBack": {
@@ -31418,6 +31499,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             "profile_performance",
             "configure_performance",
             "merge_actors",
+            "fit_frame_budget",
             "create_cpp_class",
             "remove_cpp_class",
             "run_build",
@@ -31473,13 +31555,37 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "boolean",
           "description": "True when at least one test ran and every test passed."
         },
+        "applied": {
+          "type": "boolean",
+          "description": "True when the chosen knobs were kept (one undo step); false with dryRun, when nothing was needed, or when the budget was out of reach."
+        },
         "archiveDirectory": {
           "type": "string",
           "description": "Resolved absolute archive directory."
         },
+        "baselineMs": {
+          "type": "number",
+          "description": "The view's GPU frame time as it was: the mean of the baselines measured at the start and the end."
+        },
         "beta": {
           "type": "boolean",
           "description": "Marked beta."
+        },
+        "budgetMs": {
+          "type": "number",
+          "description": "The budget asked, in milliseconds."
+        },
+        "cameraLocation": {
+          "type": "object",
+          "additionalProperties": true,
+          "x-unreal-reflection-boundary": true,
+          "description": "Where the view was measured from."
+        },
+        "cameraRotation": {
+          "type": "object",
+          "additionalProperties": true,
+          "x-unreal-reflection-boundary": true,
+          "description": "Which way the view looked."
         },
         "canContainContent": {
           "type": "boolean",
@@ -31488,6 +31594,12 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "category": {
           "type": "string",
           "description": "Plugins browser category."
+        },
+        "change": {
+          "type": "object",
+          "additionalProperties": true,
+          "x-unreal-reflection-boundary": true,
+          "description": "What the chosen knobs change in the picture, as describe_view compareWith reports it: changed (% of the picture), regionCount, regions (box, share, the actors drawn there before and after) and brightnessShift."
         },
         "changed": {
           "oneOf": [
@@ -31655,6 +31767,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "string",
           "description": "Documentation link, often empty."
         },
+        "dryRun": {
+          "type": "boolean",
+          "description": "Present and true when nothing was kept because dryRun was set."
+        },
         "elapsedSeconds": {
           "type": "number",
           "description": "Seconds so far while running, total runtime once finished."
@@ -31728,6 +31844,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "folder": {
           "type": "string",
           "description": "Its folder, relative to the project."
+        },
+        "fps": {
+          "type": "number",
+          "description": "Editor frames a second during the run. Each measure lets 6 frames drain and reads 16, so a low rate leaves knobs unmeasured when the time runs out (they read measured false)."
         },
         "friendlyName": {
           "type": "string",
@@ -31807,6 +31927,15 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "string",
           "description": "Requested key, when one was asked for."
         },
+        "knobs": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": true,
+            "x-unreal-reflection-boundary": true
+          },
+          "description": "Every knob found, as {kind (shadows, draw_distance), what, actors (up to 8 names), gainMs, changed (% of the picture changed beyond noise), chosen}; one not reached before the time ran out reads measured false."
+        },
         "lines": {
           "type": "array",
           "items": {
@@ -31844,9 +31973,17 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "number",
           "description": "How many buffered lines matched; more than returned means the lines cap cut the oldest."
         },
+        "measuredMs": {
+          "type": "number",
+          "description": "The GPU frame time with the chosen knobs on together; when the budget is out of reach, every knob that saves time together."
+        },
         "message": {
           "type": "string",
           "description": "Human-readable result message."
+        },
+        "met": {
+          "type": "boolean",
+          "description": "True when the view already fit the budget or the chosen knobs measured within it."
         },
         "mimeType": {
           "type": "string",
@@ -31891,6 +32028,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "nextOffset": {
           "type": "number",
           "description": "The offset of the next page; present only when hasMore is true."
+        },
+        "noiseMs": {
+          "type": "number",
+          "description": "The timing noise of a difference between two measures, as each gain is one: 1.4826 times the median change between consecutive measures taken with every knob off (slow drift over the run, which cancels in a gain measured on and off a moment apart, does not count). A gain under three times this (or under 0.05 ms) is not counted."
         },
         "notDeleted": {
           "type": "array",
@@ -31990,6 +32131,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
               }
             }
           }
+        },
+        "predictedMs": {
+          "type": "number",
+          "description": "The baseline less the chosen knobs' separate gains."
         },
         "properties": {
           "oneOf": [

@@ -1,6 +1,6 @@
 {
-  "catalogRevision": "83942d6961d5a7d6",
-  "recordCount": 487,
+  "catalogRevision": "fa30a8bfacf34da9",
+  "recordCount": 488,
   "records": [
     {
       "id": "animation_physics.analyze_animation",
@@ -116897,6 +116897,257 @@
         "algorithm": "sha256",
         "schema": "547325520fd68582a8185ca72f11028bdae6fbe51ef1c6fbb27bcde504c3f704",
         "content": "f8c85941aa9521183ec9f5aa48019994abdb38be88490dbd6759065ceb51d5cd"
+      }
+    },
+    {
+      "id": "system_control.fit_frame_budget",
+      "aliases": [],
+      "legacyIds": [
+        {
+          "tool": "system_control",
+          "action": "fit_frame_budget"
+        }
+      ],
+      "discovery": {
+        "domain": "performance",
+        "family": "performance",
+        "topics": [
+          "fit_frame_budget",
+          "frame budget",
+          "fit the frame budget",
+          "reduce gpu frame time",
+          "which shadows cost the most",
+          "cheapest way to hit the frame time"
+        ],
+        "summary": "Bring the level viewport's GPU frame time under budgetMs by turning down per-actor knobs at the least change to the picture, kept as one undo step. Each knob is switched on in turn and off again straight after, each state measured (the lower quartile of 16 frames' GPU times), so its gain is the difference of two measures a moment apart, and judged by how much of the picture it changes beyond the renderer's own noise against the picture just before it (as describe_view compareWith judges): a movable light casting shadows into the view (its shadows off), and the small meshes in the view beyond 20, 40 or 80 m (not drawn past that distance). The cheapest set whose gains reach the budget is picked, measured together and kept. The reply lists every knob tried (knobs: gainMs, changed as % of the picture, chosen), predictedMs, measuredMs, met, applied, and change (where the picture changed, with the actors drawn there before and after). It measures what the editor draws now, at its scalability and viewport size, from the view location, rotation and fov give, never in Play; at shadow quality Low no dynamic shadows are drawn, so lights are not tried (a warning says so: raise the Shadow group with set_scalability to measure them). A view already within the budget answers at once; when the knobs cannot reach it nothing changes and the reply says how close every knob together comes. dryRun measures and picks without keeping. Answers in about 3-20 s, the editor window held on screen meanwhile. Refusals: EDITOR_STATE_MISMATCH during Play, NO_VIEWPORT, NOTHING_TO_TRY (no knob in this view: move it to where the frame is slow), GPU_TIMING_UNAVAILABLE (turn on enable_gpu_timing), VIEWPORT_CHANGED (the viewport closed, resized or Play started mid-run; nothing changed).",
+        "whenToUse": [
+          "A level draws slowly on the GPU and the cheapest per-actor fixes are wanted, measured rather than guessed.",
+          "Seeing which lights' shadows or which far props cost frame time from a view, without changing anything: dryRun."
+        ],
+        "whenNotToUse": [
+          "Finding where the frame goes (game thread, render thread, GPU) or which meshes are heaviest: inspect get_frame_cost.",
+          "Lowering quality for the whole project: set_scalability; this changes actors, not settings.",
+          "While Play runs: it is refused (EDITOR_STATE_MISMATCH); it measures the level viewport, not the game."
+        ]
+      },
+      "schemas": {
+        "input": {
+          "$schema": "https://json-schema.org/draft/2020-12/schema",
+          "type": "object",
+          "properties": {
+            "action": {
+              "type": "string",
+              "description": "The action to execute on the parent tool."
+            },
+            "budgetMs": {
+              "type": "number",
+              "minimum": 2,
+              "maximum": 100,
+              "description": "The GPU frame time to fit, in milliseconds, 2-100 (16.7 is 60 frames a second, 33.3 is 30)."
+            },
+            "knobs": {
+              "type": "array",
+              "minItems": 1,
+              "items": {
+                "type": "string",
+                "enum": [
+                  "shadows",
+                  "draw_distance"
+                ]
+              },
+              "description": "Which knobs to try (default both). shadows: one movable light's shadow casting off, for each movable light whose light reaches the view (directional lights included; at most 12, largest reach first); static and stationary lights have baked shadows and are left alone. draw_distance: the small meshes in the view (narrower than 2% of the view at their distance) not drawn beyond 20, 40 or 80 m, one distance at most, kept as their Desired Max Draw Distance."
+            },
+            "location": {
+              "type": "object",
+              "properties": {
+                "x": {
+                  "type": "number",
+                  "description": "x"
+                },
+                "y": {
+                  "type": "number",
+                  "description": "y"
+                },
+                "z": {
+                  "type": "number",
+                  "description": "z"
+                }
+              },
+              "additionalProperties": false,
+              "description": "Put the level viewport camera here first ({x, y, z}), the view to measure from; it stays there."
+            },
+            "rotation": {
+              "type": "object",
+              "properties": {
+                "pitch": {
+                  "type": "number",
+                  "description": "pitch"
+                },
+                "yaw": {
+                  "type": "number",
+                  "description": "yaw"
+                },
+                "roll": {
+                  "type": "number",
+                  "description": "roll"
+                }
+              },
+              "additionalProperties": false,
+              "description": "Turn the level viewport camera to this first ({pitch, yaw, roll}); it stays."
+            },
+            "fov": {
+              "type": "number",
+              "minimum": 5,
+              "maximum": 170,
+              "description": "The level viewport camera's horizontal field of view in degrees (5-170), set first; it stays until the editor restarts."
+            },
+            "dryRun": {
+              "type": "boolean",
+              "description": "Measure and pick only: nothing is kept (default false)."
+            }
+          },
+          "required": [
+            "action",
+            "budgetMs"
+          ],
+          "additionalProperties": false
+        },
+        "output": {
+          "$schema": "https://json-schema.org/draft/2020-12/schema",
+          "type": "object",
+          "properties": {
+            "success": {
+              "type": "boolean",
+              "description": "Whether the action succeeded."
+            },
+            "message": {
+              "type": "string",
+              "description": "Human-readable result message."
+            },
+            "details": {
+              "type": "object",
+              "x-unreal-reflection-boundary": true,
+              "description": "Additional handler result fields not named by the contract."
+            },
+            "budgetMs": {
+              "type": "number",
+              "description": "The budget asked, in milliseconds."
+            },
+            "baselineMs": {
+              "type": "number",
+              "description": "The view's GPU frame time as it was: the mean of the baselines measured at the start and the end."
+            },
+            "noiseMs": {
+              "type": "number",
+              "description": "The timing noise of a difference between two measures, as each gain is one: 1.4826 times the median change between consecutive measures taken with every knob off (slow drift over the run, which cancels in a gain measured on and off a moment apart, does not count). A gain under three times this (or under 0.05 ms) is not counted."
+            },
+            "fps": {
+              "type": "number",
+              "description": "Editor frames a second during the run. Each measure lets 6 frames drain and reads 16, so a low rate leaves knobs unmeasured when the time runs out (they read measured false)."
+            },
+            "knobs": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "additionalProperties": true,
+                "x-unreal-reflection-boundary": true
+              },
+              "description": "Every knob found, as {kind (shadows, draw_distance), what, actors (up to 8 names), gainMs, changed (% of the picture changed beyond noise), chosen}; one not reached before the time ran out reads measured false."
+            },
+            "predictedMs": {
+              "type": "number",
+              "description": "The baseline less the chosen knobs' separate gains."
+            },
+            "measuredMs": {
+              "type": "number",
+              "description": "The GPU frame time with the chosen knobs on together; when the budget is out of reach, every knob that saves time together."
+            },
+            "met": {
+              "type": "boolean",
+              "description": "True when the view already fit the budget or the chosen knobs measured within it."
+            },
+            "applied": {
+              "type": "boolean",
+              "description": "True when the chosen knobs were kept (one undo step); false with dryRun, when nothing was needed, or when the budget was out of reach."
+            },
+            "dryRun": {
+              "type": "boolean",
+              "description": "Present and true when nothing was kept because dryRun was set."
+            },
+            "change": {
+              "type": "object",
+              "additionalProperties": true,
+              "x-unreal-reflection-boundary": true,
+              "description": "What the chosen knobs change in the picture, as describe_view compareWith reports it: changed (% of the picture), regionCount, regions (box, share, the actors drawn there before and after) and brightnessShift."
+            },
+            "cameraLocation": {
+              "type": "object",
+              "additionalProperties": true,
+              "x-unreal-reflection-boundary": true,
+              "description": "Where the view was measured from."
+            },
+            "cameraRotation": {
+              "type": "object",
+              "additionalProperties": true,
+              "x-unreal-reflection-boundary": true,
+              "description": "Which way the view looked."
+            }
+          },
+          "required": [
+            "success"
+          ],
+          "additionalProperties": false
+        }
+      },
+      "examples": [
+        {
+          "title": "Bring the level viewport's GPU frame time under budgetMs by turning down per-actor knobs at the least change to the picture, kept as one undo step. Each knob is switched on in turn and off again straight after, each state measured (the lower quartile of 16 frames' GPU times), so its gain is the difference of two measures a moment apart, and judged by how much of the picture it changes beyond the renderer's own noise against the picture just before it (as describe_view compareWith judges): a movable light casting shadows into the view (its shadows off), and the small meshes in the view beyond 20, 40 or 80 m (not drawn past that distance). The cheapest set whose gains reach the budget is picked, measured together and kept. The reply lists every knob tried (knobs: gainMs, changed as % of the picture, chosen), predictedMs, measuredMs, met, applied, and change (where the picture changed, with the actors drawn there before and after). It measures what the editor draws now, at its scalability and viewport size, from the view location, rotation and fov give, never in Play; at shadow quality Low no dynamic shadows are drawn, so lights are not tried (a warning says so: raise the Shadow group with set_scalability to measure them). A view already within the budget answers at once; when the knobs cannot reach it nothing changes and the reply says how close every knob together comes. dryRun measures and picks without keeping. Answers in about 3-20 s, the editor window held on screen meanwhile. Refusals: EDITOR_STATE_MISMATCH during Play, NO_VIEWPORT, NOTHING_TO_TRY (no knob in this view: move it to where the frame is slow), GPU_TIMING_UNAVAILABLE (turn on enable_gpu_timing), VIEWPORT_CHANGED (the viewport closed, resized or Play started mid-run; nothing changed).",
+          "input": {
+            "action": "fit_frame_budget",
+            "budgetMs": 12
+          },
+          "output": {
+            "success": true,
+            "message": "The view draws in 14.20 ms on the GPU against a 12.00 ms budget: 2 knob(s) bring it to 11.80 ms (predicted 11.60), changing 3.1% of the picture; kept as one undo step.",
+            "budgetMs": 12,
+            "baselineMs": 14.2,
+            "noiseMs": 0.1,
+            "predictedMs": 11.6,
+            "measuredMs": 11.8,
+            "met": true,
+            "applied": true
+          }
+        }
+      ],
+      "availability": {
+        "requiredPlugins": [],
+        "editorStates": [
+          "edit"
+        ]
+      },
+      "behavior": {
+        "effect": "write",
+        "idempotency": "non-idempotent",
+        "longRunning": true,
+        "safeToRetry": false
+      },
+      "policy": {
+        "requiredScope": "write",
+        "consent": "none",
+        "dataAccess": "project-write"
+      },
+      "cost": {
+        "latency": "long-running",
+        "resources": "high"
+      },
+      "routing": {
+        "parentTool": "system_control",
+        "dispatchAction": "fit_frame_budget"
+      },
+      "hashes": {
+        "algorithm": "sha256",
+        "schema": "96411be8dec6c9fbbae394f22f0f04ddb7688151aec7f6d1442243e9fb43a866",
+        "content": "88486e2393aa1e75b3cd8dd36e013ac66aefe84fe027eda199ab07788b656a93"
       }
     },
     {

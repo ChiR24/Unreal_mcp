@@ -1193,4 +1193,7 @@ export const PLAIN_PROBE: readonly PlainProbeCase[] = [
   { query: 'path traced screenshot', accepted: ['control_editor.screenshot'] },
   { query: 'render a denoised path traced image', accepted: ['control_editor.screenshot'] },
   { query: 'take a path traced screenshot', accepted: ['control_editor.screenshot'] },
+  { query: 'fit the frame budget', accepted: ['system_control.fit_frame_budget'] },
+  { query: 'reduce the gpu frame time', accepted: ['system_control.fit_frame_budget'] },
+  { query: 'which shadows cost the most frame time', accepted: ['system_control.fit_frame_budget'] },
 ];

@@ -19,6 +19,7 @@ All notable changes to the EngineWire plugin (formerly McpAutomationBridge) will
 - **Sequences and variables**: a copied sequence's possessables rebind by label; `add_variable` sets Expose to Cinematics; the sequence trigger behaviour plays a Level Sequence on a local player's overlap, cinematic mode on until OnFinished.
 - **Graph as code**: read `entry` and `codeOnly`; the write reply reads back only the entries written.
 - **Scripts and sheets**: run_script takes `(if cond a b)` as a value and awaits a step that answers later within its deadline, going on in the request's brackets again by replaying from a memo; sheets can leave no file.
+- **Frame budget**: `fit_frame_budget` switches each knob (a movable light's shadows, small meshes past 20/40/80 m) on and off again in render state, its gain the difference of the two (lower quartile of 16 frames' GPU time each, noise from the knob-off spread) and its cost the picture's change beyond noise, and keeps the multiple-choice knapsack's cheapest pick as one undo step.
 
 ### Fixed
 - **Search and replies**: lead verbs and fold aliases run their member; paging and aggregate read a reply's `data`; console text stays lean; the consent and deferred-step messages say what to do next; a logpoint reads an unwired input as its literal (the debug data maps a Set's value pin to the variable it writes).

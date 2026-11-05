@@ -1,5 +1,6 @@
 #include "Core/Compatibility/McpVersionCompatibility.h"
 
+#include "Domains/Performance/Budget/McpFrameBudget.h"
 #include "Domains/Performance/McpPerfPrivate.h"
 
 namespace McpPerformanceHandlers
@@ -49,7 +50,8 @@ bool IsPerformanceAction(const FString& RequestAction, const FString& Lower)
            Lower.StartsWith(TEXT("optimize_draw_calls")) ||
            Lower.StartsWith(TEXT("configure_occlusion_culling")) ||
            Lower.StartsWith(TEXT("optimize_shaders")) ||
-           Lower.StartsWith(TEXT("configure_world_partition"));
+           Lower.StartsWith(TEXT("configure_world_partition")) ||
+           Lower.StartsWith(TEXT("fit_frame_budget"));
 }
 }
 
@@ -82,6 +84,11 @@ bool UEngineWireSubsystem::HandlePerformanceAction(
                             TEXT("manage_performance requires action or subAction"),
                             TEXT("INVALID_ACTION"));
         return true;
+    }
+
+    if (Lower == TEXT("fit_frame_budget"))
+    {
+        return McpFrameBudget::Handle(this, RequestId, Payload, RequestingSocket);
     }
 
     const McpPerformanceHandlers::FPerformanceActionContext Context{
