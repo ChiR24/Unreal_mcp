@@ -384,6 +384,7 @@ export const CAPABILITY_COST_INDEX: Readonly<Record<string, string>> = {
   "control_editor::execute_command": "instant|low",
   "control_editor::explore_level": "long-running|high",
   "control_editor::focus_actor": "instant|low",
+  "control_editor::fuzz_blueprint": "long-running|medium",
   "control_editor::hide_stats": "instant|low",
   "control_editor::invoke_reflected_function": "interactive|low",
   "control_editor::jump_to_bookmark": "instant|low",
@@ -1695,4 +1696,4 @@ export const CAPABILITY_COST_INDEX: Readonly<Record<string, string>> = {
   "system_control::write_snapshot": "interactive|medium"
 };
 
-export const CAPABILITY_COST_INDEX_KEY_COUNT = 1682;
+export const CAPABILITY_COST_INDEX_KEY_COUNT = 1683;

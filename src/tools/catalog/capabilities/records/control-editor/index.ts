@@ -33,6 +33,7 @@ import { CAMERA_RECORDS } from './camera.js';
 import { COMMAND_RECORDS } from './command.js';
 import { EDITOR_UI_RECORDS } from './editor-ui.js';
 import { EXPLORE_RECORDS } from './explore.js';
+import { FUZZ_RECORDS } from './fuzz.js';
 import { HISTORY_RECORDS } from './history.js';
 import { INPUT_RECORDS } from './input.js';
 import { PLAYTEST_RECORDS } from './playtest.js';
@@ -59,6 +60,7 @@ export const CONTROL_EDITOR_UNFOLDED_SOURCES: readonly CapabilityRecordSource[] 
   ...HISTORY_RECORDS,
   ...PLAYTEST_RECORDS,
   ...EXPLORE_RECORDS,
+  ...FUZZ_RECORDS,
   ...EDITOR_UI_RECORDS,
 ];
 

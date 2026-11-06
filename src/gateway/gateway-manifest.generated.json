@@ -5456,6 +5456,7 @@
         "undo",
         "playtest",
         "explore_level",
+        "fuzz_blueprint",
         "read_editor_ui"
       ],
       "parameterNames": [
@@ -5466,6 +5467,7 @@
         "assetPath",
         "assetPaths",
         "blendTime",
+        "blueprintPath",
         "button",
         "camera",
         "cameraOp",
@@ -5493,6 +5495,7 @@
         "frameRate",
         "from",
         "functionName",
+        "functions",
         "goal",
         "goalActor",
         "height",
@@ -5510,6 +5513,7 @@
         "levelPath",
         "limit",
         "location",
+        "maxCalls",
         "maxSeconds",
         "maxWidgets",
         "metadata",
@@ -5593,6 +5597,10 @@
           "blendTime": {
             "type": "number",
             "description": "Blend time in seconds for set_view_target."
+          },
+          "blueprintPath": {
+            "type": "string",
+            "description": "Instead of actorName: a Blueprint whose first instance in the running game is called; its own functions are the default."
           },
           "button": {
             "type": "string",
@@ -5739,6 +5747,15 @@
             "type": "string",
             "description": "Function name exactly as reported by describe_reflected_api."
           },
+          "functions": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "minItems": 1,
+            "maxItems": 64,
+            "description": "The functions and custom events to call, a parent Blueprint's included (default: the Blueprint's own that take inputs, at most 64)."
+          },
           "goal": {
             "type": "object",
             "properties": {
@@ -5878,6 +5895,12 @@
               }
             ],
             "description": "3D location (x, y, z)."
+          },
+          "maxCalls": {
+            "type": "number",
+            "minimum": 1,
+            "maximum": 500,
+            "description": "Calls at most, across every function (default 200)."
           },
           "maxSeconds": {
             "type": "number",
@@ -6162,6 +6185,7 @@
               "undo",
               "playtest",
               "explore_level",
+              "fuzz_blueprint",
               "read_editor_ui"
             ],
             "description": "Action to invoke on control_editor."

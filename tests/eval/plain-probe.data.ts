@@ -1196,4 +1196,7 @@ export const PLAIN_PROBE: readonly PlainProbeCase[] = [
   { query: 'fit the frame budget', accepted: ['system_control.fit_frame_budget'] },
   { query: 'reduce the gpu frame time', accepted: ['system_control.fit_frame_budget'] },
   { query: 'which shadows cost the most frame time', accepted: ['system_control.fit_frame_budget'] },
+  { query: 'fuzz a blueprint', accepted: ['control_editor.fuzz_blueprint'] },
+  { query: 'call blueprint functions with edge case inputs', accepted: ['control_editor.fuzz_blueprint'] },
+  { query: 'which inputs break this blueprint function', accepted: ['control_editor.fuzz_blueprint'] },
 ];

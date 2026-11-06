@@ -14,7 +14,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - **Engine versions**: a capability an older engine cannot run reads `unavailable` and is refused `ENGINE_VERSION_UNSUPPORTED` (Geometry Script 5.1, MetaSound graph reads and skinning 5.5, retargeting 5.8).
 - **Search and execute**: a typo is read as the word meant (`corrected`), `options.aggregate` counts a long list by group, and an alias sent as tool + action resolves (five new aliases).
-- **Blueprints**: `lint_blueprint` follows values (a divisor that can be 0, an index past the end, a Set outside a Value Range, `==` on computed floats, a decided Branch, an endless While); MVVM viewmodels (UE 5.4+); `add_variable` `exposeToCinematics`.
+- **Blueprints**: `lint_blueprint` follows values (a divisor that can be 0, an index past the end, a Set outside a Value Range, `==` on computed floats, a decided Branch, an endless While) and `fuzz_blueprint` calls its functions in Play with edge-case inputs, naming each error's node; MVVM viewmodels (UE 5.4+); `add_variable` `exposeToCinematics`.
 - **Graph as code**: `read_graph_as_code` `entry` (one event or function) and `codeOnly` (no node and link lists); `write_graph_from_code` reads back only what it wrote.
 - **Cutscene shots without Play**: `camera` looks through a camera actor as it is now (`screenshot`, `describe_view`, `analyze_view`, `audit_materials`), and `pause` and `list_track_keys` name the camera each cut shows.
 - **Views**: `screenshot` `renderSize` draws the game's frame size and `pathTraced` a denoised path-traced review image; `fov` beside `location` and `rotation` on every view read.

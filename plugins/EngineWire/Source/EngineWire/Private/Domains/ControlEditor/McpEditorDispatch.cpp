@@ -5,6 +5,7 @@
 #include "Domains/ControlEditor/Toolsets/McpEditorToolsets.h"
 #include "Domains/ControlEditor/Viewport/McpEditorShowFlags.h"
 #include "Domains/Play/McpExplore.h"
+#include "Domains/Play/McpFuzz.h"
 #include "Domains/Play/McpPlaytest.h"
 
 bool UEngineWireSubsystem::HandleControlEditorAction(
@@ -42,6 +43,8 @@ bool UEngineWireSubsystem::HandleControlEditorAction(
     return McpPlaytest::Handle(*this, RequestId, Payload, RequestingSocket);
   if (LowerSub == TEXT("explore_level"))
     return McpExplore::Handle(*this, RequestId, Payload, RequestingSocket);
+  if (LowerSub == TEXT("fuzz_blueprint"))
+    return McpFuzz::Handle(*this, RequestId, Payload, RequestingSocket);
   if (LowerSub == TEXT("eject"))
     return HandleControlEditorEject(RequestId, Payload, RequestingSocket);
   if (LowerSub == TEXT("possess"))

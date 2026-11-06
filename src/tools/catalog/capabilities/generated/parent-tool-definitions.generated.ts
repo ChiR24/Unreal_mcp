@@ -7230,6 +7230,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "number",
           "description": "Blend time in seconds for set_view_target."
         },
+        "blueprintPath": {
+          "type": "string",
+          "description": "Instead of actorName: a Blueprint whose first instance in the running game is called; its own functions are the default."
+        },
         "button": {
           "type": "string",
           "description": "Mouse button for simulate_input."
@@ -7375,6 +7379,15 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "string",
           "description": "Function name exactly as reported by describe_reflected_api."
         },
+        "functions": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "minItems": 1,
+          "maxItems": 64,
+          "description": "The functions and custom events to call, a parent Blueprint's included (default: the Blueprint's own that take inputs, at most 64)."
+        },
         "goal": {
           "type": "object",
           "properties": {
@@ -7514,6 +7527,12 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             }
           ],
           "description": "3D location (x, y, z)."
+        },
+        "maxCalls": {
+          "type": "number",
+          "minimum": 1,
+          "maximum": 500,
+          "description": "Calls at most, across every function (default 200)."
         },
         "maxSeconds": {
           "type": "number",
@@ -7798,6 +7817,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             "undo",
             "playtest",
             "explore_level",
+            "fuzz_blueprint",
             "read_editor_ui"
           ],
           "description": "Action to invoke on control_editor."
@@ -7827,6 +7847,14 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "bestDistance": {
           "type": "number",
           "description": "The nearest it got to the goal, in cm (2D)."
+        },
+        "blueprintPath": {
+          "type": "string",
+          "description": "The Blueprint whose functions were the default."
+        },
+        "calls": {
+          "type": "number",
+          "description": "Calls made."
         },
         "cameraLocation": {
           "oneOf": [
@@ -8057,6 +8085,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "string",
           "description": "How the leg ended: reached, stuck, fell, timeout, paused, pawn_lost, world_ended, or the reason no leg was tried (no_path, partial, start_off_navmesh, goal_off_navmesh)."
         },
+        "failures": {
+          "type": "number",
+          "description": "Calls that raised a Blueprint runtime error."
+        },
         "filename": {
           "type": "string",
           "description": "Screenshot or recording filename."
@@ -8083,48 +8115,62 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "description": "Function invoked."
         },
         "functions": {
-          "type": "array",
-          "description": "Reflected functions, name-sorted.",
-          "items": {
-            "type": "object",
-            "additionalProperties": false,
-            "properties": {
-              "name": {
-                "type": "string",
-                "description": "Function name as reflected."
-              },
-              "parameterCount": {
-                "type": "number",
-                "description": "Declared parameters, including the return value."
-              },
-              "parameters": {
-                "type": "array",
-                "description": "Parameters in declaration order.",
-                "items": {
-                  "type": "object",
-                  "additionalProperties": false,
-                  "properties": {
-                    "name": {
-                      "type": "string",
-                      "description": "Parameter name."
-                    },
-                    "cppType": {
-                      "type": "string",
-                      "description": "Reflected C++ type, for example FString."
-                    },
-                    "isReturn": {
-                      "type": "boolean",
-                      "description": "True for the return value."
-                    },
-                    "isOut": {
-                      "type": "boolean",
-                      "description": "True for an out parameter that is not the return value."
+          "oneOf": [
+            {
+              "type": "array",
+              "description": "Reflected functions, name-sorted.",
+              "items": {
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {
+                  "name": {
+                    "type": "string",
+                    "description": "Function name as reflected."
+                  },
+                  "parameterCount": {
+                    "type": "number",
+                    "description": "Declared parameters, including the return value."
+                  },
+                  "parameters": {
+                    "type": "array",
+                    "description": "Parameters in declaration order.",
+                    "items": {
+                      "type": "object",
+                      "additionalProperties": false,
+                      "properties": {
+                        "name": {
+                          "type": "string",
+                          "description": "Parameter name."
+                        },
+                        "cppType": {
+                          "type": "string",
+                          "description": "Reflected C++ type, for example FString."
+                        },
+                        "isReturn": {
+                          "type": "boolean",
+                          "description": "True for the return value."
+                        },
+                        "isOut": {
+                          "type": "boolean",
+                          "description": "True for an out parameter that is not the return value."
+                        }
+                      }
                     }
                   }
                 }
               }
+            },
+            {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "additionalProperties": true,
+                "x-unreal-reflection-boundary": true
+              },
+              "description": "Per function: function, first (each input's plain value), planned (the calls its inputs give), calls (made: fewer after its third failing call, or when the run stopped), failed (at most 3, each {inputs: the input that differed from first, none when the plain call itself failed; errors: [{message, node, nodeId, count}]})."
             }
-          }
+          ],
+          "description": "Per function: function, first (each input's plain value), planned (the calls its inputs give), calls (made: fewer after its third failing call, or when the run stopped), failed (at most 3, each {inputs: the input that differed from first, none when the plain call itself failed; errors: [{message, node, nodeId, count}]})."
         },
         "gameSeconds": {
           "type": "number",
@@ -8308,6 +8354,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           },
           "description": "Blueprint runtime errors during the leg, each with the node that raised it."
         },
+        "seconds": {
+          "type": "number",
+          "description": "Real seconds the calls took."
+        },
         "selected": {
           "type": "array",
           "items": {
@@ -8345,6 +8395,12 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "string",
           "description": "Why an exploring call answered: seconds, paused, pawn_lost or world_ended."
         },
+        "stoppedBy": {
+          "type": "object",
+          "additionalProperties": true,
+          "x-unreal-reflection-boundary": true,
+          "description": "{function, inputs}: the call after which the actor was gone, or Play was ending."
+        },
         "success": {
           "type": "boolean",
           "description": "Whether the action succeeded."
@@ -8352,6 +8408,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "tabId": {
           "type": "string",
           "description": "Tab id acted on."
+        },
+        "target": {
+          "type": "string",
+          "description": "The actor called."
         },
         "texturesStillStreaming": {
           "type": "number",

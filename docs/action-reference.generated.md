@@ -4,7 +4,7 @@
 
 # Action reference
 
-Catalog revision: `fc79f0ba01958889`
+Catalog revision: `10e6b64480e75fd0`
 
 Both transports expose exactly ONE public MCP tool, `unreal`, with the four
 operations `search` / `describe` / `execute` / `configure`. The parent tools
@@ -13,7 +13,7 @@ by `tools/list` and a direct `tools/call` on one returns a
 `DIRECT_TOOL_CALL_REMOVED` receipt rather than executing
 (`src/server/gateway/direct-call-migration.ts`).
 
-The catalog declares 488 capabilities across
+The catalog declares 489 capabilities across
 23 internal parent tools.
 Every row is derived from the capability record that the gateway actually
 validates against, so `execute` cannot accept an action this table omits.
@@ -42,7 +42,7 @@ validates against, so `execute` cannot accept an action this table omits.
 | `animation_physics` | 32 | 5 | 25 | 2 | animation physics |
 | `build_environment` | 44 | 5 | 36 | 3 | environment |
 | `control_actor` | 36 | 9 | 24 | 3 | actor |
-| `control_editor` | 28 | 10 | 15 | 3 | editor |
+| `control_editor` | 29 | 10 | 16 | 3 | editor |
 | `inspect` | 28 | 23 | 4 | 1 | inspect |
 | `manage_ai` | 17 | 3 | 14 | 0 | manage ai |
 | `manage_asset` | 54 | 14 | 35 | 5 | asset, datatable, enum, material, struct, texture |
@@ -65,7 +65,7 @@ validates against, so `execute` cannot accept an action this table omits.
 
 ## Capabilities requiring consent
 
-77 of 488 capabilities require consent.
+77 of 489 capabilities require consent.
 
 | Capability | Tool | Action | Effect | Consent |
 | --- | --- | --- | --- | --- |
@@ -341,6 +341,7 @@ validates against, so `execute` cannot accept an action this table omits.
 | `control_editor.describe_reflected_api` | `control_editor` | `control_editor` | read | read | none | `control_editor.describe_reflected_api` |
 | `control_editor.explore_level` | `control_editor` | `explore_level` | write | write | none | `control_editor.explore_level` |
 | `control_editor.focus_actor` | `control_editor` | `focus_actor` | read | read | none | `control_editor.focus_actor` |
+| `control_editor.fuzz_blueprint` | `control_editor` | `fuzz_blueprint` | write | write | none | `control_editor.fuzz_blueprint` |
 | `control_editor.invoke_reflected_function` | `control_editor` | `control_editor` | destructive | destructive | elevated | `control_editor.invoke_reflected_function` |
 | `control_editor.jump_to_bookmark` | `control_editor` | `jump_to_bookmark` | read | read | none | `control_editor.jump_to_bookmark` |
 | `control_editor.list_editor_toolsets` | `control_editor` | `control_editor` | read | read | none | `control_editor.list_editor_toolsets` |
