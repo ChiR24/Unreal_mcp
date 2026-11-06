@@ -116,7 +116,7 @@ The [Quick Start](https://github.com/ChiR24/Unreal_mcp/wiki/Quick-Start) page wa
 
 ### 1. Add the plugin
 
-**From Fab (no compiler needed).** Get [EngineWire on Fab](https://www.fab.com/listings/9407137f-14b3-44a8-af0e-e9c6a9c9f6fc). In the Epic Games Launcher, open **Unreal Engine › Library › Fab Library**, find **EngineWire** and click **Install to Engine** for your engine version. Open your project, enable **EngineWire** in **Edit › Plugins** and restart the editor. The Fab build ships with the native server off: turn on **Enable Native MCP Server** in **Edit › Project Settings › Plugins › EngineWire › Native MCP** and restart once more. Fab updates follow Epic's review, so the Fab build can trail the newest release here.
+**From Fab (no compiler needed).** Get [EngineWire on Fab](https://www.fab.com/listings/9407137f-14b3-44a8-af0e-e9c6a9c9f6fc). In the Epic Games Launcher, open **Unreal Engine › Library › Fab Library**, find **EngineWire** and click **Install to Engine** for your engine version. Open your project, enable **EngineWire** in **Edit › Plugins** and restart the editor. Fab's 0.6.0 build ships with the native server off: if the status bar reads **`MCP off`**, turn on **Enable Native MCP Server** in **Edit › Project Settings › Plugins › EngineWire › Native MCP** and restart once more. Fab updates follow Epic's review, so the Fab build can trail the newest release here.
 
 **From a release.** Download `EngineWire-plugin-<version>.zip` from the newest release on the [Releases page](https://github.com/ChiR24/Unreal_mcp/releases), and copy the `EngineWire` folder it contains into your project:
 
@@ -149,7 +149,7 @@ This writes `build/EngineWire-v<version>-UE5.7-<Platform>.zip`, where `<version>
 
 **Route A · Native HTTP (no Node.js)**
 
-1. **Enable Native MCP Server** is on by default (**Edit › Project Settings › Plugins › EngineWire**, port `3000`); the Fab build ships with it off. A project where it is off needs it on and an editor restart.
+1. **Enable Native MCP Server** is on by default (**Edit › Project Settings › Plugins › EngineWire**, port `3000`); Fab's 0.6.0 build ships with it off. A project where it is off needs it on and an editor restart.
 
    <img src="https://raw.githubusercontent.com/wiki/ChiR24/Unreal_mcp/assets/screenshots/settings-native-mcp.png" alt="The Native MCP section of the plugin settings, with Enable Native MCP Server ticked" width="520">
 

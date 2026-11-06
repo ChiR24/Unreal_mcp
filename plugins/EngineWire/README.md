@@ -46,7 +46,7 @@ The full list is the generated [Action Reference](https://github.com/ChiR24/Unre
 1. Get [EngineWire on Fab](https://www.fab.com/listings/9407137f-14b3-44a8-af0e-e9c6a9c9f6fc), then open the Epic Games Launcher.
 2. In **Unreal Engine › Library › Fab Library**, find **EngineWire** and click **Install to Engine** for your engine version.
 3. Open your project, enable **EngineWire** in **Edit › Plugins**, and restart the editor. Fab installs it as an engine plugin, so there is nothing to copy into the project.
-4. The Fab build ships with the native server off: turn on **Enable Native MCP Server** in **Edit › Project Settings › Plugins › EngineWire › Native MCP**, and restart the editor once more.
+4. Fab's 0.6.0 build ships with the native server off: if the status bar reads **`MCP off`**, turn on **Enable Native MCP Server** in **Edit › Project Settings › Plugins › EngineWire › Native MCP**, and restart the editor once more.
 
 Fab updates follow Epic's review, so the Fab build can trail the newest [release](https://github.com/ChiR24/Unreal_mcp/releases).
 
@@ -149,7 +149,7 @@ Both routes negotiate MCP protocol versions `2025-11-25`, `2025-06-18` and `2025
 
 | Setting | Default | |
 |---------|---------|---|
-| **Enable Native MCP Server** | on (off in the Fab build) | Serve MCP over Streamable HTTP at `/mcp`; both routes use it |
+| **Enable Native MCP Server** | on (off in Fab's 0.6.0 build) | Serve MCP over Streamable HTTP at `/mcp`; both routes use it |
 | **Native MCP Port** | `3000` | Must differ from the WebSocket ports. The `MCP_NATIVE_PORT` environment variable of the editor process overrides it, for example to run several editors at once. |
 | **Load All Tools on Start** | on | When off, only the `core` internal tools start enabled; `configure` can enable the rest |
 | **Server Instructions** | empty | Text appended to the instructions native clients receive when they connect |
@@ -195,7 +195,7 @@ More: [Security](https://github.com/ChiR24/Unreal_mcp/wiki/Security). Report vul
 |---------|-----|
 | *"Plugin 'EngineWire' failed to load"* on the very first open | Close the editor and open the project again. It loads once the first build has finished. |
 | *"Engine modules cannot be compiled at runtime"* | Build the Editor target once in your IDE, then reopen the project |
-| Status bar reads **`MCP off`** | The native HTTP server is off (the Fab build ships that way): tick **Enable Native MCP Server** and restart the editor |
+| Status bar reads **`MCP off`** | The native HTTP server is off (Fab's 0.6.0 build ships that way): tick **Enable Native MCP Server** and restart the editor |
 | **401** from the native server | The `X-MCP-Capability-Token` header is missing or wrong. Copy `Saved/MCP/capability-token` again, without a trailing newline. |
 | stdio server answers `NOT_CONNECTED` | Keep the editor open with the plugin loaded and the native server on. If the message ends in `initialize answered HTTP 401`, point `UE_PROJECT_PATH` at the open project |
 | Build errors after an update | Close the editor, delete the plugin's `Binaries/` and `Intermediate/` folders, regenerate project files and rebuild |
