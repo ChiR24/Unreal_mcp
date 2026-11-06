@@ -6,6 +6,12 @@ All notable changes to the EngineWire plugin (formerly McpAutomationBridge) will
 
 ## [Unreleased]
 
+_Nothing yet._
+
+## [0.6.1-beta-a] - 2026-11-06
+
+Plugin-side changes since the `v0.6.0` tag, from the code diff. The server-side view is in the root `CHANGELOG.md`.
+
 ### Added
 - **Engine version gate**: a record's `availability.minEngineVersion` hides the capability from search and describe below it, and execute refuses it `ENGINE_VERSION_UNSUPPORTED`.
 - **Gateway**: search corrects typos to catalog words, `options.aggregate` counts a reply's list by group, and an alias sent as tool + action resolves.

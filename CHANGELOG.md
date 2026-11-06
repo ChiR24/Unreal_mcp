@@ -9,6 +9,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## 🏷️ [Unreleased]
 
+_Nothing yet._
+
+---
+
+## 🏷️ [0.6.1-beta-a] - 2026-11-06
+
+> [!NOTE]
+> **Beta.** Published as a semver prerelease (`0.6.1-beta-a`) under the npm `beta` dist-tag, so `npm install` keeps serving the newest stable release, **`0.6.0`**. This section is everything on `dev` since the `v0.6.0` tag, written from the code diff.
+
 <details>
 <summary><b>✨ Added</b></summary>
 
