@@ -171,8 +171,7 @@
     },
     {
       "Name": "Metasound",
-      "Enabled": true,
-      "Optional": true
+      "Enabled": true
     },
     {
       "Name": "StateTree",
@@ -220,18 +219,15 @@
     },
     {
       "Name": "MovieRenderPipeline",
-      "Enabled": true,
-      "Optional": true
+      "Enabled": true
     },
     {
       "Name": "MoviePipelineMaskRenderPass",
-      "Enabled": true,
-      "Optional": true
+      "Enabled": true
     },
     {
       "Name": "Takes",
-      "Enabled": true,
-      "Optional": true
+      "Enabled": true
     },
     {
       "Name": "ElectraPlayer",

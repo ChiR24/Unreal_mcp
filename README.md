@@ -339,6 +339,8 @@ The bridge declares its engine-plugin dependencies, so Unreal enables them toget
 | **Niagara** | Visual effects |
 | **Gameplay Abilities** | `manage_gas` |
 | **Smart Objects** | AI smart objects |
+| **Movie Render Pipeline**, **Movie Pipeline Mask Render Pass**, **Takes** | `manage_sequence`: Movie Render Queue and Take Recorder |
+| **MetaSound** | `manage_audio`: MetaSound authoring |
 
 </details>
 
@@ -349,7 +351,7 @@ The bridge declares its engine-plugin dependencies, so Unreal enables them toget
 
 | Plugin | Used for |
 | --- | --- |
-| **Level Sequence Editor**, **Takes**, **Movie Render Pipeline**, **Movie Pipeline Mask Render Pass**, **Electra Player** | `manage_sequence`: Sequencer, Take Recorder, Movie Render Queue, media playback |
+| **Level Sequence Editor**, **Electra Player** | `manage_sequence`: Sequencer, media playback |
 | **Control Rig**, **RigVM**, **IK Rig**, **Animation Data** | `animation_physics`: Control Rig and IK |
 | **Chaos Vehicles**, **Chaos Cloth** | `animation_physics`: vehicles and cloth |
 | **Niagara Editor** | `manage_effect`: Niagara authoring |
@@ -358,7 +360,7 @@ The bridge declares its engine-plugin dependencies, so Unreal enables them toget
 | **PCG** | `manage_pcg`, compiled in only when the project itself enables the PCG plugin |
 | **Game Features** | `system_control`: game feature plugins (listed, activated, made with `create_plugin`) through the `EngineWireGameFeatures` module, loaded only when the project itself enables Game Features (EngineWire never turns it on) |
 | **Data Registry** | `manage_asset`: data registries listed, read and made over data tables, by reflection when the project itself enables Data Registry (EngineWire never turns it on) |
-| **MetaSound**, **Synthesis** | `manage_audio`: MetaSound authoring |
+| **Synthesis** | `manage_audio`: source effect presets |
 | **Enhanced Input**, **Online Subsystem**, **Online Subsystem Utils** | `manage_networking`: input mappings, sessions |
 | **Interchange**, **Interchange OpenUSD**, **Data Validation**, **StructUtils** | Import/export, validation, struct helpers |
 | **Fab**, **Bridge** | Fab asset library access (optional `EngineWireFab` module) |

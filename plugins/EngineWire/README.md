@@ -69,8 +69,8 @@ Fab updates follow Epic's review, so the Fab build can trail the newest [release
 
 The plugin declares the engine plugins it uses, so Unreal enables them with it:
 
-- **Always enabled:** Python Editor Script Plugin, Editor Scripting Utilities, Niagara, Gameplay Abilities, Smart Objects
-- **Optional**, used when present: Sequencer, Movie Render Queue, Takes, Control Rig, IK Rig, Niagara Editor, Behavior Tree and EQS editors, StateTree, MetaSound, Enhanced Input, Geometry Scripting, PCG, Interchange, Online Subsystem, Fab and others. The full table is in [Installation](https://github.com/ChiR24/Unreal_mcp/wiki/Installation#engine-plugins-it-uses).
+- **Always enabled:** Python Editor Script Plugin, Editor Scripting Utilities, Niagara, Gameplay Abilities, Smart Objects, MetaSound, Movie Render Queue and its Additional Render Passes, Takes
+- **Optional**, used when present: Sequencer, Control Rig, IK Rig, Niagara Editor, Behavior Tree and EQS editors, StateTree, Enhanced Input, Geometry Scripting, PCG, Interchange, Online Subsystem, Fab and others. The full table is in [Installation](https://github.com/ChiR24/Unreal_mcp/wiki/Installation#engine-plugins-it-uses).
 
 A capability whose engine plugin is missing returns an error; everything else keeps working.
 
@@ -232,7 +232,7 @@ Tools & Plugins
 - **Supported Target Build Platforms:** Editor-only plugin for Win64, Mac, and Linux editor targets. It is not intended to be included in packaged game runtime builds.
 - **Documentation Link:** https://github.com/ChiR24/Unreal_mcp/tree/main/plugins/EngineWire#readme
 - **Example Project:** Not included. The plugin can be enabled in any Unreal Engine C++ project; see the documentation link for setup steps.
-- **Important/Additional Notes:** Requires Unreal Engine 5.0-5.8. Required engine plugins are `PythonScriptPlugin`, `EditorScriptingUtilities`, `Niagara`, `GameplayAbilities`, and `SmartObjects`. Other integration references are enabled but marked optional so compatible installed engine plugins can support their matching features without becoming hard distribution dependencies. These integrations include `LevelSequenceEditor`, `MovieRenderPipeline`, `MoviePipelineMaskRenderPass`, `Takes`, `ElectraPlayer`, `NiagaraEditor`, `BehaviorTreeEditor`, `EnvironmentQueryEditor`, `ControlRig`, `RigVM`, `IKRig`, `ChaosVehiclesPlugin`, `AnimationData`, `ProceduralMeshComponent`, `Interchange`, `InterchangeOpenUSD`, `DataValidation`, `EnhancedInput`, `GeometryScripting`, `GeometryProcessing`, `MeshModelingToolset`, `ChaosCloth`, `StructUtils`, `Metasound`, `StateTree`, `MassGameplay`, `OnlineSubsystem`, `OnlineSubsystemUtils`, `Synthesis`, `PCG`, `Fab`, and `Bridge`. The native MCP server does not require Node.js. The optional stdio route uses the separately distributed `unreal-engine-mcp-server` Node.js package.
+- **Important/Additional Notes:** Requires Unreal Engine 5.0-5.8. Required engine plugins are `PythonScriptPlugin`, `EditorScriptingUtilities`, `Niagara`, `GameplayAbilities`, `SmartObjects`, `Metasound`, `MovieRenderPipeline`, `MoviePipelineMaskRenderPass`, and `Takes`. Other integration references are enabled but marked optional so compatible installed engine plugins can support their matching features without becoming hard distribution dependencies. These integrations include `LevelSequenceEditor`, `ElectraPlayer`, `NiagaraEditor`, `BehaviorTreeEditor`, `EnvironmentQueryEditor`, `ControlRig`, `RigVM`, `IKRig`, `ChaosVehiclesPlugin`, `AnimationData`, `ProceduralMeshComponent`, `Interchange`, `InterchangeOpenUSD`, `DataValidation`, `EnhancedInput`, `GeometryScripting`, `GeometryProcessing`, `MeshModelingToolset`, `ChaosCloth`, `StructUtils`, `StateTree`, `MassGameplay`, `OnlineSubsystem`, `OnlineSubsystemUtils`, `Synthesis`, `PCG`, `Fab`, and `Bridge`. The native MCP server does not require Node.js. The optional stdio route uses the separately distributed `unreal-engine-mcp-server` Node.js package.
 
 ---
 
