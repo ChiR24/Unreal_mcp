@@ -47,7 +47,9 @@ bool IsRequired(const TSharedPtr<FJsonObject>& Schema, const FString& Name)
 TArray<FString> ParameterNames(const TSharedPtr<FJsonObject>& Schema)
 {
 	TArray<FString> Names;
-	for (const auto& Pair : SchemaProperties(Schema)->Values)
+	// Held: with no properties the object is a fresh one the temporary alone owned, freed before the loop ran.
+	const TSharedPtr<FJsonObject> Properties = SchemaProperties(Schema);
+	for (const auto& Pair : Properties->Values)
 	{
 		// Both key types dereference to a null-terminated TCHAR buffer, so a view
 		// compares without allocating on every supported engine version.

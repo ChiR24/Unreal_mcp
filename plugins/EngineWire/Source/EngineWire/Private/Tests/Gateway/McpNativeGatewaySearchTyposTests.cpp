@@ -129,7 +129,9 @@ bool FMcpExecuteAggregateTest::RunTest(const FString& Parameters)
 	TSharedPtr<FJsonObject> ByLabel = MakeShared<FJsonObject>();
 	ByLabel->SetStringField(TEXT("groupBy"), TEXT("label"));
 	TMap<FString, int32> Counted;
-	for (const TSharedPtr<FJsonValue>& Group : McpExecuteAggregate::Apply(ByLabel, nullptr, Level)->GetArrayField(TEXT("groups")))
+	// Held: a range-for over a temporary's member walked the block after the temporary freed it.
+	const TSharedPtr<FJsonObject> ByLabelBlock = McpExecuteAggregate::Apply(ByLabel, nullptr, Level);
+	for (const TSharedPtr<FJsonValue>& Group : ByLabelBlock->GetArrayField(TEXT("groups")))
 	{
 		Counted.Add(Group->AsObject()->GetStringField(TEXT("value")), static_cast<int32>(Group->AsObject()->GetNumberField(TEXT("count"))));
 	}
