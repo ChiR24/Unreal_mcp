@@ -14,6 +14,7 @@
 #if ENGINE_MAJOR_VERSION > 5 || ENGINE_MINOR_VERSION >= 1
 #include "AssetToolsModule.h"
 #include "GameFeatureData.h"
+#include "GameFeaturePluginOperationResult.h"
 #include "GameFeaturesSubsystem.h"
 #include "GameFeatureTypes.h"
 #include "Interfaces/IPluginManager.h"
