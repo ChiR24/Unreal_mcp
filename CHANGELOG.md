@@ -39,24 +39,83 @@ _Nothing yet._
 </details>
 
 <details>
+<summary><b>🔄 Changed</b></summary>
+
+- **Movie Render Queue, Takes and MetaSound are required plugins**: EngineWire links their modules, so enabling it turns them on (left off in a Blueprint-only project, EngineWire did not load on Windows and the editor crashed at startup on macOS).
+- **Write replies pass on only lint errors**: the warnings (unreachable nodes, heavy Tick work) stay in Validate Assets, saves and `validate_assets`, so a graph built one node at a time is not told its newest node never runs.
+- **No-op and mid-compile edits are refused**: an edit that changes nothing is refused instead of answered done, and so is any edit while a Live Coding compile runs.
+- **Scopes follow what a call writes**: `export_level` needs `write`, and `export_mesh` `outputPath`, `screenshot` `path` and `get_transform` (`sample_motion`) `inputs` raise a call to `write`.
+
+</details>
+
+<details>
+<summary><b>🛡️ Security</b></summary>
+
+- **Native `/mcp` binds to loopback only**, whatever **Allow Non Loopback** says: it has no TLS, so a token would cross the network in clear text. A WebSocket listener on a LAN address needs the capability token and TLS.
+- **The stdio proxy sends its token only to a loopback upstream** unless `UNREAL_MCP_ALLOW_REMOTE_TOKEN=1`, and `doctor` follows the same rule.
+- **A path-restricted token's prefixes hold everywhere**: saves, deletes, reflection reads, searches and listings run as the request's principal, and a file the caller places is written through a handle checked inside the project.
+- **Inputs and consent**: script, search and list inputs are bounded, and a consent grant comes back only when no handler ran.
+
+</details>
+
+<details>
 <summary><b>🔧 Fixed</b></summary>
 
-- **Security**: hardening across the transports (native `/mcp` never binds off loopback; a LAN WebSocket bind needs the token and TLS), the path model (a path-restricted token's prefixes hold in every save, delete, search and listing), scopes and request inputs; a consent grant comes back only when nothing ran; the proxy sends its token only to a loopback upstream.
-- **Plugin loading**: Movie Render Queue, Takes and MetaSound are required plugin references (left off in a Blueprint-only project, EngineWire did not load on Windows and the editor crashed at startup on macOS); geometry and skinning actions refuse with `GEOMETRYSCRIPTING_PLUGIN_NOT_ENABLED` while GeometryScripting is off instead of crashing; the game features module compiles on UE 5.6 and 5.7.
+- **Plugin loading**: geometry and skinning actions refuse with `GEOMETRYSCRIPTING_PLUGIN_NOT_ENABLED` while GeometryScripting is off instead of crashing, and the game features module compiles on UE 5.6 and 5.7.
 - **Crashes**: a glTF or GLB export and a key tapped with no Play session no longer take the editor down.
+- **Input**: simulated game keys stay out of the editor's panels.
 - **Search**: about 250 more plain requests find their capability, and an alias a family member declared runs that member.
-- **Replies**: long lists page and aggregate from the reply's `data`; console replies stay short; a script step still running at the deadline says so; write replies pass on only lint errors; logpoints read an unwired input's own value; the tool says how to get a fresh consent grant.
-- **Input**: simulated game keys stay out of the editor, and `sample_motion` inputs need the write scope.
-- **Undo**: asset edits are one step each, an edit that changes nothing is refused instead of answered done, enum undo no longer crashes UE 5.7+, and a script's rollback undoes only its own steps.
+- **Replies**: long lists page and aggregate from the reply's `data`; console replies stay short; a script step still running at the deadline says so; logpoints read an unwired input's own value; the tool says how to get a fresh consent grant.
+- **Undo**: asset edits are one step each (notifies, sockets, physics bodies, blackboard keys, Behavior Trees and more), enum undo no longer crashes UE 5.7+, and a script's rollback undoes only its own steps.
 - **Graph as code**: `%`, `==` on text, calls used as values, ids with underscores, custom event calls, other classes' variables, expose-on-spawn inputs, calls on the Blueprint itself and events bound to a delegate write as `read_graph_as_code` prints them.
 - **Placement**: props in a room built as one mesh read as they are; a support with no collision is named; `fix_coplanar` checks each move against the others.
 - **Views**: frame readers warn while shaders, meshes or textures still build; `contact_sheet` draws beside water and titles small sheets in full.
 - **Geometry**: `bevel` and `chamfer` cut whole parts, and material and PolyGroup edits are their own undo steps.
 - **Assets**: `check_mesh` finds parts wound inside out, on skeletal meshes too; FBX imports open no Message Log window and convert units with options; material instances draw their parent; morph targets and skin weight profiles survive rebuilds; output files reach captures, exports and thumbnails.
-- **Editor state**: edits are refused during a Live Coding compile; `save_all` saves streaming sublevels; dry runs no longer compile or save; Blueprint compiles leave placed skeletal meshes posed; Behavior Trees build from their Root.
+- **Editor state**: `save_all` saves streaming sublevels; dry runs no longer compile or save; Blueprint compiles leave placed skeletal meshes posed; Behavior Trees build from their Root.
 - **Niagara**: a created emitter keeps the name it was asked for.
 - **Game framework and materials**: `default_pawn_class` takes `None`, and material pins connect by the short names the material editor shows.
 - **Sequence sections**: a sound section plays in the editor and the game, and adding one is one undo step.
+
+</details>
+
+<details>
+<summary><b>⚠️ Migration</b></summary>
+
+- **A client on another machine**: the native server no longer binds to a LAN address. Tunnel to it (`ssh -L 3000:127.0.0.1:3000 <user>@<editor machine>`) and keep `UNREAL_MCP_URL` at `http://127.0.0.1:3000/mcp`; a stdio proxy pointed at another machine sends no token unless `UNREAL_MCP_ALLOW_REMOTE_TOKEN=1`. A WebSocket listener on a LAN address also needs **Enable Tls**.
+- **Scoped tokens**: a token without `write` no longer runs `export_level`, nor `export_mesh` with `outputPath`, `screenshot` with `path` or `get_transform` with `inputs`.
+- **Projects that turned off Movie Render Queue, Takes or MetaSound**: enabling EngineWire turns them on again.
+- **Lint warnings after a write**: read them with `lint_blueprint` or `validate_assets`; write replies carry only lint errors.
+
+</details>
+
+<details>
+<summary><b>🔄 Dependencies</b></summary>
+
+- None: no npm package and no GitHub Action changed, and the package still has no runtime dependencies.
+
+</details>
+
+<details>
+<summary><b>👥 Contributors</b></summary>
+
+- @SoloGorilla for keeping a created Niagara emitter's requested name (#669), and for reporting the crash when a key was tapped with no play session (#685) and simulated keys reaching editor panels, `sample_motion` inputs included (#686).
+- @claudemlandry for reporting the macOS startup crash on UE 5.7.4 (#705).
+
+</details>
+
+<details>
+<summary><b>📊 Change Statistics</b></summary>
+
+| Metric | Count |
+|--------|-------|
+| Diff range | `v0.6.0..v0.6.1-beta-a` |
+| Commits | 164, the version bump and the release cut included |
+| Files changed | 767 (741 hand-written, not counting generated files or line-ending-only changes) |
+| Insertions / deletions | 43,428 / 5,766 (hand-written: 29,413 / 3,729) |
+| Capability records | 489 |
+| Callable `{tool, action}` pairs | 1,658 |
+| C++ domain directories | 58 |
 
 </details>
 

@@ -27,20 +27,35 @@ Plugin-side changes since the `v0.6.0` tag, from the code diff. The server-side 
 - **Scripts and sheets**: run_script takes `(if cond a b)` as a value and awaits a step that answers later within its deadline; sheets can leave no file.
 - **Frame budget**: `fit_frame_budget` measures each knob (a movable light's shadows, small meshes past 20/40/80 m) on and off in render state and keeps the multiple-choice knapsack's cheapest pick as one undo step.
 
+### Changed
+- **Required plugin references**: Movie Render Queue, Takes and MetaSound are required (EngineWire links their modules), so enabling EngineWire turns them on; GeometryScripting stays optional.
+- **Write replies** pass on only lint errors; lint warnings stay in Validate Assets, saves and `validate_assets`.
+- **Refused edits**: an edit that changes nothing is refused instead of answered done, and a Live Coding compile refuses writes.
+- **Scopes**: output paths need Write (`export_level`, `export_mesh` `outputPath`, `screenshot` `path`), and sample_motion inputs need the write scope.
+
+### Security
+- **Loopback-only native /mcp**: it never binds off loopback, whatever Allow Non Loopback says; a LAN WebSocket bind needs the capability token and TLS.
+- **Path-restricted tokens**: the request's principal stays active through its handler, so the save, delete, reflection, search and listing sinks honour the token's prefixes; a file the caller places is written through a handle checked inside the project.
+- **Inputs and consent**: script, search and list inputs are bounded; a consent nonce comes back only when nothing changed.
+
 ### Fixed
-- **Security**: native /mcp never binds off loopback; a LAN WebSocket bind needs the capability token and TLS; the request's principal stays active through its handler, so the save, delete, reflection, search and listing sinks honour a path-restricted token's prefixes; output paths need Write; script, search and list inputs are bounded; a consent nonce comes back only when nothing changed.
-- **Plugin loading**: Movie Render Queue, Takes and MetaSound are required references (EngineWire links their modules); GeometryScripting stays optional and its actions refuse `GEOMETRYSCRIPTING_PLUGIN_NOT_ENABLED` while it is off; EngineWireGameFeatures includes the header defining `FResult` (5.6 and 5.7 only forward-declare it).
+- **Plugin loading**: GeometryScripting actions refuse `GEOMETRYSCRIPTING_PLUGIN_NOT_ENABLED` while it is off; EngineWireGameFeatures includes the header defining `FResult` (5.6 and 5.7 only forward-declare it).
 - **Crashes**: a glTF or GLB export runs on the editor's next tick, outside the core ticker its material baker re-entered; a key tapped with no play session is refused.
-- **Input**: simulated game keys never reach editor panels, and sample_motion inputs need the write scope.
-- **Search and replies**: lead verbs and fold aliases run their member; paging and aggregate read a reply's `data`; console text stays lean; write replies pass on only lint errors; the consent and deferred-step messages say what to do next; a logpoint reads an unwired input as its literal.
+- **Input**: simulated game keys never reach editor panels.
+- **Search and replies**: lead verbs and fold aliases run their member; paging and aggregate read a reply's `data`; console text stays lean; the consent and deferred-step messages say what to do next; a logpoint reads an unwired input as its literal.
 - **Graph code writer**: typed `%` and string `==`, calls used as values, title matching, unloadable paths refused, calls to custom events made in the same code, other classes' variables, expose-on-spawn pins, self call targets and an event bound to a delegate.
 - **Placement**: a room mesh's floor and shell judged as such, a support with no body named, hidden Blueprint parts noted, and a coplanar planner that checks each move against the others.
 - **Assets**: `check_mesh` judges each closed part by its own signed volume (skeletal LOD 0 too) and import and reimport warn of inside-out parts; imports hold the Message Log display off; an import's deferred work runs in its request's brackets; FBX imports with options convert units; morph targets and skin weight profiles survive rebuilds; material instances follow their parent; a save is not announced as new.
-- **Editor state**: a Live Coding compile refuses writes; sublevels save; dry runs have no side effects; one compile path re-poses placed skeletal meshes; variable defaults reach placed copies; asset edits are one undo step (enum by command change); Behavior Trees build from Root; engine fix-ups stay out of the change journal.
+- **Editor state**: sublevels save; dry runs have no side effects; one compile path re-poses placed skeletal meshes; variable defaults reach placed copies; asset edits are one undo step (enum by command change); Behavior Trees build from Root; engine fix-ups stay out of the change journal.
 - **Captures and geometry**: frame readers warn while assets build; contact sheets handle water and long titles; output files reach captures, exports, thumbnails and EngineWire's folders; bevel and chamfer cut whole parts; geometry undo compares every attribute.
 - **Niagara**: a created emitter keeps the name it was asked for.
 - **Game framework and materials**: no default pawn writes no class, an empty role reads "None", and material pins take the editor's short names.
 - **Sequence sections**: the track is modified before a section is added, so a track compiled before gets the section and its sound plays.
+
+### Migration
+- **Remote clients**: reach native /mcp from another machine through an SSH tunnel to its loopback port; a LAN WebSocket listener needs Enable Tls as well as the capability token.
+- **Scoped tokens**: a token without Write no longer runs `export_level`, nor `export_mesh` with `outputPath`, `screenshot` with `path` or sample_motion with inputs.
+- **Projects that turned off Movie Render Queue, Takes or MetaSound**: enabling EngineWire turns them on again.
 
 ## [0.6.0] - 2026-10-27
 
