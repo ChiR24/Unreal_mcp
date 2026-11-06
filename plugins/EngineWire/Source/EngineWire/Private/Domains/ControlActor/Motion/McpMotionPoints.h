@@ -8,6 +8,14 @@
 class AActor;
 class USceneComponent;
 
+// sample_motion propertyNames: one watched value, an actor property or a component's as "Visual.RelativeScale3D" (a
+// squash on landing lives on a component, not the actor).
+struct FMcpMotionProperty {
+  FString Label;
+  TWeakObjectPtr<UObject> Owner;
+  FName Property; // by name, as FMcpMotionTrigger
+};
+
 // sample_motion points: places on the watched actor (a component, a bone or socket of its mesh, or a component's
 // socket) sampled with it, each optionally traced to the ground below. A foot that slid, sank or floated was
 // invisible in the actor's own location; the run now measures it and sums it up per point.

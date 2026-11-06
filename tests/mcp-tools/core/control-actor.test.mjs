@@ -288,6 +288,9 @@ const testCases = [
   { scenario: 'ERROR: sample_motion with startWhen refuses the editor world', toolName: 'control_actor', arguments: actorArgs('sample_motion', { durationSeconds: 0.2, startWhen: { actorName: MAIN_ACTOR, propertyName: 'bHidden', equals: false, waitForChange: false, maxWaitSeconds: 1 } }), expected: 'error|NOT_SIMULATING' },
   { scenario: 'ERROR: sample_motion with points refuses the editor world', toolName: 'control_actor', arguments: actorArgs('sample_motion', { durationSeconds: 0.2, points: ['StaticMeshComponent0'], groundTrace: true, contactCm: 3 }), expected: 'error|NOT_SIMULATING' },
   { scenario: 'ERROR: sample_motion watching overlaps refuses the editor world', toolName: 'control_actor', arguments: actorArgs('sample_motion', { durationSeconds: 0.2, overlaps: true }), expected: 'error|NOT_SIMULATING' },
+  // feel sums the frames up (jump, run, key latency, camera jerk); the summary's arithmetic is the plugin's
+  // EngineWire.ControlActor.MotionFeel test, and in Play it is checked live.
+  { scenario: 'ERROR: sample_motion feel refuses the editor world', toolName: 'control_actor', arguments: actorArgs('sample_motion', { durationSeconds: 0.2, feel: true }), expected: 'error|NOT_SIMULATING' },
   // spawnOf waits for an actor the running game spawns: the editor world spawns nothing, so it refuses too.
   { scenario: 'ERROR: sample_motion spawnOf refuses the editor world', toolName: 'control_actor', arguments: { action: 'sample_motion', spawnOf: 'StaticMeshActor', spawnWaitSeconds: 1, durationSeconds: 0.2 }, expected: 'error|NOT_SIMULATING' },
   { scenario: 'ERROR: sample_motion spawnOf names no actor class', toolName: 'control_actor', arguments: { action: 'sample_motion', spawnOf: `BP_NoSuchClass_${ts}`, spawnWaitSeconds: 1 }, expected: 'error|CLASS_NOT_FOUND' },

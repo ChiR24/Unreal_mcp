@@ -5336,6 +5336,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "number",
           "description": "A body that ends more than this many cm below its START height fell (10-100000, default 500), measured from where it started, not from the floor: its old pose is kept rather than one under the floor, and it is listed under unstable. Dropping props from higher than 5 m onto the floor needs a larger fallCm."
         },
+        "feel": {
+          "type": "boolean",
+          "description": "Also sum up how the move feels, in feel: the run samples every frame (unless intervalSeconds is given, so durations past about 6 s at 60 fps hit the 400-sample cap) and reads the jump (takeoffAt, height, timeToApex, airTime, fallOverRise: the fall's time against the rise's, landingSpeed), the run across the ground (topSpeed, timeTo90 to reach 90% of it, and once the last key is up stopTime and stopDistance), each input key's latency to the first frame whose motion differs from the frame it went down in (latency, latencyFrames, moved false when nothing moved), and the player camera's peakJerk and meanJerk (m/s3: a camera that snaps instead of easing reads high). A rise under 20 cm is no jump; a top speed under 30 cm/s no run. Times are game seconds since the run started, as inputs take them."
+        },
         "filter": {
           "type": "string",
           "description": "Optional name substring filter for list."
@@ -6444,6 +6448,12 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "failed": {
           "type": "number",
           "description": "Items that failed to spawn or to take their material, variables or properties."
+        },
+        "feel": {
+          "type": "object",
+          "additionalProperties": true,
+          "x-unreal-reflection-boundary": true,
+          "description": "With feel: frames and frameMs (the mean frame time, so latencyFrames can be read as time), then, each only where it applies, jump {takeoffAt, height, timeToApex, landed, airTime, fallOverRise, landingSpeed}, run {topSpeed, timeTo90, stopTime, stopDistance}, keys [{key, downAt, moved, latency, latencyFrames}] and camera {peakJerk, peakJerkAt, meanJerk}."
         },
         "filter": {
           "type": "string",

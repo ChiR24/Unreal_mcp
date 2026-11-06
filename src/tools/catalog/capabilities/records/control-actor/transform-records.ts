@@ -253,6 +253,7 @@ export const TRANSFORM_RECORDS: readonly CapabilityRecordSource[] = [
         groundTrace: { type: 'boolean', description: 'With points: each sample\'s aboveGround gives each point\'s height over the first surface below it that blocks Visibility (the actor and what is attached to it ignored), negative when the point is inside that surface, and pointStats sums up its contact.' },
         contactCm: { type: 'number', description: 'With groundTrace: how far above its own lowest height a point still counts as planted (default 2 cm), so an ankle bone that never reaches the floor still counts as down when the foot is.' },
         overlaps: { type: 'boolean', description: 'Also watch which actors overlap the watched one, checked every frame: a sample names those that began (overlapsBegan) or stopped (overlapsEnded) touching it since the sample before, and overlapped lists every actor it touched. Finds what killed a pawn, what a pickup or trigger fired on, or an enemy wandering into a spawn point.' },
+        feel: { type: 'boolean', description: 'Also sum up how the move feels, in feel: the run samples every frame (unless intervalSeconds is given, so durations past about 6 s at 60 fps hit the 400-sample cap) and reads the jump (takeoffAt, height, timeToApex, airTime, fallOverRise: the fall\'s time against the rise\'s, landingSpeed), the run across the ground (topSpeed, timeTo90 to reach 90% of it, and once the last key is up stopTime and stopDistance), each input key\'s latency to the first frame whose motion differs from the frame it went down in (latency, latencyFrames, moved false when nothing moved), and the player camera\'s peakJerk and meanJerk (m/s3: a camera that snaps instead of easing reads high). A rise under 20 cm is no jump; a top speed under 30 cm/s no run. Times are game seconds since the run started, as inputs take them.' },
         startWhen: {
           type: 'object',
           properties: {
@@ -297,6 +298,10 @@ export const TRANSFORM_RECORDS: readonly CapabilityRecordSource[] = [
         pointStats: {
           type: 'object', additionalProperties: true, 'x-unreal-reflection-boundary': true,
           description: 'Per point: min and max [x, y, z] over the run; with groundTrace also minAboveGround and maxAboveGround (a negative minimum means it sank into the surface, a large one that it never touched it), contactSeconds (time spent planted) and contactSlip (cm it moved across the ground while planted: a planted foot that slides shows here).',
+        },
+        feel: {
+          type: 'object', additionalProperties: true, 'x-unreal-reflection-boundary': true,
+          description: 'With feel: frames and frameMs (the mean frame time, so latencyFrames can be read as time), then, each only where it applies, jump {takeoffAt, height, timeToApex, landed, airTime, fallOverRise, landingSpeed}, run {topSpeed, timeTo90, stopTime, stopDistance}, keys [{key, downAt, moved, latency, latencyFrames}] and camera {peakJerk, peakJerkAt, meanJerk}.',
         },
         windowRestored: { type: 'boolean', description: 'True when the editor window was minimized: a minimized editor runs PIE at about 3 fps, so it was put back on screen, without taking focus, before the run and is minimized again when the run ends. The background CPU throttle (Use Less CPU when in Background) is off for the run only, whatever the window did.' },
       },

@@ -1,4 +1,5 @@
 #include "Domains/ControlActor/McpActorSupport.h"
+#include "Domains/ControlActor/Motion/McpMotionFeel.h"
 #include "Domains/ControlActor/Motion/McpMotionPoints.h"
 #include "Domains/ControlActor/Motion/McpMotionSpawnWatch.h"
 #include "Containers/Ticker.h"
@@ -15,14 +16,6 @@
 namespace {
 constexpr int32 McpMaxMotionSamples = 400;
 
-// One watched value: an actor property, or a component's as "Visual.RelativeScale3D"
-// (a squash on landing lives on a component, not the actor).
-struct FMcpMotionProperty {
-  FString Label;
-  TWeakObjectPtr<UObject> Owner;
-  FName Property; // by name, as FMcpMotionTrigger
-};
-
 struct FMcpMotionRun {
   TWeakObjectPtr<AActor> Actor;
   TWeakObjectPtr<UWorld> World;
@@ -37,6 +30,7 @@ struct FMcpMotionRun {
   TArray<FMcpMotionInput> Inputs;
   FMcpMotionPoints Points;
   FMcpMotionOverlaps Overlaps;
+  FMcpMotionFeel Feel;
   FMcpMotionTrigger Trigger;
   int32 Frames = 0;
   FMcpEditorRunHold Hold; // what the run changed in the editor, undone by EndEditorRunForMcp
@@ -78,6 +72,7 @@ void McpTakeMotionSample(FMcpMotionRun &Run, AActor *Actor, double GameTime) {
   Run.LastSampleGame = GameTime;
   Run.Extent += Location;
   McpSampleMotionPoints(Run.Points, Actor, *Sample, GameTime);
+  McpSampleMotionFeel(Run.Feel, Actor, GameTime - Run.StartGame);
   McpSampleMotionOverlaps(Run.Overlaps, Actor, *Sample);
   Run.Samples.Add(MakeShared<FJsonValueObject>(Sample));
 }
@@ -101,6 +96,7 @@ TSharedPtr<FJsonObject> McpMotionResult(const FMcpMotionRun &Run, const FString 
     Data->SetArrayField(TEXT("missingProperties"), Run.Missing);
   }
   McpAddMotionPointStats(Run.Points, *Data);
+  McpAddMotionFeel(Run.Feel, Run.Inputs, *Data);
   McpAddMotionOverlapResult(Run.Overlaps, *Data);
   if (Run.Inputs.Num() > 0) {
     Data->SetArrayField(TEXT("inputsApplied"), McpMotionInputsJson(Run.Inputs));
@@ -216,6 +212,7 @@ bool UEngineWireSubsystem::HandleControlActorSampleMotion(
   TSharedRef<FMcpMotionRun> Run = MakeShared<FMcpMotionRun>();
   Run->Actor = Found;
   Run->World = World;
+  McpParseMotionFeel(Payload, Run->Feel, Interval);
   Run->Interval = FMath::Clamp(Interval, 0.0, 5.0);
   // Under the 60 s request budget both doors give this capability.
   Run->MaxReal = FMath::Clamp(MaxReal, 1.0, 50.0);
