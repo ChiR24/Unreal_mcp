@@ -17,6 +17,7 @@
     __has_include("GeometryScript/MeshBoneWeightFunctions.h") && \
     ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 5
 #define MCP_HAS_GEOMETRY_SCRIPT 1
+#include "Domains/Geometry/McpGeometryScriptGuard.h"
 #include "GeometryScript/MeshAssetFunctions.h"
 #include "GeometryScript/MeshBoneWeightFunctions.h"
 #include "UDynamicMesh.h"
@@ -48,6 +49,10 @@ bool HandleAnimationSkinMeshToSkeletonAction(FActionContext &Context,
     Context.ErrorCode = Code;
     Context.Resp->SetStringField(TEXT("error"), Text);
   };
+  if (!McpGeometryScriptReady()) {
+    Fail(McpGeometryScriptMissing, McpGeometryScriptMissingCode);
+    return false;
+  }
 
   FString StaticMeshPath;
   FString SkeletonPath;

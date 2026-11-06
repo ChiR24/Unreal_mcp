@@ -1,4 +1,5 @@
 #include "Domains/Geometry/McpGeometryHandlers.h"
+#include "Domains/Geometry/McpGeometryScriptGuard.h"
 
 
 DEFINE_LOG_CATEGORY(LogMcpGeometryHandlers);
@@ -17,6 +18,13 @@ bool UEngineWireSubsystem::HandleGeometryAction(
 #if MCP_HAS_FULL_GEOMETRY_SCRIPT
 
     using namespace McpGeometryHandlers;
+
+    // Every sub-action below reaches GeometryScript; none may run while its plugin is off.
+    if (!McpGeometryScriptReady())
+    {
+        SendAutomationError(RequestingSocket, RequestId, McpGeometryScriptMissing, McpGeometryScriptMissingCode);
+        return true;
+    }
 
     if (!Payload.IsValid())
     {

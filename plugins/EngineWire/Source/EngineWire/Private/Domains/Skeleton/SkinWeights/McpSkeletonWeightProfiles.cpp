@@ -17,6 +17,7 @@
     __has_include("GeometryScript/MeshBoneWeightFunctions.h") && \
     ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 5
 #define MCP_AUTO_SKIN_HAS_GEOMETRY_SCRIPT 1
+#include "Domains/Geometry/McpGeometryScriptGuard.h"
 #include "GeometryScript/MeshAssetFunctions.h"
 #include "GeometryScript/MeshBoneWeightFunctions.h"
 #include "UDynamicMesh.h"
@@ -54,6 +55,11 @@ bool HandleAutoSkinWeightsAction(UEngineWireSubsystem* Subsystem, const FString&
             TEXT("NOT_SUPPORTED"));
         return true;
 #else
+        if (!McpGeometryScriptReady())
+        {
+            Subsystem->SendAutomationError(RequestingSocket, RequestId, McpGeometryScriptMissing, McpGeometryScriptMissingCode);
+            return true;
+        }
         USkeleton* Skeleton = Mesh->GetSkeleton();
         if (!Skeleton)
         {
