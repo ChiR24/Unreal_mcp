@@ -2,10 +2,10 @@
  * Niagara/effect-specific JSON-schema property fragments.
  */
 import type { PropertyMap } from '../properties.js';
-import { str, num, bool, vec3 } from '../../shared/schema-props.js';
+import { str, num, bool, vec3, scale3, rgba } from '../../shared/schema-props.js';
 
 export const E: PropertyMap = {
-  scale: { description: 'Scale of the spawned system: one uniform number, or [x, y, z] (an {x, y, z} object is accepted). Default 1.' },
+  scale: scale3('Scale of the spawned system: one uniform number, or exactly three numbers [x, y, z] (an {x, y, z} object is accepted). Default 1. Any other array is refused.'),
   templateEmitterPath: str('Niagara emitter asset the authored system starts from; defaults to the engine template for the effect kind. Ignored when systemPath names an existing system.'),
   fromNode: str('Source node: its GUID, name or title.'),
   fromPin: str('Output pin name (or display name) on the source node.'),
@@ -44,7 +44,7 @@ export const E: PropertyMap = {
   sourceBinding: str('Data source the parameter binds to.'),
   forceType: { type: 'string', enum: ['Gravity', 'Drag', 'Wind', 'Curl', 'CurlNoise', 'Vortex', 'PointAttraction'], description: 'Force module: Gravity (default), Drag, Wind, Curl (CurlNoise), Vortex or PointAttraction; any other name is refused.' },
   velocityMode: { type: 'string', enum: ['Linear', 'Cone', 'FromPoint'], description: 'Velocity module: Linear (AddVelocity, the default), Cone (AddVelocityInCone) or FromPoint (AddVelocityFromPoint); any other name is refused.' },
-  color: { description: 'Color as an {r, g, b, a} object or an [r, g, b, a] array: 0 to 255 channels for debug_shape, 0 to 1 for a light.' },
+  color: rgba('Color as {r, g, b, a}, or exactly 3 or 4 numbers [r, g, b] or [r, g, b, a]: 0 to 255 channels for debug_shape, 0 to 1 for a light. Any other array is refused.'),
   materialPath: str('Canonical /Game material asset path for the renderer; its Niagara sprite or ribbon usage flag is set and the material saved, so the renderer never falls back to the default material.'),
   meshPath: str('Canonical /Game static mesh for the mesh renderer; its materials get their Niagara mesh-particle usage flag set and saved, so the particles never fall back to the default material.'),
   lightRadius: num('Multiplier on each particle\'s light radius (the renderer RadiusScale, engine default 1). Left unchanged when omitted.'),

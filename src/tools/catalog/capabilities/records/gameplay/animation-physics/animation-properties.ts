@@ -3,7 +3,7 @@
  */
 import type { JsonObject } from '../../../model.js';
 import type { PropertyMap } from '../properties.js';
-import { bool, num, str, vec3 } from '../../shared/schema-props.js';
+import { bool, num, scale3, str, vec3 } from '../../shared/schema-props.js';
 
 const objectList = (desc: string): JsonObject => ({
   type: 'array',
@@ -27,7 +27,7 @@ export const A: PropertyMap = {
   relativeLocation: vec3('Socket location relative to its attach bone as [x, y, z].'),
   relativeRotation: vec3('Socket rotation relative to its attach bone as [pitch, yaw, roll].'),
   relativeScale: vec3('Socket scale relative to its attach bone as [x, y, z].'),
-  scale: { description: 'Uniform scale factor, or non-uniform scale as [x, y, z].' },
+  scale: scale3('Uniform scale factor, or non-uniform scale as exactly three numbers [x, y, z] or {x, y, z}; any other array is refused.'),
   removeChildren: bool('Whether child bones are removed with the target bone.'),
   stateMachineName: str('Target state machine name inside the Animation Blueprint.'),
   conditionVariable: str('Animation Blueprint variable the transition rule tests, e.g. Speed or bFalling. Without it the rule graph is left unconnected, which reads as false forever and the state machine never leaves its entry state.'),

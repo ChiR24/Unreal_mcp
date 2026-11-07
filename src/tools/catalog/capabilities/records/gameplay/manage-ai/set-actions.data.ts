@@ -75,7 +75,7 @@ export const AI_SET_RECORDS: readonly CapabilityRecordSource[] = [
     props: {
       blackboardPath: A.blackboardPath,
       keyName: A.keyName,
-      value: { description: 'The default, in the kind the key holds: a boolean, a number, {x, y, z}, {pitch, yaw, roll}, text, an enumerator, or an asset or class path.' },
+      value: { description: 'The default, in the kind the key holds: a boolean, a number, {x, y, z} or exactly three numbers [x, y, z], {pitch, yaw, roll} or exactly three numbers [pitch, yaw, roll], text, an enumerator, or an asset or class path. Any other array is refused (INVALID_ARGUMENT).' },
     },
     required: ['blackboardPath', 'keyName', 'value'], plugins: BT,
     out: { assetPath: A.assetPath, value: { type: 'string', description: 'The default the key now holds, as the engine writes it.' } },

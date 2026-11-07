@@ -1,5 +1,6 @@
 #include "Domains/MaterialAuthoring/McpMatPrivate.h"
 #include "Foundation/BridgeHelpers/Responses/McpJsonFields.h"
+#include "Foundation/BridgeHelpers/Responses/McpJsonNumbers.h"
 #include "Materials/MaterialExpressionCollectionParameter.h"
 #include "Materials/MaterialParameterCollection.h"
 
@@ -86,6 +87,15 @@ bool HandleAddMaterialNode(UEngineWireSubsystem* Bridge, const FString& RequestI
       }
     }
 
+    // A Constant3Vector's defaultValue is a color: [1, 0.5] made it black, ["a", "b", "c"] black too, and a fifth
+    // number was dropped, each answered as added. Checked before the node exists, so a refusal adds nothing.
+    if (ExpressionClass->IsChildOf(UMaterialExpressionConstant3Vector::StaticClass()) && Payload->HasField(TEXT("defaultValue")) &&
+        !McpIsJsonVectorValue(Payload->TryGetField(TEXT("defaultValue")), true)) {
+      Bridge->SendAutomationError(Socket, RequestId, TEXT("defaultValue for a Constant3Vector takes [r, g, b], [r, g, b, a] or "
+          "{r, g, b, a}; any other value is refused and no node was added."), TEXT("INVALID_ARGUMENT"));
+      return true;
+    }
+
     UMaterialExpression *NewExpr = NewObject<UMaterialExpression>(
         HostOuter, ExpressionClass, NAME_None, RF_Transactional);
     if (!NewExpr) {
@@ -119,7 +129,7 @@ bool HandleAddMaterialNode(UEngineWireSubsystem* Bridge, const FString& RequestI
 
     // Apply the requested default value. Previously only `name` was honoured, so
     // a Constant3Vector/Color requested with defaultValue stayed at (0,0,0) while
-    // the response reported success. Accepts [r,g,b(,a)] arrays and {r,g,b,a}
+    // the response reported success. Takes [r,g,b(,a)] arrays (checked above) and {r,g,b,a}
     // objects for colour-style nodes, and a plain number for scalar nodes.
     if (UMaterialExpressionConstant3Vector *Const3 = Cast<UMaterialExpressionConstant3Vector>(NewExpr)) {
       if (Payload->HasField(TEXT("defaultValue"))) {

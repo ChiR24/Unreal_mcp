@@ -1,4 +1,5 @@
 #include "Domains/MaterialAuthoring/McpMatPrivate.h"
+#include "Foundation/BridgeHelpers/Responses/McpJsonNumbers.h"
 
 namespace McpMaterialAuthoringHandlers
 {
@@ -57,6 +58,12 @@ bool HandleAddParameterNode(UEngineWireSubsystem* Bridge, const FString& Request
         });
   }
   if (SubAction == TEXT("add_vector_parameter")) {
+    // [1, 0.5] made it white and ["a", "b", "c"] black, each answered as added: nothing is added for those.
+    if (Payload->HasField(TEXT("defaultValue")) && !McpIsJsonVectorValue(Payload->TryGetField(TEXT("defaultValue")), true)) {
+      Bridge->SendAutomationError(Socket, RequestId, TEXT("defaultValue for a vector parameter takes [r, g, b], [r, g, b, a] "
+          "or {r, g, b, a}; any other value is refused and no node was added."), TEXT("INVALID_ARGUMENT"));
+      return true;
+    }
     return AddParameterExpression<UMaterialExpressionVectorParameter>(Bridge, RequestId, Payload, Socket,
         TEXT("Vector parameter"), [&Payload](UMaterialExpressionVectorParameter* Param) {
           // r/g/b/a or x/y/z/w object, or [r,g,b(,a)]; white when absent.

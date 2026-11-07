@@ -60,7 +60,7 @@ export const EFFECT_RECORDS: readonly CapabilityRecordSource[] = [
     whenToUse: ['A light must appear in the running game (PIE), or a point, spot, directional or rect light with just an intensity and a color is enough.'],
     whenNotToUse: ['A rotation, a sky light, or settings such as castShadows, attenuationRadius or the cone angles are needed: use build_environment.create_light, which takes them and spawns into the level being edited.'],
     inputProps: { name: P.name, location: P.location, lightType: E.lightType, intensity: E.intensity,
-      color: { ...E.color, description: `Light color as an {r, g, b, a} object or an [r, g, b, a] array. ${LIGHT_COLOR_TEXT}` } }, required: ['name'],
+      color: { ...E.color, description: `Light color as {r, g, b, a}, or exactly 3 or 4 numbers [r, g, b] or [r, g, b, a]; any other array is refused. ${LIGHT_COLOR_TEXT}` } }, required: ['name'],
     outputProps: { actorName: { type: 'string', description: 'The new light, by its label.' }, actorPath: { type: 'string', description: 'The new light, by object path (a UEDPIE_ path when it went into the running game).' } }, outputRequired: [],
     effect: 'write', editorStates: ['edit', 'pie'], latency: 'interactive', resources: 'low',
     exampleInput: { action: 'create_dynamic_light', name: 'Light_1', lightType: 'Point', intensity: 750 } }),

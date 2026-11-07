@@ -1248,9 +1248,6 @@
           "scale": {
             "oneOf": [
               {
-                "description": "Uniform scale factor, or non-uniform scale as [x, y, z]."
-              },
-              {
                 "type": "array",
                 "items": {
                   "type": "number"
@@ -1267,6 +1264,18 @@
                 "minItems": 3,
                 "maxItems": 3,
                 "description": "add_bone, add_null, add_control: scale [x, y, z] (default 1)."
+              },
+              {
+                "type": [
+                  "number",
+                  "array"
+                ],
+                "items": {
+                  "type": "number"
+                },
+                "minItems": 3,
+                "maxItems": 3,
+                "description": "Uniform scale factor, or non-uniform scale as exactly three numbers [x, y, z] or {x, y, z}; any other array is refused."
               }
             ],
             "description": "Bone scale as [x, y, z]; left out, the bone keeps its own at this frame."
@@ -6885,7 +6894,7 @@
             "description": "Trace the render triangles of meshes that allow it instead of their simple collision (default false: the shapes the game's movement collides with)."
           },
           "value": {
-            "description": "Property value to set, in the form get_property reads back: a number, string or bool, {\"X\": 0, \"Y\": 0, \"Z\": 100} for a vector, an object or asset path, an array for an Array or Set, and a JSON object of key: value for a Map ({\"Apple\": 3}), which replaces the whole map."
+            "description": "Property value to set, in the form get_property reads back: a number, string or bool, {\"X\": 0, \"Y\": 0, \"Z\": 100} for a vector, an object or asset path, an array for an Array or Set, and a JSON object of key: value for a Map ({\"Apple\": 3}), which replaces the whole map. An actor's ActorLocation, ActorRotation or ActorScale3D takes {x, y, z} ({pitch, yaw, roll}) or exactly three numbers; any other value is refused (INVALID_VALUE)."
           },
           "views": {
             "type": "array",
@@ -8222,7 +8231,7 @@
             "description": "Enable RVO avoidance; left unchanged when omitted."
           },
           "value": {
-            "description": "The default, in the kind the key holds: a boolean, a number, {x, y, z}, {pitch, yaw, roll}, text, an enumerator, or an asset or class path."
+            "description": "The default, in the kind the key holds: a boolean, a number, {x, y, z} or exactly three numbers [x, y, z], {pitch, yaw, roll} or exactly three numbers [pitch, yaw, roll], text, an enumerator, or an asset or class path. Any other array is refused (INVALID_ARGUMENT)."
           },
           "x": {
             "type": "number",
@@ -8722,7 +8731,27 @@
             "description": "Several materials or material instances at once, in place of assetPath: each {assetPath, and parameters or parameterName with value}; the call's own save applies to every entry. Every entry is reported under assets, and the call fails naming any that did not apply."
           },
           "backgroundColor": {
-            "description": "Background (default transparent, so the alpha channel is the text mask) as {r, g, b, a} or [r, g, b, a] in 0-1."
+            "type": "object",
+            "properties": {
+              "r": {
+                "type": "number",
+                "description": "Red."
+              },
+              "g": {
+                "type": "number",
+                "description": "Green."
+              },
+              "b": {
+                "type": "number",
+                "description": "Blue."
+              },
+              "a": {
+                "type": "number",
+                "description": "Alpha."
+              }
+            },
+            "additionalProperties": false,
+            "description": "Background (default transparent, so the alpha channel is the text mask) as {r, g, b, a}, or exactly 3 or 4 numbers [r, g, b] or [r, g, b, a], in 0-1; any other array is refused."
           },
           "baseTexture": {
             "type": "string",
@@ -8836,7 +8865,27 @@
             "description": "box, sphere or capsule: one shape fitted to the mesh bounds (a capsule stands upright along Z) replaces its simple collision. complex: the render triangles are the collision, exact for terrain-like or concave meshes but costlier. none: no collision, so pawns and traces pass through."
           },
           "color": {
-            "description": "Text colour (default white) as {r, g, b, a} or [r, g, b, a] in 0-1."
+            "type": "object",
+            "properties": {
+              "r": {
+                "type": "number",
+                "description": "Red."
+              },
+              "g": {
+                "type": "number",
+                "description": "Green."
+              },
+              "b": {
+                "type": "number",
+                "description": "Blue."
+              },
+              "a": {
+                "type": "number",
+                "description": "Alpha."
+              }
+            },
+            "additionalProperties": false,
+            "description": "Text colour (default white) as {r, g, b, a}, or exactly 3 or 4 numbers [r, g, b] or [r, g, b, a], in 0-1; any other array is refused."
           },
           "colour": {
             "type": "string",
@@ -8910,7 +8959,7 @@
           "defaultValue": {
             "oneOf": [
               {
-                "description": "Initial value for a Constant (number) or Constant3Vector (rgb array or {r,g,b}) node."
+                "description": "Initial value: a number for a Constant node or scalar_parameter, true or false for static_switch_parameter, and for a Constant3Vector node or vector_parameter a color as [r, g, b], [r, g, b, a] or {r, g, b, a}; any other color value is refused (INVALID_ARGUMENT) and no node is added."
               },
               {
                 "type": "string",
@@ -9045,7 +9094,27 @@
             "description": "Which edit data table variant to run.\ncreate: Create a new DataTable asset.\ncreate_row_struct: Create a new UScriptStruct suitable as a DataTable row type.\nadd_row: Add a row named rowName to a DataTable from rowData (column names as the row struct spells them; columns left out take the row struct defaults). A taken name is ROW_ALREADY_EXISTS, data the struct refuses INVALID_ROW_DATA. One undo step (the undo block in the reply says so); the table is saved unless save is false (saved).\nupdate_row: Change columns of an existing DataTable row: the columns rowData names change, the others keep their values. One undo step (the undo block in the reply says so); the table is saved unless save is false (saved).\nimport_rows: Import multiple rows into a DataTable from an array.\nset_row_struct: Bind a row UScriptStruct to an existing DataTable.\nset_struct_as_row_struct: Set an existing UScriptStruct as the row struct for a DataTable (a user-defined struct is validated and compiled first)."
           },
           "endColor": {
-            "description": "End colour (default white) as {r, g, b, a} or [r, g, b, a] in 0-1."
+            "type": "object",
+            "properties": {
+              "r": {
+                "type": "number",
+                "description": "Red."
+              },
+              "g": {
+                "type": "number",
+                "description": "Green."
+              },
+              "b": {
+                "type": "number",
+                "description": "Blue."
+              },
+              "a": {
+                "type": "number",
+                "description": "Alpha."
+              }
+            },
+            "additionalProperties": false,
+            "description": "End colour (default white) as {r, g, b, a}, or exactly 3 or 4 numbers [r, g, b] or [r, g, b, a], in 0-1; any other array is refused."
           },
           "endPin": {
             "type": "string",
@@ -9889,7 +9958,27 @@
             "description": "Name prefix."
           },
           "primaryColor": {
-            "description": "Main colour (default white) as {r, g, b, a} or [r, g, b, a] in 0-1."
+            "type": "object",
+            "properties": {
+              "r": {
+                "type": "number",
+                "description": "Red."
+              },
+              "g": {
+                "type": "number",
+                "description": "Green."
+              },
+              "b": {
+                "type": "number",
+                "description": "Blue."
+              },
+              "a": {
+                "type": "number",
+                "description": "Alpha."
+              }
+            },
+            "additionalProperties": false,
+            "description": "Main colour (default white) as {r, g, b, a}, or exactly 3 or 4 numbers [r, g, b] or [r, g, b, a], in 0-1; any other array is refused."
           },
           "process": {
             "type": "string",
@@ -10059,7 +10148,27 @@
             "description": "Search pattern."
           },
           "secondaryColor": {
-            "description": "Second colour (default black) as {r, g, b, a} or [r, g, b, a] in 0-1."
+            "type": "object",
+            "properties": {
+              "r": {
+                "type": "number",
+                "description": "Red."
+              },
+              "g": {
+                "type": "number",
+                "description": "Green."
+              },
+              "b": {
+                "type": "number",
+                "description": "Blue."
+              },
+              "a": {
+                "type": "number",
+                "description": "Alpha."
+              }
+            },
+            "additionalProperties": false,
+            "description": "Second colour (default black) as {r, g, b, a}, or exactly 3 or 4 numbers [r, g, b] or [r, g, b, a], in 0-1; any other array is refused."
           },
           "seed": {
             "type": "number",
@@ -10145,7 +10254,27 @@
             "description": "Pan speed along V."
           },
           "startColor": {
-            "description": "Start colour (default black) as {r, g, b, a} or [r, g, b, a] in 0-1."
+            "type": "object",
+            "properties": {
+              "r": {
+                "type": "number",
+                "description": "Red."
+              },
+              "g": {
+                "type": "number",
+                "description": "Green."
+              },
+              "b": {
+                "type": "number",
+                "description": "Blue."
+              },
+              "a": {
+                "type": "number",
+                "description": "Alpha."
+              }
+            },
+            "additionalProperties": false,
+            "description": "Start colour (default black) as {r, g, b, a}, or exactly 3 or 4 numbers [r, g, b] or [r, g, b, a], in 0-1; any other array is refused."
           },
           "startNodeId": {
             "type": "string",
@@ -14365,13 +14494,53 @@
           "color": {
             "oneOf": [
               {
-                "description": "Color as an {r, g, b, a} object or an [r, g, b, a] array: 0 to 255 channels for debug_shape, 0 to 1 for a light."
+                "type": "object",
+                "properties": {
+                  "r": {
+                    "type": "number",
+                    "description": "Red."
+                  },
+                  "g": {
+                    "type": "number",
+                    "description": "Green."
+                  },
+                  "b": {
+                    "type": "number",
+                    "description": "Blue."
+                  },
+                  "a": {
+                    "type": "number",
+                    "description": "Alpha."
+                  }
+                },
+                "additionalProperties": false,
+                "description": "Color as {r, g, b, a}, or exactly 3 or 4 numbers [r, g, b] or [r, g, b, a]: 0 to 255 channels for debug_shape, 0 to 1 for a light. Any other array is refused."
               },
               {
-                "description": "Light color as an {r, g, b, a} object or an [r, g, b, a] array. Linear 0-1 channels, stored by the engine as the 8-bit sRGB color: {r: 1, g: 0.7, b: 0.42} reads back as (255, 218, 173). A missing channel reads 0 (alpha 1)."
+                "type": "object",
+                "properties": {
+                  "r": {
+                    "type": "number",
+                    "description": "Red."
+                  },
+                  "g": {
+                    "type": "number",
+                    "description": "Green."
+                  },
+                  "b": {
+                    "type": "number",
+                    "description": "Blue."
+                  },
+                  "a": {
+                    "type": "number",
+                    "description": "Alpha."
+                  }
+                },
+                "additionalProperties": false,
+                "description": "Light color as {r, g, b, a}, or exactly 3 or 4 numbers [r, g, b] or [r, g, b, a]; any other array is refused. Linear 0-1 channels, stored by the engine as the 8-bit sRGB color: {r: 1, g: 0.7, b: 0.42} reads back as (255, 218, 173). A missing channel reads 0 (alpha 1)."
               }
             ],
-            "description": "Color as an {r, g, b, a} object or an [r, g, b, a] array: 0 to 255 channels for debug_shape, 0 to 1 for a light."
+            "description": "Color as {r, g, b, a}, or exactly 3 or 4 numbers [r, g, b] or [r, g, b, a]: 0 to 255 channels for debug_shape, 0 to 1 for a light. Any other array is refused."
           },
           "componentName": {
             "type": "string",
@@ -14717,7 +14886,16 @@
             "description": "Canonical /Game directory for the created asset."
           },
           "scale": {
-            "description": "Scale of the spawned system: one uniform number, or [x, y, z] (an {x, y, z} object is accepted). Default 1."
+            "type": [
+              "number",
+              "array"
+            ],
+            "items": {
+              "type": "number"
+            },
+            "minItems": 3,
+            "maxItems": 3,
+            "description": "Scale of the spawned system: one uniform number, or exactly three numbers [x, y, z] (an {x, y, z} object is accepted). Default 1. Any other array is refused."
           },
           "scattering": {
             "type": "number",

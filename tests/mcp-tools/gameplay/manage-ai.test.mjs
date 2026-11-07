@@ -72,6 +72,9 @@ const testCases = [
   { scenario: 'CONFIG: set_blackboard_value', toolName: 'manage_ai', arguments: { action: 'set_blackboard_value', blackboardPath: '${captured:blackboardPath}', keyName: blackboardKeyName, value: 'true' }, expected: 'success', assertions: [{ path: 'structuredContent.result.undo.undoable', equals: true, label: 'one undo step' }] },
   { scenario: 'ERROR: set_blackboard_value refuses a value the key cannot hold', toolName: 'manage_ai', arguments: { action: 'set_blackboard_value', blackboardPath: '${captured:blackboardPath}', keyName: blackboardKeyName, value: 'maybe' }, expected: 'error|INVALID_ARGUMENT' },
   { scenario: 'CONFIG: set_blackboard_value sets a vector default', toolName: 'manage_ai', arguments: { action: 'set_blackboard_value', blackboardPath: '${captured:blackboardPath}', keyName: moveGoalKeyName, value: { x: 100, y: 200, z: 0 } }, expected: 'success', assertions: [{ path: 'structuredContent.result.undo.undoable', equals: true, label: 'one undo step' }] },
+  // A vector default sent as an array is exactly three numbers: [1, 2, 3, 4] was cut to three, ["a", "b", "c"] read as 0.
+  { scenario: 'CONFIG: set_blackboard_value takes a vector as three numbers', toolName: 'manage_ai', arguments: { action: 'set_blackboard_value', blackboardPath: '${captured:blackboardPath}', keyName: moveGoalKeyName, value: [100, 200, 0] }, expected: 'success' },
+  { scenario: 'ERROR: set_blackboard_value refuses a vector of four numbers', toolName: 'manage_ai', arguments: { action: 'set_blackboard_value', blackboardPath: '${captured:blackboardPath}', keyName: moveGoalKeyName, value: [1, 2, 3, 4] }, expected: 'error|INVALID_ARGUMENT' },
   { scenario: 'INFO: get_blackboard_value', toolName: 'manage_ai', arguments: { action: 'get_blackboard_value', blackboardPath: '${captured:blackboardPath}', keyName: blackboardKeyName }, expected: 'success' },
 
   // === BEHAVIOR TREE ===

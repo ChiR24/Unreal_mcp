@@ -14,6 +14,7 @@
 #include "BehaviorTree/Blackboard/BlackboardKeyType_Vector.h"
 #include "Foundation/BridgeHelpers/Blueprints/McpBPPaths.h"
 #include "Foundation/BridgeHelpers/Reflection/McpClassResolve.h"
+#include "Foundation/BridgeHelpers/Responses/McpJsonNumbers.h"
 #include "Misc/DefaultValueHelper.h"
 
 namespace
@@ -38,13 +39,14 @@ bool ReadBoolValue(const TSharedPtr<FJsonValue>& Value, bool& Out)
     return Out || Text.Equals(TEXT("false"), ESearchCase::IgnoreCase) || Text == TEXT("0");
 }
 
-// {x, y, z} or [x, y, z], else the engine's text (X=1 Y=2 Z=3) or 1,2,3.
+// {x, y, z} or exactly three numbers [x, y, z], else the engine's text (X=1 Y=2 Z=3) or 1,2,3. [1, 2, 3, 4] was cut to
+// three and ["a", "b", "c"] read as 0, 0, 0.
 bool ReadVectorValue(const TSharedPtr<FJsonValue>& Value, FVector& Out)
 {
     static const TCHAR* const Keys[3] = {TEXT("x"), TEXT("y"), TEXT("z")};
     double V[3] = {0.0, 0.0, 0.0};
     FString Text;
-    if (ReadJsonTriple(Value, Keys, V))
+    if (McpIsJsonVectorValue(Value) && ReadJsonTriple(Value, Keys, V))
     {
         Out = FVector(V[0], V[1], V[2]);
         return true;
@@ -52,13 +54,13 @@ bool ReadVectorValue(const TSharedPtr<FJsonValue>& Value, FVector& Out)
     return McpJsonScalarToString(Value, Text) && (Out.InitFromString(Text) || FDefaultValueHelper::ParseVector(Text, Out));
 }
 
-// {pitch, yaw, roll} or [pitch, yaw, roll], else the engine's text (P=0 Y=90 R=0) or 0,90,0.
+// {pitch, yaw, roll} or exactly three numbers [pitch, yaw, roll], else the engine's text (P=0 Y=90 R=0) or 0,90,0.
 bool ReadRotatorValue(const TSharedPtr<FJsonValue>& Value, FRotator& Out)
 {
     static const TCHAR* const Keys[3] = {TEXT("pitch"), TEXT("yaw"), TEXT("roll")};
     double V[3] = {0.0, 0.0, 0.0};
     FString Text;
-    if (ReadJsonTriple(Value, Keys, V))
+    if (McpIsJsonVectorValue(Value) && ReadJsonTriple(Value, Keys, V))
     {
         Out = FRotator(V[0], V[1], V[2]);
         return true;
@@ -184,7 +186,7 @@ bool WriteBlackboardKeyDefault(UBlackboardKeyType* KeyType, const TSharedPtr<FJs
     if (UBlackboardKeyType_Vector* Key = Cast<UBlackboardKeyType_Vector>(KeyType))
     {
         FVector Parsed = FVector::ZeroVector;
-        if (!ReadVectorValue(Value, Parsed)) { return Refuse(OutError, OutCode, Bad + TEXT("send {x, y, z}.")); }
+        if (!ReadVectorValue(Value, Parsed)) { return Refuse(OutError, OutCode, Bad + TEXT("send {x, y, z} or exactly three numbers [x, y, z].")); }
         Key->Modify();
         Key->DefaultValue = Parsed;
         Key->bUseDefaultValue = true;
@@ -193,7 +195,7 @@ bool WriteBlackboardKeyDefault(UBlackboardKeyType* KeyType, const TSharedPtr<FJs
     if (UBlackboardKeyType_Rotator* Key = Cast<UBlackboardKeyType_Rotator>(KeyType))
     {
         FRotator Parsed = FRotator::ZeroRotator;
-        if (!ReadRotatorValue(Value, Parsed)) { return Refuse(OutError, OutCode, Bad + TEXT("send {pitch, yaw, roll}.")); }
+        if (!ReadRotatorValue(Value, Parsed)) { return Refuse(OutError, OutCode, Bad + TEXT("send {pitch, yaw, roll} or exactly three numbers [pitch, yaw, roll].")); }
         Key->Modify();
         Key->DefaultValue = Parsed;
         Key->bUseDefaultValue = true;

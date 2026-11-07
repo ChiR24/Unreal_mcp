@@ -7,6 +7,7 @@
 #include "Foundation/Reflection/McpPropertyReflection.h"
 #include "Foundation/HandlerUtils/McpHandlerUtilsTransforms.h"
 #include "Foundation/BridgeHelpers/Responses/McpJsonFields.h"
+#include "Foundation/BridgeHelpers/Responses/McpJsonNumbers.h"
 #include "Foundation/BridgeHelpers/Actors/McpActorMove.h"
 #include "Foundation/BridgeHelpers/Assets/McpMaterialRecompile.h"
 #include "Foundation/McpScopedEditorTransaction.h"
@@ -72,6 +73,16 @@ bool TryHandleSetActorProperty(
         Subsystem.SendAutomationError(RequestingSocket, RequestId,
             TEXT("Cannot modify runtime transform on a Blueprint CDO. Edit defaults on the root component or SCS template instead."),
             TEXT("CDO_TRANSFORM"));
+        return true;
+    }
+    // [100, 200] or "abc" moved the actor to the origin, a number made its scale 1 and a fourth number was dropped, each
+    // answered as set.
+    if (IsActorTransformProperty(PropertyName) && !McpIsJsonVectorValue(ValueField))
+    {
+        const bool bRotation = PropertyName.Equals(TEXT("ActorRotation"), ESearchCase::IgnoreCase);
+        Subsystem.SendAutomationError(RequestingSocket, RequestId, FString::Printf(TEXT("%s takes %s or exactly three numbers "
+            "[%s]; nothing was changed."), *PropertyName, bRotation ? TEXT("{pitch, yaw, roll}") : TEXT("{x, y, z}"),
+            bRotation ? TEXT("pitch, yaw, roll") : TEXT("x, y, z")), TEXT("INVALID_VALUE"));
         return true;
     }
 

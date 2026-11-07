@@ -30,7 +30,7 @@ export const P = {
   detailed: bool('Return detailed property/component information.'),
   propertyNames: arrStr('Specific property names to include.'),
   componentNames: arrStr('Specific component names to include.'),
-  value: { description: 'Property value to set, in the form get_property reads back: a number, string or bool, {"X": 0, "Y": 0, "Z": 100} for a vector, an object or asset path, an array for an Array or Set, and a JSON object of key: value for a Map ({"Apple": 3}), which replaces the whole map.' } as Prop,
+  value: { description: 'Property value to set, in the form get_property reads back: a number, string or bool, {"X": 0, "Y": 0, "Z": 100} for a vector, an object or asset path, an array for an Array or Set, and a JSON object of key: value for a Map ({"Apple": 3}), which replaces the whole map. An actor\'s ActorLocation, ActorRotation or ActorScale3D takes {x, y, z} ({pitch, yaw, roll}) or exactly three numbers; any other value is refused (INVALID_VALUE).' } as Prop,
   valueRead: { description: 'The value read; its type follows the property.' } as Prop,
   structPath: str('UserDefinedStruct asset /Game path to introspect.'),
   limit: num('Maximum objects to return (default 100).'),

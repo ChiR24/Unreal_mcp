@@ -3,13 +3,15 @@
 
 import type { RecordSpec } from './builder.js';
 import { bool, ex, HIGH, MEDIUM, num, r, str, WRITE, WRITE_POLICY } from './builder.js';
+import type { JsonObject } from '../../model.js';
 import { schema } from '../shared/record-presets.js';
+import { rgba } from '../shared/schema-props.js';
 
 const OK = schema({ success: bool('Operation succeeded.'), details: { type: 'object', 'x-unreal-reflection-boundary': true, description: 'Operation details.' } }, ['success']);
 
 const TEXTURES = '/Game/Textures';
 const OUTPUT_PATH = str('Full output asset path, e.g. /Game/Textures/T_Noise; replaces name and path.');
-const COLOR = (what: string): { description: string } => ({ description: `${what} as {r, g, b, a} or [r, g, b, a] in 0-1.` });
+const COLOR = (what: string): JsonObject => rgba(`${what} as {r, g, b, a}, or exactly 3 or 4 numbers [r, g, b] or [r, g, b, a], in 0-1; any other array is refused.`);
 const DONE = { success: true };
 
 export const TEXTURE_CREATE_RECORDS: readonly RecordSpec[] = [

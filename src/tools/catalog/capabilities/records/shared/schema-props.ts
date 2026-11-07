@@ -33,3 +33,14 @@ export const vec3 = (desc: string): JsonObject => ({
   maxItems: 3,
   description: desc,
 });
+
+/** A described scale: one uniform number or exactly three numbers (the gateway turns {x, y, z} into the array). */
+export const scale3 = (desc: string): JsonObject => ({ ...vec3(desc), type: ['number', 'array'] });
+
+/** A described colour {r, g, b, a} (the gateway turns [r, g, b] or [r, g, b, a] into the object). */
+export const rgba = (desc: string): JsonObject => ({
+  type: 'object',
+  properties: { r: num('Red.'), g: num('Green.'), b: num('Blue.'), a: num('Alpha.') },
+  additionalProperties: false,
+  description: desc,
+});
