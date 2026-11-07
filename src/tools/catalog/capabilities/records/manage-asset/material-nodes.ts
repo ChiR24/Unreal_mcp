@@ -3,7 +3,7 @@
 
 import type { JsonObject } from '../../model.js';
 import type { RecordSpec } from './builder.js';
-import { arrObj, bool, ex, LOW, num, r, str, WRITE, WRITE_POLICY } from './builder.js';
+import { arrObj, bool, codeStr, ex, LOW, num, r, str, WRITE, WRITE_POLICY } from './builder.js';
 import { schema } from '../shared/record-presets.js';
 
 const MAT = str('Material /Game asset path.');
@@ -106,7 +106,7 @@ export const MATERIAL_NODES_RECORDS: readonly RecordSpec[] = [
     { whenToUse: ['A compile-time two-way branch is needed with no named parameter, chosen by a bool input or the node default.'],
       whenNotToUse: ['The choice must change per instance (use a static switch parameter, set with material.set_material_parameter and parameterKind=static_switch).'],
       examples: [ex('Select between graph branches', { materialPath: M, x: -200, y: 300 }, node('Switch'))] }),
-  r('add_custom_expression', 'material', 'Add a custom HLSL expression node to a material graph.', schema({ materialPath: MAT, code: str('HLSL code.'), outputType: str('Output type: Float1 (default), Float2, Float3, Float4 or MaterialAttributes.'), description: str('Node title shown in the material editor (the Custom node Description).'), inputs: arrObj('Input definitions, each {name}; wire one with connect_nodes targetPin set to that name.'), additionalOutputs: arrObj('Extra output pins after the return value, each {name, type}: type Float1 (default), Float2, Float3, Float4 or MaterialAttributes. Assign each by name in the HLSL (Emis = ...;) and wire it as "$node.Name".'), posX: num('Node X position.'), posY: num('Node Y position.'), x: X, y: Y }, ['materialPath', 'code']), OK, WRITE, WRITE_POLICY, LOW,
+  r('add_custom_expression', 'material', 'Add a custom HLSL expression node to a material graph.', schema({ materialPath: MAT, code: codeStr('HLSL code.'), outputType: str('Output type: Float1 (default), Float2, Float3, Float4 or MaterialAttributes.'), description: str('Node title shown in the material editor (the Custom node Description).'), inputs: arrObj('Input definitions, each {name}; wire one with connect_nodes targetPin set to that name.'), additionalOutputs: arrObj('Extra output pins after the return value, each {name, type}: type Float1 (default), Float2, Float3, Float4 or MaterialAttributes. Assign each by name in the HLSL (Emis = ...;) and wire it as "$node.Name".'), posX: num('Node X position.'), posY: num('Node Y position.'), x: X, y: Y }, ['materialPath', 'code']), OK, WRITE, WRITE_POLICY, LOW,
     { whenToUse: ['A calculation the standard nodes cannot express is needed as HLSL, with named inputs and optional extra outputs.'],
       whenNotToUse: ['The code or inputs of an existing Custom node must change (use material.update_custom_expression).'],
       examples: [ex('Add a scalar HLSL expression', { materialPath: M, code: 'return saturate(A * 2.0f);', outputType: 'CMOT_Float1', x: -200, y: 400 }, node('Custom'))] })

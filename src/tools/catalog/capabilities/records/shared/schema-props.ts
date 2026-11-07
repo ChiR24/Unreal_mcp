@@ -8,10 +8,17 @@
 // registry is hashed from, so a divergence between copies would surface as a
 // registry drift failure rather than a compile error.
 
+import { CODE_MAX_LENGTH, PROSE_MAX_LENGTH } from '../../constants.js';
 import type { JsonObject } from '../../model.js';
 
-/** A described string property. */
+/** A described string property: execute holds it to DEFAULT_STRING_MAX_LENGTH, the most an FName holds. */
 export const str = (desc: string): JsonObject => ({ type: 'string', description: desc });
+
+/** A string that carries code or a script, so it may run past the default length. */
+export const codeStr = (desc: string): JsonObject => ({ type: 'string', maxLength: CODE_MAX_LENGTH, description: desc });
+
+/** A string that carries prose (a description, comment, tooltip, the words a text shows), past the default length. */
+export const proseStr = (desc: string): JsonObject => ({ type: 'string', maxLength: PROSE_MAX_LENGTH, description: desc });
 
 /** A described number property. */
 export const num = (desc: string): JsonObject => ({ type: 'number', description: desc });

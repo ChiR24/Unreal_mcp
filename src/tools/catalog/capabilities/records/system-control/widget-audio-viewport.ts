@@ -2,6 +2,7 @@
  * Widget/audio/viewport records (5): create_widget, show_widget,
  * add_widget_child, play_sound, screenshot.
  */
+import { PROSE_MAX_LENGTH } from '../../constants.js';
 import type { CapabilityRecordSource } from '../../model.js';
 import { buildCoreRecord } from '../core/builder.js';
 
@@ -39,7 +40,7 @@ export const WIDGET_AUDIO_VIEWPORT_RECORDS: readonly CapabilityRecordSource[] = 
     inputProps: {
       widgetId: { type: 'string', description: 'Only "notification" (the default); any other value is refused.' },
       name: { type: 'string', description: 'Same as widgetId.' },
-      message: { type: 'string', description: 'Notification message text.' },
+      message: { type: 'string', maxLength: PROSE_MAX_LENGTH, description: 'Notification message text.' },
       duration: { type: 'number', description: 'Seconds the notification stays up (default 4, 0.5 to 60).' },
     },
     required: [],
@@ -60,7 +61,7 @@ export const WIDGET_AUDIO_VIEWPORT_RECORDS: readonly CapabilityRecordSource[] = 
       childClass: { type: 'string', description: 'Child component class (required).' },
       parentName: { type: 'string', description: 'Panel to add the child under (get_widget_info lists the panels); omitted, the root panel. A name that is not a panel fails with PARENT_NOT_FOUND.' },
       name: { type: 'string', description: 'Name of the new widget; omitted, a generated one.' },
-      text: { type: 'string', description: 'Optional text for text-bearing components.' },
+      text: { type: 'string', maxLength: PROSE_MAX_LENGTH, description: 'Optional text for text-bearing components.' },
     },
     required: ['widgetPath', 'childClass'],
     outputProps: {

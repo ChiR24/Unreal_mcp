@@ -10,6 +10,7 @@ Vitest tests that read C++/C# **source text** and assert required or forbidden p
 | Includes are self-sufficient | `source_include_self_sufficiency.test.ts` | Users of shared JSON helpers, the asset registry reads and the path refusal wording include a header that declares them (no unity-blob borrowing) |
 | Token, bind, socket, SavePackage | `security_contracts.test.ts` | Constant-time token compare on both transports; non-loopback bind refused without `RequireCapabilityToken`; replies never reach an unrelated socket; import sources stay inside the project; no `UPackage::SavePackage` outside the Safety wrappers |
 | Pre-queue gate | `prequeue-gate-contracts.test.ts` | Both transports authorize before enqueueing; the gate and the dispatcher resolve the same action |
+| String length gate | `string_length_gate_contracts.test.ts` | Execute holds input strings to `maxLength` or the 1023 an FName holds (never a reply); the long-text params keep their raised `maxLength` |
 | Browser-origin WS upgrade | `websocket_origin_contracts.test.ts` | Origin rejected before the 101 (code 4403) |
 | Reflection targets | `reflection_target_contracts.test.ts` | get/set_object_property refuse `/Script` targets (outermost package) before reading or writing, and report `OBJECT_NOT_ADDRESSABLE` |
 | Response identity redaction | `response_identity_redaction_contracts.test.ts` | Identity keys are redacted before a reply leaves; console_command output and the launch_build log tail go through the per-line sanitizer |

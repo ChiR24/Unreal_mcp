@@ -5,7 +5,7 @@
 
 import type { JsonObject } from '../../model.js';
 import type { RecordSpec } from './builder.js';
-import { arr, arrObj, bool, DESTRUCTIVE, DESTRUCTIVE_POLICY, ex, HIGH, LOW, MEDIUM, NON_IDEMPOTENT, num, r, READ, READ_POLICY, str, WRITE, WRITE_POLICY } from './builder.js';
+import { arr, arrObj, bool, DESTRUCTIVE, DESTRUCTIVE_POLICY, ex, HIGH, LOW, MEDIUM, NON_IDEMPOTENT, num, proseStr, r, READ, READ_POLICY, str, WRITE, WRITE_POLICY } from './builder.js';
 import { schema } from '../shared/record-presets.js';
 
 const ASSET_PATH = str('Canonical /Game asset path.');
@@ -279,7 +279,7 @@ export const ASSET_ADVANCED_RECORDS: readonly RecordSpec[] = [
       examples: [ex('Check out two materials before editing', { paths: ['/Game/Materials/M_Base', '/Game/Materials/M_Trim'] }, { success: true })] }
   ),
   r('source_control_submit', 'asset', 'Submit (check in) saved assets (paths, or assetPath) to the enabled provider with description as the change description. Paths that name no asset are skipped and listed (skipped); none left is NO_VALID_ASSETS, a provider refusal SUBMIT_FAILED, and source control off SOURCE_CONTROL_DISABLED. The reply gives submitted.',
-    schema({ assetPath: ASSET_PATH, paths: arr('Asset paths to submit.'), description: str('Submit description.') }, ['description']),
+    schema({ assetPath: ASSET_PATH, paths: arr('Asset paths to submit.'), description: proseStr('Submit description.') }, ['description']),
     OK, WRITE, WRITE_POLICY, MEDIUM,
     { dispatchAction: 'source_control_submit',
       whenToUse: ['Checked-out assets must be submitted to the revision-control server with a change description.'],

@@ -88,7 +88,7 @@ Every automation request is gated **before it reaches the editor queue**.
 - **A failure is never cached**: `abandon` deletes the entry so the key stays retryable, and a refusal (which never reaches `begin`) can never be replayed as a success.
 - **Eviction only removes COMPLETED entries.** Evicting an in-flight entry would admit a concurrent duplicate as a second real mutation — the exact thing the ledger exists to prevent.
 - A key replayed with a different request fingerprint is a `conflict` that discloses no prior receipt.
-- Native execute stage order is normative: resolve form/alias -> registry -> dynamic enabled state -> options -> defaults -> exact per-action input schema. Nothing reaches the subsystem queue until every stage passes.
+- Native execute stage order is normative: resolve form/alias -> registry -> dynamic enabled state -> options -> defaults -> exact per-action input schema -> string lengths (`maxLength`, else the 1023 characters an `FName` holds, boundary interiors and keys included; a long-text param declares its own). Nothing reaches the subsystem queue until every stage passes.
 
 ### UE Safety
 - Do not call `UPackage::SavePackage()` directly. Use `McpSafeAssetSave`, `McpSafeLevelSave`, or `McpSafeLoadMap` wrappers.

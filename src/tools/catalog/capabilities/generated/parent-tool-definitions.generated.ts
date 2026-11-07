@@ -10817,6 +10817,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "comment": {
           "type": "string",
+          "maxLength": 65536,
           "description": "Comment text applied to the graph node."
         },
         "componentName": {
@@ -12629,7 +12630,18 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "description": "Drop every existing row first (default false): before an import, or instead of migrating rows to a new row struct."
         },
         "code": {
-          "type": "string",
+          "oneOf": [
+            {
+              "type": "string",
+              "maxLength": 1048576,
+              "description": "HLSL code."
+            },
+            {
+              "type": "string",
+              "maxLength": 1048576,
+              "description": "Updated HLSL code."
+            }
+          ],
           "description": "HLSL code."
         },
         "collectionPath": {
@@ -12768,7 +12780,26 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "description": "Maximum recursion depth."
         },
         "description": {
-          "type": "string",
+          "oneOf": [
+            {
+              "type": "string",
+              "description": "Node title shown in the material editor (the Custom node Description)."
+            },
+            {
+              "type": "string",
+              "description": "Node title shown in the material editor."
+            },
+            {
+              "type": "string",
+              "description": "Submit description.",
+              "maxLength": 65536
+            },
+            {
+              "type": "string",
+              "maxLength": 65536,
+              "description": "Function description."
+            }
+          ],
           "description": "Function description."
         },
         "destinationDirectory": {
@@ -14109,6 +14140,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "text": {
           "type": "string",
+          "maxLength": 65536,
           "description": "The words to draw; a newline starts a new line."
         },
         "textureGroup": {
@@ -14129,6 +14161,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "tooltip": {
           "type": "string",
+          "maxLength": 65536,
           "description": "Member tooltip."
         },
         "trianglePercent": {
@@ -16615,6 +16648,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "spokenText": {
           "type": "string",
+          "maxLength": 65536,
           "description": "Transcript of the spoken line."
         },
         "startTime": {
@@ -16630,7 +16664,8 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             "additionalProperties": false,
             "properties": {
               "text": {
-                "type": "string"
+                "type": "string",
+                "maxLength": 65536
               },
               "time": {
                 "type": "number",
@@ -17473,6 +17508,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "code": {
           "type": "string",
+          "maxLength": 1048576,
           "description": "One or more (event Name [(Params)] stmts...) and (fn Name (Params) stmts...) forms, as read_graph_as_code prints them; ; comments are ignored except the node ids gotos name."
         },
         "codeOnly": {
@@ -18865,7 +18901,27 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "description": "Input pin name accepted in place of toPinName."
         },
         "text": {
-          "type": "string",
+          "oneOf": [
+            {
+              "type": "string",
+              "description": "Text content for a text block or button.",
+              "maxLength": 65536
+            },
+            {
+              "type": "string",
+              "description": "Text the piece shows: health bar label (default HP), ammo counter (30 / 90), crosshair glyph (+), compass heading (N) or prompt action (Interact)."
+            },
+            {
+              "type": "string",
+              "maxLength": 65536,
+              "description": "Text content for a text block or button."
+            },
+            {
+              "type": "string",
+              "maxLength": 65536,
+              "description": "The dialog line (default a placeholder)."
+            }
+          ],
           "description": "Text content for a text block or button."
         },
         "textName": {
@@ -31018,6 +31074,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "description": {
           "type": "string",
+          "maxLength": 65536,
           "description": "Descriptor description."
         },
         "destructive": {
@@ -31296,6 +31353,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "message": {
           "type": "string",
+          "maxLength": 65536,
           "description": "Notification message text."
         },
         "metadata": {
@@ -31558,7 +31616,18 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "description": "Percent of the window resolution per axis (100 is full resolution); 0 for the engine default."
         },
         "script": {
-          "type": "string",
+          "oneOf": [
+            {
+              "type": "string",
+              "maxLength": 1048576,
+              "description": "The script, in run_script's language; it reads each of paramNames as a variable. Its strings take only \\\" and \\\\ as escapes, as there: \\n stays a backslash and an n, and a line break inside the quotes is a line break."
+            },
+            {
+              "type": "string",
+              "maxLength": 1048576,
+              "description": "The script, statements one after another (; starts a comment to the end of the line). Where a value goes (a let, a call's :param, an operator), an (if ...) takes both values, (if cond a b) with no (else ...), and evaluates only the one cond picks; one without both values is refused (SCRIPT_INVALID). A string in double quotes takes only \\\" and \\\\ as escapes: \\n is no line break but a backslash and an n (a label \"A\\nB\" shows them); a line break inside the quotes is a line break. Refused before anything runs: SCRIPT_PARSE_ERROR, SCRIPT_INVALID, UNKNOWN_CAPABILITY (a name search does not find), UNDECLARED_PARAMETER and MISSING_REQUIRED_PARAMETER (checked against the capability's contract), SCRIPT_UNBOUND_NAME, CONSENT_NOT_LISTED, SCRIPT_STEP_REFUSED. Stopped and rolled back while running: the failed call's own error code, SCRIPT_TYPE (an operator or for over the wrong kind of value), SCRIPT_VALUE (a path into a result that holds no such field: the fields it has are named), EXPECTATION_FAILED, ENGINE_ERROR (the engine logged an error during a call, a call that answers later included), SCRIPT_BUDGET, SCRIPT_DEADLINE (past deadlineMs; a call that answers later, such as an import, still running then is the step marked STEP_DEFERRED: its work goes on past the rollback and may finish after the script returns, so read back what it makes, such as asset.list on its folder, before running it again)."
+            }
+          ],
           "description": "The script, in run_script's language; it reads each of paramNames as a variable. Its strings take only \\\" and \\\\ as escapes, as there: \\n stays a backslash and an n, and a line break inside the quotes is a line break."
         },
         "seconds": {
@@ -31675,6 +31744,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "text": {
           "type": "string",
+          "maxLength": 65536,
           "description": "Optional text for text-bearing components."
         },
         "timeoutSeconds": {

@@ -15,6 +15,7 @@
 // consult this map - adding `success` here would retype any input named
 // `success` (`utility-contract-honesty.test.ts` pins that invariant).
 
+import { PROSE_MAX_LENGTH } from '../../constants.js';
 import type { JsonObject } from '../../model.js';
 
 /** Field names whose JSON-Schema type is `boolean` on the wire. */
@@ -65,6 +66,9 @@ export const VECTOR_FIELDS = new Set(['location', 'rotation', 'size']);
 
 /** Field names whose JSON-Schema type is `array`. */
 export const ARRAY_FIELDS = new Set(['states', 'sessions', 'players', 'mappings', 'targetVoices', 'inputs']);
+
+/** String fields that carry prose, so they may run past the default string length (DEFAULT_STRING_MAX_LENGTH). */
+export const PROSE_FIELDS = new Set(['spokenText']);
 
 /**
  * Real descriptions for fields whose bare names read as placeholder text.
@@ -341,5 +345,6 @@ export function property(name: string): JsonObject {
     };
   }
   if (ARRAY_FIELDS.has(name)) return { type: 'array', description, items: {} };
+  if (PROSE_FIELDS.has(name)) return { type: 'string', maxLength: PROSE_MAX_LENGTH, description };
   return { type: 'string', description };
 }

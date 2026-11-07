@@ -10,6 +10,7 @@
  * properties, operations, parameters) per the shared json-schema validator.
  */
 import type { JsonObject } from '../../model.js';
+import { proseStr } from '../shared/schema-props.js';
 
 const S = (d: string): JsonObject => ({ type: 'string', description: d });
 const N = (d: string): JsonObject => ({ type: 'number', description: d });
@@ -160,7 +161,7 @@ export const P = {
     description: 'Widget clipping mode.',
   },
   // Widget content
-  text: S('Text content for a text block or button.'),
+  text: proseStr('Text content for a text block or button.'),
   fontSize: N('Font size.'),
   colorAndOpacity: { type: 'object', additionalProperties: true, 'x-unreal-reflection-boundary': true, description: 'Color and opacity (0-1 values).' },
   cornerRadius: { type: 'number', description: 'Corner radius in pixels for a widget that draws a brush (Image, Button, Border). Switches the brush to a RoundedBox; 0 restores square corners.' },

@@ -10,6 +10,7 @@
 #include "MCP/Execute/McpNativeGatewayReceipt.h"
 #include "MCP/Execute/McpNativeGatewaySchemaValidation.h"
 #include "MCP/Execute/Request/McpFoldVariantRules.h"
+#include "MCP/Execute/Request/McpNativeGatewayStringLimits.h"
 #include "MCP/DynamicTools/McpDynamicToolManager.h"
 #include "MCP/Registry/McpToolDefinition.h"
 #include "MCP/Registry/McpToolRegistry.h"
@@ -137,10 +138,13 @@ TSharedPtr<FJsonObject> ValidateAndResolveGatewayExecute(
 
 	// A folded family's union schema keeps only what every variant requires; the variant that will
 	// run is held to its own record's requirements as well (mirror of gateway-execute-static-check.ts).
+	// Last, every string and key the call sends is held to its maxLength or the FName limit, boundary
+	// interiors included: an 1100-character tag reached FName(*Tag) and the engine assert closed the editor.
 	FMcpSchemaViolationDetail Violation;
 	if (!McpValidateObjectAgainstCanonicalSchema(ToValidate, InputSchema, Violation)
 		|| !McpCheckVariantRequirements(*Request.Record,
-			McpResolveDispatchAction(*Request.Record, RequestedAction, WithDefaults, LegacyAction), WithDefaults, Violation))
+			McpResolveDispatchAction(*Request.Record, RequestedAction, WithDefaults, LegacyAction), WithDefaults, Violation)
+		|| !McpCheckInputStringLengths(ToValidate, InputSchema, Violation))
 	{
 		const FString Code = McpSchemaViolationCode(Violation.Reason);
 		// The wording and guidance of validateInput in gateway-execute-static-check.ts.

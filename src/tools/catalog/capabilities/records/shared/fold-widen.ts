@@ -11,6 +11,7 @@
 // `description` always carries from the first side because it documents rather
 // than constrains.
 
+import { DEFAULT_STRING_MAX_LENGTH } from '../../constants.js';
 import type {
   CapabilityRecordSource,
   JsonObject,
@@ -25,7 +26,20 @@ const UPPER_BOUNDS = ['maximum', 'maxLength', 'maxItems'] as const;
 
 const actionOf = (record: CapabilityRecordSource): string => String(record.legacyIds[0]?.action ?? '');
 
+const stringCapOf = (schema: JsonObject): number =>
+  typeof schema.maxLength === 'number' ? schema.maxLength : DEFAULT_STRING_MAX_LENGTH;
+
+// An input string with no maxLength stops at DEFAULT_STRING_MAX_LENGTH, so on the input side absent is not unbounded:
+// a cap one member raised past the default is the wider definition and survives the union, where the keyword rules
+// would drop it as one-sided (or with the type, for a typed member and a free one).
 export function widen(name: string, a: JsonValue, b: JsonValue, context: string, side: 'input' | 'output'): JsonValue {
+  const merged = widenDefinitions(name, a, b, context, side);
+  if (side !== 'input' || !isObject(a) || !isObject(b) || !isObject(merged)) return merged;
+  const cap = Math.max(stringCapOf(a), stringCapOf(b));
+  return cap > DEFAULT_STRING_MAX_LENGTH ? { ...merged, maxLength: cap } : merged;
+}
+
+function widenDefinitions(name: string, a: JsonValue, b: JsonValue, context: string, side: 'input' | 'output'): JsonValue {
   if (sameJson(a, b)) return a;
   if (!isObject(a) || !isObject(b)) return a;
   const hasTypeA = Object.hasOwn(a, 'type');

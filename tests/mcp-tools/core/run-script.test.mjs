@@ -63,6 +63,9 @@ const testCases = [
   { scenario: 'READ: crate C stands where the value ifs put it', toolName: 'control_actor', arguments: { action: 'get_transform', actorName: C }, expected: 'success', assertions: [
     { path: 'structuredContent.result.location.1', approximately: 31100, tolerance: 1, label: 'y from (if (> crates.count 2) 31100 ...)' },
   ] },
+  // A script is code, so it may run past the 1023 characters every other string stops at (the most an FName holds).
+  { scenario: 'READ: a script longer than the default string limit runs', toolName: 'system_control', arguments: run(`; ${'a comment that only pads the script '.repeat(40)}\n(return 1)`), expected: 'success' },
+  { scenario: 'ERROR: a step\'s string longer than an FName holds is refused as a direct call\'s is, and nothing runs', toolName: 'system_control', arguments: run(`(control_actor.add_tag :actorName "${A}" :tag "${'Z'.repeat(1100)}")`), expected: 'error|OUT_OF_RANGE', assertions: [{ path: 'structuredContent.errorCode', equals: 'OUT_OF_RANGE', label: 'the step was refused by the length check' }] },
   { scenario: 'ERROR: an (if ...) in a value\'s place without both values is refused before anything runs', toolName: 'system_control', arguments: run(`(control_actor.set_transform :actorName "${C}" :location (obj :x 31400 :y 31000 :z (if true 900)))`), expected: 'error|SCRIPT_INVALID' },
   { scenario: 'CREATE: a script spawns a row with range, joined names and computed positions', toolName: 'system_control', arguments: run(`(for i (range 2)
   (control_actor.spawn :classPath "/Engine/BasicShapes/Cube" :actorName (+ "${ROW}" i) :location (obj :x (+ 31000 (* i 200)) :y 31600 :z 50) :tags (list "${TAG}")))

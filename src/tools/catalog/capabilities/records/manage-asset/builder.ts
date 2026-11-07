@@ -14,7 +14,7 @@ import type {
 
 // --- Schema helpers ---
 
-export { bool, num, str } from '../shared/schema-props.js';
+export { bool, codeStr, num, proseStr, str } from '../shared/schema-props.js';
 // Several material parameter values in one consented call (set_material_parameter, create_material_instance).
 export const MATERIAL_PARAMETER_LIST: JsonObject = {
   type: 'array',

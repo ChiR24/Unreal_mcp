@@ -12,6 +12,7 @@
  * IProjectManager and saves it. Module loading and content mounting still
  * happen at startup, so the write reports restartRequired.
  */
+import { PROSE_MAX_LENGTH } from '../../constants.js';
 import type { CapabilityRecordSource } from '../../model.js';
 import { buildCoreRecord } from '../core/builder.js';
 
@@ -122,7 +123,7 @@ export const PLUGIN_RECORDS: readonly CapabilityRecordSource[] = [
     inputProps: {
       pluginName: { type: 'string', description: 'The plugin\'s name: its folder, its .uplugin and its content root /Name/. Letters, digits and underscores, starting with a letter.' },
       friendlyName: { type: 'string', description: 'Display name in the Plugins browser (default the name).' },
-      description: { type: 'string', description: 'Descriptor description.' },
+      description: { type: 'string', maxLength: PROSE_MAX_LENGTH, description: 'Descriptor description.' },
       category: { type: 'string', description: 'Plugins browser category (default Other).' },
       createdBy: { type: 'string', description: 'Author.' },
       template: { type: 'string', enum: ['content_only', 'game_feature'], description: 'content_only (default): content that loads with the project; game_feature: a game feature plugin under Plugins/GameFeatures that the Game Features subsystem loads and activates (category default Game Features).' },

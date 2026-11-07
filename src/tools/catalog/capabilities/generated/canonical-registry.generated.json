@@ -1,5 +1,5 @@
 {
-  "catalogRevision": "0628ad2d611ee666",
+  "catalogRevision": "e01a3db0f92cb101",
   "recordCount": 489,
   "records": [
     {
@@ -14649,7 +14649,8 @@
             },
             "description": {
               "type": "string",
-              "description": "Submit description."
+              "description": "Submit description.",
+              "maxLength": 65536
             },
             "provider": {
               "type": "string",
@@ -14793,8 +14794,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "c497535c3d461a09aa7dd2f059c88cc4810b4db13ab8354ad6461e25b81f0423",
-        "content": "564ae5707924db757b0f949a85aee7eb2b9ce5322606c6e201a860827cbd1f92"
+        "schema": "63c6e2b1ddb6e343e68a81d0a67f09f649c1eba76ba5aa96c54ddc73d582769a",
+        "content": "37f7afa871d975f1833398c2c4e3dad62a48f16b00b3e908055a900ca8bbd2f9"
       }
     },
     {
@@ -16357,7 +16358,8 @@
             },
             "text": {
               "type": "string",
-              "description": "Text content for a text block or button."
+              "description": "Text content for a text block or button.",
+              "maxLength": 65536
             },
             "fontSize": {
               "type": "number",
@@ -16691,8 +16693,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "db553766d9b8b02886369ca5e6ae2aff89110af56b4ec2c5cce2c871fc0332aa",
-        "content": "5d1b0f1a470dfaa9ba483e0b47ad718fabb3f5e44944497b21925f2d9cd4ec0c"
+        "schema": "4e257e3e1f6e31b19d182d72483841f925ea2fd9d18b87cb2d7ebdad0bed202b",
+        "content": "0c7703cc094ed197b1ad3d543ee66b502e57c49c65c7573d8d4d15bd304ec485"
       }
     },
     {
@@ -20342,6 +20344,7 @@
             },
             "text": {
               "type": "string",
+              "maxLength": 65536,
               "description": "The dialog line (default a placeholder)."
             },
             "columns": {
@@ -20607,8 +20610,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "af1cfbf6f1ef858806d877546051ad79202eaa79b254d8d58bc04aaf786edd5e",
-        "content": "b7c6907a08d0e7b0ea8e741dc378a8b02cf50dc2e393c789e53e89c6dc6eb787"
+        "schema": "b2da02b993bfb316e37408334b047debf8a734f69d0156414e8ed7cca85f0edd",
+        "content": "8b25af02c92070d5e7aa879846fad3d7c11dc998f60f5fa96e22f2f88b07bee6"
       }
     },
     {
@@ -28186,6 +28189,7 @@
             },
             "text": {
               "type": "string",
+              "maxLength": 65536,
               "description": "Text content for a text block or button."
             },
             "texturePath": {
@@ -28509,8 +28513,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "460bbbe8aba77513a85e6575e112ea66182d809d218341f5243a4b37cd929dba",
-        "content": "93a8a6e1745add4d5269a758e5a624bcb6c14134f1c5755c738722100ac3749d"
+        "schema": "ff8a167b88355b8ff739461b1061cdb2653f29ba9efe9d3abca973aeca73d87c",
+        "content": "c8f3ea9e267d8336624dbe2587bbeaf1876d6e2aa82a80b0f5e82d3a25f7d53a"
       }
     },
     {
@@ -28558,6 +28562,7 @@
             },
             "code": {
               "type": "string",
+              "maxLength": 1048576,
               "description": "One or more (event Name [(Params)] stmts...) and (fn Name (Params) stmts...) forms, as read_graph_as_code prints them; ; comments are ignored except the node ids gotos name."
             },
             "graphName": {
@@ -28756,8 +28761,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "fa55e64f547cfcccff3ab20bf1688faf8006105be88157bae8727200c67c2c4d",
-        "content": "a6c818e0d837d618442dd148b2c1d9c4edaef8a4e4394be8ceed5ed42bb582de"
+        "schema": "e18ad860f9fba9dfbafdbe51f03dc9c880f5c05a74190a47d79eb6bc7358be6c",
+        "content": "32451cf37a2cd38de86d6e87befd5a6f3989a10af6f8bd74606afd788a73a379"
       }
     },
     {
@@ -63998,6 +64003,7 @@
             },
             "comment": {
               "type": "string",
+              "maxLength": 65536,
               "description": "Comment text applied to the graph node."
             },
             "edit": {
@@ -64262,8 +64268,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "ff85f46981e9678a0675b0cc3e782321436e0860d8e2377f6beda3f7058a4221",
-        "content": "4b22e468783a45eae941bfc4face5721b067ceea007ba6a7e7788bf6403c6218"
+        "schema": "77fc445500d42de7985b6775fe56cd42808ed174758b1f1d22d0cf823ee1d520",
+        "content": "6c48ed97dd2fcfc2d772fcef2dbe2cd1e673602bc347f98ff5a3731c8dfa1c0d"
       }
     },
     {
@@ -69375,6 +69381,7 @@
             },
             "spokenText": {
               "type": "string",
+              "maxLength": 65536,
               "description": "Transcript of the spoken line."
             },
             "speakerPath": {
@@ -69559,8 +69566,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "f8a0a19ffe50eb1610b921c11e9437acb000cc4af16abacc3e4c5aecda0194b0",
-        "content": "3d378f079084f6c2ceda561ef4f5f6d8f33a5e62cd79fa21212e106b23e7628d"
+        "schema": "81fc1e80dbeab75f213d205f7f3a814fa089442fb008522e0f71103b0fd77b93",
+        "content": "3540cb21720f9df3f3219ed3e9efd947ed84ab87bf26184e8cac774e9ef8ff8f"
       }
     },
     {
@@ -72532,7 +72539,8 @@
                 "additionalProperties": false,
                 "properties": {
                   "text": {
-                    "type": "string"
+                    "type": "string",
+                    "maxLength": 65536
                   },
                   "time": {
                     "type": "number",
@@ -72677,8 +72685,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "a3bf05b9799cc703dca991b5f11c573996121505d690581ef14af5e344156760",
-        "content": "39549503a073d8bb8d7d9004e64e408c77f13667bc6628669adb81752573a8b0"
+        "schema": "32f4d4a24280d4df9a607d98a059d5de437a7db345b45abdd0f14530f20fd11b",
+        "content": "655cea690c9855d25e625acccaef2b5cf98f0ebc2aa98456ddb7da1bf2670c8e"
       }
     },
     {
@@ -103250,6 +103258,7 @@
             },
             "code": {
               "type": "string",
+              "maxLength": 1048576,
               "description": "HLSL code."
             },
             "outputType": {
@@ -103841,8 +103850,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "6cbd2f7599838af0aea9c917a0f6d2bf37f5ae94297741873e157568eaa13c8a",
-        "content": "f94a2fc4261755b974a028fefb17fe199c5cb69b848f9430367892d8571d0604"
+        "schema": "56cdfdb00757f39d4b473f15831b1098a4ab76b28efee83aa9f01821c1c44760",
+        "content": "dd0f18b146c74828e28aebab7ee37e990404b8328705a4eea4a1f4e9fe17eae9"
       }
     },
     {
@@ -104439,6 +104448,7 @@
             },
             "description": {
               "type": "string",
+              "maxLength": 65536,
               "description": "Function description."
             },
             "exposeToLibrary": {
@@ -104636,8 +104646,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "ddb0f137f776b24373015bac1938e25ad09bd3ab03b7f86490acc94c1873ae5e",
-        "content": "9bd6aff4a51afca950b00795b940ff4aa647dad2973e770a3636eb6a4e97a5fe"
+        "schema": "9127677ceb3ce51d695ff7cd61a0e332e640260820484cbc0535628365c6a00d",
+        "content": "56375334def14e9ba1c43bdf700a2bb529996adf937cec934fe397a01186b4ab"
       }
     },
     {
@@ -106343,6 +106353,7 @@
             },
             "code": {
               "type": "string",
+              "maxLength": 1048576,
               "description": "Updated HLSL code."
             },
             "inputs": {
@@ -106454,8 +106465,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "cc204dd630f51f656732925d7c09c84c4c3000235326210c2be03c4098cf6186",
-        "content": "446ce30b1df40692be0727dae3af92e144b6d2e1278f5321ff49852c5395b94c"
+        "schema": "c16cb1a2e4c619b23fe490e4be1055fce94bf639b40494630b1aae150cec3aae",
+        "content": "29ce62ba01a1663cc96202b1670343d56416b5017922239fdb2114fb414d859b"
       }
     },
     {
@@ -114168,6 +114179,7 @@
             },
             "tooltip": {
               "type": "string",
+              "maxLength": 65536,
               "description": "Member tooltip."
             },
             "metadata": {
@@ -114568,8 +114580,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "28c9955449dedfd1b299d3cf56c0cd7877ead127deab17021f166d9430fccf47",
-        "content": "9fda41f85a4340fe5f95dfc77efd4ef190fa7dbd2ac43a6a315d90ff8b2f45ad"
+        "schema": "48d781ca67f83ee2a79295ad25db6cfd67b747e7f82e83169e1728dccca9b466",
+        "content": "828fde2d97575203651353e30d0e2aa420de2e098edf1c6c4aee5d8cd9b5ea27"
       }
     },
     {
@@ -116174,6 +116186,7 @@
             },
             "description": {
               "type": "string",
+              "maxLength": 65536,
               "description": "Descriptor description."
             },
             "category": {
@@ -116286,8 +116299,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "bc2f1d46ae08b7bc1040dcfdc50cc3398654d315ada4d47e9dc9fa6f05807192",
-        "content": "3fda7a782ed4efa54fac98607d1f696bae9971afd884994be1e3a4d1e91c679c"
+        "schema": "ddf1e8b9745e6ce7019f523c8f30a099a7c4999fb5b6c094a2e9bd762d012b06",
+        "content": "34c2f3f945fab11e7214a8251b16bbd728386947b51a7d2f04a6fc92d56a3457"
       }
     },
     {
@@ -116370,6 +116383,7 @@
             },
             "text": {
               "type": "string",
+              "maxLength": 65536,
               "description": "Optional text for text-bearing components."
             },
             "widgetId": {
@@ -116378,6 +116392,7 @@
             },
             "message": {
               "type": "string",
+              "maxLength": 65536,
               "description": "Notification message text."
             },
             "duration": {
@@ -116519,8 +116534,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "c83209b625d6d1eb6a7cceabc5654ecaf1a514012362d535050bdc94812dbd3f",
-        "content": "7776ed2c977d835472ec4e91dee986f13470ad3fb5a613ea7dd5d53e65d7040d"
+        "schema": "b9c549a93a752c6a63b1b93e4731ea072bc75f773b8a3e04876e13e1fe5b8700",
+        "content": "890ce44b88074cfa2402d8acd2e849d54ce904f8f742a39c3f07a243dc0bfeff"
       }
     },
     {
@@ -120860,6 +120875,7 @@
             },
             "script": {
               "type": "string",
+              "maxLength": 1048576,
               "description": "The script, statements one after another (; starts a comment to the end of the line). Where a value goes (a let, a call's :param, an operator), an (if ...) takes both values, (if cond a b) with no (else ...), and evaluates only the one cond picks; one without both values is refused (SCRIPT_INVALID). A string in double quotes takes only \\\" and \\\\ as escapes: \\n is no line break but a backslash and an n (a label \"A\\nB\" shows them); a line break inside the quotes is a line break. Refused before anything runs: SCRIPT_PARSE_ERROR, SCRIPT_INVALID, UNKNOWN_CAPABILITY (a name search does not find), UNDECLARED_PARAMETER and MISSING_REQUIRED_PARAMETER (checked against the capability's contract), SCRIPT_UNBOUND_NAME, CONSENT_NOT_LISTED, SCRIPT_STEP_REFUSED. Stopped and rolled back while running: the failed call's own error code, SCRIPT_TYPE (an operator or for over the wrong kind of value), SCRIPT_VALUE (a path into a result that holds no such field: the fields it has are named), EXPECTATION_FAILED, ENGINE_ERROR (the engine logged an error during a call, a call that answers later included), SCRIPT_BUDGET, SCRIPT_DEADLINE (past deadlineMs; a call that answers later, such as an import, still running then is the step marked STEP_DEFERRED: its work goes on past the rollback and may finish after the script returns, so read back what it makes, such as asset.list on its folder, before running it again)."
             },
             "destructive": {
@@ -120991,8 +121007,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "c4b1ac122a9b49f6065d5c68d3772687c1bde6b0740620263743b21c9caf0a6f",
-        "content": "da7089e312783cfab76befbebf944945c05ee533fc22b36f3b9245291f0e36e8"
+        "schema": "375a609faab5364a59052683abf0d40d35919cc9952d863b3afa9e5f99e12193",
+        "content": "cb5d284cd3e183e28c3ef9cdce7df3e1b39ff0338e5992d4fd78f1195f797fbe"
       }
     },
     {
@@ -121043,6 +121059,7 @@
             },
             "script": {
               "type": "string",
+              "maxLength": 1048576,
               "description": "The script, in run_script's language; it reads each of paramNames as a variable. Its strings take only \\\" and \\\\ as escapes, as there: \\n stays a backslash and an n, and a line break inside the quotes is a line break."
             },
             "paramNames": {
@@ -121156,8 +121173,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "b644207169890067500280e70542ec52a62624a4ab5a22b44d33189d9109c5e1",
-        "content": "a99c71d02cc715247a89f125f150c8f457be96bfee8f396a5a03d0eea2d3b661"
+        "schema": "29f4206f89f1c41977a2fb0d2f2404e6516f2e8c5b092f9d03893fc4f8f828d4",
+        "content": "3103282db93fc6be181ed9a87da8895b8f748ed6c059c1c05d2a8fa687918e21"
       }
     },
     {
@@ -123261,6 +123278,7 @@
             },
             "text": {
               "type": "string",
+              "maxLength": 65536,
               "description": "The words to draw; a newline starts a new line."
             },
             "fontFamily": {
@@ -123820,8 +123838,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "f70e5be25cd8042b860ac559062ab482d3412aff6b1aefad7f6b7d61135de2d9",
-        "content": "333f9d8a0f45d94e922fe9358df31b1de83a6b661aefae92d9a46364a50068fa"
+        "schema": "35e23ae0e74034c896d940d6f2569cc01fdc2d1c705c94ef9f9d2189301bdace",
+        "content": "841aba493de76a9d7997da4f78b609d69b0aee42d02fc7fc503fd6b1cf0139df"
       }
     },
     {

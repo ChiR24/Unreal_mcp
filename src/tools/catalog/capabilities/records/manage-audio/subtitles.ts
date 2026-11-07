@@ -2,6 +2,7 @@
  * Subtitle records: a Sound Wave's subtitle cues, which the engine shows at the bottom of the game's screen while the
  * sound plays. Native Domains/AudioAuthoring (McpAudioSubtitles).
  */
+import { PROSE_MAX_LENGTH } from '../../constants.js';
 import type { CapabilityRecordSource } from '../../model.js';
 import { buildCoreRecord } from '../core/builder.js';
 
@@ -24,7 +25,7 @@ export const SUBTITLE_RECORDS: readonly CapabilityRecordSource[] = [
       soundPath: { type: 'string', description: 'The Sound Wave, by asset path.' },
       subtitles: {
         type: 'array', maxItems: 200, description: 'The cues, [{text, time}]: the words, and the seconds into the sound they show from (0 to the sound\'s length). [] takes them all off.',
-        items: { type: 'object', additionalProperties: false, properties: { text: { type: 'string' }, time: { type: 'number', minimum: 0 } }, required: ['text'] },
+        items: { type: 'object', additionalProperties: false, properties: { text: { type: 'string', maxLength: PROSE_MAX_LENGTH }, time: { type: 'number', minimum: 0 } }, required: ['text'] },
       },
       save: { type: 'boolean', description: 'Save the wave (default true); false leaves the change in memory only.' },
     },

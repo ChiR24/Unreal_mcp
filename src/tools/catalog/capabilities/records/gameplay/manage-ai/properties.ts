@@ -3,7 +3,7 @@
  */
 import type { JsonObject } from '../../../model.js';
 import { P } from '../properties.js';
-import { str, num, bool } from '../../shared/schema-props.js';
+import { str, num, bool, proseStr } from '../../shared/schema-props.js';
 
 const pick = (description: string, values: readonly string[]): JsonObject =>
   ({ type: 'string', enum: [...values], description });
@@ -83,7 +83,7 @@ export const AI = {
   parentNodeId: str("ID of the parent node: 'root', a node GUID, or a node id as returned by add_composite/add_task (for example BTComposite_Selector_0)."),
   childNodeId: str('ID of the child node.'),
   nodeType: str('Behavior Tree graph node type.'),
-  comment: str('Comment text applied to the graph node.'),
+  comment: proseStr('Comment text applied to the graph node.'),
   x: num('Graph node X coordinate.'),
   y: num('Graph node Y coordinate.'),
 

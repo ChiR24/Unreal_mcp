@@ -3,6 +3,7 @@
  * parameters, and run later as one checked call (plugin Domains/Scripts/McpRecipes). Three own records: a fold takes its
  * first member's effect, and a read must not share one with a destructive run.
  */
+import { CODE_MAX_LENGTH } from '../../constants.js';
 import type { CapabilityRecordSource } from '../../model.js';
 import { ANY_EDITOR_STATE, buildCoreRecord } from '../core/builder.js';
 
@@ -23,7 +24,7 @@ export const RECIPE_RECORDS: readonly CapabilityRecordSource[] = [
     inputProps: {
       name: NAME,
       summary: { type: 'string', maxLength: 300, description: 'What the recipe does, in a sentence: search and list_recipes match its words.' },
-      script: { type: 'string', description: 'The script, in run_script\'s language; it reads each of paramNames as a variable. Its strings take only \\" and \\\\ as escapes, as there: \\n stays a backslash and an n, and a line break inside the quotes is a line break.' },
+      script: { type: 'string', maxLength: CODE_MAX_LENGTH, description: 'The script, in run_script\'s language; it reads each of paramNames as a variable. Its strings take only \\" and \\\\ as escapes, as there: \\n stays a backslash and an n, and a line break inside the quotes is a line break.' },
       paramNames: { type: 'array', items: { type: 'string' }, description: 'The parameter names (at most 16), each bound by run_recipe\'s args before the script runs.' },
       destructive: { type: 'array', items: { type: 'string' }, description: 'The destructive capabilities the script calls, as run_script takes them.' },
       overwrite: { type: 'boolean', description: 'Replace a recipe of the same name (default false).' },

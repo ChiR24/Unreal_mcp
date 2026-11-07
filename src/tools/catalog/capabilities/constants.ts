@@ -11,3 +11,10 @@ export const LATENCY_CLASSES = ['instant', 'interactive', 'long-running'] as con
 export const RESOURCE_CLASSES = ['low', 'medium', 'high'] as const;
 export const HASH_ALGORITHM = 'sha256' as const;
 
+// Execute holds an input string whose schema sets no maxLength to this many characters (McpDefaultStringMaxLength,
+// NAME_SIZE - 1, in McpNativeGatewayStringLimits.h): an FName holds no more, and a longer one asserts and closes the
+// editor. A parameter that carries long text declares its own maxLength: one of the two below.
+export const DEFAULT_STRING_MAX_LENGTH = 1023;
+export const CODE_MAX_LENGTH = 1048576;
+export const PROSE_MAX_LENGTH = 65536;
+

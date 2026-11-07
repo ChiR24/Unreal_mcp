@@ -3,7 +3,7 @@
 // FInstancedStruct property access (issue #510, #struct-ecosystem).
 
 import type { RecordSpec } from './builder.js';
-import { arrObj, bool, DESTRUCTIVE, DESTRUCTIVE_POLICY, ex, HIGH, LOW, MEDIUM, NON_IDEMPOTENT, READ, READ_POLICY, r, str, WRITE, WRITE_POLICY } from './builder.js';
+import { arrObj, bool, DESTRUCTIVE, DESTRUCTIVE_POLICY, ex, HIGH, LOW, MEDIUM, NON_IDEMPOTENT, proseStr, READ, READ_POLICY, r, str, WRITE, WRITE_POLICY } from './builder.js';
 import { schema } from '../shared/record-presets.js';
 
 const STRUCT_PATH = str('Asset path of the Blueprint Struct (e.g. /Game/Structs/S_MyStruct).');
@@ -35,7 +35,7 @@ export const STRUCT_RECORDS: readonly RecordSpec[] = [
     { examples: [ex('List a struct\'s members', { structPath: S }, DONE)],
       whenToUse: ['A struct\'s member names, types, defaults and tooltips must be known before rows or edits are written; native /Script structs such as Vector can be read too.'],
       whenNotToUse: ['A struct must be changed rather than read (use struct.edit_struct).'] }),
-  r('add_struct_member', 'struct', 'Add a new member to a Blueprint Struct.', schema({ structPath: STRUCT_PATH, memberName: MEMBER_NAME, memberType: MEMBER_TYPE, defaultValue: str('Default value as string.'), tooltip: str('Member tooltip.'), metadata: { type: 'object', 'x-unreal-reflection-boundary': true, description: 'Metadata key/value pairs.' }, members: arrObj('Several members at once, each { name, type } (or memberName, memberType) with optional defaultValue, tooltip and metadata; replaces the single memberName form.'), save: SAVE }, ['structPath'], ['memberName', 'members']), OK, WRITE, WRITE_POLICY, LOW,
+  r('add_struct_member', 'struct', 'Add a new member to a Blueprint Struct.', schema({ structPath: STRUCT_PATH, memberName: MEMBER_NAME, memberType: MEMBER_TYPE, defaultValue: str('Default value as string.'), tooltip: proseStr('Member tooltip.'), metadata: { type: 'object', 'x-unreal-reflection-boundary': true, description: 'Metadata key/value pairs.' }, members: arrObj('Several members at once, each { name, type } (or memberName, memberType) with optional defaultValue, tooltip and metadata; replaces the single memberName form.'), save: SAVE }, ['structPath'], ['memberName', 'members']), OK, WRITE, WRITE_POLICY, LOW,
     { examples: [ex('Add a float damage member', { structPath: S, memberName: 'Damage', memberType: 'Float', defaultValue: '25.0', tooltip: 'Base damage per hit.' }, DONE)],
       whenToUse: ['One or several fields, each with a type, optional default and tooltip, must be added to an existing struct.'],
       whenNotToUse: ['A variable is needed on a Blueprint, not a field on a struct (use blueprint.edit_variable).'] }),
@@ -59,7 +59,7 @@ export const STRUCT_RECORDS: readonly RecordSpec[] = [
     { examples: [ex('Default damage to 25', { structPath: S, memberName: 'Damage', defaultValue: '25.0' }, DONE)],
       whenToUse: ['A field needs a new default value; a value that cannot convert to the field type is rejected.'],
       whenNotToUse: ['Values stored in a DataTable row must change, not the struct default (use datatable.edit_data_table).'] }),
-  r('set_struct_member_metadata', 'struct', 'Set metadata (tooltip, etc.) on a member in a Blueprint Struct.', schema({ structPath: STRUCT_PATH, memberName: MEMBER_NAME, tooltip: str('Member tooltip.'), metadata: { type: 'object', 'x-unreal-reflection-boundary': true, description: 'Metadata key/value pairs.' }, varGuid: str('Stable member GUID, as get_struct lists it; pass this or memberName.'), save: SAVE }, ['structPath'], ['memberName', 'varGuid']), OK, WRITE, WRITE_POLICY, LOW,
+  r('set_struct_member_metadata', 'struct', 'Set metadata (tooltip, etc.) on a member in a Blueprint Struct.', schema({ structPath: STRUCT_PATH, memberName: MEMBER_NAME, tooltip: proseStr('Member tooltip.'), metadata: { type: 'object', 'x-unreal-reflection-boundary': true, description: 'Metadata key/value pairs.' }, varGuid: str('Stable member GUID, as get_struct lists it; pass this or memberName.'), save: SAVE }, ['structPath'], ['memberName', 'varGuid']), OK, WRITE, WRITE_POLICY, LOW,
     { examples: [ex('Document a member with a tooltip', { structPath: S, memberName: 'Damage', tooltip: 'Base damage per hit.' }, DONE)],
       whenToUse: ['A field needs a tooltip or metadata key and value pairs.'],
       whenNotToUse: ['Metadata for an enum entry is wanted (use enum.edit_enum).'] }),

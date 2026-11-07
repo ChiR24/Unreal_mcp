@@ -2,7 +2,7 @@
 // specialized material types (landscape, decal, post-process).
 
 import type { RecordSpec } from './builder.js';
-import { arrObj, BLEND_MODE, bool, ex, MATERIAL_DOMAIN, MATERIAL_PARAMETER_LIST, MEDIUM, r, SHADING_MODEL, str, WRITE, WRITE_POLICY } from './builder.js';
+import { arrObj, BLEND_MODE, bool, ex, MATERIAL_DOMAIN, MATERIAL_PARAMETER_LIST, MEDIUM, proseStr, r, SHADING_MODEL, str, WRITE, WRITE_POLICY } from './builder.js';
 import { schema } from '../shared/record-presets.js';
 
 const SAVE = bool('Save the asset afterwards. Defaults to true; pass false to keep it in memory only.');
@@ -45,7 +45,7 @@ export const MATERIAL_CREATE_RECORDS: readonly RecordSpec[] = [
         ex('Make a palette of instances under one consent', { parentMaterial: '/Game/Materials/M_Toy', savePath: '/Game/Materials/Instances', instances: [{ name: 'MI_Toy_Red', parameters: [{ parameterName: 'Color', parameterType: 'vector', value: [0.8, 0.1, 0.1] }] }, { name: 'MI_Toy_Blue', parameters: [{ parameterName: 'Color', parameterType: 'vector', value: [0.1, 0.2, 0.8] }] }] }, { success: true, created: 2 })] }
   ),
   r('create_material_function', 'material', 'Create a new material function asset.',
-    schema({ name: str('Function name.'), path: str('Package path.'), save: SAVE, description: str('Function description.'), exposeToLibrary: bool('Expose in the material function library.') }, ['name']),
+    schema({ name: str('Function name.'), path: str('Package path.'), save: SAVE, description: proseStr('Function description.'), exposeToLibrary: bool('Expose in the material function library.') }, ['name']),
     OK, WRITE, WRITE_POLICY, MEDIUM,
     { whenToUse: ['A chunk of graph logic must be reused by several materials as one node, listed in the function library unless exposeToLibrary is false.'],
       whenNotToUse: ['The logic is used by one material only (build it in that material with material.add_material_node).'],

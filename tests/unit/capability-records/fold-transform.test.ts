@@ -90,6 +90,35 @@ describe('widen() merge rules (two-member folds)', () => {
     expect(merged.schemas.input.properties.depth).toEqual({ type: 'number', minimum: 0, maximum: 100 });
   });
 
+  // Execute holds an input string with no maxLength to 1023 characters (the most an FName holds), so on the input side
+  // a missing maxLength is that default, not unbounded.
+  it('keeps a string cap one member raised past the default', () => {
+    const merged = foldTwo(
+      { code: { type: 'string', maxLength: 65536 } },
+      { code: { type: 'string' } },
+      ['code'],
+    );
+    expect(merged.schemas.input.properties.code).toEqual({ type: 'string', maxLength: 65536 });
+  });
+
+  it('keeps a raised string cap when the other member leaves the value untyped', () => {
+    const merged = foldTwo(
+      { value: { type: 'string', maxLength: 65536 } },
+      { value: {} },
+      ['value'],
+    );
+    expect(merged.schemas.input.properties.value).toEqual({ maxLength: 65536 });
+  });
+
+  it('drops a one-sided string cap under the default, which is the wider', () => {
+    const merged = foldTwo(
+      { tag: { type: 'string', maxLength: 40 } },
+      { tag: { type: 'string' } },
+      ['tag'],
+    );
+    expect(merged.schemas.input.properties.tag).toEqual({ type: 'string' });
+  });
+
   it('drops a narrowing keyword declared by one member only', () => {
     const merged = foldTwo(
       { tag: { type: 'string', pattern: '^a' } },

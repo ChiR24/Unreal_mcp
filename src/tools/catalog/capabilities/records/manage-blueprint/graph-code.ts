@@ -3,6 +3,7 @@
  * Blueprint DSL, and that text written back as nodes (plugin Domains/BlueprintGraph/Code). Own records: folded into a
  * family, their action names' words would join the family primary's aliases.
  */
+import { CODE_MAX_LENGTH } from '../../constants.js';
 import type { CapabilityRecordSource } from '../../model.js';
 import { BP_PLUGINS, buildRecord } from './helpers.js';
 import { P } from './properties.js';
@@ -76,7 +77,7 @@ export const GRAPH_CODE_RECORDS: readonly CapabilityRecordSource[] = [
     ],
     inputProps: {
       blueprintPath: P.blueprintPath,
-      code: { type: 'string', description: 'One or more (event Name [(Params)] stmts...) and (fn Name (Params) stmts...) forms, as read_graph_as_code prints them; ; comments are ignored except the node ids gotos name.' },
+      code: { type: 'string', maxLength: CODE_MAX_LENGTH, description: 'One or more (event Name [(Params)] stmts...) and (fn Name (Params) stmts...) forms, as read_graph_as_code prints them; ; comments are ignored except the node ids gotos name.' },
       graphName: { type: 'string', description: 'The event graph (event) forms go into (default: the first). An (fn) form always goes into its own function.' },
     },
     required: ['blueprintPath', 'code'],

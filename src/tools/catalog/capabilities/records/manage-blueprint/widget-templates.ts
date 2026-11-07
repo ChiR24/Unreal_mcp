@@ -10,6 +10,7 @@
  * the asset is created.
  */
 import type { CapabilityRecordSource, JsonObject } from '../../model.js';
+import { proseStr } from '../shared/schema-props.js';
 import { buildRecord, WIDGET_PLUGINS } from './helpers.js';
 import { P } from './properties.js';
 
@@ -60,7 +61,7 @@ export const WIDGET_TEMPLATES_RECORDS: readonly CapabilityRecordSource[] = [
   screen('create_hud_widget', 'Create a HUD Widget Blueprint on a canvas holding ready-made pieces (default health bar, crosshair, ammo counter).',
     { elements: P.elements }, { elements: ['health_bar', 'crosshair'] }),
   screen('create_dialog_widget', 'Create a dialog box Widget Blueprint: speaker name, wrapped dialog line, response buttons and a continue hint.',
-    { showSpeakerName: P.showSpeakerName, responseCount: P.responseCount, buttons: P.buttons, text: { type: 'string', description: 'The dialog line (default a placeholder).' } },
+    { showSpeakerName: P.showSpeakerName, responseCount: P.responseCount, buttons: P.buttons, text: proseStr('The dialog line (default a placeholder).') },
     { text: 'Open the gate?', buttons: ['Yes', 'No'] }),
   screen('create_inventory_ui', 'Create an inventory Widget Blueprint: titled panel with a grid of item slots (default 6 by 4).',
     { columns: P.columns, rows: P.rows }, { columns: 5, rows: 3 }),

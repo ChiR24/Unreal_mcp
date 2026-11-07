@@ -210,6 +210,13 @@ reference:
 4. options
 5. declared defaults
 6. the exact per-action input schema
+7. string lengths: every string and object key the call sends, inside free-form
+   (reflection-boundary) objects too, is at most its schema's `maxLength`, or
+   1023 characters where none applies, the most an `FName` holds; one more
+   asserts in the engine and closes the editor
+   (`Private/MCP/Execute/Request/McpNativeGatewayStringLimits.h`). A parameter
+   that carries code or prose declares a larger `maxLength`. Replies are not
+   held to it.
 
 **Nothing reaches the subsystem queue until every stage passes.**
 
