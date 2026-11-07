@@ -1,5 +1,5 @@
 {
-  "catalogRevision": "10e6b64480e75fd0",
+  "catalogRevision": "47cb929db5846cb6",
   "recordCount": 489,
   "records": [
     {
@@ -108756,14 +108756,14 @@
             },
             "property": {
               "type": "string",
-              "description": "Property to key: Transform, Location, Rotation or Scale; Visibility, which shows (true) or hides (false) the bound actor in the editor and in renders; or a float or bool property by name."
+              "description": "Property to key, sent beside value (never inside it): Transform, Location, Rotation or Scale; Visibility, which shows (true) or hides (false) the bound actor in the editor and in renders; or a float or bool property by name."
             },
             "frame": {
               "type": "integer",
               "description": "Frame number for the keyframe."
             },
             "value": {
-              "description": "Keyframe value. For property \"Transform\" pass a composed object with any subset of {location:{x,y,z}, rotation:{pitch,yaw,roll}, scale:{x,y,z}}; each component supplied must carry all of its finite axes; a new Transform track starts from the current transform of the actor, so the parts a key leaves out keep their values. Add lookAt:{x,y,z} beside location to aim the key at that point (a camera at its subject): pitch and yaw are worked out, roll comes from rotation.roll or 0, and the yaw turns the short way from the key before, so an orbit of aimed keys never spins round. For \"Location\"/\"Rotation\"/\"Scale\" pass that component object alone. Visibility takes true or false; other properties take their own scalar value, so no type is declared here."
+              "description": "Keyframe value, beside property: the key itself, never a {property, value} wrapper. For property \"Transform\" pass a composed object with any subset of {location:{x,y,z}, rotation:{pitch,yaw,roll}, scale:{x,y,z}}; each component supplied must carry all of its finite axes; a new Transform track starts from the current transform of the actor, so the parts a key leaves out keep their values. Add lookAt:{x,y,z} beside location to aim the key at that point (a camera at its subject): pitch and yaw are worked out, roll comes from rotation.roll or 0, and the yaw turns the short way from the key before, so an orbit of aimed keys never spins round. For \"Location\"/\"Rotation\"/\"Scale\" pass that component object alone. Visibility takes true or false; other properties take their own scalar value, so no type is declared here."
             },
             "interpolation": {
               "type": "string",
@@ -108858,7 +108858,7 @@
                 "set_solo",
                 "set_section"
               ],
-              "description": "Which edit sequence tracks variant to run.\nadd_track: Add an empty track of trackType to a Level Sequence: on the binding of actorName (an actor the sequence already binds), or as a sequence-wide track without it (Audio for music, Fade, Event). trackName gives it a display name later track actions can address it by. One undo step; the sequence is left unsaved. The reply gives trackId (its object name), trackClass and trackName read back. An unknown type is TRACK_CREATION_FAILED (list_track_types gives the names), a class that is no track INVALID_CLASS_TYPE, an actor the sequence does not bind BINDING_NOT_FOUND.\nadd_section: Add a section to an existing track in a Level Sequence; on an Audio track, soundPath puts music or a sound in it.\nadd_keyframe: Add a keyframe for a property at a specific frame on a bound actor.\nset_locked: Lock (locked, default true) or unlock every section of a Level Sequence track, so the Sequencer will not move or edit them; the track still plays. One undo step; the sequence is left unsaved.\nset_muted: Mute (muted, default true) or unmute a track of a Level Sequence by trackName: a muted track stays in the sequence but is not evaluated, so it plays and renders nothing. One undo step; the sequence is left unsaved. A trackName the sequence lacks is TRACK_NOT_FOUND.\nset_solo: Solo a track of a Level Sequence (solo, default true) by muting every other track, or with solo false unmute every track, those muted before included. The reply counts the tracks it changed (affectedTrackCount, disabledOtherTrackCount). One undo step; the sequence is left unsaved.\nset_section: Move, trim, ease or speed up a section already on a track: its start and end frames, the frames it eases in and out over, and the play rate of an animation section."
+              "description": "Which edit sequence tracks variant to run.\nadd_track: Add an empty track of trackType to a Level Sequence: on the binding of actorName (an actor the sequence already binds), or as a sequence-wide track without it (Audio for music, Fade, Event). trackName gives it a display name later track actions can address it by. One undo step; the sequence is left unsaved. The reply gives trackId (its object name), trackClass and trackName read back. An unknown type is TRACK_CREATION_FAILED (list_track_types gives the names), a class that is no track INVALID_CLASS_TYPE, an actor the sequence does not bind BINDING_NOT_FOUND.\nadd_section: Add a section to an existing track in a Level Sequence; on an Audio track, soundPath puts music or a sound in it.\nadd_keyframe: Key a property of a bound actor (bindingId or actorName) at frame: property names what is keyed and goes beside value, never inside it ({\"property\": \"Transform\", \"frame\": 0, \"value\": {\"location\": {\"x\": 0, \"y\": 0, \"z\": 250}}}); keys writes several frames in one call. A missing track and section are made, and a frame outside the playback range extends it. A value wrapped as {property, value}, or a Transform value that keys nothing, is INVALID_ARGUMENT; a float or bool property given another kind of value is UNSUPPORTED_PROPERTY.\nset_locked: Lock (locked, default true) or unlock every section of a Level Sequence track, so the Sequencer will not move or edit them; the track still plays. One undo step; the sequence is left unsaved.\nset_muted: Mute (muted, default true) or unmute a track of a Level Sequence by trackName: a muted track stays in the sequence but is not evaluated, so it plays and renders nothing. One undo step; the sequence is left unsaved. A trackName the sequence lacks is TRACK_NOT_FOUND.\nset_solo: Solo a track of a Level Sequence (solo, default true) by muting every other track, or with solo false unmute every track, those muted before included. The reply counts the tracks it changed (affectedTrackCount, disabledOtherTrackCount). One undo step; the sequence is left unsaved.\nset_section: Move, trim, ease or speed up a section already on a track: its start and end frames, the frames it eases in and out over, and the play rate of an animation section."
             }
           },
           "required": [
@@ -109060,6 +109060,9 @@
               ]
             },
             "add_keyframe": {
+              "required": [
+                "property"
+              ],
               "oneOf": [
                 "bindingId",
                 "actorName"
@@ -109090,8 +109093,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "e995c27578a9994bc4cb8c0c27e517fc4e8108599c87d8efd79269d92251de79",
-        "content": "6380b67352559ea727e4ea75e5a8c50ded24933b15772a90e1460ba7b904aace"
+        "schema": "9f3ed15937973a435713f990ee70858a07a8a21382a7484fc2046761a153da69",
+        "content": "9bbb549a5722cbbd3b219026410d4c58cc67ce414b79493ddf9623a8244ef921"
       }
     },
     {

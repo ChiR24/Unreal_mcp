@@ -5,6 +5,13 @@
 #include "Domains/Sequence/Cinematics/McpSeqCine.h"
 
 namespace {
+// A key's whole params: property names what is keyed and sits beside value, the key itself. The refusals once showed
+// {"property": ..., "value": ...} alone, and callers pasted it into value, so it never keyed anything.
+const TCHAR *const KeyParamsExample =
+    TEXT("{\"edit\": \"add_keyframe\", \"path\": \"/Game/Cinematics/SEQ_Shot\", \"actorName\": \"Cube\", "
+         "\"property\": \"Transform\", \"frame\": 0, \"value\": {\"location\": {\"x\": 0, \"y\": 0, \"z\": 250}, "
+         "\"rotation\": {\"pitch\": 0, \"yaw\": 0, \"roll\": 0}, \"scale\": {\"x\": 1, \"y\": 1, \"z\": 1}}}");
+
 // Location, Translation, Rotation and Scale key that part of the Transform track.
 const TCHAR *TransformPartFor(const FString &PropertyName) {
   if (PropertyName.Equals(TEXT("Location"), ESearchCase::IgnoreCase) ||
@@ -71,6 +78,14 @@ bool ReadKeys(const TSharedPtr<FJsonObject> &Payload, TArray<TSharedPtr<FJsonObj
       OutError = Where + TEXT("interpolation must be auto, linear or constant");
       return false;
     }
+    // No key value holds these fields: a value that does is the params of a key pasted into value.
+    const TSharedPtr<FJsonObject> *Value = nullptr;
+    if (OutKeys[Index]->TryGetObjectField(TEXT("value"), Value) && Value &&
+        ((*Value)->HasField(TEXT("property")) || (*Value)->HasField(TEXT("value")))) {
+      OutError = Where + TEXT("value holds property or value: property goes beside value, never inside it, and value "
+                              "is the key itself. Example params: ") + KeyParamsExample;
+      return false;
+    }
   }
   return true;
 }
@@ -106,6 +121,17 @@ bool UEngineWireSubsystem::HandleSequenceAddKeyframe(
              "\"MySphere\", \"property\": \"Location\", \"frame\": 0, "
              "\"value\": {\"x\":0,\"y\":0,\"z\":0}}"),
         nullptr, TEXT("INVALID_ARGUMENT"));
+    return true;
+  }
+  // A number or bool value keyed a property track named None (no property, or "None"), and the engine's
+  // SetPropertyNameAndPath assert closed the editor; a name of NAME_SIZE characters asserts in FName itself.
+  if (PropertyName.IsEmpty() || PropertyName.Equals(TEXT("None"), ESearchCase::IgnoreCase) ||
+      PropertyName.Len() >= NAME_SIZE) {
+    SendAutomationResponse(Socket, RequestId, false,
+                           FString(TEXT("property must name what is keyed (Transform, Location, Rotation, Scale, "
+                                        "Visibility, or a float or bool property) and goes beside value. "
+                                        "Example params: ")) + KeyParamsExample,
+                           nullptr, TEXT("INVALID_ARGUMENT"));
     return true;
   }
 
@@ -178,18 +204,16 @@ bool UEngineWireSubsystem::HandleSequenceAddKeyframe(
                    : McpSequenceKeyframes::AddPropertyKeyframe(MovieScene, BindingGuid, PropertyName, TickFrame,
                                                                Keys[Index], SuccessMessage);
     if (!bAdded) {
+      // A transform key fails only on its value: calling that an unsupported property sent callers looking elsewhere.
       SendAutomationResponse(
           Socket, RequestId, false,
           Where + (Index > 0 ? FString::Printf(TEXT("(the %d keys before it were written) "), Index) : FString()) +
-              TEXT("Unsupported property or failed to create track. Supported "
-                   "properties: transform (location+rotation+scale in one value "
-                   "object; lookAt there needs location beside it), "
-                   "location/translation, rotation, scale, Visibility "
-                   "(true or false), or a float or bool property — e.g. "
-                   "{\"property\": \"transform\", \"value\": {\"location\": "
-                   "{\"x\":0,\"y\":0,\"z\":0}, \"rotation\": {\"pitch\":0,\"yaw\":0,"
-                   "\"roll\":0}, \"scale\": {\"x\":1,\"y\":1,\"z\":1}}}."),
-          nullptr, TEXT("UNSUPPORTED_PROPERTY"));
+              (bTransform ? TEXT("The value keyed nothing. ") : TEXT("Unsupported property or value. ")) +
+              TEXT("Transform takes value {location: {x,y,z}, rotation: {pitch,yaw,roll}, scale: {x,y,z}} (any of "
+                   "them; lookAt needs location beside it), Location, Rotation and Scale that one object, Visibility "
+                   "true or false, and a float or bool property its number or bool. Example params: ") +
+              KeyParamsExample,
+          nullptr, bTransform ? TEXT("INVALID_ARGUMENT") : TEXT("UNSUPPORTED_PROPERTY"));
       return true;
     }
   }
