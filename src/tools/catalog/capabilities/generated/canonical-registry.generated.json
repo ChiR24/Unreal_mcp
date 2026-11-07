@@ -1,5 +1,5 @@
 {
-  "catalogRevision": "47cb929db5846cb6",
+  "catalogRevision": "73d930a263c08142",
   "recordCount": 489,
   "records": [
     {
@@ -78326,7 +78326,7 @@
               "description": "The parameter to read: a user parameter of the same type (User.Tint) or an engine, system or emitter one (Emitter.Age)."
             },
             "parameterValue": {
-              "description": "Niagara parameter value (any type)."
+              "description": "The value in the parameter's own type: a number (float or int; a bool also takes true or false), an {x,y,z[,w]} or {r,g,b,a} object, or an array of exactly the type's numbers: 2 for a Vector2, 3 for a Vector3, 4 for a Vector4, 3 or 4 for a color (alpha 1). Any other array, numeric strings included, is refused (PARAM_TYPE_MISMATCH) and the value left as it was."
             },
             "parameters": {
               "type": "array",
@@ -78340,7 +78340,7 @@
                     "description": "Niagara parameter name."
                   },
                   "parameterValue": {
-                    "description": "Niagara parameter value (any type)."
+                    "description": "The value in the parameter's own type: a number (float or int; a bool also takes true or false), an {x,y,z[,w]} or {r,g,b,a} object, or an array of exactly the type's numbers: 2 for a Vector2, 3 for a Vector3, 4 for a Vector4, 3 or 4 for a color (alpha 1). Any other array, numeric strings included, is refused (PARAM_TYPE_MISMATCH) and the value left as it was."
                   }
                 },
                 "required": [
@@ -78360,7 +78360,7 @@
               "description": "Actor form: which Niagara component of the actor takes the values, when it has several (a Blueprint with a fire and a smoke); default its first. A name it lacks is refused with the names it has."
             },
             "value": {
-              "description": "Property value (any type)."
+              "description": "The value in the parameter's own type: a number for Float and Int, true, false or a number for Bool, {x,y,z} or exactly three numbers [x,y,z] for a Vector, {r,g,b,a} or [r,g,b] (alpha 1) or [r,g,b,a] for a Color; on the asset form a Vector2 or Vector4 default takes exactly 2 or 4 numbers. Any other array, numeric strings included, is refused (PARAM_TYPE_MISMATCH) and the value left as it was."
             },
             "targetNodeId": {
               "type": "string",
@@ -78743,8 +78743,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "423896276d000fcc05fc7e5e53943411d53de159dd4008f545d073ce1f3fbd71",
-        "content": "3dcabfa50b0ae3f1ab341051340770cc687083cd49bdc56df55387c2ce870757"
+        "schema": "da99fa49a032f0fb6566d807e8591f3d71ebac8c97a38eaa72616ea6ebca28d3",
+        "content": "9158424b3e7a5a455fae72c9712fb87f8bed8da77ddefdb984001131a1dd1e8e"
       }
     },
     {

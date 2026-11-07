@@ -157,7 +157,7 @@ export const EFFECT_RECORDS: readonly CapabilityRecordSource[] = [
     inputProps: { actorName: P.actorName, componentName: { type: 'string', description: 'Actor form: which Niagara component of the actor takes the values, when it has several (a Blueprint with a fire and a smoke); default its first. A name it lacks is refused with the names it has.' },
       systemPath: E.systemPath, assetPath: { type: 'string', description: 'Niagara system asset whose user parameter default to set, when no actorName is given; saved to disk.' },
       parameterName: E.parameterName, parameterType: { type: 'string', description: 'Optional: the parameter\'s own type decides (Float, Int, Bool, Vector, Color), and on the actor form a parameterType naming another type is refused. A name the system lacks is refused with the names it has.' },
-      value: P.value, parameters: PARAMETER_LIST },
+      value: { description: 'The value in the parameter\'s own type: a number for Float and Int, true, false or a number for Bool, {x,y,z} or exactly three numbers [x,y,z] for a Vector, {r,g,b,a} or [r,g,b] (alpha 1) or [r,g,b,a] for a Color; on the asset form a Vector2 or Vector4 default takes exactly 2 or 4 numbers. Any other array, numeric strings included, is refused (PARAM_TYPE_MISMATCH) and the value left as it was.' }, parameters: PARAMETER_LIST },
     required: [], requiredOneOf: ['actorName', 'assetPath', 'systemPath'],
     outputProps: { componentName: { type: 'string', description: 'Actor form: the Niagara component that took the values.' } }, outputRequired: [],
     effect: 'write', behavior: { idempotency: 'idempotent' }, latency: 'interactive', resources: 'low', plugins: NIAGARA,

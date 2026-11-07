@@ -18,6 +18,7 @@ const EMITTER_PATH = `${TEST_FOLDER}/${EMITTER_ASSET_NAME}.${EMITTER_ASSET_NAME}
 const DEFAULT_EMITTER = '${captured:niagaraEmitterName}';
 const USER_PARAM = `MCPUserParam_${ts}`;
 const USER_PARAM_B = `MCPUserParamB_${ts}`;
+const USER_VECTOR = `MCPUserVector_${ts}`;
 const BOUND_PARAM = `MCPBoundParam_${ts}`;
 const EVENT_NAME = `MCPEvent_${ts}`;
 const STAGE_NAME = `MCPStage_${ts}`;
@@ -104,6 +105,11 @@ const testCases = [
   { scenario: 'CONFIG: set_parameter_value', toolName: 'manage_effect', arguments: { action: 'set_parameter_value', systemPath: SYSTEM_PATH, parameterName: USER_PARAM, parameterValue: 2.5, save: false }, expected: 'success' },
   // The system is named by systemPath or assetPath on every edit (the handlers read both); the record used to declare one per variant.
   { scenario: 'CONFIG: set_parameter_value names the system as assetPath', toolName: 'manage_effect', arguments: { action: 'set_parameter_value', assetPath: SYSTEM_PATH, parameterName: USER_PARAM, parameterValue: 3, save: false }, expected: 'success' },
+  // A vector sent as an array holds exactly the type's numbers: [0, -980] was written as (0, -980, 0), "1" read as 1.
+  { scenario: 'ADD: add_user_parameter Vector', toolName: 'manage_effect', arguments: { action: 'add_user_parameter', systemPath: SYSTEM_PATH, parameterName: USER_VECTOR, parameterType: 'Vector', save: false }, expected: 'success|already exists' },
+  { scenario: 'CONFIG: set_parameter_value takes a Vector as three numbers', toolName: 'manage_effect', arguments: { action: 'set_parameter_value', systemPath: SYSTEM_PATH, parameterName: USER_VECTOR, parameterValue: [0, 10, -100], save: false }, expected: 'success' },
+  { scenario: 'ERROR: set_parameter_value refuses a Vector array of two numbers', toolName: 'manage_effect', arguments: { action: 'set_parameter_value', systemPath: SYSTEM_PATH, parameterName: USER_VECTOR, parameterValue: [0, -980], save: false }, expected: 'error|PARAM_TYPE_MISMATCH' },
+  { scenario: 'ERROR: set_parameter_value refuses numeric strings for a Vector', toolName: 'manage_effect', arguments: { action: 'set_parameter_value', systemPath: SYSTEM_PATH, parameterName: USER_VECTOR, parameterValue: ['0', '10', '-100'], save: false }, expected: 'error|PARAM_TYPE_MISMATCH' },
   { scenario: 'CONFIG: set_parameter_value on one emitter\'s module input', toolName: 'manage_effect', arguments: { action: 'set_parameter_value', systemPath: SYSTEM_PATH, emitterName: DEFAULT_EMITTER, parameterName: 'SpawnRate.SpawnRate', parameterValue: 40, save: false }, expected: 'success|not found' },
   // A list of values in one call: every entry written and reported, the system saved once.
   { scenario: 'ADD: add_user_parameter for the parameters list', toolName: 'manage_effect', arguments: { action: 'add_user_parameter', systemPath: SYSTEM_PATH, parameterName: USER_PARAM_B, parameterType: 'Float', save: false }, expected: 'success|already exists' },
@@ -119,6 +125,7 @@ const testCases = [
   { scenario: 'ERROR: get_niagara_info refuses a component the placed actor lacks', toolName: 'manage_effect', arguments: { action: 'get_niagara_info', systemPath: SYSTEM_PATH, actorName: EFFECT_ACTOR, componentName: `NoSuchComponent_${ts}` }, expected: 'error|COMPONENT_NOT_FOUND' },
   { scenario: 'ERROR: set_niagara_parameter refuses a name the placed effect\'s system lacks', toolName: 'manage_effect', arguments: { action: 'set_niagara_parameter', actorName: EFFECT_ACTOR, parameterName: `MCPMissingParam_${ts}`, value: 1 }, expected: 'error|PARAM_NOT_FOUND' },
   { scenario: 'ERROR: set_niagara_parameter refuses a parameterType naming another type', toolName: 'manage_effect', arguments: { action: 'set_niagara_parameter', actorName: EFFECT_ACTOR, parameterName: USER_PARAM, parameterType: 'Vector', value: [1, 2, 3] }, expected: 'error|PARAM_TYPE_MISMATCH' },
+  { scenario: 'ERROR: set_niagara_parameter refuses a placed effect\'s Vector array of four numbers', toolName: 'manage_effect', arguments: { action: 'set_niagara_parameter', actorName: EFFECT_ACTOR, parameterName: USER_VECTOR, value: [1, 2, 3, 4] }, expected: 'error|PARAM_TYPE_MISMATCH' },
   { scenario: 'CONNECT: bind_parameter_to_source applies real assignment binding', toolName: 'manage_effect', arguments: { action: 'bind_parameter_to_source', systemPath: SYSTEM_PATH, emitterName: DEFAULT_EMITTER, parameterName: BOUND_PARAM, parameterType: 'Float', sourceBinding: 'Emitter.Age', save: false }, expected: 'success', assertions: [{ path: 'structuredContent.result.bindingApplied', equals: true, label: 'real Niagara parameter binding applied' }, { path: 'structuredContent.result.assignmentModuleAdded', equals: true, label: 'assignment module added to Niagara stack' }, { path: 'structuredContent.result.niagaraDefaultSource', equals: 'Emitter Age', label: 'Emitter.Age normalized to Niagara engine constant' }] },
   // Module inputs keep the engine's spaced names; bind refused them as identifiers.
   { scenario: 'CONNECT: bind_parameter_to_source links a module input with a spaced name', toolName: 'manage_effect', arguments: { action: 'bind_parameter_to_source', systemPath: SYSTEM_PATH, emitterName: DEFAULT_EMITTER, parameterName: 'InitializeParticle.Lifetime Min', sourceBinding: `User.${USER_PARAM}`, save: false }, expected: 'success', assertions: [{ path: 'structuredContent.result.linkedInput', equals: 'InitializeParticle.Lifetime Min', label: 'the module input itself was linked' }] },

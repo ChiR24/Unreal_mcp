@@ -22183,7 +22183,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "description": "Niagara parameter type (Float, Vector, Color or LinearColor, ...)."
         },
         "parameterValue": {
-          "description": "Niagara parameter value (any type)."
+          "description": "The value in the parameter's own type: a number (float or int; a bool also takes true or false), an {x,y,z[,w]} or {r,g,b,a} object, or an array of exactly the type's numbers: 2 for a Vector2, 3 for a Vector3, 4 for a Vector4, 3 or 4 for a color (alpha 1). Any other array, numeric strings included, is refused (PARAM_TYPE_MISMATCH) and the value left as it was."
         },
         "parameters": {
           "type": "array",
@@ -22197,7 +22197,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
                 "description": "Niagara parameter name."
               },
               "parameterValue": {
-                "description": "Niagara parameter value (any type)."
+                "description": "The value in the parameter's own type: a number (float or int; a bool also takes true or false), an {x,y,z[,w]} or {r,g,b,a} object, or an array of exactly the type's numbers: 2 for a Vector2, 3 for a Vector3, 4 for a Vector4, 3 or 4 for a color (alpha 1). Any other array, numeric strings included, is refused (PARAM_TYPE_MISMATCH) and the value left as it was."
               }
             },
             "required": [
@@ -22330,7 +22330,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "description": "Input pin name (or display name) on the destination node."
         },
         "value": {
-          "description": "Property value (any type)."
+          "description": "The value in the parameter's own type: a number for Float and Int, true, false or a number for Bool, {x,y,z} or exactly three numbers [x,y,z] for a Vector, {r,g,b,a} or [r,g,b] (alpha 1) or [r,g,b,a] for a Color; on the asset form a Vector2 or Vector4 default takes exactly 2 or 4 numbers. Any other array, numeric strings included, is refused (PARAM_TYPE_MISMATCH) and the value left as it was."
         },
         "velocityMode": {
           "type": "string",

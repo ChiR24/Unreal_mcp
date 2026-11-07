@@ -40,7 +40,7 @@ export const E: PropertyMap = {
   replaceExisting: bool('Whether an existing dynamic input is replaced.'),
   parameterName: str('Niagara parameter name.'),
   parameterType: str('Niagara parameter type (Float, Vector, Color or LinearColor, ...).'),
-  parameterValue: { description: 'Niagara parameter value (any type).' },
+  parameterValue: { description: 'The value in the parameter\'s own type: a number (float or int; a bool also takes true or false), an {x,y,z[,w]} or {r,g,b,a} object, or an array of exactly the type\'s numbers: 2 for a Vector2, 3 for a Vector3, 4 for a Vector4, 3 or 4 for a color (alpha 1). Any other array, numeric strings included, is refused (PARAM_TYPE_MISMATCH) and the value left as it was.' },
   sourceBinding: str('Data source the parameter binds to.'),
   forceType: { type: 'string', enum: ['Gravity', 'Drag', 'Wind', 'Curl', 'CurlNoise', 'Vortex', 'PointAttraction'], description: 'Force module: Gravity (default), Drag, Wind, Curl (CurlNoise), Vortex or PointAttraction; any other name is refused.' },
   velocityMode: { type: 'string', enum: ['Linear', 'Cone', 'FromPoint'], description: 'Velocity module: Linear (AddVelocity, the default), Cone (AddVelocityInCone) or FromPoint (AddVelocityFromPoint); any other name is refused.' },

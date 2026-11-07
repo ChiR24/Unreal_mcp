@@ -1,4 +1,5 @@
 #include "Domains/NiagaraAuthoring/McpNiagaraContext.h"
+#include "Foundation/BridgeHelpers/Responses/McpJsonNumbers.h"
 
 namespace McpNiagaraAuthoringHandlers
 {
@@ -18,8 +19,12 @@ static bool WriteRapidIterationValue(FNiagaraParameterStore& Store, const FNiaga
     if (Type == FNiagaraTypeDefinition::GetFloatDef() && bNum) return Store.SetParameterValue(static_cast<float>(Num), Var);
     if ((Type == FNiagaraTypeDefinition::GetIntDef() || Type.IsEnum()) && bNum) return Store.SetParameterValue(static_cast<int32>(Num), Var);
     if (Type == FNiagaraTypeDefinition::GetBoolDef() && (bBool || bNum)) return Store.SetParameterValue(FNiagaraBool(bBool ? Bool : Num != 0.0), Var);
-    // Vector-like values come as an object or, like every other vector here, as an array.
-    if (!Obj && !(Arr && Arr->Num() >= 2)) return false;
+    // Vector-like values come as an object or as an array of exactly the type's numbers (3 or 4 for a color, alpha 1),
+    // which the readers below then take whole. A short array was padded with 0, a long one cut, "a" read as 0 and "1"
+    // as 1, and each was reported as set.
+    const int32 Count = Type == FNiagaraTypeDefinition::GetVec2Def() ? 2 : Type == FNiagaraTypeDefinition::GetVec4Def() ? 4
+        : Type == FNiagaraTypeDefinition::GetColorDef() && Arr && Arr->Num() == 4 ? 4 : 3;
+    if (Arr ? !McpIsJsonFloatArray(*Arr, Count) : !Obj) return false;
     if (Type == FNiagaraTypeDefinition::GetColorDef()) return Store.SetParameterValue(ExtractLinearColorField(Payload, TEXT("parameterValue"), FLinearColor::White), Var);
     FVector V = ExtractVectorField(Payload, TEXT("parameterValue"), FVector::ZeroVector);
     if (!Obj && Arr->Num() == 2) V = FVector((*Arr)[0]->AsNumber(), (*Arr)[1]->AsNumber(), 0.0);
@@ -85,7 +90,7 @@ static bool NamesModuleInput(UNiagaraSystem* System, const TArray<FString>& Name
 // a list writes every entry and saves once. Entry holds parameterValue (the payload itself, or one list entry).
 static FParameterWrite WriteParameter(UNiagaraSystem* System, const FString& EmitterName, const FString& ParamName, const TSharedPtr<FJsonObject>& Entry)
 {
-    static const TCHAR* ValueForms = TEXT("parameterValue must be a number (float, int or bool) or an {x,y,z[,w]} or {r,g,b,a} object (or an array) to match.");
+    static const TCHAR* ValueForms = TEXT("parameterValue must be a number (float, int or bool), an {x,y,z[,w]} or {r,g,b,a} object, or an array of exactly the type's numbers: 2 for a Vector2, 3 for a Vector3, 4 for a Vector4, 3 or 4 for a color (alpha 1). It was left as it was.");
     FParameterWrite Write;
     const FNiagaraVariableWithOffset* UserVar = FindUserParameter(System, ParamName);
     if (UserVar)

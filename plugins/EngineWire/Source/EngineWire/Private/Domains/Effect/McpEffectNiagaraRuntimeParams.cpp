@@ -2,6 +2,7 @@
 
 #include "Domains/Effect/McpEffectPrivate.h"
 #include "Foundation/BridgeHelpers/Responses/McpJsonFields.h"
+#include "Foundation/BridgeHelpers/Responses/McpJsonNumbers.h"
 
 #include "NiagaraComponent.h"
 #include "NiagaraSystem.h"
@@ -24,8 +25,8 @@ FString UserTypeKind(const FNiagaraTypeDefinition& Type)
 const TCHAR* ValueForm(const FString& Kind)
 {
     if (Kind == TEXT("Bool")) return TEXT("true, false or a number");
-    if (Kind == TEXT("Vector")) return TEXT("{x,y,z} or [x,y,z]");
-    if (Kind == TEXT("Color")) return TEXT("{r,g,b,a} or [r,g,b,a]");
+    if (Kind == TEXT("Vector")) return TEXT("{x,y,z} or exactly three numbers [x,y,z]");
+    if (Kind == TEXT("Color")) return TEXT("{r,g,b,a}, [r,g,b] (alpha 1) or [r,g,b,a]");
     return TEXT("a number");
 }
 
@@ -37,7 +38,11 @@ bool WriteUserValue(UNiagaraComponent& Component, const FNiagaraVariableWithOffs
     const TSharedPtr<FJsonValue> Value = Entry->TryGetField(Field);
     const bool bNumber = Value.IsValid() && Value->Type == EJson::Number;
     const bool bBoolean = Value.IsValid() && Value->Type == EJson::Boolean;
-    const bool bVector = Value.IsValid() && (Value->Type == EJson::Object || Value->Type == EJson::Array);
+    // An array is exactly its numbers (a color 3 or 4): [x,y] was written as the default (0,0,0) or white, and a longer
+    // or non-numeric one cut or read as 0, each answered as set.
+    const TArray<TSharedPtr<FJsonValue>>* Arr = nullptr;
+    const bool bVector = Value.IsValid() && (Value->Type == EJson::Object ||
+        (Value->TryGetArray(Arr) && Arr && McpIsJsonFloatArray(*Arr, Kind == TEXT("Color") && Arr->Num() == 4 ? 4 : 3)));
     if (Kind == TEXT("Float") && bNumber) Component.SetVariableFloat(Name, static_cast<float>(Value->AsNumber()));
     else if (Kind == TEXT("Int") && bNumber) Component.SetVariableInt(Name, static_cast<int32>(Value->AsNumber()));
     else if (Kind == TEXT("Bool") && (bBoolean || bNumber)) Component.SetVariableBool(Name, bBoolean ? Value->AsBool() : Value->AsNumber() != 0.0);
