@@ -25,10 +25,10 @@ namespace
 const TCHAR *const ReportConfigPathEnd = TEXT("\\:*?\"<>|' ,.&!~\r\n\t@#()[]{};=");
 
 /**
- * The /Game packages the project's config files name, each with the project-relative files that name it: Config/*.ini
- * and Saved/Config/*.ini, one folder down included (a platform's settings; the editor's per-user ones, where an
- * importer keeps the parent materials it copies from). The asset registry never sees these references. The text is
- * only searched for /Game/: a config file can hold a token, so nothing else in it is kept, logged or reported.
+ * The /Game packages the project's config files name, each with the project-relative files that name it: the .ini
+ * files in Config and Saved/Config, one folder down included (a platform's settings; the editor's per-user ones,
+ * where an importer keeps the parent materials it copies from). The asset registry never sees these references. The
+ * text is only searched for /Game/: a config file can hold a token, so nothing else in it is kept, logged or reported.
  */
 TMap<FString, TArray<FString>> ReportConfigNamedPackages() {
   TMap<FString, TArray<FString>> Named; // FString keys compare without case, as package names do

@@ -51,13 +51,13 @@ FString ChooseField(const TSharedPtr<FJsonObject>& Spec, const TSharedPtr<FJsonO
 }
 
 // An actor row's label is the name the outliner and every actor call use; its "name" is the object name
-// (StaticMeshActor_12), so a label wins.
-TSharedPtr<FJsonValue> Handle(const TSharedPtr<FJsonValue>& Item)
+// (StaticMeshActor_12), so a label wins. (Not "Handle": macOS declares a global type of that name.)
+TSharedPtr<FJsonValue> SampleName(const TSharedPtr<FJsonValue>& Item)
 {
-    static const TCHAR* const Handles[] = {TEXT("label"), TEXT("name"), TEXT("actorName"), TEXT("assetPath"), TEXT("path"), TEXT("id")};
+    static const TCHAR* const NameFields[] = {TEXT("label"), TEXT("name"), TEXT("actorName"), TEXT("assetPath"), TEXT("path"), TEXT("id")};
     const TSharedPtr<FJsonObject>* Object = nullptr;
     FString Value;
-    for (const TCHAR* Field : Handles)
+    for (const TCHAR* Field : NameFields)
     {
         if (Item.IsValid() && Item->TryGetObject(Object) && Object && (*Object)->TryGetStringField(Field, Value))
         {
@@ -191,7 +191,7 @@ TSharedPtr<FJsonObject> Apply(const TSharedPtr<FJsonObject>& Spec, const TShared
         ++Counts[At];
         if (Groups[At].Value.Num() < Sample)
         {
-            Groups[At].Value.Add(Handle(Item));
+            Groups[At].Value.Add(SampleName(Item));
         }
     }
     TArray<int32> Order;
