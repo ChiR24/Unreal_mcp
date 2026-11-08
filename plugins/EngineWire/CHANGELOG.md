@@ -8,6 +8,22 @@ All notable changes to the EngineWire plugin (formerly McpAutomationBridge) will
 
 _Nothing yet._
 
+## [0.6.1-beta-b] - 2026-11-08
+
+Plugin-side changes since the `v0.6.1-beta-a` tag, from the code diff. The server-side view is in the root `CHANGELOG.md`.
+
+### Changed
+- **Execute string limits**: every string and object key a call sends, inside reflection-boundary objects too, is held to its schema's `maxLength` or to the 1023 characters an FName holds before anything is queued (`OUT_OF_RANGE`).
+
+### Fixed
+- **Builds**: a file-scope helper no longer shares the name of macOS's global `Handle` type and a doc comment no longer holds `/*` (macOS); the explorer's cell hash calls the global `GetTypeHash` (UE 5.0 and 5.1).
+- **Crashes**: a string past 1023 characters no longer reaches an FName, and `add_keyframe` refuses an empty or "None" property instead of keying a track the engine asserts on.
+- **Vector writes**: Niagara parameters, material vector defaults, blackboard vector and rotator keys and actor location, rotation and scale take an array only when it holds exactly the type's numbers; anything else is refused and the value is left as it was.
+- **Sequence keys**: `add_keyframe` refuses a value that wraps `property` or `value`, a Transform whose value keys nothing answers `INVALID_ARGUMENT` instead of `UNSUPPORTED_PROPERTY`, and every refusal shows a key's whole params.
+
+### Migration
+- **Inputs**: long text goes only in the parameters that declare a larger `maxLength`; vector and color arrays hold exactly their numbers; `add_keyframe` sends `property` beside `value`.
+
 ## [0.6.1-beta-a] - 2026-11-06
 
 Plugin-side changes since the `v0.6.0` tag, from the code diff. The server-side view is in the root `CHANGELOG.md`.

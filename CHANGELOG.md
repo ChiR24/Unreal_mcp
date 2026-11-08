@@ -13,6 +13,61 @@ _Nothing yet._
 
 ---
 
+## 🏷️ [0.6.1-beta-b] - 2026-11-08
+
+> [!NOTE]
+> **Beta.** Published as a semver prerelease (`0.6.1-beta-b`) under the npm `beta` dist-tag, so `npm install` keeps serving the newest stable release, **`0.6.0`**. This section is everything on `dev` since the `v0.6.1-beta-a` tag, written from the code diff.
+
+<details>
+<summary><b>🔄 Changed</b></summary>
+
+- **Inputs are held to their contract**: execute refuses a string or object key past its `maxLength`, or past the 1023 characters an FName holds where none is set (code, scripts and prose parameters take more); a vector or color sent as an array must hold exactly the type's numbers; `add_keyframe` requires `property`.
+
+</details>
+
+<details>
+<summary><b>🔧 Fixed</b></summary>
+
+- **Builds**: the plugin builds on macOS again and on UE 5.0 and 5.1, and a source check in CI keeps those compiler traps out.
+- **Crashes**: an overlong tag, name or key and an `add_keyframe` with no `property` no longer close the editor.
+- **Vectors and colors**: Niagara parameters, effect and skeleton `scale`, light, debug shape and texture colors, material vector defaults, blackboard vector and rotator keys and actor location, rotation and scale no longer pad, cut or zero an array that is not exactly their numbers and answer success.
+- **Sequence keys**: an `add_keyframe` Transform whose value keys nothing is refused `INVALID_ARGUMENT` naming the value instead of reading as an unsupported property, a value that wraps `property` or `value` is refused, and every refusal shows a key's whole params (the old example put `property` inside `value`).
+
+</details>
+
+<details>
+<summary><b>⚠️ Migration</b></summary>
+
+- **Long text**: a string over 1023 characters, or over a parameter's own `maxLength`, is refused `OUT_OF_RANGE`; send long text only in the parameters that take it (code, scripts, descriptions, comments, subtitles, widget text).
+- **Vector and color arrays**: send exactly the type's numbers (three for a vector, three or four for a color), or the object form.
+- **Sequence keys**: send `property` beside `value` in `add_keyframe`; a Transform whose value keys nothing answers `INVALID_ARGUMENT`, not `UNSUPPORTED_PROPERTY`.
+
+</details>
+
+<details>
+<summary><b>🔄 Dependencies</b></summary>
+
+- **GitHub Actions**: `github/codeql-action` (init, autobuild, analyze) 4.39.0 → 4.39.2. No npm package changed, and the package still has no runtime dependencies.
+
+</details>
+
+<details>
+<summary><b>📊 Change Statistics</b></summary>
+
+| Metric | Count |
+|--------|-------|
+| Diff range | `v0.6.1-beta-a..v0.6.1-beta-b` |
+| Commits | 12, the version bump and the release cut included |
+| Files changed | 80 (65 hand-written, not counting generated files or line-ending-only changes) |
+| Insertions / deletions | 2,035 / 540 (hand-written: 889 / 101) |
+| Capability records | 489 |
+| Callable `{tool, action}` pairs | 1,658 |
+| C++ domain directories | 58 |
+
+</details>
+
+---
+
 ## 🏷️ [0.6.1-beta-a] - 2026-11-06
 
 > [!NOTE]
