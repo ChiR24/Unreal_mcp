@@ -38,9 +38,12 @@ struct FCellKey
     {
         return X == Other.X && Y == Other.Y && Z == Other.Z && Flags == Other.Flags;
     }
+    // The int32 hashes are named from the global namespace: a compiler that lets this friend be found by ordinary
+    // lookup (MSVC without /Zc:hiddenFriend, as UE 5.0 and 5.1 build) would otherwise see only this overload here.
     friend uint32 GetTypeHash(const FCellKey& Key)
     {
-        return HashCombine(HashCombine(GetTypeHash(Key.X), GetTypeHash(Key.Y)), HashCombine(GetTypeHash(Key.Z), Key.Flags));
+        return HashCombine(HashCombine(::GetTypeHash(Key.X), ::GetTypeHash(Key.Y)),
+                           HashCombine(::GetTypeHash(Key.Z), Key.Flags));
     }
 };
 
