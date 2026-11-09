@@ -8,7 +8,7 @@
 
 #include "Algo/Find.h"
 #include "Components/DirectionalLightComponent.h"
-#include "Domains/Environment/Inspection/McpEnvInspectViewIds.h"
+#include "Domains/Inspect/View/McpInspectViewIds.h"
 #include "Domains/Environment/McpEnvShared.h"
 #include "EditorViewportClient.h"
 #include "EngineUtils.h"
@@ -22,9 +22,9 @@ constexpr int32 GridWidth = 240; // cells across: fine enough for a figure, coar
 const TCHAR* const AllAspects[] = {TEXT("saliency"), TEXT("palette"), TEXT("light"), TEXT("cost")};
 } // namespace
 
-FFrame BuildFrame(const McpEnvironmentHandlers::FMcpViewCapture& View)
+FFrame BuildFrame(const McpInspectHandlers::FMcpViewCapture& View)
 {
-    using namespace McpEnvironmentHandlers;
+    using namespace McpInspectHandlers;
     FFrame Frame;
     Frame.Block = FMath::Max(1, FMath::DivideAndRoundUp(View.Size.X, GridWidth));
     Frame.Width = FMath::Max(1, View.Size.X / Frame.Block);
@@ -107,9 +107,9 @@ bool HandleAnalyzeView(UEngineWireSubsystem& Bridge, const FString& RequestId, c
         Bridge.SendAutomationError(Socket, RequestId, FString::Printf(TEXT("No actor is named '%s'."), *SubjectName), TEXT("ACTOR_NOT_FOUND"));
         return true;
     }
-    McpEnvironmentHandlers::FMcpViewCapture View;
+    McpInspectHandlers::FMcpViewCapture View;
     FString Error, Code;
-    if (!McpEnvironmentHandlers::McpCaptureView(Payload, TEXT("analyze_view"), true, View, Error, Code))
+    if (!McpInspectHandlers::McpCaptureView(Payload, TEXT("analyze_view"), true, View, Error, Code))
     {
         Bridge.SendAutomationError(Socket, RequestId, Error, Code);
         return true;
@@ -132,7 +132,7 @@ bool HandleAnalyzeView(UEngineWireSubsystem& Bridge, const FString& RequestId, c
         TArray<FVector3f> Normals;
         if (Subject && FindSun(View.Client->GetWorld(), ToSun))
         {
-            for (const FLinearColor& Normal : McpEnvironmentHandlers::McpCapturePass(View.Client->GetWorld(), View.Client->GetViewLocation(),
+            for (const FLinearColor& Normal : McpInspectHandlers::McpCapturePass(View.Client->GetWorld(), View.Client->GetViewLocation(),
                      View.Client->GetViewRotation(), View.Client->ViewFOV, FIntPoint(Frame.Width, Frame.Height), SCS_Normal))
             {
                 Normals.Add(FVector3f(Normal.R, Normal.G, Normal.B));

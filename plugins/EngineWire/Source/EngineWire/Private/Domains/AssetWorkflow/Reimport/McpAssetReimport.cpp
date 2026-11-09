@@ -8,7 +8,7 @@
 
 #include "Dom/JsonObject.h"
 #include "Domains/AssetWorkflow/Operations/McpAssetFbxImportOptions.h"
-#include "Domains/Environment/Inspection/MeshCheck/McpMeshCheck.h"
+#include "Domains/Inspect/MeshCheck/McpMeshCheck.h"
 #include "EditorReimportHandler.h"
 #include "EngineWireSubsystem.h"
 #include "Foundation/BridgeHelpers/Responses/McpJsonFields.h"

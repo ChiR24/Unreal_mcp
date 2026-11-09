@@ -52,9 +52,9 @@ describe('plugin security contracts', () => {
       ['Domains', 'AssetWorkflow', 'Analysis', 'McpAssetReports.cpp'],
       ['Domains', 'AssetWorkflow', 'Operations', 'McpAssetThumbnails.cpp'],
       ['Domains', 'Environment', 'McpEnvBuildSnapshots.cpp'],
-      ['Domains', 'Environment', 'Landscape', 'McpEnvLandscapeHeightmap.cpp'],
-      ['Domains', 'Environment', 'Inspection', 'McpEnvInspectActorQuery.cpp'],
-      ['Domains', 'Environment', 'Inspection', 'McpEnvInspectCapturePasses.cpp'],
+      ['Domains', 'Landscape', 'McpLandscapeHeightmapFile.cpp'],
+      ['Domains', 'Inspect', 'McpInspectActorQuery.cpp'],
+      ['Domains', 'Inspect', 'View', 'McpInspectCapturePasses.cpp'],
       ['Domains', 'ControlEditor', 'McpEditorScreenshotSupport.cpp'],
       ['Domains', 'Ui', 'McpUiScreenshot.cpp'],
     ];

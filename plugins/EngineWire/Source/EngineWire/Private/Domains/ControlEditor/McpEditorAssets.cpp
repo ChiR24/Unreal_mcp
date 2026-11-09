@@ -8,12 +8,8 @@ bool UEngineWireSubsystem::HandleControlEditorOpenAsset(
     const FString &RequestId, const TSharedPtr<FJsonObject> &Payload,
     TSharedPtr<FMcpBridgeWebSocket> Socket) {
   FString AssetPath;
-  Payload->TryGetStringField(TEXT("assetPath"), AssetPath);
-  if (AssetPath.IsEmpty()) {
-    SendStandardErrorResponse(this, Socket, RequestId, TEXT("INVALID_ARGUMENT"),
-                              TEXT("assetPath required"), nullptr);
+  if (!McpReadRequiredField(this, Socket, RequestId, Payload, TEXT("assetPath"), AssetPath))
     return true;
-  }
 
   const FString AssetPathAsGiven = AssetPath;
   AssetPath = SanitizeProjectRelativePath(AssetPath);
@@ -23,11 +19,8 @@ bool UEngineWireSubsystem::HandleControlEditorOpenAsset(
     return true;
   }
 
-  if (!GEditor) {
-    SendStandardErrorResponse(this, Socket, RequestId, TEXT("EDITOR_NOT_AVAILABLE"),
-                              TEXT("Editor not available"), nullptr);
+  if (!McpRequireEditor(this, Socket, RequestId))
     return true;
-  }
 
   UAssetEditorSubsystem *AssetEditorSS =
       GEditor->GetEditorSubsystem<UAssetEditorSubsystem>();
@@ -84,12 +77,8 @@ bool UEngineWireSubsystem::HandleControlEditorCloseAsset(
     const FString &RequestId, const TSharedPtr<FJsonObject> &Payload,
     TSharedPtr<FMcpBridgeWebSocket> Socket) {
   FString AssetPath;
-  Payload->TryGetStringField(TEXT("assetPath"), AssetPath);
-  if (AssetPath.IsEmpty()) {
-    SendStandardErrorResponse(this, Socket, RequestId, TEXT("INVALID_ARGUMENT"),
-                              TEXT("assetPath required"), nullptr);
+  if (!McpReadRequiredField(this, Socket, RequestId, Payload, TEXT("assetPath"), AssetPath))
     return true;
-  }
 
   const FString AssetPathAsGiven = AssetPath;
   AssetPath = SanitizeProjectRelativePath(AssetPath);

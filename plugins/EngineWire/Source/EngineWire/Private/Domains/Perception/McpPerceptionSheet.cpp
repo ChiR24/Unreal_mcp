@@ -12,7 +12,7 @@
 
 #include "Algo/Find.h"
 #include "Domains/ControlActor/Placement/McpPlacementMount.h"
-#include "Domains/Environment/Inspection/McpEnvInspectViewIds.h"
+#include "Domains/Inspect/View/McpInspectViewIds.h"
 #include "Domains/Environment/McpEnvShared.h"
 #include "Domains/Perception/McpPerception.h"
 #include "EngineUtils.h"
@@ -151,7 +151,7 @@ bool HandleContactSheet(UEngineWireSubsystem& Bridge, const FString& RequestId, 
         const FRotator Look = (Frame.GetRotation() * FQuat(Own)).Rotator();
         const FVector WorldRight = Look.RotateVector(FVector::RightVector), WorldUp = Look.RotateVector(FVector::UpVector);
         const auto Pass = [&](ESceneCaptureSource Source, const TArray<AActor*>& Actors) {
-            return McpEnvironmentHandlers::McpCapturePass(Subject->GetWorld(), Camera, Look, ThreeQuarterFov, FIntPoint(TileSize, TileSize),
+            return McpInspectHandlers::McpCapturePass(Subject->GetWorld(), Camera, Look, ThreeQuarterFov, FIntPoint(TileSize, TileSize),
                                                           Source, bOrtho ? float(2.0 * Half) : 0.f, &Actors);
         };
         const TArray<FLinearColor> Normals = Pass(SCS_Normal, Shown), Depth = Pass(SCS_SceneDepth, Shown), SubjectDepth = Pass(SCS_SceneDepth, Alone);

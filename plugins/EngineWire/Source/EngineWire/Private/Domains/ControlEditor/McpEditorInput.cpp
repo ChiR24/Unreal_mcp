@@ -215,11 +215,8 @@ void InjectActionForMcp(const TSharedPtr<FJsonObject> &Payload,
 bool UEngineWireSubsystem::HandleControlEditorSimulateInput(
     const FString &RequestId, const TSharedPtr<FJsonObject> &Payload,
     TSharedPtr<FMcpBridgeWebSocket> Socket) {
-  if (!GEditor) {
-    SendStandardErrorResponse(this, Socket, RequestId, TEXT("EDITOR_NOT_AVAILABLE"),
-                              TEXT("Editor not available"), nullptr);
+  if (!McpRequireEditor(this, Socket, RequestId))
     return true;
-  }
 
   const FString InputType = NormalizeSimulatedInputTypeForMcp(Payload);
   if (InputType == TEXT("widget_list") || InputType == TEXT("widget_click")) {

@@ -1,4 +1,4 @@
-#include "Domains/Environment/McpEnvShared.h"
+#include "Domains/Inspect/McpInspectShared.h"
 
 #include "Engine/DataTable.h"
 #include "Core/Compatibility/McpVersionCompatibility.h"

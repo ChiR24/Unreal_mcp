@@ -19,11 +19,11 @@ describe('audit_materials', () => {
   const texel = code('Domains', 'Perception', 'McpPerceptionTexel.cpp');
 
   it('is routed by inspect and reads the frame analyze_view reads', () => {
-    expect(code('Domains', 'Environment', 'Inspection', 'McpEnvInspect.cpp')).toContain(
+    expect(code('Domains', 'Inspect', 'McpInspect.cpp')).toContain(
       'return McpPerception::HandleAuditMaterials(*this, RequestId, Payload, RequestingSocket);',
     );
     expect(code('Domains', 'Perception', 'McpPerceptionAudit.cpp')).toContain(
-      'McpEnvironmentHandlers::McpCaptureView(Payload, TEXT("audit_materials"), true, View, Error, Code)',
+      'McpInspectHandlers::McpCaptureView(Payload, TEXT("audit_materials"), true, View, Error, Code)',
     );
   });
 
@@ -49,11 +49,11 @@ describe('analyze_view', () => {
   const handler = code('Domains', 'Perception', 'McpPerceptionAnalyze.cpp');
 
   it('is routed by inspect and reads the viewport through describe_view\'s own capture', () => {
-    expect(code('Domains', 'Environment', 'Inspection', 'McpEnvInspect.cpp')).toContain(
+    expect(code('Domains', 'Inspect', 'McpInspect.cpp')).toContain(
       'return McpPerception::HandleAnalyzeView(*this, RequestId, Payload, RequestingSocket);',
     );
-    expect(handler).toContain('McpEnvironmentHandlers::McpCaptureView(Payload, TEXT("analyze_view"), true, View, Error, Code)');
-    expect(code('Domains', 'Environment', 'Inspection', 'McpEnvInspectViewContents.cpp')).toContain(
+    expect(handler).toContain('McpInspectHandlers::McpCaptureView(Payload, TEXT("analyze_view"), true, View, Error, Code)');
+    expect(code('Domains', 'Inspect', 'View', 'McpInspectViewContents.cpp')).toContain(
       'McpCaptureView(CameraPayload, TEXT("describe_view"), bDiff, View, CaptureError, CaptureCode)',
     );
   });
@@ -74,8 +74,8 @@ describe('analyze_view', () => {
   // The level editor draws its axis widget, icons and gizmos into the viewport's pixels: a small enclosed shape at the
   // corner took the whole frame's saliency.
   it('judges the frame as the game draws it, then puts the viewport\'s own view back', () => {
-    const capture = code('Domains', 'Environment', 'Inspection', 'McpEnvInspectViewPoints.cpp');
-    expect(handler).toContain('McpEnvironmentHandlers::McpCaptureView(Payload, TEXT("analyze_view"), true, View, Error, Code)');
+    const capture = code('Domains', 'Inspect', 'View', 'McpInspectViewPoints.cpp');
+    expect(handler).toContain('McpInspectHandlers::McpCaptureView(Payload, TEXT("analyze_view"), true, View, Error, Code)');
     expect(capture).toMatch(/if \(bSwitch\)\s*\{\s*Out\.Client->SetGameView\(true\);/u);
     expect(capture).toMatch(/Out\.Ids = Viewport->GetRawHitProxyData\([^;]*\);\s*if \(bSwitch\)\s*\{\s*Out\.Client->SetGameView\(false\);/u);
   });
@@ -102,7 +102,7 @@ describe('analyze_view', () => {
   });
 
   it('reads the normal pass for key and fill only when a subject and a sun exist', () => {
-    expect(handler).toMatch(/if \(Subject && FindSun\(View\.Client->GetWorld\(\), ToSun\)\)\s*\{\s*for \(const FLinearColor& Normal : McpEnvironmentHandlers::McpCapturePass\(/u);
+    expect(handler).toMatch(/if \(Subject && FindSun\(View\.Client->GetWorld\(\), ToSun\)\)\s*\{\s*for \(const FLinearColor& Normal : McpInspectHandlers::McpCapturePass\(/u);
   });
 
   // An unlit cube read 78% "toward the sun" while the camera saw its shadowed face: the normal pass holds no faces of it.
@@ -116,7 +116,7 @@ describe('analyze_view', () => {
 
 // describe_view saveAs and compareWith: what changed in the picture since a saved frame (Domains/Perception, Diff).
 describe('describe_view saveAs and compareWith', () => {
-  const view = code('Domains', 'Environment', 'Inspection', 'McpEnvInspectViewContents.cpp');
+  const view = code('Domains', 'Inspect', 'View', 'McpInspectViewContents.cpp');
   const saved = code('Domains', 'Perception', 'McpPerceptionDiff.cpp');
   const frames = code('Domains', 'Perception', 'McpPerceptionDiffFrames.cpp');
 
@@ -150,7 +150,7 @@ describe('frame readers warn while the frame is still being built', () => {
   });
 
   it.each([
-    ['describe_view', ['Domains', 'Environment', 'Inspection', 'McpEnvInspectViewContents.cpp']],
+    ['describe_view', ['Domains', 'Inspect', 'View', 'McpInspectViewContents.cpp']],
     ['analyze_view', ['Domains', 'Perception', 'McpPerceptionAnalyze.cpp']],
     ['audit_materials', ['Domains', 'Perception', 'McpPerceptionAudit.cpp']],
   ])('%s warns before it replies', (_name, path) => {
@@ -165,10 +165,10 @@ describe('frame readers warn while the frame is still being built', () => {
 describe('contact_sheet', () => {
   const sheet = code('Domains', 'Perception', 'McpPerceptionSheet.cpp');
   const draw = code('Domains', 'Perception', 'McpPerceptionSheetDraw.cpp');
-  const passes = code('Domains', 'Environment', 'Inspection', 'McpEnvInspectCapturePasses.cpp');
+  const passes = code('Domains', 'Inspect', 'View', 'McpInspectCapturePasses.cpp');
 
   it('is routed by inspect', () => {
-    expect(code('Domains', 'Environment', 'Inspection', 'McpEnvInspect.cpp')).toContain(
+    expect(code('Domains', 'Inspect', 'McpInspect.cpp')).toContain(
       'return McpPerception::HandleContactSheet(*this, RequestId, Payload, RequestingSocket);',
     );
   });

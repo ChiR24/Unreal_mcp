@@ -124,5 +124,5 @@ bool HandleCreateAIController(UEngineWireSubsystem* Self, const FString& Request
     return true;
 }
 
-// assign_behavior_tree lives with the other recipe-built controller actions (McpAIControllerFocus.cpp).
+// assign_behavior_tree lives with the other recipe-built controller actions (McpAIControllerBehaviour.cpp).
 }

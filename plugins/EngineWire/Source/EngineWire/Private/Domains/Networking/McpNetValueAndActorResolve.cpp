@@ -19,6 +19,23 @@ UBlueprint* LoadBlueprintOrReply(FNetworkingActionContext& Context, const FStrin
     return Blueprint;
 }
 
+AActor* LoadActorDefaultsOrReply(FNetworkingActionContext& Context, const FString& BlueprintPath, UBlueprint*& OutBlueprint)
+{
+    OutBlueprint = LoadBlueprintOrReply(Context, BlueprintPath);
+    if (!OutBlueprint)
+    {
+        return nullptr;
+    }
+    // A Blueprint whose class never compiled has no defaults to write; the edit used to be skipped and reported.
+    AActor* CDO = OutBlueprint->GeneratedClass ? Cast<AActor>(OutBlueprint->GeneratedClass->GetDefaultObject()) : nullptr;
+    if (!CDO)
+    {
+        Context.Bridge.SendAutomationError(Context.RequestingSocket, Context.RequestId,
+            TEXT("The Blueprint has no compiled Actor class to configure; compile it first."), TEXT("NOT_SUPPORTED"));
+    }
+    return CDO;
+}
+
 bool SaveBlueprintAndReply(FNetworkingActionContext& Context, UBlueprint* Blueprint, const FString& Detail, const TCHAR* Message)
 {
     Blueprint->Modify();

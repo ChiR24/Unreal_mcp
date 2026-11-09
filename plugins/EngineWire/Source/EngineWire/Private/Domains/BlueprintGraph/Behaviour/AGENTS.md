@@ -26,7 +26,7 @@ Read this whole file before writing a recipe. Source of truth when in doubt: the
 | `...HookEvents.cpp` | hook targets (overridable, component and custom events), id uniqueness, event creation with its parent call |
 | `...Hooks.cpp` | hook checks, the shared Sequence hub, `"$id"` rewriting |
 | `...Input.cpp` | the `input` section: host class, assets, key, node, registration, key mapping |
-| `...InputAssets.cpp` | Enhanced Input module and default-class checks, the context resolver, asset creation, `EnsureInputAssets` |
+| `...InputAssets.cpp` | Enhanced Input module and default-class checks, the context resolver, asset creation |
 | `...Snapshot.cpp` | `TakeSnapshot`, `Restore` |
 | `...Ownership.cpp` | owner tags, `FindOwned`, `RemoveOwned`, `CheckRemovable`, `TagNew` |
 | `...Nodes.h/.cpp` | create_node kinds CallDelegate, Message, AsyncTask (also reached by direct create_node and build_graph) |
@@ -75,11 +75,6 @@ struct FAuthorResult
 FSnapshot TakeSnapshot(UBlueprint* Blueprint);          // compiles first when Dirty or Unknown
 TArray<UEdGraphNode*> FindOwned(UBlueprint*, const FString& Tag);  // Num() > 0: installed
 FString OwnerTag(const FString& Tag, const UEdGraphNode& Node);    // "MCP behaviour: <Tag> #<guid>"
-
-// The one input-asset resolver (see INPUT). Creates what is missing and saves it; never rolled back.
-bool EnsureInputAssets(UEngineWireSubsystem& Bridge, const FString& RequestId, UBlueprint* Blueprint,
-                       const FString& Tag, FString& InOutActionPath, FString& InOutContextPath,
-                       TArray<FString>& OutCreated, FString& OutError, FString& OutCode);
 
 constexpr int32 MaxAuthorSteps = 1000;                            // public build_graph keeps 200
 constexpr const TCHAR* HubTag = TEXT("MCP event hub");            // shared nodes, never removed
@@ -312,7 +307,7 @@ Checks, all before anything changes:
 - `key` a valid key name (`LeftShift`, `SpaceBar`, `Gamepad_FaceButton_Bottom`): `INVALID_ARGUMENT`.
 - Named assets exist (`ASSET_NOT_FOUND`); the K2Node_EnhancedInputAction class is loaded.
 
-Resolver (also public as `EnsureInputAssets`):
+Resolver:
 - Action: the given path; else, with a key, `<BlueprintFolder>/Input/IA_<Tag>` (Digital), created
   or reused. No action and no key: no input node (the section then only registers the context;
   with `registerContext` false as well it is `INVALID_RECIPE`).

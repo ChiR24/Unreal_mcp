@@ -7,7 +7,7 @@
 #include "Domains/Perception/McpPerception.h"
 
 #include "Algo/Find.h"
-#include "Domains/Environment/Inspection/McpEnvInspectViewIds.h"
+#include "Domains/Inspect/View/McpInspectViewIds.h"
 #include "Domains/Environment/McpEnvShared.h"
 #include "Editor.h"
 #include "EditorViewportClient.h"
@@ -49,9 +49,9 @@ bool HandleAuditMaterials(UEngineWireSubsystem& Bridge, const FString& RequestId
     TArray<FString> Said;
     if (Checks.Contains(TEXT("pbr")) || Checks.Contains(TEXT("texel_density")))
     {
-        McpEnvironmentHandlers::FMcpViewCapture View;
+        McpInspectHandlers::FMcpViewCapture View;
         FString Error, Code;
-        if (!McpEnvironmentHandlers::McpCaptureView(Payload, TEXT("audit_materials"), true, View, Error, Code))
+        if (!McpInspectHandlers::McpCaptureView(Payload, TEXT("audit_materials"), true, View, Error, Code))
         {
             Bridge.SendAutomationError(Socket, RequestId, Error, Code);
             return true;

@@ -14,12 +14,9 @@ bool HandleInventoryDataAssetActions(UEngineWireSubsystem& Bridge, const FString
       return true;
     }
 
-    FString PackageError;
-    FString PackageCode;
     FString SanitizedName = SanitizeAssetName(Name);
-    UPackage* Package = CreateInventoryAssetPackage(Path, SanitizedName, PackageError, PackageCode);
+    UPackage* Package = CreateInventoryAssetPackage(Bridge, RequestId, RequestingSocket, Path, SanitizedName);
     if (!Package) {
-      Bridge.SendAutomationError(RequestingSocket, RequestId, PackageError, PackageCode);
       return true;
     }
 

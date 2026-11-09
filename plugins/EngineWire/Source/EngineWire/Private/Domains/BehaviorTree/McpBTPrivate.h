@@ -13,6 +13,7 @@
 #include "AIGraphNode.h"
 #include "BehaviorTreeGraph.h"
 #include "BehaviorTreeGraphNode.h"
+#include "BehaviorTreeGraphNode_Root.h"
 #define MCP_HAS_BEHAVIOR_TREE_GRAPH 1
 #else
 #define MCP_HAS_BEHAVIOR_TREE_GRAPH 0
@@ -44,6 +45,8 @@ bool EnsureBehaviorTreeGraph(UBehaviorTree*& BehaviorTree, UEdGraph*& OutGraph);
 #if MCP_HAS_BEHAVIOR_TREE_GRAPH
 // A new BTGraph on BehaviorTree with the schema's default (root) node.
 UEdGraph* CreateBehaviorTreeGraph(UBehaviorTree* BehaviorTree);
+// The graph's Root node (the entry node, which names the tree's Blackboard), or null.
+UBehaviorTreeGraphNode_Root* FindBehaviorTreeGraphRoot(const UEdGraph* Graph);
 #endif
 // The tree a request names: assetPath, else behaviorTreePath.
 inline FString ReadBehaviorTreePath(const TSharedPtr<FJsonObject>& Payload)

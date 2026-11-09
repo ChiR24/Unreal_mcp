@@ -8,7 +8,7 @@
 
 #include "Domains/Perception/McpPerceptionDiff.h"
 
-#include "Domains/Environment/Inspection/McpEnvInspectViewIds.h"
+#include "Domains/Inspect/View/McpInspectViewIds.h"
 #include "GameFramework/Actor.h"
 #include "Templates/Greater.h"
 
@@ -75,9 +75,9 @@ struct FRegion
 };
 } // namespace
 
-FViewMeasure MeasureFrame(const McpEnvironmentHandlers::FMcpViewCapture& View)
+FViewMeasure MeasureFrame(const McpInspectHandlers::FMcpViewCapture& View)
 {
-    using namespace McpEnvironmentHandlers;
+    using namespace McpInspectHandlers;
     FViewMeasure Out;
     Out.Size = View.Size;
     Out.BlocksX = View.Size.X / DiffBlock;

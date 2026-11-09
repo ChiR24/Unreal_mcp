@@ -116,12 +116,10 @@ UObject *McpGetObjectPropertyValue(UObject *Object, const FString &PropertyName)
 bool McpSetObjectPropertyValue(UObject *Object, const FString &PropertyName, UObject *Value);
 UObject *McpInvokeObjectGetter(UObject *Object, const FName &FunctionName);
 bool McpInvokeObjectSetter(UObject *Object, const FName &FunctionName, UObject *Value);
-bool McpGetFirstNumberField(const TSharedPtr<FJsonObject> &Payload, std::initializer_list<const TCHAR *> Fields, double &OutValue);
 bool McpApplyNumberProperty(UObject *Target, const TCHAR *PropertyName, double Value,
                                    const FString &ResponseName, TSharedPtr<FJsonObject> Resp, TArray<FString> &Applied);
 int32 McpApplyPayloadSettings(UObject *Target, const TSharedPtr<FJsonObject> &Payload,
                                      TArray<FString> &AppliedProperties, TArray<FString> &FailedProperties);
-void McpAddStringArrayField(TSharedPtr<FJsonObject> Obj, const TCHAR *FieldName, const TArray<FString> &Values);
 AActor *McpFindActorByNameOrClass(UClass *ActorClass, const FString &ActorName);
 AActor *McpFindOrSpawnActor(UClass *ActorClass, const FString &ActorName, const FVector &Location,
                                    const FRotator &Rotation, bool *bOutSpawned = nullptr);
@@ -133,26 +131,8 @@ bool McpConfigureActorAndComponent(const TSharedPtr<FJsonObject> &Payload, const
                                           const FString &DefaultActorName, const FString &ComponentClassPath,
                                           TSharedPtr<FJsonObject> Resp, FString &OutMessage, FString &OutErrorCode,
                                           bool bFirstOfClassWhenUnnamed = false, AActor **OutActor = nullptr);
-ALandscape *McpFindLandscape(const TSharedPtr<FJsonObject> &Payload);
-bool McpResolveProjectFilePath(const FString &InputPath, FString &OutAbsolutePath, FString &OutSafePath, FString &OutError);
-bool McpGetLandscapeExtentForEnvironmentAction(ALandscape *Landscape, int32 &OutMinX, int32 &OutMinY, int32 &OutMaxX, int32 &OutMaxY);
-void McpApplyHeightmapRegionFromPayload(const TSharedPtr<FJsonObject> &Payload,
-                                               const int32 FullMinX, const int32 FullMinY,
-                                               const int32 FullMaxX, const int32 FullMaxY,
-                                               int32 &OutMinX, int32 &OutMinY,
-                                               int32 &OutMaxX, int32 &OutMaxY);
-bool McpExportLandscapeHeightmap(const TSharedPtr<FJsonObject> &Payload, TSharedPtr<FJsonObject> Resp,
-                                        FString &OutMessage, FString &OutErrorCode);
-bool McpImportLandscapeHeightmap(const TSharedPtr<FJsonObject> &Payload, TSharedPtr<FJsonObject> Resp,
-                                        FString &OutMessage, FString &OutErrorCode);
-UFoliageType *McpLoadFoliageTypeFromPayload(const TSharedPtr<FJsonObject> &Payload, FString &OutPath);
-bool McpConfigureFoliageType(const TSharedPtr<FJsonObject> &Payload, TSharedPtr<FJsonObject> Resp,
-                                    FString &OutMessage, FString &OutErrorCode);
-bool McpCreateLandscapeLayerInfo(const TSharedPtr<FJsonObject> &Payload, TSharedPtr<FJsonObject> Resp,
-                                        FString &OutMessage, FString &OutErrorCode);
 bool McpCreateLinearColorCurve(const TSharedPtr<FJsonObject> &Payload, const FString &DefaultName,
                                       TSharedPtr<FJsonObject> Resp, FString &OutMessage, FString &OutErrorCode);
-ALandscape *McpFindLandscapeForEnvironmentAction(const TSharedPtr<FJsonObject> &Payload);
 AActor *McpFindOrSpawnEnvironmentActor(const TSharedPtr<FJsonObject> &Payload, UClass *ActorClass, const FString &DefaultActorName,
                                         bool bFirstOfClassWhenUnnamed = false);
 // Applies payload settings onto Target and reports them on Resp; returns how many applied.
@@ -169,21 +149,6 @@ bool McpConfigureWaterBody(const TSharedPtr<FJsonObject> &Payload, const FString
                                   TSharedPtr<FJsonObject> Resp, FString &OutMessage, FString &OutErrorCode);
 bool McpConfigureWaterBodyActor(const TSharedPtr<FJsonObject> &Payload, TSharedPtr<FJsonObject> Resp,
                                        FString &OutMessage, FString &OutErrorCode);
-bool McpTryGetBoolFromPayloadOrSettings(const TSharedPtr<FJsonObject> &Payload, const TCHAR *FieldName, bool &OutValue);
-bool McpReadLandscapeSplinePoint(const TSharedPtr<FJsonValue> &PointValue, FVector &OutPoint);
-TArray<TObjectPtr<ULandscapeSplineSegment>> *McpGetLandscapeSplineSegments(ULandscapeSplinesComponent *SplinesComponent);
-TArray<TObjectPtr<ULandscapeSplineControlPoint>> *McpGetLandscapeSplineControlPoints(ULandscapeSplinesComponent *SplinesComponent);
-void McpClearLandscapeSplines(ULandscapeSplinesComponent *SplinesComponent);
-ULandscapeSplineSegment *McpAddLandscapeSplineSegment(ULandscapeSplinesComponent *SplinesComponent,
-                                                            ULandscapeSplineControlPoint *Start,
-                                                            ULandscapeSplineControlPoint *End);
-// Applies the landscape's splines to its terrain (inside the caller's undo step) and says how in Resp; false when they
-// reach none. bOutMerge: the layers must merge, after that undo step closes, for the terrain to show it.
-bool McpApplyLandscapeSplinesToTerrain(ALandscape *Landscape, const TSharedPtr<FJsonObject> &Resp, bool &bOutMerge);
-bool McpConfigureLandscapeSplines(const TSharedPtr<FJsonObject> &Payload, TSharedPtr<FJsonObject> Resp,
-                                         FString &OutMessage, FString &OutErrorCode);
-bool McpCreateLandscapeStreamingProxy(const TSharedPtr<FJsonObject> &Payload, TSharedPtr<FJsonObject> Resp,
-                                            FString &OutMessage, FString &OutErrorCode);
 bool McpCreateTimeOfDaySystem(const TSharedPtr<FJsonObject> &Payload, TSharedPtr<FJsonObject> Resp,
                                     FString &OutMessage, FString &OutErrorCode);
 bool McpConfigureWaterWavesOnActor(AActor *WaterActor, const TSharedPtr<FJsonObject> &Payload,
@@ -204,13 +169,6 @@ bool McpCaptureEnvironmentSnapshot(
     FString &OutMessage, FString &OutErrorCode);
 bool McpApplyEnvironmentSnapshot(const TSharedPtr<FJsonObject> &Snapshot, TSharedPtr<FJsonObject> Resp,
                                         FString &OutMessage, FString &OutErrorCode);
-UWorld *McpGetRuntimeInspectionWorld();
-FString McpGetWorldTypeName(UWorld *World);
-void McpAddActorTags(TSharedPtr<FJsonObject> Obj, const AActor *Actor);
-TSharedPtr<FJsonObject> McpDescribeRuntimeComponent(UActorComponent *Component, const TArray<FString> &PropertyNames,
-                                                    TSet<FString> *FoundProperties = nullptr);
-TSharedPtr<FJsonObject> McpDescribeRuntimeActor(AActor *Actor, const TArray<FString> &ComponentNames, const TArray<FString> &PropertyNames,
-                                                TSet<FString> *FoundProperties = nullptr);
 
 bool HandleBuildEnvironmentEditorAction(
     UEngineWireSubsystem &Bridge, const FString &RequestId,
@@ -228,93 +186,4 @@ bool HandleBuildLandscapeAndFoliageAction(const FString &LowerSub, FEnvironmentB
 bool HandleBuildSkyWeatherAction(const FString &LowerSub, FEnvironmentBuildContext &Context);
 bool HandleBuildWaterAction(const FString &LowerSub, FEnvironmentBuildContext &Context);
 
-bool HandleInspectGlobalAction(
-    UEngineWireSubsystem &Bridge, const FString &RequestId,
-    const FString &SubAction, const FString &LowerSubAction,
-    const TSharedPtr<FJsonObject> &Payload,
-    TSharedPtr<FMcpBridgeWebSocket> RequestingSocket);
-bool HandleInspectSettingsAction(
-    UEngineWireSubsystem &Bridge, const FString &RequestId,
-    const FString &SubAction, const FString &LowerSubAction,
-    const TSharedPtr<FJsonObject> &Payload,
-    TSharedPtr<FMcpBridgeWebSocket> RequestingSocket,
-    TSharedPtr<FJsonObject> Resp);
-bool HandleInspectStatsAction(
-    UEngineWireSubsystem &Bridge, const FString &RequestId,
-    const FString &LowerSubAction,
-    TSharedPtr<FMcpBridgeWebSocket> RequestingSocket,
-    TSharedPtr<FJsonObject> Resp);
-bool HandleInspectRuntimeReportAction(
-    UEngineWireSubsystem &Bridge, const FString &RequestId,
-    const FString &LowerSubAction, const TSharedPtr<FJsonObject> &Payload,
-    TSharedPtr<FMcpBridgeWebSocket> RequestingSocket);
-bool HandleInspectSearchAction(
-    UEngineWireSubsystem &Bridge, const FString &RequestId,
-    const FString &SubAction, const FString &LowerSubAction,
-    const TSharedPtr<FJsonObject> &Payload,
-    TSharedPtr<FMcpBridgeWebSocket> RequestingSocket,
-    TSharedPtr<FJsonObject> Resp);
-bool HandleInspectObjectAction(
-    UEngineWireSubsystem &Bridge, const FString &RequestId,
-    const FString &ObjectPath, const TSharedPtr<FJsonObject> &Payload,
-    TSharedPtr<FMcpBridgeWebSocket> RequestingSocket);
-
-// Inspection helpers, split by responsibility under Domains/Environment/Inspection/.
-TArray<FString> McpReadStringListField(const TSharedPtr<FJsonObject> &Payload, const TCHAR *ArrayField, const TCHAR *SingleField);
-void McpAppendPropertyDump(UObject *Object, const TArray<FString> &PropertyNames, TSharedPtr<FJsonObject> Resp);
-TSharedPtr<FJsonObject> McpMakeBoundsObject(const FBox &Box);
-void McpAppendLevelDetails(UWorld *World, TSharedPtr<FJsonObject> Resp);
-void McpAppendViewportInfo(TSharedPtr<FJsonObject> Resp);
-void McpDescribeClass(UClass *Class, TSharedPtr<FJsonObject> Resp);
-void McpDescribeComponent(UActorComponent *Component, TSharedPtr<FJsonObject> Resp);
-void McpDescribeAssetDetails(UObject *Object, TSharedPtr<FJsonObject> Resp);
-void McpDescribeMaterialAsset(UMaterialInterface *Material, TSharedPtr<FJsonObject> Resp);
-void McpDescribeTextureAsset(UTexture *Texture, TSharedPtr<FJsonObject> Resp);
-TArray<TSharedPtr<FJsonValue>> McpCollectBlueprintComponents(UBlueprint *Blueprint);
-TArray<TSharedPtr<FJsonValue>> McpCollectBlueprintVariables(UBlueprint *Blueprint);
-bool HandleInspectLevelDetailsAction(
-    UEngineWireSubsystem &Bridge, const FString &RequestId,
-    TSharedPtr<FMcpBridgeWebSocket> RequestingSocket);
-bool HandleInspectBlueprintDetailsAction(
-    UEngineWireSubsystem &Bridge, const FString &RequestId,
-    const TSharedPtr<FJsonObject> &Payload,
-    TSharedPtr<FMcpBridgeWebSocket> RequestingSocket);
-bool HandleInspectBlueprintComponentsAction(
-    UEngineWireSubsystem &Bridge, const FString &RequestId,
-    const FString &BlueprintPath, const TSharedPtr<FJsonObject> &Payload,
-    TSharedPtr<FMcpBridgeWebSocket> RequestingSocket);
-bool HandleInspectComponentDetailsAction(
-    UEngineWireSubsystem &Bridge, const FString &RequestId,
-    const TSharedPtr<FJsonObject> &Payload,
-    TSharedPtr<FMcpBridgeWebSocket> RequestingSocket);
-bool HandleInspectRaycastMeshAction(
-    UEngineWireSubsystem &Bridge, const FString &RequestId,
-    const TSharedPtr<FJsonObject> &Payload,
-    TSharedPtr<FMcpBridgeWebSocket> RequestingSocket);
-bool HandleInspectRaycastWorldAction(
-    UEngineWireSubsystem &Bridge, const FString &RequestId,
-    const TSharedPtr<FJsonObject> &Payload,
-    TSharedPtr<FMcpBridgeWebSocket> RequestingSocket);
-bool HandleInspectMeshCheckAction(
-    UEngineWireSubsystem &Bridge, const FString &RequestId,
-    const TSharedPtr<FJsonObject> &Payload,
-    TSharedPtr<FMcpBridgeWebSocket> RequestingSocket);
-bool HandleInspectViewContentsAction(
-    UEngineWireSubsystem &Bridge, const FString &RequestId,
-    const TSharedPtr<FJsonObject> &Payload,
-    TSharedPtr<FMcpBridgeWebSocket> RequestingSocket);
-bool HandleInspectEditorFocusAction(
-    UEngineWireSubsystem &Bridge, const FString &RequestId,
-    TSharedPtr<FMcpBridgeWebSocket> RequestingSocket);
-bool HandleInspectFrameCostAction(
-    UEngineWireSubsystem &Bridge, const FString &RequestId,
-    TSharedPtr<FMcpBridgeWebSocket> RequestingSocket);
-bool HandleInspectCapturePassesAction(
-    UEngineWireSubsystem &Bridge, const FString &RequestId,
-    const TSharedPtr<FJsonObject> &Payload,
-    TSharedPtr<FMcpBridgeWebSocket> RequestingSocket);
-bool HandleInspectActorQueryAction(
-    UEngineWireSubsystem &Bridge, const FString &RequestId,
-    const FString &LowerSubAction, const TSharedPtr<FJsonObject> &Payload,
-    TSharedPtr<FMcpBridgeWebSocket> RequestingSocket);
 }

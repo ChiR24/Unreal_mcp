@@ -76,6 +76,23 @@ struct FCombatActionContext
         Bridge.SendAutomationResponse(TargetSocket, ResponseRequestId, bSuccess, Message, Result, ErrorCode);
     }
 
+    // The request's blueprintPath, loaded; nullptr after the reply (INVALID_ARGUMENT when it is missing, NOT_FOUND when
+    // nothing loads there), so a handler answers `if (!Blueprint) return true;`.
+    UBlueprint* LoadBlueprintOrReply() const
+    {
+        if (BlueprintPath.IsEmpty())
+        {
+            SendAutomationError(RequestingSocket, RequestId, TEXT("Missing blueprintPath."), TEXT("INVALID_ARGUMENT"));
+            return nullptr;
+        }
+        UBlueprint* Blueprint = LoadObject<UBlueprint>(nullptr, *BlueprintPath);
+        if (!Blueprint)
+        {
+            SendAutomationError(RequestingSocket, RequestId, TEXT("Blueprint not found."), TEXT("NOT_FOUND"));
+        }
+        return Blueprint;
+    }
+
     bool HandleWeaponCore() const;
     bool HandleWeaponFiring() const;
     bool HandleProjectileActions() const;

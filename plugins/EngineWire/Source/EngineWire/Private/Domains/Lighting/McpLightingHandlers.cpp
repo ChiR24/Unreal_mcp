@@ -149,3 +149,21 @@ bool UEngineWireSubsystem::HandleLightingAction(
 
     return false;
 }
+
+bool UEngineWireSubsystem::HandleBakeLightmap(
+    const FString &RequestId, const FString &Action,
+    const TSharedPtr<FJsonObject> &Payload,
+    TSharedPtr<FMcpBridgeWebSocket> RequestingSocket)
+{
+    const FString Lower = Action.ToLower();
+    if (!Lower.Equals(TEXT("bake_lightmap"), ESearchCase::IgnoreCase))
+    {
+        return false;
+    }
+
+    TSharedPtr<FJsonObject> P = MakeShared<FJsonObject>();
+    if (Payload.IsValid()) { P->Values = Payload->Values; }
+    if (!P->HasField(TEXT("quality"))) { P->SetStringField(TEXT("quality"), TEXT("Preview")); }
+    return HandleLightingAction(RequestId, TEXT("bake_lightmap"), P, RequestingSocket);
+
+}

@@ -1,6 +1,7 @@
 #pragma once
 
 #include "Core/Compatibility/McpVersionCompatibility.h"
+#include "EngineWireSubsystem.h"
 #include "Foundation/BridgeHelpers/Reflection/McpClassResolve.h"
 
 #include "Modules/ModuleManager.h"
@@ -64,6 +65,26 @@ inline UStateTreeState* McpFindStateTreeState(const UStateTreeEditorData* Editor
         }
     }
     return nullptr;
+}
+
+// The StateTree at Path and its editor data; null after replying NOT_FOUND (nothing loads there) or INVALID_STATE (no
+// editor data). OutStateTree gets the asset.
+inline UStateTreeEditorData* McpLoadStateTreeEditorDataOrReply(UEngineWireSubsystem* Self, TSharedPtr<FMcpBridgeWebSocket> Socket,
+                                                               const FString& RequestId, const FString& Path,
+                                                               UStateTree*& OutStateTree)
+{
+    OutStateTree = LoadObject<UStateTree>(nullptr, *Path);
+    if (!OutStateTree)
+    {
+        Self->SendAutomationError(Socket, RequestId, FString::Printf(TEXT("StateTree not found: %s"), *Path), TEXT("NOT_FOUND"));
+        return nullptr;
+    }
+    UStateTreeEditorData* EditorData = Cast<UStateTreeEditorData>(OutStateTree->EditorData);
+    if (!EditorData)
+    {
+        Self->SendAutomationError(Socket, RequestId, TEXT("StateTree has no EditorData"), TEXT("INVALID_STATE"));
+    }
+    return EditorData;
 }
 
 // The schema says what runs the tree, and a tree without one never compiles. component (a StateTreeComponent on any

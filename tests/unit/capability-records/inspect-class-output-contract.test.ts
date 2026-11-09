@@ -12,7 +12,7 @@ import { ALL_CAPABILITY_RECORDS } from '../../../src/tools/catalog/capabilities/
 import { validateAgainstCapabilitySchema } from '../support/schema-validate.js';
 
 const HANDLER = join('plugins', 'EngineWire', 'Source', 'EngineWire', 'Private',
-  'Domains', 'Environment', 'Inspection', 'McpEnvInspectClass.cpp');
+  'Domains', 'Inspect', 'McpInspectClass.cpp');
 // Deliberately left undeclared: a hex dump of the flags (flags carries them as booleans) and the
 // package path (module or generatedBy name it).
 const UNDECLARED = new Set(['classFlags', 'package']);

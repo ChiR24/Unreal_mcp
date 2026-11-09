@@ -26,8 +26,8 @@ describe('handlers answer what they did', () => {
   });
 
   it('create_enum and create_struct report the save result, not the request', () => {
-    expect(code('AssetWorkflow', 'Enums', 'LifecycleEnums.cpp')).toContain('const bool bSaved = FinalizeEnum(Enum, bSave);');
-    expect(code('AssetWorkflow', 'Enums', 'Shared.h')).toContain('return bSave && McpSafeAssetSave(Enum);');
+    expect(code('AssetWorkflow', 'Enums', 'McpAssetEnumLifecycle.cpp')).toContain('const bool bSaved = FinalizeEnum(Enum, bSave);');
+    expect(code('AssetWorkflow', 'Enums', 'McpAssetEnumShared.h')).toContain('return bSave && McpSafeAssetSave(Enum);');
     expect(code('AssetWorkflow', 'Structs', 'McpAssetStructsLifecycle.cpp'))
       .toContain('const bool bSaved = bSave && McpSafeAssetSave(S);');
   });
@@ -67,14 +67,14 @@ describe('handlers answer what they did', () => {
   // Renumbering an enum by hand (SetEnums with fresh values) left every stored value after a removed or moved
   // entry reading as another one. The engine's own remove and move remap loaded data and pins by name.
   it('enum value removal and reorder go through the enum editor, and a refused delete names its users', () => {
-    const values = code('AssetWorkflow', 'Enums', 'Values.cpp');
+    const values = code('AssetWorkflow', 'Enums', 'McpAssetEnumValues.cpp');
     const removal = values.slice(values.indexOf('TEXT("remove_enum_value")'), values.indexOf('TEXT("rename_enum_value")'));
     expect(removal).toContain('FEnumEditorUtils::RemoveEnumeratorFromUserDefinedEnum(Enum, Index);');
     expect(removal).not.toContain('MCP_SET_ENUMS');
     const reorder = values.slice(values.indexOf('TEXT("reorder_enum_values")'), values.indexOf('TEXT("set_enum_value_metadata")'));
     expect(reorder).toContain('FEnumEditorUtils::MoveEnumeratorInUserDefinedEnum(Enum, From, Target);');
     expect(reorder).not.toContain('MCP_SET_ENUMS');
-    expect(code('AssetWorkflow', 'Enums', 'LifecycleEnums.cpp')).toContain('OutResult->SetArrayField(TEXT("referencedBy"), McpHandlerUtils::ToJsonStringArray(Users));');
+    expect(code('AssetWorkflow', 'Enums', 'McpAssetEnumLifecycle.cpp')).toContain('OutResult->SetArrayField(TEXT("referencedBy"), McpHandlerUtils::ToJsonStringArray(Users));');
   });
 
   // A missing struct answered success, and force:true went through ObjectTools::DeleteObjects, which deletes
@@ -862,7 +862,7 @@ describe('the material slots of a mesh asset', () => {
   });
 
   it('mesh details attribute each LOD0 section to the slot its MaterialIndex names', () => {
-    const mesh = code('Environment', 'Inspection', 'McpEnvInspectAssetMesh.cpp');
+    const mesh = code('Inspect', 'McpInspectAssetMesh.cpp');
     expect(mesh).toContain('Slots[Section.MaterialIndex]');
     expect(mesh).toContain('TEXT("slotBoundsAvailable")');
     expect(mesh).toContain('TEXT("triangles")');
@@ -1008,7 +1008,7 @@ describe('receipts of input edits and deletes', () => {
     expect(mutation).toContain('DeletedPaths.Add(FPackageName::ObjectPathToPackageName(SafePath));');
     expect(mutation).toContain('Resp->SetArrayField(TEXT("deleted"), DeletedArray);');
     expect(code('Environment', 'McpEnvBuildDeletion.cpp'))
-      .toContain('McpAddStringArrayField(Context.Resp, TEXT("deleted"), DeletedTargets);');
+      .toContain('Context.Resp->SetArrayField(TEXT("deleted"), McpHandlerUtils::ToJsonStringArray(DeletedTargets));');
   });
 
   // A folder move and a legacy input mapping did their work while their receipts listed no change: the
@@ -1065,7 +1065,7 @@ describe('mesh view of a placed actor', () => {
   // inspect_object objectKind mesh declares actorName, yet refused a placed StaticMeshActor as "not a static or
   // skeletal mesh"; reading a placed prop's mesh took a second lookup for its path.
   it('the mesh view follows a placed actor or component to the one mesh it draws, and names each when there are several', () => {
-    const source = code('Environment', 'Inspection', 'McpEnvInspectObject.cpp');
+    const source = code('Inspect', 'McpInspectObject.cpp');
     expect(source).toContain('UObject *Mesh = McpMeshDrawnBy(TargetObject, Several);');
     expect(source).toMatch(/if \(!Several\.IsEmpty\(\)\)\s*\{[\s\S]{0,300}?TEXT\("AMBIGUOUS_TARGET"\)\);\s*return true;\s*\}/u);
     expect(source).toContain('Resp->SetStringField(TEXT("meshOf"), MeshOf);');
@@ -1921,7 +1921,7 @@ describe('a duplicated Blueprint keeps its Math Expressions bound to its own var
 // get_component_details sent every property the class declares (195 for a Niagara component) on every call.
 describe('a component read sends property values only when asked', () => {
   it('dumps them for propertyNames or detailed, as inspect_object does', () => {
-    expect(code('Environment', 'Inspection', 'McpEnvInspectComponent.cpp')).toContain(
+    expect(code('Inspect', 'McpInspectComponent.cpp')).toContain(
       'if (PropertyNames.Num() > 0 || GetJsonBoolField(Payload, TEXT("detailed"), false))');
   });
 });
@@ -2089,7 +2089,7 @@ describe('a child Blueprint edits and attaches to its parent Blueprint parts', (
     const header = code('Property', 'McpPropCdoComponents.h');
     expect(header).toMatch(/if \(Bp->SimpleConstructionScript && Bp->SimpleConstructionScript->GetAllNodes\(\)\.Contains\(Node\)\)\s*\{\s*break;/u);
     expect(header).toContain('Handler->GetOverridenComponentTemplate(FComponentKey(Node))');
-    expect(code('Environment', 'Inspection', 'McpEnvInspectBP.cpp')).toContain('McpPropertyCdoComponents::EffectiveTemplate(Blueprint, Node, &bOverridden)');
+    expect(code('Inspect', 'McpInspectBP.cpp')).toContain('McpPropertyCdoComponents::EffectiveTemplate(Blueprint, Node, &bOverridden)');
     expect(code('Property', 'McpPropCdoInspection.cpp')).toContain('McpPropertyCdoComponents::EffectiveTemplate(Blueprint, Node, &bOverridden)');
     expect(code('Blueprint', 'Components', 'McpBPScsGet.cpp')).toContain('McpPropertyCdoComponents::EffectiveTemplate(Blueprint, Node, &bOverridden);');
     expect(code('Blueprint', 'Queries', 'McpBPGet.cpp')).toContain('UObject *Template = Node ? McpPropertyCdoComponents::EffectiveTemplate(BP, Node) : nullptr;');
@@ -2488,19 +2488,19 @@ describe('performance stats give the game\'s own share of the frame', () => {
     expect(timer).toContain('FWorldDelegates::OnWorldTickStart.AddLambda(');
     expect(timer).toContain('FWorldDelegates::OnWorldPostActorTick.AddLambda(');
     expect(timer).toContain('FWorldDelegates::OnWorldTickStart.Remove(GMcpWorldTickStartHandle);');
-    const stats = code('Environment', 'Inspection', 'McpEnvInspectStats.cpp');
+    const stats = code('Inspect', 'McpInspectStats.cpp');
     expect(stats).toContain('if (WorldTickMs >= 0.0) Resp->SetNumberField(TEXT("worldTickMs"), WorldTickMs);');
   });
 
   // With the editor minimized the render and RHI times read the same on every call and the GPU time 150-750 ms.
   it('says when the editor window is minimized, so the render times are stale', () => {
-    const stats = code('Environment', 'Inspection', 'McpEnvInspectStats.cpp');
+    const stats = code('Inspect', 'McpInspectStats.cpp');
     expect(stats).toMatch(/if \(Root\.IsValid\(\) && Root->IsWindowMinimized\(\)\)\s*\{\s*Resp->SetBoolField\(TEXT\("windowMinimized"\), true\);/u);
   });
 
   // A game holding most of the GPU slowed every frame; only the viewport's "Video memory has been exhausted" line said so.
   it('says how far video memory is over budget, from the renderer\'s own figure', () => {
-    const stats = code('Environment', 'Inspection', 'McpEnvInspectStats.cpp');
+    const stats = code('Inspect', 'McpInspectStats.cpp');
     expect(stats).toContain('const double VideoOverMB = double(GDemotedLocalMemorySize) / (1024.0 * 1024.0);');
     expect(stats).toContain('if (VideoOverMB >= 1.0) Resp->SetNumberField(TEXT("videoMemoryOverBudgetMB"), FMath::RoundToDouble(VideoOverMB));');
   });
@@ -2630,25 +2630,25 @@ describe('run_tests runs each test and answers with its result', () => {
 // A model cannot see a mesh: a hole, a crack, a fin or a face turned inside out passed every other check.
 describe('check_mesh reads the soundness of a mesh from its source topology', () => {
   it('counts open, non-manifold and flipped edges from the faces each source edge joins', () => {
-    const check = code('Environment', 'Inspection', 'MeshCheck', 'McpMeshCheck.cpp');
+    const check = code('Inspect', 'MeshCheck', 'McpMeshCheck.cpp');
     expect(check).toContain('FEdgeUse& Use = Edges.FindOrAdd(EdgeKey(From, To));');
     expect(check).toContain('Report.FlippedEdges += Use.bSameWay && From != To ? 1 : 0;');
     // Faces split along a seam (corners at one place, not shared) are joined, not a hole, and still checked for winding.
     expect(check).toContain('Report.FlippedEdges += Seen.Count == 1 && Seen.From == From ? 1 : 0;');
     expect(check).toContain('Weld[Corner] = Found ? *Found : WeldIds.Add(Key, WeldIds.Num());');
     // Only a closed surface reports a volume.
-    const header = code('Environment', 'Inspection', 'MeshCheck', 'McpMeshCheck.h');
+    const header = code('Inspect', 'MeshCheck', 'McpMeshCheck.h');
     expect(header).toContain('bool IsClosed() const { return Triangles > 0 && OpenEdges == 0 && NonManifoldEdges == 0; }');
-    const handler = code('Environment', 'Inspection', 'McpEnvInspectMeshCheck.cpp');
+    const handler = code('Inspect', 'McpInspectMeshCheck.cpp');
     expect(handler).toContain('McpHandlerUtils::MarkNoAssetsChanged(Result);');
-    const inspect = code('Environment', 'Inspection', 'McpEnvInspect.cpp');
+    const inspect = code('Inspect', 'McpInspect.cpp');
     expect(inspect).toContain('return HandleInspectMeshCheckAction(*this, RequestId, Payload, RequestingSocket);');
   });
 
   // Unreal is left-handed: a face's outward normal is (C - A) x (B - A). In the textbook order every sound mesh reads
   // inside out and every inside-out one sound.
   it('judges each closed part by its own volume, in the order Unreal winds a front face', () => {
-    const check = code('Environment', 'Inspection', 'MeshCheck', 'McpMeshCheck.cpp');
+    const check = code('Inspect', 'MeshCheck', 'McpMeshCheck.cpp');
     expect(check).toContain('Part.Volume += FVector::DotProduct(A - O, FVector::CrossProduct(C - O, B - O)) / 6.0;');
     expect(check).toContain('Part.bInsideOut = Part.bClosed && Part.Volume < -1e-9 * Size * Size * Size;');
   });
@@ -2745,26 +2745,26 @@ describe('validate_assets materialUsage lists the usage flags a cooked game woul
 // A model that cannot see a picture could not tell what a shot shows.
 describe('describe_view counts what the game draws in the camera view', () => {
   it('reads a fresh id map, leaves editor-only drawing out, and refuses a running game', () => {
-    const view = code('Environment', 'Inspection', 'McpEnvInspectViewContents.cpp');
+    const view = code('Inspect', 'View', 'McpInspectViewContents.cpp');
     // The capture is shared with analyze_view.
-    const capture = code('Environment', 'Inspection', 'McpEnvInspectViewPoints.cpp');
+    const capture = code('Inspect', 'View', 'McpInspectViewPoints.cpp');
     expect(view).toContain('McpCaptureView(CameraPayload, TEXT("describe_view"), bDiff, View, CaptureError, CaptureCode)');
     expect(capture).toMatch(/Viewport->InvalidateHitProxy\(\);\s*Out\.Ids = Viewport->GetRawHitProxyData\(/u);
     expect(view).toContain('const bool bGameDraws = Actor && !(Component && (Component->IsEditorOnly() || Component->bHiddenInGame));');
     expect(capture).toContain('if (GEditor->PlayWorld && !GEditor->bIsSimulatingInEditor)');
     expect(capture).toContain('DrawViewportFramesForMcp(Viewport, Out.Client->GetWorld(), bMoved || bSwitch ? 3 : 1);');
     expect(view).toContain('McpHandlerUtils::MarkNoAssetsChanged(Result);');
-    const inspect = code('Environment', 'Inspection', 'McpEnvInspect.cpp');
+    const inspect = code('Inspect', 'McpInspect.cpp');
     expect(inspect).toContain('return HandleInspectViewContentsAction(*this, RequestId, Payload, RequestingSocket);');
   });
 
   // Checking one prop from a camera meant reading every row of a 40-actor frame, and a missing one said nothing.
   it('lists only the actors named and says why each unseen one is not drawn', () => {
-    const view = code('Environment', 'Inspection', 'McpEnvInspectViewContents.cpp');
+    const view = code('Inspect', 'View', 'McpInspectViewContents.cpp');
     expect(view).toContain('Payload->TryGetArrayField(TEXT("actors"), Requested);');
     expect(view).toContain('NotVisible.Add(MakeShared<FJsonValueObject>(McpDescribeUnseenActor(Actor, *Client, Size, Ids, Proxies)));');
     expect(view).toContain('if (Requested && !Named.Contains(Row.Actor))');
-    const unseen = code('Environment', 'Inspection', 'McpEnvInspectViewUnseen.cpp');
+    const unseen = code('Inspect', 'View', 'McpInspectViewUnseen.cpp');
     expect(unseen, 'the level editor keeps the horizontal field of view').toContain('FMath::Tan(FMath::DegreesToRadians(Client.ViewFOV * 0.5))');
     expect(unseen).toContain('TEXT("outside the frame")');
     expect(unseen, 'what is drawn over its box, frontmost id per pixel').toContain('Covers.FindOrAdd(Proxy->Kind == EMcpViewKind::Actor ? Proxy->Actor : nullptr) += 1;');
@@ -2782,10 +2782,10 @@ describe('describe_view counts what the game draws in the camera view', () => {
   // A spot of a picture could not be turned into the actor and the world point under it, and a picture could not
   // point at an actor by number.
   it('answers points from the id drawn there and a line through the same camera, and numbers the listed boxes', () => {
-    const view = code('Environment', 'Inspection', 'McpEnvInspectViewContents.cpp');
+    const view = code('Inspect', 'View', 'McpInspectViewContents.cpp');
     expect(view).toMatch(/!McpDescribeViewPoints\(\*Client, Size, Ids, Proxies, \*Points, FMath::Clamp\(GetJsonIntField\(Payload, TEXT\("tolerance"\), 0\), 0, 16\),\s*PointRows, PointError\)/u);
     expect(view).toContain('Result->SetStringField(TEXT("imageBase64"), McpLabelledViewPng(Colors, Size, ListedBoxes));');
-    const points = code('Environment', 'Inspection', 'McpEnvInspectViewPoints.cpp');
+    const points = code('Inspect', 'View', 'McpInspectViewPoints.cpp');
     expect(points, 'the inverse of the unseen projection, horizontal FOV').toContain('const double TanY = TanX * Size.Y / Size.X;');
     expect(points).toContain('Axes.GetScaledAxis(EAxis::Z) * ((1.0 - 2.0 * Y) * TanY)).GetSafeNormal();');
     expect(points).toContain('World->LineTraceSingleByChannel(Hit, Camera, Camera + Direction * McpViewTraceLength, ECC_Visibility, Params)');
@@ -2795,7 +2795,7 @@ describe('describe_view counts what the game draws in the camera view', () => {
   });
 
   it('draws every label digit as its 3 x 5 shape', () => {
-    const points = code('Environment', 'Inspection', 'McpEnvInspectViewPoints.cpp');
+    const points = code('Inspect', 'View', 'McpInspectViewPoints.cpp');
     const masks = /McpDigits\[10\] = \{([^}]*)\}/u.exec(points)?.[1].split(',').map((hex) => Number.parseInt(hex.trim(), 16)) ?? [];
     const shapes = masks.map((mask) => mask.toString(2).padStart(15, '0').match(/.{3}/gu)?.join(' '));
     expect(shapes).toEqual([
@@ -2808,7 +2808,7 @@ describe('describe_view counts what the game draws in the camera view', () => {
 // A model asked to fix "this node" or "the Blueprint I have open" could not tell what that was.
 describe('get_editor_focus reads what the user is working on', () => {
   it('lists the open editors newest first and each Blueprint editor\'s graph and selected nodes', () => {
-    const focus = code('Environment', 'Inspection', 'McpEnvInspectEditorFocus.cpp');
+    const focus = code('Inspect', 'McpInspectEditorFocus.cpp');
     expect(focus).toContain('Editors->GetAllEditedAssets()');
     expect(focus).toContain('const double When = Editor->GetLastActivationTime();');
     // The Kismet module lists only editors it made as FBlueprintEditor, so the cast is the one the engine relies on.
@@ -2818,7 +2818,7 @@ describe('get_editor_focus reads what the user is working on', () => {
     expect(focus).toContain('FMcpLogHistory::Get().WarningsSince(FMcpLogHistory::Now() - 60.0, 10)');
     expect(focus).toContain('FMcpScriptErrors::Get().ToJson()');
     expect(focus).toContain('McpAddShaderCompileState(Result, nullptr);');
-    const inspect = code('Environment', 'Inspection', 'McpEnvInspect.cpp');
+    const inspect = code('Inspect', 'McpInspect.cpp');
     expect(inspect).toContain('return HandleInspectEditorFocusAction(*this, RequestId, RequestingSocket);');
   });
 });
@@ -2827,14 +2827,14 @@ describe('get_editor_focus reads what the user is working on', () => {
 // faces.
 describe('capture_passes writes aligned id, depth and normal passes of the level view', () => {
   it('captures depth and normal at the view\'s own camera, field of view and shape, and paints ids per actor', () => {
-    const passes = code('Environment', 'Inspection', 'McpEnvInspectCapturePasses.cpp');
+    const passes = code('Inspect', 'View', 'McpInspectCapturePasses.cpp');
     expect(passes).toContain('McpCapturePass(Client->GetWorld(), Camera, Facing, Client->ViewFOV, Size, SCS_SceneDepth)');
     expect(passes).toContain('McpCapturePass(Client->GetWorld(), Camera, Facing, Client->ViewFOV, Size, SCS_Normal)');
     expect(passes).toContain('const FIntPoint Size(Width, FMath::Max(1, FMath::RoundToInt(double(Width) * ViewSize.Y / ViewSize.X)));');
     expect(passes).toMatch(/Viewport->InvalidateHitProxy\(\);\s*const TArray<FColor> &Ids = Viewport->GetRawHitProxyData\(/u);
     expect(passes).toContain('Capture->DestroyComponent();');
     expect(passes).toContain('if (Files->Values.Num() < Passes.Num())');
-    const ids = code('Environment', 'Inspection', 'McpEnvInspectViewContents.cpp');
+    const ids = code('Inspect', 'View', 'McpInspectViewContents.cpp');
     expect(ids).toContain('FMcpViewProxy McpViewProxyOf(const FColor &Id)');
   });
 });
@@ -3573,7 +3573,7 @@ describe('a Blueprint runtime error names the node that raised it', () => {
   });
 
   it('runtime_report lists the session errors, kept after stop until the next play', () => {
-    const runtime = code('Environment', 'Inspection', 'McpEnvInspectRuntime.cpp');
+    const runtime = code('Inspect', 'McpInspectRuntime.cpp');
     expect(runtime).toMatch(/const TArray<TSharedPtr<FJsonValue>> ScriptErrors = FMcpScriptErrors::Get\(\)\.ToJson\(\);\s*if \(ScriptErrors\.Num\(\) > 0\)\s*\{\s*Report->SetArrayField\(TEXT\("scriptErrors"\), ScriptErrors\);/u);
   });
 });
@@ -3581,7 +3581,7 @@ describe('a Blueprint runtime error names the node that raised it', () => {
 describe('runtime_report filter matches a path only whole', () => {
   // Every actor's path holds its level's name, so a filter naming the level listed every actor in it.
   it('matches name, label and class by part and the object path only exactly', () => {
-    const runtime = code('Environment', 'Inspection', 'McpEnvInspectRuntime.cpp');
+    const runtime = code('Inspect', 'McpInspectRuntime.cpp');
     expect(runtime).toContain('Actor->GetPathName().Equals(Filter, ESearchCase::IgnoreCase);');
     expect(runtime).not.toContain('Actor->GetPathName().Contains(Filter)');
   });
@@ -3627,10 +3627,10 @@ describe('what the native smoke run found', () => {
 });
 
 describe('get_frame_cost names what bounds the frame', () => {
-  const source = code('Environment', 'Inspection', 'Performance', 'McpEnvInspectFrameCost.cpp');
+  const source = code('Inspect', 'McpInspectFrameCost.cpp');
 
   it('is answered by its own handler', () => {
-    expect(code('Environment', 'Inspection', 'McpEnvInspect.cpp'))
+    expect(code('Inspect', 'McpInspect.cpp'))
       .toMatch(/LowerSubAction\.Equals\(TEXT\("get_frame_cost"\)\)\)\s*\{\s*return HandleInspectFrameCostAction\(/u);
   });
 
@@ -3752,8 +3752,8 @@ describe('fix_coplanar converges or names what it leaves', () => {
 describe('describe_view names what covers part of a named actor', () => {
   // A sign half behind a row of blocks still drew pixels, so it read as seen and nothing named what covered it.
   it('measures nearer actors over a visible actor box as it does for an unseen one', () => {
-    expect(code('Environment', 'Inspection', 'McpEnvInspectViewContents.cpp')).toContain('McpCoveringActors(Row.Actor, *Client, Size, Ids, Proxies)');
-    const unseen = code('Environment', 'Inspection', 'McpEnvInspectViewUnseen.cpp');
+    expect(code('Inspect', 'View', 'McpInspectViewContents.cpp')).toContain('McpCoveringActors(Row.Actor, *Client, Size, Ids, Proxies)');
+    const unseen = code('Inspect', 'View', 'McpInspectViewUnseen.cpp');
     expect(unseen).toContain('Covers.Remove(Actor);');
     expect(unseen).toContain('McpNearerCovers(Actor, Client, Size, Ids, Proxies, 5.0, InFrame, Covers);');
   });
@@ -3875,7 +3875,7 @@ describe('animation and character creators say what they did', () => {
   // "Group.Slot" went into the Slot node while montages name the bare slot, so no montage ever played through it;
   // neither node creator named the node it made, so it could not be wired.
   it('slot nodes hold the bare slot name and both anim node creators name their node', () => {
-    const layers = code('AnimationAuthoring', 'McpAnimBPSlotLayers.cpp');
+    const layers = code('AnimationAuthoring', 'Blueprints', 'McpAnimBPSlotLayers.cpp');
     expect(layers).toContain('SlotNode->Node.SlotName = Slot;');
     expect(layers).not.toContain('TEXT("%s.%s"), *GroupName, *SlotName');
     expect(layers).toContain('TEXT("SLOT_IN_OTHER_GROUP")');
@@ -3998,7 +3998,7 @@ describe('a write never deletes, engine content is never rebuilt, a listing can 
   });
 
   it('list_data_table_rows lists rows once, at the root, so the gateway can page them', () => {
-    const rows = code('AssetWorkflow', 'DataTables', 'Rows.cpp');
+    const rows = code('AssetWorkflow', 'DataTables', 'McpAssetDataTableRows.cpp');
     expect(rows).not.toContain('Details->SetArrayField(TEXT("rows")');
     expect(rows).toContain('constexpr int32 MaxListedRows = 10000;');
     expect(rows).toContain('OutResult->SetBoolField(TEXT("truncated"), true);');
@@ -4073,14 +4073,14 @@ describe('sequence create, duplicate and rename write only /Game sequences and s
 
 describe('enum values keep their stored meaning: renames change the shown name, duplicates are refused', () => {
   it('rename uses the display name, metadata goes on the entry, and every lookup takes either name', () => {
-    const values = code('AssetWorkflow', 'Enums', 'Values.cpp');
+    const values = code('AssetWorkflow', 'Enums', 'McpAssetEnumValues.cpp');
     expect(values).toContain('FEnumEditorUtils::SetEnumeratorDisplayName(Enum, Index, FText::FromString(NewValueName))');
     expect(values).toContain('Enum->SetMetaData(*Key, *Value, Index);');
     expect(values).not.toContain('Value_%s_%s');
     expect(values).toContain('TEXT("VALUE_EXISTS")');
-    expect(code('AssetWorkflow', 'Enums', 'Shared.h')).toContain('Enum->GetDisplayNameTextByIndex(Index).ToString() == Requested');
-    expect(code('AssetWorkflow', 'Enums', 'Split.cpp')).toContain('McpFindEnumValue(Enum, V->AsString())');
-    const lifecycle = code('AssetWorkflow', 'Enums', 'LifecycleEnums.cpp');
+    expect(code('AssetWorkflow', 'Enums', 'McpAssetEnumShared.h')).toContain('Enum->GetDisplayNameTextByIndex(Index).ToString() == Requested');
+    expect(code('AssetWorkflow', 'Enums', 'McpAssetEnumSplit.cpp')).toContain('McpFindEnumValue(Enum, V->AsString())');
+    const lifecycle = code('AssetWorkflow', 'Enums', 'McpAssetEnumLifecycle.cpp');
     expect(lifecycle.indexOf('if (ValueNames.Contains(ValName))')).toBeLessThan(lifecycle.indexOf('FEnumEditorUtils::CreateUserDefinedEnum('));
     expect(lifecycle).toContain('V->SetStringField(TEXT("displayName"), Enum->GetDisplayNameTextByIndex(i).ToString());');
   });
@@ -4121,7 +4121,7 @@ describe('material function pins refuse what would break the function', () => {
 
 describe('creating an Animation Blueprint never deletes what is in the way', () => {
   it('any asset other than an Animation Blueprint at the path is refused, not force-deleted', () => {
-    const assets = code('AnimationAuthoring', 'McpAnimBPAssets.cpp');
+    const assets = code('AnimationAuthoring', 'Blueprints', 'McpAnimBPAssets.cpp');
     expect(assets).not.toContain('UEditorAssetLibrary::DeleteAsset');
     expect(assets).not.toContain('LEGACY_ASSET_DELETE_FAILED');
     expect(assets).toContain('Response->SetBoolField(TEXT("saved"), bSaved);');
@@ -4268,10 +4268,10 @@ describe('a create never rebuilds an asset already at its path', () => {
 
   it('creators of a caller-named asset go through it', () => {
     for (const file of [['Animation', 'Rigging', 'McpAnimSkinMesh.cpp'], ['AnimationAuthoring', 'McpAnimAimOffsets.cpp'], ['AnimationAuthoring', 'McpAnimControlRig.cpp'],
-      ['AnimationAuthoring', 'McpAnimIKRetargeting.cpp'], ['AssetWorkflow', 'Enums', 'Split.cpp'], ['AssetWorkflow', 'Structs', 'McpAssetStructsImport.cpp'],
+      ['AnimationAuthoring', 'McpAnimIKRetargeting.cpp'], ['AssetWorkflow', 'Enums', 'McpAssetEnumSplit.cpp'], ['AssetWorkflow', 'Structs', 'McpAssetStructsImport.cpp'],
       ['AudioAuthoring', 'McpAudioAttenuation.cpp'], ['AudioAuthoring', 'McpAudioSoundClasses.cpp'], ['AudioAuthoring', 'McpAudioSoundCueAssets.cpp'],
       ['AudioAuthoring', 'McpAudioSoundMixes.cpp'], ['AudioAuthoring', 'McpAudioDialogue.cpp'], ['AudioAuthoring', 'McpAudioEffects.cpp'],
-      ['Environment', 'Runtime', 'McpEnvFoliageAssets.cpp'], ['LevelStructure', 'McpLevelStructureDataLayerCreation.cpp'], ['LevelStructure', 'McpLevelStructureHlod.cpp'],
+      ['Landscape', 'McpLandscapeLayerInfo.cpp'], ['LevelStructure', 'McpLevelStructureDataLayerCreation.cpp'], ['LevelStructure', 'McpLevelStructureHlod.cpp'],
       ['MaterialAuthoring', 'Nodes', 'McpMatAddLandscapeLayer.cpp'], ['Skeleton', 'Bones', 'McpSkeletonStructureCreation.cpp'], ['Skeleton', 'Physics', 'McpSkeletonPhysicsAssets.cpp'],
       ['Texture', 'McpTextureExtract.cpp'], ['Audio', 'McpAudioOcclusionAndAttenuation.cpp'], ['Foliage', 'McpFoliageProcedural.cpp'],
       ['AI', 'McpAIContext.h'], ['BehaviorTree', 'McpBTAssets.cpp'], ['Landscape', 'McpLandscapeGrassType.cpp']]) {
@@ -4517,7 +4517,7 @@ describe('landscape edits reach the merged landscape, physics and texture settin
     expect(scope).toContain('return Editing.IsValid() ? Editing : FirstEditLayerGuid(Landscape);');
     expect(scope).toContain('Landscape->ForceUpdateLayersContent();');
     for (const file of [['Landscape', 'McpLandscapeHeightmap.cpp'], ['Landscape', 'McpLandscapeSculpt.cpp'],
-      ['Landscape', 'McpLandscapeLayerPaint.cpp'], ['Environment', 'Landscape', 'McpEnvLandscapeHeightmap.cpp']]) {
+      ['Landscape', 'McpLandscapeLayerPaint.cpp'], ['Landscape', 'McpLandscapeHeightmapFile.cpp']]) {
       const source = code(...file);
       expect(source, file.join('/')).toContain('McpLandscapeHandlers::FMcpLandscapeEditScope Edit(Landscape,');
       expect(source, file.join('/')).toMatch(/FLandscapeEditDataInterface \w+\(LandscapeInfo\);/u);
@@ -4528,7 +4528,7 @@ describe('landscape edits reach the merged landscape, physics and texture settin
   // With edit layers the engine applies landscape splines only to the layer reserved for them: without one (or the
   // update request) a spline said raiseTerrain true and left every height as it was.
   it('landscape splines shape the terrain through the edit layer reserved for them, in one undo step', () => {
-    const handler = code('Environment', 'Landscape', 'McpEnvLandscapeSplines.cpp');
+    const handler = code('Landscape', 'McpLandscapeSplines.cpp');
     expect(handler).toContain('MakeUnique<FMcpScopedEditorTransaction>(');
     expect(handler).toContain('McpApplyLandscapeSplinesToTerrain(Landscape, Resp, bMerge)');
     // The layers merge after the undo step closes, and a replace never records the landscape actor: an undo would
@@ -4538,7 +4538,7 @@ describe('landscape edits reach the merged landscape, physics and texture settin
     // Control points are in the splines component's unscaled space, not the landscape's (scaled 100).
     expect(handler).toContain('ControlPoint->Location = SplineToWorld.InverseTransformPosition(WorldPoint);');
     expect(handler).not.toContain('Landscape->GetTransform().InverseTransformPosition(WorldPoint)');
-    const terrain = code('Environment', 'Landscape', 'McpEnvLandscapeSplinePayload.cpp');
+    const terrain = code('Landscape', 'McpLandscapeSplinePayload.cpp');
     expect(terrain).toContain('Landscape->RequestSplineLayerUpdate();');
     expect(terrain).toContain('CreateLayer(FName(TEXT("Splines")), ULandscapeEditLayerSplines::StaticClass());');
     expect(terrain).toContain('Landscape->SetLandscapeSplinesReservedLayer(LayerIndex);');
@@ -4580,7 +4580,7 @@ describe('sounds, landscape receipts, skeleton saves and UV projections answer w
     for (const file of ['McpLandscapeSculpt.cpp', 'McpLandscapeLayerPaint.cpp']) {
       expect(code('Landscape', file), file).toContain('McpHandlerUtils::AddVerification(Resp, Landscape);');
     }
-    const heightmapIo = code('Environment', 'Landscape', 'McpEnvLandscapeHeightmap.cpp');
+    const heightmapIo = code('Landscape', 'McpLandscapeHeightmapFile.cpp');
     const exportBody = heightmapIo.slice(heightmapIo.indexOf('McpExportLandscapeHeightmap'), heightmapIo.indexOf('McpImportLandscapeHeightmap'));
     expect(exportBody).toContain('TEXT("modifiedPaths")');
     expect(exportBody).not.toContain('AddVerification(Resp, Landscape)');
@@ -5234,7 +5234,7 @@ describe('ability edits are measured on the compiled class and saved, or refused
 
 describe('edits answer with what the engine holds', () => {
   it('movement scalars refuse negatives and read the compiled class back', () => {
-    const modes = code('Character', 'McpCharacterMovementModes.cpp');
+    const modes = code('Character', 'McpCharacterMovementValues.cpp');
     expect(modes).toContain('%s cannot be negative. Nothing was changed.');
     expect(modes).toContain('Result->SetNumberField(FString(ResponseField), Movement->*Property);');
     expect(modes).toMatch(/&UCharacterMovementComponent::GravityScale,\s+true\);/u);
@@ -5374,7 +5374,7 @@ describe('animation, audio, data table and input edits answer with what the engi
   it('bone tracks, cached poses, blend spaces and aim offsets report what they hold and whether they saved', () => {
     const tracks = code('AnimationAuthoring', 'McpAnimSequenceTracks.cpp');
     expect(tracks).toContain('Response->SetBoolField(TEXT("alreadyExists"), bAlreadyHadTrack);');
-    const nodes = code('AnimationAuthoring', 'McpAnimBPBlendNodes.cpp');
+    const nodes = code('AnimationAuthoring', 'Blueprints', 'McpAnimBPBlendNodes.cpp');
     expect(nodes).toContain('TEXT("CACHE_NAME_TAKEN")');
     expect(nodes).toContain('Response->SetStringField(TEXT("cacheName"), CachedPoseNode->CacheName);');
     expect(code('AnimationAuthoring', 'McpAnimAimOffsets.cpp')).toContain('McpSetBlendSpaceAxis(NewAimOffset, 0, TEXT("Yaw"), -180.f, 180.f)');
@@ -5399,7 +5399,7 @@ describe('animation, audio, data table and input edits answer with what the engi
 
   it('occlusion, data table rows, PIE pause and legacy bindings say what changed', () => {
     expect(code('AudioAuthoring', 'McpAudioAttenuation.cpp')).toContain('if (Params->HasField(TEXT("enable")) || Params->HasField(TEXT("enableOcclusion")))');
-    const rows = code('AssetWorkflow', 'DataTables', 'Rows.cpp');
+    const rows = code('AssetWorkflow', 'DataTables', 'McpAssetDataTableRows.cpp');
     for (const title of ['Add Data Table Row', 'Update Data Table Row', 'Delete Data Table Row']) {
       expect(rows).toContain(`FText::FromString(TEXT("${title}"))`);
     }

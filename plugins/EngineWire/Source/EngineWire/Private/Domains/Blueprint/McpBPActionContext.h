@@ -4,6 +4,7 @@
 #include "CoreMinimal.h"
 #include "Dom/JsonObject.h"
 #include "EngineWireSubsystem.h"
+#include "Domains/Blueprint/McpBPSnapshot.h"
 
 class FJsonValue;
 class FMcpBridgeWebSocket;

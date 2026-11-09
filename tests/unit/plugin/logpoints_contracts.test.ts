@@ -19,7 +19,7 @@ describe('logpoints', () => {
   const trace = code(LOGPOINTS, 'McpLogpointsTrace.cpp');
 
   it('is routed by inspect for its three sub-actions', () => {
-    expect(code(PRIVATE, 'Domains', 'Environment', 'Inspection', 'McpEnvInspect.cpp')).toMatch(
+    expect(code(PRIVATE, 'Domains', 'Inspect', 'McpInspect.cpp')).toMatch(
       /LowerSubAction\.EndsWith\(TEXT\("_logpoints"\)\)\)\s*\{\s*return McpLogpoints::Handle\(\*this, RequestId, LowerSubAction, Payload, RequestingSocket\);/u,
     );
   });

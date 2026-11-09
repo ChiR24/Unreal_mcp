@@ -136,11 +136,8 @@ bool UEngineWireSubsystem::HandleControlEditorSetGameSpeed(
 bool UEngineWireSubsystem::HandleControlEditorPause(
     const FString &RequestId, const TSharedPtr<FJsonObject> &Payload,
     TSharedPtr<FMcpBridgeWebSocket> Socket) {
-  if (!GEditor) {
-    SendStandardErrorResponse(this, Socket, RequestId, TEXT("EDITOR_NOT_AVAILABLE"),
-                              TEXT("Editor not available"), nullptr);
+  if (!McpRequireEditor(this, Socket, RequestId))
     return true;
-  }
 
   if (!GEditor->PlayWorld) {
     SendStandardErrorResponse(this, Socket, RequestId, TEXT("NO_ACTIVE_SESSION"),
@@ -164,11 +161,8 @@ bool UEngineWireSubsystem::HandleControlEditorPause(
 bool UEngineWireSubsystem::HandleControlEditorResume(
     const FString &RequestId, const TSharedPtr<FJsonObject> &Payload,
     TSharedPtr<FMcpBridgeWebSocket> Socket) {
-  if (!GEditor) {
-    SendStandardErrorResponse(this, Socket, RequestId, TEXT("EDITOR_NOT_AVAILABLE"),
-                              TEXT("Editor not available"), nullptr);
+  if (!McpRequireEditor(this, Socket, RequestId))
     return true;
-  }
 
   if (!GEditor->PlayWorld) {
     SendStandardErrorResponse(this, Socket, RequestId, TEXT("NO_ACTIVE_SESSION"),
@@ -218,11 +212,8 @@ bool UEngineWireSubsystem::HandleControlEditorResume(
 bool UEngineWireSubsystem::HandleControlEditorStepFrame(
     const FString &RequestId, const TSharedPtr<FJsonObject> &Payload,
     TSharedPtr<FMcpBridgeWebSocket> Socket) {
-  if (!GEditor) {
-    SendStandardErrorResponse(this, Socket, RequestId, TEXT("EDITOR_NOT_AVAILABLE"),
-                              TEXT("Editor not available"), nullptr);
+  if (!McpRequireEditor(this, Socket, RequestId))
     return true;
-  }
 
   if (!GEditor->PlayWorld) {
     SendStandardErrorResponse(this, Socket, RequestId, TEXT("NO_ACTIVE_SESSION"),

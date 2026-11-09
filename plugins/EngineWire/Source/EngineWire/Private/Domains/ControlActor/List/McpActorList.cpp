@@ -40,11 +40,8 @@ double McpDistanceToActorBounds(const AActor *Actor, const FVector &Point, doubl
 bool UEngineWireSubsystem::HandleControlActorList(
     const FString &RequestId, const TSharedPtr<FJsonObject> &Payload,
     TSharedPtr<FMcpBridgeWebSocket> Socket) {
-  if (!GEditor) {
-    SendStandardErrorResponse(this, Socket, RequestId, TEXT("EDITOR_NOT_AVAILABLE"),
-                              TEXT("Editor not available"), nullptr);
+  if (!McpRequireEditor(this, Socket, RequestId))
     return true;
-  }
 
   FString Filter, TagFilter, ClassFilter, FolderFilter;
   Payload->TryGetStringField(TEXT("filter"), Filter);

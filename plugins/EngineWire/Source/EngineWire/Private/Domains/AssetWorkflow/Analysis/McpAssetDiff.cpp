@@ -3,7 +3,7 @@
 // does, then released; nothing is written to the asset.
 
 #include "Domains/AssetWorkflow/Analysis/McpAssetDiff.h"
-#include "Domains/AssetWorkflow/Analysis/Shared.h"
+#include "Domains/AssetWorkflow/Analysis/McpAssetAnalysisShared.h"
 
 #include "Engine/Blueprint.h"
 #include "Engine/DataAsset.h"

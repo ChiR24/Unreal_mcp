@@ -7,7 +7,7 @@
 #include "UObject/ObjectRedirector.h"
 #include "UObject/Package.h"
 #include "UObject/UObjectHash.h"
-#include "Domains/Niagara/McpNiagaraPrivate.h"
+#include "Domains/NiagaraAuthoring/McpNiagaraContext.h"
 #include "Domains/NiagaraAuthoring/McpNiagaraEmitterName.h"
 
 IMPLEMENT_SIMPLE_AUTOMATION_TEST(

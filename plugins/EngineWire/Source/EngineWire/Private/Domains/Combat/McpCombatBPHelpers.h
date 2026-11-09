@@ -157,11 +157,4 @@ inline FEdGraphPinType MakeBoolPinType()
     return PinType;
 }
 
-inline FEdGraphPinType MakeStringPinType()
-{
-    FEdGraphPinType PinType;
-    PinType.PinCategory = UEdGraphSchema_K2::PC_String;
-    return PinType;
-}
-
 }

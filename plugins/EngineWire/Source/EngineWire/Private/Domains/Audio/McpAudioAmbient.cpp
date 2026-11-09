@@ -12,19 +12,8 @@ bool HandleAmbientActions(
     TSharedPtr<FMcpBridgeWebSocket> RequestingSocket)
 {
   if (Lower == TEXT("create_ambient_sound")) {
-    FString SoundPath;
-    if (!Payload->TryGetStringField(TEXT("soundPath"), SoundPath) ||
-        SoundPath.IsEmpty()) {
-      Self->SendAutomationError(RequestingSocket, RequestId,
-                          TEXT("soundPath required"), TEXT("INVALID_ARGUMENT"));
-      return true;
-    }
-
-    USoundBase *Sound = ResolveSoundAsset(SoundPath);
+    USoundBase *Sound = LoadSoundOrReply(Self, RequestingSocket, RequestId, Payload);
     if (!Sound) {
-      Self->SendAutomationError(RequestingSocket, RequestId,
-                          TEXT("Sound asset not found"),
-                          TEXT("ASSET_NOT_FOUND"));
       return true;
     }
 
@@ -107,19 +96,8 @@ bool HandleAmbientActions(
 
   else if (Lower == TEXT("spawn_sound_at_location")) {
     // Similar to create_ambient_sound but explicit action name
-    FString SoundPath;
-    if (!Payload->TryGetStringField(TEXT("soundPath"), SoundPath) ||
-        SoundPath.IsEmpty()) {
-      Self->SendAutomationError(RequestingSocket, RequestId,
-                          TEXT("soundPath required"), TEXT("INVALID_ARGUMENT"));
-      return true;
-    }
-
-    USoundBase *Sound = ResolveSoundAsset(SoundPath);
+    USoundBase *Sound = LoadSoundOrReply(Self, RequestingSocket, RequestId, Payload);
     if (!Sound) {
-      Self->SendAutomationError(RequestingSocket, RequestId,
-                          TEXT("Sound asset not found"),
-                          TEXT("ASSET_NOT_FOUND"));
       return true;
     }
 

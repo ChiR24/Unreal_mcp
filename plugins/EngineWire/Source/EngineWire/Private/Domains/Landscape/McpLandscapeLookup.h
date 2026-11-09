@@ -18,6 +18,11 @@ ALandscape *ResolveLandscapeOrReply(UEngineWireSubsystem &Bridge,
                                     TSharedPtr<FMcpBridgeWebSocket> RequestingSocket,
                                     ULandscapeInfo **OutInfo = nullptr);
 
+// The landscape a build_environment action names: by label (landscapeName, name, targetActor) or by package or object
+// path (landscapePath, landscapeActorPath, actorPath), else the first landscape in the level the caller may touch.
+// Null when nothing matches; unlike ResolveLandscapeOrReply it sends no reply.
+ALandscape *McpFindLandscape(const TSharedPtr<FJsonObject> &Payload);
+
 // A height or paint edit made through FLandscapeEditDataInterface, done as the editor's own tools do it. With edit
 // layers (every landscape from 5.6, most before) heights and paint live in a layer that a merge turns into what renders
 // and collides; an edit that named no layer was never drawn or collided with, and the next merge wrote over it. The

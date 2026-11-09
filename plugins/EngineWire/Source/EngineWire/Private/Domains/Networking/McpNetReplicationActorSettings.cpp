@@ -8,23 +8,13 @@ bool HandleConfigureNetPriority(FNetworkingActionContext& Context)
     FString BlueprintPath = GetJsonStringField(Payload, TEXT("blueprintPath"));
     double NetPriority = GetJsonNumberField(Payload, TEXT("netPriority"), 1.0);
 
-    UBlueprint* Blueprint = LoadBlueprintOrReply(Context, BlueprintPath);
-    if (!Blueprint)
-    {
-        return true;
-    }
-
-    // A Blueprint whose class never compiled has no defaults to write; the edit used to be skipped and reported.
-    AActor* CDO = Blueprint->GeneratedClass ? Cast<AActor>(Blueprint->GeneratedClass->GetDefaultObject()) : nullptr;
+    UBlueprint* Blueprint = nullptr;
+    AActor* CDO = LoadActorDefaultsOrReply(Context, BlueprintPath, Blueprint);
     if (!CDO)
     {
-        Context.Bridge.SendAutomationError(Context.RequestingSocket, Context.RequestId, TEXT("The Blueprint has no compiled Actor class to configure; compile it first."), TEXT("NOT_SUPPORTED"));
         return true;
     }
-    if (CDO)
-    {
-        CDO->NetPriority = static_cast<float>(NetPriority);
-    }
+    CDO->NetPriority = static_cast<float>(NetPriority);
 
     return SaveBlueprintAndReply(Context, Blueprint, FString::Printf(TEXT("Net priority set to %.2f"), NetPriority), TEXT("Net priority configured"));
 }

@@ -103,7 +103,7 @@ describe('an asset created without RF_Transactional still records undo', () => {
   }
 
   it('data table row edits describe their undo step before the save', () => {
-    const source = read('AssetWorkflow', 'DataTables', 'Rows.cpp');
+    const source = read('AssetWorkflow', 'DataTables', 'McpAssetDataTableRows.cpp');
     for (const title of ['Add Data Table Row', 'Update Data Table Row', 'Delete Data Table Row']) {
       const open = source.indexOf(`FMcpScopedEditorTransaction Transaction(FText::FromString(TEXT("${title}"))`);
       const describe = source.indexOf('Transaction.DescribeInto(OutResult);', open);

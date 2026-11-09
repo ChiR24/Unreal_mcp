@@ -2,6 +2,36 @@
 
 namespace McpNetworkingHandlers
 {
+namespace
+{
+// The editor world's actor named ActorName; null after the reply (INVALID_PARAMS when the name is missing, NO_WORLD,
+// NOT_FOUND). OutWorld, when given, gets the world searched.
+AActor* FindNetActorOrReply(FNetworkingActionContext& Context, const FString& ActorName, UWorld** OutWorld = nullptr)
+{
+    if (ActorName.IsEmpty())
+    {
+        Context.Bridge.SendAutomationError(Context.RequestingSocket, Context.RequestId, TEXT("Missing actorName"), TEXT("INVALID_PARAMS"));
+        return nullptr;
+    }
+    UWorld* World = GEditor ? GEditor->GetEditorWorldContext().World() : nullptr;
+    if (!World)
+    {
+        Context.Bridge.SendAutomationError(Context.RequestingSocket, Context.RequestId, TEXT("No world available"), TEXT("NO_WORLD"));
+        return nullptr;
+    }
+    if (OutWorld)
+    {
+        *OutWorld = World;
+    }
+    AActor* Actor = FindActorByNameInWorldForMcp(World, ActorName, true);
+    if (!Actor)
+    {
+        Context.Bridge.SendAutomationError(Context.RequestingSocket, Context.RequestId, TEXT("Actor not found"), TEXT("NOT_FOUND"));
+    }
+    return Actor;
+}
+} // namespace
+
 bool HandleSetOwner(FNetworkingActionContext& Context)
 {
     const TSharedPtr<FJsonObject>& Payload = Context.Payload;
@@ -9,23 +39,10 @@ bool HandleSetOwner(FNetworkingActionContext& Context)
     FString ActorName = GetJsonStringField(Payload, TEXT("actorName"));
     FString OwnerActorName = GetJsonStringField(Payload, TEXT("ownerActorName"));
 
-    if (ActorName.IsEmpty())
-    {
-        Context.Bridge.SendAutomationError(Context.RequestingSocket, Context.RequestId, TEXT("Missing actorName"), TEXT("INVALID_PARAMS"));
-        return true;
-    }
-
-    UWorld* World = GEditor ? GEditor->GetEditorWorldContext().World() : nullptr;
-    if (!World)
-    {
-        Context.Bridge.SendAutomationError(Context.RequestingSocket, Context.RequestId, TEXT("No world available"), TEXT("NO_WORLD"));
-        return true;
-    }
-
-    AActor* Actor = FindActorByNameInWorldForMcp(World, ActorName, true);
+    UWorld* World = nullptr;
+    AActor* Actor = FindNetActorOrReply(Context, ActorName, &World);
     if (!Actor)
     {
-        Context.Bridge.SendAutomationError(Context.RequestingSocket, Context.RequestId, TEXT("Actor not found"), TEXT("NOT_FOUND"));
         return true;
     }
 
@@ -106,24 +123,9 @@ bool HandleSetAutonomousProxy(FNetworkingActionContext& Context)
 
 bool HandleCheckHasAuthority(FNetworkingActionContext& Context)
 {
-    FString ActorName = GetJsonStringField(Context.Payload, TEXT("actorName"));
-    if (ActorName.IsEmpty())
-    {
-        Context.Bridge.SendAutomationError(Context.RequestingSocket, Context.RequestId, TEXT("Missing actorName"), TEXT("INVALID_PARAMS"));
-        return true;
-    }
-
-    UWorld* World = GEditor ? GEditor->GetEditorWorldContext().World() : nullptr;
-    if (!World)
-    {
-        Context.Bridge.SendAutomationError(Context.RequestingSocket, Context.RequestId, TEXT("No world available"), TEXT("NO_WORLD"));
-        return true;
-    }
-
-    AActor* Actor = FindActorByNameInWorldForMcp(World, ActorName, true);
+    AActor* Actor = FindNetActorOrReply(Context, GetJsonStringField(Context.Payload, TEXT("actorName")));
     if (!Actor)
     {
-        Context.Bridge.SendAutomationError(Context.RequestingSocket, Context.RequestId, TEXT("Actor not found"), TEXT("NOT_FOUND"));
         return true;
     }
 
@@ -136,24 +138,9 @@ bool HandleCheckHasAuthority(FNetworkingActionContext& Context)
 
 bool HandleCheckIsLocallyControlled(FNetworkingActionContext& Context)
 {
-    FString ActorName = GetJsonStringField(Context.Payload, TEXT("actorName"));
-    if (ActorName.IsEmpty())
-    {
-        Context.Bridge.SendAutomationError(Context.RequestingSocket, Context.RequestId, TEXT("Missing actorName"), TEXT("INVALID_PARAMS"));
-        return true;
-    }
-
-    UWorld* World = GEditor ? GEditor->GetEditorWorldContext().World() : nullptr;
-    if (!World)
-    {
-        Context.Bridge.SendAutomationError(Context.RequestingSocket, Context.RequestId, TEXT("No world available"), TEXT("NO_WORLD"));
-        return true;
-    }
-
-    AActor* Actor = FindActorByNameInWorldForMcp(World, ActorName, true);
+    AActor* Actor = FindNetActorOrReply(Context, GetJsonStringField(Context.Payload, TEXT("actorName")));
     if (!Actor)
     {
-        Context.Bridge.SendAutomationError(Context.RequestingSocket, Context.RequestId, TEXT("Actor not found"), TEXT("NOT_FOUND"));
         return true;
     }
 

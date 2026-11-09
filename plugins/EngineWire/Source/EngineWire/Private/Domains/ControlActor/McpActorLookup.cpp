@@ -76,23 +76,25 @@ AActor *UEngineWireSubsystem::FindActorByName(const FString &Target, bool bExact
   return nullptr;
 }
 
+// The payload's actorName as an actor; nullptr after the reply (INVALID_ARGUMENT when it is missing,
+// ACTOR_NOT_FOUND when nothing goes by it), so a handler answers `if (!Found) return true;`.
+AActor *UEngineWireSubsystem::FindActorOrReply(const TSharedPtr<FJsonObject> &Payload, const FString &RequestId,
+                                               const TSharedPtr<FMcpBridgeWebSocket> &Socket) {
+  FString TargetName;
+  if (!McpReadRequiredField(this, Socket, RequestId, Payload, TEXT("actorName"), TargetName))
+    return nullptr;
+  AActor *Found = FindActorByName(TargetName);
+  if (!Found)
+    SendStandardErrorResponse(this, Socket, RequestId, TEXT("ACTOR_NOT_FOUND"), TEXT("Actor not found"), nullptr);
+  return Found;
+}
+
 bool UEngineWireSubsystem::HandleControlActorGet(
     const FString &RequestId, const TSharedPtr<FJsonObject> &Payload,
     TSharedPtr<FMcpBridgeWebSocket> Socket) {
-  FString TargetName;
-  Payload->TryGetStringField(TEXT("actorName"), TargetName);
-  if (TargetName.IsEmpty()) {
-    SendStandardErrorResponse(this, Socket, RequestId, TEXT("INVALID_ARGUMENT"),
-                              TEXT("actorName required"), nullptr);
+  AActor *Found = FindActorOrReply(Payload, RequestId, Socket);
+  if (!Found)
     return true;
-  }
-
-  AActor *Found = FindActorByName(TargetName);
-  if (!Found) {
-    SendStandardErrorResponse(this, Socket, RequestId, TEXT("ACTOR_NOT_FOUND"),
-                              TEXT("Actor not found"), nullptr);
-    return true;
-  }
 
   const FTransform Current = Found->GetActorTransform();
   TSharedPtr<FJsonObject> Data = McpHandlerUtils::CreateResultObject();

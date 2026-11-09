@@ -42,12 +42,8 @@ bool UEngineWireSubsystem::HandleControlEditorOpenLevel(
     const FString &RequestId, const TSharedPtr<FJsonObject> &Payload,
     TSharedPtr<FMcpBridgeWebSocket> Socket) {
   FString LevelPath;
-  Payload->TryGetStringField(TEXT("levelPath"), LevelPath);
-  if (LevelPath.IsEmpty()) {
-    SendStandardErrorResponse(this, Socket, RequestId, TEXT("INVALID_ARGUMENT"),
-                              TEXT("levelPath required"), nullptr);
+  if (!McpReadRequiredField(this, Socket, RequestId, Payload, TEXT("levelPath"), LevelPath))
     return true;
-  }
 
   if (!LevelPath.StartsWith(TEXT("/"))) {
     LevelPath = FString::Printf(TEXT("/Game/%s"), *LevelPath);
@@ -71,11 +67,8 @@ bool UEngineWireSubsystem::HandleControlEditorOpenLevel(
   // An asset listing hands out object paths (/Game/Maps/Demo.Demo); one was looked for as a file and not found.
   LevelPath = FPackageName::ObjectPathToPackageName(LevelPath);
 
-  if (!GEditor) {
-    SendStandardErrorResponse(this, Socket, RequestId, TEXT("EDITOR_NOT_AVAILABLE"),
-                              TEXT("Editor not available"), nullptr);
+  if (!McpRequireEditor(this, Socket, RequestId))
     return true;
-  }
 
   FString MapPath = LevelPath + TEXT(".umap");
 

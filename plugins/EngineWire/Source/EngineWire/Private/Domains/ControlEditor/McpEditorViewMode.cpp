@@ -123,11 +123,8 @@ bool UEngineWireSubsystem::HandleControlEditorSetCameraFov(
 bool UEngineWireSubsystem::HandleControlEditorSetViewportRealtime(
     const FString &RequestId, const TSharedPtr<FJsonObject> &Payload,
     TSharedPtr<FMcpBridgeWebSocket> Socket) {
-  if (!GEditor) {
-    SendStandardErrorResponse(this, Socket, RequestId, TEXT("EDITOR_NOT_AVAILABLE"),
-                              TEXT("Editor not available"), nullptr);
+  if (!McpRequireEditor(this, Socket, RequestId))
     return true;
-  }
 
   // Accept both documented spellings. Reading only `realtime` made a schema-
   // valid {enabled: false} behave as absent/default-true on the native surface

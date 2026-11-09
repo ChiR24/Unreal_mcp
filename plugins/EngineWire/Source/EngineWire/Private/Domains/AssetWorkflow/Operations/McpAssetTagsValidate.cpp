@@ -19,13 +19,9 @@ bool UEngineWireSubsystem::HandleSetTags(
     return true;
   }
 
-  FString AssetPath;
-  Payload->TryGetStringField(TEXT("assetPath"), AssetPath);
-  if (AssetPath.IsEmpty()) {
-    SendAutomationResponse(Socket, RequestId, false, TEXT("assetPath required"),
-                           nullptr, TEXT("INVALID_ARGUMENT"));
+  FString SafeAssetPath;
+  if (!McpReadAssetPathOrReply(this, Socket, RequestId, Payload, SafeAssetPath, /*bMustExist=*/false))
     return true;
-  }
 
   const TArray<TSharedPtr<FJsonValue>> *TagsArray = nullptr;
   TArray<FString> Tags;
@@ -35,14 +31,6 @@ bool UEngineWireSubsystem::HandleSetTags(
         Tags.Add(Val->AsString());
       }
     }
-  }
-
-  const FString SafeAssetPath = SanitizeProjectRelativePath(AssetPath);
-  if (SafeAssetPath.IsEmpty()) {
-    SendAutomationResponse(Socket, RequestId, false,
-                           McpPathRefusalMessage(TEXT("assetPath"), AssetPath), nullptr,
-                           TEXT("SECURITY_VIOLATION"));
-    return true;
   }
 
   // Edge-case: empty or missing tags array should be treated as a no-op
@@ -110,27 +98,9 @@ bool UEngineWireSubsystem::HandleValidateAsset(
     return true;
   }
 
-  FString AssetPath;
-  Payload->TryGetStringField(TEXT("assetPath"), AssetPath);
-  if (AssetPath.IsEmpty()) {
-    SendAutomationResponse(Socket, RequestId, false, TEXT("assetPath required"),
-                           nullptr, TEXT("INVALID_ARGUMENT"));
+  FString SafeAssetPath;
+  if (!McpReadAssetPathOrReply(this, Socket, RequestId, Payload, SafeAssetPath))
     return true;
-  }
-
-  const FString SafeAssetPath = SanitizeProjectRelativePath(AssetPath);
-  if (SafeAssetPath.IsEmpty()) {
-    SendAutomationResponse(Socket, RequestId, false,
-                           McpPathRefusalMessage(TEXT("assetPath"), AssetPath), nullptr,
-                           TEXT("SECURITY_VIOLATION"));
-    return true;
-  }
-
-  if (!McpAssetExists(SafeAssetPath)) {
-    SendAutomationResponse(Socket, RequestId, false, TEXT("Asset not found"),
-                           nullptr, TEXT("ASSET_NOT_FOUND"));
-    return true;
-  }
 
   UObject *Asset = McpLoadAsset(SafeAssetPath);
   if (!Asset) {

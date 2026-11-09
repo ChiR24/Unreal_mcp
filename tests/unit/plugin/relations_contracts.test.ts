@@ -32,7 +32,7 @@ describe('describe_relations', () => {
   // An editor-only sprite made an 84 cm prop a 256 cm cube; the same box describe_view reads.
   it('judges an actor by what the game draws of it, and keeps the placement checks\' bounds-only actors out', () => {
     expect(handler).toContain('McpPlacement::IsBoundsOnlyActor(Actor) ? FBox(ForceInit) : McpPlacement::DrawnBounds(*Actor)');
-    expect(code('plugins', 'EngineWire', 'Source', 'EngineWire', 'Private', 'Domains', 'Environment', 'Inspection', 'McpEnvInspectViewUnseen.cpp'))
+    expect(code('plugins', 'EngineWire', 'Source', 'EngineWire', 'Private', 'Domains', 'Inspect', 'View', 'McpInspectViewUnseen.cpp'))
       .toContain('McpPlacement::DrawnBounds(*Actor)');
   });
 

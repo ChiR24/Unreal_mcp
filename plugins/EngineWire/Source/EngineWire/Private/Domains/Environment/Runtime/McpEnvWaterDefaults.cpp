@@ -93,7 +93,7 @@ void McpApplyWaterBodyDefaults(AActor *WaterActor, TSharedPtr<FJsonObject> Resp)
     }
     if (Filled.Num() > 0)
     {
-        McpAddStringArrayField(Resp, TEXT("defaultsApplied"), Filled);
+        Resp->SetArrayField(TEXT("defaultsApplied"), McpHandlerUtils::ToJsonStringArray(Filled));
     }
 }
 

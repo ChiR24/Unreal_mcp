@@ -48,21 +48,8 @@ bool UEngineWireSubsystem::HandleAddMaterialParameter(
                            nullptr, TEXT("INVALID_ARGUMENT"));
     return true;
   }
-
-  const FString AssetPathAsGiven = AssetPath;
-  AssetPath = SanitizeProjectRelativePath(AssetPath);
-  if (AssetPath.IsEmpty()) {
-    SendAutomationResponse(Socket, RequestId, false,
-                           McpPathRefusalMessage(TEXT("assetPath"), AssetPathAsGiven), nullptr,
-                           TEXT("SECURITY_VIOLATION"));
+  if (!McpSanitizeAssetPathOrReply(this, Socket, RequestId, AssetPath))
     return true;
-  }
-
-  if (!McpAssetExists(AssetPath)) {
-    SendAutomationResponse(Socket, RequestId, false, TEXT("Asset not found"),
-                           nullptr, TEXT("ASSET_NOT_FOUND"));
-    return true;
-  }
 
   UMaterial *Material = nullptr;
   UMaterialFunction *Function = nullptr;
@@ -211,21 +198,8 @@ bool UEngineWireSubsystem::HandleListMaterialInstances(
     const FString &RequestId, const TSharedPtr<FJsonObject> &Payload,
     TSharedPtr<FMcpBridgeWebSocket> Socket) {
   FString AssetPath;
-  Payload->TryGetStringField(TEXT("assetPath"), AssetPath);
-  if (AssetPath.IsEmpty()) {
-    SendAutomationResponse(Socket, RequestId, false, TEXT("assetPath required"),
-                           nullptr, TEXT("INVALID_ARGUMENT"));
+  if (!McpReadAssetPathOrReply(this, Socket, RequestId, Payload, AssetPath, /*bMustExist=*/false))
     return true;
-  }
-
-  const FString AssetPathAsGiven = AssetPath;
-  AssetPath = SanitizeProjectRelativePath(AssetPath);
-  if (AssetPath.IsEmpty()) {
-    SendAutomationResponse(Socket, RequestId, false,
-                           McpPathRefusalMessage(TEXT("assetPath"), AssetPathAsGiven), nullptr,
-                           TEXT("SECURITY_VIOLATION"));
-    return true;
-  }
 
   FAssetRegistryModule &AssetRegistryModule =
       FModuleManager::LoadModuleChecked<FAssetRegistryModule>("AssetRegistry");
@@ -295,27 +269,8 @@ bool UEngineWireSubsystem::HandleResetInstanceParameters(
     const FString &RequestId, const TSharedPtr<FJsonObject> &Payload,
     TSharedPtr<FMcpBridgeWebSocket> Socket) {
   FString AssetPath;
-  Payload->TryGetStringField(TEXT("assetPath"), AssetPath);
-  if (AssetPath.IsEmpty()) {
-    SendAutomationResponse(Socket, RequestId, false, TEXT("assetPath required"),
-                           nullptr, TEXT("INVALID_ARGUMENT"));
+  if (!McpReadAssetPathOrReply(this, Socket, RequestId, Payload, AssetPath))
     return true;
-  }
-
-  const FString AssetPathAsGiven = AssetPath;
-  AssetPath = SanitizeProjectRelativePath(AssetPath);
-  if (AssetPath.IsEmpty()) {
-    SendAutomationResponse(Socket, RequestId, false,
-                           McpPathRefusalMessage(TEXT("assetPath"), AssetPathAsGiven), nullptr,
-                           TEXT("SECURITY_VIOLATION"));
-    return true;
-  }
-
-  if (!McpAssetExists(AssetPath)) {
-    SendAutomationResponse(Socket, RequestId, false, TEXT("Asset not found"),
-                           nullptr, TEXT("ASSET_NOT_FOUND"));
-    return true;
-  }
 
   UObject *Asset = McpLoadAsset(AssetPath);
   UMaterialInstanceConstant *MIC = Cast<UMaterialInstanceConstant>(Asset);

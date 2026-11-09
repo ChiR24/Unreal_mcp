@@ -84,11 +84,8 @@ bool ApplySettingsPropertyForMcp(UObject *Settings, const FString &Name,
 bool UEngineWireSubsystem::HandleControlEditorSetPreferences(
     const FString &RequestId, const TSharedPtr<FJsonObject> &Payload,
     TSharedPtr<FMcpBridgeWebSocket> Socket) {
-  if (!GEditor) {
-    SendStandardErrorResponse(this, Socket, RequestId, TEXT("EDITOR_NOT_AVAILABLE"),
-                              TEXT("Editor not available"), nullptr);
+  if (!McpRequireEditor(this, Socket, RequestId))
     return true;
-  }
 
   TArray<FString> AppliedSettings;
   TArray<FString> FailedSettings;
@@ -190,12 +187,8 @@ bool UEngineWireSubsystem::HandleControlEditorSetEditorMode(
     const FString &RequestId, const TSharedPtr<FJsonObject> &Payload,
     TSharedPtr<FMcpBridgeWebSocket> Socket) {
   FString Mode;
-  Payload->TryGetStringField(TEXT("mode"), Mode);
-  if (Mode.IsEmpty()) {
-    SendStandardErrorResponse(this, Socket, RequestId, TEXT("INVALID_ARGUMENT"),
-                              TEXT("mode required"), nullptr);
+  if (!McpReadRequiredField(this, Socket, RequestId, Payload, TEXT("mode"), Mode))
     return true;
-  }
 
   if (!IsSafeConsoleArgumentToken(Mode)) {
     SendStandardErrorResponse(this, Socket, RequestId, TEXT("INVALID_ARGUMENT"),

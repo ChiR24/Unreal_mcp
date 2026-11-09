@@ -9,7 +9,7 @@ class FEditorViewportClient;
 class FMcpBridgeWebSocket;
 class UEngineWireSubsystem;
 class UWorld;
-namespace McpEnvironmentHandlers
+namespace McpInspectHandlers
 {
 struct FMcpViewCapture;
 }
@@ -32,7 +32,7 @@ struct FFrame
 };
 
 /** The frame of a viewport capture, on a grid of cells about 240 across (McpPerceptionAnalyze). */
-FFrame BuildFrame(const McpEnvironmentHandlers::FMcpViewCapture& View);
+FFrame BuildFrame(const McpInspectHandlers::FMcpViewCapture& View);
 
 /** OKLab (Ottosson 2020) of an sRGB colour (0-1, as displayed). */
 FVector3f OkLab(const FLinearColor& Srgb);
@@ -63,7 +63,7 @@ bool PrepareViewDiff(const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FJsonObj
  *  saved under compareWith (null without it), then the frame is kept under saveAs with the renderer's own noise, read
  *  from a second capture. False with OutError and OutCode: VIEW_SIZE_CHANGED, CAMERA_MOVED (another field of view), or
  *  a capture refusal. */
-bool DiffView(const TSharedPtr<FJsonObject>& Payload, const McpEnvironmentHandlers::FMcpViewCapture& View,
+bool DiffView(const TSharedPtr<FJsonObject>& Payload, const McpInspectHandlers::FMcpViewCapture& View,
               TSharedPtr<FJsonObject>& OutChange, FString& OutError, FString& OutCode);
 
 /** audit_materials' pbr findings on one actor's cells (base colour as shown, sRGB; metallic and roughness 0-1): too_dark,

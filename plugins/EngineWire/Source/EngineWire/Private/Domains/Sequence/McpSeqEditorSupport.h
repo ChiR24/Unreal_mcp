@@ -59,6 +59,15 @@
 
 namespace McpSequence {
 FString ResolvePath(const TSharedPtr<FJsonObject> &Payload);
+// ResolvePath; empty after the INVALID_SEQUENCE "<Action> requires a sequence path" reply.
+FString ResolvePathOrReply(UEngineWireSubsystem *Subsystem, const FString &RequestId,
+                           TSharedPtr<FMcpBridgeWebSocket> Socket, const TSharedPtr<FJsonObject> &Payload,
+                           const TCHAR *Action);
+// The asset at ResolvePathOrReply's path, of any class; null after either INVALID_SEQUENCE reply ("Sequence not found"
+// when nothing loads there). OutPath gets the path.
+UObject *LoadAssetOrReply(UEngineWireSubsystem *Subsystem, const FString &RequestId,
+                          TSharedPtr<FMcpBridgeWebSocket> Socket, const TSharedPtr<FJsonObject> &Payload,
+                          const TCHAR *Action, FString &OutPath);
 // The payload's level sequence and its movie scene; null after replying INVALID_SEQUENCE,
 // SEQUENCE_NOT_FOUND or MOVIESCENE_UNAVAILABLE.
 ULevelSequence *LoadOrReply(UEngineWireSubsystem *Subsystem, const FString &RequestId,

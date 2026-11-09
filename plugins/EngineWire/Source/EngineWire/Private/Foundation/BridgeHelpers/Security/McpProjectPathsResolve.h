@@ -114,3 +114,17 @@ static inline bool McpResolveProjectFilePath(const FString &ProjectRelativePath,
   OutAbsolutePath = MoveTemp(CandidatePath);
   return true;
 }
+
+// The same resolution through SanitizeProjectFilePath, also handing back the sanitized project-relative spelling
+// (OutSafePath, from a leading slash); its refusal names the path it was given.
+static inline bool McpResolveProjectFilePath(const FString &InputPath, FString &OutAbsolutePath,
+                                             FString &OutSafePath, FString &OutError) {
+  OutSafePath = SanitizeProjectFilePath(InputPath);
+  if (OutSafePath.IsEmpty()) {
+    OutError = FString::Printf(TEXT("Invalid or unsafe project-relative file path: %s"), *InputPath);
+    return false;
+  }
+  OutAbsolutePath = FPaths::ConvertRelativePathToFull(FPaths::ProjectDir() / OutSafePath);
+  FPaths::NormalizeFilename(OutAbsolutePath);
+  return McpValidateProjectSnapshotFilePath(OutAbsolutePath, OutError);
+}

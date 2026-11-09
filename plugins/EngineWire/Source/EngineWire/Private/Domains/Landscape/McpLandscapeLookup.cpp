@@ -123,4 +123,48 @@ ALandscape *ResolveLandscapeOrReply(UEngineWireSubsystem &Bridge,
   }
   return Landscape;
 }
+
+ALandscape *McpFindLandscape(const TSharedPtr<FJsonObject> &Payload) {
+  const FString LandscapeName = McpGetFirstStringField(Payload, {TEXT("landscapeName"), TEXT("name"), TEXT("targetActor")});
+  FString LandscapePath = McpGetFirstStringField(Payload, {TEXT("landscapePath"), TEXT("landscapeActorPath"), TEXT("actorPath")});
+  LandscapePath.TrimStartAndEndInline();
+  if (!LandscapePath.IsEmpty() && !LandscapePath.StartsWith(TEXT("/"))) {
+    LandscapePath = TEXT("/") + LandscapePath;
+  }
+
+  UWorld *World = McpHandlerUtils::GetEditorWorld();
+  if (World) {
+    for (TActorIterator<ALandscape> It(World); It; ++It) {
+      ALandscape *Landscape = *It;
+      // A label (or no selector at all) finds a landscape in any level: a path-restricted caller's stays in
+      // a level inside its prefixes, whatever landscapePath it also sent.
+      if (!Landscape || !McpCapabilityPrincipal::ActiveRequestPermitsObject(Landscape)) {
+        continue;
+      }
+      if (!LandscapeName.IsEmpty() && Landscape->GetActorLabel().Equals(LandscapeName, ESearchCase::IgnoreCase)) {
+        return Landscape;
+      }
+      if (!LandscapePath.IsEmpty() &&
+          ((Landscape->GetPackage() && Landscape->GetPackage()->GetPathName().Equals(LandscapePath, ESearchCase::IgnoreCase)) ||
+           Landscape->GetPathName().Equals(LandscapePath, ESearchCase::IgnoreCase) ||
+           Landscape->GetPathName(nullptr).Equals(LandscapePath, ESearchCase::IgnoreCase))) {
+        return Landscape;
+      }
+    }
+
+    if (LandscapeName.IsEmpty() && LandscapePath.IsEmpty()) {
+      // with neither a name nor a path, the first landscape in the world the caller may touch
+      for (TActorIterator<ALandscape> First(World); First; ++First) {
+        if (McpCapabilityPrincipal::ActiveRequestPermitsObject(*First)) {
+          return *First;
+        }
+      }
+    }
+  }
+
+  if (!LandscapePath.IsEmpty()) {
+    return Cast<ALandscape>(StaticLoadObject(ALandscape::StaticClass(), nullptr, *LandscapePath));
+  }
+  return nullptr;
+}
 }

@@ -20,18 +20,9 @@ bool HandlePlaybackActions(
 {
   if (Lower == TEXT("play_sound_at_location")) {
     FString SoundPath;
-    if (!Payload->TryGetStringField(TEXT("soundPath"), SoundPath) ||
-        SoundPath.IsEmpty()) {
-      Self->SendAutomationError(RequestingSocket, RequestId,
-                          TEXT("soundPath required"), TEXT("INVALID_ARGUMENT"));
-      return true;
-    }
-
-    USoundBase *Sound = ResolveSoundAsset(SoundPath);
+    Payload->TryGetStringField(TEXT("soundPath"), SoundPath);
+    USoundBase *Sound = LoadSoundOrReply(Self, RequestingSocket, RequestId, Payload);
     if (!Sound) {
-      Self->SendAutomationError(RequestingSocket, RequestId,
-                          TEXT("Sound asset not found"),
-                          TEXT("ASSET_NOT_FOUND"));
       return true;
     }
 
@@ -89,18 +80,9 @@ bool HandlePlaybackActions(
   //             "pitch": number }
   else if (Lower == TEXT("play_sound_2d")) {
     FString SoundPath;
-    if (!Payload->TryGetStringField(TEXT("soundPath"), SoundPath) ||
-        SoundPath.IsEmpty()) {
-      Self->SendAutomationError(RequestingSocket, RequestId,
-                          TEXT("soundPath required"), TEXT("INVALID_ARGUMENT"));
-      return true;
-    }
-
-    USoundBase *Sound = ResolveSoundAsset(SoundPath);
+    Payload->TryGetStringField(TEXT("soundPath"), SoundPath);
+    USoundBase *Sound = LoadSoundOrReply(Self, RequestingSocket, RequestId, Payload);
     if (!Sound) {
-      Self->SendAutomationError(RequestingSocket, RequestId,
-                          TEXT("Sound asset not found"),
-                          TEXT("ASSET_NOT_FOUND"));
       return true;
     }
 

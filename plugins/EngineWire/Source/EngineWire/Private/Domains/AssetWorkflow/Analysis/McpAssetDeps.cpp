@@ -3,7 +3,7 @@
 #include "EngineWireSubsystem.h"
 #include "Foundation/BridgeHelpers/McpHelpers.h"
 #include "Foundation/HandlerUtils/McpHandlerUtils.h"
-#include "Domains/AssetWorkflow/Analysis/Shared.h"
+#include "Domains/AssetWorkflow/Analysis/McpAssetAnalysisShared.h"
 
 #include "Dom/JsonObject.h"
 #include "Misc/EngineVersionComparison.h"
@@ -11,31 +11,41 @@
 
 #include "AssetRegistry/AssetRegistryModule.h"
 
-bool UEngineWireSubsystem::HandleGetDependencies(
-    const FString &RequestId, const TSharedPtr<FJsonObject> &Payload,
-    TSharedPtr<FMcpBridgeWebSocket> Socket) {
+namespace {
+// The payload's assetPath, sanitized, for the dependency reads; false after the reply when it is missing
+// (INVALID_ARGUMENT), refused (INVALID_PATH) or not in the asset registry (ASSET_NOT_FOUND, naming the path).
+bool ReadDependencyAssetOrReply(UEngineWireSubsystem *Subsystem, const TSharedPtr<FJsonObject> &Payload,
+                                const FString &RequestId, const TSharedPtr<FMcpBridgeWebSocket> &Socket,
+                                FString &OutSafePath) {
   FString AssetPath;
   Payload->TryGetStringField(TEXT("assetPath"), AssetPath);
   if (AssetPath.IsEmpty()) {
-    SendAutomationResponse(Socket, RequestId, false, TEXT("assetPath required"),
-                           nullptr, TEXT("INVALID_ARGUMENT"));
-    return true;
+    Subsystem->SendAutomationResponse(Socket, RequestId, false, TEXT("assetPath required"),
+                                      nullptr, TEXT("INVALID_ARGUMENT"));
+    return false;
   }
-
-  const FString SafeAssetPath = SanitizeProjectRelativePath(AssetPath);
-  if (SafeAssetPath.IsEmpty()) {
-    SendAutomationResponse(Socket, RequestId, false, McpPathRefusalMessage(TEXT("asset path"), AssetPath),
-                           nullptr, TEXT("INVALID_PATH"));
-    return true;
+  OutSafePath = SanitizeProjectRelativePath(AssetPath);
+  if (OutSafePath.IsEmpty()) {
+    Subsystem->SendAutomationResponse(Socket, RequestId, false, McpPathRefusalMessage(TEXT("asset path"), AssetPath),
+                                      nullptr, TEXT("INVALID_PATH"));
+    return false;
   }
-
-  if (!McpAssetExists(SafeAssetPath)) {
-    SendAutomationError(Socket, RequestId,
-                        FString::Printf(TEXT("Asset not found: %s"), *SafeAssetPath),
-                        TEXT("ASSET_NOT_FOUND"));
-    return true;
+  if (!McpAssetExists(OutSafePath)) {
+    Subsystem->SendAutomationError(Socket, RequestId,
+                                   FString::Printf(TEXT("Asset not found: %s"), *OutSafePath),
+                                   TEXT("ASSET_NOT_FOUND"));
+    return false;
   }
+  return true;
+}
+} // namespace
 
+bool UEngineWireSubsystem::HandleGetDependencies(
+    const FString &RequestId, const TSharedPtr<FJsonObject> &Payload,
+    TSharedPtr<FMcpBridgeWebSocket> Socket) {
+  FString SafeAssetPath;
+  if (!ReadDependencyAssetOrReply(this, Payload, RequestId, Socket, SafeAssetPath))
+    return true;
 
   // referencers: the packages that use this asset (the Blueprints that spawn
   // it, the levels that place it), the question before deleting or replacing
@@ -79,27 +89,9 @@ bool UEngineWireSubsystem::HandleGetDependencies(
 bool UEngineWireSubsystem::HandleGetAssetGraph(
     const FString &RequestId, const TSharedPtr<FJsonObject> &Payload,
     TSharedPtr<FMcpBridgeWebSocket> Socket) {
-  FString AssetPath;
-  Payload->TryGetStringField(TEXT("assetPath"), AssetPath);
-  if (AssetPath.IsEmpty()) {
-    SendAutomationResponse(Socket, RequestId, false, TEXT("assetPath required"),
-                           nullptr, TEXT("INVALID_ARGUMENT"));
+  FString SafeAssetPath;
+  if (!ReadDependencyAssetOrReply(this, Payload, RequestId, Socket, SafeAssetPath))
     return true;
-  }
-
-  const FString SafeAssetPath = SanitizeProjectRelativePath(AssetPath);
-  if (SafeAssetPath.IsEmpty()) {
-    SendAutomationResponse(Socket, RequestId, false, McpPathRefusalMessage(TEXT("asset path"), AssetPath),
-                           nullptr, TEXT("INVALID_PATH"));
-    return true;
-  }
-
-  if (!McpAssetExists(SafeAssetPath)) {
-    SendAutomationError(Socket, RequestId,
-                        FString::Printf(TEXT("Asset not found: %s"), *SafeAssetPath),
-                        TEXT("ASSET_NOT_FOUND"));
-    return true;
-  }
 
   // Bounds. The traversal below is a breadth-first walk of the dependency
   // graph; without a cap it is unbounded work on the game thread. `maxDepth`

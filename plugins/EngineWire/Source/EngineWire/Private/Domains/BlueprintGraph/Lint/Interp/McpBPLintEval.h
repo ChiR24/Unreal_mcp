@@ -57,7 +57,6 @@ struct FEval
 FName ReadVariable(const UEdGraphPin* Input);
 /** The variable or loop index a pin's value comes from, as the state keys it, else NAME_None. */
 FName ValueKey(const UEdGraphPin* Input);
-bool IsIntegerPin(const UEdGraphPin* Pin);
 /** Whether a type is a number or a Boolean the interpreter follows (an enum is not). */
 bool IsNumberType(const FEdGraphPinType& Type);
 bool IsNumberPin(const UEdGraphPin* Pin);

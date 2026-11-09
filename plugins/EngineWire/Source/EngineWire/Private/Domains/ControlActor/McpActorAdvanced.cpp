@@ -102,12 +102,8 @@ bool UEngineWireSubsystem::HandleControlActorSetBlueprintVariables(
   }
 
   FString TargetName;
-  Payload->TryGetStringField(TEXT("actorName"), TargetName);
-  if (TargetName.IsEmpty()) {
-    SendStandardErrorResponse(this, Socket, RequestId, TEXT("INVALID_ARGUMENT"),
-                              TEXT("actorName required"), nullptr);
+  if (!McpReadRequiredField(this, Socket, RequestId, Payload, TEXT("actorName"), TargetName))
     return true;
-  }
 
   const TSharedPtr<FJsonObject> *VariablesPtr = nullptr;
   if (!(Payload->TryGetObjectField(TEXT("variables"), VariablesPtr) &&
@@ -197,20 +193,9 @@ bool UEngineWireSubsystem::HandleControlActorSetBlueprintVariables(
 bool UEngineWireSubsystem::HandleControlActorExport(
     const FString &RequestId, const TSharedPtr<FJsonObject> &Payload,
     TSharedPtr<FMcpBridgeWebSocket> Socket) {
-  FString TargetName;
-  Payload->TryGetStringField(TEXT("actorName"), TargetName);
-  if (TargetName.IsEmpty()) {
-    SendStandardErrorResponse(this, Socket, RequestId, TEXT("INVALID_ARGUMENT"),
-                              TEXT("actorName required"), nullptr);
+  AActor *Found = FindActorOrReply(Payload, RequestId, Socket);
+  if (!Found)
     return true;
-  }
-
-  AActor *Found = FindActorByName(TargetName);
-  if (!Found) {
-    SendStandardErrorResponse(this, Socket, RequestId, TEXT("ACTOR_NOT_FOUND"),
-                              TEXT("Actor not found"), nullptr);
-    return true;
-  }
 
   FMcpOutputCapture OutputCapture;
   UExporter::ExportToOutputDevice(nullptr, Found, nullptr, OutputCapture, TEXT("T3D"), 0, 0, false);

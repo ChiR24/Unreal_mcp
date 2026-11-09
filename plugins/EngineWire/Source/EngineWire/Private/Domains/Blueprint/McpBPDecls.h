@@ -52,8 +52,6 @@ TArray<TSharedPtr<FJsonValue>> FEngineWire_CollectBlueprintEvents(
 TSharedPtr<FJsonObject> FEngineWire_FindNamedEntry(
     const TArray<TSharedPtr<FJsonValue>> &Array, const FString &FieldName,
     const FString &DesiredValue);
-TSharedPtr<FJsonObject> FEngineWire_BuildBlueprintSnapshot(
-    UBlueprint *Blueprint, const FString &NormalizedPath);
 
 struct FModifyScsState {
   FString BlueprintPath;

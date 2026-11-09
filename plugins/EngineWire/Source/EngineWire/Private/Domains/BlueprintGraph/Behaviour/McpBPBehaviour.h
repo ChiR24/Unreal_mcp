@@ -130,15 +130,6 @@ FString OwnerTag(const FString& Tag, const UEdGraphNode& Node);
 /** Every node the behaviour Tag owns; FindOwned(BP, Tag).Num() > 0 means it is installed. */
 TArray<UEdGraphNode*> FindOwned(const UBlueprint* Blueprint, const FString& Tag);
 
-/** The one input-asset resolver every caller shares; creates what is missing.
- *  InOutActionPath empty: <BlueprintFolder>/Input/IA_<Tag> (Digital), created or reused.
- *  InOutContextPath empty: the context this Blueprint already registers, else
- *  /Game/Input/IMC_MCP, created or reused. Created assets are saved at once, listed in
- *  OutCreated and NOT rolled back. False with OutError and OutCode on failure. */
-bool EnsureInputAssets(UEngineWireSubsystem& Bridge, const FString& RequestId, UBlueprint* Blueprint,
-                       const FString& Tag, FString& InOutActionPath, FString& InOutContextPath,
-                       TArray<FString>& OutCreated, FString& OutError, FString& OutCode);
-
 // ---- Internal: shared by the .cpp files of this folder, not for domain handlers. ----
 namespace Detail
 {

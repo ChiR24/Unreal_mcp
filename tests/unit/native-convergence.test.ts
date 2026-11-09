@@ -54,7 +54,7 @@ describe('Task 27 / Task 21: the residual native handler divergence stays visibl
   // not own Private/Domains, so this is pinned, not silently repaired.
   it('records that get_component_details now has a distinct native handler branch (dogfood #146)', () => {
     expect(filesMentioning('get_component_details')).toContain(
-      'Domains/Environment/Inspection/McpEnvInspectComponent.cpp',
+      'Domains/Inspect/McpInspectComponent.cpp',
     );
   }, 60_000);
 
@@ -76,8 +76,8 @@ describe('Task 27 / Task 21: the residual native handler divergence stays visibl
 
   it('records the exact native owners of get_project_settings', () => {
     expect(filesMentioning('get_project_settings')).toEqual([
-      'Domains/Environment/Inspection/McpEnvInspect.cpp',
-      'Domains/Environment/Inspection/McpEnvInspectSettings.cpp',
+      'Domains/Inspect/McpInspect.cpp',
+      'Domains/Inspect/McpInspectSettings.cpp',
       'Domains/Ui/McpUiProjectSettings.cpp',
     ]);
   });

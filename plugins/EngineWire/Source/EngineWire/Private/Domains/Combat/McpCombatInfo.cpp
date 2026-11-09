@@ -63,16 +63,9 @@ bool FCombatActionContext::HandleInfoActions() const
 {
     if (SubAction == TEXT("get_combat_info"))
     {
-        if (BlueprintPath.IsEmpty())
-        {
-            SendAutomationError(RequestingSocket, RequestId, TEXT("Missing blueprintPath."), TEXT("INVALID_ARGUMENT"));
-            return true;
-        }
-
-        UBlueprint* Blueprint = LoadObject<UBlueprint>(nullptr, *BlueprintPath);
+        UBlueprint* Blueprint = LoadBlueprintOrReply();
         if (!Blueprint)
         {
-            SendAutomationError(RequestingSocket, RequestId, TEXT("Blueprint not found."), TEXT("NOT_FOUND"));
             return true;
         }
 
@@ -126,16 +119,9 @@ bool FCombatActionContext::HandleInfoActions() const
     }
     if (SubAction == TEXT("get_combat_stats"))
     {
-        if (BlueprintPath.IsEmpty())
-        {
-            SendAutomationError(RequestingSocket, RequestId, TEXT("Missing blueprintPath."), TEXT("INVALID_ARGUMENT"));
-            return true;
-        }
-
-        UBlueprint* Blueprint = LoadObject<UBlueprint>(nullptr, *BlueprintPath);
+        UBlueprint* Blueprint = LoadBlueprintOrReply();
         if (!Blueprint)
         {
-            SendAutomationError(RequestingSocket, RequestId, TEXT("Blueprint not found."), TEXT("NOT_FOUND"));
             return true;
         }
 

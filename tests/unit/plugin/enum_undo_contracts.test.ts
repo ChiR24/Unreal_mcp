@@ -17,7 +17,7 @@ const PRIVATE = join('plugins', 'EngineWire', 'Source', 'EngineWire', 'Private')
 const read = (...parts: string[]): string =>
   readFileSync(join(PRIVATE, ...parts), 'utf8').replace(/\/\*[\s\S]*?\*\//gu, ' ').replace(/\/\/[^\n]*/gu, ' ');
 
-const values = read('Domains', 'AssetWorkflow', 'Enums', 'Values.cpp');
+const values = read('Domains', 'AssetWorkflow', 'Enums', 'McpAssetEnumValues.cpp');
 
 /** The body of one action's branch, up to the next action. */
 const branch = (action: string): string => {
@@ -53,7 +53,7 @@ describe('enum value edits: one undo step on every 5.x, never the enum\'s saved 
   });
 
   it('the edit opens its step with nothing recorded and closes the enum change before the step, on every version', () => {
-    const shared = read('Domains', 'AssetWorkflow', 'Enums', 'Shared.h');
+    const shared = read('Domains', 'AssetWorkflow', 'Enums', 'McpAssetEnumShared.h');
     expect(shared).not.toMatch(/ENGINE_MINOR_VERSION|Cancel\(\)|UNDO_UNAVAILABLE_ENUM_RESTORE/u);
     const edit = shared.slice(shared.indexOf('struct FMcpEnumEdit'));
     // Members close in reverse order: the change is stored while the transaction is still open.

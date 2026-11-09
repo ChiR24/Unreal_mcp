@@ -20,19 +20,10 @@ bool HandleAddStateTreeTransition(UEngineWireSubsystem* Self, const FString& Req
         return true;
     }
 
-    // Load the StateTree
-    UStateTree* StateTree = LoadObject<UStateTree>(nullptr, *StateTreePath);
-    if (!StateTree)
-    {
-        Self->SendAutomationError(RequestingSocket, RequestId,
-            FString::Printf(TEXT("StateTree not found: %s"), *StateTreePath), TEXT("NOT_FOUND"));
-        return true;
-    }
-
-    UStateTreeEditorData* EditorData = Cast<UStateTreeEditorData>(StateTree->EditorData);
+    UStateTree* StateTree = nullptr;
+    UStateTreeEditorData* EditorData = McpLoadStateTreeEditorDataOrReply(Self, RequestingSocket, RequestId, StateTreePath, StateTree);
     if (!EditorData)
     {
-        Self->SendAutomationError(RequestingSocket, RequestId, TEXT("StateTree has no EditorData"), TEXT("INVALID_STATE"));
         return true;
     }
 

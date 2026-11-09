@@ -7,19 +7,11 @@ bool UEngineWireSubsystem::HandleControlEditorFocusActor(
     const FString &RequestId, const TSharedPtr<FJsonObject> &Payload,
     TSharedPtr<FMcpBridgeWebSocket> Socket) {
   FString ActorName;
-  Payload->TryGetStringField(TEXT("actorName"), ActorName);
-  if (ActorName.IsEmpty()) {
-    SendStandardErrorResponse(this, Socket, RequestId, TEXT("INVALID_ARGUMENT"),
-                              TEXT("actorName required"), nullptr);
+  if (!McpReadRequiredField(this, Socket, RequestId, Payload, TEXT("actorName"), ActorName))
     return true;
-  }
 
-  if (!GEditor) {
-    SendStandardErrorResponse(this, Socket, RequestId,
-                              TEXT("EDITOR_NOT_AVAILABLE"),
-                              TEXT("Editor not available"), nullptr);
+  if (!McpRequireEditor(this, Socket, RequestId))
     return true;
-  }
   // The running game draws through its pawn's camera: the level viewport this moves is hidden behind it.
   if (RefuseCameraMoveWhilePieFollowsPawnForMcp(this, Socket, RequestId, TEXT("focus_actor"))) {
     return true;

@@ -51,12 +51,6 @@ FName ValueKey(const UEdGraphPin* Input)
     return bLoop && IsLoopIndexOutput(Source) ? LoopIndexKey(Node) : NAME_None;
 }
 
-bool IsIntegerPin(const UEdGraphPin* Pin)
-{
-    const FName Category = Pin ? Pin->PinType.PinCategory : NAME_None;
-    return Category == UEdGraphSchema_K2::PC_Int || Category == UEdGraphSchema_K2::PC_Int64 || Category == UEdGraphSchema_K2::PC_Byte;
-}
-
 bool IsNumberType(const FEdGraphPinType& Type)
 {
     const FName Category = Type.PinCategory;

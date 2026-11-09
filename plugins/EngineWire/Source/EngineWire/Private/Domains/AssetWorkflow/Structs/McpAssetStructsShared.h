@@ -8,7 +8,7 @@
 #include "Foundation/BridgeHelpers/Responses/McpJsonFields.h"
 #include "Safety/McpSafeOperationsAssetSave.h"
 // Supplies `using McpSafeOperations::McpSafeAssetSave`, so the handlers below
-// can call it unqualified. Enums/Shared.h already pulls this in; these two
+// can call it unqualified. Enums/McpAssetEnumShared.h already pulls this in; these two
 // siblings did not, and only compiled where a transitive include happened to
 // provide it -- which an installed-engine build does not.
 #include "Safety/McpSafeOperations.h"

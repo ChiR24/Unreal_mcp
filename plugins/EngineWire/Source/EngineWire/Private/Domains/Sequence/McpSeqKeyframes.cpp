@@ -96,12 +96,8 @@ bool UEngineWireSubsystem::HandleSequenceAddKeyframe(
     TSharedPtr<FMcpBridgeWebSocket> Socket) {
   TSharedPtr<FJsonObject> LocalPayload =
       Payload.IsValid() ? Payload : McpHandlerUtils::CreateResultObject();
-  FString SeqPath = ResolveSequencePath(LocalPayload);
+  FString SeqPath = McpSequence::ResolvePathOrReply(this, RequestId, Socket, LocalPayload, TEXT("sequence_add_keyframe"));
   if (SeqPath.IsEmpty()) {
-    SendAutomationResponse(
-        Socket, RequestId, false,
-        TEXT("sequence_add_keyframe requires a sequence path"), nullptr,
-        TEXT("INVALID_SEQUENCE"));
     return true;
   }
 

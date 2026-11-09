@@ -6,7 +6,7 @@
 
 #include "Domains/Perception/McpPerceptionDiff.h"
 
-#include "Domains/Environment/Inspection/McpEnvInspectViewIds.h"
+#include "Domains/Inspect/View/McpInspectViewIds.h"
 #include "Domains/Environment/McpEnvShared.h"
 #include "Domains/Perception/McpPerception.h"
 #include "EditorViewportClient.h"
@@ -64,7 +64,7 @@ bool PrepareViewDiff(const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FJsonObj
     return true;
 }
 
-bool DiffView(const TSharedPtr<FJsonObject>& Payload, const McpEnvironmentHandlers::FMcpViewCapture& View,
+bool DiffView(const TSharedPtr<FJsonObject>& Payload, const McpInspectHandlers::FMcpViewCapture& View,
               TSharedPtr<FJsonObject>& OutChange, FString& OutError, FString& OutCode)
 {
     Diff::FViewMeasure Now = Diff::MeasureFrame(View);
@@ -92,8 +92,8 @@ bool DiffView(const TSharedPtr<FJsonObject>& Payload, const McpEnvironmentHandle
     {
         return true;
     }
-    McpEnvironmentHandlers::FMcpViewCapture Again; // the unchanged state drawn once more: what the renderer varies alone
-    if (!McpEnvironmentHandlers::McpCaptureView(MakeShared<FJsonObject>(), TEXT("describe_view"), true, Again, OutError, OutCode))
+    McpInspectHandlers::FMcpViewCapture Again; // the unchanged state drawn once more: what the renderer varies alone
+    if (!McpInspectHandlers::McpCaptureView(MakeShared<FJsonObject>(), TEXT("describe_view"), true, Again, OutError, OutCode))
     {
         return false;
     }

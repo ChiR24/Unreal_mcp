@@ -24,30 +24,9 @@ bool UEngineWireSubsystem::HandleSetMetadata(
     return true;
   }
 
-  FString AssetPath;
-  Payload->TryGetStringField(TEXT("assetPath"), AssetPath);
-  if (AssetPath.IsEmpty()) {
-    SendAutomationResponse(Socket, RequestId, false, TEXT("assetPath required"),
-                           nullptr, TEXT("INVALID_ARGUMENT"));
+  FString SafeAssetPath;
+  if (!McpReadAssetPathOrReply(this, Socket, RequestId, Payload, SafeAssetPath))
     return true;
-  }
-
-  const FString AssetPathAsGiven = AssetPath;
-  AssetPath = SanitizeProjectRelativePath(AssetPath);
-  if (AssetPath.IsEmpty()) {
-    SendAutomationResponse(Socket, RequestId, false,
-                           McpPathRefusalMessage(TEXT("assetPath"), AssetPathAsGiven), nullptr,
-                           TEXT("SECURITY_VIOLATION"));
-    return true;
-  }
-
-  const FString SafeAssetPath = AssetPath;
-
-  if (!McpAssetExists(SafeAssetPath)) {
-    SendAutomationResponse(Socket, RequestId, false, TEXT("Asset not found"),
-                           nullptr, TEXT("ASSET_NOT_FOUND"));
-    return true;
-  }
 
   const TSharedPtr<FJsonObject> *MetadataObjPtr = nullptr;
   if (!Payload->TryGetObjectField(TEXT("metadata"), MetadataObjPtr) ||
@@ -147,16 +126,6 @@ bool UEngineWireSubsystem::HandleSetMetadata(
   return true;
 }
 
-/**
- * Handles asset duplication requests. Supports both single asset and folder
- * (deep) duplication.
- *
- * @param RequestId Unique request identifier.
- * @param Payload JSON payload containing 'sourcePath' and 'destinationPath'.
- * @param Socket WebSocket connection.
- * @return True if handled.
- */
-
 bool UEngineWireSubsystem::HandleGetMetadata(
     const FString &RequestId, const TSharedPtr<FJsonObject> &Payload,
     TSharedPtr<FMcpBridgeWebSocket> Socket) {
@@ -168,28 +137,8 @@ bool UEngineWireSubsystem::HandleGetMetadata(
   }
 
   FString AssetPath;
-  Payload->TryGetStringField(TEXT("assetPath"), AssetPath);
-
-  if (AssetPath.IsEmpty()) {
-    SendAutomationResponse(Socket, RequestId, false, TEXT("assetPath required"),
-                           nullptr, TEXT("INVALID_ARGUMENT"));
+  if (!McpReadAssetPathOrReply(this, Socket, RequestId, Payload, AssetPath))
     return true;
-  }
-
-  const FString AssetPathAsGiven = AssetPath;
-  AssetPath = SanitizeProjectRelativePath(AssetPath);
-  if (AssetPath.IsEmpty()) {
-    SendAutomationResponse(Socket, RequestId, false,
-                           McpPathRefusalMessage(TEXT("assetPath"), AssetPathAsGiven), nullptr,
-                           TEXT("SECURITY_VIOLATION"));
-    return true;
-  }
-
-  if (!McpAssetExists(AssetPath)) {
-    SendAutomationResponse(Socket, RequestId, false, TEXT("Asset not found"),
-                           nullptr, TEXT("ASSET_NOT_FOUND"));
-    return true;
-  }
 
   UObject *Asset = McpLoadAsset(AssetPath);
   if (!Asset) {

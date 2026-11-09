@@ -111,11 +111,8 @@ bool UEngineWireSubsystem::HandleControlEditorSetGameView(
     TSharedPtr<FMcpBridgeWebSocket> Socket) {
   bool bEnabled = GetJsonBoolField(Payload, TEXT("enabled"), true);
 
-  if (!GEditor) {
-    SendStandardErrorResponse(this, Socket, RequestId, TEXT("EDITOR_NOT_AVAILABLE"),
-                              TEXT("Editor not available"), nullptr);
+  if (!McpRequireEditor(this, Socket, RequestId))
     return true;
-  }
 
   // While the player plays, the game viewport on screen never draws editor icons and the level viewport this toggles
   // is hidden behind it. An ejected player's free view is a level viewport, so the toggle works there.

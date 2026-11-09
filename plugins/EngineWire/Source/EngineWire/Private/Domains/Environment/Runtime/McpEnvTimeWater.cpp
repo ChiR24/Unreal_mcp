@@ -1,4 +1,5 @@
 #include "Domains/Environment/McpEnvShared.h"
+#include "Foundation/BridgeHelpers/Responses/McpJsonNumbers.h"
 
 namespace McpEnvironmentHandlers {
 
@@ -171,7 +172,7 @@ bool McpConfigureWaterWavesOnActor(AActor *WaterActor, const TSharedPtr<FJsonObj
     Resp->SetStringField(TEXT("waterWaveClass"), WaterWaves->GetClass()->GetPathName());
     Resp->SetStringField(TEXT("waveGeneratorClass"), Generator->GetClass()->GetPathName());
     Resp->SetNumberField(TEXT("waterWaveConfiguredPropertyCount"), Applied.Num());
-    McpAddStringArrayField(Resp, TEXT("waterWaveConfiguredProperties"), Applied);
+    Resp->SetArrayField(TEXT("waterWaveConfiguredProperties"), McpHandlerUtils::ToJsonStringArray(Applied));
     OutMessage = TEXT("Water waves configured");
     return true;
 }

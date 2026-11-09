@@ -13,8 +13,8 @@
 // Struct ecosystem (issue #struct-ecosystem) — Wave 1 handler shard headers.
 #include "Domains/AssetWorkflow/DataRegistries/McpDataRegistries.h"
 #include "Domains/AssetWorkflow/Reimport/McpAssetReimport.h"
-#include "Domains/AssetWorkflow/DataTables/Shared.h"
-#include "Domains/AssetWorkflow/Enums/Shared.h"
+#include "Domains/AssetWorkflow/DataTables/McpAssetDataTableShared.h"
+#include "Domains/AssetWorkflow/Enums/McpAssetEnumShared.h"
 namespace McpStructProperty
 {
     bool HandleStructPropertyAction(FString Action, const TSharedPtr<FJsonObject>& Params, TSharedPtr<FJsonObject>& OutResult);

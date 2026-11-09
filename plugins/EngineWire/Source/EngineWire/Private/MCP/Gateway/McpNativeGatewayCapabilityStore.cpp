@@ -207,11 +207,6 @@ TArray<FString> FMcpCapabilityStore::GetDomains() const
 	return DistinctSorted(Records, [](const FMcpCapabilityRecord& R) -> FString { return R.Domain; });
 }
 
-TArray<FString> FMcpCapabilityStore::GetFamilies() const
-{
-	return DistinctSorted(Records, [](const FMcpCapabilityRecord& R) -> FString { return R.Family; });
-}
-
 TArray<const FMcpCapabilityRecord*> FMcpCapabilityStore::GetRecordsForParent(const FString& Parent) const
 {
 	TArray<const FMcpCapabilityRecord*> Matches;

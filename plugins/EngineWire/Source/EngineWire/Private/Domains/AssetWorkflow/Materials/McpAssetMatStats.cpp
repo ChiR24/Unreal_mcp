@@ -28,27 +28,8 @@ bool UEngineWireSubsystem::HandleGetMaterialStats(
     const FString &RequestId, const TSharedPtr<FJsonObject> &Payload,
     TSharedPtr<FMcpBridgeWebSocket> Socket) {
   FString AssetPath;
-  Payload->TryGetStringField(TEXT("assetPath"), AssetPath);
-  if (AssetPath.IsEmpty()) {
-    SendAutomationResponse(Socket, RequestId, false, TEXT("assetPath required"),
-                           nullptr, TEXT("INVALID_ARGUMENT"));
+  if (!McpReadAssetPathOrReply(this, Socket, RequestId, Payload, AssetPath))
     return true;
-  }
-
-  const FString AssetPathAsGiven = AssetPath;
-  AssetPath = SanitizeProjectRelativePath(AssetPath);
-  if (AssetPath.IsEmpty()) {
-    SendAutomationResponse(Socket, RequestId, false,
-                           McpPathRefusalMessage(TEXT("assetPath"), AssetPathAsGiven), nullptr,
-                           TEXT("SECURITY_VIOLATION"));
-    return true;
-  }
-
-  if (!McpAssetExists(AssetPath)) {
-    SendAutomationResponse(Socket, RequestId, false, TEXT("Asset not found"),
-                           nullptr, TEXT("ASSET_NOT_FOUND"));
-    return true;
-  }
 
   UObject *Asset = McpLoadAsset(AssetPath);
   UMaterialInterface *Material = Cast<UMaterialInterface>(Asset);

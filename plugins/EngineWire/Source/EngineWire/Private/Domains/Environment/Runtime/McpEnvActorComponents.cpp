@@ -235,8 +235,8 @@ bool McpConfigureActorAndComponent(const TSharedPtr<FJsonObject> &Payload, const
         Resp->SetStringField(TEXT("componentName"), Component->GetName());
         Resp->SetStringField(TEXT("componentPath"), Component->GetPathName());
     }
-    McpAddStringArrayField(Resp, TEXT("configuredProperties"), Applied);
-    McpAddStringArrayField(Resp, TEXT("configurationErrors"), Failed);
+    Resp->SetArrayField(TEXT("configuredProperties"), McpHandlerUtils::ToJsonStringArray(Applied));
+    Resp->SetArrayField(TEXT("configurationErrors"), McpHandlerUtils::ToJsonStringArray(Failed));
 
     if (TotalApplied == 0)
     {

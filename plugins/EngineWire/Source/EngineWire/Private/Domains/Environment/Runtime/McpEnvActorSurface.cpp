@@ -20,8 +20,8 @@ int32 McpApplyEnvironmentSettings(UObject *Target, const TSharedPtr<FJsonObject>
     TArray<FString> Failed;
     const int32 AppliedCount = McpApplyPayloadSettings(Target, Payload, Applied, Failed);
     Resp->SetNumberField(TEXT("configuredPropertyCount"), AppliedCount);
-    McpAddStringArrayField(Resp, TEXT("configuredProperties"), Applied);
-    McpAddStringArrayField(Resp, TEXT("configurationErrors"), Failed);
+    Resp->SetArrayField(TEXT("configuredProperties"), McpHandlerUtils::ToJsonStringArray(Applied));
+    Resp->SetArrayField(TEXT("configurationErrors"), McpHandlerUtils::ToJsonStringArray(Failed));
     return AppliedCount;
 }
 AActor *McpFindActorFromEnvironmentPayload(const TSharedPtr<FJsonObject> &Payload)

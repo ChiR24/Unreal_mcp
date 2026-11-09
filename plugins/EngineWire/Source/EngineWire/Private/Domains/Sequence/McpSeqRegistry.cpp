@@ -26,14 +26,38 @@ FString McpSequence::ResolvePath(const TSharedPtr<FJsonObject> &Payload) {
   return FString();
 }
 
-ULevelSequence *McpSequence::LoadOrReply(UEngineWireSubsystem *Subsystem, const FString &RequestId,
-                                         TSharedPtr<FMcpBridgeWebSocket> Socket, const TSharedPtr<FJsonObject> &Payload,
-                                         const TCHAR *Action, UMovieScene *&OutMovieScene) {
-  OutMovieScene = nullptr;
+FString McpSequence::ResolvePathOrReply(UEngineWireSubsystem *Subsystem, const FString &RequestId,
+                                        TSharedPtr<FMcpBridgeWebSocket> Socket, const TSharedPtr<FJsonObject> &Payload,
+                                        const TCHAR *Action) {
   const FString Path = ResolvePath(Payload);
   if (Path.IsEmpty()) {
     Subsystem->SendAutomationResponse(Socket, RequestId, false,
         FString::Printf(TEXT("%s requires a sequence path"), Action), nullptr, TEXT("INVALID_SEQUENCE"));
+  }
+  return Path;
+}
+
+UObject *McpSequence::LoadAssetOrReply(UEngineWireSubsystem *Subsystem, const FString &RequestId,
+                                       TSharedPtr<FMcpBridgeWebSocket> Socket, const TSharedPtr<FJsonObject> &Payload,
+                                       const TCHAR *Action, FString &OutPath) {
+  OutPath = ResolvePathOrReply(Subsystem, RequestId, Socket, Payload, Action);
+  if (OutPath.IsEmpty()) {
+    return nullptr;
+  }
+  UObject *Asset = McpLoadAsset(OutPath);
+  if (!Asset) {
+    Subsystem->SendAutomationResponse(Socket, RequestId, false, TEXT("Sequence not found"), nullptr,
+                                      TEXT("INVALID_SEQUENCE"));
+  }
+  return Asset;
+}
+
+ULevelSequence *McpSequence::LoadOrReply(UEngineWireSubsystem *Subsystem, const FString &RequestId,
+                                         TSharedPtr<FMcpBridgeWebSocket> Socket, const TSharedPtr<FJsonObject> &Payload,
+                                         const TCHAR *Action, UMovieScene *&OutMovieScene) {
+  OutMovieScene = nullptr;
+  const FString Path = ResolvePathOrReply(Subsystem, RequestId, Socket, Payload, Action);
+  if (Path.IsEmpty()) {
     return nullptr;
   }
   ULevelSequence *Sequence = LoadObject<ULevelSequence>(nullptr, *Path);

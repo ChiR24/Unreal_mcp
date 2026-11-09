@@ -10,8 +10,6 @@ import { describe, expect, it } from 'vitest';
 import { capabilityIndex } from '../support/capability-index.js';
 import { isRecord } from '../../../src/utils/validation/type-guards.js';
 
-import { sliceBetween } from './plugin-contract-fixtures.js';
-
 const DOMAINS = join('plugins', 'EngineWire', 'Source', 'EngineWire', 'Private', 'Domains');
 
 /** Block and line comments removed, so no assertion can be satisfied by prose. */
@@ -19,8 +17,10 @@ const read = (...segments: readonly string[]): string =>
   readFileSync(join(DOMAINS, ...segments), 'utf8').replace(/\/\*[\s\S]*?\*\//gu, ' ').replace(/\/\/[^\n]*/gu, ' ');
 
 describe('configure_foliage names what it wrote and what became of the placed instances', () => {
-  const configure = (): string =>
-    sliceBetween(read('Environment', 'Runtime', 'McpEnvFoliageAssets.cpp'), 'bool McpConfigureFoliageType(', 'bool McpCreateLandscapeLayerInfo(');
+  const configure = (): string => {
+    const source = read('Foliage', 'McpFoliageConfigure.cpp');
+    return source.slice(source.indexOf('bool McpConfigureFoliageType('));
+  };
 
   it('names every setting it wrote by its property name, the handled ones as well as the reflected ones', () => {
     const source = configure();

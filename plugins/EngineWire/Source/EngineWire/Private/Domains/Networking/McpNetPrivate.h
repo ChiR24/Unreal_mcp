@@ -46,6 +46,9 @@ struct FNetworkingActionContext
 UBlueprint* LoadBlueprintFromPath(const FString& BlueprintPath);
 // blueprintPath missing -> INVALID_PARAMS, not loadable -> NOT_FOUND; both replies are sent here.
 UBlueprint* LoadBlueprintOrReply(FNetworkingActionContext& Context, const FString& BlueprintPath);
+// LoadBlueprintOrReply, then its class default Actor, the object an Actor setting is written to; null after the reply
+// (NOT_SUPPORTED when the class never compiled, so there are no defaults to write). OutBlueprint gets the Blueprint.
+AActor* LoadActorDefaultsOrReply(FNetworkingActionContext& Context, const FString& BlueprintPath, UBlueprint*& OutBlueprint);
 // Mark the edited Blueprint modified, save it (saved), and send the verified success reply.
 bool SaveBlueprintAndReply(FNetworkingActionContext& Context, UBlueprint* Blueprint, const FString& Detail, const TCHAR* Message);
 // The Blueprint's own function graph named Name (FName compare, case ignored), or null.

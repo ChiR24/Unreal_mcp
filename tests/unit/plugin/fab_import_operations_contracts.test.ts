@@ -277,7 +277,7 @@ describe('the Fab add queue', () => {
   });
 
   it('starts the next add when an import ends, outside the ticker that ended it', () => {
-    const finish = store.slice(store.indexOf('void Finish('), store.indexOf('bool FindRunning('));
+    const finish = store.slice(store.indexOf('void Finish('), store.indexOf('void Amend('));
     expect(finish).toContain('SchedulePump();');
     expect(store).toMatch(/FTSTicker::GetCoreTicker\(\)\.AddTicker\(FTickerDelegate::CreateLambda/u);
   });

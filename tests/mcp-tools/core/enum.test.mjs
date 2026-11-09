@@ -7,7 +7,7 @@ const ts = Date.now();
 
 // These scenarios require a live Unreal Editor with the EngineWire
 // plugin. They validate the UserDefinedEnum authoring surface (issue #510
-// enum follow-up) that the C++ Lifecycle.cpp / Values.cpp shards expose under
+// enum follow-up) that the C++ McpAssetEnumLifecycle.cpp / McpAssetEnumValues.cpp shards expose under
 // the manage_asset tool's enum actions.
 const testCases = [
   // === ENUM LIFECYCLE ===

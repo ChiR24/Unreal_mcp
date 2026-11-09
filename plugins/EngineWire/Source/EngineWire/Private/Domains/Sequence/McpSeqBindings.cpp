@@ -8,11 +8,8 @@ bool UEngineWireSubsystem::HandleSequenceAddCamera(
     TSharedPtr<FMcpBridgeWebSocket> Socket) {
   TSharedPtr<FJsonObject> LocalPayload =
       Payload.IsValid() ? Payload : McpHandlerUtils::CreateResultObject();
-  FString SeqPath = ResolveSequencePath(LocalPayload);
+  FString SeqPath = McpSequence::ResolvePathOrReply(this, RequestId, Socket, LocalPayload, TEXT("sequence_add_camera"));
   if (SeqPath.IsEmpty()) {
-    SendAutomationResponse(Socket, RequestId, false,
-                           TEXT("sequence_add_camera requires a sequence path"),
-                           nullptr, TEXT("INVALID_SEQUENCE"));
     return true;
   }
 
@@ -101,11 +98,8 @@ bool UEngineWireSubsystem::HandleSequenceAddActor(
                            nullptr, TEXT("INVALID_ARGUMENT"));
     return true;
   }
-  FString SeqPath = ResolveSequencePath(LocalPayload);
+  FString SeqPath = McpSequence::ResolvePathOrReply(this, RequestId, Socket, LocalPayload, TEXT("sequence_add_actor"));
   if (SeqPath.IsEmpty()) {
-    SendAutomationResponse(Socket, RequestId, false,
-                           TEXT("sequence_add_actor requires a sequence path"),
-                           nullptr, TEXT("INVALID_SEQUENCE"));
     return true;
   }
 
@@ -132,11 +126,8 @@ bool UEngineWireSubsystem::HandleSequenceAddActors(
                            TEXT("INVALID_ARGUMENT"));
     return true;
   }
-  FString SeqPath = ResolveSequencePath(LocalPayload);
+  FString SeqPath = McpSequence::ResolvePathOrReply(this, RequestId, Socket, LocalPayload, TEXT("sequence_add_actors"));
   if (SeqPath.IsEmpty()) {
-    SendAutomationResponse(Socket, RequestId, false,
-                           TEXT("sequence_add_actors requires a sequence path"),
-                           nullptr, TEXT("INVALID_SEQUENCE"));
     return true;
   }
 

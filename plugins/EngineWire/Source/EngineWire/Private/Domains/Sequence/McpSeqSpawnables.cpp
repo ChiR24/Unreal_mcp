@@ -14,19 +14,9 @@ bool UEngineWireSubsystem::HandleSequenceAddSpawnable(
                            nullptr, TEXT("INVALID_ARGUMENT"));
     return true;
   }
-  FString SeqPath = ResolveSequencePath(LocalPayload);
-  if (SeqPath.IsEmpty()) {
-    SendAutomationResponse(
-        Socket, RequestId, false,
-        TEXT("sequence_add_spawnable_from_class requires a sequence path"),
-        nullptr, TEXT("INVALID_SEQUENCE"));
-    return true;
-  }
-
-  UObject *SeqObj = McpLoadAsset(SeqPath);
+  FString SeqPath;
+  UObject *SeqObj = McpSequence::LoadAssetOrReply(this, RequestId, Socket, LocalPayload, TEXT("sequence_add_spawnable_from_class"), SeqPath);
   if (!SeqObj) {
-    SendAutomationResponse(Socket, RequestId, false, TEXT("Sequence not found"),
-                           nullptr, TEXT("INVALID_SEQUENCE"));
     return true;
   }
 
@@ -67,21 +57,12 @@ bool UEngineWireSubsystem::HandleSequenceGetBindings(
     TSharedPtr<FMcpBridgeWebSocket> Socket) {
   TSharedPtr<FJsonObject> LocalPayload =
       Payload.IsValid() ? Payload : McpHandlerUtils::CreateResultObject();
-  FString SeqPath = ResolveSequencePath(LocalPayload);
-  if (SeqPath.IsEmpty()) {
-    SendAutomationResponse(
-        Socket, RequestId, false,
-        TEXT("sequence_get_bindings requires a sequence path"), nullptr,
-        TEXT("INVALID_SEQUENCE"));
+  FString SeqPath;
+  UObject *SeqObj = McpSequence::LoadAssetOrReply(this, RequestId, Socket, LocalPayload, TEXT("sequence_get_bindings"), SeqPath);
+  if (!SeqObj) {
     return true;
   }
   TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
-  UObject *SeqObj = McpLoadAsset(SeqPath);
-  if (!SeqObj) {
-    SendAutomationResponse(Socket, RequestId, false, TEXT("Sequence not found"),
-                           nullptr, TEXT("INVALID_SEQUENCE"));
-    return true;
-  }
 
   if (ULevelSequence *LevelSeq = Cast<ULevelSequence>(SeqObj)) {
     if (UMovieScene *MovieScene = LevelSeq->GetMovieScene()) {

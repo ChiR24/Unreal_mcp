@@ -43,6 +43,7 @@ domain-local copy of reflection, path, JSON, or response helpers.
 | Read/apply a property (scalar/object/array) | `BridgeHelpers/Properties/{PropertyLookup,NestedPropertyPath,ComponentLookup,PropertyApply*}.h` (export: `Reflection/McpPropertyReflection.h`) |
 | Resolve a UClass by name | `BridgeHelpers/Reflection/McpClassResolve.h` |
 | Build / verify response, capture output, JSON fields | `BridgeHelpers/Responses/{Responses,ResponseVerification,OutputCapture,JsonFields}.h` |
+| Refuse a missing field, a missing editor or a bad asset path in one line | `BridgeHelpers/Responses/McpResponses.h` `McpReadRequiredField` ("<field> required"), `McpRequireEditor`, `McpReadAssetPathOrReply` / `McpSanitizeAssetPathOrReply` (refusal wording, ASSET_NOT_FOUND): `if (!McpReadRequiredField(...)) return true;` |
 | Set a console variable and know it took | `Render/McpConsoleVariableWrite.h` `McpSetConsoleVariable` (console priority by default, read-only refused, read back; `IConsoleVariable::Set` alone loses to a console set silently) |
 | Show or hide a stat overlay without toggling it twice | `Render/McpViewportStats.h` `McpIsStatShown` (the viewport a Stat command lands on: the running game, else the last level viewport; Stat commands toggle) |
 | Give a spawned volume real bounds | `../Domains/Volume/McpVolumeGeometry.h` `VolumeHelpers::CreateBoxBrushForVolume` (a volume from `SpawnActor` has no brush; scaling it leaves zero bounds) |

@@ -1,6 +1,6 @@
 #include "Core/Compatibility/McpVersionCompatibility.h"
 
-#include "Domains/Landscape/McpLandscapeLookup.h"
+#include "Domains/Landscape/McpLandscapeShared.h"
 
 #include "Dom/JsonObject.h"
 #include "Landscape.h"
@@ -109,13 +109,7 @@ bool UEngineWireSubsystem::HandlePaintLandscapeLayer(
           TEXT("LAYER_CREATION_FAILED"));
       return true;
     }
-#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 7
-    NewLayerInfo->SetLayerName(FName(*LayerName), true);
-#else
-    PRAGMA_DISABLE_DEPRECATION_WARNINGS
-    NewLayerInfo->LayerName = FName(*LayerName);
-    PRAGMA_ENABLE_DEPRECATION_WARNINGS
-#endif
+    McpLandscapeHandlers::SetLayerInfoName(NewLayerInfo, FName(*LayerName));
     LandscapeInfo->Layers.Add(
         FLandscapeInfoLayerSettings(NewLayerInfo, Landscape));
     LayerInfo = NewLayerInfo;

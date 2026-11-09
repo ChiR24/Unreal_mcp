@@ -22,6 +22,9 @@
 #include "WorldPartition/WorldPartition.h"
 
 namespace McpFoliageHandlers {
+// build_environment's configure_foliage_* actions: the payload's settings written onto the foliage type asset it names.
+bool McpConfigureFoliageType(const TSharedPtr<FJsonObject> &Payload, TSharedPtr<FJsonObject> Resp,
+                             FString &OutMessage, FString &OutErrorCode);
 AInstancedFoliageActor* GetOrCreateFoliageActorForWorldSafe(UWorld* World, bool bCreateIfNone);
 
 // Every foliage actor in World: each loaded level, and each World Partition cell, keeps its own. Reading or removing

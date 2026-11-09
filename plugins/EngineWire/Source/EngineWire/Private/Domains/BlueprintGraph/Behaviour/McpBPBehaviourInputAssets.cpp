@@ -157,26 +157,4 @@ bool CreateInputAsset(UEngineWireSubsystem& Bridge, const FString& RequestId, bo
     return true;
 }
 } // namespace Detail
-
-bool EnsureInputAssets(UEngineWireSubsystem& Bridge, const FString& RequestId, UBlueprint* Blueprint,
-                       const FString& Tag, FString& InOutActionPath, FString& InOutContextPath,
-                       TArray<FString>& OutCreated, FString& OutError, FString& OutCode)
-{
-    OutCode = TEXT("ENHANCEDINPUT_PLUGIN_NOT_ENABLED");
-    OutError = TEXT("The Enhanced Input plugin is not enabled in this project; enable it to bind input.");
-    if (!Blueprint || !Detail::EnhancedInputLoaded())
-    {
-        return false;
-    }
-    bool bUnused = false;
-    const UObject* Registered = Detail::RegisteredContext(Blueprint, nullptr, bUnused);
-    InOutActionPath = InOutActionPath.IsEmpty() ? Detail::DefaultActionPath(Blueprint, Tag) : InOutActionPath;
-    InOutContextPath = !InOutContextPath.IsEmpty() ? InOutContextPath
-                       : (Registered ? Registered->GetPathName() : FString(Detail::DefaultInputContext));
-    FString Normalized;
-    return (McpInputHandlers::LoadInputActionAsset(InOutActionPath, Normalized) ||
-            Detail::CreateInputAsset(Bridge, RequestId, false, InOutActionPath, OutCreated, OutError, OutCode)) &&
-           (McpInputHandlers::LoadInputMappingContextAsset(InOutContextPath, Normalized) ||
-            Detail::CreateInputAsset(Bridge, RequestId, true, InOutContextPath, OutCreated, OutError, OutCode));
-}
 } // namespace McpBlueprintBehaviour

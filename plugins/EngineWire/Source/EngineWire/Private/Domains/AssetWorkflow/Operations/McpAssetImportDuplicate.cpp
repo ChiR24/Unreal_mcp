@@ -12,7 +12,7 @@
 #include "AutomatedAssetImportData.h"
 #include "Domains/AssetWorkflow/Operations/McpAssetFbxImportOptions.h"
 #include "Domains/BlueprintGraph/Expression/McpBPGraphMathExpr.h"
-#include "Domains/Environment/Inspection/MeshCheck/McpMeshCheck.h"
+#include "Domains/Inspect/MeshCheck/McpMeshCheck.h"
 #include "EditorAssetLibrary.h"
 #include "Engine/Blueprint.h"
 #include "IAssetTools.h"

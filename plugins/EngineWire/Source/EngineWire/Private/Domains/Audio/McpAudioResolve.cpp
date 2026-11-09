@@ -5,170 +5,97 @@
 
 namespace McpAudioHandlers
 {
-USoundBase *ResolveSoundAsset(const FString &SoundPath) {
-	if (SoundPath.IsEmpty())
+namespace
+{
+// An audio asset by path or by name. A /Game or /Engine path loads directly; any other path finds nothing; a bare name
+// (no '/') is the first asset of one of Classes under /Game with that name, case ignored, inside a path-restricted
+// caller's prefixes. Only an asset that IsA Wanted counts.
+//
+// VERSION COMPATIBILITY: FARFilter takes ClassNames (FName) on UE 5.0, ClassPaths (FTopLevelAssetPath) from 5.1.
+UObject* ResolveAudioAsset(const FString& Path, std::initializer_list<UClass*> Classes, UClass* Wanted)
+{
+	if (Path.IsEmpty())
+		return nullptr;
+	if (Path.Contains(TEXT("/Game/")) || Path.Contains(TEXT("/Engine/")))
+	{
+		UObject* Direct = McpAssetExists(Path) ? McpLoadAsset(Path) : nullptr;
+		if (Direct && Direct->IsA(Wanted))
+			return Direct;
+	}
+	if (Path.Contains(TEXT("/")))
 		return nullptr;
 
-	USoundBase *Sound = nullptr;
-	if (SoundPath.Contains(TEXT("/Game/")) || SoundPath.Contains(TEXT("/Engine/")))
+	const FString AssetName = FPaths::GetBaseFilename(Path);
+	FARFilter Filter;
+	for (UClass* Class : Classes)
 	{
-		if (McpAssetExists(SoundPath)) {
-			Sound = Cast<USoundBase>(McpLoadAsset(SoundPath));
+#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 1
+		Filter.ClassPaths.Add(Class->GetClassPathName());
+#else
+		Filter.ClassNames.Add(Class->GetFName());
+#endif
+	}
+	Filter.bRecursivePaths = true;
+	Filter.PackagePaths.Add(TEXT("/Game"));
+	TArray<FAssetData> AssetData;
+	FModuleManager::LoadModuleChecked<FAssetRegistryModule>("AssetRegistry").Get().GetAssets(Filter, AssetData);
+	for (const FAssetData& Data : AssetData)
+	{
+		if (Data.AssetName.ToString().Equals(AssetName, ESearchCase::IgnoreCase) &&
+			McpCapabilityPrincipal::ActiveRequestPermitsPath(Data.PackageName.ToString()))
+		{
+			UObject* Found = Data.GetAsset();
+			if (Found && Found->IsA(Wanted))
+				return Found;
 		}
+	}
+	return nullptr;
+}
+} // namespace
+
+USoundBase* ResolveSoundAsset(const FString& SoundPath)
+{
+	USoundBase* Sound = Cast<USoundBase>(
+		ResolveAudioAsset(SoundPath, {USoundWave::StaticClass(), USoundCue::StaticClass()}, USoundBase::StaticClass()));
+	// A bare name went through the registry search: say what it resolved to, or that nothing matched.
+	if (!SoundPath.IsEmpty() && !SoundPath.Contains(TEXT("/")))
+	{
 		if (Sound)
-			return Sound;
+		{
+			UE_LOG(LogMcpAudioHandlers, Log, TEXT("Resolved sound '%s' to '%s'"), *SoundPath, *Sound->GetPathName());
+		}
+		else
+		{
+			UE_LOG(LogMcpAudioHandlers, Warning, TEXT("Sound asset '%s' not found."), *SoundPath);
+		}
 	}
-
-	if (SoundPath.Contains(TEXT("/")))
-		return nullptr;
-
-	FString AssetName = FPaths::GetBaseFilename(SoundPath);
-  FAssetRegistryModule &AssetRegistryModule =
-      FModuleManager::LoadModuleChecked<FAssetRegistryModule>("AssetRegistry");
-  TArray<FAssetData> AssetData;
-  FARFilter Filter;
-#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 1
-  Filter.ClassPaths.Add(USoundWave::StaticClass()->GetClassPathName());
-  Filter.ClassPaths.Add(USoundCue::StaticClass()->GetClassPathName());
-#else
-  // UE 5.0 fallback - use ClassNames instead of ClassPaths
-  Filter.ClassNames.Add(USoundWave::StaticClass()->GetFName());
-  Filter.ClassNames.Add(USoundCue::StaticClass()->GetFName());
-#endif
-  Filter.bRecursivePaths = true;
-  Filter.PackagePaths.Add(TEXT("/Game"));
-  AssetRegistryModule.Get().GetAssets(Filter, AssetData);
-
-  // A bare name matches anywhere under /Game; a path-restricted caller's match stays inside its prefixes.
-  for (const FAssetData &Data : AssetData) {
-    if (Data.AssetName.ToString().Equals(AssetName, ESearchCase::IgnoreCase) &&
-        McpCapabilityPrincipal::ActiveRequestPermitsPath(Data.PackageName.ToString())) {
-      Sound = Cast<USoundBase>(Data.GetAsset());
-      if (Sound) {
-        UE_LOG(LogMcpAudioHandlers, Log,
-               TEXT("Resolved sound '%s' to '%s'"), *SoundPath,
-               *Sound->GetPathName());
-        return Sound;
-      }
-    }
-  }
-
-  UE_LOG(LogMcpAudioHandlers, Warning,
-         TEXT("Sound asset '%s' not found."), *SoundPath);
-  return nullptr;
+	return Sound;
 }
 
-/**
- * Attempts to load a USoundMix using the provided MixPath. If MixPath contains a
- * full asset path and the asset exists, that asset is returned. If MixPath does
- * not contain a path separator, the function treats it as an asset name and
- * searches the /Game packages for a matching USoundMix (case-insensitive).
- *
- * VERSION COMPATIBILITY:
- * - UE 5.0: FARFilter uses ClassNames (FName)
- * - UE 5.1+: FARFilter uses ClassPaths (FTopLevelAssetPath)
- */
-USoundMix *ResolveSoundMix(const FString &MixPath) {
-	if (MixPath.IsEmpty())
-		return nullptr;
-
-	USoundMix *Mix = nullptr;
-	// Only call DoesAssetExist for paths that look like full UE asset paths (contain /Game/ or /Engine/)
-	// Bare names like "TestSoundMix" would cause DoesAssetExist errors and need asset registry search
-	if (MixPath.Contains(TEXT("/Game/")) || MixPath.Contains(TEXT("/Engine/")))
-	{
-		if (McpAssetExists(MixPath)) {
-			Mix = Cast<USoundMix>(McpLoadAsset(MixPath));
-		}
-		if (Mix)
-			return Mix;
-	}
-
-	// For paths without a root (e.g. "TestSoundMix"), skip DoesAssetExist to avoid UE log errors
-	// and go straight to asset registry search below
-	if (MixPath.Contains(TEXT("/")))
-	{
-		return nullptr;
-	}
-
-  FString AssetName = FPaths::GetBaseFilename(MixPath);
-  FAssetRegistryModule &AssetRegistryModule =
-      FModuleManager::LoadModuleChecked<FAssetRegistryModule>("AssetRegistry");
-  TArray<FAssetData> AssetData;
-  FARFilter Filter;
-#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 1
-  Filter.ClassPaths.Add(USoundMix::StaticClass()->GetClassPathName());
-#else
-  Filter.ClassNames.Add(USoundMix::StaticClass()->GetFName());
-#endif
-  Filter.bRecursivePaths = true;
-  Filter.PackagePaths.Add(TEXT("/Game"));
-  AssetRegistryModule.Get().GetAssets(Filter, AssetData);
-
-  for (const FAssetData &Data : AssetData) {
-    if (Data.AssetName.ToString().Equals(AssetName, ESearchCase::IgnoreCase) &&
-        McpCapabilityPrincipal::ActiveRequestPermitsPath(Data.PackageName.ToString())) {
-      Mix = Cast<USoundMix>(Data.GetAsset());
-      if (Mix)
-        return Mix;
-    }
-  }
-  return nullptr;
+USoundMix* ResolveSoundMix(const FString& MixPath)
+{
+	return Cast<USoundMix>(ResolveAudioAsset(MixPath, {USoundMix::StaticClass()}, USoundMix::StaticClass()));
 }
 
-/**
- * @brief Locates and returns a USoundClass by asset path or by asset name.
- *
- * Attempts to load the sound class directly if ClassPath refers to an existing asset; otherwise,
- * if ClassPath does not contain a '/' it searches the project's /Game assets for a sound class
- * with a matching name (case-insensitive).
- *
- * VERSION COMPATIBILITY:
- * - UE 5.0: FARFilter uses ClassNames (FName)
- * - UE 5.1+: FARFilter uses ClassPaths (FTopLevelAssetPath)
- *
- * @param ClassPath Asset path (e.g. "/Game/Audio/MyClass") or asset name ("MyClass").
- * @return USoundClass* Pointer to the resolved sound class, or nullptr if not found or ClassPath is empty.
- */
-USoundClass *ResolveSoundClass(const FString &ClassPath) {
-	if (ClassPath.IsEmpty())
-		return nullptr;
+USoundClass* ResolveSoundClass(const FString& ClassPath)
+{
+	return Cast<USoundClass>(ResolveAudioAsset(ClassPath, {USoundClass::StaticClass()}, USoundClass::StaticClass()));
+}
 
-	USoundClass *Class = nullptr;
-	if (ClassPath.Contains(TEXT("/Game/")) || ClassPath.Contains(TEXT("/Engine/")))
+USoundBase* LoadSoundOrReply(UEngineWireSubsystem* Self, TSharedPtr<FMcpBridgeWebSocket> RequestingSocket,
+	const FString& RequestId, const TSharedPtr<FJsonObject>& Payload)
+{
+	FString SoundPath;
+	if (!Payload->TryGetStringField(TEXT("soundPath"), SoundPath) || SoundPath.IsEmpty())
 	{
-		if (McpAssetExists(ClassPath)) {
-			Class = Cast<USoundClass>(McpLoadAsset(ClassPath));
-		}
-		if (Class)
-			return Class;
-	}
-
-	if (ClassPath.Contains(TEXT("/")))
+		Self->SendAutomationError(RequestingSocket, RequestId, TEXT("soundPath required"), TEXT("INVALID_ARGUMENT"));
 		return nullptr;
-
-	FString AssetName = FPaths::GetBaseFilename(ClassPath);
-  FAssetRegistryModule &AssetRegistryModule =
-      FModuleManager::LoadModuleChecked<FAssetRegistryModule>("AssetRegistry");
-  TArray<FAssetData> AssetData;
-  FARFilter Filter;
-#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 1
-  Filter.ClassPaths.Add(USoundClass::StaticClass()->GetClassPathName());
-#else
-  Filter.ClassNames.Add(USoundClass::StaticClass()->GetFName());
-#endif
-  Filter.bRecursivePaths = true;
-  Filter.PackagePaths.Add(TEXT("/Game"));
-  AssetRegistryModule.Get().GetAssets(Filter, AssetData);
-
-  for (const FAssetData &Data : AssetData) {
-    if (Data.AssetName.ToString().Equals(AssetName, ESearchCase::IgnoreCase) &&
-        McpCapabilityPrincipal::ActiveRequestPermitsPath(Data.PackageName.ToString())) {
-      Class = Cast<USoundClass>(Data.GetAsset());
-      if (Class)
-        return Class;
-    }
-  }
-  return nullptr;
+	}
+	USoundBase* Sound = ResolveSoundAsset(SoundPath);
+	if (!Sound)
+	{
+		Self->SendAutomationError(RequestingSocket, RequestId, TEXT("Sound asset not found"), TEXT("ASSET_NOT_FOUND"));
+	}
+	return Sound;
 }
 }

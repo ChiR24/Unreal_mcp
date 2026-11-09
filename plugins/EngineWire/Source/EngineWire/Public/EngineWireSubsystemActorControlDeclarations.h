@@ -1,5 +1,6 @@
 #define MCP_SUBSYSTEM_ACTOR_CONTROL_DECLARATIONS \
 AActor* FindActorByName(const FString& Target, bool bExactMatchOnly = false); \
+AActor* FindActorOrReply(const TSharedPtr<FJsonObject>& Payload, const FString& RequestId, const TSharedPtr<FMcpBridgeWebSocket>& Socket); \
 MCP_DECLARE_PAYLOAD_HANDLER(HandleControlActorSpawn); \
 MCP_DECLARE_PAYLOAD_HANDLER(HandleControlActorSpawnBlueprint); \
 MCP_DECLARE_PAYLOAD_HANDLER(HandleControlActorSpawnBatch); \

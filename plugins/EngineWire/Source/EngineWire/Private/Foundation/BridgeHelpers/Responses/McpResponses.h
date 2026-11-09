@@ -3,6 +3,11 @@
 // Standardized Response Helpers
 // See: https://google.github.io/styleguide/jsoncstyleguide.xml
 
+#include "Editor.h"
+#include "EngineWireSubsystem.h"
+#include "Foundation/BridgeHelpers/Blueprints/McpBPPaths.h"
+#include "Foundation/BridgeHelpers/Security/McpProjectPaths.h"
+
 /**
  * Sends a standardized success response with a "data" envelope.
  *
@@ -83,4 +88,59 @@ static inline void SendStandardErrorResponse(
 
   Subsystem->SendAutomationResponse(Socket, RequestId, false, ErrorMessage,
                                     Envelope, ErrorCode);
+}
+
+// The payload's string field Field into Out; false, after the standard INVALID_ARGUMENT "<Field> required" error, when
+// it is missing or empty. A handler answers `if (!McpReadRequiredField(...)) return true;`.
+static inline bool McpReadRequiredField(UEngineWireSubsystem *Subsystem, TSharedPtr<FMcpBridgeWebSocket> Socket,
+                                        const FString &RequestId, const TSharedPtr<FJsonObject> &Payload,
+                                        const TCHAR *Field, FString &Out) {
+  Payload->TryGetStringField(Field, Out);
+  if (!Out.IsEmpty())
+    return true;
+  SendStandardErrorResponse(Subsystem, Socket, RequestId, TEXT("INVALID_ARGUMENT"),
+                            FString::Printf(TEXT("%s required"), Field), nullptr);
+  return false;
+}
+
+// True while GEditor exists; false after the standard EDITOR_NOT_AVAILABLE error. `if (!McpRequireEditor(...)) return true;`
+static inline bool McpRequireEditor(UEngineWireSubsystem *Subsystem, TSharedPtr<FMcpBridgeWebSocket> Socket,
+                                    const FString &RequestId) {
+  if (GEditor)
+    return true;
+  SendStandardErrorResponse(Subsystem, Socket, RequestId, TEXT("EDITOR_NOT_AVAILABLE"), TEXT("Editor not available"),
+                            nullptr);
+  return false;
+}
+
+// An asset path sanitized in place; false after the reply when the project-path guard refuses it (SECURITY_VIOLATION,
+// in the guard's own words) or, with bMustExist, the asset registry holds nothing there (ASSET_NOT_FOUND).
+static inline bool McpSanitizeAssetPathOrReply(UEngineWireSubsystem *Subsystem, TSharedPtr<FMcpBridgeWebSocket> Socket,
+                                               const FString &RequestId, FString &Path, bool bMustExist = true) {
+  const FString AsGiven = Path;
+  Path = SanitizeProjectRelativePath(Path);
+  if (Path.IsEmpty()) {
+    Subsystem->SendAutomationResponse(Socket, RequestId, false, McpPathRefusalMessage(TEXT("assetPath"), AsGiven),
+                                      nullptr, TEXT("SECURITY_VIOLATION"));
+    return false;
+  }
+  if (bMustExist && !McpAssetExists(Path)) {
+    Subsystem->SendAutomationResponse(Socket, RequestId, false, TEXT("Asset not found"), nullptr,
+                                      TEXT("ASSET_NOT_FOUND"));
+    return false;
+  }
+  return true;
+}
+
+// The payload's assetPath through McpSanitizeAssetPathOrReply; a missing one answers INVALID_ARGUMENT "assetPath required".
+static inline bool McpReadAssetPathOrReply(UEngineWireSubsystem *Subsystem, TSharedPtr<FMcpBridgeWebSocket> Socket,
+                                           const FString &RequestId, const TSharedPtr<FJsonObject> &Payload,
+                                           FString &OutPath, bool bMustExist = true) {
+  Payload->TryGetStringField(TEXT("assetPath"), OutPath);
+  if (OutPath.IsEmpty()) {
+    Subsystem->SendAutomationResponse(Socket, RequestId, false, TEXT("assetPath required"), nullptr,
+                                      TEXT("INVALID_ARGUMENT"));
+    return false;
+  }
+  return McpSanitizeAssetPathOrReply(Subsystem, Socket, RequestId, OutPath, bMustExist);
 }

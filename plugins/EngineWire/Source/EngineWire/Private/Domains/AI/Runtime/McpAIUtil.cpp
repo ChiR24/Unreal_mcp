@@ -1,6 +1,6 @@
 #include "Domains/AI/McpAIContext.h"
 
-#include "Domains/AI/BehaviorTree/McpAIBehaviorTreeGraphFeature.h"
+#include "Domains/BehaviorTree/McpBTPrivate.h"
 
 #include "BehaviorTree/BehaviorTree.h"
 #include "BehaviorTree/BehaviorTreeTypes.h"
@@ -158,20 +158,12 @@ bool HandleGetAIInfo(UEngineWireSubsystem* Self, const FString& RequestId, const
                     BT->BlackboardAsset->GetName());
             }
 
-#if MCP_AI_HAS_BEHAVIOR_TREE_GRAPH
-            if (UBehaviorTreeGraph* BTGraph = Cast<UBehaviorTreeGraph>(BT->BTGraph))
+#if MCP_HAS_BEHAVIOR_TREE_GRAPH
+            if (const UBehaviorTreeGraphNode_Root* RootNode =
+                    McpBehaviorTreeHandlers::FindBehaviorTreeGraphRoot(Cast<UBehaviorTreeGraph>(BT->BTGraph)))
             {
-                UClass* BTRootNodeClass = FindObject<UClass>(nullptr, TEXT("/Script/BehaviorTreeEditor.BehaviorTreeGraphNode_Root"));
-                for (UEdGraphNode* GraphNode : BTGraph->Nodes)
-                {
-                    if (BTRootNodeClass && GraphNode && GraphNode->GetClass()->IsChildOf(BTRootNodeClass))
-                    {
-                        UBehaviorTreeGraphNode_Root* RootNode = static_cast<UBehaviorTreeGraphNode_Root*>(GraphNode);
-                        AIInfo->SetStringField(TEXT("rootGraphBlackboard"), GetNameSafe(RootNode->BlackboardAsset));
-                        AIInfo->SetBoolField(TEXT("rootGraphBlackboardMatchesAssigned"), RootNode->BlackboardAsset == BT->BlackboardAsset);
-                        break;
-                    }
-                }
+                AIInfo->SetStringField(TEXT("rootGraphBlackboard"), GetNameSafe(RootNode->BlackboardAsset));
+                AIInfo->SetBoolField(TEXT("rootGraphBlackboardMatchesAssigned"), RootNode->BlackboardAsset == BT->BlackboardAsset);
             }
 #endif
             // Count BT nodes (composites + tasks + decorators + services)

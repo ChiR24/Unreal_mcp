@@ -7,20 +7,12 @@ bool UEngineWireSubsystem::HandleControlActorAddComponent(
     const FString &RequestId, const TSharedPtr<FJsonObject> &Payload,
     TSharedPtr<FMcpBridgeWebSocket> Socket) {
   FString TargetName;
-  Payload->TryGetStringField(TEXT("actorName"), TargetName);
-  if (TargetName.IsEmpty()) {
-    SendStandardErrorResponse(this, Socket, RequestId, TEXT("INVALID_ARGUMENT"),
-                              TEXT("actorName required"), nullptr);
+  if (!McpReadRequiredField(this, Socket, RequestId, Payload, TEXT("actorName"), TargetName))
     return true;
-  }
 
   FString ComponentType;
-  Payload->TryGetStringField(TEXT("componentType"), ComponentType);
-  if (ComponentType.IsEmpty()) {
-    SendStandardErrorResponse(this, Socket, RequestId, TEXT("INVALID_ARGUMENT"),
-                              TEXT("componentType required"), nullptr);
+  if (!McpReadRequiredField(this, Socket, RequestId, Payload, TEXT("componentType"), ComponentType))
     return true;
-  }
 
   FString ComponentName;
   Payload->TryGetStringField(TEXT("componentName"), ComponentName);

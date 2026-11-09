@@ -4,12 +4,8 @@ bool UEngineWireSubsystem::HandleControlActorFindByName(
     const FString &RequestId, const TSharedPtr<FJsonObject> &Payload,
     TSharedPtr<FMcpBridgeWebSocket> Socket) {
   FString Query;
-  Payload->TryGetStringField(TEXT("name"), Query);
-  if (Query.IsEmpty()) {
-    SendStandardErrorResponse(this, Socket, RequestId, TEXT("INVALID_ARGUMENT"),
-                              TEXT("name required"), nullptr);
+  if (!McpReadRequiredField(this, Socket, RequestId, Payload, TEXT("name"), Query))
     return true;
-  }
 
   // Security: Validate query format - reject path traversal attempts
   if (Query.Contains(TEXT("..")) || Query.Contains(TEXT("\\"))) {
@@ -141,20 +137,9 @@ bool UEngineWireSubsystem::HandleControlActorFindByName(
 bool UEngineWireSubsystem::HandleControlActorGetBoundingBox(
     const FString &RequestId, const TSharedPtr<FJsonObject> &Payload,
     TSharedPtr<FMcpBridgeWebSocket> Socket) {
-  FString TargetName;
-  Payload->TryGetStringField(TEXT("actorName"), TargetName);
-  if (TargetName.IsEmpty()) {
-    SendStandardErrorResponse(this, Socket, RequestId, TEXT("INVALID_ARGUMENT"),
-                              TEXT("actorName required"), nullptr);
+  AActor *Found = FindActorOrReply(Payload, RequestId, Socket);
+  if (!Found)
     return true;
-  }
-
-  AActor *Found = FindActorByName(TargetName);
-  if (!Found) {
-    SendStandardErrorResponse(this, Socket, RequestId, TEXT("ACTOR_NOT_FOUND"),
-                              TEXT("Actor not found"), nullptr);
-    return true;
-  }
 
   FVector Origin, BoxExtent;
   Found->GetActorBounds(false, Origin, BoxExtent);
@@ -207,20 +192,9 @@ bool UEngineWireSubsystem::HandleControlActorGetBoundingBox(
 bool UEngineWireSubsystem::HandleControlActorGetMetadata(
     const FString &RequestId, const TSharedPtr<FJsonObject> &Payload,
     TSharedPtr<FMcpBridgeWebSocket> Socket) {
-  FString TargetName;
-  Payload->TryGetStringField(TEXT("actorName"), TargetName);
-  if (TargetName.IsEmpty()) {
-    SendStandardErrorResponse(this, Socket, RequestId, TEXT("INVALID_ARGUMENT"),
-                              TEXT("actorName required"), nullptr);
+  AActor *Found = FindActorOrReply(Payload, RequestId, Socket);
+  if (!Found)
     return true;
-  }
-
-  AActor *Found = FindActorByName(TargetName);
-  if (!Found) {
-    SendStandardErrorResponse(this, Socket, RequestId, TEXT("ACTOR_NOT_FOUND"),
-                              TEXT("Actor not found"), nullptr);
-    return true;
-  }
 
   TSharedPtr<FJsonObject> Data = McpHandlerUtils::CreateResultObject();
   Data->SetStringField(TEXT("name"), Found->GetName());

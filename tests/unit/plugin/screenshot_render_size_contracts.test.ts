@@ -51,10 +51,10 @@ describe('screenshot renderSize', () => {
     const place = read('McpEditorScreenshotWindows.cpp');
     expect(place).toMatch(/if \(Payload->TryGetNumberField\(TEXT\("fov"\), Fov\)\) \{\s*Client->ViewFOV = static_cast<float>\(FMath::Clamp\(Fov, 5\.0, 170\.0\)\);/u);
     expect(read('McpEditorScreenshot.cpp')).toContain('PlaceViewCameraForMcp(CaptureClient, Payload);');
-    const inspection = join('..', 'Environment', 'Inspection');
-    expect(read(join(inspection, 'McpEnvInspectViewPoints.cpp'))).toContain('const bool bMoved = PlaceViewCameraForMcp(Out.Client, Payload);');
-    expect(read(join(inspection, 'McpEnvInspectCapturePasses.cpp'))).toContain('const bool bMoved = PlaceViewCameraForMcp(Client, Payload);');
-    for (const file of ['McpEditorScreenshot.cpp', join(inspection, 'McpEnvInspectViewPoints.cpp'), join(inspection, 'McpEnvInspectCapturePasses.cpp')]) {
+    const inspection = join('..', 'Inspect', 'View');
+    expect(read(join(inspection, 'McpInspectViewPoints.cpp'))).toContain('const bool bMoved = PlaceViewCameraForMcp(Out.Client, Payload);');
+    expect(read(join(inspection, 'McpInspectCapturePasses.cpp'))).toContain('const bool bMoved = PlaceViewCameraForMcp(Client, Payload);');
+    for (const file of ['McpEditorScreenshot.cpp', join(inspection, 'McpInspectViewPoints.cpp'), join(inspection, 'McpInspectCapturePasses.cpp')]) {
       expect(read(file), file).not.toContain('SetViewRotation(');
     }
   });
@@ -85,7 +85,7 @@ describe('screenshot renderSize', () => {
     }
     // describe_view, analyze_view and audit_materials read the view through McpCaptureView, which takes the camera the
     // same way (refusals as codes, not replies) before it places the view, and reads a camera's shot in game view.
-    const capture = read(join('..', 'Environment', 'Inspection', 'McpEnvInspectViewPoints.cpp'));
+    const capture = read(join('..', 'Inspect', 'View', 'McpInspectViewPoints.cpp'));
     const takeInCapture = capture.indexOf('if (!TakeCameraViewForMcp(Payload, true, CameraCode, OutError))');
     expect(takeInCapture).toBeGreaterThan(0);
     expect(takeInCapture).toBeLessThan(capture.indexOf('const bool bMoved = PlaceViewCameraForMcp(Out.Client, Payload);'));

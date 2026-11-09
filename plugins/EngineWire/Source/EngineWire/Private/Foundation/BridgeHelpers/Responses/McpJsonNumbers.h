@@ -1,7 +1,10 @@
 #pragma once
 
 #include "CoreMinimal.h"
+#include "Dom/JsonObject.h"
 #include "Dom/JsonValue.h"
+
+#include <initializer_list>
 
 // True when Values is exactly Count JSON numbers, each within float range: a vector sent as an array to a parameter
 // the gateway cannot type, held to the rule the gateway applies to a typed one. A numeric string ("1") or a missing or
@@ -22,4 +25,23 @@ inline bool McpIsJsonVectorValue(const TSharedPtr<FJsonValue>& Value, bool bColo
     const TArray<TSharedPtr<FJsonValue>>* Values = nullptr;
     return Value.IsValid() && (Value->Type == EJson::Object || (Value->TryGetArray(Values) && Values &&
         (McpIsJsonFloatArray(*Values, 3) || (bColor && McpIsJsonFloatArray(*Values, 4)))));
+}
+
+// The first of Fields holding a number, into OutValue; false, OutValue untouched, when none does.
+inline bool McpGetFirstNumberField(const TSharedPtr<FJsonObject>& Obj, std::initializer_list<const TCHAR*> Fields, double& OutValue)
+{
+    if (!Obj.IsValid())
+    {
+        return false;
+    }
+    for (const TCHAR* Field : Fields)
+    {
+        double Value = 0.0;
+        if (Obj->TryGetNumberField(Field, Value))
+        {
+            OutValue = Value;
+            return true;
+        }
+    }
+    return false;
 }

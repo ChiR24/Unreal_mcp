@@ -15,7 +15,7 @@ import { AI } from './properties.js';
 
 const A = AI;
 
-// What the controller actions answer: McpBlueprintBehaviour::Author's report (McpAIControllerFocus.cpp).
+// What the controller actions answer: McpBlueprintBehaviour::Author's report (McpAIControllerBehaviour.cpp).
 export const CONTROLLER_LOGIC_OUT = {
   controllerPath: { type: 'string', description: 'The AIController Blueprint edited.' },
   compiled: { type: 'boolean', description: 'Whether the Blueprint compiled with the logic.' },

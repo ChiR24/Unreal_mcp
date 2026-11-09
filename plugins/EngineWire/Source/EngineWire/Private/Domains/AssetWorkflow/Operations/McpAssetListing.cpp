@@ -11,7 +11,7 @@
 #include "Misc/PackageName.h"
 #include "Misc/Paths.h"
 #include "Foundation/BridgeHelpers/Assets/McpAssetResolve.h"
-#include "Domains/AssetWorkflow/Operations/EngineWireAssetListCursor.h"
+#include "Domains/AssetWorkflow/Operations/McpAssetListCursor.h"
 
 bool UEngineWireSubsystem::HandleListAssets(
     const FString &RequestId, const TSharedPtr<FJsonObject> &Payload,

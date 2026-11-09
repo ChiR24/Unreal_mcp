@@ -21,7 +21,7 @@ const readParams = (source: string): string[] =>
 
 describe('inspect explain', () => {
   it('is routed from the inspect dispatcher to the three trees', () => {
-    expect(code(PRIVATE, 'Domains', 'Environment', 'Inspection', 'McpEnvInspect.cpp'))
+    expect(code(PRIVATE, 'Domains', 'Inspect', 'McpInspect.cpp'))
       .toMatch(/StartsWith\(TEXT\("explain_"\)\)\)\s*\{\s*return McpExplain::Handle\(/u);
     const tree = code(EXPLAIN, 'McpExplainTree.cpp');
     for (const action of ['explain_collision', 'explain_visible', 'explain_input', 'explain_widget', 'explain_audible', 'explain_lit']) {

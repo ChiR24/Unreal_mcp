@@ -6,7 +6,7 @@
 
 #include "Domains/Performance/Budget/McpFrameBudget.h"
 
-#include "Domains/Environment/Inspection/McpEnvInspectViewIds.h"
+#include "Domains/Inspect/View/McpInspectViewIds.h"
 #include "Editor.h"
 #include "EngineWireSubsystem.h"
 #include "RHI.h"
@@ -89,8 +89,8 @@ TSharedPtr<FJsonObject> Changed(const FRun& Run, const McpPerception::Diff::FVie
 // The picture as the viewport draws it now.
 bool Capture(FRun& Run, McpPerception::Diff::FViewMeasure& OutFrame, FString& OutCode, FString& OutError)
 {
-    McpEnvironmentHandlers::FMcpViewCapture View;
-    if (!McpEnvironmentHandlers::McpCaptureView(MakeShared<FJsonObject>(), TEXT("fit_frame_budget"), false, View, OutError, OutCode))
+    McpInspectHandlers::FMcpViewCapture View;
+    if (!McpInspectHandlers::McpCaptureView(MakeShared<FJsonObject>(), TEXT("fit_frame_budget"), false, View, OutError, OutCode))
     {
         return false;
     }

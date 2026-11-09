@@ -4,7 +4,7 @@
 #include "CoreMinimal.h"
 #include "Dom/JsonObject.h"
 
-namespace McpEnvironmentHandlers
+namespace McpInspectHandlers
 {
 struct FMcpViewCapture;
 }
@@ -37,7 +37,7 @@ struct FSavedView
     uint64 Order = 0;
 };
 
-FViewMeasure MeasureFrame(const McpEnvironmentHandlers::FMcpViewCapture& View);
+FViewMeasure MeasureFrame(const McpInspectHandlers::FMcpViewCapture& View);
 
 /** Per block of two frames: the SSIM loss, (1 - SSIM) / 2, of its luma and how far its mean colour moved (the RMS of
  *  the channel differences as shown); all zero when the frames differ in size. */

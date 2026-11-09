@@ -1,6 +1,6 @@
 #include "Domains/AI/McpAIContext.h"
 
-#include "Domains/AI/BehaviorTree/McpAIBehaviorTreeGraphFeature.h"
+#include "Domains/BehaviorTree/McpBTPrivate.h"
 
 #include "AIController.h"
 #include "BehaviorTree/BehaviorTree.h"
@@ -41,20 +41,11 @@ bool HandleAssignBlackboard(UEngineWireSubsystem* Self, const FString& RequestId
 
         // The tree's asset field and its graph's root node both name the Blackboard: one undo step for both.
         TArray<UObject*> Edited = {BT};
-#if MCP_AI_HAS_BEHAVIOR_TREE_GRAPH
+#if MCP_HAS_BEHAVIOR_TREE_GRAPH
         UBehaviorTreeGraph* BTGraph = Cast<UBehaviorTreeGraph>(BT->BTGraph);
-        UBehaviorTreeGraphNode_Root* RootNode = nullptr;
+        UBehaviorTreeGraphNode_Root* RootNode = McpBehaviorTreeHandlers::FindBehaviorTreeGraphRoot(BTGraph);
         if (BTGraph)
         {
-            UClass* BTRootNodeClass = FindObject<UClass>(nullptr, TEXT("/Script/BehaviorTreeEditor.BehaviorTreeGraphNode_Root"));
-            for (UEdGraphNode* GraphNode : BTGraph->Nodes)
-            {
-                if (BTRootNodeClass && GraphNode && GraphNode->GetClass()->IsChildOf(BTRootNodeClass))
-                {
-                    RootNode = static_cast<UBehaviorTreeGraphNode_Root*>(GraphNode);
-                    break;
-                }
-            }
             for (UObject* Object : TArray<UObject*>{BTGraph, RootNode})
             {
                 if (Object)
@@ -68,7 +59,7 @@ bool HandleAssignBlackboard(UEngineWireSubsystem* Self, const FString& RequestId
         {
             const FMcpAssetEdit Edit(TEXT("Assign Blackboard"), Edited, Result);
             BT->BlackboardAsset = BB;
-#if MCP_AI_HAS_BEHAVIOR_TREE_GRAPH
+#if MCP_HAS_BEHAVIOR_TREE_GRAPH
             if (RootNode)
             {
                 RootNode->BlackboardAsset = BB;

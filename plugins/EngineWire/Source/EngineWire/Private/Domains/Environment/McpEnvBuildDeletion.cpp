@@ -70,12 +70,12 @@ void SetDeleteResult(
     const TArray<FString> &MissingTargets, const TArray<FString> &AmbiguousTargets,
     const TArray<FString> &FailedTargets)
 {
-    McpAddStringArrayField(Context.Resp, TEXT("deletedTargets"), DeletedTargets);
+    Context.Resp->SetArrayField(TEXT("deletedTargets"), McpHandlerUtils::ToJsonStringArray(DeletedTargets));
     // The receipt's changes[] reads deleted, not deletedTargets.
-    McpAddStringArrayField(Context.Resp, TEXT("deleted"), DeletedTargets);
-    McpAddStringArrayField(Context.Resp, TEXT("missingTargets"), MissingTargets);
-    McpAddStringArrayField(Context.Resp, TEXT("ambiguousTargets"), AmbiguousTargets);
-    McpAddStringArrayField(Context.Resp, TEXT("failedTargets"), FailedTargets);
+    Context.Resp->SetArrayField(TEXT("deleted"), McpHandlerUtils::ToJsonStringArray(DeletedTargets));
+    Context.Resp->SetArrayField(TEXT("missingTargets"), McpHandlerUtils::ToJsonStringArray(MissingTargets));
+    Context.Resp->SetArrayField(TEXT("ambiguousTargets"), McpHandlerUtils::ToJsonStringArray(AmbiguousTargets));
+    Context.Resp->SetArrayField(TEXT("failedTargets"), McpHandlerUtils::ToJsonStringArray(FailedTargets));
     Context.Resp->SetNumberField(TEXT("requestedCount"),
         DeletedTargets.Num() + MissingTargets.Num() + AmbiguousTargets.Num() + FailedTargets.Num());
     Context.Resp->SetNumberField(TEXT("deletedCount"), DeletedTargets.Num());

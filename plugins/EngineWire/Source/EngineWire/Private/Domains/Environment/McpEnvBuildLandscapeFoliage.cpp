@@ -1,4 +1,6 @@
 #include "Domains/Environment/McpEnvShared.h"
+#include "Domains/Foliage/McpFoliagePrivate.h"
+#include "Domains/Landscape/McpLandscapeShared.h"
 #include "Foundation/McpScopedEditorTransaction.h"
 #include "Foundation/Reflection/McpPropertyReflection.h"
 
@@ -7,7 +9,7 @@ namespace {
 
 bool ConfigureLandscapeActor(const FString &LowerSub, FEnvironmentBuildContext &Context)
 {
-    ALandscape *Landscape = McpFindLandscapeForEnvironmentAction(Context.Payload);
+    ALandscape *Landscape = McpLandscapeHandlers::McpFindLandscape(Context.Payload);
     if (!Landscape)
     {
         Context.bSuccess = false;
@@ -69,31 +71,31 @@ bool HandleBuildLandscapeAndFoliageAction(const FString &LowerSub, FEnvironmentB
 
     if (LowerSub == TEXT("import_heightmap"))
     {
-        const bool bResult = McpImportLandscapeHeightmap(Context.Payload, Context.Resp, Message, ErrorCode);
+        const bool bResult = McpLandscapeHandlers::McpImportLandscapeHeightmap(Context.Payload, Context.Resp, Message, ErrorCode);
         MarkActorConfigurationResult(Context, bResult, Message, ErrorCode);
         return true;
     }
     if (LowerSub == TEXT("export_heightmap"))
     {
-        const bool bResult = McpExportLandscapeHeightmap(Context.Payload, Context.Resp, Message, ErrorCode);
+        const bool bResult = McpLandscapeHandlers::McpExportLandscapeHeightmap(Context.Payload, Context.Resp, Message, ErrorCode);
         MarkActorConfigurationResult(Context, bResult, Message, ErrorCode);
         return true;
     }
     if (LowerSub == TEXT("create_landscape_layer_info"))
     {
-        const bool bResult = McpCreateLandscapeLayerInfo(Context.Payload, Context.Resp, Message, ErrorCode);
+        const bool bResult = McpLandscapeHandlers::McpCreateLandscapeLayerInfo(Context.Payload, Context.Resp, Message, ErrorCode);
         MarkActorConfigurationResult(Context, bResult, Message, ErrorCode);
         return true;
     }
     if (LowerSub == TEXT("configure_landscape_splines"))
     {
-        const bool bResult = McpConfigureLandscapeSplines(Context.Payload, Context.Resp, Message, ErrorCode);
+        const bool bResult = McpLandscapeHandlers::McpConfigureLandscapeSplines(Context.Payload, Context.Resp, Message, ErrorCode);
         MarkActorConfigurationResult(Context, bResult, Message, ErrorCode);
         return true;
     }
     if (LowerSub == TEXT("create_landscape_streaming_proxy"))
     {
-        const bool bResult = McpCreateLandscapeStreamingProxy(Context.Payload, Context.Resp, Message, ErrorCode);
+        const bool bResult = McpLandscapeHandlers::McpCreateLandscapeStreamingProxy(Context.Payload, Context.Resp, Message, ErrorCode);
         MarkActorConfigurationResult(Context, bResult, Message, ErrorCode);
         return true;
     }
@@ -107,7 +109,7 @@ bool HandleBuildLandscapeAndFoliageAction(const FString &LowerSub, FEnvironmentB
         LowerSub == TEXT("configure_foliage_collision") ||
         LowerSub == TEXT("configure_foliage_culling"))
     {
-        const bool bResult = McpConfigureFoliageType(Context.Payload, Context.Resp, Message, ErrorCode);
+        const bool bResult = McpFoliageHandlers::McpConfigureFoliageType(Context.Payload, Context.Resp, Message, ErrorCode);
         MarkActorConfigurationResult(Context, bResult, Message, ErrorCode);
         return true;
     }

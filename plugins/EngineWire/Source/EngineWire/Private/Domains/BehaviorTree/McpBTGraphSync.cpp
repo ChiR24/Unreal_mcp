@@ -153,15 +153,21 @@ int32 SyncSubtree(UEdGraph* Graph, UBTNode* AssetNode, UEdGraphNode* ParentGraph
   return Spawned;
 }
 } // namespace
+
+UBehaviorTreeGraphNode_Root* FindBehaviorTreeGraphRoot(const UEdGraph* Graph)
+{
+  UClass* RootClass = GraphNodeClass(TEXT("BehaviorTreeGraphNode_Root"));
+  if (!Graph || !RootClass) return nullptr;
+  for (UEdGraphNode* Node : Graph->Nodes) { if (Node && Node->IsA(RootClass)) return static_cast<UBehaviorTreeGraphNode_Root*>(Node); }
+  return nullptr;
+}
 #endif
 
 int32 SyncBehaviorTreeGraphFromAsset(UBehaviorTree* BehaviorTree, UEdGraph* Graph)
 {
 #if MCP_HAS_BEHAVIOR_TREE_GRAPH
   if (!BehaviorTree || !Graph || !BehaviorTree->RootNode) return 0;
-  UClass* RootClass = GraphNodeClass(TEXT("BehaviorTreeGraphNode_Root"));
-  UEdGraphNode* RootGraphNode = nullptr;
-  for (UEdGraphNode* Node : Graph->Nodes) { if (RootClass && Node && Node->IsA(RootClass)) { RootGraphNode = Node; break; } }
+  UEdGraphNode* RootGraphNode = FindBehaviorTreeGraphRoot(Graph);
   if (!RootGraphNode) return 0;
   int32 Spawned = SyncSubtree(Graph, BehaviorTree->RootNode, RootGraphNode, 0);
   // Root decorators hang off the graph node of the root COMPOSITE, not the Root

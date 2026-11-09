@@ -1,8 +1,8 @@
 // Copyright (c) 2024 EngineWire Contributors
 
-// get_asset_graph material branch (see Analysis/Shared.h for the contract).
+// get_asset_graph material branch (see Analysis/McpAssetAnalysisShared.h for the contract).
 
-#include "Domains/AssetWorkflow/Analysis/Shared.h"
+#include "Domains/AssetWorkflow/Analysis/McpAssetAnalysisShared.h"
 
 #include "AssetRegistry/AssetRegistryModule.h"
 #include "Foundation/BridgeHelpers/Blueprints/McpBPPaths.h"

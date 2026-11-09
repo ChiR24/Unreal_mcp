@@ -26,7 +26,7 @@ describe('change journal', () => {
     expect(code('Core', 'Subsystem', 'EngineWireSubsystemResponses.cpp')).toMatch(
       /McpUndoLedger::Describe\(RequestId, EffectiveResult\);\s*McpChangeJournal::AddUserChangeWarning\(RequestId, EffectiveResult\);/u,
     );
-    expect(code('Domains', 'Environment', 'Inspection', 'McpEnvInspect.cpp')).toMatch(
+    expect(code('Domains', 'Inspect', 'McpInspect.cpp')).toMatch(
       /LowerSubAction\.Equals\(TEXT\("changes_since"\)\)\)\s*\{\s*return McpChangeJournal::HandleChangesSince\(\*this, RequestId, Payload, RequestingSocket\);/u,
     );
   });

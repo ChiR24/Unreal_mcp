@@ -15,7 +15,7 @@ const CAMERA_VIEW = {
 
 /**
  * What HandleInspectObjectAction actually returns
- * (Private/Domains/Environment/Inspection/McpEnvInspectObject.cpp).
+ * (Private/Domains/Inspect/McpInspectObject.cpp).
  *
  * These MUST be declared. McpProjectCanonicalOutput keeps only the properties a
  * record declares, so while this set was missing the native gateway stripped the
@@ -49,7 +49,7 @@ const INSPECT_OBJECT_OUTPUT = {
 
 /**
  * What a static or skeletal mesh asset adds
- * (Private/Domains/Environment/Inspection/McpEnvInspectAssetMesh.cpp):
+ * (Private/Domains/Inspect/McpInspectAssetMesh.cpp):
  * the slot table, with what LOD0 draws in each slot.
  */
 const MESH_DETAILS_OUTPUT = {

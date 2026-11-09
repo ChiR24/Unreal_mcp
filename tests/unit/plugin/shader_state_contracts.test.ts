@@ -84,7 +84,7 @@ describe('every screenshot surface reports it, and control_editor.screenshot can
   });
 
   it('each editor-state read (project, editor and world settings, viewport, selection) carries the count before it answers', () => {
-    const source = read('Domains', 'Environment', 'Inspection', 'McpEnvInspectSettings.cpp');
+    const source = read('Domains', 'Inspect', 'McpInspectSettings.cpp');
 
     for (const action of ['get_project_settings', 'get_editor_settings', 'get_world_settings', 'get_viewport_info', 'get_selected_actors']) {
       const branch = sliceBetween(source, `LowerSubAction.Equals(TEXT("${action}"))`, 'return true;');

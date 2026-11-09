@@ -5,12 +5,8 @@ bool UEngineWireSubsystem::HandleControlActorFindByTag(
     const FString &RequestId, const TSharedPtr<FJsonObject> &Payload,
     TSharedPtr<FMcpBridgeWebSocket> Socket) {
   FString TagValue;
-  Payload->TryGetStringField(TEXT("tag"), TagValue);
-  if (TagValue.IsEmpty()) {
-    SendStandardErrorResponse(this, Socket, RequestId, TEXT("INVALID_ARGUMENT"),
-                              TEXT("tag required"), nullptr);
+  if (!McpReadRequiredField(this, Socket, RequestId, Payload, TEXT("tag"), TagValue))
     return true;
-  }
 
   // Security: Validate tag format - reject path traversal attempts
   if (TagValue.Contains(TEXT("..")) || TagValue.Contains(TEXT("\\")) || TagValue.Contains(TEXT("/"))) {

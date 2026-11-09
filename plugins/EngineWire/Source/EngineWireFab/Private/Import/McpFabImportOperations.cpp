@@ -179,19 +179,6 @@ bool IsCancelRequested(const FString& OperationId)
 	return Op != nullptr && Op->bCancelRequested;
 }
 
-bool FindRunning(const FString& CacheLocation, FMcpFabImportStatus& OutStatus)
-{
-	for (int32 Index = Operations().Num() - 1; Index >= 0; --Index)
-	{
-		if (IsRunning(Operations()[Index]))
-		{
-			Describe(Operations()[Index], CacheLocation, OutStatus);
-			return true;
-		}
-	}
-	return false;
-}
-
 bool FindOpenByListing(const FString& ListingId, const FString& CacheLocation, FMcpFabImportStatus& OutStatus)
 {
 	for (int32 Index = Operations().Num() - 1; Index >= 0; --Index)

@@ -69,9 +69,14 @@ void ApplyAudioComponentOptions(UAudioComponent* AudioComp, const TSharedPtr<FJs
 bool LoadOptionalAudioSettings(const TSharedPtr<FJsonObject>& Payload, USoundAttenuation*& OutAttenuation, USoundConcurrency*& OutConcurrency, FString& OutError);
 // The 2D sounds play_sound started; stop_sound, pause_sound and resume_sound act on them.
 TArray<TWeakObjectPtr<UAudioComponent>>& McpPreviewSounds();
+// A sound, mix or class by path (/Game or /Engine) or by bare asset name under /Game; null when none is found.
 USoundBase* ResolveSoundAsset(const FString& SoundPath);
 USoundMix* ResolveSoundMix(const FString& MixPath);
 USoundClass* ResolveSoundClass(const FString& ClassPath);
+// The payload's soundPath through ResolveSoundAsset; null after the reply (INVALID_ARGUMENT when it is missing,
+// ASSET_NOT_FOUND when nothing resolves).
+USoundBase* LoadSoundOrReply(UEngineWireSubsystem* Self, TSharedPtr<FMcpBridgeWebSocket> RequestingSocket,
+                             const FString& RequestId, const TSharedPtr<FJsonObject>& Payload);
 // The world whose sound is heard: a running game's while one plays (its audio device is the active one and the
 // editor world's is muted), else the editor's.
 inline UWorld* McpAudibleWorld()

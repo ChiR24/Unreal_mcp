@@ -130,7 +130,6 @@ public:
 	/** Distinct sorted projections used by discovery filters and guidance. */
 	TArray<FString> GetParents() const;
 	TArray<FString> GetDomains() const;
-	TArray<FString> GetFamilies() const;
 
 	/** Records for one parent tool, ordered by canonical id. */
 	TArray<const FMcpCapabilityRecord*> GetRecordsForParent(const FString& Parent) const;

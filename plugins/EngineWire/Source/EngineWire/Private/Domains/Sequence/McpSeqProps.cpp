@@ -17,23 +17,12 @@ bool UEngineWireSubsystem::HandleSequenceSetProperties(
     TSharedPtr<FMcpBridgeWebSocket> Socket) {
   TSharedPtr<FJsonObject> LocalPayload =
       Payload.IsValid() ? Payload : McpHandlerUtils::CreateResultObject();
-  FString SeqPath = ResolveSequencePath(LocalPayload);
-  if (SeqPath.IsEmpty()) {
-    SendAutomationResponse(
-        Socket, RequestId, false,
-        TEXT("sequence_set_properties requires a sequence path"), nullptr,
-        TEXT("INVALID_SEQUENCE"));
-    return true;
-  }
-
-  TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
-  UObject *SeqObj = McpLoadAsset(SeqPath);
+  FString SeqPath;
+  UObject *SeqObj = McpSequence::LoadAssetOrReply(this, RequestId, Socket, LocalPayload, TEXT("sequence_set_properties"), SeqPath);
   if (!SeqObj) {
-    SendAutomationResponse(Socket, RequestId, false,
-                                      TEXT("Sequence not found"), nullptr,
-                                      TEXT("INVALID_SEQUENCE"));
     return true;
   }
+  TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
 
   if (ULevelSequence *LevelSeq = Cast<ULevelSequence>(SeqObj)) {
     if (UMovieScene *MovieScene = LevelSeq->GetMovieScene()) {
@@ -166,21 +155,12 @@ bool UEngineWireSubsystem::HandleSequenceGetProperties(
     TSharedPtr<FMcpBridgeWebSocket> Socket) {
   TSharedPtr<FJsonObject> LocalPayload =
       Payload.IsValid() ? Payload : McpHandlerUtils::CreateResultObject();
-  FString SeqPath = ResolveSequencePath(LocalPayload);
-  if (SeqPath.IsEmpty()) {
-    SendAutomationResponse(
-        Socket, RequestId, false,
-        TEXT("sequence_get_properties requires a sequence path"), nullptr,
-        TEXT("INVALID_SEQUENCE"));
+  FString SeqPath;
+  UObject *SeqObj = McpSequence::LoadAssetOrReply(this, RequestId, Socket, LocalPayload, TEXT("sequence_get_properties"), SeqPath);
+  if (!SeqObj) {
     return true;
   }
   TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
-  UObject *SeqObj = McpLoadAsset(SeqPath);
-  if (!SeqObj) {
-    SendAutomationResponse(Socket, RequestId, false, TEXT("Sequence not found"),
-                           nullptr, TEXT("INVALID_SEQUENCE"));
-    return true;
-  }
 
   if (ULevelSequence *LevelSeq = Cast<ULevelSequence>(SeqObj)) {
     if (UMovieScene *MovieScene = LevelSeq->GetMovieScene()) {

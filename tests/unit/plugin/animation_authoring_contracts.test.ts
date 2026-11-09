@@ -20,8 +20,8 @@ const code = (...segments: readonly string[]): string =>
   readFileSync(join(DOMAINS, ...segments), 'utf8').replace(/\/\*[\s\S]*?\*\//gu, ' ').replace(/\/\/[^\n]*/gu, ' ');
 const compact = (source: string): string => source.split(/\s+/u).join(' ');
 
-const handler = (): string => code('AnimationAuthoring', 'McpAnimBPNodeValues.cpp');
-const lookup = (): string => code('Animation', 'Blueprints', 'McpAnimGraphNodeLookup.cpp');
+const handler = (): string => code('AnimationAuthoring', 'Blueprints', 'McpAnimBPNodeValues.cpp');
+const lookup = (): string => code('AnimationAuthoring', 'Blueprints', 'McpAnimGraphNodeLookup.cpp');
 
 describe('set_anim_graph_node_value finds the node it was handed', () => {
   it('looks in the AnimGraph and every graph under it, where a state\'s Sequence Player lives', () => {

@@ -12,8 +12,6 @@ public:
   static void FinalizeBlueprintSCSChange(UBlueprint *Blueprint,
                                          bool &bOutCompiled, bool &bOutSaved);
 
-  static TSharedPtr<FJsonObject> GetBlueprintSCS(const FString &BlueprintPath);
-
   static TSharedPtr<FJsonObject>
   AddSCSComponent(const FString &BlueprintPath, const FString &ComponentClass,
                   const FString &ComponentName,

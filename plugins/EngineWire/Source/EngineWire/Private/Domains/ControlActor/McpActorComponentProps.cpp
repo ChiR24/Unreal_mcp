@@ -202,12 +202,8 @@ bool UEngineWireSubsystem::HandleControlActorSetComponentProperties(
   }
 
   FString ComponentName;
-  Payload->TryGetStringField(TEXT("componentName"), ComponentName);
-  if (ComponentName.IsEmpty()) {
-    SendStandardErrorResponse(this, Socket, RequestId, TEXT("INVALID_ARGUMENT"),
-                              TEXT("componentName required"), nullptr);
+  if (!McpReadRequiredField(this, Socket, RequestId, Payload, TEXT("componentName"), ComponentName))
     return true;
-  }
 
   TSharedPtr<FJsonObject> PropertiesObject;
   const TSharedPtr<FJsonObject> *PropertiesPtr = nullptr;

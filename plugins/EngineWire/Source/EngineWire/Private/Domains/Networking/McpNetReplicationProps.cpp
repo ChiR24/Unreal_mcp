@@ -150,29 +150,19 @@ bool HandleConfigureNetUpdateFrequency(FNetworkingActionContext& Context)
     double NetUpdateFrequency = GetJsonNumberField(Payload, TEXT("netUpdateFrequency"), 100.0);
     double MinNetUpdateFrequency = GetJsonNumberField(Payload, TEXT("minNetUpdateFrequency"), 2.0);
 
-    UBlueprint* Blueprint = LoadBlueprintOrReply(Context, BlueprintPath);
-    if (!Blueprint)
-    {
-        return true;
-    }
-
-    // A Blueprint whose class never compiled has no defaults to write; the edit used to be skipped and reported.
-    AActor* CDO = Blueprint->GeneratedClass ? Cast<AActor>(Blueprint->GeneratedClass->GetDefaultObject()) : nullptr;
+    UBlueprint* Blueprint = nullptr;
+    AActor* CDO = LoadActorDefaultsOrReply(Context, BlueprintPath, Blueprint);
     if (!CDO)
     {
-        Context.Bridge.SendAutomationError(Context.RequestingSocket, Context.RequestId, TEXT("The Blueprint has no compiled Actor class to configure; compile it first."), TEXT("NOT_SUPPORTED"));
         return true;
     }
-    if (CDO)
-    {
 #if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 5
-        CDO->SetNetUpdateFrequency(static_cast<float>(NetUpdateFrequency));
-        CDO->SetMinNetUpdateFrequency(static_cast<float>(MinNetUpdateFrequency));
+    CDO->SetNetUpdateFrequency(static_cast<float>(NetUpdateFrequency));
+    CDO->SetMinNetUpdateFrequency(static_cast<float>(MinNetUpdateFrequency));
 #else
-        CDO->NetUpdateFrequency = static_cast<float>(NetUpdateFrequency);
-        CDO->MinNetUpdateFrequency = static_cast<float>(MinNetUpdateFrequency);
+    CDO->NetUpdateFrequency = static_cast<float>(NetUpdateFrequency);
+    CDO->MinNetUpdateFrequency = static_cast<float>(MinNetUpdateFrequency);
 #endif
-    }
 
     return SaveBlueprintAndReply(Context, Blueprint, FString::Printf(TEXT("Net update frequency set to %.1f (min: %.1f)"), NetUpdateFrequency, MinNetUpdateFrequency), TEXT("Net update frequency configured"));
 }

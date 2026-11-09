@@ -4,7 +4,7 @@
 
 #include "Domains/AssetWorkflow/DataRegistries/McpDataRegistries.h"
 
-#include "Domains/AssetWorkflow/DataTables/Shared.h"
+#include "Domains/AssetWorkflow/DataTables/McpAssetDataTableShared.h"
 #include "Dom/JsonObject.h"
 #include "Engine/CurveTable.h"
 #include "Engine/DataTable.h"

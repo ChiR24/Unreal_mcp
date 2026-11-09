@@ -29,11 +29,8 @@ bool UEngineWireSubsystem::HandleControlEditorAction(
   }
   const FString LowerSub = SubAction.ToLower();
 
-  if (!GEditor) {
-    SendStandardErrorResponse(this, RequestingSocket, RequestId, TEXT("EDITOR_NOT_AVAILABLE"),
-                              TEXT("Editor not available"), nullptr);
+  if (!McpRequireEditor(this, RequestingSocket, RequestId))
     return true;
-  }
 
   if (LowerSub == TEXT("play"))
     return HandleControlEditorPlay(RequestId, Payload, RequestingSocket);

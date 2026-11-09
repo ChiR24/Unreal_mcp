@@ -16,11 +16,8 @@ bool HandleInventoryCraftingStationActions(UEngineWireSubsystem& Bridge, const F
       return true;
     }
 
-    FString PackageError;
-    FString PackageCode;
-    UPackage* Package = CreateInventoryAssetPackage(Path, Name, PackageError, PackageCode);
+    UPackage* Package = CreateInventoryAssetPackage(Bridge, RequestId, RequestingSocket, Path, Name);
     if (!Package) {
-      Bridge.SendAutomationError(RequestingSocket, RequestId, PackageError, PackageCode);
       return true;
     }
 

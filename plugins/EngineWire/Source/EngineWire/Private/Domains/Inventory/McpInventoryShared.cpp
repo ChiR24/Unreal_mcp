@@ -2,20 +2,23 @@
 
 #include "Core/Compatibility/McpVersionCompatibility.h"
 
-UPackage* CreateInventoryAssetPackage(const FString& Path, const FString& Name, FString& OutError, FString& OutCode)
+UPackage* CreateInventoryAssetPackage(UEngineWireSubsystem& Bridge, const FString& RequestId,
+                                      TSharedPtr<FMcpBridgeWebSocket> RequestingSocket, const FString& Path,
+                                      const FString& Name)
 {
   FString PackageName;
+  FString Error;
   const FString SanitizedName = SanitizeAssetName(Name);
   const FString Folder = Path.IsEmpty() ? FString(TEXT("/Game/Items")) : Path;
-  if (!ValidateAssetCreationPath(Folder, SanitizedName, PackageName, OutError)) {
-    OutCode = TEXT("PACKAGE_CREATE_FAILED");
+  if (!ValidateAssetCreationPath(Folder, SanitizedName, PackageName, Error)) {
+    Bridge.SendAutomationError(RequestingSocket, RequestId, Error, TEXT("PACKAGE_CREATE_FAILED"));
     return nullptr;
   }
   // CreatePackage hands back a package already holding an asset, and the NewObject or factory after it replaced
   // that asset (its entries, ingredients and fields gone) or, for another class, brought the editor down.
   if (McpAssetExists(PackageName) || FindObject<UObject>(nullptr, *(PackageName + TEXT(".") + SanitizedName))) {
-    OutError = FString::Printf(TEXT("%s already exists; pick another name or folder, or change it with the configure actions. Nothing was created."), *PackageName);
-    OutCode = TEXT("ASSET_ALREADY_EXISTS");
+    Bridge.SendAutomationError(RequestingSocket, RequestId, FString::Printf(TEXT("%s already exists; pick another name or folder, or change it with the configure actions. Nothing was created."), *PackageName),
+                               TEXT("ASSET_ALREADY_EXISTS"));
     return nullptr;
   }
   return CreatePackage(*PackageName);

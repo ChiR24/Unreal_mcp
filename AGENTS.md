@@ -16,7 +16,7 @@ Area-specific guidance lives in nested `AGENTS.md` files (see **AREA GUIDES** be
 |   `-- utils/                   # commands (console policy rules), config, logging, serialization, validation
 |-- plugins/EngineWire/ # the ONLY plugin; editor-only UE (bridge + native MCP + Fab, lint and game feature adapters)
 |   |-- Source/EngineWire/{Public (22), Private/}
-|   |   Private/ (source files, subfolders included, 2026-10-29): Core(41) Domains(1474 / 58 domains) Foundation(142) MCP(162) Safety(19) Transport(23) Tests(40) UI(2)
+|   |   Private/ (source files, subfolders included, 2026-11-09): Core(42) Domains(1515 / 56 domains) Foundation(149) MCP(164) Safety(20) Transport(23) Tests(43) UI(2)
 |   |-- Source/EngineWireFab/     # Fab asset-store adapter module (delay-loaded, optional)
 |   |-- Source/EngineWireValidation/ # lint_blueprint's rules as a Data Validation validator
 |   `-- Source/EngineWireGameFeatures/ # game feature plugins for system_control (loaded where GameFeatures is on)
@@ -117,7 +117,7 @@ Every automation request is gated **before it reaches the editor queue**.
 - Editing generated artifacts (`*.generated.*`, `capabilities/generated/`, plugin `MCP/Generated/`, `MCP/Tools/McpGeneratedParentRegistry.cpp`): edit the records, regenerate.
 - A record param the C++ never reads, or a read param the record never declares: the strict gateway refuses undeclared params.
 - AGENTS files in `dist/`, `build/`, `coverage/`, `tests/reports/`, `tmp/`, plugin `Binaries/`/`Intermediate/`.
-- **Folder budget** (≤25 source files per folder under `Private/`, counted 2026-10-26): at 25 — `MCP/Gateway`, `MCP/Transport`, `MCP/Execute`, `Foundation`, `Domains/ControlEditor`, `Domains/ControlActor`, `Domains/Environment/Inspection`, `Domains/BlueprintGraph`; at 24 — `MCP/Generated`, `Tests`, `Domains/Sequence`, `Domains/LevelStructure`, `Domains/AssetWorkflow/Operations`, `Domains/AnimationAuthoring`, `Domains/ControlActor/Placement`. Split into a subdirectory before adding.
+- **Folder budget** (≤25 source files per folder under `Private/`, counted 2026-11-09): at 25 — `MCP/Gateway`, `MCP/Transport`, `MCP/Execute`, `Foundation`, `Tests`, `Domains/ControlEditor`, `Domains/ControlActor`, `Domains/ControlActor/Placement`, `Domains/BlueprintGraph`, `Domains/BlueprintGraph/Code`; at 24 — `MCP/Generated`, `Domains/Sequence`, `Domains/Sequence/Planner`, `Domains/LevelStructure`, `Domains/AssetWorkflow/Operations`. Split into a subdirectory before adding.
 - **Source-contract gates** (Vitest reads C++ text): 250 pure-line ceiling per plugin file; ≤25 files per folder; no split artifacts; every local `Mcp*` include resolves; no `UPackage::SavePackage`; constant-time token compare; no non-loopback bind without `bRequireCapabilityToken`; no browser-origin WS upgrade; `/Script` reflection targets refused; identity redaction on replies; no raw Python in logs.
 - **Lint**: `no-explicit-any` and `no-console` are `error` for `src/**`; `scripts/` and `tests/` are exempt, and `logger.ts` is the sanctioned console sink.
 - **Never `localeCompare`** for ordering: use `src/utils/serialization/ordering.ts` so generated shards agree byte-for-byte.
@@ -163,7 +163,7 @@ npx vitest run tests/unit/<file>.test.ts
 **Unreal plugin** (all under `plugins/EngineWire/`)
 - `AGENTS.md` — plugin scope, cross-surface rules, packaging.
 - `Source/EngineWire/Private/Core/AGENTS.md` — request queue, game-thread dispatch, the handler table.
-- `.../Private/Domains/AGENTS.md` — 58 domain implementations + dispatch contract.
+- `.../Private/Domains/AGENTS.md` — 56 domain implementations + dispatch contract.
 - `.../Private/Domains/BlueprintGraph/Behaviour/AGENTS.md` — `McpBlueprintBehaviour::Author`: gameplay logic written into Blueprint assets from recipe files.
 - `.../Private/Foundation/AGENTS.md` — reflection, handler utils, shared primitives.
 - `.../Private/Safety/AGENTS.md` — safe wrappers for hazardous editor operations.

@@ -22,20 +22,12 @@ bool UEngineWireSubsystem::HandleControlActorCreateSnapshot(
     const FString &RequestId, const TSharedPtr<FJsonObject> &Payload,
     TSharedPtr<FMcpBridgeWebSocket> Socket) {
   FString TargetName;
-  Payload->TryGetStringField(TEXT("actorName"), TargetName);
-  if (TargetName.IsEmpty()) {
-    SendStandardErrorResponse(this, Socket, RequestId, TEXT("INVALID_ARGUMENT"),
-                              TEXT("actorName required"), nullptr);
+  if (!McpReadRequiredField(this, Socket, RequestId, Payload, TEXT("actorName"), TargetName))
     return true;
-  }
 
   FString SnapshotName;
-  Payload->TryGetStringField(TEXT("snapshotName"), SnapshotName);
-  if (SnapshotName.IsEmpty()) {
-    SendStandardErrorResponse(this, Socket, RequestId, TEXT("INVALID_ARGUMENT"),
-                              TEXT("snapshotName required"), nullptr);
+  if (!McpReadRequiredField(this, Socket, RequestId, Payload, TEXT("snapshotName"), SnapshotName))
     return true;
-  }
 
   AActor *Found = FindActorByName(TargetName);
   if (!Found) {
@@ -67,20 +59,12 @@ bool UEngineWireSubsystem::HandleControlActorRestoreSnapshot(
     const FString &RequestId, const TSharedPtr<FJsonObject> &Payload,
     TSharedPtr<FMcpBridgeWebSocket> Socket) {
   FString TargetName;
-  Payload->TryGetStringField(TEXT("actorName"), TargetName);
-  if (TargetName.IsEmpty()) {
-    SendStandardErrorResponse(this, Socket, RequestId, TEXT("INVALID_ARGUMENT"),
-                              TEXT("actorName required"), nullptr);
+  if (!McpReadRequiredField(this, Socket, RequestId, Payload, TEXT("actorName"), TargetName))
     return true;
-  }
 
   FString SnapshotName;
-  Payload->TryGetStringField(TEXT("snapshotName"), SnapshotName);
-  if (SnapshotName.IsEmpty()) {
-    SendStandardErrorResponse(this, Socket, RequestId, TEXT("INVALID_ARGUMENT"),
-                              TEXT("snapshotName required"), nullptr);
+  if (!McpReadRequiredField(this, Socket, RequestId, Payload, TEXT("snapshotName"), SnapshotName))
     return true;
-  }
 
   AActor *Found = FindActorByName(TargetName);
   if (!Found) {
