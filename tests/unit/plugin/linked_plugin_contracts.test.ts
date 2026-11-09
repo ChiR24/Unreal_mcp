@@ -19,3 +19,16 @@ describe('plugins whose modules EngineWire links', () => {
     expect(descriptor.Plugins.find((each) => each.Name === name)).toEqual({ Name: name, Enabled: true });
   });
 });
+
+// SmartObjects, required above, requires these plugins itself. The editor's plugin walk records a plugin name the first
+// time any reference names it, before it drops an optional reference the engine's own build lacks, so an optional
+// reference from EngineWire hides the name from SmartObjects' required one. UE 5.5's build lacks PropertyBindingUtils:
+// in a Blueprint-only project it stayed off and the editor stopped with "Plugin 'SmartObjects' failed to load because
+// module 'SmartObjectsModule' could not be loaded". SmartObjects turns each of them on where it needs them.
+describe('plugins SmartObjects requires', () => {
+  const descriptor = JSON.parse(readFileSync(join('plugins', 'EngineWire', 'EngineWire.uplugin'), 'utf8')) as { readonly Plugins: readonly PluginReference[] };
+
+  it.each(['GameplayAbilities', 'TargetingSystem', 'WorldConditions', 'PropertyAccessEditor', 'PropertyBindingUtils'])('never references %s as optional', (name) => {
+    expect(descriptor.Plugins.find((each) => each.Name === name)?.Optional).toBeUndefined();
+  });
+});
