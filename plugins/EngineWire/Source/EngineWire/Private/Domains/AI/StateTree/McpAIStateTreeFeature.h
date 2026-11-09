@@ -17,6 +17,7 @@
 #include "StateTreeEditingSubsystem.h"
 #else
 #include "CoreGlobals.h"
+#include "HAL/PlatformProcess.h"
 #include "HAL/PlatformTLS.h"
 #include "Misc/OutputDeviceRedirector.h"
 #include "StateTreeDelegates.h"
@@ -100,6 +101,29 @@ inline UClass* McpFindStateTreeSchemaClass(const FString& Schema, FString& OutEr
     return SchemaClass;
 }
 
+#if !(ENGINE_MAJOR_VERSION > 5 || (ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 5))
+// The compile request delegate is data that StateTreeModule exports. Windows delay-loads that DLL (StateTree is an
+// optional plugin), and no data can be imported from a delay-loaded DLL (LNK1194), so there the delegate's address is
+// read from the DLL's export table. Other platforms do not delay-load and take it directly. Null when it is not there.
+inline UE::StateTree::Delegates::FOnRequestCompile* McpStateTreeOnRequestCompile()
+{
+#if PLATFORM_WINDOWS && !IS_MONOLITHIC
+    const FString File = FModuleManager::Get().GetModuleFilename(TEXT("StateTreeModule"));
+    void* const Dll = File.IsEmpty() ? nullptr : FPlatformProcess::GetDllHandle(*File);
+    if (!Dll)
+    {
+        return nullptr;
+    }
+    void* const Export = FPlatformProcess::GetDllExport(Dll,
+        TEXT("?OnRequestCompile@Delegates@StateTree@UE@@3V?$TDelegate@$$A6A_NAEAVUStateTree@@@ZUFDefaultDelegateUserPolicy@@@@A"));
+    FPlatformProcess::FreeDllHandle(Dll); // the module manager holds the module loaded
+    return static_cast<UE::StateTree::Delegates::FOnRequestCompile*>(Export);
+#else
+    return &UE::StateTree::Delegates::OnRequestCompile;
+#endif
+}
+#endif
+
 // The tree compiled from its editor data, as the editor's Compile button does: through the editing subsystem from 5.5,
 // through the editor module's compile request before; both validate the data first and stamp the hash that marks the
 // tree up to date. An uncompiled tree does not run; edits used to reply "recompile the asset in the StateTree editor".
@@ -142,13 +166,14 @@ inline bool McpCompileStateTree(UStateTree* Tree, TArray<FString>& OutMessages)
         }
     };
     FModuleManager::Get().LoadModule(TEXT("StateTreeEditorModule"));
-    if (!UE::StateTree::Delegates::OnRequestCompile.IsBound())
+    UE::StateTree::Delegates::FOnRequestCompile* const OnRequestCompile = McpStateTreeOnRequestCompile();
+    if (!OnRequestCompile || !OnRequestCompile->IsBound())
     {
         OutMessages.Add(TEXT("The StateTree editor module is not loaded, so the tree was not compiled."));
         return false;
     }
     FCapture Capture(OutMessages);
-    return UE::StateTree::Delegates::OnRequestCompile.Execute(*Tree);
+    return OnRequestCompile->Execute(*Tree);
 #endif
 }
 

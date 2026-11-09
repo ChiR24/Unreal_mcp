@@ -4334,8 +4334,12 @@ describe('AI and navigation writes say what they did', () => {
     expect(feature).not.toContain('__has_include("Components/StateTreeComponentSchema.h")');
     expect(feature).toContain('UStateTreeEditingSubsystem::CompileStateTree(Tree, Log)');
     // Before 5.5 the editor module compiles: a compiler object here put its destructor (and its call into StructUtils,
-    // which the plugin does not link) into the plugin on Mac.
-    expect(feature).toContain('UE::StateTree::Delegates::OnRequestCompile.Execute(*Tree)');
+    // which the plugin does not link) into the plugin on Mac. Its compile request delegate is data that StateTreeModule
+    // exports, and Windows delay-loads that DLL, which no data can be imported from (LNK1194 on UE 5.3 and 5.4): there
+    // the delegate's address comes from the DLL's export table.
+    expect(feature).toContain('OnRequestCompile->Execute(*Tree)');
+    expect(feature).toContain('FPlatformProcess::GetDllExport(Dll,');
+    expect(feature).not.toContain('UE::StateTree::Delegates::OnRequestCompile.');
     expect(feature).not.toContain('FStateTreeCompiler Compiler(');
     const assets = code('AI', 'StateTree', 'McpAIStateTreeAssets.cpp');
     expect(assets).toContain('CreateAIAssetInPackage<UStateTree>(');
