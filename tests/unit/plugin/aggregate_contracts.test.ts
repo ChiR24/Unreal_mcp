@@ -59,4 +59,17 @@ describe('options.aggregate', () => {
       /if \(!Field\.IsValid\(\) && Object && GroupBy == TEXT\("label"\)\)\s*\{\s*Field = \(\*Object\)->TryGetField\(TEXT\("name"\)\);/u,
     );
   });
+
+  // A class find's rows carried no class, so counting one by class answered a single "(none)" group and no way on.
+  it('groups by class on rows that name it class, classPath or className, and says when no row has the field', () => {
+    const aggregate = read('Execute', 'Request', 'McpExecuteAggregate.cpp');
+    expect(aggregate).toMatch(
+      /if \(!Field\.IsValid\(\) && Object && GroupBy == TEXT\("class"\)\)\s*\{\s*Field = \(\*Object\)->TryGetField\(TEXT\("classPath"\)\);\s*Field = Field\.IsValid\(\) \? Field : \(\*Object\)->TryGetField\(TEXT\("className"\)\);/u,
+    );
+    expect(aggregate).toContain('if (Groups.Num() == 1 && Groups[0].Key == TEXT("(none)"))');
+    expect(aggregate).toContain('const FString Fields = CountableFields((*Items)[0]);');
+    expect(read('..', 'Domains', 'ControlActor', 'McpActorQueryFindByClass.cpp')).toContain(
+      'ActorObj->SetStringField(TEXT("class"), Actor->GetClass() ? Actor->GetClass()->GetPathName() : TEXT(""));',
+    );
+  });
 });

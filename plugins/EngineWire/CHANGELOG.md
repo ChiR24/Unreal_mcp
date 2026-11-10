@@ -6,7 +6,8 @@ All notable changes to the EngineWire plugin (formerly McpAutomationBridge) will
 
 ## [Unreleased]
 
-_Nothing yet._
+### Fixed
+- **Counting by class**: `find_by_class` rows carry `class`; `options.aggregate` grouped by `class` reads a row's `classPath` or `className` where it has no `class`, and a `groupBy` no row carries adds a `note` naming the fields to count by.
 
 ## [0.6.1-beta-b] - 2026-11-08
 

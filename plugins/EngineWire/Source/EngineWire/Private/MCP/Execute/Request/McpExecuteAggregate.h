@@ -21,7 +21,8 @@ FString FingerprintPart(const TSharedPtr<FJsonObject>& Options);
  * else the largest at the top) and returns the receipt's aggregate block: field, total, and with groupBy the groups
  * (value, count, sample) most common first, capped at 50 (otherGroups counts the rest), or without it a sample of the
  * items. An item's sample is its handle (name, label, actorName, assetPath, path or id), else the item. A result with no
- * such array is left as it is and the block says why (note).
+ * such array is left as it is and the block says why (note). Grouped by class, an item counts by its classPath or
+ * className when it has no class; a groupBy no item carries is said in note, with the fields an item can be counted by.
  */
 TSharedPtr<FJsonObject> Apply(const TSharedPtr<FJsonObject>& Spec, const TSharedPtr<FJsonObject>& OutputSchema, TSharedPtr<FJsonObject>& InOutResult);
 } // namespace McpExecuteAggregate

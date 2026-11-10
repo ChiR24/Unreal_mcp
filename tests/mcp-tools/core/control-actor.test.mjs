@@ -387,6 +387,8 @@ const testCases = [
   { scenario: 'INFO: find_by_name near miss offers similar labels', toolName: 'control_actor', arguments: { action: 'find_by_name', name: MAIN_ACTOR.toLowerCase().replace(/_/g, ' ') }, expected: 'success', assertions: [{ path: 'structuredContent.result.count', equals: 0, label: 'spaces for underscores match nothing' }, { path: 'structuredContent.result.similar', minLength: 1, label: 'the real label is offered' }] },
   { scenario: 'INFO: find_actors_by_name', toolName: 'control_actor', arguments: { action: 'find_actors_by_name', name: MAIN_ACTOR }, expected: 'success' },
   { scenario: 'INFO: find_by_class', toolName: 'control_actor', arguments: { action: 'find_by_class', className: 'StaticMeshActor' }, expected: 'success' },
+  // A class find's rows carried no class: counted by class, every actor fell into one "(none)" group.
+  { scenario: 'INFO: find_by_class counted by class', toolName: 'control_actor', arguments: { action: 'find_by_class', className: 'StaticMeshActor' }, options: { aggregate: { groupBy: 'class' } }, expected: 'success', assertions: [{ path: 'structuredContent.aggregate.groups.0.value', includes: '/', label: 'the group is a class path, not (none)' }] },
   { scenario: 'INFO: find_by_class via class alias', toolName: 'control_actor', arguments: { action: 'find_by_class', class: 'StaticMeshActor' }, expected: 'success' },
   // A Blueprint named by its short class name used to answer CLASS_NOT_FOUND.
   { scenario: 'INFO: find_by_class with a short Blueprint class name', toolName: 'control_actor', arguments: { action: 'find_by_class', className: `${BP_NAME}_C` }, expected: 'success' },

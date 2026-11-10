@@ -88,6 +88,12 @@ FString GroupValue(const TSharedPtr<FJsonValue>& Item, const FString& GroupBy)
     {
         Field = (*Object)->TryGetField(TEXT("name"));
     }
+    // An actor row names its class "class", an asset row "classPath", others "className": class counts by the one a row has.
+    if (!Field.IsValid() && Object && GroupBy == TEXT("class"))
+    {
+        Field = (*Object)->TryGetField(TEXT("classPath"));
+        Field = Field.IsValid() ? Field : (*Object)->TryGetField(TEXT("className"));
+    }
     if (!Field.IsValid() || Field->Type == EJson::Null)
     {
         return TEXT("(none)");
@@ -98,6 +104,25 @@ FString GroupValue(const TSharedPtr<FJsonValue>& Item, const FString& GroupBy)
         return GroupBy == TEXT("label") || GroupBy == TEXT("name") || GroupBy == TEXT("actorName") ? LabelStem(Text) : Text;
     }
     return Field->Type == EJson::Boolean ? (Field->AsBool() ? TEXT("true") : TEXT("false")) : TEXT("(other)");
+}
+
+// What an item can be counted by: its text and true/false fields, in the order the item holds them.
+FString CountableFields(const TSharedPtr<FJsonValue>& Item)
+{
+    TArray<FString> Names;
+    const TSharedPtr<FJsonObject>* Object = nullptr;
+    if (Item.IsValid() && Item->TryGetObject(Object) && Object)
+    {
+        for (const auto& Entry : (*Object)->Values)
+        {
+            const FString Key(*Entry.Key); // 5.8 keys are not FString
+            if (Entry.Value.IsValid() && (Entry.Value->Type == EJson::String || Entry.Value->Type == EJson::Boolean))
+            {
+                Names.Add(Key);
+            }
+        }
+    }
+    return FString::Join(Names, TEXT(", "));
 }
 } // namespace
 
@@ -207,6 +232,17 @@ TSharedPtr<FJsonObject> Apply(const TSharedPtr<FJsonObject>& Spec, const TShared
     else
     {
         Block->SetStringField(TEXT("groupBy"), GroupBy);
+        // A groupBy no item carries answered one "(none)" group and nothing to act on, the list being gone from the reply
+        // by then: the note names what an item can be counted by.
+        if (Groups.Num() == 1 && Groups[0].Key == TEXT("(none)"))
+        {
+            const FString Fields = CountableFields((*Items)[0]);
+            FString Note;
+            Block->TryGetStringField(TEXT("note"), Note);
+            Block->SetStringField(TEXT("note"), (Note.IsEmpty() ? FString() : Note + TEXT(" ")) +
+                FString::Printf(TEXT("No item has a '%s' value, so each counts as (none)."), *GroupBy) +
+                (Fields.IsEmpty() ? FString() : FString::Printf(TEXT(" An item's fields to count by: %s."), *Fields)));
+        }
         TArray<TSharedPtr<FJsonValue>> Rows;
         for (int32 Index = 0; Index < Order.Num() && Index < McpAggregateMaxGroups; ++Index)
         {

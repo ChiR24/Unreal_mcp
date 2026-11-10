@@ -1199,4 +1199,6 @@ export const PLAIN_PROBE: readonly PlainProbeCase[] = [
   { query: 'fuzz a blueprint', accepted: ['control_editor.fuzz_blueprint'] },
   { query: 'call blueprint functions with edge case inputs', accepted: ['control_editor.fuzz_blueprint'] },
   { query: 'which inputs break this blueprint function', accepted: ['control_editor.fuzz_blueprint'] },
+  { query: 'create material base color', accepted: ['material.create_material'] },
+  { query: 'create actor blueprint with static mesh component', accepted: ['blueprint.create'] },
 ];

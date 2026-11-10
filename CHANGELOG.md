@@ -9,7 +9,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## 🏷️ [Unreleased]
 
-_Nothing yet._
+<details>
+<summary><b>🔧 Fixed</b></summary>
+
+- **Search**: `create material base color` and `create actor blueprint with static mesh component` rank their create action first, and each summary names the action that comes next.
+- **Counting by class**: `find_by_class` rows carry `class`, so `options.aggregate` with `groupBy: "class"` counts them by class instead of as one `(none)` group; a `groupBy` no row carries adds a `note` naming the fields to count by.
+
+</details>
 
 ---
 

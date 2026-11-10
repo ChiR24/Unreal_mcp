@@ -1,5 +1,5 @@
 {
-  "catalogRevision": "e01a3db0f92cb101",
+  "catalogRevision": "96d5cdf50b673525",
   "recordCount": 489,
   "records": [
     {
@@ -19909,6 +19909,7 @@
         "family": "lifecycle",
         "topics": [
           "create",
+          "static mesh component in a new blueprint",
           "new blueprint",
           "blueprint class",
           "actor blueprint",
@@ -19929,7 +19930,7 @@
           "idempotent create",
           "create if missing"
         ],
-        "summary": "Create a Blueprint asset, chosen by createMode (ensure checks first), named name in savePath (default /Game) and save it (saved). parentClass is a native class as /Script/Module.Class or a short name (Actor, Pawn, Character, PlayerController), or a Blueprint class path ending in _C; blueprintType Actor, Pawn, Character or FunctionLibrary stands in for a missing parentClass, and Interface without one makes a Blueprint Interface. A parent that resolves to nothing is CLASS_NOT_FOUND, naming classes of that name. properties sets class defaults, Component.Property and struct members by dotted path, reported as appliedProperties and failedProperties (the create stands either way). A Blueprint already at the path is answered with alreadyExists and left unchanged; one with another parent class is ASSET_ALREADY_EXISTS.",
+        "summary": "Create a Blueprint asset, chosen by createMode (ensure checks first), named name in savePath (default /Game) and save it (saved). parentClass is a native class as /Script/Module.Class or a short name (Actor, Pawn, Character, PlayerController), or a Blueprint class path ending in _C; blueprintType Actor, Pawn, Character or FunctionLibrary stands in for a missing parentClass, and Interface without one makes a Blueprint Interface. A parent that resolves to nothing is CLASS_NOT_FOUND, naming classes of that name. properties sets class defaults, Component.Property and struct members by dotted path, reported as appliedProperties and failedProperties (the create stands either way). A Blueprint already at the path is answered with alreadyExists and left unchanged; one with another parent class is ASSET_ALREADY_EXISTS. A new Blueprint gets its components from edit_scs.",
         "whenToUse": [
           "createMode=create: A new Blueprint of a known parent class is needed.",
           "createMode=create: A pickup or hazard is needed; its parts come from edit_scs, its logic from add_behaviour.",
@@ -20051,7 +20052,7 @@
       },
       "examples": [
         {
-          "title": "Create a Blueprint asset, chosen by createMode (ensure checks first), named name in savePath (default /Game) and save it (saved). parentClass is a native class as /Script/Module.Class or a short name (Actor, Pawn, Character, PlayerController), or a Blueprint class path ending in _C; blueprintType Actor, Pawn, Character or FunctionLibrary stands in for a missing parentClass, and Interface without one makes a Blueprint Interface. A parent that resolves to nothing is CLASS_NOT_FOUND, naming classes of that name. properties sets class defaults, Component.Property and struct members by dotted path, reported as appliedProperties and failedProperties (the create stands either way). A Blueprint already at the path is answered with alreadyExists and left unchanged; one with another parent class is ASSET_ALREADY_EXISTS.",
+          "title": "Create a Blueprint asset, chosen by createMode (ensure checks first), named name in savePath (default /Game) and save it (saved). parentClass is a native class as /Script/Module.Class or a short name (Actor, Pawn, Character, PlayerController), or a Blueprint class path ending in _C; blueprintType Actor, Pawn, Character or FunctionLibrary stands in for a missing parentClass, and Interface without one makes a Blueprint Interface. A parent that resolves to nothing is CLASS_NOT_FOUND, naming classes of that name. properties sets class defaults, Component.Property and struct members by dotted path, reported as appliedProperties and failedProperties (the create stands either way). A Blueprint already at the path is answered with alreadyExists and left unchanged; one with another parent class is ASSET_ALREADY_EXISTS. A new Blueprint gets its components from edit_scs.",
           "input": {
             "action": "create",
             "name": "BP_TestActor",
@@ -20135,7 +20136,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "83870dfb7d688319fb83fd01c8440eac40f8b7d9bd4eae4a3a95572a37d23976",
-        "content": "e0bef08cdb57dbbde4db0c204a9290d9b77daed2a0232acf6cca0462172c65c0"
+        "content": "ad2defc9eeda8852571bc569cea5d166114da6bf48ccf926c5c3c20f6dea7c49"
       }
     },
     {
@@ -42944,7 +42945,7 @@
           "actors showing a material",
           "actors with a material in a slot"
         ],
-        "summary": "Find actors by class, by name, by the static mesh they draw (mesh) or by a material in any of their slots (material), each with its location; the mesh and material finds name the matching components.",
+        "summary": "Find actors by class, by name, by the static mesh they draw (mesh) or by a material in any of their slots (material), each with its class and location; the mesh and material finds name the matching components.",
         "whenToUse": [
           "findBy=class: All instances of a class must be located.",
           "findBy=name: One or more actors must be located by name or substring.",
@@ -43010,7 +43011,7 @@
                 "mesh",
                 "material"
               ],
-              "description": "Which find variant to run.\nclass: Find the actors in the level of a class or any subclass of it (a short native name such as PointLight, /Script/Engine.PointLight, or a Blueprint asset path), each with name and path: the first limit (default 200), with truncated and totalCount when more match. A class that resolves to nothing is refused with CLASS_NOT_FOUND, naming assets of that name.\nname: Find the actors in the level whose label, object name or path contains a query (case-insensitive; a full object path is cut to its actor name), each with label, name, path and class: the first limit (default 200), with truncated and totalCount when more match. With no match, similar offers labels that match once case, separators and leading zeros are ignored.\nmesh: Find the actors in the level that draw a static mesh (instanced and foliage components included), each with the components that do.\nmaterial: Find the actors in the level with a component that uses a material in any slot, as an override or as its mesh's default, each with the components and slots that do."
+              "description": "Which find variant to run.\nclass: Find the actors in the level of a class or any subclass of it (a short native name such as PointLight, /Script/Engine.PointLight, or a Blueprint asset path), each with name, path and class: the first limit (default 200), with truncated and totalCount when more match. A class that resolves to nothing is refused with CLASS_NOT_FOUND, naming assets of that name.\nname: Find the actors in the level whose label, object name or path contains a query (case-insensitive; a full object path is cut to its actor name), each with label, name, path and class: the first limit (default 200), with truncated and totalCount when more match. With no match, similar offers labels that match once case, separators and leading zeros are ignored.\nmesh: Find the actors in the level that draw a static mesh (instanced and foliage components included), each with the components that do.\nmaterial: Find the actors in the level with a component that uses a material in any slot, as an override or as its mesh's default, each with the components and slots that do."
             }
           },
           "required": [
@@ -43110,7 +43111,7 @@
       },
       "examples": [
         {
-          "title": "Find actors by class, by name, by the static mesh they draw (mesh) or by a material in any of their slots (material), each with its location; the mesh and material finds name the matching components.",
+          "title": "Find actors by class, by name, by the static mesh they draw (mesh) or by a material in any of their slots (material), each with its class and location; the mesh and material finds name the matching components.",
           "input": {
             "action": "find",
             "className": "PointLight",
@@ -43221,8 +43222,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "f9e840e8fbbe190d914b94f35b848c02c590c02a43461652d2c0e20610c17a3c",
-        "content": "a61fb5f371ef52e8fce882282f9b240aeb550646c6a8e79fc95568622d87e26a"
+        "schema": "718da0279898f2a15ff6bed0862fd25b087360ee98502259f618e0766ca58241",
+        "content": "9c682a3b91d324a23a20bc11c5517e3f07b0bd5b654674854c9d9ac45b15d748"
       }
     },
     {
@@ -104372,6 +104373,7 @@
         "topics": [
           "create_material",
           "create material",
+          "material with a base color",
           "decal material",
           "landscape material",
           "post process material",
@@ -104392,7 +104394,7 @@
           "level wide material value",
           "make the floor or a surface shiny"
         ],
-        "summary": "Create a material asset: a standard material, a decal, landscape or post-process material, a material function, or a Material Parameter Collection (values every material reading it shares).",
+        "summary": "Create a material asset: a standard material, a decal, landscape or post-process material, a material function, or a Material Parameter Collection (values every material reading it shares). A new material has nothing wired in; add_material_node with nodeKind batch gives it a colour, textures and its other inputs in one call.",
         "whenToUse": [
           "kind=material: A mesh, surface or effect needs a shader of its own and no material asset exists for it yet.",
           "kind=material: A translucent, unlit or two-sided material is wanted from the start (materialDomain, blendMode, shadingModel, twoSided).",
@@ -104551,7 +104553,7 @@
       },
       "examples": [
         {
-          "title": "Create a material asset: a standard material, a decal, landscape or post-process material, a material function, or a Material Parameter Collection (values every material reading it shares).",
+          "title": "Create a material asset: a standard material, a decal, landscape or post-process material, a material function, or a Material Parameter Collection (values every material reading it shares). A new material has nothing wired in; add_material_node with nodeKind batch gives it a colour, textures and its other inputs in one call.",
           "input": {
             "name": "M_Base",
             "path": "/Game/Materials",
@@ -104647,7 +104649,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "9127677ceb3ce51d695ff7cd61a0e332e640260820484cbc0535628365c6a00d",
-        "content": "56375334def14e9ba1c43bdf700a2bb529996adf937cec934fe397a01186b4ab"
+        "content": "94274958fd118046317ee0e689c9810a7ce6b24ed183042bfc4f2fe22053612e"
       }
     },
     {

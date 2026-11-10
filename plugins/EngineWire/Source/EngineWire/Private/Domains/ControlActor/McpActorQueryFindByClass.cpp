@@ -71,6 +71,8 @@ bool UEngineWireSubsystem::HandleControlActorFindByClass(
           TSharedPtr<FJsonObject> ActorObj = McpHandlerUtils::CreateResultObject();
           ActorObj->SetStringField(TEXT("name"), McpActorRef(Actor));
           ActorObj->SetStringField(TEXT("path"), Actor->GetPathName());
+          // The class asked for matches its subclasses too, so each row says which one it is, as every other find's does.
+          ActorObj->SetStringField(TEXT("class"), Actor->GetClass() ? Actor->GetClass()->GetPathName() : TEXT(""));
           ActorObj->SetObjectField(TEXT("location"), McpHandlerUtils::VectorToJson(Actor->GetActorLocation()));
           ActorsArray.Add(MakeShared<FJsonValueObject>(ActorObj));
         }
