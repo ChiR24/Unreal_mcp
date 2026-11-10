@@ -1,5 +1,5 @@
 {
-  "catalogRevision": "96d5cdf50b673525",
+  "catalogRevision": "bdd7595a48d1d3e3",
   "recordCount": 489,
   "records": [
     {
@@ -19910,6 +19910,7 @@
         "topics": [
           "create",
           "static mesh component in a new blueprint",
+          "blueprint actor with a cube or sphere mesh",
           "new blueprint",
           "blueprint class",
           "actor blueprint",
@@ -20136,7 +20137,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "83870dfb7d688319fb83fd01c8440eac40f8b7d9bd4eae4a3a95572a37d23976",
-        "content": "ad2defc9eeda8852571bc569cea5d166114da6bf48ccf926c5c3c20f6dea7c49"
+        "content": "f9d219493fd7bdad52ac3e1ea3856a6ea43892a31a4144448779b5e26bdc097e"
       }
     },
     {
@@ -42617,10 +42618,13 @@
           "a blue or warmer light colour",
           "a light made smaller or reaching further",
           "make the cube spin or rotate",
+          "create component",
+          "create a component on an actor",
+          "create actor component",
           "add component to actor",
           "attach component to actor"
         ],
-        "summary": "Add a component to a placed actor (edit add: componentType, componentName, meshPath, properties; attached under its root, a light made Movable), remove one (remove), or set one or more of its properties (set_property, set_properties: a placed mesh's StaticMesh or OverrideMaterials, a light's Intensity or LightColor to turn on a light, dim it or make it brighter, a TextRender's Text), or make its lights flicker (flicker: speed and depth, enabled false stops it). remove takes the exact name, refused with COMPONENT_NOT_FOUND naming the nearest, and only a component added to this actor: one from its class or Blueprint, or its root, is COMPONENT_NOT_REMOVABLE (a Blueprint component comes out with edit_scs). Each is one undo step and leaves the level unsaved; while Play runs they change the playing copy.",
+        "summary": "Add a component to a placed actor (edit add creates it from componentType, componentName, meshPath and properties, attached under its root, a light made Movable), remove one (remove), or set one or more of its properties (set_property, set_properties: a placed mesh's StaticMesh or OverrideMaterials, a light's Intensity or LightColor to turn on a light, dim it or make it brighter, a TextRender's Text), or make its lights flicker (flicker: speed and depth, enabled false stops it). remove takes the exact name, refused with COMPONENT_NOT_FOUND naming the nearest, and only a component added to this actor: one from its class or Blueprint, or its root, is COMPONENT_NOT_REMOVABLE (a Blueprint component comes out with edit_scs). Each is one undo step and leaves the level unsaved; while Play runs they change the playing copy.",
         "whenToUse": [
           "edit=add: A component must be attached to an existing actor.",
           "edit=add: A placed actor must spin or travel by itself, like a platform: add a RotatingMovementComponent (properties RotationRate {pitch, yaw, roll} in degrees per second) or an InterpToMovementComponent (ControlPoints: two or more {PositionControlPoint {x, y, z}, bPositionIsRelative}, Duration in seconds, and BehaviourType PingPong or Loop: the default OneShot stops at the last point).",
@@ -42739,7 +42743,7 @@
       },
       "examples": [
         {
-          "title": "Add a component to a placed actor (edit add: componentType, componentName, meshPath, properties; attached under its root, a light made Movable), remove one (remove), or set one or more of its properties (set_property, set_properties: a placed mesh's StaticMesh or OverrideMaterials, a light's Intensity or LightColor to turn on a light, dim it or make it brighter, a TextRender's Text), or make its lights flicker (flicker: speed and depth, enabled false stops it). remove takes the exact name, refused with COMPONENT_NOT_FOUND naming the nearest, and only a component added to this actor: one from its class or Blueprint, or its root, is COMPONENT_NOT_REMOVABLE (a Blueprint component comes out with edit_scs). Each is one undo step and leaves the level unsaved; while Play runs they change the playing copy.",
+          "title": "Add a component to a placed actor (edit add creates it from componentType, componentName, meshPath and properties, attached under its root, a light made Movable), remove one (remove), or set one or more of its properties (set_property, set_properties: a placed mesh's StaticMesh or OverrideMaterials, a light's Intensity or LightColor to turn on a light, dim it or make it brighter, a TextRender's Text), or make its lights flicker (flicker: speed and depth, enabled false stops it). remove takes the exact name, refused with COMPONENT_NOT_FOUND naming the nearest, and only a component added to this actor: one from its class or Blueprint, or its root, is COMPONENT_NOT_REMOVABLE (a Blueprint component comes out with edit_scs). Each is one undo step and leaves the level unsaved; while Play runs they change the playing copy.",
           "input": {
             "action": "edit_component",
             "actorName": "Cube1",
@@ -42861,7 +42865,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "6a1af5d36036625ba61910405e6e77df29e8cc620eb543fef4810449a49c2d16",
-        "content": "1f194658fc93258b0dc0a8b550edd596b5ed03ca431feaeb62fa6209c39410ee"
+        "content": "5fe95c658757acf7345a0ef7262c7d1111ff3dd6e6122c566b1ce4602d662e0d"
       }
     },
     {
@@ -47689,6 +47693,8 @@
           "fill a room with props or furniture",
           "place lamps or posts along a road or a path",
           "create actor",
+          "create an actor",
+          "create a new actor",
           "spawn cube",
           "spawn static mesh",
           "instantiate class",
@@ -48093,7 +48099,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "fb05155ddec0c61d867d3540276173cb9307a64ce5e8324a2024d0be782ea2aa",
-        "content": "642043c823005243aa02f5acb6ed2a553715580e55a9d51ee771b837c2bdd553"
+        "content": "4cbd04b023872b670fbc0500b06a0a74f4d88a46b1deda606e9629f5c2cb4c04"
       }
     },
     {

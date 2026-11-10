@@ -1201,4 +1201,12 @@ export const PLAIN_PROBE: readonly PlainProbeCase[] = [
   { query: 'which inputs break this blueprint function', accepted: ['control_editor.fuzz_blueprint'] },
   { query: 'create material base color', accepted: ['material.create_material'] },
   { query: 'create actor blueprint with static mesh component', accepted: ['blueprint.create'] },
+  { query: 'create a material with a red color', accepted: ['material.create_material'] },
+  { query: 'create component', accepted: ['control_actor.edit_component', 'blueprint.edit_scs'] },
+  { query: 'create actor component', accepted: ['control_actor.edit_component', 'blueprint.edit_scs', 'blueprint.create'] },
+  { query: 'create actor with static mesh component', accepted: ['control_actor.edit_component', 'control_actor.spawn', 'blueprint.create'] },
+  { query: 'create a blueprint actor with a cube mesh', accepted: ['blueprint.create'] },
+  { query: 'create an actor', accepted: ['control_actor.spawn'] },
+  { query: 'set light color', accepted: ['control_actor.edit_component'] },
+  { query: 'which actors use this material', accepted: ['control_actor.find'] },
 ];

@@ -82,6 +82,22 @@ function actionHasWord(record: NativeRecord, word: string): boolean {
   return containsWord(lastSegment(record.id), word) || record.aliases.some((alias) => containsWord(lastSegment(alias), word));
 }
 
+/** McpSearchActionWords: the content words the id rule scores, which are those of the record's own action, those its
+ * domain or family names as well as one of its names, and those of the one alias that adds the most to them. */
+function scoredActionWords(record: NativeRecord, content: readonly string[]): ReadonlySet<string> {
+  const own = searchWords(lastSegment(record.id));
+  const aliases = record.aliases.map((alias) => searchWords(lastSegment(alias)));
+  const subject = [...searchWords(record.domain), ...searchWords(record.family)];
+  const scored = new Set(content.filter((word) => own.includes(word) || (subject.includes(word) && aliases.some((words) => words.includes(word)))));
+  let best: readonly string[] = [];
+  for (const words of aliases) {
+    const added = content.filter((word) => words.includes(word) && !scored.has(word));
+    if (added.length > best.length) best = added;
+  }
+  for (const word of best) scored.add(word);
+  return scored;
+}
+
 function actionEquals(record: NativeRecord, key: string): boolean {
   return key !== '' && (actionKey(record.id) === key || record.aliases.some((alias) => actionKey(alias) === key));
 }
@@ -108,9 +124,12 @@ function scoreRecord(record: NativeRecord, query: string, all: readonly string[]
   let matched = 0;
   let named = 0;
   let leadNamed = false;
+  const scored = scoredActionWords(record, content);
   for (const [index, word] of content.entries()) {
+    // A word any of the record's names holds is named and matched; the id rule scores it only in scoredActionWords.
+    const action = actionHasWord(record, word);
     const hits: [keyof typeof NATIVE_RULE_WEIGHTS, boolean][] = [
-      ['id', actionHasWord(record, word)],
+      ['id', scored.has(word)],
       ['family', containsWord(record.family, word)],
       ['domain', containsWord(record.domain, word)],
       ['topic', record.topics.some((topic) => containsWord(topic, word))],
@@ -123,9 +142,9 @@ function scoreRecord(record: NativeRecord, query: string, all: readonly string[]
       any = true;
       fire(rule);
     }
-    if (any) matched += 1;
-    if (hits.some(([rule, hit]) => hit && rule !== 'summary' && rule !== 'parent')) named += 1;
-    if (index === 0) leadNamed = hits.some(([rule, hit]) => hit && (rule === 'id' || rule === 'family' || rule === 'domain'));
+    if (any || action) matched += 1;
+    if (action || hits.some(([rule, hit]) => hit && rule !== 'summary' && rule !== 'parent')) named += 1;
+    if (index === 0) leadNamed = action || hits.some(([rule, hit]) => hit && (rule === 'family' || rule === 'domain'));
   }
   score += matched * NATIVE_WORD_COVERAGE_BONUS;
   const first = query.match(/[a-z0-9]+/u)?.[0] ?? '';

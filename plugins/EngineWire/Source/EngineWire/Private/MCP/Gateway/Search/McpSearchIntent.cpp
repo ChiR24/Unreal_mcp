@@ -121,3 +121,36 @@ bool McpSearchLeadTied(const FMcpCapabilityRecord& Record, const TArray<FString>
     }
     return false;
 }
+
+void McpSearchActionWords(const FMcpCapabilityRecord& Record, const TArray<FString>& ContentWords, TArray<FString>& OutHeld, TArray<FString>& OutScored)
+{
+    TArray<FString> Own;
+    McpSearchWords(McpLastDottedSegment(Record.Id), Own);
+    TArray<TArray<FString>> Aliases;
+    for (const FString& Alias : Record.Aliases)
+    {
+        McpSearchWords(McpLastDottedSegment(Alias), Aliases.AddDefaulted_GetRef());
+    }
+    TArray<FString> Subject;
+    McpSearchWords(Record.Domain, Subject);
+    McpSearchWords(Record.Family, Subject);
+    for (const FString& Word : ContentWords)
+    {
+        const bool bOwn = Own.Contains(Word);
+        const bool bAlias = Aliases.ContainsByPredicate([&Word](const TArray<FString>& Words) { return Words.Contains(Word); });
+        if (bOwn || bAlias) OutHeld.Add(Word);
+        if (bOwn || (bAlias && Subject.Contains(Word))) OutScored.Add(Word);
+    }
+    // The first alias that adds the most: a tie changes which words score, never how many.
+    TArray<FString> Best;
+    for (const TArray<FString>& Words : Aliases)
+    {
+        TArray<FString> Added;
+        for (const FString& Word : ContentWords)
+        {
+            if (Words.Contains(Word) && !OutScored.Contains(Word)) Added.Add(Word);
+        }
+        if (Added.Num() > Best.Num()) Best = MoveTemp(Added);
+    }
+    OutScored.Append(Best);
+}

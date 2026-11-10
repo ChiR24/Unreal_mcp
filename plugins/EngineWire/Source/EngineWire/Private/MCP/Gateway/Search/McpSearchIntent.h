@@ -19,3 +19,9 @@ bool McpSearchIsWholeAction(const FString& Word, const FMcpCapabilityStore& Stor
 /** Whether the record's action, one of its aliases or one of its topics holds the first content word together with
  * another content word: "move a vertex" ties move to vertex; "move a vertex" and "stack of crates" never tie move to crate. */
 bool McpSearchLeadTied(const FMcpCapabilityRecord& Record, const TArray<FString>& ContentWords);
+
+/** The content words the record's action names. OutHeld: its own action or any alias holds the word, which counts it
+ * as named and matched. OutScored: the ones the id rule scores, which are the words of its own action, those its domain
+ * or family names as well, and those of the one alias that adds the most to them. Words spread over several other
+ * aliases name no single action ("create", "material" and "color" from three members of a folded family). */
+void McpSearchActionWords(const FMcpCapabilityRecord& Record, const TArray<FString>& ContentWords, TArray<FString>& OutHeld, TArray<FString>& OutScored);

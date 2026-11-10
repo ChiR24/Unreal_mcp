@@ -55,6 +55,14 @@ describe('the TypeScript copy matches the native source', () => {
     expect(nativeMatch).toContain('const bool bTieLead = (bLeadIsAction && !bLeadNamed) ||');
     expect(nativeIntent).toContain('if (Words.Num() == 1)');
   });
+
+  it('scores one alias at a time under the same rule', () => {
+    expect(nativeMatch).toContain('McpSearchActionWords(Record, ContentWords, HeldWords, ScoredWords);');
+    expect(nativeMatch).toContain('Hits[RuleId] = ScoredWords.Contains(Word);');
+    expect(nativeMatch).toContain('if (bAny || bActionWord) ++Matched;');
+    expect(nativeIntent).toContain('if (bOwn || (bAlias && Subject.Contains(Word))) OutScored.Add(Word);');
+    expect(nativeIntent).toContain('if (Added.Num() > Best.Num()) Best = MoveTemp(Added);');
+  });
 });
 
 // A verb that is some record's whole action leads the request; a record that names it only in a topic, or does not
@@ -77,6 +85,17 @@ describe('lead verbs', () => {
     expect(nativeSearchRanker('move a vertex', 1)).toEqual(['manage_geometry.edit_dynamic_mesh']);
     expect(nativeSearchRanker('delete triangles', 1)).toEqual(['manage_geometry.edit_dynamic_mesh']);
     expect(nativeSearchRanker('delete the crate', 3)).not.toContain('manage_geometry.edit_dynamic_mesh');
+  });
+});
+
+// Words spread over several aliases name no single action: three members of a folded family (create_procedural_mesh,
+// set_material_id, set_vertex_color) used to add up to a material request. A word the record's domain names too keeps
+// its score beside another alias: find_actors_by_class and find_by_material still make "actors" and "material" a find
+// (EngineWire.Gateway.SearchIntent holds the C++ to the same).
+describe('one alias at a time', () => {
+  it('keeps a folded family from collecting a request word by word', () => {
+    expect(nativeSearchRanker('create a material with a red color', 1)).toEqual(['material.create_material']);
+    expect(nativeSearchRanker('which actors use this material', 1)).toEqual(['control_actor.find']);
   });
 });
 

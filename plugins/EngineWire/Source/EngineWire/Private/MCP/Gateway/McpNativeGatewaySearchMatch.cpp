@@ -103,16 +103,6 @@ FString ActionKey(const FString& Id)
 	return FString::Join(Words, TEXT("_"));
 }
 
-bool ActionHasWord(const FMcpCapabilityRecord& Record, const FString& Word)
-{
-	if (ContainsWord(McpLastDottedSegment(Record.Id), Word)) return true;
-	for (const FString& Alias : Record.Aliases)
-	{
-		if (ContainsWord(McpLastDottedSegment(Alias), Word)) return true;
-	}
-	return false;
-}
-
 bool ActionEquals(const FMcpCapabilityRecord& Record, const FString& Key)
 {
 	if (Key.IsEmpty()) return false;
@@ -209,16 +199,21 @@ bool McpSearchScoreRecord(
 			Score += MatchRules[RuleSummary].Weight;
 		}
 	}
-	// Word pass: whole-word hits per content word. The id rule reads the ACTION
-	// segment and the declared aliases; namespace words reach a record only
-	// through its domain and parent, at their own weights.
+	// Word pass: whole-word hits per content word. The id rule scores the words of the ACTION segment, those the
+	// domain or family names too, and those of the one alias that adds the most (McpSearchActionWords): words spread
+	// over several aliases name no single action. A word any alias holds still counts as named and matched. Namespace
+	// words reach a record only through its domain and parent, at their own weights.
 	int32 Matched = 0;
 	int32 Named = 0;
 	bool bLeadNamed = false;
+	TArray<FString> HeldWords;
+	TArray<FString> ScoredWords;
+	McpSearchActionWords(Record, ContentWords, HeldWords, ScoredWords);
 	for (const FString& Word : ContentWords)
 	{
 		bool Hits[RuleCount] = {};
-		Hits[RuleId] = ActionHasWord(Record, Word);
+		const bool bActionWord = HeldWords.Contains(Word);
+		Hits[RuleId] = ScoredWords.Contains(Word);
 		Hits[RuleFamily] = ContainsWord(Record.Family, Word);
 		Hits[RuleDomain] = ContainsWord(Record.Domain, Word);
 		Hits[RuleTopic] = AnyTopicContainsWord(Record.Topics, Word);
@@ -232,11 +227,11 @@ bool McpSearchScoreRecord(
 			Fired[Rule] = true;
 			Score += MatchRules[Rule].Weight;
 		}
-		if (bAny) ++Matched;
+		if (bAny || bActionWord) ++Matched;
 		// Named by the action, aliases, family, domain or topics; summary prose also
 		// holds filler words ("one", "another") and does not count.
-		if (Hits[RuleId] || Hits[RuleFamily] || Hits[RuleDomain] || Hits[RuleTopic]) ++Named;
-		bLeadNamed = bLeadNamed || (&Word == &ContentWords[0] && (Hits[RuleId] || Hits[RuleFamily] || Hits[RuleDomain]));
+		if (bActionWord || Hits[RuleFamily] || Hits[RuleDomain] || Hits[RuleTopic]) ++Named;
+		bLeadNamed = bLeadNamed || (&Word == &ContentWords[0] && (bActionWord || Hits[RuleFamily] || Hits[RuleDomain]));
 	}
 	Score += Matched * McpSearchWordCoverageBonus;
 	// A lead verb that is some record's whole action ("move the crate") is the operation asked for, and so is a delete

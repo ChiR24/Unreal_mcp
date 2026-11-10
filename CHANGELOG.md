@@ -13,7 +13,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 <summary><b>🔧 Fixed</b></summary>
 
 - **Builds**: the plugin links on UE 5.3 and 5.4 for Windows, and SmartObjects loads again in a Blueprint-only UE 5.5 project.
-- **Search**: `create material base color` and `create actor blueprint with static mesh component` rank their create action first, and each summary names the action that comes next.
+- **Search**: words spread over several member names of a folded family no longer add up, so `create a material with a red color` finds `create_material` and not a mesh edit. `create component`, `create an actor`, `set light color` and Blueprint actor requests (`create actor blueprint with static mesh component`) reach their own action, whose summary names the next one.
 - **Counting by class**: `find_by_class` rows carry `class`, so `options.aggregate` with `groupBy: "class"` counts them by class instead of as one `(none)` group; a `groupBy` no row carries adds a `note` naming the fields to count by.
 
 </details>

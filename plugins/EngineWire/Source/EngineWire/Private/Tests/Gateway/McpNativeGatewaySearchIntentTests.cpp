@@ -1,5 +1,6 @@
 // McpNativeGatewaySearchIntentTests.cpp — known answers for what a search request asks for beyond its words
-// (Search/McpSearchIntent.cpp): the effect its first word opens, and its lead verb tied to the object.
+// (Search/McpSearchIntent.cpp): the effect its first word opens, its lead verb tied to the object, and the action
+// words the id rule scores.
 
 #include "MCP/Gateway/Search/McpSearchIntent.h"
 #include "MCP/Gateway/McpNativeGatewayCapabilityStore.h"
@@ -35,6 +36,23 @@ bool FMcpSearchIntentTest::RunTest(const FString& Parameters)
 	McpSearchScoreRecord(Mesh, TEXT("move the crate"), AllWords, MoveCrate, false, Loose);
 	McpSearchScoreRecord(Mesh, TEXT("move the crate"), AllWords, MoveCrate, true, Tied);
 	TestEqual(TEXT("a whole action named in passing loses the full-coverage bonus"), Loose.Score - Tied.Score, McpSearchFullCoverageBonus);
+
+	// Words spread over several aliases name no single action: one alias scores, every held word stays matched.
+	FMcpCapabilityRecord Family;
+	Family.Id = TEXT("manage_geometry.edit_mesh");
+	Family.Domain = TEXT("geometry");
+	Family.Aliases = { TEXT("manage_geometry.create_patch"), TEXT("manage_geometry.set_material_id"), TEXT("manage_geometry.set_vertex_color") };
+	const TArray<FString> Request = { TEXT("create"), TEXT("material"), TEXT("color") };
+	TArray<FString> Held;
+	TArray<FString> Scored;
+	McpSearchActionWords(Family, Request, Held, Scored);
+	TestEqual(TEXT("every word an alias holds is held"), Held.Num(), 3);
+	TestEqual(TEXT("three aliases holding a word each score one word"), Scored.Num(), 1);
+	Family.Domain = TEXT("material");
+	Held.Reset();
+	Scored.Reset();
+	McpSearchActionWords(Family, Request, Held, Scored);
+	TestEqual(TEXT("a word the domain names too scores beside the best alias"), Scored.Num(), 2);
 
 	const FMcpCapabilityStore& Store = FMcpCapabilityStore::Get();
 	if (!TestTrue(TEXT("capability store is ready"), Store.IsReady()))

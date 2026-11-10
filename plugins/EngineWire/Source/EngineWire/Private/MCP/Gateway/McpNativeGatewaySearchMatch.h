@@ -6,7 +6,8 @@
 // substring: "move" must not hit `remove_*`, and a namespace word must not make
 // every record under it look like a hit. A record's declared aliases are its own
 // names, so a verb the action does not carry ("move actor" ->
-// control_actor.move_actor) still lands. Function words are dropped from the
+// control_actor.move_actor) still lands. One alias scores at a time: words spread
+// over several aliases name no single action (McpSearchActionWords). Function words are dropped from the
 // query, and regular plurals/inflections fold on both the query and the record
 // text, so "list actors" meets "actor".
 
