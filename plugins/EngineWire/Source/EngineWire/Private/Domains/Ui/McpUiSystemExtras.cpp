@@ -122,7 +122,7 @@ bool HandleSystemExtrasAction(UEngineWireSubsystem &Bridge,
     }
     double Level = 1.0;
     Payload->TryGetNumberField(TEXT("level"), Level);
-    return RunConsole(Bridge, RequestId, FString::Printf(TEXT("%s %d"), Cvar, FMath::Clamp(FMath::RoundToInt(Level), 0, 4)), Socket);
+    return RunConsole(Bridge, RequestId, FString::Printf(TEXT("%s %d"), Cvar, FMath::Clamp(FMath::RoundToInt32(Level), 0, 4)), Socket);
   }
   if (LowerSub == TEXT("set_resolution")) {
     const FString Resolution = ReadResolution(Payload);

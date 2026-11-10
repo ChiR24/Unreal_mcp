@@ -221,7 +221,7 @@ FString ShotMessage(const FProblem& Problem, const FShot& Shot, const FFrameCame
         Middle += Problem.Subjects[Index].Center / Subjects.Num();
         if (Shot.Occluded[Index] > 0.0)
         {
-            Hidden.Add(FString::Printf(TEXT("%s %d%% hidden"), *Names.Last(), FMath::RoundToInt(Shot.Occluded[Index] * 100.0)));
+            Hidden.Add(FString::Printf(TEXT("%s %d%% hidden"), *Names.Last(), FMath::RoundToInt32(Shot.Occluded[Index] * 100.0)));
         }
     }
     const bool bOne = Subjects.Num() == 1;

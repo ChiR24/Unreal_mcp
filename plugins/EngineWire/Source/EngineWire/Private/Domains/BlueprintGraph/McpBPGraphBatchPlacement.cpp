@@ -210,8 +210,8 @@ FMcpCapturedResponse RunPlacedStep(const FActionContext& Parent, FBatchState& St
         Payload->TryGetNumberField(TEXT("posY"), PlacedY);
         FString Warning = FString::Printf(
             TEXT("Requested position (%d, %d) overlaps %s; the node was placed at (%d, %d) instead."),
-            FMath::RoundToInt(RequestedX), FMath::RoundToInt(RequestedY), *Overlapped,
-            FMath::RoundToInt(PlacedX), FMath::RoundToInt(PlacedY));
+            FMath::RoundToInt32(RequestedX), FMath::RoundToInt32(RequestedY), *Overlapped,
+            FMath::RoundToInt32(PlacedX), FMath::RoundToInt32(PlacedY));
         FString Existing;
         if (Reply.Result->TryGetStringField(TEXT("placementWarning"), Existing) && !Existing.IsEmpty())
         {

@@ -81,8 +81,8 @@ UMaterial* MakeBase(FString& Error)
 // The instance for this speed and depth, made (with the base material) when missing.
 UMaterialInterface* FindOrMakeInstance(double Speed, double Depth, FString& Error)
 {
-    const FString Name = FString::Printf(TEXT("%sS%d_D%d"), InstancePrefix, FMath::RoundToInt(Speed * 10.0),
-                                         FMath::RoundToInt(Depth * 100.0));
+    const FString Name = FString::Printf(TEXT("%sS%d_D%d"), InstancePrefix, FMath::RoundToInt32(Speed * 10.0),
+                                         FMath::RoundToInt32(Depth * 100.0));
     if (UMaterialInterface* Existing = McpFindMaterialAsset(Folder, Name))
     {
         return Existing;

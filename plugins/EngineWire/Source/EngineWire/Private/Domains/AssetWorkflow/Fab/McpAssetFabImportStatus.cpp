@@ -227,7 +227,7 @@ bool UEngineWireSubsystem::HandleGetFabImportStatus(
   SendAutomationResponse(
       Socket, RequestId, true,
       FString::Printf(TEXT("Fab import %s of %s is %s after %d s.%s"), *Status.OperationId, *Status.ListingId,
-                      *Status.Phase, FMath::RoundToInt(Status.ElapsedSeconds),
+                      *Status.Phase, FMath::RoundToInt32(Status.ElapsedSeconds),
                       Unsaved > 0 ? *FString::Printf(TEXT(" %d package(s) are NOT SAVED."), Unsaved) : TEXT("")),
       Data);
   return true;

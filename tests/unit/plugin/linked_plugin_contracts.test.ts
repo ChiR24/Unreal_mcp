@@ -32,3 +32,25 @@ describe('plugins SmartObjects requires', () => {
     expect(descriptor.Plugins.find((each) => each.Name === name)?.Optional).toBeUndefined();
   });
 });
+
+// UE 5.9 moved the Cascade classes (UParticleSystem, UParticleSystemComponent, AEmitter) out of Engine into the Cascade
+// plugin's CascadeRuntime module, so EngineWire links that module where the engine has it. Cascade is on wherever
+// EngineWire is: on 5.9 GameplayAbilities requires it, and EngineWire requires GameplayAbilities. UE 5.0-5.5 have no
+// Cascade plugin, so EngineWire names none itself; an optional reference would also hide the name from
+// GameplayAbilities' required one where an engine's own build lacks it, as above.
+describe('the Cascade runtime EngineWire links on UE 5.9', () => {
+  const descriptor = JSON.parse(readFileSync(join('plugins', 'EngineWire', 'EngineWire.uplugin'), 'utf8')) as { readonly Plugins: readonly PluginReference[] };
+  const buildRules = readFileSync(join('plugins', 'EngineWire', 'Source', 'EngineWire', 'EngineWire.Build.cs'), 'utf8');
+
+  it('links CascadeRuntime where the engine has it, without delay-loading it', () => {
+    expect(buildRules).toContain('AddOptionalModule(Target, EngineDir, "CascadeRuntime", "CascadeRuntime", false);');
+  });
+
+  it('requires GameplayAbilities, which turns Cascade on there', () => {
+    expect(descriptor.Plugins.find((each) => each.Name === 'GameplayAbilities')).toEqual({ Name: 'GameplayAbilities', Enabled: true });
+  });
+
+  it('names no Cascade reference of its own', () => {
+    expect(descriptor.Plugins.find((each) => each.Name === 'Cascade')).toBeUndefined();
+  });
+});

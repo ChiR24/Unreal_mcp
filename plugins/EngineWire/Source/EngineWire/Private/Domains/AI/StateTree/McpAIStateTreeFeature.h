@@ -140,7 +140,11 @@ inline bool McpCompileStateTree(UStateTree* Tree, TArray<FString>& OutMessages)
     {
         if (Message.Severity <= EMessageSeverity::Warning)
         {
+#if ENGINE_MAJOR_VERSION > 5 || (ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 9)
+            OutMessages.Add(Message.Message.ToString()); // an FText from 5.9
+#else
             OutMessages.Add(Message.Message);
+#endif
         }
     }
     return bCompiled;

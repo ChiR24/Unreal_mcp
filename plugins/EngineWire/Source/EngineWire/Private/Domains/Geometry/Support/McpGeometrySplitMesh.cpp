@@ -187,9 +187,9 @@ bool HandleSplitMesh(UEngineWireSubsystem* Self, const FString& RequestId, const
     }
     const FString* Taken = bDryRun ? nullptr : AssetPaths.FindByPredicate([](const FString& Path) { return McpAssetExists(Path); });
     Problem = Kept.Num() == 0 ? FString::Printf(TEXT("No object has %d triangles or more (%d smaller ones were left out); lower minTriangles."),
-                                                FMath::RoundToInt(MinTriangles), SkippedSmall)
+                                                FMath::RoundToInt32(MinTriangles), SkippedSmall)
         : Kept.Num() > MaxParts ? FString::Printf(TEXT("The mesh splits into %d objects, more than maxParts %d; raise gap, minTriangles or maxParts, or split by material."),
-                                                  Kept.Num(), FMath::RoundToInt(MaxParts))
+                                                  Kept.Num(), FMath::RoundToInt32(MaxParts))
         : Taken ? FString::Printf(TEXT("%s already exists; give another namePrefix or outputPath."), **Taken)
         : FString();
     if (!Problem.IsEmpty())

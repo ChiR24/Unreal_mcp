@@ -32,7 +32,7 @@ TSharedPtr<FJsonObject> HandleSequenceSettingsActions(const FString& SubAction, 
         if (Frame < 0 || Time > Sequence->GetPlayLength() + KINDA_SMALL_NUMBER)
         {
             ANIM_ERROR_RESPONSE(FString::Printf(TEXT("frame must lie in 0..%d (the sequence's last frame); nothing was added."),
-                FMath::RoundToInt(Sequence->GetPlayLength() * FrameRate)), TEXT("INVALID_ARGUMENT"));
+                FMath::RoundToInt32(Sequence->GetPlayLength() * FrameRate)), TEXT("INVALID_ARGUMENT"));
         }
         {
             const FMcpAssetEdit Edit(TEXT("Add Sync Marker"), {Sequence}, Response);

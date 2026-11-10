@@ -40,6 +40,11 @@ public class EngineWire : ModuleRules {
         // PropertyBindingUtils (UE 5.6+) owns the base of the State Tree compiler log's message items, whose destructor the State Tree compile links against.
         AddOptionalModules(Target, EngineDir, new string[] { "D|GameplayAbilities|GameplayAbilities", "D|MetasoundEngine|MetasoundEngine", "C|MetasoundFrontend|MetasoundFrontend", "D|MetasoundEditor|MetasoundEditor", "D|StateTreeModule|StateTreeModule", "D|StateTreeEditorModule|StateTreeEditorModule", "D|PropertyBindingUtils|PropertyBindingUtils", "D|SmartObjectsModule|SmartObjectsModule", "D|SmartObjectsEditorModule|SmartObjectsEditorModule", "C|StructUtils|StructUtils", "D|MassEntity|MassEntity", "D|MassSpawner|MassSpawner", "D|MassActors|MassActors", "D|OnlineSubsystem|OnlineSubsystem", "D|OnlineSubsystemUtils|OnlineSubsystemUtils", "D|ControlRig|ControlRig", "D|ControlRigDeveloper|ControlRigDeveloper", "D|ControlRigEditor|ControlRigEditor", "D|ProceduralMeshComponent|ProceduralMeshComponent", "D|EnvironmentQueryEditor|EnvironmentQueryEditor", "D|GeometryScriptingCore|GeometryScriptingCore", "D|GeometryScriptingEditor|GeometryScriptingEditor" });
 
+        // UE 5.9 moved the Cascade classes (UParticleSystem, UParticleSystemComponent, AEmitter) out of Engine into the
+        // Cascade plugin's CascadeRuntime module; earlier engines have no such module, so nothing is added there. It is
+        // linked plainly: there GameplayAbilities, which EngineWire requires, requires Cascade, so the module is loaded.
+        AddOptionalModule(Target, EngineDir, "CascadeRuntime", "CascadeRuntime", false);
+
         // Catmull-Clark, Loop and bilinear subdivision (FSubdividePoly, over OpenSubdiv) live in MeshModelingToolset's editor module.
         // It is added like GeometryScriptingCore above, delay-loaded, and the handler refuses clearly when it is not there.
         bool bHasSubdividePoly = AddOptionalModule(Target, EngineDir, "ModelingComponentsEditorOnly", "ModelingComponentsEditorOnly", true);
