@@ -69,6 +69,8 @@ const SDF_SHAPES: JsonObject = {
 export const GEOMETRY_PRIMITIVES_RECORDS: readonly CapabilityRecordSource[] = [
   buildWorldRecord({
     parentTool: 'manage_geometry', action: 'create_box', plugins: PLUGIN,
+    // The name a caller invents for a box: without it "cube" was only the scene capture's word (create_scene_capture_cube).
+    aliases: ['manage_geometry.create_cube'],
     topics: ['box mesh', 'cube mesh', 'procedural box', 'geometry cube'],
     family: F, summary: 'Create a box dynamic mesh actor.', whenToUse: ['A box primitive must be created.'], whenNotToUse: ['A sphere is needed; use create_sphere.'],
     inputProps: { ...IDENT, ...XFORM, dimensions: P.dimensions, width: P.width, height: P.boxHeight, depth: P.depth, widthSegments: P.widthSegments, heightSegments: P.heightSegments, depthSegments: P.depthSegments }, required: [], effect: 'write', costLatency: 'interactive', costResources: 'low',

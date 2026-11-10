@@ -79,6 +79,13 @@ constexpr int32 McpSearchFullCoverageBonus = 100;
  */
 constexpr int32 McpSearchPhraseTopicBonus = 50;
 /**
+ * A word the actions (ids and aliases) of this many parent tools hold is generic: create, set, get, add, actor, mesh,
+ * component. It names no action by itself, so in a request that opens with an action verb an alias scores such a word
+ * only when the request also holds a word that sets the alias apart: "create actor with mesh component" does not ask
+ * for create_spline_mesh_component (McpSearchActionWords).
+ */
+constexpr int32 McpSearchGenericWordTools = 10;
+/**
  * When the query opens with a read word ("get actor location", "what is in this
  * folder"), a matching record whose effect is read ranks ahead: set_transform used
  * to answer "get actor location". Only reorders records that already matched.

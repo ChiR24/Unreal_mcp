@@ -8,7 +8,7 @@ All notable changes to the EngineWire plugin (formerly McpAutomationBridge) will
 
 ### Fixed
 - **Builds**: on Windows the State Tree compile delegate is read from the DLL's export table, so the plugin links on UE 5.3 and 5.4 (`LNK1194`); the optional `PropertyBindingUtils` reference is gone, so SmartObjects loads in a Blueprint-only UE 5.5 project.
-- **Search ranking**: the id rule scores the words of a record's own action, those its domain or family names too, and the one alias that adds the most (`McpSearchActionWords`); words spread over several other aliases score nothing and still count as named. A topic or summary holds a request only on word boundaries (`ContainsPhrase`).
+- **Search ranking**: the id rule scores the words of a record's own action, those its domain or family names too, and the one alias that adds the most (`McpSearchActionWords`); words spread over several other aliases score nothing and still count as named. A topic or summary holds a request only on word boundaries (`ContainsPhrase`). In a request that opens with an action verb, an alias scores its generic words (`McpSearchGenericWords`) only when the request holds a word that sets it apart.
 - **Counting by class**: `find_by_class` rows carry `class`; `options.aggregate` grouped by `class` reads a row's `classPath` or `className` where it has no `class`, and a `groupBy` no row carries adds a `note` naming the fields to count by.
 
 ## [0.6.1-beta-b] - 2026-11-08

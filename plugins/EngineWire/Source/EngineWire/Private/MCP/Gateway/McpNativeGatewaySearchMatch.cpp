@@ -181,7 +181,7 @@ void McpSearchContentWords(const TArray<FString>& AllWords, TArray<FString>& Out
 bool McpSearchScoreRecord(
 	const FMcpCapabilityRecord& Record, const FString& Query,
 	const TArray<FString>& AllWords, const TArray<FString>& ContentWords, bool bLeadIsAction,
-	FMcpSearchMatch& Out)
+	const TSet<FString>& GenericWords, FMcpSearchMatch& Out)
 {
 	bool Fired[RuleCount] = {};
 	int32 Score = 0;
@@ -219,7 +219,7 @@ bool McpSearchScoreRecord(
 	bool bLeadNamed = false;
 	TArray<FString> HeldWords;
 	TArray<FString> ScoredWords;
-	McpSearchActionWords(Record, ContentWords, HeldWords, ScoredWords);
+	McpSearchActionWords(Record, ContentWords, bLeadIsAction, GenericWords, HeldWords, ScoredWords);
 	for (const FString& Word : ContentWords)
 	{
 		bool Hits[RuleCount] = {};

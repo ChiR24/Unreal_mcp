@@ -1,6 +1,7 @@
 // McpNativeGatewaySearchIntentTests.cpp — known answers for what a search request asks for beyond its words
 // (Search/McpSearchIntent.cpp): the effect its first word opens, its lead verb tied to the object, and the action
-// words the id rule scores; and for the phrase rule, which reads a request as whole words.
+// words the id rule scores (an alias asked for by a word that sets it apart); and for the phrase rule, which reads a
+// request as whole words.
 
 #include "MCP/Gateway/Search/McpSearchIntent.h"
 #include "MCP/Gateway/McpNativeGatewayCapabilityStore.h"
@@ -33,8 +34,9 @@ bool FMcpSearchIntentTest::RunTest(const FString& Parameters)
 	TestTrue(TEXT("one topic ties move to vertex"), McpSearchLeadTied(Mesh, { TEXT("move"), TEXT("vertex") }));
 	FMcpSearchMatch Loose;
 	FMcpSearchMatch Tied;
-	McpSearchScoreRecord(Mesh, TEXT("move the crate"), AllWords, MoveCrate, false, Loose);
-	McpSearchScoreRecord(Mesh, TEXT("move the crate"), AllWords, MoveCrate, true, Tied);
+	const TSet<FString> NoGeneric;
+	McpSearchScoreRecord(Mesh, TEXT("move the crate"), AllWords, MoveCrate, false, NoGeneric, Loose);
+	McpSearchScoreRecord(Mesh, TEXT("move the crate"), AllWords, MoveCrate, true, NoGeneric, Tied);
 	TestEqual(TEXT("a whole action named in passing loses the full-coverage bonus"), Loose.Score - Tied.Score, McpSearchFullCoverageBonus);
 
 	// Words spread over several aliases name no single action: one alias scores, every held word stays matched.
@@ -45,14 +47,31 @@ bool FMcpSearchIntentTest::RunTest(const FString& Parameters)
 	const TArray<FString> Request = { TEXT("create"), TEXT("material"), TEXT("color") };
 	TArray<FString> Held;
 	TArray<FString> Scored;
-	McpSearchActionWords(Family, Request, Held, Scored);
+	McpSearchActionWords(Family, Request, false, NoGeneric, Held, Scored);
 	TestEqual(TEXT("every word an alias holds is held"), Held.Num(), 3);
 	TestEqual(TEXT("three aliases holding a word each score one word"), Scored.Num(), 1);
 	Family.Domain = TEXT("material");
 	Held.Reset();
 	Scored.Reset();
-	McpSearchActionWords(Family, Request, Held, Scored);
+	McpSearchActionWords(Family, Request, false, NoGeneric, Held, Scored);
 	TestEqual(TEXT("a word the domain names too scores beside the best alias"), Scored.Num(), 2);
+
+	// A request that opens with a verb asks for an alias only by a word that sets it apart: spline, not mesh or component.
+	FMcpCapabilityRecord Spline;
+	Spline.Id = TEXT("build_environment.create_spline");
+	Spline.Aliases = { TEXT("build_environment.create_spline_mesh_component") };
+	const TSet<FString> Generic = { TEXT("create"), TEXT("actor"), TEXT("mesh"), TEXT("component") };
+	const TArray<FString> Plain = { TEXT("create"), TEXT("actor"), TEXT("mesh"), TEXT("component") };
+	Held.Reset();
+	Scored.Reset();
+	McpSearchActionWords(Spline, Plain, true, Generic, Held, Scored);
+	TestEqual(TEXT("generic words of an alias not asked for are held"), Held.Num(), 3);
+	TestEqual(TEXT("and only the action's own verb scores"), Scored.Num(), 1);
+	const TArray<FString> Named = { TEXT("create"), TEXT("spline"), TEXT("mesh"), TEXT("component") };
+	Held.Reset();
+	Scored.Reset();
+	McpSearchActionWords(Spline, Named, true, Generic, Held, Scored);
+	TestEqual(TEXT("the alias asked for by name scores all its words"), Scored.Num(), 4);
 
 	// A request found inside a longer word of a topic is not that topic's request.
 	FMcpCapabilityRecord Unlink;
@@ -60,7 +79,7 @@ bool FMcpSearchIntentTest::RunTest(const FString& Parameters)
 	Unlink.Topics = { TEXT("unlink pins") };
 	const TArray<FString> LinkPins = { TEXT("link"), TEXT("pin") };
 	FMcpSearchMatch Inside;
-	McpSearchScoreRecord(Unlink, TEXT("link pins"), LinkPins, LinkPins, false, Inside);
+	McpSearchScoreRecord(Unlink, TEXT("link pins"), LinkPins, LinkPins, false, NoGeneric, Inside);
 	TestTrue(TEXT("a phrase inside a longer word earns no phrase bonus"), Inside.Score < McpSearchPhraseTopicBonus);
 
 	const FMcpCapabilityStore& Store = FMcpCapabilityStore::Get();

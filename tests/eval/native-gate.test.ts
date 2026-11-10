@@ -11,9 +11,9 @@ import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { measureRetrieval } from './measure-retrieval.js';
 import {
-  NATIVE_ACTION_COVERED_BONUS, NATIVE_DELETE_INTENT_BONUS, NATIVE_FULL_COVERAGE_BONUS, NATIVE_PHRASE_TOPIC_BONUS, NATIVE_READ_INTENT_BONUS,
+  NATIVE_ACTION_COVERED_BONUS, NATIVE_DELETE_INTENT_BONUS, NATIVE_FULL_COVERAGE_BONUS, NATIVE_GENERIC_WORD_TOOLS, NATIVE_PHRASE_TOPIC_BONUS, NATIVE_READ_INTENT_BONUS,
   NATIVE_RULE_WEIGHTS, NATIVE_TYPO_LONG_LENGTH, NATIVE_TYPO_MIN_LENGTH, NATIVE_TYPO_SWAP_LENGTH, NATIVE_WORD_COVERAGE_BONUS,
-  nativeCorrectQuery, nativeEditDistance, nativeSearchRanker, nativeWholeActions,
+  nativeCorrectQuery, nativeEditDistance, nativeGenericWords, nativeSearchRanker, nativeWholeActions,
 } from './native-ranker.js';
 
 const GATEWAY = join('plugins', 'EngineWire', 'Source', 'EngineWire', 'Private', 'MCP', 'Gateway');
@@ -57,7 +57,6 @@ describe('the TypeScript copy matches the native source', () => {
   });
 
   it('scores one alias at a time under the same rule', () => {
-    expect(nativeMatch).toContain('McpSearchActionWords(Record, ContentWords, HeldWords, ScoredWords);');
     expect(nativeMatch).toContain('Hits[RuleId] = ScoredWords.Contains(Word);');
     expect(nativeMatch).toContain('if (bAny || bActionWord) ++Matched;');
     expect(nativeIntent).toContain('if (bOwn || (bAlias && Subject.Contains(Word))) OutScored.Add(Word);');
@@ -68,6 +67,15 @@ describe('the TypeScript copy matches the native source', () => {
     expect(nativeMatch).toContain('if ((Hit == Start || !IsAsciiAlnum(Hit[-1])) && !IsAsciiAlnum(Hit[Phrase.Len()])) return true;');
     expect(nativeMatch).toContain('if (ContainsPhrase(Topic.ToLower(), Query)) return true;');
     expect(nativeMatch).toContain('if (ContainsPhrase(Record.Summary.ToLower(), Query))');
+  });
+
+  it('asks an alias for a word that sets it apart under the same rule', () => {
+    expect(headerConstant('McpSearchGenericWordTools')).toBe(NATIVE_GENERIC_WORD_TOOLS);
+    expect(nativeMatch).toContain('McpSearchActionWords(Record, ContentWords, bLeadIsAction, GenericWords, HeldWords, ScoredWords);');
+    expect(nativeIntent).toContain('const bool bAsked = !bLeadIsAction || AliasAsked(Words, Own, ContentWords, GenericWords);');
+    expect(nativeIntent).toContain('if (Words.Contains(Word) && !OutScored.Contains(Word) && (bAsked || Word == Words[0])) Added.Add(Word);');
+    expect(nativeIntent).toContain('if (GenericWords.Contains(Word) || (Own.Num() > 0 && Word == Own[0]))');
+    expect(nativeIntent).toContain('if (Entry.Value.Num() >= McpSearchGenericWordTools) Out.Add(Entry.Key);');
   });
 });
 
@@ -111,6 +119,24 @@ describe('phrases on word boundaries', () => {
   it('gives the phrase bonus only to a topic that holds the request as whole words', () => {
     expect(nativeSearchRanker('link pins', 1)).toEqual(['blueprint.edit_graph']);
     expect(nativeSearchRanker('c++ source file', 1)).toEqual(['system_control.create_cpp_class']);
+  });
+});
+
+// A word the actions of many tools hold names no action by itself. In a request that opens with an action verb, an
+// alias scores such words only when the request holds a word that sets the alias apart: create_spline_mesh_component
+// held three of the four words of "create actor with mesh component" and none that says spline.
+describe('generic action words', () => {
+  it('reads these words as too common to set an action apart: a word joins when more tools name actions with it', () => {
+    expect([...nativeGenericWords()].sort()).toEqual([
+      'actor', 'add', 'asset', 'component', 'configure', 'create', 'delete', 'edit', 'get', 'info', 'list', 'mesh', 'property',
+      'set', 'setting', 'to',
+    ]);
+  });
+
+  it('keeps a member name from answering a request that holds only its generic words', () => {
+    expect(nativeSearchRanker('create actor with mesh component', 1)).toEqual(['control_actor.edit_component']);
+    expect(nativeSearchRanker('create mesh actor', 1)).toEqual(['control_actor.spawn']);
+    expect(nativeSearchRanker('create spline mesh component', 1)).toEqual(['build_environment.create_spline']);
   });
 });
 

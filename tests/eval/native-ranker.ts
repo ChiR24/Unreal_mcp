@@ -38,6 +38,7 @@ export const NATIVE_FULL_COVERAGE_BONUS = 100;
 export const NATIVE_PHRASE_TOPIC_BONUS = 50;
 export const NATIVE_READ_INTENT_BONUS = 40;
 export const NATIVE_DELETE_INTENT_BONUS = 40;
+export const NATIVE_GENERIC_WORD_TOOLS = 10;
 
 type NativeRecord = {
   readonly id: string;
@@ -82,16 +83,40 @@ function actionHasWord(record: NativeRecord, word: string): boolean {
   return containsWord(lastSegment(record.id), word) || record.aliases.some((alias) => containsWord(lastSegment(alias), word));
 }
 
+let genericWords: ReadonlySet<string> | undefined;
+/** McpSearchGenericWords: the words the actions (ids and aliases) of NATIVE_GENERIC_WORD_TOOLS or more parent tools hold. */
+export function nativeGenericWords(): ReadonlySet<string> {
+  if (genericWords) return genericWords;
+  const tools = new Map<string, Set<string>>();
+  for (const record of nativeRecords()) {
+    for (const word of [record.id, ...record.aliases].flatMap((name) => searchWords(lastSegment(name)))) {
+      const holders = tools.get(word) ?? new Set<string>();
+      holders.add(record.parent);
+      tools.set(word, holders);
+    }
+  }
+  return genericWords = new Set([...tools].filter(([, holders]) => holders.size >= NATIVE_GENERIC_WORD_TOOLS).map(([word]) => word));
+}
+
+/** AliasAsked: the request holds a word that sets the alias apart (not generic, not a function word, not the verb of
+ * the record's own action), or the alias has no such word. */
+function aliasAsked(words: readonly string[], own: readonly string[], content: readonly string[]): boolean {
+  const apart = words.filter((word) => !RETRIEVAL_FUNCTION_WORDS.has(word) && !nativeGenericWords().has(word) && word !== own[0]);
+  return apart.length === 0 || apart.some((word) => content.includes(word));
+}
+
 /** McpSearchActionWords: the content words the id rule scores, which are those of the record's own action, those its
- * domain or family names as well as one of its names, and those of the one alias that adds the most to them. */
-function scoredActionWords(record: NativeRecord, content: readonly string[]): ReadonlySet<string> {
+ * domain or family names as well as one of its names, and those of the one alias that adds the most to them. In a
+ * request that opens with an action verb, an alias it does not ask for adds only its own verb, its first word. */
+function scoredActionWords(record: NativeRecord, content: readonly string[], leadIsAction: boolean): ReadonlySet<string> {
   const own = searchWords(lastSegment(record.id));
   const aliases = record.aliases.map((alias) => searchWords(lastSegment(alias)));
   const subject = [...searchWords(record.domain), ...searchWords(record.family)];
   const scored = new Set(content.filter((word) => own.includes(word) || (subject.includes(word) && aliases.some((words) => words.includes(word)))));
   let best: readonly string[] = [];
   for (const words of aliases) {
-    const added = content.filter((word) => words.includes(word) && !scored.has(word));
+    const asked = !leadIsAction || aliasAsked(words, own, content);
+    const added = content.filter((word) => words.includes(word) && !scored.has(word) && (asked || word === words[0]));
     if (added.length > best.length) best = added;
   }
   for (const word of best) scored.add(word);
@@ -133,7 +158,7 @@ function scoreRecord(record: NativeRecord, query: string, all: readonly string[]
   let matched = 0;
   let named = 0;
   let leadNamed = false;
-  const scored = scoredActionWords(record, content);
+  const scored = scoredActionWords(record, content, leadIsAction);
   for (const [index, word] of content.entries()) {
     // A word any of the record's names holds is named and matched; the id rule scores it only in scoredActionWords.
     const action = actionHasWord(record, word);

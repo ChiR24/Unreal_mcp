@@ -34,10 +34,10 @@ struct FMcpSearchMatch
 /**
  * Score one record against the lowercase trimmed Query, its full word list and
  * its content words. bLeadIsAction: the first content word is some record's whole
- * action (McpSearchIsWholeAction). Returns false when no rule fired, in which case
- * the record is not a result at all.
+ * action (McpSearchIsWholeAction). GenericWords: McpSearchGenericWords. Returns false
+ * when no rule fired, in which case the record is not a result at all.
  */
 bool McpSearchScoreRecord(
 	const FMcpCapabilityRecord& Record, const FString& Query,
 	const TArray<FString>& AllWords, const TArray<FString>& ContentWords, bool bLeadIsAction,
-	FMcpSearchMatch& Out);
+	const TSet<FString>& GenericWords, FMcpSearchMatch& Out);

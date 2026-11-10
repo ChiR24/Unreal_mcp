@@ -1,5 +1,5 @@
 {
-  "catalogRevision": "e5cbeba3a50e23fb",
+  "catalogRevision": "e894ea955bc05889",
   "recordCount": 489,
   "records": [
     {
@@ -28021,6 +28021,8 @@
           "button label",
           "widget image",
           "widget color",
+          "text color",
+          "button color",
           "button sound",
           "click sound",
           "hover sound",
@@ -28516,7 +28518,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "ff8a167b88355b8ff739461b1061cdb2653f29ba9efe9d3abca973aeca73d87c",
-        "content": "c8f3ea9e267d8336624dbe2587bbeaf1876d6e2aa82a80b0f5e82d3a25f7d53a"
+        "content": "d52664746cbc60a076e4103ec665c87bb386d3e36f91dc7fd5a3e3c819c57e9e"
       }
     },
     {
@@ -42621,6 +42623,9 @@
           "create component",
           "create a component on an actor",
           "create actor component",
+          "create an actor component",
+          "scene component",
+          "change the color of a light",
           "add component to actor",
           "attach component to actor"
         ],
@@ -42865,7 +42870,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "6a1af5d36036625ba61910405e6e77df29e8cc620eb543fef4810449a49c2d16",
-        "content": "5fe95c658757acf7345a0ef7262c7d1111ff3dd6e6122c566b1ce4602d662e0d"
+        "content": "bf8db7f181986782454b5716f6225b66a1d3dcf2ce8a8cba8ddcaa5d45f57a07"
       }
     },
     {
@@ -47692,9 +47697,11 @@
           "a row of trees, lamps or posts",
           "fill a room with props or furniture",
           "place lamps or posts along a road or a path",
+          "add an actor to the level",
           "create actor",
           "create an actor",
           "create a new actor",
+          "create an empty actor",
           "spawn cube",
           "spawn static mesh",
           "instantiate class",
@@ -48099,7 +48106,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "fb05155ddec0c61d867d3540276173cb9307a64ce5e8324a2024d0be782ea2aa",
-        "content": "4cbd04b023872b670fbc0500b06a0a74f4d88a46b1deda606e9629f5c2cb4c04"
+        "content": "7578d949fc82ec31577c2dd9f03474ec76ff7f7f94e29055251879266e5a7862"
       }
     },
     {
@@ -82323,6 +82330,7 @@
       "id": "manage_geometry.create_primitive",
       "aliases": [
         "manage_geometry.create_box",
+        "manage_geometry.create_cube",
         "manage_geometry.create_sphere",
         "manage_geometry.create_cylinder",
         "manage_geometry.create_cone",
@@ -82349,7 +82357,10 @@
           "action": "create_box",
           "folded": {
             "primitive": "box"
-          }
+          },
+          "aliases": [
+            "manage_geometry.create_cube"
+          ]
         },
         {
           "tool": "manage_geometry",
@@ -82473,6 +82484,7 @@
           "make a cube or ramp",
           "create a cube",
           "create cube",
+          "create a cube actor",
           "add stairs, a staircase or a ramp",
           "signed distance field",
           "smooth blend shapes",
@@ -82491,7 +82503,7 @@
           "metaball",
           "rounded character part"
         ],
-        "summary": "Create a primitive mesh actor: box, sphere, cylinder, cone, capsule, plane, disc, ring, torus, pipe, arch, ramp, stairs, spiral stairs, a hip roof over any footprint, or one smooth organic mesh from blended shapes (sdf) with soft fillets where they meet. Each is a DynamicMeshActor with no collision: traces and players pass through it, and what stands on it reads \"nothing below it\", until configure_mesh_collision gives it some. Each is one undo step.",
+        "summary": "Create a primitive mesh actor: box (a cube), sphere, cylinder, cone, capsule, plane, disc, ring, torus, pipe, arch, ramp, stairs, spiral stairs, a hip roof over any footprint, or one smooth organic mesh from blended shapes (sdf) with soft fillets where they meet. Each is a DynamicMeshActor with no collision: traces and players pass through it, and what stands on it reads \"nothing below it\", until configure_mesh_collision gives it some. Each is one undo step.",
         "whenToUse": [
           "primitive=box: A box primitive must be created.",
           "primitive=sphere: A sphere primitive must be created.",
@@ -83105,7 +83117,7 @@
       },
       "examples": [
         {
-          "title": "Create a primitive mesh actor: box, sphere, cylinder, cone, capsule, plane, disc, ring, torus, pipe, arch, ramp, stairs, spiral stairs, a hip roof over any footprint, or one smooth organic mesh from blended shapes (sdf) with soft fillets where they meet. Each is a DynamicMeshActor with no collision: traces and players pass through it, and what stands on it reads \"nothing below it\", until configure_mesh_collision gives it some. Each is one undo step.",
+          "title": "Create a primitive mesh actor: box (a cube), sphere, cylinder, cone, capsule, plane, disc, ring, torus, pipe, arch, ramp, stairs, spiral stairs, a hip roof over any footprint, or one smooth organic mesh from blended shapes (sdf) with soft fillets where they meet. Each is a DynamicMeshActor with no collision: traces and players pass through it, and what stands on it reads \"nothing below it\", until configure_mesh_collision gives it some. Each is one undo step.",
           "input": {
             "action": "create_primitive",
             "dimensions": {
@@ -83321,7 +83333,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "48dc3aeda0cfc28ef5bf650e1d7ee3a40ec94f237850c3de3784d0c72dcb6f53",
-        "content": "55996f3c6825ca2d17a9df55908733af07ab5c2631322ac6a824d2dff2a1adcc"
+        "content": "d55e7efad29b91b52aef4a502d259990de8a46255f0a2106ba1325be55c69934"
       }
     },
     {

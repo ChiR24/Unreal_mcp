@@ -192,7 +192,7 @@ TSharedPtr<FJsonObject> McpGatewaySearchCapabilities(
 			continue;
 		}
 		FMcpSearchMatch Match;
-		if (!McpSearchScoreRecord(Record, Query, AllWords, ContentWords, bLeadIsAction, Match)) continue;
+		if (!McpSearchScoreRecord(Record, Query, AllWords, ContentWords, bLeadIsAction, McpSearchGenericWords(Store), Match)) continue;
 		Entry.Score = Match.Score;
 		Scored.Add(MoveTemp(Entry));
 	}
