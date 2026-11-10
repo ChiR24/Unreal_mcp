@@ -1209,4 +1209,8 @@ export const PLAIN_PROBE: readonly PlainProbeCase[] = [
   { query: 'create an actor', accepted: ['control_actor.spawn'] },
   { query: 'set light color', accepted: ['control_actor.edit_component'] },
   { query: 'which actors use this material', accepted: ['control_actor.find'] },
+  // A request found inside a longer word of a topic ('unlink pins', 'tag assets') is not that topic's request.
+  { query: 'link pins', accepted: ['blueprint.edit_graph'] },
+  { query: 'tag asset', accepted: ['asset.set_metadata'] },
+  { query: 'create cube', accepted: ['manage_geometry.create_primitive'] },
 ];

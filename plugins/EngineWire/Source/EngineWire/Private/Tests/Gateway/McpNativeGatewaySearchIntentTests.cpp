@@ -1,6 +1,6 @@
 // McpNativeGatewaySearchIntentTests.cpp — known answers for what a search request asks for beyond its words
 // (Search/McpSearchIntent.cpp): the effect its first word opens, its lead verb tied to the object, and the action
-// words the id rule scores.
+// words the id rule scores; and for the phrase rule, which reads a request as whole words.
 
 #include "MCP/Gateway/Search/McpSearchIntent.h"
 #include "MCP/Gateway/McpNativeGatewayCapabilityStore.h"
@@ -53,6 +53,15 @@ bool FMcpSearchIntentTest::RunTest(const FString& Parameters)
 	Scored.Reset();
 	McpSearchActionWords(Family, Request, Held, Scored);
 	TestEqual(TEXT("a word the domain names too scores beside the best alias"), Scored.Num(), 2);
+
+	// A request found inside a longer word of a topic is not that topic's request.
+	FMcpCapabilityRecord Unlink;
+	Unlink.Id = TEXT("blueprint.delete_node");
+	Unlink.Topics = { TEXT("unlink pins") };
+	const TArray<FString> LinkPins = { TEXT("link"), TEXT("pin") };
+	FMcpSearchMatch Inside;
+	McpSearchScoreRecord(Unlink, TEXT("link pins"), LinkPins, LinkPins, false, Inside);
+	TestTrue(TEXT("a phrase inside a longer word earns no phrase bonus"), Inside.Score < McpSearchPhraseTopicBonus);
 
 	const FMcpCapabilityStore& Store = FMcpCapabilityStore::Get();
 	if (!TestTrue(TEXT("capability store is ready"), Store.IsReady()))

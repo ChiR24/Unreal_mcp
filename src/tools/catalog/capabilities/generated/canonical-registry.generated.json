@@ -1,5 +1,5 @@
 {
-  "catalogRevision": "bdd7595a48d1d3e3",
+  "catalogRevision": "e5cbeba3a50e23fb",
   "recordCount": 489,
   "records": [
     {
@@ -82472,6 +82472,7 @@
           "torus",
           "make a cube or ramp",
           "create a cube",
+          "create cube",
           "add stairs, a staircase or a ramp",
           "signed distance field",
           "smooth blend shapes",
@@ -83320,7 +83321,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "48dc3aeda0cfc28ef5bf650e1d7ee3a40ec94f237850c3de3784d0c72dcb6f53",
-        "content": "e8a72e1e3c100da8f5887e36bd1bbb0669c72693444b9eb225dbced3b905cf5b"
+        "content": "55996f3c6825ca2d17a9df55908733af07ab5c2631322ac6a824d2dff2a1adcc"
       }
     },
     {

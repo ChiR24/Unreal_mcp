@@ -3,8 +3,9 @@
 // The gateway's own rule-based ranker, copied for the eval gate by
 // tests/eval/native-ranker.ts, which reads the function words here and the
 // intent words in Search/McpSearchIntent.cpp. Matching is WORD-level, never
-// substring: "move" must not hit `remove_*`, and a namespace word must not make
-// every record under it look like a hit. A record's declared aliases are its own
+// substring: "move" must not hit `remove_*`, a whole request found in a topic or
+// summary must sit on word boundaries there ("link pins" is not in "unlink pins"),
+// and a namespace word must not make every record under it look like a hit. A record's declared aliases are its own
 // names, so a verb the action does not carry ("move actor" ->
 // control_actor.move_actor) still lands. One alias scores at a time: words spread
 // over several aliases name no single action (McpSearchActionWords). Function words are dropped from the

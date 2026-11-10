@@ -63,6 +63,12 @@ describe('the TypeScript copy matches the native source', () => {
     expect(nativeIntent).toContain('if (bOwn || (bAlias && Subject.Contains(Word))) OutScored.Add(Word);');
     expect(nativeIntent).toContain('if (Added.Num() > Best.Num()) Best = MoveTemp(Added);');
   });
+
+  it('reads a phrase on word boundaries under the same rule', () => {
+    expect(nativeMatch).toContain('if ((Hit == Start || !IsAsciiAlnum(Hit[-1])) && !IsAsciiAlnum(Hit[Phrase.Len()])) return true;');
+    expect(nativeMatch).toContain('if (ContainsPhrase(Topic.ToLower(), Query)) return true;');
+    expect(nativeMatch).toContain('if (ContainsPhrase(Record.Summary.ToLower(), Query))');
+  });
 });
 
 // A verb that is some record's whole action leads the request; a record that names it only in a topic, or does not
@@ -96,6 +102,15 @@ describe('one alias at a time', () => {
   it('keeps a folded family from collecting a request word by word', () => {
     expect(nativeSearchRanker('create a material with a red color', 1)).toEqual(['material.create_material']);
     expect(nativeSearchRanker('which actors use this material', 1)).toEqual(['control_actor.find']);
+  });
+});
+
+// A request found inside a longer word is not the request: 'unlink pins' held "link pins" and 'delete c++ source files'
+// held "c++ source file", so a delete answered a request to connect and one to create.
+describe('phrases on word boundaries', () => {
+  it('gives the phrase bonus only to a topic that holds the request as whole words', () => {
+    expect(nativeSearchRanker('link pins', 1)).toEqual(['blueprint.edit_graph']);
+    expect(nativeSearchRanker('c++ source file', 1)).toEqual(['system_control.create_cpp_class']);
   });
 });
 

@@ -102,6 +102,15 @@ function actionEquals(record: NativeRecord, key: string): boolean {
   return key !== '' && (actionKey(record.id) === key || record.aliases.some((alias) => actionKey(alias) === key));
 }
 
+/** ContainsPhrase: the text holds the phrase as whole words ("link pins" is not in 'unlink pins' nor in 'link pinsets'). */
+function containsPhrase(text: string, phrase: string): boolean {
+  const wordChar = (ch: string): boolean => ch !== '' && 'abcdefghijklmnopqrstuvwxyz0123456789'.includes(ch);
+  for (let at = text.indexOf(phrase); at >= 0; at = text.indexOf(phrase, at + 1)) {
+    if (!wordChar(text.charAt(at - 1)) && !wordChar(text.charAt(at + phrase.length))) return true;
+  }
+  return false;
+}
+
 /** McpSearchLeadTied: the record's action, an alias or a topic holds the first content word and another one. */
 function leadTied(record: NativeRecord, content: readonly string[]): boolean {
   const holds = (words: readonly string[]): boolean => words.includes(content[0] ?? '') && content.slice(1).some((word) => words.includes(word));
@@ -115,11 +124,11 @@ function scoreRecord(record: NativeRecord, query: string, all: readonly string[]
   const fire = (rule: keyof typeof NATIVE_RULE_WEIGHTS): void => { score += NATIVE_RULE_WEIGHTS[rule]; fired = true; };
   if (record.id.toLowerCase() === query || actionEquals(record, all.join('_')) || actionEquals(record, content.join('_'))) fire('id-exact');
   if (all.length >= 2) {
-    if (record.topics.some((topic) => topic.toLowerCase().includes(query))) {
+    if (record.topics.some((topic) => containsPhrase(topic.toLowerCase(), query))) {
       fire('topic');
       score += NATIVE_PHRASE_TOPIC_BONUS;
     }
-    if (record.summary.toLowerCase().includes(query)) fire('summary');
+    if (containsPhrase(record.summary.toLowerCase(), query)) fire('summary');
   }
   let matched = 0;
   let named = 0;

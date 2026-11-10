@@ -114,11 +114,22 @@ bool ActionEquals(const FMcpCapabilityRecord& Record, const FString& Key)
 	return false;
 }
 
+// The phrase as whole words: "link pins" is in 'link pins of a node', not in 'unlink pins' nor in 'link pinsets'.
+bool ContainsPhrase(const FString& LowerText, const FString& Phrase)
+{
+	const TCHAR* const Start = *LowerText;
+	for (const TCHAR* Hit = FCString::Strstr(Start, *Phrase); Hit != nullptr; Hit = FCString::Strstr(Hit + 1, *Phrase))
+	{
+		if ((Hit == Start || !IsAsciiAlnum(Hit[-1])) && !IsAsciiAlnum(Hit[Phrase.Len()])) return true;
+	}
+	return false;
+}
+
 bool AnyTopicContainsPhrase(const TArray<FString>& Topics, const FString& Query)
 {
 	for (const FString& Topic : Topics)
 	{
-		if (Topic.ToLower().Contains(Query, ESearchCase::CaseSensitive)) return true;
+		if (ContainsPhrase(Topic.ToLower(), Query)) return true;
 	}
 	return false;
 }
@@ -193,7 +204,7 @@ bool McpSearchScoreRecord(
 			Fired[RuleTopic] = true;
 			Score += MatchRules[RuleTopic].Weight + McpSearchPhraseTopicBonus;
 		}
-		if (Record.Summary.ToLower().Contains(Query, ESearchCase::CaseSensitive))
+		if (ContainsPhrase(Record.Summary.ToLower(), Query))
 		{
 			Fired[RuleSummary] = true;
 			Score += MatchRules[RuleSummary].Weight;

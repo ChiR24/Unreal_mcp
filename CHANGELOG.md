@@ -13,7 +13,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 <summary><b>🔧 Fixed</b></summary>
 
 - **Builds**: the plugin links on UE 5.3 and 5.4 for Windows, and SmartObjects loads again in a Blueprint-only UE 5.5 project.
-- **Search**: words spread over several member names of a folded family no longer add up, so `create a material with a red color` finds `create_material` and not a mesh edit. `create component`, `create an actor`, `set light color` and Blueprint actor requests (`create actor blueprint with static mesh component`) reach their own action, whose summary names the next one.
+- **Search**: words spread over several member names of a folded family no longer add up, so `create a material with a red color` finds `create_material` and not a mesh edit. A topic answers a request only as whole words (`link pins` no longer finds the delete that names `unlink pins`), and `create component`, `create cube`, `create an actor`, `set light color` and Blueprint actor requests reach their own action.
 - **Counting by class**: `find_by_class` rows carry `class`, so `options.aggregate` with `groupBy: "class"` counts them by class instead of as one `(none)` group; a `groupBy` no row carries adds a `note` naming the fields to count by.
 
 </details>
