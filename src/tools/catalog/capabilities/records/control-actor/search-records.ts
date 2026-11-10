@@ -68,7 +68,8 @@ export const SEARCH_RECORDS: readonly CapabilityRecordSource[] = [
     action: 'add_tag',
     domain: DOMAIN,
     family: FAMILY_TAGS,
-    topics: ['tag actor', 'actor tag', 'label actor'],
+    // No 'label actor': an actor's label is its name in the Outliner, which rename sets.
+    topics: ['tag actor', 'actor tag'],
     summary: 'Add a tag to an actor, or with actorNames to many actors in one call and one undo step; their level is left unsaved. A tag already there is kept once (wasPresent). actorNames that match nothing come back in missing, and ACTOR_NOT_FOUND answers when none matched. Tags drive find_by_tag, delete_by_tag and the Actor Has Tag node; mcp.placement.ok makes the placement checks skip the actor.',
     whenToUse: [
       'An actor must be tagged for later lookup or grouping.',

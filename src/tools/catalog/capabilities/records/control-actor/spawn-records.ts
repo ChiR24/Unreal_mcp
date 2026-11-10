@@ -253,7 +253,7 @@ export const SPAWN_RECORDS: readonly CapabilityRecordSource[] = [
     action: 'rename',
     domain: DOMAIN,
     family: FAMILY_LIFECYCLE,
-    topics: ['rename actor', 'actor label', 'relabel actor', 'outliner name', 'actor object name', 'give actor a new name', 'change actor name',
+    topics: ['rename actor', 'actor label', 'label actor', 'relabel actor', 'outliner name', 'actor object name', 'give actor a new name', 'change actor name',
       'rename several actors', 'number the actors', 'batch rename', 'rename the cube or the wall', 'rename all the trees or the lights'],
     // No prop names here: with "change" in 'change actor name', 'rename the crates' made "change the crate" a rename.
     summary: 'Rename an actor: its label (the name the Outliner and every other call use), and with renameObject its object name too, which is the name a cooked level ships. actorNames relabels several actors in one undo step, numbered in the order given by a {n} in newName (Crate_{n} -> Crate_01, Crate_02, ...).',

@@ -1,5 +1,5 @@
 {
-  "catalogRevision": "e894ea955bc05889",
+  "catalogRevision": "2919cbfec344eba1",
   "recordCount": 489,
   "records": [
     {
@@ -40149,7 +40149,6 @@
           "add_tag",
           "tag actor",
           "actor tag",
-          "label actor",
           "remove tag from actor",
           "untag actor",
           "delete tag"
@@ -40325,7 +40324,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "eca1680d47e872ab9a775627a6176b7c512539a08fa374a3fb72914a281a2482",
-        "content": "f1ec7f1567cd1a2e58e50bd0f3d3f2fa59b7a0f0b423e70aa54484d040126122"
+        "content": "81afe2d0b74a61752d936ccdbf8ec8085a3e85c39489759771ae6dd7fa3620d0"
       }
     },
     {
@@ -45621,6 +45620,7 @@
           "rename",
           "rename actor",
           "actor label",
+          "label actor",
           "relabel actor",
           "outliner name",
           "actor object name",
@@ -45809,7 +45809,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "9cdd93db1ffde13a933832a208063d594ae8e598e6fbc84e852a4c30aa072824",
-        "content": "7a169b6fcb5ab12ef442d8be6e7d259df9dc5e316ee8ea2551d7159038049e53"
+        "content": "f49499f78147e059742f87a5be1790967a154119238de58d80cbbf2845aee2fb"
       }
     },
     {

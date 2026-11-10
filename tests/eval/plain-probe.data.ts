@@ -1228,4 +1228,5 @@ export const PLAIN_PROBE: readonly PlainProbeCase[] = [
   { query: 'change the color of a light', accepted: ['control_actor.edit_component'] },
   { query: 'text color', accepted: ['blueprint.set_widget_layout'] },
   { query: 'button color', accepted: ['blueprint.set_widget_layout'] },
+  { query: 'label actor', accepted: ['control_actor.rename'] },
 ];
