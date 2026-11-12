@@ -2,7 +2,7 @@
 
 #include "HAL/PlatformTLS.h"
 #include "Core/Subsystem/EngineWireSubsystemResponseSanitization.h"
-#include "Core/Errors/McpRequestErrorDevice.h"
+#include "Core/Subsystem/McpRequestErrorDevice.h"
 
 using namespace EngineWireSubsystemResponse;
 

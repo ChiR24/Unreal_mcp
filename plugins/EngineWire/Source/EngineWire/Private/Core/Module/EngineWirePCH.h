@@ -122,7 +122,6 @@ class UAnimBlueprint;
 
 // Scoped Transaction (for undo/redo support)
 #include "ScopedTransaction.h"
-#define MCP_PCH_HAS_SCOPED_TRANSACTION 1
 
 // Editor asset library
 #include "EditorAssetLibrary.h"

@@ -1,7 +1,6 @@
 // McpResourceCatalog.h
-// The resources and templates native /mcp lists. Mirrors the stdio surface in
-// src/handlers/resource-handlers.ts and src/resources/resource-catalog.ts, minus
-// the live editor-state URIs the socket thread may not read (IsNativeUnservedUri).
+// The resources and templates native /mcp lists: every resource but the live
+// editor-state URIs the socket thread may not read (IsNativeUnservedUri).
 #pragma once
 
 #include "CoreMinimal.h"
@@ -81,10 +80,10 @@ namespace McpResourceCatalog
 		return Defs;
 	}
 
-	// Live editor state only the game thread may read. The stdio transport serves
-	// these by round-tripping through the automation bridge; native answers
-	// resources/read on the socket thread, which must never block on editor work
-	// and must not serve a stale cache, so it neither lists nor serves them.
+	// Live editor state only the game thread may read. resources/read is answered
+	// on the socket thread, which must never block on editor work and must not
+	// serve a stale cache, so these are neither listed nor served; the unreal tool
+	// reads them (list actors, selected actors, list assets).
 	inline bool IsNativeUnservedUri(const FString& Uri)
 	{
 		static const TArray<FString> Uris = {

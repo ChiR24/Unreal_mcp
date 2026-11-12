@@ -146,7 +146,8 @@ inline bool McpSafeLoadMap(const FString& MapPath, bool bForceCleanup = true)
         UWorldPartition* CurrentWorldPartition = WorldSettings ? WorldSettings->GetWorldPartition() : nullptr;
         if (CurrentWorldPartition)
         {
-            UE_LOG(LogMcpSafeOperations, Warning,
+            // Log, not Warning: it names nothing a caller can act on, and a Warning during a call is read as one.
+            UE_LOG(LogMcpSafeOperations, Log,
                 TEXT("McpSafeLoadMap: Current world '%s' has World Partition - tick cleanup may be incomplete"),
                 *CurrentWorld->GetName());
         }

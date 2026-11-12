@@ -49,10 +49,4 @@ inline bool CheckRange(const FProperty* Property, double Number, const FString& 
     return false;
 }
 
-inline FProperty* FindPropertyByName(UObject* Object, const FName& PropertyName)
-{
-    UClass* Class = Object ? Object->GetClass() : nullptr;
-    return Class ? Class->FindPropertyByName(PropertyName) : nullptr;
-}
-
 }

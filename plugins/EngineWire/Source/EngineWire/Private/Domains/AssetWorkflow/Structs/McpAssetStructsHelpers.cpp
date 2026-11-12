@@ -2,7 +2,7 @@
 
 #include "EditorAssetLibrary.h"
 #include "Foundation/BridgeHelpers/Properties/McpPropApply.h"
-#include "Foundation/HandlerUtils/McpHandlerUtilsBlueprintGraph.h"
+#include "Foundation/Blueprint/McpBlueprintUtils.h"
 #include "UObject/StructOnScope.h"
 
 

@@ -2,7 +2,7 @@
 
 #include "Foundation/BridgeHelpers/Responses/McpJsonFields.h"
 #include "Safety/McpSafeOperations.h"
-#include "Foundation/HandlerUtils/McpHandlerUtilsBlueprintGraph.h"
+#include "Foundation/Blueprint/McpBlueprintUtils.h"
 
 #include "Engine/Blueprint.h"
 #include "K2Node_BreakStruct.h"

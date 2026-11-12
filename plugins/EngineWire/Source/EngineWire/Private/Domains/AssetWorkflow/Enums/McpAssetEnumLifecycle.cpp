@@ -137,7 +137,7 @@ bool HandleEnumLifecycleActions(
         for (int32 i = 0; i < Enum->NumEnums(); ++i)
         {
             const FString EntryName = Enum->GetNameStringByIndex(i);
-            if (EntryName.EndsWith(TEXT("_MAX"))) { continue; }
+            if (McpIsEnumMaxEntry(Enum, i)) { continue; }
             TSharedPtr<FJsonObject> V = MakeShared<FJsonObject>();
             V->SetStringField(TEXT("name"), EntryName);
             V->SetStringField(TEXT("displayName"), Enum->GetDisplayNameTextByIndex(i).ToString());

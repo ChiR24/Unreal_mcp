@@ -137,7 +137,7 @@ TSharedPtr<FJsonObject> ConsentGrant(const FMcpCapabilityRecord& Record)
 	// the consent ledger, and the prequeue gate burns it on first acceptance, so a
 	// replayed grant is CONSENT_REUSED and one whose nonce this server did not mint
 	// for the capability (made up, missing, too old) is CONSENT_NOT_ISSUED.
-	Grant->SetStringField(TEXT("nonce"), McpCapabilityAuthorization::FMcpConsentLedger::Get().Mint(Record.Id));
+	Grant->SetStringField(TEXT("nonce"), FMcpConsentLedger::Get().Mint(Record.Id));
 	return Grant;
 }
 

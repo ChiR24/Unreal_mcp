@@ -10,6 +10,20 @@
 #include "MCP/Transport/McpNativeTransport.h"
 #include "Widgets/SWindow.h"
 
+void UEngineWireSubsystem::SendModalRefusal(TSharedPtr<FMcpBridgeWebSocket> Socket, const FString& RequestId, const FString& DialogTitle,
+                                            ERequestOrigin Origin)
+{
+    // The failure path hands back a consumed consent grant and never records an idempotency key, so the same call
+    // succeeds unchanged once the dialog is closed.
+    TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
+    Result->SetStringField(TEXT("modalWindowTitle"), DialogTitle);
+    SendAutomationResponse(
+        Socket, RequestId, false,
+        FString::Printf(TEXT("The editor is waiting on the dialog '%s'; nothing ran. Close that dialog in the editor, then send the same call again."),
+                        *DialogTitle),
+        Result, TEXT("EDITOR_MODAL_ACTIVE"), Origin);
+}
+
 int32 UEngineWireSubsystem::AnswerQueuedRequestsDuringModal(const FString& DialogTitle)
 {
     // Taken out under the lock and answered outside it: SendAutomationResponse reaches the transports, which take
@@ -22,15 +36,7 @@ int32 UEngineWireSubsystem::AnswerQueuedRequestsDuringModal(const FString& Dialo
     }
     for (const FPendingAutomationRequest& Request : Taken)
     {
-        // The failure path hands back a consumed consent grant and never records an idempotency key, so the same
-        // call succeeds unchanged once the dialog is closed.
-        TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
-        Result->SetStringField(TEXT("modalWindowTitle"), DialogTitle);
-        SendAutomationResponse(
-            Request.RequestingSocket, Request.RequestId, false,
-            FString::Printf(TEXT("The editor is waiting on the dialog '%s'; nothing ran. Close that dialog in the editor, then send the same call again."),
-                            *DialogTitle),
-            Result, TEXT("EDITOR_MODAL_ACTIVE"), Request.Origin);
+        SendModalRefusal(Request.RequestingSocket, Request.RequestId, DialogTitle, Request.Origin);
     }
     return Taken.Num();
 }

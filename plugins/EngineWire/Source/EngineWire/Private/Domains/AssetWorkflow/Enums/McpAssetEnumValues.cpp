@@ -9,7 +9,7 @@ static TArray<TPair<FName, int64>> GetEnumDisplayNamePairs(UUserDefinedEnum* Enu
     const int32 Num = Enum->NumEnums();
     for (int32 i = 0; i < Num; ++i)
     {
-        if (Enum->GetNameStringByIndex(i).EndsWith(TEXT("_MAX"))) { continue; }
+        if (McpIsEnumMaxEntry(Enum, i)) { continue; }
         Result.Add(TPair<FName, int64>(Enum->GetNameByIndex(i), Enum->GetValueByIndex(i)));
     }
     return Result;

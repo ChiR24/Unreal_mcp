@@ -1,5 +1,5 @@
 #include "Domains/Blueprint/McpBPActionContext.h"
-#include "Foundation/HandlerUtils/McpHandlerUtilsBlueprintGraph.h"
+#include "Foundation/Blueprint/McpBlueprintUtils.h"
 #include "Domains/BlueprintGraph/McpBPGraphCompatibility.h"
 #include "Foundation/HandlerUtils/McpHandlerUtils.h"
 

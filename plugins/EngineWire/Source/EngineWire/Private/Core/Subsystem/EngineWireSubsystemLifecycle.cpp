@@ -5,7 +5,7 @@
 #include "EngineWireSettings.h"
 #include "Transport/WebSocket/McpBridgeWebSocket.h"
 #include "McpConnectionManager.h"
-#include "Core/Errors/McpRequestErrorDevice.h"
+#include "Core/Subsystem/McpRequestErrorDevice.h"
 #include "Core/Journal/McpChangeJournal.h"
 #include "Foundation/Diagnostics/McpDiagnosticsSnapshot.h"
 #include "Foundation/Diagnostics/McpWorldTickTimer.h"

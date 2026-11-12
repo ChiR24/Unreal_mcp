@@ -257,7 +257,6 @@ IMPLEMENT_SIMPLE_AUTOMATION_TEST(
 bool FMcpPrequeueGateConsentNonceTest::RunTest(const FString& Parameters)
 {
 	(void)Parameters;
-	using McpCapabilityAuthorization::FMcpConsentLedger;
 	if (!TestTrue(TEXT("capability store is ready"), FMcpCapabilityStore::Get().IsReady()))
 	{
 		return false;

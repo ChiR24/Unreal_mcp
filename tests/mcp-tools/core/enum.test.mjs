@@ -38,6 +38,9 @@ const testCases = [
       { path: 'structuredContent.result.valueCount', equals: 0, label: 'fresh enum has no values' },
     ],
   },
+  // The entry the engine appends is left out by its place, not its name: a value named Speed_Max is a value.
+  { scenario: 'ENUM: create_enum with a value whose name ends in _Max', toolName: 'manage_asset', arguments: { action: 'create_enum', name: `E_MCP_MaxName_${ts}`, path: TEST_FOLDER, values: ['Walk', 'Speed_Max'] }, expected: 'success' },
+  { scenario: 'ENUM: get_enum lists the value whose name ends in _Max', toolName: 'manage_asset', arguments: { action: 'get_enum', enumPath: `${TEST_FOLDER}/E_MCP_MaxName_${ts}` }, expected: 'success', assertions: [{ path: 'structuredContent.result.values', includesObject: { name: 'Speed_Max' }, label: 'the value is listed' }, { path: 'structuredContent.result.valueCount', equals: 2, label: 'and the appended entry is not' }] },
   // === ENUM VALUES ===
   {
     scenario: 'ENUM: add_enum_value (Red)',

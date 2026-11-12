@@ -11,7 +11,7 @@
 #include "Foundation/BridgeHelpers/Blueprints/McpBPCompileHelpers.h"
 #include "Foundation/BridgeHelpers/Responses/McpJsonFields.h"
 #include "Foundation/HandlerUtils/McpHandlerUtils.h"
-#include "Foundation/HandlerUtils/McpHandlerUtilsBlueprintGraph.h"
+#include "Foundation/Blueprint/McpBlueprintUtils.h"
 #include "K2Node_FunctionEntry.h"
 #include "Kismet2/BlueprintEditorUtils.h"
 #include "Kismet2/Kismet2NameValidators.h"

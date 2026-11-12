@@ -7,7 +7,7 @@
 
 #include "Domains/ControlActor/Relations/McpArrange.h"
 
-#include "Foundation/Solvers/McpAnneal.h"
+#include "Foundation/Optimize/McpAnneal.h"
 
 namespace McpArrange
 {

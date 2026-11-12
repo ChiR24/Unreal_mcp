@@ -11,6 +11,9 @@
 #include "Engine/Blueprint.h"
 #include "EditorAssetLibrary.h"
 
+// A native class by name or path: the object of that exact name, a path that loads, the short name under the common
+// /Script packages, then any loaded class so named. A Blueprint class is not its concern (a name ending in _C is not
+// probed, and a Blueprint asset path names the asset, not its class): ResolveClassByName below resolves those.
 static inline UClass *ResolveUClass(const FString &Input) {
   if (Input.IsEmpty())
     return nullptr;

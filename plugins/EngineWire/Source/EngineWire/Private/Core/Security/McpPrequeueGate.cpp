@@ -231,8 +231,7 @@ FMcpAuthorizationDecision AuthorizeWithDemand(
 	// and a missing one as legacy. The WebSocket door skips a grant without one.
 	if (Grant.bConsentPresent && (Request.bRequireIssuedNonce || !Grant.ConsentNonce.IsEmpty()))
 	{
-		using McpCapabilityAuthorization::EMcpConsentNonce;
-		const EMcpConsentNonce Nonce = McpCapabilityAuthorization::FMcpConsentLedger::Get().Consume(
+		const EMcpConsentNonce Nonce = FMcpConsentLedger::Get().Consume(
 			Grant.ConsentNonce, Demand.CapabilityId, Request.bRequireIssuedNonce);
 		if (Nonce == EMcpConsentNonce::Reused)
 		{
@@ -287,7 +286,7 @@ void NoteDispatchStarted(const FString& RequestId)
 void RefundConsentForRequest(const FString& RequestId)
 {
 	// Only a request no handler ran still has its burn record.
-	McpCapabilityAuthorization::FMcpConsentLedger::Get().Refund(TakeBurnedNonce(RequestId));
+	FMcpConsentLedger::Get().Refund(TakeBurnedNonce(RequestId));
 }
 
 void ForgetConsentForRequest(const FString& RequestId)

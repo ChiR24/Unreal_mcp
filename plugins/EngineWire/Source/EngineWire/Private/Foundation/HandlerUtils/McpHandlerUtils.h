@@ -1,7 +1,7 @@
 #pragma once
 
 #include "Foundation/HandlerUtils/McpHandlerUtilsActionsPaths.h"
-#include "Foundation/HandlerUtils/McpHandlerUtilsBlueprintGraph.h"
+#include "Foundation/Blueprint/McpBlueprintUtils.h"
 #include "Foundation/HandlerUtils/McpHandlerUtilsJson.h"
 #include "Foundation/HandlerUtils/McpHandlerUtilsResponses.h"
 

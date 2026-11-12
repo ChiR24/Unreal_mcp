@@ -49,7 +49,7 @@ bool HandleEnumSplit(
     {
         for (int32 Index = FMath::Max(SplitIndex, 0); Index < Enum->NumEnums(); ++Index)
         {
-            if (!Enum->GetNameStringByIndex(Index).EndsWith(TEXT("_MAX"))) { Picked.Add(Index); }
+            if (!McpIsEnumMaxEntry(Enum, Index)) { Picked.Add(Index); }
         }
     }
     if (Picked.Num() == 0) { SetEnumResultFields(OutResult, false, TEXT("No matching values to split"), TEXT("NOT_FOUND")); return true; }

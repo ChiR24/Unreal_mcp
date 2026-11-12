@@ -115,26 +115,27 @@ bool HandleDataTableBulkRowActions(
         // import, and silently destructive when a caller passes a partial row meaning
         // to patch it -- so count the omissions and say so.
         int32 Imported = 0;
-        int32 WorstOmitted = 0;
         FString WorstOmittedRow;
-        TSet<FString> OmittedFields;
+        TArray<FString> WorstOmitted; // the columns the row that left out most did not send, by authored name
         int32 ColumnCount = 0;
         for (TFieldIterator<FProperty> PropIt(Table->RowStruct); PropIt; ++PropIt) { ++ColumnCount; }
 
         for (const FPendingRow& P : Pending)
         {
-            if (ColumnCount > 0 && P.Data.IsValid())
+            if (P.Data.IsValid())
             {
-                const int32 Omitted = ColumnCount - P.Data->Values.Num();
-                if (Omitted > WorstOmitted)
+                // Each row's own missing columns, by name. Counting its keys let a misspelled key stand in for a column, and
+                // the names of every worst row so far were added up, so the list named columns the reported row had sent.
+                TArray<FString> Omitted;
+                for (TFieldIterator<FProperty> PropIt(Table->RowStruct); PropIt; ++PropIt)
                 {
-                    WorstOmitted = Omitted;
+                    const FString Field = PropIt->GetAuthoredName();
+                    if (!P.Data->HasField(Field)) { Omitted.Add(Field); }
+                }
+                if (Omitted.Num() > WorstOmitted.Num())
+                {
+                    WorstOmitted = MoveTemp(Omitted);
                     WorstOmittedRow = P.Name.ToString();
-                    for (TFieldIterator<FProperty> PropIt(Table->RowStruct); PropIt; ++PropIt)
-                    {
-                        const FString Field = PropIt->GetAuthoredName();
-                        if (!P.Data->HasField(Field)) { OmittedFields.Add(Field); }
-                    }
                 }
             }
             Table->RemoveRow(P.Name);
@@ -149,17 +150,16 @@ bool HandleDataTableBulkRowActions(
         OutResult->SetBoolField(TEXT("saved"), bSaved);
         OutResult->SetNumberField(TEXT("skipped"), InvalidRows.Num());
         OutResult->SetArrayField(TEXT("invalidRows"), InvalidRows);
-        if (WorstOmitted > 0)
+        if (WorstOmitted.Num() > 0)
         {
-            TArray<FString> Names = OmittedFields.Array();
-            Names.Sort();
-            OutResult->SetNumberField(TEXT("fieldsDefaulted"), WorstOmitted);
+            WorstOmitted.Sort();
+            OutResult->SetNumberField(TEXT("fieldsDefaulted"), WorstOmitted.Num());
             OutResult->SetStringField(
                 TEXT("dataLossWarning"),
                 FString::Printf(
                     TEXT("import_rows replaces rows rather than merging: row '%s' supplied %d of %d columns, so %d were reset to the row struct's defaults (%s). Use update_row to patch a row without touching its other columns."),
-                    *WorstOmittedRow, ColumnCount - WorstOmitted, ColumnCount, WorstOmitted,
-                    *FString::Join(Names, TEXT(", "))));
+                    *WorstOmittedRow, ColumnCount - WorstOmitted.Num(), ColumnCount, WorstOmitted.Num(),
+                    *FString::Join(WorstOmitted, TEXT(", "))));
         }
         McpHandlerUtils::AddVerification(OutResult, Table);
         return true;

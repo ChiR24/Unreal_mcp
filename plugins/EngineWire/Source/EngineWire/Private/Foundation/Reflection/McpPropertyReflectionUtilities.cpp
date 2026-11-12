@@ -21,8 +21,9 @@ FString GetPropertyTypeName(FProperty* Property)
         return EnumProp->GetEnum() ? FString::Printf(TEXT("Enum(%s)"), *EnumProp->GetEnum()->GetName()) : TEXT("Enum");
     }
     if (Property->IsA<FObjectProperty>()) return TEXT("Object");
-    if (Property->IsA<FSoftObjectProperty>()) return TEXT("SoftObject");
+    // The soft class property derives from the soft object one, so it is asked first: asked second it was never reached.
     if (Property->IsA<FSoftClassProperty>()) return TEXT("SoftClass");
+    if (Property->IsA<FSoftObjectProperty>()) return TEXT("SoftObject");
     if (FStructProperty* StructProp = CastField<FStructProperty>(Property))
     {
         return StructProp->Struct ? FString::Printf(TEXT("Struct(%s)"), *StructProp->Struct->GetName()) : TEXT("Struct");

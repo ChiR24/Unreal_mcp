@@ -1,6 +1,6 @@
 #include "Domains/AssetWorkflow/Structs/McpAssetStructsShared.h"
 
-#include "Foundation/HandlerUtils/McpHandlerUtilsBlueprintGraph.h"
+#include "Foundation/Blueprint/McpBlueprintUtils.h"
 
 
 bool AddStructMembersFromArray(

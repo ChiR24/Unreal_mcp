@@ -3,7 +3,7 @@
 #include "Foundation/BridgeHelpers/Assets/McpAssetSaveRegistry.h"
 #include "Foundation/BridgeHelpers/Blueprints/McpBPCompileHelpers.h"
 #include "Foundation/HandlerUtils/McpHandlerUtils.h"
-#include "Foundation/HandlerUtils/McpHandlerUtilsBlueprintGraph.h"
+#include "Foundation/Blueprint/McpBlueprintUtils.h"
 
 #include "Engine/Blueprint.h"
 #include "Kismet2/BlueprintEditorUtils.h"

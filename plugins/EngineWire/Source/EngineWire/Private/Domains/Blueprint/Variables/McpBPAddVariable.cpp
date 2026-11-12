@@ -1,5 +1,5 @@
 #include "Foundation/HandlerUtils/McpHandlerUtilsJson.h"
-#include "Foundation/HandlerUtils/McpHandlerUtilsBlueprintGraph.h"
+#include "Foundation/Blueprint/McpBlueprintUtils.h"
 // Supplies MCP_BLUEPRINT_ACTION_LOCALS, which declares RequestId /
 // RequestingSocket / LocalPayload / Bridge for every handler in this file. Every
 // other Blueprint handler that uses the macro includes this; omitting it here

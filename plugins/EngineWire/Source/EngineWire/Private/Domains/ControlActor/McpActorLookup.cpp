@@ -6,21 +6,12 @@ AActor *UEngineWireSubsystem::FindActorByName(const FString &Target, bool bExact
   if (Target.IsEmpty() || !GEditor)
     return nullptr;
 
-  // Priority: PIE World if active
+  // The running game first: its exact match, then the role names (PlayerPawn, PlayerController, GameMode, HUD...), so
+  // a test need not know that the pawn spawned as BP_Hero_C_0. The editor scan below goes through UEditorActorSubsystem,
+  // which refuses every call during PIE and logs it, and that log turned a miss into "stop play, then retry" although
+  // the PIE world had been searched.
   if (GEditor->PlayWorld) {
-    if (AActor *PieActor = FindActorByNameInWorldForMcp(
-            GEditor->PlayWorld.Get(), Target, true)) {
-      return PieActor;
-    }
-    // Not in the running game. The editor-level fallback below goes through
-    // UEditorActorSubsystem, which refuses every call during PIE and logs it,
-    // and that log turned this miss into "stop play, then retry" although the
-    // PIE world had been searched (the actor was in another level PIE had
-    // loaded). The reply's worldName names the PIE world that was searched.
-    // PlayerPawn, PlayerController, GameMode, HUD... reach the running game's
-    // actors by role, so a test need not know that the pawn spawned as
-    // BP_Hero_C_0.
-    return Cast<AActor>(McpHandlerUtils::ResolveRuntimeRole(Target));
+    return McpHandlerUtils::FindActorByName(Target);
   }
 
   UEditorActorSubsystem *ActorSS =

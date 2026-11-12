@@ -220,6 +220,8 @@ public:
   // A modal dialog runs its own loop, which never ticks the queue drain: every request still queued is answered
   // EDITOR_MODAL_ACTIVE naming the dialog, without running. Returns how many were answered.
   int32 AnswerQueuedRequestsDuringModal(const FString& DialogTitle);
+  // The EDITOR_MODAL_ACTIVE answer itself, for a request that is not run because a dialog is up.
+  void SendModalRefusal(TSharedPtr<FMcpBridgeWebSocket> Socket, const FString& RequestId, const FString& DialogTitle, ERequestOrigin Origin);
 
   TSharedPtr<class FMcpConnectionManager> ConnectionManager;
   TSharedPtr<FMcpNativeTransport> NativeTransport;

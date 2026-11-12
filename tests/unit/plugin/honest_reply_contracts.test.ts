@@ -2944,8 +2944,10 @@ describe('a sound that never ends by itself', () => {
       'utf8',
     );
     expect(check).toContain('const bool bForgotten = Name == TEXT("PlaySoundAtLocation") || Name == TEXT("PlaySound2D");');
-    expect(check).toContain('const FString Endless = bForgotten ? McpAudioAuthoring::DescribeEndlessSound(Sound) : FString();');
-    const ends = code('AudioAuthoring', 'MetaSound', 'McpAudioMetaSoundGraphRead.cpp');
+    expect(check).toContain('const FString Endless = bForgotten ? DescribeEndlessSound(Sound) : FString();');
+    // The check that reads the sound lives beside its one caller, not in the audio authoring domain.
+    const ends = check;
+    expect(check).not.toContain('Domains/');
     expect(ends).toMatch(/if \(Sound->IsLooping\(\)\)\s*\{\s*return TEXT\("loops"\);/u);
     expect(ends).toContain('const FName OnFinished(TEXT("UE.Source.OneShot.OnFinished"));');
     expect(ends).toMatch(/Page\.Edges\.ContainsByPredicate\(\s*\[Finished\]\(const FMetasoundFrontendEdge& Edge\) \{ return Edge\.ToNodeID == Finished->NodeID; \}\)/u);

@@ -82,7 +82,7 @@ bool HandleSetupGlobalIllumination(
     {
         FString ResolveError;
         FString ResolveErrorCode;
-        PPV = McpRenderHandlers::McpResolvePostProcessVolume(
+        PPV = McpResolvePostProcessVolume(
             McpHandlerUtils::GetEditorWorld(), Payload, true, ResolveError, ResolveErrorCode);
         if (!PPV)
         {

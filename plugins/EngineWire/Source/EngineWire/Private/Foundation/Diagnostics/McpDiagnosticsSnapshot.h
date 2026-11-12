@@ -23,9 +23,8 @@ class FJsonObject;
 // Plugin-only diagnostics snapshot store.
 //
 // The Unreal plugin is the SOLE writer of <Project>/Saved/MCP/diagnostics/
-// current-session.json and previous-session.json (64 KiB max each). The
-// TypeScript surface is read-only (src/automation/diagnostics-snapshot-reader.ts)
-// and can never write these files.
+// current-session.json and previous-session.json (64 KiB max each). Nothing
+// in the TypeScript package reads or writes these files.
 //
 // The store is a proper .h/.cpp singleton (function-local static in the .cpp,
 // one FCriticalSection) mirroring FMcpTelemetryRegistry. The clock and the

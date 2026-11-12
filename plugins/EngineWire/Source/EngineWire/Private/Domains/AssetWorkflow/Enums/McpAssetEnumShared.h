@@ -64,6 +64,13 @@ bool HandleEnumSplit(
     const TSharedPtr<FJsonObject>& Params,
     TSharedPtr<FJsonObject>& OutResult);
 
+// Whether Index is the MAX entry the engine appends to an enum (its last one): no value of the enum. Asked by position,
+// not by name: a value a caller named Speed_Max ends in _MAX too, and a test of the name hid it from every read.
+inline bool McpIsEnumMaxEntry(const UEnum* Enum, int32 Index)
+{
+    return Enum && Index == Enum->NumEnums() - 1 && Enum->ContainsExistingMax();
+}
+
 // The index of the value named Requested, by its internal name or by its display name (rename_enum_value changes only
 // the display name, which keeps every stored value), any case; INDEX_NONE when none matches. The hidden _MAX is no value.
 inline int32 McpFindEnumValue(const UUserDefinedEnum* Enum, const FString& Requested)
@@ -71,7 +78,7 @@ inline int32 McpFindEnumValue(const UUserDefinedEnum* Enum, const FString& Reque
     for (int32 Index = 0; Enum && Index < Enum->NumEnums(); ++Index)
     {
         const FString Short = Enum->GetNameStringByIndex(Index);
-        if (!Short.EndsWith(TEXT("_MAX")) && (Short == Requested || Enum->GetDisplayNameTextByIndex(Index).ToString() == Requested))
+        if (!McpIsEnumMaxEntry(Enum, Index) && (Short == Requested || Enum->GetDisplayNameTextByIndex(Index).ToString() == Requested))
         {
             return Index;
         }

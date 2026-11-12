@@ -150,9 +150,9 @@ bool FMcpModernProtocolConsentTest::RunTest(const FString& Parameters)
 	TestEqual(TEXT("grant names the capability"), Accepted.Grant->GetStringField(TEXT("capability")), Capability);
 	TestEqual(TEXT("grant carries the asked mode"), Accepted.Grant->GetStringField(TEXT("acknowledge")), FString(TEXT("elevated")));
 	const FString Nonce = Accepted.Grant->GetStringField(TEXT("nonce"));
-	auto& Ledger = McpCapabilityAuthorization::FMcpConsentLedger::Get();
+	auto& Ledger = FMcpConsentLedger::Get();
 	TestTrue(TEXT("the grant's nonce was minted for the capability and burns once"),
-		Ledger.Consume(Nonce, Capability, true) == McpCapabilityAuthorization::EMcpConsentNonce::Accepted);
+		Ledger.Consume(Nonce, Capability, true) == EMcpConsentNonce::Accepted);
 	TestFalse(TEXT("a replayed yes is refused by the ledger"), Ledger.TryConsume(Nonce));
 
 	FString Tampered = State;

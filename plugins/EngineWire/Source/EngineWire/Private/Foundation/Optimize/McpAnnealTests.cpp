@@ -1,12 +1,12 @@
 // Copyright (c) 2024 EngineWire Contributors
 
-#include "Foundation/Solvers/McpAnneal.h"
+#include "Foundation/Optimize/McpAnneal.h"
 #include "Foundation/Solvers/McpBoxSat.h"
 
 #if WITH_DEV_AUTOMATION_TESTS
 #include "Misc/AutomationTest.h"
 
-IMPLEMENT_SIMPLE_AUTOMATION_TEST(FMcpAnnealTest, "EngineWire.Foundation.Solvers.Anneal",
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FMcpAnnealTest, "EngineWire.Foundation.Optimize.Anneal",
                                  EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
 
 // Known answers: the overlap depth of squares side by side and turned, then three boxes stacked on one spot pushed

@@ -1,5 +1,4 @@
 #include "Foundation/Render/McpPostProcessVolumeResolution.h"
-#include "Domains/Render/McpRenderSupportSettings.h"
 
 #include "Foundation/BridgeHelpers/McpHelpers.h"
 #include "Foundation/HandlerUtils/McpHandlerUtils.h"
@@ -8,8 +7,6 @@
 #include "Engine/World.h"
 #include "EngineUtils.h"
 
-namespace McpRenderHandlers
-{
 APostProcessVolume* McpResolvePostProcessVolume(
     UWorld* World,
     const TSharedPtr<FJsonObject>& Payload,
@@ -126,5 +123,4 @@ APostProcessVolume* McpResolvePostProcessVolume(
     OutError = TEXT("PostProcessVolume not found.");
     OutErrorCode = TEXT("ACTOR_NOT_FOUND");
     return nullptr;
-}
 }

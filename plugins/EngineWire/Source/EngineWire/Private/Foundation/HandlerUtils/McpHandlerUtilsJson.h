@@ -23,13 +23,6 @@ inline bool TryGetJsonValueString(const TSharedPtr<FJsonValue>& Value, FString& 
     return true;
 }
 
-/**
- * Read a JSON array field as strings, skipping any element that is not a
- * string. A missing field, a null payload or a non-array value all yield an
- * empty array, so callers never need to pre-check. This is the one place that
- * knows the shape; the configure/visibility paths on both the native gateway
- * and the dynamic tool manager read their `tools` list through it.
- */
 // Strings as a JSON string array.
 inline TArray<TSharedPtr<FJsonValue>> ToJsonStringArray(const TArray<FString>& Strings)
 {
@@ -41,6 +34,13 @@ inline TArray<TSharedPtr<FJsonValue>> ToJsonStringArray(const TArray<FString>& S
     return Values;
 }
 
+/**
+ * Read a JSON array field as strings, skipping any element that is not a
+ * string. A missing field, a null payload or a non-array value all yield an
+ * empty array, so callers never need to pre-check. This is the one place that
+ * knows the shape; the configure/visibility paths on both the native gateway
+ * and the dynamic tool manager read their `tools` list through it.
+ */
 inline TArray<FString> GetStringArrayField(
     const TSharedPtr<FJsonObject>& Payload, const FString& FieldName)
 {

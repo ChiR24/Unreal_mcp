@@ -10,11 +10,11 @@ domain-local copy of reflection, path, JSON, or response helpers.
 |--------|-------|-----------|
 | `Reflection/` | 3 .h (11 files w/ .cpp) | UE property <-> JSON serialization boundary |
 | `HandlerUtils/` | 7 .h | action normalization, JSON/path/response/transform helpers |
-| `Blueprint/` | 5 .cpp | BP pin/type introspection (no public .h; pull via subsystem) |
+| `Blueprint/` | 4 .cpp, 1 .h | BP pin/type introspection and struct nodes, declared in `McpBlueprintUtils.h` |
 | `Diagnostics/` | 6 files | diagnostics snapshot capture/load/rotation + file-name/schema helpers |
 | `GraphLayout/` | 1 file | graph node extent geometry |
-| `Solvers/` | 23 files | general algorithms, one per file (a long one split), each with a known-answer test: `McpPratt` (the assertion language of execute's `expect`/`require`), `McpAnneal` (Metropolis annealing over a caller's state), `McpBoxSat` (boxes turned about Z: separation, depth, containment), `McpKMeans` (weighted k-means, fixed seed), `McpWatershed` (basins of a height over a graph, merged across high saddles), `McpBetweenness` (Brandes route shares of weighted nodes and edges), `McpCassowary` (linear constraints, required or preferred by strength, solved by the incremental simplex Kiwi builds) |
-| `Optimize/` | 6 files | `McpNelderMead`: the downhill simplex, for a cost of a few variables with no gradient (a camera judged by traces); `McpMinSnap`: the minimum-snap path through points (Richter et al.'s closed form) and a small dense solver; each with a known-answer test |
+| `Solvers/` | 20 files | general algorithms, one per file (a long one split), each with a known-answer test: `McpPratt` (the assertion language of execute's `expect`/`require`), `McpBoxSat` (boxes turned about Z: separation, depth, containment), `McpKMeans` (weighted k-means, fixed seed), `McpWatershed` (basins of a height over a graph, merged across high saddles), `McpBetweenness` (Brandes route shares of weighted nodes and edges), `McpCassowary` (linear constraints, required or preferred by strength, solved by the incremental simplex Kiwi builds) |
+| `Optimize/` | 12 files | minimizers of a caller's cost, each with a known-answer test: `McpNelderMead` (the downhill simplex, for a cost of a few variables with no gradient: a camera judged by traces), `McpMinSnap` (the minimum-snap path through points, Richter et al.'s closed form), `McpAnneal` (Metropolis annealing over a caller's state), `McpChoiceKnapsack` (at most one option per group: the cheapest pick whose gains reach what is needed) |
 | `Render/` | 5 files | post-process volume resolution, console variable writes, stat overlay state |
 | `BridgeHelpers/` | umbrella + 7 groups | asset/actor/BP/property/response/security facade |
 | root | `McpSecureTokenCompare.h` | constant-time token equality |
@@ -35,7 +35,7 @@ domain-local copy of reflection, path, JSON, or response helpers.
 | Extract/coerce JSON fields | `HandlerUtils/McpHandlerUtilsJson.h` |
 | Standard response builders | `HandlerUtils/McpHandlerUtilsResponses.h` |
 | Transform / math helpers | `HandlerUtils/McpHandlerUtilsTransforms.h` |
-| BP graph node helpers | `HandlerUtils/McpHandlerUtilsBlueprintGraph.h` |
+| BP graph node helpers | `Blueprint/McpBlueprintUtils.h` |
 | Resolve / validate `/Game` asset path | `BridgeHelpers/Assets/McpAssetResolve.h` |
 | Create assets / dirs / save registry | `BridgeHelpers/Assets/{AssetCreation,AssetDirectories,AssetSaveRegistry}.h` |
 | Spawn an actor | `BridgeHelpers/Actors/McpActorSpawnHelpers.h` |

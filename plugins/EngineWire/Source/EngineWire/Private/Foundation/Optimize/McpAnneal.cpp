@@ -1,6 +1,6 @@
 // Copyright (c) 2024 EngineWire Contributors
 
-#include "Foundation/Solvers/McpAnneal.h"
+#include "Foundation/Optimize/McpAnneal.h"
 
 #include "HAL/PlatformTime.h"
 

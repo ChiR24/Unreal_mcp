@@ -1,5 +1,6 @@
 #include "Foundation/HandlerUtils/McpHandlerUtils.h"
 #include "Foundation/BridgeHelpers/McpHelpers.h"
+#include "Foundation/McpCapabilityPrincipal.h"
 #include "Safety/McpSafeOperations.h"
 #include "EngineUtils.h"
 #include "Serialization/JsonSerializer.h"
@@ -21,6 +22,39 @@
 #include "K2Node_FunctionEntry.h"
 #include "K2Node_FunctionResult.h"
 #include "EdGraphSchema_K2.h"
+
+AActor* FindActorByNameInWorldForMcp(UWorld* World, const FString& Target, bool bExactMatchOnly)
+{
+    if (!World || Target.IsEmpty())
+    {
+        return nullptr;
+    }
+
+    TArray<AActor*> FuzzyMatches;
+    for (TActorIterator<AActor> It(World); It; ++It)
+    {
+        AActor* Actor = *It;
+        // A label names an actor in any level; a path-restricted caller finds only those in a level inside its prefixes.
+        if (!Actor || !McpCapabilityPrincipal::ActiveRequestPermitsObject(Actor))
+        {
+            continue;
+        }
+
+        if (Actor->GetActorLabel().Equals(Target, ESearchCase::IgnoreCase) ||
+            Actor->GetName().Equals(Target, ESearchCase::IgnoreCase) ||
+            Actor->GetPathName().Equals(Target, ESearchCase::IgnoreCase))
+        {
+            return Actor;
+        }
+
+        if (!bExactMatchOnly && Actor->GetActorLabel().Contains(Target, ESearchCase::IgnoreCase))
+        {
+            FuzzyMatches.Add(Actor);
+        }
+    }
+
+    return FuzzyMatches.Num() == 1 ? FuzzyMatches[0] : nullptr;
+}
 
 namespace McpHandlerUtils
 {

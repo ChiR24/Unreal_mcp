@@ -78,7 +78,7 @@ class AActor;
 class UWorld;
 
 // Label, name or path (case-insensitive); when !bExactMatchOnly, also a unique
-// label substring. Defined in Domains/ControlActor/...ControlActorResolution.cpp.
+// label substring. A path-restricted caller finds only actors in a level inside its prefixes.
 AActor* FindActorByNameInWorldForMcp(UWorld* World, const FString& Target, bool bExactMatchOnly);
 
 // The actor of class T whose label, name or path is Target (case-insensitive).

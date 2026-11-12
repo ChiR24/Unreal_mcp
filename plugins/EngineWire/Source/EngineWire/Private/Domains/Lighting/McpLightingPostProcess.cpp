@@ -23,7 +23,7 @@ APostProcessVolume* ResolvePostProcessOrReply(UEngineWireSubsystem& Subsystem, c
 {
     FString ResolveError;
     FString ResolveErrorCode;
-    APostProcessVolume* PPV = McpRenderHandlers::McpResolvePostProcessVolume(
+    APostProcessVolume* PPV = McpResolvePostProcessVolume(
         McpHandlerUtils::GetEditorWorld(), Payload, true, ResolveError, ResolveErrorCode);
     if (!PPV)
     {

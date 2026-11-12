@@ -2,8 +2,6 @@
 #include "Safety/McpSafeOperations.h"
 #include "Engine/StaticMesh.h"
 
-DEFINE_LOG_CATEGORY(LogMcpSafeOperations);
-
 void McpHandlerUtils::ApplyProgressiveLods(UStaticMesh* Mesh, int32 NumLODs)
 {
     Mesh->Modify();

@@ -1,7 +1,7 @@
 #include "Domains/Networking/McpNetPrivate.h"
 
 #include "Components/ActorComponent.h"
-#include "Foundation/HandlerUtils/McpHandlerUtilsBlueprintGraph.h"
+#include "Foundation/Blueprint/McpBlueprintUtils.h"
 
 namespace McpNetworkingHandlers
 {

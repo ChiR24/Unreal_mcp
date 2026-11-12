@@ -23,7 +23,7 @@
 #include "K2Node_MakeStruct.h"
 #include "K2Node_BreakStruct.h"
 #include "EdGraph/EdGraph.h"
-#include "Foundation/HandlerUtils/McpHandlerUtilsBlueprintGraph.h"
+#include "Foundation/Blueprint/McpBlueprintUtils.h"
 
 // Mirror the inventory handlers' JSON payload accessors (GetJsonStringField /
 // GetJsonBoolField / GetJsonNumberField live in McpJsonFields.h).

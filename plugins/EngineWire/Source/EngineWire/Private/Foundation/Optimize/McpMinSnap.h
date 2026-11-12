@@ -22,8 +22,4 @@ bool Solve(const TArray<FVector>& Points, const TArray<double>& Seconds, TArray<
 
 /** The Derivative-th derivative (0 position, 1 velocity, 2 acceleration) of Leg at T seconds into it. */
 FVector Evaluate(const FLeg& Leg, double T, int32 Derivative = 0);
-
-/** Solves A x = B in place for an N x N row-major A and B with Columns columns (Gaussian elimination, partial
- *  pivoting); false when A is singular. */
-bool SolveDense(TArray<double>& A, TArray<double>& B, int32 N, int32 Columns);
 } // namespace McpMinSnap

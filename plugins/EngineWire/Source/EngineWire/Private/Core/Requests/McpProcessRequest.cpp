@@ -152,14 +152,7 @@ void UEngineWireSubsystem::ProcessAutomationRequest(
                 "RequestId=%s action='%s'"),
            *RequestId, *Action);
     // Named, so the caller can say which dialog to close (the queued requests get the same answer from the modal tick).
-    const FString DialogTitle = FSlateApplication::Get().GetActiveModalWindow()->GetTitle().ToString();
-    TSharedPtr<FJsonObject> ModalResult = McpHandlerUtils::CreateResultObject();
-    ModalResult->SetStringField(TEXT("modalWindowTitle"), DialogTitle);
-    SendAutomationResponse(
-        RequestingSocket, RequestId, false,
-        FString::Printf(TEXT("The editor is waiting on the dialog '%s'; nothing ran. Close that dialog in the editor, then send the same call again."),
-                        *DialogTitle),
-        ModalResult, TEXT("EDITOR_MODAL_ACTIVE"));
+    SendModalRefusal(RequestingSocket, RequestId, FSlateApplication::Get().GetActiveModalWindow()->GetTitle().ToString(), ERequestOrigin::WebSocket);
     return;
   }
 

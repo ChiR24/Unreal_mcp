@@ -39,9 +39,14 @@ describe('queued requests are answered, never run, while a dialog is up', () => 
   it('takes the queue under its lock and answers each request EDITOR_MODAL_ACTIVE on its own origin', () => {
     const answer = sliceBetween(source, 'int32 UEngineWireSubsystem::AnswerQueuedRequestsDuringModal(', 'void UEngineWireSubsystem::OnModalLoopTick(');
     expect(answer).toMatch(/FScopeLock Lock\(&PendingAutomationRequestsMutex\);\s*Taken = MoveTemp\(PendingAutomationRequests\);/u);
-    expect(answer).toContain('Result->SetStringField(TEXT("modalWindowTitle"), DialogTitle);');
-    expect(answer).toContain('Result, TEXT("EDITOR_MODAL_ACTIVE"), Request.Origin);');
+    expect(answer).toContain('SendModalRefusal(Request.RequestingSocket, Request.RequestId, DialogTitle, Request.Origin);');
     expect(answer, 'answered outside the lock').toMatch(/\}\s*for \(const FPendingAutomationRequest& Request : Taken\)/u);
+  });
+
+  it('the one refusal names the dialog and answers on the origin it is given', () => {
+    const refusal = sliceBetween(source, 'void UEngineWireSubsystem::SendModalRefusal(', 'int32 UEngineWireSubsystem::AnswerQueuedRequestsDuringModal(');
+    expect(refusal).toContain('Result->SetStringField(TEXT("modalWindowTitle"), DialogTitle);');
+    expect(refusal).toContain('Result, TEXT("EDITOR_MODAL_ACTIVE"), Origin);');
   });
 
   it('acts only while a modal window is up and keeps the native heartbeat current', () => {
@@ -59,9 +64,8 @@ describe('queued requests are answered, never run, while a dialog is up', () => 
 });
 
 describe('the pre-dispatch refusal names the dialog too', () => {
-  it('replies EDITOR_MODAL_ACTIVE with modalWindowTitle', () => {
+  it('answers with the same refusal the modal tick gives', () => {
     const source = read('Core', 'Requests', 'McpProcessRequest.cpp');
-    expect(source).toContain('ModalResult->SetStringField(TEXT("modalWindowTitle"), DialogTitle);');
-    expect(source).toContain('ModalResult, TEXT("EDITOR_MODAL_ACTIVE"));');
+    expect(source).toContain('SendModalRefusal(RequestingSocket, RequestId, FSlateApplication::Get().GetActiveModalWindow()->GetTitle().ToString(), ERequestOrigin::WebSocket);');
   });
 });

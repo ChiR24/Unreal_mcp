@@ -7,6 +7,7 @@
 #include "BehaviorTree/BlackboardData.h"
 #include "EdGraphSchema_K2.h"
 #include "Engine/Blueprint.h"
+#include "Foundation/BridgeHelpers/Blueprints/McpBPCompileHelpers.h"
 #include "Foundation/McpScopedEditorTransaction.h"
 #include "Kismet2/BlueprintEditorUtils.h"
 #include "UObject/UnrealType.h"
@@ -88,6 +89,14 @@ bool HandleAssignBlackboard(UEngineWireSubsystem* Self, const FString& RequestId
             FString::Printf(TEXT("AI Controller not found: %s"), *ControllerPath), TEXT("NOT_FOUND"));
         return true;
     }
+    // Any other Blueprint took the success reply below with nothing assigned.
+    if (!ControllerBP->GeneratedClass || !ControllerBP->GeneratedClass->IsChildOf(AAIController::StaticClass()))
+    {
+        Self->SendAutomationError(RequestingSocket, RequestId,
+            FString::Printf(TEXT("%s is not an AI Controller Blueprint (its parent class is %s), so it holds no Blackboard. Nothing was changed."),
+                *ControllerPath, ControllerBP->ParentClass ? *ControllerBP->ParentClass->GetName() : TEXT("none")), TEXT("INVALID_ARGUMENT"));
+        return true;
+    }
 
     UBlackboardData* BB = LoadObject<UBlackboardData>(nullptr, *BlackboardPath);
     if (!BB)
@@ -130,11 +139,14 @@ bool HandleAssignBlackboard(UEngineWireSubsystem* Self, const FString& RequestId
                 const FName VarName = TEXT("DefaultBlackboard");
                 if (FBlueprintEditorUtils::AddMemberVariable(ControllerBP, VarName, PinType))
                 {
-                    // Set the default value for the variable
-                    FProperty* NewProp = ControllerBP->GeneratedClass->FindPropertyByName(VarName);
-                    if (FObjectProperty* ObjProp = CastField<FObjectProperty>(NewProp))
+                    // The variable is a property of the class only after a compile: looked up before one it was never found,
+                    // so it was made with no default and propertyAssigned read false. The compile makes a new default object.
+                    McpSafeCompileBlueprint(ControllerBP);
+                    UObject* Defaults = ControllerBP->GeneratedClass ? ControllerBP->GeneratedClass->GetDefaultObject() : nullptr;
+                    FObjectProperty* ObjProp = Defaults ? CastField<FObjectProperty>(ControllerBP->GeneratedClass->FindPropertyByName(VarName)) : nullptr;
+                    if (ObjProp)
                     {
-                        ObjProp->SetObjectPropertyValue(ObjProp->ContainerPtrToValuePtr<void>(CDO), BB);
+                        ObjProp->SetObjectPropertyValue(ObjProp->ContainerPtrToValuePtr<void>(Defaults), BB);
                         bPropertySet = true;
                     }
                 }

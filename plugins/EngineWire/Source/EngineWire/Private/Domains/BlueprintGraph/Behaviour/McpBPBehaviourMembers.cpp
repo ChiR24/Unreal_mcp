@@ -7,7 +7,7 @@
 #include "Domains/Blueprint/Variables/McpBPVariableObjectDefault.h"
 #include "EdGraphSchema_K2.h"
 #include "Foundation/BridgeHelpers/Responses/McpJsonFields.h"
-#include "Foundation/HandlerUtils/McpHandlerUtilsBlueprintGraph.h"
+#include "Foundation/Blueprint/McpBlueprintUtils.h"
 #include "K2Node_Event.h"
 #include "Kismet2/BlueprintEditorUtils.h"
 #include "Kismet2/Kismet2NameValidators.h"

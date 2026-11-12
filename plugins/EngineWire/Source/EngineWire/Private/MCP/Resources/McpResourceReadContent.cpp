@@ -84,8 +84,9 @@ namespace McpResourceRead
 		if (McpResourceCatalog::IsNativeUnservedUri(Uri))
 		{
 			return FString::Printf(
-				TEXT("RESOURCE_UNAVAILABLE: %s is live editor state that only the game thread can read, so the "
-				     "native /mcp transport does not advertise or serve it; read it over the stdio transport"),
+				TEXT("RESOURCE_UNAVAILABLE: %s is live editor state that only the game thread can read, so it is not "
+				     "served as a resource; read it with the unreal tool instead (search 'list actors', 'selected actors' or "
+				     "'list assets')"),
 				*Uri);
 		}
 		return TEXT("RESOURCE_UNAVAILABLE: editor-state resource is not readable from the transport thread");

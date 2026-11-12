@@ -20,6 +20,52 @@ double Falling(int32 K, int32 D)
     return Out;
 }
 
+// Solves A x = B in place for an N x N row-major A and B with Columns columns (Gaussian elimination, partial pivoting);
+// false when A is singular.
+bool SolveDense(TArray<double>& A, TArray<double>& B, int32 N, int32 Columns)
+{
+    for (int32 Pivot = 0; Pivot < N; ++Pivot)
+    {
+        int32 Best = Pivot;
+        for (int32 Row = Pivot + 1; Row < N; ++Row)
+        {
+            Best = FMath::Abs(A[Row * N + Pivot]) > FMath::Abs(A[Best * N + Pivot]) ? Row : Best;
+        }
+        if (FMath::Abs(A[Best * N + Pivot]) < 1e-300)
+        {
+            return false;
+        }
+        for (int32 Column = 0; Column < N; ++Column)
+        {
+            Swap(A[Pivot * N + Column], A[Best * N + Column]);
+        }
+        for (int32 Column = 0; Column < Columns; ++Column)
+        {
+            Swap(B[Pivot * Columns + Column], B[Best * Columns + Column]);
+        }
+        for (int32 Row = 0; Row < N; ++Row)
+        {
+            const double Factor = Row == Pivot ? 0.0 : A[Row * N + Pivot] / A[Pivot * N + Pivot];
+            for (int32 Column = Pivot; Column < N && Factor != 0.0; ++Column)
+            {
+                A[Row * N + Column] -= Factor * A[Pivot * N + Column];
+            }
+            for (int32 Column = 0; Column < Columns && Factor != 0.0; ++Column)
+            {
+                B[Row * Columns + Column] -= Factor * B[Pivot * Columns + Column];
+            }
+        }
+    }
+    for (int32 Row = 0; Row < N; ++Row)
+    {
+        for (int32 Column = 0; Column < Columns; ++Column)
+        {
+            B[Row * Columns + Column] /= A[Row * N + Row];
+        }
+    }
+    return true;
+}
+
 // The inverse of a leg's map from coefficients to the derivatives at its two ends (rows: the four at t = 0, then the
 // four at t = Seconds), and its snap cost in those end derivatives, Ainv^T Q Ainv.
 bool LegCost(double Seconds, TArray<double>& OutInverse, TArray<double>& OutCost)
@@ -76,50 +122,6 @@ int32 Shared(int32 Leg, int32 Local)
     return Local < SnapKept ? Leg * SnapKept + Local : (Leg + 1) * SnapKept + Local - SnapKept;
 }
 } // namespace
-
-bool SolveDense(TArray<double>& A, TArray<double>& B, int32 N, int32 Columns)
-{
-    for (int32 Pivot = 0; Pivot < N; ++Pivot)
-    {
-        int32 Best = Pivot;
-        for (int32 Row = Pivot + 1; Row < N; ++Row)
-        {
-            Best = FMath::Abs(A[Row * N + Pivot]) > FMath::Abs(A[Best * N + Pivot]) ? Row : Best;
-        }
-        if (FMath::Abs(A[Best * N + Pivot]) < 1e-300)
-        {
-            return false;
-        }
-        for (int32 Column = 0; Column < N; ++Column)
-        {
-            Swap(A[Pivot * N + Column], A[Best * N + Column]);
-        }
-        for (int32 Column = 0; Column < Columns; ++Column)
-        {
-            Swap(B[Pivot * Columns + Column], B[Best * Columns + Column]);
-        }
-        for (int32 Row = 0; Row < N; ++Row)
-        {
-            const double Factor = Row == Pivot ? 0.0 : A[Row * N + Pivot] / A[Pivot * N + Pivot];
-            for (int32 Column = Pivot; Column < N && Factor != 0.0; ++Column)
-            {
-                A[Row * N + Column] -= Factor * A[Pivot * N + Column];
-            }
-            for (int32 Column = 0; Column < Columns && Factor != 0.0; ++Column)
-            {
-                B[Row * Columns + Column] -= Factor * B[Pivot * Columns + Column];
-            }
-        }
-    }
-    for (int32 Row = 0; Row < N; ++Row)
-    {
-        for (int32 Column = 0; Column < Columns; ++Column)
-        {
-            B[Row * Columns + Column] /= A[Row * N + Row];
-        }
-    }
-    return true;
-}
 
 bool Solve(const TArray<FVector>& Points, const TArray<double>& Seconds, TArray<FLeg>& OutLegs)
 {

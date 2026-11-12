@@ -3,8 +3,6 @@
 #include "Misc/Guid.h"
 #include "Misc/ScopeLock.h"
 
-namespace McpCapabilityAuthorization
-{
 namespace
 {
 // Bounded oldest-first, so a long-lived editor never grows either map without limit. A pruned issued nonce is
@@ -80,4 +78,3 @@ void FMcpConsentLedger::Refund(const FString& Nonce)
 		}
 	}
 }
-} // namespace McpCapabilityAuthorization

@@ -34,32 +34,3 @@ UMaterialInterface *LoadMaterialForMcp(const FString &MaterialPath,
   }
   return Material;
 }
-
-AActor *FindActorByNameInWorldForMcp(UWorld *World, const FString &Target,
-                                     bool bExactMatchOnly) {
-  if (!World || Target.IsEmpty()) {
-    return nullptr;
-  }
-
-  TArray<AActor *> FuzzyMatches;
-  for (TActorIterator<AActor> It(World); It; ++It) {
-    AActor *Actor = *It;
-    // A label names an actor in any level; a path-restricted caller finds only those in a level inside its prefixes.
-    if (!Actor || !McpCapabilityPrincipal::ActiveRequestPermitsObject(Actor)) {
-      continue;
-    }
-
-    if (Actor->GetActorLabel().Equals(Target, ESearchCase::IgnoreCase) ||
-        Actor->GetName().Equals(Target, ESearchCase::IgnoreCase) ||
-        Actor->GetPathName().Equals(Target, ESearchCase::IgnoreCase)) {
-      return Actor;
-    }
-
-    if (!bExactMatchOnly &&
-        Actor->GetActorLabel().Contains(Target, ESearchCase::IgnoreCase)) {
-      FuzzyMatches.Add(Actor);
-    }
-  }
-
-  return FuzzyMatches.Num() == 1 ? FuzzyMatches[0] : nullptr;
-}

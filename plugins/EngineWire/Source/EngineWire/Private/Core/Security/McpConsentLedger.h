@@ -7,8 +7,6 @@
 // mint every nonce here, bound to the capability it was minted for, and the native door accepts only such a nonce
 // (CONSENT_NOT_ISSUED otherwise): a made-up nonce used to be taken as fresh and a missing one as legacy. The WebSocket
 // door has no describe, so it keeps the older rule. Thread-safe.
-namespace McpCapabilityAuthorization
-{
 enum class EMcpConsentNonce : uint8
 {
 	Accepted,
@@ -48,4 +46,3 @@ private:
 	TArray<FString> ConsumptionOrder;
 	static constexpr int32 MaxEntries = 4096;
 };
-} // namespace McpCapabilityAuthorization
