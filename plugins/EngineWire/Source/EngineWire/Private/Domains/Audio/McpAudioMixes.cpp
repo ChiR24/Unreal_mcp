@@ -20,9 +20,7 @@ bool HandleMixActions(
   }
 
   FString MixName;
-  for (const TCHAR *Field : {TEXT("mixName"), TEXT("mix"), TEXT("name")}) {
-    if (MixName.IsEmpty()) Payload->TryGetStringField(Field, MixName);
-  }
+  Payload->TryGetStringField(TEXT("mixName"), MixName);
   if (MixName.IsEmpty()) {
     Self->SendAutomationError(RequestingSocket, RequestId, TEXT("mixName required"), TEXT("INVALID_ARGUMENT"));
     return true;
@@ -62,8 +60,7 @@ bool HandleMixActions(
     double Volume = 1.0, Pitch = 1.0, FadeTime = 1.0;
     Payload->TryGetNumberField(TEXT("volume"), Volume);
     Payload->TryGetNumberField(TEXT("pitch"), Pitch);
-    // The contract names the fade `fadeTime`; only `fadeInTime` was read, so it never arrived.
-    if (!Payload->TryGetNumberField(TEXT("fadeTime"), FadeTime)) Payload->TryGetNumberField(TEXT("fadeInTime"), FadeTime);
+    Payload->TryGetNumberField(TEXT("fadeTime"), FadeTime);
     UGameplayStatics::SetSoundMixClassOverride(World, Mix, Class, (float)Volume, (float)Pitch, (float)FadeTime, true);
     Done = TEXT("Sound Mix class override set");
   } else {

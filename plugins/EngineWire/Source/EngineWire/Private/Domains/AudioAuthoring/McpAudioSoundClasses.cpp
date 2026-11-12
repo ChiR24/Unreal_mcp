@@ -4,14 +4,14 @@
 
 namespace McpAudioAuthoring
 {
-// Loads the parentClass (parentPath is the older spelling) into OutParent; nullptr with no error when neither is sent.
+// Loads the parentClass into OutParent; nullptr with no error when none is sent.
 static TSharedPtr<FJsonObject> ResolveParentSoundClass(const TSharedPtr<FJsonObject>& Params, USoundClass*& OutParent)
 {
 	OutParent = nullptr;
-	const FString ParentPath = McpGetFirstStringField(Params, {TEXT("parentClass"), TEXT("parentPath")});
+	const FString ParentPath = GetJsonStringField(Params, TEXT("parentClass"));
 	if (!ParentPath.IsEmpty())
 	{
-		OutParent = LoadSoundClassFromPath(ParentPath);
+		OutParent = LoadAudioAsset<USoundClass>(ParentPath);
 	}
 	if (!ParentPath.IsEmpty() && !OutParent)
 	{
@@ -106,13 +106,10 @@ TSharedPtr<FJsonObject> HandleSoundClassActions(const FString& SubAction, const 
 
 	if (SubAction == TEXT("set_class_properties"))
 	{
-		FString AssetPath = NormalizeAudioPath(GetJsonStringField(Params, TEXT("assetPath"), TEXT("")));
 		bool bSave = GetJsonBoolField(Params, TEXT("save"), true);
-		USoundClass* SoundClass = LoadSoundClassFromPath(AssetPath);
-		if (!SoundClass)
-		{
-			return McpHandlerUtils::BuildErrorResponse(TEXT("CLASS_NOT_FOUND"), FString::Printf(TEXT("Could not load SoundClass: %s"), *AssetPath));
-		}
+		TSharedPtr<FJsonObject> LoadError;
+		USoundClass* SoundClass = LoadAudioAssetOrError<USoundClass>(Params, TEXT("CLASS_NOT_FOUND"), TEXT("SoundClass"), LoadError);
+		if (!SoundClass) { return LoadError; }
 
 		// Each field is written only when sent; a call sending none saved the class untouched and answered success.
 		const TPair<const TCHAR*, float*> Fields[] = {
@@ -152,18 +149,13 @@ TSharedPtr<FJsonObject> HandleSoundClassActions(const FString& SubAction, const 
 
 	if (SubAction == TEXT("set_class_parent"))
 	{
-		FString AssetPath = NormalizeAudioPath(GetJsonStringField(Params, TEXT("assetPath"), TEXT("")));
 		bool bSave = GetJsonBoolField(Params, TEXT("save"), true);
-		USoundClass* SoundClass = LoadSoundClassFromPath(AssetPath);
-		if (!SoundClass)
-		{
-			return McpHandlerUtils::BuildErrorResponse(TEXT("CLASS_NOT_FOUND"), FString::Printf(TEXT("Could not load SoundClass: %s"), *AssetPath));
-		}
+		TSharedPtr<FJsonObject> LoadError;
+		USoundClass* SoundClass = LoadAudioAssetOrError<USoundClass>(Params, TEXT("CLASS_NOT_FOUND"), TEXT("SoundClass"), LoadError);
+		if (!SoundClass) { return LoadError; }
 
-		// The contract names the parent `parentClass`; only `parentPath` was read, so every
-		// gateway call cleared the parent, and a wrong path was ignored with success. A call that
-		// sends no parent at all still cleared it; clearing takes an explicit empty parentClass.
-		if (!Params->HasField(TEXT("parentClass")) && !Params->HasField(TEXT("parentPath")))
+		// A call that sends no parent at all used to clear it: clearing takes an explicit empty parentClass.
+		if (!Params->HasField(TEXT("parentClass")))
 		{
 			return McpHandlerUtils::BuildErrorResponse(TEXT("INVALID_ARGUMENT"), TEXT("Send parentClass: the parent SoundClass, or an empty string to clear the parent."));
 		}

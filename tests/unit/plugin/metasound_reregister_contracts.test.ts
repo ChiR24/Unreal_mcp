@@ -25,7 +25,8 @@ describe('build_metasound checks the pins it names on its own nodes before runni
   it('reads the registry class pins once the add_node class resolves', () => {
     expect(strip('McpAudioMetaSoundNodes.cpp')).toContain('FindMetaSoundClassPins(Resolved, Request.Inputs, Request.Outputs);');
     const search = strip(join('MetaSound', 'McpAudioMetaSoundNodeSearch.cpp'));
-    expect(search).toMatch(/#if ENGINE_MAJOR_VERSION > 5 \|\| ENGINE_MINOR_VERSION >= 6\s*const FMetasoundFrontendClassInterface& Interface = Class\.GetDefaultInterface\(\);\s*#else\s*const FMetasoundFrontendClassInterface& Interface = Class\.Interface;/u);
+    expect(search).toContain('const FMetasoundFrontendClassInterface& Interface = MCP_METASOUND_CLASS_INTERFACE(Class);');
+    expect(strip('McpAudioAuthoringPrivate.h')).toMatch(/#if ENGINE_MAJOR_VERSION > 5 \|\| ENGINE_MINOR_VERSION >= 6\s*#define MCP_METASOUND_CLASS_INTERFACE\(Class\) \(Class\)\.GetDefaultInterface\(\)\s*#else\s*#define MCP_METASOUND_CLASS_INTERFACE\(Class\) \(Class\)\.Interface/u);
   });
 
   it('refuses a connect or set_default pin missing on a node the batch adds, with nothing applied', () => {

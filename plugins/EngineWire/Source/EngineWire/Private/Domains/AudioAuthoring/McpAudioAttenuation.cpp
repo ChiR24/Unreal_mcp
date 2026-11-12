@@ -46,13 +46,10 @@ TSharedPtr<FJsonObject> HandleAttenuationActions(const FString& SubAction, const
 
 	if (SubAction == TEXT("configure_distance_attenuation"))
 	{
-		FString AssetPath = NormalizeAudioPath(GetJsonStringField(Params, TEXT("assetPath"), TEXT("")));
 		bool bSave = GetJsonBoolField(Params, TEXT("save"), true);
-		USoundAttenuation* Atten = LoadSoundAttenuationFromPath(AssetPath);
-		if (!Atten)
-		{
-			return McpHandlerUtils::BuildErrorResponse(TEXT("ATTENUATION_NOT_FOUND"), FString::Printf(TEXT("Could not load SoundAttenuation: %s"), *AssetPath));
-		}
+		TSharedPtr<FJsonObject> LoadError;
+		USoundAttenuation* Atten = LoadAudioAssetOrError<USoundAttenuation>(Params, TEXT("ATTENUATION_NOT_FOUND"), TEXT("SoundAttenuation"), LoadError);
+		if (!Atten) { return LoadError; }
 		TOptional<FVector> BoxExtent;
 		FString ExtentError;
 		if (!ReadAttenuationBoxExtent(Params, Atten->Attenuation.AttenuationShape == EAttenuationShape::Box, BoxExtent, ExtentError))
@@ -102,16 +99,12 @@ TSharedPtr<FJsonObject> HandleAttenuationActions(const FString& SubAction, const
 
 	if (SubAction == TEXT("configure_spatialization"))
 	{
-		FString AssetPath = NormalizeAudioPath(GetJsonStringField(Params, TEXT("assetPath"), TEXT("")));
 		bool bSave = GetJsonBoolField(Params, TEXT("save"), true);
-		USoundAttenuation* Atten = LoadSoundAttenuationFromPath(AssetPath);
-		if (!Atten)
-		{
-			return McpHandlerUtils::BuildErrorResponse(TEXT("ATTENUATION_NOT_FOUND"), FString::Printf(TEXT("Could not load SoundAttenuation: %s"), *AssetPath));
-		}
+		TSharedPtr<FJsonObject> LoadError;
+		USoundAttenuation* Atten = LoadAudioAssetOrError<USoundAttenuation>(Params, TEXT("ATTENUATION_NOT_FOUND"), TEXT("SoundAttenuation"), LoadError);
+		if (!Atten) { return LoadError; }
 
-		// The contract names the algorithm `spatialization`; only `spatializationAlgorithm` was read.
-		const FString Algorithm = McpGetFirstStringField(Params, {TEXT("spatialization"), TEXT("spatializationAlgorithm")}).ToLower();
+		const FString Algorithm = GetJsonStringField(Params, TEXT("spatialization")).ToLower();
 		const bool bHasSpatialize = Params->HasField(TEXT("spatialize"));
 		if (Algorithm.IsEmpty() && !bHasSpatialize)
 		{
@@ -148,25 +141,19 @@ TSharedPtr<FJsonObject> HandleAttenuationActions(const FString& SubAction, const
 
 	if (SubAction == TEXT("configure_occlusion"))
 	{
-		FString AssetPath = NormalizeAudioPath(GetJsonStringField(Params, TEXT("assetPath"), TEXT("")));
 		bool bSave = GetJsonBoolField(Params, TEXT("save"), true);
-		USoundAttenuation* Atten = LoadSoundAttenuationFromPath(AssetPath);
-		if (!Atten)
-		{
-			return McpHandlerUtils::BuildErrorResponse(TEXT("ATTENUATION_NOT_FOUND"), FString::Printf(TEXT("Could not load SoundAttenuation: %s"), *AssetPath));
-		}
+		TSharedPtr<FJsonObject> LoadError;
+		USoundAttenuation* Atten = LoadAudioAssetOrError<USoundAttenuation>(Params, TEXT("ATTENUATION_NOT_FOUND"), TEXT("SoundAttenuation"), LoadError);
+		if (!Atten) { return LoadError; }
 
-		// The contract spells these enable, occlusionVolumeScale and occlusionFilterScale (as set_audio_occlusion
-		// does); the engine spellings stay as fallbacks. enable is written only when sent: a call that set only the
-		// volume turned occlusion on.
-		if (Params->HasField(TEXT("enable")) || Params->HasField(TEXT("enableOcclusion")))
+		// enable, occlusionVolumeScale and occlusionFilterScale, as set_audio_occlusion spells them. enable is written
+		// only when sent: a call that set only the volume turned occlusion on.
+		if (Params->HasField(TEXT("enable")))
 		{
-			Atten->Attenuation.bEnableOcclusion = GetJsonBoolField(Params, TEXT("enable"), GetJsonBoolField(Params, TEXT("enableOcclusion"), true));
+			Atten->Attenuation.bEnableOcclusion = GetJsonBoolField(Params, TEXT("enable"), true);
 		}
 		if (Params->HasField(TEXT("occlusionFilterScale"))) { Atten->Attenuation.OcclusionLowPassFilterFrequency = static_cast<float>(20000.0 * GetJsonNumberField(Params, TEXT("occlusionFilterScale"), 1.0)); }
-		else if (Params->HasField(TEXT("occlusionLowPassFilterFrequency"))) { Atten->Attenuation.OcclusionLowPassFilterFrequency = static_cast<float>(GetJsonNumberField(Params, TEXT("occlusionLowPassFilterFrequency"), 20000.0)); }
 		if (Params->HasField(TEXT("occlusionVolumeScale"))) { Atten->Attenuation.OcclusionVolumeAttenuation = static_cast<float>(GetJsonNumberField(Params, TEXT("occlusionVolumeScale"), 0.0)); }
-		else if (Params->HasField(TEXT("occlusionVolumeAttenuation"))) { Atten->Attenuation.OcclusionVolumeAttenuation = static_cast<float>(GetJsonNumberField(Params, TEXT("occlusionVolumeAttenuation"), 0.0)); }
 		if (Params->HasField(TEXT("occlusionInterpolationTime"))) { Atten->Attenuation.OcclusionInterpolationTime = static_cast<float>(GetJsonNumberField(Params, TEXT("occlusionInterpolationTime"), 0.5)); }
 
 		SaveAudioAsset(Atten, bSave);
@@ -181,13 +168,10 @@ TSharedPtr<FJsonObject> HandleAttenuationActions(const FString& SubAction, const
 
 	if (SubAction == TEXT("configure_reverb_send"))
 	{
-		FString AssetPath = NormalizeAudioPath(GetJsonStringField(Params, TEXT("assetPath"), TEXT("")));
 		bool bSave = GetJsonBoolField(Params, TEXT("save"), true);
-		USoundAttenuation* Atten = LoadSoundAttenuationFromPath(AssetPath);
-		if (!Atten)
-		{
-			return McpHandlerUtils::BuildErrorResponse(TEXT("ATTENUATION_NOT_FOUND"), FString::Printf(TEXT("Could not load SoundAttenuation: %s"), *AssetPath));
-		}
+		TSharedPtr<FJsonObject> LoadError;
+		USoundAttenuation* Atten = LoadAudioAssetOrError<USoundAttenuation>(Params, TEXT("ATTENUATION_NOT_FOUND"), TEXT("SoundAttenuation"), LoadError);
+		if (!Atten) { return LoadError; }
 
 		Atten->Attenuation.bEnableReverbSend = GetJsonBoolField(Params, TEXT("enableReverbSend"), true);
 		if (Params->HasField(TEXT("reverbWetLevelMin"))) { Atten->Attenuation.ReverbWetLevelMin = static_cast<float>(GetJsonNumberField(Params, TEXT("reverbWetLevelMin"), 0.3)); }

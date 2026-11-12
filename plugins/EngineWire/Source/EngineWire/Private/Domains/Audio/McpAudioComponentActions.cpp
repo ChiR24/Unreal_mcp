@@ -47,10 +47,9 @@ bool HandleComponentActions(
   // Response: { "success": bool, "componentPath": string,
   //             "componentName": string }
   // -------------------------------------------------------------------------
-  if (Lower.StartsWith(TEXT("create_audio_component"))) {
+  if (Lower == TEXT("create_audio_component")) {
     FString SoundPath;
-    if (!Payload->TryGetStringField(TEXT("soundPath"), SoundPath))
-      Payload->TryGetStringField(TEXT("path"), SoundPath);
+    Payload->TryGetStringField(TEXT("soundPath"), SoundPath);
     if (SoundPath.IsEmpty()) {
       Self->SendAutomationError(RequestingSocket, RequestId,
                           TEXT("soundPath required"), TEXT("INVALID_ARGUMENT"));
@@ -70,8 +69,7 @@ bool HandleComponentActions(
         ExtractVectorField(Payload, TEXT("location"), FVector::ZeroVector);
     FRotator Rotation =
         ExtractRotatorField(Payload, TEXT("rotation"), FRotator::ZeroRotator);
-    // actorName is the contract's spelling; the older attachTo stays as a fallback.
-    const FString AttachTo = McpGetFirstStringField(Payload, {TEXT("actorName"), TEXT("attachTo")});
+    const FString AttachTo = GetJsonStringField(Payload, TEXT("actorName"));
 
     UAudioComponent *AudioComp = nullptr;
     UWorld *World =

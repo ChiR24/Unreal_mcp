@@ -130,11 +130,7 @@ namespace
 {
 void ClassPins(const FMetasoundFrontendClass& Class, TArray<FString>& OutInputs, TArray<FString>& OutOutputs)
 {
-#if ENGINE_MAJOR_VERSION > 5 || ENGINE_MINOR_VERSION >= 6
-	const FMetasoundFrontendClassInterface& Interface = Class.GetDefaultInterface();
-#else
-	const FMetasoundFrontendClassInterface& Interface = Class.Interface;
-#endif
+	const FMetasoundFrontendClassInterface& Interface = MCP_METASOUND_CLASS_INTERFACE(Class);
 	for (const FMetasoundFrontendClassInput& Input : Interface.Inputs)
 	{
 		OutInputs.Add(FString::Printf(TEXT("%s (%s)"), *Input.Name.ToString(), *Input.TypeName.ToString()));

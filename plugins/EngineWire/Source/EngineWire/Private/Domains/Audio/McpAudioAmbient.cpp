@@ -27,16 +27,8 @@ bool HandleAmbientActions(
       return true;
     }
 
-    if (!GEditor)
-    {
-      Self->SendAutomationError(RequestingSocket, RequestId,
-                          TEXT("Editor not available"), TEXT("NO_EDITOR"));
-      return true;
-    }
-    UWorld *World = GEditor->GetEditorWorldContext().World();
+    UWorld *World = McpAudioEditorWorldOrReply(Self, RequestingSocket, RequestId);
     if (!World) {
-      Self->SendAutomationError(RequestingSocket, RequestId, TEXT("No World Context"),
-                          TEXT("NO_WORLD"));
       return true;
     }
 
@@ -105,16 +97,8 @@ bool HandleAmbientActions(
     const FVector Location = ExtractVectorField(Payload, TEXT("location"), FVector::ZeroVector);
     const FRotator Rotation = ExtractRotatorField(Payload, TEXT("rotation"), FRotator::ZeroRotator);
 
-    if (!GEditor)
-    {
-      Self->SendAutomationError(RequestingSocket, RequestId,
-                          TEXT("Editor not available"), TEXT("NO_EDITOR"));
-      return true;
-    }
-    UWorld *World = GEditor->GetEditorWorldContext().World();
+    UWorld *World = McpAudioEditorWorldOrReply(Self, RequestingSocket, RequestId);
     if (!World) {
-      Self->SendAutomationError(RequestingSocket, RequestId, TEXT("No World Context"),
-                          TEXT("NO_WORLD"));
       return true;
     }
 

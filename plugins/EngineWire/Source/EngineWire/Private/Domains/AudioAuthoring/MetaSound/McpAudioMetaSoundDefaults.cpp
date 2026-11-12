@@ -44,7 +44,7 @@ bool MsObjectFitsType(const RegistryT& Registry, const FString& TypeName, const 
 UObject* MsLoadLiteralObject(const TSharedPtr<FJsonValue>& Value, const FString& TypeName, UClass* Class, FString& OutError)
 {
 	const FString Path = Value->Type == EJson::String ? Value->AsString() : FString();
-	UObject* Object = Path.IsEmpty() ? nullptr : LoadObject<UObject>(nullptr, *NormalizeAudioPath(Path));
+	UObject* Object = Path.IsEmpty() ? nullptr : LoadAudioAsset<UObject>(Path);
 	if (!Object || !MsObjectFitsType(Metasound::Frontend::IDataTypeRegistry::Get(), TypeName, Object, Class))
 	{
 		OutError = FString::Printf(TEXT("'%s' is not a %s asset; pass the path of one (e.g. /Game/Audio/MyWave)"), *Path, *Class->GetName());
@@ -225,11 +225,9 @@ TSharedPtr<FJsonObject> HandleMetaSoundDefaultAction(const TSharedPtr<FJsonObjec
 	if (AssetPath.IsEmpty()) { return McpHandlerUtils::BuildErrorResponse(TEXT("MISSING_PATH"), TEXT("Asset path is required")); }
 	if (InputName.IsEmpty()) { return McpHandlerUtils::BuildErrorResponse(TEXT("MISSING_INPUT_NAME"), TEXT("Input name is required")); }
 
-	UMetaSoundSource* MetaSound = Cast<UMetaSoundSource>(StaticLoadObject(UMetaSoundSource::StaticClass(), nullptr, *AssetPath));
-	if (!MetaSound)
-	{
-		return McpHandlerUtils::BuildErrorResponse(TEXT("ASSET_NOT_FOUND"), FString::Printf(TEXT("Could not load MetaSound: %s"), *AssetPath));
-	}
+	TSharedPtr<FJsonObject> LoadError;
+	UMetaSoundSource* MetaSound = LoadAudioAssetOrError<UMetaSoundSource>(Params, TEXT("ASSET_NOT_FOUND"), TEXT("MetaSound"), LoadError);
+	if (!MetaSound) { return LoadError; }
 	TScriptInterface<IMetaSoundDocumentInterface> ScriptInterface(MetaSound);
 	MCP_METASOUND_BUILDER(Builder, ScriptInterface);
 
@@ -262,11 +260,7 @@ TSharedPtr<FJsonObject> HandleMetaSoundDefaultAction(const TSharedPtr<FJsonObjec
 			FString::Printf(TEXT("Graph input '%s' not found (pass nodeId to set a node's input instead)"), *InputName));
 #if MCP_HAS_METASOUND_FRONTEND_V2
 		TArray<TSharedPtr<FJsonValue>> InputArray;
-#if ENGINE_MAJOR_VERSION > 5 || ENGINE_MINOR_VERSION >= 6
-		for (const FMetasoundFrontendClassInput& Input : Builder.GetConstDocumentChecked().RootGraph.GetDefaultInterface().Inputs)
-#else
-		for (const FMetasoundFrontendClassInput& Input : Builder.GetConstDocumentChecked().RootGraph.Interface.Inputs)
-#endif
+		for (const FMetasoundFrontendClassInput& Input : MCP_METASOUND_CLASS_INTERFACE(Builder.GetConstDocumentChecked().RootGraph).Inputs)
 		{
 			InputArray.Add(MakeShared<FJsonValueString>(FString::Printf(TEXT("%s (%s)"), *Input.Name.ToString(), *Input.TypeName.ToString())));
 		}
@@ -293,7 +287,7 @@ TSharedPtr<FJsonObject> HandleMetaSoundDefaultAction(const TSharedPtr<FJsonObjec
 		Error->SetStringField(TEXT("expectedDataType"), TypeName);
 		return Error;
 	}
-	if (GetJsonBoolField(Params, TEXT("save"), true)) { McpSafeAssetSave(MetaSound); }
+	SaveAudioAsset(MetaSound, GetJsonBoolField(Params, TEXT("save"), true));
 	Response->SetBoolField(TEXT("success"), true);
 	Response->SetStringField(TEXT("message"), FString::Printf(TEXT("MetaSound %s '%s' set"), NodeInput ? TEXT("node input") : TEXT("default for"), *InputName));
 	Response->SetStringField(TEXT("dataType"), TypeName);

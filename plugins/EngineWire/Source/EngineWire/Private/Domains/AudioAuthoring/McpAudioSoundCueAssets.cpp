@@ -31,7 +31,7 @@ TSharedPtr<FJsonObject> HandleSoundCueAssetActions(const FString& SubAction, con
 	}
 
 	// Resolved first: a wrong wavePath used to leave an empty cue behind and still report success.
-	USoundWave* Wave = WavePath.IsEmpty() ? nullptr : LoadSoundWaveFromPath(WavePath);
+	USoundWave* Wave = WavePath.IsEmpty() ? nullptr : LoadAudioAsset<USoundWave>(WavePath);
 	if (!WavePath.IsEmpty() && !Wave)
 	{
 		return McpHandlerUtils::BuildErrorResponse(TEXT("WAVE_NOT_FOUND"), FString::Printf(TEXT("Could not load SoundWave: %s"), *WavePath));
@@ -104,7 +104,6 @@ TSharedPtr<FJsonObject> HandleSoundCueAssetActions(const FString& SubAction, con
 
 	SaveAudioAsset(NewCue, bSave);
 	FString FullPath = NewCue->GetPathName();
-	Response = MakeShared<FJsonObject>();
 	Response->SetBoolField(TEXT("success"), true);
 	Response->SetStringField(TEXT("message"), FString::Printf(TEXT("SoundCue '%s' created"), *Name));
 	Response->SetStringField(TEXT("assetPath"), FullPath);

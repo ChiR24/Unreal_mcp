@@ -70,7 +70,7 @@ TSharedPtr<FJsonObject> SetSoundVolume(const TSharedPtr<FJsonObject>& Params, TS
     TArray<UObject*> Sounds;
     for (const FString& Path : McpHandlerUtils::GetStringArrayField(Params, TEXT("soundPaths")))
     {
-        UObject* Sound = StaticLoadObject(USoundBase::StaticClass(), nullptr, *NormalizeAudioPath(Path));
+        UObject* Sound = LoadAudioAsset<USoundBase>(Path);
         if (!Cast<USoundWave>(Sound) && !Cast<USoundCue>(Sound))
         {
             return McpHandlerUtils::BuildErrorResponse(TEXT("ASSET_NOT_FOUND"), FString::Printf(TEXT("%s is not a Sound Wave, MetaSound or Sound Cue. "
@@ -140,7 +140,7 @@ TSharedPtr<FJsonObject> HandleLoudnessActions(const FString& SubAction, const TS
     TArray<FLoudnessRow> Rows;
     for (const FString& Path : McpHandlerUtils::GetStringArrayField(Params, TEXT("soundPaths")))
     {
-        USoundWave* Wave = LoadSoundWaveFromPath(Path);
+        USoundWave* Wave = LoadAudioAsset<USoundWave>(Path);
         if (!Wave)
         {
             return McpHandlerUtils::BuildErrorResponse(TEXT("ASSET_NOT_FOUND"), FString::Printf(TEXT("%s is not a Sound Wave (a Sound Cue mixes several: "

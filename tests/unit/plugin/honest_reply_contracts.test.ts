@@ -3992,7 +3992,7 @@ describe('spawned lights undo, render targets say what was saved, fades change t
     expect(fade).toContain('TEXT("COMPONENT_NOT_FOUND")');
     expect(fade).toMatch(/for \(UWorld\* World : \{GEditor->PlayWorld\.Get\(\), GEditor->GetEditorWorldContext\(\)\.World\(\)\}\)/u);
     expect(fade).toContain('Lower == TEXT("fade_sound_in") || Lower == TEXT("fade_sound_out")');
-    expect(code('Audio', 'McpAudioComponentsAndFades.cpp')).not.toContain('fade_sound');
+    expect(code('Audio', 'McpAudioComponentActions.cpp')).not.toContain('fade_sound');
   });
 });
 
@@ -4038,7 +4038,7 @@ describe('thumbnails are stored, found assets are not changes, a new audio actor
   });
 
   it('create_audio_component names the actor the component is on', () => {
-    expect(code('Audio', 'McpAudioComponentsAndFades.cpp')).toContain('Resp->SetStringField(TEXT("actorName"), McpActorRef(Owner));');
+    expect(code('Audio', 'McpAudioComponentActions.cpp')).toContain('Resp->SetStringField(TEXT("actorName"), McpActorRef(Owner));');
   });
 });
 
@@ -5417,7 +5417,7 @@ describe('animation, audio, data table and input edits answer with what the engi
   });
 
   it('occlusion, data table rows, PIE pause and legacy bindings say what changed', () => {
-    expect(code('AudioAuthoring', 'McpAudioAttenuation.cpp')).toContain('if (Params->HasField(TEXT("enable")) || Params->HasField(TEXT("enableOcclusion")))');
+    expect(code('AudioAuthoring', 'McpAudioAttenuation.cpp')).toContain('if (Params->HasField(TEXT("enable")))');
     const rows = code('AssetWorkflow', 'DataTables', 'McpAssetDataTableRows.cpp');
     for (const title of ['Add Data Table Row', 'Update Data Table Row', 'Delete Data Table Row']) {
       expect(rows).toContain(`FText::FromString(TEXT("${title}"))`);

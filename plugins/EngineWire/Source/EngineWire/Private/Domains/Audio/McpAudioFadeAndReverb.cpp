@@ -208,17 +208,10 @@ bool HandleFadeAndReverbActions(
      double FadeTime = 2.0;
      Payload->TryGetNumberField(TEXT("fadeTime"), FadeTime);
 
-     if (!GEditor) {
-       Self->SendAutomationError(RequestingSocket, RequestId,
-                           TEXT("Editor not available"), TEXT("NO_EDITOR"));
+     UWorld *World = McpAudioEditorWorldOrReply(Self, RequestingSocket, RequestId);
+     if (!World) {
        return true;
      }
-     UWorld *World = GEditor->GetEditorWorldContext().World();
-      if (!World) {
-        Self->SendAutomationError(RequestingSocket, RequestId, TEXT("No World Context"),
-                            TEXT("NO_WORLD"));
-        return true;
-      }
 
       // Check for existing actor with same name (name collision detection)
       AActor* ExistingActor = FindAudioActorByName(ZoneName, World);

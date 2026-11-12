@@ -19,7 +19,7 @@ TSharedPtr<FJsonObject> HandleSubtitleActions(const FString& SubAction, const TS
         return nullptr;
     }
     const FString Path = GetJsonStringField(Params, TEXT("soundPath"));
-    USoundWave* Wave = LoadSoundWaveFromPath(Path);
+    USoundWave* Wave = LoadAudioAsset<USoundWave>(Path);
     if (!Wave)
     {
         return McpHandlerUtils::BuildErrorResponse(TEXT("ASSET_NOT_FOUND"), FString::Printf(TEXT("%s is not a Sound Wave (a Sound Cue plays "

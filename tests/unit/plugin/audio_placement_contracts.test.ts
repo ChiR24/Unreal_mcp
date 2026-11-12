@@ -21,7 +21,7 @@ describe('placed sounds play when the game starts', () => {
   });
 
   it('an audio component takes bAutoActivate from autoPlay', () => {
-    const component = read('Audio/McpAudioComponentsAndFades.cpp');
+    const component = read('Audio/McpAudioComponentActions.cpp');
     expect(component).toContain('AudioComp->bAutoActivate = GetJsonBoolField(Payload, TEXT("autoPlay"), true);');
     expect(component).toMatch(/if \(AudioComp->bAutoActivate\)\s*AudioComp->Activate\(true\);/u);
   });

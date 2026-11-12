@@ -7,23 +7,21 @@ namespace McpAudioHandlers
 {
 namespace
 {
-// An audio asset by path or by name. A /Game or /Engine path loads directly; any other path finds nothing; a bare name
-// (no '/') is the first asset of one of Classes under /Game with that name, case ignored, inside a path-restricted
-// caller's prefixes. Only an asset that IsA Wanted counts.
+// An audio asset by path or by name. A path (anything with a '/') loads directly, under whichever content mount it
+// names; a bare name is the first asset of one of Classes under /Game with that name, case ignored, inside a
+// path-restricted caller's prefixes. Only an asset that IsA Wanted counts.
 //
 // VERSION COMPATIBILITY: FARFilter takes ClassNames (FName) on UE 5.0, ClassPaths (FTopLevelAssetPath) from 5.1.
 UObject* ResolveAudioAsset(const FString& Path, std::initializer_list<UClass*> Classes, UClass* Wanted)
 {
 	if (Path.IsEmpty())
 		return nullptr;
-	if (Path.Contains(TEXT("/Game/")) || Path.Contains(TEXT("/Engine/")))
-	{
-		UObject* Direct = McpAssetExists(Path) ? McpLoadAsset(Path) : nullptr;
-		if (Direct && Direct->IsA(Wanted))
-			return Direct;
-	}
+	// Only /Game and /Engine paths were loaded, so a sound under a plugin's or a game feature's mount read as missing.
 	if (Path.Contains(TEXT("/")))
-		return nullptr;
+	{
+		UObject* Direct = McpLoadAsset(Path);
+		return Direct && Direct->IsA(Wanted) ? Direct : nullptr;
+	}
 
 	const FString AssetName = FPaths::GetBaseFilename(Path);
 	FARFilter Filter;
@@ -97,5 +95,21 @@ USoundBase* LoadSoundOrReply(UEngineWireSubsystem* Self, TSharedPtr<FMcpBridgeWe
 		Self->SendAutomationError(RequestingSocket, RequestId, TEXT("Sound asset not found"), TEXT("ASSET_NOT_FOUND"));
 	}
 	return Sound;
+}
+
+UWorld* McpAudioEditorWorldOrReply(UEngineWireSubsystem* Self, TSharedPtr<FMcpBridgeWebSocket> RequestingSocket,
+	const FString& RequestId)
+{
+	if (!GEditor)
+	{
+		Self->SendAutomationError(RequestingSocket, RequestId, TEXT("Editor not available"), TEXT("NO_EDITOR"));
+		return nullptr;
+	}
+	UWorld* World = GEditor->GetEditorWorldContext().World();
+	if (!World)
+	{
+		Self->SendAutomationError(RequestingSocket, RequestId, TEXT("No World Context"), TEXT("NO_WORLD"));
+	}
+	return World;
 }
 }

@@ -27,24 +27,12 @@ FString MetaSoundClassTypeName(EMetasoundFrontendClassType Type)
 	}
 }
 
-TArray<TSharedPtr<FJsonValue>> MetaSoundClassVertices(const TArray<FMetasoundFrontendClassInput>& Inputs)
+// A graph input or output vertex: the two classes carry the same three fields.
+template <typename TVertex>
+TArray<TSharedPtr<FJsonValue>> MetaSoundClassVertices(const TArray<TVertex>& Vertices)
 {
 	TArray<TSharedPtr<FJsonValue>> Out;
-	for (const FMetasoundFrontendClassInput& Vertex : Inputs)
-	{
-		TSharedPtr<FJsonObject> Entry = MakeShared<FJsonObject>();
-		Entry->SetStringField(TEXT("name"), Vertex.Name.ToString());
-		Entry->SetStringField(TEXT("type"), Vertex.TypeName.ToString());
-		Entry->SetStringField(TEXT("nodeId"), Vertex.NodeID.ToString());
-		Out.Add(MakeShared<FJsonValueObject>(Entry));
-	}
-	return Out;
-}
-
-TArray<TSharedPtr<FJsonValue>> MetaSoundClassVertices(const TArray<FMetasoundFrontendClassOutput>& Outputs)
-{
-	TArray<TSharedPtr<FJsonValue>> Out;
-	for (const FMetasoundFrontendClassOutput& Vertex : Outputs)
+	for (const TVertex& Vertex : Vertices)
 	{
 		TSharedPtr<FJsonObject> Entry = MakeShared<FJsonObject>();
 		Entry->SetStringField(TEXT("name"), Vertex.Name.ToString());
@@ -73,11 +61,9 @@ TSharedPtr<FJsonObject> HandleMetaSoundGraphReadAction(const FString& SubAction,
 	{
 		return McpHandlerUtils::BuildErrorResponse(TEXT("MISSING_PATH"), TEXT("Asset path is required"));
 	}
-	UMetaSoundSource* MetaSound = Cast<UMetaSoundSource>(StaticLoadObject(UMetaSoundSource::StaticClass(), nullptr, *AssetPath));
-	if (!MetaSound)
-	{
-		return McpHandlerUtils::BuildErrorResponse(TEXT("ASSET_NOT_FOUND"), FString::Printf(TEXT("Could not load MetaSound: %s"), *AssetPath));
-	}
+	TSharedPtr<FJsonObject> LoadError;
+	UMetaSoundSource* MetaSound = LoadAudioAssetOrError<UMetaSoundSource>(Params, TEXT("ASSET_NOT_FOUND"), TEXT("MetaSound"), LoadError);
+	if (!MetaSound) { return LoadError; }
 	TScriptInterface<IMetaSoundDocumentInterface> ScriptInterface(MetaSound);
 	const FMetasoundFrontendDocument& Doc = ScriptInterface->GetConstDocument();
 
@@ -142,11 +128,7 @@ TSharedPtr<FJsonObject> HandleMetaSoundGraphReadAction(const FString& SubAction,
 		}
 	});
 
-#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 6
-	const FMetasoundFrontendClassInterface& GraphInterface = Doc.RootGraph.GetDefaultInterface();
-#else
-	const FMetasoundFrontendClassInterface& GraphInterface = Doc.RootGraph.Interface;
-#endif
+	const FMetasoundFrontendClassInterface& GraphInterface = MCP_METASOUND_CLASS_INTERFACE(Doc.RootGraph);
 	Response->SetBoolField(TEXT("success"), true);
 	Response->SetStringField(TEXT("message"), FString::Printf(TEXT("%d nodes, %d links"), Nodes.Num(), Edges.Num()));
 	Response->SetStringField(TEXT("assetPath"), MetaSound->GetPathName());

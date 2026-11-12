@@ -108,11 +108,9 @@ TSharedPtr<FJsonObject> HandleMetaSoundNodeActions(const FString& SubAction, con
 			return McpHandlerUtils::BuildErrorResponse(TEXT("MISSING_PATH"), TEXT("Asset path is required"));
 		}
 
-		UMetaSoundSource* MetaSound = Cast<UMetaSoundSource>(StaticLoadObject(UMetaSoundSource::StaticClass(), nullptr, *AssetPath));
-		if (!MetaSound)
-		{
-			return McpHandlerUtils::BuildErrorResponse(TEXT("ASSET_NOT_FOUND"), FString::Printf(TEXT("Could not load MetaSound: %s"), *AssetPath));
-		}
+		TSharedPtr<FJsonObject> LoadError;
+		UMetaSoundSource* MetaSound = LoadAudioAssetOrError<UMetaSoundSource>(Params, TEXT("ASSET_NOT_FOUND"), TEXT("MetaSound"), LoadError);
+		if (!MetaSound) { return LoadError; }
 
 		IMetaSoundDocumentInterface* DocInterface = Cast<IMetaSoundDocumentInterface>(MetaSound);
 		if (!DocInterface)
@@ -132,20 +130,15 @@ TSharedPtr<FJsonObject> HandleMetaSoundNodeActions(const FString& SubAction, con
 		{
 			Response->SetStringField(TEXT("nodeClassResolvedBy"), TEXT("registry-name-match"));
 		}
-		const FString& ActualNamespace = Request.Namespace;
-		const FString& ActualName = Request.Name;
-		const FString& ActualVariant = Request.Variant;
-		const TArray<FString>& RegistryCandidates = Request.Candidates;
-		const bool bInRegistry = Request.bInRegistry;
-		FMetasoundFrontendClassName ClassName = FMetasoundFrontendClassName(FName(*ActualNamespace), FName(*ActualName), FName(*ActualVariant));
+		FMetasoundFrontendClassName ClassName = FMetasoundFrontendClassName(FName(*Request.Namespace), FName(*Request.Name), FName(*Request.Variant));
 		// A class the registry does not hold (or holds more than once) goes straight to the candidates reply:
 		// the builder logged each one as an engine error first, which the receipt then reported as a failure.
-		const FMetasoundFrontendNode* NewNode = bInRegistry ? Builder.AddNodeByClassName(ClassName, 1, FGuid::NewGuid()) : nullptr;
-		FString FullClassName = BuildMetaSoundClassName(ActualNamespace, ActualName, ActualVariant);
+		const FMetasoundFrontendNode* NewNode = Request.bInRegistry ? Builder.AddNodeByClassName(ClassName, 1, FGuid::NewGuid()) : nullptr;
+		FString FullClassName = BuildMetaSoundClassName(Request.Namespace, Request.Name, Request.Variant);
 
 		if (NewNode)
 		{
-			if (bSave) { McpSafeAssetSave(MetaSound); }
+			SaveAudioAsset(MetaSound, bSave);
 			Response->SetStringField(TEXT("nodeId"), NewNode->GetID().ToString());
 			Response->SetStringField(TEXT("nodeClassName"), FullClassName);
 			Response->SetBoolField(TEXT("success"), true);
@@ -156,10 +149,10 @@ TSharedPtr<FJsonObject> HandleMetaSoundNodeActions(const FString& SubAction, con
 		{
 			TArray<TSharedPtr<FJsonValue>> CandidateArray;
 			FString CandidateText;
-			for (int32 Index = 0; Index < RegistryCandidates.Num() && Index < 10; ++Index)
+			for (int32 Index = 0; Index < Request.Candidates.Num() && Index < 10; ++Index)
 			{
-				CandidateArray.Add(MakeShared<FJsonValueString>(RegistryCandidates[Index]));
-				CandidateText += (Index > 0 ? TEXT(", ") : TEXT("")) + RegistryCandidates[Index];
+				CandidateArray.Add(MakeShared<FJsonValueString>(Request.Candidates[Index]));
+				CandidateText += (Index > 0 ? TEXT(", ") : TEXT("")) + Request.Candidates[Index];
 			}
 			Response->SetBoolField(TEXT("success"), false);
 			Response->SetStringField(TEXT("error"), FString::Printf(

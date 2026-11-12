@@ -8,32 +8,19 @@
 #include "Foundation/HandlerUtils/McpHandlerUtils.h"
 
 #include "AssetRegistry/AssetRegistryModule.h"
-#include "AssetToolsModule.h"
 #include "AudioDevice.h"
 #include "Components/AudioComponent.h"
-#include "Components/BrushComponent.h"
 #include "Components/SceneComponent.h"
-#include "EditorAssetLibrary.h"
 #include "Factories/SoundAttenuationFactory.h"
-#include "Factories/SoundClassFactory.h"
-#include "Factories/SoundCueFactoryNew.h"
-#include "Factories/SoundMixFactory.h"
 #include "Kismet/GameplayStatics.h"
 #include "Sound/AmbientSound.h"
 #include "Sound/AudioVolume.h"
-#include "Sound/DialogueVoice.h"
-#include "Sound/DialogueWave.h"
 #include "Sound/ReverbEffect.h"
 #include "Sound/SoundAttenuation.h"
 #include "Sound/SoundClass.h"
 #include "Sound/SoundConcurrency.h"
 #include "Sound/SoundCue.h"
-#include "Sound/SoundEffectSubmix.h"
 #include "Sound/SoundMix.h"
-#include "Sound/SoundNodeAttenuation.h"
-#include "Sound/SoundNodeLooping.h"
-#include "Sound/SoundNodeModulator.h"
-#include "Sound/SoundNodeWavePlayer.h"
 #include "Sound/SoundWave.h"
 #include "UObject/UObjectHash.h"
 
@@ -68,7 +55,7 @@ void ApplyAudioComponentOptions(UAudioComponent* AudioComp, const TSharedPtr<FJs
 bool LoadOptionalAudioSettings(const TSharedPtr<FJsonObject>& Payload, USoundAttenuation*& OutAttenuation, USoundConcurrency*& OutConcurrency, FString& OutError);
 // The 2D sounds play_sound started; stop_sound, pause_sound and resume_sound act on them.
 TArray<TWeakObjectPtr<UAudioComponent>>& McpPreviewSounds();
-// A sound, mix or class by path (/Game or /Engine) or by bare asset name under /Game; null when none is found.
+// A sound, mix or class by path (any content mount) or by bare asset name under /Game; null when none is found.
 USoundBase* ResolveSoundAsset(const FString& SoundPath);
 USoundMix* ResolveSoundMix(const FString& MixPath);
 USoundClass* ResolveSoundClass(const FString& ClassPath);
@@ -76,6 +63,9 @@ USoundClass* ResolveSoundClass(const FString& ClassPath);
 // ASSET_NOT_FOUND when nothing resolves).
 USoundBase* LoadSoundOrReply(UEngineWireSubsystem* Self, TSharedPtr<FMcpBridgeWebSocket> RequestingSocket,
                              const FString& RequestId, const TSharedPtr<FJsonObject>& Payload);
+// The editor world a handler spawns into; null after the reply (NO_EDITOR without an editor, NO_WORLD without a world).
+UWorld* McpAudioEditorWorldOrReply(UEngineWireSubsystem* Self, TSharedPtr<FMcpBridgeWebSocket> RequestingSocket,
+                                   const FString& RequestId);
 // The world whose sound is heard: a running game's while one plays (its audio device is the active one and the
 // editor world's is muted), else the editor's.
 inline UWorld* McpAudibleWorld()

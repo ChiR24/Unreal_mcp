@@ -22,7 +22,7 @@ TSharedPtr<FJsonObject> HandleLoopingActions(const FString& SubAction, const TSh
     TArray<USoundWave*> Waves;
     for (const FString& Path : McpHandlerUtils::GetStringArrayField(Params, TEXT("soundPaths")))
     {
-        UObject* Sound = StaticLoadObject(USoundBase::StaticClass(), nullptr, *NormalizeAudioPath(Path));
+        UObject* Sound = LoadAudioAsset<USoundBase>(Path);
         if (Cast<USoundCue>(Sound) || Cast<USoundWaveProcedural>(Sound))
         {
             return McpHandlerUtils::BuildErrorResponse(TEXT("INVALID_ARGUMENT"), FString::Printf(TEXT("%s loops through its own graph: a "

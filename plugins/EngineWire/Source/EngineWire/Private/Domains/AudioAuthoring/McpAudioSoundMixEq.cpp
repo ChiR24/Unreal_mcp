@@ -3,25 +3,6 @@
 
 namespace McpAudioAuthoring
 {
-static void ClampMixEq(USoundMix* Mix)
-{
-	auto ClampGain = [](float& Value) { Value = FMath::Clamp(Value, 0.0f, 4.0f); };
-	auto ClampFreq = [](float& Value) { Value = FMath::Clamp(Value, 0.0f, 20000.0f); };
-	auto ClampBandwidth = [](float& Value) { Value = FMath::Clamp(Value, 0.0f, 2.0f); };
-	ClampGain(Mix->EQSettings.Gain0);
-	ClampGain(Mix->EQSettings.Gain1);
-	ClampGain(Mix->EQSettings.Gain2);
-	ClampGain(Mix->EQSettings.Gain3);
-	ClampFreq(Mix->EQSettings.FrequencyCenter0);
-	ClampFreq(Mix->EQSettings.FrequencyCenter1);
-	ClampFreq(Mix->EQSettings.FrequencyCenter2);
-	ClampFreq(Mix->EQSettings.FrequencyCenter3);
-	ClampBandwidth(Mix->EQSettings.Bandwidth0);
-	ClampBandwidth(Mix->EQSettings.Bandwidth1);
-	ClampBandwidth(Mix->EQSettings.Bandwidth2);
-	ClampBandwidth(Mix->EQSettings.Bandwidth3);
-}
-
 TSharedPtr<FJsonObject> HandleSoundMixEqActions(const FString& SubAction, const TSharedPtr<FJsonObject>& Params, TSharedPtr<FJsonObject> Response)
 {
 	if (SubAction != TEXT("configure_mix_eq"))
@@ -29,13 +10,10 @@ TSharedPtr<FJsonObject> HandleSoundMixEqActions(const FString& SubAction, const 
 		return nullptr;
 	}
 
-	FString AssetPath = NormalizeAudioPath(GetJsonStringField(Params, TEXT("assetPath"), TEXT("")));
 	bool bSave = GetJsonBoolField(Params, TEXT("save"), true);
-	USoundMix* Mix = LoadSoundMixFromPath(AssetPath);
-	if (!Mix)
-	{
-		return McpHandlerUtils::BuildErrorResponse(TEXT("MIX_NOT_FOUND"), FString::Printf(TEXT("Could not load SoundMix: %s"), *AssetPath));
-	}
+	TSharedPtr<FJsonObject> LoadError;
+	USoundMix* Mix = LoadAudioAssetOrError<USoundMix>(Params, TEXT("MIX_NOT_FOUND"), TEXT("SoundMix"), LoadError);
+	if (!Mix) { return LoadError; }
 
 	// A call sending nothing switched the EQ on, saved and answered success. Bands switch it on unless applyEQ is sent.
 	static const TCHAR* BandFields[] = {TEXT("eqSettings"), TEXT("lowFrequency"), TEXT("lowGain"), TEXT("midFrequency"), TEXT("midGain"),
@@ -59,47 +37,43 @@ TSharedPtr<FJsonObject> HandleSoundMixEqActions(const FString& SubAction, const 
 		Mix->EQPriority = static_cast<float>(GetJsonNumberField(Params, TEXT("eqPriority"), 1.0));
 	}
 
+	// Every band value under its eqSettings name, with the most it may be: gain 4, frequency 20000, bandwidth 2.
+	struct FMixEqField { const TCHAR* Name; float* Value; float Max; };
+	FAudioEQEffect& EQ = Mix->EQSettings;
+	const FMixEqField Bands[] = {
+		{TEXT("frequencyCenter0"), &EQ.FrequencyCenter0, 20000.0f}, {TEXT("gain0"), &EQ.Gain0, 4.0f}, {TEXT("bandwidth0"), &EQ.Bandwidth0, 2.0f},
+		{TEXT("frequencyCenter1"), &EQ.FrequencyCenter1, 20000.0f}, {TEXT("gain1"), &EQ.Gain1, 4.0f}, {TEXT("bandwidth1"), &EQ.Bandwidth1, 2.0f},
+		{TEXT("frequencyCenter2"), &EQ.FrequencyCenter2, 20000.0f}, {TEXT("gain2"), &EQ.Gain2, 4.0f}, {TEXT("bandwidth2"), &EQ.Bandwidth2, 2.0f},
+		{TEXT("frequencyCenter3"), &EQ.FrequencyCenter3, 20000.0f}, {TEXT("gain3"), &EQ.Gain3, 4.0f}, {TEXT("bandwidth3"), &EQ.Bandwidth3, 2.0f}};
 	const TSharedPtr<FJsonObject>* EQObj;
 	if (Params->TryGetObjectField(TEXT("eqSettings"), EQObj) && EQObj->IsValid())
 	{
-		if ((*EQObj)->HasField(TEXT("frequencyCenter0"))) { Mix->EQSettings.FrequencyCenter0 = static_cast<float>(GetJsonNumberField((*EQObj), TEXT("frequencyCenter0"))); }
-		if ((*EQObj)->HasField(TEXT("gain0"))) { Mix->EQSettings.Gain0 = static_cast<float>(GetJsonNumberField((*EQObj), TEXT("gain0"))); }
-		if ((*EQObj)->HasField(TEXT("bandwidth0"))) { Mix->EQSettings.Bandwidth0 = static_cast<float>(GetJsonNumberField((*EQObj), TEXT("bandwidth0"))); }
-		if ((*EQObj)->HasField(TEXT("frequencyCenter1"))) { Mix->EQSettings.FrequencyCenter1 = static_cast<float>(GetJsonNumberField((*EQObj), TEXT("frequencyCenter1"))); }
-		if ((*EQObj)->HasField(TEXT("gain1"))) { Mix->EQSettings.Gain1 = static_cast<float>(GetJsonNumberField((*EQObj), TEXT("gain1"))); }
-		if ((*EQObj)->HasField(TEXT("bandwidth1"))) { Mix->EQSettings.Bandwidth1 = static_cast<float>(GetJsonNumberField((*EQObj), TEXT("bandwidth1"))); }
-		if ((*EQObj)->HasField(TEXT("frequencyCenter2"))) { Mix->EQSettings.FrequencyCenter2 = static_cast<float>(GetJsonNumberField((*EQObj), TEXT("frequencyCenter2"))); }
-		if ((*EQObj)->HasField(TEXT("gain2"))) { Mix->EQSettings.Gain2 = static_cast<float>(GetJsonNumberField((*EQObj), TEXT("gain2"))); }
-		if ((*EQObj)->HasField(TEXT("bandwidth2"))) { Mix->EQSettings.Bandwidth2 = static_cast<float>(GetJsonNumberField((*EQObj), TEXT("bandwidth2"))); }
-		if ((*EQObj)->HasField(TEXT("frequencyCenter3"))) { Mix->EQSettings.FrequencyCenter3 = static_cast<float>(GetJsonNumberField((*EQObj), TEXT("frequencyCenter3"))); }
-		if ((*EQObj)->HasField(TEXT("gain3"))) { Mix->EQSettings.Gain3 = static_cast<float>(GetJsonNumberField((*EQObj), TEXT("gain3"))); }
-		if ((*EQObj)->HasField(TEXT("bandwidth3"))) { Mix->EQSettings.Bandwidth3 = static_cast<float>(GetJsonNumberField((*EQObj), TEXT("bandwidth3"))); }
+		for (const FMixEqField& Band : Bands)
+		{
+			if ((*EQObj)->HasField(Band.Name)) { *Band.Value = static_cast<float>(GetJsonNumberField(*EQObj, Band.Name)); }
+		}
 	}
-	// The flat band fields apply on top of eqSettings rather than being dropped when both are sent.
+	// The flat band fields apply on top of eqSettings rather than being dropped when both are sent. Each names the
+	// Bands entry it writes and the value a field that is no number leaves there.
+	struct FMixEqFlatField { const TCHAR* Name; int32 Band; double Default; };
+	static const FMixEqFlatField FlatFields[] = {
+		{TEXT("lowFrequency"), 0, 600.0}, {TEXT("lowGain"), 1, 1.0}, {TEXT("midFrequency"), 3, 1000.0}, {TEXT("midGain"), 4, 1.0},
+		{TEXT("highMidFrequency"), 6, 2000.0}, {TEXT("highMidGain"), 7, 1.0}, {TEXT("highFrequency"), 9, 10000.0}, {TEXT("highGain"), 10, 1.0}};
+	for (const FMixEqFlatField& Field : FlatFields)
 	{
-		if (Params->HasField(TEXT("lowFrequency"))) { Mix->EQSettings.FrequencyCenter0 = static_cast<float>(GetJsonNumberField(Params, TEXT("lowFrequency"), 600.0)); }
-		if (Params->HasField(TEXT("lowGain"))) { Mix->EQSettings.Gain0 = static_cast<float>(GetJsonNumberField(Params, TEXT("lowGain"), 1.0)); }
-		if (Params->HasField(TEXT("midFrequency"))) { Mix->EQSettings.FrequencyCenter1 = static_cast<float>(GetJsonNumberField(Params, TEXT("midFrequency"), 1000.0)); }
-		if (Params->HasField(TEXT("midGain"))) { Mix->EQSettings.Gain1 = static_cast<float>(GetJsonNumberField(Params, TEXT("midGain"), 1.0)); }
-		if (Params->HasField(TEXT("highMidFrequency"))) { Mix->EQSettings.FrequencyCenter2 = static_cast<float>(GetJsonNumberField(Params, TEXT("highMidFrequency"), 2000.0)); }
-		if (Params->HasField(TEXT("highMidGain"))) { Mix->EQSettings.Gain2 = static_cast<float>(GetJsonNumberField(Params, TEXT("highMidGain"), 1.0)); }
-		if (Params->HasField(TEXT("highFrequency"))) { Mix->EQSettings.FrequencyCenter3 = static_cast<float>(GetJsonNumberField(Params, TEXT("highFrequency"), 10000.0)); }
-		if (Params->HasField(TEXT("highGain"))) { Mix->EQSettings.Gain3 = static_cast<float>(GetJsonNumberField(Params, TEXT("highGain"), 1.0)); }
+		if (Params->HasField(Field.Name)) { *Bands[Field.Band].Value = static_cast<float>(GetJsonNumberField(Params, Field.Name, Field.Default)); }
+	}
+	for (const FMixEqField& Band : Bands)
+	{
+		*Band.Value = FMath::Clamp(*Band.Value, 0.0f, Band.Max);
 	}
 
-	ClampMixEq(Mix);
 	Response->SetBoolField(TEXT("saved"), SaveAudioAsset(Mix, bSave));
-	// Every band after clamping (gain 0-4, frequency 0-20000, bandwidth 0-2), under the eqSettings names.
-	const FAudioEQEffect& EQ = Mix->EQSettings;
-	const TPair<const TCHAR*, float> Bands[] = {
-		{TEXT("frequencyCenter0"), EQ.FrequencyCenter0}, {TEXT("gain0"), EQ.Gain0}, {TEXT("bandwidth0"), EQ.Bandwidth0},
-		{TEXT("frequencyCenter1"), EQ.FrequencyCenter1}, {TEXT("gain1"), EQ.Gain1}, {TEXT("bandwidth1"), EQ.Bandwidth1},
-		{TEXT("frequencyCenter2"), EQ.FrequencyCenter2}, {TEXT("gain2"), EQ.Gain2}, {TEXT("bandwidth2"), EQ.Bandwidth2},
-		{TEXT("frequencyCenter3"), EQ.FrequencyCenter3}, {TEXT("gain3"), EQ.Gain3}, {TEXT("bandwidth3"), EQ.Bandwidth3}};
+	// Every band after clamping, under the eqSettings names.
 	TSharedPtr<FJsonObject> EQInfo = McpHandlerUtils::CreateResultObject();
-	for (const TPair<const TCHAR*, float>& Band : Bands)
+	for (const FMixEqField& Band : Bands)
 	{
-		EQInfo->SetNumberField(Band.Key, Band.Value);
+		EQInfo->SetNumberField(Band.Name, *Band.Value);
 	}
 	Response->SetObjectField(TEXT("eqSettings"), EQInfo);
 	Response->SetBoolField(TEXT("applyEQ"), Mix->bApplyEQ != 0);

@@ -64,13 +64,13 @@ TSharedPtr<FJsonObject> HandleEffectActions(const FString& SubAction, const TSha
 		bool bSave = GetJsonBoolField(Params, TEXT("save"), true);
 		if (AssetPath.IsEmpty()) { return McpHandlerUtils::BuildErrorResponse(TEXT("MISSING_PATH"), TEXT("Asset path is required")); }
 
-		USoundEffectSourcePresetChain* Chain = Cast<USoundEffectSourcePresetChain>(StaticLoadObject(USoundEffectSourcePresetChain::StaticClass(), nullptr, *AssetPath));
+		USoundEffectSourcePresetChain* Chain = LoadObject<USoundEffectSourcePresetChain>(nullptr, *AssetPath);
 		if (!Chain) { return McpHandlerUtils::BuildErrorResponse(TEXT("CHAIN_NOT_FOUND"), FString::Printf(TEXT("Could not load source effect chain: %s"), *AssetPath)); }
 
 		USoundEffectSourcePreset* EffectPreset = nullptr;
 		if (!EffectPresetPath.IsEmpty())
 		{
-			EffectPreset = Cast<USoundEffectSourcePreset>(StaticLoadObject(USoundEffectSourcePreset::StaticClass(), nullptr, *NormalizeAudioPath(EffectPresetPath)));
+			EffectPreset = LoadAudioAsset<USoundEffectSourcePreset>(EffectPresetPath);
 			if (!EffectPreset)
 			{
 				return McpHandlerUtils::BuildErrorResponse(TEXT("PRESET_NOT_FOUND"), FString::Printf(TEXT("Could not load source effect preset: %s"), *EffectPresetPath));

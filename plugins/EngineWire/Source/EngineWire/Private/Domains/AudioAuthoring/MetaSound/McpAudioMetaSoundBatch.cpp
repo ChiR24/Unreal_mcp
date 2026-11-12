@@ -144,9 +144,7 @@ TSharedPtr<FJsonObject> HandleMetaSoundBatchAction(const FString& SubAction, con
 			if (!Missing.IsEmpty())
 			{
 				TSharedPtr<FJsonObject> Details = McpHandlerUtils::CreateResultObject();
-				TArray<TSharedPtr<FJsonValue>> PinValues;
-				for (const FString& Pin : Pins) { PinValues.Add(MakeShared<FJsonValueString>(Pin)); }
-				Details->SetArrayField(PinsKey, PinValues);
+				Details->SetArrayField(PinsKey, McpHandlerUtils::ToJsonStringArray(Pins));
 				Details->SetNumberField(TEXT("failedIndex"), Index);
 				Details->SetNumberField(TEXT("succeeded"), 0);
 				return McpHandlerUtils::BuildErrorResponse(TEXT("PIN_NOT_FOUND"), FString::Printf(
@@ -161,9 +159,7 @@ TSharedPtr<FJsonObject> HandleMetaSoundBatchAction(const FString& SubAction, con
 		if (!Request.Name.IsEmpty() && !Request.bInRegistry)
 		{
 			TSharedPtr<FJsonObject> Details = McpHandlerUtils::CreateResultObject();
-			TArray<TSharedPtr<FJsonValue>> Candidates;
-			for (const FString& Candidate : Request.Candidates) { Candidates.Add(MakeShared<FJsonValueString>(Candidate)); }
-			Details->SetArrayField(TEXT("candidateNodeClasses"), Candidates);
+			Details->SetArrayField(TEXT("candidateNodeClasses"), McpHandlerUtils::ToJsonStringArray(Request.Candidates));
 			Details->SetNumberField(TEXT("failedIndex"), Index);
 			Details->SetNumberField(TEXT("succeeded"), 0);
 			const FString Hint = Request.Candidates.Num() > 0 ? FString(TEXT(" (see candidateNodeClasses)")) : FString();

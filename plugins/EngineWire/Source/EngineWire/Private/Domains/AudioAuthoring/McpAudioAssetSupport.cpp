@@ -97,36 +97,6 @@ bool SaveAudioAsset(UObject* Asset, bool bShouldSave)
 	return McpSafeOperations::McpSafeAssetSave(Asset);
 }
 
-USoundWave* LoadSoundWaveFromPath(const FString& SoundPath)
-{
-	FString NormalizedPath = NormalizeAudioPath(SoundPath);
-	return Cast<USoundWave>(StaticLoadObject(USoundWave::StaticClass(), nullptr, *NormalizedPath));
-}
-
-USoundCue* LoadSoundCueFromPath(const FString& CuePath)
-{
-	FString NormalizedPath = NormalizeAudioPath(CuePath);
-	return Cast<USoundCue>(StaticLoadObject(USoundCue::StaticClass(), nullptr, *NormalizedPath));
-}
-
-USoundClass* LoadSoundClassFromPath(const FString& ClassPath)
-{
-	FString NormalizedPath = NormalizeAudioPath(ClassPath);
-	return Cast<USoundClass>(StaticLoadObject(USoundClass::StaticClass(), nullptr, *NormalizedPath));
-}
-
-USoundAttenuation* LoadSoundAttenuationFromPath(const FString& AttenPath)
-{
-	FString NormalizedPath = NormalizeAudioPath(AttenPath);
-	return Cast<USoundAttenuation>(StaticLoadObject(USoundAttenuation::StaticClass(), nullptr, *NormalizedPath));
-}
-
-USoundMix* LoadSoundMixFromPath(const FString& MixPath)
-{
-	FString NormalizedPath = NormalizeAudioPath(MixPath);
-	return Cast<USoundMix>(StaticLoadObject(USoundMix::StaticClass(), nullptr, *NormalizedPath));
-}
-
 #if MCP_HAS_SOURCE_EFFECT_PRESETS
 UClass* SourceEffectPresetClass(const FString& EffectType)
 {

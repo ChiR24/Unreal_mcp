@@ -7,19 +7,16 @@ TSharedPtr<FJsonObject> HandleSoundCueNodeActions(const FString& SubAction, cons
 {
 	if (SubAction == TEXT("add_cue_node"))
 	{
-		FString AssetPath = NormalizeAudioPath(GetJsonStringField(Params, TEXT("assetPath"), TEXT("")));
 		FString NodeType = GetJsonStringField(Params, TEXT("nodeType"), TEXT("wave_player"));
 		bool bSave = GetJsonBoolField(Params, TEXT("save"), true);
-		USoundCue* Cue = LoadSoundCueFromPath(AssetPath);
-		if (!Cue)
-		{
-			return McpHandlerUtils::BuildErrorResponse(TEXT("CUE_NOT_FOUND"), FString::Printf(TEXT("Could not load SoundCue: %s"), *AssetPath));
-		}
+		TSharedPtr<FJsonObject> LoadError;
+		USoundCue* Cue = LoadAudioAssetOrError<USoundCue>(Params, TEXT("CUE_NOT_FOUND"), TEXT("SoundCue"), LoadError);
+		if (!Cue) { return LoadError; }
 		// Loaded before any node exists: a wrong path used to leave an empty node and report success.
 		const FString WavePath = GetJsonStringField(Params, TEXT("wavePath"));
 		const FString AttenPath = GetJsonStringField(Params, TEXT("attenuationPath"));
-		USoundWave* Wave = WavePath.IsEmpty() ? nullptr : LoadSoundWaveFromPath(WavePath);
-		USoundAttenuation* AttenAsset = AttenPath.IsEmpty() ? nullptr : LoadSoundAttenuationFromPath(AttenPath);
+		USoundWave* Wave = WavePath.IsEmpty() ? nullptr : LoadAudioAsset<USoundWave>(WavePath);
+		USoundAttenuation* AttenAsset = AttenPath.IsEmpty() ? nullptr : LoadAudioAsset<USoundAttenuation>(AttenPath);
 		if (!WavePath.IsEmpty() && !Wave) { return McpHandlerUtils::BuildErrorResponse(TEXT("WAVE_NOT_FOUND"), FString::Printf(TEXT("Could not load SoundWave: %s"), *WavePath)); }
 		if (!AttenPath.IsEmpty() && !AttenAsset) { return McpHandlerUtils::BuildErrorResponse(TEXT("ATTENUATION_NOT_FOUND"), FString::Printf(TEXT("Could not load SoundAttenuation: %s"), *AttenPath)); }
 		if (!Cue->SoundCueGraph)
@@ -90,11 +87,9 @@ TSharedPtr<FJsonObject> HandleSoundCueNodeActions(const FString& SubAction, cons
 		FString TargetNodeId = GetJsonStringField(Params, TEXT("targetNodeId"), TEXT(""));
 		int32 ChildIndex = static_cast<int32>(GetJsonIntField(Params, TEXT("childIndex"), 0));
 		bool bSave = GetJsonBoolField(Params, TEXT("save"), true);
-		USoundCue* Cue = LoadSoundCueFromPath(AssetPath);
-		if (!Cue)
-		{
-			return McpHandlerUtils::BuildErrorResponse(TEXT("CUE_NOT_FOUND"), FString::Printf(TEXT("Could not load SoundCue: %s"), *AssetPath));
-		}
+		TSharedPtr<FJsonObject> LoadError;
+		USoundCue* Cue = LoadAudioAssetOrError<USoundCue>(Params, TEXT("CUE_NOT_FOUND"), TEXT("SoundCue"), LoadError);
+		if (!Cue) { return LoadError; }
 		if (!Cue->SoundCueGraph)
 		{
 			Cue->CreateGraph();
@@ -177,17 +172,14 @@ TSharedPtr<FJsonObject> HandleSoundCueNodeActions(const FString& SubAction, cons
 
 	if (SubAction == TEXT("set_cue_attenuation"))
 	{
-		FString AssetPath = NormalizeAudioPath(GetJsonStringField(Params, TEXT("assetPath"), TEXT("")));
 		FString AttenuationPath = GetJsonStringField(Params, TEXT("attenuationPath"), TEXT(""));
 		bool bSave = GetJsonBoolField(Params, TEXT("save"), true);
-		USoundCue* Cue = LoadSoundCueFromPath(AssetPath);
-		if (!Cue)
-		{
-			return McpHandlerUtils::BuildErrorResponse(TEXT("CUE_NOT_FOUND"), FString::Printf(TEXT("Could not load SoundCue: %s"), *AssetPath));
-		}
+		TSharedPtr<FJsonObject> LoadError;
+		USoundCue* Cue = LoadAudioAssetOrError<USoundCue>(Params, TEXT("CUE_NOT_FOUND"), TEXT("SoundCue"), LoadError);
+		if (!Cue) { return LoadError; }
 
 		// Omitted clears the settings; a path that does not load is refused rather than ignored with success.
-		USoundAttenuation* Atten = AttenuationPath.IsEmpty() ? nullptr : LoadSoundAttenuationFromPath(AttenuationPath);
+		USoundAttenuation* Atten = AttenuationPath.IsEmpty() ? nullptr : LoadAudioAsset<USoundAttenuation>(AttenuationPath);
 		if (!AttenuationPath.IsEmpty() && !Atten)
 		{
 			return McpHandlerUtils::BuildErrorResponse(TEXT("ATTENUATION_NOT_FOUND"), FString::Printf(TEXT("Could not load SoundAttenuation: %s"), *AttenuationPath));
@@ -202,21 +194,18 @@ TSharedPtr<FJsonObject> HandleSoundCueNodeActions(const FString& SubAction, cons
 
 	if (SubAction == TEXT("set_cue_concurrency"))
 	{
-		FString AssetPath = NormalizeAudioPath(GetJsonStringField(Params, TEXT("assetPath"), TEXT("")));
 		FString ConcurrencyPath = GetJsonStringField(Params, TEXT("concurrencyPath"), TEXT(""));
 		bool bSave = GetJsonBoolField(Params, TEXT("save"), true);
-		USoundCue* Cue = LoadSoundCueFromPath(AssetPath);
-		if (!Cue)
-		{
-			return McpHandlerUtils::BuildErrorResponse(TEXT("CUE_NOT_FOUND"), FString::Printf(TEXT("Could not load SoundCue: %s"), *AssetPath));
-		}
+		TSharedPtr<FJsonObject> LoadError;
+		USoundCue* Cue = LoadAudioAssetOrError<USoundCue>(Params, TEXT("CUE_NOT_FOUND"), TEXT("SoundCue"), LoadError);
+		if (!Cue) { return LoadError; }
 
 		// A missing concurrencyPath used to silently clear the set and report success.
 		if (ConcurrencyPath.IsEmpty())
 		{
 			return McpHandlerUtils::BuildErrorResponse(TEXT("INVALID_ARGUMENT"), TEXT("concurrencyPath is required (a SoundConcurrency asset path)"));
 		}
-		USoundConcurrency* Conc = Cast<USoundConcurrency>(StaticLoadObject(USoundConcurrency::StaticClass(), nullptr, *NormalizeAudioPath(ConcurrencyPath)));
+		USoundConcurrency* Conc = LoadAudioAsset<USoundConcurrency>(ConcurrencyPath);
 		if (!Conc)
 		{
 			return McpHandlerUtils::BuildErrorResponse(TEXT("CONCURRENCY_NOT_FOUND"), FString::Printf(TEXT("SoundConcurrency asset not found: %s"), *ConcurrencyPath));

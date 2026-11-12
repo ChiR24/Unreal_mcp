@@ -52,11 +52,9 @@ TSharedPtr<FJsonObject> HandleMetaSoundNodeConnect(const TSharedPtr<FJsonObject>
 			return McpHandlerUtils::BuildErrorResponse(TEXT("MISSING_PATH"), TEXT("Asset path is required"));
 		}
 
-		UMetaSoundSource* MetaSound = Cast<UMetaSoundSource>(StaticLoadObject(UMetaSoundSource::StaticClass(), nullptr, *AssetPath));
-		if (!MetaSound)
-		{
-			return McpHandlerUtils::BuildErrorResponse(TEXT("ASSET_NOT_FOUND"), FString::Printf(TEXT("Could not load MetaSound: %s"), *AssetPath));
-		}
+		TSharedPtr<FJsonObject> LoadError;
+		UMetaSoundSource* MetaSound = LoadAudioAssetOrError<UMetaSoundSource>(Params, TEXT("ASSET_NOT_FOUND"), TEXT("MetaSound"), LoadError);
+		if (!MetaSound) { return LoadError; }
 
 		TScriptInterface<IMetaSoundDocumentInterface> ScriptInterface(MetaSound);
 		MCP_METASOUND_BUILDER(Builder, ScriptInterface);
@@ -115,12 +113,8 @@ TSharedPtr<FJsonObject> HandleMetaSoundNodeConnect(const TSharedPtr<FJsonObject>
 				{
 					NodeObj->SetStringField(TEXT("className"), Snapshot.ClassName);
 				}
-				TArray<TSharedPtr<FJsonValue>> InputArray;
-				for (const FString& Input : Snapshot.Inputs) { InputArray.Add(MakeShared<FJsonValueString>(Input)); }
-				NodeObj->SetArrayField(TEXT("inputs"), InputArray);
-				TArray<TSharedPtr<FJsonValue>> OutputArray;
-				for (const FString& Output : Snapshot.Outputs) { OutputArray.Add(MakeShared<FJsonValueString>(Output)); }
-				NodeObj->SetArrayField(TEXT("outputs"), OutputArray);
+				NodeObj->SetArrayField(TEXT("inputs"), McpHandlerUtils::ToJsonStringArray(Snapshot.Inputs));
+				NodeObj->SetArrayField(TEXT("outputs"), McpHandlerUtils::ToJsonStringArray(Snapshot.Outputs));
 				NodeArray.Add(MakeShared<FJsonValueObject>(NodeObj));
 			}
 			return NodeArray;
@@ -227,7 +221,7 @@ TSharedPtr<FJsonObject> HandleMetaSoundNodeConnect(const TSharedPtr<FJsonObject>
 #endif
 		if (bSuccess && bConnected)
 		{
-			if (bSave) { McpSafeAssetSave(MetaSound); }
+			SaveAudioAsset(MetaSound, bSave);
 			Response->SetBoolField(TEXT("success"), true);
 			Response->SetStringField(TEXT("message"), TEXT("MetaSound nodes connected"));
 			Response->SetNumberField(TEXT("edgesCreated"), FMath::Max(1, CreatedEdges.Num()));
@@ -257,14 +251,8 @@ TSharedPtr<FJsonObject> HandleMetaSoundNodeConnect(const TSharedPtr<FJsonObject>
 					? FString::Printf(TEXT("the types differ: output %s, input %s (put a conversion node between them)"), **OutPin, **InPin)
 					: FString(TEXT("the builder refused the edge (it would close a loop)"));
 			Response->SetStringField(TEXT("error"), FString::Printf(TEXT("Failed to connect: %s"), *Why));
-			auto PinArray = [](const TArray<FString>& Pins)
-			{
-				TArray<TSharedPtr<FJsonValue>> Out;
-				for (const FString& Pin : Pins) { Out.Add(MakeShared<FJsonValueString>(Pin)); }
-				return Out;
-			};
-			if (Src) { Response->SetArrayField(TEXT("sourceOutputs"), PinArray(Src->Outputs)); }
-			if (Dst) { Response->SetArrayField(TEXT("targetInputs"), PinArray(Dst->Inputs)); }
+			if (Src) { Response->SetArrayField(TEXT("sourceOutputs"), McpHandlerUtils::ToJsonStringArray(Src->Outputs)); }
+			if (Dst) { Response->SetArrayField(TEXT("targetInputs"), McpHandlerUtils::ToJsonStringArray(Dst->Inputs)); }
 #endif
 		}
 

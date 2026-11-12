@@ -21,11 +21,6 @@ bool IsMetaSoundInterfaceNode(const FMetasoundFrontendDocument& Doc, const FMeta
 	return Type == EMetasoundFrontendClassType::Input || Type == EMetasoundFrontendClassType::Output;
 }
 
-TSharedPtr<FJsonObject> MetaSoundGraphRefuse(const TCHAR* Code, const FString& Message)
-{
-	return McpHandlerUtils::BuildErrorResponse(Code, Message);
-}
-
 TSharedPtr<FJsonObject> RemoveMetaSoundNodes(UMetaSoundSource* MetaSound, const TSharedPtr<FJsonObject>& Params, TSharedPtr<FJsonObject> Response)
 {
 	TArray<FString> Refs;
@@ -42,7 +37,7 @@ TSharedPtr<FJsonObject> RemoveMetaSoundNodes(UMetaSoundSource* MetaSound, const 
 	}
 	if (Refs.Num() == 0)
 	{
-		return MetaSoundGraphRefuse(TEXT("INVALID_ARGUMENT"), TEXT("Give nodeId for one node or nodeIds for several (the ids add_node returned, or from get_metasound_graph)."));
+		return McpHandlerUtils::BuildErrorResponse(TEXT("INVALID_ARGUMENT"), TEXT("Give nodeId for one node or nodeIds for several (the ids add_node returned, or from get_metasound_graph)."));
 	}
 
 	TScriptInterface<IMetaSoundDocumentInterface> ScriptInterface(MetaSound);
@@ -61,7 +56,7 @@ TSharedPtr<FJsonObject> RemoveMetaSoundNodes(UMetaSoundSource* MetaSound, const 
 	if (Problems.Num() > 0)
 	{
 		MCP_METASOUND_FINISH(Builder);
-		return MetaSoundGraphRefuse(TEXT("NODE_NOT_REMOVABLE"), FString::Printf(TEXT("Nothing was removed: %s. Read the ids with get_metasound_graph."),
+		return McpHandlerUtils::BuildErrorResponse(TEXT("NODE_NOT_REMOVABLE"), FString::Printf(TEXT("Nothing was removed: %s. Read the ids with get_metasound_graph."),
 			*FString::Join(Problems, TEXT("; "))));
 	}
 
@@ -71,11 +66,11 @@ TSharedPtr<FJsonObject> RemoveMetaSoundNodes(UMetaSoundSource* MetaSound, const 
 		if (Builder.RemoveNode(Id)) { Removed.Add(MakeShared<FJsonValueString>(Id.ToString())); }
 	}
 	const bool bSave = GetJsonBoolField(Params, TEXT("save"), true);
-	const bool bSaved = Removed.Num() > 0 && bSave && McpSafeAssetSave(MetaSound);
+	const bool bSaved = Removed.Num() > 0 && SaveAudioAsset(MetaSound, bSave) && bSave;
 	MCP_METASOUND_FINISH(Builder);
 	if (Removed.Num() != Ids.Num())
 	{
-		return MetaSoundGraphRefuse(TEXT("REMOVE_FAILED"), FString::Printf(TEXT("Removed %d of %d nodes; the builder refused the rest."), Removed.Num(), Ids.Num()));
+		return McpHandlerUtils::BuildErrorResponse(TEXT("REMOVE_FAILED"), FString::Printf(TEXT("Removed %d of %d nodes; the builder refused the rest."), Removed.Num(), Ids.Num()));
 	}
 	Response->SetBoolField(TEXT("success"), true);
 	Response->SetStringField(TEXT("message"), FString::Printf(TEXT("Removed %d MetaSound node(s) and their links"), Removed.Num()));
@@ -96,7 +91,7 @@ TSharedPtr<FJsonObject> DisconnectMetaSoundPins(UMetaSoundSource* MetaSound, con
 	const bool bBySource = !SourceRef.IsEmpty() && !SourcePin.IsEmpty();
 	if (!bByTarget && !bBySource)
 	{
-		return MetaSoundGraphRefuse(TEXT("INVALID_ARGUMENT"), TEXT("Give targetNodeId + targetInputName (the link into that input) or sourceNodeId + sourceOutputName (every link out of that output)."));
+		return McpHandlerUtils::BuildErrorResponse(TEXT("INVALID_ARGUMENT"), TEXT("Give targetNodeId + targetInputName (the link into that input) or sourceNodeId + sourceOutputName (every link out of that output)."));
 	}
 
 	TScriptInterface<IMetaSoundDocumentInterface> ScriptInterface(MetaSound);
@@ -141,10 +136,10 @@ TSharedPtr<FJsonObject> DisconnectMetaSoundPins(UMetaSoundSource* MetaSound, con
 	if (!Problem.IsEmpty())
 	{
 		MCP_METASOUND_FINISH(Builder);
-		return MetaSoundGraphRefuse(ProblemCode, FString::Printf(TEXT("Nothing was disconnected: %s."), *Problem));
+		return McpHandlerUtils::BuildErrorResponse(ProblemCode, FString::Printf(TEXT("Nothing was disconnected: %s."), *Problem));
 	}
 	const bool bSave = GetJsonBoolField(Params, TEXT("save"), true);
-	const bool bSaved = bSave && McpSafeAssetSave(MetaSound);
+	const bool bSaved = SaveAudioAsset(MetaSound, bSave) && bSave;
 	MCP_METASOUND_FINISH(Builder);
 	Response->SetBoolField(TEXT("success"), true);
 	Response->SetStringField(TEXT("message"), FString::Printf(TEXT("Removed %d MetaSound link(s)"), Removed));
@@ -169,11 +164,9 @@ TSharedPtr<FJsonObject> HandleMetaSoundGraphEditActions(const FString& SubAction
 	{
 		return McpHandlerUtils::BuildErrorResponse(TEXT("MISSING_PATH"), TEXT("Asset path is required"));
 	}
-	UMetaSoundSource* MetaSound = Cast<UMetaSoundSource>(StaticLoadObject(UMetaSoundSource::StaticClass(), nullptr, *AssetPath));
-	if (!MetaSound)
-	{
-		return McpHandlerUtils::BuildErrorResponse(TEXT("ASSET_NOT_FOUND"), FString::Printf(TEXT("Could not load MetaSound: %s"), *AssetPath));
-	}
+	TSharedPtr<FJsonObject> LoadError;
+	UMetaSoundSource* MetaSound = LoadAudioAssetOrError<UMetaSoundSource>(Params, TEXT("ASSET_NOT_FOUND"), TEXT("MetaSound"), LoadError);
+	if (!MetaSound) { return LoadError; }
 	return bRemove ? RemoveMetaSoundNodes(MetaSound, Params, Response) : DisconnectMetaSoundPins(MetaSound, Params, Response);
 #else
 	return McpHandlerUtils::BuildErrorResponse(TEXT("METASOUND_FRONTEND_NOT_SUPPORTED"),

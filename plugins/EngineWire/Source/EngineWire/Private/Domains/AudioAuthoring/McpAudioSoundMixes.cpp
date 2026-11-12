@@ -47,17 +47,14 @@ TSharedPtr<FJsonObject> HandleSoundMixActions(const FString& SubAction, const TS
 
 	if (SubAction == TEXT("add_mix_modifier"))
 	{
-		FString AssetPath = NormalizeAudioPath(GetJsonStringField(Params, TEXT("assetPath"), TEXT("")));
 		FString SoundClassPath = GetJsonStringField(Params, TEXT("soundClassPath"), TEXT(""));
 		bool bSave = GetJsonBoolField(Params, TEXT("save"), true);
 
-		USoundMix* Mix = LoadSoundMixFromPath(AssetPath);
-		if (!Mix)
-		{
-			return McpHandlerUtils::BuildErrorResponse(TEXT("MIX_NOT_FOUND"), FString::Printf(TEXT("Could not load SoundMix: %s"), *AssetPath));
-		}
+		TSharedPtr<FJsonObject> LoadError;
+		USoundMix* Mix = LoadAudioAssetOrError<USoundMix>(Params, TEXT("MIX_NOT_FOUND"), TEXT("SoundMix"), LoadError);
+		if (!Mix) { return LoadError; }
 
-		USoundClass* SoundClass = LoadSoundClassFromPath(SoundClassPath);
+		USoundClass* SoundClass = LoadAudioAsset<USoundClass>(SoundClassPath);
 		if (!SoundClass)
 		{
 			return McpHandlerUtils::BuildErrorResponse(TEXT("CLASS_NOT_FOUND"), FString::Printf(TEXT("Could not load SoundClass: %s"), *SoundClassPath));

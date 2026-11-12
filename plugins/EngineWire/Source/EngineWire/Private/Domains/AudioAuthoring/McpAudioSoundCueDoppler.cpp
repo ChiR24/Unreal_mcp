@@ -26,10 +26,10 @@ TSharedPtr<FJsonObject> HandleSoundCueDopplerAction(const FString& SubAction, co
 		return McpHandlerUtils::BuildErrorResponse(TEXT("INVALID_ARGUMENT"),
 			TEXT("dopplerIntensity must be 0 or more (1 is the normal shift, 0 turns it off)."));
 	}
-	USoundCue* Cue = LoadSoundCueFromPath(AssetPath);
+	USoundCue* Cue = LoadAudioAsset<USoundCue>(AssetPath);
 	if (!Cue)
 	{
-		if (Cast<USoundBase>(StaticLoadObject(USoundBase::StaticClass(), nullptr, *AssetPath)))
+		if (LoadObject<USoundBase>(nullptr, *AssetPath))
 		{
 			return McpHandlerUtils::BuildErrorResponse(TEXT("DOPPLER_NEEDS_SOUND_CUE"), FString::Printf(
 				TEXT("'%s' is not a Sound Cue. Doppler is a Sound Cue node: create a cue that plays it (create_audio_asset kind sound_cue with wavePath) and set the Doppler on that cue."), *AssetPath));

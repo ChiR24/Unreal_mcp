@@ -58,8 +58,8 @@ TSharedPtr<FJsonObject> HandleDialogueActions(const FString& SubAction, const TS
 		// wavePath and speakerPath were declared and never read: they now seed the first context mapping.
 		const FString WavePath = GetJsonStringField(Params, TEXT("wavePath"));
 		const FString SpeakerPath = GetJsonStringField(Params, TEXT("speakerPath"));
-		USoundWave* ContextWave = WavePath.IsEmpty() ? nullptr : LoadSoundWaveFromPath(WavePath);
-		UDialogueVoice* Speaker = SpeakerPath.IsEmpty() ? nullptr : Cast<UDialogueVoice>(StaticLoadObject(UDialogueVoice::StaticClass(), nullptr, *NormalizeAudioPath(SpeakerPath)));
+		USoundWave* ContextWave = WavePath.IsEmpty() ? nullptr : LoadAudioAsset<USoundWave>(WavePath);
+		UDialogueVoice* Speaker = SpeakerPath.IsEmpty() ? nullptr : LoadAudioAsset<UDialogueVoice>(SpeakerPath);
 		if (!WavePath.IsEmpty() && !ContextWave) { return McpHandlerUtils::BuildErrorResponse(TEXT("SOUNDWAVE_NOT_FOUND"), FString::Printf(TEXT("Could not load SoundWave: %s"), *WavePath)); }
 		if (!SpeakerPath.IsEmpty() && !Speaker) { return McpHandlerUtils::BuildErrorResponse(TEXT("SPEAKER_NOT_FOUND"), FString::Printf(TEXT("Could not load speaker DialogueVoice: %s"), *SpeakerPath)); }
 
@@ -89,23 +89,23 @@ TSharedPtr<FJsonObject> HandleDialogueActions(const FString& SubAction, const TS
 
 	if (SubAction == TEXT("set_dialogue_context"))
 	{
-		FString AssetPath = NormalizeAudioPath(GetJsonStringField(Params, TEXT("assetPath"), TEXT("")));
 		FString SpeakerPath = NormalizeAudioPath(GetJsonStringField(Params, TEXT("speakerPath"), TEXT("")));
 		FString SoundWavePath = NormalizeAudioPath(GetJsonStringField(Params, TEXT("soundWavePath"), TEXT("")));
 		bool bSave = GetJsonBoolField(Params, TEXT("save"), true);
 
-		UDialogueWave* Wave = Cast<UDialogueWave>(StaticLoadObject(UDialogueWave::StaticClass(), nullptr, *AssetPath));
-		if (!Wave) { return McpHandlerUtils::BuildErrorResponse(TEXT("WAVE_NOT_FOUND"), FString::Printf(TEXT("Could not load DialogueWave: %s"), *AssetPath)); }
+		TSharedPtr<FJsonObject> LoadError;
+		UDialogueWave* Wave = LoadAudioAssetOrError<UDialogueWave>(Params, TEXT("WAVE_NOT_FOUND"), TEXT("DialogueWave"), LoadError);
+		if (!Wave) { return LoadError; }
 
 		// A context is who speaks the line: one without a speaker was added and matched nothing at runtime.
 		if (SpeakerPath.IsEmpty()) { return McpHandlerUtils::BuildErrorResponse(TEXT("INVALID_ARGUMENT"), TEXT("speakerPath is required: the DialogueVoice that speaks this line. Nothing was added.")); }
-		UDialogueVoice* SpeakerVoice = Cast<UDialogueVoice>(StaticLoadObject(UDialogueVoice::StaticClass(), nullptr, *SpeakerPath));
+		UDialogueVoice* SpeakerVoice = LoadObject<UDialogueVoice>(nullptr, *SpeakerPath);
 		if (!SpeakerVoice) { return McpHandlerUtils::BuildErrorResponse(TEXT("SPEAKER_NOT_FOUND"), FString::Printf(TEXT("Could not load speaker DialogueVoice: %s"), *SpeakerPath)); }
 
 		USoundWave* ContextSoundWave = nullptr;
 		if (!SoundWavePath.IsEmpty())
 		{
-			ContextSoundWave = LoadSoundWaveFromPath(SoundWavePath);
+			ContextSoundWave = LoadAudioAsset<USoundWave>(SoundWavePath);
 			if (!ContextSoundWave) { return McpHandlerUtils::BuildErrorResponse(TEXT("SOUNDWAVE_NOT_FOUND"), FString::Printf(TEXT("Could not load SoundWave: %s"), *SoundWavePath)); }
 		}
 
@@ -118,7 +118,7 @@ TSharedPtr<FJsonObject> HandleDialogueActions(const FString& SubAction, const TS
 				FString TargetPath = NormalizeAudioPath(TargetVal->AsString());
 				if (!TargetPath.IsEmpty())
 				{
-					UDialogueVoice* TargetVoice = Cast<UDialogueVoice>(StaticLoadObject(UDialogueVoice::StaticClass(), nullptr, *TargetPath));
+					UDialogueVoice* TargetVoice = LoadObject<UDialogueVoice>(nullptr, *TargetPath);
 					if (!TargetVoice) { return McpHandlerUtils::BuildErrorResponse(TEXT("TARGET_NOT_FOUND"), FString::Printf(TEXT("Could not load target DialogueVoice: %s"), *TargetPath)); }
 					TargetVoices.Add(TargetVoice);
 				}

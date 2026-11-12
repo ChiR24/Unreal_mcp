@@ -10,8 +10,6 @@
 #include "Safety/McpSafeOperations.h"
 
 #include "AssetRegistry/AssetRegistryModule.h"
-#include "AssetToolsModule.h"
-#include "EditorAssetLibrary.h"
 #include "Misc/PackageName.h"
 
 #include "Sound/SoundAttenuation.h"
@@ -36,7 +34,6 @@
 #include "SoundCueGraph/SoundCueGraphNode_Root.h"
 
 #include "Factories/SoundAttenuationFactory.h"
-#include "Factories/SoundClassFactory.h"
 #include "Factories/SoundCueFactoryNew.h"
 #include "Factories/SoundMixFactory.h"
 
@@ -47,8 +44,6 @@
 #include "Factories/DialogueWaveFactory.h"
 
 #include "Sound/SoundEffectSource.h"
-
-#include "Sound/SoundSubmixSend.h"
 
 #include "Sound/SoundSubmix.h"
 
@@ -102,6 +97,12 @@
 #else
 #define MCP_METASOUND_FINISH(Name)
 #endif
+// A MetaSound class's interface: its Interface member before 5.6, GetDefaultInterface() from then on.
+#if ENGINE_MAJOR_VERSION > 5 || ENGINE_MINOR_VERSION >= 6
+#define MCP_METASOUND_CLASS_INTERFACE(Class) (Class).GetDefaultInterface()
+#else
+#define MCP_METASOUND_CLASS_INTERFACE(Class) (Class).Interface
+#endif
 
 #if MCP_HAS_METASOUND_FRONTEND && __has_include("MetasoundFrontendSearchEngine.h")
 #include "MetasoundFrontendSearchEngine.h"
@@ -137,11 +138,18 @@ inline FMetaSoundFrontendDocumentBuilder& McpMetaSoundBuilder(const TScriptInter
 FString NormalizeAudioPath(const FString& Path, bool bForLoad = true);
 bool BuildAudioCreationPath(const FString& Directory, const FString& Name, FString& OutPackagePath, FString& OutError);
 bool SaveAudioAsset(UObject* Asset, bool bShouldSave);
-USoundWave* LoadSoundWaveFromPath(const FString& SoundPath);
-USoundCue* LoadSoundCueFromPath(const FString& CuePath);
-USoundClass* LoadSoundClassFromPath(const FString& ClassPath);
-USoundAttenuation* LoadSoundAttenuationFromPath(const FString& AttenPath);
-USoundMix* LoadSoundMixFromPath(const FString& MixPath);
+/** The T a package or object path names (normalized here); null when nothing of that class is there. */
+template <typename T>
+T* LoadAudioAsset(const FString& Path) { return LoadObject<T>(nullptr, *NormalizeAudioPath(Path)); }
+/** The T the payload's assetPath names; null with OutError <Code>, "Could not load <Kind>: <the normalized path>". */
+template <typename T>
+T* LoadAudioAssetOrError(const TSharedPtr<FJsonObject>& Params, const TCHAR* Code, const TCHAR* Kind, TSharedPtr<FJsonObject>& OutError)
+{
+	const FString AssetPath = NormalizeAudioPath(GetJsonStringField(Params, TEXT("assetPath"), TEXT("")));
+	T* Asset = LoadObject<T>(nullptr, *AssetPath);
+	if (!Asset) { OutError = McpHandlerUtils::BuildErrorResponse(Code, FString::Printf(TEXT("Could not load %s: %s"), Kind, *AssetPath)); }
+	return Asset;
+}
 #if MCP_HAS_SOURCE_EFFECT_PRESETS
 // The preset class an effectType names (eq, chorus, delay ...), or null for a type this cannot make.
 UClass* SourceEffectPresetClass(const FString& EffectType);

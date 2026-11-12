@@ -19,11 +19,9 @@ static TSharedPtr<FJsonObject> AddMetaSoundGraphVertex(const TSharedPtr<FJsonObj
 		return McpHandlerUtils::BuildErrorResponse(bInput ? TEXT("MISSING_INPUT_NAME") : TEXT("MISSING_OUTPUT_NAME"), FString::Printf(TEXT("%sName is required"), *Kind));
 	}
 
-	UMetaSoundSource* MetaSound = Cast<UMetaSoundSource>(StaticLoadObject(UMetaSoundSource::StaticClass(), nullptr, *AssetPath));
-	if (!MetaSound)
-	{
-		return McpHandlerUtils::BuildErrorResponse(TEXT("ASSET_NOT_FOUND"), FString::Printf(TEXT("Could not load MetaSound: %s"), *AssetPath));
-	}
+	TSharedPtr<FJsonObject> LoadError;
+	UMetaSoundSource* MetaSound = LoadAudioAssetOrError<UMetaSoundSource>(Params, TEXT("ASSET_NOT_FOUND"), TEXT("MetaSound"), LoadError);
+	if (!MetaSound) { return LoadError; }
 
 	TScriptInterface<IMetaSoundDocumentInterface> ScriptInterface(MetaSound);
 	MCP_METASOUND_BUILDER(Builder, ScriptInterface);
@@ -62,7 +60,7 @@ static TSharedPtr<FJsonObject> AddMetaSoundGraphVertex(const TSharedPtr<FJsonObj
 
 	if (Node)
 	{
-		if (bSave) { McpSafeAssetSave(MetaSound); }
+		SaveAudioAsset(MetaSound, bSave);
 		Response->SetStringField(Kind + TEXT("Name"), VertexName);
 		Response->SetStringField(Kind + TEXT("Type"), VertexType);
 		Response->SetStringField(TEXT("nodeId"), Node->GetID().ToString());

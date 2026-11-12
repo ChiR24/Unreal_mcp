@@ -1,9 +1,23 @@
 #include "Core/Compatibility/McpVersionCompatibility.h"
 #include "Domains/Audio/McpAudioPrivate.h"
 #include "Domains/AudioAuthoring/McpAudioAuthoringPrivate.h"
+#include "Algo/Find.h"
 
 namespace McpAudioHandlers
 {
+namespace
+{
+// The shapes and falloff modes set_sound_attenuation takes, in the spelling its reply gives back.
+struct FAttenuationShapeName { const TCHAR* Name; EAttenuationShape::Type Shape; };
+struct FAttenuationFalloffName { const TCHAR* Name; EAttenuationDistanceModel Model; };
+const FAttenuationShapeName AttenuationShapeNames[] = {
+    {TEXT("Sphere"), EAttenuationShape::Sphere}, {TEXT("Capsule"), EAttenuationShape::Capsule},
+    {TEXT("Box"), EAttenuationShape::Box}, {TEXT("Cone"), EAttenuationShape::Cone}};
+const FAttenuationFalloffName AttenuationFalloffNames[] = {
+    {TEXT("Linear"), EAttenuationDistanceModel::Linear}, {TEXT("Logarithmic"), EAttenuationDistanceModel::Logarithmic},
+    {TEXT("Inverse"), EAttenuationDistanceModel::Inverse}, {TEXT("NaturalSound"), EAttenuationDistanceModel::NaturalSound}};
+}
+
 bool HandleSpatialActions(
     UEngineWireSubsystem* Self,
     const FString& RequestId,
@@ -73,7 +87,7 @@ bool HandleSpatialActions(
               FPackageName::GetLongPackagePath(Sound->GetOutermost()->GetName()) + TEXT("/") + AttenName;
           // An attenuation an earlier call made for this sound is reused; NewObject over it rebuilt it empty, and
           // another kind of asset under that name is refused.
-          AttenuationSettings = LoadObject<USoundAttenuation>(nullptr, *(AttenPackageName + TEXT(".") + AttenName));
+          AttenuationSettings = LoadObject<USoundAttenuation>(nullptr, *AudioObjectPath(AttenPackageName));
           if (!AttenuationSettings) {
             FString CreateError, CreateCode;
             UPackage* AttenPackage = McpCreatePackageForNewAsset(AttenPackageName, CreateError, CreateCode);
@@ -96,7 +110,6 @@ bool HandleSpatialActions(
       }
     }
 
-    if (AttenuationSettings) {
       // Occlusion settings are in the Attenuation subobject (FSoundAttenuationSettings)
       // Enable/disable occlusion
       AttenuationSettings->Attenuation.bEnableOcclusion = bEnable;
@@ -133,10 +146,6 @@ bool HandleSpatialActions(
       McpHandlerUtils::AddVerification(Resp, AttenuationSettings);
       Self->SendAutomationResponse(RequestingSocket, RequestId, true,
                              TEXT("Audio occlusion configured"), Resp);
-    } else {
-      Self->SendAutomationError(RequestingSocket, RequestId,
-                           TEXT("Failed to configure audio occlusion"), TEXT("CONFIGURATION_FAILED"));
-     }
      return true;
    }
 
@@ -162,14 +171,12 @@ bool HandleSpatialActions(
      bool bSave = true;
      Payload->TryGetBoolField(TEXT("save"), bSave);
      // Any other name became a Sphere or Linear falloff, with only the reply to tell.
-     const bool bKnownShape = AttenuationShape.Equals(TEXT("Sphere"), ESearchCase::IgnoreCase) ||
-         AttenuationShape.Equals(TEXT("Capsule"), ESearchCase::IgnoreCase) || AttenuationShape.Equals(TEXT("Box"), ESearchCase::IgnoreCase) ||
-         AttenuationShape.Equals(TEXT("Cone"), ESearchCase::IgnoreCase);
-     const bool bKnownFalloff = FalloffMode.Equals(TEXT("Linear"), ESearchCase::IgnoreCase) ||
-         FalloffMode.Equals(TEXT("Logarithmic"), ESearchCase::IgnoreCase) || FalloffMode.Equals(TEXT("Inverse"), ESearchCase::IgnoreCase) ||
-         FalloffMode.Equals(TEXT("NaturalSound"), ESearchCase::IgnoreCase);
-     if (!bKnownShape || !bKnownFalloff) {
-       Self->SendAutomationError(RequestingSocket, RequestId, bKnownShape
+     const FAttenuationShapeName* Shape = Algo::FindByPredicate(AttenuationShapeNames,
+         [&AttenuationShape](const FAttenuationShapeName& Known) { return AttenuationShape.Equals(Known.Name, ESearchCase::IgnoreCase); });
+     const FAttenuationFalloffName* Falloff = Algo::FindByPredicate(AttenuationFalloffNames,
+         [&FalloffMode](const FAttenuationFalloffName& Known) { return FalloffMode.Equals(Known.Name, ESearchCase::IgnoreCase); });
+     if (!Shape || !Falloff) {
+       Self->SendAutomationError(RequestingSocket, RequestId, Shape
            ? FString::Printf(TEXT("falloffMode must be Linear, Logarithmic, Inverse or NaturalSound, got '%s'. Nothing was created."), *FalloffMode)
            : FString::Printf(TEXT("attenuationShape must be Sphere, Capsule, Box or Cone, got '%s'. Nothing was created."), *AttenuationShape),
            TEXT("INVALID_ARGUMENT"));
@@ -179,7 +186,7 @@ bool HandleSpatialActions(
      TOptional<FVector> BoxExtent;
      FString ExtentError;
      if (!McpAudioAuthoring::ReadAttenuationBoxExtent(
-             Payload, AttenuationShape.Equals(TEXT("Box"), ESearchCase::IgnoreCase), BoxExtent, ExtentError)) {
+             Payload, Shape->Shape == EAttenuationShape::Box, BoxExtent, ExtentError)) {
        Self->SendAutomationError(RequestingSocket, RequestId, ExtentError, TEXT("INVALID_ARGUMENT"));
        return true;
      }
@@ -212,36 +219,11 @@ bool HandleSpatialActions(
 
        Atten->Attenuation.FalloffDistance = (float)FalloffDistance;
 
-      FString AppliedShape = TEXT("Sphere");
-      if (AttenuationShape.Equals(TEXT("Capsule"), ESearchCase::IgnoreCase)) {
-        Atten->Attenuation.AttenuationShape = EAttenuationShape::Capsule;
-        AppliedShape = TEXT("Capsule");
-      } else if (AttenuationShape.Equals(TEXT("Box"), ESearchCase::IgnoreCase)) {
-        Atten->Attenuation.AttenuationShape = EAttenuationShape::Box;
-        AppliedShape = TEXT("Box");
-      } else if (AttenuationShape.Equals(TEXT("Cone"), ESearchCase::IgnoreCase)) {
-        Atten->Attenuation.AttenuationShape = EAttenuationShape::Cone;
-        AppliedShape = TEXT("Cone");
-      } else {
-        Atten->Attenuation.AttenuationShape = EAttenuationShape::Sphere;
-      }
+      Atten->Attenuation.AttenuationShape = Shape->Shape;
       // After the shape: it decides which extents the radius fills.
       McpAudioAuthoring::SetAttenuationInnerRadius(Atten->Attenuation, InnerRadius);
       McpAudioAuthoring::ApplyAttenuationBoxExtent(Atten->Attenuation, BoxExtent);
-
-      FString AppliedFalloffMode = TEXT("Linear");
-      if (FalloffMode.Equals(TEXT("Logarithmic"), ESearchCase::IgnoreCase)) {
-        Atten->Attenuation.DistanceAlgorithm = EAttenuationDistanceModel::Logarithmic;
-        AppliedFalloffMode = TEXT("Logarithmic");
-      } else if (FalloffMode.Equals(TEXT("Inverse"), ESearchCase::IgnoreCase)) {
-        Atten->Attenuation.DistanceAlgorithm = EAttenuationDistanceModel::Inverse;
-        AppliedFalloffMode = TEXT("Inverse");
-      } else if (FalloffMode.Equals(TEXT("NaturalSound"), ESearchCase::IgnoreCase)) {
-        Atten->Attenuation.DistanceAlgorithm = EAttenuationDistanceModel::NaturalSound;
-        AppliedFalloffMode = TEXT("NaturalSound");
-      } else {
-        Atten->Attenuation.DistanceAlgorithm = EAttenuationDistanceModel::Linear;
-      }
+      Atten->Attenuation.DistanceAlgorithm = Falloff->Model;
 
       FAssetRegistryModule::AssetCreated(Atten);
       Package->MarkPackageDirty();
@@ -260,9 +242,9 @@ bool HandleSpatialActions(
       // Read back: extent replaces the size innerRadius gives a box.
       Resp->SetNumberField(TEXT("innerRadius"), McpAudioAuthoring::GetAttenuationInnerRadius(Atten->Attenuation));
       Resp->SetNumberField(TEXT("falloffDistance"), Atten->Attenuation.FalloffDistance);
-      Resp->SetStringField(TEXT("attenuationShape"), AppliedShape);
+      Resp->SetStringField(TEXT("attenuationShape"), Shape->Name);
       McpAudioAuthoring::AddAttenuationBoxExtent(Resp, Atten->Attenuation);
-      Resp->SetStringField(TEXT("falloffMode"), AppliedFalloffMode);
+      Resp->SetStringField(TEXT("falloffMode"), Falloff->Name);
       McpHandlerUtils::AddVerification(Resp, Atten);
      Self->SendAutomationResponse(RequestingSocket, RequestId, true,
                             TEXT("Sound attenuation configured"), Resp);
