@@ -12,7 +12,7 @@ public class EngineWire : ModuleRules {
         ApplyMsvcCompatibility(Target);
 
         // NoPCHs made every unity blob re-parse the engine headers from scratch,
-        // which on 1194 files was the single largest cost in a full build. The
+        // which across the module's sources was the single largest cost in a full build. The
         // module's own PCH already existed at the path below and was never wired
         // up; using it -- rather than the engine's shared PCH -- keeps the peak
         // memory that NoPCHs was chosen to protect while reusing the parse.
@@ -141,7 +141,7 @@ public class EngineWire : ModuleRules {
     }
 
     // Adaptive unity ejects every file UBT thinks you are editing from the unity blobs. Installed
-    // engines classify by the read-only flag, so all 1100+ shipped sources qualify and unity is
+    // engines classify by the read-only flag, so every shipped source qualifies and unity is
     // defeated entirely - a ~10x build-time cost. bUseAdaptiveUnityBuild is target-scope only.
     private static void DisableAdaptiveUnityBuild(ReadOnlyTargetRules Target) {
         try {

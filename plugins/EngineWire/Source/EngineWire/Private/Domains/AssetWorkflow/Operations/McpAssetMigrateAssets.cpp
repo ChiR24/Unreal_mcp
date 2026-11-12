@@ -110,7 +110,8 @@ bool UEngineWireSubsystem::HandleMigrateAssets(
   // package copy cannot rewrite them.
   FString DestinationPath = TEXT("/Game");
   Payload->TryGetStringField(TEXT("destinationPath"), DestinationPath);
-  if (!DestinationPath.StartsWith(TEXT("/Game"))) {
+  // Not a bare prefix test: "/GameFoo" passed it and landed in Content/Foo while the reply named /GameFoo.
+  if (DestinationPath != TEXT("/Game") && !DestinationPath.StartsWith(TEXT("/Game/"))) {
     SendAutomationResponse(Socket, RequestId, false,
                            TEXT("destinationPath must be under /Game."), nullptr,
                            TEXT("INVALID_PATH"));
@@ -127,13 +128,12 @@ bool UEngineWireSubsystem::HandleMigrateAssets(
   DestRelative.RemoveFromStart(TEXT("/"));
   const bool bStructurePreserved = DestRelative.IsEmpty();
 
-  double MaxPackages = 4000;
-  Payload->TryGetNumberField(TEXT("maxPackages"), MaxPackages);
-  if (RelativeFiles.Num() > static_cast<int32>(MaxPackages)) {
+  const int32 MaxPackages = GetJsonIntField(Payload, TEXT("maxPackages"), 4000);
+  if (RelativeFiles.Num() > MaxPackages) {
     SendAutomationResponse(
         Socket, RequestId, false,
         FString::Printf(TEXT("Source holds %d files, above maxPackages %d. Narrow with subPath or raise maxPackages."),
-                        RelativeFiles.Num(), static_cast<int32>(MaxPackages)),
+                        RelativeFiles.Num(), MaxPackages),
         nullptr, TEXT("LIMIT_EXCEEDED"));
     return true;
   }

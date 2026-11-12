@@ -34,7 +34,7 @@ namespace McpFabAddOperation
 {
 namespace
 {
-/** Every /Game package path the registry knows right now. */
+/** The object path of every asset under /Game the registry knows right now. */
 TSet<FString> SnapshotGameAssets()
 {
 	TSet<FString> Paths;
@@ -112,7 +112,7 @@ void Launch(const FString& OperationId, const FString& ListingId, const FString&
 } // namespace
 
 /** Shared entry point used by the provider implementation. */
-bool Start(const FString& ListingId, const FString& EngineVersion, const FString& CacheLocation,
+void Start(const FString& ListingId, const FString& EngineVersion, const FString& CacheLocation,
 	const FMcpFabAddOptions& Options, TFunction<void(const FMcpFabAddResult&)> OnAccepted)
 {
 	// Fail closed where ListingId is interpolated into a JS string literal inside
@@ -123,7 +123,7 @@ bool Start(const FString& ListingId, const FString& EngineVersion, const FString
 		Rejected.ErrorCode = TEXT("INVALID_LISTING_ID");
 		Rejected.Error = TEXT("A listing id must be [A-Za-z0-9_-] and at most 64 characters.");
 		OnAccepted(Rejected);
-		return true;
+		return;
 	}
 
 	// The tier goes into the page script as text, so only a known one may.
@@ -133,7 +133,7 @@ bool Start(const FString& ListingId, const FString& EngineVersion, const FString
 		Unknown.ErrorCode = TEXT("INVALID_QUALITY");
 		Unknown.Error = TEXT("quality is one of raw, high, mid or low.");
 		OnAccepted(Unknown);
-		return true;
+		return;
 	}
 
 	// Asking for separate meshes when the engine gives no way to switch merging off would fuse the
@@ -144,7 +144,7 @@ bool Start(const FString& ListingId, const FString& EngineVersion, const FString
 		Unsupported.ErrorCode = TEXT("COMBINE_UNSUPPORTED");
 		Unsupported.Error = TEXT("This engine's Interchange has no mesh-combining setting the adapter can reach, so it cannot import meshes separately. Omit combineMeshes, or pass combineMeshes=true to accept Fab's single merged mesh.");
 		OnAccepted(Unsupported);
-		return true;
+		return;
 	}
 
 	// The caller repeated an add that is already queued or running, most likely after a timeout: hand
@@ -162,7 +162,7 @@ bool Start(const FString& ListingId, const FString& EngineVersion, const FString
 				"or assetName; it would ignore these. Wait for it, or cancel it and add again."), *ListingId, *Open.OperationId);
 			Changed.OperationId = Open.OperationId;
 			OnAccepted(Changed);
-			return true;
+			return;
 		}
 		FMcpFabAddResult Same = Open.Result;
 		Same.bAccepted = true;
@@ -171,7 +171,7 @@ bool Start(const FString& ListingId, const FString& EngineVersion, const FString
 		Same.Phase = Open.Phase;
 		Same.QueuePosition = Open.QueuePosition;
 		OnAccepted(Same);
-		return true;
+		return;
 	}
 
 	// One import runs at a time: the registry diff that decides success cannot tell two apart. An add
@@ -186,14 +186,14 @@ bool Start(const FString& ListingId, const FString& EngineVersion, const FString
 		Full.Error = DescribeQueueHead(Queue[0], MaxQueued);
 		Full.OperationId = Queue[0].OperationId;
 		OnAccepted(Full);
-		return true;
+		return;
 	}
 
 	const FString OperationId = McpFabImportOperations::Begin(ListingId, OptionsKey);
 	if (!bBusy)
 	{
 		Launch(OperationId, ListingId, EngineVersion, Options, OnAccepted);
-		return true;
+		return;
 	}
 	McpFabImportOperations::Enqueue(OperationId, [OperationId, ListingId, EngineVersion, Options]()
 	{
@@ -205,6 +205,5 @@ bool Start(const FString& ListingId, const FString& EngineVersion, const FString
 	Queued.Phase = TEXT("queued");
 	Queued.QueuePosition = McpFabImportOperations::QueuedCount();
 	OnAccepted(Queued);
-	return true;
 }
 } // namespace McpFabAddOperation

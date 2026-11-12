@@ -73,11 +73,7 @@ bool HandleStructAssetAction_Rename(UEngineWireSubsystem& Bridge, const FString&
         }
 
         CopyStructMembers(Dst, Src);
-        FStructureEditorUtils::CompileStructure(Dst);
-        Dst->MarkPackageDirty();
-        McpSafeAssetSave(Dst);
-        // Auto-trigger dependent refresh after the duplicate mutation (issue #510).
-        McpRefreshStructDependents(Dst);
+        FinishStructEdit(Dst, true);
         return Dst;
     };
 
@@ -295,9 +291,9 @@ bool HandleStructAssetAction_Rename(UEngineWireSubsystem& Bridge, const FString&
         // Did the supported rename leave a redirector at the old path?
         const bool bLeftRedirector = (LoadObject<UObjectRedirector>(nullptr, *SanitizedStructPath) != nullptr);
 
-        // Recompile every referencing Blueprint and notify matching DataTables
-        // via the shared helper (redirector detection above happens first).
-        McpRefreshStructDependents(S);
+        // Recompile every referencing Blueprint and notify matching DataTables (redirector detection above happens
+        // first). The refresh compiles the struct, which dirties the package AssetTools has just saved: save it again.
+        FinishStructEdit(S, true);
 
         TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
         Result->SetStringField(TEXT("oldPath"), StructPath);

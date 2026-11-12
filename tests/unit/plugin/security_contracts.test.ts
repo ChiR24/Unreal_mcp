@@ -69,7 +69,7 @@ describe('plugin security contracts', () => {
   // A folder the caller chose let one consented call write a file of the caller's name and content anywhere the editor
   // can write; and the downloader names the file after the URL's last segment, where a backslash is a separator.
   it('downloads a Fab pack only into the Fab library folder', () => {
-    const source = privateSource('Domains', 'AssetWorkflow', 'Operations', 'McpAssetFabDownload.cpp');
+    const source = privateSource('Domains', 'AssetWorkflow', 'Fab', 'McpAssetFabDownload.cpp');
     expect(source).not.toMatch(/TryGetStringField\(TEXT\("destinationDirectory"\)/u);
     expect(source).toContain('const FString Destination = McpContentSources::FabLibraryDir();');
     expect(source.indexOf('DownloadUrl.Contains(TEXT("\\\\"))')).toBeGreaterThan(-1);

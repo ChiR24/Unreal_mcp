@@ -34,11 +34,8 @@
 
 #include "Dom/JsonObject.h"
 #include "Dom/JsonValue.h"
-#include "Misc/Guid.h"
 #include "Serialization/JsonReader.h"
 #include "Serialization/JsonSerializer.h"
-
-DEFINE_LOG_CATEGORY_STATIC(LogMcpFabSearch, Log, All);
 
 namespace McpFabSearchOperation
 {
@@ -176,7 +173,7 @@ FMcpFabListing ReadListing(const TSharedPtr<FJsonObject>& Row)
 }
 } // namespace
 
-bool Start(const FMcpFabSearchRequest& Request, TFunction<void(const FMcpFabSearchResult&)> OnComplete)
+void Start(const FMcpFabSearchRequest& Request, TFunction<void(const FMcpFabSearchResult&)> OnComplete)
 {
 	FMcpFabSearchResult Rejected;
 	if (!IsSafeQuery(Request.Query))
@@ -197,7 +194,7 @@ bool Start(const FMcpFabSearchRequest& Request, TFunction<void(const FMcpFabSear
 	if (!Rejected.ErrorCode.IsEmpty())
 	{
 		OnComplete(Rejected);
-		return true;
+		return;
 	}
 
 	const int32 Bounded = FMath::Clamp(Request.Limit, 1, 50);
@@ -268,6 +265,5 @@ bool Start(const FMcpFabSearchRequest& Request, TFunction<void(const FMcpFabSear
 		Failed.Error = Error;
 		OnComplete(Failed);
 	}
-	return true;
 }
 } // namespace McpFabSearchOperation

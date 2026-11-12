@@ -3,6 +3,7 @@
 #pragma once
 
 #include "CoreMinimal.h"
+#include "EngineWireSubsystem.h"
 #include "McpFabProvider.h"
 
 #include "Dom/JsonObject.h"
@@ -72,3 +73,17 @@ inline void SetAddFacts(const TSharedPtr<FJsonObject>& Data, const FMcpFabAddRes
 	if (!Result.EngineVersion.IsEmpty()) { Data->SetStringField(TEXT("engineVersion"), Result.EngineVersion); }
 }
 } // namespace McpFabImportJson
+
+/** The Fab provider, or nullptr once NOT_SUPPORTED is answered: "Fab support is not loaded in this editor, so <Consequence>." */
+inline IMcpFabProvider* McpFabProviderOrReply(UEngineWireSubsystem* Self, const FString& RequestId,
+                                              TSharedPtr<FMcpBridgeWebSocket> Socket, const TCHAR* Consequence)
+{
+	IMcpFabProvider* Provider = GetMcpFabProvider();
+	if (Provider == nullptr || !Provider->IsFabAvailable())
+	{
+		Self->SendAutomationResponse(Socket, RequestId, false,
+			FString::Printf(TEXT("Fab support is not loaded in this editor, so %s."), Consequence), nullptr, TEXT("NOT_SUPPORTED"));
+		return nullptr;
+	}
+	return Provider;
+}

@@ -38,7 +38,7 @@ describe('a value the engine answers with a fatal error is refused first', () =>
   });
 
   it('the Fab library listing resolves a column type without asserting on an unknown one', () => {
-    const library = code('Domains', 'AssetWorkflow', 'Operations', 'McpAssetFabLibrary.cpp');
+    const library = code('Domains', 'AssetWorkflow', 'Fab', 'McpAssetFabLibrary.cpp');
     expect(library).toContain('Path.StartsWith(TEXT("/")) ? TypeOptional(FTopLevelAssetPath(Path)) : nullptr');
     expect(library).not.toMatch(/(?<!\w)Type\(FTopLevelAssetPath/u);
   });

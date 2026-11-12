@@ -1,10 +1,10 @@
 // Copyright (c) 2024 EngineWire Contributors
 
 #include "EngineWireSubsystem.h"
+#include "Core/Compatibility/McpVersionCompatibility.h"
 #include "Foundation/HandlerUtils/McpHandlerUtils.h"
 
 #include "Dom/JsonObject.h"
-#include "Misc/EngineVersionComparison.h"
 
 #include "AssetRegistry/AssetRegistryModule.h"
 #include "HAL/FileManager.h"
@@ -16,30 +16,9 @@
 bool UEngineWireSubsystem::HandleListAssets(
     const FString &RequestId, const TSharedPtr<FJsonObject> &Payload,
     TSharedPtr<FMcpBridgeWebSocket> Socket) {
-  // Parse filters
+  // path is the folder listed (default /Game); filter narrows by asset name (case-insensitive substring).
   FString PathFilter;
-  FString ClassFilter;
-  FString TagFilter;
-  FString PathStartsWith;
-
-  bool bHasExplicitPath = false;
-  const TSharedPtr<FJsonObject> *FilterObj;
-  if (Payload->TryGetObjectField(TEXT("filter"), FilterObj) && FilterObj) {
-    if ((*FilterObj)->TryGetStringField(TEXT("path"), PathFilter)) {
-      bHasExplicitPath = true;
-    }
-    (*FilterObj)->TryGetStringField(TEXT("class"), ClassFilter);
-    (*FilterObj)->TryGetStringField(TEXT("tag"), TagFilter);
-    (*FilterObj)->TryGetStringField(TEXT("pathStartsWith"), PathStartsWith);
-  } else {
-    // Legacy support for direct path/recursive fields
-    if (Payload->TryGetStringField(TEXT("path"), PathFilter)) {
-      bHasExplicitPath = true;
-    }
-  }
-  // The published `filter` is a string. As an object it was the legacy filter
-  // above; as a string it used to be ignored here, so a filtered listing came
-  // back whole. It narrows by asset name (case-insensitive substring).
+  const bool bHasExplicitPath = Payload->TryGetStringField(TEXT("path"), PathFilter);
   FString NameFilter;
   Payload->TryGetStringField(TEXT("filter"), NameFilter);
 
@@ -53,13 +32,6 @@ bool UEngineWireSubsystem::HandleListAssets(
   }
   PathFilter = NormPath.Path;
   const FString ExplicitListingPath = PathFilter;
-
-  if (!PathStartsWith.IsEmpty()) {
-    FNormalizedAssetPath NormStart = NormalizeAssetPath(PathStartsWith);
-    if (NormStart.bIsValid) {
-      PathStartsWith = NormStart.Path;
-    }
-  }
 
   bool bRecursive = true;
   Payload->TryGetBoolField(TEXT("recursive"), bRecursive);
@@ -126,42 +98,10 @@ bool UEngineWireSubsystem::HandleListAssets(
       FModuleManager::LoadModuleChecked<FAssetRegistryModule>("AssetRegistry");
   IAssetRegistry &AssetRegistry = AssetRegistryModule.Get();
 
+  // PathFilter is never empty here: a valid NormalizeAssetPath result is a long package name.
   FARFilter Filter;
   Filter.bRecursivePaths = bRecursive;
-  Filter.bRecursiveClasses = true;
-
-  // Apply path filters
-  if (!PathFilter.IsEmpty()) {
-    Filter.PackagePaths.Add(FName(*PathFilter));
-  } else if (!PathStartsWith.IsEmpty()) {
-    // If we have a path prefix, assume it's a package path
-    // Note: FARFilter doesn't support 'StartsWith' natively for paths in an
-    // efficient way other than adding the path and set bRecursivePaths=true. So
-    // if PathStartsWith is a folder, we use it.
-    Filter.PackagePaths.Add(FName(*PathStartsWith));
-  } else {
-    // Default to /Game to prevent empty results or massive scan
-    Filter.PackagePaths.Add(FName(TEXT("/Game")));
-  }
-
-  if (!ClassFilter.IsEmpty()) {
-    // Support both short class names and full paths (best effort)
-#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 1
-    FTopLevelAssetPath ClassPath(ClassFilter);
-    if (ClassPath.IsValid()) {
-      Filter.ClassPaths.Add(ClassPath);
-    }
-#else
-    // UE 5.0: Use ClassNames instead of ClassPaths
-    Filter.ClassNames.Add(FName(*ClassFilter));
-#endif
-  }
-
-  // Tags are not standard on assets in the same way as actors.
-  // AssetRegistry tags are Key-Value pairs.
-  // If TagFilter is provided, we assume it checks for the existence of a tag
-  // key or value. Implementing a generic "HasTag" is ambiguous. We'll assume
-  // TagFilter refers to a metadata key presence.
+  Filter.PackagePaths.Add(FName(*PathFilter));
 
   // NOTE: ScanPathsSynchronous() was removed to prevent GameThread blocking.
   // Asset listing uses cached AssetRegistry data exclusively.
@@ -175,39 +115,13 @@ bool UEngineWireSubsystem::HandleListAssets(
     });
   }
 
-  // Post-filtering
-  if (!ClassFilter.IsEmpty() || !TagFilter.IsEmpty()) {
-    AssetList.RemoveAll([&](const FAssetData &Asset) {
-      if (!ClassFilter.IsEmpty()) {
-        // Check full class path or asset class name
-#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 1
-        FString AssetClass = Asset.AssetClassPath.ToString();
-        FString AssetClassName = Asset.AssetClassPath.GetAssetName().ToString();
-#else
-        FString AssetClass = Asset.AssetClass.ToString();
-        FString AssetClassName = Asset.AssetClass.ToString();
-#endif
-        if (!AssetClass.Equals(ClassFilter) &&
-            !AssetClassName.Equals(ClassFilter)) {
-          return true; // Remove
-        }
-      }
-      if (!TagFilter.IsEmpty()) {
-        if (!Asset.TagsAndValues.Contains(FName(*TagFilter))) {
-          return true; // Remove
-        }
-      }
-      return false;
-    });
-  }
-
   // depth N keeps assets at most N folders below the filter path: an asset's
   // PackagePath is its folder, so /Game/A sits at depth 0 under /Game.
   int32 Depth = -1;
   Payload->TryGetNumberField(TEXT("depth"), Depth);
+  const auto CountSlashes = [](const FString &Value) { int32 Count = 0; for (TCHAR C : Value) { if (C == TEXT('/')) { ++Count; } } return Count; };
 
-  if (Depth >= 0 && bRecursive && !PathFilter.IsEmpty()) {
-    const auto CountSlashes = [](const FString &Value) { int32 Count = 0; for (TCHAR C : Value) { if (C == TEXT('/')) { ++Count; } } return Count; };
+  if (Depth >= 0 && bRecursive) {
     FString BasePath = PathFilter;
     BasePath.RemoveFromEnd(TEXT("/"));
     const int32 BaseSlashCount = CountSlashes(BasePath);
@@ -232,21 +146,14 @@ bool UEngineWireSubsystem::HandleListAssets(
     Page.Append(AssetList.GetData() + Offset, Count);
   }
 
-  // Also fetch sub-folders if we are listing a directory (PathFilter is set)
+  // Also fetch the sub-folders: the immediate ones, and for a recursive listing the nested ones, trimmed by depth.
   TArray<FString> SubPathList;
-  if (!PathFilter.IsEmpty()) {
-    // If non-recursive (or depth limited), we generally want at least the
-    // immediate subfolders. GetSubPaths is non-recursive by default.
-    // recursive listings report nested folders too, trimmed by depth.
-    AssetRegistry.GetSubPaths(PathFilter, SubPathList, bRecursive);
-    const auto SlashCount = [](const FString &Value) { int32 Count = 0; for (TCHAR C : Value) { if (C == TEXT('/')) { ++Count; } } return Count; };
-    const int32 BaseSlashes = SlashCount(PathFilter);
-    SubPathList.RemoveAll([&](const FString &Sub) { return Depth >= 0 && SlashCount(Sub) - BaseSlashes - 1 > Depth; });
-  }
+  AssetRegistry.GetSubPaths(PathFilter, SubPathList, bRecursive);
+  const int32 BaseSlashes = CountSlashes(PathFilter);
+  SubPathList.RemoveAll([&](const FString &Sub) { return Depth >= 0 && CountSlashes(Sub) - BaseSlashes - 1 > Depth; });
 
-  const bool bIncludeTags = Payload->HasField(TEXT("includeTags"))
-    ? Payload->GetBoolField(TEXT("includeTags"))
-    : false;
+  bool bIncludeTags = false;
+  Payload->TryGetBoolField(TEXT("includeTags"), bIncludeTags);
 
   // File stats below are synchronous game-thread IO. Bound how many assets we
   // stat so an unbounded recursive listing (no pagination limit) cannot stall
@@ -260,13 +167,8 @@ bool UEngineWireSubsystem::HandleListAssets(
   for (const FAssetData &Asset : Page) {
     TSharedPtr<FJsonObject> AssetObj = McpHandlerUtils::CreateResultObject();
     AssetObj->SetStringField(TEXT("name"), Asset.AssetName.ToString());
-#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 1
-    AssetObj->SetStringField(TEXT("path"), Asset.GetSoftObjectPath().ToString());
-    AssetObj->SetStringField(TEXT("class"), Asset.AssetClassPath.ToString());
-#else
-    AssetObj->SetStringField(TEXT("path"), Asset.ToSoftObjectPath().ToString());
-    AssetObj->SetStringField(TEXT("class"), Asset.AssetClass.ToString());
-#endif
+    AssetObj->SetStringField(TEXT("path"), MCP_ASSET_DATA_GET_SOFT_PATH(Asset));
+    AssetObj->SetStringField(TEXT("class"), MCP_ASSET_DATA_GET_CLASS_PATH(Asset));
     AssetObj->SetStringField(TEXT("packagePath"), Asset.PackagePath.ToString());
 
     // Add tags only when explicitly requested (off by default).

@@ -3,9 +3,8 @@
 #include "EngineWireSubsystem.h"
 #include "Foundation/BridgeHelpers/McpHelpers.h"
 #include "Foundation/HandlerUtils/McpHandlerUtils.h"
-#include "Safety/McpSafeOperations.h"
+#include "Safety/McpSafeOperationsAssetClassification.h"
 
-#include "Async/Async.h"
 #include "Dom/JsonObject.h"
 #include "Misc/CommandLine.h"
 

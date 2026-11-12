@@ -11,7 +11,6 @@
 
 #include "AssetRegistry/AssetRegistryModule.h"
 #include "Editor.h"
-#include "EditorAssetLibrary.h"
 
 namespace McpAssetRename
 {

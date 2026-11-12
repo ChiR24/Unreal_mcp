@@ -6,7 +6,7 @@ Vitest tests that read C++/C# **source text** and assert required or forbidden p
 | Contract | Test file | What it enforces |
 |----------|-----------|-------------------|
 | 250 pure-line ceiling, no split artifacts, local includes resolve | `source_structure_contracts.test.ts` | Every plugin `.cpp/.cs/.h` ≤ 250 **pure** lines (non-blank, non-`#`/`//`); rejects `Common.*`, `Part\d+`, `.incl`; every `#include "Mcp..."` resolves |
-| ≤25 source files per folder | `source_structure.test.ts` | Any folder under `Private/`. At cap (25, counted 2026-11-09): `MCP/Gateway`, `MCP/Transport`, `MCP/Execute`, `Foundation`, `Tests`, `Domains/ControlEditor`, `Domains/ControlActor`, `Domains/ControlActor/Placement`, `Domains/BlueprintGraph`, `Domains/BlueprintGraph/Code`; at 24: `MCP/Generated`, `Domains/Sequence`, `Domains/Sequence/Planner`, `Domains/LevelStructure`, `Domains/AssetWorkflow/Operations` |
+| ≤25 source files per folder | `source_structure.test.ts` | Any folder under `Private/`. At cap (25, counted 2026-11-09): `MCP/Gateway`, `MCP/Transport`, `MCP/Execute`, `Foundation`, `Tests`, `Domains/ControlEditor`, `Domains/ControlActor`, `Domains/ControlActor/Placement`, `Domains/BlueprintGraph`, `Domains/BlueprintGraph/Code`; at 24: `MCP/Generated`, `Domains/Sequence`, `Domains/Sequence/Planner`, `Domains/LevelStructure` |
 | Includes are self-sufficient | `source_include_self_sufficiency.test.ts` | Users of shared JSON helpers, the asset registry reads and the path refusal wording include a header that declares them (no unity-blob borrowing) |
 | Builds on every compiler | `compiler_portability_contracts.test.ts` | No `/*` inside a block comment and no `//` comment ending in a backslash (clang `-Wcomment`, an error on macOS); a hidden friend never calls its own name unqualified (UE 5.0/5.1's MSVC then finds only the friend); no file-scope name that macOS declares globally (`Handle`, `Size`, `Point`...: ambiguous on Mac) |
 | Token, bind, socket, SavePackage | `security_contracts.test.ts` | Constant-time token compare on both transports; non-loopback bind refused without `RequireCapabilityToken`; replies never reach an unrelated socket; import sources stay inside the project; no `UPackage::SavePackage` outside the Safety wrappers |
@@ -18,14 +18,13 @@ Vitest tests that read C++/C# **source text** and assert required or forbidden p
 | Path refusals and registered mounts | `path_refusal_contracts.test.ts` | A refused content path is worded once (`McpPathRefusalMessage`) with the helper's own reason, never as traversal unless it was; a mounted root is a folder like `/Game`; a reply keeps a registered mount readable but hides host roots, and the inline log device never asks the engine for mounts |
 | Fab bridge | `fab_bridge_security_contracts.test.ts` | No arbitrary script reaches the page; credentials never reach a reply or a log |
 | Fab page scripts | `fab_add_script_behaviour.test.ts`, `fab_details_script_behaviour.test.ts`, `fab_search_script_behaviour.test.ts` (with `fab-page-script.ts`) | The page JavaScript is lifted out of the C++ raw literals and run in a `vm` against a scripted `fetch`: format, tier and engine-build selection, reply shape, refusals, and that no token or signed URL is reported |
-| Fab imports | `fab_import_operations_contracts.test.ts`, `fab_import_cancel_contracts.test.ts`, `fab_library_sync_contracts.test.ts`, `fab_listing_details_contracts.test.ts`, `fab_relocate_contracts.test.ts`, `fab_page_readiness_contracts.test.ts` | The add answers when Fab accepts, one import runs at a time, a cancel is only Fab's own button or Interchange's own cancel, an empty library is synced with one fixed command, a relocation touches only what the import created in its own folders and is all or nothing |
 | Python diagnostics | `execute_python_diagnostics_contracts.test.ts` | Logs carry `codeSha256`, never the code |
 | Behaviour recipe files | `behaviour_recipes.test.ts` | Every `Resources/Recipes/<Domain>/<Name>.json` uses only the fields the plugin accepts, fills every placeholder it declares, calls no Blueprint-dependent function without `memberClass`, and ships (FilterPlugin.ini keeps `/Resources`) |
 
 ## CONVENTIONS
 - Use `countPureLines()` and `sliceBetween()` from `plugin-contract-fixtures.ts`; do not hand-roll them.
 - Tests read files with `fs.readFileSync` + regex; they never import plugin code.
-- Add a test here only for a structural or security invariant. Behaviour belongs in an integration case (`tests/mcp-tools/`).
+- Add a test here only for a structural or security invariant, or one that runs the code it checks (the Fab page scripts). Behaviour belongs in an integration case (`tests/mcp-tools/`). A test that pins a handler's own lines is the anti-pattern below: 112 such files were removed on 2026-11-12.
 
 ## ANTI-PATTERNS
 - Weakening a security contract to make CI pass; fix the source.

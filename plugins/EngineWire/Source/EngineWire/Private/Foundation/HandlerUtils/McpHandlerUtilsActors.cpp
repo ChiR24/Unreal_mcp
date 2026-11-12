@@ -2,8 +2,6 @@
 #include "Foundation/BridgeHelpers/McpHelpers.h"
 #include "Foundation/McpCapabilityPrincipal.h"
 #include "EngineUtils.h"
-#include "Serialization/JsonSerializer.h"
-#include "Serialization/JsonWriter.h"
 
 #include "Editor.h"
 #include "Engine/World.h"
@@ -12,15 +10,6 @@
 #include "Components/StaticMeshComponent.h"
 #include "Engine/StaticMesh.h"
 #include "Materials/MaterialInterface.h"
-#include "AssetRegistry/AssetRegistryModule.h"
-#include "AssetRegistry/AssetRegistryHelpers.h"
-#include "EditorAssetLibrary.h"
-#include "K2Node_CustomEvent.h"
-#include "K2Node_Event.h"
-#include "K2Node_VariableGet.h"
-#include "K2Node_FunctionEntry.h"
-#include "K2Node_FunctionResult.h"
-#include "EdGraphSchema_K2.h"
 
 AActor* FindActorByNameInWorldForMcp(UWorld* World, const FString& Target, bool bExactMatchOnly)
 {

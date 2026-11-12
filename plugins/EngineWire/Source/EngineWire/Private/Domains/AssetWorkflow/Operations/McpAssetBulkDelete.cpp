@@ -7,10 +7,8 @@
 #include "Foundation/HandlerUtils/McpHandlerUtils.h"
 
 #include "Dom/JsonObject.h"
-#include "Misc/EngineVersionComparison.h"
 #include "Misc/PackageName.h"
 
-#include "EditorAssetLibrary.h"
 #include "ObjectTools.h"
 
 bool UEngineWireSubsystem::HandleBulkDeleteAssets(
@@ -65,25 +63,15 @@ bool UEngineWireSubsystem::HandleBulkDeleteAssets(
   for (const FString &Path : ValidPaths) {
     DeleteSet.Add(FPackageName::ObjectPathToPackageName(Path));
   }
-  // Until nothing changes: an asset used only by one this keeps is outside-referenced in turn.
   TArray<TSharedPtr<FJsonValue>> Referenced;
-  for (bool bKeptOne = true; bKeptOne;) {
-    bKeptOne = false;
-    for (int32 Index = ValidPaths.Num() - 1; Index >= 0; --Index) {
-      const TArray<FString> Users = McpOutsideReferencers(DeleteSet[Index], DeleteSet);
-      if (Users.Num() == 0) {
-        continue;
-      }
-      TSharedPtr<FJsonObject> Row = McpHandlerUtils::CreateResultObject();
-      Row->SetStringField(TEXT("path"), ValidPaths[Index]);
-      Row->SetArrayField(TEXT("referencedBy"), McpHandlerUtils::ToJsonStringArray(Users));
-      Referenced.Add(MakeShared<FJsonValueObject>(Row));
-      ObjectsToDelete.RemoveAt(Index);
-      ValidPaths.RemoveAt(Index);
-      DeleteSet.RemoveAt(Index);
-      bKeptOne = true;
-    }
-  }
+  McpKeepOutsideReferenced(DeleteSet, [&](int32 Index, TArray<FString> &&Users) {
+    TSharedPtr<FJsonObject> Row = McpHandlerUtils::CreateResultObject();
+    Row->SetStringField(TEXT("path"), ValidPaths[Index]);
+    Row->SetArrayField(TEXT("referencedBy"), McpHandlerUtils::ToJsonStringArray(Users));
+    Referenced.Add(MakeShared<FJsonValueObject>(Row));
+    ObjectsToDelete.RemoveAt(Index);
+    ValidPaths.RemoveAt(Index);
+  });
   if (ObjectsToDelete.Num() == 0 && Referenced.Num() > 0) {
     TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
     Result->SetArrayField(TEXT("deleted"), TArray<TSharedPtr<FJsonValue>>());

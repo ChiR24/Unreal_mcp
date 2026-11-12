@@ -36,12 +36,8 @@
 bool UEngineWireSubsystem::HandleAddFabAssetToProject(
     const FString &RequestId, const TSharedPtr<FJsonObject> &Payload,
     TSharedPtr<FMcpBridgeWebSocket> Socket) {
-  IMcpFabProvider *Provider = GetMcpFabProvider();
-  if (Provider == nullptr || !Provider->IsFabAvailable()) {
-    SendAutomationResponse(
-        Socket, RequestId, false,
-        TEXT("Fab support is not loaded in this editor, so listings cannot be added."),
-        nullptr, TEXT("NOT_SUPPORTED"));
+  IMcpFabProvider *Provider = McpFabProviderOrReply(this, RequestId, Socket, TEXT("listings cannot be added"));
+  if (!Provider) {
     return true;
   }
 

@@ -102,27 +102,15 @@ bool HandleStructPropertyAction(
 {
     OutResult = MakeShared<FJsonObject>();
 
-    // Protocol invariant: ProcessAutomationRequest only delivers OutResult to
-    // the caller when the handler returns true. A false return leaves the native
-    // MCP SSE stream open with no event, so the request hangs instead of
-    // returning the error already written into OutResult. Every branch here must
-    // therefore return true (the enum handlers follow the same convention).
-
-    if (Action.IsEmpty())
+    // Every branch returns true: the dispatcher sends OutResult only then, and a false return would lose the refusal
+    // written into it behind the queue's own UNKNOWN_ACTION.
+    const auto Fail = [&OutResult](const TCHAR* Code, const FString& Message)
     {
         OutResult->SetBoolField(TEXT("success"), false);
-        OutResult->SetStringField(TEXT("error"), TEXT("UNKNOWN_ACTION"));
-        OutResult->SetStringField(TEXT("message"), TEXT("Empty action"));
+        OutResult->SetStringField(TEXT("error"), Code);
+        OutResult->SetStringField(TEXT("message"), Message);
         return true;
-    }
-
-    if (!Params.IsValid())
-    {
-        OutResult->SetBoolField(TEXT("success"), false);
-        OutResult->SetStringField(TEXT("error"), TEXT("INVALID_PAYLOAD"));
-        OutResult->SetStringField(TEXT("message"), TEXT("instanced_struct payload missing"));
-        return true;
-    }
+    };
 
     FString AssetPath;
     Params->TryGetStringField(TEXT("assetPath"), AssetPath);
@@ -133,21 +121,13 @@ bool HandleStructPropertyAction(
 
     if (AssetPath.IsEmpty() || PropertyName.IsEmpty())
     {
-        OutResult->SetBoolField(TEXT("success"), false);
-        OutResult->SetStringField(TEXT("error"), TEXT("MISSING_PARAMETER"));
-        OutResult->SetStringField(TEXT("message"),
-            TEXT("instanced_struct requires asset_path and property_name"));
-        return true;
+        return Fail(TEXT("MISSING_PARAMETER"), TEXT("instanced_struct requires assetPath and propertyName"));
     }
 
     UObject* Asset = LoadObject<UObject>(nullptr, *AssetPath);
     if (!Asset)
     {
-        OutResult->SetBoolField(TEXT("success"), false);
-        OutResult->SetStringField(TEXT("error"), TEXT("ASSET_NOT_FOUND"));
-        OutResult->SetStringField(TEXT("message"),
-            FString::Printf(TEXT("Asset not found: %s"), *AssetPath));
-        return true;
+        return Fail(TEXT("ASSET_NOT_FOUND"), FString::Printf(TEXT("Asset not found: %s"), *AssetPath));
     }
 
     if (Action.Equals(TEXT("get_instanced_struct_property"), ESearchCase::IgnoreCase))
@@ -155,22 +135,14 @@ bool HandleStructPropertyAction(
         FStructProperty* StructProp = FindInstancedStructProperty(Asset, PropertyName);
         if (!StructProp)
         {
-            OutResult->SetBoolField(TEXT("success"), false);
-            OutResult->SetStringField(TEXT("error"), TEXT("INVALID_OPERATION"));
-            OutResult->SetStringField(TEXT("message"),
-                FString::Printf(TEXT("Property '%s' is not an FInstancedStruct"), *PropertyName));
-            return true;
+            return Fail(TEXT("INVALID_OPERATION"), FString::Printf(TEXT("Property '%s' is not an FInstancedStruct"), *PropertyName));
         }
 
         const FMcpInstancedStructView Inst(*StructProp->ContainerPtrToValuePtr<FInstancedStruct>(Asset));
         const UScriptStruct* InnerStruct = Inst.Type;
         if (!InnerStruct)
         {
-            OutResult->SetBoolField(TEXT("success"), false);
-            OutResult->SetStringField(TEXT("error"), TEXT("INVALID_OPERATION"));
-            OutResult->SetStringField(TEXT("message"),
-                TEXT("FInstancedStruct has no inner script struct"));
-            return true;
+            return Fail(TEXT("INVALID_OPERATION"), TEXT("FInstancedStruct has no inner script struct"));
         }
 
         const uint8* Memory = Inst.Memory;
@@ -196,11 +168,7 @@ bool HandleStructPropertyAction(
         FStructProperty* StructProp = FindInstancedStructProperty(Asset, PropertyName);
         if (!StructProp)
         {
-            OutResult->SetBoolField(TEXT("success"), false);
-            OutResult->SetStringField(TEXT("error"), TEXT("INVALID_OPERATION"));
-            OutResult->SetStringField(TEXT("message"),
-                FString::Printf(TEXT("Property '%s' is not an FInstancedStruct"), *PropertyName));
-            return true;
+            return Fail(TEXT("INVALID_OPERATION"), FString::Printf(TEXT("Property '%s' is not an FInstancedStruct"), *PropertyName));
         }
 
         FString StructType;
@@ -210,11 +178,7 @@ bool HandleStructPropertyAction(
 
         if (StructType.IsEmpty())
         {
-            OutResult->SetBoolField(TEXT("success"), false);
-            OutResult->SetStringField(TEXT("error"), TEXT("MISSING_PARAMETER"));
-            OutResult->SetStringField(TEXT("message"),
-                TEXT("set_instanced_struct_property requires struct_type"));
-            return true;
+            return Fail(TEXT("MISSING_PARAMETER"), TEXT("set_instanced_struct_property requires structType"));
         }
 
         UScriptStruct* TargetStruct = FindObject<UScriptStruct>(nullptr, *StructType);
@@ -224,20 +188,12 @@ bool HandleStructPropertyAction(
         }
         if (!TargetStruct)
         {
-            OutResult->SetBoolField(TEXT("success"), false);
-            OutResult->SetStringField(TEXT("error"), TEXT("ASSET_NOT_FOUND"));
-            OutResult->SetStringField(TEXT("message"),
-                FString::Printf(TEXT("Struct type not found: %s"), *StructType));
-            return true;
+            return Fail(TEXT("ASSET_NOT_FOUND"), FString::Printf(TEXT("Struct type not found: %s"), *StructType));
         }
 
         if (Values.IsValid() && Values->Type != EJson::Object)
         {
-            OutResult->SetBoolField(TEXT("success"), false);
-            OutResult->SetStringField(TEXT("error"), TEXT("INVALID_OPERATION"));
-            OutResult->SetStringField(TEXT("message"),
-                TEXT("structValues must be a JSON object of fieldName -> value"));
-            return true;
+            return Fail(TEXT("INVALID_OPERATION"), TEXT("structValues must be a JSON object of fieldName -> value"));
         }
 
         // Build the new value in a scratch instance and validate structValues there
@@ -248,11 +204,7 @@ bool HandleStructPropertyAction(
         FScratchInstance Scratch(StructProp->Struct);
         if (!InitializeInstanceAs(StructProp, Scratch.Memory, TargetStruct, Asset))
         {
-            OutResult->SetBoolField(TEXT("success"), false);
-            OutResult->SetStringField(TEXT("error"), TEXT("OPERATION_FAILED"));
-            OutResult->SetStringField(TEXT("message"),
-                FString::Printf(TEXT("Could not make an instance of %s"), *TargetStruct->GetPathName()));
-            return true;
+            return Fail(TEXT("OPERATION_FAILED"), FString::Printf(TEXT("Could not make an instance of %s"), *TargetStruct->GetPathName()));
         }
 
         if (Values.IsValid())
@@ -265,11 +217,7 @@ bool HandleStructPropertyAction(
 
             if (!bImported)
             {
-                OutResult->SetBoolField(TEXT("success"), false);
-                OutResult->SetStringField(TEXT("error"), TEXT("OPERATION_FAILED"));
-                OutResult->SetStringField(TEXT("message"),
-                    FString::Printf(TEXT("Failed to apply structValues: %s"), *ImportError));
-                return true;
+                return Fail(TEXT("OPERATION_FAILED"), FString::Printf(TEXT("Failed to apply structValues: %s"), *ImportError));
             }
         }
 
@@ -289,11 +237,7 @@ bool HandleStructPropertyAction(
         {
             if (!McpSafeOperations::McpSafeAssetSave(Asset))
             {
-                OutResult->SetBoolField(TEXT("success"), false);
-                OutResult->SetStringField(TEXT("error"), TEXT("OPERATION_FAILED"));
-                OutResult->SetStringField(TEXT("message"),
-                    TEXT("Failed to save asset after setting FInstancedStruct"));
-                return true;
+                return Fail(TEXT("OPERATION_FAILED"), TEXT("Failed to save asset after setting FInstancedStruct"));
             }
         }
 
@@ -304,11 +248,7 @@ bool HandleStructPropertyAction(
         return true;
     }
 
-    OutResult->SetBoolField(TEXT("success"), false);
-    OutResult->SetStringField(TEXT("error"), TEXT("UNKNOWN_ACTION"));
-    OutResult->SetStringField(TEXT("message"),
-        FString::Printf(TEXT("Unsupported action: %s"), *Action));
-    return true;
+    return Fail(TEXT("UNKNOWN_ACTION"), FString::Printf(TEXT("Unsupported action: %s"), *Action));
 
 }
 

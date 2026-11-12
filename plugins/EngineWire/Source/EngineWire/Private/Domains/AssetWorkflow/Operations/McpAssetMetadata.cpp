@@ -10,7 +10,6 @@
 #include "Serialization/JsonWriter.h"
 
 #include "AssetRegistry/AssetRegistryModule.h"
-#include "EditorAssetLibrary.h"
 #include "UObject/MetaData.h"
 #include "UObject/Package.h"
 

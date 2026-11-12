@@ -46,6 +46,29 @@ static bool DetectRecursiveStructRef(UEngineWireSubsystem& Bridge, TSharedPtr<FM
 }
 
 
+// The pin type memberType names. Refused, with false, when it does not resolve or would put the struct inside itself:
+// as the member's type, as a container's element, or through another struct that holds it.
+static bool ResolveMemberTypeOrReply(UEngineWireSubsystem& Bridge, const FString& RequestId, TSharedPtr<FMcpBridgeWebSocket> RequestingSocket,
+    UUserDefinedStruct* S, const FString& StructPath, const FString& MemberType, const FString& MemberName, FEdGraphPinType& OutPinType)
+{
+    const McpBlueprintUtils::FTypeResolutionResult Resolved = McpBlueprintUtils::ResolvePinType(MemberType, FName(*StructPath));
+    if (!Resolved.bSuccess)
+    {
+        Bridge.SendAutomationError(RequestingSocket, RequestId,
+            FString::Printf(TEXT("Type '%s' rejected: %s"), *MemberType, *Resolved.OutError),
+            TEXT("TYPE_RESOLUTION_FAILED"));
+        return false;
+    }
+    OutPinType = Resolved.PinType;
+    if (OutPinType.PinSubCategoryObject.Get() == static_cast<UObject*>(S) || OutPinType.PinValueType.TerminalSubCategoryObject.Get() == static_cast<UObject*>(S))
+    {
+        Bridge.SendAutomationError(RequestingSocket, RequestId, TEXT("Struct cannot reference itself as a member type"), TEXT("SELF_REFERENCE"));
+        return false;
+    }
+    return !DetectRecursiveStructRef(Bridge, RequestingSocket, RequestId, OutPinType, S, MemberName);
+}
+
+
 bool HandleStructMemberAddRemoveActions(UEngineWireSubsystem& Bridge, const FString& RequestId, const FString& Action, const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> RequestingSocket)
 {
     const FString Lower = Action.ToLower();
@@ -75,25 +98,11 @@ bool HandleStructMemberAddRemoveActions(UEngineWireSubsystem& Bridge, const FStr
             return true;
         }
 
-        const FName SelfStructPath(*StructPath);
-        const McpBlueprintUtils::FTypeResolutionResult Resolved =
-            McpBlueprintUtils::ResolvePinType(MemberType, SelfStructPath);
-        if (!Resolved.bSuccess)
+        FEdGraphPinType PinType;
+        if (!ResolveMemberTypeOrReply(Bridge, RequestId, RequestingSocket, S, StructPath, MemberType, MemberName, PinType))
         {
-            Bridge.SendAutomationError(RequestingSocket, RequestId,
-                FString::Printf(TEXT("Type '%s' rejected: %s"), *MemberType, *Resolved.OutError),
-                TEXT("TYPE_RESOLUTION_FAILED"));
             return true;
         }
-        const FEdGraphPinType PinType = Resolved.PinType;
-
-        UObject* Sub = PinType.PinSubCategoryObject.Get();
-        if (Sub == static_cast<UObject*>(S) || PinType.PinValueType.TerminalSubCategoryObject.Get() == static_cast<UObject*>(S))
-        {
-            Bridge.SendAutomationError(RequestingSocket, RequestId, TEXT("Struct cannot reference itself as a member type"), TEXT("SELF_REFERENCE")); return true;
-        }
-
-        if (DetectRecursiveStructRef(Bridge, RequestingSocket, RequestId, PinType, S, MemberName)) return true;
 
         if (!FStructureEditorUtils::AddVariable(S, PinType))
         {
@@ -112,15 +121,7 @@ bool HandleStructMemberAddRemoveActions(UEngineWireSubsystem& Bridge, const FStr
         }
         ApplyStructMemberTooltipAndMetadata(S, G, Payload);
 
-        FStructureEditorUtils::CompileStructure(S);
-        S->GetOutermost()->MarkPackageDirty();
-        if (bSave)
-        {
-            McpSafeAssetSave(S);
-        }
-
-        // Auto-trigger dependent refresh after the member-add mutation (issue #510).
-        McpRefreshStructDependents(S);
+        FinishStructEdit(S, bSave);
 
         TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
         Result->SetStringField(TEXT("varGuid"), G.ToString());
@@ -135,8 +136,6 @@ bool HandleStructMemberAddRemoveActions(UEngineWireSubsystem& Bridge, const FStr
     if (Lower == TEXT("remove_struct_member"))
     {
         FString StructPath = GetJsonStringField(Payload, TEXT("structPath"));
-        FString VarGuidStr = GetJsonStringField(Payload, TEXT("varGuid"));
-        FString MemberName = GetJsonStringField(Payload, TEXT("memberName"));
         bool bSave = GetJsonBoolField(Payload, TEXT("save"), true);
 
         UUserDefinedStruct* S = LoadStructOrReply(Bridge, RequestId, RequestingSocket, StructPath);
@@ -145,24 +144,14 @@ bool HandleStructMemberAddRemoveActions(UEngineWireSubsystem& Bridge, const FStr
             return true;
         }
 
-        const FGuid G = ResolveMemberGuid(S, VarGuidStr, MemberName);
-        if (!G.IsValid())
+        FGuid G;
+        if (!ResolveMemberOrReply(Bridge, RequestId, RequestingSocket, S, Payload, G))
         {
-            Bridge.SendAutomationError(RequestingSocket, RequestId,
-                TEXT("Struct member not found"), TEXT("MEMBER_NOT_FOUND"));
             return true;
         }
 
         FStructureEditorUtils::RemoveVariable(S, G);
-        FStructureEditorUtils::CompileStructure(S);
-        S->GetOutermost()->MarkPackageDirty();
-        if (bSave)
-        {
-            McpSafeAssetSave(S);
-        }
-
-        // Auto-trigger dependent refresh after the member-remove mutation (issue #510).
-        McpRefreshStructDependents(S);
+        FinishStructEdit(S, bSave);
 
         TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
         Result->SetStringField(TEXT("varGuid"), G.ToString());
@@ -177,8 +166,6 @@ bool HandleStructMemberAddRemoveActions(UEngineWireSubsystem& Bridge, const FStr
     if (Lower == TEXT("rename_struct_member"))
     {
         FString StructPath = GetJsonStringField(Payload, TEXT("structPath"));
-        FString VarGuidStr = GetJsonStringField(Payload, TEXT("varGuid"));
-        FString MemberName = GetJsonStringField(Payload, TEXT("memberName"));
         FString NewMemberName = GetJsonStringField(Payload, TEXT("newMemberName"));
         bool bSave = GetJsonBoolField(Payload, TEXT("save"), true);
 
@@ -198,24 +185,14 @@ bool HandleStructMemberAddRemoveActions(UEngineWireSubsystem& Bridge, const FStr
             return true;
         }
 
-        const FGuid G = ResolveMemberGuid(S, VarGuidStr, MemberName);
-        if (!G.IsValid())
+        FGuid G;
+        if (!ResolveMemberOrReply(Bridge, RequestId, RequestingSocket, S, Payload, G))
         {
-            Bridge.SendAutomationError(RequestingSocket, RequestId,
-                TEXT("Struct member not found"), TEXT("MEMBER_NOT_FOUND"));
             return true;
         }
 
         FStructureEditorUtils::RenameVariable(S, G, NewMemberName);
-        FStructureEditorUtils::CompileStructure(S);
-        S->GetOutermost()->MarkPackageDirty();
-        if (bSave)
-        {
-            McpSafeAssetSave(S);
-        }
-
-        // Auto-trigger dependent refresh after the member-rename mutation (issue #510).
-        McpRefreshStructDependents(S);
+        FinishStructEdit(S, bSave);
 
         TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
         Result->SetStringField(TEXT("varGuid"), G.ToString());
@@ -230,7 +207,6 @@ bool HandleStructMemberAddRemoveActions(UEngineWireSubsystem& Bridge, const FStr
     if (Lower == TEXT("set_struct_member_type"))
     {
         FString StructPath = GetJsonStringField(Payload, TEXT("structPath"));
-        FString VarGuidStr = GetJsonStringField(Payload, TEXT("varGuid"));
         FString MemberName = GetJsonStringField(Payload, TEXT("memberName"));
         FString MemberType = GetJsonStringField(Payload, TEXT("memberType"));
         bool bSave = GetJsonBoolField(Payload, TEXT("save"), true);
@@ -248,44 +224,20 @@ bool HandleStructMemberAddRemoveActions(UEngineWireSubsystem& Bridge, const FStr
             return true;
         }
 
-        const FGuid G = ResolveMemberGuid(S, VarGuidStr, MemberName);
-        if (!G.IsValid())
+        FGuid G;
+        if (!ResolveMemberOrReply(Bridge, RequestId, RequestingSocket, S, Payload, G))
         {
-            Bridge.SendAutomationError(RequestingSocket, RequestId,
-                TEXT("Struct member not found"), TEXT("MEMBER_NOT_FOUND"));
             return true;
         }
 
-        const FName SelfStructPath(*StructPath);
-        const McpBlueprintUtils::FTypeResolutionResult Resolved =
-            McpBlueprintUtils::ResolvePinType(MemberType, SelfStructPath);
-        if (!Resolved.bSuccess)
+        FEdGraphPinType PinType;
+        if (!ResolveMemberTypeOrReply(Bridge, RequestId, RequestingSocket, S, StructPath, MemberType, MemberName, PinType))
         {
-            Bridge.SendAutomationError(RequestingSocket, RequestId,
-                FString::Printf(TEXT("Type '%s' rejected: %s"), *MemberType, *Resolved.OutError),
-                TEXT("TYPE_RESOLUTION_FAILED"));
             return true;
         }
-        const FEdGraphPinType PinType = Resolved.PinType;
-
-        UObject* Sub = PinType.PinSubCategoryObject.Get();
-        if (Sub == static_cast<UObject*>(S) || PinType.PinValueType.TerminalSubCategoryObject.Get() == static_cast<UObject*>(S))
-        {
-            Bridge.SendAutomationError(RequestingSocket, RequestId, TEXT("Struct cannot reference itself as a member type"), TEXT("SELF_REFERENCE")); return true;
-        }
-
-        if (DetectRecursiveStructRef(Bridge, RequestingSocket, RequestId, PinType, S, MemberName)) return true;
 
         FStructureEditorUtils::ChangeVariableType(S, G, PinType);
-        FStructureEditorUtils::CompileStructure(S);
-        S->GetOutermost()->MarkPackageDirty();
-        if (bSave)
-        {
-            McpSafeAssetSave(S);
-        }
-
-        // Auto-trigger dependent refresh after the member-type mutation (issue #510).
-        McpRefreshStructDependents(S);
+        FinishStructEdit(S, bSave);
 
         TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
         Result->SetStringField(TEXT("varGuid"), G.ToString());

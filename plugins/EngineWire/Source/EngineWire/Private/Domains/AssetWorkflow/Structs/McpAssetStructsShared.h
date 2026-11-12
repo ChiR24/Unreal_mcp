@@ -4,25 +4,15 @@
 #include "EngineWireSubsystem.h"
 #include "Foundation/HandlerUtils/McpHandlerUtils.h"
 #include "Foundation/BridgeHelpers/Assets/McpAssetCreation.h"
-#include "Foundation/Reflection/McpPropertyReflection.h"
 #include "Foundation/BridgeHelpers/Responses/McpJsonFields.h"
 #include "Safety/McpSafeOperationsAssetSave.h"
-// Supplies `using McpSafeOperations::McpSafeAssetSave`, so the handlers below
-// can call it unqualified. Enums/McpAssetEnumShared.h already pulls this in; these two
-// siblings did not, and only compiled where a transitive include happened to
-// provide it -- which an installed-engine build does not.
-#include "Safety/McpSafeOperations.h"
 #include "AssetRegistry/AssetRegistryModule.h"
 #include "Kismet2/StructureEditorUtils.h"
 #include "UserDefinedStructure/UserDefinedStructEditorData.h"
 #include MCP_USER_DEFINED_STRUCT_HEADER
 #include "Kismet2/BlueprintEditorUtils.h"
-#include "Kismet2/KismetEditorUtilities.h"
 #include "Foundation/BridgeHelpers/Blueprints/McpBPCompileHelpers.h"
 #include "Engine/Blueprint.h"
-#include "K2Node_MakeStruct.h"
-#include "K2Node_BreakStruct.h"
-#include "EdGraph/EdGraph.h"
 #include "Foundation/Blueprint/McpBlueprintUtils.h"
 
 // A new UserDefinedStruct in Package with the engine-seeded default member (MemberVar_0) removed. Removing the
@@ -60,6 +50,9 @@ inline void ApplyStructMemberTooltipAndMetadata(UUserDefinedStruct* S, const FGu
 UUserDefinedStruct* LoadStructOrReply(UEngineWireSubsystem& Bridge, const FString& RequestId,
     TSharedPtr<FMcpBridgeWebSocket> Socket, const FString& StructPath);
 FGuid ResolveMemberGuid(UUserDefinedStruct* S, const FString& VarGuidStr, const FString& MemberName);
+// The member the payload's varGuid or memberName names; false once "Struct member not found" (MEMBER_NOT_FOUND) is sent.
+bool ResolveMemberOrReply(UEngineWireSubsystem& Bridge, const FString& RequestId, TSharedPtr<FMcpBridgeWebSocket> Socket,
+    UUserDefinedStruct* S, const TSharedPtr<FJsonObject>& Payload, FGuid& OutGuid);
 FString PinTypeToSummary(const FEdGraphPinType& Pin);
 FString UserDefinedStructureStatusToString(EUserDefinedStructureStatus Status);
 TSharedPtr<FJsonObject> VariableDescriptionToJson(const FStructVariableDescription& Var);
@@ -97,49 +90,21 @@ void McpRefreshStructDependents(UUserDefinedStruct* S,
     TArray<FString>* OutDataAssets = nullptr);
 
 /**
- * Validate-then-apply a `members[]` array to a UserDefinedStruct.
- *
- * Validation phase: for every member entry, resolves its `type` through
- * `McpBlueprintUtils::ResolvePinType` with `SelfStructPath` for the
- * recursive by-value self-reference guard. Collects per-member failures
- * (missing name/type, unresolved Struct:/Enum:/SoftObject: refs, illegal
- * map keys) BEFORE mutating the struct — so a malformed request never
- * leaves the struct in a half-populated state.
- *
- * Apply phase: only runs if the validation phase produced zero failures.
- * For each validated member, calls AddVariable, RenameVariable, sets
- * `default`/`defaultValue`, `tooltip` and per-key `metadata`. The struct
- * is NOT compiled/saved here — the caller owns the compile/save boundary
- * (different actions want different post-conditions: e.g. create_struct
- * saves eagerly when save=true, import_struct always saves on success).
- *
- * Returns true on a clean validate+apply (Failures.Num() == 0). On any
- * validation failure, no members are added and Failures is populated;
- * apply is skipped entirely.
- *
- * Field-name policy: the schema advertises `defaultValue`, but legacy
- * callers used `default`. Both are accepted for parity (the schema field
- * wins when both are present).
+ * The end of every struct edit: McpRefreshStructDependents (which compiles S), the package dirtied and, with bSave, the
+ * save. The save comes last because the engine's compile dirties the package: saved before the refresh, a struct was
+ * dirty again a moment later. True when S was saved.
  */
-bool ApplyStructMembers(
-    UUserDefinedStruct* S,
-    const TArray<TSharedPtr<FJsonValue>>& Members,
-    const FName& SelfStructPath,
-    int32& OutImported,
-    TArray<FString>& Failures);
+bool FinishStructEdit(UUserDefinedStruct* S, bool bSave);
 
 /**
- * Validation phase of ApplyStructMembers, exposed separately so callers that
- * do not yet have a struct instance (e.g. create_struct's pre-create check)
- * can run the same validation run before committing to asset creation.
+ * A `members[]` array is validated first and applied second, so a malformed request never leaves a struct half
+ * built: create_struct and import_struct validate before they create anything.
  *
- * Returns the array of validated members' (TypeStr, resolved PinType, name,
- * default, tooltip, metadata) plus per-member failure messages. When the
- * returned Failures is empty, the caller can hand OutParsed to
- * ApplyParsedStructMembers for the (now-cannot-fail) mutation.
- *
- * SelfStructPath is used by ResolvePinType's recursive by-value
- * self-reference guard.
+ * ValidateStructMembers resolves each entry's type through McpBlueprintUtils::ResolvePinType (SelfStructPath feeds
+ * its guard against a struct that holds itself by value) and collects one failure per bad entry: a missing name or
+ * type, an unresolved Struct:/Enum:/SoftObject: reference, an illegal map key. An entry may spell its fields
+ * name/type or memberName/memberType, and its default as defaultValue (the declared name, which wins) or default.
+ * It returns true when nothing failed; OutParsed then goes to ApplyParsedStructMembers.
  */
 struct FParsedMember
 {
@@ -182,15 +147,13 @@ bool AddStructMembersFromArray(
     const TSharedPtr<FJsonObject>& Payload,
     TSharedPtr<FMcpBridgeWebSocket> RequestingSocket);
 
-bool HandleStructAction(const FString& RequestId, const FString& Action, const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> RequestingSocket);
 bool HandleStructLifecycleActions(UEngineWireSubsystem& Bridge, const FString& RequestId, const FString& Action, const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> RequestingSocket);
 bool HandleStructMemberAddRemoveActions(UEngineWireSubsystem& Bridge, const FString& RequestId, const FString& Action, const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> RequestingSocket);
 bool HandleStructMemberEditActions(UEngineWireSubsystem& Bridge, const FString& RequestId, const FString& Action, const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> RequestingSocket);
 bool HandleStructAnalysisActions(UEngineWireSubsystem& Bridge, const FString& RequestId, const FString& Action, const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> RequestingSocket);
-bool HandleStructSerializationActions(UEngineWireSubsystem& Bridge, const FString& RequestId, const FString& Action, const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> RequestingSocket);
+bool HandleStructListActions(UEngineWireSubsystem& Bridge, const FString& RequestId, const FString& Action, const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> RequestingSocket);
 bool HandleStructImportActions(UEngineWireSubsystem& Bridge, const FString& RequestId, const FString& Action, const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> RequestingSocket);
 // delete_struct; duplicate_struct and rename_struct; refresh_struct_dependencies.
 bool HandleStructAssetAction_Delete(UEngineWireSubsystem& Bridge, const FString& RequestId, const FString& Action, const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> RequestingSocket);
 bool HandleStructAssetAction_Rename(UEngineWireSubsystem& Bridge, const FString& RequestId, const FString& Action, const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> RequestingSocket);
 bool HandleStructAssetAction_Refresh(UEngineWireSubsystem& Bridge, const FString& RequestId, const FString& Action, const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> RequestingSocket);
-bool HandleStructPropertyAction(UEngineWireSubsystem& Bridge, const FString& RequestId, const FString& Action, const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> RequestingSocket);

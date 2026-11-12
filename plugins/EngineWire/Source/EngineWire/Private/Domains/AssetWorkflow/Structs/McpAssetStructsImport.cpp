@@ -165,8 +165,6 @@ bool HandleStructImportActions(UEngineWireSubsystem& Bridge, const FString& Requ
             return true;
         }
 
-        FStructureEditorUtils::CompileStructure(S);
-        S->GetOutermost()->MarkPackageDirty();
         if (bCreatedNew)
         {
             // Only register creation for genuinely new structs. On the update
@@ -175,14 +173,7 @@ bool HandleStructImportActions(UEngineWireSubsystem& Bridge, const FString& Requ
             // AssetUpdated in this engine version).
             FAssetRegistryModule::AssetCreated(S);
         }
-        if (bSave)
-        {
-            McpSafeAssetSave(S);
-        }
-
-        // Auto-trigger dependent refresh so Blueprints/DataTables pointing at this
-        // struct stay consistent after the import mutation (issue #510).
-        McpRefreshStructDependents(S);
+        FinishStructEdit(S, bSave);
 
         TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
         Result->SetStringField(TEXT("assetPath"), PackageName + TEXT(".") + FinalName);

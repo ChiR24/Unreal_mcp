@@ -77,7 +77,7 @@ bool HandleConfigureRenderCamera(UEngineWireSubsystem *Subsystem,
 
   TSharedPtr<FJsonObject> Result = BuildJobResult(Job, Queue);
   Result->SetStringField(TEXT("shutterTiming"), StaticEnum<EMoviePipelineShutterTiming>()->GetNameStringByValue(static_cast<int64>(Camera->ShutterTiming)));
-  Result->SetNumberField(TEXT("overscanPercentage"), McpPropertyReflection::ReadableFloat(Camera->OverscanPercentage));
+  Result->SetNumberField(TEXT("overscanPercentage"), McpHandlerUtils::ReadableFloat(Camera->OverscanPercentage));
   if (AllCamerasProperty)
     Result->SetBoolField(TEXT("renderAllCameras"), AllCamerasProperty->GetPropertyValue_InContainer(Camera));
   Subsystem->SendAutomationResponse(Socket, RequestId, true, TEXT("MRQ camera setting configured."), Result);

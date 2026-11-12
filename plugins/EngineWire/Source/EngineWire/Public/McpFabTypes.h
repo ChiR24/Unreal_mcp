@@ -36,7 +36,7 @@ struct FMcpFabAddResult
 	int32 AssetCount = 0;
 	TArray<FString> SamplePaths;
 	bool bEngineExactMatch = false;
-	/** Which build of a unreal-engine pack was taken: exact, older or newer than the running engine; empty when unknown. */
+	/** Which build of an unreal-engine pack was taken: exact, older or newer than the running engine; empty when unknown. */
 	FString EngineMatch;
 	/** The engine version that build declares (UE_5.4), empty when none was declared. */
 	FString EngineVersion;
@@ -65,7 +65,7 @@ struct FMcpFabAddResult
 	TOptional<bool> MeshesSeparated;
 	/** True once the post-import step ran: it saves the packages the import left dirty. */
 	bool bSaveRan = false;
-	/** Packages that step saved. One that arrived on disk already (a unreal-engine pack) is not dirty and not counted. */
+	/** Packages that step saved. One that arrived on disk already (an unreal-engine pack) is not dirty and not counted. */
 	int32 SavedCount = 0;
 	/** Packages that step could not save, by name. */
 	TArray<FString> UnsavedPackages;
@@ -91,7 +91,7 @@ struct FMcpFabAddOptions
 
 	/**
 	 * Which quality tier of a source format to fetch: raw, high, mid or low. Empty takes the best
-	 * game-ready tier (high, else mid, low, raw). A listing that publishes no tiers, and a unreal-engine
+	 * game-ready tier (high, else mid, low, raw). A listing that publishes no tiers, and an unreal-engine
 	 * pack, ignore it; a tier the listing lacks is refused with QUALITY_NOT_AVAILABLE.
 	 */
 	FString Quality;

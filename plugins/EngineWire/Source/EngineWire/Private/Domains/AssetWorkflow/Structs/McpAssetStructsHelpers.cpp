@@ -1,6 +1,5 @@
 #include "Domains/AssetWorkflow/Structs/McpAssetStructsShared.h"
 
-#include "EditorAssetLibrary.h"
 #include "Foundation/BridgeHelpers/Properties/McpPropApply.h"
 #include "Foundation/Blueprint/McpBlueprintUtils.h"
 #include "UObject/StructOnScope.h"
@@ -29,6 +28,24 @@ FGuid ResolveMemberGuid(UUserDefinedStruct* S, const FString& VarGuidStr, const 
     }
 
     return FGuid();
+}
+
+bool ResolveMemberOrReply(UEngineWireSubsystem& Bridge, const FString& RequestId, TSharedPtr<FMcpBridgeWebSocket> Socket,
+    UUserDefinedStruct* S, const TSharedPtr<FJsonObject>& Payload, FGuid& OutGuid)
+{
+    OutGuid = ResolveMemberGuid(S, GetJsonStringField(Payload, TEXT("varGuid")), GetJsonStringField(Payload, TEXT("memberName")));
+    if (!OutGuid.IsValid())
+    {
+        Bridge.SendAutomationError(Socket, RequestId, TEXT("Struct member not found"), TEXT("MEMBER_NOT_FOUND"));
+    }
+    return OutGuid.IsValid();
+}
+
+bool FinishStructEdit(UUserDefinedStruct* S, bool bSave)
+{
+    McpRefreshStructDependents(S);
+    S->GetOutermost()->MarkPackageDirty();
+    return bSave && McpSafeOperations::McpSafeAssetSave(S);
 }
 
 bool ValidateStructMembers(
@@ -153,32 +170,6 @@ int32 ApplyParsedStructMembers(
         ++Applied;
     }
     return Applied;
-}
-
-bool ApplyStructMembers(
-    UUserDefinedStruct* S,
-    const TArray<TSharedPtr<FJsonValue>>& Members,
-    const FName& SelfStructPath,
-    int32& OutImported,
-    TArray<FString>& Failures)
-{
-    OutImported = 0;
-    Failures.Reset();
-
-    if (!S)
-    {
-        Failures.Add(TEXT("ApplyStructMembers: null struct"));
-        return false;
-    }
-
-    TArray<FParsedMember> Parsed;
-    if (!ValidateStructMembers(Members, SelfStructPath, Parsed, Failures))
-    {
-        return false;
-    }
-
-    OutImported = ApplyParsedStructMembers(S, Parsed, Failures);
-    return Failures.Num() == 0;
 }
 
 TSharedPtr<FJsonObject> VariableDescriptionToJson(const FStructVariableDescription& Var)

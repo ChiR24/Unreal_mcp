@@ -13,14 +13,7 @@ bool UEngineWireSubsystem::HandleCreateFolder(
     const FString &RequestId, const TSharedPtr<FJsonObject> &Payload,
     TSharedPtr<FMcpBridgeWebSocket> Socket) {
   FString Path;
-  if (!Payload->TryGetStringField(TEXT("path"), Path) || Path.IsEmpty()) {
-    Payload->TryGetStringField(TEXT("directoryPath"), Path);
-  }
-
-  if (Path.IsEmpty()) {
-    SendAutomationResponse(Socket, RequestId, false,
-                           TEXT("path (or directoryPath) required"), nullptr,
-                           TEXT("INVALID_ARGUMENT"));
+  if (!McpReadRequiredField(this, Socket, RequestId, Payload, TEXT("path"), Path)) {
     return true;
   }
 

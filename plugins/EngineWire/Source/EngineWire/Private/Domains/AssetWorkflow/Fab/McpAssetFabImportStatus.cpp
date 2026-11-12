@@ -90,12 +90,8 @@ TSharedPtr<FJsonValue> QueueRow(const FMcpFabImportStatus &Entry) {
 bool UEngineWireSubsystem::HandleGetFabImportStatus(
     const FString &RequestId, const TSharedPtr<FJsonObject> &Payload,
     TSharedPtr<FMcpBridgeWebSocket> Socket) {
-  IMcpFabProvider *Provider = GetMcpFabProvider();
-  if (Provider == nullptr || !Provider->IsFabAvailable()) {
-    SendAutomationResponse(
-        Socket, RequestId, false,
-        TEXT("Fab support is not loaded in this editor, so there is no import to report."),
-        nullptr, TEXT("NOT_SUPPORTED"));
+  IMcpFabProvider *Provider = McpFabProviderOrReply(this, RequestId, Socket, TEXT("there is no import to report"));
+  if (!Provider) {
     return true;
   }
 

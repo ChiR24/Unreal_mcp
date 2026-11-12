@@ -4,7 +4,6 @@
 #include "Foundation/BridgeHelpers/McpHelpers.h"
 #include "Foundation/HandlerUtils/McpHandlerUtils.h"
 
-#include "Async/Async.h"
 #include "Dom/JsonObject.h"
 
 #include "EditorAssetLibrary.h"
@@ -23,15 +22,7 @@ bool UEngineWireSubsystem::HandleSetTags(
   if (!McpReadAssetPathOrReply(this, Socket, RequestId, Payload, SafeAssetPath, /*bMustExist=*/false))
     return true;
 
-  const TArray<TSharedPtr<FJsonValue>> *TagsArray = nullptr;
-  TArray<FString> Tags;
-  if (Payload->TryGetArrayField(TEXT("tags"), TagsArray) && TagsArray) {
-    for (const TSharedPtr<FJsonValue> &Val : *TagsArray) {
-      if (Val.IsValid() && Val->Type == EJson::String) {
-        Tags.Add(Val->AsString());
-      }
-    }
-  }
+  const TArray<FString> Tags = McpHandlerUtils::GetStringArrayField(Payload, TEXT("tags"));
 
   // Edge-case: empty or missing tags array should be treated as a no-op
   // success.

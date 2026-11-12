@@ -1,7 +1,7 @@
 #include "Domains/AssetWorkflow/Structs/McpAssetStructsShared.h"
 
 
-bool HandleStructSerializationActions(UEngineWireSubsystem& Bridge, const FString& RequestId, const FString& Action, const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> RequestingSocket)
+bool HandleStructListActions(UEngineWireSubsystem& Bridge, const FString& RequestId, const FString& Action, const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> RequestingSocket)
 {
     const FString Lower = Action.ToLower();
 

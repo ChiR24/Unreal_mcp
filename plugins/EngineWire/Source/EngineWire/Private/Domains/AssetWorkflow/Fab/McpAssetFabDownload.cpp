@@ -3,12 +3,12 @@
 #include "EngineWireSubsystem.h"
 #include "Domains/AssetWorkflow/Operations/McpAssetContentSourceRoots.h"
 #include "Foundation/HandlerUtils/McpHandlerUtils.h"
+#include "Domains/AssetWorkflow/Fab/McpFabImportJson.h"
 #include "McpFabProvider.h"
 
 #include "Async/Async.h"
 #include "Dom/JsonObject.h"
 #include "HAL/FileManager.h"
-#include "Misc/Paths.h"
 
 
 /**
@@ -27,12 +27,8 @@
 bool UEngineWireSubsystem::HandleDownloadFabAsset(
     const FString &RequestId, const TSharedPtr<FJsonObject> &Payload,
     TSharedPtr<FMcpBridgeWebSocket> Socket) {
-  IMcpFabProvider *Provider = GetMcpFabProvider();
-  if (Provider == nullptr || !Provider->IsFabAvailable()) {
-    SendAutomationResponse(
-        Socket, RequestId, false,
-        TEXT("Fab support is not loaded in this editor, so Fab downloads are unavailable."),
-        nullptr, TEXT("NOT_SUPPORTED"));
+  IMcpFabProvider *Provider = McpFabProviderOrReply(this, RequestId, Socket, TEXT("Fab downloads are unavailable"));
+  if (!Provider) {
     return true;
   }
 

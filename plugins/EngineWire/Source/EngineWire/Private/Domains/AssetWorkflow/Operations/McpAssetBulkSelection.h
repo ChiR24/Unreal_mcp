@@ -5,6 +5,7 @@
 #include "EngineWireSubsystem.h"
 #include "Foundation/BridgeHelpers/McpHelpers.h"
 #include "Foundation/BridgeHelpers/Security/McpAssetPathCanonical.h"
+#include "Foundation/HandlerUtils/McpHandlerUtilsJson.h"
 
 #include "AssetRegistry/AssetRegistryModule.h"
 
@@ -17,10 +18,7 @@ inline bool McpCollectBulkAssetPaths(UEngineWireSubsystem& Bridge, const FString
     const TArray<TSharedPtr<FJsonValue>>* Explicit = nullptr;
     if (Payload->TryGetArrayField(TEXT("assetPaths"), Explicit) && Explicit->Num() > 0)
     {
-        for (const TSharedPtr<FJsonValue>& Value : *Explicit)
-        {
-            if (Value.IsValid() && Value->Type == EJson::String) OutPaths.Add(Value->AsString());
-        }
+        OutPaths.Append(McpHandlerUtils::GetStringArrayField(Payload, TEXT("assetPaths")));
         return true;
     }
     const FString FolderPath = GetJsonStringField(Payload, TEXT("folderPath"));
@@ -68,4 +66,26 @@ inline TArray<FString> McpOutsideReferencers(const FString& PackageName, const T
         if (!RefPackage.IsEmpty() && !bDeletedToo) Outside.AddUnique(RefPackage);
     }
     return Outside;
+}
+
+// Takes out of DeleteSet every package something outside it still references, handing each to Kept(Index, Users)
+// first. Until nothing changes: an asset used only by one this keeps is outside-referenced in turn, and one pass
+// deleted it and left the kept asset pointing at nothing.
+template <typename TKept>
+void McpKeepOutsideReferenced(TArray<FString>& DeleteSet, TKept&& Kept)
+{
+    for (bool bKeptOne = true; bKeptOne;)
+    {
+        bKeptOne = false;
+        for (int32 Index = DeleteSet.Num() - 1; Index >= 0; --Index)
+        {
+            TArray<FString> Users = McpOutsideReferencers(DeleteSet[Index], DeleteSet);
+            if (Users.Num() > 0)
+            {
+                Kept(Index, MoveTemp(Users));
+                DeleteSet.RemoveAt(Index);
+                bKeptOne = true;
+            }
+        }
+    }
 }

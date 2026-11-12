@@ -14,6 +14,12 @@ inline double ReadableDouble(double Value)
     return FMath::IsFinite(Value) ? FCString::Atod(*FString::Printf(TEXT("%.10g"), Value)) : Value;
 }
 
+// A float as it was typed: widened to double, 2.2 read 2.200000047683716. Seven significant digits, all a float holds.
+inline double ReadableFloat(float Value)
+{
+    return FCString::Atod(*FString::Printf(TEXT("%.7g"), Value));
+}
+
 // The [x, y, z] array shape the actor get/transform/spawn replies use.
 inline TArray<TSharedPtr<FJsonValue>> VectorToJsonArray(const FVector& Vector)
 {
@@ -59,10 +65,10 @@ inline TSharedPtr<FJsonObject> TransformToJson(const FTransform& Transform)
 inline TSharedPtr<FJsonObject> LinearColorToJson(const FLinearColor& Color)
 {
     TSharedPtr<FJsonObject> Obj = MakeShared<FJsonObject>();
-    Obj->SetNumberField(TEXT("r"), Color.R);
-    Obj->SetNumberField(TEXT("g"), Color.G);
-    Obj->SetNumberField(TEXT("b"), Color.B);
-    Obj->SetNumberField(TEXT("a"), Color.A);
+    Obj->SetNumberField(TEXT("r"), ReadableFloat(Color.R));
+    Obj->SetNumberField(TEXT("g"), ReadableFloat(Color.G));
+    Obj->SetNumberField(TEXT("b"), ReadableFloat(Color.B));
+    Obj->SetNumberField(TEXT("a"), ReadableFloat(Color.A));
     return Obj;
 }
 }

@@ -6,7 +6,6 @@ namespace McpFabSelection
 {
 const TCHAR* Script()
 {
-	// No percent sign may appear in this text: it is spliced into an FString::Printf format.
 	return TEXT(R"JS(
   // A single mesh file this large is almost always a whole scene, not an asset: merged into one static mesh
   // it needed 14 GB to build. The add refuses it until the caller says how to import it, and the listing

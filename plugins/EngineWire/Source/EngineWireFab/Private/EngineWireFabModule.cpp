@@ -9,17 +9,17 @@
 
 namespace McpFabDetailsOperation
 {
-bool Start(const FString& ListingId, const FString& EngineVersion, TFunction<void(bool, const FString&)> OnComplete);
+void Start(const FString& ListingId, const FString& EngineVersion, TFunction<void(bool, const FString&)> OnComplete);
 }
 
 namespace McpFabSearchOperation
 {
-bool Start(const FMcpFabSearchRequest& Request, TFunction<void(const FMcpFabSearchResult&)> OnComplete);
+void Start(const FMcpFabSearchRequest& Request, TFunction<void(const FMcpFabSearchResult&)> OnComplete);
 }
 
 namespace McpFabAddOperation
 {
-bool Start(const FString& ListingId, const FString& EngineVersion, const FString& CacheLocation,
+void Start(const FString& ListingId, const FString& EngineVersion, const FString& CacheLocation,
 	const FMcpFabAddOptions& Options, TFunction<void(const FMcpFabAddResult&)> OnAccepted);
 }
 #include "Misc/EngineVersion.h"
@@ -141,9 +141,10 @@ public:
 	{
 #if MCP_FAB_ADAPTER_HAS_FAB_API
 		const FEngineVersion& Version = FEngineVersion::Current();
-		return McpFabAddOperation::Start(ListingId,
+		McpFabAddOperation::Start(ListingId,
 			FString::Printf(TEXT("%u.%u"), Version.GetMajor(), Version.GetMinor()), GetCacheLocation(),
 			Options, MoveTemp(OnAccepted));
+		return true;
 #else
 		return false;
 #endif
@@ -170,8 +171,9 @@ public:
 	{
 #if MCP_FAB_ADAPTER_HAS_FAB_API
 		const FEngineVersion& Version = FEngineVersion::Current();
-		return McpFabDetailsOperation::Start(ListingId,
+		McpFabDetailsOperation::Start(ListingId,
 			FString::Printf(TEXT("%u.%u"), Version.GetMajor(), Version.GetMinor()), MoveTemp(OnComplete));
+		return true;
 #else
 		return false;
 #endif
@@ -182,7 +184,8 @@ public:
 		TFunction<void(const FMcpFabSearchResult&)> OnComplete) override
 	{
 #if MCP_FAB_ADAPTER_HAS_FAB_API
-		return McpFabSearchOperation::Start(Request, MoveTemp(OnComplete));
+		McpFabSearchOperation::Start(Request, MoveTemp(OnComplete));
+		return true;
 #else
 		return false;
 #endif

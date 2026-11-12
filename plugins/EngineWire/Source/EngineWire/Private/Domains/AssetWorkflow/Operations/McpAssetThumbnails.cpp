@@ -9,11 +9,9 @@
 #include "Dom/JsonObject.h"
 #include "ImageUtils.h"
 #include "Misc/CommandLine.h"
-#include "Misc/FileHelper.h"
 #include "Misc/ObjectThumbnail.h"
 #include "Misc/Paths.h"
 
-#include "EditorAssetLibrary.h"
 #include "ObjectTools.h"
 
 bool UEngineWireSubsystem::HandleGenerateThumbnail(
@@ -49,14 +47,8 @@ bool UEngineWireSubsystem::HandleGenerateThumbnail(
     return true;
   }
 
-  int32 Width = 512;
-  int32 Height = 512;
-
-  double TempWidth = 0, TempHeight = 0;
-  if (Payload->TryGetNumberField(TEXT("width"), TempWidth))
-    Width = static_cast<int32>(TempWidth);
-  if (Payload->TryGetNumberField(TEXT("height"), TempHeight))
-    Height = static_cast<int32>(TempHeight);
+  const int32 Width = GetJsonIntField(Payload, TEXT("width"), 512);
+  const int32 Height = GetJsonIntField(Payload, TEXT("height"), 512);
   if (Width < 1 || Height < 1 || Width > 4096 || Height > 4096) {
     SendAutomationError(RequestingSocket, RequestId, TEXT("width and height must be between 1 and 4096"),
                         TEXT("INVALID_ARGUMENT"));

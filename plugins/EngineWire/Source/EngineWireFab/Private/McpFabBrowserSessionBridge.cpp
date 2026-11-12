@@ -26,7 +26,6 @@
 #include "Framework/Application/SlateApplication.h"
 #include "Framework/Docking/TabManager.h"
 #include "Framework/MultiBox/MultiBox.h"
-#include "HAL/IConsoleManager.h"
 #include "Misc/App.h"
 #include "ToolMenus.h"
 #include "Widgets/Docking/SDockTab.h"
@@ -114,11 +113,10 @@ static TSharedPtr<SDockTab> FindLiveFabTab()
 }
 
 /**
- * Locates the browser inside the open Fab tab.
+ * Locates the browser inside the Fab tab, opening the tab through the Window > Fab menu when it is not open.
  *
- * Returns nothing when the tab was never opened this session: FindExistingLiveTab
- * deliberately does not spawn one, because spawning Fab's tab headlessly asserts
- * inside Epic's FFabBrowser::OpenTab under -NullRHI.
+ * Returns nothing when the tab cannot be found or opened: TryOpenFabTabViaMenu opens it only in an editor that
+ * renders, because Epic's FFabBrowser::OpenTab asserts under -NullRHI.
  */
 
 TSharedPtr<SWidget> FindFabBrowserWidget(FString& OutDiagnostic)
@@ -143,11 +141,9 @@ TSharedPtr<SWidget> FindFabBrowserWidget(FString& OutDiagnostic)
 	bool bOpenAttempted = false;
 	if (!FabTab.IsValid())
 	{
-		// Menu first, reflection second -- the reverse of the original order.
-		//
-		// The reflection route calls OpenInNewTab on a transient
-		// NewObject<UFabBrowserApi> that Fab never initialised, and the tab it
-		// produces opens EMPTY: a window shell with no browser session behind
+		// The menu, not reflection: an OpenInNewTab call on a transient
+		// NewObject<UFabBrowserApi> that Fab never initialised opens a tab that is
+		// EMPTY: a window shell with no browser session behind
 		// it. Scripts dispatched into that shell never reply, so the caller
 		// waits out the full 90s abandonment window and sees PAGE_TIMED_OUT.
 		// The menu entry executes Fab's own FUIAction, which is the path the

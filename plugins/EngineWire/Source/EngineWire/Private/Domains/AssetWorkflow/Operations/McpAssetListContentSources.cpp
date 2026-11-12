@@ -6,7 +6,6 @@
 
 #include "Dom/JsonObject.h"
 #include "HAL/FileManager.h"
-#include "Misc/Paths.h"
 
 namespace
 {
@@ -164,12 +163,8 @@ bool UEngineWireSubsystem::HandleListContentSources(
   // entries, and describing all of them recursively counts packages under every
   // one — a default call has to stay cheap in both bytes and disk work, so only
   // the page that is returned is described.
-  double Limit = 50;
-  Payload->TryGetNumberField(TEXT("limit"), Limit);
-  const int32 PageSize = FMath::Clamp(static_cast<int32>(Limit), 1, 500);
-  double Offset = 0;
-  Payload->TryGetNumberField(TEXT("offset"), Offset);
-  const int32 Start = FMath::Clamp(static_cast<int32>(Offset), 0, Entries.Num());
+  const int32 PageSize = FMath::Clamp(GetJsonIntField(Payload, TEXT("limit"), 50), 1, 500);
+  const int32 Start = FMath::Clamp(GetJsonIntField(Payload, TEXT("offset"), 0), 0, Entries.Num());
   const int32 End = FMath::Min(Start + PageSize, Entries.Num());
 
   TArray<TSharedPtr<FJsonValue>> Sources;

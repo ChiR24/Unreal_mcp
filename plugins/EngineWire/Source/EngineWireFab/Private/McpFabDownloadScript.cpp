@@ -6,7 +6,6 @@ namespace McpFabDownload
 {
 const TCHAR* Script()
 {
-	// No percent sign may appear in this text: it is spliced into an FString::Printf format.
 	return TEXT(R"JS(
   // The status and text of the last download-info attempt: "id|mode|status|detail" as it was recorded.
   function lastAttempt() {

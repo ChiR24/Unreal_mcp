@@ -6,7 +6,6 @@ namespace McpFabListing
 {
 const TCHAR* Script()
 {
-	// No percent sign may appear in this text: it is spliced into an FString::Printf format.
 	return TEXT(R"JS(
   // The price of a listing row or page, as a number in Fab's own units, or unresolved when the field has a
   // shape this does not know. The listing's own isFree flag disagrees with price (City Sample Buildings has

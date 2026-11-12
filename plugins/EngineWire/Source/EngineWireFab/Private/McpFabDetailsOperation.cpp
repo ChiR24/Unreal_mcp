@@ -13,18 +13,10 @@
 // pack exists for the running engine, and when it would refuse (a complete project, a MetaHuman listing,
 // no importable format). Those come from the asset-formats resources, read without claiming anything.
 
-#include "McpFabProvider.h"
 #include "McpFabBridgeDispatch.h"
 #include "McpFabListingScript.h"
 #include "McpFabSelectionScript.h"
-
-#include "Dom/JsonObject.h"
 #include "McpFabAddScript.h"
-#include "Misc/Guid.h"
-#include "Serialization/JsonReader.h"
-#include "Serialization/JsonSerializer.h"
-
-DEFINE_LOG_CATEGORY_STATIC(LogMcpFabDetails, Log, All);
 
 namespace McpFabDetailsOperation
 {
@@ -211,12 +203,12 @@ FString BuildDetailsScript(const FString& RequestId, const FString& ListingId, c
 }
 } // namespace
 
-bool Start(const FString& ListingId, const FString& EngineVersion, TFunction<void(bool, const FString&)> OnComplete)
+void Start(const FString& ListingId, const FString& EngineVersion, TFunction<void(bool, const FString&)> OnComplete)
 {
 	if (!McpFabAddOperation::IsSafeListingId(ListingId))
 	{
 		OnComplete(false, TEXT("{\"error\":\"INVALID_LISTING_ID\"}"));
-		return true;
+		return;
 	}
 	FString Error;
 	FString ErrorCode;
@@ -232,6 +224,5 @@ bool Start(const FString& ListingId, const FString& EngineVersion, TFunction<voi
 	{
 		OnComplete(false, McpFabBridgeDispatch::FailurePayload(*ErrorCode, Error));
 	}
-	return true;
 }
 } // namespace McpFabDetailsOperation

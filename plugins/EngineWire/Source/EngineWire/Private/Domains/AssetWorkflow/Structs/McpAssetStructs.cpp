@@ -27,7 +27,7 @@ bool UEngineWireSubsystem::HandleStructAction(
         || HandleStructMemberAddRemoveActions(*this, RequestId, Action, Payload, RequestingSocket)
         || HandleStructMemberEditActions(*this, RequestId, Action, Payload, RequestingSocket)
         || HandleStructAnalysisActions(*this, RequestId, Action, Payload, RequestingSocket)
-        || HandleStructSerializationActions(*this, RequestId, Action, Payload, RequestingSocket)
+        || HandleStructListActions(*this, RequestId, Action, Payload, RequestingSocket)
         || HandleStructImportActions(*this, RequestId, Action, Payload, RequestingSocket)
         || HandleStructAssetAction_Delete(*this, RequestId, Action, Payload, RequestingSocket)
         || HandleStructAssetAction_Rename(*this, RequestId, Action, Payload, RequestingSocket)

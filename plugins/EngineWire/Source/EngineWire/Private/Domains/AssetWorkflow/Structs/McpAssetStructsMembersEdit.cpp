@@ -8,8 +8,6 @@ bool HandleStructMemberEditActions(UEngineWireSubsystem& Bridge, const FString& 
     if (Lower == TEXT("reorder_struct_members"))
     {
         FString StructPath = GetJsonStringField(Payload, TEXT("structPath"));
-        FString VarGuidStr = GetJsonStringField(Payload, TEXT("varGuid"));
-        FString MemberName = GetJsonStringField(Payload, TEXT("memberName"));
         FString RelativeToStr = GetJsonStringField(Payload, TEXT("relativeTo"));
         FString Position = GetJsonStringField(Payload, TEXT("position"));
         bool bSave = GetJsonBoolField(Payload, TEXT("save"), true);
@@ -20,11 +18,9 @@ bool HandleStructMemberEditActions(UEngineWireSubsystem& Bridge, const FString& 
             return true;
         }
 
-        const FGuid G = ResolveMemberGuid(S, VarGuidStr, MemberName);
-        if (!G.IsValid())
+        FGuid G;
+        if (!ResolveMemberOrReply(Bridge, RequestId, RequestingSocket, S, Payload, G))
         {
-            Bridge.SendAutomationError(RequestingSocket, RequestId,
-                TEXT("Struct member not found"), TEXT("MEMBER_NOT_FOUND"));
             return true;
         }
 
@@ -69,10 +65,7 @@ bool HandleStructMemberEditActions(UEngineWireSubsystem& Bridge, const FString& 
         }
 
         FStructureEditorUtils::MoveVariable(S, G, TargetGuid, MovePos);
-        FStructureEditorUtils::CompileStructure(S);
-        McpRefreshStructDependents(S);
-        S->GetOutermost()->MarkPackageDirty();
-        if (bSave) { McpSafeAssetSave(S); }
+        FinishStructEdit(S, bSave);
 
         TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
         Result->SetStringField(TEXT("varGuid"), G.ToString());
@@ -85,8 +78,6 @@ bool HandleStructMemberEditActions(UEngineWireSubsystem& Bridge, const FString& 
     if (Lower == TEXT("set_struct_member_default"))
     {
         FString StructPath = GetJsonStringField(Payload, TEXT("structPath"));
-        FString VarGuidStr = GetJsonStringField(Payload, TEXT("varGuid"));
-        FString MemberName = GetJsonStringField(Payload, TEXT("memberName"));
         bool bSave = GetJsonBoolField(Payload, TEXT("save"), true);
         const TSharedPtr<FJsonValue>* DefaultVal = Payload->Values.Find(TEXT("defaultValue"));
 
@@ -95,8 +86,8 @@ bool HandleStructMemberEditActions(UEngineWireSubsystem& Bridge, const FString& 
         UUserDefinedStruct* S = LoadStructOrReply(Bridge, RequestId, RequestingSocket, StructPath);
         if (!S) { return true; }
 
-        const FGuid G = ResolveMemberGuid(S, VarGuidStr, MemberName);
-        if (!G.IsValid()) { Bridge.SendAutomationError(RequestingSocket, RequestId, TEXT("Struct member not found"), TEXT("MEMBER_NOT_FOUND")); return true; }
+        FGuid G;
+        if (!ResolveMemberOrReply(Bridge, RequestId, RequestingSocket, S, Payload, G)) { return true; }
 
         FStructureEditorUtils::CompileStructure(S);
         FProperty* Prop = FStructureEditorUtils::GetPropertyByGuid(S, G);
@@ -121,10 +112,7 @@ bool HandleStructMemberEditActions(UEngineWireSubsystem& Bridge, const FString& 
         }
 
         FStructureEditorUtils::ChangeVariableDefaultValue(S, G, ExportText);
-        FStructureEditorUtils::CompileStructure(S);
-        McpRefreshStructDependents(S);
-        S->GetOutermost()->MarkPackageDirty();
-        if (bSave) { McpSafeAssetSave(S); }
+        FinishStructEdit(S, bSave);
 
         const FStructVariableDescription* VarDesc = FStructureEditorUtils::GetVarDescByGuid(S, G);
         const FString VerifiedDefault = VarDesc ? VarDesc->DefaultValue : ExportText;
@@ -140,22 +128,17 @@ bool HandleStructMemberEditActions(UEngineWireSubsystem& Bridge, const FString& 
     if (Lower == TEXT("set_struct_member_metadata"))
     {
         FString StructPath = GetJsonStringField(Payload, TEXT("structPath"));
-        FString VarGuidStr = GetJsonStringField(Payload, TEXT("varGuid"));
-        FString MemberName = GetJsonStringField(Payload, TEXT("memberName"));
         bool bSave = GetJsonBoolField(Payload, TEXT("save"), true);
 
         UUserDefinedStruct* S = LoadStructOrReply(Bridge, RequestId, RequestingSocket, StructPath);
         if (!S) { return true; }
 
-        const FGuid G = ResolveMemberGuid(S, VarGuidStr, MemberName);
-        if (!G.IsValid()) { Bridge.SendAutomationError(RequestingSocket, RequestId, TEXT("Struct member not found"), TEXT("MEMBER_NOT_FOUND")); return true; }
+        FGuid G;
+        if (!ResolveMemberOrReply(Bridge, RequestId, RequestingSocket, S, Payload, G)) { return true; }
 
         ApplyStructMemberTooltipAndMetadata(S, G, Payload);
 
-        FStructureEditorUtils::CompileStructure(S);
-        McpRefreshStructDependents(S);
-        S->GetOutermost()->MarkPackageDirty();
-        if (bSave) { McpSafeAssetSave(S); }
+        FinishStructEdit(S, bSave);
 
         TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
         Result->SetStringField(TEXT("varGuid"), G.ToString());

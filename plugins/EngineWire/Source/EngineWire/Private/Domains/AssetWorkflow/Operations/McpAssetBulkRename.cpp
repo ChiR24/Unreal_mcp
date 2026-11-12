@@ -9,9 +9,6 @@
 #include "Dom/JsonObject.h"
 #include "Misc/PackageName.h"
 
-#include "AssetRegistry/AssetRegistryModule.h"
-#include "AssetToolsModule.h"
-#include "EditorAssetLibrary.h"
 #include "IAssetTools.h"
 #include "ISourceControlModule.h"
 #include "SourceControlHelpers.h"

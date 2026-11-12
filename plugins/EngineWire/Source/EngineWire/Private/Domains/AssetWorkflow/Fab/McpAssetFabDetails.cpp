@@ -2,6 +2,7 @@
 
 #include "EngineWireSubsystem.h"
 #include "Foundation/HandlerUtils/McpHandlerUtils.h"
+#include "Domains/AssetWorkflow/Fab/McpFabImportJson.h"
 #include "McpFabProvider.h"
 
 #include "Async/Async.h"
@@ -21,12 +22,8 @@
 bool UEngineWireSubsystem::HandleGetFabListingDetails(
     const FString &RequestId, const TSharedPtr<FJsonObject> &Payload,
     TSharedPtr<FMcpBridgeWebSocket> Socket) {
-  IMcpFabProvider *Provider = GetMcpFabProvider();
-  if (Provider == nullptr || !Provider->IsFabAvailable()) {
-    SendAutomationResponse(
-        Socket, RequestId, false,
-        TEXT("Fab support is not loaded in this editor, so listings cannot be described."),
-        nullptr, TEXT("NOT_SUPPORTED"));
+  IMcpFabProvider *Provider = McpFabProviderOrReply(this, RequestId, Socket, TEXT("listings cannot be described"));
+  if (!Provider) {
     return true;
   }
 

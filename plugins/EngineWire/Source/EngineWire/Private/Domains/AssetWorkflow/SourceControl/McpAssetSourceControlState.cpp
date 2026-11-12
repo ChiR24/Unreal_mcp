@@ -8,7 +8,6 @@
 #include "Misc/PackageName.h"
 
 #include "AssetRegistry/AssetRegistryModule.h"
-#include "EditorAssetLibrary.h"
 #include "ISourceControlModule.h"
 #include "ISourceControlProvider.h"
 

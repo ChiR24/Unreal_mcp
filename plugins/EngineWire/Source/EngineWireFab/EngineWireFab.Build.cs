@@ -25,7 +25,7 @@ public class EngineWireFab : ModuleRules
         PCHUsage = PCHUsageMode.UseExplicitOrSharedPCHs;
         // Load-bearing, not an oversight: several files here define their own
         // EnsureCallback in an anonymous namespace, which a merged unity blob
-        // rejects as a redefinition. At eight files unity would save nothing.
+        // rejects as a redefinition.
         bUseUnity = false;
 
         PublicDependencyModuleNames.AddRange(new string[] {
@@ -90,21 +90,6 @@ public class EngineWireFab : ModuleRules
             foreach (string subDir in Directory.GetDirectories(rootDir))
             {
                 if (FindFileBounded(subDir, fileName, maxDepth - 1)) return true;
-            }
-        }
-        catch { }
-        return false;
-    }
-
-    private bool SearchDirectoryBounded(string rootDir, string targetName, int maxDepth)
-    {
-        if (maxDepth < 0 || !Directory.Exists(rootDir)) return false;
-        try
-        {
-            foreach (string subDir in Directory.GetDirectories(rootDir))
-            {
-                if (string.Equals(Path.GetFileName(subDir), targetName, StringComparison.OrdinalIgnoreCase)) return true;
-                if (maxDepth > 0 && SearchDirectoryBounded(subDir, targetName, maxDepth - 1)) return true;
             }
         }
         catch { }

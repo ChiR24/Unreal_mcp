@@ -41,19 +41,14 @@ bool AddStructMembersFromArray(
     }
 
     const int32 Applied = ApplyParsedStructMembers(S, Parsed, Failures);
-    FStructureEditorUtils::CompileStructure(S);
-    S->GetOutermost()->MarkPackageDirty();
-    const bool bSaved = GetJsonBoolField(Payload, TEXT("save"), true);
-    if (bSaved)
-    {
-        McpSafeAssetSave(S);
-    }
+    const bool bSave = GetJsonBoolField(Payload, TEXT("save"), true);
+    const bool bSaved = FinishStructEdit(S, bSave);
 
     TSharedPtr<FJsonObject> Data = McpHandlerUtils::CreateResultObject();
     Data->SetStringField(TEXT("structPath"), StructPath);
     Data->SetNumberField(TEXT("addedCount"), Applied);
     Data->SetBoolField(TEXT("saved"), bSaved);
-    if (!bSaved && Applied > 0)
+    if (!bSave && Applied > 0)
     {
         // A UserDefinedStruct left dirty is a silent time bomb: the members are
         // live for the rest of the session -- readable, connectable, writable from

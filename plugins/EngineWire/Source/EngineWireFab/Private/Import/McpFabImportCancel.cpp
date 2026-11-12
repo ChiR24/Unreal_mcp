@@ -5,7 +5,7 @@
 #include "Import/McpFabInterchange.h"
 
 // Stopping an import. Fab gives three handles and no more: a queued add is only a closure in this store,
-// a unreal-engine pack's download notification carries a Cancel button, and Interchange has a cancel for
+// an unreal-engine pack's download notification carries a Cancel button, and Interchange has a cancel for
 // the translation it runs. A source-format download (fbx, gltf, obj, usdz, Megascans) has no Cancel:
 // Fab builds its notification with the button disabled, and the request is private to its workflow.
 namespace McpFabImportOperations
@@ -102,7 +102,7 @@ bool RequestCancel(const FString& OperationId, FString& OutMessage, FString& Out
 	}
 	OutErrorCode = TEXT("NOT_CANCELLABLE");
 	OutMessage = Toast.bFound
-		? TEXT("This download has no Cancel: Fab offers one only for a unreal-engine pack, and the download of a source format (fbx, gltf, obj, usdz, Megascans) cannot be stopped from outside Fab. It finishes, then imports; asset.delete removes what lands.")
+		? TEXT("This download has no Cancel: Fab offers one only for an unreal-engine pack, and the download of a source format (fbx, gltf, obj, usdz, Megascans) cannot be stopped from outside Fab. It finishes, then imports; asset.delete removes what lands.")
 		: TEXT("Fab is past the download and Interchange reports no import task to stop, so there is nothing to cancel; the import ends by itself.");
 	return false;
 }

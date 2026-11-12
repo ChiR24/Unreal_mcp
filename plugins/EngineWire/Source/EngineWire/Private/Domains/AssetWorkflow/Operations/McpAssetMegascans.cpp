@@ -6,7 +6,6 @@
 #include "McpFabProvider.h"
 
 #include "Dom/JsonObject.h"
-#include "HAL/FileManager.h"
 #include "Misc/FileHelper.h"
 #include "Misc/Paths.h"
 #include "Serialization/JsonSerializer.h"

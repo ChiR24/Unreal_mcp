@@ -12,7 +12,7 @@
  * Stops one Fab import that the add started, where Fab gives a way to.
  *
  * Fab offers three handles and no more, and the adapter uses exactly those: an add still waiting in the
- * queue is dropped, a unreal-engine pack download is stopped by pressing the Cancel button on Fab's own
+ * queue is dropped, an unreal-engine pack download is stopped by pressing the Cancel button on Fab's own
  * download notification, and an import Interchange is translating is told to cancel its tasks. A download
  * of a source format has no Cancel anywhere in Fab, so it is refused with NOT_CANCELLABLE and the reason.
  * The call can only be served while the game thread is free; during Fab's mesh build the editor is held
@@ -21,12 +21,8 @@
 bool UEngineWireSubsystem::HandleCancelFabImport(
     const FString &RequestId, const TSharedPtr<FJsonObject> &Payload,
     TSharedPtr<FMcpBridgeWebSocket> Socket) {
-  IMcpFabProvider *Provider = GetMcpFabProvider();
-  if (Provider == nullptr || !Provider->IsFabAvailable()) {
-    SendAutomationResponse(
-        Socket, RequestId, false,
-        TEXT("Fab support is not loaded in this editor, so there is no import to cancel."),
-        nullptr, TEXT("NOT_SUPPORTED"));
+  IMcpFabProvider *Provider = McpFabProviderOrReply(this, RequestId, Socket, TEXT("there is no import to cancel"));
+  if (!Provider) {
     return true;
   }
 

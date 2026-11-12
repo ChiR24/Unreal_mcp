@@ -15,7 +15,7 @@ namespace
 {
 // Fab's importers leave what they create in memory. Five Megascans surface adds left 24 dirty texture
 // and material-instance packages that existed only until the editor closed, and one import was lost
-// outright when the editor had to be shut. A unreal-engine pack is copied from disk, never loaded, and
+// outright when the editor had to be shut. An unreal-engine pack is copied from disk, never loaded, and
 // so is not dirty: it is left alone rather than loaded just to be written back out.
 void SaveImported(FMcpFabAddResult& Result, const TArray<FString>& ImportedPaths)
 {
@@ -47,7 +47,7 @@ void SaveImported(FMcpFabAddResult& Result, const TArray<FString>& ImportedPaths
 
 // Fab's importer parents each material instance to master materials it first copies into the project, from the folders
 // its settings name. When those are gone the copy fails, and the instance is left with no parent and draws the engine's
-// default grid, with nothing in the reply to say so. Only what the import holds in memory is read: a unreal-engine
+// default grid, with nothing in the reply to say so. Only what the import holds in memory is read: an unreal-engine
 // pack is copied from disk and is not loaded just to look.
 void NoteParentless(FMcpFabAddResult& Result, const TArray<FString>& ImportedPaths)
 {

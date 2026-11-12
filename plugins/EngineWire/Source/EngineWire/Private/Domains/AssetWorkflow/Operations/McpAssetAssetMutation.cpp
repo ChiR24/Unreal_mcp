@@ -9,7 +9,6 @@
 #include "Safety/McpSafeOperations.h"
 
 #include "Dom/JsonObject.h"
-#include "Misc/Paths.h"
 
 #include "AssetRegistry/AssetRegistryModule.h"
 #include "EditorAssetLibrary.h"
@@ -134,14 +133,7 @@ bool UEngineWireSubsystem::HandleDeleteAssets(
     TSharedPtr<FMcpBridgeWebSocket> Socket) {
   // What the records declare: the array `paths`, and `path` with its alias `assetPath` (reading only `path` once left a
   // contract-correct call with "No paths provided").
-  TArray<FString> PathsToDelete;
-  const TArray<TSharedPtr<FJsonValue>> *PathsArray = nullptr;
-  if (Payload->TryGetArrayField(TEXT("paths"), PathsArray) && PathsArray) {
-    for (const auto &Val : *PathsArray) {
-      if (Val.IsValid() && Val->Type == EJson::String)
-        PathsToDelete.Add(Val->AsString());
-    }
-  }
+  TArray<FString> PathsToDelete = McpHandlerUtils::GetStringArrayField(Payload, TEXT("paths"));
 
   for (const TCHAR *StringField : {TEXT("path"), TEXT("assetPath")}) {
     FString SinglePath;
@@ -173,19 +165,9 @@ bool UEngineWireSubsystem::HandleDeleteAssets(
     const FString Safe = SanitizeProjectRelativePath(Path);
     if (!Safe.IsEmpty()) { DeleteSet.Add(FPackageName::ObjectPathToPackageName(Safe)); }
   }
-  // Until nothing changes, as bulk_delete does: an asset used only by one this keeps is outside-referenced in turn.
-  // One pass deleted it, and the asset kept for its outside user was left pointing at nothing.
   TMap<FString, TArray<FString>> Kept;
-  for (bool bKeptOne = !bForce; bKeptOne;) {
-    bKeptOne = false;
-    for (int32 Index = DeleteSet.Num() - 1; Index >= 0; --Index) {
-      TArray<FString> Users = McpOutsideReferencers(DeleteSet[Index], DeleteSet);
-      if (Users.Num() > 0) {
-        Kept.Add(DeleteSet[Index], MoveTemp(Users));
-        DeleteSet.RemoveAt(Index);
-        bKeptOne = true;
-      }
-    }
+  if (!bForce) {
+    McpKeepOutsideReferenced(DeleteSet, [&](int32 Index, TArray<FString> &&Users) { Kept.Add(DeleteSet[Index], MoveTemp(Users)); });
   }
 
   int32 PathIndex = -1;

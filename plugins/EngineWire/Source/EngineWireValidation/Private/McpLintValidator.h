@@ -25,4 +25,8 @@ protected:
 	virtual bool CanValidateAsset_Implementation(UObject* InAsset) const override;
 	virtual EDataValidationResult ValidateLoadedAsset_Implementation(UObject* InAsset, TArray<FText>& ValidationErrors) override;
 #endif
+
+private:
+	/** The lint rules on one asset: an error goes to Fail (each engine's own AssetFails), anything else is a warning. */
+	EDataValidationResult ValidateWithLint(UObject* InAsset, TFunctionRef<void(const FText&)> Fail);
 };

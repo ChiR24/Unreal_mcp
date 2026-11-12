@@ -129,17 +129,17 @@ bool HandleStructAnalysisRecompile(UEngineWireSubsystem& Bridge, const FString& 
     {
         // Persist the main struct and every dependent package modified by the
         // recompilation loops so their dirty changes are not lost on editor exit.
-        McpSafeAssetSave(S);
+        McpSafeOperations::McpSafeAssetSave(S);
         ForEachReferencingAsset(S, [](UObject* Asset)
         {
             if (UUserDefinedStruct* Nested = Cast<UUserDefinedStruct>(Asset))
             {
-                McpSafeAssetSave(Nested);
+                McpSafeOperations::McpSafeAssetSave(Nested);
             }
         });
         ForEachReferencingBlueprint(S, [](UBlueprint* BP)
         {
-            McpSafeAssetSave(BP);
+            McpSafeOperations::McpSafeAssetSave(BP);
         });
     }
 

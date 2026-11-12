@@ -7,7 +7,6 @@
 #include "Dom/JsonObject.h"
 #include "Misc/PackageName.h"
 
-#include "EditorAssetLibrary.h"
 #include "ISourceControlModule.h"
 #include "ISourceControlProvider.h"
 #include "SourceControlHelpers.h"
