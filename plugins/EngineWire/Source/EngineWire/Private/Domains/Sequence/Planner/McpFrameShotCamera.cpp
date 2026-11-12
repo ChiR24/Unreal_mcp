@@ -9,10 +9,8 @@
 #include "Foundation/BridgeHelpers/Actors/McpActorSpawnHelpers.h"
 #include "Foundation/HandlerUtils/McpHandlerUtils.h"
 #include "Foundation/McpScopedEditorTransaction.h"
-#include "Misc/EngineVersionComparison.h"
-#if ENGINE_MAJOR_VERSION > 5 || (ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 1)
-#include "Engine/HitResult.h" // 5.0 declares FHitResult in EngineTypes.h
-#endif
+#include "Core/Compatibility/McpVersionCompatibility.h"
+#include MCP_HIT_RESULT_HEADER
 #if MCP_HAS_CINEMATIC_CAMERA
 #include "CineCameraActor.h"
 #include "CineCameraComponent.h"
@@ -29,17 +27,11 @@ double FieldOfView(const FLens& Lens)
     return FMath::RadiansToDegrees(2.0 * FMath::Atan(Lens.TanHalfH));
 }
 
-// Value to 1 / Scale (Scale 10, 100 or 1000): divided, so 26.7 reads 26.7 rather than 26.700000000000003.
-double Rounded(double Value, double Scale)
-{
-    return FMath::RoundToDouble(Value * Scale) / Scale;
-}
-
 TArray<TSharedPtr<FJsonValue>> ScreenPoint(const FVector2D& Point)
 {
     TArray<TSharedPtr<FJsonValue>> Out;
-    Out.Add(MakeShared<FJsonValueNumber>(Rounded(Point.X, 1000.0)));
-    Out.Add(MakeShared<FJsonValueNumber>(Rounded(Point.Y, 1000.0)));
+    Out.Add(MakeShared<FJsonValueNumber>(McpRoundTo(Point.X, 1000.0)));
+    Out.Add(MakeShared<FJsonValueNumber>(McpRoundTo(Point.Y, 1000.0)));
     return Out;
 }
 } // namespace
@@ -178,14 +170,14 @@ TSharedPtr<FJsonObject> DescribeShot(const FProblem& Problem, const FShot& Shot,
     TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
     Result->SetStringField(TEXT("camera"), Camera.Label);
     Result->SetBoolField(TEXT("spawned"), Camera.Actor == nullptr);
-    const FVector Location(Rounded(Shot.Location.X, 10.0), Rounded(Shot.Location.Y, 10.0), Rounded(Shot.Location.Z, 10.0));
+    const FVector Location(McpRoundTo(Shot.Location.X, 10.0), McpRoundTo(Shot.Location.Y, 10.0), McpRoundTo(Shot.Location.Z, 10.0));
     Result->SetArrayField(TEXT("location"), McpHandlerUtils::VectorToJsonArray(Location));
-    Result->SetArrayField(TEXT("rotation"), McpHandlerUtils::RotatorToJsonArray(FRotator(Rounded(Shot.Rotation.Pitch, 100.0), Rounded(Shot.Rotation.Yaw, 100.0), 0.0)));
-    Result->SetNumberField(TEXT("fieldOfView"), Rounded(FieldOfView(Camera.Lens), 10.0));
+    Result->SetArrayField(TEXT("rotation"), McpHandlerUtils::RotatorToJsonArray(FRotator(McpRoundTo(Shot.Rotation.Pitch, 100.0), McpRoundTo(Shot.Rotation.Yaw, 100.0), 0.0)));
+    Result->SetNumberField(TEXT("fieldOfView"), McpRoundTo(FieldOfView(Camera.Lens), 10.0));
     if (Camera.bCine)
     {
-        Result->SetNumberField(TEXT("focalLength"), Rounded(Camera.FocalLength, 10.0));
-        Result->SetNumberField(TEXT("focusDistance"), Rounded(FVector::Dist(Shot.Location, Problem.Subjects[0].Center), 10.0));
+        Result->SetNumberField(TEXT("focalLength"), McpRoundTo(Camera.FocalLength, 10.0));
+        Result->SetNumberField(TEXT("focusDistance"), McpRoundTo(FVector::Dist(Shot.Location, Problem.Subjects[0].Center), 10.0));
     }
     TArray<TSharedPtr<FJsonValue>> Rows;
     for (int32 Index = 0; Index < Subjects.Num(); ++Index)
@@ -196,14 +188,14 @@ TSharedPtr<FJsonObject> DescribeShot(const FProblem& Problem, const FShot& Shot,
         Row->SetStringField(TEXT("actorName"), Subjects[Index]->GetActorLabel());
         Row->SetArrayField(TEXT("target"), ScreenPoint(Target));
         Row->SetArrayField(TEXT("screen"), ScreenPoint(Screen));
-        Row->SetNumberField(TEXT("error"), Rounded(FVector2D::Distance(Screen, Target), 1000.0));
-        Row->SetNumberField(TEXT("hidden"), Rounded(Shot.Occluded[Index], 100.0));
+        Row->SetNumberField(TEXT("error"), McpRoundTo(FVector2D::Distance(Screen, Target), 1000.0));
+        Row->SetNumberField(TEXT("hidden"), McpRoundTo(Shot.Occluded[Index], 100.0));
         Rows.Add(MakeShared<FJsonValueObject>(Row));
     }
     Result->SetArrayField(TEXT("subjects"), Rows);
     if (Subjects.Num() == 1)
     {
-        Result->SetNumberField(TEXT("fill"), Rounded(Shot.Fill, 100.0));
+        Result->SetNumberField(TEXT("fill"), McpRoundTo(Shot.Fill, 100.0));
     }
     return Result;
 }

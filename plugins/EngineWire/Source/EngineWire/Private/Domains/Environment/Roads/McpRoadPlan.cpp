@@ -18,7 +18,6 @@ constexpr int32 RoadStepX[16] = {1, 2, 1, 1, 0, -1, -1, -2, -1, -2, -1, -1, 0, 1
 constexpr int32 RoadStepY[16] = {0, 1, 1, 2, 1, 2, 1, 1, 0, -1, -1, -2, -1, -2, -1, -1};
 constexpr int32 RoadSlots = 17;
 constexpr int32 RoadStart = 16;
-constexpr double RoadPi = 3.14159265358979323846;
 constexpr double RoadNotch = 0.46364760900080611;  // atan(1 / 2): the larger step between two headings
 constexpr int32 RoadMaxFrontier = 8000000;           // 128 MB of queued states: past it the search stops
 
@@ -164,7 +163,7 @@ TArray<FIntPoint> Search(const FRoadField& Field, FIntPoint From, FIntPoint To, 
             if (In != RoadStart)
             {
                 Turn = FMath::Abs(Angle[In] - Angle[Out]);
-                Turn = Turn > RoadPi ? 2.0 * RoadPi - Turn : Turn;
+                Turn = Turn > DOUBLE_PI ? 2.0 * DOUBLE_PI - Turn : Turn;
                 if (CornerRadius(RoadStepLength(In) * Field.Cell, RoadStepLength(Out) * Field.Cell, Turn) < RadiusCm)
                 {
                     continue;

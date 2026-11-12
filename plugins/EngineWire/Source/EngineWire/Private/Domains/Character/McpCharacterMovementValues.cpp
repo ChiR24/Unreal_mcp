@@ -8,7 +8,6 @@ static bool HandleMovementScalar(
     const TSharedPtr<FJsonObject>& Payload,
     FCharacterSocket Socket,
     const TCHAR* InputField,
-    const TCHAR* ResponseField,
     const FString& Message,
     float UCharacterMovementComponent::* Property,
     bool bAllowNegative = false)
@@ -56,34 +55,34 @@ static bool HandleMovementScalar(
     }
     TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
     Result->SetStringField(TEXT("blueprintPath"), BlueprintPath);
-    Result->SetNumberField(FString(ResponseField), Movement->*Property);
+    Result->SetNumberField(FString(InputField), Movement->*Property);
     Self->SendAutomationResponse(Socket, RequestId, true, Message, Result);
     return true;
 }
 
 bool HandleSetWalkSpeed(UEngineWireSubsystem* Self, const FString& RequestId, const TSharedPtr<FJsonObject>& Payload, FCharacterSocket Socket)
 {
-    return HandleMovementScalar(Self, RequestId, Payload, Socket, TEXT("walkSpeed"), TEXT("walkSpeed"), TEXT("Walk speed set"), &UCharacterMovementComponent::MaxWalkSpeed);
+    return HandleMovementScalar(Self, RequestId, Payload, Socket, TEXT("walkSpeed"), TEXT("Walk speed set"), &UCharacterMovementComponent::MaxWalkSpeed);
 }
 
 bool HandleSetJumpHeight(UEngineWireSubsystem* Self, const FString& RequestId, const TSharedPtr<FJsonObject>& Payload, FCharacterSocket Socket)
 {
-    return HandleMovementScalar(Self, RequestId, Payload, Socket, TEXT("jumpHeight"), TEXT("jumpHeight"), TEXT("Jump launch speed set"), &UCharacterMovementComponent::JumpZVelocity);
+    return HandleMovementScalar(Self, RequestId, Payload, Socket, TEXT("jumpHeight"), TEXT("Jump launch speed set"), &UCharacterMovementComponent::JumpZVelocity);
 }
 
 bool HandleSetGravityScale(UEngineWireSubsystem* Self, const FString& RequestId, const TSharedPtr<FJsonObject>& Payload, FCharacterSocket Socket)
 {
-    return HandleMovementScalar(Self, RequestId, Payload, Socket, TEXT("gravityScale"), TEXT("gravityScale"), TEXT("Gravity scale set"), &UCharacterMovementComponent::GravityScale, /*bAllowNegative=*/true);
+    return HandleMovementScalar(Self, RequestId, Payload, Socket, TEXT("gravityScale"), TEXT("Gravity scale set"), &UCharacterMovementComponent::GravityScale, /*bAllowNegative=*/true);
 }
 
 bool HandleSetGroundFriction(UEngineWireSubsystem* Self, const FString& RequestId, const TSharedPtr<FJsonObject>& Payload, FCharacterSocket Socket)
 {
-    return HandleMovementScalar(Self, RequestId, Payload, Socket, TEXT("groundFriction"), TEXT("groundFriction"), TEXT("Ground friction set"), &UCharacterMovementComponent::GroundFriction);
+    return HandleMovementScalar(Self, RequestId, Payload, Socket, TEXT("groundFriction"), TEXT("Ground friction set"), &UCharacterMovementComponent::GroundFriction);
 }
 
 bool HandleSetBrakingDeceleration(UEngineWireSubsystem* Self, const FString& RequestId, const TSharedPtr<FJsonObject>& Payload, FCharacterSocket Socket)
 {
-    return HandleMovementScalar(Self, RequestId, Payload, Socket, TEXT("brakingDeceleration"), TEXT("brakingDeceleration"), TEXT("Braking deceleration set"), &UCharacterMovementComponent::BrakingDecelerationWalking);
+    return HandleMovementScalar(Self, RequestId, Payload, Socket, TEXT("brakingDeceleration"), TEXT("Braking deceleration set"), &UCharacterMovementComponent::BrakingDecelerationWalking);
 }
 
 bool HandleConfigureCrouch(UEngineWireSubsystem* Self, const FString& RequestId, const TSharedPtr<FJsonObject>& Payload, FCharacterSocket Socket)

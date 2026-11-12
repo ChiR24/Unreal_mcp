@@ -89,16 +89,6 @@ bool StepsSince(const UTransBuffer& Trans, TArray<const FTransaction*>& Out)
     return !GPoint.Marker.IsValid();
 }
 
-TArray<TSharedPtr<FJsonValue>> Strings(const TArray<FString>& Values)
-{
-    TArray<TSharedPtr<FJsonValue>> Out;
-    for (const FString& Value : Values)
-    {
-        Out.Add(MakeShared<FJsonValueString>(Value));
-    }
-    return Out;
-}
-
 void Refuse(UEngineWireSubsystem* Self, TSharedPtr<FMcpBridgeWebSocket> Socket, const FString& RequestId,
             const TCHAR* Code, const FString& Message, const TSharedPtr<FJsonObject>& Details = nullptr)
 {
@@ -238,22 +228,18 @@ bool Handle(UEngineWireSubsystem* Self, const FString& RequestId, const TSharedP
     }
     Result->SetArrayField(TEXT("steps"), Rows);
     Result->SetBoolField(TEXT("historyIntact"), bIntact);
-    Result->SetArrayField(TEXT("assetsCreated"), Strings(GPoint.Added));
-    Result->SetArrayField(TEXT("assetsRemoved"), Strings(GPoint.Removed));
-    Result->SetArrayField(TEXT("packagesSaved"), Strings(GPoint.Saved));
+    Result->SetArrayField(TEXT("assetsCreated"), McpHandlerUtils::ToJsonStringArray(GPoint.Added));
+    Result->SetArrayField(TEXT("assetsRemoved"), McpHandlerUtils::ToJsonStringArray(GPoint.Removed));
+    Result->SetArrayField(TEXT("packagesSaved"), McpHandlerUtils::ToJsonStringArray(GPoint.Saved));
     // Undo deletes no asset: the call that removes what calls through this server created since, ready to send (it asks
     // for consent). Only theirs: an asset the user made is listed in assetsCreated and never offered for deletion.
     const TArray<FString> Created = GPoint.AddedByMcp.FilterByPredicate([](const FString& Path) { return !GPoint.Removed.Contains(Path); });
     if (Created.Num() > 0)
     {
         TSharedPtr<FJsonObject> Params = MakeShared<FJsonObject>();
-        Params->SetArrayField(TEXT("assetPaths"), Strings(Created));
+        Params->SetArrayField(TEXT("assetPaths"), McpHandlerUtils::ToJsonStringArray(Created));
         Params->SetBoolField(TEXT("fixupRedirectors"), false);
-        TSharedPtr<FJsonObject> Cleanup = MakeShared<FJsonObject>();
-        Cleanup->SetStringField(TEXT("operation"), TEXT("execute"));
-        Cleanup->SetStringField(TEXT("tool"), TEXT("manage_asset"));
-        Cleanup->SetStringField(TEXT("action"), TEXT("bulk_delete"));
-        Cleanup->SetObjectField(TEXT("params"), Params);
+        TSharedPtr<FJsonObject> Cleanup = McpHandlerUtils::MakeExecuteCall(TEXT("manage_asset"), TEXT("bulk_delete"), Params);
         Result->SetObjectField(TEXT("cleanupCall"), Cleanup);
     }
     if (Op == TEXT("rollback"))

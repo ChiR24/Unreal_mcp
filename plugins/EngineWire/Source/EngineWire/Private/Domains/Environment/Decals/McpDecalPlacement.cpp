@@ -11,9 +11,8 @@
 #include "Math/RotationMatrix.h"
 #include "MeshDescription.h"
 #include "MeshDescriptionToDynamicMesh.h"
-#if ENGINE_MAJOR_VERSION > 5 || ENGINE_MINOR_VERSION >= 1
-#include "Engine/HitResult.h" // 5.0 declares FHitResult in EngineTypes.h
-#endif
+#include "Core/Compatibility/McpVersionCompatibility.h"
+#include MCP_HIT_RESULT_HEADER
 
 namespace McpDecalPlacement
 {
@@ -73,7 +72,6 @@ EDrawnHit DrawnHit(const FHitResult& Hit, const FVector& Start, const FVector& E
 
 TArray<FVector> ScatterInDisc(const FVector& Center, const FVector& Direction, double Radius, int32 Count, int32 Seed, double MinSpacing)
 {
-    constexpr double DecalTwoPi = 6.283185307179586; // PI is gone in 5.8 and UE_PI missing in 5.0
     // The disc faces the trace: level for a trace down or up, upright (across and up) for a trace into a wall.
     const bool bLevel = FMath::Abs(Direction.GetSafeNormal().Z) > 0.7;
     const FVector Across = bLevel ? FVector::ForwardVector : (Direction ^ FVector::UpVector).GetSafeNormal();
@@ -83,7 +81,7 @@ TArray<FVector> ScatterInDisc(const FVector& Center, const FVector& Direction, d
     // Rejection sampling: a point too near one kept is drawn again, up to 30 draws a point.
     for (int32 Draw = 0; Points.Num() < Count && Draw < Count * 30; ++Draw)
     {
-        const double Angle = DecalTwoPi * Random.FRand();
+        const double Angle = 2.0 * DOUBLE_PI * Random.FRand();
         const double Distance = Radius * FMath::Sqrt(static_cast<double>(Random.FRand()));
         const FVector Point = Center + Across * (FMath::Cos(Angle) * Distance) + Along * (FMath::Sin(Angle) * Distance);
         if (!Points.ContainsByPredicate([&](const FVector& Kept) { return FVector::Dist(Kept, Point) < MinSpacing; }))

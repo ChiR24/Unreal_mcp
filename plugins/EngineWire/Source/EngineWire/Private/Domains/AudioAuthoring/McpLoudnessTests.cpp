@@ -32,7 +32,7 @@ TArray<float> LoudnessSine(int32 Channels, int32 Rate, const TArray<FLoudnessPar
         const double Amplitude = FMath::Pow(10.0, Part.Db / 20.0);
         for (int64 Frame = 0; Frame < int64(Part.Seconds * Rate); ++Frame, ++Sample)
         {
-            const float Value = float(Amplitude * FMath::Sin(2.0 * 3.14159265358979323846 * 1000.0 * Sample / Rate));
+            const float Value = float(Amplitude * FMath::Sin(2.0 * DOUBLE_PI * 1000.0 * Sample / Rate));
             for (int32 Channel = 0; Channel < Channels; ++Channel)
             {
                 Out.Add(Value);

@@ -106,7 +106,7 @@ static bool HandleCreateTemplateSpline(
         }
     }
 
-    UWorld* World = GEditor ? GEditor->GetEditorWorldContext().World() : nullptr;
+    UWorld* World = McpHandlerUtils::GetEditorWorld();
     if (!World)
     {
         Self->SendAutomationResponse(Socket, RequestId, false,

@@ -43,7 +43,6 @@ bool UEngineWireSubsystem::HandleControlActorSetMaterial(
       Transaction = MakeUnique<FMcpScopedEditorTransaction>(
           FText::FromString(TEXT("Set Actor Material")), EMcpMutationDurability::EditorStateOnly, Undoable);
     }
-    FMcpResponseCaptureRegistry &Capture = FMcpResponseCaptureRegistry::Get();
     TArray<TSharedPtr<FJsonValue>> Results;
     TArray<FString> Failures;
     // The actors that took the material, each by the name its one-actor run replied with (the label unless
@@ -56,9 +55,9 @@ bool UEngineWireSubsystem::HandleControlActorSetMaterial(
       One->RemoveField(TEXT("actorNames"));
       One->SetStringField(TEXT("actorName"), Name);
       const FString ItemId = FString::Printf(TEXT("%s#%d"), *RequestId, Index);
-      Capture.Begin(ItemId);
-      HandleControlActorSetMaterial(ItemId, One, Socket);
-      const FMcpCapturedResponse Reply = Capture.End(ItemId);
+      const FMcpCapturedResponse Reply = McpCaptureResponse(ItemId, [&] {
+        HandleControlActorSetMaterial(ItemId, One, Socket);
+      });
       if (Reply.bSuccess) {
         FString Changed;
         if (!Reply.Result.IsValid() || !Reply.Result->TryGetStringField(TEXT("actorName"), Changed) || Changed.IsEmpty()) {
@@ -116,9 +115,9 @@ bool UEngineWireSubsystem::HandleControlActorSetMaterial(
       One->SetStringField(TEXT("materialPath"), Path);
       One->SetNumberField(TEXT("materialSlot"), Slot);
       const FString ItemId = FString::Printf(TEXT("%s#slot%d"), *RequestId, Slot);
-      FMcpResponseCaptureRegistry::Get().Begin(ItemId);
-      HandleControlActorSetMaterial(ItemId, One, Socket);
-      const FMcpCapturedResponse Reply = FMcpResponseCaptureRegistry::Get().End(ItemId);
+      const FMcpCapturedResponse Reply = McpCaptureResponse(ItemId, [&] {
+        HandleControlActorSetMaterial(ItemId, One, Socket);
+      });
       TSharedPtr<FJsonObject> Entry = McpHandlerUtils::CreateResultObject();
       Entry->SetNumberField(TEXT("materialSlot"), Slot);
       Entry->SetStringField(TEXT("materialPath"), Path);

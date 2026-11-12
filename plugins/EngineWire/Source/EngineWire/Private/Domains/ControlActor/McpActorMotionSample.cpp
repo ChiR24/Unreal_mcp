@@ -37,8 +37,6 @@ struct FMcpMotionRun {
   bool bWaiting = false;
 };
 
-double McpRoundTo(double Value, double Scale) { return FMath::RoundToDouble(Value * Scale) / Scale; }
-
 void McpTakeMotionSample(FMcpMotionRun &Run, AActor *Actor, double GameTime) {
   const FVector Location = Actor->GetActorLocation();
   TSharedPtr<FJsonObject> Sample = MakeShared<FJsonObject>();

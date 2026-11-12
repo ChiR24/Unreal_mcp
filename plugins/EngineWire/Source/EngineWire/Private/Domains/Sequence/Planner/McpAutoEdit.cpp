@@ -63,7 +63,7 @@ McpFrameShot::FLens EditLensOf(AActor& Camera)
 bool Handle(UEngineWireSubsystem& Bridge, const FString& RequestId, const TSharedPtr<FJsonObject>& Payload,
             TSharedPtr<FMcpBridgeWebSocket> Socket, TFunctionRef<AActor*(const FString&)> Find)
 {
-    UWorld* World = GEditor ? GEditor->GetEditorWorldContext().World() : nullptr;
+    UWorld* World = McpHandlerUtils::GetEditorWorld();
     if (!World || GEditor->PlayWorld)
     {
         Bridge.SendAutomationError(Socket, RequestId, TEXT("Needs the editor world with Play In Editor stopped."), TEXT("NO_WORLD"));

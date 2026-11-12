@@ -10,7 +10,7 @@ namespace McpModuleKit
 namespace
 {
 const TCHAR* const ModuleSideNames[6] = {TEXT("+X"), TEXT("-X"), TEXT("+Y"), TEXT("-Y"), TEXT("+Z"), TEXT("-Z")};
-constexpr double ModuleQuarterTurn = 1.5707963267948966;
+constexpr double ModuleQuarterTurn = 0.5 * DOUBLE_PI;
 } // namespace
 
 const TCHAR* SideName(int32 Side)

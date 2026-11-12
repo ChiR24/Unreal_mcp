@@ -10,6 +10,7 @@
 #include "Domains/Blueprint/Gameplay/McpBPBehaviourPlans.h"
 #include "Domains/BlueprintGraph/Behaviour/McpBPBehaviour.h"
 #include "Foundation/BridgeHelpers/Responses/McpJsonFields.h"
+#include "Foundation/HandlerUtils/McpHandlerUtilsJson.h"
 
 #include "AIController.h"
 #include "GameFramework/Pawn.h"
@@ -105,10 +106,7 @@ bool HandleBlueprintAddBehaviour(const FBlueprintActionContext &Context) {
       PossessByAI(Blueprint, Result.Report);
     }
     if (Plan.Replaces.Num() > 0) {
-      TArray<TSharedPtr<FJsonValue>> Replaced;
-      for (const FString &Tag : Plan.Replaces) {
-        Replaced.Add(MakeShared<FJsonValueString>(Tag));
-      }
+      TArray<TSharedPtr<FJsonValue>> Replaced = McpHandlerUtils::ToJsonStringArray(Plan.Replaces);
       Result.Report->SetArrayField(TEXT("replaced"), Replaced);
       Result.Report->SetNumberField(TEXT("previousRemoved"), GetJsonNumberField(Result.Report, TEXT("previousRemoved")) + Removed);
     }

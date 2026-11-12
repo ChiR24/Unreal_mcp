@@ -83,11 +83,7 @@ bool HandleCleanup(const FEffectActionContext& Context, bool bIsCreateEffect)
             Removed.Add(Label);
         }
     }
-    TArray<TSharedPtr<FJsonValue>> RemovedActors;
-    for (const FString& Label : Removed)
-    {
-        RemovedActors.Add(MakeShared<FJsonValueString>(Label));
-    }
+    TArray<TSharedPtr<FJsonValue>> RemovedActors = McpHandlerUtils::ToJsonStringArray(Removed);
     TSharedPtr<FJsonObject> Response = McpHandlerUtils::CreateResultObject();
     Response->SetArrayField(TEXT("removedActors"), RemovedActors);
     Response->SetNumberField(TEXT("removed"), Removed.Num());

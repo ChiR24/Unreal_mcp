@@ -71,13 +71,8 @@ TMap<FString, TArray<FString>> ReportConfigNamedPackages() {
 TSharedPtr<FJsonObject> ReportAssetRow(const FAssetData &Asset) {
   TSharedPtr<FJsonObject> Row = McpHandlerUtils::CreateResultObject();
   Row->SetStringField(TEXT("name"), Asset.AssetName.ToString());
-#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 1
-  Row->SetStringField(TEXT("path"), Asset.GetSoftObjectPath().ToString());
-  Row->SetStringField(TEXT("class"), Asset.AssetClassPath.ToString());
-#else
-  Row->SetStringField(TEXT("path"), Asset.ToSoftObjectPath().ToString());
-  Row->SetStringField(TEXT("class"), Asset.AssetClass.ToString());
-#endif
+  Row->SetStringField(TEXT("path"), MCP_ASSET_DATA_GET_SOFT_PATH(Asset));
+  Row->SetStringField(TEXT("class"), MCP_ASSET_DATA_GET_CLASS_PATH(Asset));
   return Row;
 }
 } // namespace
@@ -85,13 +80,6 @@ TSharedPtr<FJsonObject> ReportAssetRow(const FAssetData &Asset) {
 bool UEngineWireSubsystem::HandleGenerateReport(
     const FString &RequestId, const TSharedPtr<FJsonObject> &Payload,
     TSharedPtr<FMcpBridgeWebSocket> Socket) {
-  if (!Payload.IsValid()) {
-    SendAutomationResponse(Socket, RequestId, false,
-                           TEXT("generate_report payload missing"), nullptr,
-                           TEXT("INVALID_PAYLOAD"));
-    return true;
-  }
-
   FString Directory;
   Payload->TryGetStringField(TEXT("directory"), Directory);
   if (Directory.IsEmpty()) {
@@ -147,10 +135,7 @@ bool UEngineWireSubsystem::HandleGenerateReport(
     AssetList.RemoveAll([&Named, &ConfigRows](const FAssetData &Asset) {
       const TArray<FString> *Files = Named.Find(Asset.PackageName.ToString());
       if (Files != nullptr) {
-        TArray<TSharedPtr<FJsonValue>> FileValues;
-        for (const FString &ConfigFile : *Files) {
-          FileValues.Add(MakeShared<FJsonValueString>(ConfigFile));
-        }
+        TArray<TSharedPtr<FJsonValue>> FileValues = McpHandlerUtils::ToJsonStringArray(*Files);
         TSharedPtr<FJsonObject> Row = ReportAssetRow(Asset);
         Row->SetArrayField(TEXT("configFiles"), FileValues);
         ConfigRows.Add(MakeShared<FJsonValueObject>(Row));

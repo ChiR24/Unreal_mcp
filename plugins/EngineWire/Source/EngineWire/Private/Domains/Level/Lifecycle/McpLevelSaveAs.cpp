@@ -48,7 +48,7 @@ bool HandleSaveLevelAsAction(UEngineWireSubsystem& Subsystem, const FString& Req
     // McpSafeLevelSave never overwrites another package, but its refusal reached only the log and the reply
     // said "check Output Log for details". Name it here.
     const FString SavePackage = FPackageName::ObjectPathToPackageName(SavePath);
-    const UWorld *OpenWorld = GEditor ? GEditor->GetEditorWorldContext().World() : nullptr;
+    const UWorld *OpenWorld = McpHandlerUtils::GetEditorWorld();
     if (FPackageName::DoesPackageExist(SavePackage) &&
         !(OpenWorld && OpenWorld->GetOutermost()->GetName().Equals(SavePackage, ESearchCase::IgnoreCase))) {
       Subsystem.SendAutomationResponse(RequestingSocket, RequestId, false,

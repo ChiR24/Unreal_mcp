@@ -70,6 +70,13 @@
 #define MCP_INSTANCED_STRUCT_HEADER "InstancedStruct.h"
 #endif
 
+// FHitResult has its own header from 5.1; 5.0 declares it in EngineTypes.h.
+#if __has_include("Engine/HitResult.h")
+#define MCP_HIT_RESULT_HEADER "Engine/HitResult.h"
+#else
+#define MCP_HIT_RESULT_HEADER "Engine/EngineTypes.h"
+#endif
+
 // These macros are only defined when Movie Render Pipeline is actually enabled
 // (MCP_HAS_MOVIE_RENDER_PIPELINE=1). When MRP is disabled, callers gate the
 // related #include with the same flag, so the macros being undefined is safe.
@@ -192,6 +199,18 @@
   #define MCP_HAS_ASSET_CLASS_PATHS 1
 #else
   #define MCP_HAS_ASSET_CLASS_PATHS 0
+#endif
+
+// A class as the registry and the Blueprint interface calls name it (MCP_CLASS_ID), and a class added to an
+// FARFilter, loaded (MCP_AR_FILTER_ADD_CLASS) or by its package and name (MCP_AR_FILTER_ADD_CLASS_PATH).
+#if MCP_HAS_ASSET_CLASS_PATHS
+  #define MCP_CLASS_ID(Class) (Class)->GetClassPathName()
+  #define MCP_AR_FILTER_ADD_CLASS(Filter, Class) (Filter).ClassPaths.Add((Class)->GetClassPathName())
+  #define MCP_AR_FILTER_ADD_CLASS_PATH(Filter, Package, Name) (Filter).ClassPaths.Add(FTopLevelAssetPath(FName(Package), FName(Name)))
+#else
+  #define MCP_CLASS_ID(Class) (Class)->GetFName()
+  #define MCP_AR_FILTER_ADD_CLASS(Filter, Class) (Filter).ClassNames.Add((Class)->GetFName())
+  #define MCP_AR_FILTER_ADD_CLASS_PATH(Filter, Package, Name) (Filter).ClassNames.Add(FName(Name))
 #endif
 
 // =============================================================================

@@ -32,8 +32,6 @@ bool McpMotionValueMatches(const FString &Value, const FString &Wanted) {
   return Value.IsNumeric() && Wanted.IsNumeric() &&
          FMath::IsNearlyEqual(FCString::Atod(*Value), FCString::Atod(*Wanted), 1e-4);
 }
-
-double McpRoundMs(double Seconds) { return FMath::RoundToDouble(Seconds * 1000.0) / 1000.0; }
 } // namespace
 
 bool McpParseMotionInputs(const TSharedPtr<FJsonObject> &Payload,
@@ -236,16 +234,16 @@ TArray<TSharedPtr<FJsonValue>> McpMotionInputsJson(const TArray<FMcpMotionInput>
   for (const FMcpMotionInput &Input : Inputs) {
     TSharedPtr<FJsonObject> Entry = MakeShared<FJsonObject>();
     Entry->SetStringField(TEXT("key"), Input.Key);
-    Entry->SetNumberField(TEXT("at"), McpRoundMs(Input.At));
-    Entry->SetNumberField(TEXT("hold"), McpRoundMs(Input.Hold));
+    Entry->SetNumberField(TEXT("at"), McpRoundTo(Input.At, 1000.0));
+    Entry->SetNumberField(TEXT("hold"), McpRoundTo(Input.Hold, 1000.0));
     if (Input.DownAt >= 0.0) {
-      Entry->SetNumberField(TEXT("down"), McpRoundMs(Input.DownAt));
+      Entry->SetNumberField(TEXT("down"), McpRoundTo(Input.DownAt, 1000.0));
       if (!Input.bRouted) {
         Entry->SetBoolField(TEXT("routedToPIE"), false);
       }
     }
     if (Input.UpAt >= 0.0) {
-      Entry->SetNumberField(TEXT("up"), McpRoundMs(Input.UpAt));
+      Entry->SetNumberField(TEXT("up"), McpRoundTo(Input.UpAt, 1000.0));
     }
     Out.Add(MakeShared<FJsonValueObject>(Entry));
   }

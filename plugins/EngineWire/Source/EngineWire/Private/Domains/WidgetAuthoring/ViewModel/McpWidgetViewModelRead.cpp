@@ -122,11 +122,7 @@ bool HandleList(UEngineWireSubsystem& Bridge, const FString& RequestId, const TS
 	Filter.PackagePaths.Add(FName(*Folder.Path));
 	Filter.bRecursivePaths = true;
 	Filter.bRecursiveClasses = true;
-#if MCP_HAS_ASSET_CLASS_PATHS
-	Filter.ClassPaths.Add(UBlueprint::StaticClass()->GetClassPathName());
-#else
-	Filter.ClassNames.Add(UBlueprint::StaticClass()->GetFName());
-#endif
+	MCP_AR_FILTER_ADD_CLASS(Filter, UBlueprint::StaticClass());
 	TArray<FAssetData> Assets;
 	FModuleManager::LoadModuleChecked<FAssetRegistryModule>(TEXT("AssetRegistry")).Get().GetAssets(Filter, Assets);
 	TArray<TSharedPtr<FJsonValue>> Blueprints;

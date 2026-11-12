@@ -1,6 +1,7 @@
 #include "Domains/Animation/McpAnimActionContext.h"
 #include "Foundation/BridgeHelpers/Blueprints/McpBPPaths.h"
 #include "Safety/McpSafeOperations.h"
+#include "Foundation/HandlerUtils/McpHandlerUtilsJson.h"
 
 #include "Editor.h"
 #include "EditorAssetLibrary.h"
@@ -65,28 +66,19 @@ bool HandleAnimationCleanupAction(FActionContext &Context,
         }
       }
 
-      TArray<TSharedPtr<FJsonValue>> CleanedArray;
-      for (const FString &Path : Cleaned) {
-        CleanedArray.Add(MakeShared<FJsonValueString>(Path));
-      }
+      TArray<TSharedPtr<FJsonValue>> CleanedArray = McpHandlerUtils::ToJsonStringArray(Cleaned);
       if (CleanedArray.Num() > 0) {
         Resp->SetArrayField(TEXT("cleaned"), CleanedArray);
       }
       Resp->SetNumberField(TEXT("cleanedCount"), Cleaned.Num());
 
       if (Missing.Num() > 0) {
-        TArray<TSharedPtr<FJsonValue>> MissingArray;
-        for (const FString &Path : Missing) {
-          MissingArray.Add(MakeShared<FJsonValueString>(Path));
-        }
+        TArray<TSharedPtr<FJsonValue>> MissingArray = McpHandlerUtils::ToJsonStringArray(Missing);
         Resp->SetArrayField(TEXT("missing"), MissingArray);
       }
 
       if (Failed.Num() > 0) {
-        TArray<TSharedPtr<FJsonValue>> FailedArray;
-        for (const FString &Path : Failed) {
-          FailedArray.Add(MakeShared<FJsonValueString>(Path));
-        }
+        TArray<TSharedPtr<FJsonValue>> FailedArray = McpHandlerUtils::ToJsonStringArray(Failed);
         Resp->SetArrayField(TEXT("failed"), FailedArray);
       }
 

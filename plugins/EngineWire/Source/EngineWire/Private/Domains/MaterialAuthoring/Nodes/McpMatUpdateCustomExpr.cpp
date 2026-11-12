@@ -60,10 +60,7 @@ bool HandleUpdateCustomExpression(UEngineWireSubsystem* Bridge, const FString& R
     // nothing of a compile error, including the HLSL errors only the shader compile finds.
     if (!FMcpResponseCaptureRegistry::Get().IsBatchStep(RequestId)) {
       const TArray<FString> CompileErrors = McpMaterialCompileErrors(Material);
-      TArray<TSharedPtr<FJsonValue>> ErrorValues;
-      for (const FString &Error : CompileErrors) {
-        ErrorValues.Add(MakeShared<FJsonValueString>(Error));
-      }
+      TArray<TSharedPtr<FJsonValue>> ErrorValues = McpHandlerUtils::ToJsonStringArray(CompileErrors);
       Result->SetBoolField(TEXT("compiled"), CompileErrors.Num() == 0);
       Result->SetArrayField(TEXT("compileErrors"), ErrorValues);
       Result->SetBoolField(TEXT("saved"), Material ? McpSafeAssetSave(Material) : McpSafeAssetSave(Function));

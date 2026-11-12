@@ -25,6 +25,14 @@ FString GetString(const TSharedPtr<FJsonObject> &Params, const TCHAR *Name,
   return McpGetFirstStringField(Params, {Name, Alias ? Alias : Name});
 }
 
+namespace {
+// A refusal's action label: the sub-action that reached the handler (the sequence dispatcher reaches a cinematic
+// handler only with one).
+FString ActionLabel(const TSharedPtr<FJsonObject> &Params) {
+  return GetString(Params, TEXT("action"), TEXT("subAction"));
+}
+}
+
 FString GetSequencePath(const TSharedPtr<FJsonObject> &Params) {
   FString Path = GetString(Params, TEXT("sequencePath"), TEXT("path"));
   if (!Path.IsEmpty()) {
@@ -55,9 +63,8 @@ ULevelSequence *LoadSequence(const TSharedPtr<FJsonObject> &Params,
   FString FrameError;
   if (!McpSequenceFrameMath::ValidateCinematicFrameRequest(
           Params, Sequence->GetMovieScene(), FrameError)) {
-    const FString Action = GetString(Params, TEXT("action"), TEXT("subAction"));
     OutResult = MakeResult(
-        false, Action.IsEmpty() ? TEXT("cinematics") : Action, FrameError,
+        false, ActionLabel(Params), FrameError,
         TEXT("INVALID_ARGUMENT"));
     return nullptr;
   }
@@ -66,9 +73,8 @@ ULevelSequence *LoadSequence(const TSharedPtr<FJsonObject> &Params,
   UPackage *Package = Sequence->GetOutermost();
   if (Params.IsValid() && Params->TryGetBoolField(TEXT("save"), bSave) &&
       bSave && Package && Package->IsDirty() && !McpSafeAssetSave(Sequence)) {
-    const FString Action = GetString(Params, TEXT("action"), TEXT("subAction"));
     OutResult = MakeResult(
-        false, Action.IsEmpty() ? TEXT("cinematics") : Action,
+        false, ActionLabel(Params),
         TEXT("Existing sequence changes could not be saved; no new mutation "
              "was applied"),
         TEXT("ASSET_PREFLIGHT_SAVE_FAILED"));
@@ -100,14 +106,14 @@ void SetSectionRange(UMovieScene *MovieScene, UMovieSceneSection *Section,
 }
 
 bool ReadBindingGuid(const TSharedPtr<FJsonObject> &Params, FGuid &OutGuid) {
-  FString BindingId = GetString(Params, TEXT("bindingGuid"), TEXT("bindingId"));
+  FString BindingId = GetString(Params, TEXT("bindingGuid"), nullptr);
   return !BindingId.IsEmpty() && FGuid::Parse(BindingId, OutGuid);
 }
 
 AActor *ResolveActor(const TSharedPtr<FJsonObject> &Params) {
   FString ActorName = GetString(Params, TEXT("actorName"), TEXT("cameraName"));
   if (ActorName.IsEmpty()) {
-    ActorName = GetString(Params, TEXT("actorPath"), TEXT("cameraActorPath"));
+    ActorName = GetString(Params, TEXT("actorPath"), nullptr);
   }
   UObject *Object = ActorName.IsEmpty() ? nullptr : McpHandlerUtils::ResolveObjectFromPath(ActorName);
   return Cast<AActor>(Object);
@@ -254,9 +260,8 @@ bool MaybeSaveSequence(ULevelSequence *Sequence,
     RollbackError = ReloadError.ToString();
   }
 
-  const FString Action = GetString(Params, TEXT("action"), TEXT("subAction"));
   OutResult = MakeResult(
-      false, Action.IsEmpty() ? TEXT("cinematics") : Action,
+      false, ActionLabel(Params),
       bRolledBack
           ? TEXT("The sequence could not be saved; the in-memory mutation was "
                  "rolled back")

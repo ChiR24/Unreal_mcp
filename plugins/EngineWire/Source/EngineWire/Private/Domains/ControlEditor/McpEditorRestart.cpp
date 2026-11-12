@@ -64,10 +64,7 @@ bool UEngineWireSubsystem::HandleControlEditorRestart(
     return true;
   }
 
-  TArray<TSharedPtr<FJsonValue>> NameValues;
-  for (const FString &Name : DirtyNames) {
-    NameValues.Add(MakeShared<FJsonValueString>(Name));
-  }
+  TArray<TSharedPtr<FJsonValue>> NameValues = McpHandlerUtils::ToJsonStringArray(DirtyNames);
 
   double DelaySeconds = GetJsonNumberField(Payload, TEXT("delaySeconds"), 1.0);
   DelaySeconds = FMath::Clamp(DelaySeconds, 0.1, 30.0);

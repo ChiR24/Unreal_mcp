@@ -6,7 +6,7 @@ Cross-link, never duplicate: scope map in `../AGENTS.md`, registration in `../Co
 
 ## STRUCTURE
 
-Each domain is a folder `Domains/<Domain>/` holding one thin `*Dispatch.cpp` plus sibling behavior `.cpp` files split by responsibility (e.g. `ControlActor/McpActorSpawn.cpp`).
+Each domain is a folder `Domains/<Domain>/` holding its thin dispatcher `Mcp<Tag>Handlers.cpp` plus sibling behavior `.cpp` files split by responsibility (e.g. `ControlActor/McpActorSpawn.cpp`). Eight domains have no dispatcher; the domains that use them call in: AssetQuery from AssetWorkflow, Foliage and Landscape from Environment, MetaHuman from Character, Perception from Inspect, Play from ControlActor and ControlEditor, Property from Inspect, ControlActor, Blueprint and SCS, Scripts from SystemControl and the gateway.
 
 Grouped index (~N: source files, subfolders included, counted 2026-11-09; the rest are discoverable by folder name):
 
@@ -16,11 +16,11 @@ Grouped index (~N: source files, subfolders included, counted 2026-11-09; the re
 - VFX: `NiagaraAuthoring`, `NiagaraGraph`, `Effect`
 - Gameplay: `AI` (~37), `GAS`, `Character`, `Combat`, `Interaction`, `Inventory`, `BehaviorTree`, `GameFramework`, `Input`, `Networking`, `Sessions`, `MetaHuman`
 - `manage_ai`'s dispatcher (`AI/McpAIHandlers.cpp`) runs AI's own handlers, filed by topic under `AI/`, and sends the actions in `McpConsolidatedActions::BehaviorTree()` and `::Navigation()` to the `BehaviorTree` and `Navigation` domains. Two pairs overlap on purpose, both public with their own defaults and replies, so neither replaces the other. `AI/BehaviorTree` (create_behavior_tree, add_composite_node, add_task_node, add_decorator, add_service, configure_bt_node) edits the runtime tree. `BehaviorTree` (create, add_node, add_subnode, connect_nodes...) edits the graph and owns what both share: `EnsureBehaviorTreeGraph` gives runtime-tree edits their graph nodes, `FindBehaviorTreeGraphRoot`, and `MCP_HAS_BEHAVIOR_TREE_GRAPH`. In the other pair, `AI/Navigation`'s create_nav_modifier places a NavModifierVolume or gives a Blueprint a component, with an Obstacle default and short area names. `Navigation`'s create_nav_modifier_component gives a Blueprint or a placed actor a component, with failsafeExtent and save on request.
-- Editor/System: `ControlActor`, `ControlEditor` (`EditorUi/`: the editor's own Slate UI read as an outline with refs; it only reads), `ConsoleCommand`, `Debug` (`Explain/`, `Contracts/`, and `Logpoints/`: marked Blueprint nodes' pin values read from the script tracepoints while Play runs, never pausing it), `Inspect` (the inspect tool: its dispatcher `McpInspect.cpp`, its handlers and their shared header `McpInspectShared.h`, namespace `McpInspectHandlers`; `McpInspectRuntimeDescribe`: the world a runtime report reads and its actors described; `View/`: describe_view, the view ids and the capture API `McpCaptureView` that Perception and the frame budget also use; `MeshCheck/`: `McpMeshCheck`, a static or skeletal mesh's source triangles read part by part, each closed part's signed volume saying whether it is wound inside out, under `check_mesh` and the import and reimport warnings), `Log`, `Property`, `SystemControl` (`Plugins/`: get_plugin_info, create_plugin, remove_plugin, and list_game_features / set_game_feature_active through `IMcpGameFeaturesProvider`, which the EngineWireGameFeatures module registers), `Performance`, `Insights`, `Ui`, `Audio` (`analyze_acoustics`: `McpAcoustics::Estimate` reads a room through a trace callback, so its known answers run on analytic box rooms), `AudioAuthoring` (`measure_loudness` and `normalize_loudness`: EBU R128 integrated loudness from a wave's own samples, in `McpLoudness` with known answers from EBU Tech 3341), `Perception` (what a captured view shows; `audit_materials` reads the view's G-buffer in the Buffer Visualization view mode and puts the view mode back), `Play` (what drives a running game: `playtest` and `explore_level`, only in a Play session this server started, never one the user may be playing; `settle_physics`, a Simulate session of its own whose resting poses are kept through `RunLatentReply`), `Scripts` (`run_script`: each step is held to a direct execute's gateway validation and pre-queue gate for the caller's principal, consent aside, and dispatched in-process under a captured id; a step that answers later is awaited within the deadline by `McpScriptAwait`, the run going on inside `RunLatentReply` from its first form, every call and expectation an earlier pass reached taken from the runner's memo, under a restore point of its own that undoes only its request's steps; recipes in `McpRecipes`: a script kept under Saved/EngineWire/Recipes/, run through `HandleRunScript` itself, and listed by the gateway's search through `McpRecipesSearch`, which runs on the socket thread and so reads files and JSON only)
+- Editor/System: `ControlActor`, `ControlEditor` (`EditorUi/`: the editor's own Slate UI read as an outline with refs; it only reads), `ConsoleCommand`, `Debug` (`Explain/`, `Contracts/`, and `Logpoints/`: marked Blueprint nodes' pin values read from the script tracepoints while Play runs, never pausing it), `Inspect` (the inspect tool: its dispatcher `McpInspectHandlers.cpp`, its handlers and their shared header `McpInspectShared.h`, namespace `McpInspectHandlers`; `McpInspectRuntimeDescribe`: the world a runtime report reads and its actors described; `View/`: describe_view, the view ids and the capture API `McpCaptureView` that Perception and the frame budget also use; `MeshCheck/`: `McpMeshCheck`, a static or skeletal mesh's source triangles read part by part, each closed part's signed volume saying whether it is wound inside out, under `check_mesh` and the import and reimport warnings), `Log`, `Property`, `SystemControl` (`Plugins/`: get_plugin_info, create_plugin, remove_plugin, and list_game_features / set_game_feature_active through `IMcpGameFeaturesProvider`, which the EngineWireGameFeatures module registers), `Performance`, `Insights`, `Ui`, `Audio` (`analyze_acoustics`: `McpAcoustics::Estimate` reads a room through a trace callback, so its known answers run on analytic box rooms), `AudioAuthoring` (`measure_loudness` and `normalize_loudness`: EBU R128 integrated loudness from a wave's own samples, in `McpLoudness` with known answers from EBU Tech 3341), `Perception` (what a captured view shows; `audit_materials` reads the view's G-buffer in the Buffer Visualization view mode and puts the view mode back), `Play` (what drives a running game: `playtest` and `explore_level`, only in a Play session this server started, never one the user may be playing; `settle_physics`, a Simulate session of its own whose resting poses are kept through `RunLatentReply`), `Scripts` (`run_script`: each step is held to a direct execute's gateway validation and pre-queue gate for the caller's principal, consent aside, and dispatched in-process under a captured id; a step that answers later is awaited within the deadline by `McpScriptAwait`, the run going on inside `RunLatentReply` from its first form, every call and expectation an earlier pass reached taken from the runner's memo, under a restore point of its own that undoes only its request's steps; recipes in `McpRecipes`: a script kept under Saved/EngineWire/Recipes/, run through `HandleRunScript` itself, and listed by the gateway's search through `McpRecipesSearch`, which runs on the socket thread and so reads files and JSON only)
 
 ## DISPATCH CONTRACT
 
-Every domain exposes one entry point on `UEngineWireSubsystem`:
+Every domain with a dispatcher exposes one entry point on `UEngineWireSubsystem`:
 
 ```cpp
 bool UEngineWireSubsystem::Handle<Domain>Action(
@@ -32,7 +32,10 @@ bool UEngineWireSubsystem::Handle<Domain>Action(
 The dispatcher resolves the sub-action (`subAction` first, `action` only as the
 fallback — the same priority `McpHandlerUtils::NormalizeAction` and the pre-queue
 gate use) and routes to concrete `Handle<Domain>Xxx` methods in sibling `.cpp`
-files with an explicit compare chain. Every domain does it this way:
+files: by an explicit compare chain, or by a static table of action names and
+handlers (Animation, Level, Networking, Skeleton; AI's table is a `TMap`).
+AnimationAuthoring, Blueprint and WidgetAuthoring ask each group handler in
+turn, and a group declines an action that is not its own. A compare chain:
 
 ```cpp
 if (LowerSub == TEXT("spawn") || LowerSub == TEXT("spawn_actor"))
@@ -51,7 +54,7 @@ SCREAMING_SNAKE code (`INVALID_PAYLOAD`, `MISSING_PARAMETER`, `NOT_FOUND`).
 
 1. Pick or create the domain folder `Domains/<Domain>/`.
 2. Add a `Handle<Domain>Xxx(RequestId, Payload, Socket)` declaration to the domain support header and the body in a responsibility `.cpp`.
-3. Add the route to the compare chain in `<Domain>Dispatch.cpp`.
+3. Add the route to the domain's dispatcher `Mcp<Tag>Handlers.cpp` (its compare chain or route table).
 4. Make sure the parent tool reaches the domain: `../Core/Subsystem/...HandlerRegistration.cpp` maps each of the 23 parents (plus `console_command`) to a handler, with `FSubRoute` entries for sibling domains. See `../Core/AGENTS.md`.
 5. Add the capability record (TS side) and an integration case under `tests/mcp-tools/`.
 
@@ -83,5 +86,5 @@ Enforced by Vitest source-contract tests that read C++ text and fail CI (`tests/
 | `ANY_PACKAGE` | modern `nullptr` / project lookup |
 | `TargetGraph->RemoveNode` | `RemoveNiagaraGraphNodeSafely` |
 | `GenerateFullEnumName` | `GetIndexByValue` + `HasMetaData("Hidden")` |
-| `SendRawMessage` / `SendControlMessage` for automation events | `BroadcastAutomationEvent` / `SendAutomationResponse` |
+| Writing to the socket (`FMcpBridgeWebSocket::Send`) from a handler | `SendAutomationResponse` / `SendAutomationError`; `BroadcastAutomationEvent` for an event |
 | Leaf handler emits "Unknown <X> subAction" | return `false`; let the dispatcher own it |

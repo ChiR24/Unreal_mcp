@@ -72,3 +72,10 @@ inline TSharedPtr<FJsonObject> LinearColorToJson(const FLinearColor& Color)
     return Obj;
 }
 }
+
+// Value to the nearest 1 / Scale (Scale 10: tenths). Divided by Scale, not multiplied by 1 / Scale: 594 x 0.1 is
+// 59.400000000000006, 594 / 10 is 59.4.
+inline double McpRoundTo(double Value, double Scale)
+{
+    return FMath::RoundToDouble(Value * Scale) / Scale;
+}

@@ -7,12 +7,7 @@
 #include "CollisionShape.h"
 #include "Engine/World.h"
 #include "Foundation/BridgeHelpers/Responses/McpJsonFields.h"
-#include "Misc/EngineVersionComparison.h"
-#if ENGINE_MAJOR_VERSION > 5 || (ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 1)
-#include "Engine/HitResult.h" // 5.0 declares FHitResult in EngineTypes.h
-#else
-#include "Engine/EngineTypes.h"
-#endif
+#include MCP_HIT_RESULT_HEADER
 
 namespace McpAudioHandlers
 {
@@ -22,11 +17,6 @@ constexpr double AcousticsOpenSky = 0.5;          // from this share of open ray
 constexpr TCHAR AcousticsEffectName[] = TEXT("RE_Room");
 constexpr TCHAR AcousticsEffectPath[] = TEXT("/Game/Audio/Effects/RE_Room"); // create_reverb_effect's default folder
 
-double AcousticsRound(double Value, double Scale)
-{
-    return FMath::RoundToDouble(Value * Scale) / Scale;
-}
-
 TSharedPtr<FJsonObject> AcousticsPoint(const FVector& Point)
 {
     return McpHandlerUtils::VectorToJson(FVector(FMath::RoundToDouble(Point.X), FMath::RoundToDouble(Point.Y), FMath::RoundToDouble(Point.Z)));
@@ -34,12 +24,7 @@ TSharedPtr<FJsonObject> AcousticsPoint(const FVector& Point)
 
 TSharedPtr<FJsonObject> AcousticsCall(const TCHAR* Action, const TSharedPtr<FJsonObject>& Params)
 {
-    TSharedPtr<FJsonObject> Call = MakeShared<FJsonObject>();
-    Call->SetStringField(TEXT("operation"), TEXT("execute"));
-    Call->SetStringField(TEXT("tool"), TEXT("manage_audio"));
-    Call->SetStringField(TEXT("action"), Action);
-    Call->SetObjectField(TEXT("params"), Params);
-    return Call;
+    return McpHandlerUtils::MakeExecuteCall(TEXT("manage_audio"), Action, Params);
 }
 
 // The Reverb Effect with the room's decay (the engine holds 0.1-20 s), and the reverb zone over the room's box.
@@ -47,7 +32,7 @@ void AcousticsSuggest(const McpAcoustics::FRoom& Room, double Rt60, TSharedPtr<F
 {
     TSharedPtr<FJsonObject> Effect = MakeShared<FJsonObject>();
     Effect->SetStringField(TEXT("name"), AcousticsEffectName);
-    Effect->SetNumberField(TEXT("decayTime"), AcousticsRound(FMath::Clamp(Rt60, 0.1, 20.0), 100.0));
+    Effect->SetNumberField(TEXT("decayTime"), McpRoundTo(FMath::Clamp(Rt60, 0.1, 20.0), 100.0));
     Resp->SetObjectField(TEXT("nextCall"), AcousticsCall(TEXT("create_reverb_effect"), Effect));
     TSharedPtr<FJsonObject> Zone = MakeShared<FJsonObject>();
     Zone->SetStringField(TEXT("name"), TEXT("RoomReverb"));
@@ -142,27 +127,27 @@ bool HandleAcousticsActions(UEngineWireSubsystem* Self, const FString& RequestId
 
     TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
     Resp->SetObjectField(TEXT("listener"), AcousticsPoint(Point));
-    Resp->SetNumberField(TEXT("openShare"), AcousticsRound(Room.OpenShare, 100.0));
+    Resp->SetNumberField(TEXT("openShare"), McpRoundTo(Room.OpenShare, 100.0));
     if (Room.OpenShare < 1.0)
     {
-        Resp->SetNumberField(TEXT("volumeM3"), AcousticsRound(Room.VolumeM3, 10.0));
-        Resp->SetNumberField(TEXT("surfaceM2"), AcousticsRound(Room.SurfaceM2, 10.0));
-        Resp->SetNumberField(TEXT("meanFreePathM"), AcousticsRound(Room.MeanFreePathM, 100.0));
-        Resp->SetNumberField(TEXT("firstReflectionMs"), AcousticsRound(Room.FirstReflectionMs, 10.0));
-        Resp->SetNumberField(TEXT("lengthM"), AcousticsRound(Room.LengthM, 100.0));
-        Resp->SetNumberField(TEXT("widthM"), AcousticsRound(Room.WidthM, 100.0));
-        Resp->SetNumberField(TEXT("heightM"), AcousticsRound(Room.HeightM, 100.0));
-        Resp->SetNumberField(TEXT("proportion"), AcousticsRound(Room.Proportion, 10.0));
+        Resp->SetNumberField(TEXT("volumeM3"), McpRoundTo(Room.VolumeM3, 10.0));
+        Resp->SetNumberField(TEXT("surfaceM2"), McpRoundTo(Room.SurfaceM2, 10.0));
+        Resp->SetNumberField(TEXT("meanFreePathM"), McpRoundTo(Room.MeanFreePathM, 100.0));
+        Resp->SetNumberField(TEXT("firstReflectionMs"), McpRoundTo(Room.FirstReflectionMs, 10.0));
+        Resp->SetNumberField(TEXT("lengthM"), McpRoundTo(Room.LengthM, 100.0));
+        Resp->SetNumberField(TEXT("widthM"), McpRoundTo(Room.WidthM, 100.0));
+        Resp->SetNumberField(TEXT("heightM"), McpRoundTo(Room.HeightM, 100.0));
+        Resp->SetNumberField(TEXT("proportion"), McpRoundTo(Room.Proportion, 10.0));
         Resp->SetObjectField(TEXT("roomCenter"), AcousticsPoint(Room.Bounds.GetCenter()));
         Resp->SetObjectField(TEXT("roomSize"), AcousticsPoint(Room.Bounds.GetSize()));
     }
     if (Room.DecaySeconds.IsSet())
     {
-        Resp->SetNumberField(TEXT("rt60"), AcousticsRound(Room.DecaySeconds.GetValue(), 100.0));
+        Resp->SetNumberField(TEXT("rt60"), McpRoundTo(Room.DecaySeconds.GetValue(), 100.0));
     }
     if (Room.EyringSeconds.IsSet())
     {
-        Resp->SetNumberField(TEXT("eyringRt60"), AcousticsRound(Room.EyringSeconds.GetValue(), 100.0));
+        Resp->SetNumberField(TEXT("eyringRt60"), McpRoundTo(Room.EyringSeconds.GetValue(), 100.0));
     }
     if (Room.OpenShare < AcousticsOpenSky && Room.DecaySeconds.IsSet())
     {

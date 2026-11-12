@@ -144,7 +144,7 @@ bool HandleInspectViewContentsAction(
     }
     const int32 Limit = FMath::Clamp(GetJsonIntField(Payload, TEXT("limit"), 20), 1, 100);
     const FVector Camera = Client->GetViewLocation();
-    const auto Percent = [Samples](int64 Count) { return McpViewRound(100.0 * Count / Samples, 100.0); };
+    const auto Percent = [Samples](int64 Count) { return McpRoundTo(100.0 * Count / Samples, 100.0); };
     TArray<TSharedPtr<FJsonValue>> Listed;
     TArray<FIntRect> ListedBoxes;
     for (const FMcpViewActor &Row : Rows)
@@ -162,12 +162,12 @@ bool HandleInspectViewContentsAction(
         Item->SetStringField(TEXT("class"), Row.Actor->GetClass()->GetName());
         Item->SetNumberField(TEXT("coverage"), Percent(Row.Pixels));
         TArray<TSharedPtr<FJsonValue>> Box;
-        Box.Add(MakeShared<FJsonValueNumber>(McpViewRound(100.0 * Row.MinX / Size.X, 10.0)));
-        Box.Add(MakeShared<FJsonValueNumber>(McpViewRound(100.0 * Row.MinY / Size.Y, 10.0)));
-        Box.Add(MakeShared<FJsonValueNumber>(McpViewRound(100.0 * FMath::Min(Row.MaxX + McpViewStride, Size.X) / Size.X, 10.0)));
-        Box.Add(MakeShared<FJsonValueNumber>(McpViewRound(100.0 * FMath::Min(Row.MaxY + McpViewStride, Size.Y) / Size.Y, 10.0)));
+        Box.Add(MakeShared<FJsonValueNumber>(McpRoundTo(100.0 * Row.MinX / Size.X, 10.0)));
+        Box.Add(MakeShared<FJsonValueNumber>(McpRoundTo(100.0 * Row.MinY / Size.Y, 10.0)));
+        Box.Add(MakeShared<FJsonValueNumber>(McpRoundTo(100.0 * FMath::Min(Row.MaxX + McpViewStride, Size.X) / Size.X, 10.0)));
+        Box.Add(MakeShared<FJsonValueNumber>(McpRoundTo(100.0 * FMath::Min(Row.MaxY + McpViewStride, Size.Y) / Size.Y, 10.0)));
         Item->SetArrayField(TEXT("box"), Box);
-        Item->SetNumberField(TEXT("brightness"), McpViewRound(Row.Luma / Row.Pixels, 100.0));
+        Item->SetNumberField(TEXT("brightness"), McpRoundTo(Row.Luma / Row.Pixels, 100.0));
         const FBox Bounds = Row.Actor->GetComponentsBoundingBox(true);
         const double Distance = Bounds.IsValid ? FMath::Sqrt(Bounds.ComputeSquaredDistanceToPoint(Camera))
                                                : FVector::Dist(Row.Actor->GetActorLocation(), Camera);
@@ -197,7 +197,7 @@ bool HandleInspectViewContentsAction(
             Below += Histogram[Bin];
             if (Below >= Fraction * Samples)
             {
-                return McpViewRound(Bin / 255.0, 100.0);
+                return McpRoundTo(Bin / 255.0, 100.0);
             }
         }
         return 1.0;

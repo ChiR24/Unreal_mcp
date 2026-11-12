@@ -143,17 +143,12 @@ void ApplyAudioComponentOptions(UAudioComponent* AudioComp, const TSharedPtr<FJs
     AudioComp->SetPitchMultiplier(static_cast<float>(Pitch));
 }
 
-FString AudioObjectPath(const FString& Path)
-{
-  return Path.Contains(TEXT(".")) ? Path : Path + TEXT(".") + FPackageName::GetShortName(Path);
-}
-
 bool LoadOptionalAudioSettings(const TSharedPtr<FJsonObject>& Payload, USoundAttenuation*& OutAttenuation, USoundConcurrency*& OutConcurrency, FString& OutError)
 {
   const FString AttenPath = GetJsonStringField(Payload, TEXT("attenuationPath"));
   const FString ConcPath = GetJsonStringField(Payload, TEXT("concurrencyPath"));
-  OutAttenuation = AttenPath.IsEmpty() ? nullptr : LoadObject<USoundAttenuation>(nullptr, *AudioObjectPath(AttenPath), nullptr, LOAD_NoWarn);
-  OutConcurrency = ConcPath.IsEmpty() ? nullptr : LoadObject<USoundConcurrency>(nullptr, *AudioObjectPath(ConcPath), nullptr, LOAD_NoWarn);
+  OutAttenuation = AttenPath.IsEmpty() ? nullptr : LoadObject<USoundAttenuation>(nullptr, *McpToObjectPath(AttenPath), nullptr, LOAD_NoWarn);
+  OutConcurrency = ConcPath.IsEmpty() ? nullptr : LoadObject<USoundConcurrency>(nullptr, *McpToObjectPath(ConcPath), nullptr, LOAD_NoWarn);
   if (!AttenPath.IsEmpty() && !OutAttenuation)
   {
     OutError = FString::Printf(TEXT("SoundAttenuation not found: %s"), *AttenPath);

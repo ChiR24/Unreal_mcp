@@ -9,6 +9,7 @@
 #include "Domains/Blueprint/Components/McpBPScsPropBag.h"
 #include "Domains/Blueprint/Components/McpBPScsTransform.h"
 #include "Domains/Property/McpPropCdoComponents.h"
+#include "Foundation/HandlerUtils/McpHandlerUtilsJson.h"
 
 #include "Components/ActorComponent.h"
 #include "Components/SceneComponent.h"
@@ -64,8 +65,7 @@ bool bAssetsApplied = false;
 Rejected.Append(ApplyScsTemplateAssets(Template, Op, bAssetsApplied));
 bAnySuccess = bAssetsApplied || bAnySuccess;
 if (Rejected.Num() > 0) {
-  TArray<TSharedPtr<FJsonValue>> Values;
-  for (const FString &Entry : Rejected) Values.Add(MakeShared<FJsonValueString>(Entry));
+  TArray<TSharedPtr<FJsonValue>> Values = McpHandlerUtils::ToJsonStringArray(Rejected);
   OpSummary->SetArrayField(TEXT("rejectedProperties"), Values);
 }
 const FString HiddenHint = bAssetsApplied ? McpScsHiddenHint(Template, ComponentName) : FString();

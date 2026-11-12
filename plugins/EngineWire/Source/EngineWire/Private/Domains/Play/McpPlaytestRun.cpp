@@ -133,11 +133,7 @@ TSharedPtr<FJsonObject> Judge(FRun& Run, const FString& Ended, FString& OutVerdi
     Result->SetStringField(TEXT("verdict"), OutVerdict);
     Result->SetStringField(TEXT("ended"), Ended);
     Result->SetArrayField(TEXT("checks"), CheckRows);
-    TArray<TSharedPtr<FJsonValue>> ErrorRows;
-    for (const FString& Error : Errors)
-    {
-        ErrorRows.Add(MakeShared<FJsonValueString>(Error));
-    }
+    TArray<TSharedPtr<FJsonValue>> ErrorRows = McpHandlerUtils::ToJsonStringArray(Errors);
     Result->SetArrayField(TEXT("scriptErrors"), ErrorRows);
     Result->SetArrayField(TEXT("timeline"), Run.Timeline);
     Result->SetArrayField(TEXT("last"), Point(Run.Last));

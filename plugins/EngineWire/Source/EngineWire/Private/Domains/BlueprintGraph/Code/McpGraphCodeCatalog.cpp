@@ -23,13 +23,6 @@ bool IsStale(FBlueprintActionInfo& Info)
     return Owner && (Owner->HasAnyClassFlags(CLASS_NewerVersionExists) || Owner->GetOutermost() == GetTransientPackage());
 }
 
-// A title without spaces and underscores, lower case: a node's own title can differ from its menu entry's in those only
-// (the node reads SetInputMode_GameOnly where the menu shows Set Input Mode Game Only).
-FString TitleKey(const FString& Title)
-{
-    return Title.Replace(TEXT(" "), TEXT("")).Replace(TEXT("_"), TEXT("")).ToLower();
-}
-
 // A title key in Titles, or with bPrefix one that starts with a title there.
 bool Wanted(const FString& Title, const TSet<FString>& Titles, bool bPrefix)
 {
@@ -48,10 +41,12 @@ bool Wanted(const FString& Title, const TSet<FString>& Titles, bool bPrefix)
 }
 } // namespace CatalogParts
 
+// Titles are compared as McpPlainKey keys: a node's own title can differ from its menu entry's in spaces,
+// underscores and case only (the node reads SetInputMode_GameOnly where the menu shows Set Input Mode Game Only).
 FString MenuTitleKey(const FString& MenuId)
 {
     int32 Bar = INDEX_NONE;
-    return CatalogParts::TitleKey(MenuId.FindLastChar(TEXT('|'), Bar) ? MenuId.Mid(Bar + 1) : MenuId);
+    return McpPlainKey(MenuId.FindLastChar(TEXT('|'), Bar) ? MenuId.Mid(Bar + 1) : MenuId);
 }
 
 TArray<FMenuEntry> MenuCandidates(const TSet<FString>& Titles, bool bPrefix)
@@ -70,7 +65,7 @@ TArray<FMenuEntry> MenuCandidates(const TSet<FString>& Titles, bool bPrefix)
             {
                 continue;
             }
-            const FString Title = CatalogParts::TitleKey(Spawner->PrimeDefaultUiSpec().MenuName.BuildSourceString());
+            const FString Title = McpPlainKey(Spawner->PrimeDefaultUiSpec().MenuName.BuildSourceString());
             if (Title.IsEmpty() || CatalogParts::Wanted(Title, Titles, bPrefix))
             {
                 Candidates.Add(FMenuEntry{Owner, Spawner, FString()});
@@ -95,7 +90,7 @@ TArray<FMenuEntry> MenuEntries(UBlueprint* Blueprint, UEdGraph* Graph, const TAr
         }
         const FBlueprintActionUiSpec Spec = Candidate.Spawner->GetUiSpec(Filter.Context, Info.GetBindings());
         const FString Title = Spec.MenuName.BuildSourceString().Replace(TEXT(" "), TEXT(""));
-        if (CatalogParts::Wanted(CatalogParts::TitleKey(Title), Titles, bPrefix))
+        if (CatalogParts::Wanted(McpPlainKey(Title), Titles, bPrefix))
         {
             const FString Own = MemberCategory(Info.GetAssociatedFunction(), Info.GetAssociatedProperty());
             Entries.Add(FMenuEntry{Candidate.Owner, Candidate.Spawner, InvariantCategory(Spec.Category, Own).Replace(TEXT(" "), TEXT("")) + TEXT("|") + Title});

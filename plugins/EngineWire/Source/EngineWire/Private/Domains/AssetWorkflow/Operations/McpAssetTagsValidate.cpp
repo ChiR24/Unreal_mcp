@@ -11,13 +11,6 @@
 bool UEngineWireSubsystem::HandleSetTags(
     const FString &RequestId, const TSharedPtr<FJsonObject> &Payload,
     TSharedPtr<FMcpBridgeWebSocket> Socket) {
-  if (!Payload.IsValid()) {
-    SendAutomationResponse(Socket, RequestId, false,
-                           TEXT("set_tags payload missing"), nullptr,
-                           TEXT("INVALID_PAYLOAD"));
-    return true;
-  }
-
   FString SafeAssetPath;
   if (!McpReadAssetPathOrReply(this, Socket, RequestId, Payload, SafeAssetPath, /*bMustExist=*/false))
     return true;
@@ -82,13 +75,6 @@ bool UEngineWireSubsystem::HandleSetTags(
 bool UEngineWireSubsystem::HandleValidateAsset(
     const FString &RequestId, const TSharedPtr<FJsonObject> &Payload,
     TSharedPtr<FMcpBridgeWebSocket> Socket) {
-  if (!Payload.IsValid()) {
-    SendAutomationResponse(Socket, RequestId, false,
-                           TEXT("validate payload missing"), nullptr,
-                           TEXT("INVALID_PAYLOAD"));
-    return true;
-  }
-
   FString SafeAssetPath;
   if (!McpReadAssetPathOrReply(this, Socket, RequestId, Payload, SafeAssetPath))
     return true;

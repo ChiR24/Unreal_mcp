@@ -193,11 +193,7 @@ TSharedPtr<FJsonObject> HandleCreateTextTexture(const TSharedPtr<FJsonObject>& P
     }
     const bool bSaved = SaveTextureAsset(NewTexture);
 
-    TArray<TSharedPtr<FJsonValue>> FaceValues;
-    for (const FString& Face : Faces)
-    {
-        FaceValues.Add(MakeShared<FJsonValueString>(Face));
-    }
+    TArray<TSharedPtr<FJsonValue>> FaceValues = McpHandlerUtils::ToJsonStringArray(Faces);
     const TSharedPtr<FJsonObject> Ink2D = MakeShared<FJsonObject>();
     Ink2D->SetNumberField(TEXT("x"), InkMin.X);
     Ink2D->SetNumberField(TEXT("y"), InkMin.Y);

@@ -17,7 +17,7 @@ import { describe, expect, it } from 'vitest';
 // Left open, `inspect.set_property` (write / consent none) could turn the
 // plugin's own token requirement off and persist it through PostEditChange(), and
 // `inspect.get_property` (read / consent none) could export the Admin token. The
-// predicate lives in Safety/McpSafeReflectionTarget.h; these assertions prove
+// predicate lives in Foundation/BridgeHelpers/Security/McpSafeReflectionTarget.h; these assertions prove
 // every entry point CALLS it, because a passing predicate nobody invokes is not a
 // control.
 
@@ -29,7 +29,7 @@ const PRIVATE_ROOT = resolve(
 const privateSource = (...parts: string[]): string =>
   readFileSync(resolve(PRIVATE_ROOT, ...parts), 'utf8');
 
-const guard = (): string => privateSource('Safety', 'McpSafeReflectionTarget.h');
+const guard = (): string => privateSource('Foundation', 'BridgeHelpers', 'Security', 'McpSafeReflectionTarget.h');
 const objectGet = (): string =>
   privateSource('Domains', 'Property', 'McpPropObjectGet.cpp');
 const objectSet = (): string =>
@@ -177,7 +177,7 @@ describe('the reflection surface refuses /Script targets', () => {
       const source = privateSource('Domains', 'Property', file);
       if (!source.includes('McpSafeReflectionTarget::')) continue;
       expect(source, `${file} uses the guard without including it`).toContain(
-        '#include "Safety/McpSafeReflectionTarget.h"'
+        '#include "Foundation/BridgeHelpers/Security/McpSafeReflectionTarget.h"'
       );
     }
   });

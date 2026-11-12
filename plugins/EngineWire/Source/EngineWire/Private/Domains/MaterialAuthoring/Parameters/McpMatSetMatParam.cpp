@@ -5,7 +5,6 @@ namespace McpMaterialAuthoringHandlers
 {
 void ApplyMaterialParameterList(UEngineWireSubsystem* Bridge, const FString& RequestId, const FString& AssetPath, const TArray<TSharedPtr<FJsonValue>>& Entries, const TSharedPtr<FJsonObject>& Shared, TSharedPtr<FMcpBridgeWebSocket> Socket, TArray<TSharedPtr<FJsonValue>>& OutResults, TArray<FString>& OutFailed, FString* OutChangedAssetPath)
 {
-  FMcpResponseCaptureRegistry& Capture = FMcpResponseCaptureRegistry::Get();
   for (int32 Index = 0; Index < Entries.Num(); ++Index) {
     TSharedPtr<FJsonObject> One = MakeShared<FJsonObject>();
     const TSharedPtr<FJsonObject>* EntryObj = nullptr;
@@ -21,9 +20,9 @@ void ApplyMaterialParameterList(UEngineWireSubsystem* Bridge, const FString& Req
     }
     const FString Name = GetJsonStringField(One, TEXT("parameterName"));
     const FString ItemId = FString::Printf(TEXT("%s#param%d"), *RequestId, Index);
-    Capture.Begin(ItemId);
-    HandleSetMaterialParameter(Bridge, ItemId, TEXT("set_material_parameter"), One, Socket);
-    const FMcpCapturedResponse Reply = Capture.End(ItemId);
+    const FMcpCapturedResponse Reply = McpCaptureResponse(ItemId, [&] {
+      HandleSetMaterialParameter(Bridge, ItemId, TEXT("set_material_parameter"), One, Socket);
+    });
     if (Reply.bSuccess) {
       // The setter names the asset it wrote (the package path) the way a single parameter's reply does, so the
       // caller's reply can name it too and the receipt lists it.
@@ -61,9 +60,9 @@ static bool SetMaterialParameterBatch(UEngineWireSubsystem* Bridge, const FStrin
       }
     }
     const FString StepId = FString::Printf(TEXT("%s#asset%d"), *RequestId, Index);
-    FMcpResponseCaptureRegistry::Get().Begin(StepId);
-    HandleSetMaterialParameter(Bridge, StepId, TEXT("set_material_parameter"), Item, Socket);
-    const FMcpCapturedResponse Reply = FMcpResponseCaptureRegistry::Get().End(StepId);
+    const FMcpCapturedResponse Reply = McpCaptureResponse(StepId, [&] {
+      HandleSetMaterialParameter(Bridge, StepId, TEXT("set_material_parameter"), Item, Socket);
+    });
     TSharedPtr<FJsonObject> Row = Reply.Result.IsValid() ? Reply.Result : McpHandlerUtils::CreateResultObject();
     const FString AssetPath = GetJsonStringField(Item, TEXT("assetPath"));
     Row->SetStringField(TEXT("assetPath"), AssetPath);

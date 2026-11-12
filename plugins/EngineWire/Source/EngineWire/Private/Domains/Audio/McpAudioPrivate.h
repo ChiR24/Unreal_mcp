@@ -47,8 +47,6 @@ UAudioComponent* CreateAudioComponentAtEditorLocation(
     const FVector& Location,
     const FRotator& Rotation,
     const FString& ActorName);
-// "/Game/A/B" names the asset B inside package /Game/A/B; an object path passes through.
-FString AudioObjectPath(const FString& Path);
 // componentName (a rename when free), volume and pitch, each only when sent.
 void ApplyAudioComponentOptions(UAudioComponent* AudioComp, const TSharedPtr<FJsonObject>& Payload);
 // attenuationPath and concurrencyPath, each optional; false with OutError when one is sent and does not load.
@@ -71,7 +69,7 @@ UWorld* McpAudioEditorWorldOrReply(UEngineWireSubsystem* Self, TSharedPtr<FMcpBr
 inline UWorld* McpAudibleWorld()
 {
     UWorld* PlayWorld = GEditor ? GEditor->PlayWorld.Get() : nullptr;
-    return PlayWorld ? PlayWorld : GEditor ? GEditor->GetEditorWorldContext().World() : nullptr;
+    return PlayWorld ? PlayWorld : McpHandlerUtils::GetEditorWorld();
 }
 
 using FAudioActionHandler = bool (*)(

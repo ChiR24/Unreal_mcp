@@ -71,7 +71,7 @@ bool HandleGASEffectsMagnitude(const FGASRequestContext& Context, const FString&
         // An effect that already existed is left as it was, so the policy asked for is not what it has.
         if (!bReusedExisting)
         {
-            Result->SetStringField(TEXT("durationType"), GASEnumName(Policy));
+            Result->SetStringField(TEXT("durationType"), McpEnumName(Policy));
         }
         Bridge->SendAutomationResponse(RequestingSocket, RequestId, true,
             bReusedExisting ? TEXT("Effect already exists and was left as it is; set_effect_duration changes its duration.")
@@ -110,7 +110,7 @@ bool HandleGASEffectsMagnitude(const FGASRequestContext& Context, const FString&
                 TEXT("INVALID_ARGUMENT"));
             return true;
         }
-        const FString ExpectedPolicy = GASEnumName(ExpectedPolicyValue);
+        const FString ExpectedPolicy = McpEnumName(ExpectedPolicyValue);
 
         EffectCDO->DurationPolicy = ExpectedPolicyValue;
         if (ExpectedPolicyValue == EGameplayEffectDurationType::HasDuration)
@@ -144,7 +144,7 @@ bool HandleGASEffectsMagnitude(const FGASRequestContext& Context, const FString&
         {
             if (UGameplayEffect* CompiledCDO = Cast<UGameplayEffect>(CompiledClass->GetDefaultObject()))
             {
-                VerifiedPolicy = GASEnumName(CompiledCDO->DurationPolicy);
+                VerifiedPolicy = McpEnumName(CompiledCDO->DurationPolicy);
                 VerifiedPeriod = CompiledCDO->Period.GetValueAtLevel(0.0f);
                 bDurationReadable = CompiledCDO->DurationMagnitude.GetStaticMagnitudeIfPossible(0.0f, VerifiedDuration);
             }

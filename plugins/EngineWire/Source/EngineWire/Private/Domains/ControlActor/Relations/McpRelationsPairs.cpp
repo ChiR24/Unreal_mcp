@@ -14,10 +14,8 @@
 #include "Engine/EngineTypes.h"
 #include "Engine/World.h"
 #include "GameFramework/Actor.h"
-#include "Misc/EngineVersionComparison.h"
-#if ENGINE_MAJOR_VERSION > 5 || (ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 1)
-#include "Engine/HitResult.h" // 5.0 declares FHitResult in EngineTypes.h
-#endif
+#include "Core/Compatibility/McpVersionCompatibility.h"
+#include MCP_HIT_RESULT_HEADER
 
 namespace McpRelations
 {
@@ -134,11 +132,6 @@ int32 FindSupport(UWorld* World, const TArray<FItem>& Items, const TMap<const AA
     return Best;
 }
 
-double Volume(const FBox& Box)
-{
-    const FVector Size = Box.GetSize();
-    return Size.X * Size.Y * Size.Z;
-}
 } // namespace
 
 // Side by side on the footprints turned with the actors: a chair turned toward a table it touches has a bounds' box
@@ -215,8 +208,8 @@ void FindPairRelations(UWorld* World, const TArray<FItem>& Items, const TSet<FSt
             {
                 continue;
             }
-            if (Wants(TEXT("inside")) && Other.Box.ExpandBy(1.0).IsInside(Item.Box) && Volume(Other.Box) > 2.0 * Volume(Item.Box) &&
-                (Container == INDEX_NONE || Volume(Other.Box) < Volume(Items[Container].Box)))
+            if (Wants(TEXT("inside")) && Other.Box.ExpandBy(1.0).IsInside(Item.Box) && Other.Box.GetVolume() > 2.0 * Item.Box.GetVolume() &&
+                (Container == INDEX_NONE || Other.Box.GetVolume() < Items[Container].Box.GetVolume()))
             {
                 Container = B;
             }

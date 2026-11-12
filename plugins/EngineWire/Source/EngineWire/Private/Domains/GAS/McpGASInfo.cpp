@@ -73,10 +73,10 @@ bool HandleGASInfo(const FGASRequestContext& Context, const FString& SubAction)
                             // raw numbers made every get_gas_info fail OUTPUT_SCHEMA_VIOLATION.
                             Result->SetStringField(TEXT("instancingPolicy"),
                                 GetAbilityPropertyValue(AbilityCDO, FName(TEXT("InstancingPolicy")), InstPolicy)
-                                    ? GASEnumName(InstPolicy.GetValue()) : FString(TEXT("Unknown")));
+                                    ? McpEnumName(InstPolicy.GetValue()) : FString(TEXT("Unknown")));
                             Result->SetStringField(TEXT("netExecutionPolicy"),
                                 GetAbilityPropertyValue(AbilityCDO, FName(TEXT("NetExecutionPolicy")), NetPolicy)
-                                    ? GASEnumName(NetPolicy.GetValue()) : FString(TEXT("Unknown")));
+                                    ? McpEnumName(NetPolicy.GetValue()) : FString(TEXT("Unknown")));
                         }
                     }
                     else if (ParentClass->IsChildOf(UGameplayEffect::StaticClass()))
@@ -87,10 +87,10 @@ bool HandleGASInfo(const FGASRequestContext& Context, const FString& SubAction)
                             Blueprint->GeneratedClass->GetDefaultObject());
                         if (EffectCDO)
                         {
-                            Result->SetStringField(TEXT("durationPolicy"), GASEnumName(EffectCDO->DurationPolicy));
+                            Result->SetStringField(TEXT("durationPolicy"), McpEnumName(EffectCDO->DurationPolicy));
                             // StackingType is deprecated on 5.7+ and GetStackingType() is not exported.
                             PRAGMA_DISABLE_DEPRECATION_WARNINGS
-                            Result->SetStringField(TEXT("stackingType"), GASEnumName(EffectCDO->StackingType));
+                            Result->SetStringField(TEXT("stackingType"), McpEnumName(EffectCDO->StackingType));
                             PRAGMA_ENABLE_DEPRECATION_WARNINGS
                             Result->SetNumberField(TEXT("modifierCount"), EffectCDO->Modifiers.Num());
                             Result->SetNumberField(TEXT("cueCount"), EffectCDO->GameplayCues.Num());

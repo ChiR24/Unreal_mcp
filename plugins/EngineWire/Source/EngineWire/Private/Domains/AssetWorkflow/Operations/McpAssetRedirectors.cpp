@@ -19,12 +19,6 @@ bool UEngineWireSubsystem::HandleFixupRedirectors(
   }
 
   // Implementation of redirector fixup functionality
-  if (!Payload.IsValid()) {
-    SendAutomationError(RequestingSocket, RequestId,
-                        TEXT("fixup_redirectors payload missing"),
-                        TEXT("INVALID_PAYLOAD"));
-    return true;
-  }
 
   // Get directory path - REQUIRED for proper error reporting
   FString DirectoryPath;

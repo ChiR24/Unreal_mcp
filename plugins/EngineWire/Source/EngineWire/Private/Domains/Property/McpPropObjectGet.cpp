@@ -9,7 +9,7 @@
 #include "EngineWireSubsystem.h"
 #include "Foundation/HandlerUtils/McpHandlerUtils.h"
 #include "Foundation/Reflection/McpPropertyReflection.h"
-#include "Safety/McpSafeReflectionTarget.h"
+#include "Foundation/BridgeHelpers/Security/McpSafeReflectionTarget.h"
 #include "Core/Requests/McpResponseCaptureRegistry.h"
 
 #include "GameFramework/Actor.h"
@@ -49,9 +49,9 @@ bool UEngineWireSubsystem::HandleGetObjectProperty(
       for (const TCHAR *Field : {TEXT("objectPaths"), TEXT("actorName"), TEXT("name"), TEXT("blueprintPath")}) One->RemoveField(Field);
       One->SetStringField(TEXT("objectPath"), Path);
       const FString ItemId = FString::Printf(TEXT("%s#target%d"), *RequestId, Targets.Num());
-      FMcpResponseCaptureRegistry::Get().Begin(ItemId);
-      HandleGetObjectProperty(ItemId, Action, One, RequestingSocket);
-      const FMcpCapturedResponse Reply = FMcpResponseCaptureRegistry::Get().End(ItemId);
+      const FMcpCapturedResponse Reply = McpCaptureResponse(ItemId, [&] {
+        HandleGetObjectProperty(ItemId, Action, One, RequestingSocket);
+      });
       // propertyName rides along: the receipt redactor judges a value by that sibling name.
       for (const TCHAR *Field : {TEXT("propertyName"), TEXT("value"), TEXT("properties"), TEXT("missingProperties")}) {
         const TSharedPtr<FJsonValue> Value = Reply.Result.IsValid() ? Reply.Result->TryGetField(Field) : nullptr;
@@ -82,9 +82,9 @@ bool UEngineWireSubsystem::HandleGetObjectProperty(
       One->RemoveField(TEXT("propertyPath"));
       One->SetStringField(TEXT("propertyName"), Wanted);
       const FString ItemId = FString::Printf(TEXT("%s#read%d"), *RequestId, Rows.Num() + Missing.Num());
-      FMcpResponseCaptureRegistry::Get().Begin(ItemId);
-      HandleGetObjectProperty(ItemId, Action, One, RequestingSocket);
-      const FMcpCapturedResponse Reply = FMcpResponseCaptureRegistry::Get().End(ItemId);
+      const FMcpCapturedResponse Reply = McpCaptureResponse(ItemId, [&] {
+        HandleGetObjectProperty(ItemId, Action, One, RequestingSocket);
+      });
       const TSharedPtr<FJsonValue> Value = Reply.Result.IsValid() ? Reply.Result->TryGetField(TEXT("value")) : nullptr;
       FString Resolved;
       if (!Reply.bSuccess || !Value.IsValid() || !Reply.Result->TryGetStringField(TEXT("propertyName"), Resolved)) {

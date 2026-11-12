@@ -1,6 +1,7 @@
 // Copyright (c) 2024 EngineWire Contributors
 
 #include "Domains/AssetWorkflow/Rename/McpAssetRenameGuard.h"
+#include "Foundation/HandlerUtils/McpHandlerUtilsActionsPaths.h"
 
 #include "AssetRegistry/AssetRegistryModule.h"
 #include "AssetToolsModule.h"
@@ -205,7 +206,7 @@ bool RenameWithSettingsFollow(const TArray<FAssetRenameData>& RenameData, const 
                 return false;
             }
             Follow.ByPackage.Add(Asset->GetOutermost()->GetFName(),
-                                 FMcpRenameTarget{Asset->GetName(), Data.NewPackagePath / Data.NewName + TEXT(".") + Data.NewName});
+                                 FMcpRenameTarget{Asset->GetName(), McpToObjectPath(Data.NewPackagePath / Data.NewName)});
         }
     }
     // The same set AssetRenameManager's FindCDOReferences checks: native class defaults only.

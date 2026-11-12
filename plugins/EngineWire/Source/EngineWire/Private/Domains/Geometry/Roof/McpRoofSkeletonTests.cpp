@@ -122,7 +122,7 @@ bool FMcpRoofSkeletonTest::RunTest(const FString& Parameters)
         TArray<FVector2D> Star;
         for (int32 K = 0; K < Corners; ++K)
         {
-            const double Angle = 2.0 * 3.14159265358979323846 * K / Corners, Radius = 300.0 + Random.FRand() * 700.0;
+            const double Angle = 2.0 * DOUBLE_PI * K / Corners, Radius = 300.0 + Random.FRand() * 700.0;
             Star.Add(FVector2D(Radius * FMath::Cos(Angle), Radius * FMath::Sin(Angle)));
         }
         Unsound += RoofSound(Build(Star)) ? 0 : 1;

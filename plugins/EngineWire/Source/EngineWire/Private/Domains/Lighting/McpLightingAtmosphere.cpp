@@ -222,11 +222,7 @@ bool HandleConfigureShadows(
 
     Resp->SetBoolField(TEXT("success"), true);
     Resp->SetArrayField(TEXT("appliedSettings"), Applied);
-    TArray<TSharedPtr<FJsonValue>> NotSetJson;
-    for (const FString& Entry : NotSet)
-    {
-        NotSetJson.Add(MakeShared<FJsonValueString>(Entry));
-    }
+    TArray<TSharedPtr<FJsonValue>> NotSetJson = McpHandlerUtils::ToJsonStringArray(NotSet);
     Resp->SetArrayField(TEXT("notSet"), NotSetJson);
     Subsystem.SendAutomationResponse(RequestingSocket, RequestId, true,
         FString::Printf(TEXT("Shadows configured (%d setting(s) applied)%s"), Applied.Num(),

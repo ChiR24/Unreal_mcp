@@ -42,11 +42,7 @@ void AddRemap(TMap<FSoftObjectPath, FSoftObjectPath>& Remap, const UObjectRedire
 void FixupRedirectorsIn(const FString& Folder, int32& OutFound, int32& OutFixed, bool bCheckoutFiles)
 {
     FARFilter Filter;
-#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 1
-    Filter.ClassPaths.Add(FTopLevelAssetPath(TEXT("/Script/CoreUObject"), TEXT("ObjectRedirector")));
-#else
-    Filter.ClassNames.Add(FName(TEXT("ObjectRedirector")));
-#endif
+    MCP_AR_FILTER_ADD_CLASS_PATH(Filter, TEXT("/Script/CoreUObject"), TEXT("ObjectRedirector"));
     Filter.PackagePaths.Add(FName(*Folder));
     Filter.bRecursivePaths = true;
     IAssetRegistry& Registry = FModuleManager::LoadModuleChecked<FAssetRegistryModule>(TEXT("AssetRegistry")).Get();

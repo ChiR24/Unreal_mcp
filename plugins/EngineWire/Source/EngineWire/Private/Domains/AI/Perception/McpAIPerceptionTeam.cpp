@@ -33,11 +33,7 @@ static void SetBPVarDefaultValueAI(UBlueprint* Blueprint, FName VarName, const F
             if (FProperty* Property = FindFProperty<FProperty>(Blueprint->GeneratedClass, VarName))
             {
                 void* ValuePtr = Property->ContainerPtrToValuePtr<void>(CDO);
-#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 1
-                Property->ImportText_Direct(*DefaultValue, ValuePtr, CDO, 0);
-#else
-                Property->ImportText(*DefaultValue, ValuePtr, PPF_None, CDO);
-#endif
+                MCP_PROPERTY_IMPORT_TEXT(Property, *DefaultValue, ValuePtr, CDO, PPF_None);
             }
         }
     }

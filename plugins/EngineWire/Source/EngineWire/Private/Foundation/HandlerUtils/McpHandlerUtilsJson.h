@@ -34,6 +34,17 @@ inline TArray<TSharedPtr<FJsonValue>> ToJsonStringArray(const TArray<FString>& S
     return Values;
 }
 
+// A reply's nextCall (or any call it hands back): execute Tool.Action with Params, an empty object when none.
+inline TSharedPtr<FJsonObject> MakeExecuteCall(const FString& Tool, const FString& Action, const TSharedPtr<FJsonObject>& Params)
+{
+    TSharedPtr<FJsonObject> Call = MakeShared<FJsonObject>();
+    Call->SetStringField(TEXT("operation"), TEXT("execute"));
+    Call->SetStringField(TEXT("tool"), Tool);
+    Call->SetStringField(TEXT("action"), Action);
+    Call->SetObjectField(TEXT("params"), Params.IsValid() ? Params : MakeShared<FJsonObject>());
+    return Call;
+}
+
 /**
  * Read a JSON array field as strings, skipping any element that is not a
  * string. A missing field, a null payload or a non-array value all yield an

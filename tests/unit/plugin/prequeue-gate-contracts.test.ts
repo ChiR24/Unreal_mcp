@@ -207,7 +207,7 @@ describe('the gate and the dispatcher cannot resolve DIFFERENT actions', () => {
   // agree with it even if the ingest guard is ever bypassed.
   const SUBACTION_FIRST: ReadonlyArray<readonly [string, string[]]> = [
     ['system_control', ['Domains', 'SystemControl', 'McpSystemHandlers.cpp']],
-    ['control_actor', ['Domains', 'ControlActor', 'McpActorDispatch.cpp']]
+    ['control_actor', ['Domains', 'ControlActor', 'McpActorHandlers.cpp']]
   ];
 
   it.each(SUBACTION_FIRST)('the %s dispatcher reads subAction before action', (_name, parts) => {

@@ -80,7 +80,7 @@ bool LayoutEnd(UWorld* World, const TSharedPtr<FJsonObject>& Payload, const TCHA
 bool Handle(UEngineWireSubsystem* Bridge, const FString& RequestId, const TSharedPtr<FJsonObject>& Payload,
             TSharedPtr<FMcpBridgeWebSocket> Socket)
 {
-    UWorld* World = GEditor ? GEditor->GetEditorWorldContext().World() : nullptr;
+    UWorld* World = McpHandlerUtils::GetEditorWorld();
     const auto Refuse = [&](const FString& Message, const TCHAR* Code)
     {
         Bridge->SendAutomationResponse(Socket, RequestId, false, Message, nullptr, Code);

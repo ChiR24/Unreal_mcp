@@ -105,7 +105,7 @@ bool HandleEnumLifecycleActions(
         const bool bSaved = FinalizeEnum(Enum, bSave);
 
         TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
-        Result->SetStringField(TEXT("enumPath"), PackageName + TEXT(".") + SanitizedName);
+        Result->SetStringField(TEXT("enumPath"), McpToObjectPath(PackageName));
         Result->SetStringField(TEXT("enumName"), SanitizedName);
         Result->SetBoolField(TEXT("saved"), bSaved);
         OutResult = Result;

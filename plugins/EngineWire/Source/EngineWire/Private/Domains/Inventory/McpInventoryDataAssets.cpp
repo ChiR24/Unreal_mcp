@@ -129,17 +129,11 @@ bool HandleInventoryDataAssetActions(UEngineWireSubsystem& Bridge, const FString
     Result->SetNumberField(TEXT("propertiesModified"), ModifiedProperties.Num());
     McpHandlerUtils::AddVerification(Result, ItemAsset);
 
-    TArray<TSharedPtr<FJsonValue>> ModifiedArr;
-    for (const FString& Name : ModifiedProperties) {
-      ModifiedArr.Add(MakeShared<FJsonValueString>(Name));
-    }
+    TArray<TSharedPtr<FJsonValue>> ModifiedArr = McpHandlerUtils::ToJsonStringArray(ModifiedProperties);
     Result->SetArrayField(TEXT("modifiedProperties"), ModifiedArr);
 
     if (FailedProperties.Num() > 0) {
-      TArray<TSharedPtr<FJsonValue>> FailedArr;
-      for (const FString& Err : FailedProperties) {
-        FailedArr.Add(MakeShared<FJsonValueString>(Err));
-      }
+      TArray<TSharedPtr<FJsonValue>> FailedArr = McpHandlerUtils::ToJsonStringArray(FailedProperties);
       Result->SetArrayField(TEXT("failedProperties"), FailedArr);
     }
 

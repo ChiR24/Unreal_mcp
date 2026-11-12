@@ -4,9 +4,7 @@
 #include "CollisionQueryParams.h"
 #include "Engine/EngineTypes.h"
 #include "Engine/World.h"
-#if ENGINE_MAJOR_VERSION > 5 || (ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 1)
-#include "Engine/HitResult.h" // 5.0 declares FHitResult in EngineTypes.h
-#endif
+#include MCP_HIT_RESULT_HEADER
 
 namespace McpInspectHandlers {
 namespace {

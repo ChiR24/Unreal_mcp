@@ -21,11 +21,6 @@ namespace McpBlueprintBehaviour::Detail
 {
 namespace
 {
-FString InputObjectPath(const FString& Path)
-{
-    return Path.Contains(TEXT(".")) ? Path : Path + TEXT(".") + FPackageName::GetShortName(Path);
-}
-
 // Which Actor classes can host input, and whether this one can register a context.
 bool CheckInputHost(UBlueprint* Blueprint, bool bRegister, FString& OutError, FString& OutCode)
 {
@@ -105,13 +100,13 @@ bool PlanInput(UBlueprint* Blueprint, const TSharedPtr<FJsonObject>& Recipe, FPl
     Context = Context ? Context : Registered;
     Context = Context ? Context : McpInputHandlers::LoadInputMappingContextAsset(DefaultInputContext, Normalized);
     Plan.bCreateContext = Context == nullptr;
-    Plan.ContextPath = Context ? Context->GetPathName() : InputObjectPath(DefaultInputContext);
+    Plan.ContextPath = Context ? Context->GetPathName() : McpToObjectPath(DefaultInputContext);
     if (!Action && !Plan.Key.IsEmpty())
     {
         const FString Default = DefaultActionPath(Blueprint, Plan.Tag);
         Action = McpInputHandlers::LoadInputActionAsset(Default, Normalized);
         Plan.bCreateAction = Action == nullptr;
-        Plan.ActionPath = InputObjectPath(Default);
+        Plan.ActionPath = McpToObjectPath(Default);
     }
     Plan.ActionPath = Action ? Action->GetPathName() : Plan.ActionPath;
     // The context and action can come from the Blueprint's own wiring or the shared defaults rather than from paths
@@ -205,9 +200,9 @@ bool EnsureKeyMapping(UEngineWireSubsystem& Bridge, const FString& RequestId, co
     Payload->SetStringField(TEXT("actionPath"), Plan.ActionPath);
     Payload->SetStringField(TEXT("key"), Plan.Key);
     const FString Id = RequestId + TEXT("#keymapping");
-    FMcpResponseCaptureRegistry::Get().Begin(Id);
-    McpInputHandlers::HandleAddInputMapping(Bridge, Id, TEXT("add_mapping"), Payload, nullptr);
-    const FMcpCapturedResponse Reply = FMcpResponseCaptureRegistry::Get().End(Id);
+    const FMcpCapturedResponse Reply = McpCaptureResponse(Id, [&] {
+        McpInputHandlers::HandleAddInputMapping(Bridge, Id, TEXT("add_mapping"), Payload, nullptr);
+    });
     Plan.Input->SetBoolField(TEXT("keyMapped"), Reply.bSuccess);
     OutError = FString::Printf(TEXT("Mapping key %s to %s failed: %s"), *Plan.Key, *Plan.ActionPath, *Reply.Message);
     return Reply.bSuccess;

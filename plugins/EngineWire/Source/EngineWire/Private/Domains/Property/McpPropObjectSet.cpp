@@ -13,7 +13,7 @@
 #include "Foundation/HandlerUtils/McpHandlerUtils.h"
 #include "Foundation/Reflection/McpPropertyReflection.h"
 #include "Safety/McpSafeOperationsEnumUndo.h"
-#include "Safety/McpSafeReflectionTarget.h"
+#include "Foundation/BridgeHelpers/Security/McpSafeReflectionTarget.h"
 
 #include "Components/ActorComponent.h"
 #include "GameFramework/Actor.h"

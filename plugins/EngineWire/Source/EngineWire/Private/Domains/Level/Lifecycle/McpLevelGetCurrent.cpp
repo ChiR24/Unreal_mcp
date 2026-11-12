@@ -9,7 +9,7 @@
 
 namespace McpLevelHandlers {
 bool HandleGetCurrentLevelAction(UEngineWireSubsystem& Subsystem, const FString& RequestId, const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> RequestingSocket) {
-    UWorld* EditorWorld = GEditor ? GEditor->GetEditorWorldContext().World() : nullptr;
+    UWorld* EditorWorld = McpHandlerUtils::GetEditorWorld();
     if (!EditorWorld) {
       Subsystem.SendAutomationResponse(RequestingSocket, RequestId, false,
                              TEXT("No editor world available"), nullptr, TEXT("NO_WORLD"));

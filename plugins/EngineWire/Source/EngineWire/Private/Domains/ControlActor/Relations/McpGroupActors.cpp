@@ -28,14 +28,10 @@ bool HandleGroupActors(UEngineWireSubsystem* Bridge, const FString& RequestId, c
     };
     const bool bUngroup = GetJsonStringField(Payload, TEXT("op"), TEXT("group")).Equals(TEXT("ungroup"), ESearchCase::IgnoreCase);
     TArray<AActor*> Actors;
-    for (const FString& Name : McpHandlerUtils::GetStringArrayField(Payload, TEXT("actorNames")))
+    FString Missing;
+    if (!FindAllNamed(McpHandlerUtils::GetStringArrayField(Payload, TEXT("actorNames")), Find, Actors, Missing))
     {
-        AActor* Actor = Find(Name);
-        if (!Actor)
-        {
-            return Refuse(FString::Printf(TEXT("No actor is labelled or named %s."), *Name), TEXT("ACTOR_NOT_FOUND"));
-        }
-        Actors.AddUnique(Actor);
+        return Refuse(FString::Printf(TEXT("No actor is labelled or named %s."), *Missing), TEXT("ACTOR_NOT_FOUND"));
     }
     if (!UActorGroupingUtils::IsGroupingActive())
     {

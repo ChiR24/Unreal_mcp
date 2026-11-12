@@ -159,7 +159,7 @@ FString RunBatchStep(const FActionContext& Context, FBatchState& State,
     // the inputs: list the pins it has now.
     if (Step->HasField(TEXT("pinDefaults")) || Step->HasField(TEXT("expression")))
     {
-        Entry->SetStringField(TEXT("pins"), DescribeNodePins(FindBatchNode(Context.Blueprint, Guid)));
+        Entry->SetStringField(TEXT("pins"), McpDescribeNodePins(FindBatchNode(Context.Blueprint, Guid)));
     }
     if (!Alias.IsEmpty())
     {

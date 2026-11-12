@@ -106,7 +106,6 @@ bool UEngineWireSubsystem::HandleControlEditorAction(
     return McpEditorUi::HandleRead(this, RequestId, Payload, RequestingSocket);
   if (LowerSub == TEXT("simulate_input"))
     return HandleControlEditorSimulateInput(RequestId, Payload, RequestingSocket);
-  // Additional actions for test compatibility
   if (LowerSub == TEXT("close_asset"))
     return HandleControlEditorCloseAsset(RequestId, Payload, RequestingSocket);
   if (LowerSub == TEXT("save_all"))
@@ -138,10 +137,8 @@ bool UEngineWireSubsystem::HandleControlEditorAction(
   if (LowerSub == TEXT("open_level"))
     return HandleControlEditorOpenLevel(RequestId, Payload, RequestingSocket);
   if (LowerSub == TEXT("set_viewport_resolution")) {
-    // The record routes this to console_command with r.SetRes. The gateway
-    // resolves the wire action from the parent tool's dispatch pattern alone, so
-    // the cross-parent hop is made here; without it a published capability
-    // answered UNKNOWN_ACTION.
+    // The action arrives here as set_viewport_resolution, and this builds the
+    // console_command call with r.SetRes that the record's routing names.
     double Width = 0.0;
     double Height = 0.0;
     if (!Payload->TryGetNumberField(TEXT("width"), Width) ||

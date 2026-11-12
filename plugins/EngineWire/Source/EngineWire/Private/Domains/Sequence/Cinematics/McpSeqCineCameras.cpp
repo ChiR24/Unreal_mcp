@@ -144,13 +144,8 @@ bool HandleCreateCineCameraActor(const TSharedPtr<FJsonObject> &Params,
   // Echo the transform inputs that were applied; rotation accepts pitch/yaw/roll or x/y/z.
   OutResult->SetBoolField(TEXT("locationApplied"), bHasLocation);
   OutResult->SetBoolField(TEXT("rotationApplied"), bHasRotation);
-  if (ApplyCameraSettings(Actor, Params, OutResult) == INDEX_NONE) {
-    Actor->Destroy();
-    OutResult = MakeResult(false, TEXT("create_cine_camera_actor"),
-                           TEXT("Spawned actor has no CineCameraComponent"),
-                           TEXT("CAMERA_COMPONENT_NOT_FOUND"));
-    return true;
-  }
+  // A CineCameraActor always has its CineCameraComponent.
+  ApplyCameraSettings(Actor, Params, OutResult);
   {
     // appliedProperties lists the transform inputs too, not only camera settings.
     TArray<TSharedPtr<FJsonValue>> Applied;

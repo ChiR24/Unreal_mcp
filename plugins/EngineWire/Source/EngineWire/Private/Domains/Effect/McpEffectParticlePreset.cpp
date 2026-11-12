@@ -21,11 +21,7 @@ FString FindNiagaraSystemForPreset(const FString& Preset, TArray<FString>& OutCa
     FAssetRegistryModule& Registry =
         FModuleManager::LoadModuleChecked<FAssetRegistryModule>(TEXT("AssetRegistry"));
     FARFilter Filter;
-#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 1
-    Filter.ClassPaths.Add(UNiagaraSystem::StaticClass()->GetClassPathName());
-#else
-    Filter.ClassNames.Add(UNiagaraSystem::StaticClass()->GetFName());
-#endif
+    MCP_AR_FILTER_ADD_CLASS(Filter, UNiagaraSystem::StaticClass());
     Filter.bRecursivePaths = true;
     Filter.PackagePaths.Add(TEXT("/Niagara"));
     Filter.PackagePaths.Add(TEXT("/Engine"));

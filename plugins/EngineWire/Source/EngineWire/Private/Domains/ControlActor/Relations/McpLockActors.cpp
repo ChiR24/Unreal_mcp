@@ -25,16 +25,12 @@ bool HandleLockActors(UEngineWireSubsystem* Bridge, const FString& RequestId, co
     const TArray<FString> Names = McpHandlerUtils::GetStringArrayField(Payload, TEXT("actorNames"));
     const bool bLock = GetJsonBoolField(Payload, TEXT("locked"), true);
     TArray<AActor*> Actors;
-    for (const FString& Name : Names)
+    FString Missing;
+    if (!FindAllNamed(Names, Find, Actors, Missing))
     {
-        AActor* Actor = Find(Name);
-        if (!Actor)
-        {
-            Bridge->SendAutomationError(Socket, RequestId,
-                FString::Printf(TEXT("No actor is labelled or named %s. Nothing was changed."), *Name), TEXT("ACTOR_NOT_FOUND"));
-            return true;
-        }
-        Actors.AddUnique(Actor);
+        Bridge->SendAutomationError(Socket, RequestId,
+            FString::Printf(TEXT("No actor is labelled or named %s. Nothing was changed."), *Missing), TEXT("ACTOR_NOT_FOUND"));
+        return true;
     }
     TArray<UObject*> Changing;
     TArray<bool> Was;

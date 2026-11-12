@@ -56,16 +56,8 @@ inline void SendPerfCVarResult(const FPerformanceActionContext& Context, const F
     {
         Resp = McpHandlerUtils::CreateResultObject();
     }
-    TArray<TSharedPtr<FJsonValue>> AppliedJson;
-    for (const FString& Name : Applied)
-    {
-        AppliedJson.Add(MakeShared<FJsonValueString>(Name));
-    }
-    TArray<TSharedPtr<FJsonValue>> NotSetJson;
-    for (const FString& Entry : NotSet)
-    {
-        NotSetJson.Add(MakeShared<FJsonValueString>(Entry));
-    }
+    TArray<TSharedPtr<FJsonValue>> AppliedJson = McpHandlerUtils::ToJsonStringArray(Applied);
+    TArray<TSharedPtr<FJsonValue>> NotSetJson = McpHandlerUtils::ToJsonStringArray(NotSet);
     Resp->SetArrayField(TEXT("appliedCVars"), AppliedJson);
     Resp->SetArrayField(TEXT("notSet"), NotSetJson);
     Context.Bridge.SendAutomationResponse(Context.RequestingSocket, Context.RequestId, true,

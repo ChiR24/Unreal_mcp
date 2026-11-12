@@ -24,13 +24,6 @@ class UK2Node_Variable;
 
 namespace McpBlueprintGraphHandlers
 {
-// "Pin not found." named neither the pin looked for nor what would have
-// worked, so every miss cost a separate inspect_graph round trip. The pins are
-// already in hand at each of those sites; this names them.
-static inline FString DescribeNodePins(UEdGraphNode* Node)
-{
-    return McpDescribeNodePins(Node);
-}
 
 // The classes other than Class that declare a Blueprint-callable Wanted, as a
 // retry hint; empty when none does.

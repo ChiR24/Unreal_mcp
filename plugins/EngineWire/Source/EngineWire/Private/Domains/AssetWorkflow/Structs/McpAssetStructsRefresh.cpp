@@ -66,11 +66,7 @@ void McpRefreshStructDependents(UUserDefinedStruct* S,
     //    struct compiled above) so rows using nested types are re-validated too.
     IAssetRegistry& AR = FAssetRegistryModule::GetRegistry();
     TArray<FAssetData> DataTableAssets;
-#if ENGINE_MAJOR_VERSION > 5 || ENGINE_MINOR_VERSION >= 1
-    AR.GetAssetsByClass(UDataTable::StaticClass()->GetClassPathName(), DataTableAssets, true);
-#else
-    AR.GetAssetsByClass(UDataTable::StaticClass()->GetFName(), DataTableAssets, true);
-#endif
+    AR.GetAssetsByClass(MCP_CLASS_ID(UDataTable::StaticClass()), DataTableAssets, true);
 
     // Candidate row structs: the primary struct plus every nested struct compiled above.
     TArray<UScriptStruct*> CandidateRowStructs;

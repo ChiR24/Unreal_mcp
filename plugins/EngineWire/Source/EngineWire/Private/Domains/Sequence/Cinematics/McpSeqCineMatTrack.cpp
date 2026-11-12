@@ -33,7 +33,7 @@ bool ReadLinearColor(const TSharedPtr<FJsonObject> &Value,
 UPrimitiveComponent *ResolveMaterialComponent(
     ULevelSequence *Sequence, const FGuid &BindingGuid,
     const FString &ComponentName, FGuid &OutComponentGuid) {
-  UWorld *World = GEditor ? GEditor->GetEditorWorldContext().World() : nullptr;
+  UWorld *World = McpHandlerUtils::GetEditorWorld();
   if (!Sequence || !Sequence->GetMovieScene() || !World)
     return nullptr;
   TArray<UObject *, TInlineAllocator<1>> BoundObjects;

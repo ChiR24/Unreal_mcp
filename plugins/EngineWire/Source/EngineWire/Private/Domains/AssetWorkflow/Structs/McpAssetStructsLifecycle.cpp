@@ -47,7 +47,7 @@ bool HandleStructLifecycleActions(UEngineWireSubsystem& Bridge, const FString& R
         TArray<FParsedMember> ParsedMembers;
         if (bHasMembers)
         {
-            const FName SelfPath = FName(*FString::Printf(TEXT("%s.%s"), *PackageName, *SanitizedName));
+            const FName SelfPath = FName(*McpToObjectPath(PackageName));
             TArray<FString> ValidationFailures;
             if (!ValidateStructMembers(*MembersArr, SelfPath, ParsedMembers, ValidationFailures))
             {
@@ -93,7 +93,7 @@ bool HandleStructLifecycleActions(UEngineWireSubsystem& Bridge, const FString& R
             if (ApplyFailures.Num() > 0)
             {
                 TSharedPtr<FJsonObject> ApplyResult = McpHandlerUtils::CreateResultObject();
-                ApplyResult->SetStringField(TEXT("assetPath"), PackageName + TEXT(".") + SanitizedName);
+                ApplyResult->SetStringField(TEXT("assetPath"), McpToObjectPath(PackageName));
                 ApplyResult->SetNumberField(TEXT("imported"), Applied);
                 ApplyResult->SetNumberField(TEXT("failed"), ApplyFailures.Num());
                 ApplyResult->SetArrayField(TEXT("failures"), McpHandlerUtils::ToJsonStringArray(ApplyFailures));
@@ -123,7 +123,7 @@ bool HandleStructLifecycleActions(UEngineWireSubsystem& Bridge, const FString& R
         const bool bSaved = bSave && McpSafeOperations::McpSafeAssetSave(S);
 
         TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
-        Result->SetStringField(TEXT("assetPath"), PackageName + TEXT(".") + SanitizedName);
+        Result->SetStringField(TEXT("assetPath"), McpToObjectPath(PackageName));
         Result->SetStringField(TEXT("structName"), SanitizedName);
         Result->SetStringField(TEXT("status"), UserDefinedStructureStatusToString(S->Status));
         Result->SetBoolField(TEXT("saved"), bSaved);

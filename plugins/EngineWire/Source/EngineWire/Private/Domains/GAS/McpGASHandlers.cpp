@@ -64,7 +64,7 @@ bool UEngineWireSubsystem::HandleManageGASAction(
         McpGASHandlers::HandleGASCueNotify(Context, SubAction) ||
         McpGASHandlers::HandleGASInfo(Context, SubAction) ||
         McpGASHandlers::HandleGASAbilitySets(Context, SubAction) ||
-        McpGASHandlers::HandleGASAbilityGrantAndExecution(Context, SubAction))
+        McpGASHandlers::HandleGASExecutionCalculation(Context, SubAction))
     {
         return true;
     }

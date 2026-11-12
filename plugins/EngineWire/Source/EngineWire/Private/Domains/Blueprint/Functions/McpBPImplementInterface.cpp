@@ -67,17 +67,9 @@ bool HandleBlueprintImplementInterface(const FBlueprintActionContext &Context) {
   // Already in the wanted state is success, so a repeat call changes nothing.
   const bool bChange = bRemove == Implements(Blueprint, Interface);
   if (bChange && bRemove) {
-#if ENGINE_MAJOR_VERSION > 5 || ENGINE_MINOR_VERSION >= 1
-    FBlueprintEditorUtils::RemoveInterface(Blueprint, Interface->GetClassPathName());
-#else
-    FBlueprintEditorUtils::RemoveInterface(Blueprint, Interface->GetFName());
-#endif
+    FBlueprintEditorUtils::RemoveInterface(Blueprint, MCP_CLASS_ID(Interface));
   } else if (bChange) {
-#if ENGINE_MAJOR_VERSION > 5 || ENGINE_MINOR_VERSION >= 1
-    const bool bAdded = FBlueprintEditorUtils::ImplementNewInterface(Blueprint, Interface->GetClassPathName());
-#else
-    const bool bAdded = FBlueprintEditorUtils::ImplementNewInterface(Blueprint, Interface->GetFName());
-#endif
+    const bool bAdded = FBlueprintEditorUtils::ImplementNewInterface(Blueprint, MCP_CLASS_ID(Interface));
     if (!bAdded) {
       Bridge.SendAutomationResponse(RequestingSocket, RequestId, false,
                                     FString::Printf(TEXT("The editor refused to add %s"), *Interface->GetName()),

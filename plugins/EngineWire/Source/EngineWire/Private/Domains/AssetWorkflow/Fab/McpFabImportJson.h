@@ -5,6 +5,7 @@
 #include "CoreMinimal.h"
 #include "EngineWireSubsystem.h"
 #include "McpFabProvider.h"
+#include "Foundation/HandlerUtils/McpHandlerUtilsJson.h"
 
 #include "Dom/JsonObject.h"
 #include "Dom/JsonValue.h"
@@ -44,12 +45,7 @@ inline TSharedPtr<FJsonObject> MakeStatusNextCall(const FString& OperationId)
 	TSharedPtr<FJsonObject> Params = MakeShared<FJsonObject>();
 	Params->SetStringField(TEXT("lookup"), TEXT("fab_import_status"));
 	Params->SetStringField(TEXT("operationId"), OperationId);
-	TSharedPtr<FJsonObject> Next = MakeShared<FJsonObject>();
-	Next->SetStringField(TEXT("operation"), TEXT("execute"));
-	Next->SetStringField(TEXT("tool"), TEXT("manage_asset"));
-	Next->SetStringField(TEXT("action"), TEXT("query_marketplace"));
-	Next->SetObjectField(TEXT("params"), Params);
-	return Next;
+	return McpHandlerUtils::MakeExecuteCall(TEXT("manage_asset"), TEXT("query_marketplace"), Params);
 }
 
 /**

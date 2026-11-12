@@ -196,7 +196,7 @@ bool HandleCreateLightmassVolume(
     const FVector Size = ExtractVectorField(Payload, TEXT("size"), FVector(1000.0));
     FString Name;
     Payload->TryGetStringField(TEXT("name"), Name);
-    UWorld* World = GEditor ? GEditor->GetEditorWorldContext().World() : nullptr;
+    UWorld* World = McpHandlerUtils::GetEditorWorld();
     if (!World)
     {
         Subsystem.SendAutomationError(RequestingSocket, RequestId, TEXT("No editor world available"), TEXT("NO_WORLD"));

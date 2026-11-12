@@ -17,11 +17,7 @@ bool HandleStructListActions(UEngineWireSubsystem& Bridge, const FString& Reques
         IAssetRegistry& AR = ARM.GetRegistry();
 
         FARFilter Filter;
-#if ENGINE_MAJOR_VERSION > 5 || ENGINE_MINOR_VERSION >= 1
-        Filter.ClassPaths.Add(UUserDefinedStruct::StaticClass()->GetClassPathName());
-#else
-        Filter.ClassNames.Add(UUserDefinedStruct::StaticClass()->GetFName());
-#endif
+        MCP_AR_FILTER_ADD_CLASS(Filter, UUserDefinedStruct::StaticClass());
         Filter.bRecursiveClasses = true;
         if (!PathFilter.IsEmpty())
         {

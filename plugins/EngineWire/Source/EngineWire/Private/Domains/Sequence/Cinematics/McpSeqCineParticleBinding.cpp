@@ -59,7 +59,7 @@ FGuid ResolveParticleComponentBinding(ULevelSequence *Sequence,
   UFXSystemComponent *Component = nullptr;
   UObject *Context = nullptr;
   FString ResolvedBy;
-  UWorld *World = GEditor ? GEditor->GetEditorWorldContext().World() : nullptr;
+  UWorld *World = McpHandlerUtils::GetEditorWorld();
   if (World) {
     TArray<UObject *, TInlineAllocator<1>> BoundObjects;
     LocateBindingObjects(Sequence, ActorGuid, World, BoundObjects);

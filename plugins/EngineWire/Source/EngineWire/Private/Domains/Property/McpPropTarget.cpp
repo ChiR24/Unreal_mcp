@@ -6,7 +6,7 @@
 #include "Foundation/BridgeHelpers/McpHelpers.h"
 #include "Foundation/HandlerUtils/McpHandlerUtils.h"
 #include "EngineWireSubsystem.h"
-#include "Safety/McpSafeReflectionTarget.h"
+#include "Foundation/BridgeHelpers/Security/McpSafeReflectionTarget.h"
 
 #include "Editor.h"
 #include "Engine/Blueprint.h"

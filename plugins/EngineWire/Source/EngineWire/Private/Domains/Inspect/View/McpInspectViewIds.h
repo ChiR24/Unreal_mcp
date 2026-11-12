@@ -32,13 +32,6 @@ inline uint32 McpViewIdKey(const FColor &Id)
 // Every second pixel of every second row: a quarter of the pixels, plenty for shares of the frame.
 constexpr int32 McpViewStride = 2;
 
-// Rounded to 1 / Scale (10 for tenths). Dividing by the scale, not multiplying by a step, keeps 61.9 from printing
-// as 61.900000000000006.
-inline double McpViewRound(double Value, double Scale)
-{
-    return FMath::RoundToDouble(Value * Scale) / Scale;
-}
-
 // describe_view's row for an actor the caller named that drew no pixel: reason "outside the frame" when its bounds
 // project outside it, else inFrame (percent of the box they project to inside the frame) and what is drawn over that
 // box (hiddenBy: up to three actors by share of the box, leaving out actors centred farther than it and the ground

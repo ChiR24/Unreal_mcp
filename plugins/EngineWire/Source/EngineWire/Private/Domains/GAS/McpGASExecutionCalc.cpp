@@ -20,7 +20,7 @@
 
 namespace McpGASHandlers
 {
-bool HandleGASAbilityGrantAndExecution(const FGASRequestContext& Context, const FString& SubAction)
+bool HandleGASExecutionCalculation(const FGASRequestContext& Context, const FString& SubAction)
 {
     UEngineWireSubsystem* Bridge = Context.Subsystem;
     const FString& RequestId = Context.RequestId;
@@ -30,10 +30,6 @@ bool HandleGASAbilityGrantAndExecution(const FGASRequestContext& Context, const 
     const FString& Path = Context.Path;
     const FString& BlueprintPath = Context.BlueprintPath;
     const FString& AssetPath = Context.AssetPath;
-
-    // ============================================================
-    // 13.7 EXECUTION CALCULATIONS
-    // ============================================================
 
     if (SubAction == TEXT("create_execution_calculation"))
     {

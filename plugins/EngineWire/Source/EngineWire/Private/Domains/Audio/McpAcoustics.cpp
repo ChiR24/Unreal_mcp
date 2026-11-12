@@ -9,7 +9,6 @@ namespace McpAcoustics
 namespace
 {
 constexpr int32 AcousticRays = 256;
-constexpr double AcousticPi = 3.14159265358979323846;
 constexpr double AcousticSpeed = 34300.0;  // cm a second
 constexpr double AcousticScatter = 0.3;    // share of reflections scattered (Lambert) rather than mirrored
 constexpr double AcousticMinCos = 0.2;     // a grazing hit's surface share is capped here
@@ -22,7 +21,7 @@ FVector AcousticDirection(int32 Index)
 {
     const double Z = 1.0 - (2.0 * Index + 1.0) / AcousticRays;
     const double Radius = FMath::Sqrt(FMath::Max(0.0, 1.0 - Z * Z));
-    const double Angle = AcousticPi * (3.0 - FMath::Sqrt(5.0)) * Index;
+    const double Angle = DOUBLE_PI * (3.0 - FMath::Sqrt(5.0)) * Index;
     return FVector(Radius * FMath::Cos(Angle), Radius * FMath::Sin(Angle), Z);
 }
 
@@ -31,7 +30,7 @@ FVector AcousticLambert(const FVector& Normal, FRandomStream& Random)
     const double U = Random.FRand(), V = Random.FRand();
     FVector Tangent, Bitangent;
     Normal.FindBestAxisVectors(Tangent, Bitangent);
-    return (Tangent * FMath::Sqrt(U) * FMath::Cos(2.0 * AcousticPi * V) + Bitangent * FMath::Sqrt(U) * FMath::Sin(2.0 * AcousticPi * V) +
+    return (Tangent * FMath::Sqrt(U) * FMath::Cos(2.0 * DOUBLE_PI * V) + Bitangent * FMath::Sqrt(U) * FMath::Sin(2.0 * DOUBLE_PI * V) +
             Normal * FMath::Sqrt(1.0 - U)).GetSafeNormal();
 }
 
@@ -42,7 +41,7 @@ void AcousticExtents(const TArray<FVector>& Points, FRoom& Room)
     double BestArea = TNumericLimits<double>::Max();
     for (int32 Degree = 0; Degree < 90; ++Degree)
     {
-        const double C = FMath::Cos(Degree * AcousticPi / 180.0), S = FMath::Sin(Degree * AcousticPi / 180.0);
+        const double C = FMath::Cos(Degree * DOUBLE_PI / 180.0), S = FMath::Sin(Degree * DOUBLE_PI / 180.0);
         double MinU = TNumericLimits<double>::Max(), MaxU = -MinU, MinV = MinU, MaxV = -MinU;
         for (const FVector& Point : Points)
         {
@@ -142,8 +141,8 @@ FRoom Estimate(FTrace Trace, const FVector& Listener, double Absorption, double 
             Energy[Bin] += Carried;
         }
     }
-    Room.VolumeM3 = Volume * 4.0 * AcousticPi / (3.0 * AcousticRays);
-    Room.SurfaceM2 = Surface * 4.0 * AcousticPi / AcousticRays;
+    Room.VolumeM3 = Volume * 4.0 * DOUBLE_PI / (3.0 * AcousticRays);
+    Room.SurfaceM2 = Surface * 4.0 * DOUBLE_PI / AcousticRays;
     Room.MeanFreePathM = Room.SurfaceM2 > 0.0 ? 4.0 * Room.VolumeM3 / Room.SurfaceM2 : 0.0;
     Room.FirstReflectionMs = Points.Num() > 0 ? 1000.0 * 2.0 * Nearest / AcousticSpeed : 0.0; // out to the nearest wall and back
     if (Points.Num() > 0)

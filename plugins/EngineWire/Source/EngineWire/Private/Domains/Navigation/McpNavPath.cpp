@@ -92,7 +92,7 @@ bool FindNavPath(UWorld* World, const FVector& From, const FVector& To, const FV
 bool HandleGetNavigationPath(UEngineWireSubsystem* Self, const FString& RequestId, const TSharedPtr<FJsonObject>& Payload,
                              TSharedPtr<FMcpBridgeWebSocket> Socket)
 {
-    UWorld* World = GEditor ? GEditor->GetEditorWorldContext().World() : nullptr;
+    UWorld* World = McpHandlerUtils::GetEditorWorld();
     FVector From = FVector::ZeroVector;
     FVector To = FVector::ZeroVector;
     FString Error;

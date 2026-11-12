@@ -51,13 +51,6 @@ uint16 ErodeToRaw(double Cm, double ScaleZ)
     return static_cast<uint16>(FMath::Clamp(FMath::RoundToDouble(Cm / ScaleZ * 128.0 + 32768.0), 0.0, 65535.0));
 }
 
-// Value to the nearest 1 / Per (Per 10: tenths). Dividing by Per, not multiplying by 0.1: 594 x 0.1 is
-// 59.400000000000006, 594 / 10 is 59.4.
-double ErodeRound(double Value, double Per)
-{
-    return FMath::RoundToDouble(Value * Per) / Per;
-}
-
 TArray<TSharedPtr<FJsonValue>> ErodeRivers(const TArray<McpTerrainErosion::FRiver>& Rivers, const ALandscape* Landscape, int32 MinX, int32 MinY)
 {
     const FTransform ToWorld = Landscape->GetActorTransform();
@@ -71,14 +64,14 @@ TArray<TSharedPtr<FJsonValue>> ErodeRivers(const TArray<McpTerrainErosion::FRive
             // The landscape's own space (a vertex per unit, height in Z-scale steps) through its whole transform.
             const FVector World = ToWorld.TransformPosition(FVector(MinX + Point.X, MinY + Point.Y, Point.Z / ScaleZ));
             const TSharedPtr<FJsonObject> Spot = MakeShared<FJsonObject>();
-            Spot->SetNumberField(TEXT("x"), ErodeRound(World.X, 1.0));
-            Spot->SetNumberField(TEXT("y"), ErodeRound(World.Y, 1.0));
-            Spot->SetNumberField(TEXT("z"), ErodeRound(World.Z, 1.0));
+            Spot->SetNumberField(TEXT("x"), McpRoundTo(World.X, 1.0));
+            Spot->SetNumberField(TEXT("y"), McpRoundTo(World.Y, 1.0));
+            Spot->SetNumberField(TEXT("z"), McpRoundTo(World.Z, 1.0));
             Points.Add(MakeShared<FJsonValueObject>(Spot));
         }
         const TSharedPtr<FJsonObject> Entry = MakeShared<FJsonObject>();
-        Entry->SetNumberField(TEXT("catchmentM2"), ErodeRound(River.CatchmentM2, 1.0));
-        Entry->SetNumberField(TEXT("lengthM"), ErodeRound(River.LengthCm / 100.0, 10.0));
+        Entry->SetNumberField(TEXT("catchmentM2"), McpRoundTo(River.CatchmentM2, 1.0));
+        Entry->SetNumberField(TEXT("lengthM"), McpRoundTo(River.LengthCm / 100.0, 10.0));
         Entry->SetArrayField(TEXT("points"), Points);
         Out.Add(MakeShared<FJsonValueObject>(Entry));
     }
@@ -225,8 +218,8 @@ bool HandleErodeLandscape(UEngineWireSubsystem& Bridge, const FString& RequestId
     Result->SetNumberField(TEXT("cells"), static_cast<double>(Cells));
     Result->SetNumberField(TEXT("changedCells"), Changed);
     Result->SetNumberField(TEXT("depressionsFilled"), Filled.Depressions);
-    Result->SetNumberField(TEXT("maxLoweredCm"), ErodeRound(Cut, 10.0));
-    Result->SetNumberField(TEXT("maxRaisedCm"), ErodeRound(Raised, 10.0));
+    Result->SetNumberField(TEXT("maxLoweredCm"), McpRoundTo(Cut, 10.0));
+    Result->SetNumberField(TEXT("maxRaisedCm"), McpRoundTo(Raised, 10.0));
     Result->SetNumberField(TEXT("dropletsRun"), Ran);
     Result->SetBoolField(TEXT("drains"), Undrained == 0);
     if (Undrained > 0)
@@ -235,7 +228,7 @@ bool HandleErodeLandscape(UEngineWireSubsystem& Bridge, const FString& RequestId
     }
     Result->SetNumberField(TEXT("editLayers"), Layers);
     Result->SetArrayField(TEXT("rivers"), ErodeRivers(Rivers, Landscape, MinX, MinY));
-    Result->SetNumberField(TEXT("seconds"), ErodeRound(FPlatformTime::Seconds() - Start, 100.0));
+    Result->SetNumberField(TEXT("seconds"), McpRoundTo(FPlatformTime::Seconds() - Start, 100.0));
     McpHandlerUtils::AddVerification(Result, Landscape);
     const FString Drainage = Undrained == 0 ? FString(TEXT("every cell drains"))
                                             : FString::Printf(TEXT("%d cell(s) drain nowhere (fillDepressions false keeps their basins)"), Undrained);

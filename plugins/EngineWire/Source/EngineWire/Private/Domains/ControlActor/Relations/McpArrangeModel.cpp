@@ -16,7 +16,6 @@ constexpr double FacingGrace = 0.34907; // 20 degrees in radians: a turn within 
 constexpr double HairGap = 0.5;         // cm a snapped contact keeps: touching shapes read as intersecting
 constexpr double EdgeMargin = 10.0;     // cm from a support's edges a subject keeps where the top has room (a lamp on a table)
 constexpr double FlushWeight = 0.1;     // per radian squared two sides that touch stand off square: furniture stands flush
-constexpr double RightAngle = 1.57079632679489662;
 
 double M2(double Cm)
 {
@@ -107,7 +106,7 @@ double Miss(const TArray<FBody>& Bodies, const FGoal& Goal, bool bMargins)
     if (bMargins) // turned square to the other, the two meet face to face rather than at a corner
     {
         const double Turn = FMath::FindDeltaAngleRadians(FB.Yaw, A.Yaw);
-        Out += FlushWeight * FMath::Square(Turn - FMath::RoundToDouble(Turn / RightAngle) * RightAngle);
+        Out += FlushWeight * FMath::Square(Turn - FMath::RoundToDouble(Turn / QuarterTurn) * QuarterTurn);
     }
     return Out;
 }

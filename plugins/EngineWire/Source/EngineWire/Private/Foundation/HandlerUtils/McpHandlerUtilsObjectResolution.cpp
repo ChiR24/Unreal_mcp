@@ -129,7 +129,7 @@ UObject* ResolveObjectFromPath(const FString& ObjectPath, FString* OutResolvedPa
         }
         if (!Path.Contains(TEXT(".")))
         {
-            const FString DottedPath = Path + TEXT(".") + FPackageName::GetShortName(Path);
+            const FString DottedPath = McpToObjectPath(Path);
             if (UObject* DottedObj = LoadObject<UObject>(nullptr, *DottedPath))
             {
                 // Mirror the DirectObj guard above: the dotted path can also resolve to a

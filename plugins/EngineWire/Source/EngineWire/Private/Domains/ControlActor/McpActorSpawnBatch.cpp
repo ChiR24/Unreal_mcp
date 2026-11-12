@@ -92,7 +92,6 @@ bool UEngineWireSubsystem::HandleControlActorSpawnBatch(
   // One undo step for the whole batch: each item's spawn, material and variables below run captured, and leave
   // the step to this one.
   const TUniquePtr<FMcpScopedEditorTransaction> Transaction = McpBeginSpawnTransaction(RequestId);
-  FMcpResponseCaptureRegistry &Capture = FMcpResponseCaptureRegistry::Get();
   TArray<TSharedPtr<FJsonValue>> Results;
   // An item without actorName is labelled after its mesh ("Cube" for 300 of them), so its
   // unique name is the only address a later call has; report: failures used to drop it.
@@ -130,9 +129,9 @@ bool UEngineWireSubsystem::HandleControlActorSpawnBatch(
     }
 
     const FString SpawnId = FString::Printf(TEXT("%s#spawn%d"), *RequestId, Index);
-    Capture.Begin(SpawnId);
-    HandleControlActorSpawn(SpawnId, Item, Socket);
-    const FMcpCapturedResponse Reply = Capture.End(SpawnId);
+    const FMcpCapturedResponse Reply = McpCaptureResponse(SpawnId, [&] {
+      HandleControlActorSpawn(SpawnId, Item, Socket);
+    });
     FString ActorPath;
     if (!Reply.bSuccess || !Reply.Result.IsValid() ||
         !Reply.Result->TryGetStringField(TEXT("actorPath"), ActorPath)) {
@@ -172,9 +171,9 @@ bool UEngineWireSubsystem::HandleControlActorSpawnBatch(
       VariablesPayload->SetStringField(TEXT("actorName"), ActorPath);
       VariablesPayload->SetField(TEXT("variables"), Item->TryGetField(TEXT("variables")));
       const FString VariablesId = SpawnId + TEXT("#variables");
-      Capture.Begin(VariablesId);
-      HandleControlActorSetBlueprintVariables(VariablesId, VariablesPayload, Socket);
-      const FMcpCapturedResponse VariablesReply = Capture.End(VariablesId);
+      const FMcpCapturedResponse VariablesReply = McpCaptureResponse(VariablesId, [&] {
+        HandleControlActorSetBlueprintVariables(VariablesId, VariablesPayload, Socket);
+      });
       // Reply envelope: { data: { updated: [...] }, warnings: [...] }.
       const TSharedPtr<FJsonObject> *VariablesData = nullptr;
       const TArray<TSharedPtr<FJsonValue>> *Updated = nullptr;
@@ -214,9 +213,9 @@ bool UEngineWireSubsystem::HandleControlActorSpawnBatch(
         }
       }
       const FString MaterialId = SpawnId + TEXT("#material");
-      Capture.Begin(MaterialId);
-      HandleControlActorSetMaterial(MaterialId, MaterialPayload, Socket);
-      const FMcpCapturedResponse MaterialReply = Capture.End(MaterialId);
+      const FMcpCapturedResponse MaterialReply = McpCaptureResponse(MaterialId, [&] {
+        HandleControlActorSetMaterial(MaterialId, MaterialPayload, Socket);
+      });
       Entry->SetBoolField(TEXT("materialApplied"), MaterialReply.bSuccess);
       if (!MaterialReply.bSuccess) {
         Entry->SetStringField(TEXT("materialError"), MaterialReply.Message);

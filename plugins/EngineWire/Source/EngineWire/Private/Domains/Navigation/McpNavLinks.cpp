@@ -77,7 +77,7 @@ ANavLinkProxy* ResolveNavLinkOrReply(
     TSharedPtr<FMcpBridgeWebSocket> Socket)
 {
     const FString ActorName = GetJsonStringField(Payload, TEXT("actorName"));
-    UWorld* World = GEditor ? GEditor->GetEditorWorldContext().World() : nullptr;
+    UWorld* World = McpHandlerUtils::GetEditorWorld();
     if (ActorName.IsEmpty())
     {
         Self->SendAutomationResponse(Socket, RequestId, false, TEXT("actorName is required"), nullptr, TEXT("MISSING_PARAM"));
@@ -120,7 +120,7 @@ bool SpawnNavLink(
     FNavLinkEnds Ends;
     Ends.Start = ExtractVectorField(Payload, TEXT("startPoint"), FVector::ZeroVector);
     Ends.End = ExtractVectorField(Payload, TEXT("endPoint"), FVector::ZeroVector);
-    UWorld* World = GEditor ? GEditor->GetEditorWorldContext().World() : nullptr;
+    UWorld* World = McpHandlerUtils::GetEditorWorld();
     if (!Payload->HasField(TEXT("location")))
     {
         return Fail(FString::Printf(TEXT("location is required for %s"), Action), TEXT("MISSING_PARAM"));

@@ -85,7 +85,7 @@ bool HandleBlueprintConvertActors(const FBlueprintActionContext& Context)
     {
         return Refuse(TEXT("mode is harvest, child_actors or subclass."), TEXT("INVALID_ARGUMENT"));
     }
-    UWorld* World = GEditor ? GEditor->GetEditorWorldContext().World() : nullptr;
+    UWorld* World = McpHandlerUtils::GetEditorWorld();
     TArray<AActor*> Actors;
     TArray<FString> Labels;
     for (const FString& ActorName : Names)

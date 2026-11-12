@@ -82,7 +82,7 @@ bool HandleGASEffectsStackingTags(const FGASRequestContext& Context, const FStri
 
         TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
         Result->SetStringField(TEXT("blueprintPath"), BlueprintPath);
-        Result->SetStringField(TEXT("stackingType"), GASEnumName(NewStackingType));
+        Result->SetStringField(TEXT("stackingType"), McpEnumName(NewStackingType));
         Result->SetNumberField(TEXT("stackLimit"), StackLimit);
         if (!StackDurationRefreshPolicy.IsEmpty()) Result->SetStringField(TEXT("stackDurationRefreshPolicy"), StackDurationRefreshPolicy);
         if (!StackPeriodResetPolicy.IsEmpty()) Result->SetStringField(TEXT("stackPeriodResetPolicy"), StackPeriodResetPolicy);
@@ -164,11 +164,7 @@ bool HandleGASEffectsStackingTags(const FGASRequestContext& Context, const FStri
 
         TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
         Result->SetStringField(TEXT("blueprintPath"), BlueprintPath);
-        TArray<TSharedPtr<FJsonValue>> TagsJsonArray;
-        for (const FString& Tag : TagsAdded)
-        {
-            TagsJsonArray.Add(MakeShared<FJsonValueString>(Tag));
-        }
+        TArray<TSharedPtr<FJsonValue>> TagsJsonArray = McpHandlerUtils::ToJsonStringArray(TagsAdded);
         Result->SetArrayField(TEXT("tagsAdded"), TagsJsonArray);
         Bridge->SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Effect tags set"), Result);
         return true;

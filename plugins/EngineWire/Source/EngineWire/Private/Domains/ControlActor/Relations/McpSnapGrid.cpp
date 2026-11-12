@@ -24,12 +24,6 @@ double SnapValue(double Value, double Step)
     return Step > 0.0 ? FMath::RoundToDouble(Value / Step) * Step : Value;
 }
 
-TArray<TSharedPtr<FJsonValue>> Triple(double X, double Y, double Z)
-{
-    // Rounded for the reply: a grid of 0.1 must not read back as 32.300000000000004.
-    const auto Round = [](double V) { return FMath::RoundToDouble(V * 1000.0) / 1000.0; };
-    return {MakeShared<FJsonValueNumber>(Round(X)), MakeShared<FJsonValueNumber>(Round(Y)), MakeShared<FJsonValueNumber>(Round(Z))};
-}
 } // namespace
 
 bool HandleSnapToGrid(UEngineWireSubsystem* Bridge, const FString& RequestId, const TSharedPtr<FJsonObject>& Payload,
@@ -58,14 +52,10 @@ bool HandleSnapToGrid(UEngineWireSubsystem* Bridge, const FString& RequestId, co
                            "heights)."), TEXT("INVALID_ARGUMENT"));
     }
     TArray<AActor*> Actors;
-    for (const FString& Name : Names)
+    FString Missing;
+    if (!FindAllNamed(Names, Find, Actors, Missing))
     {
-        AActor* Actor = Find(Name);
-        if (!Actor)
-        {
-            return Refuse(FString::Printf(TEXT("No actor is labelled or named %s."), *Name), TEXT("ACTOR_NOT_FOUND"));
-        }
-        Actors.AddUnique(Actor);
+        return Refuse(FString::Printf(TEXT("No actor is labelled or named %s."), *Missing), TEXT("ACTOR_NOT_FOUND"));
     }
     TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
     TArray<TSharedPtr<FJsonValue>> Rows;
@@ -86,13 +76,13 @@ bool HandleSnapToGrid(UEngineWireSubsystem* Bridge, const FString& RequestId, co
         }
         TSharedPtr<FJsonObject> Row = MakeShared<FJsonObject>();
         Row->SetStringField(TEXT("actor"), Actor->GetActorLabel());
-        Row->SetArrayField(TEXT("from"), Triple(From.X, From.Y, From.Z));
-        Row->SetArrayField(TEXT("to"), Triple(To.X, To.Y, To.Z));
+        Row->SetArrayField(TEXT("from"), RoundedTriple(From.X, From.Y, From.Z));
+        Row->SetArrayField(TEXT("to"), RoundedTriple(To.X, To.Y, To.Z));
         if (RotationStep > 0.0)
         {
-            Row->SetArrayField(TEXT("rotation"), Triple(ToRotation.Pitch, ToRotation.Yaw, ToRotation.Roll));
+            Row->SetArrayField(TEXT("rotation"), RoundedTriple(ToRotation.Pitch, ToRotation.Yaw, ToRotation.Roll));
         }
-        Row->SetNumberField(TEXT("movedCm"), FMath::RoundToDouble(FVector::Dist(From, To) * 10.0) / 10.0);
+        Row->SetNumberField(TEXT("movedCm"), McpRoundTo(FVector::Dist(From, To), 10.0));
         Rows.Add(MakeShared<FJsonValueObject>(Row));
     }
     // The undo step covers only actors that move: one already on the grid would make a step that changes nothing.

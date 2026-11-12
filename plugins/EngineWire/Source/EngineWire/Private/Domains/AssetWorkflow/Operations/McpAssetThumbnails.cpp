@@ -23,12 +23,6 @@ bool UEngineWireSubsystem::HandleGenerateThumbnail(
       !Lower.Equals(TEXT("create_thumbnail"), ESearchCase::IgnoreCase)) {
     return false;
   }
-  if (!Payload.IsValid()) {
-    SendAutomationError(RequestingSocket, RequestId,
-                        TEXT("generate_thumbnail payload missing"),
-                        TEXT("INVALID_PAYLOAD"));
-    return true;
-  }
 
   FString AssetPath;
   if (!Payload->TryGetStringField(TEXT("assetPath"), AssetPath) ||

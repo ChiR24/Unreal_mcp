@@ -23,9 +23,9 @@ namespace {
 FString RunWidgetStep(UEngineWireSubsystem &Bridge, const FString &Id,
                       WidgetAuthoringHandlers::FWidgetAuthoringActionHandler Handler, const TCHAR *SubAction,
                       const TSharedPtr<FJsonObject> &Payload) {
-  FMcpResponseCaptureRegistry::Get().Begin(Id);
-  Handler(Bridge, Id, SubAction, Payload, nullptr, McpHandlerUtils::CreateResultObject());
-  const FMcpCapturedResponse Reply = FMcpResponseCaptureRegistry::Get().End(Id);
+  const FMcpCapturedResponse Reply = McpCaptureResponse(Id, [&] {
+    Handler(Bridge, Id, SubAction, Payload, nullptr, McpHandlerUtils::CreateResultObject());
+  });
   return Reply.bSuccess ? FString() : FString::Printf(TEXT("%s failed: %s"), SubAction, *Reply.Message);
 }
 

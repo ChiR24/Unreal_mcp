@@ -17,18 +17,6 @@
 
 namespace McpRelations
 {
-namespace
-{
-double Round3(double Value)
-{
-    return FMath::RoundToDouble(Value * 1000.0) / 1000.0;
-}
-
-TArray<TSharedPtr<FJsonValue>> Triple(const FVector& V)
-{
-    return {MakeShared<FJsonValueNumber>(Round3(V.X)), MakeShared<FJsonValueNumber>(Round3(V.Y)), MakeShared<FJsonValueNumber>(Round3(V.Z))};
-}
-} // namespace
 
 bool HandleDistributeActors(UEngineWireSubsystem* Bridge, const FString& RequestId, const TSharedPtr<FJsonObject>& Payload,
                             TSharedPtr<FMcpBridgeWebSocket> Socket, TFunctionRef<AActor*(const FString&)> Find)
@@ -48,14 +36,10 @@ bool HandleDistributeActors(UEngineWireSubsystem* Bridge, const FString& Request
         return Refuse(TEXT("axis is x, y or z; gapCm is 0 or more."), TEXT("INVALID_ARGUMENT"));
     }
     TArray<AActor*> Actors;
-    for (const FString& Name : Names)
+    FString Missing;
+    if (!FindAllNamed(Names, Find, Actors, Missing))
     {
-        AActor* Actor = Find(Name);
-        if (!Actor)
-        {
-            return Refuse(FString::Printf(TEXT("No actor is labelled or named %s."), *Name), TEXT("ACTOR_NOT_FOUND"));
-        }
-        Actors.AddUnique(Actor);
+        return Refuse(FString::Printf(TEXT("No actor is labelled or named %s."), *Missing), TEXT("ACTOR_NOT_FOUND"));
     }
     if (Actors.Num() < 3)
     {
@@ -105,9 +89,9 @@ bool HandleDistributeActors(UEngineWireSubsystem* Bridge, const FString& Request
         }
         TSharedPtr<FJsonObject> Row = MakeShared<FJsonObject>();
         Row->SetStringField(TEXT("actor"), Actors[Index]->GetActorLabel());
-        Row->SetArrayField(TEXT("from"), Triple(From));
-        Row->SetArrayField(TEXT("to"), Triple(To));
-        Row->SetNumberField(TEXT("movedCm"), FMath::RoundToDouble(FVector::Dist(From, To) * 10.0) / 10.0);
+        Row->SetArrayField(TEXT("from"), RoundedTriple(From.X, From.Y, From.Z));
+        Row->SetArrayField(TEXT("to"), RoundedTriple(To.X, To.Y, To.Z));
+        Row->SetNumberField(TEXT("movedCm"), McpRoundTo(FVector::Dist(From, To), 10.0));
         Rows.Add(MakeShared<FJsonValueObject>(Row));
     }
     // The undo step covers only actors that move: spacing already even would make a step that changes nothing.
@@ -128,7 +112,7 @@ bool HandleDistributeActors(UEngineWireSubsystem* Bridge, const FString& Request
     Result->SetStringField(TEXT("axis"), AxisNames[Axis]);
     if (!bGap)
     {
-        Result->SetNumberField(TEXT("stepCm"), Round3(Step));
+        Result->SetNumberField(TEXT("stepCm"), McpRoundTo(Step, 1000.0));
     }
     Result->SetNumberField(TEXT("moved"), Moving.Num());
     Result->SetBoolField(TEXT("dryRun"), bDryRun);

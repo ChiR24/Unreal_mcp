@@ -145,7 +145,7 @@ bool UEngineWireSubsystem::HandleImportAsset(
               bRenameSucceeded = AssetTools.RenameAssets({RenameData});
               // After rename, compute path from destination (Asset pointer may
               // be stale)
-              FinalAssetPath = DestPath / DestName + TEXT(".") + DestName;
+              FinalAssetPath = McpToObjectPath(DestPath / DestName);
             } else {
               // No rename needed, safe to use the asset's current path
               FinalAssetPath = Asset->GetPathName();

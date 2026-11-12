@@ -239,7 +239,7 @@ bool HandleLoadLevelAction(UEngineWireSubsystem& Subsystem, const FString& Reque
       const bool bLoaded = McpSafeLoadMap(ResolvedFileToLoad);
 
       if (bLoaded) {
-        UWorld* LoadedWorld = GEditor ? GEditor->GetEditorWorldContext().World() : nullptr;
+        UWorld* LoadedWorld = McpHandlerUtils::GetEditorWorld();
         if (LoadedWorld) {
           FString LoadedPath = LoadedWorld->GetOutermost()->GetName();
           if (!LoadedPath.Equals(ExpectedLoadedPath, ESearchCase::IgnoreCase)) {

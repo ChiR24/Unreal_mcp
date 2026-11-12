@@ -4,6 +4,7 @@
 #include "Core/Compatibility/McpVersionCompatibility.h"
 #include "Dom/JsonObject.h"
 #include "EngineWireSubsystem.h"
+#include "Foundation/HandlerUtils/McpHandlerUtilsActionsPaths.h"
 #include "Misc/PackageName.h"
 #include "UObject/SoftObjectPtr.h"
 #include "UObject/UnrealType.h"
@@ -31,11 +32,7 @@ bool Handle(UEngineWireSubsystem* Self, const FString& RequestId, const FString&
 TArray<FAssetData> RegistryAssets()
 {
 	FARFilter Filter;
-#if MCP_HAS_ASSET_CLASS_PATHS
-	Filter.ClassPaths.Add(FTopLevelAssetPath(FName(TEXT("/Script/DataRegistry")), FName(TEXT("DataRegistry"))));
-#else
-	Filter.ClassNames.Add(FName(TEXT("DataRegistry")));
-#endif
+	MCP_AR_FILTER_ADD_CLASS_PATH(Filter, TEXT("/Script/DataRegistry"), TEXT("DataRegistry"));
 	TArray<FAssetData> Assets;
 	FModuleManager::LoadModuleChecked<FAssetRegistryModule>(TEXT("AssetRegistry")).Get().GetAssets(Filter, Assets);
 	Assets.Sort([](const FAssetData& A, const FAssetData& B) { return A.PackageName.ToString().Compare(B.PackageName.ToString(), ESearchCase::CaseSensitive) < 0; });
@@ -57,7 +54,7 @@ UObject* LoadExisting(const FString& Path)
 	{
 		return nullptr;
 	}
-	return LoadObject<UObject>(nullptr, *(Path.Contains(TEXT(".")) ? Path : Package + TEXT(".") + FPackageName::GetShortName(Package)));
+	return LoadObject<UObject>(nullptr, *McpToObjectPath(Path));
 }
 
 UClass* RegistryClass()

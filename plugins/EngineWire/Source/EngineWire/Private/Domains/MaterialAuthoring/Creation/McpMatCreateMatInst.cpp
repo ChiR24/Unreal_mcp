@@ -21,9 +21,9 @@ static bool CreateMaterialInstanceBatch(UEngineWireSubsystem* Bridge, const FStr
       }
     }
     const FString StepId = FString::Printf(TEXT("%s#instance%d"), *RequestId, Index);
-    FMcpResponseCaptureRegistry::Get().Begin(StepId);
-    HandleCreateMaterialInstance(Bridge, StepId, TEXT("create_material_instance"), Item, Socket);
-    const FMcpCapturedResponse Reply = FMcpResponseCaptureRegistry::Get().End(StepId);
+    const FMcpCapturedResponse Reply = McpCaptureResponse(StepId, [&] {
+      HandleCreateMaterialInstance(Bridge, StepId, TEXT("create_material_instance"), Item, Socket);
+    });
     TSharedPtr<FJsonObject> Row = Reply.Result.IsValid() ? Reply.Result : McpHandlerUtils::CreateResultObject();
     const FString Name = GetJsonStringField(Item, TEXT("name"));
     Row->SetStringField(TEXT("name"), Name);

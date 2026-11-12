@@ -169,8 +169,8 @@ export const CINEMATIC_RECORDS: readonly CapabilityRecordSource[] = [
     whenToUse: ['A camera cut track must be added for shot transitions.'],
     whenNotToUse: ['The sequence already has a camera cut track.'],
     // Native HandleAddCameraCutTrack (Cinematics/CameraTracks.cpp:44-105) reads
-    // bindingGuid/bindingId (ReadBindingGuid Cinematics.cpp:112-115) or an
-    // actor resolved by actorName/cameraName/actorPath/cameraActorPath
+    // bindingGuid (ReadBindingGuid Cinematics.cpp:112-115) or an
+    // actor resolved by actorName/cameraName/actorPath
     // (ResolveActor Cinematics.cpp:117-124) plus the SetSectionRange fields
     // and save. cameraActorName is never read, so it is dropped.
     inputProps: { path: P.path, actorName: P.actorName, cameraName: P.actorName, actorPath: { type: 'string', description: 'Actor path (alias of actorName).' }, bindingGuid: A.bindingGuid, ...SECTION_RANGE, save: A.save },

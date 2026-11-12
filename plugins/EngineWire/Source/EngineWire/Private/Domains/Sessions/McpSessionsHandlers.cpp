@@ -12,26 +12,11 @@ bool UEngineWireSubsystem::HandleManageSessionsAction(
     const TSharedPtr<FJsonObject>& Payload,
     TSharedPtr<FMcpBridgeWebSocket> Socket)
 {
-    // This never inspected Action at all, so in the fallback chain it behaved as
-    // a catch-all: any foreign action reaching this step was claimed and
-    // answered "Unknown manage_sessions action: <x>", naming a domain the caller
-    // never asked for, and every handler ordered after this one became
-    // unreachable by fallback. Witnessed answering asset.analyze_graph. Both
-    // entry points pass the parent verb explicitly (MCP_REGISTER_DIRECT
-    // "manage_sessions" and the Blueprint-domain route), so anything else is
-    // not ours to answer.
-    if (Action != TEXT("manage_sessions"))
-    {
-        return false;
-    }
-
     FString SubAction;
     if (Payload.IsValid() && Payload->HasField(TEXT("action")))
     {
         SubAction = GetJsonStringField(Payload, TEXT("action"));
     }
-
-    UE_LOG(LogMcpSessionsHandlers, Log, TEXT("HandleManageSessionsAction: SubAction=%s, RequestId=%s"), *SubAction, *RequestId);
 
     // set_split_screen_type is the same operation by its older name.
     if (SubAction == TEXT("configure_split_screen") || SubAction == TEXT("set_split_screen_type"))

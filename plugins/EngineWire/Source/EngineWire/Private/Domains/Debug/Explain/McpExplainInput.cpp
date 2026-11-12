@@ -41,11 +41,7 @@ TArray<UInputMappingContext*> ContextsMapping(const UInputAction* Action, const 
     FARFilter Filter;
     Filter.PackagePaths.Add(TEXT("/Game"));
     Filter.bRecursivePaths = true;
-#if ENGINE_MINOR_VERSION >= 1
-    Filter.ClassPaths.Add(UInputMappingContext::StaticClass()->GetClassPathName());
-#else
-    Filter.ClassNames.Add(UInputMappingContext::StaticClass()->GetFName());
-#endif
+    MCP_AR_FILTER_ADD_CLASS(Filter, UInputMappingContext::StaticClass());
     TArray<FAssetData> Assets;
     FModuleManager::LoadModuleChecked<FAssetRegistryModule>(TEXT("AssetRegistry")).Get().GetAssets(Filter, Assets);
     TArray<UInputMappingContext*> Out;
@@ -127,7 +123,7 @@ void CheckPlay(FTree& Tree, UWorld* World, const TArray<UInputMappingContext*>& 
         Params->SetStringField(TEXT("setting"), TEXT("enable_mapping"));
         Params->SetStringField(TEXT("contextPath"), Contexts[0]->GetPathName());
         Tree.Fail(TEXT("contextAdded"), TEXT("CONTEXT_NOT_ADDED"), FString::Printf(TEXT("No mapping context that maps it is added to the player: every key of '%s' is dead until an Add Mapping Context node adds it."), *Contexts[0]->GetName()),
-                  MakeNextCall(TEXT("manage_networking"), TEXT("configure_input"), Params));
+                  McpHandlerUtils::MakeExecuteCall(TEXT("manage_networking"), TEXT("configure_input"), Params));
     }
     if (!Player || !Player->GetPawn())
     {
@@ -138,7 +134,7 @@ void CheckPlay(FTree& Tree, UWorld* World, const TArray<UInputMappingContext*>& 
         TSharedPtr<FJsonObject> Params = MakeShared<FJsonObject>();
         Params->SetStringField(TEXT("control"), TEXT("resume"));
         Params->SetBoolField(TEXT("unpauseGame"), true);
-        Tree.Fail(TEXT("paused"), TEXT("GAME_PAUSED"), TEXT("The game is paused, so nothing ticks."), MakeNextCall(TEXT("control_editor"), TEXT("play"), Params));
+        Tree.Fail(TEXT("paused"), TEXT("GAME_PAUSED"), TEXT("The game is paused, so nothing ticks."), McpHandlerUtils::MakeExecuteCall(TEXT("control_editor"), TEXT("play"), Params));
     }
     const FString Focused = FocusedPieWidgetForMcp();
     if (!Focused.IsEmpty())
@@ -235,7 +231,7 @@ bool ExplainInput(UEngineWireSubsystem& Self, const FString& RequestId, const TS
         }
         Tree.Fail(TEXT("mapped"), TEXT("NOT_MAPPED"),
                   FString::Printf(TEXT("No mapping context under /Game maps '%s'%s."), *Action->GetName(), Key.IsValid() ? *FString::Printf(TEXT(" to %s"), *Key.ToString()) : TEXT("")),
-                  MakeNextCall(TEXT("manage_networking"), TEXT("configure_input"), Params));
+                  McpHandlerUtils::MakeExecuteCall(TEXT("manage_networking"), TEXT("configure_input"), Params));
     }
     const bool bAdds = Blueprints.ContainsByPredicate([&Contexts](const UBlueprint* Blueprint) { return AddsContext(Blueprint, Contexts); });
     const bool bHandles = Blueprints.ContainsByPredicate([Action](const UBlueprint* Blueprint) { return HandlesAction(Blueprint, Action); });
@@ -273,7 +269,7 @@ bool ExplainInput(UEngineWireSubsystem& Self, const FString& RequestId, const TS
         }
         Tree.Fail(TEXT("handled"), TEXT("NOT_HANDLED"),
                   FString::Printf(TEXT("No Blueprint of the player (%s) has an event for '%s', so firing it runs nothing."), *Names(Blueprints), *Action->GetName()),
-                  Home ? MakeNextCall(TEXT("manage_blueprint"), TEXT("create_node"), Params) : TSharedPtr<FJsonObject>());
+                  Home ? McpHandlerUtils::MakeExecuteCall(TEXT("manage_blueprint"), TEXT("create_node"), Params) : TSharedPtr<FJsonObject>());
     }
     TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
     Tree.WriteTo(Result);

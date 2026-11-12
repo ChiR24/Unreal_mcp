@@ -3,6 +3,7 @@
 #include "CoreMinimal.h"
 #include "Dom/JsonObject.h"
 #include "EngineUtils.h"
+#include "Misc/PackageName.h"
 #include "Misc/Paths.h"
 #include "Foundation/HandlerUtils/McpHandlerUtilsTransforms.h"
 #include "Foundation/McpCapabilityPrincipal.h"
@@ -101,4 +102,18 @@ T* FindActorOfClassForMcp(UWorld* World, const FString& Target)
 		}
 	}
 	return nullptr;
+}
+
+// A name compared loosely: lower case, spaces and underscores dropped ("Path Tracing", "path_tracing" and
+// "PathTracing" all read "pathtracing").
+inline FString McpPlainKey(const FString& Text)
+{
+	return Text.Replace(TEXT(" "), TEXT("")).Replace(TEXT("_"), TEXT("")).ToLower();
+}
+
+// "/Game/A/B" names the asset B inside package /Game/A/B (its object path is /Game/A/B.B); an object path passes
+// through. A loader takes either; the asset registry and FindObject take only the object path.
+inline FString McpToObjectPath(const FString& Path)
+{
+	return Path.Contains(TEXT(".")) ? Path : Path + TEXT(".") + FPackageName::GetShortName(Path);
 }

@@ -20,12 +20,6 @@ bool UEngineWireSubsystem::HandleGetSourceControlState(
     return false;
   }
 
-  if (!Payload.IsValid()) {
-    SendAutomationError(Socket, RequestId,
-                        TEXT("get_source_control_state payload missing"),
-                        TEXT("INVALID_PAYLOAD"));
-    return true;
-  }
 
   TArray<FString> AssetPaths = McpGetStringListField(Payload, TEXT("assetPaths"), TEXT("assetPath"));
 

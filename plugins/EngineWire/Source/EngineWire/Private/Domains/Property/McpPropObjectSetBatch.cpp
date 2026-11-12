@@ -9,9 +9,7 @@ namespace
 {
 FMcpCapturedResponse RunCaptured(const FString& ItemId, const TSharedPtr<FJsonObject>& One, FSetBatchWrite RunOne)
 {
-  FMcpResponseCaptureRegistry::Get().Begin(ItemId);
-  RunOne(ItemId, One);
-  return FMcpResponseCaptureRegistry::Get().End(ItemId);
+  return McpCaptureResponse(ItemId, [&] { RunOne(ItemId, One); });
 }
 
 void Finish(FSetBatchReply& Out, const TSharedPtr<FJsonObject>& Data, const TCHAR* RowsField,
@@ -93,8 +91,7 @@ void RunTargets(const FString& RequestId, const TSharedPtr<FJsonObject>& Payload
     Rows.Add(MakeShared<FJsonValueObject>(Row));
   }
   TSharedPtr<FJsonObject> Data = McpHandlerUtils::CreateResultObject();
-  TArray<TSharedPtr<FJsonValue>> ChangedValues;
-  for (const FString& Entity : Changed) ChangedValues.Add(MakeShared<FJsonValueString>(Entity));
+  TArray<TSharedPtr<FJsonValue>> ChangedValues = McpHandlerUtils::ToJsonStringArray(Changed);
   Data->SetArrayField(TEXT("changedEntities"), ChangedValues);
   Finish(Out, Data, TEXT("targets"), Rows, Failed, FString::Printf(TEXT("Wrote %d objects."), Rows.Num()));
 }

@@ -16,7 +16,6 @@ namespace
 constexpr double DriftWeight = 0.02; // per m2 of wander from where a mover started
 constexpr double TurnWeight = 0.01;  // per radian squared a mover turns from how it started: nothing turns for nothing
 constexpr double SnapReach = 20.0;   // cm the closing snap may move a body
-constexpr double QuarterTurn = 1.57079632679489662;
 
 struct FPose
 {

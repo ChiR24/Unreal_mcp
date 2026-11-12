@@ -32,7 +32,7 @@ UClass* ResolveClass(const FString& Path)
 	{
 		return nullptr;
 	}
-	UObject* Object = LoadObject<UObject>(nullptr, *(Path.Contains(TEXT(".")) ? Path : Package + TEXT(".") + FPackageName::GetShortName(Package)));
+	UObject* Object = LoadObject<UObject>(nullptr, *McpToObjectPath(Path));
 	const UBlueprint* Blueprint = Cast<UBlueprint>(Object);
 	return Blueprint ? Blueprint->GeneratedClass.Get() : Cast<UClass>(Object);
 }

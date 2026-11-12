@@ -1,6 +1,7 @@
 // Copyright (c) 2024 EngineWire Contributors
 
 #include "Domains/AnimationAuthoring/Analysis/McpAnimBlendLayout.h"
+#include "Foundation/HandlerUtils/McpHandlerUtilsTransforms.h"
 
 namespace McpAnimBlendLayout
 {
@@ -9,11 +10,6 @@ namespace
 constexpr double BlendLayoutIdleSpeed = 10.0; // cm/s
 constexpr double BlendLayoutBackward = 170.0; // degrees from forward
 constexpr double BlendLayoutStep = 50.0;      // speed axes end on a multiple of this
-
-double BlendLayoutRound(double Value)
-{
-    return FMath::RoundToDouble(Value * 10.0) / 10.0;
-}
 
 double BlendLayoutTop(double Value)
 {
@@ -100,7 +96,7 @@ void Layout(const TArray<FVector2D>& Velocities, const TArray<EQuantity>& Quanti
         }
         else if (!Place.bIdle)
         {
-            Directions.AddUnique(BlendLayoutRound(Place.Direction));
+            Directions.AddUnique(McpRoundTo(Place.Direction, 10.0));
         }
     }
     if (Directions.Num() == 0)
@@ -116,13 +112,13 @@ void Layout(const TArray<FVector2D>& Velocities, const TArray<EQuantity>& Quanti
         const TArray<double> Own = DirectionAxis == INDEX_NONE ? TArray<double>{0.0}
             : Place.bIdle ? Directions
             : BlendLayoutBackwardOf(Place) ? TArray<double>{-180.0, 180.0}
-            : TArray<double>{BlendLayoutRound(Place.Direction)};
+            : TArray<double>{McpRoundTo(Place.Direction, 10.0)};
         for (const double Direction : Own)
         {
             FVector Position = FVector::ZeroVector;
             for (int32 Axis = 0; Axis < Quantities.Num(); ++Axis)
             {
-                Position[Axis] = Axis == DirectionAxis ? Direction : BlendLayoutRound(BlendLayoutValue(Quantities[Axis], Velocities[Clip], Place));
+                Position[Axis] = Axis == DirectionAxis ? Direction : McpRoundTo(BlendLayoutValue(Quantities[Axis], Velocities[Clip], Place), 10.0);
             }
             if (Taken.ContainsByPredicate([&Position](const FVector& Other) { return Other.Equals(Position, 1e-3); }))
             {

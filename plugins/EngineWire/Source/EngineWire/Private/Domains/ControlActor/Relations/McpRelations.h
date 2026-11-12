@@ -4,6 +4,7 @@
 #include "CoreMinimal.h"
 #include "Dom/JsonObject.h"
 #include "Dom/JsonValue.h"
+#include "Foundation/HandlerUtils/McpHandlerUtilsTransforms.h"
 #include "Foundation/Solvers/McpBoxSat.h"
 #include "Templates/Function.h"
 
@@ -132,6 +133,31 @@ inline TArray<TSharedPtr<FJsonValue>> MemberNames(const TArray<FItem>& Items, co
         Out.Add(MakeShared<FJsonValueString>(Items[Index].Name));
     }
     return Out;
+}
+
+/** Every actor Names names, each once and in order, found before anything changes. False on the first name no actor
+ *  answers to, which goes in OutMissing for the caller's own refusal. */
+inline bool FindAllNamed(const TArray<FString>& Names, TFunctionRef<AActor*(const FString&)> Find, TArray<AActor*>& OutActors,
+                         FString& OutMissing)
+{
+    for (const FString& Name : Names)
+    {
+        AActor* Actor = Find(Name);
+        if (!Actor)
+        {
+            OutMissing = Name;
+            return false;
+        }
+        OutActors.AddUnique(Actor);
+    }
+    return true;
+}
+
+/** Three numbers to a thousandth as a JSON array: a grid of 0.1 must not read back as 32.300000000000004. */
+inline TArray<TSharedPtr<FJsonValue>> RoundedTriple(double X, double Y, double Z)
+{
+    return {MakeShared<FJsonValueNumber>(McpRoundTo(X, 1000.0)), MakeShared<FJsonValueNumber>(McpRoundTo(Y, 1000.0)),
+            MakeShared<FJsonValueNumber>(McpRoundTo(Z, 1000.0))};
 }
 
 /** The patterns among the items (McpRelationsPatterns.cpp), each a JSON row. */

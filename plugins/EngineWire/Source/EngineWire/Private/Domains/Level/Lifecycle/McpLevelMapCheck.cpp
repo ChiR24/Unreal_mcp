@@ -72,7 +72,7 @@ bool HandleRunMapCheckAction(UEngineWireSubsystem& Subsystem, const FString& Req
                              TSharedPtr<FMcpBridgeWebSocket> RequestingSocket)
 {
     (void)Payload;
-    UWorld* World = GEditor ? GEditor->GetEditorWorldContext().World() : nullptr;
+    UWorld* World = McpHandlerUtils::GetEditorWorld();
     if (!World)
     {
         Subsystem.SendAutomationError(RequestingSocket, RequestId, TEXT("No level is open in the editor."), TEXT("NO_WORLD"));

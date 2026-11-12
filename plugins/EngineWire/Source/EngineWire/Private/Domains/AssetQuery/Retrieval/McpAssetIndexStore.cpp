@@ -5,6 +5,7 @@
 // aside as AssetCaptions.unread.json before captions start over.
 
 #include "Domains/AssetQuery/Retrieval/McpAssetIndex.h"
+#include "Foundation/HandlerUtils/McpHandlerUtilsJson.h"
 
 #include "Dom/JsonObject.h"
 #include "HAL/FileManager.h"
@@ -137,11 +138,7 @@ void SaveIndex(FIndex& Index)
         const TSharedRef<FJsonObject> Row = MakeShared<FJsonObject>();
         Row->SetStringField(TEXT("class"), Entry.Class);
         Row->SetStringField(TEXT("stamp"), LexToString(Entry.Stamp));
-        TArray<TSharedPtr<FJsonValue>> Words;
-        for (const FString& Word : Entry.Words)
-        {
-            Words.Add(MakeShared<FJsonValueString>(Word));
-        }
+        TArray<TSharedPtr<FJsonValue>> Words = McpHandlerUtils::ToJsonStringArray(Entry.Words);
         Row->SetArrayField(TEXT("words"), Words);
         Row->SetArrayField(TEXT("size"), StoreNumbers({static_cast<float>(Entry.Size.X), static_cast<float>(Entry.Size.Y), static_cast<float>(Entry.Size.Z)}));
         Row->SetNumberField(TEXT("triangles"), Entry.Triangles);
@@ -168,11 +165,7 @@ bool SaveCaptions(const TMap<FString, FCaption>& Captions)
     {
         const TSharedRef<FJsonObject> Row = MakeShared<FJsonObject>();
         Row->SetStringField(TEXT("caption"), Pair.Value.Text);
-        TArray<TSharedPtr<FJsonValue>> Tags;
-        for (const FString& Tag : Pair.Value.Tags)
-        {
-            Tags.Add(MakeShared<FJsonValueString>(Tag));
-        }
+        TArray<TSharedPtr<FJsonValue>> Tags = McpHandlerUtils::ToJsonStringArray(Pair.Value.Tags);
         Row->SetArrayField(TEXT("tags"), Tags);
         Rows->SetObjectField(Pair.Key, Row);
     }

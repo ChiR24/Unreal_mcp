@@ -189,11 +189,7 @@ bool HandleWidgetAuthoringTreeBuild(UEngineWireSubsystem& Subsystem, const FStri
         }
         TArray<FString> Names;
         McpCollectSpecNames(*TreeObject, RootName, Names);
-        TArray<TSharedPtr<FJsonValue>> WouldMake;
-        for (const FString& Name : Names)
-        {
-            WouldMake.Add(MakeShared<FJsonValueString>(Name));
-        }
+        TArray<TSharedPtr<FJsonValue>> WouldMake = McpHandlerUtils::ToJsonStringArray(Names);
         ResultJson->SetBoolField(TEXT("dryRun"), true);
         ResultJson->SetStringField(TEXT("widgetPath"), WidgetBlueprintPackagePath(WidgetBP));
         ResultJson->SetStringField(TEXT("slotName"), RootName);

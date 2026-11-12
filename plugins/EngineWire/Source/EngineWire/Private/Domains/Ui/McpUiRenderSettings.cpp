@@ -1,4 +1,5 @@
 #include "Domains/Ui/McpUiPrivate.h"
+#include "Foundation/HandlerUtils/McpHandlerUtilsActionsPaths.h"
 #include "Foundation/HandlerUtils/McpHandlerUtilsResponses.h"
 #include "Foundation/Render/McpConsoleVariableWrite.h"
 
@@ -34,10 +35,6 @@ const TArray<FMcpRenderSetting> &McpRenderSettings() {
       {TEXT("motionBlur"), TEXT("bDefaultFeatureMotionBlur"), {}},
   };
   return Settings;
-}
-
-FString McpPlainKey(const FString &Text) {
-  return Text.Replace(TEXT("_"), TEXT("")).Replace(TEXT(" "), TEXT("")).ToLower();
 }
 
 UEnum *McpSettingEnum(const FProperty *Property) {

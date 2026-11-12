@@ -106,9 +106,7 @@ namespace McpMaterialAuthoringHandlers
 // other way, so accept the spellings people actually type.
 inline bool IsMaterialRootTarget(const FString& TargetNodeId)
 {
-  FString Key = TargetNodeId.TrimStartAndEnd().ToLower();
-  Key.ReplaceInline(TEXT(" "), TEXT(""));
-  Key.ReplaceInline(TEXT("_"), TEXT(""));
+  const FString Key = McpPlainKey(TargetNodeId.TrimStartAndEnd());
   if (Key.IsEmpty() || Key == TEXT("main") || Key == TEXT("root") || Key == TEXT("rootnode") ||
       Key == TEXT("output") || Key == TEXT("materialoutput") || Key == TEXT("material")) {
     return true;
@@ -399,10 +397,7 @@ inline FString AddMaterialNodePlacementFields(const TSharedPtr<FJsonObject> &Res
     return FString();
   }
 
-  TArray<TSharedPtr<FJsonValue>> OverlapValues;
-  for (const FString &Name : Overlapping) {
-    OverlapValues.Add(MakeShared<FJsonValueString>(Name));
-  }
+  TArray<TSharedPtr<FJsonValue>> OverlapValues = McpHandlerUtils::ToJsonStringArray(Overlapping);
   Result->SetArrayField(TEXT("overlappingNodes"), OverlapValues);
   const FString Warning = FString::Printf(
       TEXT("Node placed at (%d, %d) overlaps %d existing node(s): %s. Estimated ")

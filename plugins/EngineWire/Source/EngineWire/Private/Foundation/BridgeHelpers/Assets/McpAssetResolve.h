@@ -8,11 +8,13 @@
 // - Reference: Engine/Source/Runtime/CoreUObject/Public/Misc/PackageName.h
 #include "Misc/PackageName.h"
 #include "Foundation/BridgeHelpers/Blueprints/McpBPPaths.h"
+#include "Foundation/BridgeHelpers/Security/McpProjectPaths.h"
 #include "Foundation/McpCapabilityPrincipal.h"
 // UEditorAssetLibrary is used below. It reached this header only through the
 // PCH, which an installed-engine build does not guarantee; include it here with
 // the same guard the PCH uses so the header is self-contained.
 #include "EditorAssetLibrary.h"
+#include "Materials/MaterialInterface.h"
 
 struct FNormalizedAssetPath {
   FString Path;
@@ -125,4 +127,35 @@ static inline FString ResolveAssetPath(const FString &InputPath) {
   }
 
   return FString();
+}
+
+// A material or material instance the caller named, loaded strictly: no fallback to a default material. A path the
+// project confines refuses with FieldName in the message and leaves OutResolvedPath empty; a path that loads nothing
+// leaves it set and says "Material not found".
+static inline UMaterialInterface *LoadMaterialForMcp(const FString &MaterialPath, FString &OutResolvedPath, FString &OutError,
+                                                     const TCHAR *FieldName = TEXT("materialPath")) {
+  OutResolvedPath.Empty();
+  OutError.Empty();
+  const FString SafeMaterialPath = SanitizeProjectRelativePath(MaterialPath);
+  if (SafeMaterialPath.IsEmpty()) {
+    OutError = McpPathRefusalMessage(FieldName, MaterialPath);
+    return nullptr;
+  }
+  OutResolvedPath = SafeMaterialPath;
+  UMaterialInterface *Material = Cast<UMaterialInterface>(McpLoadAsset(SafeMaterialPath));
+  if (!Material) {
+    // McpLoadAsset reads the asset registry; a path it has not scanned yet (some engine content) loads straight from disk.
+    Material = LoadObject<UMaterialInterface>(nullptr, *SafeMaterialPath);
+  }
+  if (!Material && !SafeMaterialPath.Contains(TEXT("."))) {
+    const FString ObjectPath = FString::Printf(TEXT("%s.%s"), *SafeMaterialPath, *FPaths::GetBaseFilename(SafeMaterialPath));
+    Material = LoadObject<UMaterialInterface>(nullptr, *ObjectPath);
+    if (Material) {
+      OutResolvedPath = ObjectPath;
+    }
+  }
+  if (!Material) {
+    OutError = FString::Printf(TEXT("Material not found: %s"), *MaterialPath);
+  }
+  return Material;
 }

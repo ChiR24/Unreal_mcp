@@ -1,4 +1,5 @@
 #include "Domains/Log/McpScriptErrorCause.h"
+#include "Foundation/HandlerUtils/McpHandlerUtilsJson.h"
 
 #include "EdGraph/EdGraphPin.h"
 #include "Engine/Blueprint.h"
@@ -127,11 +128,7 @@ TSharedPtr<FJsonObject> Diagnose(const UObject* ActiveObject, const FFrame& Stac
     TSharedPtr<FJsonObject> Params = MakeShared<FJsonObject>();
     Params->SetStringField(TEXT("objectPath"), Actor->GetActorNameOrLabel());
     Params->SetStringField(TEXT("propertyName"), Name.ToString());
-    TSharedPtr<FJsonObject> NextCall = MakeShared<FJsonObject>();
-    NextCall->SetStringField(TEXT("operation"), TEXT("execute"));
-    NextCall->SetStringField(TEXT("tool"), TEXT("inspect"));
-    NextCall->SetStringField(TEXT("action"), TEXT("set_property"));
-    NextCall->SetObjectField(TEXT("params"), Params);
+    TSharedPtr<FJsonObject> NextCall = McpHandlerUtils::MakeExecuteCall(TEXT("inspect"), TEXT("set_property"), Params);
     Cause->SetObjectField(TEXT("nextCall"), NextCall);
     return Cause;
 }

@@ -1,6 +1,7 @@
 #include "Domains/Inspect/View/McpInspectViewIds.h"
 
 #include "Domains/ControlActor/Placement/McpPlacementMount.h"
+#include "Foundation/HandlerUtils/McpHandlerUtilsTransforms.h"
 
 #include "Components/PrimitiveComponent.h"
 #include "Dom/JsonObject.h"
@@ -41,7 +42,7 @@ bool McpNearerCovers(AActor *Actor, const FEditorViewportClient &Client, const F
     }
     // What is drawn over the box the bounds project to, by share of the box: the frontmost id per pixel.
     const FBox2D Box = Screen.Overlap(Frame);
-    OutInFrame = McpViewRound(100.0 * Box.GetArea() / FMath::Max(Screen.GetArea(), 1.0), 10.0);
+    OutInFrame = McpRoundTo(100.0 * Box.GetArea() / FMath::Max(Screen.GetArea(), 1.0), 10.0);
     TMap<AActor *, int64> Covers;
     int64 Total = 0;
     for (int32 Y = FMath::FloorToInt(Box.Min.Y); Y < FMath::Min(FMath::CeilToInt(Box.Max.Y), Size.Y); Y += McpViewStride)
@@ -70,7 +71,7 @@ bool McpNearerCovers(AActor *Actor, const FEditorViewportClient &Client, const F
     const double Depth = FVector::DotProduct(Middle - Client.GetViewLocation(), Axes.GetScaledAxis(EAxis::X));
     for (int32 Index = 0; Index < Sorted.Num() && OutCovers.Num() < 3; ++Index)
     {
-        const double Share = McpViewRound(100.0 * Sorted[Index].Value / FMath::Max<int64>(Total, 1), 10.0);
+        const double Share = McpRoundTo(100.0 * Sorted[Index].Value / FMath::Max<int64>(Total, 1), 10.0);
         if (Share < MinShare)
         {
             break;

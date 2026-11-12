@@ -6,10 +6,8 @@
 #include "Foundation/BridgeHelpers/Responses/McpResponseVerify.h"
 #include "Foundation/HandlerUtils/McpHandlerUtilsJson.h"
 #include "GameFramework/Actor.h"
-#include "Misc/EngineVersionComparison.h"
-#if ENGINE_MAJOR_VERSION > 5 || (ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 1)
-#include "Engine/HitResult.h" // 5.0 declares FHitResult in EngineTypes.h
-#endif
+#include "Core/Compatibility/McpVersionCompatibility.h"
+#include MCP_HIT_RESULT_HEADER
 
 void McpTrackMotionPasses(FMcpMotionPasses &Passes, AActor *Actor) {
   UWorld *World = Actor ? Actor->GetWorld() : nullptr;

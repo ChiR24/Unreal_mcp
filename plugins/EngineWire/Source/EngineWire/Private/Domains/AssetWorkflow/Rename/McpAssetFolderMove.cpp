@@ -115,7 +115,7 @@ bool HandleMoveFolder(UEngineWireSubsystem* Bridge, const FString& RequestId, co
     }
 
     // The editor cannot rename the level it has open: it waits on a blank map and comes back afterwards.
-    UWorld* World = GEditor ? GEditor->GetEditorWorldContext().World() : nullptr;
+    UWorld* World = McpHandlerUtils::GetEditorWorld();
     const FString Current = World ? World->GetOutermost()->GetName() : FString();
     if (!Current.StartsWith(SourceFolder + TEXT("/"), ESearchCase::IgnoreCase))
     {

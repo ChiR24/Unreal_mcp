@@ -181,7 +181,7 @@ bool HandleGASComponents(const FGASRequestContext& Context, const FString& SubAc
 
         TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
         Result->SetStringField(TEXT("componentName"), ComponentName);
-        Result->SetStringField(TEXT("replicationMode"), GASEnumName(Mode));
+        Result->SetStringField(TEXT("replicationMode"), McpEnumName(Mode));
         McpHandlerUtils::AddVerification(Result, Blueprint);
         Bridge->SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("ASC configured"), Result);
         return true;

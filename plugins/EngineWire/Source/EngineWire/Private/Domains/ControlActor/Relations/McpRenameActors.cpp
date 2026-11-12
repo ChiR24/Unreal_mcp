@@ -35,14 +35,10 @@ bool HandleRenameActors(UEngineWireSubsystem* Bridge, const FString& RequestId, 
     const int32 Start = FMath::Max(0, GetJsonIntField(Payload, TEXT("start"), 1));
     const int32 Digits = FMath::Clamp(GetJsonIntField(Payload, TEXT("digits"), 2), 1, 6);
     TArray<AActor*> Actors;
-    for (const FString& Name : McpHandlerUtils::GetStringArrayField(Payload, TEXT("actorNames")))
+    FString Missing;
+    if (!FindAllNamed(McpHandlerUtils::GetStringArrayField(Payload, TEXT("actorNames")), Find, Actors, Missing))
     {
-        AActor* Actor = Find(Name);
-        if (!Actor)
-        {
-            return Refuse(FString::Printf(TEXT("No actor is labelled or named %s."), *Name), TEXT("ACTOR_NOT_FOUND"));
-        }
-        Actors.AddUnique(Actor);
+        return Refuse(FString::Printf(TEXT("No actor is labelled or named %s."), *Missing), TEXT("ACTOR_NOT_FOUND"));
     }
     if (Pattern.IsEmpty() || (Actors.Num() > 1 && !Pattern.Contains(TEXT("{n}"))))
     {

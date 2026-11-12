@@ -135,11 +135,7 @@ bool HandleSetupGlobalIllumination(
     }
     if (NotSet.Num() > 0)
     {
-        TArray<TSharedPtr<FJsonValue>> NotSetJson;
-        for (const FString& Entry : NotSet)
-        {
-            NotSetJson.Add(MakeShared<FJsonValueString>(Entry));
-        }
+        TArray<TSharedPtr<FJsonValue>> NotSetJson = McpHandlerUtils::ToJsonStringArray(NotSet);
         Resp->SetArrayField(TEXT("notSet"), NotSetJson);
     }
     if (PPV)

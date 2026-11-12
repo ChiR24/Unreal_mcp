@@ -66,11 +66,7 @@ bool ApplySettingsPropertyForMcp(UObject *Settings, const FString &Name,
       }
       Text = LexToString(NumVal);
     }
-#if ENGINE_MAJOR_VERSION > 5 || ENGINE_MINOR_VERSION >= 1
-    if (Prop->ImportText_Direct(*Text, Address, Settings, PPF_None) == nullptr) {
-#else
-    if (Prop->ImportText(*Text, Address, PPF_None, Settings) == nullptr) {
-#endif
+    if (MCP_PROPERTY_IMPORT_TEXT(Prop, *Text, Address, Settings, PPF_None) == nullptr) {
       return false;
     }
   }
@@ -147,16 +143,12 @@ bool UEngineWireSubsystem::HandleControlEditorSetPreferences(
   Resp->SetNumberField(TEXT("appliedCount"), AppliedSettings.Num());
 
   if (AppliedSettings.Num() > 0) {
-    TArray<TSharedPtr<FJsonValue>> AppliedArray;
-    for (const FString& Name : AppliedSettings)
-      AppliedArray.Add(MakeShared<FJsonValueString>(Name));
+    TArray<TSharedPtr<FJsonValue>> AppliedArray = McpHandlerUtils::ToJsonStringArray(AppliedSettings);
     Resp->SetArrayField(TEXT("applied"), AppliedArray);
   }
 
   if (FailedSettings.Num() > 0) {
-    TArray<TSharedPtr<FJsonValue>> FailedArray;
-    for (const FString& Name : FailedSettings)
-      FailedArray.Add(MakeShared<FJsonValueString>(Name));
+    TArray<TSharedPtr<FJsonValue>> FailedArray = McpHandlerUtils::ToJsonStringArray(FailedSettings);
     Resp->SetArrayField(TEXT("failed"), FailedArray);
   }
 

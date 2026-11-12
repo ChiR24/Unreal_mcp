@@ -7,10 +7,8 @@
 #include "Dom/JsonValue.h"
 #include "Engine/EngineTypes.h"
 #include "Engine/World.h"
-#include "Misc/EngineVersionComparison.h"
-#if ENGINE_MAJOR_VERSION > 5 || (ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 1)
-#include "Engine/HitResult.h" // 5.0 declares FHitResult in EngineTypes.h
-#endif
+#include "Core/Compatibility/McpVersionCompatibility.h"
+#include MCP_HIT_RESULT_HEADER
 
 namespace McpLevelLayout
 {
@@ -19,7 +17,6 @@ namespace
 constexpr double LayoutEyeCm = 160.0;
 constexpr double LayoutSightCm = 5000.0;
 constexpr int32 LayoutSightRays = 16;
-constexpr double LayoutTwoPi = 6.283185307179586; // PI is gone in 5.8 and UE_PI missing in 5.0
 constexpr int32 LayoutPathPoints = 40;
 constexpr double LayoutChokeShare = 0.01; // a space carrying fewer of the routes is no choke
 constexpr int32 LayoutMaxRows = 100;      // spaces and doors listed (a cluttered level makes hundreds)
@@ -62,7 +59,7 @@ double LayoutSight(UWorld* World, const FVector& Ground)
     double Longest = 0.0;
     for (int32 Ray = 0; Ray < LayoutSightRays; ++Ray)
     {
-        const double Angle = LayoutTwoPi * Ray / LayoutSightRays;
+        const double Angle = 2.0 * DOUBLE_PI * Ray / LayoutSightRays;
         FHitResult Hit;
         const bool bHit = World->LineTraceSingleByChannel(
             Hit, Eye, Eye + FVector(FMath::Cos(Angle), FMath::Sin(Angle), 0.0) * LayoutSightCm, ECC_Visibility, Params);

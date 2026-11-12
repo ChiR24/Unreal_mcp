@@ -62,7 +62,7 @@ TSharedPtr<FJsonObject> ActorCall(const TCHAR* Tool, const TCHAR* Action, const 
 {
     TSharedPtr<FJsonObject> Params = MakeShared<FJsonObject>();
     Params->SetStringField(TEXT("actorName"), McpActorRef(Actor));
-    return MakeNextCall(Tool, Action, Params);
+    return McpHandlerUtils::MakeExecuteCall(Tool, Action, Params);
 }
 
 // The components that draw: registered and visible, and not hidden in the game during Play.
@@ -150,7 +150,7 @@ void CheckView(FTree& Tree, AActor* Actor, const TArray<UPrimitiveComponent*>& P
             Params->SetNumberField(TEXT("value"), 0);
             Tree.Fail(TEXT("drawDistance"), TEXT("CULLED_BY_DISTANCE"),
                       FString::Printf(TEXT("%s stops drawing beyond %.0f units and the camera is %.0f away."), *Part->GetName(), Part->CachedMaxDrawDistance, Distance),
-                      MakeNextCall(TEXT("inspect"), TEXT("set_property"), Params));
+                      McpHandlerUtils::MakeExecuteCall(TEXT("inspect"), TEXT("set_property"), Params));
             return;
         }
     }

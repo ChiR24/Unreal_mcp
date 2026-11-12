@@ -61,7 +61,7 @@ inline USkeletalMesh *McpFindMeshForSkeleton(USkeleton *Skeleton) {
   const FSoftObjectPath WantedSkeleton(Skeleton);
   const FName SkeletonTag(TEXT("Skeleton"));
   FARFilter Filter;
-  Filter.ClassPaths.Add(USkeletalMesh::StaticClass()->GetClassPathName());
+  MCP_AR_FILTER_ADD_CLASS(Filter, USkeletalMesh::StaticClass());
   Filter.bRecursivePaths = true;
   Filter.TagsAndValues.Add(SkeletonTag, WantedSkeleton.ToString());
   Filter.TagsAndValues.Add(SkeletonTag, FObjectPropertyBase::GetExportPath(Skeleton));

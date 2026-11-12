@@ -44,7 +44,7 @@ inline bool McpCollectBulkAssetPaths(UEngineWireSubsystem& Bridge, const FString
     FModuleManager::LoadModuleChecked<FAssetRegistryModule>(TEXT("AssetRegistry")).Get().GetAssets(Filter, Assets);
     for (const FAssetData& Asset : Assets)
     {
-        OutPaths.Add(Asset.ToSoftObjectPath().ToString());
+        OutPaths.Add(MCP_ASSET_DATA_GET_SOFT_PATH(Asset));
     }
     return true;
 }

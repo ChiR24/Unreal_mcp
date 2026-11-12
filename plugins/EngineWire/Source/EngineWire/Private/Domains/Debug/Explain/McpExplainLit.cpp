@@ -22,7 +22,7 @@ TSharedPtr<FJsonObject> LightPropertyFix(const ULightComponent* Light, const TCH
     Params->SetStringField(TEXT("objectPath"), Light->GetPathName());
     Params->SetStringField(TEXT("propertyName"), Property);
     Params->SetNumberField(TEXT("value"), Value);
-    return MakeNextCall(TEXT("inspect"), TEXT("set_property"), Params);
+    return McpHandlerUtils::MakeExecuteCall(TEXT("inspect"), TEXT("set_property"), Params);
 }
 
 bool SharesChannel(const FLightingChannels& Light, const FLightingChannels& Primitive)

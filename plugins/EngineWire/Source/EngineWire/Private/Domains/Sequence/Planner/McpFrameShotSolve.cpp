@@ -8,7 +8,6 @@ namespace McpFrameShot
 {
 namespace
 {
-constexpr double ShotPi = 3.14159265358979323846;
 constexpr double ShotFramingWeight = 4.0;   // per subject: squared screen distance from its point
 constexpr double ShotOcclusionWeight = 3.0; // per subject: share of its sight lines blocked
 constexpr double ShotInsideCost = 10.0;
@@ -90,7 +89,7 @@ FVector OnTorus(const FProblem& Problem, double Alpha, double T, double Spin)
     const FVector Flat = FVector::CrossProduct(U, FVector::UpVector);
     const FVector Side = Flat.SizeSquared() < 1e-6 ? FVector::CrossProduct(U, FVector::ForwardVector).GetSafeNormal() : Flat.GetSafeNormal();
     const FVector Off = Side * FMath::Cos(Spin) + FVector::CrossProduct(Side, U) * FMath::Sin(Spin);
-    const double Beta = (0.05 + 0.9 * FMath::Clamp(T, 0.0, 1.0)) * (ShotPi - Alpha);
+    const double Beta = (0.05 + 0.9 * FMath::Clamp(T, 0.0, 1.0)) * (DOUBLE_PI - Alpha);
     const double Reach = Along.Size() * FMath::Sin(Alpha + Beta) / FMath::Sin(Alpha);
     return A + Reach * (U * FMath::Cos(Beta) + Off * FMath::Sin(Beta));
 }
@@ -169,7 +168,7 @@ TArray<TArray<double>> Starts(const FProblem& Problem)
         {
             for (int32 Step = 0; Step < 16; ++Step)
             {
-                Out.Add({T, Step * ShotPi / 8.0});
+                Out.Add({T, Step * DOUBLE_PI / 8.0});
             }
         }
         return Out;
@@ -177,7 +176,7 @@ TArray<TArray<double>> Starts(const FProblem& Problem)
     // Fibonacci directions over the sphere, kept from a little below the subject to well above it, and the two
     // three-quarter views of its front.
     constexpr int32 Count = 64;
-    const double Golden = ShotPi * (3.0 - FMath::Sqrt(5.0));
+    const double Golden = DOUBLE_PI * (3.0 - FMath::Sqrt(5.0));
     for (int32 Index = 0; Index < Count; ++Index)
     {
         const double Elevation = FMath::Asin(1.0 - (2.0 * Index + 1.0) / Count);

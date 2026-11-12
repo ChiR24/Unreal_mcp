@@ -1,3 +1,4 @@
+#include "Core/Compatibility/McpVersionCompatibility.h"
 #include "Domains/Blueprint/McpBPActionContext.h"
 #include "Foundation/BridgeHelpers/Assets/McpAssetResolve.h"
 #include "Foundation/BridgeHelpers/Blueprints/McpBPDiag.h"
@@ -24,11 +25,7 @@ void McpCompileBlueprintFolder(const FBlueprintActionContext &Context, const FSt
   Filter.PackagePaths.Add(FName(*Root.Path));
   Filter.bRecursivePaths = true;
   Filter.bRecursiveClasses = true;
-#if ENGINE_MINOR_VERSION >= 1
-  Filter.ClassPaths.Add(UBlueprint::StaticClass()->GetClassPathName());
-#else
-  Filter.ClassNames.Add(UBlueprint::StaticClass()->GetFName());
-#endif
+  MCP_AR_FILTER_ADD_CLASS(Filter, UBlueprint::StaticClass());
   TArray<FAssetData> Assets;
   FModuleManager::LoadModuleChecked<FAssetRegistryModule>("AssetRegistry").Get().GetAssets(Filter, Assets);
 

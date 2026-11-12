@@ -26,12 +26,6 @@ bool UEngineWireSubsystem::HandleAnalyzeGraph(
     return false;
   }
 
-  if (!Payload.IsValid()) {
-    SendAutomationError(Socket, RequestId,
-                        TEXT("analyze_graph payload missing"),
-                        TEXT("INVALID_PAYLOAD"));
-    return true;
-  }
 
   FString AssetPath;
   if (!Payload->TryGetStringField(TEXT("assetPath"), AssetPath) &&
@@ -158,10 +152,7 @@ bool UEngineWireSubsystem::HandleAnalyzeGraph(
     Result->SetNumberField(TEXT("textureSampleCount"), TextureSampleCount);
 
     // Add parameter names
-    TArray<TSharedPtr<FJsonValue>> ParamArray;
-    for (const FString &ParamName : ParameterNames) {
-      ParamArray.Add(MakeShared<FJsonValueString>(ParamName));
-    }
+    TArray<TSharedPtr<FJsonValue>> ParamArray = McpHandlerUtils::ToJsonStringArray(ParameterNames);
     Result->SetArrayField(TEXT("parameters"), ParamArray);
 
     // Material properties
@@ -234,11 +225,7 @@ bool UEngineWireSubsystem::HandleAnalyzeGraph(
     }
     TSharedPtr<FJsonObject> Params = MakeShared<FJsonObject>();
     Params->SetStringField(TEXT("assetPath"), AssetPath);
-    TSharedPtr<FJsonObject> Next = MakeShared<FJsonObject>();
-    Next->SetStringField(TEXT("operation"), TEXT("execute"));
-    Next->SetStringField(TEXT("tool"), Reader.Tool);
-    Next->SetStringField(TEXT("action"), Reader.Action);
-    Next->SetObjectField(TEXT("params"), Params);
+    TSharedPtr<FJsonObject> Next = McpHandlerUtils::MakeExecuteCall(Reader.Tool, Reader.Action, Params);
     const FString Message = FString::Printf(TEXT("A %s graph is read by %s %s; nextCall reads this one."),
                                             *ClassName, Reader.Tool, Reader.Action);
     Result->SetStringField(TEXT("graphType"), ClassName);

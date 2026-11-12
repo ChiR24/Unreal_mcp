@@ -69,7 +69,7 @@ bool AddClassFilter(const FString& ClassName, FARFilter& Filter)
 {
     if (ClassName.Contains(TEXT("/")))
     {
-#if ENGINE_MINOR_VERSION >= 1
+#if MCP_HAS_ASSET_CLASS_PATHS
         Filter.ClassPaths.Add(FTopLevelAssetPath(ClassName));
 #else
         int32 DotIndex;
@@ -89,22 +89,14 @@ bool AddClassFilter(const FString& ClassName, FARFilter& Filter)
     {
         if (ClassName.Equals(Mapping.ShortName, ESearchCase::IgnoreCase))
         {
-#if ENGINE_MINOR_VERSION >= 1
-            Filter.ClassPaths.Add(FTopLevelAssetPath(Mapping.PackagePath, Mapping.ClassNameStr));
-#else
-            Filter.ClassNames.Add(FName(Mapping.ClassNameStr));
-#endif
+            MCP_AR_FILTER_ADD_CLASS_PATH(Filter, Mapping.PackagePath, Mapping.ClassNameStr);
             return true;
         }
     }
     // Any other loaded class by its short name: ObjectRedirector used to be refused although the class exists.
     if (const UClass* Class = ResolveUClass(ClassName))
     {
-#if ENGINE_MINOR_VERSION >= 1
-        Filter.ClassPaths.Add(Class->GetClassPathName());
-#else
-        Filter.ClassNames.Add(Class->GetFName());
-#endif
+        MCP_AR_FILTER_ADD_CLASS(Filter, Class);
         return true;
     }
     return false;

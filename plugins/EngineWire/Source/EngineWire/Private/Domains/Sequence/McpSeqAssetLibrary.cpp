@@ -68,11 +68,7 @@ bool UEngineWireSubsystem::HandleSequenceList(
   IAssetRegistry &AssetRegistry = AssetRegistryModule.Get();
 
   FARFilter Filter;
-#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 1
-  Filter.ClassPaths.Add(ULevelSequence::StaticClass()->GetClassPathName());
-#else
-  Filter.ClassNames.Add(ULevelSequence::StaticClass()->GetFName());
-#endif
+  MCP_AR_FILTER_ADD_CLASS(Filter, ULevelSequence::StaticClass());
   Filter.bRecursiveClasses = true;
   Filter.bRecursivePaths = true;
   Filter.PackagePaths.Add(FName(*Root));
@@ -102,12 +98,10 @@ bool UEngineWireSubsystem::HandleSequenceList(
 bool UEngineWireSubsystem::HandleSequenceDuplicate(
     const FString &RequestId, const TSharedPtr<FJsonObject> &Payload,
     TSharedPtr<FMcpBridgeWebSocket> Socket) {
-  TSharedPtr<FJsonObject> LocalPayload =
-      Payload.IsValid() ? Payload : McpHandlerUtils::CreateResultObject();
   FString SourcePath;
-  LocalPayload->TryGetStringField(TEXT("path"), SourcePath);
+  Payload->TryGetStringField(TEXT("path"), SourcePath);
   FString DestinationPath;
-  LocalPayload->TryGetStringField(TEXT("destinationPath"), DestinationPath);
+  Payload->TryGetStringField(TEXT("destinationPath"), DestinationPath);
   if (SourcePath.IsEmpty() || DestinationPath.IsEmpty()) {
     SendAutomationResponse(
         Socket, RequestId, false,
@@ -116,7 +110,7 @@ bool UEngineWireSubsystem::HandleSequenceDuplicate(
     return true;
   }
 
-  if (!DestinationPath.IsEmpty() && !DestinationPath.StartsWith(TEXT("/"))) {
+  if (!DestinationPath.StartsWith(TEXT("/"))) {
     FString ParentPath = FPaths::GetPath(SourcePath);
     DestinationPath =
         FString::Printf(TEXT("%s/%s"), *ParentPath, *DestinationPath);
@@ -125,7 +119,7 @@ bool UEngineWireSubsystem::HandleSequenceDuplicate(
   // newName (or the source name) so the copy is not written as an asset named
   // after the folder.
   FString NewName;
-  LocalPayload->TryGetStringField(TEXT("newName"), NewName);
+  Payload->TryGetStringField(TEXT("newName"), NewName);
   NewName.TrimStartAndEndInline();
   const bool bDestinationIsFolder =
       UEditorAssetLibrary::DoesDirectoryExist(DestinationPath) ||
@@ -166,12 +160,10 @@ bool UEngineWireSubsystem::HandleSequenceDuplicate(
 bool UEngineWireSubsystem::HandleSequenceRename(
     const FString &RequestId, const TSharedPtr<FJsonObject> &Payload,
     TSharedPtr<FMcpBridgeWebSocket> Socket) {
-  TSharedPtr<FJsonObject> LocalPayload =
-      Payload.IsValid() ? Payload : McpHandlerUtils::CreateResultObject();
   FString Path;
-  LocalPayload->TryGetStringField(TEXT("path"), Path);
+  Payload->TryGetStringField(TEXT("path"), Path);
   FString NewName;
-  LocalPayload->TryGetStringField(TEXT("newName"), NewName);
+  Payload->TryGetStringField(TEXT("newName"), NewName);
   if (Path.IsEmpty() || NewName.IsEmpty()) {
     SendAutomationResponse(Socket, RequestId, false,
                            TEXT("sequence_rename requires path and newName"),
@@ -179,7 +171,7 @@ bool UEngineWireSubsystem::HandleSequenceRename(
     return true;
   }
 
-  if (!NewName.IsEmpty() && !NewName.StartsWith(TEXT("/"))) {
+  if (!NewName.StartsWith(TEXT("/"))) {
     FString ParentPath = FPaths::GetPath(Path);
     NewName = FString::Printf(TEXT("%s/%s"), *ParentPath, *NewName);
   }
@@ -210,10 +202,8 @@ bool UEngineWireSubsystem::HandleSequenceRename(
 bool UEngineWireSubsystem::HandleSequenceDelete(
     const FString &RequestId, const TSharedPtr<FJsonObject> &Payload,
     TSharedPtr<FMcpBridgeWebSocket> Socket) {
-  TSharedPtr<FJsonObject> LocalPayload =
-      Payload.IsValid() ? Payload : McpHandlerUtils::CreateResultObject();
   FString Path;
-  LocalPayload->TryGetStringField(TEXT("path"), Path);
+  Payload->TryGetStringField(TEXT("path"), Path);
   if (Path.IsEmpty()) {
     SendAutomationResponse(Socket, RequestId, false,
                            TEXT("sequence_delete requires path"), nullptr,
@@ -243,7 +233,7 @@ bool UEngineWireSubsystem::HandleSequenceDelete(
                            Resp, TEXT("SEQUENCE_IN_USE"));
     return true;
   }
-  if (UEditorAssetLibrary::DeleteAsset(Path)) {
+  if (McpSafeOperations::McpDeleteAssetAndFile(Path)) {
     TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
     Resp->SetStringField(TEXT("deletedPath"), Path);
     Resp->SetBoolField(TEXT("existsAfter"), McpAssetExists(Path));
@@ -252,8 +242,11 @@ bool UEngineWireSubsystem::HandleSequenceDelete(
                            FString());
     return true;
   }
+  // The engine delete keeps the file of a package something still holds: the sequence leaves the Content Browser,
+  // a retry answers not found, and it comes back at the next editor start.
   SendAutomationResponse(Socket, RequestId, false,
-                         TEXT("Failed to delete sequence"), nullptr,
-                         TEXT("OPERATION_FAILED"));
+                         McpAssetExists(Path) ? TEXT("Failed to delete sequence")
+                             : TEXT("The sequence left the Content Browser, but its file is still on disk because its package is still loaded: delete it again after an editor restart"),
+                         nullptr, TEXT("OPERATION_FAILED"));
   return true;
 }

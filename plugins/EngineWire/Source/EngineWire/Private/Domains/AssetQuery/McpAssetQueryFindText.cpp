@@ -268,11 +268,7 @@ bool HandleFindText(
     Filter.bRecursiveClasses = true;
     for (const UClass* Class : {UBlueprint::StaticClass(), UDataTable::StaticClass(), UStringTable::StaticClass()})
     {
-#if ENGINE_MINOR_VERSION >= 1
-        Filter.ClassPaths.Add(Class->GetClassPathName());
-#else
-        Filter.ClassNames.Add(Class->GetFName());
-#endif
+        MCP_AR_FILTER_ADD_CLASS(Filter, Class);
     }
     TArray<FAssetData> Assets;
     FModuleManager::LoadModuleChecked<FAssetRegistryModule>("AssetRegistry").Get().GetAssets(Filter, Assets);

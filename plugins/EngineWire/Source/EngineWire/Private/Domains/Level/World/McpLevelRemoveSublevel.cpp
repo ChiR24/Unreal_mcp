@@ -43,7 +43,7 @@ bool HandleRemoveSublevelAction(UEngineWireSubsystem& Subsystem, const FString& 
   // An object path or a .umap name reads as its package, as stream takes it; a bare name finds the one sublevel whose
   // path ends with it. Only the open level's own sublevels can match, so nothing on disk is reached by it.
   const FString SubLevelPath = NormalizeLevelPackagePath(Given);
-  UWorld* World = GEditor ? GEditor->GetEditorWorldContext().World() : nullptr;
+  UWorld* World = McpHandlerUtils::GetEditorWorld();
   if (!World) {
     Subsystem.SendAutomationError(RequestingSocket, RequestId, TEXT("No level is open in the editor"), TEXT("NO_WORLD"));
     return true;

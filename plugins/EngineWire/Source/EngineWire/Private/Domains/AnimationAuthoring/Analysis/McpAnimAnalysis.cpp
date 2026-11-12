@@ -13,15 +13,10 @@ constexpr int32 McpMaxAnalysisSamples = 2000;
 constexpr int32 McpMaxContactsReported = 32;
 constexpr int32 McpPopsReported = 3;
 
-double McpRound(double Value, double Scale = 10.0)
-{
-    return FMath::RoundToDouble(Value * Scale) / Scale;
-}
-
 TSharedPtr<FJsonValue> McpVectorJson(const FVector& Value)
 {
-    return MakeShared<FJsonValueArray>(TArray<TSharedPtr<FJsonValue>>{MakeShared<FJsonValueNumber>(McpRound(Value.X)),
-        MakeShared<FJsonValueNumber>(McpRound(Value.Y)), MakeShared<FJsonValueNumber>(McpRound(Value.Z))});
+    return MakeShared<FJsonValueArray>(TArray<TSharedPtr<FJsonValue>>{MakeShared<FJsonValueNumber>(McpRoundTo(Value.X, 10.0)),
+        MakeShared<FJsonValueNumber>(McpRoundTo(Value.Y, 10.0)), MakeShared<FJsonValueNumber>(McpRoundTo(Value.Z, 10.0))});
 }
 
 // One foot over the sampled frames: planted where it is within ContactHeight of its lowest point.
@@ -50,17 +45,17 @@ TSharedPtr<FJsonObject> McpDescribeFoot(const FName Foot, const TArray<FVector>&
             if (Contacts.Num() < McpMaxContactsReported)
             {
                 Contacts.Add(MakeShared<FJsonValueArray>(TArray<TSharedPtr<FJsonValue>>{
-                    MakeShared<FJsonValueNumber>(McpRound(Times[Start], 100.0)), MakeShared<FJsonValueNumber>(McpRound(Times[Index - 1], 100.0))}));
+                    MakeShared<FJsonValueNumber>(McpRoundTo(Times[Start], 100.0)), MakeShared<FJsonValueNumber>(McpRoundTo(Times[Index - 1], 100.0))}));
             }
             Start = INDEX_NONE;
         }
     }
     const TSharedPtr<FJsonObject> Entry = MakeShared<FJsonObject>();
     Entry->SetStringField(TEXT("bone"), Foot.ToString());
-    Entry->SetNumberField(TEXT("lowest"), McpRound(Lowest));
+    Entry->SetNumberField(TEXT("lowest"), McpRoundTo(Lowest, 10.0));
     Entry->SetArrayField(TEXT("contacts"), Contacts);
-    Entry->SetNumberField(TEXT("plantedRatio"), McpRound(double(Planted) / FMath::Max(Path.Num(), 1), 100.0));
-    Entry->SetNumberField(TEXT("plantedSpeed"), McpRound(Moves > 0 ? PlantedSpeed / Moves : 0.0));
+    Entry->SetNumberField(TEXT("plantedRatio"), McpRoundTo(double(Planted) / FMath::Max(Path.Num(), 1), 100.0));
+    Entry->SetNumberField(TEXT("plantedSpeed"), McpRoundTo(Moves > 0 ? PlantedSpeed / Moves : 0.0, 10.0));
     return Entry;
 }
 } // namespace
@@ -156,10 +151,10 @@ TSharedPtr<FJsonObject> HandleAnalyzeAnimation(const TSharedPtr<FJsonObject>& Pa
     const TSharedPtr<FJsonObject> RootMotion = MakeShared<FJsonObject>();
     RootMotion->SetBoolField(TEXT("enabled"), Sequence->bEnableRootMotion);
     RootMotion->SetField(TEXT("displacement"), McpVectorJson(RootPath.Last().GetLocation() - RootPath[0].GetLocation()));
-    RootMotion->SetNumberField(TEXT("distance"), McpRound(Distance));
-    RootMotion->SetNumberField(TEXT("averageSpeed"), McpRound(Distance / Length));
-    RootMotion->SetNumberField(TEXT("peakSpeed"), McpRound(TopSpeed));
-    RootMotion->SetNumberField(TEXT("turn"), McpRound((RootPath.Last().GetRotation() * RootPath[0].GetRotation().Inverse()).Rotator().Yaw));
+    RootMotion->SetNumberField(TEXT("distance"), McpRoundTo(Distance, 10.0));
+    RootMotion->SetNumberField(TEXT("averageSpeed"), McpRoundTo(Distance / Length, 10.0));
+    RootMotion->SetNumberField(TEXT("peakSpeed"), McpRoundTo(TopSpeed, 10.0));
+    RootMotion->SetNumberField(TEXT("turn"), McpRoundTo((RootPath.Last().GetRotation() * RootPath[0].GetRotation().Inverse()).Rotator().Yaw, 10.0));
 
     // The loop seam: every bone but the root, last frame against first, in its parent's space.
     double SeamPosition = 0.0;
@@ -180,8 +175,8 @@ TSharedPtr<FJsonObject> HandleAnalyzeAnimation(const TSharedPtr<FJsonObject>& Pa
         }
     }
     const TSharedPtr<FJsonObject> Loop = MakeShared<FJsonObject>();
-    Loop->SetNumberField(TEXT("positionError"), McpRound(SeamPosition, 100.0));
-    Loop->SetNumberField(TEXT("rotationError"), McpRound(SeamRotation));
+    Loop->SetNumberField(TEXT("positionError"), McpRoundTo(SeamPosition, 100.0));
+    Loop->SetNumberField(TEXT("rotationError"), McpRoundTo(SeamRotation, 10.0));
     Loop->SetStringField(TEXT("worstBone"), SeamBone.ToString());
 
     TArray<TSharedPtr<FJsonValue>> FeetJson;
@@ -201,15 +196,15 @@ TSharedPtr<FJsonObject> HandleAnalyzeAnimation(const TSharedPtr<FJsonObject>& Pa
     {
         const TSharedPtr<FJsonObject> Pop = MakeShared<FJsonObject>();
         Pop->SetStringField(TEXT("bone"), Bones[Order[Rank]].ToString());
-        Pop->SetNumberField(TEXT("time"), McpRound(PeakTime[Order[Rank]], 100.0));
-        Pop->SetNumberField(TEXT("degreesPerSecond"), McpRound(PeakSpeed[Order[Rank]], 1.0));
+        Pop->SetNumberField(TEXT("time"), McpRoundTo(PeakTime[Order[Rank]], 100.0));
+        Pop->SetNumberField(TEXT("degreesPerSecond"), McpRoundTo(PeakSpeed[Order[Rank]], 1.0));
         Pops.Add(MakeShared<FJsonValueObject>(Pop));
     }
 
     Response->SetStringField(TEXT("assetPath"), Sequence->GetPathName());
-    Response->SetNumberField(TEXT("length"), McpRound(Length, 1000.0));
+    Response->SetNumberField(TEXT("length"), McpRoundTo(Length, 1000.0));
     Response->SetNumberField(TEXT("frames"), Keys);
-    Response->SetNumberField(TEXT("frameRate"), McpRound((Keys - 1) / Length, 100.0));
+    Response->SetNumberField(TEXT("frameRate"), McpRoundTo((Keys - 1) / Length, 100.0));
     Response->SetNumberField(TEXT("samples"), Count);
     Response->SetObjectField(TEXT("rootMotion"), RootMotion);
     Response->SetObjectField(TEXT("loop"), Loop);

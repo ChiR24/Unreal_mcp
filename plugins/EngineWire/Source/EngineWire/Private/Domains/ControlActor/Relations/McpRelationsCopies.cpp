@@ -16,7 +16,6 @@ namespace
 {
 constexpr double LineTolerance = 5.0;       // cm off a row's line, or between a grid's columns
 constexpr double EvenShare = 0.05;          // a step within 5 percent of the mean is even
-constexpr double TwoPi = 6.283185307179586; // UE_PI is missing in 5.0 and PI in 5.8
 
 FVector Flat(const FItem& Item)
 {
@@ -168,11 +167,11 @@ bool IsRing(const TArray<FItem>& Items, const TArray<int32>& Members, FVector& O
         Angles.Add(FMath::Atan2(Offset.Y, Offset.X));
     }
     Angles.Sort();
-    const double Step = TwoPi / Members.Num();
+    const double Step = 2.0 * DOUBLE_PI / Members.Num();
     bool bRing = OutRadius > 1.0;
     for (int32 Index = 0; Index < Members.Num() && bRing; ++Index)
     {
-        const double Gap = (Index + 1 < Angles.Num() ? Angles[Index + 1] : Angles[0] + TwoPi) - Angles[Index];
+        const double Gap = (Index + 1 < Angles.Num() ? Angles[Index + 1] : Angles[0] + 2.0 * DOUBLE_PI) - Angles[Index];
         const double Distance = (Flat(Items[Members[Index]]) - OutCentre).Size();
         bRing = FMath::Abs(Gap - Step) <= 0.25 * Step && FMath::Abs(Distance - OutRadius) <= FMath::Max(2.0, EvenShare * OutRadius);
     }

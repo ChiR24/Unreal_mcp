@@ -221,7 +221,7 @@ bool HandleGASEffectModifiers(const FGASRequestContext& Context, const FString& 
 
         TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
         Result->SetStringField(TEXT("blueprintPath"), BlueprintPath);
-        Result->SetStringField(TEXT("operation"), GASEnumName(ModOp));
+        Result->SetStringField(TEXT("operation"), McpEnumName(ModOp));
         Result->SetNumberField(TEXT("magnitude"), Magnitude);
         // EffectCDO is the pre-compile object; the compile above reinstanced it.
         Result->SetNumberField(TEXT("modifierCount"), VerifiedModifierCount);

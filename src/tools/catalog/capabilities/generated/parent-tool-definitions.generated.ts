@@ -28710,7 +28710,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "bindingGuid": {
           "type": "string",
-          "description": "Sequencer binding GUID (alias of bindingId)."
+          "description": "Sequencer binding GUID."
         },
         "bindingId": {
           "type": "string",

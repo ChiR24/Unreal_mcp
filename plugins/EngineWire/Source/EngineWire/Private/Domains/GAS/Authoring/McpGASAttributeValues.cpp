@@ -21,7 +21,7 @@ bool HandleGASAttributeValues(const FGASRequestContext& Context, const FString& 
     const TSharedPtr<FJsonObject>& Payload = Context.Payload;
     const FString& BlueprintPath = Context.BlueprintPath;
 
-    // set_attribute_base_value - REAL IMPLEMENTATION using reflection
+    // set_attribute_base_value: the attribute's base value, set by reflection
     if (SubAction == TEXT("set_attribute_base_value"))
     {
         if (BlueprintPath.IsEmpty())
@@ -118,7 +118,6 @@ bool HandleGASAttributeValues(const FGASRequestContext& Context, const FString& 
         return true;
     }
 
-    // set_attribute_clamping - REAL IMPLEMENTATION with PreAttributeChange clamping logic
     return false;
 }
 }

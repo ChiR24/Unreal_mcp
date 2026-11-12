@@ -19,11 +19,6 @@ bool UEngineWireSubsystem::HandleGenerateLODs(
     return false;
   }
 
-  if (!Payload.IsValid()) {
-    SendAutomationError(RequestingSocket, RequestId, TEXT("Payload missing"),
-                        TEXT("INVALID_PAYLOAD"));
-    return true;
-  }
 
   // Support both landscapePath (single) and assetPaths (array)
   FString LandscapePath;

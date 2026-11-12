@@ -10,6 +10,7 @@
 #include "Domains/Input/McpInputAssetResolve.h"
 #include "Domains/Input/McpInputKeyResolve.h"
 #include "Foundation/BridgeHelpers/Responses/McpJsonFields.h"
+#include "Foundation/HandlerUtils/McpHandlerUtilsJson.h"
 
 #include "Engine/Blueprint.h"
 #include "GameFramework/Character.h"
@@ -23,9 +24,7 @@ namespace {
 bool RunInputStep(UEngineWireSubsystem &Bridge, const FString &Id, const TSharedPtr<FJsonObject> &Payload,
                   bool (*Handler)(UEngineWireSubsystem &, const FString &, const TSharedPtr<FJsonObject> &,
                                   TSharedPtr<FMcpBridgeWebSocket>)) {
-  FMcpResponseCaptureRegistry::Get().Begin(Id);
-  Handler(Bridge, Id, Payload, nullptr);
-  return FMcpResponseCaptureRegistry::Get().End(Id).bSuccess;
+  return McpCaptureResponse(Id, [&] { Handler(Bridge, Id, Payload, nullptr); }).bSuccess;
 }
 
 // Maps Key to Action with Modifiers in order, unless that pair is mapped already (a re-run keeps it as it is).
@@ -41,9 +40,9 @@ bool MapKey(UEngineWireSubsystem &Bridge, const FString &Id, const FString &Cont
   Payload->SetStringField(TEXT("contextPath"), Context);
   Payload->SetStringField(TEXT("actionPath"), Action);
   Payload->SetStringField(TEXT("key"), Key);
-  FMcpResponseCaptureRegistry::Get().Begin(Id);
-  McpInputHandlers::HandleAddInputMapping(Bridge, Id, TEXT("add_mapping"), Payload, nullptr);
-  bool bOk = FMcpResponseCaptureRegistry::Get().End(Id).bSuccess;
+  bool bOk = McpCaptureResponse(Id, [&] {
+    McpInputHandlers::HandleAddInputMapping(Bridge, Id, TEXT("add_mapping"), Payload, nullptr);
+  }).bSuccess;
   for (const TCHAR *Modifier : Modifiers) {
     Payload->SetStringField(TEXT("modifierType"), Modifier);
     bOk = bOk && RunInputStep(Bridge, Id + TEXT(".") + Modifier, Payload, McpInputHandlers::HandleSetInputModifier);
@@ -156,10 +155,7 @@ bool HandleBlueprintAddControls(const FBlueprintActionContext &Context) {
       Changed.AddUnique(FPackageName::ObjectPathToPackageName(Asset));
     }
   }
-  TArray<TSharedPtr<FJsonValue>> ChangedValues;
-  for (const FString &Asset : Changed) {
-    ChangedValues.Add(MakeShared<FJsonValueString>(Asset));
-  }
+  TArray<TSharedPtr<FJsonValue>> ChangedValues = McpHandlerUtils::ToJsonStringArray(Changed);
   Report->SetArrayField(TEXT("changedAssets"), ChangedValues);
   Bridge.SendAutomationResponse(RequestingSocket, RequestId, bMapped,
                                 bMapped ? FString(TEXT("Controls written: WASD or the left stick walk, the mouse or the right "

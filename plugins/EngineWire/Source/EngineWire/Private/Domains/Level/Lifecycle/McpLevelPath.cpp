@@ -1,4 +1,5 @@
 #include "Domains/Level/Lifecycle/McpLevelPathSafety.h"
+#include "Foundation/HandlerUtils/McpHandlerUtilsActionsPaths.h"
 
 #include "AssetRegistry/AssetRegistryModule.h"
 #include "Dom/JsonObject.h"
@@ -114,7 +115,7 @@ FString CheckLevelPathIsOpenLevel(const TSharedPtr<FJsonObject>& Payload) {
     return FString();
   }
   LevelPath = NormalizeLevelPackagePath(LevelPath);
-  UWorld* World = GEditor ? GEditor->GetEditorWorldContext().World() : nullptr;
+  UWorld* World = McpHandlerUtils::GetEditorWorld();
   const FString OpenLevel = World ? World->GetOutermost()->GetName() : FString();
   if (LevelPath.Equals(OpenLevel, ESearchCase::IgnoreCase)) {
     return FString();

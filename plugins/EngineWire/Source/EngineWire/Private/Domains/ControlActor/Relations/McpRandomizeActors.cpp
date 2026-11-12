@@ -47,14 +47,10 @@ bool HandleRandomizeTransforms(UEngineWireSubsystem* Bridge, const FString& Requ
         return Refuse(TEXT("Nothing to randomize: give yaw, tilt, scale or offset."), TEXT("INVALID_ARGUMENT"));
     }
     TArray<AActor*> Actors;
-    for (const FString& Name : McpHandlerUtils::GetStringArrayField(Payload, TEXT("actorNames")))
+    FString Missing;
+    if (!FindAllNamed(McpHandlerUtils::GetStringArrayField(Payload, TEXT("actorNames")), Find, Actors, Missing))
     {
-        AActor* Actor = Find(Name);
-        if (!Actor)
-        {
-            return Refuse(FString::Printf(TEXT("No actor is labelled or named %s."), *Name), TEXT("ACTOR_NOT_FOUND"));
-        }
-        Actors.AddUnique(Actor);
+        return Refuse(FString::Printf(TEXT("No actor is labelled or named %s."), *Missing), TEXT("ACTOR_NOT_FOUND"));
     }
     FRandomStream Stream(GetJsonIntField(Payload, TEXT("seed"), 1));
     TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();

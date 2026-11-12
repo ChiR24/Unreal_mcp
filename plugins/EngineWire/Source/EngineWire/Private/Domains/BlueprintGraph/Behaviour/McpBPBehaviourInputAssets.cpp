@@ -5,6 +5,7 @@
 // optional, delay-loaded module: nothing here touches its classes before
 // EnhancedInputLoaded() said yes.
 #include "Domains/BlueprintGraph/Behaviour/McpBPBehaviour.h"
+#include "Foundation/HandlerUtils/McpHandlerUtilsJson.h"
 
 #include "Core/Requests/McpResponseCaptureRegistry.h"
 #include "Domains/Input/McpInputActionRouting.h"
@@ -89,11 +90,7 @@ bool CheckDefaultInputClasses(const TSharedPtr<FJsonObject>& Input, const TShare
     Params->SetStringField(TEXT("key"), bPlayerInput ? TEXT("DefaultInputComponentClass") : TEXT("DefaultPlayerInputClass"));
     Params->SetStringField(TEXT("value"), bPlayerInput ? TEXT("/Script/EnhancedInput.EnhancedInputComponent")
                                                        : TEXT("/Script/EnhancedInput.EnhancedPlayerInput"));
-    TSharedPtr<FJsonObject> Next = MakeShared<FJsonObject>();
-    Next->SetStringField(TEXT("operation"), TEXT("execute"));
-    Next->SetStringField(TEXT("tool"), TEXT("system_control"));
-    Next->SetStringField(TEXT("action"), TEXT("set_project_setting"));
-    Next->SetObjectField(TEXT("params"), Params);
+    TSharedPtr<FJsonObject> Next = McpHandlerUtils::MakeExecuteCall(TEXT("system_control"), TEXT("set_project_setting"), Params);
     Report->SetObjectField(TEXT("nextCall"), Next);
     OutCode = TEXT("ENHANCED_INPUT_NOT_DEFAULT");
     OutError = TEXT("This project's default input classes are not Enhanced Input, so an Enhanced Input node would compile "
@@ -136,17 +133,18 @@ bool CreateInputAsset(UEngineWireSubsystem& Bridge, const FString& RequestId, bo
     Payload->SetStringField(TEXT("name"), FPackageName::GetShortName(Package));
     Payload->SetStringField(TEXT("path"), FPackageName::GetLongPackagePath(Package));
     const FString Id = RequestId + TEXT("#inputasset");
-    FMcpResponseCaptureRegistry::Get().Begin(Id);
-    if (bContext)
+    const FMcpCapturedResponse Reply = McpCaptureResponse(Id, [&]
     {
-        McpInputHandlers::HandleCreateInputMappingContext(Bridge, Id, Payload, nullptr);
-    }
-    else
-    {
-        Payload->SetStringField(TEXT("valueType"), TEXT("digital"));
-        McpInputHandlers::HandleCreateInputAction(Bridge, Id, Payload, nullptr);
-    }
-    const FMcpCapturedResponse Reply = FMcpResponseCaptureRegistry::Get().End(Id);
+        if (bContext)
+        {
+            McpInputHandlers::HandleCreateInputMappingContext(Bridge, Id, Payload, nullptr);
+        }
+        else
+        {
+            Payload->SetStringField(TEXT("valueType"), TEXT("digital"));
+            McpInputHandlers::HandleCreateInputAction(Bridge, Id, Payload, nullptr);
+        }
+    });
     if (!Reply.bSuccess)
     {
         OutCode = Reply.ErrorCode.IsEmpty() ? TEXT("INPUT_ASSET_FAILED") : *Reply.ErrorCode;

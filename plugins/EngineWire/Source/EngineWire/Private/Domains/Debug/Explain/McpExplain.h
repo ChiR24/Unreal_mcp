@@ -35,9 +35,6 @@ private:
     int32 Unknowns = 0;
 };
 
-// A nextCall: execute Tool.Action with Params.
-TSharedPtr<FJsonObject> MakeNextCall(const TCHAR* Tool, const TCHAR* Action, const TSharedPtr<FJsonObject>& Params);
-
 // The Blueprints that set a player up: the game mode's player controller, pawn and HUD, the level's own Blueprint, and
 // during Play the classes actually running.
 TArray<UBlueprint*> PlayerBlueprints(UWorld* World);

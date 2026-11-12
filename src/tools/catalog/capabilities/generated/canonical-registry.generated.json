@@ -1,5 +1,5 @@
 {
-  "catalogRevision": "4f0854bb8267a7fd",
+  "catalogRevision": "be90c0ae9da49f75",
   "recordCount": 489,
   "records": [
     {
@@ -106662,7 +106662,7 @@
             },
             "bindingGuid": {
               "type": "string",
-              "description": "Sequencer binding GUID (alias of bindingId)."
+              "description": "Sequencer binding GUID."
             },
             "startFrame": {
               "type": "integer",
@@ -107095,8 +107095,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "a470c8957c44677e939bc0a2cf97b9ad4618bfdc5cca90d4967f87d99430fc15",
-        "content": "79005184dceec8d36996db3dcfdec21b134d9d7a7970c51ad63edf13d073c45e"
+        "schema": "a72006ae09f51455a90d4c7742814a21c14b39940285a8d99c4cec42b743e9d9",
+        "content": "e6920888e8479f6a44c72c61cbc98c50610d253cf154b878612ba6bd4d198014"
       }
     },
     {

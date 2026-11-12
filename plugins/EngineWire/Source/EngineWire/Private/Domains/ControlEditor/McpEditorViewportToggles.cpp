@@ -42,13 +42,6 @@ bool McpReadStatNames(const TSharedPtr<FJsonObject> &Payload, const TArray<FStri
   return true;
 }
 
-TArray<TSharedPtr<FJsonValue>> McpStatsJson(const TArray<FString> &Names) {
-  TArray<TSharedPtr<FJsonValue>> Out;
-  for (const FString &Name : Names)
-    Out.Add(MakeShared<FJsonValueString>(Name));
-  return Out;
-}
-
 // Shows (bShow) or hides each stat, toggling only the ones not already in the
 // wanted state, and sends the reply. hide_stats with no stat hides them all.
 void McpSetStatsShown(UEngineWireSubsystem &Bridge, const FString &RequestId,
@@ -83,8 +76,8 @@ void McpSetStatsShown(UEngineWireSubsystem &Bridge, const FString &RequestId,
     GEditor->Exec(World, *Command);
     Toggled.Add(Stat);
   }
-  Resp->SetArrayField(bShow ? TEXT("statsShown") : TEXT("statsHidden"), McpStatsJson(Toggled));
-  Resp->SetArrayField(bShow ? TEXT("alreadyShown") : TEXT("alreadyHidden"), McpStatsJson(Unchanged));
+  Resp->SetArrayField(bShow ? TEXT("statsShown") : TEXT("statsHidden"), McpHandlerUtils::ToJsonStringArray(Toggled));
+  Resp->SetArrayField(bShow ? TEXT("alreadyShown") : TEXT("alreadyHidden"), McpHandlerUtils::ToJsonStringArray(Unchanged));
   Bridge.SendAutomationResponse(Socket, RequestId, true,
                                 FString::Printf(TEXT("%s: %s"), bShow ? TEXT("Stats shown") : TEXT("Stats hidden"),
                                                 *FString::Join(Stats, TEXT(", "))),

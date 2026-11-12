@@ -4,12 +4,9 @@
 
 namespace McpSequenceCinematics {
 namespace {
+// The sequence dispatcher hands over its action lower-cased, with sequence_ before the sub-action.
 FString NormalizeAction(const FString &Action) {
-  FString Lower = Action.ToLower();
-  if (Lower.StartsWith(TEXT("sequence_"))) {
-    Lower.RightChopInline(9);
-  }
-  return Lower;
+  return Action.StartsWith(TEXT("sequence_")) ? Action.RightChop(9) : Action;
 }
 }
 

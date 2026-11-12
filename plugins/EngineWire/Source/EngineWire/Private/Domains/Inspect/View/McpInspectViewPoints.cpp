@@ -8,9 +8,7 @@
 #include "Engine/World.h"
 #include "ImageUtils.h"
 #include "Misc/Base64.h"
-#if ENGINE_MAJOR_VERSION > 5 || (ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 1)
-#include "Engine/HitResult.h" // 5.0 declares FHitResult in EngineTypes.h
-#endif
+#include MCP_HIT_RESULT_HEADER
 
 // describe_view's points (what is under a spot of the frame, drawn and in the world) and labels (the frame with
 // each listed actor boxed and numbered). Split from McpInspectViewContents.cpp.
@@ -93,8 +91,8 @@ bool McpDescribeViewPoints(const FEditorViewportClient &Client, const FIntPoint 
             X = (PixelX + 0.5) / Size.X;
             Y = (PixelY + 0.5) / Size.Y;
             const TSharedPtr<FJsonObject> Snapped = MakeShared<FJsonObject>();
-            Snapped->SetNumberField(TEXT("x"), McpViewRound(X, 10000.0));
-            Snapped->SetNumberField(TEXT("y"), McpViewRound(Y, 10000.0));
+            Snapped->SetNumberField(TEXT("x"), McpRoundTo(X, 10000.0));
+            Snapped->SetNumberField(TEXT("y"), McpRoundTo(Y, 10000.0));
             Row->SetObjectField(TEXT("snappedTo"), Snapped);
         }
         const FMcpViewProxy *Proxy = ProxyAt(PixelX, PixelY);

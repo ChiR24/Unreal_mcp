@@ -93,11 +93,7 @@ bool HandleMetaHumanStatus(UEngineWireSubsystem* Self, const FString& RequestId,
         }
     }
 
-    TArray<TSharedPtr<FJsonValue>> BlockerValues;
-    for (const FString& Blocker : Blockers)
-    {
-        BlockerValues.Add(MakeShared<FJsonValueString>(Blocker));
-    }
+    TArray<TSharedPtr<FJsonValue>> BlockerValues = McpHandlerUtils::ToJsonStringArray(Blockers);
     Result->SetArrayField(TEXT("blockers"), BlockerValues);
     Result->SetBoolField(TEXT("ready"), Blockers.Num() == 0);
 

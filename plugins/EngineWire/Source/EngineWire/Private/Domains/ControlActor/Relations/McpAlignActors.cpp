@@ -48,14 +48,10 @@ bool HandleAlignActors(UEngineWireSubsystem* Bridge, const FString& RequestId, c
         return Refuse(TEXT("axis is x, y or z; edge is min, max, center or pivot."), TEXT("INVALID_ARGUMENT"));
     }
     TArray<AActor*> Actors;
-    for (const FString& Name : McpHandlerUtils::GetStringArrayField(Payload, TEXT("actorNames")))
+    FString Missing;
+    if (!FindAllNamed(McpHandlerUtils::GetStringArrayField(Payload, TEXT("actorNames")), Find, Actors, Missing))
     {
-        AActor* Actor = Find(Name);
-        if (!Actor)
-        {
-            return Refuse(FString::Printf(TEXT("No actor is labelled or named %s."), *Name), TEXT("ACTOR_NOT_FOUND"));
-        }
-        Actors.AddUnique(Actor);
+        return Refuse(FString::Printf(TEXT("No actor is labelled or named %s."), *Missing), TEXT("ACTOR_NOT_FOUND"));
     }
     if (Actors.Num() < (bValue ? 1 : 2))
     {

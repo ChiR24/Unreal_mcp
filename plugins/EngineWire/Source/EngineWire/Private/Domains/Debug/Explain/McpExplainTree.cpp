@@ -74,16 +74,6 @@ FString FTree::Summary(const FString& Subject) const
         : FString::Printf(TEXT("%s: every check passed; nothing found that stops it."), *Subject);
 }
 
-TSharedPtr<FJsonObject> MakeNextCall(const TCHAR* Tool, const TCHAR* Action, const TSharedPtr<FJsonObject>& Params)
-{
-    TSharedPtr<FJsonObject> Call = MakeShared<FJsonObject>();
-    Call->SetStringField(TEXT("operation"), TEXT("execute"));
-    Call->SetStringField(TEXT("tool"), Tool);
-    Call->SetStringField(TEXT("action"), Action);
-    Call->SetObjectField(TEXT("params"), Params.IsValid() ? Params : MakeShared<FJsonObject>());
-    return Call;
-}
-
 bool Handle(UEngineWireSubsystem& Self, const FString& RequestId, const FString& LowerSubAction,
             const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> Socket)
 {

@@ -4,6 +4,7 @@
 
 #include "CoreMinimal.h"
 #include "Dom/JsonObject.h"
+#include "Foundation/BridgeHelpers/Reflection/McpEnumName.h"
 #include "Foundation/BridgeHelpers/Responses/McpJsonFields.h"
 
 namespace McpGASHandlers
@@ -68,13 +69,5 @@ bool TryParseGASEnum(const FString& Value, TEnum& Out)
         }
     }
     return false;
-}
-
-// The enumerator's short name ("HasDuration").
-template <typename TEnum>
-FString GASEnumName(TEnum Value)
-{
-    const UEnum* Enum = StaticEnum<TEnum>();
-    return Enum ? Enum->GetNameStringByValue(static_cast<int64>(Value)) : FString();
 }
 }

@@ -72,8 +72,7 @@ bool HandleComponentActions(
     const FString AttachTo = GetJsonStringField(Payload, TEXT("actorName"));
 
     UAudioComponent *AudioComp = nullptr;
-    UWorld *World =
-        GEditor ? GEditor->GetEditorWorldContext().World() : nullptr;
+    UWorld *World = McpHandlerUtils::GetEditorWorld();
 
     if (!World) {
       Self->SendAutomationError(RequestingSocket, RequestId, TEXT("No editor world"),

@@ -45,11 +45,7 @@ void AddAIAssetInventory(const TSharedPtr<FJsonObject>& Result)
         Filter.PackagePaths.Add(FName(TEXT("/Game")));
         Filter.bRecursivePaths = true;
         Filter.bRecursiveClasses = true;
-#if MCP_HAS_ASSET_CLASS_PATHS
-        Filter.ClassPaths.Add(FTopLevelAssetPath(FName(Spec.ModulePath), FName(Spec.ClassName)));
-#else
-        Filter.ClassNames.Add(FName(Spec.ClassName));
-#endif
+        MCP_AR_FILTER_ADD_CLASS_PATH(Filter, Spec.ModulePath, Spec.ClassName);
 
         TArray<FAssetData> Assets;
         AssetRegistryModule.Get().GetAssets(Filter, Assets);

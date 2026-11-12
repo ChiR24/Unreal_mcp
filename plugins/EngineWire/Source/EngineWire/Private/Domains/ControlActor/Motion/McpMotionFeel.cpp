@@ -15,11 +15,6 @@ constexpr double FeelStillCmS = 10.0;
 constexpr double FeelLiftCm = 20.0;
 constexpr double FeelRunCmS = 30.0;
 
-double FeelRound(double Value, double Scale)
-{
-    return FMath::RoundToDouble(Value * Scale) / Scale;
-}
-
 // The rate of change of a series, over the frame ending at each sample (the first copies 0).
 TArray<FVector> FeelRate(const TArray<double>& Times, const TArray<FVector>& Series)
 {
@@ -52,9 +47,9 @@ TSharedPtr<FJsonObject> FeelJump(const TArray<double>& T, const TArray<FVector>&
     }
     TSharedPtr<FJsonObject> Jump = MakeShared<FJsonObject>();
     const double Up = T[Apex] - T[Takeoff];
-    Jump->SetNumberField(TEXT("takeoffAt"), FeelRound(T[Takeoff], 1000.0));
-    Jump->SetNumberField(TEXT("height"), FeelRound(P[Apex].Z - P[Takeoff].Z, 10.0));
-    Jump->SetNumberField(TEXT("timeToApex"), FeelRound(Up, 1000.0));
+    Jump->SetNumberField(TEXT("takeoffAt"), McpRoundTo(T[Takeoff], 1000.0));
+    Jump->SetNumberField(TEXT("height"), McpRoundTo(P[Apex].Z - P[Takeoff].Z, 10.0));
+    Jump->SetNumberField(TEXT("timeToApex"), McpRoundTo(Up, 1000.0));
     // Landed: it fell, then stopped falling, on the floor it left or on any other.
     int32 Land = Apex + 1;
     while (Land < P.Num() && V[Land].Z >= -FeelStillCmS)
@@ -70,9 +65,9 @@ TSharedPtr<FJsonObject> FeelJump(const TArray<double>& T, const TArray<FVector>&
     Jump->SetBoolField(TEXT("landed"), Land < P.Num());
     if (Land < P.Num())
     {
-        Jump->SetNumberField(TEXT("airTime"), FeelRound(T[Land - 1] - T[Takeoff], 1000.0));
-        Jump->SetNumberField(TEXT("fallOverRise"), FeelRound(Up > 0.0 ? (T[Land - 1] - T[Apex]) / Up : 0.0, 100.0));
-        Jump->SetNumberField(TEXT("landingSpeed"), FeelRound(Fastest, 1.0));
+        Jump->SetNumberField(TEXT("airTime"), McpRoundTo(T[Land - 1] - T[Takeoff], 1000.0));
+        Jump->SetNumberField(TEXT("fallOverRise"), McpRoundTo(Up > 0.0 ? (T[Land - 1] - T[Apex]) / Up : 0.0, 100.0));
+        Jump->SetNumberField(TEXT("landingSpeed"), McpRoundTo(Fastest, 1.0));
     }
     return Jump;
 }
@@ -100,8 +95,8 @@ TSharedPtr<FJsonObject> FeelRun(const TArray<double>& T, const TArray<FVector>& 
         ++Reach;
     }
     TSharedPtr<FJsonObject> Run = MakeShared<FJsonObject>();
-    Run->SetNumberField(TEXT("topSpeed"), FeelRound(TopSpeed, 1.0));
-    Run->SetNumberField(TEXT("timeTo90"), FeelRound(T[Reach] - T[Start - 1], 1000.0));
+    Run->SetNumberField(TEXT("topSpeed"), McpRoundTo(TopSpeed, 1.0));
+    Run->SetNumberField(TEXT("timeTo90"), McpRoundTo(T[Reach] - T[Start - 1], 1000.0));
     int32 From = 0; // the first frame after the last key went up
     while (From < T.Num() && T[From] < Released)
     {
@@ -117,8 +112,8 @@ TSharedPtr<FJsonObject> FeelRun(const TArray<double>& T, const TArray<FVector>& 
         // From where the pawn stood when the key went up: the frame stamped with that time (the sampler releases a key
         // after reading its frame), else the one before, as a key's latency counts from the frame it went down in.
         const int32 At = From < T.Num() && T[From] <= Released ? From : From - 1;
-        Run->SetNumberField(TEXT("stopTime"), FeelRound(T[Stop] - Released, 1000.0));
-        Run->SetNumberField(TEXT("stopDistance"), FeelRound(FVector::Dist2D(P[Stop], P[At]), 1.0));
+        Run->SetNumberField(TEXT("stopTime"), McpRoundTo(T[Stop] - Released, 1000.0));
+        Run->SetNumberField(TEXT("stopDistance"), McpRoundTo(FVector::Dist2D(P[Stop], P[At]), 1.0));
     }
     return Run;
 }
@@ -145,11 +140,11 @@ TArray<TSharedPtr<FJsonValue>> FeelKeys(const TArray<double>& T, const TArray<FV
         }
         TSharedPtr<FJsonObject> Row = MakeShared<FJsonObject>();
         Row->SetStringField(TEXT("key"), Press.Key);
-        Row->SetNumberField(TEXT("downAt"), FeelRound(Press.DownAt, 1000.0));
+        Row->SetNumberField(TEXT("downAt"), McpRoundTo(Press.DownAt, 1000.0));
         Row->SetBoolField(TEXT("moved"), Moved < V.Num());
         if (Moved < V.Num())
         {
-            Row->SetNumberField(TEXT("latency"), FeelRound(T[Moved] - Press.DownAt, 1000.0));
+            Row->SetNumberField(TEXT("latency"), McpRoundTo(T[Moved] - Press.DownAt, 1000.0));
             Row->SetNumberField(TEXT("latencyFrames"), Moved - At);
         }
         Rows.Add(MakeShared<FJsonValueObject>(Row));
@@ -175,9 +170,9 @@ TSharedPtr<FJsonObject> FeelCamera(const TArray<double>& T, const TArray<FVector
         Peak = FMath::Max(Peak, Size);
     }
     TSharedPtr<FJsonObject> Camera = MakeShared<FJsonObject>();
-    Camera->SetNumberField(TEXT("peakJerk"), FeelRound(Peak / 100.0, 1.0));
-    Camera->SetNumberField(TEXT("peakJerkAt"), FeelRound(T[PeakAt], 1000.0));
-    Camera->SetNumberField(TEXT("meanJerk"), FeelRound(Sum / (Jerk.Num() - 3) / 100.0, 1.0));
+    Camera->SetNumberField(TEXT("peakJerk"), McpRoundTo(Peak / 100.0, 1.0));
+    Camera->SetNumberField(TEXT("peakJerkAt"), McpRoundTo(T[PeakAt], 1000.0));
+    Camera->SetNumberField(TEXT("meanJerk"), McpRoundTo(Sum / (Jerk.Num() - 3) / 100.0, 1.0));
     return Camera;
 }
 } // namespace
@@ -191,7 +186,7 @@ TSharedPtr<FJsonObject> McpMotionFeelSummary(const TArray<double>& Times, const 
     {
         return Out;
     }
-    Out->SetNumberField(TEXT("frameMs"), FeelRound((Times.Last() - Times[0]) / (Times.Num() - 1) * 1000.0, 10.0));
+    Out->SetNumberField(TEXT("frameMs"), McpRoundTo((Times.Last() - Times[0]) / (Times.Num() - 1) * 1000.0, 10.0));
     const TArray<FVector> Velocities = FeelRate(Times, Locations);
     if (const TSharedPtr<FJsonObject> Jump = FeelJump(Times, Locations, Velocities))
     {

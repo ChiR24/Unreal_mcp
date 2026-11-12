@@ -87,12 +87,7 @@ TSharedPtr<FJsonObject> ArrangeAuditCall(const FString& WidgetPath, const TArray
         SizeJson.Add(MakeShared<FJsonValueString>(FString::Printf(TEXT("%dx%d"), Size.X, Size.Y)));
     }
     Params->SetArrayField(TEXT("resolutions"), SizeJson);
-    TSharedPtr<FJsonObject> Call = MakeShared<FJsonObject>();
-    Call->SetStringField(TEXT("operation"), TEXT("execute"));
-    Call->SetStringField(TEXT("tool"), TEXT("manage_blueprint"));
-    Call->SetStringField(TEXT("action"), TEXT("audit_widget"));
-    Call->SetObjectField(TEXT("params"), Params);
-    return Call;
+    return McpHandlerUtils::MakeExecuteCall(TEXT("manage_blueprint"), TEXT("audit_widget"), Params);
 }
 } // namespace
 
@@ -221,11 +216,7 @@ bool HandleWidgetAuthoringArrange(UEngineWireSubsystem& Subsystem, const FString
     {
         TSharedPtr<FJsonObject> Row = MakeShared<FJsonObject>();
         Row->SetStringField(TEXT("relation"), Relations[Index].Text);
-        TArray<TSharedPtr<FJsonValue>> Met;
-        for (const FString& Size : MetAt[Index])
-        {
-            Met.Add(MakeShared<FJsonValueString>(Size));
-        }
+        TArray<TSharedPtr<FJsonValue>> Met = McpHandlerUtils::ToJsonStringArray(MetAt[Index]);
         Row->SetArrayField(TEXT("metAt"), Met);
         Row->SetNumberField(TEXT("worstMiss"), FMath::RoundToDouble(Worst[Index] * 10.0) / 10.0);
         RelationRows.Add(MakeShared<FJsonValueObject>(Row));

@@ -157,7 +157,7 @@ bool HandleDataTableAction(
 
         OutResult = McpHandlerUtils::CreateResultObject();
         OutResult->SetBoolField(TEXT("created"), true);
-        OutResult->SetStringField(TEXT("assetPath"), PackageName + TEXT(".") + SanitizedName);
+        OutResult->SetStringField(TEXT("assetPath"), McpToObjectPath(PackageName));
         // The struct the table holds, as set_row_struct reports it, not the spelling the request used.
         OutResult->SetStringField(TEXT("rowStructPath"), RowStruct->GetPathName());
         OutResult->SetBoolField(TEXT("hasRowStruct"), true);
@@ -195,7 +195,7 @@ bool HandleDataTableAction(
         const TArray<TSharedPtr<FJsonValue>>* MembersArray = nullptr;
         if (Params->TryGetArrayField(TEXT("members"), MembersArray) && MembersArray)
         {
-            ValidateStructMembers(*MembersArray, FName(*(PackageName + TEXT(".") + SanitizedName)), ParsedMembers, MemberFailures);
+            ValidateStructMembers(*MembersArray, FName(*(McpToObjectPath(PackageName))), ParsedMembers, MemberFailures);
             if (MemberFailures.Num() > 0) { OutResult = McpDataTableMakeError(TEXT("INVALID_MEMBER"), *FString::Join(MemberFailures, TEXT("; "))); return true; }
         }
 
@@ -225,7 +225,7 @@ bool HandleDataTableAction(
 
         OutResult = McpHandlerUtils::CreateResultObject();
         OutResult->SetBoolField(TEXT("created"), true);
-        OutResult->SetStringField(TEXT("assetPath"), PackageName + TEXT(".") + SanitizedName);
+        OutResult->SetStringField(TEXT("assetPath"), McpToObjectPath(PackageName));
         OutResult->SetStringField(TEXT("structName"), SanitizedName);
         OutResult->SetBoolField(TEXT("usableAsRowStruct"), true);
         OutResult->SetBoolField(TEXT("saved"), bSaved);

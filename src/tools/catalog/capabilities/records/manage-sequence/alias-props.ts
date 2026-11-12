@@ -102,7 +102,7 @@ export const A = {
   /** HandleAddPropertyTrack PropertyTrack.cpp:112. */
   propertyType: str('Property value type hint (alias of type).'),
   /** ReadBindingGuid Cinematics.cpp:113. */
-  bindingGuid: str('Sequencer binding GUID (alias of bindingId).'),
+  bindingGuid: str('Sequencer binding GUID.'),
 
   /** GetBoolAny MediaAssets.cpp:69. */
   autoPlay: bool('Whether the media player plays automatically on open.'),

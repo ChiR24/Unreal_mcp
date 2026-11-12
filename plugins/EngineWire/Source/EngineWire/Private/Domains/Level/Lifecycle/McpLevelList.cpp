@@ -11,8 +11,7 @@ bool HandleListLevelsAction(UEngineWireSubsystem& Subsystem, const FString& Requ
     TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
     TArray<TSharedPtr<FJsonValue>> LevelsArray;
 
-    UWorld *World =
-        GEditor ? GEditor->GetEditorWorldContext().World() : nullptr;
+    UWorld *World = McpHandlerUtils::GetEditorWorld();
 
     if (World) {
       TSharedPtr<FJsonObject> CurrentLevel = McpHandlerUtils::CreateResultObject();
@@ -53,16 +52,7 @@ bool HandleListLevelsAction(UEngineWireSubsystem& Subsystem, const FString& Requ
         FModuleManager::LoadModuleChecked<FAssetRegistryModule>("AssetRegistry")
             .Get();
     TArray<FAssetData> MapAssets;
-#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 1
-    AssetRegistry.GetAssetsByClass(
-        FTopLevelAssetPath(TEXT("/Script/Engine"), TEXT("World")), MapAssets,
-        false);
-#else
-    // UE 5.0: Use FName for class path
-    AssetRegistry.GetAssetsByClass(
-        FName(TEXT("World")), MapAssets,
-        false);
-#endif
+    AssetRegistry.GetAssetsByClass(MCP_CLASS_ID(UWorld::StaticClass()), MapAssets, false);
 
     TArray<TSharedPtr<FJsonValue>> AllMapsArray;
     for (const FAssetData &MapAsset : MapAssets) {

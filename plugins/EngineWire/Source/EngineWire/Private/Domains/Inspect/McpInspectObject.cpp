@@ -1,6 +1,6 @@
 #include "Domains/Inspect/McpInspectShared.h"
 #include "Foundation/HandlerUtils/McpHandlerUtilsTransforms.h"
-#include "Safety/McpSafeReflectionTarget.h"
+#include "Foundation/BridgeHelpers/Security/McpSafeReflectionTarget.h"
 #include "Components/SkeletalMeshComponent.h"
 #include "Components/StaticMeshComponent.h"
 #include "Engine/SkeletalMesh.h"

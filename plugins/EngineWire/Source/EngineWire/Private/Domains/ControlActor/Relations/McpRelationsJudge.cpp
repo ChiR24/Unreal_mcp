@@ -9,7 +9,7 @@
 #include "Domains/ControlActor/Relations/McpRelations.h"
 
 #include "Domains/ControlActor/Placement/McpPlacementMount.h"
-#include "Domains/Debug/Explain/McpExplain.h"
+#include "Foundation/HandlerUtils/McpHandlerUtilsJson.h"
 #include "Foundation/BridgeHelpers/Responses/McpResponseVerify.h"
 #include "GameFramework/Actor.h"
 
@@ -30,7 +30,7 @@ TSharedPtr<FJsonObject> PlacementFix(const AActor* Actor)
     TSharedPtr<FJsonObject> Params = MakeShared<FJsonObject>();
     Params->SetArrayField(TEXT("actorNames"), Names);
     Params->SetArrayField(TEXT("kinds"), Kinds);
-    return McpExplain::MakeNextCall(TEXT("control_actor"), TEXT("fix_placement"), Params);
+    return McpHandlerUtils::MakeExecuteCall(TEXT("control_actor"), TEXT("fix_placement"), Params);
 }
 } // namespace
 

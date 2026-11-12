@@ -147,7 +147,7 @@ bool HandleAdvancedOptimizationAction(const FPerformanceActionContext& Context)
     {
         return false;
     }
-    UWorld* EditorWorld = GEditor ? GEditor->GetEditorWorldContext().World() : nullptr;
+    UWorld* EditorWorld = McpHandlerUtils::GetEditorWorld();
     UWorldPartition* WorldPartition = EditorWorld ? EditorWorld->GetWorldPartition() : nullptr;
     if (!WorldPartition)
     {

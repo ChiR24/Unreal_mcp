@@ -76,11 +76,7 @@ struct FScratchInstance
 static bool InitializeInstanceAs(FStructProperty* Prop, void* Value, UScriptStruct* Target, UObject* Owner)
 {
     const FString Text = Target->GetPathName() + TEXT("()");
-#if ENGINE_MAJOR_VERSION > 5 || ENGINE_MINOR_VERSION >= 1
-    const bool bImported = Prop->ImportText_Direct(*Text, Value, Owner, PPF_None) != nullptr;
-#else
-    const bool bImported = Prop->ImportText(*Text, Value, PPF_None, Owner) != nullptr;
-#endif
+    const bool bImported = MCP_PROPERTY_IMPORT_TEXT(Prop, *Text, Value, Owner, PPF_None) != nullptr;
     return bImported && FMcpInstancedStructView(*reinterpret_cast<const FInstancedStruct*>(Value)).Type == Target;
 }
 

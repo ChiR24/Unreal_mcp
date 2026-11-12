@@ -21,12 +21,6 @@ bool UEngineWireSubsystem::HandleSourceControlCheckout(
       !Lower.Equals(TEXT("checkout"), ESearchCase::IgnoreCase)) {
     return false;
   }
-  if (!Payload.IsValid()) {
-    SendAutomationError(RequestingSocket, RequestId,
-                        TEXT("source_control_checkout payload missing"),
-                        TEXT("INVALID_PAYLOAD"));
-    return true;
-  }
 
   // The contract declares `paths`; only assetPaths was read, so a multi-asset
   // call through the gateway was impossible. assetPaths stays as the fallback.
@@ -75,10 +69,7 @@ bool UEngineWireSubsystem::HandleSourceControlCheckout(
 
   bool bSuccess = SourceControlHelpers::CheckOutFiles(PackageNames, true);
 
-  TArray<TSharedPtr<FJsonValue>> CheckedOutPaths;
-  for (const FString &Path : ValidPaths) {
-    CheckedOutPaths.Add(MakeShared<FJsonValueString>(Path));
-  }
+  TArray<TSharedPtr<FJsonValue>> CheckedOutPaths = McpHandlerUtils::ToJsonStringArray(ValidPaths);
 
   TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
   Result->SetBoolField(TEXT("success"), bSuccess);
@@ -102,12 +93,6 @@ bool UEngineWireSubsystem::HandleSourceControlSubmit(
   if (!Lower.Equals(TEXT("source_control_submit"), ESearchCase::IgnoreCase) &&
       !Lower.Equals(TEXT("submit"), ESearchCase::IgnoreCase)) {
     return false;
-  }
-  if (!Payload.IsValid()) {
-    SendAutomationError(RequestingSocket, RequestId,
-                        TEXT("source_control_submit payload missing"),
-                        TEXT("INVALID_PAYLOAD"));
-    return true;
   }
 
   // The contract declares `paths`; only assetPaths was read, so a multi-asset

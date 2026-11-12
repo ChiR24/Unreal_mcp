@@ -155,17 +155,11 @@ bool HandleBlueprintSetVariableMetadata(const FBlueprintActionContext &Context) 
     Resp->SetBoolField(TEXT("success"), true);
     Resp->SetStringField(TEXT("blueprintPath"), RegistryKey);
     Resp->SetStringField(TEXT("variableName"), VarName);
-    TArray<TSharedPtr<FJsonValue>> VarNamesJson;
-    for (const FString &Name : VarNames) {
-      VarNamesJson.Add(MakeShared<FJsonValueString>(Name));
-    }
+    TArray<TSharedPtr<FJsonValue>> VarNamesJson = McpHandlerUtils::ToJsonStringArray(VarNames);
     Resp->SetArrayField(TEXT("variableNames"), VarNamesJson);
     Resp->SetBoolField(TEXT("saved"), bSaved);
 
-    TArray<TSharedPtr<FJsonValue>> AppliedKeysJson;
-    for (const FString &Key : AppliedKeys) {
-      AppliedKeysJson.Add(MakeShared<FJsonValueString>(Key));
-    }
+    TArray<TSharedPtr<FJsonValue>> AppliedKeysJson = McpHandlerUtils::ToJsonStringArray(AppliedKeys);
     Resp->SetArrayField(TEXT("appliedKeys"), AppliedKeysJson);
     if (Snapshot.IsValid() && Snapshot->HasField(TEXT("metadata"))) {
       Resp->SetObjectField(TEXT("metadata"),

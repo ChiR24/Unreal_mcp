@@ -187,12 +187,7 @@ bool UEngineWireSubsystem::HandleListMaterialInstances(
   // no instance is loaded to ask.
 
   FARFilter Filter;
-#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 1
-  Filter.ClassPaths.Add(FTopLevelAssetPath(TEXT("/Script/Engine"),
-                                           TEXT("MaterialInstanceConstant")));
-#else
-  Filter.ClassNames.Add(FName(TEXT("MaterialInstanceConstant")));
-#endif
+  MCP_AR_FILTER_ADD_CLASS_PATH(Filter, TEXT("/Script/Engine"), TEXT("MaterialInstanceConstant"));
   Filter.bRecursiveClasses = true;
 
   // NOTE: ScanPathsSynchronous() was removed to prevent GameThread blocking.

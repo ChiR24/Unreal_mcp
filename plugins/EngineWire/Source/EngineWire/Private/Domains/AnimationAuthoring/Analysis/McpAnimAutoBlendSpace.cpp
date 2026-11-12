@@ -13,11 +13,6 @@
 
 namespace McpAnimationAuthoring {
 namespace {
-double AutoBlendRound(double Value)
-{
-    return FMath::RoundToDouble(Value * 10.0) / 10.0;
-}
-
 // The character's forward in its clips' component space (the UE mannequin faces +Y there).
 bool AutoBlendForward(const FString& Text, FVector2D& OutForward)
 {
@@ -38,10 +33,10 @@ TSharedPtr<FJsonObject> AutoBlendRow(const FString& Path, const FVector2D& Veloc
 {
     TSharedPtr<FJsonObject> Row = MakeShared<FJsonObject>();
     Row->SetStringField(TEXT("animationPath"), Path);
-    Row->SetNumberField(TEXT("speed"), AutoBlendRound(Place.Speed));
-    Row->SetNumberField(TEXT("direction"), AutoBlendRound(Place.Direction));
-    Row->SetNumberField(TEXT("forwardSpeed"), AutoBlendRound(Velocity.X));
-    Row->SetNumberField(TEXT("rightSpeed"), AutoBlendRound(Velocity.Y));
+    Row->SetNumberField(TEXT("speed"), McpRoundTo(Place.Speed, 10.0));
+    Row->SetNumberField(TEXT("direction"), McpRoundTo(Place.Direction, 10.0));
+    Row->SetNumberField(TEXT("forwardSpeed"), McpRoundTo(Velocity.X, 10.0));
+    Row->SetNumberField(TEXT("rightSpeed"), McpRoundTo(Velocity.Y, 10.0));
     Row->SetStringField(TEXT("source"), bFromFeet ? TEXT("feet") : TEXT("root"));
     Row->SetBoolField(TEXT("idle"), Place.bIdle);
     TArray<TSharedPtr<FJsonValue>> Positions;

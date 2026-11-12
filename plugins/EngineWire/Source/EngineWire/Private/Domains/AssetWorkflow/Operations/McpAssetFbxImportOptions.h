@@ -22,6 +22,7 @@
 #include "Misc/App.h"
 #include "Misc/Paths.h"
 #include "Safety/McpSafeOperations.h"
+#include "Foundation/HandlerUtils/McpHandlerUtilsActionsPaths.h"
 #include "Modules/ModuleManager.h"
 #include "ObjectTools.h"
 #include "UObject/SoftObjectPath.h"
@@ -143,7 +144,7 @@ inline bool McpClearImportTarget(const FString &DestPath,
       FModuleManager::LoadModuleChecked<FAssetRegistryModule>("AssetRegistry")
           .Get();
   for (const FString &Name : Names) {
-    const FString Target = DestPath / Name + TEXT(".") + Name;
+    const FString Target = McpToObjectPath(DestPath / Name);
     if (!Registry.GetAssetByObjectPath(MCP_ASSET_REGISTRY_OBJECT_PATH(Target), false).IsValid()) {
       continue;
     }

@@ -245,19 +245,11 @@ bool UEngineWireSubsystem::HandleControlEditorSaveAll(
     ProcessPackage(FindPackage(nullptr, *Name));
   }
 
-  auto MakeStringArray = [](const TArray<FString>& Values) {
-    TArray<TSharedPtr<FJsonValue>> Result;
-    for (const FString& Value : Values) {
-      Result.Add(MakeShared<FJsonValueString>(Value));
-    }
-    return Result;
-  };
-
   // The message gives every count; a reply also carried each of them as a field, and two empty lists, on every save.
   TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
-  if (SkippedPackages.Num() > 0) Resp->SetArrayField(TEXT("skippedPackages"), MakeStringArray(SkippedPackages));
-  if (FailedPackages.Num() > 0) Resp->SetArrayField(TEXT("failedPackages"), MakeStringArray(FailedPackages));
-  if (LeftDirtyPackages.Num() > 0) Resp->SetArrayField(TEXT("leftDirtyPackages"), MakeStringArray(LeftDirtyPackages));
+  if (SkippedPackages.Num() > 0) Resp->SetArrayField(TEXT("skippedPackages"), McpHandlerUtils::ToJsonStringArray(SkippedPackages));
+  if (FailedPackages.Num() > 0) Resp->SetArrayField(TEXT("failedPackages"), McpHandlerUtils::ToJsonStringArray(FailedPackages));
+  if (LeftDirtyPackages.Num() > 0) Resp->SetArrayField(TEXT("leftDirtyPackages"), McpHandlerUtils::ToJsonStringArray(LeftDirtyPackages));
 
   if (FailedPackages.Num() > 0) {
     Receipt.AddCompensatingCapability(TEXT("control_editor.save_all"));

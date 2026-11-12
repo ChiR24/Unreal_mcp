@@ -16,13 +16,6 @@
 bool UEngineWireSubsystem::HandleSetMetadata(
     const FString &RequestId, const TSharedPtr<FJsonObject> &Payload,
     TSharedPtr<FMcpBridgeWebSocket> Socket) {
-  if (!Payload.IsValid()) {
-    SendAutomationResponse(Socket, RequestId, false,
-                           TEXT("set_metadata payload missing"), nullptr,
-                           TEXT("INVALID_PAYLOAD"));
-    return true;
-  }
-
   FString SafeAssetPath;
   if (!McpReadAssetPathOrReply(this, Socket, RequestId, Payload, SafeAssetPath))
     return true;
@@ -128,13 +121,6 @@ bool UEngineWireSubsystem::HandleSetMetadata(
 bool UEngineWireSubsystem::HandleGetMetadata(
     const FString &RequestId, const TSharedPtr<FJsonObject> &Payload,
     TSharedPtr<FMcpBridgeWebSocket> Socket) {
-  if (!Payload.IsValid()) {
-    SendAutomationResponse(Socket, RequestId, false,
-                           TEXT("get_metadata payload missing"), nullptr,
-                           TEXT("INVALID_PAYLOAD"));
-    return true;
-  }
-
   FString AssetPath;
   if (!McpReadAssetPathOrReply(this, Socket, RequestId, Payload, AssetPath))
     return true;

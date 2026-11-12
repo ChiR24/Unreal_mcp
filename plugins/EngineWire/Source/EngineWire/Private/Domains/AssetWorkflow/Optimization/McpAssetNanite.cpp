@@ -36,7 +36,7 @@ void McpNaniteSetFlag(UMaterialInterface *Owner) {
 TArray<UMaterialInterface *> McpNaniteUnflagged(const UStaticMesh *StaticMesh) {
   TArray<UMaterialInterface *> Used;
   for (const FStaticMaterial &Slot : StaticMesh->GetStaticMaterials()) Used.AddUnique(Slot.MaterialInterface);
-  const UWorld *World = GEditor ? GEditor->GetEditorWorldContext().World() : nullptr;
+  const UWorld *World = McpHandlerUtils::GetEditorWorld();
   for (TObjectIterator<UStaticMeshComponent> It; It && World; ++It) {
     if (It->GetStaticMesh() != StaticMesh || It->GetWorld() != World) continue;
     for (int32 Index = 0; Index < It->GetNumMaterials(); ++Index) Used.AddUnique(It->GetMaterial(Index));
@@ -135,12 +135,6 @@ bool UEngineWireSubsystem::HandleNaniteRebuildMesh(
     return false;
   }
 
-  if (!Payload.IsValid()) {
-    SendAutomationError(Socket, RequestId,
-                        TEXT("nanite_rebuild_mesh payload missing"),
-                        TEXT("INVALID_PAYLOAD"));
-    return true;
-  }
 
   // Percent of the source triangles Nanite keeps (the record's default: all of them).
   double TrianglePercent = 100.0;

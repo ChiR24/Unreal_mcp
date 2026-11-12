@@ -106,11 +106,6 @@ T PbrMedian(TArray<T> Values)
     Values.Sort();
     return Values.Num() > 0 ? Values[Values.Num() / 2] : T();
 }
-
-double PbrRound(double Value, double Scale)
-{
-    return FMath::RoundToDouble(Value * Scale) / Scale;
-}
 } // namespace
 
 TArray<FString> PbrFindings(const TArray<FColor>& Base, const TArray<float>& Metal, const TArray<float>& Rough)
@@ -195,20 +190,16 @@ TSharedPtr<FJsonObject> PbrAsRendered(FEditorViewportClient& Client, const FFram
         }
         TSharedPtr<FJsonObject> Row = MakeShared<FJsonObject>();
         Row->SetStringField(TEXT("actorName"), Pair.Key->GetActorLabel());
-        Row->SetNumberField(TEXT("share"), PbrRound(double(Cells.Base.Num()) / (Frame.Width * Frame.Height), 1000.0));
+        Row->SetNumberField(TEXT("share"), McpRoundTo(double(Cells.Base.Num()) / (Frame.Width * Frame.Height), 1000.0));
         TArray<TSharedPtr<FJsonValue>> Median;
         for (const TArray<uint8>* Channel : {&Reds, &Greens, &Blues})
         {
             Median.Add(MakeShared<FJsonValueNumber>(PbrMedian(*Channel)));
         }
         Row->SetArrayField(TEXT("baseColor"), Median);
-        Row->SetNumberField(TEXT("metallic"), PbrRound(PbrMedian(Cells.Metal), 100.0));
-        Row->SetNumberField(TEXT("roughness"), PbrRound(PbrMedian(Cells.Rough), 100.0));
-        TArray<TSharedPtr<FJsonValue>> Kinds;
-        for (const FString& Kind : Findings)
-        {
-            Kinds.Add(MakeShared<FJsonValueString>(Kind));
-        }
+        Row->SetNumberField(TEXT("metallic"), McpRoundTo(PbrMedian(Cells.Metal), 100.0));
+        Row->SetNumberField(TEXT("roughness"), McpRoundTo(PbrMedian(Cells.Rough), 100.0));
+        TArray<TSharedPtr<FJsonValue>> Kinds = McpHandlerUtils::ToJsonStringArray(Findings);
         Row->SetArrayField(TEXT("findings"), Kinds);
         (Findings.Num() > 0 ? Rows : Clean).Add(MakeShared<FJsonValueObject>(Row));
     }

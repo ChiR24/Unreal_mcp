@@ -75,10 +75,7 @@ bool HandleInventoryReplicationActions(UEngineWireSubsystem& Bridge, const FStri
     Result->SetStringField(TEXT("replicationCondition"), ReplicationCondition);
     Result->SetStringField(TEXT("blueprintPath"), BlueprintPath);
 
-    TArray<TSharedPtr<FJsonValue>> VarsArr;
-    for (const FString& VarName : ReplicatedVariables) {
-      VarsArr.Add(MakeShared<FJsonValueString>(VarName));
-    }
+    TArray<TSharedPtr<FJsonValue>> VarsArr = McpHandlerUtils::ToJsonStringArray(ReplicatedVariables);
     Result->SetArrayField(TEXT("modifiedVariables"), VarsArr);
 
     McpHandlerUtils::AddVerification(Result, Blueprint);

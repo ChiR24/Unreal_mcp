@@ -6,7 +6,7 @@
 #include "Foundation/Reflection/McpPropertyReflection.h"
 #include "HAL/PlatformTime.h"
 #include "EngineWireSubsystem.h"
-#include "Safety/McpSafeReflectionTarget.h"
+#include "Foundation/BridgeHelpers/Security/McpSafeReflectionTarget.h"
 
 // set_property's watch. A UMG pop or fade set off by a write runs on Slate time, even with PIE paused, and
 // ended before any later call could read it: the HUD's 0.2 s LivesPop was only provable by slowing the asset

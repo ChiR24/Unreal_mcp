@@ -38,17 +38,7 @@ FString RoadWhyBlocked(const TCHAR* Which, ERoadGround Kind, const AActor* Hit)
 
 TSharedPtr<FJsonObject> RoadCall(const TCHAR* Action, const TSharedPtr<FJsonObject>& Params)
 {
-    TSharedPtr<FJsonObject> Call = MakeShared<FJsonObject>();
-    Call->SetStringField(TEXT("operation"), TEXT("execute"));
-    Call->SetStringField(TEXT("tool"), TEXT("build_environment"));
-    Call->SetStringField(TEXT("action"), Action);
-    Call->SetObjectField(TEXT("params"), Params);
-    return Call;
-}
-
-double RoadRound(double Value, double Per)
-{
-    return FMath::RoundToDouble(Value * Per) / Per;
+    return McpHandlerUtils::MakeExecuteCall(TEXT("build_environment"), Action, Params);
 }
 } // namespace
 
@@ -173,7 +163,7 @@ bool HandlePlanRoad(UEngineWireSubsystem& Bridge, const FString& RequestId, cons
         Grade = Index > 0 ? FMath::Max(Grade, FMath::Abs(Point.Z - Previous.Z) / FVector2D::Distance(Flat, FVector2D(Previous))) : Grade;
         Previous = Point;
         MaxLift = FMath::Max(MaxLift, Lift[Index]);
-        const TSharedPtr<FJsonObject> At = McpHandlerUtils::VectorToJson(FVector(RoadRound(Point.X, 1.0), RoadRound(Point.Y, 1.0), RoadRound(Point.Z, 1.0)));
+        const TSharedPtr<FJsonObject> At = McpHandlerUtils::VectorToJson(FVector(McpRoundTo(Point.X, 1.0), McpRoundTo(Point.Y, 1.0), McpRoundTo(Point.Z, 1.0)));
         Points.Add(MakeShared<FJsonValueObject>(At));
         const TSharedPtr<FJsonObject> Spline = MakeShared<FJsonObject>();
         Spline->SetObjectField(TEXT("position"), At);
@@ -181,19 +171,19 @@ bool HandlePlanRoad(UEngineWireSubsystem& Bridge, const FString& RequestId, cons
     }
     TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
     Result->SetArrayField(TEXT("points"), Points);
-    Result->SetNumberField(TEXT("lengthM"), RoadRound(Laid.LengthCm / 100.0, 10.0));
-    Result->SetNumberField(TEXT("climbM"), RoadRound(Laid.ClimbCm / 100.0, 10.0));
-    Result->SetNumberField(TEXT("maxGradePercent"), RoadRound(Grade * 100.0, 10.0));
+    Result->SetNumberField(TEXT("lengthM"), McpRoundTo(Laid.LengthCm / 100.0, 10.0));
+    Result->SetNumberField(TEXT("climbM"), McpRoundTo(Laid.ClimbCm / 100.0, 10.0));
+    Result->SetNumberField(TEXT("maxGradePercent"), McpRoundTo(Grade * 100.0, 10.0));
     if (Laid.MinRadiusCm < TNumericLimits<double>::Max())
     {
-        Result->SetNumberField(TEXT("minTurnRadiusM"), RoadRound(Laid.MinRadiusCm / 100.0, 10.0));
+        Result->SetNumberField(TEXT("minTurnRadiusM"), McpRoundTo(Laid.MinRadiusCm / 100.0, 10.0));
     }
     Result->SetNumberField(TEXT("switchbacks"), Laid.Switchbacks);
-    Result->SetNumberField(TEXT("groundGapCm"), RoadRound(Laid.GapCm, 1.0));
-    Result->SetNumberField(TEXT("maxLiftCm"), RoadRound(MaxLift, 1.0));
-    Result->SetNumberField(TEXT("cellCm"), RoadRound(Field.Cell, 1.0));
+    Result->SetNumberField(TEXT("groundGapCm"), McpRoundTo(Laid.GapCm, 1.0));
+    Result->SetNumberField(TEXT("maxLiftCm"), McpRoundTo(MaxLift, 1.0));
+    Result->SetNumberField(TEXT("cellCm"), McpRoundTo(Field.Cell, 1.0));
     Result->SetNumberField(TEXT("statesSearched"), Searched);
-    Result->SetNumberField(TEXT("seconds"), RoadRound(FPlatformTime::Seconds() - Start, 100.0));
+    Result->SetNumberField(TEXT("seconds"), McpRoundTo(FPlatformTime::Seconds() - Start, 100.0));
     TSharedPtr<FJsonObject> Road = MakeShared<FJsonObject>();
     Road->SetStringField(TEXT("name"), TEXT("Road"));
     Road->SetArrayField(TEXT("points"), SplinePoints);

@@ -27,7 +27,7 @@ bool FMcpAnnealTest::RunTest(const FString& Parameters)
     TestFalse(TEXT("a ray aimed past it misses"), McpBoxSat::RayHits(Unit, FVector2D(-5.0, 1.5), FVector2D(1.0, 0.0), Distance));
     TestFalse(TEXT("a ray aimed away misses"), McpBoxSat::RayHits(Unit, FVector2D(-5.0, 0.0), FVector2D(-1.0, 0.0), Distance));
     // Turned 45 degrees, the second square reaches sqrt(2) along X: 1 + 1.414 - 2.2.
-    constexpr double EighthTurn = 0.78539816339744831; // PI is gone in 5.8 and UE_PI missing in 5.0
+    constexpr double EighthTurn = 0.25 * DOUBLE_PI;
     const double Turned = McpBoxSat::Depth(Unit, {FVector2D(2.2, 0.0), FVector2D(1.0, 1.0), EighthTurn});
     TestEqual(TEXT("a turned square overlaps by its corner"), Turned, 1.0 + FMath::Sqrt(2.0) - 2.2, 1e-9);
 

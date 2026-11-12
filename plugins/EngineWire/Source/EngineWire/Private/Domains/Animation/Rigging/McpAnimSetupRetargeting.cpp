@@ -24,14 +24,6 @@ namespace McpAnimationHandlers {
 
 namespace {
 #if MCP_HAS_IKRIG_BATCH_RETARGET
-// LoadObject accepts a bare package path; the asset registry does not, and a
-// caller naming /Game/Anims/A_Run the way every other action accepts it would
-// otherwise be told its animation does not exist.
-FString ToObjectPath(const FString &Path) {
-  return Path.Contains(TEXT("."))
-             ? Path
-             : Path + TEXT(".") + FPackageName::GetShortName(Path);
-}
 USkeletalMesh *ResolveMesh(const TSharedPtr<FJsonObject> &Payload,
                            const TCHAR *Field, USkeleton *Skeleton) {
   FString MeshPath;
@@ -172,8 +164,10 @@ bool HandleAnimationSetupRetargetingAction(FActionContext &Context,
       continue;
     }
     const FString AssetPath = Value->AsString();
+    // The registry takes only an object path: a caller naming /Game/Anims/A_Run the way every other action accepts
+    // it was told its animation does not exist.
     const FAssetData Data =
-        Registry.GetAssetByObjectPath(FSoftObjectPath(ToObjectPath(AssetPath)), false);
+        Registry.GetAssetByObjectPath(FSoftObjectPath(McpToObjectPath(AssetPath)), false);
     if (!Data.IsValid()) {
       Warnings.Add(MakeShared<FJsonValueString>(
           FString::Printf(TEXT("Not found, skipped: %s"), *AssetPath)));

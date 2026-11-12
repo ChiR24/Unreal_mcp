@@ -36,7 +36,7 @@ TSharedPtr<ISequencer> McpFindOpenSequencer(UObject *SequenceAsset) {
 void McpSeekPaused(const TSharedPtr<ISequencer> &Sequencer, FFrameTime Tick) {
   ULevelSequenceEditorBlueprintLibrary::Pause();
   Sequencer->SetLocalTime(Tick);
-  UWorld *World = GEditor ? GEditor->GetEditorWorldContext().World() : nullptr;
+  UWorld *World = McpHandlerUtils::GetEditorWorld();
   // A mesh that copies another's pose (a face following its body) could refresh first and copy the old pose,
   // so a held frame showed the head a frame behind; the second pass reads the pose the first one made.
   for (int32 Pass = 0; Pass < 2; ++Pass) {
@@ -185,7 +185,7 @@ bool UEngineWireSubsystem::HandleSequenceSetPlaybackSpeed(
   // plays this asset; that is what runs in game and PIE, so it needs no open
   // Sequencer. An open Sequencer gets the preview speed as well.
   TArray<UObject *> Actors;
-  if (UWorld *World = GEditor ? GEditor->GetEditorWorldContext().World() : nullptr) {
+  if (UWorld *World = McpHandlerUtils::GetEditorWorld()) {
     for (TActorIterator<ALevelSequenceActor> It(World); It; ++It) {
       if (*It && It->GetSequence() == SeqObj) {
         Actors.Add(*It);

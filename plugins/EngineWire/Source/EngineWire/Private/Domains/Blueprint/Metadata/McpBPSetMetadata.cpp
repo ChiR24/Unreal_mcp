@@ -90,10 +90,7 @@ bool HandleBlueprintSetMetadata(const FBlueprintActionContext &Context) {
     TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
     Resp->SetBoolField(TEXT("success"), true);
     Resp->SetStringField(TEXT("blueprintPath"), RegistryKey);
-    TArray<TSharedPtr<FJsonValue>> MetaArray;
-    for (const FString& Key : MetadataSet) {
-      MetaArray.Add(MakeShared<FJsonValueString>(Key));
-    }
+    TArray<TSharedPtr<FJsonValue>> MetaArray = McpHandlerUtils::ToJsonStringArray(MetadataSet);
     Resp->SetArrayField(TEXT("metadataSet"), MetaArray);
     Resp->SetBoolField(TEXT("saved"), bSaved);
     McpHandlerUtils::AddVerification(Resp, BP);

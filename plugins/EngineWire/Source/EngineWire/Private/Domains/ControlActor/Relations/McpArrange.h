@@ -12,6 +12,9 @@ class AActor;
 // caller left them in, so the layout stays the caller's); then each contact is snapped exact (McpArrangeModel.cpp).
 namespace McpArrange
 {
+// A quarter turn in radians: the turns a side snaps to.
+constexpr double QuarterTurn = 0.5 * DOUBLE_PI;
+
 struct FBody
 {
     AActor* Actor = nullptr;

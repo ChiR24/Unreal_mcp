@@ -88,6 +88,17 @@ bool HandleCreateMasterSequence(const TSharedPtr<FJsonObject> &Params,
     McpHandlerUtils::MarkNoAssetsChanged(OutResult);
     return true;
   }
+  // The frame rate is read before anything is made, so a bad one leaves no asset to clean up.
+  FFrameRate FrameRate(24, 1);
+  if (Params->HasField(TEXT("frameRate"))) {
+    FString FrameRateError;
+    if (!McpSequenceFrameRate::TryParse(
+            Params, TEXT("frameRate"), FrameRate, FrameRateError)) {
+      OutResult = MakeResult(false, TEXT("create_master_sequence"),
+                             FrameRateError, TEXT("INVALID_ARGUMENT"));
+      return true;
+    }
+  }
   ULevelSequence *Sequence = McpSequence::CreateSequenceAsset(Name, Folder);
   if (!Sequence || !Sequence->GetMovieScene()) {
     OutResult = MakeResult(false, TEXT("create_master_sequence"),
@@ -96,22 +107,11 @@ bool HandleCreateMasterSequence(const TSharedPtr<FJsonObject> &Params,
     return true;
   }
   UMovieScene *MovieScene = Sequence->GetMovieScene();
-  FFrameRate FrameRate(24, 1);
-  if (Params->HasField(TEXT("frameRate"))) {
-    FString FrameRateError;
-    if (!McpSequenceFrameRate::TryParse(
-            Params, TEXT("frameRate"), FrameRate, FrameRateError)) {
-      UEditorAssetLibrary::DeleteAsset(FullPath);
-      OutResult = MakeResult(false, TEXT("create_master_sequence"),
-                             FrameRateError, TEXT("INVALID_ARGUMENT"));
-      return true;
-    }
-  }
   MovieScene->SetDisplayRate(FrameRate);
   FString FrameError;
   if (!McpSequenceFrameMath::ValidateCinematicFrameRequest(
           Params, MovieScene, FrameError)) {
-    UEditorAssetLibrary::DeleteAsset(FullPath);
+    McpSafeOperations::McpDeleteAssetAndFile(FullPath);
     OutResult = MakeResult(false, TEXT("create_master_sequence"), FrameError,
                            TEXT("INVALID_ARGUMENT"));
     return true;
@@ -119,7 +119,7 @@ bool HandleCreateMasterSequence(const TSharedPtr<FJsonObject> &Params,
   MovieScene->SetPlaybackRange(GetFrame(Params, MovieScene, TEXT("startFrame")),
                                GetDuration(Params, MovieScene, 240));
   if (!McpSafeAssetSave(Sequence)) {
-    UEditorAssetLibrary::DeleteAsset(FullPath);
+    McpSafeOperations::McpDeleteAssetAndFile(FullPath);
     OutResult = MakeResult(
         false, TEXT("create_master_sequence"),
         TEXT("The master sequence could not be saved"),

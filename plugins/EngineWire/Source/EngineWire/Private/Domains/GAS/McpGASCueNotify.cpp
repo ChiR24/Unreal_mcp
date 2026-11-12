@@ -63,7 +63,6 @@ bool HandleGASCueNotify(const FGASRequestContext& Context, const FString& SubAct
         return true;
     }
 
-    // configure_cue_trigger - REAL IMPLEMENTATION adding trigger configuration
     return false;
 }
 }

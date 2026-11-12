@@ -68,7 +68,6 @@ bool HandleBuildMaterialGraph(UEngineWireSubsystem* Bridge, const FString& Reque
   const int32 AutoColumns = FMath::DivideAndRoundUp(AutoTotal, AutoRows);
   const float OriginX = AutoOriginX(Material, Function);
 
-  FMcpResponseCaptureRegistry& Capture = FMcpResponseCaptureRegistry::Get();
   TMap<FString, FString> Aliases;
   TSharedPtr<FJsonObject> NodeIds = MakeShared<FJsonObject>();
   TArray<TSharedPtr<FJsonValue>> Results;
@@ -99,9 +98,7 @@ bool HandleBuildMaterialGraph(UEngineWireSubsystem* Bridge, const FString& Reque
       }
       if (ResolveAliases(Aliases, StepPayload, Error)) {
         const FString StepId = FString::Printf(TEXT("%s#step%d"), *RequestId, Index);
-        Capture.Begin(StepId);
-        RunStep(StepId, StepPayload);
-        const FMcpCapturedResponse Reply = Capture.End(StepId);
+        const FMcpCapturedResponse Reply = McpCaptureResponse(StepId, [&] { RunStep(StepId, StepPayload); });
         FString NodeId, Warning;
         if (Reply.Result.IsValid() && Reply.Result->TryGetStringField(TEXT("nodeId"), NodeId)) {
           Entry->SetStringField(TEXT("nodeId"), NodeId);
@@ -163,9 +160,7 @@ bool HandleBuildMaterialGraph(UEngineWireSubsystem* Bridge, const FString& Reque
   Compile->SetStringField(TEXT("subAction"), TEXT("compile_material"));
   Compile->SetStringField(TEXT("assetPath"), AssetPath);
   const FString CompileId = RequestId + TEXT("#compile");
-  Capture.Begin(CompileId);
-  RunStep(CompileId, Compile);
-  const FMcpCapturedResponse Compiled = Capture.End(CompileId);
+  const FMcpCapturedResponse Compiled = McpCaptureResponse(CompileId, [&] { RunStep(CompileId, Compile); });
   bool bSaved = false;
   bool bCompiles = Compiled.bSuccess;
   const TArray<TSharedPtr<FJsonValue>>* CompileErrors = nullptr;

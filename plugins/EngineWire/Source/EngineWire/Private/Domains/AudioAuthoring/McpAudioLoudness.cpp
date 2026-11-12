@@ -26,11 +26,6 @@ double LoudnessDb(double Linear)
     return Linear > 1e-6 ? 20.0 * FMath::LogX(10.0, Linear) : -120.0;
 }
 
-double LoudnessRound(double Value)
-{
-    return FMath::RoundToDouble(Value * 10.0) / 10.0;
-}
-
 // The wave's samples (16-bit PCM as imported) to programme loudness and sample peak.
 FLoudnessRow LoudnessOfWave(USoundWave* Wave)
 {
@@ -186,14 +181,14 @@ TSharedPtr<FJsonObject> HandleLoudnessActions(const FString& SubAction, const TS
     {
         TSharedPtr<FJsonObject> Sound = MakeShared<FJsonObject>();
         Sound->SetStringField(TEXT("soundPath"), Row.Wave->GetPathName());
-        Sound->SetNumberField(TEXT("peakDb"), LoudnessRound(Row.PeakDb));
+        Sound->SetNumberField(TEXT("peakDb"), McpRoundTo(Row.PeakDb, 10.0));
         Sound->SetNumberField(TEXT("volume"), FMath::RoundToDouble(Row.Wave->Volume * 1000.0) / 1000.0);
         if (Row.Lufs.IsSet())
         {
             const double PlaysAt = Row.Lufs.GetValue() + LoudnessDb(Row.Wave->Volume);
-            Sound->SetNumberField(TEXT("lufs"), LoudnessRound(Row.Lufs.GetValue()));
-            Sound->SetNumberField(TEXT("playsAtLufs"), LoudnessRound(PlaysAt));
-            Sound->SetNumberField(TEXT("peakAtVolumeDb"), LoudnessRound(Row.PeakDb + LoudnessDb(Row.Wave->Volume)));
+            Sound->SetNumberField(TEXT("lufs"), McpRoundTo(Row.Lufs.GetValue(), 10.0));
+            Sound->SetNumberField(TEXT("playsAtLufs"), McpRoundTo(PlaysAt, 10.0));
+            Sound->SetNumberField(TEXT("peakAtVolumeDb"), McpRoundTo(Row.PeakDb + LoudnessDb(Row.Wave->Volume), 10.0));
             ++Measured;
             Lowest = FMath::Min(Lowest, PlaysAt);
             Highest = FMath::Max(Highest, PlaysAt);
@@ -211,7 +206,7 @@ TSharedPtr<FJsonObject> HandleLoudnessActions(const FString& SubAction, const TS
     Response->SetArrayField(TEXT("sounds"), Sounds);
     if (Highest >= Lowest)
     {
-        Response->SetNumberField(TEXT("spreadLu"), LoudnessRound(Highest - Lowest));
+        Response->SetNumberField(TEXT("spreadLu"), McpRoundTo(Highest - Lowest, 10.0));
     }
     if (!bNormalize)
     {

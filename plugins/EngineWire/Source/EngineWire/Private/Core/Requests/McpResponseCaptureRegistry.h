@@ -56,3 +56,13 @@ private:
 	mutable FCriticalSection Mutex;
 	TMap<FString, FMcpCapturedResponse> Pending;
 };
+
+/** Runs Call, a handler that replies under RequestId, and hands back that reply instead of delivering it. A step that
+ *  answers later (awaited with HasReply between Begin and End) keeps the two calls. */
+template <typename FCall>
+FMcpCapturedResponse McpCaptureResponse(const FString& RequestId, FCall&& Call, bool bBatchStep = true)
+{
+	FMcpResponseCaptureRegistry::Get().Begin(RequestId, bBatchStep);
+	Call();
+	return FMcpResponseCaptureRegistry::Get().End(RequestId);
+}

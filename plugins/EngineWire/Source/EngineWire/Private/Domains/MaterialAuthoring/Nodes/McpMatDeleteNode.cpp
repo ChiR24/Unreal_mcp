@@ -71,10 +71,7 @@ bool HandleDeleteNode(UEngineWireSubsystem* Bridge, const FString& RequestId, co
 
     TSharedPtr<FJsonObject> Result = McpMaterialHostResult(HostOuter);
     Result->SetBoolField(TEXT("saved"), bSaved);
-    TArray<TSharedPtr<FJsonValue>> RemovedArr;
-    for (const FString &R : Removed) {
-      RemovedArr.Add(MakeShared<FJsonValueString>(R));
-    }
+    TArray<TSharedPtr<FJsonValue>> RemovedArr = McpHandlerUtils::ToJsonStringArray(Removed);
     Result->SetArrayField(TEXT("removed"), RemovedArr);
     Result->SetNumberField(TEXT("removedCount"), Removed.Num());
     TArray<TSharedPtr<FJsonValue>> NotFoundArr;

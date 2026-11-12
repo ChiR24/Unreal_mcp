@@ -34,7 +34,7 @@ bool HandleMoveActorsToLevelAction(UEngineWireSubsystem& Subsystem, const FStrin
     Subsystem.SendAutomationResponse(RequestingSocket, RequestId, false, Message + TEXT(" Nothing was moved."), Detail, Code);
     return true;
   };
-  UWorld* World = GEditor ? GEditor->GetEditorWorldContext().World() : nullptr;
+  UWorld* World = McpHandlerUtils::GetEditorWorld();
   if (!World) {
     return Refuse(TEXT("No level is open in the editor."), nullptr, TEXT("NO_WORLD"));
   }

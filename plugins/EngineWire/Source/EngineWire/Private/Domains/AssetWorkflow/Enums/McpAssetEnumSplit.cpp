@@ -81,7 +81,7 @@ bool HandleEnumSplit(
     FAssetRegistryModule::AssetCreated(NewEnum);
 
     TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
-    Result->SetStringField(TEXT("enumPath"), PackageName + TEXT(".") + SanitizedName);
+    Result->SetStringField(TEXT("enumPath"), McpToObjectPath(PackageName));
     Result->SetStringField(TEXT("enumName"), SanitizedName);
     Result->SetNumberField(TEXT("valueCount"), Picked.Num());
     Result->SetStringField(TEXT("sourceEnumPath"), GetJsonStringField(Params, TEXT("enumPath")));

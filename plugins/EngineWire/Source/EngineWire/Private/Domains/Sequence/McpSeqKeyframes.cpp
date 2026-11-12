@@ -168,7 +168,7 @@ bool UEngineWireSubsystem::HandleSequenceAddKeyframe(
   const USceneComponent *BoundRoot = nullptr;
   if (bTransform) {
     TArray<UObject *, TInlineAllocator<1>> Bound;
-    McpSequenceCinematics::LocateBindingObjects(LevelSeq, BindingGuid, GEditor ? GEditor->GetEditorWorldContext().World() : nullptr, Bound);
+    McpSequenceCinematics::LocateBindingObjects(LevelSeq, BindingGuid, McpHandlerUtils::GetEditorWorld(), Bound);
     const AActor *BoundActor = Bound.Num() > 0 ? Cast<AActor>(Bound[0]) : nullptr;
     BoundRoot = BoundActor ? BoundActor->GetRootComponent() : (Bound.Num() > 0 ? Cast<USceneComponent>(Bound[0]) : nullptr);
   }

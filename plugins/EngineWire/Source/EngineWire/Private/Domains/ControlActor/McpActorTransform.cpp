@@ -18,7 +18,6 @@ bool UEngineWireSubsystem::HandleControlActorSetTransform(
                                 TEXT("set_transform moves at most 500 actors per call"), nullptr);
       return true;
     }
-    FMcpResponseCaptureRegistry &Capture = FMcpResponseCaptureRegistry::Get();
     TArray<TSharedPtr<FJsonValue>> Results;
     TArray<FString> Failures;
     for (int32 Index = 0; Index < Items.Num(); ++Index) {
@@ -26,9 +25,9 @@ bool UEngineWireSubsystem::HandleControlActorSetTransform(
       FString Name;
       One->TryGetStringField(TEXT("actorName"), Name);
       const FString ItemId = FString::Printf(TEXT("%s#%d"), *RequestId, Index);
-      Capture.Begin(ItemId);
-      HandleControlActorSetTransform(ItemId, One, Socket);
-      const FMcpCapturedResponse Reply = Capture.End(ItemId);
+      const FMcpCapturedResponse Reply = McpCaptureResponse(ItemId, [&] {
+        HandleControlActorSetTransform(ItemId, One, Socket);
+      });
       TSharedPtr<FJsonObject> Entry = McpHandlerUtils::CreateResultObject();
       Entry->SetStringField(TEXT("actorName"), Name);
       Entry->SetBoolField(TEXT("success"), Reply.bSuccess);

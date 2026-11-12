@@ -42,7 +42,7 @@ AActor* ResolveSplineActor(UEngineWireSubsystem* Self, const FString& RequestId,
             TEXT("actorName is required"), nullptr, TEXT("MISSING_PARAM"));
         return nullptr;
     }
-    UWorld* World = GEditor ? GEditor->GetEditorWorldContext().World() : nullptr;
+    UWorld* World = McpHandlerUtils::GetEditorWorld();
     if (!World)
     {
         Self->SendAutomationResponse(Socket, RequestId, false,

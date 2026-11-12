@@ -165,7 +165,7 @@ bool HandleInspectCapturePassesAction(
             Summary->SetNumberField(TEXT("median"), FMath::RoundToDouble(Near[Near.Num() / 2]));
             Summary->SetNumberField(TEXT("max"), FMath::RoundToDouble(Near.Last()));
         }
-        Summary->SetNumberField(TEXT("sky"), McpViewRound(100.0 * (Count - Near.Num()) / Count, 100.0));
+        Summary->SetNumberField(TEXT("sky"), McpRoundTo(100.0 * (Count - Near.Num()) / Count, 100.0));
         Result->SetObjectField(TEXT("depth"), Summary);
     }
     if (Passes.Contains(TEXT("normal")))
@@ -194,9 +194,9 @@ bool HandleInspectCapturePassesAction(
                 Files->SetStringField(TEXT("normal"), Base + TEXT("_normal.png"));
             }
             const TSharedPtr<FJsonObject> Summary = MakeShared<FJsonObject>();
-            Summary->SetNumberField(TEXT("up"), Drawn > 0 ? McpViewRound(100.0 * Up / Drawn, 100.0) : 0.0);
-            Summary->SetNumberField(TEXT("down"), Drawn > 0 ? McpViewRound(100.0 * Down / Drawn, 100.0) : 0.0);
-            Summary->SetNumberField(TEXT("side"), Drawn > 0 ? McpViewRound(100.0 * (Drawn - Up - Down) / Drawn, 100.0) : 0.0);
+            Summary->SetNumberField(TEXT("up"), Drawn > 0 ? McpRoundTo(100.0 * Up / Drawn, 100.0) : 0.0);
+            Summary->SetNumberField(TEXT("down"), Drawn > 0 ? McpRoundTo(100.0 * Down / Drawn, 100.0) : 0.0);
+            Summary->SetNumberField(TEXT("side"), Drawn > 0 ? McpRoundTo(100.0 * (Drawn - Up - Down) / Drawn, 100.0) : 0.0);
             Result->SetObjectField(TEXT("normal"), Summary);
         }
     }
@@ -242,7 +242,7 @@ bool HandleInspectCapturePassesAction(
                     Item->SetStringField(TEXT("color"), McpHex(Color));
                     Item->SetStringField(TEXT("name"), Entry.Key->GetActorLabel());
                     Item->SetStringField(TEXT("class"), Entry.Key->GetClass()->GetName());
-                    Item->SetNumberField(TEXT("coverage"), McpViewRound(100.0 * Entry.Value / Count, 100.0));
+                    Item->SetNumberField(TEXT("coverage"), McpRoundTo(100.0 * Entry.Value / Count, 100.0));
                     Legend.Add(MakeShared<FJsonValueObject>(Item));
                 }
             }

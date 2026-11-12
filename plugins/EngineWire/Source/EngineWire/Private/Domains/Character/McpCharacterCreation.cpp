@@ -50,35 +50,17 @@ bool HandleCreateCharacterBlueprint(UEngineWireSubsystem* Self, const FString& R
     }
 
     bool bSkeletalMeshAssigned = false;
-    if (RequestedMesh)
+    // A Character's Mesh is ACharacter's own component, not a node of the new Blueprint's construction script, so
+    // the mesh goes on the class default's Mesh.
+    if (RequestedMesh && Blueprint->GeneratedClass)
     {
-        for (USCS_Node* Node : Blueprint->SimpleConstructionScript->GetAllNodes())
+        if (ACharacter* CharacterCDO = Cast<ACharacter>(Blueprint->GeneratedClass->GetDefaultObject()))
         {
-            if (Node && Node->ComponentTemplate && Node->ComponentTemplate->IsA<USkeletalMeshComponent>())
+            if (USkeletalMeshComponent* MeshComp = CharacterCDO->GetMesh())
             {
-                if (USkeletalMeshComponent* MeshComp = Cast<USkeletalMeshComponent>(Node->ComponentTemplate))
-                {
-                    MeshComp->SetSkeletalMesh(RequestedMesh);
-                    bSkeletalMeshAssigned = true;
-                }
-                break;
-            }
-        }
-
-        // A Character Blueprint inherits its Mesh from ACharacter natively, so it
-        // is NOT an SCS node: the loop above finds nothing and every call quietly
-        // reported skeletalMeshAssigned:false while still answering success.
-        // Fall back to the inherited component on the generated class default.
-        if (!bSkeletalMeshAssigned && Blueprint->GeneratedClass)
-        {
-            if (ACharacter* CharacterCDO = Cast<ACharacter>(Blueprint->GeneratedClass->GetDefaultObject()))
-            {
-                if (USkeletalMeshComponent* MeshComp = CharacterCDO->GetMesh())
-                {
-                    MeshComp->SetSkeletalMesh(RequestedMesh);
-                    MeshComp->MarkPackageDirty();
-                    bSkeletalMeshAssigned = true;
-                }
+                MeshComp->SetSkeletalMesh(RequestedMesh);
+                MeshComp->MarkPackageDirty();
+                bSkeletalMeshAssigned = true;
             }
         }
     }

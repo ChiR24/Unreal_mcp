@@ -70,9 +70,7 @@ bool UEngineWireSubsystem::HandleControlEditorOpenLevel(
   if (!McpRequireEditor(this, Socket, RequestId))
     return true;
 
-  FString MapPath = LevelPath + TEXT(".umap");
-
-  // CRITICAL FIX: Unreal stores levels in TWO possible path patterns:
+  // Unreal stores levels in two path patterns:
   // 1. Folder-based (standard): /Game/Path/LevelName/LevelName.umap
   // 2. Flat (legacy): /Game/Path/LevelName.umap
   // We must check BOTH paths before returning FILE_NOT_FOUND.

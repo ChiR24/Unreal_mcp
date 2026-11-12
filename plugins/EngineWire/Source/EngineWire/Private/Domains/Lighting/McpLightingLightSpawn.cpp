@@ -97,7 +97,7 @@ bool HandleSpawnLight(
     const FVector Location = ExtractVectorField(Payload, TEXT("location"), FVector(0.0, 0.0, 300.0));
     const FRotator Rotation = ExtractRotatorField(Payload, TEXT("rotation"), FRotator::ZeroRotator);
 
-    UWorld* World = GEditor ? GEditor->GetEditorWorldContext().World() : nullptr;
+    UWorld* World = McpHandlerUtils::GetEditorWorld();
     if (!World || !World->IsValidLowLevel())
     {
         Subsystem.SendAutomationError(

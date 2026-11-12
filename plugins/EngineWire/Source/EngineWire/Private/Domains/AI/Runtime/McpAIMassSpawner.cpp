@@ -114,7 +114,7 @@ bool HandleAddMassSpawner(UEngineWireSubsystem* Self, const FString& RequestId, 
     {
         return Fail(Error, *Code);
     }
-    UWorld* World = GEditor ? GEditor->GetEditorWorldContext().World() : nullptr;
+    UWorld* World = McpHandlerUtils::GetEditorWorld();
     if (!World)
     {
         return Fail(TEXT("No editor world available"), TEXT("NO_WORLD"));

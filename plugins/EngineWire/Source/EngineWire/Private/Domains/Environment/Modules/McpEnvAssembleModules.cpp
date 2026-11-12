@@ -140,7 +140,7 @@ bool HandleAssembleModules(UEngineWireSubsystem& Bridge, const FString& RequestI
     Payload->TryGetBoolField(TEXT("dryRun"), bDryRun);
     if (!bDryRun)
     {
-        UWorld* World = GEditor ? GEditor->GetEditorWorldContext().World() : nullptr;
+        UWorld* World = McpHandlerUtils::GetEditorWorld();
         FMcpScopedEditorTransaction Transaction(FText::FromString(TEXT("Assemble Modules")), EMcpMutationDurability::EditorStateOnly, TArray<UObject*>());
         AActor* Actor = World ? SpawnLayout(World, GetJsonStringField(Payload, TEXT("name"), TEXT("ModuleAssembly")),
                                             ExtractVectorField(Payload, TEXT("location"), FVector::ZeroVector), Request, Layout.Placed)

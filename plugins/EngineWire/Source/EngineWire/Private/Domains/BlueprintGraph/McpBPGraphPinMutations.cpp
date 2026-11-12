@@ -227,7 +227,7 @@ static bool BreakPinLinks(FActionContext& Context)
     {
         Context.SendError(
             FString::Printf(TEXT("No pin named '%s'. Pins on this node: %s."),
-                *PinName, *DescribeNodePins(TargetNode)),
+                *PinName, *McpDescribeNodePins(TargetNode)),
             TEXT("PIN_NOT_FOUND"));
         return true;
     }

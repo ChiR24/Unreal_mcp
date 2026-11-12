@@ -45,7 +45,7 @@ bool HandleGetLevelInfoAction(UEngineWireSubsystem& Subsystem, const FString& Re
       Payload->TryGetStringField(TEXT("levelPath"), LevelPath);
     }
 
-    UWorld* World = GEditor ? GEditor->GetEditorWorldContext().World() : nullptr;
+    UWorld* World = McpHandlerUtils::GetEditorWorld();
     if (!World) {
       Subsystem.SendAutomationResponse(RequestingSocket, RequestId, false,
                              TEXT("No editor world available"), nullptr, TEXT("NO_WORLD"));

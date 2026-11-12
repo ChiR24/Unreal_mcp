@@ -122,9 +122,7 @@ bool UEngineWireSubsystem::HandleControlActorFindByName(
         Similar.Add(Actor->GetActorLabel());
     }
     if (Similar.Num() > 0) {
-      TArray<TSharedPtr<FJsonValue>> SimilarValues;
-      for (const FString &Label : Similar)
-        SimilarValues.Add(MakeShared<FJsonValueString>(Label));
+      TArray<TSharedPtr<FJsonValue>> SimilarValues = McpHandlerUtils::ToJsonStringArray(Similar);
       Data->SetArrayField(TEXT("similar"), SimilarValues);
       Message = FString::Printf(TEXT("No actor name, label or path contains '%s'; similar: %s"), *Query,
                                 *FString::Join(Similar, TEXT(", ")));

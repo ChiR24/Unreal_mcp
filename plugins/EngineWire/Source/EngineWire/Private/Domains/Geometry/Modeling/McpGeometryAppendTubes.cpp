@@ -21,7 +21,6 @@ constexpr double MaxTubeRadius = 10000.0;
 constexpr double MinTubeSegment = 0.01;
 constexpr double MinTubeTurnCos = -0.866; // a turn past 150 degrees folds the tube back through itself
 constexpr double MinTubeMitreCos = 0.25;
-constexpr double TubeTwoPi = 6.283185307179586; // PI is gone in 5.8 and UE_PI missing in 5.0
 
 struct FTubeSpec
 {
@@ -170,7 +169,7 @@ void AddTubeFaces(FAppendPolygonsInput& Out, const FTubeSpec& Tube, const FVecto
         }
         for (int32 K = 0; K < S; ++K)
         {
-            const double Phi = TubeTwoPi * K / S;
+            const double Phi = 2.0 * DOUBLE_PI * K / S;
             FVector3d Offset = Radius * (FMath::Cos(Phi) * R[I] + FMath::Sin(Phi) * Side);
             Offset += (Widen - 1.0) * Offset.Dot(Mitre) * Mitre;
             Out.Vertices.Add(Tube.Path[I] + Shift + Offset);

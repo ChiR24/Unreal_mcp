@@ -238,11 +238,7 @@ bool HandleWidgetAuthoringStyleClipping(
                 }
                 else
                 {
-#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 1
-                    const TCHAR* ImportResult = Prop->ImportText_Direct(*Value, ValuePtr, Widget, PPF_None);
-#else
-                    const TCHAR* ImportResult = Prop->ImportText(*Value, ValuePtr, PPF_None, Widget);
-#endif
+                    const TCHAR* ImportResult = MCP_PROPERTY_IMPORT_TEXT(Prop, *Value, ValuePtr, Widget, PPF_None);
                     bWriteSuccess = (ImportResult != nullptr);
                 }
                 if (!bWriteSuccess)

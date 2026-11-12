@@ -8,7 +8,7 @@ How to add editor behaviour to the plugin in `plugins/EngineWire/`. Every capabi
 2. **Pre-queue gate.** `Private/Core/Security/McpPrequeueGate` checks scope, consent, paths and quota on both transports before anything is queued. The plugin is the security authority; the TypeScript side only fails fast.
 3. **Queue.** `QueueAutomationRequest()` appends the request, and the game thread drains up to 16 per tick in `ProcessPendingAutomationRequests()`. There is exactly one dequeuer.
 4. **Handler table.** `InitializeHandlers()` in `Private/Core/Subsystem/EngineWireSubsystemHandlerRegistration.cpp` maps each of the 23 parent tools, plus `console_command`, to a domain handler. `Route(Parent, Fallback, { FSubRoute... })` sends the sub-actions a sibling domain claims to that domain.
-5. **Domain dispatcher.** `Handle<Domain>Action` in `Private/Domains/<Domain>/…Dispatch.cpp` reads `subAction` first, then `action`, and calls the leaf handler through a compare chain.
+5. **Domain dispatcher.** `Handle<Domain>Action` in `Private/Domains/<Domain>/Mcp<Tag>Handlers.cpp` reads `subAction` first, then `action`, and calls the leaf handler through a compare chain or a table of action names.
 6. **Leaf handler.** It does the work and replies with `SendAutomationResponse` or `SendAutomationError`. The gateway projects the reply onto the record's declared output schema and returns it with a receipt.
 
 ## Adding an action
@@ -71,7 +71,7 @@ Report failures with `SendAutomationError(Socket, RequestId, Message, Code)` and
 
 ### 4. Route it
 
-Add the sub-action to the compare chain in the domain's `…Dispatch.cpp`:
+Add the sub-action to the domain's dispatcher, `Mcp<Tag>Handlers.cpp` (its compare chain, or its route table where it has one):
 
 ```cpp
 if (LowerSub == TEXT("add_tag"))

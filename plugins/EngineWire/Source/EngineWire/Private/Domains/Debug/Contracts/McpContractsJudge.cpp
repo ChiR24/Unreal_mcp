@@ -160,9 +160,9 @@ FVerdict Drawn(AActor* Actor)
     const FString Id = FGuid::NewGuid().ToString();
     TSharedPtr<FJsonObject> Payload = MakeShared<FJsonObject>();
     Payload->SetStringField(TEXT("actorName"), Actor->GetName());
-    FMcpResponseCaptureRegistry::Get().Begin(Id);
-    McpExplain::Handle(*Bridge, Id, TEXT("explain_visible"), Payload, nullptr);
-    const FMcpCapturedResponse Reply = FMcpResponseCaptureRegistry::Get().End(Id);
+    const FMcpCapturedResponse Reply = McpCaptureResponse(Id, [&] {
+        McpExplain::Handle(*Bridge, Id, TEXT("explain_visible"), Payload, nullptr);
+    });
     static const TSet<FString> CameraChecks = {TEXT("view"), TEXT("drawDistance"), TEXT("nearClip"), TEXT("inView"),
                                                TEXT("sightLines"), TEXT("ownerSee")};
     const TArray<TSharedPtr<FJsonValue>>* Causes = nullptr;
@@ -199,12 +199,12 @@ FVerdict JudgePredicate(const FNode& Node)
         if (Blueprint->Status == BS_Dirty || Blueprint->Status == BS_Unknown || Blueprint->bBeingCompiled)
         {
             FVerdict Out = Unknown(TEXT("it changed since its last compile: compile it, then judge again"));
-            Out.NextCall = McpExplain::MakeNextCall(TEXT("manage_blueprint"), TEXT("compile"), Params);
+            Out.NextCall = McpHandlerUtils::MakeExecuteCall(TEXT("manage_blueprint"), TEXT("compile"), Params);
             return Out;
         }
         return Decide(Blueprint->Status != BS_Error, Blueprint->Status == BS_Error ? TEXT("its last compile failed")
                       : Blueprint->Status == BS_UpToDateWithWarnings ? TEXT("compiled, with warnings") : TEXT("compiled"),
-                      McpExplain::MakeNextCall(TEXT("manage_blueprint"), TEXT("compile"), Params));
+                      McpHandlerUtils::MakeExecuteCall(TEXT("manage_blueprint"), TEXT("compile"), Params));
     }
     FVerdict Missing;
     AActor* Actor = McpHandlerUtils::FindActorByName(Subject.Path.Num() > 0 ? Subject.Path[0] : FString());

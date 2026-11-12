@@ -1,4 +1,5 @@
 #include "Domains/Inspect/McpInspectShared.h"
+#include "Foundation/BridgeHelpers/Reflection/McpEnumName.h"
 
 #include "Engine/Texture.h"
 #include "Engine/Texture2D.h"
@@ -17,13 +18,6 @@
 namespace McpInspectHandlers {
 
 namespace {
-template <typename TEnum>
-FString McpEnumName(TEnum Value)
-{
-    const UEnum *Enum = StaticEnum<TEnum>();
-    return Enum ? Enum->GetNameStringByValue(static_cast<int64>(Value)) : FString();
-}
-
 TSharedPtr<FJsonObject> McpMakeParameterEntry(const FMaterialParameterInfo &Info, bool bResolved)
 {
     TSharedPtr<FJsonObject> Entry = McpHandlerUtils::CreateResultObject();

@@ -14,7 +14,6 @@ constexpr float LookBackdropStray = 0.1f;  // a frame straying further from its 
 constexpr int32 LookColours = 4;
 constexpr int32 LookEdgeBins = 8;
 constexpr int32 LookSide = 64; // a stored thumbnail is 256 across or more: averaged down, it keeps colours and outline
-constexpr double LookPi = 3.14159265358979323846;
 
 FVector3f LookPixel(const TArray<uint8>& Bgra, int32 Index)
 {
@@ -190,8 +189,8 @@ bool LookOf(const TArray<uint8>& Source, int32 SourceWidth, int32 SourceHeight, 
             const double Gx = (L(X + 1, Y - 1) + 2 * L(X + 1, Y) + L(X + 1, Y + 1)) - (L(X - 1, Y - 1) + 2 * L(X - 1, Y) + L(X - 1, Y + 1));
             const double Gy = (L(X - 1, Y + 1) + 2 * L(X, Y + 1) + L(X + 1, Y + 1)) - (L(X - 1, Y - 1) + 2 * L(X, Y - 1) + L(X + 1, Y - 1));
             const double Magnitude = FMath::Sqrt(Gx * Gx + Gy * Gy);
-            const double Angle = FMath::Fmod(FMath::Atan2(Gy, Gx) + 2.0 * LookPi, LookPi);
-            Out.Edges[FMath::Min(static_cast<int32>(Angle / LookPi * LookEdgeBins), LookEdgeBins - 1)] += static_cast<float>(Magnitude);
+            const double Angle = FMath::Fmod(FMath::Atan2(Gy, Gx) + 2.0 * DOUBLE_PI, DOUBLE_PI);
+            Out.Edges[FMath::Min(static_cast<int32>(Angle / DOUBLE_PI * LookEdgeBins), LookEdgeBins - 1)] += static_cast<float>(Magnitude);
             Total += Magnitude;
         }
     }

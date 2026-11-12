@@ -10,8 +10,6 @@ namespace
 // An audio asset by path or by name. A path (anything with a '/') loads directly, under whichever content mount it
 // names; a bare name is the first asset of one of Classes under /Game with that name, case ignored, inside a
 // path-restricted caller's prefixes. Only an asset that IsA Wanted counts.
-//
-// VERSION COMPATIBILITY: FARFilter takes ClassNames (FName) on UE 5.0, ClassPaths (FTopLevelAssetPath) from 5.1.
 UObject* ResolveAudioAsset(const FString& Path, std::initializer_list<UClass*> Classes, UClass* Wanted)
 {
 	if (Path.IsEmpty())
@@ -27,11 +25,7 @@ UObject* ResolveAudioAsset(const FString& Path, std::initializer_list<UClass*> C
 	FARFilter Filter;
 	for (UClass* Class : Classes)
 	{
-#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 1
-		Filter.ClassPaths.Add(Class->GetClassPathName());
-#else
-		Filter.ClassNames.Add(Class->GetFName());
-#endif
+		MCP_AR_FILTER_ADD_CLASS(Filter, Class);
 	}
 	Filter.bRecursivePaths = true;
 	Filter.PackagePaths.Add(TEXT("/Game"));

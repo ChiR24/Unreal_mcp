@@ -32,11 +32,13 @@ domain-local copy of reflection, path, JSON, or response helpers.
 | Dispatch an action in a handler | Resolve with `HandlerUtils/McpHandlerUtilsActionsPaths.h` `NormalizeAction`, then an explicit compare chain (see `../Domains/AGENTS.md`) |
 | Build an error response | `SendAutomationError(Socket, RequestId, Message, Code)` on the subsystem |
 | Normalize/sanitize action + path strings | `HandlerUtils/McpHandlerUtilsActionsPaths.h` |
+| Match a name with case, spaces and underscores ignored | `HandlerUtils/McpHandlerUtilsActionsPaths.h` `McpPlainKey` |
 | Extract/coerce JSON fields | `HandlerUtils/McpHandlerUtilsJson.h` |
 | Standard response builders | `HandlerUtils/McpHandlerUtilsResponses.h` |
-| Transform / math helpers | `HandlerUtils/McpHandlerUtilsTransforms.h` |
+| Transform / math helpers; a reply number to the nearest 1 / Scale | `HandlerUtils/McpHandlerUtilsTransforms.h` (`McpRoundTo`) |
 | BP graph node helpers | `Blueprint/McpBlueprintUtils.h` |
 | Resolve / validate `/Game` asset path | `BridgeHelpers/Assets/McpAssetResolve.h` |
+| Load a material the caller named, no fallback | `BridgeHelpers/Assets/McpAssetResolve.h` `LoadMaterialForMcp` |
 | Create assets / dirs / save registry | `BridgeHelpers/Assets/{McpAssetCreation,McpAssetDirs,McpAssetSaveRegistry}.h` |
 | Make the package of a new asset | `BridgeHelpers/Assets/McpAssetCreation.h` `McpCreatePackageForNewAsset` (refuses an occupied path and a name the engine does not take) or `McpCreatePackageOrNull` (null where the engine's `CreatePackage` is a Fatal log: a name holding `//`); never the engine call (contract test) |
 | Spawn an actor | `BridgeHelpers/Actors/McpActorSpawnHelpers.h` |
@@ -45,6 +47,7 @@ domain-local copy of reflection, path, JSON, or response helpers.
 | Read/apply a property (scalar/object/array) | `BridgeHelpers/Properties/{McpNestedPropPath,McpComponentLookup,McpPropApply*}.h` (export: `Reflection/McpPropertyReflection.h`) |
 | Refuse a number outside a property's ClampMin/ClampMax | `Reflection/McpPropertyReflection.h` `CheckRange` |
 | Resolve a UClass by name | `BridgeHelpers/Reflection/McpClassResolve.h` |
+| An enumerator's short name for a reply | `BridgeHelpers/Reflection/McpEnumName.h` `McpEnumName(Value)` |
 | Build / verify response, capture output, JSON fields | `BridgeHelpers/Responses/{McpResponses,McpResponseVerify,McpOutputCapture,McpJsonFields}.h` |
 | Refuse a missing field, a missing editor or a bad asset path in one line | `BridgeHelpers/Responses/McpResponses.h` `McpReadRequiredField` ("<field> required"), `McpRequireEditor`, `McpReadAssetPathOrReply` / `McpSanitizeAssetPathOrReply` (refusal wording, ASSET_NOT_FOUND): `if (!McpReadRequiredField(...)) return true;` |
 | Set a console variable and know it took | `Render/McpConsoleVariableWrite.h` `McpSetConsoleVariable` (console priority by default, read-only refused, read back; `IConsoleVariable::Set` alone loses to a console set silently) |
@@ -76,6 +79,9 @@ Every domain that touches properties funnels through it.
   classifiers live in `McpSecretKeys.cpp`. Mask through these, never a local keyword list.
 - `BridgeHelpers/Security/McpCommandValidate.h`: blocklist
   of `&&`, `||`, `;`, `|`, backtick, `<`, `>`, newline, CR for console/UBT args.
+- `BridgeHelpers/Security/McpSafeReflectionTarget.h`: `IsAddressable` refuses an object in a `/Script` package
+  (a native class or CDO, the plugin's own settings among them) and one outside a path-restricted caller's
+  prefixes; the generic property handlers ask it before they read or write and refuse with `DenyCode()`.
 - Hazardous editor ops (save/load/delete) live in `../Safety/`; include
   `Safety/McpSafeOperations.h`, which also declares the unqualified spellings
   (`McpSafeAssetSave`, `ScanPathSynchronous`, ...). See `../Safety/AGENTS.md`.

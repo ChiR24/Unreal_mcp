@@ -18,11 +18,6 @@ namespace
 constexpr double MinGainMs = 0.05;
 constexpr int32 NamesPerKnob = 8;
 
-double BudgetRound(double Value)
-{
-    return FMath::RoundToDouble(Value * 100.0) / 100.0;
-}
-
 TSharedPtr<FJsonObject> KnobRow(const FKnob& Knob, bool bChosen)
 {
     TSharedPtr<FJsonObject> Row = MakeShared<FJsonObject>();
@@ -50,7 +45,7 @@ TSharedPtr<FJsonObject> KnobRow(const FKnob& Knob, bool bChosen)
         Row->SetBoolField(TEXT("measured"), false); // out of time before its turn
         return Row;
     }
-    Row->SetNumberField(TEXT("gainMs"), BudgetRound(Knob.GainMs));
+    Row->SetNumberField(TEXT("gainMs"), McpRoundTo(Knob.GainMs, 100.0));
     Row->SetNumberField(TEXT("changed"), Knob.Changed);
     Row->SetBoolField(TEXT("chosen"), bChosen);
     return Row;
@@ -121,8 +116,8 @@ TSharedPtr<FJsonObject> Reply(const FRun& Run, int32 Kept, FString& OutMessage)
 {
     TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
     const double Baseline = Run.BaselineMs();
-    Result->SetNumberField(TEXT("budgetMs"), BudgetRound(Run.BudgetMs));
-    Result->SetNumberField(TEXT("baselineMs"), BudgetRound(Baseline));
+    Result->SetNumberField(TEXT("budgetMs"), McpRoundTo(Run.BudgetMs, 100.0));
+    Result->SetNumberField(TEXT("baselineMs"), McpRoundTo(Baseline, 100.0));
     const double Fps = Run.FramesDrawn / FMath::Max(FPlatformTime::Seconds() - Run.Started, 0.001);
     Result->SetNumberField(TEXT("fps"), FMath::RoundToDouble(Fps));
     // A frame far longer than its GPU time waits on the editor's own CPU work: the GPU time then holds idle gaps.
@@ -148,7 +143,7 @@ TSharedPtr<FJsonObject> Reply(const FRun& Run, int32 Kept, FString& OutMessage)
         OutMessage = FString::Printf(TEXT("The view draws in %.2f ms on the GPU, within the %.2f ms budget: nothing to change."), Baseline, Run.BudgetMs);
         return Result;
     }
-    Result->SetNumberField(TEXT("noiseMs"), BudgetRound(Run.NoiseMs));
+    Result->SetNumberField(TEXT("noiseMs"), McpRoundTo(Run.NoiseMs, 100.0));
     TArray<TSharedPtr<FJsonValue>> Rows;
     double Saved = 0.0;
     for (int32 Index = 0; Index < Run.Knobs.Num(); ++Index)
@@ -171,8 +166,8 @@ TSharedPtr<FJsonObject> Reply(const FRun& Run, int32 Kept, FString& OutMessage)
                                           "%.2f ms budget is out of their reach: nothing changed."), Baseline, Run.Knobs.Num(), Run.BudgetMs);
         return Result;
     }
-    Result->SetNumberField(TEXT("predictedMs"), BudgetRound(Baseline - Saved));
-    Result->SetNumberField(TEXT("measuredMs"), BudgetRound(Run.ChosenMs));
+    Result->SetNumberField(TEXT("predictedMs"), McpRoundTo(Baseline - Saved, 100.0));
+    Result->SetNumberField(TEXT("measuredMs"), McpRoundTo(Run.ChosenMs, 100.0));
     if (Run.Change.IsValid())
     {
         Result->SetObjectField(TEXT("change"), Run.Change);

@@ -9,21 +9,18 @@
 #include "Foundation/HandlerUtils/McpHandlerUtilsTransforms.h"
 #include "GameFramework/Actor.h"
 #include "UObject/Package.h"
-#if ENGINE_MAJOR_VERSION > 5 || (ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 1)
-#include "Engine/HitResult.h" // 5.0 declares FHitResult in EngineTypes.h
-#endif
+#include "Core/Compatibility/McpVersionCompatibility.h"
+#include MCP_HIT_RESULT_HEADER
 
 namespace {
 constexpr int32 McpMaxMotionPoints = 8;
 // Traced from above the point, so a foot sunk into the floor is found too.
 constexpr double McpGroundTraceUp = 50.0;
 constexpr double McpGroundTraceDown = 1000.0;
-
-double McpRound1(double Value) { return FMath::RoundToDouble(Value * 10.0) / 10.0; }
 } // namespace
 
 TArray<TSharedPtr<FJsonValue>> McpPointVec(const FVector &V) {
-  return McpHandlerUtils::VectorToJsonArray(FVector(McpRound1(V.X), McpRound1(V.Y), McpRound1(V.Z)));
+  return McpHandlerUtils::VectorToJsonArray(FVector(McpRoundTo(V.X, 10.0), McpRoundTo(V.Y, 10.0), McpRoundTo(V.Z, 10.0)));
 }
 
 namespace {
@@ -140,7 +137,7 @@ void McpSampleMotionPoints(FMcpMotionPoints &Points, const AActor *Actor, FJsonO
     Where->SetArrayField(Point.Label, McpPointVec(Location));
     const TOptional<double> Height = Points.bGround ? McpHeightAboveGround(Actor, Location) : TOptional<double>();
     if (Height.IsSet()) {
-      Above->SetNumberField(Point.Label, McpRound1(Height.GetValue()));
+      Above->SetNumberField(Point.Label, McpRoundTo(Height.GetValue(), 10.0));
     }
     Point.Times.Add(Time);
     Point.Locations.Add(Location);
@@ -186,10 +183,10 @@ void McpAddMotionPointStats(const FMcpMotionPoints &Points, FJsonObject &Data) {
           Slip += FVector::Dist2D(Point.Locations[Index], Point.Locations[Index - 1]);
         }
       }
-      One->SetNumberField(TEXT("minAboveGround"), McpRound1(Low));
-      One->SetNumberField(TEXT("maxAboveGround"), McpRound1(High));
+      One->SetNumberField(TEXT("minAboveGround"), McpRoundTo(Low, 10.0));
+      One->SetNumberField(TEXT("maxAboveGround"), McpRoundTo(High, 10.0));
       One->SetNumberField(TEXT("contactSeconds"), FMath::RoundToDouble(Seconds * 1000.0) / 1000.0);
-      One->SetNumberField(TEXT("contactSlip"), McpRound1(Slip));
+      One->SetNumberField(TEXT("contactSlip"), McpRoundTo(Slip, 10.0));
     }
     Stats->SetObjectField(Point.Label, One);
   }

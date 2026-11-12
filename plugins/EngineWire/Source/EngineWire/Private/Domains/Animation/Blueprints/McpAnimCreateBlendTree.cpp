@@ -141,10 +141,7 @@ bool HandleAnimationCreateBlendTreeAction(FActionContext &Context,
   Resp->SetBoolField(TEXT("connectedToOutput"), bConnectedToOutput);
   Resp->SetBoolField(TEXT("saved"), bSaved);
   if (Warnings.Num() > 0) {
-    TArray<TSharedPtr<FJsonValue>> WarningValues;
-    for (const FString &Warning : Warnings) {
-      WarningValues.Add(MakeShared<FJsonValueString>(Warning));
-    }
+    TArray<TSharedPtr<FJsonValue>> WarningValues = McpHandlerUtils::ToJsonStringArray(Warnings);
     Resp->SetArrayField(TEXT("warnings"), WarningValues);
   }
   bSuccess = true;

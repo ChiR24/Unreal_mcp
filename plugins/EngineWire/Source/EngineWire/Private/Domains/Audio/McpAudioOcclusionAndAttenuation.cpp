@@ -87,7 +87,7 @@ bool HandleSpatialActions(
               FPackageName::GetLongPackagePath(Sound->GetOutermost()->GetName()) + TEXT("/") + AttenName;
           // An attenuation an earlier call made for this sound is reused; NewObject over it rebuilt it empty, and
           // another kind of asset under that name is refused.
-          AttenuationSettings = LoadObject<USoundAttenuation>(nullptr, *AudioObjectPath(AttenPackageName));
+          AttenuationSettings = LoadObject<USoundAttenuation>(nullptr, *McpToObjectPath(AttenPackageName));
           if (!AttenuationSettings) {
             FString CreateError, CreateCode;
             UPackage* AttenPackage = McpCreatePackageForNewAsset(AttenPackageName, CreateError, CreateCode);

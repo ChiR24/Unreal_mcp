@@ -28,13 +28,14 @@ FMcpCapturedResponse RunBehaviourBatch(UEngineWireSubsystem& Bridge, const FStri
     Payload->SetStringField(TEXT("subAction"), TEXT("build_graph"));
     Payload->SetArrayField(TEXT("operations"), Plan.Ops);
     const FString Id = RequestId + TEXT("#behaviour");
-    FMcpResponseCaptureRegistry::Get().Begin(Id);
-    McpBlueprintGraphHandlers::FActionContext Context{&Bridge, Id, Payload, Socket, TEXT("build_graph")};
-    if (McpBlueprintGraphHandlers::PrepareBlueprintAndGraph(Context))
+    return McpCaptureResponse(Id, [&]
     {
-        McpBlueprintGraphHandlers::GraphBatch::RunGraphBatch(Context, MaxAuthorSteps, /*bCompile=*/false);
-    }
-    return FMcpResponseCaptureRegistry::Get().End(Id);
+        McpBlueprintGraphHandlers::FActionContext Context{&Bridge, Id, Payload, Socket, TEXT("build_graph")};
+        if (McpBlueprintGraphHandlers::PrepareBlueprintAndGraph(Context))
+        {
+            McpBlueprintGraphHandlers::GraphBatch::RunGraphBatch(Context, MaxAuthorSteps, /*bCompile=*/false);
+        }
+    });
 }
 
 // The batch's per-step results in the report, plus where the failed step came from.

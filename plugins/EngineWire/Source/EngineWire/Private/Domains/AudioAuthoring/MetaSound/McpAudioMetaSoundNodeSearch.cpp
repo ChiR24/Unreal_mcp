@@ -6,15 +6,6 @@ namespace McpAudioAuthoring
 {
 namespace
 {
-// "Wave Player" / "wave_player" / "WavePlayer" all name the same registry class.
-FString SquashName(const FString& In)
-{
-	FString Out = In;
-	Out.ReplaceInline(TEXT(" "), TEXT(""));
-	Out.ReplaceInline(TEXT("_"), TEXT(""));
-	return Out;
-}
-
 FString DottedName(const FMetasoundFrontendClassName& ClassName)
 {
 	const FString Namespace = ClassName.Namespace.ToString();
@@ -46,7 +37,7 @@ bool ResolveMetaSoundNodeClassName(
 	{
 		return false;
 	}
-	const FString WantedName = SquashName(Name);
+	const FString WantedName = McpPlainKey(Name);
 	TArray<FMetasoundFrontendClassName> Matches;
 	TArray<FString> SeenNames;
 	const TArray<FMetasoundFrontendClass> Classes =
@@ -58,7 +49,7 @@ bool ResolveMetaSoundNodeClassName(
 			continue;
 		}
 		const FMetasoundFrontendClassName& ClassName = Class.Metadata.GetClassName();
-		if (!SquashName(ClassName.Name.ToString()).Equals(WantedName, ESearchCase::IgnoreCase))
+		if (!McpPlainKey(ClassName.Name.ToString()).Equals(WantedName, ESearchCase::IgnoreCase))
 		{
 			continue;
 		}
@@ -91,7 +82,7 @@ bool ResolveMetaSoundNodeClassName(
 			const FMetasoundFrontendClassName& ClassName = Class.Metadata.GetClassName();
 			const FString Dotted = DottedName(ClassName);
 			if (Class.Metadata.GetType() == EMetasoundFrontendClassType::External &&
-				SquashName(ClassName.Name.ToString()).Contains(WantedName, ESearchCase::IgnoreCase) &&
+				McpPlainKey(ClassName.Name.ToString()).Contains(WantedName, ESearchCase::IgnoreCase) &&
 				!SeenNames.Contains(Dotted) && OutCandidates.Num() < 12)
 			{
 				SeenNames.Add(Dotted);
@@ -163,7 +154,7 @@ namespace McpAudioAuthoring
 TSharedPtr<FJsonObject> ListMetaSoundNodeClasses(const TSharedPtr<FJsonObject>& Params, TSharedPtr<FJsonObject> Response)
 {
 #if MCP_HAS_METASOUND && MCP_HAS_METASOUND_FRONTEND && MCP_HAS_METASOUND_SEARCH_ENGINE
-	const FString Filter = SquashName(GetJsonStringField(Params, TEXT("filter"), TEXT("")));
+	const FString Filter = McpPlainKey(GetJsonStringField(Params, TEXT("filter"), TEXT("")));
 	const bool bPins = GetJsonBoolField(Params, TEXT("includePins"), false);
 	const int32 Limit = FMath::Clamp(GetJsonIntField(Params, TEXT("limit"), 50), 1, 200);
 	TMap<FString, TSharedPtr<FJsonObject>> ByName;
@@ -180,7 +171,7 @@ TSharedPtr<FJsonObject> ListMetaSoundNodeClasses(const TSharedPtr<FJsonObject>& 
 		}
 		const FString Category = FString::Join(Parts, TEXT("/"));
 		if (Meta.GetType() != EMetasoundFrontendClassType::External || ByName.Contains(Dotted) ||
-			!SquashName(Dotted + TEXT("|") + Meta.GetDisplayName().ToString() + TEXT("|") + Category).Contains(Filter, ESearchCase::IgnoreCase))
+			!McpPlainKey(Dotted + TEXT("|") + Meta.GetDisplayName().ToString() + TEXT("|") + Category).Contains(Filter, ESearchCase::IgnoreCase))
 		{
 			continue;
 		}
@@ -198,7 +189,7 @@ TSharedPtr<FJsonObject> ListMetaSoundNodeClasses(const TSharedPtr<FJsonObject>& 
 		}
 		ByName.Add(Dotted, Row);
 		// Within a tier the engine's own UE nodes come first: dozens of Crossfade "Trigger Route" variants hid Trigger Repeat.
-		const FString Name = SquashName(Meta.GetClassName().Name.ToString());
+		const FString Name = McpPlainKey(Meta.GetClassName().Name.ToString());
 		const int32 Tier = Name.Equals(Filter, ESearchCase::IgnoreCase) ? 0 : Name.StartsWith(Filter, ESearchCase::IgnoreCase) ? 1
 			: Name.Contains(Filter, ESearchCase::IgnoreCase) ? 2 : 3;
 		Rank.Add(Dotted, Tier * 2 + (Meta.GetClassName().Namespace.ToString().Equals(TEXT("UE"), ESearchCase::IgnoreCase) ? 0 : 1));

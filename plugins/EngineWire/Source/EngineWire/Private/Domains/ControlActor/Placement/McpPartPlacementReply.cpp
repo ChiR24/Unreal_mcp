@@ -1,4 +1,5 @@
 #include "Domains/ControlActor/Placement/McpPartPlacement.h"
+#include "Foundation/HandlerUtils/McpHandlerUtilsJson.h"
 
 #include "Foundation/BridgeHelpers/Blueprints/McpBPAssetLoad.h"
 
@@ -215,11 +216,7 @@ TSharedPtr<FJsonObject> BuildBlueprintAuditReply(const FString& BlueprintPath, d
     {
         Data->SetNumberField(TEXT("groundZ"), FMath::RoundToDouble(Audit.GroundZ * 10.0) / 10.0);
     }
-    TArray<TSharedPtr<FJsonValue>> Notes;
-    for (const FString& Note : Audit.Notes)
-    {
-        Notes.Add(MakeShared<FJsonValueString>(Note));
-    }
+    TArray<TSharedPtr<FJsonValue>> Notes = McpHandlerUtils::ToJsonStringArray(Audit.Notes);
     if (Notes.Num() > 0)
     {
         Data->SetArrayField(TEXT("warnings"), Notes);

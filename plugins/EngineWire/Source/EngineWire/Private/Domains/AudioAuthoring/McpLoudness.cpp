@@ -6,7 +6,6 @@ namespace McpLoudness
 {
 namespace
 {
-constexpr double LoudnessPi = 3.14159265358979323846;
 constexpr double LoudnessAbsoluteGate = -70.0;
 constexpr double LoudnessRelativeGate = -10.0;
 
@@ -21,14 +20,14 @@ struct FLoudnessFilter
 FLoudnessFilter LoudnessFilterFor(double Rate)
 {
     double F0 = 1681.974450955533, Q = 0.7071752369554196;
-    double K = FMath::Tan(LoudnessPi * F0 / Rate);
+    double K = FMath::Tan(DOUBLE_PI * F0 / Rate);
     const double Vh = FMath::Pow(10.0, 3.999843853973347 / 20.0), Vb = FMath::Pow(Vh, 0.4996667741545416);
     const double A0 = 1.0 + K / Q + K * K;
     const double Pb[3] = {(Vh + Vb * K / Q + K * K) / A0, 2.0 * (K * K - Vh) / A0, (Vh - Vb * K / Q + K * K) / A0};
     const double Pa[3] = {1.0, 2.0 * (K * K - 1.0) / A0, (1.0 - K / Q + K * K) / A0};
     F0 = 38.13547087602444;
     Q = 0.5003270373238773;
-    K = FMath::Tan(LoudnessPi * F0 / Rate);
+    K = FMath::Tan(DOUBLE_PI * F0 / Rate);
     const double Rb[3] = {1.0, -2.0, 1.0};
     const double Ra[3] = {1.0, 2.0 * (K * K - 1.0) / (1.0 + K / Q + K * K), (1.0 - K / Q + K * K) / (1.0 + K / Q + K * K)};
     FLoudnessFilter Out;

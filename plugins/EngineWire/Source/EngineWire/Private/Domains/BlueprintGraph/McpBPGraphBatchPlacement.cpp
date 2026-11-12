@@ -123,22 +123,23 @@ FMcpCapturedResponse RunStep(const FActionContext& Parent, const TSharedPtr<FJso
                              const FString& Edit, const FString& StepId, FString& OutPins)
 {
     FollowStepGraph(Parent, Payload);
-    FMcpResponseCaptureRegistry::Get().Begin(StepId);
     FActionContext Step{Parent.Subsystem, StepId, Payload, Parent.RequestingSocket, Edit};
     Step.bDeferCompile = true;
-    if (!RunBlueprintMemberStep(Parent, Edit, StepId, Payload) && PrepareBlueprintAndGraph(Step))
+    FMcpCapturedResponse Reply = McpCaptureResponse(StepId, [&]
     {
-        const bool bHandled = HandleNodeCreationAction(Step) || HandlePinMutationAction(Step) ||
-                              HandleNodeMutationAction(Step);
-        (void)bHandled;
-    }
-    FMcpCapturedResponse Reply = FMcpResponseCaptureRegistry::Get().End(StepId);
+        if (!RunBlueprintMemberStep(Parent, Edit, StepId, Payload) && PrepareBlueprintAndGraph(Step))
+        {
+            const bool bHandled = HandleNodeCreationAction(Step) || HandlePinMutationAction(Step) ||
+                                  HandleNodeMutationAction(Step);
+            (void)bHandled;
+        }
+    });
     FString Guid;
     if (Reply.bSuccess && Reply.Result.IsValid() && Reply.Result->TryGetStringField(TEXT("nodeGuid"), Guid))
     {
         // A member step (add_event: its parameter pins are what later steps wire) prepares no
         // graph, so its node is found across the Blueprint; it used to report no pins at all.
-        OutPins = DescribeNodePins(Step.TargetGraph ? Step.FindNode(Guid) : FindBatchNode(Parent.Blueprint, Guid));
+        OutPins = McpDescribeNodePins(Step.TargetGraph ? Step.FindNode(Guid) : FindBatchNode(Parent.Blueprint, Guid));
     }
     return Reply;
 }

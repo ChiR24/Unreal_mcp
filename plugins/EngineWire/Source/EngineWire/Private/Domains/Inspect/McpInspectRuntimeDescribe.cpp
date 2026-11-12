@@ -15,7 +15,7 @@ UWorld *McpGetRuntimeInspectionWorld()
             }
         }
     }
-    return GEditor ? GEditor->GetEditorWorldContext().World() : nullptr;
+    return McpHandlerUtils::GetEditorWorld();
 }
 FString McpGetWorldTypeName(UWorld *World)
 {

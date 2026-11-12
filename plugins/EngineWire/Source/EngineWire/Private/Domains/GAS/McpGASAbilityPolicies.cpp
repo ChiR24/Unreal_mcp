@@ -67,7 +67,7 @@ bool HandleGASAbilityPolicies(const FGASRequestContext& Context, const FString& 
 
         TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
         Result->SetStringField(TEXT("blueprintPath"), BlueprintPath);
-        Result->SetStringField(TEXT("activationPolicy"), GASEnumName(NetPolicy));
+        Result->SetStringField(TEXT("activationPolicy"), McpEnumName(NetPolicy));
         Bridge->SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Activation policy set"), Result);
         return true;
     }
@@ -119,7 +119,7 @@ bool HandleGASAbilityPolicies(const FGASRequestContext& Context, const FString& 
 
         TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
         Result->SetStringField(TEXT("blueprintPath"), BlueprintPath);
-        Result->SetStringField(TEXT("instancingPolicy"), GASEnumName(InstPolicy));
+        Result->SetStringField(TEXT("instancingPolicy"), McpEnumName(InstPolicy));
         Bridge->SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Instancing policy set"), Result);
         return true;
     }

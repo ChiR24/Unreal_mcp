@@ -58,25 +58,13 @@ bool LoadConversionMaterials(const TSharedPtr<FJsonObject>& Payload, int32 SlotC
             OutMaterials.Add(nullptr);
             continue;
         }
-        const FString SafePath = SanitizeProjectRelativePath(Path);
-        if (SafePath.IsEmpty())
-        {
-            OutError = FString::Printf(TEXT("materials[%d]: %s"), Slot, *McpPathRefusalMessage(TEXT("materials"), Path));
-            return false;
-        }
-        UMaterialInterface* Material = Cast<UMaterialInterface>(McpLoadAsset(SafePath));
+        FString Resolved, LoadError;
+        UMaterialInterface* Material = LoadMaterialForMcp(Path, Resolved, LoadError, TEXT("materials"));
         if (!Material)
         {
-            // McpLoadAsset reads the asset registry; a path it has not scanned yet (some engine content) loads straight from disk.
-            Material = LoadObject<UMaterialInterface>(nullptr, *SafePath);
-        }
-        if (!Material && !SafePath.Contains(TEXT(".")))
-        {
-            Material = LoadObject<UMaterialInterface>(nullptr, *FString::Printf(TEXT("%s.%s"), *SafePath, *FPaths::GetBaseFilename(SafePath)));
-        }
-        if (!Material)
-        {
-            OutError = FString::Printf(TEXT("materials[%d]: %s does not load as a material or a material instance"), Slot, *Path);
+            // An empty Resolved: the path was refused, in the loader's words.
+            OutError = Resolved.IsEmpty() ? FString::Printf(TEXT("materials[%d]: %s"), Slot, *LoadError)
+                : FString::Printf(TEXT("materials[%d]: %s does not load as a material or a material instance"), Slot, *Path);
             return false;
         }
         OutMaterials.Add(Material);

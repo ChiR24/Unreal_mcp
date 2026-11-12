@@ -111,10 +111,7 @@ void FinalizeModifyScsResponse(const FBlueprintActionContext &Context,
     }
     State.LocalWarnings.Append(Parts.Notes);
   }
-  TArray<TSharedPtr<FJsonValue>> WarningValues;
-  for (const FString &Warning : State.LocalWarnings) {
-    WarningValues.Add(MakeShared<FJsonValueString>(Warning));
-  }
+  TArray<TSharedPtr<FJsonValue>> WarningValues = McpHandlerUtils::ToJsonStringArray(State.LocalWarnings);
   TSharedPtr<FJsonObject> ResultPayload = McpHandlerUtils::CreateResultObject();
   ResultPayload->SetStringField(TEXT("blueprintPath"), State.NormalizedBlueprintPath);
   ResultPayload->SetArrayField(TEXT("operations"), State.FinalSummaries);

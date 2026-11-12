@@ -197,7 +197,7 @@ bool HandleInspectFrameCostAction(
     TSharedPtr<FMcpBridgeWebSocket> RequestingSocket)
 {
     const bool bPie = GEditor && GEditor->PlayWorld;
-    UWorld* World = bPie ? GEditor->PlayWorld.Get() : (GEditor ? GEditor->GetEditorWorldContext().World() : nullptr);
+    UWorld* World = bPie ? GEditor->PlayWorld.Get() : McpHandlerUtils::GetEditorWorld();
     const double PieDelta = bPie && World ? World->GetDeltaSeconds() : 0.0;
     const FFrameCostTimes T{FPlatformTime::ToMilliseconds(GGameThreadTime), FPlatformTime::ToMilliseconds(GRenderThreadTime),
         FPlatformTime::ToMilliseconds(GRHIThreadTime), FPlatformTime::ToMilliseconds(RHIGetGPUFrameCycles()),

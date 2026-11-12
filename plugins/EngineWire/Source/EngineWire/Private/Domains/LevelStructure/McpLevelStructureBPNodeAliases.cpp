@@ -73,9 +73,7 @@ UFunction* FindBindableFunctionByName(const FString& FunctionName)
 
 bool ResolveLevelBlueprintNodeAlias(FString& InOutNodeClass, FString& OutEventName, FString& OutFunctionName)
 {
-    FString Key = InOutNodeClass.ToLower();
-    Key.ReplaceInline(TEXT("_"), TEXT(""));
-    Key.ReplaceInline(TEXT(" "), TEXT(""));
+    const FString Key = McpPlainKey(InOutNodeClass);
     OutEventName.Reset();
     OutFunctionName.Reset();
     struct FAlias { const TCHAR* Key; const TCHAR* NodeClass; const TCHAR* Event; const TCHAR* Function; };

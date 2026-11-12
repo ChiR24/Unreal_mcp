@@ -23,7 +23,7 @@ double RoadTurnAt(const FIntPoint& A, const FIntPoint& B, const FIntPoint& C)
     const double In = FMath::Atan2(static_cast<double>(B.Y - A.Y), static_cast<double>(B.X - A.X));
     const double Out = FMath::Atan2(static_cast<double>(C.Y - B.Y), static_cast<double>(C.X - B.X));
     const double Turn = FMath::Abs(Out - In);
-    return Turn > 3.14159265358979323846 ? 2.0 * 3.14159265358979323846 - Turn : Turn;
+    return Turn > DOUBLE_PI ? 2.0 * DOUBLE_PI - Turn : Turn;
 }
 
 bool RoadCornerHolds(const FRoadField& Field, const FIntPoint& A, const FIntPoint& B, const FIntPoint& C, double RadiusCm)
@@ -100,8 +100,8 @@ FMeasure Measure(const FRoadField& Field, const TArray<FIntPoint>& Points)
             continue;
         }
         double Turned = FMath::Abs(Heading - Reference);
-        Turned = Turned > 3.14159265358979323846 ? 2.0 * 3.14159265358979323846 - Turned : Turned;
-        if (Turned > 3.14159265358979323846 / 2.0)
+        Turned = Turned > DOUBLE_PI ? 2.0 * DOUBLE_PI - Turned : Turned;
+        if (Turned > DOUBLE_PI / 2.0)
         {
             ++Out.Switchbacks;
             Reference = Heading;

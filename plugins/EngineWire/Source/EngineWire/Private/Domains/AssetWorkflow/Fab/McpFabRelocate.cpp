@@ -5,6 +5,7 @@
 #include "Domains/AssetWorkflow/Rename/McpAssetRenameGuard.h"
 #include "Foundation/BridgeHelpers/Blueprints/McpBPPaths.h"
 #include "Safety/McpSafeOperations.h"
+#include "Foundation/HandlerUtils/McpHandlerUtilsActionsPaths.h"
 
 #include "AssetRegistry/AssetRegistryModule.h"
 #include "Dom/JsonObject.h"
@@ -160,11 +161,6 @@ void PruneEmptyFolders(const FString& Folder, const TSet<FString>& Moved)
 		}
 	}
 }
-
-FString ObjectPathOf(const FString& Folder, const FString& Name)
-{
-	return Folder / Name + TEXT(".") + Name;
-}
 } // namespace
 
 bool IsValidAssetName(const FString& Name)
@@ -236,7 +232,7 @@ void Apply(const FString& Destination, const FString& AssetName, FMcpFabAddResul
 	TMap<FString, FString> NowAt;
 	for (const FMove& Move : Moves)
 	{
-		NowAt.Add(ObjectPathOf(Move.OldFolder, Move.OldName), ObjectPathOf(Move.NewFolder, Move.NewName));
+		NowAt.Add(McpToObjectPath(Move.OldFolder / Move.OldName), McpToObjectPath(Move.NewFolder / Move.NewName));
 	}
 	for (TArray<FString>* Paths : {&ImportedPaths, &Result.SamplePaths})
 	{

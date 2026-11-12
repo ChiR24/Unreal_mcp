@@ -197,7 +197,7 @@ bool HandleFadeAndReverbActions(
      Payload->TryGetStringField(TEXT("reverbEffect"), ReverbEffectPath);
      // Loaded before the spawn: a wrong path used to leave a zone with no reverb and report success.
      UReverbEffect *ReverbEffect = ReverbEffectPath.IsEmpty() ? nullptr
-         : LoadObject<UReverbEffect>(nullptr, *AudioObjectPath(ReverbEffectPath), nullptr, LOAD_NoWarn);
+         : LoadObject<UReverbEffect>(nullptr, *McpToObjectPath(ReverbEffectPath), nullptr, LOAD_NoWarn);
      if (!ReverbEffectPath.IsEmpty() && !ReverbEffect) {
        Self->SendAutomationError(RequestingSocket, RequestId,
            FString::Printf(TEXT("ReverbEffect not found: %s"), *ReverbEffectPath), TEXT("ASSET_NOT_FOUND"));

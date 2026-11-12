@@ -19,7 +19,6 @@ bool UEngineWireSubsystem::HandleControlActorSetBlueprintVariables(
                                 TEXT("actors takes at most 500 actors"), nullptr);
       return true;
     }
-    FMcpResponseCaptureRegistry &Capture = FMcpResponseCaptureRegistry::Get();
     // One undo step for the whole batch; its items, run captured, open none of their own.
     FMcpScopedEditorTransaction BatchTransaction(FText::FromString(TEXT("Set Blueprint Variables")),
                                                  EMcpMutationDurability::EditorStateOnly, TArray<UObject *>());
@@ -42,9 +41,9 @@ bool UEngineWireSubsystem::HandleControlActorSetBlueprintVariables(
           Wanted = (*Vars)->Values.Num();
       }
       const FString ItemId = FString::Printf(TEXT("%s#%d"), *RequestId, Index);
-      Capture.Begin(ItemId);
-      HandleControlActorSetBlueprintVariables(ItemId, One, Socket);
-      const FMcpCapturedResponse Reply = Capture.End(ItemId);
+      const FMcpCapturedResponse Reply = McpCaptureResponse(ItemId, [&] {
+        HandleControlActorSetBlueprintVariables(ItemId, One, Socket);
+      });
       // Reply envelope: { data: { updated: [...] }, warnings: [...] }.
       const TSharedPtr<FJsonObject> *ReplyData = nullptr;
       const TArray<TSharedPtr<FJsonValue>> *Updated = nullptr;

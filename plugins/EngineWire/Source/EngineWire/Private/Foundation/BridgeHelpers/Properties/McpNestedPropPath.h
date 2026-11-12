@@ -3,7 +3,7 @@
 #include "CoreMinimal.h"
 #include "Components/ActorComponent.h"
 #include "GameFramework/Actor.h"
-#include "Safety/McpSafeReflectionTarget.h"
+#include "Foundation/BridgeHelpers/Security/McpSafeReflectionTarget.h"
 #include "UObject/UnrealType.h"
 
 // Up to 8 property names of Scope sharing a word (3+ letters, split at capitals) with Wanted, so a

@@ -20,12 +20,6 @@ bool UEngineWireSubsystem::HandleBulkDeleteAssets(
       !Lower.Equals(TEXT("bulk_delete"), ESearchCase::IgnoreCase)) {
     return false;
   }
-  if (!Payload.IsValid()) {
-    SendAutomationError(RequestingSocket, RequestId,
-                        TEXT("bulk_delete payload missing"),
-                        TEXT("INVALID_PAYLOAD"));
-    return true;
-  }
 
   bool bFixupRedirectors = true;
   Payload->TryGetBoolField(TEXT("fixupRedirectors"), bFixupRedirectors);

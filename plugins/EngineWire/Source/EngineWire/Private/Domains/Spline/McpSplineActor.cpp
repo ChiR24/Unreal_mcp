@@ -21,7 +21,7 @@ bool HandleCreateSplineActor(
     bool bClosedLoop = GetJsonBoolField(Payload, TEXT("bClosedLoop"), false);
     FString SplineType = GetJsonStringField(Payload, TEXT("splineType"), TEXT("Curve"));
 
-    UWorld* World = GEditor ? GEditor->GetEditorWorldContext().World() : nullptr;
+    UWorld* World = McpHandlerUtils::GetEditorWorld();
     if (!World)
     {
         Self->SendAutomationResponse(Socket, RequestId, false,

@@ -2,6 +2,7 @@
 
 #include "Domains/Ui/McpUiPrivate.h"
 #include "Foundation/BridgeHelpers/Reflection/McpClassResolve.h"
+#include "Foundation/HandlerUtils/McpHandlerUtilsActionsPaths.h"
 #include "Foundation/HandlerUtils/McpHandlerUtilsProjectConfig.h"
 #include "EngineWireSettings.h"
 
@@ -37,10 +38,7 @@ const TCHAR *SectionForCategory(const FString &Category) {
       {TEXT("streaming"), TEXT("/Script/Engine.StreamingSettings")},
       {TEXT("garbagecollection"), TEXT("/Script/Engine.GarbageCollectionSettings")},
   };
-  FString Key = Category.ToLower();
-  Key.ReplaceInline(TEXT(" "), TEXT(""));
-  Key.ReplaceInline(TEXT("_"), TEXT(""));
-  const TCHAR *const *Found = Map.Find(Key);
+  const TCHAR *const *Found = Map.Find(McpPlainKey(Category));
   return Found ? *Found : nullptr;
 }
 
@@ -250,11 +248,7 @@ bool HandleProjectSettingsAction(const FString &LowerSub,
       }
       if (Property) {
         void *ValuePtr = Property->ContainerPtrToValuePtr<void>(CDO);
-#if ENGINE_MAJOR_VERSION > 5 || ENGINE_MINOR_VERSION >= 1
-        if (Property->ImportText_Direct(*Value, ValuePtr, CDO, PPF_None)) {
-#else
-        if (Property->ImportText(*Value, ValuePtr, PPF_None, CDO)) {
-#endif
+        if (MCP_PROPERTY_IMPORT_TEXT(Property, *Value, ValuePtr, CDO, PPF_None)) {
           bAppliedToObject = true;
           // A per-user class (EditorPerProjectUserSettings) is saved to the user's config, as the settings
           // editor saves it; only a defaultconfig class belongs in the project's Default<Config>.ini.

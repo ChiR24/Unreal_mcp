@@ -26,7 +26,7 @@ bool HandleSetCurrentLevelAction(UEngineWireSubsystem& Subsystem, const FString&
                                      Detail, Code);
     return true;
   };
-  UWorld* World = GEditor ? GEditor->GetEditorWorldContext().World() : nullptr;
+  UWorld* World = McpHandlerUtils::GetEditorWorld();
   if (!World) {
     return Refuse(TEXT("No level is open in the editor."), nullptr, TEXT("NO_WORLD"));
   }

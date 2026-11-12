@@ -1,4 +1,5 @@
 #include "Domains/SystemControl/McpSystemPrivate.h"
+#include "Foundation/HandlerUtils/McpHandlerUtilsJson.h"
 
 #include "AssetRegistry/AssetData.h"
 #include "AssetRegistry/AssetRegistryModule.h"
@@ -136,12 +137,6 @@ void SourceUsers(const FString& Name, const FString& Prefixed, const TArray<FStr
     }
   }
 }
-
-TArray<TSharedPtr<FJsonValue>> ToJsonStrings(const TArray<FString>& Values) {
-  TArray<TSharedPtr<FJsonValue>> Out;
-  for (const FString& Value : Values) Out.Add(MakeShared<FJsonValueString>(Value));
-  return Out;
-}
 } // namespace
 
 bool HandleRemoveCppClass(UEngineWireSubsystem* Self, const FString& RequestId, const TSharedPtr<FJsonObject>& Payload,
@@ -237,7 +232,7 @@ bool HandleRemoveCppClass(UEngineWireSubsystem* Self, const FString& RequestId, 
   Data->SetStringField(TEXT("moduleName"), Module->ModuleName);
   if (Class) Data->SetStringField(TEXT("classPath"), Class->GetPathName());
   if (Users.Num() > 0) {
-    Data->SetArrayField(TEXT("users"), ToJsonStrings(TArray<FString>(Users.GetData(), FMath::Min(Users.Num(), MaxUsersListed))));
+    Data->SetArrayField(TEXT("users"), McpHandlerUtils::ToJsonStringArray(TArray<FString>(Users.GetData(), FMath::Min(Users.Num(), MaxUsersListed))));
     const FString First = FString::Join(TArray<FString>(Users.GetData(), FMath::Min(Users.Num(), 3)), TEXT("; "));
     const FString More = Users.Num() > 3 ? FString::Printf(TEXT(" (and %d more under users)."), Users.Num() - 3) : FString(TEXT("."));
     Self->SendAutomationResponse(Socket, RequestId, false,
@@ -250,12 +245,12 @@ bool HandleRemoveCppClass(UEngineWireSubsystem* Self, const FString& RequestId, 
   for (const FString& File : Own) {
     (IFileManager::Get().Delete(*File, true, false, true) ? Deleted : Left).Add(File);
   }
-  Data->SetArrayField(TEXT("deleted"), ToJsonStrings(Deleted));
+  Data->SetArrayField(TEXT("deleted"), McpHandlerUtils::ToJsonStringArray(Deleted));
   Data->SetStringField(TEXT("note"), TEXT("The class stays loaded in this editor (Live Coding cannot remove a class) until "
                                           "the editor target is built with the editor closed and the editor opens again; "
                                           "until then it still shows under C++ Classes."));
   if (Left.Num() > 0) {
-    Data->SetArrayField(TEXT("notDeleted"), ToJsonStrings(Left));
+    Data->SetArrayField(TEXT("notDeleted"), McpHandlerUtils::ToJsonStringArray(Left));
     Self->SendAutomationResponse(Socket, RequestId, false,
                                  FString::Printf(TEXT("Could not delete %s (read-only or in use)."), *FString::Join(Left, TEXT(", "))),
                                  Data, TEXT("DELETE_FAILED"));

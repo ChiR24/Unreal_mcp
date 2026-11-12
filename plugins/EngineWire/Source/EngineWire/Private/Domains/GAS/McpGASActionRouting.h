@@ -14,7 +14,7 @@ bool HandleGASEffectsStackingTags(const FGASRequestContext& Context, const FStri
 bool HandleGASCueNotify(const FGASRequestContext& Context, const FString& SubAction);
 bool HandleGASInfo(const FGASRequestContext& Context, const FString& SubAction);
 bool HandleGASAbilitySets(const FGASRequestContext& Context, const FString& SubAction);
-bool HandleGASAbilityGrantAndExecution(const FGASRequestContext& Context, const FString& SubAction);
+bool HandleGASExecutionCalculation(const FGASRequestContext& Context, const FString& SubAction);
 // Authoring/: the mutations that compile, verify and save what they wrote.
 bool HandleGASAbilityTags(const FGASRequestContext& Context, const FString& SubAction);
 bool HandleGASAttributeValues(const FGASRequestContext& Context, const FString& SubAction);

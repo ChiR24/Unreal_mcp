@@ -24,25 +24,13 @@ FMcpCapturedResponse RestorePoint(UEngineWireSubsystem& Subsystem, const FString
     TSharedPtr<FJsonObject> Payload = MakeShared<FJsonObject>();
     Payload->SetStringField(TEXT("op"), Op);
     Payload->SetStringField(TEXT("label"), TEXT("run_script"));
-    FMcpResponseCaptureRegistry::Get().Begin(Id);
-    McpEditorCheckpoint::Handle(&Subsystem, Id, Payload, nullptr, RequestId);
-    return FMcpResponseCaptureRegistry::Get().End(Id);
+    return McpCaptureResponse(Id, [&] { McpEditorCheckpoint::Handle(&Subsystem, Id, Payload, nullptr, RequestId); });
 }
 
 // Message ended as a sentence, so another can follow it.
 FString Sentence(const FString& Message)
 {
     return Message.EndsWith(TEXT(".")) || Message.EndsWith(TEXT("?")) || Message.EndsWith(TEXT("!")) ? Message : Message + TEXT(".");
-}
-
-TArray<TSharedPtr<FJsonValue>> Strings(const TArray<FString>& Values)
-{
-    TArray<TSharedPtr<FJsonValue>> Out;
-    for (const FString& Value : Values)
-    {
-        Out.Add(MakeShared<FJsonValueString>(Value));
-    }
-    return Out;
 }
 
 // One row per call, a loop's run of the same call collapsed to one row with its count.
@@ -158,10 +146,10 @@ void Finish(UEngineWireSubsystem& Subsystem, FScriptRun& Run, const bool bRan)
     const FRunner& Runner = Run.Runner;
     const FString& RequestId = Run.RequestId;
     TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
-    Result->SetArrayField(TEXT("steps"), Strings(StepRows(Runner.Steps)));
+    Result->SetArrayField(TEXT("steps"), McpHandlerUtils::ToJsonStringArray(StepRows(Runner.Steps)));
     if (Runner.Warnings.Num() > 0)
     {
-        Result->SetArrayField(TEXT("warnings"), Strings(Runner.Warnings));
+        Result->SetArrayField(TEXT("warnings"), McpHandlerUtils::ToJsonStringArray(Runner.Warnings));
     }
     if (bRan)
     {

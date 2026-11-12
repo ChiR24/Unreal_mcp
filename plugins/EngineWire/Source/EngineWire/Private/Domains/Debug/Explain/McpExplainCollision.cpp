@@ -2,6 +2,7 @@
 // actor collision, components taking part in queries, a shape to collide with, the channel responses both ways,
 // overlap or hit events, actors told to ignore each other, and whether they touch at all.
 #include "Domains/Debug/Explain/McpExplain.h"
+#include "Foundation/BridgeHelpers/Properties/McpComponentLookup.h"
 
 #include "Components/PrimitiveComponent.h"
 #include "Components/StaticMeshComponent.h"
@@ -22,11 +23,6 @@ FString ChannelName(const ECollisionChannel Channel)
 {
     const FName Name = UCollisionProfile::Get()->ReturnChannelNameFromContainerIndex(static_cast<int32>(Channel));
     return Name.IsNone() ? FString::FromInt(static_cast<int32>(Channel)) : Name.ToString();
-}
-
-const TCHAR* ResponseName(const ECollisionResponse Response)
-{
-    return Response == ECR_Block ? TEXT("Block") : Response == ECR_Overlap ? TEXT("Overlap") : TEXT("Ignore");
 }
 
 // The primitives that take part in collision queries, the root first.
@@ -82,7 +78,7 @@ TSharedPtr<FJsonObject> CollisionFix(AActor* Actor, const UPrimitiveComponent* C
     {
         Params->SetStringField(TEXT("componentName"), Component->GetName());
     }
-    return MakeNextCall(TEXT("control_actor"), TEXT("set_actor_collision"), Params);
+    return McpHandlerUtils::MakeExecuteCall(TEXT("control_actor"), TEXT("set_actor_collision"), Params);
 }
 
 TSharedPtr<FJsonObject> PropertyFix(const UObject* Object, const TCHAR* Property)
@@ -91,7 +87,7 @@ TSharedPtr<FJsonObject> PropertyFix(const UObject* Object, const TCHAR* Property
     Params->SetStringField(TEXT("objectPath"), Object->GetPathName());
     Params->SetStringField(TEXT("propertyName"), Property);
     Params->SetBoolField(TEXT("value"), true);
-    return MakeNextCall(TEXT("inspect"), TEXT("set_property"), Params);
+    return McpHandlerUtils::MakeExecuteCall(TEXT("inspect"), TEXT("set_property"), Params);
 }
 
 // How Self answers Other's object type, and whether that is enough for the expected event.
@@ -100,7 +96,7 @@ void CheckResponse(FTree& Tree, AActor* SelfActor, const UPrimitiveComponent* Se
     const ECollisionResponse Response = Self->GetCollisionResponseToChannel(Other->GetCollisionObjectType());
     const FString Channel = ChannelName(Other->GetCollisionObjectType());
     const FString Detail = FString::Printf(TEXT("'%s' (%s) answers %s, the object type of '%s', with %s"),
-        *McpActorRef(SelfActor), *Self->GetName(), *Channel, *Other->GetName(), ResponseName(Response));
+        *McpActorRef(SelfActor), *Self->GetName(), *Channel, *Other->GetName(), McpCollisionResponseName(Response));
     if (Response == ECR_Ignore || (bHit && Response != ECR_Block))
     {
         TSharedPtr<FJsonObject> Responses = MakeShared<FJsonObject>();

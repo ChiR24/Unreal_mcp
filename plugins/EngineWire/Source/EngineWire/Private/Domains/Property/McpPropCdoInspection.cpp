@@ -116,11 +116,7 @@ bool UEngineWireSubsystem::HandleInspectCdoAction(
             // both an object name and a UPROPERTY alias).
             const TArray<FString> Available =
                 McpPropertyCdoComponents::CollectResolvableComponentNames(Blueprint, CDO);
-            TArray<TSharedPtr<FJsonValue>> AvailableJson;
-            for (const FString& Name : Available)
-            {
-                AvailableJson.Add(MakeShared<FJsonValueString>(Name));
-            }
+            TArray<TSharedPtr<FJsonValue>> AvailableJson = McpHandlerUtils::ToJsonStringArray(Available);
 
             TSharedPtr<FJsonObject> ErrData = McpHandlerUtils::CreateResultObject();
             ErrData->SetArrayField(TEXT("availableComponents"), AvailableJson);

@@ -112,10 +112,7 @@ bool HandleInventoryItemPresentationActions(UEngineWireSubsystem& Bridge, const 
       Result->SetBoolField(TEXT("uniqueItems"), bUniqueItems);
     }
 
-    TArray<TSharedPtr<FJsonValue>> ModArr;
-    for (const FString& Prop : ModifiedProps) {
-      ModArr.Add(MakeShared<FJsonValueString>(Prop));
-    }
+    TArray<TSharedPtr<FJsonValue>> ModArr = McpHandlerUtils::ToJsonStringArray(ModifiedProps);
     Result->SetArrayField(TEXT("modifiedProperties"), ModArr);
     Result->SetBoolField(TEXT("configured"), true);
 

@@ -26,7 +26,6 @@ static constexpr int32 MaxBakeBlurIterations = 16;
 static constexpr int64 MaxAoRayTests = 16000000;
 // Above this share of the surface in triangles longer than the occlusion reach, the reply warns (BakeCoarseShare).
 static constexpr double CoarseShareWarning = 0.25;
-static constexpr double BakePi = 3.14159265358979323846;
 
 // Area-weighted vertex normals, indexed by vertex id; a vertex no triangle uses stays zero.
 static void BakeVertexNormals(const UE::Geometry::FDynamicMesh3& Mesh, TArray<FVector3d>& OutNormals)
@@ -55,7 +54,7 @@ static void BakeAmbientOcclusion(const UE::Geometry::FDynamicMesh3& Mesh, const 
     OutOpenness.Init(1.0f, Mesh.MaxVertexID());
     TArray<FVector3d> Directions;
     Directions.Reserve(Rays);
-    const double GoldenAngle = BakePi * (3.0 - FMath::Sqrt(5.0));
+    const double GoldenAngle = DOUBLE_PI * (3.0 - FMath::Sqrt(5.0));
     for (int32 Index = 0; Index < Rays; ++Index)
     {
         const double U = (Index + 0.5) / Rays;
@@ -207,7 +206,7 @@ bool HandleBakeVertexColors(UEngineWireSubsystem* Self, const FString& RequestId
         BakeFolds(Source, Convex, Concave);
 
         // A fold of a quarter turn is a full edge; curvatureScale makes shallower folds read as stronger or weaker.
-        const double PerRadian = CurvatureScale * 2.0 / BakePi;
+        const double PerRadian = CurvatureScale * 2.0 / DOUBLE_PI;
         TArray<FVector3f> Masks;
         Masks.Init(FVector3f(1.0f, 1.0f, 1.0f), Source.MaxVertexID());
         for (const int32 VertexId : Source.VertexIndicesItr())

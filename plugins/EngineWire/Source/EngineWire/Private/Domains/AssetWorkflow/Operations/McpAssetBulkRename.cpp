@@ -22,12 +22,6 @@ bool UEngineWireSubsystem::HandleBulkRenameAssets(
       !Lower.Equals(TEXT("bulk_rename"), ESearchCase::IgnoreCase)) {
     return false;
   }
-  if (!Payload.IsValid()) {
-    SendAutomationError(RequestingSocket, RequestId,
-                        TEXT("bulk_rename payload missing"),
-                        TEXT("INVALID_PAYLOAD"));
-    return true;
-  }
 
   // Get rename options
   FString Prefix, Suffix, SearchText, ReplaceText;

@@ -17,7 +17,7 @@ UStaticMesh* ResolveLodMesh(UEngineWireSubsystem* Self, const FString& RequestId
                             const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> Socket)
 {
     const FString ActorName = GetJsonStringField(Payload, TEXT("actorName"));
-    UWorld* World = GEditor ? GEditor->GetEditorWorldContext().World() : nullptr;
+    UWorld* World = McpHandlerUtils::GetEditorWorld();
     if (World && !ActorName.IsEmpty())
     {
         for (TActorIterator<AActor> It(World); It; ++It)

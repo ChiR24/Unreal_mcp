@@ -26,7 +26,7 @@ namespace WidgetAuthoringHelpers
 bool McpDrawWidget(UWidgetBlueprint* WidgetBP, FIntPoint Size, TArray<FColor>& OutPixels, FString& OutError,
                    TFunctionRef<void(UUserWidget& Widget, float Scale)> Inspect)
 {
-    UWorld* World = GEditor ? GEditor->GetEditorWorldContext().World() : nullptr;
+    UWorld* World = McpHandlerUtils::GetEditorWorld();
     UClass* Class = WidgetBP->GeneratedClass;
     if (!World || !Class || !Class->IsChildOf(UUserWidget::StaticClass()))
     {

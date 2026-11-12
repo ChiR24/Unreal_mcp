@@ -83,10 +83,7 @@ bool HandleCompileMaterial(UEngineWireSubsystem* Bridge, const FString& RequestI
     Result->SetStringField(TEXT("assetType"),
                            Material ? TEXT("Material") : TEXT("MaterialFunction"));
     Result->SetBoolField(TEXT("compiled"), CompileErrors.Num() == 0);
-    TArray<TSharedPtr<FJsonValue>> ErrorValues;
-    for (const FString &Error : CompileErrors) {
-      ErrorValues.Add(MakeShared<FJsonValueString>(Error));
-    }
+    TArray<TSharedPtr<FJsonValue>> ErrorValues = McpHandlerUtils::ToJsonStringArray(CompileErrors);
     Result->SetArrayField(TEXT("compileErrors"), ErrorValues);
     Result->SetBoolField(TEXT("saved"), bSaved);
     Bridge->SendAutomationResponse(Socket, RequestId, true,

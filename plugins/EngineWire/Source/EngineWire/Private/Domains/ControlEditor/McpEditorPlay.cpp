@@ -221,9 +221,8 @@ bool UEngineWireSubsystem::HandleControlEditorStepFrame(
     return true;
   }
 
-  // Stepping and reporting happen here: otherwise `steps: 10` silently advances
-  // one frame and the reply fails its own output schema for want of the `steps`
-  // field.
+  // Every requested step happens in this one call, and the reply says how many
+  // were taken (`steps`).
   int32 RequestedSteps = 1;
   if (Payload.IsValid()) {
     Payload->TryGetNumberField(TEXT("steps"), RequestedSteps);
