@@ -36,7 +36,7 @@ bool HandleCreateMinimapVolume(UEngineWireSubsystem* Subsystem, const FString& R
 bool HandleOpenLevelBlueprint(UEngineWireSubsystem* Subsystem, const FString& RequestId, const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> Socket);
 bool HandleAddLevelBlueprintNode(UEngineWireSubsystem* Subsystem, const FString& RequestId, const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> Socket);
 bool HandleRemoveLevelBlueprintNode(UEngineWireSubsystem* Subsystem, const FString& RequestId, const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> Socket);
-// Friendly node names (EventBeginPlay, PrintString, ...) -> node class + member to bind (dogfood #160).
+// Friendly node names (EventBeginPlay, PrintString, ...) -> node class + member to bind.
 bool ResolveLevelBlueprintNodeAlias(FString& InOutNodeClass, FString& OutEventName, FString& OutFunctionName);
 // MemberClass, when given, is the class FunctionName is looked up on instead of the common libraries. OutCode is
 // INVALID_ARGUMENT for a MemberClass that names no class, else NOT_SUPPORTED.

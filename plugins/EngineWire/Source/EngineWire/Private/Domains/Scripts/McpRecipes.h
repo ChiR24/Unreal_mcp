@@ -6,7 +6,7 @@
 class FMcpBridgeWebSocket;
 class UEngineWireSubsystem;
 
-// system_control save_recipe / run_recipe / list_recipes (S14): an agent's working multi-call script kept in the project as
+// system_control save_recipe / run_recipe / list_recipes: an agent's working multi-call script kept in the project as
 // a named recipe with parameters, so a later agent runs it as one checked call. A recipe is a run_script script
 // (Domains/Scripts) plus parameter names, stored under Saved/EngineWire/Recipes/<name>.json. save checks it statically
 // (the same check run_script makes, its parameters bound) and runs nothing: a restore point cannot undo a deletion and

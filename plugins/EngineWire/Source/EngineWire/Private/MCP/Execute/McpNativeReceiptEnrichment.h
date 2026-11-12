@@ -1,7 +1,6 @@
 // McpNativeReceiptEnrichment.h — canonical receipt assembly + secret masking
 //
-// Builds the nested canonical `receipt` object (mirroring the TypeScript
-// ReceiptSchema after normalizers) that both the success and error native
+// Builds the nested canonical `receipt` object that both the success and error native
 // envelopes carry, and provides the secret-masking + request-id canonicalization
 // primitives shared across the native receipt path.
 
@@ -14,7 +13,11 @@
 struct FMcpSemanticError;
 struct FMcpReceiptContext;
 
-/** Canonicalize a JSON-RPC id to the collision-free num:/str: form the TS receipt
+// capabilityRevision / schemaRevision on a receipt come straight from the resolved
+// record's content/schema hashes, so all three revision strings stay distinct and truthful.
+void McpSetReceiptRecordRevisions(const TSharedPtr<FJsonObject>& Receipt, const FString& CapabilityId);
+
+/** Canonicalize a JSON-RPC id to the collision-free num:/str: form the receipt
  *  uses. Never the internal automation id. */
 FString McpCanonicalizeRequestId(const TSharedPtr<FJsonValue>& Id);
 

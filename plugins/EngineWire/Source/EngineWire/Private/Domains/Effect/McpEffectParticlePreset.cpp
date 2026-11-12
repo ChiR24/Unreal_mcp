@@ -61,7 +61,7 @@ FString FindNiagaraSystemForPreset(const FString& Preset, TArray<FString>& OutCa
     }
     if (OutCandidates.IsEmpty())
     {
-        // Nothing matched the preset name: still name a few shipped systems the caller can pass as systemPath (dogfood #102).
+        // Nothing matched the preset name: still name a few shipped systems the caller can pass as systemPath.
         for (const FAssetData& Asset : Assets)
         {
             if (OutCandidates.Num() >= 8) { break; }
@@ -147,7 +147,7 @@ bool HandleParticleEffect(const FEffectActionContext& Context)
     if (SystemPath.IsEmpty())
     {
         // A bare preset name has no built-in template of its own: resolve it against the
-        // Niagara systems the engine and project actually ship (dogfood #102).
+        // Niagara systems the engine and project actually ship.
         TArray<FString> Candidates;
         SystemPath = FindNiagaraSystemForPreset(Preset, Candidates);
         if (SystemPath.IsEmpty())

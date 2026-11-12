@@ -44,9 +44,6 @@ bool UEngineWireSubsystem::HandleGetMaterialStats(
   // Ensure material is compiled
 #if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 1
   Material->EnsureIsComplete();
-#else
-  // UE 5.0: Force compilation by accessing the material resource
-  Material->GetMaterial();
 #endif
 
   TSharedPtr<FJsonObject> Stats = McpHandlerUtils::CreateResultObject();

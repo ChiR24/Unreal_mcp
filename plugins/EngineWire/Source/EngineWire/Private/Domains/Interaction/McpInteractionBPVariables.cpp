@@ -104,7 +104,7 @@ UBlueprint* CreateInteractableBlueprint(
             TEXT("ASSET_ALREADY_EXISTS"));
         return nullptr;
     }
-    UPackage* Package = CreatePackage(*PackageName);
+    UPackage* Package = McpCreatePackageOrNull(PackageName);
     if (!Package)
     {
         Subsystem->SendAutomationError(Socket, RequestId, TEXT("Failed to create package"), TEXT("PACKAGE_CREATE_FAILED"));

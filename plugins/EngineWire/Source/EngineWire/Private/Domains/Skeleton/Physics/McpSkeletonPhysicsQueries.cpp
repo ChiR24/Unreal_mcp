@@ -126,7 +126,7 @@ bool UEngineWireSubsystem::HandleListPhysicsBodies(
     TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
     Result->SetStringField(TEXT("physicsAssetPath"), PhysicsAsset->GetPathName());
     // The contract types `bodies` as a list of strings (bone names); the
-    // per-body detail rides alongside as bodyDetails (dogfood #89).
+    // per-body detail rides alongside as bodyDetails.
     Result->SetArrayField(TEXT("bodies"), BoneNames);
     Result->SetNumberField(TEXT("count"), BoneNames.Num());
     Result->SetArrayField(TEXT("bodyDetails"), BodyDetails);

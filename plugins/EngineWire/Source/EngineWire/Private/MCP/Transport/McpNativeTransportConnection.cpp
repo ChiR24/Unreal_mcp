@@ -281,14 +281,14 @@ void FMcpNativeTransport::HandleConnection(FSocket* ClientSocket)
 		return;
 	}
 
-	// `ping` is an MCP base-protocol utility: an empty result proves liveness.
-	// The stdio transport answers it through the SDK; without this the native
-	// surface returned -32601 and a liveness client saw the server as broken.
 	if (Rpc.Method == TEXT("server/discover"))
 	{
 		SendAndClose(ClientSocket, 200, TEXT("application/json"), HandleServerDiscover(Rpc.Id), {}, HttpReq.Origin);
 		return;
 	}
+	// `ping` is an MCP base-protocol utility: an empty result proves liveness.
+	// Without this the native surface returned -32601 and a liveness client saw
+	// the server as broken.
 	if (Rpc.Method == TEXT("ping"))
 	{
 		SendAndClose(ClientSocket, 200, TEXT("application/json"),
@@ -324,5 +324,3 @@ void FMcpNativeTransport::HandleConnection(FSocket* ClientSocket)
 		FString::Printf(TEXT("Unknown method: %s"), *Rpc.Method));
 	SendAndClose(ClientSocket, 200, TEXT("application/json"), ErrorBody, {}, HttpReq.Origin);
 }
-
-// ─── HTTP Parsing ───────────────────────────────────────────────────────────

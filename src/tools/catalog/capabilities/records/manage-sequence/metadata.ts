@@ -21,7 +21,7 @@ export const METADATA_RECORDS: readonly CapabilityRecordSource[] = [
     inputProps: { path: P.path, key: { type: 'string', description: 'Metadata key to look up; the reply then carries found and value.' } },
     required: ['path'],
     // Native HandleSequenceGetMetadata emits path/name/class plus the stored metadata pairs
-    // (editor metadata tags written by set_metadata, dogfood #127).
+    // (editor metadata tags written by set_metadata).
     outputProps: {
       path: { type: 'string', description: 'Resolved sequence asset path.' },
       name: { type: 'string', description: 'Sequence asset name.' },

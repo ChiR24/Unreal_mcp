@@ -34,25 +34,18 @@ TArray<FString> ReadStringArray(const TSharedPtr<FJsonObject>& Owner, const TCHA
 	return Values;
 }
 
-TSharedPtr<FJsonObject> ReadObject(const TSharedPtr<FJsonObject>& Owner, const TCHAR* Field)
-{
-	const TSharedPtr<FJsonObject>* Nested = nullptr;
-	if (Owner.IsValid() && Owner->TryGetObjectField(Field, Nested) && Nested) return *Nested;
-	return nullptr;
-}
-
 bool ParseRecord(const TSharedPtr<FJsonObject>& Entry, FMcpCapabilityRecord& Out, FString& OutError)
 {
-	const TSharedPtr<FJsonObject> Record = ReadObject(Entry, TEXT("record"));
+	const TSharedPtr<FJsonObject> Record = McpHandlerUtils::GetObjectFieldOrNull(Entry, TEXT("record"));
 	if (!Record.IsValid())
 	{
 		OutError = TEXT("entry is missing its 'record' object");
 		return false;
 	}
-	const TSharedPtr<FJsonObject> Discovery = ReadObject(Record, TEXT("discovery"));
-	const TSharedPtr<FJsonObject> Routing = ReadObject(Record, TEXT("routing"));
-	const TSharedPtr<FJsonObject> Schemas = ReadObject(Record, TEXT("schemas"));
-	const TSharedPtr<FJsonObject> Hashes = ReadObject(Record, TEXT("hashes"));
+	const TSharedPtr<FJsonObject> Discovery = McpHandlerUtils::GetObjectFieldOrNull(Record, TEXT("discovery"));
+	const TSharedPtr<FJsonObject> Routing = McpHandlerUtils::GetObjectFieldOrNull(Record, TEXT("routing"));
+	const TSharedPtr<FJsonObject> Schemas = McpHandlerUtils::GetObjectFieldOrNull(Record, TEXT("schemas"));
+	const TSharedPtr<FJsonObject> Hashes = McpHandlerUtils::GetObjectFieldOrNull(Record, TEXT("hashes"));
 	if (!Record->TryGetStringField(TEXT("id"), Out.Id) || Out.Id.IsEmpty())
 	{
 		OutError = TEXT("record is missing a non-empty 'id'");
@@ -75,8 +68,8 @@ bool ParseRecord(const TSharedPtr<FJsonObject>& Entry, FMcpCapabilityRecord& Out
 	{
 		return false;
 	}
-	Out.InputSchema = ReadObject(Schemas, TEXT("input"));
-	Out.OutputSchema = ReadObject(Schemas, TEXT("output"));
+	Out.InputSchema = McpHandlerUtils::GetObjectFieldOrNull(Schemas, TEXT("input"));
+	Out.OutputSchema = McpHandlerUtils::GetObjectFieldOrNull(Schemas, TEXT("output"));
 	if (!Out.InputSchema.IsValid() || !Out.OutputSchema.IsValid())
 	{
 		OutError = FString::Printf(TEXT("record '%s' is missing an exact input/output schema"), *Out.Id);
@@ -91,10 +84,10 @@ bool ParseRecord(const TSharedPtr<FJsonObject>& Entry, FMcpCapabilityRecord& Out
 	Out.WhenToUse = ReadStringArray(Discovery, TEXT("whenToUse"));
 	Out.WhenNotToUse = ReadStringArray(Discovery, TEXT("whenNotToUse"));
 
-	Out.Availability = ReadObject(Record, TEXT("availability"));
-	Out.Behavior = ReadObject(Record, TEXT("behavior"));
-	Out.Policy = ReadObject(Record, TEXT("policy"));
-	Out.Cost = ReadObject(Record, TEXT("cost"));
+	Out.Availability = McpHandlerUtils::GetObjectFieldOrNull(Record, TEXT("availability"));
+	Out.Behavior = McpHandlerUtils::GetObjectFieldOrNull(Record, TEXT("behavior"));
+	Out.Policy = McpHandlerUtils::GetObjectFieldOrNull(Record, TEXT("policy"));
+	Out.Cost = McpHandlerUtils::GetObjectFieldOrNull(Record, TEXT("cost"));
 	Out.Hashes = Hashes;
 	if (Out.Behavior.IsValid()) Out.Behavior->TryGetStringField(TEXT("effect"), Out.Effect);
 

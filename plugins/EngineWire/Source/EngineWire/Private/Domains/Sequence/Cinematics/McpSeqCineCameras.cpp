@@ -143,7 +143,7 @@ bool HandleCreateCineCameraActor(const TSharedPtr<FJsonObject> &Params,
   }
   OutResult = MakeResult(true, TEXT("create_cine_camera_actor"),
                          TEXT("Cine camera actor created"));
-  // Echo the transform inputs that were applied; rotation accepts pitch/yaw/roll or x/y/z (dogfood #132).
+  // Echo the transform inputs that were applied; rotation accepts pitch/yaw/roll or x/y/z.
   OutResult->SetBoolField(TEXT("locationApplied"), bHasLocation);
   OutResult->SetBoolField(TEXT("rotationApplied"), bHasRotation);
   if (ApplyCameraSettings(Actor, Params, OutResult) == INDEX_NONE) {
@@ -154,7 +154,7 @@ bool HandleCreateCineCameraActor(const TSharedPtr<FJsonObject> &Params,
     return true;
   }
   {
-    // appliedProperties lists the transform inputs too, not only camera settings (dogfood #132).
+    // appliedProperties lists the transform inputs too, not only camera settings.
     TArray<TSharedPtr<FJsonValue>> Applied;
     const TArray<TSharedPtr<FJsonValue>> *Existing = nullptr;
     if (OutResult->TryGetArrayField(TEXT("appliedProperties"), Existing) && Existing) { Applied = *Existing; }

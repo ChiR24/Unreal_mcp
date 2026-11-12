@@ -91,8 +91,7 @@ FMcpAuthorizationDecision CheckConsent(
 	// consent-bearing capability cost a whole contract dump to learn two strings
 	// this function already holds. The grant is not a secret -- describe hands it
 	// to anyone who asks -- and the re-send still names the capability itself,
-	// which is the entire point of the gate. The TypeScript gateway already
-	// answers this way; this brings the native surface level with it.
+	// which is the entire point of the gate.
 	auto Refuse = [&Demand, &Mode]()
 	{
 		const bool bKnown = !Demand.CapabilityId.IsEmpty();

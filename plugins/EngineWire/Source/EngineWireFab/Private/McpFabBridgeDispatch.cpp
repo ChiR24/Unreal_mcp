@@ -38,10 +38,6 @@ double GDispatchedAt = 0.0;
 // a reply that has not arrived by now is not late, it is never coming. Without
 // this, a single page error or a tab closed mid-call would make every later
 // Fab request wait on a slot that never frees, until the editor restarted.
-//
-// Set below the MCP client's default per-request timeout (120s) so the abandon
-// fires and tells the caller before the client gives up on its own; a window
-// longer than the client timeout would abandon nothing the caller still hears.
 constexpr double AbandonAfterSeconds = 90.0;
 
 // A request whose page is not ready, or whose turn on the one callback has not come, waits on a ticker

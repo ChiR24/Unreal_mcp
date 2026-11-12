@@ -5,7 +5,6 @@
 #include "EngineWireSubsystem.h"
 #include "Foundation/BridgeHelpers/Blueprints/McpBPCompileError.h"
 #include "Foundation/BridgeHelpers/McpHelpers.h"
-#include "Core/Module/EngineWireGlobals.h"
 #include "Foundation/HandlerUtils/McpHandlerUtils.h"
 #include "Safety/McpSafeOperations.h"
 
@@ -44,7 +43,7 @@ using FCharacterSocket = TSharedPtr<FMcpBridgeWebSocket>;
 UBlueprint* CreateCharacterBlueprintAsset(const FString& Path, const FString& Name, UClass* ParentClass, FString& OutError);
 UBlueprint* LoadCharacterBlueprint(UEngineWireSubsystem* Self, const FString& RequestId, const FString& BlueprintPath, FCharacterSocket Socket);
 
-// Compiles (so added variables are usable, dogfood #39) and saves one configure_* edit.
+// Compiles (so added variables are usable) and saves one configure_* edit.
 // Every configure call used to compile only, answer "configured", and lose the change
 // when the editor closed. False once the COMPILE_FAILED or SAVE_FAILED error has been sent;
 // a Blueprint that does not compile is not saved (it was, and the reply said configured).

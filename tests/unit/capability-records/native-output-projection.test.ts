@@ -18,7 +18,7 @@ const read = (relativePath: string): string => readFileSync(resolve(REPO_ROOT, r
 
 describe('the details fold leaves the message and the expectations to the receipt', () => {
   it('skips liveRevisions, the message, the expectations and every declared field', () => {
-    expect(read(`${PLUGIN}/MCP/Gateway/McpNativeGatewayOutputProjection.cpp`).replace(/\s+/gu, ' '))
+    expect(read(`${PLUGIN}/MCP/Execute/McpNativeGatewayOutputProjection.cpp`).replace(/\s+/gu, ' '))
       .toContain('Entry.Key == TEXT("liveRevisions") || Entry.Key == TEXT("message") || Entry.Key == TEXT("expectations") || (*Properties)->HasField(Entry.Key)');
   });
 });

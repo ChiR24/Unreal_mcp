@@ -9,7 +9,7 @@ An Unreal Editor plugin that lets AI assistants (Claude, Cursor, VS Code, Windsu
 Clients reach it in one of two ways:
 
 - **Native HTTP:** the plugin's own Streamable HTTP server at `http://127.0.0.1:3000/mcp`. No Node.js.
-- **stdio:** the `unreal-engine-mcp-server` Node.js package, which talks to the plugin over a WebSocket on `127.0.0.1:8090`.
+- **stdio:** the `unreal-engine-mcp-server` Node.js package, a stdio proxy that relays to the same `/mcp` server.
 
 📖 Full documentation: the [wiki](https://github.com/ChiR24/Unreal_mcp/wiki), starting with [Quick Start](https://github.com/ChiR24/Unreal_mcp/wiki/Quick-Start).
 
@@ -158,7 +158,7 @@ Both routes negotiate MCP protocol versions `2025-11-25`, `2025-06-18` and `2025
 | **Require Capability Token** | on | Both routes refuse clients without the token |
 | **Capability Token** | empty | Your own token. When empty, the plugin generates one in `Saved/MCP/capability-token`. |
 | **Allow Non Loopback** | off | Let **Listen Host** be a LAN address |
-| **Enable TLS** | off | `wss://` for the WebSocket listener, from PEM certificate and key files |
+| **Enable TLS** | off | `wss://` for the WebSocket listener, from PEM certificate and key files. UE 5.7 and later; on earlier engines a TLS listener refuses every connection |
 | **Max Client Requests / Tool Calls Per Minute** | `600` / `120` | Native HTTP limits per session; `0` disables |
 | **Max Messages / Automation Requests Per Minute** | `0` (off) | WebSocket limits per client |
 
@@ -225,7 +225,7 @@ LogEngineWireSubsystem: execute_python begin: executionId=<guid> requestId=<id> 
 Tools & Plugins
 ---------------------
 - **Features:** Editor automation bridge for Model Context Protocol clients. Includes a native MCP Streamable HTTP server, a WebSocket bridge for the optional Node.js stdio server, a single gateway tool with search, describe, execute and configure, asset/actor/editor/level automation, Blueprint and graph authoring, Niagara/material/audio/AI/PCG/Sequencer helpers, project and system controls, and security settings for loopback binding, capability tokens, consent, TLS and rate limits.
-- **Code Modules:** `EngineWire` - Editor module; `EngineWireFab` - Editor module (delay-loaded Fab asset-store adapter, optional); `EngineWireValidation` - Editor module (Blueprint lint rules as a Data Validation validator).
+- **Code Modules:** `EngineWire` - Editor module; `EngineWireFab` - Editor module (delay-loaded Fab asset-store adapter, optional); `EngineWireValidation` - Editor module (Blueprint lint rules as a Data Validation validator); `EngineWireGameFeatures` - Editor module (game feature plugin actions, loaded only where the GameFeatures plugin is on).
 - **Number of Blueprints:** 0.
 - **Network Replicated:** No. This is an editor-only automation and MCP transport plugin; it does not add gameplay replication.
 - **Supported Development Platforms:** Windows: Yes. Mac: Yes. Linux: Yes.

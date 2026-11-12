@@ -1,4 +1,4 @@
-// Todo 9 lane 2 - diagnostics hook sequence automation tests.
+// Diagnostics hook sequence automation tests.
 //
 // These run IN the editor process against a UNIQUE temp root injected through
 // SetRootOverride, so a real user's <Project>/Saved/MCP/diagnostics tree is
@@ -9,28 +9,22 @@
 // more; this file proves the exact recorder SEQUENCES the hooks perform at the
 // STORE level):
 //   * admission -> pre-dispatch -> terminal -> PersistCurrent -> RotateOnStartup
-//     leaves the terminal record in previous (the H1/H4/H5 crash-preservation
-//     contract)
-//   * a refusal increments refusals and coerces terminal (H3 - the disk write
-//     is coalesced into the next game-thread persist)
-//   * handshake + disconnect summaries (H2/H6)
-//   * NF-4 WINDOW-INDEPENDENT balance truth: the store exposes raw
+//     leaves the terminal record in previous (the crash-preservation contract)
+//   * a refusal increments refusals and coerces terminal (the disk write is
+//     coalesced into the next game-thread persist)
+//   * handshake + disconnect summaries
+//   * window-independent balance truth: the store exposes raw
 //     created/closed counters verbatim and clamps SessionsActive >= 0, so
 //     closed MAY exceed created at the store level when RecordSessionClosed is
 //     called more times than RecordSessionCreated (the store does NOT dedupe -
-//     dedupe lives in the H8 funnel's bounded 128-close window, which is
-//     source-contract + limitation-model gated). In-window first-close-wins
-//     live proof is Todo 39 double-DELETE.
+//     dedupe lives in the transport's session-close funnel, in its window of
+//     the last 128 closed ids). First-close-wins inside that window is shown
+//     live by deleting one session twice, not here.
 
 #include "Tests/Diagnostics/McpDiagnosticsTestFixture.h"
 
 #if WITH_DEV_AUTOMATION_TESTS
-#include "Containers/StringConv.h"
-#include "HAL/PlatformFileManager.h"
-#include "HAL/PlatformProcess.h"
 #include "Misc/AutomationTest.h"
-#include "Misc/FileHelper.h"
-#include "Misc/Guid.h"
 #include "Misc/Paths.h"
 
 IMPLEMENT_SIMPLE_AUTOMATION_TEST(
@@ -47,7 +41,7 @@ bool FMcpDiagnosticsHookSequenceTerminalInPreviousTest::RunTest(const FString& P
 
 	// The editor "crashes" right after the last pre-dispatch refresh: admission
 	// + pre-dispatch + terminal were persisted, then the session is rotated on
-	// the next boot (H1).
+	// the next boot.
 	Store.RecordAdmission(
 		TEXT("req-hook-1"), TEXT("corr-hook-1"),
 		TEXT("manage_asset.import_asset"), TEXT("WebSocket"), 2);
@@ -86,7 +80,7 @@ bool FMcpDiagnosticsHookSequenceRefusalCoercesTerminalTest::RunTest(const FStrin
 	FMcpDiagnosticsSnapshot& Store = Fixture.Store;
 	const FString& Root = Fixture.Root;
 
-	// H3: a queue-full refusal records memory-only at the socket-thread call
+	// A queue-full refusal records memory-only at the socket-thread call
 	// site; its disk write is COALESCED into the next game-thread persist.
 	// AUTOMATION_QUEUE_FULL is not an allowlist terminal class, so it coerces
 	// to the store's unknown sentinel while the refusals counter stays exact.
@@ -115,11 +109,11 @@ bool FMcpDiagnosticsHookSequenceSessionBalanceWindowIndependentTest::RunTest(con
 	FMcpDiagnosticsSnapshot& Store = Fixture.Store;
 	const FString& Root = Fixture.Root;
 
-	// H2/H6 summaries: handshake success is overwritten by a later disconnect
-	// summary (last-value, not a counter). H7 created once, H8 closed THREE
+	// Summaries: handshake success is overwritten by a later disconnect
+	// summary (last-value, not a counter). Created once, closed THREE
 	// times: the store passes created/closed verbatim and clamps SessionsActive
 	// >= 0, so closed may exceed created at the store level - the store does
-	// NOT dedupe; dedupe lives in the H8 funnel's retained-128-close window.
+	// NOT dedupe; dedupe lives in the transport's window of the last 128 closed ids.
 	// On-disk JSON carries the verbatim counters "closed":3 and "active":0.
 	Store.RecordHandshake(true);
 	Fixture.Now += 1.0;

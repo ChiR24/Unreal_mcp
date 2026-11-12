@@ -26,8 +26,7 @@ int32 McpCountLevelActors(const ULevel *Level)
 } // namespace
 
 // Level/world summary shared by get_level_details (dedicated inspect action)
-// and get_world_settings (the TypeScript alias target of get_level_details),
-// so both surfaces expose the same level fields.
+// and get_world_settings, so both expose the same level fields.
 void McpAppendLevelDetails(UWorld *World, TSharedPtr<FJsonObject> Resp)
 {
     if (!World || !Resp.IsValid())

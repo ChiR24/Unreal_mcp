@@ -50,7 +50,7 @@ bool EnsureBehaviorTreeGraph(UBehaviorTree*& BehaviorTree, UEdGraph*& OutGraph)
   }
   // A tree with no root composite is what the editor holds until its Root node is linked, and the graph route builds
   // one that way. Root decorators with no root composite to hang on are not: the engine's graph build dereferences the
-  // missing composite's node for them (SpawnMissingDecoratorNodes, dogfood #63), and its rebuild discards them.
+  // missing composite's node for them (SpawnMissingDecoratorNodes), and its rebuild discards them.
   if (!BehaviorTree->RootNode && BehaviorTree->RootDecorators.Num() > 0)
   {
     OutGraph = nullptr;
@@ -83,7 +83,7 @@ bool EnsureBehaviorTreeGraph(UBehaviorTree*& BehaviorTree, UEdGraph*& OutGraph)
       return false;
     }
     // Asset-route edits (add_task_node/add_composite_node) bypass the graph: spawn their graph
-    // nodes so graph-route ids resolve and UpdateAsset does not drop them (dogfood #60).
+    // nodes so graph-route ids resolve and UpdateAsset does not drop them.
     // NOT SpawnMissingNodes(): the engine only calls it from UBehaviorTreeGraph::OnCreated(),
     // and SpawnMissingGraphNodesWorker() creates a node for every asset node unconditionally,
     // so on an already-populated graph it duplicates the whole tree once per request.
@@ -141,7 +141,7 @@ bool LoadBehaviorTreeForGraph(UEngineWireSubsystem* Subsystem,
 
   UEdGraph* Graph = BehaviorTree->BTGraph;
   // Always run the ensure step: besides creating a missing graph it syncs asset-route nodes
-  // (add_composite_node / add_task_node) into an existing graph (dogfood #60).
+  // (add_composite_node / add_task_node) into an existing graph.
   if (!EnsureBehaviorTreeGraph(BehaviorTree, Graph)) {
 #if MCP_HAS_BEHAVIOR_TREE_GRAPH
     // Every refusal said "requires UE 5.3+", on every version.
@@ -197,7 +197,7 @@ UEdGraphNode* FindGraphNodeByIdOrName(UEdGraph* Graph,
     }
 #if MCP_HAS_BEHAVIOR_TREE_GRAPH
     if (UAIGraphNode* AINode = Cast<UAIGraphNode>(Node)) {
-      // Asset-route ids (BTTask_Wait_0) name the node instance, not the graph node (dogfood #60).
+      // Asset-route ids (BTTask_Wait_0) name the node instance, not the graph node.
       if (IsValid(AINode->NodeInstance) && AINode->NodeInstance->GetName().Equals(Needle, ESearchCase::IgnoreCase)) return Node;
       for (UAIGraphNode* SubNode : AINode->SubNodes) {
         if (UEdGraphNode* Found = Match(SubNode)) return Found;

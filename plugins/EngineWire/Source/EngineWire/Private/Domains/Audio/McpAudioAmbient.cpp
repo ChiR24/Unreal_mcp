@@ -49,7 +49,7 @@ bool HandleAmbientActions(
     AAmbientSound* AmbientActor = World->SpawnActor<AAmbientSound>(AAmbientSound::StaticClass(), Location, FRotator::ZeroRotator, SpawnParams);
     if (AmbientActor)
     {
-      FString AmbientName; // dogfood #114: allow naming the spawned actor
+      FString AmbientName; // allow naming the spawned actor
       if (Payload->TryGetStringField(TEXT("name"), AmbientName) && !AmbientName.IsEmpty()) {
         AmbientActor->SetActorLabel(AmbientName);
       }
@@ -118,13 +118,13 @@ bool HandleAmbientActions(
       return true;
     }
 
-    // Honour name/actorName for the spawned sound actor (dogfood #114).
+    // Honour name/actorName for the spawned sound actor.
     FString SpawnedName;
     if (!Payload->TryGetStringField(TEXT("name"), SpawnedName)) {
       Payload->TryGetStringField(TEXT("actorName"), SpawnedName);
     }
     if (SpawnedName.IsEmpty()) {
-      Payload->TryGetStringField(TEXT("componentName"), SpawnedName); // dogfood #114
+      Payload->TryGetStringField(TEXT("componentName"), SpawnedName);
     }
     UAudioComponent *AudioComp = CreateAudioComponentAtEditorLocation(World, Sound, Location, Rotation, SpawnedName);
 

@@ -65,8 +65,8 @@ bool HandleGASEffectModifiers(const FGASRequestContext& Context, const FString& 
         // This was the whole defect: FGameplayModifierInfo was default-constructed, given an op and a
         // magnitude, and pushed onto Modifiers with its Attribute left null. The effect then carried a
         // modifier that modified nothing, while the handler answered success:true with modifierCount:1 --
-        // a real read-back of the wrong thing. Both spellings are accepted because both are advertised:
-        // the native schema documents `targetAttribute` and the TS route lists `attributeName`.
+        // a real read-back of the wrong thing. Both spellings are accepted because the
+        // contract declares both: `targetAttribute` and `attributeName`.
         const FString TargetAttribute =
             GetGASStringFieldWithFallback(Payload, TEXT("targetAttribute"), TEXT("attributeName"), TEXT("")).TrimStartAndEnd();
         if (TargetAttribute.IsEmpty())

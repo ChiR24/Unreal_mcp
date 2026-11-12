@@ -1,7 +1,7 @@
 // Copyright (c) 2024 EngineWire Contributors
 //
 // maintain_content refresh_blueprints. Renaming a class leaves every node that names it as it was:
-// a cast keeps its "AsBP Mario Save" pin, which compiles into the bytecode under that name, and
+// a cast keeps its "As BP Old Name" pin, which compiles into the bytecode under that name, and
 // cached node titles keep the old class. The editor's Refresh All Nodes fixes one Blueprint at a time.
 
 #include "Domains/AssetWorkflow/Operations/McpAssetBulkSelection.h"

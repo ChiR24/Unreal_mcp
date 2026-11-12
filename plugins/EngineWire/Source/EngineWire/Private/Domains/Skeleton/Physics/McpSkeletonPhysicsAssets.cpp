@@ -151,7 +151,7 @@ bool UEngineWireSubsystem::HandleCreatePhysicsAsset(
     }
 
     // Generate bodies and constraints the way the editor's Create Physics
-    // Asset dialog does; an empty asset satisfied nothing (dogfood #98).
+    // Asset dialog does; an empty asset satisfied nothing.
     const bool bAssignToMesh = GetJsonBoolField(Payload, TEXT("assignToMesh"), false);
     FText CreateError;
     const bool bGenerated = FPhysicsAssetUtils::CreateFromSkeletalMesh(PhysicsAsset, SkeletalMesh, Params, CreateError, bAssignToMesh);

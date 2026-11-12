@@ -29,8 +29,8 @@ FString DottedName(const FMetasoundFrontendClassName& ClassName)
 }
 }
 
-// Resolves a partial MetaSound node class spelling against the live node registry
-// (dogfood #115). Name matches case-insensitively in any namespace; an explicit
+// Resolves a partial MetaSound node class spelling against the live node registry.
+// Name matches case-insensitively in any namespace; an explicit
 // Namespace/Variant narrows the set. A unique hit wins outright; among several hits the
 // engine "UE" namespace wins when it alone disambiguates. OutCandidates always lists every
 // hit as the dotted "Namespace.Name.Variant" spelling that nodeClassName accepts.

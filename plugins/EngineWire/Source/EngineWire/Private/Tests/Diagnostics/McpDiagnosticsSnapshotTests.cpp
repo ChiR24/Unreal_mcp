@@ -1,4 +1,4 @@
-// Todo 9 lane 1 - diagnostics snapshot store automation tests.
+// Diagnostics snapshot store automation tests.
 //
 // These run IN the editor process against a UNIQUE temp root injected through
 // SetRootOverride, so a real user's <Project>/Saved/MCP/diagnostics tree is
@@ -6,7 +6,7 @@
 // Every test resets the singleton and deletes its own temp root on the way out;
 // a crashed test editor can leave one temp folder in the OS temp dir at worst.
 //
-// Coverage (foundation store contract only - hook wiring is a later lane):
+// Coverage (the store's own contract; the hook sequences are in McpDiagnosticsHookSequenceTests.cpp):
 //   * valid rotation: a session with recorded events is promoted to previous,
 //     a fresh current is initialized, and exactly one previous exists
 //   * crash preservation: the last pre-dispatch record survives a simulated
@@ -23,16 +23,9 @@
 
 #if WITH_DEV_AUTOMATION_TESTS
 #include "Containers/StringConv.h"
-#include "HAL/PlatformFileManager.h"
-#include "HAL/PlatformProcess.h"
 #include "Misc/AutomationTest.h"
-#include "Misc/FileHelper.h"
-#include "Misc/Guid.h"
 #include "Misc/Paths.h"
 
-// Helpers carry a Snapshot prefix because bUseUnity merges these test
-// translation units and a sibling diagnostics suite defines helpers with the
-// same bare names; unqualified names would collide in the merged unit.
 IMPLEMENT_SIMPLE_AUTOMATION_TEST(
 	FMcpDiagnosticsRotationPromotesCrashedSessionTest,
 	"EngineWire.Foundation.Diagnostics.RotationPromotesCrashedSession",

@@ -221,10 +221,9 @@ bool UEngineWireSubsystem::HandleControlEditorStepFrame(
     return true;
   }
 
-  // The TypeScript path loops N bridge calls and reports `steps`; the native
-  // surface reaches this handler directly, so stepping and reporting have to
-  // happen here too or `steps: 10` silently advances one frame and the reply
-  // fails its own output schema for want of the `steps` field.
+  // Stepping and reporting happen here: otherwise `steps: 10` silently advances
+  // one frame and the reply fails its own output schema for want of the `steps`
+  // field.
   int32 RequestedSteps = 1;
   if (Payload.IsValid()) {
     Payload->TryGetNumberField(TEXT("steps"), RequestedSteps);

@@ -1,8 +1,8 @@
 #include "EngineWireSettings.h"
+#include "Core/Compatibility/McpVersionCompatibility.h"
 #include "Dom/JsonObject.h"
 #include "EngineWireLog.h"
 #include "Misc/ConfigCacheIni.h"
-#include "Misc/EngineVersionComparison.h"
 #include "UObject/UnrealType.h"
 
 #include "Internationalization/Text.h"
@@ -11,11 +11,7 @@ namespace
 {
 void ImportConfigText(const FProperty* Property, const FString& Text, void* Address, UObject* Owner)
 {
-#if ENGINE_MAJOR_VERSION > 5 || ENGINE_MINOR_VERSION >= 1
-    Property->ImportText_Direct(*Text, Address, Owner, PPF_None);
-#else
-    Property->ImportText(*Text, Address, PPF_None, Owner);
-#endif
+    MCP_PROPERTY_IMPORT_TEXT(Property, *Text, Address, Owner, PPF_None);
 }
 } // namespace
 
@@ -85,10 +81,9 @@ void UEngineWireSettings::PostInitProperties()
 UEngineWireSettings::UEngineWireSettings()
 {
     // Provide practical defaults so the Project Settings UI shows a usable out-of-the-box configuration.
-    // By default the plugin will run in server/listen mode so the MCP server (node process)
-    // can connect to it (tests expect the plugin to accept inbound MCP connections).
+    // By default the plugin runs in server/listen mode, so a bridge client can connect to it.
     CapabilityToken = TEXT("");
-    AutoReconnectDelay = 5.0f; // Seconds between automatic reconnect attempts when disabled/failed
+    AutoReconnectDelay = 5.0f; // listeners down after an error or the last close are opened again after 5 s
     bAlwaysListen = true; // Start a listening server by default in the Editor
     ListenHost = TEXT("127.0.0.1");
     ListenPorts = TEXT("8090,8091");
@@ -108,9 +103,8 @@ UEngineWireSettings::UEngineWireSettings()
         TEXT("r.DepthOfFieldQuality")
     };
     MaxMovieRenderConsoleVariableMagnitude = 1000.0f;
-    // C7: The class allowlists below ship with safe default entries, not
-    // empty. The audit flagged this as "empty by default" but inspection
-    // shows the defaults are populated with editor-provided safe classes
+    // The class allowlists below ship with safe default entries, not
+    // empty: the defaults are populated with editor-provided safe classes
     // (PIE/in-process executors, default burn-in, take recorder sources).
     // These defaults are applied unless the project's config overrides
     // them. Do NOT clear these defaults in code — projects that rely on
@@ -150,7 +144,7 @@ UEngineWireSettings::UEngineWireSettings()
     HeartbeatTimeoutSeconds = 10.0f; // drop connections after 10s without heartbeat
     ListenBacklog = 10; // typical listen backlog
     AcceptSleepSeconds = 0.01f; // brief sleepers to reduce CPU when idle
-    TickerIntervalSeconds = 0.1f; // subsystem tick every 100ms
+    TickerIntervalSeconds = 0.1f; // the WebSocket connection manager ticks every 100 ms
 }
 
 /**

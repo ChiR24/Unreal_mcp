@@ -1,4 +1,5 @@
 #include "Domains/LevelStructure/McpLevelStructureActions.h"
+#include "Foundation/BridgeHelpers/Assets/McpAssetCreation.h"
 
 #include "AssetRegistry/AssetRegistryModule.h"
 #include "Components/ActorComponent.h"
@@ -16,7 +17,7 @@ namespace McpLevelStructure
 
 UWorld* CreateLevelWorld(const FString& PackagePath, const FString& LevelName, UPackage*& OutPackage)
 {
-    OutPackage = CreatePackage(*PackagePath);
+    OutPackage = McpCreatePackageOrNull(PackagePath);
     UWorld* World = OutPackage ? UWorld::CreateWorld(EWorldType::Inactive, false, FName(*LevelName), OutPackage) : nullptr;
     // CreateWorld may already initialize it in some UE versions
     if (World && !World->bIsWorldInitialized)

@@ -99,7 +99,7 @@ EAutomationQueueRejection UEngineWireSubsystem::QueueAutomationRequest(
     // Queue refusal: the refusal record is memory-only in-lock; its disk
     // write is deferred OFF the lock to the game thread, so a hard crash after
     // StopAcceptingAutomationRequests() (or on an empty queue) still leaves the
-    // last refusal persisted (plan line 197). The admission path coalesces its
+    // last refusal persisted. The admission path coalesces its
     // records into the next tick's pre-dispatch persist instead.
     if (Rejection != EAutomationQueueRejection::None)
     {
@@ -109,10 +109,10 @@ EAutomationQueueRejection UEngineWireSubsystem::QueueAutomationRequest(
 
     // Admission records memory-only on the socket/HTTP thread. The
     // depth was read in-lock above; these store calls take the store's own
-    // mutex. NF-1: NO latch - every WebSocket admission records handshake
+    // mutex. NO latch - every WebSocket admission records handshake
     // success (last-writer-wins under the store mutex, always fresh). An
     // admitted WS automation_request PROVES the bridge_hello gate passed for
-    // THIS connection; a later 4004/4005 close (H6) overwrites ok=false.
+    // THIS connection; a later 4004/4005 close overwrites ok=false.
     FMcpDiagnosticsSnapshot::Get().RecordAdmission(RequestId, FString(), Action,
         Origin == ERequestOrigin::NativeHTTP ? TEXT("NativeHTTP") : TEXT("WebSocket"), AdmissionDepth);
     if (Origin == ERequestOrigin::WebSocket) { FMcpDiagnosticsSnapshot::Get().RecordHandshake(true); }

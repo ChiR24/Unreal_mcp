@@ -8,16 +8,16 @@ domain-local copy of reflection, path, JSON, or response helpers.
 
 | Subdir | Count | Gives you |
 |--------|-------|-----------|
-| `Reflection/` | 3 .h (11 files w/ .cpp) | UE property <-> JSON serialization boundary |
-| `HandlerUtils/` | 7 .h | action normalization, JSON/path/response/transform helpers |
+| `Reflection/` | 12 files | UE property <-> JSON serialization boundary (`McpPropertyReflection*`), calls by reflection (`McpReflectedInvoke`), `McpInstancedStructView.h` |
+| `HandlerUtils/` | 6 .h, 5 .cpp | action normalization, JSON/path/response/transform helpers, actor lookup by name, project config reads |
 | `Blueprint/` | 4 .cpp, 1 .h | BP pin/type introspection and struct nodes, declared in `McpBlueprintUtils.h` |
-| `Diagnostics/` | 6 files | diagnostics snapshot capture/load/rotation + file-name/schema helpers |
-| `GraphLayout/` | 1 file | graph node extent geometry |
+| `Diagnostics/` | 8 files | diagnostics snapshot capture/load/rotation + file-name/schema helpers, `McpWorldTickTimer` |
+| `GraphLayout/` | 6 files | graph node extent geometry, overlap tests, the layered layout (`McpLayered`) with its known-answer test |
 | `Solvers/` | 20 files | general algorithms, one per file (a long one split), each with a known-answer test: `McpPratt` (the assertion language of execute's `expect`/`require`), `McpBoxSat` (boxes turned about Z: separation, depth, containment), `McpKMeans` (weighted k-means, fixed seed), `McpWatershed` (basins of a height over a graph, merged across high saddles), `McpBetweenness` (Brandes route shares of weighted nodes and edges), `McpCassowary` (linear constraints, required or preferred by strength, solved by the incremental simplex Kiwi builds) |
 | `Optimize/` | 12 files | minimizers of a caller's cost, each with a known-answer test: `McpNelderMead` (the downhill simplex, for a cost of a few variables with no gradient: a camera judged by traces), `McpMinSnap` (the minimum-snap path through points, Richter et al.'s closed form), `McpAnneal` (Metropolis annealing over a caller's state), `McpChoiceKnapsack` (at most one option per group: the cheapest pick whose gains reach what is needed) |
 | `Render/` | 5 files | post-process volume resolution, console variable writes, stat overlay state |
 | `BridgeHelpers/` | umbrella + 7 groups | asset/actor/BP/property/response/security facade |
-| root | `McpSecureTokenCompare.h` | constant-time token equality |
+| root | 25 files (at cap) | `McpSecureTokenCompare.h` (constant-time token equality), capability authorization predicates and the path scan, the request principal and its quota, the idempotency ledger, compensation receipts, live-state revisions, readiness, the scoped editor transaction, screenshot resampling, the telemetry registry |
 
 `Foundation` is split finely (<=25 files/folder, 250 pure-line ceiling) so
 `tests/unit/plugin/source_structure*.test.ts` passes. Keep it that way.
@@ -37,12 +37,15 @@ domain-local copy of reflection, path, JSON, or response helpers.
 | Transform / math helpers | `HandlerUtils/McpHandlerUtilsTransforms.h` |
 | BP graph node helpers | `Blueprint/McpBlueprintUtils.h` |
 | Resolve / validate `/Game` asset path | `BridgeHelpers/Assets/McpAssetResolve.h` |
-| Create assets / dirs / save registry | `BridgeHelpers/Assets/{AssetCreation,AssetDirectories,AssetSaveRegistry}.h` |
+| Create assets / dirs / save registry | `BridgeHelpers/Assets/{McpAssetCreation,McpAssetDirs,McpAssetSaveRegistry}.h` |
+| Make the package of a new asset | `BridgeHelpers/Assets/McpAssetCreation.h` `McpCreatePackageForNewAsset` (refuses an occupied path and a name the engine does not take) or `McpCreatePackageOrNull` (null where the engine's `CreatePackage` is a Fatal log: a name holding `//`); never the engine call (contract test) |
 | Spawn an actor | `BridgeHelpers/Actors/McpActorSpawnHelpers.h` |
-| Load / compile BP, SCS lookup, BP paths | `BridgeHelpers/Blueprints/{BlueprintAssetLoad,BlueprintCompilation,ScsLookup,BlueprintPaths}.h` |
-| Read/apply a property (scalar/object/array) | `BridgeHelpers/Properties/{PropertyLookup,NestedPropertyPath,ComponentLookup,PropertyApply*}.h` (export: `Reflection/McpPropertyReflection.h`) |
+| Find an actor by name or label | `HandlerUtils/McpHandlerUtilsActionsPaths.h` `McpHandlerUtils::FindActorByName` |
+| Load / compile BP, SCS lookup, BP paths | `BridgeHelpers/Blueprints/{McpBPAssetLoad,McpBPCompileHelpers,McpScsLookup,McpBPPaths}.h` |
+| Read/apply a property (scalar/object/array) | `BridgeHelpers/Properties/{McpNestedPropPath,McpComponentLookup,McpPropApply*}.h` (export: `Reflection/McpPropertyReflection.h`) |
+| Refuse a number outside a property's ClampMin/ClampMax | `Reflection/McpPropertyReflection.h` `CheckRange` |
 | Resolve a UClass by name | `BridgeHelpers/Reflection/McpClassResolve.h` |
-| Build / verify response, capture output, JSON fields | `BridgeHelpers/Responses/{Responses,ResponseVerification,OutputCapture,JsonFields}.h` |
+| Build / verify response, capture output, JSON fields | `BridgeHelpers/Responses/{McpResponses,McpResponseVerify,McpOutputCapture,McpJsonFields}.h` |
 | Refuse a missing field, a missing editor or a bad asset path in one line | `BridgeHelpers/Responses/McpResponses.h` `McpReadRequiredField` ("<field> required"), `McpRequireEditor`, `McpReadAssetPathOrReply` / `McpSanitizeAssetPathOrReply` (refusal wording, ASSET_NOT_FOUND): `if (!McpReadRequiredField(...)) return true;` |
 | Set a console variable and know it took | `Render/McpConsoleVariableWrite.h` `McpSetConsoleVariable` (console priority by default, read-only refused, read back; `IConsoleVariable::Set` alone loses to a console set silently) |
 | Show or hide a stat overlay without toggling it twice | `Render/McpViewportStats.h` `McpIsStatShown` (the viewport a Stat command lands on: the running game, else the last level viewport; Stat commands toggle) |
@@ -68,6 +71,9 @@ Every domain that touches properties funnels through it.
   set by `FActiveRequestScope` around each dispatch). A handler that reaches a package the request did not name
   asks `ActiveRequestPermitsPath` / `ActiveRequestPermitsObject` (an actor counts as its level's map) or
   `ActiveRequestHoldsScope`; the save, delete and reflection sinks already do.
+- `BridgeHelpers/Security/McpSecretMask.h`: `McpMaskSecrets` (free text) and `McpMaskSecretsDeep` (a JSON tree,
+  a secret-named key's whole value) mask credentials before a reply, receipt or log line leaves; the key-name
+  classifiers live in `McpSecretKeys.cpp`. Mask through these, never a local keyword list.
 - `BridgeHelpers/Security/McpCommandValidate.h`: blocklist
   of `&&`, `||`, `;`, `|`, backtick, `<`, `>`, newline, CR for console/UBT args.
 - Hazardous editor ops (save/load/delete) live in `../Safety/`; include
@@ -78,7 +84,7 @@ Every domain that touches properties funnels through it.
 
 - SCS rule: Blueprint component templates must be owned by SCS nodes via
   `SCS->CreateNode()` / `SCS->AddNode()`. Relevant to `Blueprint/` and
-  `BridgeHelpers/Blueprints/ScsLookup`. Do not attach templates ad hoc.
+  `BridgeHelpers/Blueprints/McpScsLookup.h`. Do not attach templates ad hoc.
 - Adding a handler is a Core/Domains concern; the registration flow lives in
   `../Core/AGENTS.md` and `../Domains/AGENTS.md`.
 - Every local `Mcp*` include must resolve (contract test). Include the umbrella
@@ -89,6 +95,6 @@ Every domain that touches properties funnels through it.
 - Top one: writing a domain-local copy of a reflection/path/JSON/response helper
   that already lives here. Reuse it.
 - Reimplementing `McpConstantTimeTokenEquals` with `==` / `FString::Equals`.
-- Hand-rolling `/Game` path validation instead of `...ProjectPaths.h`.
-- Skipping `...CommandValidation.h` on console-command strings.
+- Hand-rolling `/Game` path validation instead of `McpProjectPaths.h`.
+- Skipping `McpCommandValidate.h` on console-command strings.
 - Building responses by hand when `McpHandlerUtilsResponses.h` exists.

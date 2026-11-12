@@ -15,7 +15,7 @@ const code = (path: string): string => readFileSync(path, 'utf8').replace(/\r\n/
 
 describe('read_graph_as_code', () => {
   it('is routed to the graph handler as a read, needing a graph only when it names one', () => {
-    expect(code(join(PRIVATE, 'Core', 'Subsystem', 'EngineWireSubsystemHandlerRegistration.cpp'))).toContain('TEXT("read_graph_as_code")');
+    expect(code(join(PRIVATE, 'Core', 'Routing', 'McpConsolidatedActionRoutingBlueprints.h'))).toContain('TEXT("read_graph_as_code")');
     const graph = code(join(PRIVATE, 'Domains', 'BlueprintGraph', 'McpBPGraphHandlers.cpp'));
     expect(graph).toMatch(/bCode \? Payload->HasField\(TEXT\("graphName"\)\)/u);
     expect(graph).toMatch(/Context\.bDeferCompile = true;\s*return bLint \? McpBPLint::HandleLint\(Context\) : McpGraphCode::HandleReadGraphAsCode\(Context\) \|\| McpGraphCode::HandleWriteGraphFromCode\(Context\);/u);
@@ -75,7 +75,7 @@ describe('write_graph_from_code', () => {
   };
 
   it('is routed to the graph handler', () => {
-    expect(code(join(PRIVATE, 'Core', 'Subsystem', 'EngineWireSubsystemHandlerRegistration.cpp'))).toContain('TEXT("write_graph_from_code")');
+    expect(code(join(PRIVATE, 'Core', 'Routing', 'McpConsolidatedActionRoutingBlueprints.h'))).toContain('TEXT("write_graph_from_code")');
   });
 
   it('refuses during Play and checks every form before the Blueprint is touched', () => {

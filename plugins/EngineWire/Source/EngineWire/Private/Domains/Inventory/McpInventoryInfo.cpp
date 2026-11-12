@@ -36,7 +36,7 @@ void AddInventoryBlueprintDefaults(const TSharedPtr<FJsonObject>& Result, UBluep
     VarInfo->SetStringField(TEXT("type"), Property ? Property->GetCPPType() : Var.VarType.PinCategory.ToString());
     VarInfo->SetStringField(TEXT("default"), Value);
     Variables.Add(MakeShared<FJsonValueObject>(VarInfo));
-    // Typed where the property type is known (dogfood #54: everything used to be text).
+    // Typed where the property type is known (everything used to be text).
     if (Property && Property->IsA<FBoolProperty>()) {
       Properties->SetBoolField(Var.VarName.ToString(), Value.Equals(TEXT("True"), ESearchCase::IgnoreCase));
     } else if (Property && Property->IsA<FNumericProperty>() && Value.IsNumeric()) {
@@ -143,7 +143,7 @@ bool HandleInventoryInfoActions(UEngineWireSubsystem& Bridge, const FString& Req
       if (UMcpGenericDataAsset* GenericAsset = Cast<UMcpGenericDataAsset>(Asset)) {
         TSharedPtr<FJsonObject> PropertiesObject = MakeShared<FJsonObject>();
         for (const TPair<FString, FString>& Pair : GenericAsset->Properties) {
-          // Dogfood #54: generic data-asset values are stored as text; project them typed.
+          // Generic data-asset values are stored as text; project them typed.
           double Number = 0.0;
           if (Pair.Value.Equals(TEXT("true"), ESearchCase::IgnoreCase) || Pair.Value.Equals(TEXT("false"), ESearchCase::IgnoreCase)) {
             PropertiesObject->SetBoolField(Pair.Key, Pair.Value.Equals(TEXT("true"), ESearchCase::IgnoreCase));
@@ -153,7 +153,7 @@ bool HandleInventoryInfoActions(UEngineWireSubsystem& Bridge, const FString& Req
             PropertiesObject->SetStringField(Pair.Key, Pair.Value);
           }
         }
-        // set_item_properties writes Description/ItemName to the typed UPROPERTYs, not the map (dogfood #52).
+        // set_item_properties writes Description/ItemName to the typed UPROPERTYs, not the map.
         if (!GenericAsset->Description.IsEmpty()) { PropertiesObject->SetStringField(TEXT("Description"), GenericAsset->Description); }
         if (!GenericAsset->ItemName.IsEmpty()) { PropertiesObject->SetStringField(TEXT("ItemName"), GenericAsset->ItemName); }
         TargetResult->SetObjectField(TEXT("properties"), PropertiesObject);
@@ -194,7 +194,7 @@ bool HandleInventoryInfoActions(UEngineWireSubsystem& Bridge, const FString& Req
       Result->SetStringField(TEXT("assetType"), TEXT("LootTable"));
       Result->SetStringField(TEXT("lootTablePath"), LootTablePath);
       AddGenericProperties(Result, LootTableAsset);
-      // Structured loot entries beside the raw LootEntry_n strings (dogfood #54).
+      // Structured loot entries beside the raw LootEntry_n strings.
       if (UMcpGenericDataAsset* GenericLoot = Cast<UMcpGenericDataAsset>(LootTableAsset)) {
         TArray<TSharedPtr<FJsonValue>> LootEntries;
         for (const TPair<FString, FString>& Pair : GenericLoot->Properties) {

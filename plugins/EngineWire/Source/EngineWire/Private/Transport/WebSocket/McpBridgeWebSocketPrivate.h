@@ -22,10 +22,9 @@ inline constexpr uint64 MaxWebSocketFramePayloadBytes =
 inline constexpr int32 MaxWebSocketClients = 32;
 // A frame's payload is read in pieces of this size, so a declared length reserves nothing that has not arrived.
 inline constexpr uint64 WebSocketReceiveChunkBytes = 64ULL * 1024ULL;
-inline constexpr int32 WebSocketCloseCodeAbnormalClosure = 4000;
-inline constexpr int32 WebSocketCloseCodeMessageTooBig = 1009;
 
-FString BytesToStringView(const TArray<uint8> &Data);
+// The bytes as UTF-8 text (an owning string; empty for no bytes or for bytes that are not UTF-8).
+FString Utf8BytesToString(const TArray<uint8> &Data);
 void DispatchOnGameThread(TFunction<void()> &&Fn);
 FString DescribeSocketError(ISocketSubsystem *SocketSubsystem,
                             const TCHAR *Context);

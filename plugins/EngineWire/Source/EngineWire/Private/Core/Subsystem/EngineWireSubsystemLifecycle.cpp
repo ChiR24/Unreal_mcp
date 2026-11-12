@@ -1,6 +1,6 @@
 #include "EngineWireSubsystem.h"
 
-#include "Interfaces/IPluginManager.h"
+#include "Core/Module/McpOwnPlugin.h"
 #include "MCP/Transport/McpNativeTransport.h"
 #include "EngineWireSettings.h"
 #include "Transport/WebSocket/McpBridgeWebSocket.h"
@@ -18,7 +18,6 @@
 #include "Foundation/McpLiveStateRevisionTracker.h"
 #include "Foundation/McpReadinessState.h"
 #include "Framework/Application/SlateApplication.h"
-#include "Misc/Parse.h"
 
 void UEngineWireSubsystem::Initialize(FSubsystemCollectionBase& Collection)
 {
@@ -95,41 +94,7 @@ void UEngineWireSubsystem::Initialize(FSubsystemCollectionBase& Collection)
         FSlateApplication::Get().GetOnModalLoopTickEvent().AddUObject(this, &UEngineWireSubsystem::OnModalLoopTick);
     }
 
-    // -McpStartMinimized: a launch for an automated session sat in the foreground, rendering flat out, until a caller
-    // could minimize it over the bridge. The editor adds its main window hidden and shows it, maximized, at the end of
-    // startup (FMainFrameHandler::ShowMainFrameWindow), which undid a minimize made before that. So this waits until
-    // the window is on screen, puts it away without taking focus, and keeps it down for 10 s in case startup brings it
-    // back. Bounded, because a ticker left registered would outlive a Live Coding module unload (see Deinitialize).
-    // A restore made over the bridge ends the hold: one asked for 3 minutes after launch was put away again within
-    // seconds, while a second one 23 s later stayed up.
-    if (FParse::Param(FCommandLine::Get(), TEXT("McpStartMinimized")))
-    {
-        const double GiveUpAt = FPlatformTime::Seconds() + 600.0;
-        const TSharedRef<double> HoldUntil = MakeShared<double>(0.0);
-        FTSTicker::GetCoreTicker().AddTicker(FTickerDelegate::CreateLambda([GiveUpAt, HoldUntil](float)
-        {
-            if (McpWindowRestoreCount() != 0)
-            {
-                return false;
-            }
-            const double Now = FPlatformTime::Seconds();
-            const TSharedPtr<SWindow> Root = FGlobalTabmanager::Get()->GetRootWindow();
-            // The hold starts the first time the window is on screen, down already or not: a window that came up
-            // minimized kept this waiting, and the first restore made over the bridge minutes later was put away.
-            if (Root.IsValid() && Root->GetNativeWindow().IsValid() && Root->IsVisible())
-            {
-                if (!Root->IsWindowMinimized())
-                {
-                    MinimizeWindowForMcp(Root.ToSharedRef());
-                }
-                if (*HoldUntil == 0.0)
-                {
-                    *HoldUntil = Now + 10.0;
-                }
-            }
-            return *HoldUntil == 0.0 ? Now < GiveUpAt : Now < *HoldUntil;
-        }), 0.25f);
-    }
+    HoldEditorMinimizedAtStartupForMcp();
 
     // Published only here, at the END of a non-commandlet initialization that
     // registered handlers and installed the ticker. Readiness is a POSITIVE
@@ -238,12 +203,8 @@ void UEngineWireSubsystem::StartNativeTransport()
         return;
     }
 
-    FString PluginDir;
-    TSharedPtr<IPlugin> Plugin = IPluginManager::Get().FindPlugin(TEXT("EngineWire"));
-    if (Plugin.IsValid())
-    {
-        PluginDir = Plugin->GetBaseDir();
-    }
+    const TSharedPtr<IPlugin> Plugin = McpOwnPlugin();
+    const FString PluginDir = Plugin.IsValid() ? Plugin->GetBaseDir() : FString();
 
     // Allow an environment-variable override of the native MCP port, mirroring the
     // plugin's existing MCP_MAX_* env overrides. This lets a project select a per-

@@ -4,25 +4,9 @@
 #include "Misc/Paths.h"
 #include "SocketSubsystem.h"
 #include "Sockets.h"
-#include "Ssl.h"
-#include "SslModule.h"
+#include "Transport/WebSocket/McpBridgeWebSocketOpenSsl.h"
 
 #if WITH_SSL
-
-#define UI OSSL_UI
-
-#if PLATFORM_WINDOWS
-#include "Windows/AllowWindowsPlatformTypes.h"
-#endif
-
-#include <openssl/err.h>
-#include <openssl/ssl.h>
-
-#undef UI
-
-#if PLATFORM_WINDOWS
-#include "Windows/HideWindowsPlatformTypes.h"
-#endif
 
 #if PLATFORM_WINDOWS
 #include "Windows/AllowWindowsPlatformTypes.h"
@@ -33,40 +17,14 @@
 #include <unistd.h>
 #endif
 
-bool FMcpBridgeWebSocket::InitializeTlsContext(bool bServer) {
-  if (!bUseTls) {
-    return true;
-  }
-
+bool FMcpBridgeWebSocket::InitializeTlsContext() {
   if (SslContext) {
     return true;
   }
 
-  FSslModule &SslModule = FSslModule::Get();
-  ISslManager &SslManager = SslModule.GetSslManager();
-  if (!SslManager.InitializeSsl()) {
-    UE_LOG(LogEngineWireSubsystem, Error,
-           TEXT("Failed to initialize SSL module."));
-    return false;
-  }
-
-  bSslInitialized = true;
-
-  if (!bServer) {
-    FSslContextCreateOptions Options;
-    Options.bAllowCompression = false;
-    Options.bAddCertificates = true;
-    SslContext = SslManager.CreateSslContext(Options);
-    if (!SslContext) {
-      UE_LOG(LogEngineWireSubsystem, Error,
-             TEXT("Failed to create SSL client context."));
-      return false;
-    }
-    bOwnsSslContext = false;
-    SSL_CTX_set_verify(SslContext, SSL_VERIFY_PEER, nullptr);
-    return true;
-  }
-
+  // No call to the engine's SSL manager: it initialises OpenSSL only in a monolithic build and answers false in a
+  // modular one, which the editor always is, so asking it refused every connection. This module links its own OpenSSL
+  // (1.1.1 on every engine from 5.0), which initialises itself on first use.
   const SSL_METHOD *Method = TLS_server_method();
   if (!Method) {
     UE_LOG(LogEngineWireSubsystem, Error,
@@ -80,7 +38,6 @@ bool FMcpBridgeWebSocket::InitializeTlsContext(bool bServer) {
            TEXT("Failed to create SSL server context."));
     return false;
   }
-  bOwnsSslContext = true;
 
   SSL_CTX_set_min_proto_version(SslContext, TLS1_2_VERSION);
   SSL_CTX_set_options(SslContext, SSL_OP_NO_COMPRESSION);
@@ -127,7 +84,7 @@ bool FMcpBridgeWebSocket::InitializeTlsContext(bool bServer) {
   return true;
 }
 
-bool FMcpBridgeWebSocket::EstablishTls(bool bServer) {
+bool FMcpBridgeWebSocket::EstablishTls() {
   if (!bUseTls) {
     return true;
   }
@@ -139,7 +96,7 @@ bool FMcpBridgeWebSocket::EstablishTls(bool bServer) {
     return false;
   }
 
-  if (!InitializeTlsContext(bServer)) {
+  if (!InitializeTlsContext()) {
     return false;
   }
 
@@ -162,15 +119,11 @@ bool FMcpBridgeWebSocket::EstablishTls(bool bServer) {
   }
 
   SSL_set_fd(SslHandle, static_cast<int>(NativeSocketHandle));
-  int Result = bServer ? SSL_accept(SslHandle) : SSL_connect(SslHandle);
-  if (Result <= 0) {
-    UE_LOG(LogEngineWireSubsystem, Error,
-           TEXT("TLS handshake failed (mode=%s)."),
-           bServer ? TEXT("server") : TEXT("client"));
+  if (SSL_accept(SslHandle) <= 0) {
+    UE_LOG(LogEngineWireSubsystem, Error, TEXT("TLS handshake failed."));
     return false;
   }
 
-  bTlsServer = bServer;
   return true;
 #else
   UE_LOG(LogEngineWireSubsystem, Error,
@@ -187,14 +140,9 @@ void FMcpBridgeWebSocket::ShutdownTls() {
     SslHandle = nullptr;
   }
 
-  if (SslContext && bOwnsSslContext) {
+  if (SslContext) {
     SSL_CTX_free(SslContext);
     SslContext = nullptr;
-  }
-
-  if (bSslInitialized) {
-    FSslModule::Get().GetSslManager().ShutdownSsl();
-    bSslInitialized = false;
   }
 }
 
@@ -224,7 +172,7 @@ void FMcpBridgeWebSocket::InterruptNativeSocket() {
 
 #else
 
-bool FMcpBridgeWebSocket::InitializeTlsContext(bool bServer) {
+bool FMcpBridgeWebSocket::InitializeTlsContext() {
   if (bUseTls) {
     UE_LOG(LogEngineWireSubsystem, Warning,
            TEXT("TLS requested but WITH_SSL is not enabled."));
@@ -232,7 +180,7 @@ bool FMcpBridgeWebSocket::InitializeTlsContext(bool bServer) {
   return !bUseTls;
 }
 
-bool FMcpBridgeWebSocket::EstablishTls(bool bServer) {
+bool FMcpBridgeWebSocket::EstablishTls() {
   if (bUseTls) {
     UE_LOG(LogEngineWireSubsystem, Error,
            TEXT("TLS requested but WITH_SSL is not enabled."));

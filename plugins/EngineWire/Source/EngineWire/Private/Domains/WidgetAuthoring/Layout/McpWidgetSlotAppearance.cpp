@@ -43,7 +43,7 @@ bool HandleWidgetAuthoringSlotAppearance(
 
     if (bPadding)
     {
-        TSharedPtr<FJsonObject> PaddingObj = GetObjectField(Payload, TEXT("padding"));
+        TSharedPtr<FJsonObject> PaddingObj = McpHandlerUtils::GetObjectFieldOrNull(Payload, TEXT("padding"));
         if (!PaddingObj.IsValid())
         {
             Subsystem.SendAutomationError(RequestingSocket, RequestId,
@@ -94,9 +94,9 @@ bool HandleWidgetAuthoringSlotAppearance(
 #else
         FWidgetTransform Transform = Widget->RenderTransform;
 #endif
-        const TSharedPtr<FJsonObject> Translation = GetObjectField(Payload, TEXT("translation"));
-        const TSharedPtr<FJsonObject> Scale = GetObjectField(Payload, TEXT("scale"));
-        const TSharedPtr<FJsonObject> Shear = GetObjectField(Payload, TEXT("shear"));
+        const TSharedPtr<FJsonObject> Translation = McpHandlerUtils::GetObjectFieldOrNull(Payload, TEXT("translation"));
+        const TSharedPtr<FJsonObject> Scale = McpHandlerUtils::GetObjectFieldOrNull(Payload, TEXT("scale"));
+        const TSharedPtr<FJsonObject> Shear = McpHandlerUtils::GetObjectFieldOrNull(Payload, TEXT("shear"));
         if (!Translation.IsValid() && !Scale.IsValid() && !Shear.IsValid() && !Payload->HasField(TEXT("angle")))
         {
             Subsystem.SendAutomationError(RequestingSocket, RequestId,

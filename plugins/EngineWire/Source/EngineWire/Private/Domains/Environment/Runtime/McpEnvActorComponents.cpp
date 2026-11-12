@@ -172,7 +172,7 @@ bool McpConfigureActorAndComponent(const TSharedPtr<FJsonObject> &Payload, const
         }
     }
 
-    // Friendly aliases for component properties (dogfood #218): density -> FogDensity, etc.
+    // Friendly aliases for component properties: density -> FogDensity, etc.
     TSharedPtr<FJsonObject> EffectivePayload = MakeShared<FJsonObject>(*Payload);
     if (Component)
     {
@@ -247,7 +247,7 @@ bool McpConfigureActorAndComponent(const TSharedPtr<FJsonObject> &Payload, const
     if (TotalApplied == 0)
     {
         // A find-or-configure with nothing to configure is a true no-op: the
-        // receipt must not claim changed objects (MCPBB-085). The gateway
+        // receipt must not claim changed objects. The gateway
         // derives receipt changes[] from actorPath/actorName, so leave those
         // absent and disclose the no-op in the message instead.
         if (bExistedBefore)

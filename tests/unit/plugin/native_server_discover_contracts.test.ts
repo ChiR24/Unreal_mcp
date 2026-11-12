@@ -15,7 +15,7 @@ const code = (file: string): string =>
 
 describe('native server/discover', () => {
   const connection = code('McpNativeTransportConnection.cpp');
-  const discovery = code('McpNativeTransportToolDiscovery.cpp');
+  const discovery = code('Methods/McpNativeTransportToolDiscovery.cpp');
 
   it('skips the session and protocol-version checks exactly as initialize does, after the token check', () => {
     expect(connection).toContain('const bool bSessionless = Rpc.Method == TEXT("initialize") || Rpc.Method == TEXT("server/discover");');

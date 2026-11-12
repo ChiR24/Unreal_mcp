@@ -1,4 +1,4 @@
-// The saved recipes the gateway's search lists beside its capabilities (S14; see McpRecipes.h). Search is answered on
+// The saved recipes the gateway's search lists beside its capabilities (see McpRecipes.h). Search is answered on
 // the socket thread, so this reads files and JSON only: no editor API.
 #include "Domains/Scripts/McpRecipes.h"
 

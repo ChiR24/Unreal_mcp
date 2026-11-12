@@ -17,7 +17,7 @@ describe('add_footsteps', () => {
   const handler = (): string => read(join(AUTHORING, 'Analysis', 'McpAnimFootsteps.cpp'));
 
   it('is routed to the animation authoring dispatcher', () => {
-    expect(read(join(PRIVATE, 'MCP', 'Routing', 'McpConsolidatedActionRoutingAnimationSystem.h'))).toContain('TEXT("add_footsteps")');
+    expect(read(join(PRIVATE, 'Core', 'Routing', 'McpConsolidatedActionRoutingAnimationSystem.h'))).toContain('TEXT("add_footsteps")');
     expect(read(join(AUTHORING, 'McpAnimSequenceEvents.cpp'))).toMatch(/SubAction == TEXT\("add_footsteps"\)\)\s*\{\s*return HandleAddFootsteps\(Params, Response\);/u);
   });
 

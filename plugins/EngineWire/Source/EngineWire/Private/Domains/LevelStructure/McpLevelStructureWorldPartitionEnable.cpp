@@ -39,7 +39,7 @@ bool HandleEnableWorldPartition(
 
     if (bEnable && !WorldPartition)
     {
-        // Best effort in-place enable (dogfood #163): create the world partition object on the
+        // Best effort in-place enable: create the world partition object on the
         // world settings the way a new partitioned level does. Existing actors stay non-external;
         // a full conversion still needs the WorldPartitionConvertCommandlet.
         AWorldSettings* WorldSettings = World->GetWorldSettings();

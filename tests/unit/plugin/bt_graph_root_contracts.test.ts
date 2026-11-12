@@ -2,7 +2,7 @@
 // linked yet: add_node, then connect_nodes from BehaviorTreeGraphNode_Root_0 makes the root. Every graph-route call on
 // such a tree was refused ("requires UE 5.3+" on every version, then NO_ROOT). The one state still refused is root
 // decorators with no root composite to hang on: UBehaviorTreeGraph::SpawnMissingNodes dereferences the missing
-// composite's node for them (SpawnMissingDecoratorNodes, dogfood #63), and the graph's rebuild discards them.
+// composite's node for them (SpawnMissingDecoratorNodes), and the graph's rebuild discards them.
 // Behaviour belongs to tests/mcp-tools/gameplay/manage-ai.test.mjs and tests/mcp-tools/utility/behavior-tree-get-tree.test.mjs.
 
 import { readFileSync } from 'node:fs';

@@ -2,7 +2,6 @@
 
 // MCP Core
 #include "EngineWireSubsystem.h"
-#include "Core/Module/EngineWireGlobals.h"
 #include "Foundation/HandlerUtils/McpHandlerUtils.h"
 #include "Foundation/BridgeHelpers/McpHelpers.h"
 #include "Foundation/BridgeHelpers/Assets/McpMaterialRecompile.h"

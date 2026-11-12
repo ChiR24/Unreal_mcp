@@ -53,7 +53,7 @@ static void CollectStackIssues(UNiagaraStackEntry* Entry, TArray<TSharedPtr<FJso
     }
 }
 
-// Shared by validate_niagara_system and the add_*_module responses (dogfood #106), so an add
+// Shared by validate_niagara_system and the add_*_module responses, so an add
 // call reports the very same "The module has unmet dependencies" the validator would.
 //
 // An earlier attempt that inspected each script's ENiagaraScriptCompileStatus missed the common

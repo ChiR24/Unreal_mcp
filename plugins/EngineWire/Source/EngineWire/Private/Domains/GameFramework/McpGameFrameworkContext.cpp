@@ -178,7 +178,7 @@ UBlueprint* CreateGameFrameworkBlueprint(const FString& Path, const FString& Nam
         return nullptr;
     }
 
-    UPackage* Package = CreatePackage(*AssetPath);
+    UPackage* Package = McpCreatePackageOrNull(AssetPath);
     if (!Package)
     {
         OutError = FString::Printf(TEXT("Failed to create package: %s"), *AssetPath);

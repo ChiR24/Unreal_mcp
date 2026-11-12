@@ -1,8 +1,8 @@
 // Copyright (c) 2024 EngineWire Contributors
 
-#include "McpFabImportOperations.h"
-#include "McpFabImportState.h"
-#include "McpFabInterchange.h"
+#include "Import/McpFabImportOperations.h"
+#include "Import/McpFabImportState.h"
+#include "Import/McpFabInterchange.h"
 
 // Stopping an import. Fab gives three handles and no more: a queued add is only a closure in this store,
 // a unreal-engine pack's download notification carries a Cancel button, and Interchange has a cancel for

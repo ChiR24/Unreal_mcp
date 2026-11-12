@@ -1,4 +1,4 @@
-// McpWidgetAnimKeyframe.cpp — add_animation_keyframe (dogfood #38).
+// McpWidgetAnimKeyframe.cpp — add_animation_keyframe.
 #include "Domains/WidgetAuthoring/Support/McpWidgetAnimKeys.h"
 #include "Domains/WidgetAuthoring/Support/McpWidgetBPLoading.h"
 #include "Domains/WidgetAuthoring/McpWidgetPayload.h"

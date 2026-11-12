@@ -23,7 +23,7 @@ describe('data registries', () => {
 
   it('refuses every bad request before anything is made', () => {
     const create = read(FOLDER, 'McpDataRegistryCreate.cpp');
-    const made = create.indexOf('NewObject<UObject>(CreatePackage(');
+    const made = create.indexOf('McpCreatePackageOrNull(PackageName)');
     expect(made).toBeGreaterThan(-1);
     for (const code of ['INVALID_ARGUMENT', 'ASSET_EXISTS', 'DATA_REGISTRY_EXISTS', 'DATA_TABLE_NOT_FOUND', 'ROW_STRUCT_MISMATCH']) {
       const refusal = create.indexOf(`TEXT("${code}")`);

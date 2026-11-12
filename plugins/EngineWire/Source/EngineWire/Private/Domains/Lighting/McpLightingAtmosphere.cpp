@@ -60,9 +60,8 @@ bool HandleSetupVolumetricFog(
         return true;
     }
 
-    // `enabled` was hard-coded true here while the TS handler ran
-    // `r.VolumetricFog 0` first for enabled:false, so disabling fog turned the
-    // cvar off and the component flag straight back on.
+    // `enabled` was hard-coded true here, so disabling fog turned the component
+    // flag straight back on.
     // Left out, enabled read as true and switched volumetric fog on for a call that only set viewDistance.
     UExponentialHeightFogComponent* FogComp = FogActor->GetComponent();
     FogComp->Modify();

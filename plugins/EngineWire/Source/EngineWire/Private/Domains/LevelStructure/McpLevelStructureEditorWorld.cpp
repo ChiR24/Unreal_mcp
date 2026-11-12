@@ -172,7 +172,7 @@ void SendLevelEditResult(
 
 ULevelStreaming* FindOrAddStreamingLevel(UWorld* World, const FString& LevelName)
 {
-    // Package name, object path or short name, case-insensitively (dogfood #159: create_sublevel reported the
+    // Package name, object path or short name, case-insensitively (create_sublevel reported the
     // level under /Game/.../Sub but the configurators could not find it).
     FString WantedPackage = LevelName;
     int32 DotIndex = INDEX_NONE;

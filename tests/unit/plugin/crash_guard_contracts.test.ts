@@ -12,10 +12,15 @@ const PRIVATE = join('plugins', 'EngineWire', 'Source', 'EngineWire', 'Private')
 /** Block and line comments removed, so no assertion can be satisfied (or tripped) by prose. */
 const strip = (text: string): string => text.replace(/\/\*[\s\S]*?\*\//gu, ' ').replace(/\/\/[^\n]*/gu, ' ');
 const code = (...segments: readonly string[]): string => strip(readFileSync(join(PRIVATE, ...segments), 'utf8').replace(/\r\n/gu, '\n'));
+/** Every source file under Private with its text, read once: several cases below look over the whole tree. */
+let tree: Map<string, string> | undefined;
+const sources = (): Map<string, string> =>
+  (tree ??= new Map(readdirSync(PRIVATE, { recursive: true, encoding: 'utf8' })
+    .filter((entry) => /\.(?:cpp|h)$/u.test(entry))
+    .map((entry) => [entry, readFileSync(join(PRIVATE, entry), 'utf8')])));
 /** The source files under Private that name a word at all: a plain look that spares the comment strip for the rest. */
 const filesNaming = (word: string): string[] =>
-  readdirSync(PRIVATE, { recursive: true, encoding: 'utf8' })
-    .filter((entry) => /\.(?:cpp|h)$/u.test(entry) && readFileSync(join(PRIVATE, entry), 'utf8').includes(word));
+  [...sources()].filter(([, text]) => text.includes(word)).map(([entry]) => entry);
 
 describe('a value the engine answers with a fatal error is refused first', () => {
   it('a montage notify and a Behavior Tree node are made only from a class of their base that can be instanced', () => {
@@ -54,7 +59,7 @@ describe('a value the engine answers with a fatal error is refused first', () =>
     const valid = helper.indexOf('FPackageName::IsValidLongPackageName(PackagePath, true, &InvalidWhy)');
     expect(valid).toBeGreaterThan(-1);
     expect(helper).toContain('PackagePath.Len() >= NAME_SIZE');
-    expect(valid).toBeLessThan(helper.indexOf('CreatePackage(*PackagePath)'));
+    expect(valid).toBeLessThan(helper.indexOf('UPackage *Package = McpCreatePackageOrNull(PackagePath);'));
     for (const file of [
       ['AssetWorkflow', 'Structs', 'McpAssetStructsLifecycle.cpp'],
       ['AssetWorkflow', 'Structs', 'McpAssetStructsAssetOpsRename.cpp'],
@@ -67,11 +72,23 @@ describe('a value the engine answers with a fatal error is refused first', () =>
       expect(source, file.join('/')).toContain('McpCreatePackageForNewAsset(');
       expect(source.match(/(?<!\w)CreatePackage\(/gu), file.join('/')).toBeNull();
     }
-    // The one bare CreatePackage left in the audio effects takes a name built from a known effect type.
+    // The audio effects make their preset package under a name built from a known effect type.
     const effects = code('Domains', 'AudioAuthoring', 'McpAudioEffects.cpp');
     const known = effects.indexOf('if (!SourceEffectPresetClass(EffectType))');
     expect(known).toBeGreaterThan(-1);
-    expect(known).toBeLessThan(effects.indexOf('CreatePackage(*PresetPkg)'));
+    expect(known).toBeLessThan(effects.indexOf('McpCreatePackageOrNull(PresetPkg)'));
+  });
+
+  // CreatePackage is a Fatal log for a name holding "//" (a folder ending in a slash joined to a name), so the engine
+  // call sits in one function that answers null for such a name, and every creator's own null branch reports it.
+  it('no handler hands the engine a package name it stops the editor on', () => {
+    // Read as written: the comment strip would cut the line at the "//" the check names.
+    expect(readFileSync(join(PRIVATE, 'Foundation', 'BridgeHelpers', 'Assets', 'McpAssetCreation.h'), 'utf8'))
+      .toContain('PackagePath.Contains(TEXT("//")) || PackagePath.Len() >= NAME_SIZE ? nullptr : CreatePackage(*PackagePath)');
+    const bare = filesNaming('CreatePackage(')
+      .filter((file) => !/Tests?\.cpp$/u.test(file) && !file.endsWith('McpAssetCreation.h'))
+      .filter((file) => /(?<!\w)CreatePackage\(/u.test(strip(readFileSync(join(PRIVATE, file), 'utf8'))));
+    expect(bare).toEqual([]);
   });
 
   it('a Blueprint component is added only from a component class that can be instanced', () => {

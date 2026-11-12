@@ -113,7 +113,7 @@ bool HandleSpawnNiagara(const FEffectActionContext& Context, bool bIsCreateEffec
         NiagaraComponent->DeactivateImmediate();
     }
     // Activation needs a ticking world: in edit mode the component stays inactive even
-    // though the asset is assigned, so only a missing asset is a failure (dogfood #107).
+    // though the asset is assigned, so only a missing asset is a failure.
     if (!NiagaraComponent->GetAsset())
     {
         Context.Bridge.SendAutomationResponse(

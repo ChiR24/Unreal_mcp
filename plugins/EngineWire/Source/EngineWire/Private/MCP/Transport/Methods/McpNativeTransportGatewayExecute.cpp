@@ -1,6 +1,6 @@
 // McpNativeTransportGatewayExecute.cpp — canonical execute for the 'unreal' tool
 //
-// Split out of McpNativeTransportGateway.cpp so discovery (search/describe) and
+// Split out of McpNativeTransportGateway.cpp (beside it) so discovery (search/describe) and
 // execute evolve independently. Session validation, dynamic tool state, the
 // local-tool intercept and the subsystem queue all stay on their existing paths.
 
@@ -114,7 +114,7 @@ void FMcpNativeTransport::HandleGatewayExecute(
 			return;
 		}
 		FMcpResultPage Page;
-		const FString Refusal = McpNextResultPage(PageCursor, *Context.PageOwner, 100000, Page);
+		const FString Refusal = McpNextResultPage(PageCursor, *Context.PageOwner, McpReplyCharBudget, Page);
 		if (!Refusal.IsEmpty())
 		{
 			TSharedPtr<FJsonObject> Guidance = MakeShared<FJsonObject>();
@@ -133,7 +133,7 @@ void FMcpNativeTransport::HandleGatewayExecute(
 		return;
 	}
 
-	// A call that already failed the same way three times in a row is not run again (mirrors gateway-loop-guard.ts).
+	// A call that already failed the same way three times in a row is not run again.
 	// Before the policy gate, so nobody is asked to approve a call that is then refused.
 	const FString Repeated = McpLoopGuardRefusal(Context.PageOwner);
 	if (!Repeated.IsEmpty())
@@ -196,8 +196,7 @@ void FMcpNativeTransport::HandleGatewayExecute(
 			UE_LOG(LogMcpNativeTransport, Warning,
 				TEXT("gateway execute refused by policy before dispatch (%s, correlationId=%s)"),
 				*Decision.ErrorCode, *Context.CorrelationId);
-			// Mirrors checkScopeAuthorization/checkConsentAuthorization in
-			// gateway-execute-policy.ts, which emit this same nextCall. Not after the user said no: describe's
+			// Not after the user said no: describe's
 			// grant would run what they just refused.
 			TSharedPtr<FJsonObject> Guidance = MakeShared<FJsonObject>();
 			Guidance->SetObjectField(TEXT("nextCall"),
@@ -253,7 +252,7 @@ void FMcpNativeTransport::HandleGatewayExecute(
 				// client joining on correlationId saw a mismatch it could not tell
 				// from a bug. The envelope names THIS call, `replayed` says why the
 				// body is the earlier one, and `replayedFrom` keeps the original
-				// joinable. Mirrors markReplayed in gateway-execute-idempotency.ts.
+				// joinable.
 				FString RecordedCorrelation;
 				if (Recorded->TryGetStringField(TEXT("correlationId"), RecordedCorrelation))
 				{

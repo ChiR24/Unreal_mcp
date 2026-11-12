@@ -122,7 +122,7 @@ TSharedPtr<FJsonObject> HandleSoundCueNodeActions(const FString& SubAction, cons
 			if (Node && Node->GetName() == SourceNodeId && !SourceNode) { SourceNode = Node; }
 			if (Node && Node->GetName() == TargetNodeId && !TargetNode) { TargetNode = Node; }
 		}
-		// Dogfood #116: name the nodes that exist so the caller can pick a real id.
+		// Name the nodes that exist so the caller can pick a real id.
 		TArray<FString> AvailableNodes;
 		AvailableNodes.Add(TEXT("Output"));
 		for (USoundNode* Node : Cue->AllNodes) { if (Node) { AvailableNodes.Add(Node->GetName()); } }
@@ -155,7 +155,7 @@ TSharedPtr<FJsonObject> HandleSoundCueNodeActions(const FString& SubAction, cons
 		{
 			if (SourceNode->GetMaxChildNodes() <= InputPins.Num())
 			{
-				return McpHandlerUtils::BuildErrorResponse(TEXT("MAX_CHILDREN_EXCEEDED"), FString::Printf(TEXT("Source node accepts %d child inputs, requested index %d. sourceNodeId is the PARENT that receives the child on one of its input pins; pass the receiving node as sourceNodeId and the child as targetNodeId (dogfood #116)"), SourceNode->GetMaxChildNodes(), ChildIndex));
+				return McpHandlerUtils::BuildErrorResponse(TEXT("MAX_CHILDREN_EXCEEDED"), FString::Printf(TEXT("Source node accepts %d child inputs, requested index %d. sourceNodeId is the PARENT that receives the child on one of its input pins; pass the receiving node as sourceNodeId and the child as targetNodeId."), SourceNode->GetMaxChildNodes(), ChildIndex));
 			}
 			SourceNode->InsertChildNode(SourceNode->ChildNodes.Num());
 			InputPins.Empty();
@@ -211,7 +211,7 @@ TSharedPtr<FJsonObject> HandleSoundCueNodeActions(const FString& SubAction, cons
 			return McpHandlerUtils::BuildErrorResponse(TEXT("CUE_NOT_FOUND"), FString::Printf(TEXT("Could not load SoundCue: %s"), *AssetPath));
 		}
 
-		// Dogfood #114: a missing concurrencyPath used to silently clear the set and report success.
+		// A missing concurrencyPath used to silently clear the set and report success.
 		if (ConcurrencyPath.IsEmpty())
 		{
 			return McpHandlerUtils::BuildErrorResponse(TEXT("INVALID_ARGUMENT"), TEXT("concurrencyPath is required (a SoundConcurrency asset path)"));

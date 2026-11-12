@@ -69,7 +69,7 @@ FString BuildAddScript(const FString& RequestId, const FString& ListingId, const
     if (typeof v === "object") { var o = {}; if (d <= 0) return "object"; Object.keys(v).slice(0, 40).forEach(function (k) { o[k] = shape(v[k], d - 1); }); return o; }
     return typeof v;
   }
-  // Mirrors the C++/TS receipt redaction for the two fields that echo
+  // Mirrors the plugin's receipt redaction for the two fields that echo
   // third-party response text (a failed claim body and download-info detail).
   // The reply is logged in full on refusal, so secret-shaped values must not
   // survive in it; only the value AFTER masking crosses the boundary.

@@ -5,6 +5,7 @@
 #include "MCP/Execute/McpNativeGatewayCanonicalRecords.h"
 #include "MCP/Gateway/McpNativeGatewayCapabilityStore.h"
 #include "MCP/Gateway/McpNativeGatewayCatalog.h"
+#include "MCP/Gateway/McpNativeGatewayGuidance.h"
 #include "MCP/Gateway/McpNativeGatewayFolding.h"
 #include "MCP/Execute/McpNativeGatewayExecuteRequest.h"
 #include "MCP/Execute/McpNativeGatewayReceipt.h"
@@ -18,7 +19,7 @@
 
 namespace
 {
-// Mirror of HEX_REVISION (/^[0-9a-f]{1,64}$/) in ids.ts: a well-formed catalog
+// A well-formed catalog
 // revision digest is 1..64 lowercase hex characters. Anything else is malformed.
 bool IsCatalogRevisionDigest(const FString& Value)
 {
@@ -86,8 +87,8 @@ TSharedPtr<FJsonObject> ValidateAndResolveGatewayExecute(
 	// capability), so it is injected for validation only where declared.
 	const TSharedPtr<FJsonObject> InputSchema = Request.Record->InputSchema;
 	// A folded family: an old name implies selector values, pinned before
-	// defaults and validation so the folded contract accepts the old call
-	// (mirror of applyFoldedPins in gateway-execute.ts). A caller who names the
+	// defaults and validation so the folded contract accepts the old call.
+	// A caller who names the
 	// old action AND sends a disagreeing selector value is contradictory, not
 	// legacy — refuse instead of letting the mismatch ride into the handler.
 	// An alias a member declared stands for that member's old name.
@@ -101,7 +102,7 @@ TSharedPtr<FJsonObject> ValidateAndResolveGatewayExecute(
 	if (!McpApplyFoldedPins(*Request.Record, RequestedAction, Request.Params, &ConflictKey, &PinnedValue))
 	{
 		// Name the pinned value and hand back the primary action with the same
-		// params (mirror of gateway-execute-static-check.ts): "conflicts with the
+		// params: "conflicts with the
 		// one supplied" left a caller with nothing to try next.
 		SentParams->TryGetStringField(ConflictKey, SentValue);
 		TSharedPtr<FJsonObject> ConflictGuidance = GatewaySchemaGuidance(ParentTool, LegacyAction, TEXT("/") + ConflictKey);
@@ -137,7 +138,7 @@ TSharedPtr<FJsonObject> ValidateAndResolveGatewayExecute(
 	}
 
 	// A folded family's union schema keeps only what every variant requires; the variant that will
-	// run is held to its own record's requirements as well (mirror of gateway-execute-static-check.ts).
+	// run is held to its own record's requirements as well.
 	// Last, every string and key the call sends is held to its maxLength or the FName limit, boundary
 	// interiors included: an 1100-character tag reached FName(*Tag) and the engine assert closed the editor.
 	FMcpSchemaViolationDetail Violation;
@@ -147,7 +148,7 @@ TSharedPtr<FJsonObject> ValidateAndResolveGatewayExecute(
 		|| !McpCheckInputStringLengths(ToValidate, InputSchema, Violation))
 	{
 		const FString Code = McpSchemaViolationCode(Violation.Reason);
-		// The wording and guidance of validateInput in gateway-execute-static-check.ts.
+		// The violation, the capability it is for, and where the contract is.
 		const FString Message = FString::Printf(TEXT("%s for %s. Call describe before execution."), *Violation.Message, *Request.CapabilityId);
 		FMcpSemanticError SchemaError = Violation.Reason == EMcpSchemaViolation::Range
 			? McpRangeError(Violation.Pointer, Message)
@@ -156,7 +157,7 @@ TSharedPtr<FJsonObject> ValidateAndResolveGatewayExecute(
 			GatewaySchemaViolationGuidance(ParentTool, LegacyAction, Violation.Pointer, InputSchema));
 	}
 
-	// Availability gate: an engine older than the record's minEngineVersion, or (dogfood #91) a capability whose
+	// Availability gate: an engine older than the record's minEngineVersion, or a capability whose
 	// editorStates exclude "edit" with no running world; refused up front instead of failing deep in a handler.
 	{
 		FString GateCode;
@@ -174,8 +175,7 @@ TSharedPtr<FJsonObject> ValidateAndResolveGatewayExecute(
 		const FString Current = FMcpCanonicalRecordIndex::Get().GetCatalogRevision();
 		// TryGetStringField silently coerces a JSON number to its digits (so 12345
 		// would read as the hex-looking "12345"), so the JSON type is checked
-		// explicitly: only a genuine string is a candidate pin, matching the TS
-		// CatalogRevisionSchema which rejects any non-string value.
+		// explicitly: only a genuine string is a candidate pin.
 		const TSharedPtr<FJsonValue>* PinValue = Request.Options->Values.Find(TEXT("expectedCatalogRevision"));
 		const bool bIsStringPin = PinValue != nullptr && PinValue->IsValid()
 			&& (*PinValue)->Type == EJson::String;
@@ -266,7 +266,7 @@ TSharedPtr<FJsonObject> ValidateAndResolveGatewayExecute(
 	return nullptr;
 }
 
-// McpProjectCanonicalOutput lives in MCP/Gateway/McpNativeGatewayOutputProjection.cpp.
+// McpProjectCanonicalOutput lives in McpNativeGatewayOutputProjection.cpp.
 
 TSharedPtr<FJsonObject> ValidateGatewayExecuteOutput(
 	const FString& CapabilityId, const TSharedPtr<FJsonObject>& OutputSchema,

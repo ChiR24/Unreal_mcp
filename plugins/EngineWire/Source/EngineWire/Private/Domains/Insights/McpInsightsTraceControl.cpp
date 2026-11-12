@@ -181,7 +181,7 @@ bool HandleStartSession(
     Result->SetStringField(TEXT("status"), TEXT("started"));
     AddStartFields(Request, Result);
     AddTraceStatus(Result);
-    // Optionally open the Unreal Insights viewer on the new trace (dogfood #173).
+    // Optionally open the Unreal Insights viewer on the new trace.
     const bool bViewerFailed = bLaunchViewer &&
         !LaunchInsightsViewer(Request.Mode == ETraceStartMode::Network ? FString() : Target, Result);
     if (!bLaunchViewer)

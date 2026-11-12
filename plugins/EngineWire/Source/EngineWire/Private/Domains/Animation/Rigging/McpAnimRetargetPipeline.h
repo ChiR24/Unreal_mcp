@@ -8,6 +8,7 @@
 
 #include "CoreMinimal.h"
 #include "Core/Compatibility/McpVersionCompatibility.h"
+#include "Foundation/BridgeHelpers/Assets/McpAssetCreation.h"
 #include "Safety/McpSafeOperations.h"
 
 #include "Animation/Skeleton.h"
@@ -130,7 +131,7 @@ inline UIKRetargeter *McpBuildRetargeter(UIKRigDefinition *SourceRig,
                                          const FString &PackagePath,
                                          const FString &AssetName,
                                          FString &OutError) {
-  UPackage *Package = CreatePackage(*(PackagePath / AssetName));
+  UPackage *Package = McpCreatePackageOrNull(PackagePath / AssetName);
   if (Package == nullptr) {
     OutError = FString::Printf(TEXT("Could not create package %s/%s"),
                                *PackagePath, *AssetName);

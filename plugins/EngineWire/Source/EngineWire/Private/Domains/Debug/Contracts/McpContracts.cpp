@@ -137,19 +137,17 @@ void AddExpectations(const FString& RequestId, TSharedPtr<FJsonObject>& Result)
     {
         Result = MakeShared<FJsonObject>();
     }
-    TArray<TSharedPtr<FJsonValue>> Warnings;
+    TArray<FString> Said;
+    FString Text;
     const TArray<TSharedPtr<FJsonValue>>* Existing = nullptr;
     if (Result->TryGetArrayField(TEXT("warnings"), Existing))
     {
-        Warnings = *Existing;
-    }
-    TArray<FString> Said;
-    FString Text;
-    for (const TSharedPtr<FJsonValue>& Warning : Warnings)
-    {
-        if (Warning.IsValid() && Warning->TryGetString(Text))
+        for (const TSharedPtr<FJsonValue>& Warning : *Existing)
         {
-            Said.Add(Text);
+            if (Warning.IsValid() && Warning->TryGetString(Text))
+            {
+                Said.Add(Text);
+            }
         }
     }
     // A placement the handler judged itself stays in its own field (the change watch does not repeat it): a spawn's
@@ -178,9 +176,8 @@ void AddExpectations(const FString& RequestId, TSharedPtr<FJsonObject>& Result)
     Result->SetArrayField(TEXT("expectations"), JudgeAll(Held.Expect, &Said, false, Failed));
     if (Failed.Num() > 0)
     {
-        Warnings.Add(MakeShared<FJsonValueString>(FString::Printf(
-            TEXT("%d of %d expectations failed; the call itself succeeded (expectations[] says what was found)."), Failed.Num(), Held.Expect.Num())));
-        Result->SetArrayField(TEXT("warnings"), Warnings);
+        McpHandlerUtils::AppendWarning(Result, FString::Printf(
+            TEXT("%d of %d expectations failed; the call itself succeeded (expectations[] says what was found)."), Failed.Num(), Held.Expect.Num()));
     }
 }
 

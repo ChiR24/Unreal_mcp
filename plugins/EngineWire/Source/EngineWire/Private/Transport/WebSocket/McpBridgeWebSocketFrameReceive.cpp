@@ -8,7 +8,6 @@
 
 #include "HAL/Event.h"
 #include "Math/UnrealMathUtility.h"
-#include "Misc/EngineVersionComparison.h"
 #include "Misc/ScopeLock.h"
 #include "Misc/Timespan.h"
 #include "Sockets.h"
@@ -16,7 +15,7 @@
 using namespace McpBridgeWebSocket;
 
 void FMcpBridgeWebSocket::HandleTextPayload(const TArray<uint8> &Payload) {
-  const FString Message = BytesToStringView(Payload);
+  const FString Message = Utf8BytesToString(Payload);
   DispatchOnGameThread([WeakThis = AsWeak(), Message] {
     if (TSharedPtr<FMcpBridgeWebSocket> Pinned = WeakThis.Pin()) {
       Pinned->MessageDelegate.Broadcast(Pinned, Message);
@@ -32,7 +31,7 @@ void FMcpBridgeWebSocket::ResetFragmentState() {
 bool FMcpBridgeWebSocket::ReceiveFrame() {
   uint8 Header[2];
   if (!ReceiveExact(Header, 2)) {
-    TearDown(TEXT("Failed to read WebSocket frame header."), false, 4001);
+    TearDown(TEXT("Failed to read WebSocket frame header."), false, McpWsClose::ReadFailed);
     return false;
   }
 
@@ -41,15 +40,15 @@ bool FMcpBridgeWebSocket::ReceiveFrame() {
   uint64 PayloadLength = Header[1] & 0x7F;
   const bool bMasked = (Header[1] & 0x80) != 0;
 
-  if (bServerAcceptedConnection && !bMasked) {
-    TearDown(TEXT("Client frames must be masked."), false, 1002);
+  if (!bMasked) {
+    TearDown(TEXT("Client frames must be masked."), false, McpWsClose::ProtocolError);
     return false;
   }
 
   if (PayloadLength == 126) {
     uint8 Extended[2];
     if (!ReceiveExact(Extended, sizeof(Extended))) {
-      TearDown(TEXT("Failed to read extended payload length."), false, 4001);
+      TearDown(TEXT("Failed to read extended payload length."), false, McpWsClose::ReadFailed);
       return false;
     }
     uint16 ShortVal = 0;
@@ -58,7 +57,7 @@ bool FMcpBridgeWebSocket::ReceiveFrame() {
   } else if (PayloadLength == 127) {
     uint8 Extended[8];
     if (!ReceiveExact(Extended, sizeof(Extended))) {
-      TearDown(TEXT("Failed to read extended payload length."), false, 4001);
+      TearDown(TEXT("Failed to read extended payload length."), false, McpWsClose::ReadFailed);
       return false;
     }
     uint64 LongVal = 0;
@@ -68,14 +67,14 @@ bool FMcpBridgeWebSocket::ReceiveFrame() {
 
   if (PayloadLength > MaxWebSocketFramePayloadBytes) {
     TearDown(TEXT("WebSocket message too large."), false,
-             WebSocketCloseCodeMessageTooBig);
+             McpWsClose::MessageTooBig);
     return false;
   }
 
   uint8 MaskKey[4] = {0, 0, 0, 0};
   if (bMasked) {
     if (!ReceiveExact(MaskKey, 4)) {
-      TearDown(TEXT("Failed to read masking key."), false, 4001);
+      TearDown(TEXT("Failed to read masking key."), false, McpWsClose::ReadFailed);
       return false;
     }
   }
@@ -87,7 +86,7 @@ bool FMcpBridgeWebSocket::ReceiveFrame() {
       const int32 Chunk = static_cast<int32>(FMath::Min<uint64>(PayloadLength - Payload.Num(), WebSocketReceiveChunkBytes));
       const int32 At = Payload.AddUninitialized(Chunk);
       if (!ReceiveExact(Payload.GetData() + At, Chunk)) {
-        TearDown(TEXT("Failed to read WebSocket payload."), false, 4001);
+        TearDown(TEXT("Failed to read WebSocket payload."), false, McpWsClose::ReadFailed);
         return false;
       }
     }
@@ -99,13 +98,13 @@ bool FMcpBridgeWebSocket::ReceiveFrame() {
   }
 
   if (OpCode == OpCodeClose) {
-    TearDown(TEXT("WebSocket closed by peer."), true, 1000);
+    TearDown(TEXT("WebSocket closed by peer."), true, McpWsClose::Normal);
     return false;
   }
 
   if ((OpCode & 0x08) != 0) {
     if (!bFinalFrame) {
-      TearDown(TEXT("Control frames must not be fragmented."), false, 4002);
+      TearDown(TEXT("Control frames must not be fragmented."), false, McpWsClose::FramingViolation);
       return false;
     }
 
@@ -127,7 +126,6 @@ bool FMcpBridgeWebSocket::ReceiveFrame() {
           Pinned->HeartbeatDelegate.Broadcast(Pinned);
         }
       });
-      return true;
     }
 
     return true;
@@ -135,7 +133,7 @@ bool FMcpBridgeWebSocket::ReceiveFrame() {
 
   if (OpCode == OpCodeContinuation) {
     if (!bFragmentMessageActive) {
-      TearDown(TEXT("Unexpected continuation frame."), false, 4002);
+      TearDown(TEXT("Unexpected continuation frame."), false, McpWsClose::FramingViolation);
       return false;
     }
 
@@ -143,7 +141,7 @@ bool FMcpBridgeWebSocket::ReceiveFrame() {
                            static_cast<uint64>(Payload.Num());
     if (NewSize > MaxWebSocketMessageBytes) {
       TearDown(TEXT("WebSocket message too large."), false,
-               WebSocketCloseCodeMessageTooBig);
+               McpWsClose::MessageTooBig);
       return false;
     }
 
@@ -158,7 +156,7 @@ bool FMcpBridgeWebSocket::ReceiveFrame() {
 
   if (bFragmentMessageActive) {
     TearDown(TEXT("Received new data frame before completing fragmented message."),
-             false, 4002);
+             false, McpWsClose::FramingViolation);
     return false;
   }
 
@@ -168,7 +166,7 @@ bool FMcpBridgeWebSocket::ReceiveFrame() {
     } else {
       if (static_cast<uint64>(Payload.Num()) > MaxWebSocketMessageBytes) {
         TearDown(TEXT("WebSocket message too large."), false,
-                 WebSocketCloseCodeMessageTooBig);
+                 McpWsClose::MessageTooBig);
         return false;
       }
       FragmentAccumulator = Payload;
@@ -178,11 +176,11 @@ bool FMcpBridgeWebSocket::ReceiveFrame() {
   }
 
   if (OpCode == OpCodeBinary) {
-    TearDown(TEXT("Binary frames are not supported."), false, 4003);
+    TearDown(TEXT("Binary frames are not supported."), false, McpWsClose::UnsupportedData);
     return false;
   }
 
-  TearDown(TEXT("Unsupported WebSocket opcode."), false, 4003);
+  TearDown(TEXT("Unsupported WebSocket opcode."), false, McpWsClose::UnsupportedData);
   return false;
 }
 
@@ -195,11 +193,7 @@ bool FMcpBridgeWebSocket::ReceiveExact(uint8 *Buffer, SIZE_T Length) {
         FMath::Min(static_cast<SIZE_T>(PendingReceived.Num()), Length);
     if (Existing > 0) {
       FMemory::Memcpy(Buffer, PendingReceived.GetData(), Existing);
-      PendingReceived.RemoveAt(0, Existing
-#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 1
-      , MCP_DISALLOW_SHRINKING
-#endif
-      );
+      PendingReceived.RemoveAt(0, Existing, MCP_DISALLOW_SHRINKING);
       Collected += Existing;
     }
   }

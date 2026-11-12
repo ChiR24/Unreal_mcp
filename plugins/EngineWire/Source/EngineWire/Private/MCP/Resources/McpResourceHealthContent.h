@@ -1,5 +1,5 @@
 // McpResourceHealthContent.h
-// Task 47: the body of the EXISTING `ue://health` resource on the native
+// The body of the EXISTING `ue://health` resource on the native
 // transport. No new uri is introduced - this is what `McpResourceRead` serves
 // when a client reads the health resource the native catalog already lists.
 //
@@ -21,7 +21,7 @@ namespace McpResourceHealth
 {
 	/**
 	 * Readiness + anonymous aggregate diagnostics + the rendered Prometheus
-	 * exposition, mirroring what the TypeScript surface puts on `ue://health`.
+	 * exposition: the body of `ue://health`.
 	 * Bounded and redacted by construction: every value is a number, a bool, or
 	 * a member of a closed schema set.
 	 */

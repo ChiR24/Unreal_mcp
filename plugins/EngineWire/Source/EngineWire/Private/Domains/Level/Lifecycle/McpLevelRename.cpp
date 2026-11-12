@@ -41,7 +41,7 @@ bool HandleRenameLevelAction(UEngineWireSubsystem& Subsystem, const FString& Req
     }
     // A level that is open in the editor (current world or a streaming
     // sub-level) cannot have its source deleted after the copy, which used to
-    // leave both files behind and report SOURCE_DELETE_FAILED (dogfood #154).
+    // leave both files behind and report SOURCE_DELETE_FAILED.
     if (GEditor) {
       if (UWorld* EditorWorld = GEditor->GetEditorWorldContext().World()) {
         const FString SourcePackage = NormalizeLevelPackagePath(SourcePath);

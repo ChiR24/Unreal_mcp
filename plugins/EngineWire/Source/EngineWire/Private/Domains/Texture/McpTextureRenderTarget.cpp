@@ -128,7 +128,7 @@ TSharedPtr<FJsonObject> HandleCreateRenderTarget(const TSharedPtr<FJsonObject>& 
         return Response;
     }
 
-    UPackage* Package = CreatePackage(*FullPath);
+    UPackage* Package = McpCreatePackageOrNull(FullPath);
     if (!Package)
     {
         TEXTURE_ERROR_RESPONSE(TEXT("Failed to create package"));

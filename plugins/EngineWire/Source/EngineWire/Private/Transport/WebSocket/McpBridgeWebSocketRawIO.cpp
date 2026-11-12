@@ -1,13 +1,7 @@
 #include "Transport/WebSocket/McpBridgeWebSocket.h"
 
 #include "Sockets.h"
-
-#if WITH_SSL
-#define UI OSSL_UI
-#include <openssl/err.h>
-#include <openssl/ssl.h>
-#undef UI
-#endif
+#include "Transport/WebSocket/McpBridgeWebSocketOpenSsl.h"
 
 bool FMcpBridgeWebSocket::SendRaw(const uint8* Data, int32 Length,
                                   int32& OutBytesSent) {

@@ -20,7 +20,7 @@ bool UEngineWireSubsystem::HandleSequenceSetMetadata(
     return true;
   }
   // Accept the documented `metadata` object (or `tags`) and the single-pair
-  // `key`/`value` spelling that callers reach for first (dogfood #127).
+  // `key`/`value` spelling that callers reach for first.
   TArray<TPair<FString, FString>> Pending;
   const TSharedPtr<FJsonObject> *MetadataObj = nullptr;
   if ((LocalPayload->TryGetObjectField(TEXT("metadata"), MetadataObj) ||

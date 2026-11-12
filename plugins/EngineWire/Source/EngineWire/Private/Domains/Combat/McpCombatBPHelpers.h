@@ -34,7 +34,7 @@ inline UBlueprint* CreateActorBlueprint(
         return nullptr;
     }
 
-    UPackage* Package = CreatePackage(*FullPath);
+    UPackage* Package = McpCreatePackageOrNull(FullPath);
     if (!Package)
     {
         OutError = FString::Printf(TEXT("Failed to create package: %s"), *FullPath);

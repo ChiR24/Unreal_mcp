@@ -110,7 +110,7 @@ inline TSharedPtr<FJsonValue> SampleValue(const TSharedPtr<FJsonObject>& Propert
 		return MakeShared<FJsonValueNull>();
 	}
 
-	FString MaxLengthValue = TEXT("/Game/Task27/Sample");
+	FString MaxLengthValue = TEXT("/Game/McpSample/Path");
 	double MaxLength = 0.0;
 	if (PropertySchema->TryGetNumberField(TEXT("maxLength"), MaxLength) &&
 		MaxLengthValue.Len() > static_cast<int32>(MaxLength))

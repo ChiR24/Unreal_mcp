@@ -1,6 +1,6 @@
 // McpPromptCatalog.cpp
 // The six step-by-step workflow prompts, data only; the playbooks follow them (McpPromptPlaybooks.cpp).
-#include "McpPromptCatalog.h"
+#include "MCP/Primitives/McpPromptCatalog.h"
 
 const TArray<FMcpWorkflowPrompt>& McpWorkflowPrompts()
 {

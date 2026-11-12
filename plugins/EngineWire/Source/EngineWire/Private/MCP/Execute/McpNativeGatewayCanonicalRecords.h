@@ -61,7 +61,7 @@ public:
 	 * The advertised primary action for a capability: its first legacy id. A
 	 * folded family carries further pairs (the old names it replaced), which
 	 * resolve through FindByLegacy but never displace the primary. This is NOT
-	 * routing.dispatchAction (that names the internal TypeScript route).
+	 * routing.dispatchAction (the action name the handler is reached under).
 	 */
 	FString GetLegacyActionForCapability(const FString& CapabilityId) const;
 
@@ -70,7 +70,7 @@ public:
 	/**
 	 * A capability ID's namespace (asset.list -> asset) is not always a parent tool: asset.* is dispatched by
 	 * manage_asset, blueprint.* by manage_blueprint. The parent tool a namespace names, when every record carrying
-	 * it agrees on one (the TypeScript deriveNamespaceAliases rule); otherwise, and for a real tool name, Tool.
+	 * it agrees on one; otherwise, and for a real tool name, Tool.
 	 */
 	FString ResolveToolNamespace(const FString& Tool) const;
 

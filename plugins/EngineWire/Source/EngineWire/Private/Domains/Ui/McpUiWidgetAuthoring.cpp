@@ -113,7 +113,7 @@ bool HandleWidgetAuthoringAction(
       }
       ParentUClass = Requested;
     }
-    UPackage *Package = CreatePackage(*SafeTargetPath);
+    UPackage *Package = McpCreatePackageOrNull(SafeTargetPath);
     if (!Package) {
       Message = FString::Printf(TEXT("Failed to create package %s"), *SafeTargetPath);
       ErrorCode = TEXT("PACKAGE_CREATE_FAILED");

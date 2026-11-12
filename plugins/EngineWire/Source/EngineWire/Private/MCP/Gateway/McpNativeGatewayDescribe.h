@@ -8,8 +8,8 @@
 
 class FMcpCapabilityStore;
 
-/** Progressive discovery, as on the TS door: catalog -> domain -> family -> one capability -> one parameter. */
-/** describe without a tool: the domains, one domain's families, or one family's capabilities (gateway-describe-browse.ts). */
+/** Progressive discovery: catalog -> domain -> family -> one capability -> one parameter. */
+/** describe without a tool: the domains, one domain's families, or one family's capabilities. */
 TSharedPtr<FJsonObject> McpGatewayDescribeBrowse(
 	const FMcpDiscoveryQuery& Input, const FMcpCapabilityStore& Store, FMcpToolEnabledPredicate IsToolEnabled);
 /** describe { tool }: the parent's action names and a browse call, the whole list unless the caller sent limit. */

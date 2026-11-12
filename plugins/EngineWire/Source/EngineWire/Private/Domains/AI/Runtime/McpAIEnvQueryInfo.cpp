@@ -1,6 +1,6 @@
 // McpAIEnvQueryInfo.cpp — get_ai_info {queryPath} payload.
 //
-// Dogfood #76: the EQS branch only echoed the query name. Serialize the options
+// The EQS branch only echoed the query name. Serialize the options
 // (generator + tests) so a client can see what the query actually does.
 #include "Domains/AI/McpAIContext.h"
 

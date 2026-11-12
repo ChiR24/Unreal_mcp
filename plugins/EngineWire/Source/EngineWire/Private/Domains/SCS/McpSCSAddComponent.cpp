@@ -278,7 +278,7 @@ TSharedPtr<FJsonObject> FSCSHandlers::AddSCSComponent(
   Result->SetStringField(TEXT("component_name"), ComponentName);
   Result->SetStringField(TEXT("component_class"), CompClass->GetName());
   // Report the parent the engine actually attached to: a new scene component with no
-  // explicit parent lands under the root node, not at "(root)" (dogfood #23).
+  // explicit parent lands under the root node, not at "(root)".
   FString ActualParent = ParentComponentName;
   if (USCS_Node *ActualParentNode = SCS->FindParentNode(VerifiedNode)) {
     ActualParent = ActualParentNode->GetVariableName().ToString();
@@ -288,7 +288,7 @@ TSharedPtr<FJsonObject> FSCSHandlers::AddSCSComponent(
   Result->SetStringField(TEXT("parent"), !bSceneComponent ? TEXT("(none - not a scene component)")
                                          : ActualParent.IsEmpty() ? TEXT("(root)") : ActualParent);
   // componentName is the SCS name the caller asked for and can address again; the internal
-  // variable/template name (Name_GEN_VARIABLE) rides separately (dogfood #23).
+  // variable/template name (Name_GEN_VARIABLE) rides separately.
   Result->SetStringField(TEXT("componentName"), ComponentName);
   Result->SetStringField(TEXT("variableName"), VerifiedNode->GetVariableName().ToString());
   Result->SetBoolField(TEXT("compiled"), bCompiled);
@@ -301,7 +301,7 @@ TSharedPtr<FJsonObject> FSCSHandlers::AddSCSComponent(
     if (USceneComponent *SceneComp =
             Cast<USceneComponent>(NewNode->ComponentTemplate)) {
       AddComponentVerification(Result, SceneComp);
-      // AddComponentVerification reports the template object name; keep the SCS name authoritative (dogfood #23).
+      // AddComponentVerification reports the template object name; keep the SCS name authoritative.
       Result->SetStringField(TEXT("componentName"), ComponentName);
     }
   }

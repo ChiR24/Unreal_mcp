@@ -82,8 +82,12 @@ bool HandleCreate(UEngineWireSubsystem* Self, const FString& RequestId, const TS
 		return Refuse(Tables.Num() == 0 ? FString(TEXT("dataTables lists no table.")) : FString(TEXT("This engine's DataRegistry "
 			"classes lack the properties a registry is made from.")), TEXT("INVALID_ARGUMENT"));
 	}
-	UObject* Registry = NewObject<UObject>(CreatePackage(*PackageName), Class, FName(*FPackageName::GetShortName(PackageName)),
-		RF_Public | RF_Standalone);
+	UPackage* Package = McpCreatePackageOrNull(PackageName);
+	if (!Package)
+	{
+		return Refuse(FString::Printf(TEXT("Could not create the package %s."), *PackageName), TEXT("PACKAGE_ERROR"));
+	}
+	UObject* Registry = NewObject<UObject>(Package, Class, FName(*FPackageName::GetShortName(PackageName)), RF_Public | RF_Standalone);
 	TypeProperty->SetPropertyValue_InContainer(Registry, FName(*RegistryType));
 	StructProperty->SetObjectPropertyValue_InContainer(Registry, const_cast<UScriptStruct*>(RowStruct));
 	FScriptArrayHelper Sources(SourcesProperty, SourcesProperty->ContainerPtrToValuePtr<void>(Registry));

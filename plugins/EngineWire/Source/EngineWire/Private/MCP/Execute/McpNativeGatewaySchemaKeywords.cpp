@@ -239,8 +239,7 @@ FString DescribeAllowedValues(const TArray<TSharedPtr<FJsonValue>>& Allowed, int
 
 // "Undeclared parameter 'x'" named the one spelling that does NOT work and
 // nothing that does, so every wrong guess cost a describe round trip for a list
-// the validator already held. Byte-for-byte identical to the TypeScript
-// gateway's describeUndeclaredParameter: case-sensitive sort, related names
+// the validator already held. Case-sensitive sort, related names
 // ranked ahead of the rest (see McpParameterHints), at most 24 names listed.
 FString DescribeUndeclaredParameter(const FString& Key, const TSharedPtr<FJsonObject>& Properties)
 {

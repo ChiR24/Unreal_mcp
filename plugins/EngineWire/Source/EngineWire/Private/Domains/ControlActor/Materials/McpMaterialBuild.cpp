@@ -1,5 +1,6 @@
 // Copyright (c) 2024 EngineWire Contributors
 #include "Domains/ControlActor/Materials/McpMaterialBuild.h"
+#include "Foundation/BridgeHelpers/Assets/McpAssetCreation.h"
 
 #include "AssetRegistry/AssetRegistryModule.h"
 #include "Factories/MaterialFactoryNew.h"
@@ -22,7 +23,7 @@ UMaterialInterface* McpFindMaterialAsset(const TCHAR* Folder, const FString& Nam
 
 UMaterial* McpNewMaterial(const TCHAR* Folder, const FString& Name)
 {
-    UPackage* Package = CreatePackage(*(FString(Folder) + Name));
+    UPackage* Package = McpCreatePackageOrNull(FString(Folder) + Name);
     return Package ? Cast<UMaterial>(NewObject<UMaterialFactoryNew>()->FactoryCreateNew(
                          UMaterial::StaticClass(), Package, FName(*Name), RF_Public | RF_Standalone, nullptr, GWarn))
                    : nullptr;
@@ -32,7 +33,7 @@ UMaterialInstanceConstant* McpNewMaterialInstance(UMaterialInterface* Parent, co
 {
     UMaterialInstanceConstantFactoryNew* Factory = NewObject<UMaterialInstanceConstantFactoryNew>();
     Factory->InitialParent = Parent;
-    UPackage* Package = CreatePackage(*(FString(Folder) + Name));
+    UPackage* Package = McpCreatePackageOrNull(FString(Folder) + Name);
     return Package ? Cast<UMaterialInstanceConstant>(Factory->FactoryCreateNew(UMaterialInstanceConstant::StaticClass(),
                          Package, FName(*Name), RF_Public | RF_Standalone, nullptr, GWarn))
                    : nullptr;

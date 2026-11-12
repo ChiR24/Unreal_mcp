@@ -1,6 +1,5 @@
 #include "Foundation/HandlerUtils/McpHandlerUtils.h"
 #include "Foundation/BridgeHelpers/McpHelpers.h"
-#include "Safety/McpSafeOperations.h"
 #include "EngineUtils.h"
 #include "Serialization/JsonSerializer.h"
 #include "Serialization/JsonWriter.h"

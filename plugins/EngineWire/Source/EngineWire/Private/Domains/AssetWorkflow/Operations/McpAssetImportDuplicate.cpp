@@ -253,8 +253,7 @@ bool UEngineWireSubsystem::HandleDuplicateAsset(
 
   // If the source path is a directory, perform a deep duplication of all
   // assets under that folder into the destination folder, preserving
-  // relative structure. This powers the "Deep Duplication - Duplicate
-  // Folder" scenario in tests.
+  // relative structure.
   if (UEditorAssetLibrary::DoesDirectoryExist(SourcePath)) {
     // Ensure the destination root exists
     UEditorAssetLibrary::MakeDirectory(DestinationPath);
@@ -267,7 +266,7 @@ bool UEngineWireSubsystem::HandleDuplicateAsset(
     // NOTE: ScanPathsSynchronous() was removed to prevent GameThread blocking.
     // Asset listing uses cached AssetRegistry data exclusively.
     // LIMITATION: Assets not yet indexed by the editor's background scanner
-    // will NOT appear. Use Content Browser "Rescan" or rescan_content_directory.
+    // will NOT appear. Use Content Browser "Rescan".
     TArray<FAssetData> Assets;
     AssetRegistryModule.Get().GetAssets(Filter, Assets);
 

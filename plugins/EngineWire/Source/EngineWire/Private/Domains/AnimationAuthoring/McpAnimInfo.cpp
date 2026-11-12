@@ -162,7 +162,7 @@ TSharedPtr<FJsonObject> HandleAnimationInfoActions(const FString& SubAction, con
     }
 
     // The contract declares length/frameRate at the top level of the result;
-    // a nested animationInfo object never surfaced them (dogfood #83).
+    // a nested animationInfo object never surfaced them.
     Response->SetStringField(TEXT("assetPath"), Asset->GetPathName());
     Response->SetStringField(TEXT("className"), Asset->GetClass()->GetName());
     if (const UAnimSequence* Sequence = Cast<UAnimSequence>(Asset))

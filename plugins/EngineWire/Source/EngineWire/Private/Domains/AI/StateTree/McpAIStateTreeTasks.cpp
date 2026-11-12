@@ -173,7 +173,7 @@ bool HandleConfigureStateTreeTask(UEngineWireSubsystem* Self, const FString& Req
     const bool bSaved = McpSafeAssetSave(StateTree);
 
     Result->SetStringField(TEXT("assetPath"), StateTree->GetPathName());
-    Result->SetStringField(TEXT("packagePath"), StateTree->GetOutermost()->GetName()); // dogfood #66
+    Result->SetStringField(TEXT("packagePath"), StateTree->GetOutermost()->GetName());
     Result->SetStringField(TEXT("stateName"), StateName);
     Result->SetNumberField(TEXT("taskCount"), TaskCount);
     Result->SetArrayField(TEXT("applied"), ToJsonStringArray(Applied));

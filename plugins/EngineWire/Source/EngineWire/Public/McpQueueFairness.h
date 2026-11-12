@@ -3,7 +3,7 @@
 #include "Containers/ArrayView.h"
 #include "CoreMinimal.h"
 
-// Task 45 - fairness policy for the SERIALIZED editor request queue.
+// Fairness policy for the SERIALIZED editor request queue.
 //
 // THE INVARIANT THIS FILE MUST NEVER BREAK: there is exactly ONE game-thread
 // editor mutation lane. Nothing here executes, parallelises, or overlaps

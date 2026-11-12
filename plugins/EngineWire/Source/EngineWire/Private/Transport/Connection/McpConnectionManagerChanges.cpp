@@ -40,16 +40,5 @@ void FMcpConnectionManager::FlushChangesUpdate()
 
 	const TSharedRef<FJsonObject> Payload = MakeShared<FJsonObject>();
 	Payload->SetStringField(TEXT("changesCursor"), McpChangeJournal::LatestCursor());
-	const TSharedRef<FJsonObject> Event = MakeShared<FJsonObject>();
-	Event->SetStringField(TEXT("type"), TEXT("automation_event"));
-	Event->SetStringField(TEXT("event"), TEXT("changes_moved"));
-	Event->SetObjectField(TEXT("payload"), Payload);
-
-	FString Serialized;
-	const TSharedRef<TJsonWriter<>> Writer = TJsonWriterFactory<>::Create(&Serialized);
-	FJsonSerializer::Serialize(Event, Writer);
-	for (const TSharedPtr<FMcpBridgeWebSocket>& Sock : Targets)
-	{
-		Sock->Send(Serialized);
-	}
+	McpSendAutomationEvent(TEXT("changes_moved"), Payload, Targets);
 }

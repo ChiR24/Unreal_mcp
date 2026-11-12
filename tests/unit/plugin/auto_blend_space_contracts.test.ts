@@ -18,7 +18,7 @@ describe('auto_blend_space', () => {
   const handler = (): string => read(join(AUTHORING, 'Analysis', 'McpAnimAutoBlendSpace.cpp'));
 
   it('is routed to the animation authoring dispatcher', () => {
-    expect(read(join(PRIVATE, 'MCP', 'Routing', 'McpConsolidatedActionRoutingAnimationSystem.h'))).toContain('TEXT("auto_blend_space")');
+    expect(read(join(PRIVATE, 'Core', 'Routing', 'McpConsolidatedActionRoutingAnimationSystem.h'))).toContain('TEXT("auto_blend_space")');
     expect(read(join(AUTHORING, 'McpAnimInfo.cpp'))).toMatch(/SubAction == TEXT\("auto_blend_space"\)\)\s*\{\s*return HandleAutoBlendSpace\(Params, Response\);/u);
   });
 

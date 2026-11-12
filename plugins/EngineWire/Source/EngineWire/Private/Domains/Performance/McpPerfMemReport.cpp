@@ -38,7 +38,7 @@ FString FindNewestMemReport(const FString& ReportDirectory, FDateTime& OutStamp)
 // generate_memory_report: runs memreport and answers with the file it produced.
 // The engine writes the report at the end of the frame, so the response is
 // deferred through a ticker instead of blocking the game thread (which could
-// never observe the new file, dogfood #172).
+// never observe the new file).
 bool HandleMemoryReportAction(const FPerformanceActionContext& Context)
 {
     if (Context.Lower != TEXT("generate_memory_report"))

@@ -76,7 +76,7 @@ bool HandleSeekMedia(UEngineWireSubsystem *Subsystem,
   TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
   Result->SetStringField(TEXT("mediaPlayerPath"), ResolvedPlayerPath);
   Result->SetNumberField(TEXT("timeSeconds"), Seconds);
-  // Seeking a player with nothing open fails inside the engine with no explanation (dogfood #131).
+  // Seeking a player with nothing open fails inside the engine with no explanation.
   if (!CallBoolFunction(Player, TEXT("IsReady"))) {
     SendMediaError(Subsystem, Socket, RequestId, TEXT("NO_MEDIA_OPEN"),
                    TEXT("The media player has no media open; open a media source (open_media_source / open_media) before seek_media"),

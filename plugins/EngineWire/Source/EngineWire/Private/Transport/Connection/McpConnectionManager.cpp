@@ -111,6 +111,10 @@ void FMcpConnectionManager::SetOnMessageReceived(
   OnMessageReceived = InCallback;
 }
 
+int32 FMcpConnectionManager::GetActiveSocketCount() const {
+  return ActiveSockets.Num();
+}
+
 bool FMcpConnectionManager::Tick(float DeltaTime) {
   FlushContentRootsUpdate();
   FlushChangesUpdate();
@@ -142,7 +146,7 @@ bool FMcpConnectionManager::Tick(float DeltaTime) {
     for (const TSharedPtr<FMcpBridgeWebSocket> &Socket : TArray<TSharedPtr<FMcpBridgeWebSocket>>(ActiveSockets)) {
       if (Socket.IsValid() && Expired.Contains(Socket.Get())) {
         UE_LOG(LogEngineWireSubsystem, Warning, TEXT("Heartbeat timed out; closing that connection."));
-        Socket->Close(4000, TEXT("Heartbeat timeout"));
+        Socket->Close(McpWsClose::ConnectionFailed, TEXT("Heartbeat timeout"));
       }
     }
   }

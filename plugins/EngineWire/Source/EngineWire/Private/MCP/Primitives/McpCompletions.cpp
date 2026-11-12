@@ -2,6 +2,7 @@
 #include "MCP/Primitives/McpPromptCatalog.h"
 #include "MCP/Gateway/McpNativeGatewayCapabilityStore.h"
 #include "MCP/Resources/McpResourceUri.h"
+#include "Foundation/BridgeHelpers/Security/McpAssetPathCanonical.h"
 #include "Containers/StringConv.h"
 
 // Named, not anonymous: unity builds merge neighbouring files.
@@ -18,14 +19,8 @@ namespace McpCompletionsInternal
 		TArray<FString> Parts;
 		Value.ParseIntoArray(Parts, TEXT("/"), false);
 		if (Parts.Contains(TEXT(".."))) return true;
-		const FString Lower = Value.ToLower();
-		for (const TCHAR* Root : { TEXT("/home"), TEXT("/users"), TEXT("/etc"), TEXT("/var"), TEXT("/root"),
-			TEXT("/tmp"), TEXT("/bin"), TEXT("/opt"), TEXT("/usr") })
-		{
-			const int32 Len = FCString::Strlen(Root);
-			if (Lower.StartsWith(Root) && (Lower.Len() == Len || !FChar::IsAlnum(Lower[Len]))) return true;
-		}
-		return false;
+		// A first segment naming a host root (/etc, /home, ...): what the path gate refuses, from the same list.
+		return Value.StartsWith(TEXT("/")) && Parts.Num() > 1 && McpAssetPathCanonical::IsHostFilesystemRootSegment(Parts[1]);
 	}
 
 	TArray<FString> CapabilityCandidates(TFunctionRef<bool(const FString&)> IsParentEnabled)

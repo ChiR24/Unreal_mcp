@@ -34,7 +34,7 @@ bool HandleGetCurrentLevelAction(UEngineWireSubsystem& Subsystem, const FString&
                                         : CurrentLevel->GetName());
     Result->SetStringField(TEXT("levelPath"), LevelPackage ? LevelPackage->GetName() : TEXT(""));
     // The editor's "current level" can be a streaming sub-level; also publish
-    // the persistent map so callers do not mistake one for the other (dogfood #155).
+    // the persistent map so callers do not mistake one for the other.
     Result->SetStringField(TEXT("persistentLevelPath"), WorldPackage ? WorldPackage->GetName() : TEXT(""));
     Result->SetBoolField(TEXT("currentLevelIsSubLevel"), CurrentLevel != EditorWorld->PersistentLevel);
     // Include editor-world identity separately from the map package so agents

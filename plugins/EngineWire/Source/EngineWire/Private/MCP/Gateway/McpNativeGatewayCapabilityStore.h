@@ -25,8 +25,7 @@ enum class EMcpCapabilityStoreStatus : uint8
  * action name the record replaced: FoldedPins carries the selector values that
  * name implied, so a call by the old name validates against the folded
  * contract and dispatches unchanged, and Aliases are the record aliases that
- * former action declared, which a call may name it by. Mirror of `legacyIds[]`
- * in TypeScript.
+ * former action declared, which a call may name it by. The record's `legacyIds[]`.
  */
 struct FMcpLegacyPair
 {
@@ -69,6 +68,13 @@ struct FMcpCapabilityRecord
 	TSharedPtr<FJsonObject> DispatchByRequires;
 };
 
+// The part of a capability id after its last '.', or the whole id when it has none.
+inline FString McpLastDottedSegment(const FString& Id)
+{
+	int32 LastDot = INDEX_NONE;
+	return Id.FindLastChar(TEXT('.'), LastDot) ? Id.RightChop(LastDot + 1) : Id;
+}
+
 /**
  * The action name this capability is addressed by on its parent tool — the
  * capability id's last dotted segment (e.g. "manage_audio.create_metasound" ->
@@ -78,13 +84,6 @@ struct FMcpCapabilityRecord
  * is INTERNAL routing and is not unique per capability (every manage_audio
  * capability dispatches through "manage_audio"), so it cannot identify one.
  */
-// The part of a capability id after its last '.', or the whole id when it has none.
-inline FString McpLastDottedSegment(const FString& Id)
-{
-	int32 LastDot = INDEX_NONE;
-	return Id.FindLastChar(TEXT('.'), LastDot) ? Id.RightChop(LastDot + 1) : Id;
-}
-
 inline FString McpCapabilityPublicAction(const FMcpCapabilityRecord& Record)
 {
 	return Record.Id.Contains(TEXT(".")) ? McpLastDottedSegment(Record.Id) : Record.DispatchAction;

@@ -145,7 +145,7 @@ static bool DrawShape(
     Response->SetStringField(TEXT("shapeType"), ShapeType);
     Response->SetStringField(TEXT("location"), FString::Printf(TEXT("%.2f,%.2f,%.2f"), Location.X, Location.Y, Location.Z));
     Response->SetNumberField(TEXT("duration"), Duration);
-    // Non-realtime editor viewports only show batched debug lines after a redraw (dogfood #109).
+    // Non-realtime editor viewports only show batched debug lines after a redraw.
     if (GEditor) { GEditor->RedrawLevelEditingViewports(false); }
     Context.Bridge.SendAutomationResponse(
         Context.Socket, Context.RequestId, true, TEXT("Debug shape drawn"), Response);
@@ -164,8 +164,8 @@ bool HandleEffectDiscoveryAction(const FEffectActionContext& Context)
         {
             Shapes.Add(MakeShared<FJsonValueString>(Shape));
         }
-        // The catalogue of drawable types plus what is actually batched right now
-        // (dogfood #103): the world/persistent/foreground line batchers are the
+        // The catalogue of drawable types plus what is actually batched right now:
+        // the world/persistent/foreground line batchers are the
         // only place the engine keeps debug primitives, so their buffers are the
         // live count. Batched primitives carry no shape names, hence counts.
         TSharedPtr<FJsonObject> Response = McpHandlerUtils::CreateResultObject();

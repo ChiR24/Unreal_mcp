@@ -82,7 +82,7 @@ struct FSSEConnection
 	FString CorrelationId;
 	// External MCP request id (canonicalized num:/str:), client
 	// idempotency key, and request start time, threaded onto the completed
-	// receipt so an async success/error carries the same join keys as TS.
+	// receipt so an async success/error carries the join keys a synchronous one does.
 	FString RequestId;
 	FString IdempotencyId;
 	// Set only when this request claimed a fresh idempotency slot; the completion

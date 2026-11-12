@@ -27,7 +27,7 @@ bool McpDrawWidget(UWidgetBlueprint* WidgetBP, FIntPoint Size, TArray<FColor>& O
 FString WidgetBlueprintPackagePath(const UWidgetBlueprint* WidgetBP);
 // Loads the widget blueprint, creating an empty UUserWidget-based asset at the path when missing.
 // Marks the Widget Blueprint structurally modified and saves it through the safe wrapper, so
-// authoring edits survive an editor restart (dogfood c27: widgets added via MCP vanished).
+// authoring edits survive an editor restart (widgets added via MCP vanished).
 // Returns whether the save landed.
 bool MarkWidgetBlueprintModifiedAndSave(UWidgetBlueprint* WidgetBP);
 // A widget added, renamed or copied since the last compile has no property on the Widget Blueprint's generated

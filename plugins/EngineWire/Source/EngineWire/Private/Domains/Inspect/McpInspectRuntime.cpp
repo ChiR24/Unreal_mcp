@@ -161,7 +161,7 @@ bool HandleInspectRuntimeReportAction(
             APlayerController *PlayerController = World->GetFirstPlayerController();
             if (PlayerController)
             {
-                // Pins these as canonical string identities; the record now matches (dogfood #139).
+                // Pins these as canonical string identities; the record now matches.
                 Report->SetStringField(TEXT("playerController"), PlayerController->GetPathName());
 
                 if (APawn *Pawn = PlayerController->GetPawn())
@@ -176,7 +176,7 @@ bool HandleInspectRuntimeReportAction(
 
                 if (APlayerCameraManager *CameraManager = PlayerController->PlayerCameraManager)
                 {
-                    // The contract declares playerCameraManager as an object (dogfood #139): describe the manager
+                    // The contract declares playerCameraManager as an object: describe the manager
                     // as a runtime actor with its camera pose instead of a bare path string.
                     TSharedPtr<FJsonObject> CameraJson = MakeShared<FJsonObject>();
                     CameraJson->SetStringField(TEXT("name"), CameraManager->GetName());

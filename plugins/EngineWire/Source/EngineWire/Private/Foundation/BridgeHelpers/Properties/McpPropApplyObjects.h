@@ -91,12 +91,8 @@ static inline bool ImportExportTextIntoValue(void *ValuePtr, FProperty *Property
   // "(Offsets=(Left=10,Top=NOTANUMBER))" would leave Left=10 on the real object while the caller is told the
   // conversion failed.
   return McpWriteThroughScratch(ValuePtr, Property, [Property, &Text](void *Scratch) {
-#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 1
     // The error device stays GWarn: a null one crashed the editor on text an enum or struct import refused.
-    return Property->ImportText_Direct(*Text, Scratch, nullptr, PPF_None) != nullptr;
-#else
-    return Property->ImportText(*Text, Scratch, PPF_None, nullptr) != nullptr;
-#endif
+    return MCP_PROPERTY_IMPORT_TEXT(Property, *Text, Scratch, nullptr, PPF_None) != nullptr;
   });
 }
 

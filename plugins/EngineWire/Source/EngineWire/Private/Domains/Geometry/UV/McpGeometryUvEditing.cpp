@@ -45,8 +45,8 @@ bool HandleSetUVs(UEngineWireSubsystem* Self, const FString& RequestId,
     if (ElementsModified == 0)
     {
         // A vertex whose triangles have no UV elements yet (fresh or non-compact mesh, a
-        // layer XAtlas skipped) gets them authored here instead of NO_UV_ELEMENTS
-        // (dogfood #133): one element per unset corner, reusing another triangle's
+        // layer XAtlas skipped) gets them authored here instead of NO_UV_ELEMENTS:
+        // one element per unset corner, reusing another triangle's
         // element for the same vertex so no seam is introduced.
         auto FindElementForVertex = [UVOverlay](int32 VertexID) -> int32
         {

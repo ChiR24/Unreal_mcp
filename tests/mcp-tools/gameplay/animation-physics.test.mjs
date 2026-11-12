@@ -131,6 +131,7 @@ const testCases = [
 
 // === ACTION (Setup IK - needs name and skeletonPath) ===
 { scenario: 'ACTION: setup_ik', toolName: 'animation_physics', arguments: {"action": "setup_ik", "name": "TestIK", "skeletonPath": TEST_SKELETON_PATH}, expected: 'success|already exists' },
+{ scenario: 'ACTION: setup_ik again keeps the rig and says so', toolName: 'animation_physics', arguments: {"action": "setup_ik", "name": "TestIK", "skeletonPath": TEST_SKELETON_PATH}, expected: 'success', assertions: [{ path: 'structuredContent.result.existingAsset', equals: true, label: 'the rig already there is reported as kept, not created' }] },
 
 // === CREATE (Pose Library - needs skeletonPath) ===
 

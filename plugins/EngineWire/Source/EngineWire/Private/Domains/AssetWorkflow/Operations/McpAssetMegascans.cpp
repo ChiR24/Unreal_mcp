@@ -113,7 +113,7 @@ bool UEngineWireSubsystem::HandleImportMegascansAsset(
           nullptr, TEXT("INVALID_ARGUMENT"));
       return true;
     }
-    // Bridge silently drops sources that do not exist; refuse them up front (dogfood #198).
+    // Bridge silently drops sources that do not exist; refuse them up front.
     TArray<FString> MissingSources;
     for (const TSharedPtr<FJsonValue>& PathValue : *AssetPaths) {
       const FString SourcePath = PathValue.IsValid() ? PathValue->AsString() : FString();

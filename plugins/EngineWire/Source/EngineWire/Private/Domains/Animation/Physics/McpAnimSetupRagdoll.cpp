@@ -54,7 +54,7 @@ bool UEngineWireSubsystem::HandleSetupRagdoll(
     return true;
   }
 
-  // Optional explicit physics asset (dogfood #143); the mesh default is used otherwise.
+  // Optional explicit physics asset; the mesh default is used otherwise.
   const FString PhysicsAssetPath = bSetup ? GetJsonStringField(Payload, TEXT("physicsAssetPath")) : FString();
   if (!PhysicsAssetPath.IsEmpty()) {
     UPhysicsAsset *RagdollAsset = LoadObject<UPhysicsAsset>(nullptr, *PhysicsAssetPath);

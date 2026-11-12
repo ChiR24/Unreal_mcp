@@ -44,7 +44,7 @@ bool HandleConfigureLayerBlend(UEngineWireSubsystem* Bridge, const FString& Requ
     Payload->TryGetNumberField(TEXT("x"), BaseX);
     Payload->TryGetNumberField(TEXT("y"), BaseY);
 
-    // Dogfood #207: a landscape layer blend is one LandscapeLayerBlend expression whose
+    // A landscape layer blend is one LandscapeLayerBlend expression whose
     // FLayerBlendInput entries name the layers; scalar weight parameters are not a layer blend.
     FString DefaultBlendType;
     Payload->TryGetStringField(TEXT("blendType"), DefaultBlendType);

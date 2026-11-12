@@ -51,7 +51,7 @@ bool HandleGetLevelStructureInfo(
     const TArray<ULevelStreaming*>& StreamingLevels = World->GetStreamingLevels();
     InfoJson->SetNumberField(TEXT("sublevelCount"), StreamingLevels.Num());
 
-    // Structured streaming-level report (dogfood #161) beside the bare name list.
+    // Structured streaming-level report beside the bare name list.
     TArray<TSharedPtr<FJsonValue>> StreamingArray;
     for (const ULevelStreaming* StreamingLevel : StreamingLevels)
     {

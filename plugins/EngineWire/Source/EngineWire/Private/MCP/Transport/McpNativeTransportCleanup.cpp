@@ -30,7 +30,7 @@ void FMcpNativeTransport::CollectSessionsWithLiveConnections(
 void FMcpNativeTransport::CleanupStaleRequests()
 {
 	const double Now = FPlatformTime::Seconds();
-	LastGameThreadHeartbeat.store(Now); // this pass runs on the GameThread (dogfood #79)
+	LastGameThreadHeartbeat.store(Now); // this pass runs on the GameThread
 
 	// Clean up timed-out SSE connections. Live requests are kept fed by the
 	// keepalive thread (SweepRequestProgress), whose written pings refresh
@@ -166,5 +166,3 @@ void FMcpNativeTransport::CleanupStaleRequests()
 }
 
 // The keepalive loop and the per-request progress sweep live in McpNativeTransportKeepalive.cpp.
-
-// ─── Session Validation ─────────────────────────────────────────────────────

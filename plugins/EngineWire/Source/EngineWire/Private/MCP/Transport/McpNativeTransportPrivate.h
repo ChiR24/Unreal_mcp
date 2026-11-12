@@ -5,6 +5,7 @@
 // McpCanonicalizeRequestId keys an in-flight call by its JSON-RPC id; "str:"/"num:"
 // namespacing keeps a string "1" and a numeric 1 from cross-cancelling.
 #include "MCP/Execute/McpNativeReceiptEnrichment.h"
+#include "MCP/Execute/McpNativeGatewayReceipt.h"
 #include "Foundation/McpSecureTokenCompare.h"
 #include "MCP/Registry/McpToolRegistry.h"
 #include "MCP/Registry/McpToolDefinition.h"
@@ -53,7 +54,26 @@ inline const FString& McpLatestProtocolVersion()
     return Version;
 }
 
+// What a request on a session that is gone (expired, closed, never opened) is told.
+inline const TCHAR* const McpSessionExpiredMessage = TEXT("Invalid or expired session ID");
+
 inline bool McpIsSupportedProtocolVersion(const FString& Version)
 {
     return McpSupportedProtocolVersions().Contains(Version);
+}
+
+// The receipt context of the call a pending connection carries: its join keys and timing, the gateway's warnings and
+// provenance, who may page its result and how it is aggregated.
+inline FMcpReceiptContext McpReceiptContextOf(const FSSEConnection& Conn)
+{
+    FMcpReceiptContext Context;
+    Context.CorrelationId = Conn.CorrelationId;
+    Context.RequestId = Conn.RequestId;
+    Context.IdempotencyId = Conn.IdempotencyId;
+    Context.StartTimeSeconds = Conn.RequestStartSeconds;
+    Context.GatewayWarnings = Conn.GatewayWarnings;
+    Context.Provenance = Conn.Provenance;
+    Context.PageOwner = Conn.PageOwner;
+    Context.Aggregate = Conn.Aggregate;
+    return Context;
 }

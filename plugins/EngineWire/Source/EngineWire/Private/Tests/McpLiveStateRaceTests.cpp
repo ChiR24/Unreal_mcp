@@ -20,7 +20,7 @@ bool FMcpLiveStateRaceBeforeDispatchTest::RunTest(const FString& Parameters)
 	int32 DispatchCount = 0;
 	TestTrue(TEXT("race fixture handler registered"),
 		Subsystem->RegisterHandler(
-			TEXT("task42_race_fixture"),
+			TEXT("race_fixture"),
 			[&DispatchCount](
 				const FString&, const FString&, const TSharedPtr<FJsonObject>&,
 				TSharedPtr<FMcpBridgeWebSocket>)
@@ -35,7 +35,7 @@ bool FMcpLiveStateRaceBeforeDispatchTest::RunTest(const FString& Parameters)
 		Revisions.Current(EMcpStateKind::Selection));
 	TestEqual(TEXT("race request accepted before state changes"),
 		Subsystem->QueueAutomationRequest(
-			TEXT("task42-race-request"), TEXT("task42_race_fixture"),
+			TEXT("race-request"), TEXT("race_fixture"),
 			MakeShared<FJsonObject>(), nullptr, ERequestOrigin::WebSocket, Expected),
 		EAutomationQueueRejection::None);
 

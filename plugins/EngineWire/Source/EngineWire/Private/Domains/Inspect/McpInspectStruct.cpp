@@ -8,7 +8,7 @@
 #include "UserDefinedStructure/UserDefinedStructEditorData.h"
 
 // =============================================================================
-// inspect_struct handler shard (struct ecosystem, issue #struct-ecosystem)
+// inspect_struct handler shard
 // -----------------------------------------------------------------------------
 // Read-only struct layout introspection. Given a struct asset path, struct
 // path, or plain struct name, enumerate its fields (name, type, default,

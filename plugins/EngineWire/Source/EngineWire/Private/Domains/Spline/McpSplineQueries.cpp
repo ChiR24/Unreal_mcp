@@ -57,7 +57,7 @@ bool HandleGetSplinesInfo(
 
             PointsArray.Add(MakeShared<FJsonValueObject>(PointObj));
         }
-        // The contract requires splines[] in every reply (dogfood #211): wrap the single actor.
+        // The contract requires splines[] in every reply: wrap the single actor.
         TSharedPtr<FJsonObject> SelfObj = McpHandlerUtils::CreateResultObject();
         SelfObj->SetStringField(TEXT("actorName"), ActorName);
         SelfObj->SetNumberField(TEXT("pointCount"), SplineComp->GetNumberOfSplinePoints());
@@ -81,7 +81,7 @@ bool HandleGetSplinesInfo(
             {
                 TSharedPtr<FJsonObject> ActorObj = McpHandlerUtils::CreateResultObject();
                 ActorObj->SetStringField(TEXT("actorName"), McpActorRef(Actor));
-                // Same label can live in the persistent level and a streamed sub-level: identify each actor (dogfood #211).
+                // Same label can live in the persistent level and a streamed sub-level: identify each actor.
                 ActorObj->SetStringField(TEXT("actorPath"), Actor->GetPathName());
                 ActorObj->SetStringField(TEXT("level"), Actor->GetLevel() ? Actor->GetLevel()->GetOutermost()->GetName() : TEXT(""));
                 ActorObj->SetNumberField(TEXT("splineComponentCount"), SplineComponents.Num());

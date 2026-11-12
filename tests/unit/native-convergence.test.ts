@@ -38,7 +38,9 @@ function sourceFilesUnder(...relativeDirs: readonly string[]): readonly string[]
   return files;
 }
 
-const handlerSources = sourceFilesUnder('Domains', 'Core', 'Foundation');
+// The routing lists (Core/Routing) name every sub-action a parent routes and own none of them, so they are no handler.
+const handlerSources = sourceFilesUnder('Domains', 'Core', 'Foundation')
+  .filter((file) => !file.replaceAll('\\', '/').includes('/Private/Core/Routing/'));
 // Read once: re-reading every source file per call took 14.7 s under a loaded machine and timed
 // out the 10 s tests after the first (which alone has 60 s for this first read).
 let handlerTexts: readonly (readonly [string, string])[] | undefined;
@@ -52,7 +54,7 @@ describe('Task 27 / Task 21: the residual native handler divergence stays visibl
   // Task 21 sublane 4: TS carries component logic locally; native has no
   // distinct body and falls through to generic object inspection. Task 27 does
   // not own Private/Domains, so this is pinned, not silently repaired.
-  it('records that get_component_details now has a distinct native handler branch (dogfood #146)', () => {
+  it('records that get_component_details now has a distinct native handler branch', () => {
     expect(filesMentioning('get_component_details')).toContain(
       'Domains/Inspect/McpInspectComponent.cpp',
     );

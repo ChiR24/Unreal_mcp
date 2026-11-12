@@ -145,7 +145,7 @@ bool HandleWidgetAuthoringTypedPanels(
         return Add(UUniformGridPanel::StaticClass(), TEXT("UniformGridPanel"), TEXT("uniform grid panel"), [&](UWidget* Widget)
         {
             UUniformGridPanel* Grid = CastChecked<UUniformGridPanel>(Widget);
-            const TSharedPtr<FJsonObject> Padding = GetObjectField(Payload, TEXT("slotPadding"));
+            const TSharedPtr<FJsonObject> Padding = McpHandlerUtils::GetObjectFieldOrNull(Payload, TEXT("slotPadding"));
             if (Padding.IsValid())
             {
                 Grid->SetSlotPadding(ReadMargin(Padding));
@@ -159,7 +159,7 @@ bool HandleWidgetAuthoringTypedPanels(
         return Add(UWrapBox::StaticClass(), TEXT("WrapBox"), TEXT("wrap box"), [&](UWidget* Widget)
         {
             UWrapBox* WrapBox = CastChecked<UWrapBox>(Widget);
-            const TSharedPtr<FJsonObject> Padding = GetObjectField(Payload, TEXT("innerSlotPadding"));
+            const TSharedPtr<FJsonObject> Padding = McpHandlerUtils::GetObjectFieldOrNull(Payload, TEXT("innerSlotPadding"));
             if (Padding.IsValid())
             {
                 WrapBox->SetInnerSlotPadding(FVector2D(GetJsonNumberField(Padding, TEXT("x"), 0.0), GetJsonNumberField(Padding, TEXT("y"), 0.0)));

@@ -92,7 +92,7 @@ TSharedPtr<FJsonObject> HandleEffectActions(const FString& SubAction, const TSha
 			const FString PresetBase = FPackageName::ObjectPathToPackageName(AssetPath) + TEXT("_") + EffectType;
 			FString PresetPkg = PresetBase;
 			for (int32 Suffix = 1; McpAssetExists(PresetPkg); ++Suffix) { PresetPkg = FString::Printf(TEXT("%s_%d"), *PresetBase, Suffix); }
-			UPackage* PresetPackage = CreatePackage(*PresetPkg); // a free name by construction
+			UPackage* PresetPackage = McpCreatePackageOrNull(PresetPkg); // a free name by construction
 			if (PresetPackage)
 			{
 				EffectPreset = CreateSourceEffectPresetByType(EffectType, PresetPackage);

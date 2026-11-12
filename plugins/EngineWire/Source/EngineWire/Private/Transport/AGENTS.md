@@ -2,7 +2,7 @@
 
 WebSocket automation bridge only. The native `/mcp` HTTP/SSE transport is a SEPARATE lifecycle under `../MCP/Transport/` (see `../MCP/AGENTS.md`). Do not document or edit it here; do not route around either boundary.
 
-Two subdirs, 22 source files (`WebSocket/` 12, `Connection/` 10). The plugin only listens; it never dials out. `WebSocket/` owns sockets, framing, TLS, handshakes. `Connection/` owns the connection manager: auth, per-socket rate limits, request/socket correlation, cancellation, telemetry.
+Two subdirs, 24 source files (`WebSocket/` 13, `Connection/` 11). The plugin only listens; it never dials out. `WebSocket/` owns sockets, framing, TLS, handshakes. `Connection/` owns the connection manager: auth, per-socket rate limits, request/socket correlation, cancellation, telemetry.
 
 ## STRUCTURE
 
@@ -13,7 +13,7 @@ WebSocket/
 - `McpBridgeWebSocketServerClients.cpp` — connected client registry.
 - `McpBridgeWebSocketClient.cpp` — `RunClient()`: the per-accepted-connection loop (server side, despite the name).
 - `McpBridgeWebSocketFrameReceive.cpp` (rejects unmasked client frames) / `McpBridgeWebSocketFrameSend.cpp` / `McpBridgeWebSocketRawIO.cpp` / `McpBridgeWebSocketUtilities.cpp` — frame encode/decode, raw socket IO, helpers.
-- `McpBridgeWebSocketTls.cpp` — TLS establish; preserve cert/key validation.
+- `McpBridgeWebSocketTls.cpp` — TLS establish (the bridge only accepts); preserve cert/key validation. UE 5.7 and later (it hands OpenSSL the socket through `FSocket::ReleaseNativeSocket`); the module's own OpenSSL initialises itself, the engine's SSL manager is not asked. `McpBridgeWebSocketOpenSsl.h` is the one way OpenSSL is included.
 
 Connection/
 - `McpConnectionManager.cpp` / `McpConnectionManagerPrivate.h` (public header in `../../Public/McpConnectionManager.h`) — manager core, rate-limit map teardown.
@@ -22,10 +22,10 @@ Connection/
 - `McpConnectionManagerMessages.cpp` — message routing, `bridge_hello` token, handshake gate, rate-limit calls.
 - `McpConnectionManagerSocketEvents.cpp` — socket events; clears per-socket rate state on teardown.
 - `McpConnectionManagerCancellation.cpp` — request cancellation (scoped, advisory).
-- `McpConnectionManagerResponses.cpp` — response correlation back to the originating socket.
-- `McpConnectionManagerTelemetry.cpp` — connection telemetry.
-- `McpConnectionManagerContentRoots.cpp` — the editor's content roots for the TypeScript path allowlist (`bridge_ack.contentRoots`, `content_roots_changed`).
-- `McpConnectionManagerChanges.cpp` — `changes_moved` (the change journal's cursor) from the ticker, at most once a second, to authenticated sockets whose principal holds Read; `bridge_ack.changesCursor` under the same rule. The TypeScript server turns it into `notifications/resources/updated` for `ue://changes` and never forwards it raw.
+- `McpConnectionManagerResponses.cpp` — replies and progress back to the originating socket (the request-to-socket route), the log subscribers and their fan-out.
+- `McpConnectionManagerTelemetry.cpp` — per-request telemetry: the action a request id names and how it ended.
+- `McpConnectionManagerContentRoots.cpp` — the editor's content roots, for a client that checks paths before it sends them (`bridge_ack.contentRoots`, `content_roots_changed`).
+- `McpConnectionManagerChanges.cpp` — `changes_moved` (the change journal's cursor) from the ticker, at most once a second, to authenticated sockets whose principal holds Read; `bridge_ack.changesCursor` under the same rule. It tells a WebSocket client that `ue://changes` has more to read; the native `/mcp` transport announces the same move with its own `notifications/resources/updated`.
 
 ## CONNECTION LIFECYCLE
 
@@ -50,6 +50,7 @@ Connection/
 ## CONVENTIONS
 
 - Defaults: host `127.0.0.1`, ports `8090,8091`, multi-listen on, non-loopback off.
+- Close codes are named once, in `McpWsClose` (`WebSocket/McpBridgeWebSocket.h`); the numbers in this guide are their values.
 - Keep editor API work OFF socket threads. Hand it to the Core game-thread queue (`../Core/AGENTS.md`).
 - 250 pure-line ceiling + ≤25 files/folder apply.
 

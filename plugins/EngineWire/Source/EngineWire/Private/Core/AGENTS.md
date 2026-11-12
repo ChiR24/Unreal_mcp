@@ -3,11 +3,12 @@
 Core owns the request queue, the game-thread drain and the per-tool handler map: the routing spine between the transports (`../Transport/`, `../MCP/`) and the domain implementations (`../Domains/`). Hazardous editor ops go through `../Safety/`.
 
 ## STRUCTURE
-- `Subsystem/` (11): `UEngineWireSubsystem` (declared in `../../Public/EngineWireSubsystem.h`) split into `...Subsystem.cpp`, `...RequestQueue.cpp`, `...RequestQueueCancellation.cpp`, `...Lifecycle.cpp`, `...HandlerRegistration.cpp`, `...Responses.cpp` + sanitization/enrichment headers, `...ErrorCapture.cpp`, `...EditorCommands.cpp`, `...RequestQueueTests.cpp`.
-- `Requests/` (9): `McpProcessRequest.cpp` (`AutomationHandlers.Find(Action)`, else `UNKNOWN_ACTION`), `McpRequestOriginRegistry` (request id → originating transport), `McpResponseCaptureRegistry`, `McpModalRefusal.cpp` (answers queued requests while a dialog runs its own loop), `McpUndoLedger` (the undo steps a request left, read from the transaction buffer, plus its in-editor test).
+- `Subsystem/` (12): `UEngineWireSubsystem` (declared in `../../Public/EngineWireSubsystem.h`) split into `...Subsystem.cpp`, `...RequestQueue.cpp`, `...RequestQueueCancellation.cpp`, `...Lifecycle.cpp`, `...HandlerRegistration.cpp`, `...Responses.cpp` + sanitization/enrichment headers and `...ContentPaths.h` (which content mounts a reply may name), `...ErrorCapture.cpp` with `McpRequestErrorDevice.h`, `...RequestQueueTests.cpp`.
+- `Requests/` (10): `McpProcessRequest.cpp` (`AutomationHandlers.Find(Action)`, else `UNKNOWN_ACTION`), `McpRequestOriginRegistry` (request id → originating transport), `McpResponseCaptureRegistry`, `McpModalRefusal.cpp` (answers queued requests while a dialog runs its own loop), `McpRunOutsideTicker.cpp` (work that must not run inside the core ticker: an engine wait that ticks it again asserts), `McpUndoLedger` (the undo steps a request left, read from the transaction buffer, plus its in-editor test).
 - `Security/` (6): `McpPrequeueGate` + `McpPrequeueDemand` — scope/consent authorization before anything is enqueued, on both transports. `McpConsentLedger` mints every consent nonce (native describe and the 2026-07-28 consent ask) bound to its capability and burns it once; native `/mcp` sets `bRequireIssuedNonce`, so a missing, made-up or other capability's nonce is `CONSENT_NOT_ISSUED` (the WebSocket door, with no describe, keeps the older rule). `Authorize` keeps the principal it allowed per request id (`McpRequestPrincipals.cpp`) until the response funnel forgets it, so work a request runs in-process is authorized for the same caller: `AuthorizeStep` is the whole gate minus consent, for `run_script`'s steps, burning no nonce and recording nothing.
 - `Journal/` (7): `McpChangeJournal` — what changed in the editor and who changed it (mcp, user, editor), read by `inspect changes_since`: the recorder (object and actor events), the values a property held before and after (`McpChangeJournalValues.cpp`: "before" only from `OnPreObjectPropertyChanged`, which the Details panel raises and a code edit does not), its package events and Start/Stop, the reader (values, an actor's transform then and now), the shared state and in-editor tests (attribution, values).
-- `Module/` (4), `Settings/` (1), `Compatibility/` (1), `Errors/` (1).
+- `Routing/` (7): the sub-action lists the handler table routes by (`McpConsolidatedActionRouting.h` is the umbrella with the `Is...Action` predicates; one header of lists per area), read by the table and by the domain dispatchers that split a parent the same way.
+- `Module/` (3: the module, its PCH and `McpOwnPlugin()`, the one lookup of this plugin by name), `Settings/` (1), `Compatibility/` (2: the engine-version macros and the MetaSound detection).
 
 ## REQUEST LIFECYCLE
 1. A transport authorizes the request through the pre-queue gate, then calls `QueueAutomationRequest()`.
@@ -25,7 +26,7 @@ Core owns the request queue, the game-thread drain and the per-tool handler map:
 ## HANDLER REGISTRATION
 The wire contract is the 23 parent tools plus `console_command`. `InitializeHandlers()` in `...HandlerRegistration.cpp` is one table:
 - direct parents map to one handler method;
-- `Route(Parent, Fallback, { FSubRoute... })` sends the sub-actions a sibling domain claims (`IsLightingAction`, `IsWidgetAuthoringAction`, ...) to that domain under its own action name, everything else to the fallback;
+- `Route(Parent, Fallback, { FSubRoute... })` sends the sub-actions a sibling domain claims (`IsLightingAction`, `IsWidgetAuthoringAction`, ... from `Routing/`) to that domain under its own action name, everything else to the fallback;
 - `manage_asset` routes texture and material-authoring sub-actions to their domains.
 
 `RegisterHandler()` is defined in the same file and refuses an invalid identifier or a duplicate. Bare action names are not registered.

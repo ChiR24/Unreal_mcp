@@ -1,11 +1,10 @@
 #include "MCP/Protocol/McpJsonRpcImageContent.h"
+#include "Foundation/BridgeHelpers/Security/McpSecretMask.h"
 
 namespace
 {
-// Mirror of MAX_RECEIPT_DEPTH in receipt-redaction.ts: a size gate cannot
-// substitute for a depth gate, so a tree deeper than this is not descended (the
-// subtree is preserved verbatim rather than walked to a stack overflow).
-constexpr int32 McpMaxImageDepth = 100;
+// A tree deeper than this is not descended: the subtree is preserved verbatim rather than walked to a stack overflow.
+constexpr int32 McpMaxImageDepth = McpMaxReplyTreeDepth;
 
 /** Deep search for the object actually holding imageBase64.
  *

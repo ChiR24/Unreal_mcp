@@ -18,7 +18,7 @@ describe('blueprint lint', () => {
   const handler = code(join(LINT, 'McpBPLint.cpp'));
 
   it('is routed to the graph handler, after the Blueprint loads, as a read that needs no event graph', () => {
-    expect(code(join(PRIVATE, 'Core', 'Subsystem', 'EngineWireSubsystemHandlerRegistration.cpp'))).toContain('TEXT("lint_blueprint")');
+    expect(code(join(PRIVATE, 'Core', 'Routing', 'McpConsolidatedActionRoutingBlueprints.h'))).toContain('TEXT("lint_blueprint")');
     const graph = code(join(PRIVATE, 'Domains', 'BlueprintGraph', 'McpBPGraphHandlers.cpp'));
     expect(graph).toMatch(/PrepareBlueprintAndGraph\(Context, \/\*bRequireGraph=\*\/bCode \? Payload->HasField\(TEXT\("graphName"\)\) : !bLint\)/u);
     expect(graph).toMatch(/if \(bLint \|\| bCode\)\s*\{\s*Context\.bDeferCompile = true;\s*return bLint \? McpBPLint::HandleLint\(Context\)/u);

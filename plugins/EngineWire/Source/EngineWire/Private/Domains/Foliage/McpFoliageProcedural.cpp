@@ -131,7 +131,12 @@ bool UEngineWireSubsystem::HandleCreateProceduralFoliage(
       FTName = FString::Printf(TEXT("%s_FT_%d"), *AssetName, TypeIndex++);
       FTPackagePath = FString::Printf(TEXT("%s/%s"), *PackagePath, *FTName);
     } while (McpAssetExists(FTPackagePath));
-    UPackage *FTPackage = CreatePackage(*FTPackagePath);
+    UPackage *FTPackage = McpCreatePackageOrNull(FTPackagePath);
+    if (!FTPackage) {
+      SendAutomationError(RequestingSocket, RequestId,
+                          FString::Printf(TEXT("Could not create the package %s."), *FTPackagePath), TEXT("PACKAGE_ERROR"));
+      return true;
+    }
     UFoliageType_InstancedStaticMesh *FT =
         NewObject<UFoliageType_InstancedStaticMesh>(FTPackage, FName(*FTName), RF_Public | RF_Standalone);
     FT->SetStaticMesh(Type.Key);

@@ -34,7 +34,7 @@ namespace McpDiagnosticsSchema
 	inline const TCHAR* NonCanonicalActionValue() { return TEXT("non_canonical"); }
 	inline const TCHAR* UnknownValue() { return TEXT("unknown"); }
 
-	// Canonical parent-tool allowlist (mirrors the 23 TS canonical parents).
+	// Canonical parent-tool allowlist (the 23 canonical parents).
 	inline const TArray<FString>& CanonicalActionValues()
 	{
 		static const TArray<FString> Values = {

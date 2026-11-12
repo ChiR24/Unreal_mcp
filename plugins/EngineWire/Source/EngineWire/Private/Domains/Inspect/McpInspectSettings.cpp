@@ -94,8 +94,7 @@ bool HandleInspectSettingsAction(
                     }
                 }
                 // Level summary (levelPath, streamingLevels, worldSettings,
-                // lightingBuilt...) shared with get_level_details, which the
-                // TypeScript surface aliases to this action.
+                // lightingBuilt...) shared with get_level_details.
                 McpAppendLevelDetails(World, Resp);
                 McpAddShaderCompileState(Resp, nullptr);
                 Resp->SetBoolField(TEXT("success"), true);

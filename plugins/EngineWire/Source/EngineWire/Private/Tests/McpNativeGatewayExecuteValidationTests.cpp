@@ -1,12 +1,9 @@
 #include "Foundation/HandlerUtils/McpHandlerUtilsJson.h"
 // McpNativeGatewayExecuteValidationTests.cpp — in-editor run of the suite
 //
-// The TypeScript side runs the same generated suite in
-// tests/unit/generated-execute-suite.test.ts. Both build their cases from
-// the same canonical records with the same algorithm, so a rule that changes on
-// one surface and not the other fails here.
+// The cases are built from the canonical records, one set per capability.
 //
-// Rule -> outcome matrix (the same on both surfaces):
+// Rule -> outcome matrix:
 //   valid                      -> accepted
 //   undeclared-param           -> UNDECLARED_PARAMETER
 //   missing-required           -> MISSING_REQUIRED_PARAMETER
@@ -156,7 +153,7 @@ bool FMcpNativeGatewayExecuteSuiteTest::RunTest(const FString& Parameters)
 
 		TSharedPtr<FJsonObject> Undeclared = MakeShared<FJsonObject>();
 		Undeclared->Values = Valid->Values;
-		Undeclared->SetBoolField(TEXT("task27UndeclaredParameter"), true);
+		Undeclared->SetBoolField(TEXT("mcpUndeclaredParameter"), true);
 		if (ValidateAndReportCode(Undeclared, Schema) == TEXT("UNDECLARED_PARAMETER"))
 		{
 			++UndeclaredRejected;
@@ -212,7 +209,7 @@ bool FMcpNativeGatewayExecuteSuiteTest::RunTest(const FString& Parameters)
 	// Options are bounded to the key set.
 	FMcpSemanticError OptionError;
 	TSharedPtr<FJsonObject> BadOptions = MakeShared<FJsonObject>();
-	BadOptions->SetBoolField(TEXT("task27NotAnOption"), true);
+	BadOptions->SetBoolField(TEXT("mcpNotAnOption"), true);
 	TestFalse(TEXT("unsupported option rejected"),
 		McpValidateExecutionOptions(BadOptions, OptionError));
 	TestEqual(TEXT("unsupported option is a typed option error"),

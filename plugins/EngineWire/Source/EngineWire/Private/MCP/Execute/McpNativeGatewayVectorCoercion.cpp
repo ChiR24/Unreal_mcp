@@ -3,8 +3,7 @@
 // Some parents declare location/rotation/scale/size/color as arrays, others as
 // {x,y,z} / {width,height} objects, and every handler accepts both spellings. The
 // gateway converts between the two shapes instead of refusing with
-// INVALID_PARAMETER_TYPE (dogfood #226). Mirrors coerceVectorShapes in
-// src/server/gateway/gateway-schema-validate.ts.
+// INVALID_PARAMETER_TYPE.
 //
 // Matching is strict: a candidate key set only wins when the caller's keys are a
 // subset of the set and every set member that would be emitted is a finite number.
@@ -13,8 +12,7 @@
 // or having keys dropped. In a set of four keys the last one (w / a) is optional, so
 // three of four are required. A shorter set never stands in for a longer one the
 // schema declares (XyKeys does not match a schema that also declares z), and only
-// arrays of finite numbers coerce. The key sets and their order are pinned against the
-// TypeScript VECTOR_KEY_SETS by tests/unit/tools/vector-shape-coercion-parity.test.ts.
+// arrays of finite numbers coerce.
 #include "MCP/Execute/McpNativeGatewaySchemaValidation.h"
 
 #include "Math/UnrealMathUtility.h"
@@ -31,7 +29,7 @@ namespace
 	const TCHAR* const XyKeys[] = { TEXT("x"), TEXT("y") };
 
 	// PyrKeys first: a rotation that also declares x/y/z aliases reads an array as
-	// [pitch, yaw, roll] (mirror of the TypeScript order).
+	// [pitch, yaw, roll].
 	const FVectorKeySet GVectorKeySets[] = {
 		{ PyrKeys, 3, 3 },
 		{ XyzwKeys, 4, 3 },
@@ -85,8 +83,7 @@ namespace
 	}
 
 	// True when a longer set that contains every key of Set has a further key the schema
-	// declares — that longer set describes the schema, so Set must not match. Mirrors
-	// isShadowedByLongerSet in gateway-schema-validate.ts.
+	// declares — that longer set describes the schema, so Set must not match.
 	bool IsShadowedByLongerSet(const FVectorKeySet& Set, const TSharedPtr<FJsonObject>& Declared)
 	{
 		for (const FVectorKeySet& Longer : GVectorKeySets)
@@ -125,7 +122,7 @@ namespace
 		if (!Object.IsValid()) return nullptr;
 		for (const FVectorKeySet& Set : GVectorKeySets)
 		{
-			// Per set, as in the TypeScript twin: a key outside THIS set disqualifies the object for this set only.
+			// Per set: a key outside THIS set disqualifies the object for this set only.
 			if (!ObjectKeysAreSubset(Object, Set)) continue;
 			TArray<TSharedPtr<FJsonValue>> Values;
 			bool bOk = true;
@@ -199,7 +196,7 @@ TSharedPtr<FJsonObject> McpCoerceCanonicalVectorShapes(const TSharedPtr<FJsonObj
 		}
 		else if (bWantsObject && Value->Type == EJson::Array && AllFiniteNumbers(Value->AsArray()))
 		{
-			// As in TypeScript: a non-numeric element keeps the array shape and fails validation
+			// A non-numeric element keeps the array shape and fails validation
 			// (AsNumber() would read "a" as 0 and ship a fabricated vector).
 			Replacement = VectorToObject(Value->AsArray(), *PropertySchema);
 		}

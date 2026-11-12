@@ -43,10 +43,7 @@ void FMcpNativeTransport::HandleGatewayCall(
 		FScopeLock SessionLock(&SessionMutex);
 		if (!ActiveSessions.Contains(SessionId))
 		{
-			const FString Body = FMcpJsonRpc::BuildError(
-				Id, FMcpJsonRpc::ErrorInvalidRequest,
-				TEXT("Invalid or expired session ID"));
-			SendAndClose(ClientSocket, 404, TEXT("application/json"), Body, {}, CorsOrigin);
+			SendSessionExpired(Id, ClientSocket, CorsOrigin);
 			return;
 		}
 	}
@@ -79,11 +76,11 @@ void FMcpNativeTransport::HandleGatewayCall(
 		DiscoveryQuery.bHasAction = Params->TryGetStringField(TEXT("action"), DiscoveryQuery.Action);
 		DiscoveryQuery.bHasCapability = Params->TryGetStringField(TEXT("capability"), DiscoveryQuery.Capability);
 		DiscoveryQuery.bHasEffect = Params->TryGetStringField(TEXT("effect"), DiscoveryQuery.Effect);
-		// A cursor supersedes offset; only a string is one (resolveOffset in gateway-search.ts).
+		// A cursor supersedes offset; only a string is one.
 		const TSharedPtr<FJsonValue> Cursor = Params->TryGetField(TEXT("cursor"));
 		DiscoveryQuery.bHasCursor = Cursor.IsValid() && Cursor->Type == EJson::String;
 		if (DiscoveryQuery.bHasCursor) DiscoveryQuery.Cursor = Cursor->AsString();
-		// An integer past its bounds is clamped and the reply says so (integerCoercion in gateway-shared.ts).
+		// An integer past its bounds is clamped and the reply says so.
 		auto ReadBounded = [&](const TCHAR* Name, int32 Min, int32 Max, int32& Out)
 		{
 			int32 Requested = 0;
@@ -143,7 +140,7 @@ void FMcpNativeTransport::HandleGatewayCall(
 			if (Params->TryGetNumberField(TEXT("actionOffset"), O)) DiscoveryQuery.Offset = FMath::Max(0, O);
 		}
 		// describe takes a capability ID as execute does: it is the ID every search row and execute nextCall carries,
-		// and it wins over tool and action (describeCapabilityReference in gateway-describe-capability.ts).
+		// and it wins over tool and action.
 		FString Capability;
 		FString ResolvedFromAlias;
 		// A tool + action naming none of that tool's actions but one record's alias (system_control.restart_editor) is
@@ -178,7 +175,7 @@ void FMcpNativeTransport::HandleGatewayCall(
 			DiscoveryQuery.Action = McpCapabilityPublicAction(*Record);
 			DiscoveryQuery.bHasAction = true;
 		}
-		// param selects one parameter of one capability (paramWithoutCapabilityError in gateway-describe.ts).
+		// param selects one parameter of one capability.
 		if (DiscoveryQuery.bHasParam && !DiscoveryQuery.bHasAction)
 		{
 			TSharedPtr<FJsonObject> Error = GatewayError(TEXT("describe"), TEXT("MISSING_ACTION"),
@@ -273,7 +270,7 @@ void FMcpNativeTransport::HandleGatewayModePreDispatch(
 	}
 
 	// Every other (removed) direct tool name gets a bounded, executable migration
-	// receipt built by the shared builder (mirrors TS buildDirectCallMigration).
+	// receipt built by the shared builder.
 	// Total and non-dispatching: no legacy direct-call path runs after this.
 	const TArray<FString> ParentNames = FMcpToolRegistry::Get().GetToolNames().Array();
 	const TSharedPtr<FJsonObject> Migration =

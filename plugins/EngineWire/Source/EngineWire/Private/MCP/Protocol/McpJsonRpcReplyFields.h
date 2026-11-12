@@ -3,6 +3,7 @@
 #include "CoreMinimal.h"
 #include "Dom/JsonObject.h"
 #include "Dom/JsonValue.h"
+#include "Foundation/HandlerUtils/McpHandlerUtilsJson.h"
 
 // Field helpers of the reply compaction (McpJsonRpcReplyCompaction.cpp: execute; McpJsonRpcReplyDiscovery.cpp:
 // describe and search). Every helper reads; a change is always made on a Copy, never on the reply.
@@ -30,18 +31,13 @@ inline TSharedPtr<FJsonObject> AsObject(const TSharedPtr<FJsonValue>& Value)
 	return Value.IsValid() && Value->TryGetObject(Object) && Object && Object->IsValid() ? *Object : nullptr;
 }
 
-inline TSharedPtr<FJsonObject> ObjectField(const TSharedPtr<FJsonObject>& Source, const FString& Field)
-{
-	return Source.IsValid() ? AsObject(Source->TryGetField(Field)) : nullptr;
-}
-
 inline const FJsonArray* ArrayField(const TSharedPtr<FJsonObject>& Source, const FString& Field)
 {
 	const FJsonArray* Value = nullptr;
 	return Source.IsValid() && Source->TryGetArrayField(Field, Value) ? Value : nullptr;
 }
 
-// Both present and equal. Strings compare case-sensitively (FString == does not), as the TypeScript twin does.
+// Both present and equal. Strings compare case-sensitively (FString == does not).
 inline bool Same(const TSharedPtr<FJsonValue>& Left, const TSharedPtr<FJsonValue>& Right)
 {
 	if (!Left.IsValid() || !Right.IsValid()) return false;

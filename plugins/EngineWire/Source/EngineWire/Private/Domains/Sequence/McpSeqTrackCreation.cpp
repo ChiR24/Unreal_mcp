@@ -69,7 +69,7 @@ bool HandleAddTrack(UEngineWireSubsystem *Subsystem,
       // An unbound track (an Audio track for cutscene music) is a master track before 5.2.
       NewTrack = MCP_ADD_MOVIESCENE_TRACK(MovieScene, TrackClass);
     }
-    // Honour trackName (dogfood #124): callers address tracks by the display name they chose.
+    // Honour trackName: callers address tracks by the display name they chose.
     if (UMovieSceneNameableTrack *Nameable = (NewTrack && !TrackName.IsEmpty()) ? Cast<UMovieSceneNameableTrack>(NewTrack) : nullptr) {
       Nameable->SetDisplayName(FText::FromString(TrackName));
     }
@@ -94,7 +94,7 @@ bool HandleAddTrack(UEngineWireSubsystem *Subsystem,
     Resp->SetStringField(TEXT("sequencePath"), SeqPath);
     Resp->SetStringField(TEXT("trackType"), TrackType);
     if (NewTrack) {
-      Resp->SetStringField(TEXT("trackId"), NewTrack->GetName()); // dogfood #124: addressable id
+      Resp->SetStringField(TEXT("trackId"), NewTrack->GetName()); // addressable id
       Resp->SetStringField(TEXT("trackClass"), NewTrack->GetClass()->GetName());
       Resp->SetStringField(TEXT("trackPath"), NewTrack->GetPathName());
     }

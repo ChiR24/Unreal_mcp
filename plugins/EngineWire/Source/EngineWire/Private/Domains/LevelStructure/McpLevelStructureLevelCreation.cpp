@@ -79,7 +79,7 @@ bool HandleCreateLevel(
     LevelPath = SafeLevelPath;
 
     // levelPath may already name the level (".../Maps/MCP_Arena" + levelName
-    // "MCP_Arena"); do not nest it a second time (dogfood #15).
+    // "MCP_Arena"); do not nest it a second time.
     FString FullPath = LevelPath.EndsWith(TEXT("/") + LevelName, ESearchCase::IgnoreCase) ? LevelPath : LevelPath / LevelName;
     if (!FullPath.StartsWith(TEXT("/")))
     {
@@ -255,7 +255,7 @@ bool HandleCreateLevel(
     }
 
     // Creating does not switch the editor to the new level unless
-    // loadAfterCreate is set; say so explicitly (dogfood #162).
+    // loadAfterCreate is set; say so explicitly.
     if (!LoadIfRequested(ResponseJson, TEXT("Level created but")))
     {
         return true;

@@ -22,8 +22,7 @@ namespace
 	};
 
 	// Loading is not serving: a store that reports Ready but holds zero records
-	// cannot answer a discovery call, so it is NOT ready. Mirrors the TypeScript
-	// registry probe's registry_empty branch.
+	// cannot answer a discovery call, so it is NOT ready.
 	FComponentProbe ProbeRegistry()
 	{
 		const FMcpCapabilityStore& Store = FMcpCapabilityStore::Get();
@@ -98,14 +97,7 @@ namespace McpResourceHealth
 		Data->SetStringField(TEXT("surface"), TEXT("native"));
 		Data->SetObjectField(TEXT("readiness"), Readiness);
 		Data->SetObjectField(TEXT("diagnostics"), Registry.SnapshotJson());
-		// Identical null-when-empty projection to the automation-bridge
-		// presenter (McpResourceBridgeContent.cpp) - cross-transport parity with
-		// the TS reader's null for a missing previous FILE.
-		const TSharedRef<FJsonObject> PreviousSummary = FMcpDiagnosticsSnapshot::Get().PreviousSummaryJson();
-		Data->SetField(TEXT("previousSession"), PreviousSummary->Values.Num() == 0
-			? TSharedPtr<FJsonValue>(MakeShared<FJsonValueNull>())
-			: TSharedPtr<FJsonValue>(MakeShared<FJsonValueObject>(PreviousSummary)));
-		Data->SetObjectField(TEXT("currentSession"), FMcpDiagnosticsSnapshot::Get().CurrentSummaryJson());
+		FMcpDiagnosticsSnapshot::Get().SetSessionFields(Data);
 		Data->SetStringField(TEXT("metricsExposition"), Registry.RenderPrometheus(&View));
 		return Data;
 	}

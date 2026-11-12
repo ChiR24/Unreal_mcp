@@ -7,7 +7,7 @@
 
 /**
  * Builds the static, non-canonical 'unreal' gateway tool definition returned by
- * tools/list when native gateway mode is enabled. The gateway is NOT registered
+ * tools/list, always: it is the only tool listed. The gateway is NOT registered
  * in FMcpToolRegistry, so it never enters the canonical 23-tool parity set.
  */
 TSharedPtr<FJsonObject> BuildUnrealGatewayToolDefinition();

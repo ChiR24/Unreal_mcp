@@ -183,5 +183,3 @@ bool UEngineWireSubsystem::HandleGetMetadata(
                          Resp, FString());
   return true;
 }
-
-// Dispatcher-compatible mesh workflow handlers with explicit success/error responses.

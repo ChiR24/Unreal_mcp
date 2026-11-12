@@ -1,7 +1,6 @@
 // McpNativeGatewayValidation.h — canonical execute validation for the unreal gateway
 //
-// Stage order is normative and matches the TypeScript reference
-// (src/server/gateway/gateway-execute*.ts): resolve form and alias ->
+// Stage order is normative: resolve form and alias ->
 // registry -> dynamic enabled state -> options -> defaults -> exact per-action
 // input schema. Nothing reaches the subsystem queue until every stage passes.
 
@@ -58,7 +57,7 @@ TSharedPtr<FJsonObject> ValidateAndResolveGatewayExecute(
 /**
  * Project a handler result to the capability's declared output fields.
  *
- * Mirrors the TypeScript gateway (projectCanonicalOutput): keeps only the
+ * Keeps only the
  * declared output properties, reading each from the result root and then from
  * its nested `data` payload. Undeclared native transport/verification fields are
  * dropped so a real success payload can never violate its closed output schema.

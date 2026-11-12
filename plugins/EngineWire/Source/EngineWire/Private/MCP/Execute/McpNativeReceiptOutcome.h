@@ -1,10 +1,9 @@
 // McpNativeReceiptOutcome.h — reusable outcome metadata mined from a handler result
 //
-// Mirrors src/tools/catalog/capabilities/semantic/receipt-outcome.ts so both
-// transports surface the same handles / changed entities / task state for the
-// same handler result. Nothing is fabricated: a derived handle is emitted only
-// when its identifier passes the same allowed-root / shape gate the TypeScript
-// schemas apply, so a malformed identifier is dropped rather than coerced.
+// Handles, changed entities and task state for a handler result, the same on
+// both transports. Nothing is fabricated: a derived handle is emitted only
+// when its identifier passes the allowed-root / shape gate, so a malformed
+// identifier is dropped rather than coerced.
 
 #pragma once
 

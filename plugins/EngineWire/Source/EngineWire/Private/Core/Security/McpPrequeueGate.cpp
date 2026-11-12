@@ -12,9 +12,8 @@ namespace McpPrequeueGate
 {
 namespace
 {
-// Bounds mirror the payload path scan: a hostile client cannot make the gate
-// walk an unbounded structure before its request is even queued.
-constexpr int32 MaxScanDepth = 24;
+// Bounds mirror the payload path scan (McpCapabilityAuthorization.h).
+constexpr int32 MaxScanDepth = McpMaxPayloadScanDepth;
 constexpr int32 MaxScanNodes = McpMaxPayloadScanNodes;
 
 FMcpAuthorizationGrant ReadGrant(const TSharedPtr<FJsonObject>& Consent)

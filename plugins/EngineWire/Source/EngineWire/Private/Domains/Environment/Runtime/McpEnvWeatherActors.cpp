@@ -56,7 +56,7 @@ bool McpConfigureParticleEmitter(const TSharedPtr<FJsonObject> &Payload, const F
         // Claiming "Configured particle emitter" for an emitter with no particle
         // system and no applied property is the false-success this capability was
         // reported for: nothing renders and nothing was set. Say so, and name the
-        // input that would make it render (MCPBB-085 disclosure pattern).
+        // input that would make it render.
         OutMessage = FString::Printf(
             TEXT("Particle emitter %s created but nothing was configured: no particleSystemPath was supplied and no payload property matched this emitter. Pass particleSystemPath to make it render."),
             *Emitter->GetActorLabel());

@@ -186,6 +186,22 @@ describe('plugin security contracts', () => {
     expect(destroyIdx).toBeLessThan(retIdx);
   });
 
+  it('sets the WebSocket TLS up without the engine SSL manager, whose answer is false in every editor build', () => {
+    // FSslManager::InitializeSsl() initialises OpenSSL only in a monolithic build and returns false in a modular one.
+    // Taking that for a failure refused every wss client on every engine; the module's own OpenSSL initialises itself.
+    const tls = privateSource('Transport', 'WebSocket', 'McpBridgeWebSocketTls.cpp').replace(/\/\/[^\n]*/gu, '');
+    expect(tls).not.toContain('InitializeSsl(');
+    // What makes the listener's TLS worth having stays: a TLS 1.2 floor, a certificate, its key, and the two matching.
+    for (const check of [
+      'SSL_CTX_set_min_proto_version(SslContext, TLS1_2_VERSION)',
+      'SSL_CTX_use_certificate_file(',
+      'SSL_CTX_use_PrivateKey_file(',
+      'SSL_CTX_check_private_key(SslContext) != 1',
+    ]) {
+      expect(tls).toContain(check);
+    }
+  });
+
   it('accepts in-project absolute file paths but still enforces containment', () => {
     // The resolver lives in the header the sanitizer header includes at its end.
     const source = privateSource(

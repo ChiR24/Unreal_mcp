@@ -1,9 +1,7 @@
 // McpNativeGatewaySchemaValidation.h — exact per-action schema enforcement
 //
 // Implements the Draft-2020-12 keyword subset the canonical capability records
-// actually use, and nothing else. The matching TypeScript implementation is
-// src/server/gateway/gateway-schema-validate.ts; both surfaces must produce the same
-// violation reason for the same input.
+// actually use, and nothing else.
 //
 // Unsupported keywords fail CLOSED. If a record ever grows a keyword this
 // validator does not implement (a conditional, $ref, allOf/anyOf/oneOf, pattern,
@@ -34,7 +32,7 @@ struct FMcpSchemaViolationDetail
 	FString Message;
 };
 
-/** Stable gateway error code for a violation reason, shared with TypeScript. */
+/** Stable gateway error code for a violation reason. */
 const TCHAR* McpSchemaViolationCode(EMcpSchemaViolation Reason);
 
 /** True when the value satisfies the schema. OutViolation is set otherwise. */
@@ -47,9 +45,9 @@ bool McpValidateObjectAgainstCanonicalSchema(
 	const TSharedPtr<FJsonObject>& Object, const TSharedPtr<FJsonObject>& Schema,
 	FMcpSchemaViolationDetail& OutViolation);
 
-/** Apply declared property defaults before validation, mirroring TypeScript. */
-/** Converts {x,y,z}/{width,height}/{r,g,b,a} objects to arrays and back to match the declared shape (dogfood #226). */
+/** Converts {x,y,z}/{width,height}/{r,g,b,a} objects to arrays and back to match the declared shape. */
 TSharedPtr<FJsonObject> McpCoerceCanonicalVectorShapes(const TSharedPtr<FJsonObject>& Params, const TSharedPtr<FJsonObject>& Schema);
+/** Apply declared property defaults before validation. */
 TSharedPtr<FJsonObject> McpApplyCanonicalSchemaDefaults(
 	const TSharedPtr<FJsonObject>& Params, const TSharedPtr<FJsonObject>& Schema);
 

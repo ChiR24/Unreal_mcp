@@ -8,7 +8,7 @@
 #include "Tests/McpLaneOracle.h"
 #include "Transport/WebSocket/McpBridgeWebSocket.h"
 
-// Gate - CONCURRENCY half of "prove all editor mutations enter through
+// The CONCURRENCY half of "prove all editor mutations enter through
 // the subsystem queue / game thread".
 //
 // Already proved the RE-ENTRANT case (one thread, a handler that pumps
@@ -102,7 +102,7 @@ bool FMcpQueueConcurrentEnqueueLaneTest::RunTest(const FString& Parameters)
 {
 	(void)Parameters;
 	using namespace McpQueueConcurrencyTestUtils;
-	const TCHAR* Action = TEXT("task46_concurrency_fixture");
+	const TCHAR* Action = TEXT("concurrency_fixture");
 	FDispatchLog Log;
 	UEngineWireSubsystem* Subsystem =
 		NewObject<UEngineWireSubsystem>();
@@ -164,7 +164,7 @@ bool FMcpQueueOffThreadDrainTest::RunTest(const FString& Parameters)
 {
 	(void)Parameters;
 	using namespace McpQueueConcurrencyTestUtils;
-	const TCHAR* Action = TEXT("task46_offthread_fixture");
+	const TCHAR* Action = TEXT("offthread_fixture");
 	FDispatchLog Log;
 	UEngineWireSubsystem* Subsystem =
 		NewObject<UEngineWireSubsystem>();

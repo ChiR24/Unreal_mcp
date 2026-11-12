@@ -118,6 +118,9 @@ public:
 	/** Bounded read-only summary of the previous record, or empty. */
 	TSharedRef<FJsonObject> PreviousSummaryJson() const;
 
+	/** previousSession (null when there is no previous record) and currentSession, as the ue:// bodies report them. */
+	void SetSessionFields(const TSharedPtr<FJsonObject>& Data) const;
+
 	static int32 MaxSnapshotBytes() { return McpDiagnosticsSchema::MaxSnapshotBytes; }
 
 private:

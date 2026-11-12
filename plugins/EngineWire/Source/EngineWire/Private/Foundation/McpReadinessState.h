@@ -1,5 +1,5 @@
 // McpReadinessState.h
-// Task 47: the readiness facts a SOCKET-THREAD reader is allowed to consult.
+// The readiness facts a SOCKET-THREAD reader is allowed to consult.
 //
 // `ue://health` is answered on the transport thread, so deciding "is the editor
 // up" must never reach into editor state from there. Instead the layer that
@@ -7,9 +7,8 @@
 // teardown; the health reader only reads these flags.
 //
 // Fail-closed by construction: every flag starts FALSE. A surface that has not
-// yet published reads as NOT ready rather than ready-by-default, mirroring the
-// TypeScript editor probe (`src/services/readiness.ts`) that refuses to infer
-// health from "the socket is open". Nothing branches on these flags to admit,
+// yet published reads as NOT ready rather than ready-by-default: health is never inferred
+// from "the socket is open". Nothing branches on these flags to admit,
 // refuse, route or retry a request - they are reported, never enforced.
 //
 // Foundation-only: this header depends on nothing from MCP/, Domains/ or

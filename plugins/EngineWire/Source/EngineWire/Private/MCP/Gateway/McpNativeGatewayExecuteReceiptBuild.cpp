@@ -22,8 +22,7 @@ TSharedPtr<FJsonObject> DescribeGuidance(const FString& CapabilityId)
 	return GatewaySchemaGuidance(Record->Parent, McpCapabilityPublicAction(*Record), FString());
 }
 
-// RESULT_TOO_LARGE names the capability's own narrowing parameters, as the
-// TypeScript gateway's narrowingGuidance does. The native refusal only pointed
+// RESULT_TOO_LARGE names the capability's own narrowing parameters. The refusal only pointed
 // at describe, so the same oversized call was simply sent again.
 TSharedPtr<FJsonObject> NarrowingGuidance(const FString& CapabilityId)
 {
@@ -35,7 +34,7 @@ TSharedPtr<FJsonObject> NarrowingGuidance(const FString& CapabilityId)
 	{
 		return Guidance;
 	}
-	// Mirrors NARROWING_PARAM in src/server/gateway/gateway-execute-dispatch.ts.
+	// The words a narrowing parameter carries in its name.
 	static const TCHAR* const NarrowingWords[] = {
 		TEXT("summary"), TEXT("filter"), TEXT("name"), TEXT("path"), TEXT("kind"), TEXT("type"), TEXT("limit"),
 		TEXT("offset"), TEXT("page"), TEXT("cursor"), TEXT("count"), TEXT("max"), TEXT("top"), TEXT("depth")};
@@ -97,12 +96,11 @@ TSharedPtr<FJsonObject> McpBuildGatewayExecuteReceipt(
 	}
 
 	// Project the handler result to the capability's declared output fields
-	// before validating and publishing it, mirroring the TypeScript gateway
-	// (projectCanonicalOutput). This keeps undeclared native transport and
+	// before validating and publishing it. This keeps undeclared native transport and
 	// verification fields (compiled, saved, scsVerification, assetPath, ...) from
 	// turning a correct success payload into OUTPUT_SCHEMA_VIOLATION. The native
 	// completion carries the success verdict separately from the payload (the
-	// WebSocket frame the TS gateway projects embeds it), so it is reunited
+	// WebSocket frame embeds it), so it is reunited
 	// first; the projected output is what is both validated and published.
 	// The 100k budget exists to stop an unbounded listing from flooding a client, and
 	// every capability that can page or filter keeps it. An image can do neither: it is
@@ -111,11 +109,10 @@ TSharedPtr<FJsonObject> McpBuildGatewayExecuteReceipt(
 	// cannot be followed. The budget follows the reply's shape, not the capability that
 	// sent it: a top-level imageBase64 string of at most 6000000 characters adds its own
 	// length to the flat 100000. The rest of the reply is still held to 100k, and an image
-	// past its own ceiling is refused. Mirrors resultCharBudget() in
-	// src/server/gateway/gateway-execute-dispatch.ts.
+	// past its own ceiling is refused.
 	// A list a handler sends inside its data payload is aggregated and paged as one at the root (the projection reads both).
 	TSharedPtr<FJsonObject> Published = McpLiftReplyPayload(Result);
-	int32 ResultCharBudget = 100000;
+	int32 ResultCharBudget = McpReplyCharBudget;
 	FString ImageBase64;
 	if (Published.IsValid() && Published->TryGetStringField(TEXT("imageBase64"), ImageBase64) && ImageBase64.Len() <= 6000000)
 	{
@@ -152,9 +149,8 @@ TSharedPtr<FJsonObject> McpBuildGatewayExecuteReceipt(
 		WithVerdict->Values = Published->Values;
 	}
 	// A handler that answers success:false inside its payload has failed even
-	// when the completion frame said otherwise; surface it as an error like the
-	// TypeScript gateway does instead of a "success" wrapping a failure
-	// (dogfood #188/#189).
+	// when the completion frame said otherwise; surface it as an error
+	// instead of a "success" wrapping a failure.
 	bool bPayloadSuccess = true;
 	if (WithVerdict->TryGetBoolField(TEXT("success"), bPayloadSuccess) && !bPayloadSuccess)
 	{
@@ -182,9 +178,9 @@ TSharedPtr<FJsonObject> McpBuildGatewayExecuteReceipt(
 		WithVerdict->SetBoolField(TEXT("success"), true);
 	}
 	// `message` is carried beside the payload on a native completion but INSIDE
-	// it on the WebSocket frame the TS gateway projects, so reuniting only
+	// it on the WebSocket frame, so reuniting only
 	// `success` dropped a field the output schema declares and left the two
-	// surfaces publishing different `data` for the same call.
+	// transports publishing different `data` for the same call.
 	if (!Message.IsEmpty() && !WithVerdict->HasField(TEXT("message")))
 	{
 		WithVerdict->SetStringField(TEXT("message"), Message);

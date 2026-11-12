@@ -103,7 +103,7 @@ UPCGGraph* CreateOrReusePCGGraph(const FString& GraphPath, bool bOverwrite, bool
     }
 
     const FString AssetName = FPackageName::GetShortName(GraphPath);
-    UPackage* Package = CreatePackage(*GraphPath);
+    UPackage* Package = McpCreatePackageOrNull(GraphPath);
     if (!Package)
     {
         OutError = FString::Printf(TEXT("Failed to create package '%s'."), *GraphPath);

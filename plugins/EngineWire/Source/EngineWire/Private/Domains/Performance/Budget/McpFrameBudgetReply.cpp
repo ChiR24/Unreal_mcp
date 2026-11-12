@@ -23,18 +23,6 @@ double BudgetRound(double Value)
     return FMath::RoundToDouble(Value * 100.0) / 100.0;
 }
 
-void AddBudgetWarning(const TSharedPtr<FJsonObject>& Result, const FString& Text)
-{
-    TArray<TSharedPtr<FJsonValue>> Warnings;
-    const TArray<TSharedPtr<FJsonValue>>* Held = nullptr;
-    if (Result->TryGetArrayField(TEXT("warnings"), Held))
-    {
-        Warnings = *Held;
-    }
-    Warnings.Add(MakeShared<FJsonValueString>(Text));
-    Result->SetArrayField(TEXT("warnings"), Warnings);
-}
-
 TSharedPtr<FJsonObject> KnobRow(const FKnob& Knob, bool bChosen)
 {
     TSharedPtr<FJsonObject> Row = MakeShared<FJsonObject>();
@@ -140,18 +128,18 @@ TSharedPtr<FJsonObject> Reply(const FRun& Run, int32 Kept, FString& OutMessage)
     // A frame far longer than its GPU time waits on the editor's own CPU work: the GPU time then holds idle gaps.
     if (Fps > 0.0 && 1000.0 / Fps > 2.5 * Baseline)
     {
-        AddBudgetWarning(Result, FString::Printf(TEXT("The editor's frame takes %.1f ms but its GPU work %.2f ms: the frame waits on the "
-                                                      "editor's own CPU work, so GPU times here hold idle gaps and gains under a few tenths of "
-                                                      "a millisecond are uncertain. A GPU-bound frame (a heavier view, a game at its own "
-                                                      "quality) measures them better."), 1000.0 / Fps, Baseline));
+        McpHandlerUtils::AppendWarning(Result, FString::Printf(TEXT("The editor's frame takes %.1f ms but its GPU work %.2f ms: the frame waits on the "
+                                                                    "editor's own CPU work, so GPU times here hold idle gaps and gains under a few tenths of "
+                                                                    "a millisecond are uncertain. A GPU-bound frame (a heavier view, a game at its own "
+                                                                    "quality) measures them better."), 1000.0 / Fps, Baseline));
     }
     Result->SetObjectField(TEXT("cameraLocation"), McpHandlerUtils::VectorToJson(Run.Client->GetViewLocation()));
     Result->SetObjectField(TEXT("cameraRotation"), McpHandlerUtils::RotatorToJson(Run.Client->GetViewRotation()));
     if (Run.bNoDynamicShadows)
     {
-        AddBudgetWarning(Result, TEXT("Lights were not tried: at the editor's shadow quality (scalability Low) no dynamic shadows are "
-                                      "drawn, so their cost is missing from this measure. A game drawn at a higher quality pays for "
-                                      "them: raise the Shadow group (set_scalability) to measure them, then set it back."));
+        McpHandlerUtils::AppendWarning(Result, TEXT("Lights were not tried: at the editor's shadow quality (scalability Low) no dynamic shadows are "
+                                                    "drawn, so their cost is missing from this measure. A game drawn at a higher quality pays for "
+                                                    "them: raise the Shadow group (set_scalability) to measure them, then set it back."));
     }
     if (Baseline <= Run.BudgetMs)
     {
@@ -204,9 +192,9 @@ TSharedPtr<FJsonObject> Reply(const FRun& Run, int32 Kept, FString& OutMessage)
                                  Baseline, Run.BudgetMs, Run.Chosen.Num(), Run.ChosenMs, Baseline - Saved, Changed, *Outcome);
     if (!bMet)
     {
-        AddBudgetWarning(Result, FString::Printf(TEXT("Together the knobs measured %.2f ms, over the budget their separate gains "
-                                                      "promised (%.2f ms): their savings overlap. Call again with a lower budgetMs to "
-                                                      "pick more."), Run.ChosenMs, Baseline - Saved));
+        McpHandlerUtils::AppendWarning(Result, FString::Printf(TEXT("Together the knobs measured %.2f ms, over the budget their separate gains "
+                                                                    "promised (%.2f ms): their savings overlap. Call again with a lower budgetMs to "
+                                                                    "pick more."), Run.ChosenMs, Baseline - Saved));
     }
     return Result;
 }

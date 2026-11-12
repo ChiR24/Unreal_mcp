@@ -21,18 +21,15 @@ struct FMcpCapabilityDemand
 	// Scopes a parameter the call sent adds (policy.raisedBy), needed AS WELL as RequiredScope: membership is
 	// exact-set, so swapping read for write would let a write-only token read.
 	TArray<EMcpCapabilityScope> AlsoRequiredScopes;
-	// "none" | "explicit" | "elevated" — mirrors CONSENT_MODES in TypeScript.
+	// "none" | "explicit" | "elevated", the CONSENT_MODES of the capability records.
 	FString ConsentMode = TEXT("none");
 	FString CapabilityId;
 	// Every other name a grant may use for this capability: its declared aliases
-	// and its {tool}.{action} legacy pairs (a folded family's old names included),
-	// mirroring grantNamesCapability() in gateway-execute-policy.ts.
+	// and its {tool}.{action} legacy pairs (a folded family's old names included).
 	TArray<FString> ConsentNames;
 
-	// Case-sensitive, mirroring the `===` comparisons in grantNamesCapability():
-	// FString::operator== and TArray::Contains compare IgnoreCase, which would
-	// make the plugin looser than the TypeScript door on an authorization
-	// predicate.
+	// Case-sensitive: FString::operator== and TArray::Contains compare IgnoreCase,
+	// too loose for an authorization predicate.
 	bool AcceptsConsentName(const FString& Name) const
 	{
 		if (Name.IsEmpty())
@@ -64,14 +61,13 @@ struct FMcpAuthorizationGrant
 	FString ConsentCapability;
 	FString ConsentAcknowledge;
 	// Per-describe nonce issued alongside the grant. Grants without one (older
-	// clients, the TypeScript surface) keep the previous capability-match-only
+	// clients) keep the previous capability-match-only
 	// behaviour; grants carrying one are single-use and burn on first acceptance.
 	FString ConsentNonce;
 	bool bConsentPresent = false;
 };
 
-// Stable machine-readable refusal codes. These are the SAME strings the
-// TypeScript semantic error algebra emits, so typed parity holds by construction.
+// Stable machine-readable refusal codes.
 namespace McpAuthorizationCodes
 {
 extern const TCHAR* const ScopeNotGranted;
@@ -90,7 +86,7 @@ struct FMcpAuthorizationDecision
 	FString ErrorCode;
 	FString Message;
 
-	// Typed-error payload mirroring the TypeScript discriminated union exactly:
+	// Typed-error payload:
 	// authorization/SCOPE_NOT_GRANTED carries requiredScope + grantedScopes,
 	// consent/CONSENT_REQUIRED carries scope, quota/QUOTA_EXCEEDED carries
 	// retryable. Carried on the decision so BOTH transports build the identical
@@ -119,6 +115,9 @@ struct FMcpPayloadPathScan
 // (about 16 values an item) was refused although batches declare up to 500 items. Walking them costs the same order
 // as the parse that built them.
 inline constexpr int32 McpMaxPayloadScanNodes = 262144;
+// The nesting depth those scans and execute's string-length walk go to: a hostile client cannot make the gate walk an
+// unbounded structure before its request is even queued, and no payload nested deeper reaches the queue.
+inline constexpr int32 McpMaxPayloadScanDepth = 24;
 
 namespace McpCapabilityAuthorization
 {

@@ -108,7 +108,7 @@ bool HandleWidgetAuthoringLocalization(
             return true;
         }
 
-        // Dogfood #188: a missing table/key used to answer success with data.success=false.
+        // A missing table/key used to answer success with data.success=false.
         UStringTable* StringTableAsset = LoadObject<UStringTable>(nullptr, *StringTableId);
         if (!StringTableAsset)
         {
@@ -143,7 +143,7 @@ bool HandleWidgetAuthoringLocalization(
         ResultJson->SetStringField(TEXT("stringKey"), StringKey);
         if (!bBound)
         {
-            // The same dogfood #188 shape the branches above were fixed for was
+            // The shape the branches above were fixed for was
             // left here: envelope success:true carrying data.success:false, and
             // the asset dirtied and saved for a bind that did not happen. The
             // table and the key are verified above, so the only way here is an

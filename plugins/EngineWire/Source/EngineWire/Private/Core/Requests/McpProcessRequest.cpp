@@ -1,7 +1,6 @@
 #include "Async/Async.h"
 #include "Dom/JsonObject.h"
 #include "HAL/PlatformTime.h"
-#include "Core/Module/EngineWireGlobals.h"
 #include "Core/Journal/McpChangeJournal.h"
 #include "Core/Requests/McpUndoLedger.h"
 #include "Core/Security/McpPrequeueGate.h"
@@ -143,7 +142,7 @@ void UEngineWireSubsystem::ProcessAutomationRequest(
   }
 
   // if the editor is ALREADY blocked on a modal window, do NOT stack another handler on top of it — reply
-  // with a clear signal instead of piling onto the freeze. Defensive: the primary K1 fix is the unattended-guard
+  // with a clear signal instead of piling onto the freeze. Defensive: the primary fix is the unattended-guard
   // below, which stops handlers from opening a blocking modal in the first place.
   if (FSlateApplication::IsInitialized() &&
       FSlateApplication::Get().GetActiveModalWindow().IsValid()) {
@@ -173,7 +172,7 @@ void UEngineWireSubsystem::ProcessAutomationRequest(
   // (the witnessed force-kill / data-loss class). RAII-restored on every function-scope exit (incl. the early
   // returns and the exception paths below). Non-differential stability fix.
   TGuardValue<bool> UnattendedScriptGuard(GIsRunningUnattendedScript, true);
-  // B11/K2b: record which action is now executing (cleared in the ON_SCOPE_EXIT below) so the off-thread watchdog
+  // Record which action is now executing (cleared in the ON_SCOPE_EXIT below) so the off-thread watchdog
   // can name it if this handler freezes the game thread.
   {
     const FString SubAction = Payload.IsValid() ? GetJsonStringField(Payload, TEXT("subAction")) : FString();

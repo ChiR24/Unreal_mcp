@@ -206,6 +206,16 @@ TSharedRef<FJsonObject> FMcpDiagnosticsSnapshot::PreviousSummaryJson() const
 	return bHasPrevious ? McpDiagnosticsSchema::BuildSnapshotJson(PreviousState) : MakeShared<FJsonObject>();
 }
 
+void FMcpDiagnosticsSnapshot::SetSessionFields(const TSharedPtr<FJsonObject>& Data) const
+{
+	// The current summary is never empty (schemaVersion, instance, counters and lastRequest always appear).
+	const TSharedRef<FJsonObject> Previous = PreviousSummaryJson();
+	Data->SetField(TEXT("previousSession"), Previous->Values.Num() == 0
+		? TSharedPtr<FJsonValue>(MakeShared<FJsonValueNull>())
+		: TSharedPtr<FJsonValue>(MakeShared<FJsonValueObject>(Previous)));
+	Data->SetObjectField(TEXT("currentSession"), CurrentSummaryJson());
+}
+
 FString FMcpDiagnosticsSnapshot::DiagnosticsRoot() const
 {
 	return !RootOverride.IsEmpty() ? RootOverride : CachedRoot;

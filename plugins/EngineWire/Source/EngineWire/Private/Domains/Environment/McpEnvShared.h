@@ -6,7 +6,6 @@
 #include "Safety/McpSafeOperations.h"
 
 #include "Dom/JsonObject.h"
-#include "Core/Module/EngineWireGlobals.h"
 #include "Foundation/BridgeHelpers/McpHelpers.h"
 #include "EngineWireSubsystem.h"
 #include "HAL/PlatformMemory.h"

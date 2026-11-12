@@ -153,7 +153,7 @@ bool UEngineWireSubsystem::HandleAnalyzeGraph(
           ParameterCount++;
           ParameterNames.Add(Param->ParameterName.ToString());
         }
-        // Texture parameters derive from TextureSample, not UMaterialExpressionParameter (dogfood #207).
+        // Texture parameters derive from TextureSample, not UMaterialExpressionParameter.
         else if (UMaterialExpressionTextureSampleParameter *TexParam = Cast<UMaterialExpressionTextureSampleParameter>(Expr)) {
           ParameterCount++;
           ParameterNames.Add(TexParam->ParameterName.ToString());

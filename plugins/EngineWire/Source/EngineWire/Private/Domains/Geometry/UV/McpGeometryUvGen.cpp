@@ -18,8 +18,8 @@ bool HandleAutoUV(UEngineWireSubsystem* Self, const FString& RequestId,
     const int32 UVChannel = FMath::Max(0, GetJsonIntField(Payload, TEXT("uvChannel"), 0));
 
     // XAtlas silently refuses a non-compact mesh or a missing UV layer (its Debug sink
-    // was null), which is how auto_uv reported success while writing nothing (dogfood
-    // #133). Make sure the layer exists (a channel out of range is refused before anything
+    // was null), which is how auto_uv reported success while writing nothing.
+    // Make sure the layer exists (a channel out of range is refused before anything
     // changes), compact, and fall back to a bounds-sized box projection so the channel is
     // never left empty.
     if (!EnsureUvLayerOrReply(Self, RequestId, Socket, Mesh, UVChannel))

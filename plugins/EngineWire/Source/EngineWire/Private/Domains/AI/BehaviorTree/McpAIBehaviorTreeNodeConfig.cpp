@@ -108,7 +108,7 @@ bool HandleConfigureBehaviorTreeNode(UEngineWireSubsystem* Self, const FString& 
     };
 
     // get_tree numbers nodes by DFS index (root decorators first, then node, services,
-    // children, entry decorators); accept those ids here as well (dogfood #60).
+    // children, entry decorators); accept those ids here as well.
     if (!NodeId.IsEmpty() && NodeId.IsNumeric())
     {
         TArray<UBTNode*> Ordered;

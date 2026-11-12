@@ -257,15 +257,9 @@ void AddWarnings(const FString& RequestId, const TSharedPtr<FJsonObject>& Result
     {
         return;
     }
-    TArray<TSharedPtr<FJsonValue>> Warnings;
-    const TArray<TSharedPtr<FJsonValue>>* Existing = nullptr;
-    if (Result->TryGetArrayField(TEXT("warnings"), Existing) && Existing)
-    {
-        Warnings = *Existing;
-    }
     for (int32 Index = 0; Index < Found.Num() && Index < WatchMaxListed; ++Index)
     {
-        Warnings.Add(MakeShared<FJsonValueString>(Found[Index]));
+        McpHandlerUtils::AppendWarning(Result, Found[Index]);
     }
     TArray<FString> Unsaid;
     if (Found.Num() > WatchMaxListed)
@@ -278,14 +272,13 @@ void AddWarnings(const FString& RequestId, const TSharedPtr<FJsonObject>& Result
     }
     if (Unsaid.Num() > 0)
     {
-        Warnings.Add(MakeShared<FJsonValueString>(FString::Join(Unsaid, TEXT("; ")) +
-            TEXT(": control_actor audit_placement lists every problem in the level.")));
+        McpHandlerUtils::AppendWarning(Result, FString::Join(Unsaid, TEXT("; ")) +
+            TEXT(": control_actor audit_placement lists every problem in the level."));
     }
     if (bPlacement)
     {
-        Warnings.Add(MakeShared<FJsonValueString>(TEXT("A placement made on purpose drops out of these checks with the actor tag "
-            "mcp.placement.ok; faces in one plane flicker whatever the intent.")));
+        McpHandlerUtils::AppendWarning(Result, TEXT("A placement made on purpose drops out of these checks with the actor tag "
+            "mcp.placement.ok; faces in one plane flicker whatever the intent."));
     }
-    Result->SetArrayField(TEXT("warnings"), Warnings);
 }
 } // namespace McpChangeWatch

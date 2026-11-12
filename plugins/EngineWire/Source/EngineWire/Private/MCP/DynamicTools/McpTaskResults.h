@@ -8,7 +8,7 @@
  * Calls that answered "still running" (FMcpNativeTransport::AnswerStillRunning) and, once done, their outcome, read
  * back by manage_tools get_task_result and by the tasks extension's tasks/get: past that answer the call's own reply
  * went only to the log. Keyed by the task id the answer gave, readable only by the principal that sent the call, and
- * capped at the last MaxKept calls. Mirrors src/server/gateway/gateway-task-results.ts on the TypeScript door.
+ * capped at the last MaxKept calls.
  */
 class FMcpTaskResults
 {

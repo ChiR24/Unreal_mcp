@@ -79,7 +79,7 @@ TSharedPtr<FJsonObject> FMcpDynamicToolManager::GetStatus()
 TSharedPtr<FJsonObject> FMcpDynamicToolManager::Reset(bool& bOutChanged)
 {
 	int32 Changed = 0;
-	int32 Enabled = 0; // tools switched back on, the record's enabled (the TypeScript door counts the same)
+	int32 Enabled = 0; // tools switched back on, the record's enabled
 	for (auto& Pair : ToolStates)
 	{
 		const bool* Initial = InitialToolEnabled.Find(Pair.Key);

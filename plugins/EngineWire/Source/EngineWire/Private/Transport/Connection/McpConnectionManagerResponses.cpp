@@ -1,6 +1,25 @@
 #include "Transport/Connection/McpConnectionManagerPrivate.h"
 #include "Foundation/McpLiveStateRevisions.h"
 
+void FMcpConnectionManager::SetLogSubscription(
+    TSharedPtr<FMcpBridgeWebSocket> Socket, const bool bSubscribed) {
+  if (!Socket.IsValid()) {
+    return;
+  }
+
+  FScopeLock Lock(&LogSubscribersMutex);
+  if (bSubscribed) {
+    LogSubscriberSockets.Add(Socket.Get());
+  } else {
+    LogSubscriberSockets.Remove(Socket.Get());
+  }
+}
+
+bool FMcpConnectionManager::HasLogSubscribers() const {
+  FScopeLock Lock(&LogSubscribersMutex);
+  return LogSubscriberSockets.Num() > 0;
+}
+
 bool FMcpConnectionManager::SendRawMessageToLogSubscribers(
     const FString &Message) {
   if (Message.IsEmpty()) {
@@ -27,6 +46,14 @@ bool FMcpConnectionManager::SendRawMessageToLogSubscribers(
   return bSent;
 }
 
+void FMcpConnectionManager::RegisterRequestSocket(
+    const FString &RequestId, TSharedPtr<FMcpBridgeWebSocket> Socket) {
+  if (!RequestId.IsEmpty() && Socket.IsValid()) {
+    FScopeLock Lock(&PendingRequestsMutex);
+    PendingRequestsToSockets.Add(RequestId, Socket);
+  }
+}
+
 void FMcpConnectionManager::SendAutomationResponse(
     TSharedPtr<FMcpBridgeWebSocket> TargetSocket, const FString &RequestId,
     bool bSuccess, const FString &Message,
@@ -37,8 +64,8 @@ void FMcpConnectionManager::SendAutomationResponse(
   Response->SetBoolField(TEXT("success"), bSuccess);
   if (!Message.IsEmpty())
     Response->SetStringField(TEXT("message"), Message);
-  // Always include error field as empty string when no error (required by JSON schema: error: { type: 'string' })
-  Response->SetStringField(TEXT("error"), ErrorCode.IsEmpty() ? TEXT("") : ErrorCode);
+  // error is always present, empty on success.
+  Response->SetStringField(TEXT("error"), ErrorCode);
   if (Result.IsValid())
     Response->SetObjectField(TEXT("result"), Result.ToSharedRef());
   const FMcpLiveStateRevisionSnapshot Snapshot = FMcpLiveStateRevisions::Get().Snapshot();
@@ -52,11 +79,8 @@ void FMcpConnectionManager::SendAutomationResponse(
   const FString* KnownAction = ActiveRequestActions.Find(RequestId);
   const FString ActionName = KnownAction ? *KnownAction : TEXT("unknown");
 
-  // Skip logging for console_command - Unreal already logs the command
-  const bool bSkipLogging = ActionName.Equals(TEXT("console_command"), ESearchCase::IgnoreCase);
-
   // Log result with actual values for verification
-  if (!bSkipLogging) {
+  if (!McpIsEngineLoggedAction(ActionName)) {
     const FString Fields = PreviewJsonFields(Result, 40, false);
     const FString ResultPreview = Fields.IsEmpty() ? FString() : FString::Printf(TEXT(" (%s)"), *Fields);
     UE_LOG(LogEngineWireSubsystem, Log,

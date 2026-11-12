@@ -8,7 +8,6 @@
 #include "Dom/JsonObject.h"
 #include "EdGraph/EdGraphNodeUtils.h"
 #include "Foundation/BridgeHelpers/McpHelpers.h"
-#include "Core/Module/EngineWireGlobals.h"
 #include "Modules/ModuleManager.h"
 
 #if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 1

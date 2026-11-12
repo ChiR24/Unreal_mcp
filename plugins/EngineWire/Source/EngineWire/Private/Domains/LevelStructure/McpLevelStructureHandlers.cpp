@@ -4,7 +4,6 @@ DEFINE_LOG_CATEGORY(LogMcpLevelStructureHandlers);
 
 #include "Dom/JsonObject.h"
 #include "EngineWireSubsystem.h"
-#include "Core/Module/EngineWireGlobals.h"
 #include "Transport/WebSocket/McpBridgeWebSocket.h"
 
 static bool IsManageLevelStructureVolumeSubAction(const FString& SubAction)
@@ -139,7 +138,7 @@ bool UEngineWireSubsystem::HandleManageLevelStructureAction(
     else
     {
         // Only claim unknown sub-actions when this handler was addressed directly;
-        // in the shared fallback chain it must not swallow other domains' requests (dogfood #112/#176).
+        // in the shared fallback chain it must not swallow other domains' requests.
         if (!Action.Equals(TEXT("manage_level_structure"), ESearchCase::IgnoreCase))
         {
             return false;

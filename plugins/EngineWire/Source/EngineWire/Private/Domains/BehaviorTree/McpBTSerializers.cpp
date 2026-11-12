@@ -22,12 +22,12 @@
 namespace McpBehaviorTreeSerializers
 {
 
-// Max tree-traversal depth (R12). BT graphs are shallow; this is pure defense-in-depth.
+// Max tree-traversal depth. BT graphs are shallow; this is pure defense-in-depth.
 static const int32 GMaxTreeDepth = 64;
 
 // ---------------------------------------------------------------------------
-// CollectBlackboardKeySelectors — enumerate ALL FBlackboardKeySelector props (R16)
-// Fix of dev's CreateBTNodeRuntimeInfo, which broke after the first selector.
+// CollectBlackboardKeySelectors — enumerate ALL FBlackboardKeySelector props
+// (every selector is listed, not only the first).
 // ---------------------------------------------------------------------------
 static void CollectBlackboardKeySelectors(UBTNode* Node, const TSharedRef<FJsonObject>& OutKeyProps)
 {
@@ -103,7 +103,7 @@ TSharedPtr<FJsonObject> SerializeBTNode(
         return Obj;
     }
 
-    // R12/R13: depth + cycle defense. Emit a per-node serializationError instead of
+    // Depth + cycle defense. Emit a per-node serializationError instead of
     // failing the whole response or looping forever.
     if (Depth > GMaxTreeDepth || Visited.Contains(Node))
     {
@@ -125,7 +125,7 @@ TSharedPtr<FJsonObject> SerializeBTNode(
     }
     Obj->SetStringField(TEXT("nodeName"), Node->GetNodeName());
 
-    // executionIndex (R14): UPROPERTY(transient), 0 until InitializeNode() runs at BT
+    // executionIndex: UPROPERTY(transient), 0 until InitializeNode() runs at BT
     // runtime. On an asset-only load it is typically 0 -> OMIT (don't emit misleading 0).
     const uint16 ExecIdx = Node->GetExecutionIndex();
     if (ExecIdx != 0 && ExecIdx != MAX_uint16)
@@ -133,7 +133,7 @@ TSharedPtr<FJsonObject> SerializeBTNode(
         Obj->SetNumberField(TEXT("executionIndex"), ExecIdx);
     }
 
-    // keyProperties{} — ALL FBlackboardKeySelector props (R16). Omit if none.
+    // keyProperties{} — ALL FBlackboardKeySelector props. Omit if none.
     {
         TSharedRef<FJsonObject> KeyProps = MakeShared<FJsonObject>();
         CollectBlackboardKeySelectors(Node, KeyProps);

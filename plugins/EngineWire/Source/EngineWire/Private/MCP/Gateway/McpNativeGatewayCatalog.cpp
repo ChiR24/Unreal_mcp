@@ -3,6 +3,7 @@
 #include "MCP/Gateway/McpNativeGatewayCatalog.h"
 #include "Editor.h"
 #include "MCP/Gateway/McpNativeGatewayCapabilityStore.h"
+#include "MCP/Gateway/McpNativeGatewayGuidance.h"
 #include "MCP/Gateway/McpNativeGatewaySearch.h"
 #include "Modules/ModuleManager.h"
 #include "Runtime/Launch/Resources/Version.h"
@@ -70,7 +71,7 @@ bool McpCheckAvailabilityGate(const FMcpCapabilityRecord& Record, FString& OutCo
 			"marks nothing unsaved, so the change would be lost. Call again once the log says \"Live coding succeeded\"."), *Record.Id);
 		return false;
 	}
-	// Editor-state gate (dogfood #91): a capability whose editorStates exclude
+	// Editor-state gate: a capability whose editorStates exclude
 	// "edit" needs a running world; refuse it up front in plain edit mode
 	// instead of failing deep in a handler.
 	const TArray<TSharedPtr<FJsonValue>>* States = nullptr;

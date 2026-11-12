@@ -41,6 +41,8 @@ public:
     UPROPERTY(config, EditAnywhere, Category = "Security|Scoped Tokens")
     TArray<FMcpScopedCapabilityToken> ScopedCapabilityTokens;
 
+    /** Seconds the WebSocket bridge waits, after a listener error or its last connection closing, before it opens
+     *  any of its listeners that is down. 0 or less keeps 5. */
     UPROPERTY(config, EditAnywhere, Category = "Connection", meta = (ClampMin = "0.0"))
     float AutoReconnectDelay;
 
@@ -208,7 +210,8 @@ public:
     UPROPERTY(config, EditAnywhere, Category = "Connection", meta = (ClampMin = "0.0"))
     float AcceptSleepSeconds;
 
-    /** Frequency, in seconds, for the subsystem ticker. If <= 0, engine default will be used. */
+    /** Seconds between ticks of the WebSocket bridge's connection manager (heartbeat expiry, the listener re-open
+     *  countdown, content-root and change pushes). 0 or less uses 0.25. */
     UPROPERTY(config, EditAnywhere, Category = "Debug", meta = (ClampMin = "0.0"))
     float TickerIntervalSeconds;
 
@@ -227,7 +230,7 @@ public:
                 ClampMin = "1024", ClampMax = "65535"))
     int32 NativeMCPPort = 3000;
 
-    /** Load all 23 canonical tools on startup. */
+    /** Enable every tool category at startup; off enables only the core category until manage_tools enables more. */
     UPROPERTY(config, EditAnywhere, Category = "Native MCP",
         meta = (DisplayName = "Load All Tools on Start", EditCondition = "bEnableNativeMCP"))
     bool bLoadAllToolsOnStart = true;

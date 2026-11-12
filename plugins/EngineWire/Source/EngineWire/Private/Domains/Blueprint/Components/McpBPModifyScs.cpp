@@ -1,5 +1,4 @@
 #include "Domains/Blueprint/McpBPActionContext.h"
-#include "Core/Module/EngineWireGlobals.h"
 #include "Foundation/HandlerUtils/McpHandlerUtils.h"
 #include "HAL/PlatformTime.h"
 #include "Misc/ScopeExit.h"

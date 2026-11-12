@@ -42,7 +42,7 @@ bool SeatWidgetInTree(UWidgetBlueprint* WidgetBP, UWidget* NewWidget, const FStr
     // — and UUserWidget::GetWidgetFromName is not a UFUNCTION, so there is no
     // Blueprint-side workaround. A widget added by name is meant to be driven.
     NewWidget->bIsVariable = true;
-    // Every widget that reaches the tree needs a GUID map entry before the next compile (dogfood c22).
+    // Every widget that reaches the tree needs a GUID map entry before the next compile.
     RegisterWidgetGuid(WidgetBP, NewWidget);
     if (ParentSlot.IsEmpty())
     {

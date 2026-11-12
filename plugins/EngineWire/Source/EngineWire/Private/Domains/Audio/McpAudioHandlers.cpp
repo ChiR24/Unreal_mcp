@@ -10,7 +10,7 @@ bool UEngineWireSubsystem::HandleAudioAction(
     TSharedPtr<FMcpBridgeWebSocket> RequestingSocket)
 {
   // Tool-name dispatch hands this handler Action == "manage_audio"; the real verb then
-  // lives in the payload (dogfood #112: every runtime audio action fell through).
+  // lives in the payload (every runtime audio action fell through).
   FString Lower = Action.ToLower();
   if (Lower == TEXT("manage_audio") && Payload.IsValid())
   {

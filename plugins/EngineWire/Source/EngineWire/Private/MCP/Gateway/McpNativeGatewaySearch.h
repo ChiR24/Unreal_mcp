@@ -1,9 +1,7 @@
 // McpNativeGatewaySearch.h — deterministic capability search for the unreal gateway
 //
-// Its own integer rule ranking, not the TypeScript BM25 scorer: the two surfaces
-// share the filters, the read/delete intent word lists (pinned by
-// search-read-intent-parity.test.ts), the total order and the paging, but not
-// the weights, so result order can differ between them.
+// An integer rule ranking with a total order: the same query gives the same
+// rows in the same order.
 //
 // Reads only the generated capability store. There is no alternate catalog: an
 // unavailable store yields a typed error, never substituted metadata.
@@ -17,6 +15,10 @@ class FMcpCapabilityStore;
 
 /** Runtime capability probe: is this parent tool currently exposed to the session? */
 using FMcpToolEnabledPredicate = TFunctionRef<bool(const FString&)>;
+
+/** Search default/maximum budgets, shared with the gateway tool schema. */
+constexpr int32 McpSearchDefaultLimit = 12;
+constexpr int32 McpSearchMaxLimit = 25;
 
 struct FMcpDiscoveryQuery
 {
@@ -38,18 +40,14 @@ struct FMcpDiscoveryQuery
 	bool bHasLimit = false; // describe pages a listing at Limit only when the caller sent one
 	FString Cursor; // search: a nextCursor sent back, which supersedes Offset
 	bool bHasCursor = false;
-	int32 Limit = 12;
+	int32 Limit = McpSearchDefaultLimit;
 	int32 Offset = 0;
-	int32 MaxBytes = 0; // 0 -> McpMaxResultBytes; the schema accepted maxBytes but native ignored it (dogfood #3)
+	int32 MaxBytes = 0; // 0 -> McpMaxResultBytes; the schema accepted maxBytes but native ignored it
 	/** search: the caller may read project data (Read scope or Admin), so saved recipes are listed as list_recipes would. */
 	bool bMayReadProject = false;
-	/** search: each sent integer that was clamped, {parameter, requested, applied, reason} as in gateway-shared.ts. */
+	/** search: each sent integer that was clamped, {parameter, requested, applied, reason}. */
 	TArray<TSharedPtr<FJsonValue>> Coercions;
 };
-
-/** Search default/maximum budgets, shared with the gateway tool schema. */
-constexpr int32 McpSearchDefaultLimit = 12;
-constexpr int32 McpSearchMaxLimit = 25;
 
 /**
  * Per-matched-word score bonus for multi-word queries. Ranks a record that
@@ -95,7 +93,7 @@ constexpr int32 McpSearchReadIntentBonus = 40;
 constexpr int32 McpSearchDeleteIntentBonus = 40;
 /**
  * A first hit whose runner-up scores at most this percentage of it, and that needs no consent, carries its signature
- * and execute call so a caller can skip describe (SEARCH_CONFIDENT_RATIO_PERCENT in gateway-search.ts; measured by
+ * and execute call so a caller can skip describe (measured by
  * tests/eval/confident-hit.test.ts).
  */
 constexpr int32 McpSearchConfidentRatioPercent = 90;
@@ -103,7 +101,7 @@ constexpr int32 McpSearchConfidentRatioPercent = 90;
 constexpr int32 McpDescribeMaxLimit = 50;
 // Search result byte budget (24 KB); a page that would pass it is cut short and
 // reported as truncated by "byte-budget".
-constexpr int32 McpMaxResultBytes = 24576; // matches DEFAULT_SEARCH_MAX_BYTES on the TS gateway (dogfood #3)
+constexpr int32 McpMaxResultBytes = 24576;
 
 /** Typed error emitted when the generated capability catalog failed to load. */
 TSharedPtr<FJsonObject> McpGatewayCatalogUnavailable(

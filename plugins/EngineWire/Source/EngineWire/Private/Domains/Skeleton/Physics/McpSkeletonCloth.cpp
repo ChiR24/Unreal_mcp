@@ -128,7 +128,7 @@ FClothBindOutcome RunClothBinding(const TSharedPtr<FJsonObject>& Payload, bool b
     if (ClothAssetName.IsEmpty() && ClothAssetPath.IsEmpty())
     {
         // Listing the candidates is not a binding; fail so the caller knows
-        // nothing changed (dogfood #97).
+        // nothing changed.
         Outcome.Message = FString::Printf(
             TEXT("No cloth asset specified; %s has %d clothing asset(s). Pass clothAssetName (see availableClothAssets) or clothAssetPath."),
             *Mesh->GetName(), Mesh->GetMeshClothingAssets().Num());

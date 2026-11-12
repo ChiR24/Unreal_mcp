@@ -57,14 +57,14 @@ struct FMcpUnknownActionGuide
  * When no suggestion shares the action's verb, even with a one-letter typo,
  * the name is searched instead: save_asset used to be sent to move_asset,
  * while saving is control_editor.save_all. Otherwise the closest action of this
- * tool. Mirrors guideUnknownAction in gateway-guidance.ts.
+ * tool.
  */
 FMcpUnknownActionGuide GatewayGuideUnknownAction(const FString& Tool, const FString& Action,
 	const TArray<FString>& Actions, const TArray<FString>& OwningTools);
 
 /**
  * The call that turns a disabled parent tool back on, its category included (enable_tools re-enables both): the
- * nextCall of a disabled capability on both doors (enableToolNextCall in gateway-guidance.ts).
+ * nextCall of a disabled capability.
  */
 TSharedPtr<FJsonObject> GatewayEnableToolNextCall(const FString& ParentTool);
 
@@ -77,8 +77,7 @@ TSharedPtr<FJsonObject> GatewaySchemaGuidance(
 
 /**
  * A params refusal: the schema guidance plus the declared parameter names (allowedParameters), the ones closest to
- * the field the pointer names (suggestions), and a describe of the closest one (validateInput in
- * gateway-execute-static-check.ts).
+ * the field the pointer names (suggestions), and a describe of the closest one.
  */
 TSharedPtr<FJsonObject> GatewaySchemaViolationGuidance(const FString& ParentTool, const FString& Action,
 	const FString& Pointer, const TSharedPtr<FJsonObject>& InputSchema);

@@ -2,7 +2,6 @@
 // first and then carries notifications/resources/updated, and resources/subscribe (earlier versions), whose updates
 // ride the session's GET stream. The only resource that changes while the server runs is ue://changes, so updates
 // come from the keepalive thread when the change journal's number moves: at most one per stream a second.
-// Transport members kept here because Transport/ is full.
 
 #include "MCP/Transport/McpNativeTransportPrivate.h"
 

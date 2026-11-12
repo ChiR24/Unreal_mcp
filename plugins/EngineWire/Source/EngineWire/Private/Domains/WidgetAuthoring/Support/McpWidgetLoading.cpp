@@ -101,8 +101,8 @@ static UWidgetBlueprint* LoadWidgetBlueprintRaw(const FString& WidgetPath)
     return Cast<UWidgetBlueprint>(StaticLoadObject(UWidgetBlueprint::StaticClass(), nullptr, *PackagePath));
 }
 // Template actions (create_pause_menu, create_hud_widget, ...) author a widget from
-// scratch, so a missing asset is created instead of answering NOT_FOUND (dogfood #26/#187).
-// Dogfood c22: the widget compiler ensures that every source widget and animation has a
+// scratch, so a missing asset is created instead of answering NOT_FOUND.
+// The widget compiler ensures that every source widget and animation has a
 // WidgetVariableNameToGuidMap entry. Assets authored before the registry existed (or renamed
 // without moving their entry) trip that ensure on the next compile, so repair the map on load.
 UWidgetBlueprint* LoadWidgetBlueprint(const FString& WidgetPath)

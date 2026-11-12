@@ -3,7 +3,118 @@
 #include "Domains/AnimationAuthoring/McpAnimSupport.h"
 #include "Domains/AnimationAuthoring/ControlRig/McpControlRigGraph.h"
 
+#if MCP_HAS_CONTROLRIG_FACTORY
+#include "ControlRigBlueprintGeneratedClass.h"
+#endif
+
 namespace McpAnimationAuthoring {
+
+#if MCP_HAS_CONTROLRIG_FACTORY
+UBlueprint* CreateControlRigBlueprint(
+    const FString& AssetName,
+    const FString& PackagePath,
+    USkeleton* TargetSkeleton,
+    FString& OutError,
+    bool* bOutExisting)
+{
+    if (AssetName.IsEmpty())
+    {
+        OutError = TEXT("Asset name cannot be empty");
+        return nullptr;
+    }
+
+    if (PackagePath.IsEmpty())
+    {
+        OutError = TEXT("Package path cannot be empty");
+        return nullptr;
+    }
+
+    // Call the canonicalizer WHOLE rather than replaying its steps here. It
+    // normalizes separators BEFORE mapping the /Content alias; doing it the
+    // other way round left "\Content\TeamA\Thing" invisible to the alias map,
+    // so this executor rooted it at /Game/Content/... while the pre-queue gate
+    // had already resolved it to /Game/TeamA/... and admitted it. Guard and
+    // executor now cannot disagree, because they run the same function.
+    const FString NormalizedPath = McpCanonicalizeContentPath(PackagePath, /*bAssumeGameRoot=*/true);
+    if (NormalizedPath.IsEmpty())
+    {
+        OutError = FString::Printf(
+            TEXT("Package path is not a valid content path: %s"), *PackagePath);
+        return nullptr;
+    }
+
+    const FString FullPackageName = NormalizedPath / AssetName;
+    const FString FullObjectPath = FullPackageName + TEXT(".") + AssetName;
+    // An object already at the path, in memory or on disk: reuse a Control Rig, refuse anything else.
+    UObject* Existing = FindObject<UObject>(nullptr, *FullObjectPath);
+    if (!Existing && FPackageName::DoesPackageExist(FullPackageName))
+    {
+        Existing = LoadObject<UObject>(nullptr, *FullObjectPath, nullptr, LOAD_NoWarn);
+    }
+    if (Existing)
+    {
+        if (Existing->IsA<UControlRigBlueprint>())
+        {
+            UE_LOG(LogEngineWireSubsystem, Log,
+                TEXT("Control Rig Blueprint already exists, reusing: %s"), *FullObjectPath);
+            if (bOutExisting)
+            {
+                *bOutExisting = true;
+            }
+            return Cast<UBlueprint>(Existing);
+        }
+        OutError = FString::Printf(
+            TEXT("Asset exists at path but is not a ControlRigBlueprint (is %s). "
+                 "Cannot create ControlRigBlueprint at this path."),
+            *Existing->GetClass()->GetName());
+        UE_LOG(LogEngineWireSubsystem, Error, TEXT("%s"), *OutError);
+        return nullptr;
+    }
+
+    UPackage* Package = McpCreatePackageOrNull(FullPackageName);
+    if (!Package)
+    {
+        OutError = FString::Printf(TEXT("Failed to create package: %s"), *FullPackageName);
+        return nullptr;
+    }
+    Package->FullyLoad();
+
+    UControlRigBlueprint* NewBlueprint = Cast<UControlRigBlueprint>(
+        FKismetEditorUtilities::CreateBlueprint(
+            UControlRig::StaticClass(),
+            Package,
+            *AssetName,
+            BPTYPE_Normal,
+            UControlRigBlueprint::StaticClass(),
+            UControlRigBlueprintGeneratedClass::StaticClass(),
+            NAME_None));
+    if (!NewBlueprint)
+    {
+        OutError = TEXT("Factory failed to create Control Rig Blueprint");
+        return nullptr;
+    }
+
+    if (TargetSkeleton)
+    {
+        USkeletalMesh* PreviewMesh = TargetSkeleton->GetPreviewMesh();
+        if (PreviewMesh)
+        {
+            NewBlueprint->SetPreviewMesh(PreviewMesh);
+        }
+    }
+
+    FAssetRegistryModule::AssetCreated(NewBlueprint);
+    NewBlueprint->MarkPackageDirty();
+    McpSafeAssetSave(NewBlueprint);
+
+    UE_LOG(
+        LogEngineWireSubsystem,
+        Log,
+        TEXT("Created Control Rig Blueprint: %s"),
+        *FullPackageName);
+    return NewBlueprint;
+}
+#endif
 
 TSharedPtr<FJsonObject> HandleControlRigActions(const FString& SubAction, const TSharedPtr<FJsonObject>& Params, TSharedPtr<FJsonObject> Response)
 {
@@ -60,7 +171,7 @@ TSharedPtr<FJsonObject> HandleControlRigActions(const FString& SubAction, const 
         }
 
         // The skeleton factory names and places the asset after the skeleton;
-        // move it to the requested path/name (dogfood #84).
+        // move it to the requested path/name.
         if (ControlRigBP && !FullPath.IsEmpty() &&
             !ControlRigBP->GetOutermost()->GetName().Equals(FullPath, ESearchCase::IgnoreCase))
         {
@@ -83,7 +194,6 @@ TSharedPtr<FJsonObject> HandleControlRigActions(const FString& SubAction, const 
         ANIM_SUCCESS_RESPONSE(FString::Printf(TEXT("Control Rig '%s' created successfully"), *Name));
 #elif MCP_HAS_CONTROLRIG_BLUEPRINT
         // Factory static methods not available in UE 5.1-5.4 (header is in Private folder)
-        // Use the Subsystem's CreateControlRigBlueprint method as fallback
         FString Name = GetJsonStringField(Params, TEXT("name"), TEXT(""));
         FString Path = NormalizeAnimPath(GetJsonStringField(Params, TEXT("path"), TEXT("/Game/ControlRigs")));
         FString SkeletalMeshPath = GetJsonStringField(Params, TEXT("skeletalMeshPath"), TEXT(""));

@@ -1,19 +1,24 @@
 #pragma once
 
 #include "Core/Compatibility/McpVersionCompatibility.h"
-#include "Safety/McpSafeOperationsDeleteEditorSupport.h"
 #include "Safety/McpSafeOperationsLog.h"
 #include "PackageTools.h"
 
+#include "Animation/AnimBlueprint.h"
+#include "AssetCompilingManager.h"
 #include "AssetRegistry/AssetData.h"
 #include "AssetRegistry/AssetRegistryModule.h"
+#include "BlueprintActionDatabase.h"
 #include "Editor.h"
+#include "Engine/Blueprint.h"
+#include "Engine/Selection.h"
 #include "HAL/FileManager.h"
 #include "HAL/PlatformProcess.h"
 #include "Misc/PackageName.h"
 #include "Misc/Paths.h"
 #include "Modules/ModuleManager.h"
 #include "RenderingThread.h"
+#include "Subsystems/AssetEditorSubsystem.h"
 
 namespace McpSafeOperations
 {
@@ -63,6 +68,14 @@ inline void McpSafePostDeleteGC()
     FlushRenderingCommands();
 }
 
+// The settle step of every quiesce here: flush rendering, wait one 60 Hz frame, collect garbage.
+inline void McpSettleAndCollectGarbage()
+{
+    FlushRenderingCommands();
+    FPlatformProcess::Sleep(0.016f);
+    McpSafePostDeleteGC();
+}
+
 inline void McpQuiesceAllState()
 {
     UE_LOG(LogMcpSafeOperations, Log, TEXT("McpQuiesceAllState: Starting full editor quiesce"));
@@ -76,9 +89,7 @@ inline void McpQuiesceAllState()
         CompilingManager.FinishAllCompilation();
     }
 
-    FlushRenderingCommands();
-    FPlatformProcess::Sleep(0.016f);
-    McpSafePostDeleteGC();
+    McpSettleAndCollectGarbage();
 
     UE_LOG(LogMcpSafeOperations, Log, TEXT("McpQuiesceAllState: Editor quiesce completed"));
 }

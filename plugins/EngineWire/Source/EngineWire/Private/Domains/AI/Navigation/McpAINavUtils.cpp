@@ -149,7 +149,7 @@ bool HandleCreateNavModifier(UEngineWireSubsystem* Self, const FString& RequestI
     TSharedPtr<FJsonObject> NavModResult = McpHandlerUtils::CreateResultObject();
     NavModResult->SetStringField(TEXT("blueprintPath"), BlueprintPath);
     NavModResult->SetStringField(TEXT("componentName"), NavModNode->GetVariableName().ToString());
-    // Report the class actually applied (dogfood #61); UNavModifierComponent has no getter on 5.7.
+    // Report the class actually applied; UNavModifierComponent has no getter on 5.7.
     NavModResult->SetStringField(TEXT("areaClass"), AppliedAreaClass->GetPathName());
     NavModResult->SetBoolField(TEXT("saved"), McpSafeAssetSave(Blueprint));
     McpHandlerUtils::AddVerification(NavModResult, Blueprint);

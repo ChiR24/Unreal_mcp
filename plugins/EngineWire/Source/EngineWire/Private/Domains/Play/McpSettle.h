@@ -9,7 +9,7 @@ class FMcpBridgeWebSocket;
 class UEngineWireSubsystem;
 class UWorld;
 
-// control_actor settle_physics (S13): the named actors fall and come to rest in a Simulate session of its own, and their
+// control_actor settle_physics: the named actors fall and come to rest in a Simulate session of its own, and their
 // resting poses are kept in the level as one undo step (dryRun: reported, nothing kept). Advanced per editor frame
 // (McpSettle.cpp) and answered once Simulate has ended, inside the request's brackets again
 // (UEngineWireSubsystem::RunLatentReply), so the reply carries the undo block and the placement checks a direct edit gets,

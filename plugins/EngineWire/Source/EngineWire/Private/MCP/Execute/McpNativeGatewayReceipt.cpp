@@ -5,7 +5,7 @@
 #include "MCP/Execute/McpNativeReceiptRedaction.h"
 #include "MCP/Execute/McpNativeGatewayCanonicalRecords.h"
 #include "MCP/Gateway/McpNativeGatewayCapabilityStore.h"
-#include "MCP/Gateway/McpNativeGatewayCatalog.h"
+#include "MCP/Gateway/McpNativeGatewayGuidance.h"
 
 namespace
 {
@@ -114,7 +114,7 @@ TSharedPtr<FJsonObject> BuildReceiptShell(const FString& CapabilityId, const FMc
 	TSharedPtr<FJsonObject> Receipt = MakeShared<FJsonObject>();
 	Receipt->SetStringField(TEXT("capabilityId"), CapabilityId);
 	// capabilityId is the catalog record id (asset.rename); name the parent tool and public
-	// action beside it so callers do not have to decode the namespace (dogfood #12).
+	// action beside it so callers do not have to decode the namespace.
 	if (const FMcpCapabilityRecord* Record = FMcpCanonicalRecordIndex::Get().FindById(CapabilityId))
 	{
 		Receipt->SetStringField(TEXT("tool"), Record->Parent);
@@ -144,7 +144,7 @@ TSharedPtr<FJsonObject> McpBuildErrorReceipt(
 	const TSharedRef<FJsonObject> LiveRevisions = FMcpLiveStateRevisions::Get().Snapshot().ToJson();
 	Receipt->SetObjectField(TEXT("liveRevisions"), LiveRevisions);
 
-	// `success` and `message` are retained so pre-Task-27 gateway clients keep
+	// `success` and `message` are retained so earlier gateway clients keep
 	// reading the same fields they already branch on.
 	Receipt->SetBoolField(TEXT("success"), false);
 	Receipt->SetStringField(TEXT("operation"), TEXT("execute"));
@@ -165,7 +165,7 @@ TSharedPtr<FJsonObject> McpBuildErrorReceipt(
 	SetIfPresent(TypedError, TEXT("expectedRevision"), Error.ExpectedRevision);
 	SetIfPresent(TypedError, TEXT("requiredScope"), Error.RequiredScope);
 	SetIfPresent(TypedError, TEXT("scope"), Error.ConsentScope);
-	// grantedScopes is REQUIRED (not optional) on the TypeScript authorization
+	// grantedScopes is REQUIRED (not optional) on the authorization
 	// variant, so it is emitted for that kind even when the principal holds none.
 	if (Error.Kind == TEXT("authorization"))
 	{
@@ -192,8 +192,7 @@ TSharedPtr<FJsonObject> McpBuildErrorReceipt(
 	Receipt->SetObjectField(TEXT("typedError"), TypedError);
 
 	// The nested canonical receipt names a capability; when none resolved (an
-	// unknown-capability guided error) it is omitted, matching the TS gateway
-	// which builds no receipt for an unresolved request.
+	// unknown-capability guided error) it is omitted: an unresolved request has no receipt.
 	if (!CapabilityId.IsEmpty())
 	{
 		TSharedPtr<FJsonObject> Canonical =

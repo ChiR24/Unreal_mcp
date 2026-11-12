@@ -14,7 +14,7 @@ namespace McpPratt
 struct FNode;
 }
 
-// control_editor explore_level (S5): Go-Explore without learning (Ecoffet et al. 2019, first phase; written from the
+// control_editor explore_level: Go-Explore without learning (Ecoffet et al. 2019, first phase; written from the
 // paper, its code is non-commercial). In a Play session this server started, the player's pawn is walked back to a cell
 // of an archive (by nav path, else teleported) and explores from there with sticky random input (the last move repeated
 // with p = 0.95, jumps included), never through the OS: AddMovementInput and Jump on the pawn. Every cell the pawn

@@ -124,7 +124,7 @@ bool UEngineWireSubsystem::HandleBulkRenameAssets(
   }
 
   if (RenameData.Num() == 0 && MissingAssets.Num() > 0) {
-    // Nothing renamed because the inputs do not exist (dogfood #198): that is an error, not a no-op.
+    // Nothing renamed because the inputs do not exist: that is an error, not a no-op.
     SendAutomationError(RequestingSocket, RequestId,
                         FString::Printf(TEXT("Assets not found: %s"), *FString::Join(MissingAssets, TEXT(", "))),
                         TEXT("ASSET_NOT_FOUND"));

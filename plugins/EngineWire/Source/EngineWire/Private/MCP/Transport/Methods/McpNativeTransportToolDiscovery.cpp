@@ -198,7 +198,7 @@ FString FMcpNativeTransport::HandleInitialize(
 		SessionRateStates.Add(OutSessionId, RateState);
 		CurrentSessionCount = ActiveSessions.Num();
 	}
-	// H7: record the native session create AFTER the SessionMutex scope closes
+	// Record the native session create AFTER the SessionMutex scope closes
 	// (the store's own mutex protects the memory record; only a truncated
 	// SHA-256 identity of the raw session id is stored - never the raw value).
 	// The disk write is deferred to the game thread.
@@ -231,7 +231,7 @@ TSharedPtr<FJsonObject> FMcpNativeTransport::DescribeServer(const TSharedPtr<FJs
 	// and an explicit false are different claims); the tools object is still sent.
 	Capabilities->SetObjectField(TEXT("tools"), MakeShared<FJsonObject>());
 	// resources, prompts and completions are all answered by HandlePrimitiveMethod. ue://changes can be subscribed to:
-	// subscriptions/listen in 2026-07-28, resources/subscribe before it (Protocol/McpNativeTransportListen.cpp).
+	// subscriptions/listen in 2026-07-28, resources/subscribe before it (McpNativeTransportListen.cpp, beside this file).
 	const TSharedPtr<FJsonObject> Resources = MakeShared<FJsonObject>();
 	Resources->SetBoolField(TEXT("subscribe"), true);
 	Capabilities->SetObjectField(TEXT("resources"), Resources);

@@ -1,5 +1,5 @@
 #include "Domains/AI/McpAIContext.h"
-#include "MCP/Routing/McpConsolidatedActionRouting.h"
+#include "Core/Routing/McpConsolidatedActionRouting.h"
 
 DEFINE_LOG_CATEGORY(LogMcpAIHandlers);
 

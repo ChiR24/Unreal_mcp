@@ -32,7 +32,7 @@ bool HandleInventoryLootTableActions(UEngineWireSubsystem& Bridge, const FString
       TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
       Result->SetBoolField(TEXT("saved"), bSaved);
       Result->SetStringField(TEXT("lootTablePath"), Package->GetName());
-      Result->SetStringField(TEXT("assetPath"), Package->GetName() + TEXT(".") + FPackageName::GetShortName(Package->GetName())); // dogfood #55: consistent object path
+      Result->SetStringField(TEXT("assetPath"), Package->GetName() + TEXT(".") + FPackageName::GetShortName(Package->GetName())); // consistent object path
       Bridge.SendAutomationResponse(RequestingSocket, RequestId, true,
                              TEXT("Loot table created"), Result);
     } else {
@@ -179,7 +179,7 @@ bool HandleInventoryLootTableActions(UEngineWireSubsystem& Bridge, const FString
     Result->SetNumberField(TEXT("removedCount"), RemovedCount);
 
     if (!bEntryRemoved) {
-      // Reporting success here hid a no-op (dogfood #51).
+      // Reporting success here hid a no-op.
       Bridge.SendAutomationResponse(RequestingSocket, RequestId, false,
                              ItemPath.IsEmpty()
                                  ? FString::Printf(TEXT("No loot entry at index %d"), EntryIndex)

@@ -23,7 +23,7 @@ bool IsStackModuleAuthoringSubAction(const FString& SubAction)
 
 // After a stack-module sub-action succeeds, run the same stack-issue harvest that
 // validate_niagara_system performs so "The module has unmet dependencies" reaches the
-// caller on the add call itself (dogfood #106), not five calls later.
+// caller on the add call itself, not five calls later.
 static void AppendStackIssueWarnings(const FActionContext& Context, bool bSuccess)
 {
     if (!bSuccess || !Context.Result.IsValid() || Context.SystemPath.IsEmpty() ||

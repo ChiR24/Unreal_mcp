@@ -20,7 +20,7 @@ class UEngineWireSettings;
 DECLARE_DELEGATE_FiveParams(FMcpMessageReceivedCallback, const FString&, const FString&, const TSharedPtr<FJsonObject>&, TSharedPtr<FMcpBridgeWebSocket>, const FMcpExpectedRevisions&);
 
 /**
- * Delegate for handling inbound cancel_request frames from the TS bridge.
+ * Delegate for handling inbound cancel_request frames.
  * Params: RequestId (the automation request id to cancel)
  */
 DECLARE_DELEGATE_OneParam(FMcpRequestCancelledCallback, const FString&);
@@ -54,7 +54,7 @@ public:
     void SendProgressUpdate(const FString& RequestId, float Percent = -1.0f, const FString& Message = TEXT(""), bool bStillWorking = true);
 
 	/**
-	 * Content-root reporting for the TypeScript path allowlist. bridge_ack carries the
+	 * Content-root reporting. bridge_ack carries the
 	 * snapshot (McpBuildContentRootValues); a mount or dismount marks it stale and the
 	 * next Tick sends one content_roots_changed automation_event to authenticated sockets.
 	 * Public so the automation tests can drive them without opening sockets.
@@ -100,7 +100,6 @@ private:
 	friend class FMcpDrainSessionTeardownTest;
 
 	void AttemptConnection();
-	void ForceReconnect(const FString& Reason, float ReconnectDelayOverride = -1.0f);
 
 	void HandleConnected(TSharedPtr<FMcpBridgeWebSocket> Socket);
 	void HandleClientConnected(TSharedPtr<FMcpBridgeWebSocket> ClientSocket);
@@ -172,7 +171,7 @@ private:
 	float HeartbeatTimeoutSeconds = 0.0f;
 
 	// Mirror of Settings->bRequireCapabilityToken, assigned from settings at
-	// Initialize() (McpConnectionManager.cpp:29). Default true so any path that
+	// Initialize(). Default true so any path that
 	// reads this before Initialize() fails closed (requires a token) rather than
 	// silently allowing unauthenticated access.
 	bool bRequireCapabilityToken = true;

@@ -14,7 +14,7 @@
 
 // create_spline_mesh_component {actorName}: adds a USplineMeshComponent to a level actor
 // (the blueprintPath route lives in McpSplineMeshBP.cpp).
-// Dogfood #212: the schema advertises actorName but only the Blueprint route existed.
+// The schema advertises actorName but only the Blueprint route existed.
 bool HandleCreateSplineMeshComponentOnActor(
     UEngineWireSubsystem* Self,
     const FString& RequestId,

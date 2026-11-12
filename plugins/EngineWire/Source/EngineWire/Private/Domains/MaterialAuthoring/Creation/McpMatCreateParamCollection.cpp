@@ -102,8 +102,13 @@ bool HandleCreateParameterCollection(UEngineWireSubsystem* Bridge, const FString
     {
       return true;
     }
-    Collection = NewObject<UMaterialParameterCollection>(CreatePackage(*PackagePath), FName(*Name),
-                                                         RF_Public | RF_Standalone | RF_Transactional);
+    UPackage *Package = McpCreatePackageOrNull(PackagePath);
+    if (!Package)
+    {
+      Bridge->SendAutomationError(Socket, RequestId, TEXT("Failed to create package."), TEXT("PACKAGE_ERROR"));
+      return true;
+    }
+    Collection = NewObject<UMaterialParameterCollection>(Package, FName(*Name), RF_Public | RF_Standalone | RF_Transactional);
     FAssetRegistryModule::AssetCreated(Collection);
   }
   Collection->Modify();

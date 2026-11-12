@@ -1,10 +1,9 @@
 // McpResourceReadContent.h
-// Task 38 lane A: bounded, socket-thread-safe read content for the static
+// Bounded, socket-thread-safe read content for the static
 // resources the native transport can answer without a game-thread editor scan,
 // plus the read classification that separates a socket-readable uri from a
 // known-but-not-served uri (RESOURCE_UNAVAILABLE) and from a genuinely unknown
-// uri (RESOURCE_NOT_FOUND). Mirrors the typed error codes of the TypeScript
-// ResourceReadRouter without touching editor world state. The body builders read
+// uri (RESOURCE_NOT_FOUND), without touching editor world state. The body builders read
 // the immutable capability store, process-local transport state and static app
 // info only; none of them opens a socket or scans the editor.
 //

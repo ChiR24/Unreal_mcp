@@ -146,7 +146,7 @@ bool FCombatActionContext::HandleProjectileActions() const
         Result->SetStringField(TEXT("blueprintPath"), Blueprint->GetPathName());
 
         McpHandlerUtils::AddVerification(Result, Blueprint);
-        // The values the projectile now holds, not the ones asked for (dogfood #43 echoed the request).
+        // The values the projectile now holds, not the ones asked for (the reply echoed the request).
         Result->SetNumberField(TEXT("projectileSpeed"), MovementComp->InitialSpeed);
         Result->SetNumberField(TEXT("projectileGravityScale"), MovementComp->ProjectileGravityScale);
         if (ProjectileCdo)

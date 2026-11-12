@@ -9,9 +9,8 @@
 //                         that still names the old action (or its alias id);
 //   legacyIds[n].aliases  the aliases that old action declared, which name
 //                         its pair as the old action does.
-// Both doors apply the same two steps in the same order: the pins are injected
-// before schema validation, the action is chosen after it. Mirror of
-// src/server/gateway/gateway-dispatch-by.ts.
+// The two steps run in this order: the pins are injected
+// before schema validation, the action is chosen after it.
 #pragma once
 
 #include "CoreMinimal.h"

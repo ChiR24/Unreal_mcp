@@ -89,7 +89,7 @@ bool HandleCreateBehaviorTree(UEngineWireSubsystem* Self, const FString& Request
     }
 
     Result->SetStringField(TEXT("behaviorTreePath"), BT->GetPathName());
-    Result->SetStringField(TEXT("packagePath"), BT->GetOutermost()->GetName()); // dogfood #66
+    Result->SetStringField(TEXT("packagePath"), BT->GetOutermost()->GetName());
     Result->SetBoolField(TEXT("saved"), bSaved);
     Result->SetStringField(TEXT("message"), FString::Printf(TEXT("Created Behavior Tree: %s"), *Name));
     McpHandlerUtils::AddVerification(Result, BT);
@@ -147,7 +147,7 @@ bool HandleAddCompositeNode(UEngineWireSubsystem* Self, const FString& RequestId
             NewNode->NodeName = RequestedNodeName;
         }
         // Nest under the requested parent composite, else under the root; a tree
-        // with no root adopts the node as root (dogfood #57/#58).
+        // with no root adopts the node as root.
         const FString ParentNodeId = GetJsonStringField(Payload, TEXT("parentNodeId"));
         UBTCompositeNode* Parent = ParentNodeId.IsEmpty() ? nullptr : FindCompositeById(BT->RootNode, ParentNodeId);
         if (!ParentNodeId.IsEmpty() && !Parent)

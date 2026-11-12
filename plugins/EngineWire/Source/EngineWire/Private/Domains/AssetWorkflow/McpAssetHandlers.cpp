@@ -3,14 +3,14 @@
 #include "EngineWireSubsystem.h"
 
 #include "Dom/JsonObject.h"
-#include "MCP/Routing/McpConsolidatedActionRouting.h"
+#include "Core/Routing/McpConsolidatedActionRouting.h"
 #include "Domains/AssetQuery/McpAssetQueryPrivate.h"
 #include "Domains/AssetWorkflow/Analysis/McpAssetDiff.h"
 #include "Domains/AssetWorkflow/Materials/McpAssetMeshMats.h"
 #include "Domains/AssetWorkflow/Materials/McpMaterialParent.h"
 #include "Domains/AssetWorkflow/Rename/McpAssetRenameGuard.h"
 
-// Struct ecosystem (issue #struct-ecosystem) — Wave 1 handler shard headers.
+// Handler shard headers.
 #include "Domains/AssetWorkflow/DataRegistries/McpDataRegistries.h"
 #include "Domains/AssetWorkflow/Reimport/McpAssetReimport.h"
 #include "Domains/AssetWorkflow/DataTables/McpAssetDataTableShared.h"
@@ -59,8 +59,6 @@ bool UEngineWireSubsystem::HandleAssetAction(
     return false;
 
   // Dispatch to specific handlers
-  // CRITICAL: These actions must match what TS sends as 'action' (not just 'subAction')
-  // When TS calls executeAutomationRequest(tools, 'search_assets', {...}), Action='search_assets'
   //
   // Leaf handlers that take an action parameter are passed `Lower`, never
   // `Action`. `Lower` is the RESOLVED concrete action; `Action` is still the
@@ -233,7 +231,7 @@ bool UEngineWireSubsystem::HandleAssetAction(
     SendAutomationResponse(RequestingSocket, RequestId, bOk, bOk ? FString(DoneMessage) : Message, Result, ErrCode);
   };
 
-  // Struct ecosystem — DataTable (issue #struct-ecosystem)
+  // DataTable
   if (Lower == TEXT("create_data_table") || Lower == TEXT("set_data_table_row_struct") ||
       Lower == TEXT("create_row_struct") || Lower == TEXT("get_row_struct") ||
       Lower == TEXT("set_struct_as_row_struct") || Lower == TEXT("add_data_table_row") ||

@@ -4,15 +4,6 @@
 
 namespace WidgetAuthoringHelpers
 {
-TSharedPtr<FJsonObject> GetObjectField(const TSharedPtr<FJsonObject>& Payload, const FString& FieldName)
-{
-    if (Payload.IsValid() && Payload->HasTypedField<EJson::Object>(FieldName))
-    {
-        return Payload->GetObjectField(FieldName);
-    }
-    return nullptr;
-}
-
 const TArray<TSharedPtr<FJsonValue>>* GetArrayField(const TSharedPtr<FJsonObject>& Payload, const FString& FieldName)
 {
     if (Payload.IsValid() && Payload->HasTypedField<EJson::Array>(FieldName))

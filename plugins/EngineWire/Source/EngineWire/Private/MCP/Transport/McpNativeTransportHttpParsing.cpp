@@ -185,5 +185,3 @@ bool FMcpNativeTransport::ReadHttpRequest(FSocket* Socket, FParsedHttpRequest& O
 
 	return true;
 }
-
-// ─── HTTP Response Helpers ──────────────────────────────────────────────────

@@ -7,12 +7,11 @@ class FMcpToolRegistry;
 
 /**
  * Manages MCP tool visibility at runtime.
- * Port of src/tools/dynamic/dynamic-tool-manager.ts.
  */
 class FMcpDynamicToolManager
 {
 public:
-	/** Initialize from tool registry (self-describing C++ tool classes). */
+	/** Initialize from the tool registry. */
 	void Initialize(const FMcpToolRegistry& Registry, bool bLoadAllTools = false);
 
 	/** Check if a tool is enabled (tool AND category must be enabled). */

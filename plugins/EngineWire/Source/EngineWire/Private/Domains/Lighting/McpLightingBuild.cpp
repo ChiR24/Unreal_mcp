@@ -128,7 +128,7 @@ bool HandleBuildLighting(
     FString ReasonText;
     if (!bBuildSucceeded)
     {
-        // Say why a build can fail instead of a bare BUILD_FAILED (dogfood #156/#215).
+        // Say why a build can fail instead of a bare BUILD_FAILED.
         TArray<TSharedPtr<FJsonValue>> Reasons;
         if (!GetDefault<URendererSettings>()->bAllowStaticLighting)
         {

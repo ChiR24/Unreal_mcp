@@ -43,7 +43,7 @@ bool HandleInteractableInterfaceAction(
         return true;
     }
 
-    UPackage* Package = CreatePackage(*InterfacePath);
+    UPackage* Package = McpCreatePackageOrNull(InterfacePath);
     if (!Package)
     {
         Subsystem->SendAutomationError(RequestingSocket, RequestId, TEXT("Failed to create package"), TEXT("PACKAGE_CREATE_FAILED"));

@@ -50,9 +50,9 @@ bool FMcpLiveStateRevisionTrackerTest::RunTest(const FString& Parameters)
 	TestTrue(TEXT("map delegate advances"),
 		Revisions.Current(EMcpStateKind::Level) > LevelBefore);
 
-	UPackage* Package = CreatePackage(TEXT("/Game/MCP_Task42_RevisionTracker"));
+	UPackage* Package = CreatePackage(TEXT("/Game/McpRevisionTrackerTest"));
 	UCurveFloat* Asset = NewObject<UCurveFloat>(
-		Package, TEXT("MCP_Task42_TrackedAsset"), RF_Public | RF_Standalone);
+		Package, TEXT("McpTrackedAsset"), RF_Public | RF_Standalone);
 	Package->SetDirtyFlag(false);
 	const int64 PackageBefore = Revisions.Current(EMcpStateKind::Package);
 	TestTrue(TEXT("package fixture marks dirty"), Asset->MarkPackageDirty());

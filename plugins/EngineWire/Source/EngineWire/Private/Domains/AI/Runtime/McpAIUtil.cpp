@@ -232,7 +232,7 @@ bool HandleGetAIInfo(UEngineWireSubsystem* Self, const FString& RequestId, const
             AIInfo->SetStringField(TEXT("assignedBlackboard"), BB->GetName());
             // keyCount + blackboardKeys (+ parentBlackboard) via the shared serializer.
             // For a no-parent BB this is bit-identical to the prior output plus additive
-            // per-key enrichment fields (the PR0a characterization tolerates added fields).
+            // per-key enrichment fields.
             McpBehaviorTreeSerializers::SerializeBlackboardData(BB, AIInfo.ToSharedRef());
         }
     }
@@ -244,7 +244,7 @@ bool HandleGetAIInfo(UEngineWireSubsystem* Self, const FString& RequestId, const
         UEnvQuery* Query = LoadObject<UEnvQuery>(nullptr, *QueryPath);
         if (Query)
         {
-            McpSerializeEnvQueryInfo(Query, AIInfo); // dogfood #76: options, generators, tests
+            McpSerializeEnvQueryInfo(Query, AIInfo); // options, generators, tests
         }
     }
 

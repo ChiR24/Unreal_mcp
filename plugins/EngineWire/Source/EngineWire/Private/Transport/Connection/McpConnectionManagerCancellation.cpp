@@ -20,12 +20,11 @@ void FMcpConnectionManager::HandleCancelRequest(
     const FString& RequestId) {
   if (RequestId.IsEmpty()) {
     UE_LOG(LogEngineWireSubsystem, Warning,
-           TEXT("cancel_request missing requestId: %s"),
-           *EngineWireSubsystemResponse::SanitizeForLog(RequestId));
+           TEXT("cancel_request missing requestId."));
     return;
   }
 
-  if (RequestId.Len() > 128) {
+  if (RequestId.Len() > McpBridgeMaxIdChars) {
     UE_LOG(LogEngineWireSubsystem, Warning,
            TEXT("cancel_request requestId exceeds expected size."));
     return;

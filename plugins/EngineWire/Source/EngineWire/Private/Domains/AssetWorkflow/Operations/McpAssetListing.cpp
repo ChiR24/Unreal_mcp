@@ -44,7 +44,7 @@ bool UEngineWireSubsystem::HandleListAssets(
   Payload->TryGetStringField(TEXT("filter"), NameFilter);
 
   // Canonicalize + validate the listing path. Blocks traversal and invalid
-  // roots; TS already canonicalizes but native MCP callers may send raw input.
+  // roots: callers may send raw input.
   FString RawPath = PathFilter.IsEmpty() ? TEXT("/Game") : PathFilter;
   FNormalizedAssetPath NormPath = NormalizeAssetPath(RawPath);
   if (!NormPath.bIsValid) {
@@ -144,11 +144,6 @@ bool UEngineWireSubsystem::HandleListAssets(
     Filter.PackagePaths.Add(FName(TEXT("/Game")));
   }
 
-  // Use cached AssetRegistry data — ScanPathsSynchronous() removed to prevent
-  // blocking the GameThread (causes SSE/HTTP transport timeouts).
-  // LIMITATION: Assets not yet indexed by the editor's background scanner
-  // will NOT appear. Use Content Browser "Rescan" or rescan_content_directory.
-
   if (!ClassFilter.IsEmpty()) {
     // Support both short class names and full paths (best effort)
 #if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 1
@@ -171,7 +166,7 @@ bool UEngineWireSubsystem::HandleListAssets(
   // NOTE: ScanPathsSynchronous() was removed to prevent GameThread blocking.
   // Asset listing uses cached AssetRegistry data exclusively.
   // LIMITATION: Assets not yet indexed by the editor's background scanner
-  // will NOT appear. Use Content Browser "Rescan" or rescan_content_directory.
+  // will NOT appear. Use Content Browser "Rescan".
   TArray<FAssetData> AssetList;
   AssetRegistry.GetAssets(Filter, AssetList);
   if (!NameFilter.IsEmpty()) {
@@ -242,7 +237,7 @@ bool UEngineWireSubsystem::HandleListAssets(
   if (!PathFilter.IsEmpty()) {
     // If non-recursive (or depth limited), we generally want at least the
     // immediate subfolders. GetSubPaths is non-recursive by default.
-    // recursive listings report nested folders too, trimmed by depth (dogfood #30).
+    // recursive listings report nested folders too, trimmed by depth.
     AssetRegistry.GetSubPaths(PathFilter, SubPathList, bRecursive);
     const auto SlashCount = [](const FString &Value) { int32 Count = 0; for (TCHAR C : Value) { if (C == TEXT('/')) { ++Count; } } return Count; };
     const int32 BaseSlashes = SlashCount(PathFilter);

@@ -102,7 +102,7 @@ bool HandleCreateMaterialInstance(UEngineWireSubsystem* Bridge, const FString& R
         NewObject<UMaterialInstanceConstantFactoryNew>();
     Factory->InitialParent = Parent;
 
-    UPackage *Package = CreatePackage(*ValidatedPath);
+    UPackage *Package = McpCreatePackageOrNull(ValidatedPath);
     if (!Package) {
       Bridge->SendAutomationError(Socket, RequestId, TEXT("Failed to create package."),
                           TEXT("PACKAGE_ERROR"));

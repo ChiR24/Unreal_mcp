@@ -1,6 +1,6 @@
 // remove_metasound_node and disconnect_metasound_nodes: the two edits a MetaSound
 // graph was missing. Without them, re-voicing a synth left the old oscillators in the
-// graph as dead nodes (MS_UIClick carried 8) and a wrong link could only be replaced.
+// graph as dead nodes (one click sound carried eight) and a wrong link could only be replaced.
 // Both are all or nothing: every node, pin and link is checked before the graph changes.
 #include "Core/Compatibility/McpVersionCompatibility.h"
 #include "Domains/AudioAuthoring/McpAudioAuthoringPrivate.h"

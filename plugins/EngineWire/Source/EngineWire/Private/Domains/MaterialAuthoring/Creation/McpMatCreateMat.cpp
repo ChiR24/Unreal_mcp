@@ -21,7 +21,7 @@ bool HandleCreateMaterial(UEngineWireSubsystem* Bridge, const FString& RequestId
     }
     // Create material using factory - use ValidatedPath, not original Path!
     UMaterialFactoryNew *Factory = NewObject<UMaterialFactoryNew>();
-    UPackage *Package = CreatePackage(*ValidatedPath);
+    UPackage *Package = McpCreatePackageOrNull(ValidatedPath);
     if (!Package) {
       Bridge->SendAutomationError(Socket, RequestId, TEXT("Failed to create package."),
                           TEXT("PACKAGE_ERROR"));

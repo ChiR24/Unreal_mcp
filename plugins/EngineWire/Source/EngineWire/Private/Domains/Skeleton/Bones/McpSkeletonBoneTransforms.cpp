@@ -27,7 +27,7 @@ bool UEngineWireSubsystem::HandleSetBoneTransform(
 
     // Resolve the mesh whose reference skeleton get_bone_transform reads, so a
     // get/set pair always addresses one set of data. skeletonPath resolves to
-    // the skeleton's preview or compatible mesh (dogfood #72, #93).
+    // the skeleton's preview or compatible mesh.
     const FSkeletonMeshTarget Target = ResolveSkeletonMeshTarget(Payload);
     if (!Target.IsValid())
     {

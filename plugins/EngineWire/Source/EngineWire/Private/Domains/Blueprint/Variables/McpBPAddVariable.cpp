@@ -6,7 +6,6 @@
 // compiled only by transitive luck and fails outright under an installed engine.
 #include "Domains/Blueprint/McpBPActionContext.h"
 #include "Domains/Blueprint/Variables/McpBPVariableObjectDefault.h"
-#include "Core/Module/EngineWireGlobals.h"
 #include "Foundation/BridgeHelpers/Assets/McpAssetSaveRegistry.h"
 #include "Foundation/BridgeHelpers/Blueprints/McpBPAssetLoad.h"
 #include "Foundation/BridgeHelpers/Blueprints/McpBPCompileHelpers.h"

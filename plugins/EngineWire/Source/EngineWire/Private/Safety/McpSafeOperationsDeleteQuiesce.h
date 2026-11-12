@@ -25,9 +25,7 @@ inline void McpQuiesceBeforeBatchDelete(TArray<UObject*>& BatchObjects)
     }
 
     McpFinishCompilationForBatch(BatchObjects, TEXT("pre-delete"));
-    FlushRenderingCommands();
-    FPlatformProcess::Sleep(0.016f);
-    McpSafePostDeleteGC();
+    McpSettleAndCollectGarbage();
 
     UE_LOG(LogMcpSafeOperations, Log,
         TEXT("McpQuiesceBeforeBatchDelete: Pre-delete quiesce complete"));
@@ -39,9 +37,7 @@ inline void McpQuiesceAfterBatchDelete(const TArray<UObject*>& BatchObjects)
         TEXT("McpQuiesceAfterBatchDelete: Starting post-delete quiesce for %d objects"),
         BatchObjects.Num());
 
-    FlushRenderingCommands();
-    FPlatformProcess::Sleep(0.016f);
-    McpSafePostDeleteGC();
+    McpSettleAndCollectGarbage();
 
     UE_LOG(LogMcpSafeOperations, Log,
         TEXT("McpQuiesceAfterBatchDelete: Post-delete quiesce complete"));

@@ -1,7 +1,6 @@
 #include "Domains/Skeleton/McpSkeletonActions.h"
 
 #include "Dom/JsonObject.h"
-#include "Core/Module/EngineWireGlobals.h"
 #include "EngineWireSubsystem.h"
 #include "Transport/WebSocket/McpBridgeWebSocket.h"
 

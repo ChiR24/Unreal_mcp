@@ -28,7 +28,7 @@ namespace McpBehaviorTreeSerializers
      * @param EntryDecorators / EntryDecoratorOps  decorators on the edge INTO this node
      *        (from the parent's FBTCompositeChild). Pass nullptr for the root and for
      *        aux nodes (decorators/services), which carry no incoming edge.
-     * @param Depth / Visited                      cycle + max-depth defense (R12/R13).
+     * @param Depth / Visited                      cycle + max-depth defense.
      * @param InOutNodeCount                        ++ for every serialized node.
      * @param InOutExecutionNodeCount               ++ for composites + tasks only.
      */
@@ -46,7 +46,7 @@ namespace McpBehaviorTreeSerializers
      * (parent-chain-walked, parent-most keys first, with additive enrichment), and
      * parentBlackboard (path) when a Parent exists.
      * Does NOT set the root asset-name field — the caller sets `assignedBlackboard`
-     * (get_ai_info, short name) or `assetPath` (PR2). Preserves the PR0a-pinned per-key
+     * (get_ai_info, short name) or `assetPath`. Preserves the pinned per-key
      * {name, type=BlackboardKeyType_*, instanceSynced} bit-identical for the no-parent case.
      */
     void SerializeBlackboardData(UBlackboardData* BB, const TSharedRef<FJsonObject>& Out);

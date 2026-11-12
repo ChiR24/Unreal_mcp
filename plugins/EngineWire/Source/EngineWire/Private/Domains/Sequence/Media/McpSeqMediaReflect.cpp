@@ -1,3 +1,4 @@
+#include "Foundation/BridgeHelpers/Assets/McpAssetCreation.h"
 #include "Foundation/BridgeHelpers/Security/McpAssetPathCanonical.h"
 #include "Domains/Sequence/Media/McpSeqMedia.h"
 #include "Domains/Sequence/McpSeqPathSecurity.h"
@@ -215,7 +216,7 @@ bool CreateMediaAsset(UClass *AssetClass,
         FString::Printf(TEXT("Package already exists: %s"), *PackageName);
     return false;
   }
-  UPackage *Package = CreatePackage(*PackageName);
+  UPackage *Package = McpCreatePackageOrNull(PackageName);
   UObject *Object =
       Package ? NewObject<UObject>(Package, AssetClass, FName(*AssetName),
                                    RF_Public | RF_Standalone | RF_Transactional)

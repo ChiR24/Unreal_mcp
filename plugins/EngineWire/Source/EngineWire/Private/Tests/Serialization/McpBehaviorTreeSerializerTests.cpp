@@ -1,13 +1,13 @@
-// B11 - Behavior Tree serializer regression tests.
+// Behavior Tree serializer regression tests.
 //
 // These run IN the editor process against synthetic BT node objects. They lock
 // three contracts of McpBehaviorTreeSerializers::SerializeBTNode:
-//   * R16: CollectBlackboardKeySelectors enumerates ALL FBlackboardKeySelector
+//   * CollectBlackboardKeySelectors enumerates ALL FBlackboardKeySelector
 //     props (the old implementation broke after the first selector), so a node
 //     carrying two selectors must expose BOTH in keyProperties{}.
-//   * R12: the max-depth guard emits a per-node serializationError instead of
+//   * the max-depth guard emits a per-node serializationError instead of
 //     recursing forever once Depth exceeds the file-local GMaxTreeDepth (64).
-//   * R13: the cycle guard emits a per-node serializationError when a node is
+//   * the cycle guard emits a per-node serializationError when a node is
 //     visited twice through the shared Visited set.
 
 #include "Domains/BehaviorTree/McpBTSerializers.h"

@@ -50,10 +50,9 @@ bool RestoreWindowForCaptureForMcp(const TSharedRef<SWindow> &Window);
 // The other half: puts a window away again WITHOUT activating anything (a Win32 placement with
 // SW_SHOWMINNOACTIVE; SWindow::Minimize() elsewhere), for a caller that had to restore it.
 void MinimizeWindowForMcp(const TSharedRef<SWindow> &Window);
-// Counts the bridge's restores of a window: every un-minimize it made, and every configure_editor restore request,
-// even of a window already up. What puts the window away again on its own (the -McpStartMinimized startup hold, the
-// end of a timed run) stands down once the count moved past what it saw, since a caller wanted the window up.
-uint32 McpWindowRestoreCount();
+// -McpStartMinimized: puts the main window away once startup has shown it and keeps it down for 10 s, without taking
+// focus. Does nothing without the switch; a restore made over the bridge ends the hold.
+void HoldEditorMinimizedAtStartupForMcp();
 // What a timed run (sample_motion) holds while it runs: the main frame restored if it was minimized, and the
 // Use Less CPU when in Background preference off in memory only (never saved), because a background editor
 // steps PIE at about 3 fps with it on. EndEditorRunForMcp minimizes the frame again, unless a restore was asked

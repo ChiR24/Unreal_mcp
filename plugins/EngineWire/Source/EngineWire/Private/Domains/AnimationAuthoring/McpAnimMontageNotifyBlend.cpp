@@ -233,7 +233,6 @@ if (SubAction == TEXT("add_montage_notify"))
         return Response;
     }
 
-    // ===== 10.3 Blend Spaces =====
     return nullptr;
 }
 

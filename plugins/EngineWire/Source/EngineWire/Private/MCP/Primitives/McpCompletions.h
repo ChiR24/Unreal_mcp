@@ -1,5 +1,5 @@
 // McpCompletions.h
-// completion/complete over a closed set of slots (mirrors completions.ts):
+// completion/complete over a closed set of slots:
 // capability ids, knowledge topics, content roots and the enum-valued prompt
 // arguments. Every pool is in-memory; nothing scans the editor or host paths.
 #pragma once

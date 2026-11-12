@@ -25,11 +25,8 @@ static UBlueprint* CreateAIControllerBlueprint(const FString& Path, const FStrin
 
     FString FullPath = SanitizedPath / Name;
 
-    // CRITICAL: Use UEditorAssetLibrary for reliable existence check
-    // This prevents the Kismet2.cpp assertion failure when blueprint already exists
-    // The FindObject check alone is insufficient because:
-    // 1. It checks for exact object path format
-    // 2. The package may exist even if the blueprint object doesn't
+    // A Blueprint already at the path is refused before the factory runs: creating one over it fails an
+    // assertion in Kismet2.cpp. McpAssetExists asks the asset registry, which also knows a package not loaded yet.
     if (McpAssetExists(FullPath))
     {
         OutError = FString::Printf(TEXT("Asset already exists: %s"), *FullPath);
@@ -51,7 +48,7 @@ static UBlueprint* CreateAIControllerBlueprint(const FString& Path, const FStrin
         return nullptr;
     }
 
-    UPackage* Package = CreatePackage(*FullPath);
+    UPackage* Package = McpCreatePackageOrNull(FullPath);
     if (!Package)
     {
         OutError = FString::Printf(TEXT("Failed to create package: %s"), *FullPath);

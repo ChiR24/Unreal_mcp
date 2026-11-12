@@ -1,5 +1,4 @@
 #include "Domains/Blueprint/McpBPActionContext.h"
-#include "Core/Module/EngineWireGlobals.h"
 #include "Foundation/BridgeHelpers/Assets/McpAssetSaveRegistry.h"
 #include "Foundation/BridgeHelpers/Blueprints/McpBPCompileHelpers.h"
 #include "Foundation/BridgeHelpers/Blueprints/McpBPDiag.h"

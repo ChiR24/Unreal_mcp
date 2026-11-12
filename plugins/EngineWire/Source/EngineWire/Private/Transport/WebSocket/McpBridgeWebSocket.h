@@ -15,6 +15,22 @@ struct ssl_st;
 typedef struct ssl_st SSL;
 #endif
 
+// The close codes this bridge sends and reads. 1000-1009 are RFC 6455's; 4000 and up are the bridge's own.
+namespace McpWsClose
+{
+inline constexpr int32 Normal = 1000;
+inline constexpr int32 GoingAway = 1001;
+inline constexpr int32 ProtocolError = 1002;          // a client frame that is not masked
+inline constexpr int32 MessageTooBig = 1009;
+inline constexpr int32 ConnectionFailed = 4000;       // the TLS or HTTP upgrade failed, or the heartbeat stopped
+inline constexpr int32 ReadFailed = 4001;
+inline constexpr int32 FramingViolation = 4002;       // a fragmented control frame, a stray or interleaved data frame
+inline constexpr int32 UnsupportedData = 4003;        // a binary frame or an unknown opcode
+inline constexpr int32 HandshakeRequired = 4004;      // a request before bridge_hello
+inline constexpr int32 InvalidCapabilityToken = 4005;
+inline constexpr int32 RateLimited = 4008;
+inline constexpr int32 Refused = 4403;                // a browser Origin, or no matching subprotocol
+}
 class FMcpBridgeWebSocket;
 
 DECLARE_MULTICAST_DELEGATE_OneParam(FMcpBridgeWebSocketConnectedEvent, TSharedPtr<FMcpBridgeWebSocket>);
@@ -37,7 +53,7 @@ public:
 
     void Connect();
     void Listen();
-    void Close(int32 StatusCode = 1000, const FString& Reason = FString());
+    void Close(int32 StatusCode = McpWsClose::Normal, const FString& Reason = FString());
     bool Send(const FString& Data);
     bool Send(const void* Data, SIZE_T Length);
     bool IsConnected() const;
@@ -56,10 +72,6 @@ public:
     FMcpBridgeWebSocketMessageEvent MessageDelegate;
     FMcpBridgeWebSocketHeartbeatEvent HeartbeatDelegate;
     FMcpBridgeWebSocketClientConnectedEvent ClientConnectedDelegate;
-
-    // Threading
-    FCriticalSection SendMutex;
-    FCriticalSection ReceiveMutex;
 
     // Notify the socket implementation that the message handler has been
     // registered on the game thread. This is used to avoid a race where the
@@ -90,8 +102,8 @@ private:
     bool ReceiveExact(uint8* Buffer, SIZE_T Length);
     bool SendRaw(const uint8* Data, int32 Length, int32& OutBytesSent);
     bool RecvRaw(uint8* Data, int32 Length, int32& OutBytesRead);
-    bool InitializeTlsContext(bool bServer);
-    bool EstablishTls(bool bServer);
+    bool InitializeTlsContext();
+    bool EstablishTls();
     void ShutdownTls();
     void CloseNativeSocket();
     void InterruptNativeSocket();
@@ -104,6 +116,9 @@ private:
     FString Protocols = TEXT("mcp-automation");
     FString ListenHost;
 
+    // SendMutex: frames are written whole, from the game thread and the worker. ReceiveMutex: PendingReceived.
+    FCriticalSection SendMutex;
+    FCriticalSection ReceiveMutex;
     TArray<uint8> PendingReceived;
     TArray<uint8> FragmentAccumulator;
     bool bFragmentMessageActive = false;
@@ -111,7 +126,6 @@ private:
 
     // Server mode members
     bool bServerMode = false;
-    bool bServerAcceptedConnection = false;
     FSocket* ListenSocket = nullptr;
     FRunnableThread* Thread = nullptr;
     FEvent* StopEvent = nullptr;
@@ -134,9 +148,6 @@ private:
     TAtomic<bool> bWorkerRunning{false};
 
     bool bUseTls = false;
-    bool bTlsServer = true;
-    bool bSslInitialized = false;
-    bool bOwnsSslContext = false;
 #if WITH_SSL
     SSL_CTX* SslContext = nullptr;
     SSL* SslHandle = nullptr;

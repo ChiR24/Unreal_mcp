@@ -19,7 +19,7 @@
 #include "Components/StaticMeshComponent.h"
 #include "Components/SkeletalMeshComponent.h"
 #include "GameFramework/Actor.h"
-#include "Engine/DataAsset.h"
+#include "Domains/Inventory/McpGenericDataAsset.h"
 #include "Engine/DataTable.h"
 #include "Misc/PackageName.h"
 #include "Factories/BlueprintFactory.h"

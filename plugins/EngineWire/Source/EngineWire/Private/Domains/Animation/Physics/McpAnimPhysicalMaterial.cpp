@@ -113,7 +113,7 @@ bool HandleAnimationCreatePhysicalMaterialAction(FActionContext &Context, const 
     const bool bCreated = Material == nullptr;
     if (bCreated)
     {
-        UPackage *Package = CreatePackage(*ObjectPath);
+        UPackage *Package = McpCreatePackageOrNull(ObjectPath);
         Material = Package ? NewObject<UPhysicalMaterial>(Package, FName(*FPackageName::GetShortName(ObjectPath)),
                                                           RF_Public | RF_Standalone | RF_Transactional)
                            : nullptr;

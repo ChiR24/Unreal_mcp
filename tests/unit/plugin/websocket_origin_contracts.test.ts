@@ -20,6 +20,12 @@ describe('WebSocket server origin contract', () => {
     expect(originRejection).toBeGreaterThan(originRead);
     expect(originRejection).toBeLessThan(switchingProtocols);
     expect(source).toContain('Browser-origin WebSocket requests are not allowed.');
-    expect(source).toContain('4403');
+    // The refusal closes with the code the bridge names Refused, and that code is 4403.
+    expect(source.slice(originRejection, switchingProtocols)).toContain('McpWsClose::Refused');
+    const header = readFileSync(
+      resolve(process.cwd(), 'plugins/EngineWire/Source/EngineWire/Private/Transport/WebSocket/McpBridgeWebSocket.h'),
+      'utf8',
+    );
+    expect(header).toContain('inline constexpr int32 Refused = 4403;');
   });
 });

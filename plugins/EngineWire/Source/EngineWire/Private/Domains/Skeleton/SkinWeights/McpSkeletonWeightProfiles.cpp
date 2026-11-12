@@ -100,7 +100,7 @@ bool HandleAutoSkinWeightsAction(UEngineWireSubsystem* Subsystem, const FString&
 
         TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
         Result->SetStringField(TEXT("skeletalMeshPath"), SkeletalMeshPath);
-        // Verification counts so the rebuild is checkable (dogfood #99).
+        // Verification counts so the rebuild is checkable.
         if (FSkeletalMeshModel* Model = Mesh->GetImportedModel())
         {
             if (Model->LODModels.Num() > 0)

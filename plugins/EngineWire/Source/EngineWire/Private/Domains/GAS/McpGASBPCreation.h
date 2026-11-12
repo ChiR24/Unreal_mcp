@@ -74,7 +74,7 @@ static inline UBlueprint* CreateGASBlueprint(
         return ExistingBlueprint;
     }
 
-    UPackage* Package = CreatePackage(*PackageName);
+    UPackage* Package = McpCreatePackageOrNull(PackageName);
     if (!Package)
     {
         OutError = FString::Printf(TEXT("Failed to create package: %s"), *PackageName);

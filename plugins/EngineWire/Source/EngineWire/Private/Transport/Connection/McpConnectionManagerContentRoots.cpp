@@ -4,8 +4,8 @@
 
 TArray<TSharedPtr<FJsonValue>> McpBuildContentRootValues()
 {
-	// The editor's mounted content roots ("/Game", "/Engine", "/ShooterCore", ...):
-	// the TypeScript path gate allows exactly these plus its static list.
+	// The editor's mounted content roots ("/Game", "/Engine", "/ShooterCore", ...),
+	// as bridge_ack and content_roots_changed report them.
 	TArray<FString> Roots;
 	FPackageName::QueryRootContentPaths(Roots, /*bIncludeReadOnlyRoots*/ false,
 		/*bWithoutLeadingSlashes*/ false, /*bWithoutTrailingSlashes*/ true);
@@ -83,16 +83,5 @@ void FMcpConnectionManager::FlushContentRootsUpdate()
 	// One snapshot per ticker pass, however many mounts came and went since the last.
 	const TSharedRef<FJsonObject> Payload = MakeShared<FJsonObject>();
 	Payload->SetArrayField(TEXT("contentRoots"), McpBuildContentRootValues());
-	const TSharedRef<FJsonObject> Event = MakeShared<FJsonObject>();
-	Event->SetStringField(TEXT("type"), TEXT("automation_event"));
-	Event->SetStringField(TEXT("event"), TEXT("content_roots_changed"));
-	Event->SetObjectField(TEXT("payload"), Payload);
-
-	FString Serialized;
-	const TSharedRef<TJsonWriter<>> Writer = TJsonWriterFactory<>::Create(&Serialized);
-	FJsonSerializer::Serialize(Event, Writer);
-	for (const TSharedPtr<FMcpBridgeWebSocket>& Sock : Targets)
-	{
-		Sock->Send(Serialized);
-	}
+	McpSendAutomationEvent(TEXT("content_roots_changed"), Payload, Targets);
 }

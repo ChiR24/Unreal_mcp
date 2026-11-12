@@ -2,14 +2,11 @@
 
 #include "Async/Async.h"
 #include "Containers/StringConv.h"
-#include "HAL/PlatformMisc.h"
-#include "Math/UnrealMathUtility.h"
 #include "SocketSubsystem.h"
-#include "String/LexFromString.h"
 
 namespace McpBridgeWebSocket {
 
-FString BytesToStringView(const TArray<uint8> &Data) {
+FString Utf8BytesToString(const TArray<uint8> &Data) {
   if (Data.Num() == 0) {
     return FString();
   }

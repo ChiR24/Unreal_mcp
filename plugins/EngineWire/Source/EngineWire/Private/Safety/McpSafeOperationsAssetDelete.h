@@ -2,7 +2,7 @@
 
 #include "Foundation/McpCapabilityPrincipal.h"
 #include "Safety/McpSafeOperationsDeleteCompilation.h"
-#include "Safety/McpSafeOperationsMaterial.h"
+#include "Safety/McpSafeOperationsAssetSave.h"
 
 #include "EditorAssetLibrary.h"
 #include "UObject/Linker.h"

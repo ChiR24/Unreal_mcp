@@ -59,8 +59,8 @@ FMcpCanonicalRecordIndex FMcpCanonicalRecordIndex::Build()
 		return Index;
 	}
 
-	// A caller who read asset.list off a search row and sent tool "asset" was refused UNKNOWN_TOOL here while the
-	// TypeScript door resolved it. A namespace is an alias only while every record carrying it names one parent.
+	// A caller who read asset.list off a search row and sent tool "asset" was refused UNKNOWN_TOOL here.
+	// A namespace is an alias only while every record carrying it names one parent.
 	TSet<FString> ParentTools;
 	TMap<FString, TSet<FString>> OwnersByNamespace;
 	for (const FMcpCapabilityRecord& Record : Store.GetRecords())

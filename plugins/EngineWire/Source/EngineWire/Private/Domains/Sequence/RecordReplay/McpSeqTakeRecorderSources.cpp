@@ -19,7 +19,7 @@ bool ConfigureSources(
     if (!Sources && Panel)
     {
         // A freshly opened panel has no take yet, so it has no sources either;
-        // start a new take before giving up (dogfood #128).
+        // start a new take before giving up.
         Panel->SetupForRecording_TakePreset(nullptr);
         Sources = Panel->GetSources();
     }

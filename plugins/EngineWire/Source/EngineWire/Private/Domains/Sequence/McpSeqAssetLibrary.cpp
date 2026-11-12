@@ -123,7 +123,7 @@ bool UEngineWireSubsystem::HandleSequenceDuplicate(
   }
   // destinationPath is a folder in the published contract; combine it with
   // newName (or the source name) so the copy is not written as an asset named
-  // after the folder (dogfood #118).
+  // after the folder.
   FString NewName;
   LocalPayload->TryGetStringField(TEXT("newName"), NewName);
   NewName.TrimStartAndEndInline();
@@ -223,7 +223,7 @@ bool UEngineWireSubsystem::HandleSequenceDelete(
   if (!McpAssetExists(Path)) {
     TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
     Resp->SetStringField(TEXT("deletedPath"), Path);
-    // A destructive call must say whether it removed anything (dogfood #119).
+    // A destructive call must say whether it removed anything.
     SendAutomationResponse(Socket, RequestId, false,
                            FString::Printf(TEXT("Sequence not found: %s"), *Path), Resp,
                            TEXT("NOT_FOUND"));

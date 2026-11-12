@@ -37,12 +37,12 @@ inline TSharedPtr<FJsonObject> WithPayloadSubAction(const TSharedPtr<FJsonObject
 
 }
 
-#include "MCP/Routing/McpConsolidatedActionRoutingAI.h"
-#include "MCP/Routing/McpConsolidatedActionRoutingAnimationSystem.h"
-#include "MCP/Routing/McpConsolidatedActionRoutingAssets.h"
-#include "MCP/Routing/McpConsolidatedActionRoutingBlueprints.h"
-#include "MCP/Routing/McpConsolidatedActionRoutingEnvironment.h"
-#include "MCP/Routing/McpConsolidatedActionRoutingNetworkingLevel.h"
+#include "Core/Routing/McpConsolidatedActionRoutingAI.h"
+#include "Core/Routing/McpConsolidatedActionRoutingAnimationSystem.h"
+#include "Core/Routing/McpConsolidatedActionRoutingAssets.h"
+#include "Core/Routing/McpConsolidatedActionRoutingBlueprints.h"
+#include "Core/Routing/McpConsolidatedActionRoutingEnvironment.h"
+#include "Core/Routing/McpConsolidatedActionRoutingNetworkingLevel.h"
 
 // Sub-route predicates (taken by pointer in the handler-registration tables).
 // FString == is case-insensitive, so "Set_Padding" matches the lowercase entries.
@@ -50,6 +50,7 @@ namespace McpConsolidatedActions
 {
 inline bool IsAnimationAuthoringAction(const FString& Action) { return AnimationAuthoring().Contains(Action); }
 inline bool IsAudioAuthoringAction(const FString& Action) { return AudioAuthoring().Contains(Action); }
+inline bool IsBlueprintGraphAction(const FString& Action) { return BlueprintGraph().Contains(Action); }
 inline bool IsGameFrameworkAction(const FString& Action) { return GameFramework().Contains(Action); }
 inline bool IsInputAction(const FString& Action) { return Input().Contains(Action); }
 inline bool IsLightingAction(const FString& Action) { return Lighting().Contains(Action); }

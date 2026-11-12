@@ -1,6 +1,6 @@
 // Copyright (c) 2024 EngineWire Contributors
 
-#include "McpFabInterchange.h"
+#include "Import/McpFabInterchange.h"
 
 #include "UObject/Class.h"
 #include "UObject/EnumProperty.h"

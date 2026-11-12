@@ -6,7 +6,7 @@
 #include "MCP/Execute/Request/McpExecuteContractOptions.h"
 #include "MCP/Execute/Request/McpNativeGatewayReservedParams.h"
 #include "MCP/Gateway/McpNativeGatewayCapabilityStore.h"
-#include "MCP/Gateway/McpNativeGatewayCatalog.h"
+#include "MCP/Gateway/McpNativeGatewayGuidance.h"
 
 const TArray<FString>& McpExecutionOptionKeys()
 {
@@ -80,7 +80,7 @@ bool McpValidateExecutionOptions(
 		}
 	}
 
-	// The cursor of a paged result's page block (McpNativeResultPages.cpp), as gateway-option-validate.ts checks it.
+	// The cursor of a paged result's page block (McpNativeResultPages.cpp).
 	const TSharedPtr<FJsonValue> Cursor = Options->TryGetField(TEXT("pageCursor"));
 	if (Cursor.IsValid() && (Cursor->Type != EJson::String || Cursor->AsString().TrimStartAndEnd().IsEmpty() || Cursor->AsString().Len() > 64))
 	{
@@ -89,11 +89,11 @@ bool McpValidateExecutionOptions(
 		return false;
 	}
 
-	// Mirrors the 1..128 bound in gateway-execute-validate.ts. Only the key NAME
+	// The key is 1..128 characters. Only the key NAME
 	// was checked here, so a malformed value fell through to TryGetStringField in
 	// McpNativeTransportGatewayExecute, left Context.IdempotencyId empty and took
-	// the no-ledger path: a retry re-ran the mutation that the stdio surface had
-	// already refused. A dedup guard that cannot be honoured must refuse. It lives
+	// the no-ledger path: a retry re-ran the mutation.
+	// A dedup guard that cannot be honoured must refuse. It lives
 	// in McpNativeGatewayIdempotency.cpp because this file is at the line ceiling,
 	// as the expect and require checks live in Request/McpExecuteContractOptions.cpp.
 	return McpValidateIdempotencyKeyOption(Options, OutError) && McpExecuteContracts::Validate(Options, OutError) &&
@@ -218,7 +218,7 @@ bool McpParseGatewayExecuteRequest(
 	const FMcpCapabilityRecord* Record = FromCapability ? FromCapability : FromLegacy;
 	if (!Record)
 	{
-		// describe {} lists the parent tools, so point the caller there (dogfood #2).
+		// describe {} lists the parent tools, so point the caller there.
 		OutGuidance = BuildGuidance({},
 			GatewayBuildNextCall(TEXT("describe"), FString(), FString(), FString()));
 		OutError = McpValidationError(TEXT("UNKNOWN_CAPABILITY"),
@@ -227,11 +227,10 @@ bool McpParseGatewayExecuteRequest(
 	}
 
 	// Bind the resolved capability id now so a later param/option failure still
-	// carries it (the receipt then keeps its capability + revision triple, like
-	// the TS gateway which resolves the capability before validating options).
+	// carries it (the receipt then keeps its capability + revision triple).
 	OutRequest.CapabilityId = Record->Id;
-	// The names the call used (mirror of resolvedFromAlias / migratedFrom in the TS
-	// envelope): a reply names what actually ran only when the two differ.
+	// The names the call used (resolvedFromAlias / migratedFrom): a reply names
+	// what actually ran only when the two differ.
 	OutRequest.Provenance = MakeShared<FJsonObject>();
 	if (FromCapability && !Capability.Equals(Record->Id, ESearchCase::CaseSensitive))
 	{
@@ -263,8 +262,8 @@ bool McpParseGatewayExecuteRequest(
 	// The echoed `params.action` is compared against the action the request
 	// actually names: the gateway-level `action` for the legacy form, otherwise
 	// the resolved record's advertised primary pair (a capability-form call has
-	// no gateway action). Without this, the capability form would refuse the
-	// same echo the TypeScript door strips.
+	// no gateway action). Without this, the capability form would refuse an
+	// echo the legacy form accepts.
 	FString NamedAction = Action;
 	if (NamedAction.IsEmpty() && Record->LegacyPairs.Num() > 0)
 	{

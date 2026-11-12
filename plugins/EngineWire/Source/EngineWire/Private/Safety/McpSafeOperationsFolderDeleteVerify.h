@@ -1,7 +1,9 @@
 #pragma once
 
+#include "Safety/McpSafeOperationsAssetSave.h"
 #include "Safety/McpSafeOperationsDeleteCompilation.h"
-#include "Safety/McpSafeOperationsMaterial.h"
+
+#include "HAL/PlatformFileManager.h"
 
 namespace McpSafeOperations
 {

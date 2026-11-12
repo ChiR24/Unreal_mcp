@@ -82,13 +82,8 @@ bool UEngineWireSubsystem::HandleAddMaterialParameter(
   UMaterialExpression *NewExpression = nullptr;
   Type = Type.ToLower();
 
-  // Asymmetric creation paths by design:
-  // - UMaterial: UMaterialEditingLibrary::CreateMaterialExpression handles
-  //   graph registration, undo transactions, and editor-only data setup.
-  // - UMaterialFunction: UMaterialEditingLibrary only supports UMaterial, so we
-  //   use NewObject + manual add to the expression collection. This is
-  //   intentional due to API limitations — CreateMaterialExpression does not
-  //   accept UMaterialFunction as a host.
+  // A material's node is made by UMaterialEditingLibrary::CreateMaterialExpression (graph registration, undo,
+  // editor-only data); a material function's is made here by hand and added to its expression list.
   auto CreateExpr = [&](UClass* ExprClass) -> UMaterialExpression* {
     if (Material) {
       return UMaterialEditingLibrary::CreateMaterialExpression(Material, ExprClass);
@@ -205,11 +200,8 @@ bool UEngineWireSubsystem::HandleListMaterialInstances(
       FModuleManager::LoadModuleChecked<FAssetRegistryModule>("AssetRegistry");
   IAssetRegistry &AssetRegistry = AssetRegistryModule.Get();
 
-  // Find all assets that are Material Instances and have this asset as parent
-  // Note: This can be expensive if we scan all assets.
-  // Optimization: Use GetReferencers? Or just filter by class and check parent.
-  // Since we can't easily query by "Parent" tag efficiently without iterating,
-  // we'll try a filtered query.
+  // The material instances whose Parent tag in the asset registry names this asset: only the registry is read,
+  // no instance is loaded to ask.
 
   FARFilter Filter;
 #if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 1
@@ -223,17 +215,14 @@ bool UEngineWireSubsystem::HandleListMaterialInstances(
   // NOTE: ScanPathsSynchronous() was removed to prevent GameThread blocking.
   // Asset listing uses cached AssetRegistry data exclusively.
   // LIMITATION: Assets not yet indexed by the editor's background scanner
-  // will NOT appear. Use Content Browser "Rescan" or rescan_content_directory.
+  // will NOT appear. Use Content Browser "Rescan".
   TArray<FAssetData> AssetList;
   AssetRegistry.GetAssets(Filter, AssetList);
 
   TArray<TSharedPtr<FJsonValue>> Instances;
 
-  // We need to check the parent. Loading the asset is safest but slow.
-  // Checking tags is faster. MICs usually have "Parent" tag.
   const FString ParentPackage = FPackageName::ObjectPathToPackageName(AssetPath);
   for (const FAssetData &Asset : AssetList) {
-    // Check tag first
     FString ParentTag;
     if (Asset.GetTagValue(TEXT("Parent"), ParentTag)) {
       // Tag value might be "Material'Path'" or just "Path". Its package, compared whole: a substring match took the
@@ -250,10 +239,6 @@ bool UEngineWireSubsystem::HandleListMaterialInstances(
             MakeShared<FJsonValueString>(Asset.ToSoftObjectPath().ToString()));
 #endif
       }
-    } else {
-      // Fallback: load asset (slow, but accurate)
-      // Only do this if tag is missing? Or maybe skip to avoid perf hit.
-      // Let's rely on tag for now.
     }
   }
 

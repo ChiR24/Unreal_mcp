@@ -99,7 +99,7 @@ namespace ConsoleCommandSecurity
     // generated arrays so both transports share one fail-closed policy.
     #include "Domains/ConsoleCommand/McpConsolePolicy.generated.h"
 
-    // B7 fail-closed guard: if the policy generator emits empty arrays (broken
+    // Fail-closed guard: if the policy generator emits empty arrays (broken
     // build, stale header, or hand-edit), every check below silently allows
     // everything. These asserts make that impossible at compile time.
     static_assert(UE_ARRAY_COUNT(McpGeneratedConsoleCommandPolicy::BLOCKED_COMMANDS) > 0,
@@ -121,7 +121,7 @@ namespace ConsoleCommandSecurity
         return false;
     }
 
-    // B1: Mirror UE's FParse::Command name matching. The engine accepts a
+    // Mirror UE's FParse::Command name matching. The engine accepts a
     // command-name match when the name is a case-insensitive prefix AND the
     // next character is non-alphanumeric (or end of string). The old
     // ParseIntoArrayWS + exact-Equals tokenizer only split on whitespace,
@@ -183,7 +183,7 @@ namespace ConsoleCommandSecurity
             return true;
         }
 
-        // B1: Prefix-match against the full lowercased command string instead
+        // Prefix-match against the full lowercased command string instead
         // of splitting on whitespace. CommandNameMatches mirrors UE's
         // FParse::Command so "quit." and "quit=x" are blocked just like "quit".
         if (IsListedCommandName(LowerCommand, McpGeneratedConsoleCommandPolicy::BLOCKED_COMMANDS, UE_ARRAY_COUNT(McpGeneratedConsoleCommandPolicy::BLOCKED_COMMANDS)) ||
@@ -271,7 +271,7 @@ bool UEngineWireSubsystem::HandleConsoleCommandAction(
         // Execute the command through the editor first, then engine fallback,
         // capturing bounded output into an FStringOutputDevice.
         FStringOutputDevice OutputCapture;
-        OutputCapture.SetAutoEmitLineTerminator(true); // one captured line per engine Log call (dogfood #174)
+        OutputCapture.SetAutoEmitLineTerminator(true); // one captured line per engine Log call
         // Many commands (au.DumpActiveSounds, obj list, the stat dumps) report
         // through UE_LOG, not the device they are handed, so `output` came back
         // empty while the answer sat in the editor log. Mirror the log for the

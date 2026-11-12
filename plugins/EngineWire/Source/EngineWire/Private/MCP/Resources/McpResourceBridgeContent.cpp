@@ -42,12 +42,11 @@ namespace McpResourceBridge
 			FMcpTelemetryRegistry::Get().InFlightCount());
 
 		// The four connection timestamps, the last disconnect and the last two
-		// failures are tracked only by the TypeScript bridge CLIENT, which owns
+		// failures are a bridge CLIENT's to track: it owns
 		// the socket lifecycle it is reporting on. The plugin is the SERVER here
 		// and holds no equivalent history, so these are reported as null rather
-		// than back-filled from something that would merely look similar. The key
-		// set stays identical to the TypeScript body so a client can parse one
-		// shape on both transports.
+		// than back-filled from something that would merely look similar. The keys
+		// stay, so a client parses one shape.
 		auto Timestamps = MakeShared<FJsonObject>();
 		for (const TCHAR* Key : { TEXT("connectedAt"), TEXT("lastHandshakeAt"),
 			TEXT("lastMessageAt"), TEXT("lastRequestSentAt") })
@@ -62,17 +61,7 @@ namespace McpResourceBridge
 		Data->SetField(TEXT("lastHandshakeFailure"), MakeShared<FJsonValueNull>());
 		Data->SetField(TEXT("lastError"), MakeShared<FJsonValueNull>());
 		Data->SetBoolField(TEXT("listening"), Readiness.IsTransportReady());
-		// PreviousSummaryJson() is an EMPTY object when no previous record
-		// exists (store returns MakeShared<FJsonObject>() when !bHasPrevious). The
-		// TS reader emits null for a missing previous FILE, so native must emit
-		// JSON null for the same semantic state. CurrentSummaryJson() is NEVER
-		// empty (BuildSnapshotJson always emits schemaVersion/instance/counters/
-		// lastRequest + three nullable sections).
-		const TSharedRef<FJsonObject> PreviousSummary = FMcpDiagnosticsSnapshot::Get().PreviousSummaryJson();
-		Data->SetField(TEXT("previousSession"), PreviousSummary->Values.Num() == 0
-			? TSharedPtr<FJsonValue>(MakeShared<FJsonValueNull>())
-			: TSharedPtr<FJsonValue>(MakeShared<FJsonValueObject>(PreviousSummary)));
-		Data->SetObjectField(TEXT("currentSession"), FMcpDiagnosticsSnapshot::Get().CurrentSummaryJson());
+		FMcpDiagnosticsSnapshot::Get().SetSessionFields(Data);
 		return Data;
 	}
 }  // namespace McpResourceBridge

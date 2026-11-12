@@ -19,9 +19,10 @@ describe('options.aggregate', () => {
   });
 
   it('rides the receipt context from the request through the pending connection to the completion', () => {
-    expect(read('Execute', 'McpNativeTransportGatewayExecute.cpp')).toContain('Context.Aggregate = (*Options)->TryGetObjectField(TEXT("aggregate"), Aggregate)');
-    expect(read('Transport', 'McpNativeTransportGatewayStream.cpp')).toContain('Conn->Aggregate = Context.Aggregate;');
-    expect(read('Transport', 'McpNativeTransportPendingRequests.cpp')).toContain('Context.Aggregate = Conn->Aggregate;');
+    expect(read('Transport', 'Methods', 'McpNativeTransportGatewayExecute.cpp')).toContain('Context.Aggregate = (*Options)->TryGetObjectField(TEXT("aggregate"), Aggregate)');
+    expect(read('Transport', 'Methods', 'McpNativeTransportGatewayStream.cpp')).toContain('Conn->Aggregate = Context.Aggregate;');
+    expect(read('Transport', 'McpNativeTransportPrivate.h')).toContain('Context.Aggregate = Conn.Aggregate;');
+    expect(read('Transport', 'Methods', 'McpNativeTransportPendingRequests.cpp')).toContain('McpReceiptContextOf(*Conn)');
   });
 
   it('counts before the size check, and the receipt carries the block', () => {
@@ -43,7 +44,7 @@ describe('options.aggregate', () => {
   });
 
   it('is part of the idempotency fingerprint', () => {
-    expect(read('Execute', 'McpNativeTransportGatewayExecute.cpp')).toContain('McpExecuteAggregate::FingerprintPart(ExecOptions)');
+    expect(read('Transport', 'Methods', 'McpNativeTransportGatewayExecute.cpp')).toContain('McpExecuteAggregate::FingerprintPart(ExecOptions)');
   });
 
   // Counting a level by label gave one group per actor (Hall_DuctBracket_1 .. _27): copies count by their stem.

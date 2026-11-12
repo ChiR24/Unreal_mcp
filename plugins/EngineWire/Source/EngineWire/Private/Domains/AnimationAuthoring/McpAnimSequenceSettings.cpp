@@ -167,7 +167,6 @@ TSharedPtr<FJsonObject> HandleSequenceSettingsActions(const FString& SubAction, 
         return Response;
     }
 
-    // ===== 10.2 Animation Montages =====
     return nullptr;
 }
 

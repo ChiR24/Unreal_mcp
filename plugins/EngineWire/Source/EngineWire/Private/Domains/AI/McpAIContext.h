@@ -1,7 +1,6 @@
 #pragma once
 
 #include "EngineWireSubsystem.h"
-#include "Core/Module/EngineWireGlobals.h"
 #include "Foundation/BridgeHelpers/McpHelpers.h"
 #include "Foundation/HandlerUtils/McpHandlerUtils.h"
 #include "Core/Compatibility/McpVersionCompatibility.h"
@@ -87,7 +86,7 @@ T* CreateAIAssetInPackage(const FString& Path, const FString& Name, const TCHAR*
 }
 
 
-// Shared by the five perception actions; see PerceptionSetup.cpp.
+// Shared by the six perception actions; see Perception/McpAIPerceptionSetup.cpp.
 UAIPerceptionComponent* FindOrCreatePerceptionComponent(
     UEngineWireSubsystem* Self, const FString& RequestId,
     TSharedPtr<FMcpBridgeWebSocket> RequestingSocket,

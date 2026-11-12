@@ -1,5 +1,4 @@
 #include "Domains/Blueprint/McpBPActionContext.h"
-#include "Core/Module/EngineWireGlobals.h"
 #include "Domains/Blueprint/Components/McpBPScsOpFields.h"
 #include "Foundation/BridgeHelpers/Blueprints/McpBPPaths.h"
 #include "Foundation/HandlerUtils/McpHandlerUtils.h"

@@ -1,6 +1,6 @@
 // Copyright (c) 2024 EngineWire Contributors
 
-#include "McpFabLogCapture.h"
+#include "Import/McpFabLogCapture.h"
 
 #include "HAL/CriticalSection.h"
 #include "Logging/LogVerbosity.h"

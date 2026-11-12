@@ -173,12 +173,20 @@ inline bool DeleteRiskySpecialAssets(
             TEXT("McpSafeDeleteFolder: Deleting %d remaining risky special-delete assets via ordered engine-owned deletion"),
             TotalRisky);
 
+        // INDEX_NONE means the ordered delete gave up. The folder check that follows names what is still there.
         const int32 GenericDeleted = DeleteAnimationRigClusterOrdered(GenericRiskyAssets);
-        DeletedRisky += GenericDeleted;
-
-        UE_LOG(LogMcpSafeOperations, Log,
-            TEXT("McpSafeDeleteFolder: Deleted %d/%d remaining risky special-delete assets via ordered engine-owned deletion"),
-            GenericDeleted, TotalRisky);
+        if (GenericDeleted == INDEX_NONE)
+        {
+            UE_LOG(LogMcpSafeOperations, Log,
+                TEXT("McpSafeDeleteFolder: The ordered delete of %d remaining risky special-delete assets failed"), TotalRisky);
+        }
+        else
+        {
+            DeletedRisky += GenericDeleted;
+            UE_LOG(LogMcpSafeOperations, Log,
+                TEXT("McpSafeDeleteFolder: Deleted %d/%d remaining risky special-delete assets via ordered engine-owned deletion"),
+                GenericDeleted, TotalRisky);
+        }
     }
 
     UE_LOG(LogMcpSafeOperations, Log,

@@ -40,7 +40,7 @@ FGuid FindExistingFxComponentBinding(UMovieScene *MovieScene,
 // The particle evaluator only resolves AEmitter or UFXSystemComponent objects, so an
 // actor that merely owns a Niagara/particle component (ANiagaraActor, a Blueprint
 // actor, ...) gets its track on a child component binding, which is exactly what the
-// Sequencer UI creates for "Add Track > Particle" on such actors (dogfood #123).
+// Sequencer UI creates for "Add Track > Particle" on such actors.
 FGuid ResolveParticleComponentBinding(ULevelSequence *Sequence,
                                       const FGuid &ActorGuid,
                                       TSharedPtr<FJsonObject> &OutDetails) {

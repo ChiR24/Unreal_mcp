@@ -75,7 +75,7 @@ export function sampleValue(propertySchema: unknown): unknown {
   switch (firstType(propertySchema)) {
     case 'string': {
       const max = typeof propertySchema.maxLength === 'number' ? propertySchema.maxLength : undefined;
-      const base = '/Game/Task27/Sample';
+      const base = '/Game/McpSample/Path';
       return max !== undefined && max < base.length ? base.slice(0, max) : base;
     }
     case 'number':
@@ -175,7 +175,7 @@ export function buildCasesForRecord(record: CapabilityLike): readonly ExecuteCas
       caseId: `${record.id}#undeclared-param`,
       rule: 'undeclared-param',
       capabilityId: record.id,
-      params: { ...valid, task27UndeclaredParameter: true },
+      params: { ...valid, mcpUndeclaredParameter: true },
       toolEnabled: true,
       expect: { status: 'error', kind: 'validation', gatewayCode: 'UNDECLARED_PARAMETER' }
     },
@@ -183,7 +183,7 @@ export function buildCasesForRecord(record: CapabilityLike): readonly ExecuteCas
       caseId: `${record.id}#action-override`,
       rule: 'action-override',
       capabilityId: record.id,
-      params: { ...valid, action: 'task27_override' },
+      params: { ...valid, action: 'mcp_override' },
       toolEnabled: true,
       expect: { status: 'error', kind: 'validation', gatewayCode: 'INVALID_PARAMS' }
     },
@@ -200,7 +200,7 @@ export function buildCasesForRecord(record: CapabilityLike): readonly ExecuteCas
       rule: 'unsupported-option',
       capabilityId: record.id,
       params: valid,
-      options: { task27NotAnOption: true },
+      options: { mcpNotAnOption: true },
       toolEnabled: true,
       expect: { status: 'error', kind: 'option', gatewayCode: 'UNSUPPORTED_OPTION' }
     },
@@ -280,7 +280,7 @@ export function buildCasesForRecord(record: CapabilityLike): readonly ExecuteCas
       caseId: `${record.id}#enum`,
       rule: 'enum',
       capabilityId: record.id,
-      params: { ...valid, [enumProperty[0]]: 'task27-not-an-enum-member' },
+      params: { ...valid, [enumProperty[0]]: 'not-an-enum-member' },
       toolEnabled: true,
       expect: { status: 'error', kind: 'validation', gatewayCode: 'INVALID_PARAMETER_VALUE' }
     });

@@ -26,7 +26,7 @@ bool JsonValuesEqual(const TSharedPtr<FJsonValue>& Left, const TSharedPtr<FJsonV
 FMcpSchemaViolationDetail MakeViolation(
 	EMcpSchemaViolation Reason, const FString& Pointer, const FString& Message);
 
-/** Numeric range, string length, array item-count and uniqueness bounds. */
+/** Numeric range (minimum, maximum), string length (maxLength) and array item-count (minItems, maxItems) bounds. */
 bool CheckBounds(
 	const TSharedPtr<FJsonValue>& Value, const TSharedPtr<FJsonObject>& Schema,
 	const FString& Pointer, FMcpSchemaViolationDetail& OutViolation);
@@ -44,8 +44,7 @@ FString DescribeUndeclaredParameter(
 
 /**
  * A missing ENUM parameter is the one case the caller cannot guess, so the
- * refusal lists what it accepts. Matches the TypeScript gateway's
- * describeMissingParameter exactly.
+ * refusal lists what it accepts.
  */
 inline FString DescribeMissingParameter(
 	const FString& Name, const TSharedPtr<FJsonObject>& Properties)

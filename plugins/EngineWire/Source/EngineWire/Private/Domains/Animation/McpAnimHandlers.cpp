@@ -1,7 +1,6 @@
 #include "Domains/Animation/McpAnimActionContext.h"
 #include "Domains/Animation/McpAnimActionDecls.h"
 #include "Domains/Animation/Physics/McpAnimPhysicsProp.h"
-#include "Core/Module/EngineWireGlobals.h"
 #include "Foundation/HandlerUtils/McpHandlerUtils.h"
 
 bool UEngineWireSubsystem::HandleAnimationPhysicsAction(

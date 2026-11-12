@@ -23,9 +23,9 @@ bool HandleBlueprintRemoveEvent(const FBlueprintActionContext &Context) {
       return true;
     }
     // Accept eventName, falling back to customEventName: the schema advertises
-    // both and the TS layer forwards customEventName, but the handler used to
+    // both, but the handler used to
     // read only eventName -> a customEventName-only call was wrongly rejected
-    // with "eventName required" (dogfood #30).
+    // with "eventName required".
     FString EventName;
     LocalPayload->TryGetStringField(TEXT("eventName"), EventName);
     if (EventName.IsEmpty()) {
@@ -53,7 +53,7 @@ bool HandleBlueprintRemoveEvent(const FBlueprintActionContext &Context) {
             ? NormPath
             : Path;
 
-    // The EventGraph is the source of truth (dogfood #30). The per-asset
+    // The EventGraph is the source of truth. The per-asset
     // registry can be out of sync with the real graph -- e.g. a custom event
     // created via add_node never enters the registry -- so deciding
     // found/not-found from the registry returned a bogus "idempotent success"
@@ -166,8 +166,7 @@ bool HandleBlueprintRemoveEvent(const FBlueprintActionContext &Context) {
     }
 
     // Graph is authoritative: removed nothing => the event does not exist. Report NOT_FOUND loudly
-    // instead of the old bogus idempotent success that masked the no-op
-    // (dogfood #30).
+    // instead of the old bogus idempotent success that masked the no-op.
     if (RemovedNodeCount == 0) {
       TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
       Resp->SetStringField(TEXT("eventName"), EventName);

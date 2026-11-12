@@ -17,12 +17,11 @@
 
 namespace McpAIHandlers
 {
-// Five perception actions (configure_sight_config, configure_hearing_config,
-// configure_damage_sense_config, setup_perception, set_ai_perception) opened
-// with the same twenty-five lines: reject a Blueprint with no SCS, scan the
-// SCS for an existing UAIPerceptionComponent, create one when there is none,
-// and reject a null template. Changing any of those three refusals meant
-// editing all five. Returns nullptr once a refusal has been sent.
+// The Blueprint's AI perception component for the six perception actions (add_ai_perception_component,
+// configure_sight_config, configure_hearing_config, configure_damage_sense_config, setup_perception,
+// set_ai_perception): a Blueprint with no SCS is refused, the SCS is scanned for an existing
+// UAIPerceptionComponent, one is created when there is none, and a null template is refused. Returns nullptr
+// once a refusal has been sent.
 UAIPerceptionComponent* FindOrCreatePerceptionComponent(
     UEngineWireSubsystem* Self,
     const FString& RequestId,

@@ -61,6 +61,13 @@ inline TArray<FString> GetStringArrayField(
     return Names;
 }
 
+/** The object a field holds; null when the payload is null or the field is missing or holds anything else. */
+inline TSharedPtr<FJsonObject> GetObjectFieldOrNull(const TSharedPtr<FJsonObject>& Payload, const FString& FieldName)
+{
+    const TSharedPtr<FJsonObject>* Found = nullptr;
+    return Payload.IsValid() && Payload->TryGetObjectField(FieldName, Found) && Found ? *Found : TSharedPtr<FJsonObject>();
+}
+
 ENGINEWIRE_API FString JsonValueToString(const TSharedPtr<FJsonValue>& Value);
 
 /**

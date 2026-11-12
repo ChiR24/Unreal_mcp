@@ -1,9 +1,6 @@
 #include "Domains/AssetWorkflow/DataTables/McpAssetDataTableShared.h"
 #include "Foundation/McpScopedEditorTransaction.h"
 
-
-// MakeInvalidEntry/FPendingRow moved to McpAssetDataTableRowsBulk.cpp with their only callers.
-// Leaving copies here would be a redefinition once Unity merges the two shards.
 bool HandleDataTableRowActions(
     const FString& Action,
     const TSharedPtr<FJsonObject>& Params,

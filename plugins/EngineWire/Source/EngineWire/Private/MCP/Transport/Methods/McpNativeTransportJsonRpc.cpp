@@ -57,5 +57,3 @@ void FMcpNativeTransport::HandleToolsCall(
 	}
 	HandleGatewayModePreDispatch(ToolName, Arguments, Id, ClientSocket, SessionId, CorsOrigin, ProgressToken);
 }
-
-// ─── SSE Connection Management ──────────────────────────────────────────────

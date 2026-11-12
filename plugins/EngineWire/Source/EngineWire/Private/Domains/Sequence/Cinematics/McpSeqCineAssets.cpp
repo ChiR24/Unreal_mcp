@@ -26,7 +26,7 @@ bool ResolveAssetTarget(const TSharedPtr<FJsonObject> &Params, FString &OutName,
   if (!OutPath.IsEmpty()) {
     // sequencePath + name means "create <name> inside this folder"; only a
     // sequencePath without a name is a full asset path. Splitting always used
-    // to turn the folder into the asset name (dogfood #117).
+    // to turn the folder into the asset name.
     if (!OutName.IsEmpty() &&
         !OutPath.EndsWith(TEXT("/") + OutName, ESearchCase::IgnoreCase)) {
       OutFolder = OutPath;

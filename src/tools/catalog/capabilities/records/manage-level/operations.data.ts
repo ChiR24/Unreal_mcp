@@ -48,7 +48,7 @@ export const OPERATIONS_RECORDS: readonly CapabilityRecordSource[] = [
     whenToUse: ['Metadata and stats for a specific level must be inspected.'],
     whenNotToUse: ['The current level path is needed; use get_current_level.'],
     inputProps: { levelPath: P.levelPath },
-    required: [], // levelPath defaults to the loaded world (dogfood #14)
+    required: [], // levelPath defaults to the loaded world
     effect: 'read',
     exampleInput: { action: 'get_summary', levelPath: '/Game/Maps/Demo' },
     exampleOutput: {

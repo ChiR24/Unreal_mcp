@@ -2,7 +2,7 @@
 
 #include "CoreMinimal.h"
 #include "Core/Subsystem/EngineWireSubsystemContentPaths.h"
-#include "MCP/Execute/McpNativeReceiptRedaction.h"
+#include "Foundation/BridgeHelpers/Security/McpSecretMask.h"
 
 namespace EngineWireSubsystemResponse
 {

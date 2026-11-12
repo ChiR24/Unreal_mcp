@@ -1,5 +1,4 @@
 #include "Domains/Animation/McpAnimActionContext.h"
-#include "Core/Module/EngineWireGlobals.h"
 #include "Domains/Animation/Rigging/McpAnimRetargetPipeline.h"
 #include "Foundation/BridgeHelpers/McpHelpers.h"
 #include "Foundation/HandlerUtils/McpHandlerUtils.h"

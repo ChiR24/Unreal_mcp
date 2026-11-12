@@ -28,7 +28,7 @@ bool HandleConfigureLevelStreaming(
     FString LevelName;
     if (Payload.IsValid())
     {
-        // Accept every spelling the contracts use for the streaming level (dogfood #159).
+        // Accept every spelling the contracts use for the streaming level.
         for (const TCHAR* Key : {TEXT("levelName"), TEXT("sublevelName"), TEXT("subLevelName"), TEXT("sublevelPath"), TEXT("subLevelPath"), TEXT("levelPath")})
         {
             if (Payload->TryGetStringField(Key, LevelName) && !LevelName.IsEmpty()) { break; }

@@ -50,7 +50,7 @@ bool HandleInventoryCraftingStationActions(UEngineWireSubsystem& Bridge, const F
       TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
       Result->SetBoolField(TEXT("saved"), bSaved);
       Result->SetStringField(TEXT("stationPath"), Package->GetName());
-      Result->SetStringField(TEXT("assetPath"), Package->GetName() + TEXT(".") + FPackageName::GetShortName(Package->GetName())); // dogfood #55: consistent object path
+      Result->SetStringField(TEXT("assetPath"), Package->GetName() + TEXT(".") + FPackageName::GetShortName(Package->GetName())); // consistent object path
       Result->SetStringField(TEXT("stationType"), StationType);
       Bridge.SendAutomationResponse(RequestingSocket, RequestId, true,
                              TEXT("Crafting station created"), Result);

@@ -3,7 +3,6 @@
 #include "Core/Compatibility/McpVersionCompatibility.h"
 #include "EngineWireSubsystem.h"
 #include "Foundation/BridgeHelpers/McpHelpers.h"
-#include "Core/Module/EngineWireGlobals.h"
 #include "Transport/WebSocket/McpBridgeWebSocket.h"
 #include "Foundation/HandlerUtils/McpHandlerUtils.h"
 #include "Foundation/McpCapabilityPrincipal.h"

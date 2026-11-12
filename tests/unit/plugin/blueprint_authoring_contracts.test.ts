@@ -456,7 +456,7 @@ describe('arrange_nodes moves listed nodes beside what they are wired to', () =>
     expect(settle).toBeGreaterThan(park);
     expect(source).toContain('if (Unmoved.Contains(Node))');
     expect(read('Domains', 'BlueprintGraph', 'McpBPGraphNodeMutations.cpp')).toContain('ArrangeNodes(Context)');
-    expect(read('Core', 'Subsystem', 'EngineWireSubsystemHandlerRegistration.cpp')).toContain('TEXT("arrange_nodes")');
+    expect(read('Core', 'Routing', 'McpConsolidatedActionRoutingBlueprints.h')).toContain('TEXT("arrange_nodes")');
   });
 });
 

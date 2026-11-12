@@ -2,7 +2,7 @@
 
 #include "Editor.h"
 #include "MCP/Transport/McpNativeTransport.h"
-#include "MCP/Execute/McpNativeReceiptRedaction.h"
+#include "Foundation/BridgeHelpers/Security/McpSecretMask.h"
 #include "Core/Journal/McpChangeJournal.h"
 #include "Core/Requests/McpRequestOriginRegistry.h"
 #include "Core/Requests/McpResponseCaptureRegistry.h"
@@ -195,14 +195,10 @@ void UEngineWireSubsystem::SendAutomationResponse(
     // below RETURNS, so this must precede it.
     FMcpDiagnosticsSnapshot::Get().RecordTerminal(RequestId, bSuccess ? TEXT("success") : EffectiveErrorCode.IsEmpty() ? TEXT("failure") : EffectiveErrorCode);
     if (IsInGameThread()) { FMcpDiagnosticsSnapshot::Get().PersistCurrent(); }
-    // F3 fix: removed the response-stealing override that redirected a
-    // WebSocket-originated response to the Native HTTP transport when the
-    // RequestId matched a Native pending request. RequestIds are
-    // server-generated GUIDs, so the match should never happen in practice,
-    // but if a collision ever occurred, the response would leak to the
-    // wrong transport. The response now goes to the originator (Origin
-    // parameter, possibly resolved via the CurrentRequestOrigin global
-    // for WebSocket-originated calls).
+    // A response goes to its originator (the Origin parameter, possibly resolved
+    // via the CurrentRequestOrigin global for WebSocket-originated calls), never
+    // to the Native HTTP transport because its RequestId matches a Native pending
+    // request: on a collision the response would leak to the wrong transport.
     if (EffectiveOrigin == ERequestOrigin::NativeHTTP && NativeTransport)
     {
         // This branch RETURNS, so it never reaches the connection manager that
@@ -308,7 +304,7 @@ void UEngineWireSubsystem::DescribeQueueRejection(
             Code = TEXT("EDITOR_BLOCKED");
             const FString Work = EngineWire::DescribeEditorWork();
             Message = Work.IsEmpty()
-                ? FString(TEXT("Automation request rejected: the editor game thread has not ticked for over 15 s (a modal dialog or a blocking operation is holding it); dismiss it and retry"))
+                ? FString::Printf(TEXT("Automation request rejected: the editor game thread has not ticked for over %d s (a modal dialog or a blocking operation is holding it); dismiss it and retry"), GameThreadStallSeconds)
                 : FString::Printf(TEXT("Not run: Unreal is %s. Send this call again once that is done; until then every call answers with its progress."), *Work);
             break;
         }

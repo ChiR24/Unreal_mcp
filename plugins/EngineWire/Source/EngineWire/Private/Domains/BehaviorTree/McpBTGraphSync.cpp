@@ -1,6 +1,6 @@
 // McpBTGraphSync.cpp — asset -> graph synchronisation.
 //
-// Dogfood #60: asset-route actions (add_composite_node / add_task_node) edit UBehaviorTree
+// Asset-route actions (add_composite_node / add_task_node) edit UBehaviorTree
 // directly, so their nodes had no UBehaviorTreeGraphNode and graph-route ids could not
 // resolve them; UBehaviorTreeGraph::SpawnMissingNodes() only covers a graph created from
 // scratch. This walks the asset tree and spawns a graph node for every composite/task that

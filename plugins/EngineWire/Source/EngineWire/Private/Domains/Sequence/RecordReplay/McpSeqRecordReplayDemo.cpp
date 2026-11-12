@@ -48,7 +48,7 @@ bool HandleDemoReplayAction(
     UReplaySubsystem* Replay = nullptr;
     if (Action == TEXT("configure_demo_settings"))
     {
-        // Settings-only (catalogued for edit mode, dogfood #129): store them now and
+        // Settings-only (catalogued for edit mode): store them now and
         // apply to the live replay driver only when a PIE/game world already exists.
         World = GetRuntimeWorld();
         Replay = GetReplaySubsystem(World);

@@ -1,7 +1,5 @@
-// Behavioral automation coverage for McpCoerceCanonicalVectorShapes. The TS<->C++ parity
-// test (tests/unit/tools/vector-shape-coercion-parity.test.ts) pins call order and the
-// predicate bodies as source text; these tests pin the native BEHAVIOR, so weakening a
-// guard fails here even when the pinned fragments survive a refactor.
+// Behavioral automation coverage for McpCoerceCanonicalVectorShapes: these tests pin what the
+// coercion does, so weakening a guard fails here whatever the source looks like.
 
 #if WITH_DEV_AUTOMATION_TESTS
 

@@ -146,7 +146,7 @@ bool HandleSetMaterialParameter(UEngineWireSubsystem* Bridge, const FString& Req
     // Each type-specific setter below already handles BOTH a material instance
     // and a base material (it edits the named parameter expression's
     // DefaultValue), so the canonical action delegates rather than refusing.
-    // parameterType defaults to scalar, matching the TypeScript normalizer.
+    // parameterType defaults to scalar.
     const FString Type = ParameterType.IsEmpty() ? TEXT("scalar") : ParameterType.ToLower();
 
     if (Type == TEXT("scalar") || Type == TEXT("float")) {

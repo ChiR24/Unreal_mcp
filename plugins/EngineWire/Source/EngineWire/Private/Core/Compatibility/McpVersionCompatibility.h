@@ -16,6 +16,12 @@
 
 #pragma once
 
+// UE 5.0 engine headers (ConcurrentLinearAllocator.h among them) use Clang's __has_feature under MSVC.
+// EngineWire.Build.cs defines it for the whole target on 5.0-5.2; this covers a file compiled without that.
+#if defined(_MSC_VER) && !defined(__has_feature)
+#define __has_feature(x) 0
+#endif
+
 #include "Runtime/Launch/Resources/Version.h"
 #include "Misc/Crc.h"
 
@@ -224,6 +230,17 @@
 #else
   #define MCP_PROPERTY_EXPORT_TEXT(Property, OutText, ValuePtr, DefaultValuePtr, Container, Flags) \
     (Property)->ExportTextItem(OutText, ValuePtr, DefaultValuePtr, Container, Flags, nullptr)
+#endif
+
+// UE 5.0: ImportText(Text, ValuePtr, Flags, Owner)
+// UE 5.1+: ImportText_Direct(Text, ValuePtr, Owner, Flags)
+// Both report a refusal to GWarn, their default error device, and return null for text the property does not take.
+#if ENGINE_MAJOR_VERSION > 5 || ENGINE_MINOR_VERSION >= 1
+  #define MCP_PROPERTY_IMPORT_TEXT(Property, Text, ValuePtr, Owner, Flags) \
+    (Property)->ImportText_Direct(Text, ValuePtr, Owner, Flags)
+#else
+  #define MCP_PROPERTY_IMPORT_TEXT(Property, Text, ValuePtr, Owner, Flags) \
+    (Property)->ImportText(Text, ValuePtr, Flags, Owner)
 #endif
 
 // =============================================================================

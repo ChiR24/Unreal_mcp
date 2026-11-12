@@ -16,12 +16,7 @@ bool FMcpNativeTransport::TryHandleLocalToolCall(
 		FScopeLock SessionLock(&SessionMutex);
 		if (!ActiveSessions.Contains(SessionId))
 		{
-			const FString Body = FMcpJsonRpc::BuildError(
-				Id, FMcpJsonRpc::ErrorInvalidRequest,
-				TEXT("Invalid or expired session ID"));
-			SendAndClose(
-				ClientSocket, 404, TEXT("application/json"), Body, {},
-				CorsOrigin);
+			SendSessionExpired(Id, ClientSocket, CorsOrigin);
 			return true;
 		}
 	}

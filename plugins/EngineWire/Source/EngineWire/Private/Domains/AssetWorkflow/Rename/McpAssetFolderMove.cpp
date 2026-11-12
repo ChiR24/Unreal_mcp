@@ -1,7 +1,7 @@
 // Copyright (c) 2024 EngineWire Contributors
 //
 // move / rename with a folder as sourcePath. The Content Browser renames folders; the MCP only moved
-// one asset per call, so relocating a game's root folder (/Game/Mario held 207 assets) was out of reach.
+// one asset per call, so relocating a game's root folder (a few hundred assets) was out of reach.
 
 #include "Domains/AssetWorkflow/Rename/McpAssetRenameGuard.h"
 #include "Foundation/BridgeHelpers/McpHelpers.h"

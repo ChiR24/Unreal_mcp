@@ -161,5 +161,3 @@ uint32 FMcpNativeTransport::Run()
 	UE_LOG(LogMcpNativeTransport, Verbose, TEXT("Accept loop exited"));
 	return 0;
 }
-
-// ─── Connection Handler ─────────────────────────────────────────────────────

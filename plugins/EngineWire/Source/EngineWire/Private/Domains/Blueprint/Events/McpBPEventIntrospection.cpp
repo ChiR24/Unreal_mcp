@@ -1,6 +1,5 @@
 #include "Domains/Blueprint/McpBPActionContext.h"
 #include "Domains/BlueprintGraph/McpBPGraphCompatibility.h"
-#include "Core/Module/EngineWireGlobals.h"
 #include "Foundation/HandlerUtils/McpHandlerUtils.h"
 
 #include "Blueprint/UserWidget.h"
@@ -150,7 +149,7 @@ FEngineWire_BuildBlueprintSnapshot(UBlueprint *Blueprint,
       Blueprint->SimpleConstructionScript
           ? Blueprint->SimpleConstructionScript->GetAllNodes().Num()
           : 0);
-  McpAppendBlueprintScsComponents(Blueprint, Snapshot); // dogfood #22: components beside scsNodeCount
+  McpAppendBlueprintScsComponents(Blueprint, Snapshot); // components beside scsNodeCount
   FString CompileStatus = TEXT("unknown");
   if (const UEnum *StatusEnum = StaticEnum<EBlueprintStatus>()) {
     const FString StatusName =

@@ -179,8 +179,8 @@ bool McpSendComponentPropertyShortfall(UEngineWireSubsystem &Bridge,
         Data, TEXT("PROPERTY_CONVERSION_FAILED"));
     return true;
   }
-  // A partial apply is a failure (PARTIAL_FAILURE) carrying the applied list
-  // (dogfood #151); a `warnings` array next to success:true went unread.
+  // A partial apply is a failure (PARTIAL_FAILURE) carrying the applied list;
+  // a `warnings` array next to success:true went unread.
   Data->SetBoolField(TEXT("partial"), true);
   Bridge.SendAutomationResponse(
       Socket, RequestId, false,

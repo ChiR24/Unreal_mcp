@@ -1,6 +1,6 @@
 #include "Domains/Animation/McpAnimActionContext.h"
+#include "Foundation/BridgeHelpers/Assets/McpAssetCreation.h"
 #include "Foundation/BridgeHelpers/Blueprints/McpBPPaths.h"
-#include "Core/Module/EngineWireGlobals.h"
 #include "Foundation/HandlerUtils/McpHandlerUtils.h"
 #include "Safety/McpSafeOperations.h"
 #include "Core/Compatibility/McpVersionCompatibility.h"
@@ -231,7 +231,7 @@ bool HandleAnimationSetupPhysicsSimulationAction(FActionContext &Context,
             McpHandlerUtils::AddVerification(Resp, ExistingPhysicsAsset);
           }
         } else {
-          UPackage *Package = CreatePackage(*PhysicsAssetObjectPath);
+          UPackage *Package = McpCreatePackageOrNull(PhysicsAssetObjectPath);
           if (!Package) {
             Context.Fail(TEXT("PACKAGE_ERROR"), TEXT("Failed to create physics asset package"));
           } else {

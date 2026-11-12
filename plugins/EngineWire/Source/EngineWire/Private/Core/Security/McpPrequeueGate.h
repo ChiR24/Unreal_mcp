@@ -34,7 +34,7 @@ struct FMcpPrequeueRequest
 	TSharedPtr<FJsonObject> Payload;
 
 	// The automation_request envelope sibling. Re-validated here; the plugin
-	// never trusts the TypeScript layer to have checked it.
+	// never trusts a client to have checked it.
 	TSharedPtr<FJsonObject> Consent;
 
 	// Set by native /mcp, whose describe mints every grant's nonce: a grant's nonce must be one the ledger issued for

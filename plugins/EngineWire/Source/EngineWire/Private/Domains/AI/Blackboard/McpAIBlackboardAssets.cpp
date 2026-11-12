@@ -53,7 +53,7 @@ static bool CreateBlackboardAndReply(UEngineWireSubsystem* Self, const FString& 
         return true;
     }
 
-    Result->SetStringField(TEXT("blackboardPath"), Blackboard->GetPathName()); // dogfood #66: object path
+    Result->SetStringField(TEXT("blackboardPath"), Blackboard->GetPathName()); // object path
     Result->SetStringField(TEXT("packagePath"), Blackboard->GetOutermost()->GetName());
     Result->SetBoolField(TEXT("alreadyExisted"), false);
     Result->SetBoolField(TEXT("saved"), McpSafeAssetSave(Blackboard));

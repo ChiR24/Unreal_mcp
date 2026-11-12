@@ -16,9 +16,11 @@ describe('reply compaction', () => {
   it('carries the names a call used onto every native receipt, queued or not', () => {
     expect(mcp('Execute/McpNativeGatewayExecuteRequest.cpp')).toContain('SetObjectField(TEXT("migratedFrom"), Legacy)');
     expect(mcp('Execute/McpNativeGatewayValidation.cpp')).toContain('Context.Provenance = Request.Provenance;');
-    expect(mcp('Transport/McpNativeTransportGatewayStream.cpp')).toContain('Conn->Provenance = Context.Provenance;');
-    expect(mcp('Transport/McpNativeTransportPendingRequests.cpp')).toContain('Context.Provenance = Conn->Provenance;');
-    expect(mcp('Transport/McpNativeTransportKeepalive.cpp')).toContain('Context.Provenance = Conn->Provenance;');
+    expect(mcp('Transport/Methods/McpNativeTransportGatewayStream.cpp')).toContain('Conn->Provenance = Context.Provenance;');
+    expect(mcp('Transport/McpNativeTransportPrivate.h')).toContain('Context.Provenance = Conn.Provenance;');
+    for (const file of ['Transport/Methods/McpNativeTransportPendingRequests.cpp', 'Transport/McpNativeTransportKeepalive.cpp']) {
+      expect(mcp(file)).toContain('McpReceiptContextOf(*Conn)');
+    }
   });
 
   it('compacts the text and structuredContent a client reads, and takes images from the whole reply', () => {

@@ -3,7 +3,7 @@
 // principal, capability and params to read with options.pageCursor, without the handler running again. Each page is
 // the capability's own output with a slice of that array, so it still meets the declared output schema. A cursor
 // names the kept result and the offset its page starts at, so reading it again (a retry, or an idempotent replay of
-// the first call) returns the same page instead of the one after. Mirrors src/server/gateway/gateway-result-pages.ts.
+// the first call) returns the same page instead of the one after.
 
 #include "MCP/Execute/McpNativeGatewayReceipt.h"
 #include "MCP/Execute/McpNativeReceiptRedaction.h"
@@ -30,7 +30,7 @@ struct FMcpKeptResult
 	FString Field;
 	TArray<TSharedPtr<FJsonValue>> Items;
 	TArray<int64> Sizes;
-	TSet<int32> Issued; // the offsets this result's pages handed out (gateway-result-pages.ts issued)
+	TSet<int32> Issued; // the offsets this result's pages handed out
 	double Expires = 0.0;
 };
 

@@ -1,6 +1,6 @@
 #include "EngineWireSubsystem.h"
 
-#include "MCP/Routing/McpConsolidatedActionRouting.h"
+#include "Core/Routing/McpConsolidatedActionRouting.h"
 #include "Foundation/BridgeHelpers/Responses/McpJsonFields.h"
 
 #include <initializer_list>
@@ -18,20 +18,6 @@ struct FSubRoute
     FHandlerMethod Handler;
     const TCHAR* Domain;
 };
-
-bool IsBlueprintGraphAction(const FString& SubAction)
-{
-    static const TSet<FString> Actions = {
-        TEXT("create_node"), TEXT("delete_node"), TEXT("connect_pins"), TEXT("connect_nodes"),
-        TEXT("break_pin_links"), TEXT("set_node_property"),
-        TEXT("create_reroute_node"), TEXT("get_node_details"),
-        TEXT("get_graph_details"), TEXT("get_pin_details"),
-        TEXT("list_node_types"), TEXT("find_functions"), TEXT("set_pin_default_value"),
-        TEXT("list_animbp_graphs"), TEXT("get_transition_rule_graph"),
-        TEXT("build_graph"), TEXT("arrange_nodes"), TEXT("lint_blueprint"), TEXT("read_graph_as_code"),
-        TEXT("write_graph_from_code")};
-    return Actions.Contains(SubAction);
-}
 
 // connect_material_pins spells its endpoints several ways; the material
 // authoring handler reads only the canonical names.

@@ -38,7 +38,7 @@ TSharedPtr<FJsonObject> WithoutListed(const TSharedPtr<FJsonObject>& Payload, co
 	TSharedPtr<FJsonObject> Out = Copy(Payload);
 	const FJsonArray* List = ArrayField(Out, Field);
 	if (List && AllListed(*List, Listed)) Out->RemoveField(Field);
-	if (const TSharedPtr<FJsonObject> Details = ObjectField(Out, TEXT("details")))
+	if (const TSharedPtr<FJsonObject> Details = McpHandlerUtils::GetObjectFieldOrNull(Out, TEXT("details")))
 	{
 		Out->SetObjectField(TEXT("details"), WithoutListed(Details, Field, Listed));
 	}
@@ -50,7 +50,7 @@ TSharedPtr<FJsonObject> WithoutListed(const TSharedPtr<FJsonObject>& Payload, co
 // beside name) says nothing new; the receipt read its fields from the full result before this.
 TSharedPtr<FJsonObject> WithoutRepeatedValues(const TSharedPtr<FJsonObject>& Data)
 {
-	const TSharedPtr<FJsonObject> Details = ObjectField(Data, TEXT("details"));
+	const TSharedPtr<FJsonObject> Details = McpHandlerUtils::GetObjectFieldOrNull(Data, TEXT("details"));
 	if (!Details) return Data;
 	TArray<FString> Declared;
 	for (const auto& Field : Data->Values)
@@ -92,11 +92,11 @@ TSharedPtr<FJsonObject> ReceiptOutcome(const TSharedPtr<FJsonObject>& Receipt, c
 		const FJsonArray* List = ArrayField(Receipt, Field);
 		if (List && List->Num() > 0) Out->SetArrayField(Field, *List);
 	}
-	if (const TSharedPtr<FJsonObject> Task = ObjectField(Receipt, TEXT("task"))) Out->SetObjectField(TEXT("task"), Task);
+	if (const TSharedPtr<FJsonObject> Task = McpHandlerUtils::GetObjectFieldOrNull(Receipt, TEXT("task"))) Out->SetObjectField(TEXT("task"), Task);
 	// Over the bridge the receipt's error repeats typedError; it is kept only for what it alone says.
-	if (const TSharedPtr<FJsonObject> Error = ObjectField(Receipt, TEXT("error")))
+	if (const TSharedPtr<FJsonObject> Error = McpHandlerUtils::GetObjectFieldOrNull(Receipt, TEXT("error")))
 	{
-		const TSharedPtr<FJsonObject> Typed = ObjectField(Reply, TEXT("typedError"));
+		const TSharedPtr<FJsonObject> Typed = McpHandlerUtils::GetObjectFieldOrNull(Reply, TEXT("typedError"));
 		TSharedPtr<FJsonObject> Kept = MakeShared<FJsonObject>();
 		for (const auto& Field : Error->Values)
 		{
@@ -126,7 +126,7 @@ TSharedPtr<FJsonObject> CompactDetail(const TSharedPtr<FJsonObject>& Detail, con
 	}
 	// The handler's own details (the unsaved packages, the offending parameter) sit in this object too: only the
 	// repeats go.
-	if (const TSharedPtr<FJsonObject> Error = ObjectField(Out, TEXT("error")))
+	if (const TSharedPtr<FJsonObject> Error = McpHandlerUtils::GetObjectFieldOrNull(Out, TEXT("error")))
 	{
 		const TSharedPtr<FJsonObject> Kept = Copy(Error);
 		if (SameField(Kept, TEXT("message"), Reply, TEXT("message"))) Kept->RemoveField(TEXT("message"));
@@ -134,9 +134,9 @@ TSharedPtr<FJsonObject> CompactDetail(const TSharedPtr<FJsonObject>& Detail, con
 		if (Kept->Values.Num() > 0) Out->SetObjectField(TEXT("error"), Kept);
 		else Out->RemoveField(TEXT("error"));
 	}
-	const TSharedPtr<FJsonObject> Data = ObjectField(Out, TEXT("data"));
+	const TSharedPtr<FJsonObject> Data = McpHandlerUtils::GetObjectFieldOrNull(Out, TEXT("data"));
 	if (Data && Data->Values.Num() == 0) Out->RemoveField(TEXT("data"));
-	if (const TSharedPtr<FJsonObject> Inner = ObjectField(Out, TEXT("result")))
+	if (const TSharedPtr<FJsonObject> Inner = McpHandlerUtils::GetObjectFieldOrNull(Out, TEXT("result")))
 	{
 		const TSharedPtr<FJsonObject> Kept = CompactDetail(Inner, Reply);
 		if (Kept) Out->SetObjectField(TEXT("result"), Kept);
@@ -154,7 +154,7 @@ TSharedPtr<FJsonObject> CompactTypedError(const TSharedPtr<FJsonObject>& Typed, 
 		if (!SameField(Typed, Key, Reply, Key)) Out->SetField(Key, Field.Value);
 	}
 	if (SameField(Out, TEXT("handlerCode"), Reply, TEXT("errorCode"))) Out->RemoveField(TEXT("handlerCode"));
-	const TSharedPtr<FJsonObject> Unreal = ObjectField(Out, TEXT("unrealDetail"));
+	const TSharedPtr<FJsonObject> Unreal = McpHandlerUtils::GetObjectFieldOrNull(Out, TEXT("unrealDetail"));
 	if (!Unreal) return Out;
 	const TSharedPtr<FJsonObject> Detail = CompactDetail(Unreal, Reply);
 	if (Detail) Out->SetObjectField(TEXT("unrealDetail"), Detail);
@@ -166,7 +166,7 @@ TSharedPtr<FJsonObject> CompactExecute(const TSharedPtr<FJsonObject>& Reply)
 {
 	TSharedPtr<FJsonObject> Out = Copy(Reply);
 	for (const TCHAR* Field : LogOnlyExecuteFields) Out->RemoveField(Field);
-	const TSharedPtr<FJsonObject> Migrated = ObjectField(Reply, TEXT("migratedFrom"));
+	const TSharedPtr<FJsonObject> Migrated = McpHandlerUtils::GetObjectFieldOrNull(Reply, TEXT("migratedFrom"));
 	const bool bTranslated = Reply->HasField(TEXT("resolvedFromAlias")) || (Migrated &&
 		!(SameField(Migrated, TEXT("tool"), Reply, TEXT("tool")) && SameField(Migrated, TEXT("action"), Reply, TEXT("action"))));
 	for (const TCHAR* Field : ResolvedIdentityFields)
@@ -176,25 +176,25 @@ TSharedPtr<FJsonObject> CompactExecute(const TSharedPtr<FJsonObject>& Reply)
 	if (!bTranslated) Out->RemoveField(TEXT("migratedFrom"));
 	if (SameField(Out, TEXT("error"), Out, TEXT("message"))) Out->RemoveField(TEXT("error"));
 	// A success's raw `result` only repeats `data`, its projection (stdio sends one; mirrored for parity).
-	if (IsTrue(Out, TEXT("success")) && ObjectField(Out, TEXT("data"))) Out->RemoveField(TEXT("result"));
-	if (const TSharedPtr<FJsonObject> Detail = IsTrue(Out, TEXT("success")) ? nullptr : ObjectField(Out, TEXT("result")))
+	if (IsTrue(Out, TEXT("success")) && McpHandlerUtils::GetObjectFieldOrNull(Out, TEXT("data"))) Out->RemoveField(TEXT("result"));
+	if (const TSharedPtr<FJsonObject> Detail = IsTrue(Out, TEXT("success")) ? nullptr : McpHandlerUtils::GetObjectFieldOrNull(Out, TEXT("result")))
 	{
 		const TSharedPtr<FJsonObject> Kept = CompactDetail(Detail, Out);
 		if (Kept) Out->SetObjectField(TEXT("result"), Kept);
 		else Out->RemoveField(TEXT("result"));
 	}
-	const TSharedPtr<FJsonObject> Receipt = ObjectField(Reply, TEXT("receipt"));
+	const TSharedPtr<FJsonObject> Receipt = McpHandlerUtils::GetObjectFieldOrNull(Reply, TEXT("receipt"));
 	const TSharedPtr<FJsonObject> Outcome = Receipt ? ReceiptOutcome(Receipt, Reply) : nullptr;
 	if (Outcome) Out->SetObjectField(TEXT("receipt"), Outcome);
 	else Out->RemoveField(TEXT("receipt"));
-	if (const TSharedPtr<FJsonObject> Typed = ObjectField(Out, TEXT("typedError")))
+	if (const TSharedPtr<FJsonObject> Typed = McpHandlerUtils::GetObjectFieldOrNull(Out, TEXT("typedError")))
 	{
 		Out->SetObjectField(TEXT("typedError"), CompactTypedError(Typed, Out));
 	}
 	const TArray<FString> Listed = StringItems(ArrayField(Outcome, TEXT("warnings")));
 	const FJsonArray* TopWarnings = ArrayField(Out, TEXT("warnings"));
 	if (TopWarnings && AllListed(*TopWarnings, Listed)) Out->RemoveField(TEXT("warnings"));
-	if (const TSharedPtr<FJsonObject> Data = ObjectField(Out, TEXT("data")))
+	if (const TSharedPtr<FJsonObject> Data = McpHandlerUtils::GetObjectFieldOrNull(Out, TEXT("data")))
 	{
 		const TArray<FString> Changes = StringItems(ArrayField(Outcome, TEXT("changes")));
 		TSharedPtr<FJsonObject> Shown = WithoutListed(Data, TEXT("warnings"), Listed);

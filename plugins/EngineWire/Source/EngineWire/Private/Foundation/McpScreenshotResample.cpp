@@ -1,4 +1,5 @@
 #include "Foundation/McpScreenshotResample.h"
+#include "Foundation/HandlerUtils/McpHandlerUtilsResponses.h"
 
 #include "Foundation/BridgeHelpers/Security/McpProjectPaths.h"
 
@@ -176,17 +177,11 @@ void McpAddShaderCompileState(const TSharedPtr<FJsonObject> &Resp,
   }
   if (Jobs > 0) {
     // Added to whatever warnings the capture already carries (the game view's scene-only note).
-    TArray<TSharedPtr<FJsonValue>> Warnings;
-    const TArray<TSharedPtr<FJsonValue>> *Existing = nullptr;
-    if (Resp->TryGetArrayField(TEXT("warnings"), Existing) && Existing) {
-      Warnings = *Existing;
-    }
-    Warnings.Add(MakeShared<FJsonValueString>(FString::Printf(
+    McpHandlerUtils::AppendWarning(Resp, FString::Printf(
         TEXT("%d shader job(s) were still compiling: until they finish, surfaces they cover draw with the engine's ")
         TEXT("default material (black or grey), so a picture taken now may not show the final look. A capture takes ")
         TEXT("waitForShaders true; otherwise wait until shadersCompiling reads 0."),
-        Jobs)));
-    Resp->SetArrayField(TEXT("warnings"), Warnings);
+        Jobs));
   }
 }
 
@@ -196,17 +191,11 @@ void McpWarnFrameStillBuilding(const TSharedPtr<FJsonObject> &Resp) {
   if (!Resp.IsValid() || Shaders + Assets == 0) {
     return;
   }
-  TArray<TSharedPtr<FJsonValue>> Warnings;
-  const TArray<TSharedPtr<FJsonValue>> *Existing = nullptr;
-  if (Resp->TryGetArrayField(TEXT("warnings"), Existing) && Existing) {
-    Warnings = *Existing;
-  }
-  Warnings.Add(MakeShared<FJsonValueString>(FString::Printf(
+  McpHandlerUtils::AppendWarning(Resp, FString::Printf(
       TEXT("%d shader job(s) and %d asset build(s) (meshes, textures) were still running: until they finish a ")
       TEXT("material draws as the engine's stand-in and a mesh still building may be missing or coarse, so this frame ")
       TEXT("is not the final one; call again when they finish."),
-      Shaders, Assets)));
-  Resp->SetArrayField(TEXT("warnings"), Warnings);
+      Shaders, Assets));
 }
 
 // Jobs done compiling still have to be applied to their shader maps on a later tick: until then the material

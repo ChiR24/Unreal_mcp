@@ -13,9 +13,7 @@ namespace
 	// principal could shift bytes across a boundary and land two distinct scopes on
 	// one slot. Prefixing each field with its own byte length removes the ambiguity.
 	//
-	// This is byte-for-byte the encoding the TypeScript mirror builds in
-	// src/server/gateway/idempotency-ledger.ts, so both surfaces digest the same
-	// preimage for the same inputs; the vectors below are pinned on both sides.
+	// McpIdempotencyLedgerTests.cpp pins digest vectors of this encoding.
 	// FString is NUL-terminated, so a field carrying an embedded NUL is truncated
 	// here before encoding - the encoding stays injective over what is encoded.
 	void AppendLengthPrefixedField(TArray<uint8>& Out, const FString& Field)

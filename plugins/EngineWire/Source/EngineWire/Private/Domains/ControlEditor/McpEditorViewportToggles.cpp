@@ -151,7 +151,7 @@ bool UEngineWireSubsystem::HandleControlEditorSetImmersiveMode(
     TSharedPtr<FMcpBridgeWebSocket> Socket) {
   bool bEnabled = GetJsonBoolField(Payload, TEXT("enabled"), true);
 
-  // Drive the requested state instead of blindly toggling (dogfood #142).
+  // Drive the requested state instead of blindly toggling.
   bool bApplied = false;
   FLevelEditorModule& LevelEditor = FModuleManager::LoadModuleChecked<FLevelEditorModule>(TEXT("LevelEditor"));
   if (TSharedPtr<SLevelViewport> LevelViewport = LevelEditor.GetFirstActiveLevelViewport()) {

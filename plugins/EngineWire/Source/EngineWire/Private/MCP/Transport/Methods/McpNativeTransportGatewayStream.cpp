@@ -88,11 +88,7 @@ void FMcpNativeTransport::StreamToolCall(
 		// answers IDEMPOTENCY_CONFLICT for the rest of the process lifetime.
 		McpSettleIdempotency(Conn->IdempotencySlot, false, nullptr);
 		Conn->IdempotencySlot.Reset();
-		const FString Body = FMcpJsonRpc::BuildError(
-			Id, FMcpJsonRpc::ErrorInvalidRequest,
-			TEXT("Invalid or expired session ID"));
-		SendAndClose(
-			ClientSocket, 404, TEXT("application/json"), Body, {}, CorsOrigin);
+		SendSessionExpired(Id, ClientSocket, CorsOrigin);
 		return;
 	}
 	if (bPendingLimitReached)
@@ -196,7 +192,7 @@ void FMcpNativeTransport::StreamToolCall(
 		{
 			CompletePendingRequest(
 				CapturedRequestId, false,
-				TEXT("Invalid or expired session ID"), nullptr,
+				McpSessionExpiredMessage, nullptr,
 				TEXT("INVALID_SESSION"));
 		}
 		else if (!bQueued)

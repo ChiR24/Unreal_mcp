@@ -8,7 +8,7 @@ struct FMcpCapabilityRecord;
 
 // The per-variant rules of a folded family. Its union schema lists every variant's parameters
 // and keeps only what every variant requires; routing.dispatchBy.declaredBy and .requires say
-// which variant reads and requires what. Mirrors of gateway-dispatch-by.ts.
+// which variant reads and requires what.
 
 /** Parameters a call sent that only other variants read: one receipt warning each (unreadVariantParams). */
 TArray<FString> McpUnreadVariantParams(
@@ -31,6 +31,6 @@ void McpSetVariantRequirementViews(
 
 /**
  * search: what a clear first hit needs to run without describe: each required parameter's type, an at-least-one-of
- * group, a family's variant selector, and one example with the variant its action name pins (capabilitySignature in TS).
+ * group, a family's variant selector, and one example with the variant its action name pins.
  */
 TSharedPtr<FJsonObject> McpSearchSignature(const FMcpCapabilityRecord& Record);

@@ -18,7 +18,7 @@ bool UEngineWireSubsystem::HandleControlEditorStartRecording(
     return true;
 
   FString RecordingName;
-  // TS handler sends 'filename', so we check that first
+  // filename first, then name
   Payload->TryGetStringField(TEXT("filename"), RecordingName);
   if (RecordingName.IsEmpty()) {
     Payload->TryGetStringField(TEXT("name"), RecordingName);

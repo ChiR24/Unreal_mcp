@@ -162,8 +162,7 @@ bool UEngineWireSubsystem::HandleControlEditorSetPreferences(
 
   FString ResponseMessage = TEXT("Preferences updated");
   if (!bPreferencesUpdated) {
-    // Name the keys that were not applied (dogfood #142).
-    // Name the keys that were not applied (dogfood #142), and say whether the
+    // Name the keys that were not applied, and say whether the
     // category resolved at all -- an unrecognised category is the difference
     // between "that property does not exist" and "I never looked".
     const FString CategoryHint =

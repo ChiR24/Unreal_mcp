@@ -44,14 +44,14 @@ describe('an open call hears from the editor even while the game thread is held'
     expect(answer).toContain('bAnsweredRunning.exchange(true)');
     expect(answer).toContain('Subsystem->IsAutomationRequestWaiting(RequestId)');
     expect(answer).toContain('bWaiting ? TEXT("queued") : TEXT("running")');
-    expect(answer).toContain('McpBuildSuccessReceipt(Conn->CapabilityId, Data, Context, Raw, Message)');
+    expect(answer).toContain('McpBuildSuccessReceipt(Conn->CapabilityId, Data, McpReceiptContextOf(*Conn), Raw, Message)');
     // The idempotency slot is settled by the work's own completion, never by the early answer.
     expect(answer).not.toContain('McpSettleIdempotency');
   });
 
   it('keeps an answered call until its work completes, writing nothing more to it', () => {
     expect(cleanup).toMatch(/Now - Conn->StartTime > Conn->MaxLifetimeSeconds\s*\|\| \(!Conn->bAnsweredRunning\.load\(\)/u);
-    const pending = code('Private/MCP/Transport/McpNativeTransportPendingRequests.cpp');
+    const pending = code('Private/MCP/Transport/Methods/McpNativeTransportPendingRequests.cpp');
     expect(pending).toContain('if (!Conn->Socket || Conn->bAnsweredRunning.load())');
     expect(pending).toContain('McpSettleIdempotency(Conn->IdempotencySlot, bReportedSuccess, ReportedResult);');
   });
@@ -62,9 +62,9 @@ describe('an open call hears from the editor even while the game thread is held'
     expect(answer).toContain('TaskResults.NoteRunning(RequestId, GetSessionPrincipal(Conn->SessionId).Identity, ');
     expect(answer.indexOf('TaskResults.NoteRunning(')).toBeLessThan(answer.indexOf('SendSSEFrame('));
     expect(answer).toContain('manage_tools get_task_result taskId %s');
-    const pending = code('Private/MCP/Transport/McpNativeTransportPendingRequests.cpp');
+    const pending = code('Private/MCP/Transport/Methods/McpNativeTransportPendingRequests.cpp');
     expect(pending).toContain('TaskResults.NoteDone(RequestId, McpTaskOutcome(bReportedSuccess, ReportedMessage, ReportedErrorCode, ReportedResult), ToolResult);');
-    const local = code('Private/MCP/Transport/McpNativeTransportDynamicTools.cpp');
+    const local = code('Private/MCP/Transport/Methods/McpNativeTransportDynamicTools.cpp');
     expect(local).toContain('if (Action == TEXT("get_task_result"))');
     expect(local).toContain('TaskResults.Find(TaskId, GetSessionPrincipal(SessionId).Identity, Task)');
     expect(code('Private/MCP/DynamicTools/McpTaskResults.cpp')).toContain('!Entry->Principal.Equals(Principal, ESearchCase::CaseSensitive)');

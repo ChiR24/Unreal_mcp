@@ -33,7 +33,7 @@ TSharedPtr<FJsonValue> ListedDescription(const FJsonArray& Parameters, const FSt
 TSharedPtr<FJsonObject> CompactInputSchema(const TSharedPtr<FJsonObject>& Schema, const FJsonArray* Parameters)
 {
 	TSharedPtr<FJsonObject> Out = Without(Schema, TEXT("$schema"));
-	const TSharedPtr<FJsonObject> Properties = ObjectField(Out, TEXT("properties"));
+	const TSharedPtr<FJsonObject> Properties = McpHandlerUtils::GetObjectFieldOrNull(Out, TEXT("properties"));
 	if (!Properties || !Parameters) return Out;
 	TSharedPtr<FJsonObject> Kept = MakeShared<FJsonObject>();
 	for (const auto& Property : Properties->Values)
@@ -57,13 +57,13 @@ TSharedPtr<FJsonObject> CompactOutputSchema(const TSharedPtr<FJsonObject>& Schem
 {
 	TSharedPtr<FJsonObject> Out = Without(Schema, TEXT("$schema"));
 	TArray<FString> Removed;
-	if (const TSharedPtr<FJsonObject> Properties = ObjectField(Out, TEXT("properties")))
+	if (const TSharedPtr<FJsonObject> Properties = McpHandlerUtils::GetObjectFieldOrNull(Out, TEXT("properties")))
 	{
 		TSharedPtr<FJsonObject> Kept = Copy(Properties);
 		for (const auto& Stock : StockOutputProperties)
 		{
 			FString Description;
-			const TSharedPtr<FJsonObject> Property = ObjectField(Kept, Stock[0]);
+			const TSharedPtr<FJsonObject> Property = McpHandlerUtils::GetObjectFieldOrNull(Kept, Stock[0]);
 			if (Property && Property->TryGetStringField(TEXT("description"), Description) &&
 				Description.Equals(Stock[1], ESearchCase::CaseSensitive))
 			{
@@ -101,7 +101,7 @@ TSharedPtr<FJsonObject> CompactDescribe(const TSharedPtr<FJsonObject>& Reply)
 	if (IsTrue(Out, TEXT("runnable"))) Out->RemoveField(TEXT("runnable"));
 	const FJsonArray* Aliases = ArrayField(Out, TEXT("aliases"));
 	if (Aliases && Aliases->Num() == 0) Out->RemoveField(TEXT("aliases"));
-	// One legacy id that is the very pair the reply names says nothing new (compactDescribe in TS).
+	// One legacy id that is the very pair the reply names says nothing new.
 	const FJsonArray* LegacyIds = ArrayField(Out, TEXT("legacyIds"));
 	const TSharedPtr<FJsonObject> OnlyPair = LegacyIds && LegacyIds->Num() == 1 ? AsObject((*LegacyIds)[0]) : nullptr;
 	if (OnlyPair && OnlyPair->Values.Num() == 2 && SameField(OnlyPair, TEXT("tool"), Out, TEXT("parentTool")) &&
@@ -113,7 +113,7 @@ TSharedPtr<FJsonObject> CompactDescribe(const TSharedPtr<FJsonObject>& Reply)
 	{
 		if (SameField(Out, Field, Out, TEXT("tool"))) Out->RemoveField(Field);
 	}
-	const TSharedPtr<FJsonObject> Behavior = ObjectField(Out, TEXT("behavior"));
+	const TSharedPtr<FJsonObject> Behavior = McpHandlerUtils::GetObjectFieldOrNull(Out, TEXT("behavior"));
 	if (SameField(Behavior, TEXT("effect"), Out, TEXT("effect"))) Out->SetObjectField(TEXT("behavior"), Without(Behavior, TEXT("effect")));
 	if (const FJsonArray* Examples = ArrayField(Out, TEXT("examples")))
 	{
@@ -126,11 +126,11 @@ TSharedPtr<FJsonObject> CompactDescribe(const TSharedPtr<FJsonObject>& Reply)
 		}
 		Out->SetArrayField(TEXT("examples"), Kept);
 	}
-	if (const TSharedPtr<FJsonObject> Input = ObjectField(Out, TEXT("inputSchema")))
+	if (const TSharedPtr<FJsonObject> Input = McpHandlerUtils::GetObjectFieldOrNull(Out, TEXT("inputSchema")))
 	{
 		Out->SetObjectField(TEXT("inputSchema"), CompactInputSchema(Input, ArrayField(Out, TEXT("parameters"))));
 	}
-	if (const TSharedPtr<FJsonObject> Output = ObjectField(Out, TEXT("outputSchema")))
+	if (const TSharedPtr<FJsonObject> Output = McpHandlerUtils::GetObjectFieldOrNull(Out, TEXT("outputSchema")))
 	{
 		const TSharedPtr<FJsonObject> Shown = CompactOutputSchema(Output);
 		if (Shown) Out->SetObjectField(TEXT("outputSchema"), Shown);

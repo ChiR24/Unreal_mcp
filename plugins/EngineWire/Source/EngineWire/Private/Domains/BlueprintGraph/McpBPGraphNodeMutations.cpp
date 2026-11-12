@@ -25,8 +25,8 @@ static bool CreateRerouteNode(FActionContext& Context)
 
     float X = 0.0f;
     float Y = 0.0f;
-    // Match create_node: accept the tool-facing posX/posY names, which reach the
-    // native transport unnormalized (the TS bridge's posX->x mapping is bypassed).
+    // Match create_node: accept the tool-facing posX/posY names, which reach
+    // this handler as sent.
     // posX/posY are the declared names, so they win over the legacy x/y.
     if (!Context.Payload->TryGetNumberField(TEXT("posX"), X))
     {

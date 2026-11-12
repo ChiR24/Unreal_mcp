@@ -1,11 +1,9 @@
 // McpNativeGatewayReceipt.h — semantic receipt and typed error envelope
 //
-// Mirrors the TypeScript contracts in
-// src/tools/catalog/capabilities/semantic/{envelope,errors}.ts: a
-// receipt is discriminated by `status`, always names its capability, and an
+// A receipt is discriminated by `status`, always names its capability, and an
 // error carries the typed algebra (`kind` + `code`) rather than a bare string.
 //
-// The pre-Task-27 gateway guidance fields (errorCode, suggestions, nextCall) are
+// The earlier gateway guidance fields (errorCode, suggestions, nextCall) are
 // retained alongside the typed error so existing clients keep their guided
 // recovery path, and a failed Unreal dispatch keeps its structured detail under
 // `unrealDetail` instead of being flattened into a message.
@@ -25,13 +23,13 @@ struct FMcpSemanticError
 	FString Pointer;
 	FString Option;
 	FString Field;
-	// Unreal's own error code when the handler refused the call, mirroring the
-	// TypeScript execution variant's `handlerCode`: the fixed algebra label stays
+	// Unreal's own error code when the handler refused the call (`handlerCode`
+	// on the execution variant): the fixed algebra label stays
 	// on Code, this names the specific reason.
 	FString HandlerCode;
 	// A real boolean carried on the typed error (kinds capability,
 	// dispatch and execution), replacing the earlier Field="retryable" string
-	// hack so retryability is a true boolean matching the TypeScript algebra.
+	// hack so retryability is a true boolean.
 	bool bHasRetryable = false;
 	bool bRetryable = false;
 	// Stale-revision references, set only on a staleState error.
@@ -43,15 +41,15 @@ struct FMcpSemanticError
 	TArray<FString> GrantedScopes;
 	FString ConsentScope;
 	TArray<FString> Supported;
-	// Set only on RESULT_TOO_LARGE, mirroring the TypeScript output variant so a
-	// client learns by how much a response overran on either transport.
+	// Set only on RESULT_TOO_LARGE, so a client learns by how much a response
+	// overran.
 	bool bHasResultChars = false;
 	int64 ResultChars = 0;
 	TSharedPtr<FJsonObject> UnrealDetail;
 };
 
 /** Who may read on through a result too large for one reply: the principal, capability and params of the call that
- *  produced it (McpNativeResultPages.cpp; the TypeScript twin is gateway-result-pages.ts). */
+ *  produced it (McpNativeResultPages.cpp). */
 struct FMcpPageOwner
 {
 	FString Principal;
@@ -60,6 +58,9 @@ struct FMcpPageOwner
 	/** The call's own routing (capability, or tool and action) and params, for the page block's continuation call. */
 	TSharedPtr<FJsonObject> Call;
 };
+
+/** The characters one execute reply may hold before it is paged or refused (an image's own length is added to it). */
+inline constexpr int32 McpReplyCharBudget = 100000;
 
 /** One page of such a result: the result with its array cut to what fits, and the page block (field, offset,
  *  returned, total; cursor and nextCall while items remain). */
@@ -78,8 +79,8 @@ bool McpFirstResultPage(const TSharedPtr<FJsonObject>& Result, int64 Budget, con
 FString McpNextResultPage(const FString& Cursor, const FMcpPageOwner& Owner, int64 Budget, FMcpResultPage& Out);
 
 // Per-request join keys + timing threaded onto every receipt so success and error
-// envelopes carry the same correlation/request/idempotency ids and timing as the
-// TypeScript receipt. RequestId is the canonicalized external MCP id (num:/str:),
+// envelopes carry the same correlation/request/idempotency ids and timing.
+// RequestId is the canonicalized external MCP id (num:/str:),
 // never the internal automation id; IdempotencyId is the client's
 // options.idempotencyKey; StartTimeSeconds is FPlatformTime::Seconds() captured
 // when the request began (0 => timing omitted).
@@ -120,7 +121,7 @@ FMcpSemanticError McpOptionError(const FString& Option, const TArray<FString>& S
 FMcpSemanticError McpRangeError(const FString& Field, const FString& Message);
 FMcpSemanticError McpExecutionError(const FString& GatewayCode, const FString& Message, bool bRetryable);
 FMcpSemanticError McpUnrealExecutionError(const FString& Message, const TSharedPtr<FJsonObject>& UnrealDetail);
-// Plan-class constructors mirroring the TypeScript typed error algebra.
+// Plan-class constructors of the typed error algebra.
 FMcpSemanticError McpCapabilityError(const FString& GatewayCode, const FString& Code, const FString& Message, bool bRetryable);
 FMcpSemanticError McpDispatchError(const FString& GatewayCode, const FString& Code, const FString& Message, bool bRetryable);
 FMcpSemanticError McpOutputError(const FString& Code, const FString& Message, const FString& Pointer = FString());
@@ -135,7 +136,7 @@ FString McpCanonicalFingerprint(const FString& CapabilityId, const TSharedPtr<FJ
  *  the slot so the key stays retryable. A blank slot is a no-op. */
 void McpSettleIdempotency(const FString& Slot, bool bSuccess, const TSharedPtr<FJsonObject>& Receipt);
 
-/** Loop guard (mirrors gateway-loop-guard.ts): the refusal message when this exact call (the owner's principal and
+/** Loop guard: the refusal message when this exact call (the owner's principal and
  *  params fingerprint) already failed the same way McpLoopLimit times in a row within a minute, else empty. */
 FString McpLoopGuardRefusal(const TSharedPtr<FMcpPageOwner>& Owner);
 

@@ -1,6 +1,6 @@
 // McpWidgetAnimKeys.cpp — MovieScene key authoring for widget animations.
 //
-// Dogfood #38: add_animation_keyframe used to refuse with NOT_SUPPORTED. It now finds or creates the
+// add_animation_keyframe used to refuse with NOT_SUPPORTED. It now finds or creates the
 // widget binding + property track, adds a section, and writes real channel keys for RenderOpacity,
 // ColorAndOpacity and (in AnimationKeysTransform.cpp) the RenderTransform.
 #include "Domains/WidgetAuthoring/Support/McpWidgetAnimKeys.h"

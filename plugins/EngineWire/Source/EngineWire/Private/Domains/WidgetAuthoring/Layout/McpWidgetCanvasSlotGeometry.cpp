@@ -134,7 +134,7 @@ bool HandleWidgetAuthoringCanvasSlotGeometry(
     if (bAlignment)
     {
         FString AlignError;
-        if (!McpWidgetSlotAlignment::Apply(Widget, GetObjectField(Payload, TEXT("alignment")), ResultJson, AlignError))
+        if (!McpWidgetSlotAlignment::Apply(Widget, McpHandlerUtils::GetObjectFieldOrNull(Payload, TEXT("alignment")), ResultJson, AlignError))
         {
             Subsystem.SendAutomationError(RequestingSocket, RequestId, AlignError, TEXT("ALIGNMENT_UNSUPPORTED"));
             return true;
@@ -170,8 +170,8 @@ bool HandleWidgetAuthoringCanvasSlotGeometry(
     {
         // Partial input keeps the other corner, instead of resetting it to 0,0 and 1,1.
         FAnchors Anchors = Canvas->GetAnchors();
-        const TSharedPtr<FJsonObject> Min = GetObjectField(Payload, TEXT("anchorMin"));
-        const TSharedPtr<FJsonObject> Max = GetObjectField(Payload, TEXT("anchorMax"));
+        const TSharedPtr<FJsonObject> Min = McpHandlerUtils::GetObjectFieldOrNull(Payload, TEXT("anchorMin"));
+        const TSharedPtr<FJsonObject> Max = McpHandlerUtils::GetObjectFieldOrNull(Payload, TEXT("anchorMax"));
         const FString Preset = GetJsonStringField(Payload, TEXT("preset"));
         if (!Preset.IsEmpty())
         {
@@ -199,8 +199,8 @@ bool HandleWidgetAuthoringCanvasSlotGeometry(
         ReplyWidgetLayout(Subsystem, RequestId, RequestingSocket, ResultJson, WidgetBP, Widget, TEXT("Anchor set"));
         return true;
     }
-    const TSharedPtr<FJsonObject> Position = GetObjectField(Payload, TEXT("position"));
-    const TSharedPtr<FJsonObject> Size = GetObjectField(Payload, TEXT("size"));
+    const TSharedPtr<FJsonObject> Position = McpHandlerUtils::GetObjectFieldOrNull(Payload, TEXT("position"));
+    const TSharedPtr<FJsonObject> Size = McpHandlerUtils::GetObjectFieldOrNull(Payload, TEXT("size"));
     double ZOrder = 0.0;
     const bool bZOrder = Payload->TryGetNumberField(TEXT("zOrder"), ZOrder);
     if (bPosition ? !Position.IsValid() && !Size.IsValid() && !bZOrder : !Size.IsValid())

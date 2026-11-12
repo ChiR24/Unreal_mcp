@@ -3,7 +3,7 @@
 
 namespace McpAnimationAuthoring {
 
-// Wave 7+ #12: explicit BS rebuild for cases where SampleData / BlendParameters
+// Explicit BS rebuild for cases where SampleData / BlendParameters
 // were mutated via Python set_editor_property (raw memory write skips
 // PostEditChange) or any other path that bypasses MCP's add_blend_sample.
 // Optionally cascade-compile referencing AnimBlueprints so the user doesn't

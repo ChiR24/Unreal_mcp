@@ -1,4 +1,4 @@
-// inspect set_logpoints / read_logpoints / clear_logpoints (S6; see McpLogpoints.h): which nodes are marked, and their
+// inspect set_logpoints / read_logpoints / clear_logpoints (see McpLogpoints.h): which nodes are marked, and their
 // timelines read back. The marks live in editor memory until cleared or the editor closes; each play session starts
 // their timelines empty, and the last one stays readable after Play stops.
 #include "Domains/Debug/Logpoints/McpLogpoints.h"

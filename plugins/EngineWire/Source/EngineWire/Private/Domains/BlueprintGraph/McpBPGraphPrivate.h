@@ -4,7 +4,6 @@
 
 #include "CoreMinimal.h"
 #include "Dom/JsonObject.h"
-#include "Core/Module/EngineWireGlobals.h"
 #include "Foundation/BridgeHelpers/McpHelpers.h"
 #include "Foundation/BridgeHelpers/Blueprints/McpBPActorBinding.h"
 #include "EngineWireSubsystem.h"

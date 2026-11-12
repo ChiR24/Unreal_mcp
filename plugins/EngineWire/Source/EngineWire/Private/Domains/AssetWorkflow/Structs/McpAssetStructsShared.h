@@ -25,9 +25,6 @@
 #include "EdGraph/EdGraph.h"
 #include "Foundation/Blueprint/McpBlueprintUtils.h"
 
-// Mirror the inventory handlers' JSON payload accessors (GetJsonStringField /
-// GetJsonBoolField / GetJsonNumberField live in McpJsonFields.h).
-
 // A new UserDefinedStruct in Package with the engine-seeded default member (MemberVar_0) removed. Removing the
 // last member makes the engine re-seed a placeholder, so a caller that adds members drops that one afterwards.
 inline UUserDefinedStruct* CreateUnseededUserStruct(UPackage* Package, const FString& Name)

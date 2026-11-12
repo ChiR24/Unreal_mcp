@@ -4,7 +4,7 @@
 #include "Domains/BlueprintGraph/Behaviour/McpBPBehaviour.h"
 
 #include "Foundation/BridgeHelpers/Responses/McpJsonFields.h"
-#include "Interfaces/IPluginManager.h"
+#include "Core/Module/McpOwnPlugin.h"
 #include "Misc/FileHelper.h"
 #include "Misc/Paths.h"
 #include "Serialization/JsonReader.h"
@@ -126,7 +126,7 @@ TSharedPtr<FJsonObject> LoadRecipe(const FString& Domain, const FString& Name,
     const FString Key = Domain + TEXT(".") + Name;
     if (!Cache.Contains(Key))
     {
-        const TSharedPtr<IPlugin> Plugin = IPluginManager::Get().FindPlugin(TEXT("EngineWire"));
+        const TSharedPtr<IPlugin> Plugin = McpOwnPlugin();
         const FString File = Plugin.IsValid()
             ? FPaths::Combine(Plugin->GetBaseDir(), TEXT("Resources"), TEXT("Recipes"), Domain, Name + TEXT(".json"))
             : FString();

@@ -98,13 +98,6 @@ inline bool McpSafeLevelSave(ULevel* Level, const FString& FullPath, int32 MaxRe
         {
             FString AbsolutePath = FPaths::ConvertRelativePathToFull(ExistingLevelFilename);
             bLevelExists = IFileManager::Get().FileExists(*AbsolutePath);
-
-            if (!bLevelExists)
-            {
-                FString LevelName = FPaths::GetBaseFilename(PackagePath);
-                FString FolderPath = FPaths::GetPath(AbsolutePath) / LevelName + FPackageName::GetMapPackageExtension();
-                bLevelExists = IFileManager::Get().FileExists(*FolderPath);
-            }
         }
 
         if (!bLevelExists)

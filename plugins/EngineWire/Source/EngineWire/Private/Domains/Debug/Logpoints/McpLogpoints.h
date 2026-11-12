@@ -9,7 +9,7 @@ class UBlueprint;
 class UEdGraphNode;
 class UEngineWireSubsystem;
 
-// inspect set_logpoints / read_logpoints / clear_logpoints (S6): nodes of a Blueprint marked to record the values on
+// inspect set_logpoints / read_logpoints / clear_logpoints: nodes of a Blueprint marked to record the values on
 // their pins each time they run in Play, without pausing it. The editor compiles a tracepoint before every impure node
 // and a wire trace after it, and in the editor the VM raises both as script exceptions on every run
 // (FBlueprintCoreDelegates::IsDebuggingEnabled is GIsEditor): while a logpoint is set, McpLogpointsTrace.cpp listens to

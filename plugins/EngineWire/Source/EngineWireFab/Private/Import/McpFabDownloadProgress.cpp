@@ -1,6 +1,6 @@
 // Copyright (c) 2024 EngineWire Contributors
 
-#include "McpFabDownloadProgress.h"
+#include "Import/McpFabDownloadProgress.h"
 
 #include "Framework/Application/SlateApplication.h"
 #include "Framework/Notifications/NotificationManager.h"

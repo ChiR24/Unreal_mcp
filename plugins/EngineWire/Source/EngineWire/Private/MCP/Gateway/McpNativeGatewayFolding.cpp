@@ -213,7 +213,7 @@ bool McpApplyFoldedPins(
 
 // A call that omits the selector runs the variant its parameters point to:
 // every sent parameter the variants do not all share must be declared by one
-// and the same variant (mirror of inferSelector in gateway-dispatch-by.ts).
+// and the same variant.
 void McpInferFoldSelector(const FMcpCapabilityRecord& Record, const TSharedPtr<FJsonObject>& Params)
 {
 	if (Record.DispatchByDeclaredBy.Num() == 0 || !Params.IsValid() || Params->HasField(Record.DispatchBySelector))
@@ -270,8 +270,7 @@ FString McpResolveDispatchAction(
 // describes. Returns false (and reports the granted pair name) when such a
 // grant is used to dispatch a DIFFERENT action of the same family; a grant
 // naming the canonical id, an alias, or a non-folded name authorizes the
-// whole family and always passes. Mirror of matchedFoldedGrant in
-// gateway-execute.ts.
+// whole family and always passes.
 bool McpFoldedGrantMatchesDispatch(
 	const FMcpCapabilityRecord& Record, const FString& GrantedCapability,
 	const FString& DispatchTarget, FString& OutGrantedPairName)

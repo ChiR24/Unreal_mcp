@@ -1,7 +1,6 @@
 #include "Domains/Blueprint/McpBPActionContext.h"
 #include "Domains/Blueprint/Timeline/McpBPTimeline.h"
 #include "Domains/BlueprintGraph/McpBPGraphCompatibility.h"
-#include "Core/Module/EngineWireGlobals.h"
 #include "Foundation/BridgeHelpers/Assets/McpAssetSaveRegistry.h"
 #include "Foundation/BridgeHelpers/Blueprints/McpBPAssetLoad.h"
 #include "Foundation/BridgeHelpers/Blueprints/McpBPCompileHelpers.h"

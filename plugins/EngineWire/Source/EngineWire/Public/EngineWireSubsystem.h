@@ -6,7 +6,6 @@
 #include "CoreMinimal.h"
 #include "Dom/JsonObject.h"
 #include "EditorSubsystem.h"
-#include "Engine/DataAsset.h"
 #include "HAL/CriticalSection.h"
 #include "Misc/ScopeLock.h"
 #include "EngineWireLog.h"
@@ -53,30 +52,6 @@ ENGINEWIRE_API FString DescribeEditorWork(const FString& ForRequestId = FString(
 
 #include "EngineWireSubsystem.generated.h"
 
-#ifndef MCP_HAS_CONTROLRIG_FACTORY
-  #if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 1
-    #define MCP_HAS_CONTROLRIG_FACTORY 1
-  #else
-    #define MCP_HAS_CONTROLRIG_FACTORY 0
-  #endif
-#endif
-
-UCLASS(BlueprintType)
-class ENGINEWIRE_API UMcpGenericDataAsset : public UDataAsset
-{
-  GENERATED_BODY()
-
-public:
-  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "MCP Data")
-  FString ItemName;
-
-  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "MCP Data")
-  FString Description;
-
-  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "MCP Data")
-  TMap<FString, FString> Properties;
-};
-
 enum class ERequestOrigin : uint8
 {
   WebSocket,
@@ -115,6 +90,8 @@ public:
   void SendAutomationRejection(
       TSharedPtr<FMcpBridgeWebSocket> TargetSocket,
       const FString& RequestId, EAutomationQueueRejection Reason);
+  /** How long the game thread may go without a tick before a new request is refused EDITOR_BLOCKED, in seconds. */
+  static constexpr int32 GameThreadStallSeconds = 15;
   /** The typed code and message every surface answers a queue rejection with. */
   static void DescribeQueueRejection(EAutomationQueueRejection Reason, FString& OutCode, FString& OutMessage);
   void SendProgressUpdate(
@@ -123,15 +100,6 @@ public:
       const FString& Message = TEXT(""),
       bool bStillWorking = true,
       ERequestOrigin Origin = ERequestOrigin::WebSocket);
-
-  bool ExecuteEditorCommands(const TArray<FString>& Commands, FString& OutErrorMessage);
-#if MCP_HAS_CONTROLRIG_FACTORY
-  UBlueprint* CreateControlRigBlueprint(
-      const FString& AssetName,
-      const FString& PackagePath,
-      USkeleton* TargetSkeleton,
-      FString& OutError);
-#endif
 
   using FAutomationHandler = TFunction<bool(
       const FString&,

@@ -149,7 +149,6 @@ bool HandleScsGet(const FBlueprintActionContext &Context) {
 
     TArray<TSharedPtr<FJsonValue>> ComponentsArray;
 
-    // Get SCS with explicit null check
     USimpleConstructionScript *SCS = Blueprint->SimpleConstructionScript;
     if (SCS) {
       const TArray<USCS_Node *> &AllNodes = SCS->GetAllNodes();
@@ -163,11 +162,8 @@ bool HandleScsGet(const FBlueprintActionContext &Context) {
                                            ? Node->ComponentClass->GetName()
                                            : TEXT("Unknown"));
 
-          // Add parent info if available
-          // USCS_Node doesn't have GetParent() - use
-          // ParentComponentOrVariableName instead
           // SCS-owned parents are found through the tree; ParentComponentOrVariableName
-          // only names inherited native parents (dogfood #193: reparented nodes showed no parent).
+          // only names inherited native parents (reparented nodes showed no parent).
           if (USCS_Node *ParentNode = SCS->FindParentNode(Node)) {
             ComponentObj->SetStringField(TEXT("parentComponent"), ParentNode->GetVariableName().ToString());
           } else if (!Node->ParentComponentOrVariableName.IsNone()) {
@@ -189,8 +185,7 @@ bool HandleScsGet(const FBlueprintActionContext &Context) {
             ComponentObj->SetBoolField(TEXT("parentIsInherited"), true);
           }
 
-          // Add transform
-          // Get component transform from template
+          // The template's relative transform.
           FTransform Transform;
           if (UActorComponent *ComponentTemplate = Node->ComponentTemplate) {
             if (USceneComponent *SceneTemplate =

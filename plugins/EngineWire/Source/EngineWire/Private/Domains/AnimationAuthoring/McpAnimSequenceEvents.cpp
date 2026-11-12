@@ -79,7 +79,7 @@ TSharedPtr<FJsonObject> HandleSequenceEventActions(const FString& SubAction, con
         bool bSave = GetJsonBoolField(Params, TEXT("save"), true);
 
         // The contract requires one of notifyClass / notifyName, not both:
-        // a class alone names the event after itself (dogfood #82).
+        // a class alone names the event after itself.
         if (NotifyClass.IsEmpty() && NotifyName.IsEmpty())
         {
             ANIM_ERROR_RESPONSE(TEXT("At least one of notifyClass or notifyName is required"), TEXT("MISSING_NOTIFY_PARAMS"));
@@ -126,7 +126,7 @@ TSharedPtr<FJsonObject> HandleSequenceEventActions(const FString& SubAction, con
         if (FrameRate <= KINDA_SMALL_NUMBER)
         {
             // A sequence without sampled frames reports a 0 rate; fall back to 30 fps
-            // instead of dividing by zero (notify time read back as 0, dogfood #81).
+            // instead of dividing by zero (notify time read back as 0).
             FrameRate = 30.0f;
         }
         float TriggerTime = static_cast<float>(Frame) / FrameRate;
@@ -147,7 +147,7 @@ TSharedPtr<FJsonObject> HandleSequenceEventActions(const FString& SubAction, con
             const FMcpAssetEdit Edit(TEXT("Add Notify"), {AnimAsset}, Response);
             FAnimNotifyEvent& NotifyEvent = AnimAsset->Notifies.AddDefaulted_GetRef();
             // Link the event to the asset: SetTime alone leaves LinkedSequence null and
-            // GetTime() reads back 0 (every notify landed at 0.00s, dogfood #81).
+            // GetTime() reads back 0 (every notify landed at 0.00s).
             NotifyEvent.Link(AnimAsset, TriggerTime);
             NotifyEvent.TrackIndex = TrackIndex;
             NotifyEvent.NotifyName = FName(*NotifyName);

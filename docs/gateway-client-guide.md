@@ -16,14 +16,14 @@ package is a stdio proxy that relays to it. There is no opt-out: the native
 
 The 23 canonical parent tools are an **internal routing boundary**: `execute`
 runs `{ action, ...params }` on the record's parent tool
-(`Private/MCP/Execute/McpNativeTransportGatewayExecute.cpp`). They are not a
+(`Private/MCP/Transport/Methods/McpNativeTransportGatewayExecute.cpp`). They are not a
 client-visible listing and there is no legacy multi-tool listing to restore.
 
 | Operation | Purpose | Implementation (`plugins/.../Private/MCP/`) |
 | --- | --- | --- |
 | `search` | Find capabilities by query and filters | `Gateway/McpNativeGatewaySearch.cpp` |
 | `describe` | Drill one level into a contract | `Gateway/McpNativeGatewayDescribe*.cpp` |
-| `execute` | Run one validated action | `Execute/McpNativeTransportGatewayExecute.cpp` |
+| `execute` | Run one validated action | `Transport/Methods/McpNativeTransportGatewayExecute.cpp` |
 | `configure` | Internal tool enable/disable (`manage_tools`) | `DynamicTools/McpDynamicToolManager.cpp` |
 
 The reference table [`action-reference.generated.md`](action-reference.generated.md)

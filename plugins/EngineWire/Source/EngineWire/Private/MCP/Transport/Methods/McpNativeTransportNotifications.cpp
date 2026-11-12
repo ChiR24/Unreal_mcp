@@ -157,7 +157,7 @@ void FMcpNativeTransport::HandleGetMcp(FSocket* ClientSocket, const FString& Ses
 			FScopeLock WriteLock(&Stream->WriteMutex);
 			if (Stream->Socket)
 			{
-				SendHttpResponse(Stream->Socket, 404, TEXT("text/plain"), TEXT("Invalid or expired session ID"), {}, CorsOrigin);
+				SendHttpResponse(Stream->Socket, 404, TEXT("text/plain"), McpSessionExpiredMessage, {}, CorsOrigin);
 				CloseSocket(Stream->Socket);
 			}
 			return;
@@ -166,7 +166,7 @@ void FMcpNativeTransport::HandleGetMcp(FSocket* ClientSocket, const FString& Ses
 	if (bSessionInvalid)
 	{
 		SendAndClose(ClientSocket, 404, TEXT("text/plain"),
-			TEXT("Invalid or expired session ID"), {}, CorsOrigin);
+			McpSessionExpiredMessage, {}, CorsOrigin);
 		return;
 	}
 	if (bStreamLimitReached || bSessionStreamLimitReached)

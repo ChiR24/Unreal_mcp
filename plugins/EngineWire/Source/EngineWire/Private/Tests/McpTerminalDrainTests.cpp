@@ -85,7 +85,7 @@ bool FMcpDrainCancelQueuedTest::RunTest(const FString& Parameters)
 {
 	(void)Parameters;
 	using namespace McpTerminalDrain;
-	const TCHAR* Action = TEXT("task46_drain_cancel_queued");
+	const TCHAR* Action = TEXT("drain_cancel_queued");
 	TArray<FString> Dispatched;
 	UEngineWireSubsystem* Subsystem = MakeSubsystem(Action, Dispatched);
 
@@ -114,7 +114,7 @@ bool FMcpDrainCancelInFlightTest::RunTest(const FString& Parameters)
 {
 	(void)Parameters;
 	using namespace McpTerminalDrain;
-	const TCHAR* Action = TEXT("task46_drain_cancel_inflight");
+	const TCHAR* Action = TEXT("drain_cancel_inflight");
 	TArray<FString> Dispatched;
 	UEngineWireSubsystem* Subsystem =
 		NewObject<UEngineWireSubsystem>();
@@ -154,7 +154,7 @@ bool FMcpDrainStaleRefusalTest::RunTest(const FString& Parameters)
 {
 	(void)Parameters;
 	using namespace McpTerminalDrain;
-	const TCHAR* Action = TEXT("task46_drain_stale");
+	const TCHAR* Action = TEXT("drain_stale");
 	TArray<FString> Dispatched;
 	UEngineWireSubsystem* Subsystem = MakeSubsystem(Action, Dispatched);
 	FMcpLiveStateRevisions& Revisions = FMcpLiveStateRevisions::Get();
@@ -188,7 +188,7 @@ bool FMcpDrainShutdownTest::RunTest(const FString& Parameters)
 {
 	(void)Parameters;
 	using namespace McpTerminalDrain;
-	const TCHAR* Action = TEXT("task46_drain_shutdown");
+	const TCHAR* Action = TEXT("drain_shutdown");
 	TArray<FString> Dispatched;
 	UEngineWireSubsystem* Subsystem = MakeSubsystem(Action, Dispatched);
 
@@ -234,7 +234,7 @@ bool FMcpDrainSessionTeardownTest::RunTest(const FString& Parameters)
 	Manager.RegisterRequestSocket(TEXT("teardown-req"), Socket);
 	TestTrue(TEXT("socket setup: the request is tracked before teardown"),
 		Manager.PendingRequestsToSockets.Contains(TEXT("teardown-req")));
-	Manager.HandleClosed(Socket, 1000, TEXT("task46-teardown"), true);
+	Manager.HandleClosed(Socket, 1000, TEXT("drain-teardown"), true);
 	McpLaneOracle::RecordResidue(
 		Verdict, TEXT("PendingRequestsToSockets"),
 		Manager.PendingRequestsToSockets.Contains(TEXT("teardown-req")) ? 1 : 0);

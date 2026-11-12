@@ -87,7 +87,7 @@ bool HandleEnableVoiceChat(
     }
 #else
     StatusMessage = TEXT("Voice chat module not available in this build");
-    bSuccess = false; // dogfood #179: an unavailable voice system is not a success
+    bSuccess = false; // an unavailable voice system is not a success
 #endif
 
     TSharedPtr<FJsonObject> ResponseJson = McpHandlerUtils::CreateResultObject();

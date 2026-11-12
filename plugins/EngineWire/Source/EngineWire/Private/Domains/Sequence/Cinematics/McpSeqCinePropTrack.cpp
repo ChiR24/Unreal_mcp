@@ -68,7 +68,7 @@ bool IsTransformPropertyName(const FString &Name,
 }
 
 // Transform/Location/Rotation/Scale are not reflected FProperties on an actor; they
-// are the 3D transform track with a channel mask (dogfood #121). An existing transform
+// are the 3D transform track with a channel mask. An existing transform
 // track on the binding gains a new section rather than a duplicate track.
 bool AddTransformPropertyTrack(ULevelSequence *Sequence, const FGuid &Guid,
                                const TSharedPtr<FJsonObject> &Params,

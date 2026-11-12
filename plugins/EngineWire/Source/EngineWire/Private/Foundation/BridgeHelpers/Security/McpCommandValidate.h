@@ -18,7 +18,7 @@ static inline bool McpAllAlnumOr(const FString &Value, const TCHAR *Extra) {
   return true;
 }
 
-/** Match TS-side UBT argument hardening for native-direct MCP requests. */
+/** UBT argument hardening: no command separator and no redirection. */
 static inline bool McpHasUnsafeUbtArgumentCharacters(const FString &Value) {
   return McpContainsUnsafeCommandSeparator(Value) || Value.Contains(TEXT(">")) ||
          Value.Contains(TEXT("<"));

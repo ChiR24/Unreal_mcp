@@ -47,11 +47,7 @@ struct FMcpEnumState
         int32 Index = 0;
         for (TFieldIterator<FProperty> It(Enum->GetClass()); It && Index < Properties.Num(); ++It, ++Index)
         {
-#if ENGINE_MAJOR_VERSION > 5 || ENGINE_MINOR_VERSION >= 1
-            It->ImportText_Direct(*Properties[Index], It->ContainerPtrToValuePtr<void>(Enum), Enum, PPF_None);
-#else
-            It->ImportText(*Properties[Index], It->ContainerPtrToValuePtr<void>(Enum), PPF_None, Enum);
-#endif
+            MCP_PROPERTY_IMPORT_TEXT(*It, *Properties[Index], It->ContainerPtrToValuePtr<void>(Enum), Enum, PPF_None);
         }
     }
 

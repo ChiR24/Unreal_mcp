@@ -115,7 +115,7 @@ bool HandleWidgetAuthoringManipulation(
             return true;
         }
 
-        // Dogfood #192: a bare UObject::Rename left WidgetVariableNameToGuidMap keyed by the old
+        // A bare UObject::Rename left WidgetVariableNameToGuidMap keyed by the old
         // name, so the next compile ensured twice ("was added but did not get a GUID" / "was
         // deleted but still has a GUID"). Mirror FWidgetBlueprintEditorUtils::RenameWidget.
         // The map only exists from UE 5.6; before that there is nothing keyed to fix up.

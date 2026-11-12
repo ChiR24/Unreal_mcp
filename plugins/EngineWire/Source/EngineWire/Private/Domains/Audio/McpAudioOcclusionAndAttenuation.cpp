@@ -67,7 +67,7 @@ bool HandleSpatialActions(
         AttenuationSettings = Sound->AttenuationSettings;
         if (!AttenuationSettings) {
           // The sound has no attenuation asset yet: author one next to it and assign it,
-          // so the occlusion settings actually reach playback (dogfood #111).
+          // so the occlusion settings actually reach playback.
           const FString AttenName = Sound->GetName() + TEXT("_Attenuation");
           const FString AttenPackageName =
               FPackageName::GetLongPackagePath(Sound->GetOutermost()->GetName()) + TEXT("/") + AttenName;

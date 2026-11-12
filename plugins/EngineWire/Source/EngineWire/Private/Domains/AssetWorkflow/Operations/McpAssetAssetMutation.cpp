@@ -1,7 +1,6 @@
 // Copyright (c) 2024 EngineWire Contributors
 
 #include "EngineWireSubsystem.h"
-#include "Core/Module/EngineWireGlobals.h"
 #include "Domains/AssetWorkflow/Rename/McpAssetRenameGuard.h"
 #include "Domains/AssetWorkflow/Operations/McpAssetBulkSelection.h"
 #include "Misc/PackageName.h"
@@ -22,7 +21,7 @@ bool UEngineWireSubsystem::HandleRenameAsset(
   Payload->TryGetStringField(TEXT("sourcePath"), SourcePath);
   FString DestinationPath;
   Payload->TryGetStringField(TEXT("destinationPath"), DestinationPath);
-  // rename {sourcePath, newName}: the destination is the same folder under the new name (dogfood #195).
+  // rename {sourcePath, newName}: the destination is the same folder under the new name.
   if (DestinationPath.IsEmpty() && !SourcePath.IsEmpty()) {
     FString NewName;
     if (Payload->TryGetStringField(TEXT("newName"), NewName) && !NewName.TrimStartAndEnd().IsEmpty()) {
@@ -127,31 +126,20 @@ bool UEngineWireSubsystem::HandleRenameAsset(
 }
 
 /**
- * Handles asset deletion requests.
- *
- * @param RequestId Unique request identifier.
- * @param Payload JSON payload containing 'path' (string) or 'paths' (array of
- * strings).
- * @param Socket WebSocket connection.
- * @return True if handled.
+ * Deletes the assets and folders named by `paths` (an array), `path` or its alias `assetPath`. An asset that
+ * something outside the delete still references is kept and listed in referencedPaths unless `force` is true.
  */
 bool UEngineWireSubsystem::HandleDeleteAssets(
     const FString &RequestId, const TSharedPtr<FJsonObject> &Payload,
     TSharedPtr<FMcpBridgeWebSocket> Socket) {
-  // Accept the canonical schema spellings (`assetPath` / `assetPaths`) as well
-  // as the legacy `path` / `paths`. Reading only the legacy pair made
-  // asset.delete uncallable through the gateway: the schema declares
-  // `assetPath`, so a contract-correct call reached here with nothing this
-  // handler recognised ("No paths provided"), while sending `assetPaths` was
-  // rejected upstream as an undeclared parameter.
+  // What the records declare: the array `paths`, and `path` with its alias `assetPath` (reading only `path` once left a
+  // contract-correct call with "No paths provided").
   TArray<FString> PathsToDelete;
   const TArray<TSharedPtr<FJsonValue>> *PathsArray = nullptr;
-  for (const TCHAR *ArrayField : {TEXT("paths"), TEXT("assetPaths")}) {
-    if (Payload->TryGetArrayField(ArrayField, PathsArray) && PathsArray) {
-      for (const auto &Val : *PathsArray) {
-        if (Val.IsValid() && Val->Type == EJson::String)
-          PathsToDelete.Add(Val->AsString());
-      }
+  if (Payload->TryGetArrayField(TEXT("paths"), PathsArray) && PathsArray) {
+    for (const auto &Val : *PathsArray) {
+      if (Val.IsValid() && Val->Type == EJson::String)
+        PathsToDelete.Add(Val->AsString());
     }
   }
 

@@ -13,7 +13,7 @@ const strip = (text: string): string =>
   text.replace(/\r\n/gu, '\n').replace(/\/\*[\s\S]*?\*\//gu, ' ').replace(/\/\/[^\n]*/gu, ' ');
 const read = (...segments: readonly string[]): string => strip(readFileSync(join(...segments), 'utf8'));
 
-const guard = read(PRIVATE, 'MCP', 'Execute', 'McpNativeGatewayIdempotency.cpp');
+const guard = read(PRIVATE, 'MCP', 'Execute', 'Request', 'McpNativeGatewayLoopGuard.cpp');
 
 describe('native loop guard', () => {
   it('stops at three failures in a minute', () => {
@@ -31,7 +31,7 @@ describe('native loop guard', () => {
   });
 
   it('refuses before the policy gate, so consent is never asked for a refused call', () => {
-    const execute = read(PRIVATE, 'MCP', 'Execute', 'McpNativeTransportGatewayExecute.cpp');
+    const execute = read(PRIVATE, 'MCP', 'Transport', 'Methods', 'McpNativeTransportGatewayExecute.cpp');
     const refusal = execute.indexOf('McpLoopGuardRefusal(Context.PageOwner)');
     expect(refusal).toBeGreaterThan(-1);
     expect(refusal).toBeLessThan(execute.indexOf('McpPrequeueGate::Authorize('));
@@ -39,7 +39,7 @@ describe('native loop guard', () => {
   });
 
   it('notes the outcome from the final receipt at the completion funnel', () => {
-    const pending = read(PRIVATE, 'MCP', 'Transport', 'McpNativeTransportPendingRequests.cpp');
+    const pending = read(PRIVATE, 'MCP', 'Transport', 'Methods', 'McpNativeTransportPendingRequests.cpp');
     expect(pending).toMatch(/McpSettleIdempotency\(Conn->IdempotencySlot, bReportedSuccess, ReportedResult\);\s*McpLoopGuardNote\(Conn->PageOwner, bReportedSuccess, ReportedErrorCode\);/u);
   });
 });

@@ -73,7 +73,7 @@ bool HandleCreateNavModifierComponent(
         return true;
     }
     // Resolve the area class up front so an unknown class is refused instead of
-    // silently falling back to the default area (dogfood #61).
+    // silently falling back to the default area.
     UClass* ResolvedAreaClass = nullptr;
     if (!AreaClassPath.IsEmpty())
     {

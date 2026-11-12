@@ -63,7 +63,9 @@ describe('shader compile state: counted through the engine, waited for off the g
 
     expect(add).toContain('Resp->SetNumberField(TEXT("shadersCompiling"), Jobs);');
     expect(add).toMatch(/TryGetObjectField\(TEXT\("shaderWait"\), Waited\)[\s\S]*?Resp->SetObjectField\(TEXT\("shaderWait"\), \*Waited\);/u);
-    expect(add).toMatch(/if \(Jobs > 0\) \{[\s\S]*?TryGetArrayField\(TEXT\("warnings"\), Existing\)[\s\S]*?Warnings = \*Existing;[\s\S]*?Warnings\.Add\([\s\S]*?Resp->SetArrayField\(TEXT\("warnings"\), Warnings\);/u);
+    expect(add).toMatch(/if \(Jobs > 0\) \{[\s\S]*?McpHandlerUtils::AppendWarning\(Resp, /u);
+    // The shared append is what keeps the warnings already there.
+    expect(read('Foundation', 'HandlerUtils', 'McpHandlerUtilsResponses.h')).toMatch(/inline void AppendWarning\([\s\S]*?TryGetArrayField\(TEXT\("warnings"\), Existing\)[\s\S]*?Warnings = \*Existing;[\s\S]*?Warnings\.Add\([\s\S]*?Result->SetArrayField\(TEXT\("warnings"\), Warnings\);/u);
     expect(add).toContain('waitForShaders true');
   });
 });

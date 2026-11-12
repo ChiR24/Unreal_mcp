@@ -43,7 +43,7 @@ bool HandleAddLevelBlueprintNode(
         PosX = static_cast<int32>((*PositionArray)[0]->AsNumber());
         PosY = static_cast<int32>((*PositionArray)[1]->AsNumber());
     }
-    // Friendly names such as EventBeginPlay / PrintString (dogfood #160).
+    // Friendly names such as EventBeginPlay / PrintString.
     FString AliasEventName;
     FString AliasFunctionName;
     ResolveLevelBlueprintNodeAlias(NodeClass, AliasEventName, AliasFunctionName);

@@ -1,6 +1,6 @@
 #include "MCP/Transport/McpNativeTransportPrivate.h"
 #include "MCP/Execute/McpNativeGatewayAuthorization.h"
-#include "Interfaces/IPluginManager.h"
+#include "Core/Module/McpOwnPlugin.h"
 
 DEFINE_LOG_CATEGORY(LogMcpNativeTransport);
 
@@ -93,13 +93,13 @@ bool FMcpNativeTransport::Start(int32 Port, const FString& PluginDir, bool bLoad
 		}
 	}
 	// The .uplugin VersionName is the native side's only copy of the version.
-	if (const TSharedPtr<IPlugin> Plugin = IPluginManager::Get().FindPlugin(TEXT("EngineWire"))) { ServerVersion = Plugin->GetDescriptor().VersionName; }
+	if (const TSharedPtr<IPlugin> Plugin = McpOwnPlugin()) { ServerVersion = Plugin->GetDescriptor().VersionName; }
 
-	// Initialize dynamic tool manager from self-describing C++ tool registry
+	// Initialize the dynamic tool manager from the tool registry
 	{
 		FMcpToolRegistry& Registry = FMcpToolRegistry::Get();
 		UE_LOG(LogMcpNativeTransport, Log,
-			TEXT("Tool registry: %d self-describing tools registered"), Registry.GetToolCount());
+			TEXT("Tool registry: %d tools registered"), Registry.GetToolCount());
 		ToolManager.Initialize(Registry, bLoadAllTools);
 	}
 
@@ -143,7 +143,7 @@ bool FMcpNativeTransport::Start(int32 Port, const FString& PluginDir, bool bLoad
 	KeepaliveLoopFuture = Async(EAsyncExecution::Thread, [this]() { RunKeepaliveLoop(); });
 
 	// Seed the game-thread heartbeat at start-up so a startup modal (restore packages after a kill)
-	// is reported as EDITOR_BLOCKED instead of queueing requests forever (dogfood #79).
+	// is reported as EDITOR_BLOCKED instead of queueing requests forever.
 	LastGameThreadHeartbeat.store(FPlatformTime::Seconds());
 	UE_LOG(LogMcpNativeTransport, Log,
 		TEXT("Native MCP server started on http://%s:%d/mcp"), *ListenHost, Port);
@@ -305,5 +305,3 @@ void FMcpNativeTransport::Shutdown()
 
 	UE_LOG(LogMcpNativeTransport, Log, TEXT("Native MCP server stopped"));
 }
-
-// ─── Socket Helper ──────────────────────────────────────────────────────────

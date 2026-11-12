@@ -5,7 +5,7 @@
 #include "Dom/JsonValue.h"
 #include "Misc/ScopeLock.h"
 
-// Task 47 Prometheus text exposition for the native registry, split from the
+// Prometheus text exposition for the native registry, split from the
 // accumulation translation unit to keep each file inside the plugin's 250
 // pure-line ceiling. Label VALUES here can only come from the bounded schema
 // sets - a request id, action name or content path is never formatted into a

@@ -3,8 +3,7 @@
 #include "Core/Security/McpConsentLedger.h"
 // McpNativeGatewayDescribe.cpp — capability describe for the unreal gateway.
 //
-// The levels below the browse listings (McpNativeGatewayDescribeOverview.cpp), the same replies as the TypeScript
-// discovery reference (gateway-describe.ts, gateway-describe-capability.ts):
+// The levels below the browse listings (McpNativeGatewayDescribeOverview.cpp):
 //   1. describe { tool }                -> parent summary + bounded action list
 //   2. describe { tool, action }        -> that capability's EXACT contract
 //   3. describe { tool, action, param } -> exactly one parameter's schema
@@ -121,8 +120,6 @@ void SetMigratedFrom(const TSharedPtr<FJsonObject>& Out, const FMcpDiscoveryQuer
 // The exact `consent` sibling execute demands for this capability, so a grant is
 // discoverable BEFORE the first refusal — the gateway tool description points
 // clients at `describe.consentGrant`. Absent when policy.consent is "none".
-// Must stay identical to the TypeScript capabilityConsentGrant: the two
-// surfaces answer the same discovery question and a client may follow either.
 TSharedPtr<FJsonObject> ConsentGrant(const FMcpCapabilityRecord& Record)
 {
 	FString Consent;
@@ -141,7 +138,7 @@ TSharedPtr<FJsonObject> ConsentGrant(const FMcpCapabilityRecord& Record)
 	return Grant;
 }
 
-// capabilityContract in gateway-capability-view.ts, field for field.
+// One capability's contract, as describe answers it.
 TSharedPtr<FJsonObject> CapabilityContract(
 	const FMcpCapabilityRecord& Record, const FString& Tool, const FString& Revision, bool bAvailable)
 {
@@ -175,7 +172,7 @@ TSharedPtr<FJsonObject> CapabilityContract(
 	Out->SetArrayField(TEXT("legacyIds"), LegacyIds);
 	Out->SetStringField(TEXT("message"),
 		TEXT("Exact capability contract. inputSchema declares every parameter this action accepts."));
-	// The execute call to send with params filled in, as the tool description promises (capabilityNextCall in TS);
+	// The execute call to send with params filled in, as the tool description promises;
 	// a disabled tool is turned back on first.
 	TSharedPtr<FJsonObject> Next;
 	if (bAvailable)

@@ -21,7 +21,12 @@ UPackage* CreateInventoryAssetPackage(UEngineWireSubsystem& Bridge, const FStrin
                                TEXT("ASSET_ALREADY_EXISTS"));
     return nullptr;
   }
-  return CreatePackage(*PackageName);
+  UPackage* Package = McpCreatePackageOrNull(PackageName);
+  if (!Package) {
+    Bridge.SendAutomationError(RequestingSocket, RequestId, FString::Printf(TEXT("Could not create the package %s."), *PackageName),
+                               TEXT("PACKAGE_CREATE_FAILED"));
+  }
+  return Package;
 }
 
 bool RequireReferencedAsset(UEngineWireSubsystem& Bridge, const FString& RequestId, TSharedPtr<FMcpBridgeWebSocket> RequestingSocket,

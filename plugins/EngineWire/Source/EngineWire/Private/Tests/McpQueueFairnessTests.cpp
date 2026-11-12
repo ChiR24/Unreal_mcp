@@ -48,7 +48,7 @@ bool FMcpQueueFairnessNoStarvationTest::RunTest(const FString& Parameters)
 {
 	(void)Parameters;
 	using namespace McpQueueFairnessTestUtils;
-	const TCHAR* Action = TEXT("task45_fairness_fixture");
+	const TCHAR* Action = TEXT("fairness_fixture");
 	TArray<FString> DispatchOrder;
 	UEngineWireSubsystem* Subsystem =
 		MakeSubsystemRecording(Action, DispatchOrder);
@@ -104,7 +104,7 @@ bool FMcpQueueFairnessRotationTest::RunTest(const FString& Parameters)
 {
 	(void)Parameters;
 	using namespace McpQueueFairnessTestUtils;
-	const TCHAR* Action = TEXT("task45_rotation_fixture");
+	const TCHAR* Action = TEXT("rotation_fixture");
 	TArray<FString> DispatchOrder;
 	UEngineWireSubsystem* Subsystem =
 		MakeSubsystemRecording(Action, DispatchOrder);
@@ -145,7 +145,7 @@ bool FMcpQueueFairnessCapsTest::RunTest(const FString& Parameters)
 {
 	(void)Parameters;
 	using namespace McpQueueFairnessTestUtils;
-	const TCHAR* Action = TEXT("task45_caps_fixture");
+	const TCHAR* Action = TEXT("caps_fixture");
 	TArray<FString> DispatchOrder;
 	UEngineWireSubsystem* Subsystem =
 		MakeSubsystemRecording(Action, DispatchOrder);
@@ -208,7 +208,7 @@ bool FMcpQueueSingleMutationLaneTest::RunTest(const FString& Parameters)
 {
 	(void)Parameters;
 	using namespace McpQueueFairnessTestUtils;
-	const TCHAR* Action = TEXT("task45_lane_fixture");
+	const TCHAR* Action = TEXT("lane_fixture");
 	TArray<FString> DispatchOrder;
 	UEngineWireSubsystem* Subsystem =
 		NewObject<UEngineWireSubsystem>();

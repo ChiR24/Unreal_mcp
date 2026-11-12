@@ -210,7 +210,7 @@ bool HandleProceduralEffectAction(const FEffectActionContext& Context, bool bIsC
             TEXT("Editor not available"), nullptr, TEXT("EDITOR_NOT_AVAILABLE"));
         return true;
     }
-    // No systemPath: the creator authors the effect itself (dogfood #101) - a new
+    // No systemPath: the creator authors the effect itself - a new
     // UNiagaraSystem under path/savePath built from the matching engine template
     // emitter - and then places it exactly like the systemPath branch does.
     FString AuthoredSystemPath;

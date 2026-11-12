@@ -1,6 +1,7 @@
 // Copyright (c) 2024 EngineWire Contributors
 
 #include "Domains/Inspect/MeshCheck/McpMeshCheck.h"
+#include "Foundation/HandlerUtils/McpHandlerUtilsResponses.h"
 
 #include "Dom/JsonObject.h"
 #include "Dom/JsonValue.h"
@@ -114,13 +115,6 @@ void AppendInsideOutWarnings(const TArray<UObject*>& Assets, const TSharedPtr<FJ
     {
         return;
     }
-    TArray<TSharedPtr<FJsonValue>> Warnings;
-    const TArray<TSharedPtr<FJsonValue>>* Existing = nullptr;
-    if (Result->TryGetArrayField(TEXT("warnings"), Existing) && Existing)
-    {
-        Warnings = *Existing;
-    }
-    const int32 Before = Warnings.Num();
     TArray<FVector3f> Positions;
     TArray<int32> Corners;
     for (const UObject* Asset : Assets)
@@ -133,14 +127,10 @@ void AppendInsideOutWarnings(const TArray<UObject*>& Assets, const TSharedPtr<FJ
         if (InsideOut > 0)
         {
             const FString Path = Asset->GetPackage()->GetName();
-            Warnings.Add(MakeShared<FJsonValueString>(FString::Printf(TEXT("%s has %d inside-out part(s): their faces point "
+            McpHandlerUtils::AppendWarning(Result, FString::Printf(TEXT("%s has %d inside-out part(s): their faces point "
                 "inward, so the renderer culls the side you look at and shows the far inner wall. Flip their normals in the "
-                "source and import again; inspect.check_mesh with meshPath %s lists them."), *Path, InsideOut, *Path)));
+                "source and import again; inspect.check_mesh with meshPath %s lists them."), *Path, InsideOut, *Path));
         }
-    }
-    if (Warnings.Num() > Before)
-    {
-        Result->SetArrayField(TEXT("warnings"), Warnings);
     }
 }
 } // namespace McpMeshCheck

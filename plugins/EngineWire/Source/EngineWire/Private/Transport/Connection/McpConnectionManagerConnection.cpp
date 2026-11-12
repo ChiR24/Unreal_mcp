@@ -29,7 +29,7 @@ void FMcpConnectionManager::AttemptConnection() {
     }
     if (PortTokens.Num() == 0)
       PortTokens.Add(TEXT("8090"));
-    if (!Settings->bMultiListen && PortTokens.Num() > 0)
+    if (!Settings->bMultiListen)
       PortTokens.SetNum(1);
 
     const FString HostToBind =
@@ -68,28 +68,8 @@ void FMcpConnectionManager::AttemptConnection() {
       ServerSocket->ClientConnectedDelegate.AddSP(this, &FMcpConnectionManager::HandleClientConnected);
       ServerSocket->ConnectionErrorDelegate.AddSP(this, &FMcpConnectionManager::HandleServerConnectionError);
 
-      if (!ActiveSockets.Contains(ServerSocket))
-        ActiveSockets.Add(ServerSocket);
+      ActiveSockets.Add(ServerSocket);
       ServerSocket->Listen();
     }
-  }
-
-}
-
-void FMcpConnectionManager::ForceReconnect(const FString &Reason,
-                                           float ReconnectDelayOverride) {
-  UE_LOG(LogEngineWireSubsystem, Warning, TEXT("ForceReconnect: %s"),
-         *Reason);
-
-  ForgetAllSockets();
-
-  bBridgeAvailable = false;
-  if (bReconnectEnabled) {
-    TimeUntilReconnect = (ReconnectDelayOverride >= 0.0f)
-                             ? ReconnectDelayOverride
-                             : AutoReconnectDelaySeconds;
-    // Re-enable bridge availability flag so tick will attempt connection after
-    // delay
-    bBridgeAvailable = true;
   }
 }

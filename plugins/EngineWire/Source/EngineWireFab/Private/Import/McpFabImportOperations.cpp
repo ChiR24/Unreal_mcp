@@ -1,7 +1,7 @@
 // Copyright (c) 2024 EngineWire Contributors
 
-#include "McpFabImportOperations.h"
-#include "McpFabImportState.h"
+#include "Import/McpFabImportOperations.h"
+#include "Import/McpFabImportState.h"
 
 #include "Containers/Ticker.h"
 #include "HAL/PlatformTime.h"

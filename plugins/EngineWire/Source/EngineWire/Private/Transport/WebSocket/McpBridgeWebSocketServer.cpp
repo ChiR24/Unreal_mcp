@@ -194,7 +194,7 @@ uint32 FMcpBridgeWebSocket::RunServer() {
   const FString BoundAddress = ListenAddr->ToString(false);
   UE_LOG(LogEngineWireSubsystem, Log,
          TEXT("EngineWire listening on %s"), *BoundAddress);
-  DispatchOnGameThread([WeakThis = AsWeak(), BoundAddress] {
+  DispatchOnGameThread([WeakThis = AsWeak()] {
     if (TSharedPtr<FMcpBridgeWebSocket> Pinned = WeakThis.Pin()) {
       Pinned->ConnectedDelegate.Broadcast(Pinned);
     }

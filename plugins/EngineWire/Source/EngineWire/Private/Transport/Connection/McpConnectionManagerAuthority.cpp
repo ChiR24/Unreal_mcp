@@ -3,7 +3,7 @@
 #include "Core/Journal/McpChangeJournal.h"
 #include "Core/Security/McpPrequeueGate.h"
 #include "Foundation/McpCapabilityPrincipal.h"
-#include "Interfaces/IPluginManager.h"
+#include "Core/Module/McpOwnPlugin.h"
 #include "Misc/App.h"
 
 bool FMcpConnectionManager::AuthenticateSocketPrincipal(
@@ -86,11 +86,11 @@ void FMcpConnectionManager::SendBridgeAck(
 	if (ActiveSessionId.IsEmpty()) ActiveSessionId = FGuid::NewGuid().ToString();
 	Ack->SetStringField(TEXT("sessionId"), ActiveSessionId);
 	Ack->SetNumberField(TEXT("protocolVersion"), 1);
-	// The .uplugin VersionName, so the Node server can name the matching build when the two differ.
-	if (const TSharedPtr<IPlugin> Plugin = IPluginManager::Get().FindPlugin(TEXT("EngineWire"))) { Ack->SetStringField(TEXT("pluginVersion"), Plugin->GetDescriptor().VersionName); }
+	// The .uplugin VersionName, so a client can name the matching build when the two differ.
+	if (const TSharedPtr<IPlugin> Plugin = McpOwnPlugin()) { Ack->SetStringField(TEXT("pluginVersion"), Plugin->GetDescriptor().VersionName); }
 
-	// The editor's mount table, so the TypeScript path allowlist has plugin and
-	// game-feature roots before the first request. Updates follow as
+	// The editor's mount table, so a client knows the plugin and game-feature
+	// roots before the first request. Updates follow as
 	// content_roots_changed events (McpConnectionManagerContentRoots.cpp).
 	Ack->SetArrayField(TEXT("contentRoots"), McpBuildContentRootValues());
 	// Where the change journal stands, for a principal that may read it; changes_moved events follow
@@ -225,7 +225,7 @@ bool FMcpConnectionManager::AuthorizeAutomationRequest(
 	}
 
 	// Consent is an envelope sibling, never a handler param, and is revalidated
-	// here rather than trusted from the TypeScript layer.
+	// here rather than trusted from the client.
 	const TSharedPtr<FJsonObject>* ConsentField = nullptr;
 	if (RootObj->TryGetObjectField(TEXT("consent"), ConsentField) && ConsentField)
 	{

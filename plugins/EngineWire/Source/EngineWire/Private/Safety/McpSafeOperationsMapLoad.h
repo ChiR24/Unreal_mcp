@@ -14,13 +14,10 @@
 #include "GameFramework/Actor.h"
 #include "GameFramework/WorldSettings.h"
 #include "HAL/PlatformProcess.h"
-#include "HAL/PlatformFileManager.h"
 #include "Misc/PackageName.h"
 #include "Misc/Paths.h"
 #include "RenderingThread.h"
 #include "UObject/UObjectHash.h"
-
-#include "EditorAssetLibrary.h"
 
 namespace McpSafeOperations
 {
@@ -138,10 +135,7 @@ inline bool McpSafeLoadMap(const FString& MapPath, bool bForceCleanup = true)
             UE_LOG(LogMcpSafeOperations, Log, TEXT("McpSafeLoadMap: Map '%s' is already loaded, skipping"), *MapPath);
             return true;
         }
-    }
 
-    if (CurrentWorld)
-    {
         AWorldSettings* WorldSettings = CurrentWorld->GetWorldSettings();
         UWorldPartition* CurrentWorldPartition = WorldSettings ? WorldSettings->GetWorldPartition() : nullptr;
         if (CurrentWorldPartition)

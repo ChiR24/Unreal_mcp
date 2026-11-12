@@ -40,10 +40,7 @@ void FMcpConnectionManager::HandleClientConnected(
     ActiveSockets.Add(ClientSocket);
   }
   bBridgeAvailable = true;
-
-  if (ClientSocket.IsValid()) {
-    ClientSocket->NotifyMessageHandlerRegistered();
-  }
+  ClientSocket->NotifyMessageHandlerRegistered();
 }
 
 void FMcpConnectionManager::HandleConnectionError(
@@ -52,8 +49,8 @@ void FMcpConnectionManager::HandleConnectionError(
   const int32 Port = Socket.IsValid() ? Socket->GetPort() : -1;
   UE_LOG(LogEngineWireSubsystem, Warning,
          TEXT("Automation bridge socket error (port=%d): %s"), Port, *Error);
-  // An error close is a disconnect summary (memory-only on the socket
-  // thread); the disk write is deferred to the game thread.
+  // An error close is a disconnect summary, kept in memory here; the disk
+  // write is queued as its own game-thread task.
   FMcpDiagnosticsSnapshot::Get().RecordDisconnect(TEXT("error"));
   FMcpDiagnosticsSnapshot::PersistCurrentAsync();
 
@@ -93,12 +90,12 @@ void FMcpConnectionManager::HandleClosed(TSharedPtr<FMcpBridgeWebSocket> Socket,
   // both handshake failures; a 4005-only record left lastHandshake unset for
   // a 4004-only interaction. The close-code mapping is bounded by the store's
   // allowlist {closed, error}: 1000/1001 -> closed, everything else -> error.
-  if (StatusCode == 4004 || StatusCode == 4005) {
+  if (StatusCode == McpWsClose::HandshakeRequired || StatusCode == McpWsClose::InvalidCapabilityToken) {
     FMcpDiagnosticsSnapshot::Get().RecordHandshake(false);
   }
-  // A disconnect summary is memory-only on the socket thread; the disk
-  // write is deferred to the game thread (H6).
-  FMcpDiagnosticsSnapshot::Get().RecordDisconnect((StatusCode == 1000 || StatusCode == 1001) ? TEXT("closed") : TEXT("error"));
+  // A disconnect summary is kept in memory here; the disk write is queued
+  // as its own game-thread task.
+  FMcpDiagnosticsSnapshot::Get().RecordDisconnect((StatusCode == McpWsClose::Normal || StatusCode == McpWsClose::GoingAway) ? TEXT("closed") : TEXT("error"));
   FMcpDiagnosticsSnapshot::PersistCurrentAsync();
   if (Socket.IsValid()) {
     ForgetSocket(Socket);

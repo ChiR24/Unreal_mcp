@@ -42,12 +42,12 @@ static void CopyStructMembers(UUserDefinedStruct* Dst, UUserDefinedStruct* Src)
     }
 }
 
-// rename_struct (reuses this) + duplicate_struct
+// duplicate_struct and rename_struct
 static bool HandleStructAssetAction_Rename(UEngineWireSubsystem& Bridge, const FString& RequestId, const FString& Action, const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> RequestingSocket)
 {
     const FString Lower = Action.ToLower();
 
-    // duplicate_struct  (rename_struct reuses this)
+    // duplicate_struct's copy (rename_struct goes through AssetTools instead)
     auto DuplicateStructTo = [&](const FString& SrcPath, const FString& DestPath,
                                  const FString& DestName, FString& OutError, FString& OutCode) -> UUserDefinedStruct*
     {

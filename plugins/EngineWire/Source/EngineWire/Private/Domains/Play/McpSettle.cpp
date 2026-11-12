@@ -1,4 +1,4 @@
-// control_actor settle_physics (S13; see McpSettle.h): the call checks the actors named, starts Simulate In Editor in the
+// control_actor settle_physics (see McpSettle.h): the call checks the actors named, starts Simulate In Editor in the
 // level viewport, and advances the run once per editor frame: the bodies wake when Simulate has begun play, are sampled
 // until they rest or time is up, Simulate ends, and only then are the resting poses kept and the call answered.
 #include "Domains/Play/McpSettle.h"

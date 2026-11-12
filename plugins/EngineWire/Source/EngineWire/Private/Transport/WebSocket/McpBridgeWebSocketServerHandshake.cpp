@@ -21,9 +21,9 @@ bool FMcpBridgeWebSocket::PerformServerHandshake() {
 
   int32 HeaderEndIndex = -1;
   if (bUseTls) {
-    if (!EstablishTls(true)) {
+    if (!EstablishTls()) {
       TearDown(TEXT("TLS handshake failed."), false,
-               WebSocketCloseCodeAbnormalClosure);
+               McpWsClose::ConnectionFailed);
       return false;
     }
   }
@@ -39,7 +39,7 @@ bool FMcpBridgeWebSocket::PerformServerHandshake() {
              TEXT("Server handshake recv failed while awaiting upgrade request "
                   "(benign or client closed)."));
       TearDown(TEXT("Failed to read WebSocket upgrade request."), false,
-               WebSocketCloseCodeAbnormalClosure);
+               McpWsClose::ConnectionFailed);
       return false;
     }
 
@@ -65,7 +65,7 @@ bool FMcpBridgeWebSocket::PerformServerHandshake() {
                TEXT("Server handshake upgrade request exceeded %d bytes."),
                MaxHandshakeHeaderBytes);
         TearDown(TEXT("WebSocket upgrade request too large."), false,
-                 WebSocketCloseCodeAbnormalClosure);
+                 McpWsClose::ConnectionFailed);
         return false;
       }
     } else if (RequestBuffer.Num() > MaxHandshakeHeaderBytes) {
@@ -73,14 +73,14 @@ bool FMcpBridgeWebSocket::PerformServerHandshake() {
              TEXT("Server handshake upgrade request exceeded %d bytes."),
              MaxHandshakeHeaderBytes);
       TearDown(TEXT("WebSocket upgrade request too large."), false,
-               WebSocketCloseCodeAbnormalClosure);
+               McpWsClose::ConnectionFailed);
       return false;
     }
   }
 
   TArray<uint8> RequestHeaderBytes;
   RequestHeaderBytes.Append(RequestBuffer.GetData(), HeaderEndIndex);
-  FString RequestString = BytesToStringView(RequestHeaderBytes);
+  FString RequestString = Utf8BytesToString(RequestHeaderBytes);
   TArray<FString> RequestLines;
   RequestString.ParseIntoArrayLines(RequestLines, false);
 
@@ -88,7 +88,7 @@ bool FMcpBridgeWebSocket::PerformServerHandshake() {
     UE_LOG(LogEngineWireSubsystem, Warning,
            TEXT("Server handshake received empty upgrade request."));
     TearDown(TEXT("Malformed WebSocket upgrade request."), false,
-             WebSocketCloseCodeAbnormalClosure);
+             McpWsClose::ConnectionFailed);
     return false;
   }
 
@@ -98,23 +98,21 @@ bool FMcpBridgeWebSocket::PerformServerHandshake() {
       !RequestParts[0].Equals(TEXT("GET"), ESearchCase::IgnoreCase)) {
     UE_LOG(LogEngineWireSubsystem, Warning,
            TEXT("Server handshake received invalid request line: %s"),
-           RequestLines.Num() > 0 ? *RequestLines[0] : TEXT("(empty)"));
+           *RequestLines[0]);
     TearDown(TEXT("Invalid WebSocket upgrade request line."), false,
-             WebSocketCloseCodeAbnormalClosure);
+             McpWsClose::ConnectionFailed);
     return false;
   }
 
   if (HeaderEndIndex > 0 && HeaderEndIndex < RequestBuffer.Num()) {
     const int32 ExtraCount = RequestBuffer.Num() - HeaderEndIndex;
-    if (ExtraCount > 0) {
-      FScopeLock Guard(&ReceiveMutex);
-      PendingReceived.Append(RequestBuffer.GetData() + HeaderEndIndex,
-                             ExtraCount);
-      UE_LOG(LogEngineWireSubsystem, Verbose,
-             TEXT("Server handshake: preserved %d extra bytes after upgrade "
-                  "request for subsequent frame parsing."),
-             ExtraCount);
-    }
+    FScopeLock Guard(&ReceiveMutex);
+    PendingReceived.Append(RequestBuffer.GetData() + HeaderEndIndex,
+                           ExtraCount);
+    UE_LOG(LogEngineWireSubsystem, Verbose,
+           TEXT("Server handshake: preserved %d extra bytes after upgrade "
+                "request for subsequent frame parsing."),
+           ExtraCount);
   }
 
   bool bValidUpgrade = false;
@@ -155,7 +153,7 @@ bool FMcpBridgeWebSocket::PerformServerHandshake() {
     UE_LOG(LogEngineWireSubsystem, Warning,
            TEXT("Server handshake rejected browser-origin WebSocket request."));
     TearDown(TEXT("Browser-origin WebSocket requests are not allowed."), false,
-             4403);
+             McpWsClose::Refused);
     return false;
   }
 
@@ -169,7 +167,7 @@ bool FMcpBridgeWebSocket::PerformServerHandshake() {
            bValidVersion ? TEXT("true") : TEXT("false"),
            ClientKey.IsEmpty() ? TEXT("false") : TEXT("true"));
     TearDown(TEXT("Invalid WebSocket upgrade request."), false,
-             WebSocketCloseCodeAbnormalClosure);
+             McpWsClose::ConnectionFailed);
     return false;
   }
 
@@ -213,7 +211,7 @@ bool FMcpBridgeWebSocket::PerformServerHandshake() {
            TEXT("Server handshake failed: no matching subprotocol. "
                 "Requested=%s Supported=%s"),
            *RequestedProtocols, *Protocols);
-    TearDown(TEXT("No matching WebSocket subprotocol."), false, 4403);
+    TearDown(TEXT("No matching WebSocket subprotocol."), false, McpWsClose::Refused);
     return false;
   }
 
@@ -240,7 +238,7 @@ bool FMcpBridgeWebSocket::PerformServerHandshake() {
                 "(sent %d expected %d)."),
            BytesSent, ResponseUtf8.Length());
     TearDown(TEXT("Failed to send WebSocket upgrade response."), false,
-             WebSocketCloseCodeAbnormalClosure);
+             McpWsClose::ConnectionFailed);
     return false;
   }
 

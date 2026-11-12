@@ -87,7 +87,7 @@ FEngineWire_ResolveFunction(UBlueprint *Blueprint,
     }
   }
 
-  // Dogfood #221: callers pass bare K2 function names ("PrintString",
+  // Callers pass bare K2 function names ("PrintString",
   // "GetPlayerPawn", "ApplyDamage", ...). Those live in Blueprint function
   // libraries, not on the Blueprint's own classes, so the checks above miss them
   // and the node was created unbound — compiling as

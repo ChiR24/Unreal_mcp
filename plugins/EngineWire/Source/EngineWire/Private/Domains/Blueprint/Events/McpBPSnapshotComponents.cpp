@@ -1,5 +1,5 @@
 // McpBPSnapshotComponents.cpp — SCS component list for the
-// blueprint snapshot (manage_blueprint.get_blueprint). Dogfood #22: the snapshot reported only
+// blueprint snapshot (manage_blueprint.get_blueprint). The snapshot reported only
 // scsNodeCount; clients also need the components themselves (name, class, parent).
 #include "Domains/Blueprint/McpBPActionContext.h"
 #include "Dom/JsonObject.h"

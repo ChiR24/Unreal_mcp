@@ -1,4 +1,5 @@
 #include "MCP/Protocol/McpModernRequest.h"
+#include "Foundation/HandlerUtils/McpHandlerUtilsJson.h"
 
 #include "Containers/StringConv.h"
 #include "MCP/Protocol/McpJsonRpc.h"
@@ -12,12 +13,6 @@ namespace McpModern
 namespace
 {
 const TCHAR* const MetaVersionKey = TEXT("io.modelcontextprotocol/protocolVersion");
-
-TSharedPtr<FJsonObject> ObjectField(const TSharedPtr<FJsonObject>& Object, const TCHAR* Name)
-{
-    const TSharedPtr<FJsonObject>* Found = nullptr;
-    return Object.IsValid() && Object->TryGetObjectField(Name, Found) && Found ? *Found : TSharedPtr<FJsonObject>();
-}
 
 // A header value may carry the =?base64?...?= sentinel (a name outside the header-safe characters).
 FString DecodeHeaderValue(const FString& Value)
@@ -39,24 +34,24 @@ FString DecodeHeaderValue(const FString& Value)
 
 bool IsModern(const TSharedPtr<FJsonObject>& Params)
 {
-    const TSharedPtr<FJsonObject> Meta = ObjectField(Params, TEXT("_meta"));
+    const TSharedPtr<FJsonObject> Meta = McpHandlerUtils::GetObjectFieldOrNull(Params, TEXT("_meta"));
     return Meta.IsValid() && Meta->HasTypedField<EJson::String>(MetaVersionKey);
 }
 
 FMeta ReadMeta(const TSharedPtr<FJsonObject>& Params)
 {
     FMeta Out;
-    const TSharedPtr<FJsonObject> Meta = ObjectField(Params, TEXT("_meta"));
+    const TSharedPtr<FJsonObject> Meta = McpHandlerUtils::GetObjectFieldOrNull(Params, TEXT("_meta"));
     if (!Meta.IsValid())
     {
         return Out;
     }
     Meta->TryGetStringField(MetaVersionKey, Out.ProtocolVersion);
-    const TSharedPtr<FJsonObject> Caps = ObjectField(Meta, TEXT("io.modelcontextprotocol/clientCapabilities"));
-    const TSharedPtr<FJsonObject> Extensions = ObjectField(Caps, TEXT("extensions"));
+    const TSharedPtr<FJsonObject> Caps = McpHandlerUtils::GetObjectFieldOrNull(Meta, TEXT("io.modelcontextprotocol/clientCapabilities"));
+    const TSharedPtr<FJsonObject> Extensions = McpHandlerUtils::GetObjectFieldOrNull(Caps, TEXT("extensions"));
     Out.bTasks = Extensions.IsValid() && Extensions->HasField(TEXT("io.modelcontextprotocol/tasks"));
     // An elicitation capability with no mode named means form, as the spec keeps it for older clients.
-    const TSharedPtr<FJsonObject> Elicitation = ObjectField(Caps, TEXT("elicitation"));
+    const TSharedPtr<FJsonObject> Elicitation = McpHandlerUtils::GetObjectFieldOrNull(Caps, TEXT("elicitation"));
     Out.bElicitationForm = Elicitation.IsValid() &&
         (Elicitation->HasField(TEXT("form")) || !Elicitation->HasField(TEXT("url")));
     return Out;

@@ -2,7 +2,6 @@
 
 #include "Domains/Input/McpInputActionRouting.h"
 
-#include "Core/Module/EngineWireGlobals.h"
 #include "Modules/ModuleManager.h"
 
 bool UEngineWireSubsystem::HandleInputAction(

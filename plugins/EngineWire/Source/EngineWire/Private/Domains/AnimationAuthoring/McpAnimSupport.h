@@ -6,7 +6,6 @@
 
 #include "Dom/JsonObject.h"
 #include "Foundation/BridgeHelpers/McpHelpers.h"
-#include "Core/Module/EngineWireGlobals.h"
 #include "Misc/EngineVersionComparison.h"
 
 // UE 5.0 deprecation warning suppression - BlendSpaceBase.h is deprecated but transitively included by engine headers
@@ -265,7 +264,7 @@ UAnimStateTransitionNode* FindTransitionNode(UAnimationStateMachineGraph* SMGrap
 // Fills a state's BoundGraph with sequence players and wires the first to the
 // state Result, writing animationsApplied / animationsFailed into Response.
 void ApplyStateAnimations(UAnimStateNode* StateNode, const TArray<FString>& AnimPaths, TSharedPtr<FJsonObject> Response);
-// set_anim_graph_node_value (Domains/Animation/Blueprints/...AnimationGraphNodeLookup.cpp). FindAnimGraphNode looks in the
+// set_anim_graph_node_value (Blueprints/McpAnimGraphNodeLookup.cpp). FindAnimGraphNode looks in the
 // AnimGraph and every graph under it for a node by object name or GUID, else by a custom name or title; a name several nodes
 // share comes back in OutAmbiguous with a null node. ResolveAnimNodeProperty gives the property a dotted path names AND the
 // memory it lives in (OutContainer is the embedded Node struct for a setting such as Sequence or PlayRate, not the graph
@@ -313,6 +312,13 @@ TSharedPtr<FJsonObject> HandleBlueprintBlendNodeActions(const FString& SubAction
 TSharedPtr<FJsonObject> HandleBlueprintSlotLayerActions(const FString& SubAction, const TSharedPtr<FJsonObject>& Params, TSharedPtr<FJsonObject> Response);
 TSharedPtr<FJsonObject> HandleBlueprintNodeValueActions(const FString& SubAction, const TSharedPtr<FJsonObject>& Params, TSharedPtr<FJsonObject> Response);
 TSharedPtr<FJsonObject> HandleControlRigActions(const FString& SubAction, const TSharedPtr<FJsonObject>& Params, TSharedPtr<FJsonObject> Response);
+#if MCP_HAS_CONTROLRIG_FACTORY
+// A saved Control Rig Blueprint PackagePath/AssetName showing TargetSkeleton's preview mesh, or the Control Rig already
+// there (bOutExisting then set, and nothing about it changed). Null with OutError when the path is no content path,
+// another asset sits there or the Blueprint is not made.
+UBlueprint* CreateControlRigBlueprint(const FString& AssetName, const FString& PackagePath, USkeleton* TargetSkeleton, FString& OutError,
+                                      bool* bOutExisting = nullptr);
+#endif
 TSharedPtr<FJsonObject> HandleIKRigActions(const FString& SubAction, const TSharedPtr<FJsonObject>& Params, TSharedPtr<FJsonObject> Response);
 TSharedPtr<FJsonObject> HandleIKRetargetActions(const FString& SubAction, const TSharedPtr<FJsonObject>& Params, TSharedPtr<FJsonObject> Response);
 TSharedPtr<FJsonObject> HandleAnimationInfoActions(const FString& SubAction, const TSharedPtr<FJsonObject>& Params, TSharedPtr<FJsonObject> Response);

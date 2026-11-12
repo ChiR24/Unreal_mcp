@@ -138,11 +138,10 @@ bool UEngineWireSubsystem::HandleControlEditorAction(
   if (LowerSub == TEXT("open_level"))
     return HandleControlEditorOpenLevel(RequestId, Payload, RequestingSocket);
   if (LowerSub == TEXT("set_viewport_resolution")) {
-    // The record routes this to console_command with r.SetRes, and the
-    // TypeScript gateway honours that. The native gateway resolves the wire
-    // action from the parent tool's dispatch pattern alone, so the cross-parent
-    // hop was lost here and a published capability answered UNKNOWN_ACTION on
-    // one surface only. Rebuild the same console call the other surface makes.
+    // The record routes this to console_command with r.SetRes. The gateway
+    // resolves the wire action from the parent tool's dispatch pattern alone, so
+    // the cross-parent hop is made here; without it a published capability
+    // answered UNKNOWN_ACTION.
     double Width = 0.0;
     double Height = 0.0;
     if (!Payload->TryGetNumberField(TEXT("width"), Width) ||

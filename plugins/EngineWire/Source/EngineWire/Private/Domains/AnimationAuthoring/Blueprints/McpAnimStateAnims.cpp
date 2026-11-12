@@ -52,9 +52,6 @@ TArray<FString> ReadStateAnimationPaths(const TSharedPtr<FJsonObject> &Params)
 // single Result pose. The rest are still created, and every entry reports its
 // own `connected` flag, so a caller can see exactly what plays instead of
 // having to guess.
-//
-// Lives beside the other Animation/Blueprints graph authors rather than next to
-// its caller only because Domains/AnimationAuthoring sits at the 25-file cap.
 void ApplyStateAnimations(UAnimStateNode *StateNode, const TArray<FString> &AnimPaths,
                           TSharedPtr<FJsonObject> Response)
 {

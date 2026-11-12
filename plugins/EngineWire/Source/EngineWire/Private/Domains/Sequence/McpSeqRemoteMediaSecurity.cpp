@@ -18,11 +18,9 @@ bool ValidateRemoteMediaUrl(const FString &InputUrl, FString &OutResolvedUrl,
   OutResolvedUrl = InputUrl.TrimStartAndEnd();
   OutErrorType = ERemoteMediaUrlError::InvalidArgument;
   OutError.Reset();
-  // Empty URL is rejected as invalid input. This is intentionally stricter
-  // than the TS-side validateUrlArgument, which returns undefined (no-op) for
-  // empty input. The TS layer treats empty as "caller did not provide a URL";
-  // the C++ layer treats empty as "the URL parameter, if supplied, must not be
-  // blank". Callers that want to omit the URL must not send the key at all.
+  // Empty URL is rejected as invalid input: the URL parameter, if supplied,
+  // must not be blank. Callers that want to omit the URL must not send the key
+  // at all.
   if (OutResolvedUrl.IsEmpty()) {
     OutError = TEXT("A non-empty media URL is required.");
     return false;

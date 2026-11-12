@@ -1,11 +1,11 @@
 // Copyright (c) 2024 EngineWire Contributors
 
-#include "McpFabImportWatcher.h"
+#include "Import/McpFabImportWatcher.h"
 
-#include "McpFabImportOperations.h"
-#include "McpFabImportScope.h"
-#include "McpFabInterchange.h"
-#include "McpFabLogCapture.h"
+#include "Import/McpFabImportOperations.h"
+#include "Import/McpFabImportScope.h"
+#include "Import/McpFabInterchange.h"
+#include "Import/McpFabLogCapture.h"
 
 #include "AssetRegistry/AssetData.h"
 #include "AssetRegistry/AssetRegistryModule.h"

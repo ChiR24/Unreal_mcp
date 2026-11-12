@@ -105,7 +105,7 @@ bool HandleAddClassNode(UEngineWireSubsystem* Bridge, const FString& RequestId, 
       {TEXT("add_noise"), {TEXT("Noise"), UMaterialExpressionNoise::StaticClass()}},
       {TEXT("add_voronoi"), {TEXT("Voronoi"), UMaterialExpressionNoise::StaticClass()}},
       {TEXT("add_if"), {TEXT("If"), UMaterialExpressionIf::StaticClass()}},
-      // add_switch authors a real StaticSwitch (dogfood #204: it used to create an If node).
+      // add_switch authors a real StaticSwitch (it used to create an If node).
       {TEXT("add_switch"), {TEXT("StaticSwitch"), UMaterialExpressionStaticSwitch::StaticClass()}},
   };
   static const FClassNodeNumberField PannerFields[] = {{TEXT("speedX"), TEXT("SpeedX")}, {TEXT("speedY"), TEXT("SpeedY")}};

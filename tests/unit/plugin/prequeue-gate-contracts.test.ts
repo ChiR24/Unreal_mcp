@@ -27,11 +27,11 @@ const wsMessages = (): string =>
 const wsAuthority = (): string =>
   privateSource('Transport', 'Connection', 'McpConnectionManagerAuthority.cpp');
 const nativeExecute = (): string =>
-  privateSource('MCP', 'Execute', 'McpNativeTransportGatewayExecute.cpp');
+  privateSource('MCP', 'Transport', 'Methods', 'McpNativeTransportGatewayExecute.cpp');
 const nativeConnection = (): string =>
   privateSource('MCP', 'Transport', 'McpNativeTransportConnection.cpp');
 const nativePrimitives = (): string =>
-  privateSource('MCP', 'Transport', 'McpNativeTransportPrimitives.cpp');
+  privateSource('MCP', 'Transport', 'Methods', 'McpNativeTransportPrimitives.cpp');
 const gateDemand = (): string => privateSource('Core', 'Security', 'McpPrequeueDemand.cpp');
 const gateOrder = (): string => privateSource('Core', 'Security', 'McpPrequeueGate.cpp');
 const pathScan = (): string => privateSource('Foundation', 'McpCapabilityPathScan.cpp');
@@ -58,7 +58,7 @@ const pluginSourceFiles = (): string[] =>
 // group) resolve a WRITE target and must run the whole canonicalizer; the rest
 // only need the shared boundary-aware root map.
 const CONVERGED_EXECUTORS = [
-  'Core/Subsystem/EngineWireSubsystemEditorCommands.cpp',
+  'Domains/AnimationAuthoring/McpAnimControlRig.cpp',
   'Domains/AnimationAuthoring/McpAnimSupport.cpp',
   'Domains/Texture/McpTextureShared.cpp'
 ];
@@ -369,7 +369,7 @@ describe('Task 40 Blocker 6 — native MCP primitives are not an ungated read ch
   });
 
   it('tools/list is gated on the same read demand before it builds a listing', () => {
-    const source = privateSource('MCP', 'Transport', 'McpNativeTransportToolDiscovery.cpp');
+    const source = privateSource('MCP', 'Transport', 'Methods', 'McpNativeTransportToolDiscovery.cpp');
     const gateAt = source.indexOf('McpAuthorizePrimitiveRead');
     const buildAt = source.indexOf('BuildUnrealGatewayToolDefinition()');
     expect(gateAt, 'tools/list must be gated').toBeGreaterThan(-1);
@@ -416,7 +416,7 @@ describe('consent nonces are minted by the server and required on native /mcp', 
   });
   // The native door answers a queue refusal itself, outside the subsystem's reply funnel that refunds.
   it('a native call the queue refuses gets its grant back', () => {
-    const stream = privateSource('MCP', 'Transport', 'McpNativeTransportGatewayStream.cpp');
+    const stream = privateSource('MCP', 'Transport', 'Methods', 'McpNativeTransportGatewayStream.cpp');
     expect(stream).toMatch(/if \(!bQueued\)\s*\{[^}]*McpPrequeueGate::RefundConsentForRequest\(CapturedRequestId\);/u);
   });
 });

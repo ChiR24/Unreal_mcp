@@ -1,5 +1,5 @@
 // McpResourceRevision.h
-// The revision a resource read body carries (mirrors resource-revision.ts).
+// The revision a resource read body carries.
 #pragma once
 
 #include "CoreMinimal.h"

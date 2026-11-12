@@ -8,7 +8,7 @@ namespace
 {
 // ACTOR_NOT_FOUND from any handler said only "Actor not found" ("Bug1" beside Bug_01..Bug_10).
 // A find by the same name answers with the labels it resembles (similar), so the refusal hands
-// that call over. Mirrors actorNotFoundGuidance in src/server/gateway/gateway-execute-dispatch.ts.
+// that call over.
 void AddActorNotFoundGuidance(const TSharedPtr<FJsonObject>& Receipt, const TSharedPtr<FJsonObject>& Arguments)
 {
 	FString Code, Name;
@@ -31,8 +31,7 @@ void AddActorNotFoundGuidance(const TSharedPtr<FJsonObject>& Receipt, const TSha
 }
 
 // What manage_tools get_task_result answers as the outcome of a call that answered "still running": the call's own
-// reply as it would have answered, compacted like every reply (data without the repeats). Mirrors describeTask in
-// src/server/gateway/gateway-task-results.ts.
+// reply as it would have answered, compacted like every reply (data without the repeats).
 TSharedPtr<FJsonObject> McpTaskOutcome(
 	bool bSuccess, const FString& Message, const FString& ErrorCode, const TSharedPtr<FJsonObject>& Reply)
 {
@@ -56,8 +55,7 @@ TSharedPtr<FJsonObject> McpTaskOutcome(
 
 // A handler that refuses a call because another call settles it can name that call in its own reply:
 // the Fab add turns a second import away while one runs and hands back the read that reports the first.
-// Only an executable gateway call is passed on. Mirrors handlerNextCall in
-// src/server/gateway/gateway-execute-dispatch.ts.
+// Only an executable gateway call is passed on.
 void AddHandlerNextCall(const TSharedPtr<FJsonObject>& Receipt, const TSharedPtr<FJsonObject>& Result)
 {
 	const TSharedPtr<FJsonObject>* Next = nullptr;
@@ -152,17 +150,8 @@ bool FMcpNativeTransport::CompletePendingRequest(
 	TSharedPtr<FJsonObject> ReportedResult = Result;
 	if (!Conn->CapabilityId.IsEmpty())
 	{
-		FMcpReceiptContext Context;
-		Context.CorrelationId = Conn->CorrelationId;
-		Context.RequestId = Conn->RequestId;
-		Context.IdempotencyId = Conn->IdempotencyId;
-		Context.StartTimeSeconds = Conn->RequestStartSeconds;
-		Context.GatewayWarnings = Conn->GatewayWarnings;
-		Context.Provenance = Conn->Provenance;
-		Context.PageOwner = Conn->PageOwner;
-		Context.Aggregate = Conn->Aggregate;
 		ReportedResult = McpBuildGatewayExecuteReceipt(
-			Conn->CapabilityId, Conn->OutputSchema, Context, bSuccess, Message, Result, ErrorCode);
+			Conn->CapabilityId, Conn->OutputSchema, McpReceiptContextOf(*Conn), bSuccess, Message, Result, ErrorCode);
 		if (!bSuccess)
 		{
 			AddHandlerNextCall(ReportedResult, Result);
@@ -305,15 +294,7 @@ void FMcpNativeTransport::SendSSEProgressUpdate(
 				Conn->LastProgressTime = FPlatformTime::Seconds();
 			}
 			// Touch session so long-running tool calls don't expire the session
-			if (!CapturedSessionId.IsEmpty())
-			{
-				FScopeLock Lock(&SessionMutex);
-				double* LastActivity = ActiveSessions.Find(CapturedSessionId);
-				if (LastActivity)
-				{
-					*LastActivity = FPlatformTime::Seconds();
-				}
-			}
+			TouchSession(CapturedSessionId);
 		}
 		else
 		{

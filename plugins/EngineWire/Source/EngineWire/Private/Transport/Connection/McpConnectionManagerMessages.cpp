@@ -45,7 +45,7 @@ void FMcpConnectionManager::HandleMessage(
     UE_LOG(LogEngineWireSubsystem, Warning,
            TEXT("Rate limit exceeded for incoming messages: %s"),
            *RateLimitReason);
-    SendBridgeErrorAndClose(Socket, TEXT("RATE_LIMIT_EXCEEDED"), RateLimitReason, 4008, TEXT("Rate limit exceeded"));
+    SendBridgeErrorAndClose(Socket, TEXT("RATE_LIMIT_EXCEEDED"), RateLimitReason, McpWsClose::RateLimited, TEXT("Rate limit exceeded"));
     return;
   }
 
@@ -71,7 +71,7 @@ void FMcpConnectionManager::HandleMessage(
       UE_LOG(LogEngineWireSubsystem, Warning,
              TEXT("Rate limit exceeded for automation requests: %s"),
              *RateLimitReason);
-      SendBridgeErrorAndClose(Socket, TEXT("RATE_LIMIT_EXCEEDED"), RateLimitReason, 4008, TEXT("Rate limit exceeded"));
+      SendBridgeErrorAndClose(Socket, TEXT("RATE_LIMIT_EXCEEDED"), RateLimitReason, McpWsClose::RateLimited, TEXT("Rate limit exceeded"));
       return;
     }
 
@@ -108,7 +108,7 @@ void FMcpConnectionManager::HandleMessage(
       return;
     }
 
-    if (RequestId.Len() > 128 || Action.Len() > 128) {
+    if (RequestId.Len() > McpBridgeMaxIdChars || Action.Len() > McpBridgeMaxIdChars) {
       UE_LOG(LogEngineWireSubsystem, Warning,
              TEXT("automation_request fields exceed expected size."));
       return;
@@ -122,15 +122,12 @@ void FMcpConnectionManager::HandleMessage(
     if (!bIsAuthenticated) {
       UE_LOG(LogEngineWireSubsystem, Warning,
              TEXT("Automation request received before bridge_hello handshake."));
-      SendBridgeErrorAndClose(Socket, TEXT("HANDSHAKE_REQUIRED"), FString(), 4004, TEXT("Handshake required"));
+      SendBridgeErrorAndClose(Socket, TEXT("HANDSHAKE_REQUIRED"), FString(), McpWsClose::HandshakeRequired, TEXT("Handshake required"));
       return;
     }
 
-    // Skip logging for console_command - Unreal already logs the command
-    const bool bSkipLogging = Action.Equals(TEXT("console_command"), ESearchCase::IgnoreCase);
-
     // Log incoming request: action + filtered payload (exclude type/requestId)
-    if (!bSkipLogging) {
+    if (!McpIsEngineLoggedAction(Action)) {
       FString PayloadPreview = PreviewJsonFields(Payload, 50, true);
       if (Payload.IsValid() && PayloadPreview.IsEmpty())
         PayloadPreview = TEXT("{}");
@@ -211,7 +208,7 @@ void FMcpConnectionManager::HandleMessage(
         // socket is still connected -- this path must not depend on that.
         ForgetSocketPrincipal(SocketPtr);
       }
-      SendBridgeErrorAndClose(Socket, TEXT("INVALID_CAPABILITY_TOKEN"), FString(), 4005, TEXT("Invalid capability token"));
+      SendBridgeErrorAndClose(Socket, TEXT("INVALID_CAPABILITY_TOKEN"), FString(), McpWsClose::InvalidCapabilityToken, TEXT("Invalid capability token"));
       return;
     }
 

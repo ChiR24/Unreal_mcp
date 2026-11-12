@@ -118,7 +118,7 @@ bool HandleWidgetAuthoringTypedComponents(
             {
                 Image->SetBrushFromTexture(Texture);
             }
-            if (const TSharedPtr<FJsonObject> Size = GetObjectField(Payload, TEXT("brushSize")))
+            if (const TSharedPtr<FJsonObject> Size = McpHandlerUtils::GetObjectFieldOrNull(Payload, TEXT("brushSize")))
             {
                 McpSetImageSize(Image, FVector2D(GetJsonNumberField(Size, TEXT("x"), 32.0), GetJsonNumberField(Size, TEXT("y"), 32.0)));
             }

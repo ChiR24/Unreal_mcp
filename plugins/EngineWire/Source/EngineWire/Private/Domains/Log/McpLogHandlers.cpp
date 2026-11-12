@@ -6,7 +6,6 @@
 #include "Transport/WebSocket/McpBridgeWebSocket.h"
 #include "Foundation/BridgeHelpers/McpHelpers.h"
 #include "Core/Subsystem/EngineWireSubsystemResponseSanitization.h"
-#include "Core/Module/EngineWireGlobals.h"
 #include "Foundation/HandlerUtils/McpHandlerUtils.h"
 #include "Domains/Log/McpLogHistory.h"
 

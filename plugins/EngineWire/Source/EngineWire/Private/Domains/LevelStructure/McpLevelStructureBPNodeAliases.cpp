@@ -1,10 +1,10 @@
 // McpLevelStructureBPNodeAliases.cpp — friendly node names for add_level_blueprint_node.
 //
-// Dogfood #160/#164: callers reach for "EventBeginPlay" or "PrintString"; only raw
+// Callers reach for "EventBeginPlay" or "PrintString"; only raw
 // K2Node_* class names used to resolve, and the created event/function nodes carried
 // no binding at all. The aliases below map to a node class plus the member to bind.
 //
-// Dogfood #221 (gameplay build): the function lookup was hard-wired to
+// The function lookup was hard-wired to
 // UKismetSystemLibrary, so gameplay-critical calls such as GetPlayerPawn,
 // GetAllActorsOfClass, ApplyDamage, SpawnSystemAtLocation or RandomFloatInRange
 // were rejected as "could not be bound" even though the caller passed a perfectly
@@ -92,7 +92,7 @@ bool ResolveLevelBlueprintNodeAlias(FString& InOutNodeClass, FString& OutEventNa
         {TEXT("print"), TEXT("K2Node_CallFunction"), nullptr, TEXT("PrintString")},
         {TEXT("printtext"), TEXT("K2Node_CallFunction"), nullptr, TEXT("PrintText")},
         {TEXT("delay"), TEXT("K2Node_CallFunction"), nullptr, TEXT("Delay")},
-        // Gameplay aliases (dogfood #221) — resolved through the wide library search.
+        // Gameplay aliases — resolved through the wide library search.
         {TEXT("getplayerpawn"), TEXT("K2Node_CallFunction"), nullptr, TEXT("GetPlayerPawn")},
         {TEXT("getplayercharacter"), TEXT("K2Node_CallFunction"), nullptr, TEXT("GetPlayerCharacter")},
         {TEXT("getallactorsofclass"), TEXT("K2Node_CallFunction"), nullptr, TEXT("GetAllActorsOfClass")},
@@ -199,7 +199,7 @@ bool ApplyLevelBlueprintNodeAlias(UK2Node* Node, const FString& EventName, const
     {
         UK2Node_CallFunction* CallNode = Cast<UK2Node_CallFunction>(Node);
         // memberClass names the class of a function outside the common libraries (a component's SetVisibility), the
-        // way create_node takes it; without it, dogfood #221's search of every common Blueprint library binds the
+        // way create_node takes it; without it, the search of every common Blueprint library binds the
         // gameplay calls (GetPlayerPawn, ApplyDamage, SpawnSystemAtLocation, ...).
         UClass* Owner = MemberClass.IsEmpty() ? nullptr : McpBlueprintGraphHandlers::ResolveMemberClass(MemberClass);
         if (!MemberClass.IsEmpty() && !Owner)

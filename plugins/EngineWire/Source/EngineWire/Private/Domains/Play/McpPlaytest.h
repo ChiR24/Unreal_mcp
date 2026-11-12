@@ -15,7 +15,7 @@ namespace McpPratt
 struct FNode;
 }
 
-// control_editor playtest (A5b): walk a pawn of the running game to a goal along the nav mesh and judge the leg: pass
+// control_editor playtest: walk a pawn of the running game to a goal along the nav mesh and judge the leg: pass
 // only with evidence (the goal reached, every check held, no script error), fail with what went wrong (stuck, fell, a
 // script error, a check that did not hold), inconclusive (no full path to try, or still on the way when time ran
 // out), error (Play stopped). Advanced per tick, as sample_motion is, with the editor window held on screen without

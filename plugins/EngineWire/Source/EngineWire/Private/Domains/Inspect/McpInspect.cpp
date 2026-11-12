@@ -5,7 +5,7 @@
 #include "Domains/Debug/Logpoints/McpLogpoints.h"
 #include "Domains/Perception/McpPerception.h"
 
-// Struct ecosystem (issue #struct-ecosystem) — inspect_struct handler shard forward declaration.
+// inspect_struct handler shard forward declaration.
 namespace McpInspectStruct
 {
     bool HandleInspectStructAction(FString Action, const TSharedPtr<FJsonObject>& Params, TSharedPtr<FJsonObject>& OutResult);
@@ -207,7 +207,7 @@ bool UEngineWireSubsystem::HandleInspectAction(
         return HandleInspectCdoAction(RequestId, Payload, RequestingSocket);
     }
 
-    // Struct ecosystem — read-only struct layout introspection (issue #struct-ecosystem)
+    // Read-only struct layout introspection
     if (LowerSubAction.Equals(TEXT("inspect_struct")))
     {
         TSharedPtr<FJsonObject> Result;

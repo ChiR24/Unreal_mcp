@@ -1,6 +1,6 @@
 // Copyright (c) 2024 EngineWire Contributors
 
-#include "McpFabImportScope.h"
+#include "Import/McpFabImportScope.h"
 
 namespace McpFabImportScope
 {

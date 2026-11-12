@@ -1,5 +1,4 @@
-// McpNativeTransportModern.cpp — MCP 2026-07-28 requests on the native /mcp transport. Kept with the protocol
-// helpers because MCP/Transport is at its folder cap; these are FMcpNativeTransport members all the same.
+// McpNativeTransportModern.cpp — MCP 2026-07-28 requests on the native /mcp transport.
 //
 // A modern request carries its protocol version and client capabilities in params._meta and mirrors its method and
 // name into headers; there is no initialize and no Mcp-Session-Id. Each one is served on an implicit session per

@@ -56,7 +56,7 @@ describe('recipes', () => {
   // Recipes are project data that list_recipes answers only for the read scope: search, which needs no scope for the
   // catalog, lists them only when the session's principal holds Read (or Admin). Write does not imply Read.
   it('lists recipes in search only for a caller that may read the project', () => {
-    const transport = code(join(PRIVATE, 'MCP', 'Transport', 'McpNativeTransportGateway.cpp'));
+    const transport = code(join(PRIVATE, 'MCP', 'Transport', 'Methods', 'McpNativeTransportGateway.cpp'));
     // Read, and this project among the token's: one whose AllowedProjects leaves it out reads none of its recipes.
     expect(transport).toMatch(/DiscoveryQuery\.bMayReadProject = Searcher\.IsScopeAuthorized\(EMcpCapabilityScope::Read\) &&\s*McpCapabilityAuthorization::CheckProject\(Searcher, FApp::GetProjectName\(\)\)\.bAllowed;/u);
     expect(code(join(PRIVATE, 'MCP', 'Gateway', 'McpNativeGatewaySearch.cpp')))

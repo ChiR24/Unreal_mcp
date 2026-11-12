@@ -1,6 +1,9 @@
 #include "Domains/ControlEditor/McpEditorScreenshotSupport.h"
 
+#include "Containers/Ticker.h"
 #include "Editor/EditorPerformanceSettings.h"
+#include "Misc/CommandLine.h"
+#include "Misc/Parse.h"
 #if PLATFORM_WINDOWS
 #include "Windows/AllowWindowsPlatformTypes.h"
 #include <windows.h>
@@ -145,9 +148,10 @@ TSharedPtr<SWindow> FindEditorSlateWindowForMcp(const FString &Query,
   return nullptr;
 }
 
+// Counts the bridge's restores of a window: every un-minimize it made, and every configure_editor restore request,
+// even of a window already up. What puts the window away again on its own (the -McpStartMinimized startup hold, the
+// end of a timed run) stands down once the count moved past what it saw, since a caller wanted the window up.
 static uint32 GMcpWindowRestoreCount = 0;
-
-uint32 McpWindowRestoreCount() { return GMcpWindowRestoreCount; }
 
 bool RestoreWindowForCaptureForMcp(const TSharedRef<SWindow> &Window) {
   if (!Window->IsWindowMinimized()) {
@@ -205,6 +209,38 @@ void MinimizeWindowForMcp(const TSharedRef<SWindow> &Window) {
   }
 #endif
   Window->Minimize();
+}
+
+// A launch for an automated session sat in the foreground, rendering flat out, until a caller could minimize it over
+// the bridge. The editor adds its main window hidden and shows it, maximized, at the end of startup
+// (FMainFrameHandler::ShowMainFrameWindow), which undid a minimize made before that. So this waits until the window is
+// on screen, puts it away and keeps it down for 10 s in case startup brings it back. Bounded, because a ticker left
+// registered would outlive a Live Coding module unload. A restore made over the bridge ends the hold: one asked for
+// 3 minutes after launch was put away again within seconds, while a second one 23 s later stayed up.
+void HoldEditorMinimizedAtStartupForMcp() {
+  if (!FParse::Param(FCommandLine::Get(), TEXT("McpStartMinimized"))) {
+    return;
+  }
+  const double GiveUpAt = FPlatformTime::Seconds() + 600.0;
+  const TSharedRef<double> HoldUntil = MakeShared<double>(0.0);
+  FTSTicker::GetCoreTicker().AddTicker(FTickerDelegate::CreateLambda([GiveUpAt, HoldUntil](float) {
+    if (GMcpWindowRestoreCount != 0) {
+      return false;
+    }
+    const double Now = FPlatformTime::Seconds();
+    const TSharedPtr<SWindow> Root = FGlobalTabmanager::Get()->GetRootWindow();
+    // The hold starts the first time the window is on screen, down already or not: a window that came up minimized
+    // kept this waiting, and the first restore made over the bridge minutes later was put away.
+    if (Root.IsValid() && Root->GetNativeWindow().IsValid() && Root->IsVisible()) {
+      if (!Root->IsWindowMinimized()) {
+        MinimizeWindowForMcp(Root.ToSharedRef());
+      }
+      if (*HoldUntil == 0.0) {
+        *HoldUntil = Now + 10.0;
+      }
+    }
+    return *HoldUntil == 0.0 ? Now < GiveUpAt : Now < *HoldUntil;
+  }), 0.25f);
 }
 
 FMcpEditorRunHold BeginEditorRunForMcp() {

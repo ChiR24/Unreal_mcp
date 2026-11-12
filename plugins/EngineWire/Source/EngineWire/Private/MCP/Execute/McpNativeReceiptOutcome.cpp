@@ -23,8 +23,7 @@ bool IsAllowedPath(const FString& Path)
 }
 
 // The running game's objects (GameInstance, a live widget) live in the transient package, so a
-// handler names /Engine/Transient as their "asset"; no asset changed. Mirrors
-// isTransientPackagePath in src/tools/catalog/capabilities/semantic/receipt-outcome.ts.
+// handler names /Engine/Transient as their "asset"; no asset changed.
 bool IsTransientPackagePath(const FString& Path)
 {
 	return Path == TEXT("/Engine/Transient") || Path.StartsWith(TEXT("/Engine/Transient.")) ||
@@ -41,27 +40,15 @@ bool IsPathKind(const FString& Kind)
 	return Kind == TEXT("object") || Kind == TEXT("asset") || Kind == TEXT("class");
 }
 
-TSharedPtr<FJsonObject> OutcomeChildObject(const TSharedPtr<FJsonObject>& Parent, const TCHAR* Name)
-{
-	const TSharedPtr<FJsonObject>* Object = nullptr;
-	if (Parent.IsValid() && Parent->TryGetObjectField(Name, Object) && Object)
-	{
-		return *Object;
-	}
-	return nullptr;
-}
-
 // Read a field from the result root, then its nested `data` payload (the native
 // completion carries the verdict separately from the payload), then `details`
 // (the gateway folds undeclared handler fields into it) and finally the
-// handler's own nested `data.details`. Field order (root, data, details,
-// data.details) matches the TypeScript makeReader order exactly, so both
-// transports read the same winner.
+// handler's own nested `data.details`.
 TSharedPtr<FJsonValue> ReadField(const TSharedPtr<FJsonObject>& Result, const TCHAR* Key)
 {
-	const TSharedPtr<FJsonObject> Data = OutcomeChildObject(Result, TEXT("data"));
+	const TSharedPtr<FJsonObject> Data = McpHandlerUtils::GetObjectFieldOrNull(Result, TEXT("data"));
 	const TSharedPtr<FJsonObject> Holders[] = {
-		Result, Data, OutcomeChildObject(Result, TEXT("details")), OutcomeChildObject(Data, TEXT("details"))};
+		Result, Data, McpHandlerUtils::GetObjectFieldOrNull(Result, TEXT("details")), McpHandlerUtils::GetObjectFieldOrNull(Data, TEXT("details"))};
 	for (const TSharedPtr<FJsonObject>& Holder : Holders)
 	{
 		if (Holder.IsValid())
@@ -106,7 +93,6 @@ const TCHAR* const ASSET_FIELDS[] = {
 const TCHAR* const ACTOR_FIELDS[] = {TEXT("actorName"), TEXT("actorLabel"), TEXT("actorPath")};
 // The many forms (set_visibility, set_actor_collision, add_tag with actorNames) name every actor they
 // changed in affectedActors and carry no single actorName: one handle per entry, the first this many.
-// Mirrors AFFECTED_ACTOR_HANDLE_LIMIT in src/tools/catalog/capabilities/semantic/receipt-outcome.ts.
 const int32 MAX_AFFECTED_ACTOR_HANDLES = 20;
 const TCHAR* const CHANGE_ARRAYS[] = {
 	TEXT("changes"), TEXT("changedEntities"), TEXT("changedAssets"), TEXT("affectedActors"),

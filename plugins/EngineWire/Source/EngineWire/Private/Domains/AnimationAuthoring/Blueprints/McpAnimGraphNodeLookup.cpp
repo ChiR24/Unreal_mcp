@@ -2,8 +2,8 @@
 
 #include "AnimGraphNode_AssetPlayerBase.h"
 
-// What set_anim_graph_node_value needs to find a node and to write one of its settings. Lives beside the other
-// Animation/Blueprints graph authors because Domains/AnimationAuthoring sits at the 25-file cap.
+// What set_anim_graph_node_value needs to find a node and to write one of its settings, beside the other
+// Anim Blueprint graph authors.
 namespace McpAnimationAuthoring
 {
 namespace

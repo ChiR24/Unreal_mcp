@@ -39,9 +39,7 @@ bool UEngineWireSubsystem::HandleGeometryAction(
         return true;
     }
 
-    // Normalize targetActor -> actorName before routing. The TS stdio
-    // surface already does this copy; the native /mcp surface bypasses TS
-    // normalization, so the seam belongs here too. Non-clobbering.
+    // Normalize targetActor -> actorName before routing. Non-clobbering.
     FString TargetActor = GetJsonStringField(Payload, TEXT("targetActor"));
     if (!TargetActor.IsEmpty())
     {

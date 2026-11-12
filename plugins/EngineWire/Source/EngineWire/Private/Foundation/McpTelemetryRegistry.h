@@ -8,9 +8,8 @@ class FJsonObject;
 // Native counters/histograms. The native surface used to be log-only:
 // telemetry was aggregated into a summary UE_LOG line and nothing could scrape
 // it. This registry keeps the SAME aggregate as real counters, histogram buckets
-// and bounded percentile samples, and renders them in the exposition format the
-// TypeScript surface uses, with identical family and label names
-// (`Foundation/McpTelemetrySchema.h`).
+// and bounded percentile samples, and renders them as Prometheus text, with the family and label
+// names of `Foundation/McpTelemetrySchema.h`.
 //
 // Observation only: nothing reads these counters back to change routing, retry,
 // scheduling or authorization behaviour.
@@ -66,9 +65,7 @@ public:
 	FString RenderPrometheus(const FMcpTelemetryReadinessView* Readiness = nullptr) const;
 
 	/**
-	 * Anonymous aggregate snapshot, key-for-key the TypeScript TelemetrySnapshot
-	 * (`src/services/telemetry-registry.ts`), so a client reading `ue://health`
-	 * sees the same diagnostics on either transport. Carries only bounded label
+	 * Anonymous aggregate snapshot, read by `ue://health`. Carries only bounded label
 	 * values and numbers - never a request id, capability id, path or message.
 	 */
 	TSharedRef<FJsonObject> SnapshotJson() const;

@@ -5,7 +5,7 @@
 
 namespace
 {
-constexpr int32 McpMigrationMaxSuggestions = 3;  // mirrors TS MAX_SUGGESTIONS
+constexpr int32 McpMigrationMaxSuggestions = 3;
 
 // Merge a legacy call's nested `params` into the action parameters (top-level
 // keys win, exactly as legacy dispatch did), then drop the routing/control
@@ -32,7 +32,7 @@ TSharedPtr<FJsonObject> MigratedParams(const TSharedPtr<FJsonObject>& Arguments)
 	return Merged;
 }
 
-// Flat migration receipt mirroring the TS DirectCallMigrationResult:
+// Flat migration receipt:
 // success/operation/errorCode/tool/message/nextCall as top-level keys, never a
 // wrapper (operation is copied from nextCall below).
 TSharedPtr<FJsonObject> MigrationReceipt(
@@ -43,7 +43,7 @@ TSharedPtr<FJsonObject> MigrationReceipt(
 	Result->SetStringField(TEXT("errorCode"), TEXT("DIRECT_TOOL_CALL_REMOVED"));
 	Result->SetStringField(TEXT("tool"), ToolName);
 	Result->SetStringField(TEXT("message"), Message);
-	// The `unreal` output schema (and the TS DirectCallMigrationResult) require a
+	// The `unreal` output schema requires a
 	// top-level `operation` beside success:false; copy it from the branch's
 	// nextCall so the flat receipt and its executable next step never disagree.
 	FString Operation;
@@ -55,7 +55,7 @@ TSharedPtr<FJsonObject> MigrationReceipt(
 	return Result;
 }
 
-// Mirror of TS getString(args, key): accept only a JSON string, TrimStartAndEnd,
+// Accept only a JSON string, TrimStartAndEnd,
 // and reject an empty-after-trim value so it can fall through. Sets OutValue to
 // the trimmed value on a hit and leaves it untouched on a miss.
 bool GetTrimmedStringArg(
@@ -102,7 +102,7 @@ TSharedPtr<FJsonObject> McpBuildDirectCallMigration(
 		return Result;
 	}
 
-	// Action selection mirrors TS getString(args,'action') ?? getString(args,'subAction'):
+	// Action selection:
 	// a string-typed, trimmed, non-empty action wins; an empty/whitespace/non-string
 	// action falls through to subAction; otherwise there is no action.
 	FString Action;

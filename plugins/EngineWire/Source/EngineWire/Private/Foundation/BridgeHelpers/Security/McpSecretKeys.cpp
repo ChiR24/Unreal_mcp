@@ -1,18 +1,13 @@
-#include "Foundation/HandlerUtils/McpHandlerUtilsJson.h"
-// McpNativeReceiptSecretKeys.cpp — key-NAME credential classification.
-//
-// Native mirror of isSecretKey() in
-// src/tools/catalog/capabilities/semantic/receipt-redaction.ts.
+// McpSecretKeys.cpp — key-NAME credential classification.
 //
 // McpMaskSecrets needs a `keyword<sep>value` run WITHIN one string, so a
 // credential that arrives as a real JSON value has no keyword context left to
 // match — the key it hangs under is the only signal, and the invariant (a secret
-// never reaches a receipt) makes that signal sufficient. Split out of
-// McpNativeReceiptRedaction.cpp to keep that file inside the 250 pure-line
-// ceiling; the declaration lives in McpNativeReceiptRedaction.h beside the
-// masking entry points that consume it.
+// never reaches a receipt) makes that signal sufficient. The declarations
+// live in McpSecretMask.h beside the masking entry points that consume them.
 
-#include "MCP/Execute/McpNativeReceiptRedaction.h"
+#include "Foundation/BridgeHelpers/Security/McpSecretMask.h"
+#include "Foundation/HandlerUtils/McpHandlerUtilsJson.h"
 
 namespace
 {
@@ -71,8 +66,7 @@ const TSet<FString>& SecretQualifiers()
 }
 
 // Credential nouns that can close a compound. `secret` + `key` is a credential
-// even though `key` alone is far too generic to live in SecretKeyWords. Must stay
-// byte-identical to CREDENTIAL_TAILS in receipt-redaction.ts.
+// even though `key` alone is far too generic to live in SecretKeyWords.
 const TSet<FString>& CredentialTails()
 {
 	static const TSet<FString> Words = {
@@ -91,13 +85,10 @@ bool IsSplittableWord(const FString& Word)
 }
 
 // Enumerates every complete segmentation of Word into `Parts` splittable words,
-// leftmost cut first, mirroring segmentations() in receipt-redaction.ts. The
-// credential predicate is deliberately NOT applied here: TS applies
-// splitNamesCredential() only to the COMPLETE part list (the `.find()` over the
-// full enumeration), so filtering sub-segmentations during recursion would reject
-// a split whose first part is the credential word while its tail is not itself
-// credential-named, and leave the native surface masking less than the stdio
-// surface.
+// leftmost cut first. The credential predicate is deliberately NOT applied here:
+// it judges only the COMPLETE part list, and filtering sub-segmentations during
+// recursion would reject a split whose first part is the credential word while
+// its tail is not itself credential-named, so less would be masked.
 void CollectSegmentations(const FString& Word, int32 Parts,
 	TArray<TArray<FString>>& Out)
 {
@@ -140,7 +131,7 @@ bool InSet(const TSet<FString>& Set, const FString& Word)
 	return Set.Contains(Word) || Set.Contains(Singular(Word));
 }
 
-// Mirrors splitNamesCredential() in receipt-redaction.ts: ANY part naming a
+// ANY part naming a
 // secret key word, or the LAST part being a credential tail, makes the split a
 // credential.
 bool PartsNameCredential(const TArray<FString>& Parts)
@@ -162,7 +153,7 @@ bool PartsNameCredential(const TArray<FString>& Parts)
 // Requiring both halves to be in the closed vocabulary is what stops `tokenizer`
 // becoming token + izer and `passwordless` becoming password + less.
 // Two parts cannot reach `APIACCESSTOKEN`, so the search runs to three - fewest
-// parts first, mirroring segmentations() in receipt-redaction.ts.
+// parts first.
 void AppendCompound(const FString& Word, TArray<FString>& Out)
 {
 	if (Word.Len() < 6 || IsSplittableWord(Word))
@@ -298,8 +289,7 @@ bool McpIsGenericValueKey(const FString& Key)
 
 // The NAME the caller asked for decides, judged by the same classifier a key
 // would face. `{name:"Foo", value:"bar"}` is untouched; only a name that itself
-// reads as a credential masks its sibling. Mirrors namesCredentialBySibling()
-// in receipt-redaction.ts, including the length bound: the name is caller-
+// reads as a credential masks its sibling. The length bound: the name is caller-
 // supplied and the compound splitter is O(n^2) on a separator-less run, so an
 // over-long name is skipped rather than classified.
 constexpr int32 McpMaxSiblingNameLength = 128;

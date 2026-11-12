@@ -3,7 +3,7 @@
 #pragma once
 
 #include "CoreMinimal.h"
-#include "McpFabDownloadProgress.h"
+#include "Import/McpFabDownloadProgress.h"
 #include "McpFabProvider.h"
 
 // The operation store's own data, shared by the two files that make it up (McpFabImportOperations.cpp owns

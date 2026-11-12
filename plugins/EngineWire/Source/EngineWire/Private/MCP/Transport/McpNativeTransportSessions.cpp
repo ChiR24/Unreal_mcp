@@ -15,7 +15,7 @@ FMcpNativeTransport::ESessionValidationResult FMcpNativeTransport::ValidateSessi
 		double* LastActivity = ActiveSessions.Find(SessionId);
 		if (!LastActivity)
 		{
-			OutError = TEXT("Invalid or expired session ID");
+			OutError = McpSessionExpiredMessage;
 			return RehydrateColdBootSessionLocked(SessionId, PresentedToken) ? ESessionValidationResult::Valid : ESessionValidationResult::Invalid;
 		}
 
@@ -33,7 +33,7 @@ FMcpNativeTransport::ESessionValidationResult FMcpNativeTransport::ValidateSessi
 		ForgetSessionLocked(SessionId);
 	}
 	CloseSessionConnections(SessionId);
-	OutError = TEXT("Invalid or expired session ID");
+	OutError = McpSessionExpiredMessage;
 	return ESessionValidationResult::Invalid;
 }
 
@@ -82,7 +82,7 @@ bool FMcpNativeTransport::ConsumeSessionRequestBudget(
 	FSessionRateState* State = SessionRateStates.Find(SessionId);
 	if (!State)
 	{
-		OutError = TEXT("Invalid or expired session ID");
+		OutError = McpSessionExpiredMessage;
 		return false;
 	}
 	return ConsumeClientRequestBudgetLocked(
@@ -163,8 +163,8 @@ bool FMcpNativeTransport::QueueAutomationRequestForSession(
 		return false;
 	}
 	// A blocked GameThread (modal dialog, blocking import) would hold the request until the client
-	// gave up; refuse with a typed code instead (dogfood #79).
-	const double Heartbeat = LastGameThreadHeartbeat.load(); if (Heartbeat > 0.0 && FPlatformTime::Seconds() - Heartbeat > 15.0) { OutRejection = EAutomationQueueRejection::GameThreadStalled; return false; }
+	// gave up; refuse with a typed code instead.
+	const double Heartbeat = LastGameThreadHeartbeat.load(); if (Heartbeat > 0.0 && FPlatformTime::Seconds() - Heartbeat > UEngineWireSubsystem::GameThreadStallSeconds) { OutRejection = EAutomationQueueRejection::GameThreadStalled; return false; }
 	// A native request carries no socket, so the MCP session id is the
 	// only thing that keeps its queue fairness lane and per-session cap distinct
 	// from every other session's. The rejection is surfaced so the /mcp surface
@@ -179,7 +179,7 @@ bool FMcpNativeTransport::QueueAutomationRequestForSession(
 	return Rejection == EAutomationQueueRejection::None;
 }
 
-// H8: bounded first-close-wins dedupe set, file-local (compressed form
+// Bounded first-close-wins dedupe set, file-local (compressed form
 // keeps this file inside the 250 pure-line ceiling). ClaimSessionClose returns
 // true at most once per session WHILE the id is retained in the 128-close
 // window; a re-close of an EVICTED id double-counts by design (documented
@@ -197,7 +197,7 @@ void FMcpNativeTransport::CloseSessionConnections(const FString& SessionId)
 		return;
 	}
 
-	// H8: dedupe the RECORD with the bounded first-close-wins set (claim once
+	// Dedupe the RECORD with the bounded first-close-wins set (claim once
 	// while retained); the teardown below still runs on every call - it is
 	// idempotent. The record is memory-only here; the disk write is deferred.
 	if (ClaimSessionClose(SessionId)) { FMcpDiagnosticsSnapshot::Get().RecordSessionClosed();
@@ -271,4 +271,10 @@ int32 FMcpNativeTransport::GetActiveSessionCount() const
 {
 	FScopeLock Lock(&SessionMutex);
 	return ActiveSessions.Num();
+}
+
+void FMcpNativeTransport::SendSessionExpired(const TSharedPtr<FJsonValue>& Id, FSocket* ClientSocket, const FString& CorsOrigin)
+{
+	SendAndClose(ClientSocket, 404, TEXT("application/json"),
+		FMcpJsonRpc::BuildError(Id, FMcpJsonRpc::ErrorInvalidRequest, McpSessionExpiredMessage), {}, CorsOrigin);
 }

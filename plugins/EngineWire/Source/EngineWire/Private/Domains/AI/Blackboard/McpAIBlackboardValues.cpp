@@ -85,7 +85,7 @@ bool HandleGetBlackboardValue(UEngineWireSubsystem* Self, const FString& Request
     if (bValueAvailable)
     {
         GetResult->SetStringField(TEXT("value"), ValueStr);
-        // Typed companions so callers need not parse the text (dogfood #65).
+        // Typed companions so callers need not parse the text.
         if (KeyType.EndsWith(TEXT("_Float")) || KeyType.EndsWith(TEXT("_Int")))
         {
             GetResult->SetNumberField(TEXT("valueNumber"), FCString::Atod(*ValueStr));

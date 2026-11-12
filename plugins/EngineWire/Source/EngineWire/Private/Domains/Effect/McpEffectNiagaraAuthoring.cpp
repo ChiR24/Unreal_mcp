@@ -207,7 +207,7 @@ bool AuthorProceduralNiagaraSystem(
             OutErrorCode = TEXT("TEMPLATE_NOT_FOUND");
             return false;
         }
-        UPackage* Package = CreatePackage(*PackageName);
+        UPackage* Package = McpCreatePackageOrNull(PackageName);
         // RF_Transactional as the asset factory gives it (undo, and no "not transctional" stack warning).
         System = Package ? NewObject<UNiagaraSystem>(Package, FName(*Name), RF_Public | RF_Standalone | RF_Transactional) : nullptr;
         if (!System)

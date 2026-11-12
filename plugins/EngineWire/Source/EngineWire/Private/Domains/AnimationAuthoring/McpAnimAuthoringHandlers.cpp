@@ -13,7 +13,7 @@ static TSharedPtr<FJsonObject> HandleAnimationAuthoringRequest(const TSharedPtr<
     // Every authoring record advertises a typed alias (animationPath,
     // sequencePath, montagePath, blendSpacePath, aimOffsetPath, ...) next to
     // assetPath, but the leaf handlers read only assetPath; honour the aliases
-    // here so the documented calls work (dogfood #80).
+    // here so the documented calls work.
     // Where animationPath is an input of its own -- the sample or segment to
     // add -- it is never the target: copying it into assetPath made
     // add_aim_offset_sample load the sample as the aim offset, and

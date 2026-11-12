@@ -13,11 +13,11 @@ const code = (...segments: readonly string[]): string =>
   readFileSync(join(PRIVATE, ...segments), 'utf8').replace(/\r\n/gu, '\n').replace(/\/\/[^\n]*/gu, ' ');
 
 describe('native subscriptions to ue://changes', () => {
-  const listen = code('MCP', 'Protocol', 'McpNativeTransportListen.cpp');
+  const listen = code('MCP', 'Transport', 'Methods', 'McpNativeTransportListen.cpp');
   const handler = listen.slice(listen.indexOf('void FMcpNativeTransport::HandleSubscriptionsListen('), listen.indexOf('FString FMcpNativeTransport::HandleResourceSubscription('));
 
   it('serves subscriptions/listen on the 2026-07-28 path and sweeps it from the keepalive thread', () => {
-    expect(code('MCP', 'Protocol', 'McpNativeTransportModern.cpp')).toMatch(
+    expect(code('MCP', 'Transport', 'Methods', 'McpNativeTransportModern.cpp')).toMatch(
       /Rpc\.Method == TEXT\("subscriptions\/listen"\)\)\s*\{\s*HandleSubscriptionsListen\(ClientSocket, HttpReq, Rpc, SessionId\);\s*return;/u,
     );
     expect(code('MCP', 'Transport', 'McpNativeTransportKeepalive.cpp')).toMatch(/SweepNotificationKeepalives\(\);\s*SweepChangeNotifications\(\);/u);
@@ -44,11 +44,11 @@ describe('native subscriptions to ue://changes', () => {
   });
 
   it('answers resources/subscribe for earlier versions only, and advertises subscribe on both', () => {
-    expect(code('MCP', 'Transport', 'McpNativeTransportPrimitives.cpp')).toContain(
+    expect(code('MCP', 'Transport', 'Methods', 'McpNativeTransportPrimitives.cpp')).toContain(
       '(Method == TEXT("resources/subscribe") || Method == TEXT("resources/unsubscribe")) && !McpModern::Current().bActive',
     );
     expect(code('MCP', 'Transport', 'McpNativeTransportSessions.cpp')).toContain('ChangesSubscribedSessions.Remove(SessionId);');
-    expect(code('MCP', 'Transport', 'McpNativeTransportToolDiscovery.cpp')).toMatch(
+    expect(code('MCP', 'Transport', 'Methods', 'McpNativeTransportToolDiscovery.cpp')).toMatch(
       /Resources->SetBoolField\(TEXT\("subscribe"\), true\);\s*Capabilities->SetObjectField\(TEXT\("resources"\), Resources\);/u,
     );
   });

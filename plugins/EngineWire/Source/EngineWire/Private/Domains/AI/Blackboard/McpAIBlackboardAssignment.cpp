@@ -80,8 +80,7 @@ bool HandleAssignBlackboard(UEngineWireSubsystem* Self, const FString& RequestId
         return true;
     }
 
-    // CRITICAL: Remove DoesAssetExist pre-check - newly created assets may not yet be
-    // indexed in the asset registry. Rely on LoadObject null-check instead.
+    // LoadObject, not a registry check: a Blueprint created moments ago may not be in the asset registry yet.
     UBlueprint* ControllerBP = LoadObject<UBlueprint>(nullptr, *ControllerPath);
     if (!ControllerBP)
     {

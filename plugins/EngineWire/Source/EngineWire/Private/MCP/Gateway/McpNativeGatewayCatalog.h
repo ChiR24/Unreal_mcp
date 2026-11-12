@@ -1,15 +1,11 @@
 // McpNativeGatewayCatalog.h — what a capability record shows a caller: its availability, its search row, and the
 // availability gate execute applies (engine version, editor state).
-//
-// Error envelopes and closest-match guidance live in McpNativeGatewayGuidance.h,
-// which this header re-exports so existing execute-path includes keep working.
 
 #pragma once
 
 #include "CoreMinimal.h"
 #include "Dom/JsonObject.h"
 #include "Dom/JsonValue.h"
-#include "MCP/Gateway/McpNativeGatewayGuidance.h"
 
 class FMcpToolRegistry;
 class FMcpDynamicToolManager;
@@ -41,10 +37,6 @@ TSharedPtr<FJsonObject> McpSearchRow(const FMcpCapabilityRecord& Record, bool bE
 
 /** The filters a search applied, as sent. */
 TSharedPtr<FJsonObject> McpSearchFilters(const FMcpDiscoveryQuery& Input);
-
-// capabilityRevision / schemaRevision on a receipt come straight from the resolved
-// record's content/schema hashes, so all three revision strings stay distinct and truthful.
-void McpSetReceiptRecordRevisions(const TSharedPtr<FJsonObject>& Receipt, const FString& CapabilityId);
 
 // Refuses (OutCode and OutMessage set) a capability this engine is too old for (ENGINE_VERSION_UNSUPPORTED), one that
 // is not a read while a Live Coding compile runs (LIVE_CODING_ACTIVE: the engine marks nothing unsaved then), or one

@@ -1,6 +1,6 @@
 // McpGeometrySelection.cpp — triangle selections for the face operators.
 //
-// Dogfood #137: extrude/inset/outset/offset_faces/bevel applied to the whole mesh
+// Extrude/inset/outset/offset_faces/bevel applied to the whole mesh
 // because every handler passed an empty FGeometryScriptMeshSelection. An optional
 // `triangleIndices` array now limits the operation to those triangles, and an optional
 // `region` (see McpGeometryRegion.cpp) picks them by where they are.

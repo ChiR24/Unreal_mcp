@@ -1,7 +1,7 @@
 // McpNativeGatewayCanonicalJson.h — deterministic, cross-language JSON rendering
 //
-// Discovery responses are compared byte-for-byte against the TypeScript gateway
-// reference, so both surfaces must serialize identically. The rules are:
+// Digests and fingerprints are taken over this rendering, so the same value
+// must always give the same bytes. The rules are:
 //   * object keys sorted by code unit, compact separators, no whitespace
 //   * every code unit above 0x7e escaped as \uXXXX, so output is pure ASCII
 //   * integers printed as integers; a non-integer number is refused, because

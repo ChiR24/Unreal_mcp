@@ -1,6 +1,6 @@
 # MCP AUTOMATION BRIDGE PLUGIN
 
-Editor-only UE 5.0-5.8 plugin. It owns the native `/mcp` HTTP/SSE server (the only gateway; the npm package is a stdio proxy in front of it), the WebSocket automation bridge, the delay-loaded Fab adapter module, a Data Validation module that runs lint_blueprint's rules, and a game features module. It is the sole authority on security. Version: `EngineWire.uplugin` (`0.6.0`), rewritten by the `bump-version.yml` workflow with the other version files.
+Editor-only UE 5.0-5.8 plugin. It owns the native `/mcp` HTTP/SSE server (the only gateway; the npm package is a stdio proxy in front of it), the WebSocket automation bridge, the delay-loaded Fab adapter module, a Data Validation module that runs lint_blueprint's rules, and a game features module. It is the sole authority on security. Version: the `VersionName` of `EngineWire.uplugin`, rewritten by the `bump-version.yml` workflow with the other version files.
 
 ## SCOPE MAP
 | Area | Owner | Notes |

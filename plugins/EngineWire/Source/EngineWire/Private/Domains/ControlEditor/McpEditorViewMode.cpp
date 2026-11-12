@@ -127,8 +127,7 @@ bool UEngineWireSubsystem::HandleControlEditorSetViewportRealtime(
     return true;
 
   // Accept both documented spellings. Reading only `realtime` made a schema-
-  // valid {enabled: false} behave as absent/default-true on the native surface
-  // while the TypeScript bridge normalized the same call correctly (MCPBB-046).
+  // valid {enabled: false} behave as absent/default-true.
   bool bRealtime = true;
   if (!Payload->TryGetBoolField(TEXT("realtime"), bRealtime))
   {

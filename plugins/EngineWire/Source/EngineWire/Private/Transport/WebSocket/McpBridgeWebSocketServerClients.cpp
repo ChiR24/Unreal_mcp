@@ -21,8 +21,6 @@ void FMcpBridgeWebSocket::HandleAcceptedClient(FSocket* ClientSocket) {
 
   auto ClientWebSocket = MakeShared<FMcpBridgeWebSocket>(
       ClientSocket, bUseTls, TlsCertificatePath, TlsPrivateKeyPath);
-  ClientWebSocket->bServerMode = false;
-  ClientWebSocket->bServerAcceptedConnection = true;
   ClientWebSocket->bListenerLoopback = bListenerLoopback;
   ClientWebSocket->Port = Port;
 

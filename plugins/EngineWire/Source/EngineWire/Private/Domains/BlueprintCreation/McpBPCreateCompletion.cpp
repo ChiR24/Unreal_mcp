@@ -3,7 +3,6 @@
 
 
 #include "Engine/Blueprint.h"
-#include "Core/Module/EngineWireGlobals.h"
 #include "EngineWireSubsystem.h"
 #include "Foundation/HandlerUtils/McpHandlerUtils.h"
 

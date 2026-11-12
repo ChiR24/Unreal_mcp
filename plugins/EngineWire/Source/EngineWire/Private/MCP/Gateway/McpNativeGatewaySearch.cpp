@@ -25,8 +25,7 @@ bool HasExactly(const TArray<FString>& Values, const FString& Value)
 	return Values.ContainsByPredicate([&Value](const FString& Entry) { return Entry.Equals(Value, ESearchCase::CaseSensitive); });
 }
 
-// A rejected filter hands back the same search with that filter replaced by its closest declared value
-// (guidedFilterError in gateway-search-filters.ts).
+// A rejected filter hands back the same search with that filter replaced by its closest declared value.
 TSharedPtr<FJsonObject> GuidedFilterError(const FString& ErrorCode, const FString& Message, const TCHAR* Dimension,
 	const FString& Target, const TArray<FString>& Candidates, const FString& Domain)
 {
@@ -49,7 +48,7 @@ bool RenderedLength(const TSharedPtr<FJsonObject>& View, int32& OutLength)
 	return true;
 }
 
-// The offset a nextCursor names, "c:<offset>" (decodeCursor in gateway-search-filters.ts). At most 9 digits, so the
+// The offset a nextCursor names, "c:<offset>". At most 9 digits, so the
 // offset stays an int32: the catalog holds a few hundred records.
 bool DecodeCursor(const FString& Cursor, int32& OutOffset)
 {
@@ -92,7 +91,7 @@ TSharedPtr<FJsonObject> McpGatewaySearchCapabilities(
 	int32 Offset = FMath::Max(0, Input.Offset);
 	const FString& Revision = Store.GetCatalogRevision();
 
-	// Every filter is checked before ranking, in the TS order and case-sensitively (validateFilters).
+	// Every filter is checked before ranking, case-sensitively.
 	if (Input.bHasDomain && !HasExactly(Store.GetDomains(), Input.Domain))
 	{
 		return GuidedFilterError(TEXT("UNKNOWN_DOMAIN"),
@@ -143,7 +142,7 @@ TSharedPtr<FJsonObject> McpGatewaySearchCapabilities(
 	}
 
 	// An exact capability (or a unique alias) or an exact tool + action pair is that one record; an action alone matches
-	// either name a caller can mean, the bridge verb or a declared pair (selectCandidates in gateway-search-filters.ts).
+	// either name a caller can mean, the bridge verb or a declared pair.
 	const FMcpCanonicalRecordIndex& Canonical = FMcpCanonicalRecordIndex::Get();
 	const bool bExact = Input.bHasCapability || (Input.bHasTool && Input.bHasAction);
 	FString ExactId;
@@ -159,8 +158,8 @@ TSharedPtr<FJsonObject> McpGatewaySearchCapabilities(
 		ExactId = Legacy ? Legacy->Id : FString();
 	}
 
-	// Query words are ASCII alphanumeric runs (McpSearchWords), the same split the
-	// TypeScript reference applies; matching is word-level on both surfaces.
+	// Query words are ASCII alphanumeric runs (McpSearchWords); matching is
+	// word-level.
 	TArray<FString> AllWords;
 	McpSearchWords(Query, AllWords);
 	TArray<FString> ContentWords;
@@ -206,7 +205,7 @@ TSharedPtr<FJsonObject> McpGatewaySearchCapabilities(
 	});
 
 	// A clear first hit that needs no consent carries its signature and the execute call, so a caller can skip
-	// describe (withSignature in gateway-search.ts); consent still needs describe's grant.
+	// describe; consent still needs describe's grant.
 	FString TopConsent;
 	const bool bConfident = !Query.IsEmpty() && Offset == 0 && Scored.Num() > 0 && Scored[0].Score > 0 &&
 		(Scored.Num() == 1 || Scored[1].Score * 100 <= Scored[0].Score * McpSearchConfidentRatioPercent) &&
@@ -237,7 +236,7 @@ TSharedPtr<FJsonObject> McpGatewaySearchCapabilities(
 		}
 		int32 Size = 0;
 		bool bRendered = RenderedLength(View, Size);
-		// The first row's signature goes before the row does; a page no row fits says so (withinByteBudget in TS).
+		// The first row's signature goes before the row does; a page no row fits says so.
 		if (bRendered && Results.Num() == 0 && Size > Budget && View->HasField(TEXT("signature")))
 		{
 			View->RemoveField(TEXT("signature"));

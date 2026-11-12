@@ -5,6 +5,7 @@
 #include "Misc/AutomationTest.h"
 #include "Misc/PackageName.h"
 #include "Misc/Paths.h"
+#include "Misc/ScopeExit.h"
 #include "Core/Subsystem/EngineWireSubsystemResponseSanitization.h"
 #include "Foundation/BridgeHelpers/Security/McpProjectPaths.h"
 #include "Transport/Connection/McpConnectionManagerPrivate.h"
@@ -55,6 +56,7 @@ bool FMcpContentRootsSnapshotTest::RunTest(const FString& Parameters)
 
 	TestFalse(TEXT("probe absent before mount"), Reports(ProbeName));
 	const FString Dir = ProbeDir();
+	ON_SCOPE_EXIT { IFileManager::Get().DeleteDirectory(*Dir, false, true); };
 	FPackageName::RegisterMountPoint(ProbeRoot, Dir);
 	TestTrue(TEXT("probe reported after mount"), Reports(ProbeName));
 	FPackageName::UnRegisterMountPoint(ProbeRoot, Dir);
@@ -72,6 +74,7 @@ bool FMcpContentRootsSubscriptionTest::RunTest(const FString& Parameters)
 	(void)Parameters;
 	using namespace McpContentRootsTestsLocal;
 	const FString Dir = ProbeDir();
+	ON_SCOPE_EXIT { IFileManager::Get().DeleteDirectory(*Dir, false, true); };
 	const TSharedRef<FMcpConnectionManager> Manager = MakeShared<FMcpConnectionManager>();
 
 	Manager->SubscribeContentRootChanges();
@@ -103,6 +106,7 @@ bool FMcpContentRootsPathAcceptanceTest::RunTest(const FString& Parameters)
 	(void)Parameters;
 	using namespace McpContentRootsTestsLocal;
 	const FString Dir = ProbeDir();
+	ON_SCOPE_EXIT { IFileManager::Get().DeleteDirectory(*Dir, false, true); };
 	FPackageName::RegisterMountPoint(ProbeRoot, Dir);
 	FPackageName::RegisterMountPoint(ShortRoot, Dir);
 
@@ -170,6 +174,7 @@ bool FMcpContentRootsRedactionTest::RunTest(const FString& Parameters)
 	using namespace McpContentRootsTestsLocal;
 	using EngineWireSubsystemResponse::SanitizeEngineErrorForResponse;
 	const FString Dir = ProbeDir();
+	ON_SCOPE_EXIT { IFileManager::Get().DeleteDirectory(*Dir, false, true); };
 	FPackageName::RegisterMountPoint(ProbeRoot, Dir);
 
 	// A mount that is registered stays readable in a reply, bare or with a path below it, as /Game does.

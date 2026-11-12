@@ -129,7 +129,7 @@ UAudioComponent* CreateAudioComponentAtEditorLocation(UWorld* World, USoundBase*
 
 void ApplyAudioComponentOptions(UAudioComponent* AudioComp, const TSharedPtr<FJsonObject>& Payload)
 {
-  // Honour the requested componentName so later calls can address it (dogfood #112).
+  // Honour the requested componentName so later calls can address it.
   FString RequestedName;
   if (Payload->TryGetStringField(TEXT("componentName"), RequestedName) && !RequestedName.IsEmpty() &&
       !FindObject<UObject>(AudioComp->GetOuter(), *RequestedName)) {

@@ -104,7 +104,7 @@ bool HandleStructMemberEditActions(UEngineWireSubsystem& Bridge, const FString& 
 
         const FString ExportText = BuildDefaultExportText(S, Prop, *DefaultVal);
 
-        // [29] A non-empty defaultValue that cannot be converted yields an empty
+        // A non-empty defaultValue that cannot be converted yields an empty
         // export text. Applying it would silently clear the existing default.
         // Reject invalid input instead of clearing; only treat empty export text
         // as a valid clear when the input itself was empty/null.

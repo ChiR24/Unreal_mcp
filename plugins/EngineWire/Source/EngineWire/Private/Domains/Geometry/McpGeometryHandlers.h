@@ -1,7 +1,6 @@
 #pragma once
 
 #include "Core/Compatibility/McpVersionCompatibility.h"
-#include "Core/Module/EngineWireGlobals.h"
 #include "Dom/JsonObject.h"
 #include "Foundation/BridgeHelpers/McpHelpers.h"
 #include "Foundation/HandlerUtils/McpHandlerUtils.h"
@@ -107,7 +106,7 @@ UE::Geometry::FDynamicMeshUVOverlay* EnsureUvLayerOrReply(UEngineWireSubsystem* 
 // Moves every vertex to Move(position) in one mesh edit; returns how many moved.
 int32 DeformVertices(UDynamicMesh* Mesh, TFunctionRef<FVector(const FVector&)> Move);
 void RecomputeMeshNormals(UDynamicMesh* Mesh, const FGeometryScriptCalculateNormalsOptions& Options = FGeometryScriptCalculateNormalsOptions());
-// Optional triangleIndices or region -> mesh selection (dogfood #137); false after replying INVALID_SELECTION on bad
+// Optional triangleIndices or region -> mesh selection; false after replying INVALID_SELECTION on bad
 // ids, INVALID_REGION on a malformed region and REGION_EMPTY when it matches nothing. OutTriangleIds, when given,
 // receives the selected ids (unique) and stays untouched when nothing was selected.
 bool ReadTriangleSelection(UEngineWireSubsystem* Self, const FString& RequestId, TSharedPtr<FMcpBridgeWebSocket> Socket, UDynamicMesh* Mesh, const TSharedPtr<FJsonObject>& Payload, FGeometryScriptMeshSelection& OutSelection, bool& bOutHasSelection, TArray<int32>* OutTriangleIds = nullptr);

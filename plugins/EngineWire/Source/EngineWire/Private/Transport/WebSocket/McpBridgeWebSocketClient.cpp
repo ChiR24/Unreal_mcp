@@ -15,32 +15,27 @@ uint32 FMcpBridgeWebSocket::RunClient() {
   }
 
   bConnected = true;
-  UE_LOG(
-      LogEngineWireSubsystem, Log,
-      TEXT("FMcpBridgeWebSocket connection established (serverAccepted=%s)."),
-      bServerAcceptedConnection ? TEXT("true") : TEXT("false"));
+  UE_LOG(LogEngineWireSubsystem, Log, TEXT("FMcpBridgeWebSocket connection established."));
   DispatchOnGameThread([WeakThis = AsWeak()] {
     if (TSharedPtr<FMcpBridgeWebSocket> Pinned = WeakThis.Pin()) {
       Pinned->ConnectedDelegate.Broadcast(Pinned);
     }
   });
 
-  if (bServerAcceptedConnection) {
-    if (!HandlerReadyEvent) {
-      HandlerReadyEvent = FPlatformProcess::GetSynchEventFromPool(true);
-    }
+  if (!HandlerReadyEvent) {
+    HandlerReadyEvent = FPlatformProcess::GetSynchEventFromPool(true);
+  }
 
-    constexpr double MaxWaitSeconds = 0.5;
+  constexpr double MaxWaitSeconds = 0.5;
+  UE_LOG(LogEngineWireSubsystem, Verbose,
+         TEXT("Awaiting message handler registration for new client "
+              "connection (max %.0f ms)."),
+         MaxWaitSeconds * 1000.0);
+  HandlerReadyEvent->Wait(FTimespan::FromSeconds(MaxWaitSeconds));
+  if (!bHandlerRegistered) {
     UE_LOG(LogEngineWireSubsystem, Verbose,
-           TEXT("Awaiting message handler registration for new client "
-                "connection (max %.0f ms)."),
-           MaxWaitSeconds * 1000.0);
-    HandlerReadyEvent->Wait(FTimespan::FromSeconds(MaxWaitSeconds));
-    if (!bHandlerRegistered) {
-      UE_LOG(LogEngineWireSubsystem, Verbose,
-             TEXT("Message handler registration not observed in time; "
-                  "proceeding without explicit synchronization."));
-    }
+           TEXT("Message handler registration not observed in time; "
+                "proceeding without explicit synchronization."));
   }
 
   while (!bStopping) {
@@ -49,6 +44,6 @@ uint32 FMcpBridgeWebSocket::RunClient() {
     }
   }
 
-  TearDown(TEXT("Socket loop finished."), true, 1000);
+  TearDown(TEXT("Socket loop finished."), true, McpWsClose::Normal);
   return 0;
 }

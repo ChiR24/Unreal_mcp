@@ -26,9 +26,8 @@ void McpSetNativeListenerLoopback(bool bLoopback);
 bool McpIsNativePrincipalSwap(
 	const FMcpCapabilityPrincipal& Bound, const FMcpCapabilityPrincipal& Presented);
 
-// Map a refusal onto the shared typed-error algebra. Every field mirrors the
-// TypeScript discriminated union so a client sees the identical kind/code/payload
-// whichever transport refused it.
+// Map a refusal onto the shared typed-error algebra, so a client sees the
+// identical kind/code/payload whichever transport refused it.
 FMcpSemanticError McpAuthorizationSemanticError(const FMcpAuthorizationDecision& Decision);
 
 // Gate a native MCP primitive (resources/*, prompts/*, tools/list) on a `read`

@@ -1,4 +1,4 @@
-// system_control save_recipe / run_recipe / list_recipes (S14; see McpRecipes.h).
+// system_control save_recipe / run_recipe / list_recipes (see McpRecipes.h).
 #include "Domains/Scripts/McpRecipes.h"
 
 #include "Domains/Scripts/McpScript.h"

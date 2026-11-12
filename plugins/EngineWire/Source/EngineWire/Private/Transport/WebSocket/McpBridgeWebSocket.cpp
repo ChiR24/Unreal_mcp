@@ -30,7 +30,7 @@ FMcpBridgeWebSocket::FMcpBridgeWebSocket(FSocket *InClientSocket,
                                          bool bInEnableTls,
                                          const FString &InTlsCertificatePath,
                                          const FString &InTlsPrivateKeyPath)
-    : Socket(InClientSocket), bServerAcceptedConnection(true), bConnected(true),
+    : Socket(InClientSocket), bConnected(true),
       bUseTls(bInEnableTls), TlsCertificatePath(InTlsCertificatePath),
       TlsPrivateKeyPath(InTlsPrivateKeyPath) {}
 

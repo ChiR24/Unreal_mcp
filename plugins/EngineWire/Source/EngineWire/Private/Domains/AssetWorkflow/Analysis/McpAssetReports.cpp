@@ -121,7 +121,7 @@ bool UEngineWireSubsystem::HandleGenerateReport(
   // NOTE: ScanPathsSynchronous() was removed to prevent GameThread blocking.
   // Asset listing uses cached AssetRegistry data exclusively.
   // LIMITATION: Assets not yet indexed by the editor's background scanner
-  // will NOT appear. Use Content Browser "Rescan" or rescan_content_directory.
+  // will NOT appear. Use Content Browser "Rescan".
   TArray<FAssetData> AssetList;
   AssetRegistryModule.Get().GetAssets(Filter, AssetList);
   const int32 Scanned = AssetList.Num();

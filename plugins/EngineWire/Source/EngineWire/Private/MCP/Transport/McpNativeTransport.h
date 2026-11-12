@@ -128,6 +128,8 @@ private:
 		const TMap<FString, FString>& ExtraHeaders = {},
 		const FString& CorsOrigin = FString());
 	// Send a response then tear down the client socket (close + destroy). Returns SendHttpResponse result so callers branch on send success.
+	// 404 with the JSON-RPC invalid-request error, for a call on a session that is gone.
+	void SendSessionExpired(const TSharedPtr<FJsonValue>& Id, FSocket* ClientSocket, const FString& CorsOrigin);
 	bool SendAndClose(FSocket* ClientSocket, int32 StatusCode, const FString& ContentType, const FString& Body, const TMap<FString, FString>& ExtraHeaders = {}, const FString& CorsOrigin = FString());
 	bool SendSSEHeaders(FSocket* Socket, const FString& SessionId,
 		const FString& CorsOrigin = FString());
@@ -140,13 +142,13 @@ private:
 	// server/discover (MCP 2026-07-28): versions, capabilities, identity and instructions with no session.
 	FString HandleServerDiscover(const TSharedPtr<FJsonValue>& Id) const;
 	// A 2026-07-28 request (its _meta names the version): no initialize and no session id, served on one implicit
-	// session per principal that is never shown to the client (Protocol/McpNativeTransportModern.cpp).
+	// session per principal that is never shown to the client (Methods/McpNativeTransportModern.cpp).
 	void HandleModernRequest(FSocket* ClientSocket, const FParsedHttpRequest& HttpReq, const FMcpJsonRpcRequest& Rpc);
 	FString EnsureModernSession(const FString& PresentedToken);
 	// subscriptions/listen (2026-07-28): an SSE answer that stays open, acknowledged first, then told when ue://changes
 	// moves; resources/subscribe and unsubscribe (earlier versions) do the same on the session's GET stream. The
 	// keepalive thread sends the updates (SweepChangeNotifications); ListenEndFrame closes a listen at shutdown
-	// (Protocol/McpNativeTransportListen.cpp).
+	// (Methods/McpNativeTransportListen.cpp).
 	void HandleSubscriptionsListen(FSocket* ClientSocket, const FParsedHttpRequest& HttpReq, const FMcpJsonRpcRequest& Rpc,
 		const FString& SessionId);
 	FString HandleResourceSubscription(const FString& Method, const FString& Uri, const TSharedPtr<FJsonValue>& Id,
@@ -203,7 +205,7 @@ private:
 		const FMcpReceiptContext& Context);
 
 	// Session validation
-	// Task 40 session principal. Bound once at initialize from the presented
+	// Session principal. Bound once at initialize from the presented
 	// capability token, then re-verified on every later request so a client can
 	// never present one token at initialize and a different one afterwards.
 	void BindSessionPrincipal(const FString& SessionId, const FString& PresentedToken);
@@ -263,9 +265,9 @@ private:
 		const TArray<TSharedPtr<FNotificationStream>>& Streams,
 		const FString& NotificationJson);
 
-	// ─── MCP primitives (Tasks 31-36 wiring) ────────────────────────────────
+	// ─── MCP primitives ────────────────────────────────
 	// Dispatches resources/*, prompts/*, and completion/complete by delegating
-	// to the pure Tasks 31-36 primitives, inserted before the ErrorMethodNotFound
+	// to the pure primitives, inserted before the ErrorMethodNotFound
 	// fallback so an implemented primitive never 404s. Returns true when it
 	// handled (or errored) the method. Static capability/project reads are served
 	// safely; editor-state URIs return a typed RESOURCE_UNAVAILABLE rather than
@@ -300,7 +302,7 @@ private:
 	std::atomic<bool> bBindSuccess{false};
 	std::atomic<int32> ActiveConnectionCount{0};
 	std::atomic<int32> PendingAsyncWrites{0};  // tracks in-flight SSE progress/complete writes
-	std::atomic<double> LastGameThreadHeartbeat{0.0};  // GameThread cleanup pass timestamp; stale => modal/blocking op (dogfood #79)
+	std::atomic<double> LastGameThreadHeartbeat{0.0};  // GameThread cleanup pass timestamp; stale => modal/blocking op
 	static constexpr int32 MaxConcurrentConnections = 32;
 	static constexpr int32 MaxActiveSessions = 16;
 	static constexpr int32 MaxPendingToolCalls = 16;
@@ -359,7 +361,7 @@ private:
 	TMap<FString, FString> CancelledClientIdToInternal;  // client id key -> internal request id
 	TSet<FString> CancelledInternalRequestIds;            // internal ids to suppress
 	// Insertion-order of client-id keys, bounded by a cap constant in
-	// McpNativeTransportCancellation.cpp, so the two maps above can be evicted
+	// Methods/McpNativeTransportCancellation.cpp, so the two maps above can be evicted
 	// oldest-first and never grow without limit.
 	TArray<FString> CancelledMarkerOrder;
 	mutable FCriticalSection CancelledRequestsMutex;

@@ -19,8 +19,6 @@
 // Include centralized UE version compatibility macros.
 #include "Core/Compatibility/McpVersionCompatibility.h"
 
-// Globals used by registry helpers and fast-mode simulations
-#include "Core/Module/EngineWireGlobals.h"
 #include "EngineWireSubsystem.h"
 
 #include "Editor.h"  // GEditor for McpSafeLoadMap

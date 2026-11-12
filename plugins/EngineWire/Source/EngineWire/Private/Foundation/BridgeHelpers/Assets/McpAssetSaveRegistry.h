@@ -4,7 +4,6 @@
 #include "AssetRegistry/IAssetRegistry.h"
 #include "CoreMinimal.h"
 #include "Misc/PackageName.h"
-#include "Core/Module/EngineWireGlobals.h"
 #include "Safety/McpSafeOperations.h"
 #include "EngineWireSubsystem.h"
 #include "Misc/ScopeLock.h"

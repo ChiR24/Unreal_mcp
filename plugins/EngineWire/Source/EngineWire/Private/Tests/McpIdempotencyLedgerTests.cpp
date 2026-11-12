@@ -212,7 +212,7 @@ bool FMcpIdempotencyLedgerSecrecyTest::RunTest(const FString& Parameters)
 
 IMPLEMENT_SIMPLE_AUTOMATION_TEST(
 	FMcpIdempotencyLedgerSlotEncodingTest,
-	"EngineWire.Foundation.IdempotencyLedger.SlotEncodingMatchesTypeScript",
+	"EngineWire.Foundation.IdempotencyLedger.SlotEncodingMatchesKnownAnswers",
 	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
 
 bool FMcpIdempotencyLedgerSlotEncodingTest::RunTest(const FString& Parameters)
@@ -220,14 +220,12 @@ bool FMcpIdempotencyLedgerSlotEncodingTest::RunTest(const FString& Parameters)
 	(void)Parameters;
 
 	// Vectors computed with an external sha256sum over the canonical length-prefixed
-	// preimage bytes, so they are an oracle independent of BOTH implementations. The
-	// TypeScript mirror pins the same three digests in
-	// src/server/gateway/idempotency-ledger.test.ts, so if either surface changes its
-	// encoding exactly one of the two suites goes red.
+	// preimage bytes, so they are known answers the implementation did not produce:
+	// a change of encoding turns this test red.
 	// sha256("15:scoped:qawriter18:asset.import_asset15:client-key-0001")
 	const FString Typical = FMcpIdempotencyLedger::ComputeSlot(
 		TEXT("scoped:qawriter"), TEXT("asset.import_asset"), TEXT("client-key-0001"));
-	TestEqual(TEXT("the canonical vector matches the TypeScript mirror"),
+	TestEqual(TEXT("the canonical vector matches its known answer"),
 		Typical,
 		FString(TEXT("14190f6efc7cd729e4658414cfa430c59f2c3b8e0e37f3d8ad3571c61dcfa1e5")));
 
@@ -237,12 +235,12 @@ bool FMcpIdempotencyLedgerSlotEncodingTest::RunTest(const FString& Parameters)
 	// native surface the reachable one. Length prefixes separate them.
 	// sha256("3:p c1:k1:x") and sha256("1:p3:c k1:x")
 	const FString ShiftedLeft = FMcpIdempotencyLedger::ComputeSlot(TEXT("p c"), TEXT("k"), TEXT("x"));
-	TestEqual(TEXT("a space-bearing principal matches the TypeScript mirror"),
+	TestEqual(TEXT("a space-bearing principal matches its known answer"),
 		ShiftedLeft,
 		FString(TEXT("f270ca82affdbdc185837d23aabcdb5f1e9f8ef00dcd10711b6508a9cd5b1ad6")));
 
 	const FString ShiftedRight = FMcpIdempotencyLedger::ComputeSlot(TEXT("p"), TEXT("c k"), TEXT("x"));
-	TestEqual(TEXT("a space-bearing capability matches the TypeScript mirror"),
+	TestEqual(TEXT("a space-bearing capability matches its known answer"),
 		ShiftedRight,
 		FString(TEXT("06bd91f8cd81eb5efe434332021c70925320c056150ee133944238aa994d4986")));
 

@@ -3,13 +3,13 @@
 #include "Components/SlateWrapperTypes.h"
 #include "CoreMinimal.h"
 #include "Dom/JsonObject.h"
+#include "Foundation/HandlerUtils/McpHandlerUtilsJson.h"
 
 class FProperty;
 class UClass;
 
 namespace WidgetAuthoringHelpers
 {
-TSharedPtr<FJsonObject> GetObjectField(const TSharedPtr<FJsonObject>& Payload, const FString& FieldName);
 const TArray<TSharedPtr<FJsonValue>>* GetArrayField(const TSharedPtr<FJsonObject>& Payload, const FString& FieldName);
 FString GetSlotName(const TSharedPtr<FJsonObject>& Payload);
 // Unknown names read as Visible; TryParseVisibility says whether the name was one of the five.

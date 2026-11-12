@@ -21,9 +21,8 @@ const FMatchRule MatchRules[RuleCount] = {
 	{ TEXT("parent"), 5 },
 };
 
-// Closed-class English function words dropped from the QUERY. Same set as
-// SEARCH_FUNCTION_WORDS in the TypeScript reference; a grammatical category,
-// never catalog vocabulary.
+// Closed-class English function words dropped from the QUERY: a grammatical
+// category, never catalog vocabulary.
 const TCHAR* const FunctionWords[] = {
 	TEXT("a"), TEXT("an"), TEXT("the"), TEXT("this"), TEXT("that"), TEXT("these"), TEXT("those"), TEXT("of"), TEXT("in"), TEXT("on"), TEXT("at"),
 	TEXT("to"), TEXT("for"), TEXT("from"), TEXT("by"), TEXT("with"), TEXT("into"), TEXT("onto"), TEXT("and"), TEXT("or"), TEXT("but"), TEXT("it"),
@@ -54,7 +53,7 @@ bool EndsWith(const FString& Word, const TCHAR* Suffix)
 
 // Regular plurals and the two regular verb inflections, first matching rule
 // wins (`foldInflection`). Deliberately not a stemmer: every rule is a suffix
-// rewrite so both surfaces reproduce it exactly. A function word stays whole, or
+// rewrite, so the eval ranker's copy reproduces it exactly. A function word stays whole, or
 // "this" and "does" fold to "thi" and "doe" and slip past the function-word filter.
 FString FoldInflection(const FString& Word)
 {

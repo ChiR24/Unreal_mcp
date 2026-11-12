@@ -1,4 +1,5 @@
 #include "Domains/Animation/McpAnimActionContext.h"
+#include "Domains/AnimationAuthoring/McpAnimSupport.h"
 #include "Foundation/HandlerUtils/McpHandlerUtils.h"
 #include "Core/Compatibility/McpVersionCompatibility.h"
 
@@ -39,9 +40,10 @@ bool HandleAnimationSetupIKAction(FActionContext &Context,
         } else {
           FString FactoryError;
           UBlueprint *ControlRigBlueprint = nullptr;
+          bool bExisting = false;
 #if MCP_HAS_CONTROLRIG_FACTORY
-          ControlRigBlueprint = Context.Bridge.CreateControlRigBlueprint(
-              IKName, SavePath, TargetSkeleton, FactoryError);
+          ControlRigBlueprint = McpAnimationAuthoring::CreateControlRigBlueprint(
+              IKName, SavePath, TargetSkeleton, FactoryError, &bExisting);
 #else
           FactoryError =
               TEXT("Control Rig factory not available in this editor build");
@@ -51,7 +53,13 @@ bool HandleAnimationSetupIKAction(FActionContext &Context,
                                              : FactoryError);
           } else {
             bSuccess = true;
-            Message = TEXT("IK setup created successfully");
+            // A rig already at the path is handed back untouched: the reply said "created" for it.
+            Message = bExisting ? TEXT("An IK Control Rig of that name already exists and was kept as it is")
+                                : TEXT("IK setup created successfully");
+            if (bExisting) {
+              Resp->SetBoolField(TEXT("existingAsset"), true);
+              McpHandlerUtils::MarkNoAssetsChanged(Resp);
+            }
             const FString ControlRigPath = ControlRigBlueprint->GetPathName();
             Resp->SetStringField(TEXT("ikPath"), ControlRigPath);
             Resp->SetStringField(TEXT("controlRigPath"), ControlRigPath);

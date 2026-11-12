@@ -38,4 +38,17 @@ inline void MarkNoAssetsChanged(const TSharedPtr<FJsonObject>& Result)
         Result->SetArrayField(TEXT("changedAssets"), TArray<TSharedPtr<FJsonValue>>());
     }
 }
+
+// Adds Text to the reply's warnings[], after the ones it already holds.
+inline void AppendWarning(const TSharedPtr<FJsonObject>& Result, const FString& Text)
+{
+    TArray<TSharedPtr<FJsonValue>> Warnings;
+    const TArray<TSharedPtr<FJsonValue>>* Existing = nullptr;
+    if (Result->TryGetArrayField(TEXT("warnings"), Existing) && Existing)
+    {
+        Warnings = *Existing;
+    }
+    Warnings.Add(MakeShared<FJsonValueString>(Text));
+    Result->SetArrayField(TEXT("warnings"), Warnings);
+}
 }

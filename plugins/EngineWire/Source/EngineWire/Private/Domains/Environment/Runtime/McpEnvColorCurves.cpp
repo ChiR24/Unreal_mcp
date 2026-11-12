@@ -72,7 +72,7 @@ bool McpCreateLinearColorCurve(const TSharedPtr<FJsonObject> &Payload, const FSt
             return McpFailEnvironmentAction(OutMessage, OutErrorCode,
                 FString::Printf(TEXT("%s exists and is not a linear color curve"), *PackagePath), TEXT("INVALID_ARGUMENT"));
         }
-        UPackage *Package = CreatePackage(*PackagePath);
+        UPackage *Package = McpCreatePackageOrNull(PackagePath);
         Curve = Package ? NewObject<UCurveLinearColor>(Package, FName(*Name), RF_Public | RF_Standalone) : nullptr;
         if (!Curve)
         {

@@ -242,17 +242,10 @@ void AddUserChangeWarning(const FString& RequestId, const TSharedPtr<FJsonObject
     {
         return;
     }
-    TArray<TSharedPtr<FJsonValue>> Warnings;
-    const TArray<TSharedPtr<FJsonValue>>* Existing = nullptr;
-    if (Result->TryGetArrayField(TEXT("warnings"), Existing) && Existing)
-    {
-        Warnings = *Existing;
-    }
-    Warnings.Add(MakeShared<FJsonValueString>(FString::Printf(
+    McpHandlerUtils::AppendWarning(Result, FString::Printf(
         TEXT("The user changed %d object(s) in the editor since the previous call through this server (%s%s): inspect "
              "changes_since lists what and how."),
-        Count, *FString::Join(Named, TEXT(", ")), Count > Named.Num() ? TEXT(", ...") : TEXT(""))));
-    Result->SetArrayField(TEXT("warnings"), Warnings);
+        Count, *FString::Join(Named, TEXT(", ")), Count > Named.Num() ? TEXT(", ...") : TEXT("")));
 }
 
 void AssetsChangedBy(const FString& RequestId, TArray<FString>& OutPackages)

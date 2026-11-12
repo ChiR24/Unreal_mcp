@@ -101,9 +101,9 @@ bool HandleCreateRenderTarget(
         return true;
     }
 
-    UPackage* Package = CreatePackage(*FullPath);
-    UTextureRenderTarget2D* RT = NewObject<UTextureRenderTarget2D>(
-        Package, UTextureRenderTarget2D::StaticClass(), FName(*Name), RF_Public | RF_Standalone);
+    UPackage* Package = McpCreatePackageOrNull(FullPath);
+    UTextureRenderTarget2D* RT = Package ? NewObject<UTextureRenderTarget2D>(
+        Package, UTextureRenderTarget2D::StaticClass(), FName(*Name), RF_Public | RF_Standalone) : nullptr;
     if (!RT)
     {
         Subsystem->SendAutomationError(

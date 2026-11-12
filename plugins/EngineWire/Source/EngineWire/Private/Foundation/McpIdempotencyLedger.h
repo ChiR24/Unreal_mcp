@@ -3,8 +3,7 @@
 #include "CoreMinimal.h"
 #include "HAL/CriticalSection.h"
 
-// Principal-scoped idempotency ledger (native mirror of the TypeScript
-// src/server/gateway/idempotency-ledger.ts, at 4096 entries rather than 1024).
+// Principal-scoped idempotency ledger (4096 entries).
 //
 // A slot is keyed by a SHA-256 digest over principal + capability + the client's
 // idempotency key, so the raw key never enters the map and can never reach a log
@@ -12,10 +11,9 @@
 // what stops one principal replaying, colliding with, or observing another's
 // execution. The three fields are LENGTH-PREFIXED into the preimage rather than
 // joined with a delimiter, so no crafted field can shift a boundary and merge two
-// distinct scopes onto one slot; the TypeScript mirror builds the identical
-// preimage, and both surfaces pin the same digest vectors in their tests.
+// distinct scopes onto one slot; the tests pin digest vectors.
 //
-// Two properties are load-bearing and match the TypeScript side exactly:
+// Two properties are load-bearing:
 //   * A failure is NEVER recorded. Abandon() drops the slot outright, so a
 //     transient error stays retryable and an authorization/validation/consent
 //     refusal (which is refused before it ever reaches Begin) can never be

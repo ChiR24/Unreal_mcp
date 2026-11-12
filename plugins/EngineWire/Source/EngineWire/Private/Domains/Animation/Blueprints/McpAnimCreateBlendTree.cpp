@@ -1,6 +1,5 @@
 #include "Domains/Animation/McpAnimActionContext.h"
 #include "Domains/AnimationAuthoring/McpAnimSupport.h"
-#include "Core/Module/EngineWireGlobals.h"
 #include "Safety/McpSafeOperations.h"
 
 #include "Animation/AnimBlueprint.h"
@@ -13,7 +12,7 @@
 #include "AnimGraphNode_Root.h"
 #include "AnimGraphNode_SequencePlayer.h"
 
-// create_blend_tree (dogfood #87): UE 5 has no "blend tree asset"; a blend tree is a graph of
+// create_blend_tree: UE 5 has no "blend tree asset"; a blend tree is a graph of
 // blend nodes inside an AnimBlueprint. This authors one: a Blend List (by int) node fed by one
 // Sequence Player per animation, optionally wired into the AnimGraph output pose.
 namespace McpAnimationHandlers {

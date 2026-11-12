@@ -188,7 +188,7 @@ UWidgetBlueprint* McpCreateTemplateWidgetBlueprint(UEngineWireSubsystem& Subsyst
             *PackagePath), TEXT("ALREADY_EXISTS"));
         return nullptr;
     }
-    UPackage* Package = CreatePackage(*PackagePath);
+    UPackage* Package = McpCreatePackageOrNull(PackagePath);
     UWidgetBlueprint* WidgetBP = Package ? Cast<UWidgetBlueprint>(FKismetEditorUtilities::CreateBlueprint(
         ParentClass ? ParentClass : UUserWidget::StaticClass(), Package, FName(*Name), BPTYPE_Normal,
         UWidgetBlueprint::StaticClass(), UWidgetBlueprintGeneratedClass::StaticClass())) : nullptr;

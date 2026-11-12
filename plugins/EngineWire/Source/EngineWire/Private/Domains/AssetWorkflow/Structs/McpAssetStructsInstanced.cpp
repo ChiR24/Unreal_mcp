@@ -7,7 +7,7 @@
 #include "Safety/McpSafeOperationsAssetSave.h"
 
 // =============================================================================
-// instanced_struct handler shard (struct ecosystem, issue #struct-ecosystem)
+// instanced_struct handler shard
 // -----------------------------------------------------------------------------
 // Get/set an FInstancedStruct property on any UObject asset. Both operations are
 // driven through the generic reflection layer (McpPropertyReflection) and, on
@@ -241,7 +241,7 @@ bool HandleStructPropertyAction(
         }
 
         // Build the new value in a scratch instance and validate structValues there
-        // BEFORE touching the live FInstancedStruct (issue #struct-ecosystem [23]):
+        // BEFORE touching the live FInstancedStruct:
         // the JSON object goes through the shared reflection importer
         // (McpPropertyReflection::ApplyJsonValueToProperty) bound to the scratch's
         // inner struct memory, so a malformed payload never mutates the asset.

@@ -5,7 +5,6 @@
 #include "Async/Async.h"
 #include "Dom/JsonObject.h"
 #include "GameFramework/Actor.h"
-#include "Core/Module/EngineWireGlobals.h"
 #include "Foundation/BridgeHelpers/McpHelpers.h"
 #include "EngineWireSubsystem.h"
 #include "Foundation/HandlerUtils/McpHandlerUtils.h"

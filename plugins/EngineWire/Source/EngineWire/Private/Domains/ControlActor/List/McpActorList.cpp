@@ -51,7 +51,7 @@ bool UEngineWireSubsystem::HandleControlActorList(
 
   double LimitValue = 0.0;
   Payload->TryGetNumberField(TEXT("limit"), LimitValue);
-  // Default page size: a bare list of a big level used to return every actor (dogfood #18).
+  // Default page size: a bare list of a big level used to return every actor.
   const int32 Limit = LimitValue > 0.0
       ? FMath::Max(1, static_cast<int32>(LimitValue))
       : 100;

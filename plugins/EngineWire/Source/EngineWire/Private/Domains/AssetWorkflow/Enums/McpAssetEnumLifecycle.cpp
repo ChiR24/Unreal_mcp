@@ -159,8 +159,8 @@ bool HandleEnumLifecycleActions(
         UUserDefinedEnum* Enum = RequireEnum(Params, OutResult, bHandled);
         if (bHandled) { return true; }
 
-        // Editor-tracked delete via ObjectTools::DeleteObjects (issue
-        // #struct-ecosystem [27]). The previous implementation unloaded the
+        // Editor-tracked delete via ObjectTools::DeleteObjects.
+        // The previous implementation unloaded the
         // package and deleted the .uasset/.uexp files directly, which bypassed
         // the editor deletion flow (asset registry, source control, redirectors,
         // loaded references) and could leave a referenced enum half-unregistered.

@@ -16,7 +16,7 @@ static TSharedRef<FJsonObject> SerializeBlackboardEntry(
 {
     TSharedRef<FJsonObject> KeyObj = MakeShared<FJsonObject>();
 
-    // --- PR0a-pinned (must stay bit-identical) ---
+    // --- pinned by a contract test (must stay bit-identical) ---
     KeyObj->SetStringField(TEXT("name"), Entry.EntryName.ToString());
     KeyObj->SetStringField(TEXT("type"),
         Entry.KeyType ? Entry.KeyType->GetClass()->GetName() : TEXT("Unknown")); // BlackboardKeyType_*
@@ -56,9 +56,9 @@ void SerializeBlackboardData(UBlackboardData* BB, const TSharedRef<FJsonObject>&
         return;
     }
 
-    // Walk the Parent chain (R4 cycle defense: max depth 32 + visited set).
+    // Walk the Parent chain (cycle defense: max depth 32 + visited set).
     // Chain ends up ordered parent-most ... self (self last), so inherited keys
-    // are emitted before own keys (spec 2.6).
+    // are emitted before own keys.
     TArray<UBlackboardData*> Chain;
     {
         TSet<const UBlackboardData*> Visited;
@@ -105,7 +105,7 @@ void SerializeBlackboardData(UBlackboardData* BB, const TSharedRef<FJsonObject>&
             Keys.Add(MakeShared<FJsonValueObject>(SerializeBlackboardEntry(Entry, Source, BB)));
         }
     }
-    Out->SetNumberField(TEXT("keyCount"), Keys.Num()); // == blackboardKeys.length (F7)
+    Out->SetNumberField(TEXT("keyCount"), Keys.Num()); // == blackboardKeys.length
     Out->SetArrayField(TEXT("blackboardKeys"), Keys);
 }
 

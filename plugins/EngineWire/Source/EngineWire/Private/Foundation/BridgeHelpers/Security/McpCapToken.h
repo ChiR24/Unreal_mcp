@@ -8,7 +8,7 @@
 #include "EngineWireLog.h"
 #include "EngineWireSettings.h"
 
-// Shared token-file contract (byte-identical with TS side):
+// Shared token-file contract (the stdio proxy reads the same file):
 //   Path:    <ProjectRoot>/Saved/MCP/capability-token
 //   Format:  raw UTF-8, 64 lowercase hex chars (32 bytes), NO trailing newline
 //   NEVER log the token value; never emit in health/telemetry/resource bodies
@@ -100,7 +100,7 @@ static inline bool WriteTokenFile(const FString& Token)
  * Read and return the token from the file, or an empty string if absent or
  * malformed. A valid token is exactly 64 lowercase hex chars after trimming
  * surrounding whitespace; anything else is treated as absent (fail closed) so
- * the C++ and TypeScript sides can never disagree on a file's meaning.
+ * the plugin and the stdio proxy can never disagree on a file's meaning.
  */
 static inline FString ReadTokenFile()
 {

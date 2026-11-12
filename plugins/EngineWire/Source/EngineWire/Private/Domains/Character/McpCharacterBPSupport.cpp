@@ -17,7 +17,7 @@ UBlueprint* CreateCharacterBlueprintAsset(const FString& Path, const FString& Na
         return nullptr;
     }
 
-    UPackage* Package = CreatePackage(*FullPath);
+    UPackage* Package = McpCreatePackageOrNull(FullPath);
     if (!Package)
     {
         OutError = FString::Printf(TEXT("Failed to create package: %s"), *FullPath);

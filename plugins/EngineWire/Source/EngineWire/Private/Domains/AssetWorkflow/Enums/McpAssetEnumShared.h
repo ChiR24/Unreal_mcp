@@ -34,10 +34,6 @@ struct FMcpEnumEdit
     ~FMcpEnumEdit() { Transaction.DescribeInto(Response); }
 };
 
-// Mirror the struct/datatable handlers' JSON payload accessors
-// (GetJsonStringField / GetJsonBoolField / GetJsonNumberField live in
-// McpJsonFields.h).
-
 // Single entry point for all UserDefinedEnum authoring actions. Mirrors the
 // DataTable handler signature style: the result object is returned through an
 // out-parameter so the calling layer can embed it in its own response envelope.

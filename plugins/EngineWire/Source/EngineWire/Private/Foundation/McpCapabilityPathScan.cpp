@@ -22,9 +22,8 @@ namespace McpCapabilityAuthorization
 {
 namespace
 {
-// Bounds for the payload path scan. A hostile client cannot make the gate walk
-// an unbounded structure before its request is even queued.
-constexpr int32 MaxScanDepth = 24;
+// Bounds for the payload path scan (McpCapabilityAuthorization.h).
+constexpr int32 MaxScanDepth = McpMaxPayloadScanDepth;
 constexpr int32 MaxScanNodes = McpMaxPayloadScanNodes;
 
 struct FScanState

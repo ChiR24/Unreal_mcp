@@ -71,7 +71,7 @@ FMcpMetaSoundNodeClassRequest ResolveMetaSoundAddNodeClass(const TSharedPtr<FJso
 #if MCP_HAS_METASOUND_SEARCH_ENGINE
 	// Every spelling is resolved against the live node registry before the add,
 	// case-insensitively: a bare or partial name ("Sine", "UE.Multiply") gets its
-	// full Namespace.Name.Variant (dogfood #115), and a wrong namespace guess
+	// full Namespace.Name.Variant, and a wrong namespace guess
 	// ("UE.AD Envelope.Audio" for "AD Envelope.AD Envelope.Audio" -- standard
 	// nodes do not share one namespace) is retried by name and variant alone,
 	// so the engine is never asked for a class it will log as unregistered.

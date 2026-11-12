@@ -1,4 +1,4 @@
-// control_editor explore_level (S5; see McpExplore.h): the session and the call. start makes a session for the running
+// control_editor explore_level (see McpExplore.h): the session and the call. start makes a session for the running
 // game (only one this server started: McpPlaySession), samples the nav mesh for islands, and explores; continue explores
 // more; read answers with the archive; stop ends it. Each exploring call runs at most its seconds, one step per editor
 // frame, with the window held on screen without focus, then answers.

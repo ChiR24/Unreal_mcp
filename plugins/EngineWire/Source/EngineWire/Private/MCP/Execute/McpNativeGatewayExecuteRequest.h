@@ -6,8 +6,8 @@
 //
 // When both are supplied they must designate the same capability; a
 // disagreement is reported as FORM_CONFLICT rather than one form silently
-// winning. Cross-cutting execution controls live only in `options` (the Task 3
-// key set); a control smuggled into `params` is rejected.
+// winning. Cross-cutting execution controls live only in `options`;
+// a control smuggled into `params` is rejected.
 
 #pragma once
 
@@ -18,10 +18,10 @@
 
 struct FMcpCapabilityRecord;
 
-/** Bounded execution option keys, mirroring EXECUTION_OPTION_KEYS in TypeScript. */
+/** Bounded execution option keys. */
 const TArray<FString>& McpExecutionOptionKeys();
 
-/** Upper bound for options.timeoutMs, mirroring MAX_TIMEOUT_MS in TypeScript. */
+/** Upper bound for options.timeoutMs. */
 constexpr int64 McpMaxExecutionTimeoutMs = 600000;
 
 struct FMcpGatewayExecuteRequest
@@ -31,7 +31,7 @@ struct FMcpGatewayExecuteRequest
 	TSharedPtr<FJsonObject> Params;
 	TSharedPtr<FJsonObject> Options;
 
-	/** resolvedFromAlias / migratedFrom: the names the call used, as the TS gateway reports them. */
+	/** resolvedFromAlias / migratedFrom: the names the call used. */
 	TSharedPtr<FJsonObject> Provenance;
 };
 
@@ -50,7 +50,7 @@ bool McpValidateExecutionOptions(
 
 /**
  * Validate `options.idempotencyKey` alone: absent, or a string of 1..128
- * characters, mirroring IdempotencyKeySchema in TypeScript. Implemented in
+ * characters. Implemented in
  * McpNativeGatewayIdempotency.cpp, beside the ledger the key addresses.
  */
 bool McpValidateIdempotencyKeyOption(

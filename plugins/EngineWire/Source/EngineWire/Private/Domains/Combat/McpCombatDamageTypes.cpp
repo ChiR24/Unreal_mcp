@@ -39,7 +39,7 @@ bool FCombatActionContext::HandleDamageTypes() const
                 return true;
             }
 
-            UPackage* Package = CreatePackage(*FullPath);
+            UPackage* Package = McpCreatePackageOrNull(FullPath);
             if (!Package)
             {
                 SendAutomationError(RequestingSocket, RequestId, TEXT("Failed to create damage type package."), TEXT("CREATION_FAILED"));

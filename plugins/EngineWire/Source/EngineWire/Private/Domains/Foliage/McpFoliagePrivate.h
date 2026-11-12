@@ -1,6 +1,5 @@
 #pragma once
 
-#include "Core/Module/EngineWireGlobals.h"
 #include "Dom/JsonObject.h"
 #include "Foundation/BridgeHelpers/McpHelpers.h"
 #include "EngineWireSubsystem.h"

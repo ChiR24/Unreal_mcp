@@ -11,6 +11,16 @@
 #include "ISettingsModule.h"
 #include "Modules/ModuleManager.h"
 
+namespace
+{
+// The native transport while it serves /mcp, else null.
+FMcpNativeTransport* RunningTransport()
+{
+	const UEngineWireSubsystem* Subsystem = GEditor ? GEditor->GetEditorSubsystem<UEngineWireSubsystem>() : nullptr;
+	return Subsystem && Subsystem->NativeTransport && Subsystem->NativeTransport->IsRunning() ? Subsystem->NativeTransport.Get() : nullptr;
+}
+}
+
 void SMcpStatusBarWidget::Construct(const FArguments& InArgs)
 {
 	ChildSlot
@@ -58,12 +68,9 @@ FText SMcpStatusBarWidget::GetStatusText() const
 {
 	if (!GEditor) return FText::FromString(TEXT("MCP"));
 
-	auto* Subsystem = GEditor->GetEditorSubsystem<UEngineWireSubsystem>();
-	if (Subsystem && Subsystem->NativeTransport && Subsystem->NativeTransport->IsRunning())
+	if (const FMcpNativeTransport* Transport = RunningTransport())
 	{
-		const int32 Port = Subsystem->NativeTransport->GetListenPort();
-		const int32 Sessions = Subsystem->NativeTransport->GetActiveSessionCount();
-		return FText::FromString(FString::Printf(TEXT("MCP :%d (%d)"), Port, Sessions));
+		return FText::FromString(FString::Printf(TEXT("MCP :%d (%d)"), Transport->GetListenPort(), Transport->GetActiveSessionCount()));
 	}
 
 	return FText::FromString(TEXT("MCP off"));
@@ -71,13 +78,6 @@ FText SMcpStatusBarWidget::GetStatusText() const
 
 FSlateColor SMcpStatusBarWidget::GetStatusColor() const
 {
-	if (!GEditor) return FSlateColor(FLinearColor(0.4f, 0.4f, 0.4f));
-
-	auto* Subsystem = GEditor->GetEditorSubsystem<UEngineWireSubsystem>();
-	if (Subsystem && Subsystem->NativeTransport && Subsystem->NativeTransport->IsRunning())
-	{
-		return FSlateColor(FLinearColor(0.1f, 0.8f, 0.1f)); // Green
-	}
-
-	return FSlateColor(FLinearColor(0.4f, 0.4f, 0.4f)); // Gray
+	// Green while /mcp is served, gray otherwise.
+	return FSlateColor(RunningTransport() ? FLinearColor(0.1f, 0.8f, 0.1f) : FLinearColor(0.4f, 0.4f, 0.4f));
 }

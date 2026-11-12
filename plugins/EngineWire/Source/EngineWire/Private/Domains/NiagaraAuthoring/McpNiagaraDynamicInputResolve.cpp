@@ -96,7 +96,7 @@ FString ListModuleInputs(UNiagaraNodeFunctionCall* Module)
 
 // targetNodeId is optional (the contract only requires systemPath + inputName): without it
 // the module is resolved by moduleName / targetModuleName, the "Module.Input" prefix of
-// inputName, or - when exactly one module exposes the input - by the input alone (dogfood #105).
+// inputName, or - when exactly one module exposes the input - by the input alone.
 UNiagaraNodeFunctionCall* ResolveDynamicInputTargetNode(
     FActionContext& Context,
     UNiagaraGraph* Graph,

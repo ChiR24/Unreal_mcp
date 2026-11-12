@@ -8,7 +8,8 @@ class FMcpToolDefinition;
 
 /**
  * The canonical parent tools, registered at static-init time by the generated
- * McpGeneratedParentRegistry.cpp. Register() and the readers share one lock.
+ * McpGeneratedParentRegistry.cpp. Register() locks; registration ends at static init, before any reader
+ * runs, so the readers take no lock.
  */
 class FMcpToolRegistry
 {

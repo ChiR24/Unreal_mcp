@@ -4,7 +4,6 @@
 
 #include "Domains/BlueprintCreation/McpBPCreatePrivate.h"
 #include "HAL/PlatformTime.h"
-#include "Core/Module/EngineWireGlobals.h"
 #include "Foundation/BridgeHelpers/McpHelpers.h"
 #include "EngineWireSubsystem.h"
 #include "Misc/ScopeLock.h"

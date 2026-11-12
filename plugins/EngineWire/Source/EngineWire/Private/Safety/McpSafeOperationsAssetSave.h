@@ -116,7 +116,7 @@ inline bool McpSafeAssetSave(UObject* Asset)
 
     // Nobody can answer a modal during an MCP call. A save that failed opened the
     // editor's message or checkout dialog and blocked the game thread until the
-    // process was killed (a build_graph batch on BP_LaserGate, 2026-09-25).
+    // process was killed (seen in a build_graph batch).
     // Unattended, PromptForCheckoutAndSave saves directly and a dialog only logs.
     TGuardValue<bool> UnattendedSave(GIsRunningUnattendedScript, true);
     if (AssetToSave && AssetToSave != Package)

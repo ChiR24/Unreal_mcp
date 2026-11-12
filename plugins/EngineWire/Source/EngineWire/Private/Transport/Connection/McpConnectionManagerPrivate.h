@@ -18,6 +18,29 @@
 // (McpConnectionManagerContentRoots.cpp). Sent in bridge_ack and content_roots_changed.
 TArray<TSharedPtr<FJsonValue>> McpBuildContentRootValues();
 
+// {type: automation_event, event, payload}, serialized once and sent to each target.
+inline void McpSendAutomationEvent(const TCHAR* EventName, const TSharedRef<FJsonObject>& Payload,
+                                   const TArray<TSharedPtr<FMcpBridgeWebSocket>>& Targets) {
+  const TSharedRef<FJsonObject> Event = MakeShared<FJsonObject>();
+  Event->SetStringField(TEXT("type"), TEXT("automation_event"));
+  Event->SetStringField(TEXT("event"), EventName);
+  Event->SetObjectField(TEXT("payload"), Payload);
+  FString Serialized;
+  const TSharedRef<TJsonWriter<>> Writer = TJsonWriterFactory<>::Create(&Serialized);
+  FJsonSerializer::Serialize(Event, Writer);
+  for (const TSharedPtr<FMcpBridgeWebSocket>& Sock : Targets) {
+    Sock->Send(Serialized);
+  }
+}
+
+// A requestId or action longer than this is refused.
+inline constexpr int32 McpBridgeMaxIdChars = 128;
+
+// Unreal logs a console command itself, so the request and response log lines leave it out.
+inline bool McpIsEngineLoggedAction(const FString& Action) {
+  return Action.Equals(TEXT("console_command"), ESearchCase::IgnoreCase);
+}
+
 // "key=value ..." log preview of Obj: strings quoted and cut to MaxString, arrays as [n], objects as {...},
 // image payload fields omitted. bRequest also drops type/requestId and redacts code.
 inline FString PreviewJsonFields(const TSharedPtr<FJsonObject>& Obj, int32 MaxString, bool bRequest) {

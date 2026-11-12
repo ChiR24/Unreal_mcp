@@ -123,7 +123,7 @@ bool UEngineWireSubsystem::HandleAddFoliageType(
   }
   const bool bCreated = FoliageType == nullptr;
   if (!FoliageType) {
-    UPackage *Package = CreatePackage(*FullPackagePath);
+    UPackage *Package = McpCreatePackageOrNull(FullPackagePath);
     FoliageType = Package ? NewObject<UFoliageType_InstancedStaticMesh>(
         Package, FName(*AssetName), RF_Public | RF_Standalone) : nullptr;
   }

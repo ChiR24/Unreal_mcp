@@ -140,7 +140,7 @@ static const TMap<EMcpStateKind, int64> NoRevisions;
 
 // Regression harness: saturate one session key, assert the precise
 // refusal, drain admitted work at lane depth one, then accept a NEW request
-// after recovery (plan Todo 8 acceptance, run on the game thread like the
+// after recovery (run on the game thread like the
 // sibling RequestQueue tests).
 IMPLEMENT_SIMPLE_AUTOMATION_TEST(
     FMcpAutomationSaturationRecoveryTest,
@@ -188,8 +188,8 @@ bool FMcpAutomationSaturationRecoveryTest::RunTest(const FString &Parameters) {
         EAutomationQueueRejection::None);
   }
 
-  // 17th request under the SAME session key: precise SessionQueueFull refusal
-  // (the :67 path), never the generic global-cap code.
+  // 17th request under the SAME session key: precise SessionQueueFull refusal,
+  // never the generic global-cap code.
   TestEqual(
       TEXT("17th same-session request refused with SessionQueueFull"),
       Subsystem->QueueAutomationRequest(

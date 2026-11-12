@@ -14,7 +14,7 @@ const code = (...segments: readonly string[]): string =>
 
 describe('action contracts', () => {
   const request = code('MCP', 'Execute', 'McpNativeGatewayExecuteRequest.cpp');
-  const execute = code('MCP', 'Execute', 'McpNativeTransportGatewayExecute.cpp');
+  const execute = code('MCP', 'Transport', 'Methods', 'McpNativeTransportGatewayExecute.cpp');
   const process = code('Core', 'Requests', 'McpProcessRequest.cpp');
   const responses = code('Core', 'Subsystem', 'EngineWireSubsystemResponses.cpp');
   const contracts = code('Domains', 'Debug', 'Contracts', 'McpContracts.cpp');

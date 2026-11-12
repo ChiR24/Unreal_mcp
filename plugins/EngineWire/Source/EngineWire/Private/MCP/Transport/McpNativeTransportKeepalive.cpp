@@ -162,14 +162,7 @@ void FMcpNativeTransport::AnswerStillRunning(const FString& RequestId)
 	TSharedPtr<FJsonObject> Result = Data;
 	if (!Conn->CapabilityId.IsEmpty())
 	{
-		FMcpReceiptContext Context;
-		Context.CorrelationId = Conn->CorrelationId;
-		Context.RequestId = Conn->RequestId;
-		Context.IdempotencyId = Conn->IdempotencyId;
-		Context.StartTimeSeconds = Conn->RequestStartSeconds;
-		Context.GatewayWarnings = Conn->GatewayWarnings;
-		Context.Provenance = Conn->Provenance;
-		Result = McpBuildSuccessReceipt(Conn->CapabilityId, Data, Context, Raw, Message);
+		Result = McpBuildSuccessReceipt(Conn->CapabilityId, Data, McpReceiptContextOf(*Conn), Raw, Message);
 	}
 	TSharedPtr<FJsonObject> ToolResult = FMcpJsonRpc::BuildToolResult(true, Message, Result, FString());
 	if (Conn->bModern)

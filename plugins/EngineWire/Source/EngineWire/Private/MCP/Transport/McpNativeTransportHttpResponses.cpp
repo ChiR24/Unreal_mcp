@@ -232,5 +232,3 @@ bool FMcpNativeTransport::WriteSSEEvent(FSSEConnection& Conn, const FString& Eve
 	FScopeLock Lock(&Conn.WriteMutex);
 	return Conn.Socket && SendSSEFrame(Conn.Socket, EventData);
 }
-
-// ─── Persistent Notification Streams (GET /mcp) ────────────────────────────

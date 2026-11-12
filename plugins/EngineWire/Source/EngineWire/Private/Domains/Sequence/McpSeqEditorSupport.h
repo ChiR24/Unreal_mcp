@@ -5,7 +5,6 @@
 
 #include "Dom/JsonObject.h"
 #include "LevelSequence.h"
-#include "Core/Module/EngineWireGlobals.h"
 #include "Foundation/BridgeHelpers/McpHelpers.h"
 #include "EngineWireSubsystem.h"
 #include "Modules/ModuleManager.h"
@@ -56,6 +55,9 @@
 
 #include "ScopedTransaction.h"
 #include "Camera/CameraActor.h"
+
+// The sequence the last create made: what ResolvePath answers when a call names no path.
+extern FString GCurrentSequencePath;
 
 namespace McpSequence {
 FString ResolvePath(const TSharedPtr<FJsonObject> &Payload);

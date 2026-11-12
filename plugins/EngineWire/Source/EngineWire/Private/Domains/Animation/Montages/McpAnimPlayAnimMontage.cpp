@@ -77,7 +77,7 @@ bool UEngineWireSubsystem::HandlePlayAnimMontage(
   }
 
   // Resolve the montage by loading it (package path or object path); DoesAssetExist rejected valid
-  // /Game package paths for freshly authored montages (dogfood #91).
+  // /Game package paths for freshly authored montages.
   UAnimMontage *Montage = LoadObject<UAnimMontage>(nullptr, *MontagePath);
   if (!Montage && !MontagePath.Contains(TEXT("."))) {
     Montage = LoadObject<UAnimMontage>(

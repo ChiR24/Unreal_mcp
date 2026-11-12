@@ -185,7 +185,7 @@ bool HandleCreateMediaSource(UEngineWireSubsystem *Subsystem,
                    TEXT("The media source could not be saved"), Result);
     return true;
   }
-  // The contract requires mediaSourcePath (dogfood #130).
+  // The contract requires mediaSourcePath.
   Result->SetStringField(TEXT("mediaSourcePath"), Created.ObjectPath);
   Subsystem->SendAutomationResponse(Socket, RequestId, true,
                                     TEXT("Media source asset created"), Result);

@@ -53,7 +53,7 @@ bool HandleConfigureMovementSpeeds(UEngineWireSubsystem* Self, const FString& Re
     Result->SetStringField(TEXT("blueprintPath"), BlueprintPath);
     if (CharCDO && CharCDO->GetCharacterMovement())
     {
-        // Echo the values now on the CDO (dogfood #39).
+        // Echo the values now on the CDO.
         const UCharacterMovementComponent* Applied = CharCDO->GetCharacterMovement();
         Result->SetNumberField(TEXT("jumpZVelocity"), Applied->JumpZVelocity);
         Result->SetNumberField(TEXT("airControl"), Applied->AirControl);
@@ -119,7 +119,7 @@ bool HandleConfigureJump(UEngineWireSubsystem* Self, const FString& RequestId, c
     Result->SetStringField(TEXT("blueprintPath"), BlueprintPath);
     if (CharCDO && CharCDO->GetCharacterMovement())
     {
-        // Echo the values now on the CDO (dogfood #39).
+        // Echo the values now on the CDO.
         const UCharacterMovementComponent* Applied = CharCDO->GetCharacterMovement();
         Result->SetNumberField(TEXT("jumpZVelocity"), Applied->JumpZVelocity);
         Result->SetNumberField(TEXT("airControl"), Applied->AirControl);

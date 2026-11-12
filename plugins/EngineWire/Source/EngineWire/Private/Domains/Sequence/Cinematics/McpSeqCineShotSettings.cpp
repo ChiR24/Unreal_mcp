@@ -95,7 +95,7 @@ bool HandleConfigureShotSettings(const TSharedPtr<FJsonObject> &Params,
   }
   UMovieSceneCinematicShotSection *Shot =
       FindShotSection(Sequence->GetMovieScene(),
-                      // sectionName selects the shot when the caller also passes the new displayName (dogfood #120).
+                      // sectionName selects the shot when the caller also passes the new displayName.
                       Params->HasField(TEXT("sectionName")) ? GetString(Params, TEXT("sectionName"), TEXT("shotName"))
                                                             : GetString(Params, TEXT("shotName"), TEXT("displayName")),
                       GetString(Params, TEXT("shotSequencePath")), SectionIndex);

@@ -89,7 +89,7 @@ TSharedPtr<FJsonObject> HandleBlueprintAssetActions(const FString& SubAction, co
 
         // Create package and asset directly to avoid UI dialogs
         FString PackagePath = Path / Name;
-        UPackage* Package = CreatePackage(*PackagePath);
+        UPackage* Package = McpCreatePackageOrNull(PackagePath);
         if (!Package)
         {
             ANIM_ERROR_RESPONSE(TEXT("Failed to create package"), TEXT("PACKAGE_ERROR"));

@@ -15,7 +15,7 @@ const code = (file: string): string =>
 
 describe('native MCP 2026-07-28 requests', () => {
   const connection = code('MCP/Transport/McpNativeTransportConnection.cpp');
-  const modern = code('MCP/Protocol/McpNativeTransportModern.cpp');
+  const modern = code('MCP/Transport/Methods/McpNativeTransportModern.cpp');
   const request = code('MCP/Protocol/McpModernRequest.cpp');
   const header = code('MCP/Protocol/McpModernRequest.h');
 
@@ -39,17 +39,17 @@ describe('native MCP 2026-07-28 requests', () => {
   it('serves every modern request on the implicit session, rate limits first, and never names that session', () => {
     expect(modern.indexOf('ConsumeSessionRequestBudget(SessionId')).toBeLessThan(modern.indexOf('const McpModern::FScope Scope(Call);'));
     expect(modern).toContain('static const FString Salt = FGuid::NewGuid().ToString();');
-    expect(code('MCP/Transport/McpNativeTransportGatewayStream.cpp')).toContain('Conn->bModern ? FString() : SessionId');
+    expect(code('MCP/Transport/Methods/McpNativeTransportGatewayStream.cpp')).toContain('Conn->bModern ? FString() : SessionId');
     expect(code('MCP/Transport/McpNativeTransportHttpResponses.cpp')).toContain('if (!SessionId.IsEmpty())');
   });
 
   it('stamps every JSON answer and the streamed result of a modern call', () => {
     expect(code('MCP/Transport/McpNativeTransportHttpResponses.cpp')).toContain('McpModern::StampResponseBody(Body, Modern.Method)');
-    expect(code('MCP/Transport/McpNativeTransportPendingRequests.cpp')).toContain('if (Conn->bModern) McpModern::StampResult(TEXT("tools/call"), ToolResult);');
+    expect(code('MCP/Transport/Methods/McpNativeTransportPendingRequests.cpp')).toContain('if (Conn->bModern) McpModern::StampResult(TEXT("tools/call"), ToolResult);');
   });
 
   it('lists 2026-07-28 and the tasks extension in server/discover', () => {
-    const discovery = code('MCP/Transport/McpNativeTransportToolDiscovery.cpp');
+    const discovery = code('MCP/Transport/Methods/McpNativeTransportToolDiscovery.cpp');
     expect(discovery).toContain('TArray<TSharedPtr<FJsonValue>> Versions = {MakeShared<FJsonValueString>(McpModern::Version)};');
     expect(discovery).toContain('Extensions->SetObjectField(TEXT("io.modelcontextprotocol/tasks"), MakeShared<FJsonObject>());');
   });
@@ -57,7 +57,7 @@ describe('native MCP 2026-07-28 requests', () => {
 
 describe('native consent through the client', () => {
   const consent = code('MCP/Protocol/McpModernConsent.cpp');
-  const execute = code('MCP/Execute/McpNativeTransportGatewayExecute.cpp');
+  const execute = code('MCP/Transport/Methods/McpNativeTransportGatewayExecute.cpp');
 
   it('signs requestState with a per-run key over the principal, the call digest and the payload, and checks it in constant time', () => {
     expect(consent).toContain('static const FString Key = McpCapabilityTokenStore::GenerateRandomToken();');
@@ -89,7 +89,7 @@ describe('native consent through the client', () => {
 
 describe('native tasks extension', () => {
   const keepalive = code('MCP/Transport/McpNativeTransportKeepalive.cpp');
-  const modern = code('MCP/Protocol/McpNativeTransportModern.cpp');
+  const modern = code('MCP/Transport/Methods/McpNativeTransportModern.cpp');
 
   it('answers a task handle at the client time limit when the client declared the extension', () => {
     expect(keepalive).toContain('Conn->bTasks');
@@ -97,7 +97,7 @@ describe('native tasks extension', () => {
   });
 
   it('keeps the call result for tasks/get and reads tasks only for their principal', () => {
-    expect(code('MCP/Transport/McpNativeTransportPendingRequests.cpp')).toContain('ReportedResult), ToolResult);');
+    expect(code('MCP/Transport/Methods/McpNativeTransportPendingRequests.cpp')).toContain('ReportedResult), ToolResult);');
     expect(modern).toContain('TaskResults.Find(TaskId, GetSessionPrincipal(SessionId).Identity, Task)');
     expect(code('MCP/DynamicTools/McpTaskResults.cpp')).toContain('Entry->Principal.Equals(Principal, ESearchCase::CaseSensitive)');
   });

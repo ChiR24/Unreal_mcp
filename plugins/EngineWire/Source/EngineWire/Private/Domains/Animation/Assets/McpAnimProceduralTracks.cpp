@@ -1,6 +1,6 @@
 #include "Domains/Animation/Assets/McpAnimProceduralTracks.h"
+#include "Foundation/BridgeHelpers/Assets/McpAssetCreation.h"
 #include "Foundation/BridgeHelpers/Blueprints/McpBPPaths.h"
-#include "Core/Module/EngineWireGlobals.h"
 #include "Core/Compatibility/McpVersionCompatibility.h"
 
 #include "Animation/AnimSequence.h"
@@ -32,7 +32,7 @@ UObject *CreateOrReuseAnimAsset(UClass *AssetClass, UFactory *Factory, const FSt
     return nullptr;
   }
   // CreatePackage + the factory directly: AssetTools' CreateAsset can raise dialogs nobody can answer.
-  UPackage *Package = CreatePackage(*PackagePath);
+  UPackage *Package = McpCreatePackageOrNull(PackagePath);
   UObject *NewAsset = Package && Factory
       ? Factory->FactoryCreateNew(AssetClass, Package, FName(*Name), RF_Public | RF_Standalone, nullptr, GWarn)
       : nullptr;

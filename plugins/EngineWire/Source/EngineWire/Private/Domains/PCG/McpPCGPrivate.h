@@ -4,7 +4,7 @@
 #include "EngineWireSubsystem.h"
 #include "Foundation/BridgeHelpers/McpHelpers.h"
 #include "Foundation/HandlerUtils/McpHandlerUtils.h"
-#include "MCP/Routing/McpConsolidatedActionRouting.h"
+#include "Core/Routing/McpConsolidatedActionRouting.h"
 
 #include "Dom/JsonObject.h"
 #include "Dom/JsonValue.h"

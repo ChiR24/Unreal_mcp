@@ -41,7 +41,7 @@ TSharedPtr<FJsonObject> HandleMetaSoundAssetActions(const FString& SubAction, co
 	}
 	Name = FPackageName::GetShortName(PackagePath);
 
-	UPackage* Package = CreatePackage(*PackagePath);
+	UPackage* Package = McpCreatePackageOrNull(PackagePath);
 	if (!Package)
 	{
 		return McpHandlerUtils::BuildErrorResponse(TEXT("PACKAGE_ERROR"), TEXT("Failed to create package"));

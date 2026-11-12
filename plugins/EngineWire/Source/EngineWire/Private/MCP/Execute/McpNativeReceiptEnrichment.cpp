@@ -9,7 +9,6 @@
 #include "MCP/Execute/McpNativeGatewayReceipt.h"
 #include "MCP/Execute/McpNativeGatewayCanonicalRecords.h"
 #include "MCP/Gateway/McpNativeGatewayCapabilityStore.h"
-#include "MCP/Gateway/McpNativeGatewayCatalog.h"
 #include "HAL/PlatformTime.h"
 
 void McpSetReceiptRecordRevisions(const TSharedPtr<FJsonObject>& Receipt, const FString& CapabilityId)
@@ -121,8 +120,8 @@ static void McpCollectResultWarnings(const TSharedPtr<FJsonObject>& Source,
 // A world edit made while Play-In-Editor runs lands in the PIE world and is
 // discarded when play stops; the only trace was a UEDPIE_ prefix buried in
 // details.worldName, so a caller editing "the level" while someone was playing
-// believed a whole spawn batch had stuck. Mirrors pieWorldWarnings() in
-// gateway-execute-dispatch.ts; the caller has already excluded read capabilities.
+// believed a whole spawn batch had stuck. The caller
+// has already excluded read capabilities.
 static void McpAddPieWorldWarning(const FString& CapabilityId,
                                   const TSharedPtr<FJsonObject>& Source,
                                   TArray<FString>& Out)
@@ -225,7 +224,7 @@ TSharedPtr<FJsonObject> McpBuildCanonicalReceipt(
 			Receipt->SetObjectField(TEXT("task"), Task);
 		}
 		// The payload is published once at the top level; the receipt binds to the masked payload
-		// through a digest instead of repeating it (dogfood #11). Mirrors dataDigestOf() in envelope.ts.
+		// through a digest instead of repeating it.
 		TSharedPtr<FJsonObject> Published = Data.IsValid() ? Data : MakeShared<FJsonObject>();
 		McpMaskSecretsDeep(Published);
 		FString CanonicalData;

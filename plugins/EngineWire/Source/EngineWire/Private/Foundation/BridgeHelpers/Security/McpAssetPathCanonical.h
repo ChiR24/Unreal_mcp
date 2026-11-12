@@ -24,8 +24,7 @@ namespace McpAssetPathCanonical
 {
 /**
  * A first path segment that names a host filesystem root, never a UE mount.
- * Mirrors the TypeScript HOST_PATH_PATTERN so both surfaces refuse the same
- * shapes. `/Temp` is a real UE root and does not collide with `tmp`.
+ * `/Temp` is a real UE root and does not collide with `tmp`.
  */
 inline bool IsHostFilesystemRootSegment(const FString& Segment)
 {

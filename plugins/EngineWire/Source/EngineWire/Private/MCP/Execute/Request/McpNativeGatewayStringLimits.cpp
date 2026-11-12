@@ -1,12 +1,13 @@
 #include "MCP/Execute/Request/McpNativeGatewayStringLimits.h"
 
 #include "MCP/Execute/McpNativeGatewaySchemaKeywords.h"
+#include "Foundation/McpCapabilityAuthorization.h"
 
 namespace
 {
-// The pre-queue gate's nesting bound (McpPrequeueGate.cpp): no payload nested deeper reaches the queue, so refusing
-// it here narrows nothing and keeps this walk, which follows reflection-boundary interiors, off a hostile nest's stack.
-constexpr int32 StringLimitsMaxDepth = 24;
+// The pre-queue gate's nesting bound: no payload nested deeper reaches the queue, so refusing it here narrows nothing
+// and keeps this walk, which follows reflection-boundary interiors, off a hostile nest's stack.
+constexpr int32 StringLimitsMaxDepth = McpMaxPayloadScanDepth;
 
 bool RefuseStringLimit(const FString& Pointer, const FString& Message, FMcpSchemaViolationDetail& OutViolation)
 {

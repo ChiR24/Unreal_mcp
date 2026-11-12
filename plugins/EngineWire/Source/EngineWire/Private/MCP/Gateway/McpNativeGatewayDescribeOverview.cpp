@@ -1,10 +1,9 @@
 // McpNativeGatewayDescribeOverview.cpp — describe's listings and schema hygiene.
 //
-// The browse levels above one capability (catalog -> domain -> family) and the tool summary, each in the shape
-// gateway-describe-browse.ts and gateway-describe.ts answer on the TS door. describe {} used to
-// answer UNKNOWN_TOOL although nothing else enumerated the canonical parents (dogfood #1), then listed the 23 parents
-// while the TS door listed domains; and every capability inputSchema leaked the envelope key `action` as a required
-// parameter (dogfood #78/#110).
+// The browse levels above one capability (catalog -> domain -> family) and the tool summary. describe {} used to
+// answer UNKNOWN_TOOL although nothing else enumerated the canonical parents, then listed the 23 parents
+// where it now lists domains; and every capability inputSchema leaked the envelope key `action` as a required
+// parameter.
 #include "MCP/Gateway/McpNativeGatewayDescribe.h"
 #include "MCP/Gateway/McpNativeGatewayGuidance.h"
 #include "MCP/Gateway/McpNativeGatewayCapabilityStore.h"
@@ -17,7 +16,7 @@ namespace
 // A functor, not a function: TFunctionRef keeps a pointer to the callable it is handed.
 const auto RecordFamily = [](const FMcpCapabilityRecord& Record) -> FString { return Record.Family; };
 
-// Rows [Offset, Offset + Limit) of a listing, and whether more follow (paged in gateway-describe-browse.ts).
+// Rows [Offset, Offset + Limit) of a listing, and whether more follow.
 template <typename T>
 TArray<T> ListingPage(const TArray<T>& Entries, int32 Offset, int32 Limit, bool& bOutHasMore)
 {
@@ -194,7 +193,7 @@ TSharedPtr<FJsonObject> McpGatewayToolSummary(
 		if (Query.IsEmpty() || Action.ToLower().Contains(Query, ESearchCase::CaseSensitive)) Filtered.Add(Action);
 	}
 	// Action names are short, so the whole list unless a page is asked for: limit stops at 50 and a parent can carry
-	// more actions than one page (describeToolSummary in gateway-describe.ts).
+	// more actions than one page.
 	const int32 Limit = Input.bHasLimit ? FMath::Clamp(Input.Limit, 1, McpDescribeMaxLimit) : Filtered.Num();
 	const int32 Offset = FMath::Max(0, Input.Offset);
 	bool bHasMore = false;

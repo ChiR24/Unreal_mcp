@@ -1,4 +1,5 @@
 #include "Domains/SystemControl/McpSystemValidateDelta.h"
+#include "Foundation/HandlerUtils/McpHandlerUtilsResponses.h"
 
 #include "Core/Journal/McpChangeJournal.h"
 #include "Core/Requests/McpResponseCaptureRegistry.h"
@@ -74,15 +75,9 @@ void AddWarnings(const FString& RequestId, const TSharedPtr<FJsonObject>& Result
     {
         return;
     }
-    TArray<TSharedPtr<FJsonValue>> Lines;
-    const TArray<TSharedPtr<FJsonValue>>* Existing = nullptr;
-    if (Result->TryGetArrayField(TEXT("warnings"), Existing) && Existing)
-    {
-        Lines = *Existing;
-    }
     for (int32 Index = 0; Index < Found.Num() && Index < MaxListed; ++Index)
     {
-        Lines.Add(MakeShared<FJsonValueString>(Found[Index]));
+        McpHandlerUtils::AppendWarning(Result, Found[Index]);
     }
     TArray<FString> Unsaid;
     if (Found.Num() > MaxListed)
@@ -95,9 +90,8 @@ void AddWarnings(const FString& RequestId, const TSharedPtr<FJsonObject>& Result
     }
     if (Unsaid.Num() > 0)
     {
-        Lines.Add(MakeShared<FJsonValueString>(FString::Join(Unsaid, TEXT("; ")) +
-            TEXT(": system_control validate_assets with dataValidation true checks them all.")));
+        McpHandlerUtils::AppendWarning(Result, FString::Join(Unsaid, TEXT("; ")) +
+            TEXT(": system_control validate_assets with dataValidation true checks them all."));
     }
-    Result->SetArrayField(TEXT("warnings"), Lines);
 }
 } // namespace McpValidateDelta

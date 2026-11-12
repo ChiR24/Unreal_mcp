@@ -212,7 +212,7 @@ bool FMcpPrequeueGateWriteTargetProofTest::RunTest(const FString& Parameters)
 
 	// THE NARROWING'S REASON: a legitimately pathless write must NOT regress.
 	// console_command declares no path parameter, so a confined principal keeps
-	// running it — this is live matrix case B2-0.
+	// running it.
 	TestTrue(TEXT("control: a pathless write capability is still admitted"),
 		Authorize(Confined, TEXT("system_control"),
 			McpTestFields({ { TEXT("subAction"), TEXT("console_command") },

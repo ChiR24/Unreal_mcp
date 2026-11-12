@@ -12,7 +12,7 @@
 
 namespace
 {
-const FName ProbeTag(TEXT("McpTask43UndoProbe"));
+const FName ProbeTag(TEXT("McpUndoProbe"));
 
 /** A fresh transactional object with no outer asset, so nothing on disk moves. */
 USceneComponent* MakeTransactionalProbe()
@@ -30,7 +30,7 @@ void ClearUndoBuffer()
 {
 	if (GEditor && GEditor->Trans)
 	{
-		GEditor->Trans->Reset(FText::FromString(TEXT("Mcp Task 43 test isolation")));
+		GEditor->Trans->Reset(FText::FromString(TEXT("Mcp test isolation")));
 	}
 }
 
@@ -205,7 +205,7 @@ bool FMcpScopedTransactionDurableEscapeTest::RunTest(const FString& Parameters)
 
 	// A save inside a scope declared in-memory-only is the exact defect this
 	// witness exists to surface: undo restores the object, not the bytes.
-	McpDurableWrites::RecordDurableWrite(TEXT("/Game/Task43/EscapeProbe"));
+	McpDurableWrites::RecordDurableWrite(TEXT("/Game/McpEscapeProbe"));
 
 	TestFalse(TEXT("a durable write withdraws the undo claim"), Transaction.IsRecordingUndo());
 	TestTrue(TEXT("the state names the escape"),
@@ -213,7 +213,7 @@ bool FMcpScopedTransactionDurableEscapeTest::RunTest(const FString& Parameters)
 	TestEqual(TEXT("the refusal code is stable"), Transaction.GetRefusalCode(),
 		FString(TEXT("UNDO_BROKEN_BY_DURABLE_WRITE")));
 	TestTrue(TEXT("the detail names the package that escaped"),
-		Transaction.GetRefusalDetail().Contains(TEXT("/Game/Task43/EscapeProbe")));
+		Transaction.GetRefusalDetail().Contains(TEXT("/Game/McpEscapeProbe")));
 
 	const TSharedPtr<FJsonObject> Payload = MakeShared<FJsonObject>();
 	Transaction.DescribeInto(Payload);

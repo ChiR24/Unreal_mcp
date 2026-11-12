@@ -82,6 +82,14 @@ static inline bool ValidateAssetCreationPath(
   return true;
 }
 
+// CreatePackage, except that a path the engine would stop the editor on answers null: CreatePackage is a Fatal log for
+// a name holding "//" (a folder ending in a slash joined to a name, or a name like "a//b"), and so is the FName under
+// it for one past the 1023 characters a name holds. Handlers make their packages through this, never the engine call.
+static inline UPackage *McpCreatePackageOrNull(const FString &PackagePath)
+{
+  return PackagePath.Contains(TEXT("//")) || PackagePath.Len() >= NAME_SIZE ? nullptr : CreatePackage(*PackagePath);
+}
+
 // The package for a NEW asset at PackagePath (/Game/Folder/Name), or null with OutError and OutCode when that is not
 // possible: ASSET_ALREADY_EXISTS when an asset already lives there, PACKAGE_ERROR when the package cannot be made.
 // CreatePackage hands back an existing package, and the NewObject or factory call after it rebuilt that asset in
@@ -115,7 +123,7 @@ static inline UPackage *McpCreatePackageForNewAsset(const FString &PackagePath, 
     OutCode = TEXT("ASSET_ALREADY_EXISTS");
     return nullptr;
   }
-  UPackage *Package = CreatePackage(*PackagePath);
+  UPackage *Package = McpCreatePackageOrNull(PackagePath);
   if (!Package)
   {
     OutError = FString::Printf(TEXT("Could not create the package %s."), *PackagePath);

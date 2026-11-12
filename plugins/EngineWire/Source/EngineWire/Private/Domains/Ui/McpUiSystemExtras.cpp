@@ -51,7 +51,7 @@ bool RunConsole(UEngineWireSubsystem &Bridge, const FString &RequestId,
 } // namespace
 
 // The system_control actions that had describable contracts but no native
-// implementation (dogfood #167; set_quality lived only in the TS layer): each is a
+// implementation: each is a
 // thin adapter onto an existing handler or a validated console command.
 bool HandleSystemExtrasAction(UEngineWireSubsystem &Bridge,
                               const FString &RequestId, const FString &LowerSub,

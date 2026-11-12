@@ -3,8 +3,7 @@
 #include "CoreMinimal.h"
 #include "Dom/JsonObject.h"
 
-// Ranking behind the native gateway's "Undeclared parameter" text, mirrored
-// byte-for-byte by the TypeScript describeUndeclaredParameter.
+// Ranking behind the gateway's "Undeclared parameter" text.
 //
 // A wrong parameter name is usually a synonym rather than a typo, so substring
 // matching alone drew no "did you mean" for propertyValue when the caller sent
@@ -15,8 +14,8 @@
 namespace McpParameterHints
 {
 // camelCase -> lowercase word tokens: "propertyValue" -> { "property", "value" }.
-// Splits on a lower/digit followed by an upper (the TypeScript /([a-z0-9])([A-Z])/
-// boundary) and on any run of non-alphanumeric characters.
+// Splits on a lower/digit followed by an upper
+// and on any run of non-alphanumeric characters.
 inline TArray<FString> ParameterNameTokens(const FString& Name)
 {
 	auto IsAsciiAlnum = [](TCHAR Ch) {
@@ -91,7 +90,7 @@ inline TArray<FString> RankParameterNames(
 
 // A key that is one of a declared parameter's values (motion for readMode) is that parameter set to it: the list named
 // readMode and never said motion was one of its values. The first such parameter of Declared, the value as the schema
-// spells it; empty when none. Mirrors the TypeScript enumHint.
+// spells it; empty when none.
 inline FString EnumValueHint(const FString& Key, const TSharedPtr<FJsonObject>& Properties, const TArray<FString>& Declared)
 {
 	for (const FString& Name : Declared)

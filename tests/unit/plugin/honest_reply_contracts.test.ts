@@ -908,10 +908,17 @@ describe('object and class references in a property bag', () => {
     expect(objects).toContain('CP ? !(AsClass && AsClass->IsChildOf(Wanted)) : !Res->IsA(Wanted)');
   });
 
-  // A null error device crashed the editor: the enum import logs a name it refuses through it.
+  // A null error device crashed the editor: the enum import logs a name it refuses through it. The import goes through
+  // the compatibility macro, whose two arms pass no error device, so the engine's own (GWarn) is the one used.
   it('export text is imported with an error device', () => {
-    expect(objects).toContain('Property->ImportText_Direct(*Text, Scratch, nullptr, PPF_None) != nullptr');
-    expect(objects).not.toMatch(/ImportText_Direct\([^;]*PPF_None, nullptr\)/u);
+    expect(objects).toContain('MCP_PROPERTY_IMPORT_TEXT(Property, *Text, Scratch, nullptr, PPF_None) != nullptr');
+    expect(objects).not.toMatch(/ImportText(?:_Direct)?\(/u);
+    const compat = readFileSync(
+      join('plugins', 'EngineWire', 'Source', 'EngineWire', 'Private', 'Core', 'Compatibility', 'McpVersionCompatibility.h'),
+      'utf8',
+    );
+    expect(compat).toContain('(Property)->ImportText_Direct(Text, ValuePtr, Owner, Flags)');
+    expect(compat).toContain('(Property)->ImportText(Text, ValuePtr, Flags, Owner)');
   });
 });
 
@@ -1372,7 +1379,7 @@ describe('material and widget authoring', () => {
     const create = code('MaterialAuthoring', 'Creation', 'McpMatCreateMat.cpp');
     const check = create.indexOf('if (!ApplyMaterialEnumFields(nullptr, Payload, EnumError))');
     expect(check).toBeGreaterThan(-1);
-    expect(check).toBeLessThan(create.indexOf('CreatePackage('));
+    expect(check).toBeLessThan(create.indexOf('McpCreatePackageOrNull('));
     expect(check).toBeLessThan(create.indexOf('PrepareNewMaterialAsset('));
     const setters = code('MaterialAuthoring', 'Properties', 'McpMatSetMatEnum.cpp');
     expect(setters.match(/if \(Material\) Material->/gu)).toHaveLength(3);
@@ -1603,17 +1610,13 @@ describe('start minimized', () => {
   // The editor came up already minimized, so the start-minimized ticker never saw it on screen, kept waiting, and
   // put away the first restore made over the bridge minutes later.
   it('the start-minimized hold begins the first time the window is on screen, minimized or not', () => {
-    const lifecycle = readFileSync(join('plugins', 'EngineWire', 'Source', 'EngineWire', 'Private', 'Core', 'Subsystem',
-      'EngineWireSubsystemLifecycle.cpp'), 'utf8').replace(/\/\*[\s\S]*?\*\//gu, ' ').replace(/\/\/[^\n]*/gu, ' ');
-    expect(lifecycle).toMatch(/Root->IsVisible\(\)\)\s*\{\s*if \(!Root->IsWindowMinimized\(\)\)\s*\{\s*MinimizeWindowForMcp\(Root\.ToSharedRef\(\)\);\s*\}\s*if \(\*HoldUntil == 0\.0\)/u);
+    expect(code('ControlEditor', 'McpEditorScreenshotWindows.cpp')).toMatch(/Root->IsVisible\(\)\)\s*\{\s*if \(!Root->IsWindowMinimized\(\)\)\s*\{\s*MinimizeWindowForMcp\(Root\.ToSharedRef\(\)\);\s*\}\s*if \(\*HoldUntil == 0\.0\)/u);
   });
 
   // A restore asked for 3 minutes after launch was put away again within seconds; one 23 s later stayed up.
   it('a restore made over the bridge ends the hold, and a timed run leaves a window restored meanwhile up', () => {
-    const lifecycle = readFileSync(join('plugins', 'EngineWire', 'Source', 'EngineWire', 'Private', 'Core', 'Subsystem',
-      'EngineWireSubsystemLifecycle.cpp'), 'utf8');
-    expect(lifecycle).toMatch(/CreateLambda\(\[GiveUpAt, HoldUntil\]\(float\)\s*\{\s*if \(McpWindowRestoreCount\(\) != 0\)\s*\{\s*return false;/u);
     const windows = code('ControlEditor', 'McpEditorScreenshotWindows.cpp');
+    expect(windows).toMatch(/CreateLambda\(\[GiveUpAt, HoldUntil\]\(float\)\s*\{\s*if \(GMcpWindowRestoreCount != 0\)\s*\{\s*return false;/u);
     expect(windows).toMatch(/::SetWindowPlacement\(Hwnd, &Placement\);\s*\}\s*\+\+GMcpWindowRestoreCount;/u);
     expect(windows).toMatch(/\} else \{\s*\+\+GMcpWindowRestoreCount;\s*RestoreWindowForCaptureForMcp\(Root\.ToSharedRef\(\)\);/u);
     expect(windows).toContain('Hold.RestoreCount = GMcpWindowRestoreCount;');
@@ -2555,7 +2558,7 @@ describe('a Material Parameter Collection can be made and read', () => {
     expect(create).not.toMatch(/ScalarParameters\.Remove|VectorParameters\.Remove|\.Empty\(\)/u);
     const handlers = code('MaterialAuthoring', 'McpMatHandlers.cpp');
     expect(handlers).toContain('McpMaterialAuthoringHandlers::HandleCreateParameterCollection(this, RequestId, SubAction, Payload, Socket)');
-    const routing = readFileSync(join('plugins', 'EngineWire', 'Source', 'EngineWire', 'Private', 'MCP', 'Routing',
+    const routing = readFileSync(join('plugins', 'EngineWire', 'Source', 'EngineWire', 'Private', 'Core', 'Routing',
       'McpConsolidatedActionRoutingAssets.h'), 'utf8');
     expect(routing).toContain('TEXT("create_parameter_collection")');
   });
@@ -3303,7 +3306,7 @@ describe('a compiler warning reaches the receipt', () => {
   it('carries the compiler warnings with the graph checks and names them in a batch headline', () => {
     const diag = code('..', 'Foundation', 'BridgeHelpers', 'Blueprints', 'McpBPDiag.h');
     expect(diag).toContain('if (Index >= FirstCheck || Entry->GetStringField(TEXT("severity")) == TEXT("warning")) {');
-    expect(diag).toContain('if (Warnings.Num() > Before) {');
+    expect(diag).toContain('McpHandlerUtils::AppendWarning(Out, Entry->GetStringField(TEXT("message")));');
     const batch = code('BlueprintGraph', 'McpBPGraphBatch.cpp');
     expect(batch).toContain('TEXT(", with warnings (see the receipt\'s warnings)")');
   });
@@ -3706,7 +3709,7 @@ describe('long cinematic work: tracks, settings, batches, rate limits and render
 
   it('a rate-limited request names its wait and sends Retry-After', () => {
     expect(privateCode('MCP', 'Protocol', 'McpJsonRpc.cpp')).toContain('Data->SetNumberField(TEXT("retryAfterSeconds"), RetryAfterSeconds);');
-    for (const file of [['MCP', 'Transport', 'McpNativeTransportConnection.cpp'], ['MCP', 'Protocol', 'McpNativeTransportModern.cpp']]) {
+    for (const file of [['MCP', 'Transport', 'McpNativeTransportConnection.cpp'], ['MCP', 'Transport', 'Methods', 'McpNativeTransportModern.cpp']]) {
       expect(privateCode(...file), file.join('/')).toContain('FMcpJsonRpc::RetryAfterHeader(RetryAfter)');
     }
   });
@@ -4267,7 +4270,7 @@ describe('a create never rebuilds an asset already at its path', () => {
   it('the shared package helper refuses an occupied path before CreatePackage', () => {
     const helper = readFileSync(join('plugins', 'EngineWire', 'Source', 'EngineWire', 'Private', 'Foundation', 'BridgeHelpers', 'Assets', 'McpAssetCreation.h'), 'utf8');
     const body = helper.slice(helper.indexOf('McpCreatePackageForNewAsset('));
-    expect(body.indexOf('McpAssetExists(PackagePath)')).toBeLessThan(body.indexOf('CreatePackage(*PackagePath)'));
+    expect(body.indexOf('McpAssetExists(PackagePath)')).toBeLessThan(body.indexOf('McpCreatePackageOrNull(PackagePath)'));
     expect(body).toContain('OutCode = TEXT("ASSET_ALREADY_EXISTS");');
   });
 

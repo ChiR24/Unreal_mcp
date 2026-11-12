@@ -6,7 +6,7 @@
 #include "Misc/AutomationTest.h"
 #include "Tests/McpLaneOracle.h"
 
-// Gate - PROOF THAT THE GATE CAN FAIL.
+// PROOF THAT THE GATE CAN FAIL.
 //
 // The acceptance criterion is "injected race, stale state, unauthorized action
 // or duplicate mutation is detected". A green concurrency run does not
@@ -70,7 +70,7 @@ bool FMcpLaneOracleInjectedRaceTest::RunTest(const FString& Parameters)
 {
 	(void)Parameters;
 	using namespace McpLaneFaultInjection;
-	// Depth 2 is the EXACT shape Task 45 measured when the drain guard was
+	// Depth 2 is the EXACT shape measured when the drain guard was
 	// removed: a second dispatch opened inside the first one's execution
 	// because FCriticalSection is recursive. This is the historical defect,
 	// replayed as an observation.
@@ -207,8 +207,8 @@ bool FMcpLedgerConcurrentDuplicateTest::RunTest(const FString& Parameters)
 				FString Slot;
 				FString Replay;
 				const EMcpIdempotencyOutcome Outcome = Ledger.Begin(
-					TEXT("task46-principal"), TEXT("control_actor.spawn"),
-					TEXT("task46-duplicate-key"), TEXT("fingerprint-a"), Slot,
+					TEXT("lane-principal"), TEXT("control_actor.spawn"),
+					TEXT("lane-duplicate-key"), TEXT("fingerprint-a"), Slot,
 					Replay);
 				if (Outcome == EMcpIdempotencyOutcome::First)
 				{

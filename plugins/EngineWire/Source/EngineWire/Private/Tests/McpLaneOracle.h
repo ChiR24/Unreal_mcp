@@ -3,7 +3,7 @@
 #include "CoreMinimal.h"
 #include "HAL/CriticalSection.h"
 
-// Gate - the SHARED verdict for "one editor mutation lane, on the game
+// The SHARED verdict for "one editor mutation lane, on the game
 // thread, exactly once".
 //
 // Why this is its own header rather than a helper inside one test file: a gate
@@ -125,9 +125,9 @@ inline FLaneVerdict Judge(
 }
 
 /** Terminal-path drain verdict. A terminal path (cancel, stale refusal,
- * timeout, disconnect, shutdown) must leave NOTHING behind: the plan's wording
- * is "maps/queues/tasks/subscriptions/ledgers/sockets drain on every terminal
- * path". Each residue is reported by name so a leak identifies its own map. */
+ * timeout, disconnect, shutdown) must leave NOTHING behind: maps, queues,
+ * tasks, subscriptions, ledgers and sockets drain on every terminal path.
+ * Each residue is reported by name so a leak identifies its own map. */
 struct FDrainVerdict
 {
 	TArray<FString> Residue;
