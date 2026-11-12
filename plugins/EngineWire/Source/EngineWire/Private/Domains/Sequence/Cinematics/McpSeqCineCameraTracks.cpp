@@ -1,7 +1,10 @@
 #include "Domains/Sequence/Cinematics/McpSeqCine.h"
 
 #include "Domains/Sequence/McpSeqEditorSupport.h"
+#include "Foundation/BridgeHelpers/Blueprints/McpBPPaths.h"
 #include "Foundation/BridgeHelpers/Responses/McpMutationEvidence.h"
+#include "Foundation/BridgeHelpers/Security/McpProjectPaths.h"
+#include "Safety/McpSafeOperationsAssetClassification.h"
 
 #include "Camera/CameraComponent.h"
 #include "Engine/Blueprint.h"
@@ -21,15 +24,17 @@ FString GetCameraShakePath(const TSharedPtr<FJsonObject> &Params) {
   return Path;
 }
 
-UClass *LoadCameraShakeClass(const FString &Path) {
+// A shake class path (native or generated), else a Blueprint asset whose class is one. The path goes through the shared
+// canonicalizer, and only an asset the registry lists as a Blueprint is loaded: any other asset the text named was loaded
+// just to find it was no shake.
+UClass *LoadCameraShakeClass(const FString &RawPath) {
+  const FString Path = SanitizeProjectRelativePath(RawPath);
   if (Path.IsEmpty()) return nullptr;
   UClass *LoadedClass = LoadClass<UCameraShakeBase>(nullptr, *Path);
-  if (!LoadedClass) {
-    UObject *LoadedObject = LoadObject<UObject>(nullptr, *Path);
-    if (UBlueprint *Blueprint = Cast<UBlueprint>(LoadedObject))
+  FAssetData Data;
+  if (!LoadedClass && McpAssetExists(Path, &Data) && McpSafeOperations::IsAnyBlueprintAsset(Data)) {
+    if (UBlueprint *Blueprint = Cast<UBlueprint>(Data.GetAsset()))
       LoadedClass = Blueprint->GeneratedClass;
-    else
-      LoadedClass = Cast<UClass>(LoadedObject);
   }
   return LoadedClass && LoadedClass->IsChildOf(UCameraShakeBase::StaticClass()) &&
                  !LoadedClass->HasAnyClassFlags(CLASS_Abstract | CLASS_Deprecated |

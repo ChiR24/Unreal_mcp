@@ -21,7 +21,8 @@ AActor* FindSoleReflectionCaptureActor(FString& OutError, FString& OutErrorCode)
     {
         for (TActorIterator<AActor> It(World); It; ++It)
         {
-            if (It->FindComponentByClass<UReflectionCaptureComponent>())
+            // The request named no actor: a path-restricted caller chooses among those in a level inside its prefixes.
+            if (It->FindComponentByClass<UReflectionCaptureComponent>() && McpCapabilityPrincipal::ActiveRequestPermitsObject(*It))
             {
                 Captures.Add(*It);
             }

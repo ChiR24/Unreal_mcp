@@ -1,5 +1,5 @@
 {
-  "catalogRevision": "2919cbfec344eba1",
+  "catalogRevision": "1a484759eaebe96f",
   "recordCount": 489,
   "records": [
     {
@@ -10655,10 +10655,6 @@
               "type": "string",
               "description": "Signed https download URL issued by Fab. Short-lived: a stale URL fails with DOWNLOAD_FAILED."
             },
-            "destinationDirectory": {
-              "type": "string",
-              "description": "Where the pack lands. Defaults to the Fab library cache directory, which list_fab_downloads and the fabLibrary source root both read."
-            },
             "downloadType": {
               "type": "string",
               "default": "http",
@@ -10813,7 +10809,7 @@
             },
             "destinationDirectory": {
               "type": "string",
-              "description": "Directory the pack landed in."
+              "description": "Directory the pack landed in: always the Fab library cache directory, which list_fab_downloads and the fabLibrary source root read."
             },
             "downloadedFiles": {
               "type": "array",
@@ -10909,9 +10905,6 @@
             "downloadUrl": [
               "fab_download"
             ],
-            "destinationDirectory": [
-              "fab_download"
-            ],
             "downloadType": [
               "fab_download"
             ],
@@ -10956,8 +10949,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "6d31aabf70a63f179d3d0a779c9310bfa5b2117657918c091ce548a2d9eb275a",
-        "content": "c148008ac22578f3b0d511c9db6bcbcb6b100a22f84b2233d4c4c231760960a6"
+        "schema": "efeef4dba40059abc8336aeff96a10a52758afcb5926aba26dd8ce6f68389aef",
+        "content": "1e9e9f6be7a32023c5a3c06fb9a882e90474ccfe0c15dcae18930bf4daa4d8ef"
       }
     },
     {

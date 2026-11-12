@@ -113,7 +113,7 @@ bool UEngineWireSubsystem::HandleGenerateLODs(
     }
     // Engine meshes are shared by every project on this engine and by the editor itself: the rebuild was saved into
     // the engine's own content.
-    if (Mesh->GetOutermost()->GetName().StartsWith(TEXT("/Engine/"))) {
+    if (McpSafeOperations::IsEngineContentPackage(Mesh->GetOutermost()->GetName())) {
       EnginePaths.Add(Path);
       continue;
     }

@@ -66,15 +66,11 @@ bool CreateCaptureActor(
     return true;
 }
 
+// Through the shared canonicalizer and the registry, which takes a package or an object path.
 UTextureRenderTarget2D* LoadRenderTarget2D(const FString& Path)
 {
-    UTextureRenderTarget2D* Target = LoadObject<UTextureRenderTarget2D>(nullptr, *Path);
-    if (Target || Path.Contains(TEXT(".")))
-    {
-        return Target;
-    }
-    const FString Name = McpHandlerUtils::ExtractAssetName(Path);
-    return LoadObject<UTextureRenderTarget2D>(nullptr, *(Path + TEXT(".") + Name));
+    const FString SafePath = SanitizeProjectRelativePath(Path);
+    return SafePath.IsEmpty() ? nullptr : Cast<UTextureRenderTarget2D>(McpLoadAsset(SafePath));
 }
 
 bool ApplyCaptureSource(
@@ -188,7 +184,7 @@ bool HandleRenderSceneCaptureAction(
         UTextureRenderTarget2D* Target = LoadRenderTarget2D(TargetPath);
         if (!Target)
         {
-            Subsystem->SendAutomationError(RequestingSocket, RequestId, TEXT("Render target not found."), TEXT("ASSET_NOT_FOUND"));
+            Subsystem->SendAutomationError(RequestingSocket, RequestId, FString::Printf(TEXT("Render target not found: %s"), *TargetPath), TEXT("ASSET_NOT_FOUND"));
             return true;
         }
         Capture2D->TextureTarget = Target;

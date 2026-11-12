@@ -23,31 +23,6 @@ namespace
  * surface discovered here is whatever the INSTALLED version exposes, not a
  * copy of it frozen at the time this was written.
  */
-UObject* FindLiveInstanceByClassName(const FString& ClassName)
-{
-	// The shared resolver accepts every spelling the rest of the catalog does -
-	// '/Script/Engine.DirectionalLightComponent', a bare class name, a Blueprint
-	// asset path. The exact short-name scan this replaced matched only the bare
-	// form, so a core engine class named the canonical way was reported as not
-	// existing while other capabilities read its properties in the same session.
-	UClass* Target = ResolveClassByName(ClassName);
-	if (Target == nullptr)
-	{
-		return nullptr;
-	}
-	for (TObjectIterator<UObject> ObjectIt; ObjectIt; ++ObjectIt)
-	{
-		UObject* Candidate = *ObjectIt;
-		// A path-restricted caller is pointed only at an instance inside its prefixes (else the class default).
-		if (Candidate->GetClass() == Target && !Candidate->HasAnyFlags(RF_ClassDefaultObject)
-			&& IsValid(Candidate) && McpCapabilityPrincipal::ActiveRequestPermitsObject(Candidate))
-		{
-			return Candidate;
-		}
-	}
-	return Target->GetDefaultObject();
-}
-
 /** Describes one reflected parameter so a caller can build a valid request. */
 TSharedPtr<FJsonObject> DescribeParameter(const FProperty* Property)
 {
@@ -75,6 +50,29 @@ TSharedPtr<FJsonObject> DescribeFunction(UFunction* Function)
 }
 } // namespace
 
+// describe_reflected_api and invoke_reflected_function pick their object here: the class by any spelling the catalog
+// takes ('/Script/Engine.DirectionalLightComponent', a bare name, a Blueprint asset path), then its first live
+// instance, never a template (IsTemplate walks the outer chain, so an archetype subobject of a class default is not
+// live either) and, for a path-restricted caller, one inside its prefixes; else the class default object.
+UObject* McpFindReflectedInstance(const FString& ClassName)
+{
+	UClass* Target = ResolveClassByName(ClassName);
+	if (Target == nullptr)
+	{
+		return nullptr;
+	}
+	for (TObjectIterator<UObject> ObjectIt; ObjectIt; ++ObjectIt)
+	{
+		UObject* Candidate = *ObjectIt;
+		if (Candidate->GetClass() == Target && !Candidate->IsTemplate() && IsValid(Candidate)
+			&& McpCapabilityPrincipal::ActiveRequestPermitsObject(Candidate))
+		{
+			return Candidate;
+		}
+	}
+	return Target->GetDefaultObject();
+}
+
 /**
  * Enumerates the reflected API of a plugin's live bridge object.
  *
@@ -101,7 +99,7 @@ bool UEngineWireSubsystem::HandleDescribeReflectedApi(
     return true;
   }
 
-  UObject* Instance = FindLiveInstanceByClassName(ClassName);
+  UObject* Instance = McpFindReflectedInstance(ClassName);
   if (Instance == nullptr) {
     SendAutomationResponse(
         Socket, RequestId, false,

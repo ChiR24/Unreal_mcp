@@ -231,8 +231,13 @@ bool UEngineWireSubsystem::HandleSourceControlRepo(
 
       if (bInit) {
         // Point the editor at the repository now that one exists, so the
-        // caller does not have to follow up with source_control_enable.
-        ISourceControlModule::Get().SetProvider(FName(TEXT("Git")));
+        // caller does not have to follow up with source_control_enable. SetProvider ends in a Fatal log for a
+        // provider that is not registered (the Git plugin off), so the provider is left as it is then.
+        TArray<FName> Registered;
+        ISourceControlModule::Get().GetProviderNames(Registered);
+        if (Registered.Contains(FName(TEXT("Git")))) {
+          ISourceControlModule::Get().SetProvider(FName(TEXT("Git")));
+        }
         Result->SetStringField(TEXT("provider"),
             ISourceControlModule::Get().GetProvider().GetName().ToString());
         Result->SetBoolField(TEXT("sourceControlEnabled"),

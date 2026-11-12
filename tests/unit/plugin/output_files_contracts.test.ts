@@ -19,6 +19,15 @@ describe('output files', () => {
     expect(code()).toMatch(/OutputRoots\[\] = \{TEXT\("Saved\/Screenshots"\), TEXT\("Saved\/Captures"\), TEXT\("Saved\/EngineWire"\),\s*TEXT\("Saved\/Exports"\), TEXT\("Saved\/Thumbnails"\), TEXT\("Saved\/unreal-mcp"\),\s*TEXT\("tmp\/unreal-mcp"\), TEXT\("temp\/unreal-mcp"\)\};/u);
   });
 
+  // A symbolic link or junction inside an output root sent the delete, and the walk that removes emptied folders,
+  // outside the project; the shared project-file resolver refuses a link on the way.
+  it('a delete and the listing resolve each file through the shared project-file resolver', () => {
+    const source = code();
+    expect(source).toContain('McpResolveProjectFilePath(Path, Full, ResolveError)');
+    expect(source.indexOf('McpResolveProjectFilePath(Path, Full, ResolveError)')).toBeLessThan(source.indexOf('IFileManager::Get().Delete(*Full'));
+    expect(source).toMatch(/FolderInProject\.Add\(Folder, McpResolveProjectFilePath\(Relative, Resolved, Ignored\)\)/u);
+  });
+
   it('a delete takes the folders it leaves empty, never the root and never a folder still holding something', () => {
     const source = code();
     expect(source).toMatch(/for \(FString Dir = FPaths::GetPath\(Full\); !bExistsAfter && Dir\.Len\(\) > RootFull\.Len\(\) &&\s*IFileManager::Get\(\)\.DeleteDirectory\(\*Dir, false, false\);/u);

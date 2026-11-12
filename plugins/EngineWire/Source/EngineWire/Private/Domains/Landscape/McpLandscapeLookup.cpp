@@ -59,26 +59,27 @@ void FMcpLandscapeEditScope::DescribeInto(const TSharedPtr<FJsonObject> &Result)
   Transaction->DescribeInto(Result);
 }
 
-static ALandscape *FindLandscapeForEdit(const FString &LandscapePath,
-                                        const FString &LandscapeName,
-                                        const FString &ActorPath) {
-  if (UWorld *World = McpHandlerUtils::GetEditorWorld()) {
-    for (TActorIterator<ALandscape> It(World); It; ++It) {
-      if ((!LandscapeName.IsEmpty() &&
-           It->GetActorLabel().Equals(LandscapeName, ESearchCase::IgnoreCase)) ||
-          (!LandscapePath.IsEmpty() &&
-           It->GetPackage()->GetPathName().Equals(LandscapePath,
-                                                  ESearchCase::IgnoreCase)) ||
-          (!ActorPath.IsEmpty() &&
-           It->GetPathName().Equals(ActorPath, ESearchCase::IgnoreCase))) {
-        return *It;
-      }
+// The editor world's landscape labelled Name, or whose package or object path is Path; with neither, the first. A
+// label names a landscape in any level: a path-restricted caller's stays in a level inside its prefixes, whatever
+// path it also sent. A level that is not open is never loaded to look.
+static ALandscape *FindLandscapeBy(const FString &Name, const FString &Path) {
+  UWorld *World = McpHandlerUtils::GetEditorWorld();
+  if (!World) {
+    return nullptr;
+  }
+  for (TActorIterator<ALandscape> It(World); It; ++It) {
+    ALandscape *Landscape = *It;
+    if (!Landscape || !McpCapabilityPrincipal::ActiveRequestPermitsObject(Landscape)) {
+      continue;
+    }
+    if ((Name.IsEmpty() && Path.IsEmpty()) ||
+        (!Name.IsEmpty() && Landscape->GetActorLabel().Equals(Name, ESearchCase::IgnoreCase)) ||
+        (!Path.IsEmpty() && ((Landscape->GetPackage() && Landscape->GetPackage()->GetPathName().Equals(Path, ESearchCase::IgnoreCase)) ||
+                             Landscape->GetPathName().Equals(Path, ESearchCase::IgnoreCase)))) {
+      return Landscape;
     }
   }
-  return LandscapePath.IsEmpty()
-             ? nullptr
-             : Cast<ALandscape>(StaticLoadObject(ALandscape::StaticClass(),
-                                                 nullptr, *LandscapePath));
+  return nullptr;
 }
 
 ALandscape *ResolveLandscapeOrReply(UEngineWireSubsystem &Bridge,
@@ -102,7 +103,7 @@ ALandscape *ResolveLandscapeOrReply(UEngineWireSubsystem &Bridge,
     }
     LandscapePath = SafePath;
   }
-  ALandscape *Landscape = FindLandscapeForEdit(LandscapePath, LandscapeName, ActorPath);
+  ALandscape *Landscape = FindLandscapeBy(LandscapeName, LandscapePath.IsEmpty() ? ActorPath : LandscapePath);
   if (!Landscape) {
     Bridge.SendAutomationError(
         RequestingSocket, RequestId,
@@ -125,46 +126,12 @@ ALandscape *ResolveLandscapeOrReply(UEngineWireSubsystem &Bridge,
 }
 
 ALandscape *McpFindLandscape(const TSharedPtr<FJsonObject> &Payload) {
-  const FString LandscapeName = McpGetFirstStringField(Payload, {TEXT("landscapeName"), TEXT("name"), TEXT("targetActor")});
-  FString LandscapePath = McpGetFirstStringField(Payload, {TEXT("landscapePath"), TEXT("landscapeActorPath"), TEXT("actorPath")});
+  const FString LandscapeName = GetJsonStringField(Payload, TEXT("landscapeName"));
+  FString LandscapePath = McpGetFirstStringField(Payload, {TEXT("landscapePath"), TEXT("landscapeActorPath")});
   LandscapePath.TrimStartAndEndInline();
   if (!LandscapePath.IsEmpty() && !LandscapePath.StartsWith(TEXT("/"))) {
     LandscapePath = TEXT("/") + LandscapePath;
   }
-
-  UWorld *World = McpHandlerUtils::GetEditorWorld();
-  if (World) {
-    for (TActorIterator<ALandscape> It(World); It; ++It) {
-      ALandscape *Landscape = *It;
-      // A label (or no selector at all) finds a landscape in any level: a path-restricted caller's stays in
-      // a level inside its prefixes, whatever landscapePath it also sent.
-      if (!Landscape || !McpCapabilityPrincipal::ActiveRequestPermitsObject(Landscape)) {
-        continue;
-      }
-      if (!LandscapeName.IsEmpty() && Landscape->GetActorLabel().Equals(LandscapeName, ESearchCase::IgnoreCase)) {
-        return Landscape;
-      }
-      if (!LandscapePath.IsEmpty() &&
-          ((Landscape->GetPackage() && Landscape->GetPackage()->GetPathName().Equals(LandscapePath, ESearchCase::IgnoreCase)) ||
-           Landscape->GetPathName().Equals(LandscapePath, ESearchCase::IgnoreCase) ||
-           Landscape->GetPathName(nullptr).Equals(LandscapePath, ESearchCase::IgnoreCase))) {
-        return Landscape;
-      }
-    }
-
-    if (LandscapeName.IsEmpty() && LandscapePath.IsEmpty()) {
-      // with neither a name nor a path, the first landscape in the world the caller may touch
-      for (TActorIterator<ALandscape> First(World); First; ++First) {
-        if (McpCapabilityPrincipal::ActiveRequestPermitsObject(*First)) {
-          return *First;
-        }
-      }
-    }
-  }
-
-  if (!LandscapePath.IsEmpty()) {
-    return Cast<ALandscape>(StaticLoadObject(ALandscape::StaticClass(), nullptr, *LandscapePath));
-  }
-  return nullptr;
+  return FindLandscapeBy(LandscapeName, LandscapePath);
 }
 }

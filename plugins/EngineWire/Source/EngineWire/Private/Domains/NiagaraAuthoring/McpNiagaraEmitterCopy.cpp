@@ -112,8 +112,12 @@ bool CopyEmitterFromSystem(FActionContext& Context)
     {
         return true;
     }
-    const FString SourcePath = GetJsonStringField(Context.Payload, TEXT("sourceSystemPath"));
+    FString SourcePath = GetJsonStringField(Context.Payload, TEXT("sourceSystemPath"));
     const FString SourceName = GetJsonStringField(Context.Payload, TEXT("sourceEmitterName"));
+    if (!ValidateAndSanitizePath(Context, SourcePath, TEXT("sourceSystemPath")))
+    {
+        return true;
+    }
     UNiagaraSystem* Source = LoadObject<UNiagaraSystem>(nullptr, *SourcePath, nullptr, LOAD_NoWarn);
     if (!Source)
     {

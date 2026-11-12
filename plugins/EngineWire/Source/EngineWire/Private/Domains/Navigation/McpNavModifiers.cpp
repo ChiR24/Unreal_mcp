@@ -182,15 +182,7 @@ bool HandleSetNavAreaClass(
         return true;
     }
 
-    AActor* TargetActor = nullptr;
-    for (TActorIterator<AActor> It(World); It; ++It)
-    {
-        if (It->GetActorLabel() == ActorName || It->GetName() == ActorName)
-        {
-            TargetActor = *It;
-            break;
-        }
-    }
+    AActor* TargetActor = FindActorByNameInWorldForMcp(World, ActorName, true);
     if (!TargetActor)
     {
         Self->SendAutomationResponse(Socket, RequestId, false,

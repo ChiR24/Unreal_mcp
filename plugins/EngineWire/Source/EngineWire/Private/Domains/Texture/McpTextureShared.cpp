@@ -1,4 +1,5 @@
 #include "Domains/Texture/McpTextureShared.h"
+#include "Safety/McpSafeOperationsAssetClassification.h"
 #include "Foundation/BridgeHelpers/Security/McpAssetPathCanonical.h"
 
 namespace McpTextureHandlers
@@ -136,7 +137,7 @@ UTexture2D* LoadSourceTexture(const FString& RawPath, const TCHAR* Field, FStrin
     }
     // bConvertToBGRA8 is the in-place edit (curves, levels, filters): engine content edited and saved changes the engine
     // every project shares, and the G8 conversion below would already have rewritten it in memory.
-    if (bConvertToBGRA8 && Texture->GetOutermost()->GetName().StartsWith(TEXT("/Engine/")))
+    if (bConvertToBGRA8 && McpSafeOperations::IsEngineContentPackage(Texture->GetOutermost()->GetName()))
     {
         OutError = FString::Printf(TEXT("%s '%s' is engine content, which is not changed: duplicate it into /Game and edit the copy"), Field, *OutPath);
         if (OutErrorCode)

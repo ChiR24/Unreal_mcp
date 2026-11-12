@@ -12,6 +12,5 @@ namespace VolumeHelpers
 {
 using McpHandlerUtils::GetEditorWorld;
 AActor* FindVolumeByName(UWorld* World, const FString& VolumeName);
-AActor* FindActorByPathOrName(UWorld* World, const FString& ActorPath);
 bool ResolveEditorWorld(UEngineWireSubsystem* Subsystem, const FString& RequestId, TSharedPtr<FMcpBridgeWebSocket> Socket, UWorld*& OutWorld);
 }

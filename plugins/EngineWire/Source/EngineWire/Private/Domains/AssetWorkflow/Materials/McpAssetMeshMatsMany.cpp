@@ -6,6 +6,7 @@
 // fails it before any mesh changes. Setting 32 meshes one call each took 64 calls with their consents.
 
 #include "Domains/AssetWorkflow/Materials/McpAssetMeshMats.h"
+#include "Safety/McpSafeOperationsAssetClassification.h"
 #include "Domains/AssetWorkflow/Materials/McpAssetMeshMatSlots.h"
 #include "Foundation/BridgeHelpers/Assets/McpAssetSaveRegistry.h"
 
@@ -62,7 +63,7 @@ void SetOnOneOfMany(const FString& Path, const TArray<TPair<TSharedPtr<FJsonValu
     }
     Row->SetNumberField(TEXT("changed"), Changed);
     TotalChanged += Changed;
-    const bool bWritable = bSave && !Asset->GetOutermost()->GetName().StartsWith(TEXT("/Engine/"));
+    const bool bWritable = bSave && !McpSafeOperations::IsEngineContentPackage(Asset->GetOutermost()->GetName());
     if (bWritable && !SaveLoadedAssetThrottled(Asset))
     {
         Row->SetBoolField(TEXT("saved"), false);

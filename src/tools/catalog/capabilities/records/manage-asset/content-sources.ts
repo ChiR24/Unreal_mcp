@@ -107,7 +107,6 @@ export const CONTENT_SOURCE_RECORDS: readonly RecordSpec[] = [
     schema({
       assetId: str('Fab asset id, used as the cache key.'),
       downloadUrl: str('Signed https download URL issued by Fab. Short-lived: a stale URL fails with DOWNLOAD_FAILED.'),
-      destinationDirectory: str('Where the pack lands. Defaults to the Fab library cache directory, which list_fab_downloads and the fabLibrary source root both read.'),
       downloadType: { type: 'string', default: 'http', description: 'Transfer mode: "http" or "buildpatch". BuildPatchServices is for Marketplace-era packs; pointing it at a plain URL stalls rather than failing, so it must be opted into.' }
     }, ['assetId', 'downloadUrl']),
     schema({
@@ -116,7 +115,7 @@ export const CONTENT_SOURCE_RECORDS: readonly RecordSpec[] = [
       servedFromCache: bool('True when the pack was already cached and no transfer occurred.'),
       completedBytes: num('Bytes transferred.'),
       totalBytes: num('Expected total bytes.'),
-      destinationDirectory: str('Directory the pack landed in.'),
+      destinationDirectory: str('Directory the pack landed in: always the Fab library cache directory, which list_fab_downloads and the fabLibrary source root read.'),
       downloadedFiles: arr('Files the downloader reported writing.'),
       note: str('How to place the downloaded pack into /Game.')
     }, ['success']),

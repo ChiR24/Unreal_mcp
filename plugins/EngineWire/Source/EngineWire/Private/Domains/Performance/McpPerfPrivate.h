@@ -81,7 +81,6 @@ bool HandleProfilingAction(const FPerformanceActionContext& Context);
 bool HandleRenderingSettingsAction(const FPerformanceActionContext& Context);
 bool HandleActorMergeAction(const FPerformanceActionContext& Context);
 bool HandleAdvancedOptimizationAction(const FPerformanceActionContext& Context);
-AActor* ResolveMergeActorByName(UWorld* World, const FString& Name);
 void CollectMergeComponents(
     const TArray<AActor*>& ActorsToMerge,
     TArray<UPrimitiveComponent*>& ComponentsToMerge);

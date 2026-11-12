@@ -66,8 +66,16 @@ bool InvokeMetaHumanFunction(UObject* Target, const TCHAR* FunctionName,
 /** CanBuildMetaHuman(Character) on Subsystem; false when it says no or cannot be asked. bLogError asks it to log why. */
 bool QueryCanBuild(UObject* Subsystem, UObject* Character, bool bLogError);
 
-/** Load a MetaHuman character asset by package path, or nullptr. */
+/** Load a MetaHuman character asset by package path (through the shared canonicalizer), or nullptr. */
 UObject* LoadMetaHumanCharacter(const FString& AssetPath);
+
+/**
+ * A content folder the engine writes the character's assets into: through the shared canonicalizer, and never engine
+ * content, which McpSafeAssetSave would refuse but these engine functions save themselves. Replies and returns false
+ * when refused.
+ */
+bool ReadContentFolderOrReply(UEngineWireSubsystem* Self, const FString& RequestId, FMetaHumanSocket Socket,
+    const TCHAR* Field, const FString& RawFolder, FString& OutFolder);
 
 /**
  * Resolve the character and register it for editing.

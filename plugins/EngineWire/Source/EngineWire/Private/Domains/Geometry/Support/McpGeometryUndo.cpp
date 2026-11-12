@@ -12,7 +12,7 @@ FMcpGeometryUndoScope::FMcpGeometryUndoScope(const TSharedPtr<FJsonObject>& Payl
 {
     // Only an actor that is there before the request: a create makes its own, and spawning is its own undo step.
     const FString ActorName = GetJsonStringField(Payload, TEXT("actorName"));
-    ADynamicMeshActor* Actor = ActorName.IsEmpty() ? nullptr : FindGeometryActor<ADynamicMeshActor>(ActorName);
+    ADynamicMeshActor* Actor = FindActorOfClassForMcp<ADynamicMeshActor>(McpHandlerUtils::GetEditorWorld(), ActorName);
     UDynamicMeshComponent* Target = Actor ? Actor->GetDynamicMeshComponent() : nullptr;
     if (!Target || !Target->GetDynamicMesh())
     {

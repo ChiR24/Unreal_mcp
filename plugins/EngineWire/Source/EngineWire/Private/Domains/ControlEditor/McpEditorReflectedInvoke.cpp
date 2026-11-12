@@ -10,42 +10,9 @@
 #include "UObject/Class.h"
 #include "UObject/Script.h"
 #include "UObject/UnrealType.h"
-#include "UObject/UObjectIterator.h"
 
-namespace
-{
-/** Mirrors the resolver in describe_reflected_api: live instance over CDO. */
-UObject* ResolveReflectedTarget(const FString& ClassName)
-{
-	UClass* Target = nullptr;
-	for (TObjectIterator<UClass> ClassIt; ClassIt; ++ClassIt)
-	{
-		if (ClassIt->GetName() == ClassName)
-		{
-			Target = *ClassIt;
-			break;
-		}
-	}
-	if (Target == nullptr)
-	{
-		return nullptr;
-	}
-	for (TObjectIterator<UObject> ObjectIt; ObjectIt; ++ObjectIt)
-	{
-		UObject* Candidate = *ObjectIt;
-		// IsTemplate walks the outer chain, so a component template owned by a
-		// CDO -- Default__WheeledVehiclePawn:VehicleMovementComp, which carries
-		// RF_DefaultSubObject rather than RF_ClassDefaultObject -- is rejected
-		// here too. Checking only the object's own RF_ClassDefaultObject let
-		// such an archetype pass as a "live instance".
-		if (Candidate->GetClass() == Target && !Candidate->IsTemplate() && IsValid(Candidate))
-		{
-			return Candidate;
-		}
-	}
-	return Target->GetDefaultObject();
-}
-} // namespace
+// Defined in McpEditorReflectedApi.cpp: the object describe_reflected_api describes, so invoke calls the same one.
+UObject* McpFindReflectedInstance(const FString& ClassName);
 
 /**
  * Calls one reflected UFunction on a plugin's live object.
@@ -70,7 +37,7 @@ bool UEngineWireSubsystem::HandleInvokeReflectedFunction(
     return true;
   }
 
-  UObject *Instance = ResolveReflectedTarget(ClassName);
+  UObject *Instance = McpFindReflectedInstance(ClassName);
   if (Instance == nullptr) {
     SendAutomationResponse(
         Socket, RequestId, false,

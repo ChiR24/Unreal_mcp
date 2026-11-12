@@ -12802,10 +12802,6 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           ],
           "description": "Function description."
         },
-        "destinationDirectory": {
-          "type": "string",
-          "description": "Where the pack lands. Defaults to the Fab library cache directory, which list_fab_downloads and the fabLibrary source root both read."
-        },
         "destinationFolder": {
           "type": "string",
           "description": "Folder to move the renamed struct into, e.g. /Game/Data."
@@ -14800,7 +14796,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "destinationDirectory": {
           "type": "string",
-          "description": "Directory the pack landed in."
+          "description": "Directory the pack landed in: always the Fab library cache directory, which list_fab_downloads and the fabLibrary source root read."
         },
         "destinationPath": {
           "type": "string",

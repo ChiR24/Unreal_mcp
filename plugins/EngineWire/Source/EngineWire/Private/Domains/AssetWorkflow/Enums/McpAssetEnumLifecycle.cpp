@@ -88,10 +88,13 @@ bool HandleEnumLifecycleActions(
             return true;
         }
 
-        UPackage* Package = CreatePackage(*PackageName);
+        // Refused when any asset already holds the path: a bare CreatePackage handed back that asset's package, and the
+        // enum made in it replaced an enum in place or, over an asset of another class, was a fatal error.
+        FString CreateError, CreateCode;
+        UPackage* Package = McpCreatePackageForNewAsset(PackageName, CreateError, CreateCode);
         if (!Package)
         {
-            SetEnumResultFields(OutResult, false, TEXT("Failed to create package"));
+            SetEnumResultFields(OutResult, false, CreateError, *CreateCode);
             return true;
         }
 

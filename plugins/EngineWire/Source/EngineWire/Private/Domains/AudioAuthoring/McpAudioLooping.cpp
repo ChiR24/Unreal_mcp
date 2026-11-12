@@ -5,6 +5,7 @@
 // both are refused.
 
 #include "Core/Compatibility/McpVersionCompatibility.h"
+#include "Safety/McpSafeOperationsAssetClassification.h"
 #include "Domains/AudioAuthoring/McpAudioAuthoringPrivate.h"
 #include "Foundation/McpScopedEditorTransaction.h"
 #include "Sound/SoundWaveProcedural.h"
@@ -32,7 +33,7 @@ TSharedPtr<FJsonObject> HandleLoopingActions(const FString& SubAction, const TSh
         {
             return McpHandlerUtils::BuildErrorResponse(TEXT("ASSET_NOT_FOUND"), FString::Printf(TEXT("%s is not a Sound Wave. Nothing was changed."), *Path));
         }
-        if (Wave->GetPathName().StartsWith(TEXT("/Engine/")))
+        if (McpSafeOperations::IsEngineContentPackage(Wave->GetOutermost()->GetName()))
         {
             return McpHandlerUtils::BuildErrorResponse(TEXT("ENGINE_CONTENT"), FString::Printf(TEXT("%s is engine content, which is never changed: "
                 "duplicate it into /Game first. Nothing was changed."), *Wave->GetPathName()));

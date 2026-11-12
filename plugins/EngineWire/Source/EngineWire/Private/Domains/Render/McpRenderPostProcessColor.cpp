@@ -58,11 +58,13 @@ bool HandleRenderPostProcessColorAction(
     else if (SubAction == TEXT("set_pp_lut"))
     {
         const FString LutPath = GetJsonStringField(Payload, TEXT("lutPath"));
-        UTexture* Texture = LoadObject<UTexture>(nullptr, *LutPath);
+        // Through the shared canonicalizer and the registry, as every other asset path a request names.
+        const FString SafeLutPath = SanitizeProjectRelativePath(LutPath);
+        UTexture* Texture = SafeLutPath.IsEmpty() ? nullptr : Cast<UTexture>(McpLoadAsset(SafeLutPath));
         if (!Texture)
         {
             Subsystem->SendAutomationError(
-                RequestingSocket, RequestId, TEXT("Color grading LUT not found."), TEXT("ASSET_NOT_FOUND"));
+                RequestingSocket, RequestId, FString::Printf(TEXT("Color grading LUT not found: %s"), *LutPath), TEXT("ASSET_NOT_FOUND"));
             return true;
         }
         Staged.bOverride_ColorGradingLUT = true;

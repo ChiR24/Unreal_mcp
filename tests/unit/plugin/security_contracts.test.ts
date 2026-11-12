@@ -57,12 +57,36 @@ describe('plugin security contracts', () => {
       ['Domains', 'Inspect', 'View', 'McpInspectCapturePasses.cpp'],
       ['Domains', 'ControlEditor', 'McpEditorScreenshotSupport.cpp'],
       ['Domains', 'Ui', 'McpUiScreenshot.cpp'],
+      ['Domains', 'SystemControl', 'McpSystemGameTarget.cpp'],
     ];
     for (const parts of writers) {
       const source = privateSource(...parts);
       expect(source, parts.join('/')).toMatch(/McpWriteProject(File|Text)\(/u);
       expect(source, parts.join('/')).not.toMatch(/FFileHelper::Save(String|Array)ToFile/u);
     }
+  });
+
+  // A folder the caller chose let one consented call write a file of the caller's name and content anywhere the editor
+  // can write; and the downloader names the file after the URL's last segment, where a backslash is a separator.
+  it('downloads a Fab pack only into the Fab library folder', () => {
+    const source = privateSource('Domains', 'AssetWorkflow', 'Operations', 'McpAssetFabDownload.cpp');
+    expect(source).not.toMatch(/TryGetStringField\(TEXT\("destinationDirectory"\)/u);
+    expect(source).toContain('const FString Destination = McpContentSources::FabLibraryDir();');
+    expect(source.indexOf('DownloadUrl.Contains(TEXT("\\\\"))')).toBeGreaterThan(-1);
+    expect(source.indexOf('DownloadUrl.Contains(TEXT("\\\\"))')).toBeLessThan(source.indexOf('McpContentSources::FabLibraryDir()'));
+  });
+
+  // NUL saved into nothing while the reply read back what it sent; CON or COM1 opened a device in place of a file.
+  it('refuses a Windows device name as a save slot', () => {
+    const source = privateSource('Domains', 'SystemControl', 'McpSystemSaveGames.cpp');
+    expect(source).toContain('McpIsReservedDeviceSegment(OutSlot)');
+  });
+
+  // Each name costs a scan of every actor of the editor and Play worlds: the lists take the source setting's limits.
+  it('holds the Take Recorder track actor lists to the source limits', () => {
+    const source = privateSource('Domains', 'Sequence', 'RecordReplay', 'McpSeqTakeRecorderTracks.cpp');
+    expect(source).toMatch(/TEXT\("actorNames"\), TEXT\("actors"\), TEXT\("sourceActors"\)\}\)\s*if \(!ReadTakeRecorderStringArray\(/u);
+    expect(source).toContain('ReadTakeRecorderName(Payload, TEXT("actorName"), RequestedNames, Error)');
   });
 
   it('compares capability tokens in constant time on both transports', () => {

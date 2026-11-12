@@ -3,6 +3,7 @@
 #include "Dom/JsonObject.h"
 #include "Dom/JsonValue.h"
 #include "Foundation/BridgeHelpers/Properties/McpPropApply.h"
+#include "Foundation/BridgeHelpers/Security/McpProjectPaths.h"
 #include "Foundation/HandlerUtils/McpHandlerUtils.h"
 #include "Foundation/Reflection/McpPropertyReflection.h"
 #include "GameFramework/SaveGame.h"
@@ -30,7 +31,9 @@ bool ReadSaveSlot(const TSharedPtr<FJsonObject>& Payload, FString& OutSlot, int3
   OutSlot.TrimStartAndEndInline();
   OutUser = FMath::Max(0, static_cast<int32>(User));
   if (OutSlot.IsEmpty() || OutSlot.Contains(TEXT("..")) || OutSlot.Contains(TEXT("/")) ||
-      OutSlot.Contains(TEXT("\\")) || OutSlot.Contains(TEXT(":"))) {
+      OutSlot.Contains(TEXT("\\")) || OutSlot.Contains(TEXT(":")) || McpIsReservedDeviceSegment(OutSlot)) {
+    // A Windows device name (NUL, CON, COM1...) is no file: NUL saved into nothing while the reply read back the
+    // object it sent, and CON or COM1 opened a device.
     OutError = FString::Printf(
         TEXT("`slotName` must be a slot as list_save_games shows it (its file name without .sav), not `%s`."), *OutSlot);
     return false;

@@ -186,6 +186,7 @@ const testCases = [
 // === ADD (Montage Notify - needs assetPath; no notifyClass = simple notify event) ===
 { scenario: 'ADD: add_montage_notify', toolName: 'animation_physics', arguments: {"action": "add_montage_notify", "assetPath": `${TEST_FOLDER}/Testmontage`, "time": 0.5, "notifyName": "Testmontage_notify"}, expected: 'success|already exists', assertions: [{ path: 'structuredContent.result.undo.undoable', equals: true, label: 'one undo step' }] },
 { scenario: 'ADD: add_montage_notify via notifyClass', toolName: 'animation_physics', arguments: {"action": "add_montage_notify", "assetPath": `${TEST_FOLDER}/Testmontage`, "time": 0.6, "notifyClass": "AnimNotify_PlaySound"}, expected: 'success|already exists', assertions: [{ path: 'structuredContent.result.undo.undoable', equals: true, label: 'one undo step' }] },
+{ scenario: 'ERROR: add_montage_notify refuses a class that is no notify', toolName: 'animation_physics', arguments: {"action": "add_montage_notify", "assetPath": `${TEST_FOLDER}/Testmontage`, "time": 0.6, "notifyClass": "AnimNotifyState_Trail"}, expected: 'error' },
 // A notify past the end never fired.
 { scenario: 'ERROR: add_montage_notify past the montage end', toolName: 'animation_physics', arguments: {"action": "add_montage_notify", "assetPath": `${TEST_FOLDER}/Testmontage`, "time": 99, "notifyName": "Late", "save": false}, expected: 'error|INVALID_ARGUMENT' },
 

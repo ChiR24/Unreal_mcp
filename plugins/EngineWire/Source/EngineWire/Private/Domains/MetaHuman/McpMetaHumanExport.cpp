@@ -54,7 +54,14 @@ bool HandleExportMetaHuman(UEngineWireSubsystem* Self, const FString& RequestId,
     }
 
     const FString ExportType = GetJsonStringField(Payload, TEXT("exportType"), TEXT("geometry"));
-    const FString ProjectPath = GetJsonStringField(Payload, TEXT("projectPath"), TEXT("/Game/MetaHumans"));
+    // The export functions write their assets themselves, past McpSafeAssetSave: the folder takes the shared
+    // canonicalizer and the engine-content rule here.
+    FString ProjectPath;
+    if (!ReadContentFolderOrReply(Self, RequestId, Socket, TEXT("projectPath"),
+            GetJsonStringField(Payload, TEXT("projectPath"), TEXT("/Game/MetaHumans")), ProjectPath))
+    {
+        return true;
+    }
 
     TSharedPtr<FJsonObject> Params = MakeShared<FJsonObject>();
     const TCHAR* FunctionName = nullptr;

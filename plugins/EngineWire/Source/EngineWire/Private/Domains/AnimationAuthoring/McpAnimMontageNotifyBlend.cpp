@@ -75,19 +75,10 @@ if (SubAction == TEXT("add_montage_notify"))
             FullClassName = TEXT("AnimNotify_") + NotifyClass;
         }
 
-#if ENGINE_MINOR_VERSION >= 1
-        ResolvedNotifyClass = FindFirstObject<UClass>(*FullClassName, EFindFirstObjectOptions::None);
-#else
-        ResolvedNotifyClass = ResolveClassByName(FullClassName);
-#endif
-        if (!ResolvedNotifyClass)
-        {
-#if ENGINE_MINOR_VERSION >= 1
-            ResolvedNotifyClass = FindFirstObject<UClass>(*NotifyClass, EFindFirstObjectOptions::None);
-#else
-            ResolvedNotifyClass = ResolveClassByName(NotifyClass);
-#endif
-        }
+        // The resolver add_notify uses, which returns a UAnimNotify subclass or nothing: any class of that name was
+        // taken here (a notify state, an actor class), and NewObject<UAnimNotify> of one is a fatal check.
+        TArray<FString> Tried;
+        ResolvedNotifyClass = ResolveNotifyClassByName(NotifyClass, TEXT("AnimNotify_"), UAnimNotify::StaticClass(), Tried);
 
         if (ResolvedNotifyClass && ResolvedNotifyClass->HasAnyClassFlags(CLASS_Abstract))
         {

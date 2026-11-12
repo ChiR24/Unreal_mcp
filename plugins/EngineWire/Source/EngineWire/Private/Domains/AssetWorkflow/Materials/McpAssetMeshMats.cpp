@@ -6,6 +6,7 @@
 // each slot holds afterwards and each entry it refused, so a typo in one slot never reads as success.
 
 #include "Domains/AssetWorkflow/Materials/McpAssetMeshMats.h"
+#include "Safety/McpSafeOperationsAssetClassification.h"
 #include "Domains/AssetWorkflow/Materials/McpAssetMeshMatSlots.h"
 #include "Foundation/BridgeHelpers/Assets/McpAssetSaveRegistry.h"
 
@@ -159,7 +160,7 @@ bool HandleSetMeshMaterials(UEngineWireSubsystem* Bridge, const FString& Request
     // A save request also writes an earlier unsaved change; a clean package is skipped. Engine content is never written.
     FString SaveSkippedReason;
     if (!bSave) SaveSkippedReason = TEXT("save was false");
-    else if (Asset->GetOutermost()->GetName().StartsWith(TEXT("/Engine/"))) SaveSkippedReason = TEXT("engine content is not saved");
+    else if (McpSafeOperations::IsEngineContentPackage(Asset->GetOutermost()->GetName())) SaveSkippedReason = TEXT("engine content is not saved");
     const bool bSaved = SaveSkippedReason.IsEmpty() && SaveLoadedAssetThrottled(Asset);
 
     TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();

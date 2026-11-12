@@ -31,18 +31,11 @@ inline UWorld* GetRenderWorld()
         : GEditor->GetEditorWorldContext().World();
 }
 
+// The render world actor a reference names by label, name or path; a path-restricted caller finds only those in a
+// level inside its prefixes.
 inline AActor* FindRenderActor(const FString& Reference)
 {
-    if (Reference.IsEmpty())
-    {
-        return nullptr;
-    }
-    if (AActor* ByPath = FindObject<AActor>(nullptr, *Reference))
-    {
-        return ByPath;
-    }
-    UWorld* World = GetRenderWorld();
-    return FindActorByNameInWorldForMcp(World, Reference, true);
+    return FindActorByNameInWorldForMcp(GetRenderWorld(), Reference, true);
 }
 
 // Writes FPostProcessSettings fields from JSON (reflection; override flags set). Handlers write a copy of the
@@ -195,7 +188,9 @@ inline AActor* FindSoleSceneCaptureActor(FString& OutError, FString& OutErrorCod
     for (TActorIterator<AActor> It(World); It; ++It)
     {
         AActor* Actor = *It;
-        if (Actor && (Actor->IsA<ASceneCapture2D>() || Actor->IsA<ASceneCaptureCube>()))
+        // The request named no actor: a path-restricted caller chooses among those in a level inside its prefixes.
+        if (Actor && (Actor->IsA<ASceneCapture2D>() || Actor->IsA<ASceneCaptureCube>()) &&
+            McpCapabilityPrincipal::ActiveRequestPermitsObject(Actor))
         {
             Captures.Add(Actor);
         }

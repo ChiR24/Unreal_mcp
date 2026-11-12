@@ -107,6 +107,8 @@ static bool ConfigurePlayerStart(FActionContext& Context)
     APlayerStart* Target = nullptr;
     for (TActorIterator<APlayerStart> It(World); It; ++It)
     {
+        // A path-restricted caller sees and takes only the starts in a level inside its prefixes.
+        if (!McpCapabilityPrincipal::ActiveRequestPermitsObject(*It)) continue;
         Labels.Add(It->GetActorLabel());
         Target = Labels.Num() == 1 ? *It : nullptr;
     }

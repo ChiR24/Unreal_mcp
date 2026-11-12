@@ -41,28 +41,17 @@ bool UEngineWireSubsystem::HandleNiagaraGraphAction(
         return true;
     }
 
-    FString AssetPath;
-    Payload->TryGetStringField(TEXT("assetPath"), AssetPath);
-    // Every sibling Niagara variant names the system `systemPath`; only this route
-    // read `assetPath`, so the one variant that takes an arbitrary module script by
-    // path - the headline of the capability summary - could not be reached at all.
-    if (AssetPath.IsEmpty())
+    // The authoring folder's own context: systemPath (else system, else assetPath) and every path through the shared
+    // canonicalizer, systemPath and assetPath naming two systems refused, the system loaded and made transactional.
+    McpNiagaraAuthoringHandlers::FActionContext Context =
+        McpNiagaraAuthoringHandlers::MakeActionContext(this, RequestId, Payload, RequestingSocket);
+    if (!McpNiagaraAuthoringHandlers::ValidateCommonFields(Context))
     {
-        Payload->TryGetStringField(TEXT("systemPath"), AssetPath);
-    }
-    if (AssetPath.IsEmpty())
-    {
-        SendAutomationError(RequestingSocket, RequestId,
-            TEXT("Missing 'systemPath' (or 'assetPath'): the Niagara System to edit."),
-            TEXT("INVALID_ARGUMENT"));
         return true;
     }
-
-    UNiagaraSystem* System = LoadObject<UNiagaraSystem>(nullptr, *AssetPath);
+    UNiagaraSystem* System = McpNiagaraAuthoringHandlers::LoadSystemOrError(Context);
     if (!System)
     {
-        SendAutomationError(RequestingSocket, RequestId,
-            TEXT("Could not load Niagara System."), TEXT("ASSET_NOT_FOUND"));
         return true;
     }
 
@@ -137,6 +126,10 @@ bool UEngineWireSubsystem::HandleNiagaraGraphAction(
     {
         FString ModulePath;
         Payload->TryGetStringField(TEXT("modulePath"), ModulePath);
+        if (!McpNiagaraAuthoringHandlers::ValidateAndSanitizePath(Context, ModulePath, TEXT("modulePath")))
+        {
+            return true;
+        }
 
         UNiagaraScript* ModuleScript = LoadObject<UNiagaraScript>(nullptr, *ModulePath);
         if (!ModuleScript)

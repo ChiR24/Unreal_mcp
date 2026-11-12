@@ -36,9 +36,13 @@ UTexture2D* CreateEmptyTexture(const FString& PackagePath, const FString& Textur
         UE_LOG(LogEngineWireSubsystem, Warning, TEXT("CreateEmptyTexture: %s holds an asset that is not a Texture2D; it is not replaced."), *FullPath);
         return nullptr;
     }
-    UPackage* Package = NewTexture ? NewTexture->GetOutermost() : CreatePackage(*FullPath);
+    // A new package through the shared helper: CreatePackage is a Fatal log for a name holding "//" (a name such as
+    // "a//b" joined onto the folder), which the canonicalizer above lets through under /Game.
+    FString CreateError, CreateCode;
+    UPackage* Package = NewTexture ? NewTexture->GetOutermost() : McpCreatePackageForNewAsset(FullPath, CreateError, CreateCode);
     if (!Package)
     {
+        UE_LOG(LogEngineWireSubsystem, Warning, TEXT("CreateEmptyTexture: %s"), *CreateError);
         return nullptr;
     }
 

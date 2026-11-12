@@ -234,6 +234,8 @@ bool HandleFadeAndReverbActions(
                                               TArray<UObject*>());
       FActorSpawnParameters SpawnParams;
       SpawnParams.Name = FName(*ZoneName);
+      // An object that is no live actor can still hold the name: the default mode is a Fatal log for that.
+      SpawnParams.NameMode = FActorSpawnParameters::ESpawnActorNameMode::Requested;
       SpawnParams.ObjectFlags = RF_Transactional;
       AAudioVolume *AudioVolume = World->SpawnActor<AAudioVolume>(Location, FRotator::ZeroRotator, SpawnParams);
      if (!AudioVolume) {

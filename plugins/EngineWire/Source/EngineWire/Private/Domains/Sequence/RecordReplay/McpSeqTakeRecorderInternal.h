@@ -62,6 +62,12 @@ bool ReadTakeRecorderStringArray(
     const TCHAR* FieldName,
     TArray<FString>& OutValues,
     FString& OutError);
+// One name field (actorName) under the same length limit as the arrays, added to OutValues; true when it is absent.
+bool ReadTakeRecorderName(
+    const TSharedPtr<FJsonObject>& Payload,
+    const TCHAR* FieldName,
+    TArray<FString>& OutValues,
+    FString& OutError);
 bool PrepareTakeRecorderSources(
     UTakeRecorderSources* Sources,
     const TSharedPtr<FJsonObject>& Payload,

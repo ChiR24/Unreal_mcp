@@ -1,5 +1,6 @@
 
 #include "Domains/AssetWorkflow/Structs/McpAssetStructsShared.h"
+#include "Safety/McpSafeOperationsAssetClassification.h"
 #include "Foundation/BridgeHelpers/Blueprints/McpBPPaths.h"
 #include "UObject/ObjectRedirector.h"
 #include "AssetToolsModule.h"
@@ -48,8 +49,9 @@ static bool HandleStructAssetAction_Rename(UEngineWireSubsystem& Bridge, const F
 
     // duplicate_struct  (rename_struct reuses this)
     auto DuplicateStructTo = [&](const FString& SrcPath, const FString& DestPath,
-                                 const FString& DestName, FString& OutError) -> UUserDefinedStruct*
+                                 const FString& DestName, FString& OutError, FString& OutCode) -> UUserDefinedStruct*
     {
+        OutCode = TEXT("OPERATION_FAILED");
         const FString SanitizedSrcPath = SanitizeProjectRelativePath(SrcPath);
         UUserDefinedStruct* Src = LoadObject<UUserDefinedStruct>(nullptr, *SanitizedSrcPath);
         if (!Src)
@@ -58,10 +60,11 @@ static bool HandleStructAssetAction_Rename(UEngineWireSubsystem& Bridge, const F
             return nullptr;
         }
 
-        UPackage* DestPkg = CreatePackage(*DestPath);
+        // Refused when any asset already holds the destination (the caller has only ruled out a struct there): a bare
+        // CreatePackage handed back that asset's package, and the copy made in it was a fatal error.
+        UPackage* DestPkg = McpCreatePackageForNewAsset(DestPath, OutError, OutCode);
         if (!DestPkg)
         {
-            OutError = TEXT("Failed to create destination package");
             return nullptr;
         }
 
@@ -125,7 +128,7 @@ static bool HandleStructAssetAction_Rename(UEngineWireSubsystem& Bridge, const F
             return true;
         }
         // Engine/script roots are read-only; asset creation must target /Game.
-        if (DupPackageName.StartsWith(TEXT("/Engine/")) || DupPackageName.StartsWith(TEXT("/Script/")))
+        if (McpSafeOperations::IsEngineContentPackage(DupPackageName) || DupPackageName.StartsWith(TEXT("/Script/")))
         {
             Bridge.SendAutomationError(RequestingSocket, RequestId,
                 TEXT("Destination must reside under /Game (engine/script roots are read-only)"),
@@ -141,11 +144,11 @@ static bool HandleStructAssetAction_Rename(UEngineWireSubsystem& Bridge, const F
             return true;
         }
 
-        FString Err;
-        UUserDefinedStruct* Dup = DuplicateStructTo(StructPath, DupPackageName, FinalName, Err);
+        FString Err, ErrCode;
+        UUserDefinedStruct* Dup = DuplicateStructTo(StructPath, DupPackageName, FinalName, Err, ErrCode);
         if (!Dup)
         {
-            Bridge.SendAutomationError(RequestingSocket, RequestId, Err, TEXT("OPERATION_FAILED"));
+            Bridge.SendAutomationError(RequestingSocket, RequestId, Err, ErrCode);
             return true;
         }
 
@@ -217,7 +220,7 @@ static bool HandleStructAssetAction_Rename(UEngineWireSubsystem& Bridge, const F
                 return true;
             }
             // Engine/script roots are read-only; asset creation must target /Game.
-            if (NewPackageName.StartsWith(TEXT("/Engine/")) || NewPackageName.StartsWith(TEXT("/Script/")))
+            if (McpSafeOperations::IsEngineContentPackage(NewPackageName) || NewPackageName.StartsWith(TEXT("/Script/")))
             {
                 Bridge.SendAutomationError(RequestingSocket, RequestId,
                     TEXT("Destination must reside under /Game (engine/script roots are read-only)"),

@@ -219,7 +219,6 @@ bool HandleAddTaskNode(UEngineWireSubsystem* Self, const FString& RequestId, con
     // Map task type strings to actual UE classes via template or runtime lookup
     // Support both short names ("MoveTo") and full class names ("MoveToTask")
     UBTTaskNode* NewTask = nullptr;
-    UClass* TaskClass = nullptr;
 
     // Template-based classes: use StaticClass() for known task types
     if (TaskType.Equals(TEXT("MoveTo"), ESearchCase::IgnoreCase) ||
@@ -234,20 +233,11 @@ bool HandleAddTaskNode(UEngineWireSubsystem* Self, const FString& RequestId, con
     }
     else
     {
-        // Fallback: try runtime class lookup
-        TaskClass = FindObject<UClass>(nullptr, *FString::Printf(TEXT("/Script/AIModule.%s"), *TaskType));
-        if (!TaskClass)
+        // An AIModule task class by its own name or after "BTTask_", and only one that can be instanced: any class
+        // of that name used to be built first and tested afterwards.
+        if (UClass* TaskClass = FindBTNodeClass(TEXT("BTTask_"), TaskType, UBTTaskNode::StaticClass(), true))
         {
-            // Try with "BTTask_" prefix
-            TaskClass = FindObject<UClass>(nullptr, *FString::Printf(TEXT("/Script/AIModule.BTTask_%s"), *TaskType));
-        }
-        if (TaskClass)
-        {
-            UObject* TaskObj = NewObject<UObject>(BT, TaskClass);
-            if (TaskObj && TaskObj->GetClass()->IsChildOf(UBTTaskNode::StaticClass()))
-            {
-                NewTask = static_cast<UBTTaskNode*>(TaskObj);
-            }
+            NewTask = NewObject<UBTTaskNode>(BT, TaskClass);
         }
     }
 

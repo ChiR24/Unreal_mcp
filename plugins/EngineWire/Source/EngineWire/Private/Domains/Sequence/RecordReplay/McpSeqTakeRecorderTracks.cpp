@@ -136,19 +136,15 @@ bool HandleConfigureRecordedTracks(UEngineWireSubsystem* Subsystem,
         TEXT("No recorded properties or source options were requested"),
         TEXT("INVALID_ARGUMENT"));
 
-    TSet<FString> RequestedNames;
+    // The source setting's limits (item count and length): each name costs a scan of every actor of the editor and
+    // Play worlds, so an unbounded list was unbounded game-thread work.
+    TArray<FString> RequestedNames;
     for (const TCHAR* Field : {
         TEXT("actorNames"), TEXT("actors"), TEXT("sourceActors")})
-        if (!ReadNames(Payload, Field, RequestedNames, Error))
+        if (!ReadTakeRecorderStringArray(Payload, Field, RequestedNames, Error))
             return Fail(Error, TEXT("INVALID_ARGUMENT"));
-    if (Payload->HasField(TEXT("actorName"))) {
-        FString Name;
-        if (!Payload->TryGetStringField(TEXT("actorName"), Name) ||
-            Name.TrimStartAndEnd().IsEmpty())
-            return Fail(TEXT("actorName must be a non-empty string"),
-                TEXT("INVALID_ARGUMENT"));
-        RequestedNames.Add(Name.TrimStartAndEnd().ToLower());
-    }
+    if (!ReadTakeRecorderName(Payload, TEXT("actorName"), RequestedNames, Error))
+        return Fail(Error, TEXT("INVALID_ARGUMENT"));
     TSet<AActor*> RequestedActors;
     for (const FString& Name : RequestedNames) {
         AActor* Actor = FindTakeRecorderActor(Name);

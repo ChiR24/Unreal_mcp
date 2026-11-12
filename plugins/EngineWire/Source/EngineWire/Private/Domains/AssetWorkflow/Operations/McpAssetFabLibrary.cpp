@@ -181,7 +181,10 @@ bool UEngineWireSubsystem::HandleListFabLibrary(
 
   TSharedRef<FFabLibraryRead> Read = MakeShared<FFabLibraryRead>();
   for (const FString &Path : ColumnPaths) {
-    const UScriptStruct *Resolved = Type(FTopLevelAssetPath(Path));
+    // TypeOptional, never Type: Type is a checkf on a name that does not resolve (a mistyped column, or the default
+    // columns with the Fab plugin off), which took the editor down before either reply below could be sent. A name
+    // with no leading slash fires an ensure inside FTopLevelAssetPath, so it is unresolved without asking.
+    const UScriptStruct *Resolved = Path.StartsWith(TEXT("/")) ? TypeOptional(FTopLevelAssetPath(Path)) : nullptr;
     if (Resolved != nullptr) {
       Read->Columns.Add(Resolved);
     } else {

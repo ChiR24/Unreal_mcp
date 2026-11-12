@@ -5,6 +5,7 @@
 #include "Engine/StaticMesh.h"
 #include "Engine/World.h"
 #include "EngineUtils.h"
+#include "Safety/McpSafeOperationsAssetClassification.h"
 
 #if MCP_HAS_FULL_GEOMETRY_SCRIPT
 
@@ -21,13 +22,21 @@ UStaticMesh* ResolveLodMesh(UEngineWireSubsystem* Self, const FString& RequestId
     {
         for (TActorIterator<AActor> It(World); It; ++It)
         {
-            if (It->GetActorLabel() != ActorName && It->GetName() != ActorName) continue;
+            // A path-restricted caller finds only actors in a level inside its prefixes.
+            if ((It->GetActorLabel() != ActorName && It->GetName() != ActorName) ||
+                !McpCapabilityPrincipal::ActiveRequestPermitsObject(*It)) continue;
             const UStaticMeshComponent* Component = It->FindComponentByClass<UStaticMeshComponent>();
             UStaticMesh* Mesh = Component ? Component->GetStaticMesh() : nullptr;
             if (!Mesh) continue;
+            // The mesh asset is changed and saved, and the gate never saw its path: it has to be inside the prefixes too.
+            if (!McpCapabilityPrincipal::ActiveRequestPermitsObject(Mesh))
+            {
+                Self->SendAutomationError(Socket, RequestId, FString::Printf(TEXT("%s draws %s, which is outside the caller's allowed paths; nothing was changed."), *ActorName, *Mesh->GetPathName()), TEXT("PATH_NOT_PERMITTED"));
+                return nullptr;
+            }
             // Engine meshes are shared by every project on this engine and by the editor itself (the basic shapes):
             // a change here was saved into the engine's own content.
-            if (Mesh->GetOutermost()->GetName().StartsWith(TEXT("/Engine/")))
+            if (McpSafeOperations::IsEngineContentPackage(Mesh->GetOutermost()->GetName()))
             {
                 Self->SendAutomationError(Socket, RequestId, FString::Printf(TEXT("%s draws the engine mesh %s, which is not changed: duplicate it into /Game, assign the copy, and set the LODs of the copy"), *ActorName, *Mesh->GetPathName()), TEXT("ENGINE_CONTENT"));
                 return nullptr;

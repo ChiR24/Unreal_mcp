@@ -18,8 +18,8 @@ bool HandleBooleanOperation(UEngineWireSubsystem* Self, const FString& RequestId
         return true;
     }
 
-    ADynamicMeshActor* TargetActor = FindGeometryActor<ADynamicMeshActor>(TargetActorName);
-    ADynamicMeshActor* ToolActor = FindGeometryActor<ADynamicMeshActor>(ToolActorName);
+    ADynamicMeshActor* TargetActor = FindActorOfClassForMcp<ADynamicMeshActor>(McpHandlerUtils::GetEditorWorld(), TargetActorName);
+    ADynamicMeshActor* ToolActor = FindActorOfClassForMcp<ADynamicMeshActor>(McpHandlerUtils::GetEditorWorld(), ToolActorName);
     if (!TargetActor)
     {
         Self->SendAutomationError(Socket, RequestId, FString::Printf(TEXT("Target actor not found: %s"), *TargetActorName), TEXT("ACTOR_NOT_FOUND"));

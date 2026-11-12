@@ -150,6 +150,8 @@ FActionContext MakeActionContext(
     const TSharedPtr<FJsonObject>& Payload,
     TSharedPtr<FMcpBridgeWebSocket> RequestingSocket);
 bool ValidateCommonFields(FActionContext& Context);
+// PathToCheck through the shared canonicalizer (an empty one passes); a refusal names ParamName and is sent.
+bool ValidateAndSanitizePath(FActionContext& Context, FString& PathToCheck, const FString& ParamName);
 bool ValidateNiagaraIdentifier(FActionContext& Context, const FString& Value, const FString& ParamName, bool bAllowDot);
 
 UNiagaraSystem* LoadSystemOrError(FActionContext& Context);

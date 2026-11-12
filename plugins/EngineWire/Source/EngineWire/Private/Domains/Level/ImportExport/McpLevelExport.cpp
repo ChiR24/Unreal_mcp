@@ -83,12 +83,15 @@ bool HandleExportLevelAction(UEngineWireSubsystem& Subsystem, const FString& Req
     // the engine's T3D level exporter; it must stay inside the project
     // directory (Saved/... is fine). Anything else is a /Game package copy.
     if (ExportPath.EndsWith(TEXT(".t3d"), ESearchCase::IgnoreCase)) {
-      // A relative path is the project's: resolved against the engine binaries, the example below was refused.
-      const FString FullT3D = FPaths::ConvertRelativePathToFull(FPaths::ProjectDir(), ExportPath);
-      const FString ProjectRoot = FPaths::ConvertRelativePathToFull(FPaths::ProjectDir());
-      if (!FullT3D.StartsWith(ProjectRoot, ESearchCase::IgnoreCase) || FullT3D.Contains(TEXT(".."))) {
+      // The one resolver for a file the plugin writes: a relative path is the project's, and a path that leaves the
+      // project, names a device or crosses a symbolic link is refused. The hand-written test this replaces compared a
+      // prefix without regard to case and knew neither links nor device names.
+      FString FullT3D;
+      FString PathError;
+      if (!McpResolveProjectFilePath(ExportPath, FullT3D, PathError)) {
+        PathError.RemoveFromStart(TEXT("SECURITY_VIOLATION: "));
         Subsystem.SendAutomationResponse(RequestingSocket, RequestId, false,
-                               TEXT("A .t3d exportPath must be a file inside the project directory (e.g. Saved/Exports/Level.t3d)"),
+                               FString::Printf(TEXT("A .t3d exportPath must be a file inside the project directory (e.g. Saved/Exports/Level.t3d): %s"), *PathError),
                                nullptr, TEXT("SECURITY_VIOLATION"));
         return true;
       }

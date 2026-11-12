@@ -1,6 +1,7 @@
 // Copyright (c) 2024 EngineWire Contributors
 
 #include "EngineWireSubsystem.h"
+#include "Safety/McpSafeOperationsAssetClassification.h"
 #include "Foundation/BridgeHelpers/McpHelpers.h"
 #include "Foundation/BridgeHelpers/Security/McpProjectFileWrite.h"
 #include "Foundation/HandlerUtils/McpHandlerUtils.h"
@@ -123,7 +124,7 @@ bool UEngineWireSubsystem::HandleGenerateThumbnail(
   // asset's thumbnail as it was while the package was marked changed. Engine content keeps its own: a dirty engine
   // package is one Save All would write.
   UPackage *Package = Asset->GetOutermost();
-  const bool bEngineContent = Package && Package->GetName().StartsWith(TEXT("/Engine/"));
+  const bool bEngineContent = Package && McpSafeOperations::IsEngineContentPackage(Package->GetName());
   const bool bCached = bSuccess && Package && !bEngineContent;
   if (bCached) {
     ThumbnailTools::CacheThumbnail(Asset->GetFullName(), &ObjectThumbnail, Package);

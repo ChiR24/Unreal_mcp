@@ -63,11 +63,13 @@ bool HandleStructLifecycleActions(UEngineWireSubsystem& Bridge, const FString& R
             }
         }
 
-        UPackage* Package = CreatePackage(*PackageName);
+        // Refused when any asset already holds the path: a bare CreatePackage handed back that asset's package, and the
+        // struct made in it replaced a struct in place or, over an asset of another class, was a fatal error.
+        FString CreateError, CreateCode;
+        UPackage* Package = McpCreatePackageForNewAsset(PackageName, CreateError, CreateCode);
         if (!Package)
         {
-            Bridge.SendAutomationError(RequestingSocket, RequestId,
-                TEXT("Failed to create package"), TEXT("PACKAGE_CREATE_FAILED"));
+            Bridge.SendAutomationError(RequestingSocket, RequestId, CreateError, CreateCode);
             return true;
         }
 

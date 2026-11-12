@@ -1,4 +1,5 @@
 #include "Domains/AI/Blackboard/McpAIBlackboardDefaults.h"
+#include "Safety/McpSafeOperationsAssetClassification.h"
 #include "Domains/AI/McpAIContext.h"
 
 #include "BehaviorTree/BlackboardData.h"
@@ -109,7 +110,7 @@ UBlackboardData* LoadEditableBlackboard(const TSharedPtr<FJsonObject>& Payload, 
             : FString::Printf(TEXT("Blackboard not found: %s"), *Path), Path.IsEmpty() ? TEXT("INVALID_ARGUMENT") : TEXT("NOT_FOUND"));
         return nullptr;
     }
-    if (Blackboard->GetOutermost()->GetName().StartsWith(TEXT("/Engine/")))
+    if (McpSafeOperations::IsEngineContentPackage(Blackboard->GetOutermost()->GetName()))
     {
         Refuse(OutError, OutCode, TEXT("Engine content is not changed: duplicate the Blackboard into /Game and edit the copy."), TEXT("ENGINE_CONTENT"));
         return nullptr;

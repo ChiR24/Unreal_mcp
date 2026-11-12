@@ -10,16 +10,17 @@ class ULandscapeInfo;
 class UEngineWireSubsystem;
 
 namespace McpLandscapeHandlers {
-// The landscape the payload names by landscapeName (actor label) or landscapePath. Replies and returns null when the
-// path is unsafe, nothing matches, or OutInfo is requested and the landscape has no LandscapeInfo.
+// The landscape the payload names by landscapeName (actor label), landscapePath (package) or landscapeActorPath
+// (object path), else the first landscape in the level the caller may touch. Replies and returns null when the path
+// is unsafe, nothing matches, or OutInfo is requested and the landscape has no LandscapeInfo.
 ALandscape *ResolveLandscapeOrReply(UEngineWireSubsystem &Bridge,
                                     const FString &RequestId,
                                     const TSharedPtr<FJsonObject> &Payload,
                                     TSharedPtr<FMcpBridgeWebSocket> RequestingSocket,
                                     ULandscapeInfo **OutInfo = nullptr);
 
-// The landscape a build_environment action names: by label (landscapeName, name, targetActor) or by package or object
-// path (landscapePath, landscapeActorPath, actorPath), else the first landscape in the level the caller may touch.
+// The landscape a build_environment action names: by label (landscapeName) or by package or object path
+// (landscapePath, landscapeActorPath), else the first landscape in the level the caller may touch.
 // Null when nothing matches; unlike ResolveLandscapeOrReply it sends no reply.
 ALandscape *McpFindLandscape(const TSharedPtr<FJsonObject> &Payload);
 

@@ -1,5 +1,6 @@
 #include "Domains/Sequence/Cinematics/McpSeqCine.h"
 #include "Foundation/BridgeHelpers/Blueprints/McpBPPaths.h"
+#include "Foundation/BridgeHelpers/Security/McpProjectPaths.h"
 
 #include "Domains/Sequence/McpSeqFrameRate.h"
 #include "Domains/Sequence/McpSeqEditorSupport.h"
@@ -141,7 +142,8 @@ bool HandleAddSubsequence(const TSharedPtr<FJsonObject> &Params,
   ULevelSequence *Master = LoadSequence(Params, OutResult);
   if (!Master) return true;
   const FString SubPath = GetString(Params, TEXT("subsequencePath"), TEXT("subSequencePath"));
-  ULevelSequence *Sub = SubPath.IsEmpty() ? nullptr : LoadObject<ULevelSequence>(nullptr, *SubPath);
+  // Through the shared canonicalizer and the registry, as the sequence path is.
+  ULevelSequence *Sub = Cast<ULevelSequence>(McpLoadAsset(SanitizeProjectRelativePath(SubPath)));
   if (!Sub) {
     OutResult = MakeResult(false, TEXT("add_subsequence"),
                            TEXT("A valid subsequencePath is required"),
@@ -185,10 +187,7 @@ bool HandleAddShotTrack(const TSharedPtr<FJsonObject> &Params,
   if (!Master) return true;
   const FString ShotPath =
       GetString(Params, TEXT("shotSequencePath"), TEXT("subsequencePath"));
-  ULevelSequence *ShotSeq =
-      ShotPath.IsEmpty()
-          ? nullptr
-          : LoadObject<ULevelSequence>(nullptr, *ShotPath);
+  ULevelSequence *ShotSeq = Cast<ULevelSequence>(McpLoadAsset(SanitizeProjectRelativePath(ShotPath)));
   if (!ShotSeq) {
     OutResult = MakeResult(false, TEXT("add_shot_track"),
                            TEXT("A valid shotSequencePath is required"),

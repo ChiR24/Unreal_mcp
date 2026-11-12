@@ -161,6 +161,17 @@ bool HandleEnsureSingleSkyLight(
     AActor* Kept = SkyLights.Num() == 1 ? SkyLights[0] : nullptr;
     const bool bSpawned = Kept == nullptr;
     const bool bRelabelled = Kept && Kept->GetActorLabel() != TargetName;
+    // Every sky light counts above, whoever may touch it, since their light adds up; changing one is for a caller whose
+    // allowed paths hold its level.
+    bool bRecaptureAsked = false;
+    Payload->TryGetBoolField(TEXT("recapture"), bRecaptureAsked);
+    if (Kept && (bRelabelled || bRecaptureAsked) && !McpCapabilityPrincipal::ActiveRequestPermitsObject(Kept))
+    {
+        Subsystem.SendAutomationError(RequestingSocket, RequestId,
+            FString::Printf(TEXT("The level's sky light %s is in a level outside the caller's allowed paths; nothing was changed."), *McpActorRef(Kept)),
+            TEXT("PATH_NOT_PERMITTED"));
+        return true;
+    }
     // Only a spawn or a relabel opens an undo step: capturing the sky light when nothing changes dirtied the level.
     TOptional<FMcpScopedEditorTransaction> Transaction;
     if (bSpawned || bRelabelled)

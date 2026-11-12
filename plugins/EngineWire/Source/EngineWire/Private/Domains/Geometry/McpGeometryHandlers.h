@@ -184,18 +184,6 @@ void ApplyConversionCollision(UStaticMesh* Mesh, const FString& Mode);
 // out at its default tessellation. First name present wins: declared first.
 int32 DeclaredSegments(const TSharedPtr<FJsonObject>& Payload, std::initializer_list<const TCHAR*> Names, int32 Default);
 double ClampDimension(double Value, double Default = 100.0);
-// Editor-world actor of class TActor by label or object name.
-template <class TActor>
-TActor* FindGeometryActor(const FString& ActorName)
-{
-	UWorld* World = GEditor ? GEditor->GetEditorWorldContext().World() : nullptr;
-	if (!World) return nullptr;
-	for (TActorIterator<TActor> It(World); It; ++It)
-	{
-		if (It->GetActorLabel() == ActorName || It->GetName() == ActorName) return *It;
-	}
-	return nullptr;
-}
 // The named actor's spline; null after replying with the error when it has none.
 USplineComponent* ResolveGeometrySpline(UEngineWireSubsystem* Self, const FString& RequestId, TSharedPtr<FMcpBridgeWebSocket> Socket, const FString& SplineActorName);
 struct FMcpGeometryTarget

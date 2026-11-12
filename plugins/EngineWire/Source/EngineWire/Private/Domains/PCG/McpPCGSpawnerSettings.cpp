@@ -103,13 +103,13 @@ bool ApplyPCGConvenienceSettings(const FString& SubAction, UPCGSettings* Setting
         const FString TexturePath = GetJsonStringField(Payload, TEXT("texturePath"));
         if (!TexturePath.IsEmpty())
         {
-            // Validate the texture up front (dogfood #184) instead of storing an unresolvable path.
-            if (!LoadObject<UTexture>(nullptr, *TexturePath))
+            // Loaded up front through the shared normalizer instead of storing an unresolvable path.
+            FString ResolvedTexturePath;
+            if (!LoadPCGAsset<UTexture>(TexturePath, TEXT("texture"), ResolvedTexturePath, OutError))
             {
-                OutError = FString::Printf(TEXT("texturePath not found: %s"), *TexturePath);
                 return false;
             }
-            if (!ApplyStringSetting(Settings, TEXT("Texture"), TexturePath, OutError))
+            if (!ApplyStringSetting(Settings, TEXT("Texture"), ResolvedTexturePath, OutError))
             {
                 return false;
             }
@@ -121,7 +121,7 @@ bool ApplyPCGConvenienceSettings(const FString& SubAction, UPCGSettings* Setting
         const FString MeshPath = GetJsonStringField(Payload, TEXT("meshPath"));
         if (!MeshPath.IsEmpty())
         {
-            // Validate the mesh up front (dogfood #184): a bare or wrong path used to be stored as text
+            // Loaded up front: a bare or wrong path used to be stored as text
             // and only LogPCG complained at generation time.
             FString ResolvedSamplerMeshPath;
             if (!LoadPCGAsset<UStaticMesh>(MeshPath, TEXT("static mesh"), ResolvedSamplerMeshPath, OutError))

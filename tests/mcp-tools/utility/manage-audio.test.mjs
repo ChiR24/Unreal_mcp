@@ -83,6 +83,7 @@ const testCases = [
 { scenario: 'PLAYBACK: play_sound_measure reads a cue with no wave as silent', toolName: 'manage_audio', arguments: { action: 'play_sound_measure', soundPath: SOUND_CUE, maxSeconds: 1 }, expected: 'success', assertions: [{ path: 'structuredContent.result.silent', equals: true, label: 'nothing reaches the cue output' }] },
 { scenario: 'PLAYBACK: play_sound_measure of a missing sound is refused', toolName: 'manage_audio', arguments: { action: 'play_sound_measure', soundPath: `/Game/MCPTest/NoSuchSound_${ts}` }, expected: 'error|ASSET_NOT_FOUND' },
 { scenario: 'CREATE: spawn_sound_at_location', toolName: 'manage_audio', arguments: { action: 'spawn_sound_at_location', soundPath: SOUND_CUE, location: [0, 0, 100], rotation: { pitch: 0, yaw: 30, roll: 0 }, name: `MCPTestSpawnedSound_${ts}` }, expected: 'success' },
+{ scenario: 'CREATE: spawn_sound_at_location under a name the level already holds', toolName: 'manage_audio', arguments: { action: 'spawn_sound_at_location', soundPath: SOUND_CUE, location: [0, 0, 100], name: `MCPTestSpawnedSound_${ts}` }, expected: 'success' },
 { scenario: 'ACTION: prime_sound', toolName: 'manage_audio', arguments: { action: 'prime_sound', soundPath: SOUND_CUE }, expected: 'success' },
 
 // === SOUND MIX CONTROL === (uses ResolveSoundMix/Class - accepts simple names)
@@ -190,6 +191,7 @@ const testCases = [
 
 // === ATTENUATION AUTHORING ===
 { scenario: 'CREATE: create_attenuation_settings', toolName: 'manage_audio', arguments: { action: 'create_attenuation_settings', name: `Testattenuation_settings_${ts}`, path: '/Game/MCPTest', innerRadius: 300, falloffDistance: 2000, save: false }, expected: 'success|already exists' },
+{ scenario: 'ERROR: create_attenuation_settings refuses a name that is no package name', toolName: 'manage_audio', arguments: { action: 'create_attenuation_settings', name: 'Bad//Name', path: '/Game/MCPTest' }, expected: 'error' },
 { scenario: 'CONFIG: configure_distance_attenuation', toolName: 'manage_audio', arguments: { action: 'configure_distance_attenuation', assetPath: ATTENUATION, innerRadius: 400, falloffDistance: 3600, distanceAlgorithm: 'Logarithmic', save: false }, expected: 'success' },
 { scenario: 'CONFIG: configure_distance_attenuation box extent', toolName: 'manage_audio', arguments: { action: 'configure_distance_attenuation', assetPath: `${TEST_FOLDER}/TestBoxZone_${ts}`, extent: { x: 2500, y: 500, z: 300 }, save: false }, expected: 'success', assertions: [{ path: 'structuredContent.result.extent.y', equals: 500, label: 'box extent updated' }] },
 { scenario: 'CONFIG: configure_distance_attenuation air absorption', toolName: 'manage_audio', arguments: { action: 'configure_distance_attenuation', assetPath: ATTENUATION, attenuateWithLPF: true, lpfRadiusMin: 1500, lpfRadiusMax: 9000, lpfFrequencyAtMin: 20000, lpfFrequencyAtMax: 900, save: false }, expected: 'success' },

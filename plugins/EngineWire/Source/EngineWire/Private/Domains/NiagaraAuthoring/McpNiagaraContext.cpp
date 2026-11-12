@@ -100,7 +100,7 @@ FActionContext MakeActionContext(
     return Context;
 }
 
-static bool ValidateAndSanitizePath(FActionContext& Context, FString& PathToCheck, const FString& ParamName)
+bool ValidateAndSanitizePath(FActionContext& Context, FString& PathToCheck, const FString& ParamName)
 {
     if (PathToCheck.IsEmpty())
     {

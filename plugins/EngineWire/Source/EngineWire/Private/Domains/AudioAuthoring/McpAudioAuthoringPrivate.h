@@ -174,6 +174,8 @@ USoundClass* LoadSoundClassFromPath(const FString& ClassPath);
 USoundAttenuation* LoadSoundAttenuationFromPath(const FString& AttenPath);
 USoundMix* LoadSoundMixFromPath(const FString& MixPath);
 #if MCP_HAS_SOURCE_EFFECT_PRESETS
+// The preset class an effectType names (eq, chorus, delay ...), or null for a type this cannot make.
+UClass* SourceEffectPresetClass(const FString& EffectType);
 USoundEffectSourcePreset* CreateSourceEffectPresetByType(const FString& EffectType, UObject* Outer);
 #endif
 TSharedPtr<FJsonObject> HandleSoundCueAssetActions(const FString& SubAction, const TSharedPtr<FJsonObject>& Params, TSharedPtr<FJsonObject> Response);

@@ -1,6 +1,7 @@
 // Copyright (c) 2024 EngineWire Contributors
 
 #include "Domains/AssetWorkflow/Materials/McpMaterialParent.h"
+#include "Safety/McpSafeOperationsAssetClassification.h"
 
 #include "Foundation/BridgeHelpers/McpHelpers.h"
 #include "Foundation/HandlerUtils/McpHandlerUtils.h"
@@ -128,7 +129,7 @@ bool HandleSetParent(UEngineWireSubsystem* Bridge, const FString& RequestId, con
     return Fail(FString::Printf(TEXT("%s is a %s, not a material instance."), *AssetText, *Asset->GetClass()->GetName()),
                 TEXT("INVALID_ASSET_TYPE"));
   }
-  if (Instance->GetOutermost()->GetName().StartsWith(TEXT("/Engine/"))) {
+  if (McpSafeOperations::IsEngineContentPackage(Instance->GetOutermost()->GetName())) {
     return Fail(TEXT("Engine content is not changed: duplicate the instance into /Game first."), TEXT("ENGINE_CONTENT"));
   }
   UMaterialInterface* To = Cast<UMaterialInterface>(McpLoadAsset(ParentPath));

@@ -6,6 +6,7 @@
 // collision (complex), or removes it (none); then it rebuilds the physics of every placed copy and saves the mesh.
 
 #include "EngineWireSubsystem.h"
+#include "Safety/McpSafeOperationsAssetClassification.h"
 #include "Foundation/BridgeHelpers/McpHelpers.h"
 #include "Foundation/BridgeHelpers/Assets/McpAssetSaveRegistry.h"
 #include "Foundation/HandlerUtils/McpHandlerUtils.h"
@@ -76,7 +77,7 @@ bool HandleSetMeshCollision(UEngineWireSubsystem* Bridge, const FString& Request
     if (!Asset) return Fail(FString::Printf(TEXT("No mesh asset at %s"), *AssetPath), TEXT("ASSET_NOT_FOUND"));
     if (!Mesh) return Fail(FString::Printf(TEXT("%s is a %s, not a static mesh"), *AssetPath, *Asset->GetClass()->GetName()), TEXT("TYPE_MISMATCH"));
     // Engine meshes are shared by the editor itself (the basic shapes, gizmos): an in-memory change would reach all of it.
-    if (Asset->GetOutermost()->GetName().StartsWith(TEXT("/Engine/")))
+    if (McpSafeOperations::IsEngineContentPackage(Asset->GetOutermost()->GetName()))
     {
         return Fail(TEXT("Engine content is not changed: duplicate the mesh into /Game and set the copy's collision."), TEXT("ENGINE_CONTENT"));
     }

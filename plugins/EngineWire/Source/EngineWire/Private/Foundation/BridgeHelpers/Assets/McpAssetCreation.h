@@ -96,6 +96,18 @@ static inline UPackage *McpCreatePackageForNewAsset(const FString &PackagePath, 
     OutCode = TEXT("PATH_NOT_PERMITTED");
     return nullptr;
   }
+  // CreatePackage is a Fatal log for a name holding "//" (a caller's name joined straight onto a folder: name "a//b")
+  // and the FName under it for one past the 1023 characters a name holds, so a name the engine does not take as a
+  // package name (the test the editor's own asset creation makes) is refused here, for every caller.
+  FText InvalidWhy;
+  const bool bTooLong = PackagePath.Len() >= NAME_SIZE;
+  if (bTooLong || !FPackageName::IsValidLongPackageName(PackagePath, true, &InvalidWhy))
+  {
+    OutError = FString::Printf(TEXT("%s is not a package name: %s Nothing was created."), *PackagePath.Left(256),
+                               bTooLong ? TEXT("it is longer than the 1023 characters a name holds.") : *InvalidWhy.ToString());
+    OutCode = TEXT("INVALID_PATH");
+    return nullptr;
+  }
   const UPackage *Loaded = FindPackage(nullptr, *PackagePath);
   if (McpAssetExists(PackagePath) || (Loaded && Loaded->FindAssetInPackage()))
   {

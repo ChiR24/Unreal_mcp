@@ -141,8 +141,11 @@ bool HandleDataTableAction(
         UScriptStruct* RowStruct = ResolveRowStruct(RowStructPath, OutResult);
         if (!RowStruct) { return true; }
 
-        UPackage* Package = CreatePackage(*PackageName);
-        if (!Package) { OutResult = McpDataTableMakeError(TEXT("PACKAGE_CREATE_FAILED"), TEXT("Failed to create package")); return true; }
+        // Refused when any asset already holds the path: a bare CreatePackage handed back that asset's package, and what
+        // was made in it replaced an asset in place or, over one of another class, was a fatal error.
+        FString CreateError, CreateCode;
+        UPackage* Package = McpCreatePackageForNewAsset(PackageName, CreateError, CreateCode);
+        if (!Package) { OutResult = McpDataTableMakeError(*CreateCode, *CreateError); return true; }
 
         UDataTable* Table = NewObject<UDataTable>(Package, FName(*SanitizedName), RF_Public | RF_Standalone);
         if (!Table) { OutResult = McpDataTableMakeError(TEXT("ASSET_CREATE_FAILED"), TEXT("Failed to create data table")); return true; }
@@ -196,8 +199,11 @@ bool HandleDataTableAction(
             if (MemberFailures.Num() > 0) { OutResult = McpDataTableMakeError(TEXT("INVALID_MEMBER"), *FString::Join(MemberFailures, TEXT("; "))); return true; }
         }
 
-        UPackage* Package = CreatePackage(*PackageName);
-        if (!Package) { OutResult = McpDataTableMakeError(TEXT("PACKAGE_CREATE_FAILED"), TEXT("Failed to create package")); return true; }
+        // Refused when any asset already holds the path: a bare CreatePackage handed back that asset's package, and what
+        // was made in it replaced an asset in place or, over one of another class, was a fatal error.
+        FString CreateError, CreateCode;
+        UPackage* Package = McpCreatePackageForNewAsset(PackageName, CreateError, CreateCode);
+        if (!Package) { OutResult = McpDataTableMakeError(*CreateCode, *CreateError); return true; }
 
         UUserDefinedStruct* S = CreateUnseededUserStruct(Package, SanitizedName);
         if (S) { FStructureEditorUtils::CompileStructure(S); }

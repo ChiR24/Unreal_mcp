@@ -70,22 +70,6 @@ T* NavLinkCustomField(UNavLinkCustomComponent* SmartComp, const TCHAR* Name)
     return Property ? Property->ContainerPtrToValuePtr<T>(SmartComp) : nullptr;
 }
 
-inline ANavLinkProxy* FindNavLinkProxyByName(UWorld* World, const FString& ActorName)
-{
-    if (!World)
-    {
-        return nullptr;
-    }
-    for (TActorIterator<ANavLinkProxy> It(World); It; ++It)
-    {
-        if (It->GetActorLabel() == ActorName || It->GetName() == ActorName)
-        {
-            return *It;
-        }
-    }
-    return nullptr;
-}
-
 // What a link proxy links, relative to itself.
 struct FNavLinkEnds
 {

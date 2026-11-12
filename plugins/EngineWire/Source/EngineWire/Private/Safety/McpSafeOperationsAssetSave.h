@@ -2,6 +2,7 @@
 
 #include "Core/Compatibility/McpVersionCompatibility.h"
 #include "Foundation/McpCapabilityPrincipal.h"
+#include "Safety/McpSafeOperationsAssetClassification.h"
 #include "Safety/McpSafeOperationsLog.h"
 #include "PackageTools.h"
 
@@ -93,7 +94,7 @@ inline bool McpSafeAssetSave(UObject* Asset)
     // Engine content is shared by every project on this engine install: a handler that edited a /Engine asset
     // and saved it (LOD rebuilds, texture edits, reference poses) rewrote it for all of them. Only refusing
     // /Engine/Transient left every other engine package writable.
-    if (PackageName.StartsWith(TEXT("/Engine/")))
+    if (IsEngineContentPackage(PackageName))
     {
         UE_LOG(LogMcpSafeOperations, Warning, TEXT("McpSafeAssetSave: %s is engine content and was not saved; edit a copy under /Game instead."), *PackageName);
         return false;

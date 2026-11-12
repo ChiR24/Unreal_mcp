@@ -1,6 +1,7 @@
 // Copyright (c) 2024 EngineWire Contributors
 
 #include "EngineWireSubsystem.h"
+#include "Safety/McpSafeOperationsAssetClassification.h"
 #include "Foundation/BridgeHelpers/McpHelpers.h"
 #include "Foundation/HandlerUtils/McpHandlerUtils.h"
 
@@ -56,7 +57,7 @@ TArray<TSharedPtr<FJsonValue>> McpNaniteFlagMaterials(const TArray<UMaterialInte
     if (!McpCapabilityPrincipal::ActiveRequestPermitsObject(Owner)) continue;
     if (!McpNaniteHasFlag(Owner)) McpNaniteSetFlag(Owner);
     const FString Package = Owner->GetOutermost()->GetName();
-    if (!Package.StartsWith(TEXT("/Engine/")) && McpSafeAssetSave(Owner)) Flagged.Add(MakeShared<FJsonValueString>(Package));
+    if (!McpSafeOperations::IsEngineContentPackage(Package) && McpSafeAssetSave(Owner)) Flagged.Add(MakeShared<FJsonValueString>(Package));
   }
   return Flagged;
 }

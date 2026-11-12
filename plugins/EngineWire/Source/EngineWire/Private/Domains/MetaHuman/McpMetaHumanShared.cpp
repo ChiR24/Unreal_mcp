@@ -4,7 +4,10 @@ DEFINE_LOG_CATEGORY(LogMcpMetaHumanHandlers);
 
 #include "Editor.h"
 #include "EditorSubsystem.h"
+#include "Foundation/BridgeHelpers/Security/McpProjectPaths.h"
+#include "Foundation/BridgeHelpers/Security/McpProjectPathsRefusal.h"
 #include "Foundation/Reflection/McpReflectedInvoke.h"
+#include "Safety/McpSafeOperationsAssetClassification.h"
 #include "Interfaces/IPluginManager.h"
 #include "Misc/Paths.h"
 #include "UObject/UObjectGlobals.h"
@@ -128,15 +131,35 @@ bool InvokeMetaHumanFunction(UObject* Target, const TCHAR* FunctionName,
     return true;
 }
 
-UObject* LoadMetaHumanCharacter(const FString& AssetPath)
+UObject* LoadMetaHumanCharacter(const FString& RawPath)
 {
     UClass* CharacterClass = FindMetaHumanCharacterClass();
+    const FString AssetPath = SanitizeProjectRelativePath(RawPath);
     if (!CharacterClass || AssetPath.IsEmpty())
     {
         return nullptr;
     }
     UObject* Loaded = StaticLoadObject(CharacterClass, nullptr, *AssetPath);
     return (Loaded && Loaded->IsA(CharacterClass)) ? Loaded : nullptr;
+}
+
+bool ReadContentFolderOrReply(UEngineWireSubsystem* Self, const FString& RequestId, FMetaHumanSocket Socket,
+    const TCHAR* Field, const FString& RawFolder, FString& OutFolder)
+{
+    OutFolder = SanitizeProjectRelativePath(RawFolder);
+    if (OutFolder.IsEmpty())
+    {
+        Self->SendAutomationError(Socket, RequestId, McpPathRefusalMessage(Field, RawFolder), TEXT("SECURITY_VIOLATION"));
+        return false;
+    }
+    if (McpSafeOperations::IsEngineContentPackage(OutFolder))
+    {
+        Self->SendAutomationError(Socket, RequestId,
+            FString::Printf(TEXT("%s %s is engine content, which is never changed: name a /Game folder."), Field, *OutFolder),
+            TEXT("ENGINE_CONTENT"));
+        return false;
+    }
+    return true;
 }
 
 void SendMetaHumanUnavailable(UEngineWireSubsystem* Self, const FString& RequestId, FMetaHumanSocket Socket)
@@ -161,6 +184,11 @@ UObject* RequireEditableCharacter(UEngineWireSubsystem* Self, const FString& Req
     if (AssetPath.IsEmpty())
     {
         Self->SendAutomationError(Socket, RequestId, TEXT("Missing 'characterPath'."), TEXT("MISSING_PARAMETER"));
+        return nullptr;
+    }
+    if (SanitizeProjectRelativePath(AssetPath).IsEmpty())
+    {
+        Self->SendAutomationError(Socket, RequestId, McpPathRefusalMessage(TEXT("characterPath"), AssetPath), TEXT("SECURITY_VIOLATION"));
         return nullptr;
     }
 

@@ -15,6 +15,18 @@
 
 namespace McpSafeOperations
 {
+// Content saved into the engine install, which every project on it shares: /Engine and the mount of every engine plugin
+// (/Niagara, /ControlRig, a plugin installed into the engine). A project plugin's content belongs to the project.
+inline bool IsEngineContentPackage(const FString& PackageName)
+{
+    if (PackageName.StartsWith(TEXT("/Engine/")))
+    {
+        return true;
+    }
+    FString File;
+    return FPackageName::TryConvertLongPackageNameToFilename(PackageName, File) &&
+        FPaths::IsUnderDirectory(FPaths::ConvertRelativePathToFull(File), FPaths::ConvertRelativePathToFull(FPaths::EngineDir()));
+}
 
 
 inline bool IsAnyBlueprintAsset(const FAssetData& AssetData)

@@ -221,11 +221,19 @@ bool UEngineWireSubsystem::HandleSourceControlEnable(
     return true;
   }
 
+  // SetProvider ends in a Fatal log for a name no registered provider has (a typo, or a provider whose plugin is off):
+  // only a registered name is set, and any other gets the refusal below.
+  bool bKnownProvider = false;
   if (bWantsProvider) {
-    SourceControlModule.SetProvider(FName(*Provider));
+    TArray<FName> Registered;
+    SourceControlModule.GetProviderNames(Registered);
+    bKnownProvider = Registered.Contains(FName(*Provider));
+    if (bKnownProvider) {
+      SourceControlModule.SetProvider(FName(*Provider));
+    }
   }
 
-  bool bEnabled = SourceControlModule.IsEnabled();
+  bool bEnabled = SourceControlModule.IsEnabled() && (!bWantsProvider || bKnownProvider);
   TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
   Result->SetBoolField(TEXT("success"), bEnabled);
   Result->SetStringField(TEXT("provider"), SourceControlModule.GetProvider().GetName().ToString());

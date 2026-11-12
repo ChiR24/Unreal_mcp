@@ -4,6 +4,7 @@
 // sound each shows from), which the engine shows at the bottom of the game's screen while the sound plays.
 
 #include "Core/Compatibility/McpVersionCompatibility.h"
+#include "Safety/McpSafeOperationsAssetClassification.h"
 #include "Domains/AudioAuthoring/McpAudioAuthoringPrivate.h"
 #include "Engine/Engine.h"
 #include "Engine/EngineTypes.h"
@@ -24,7 +25,7 @@ TSharedPtr<FJsonObject> HandleSubtitleActions(const FString& SubAction, const TS
         return McpHandlerUtils::BuildErrorResponse(TEXT("ASSET_NOT_FOUND"), FString::Printf(TEXT("%s is not a Sound Wave (a Sound Cue plays "
             "waves: give each wave it plays its own subtitles). Nothing was changed."), *Path));
     }
-    if (Wave->GetPathName().StartsWith(TEXT("/Engine/")))
+    if (McpSafeOperations::IsEngineContentPackage(Wave->GetOutermost()->GetName()))
     {
         return McpHandlerUtils::BuildErrorResponse(TEXT("ENGINE_CONTENT"), FString::Printf(TEXT("%s is engine content, which is never changed: "
             "duplicate it into /Game first. Nothing was changed."), *Wave->GetPathName()));

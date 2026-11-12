@@ -91,7 +91,7 @@ ANavLinkProxy* ResolveNavLinkOrReply(
     {
         Self->SendAutomationResponse(Socket, RequestId, false, TEXT("No editor world available"), nullptr, TEXT("NO_WORLD"));
     }
-    else if (ANavLinkProxy* NavLink = FindNavLinkProxyByName(World, ActorName))
+    else if (ANavLinkProxy* NavLink = FindActorOfClassForMcp<ANavLinkProxy>(World, ActorName))
     {
         return NavLink;
     }

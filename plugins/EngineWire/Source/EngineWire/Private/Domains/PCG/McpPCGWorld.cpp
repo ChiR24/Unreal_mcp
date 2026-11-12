@@ -54,6 +54,11 @@ UPCGComponent* FindPCGComponent(UWorld* World, const FString& ActorName, const F
     for (TActorIterator<AActor> It(World); It; ++It)
     {
         AActor* Actor = *It;
+        // A path-restricted caller finds only components on actors in a level inside its prefixes.
+        if (!McpCapabilityPrincipal::ActiveRequestPermitsObject(Actor))
+        {
+            continue;
+        }
         if (UPCGComponent* Component = FindPCGComponentOnActor(Actor, ComponentName))
         {
             OutActor = Actor;

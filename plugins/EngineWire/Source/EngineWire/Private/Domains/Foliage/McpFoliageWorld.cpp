@@ -1,4 +1,5 @@
 #include "Core/Compatibility/McpVersionCompatibility.h"
+#include "Foundation/BridgeHelpers/Assets/McpAssetCreation.h"
 #include "Foundation/BridgeHelpers/Blueprints/McpBPPaths.h"
 #include "Domains/Foliage/McpFoliagePrivate.h"
 
@@ -46,8 +47,16 @@ UFoliageType* ResolveFoliageTypeOrMesh(UEngineWireSubsystem& Bridge, const FStri
     const FString AutoPath = FString::Printf(TEXT("/Game/Foliage/Auto_%s"), *FPaths::GetBaseFilename(InOutPath));
     Type = McpAssetExists(AutoPath) ? LoadObject<UFoliageType>(nullptr, *AutoPath) : nullptr;
     if (!Type) {
+      // Refused when an asset of another kind already holds the auto path: a bare CreatePackage handed back its
+      // package, and the type made in it was a fatal error (the asset in memory) or saved over it (on disk only).
+      FString CreateError, CreateCode;
+      UPackage* AutoPackage = McpCreatePackageForNewAsset(AutoPath, CreateError, CreateCode);
+      if (!AutoPackage) {
+        Bridge.SendAutomationError(Socket, RequestId, CreateError, CreateCode);
+        return nullptr;
+      }
       UFoliageType_InstancedStaticMesh* AutoType = NewObject<UFoliageType_InstancedStaticMesh>(
-          CreatePackage(*AutoPath), FName(*FPackageName::GetShortName(AutoPath)), RF_Public | RF_Standalone);
+          AutoPackage, FName(*FPackageName::GetShortName(AutoPath)), RF_Public | RF_Standalone);
       AutoType->SetStaticMesh(Mesh);
       AutoType->Density = 100.0f;
       AutoType->ReapplyDensity = true;

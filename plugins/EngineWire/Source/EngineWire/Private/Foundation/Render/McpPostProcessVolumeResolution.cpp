@@ -43,7 +43,8 @@ APostProcessVolume* McpResolvePostProcessVolume(
     for (TActorIterator<APostProcessVolume> It(World); It; ++It)
     {
         APostProcessVolume* Candidate = *It;
-        if (Candidate && Candidate->bUnbound)
+        // Chosen without a name: a path-restricted caller chooses among volumes in a level inside its prefixes.
+        if (Candidate && Candidate->bUnbound && McpCapabilityPrincipal::ActiveRequestPermitsObject(Candidate))
         {
             Unbound.Add(Candidate);
         }

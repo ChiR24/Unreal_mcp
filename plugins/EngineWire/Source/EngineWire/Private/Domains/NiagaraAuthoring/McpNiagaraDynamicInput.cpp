@@ -7,7 +7,7 @@ static bool SetNiagaraDynamicInput(FActionContext& Context)
 {
     const FString TargetNodeId = GetJsonStringField(Context.Payload, TEXT("targetNodeId"));
     const FString InputName = GetJsonStringField(Context.Payload, TEXT("inputName"));
-    const FString DynamicInputScriptPath = GetJsonStringField(Context.Payload, TEXT("dynamicInputScriptPath"));
+    FString DynamicInputScriptPath = GetJsonStringField(Context.Payload, TEXT("dynamicInputScriptPath"));
     bool bReplaceExisting = false;
     Context.Payload->TryGetBoolField(TEXT("replaceExisting"), bReplaceExisting);
 
@@ -18,6 +18,10 @@ static bool SetNiagaraDynamicInput(FActionContext& Context)
             Context.SystemPath.IsEmpty() ? TEXT("Missing 'systemPath' (or 'assetPath'): the Niagara System.") :
             InputName.IsEmpty() ? TEXT("Missing 'inputName'.") :
             TEXT("Missing 'dynamicInputScriptPath'."), TEXT("INVALID_ARGUMENT"));
+        return true;
+    }
+    if (!ValidateAndSanitizePath(Context, DynamicInputScriptPath, TEXT("dynamicInputScriptPath")))
+    {
         return true;
     }
 

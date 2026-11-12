@@ -129,7 +129,7 @@ TOptional<FMcpGeometryTarget> ResolveGeometryTarget(UEngineWireSubsystem* Self, 
         return {};
     }
     FMcpGeometryTarget Target;
-    Target.Actor = FindGeometryActor<ADynamicMeshActor>(ActorName);
+    Target.Actor = FindActorOfClassForMcp<ADynamicMeshActor>(McpHandlerUtils::GetEditorWorld(), ActorName);
     if (!Target.Actor)
     {
         Self->SendAutomationError(Socket, RequestId, FString::Printf(TEXT("Actor not found: %s"), *ActorName), TEXT("ACTOR_NOT_FOUND"));
@@ -148,7 +148,7 @@ TOptional<FMcpGeometryTarget> ResolveGeometryTarget(UEngineWireSubsystem* Self, 
 USplineComponent* ResolveGeometrySpline(UEngineWireSubsystem* Self, const FString& RequestId,
                                         TSharedPtr<FMcpBridgeWebSocket> Socket, const FString& SplineActorName)
 {
-    AActor* SplineActor = FindGeometryActor<AActor>(SplineActorName);
+    AActor* SplineActor = FindActorOfClassForMcp<AActor>(McpHandlerUtils::GetEditorWorld(), SplineActorName);
     if (!SplineActor)
     {
         Self->SendAutomationError(Socket, RequestId, FString::Printf(TEXT("Spline actor not found: %s"), *SplineActorName), TEXT("SPLINE_NOT_FOUND"));

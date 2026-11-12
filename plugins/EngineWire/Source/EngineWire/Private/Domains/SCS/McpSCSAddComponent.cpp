@@ -183,11 +183,14 @@ TSharedPtr<FJsonObject> FSCSHandlers::AddSCSComponent(
   // answered success with mesh_applied false: an empty component the caller took for a mesh. Both refuse first.
   const bool bStaticMeshClass = CompClass->IsChildOf(UStaticMeshComponent::StaticClass());
   const bool bSkeletalMeshClass = CompClass->IsChildOf(USkeletalMeshComponent::StaticClass());
-  UObject *MeshAsset = MeshPath.IsEmpty() ? nullptr
-      : bStaticMeshClass ? static_cast<UObject *>(LoadObject<UStaticMesh>(nullptr, *MeshPath))
-      : bSkeletalMeshClass ? static_cast<UObject *>(LoadObject<USkeletalMesh>(nullptr, *MeshPath)) : nullptr;
-  UMaterialInterface *MaterialAsset = !MaterialPath.IsEmpty() && CompClass->IsChildOf(UPrimitiveComponent::StaticClass())
-      ? LoadObject<UMaterialInterface>(nullptr, *MaterialPath) : nullptr;
+  // Both paths go through the shared canonicalizer and the registry, as every other asset path a request names.
+  const FString SafeMeshPath = SanitizeProjectRelativePath(MeshPath);
+  const FString SafeMaterialPath = SanitizeProjectRelativePath(MaterialPath);
+  UObject *MeshAsset = SafeMeshPath.IsEmpty() ? nullptr
+      : bStaticMeshClass ? static_cast<UObject *>(Cast<UStaticMesh>(McpLoadAsset(SafeMeshPath)))
+      : bSkeletalMeshClass ? static_cast<UObject *>(Cast<USkeletalMesh>(McpLoadAsset(SafeMeshPath))) : nullptr;
+  UMaterialInterface *MaterialAsset = !SafeMaterialPath.IsEmpty() && CompClass->IsChildOf(UPrimitiveComponent::StaticClass())
+      ? Cast<UMaterialInterface>(McpLoadAsset(SafeMaterialPath)) : nullptr;
   if ((!MeshPath.IsEmpty() && !MeshAsset) || (!MaterialPath.IsEmpty() && !MaterialAsset)) {
     const bool bMesh = !MeshPath.IsEmpty() && !MeshAsset;
     const bool bCanHold = bMesh ? (bStaticMeshClass || bSkeletalMeshClass) : CompClass->IsChildOf(UPrimitiveComponent::StaticClass());

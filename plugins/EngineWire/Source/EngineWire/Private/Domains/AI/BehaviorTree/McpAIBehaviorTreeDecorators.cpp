@@ -85,9 +85,7 @@ bool HandleAddDecorator(UEngineWireSubsystem* Self, const FString& RequestId, co
     {
         // The rest of the advertised types (TimeLimit, ForceSuccess, ConeCheck...) are AIModule
         // BTDecorator_<Type> classes; abstract bases such as BlackboardBase cannot be instanced.
-        UClass* DecoratorClass = FindObject<UClass>(nullptr,
-            *FString::Printf(TEXT("/Script/AIModule.BTDecorator_%s"), *DecoratorType));
-        if (DecoratorClass && DecoratorClass->IsChildOf(UBTDecorator::StaticClass()) && !DecoratorClass->HasAnyClassFlags(CLASS_Abstract))
+        if (UClass* DecoratorClass = FindBTNodeClass(TEXT("BTDecorator_"), DecoratorType, UBTDecorator::StaticClass()))
         {
             NewDecorator = NewObject<UBTDecorator>(BT, DecoratorClass);
         }
@@ -174,9 +172,7 @@ bool HandleAddService(UEngineWireSubsystem* Self, const FString& RequestId, cons
     }
     else
     {
-        UClass* ServiceClass = FindObject<UClass>(nullptr,
-            *FString::Printf(TEXT("/Script/AIModule.BTService_%s"), *ServiceType));
-        if (ServiceClass && ServiceClass->IsChildOf(UBTService::StaticClass()))
+        if (UClass* ServiceClass = FindBTNodeClass(TEXT("BTService_"), ServiceType, UBTService::StaticClass()))
         {
             NewService = NewObject<UBTService>(BT, ServiceClass);
         }

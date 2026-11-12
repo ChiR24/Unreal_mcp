@@ -73,7 +73,7 @@ bool Handle(UEngineWireSubsystem& Bridge, const FString& RequestId, const TShare
 		{
 			return Refuse(FString::Printf(TEXT("No asset is at %s."), *Path), TEXT("ASSET_NOT_FOUND"));
 		}
-		if (Asset->GetPathName().StartsWith(TEXT("/Engine/")))
+		if (McpSafeOperations::IsEngineContentPackage(Asset->GetOutermost()->GetName()))
 		{
 			return Refuse(FString::Printf(TEXT("%s is engine content, which is never changed: duplicate it into /Game first."), *Asset->GetPathName()),
 				TEXT("ENGINE_CONTENT"));

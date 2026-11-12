@@ -1,4 +1,5 @@
 #include "Domains/SystemControl/McpSystemPrivate.h"
+#include "Foundation/BridgeHelpers/Security/McpProjectFileWrite.h"
 
 #include "HAL/FileManager.h"
 #include "Misc/App.h"
@@ -79,8 +80,11 @@ bool McpEnsureGameTarget(const FString &Name, FString &OutFile, bool &bOutCreate
     return false;
   }
   Text.ReplaceInline(*OldClass, *(Name + TEXT("Target")), ESearchCase::CaseSensitive);
-  if (!FFileHelper::SaveStringToFile(Text, *OutFile, FFileHelper::EEncodingOptions::ForceUTF8WithoutBOM)) {
-    OutError = FString::Printf(TEXT("Could not write %s."), *OutFile);
+  // The checked project writer: the file is opened first and must be that path, so a link in the Source folder cannot
+  // send the write outside the project.
+  FString WriteError;
+  if (!McpWriteProjectText(OutFile, Text, WriteError)) {
+    OutError = FString::Printf(TEXT("Could not write %s: %s"), *OutFile, *WriteError);
     return false;
   }
   bOutCreated = true;

@@ -3,6 +3,7 @@
 #include "Dom/JsonObject.h"
 #include "Dom/JsonValue.h"
 #include "Foundation/BridgeHelpers/McpHelpers.h"
+#include "Foundation/BridgeHelpers/Security/McpProjectPaths.h"
 #include "Foundation/HandlerUtils/McpHandlerUtils.h"
 #include "HAL/FileManager.h"
 #include "EngineWireSubsystem.h"
@@ -71,14 +72,18 @@ TSharedPtr<FJsonObject> DeleteOneOutputFile(const FString& Project, FString Path
     OutError = FString::Printf(TEXT("`%s` must be a project-relative file under %s, as list_output_files shows it."),
                                *Path, *RootsText());
   } else {
-    Full = FPaths::ConvertRelativePathToFull(Project / Path);
-    FPaths::NormalizeFilename(Full);
-    FPaths::CollapseRelativeDirectories(Full);
+    // Through the shared project-file resolver, which refuses a symbolic link or junction on the way: a link inside an
+    // output root sent the delete, and the walk that removes emptied folders, outside the project.
+    FString ResolveError;
+    const bool bResolved = McpResolveProjectFilePath(Path, Full, ResolveError);
     FString RootFull;
     for (const TCHAR* Root : OutputRoots) {
-      RootFull = Full.StartsWith(Project / Root + TEXT("/"), McpFileNameCase) ? Project / Root : RootFull;
+      RootFull = bResolved && Full.StartsWith(Project / Root + TEXT("/"), McpFileNameCase) ? Project / Root : RootFull;
     }
-    if (RootFull.IsEmpty()) {
+    if (!bResolved) {
+      OutErrorCode = TEXT("PATH_OUTSIDE_OUTPUT_ROOTS");
+      OutError = FString::Printf(TEXT("%s does not resolve inside the project: %s"), *Path, *ResolveError);
+    } else if (RootFull.IsEmpty()) {
       OutErrorCode = TEXT("PATH_OUTSIDE_OUTPUT_ROOTS");
       OutError = FString::Printf(TEXT("Only files the MCP writes can be deleted here (%s); %s is outside them."),
                                  *RootsText(), *Path);
@@ -142,8 +147,23 @@ bool HandleListOutputFiles(UEngineWireSubsystem* Self, const FString& RequestId,
     bRootKnown = true;
     TArray<FString> InRoot;
     IFileManager::Get().FindFilesRecursive(InRoot, *(Project / Root), TEXT("*"), true, false);
+    // A folder reached through a symbolic link or junction lies outside the project: the delete refuses what is under
+    // it, and the listing leaves it out. Asked once a folder, since the resolver walks every segment of the path.
+    TMap<FString, bool> FolderInProject;
     for (const FString& File : InRoot) {
-      if (Extension.IsEmpty() || FPaths::GetExtension(File).Equals(Extension, ESearchCase::IgnoreCase)) {
+      if (!Extension.IsEmpty() && !FPaths::GetExtension(File).Equals(Extension, ESearchCase::IgnoreCase)) {
+        continue;
+      }
+      const FString Folder = FPaths::GetPath(File);
+      const bool* bKnown = FolderInProject.Find(Folder);
+      if (!bKnown) {
+        FString Relative = Folder;
+        FPaths::MakePathRelativeTo(Relative, *(Project + TEXT("/")));
+        FString Resolved;
+        FString Ignored;
+        bKnown = &FolderInProject.Add(Folder, McpResolveProjectFilePath(Relative, Resolved, Ignored));
+      }
+      if (*bKnown) {
         Found.Add({File, IFileManager::Get().GetTimeStamp(*File)});
       }
     }

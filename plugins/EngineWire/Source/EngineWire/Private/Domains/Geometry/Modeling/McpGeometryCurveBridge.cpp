@@ -139,7 +139,7 @@ bool HandleDuplicateAlongSpline(UEngineWireSubsystem* Self, const FString& Reque
     const FString SplineActorName = GetJsonStringField(Payload, TEXT("splineActorName"));
     const int32 Count = GetJsonIntField(Payload, TEXT("count"), 10);
 
-    ADynamicMeshActor* SourceActor = FindGeometryActor<ADynamicMeshActor>(ActorName);
+    ADynamicMeshActor* SourceActor = FindActorOfClassForMcp<ADynamicMeshActor>(McpHandlerUtils::GetEditorWorld(), ActorName);
     if (!SourceActor)
     {
         Self->SendAutomationError(Socket, RequestId, FString::Printf(TEXT("Source actor not found: %s"), *ActorName), TEXT("ACTOR_NOT_FOUND"));

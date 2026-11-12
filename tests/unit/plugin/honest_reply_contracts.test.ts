@@ -125,7 +125,8 @@ describe('handlers answer what they did', () => {
     expect(assets).toContain('return McpSafeAssetSave(Texture);');
     expect(assets).not.toContain('bExistsOnDisk');
     expect(assets).toMatch(/LoadObject<UTexture2D>\(nullptr, \*ObjectPath/u);
-    expect(assets.indexOf('LoadObject<UTexture2D>')).toBeLessThan(assets.indexOf('CreatePackage('));
+    expect(assets.indexOf('LoadObject<UTexture2D>')).toBeLessThan(assets.indexOf('McpCreatePackageForNewAsset('));
+    expect(assets).not.toContain('CreatePackage(*');
   });
 
   // A BlockingVolume from create_volume had the right bounds and blocked nothing: the brush had
@@ -3926,7 +3927,8 @@ describe('edits that skipped undo, and replies that said too little', () => {
 
   it('open_level takes an object path, and a relative .t3d export is the project\'s', () => {
     expect(code('ControlEditor', 'McpEditorLevel.cpp')).toContain('LevelPath = FPackageName::ObjectPathToPackageName(LevelPath);');
-    expect(code('Level', 'ImportExport', 'McpLevelExport.cpp')).toContain('FPaths::ConvertRelativePathToFull(FPaths::ProjectDir(), ExportPath)');
+    // The shared project-file resolver takes a relative path as the project's (never the engine binaries').
+    expect(code('Level', 'ImportExport', 'McpLevelExport.cpp')).toContain('McpResolveProjectFilePath(ExportPath, FullT3D, PathError)');
   });
 
   it('local player refusals carry codes, native reset answers enabled and a widget animation delete reports saved', () => {
@@ -4010,7 +4012,7 @@ describe('a write never deletes, engine content is never rebuilt, a listing can 
     expect(lods.match(/Result->SetBoolField\(TEXT\("saved"\), bSaved\);/gu)).toHaveLength(2);
     expect(lods).toContain('TrianglePercent <= 0.0 || TrianglePercent > 100.0');
     const assetLods = code('AssetWorkflow', 'Optimization', 'McpAssetLODs.cpp');
-    expect(assetLods).toMatch(/StartsWith\(TEXT\("\/Engine\/"\)\)\) \{\s*EnginePaths\.Add\(Path\);\s*continue;/u);
+    expect(assetLods).toMatch(/McpSafeOperations::IsEngineContentPackage\(Mesh->GetOutermost\(\)->GetName\(\)\)\) \{\s*EnginePaths\.Add\(Path\);\s*continue;/u);
     expect(assetLods).toContain('ErrorCode = TEXT("ENGINE_CONTENT");');
   });
 });
@@ -4207,10 +4209,10 @@ describe('hitboxes, attachments, inventory receipts and the Ability System Compo
 });
 
 describe('no save rewrites engine content', () => {
-  it('McpSafeAssetSave refuses every /Engine/ package, not only /Engine/Transient', () => {
+  it('McpSafeAssetSave refuses every engine content package, not only /Engine/Transient', () => {
     const save = code('..', 'Safety', 'McpSafeOperationsAssetSave.h');
-    expect(save).toMatch(/if \(PackageName\.StartsWith\(TEXT\("\/Engine\/"\)\)\)\s*\{[\s\S]*?return false;/u);
-    expect(save.indexOf('PackageName.StartsWith(TEXT("/Engine/"))')).toBeLessThan(save.indexOf('Package->SetDirtyFlag(true);'));
+    expect(save).toMatch(/if \(IsEngineContentPackage\(PackageName\)\)\s*\{[\s\S]*?return false;/u);
+    expect(save.indexOf('IsEngineContentPackage(PackageName)')).toBeLessThan(save.indexOf('Package->SetDirtyFlag(true);'));
   });
 
   // AssetCreated on every save told a restore point (and its cleanup call), the journal and the Content Browser that

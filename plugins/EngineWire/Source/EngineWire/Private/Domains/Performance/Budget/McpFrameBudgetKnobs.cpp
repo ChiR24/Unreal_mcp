@@ -10,6 +10,7 @@
 #include "Components/StaticMeshComponent.h"
 #include "EditorViewportClient.h"
 #include "EngineUtils.h"
+#include "Foundation/McpCapabilityPrincipal.h"
 #include "Foundation/McpScopedEditorTransaction.h"
 #include "HAL/IConsoleManager.h"
 
@@ -93,6 +94,11 @@ void FindKnobs(FRun& Run, bool bShadows, bool bDistance)
     TArray<UStaticMeshComponent*> Banded[BandCount];
     for (TActorIterator<AActor> It(Run.Client->GetWorld()); It; ++It)
     {
+        // The request names no actor: a path-restricted caller's knobs are the actors of a level inside its prefixes.
+        if (!McpCapabilityPrincipal::ActiveRequestPermitsObject(*It))
+        {
+            continue;
+        }
         for (UActorComponent* Component : It->GetComponents())
         {
             ULightComponent* Light = bShadows ? Cast<ULightComponent>(Component) : nullptr;

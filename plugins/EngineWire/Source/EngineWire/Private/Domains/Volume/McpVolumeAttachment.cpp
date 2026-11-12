@@ -33,7 +33,7 @@ bool ResolveAttachmentTarget(UEngineWireSubsystem* Subsystem, const FString& Req
     {
         return false;
     }
-    OutArgs.TargetActor = FindActorByPathOrName(OutArgs.World, ActorPath);
+    OutArgs.TargetActor = FindActorByNameInWorldForMcp(OutArgs.World, ActorPath, true);
     if (!OutArgs.TargetActor)
     {
         Subsystem->SendAutomationResponse(Socket, RequestId, false, FString::Printf(TEXT("Actor not found: %s"), *ActorPath), nullptr, TEXT("NOT_FOUND"));

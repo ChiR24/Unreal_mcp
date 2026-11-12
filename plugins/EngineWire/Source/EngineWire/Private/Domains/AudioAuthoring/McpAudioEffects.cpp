@@ -79,6 +79,14 @@ TSharedPtr<FJsonObject> HandleEffectActions(const FString& SubAction, const TSha
 #if MCP_HAS_SOURCE_EFFECT_PRESETS
 		if (!EffectPreset && !EffectType.IsEmpty())
 		{
+			// An unknown type is refused before any package is made: its package was made first, so one was left behind
+			// empty, and a type holding "//" was CreatePackage's Fatal log.
+			if (!SourceEffectPresetClass(EffectType))
+			{
+				return McpHandlerUtils::BuildErrorResponse(TEXT("INVALID_ARGUMENT"), FString::Printf(TEXT("Unknown effectType %s: use eq, chorus, delay, "
+					"filter, dynamics, bitcrusher, phaser, waveshaper, panner, stereodelay, foldback, ringmodulation, midsidespreader, "
+					"motionfilter, envelopefollower or convolutionreverb. Nothing was added."), *EffectType));
+			}
 			// Each added effect gets its own preset under the next free <chain>_<type>[_<n>]: a second effect of one type
 			// rebuilt the first one's preset in place.
 			const FString PresetBase = FPackageName::ObjectPathToPackageName(AssetPath) + TEXT("_") + EffectType;
@@ -99,9 +107,7 @@ TSharedPtr<FJsonObject> HandleEffectActions(const FString& SubAction, const TSha
 			}
 			if (!EffectPreset)
 			{
-				return McpHandlerUtils::BuildErrorResponse(TEXT("INVALID_ARGUMENT"), FString::Printf(TEXT("Unknown effectType %s: use eq, chorus, delay, "
-					"filter, dynamics, bitcrusher, phaser, waveshaper, panner, stereodelay, foldback, ringmodulation, midsidespreader, "
-					"motionfilter, envelopefollower or convolutionreverb. Nothing was added."), *EffectType));
+				return McpHandlerUtils::BuildErrorResponse(TEXT("PACKAGE_ERROR"), FString::Printf(TEXT("Could not create the effect preset %s. Nothing was added."), *PresetPkg));
 			}
 		}
 #endif

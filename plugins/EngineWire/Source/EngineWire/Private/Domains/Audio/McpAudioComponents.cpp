@@ -110,6 +110,8 @@ UAudioComponent* CreateAudioComponentAtEditorLocation(UWorld* World, USoundBase*
 
   FActorSpawnParameters SpawnParams;
   SpawnParams.Name = ActorName.IsEmpty() ? NAME_None : FName(*ActorName);
+  // The default mode is a Fatal log when the level already holds that name; this one lets the engine pick a free one.
+  SpawnParams.NameMode = FActorSpawnParameters::ESpawnActorNameMode::Requested;
   SpawnParams.ObjectFlags = RF_Transactional;
   AActor* Owner = World->SpawnActor<AActor>(AActor::StaticClass(), Location, Rotation, SpawnParams);
   if (!Owner)

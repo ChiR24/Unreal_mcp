@@ -2,6 +2,8 @@
 
 #include "Domains/Sequence/McpSeqEditorSupport.h"
 #include "Domains/Sequence/Validation/McpSeqFrameMath.h"
+#include "Foundation/BridgeHelpers/Blueprints/McpBPPaths.h"
+#include "Foundation/BridgeHelpers/Security/McpProjectPaths.h"
 
 #include "Animation/AnimSequence.h"
 #include "Animation/Skeleton.h"
@@ -86,7 +88,8 @@ bool HandleAddSkeletalAnimationTrack(const TSharedPtr<FJsonObject> &Params,
       GetString(Params, TEXT("animationSequencePath"), TEXT("animationPath"));
   if (AnimPath.IsEmpty())
     AnimPath = GetString(Params, TEXT("animSequencePath"));
-  UAnimSequence *Anim = AnimPath.IsEmpty() ? nullptr : LoadObject<UAnimSequence>(nullptr, *AnimPath);
+  // Through the shared canonicalizer and the registry, as the sequence path is.
+  UAnimSequence *Anim = Cast<UAnimSequence>(McpLoadAsset(SanitizeProjectRelativePath(AnimPath)));
   if (!Anim) {
     OutResult = MakeResult(false, TEXT("add_skeletal_animation_track"),
                            TEXT("Valid animationSequencePath is required"),

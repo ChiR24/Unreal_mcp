@@ -1,4 +1,5 @@
 #include "Domains/Property/McpPropTarget.h"
+#include "Safety/McpSafeOperationsAssetClassification.h"
 
 #include "Core/Compatibility/McpVersionCompatibility.h"
 #include "Domains/ControlActor/McpActorSupport.h"
@@ -247,7 +248,7 @@ bool SaveAfterWrite(UObject* Target, UBlueprint* Blueprint, bool bMarkDirty, FSt
     OutSkipReason = TEXT("a running-game or transient object has nothing to save; the change lasts until PIE stops");
   } else if (OwningPackage->ContainsMap()) {
     OutSkipReason = TEXT("level content is saved with its level");
-  } else if (OwningPackage->GetName().StartsWith(TEXT("/Engine/"))) {
+  } else if (McpSafeOperations::IsEngineContentPackage(OwningPackage->GetName())) {
     OutSkipReason = TEXT("engine content is not saved");
   } else if (McpSafeAssetSave(OwningPackage)) {
     return true;

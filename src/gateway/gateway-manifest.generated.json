@@ -8383,7 +8383,6 @@
         "deleteScope",
         "depth",
         "description",
-        "destinationDirectory",
         "destinationFolder",
         "destinationName",
         "destinationPath",
@@ -9018,10 +9017,6 @@
               }
             ],
             "description": "Function description."
-          },
-          "destinationDirectory": {
-            "type": "string",
-            "description": "Where the pack lands. Defaults to the Fab library cache directory, which list_fab_downloads and the fabLibrary source root both read."
           },
           "destinationFolder": {
             "type": "string",

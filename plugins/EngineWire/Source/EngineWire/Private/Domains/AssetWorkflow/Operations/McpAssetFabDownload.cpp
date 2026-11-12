@@ -51,8 +51,18 @@ bool UEngineWireSubsystem::HandleDownloadFabAsset(
     return true;
   }
 
-  FString Destination = McpContentSources::FabLibraryDir();
-  Payload->TryGetStringField(TEXT("destinationDirectory"), Destination);
+  // Fab's downloader names the file after the URL's last segment, taken raw: on Windows a backslash there is a path
+  // separator, and the file would land outside the library folder.
+  if (DownloadUrl.Contains(TEXT("\\"))) {
+    SendAutomationResponse(Socket, RequestId, false,
+                           TEXT("'downloadUrl' must not contain a backslash: the downloader names the file after the URL's last segment."),
+                           nullptr, TEXT("INVALID_ARGUMENT"));
+    return true;
+  }
+
+  // A pack always lands in the Fab library folder, which migrate_assets reads (fabLibrary): a folder the caller chose
+  // let one call write a file of the caller's name and content anywhere the editor can write.
+  const FString Destination = McpContentSources::FabLibraryDir();
   if (Destination.IsEmpty()) {
     SendAutomationResponse(Socket, RequestId, false,
                            TEXT("Could not resolve a destination directory."), nullptr,

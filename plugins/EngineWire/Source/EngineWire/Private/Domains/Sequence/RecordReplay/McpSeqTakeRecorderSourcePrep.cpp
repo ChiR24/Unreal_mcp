@@ -45,6 +45,25 @@ bool ReadTakeRecorderStringArray(
     return true;
 }
 
+bool ReadTakeRecorderName(
+    const TSharedPtr<FJsonObject>& Payload,
+    const TCHAR* FieldName,
+    TArray<FString>& OutValues,
+    FString& OutError)
+{
+    if (!Payload.IsValid() || !Payload->HasField(FieldName)) return true;
+    FString Text;
+    const int32 MaxStringLength = FMath::Max(1, GetDefault<UEngineWireSettings>()->MaxTakeRecorderStringLength);
+    if (!Payload->TryGetStringField(FieldName, Text) || Text.TrimStartAndEnd().IsEmpty() ||
+        Text.TrimStartAndEnd().Len() > MaxStringLength)
+    {
+        OutError = FString::Printf(TEXT("%s must be a non-empty string"), FieldName);
+        return false;
+    }
+    OutValues.AddUnique(Text.TrimStartAndEnd());
+    return true;
+}
+
 bool PrepareTakeRecorderSources(
     UTakeRecorderSources* Sources,
     const TSharedPtr<FJsonObject>& Payload,
@@ -66,24 +85,10 @@ bool PrepareTakeRecorderSources(
         OutCode = TEXT("INVALID_ARGUMENT");
         return false;
     }
-    if (Payload->HasField(TEXT("actorName")))
+    if (!ReadTakeRecorderName(Payload, TEXT("actorName"), ActorNames, OutError))
     {
-        FString ActorName;
-        const UEngineWireSettings* Settings =
-            GetDefault<UEngineWireSettings>();
-        const int32 MaxStringLength =
-            Settings
-                ? FMath::Max(1, Settings->MaxTakeRecorderStringLength)
-                : 1024;
-        if (!Payload->TryGetStringField(TEXT("actorName"), ActorName) ||
-            ActorName.TrimStartAndEnd().IsEmpty() ||
-            ActorName.TrimStartAndEnd().Len() > MaxStringLength)
-        {
-            OutCode = TEXT("INVALID_ARGUMENT");
-            OutError = TEXT("actorName must be a non-empty string");
-            return false;
-        }
-        ActorNames.AddUnique(ActorName.TrimStartAndEnd());
+        OutCode = TEXT("INVALID_ARGUMENT");
+        return false;
     }
     if (Payload->HasField(TEXT("clearSources")) &&
         !Payload->TryGetBoolField(

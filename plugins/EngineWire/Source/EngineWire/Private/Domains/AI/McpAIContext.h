@@ -31,6 +31,22 @@ inline bool SanitizeAIAssetPath(const FString& InputPath, FString& OutSanitizedP
     return true;
 }
 
+// The AIModule Behavior Tree node class a type names: /Script/AIModule.<Prefix><Type>, and with bAlsoBare
+// /Script/AIModule.<Type> before it. Null unless it is a Base subclass that can be instanced: NewObject of another
+// class is a fatal check, and of an abstract one (BTTask_BlackboardBase, BTService_BlackboardBase) an ensure and an
+// object the editor nulls out on save.
+inline UClass* FindBTNodeClass(const TCHAR* Prefix, const FString& Type, const UClass* Base, bool bAlsoBare = false)
+{
+    for (const FString& Name : {bAlsoBare ? Type : FString(), Prefix + Type})
+    {
+        UClass* Class = Name.IsEmpty() ? nullptr : FindObject<UClass>(nullptr, *(TEXT("/Script/AIModule.") + Name));
+        if (Class && Class->IsChildOf(Base) && !Class->HasAnyClassFlags(CLASS_Abstract))
+        {
+            return Class;
+        }
+    }
+    return nullptr;
+}
 
 /**
  * Create a /Game AI asset of AssetClass at Path/Name, or fill OutError and OutCode

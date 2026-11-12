@@ -113,12 +113,33 @@ bool HandleBuildMetaHuman(UEngineWireSubsystem* Self, const FString& RequestId,
     TSharedPtr<FJsonObject> Params = MakeShared<FJsonObject>();
     Params->SetStringField(TEXT("PipelineType"), PipelineType);
     Params->SetStringField(TEXT("PipelineQuality"), Quality);
-    const FString BuildPath = GetJsonStringField(Payload, TEXT("buildPath"));
-    if (!BuildPath.IsEmpty()) { Params->SetStringField(TEXT("AbsoluteBuildPath"), BuildPath); }
-    const FString CommonPath = GetJsonStringField(Payload, TEXT("commonFolderPath"));
-    if (!CommonPath.IsEmpty()) { Params->SetStringField(TEXT("CommonFolderPath"), CommonPath); }
+    // The engine writes the assembled assets into these folders itself, past McpSafeAssetSave: they take the shared
+    // canonicalizer and the engine-content rule here, and the folder name is one plain name.
+    FString BuildPath = GetJsonStringField(Payload, TEXT("buildPath"));
+    if (!BuildPath.IsEmpty())
+    {
+        if (!ReadContentFolderOrReply(Self, RequestId, Socket, TEXT("buildPath"), BuildPath, BuildPath)) { return true; }
+        Params->SetStringField(TEXT("AbsoluteBuildPath"), BuildPath);
+    }
+    FString CommonPath = GetJsonStringField(Payload, TEXT("commonFolderPath"));
+    if (!CommonPath.IsEmpty())
+    {
+        if (!ReadContentFolderOrReply(Self, RequestId, Socket, TEXT("commonFolderPath"), CommonPath, CommonPath)) { return true; }
+        Params->SetStringField(TEXT("CommonFolderPath"), CommonPath);
+    }
     const FString NameOverride = GetJsonStringField(Payload, TEXT("nameOverride"));
-    if (!NameOverride.IsEmpty()) { Params->SetStringField(TEXT("NameOverride"), NameOverride); }
+    if (!NameOverride.IsEmpty())
+    {
+        FText Reason;
+        if (NameOverride.TrimStartAndEnd() != NameOverride || NameOverride.Contains(TEXT("..")) || NameOverride.Contains(TEXT("/")) ||
+            NameOverride.Contains(TEXT("\\")) || !FName(*NameOverride).IsValidObjectName(Reason))
+        {
+            Self->SendAutomationError(Socket, RequestId,
+                FString::Printf(TEXT("nameOverride '%s' is not one plain folder name."), *NameOverride), TEXT("INVALID_ARGUMENT"));
+            return true;
+        }
+        Params->SetStringField(TEXT("NameOverride"), NameOverride);
+    }
 
     TSharedPtr<FJsonObject> Args = MakeShared<FJsonObject>();
     Args->SetObjectField(TEXT("InParams"), Params);

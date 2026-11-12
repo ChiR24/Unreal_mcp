@@ -5,6 +5,7 @@
 // undo step.
 
 #include "Core/Compatibility/McpVersionCompatibility.h"
+#include "Safety/McpSafeOperationsAssetClassification.h"
 #include "Domains/AudioAuthoring/McpAudioAuthoringPrivate.h"
 #include "Domains/AudioAuthoring/McpLoudness.h"
 #include "Foundation/McpScopedEditorTransaction.h"
@@ -75,7 +76,7 @@ TSharedPtr<FJsonObject> SetSoundVolume(const TSharedPtr<FJsonObject>& Params, TS
             return McpHandlerUtils::BuildErrorResponse(TEXT("ASSET_NOT_FOUND"), FString::Printf(TEXT("%s is not a Sound Wave, MetaSound or Sound Cue. "
                 "Nothing was changed."), *Path));
         }
-        if (Sound->GetPathName().StartsWith(TEXT("/Engine/")))
+        if (McpSafeOperations::IsEngineContentPackage(Sound->GetOutermost()->GetName()))
         {
             return McpHandlerUtils::BuildErrorResponse(TEXT("ENGINE_CONTENT"), FString::Printf(TEXT("%s is engine content, which is never changed: "
                 "duplicate it into /Game first. Nothing was changed."), *Sound->GetPathName()));
@@ -145,7 +146,7 @@ TSharedPtr<FJsonObject> HandleLoudnessActions(const FString& SubAction, const TS
             return McpHandlerUtils::BuildErrorResponse(TEXT("ASSET_NOT_FOUND"), FString::Printf(TEXT("%s is not a Sound Wave (a Sound Cue mixes several: "
                 "measure the waves it plays). Nothing was measured or changed."), *Path));
         }
-        if (bNormalize && Wave->GetPathName().StartsWith(TEXT("/Engine/")))
+        if (bNormalize && McpSafeOperations::IsEngineContentPackage(Wave->GetOutermost()->GetName()))
         {
             return McpHandlerUtils::BuildErrorResponse(TEXT("ENGINE_CONTENT"), FString::Printf(TEXT("%s is engine content, which is never changed: "
                 "duplicate it into /Game first. Nothing was changed."), *Wave->GetPathName()));

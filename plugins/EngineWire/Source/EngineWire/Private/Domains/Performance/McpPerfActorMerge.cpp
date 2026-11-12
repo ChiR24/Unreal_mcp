@@ -64,7 +64,7 @@ bool HandleActorMergeAction(const FPerformanceActionContext& Context)
     for (const TSharedPtr<FJsonValue>& Val : *NamesArray)
     {
         const FString RawName = Val.IsValid() && Val->Type == EJson::String ? Val->AsString().TrimStartAndEnd() : FString();
-        AActor* Resolved = RawName.IsEmpty() ? nullptr : ResolveMergeActorByName(World, RawName);
+        AActor* Resolved = FindActorByNameInWorldForMcp(World, RawName, true);
         if (Resolved)
         {
             ActorsToMerge.AddUnique(Resolved);

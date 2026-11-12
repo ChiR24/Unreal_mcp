@@ -128,7 +128,7 @@ USoundMix* LoadSoundMixFromPath(const FString& MixPath)
 }
 
 #if MCP_HAS_SOURCE_EFFECT_PRESETS
-USoundEffectSourcePreset* CreateSourceEffectPresetByType(const FString& EffectType, UObject* Outer)
+UClass* SourceEffectPresetClass(const FString& EffectType)
 {
 	FString LowerType = EffectType.ToLower();
 	UClass* PresetClass = nullptr;
@@ -151,8 +151,12 @@ USoundEffectSourcePreset* CreateSourceEffectPresetByType(const FString& EffectTy
 #if MCP_HAS_SOURCE_EFFECT_CONVOLUTION_REVERB
 	else if (LowerType == TEXT("convolutionreverb") || LowerType == TEXT("conv_reverb")) { PresetClass = USourceEffectConvolutionReverbPreset::StaticClass(); }
 #endif
+	return PresetClass;
+}
 
-	if (PresetClass)
+USoundEffectSourcePreset* CreateSourceEffectPresetByType(const FString& EffectType, UObject* Outer)
+{
+	if (UClass* PresetClass = SourceEffectPresetClass(EffectType))
 	{
 		// In Outer's package and named after it, so the preset is an asset of its own; it was made in the transient
 		// package, and the chain saved a reference to an object gone on reload.

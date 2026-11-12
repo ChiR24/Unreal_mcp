@@ -17,7 +17,8 @@ AActor *McpFindActorByNameOrClass(UClass *ActorClass, const FString &ActorName)
     for (TActorIterator<AActor> It(World); It; ++It)
     {
         AActor *Actor = *It;
-        if (!Actor || (ActorClass && !Actor->IsA(ActorClass)))
+        // A path-restricted caller finds only actors in a level inside its prefixes.
+        if (!Actor || (ActorClass && !Actor->IsA(ActorClass)) || !McpCapabilityPrincipal::ActiveRequestPermitsObject(Actor))
         {
             continue;
         }

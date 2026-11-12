@@ -6,6 +6,7 @@
 #include "Editor.h"
 #include "Engine/SkeletalMesh.h"
 #include "Engine/World.h"
+#include "Foundation/HandlerUtils/McpHandlerUtilsActionsPaths.h"
 #include "EngineUtils.h"
 #include "GameFramework/Actor.h"
 #include "Safety/McpSafeOperations.h"
@@ -40,15 +41,8 @@ bool UEngineWireSubsystem::HandleSetMorphTargetValue(
         return true;
     }
 
-    AActor* FoundActor = nullptr;
-    for (TActorIterator<AActor> It(World); It; ++It)
-    {
-        if (It->GetActorLabel() == ActorName || It->GetName() == ActorName)
-        {
-            FoundActor = *It;
-            break;
-        }
-    }
+    // A path-restricted caller finds only actors in a level inside its prefixes.
+    AActor* FoundActor = FindActorByNameInWorldForMcp(World, ActorName, true);
 
     if (!FoundActor)
     {
