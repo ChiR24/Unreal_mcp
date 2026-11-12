@@ -96,11 +96,7 @@ bool UEngineWireSubsystem::HandleDownloadFabAsset(
           Result->SetNumberField(TEXT("completedBytes"), static_cast<double>(Stats.CompletedBytes));
           Result->SetNumberField(TEXT("totalBytes"), static_cast<double>(Stats.TotalBytes));
           Result->SetStringField(TEXT("destinationDirectory"), Destination);
-          TArray<TSharedPtr<FJsonValue>> Files;
-          for (const FString &File : Stats.DownloadedFiles) {
-            Files.Add(MakeShared<FJsonValueString>(File));
-          }
-          Result->SetArrayField(TEXT("downloadedFiles"), Files);
+          Result->SetArrayField(TEXT("downloadedFiles"), McpHandlerUtils::ToJsonStringArray(Stats.DownloadedFiles));
           Result->SetStringField(
               TEXT("note"),
               TEXT("Use asset.migrate_assets with sourceRoot 'fabLibrary' to place the pack into /Game."));

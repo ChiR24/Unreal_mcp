@@ -27,7 +27,7 @@ describe('handlers answer what they did', () => {
 
   it('create_enum and create_struct report the save result, not the request', () => {
     expect(code('AssetWorkflow', 'Enums', 'McpAssetEnumLifecycle.cpp')).toContain('const bool bSaved = FinalizeEnum(Enum, bSave);');
-    expect(code('AssetWorkflow', 'Enums', 'McpAssetEnumShared.h')).toContain('return bSave && McpSafeAssetSave(Enum);');
+    expect(code('AssetWorkflow', 'Enums', 'McpAssetEnumShared.h')).toContain('return bSave && McpSafeOperations::McpSafeAssetSave(Enum);');
     expect(code('AssetWorkflow', 'Structs', 'McpAssetStructsLifecycle.cpp'))
       .toContain('const bool bSaved = bSave && McpSafeAssetSave(S);');
   });
@@ -1015,7 +1015,7 @@ describe('receipts of input edits and deletes', () => {
     // asset.delete of an input action answered deletedCount 1 with an empty changes[].
     const mutation = code('AssetWorkflow', 'Operations', 'McpAssetAssetMutation.cpp');
     expect(mutation).toContain('DeletedPaths.Add(FPackageName::ObjectPathToPackageName(SafePath));');
-    expect(mutation).toContain('Resp->SetArrayField(TEXT("deleted"), DeletedArray);');
+    expect(mutation).toContain('Resp->SetArrayField(TEXT("deleted"), McpHandlerUtils::ToJsonStringArray(DeletedPaths));');
     expect(code('Environment', 'McpEnvBuildDeletion.cpp'))
       .toContain('Context.Resp->SetArrayField(TEXT("deleted"), McpHandlerUtils::ToJsonStringArray(DeletedTargets));');
   });
@@ -1024,7 +1024,7 @@ describe('receipts of input edits and deletes', () => {
   // reply named the folders and the ini only in fields changes[] never reads.
   it('a folder move names both folders in modifiedPaths, once something moved', () => {
     expect(code('AssetWorkflow', 'Rename', 'McpAssetFolderMove.cpp')).toMatch(
-      /if \(bMoved\)\s*\{[\s\S]{0,200}?Folders\.Add\(MakeShared<FJsonValueString>\(SourceFolder\)\);\s*Folders\.Add\(MakeShared<FJsonValueString>\(DestinationFolder\)\);\s*Result->SetArrayField\(TEXT\("modifiedPaths"\), Folders\);/u);
+      /if \(bMoved\)\s*\{[\s\S]{0,200}?Result->SetArrayField\(TEXT\("modifiedPaths"\), McpHandlerUtils::ToJsonStringArray\(\{SourceFolder, DestinationFolder\}\)\);/u);
   });
 
   it('a legacy input mapping names DefaultInput.ini when it changed it, not for a mapping already there', () => {

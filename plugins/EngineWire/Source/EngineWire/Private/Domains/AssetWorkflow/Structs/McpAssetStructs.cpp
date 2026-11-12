@@ -22,34 +22,15 @@ bool UEngineWireSubsystem::HandleStructAction(
     const TSharedPtr<FJsonObject>& Payload,
     TSharedPtr<FMcpBridgeWebSocket> RequestingSocket)
 {
-    if (HandleStructLifecycleActions(*this, RequestId, Action, Payload, RequestingSocket))
-    {
-        return true;
-    }
-    if (HandleStructMemberAddRemoveActions(*this, RequestId, Action, Payload, RequestingSocket))
-    {
-        return true;
-    }
-    if (HandleStructMemberEditActions(*this, RequestId, Action, Payload, RequestingSocket))
-    {
-        return true;
-    }
-    if (HandleStructAnalysisActions(*this, RequestId, Action, Payload, RequestingSocket))
-    {
-        return true;
-    }
-    if (HandleStructSerializationActions(*this, RequestId, Action, Payload, RequestingSocket))
-    {
-        return true;
-    }
-    if (HandleStructImportActions(*this, RequestId, Action, Payload, RequestingSocket))
-    {
-        return true;
-    }
-    if (HandleStructAssetActions(*this, RequestId, Action, Payload, RequestingSocket))
-    {
-        return true;
-    }
-    return false;
+    // Each group tests the name itself and returns false, sending nothing, for one it does not own.
+    return HandleStructLifecycleActions(*this, RequestId, Action, Payload, RequestingSocket)
+        || HandleStructMemberAddRemoveActions(*this, RequestId, Action, Payload, RequestingSocket)
+        || HandleStructMemberEditActions(*this, RequestId, Action, Payload, RequestingSocket)
+        || HandleStructAnalysisActions(*this, RequestId, Action, Payload, RequestingSocket)
+        || HandleStructSerializationActions(*this, RequestId, Action, Payload, RequestingSocket)
+        || HandleStructImportActions(*this, RequestId, Action, Payload, RequestingSocket)
+        || HandleStructAssetAction_Delete(*this, RequestId, Action, Payload, RequestingSocket)
+        || HandleStructAssetAction_Rename(*this, RequestId, Action, Payload, RequestingSocket)
+        || HandleStructAssetAction_Refresh(*this, RequestId, Action, Payload, RequestingSocket);
 }
 

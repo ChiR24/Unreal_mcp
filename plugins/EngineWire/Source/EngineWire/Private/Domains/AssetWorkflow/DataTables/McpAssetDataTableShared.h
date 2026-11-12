@@ -6,11 +6,6 @@
 #include "Foundation/BridgeHelpers/Assets/McpAssetCreation.h"
 #include "Foundation/BridgeHelpers/Responses/McpJsonFields.h"
 #include "Safety/McpSafeOperationsAssetSave.h"
-// Supplies `using McpSafeOperations::McpSafeAssetSave`, so the handlers below
-// can call it unqualified. Enums/McpAssetEnumShared.h already pulls this in; these two
-// siblings did not, and only compiled where a transitive include happened to
-// provide it -- which an installed-engine build does not.
-#include "Safety/McpSafeOperations.h"
 #include "AssetRegistry/AssetRegistryModule.h"
 
 #include "Dom/JsonObject.h"
@@ -78,7 +73,7 @@ inline UDataTable* ResolveDataTable(const TSharedPtr<FJsonObject>& Params, TShar
 // Returns whether the asset is now on disk.
 inline bool McpDataTableSaveIfRequested(const TSharedPtr<FJsonObject>& Params, UObject* Asset)
 {
-    return GetJsonBoolField(Params, TEXT("save"), true) && McpSafeAssetSave(Asset);
+    return GetJsonBoolField(Params, TEXT("save"), true) && McpSafeOperations::McpSafeAssetSave(Asset);
 }
 
 // Build a row from JSON against RowStruct. Returns false (and sets OutError)

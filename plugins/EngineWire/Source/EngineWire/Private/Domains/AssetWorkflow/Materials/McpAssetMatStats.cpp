@@ -9,7 +9,6 @@
 #include "Dom/JsonObject.h"
 #include "Misc/EngineVersionComparison.h"
 
-#include "EditorAssetLibrary.h"
 // EMaterialDomain's own header exists only on the engines that split it out of
 // Material.h; on 5.0 it is declared in Materials/Material.h, included below.
 #if __has_include("MaterialDomain.h")

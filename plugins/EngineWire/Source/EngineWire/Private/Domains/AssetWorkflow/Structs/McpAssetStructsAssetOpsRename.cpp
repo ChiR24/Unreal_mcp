@@ -3,13 +3,10 @@
 #include "Safety/McpSafeOperationsAssetClassification.h"
 #include "Foundation/BridgeHelpers/Blueprints/McpBPPaths.h"
 #include "UObject/ObjectRedirector.h"
-#include "AssetToolsModule.h"
+#include "Domains/AssetWorkflow/Rename/McpAssetRenameGuard.h"
 #include "IAssetTools.h"
 #include "EditorAssetLibrary.h"
 #include "Foundation/BridgeHelpers/Security/McpProjectPaths.h"
-
-
-#ifdef MCP_ASSETWORKFLOW_STRUCTS_ASSETOPS_IMPL
 
 // Copy all variable descriptions from Src into a freshly created (empty) Dst
 // struct. Avoids DuplicateObject (which triggers a UDS reinstancing cascade
@@ -43,7 +40,7 @@ static void CopyStructMembers(UUserDefinedStruct* Dst, UUserDefinedStruct* Src)
 }
 
 // duplicate_struct and rename_struct
-static bool HandleStructAssetAction_Rename(UEngineWireSubsystem& Bridge, const FString& RequestId, const FString& Action, const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> RequestingSocket)
+bool HandleStructAssetAction_Rename(UEngineWireSubsystem& Bridge, const FString& RequestId, const FString& Action, const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> RequestingSocket)
 {
     const FString Lower = Action.ToLower();
 
@@ -277,23 +274,14 @@ static bool HandleStructAssetAction_Rename(UEngineWireSubsystem& Bridge, const F
             return true;
         }
 
-        // Supported, editor-side rename. AssetTools::RenameAssets moves the
-        // asset, leaves a UObjectRedirector at the old path automatically when
-        // the struct is referenced, fixes up soft references, and saves the
-        // affected packages for us. It must run on the game thread, where every
-        // handler runs.
-        auto DoRename = [&S, &NewPackagePath, &NewNameOnly]()
-        {
-            FAssetToolsModule& AssetToolsModule =
-                FModuleManager::LoadModuleChecked<FAssetToolsModule>(TEXT("AssetTools"));
-            IAssetTools& AssetTools = AssetToolsModule.Get();
-
-            TArray<FAssetRenameData> AssetsToRename;
-            AssetsToRename.Emplace(S, NewPackagePath, NewNameOnly);
-            AssetTools.RenameAssets(AssetsToRename);
-        };
-
-        DoRename();
+        // The editor's own rename: it moves the asset, leaves a UObjectRedirector at the old path when the struct is
+        // referenced, fixes up soft references and saves the affected packages. Through the shared rename, as
+        // asset.rename goes: no progress window and no question an unattended editor answers Cancel. Whether it
+        // worked is read from the destination below, so its report and failure text are not used.
+        TArray<FAssetRenameData> RenameData;
+        RenameData.Emplace(S, NewPackagePath, NewNameOnly);
+        FString Unused;
+        McpAssetRename::RenameWithSettingsFollow(RenameData, MakeShared<FJsonObject>(), Unused);
 
         UUserDefinedStruct* Renamed = LoadObject<UUserDefinedStruct>(nullptr, *FinalObjectPath);
         if (!Renamed)
@@ -325,5 +313,3 @@ static bool HandleStructAssetAction_Rename(UEngineWireSubsystem& Bridge, const F
 
     return false;
 }
-
-#endif // MCP_ASSETWORKFLOW_STRUCTS_ASSETOPS_IMPL

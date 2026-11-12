@@ -2,7 +2,8 @@
 #include "Kismet2/EnumEditorUtils.h"
 
 
-static TArray<TPair<FName, int64>> GetEnumDisplayNamePairs(UUserDefinedEnum* Enum)
+// The enum's values in order, each by its internal name and number; the generated MAX entry is no value.
+static TArray<TPair<FName, int64>> EnumValuePairs(UUserDefinedEnum* Enum)
 {
     TArray<TPair<FName, int64>> Result;
     if (!Enum) { return Result; }
@@ -40,7 +41,7 @@ bool HandleEnumValueActions(
         if (RefuseTakenValueName(Enum, ValueName, INDEX_NONE, OutResult)) { return true; }
 
         TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
-        TArray<TPair<FName, int64>> Names = GetEnumDisplayNamePairs(Enum);
+        TArray<TPair<FName, int64>> Names = EnumValuePairs(Enum);
         {
             // Modify with no transaction open recorded nothing: Ctrl+Z undid the edit before this one.
             const FMcpEnumEdit Edit(TEXT("Add Enum Value"), Enum, Result);
@@ -50,7 +51,7 @@ bool HandleEnumValueActions(
             MCP_SET_ENUMS(Enum, Names, Enum->GetCppForm());
             CommitEnum(Enum);
         }
-        Result->SetBoolField(TEXT("saved"), EnumSaveRequested(Params) && McpSafeAssetSave(Enum));
+        Result->SetBoolField(TEXT("saved"), EnumSaveRequested(Params) && McpSafeOperations::McpSafeAssetSave(Enum));
         Result->SetStringField(TEXT("valueName"), ValueName);
         Result->SetNumberField(TEXT("index"), static_cast<double>(Names.Num() - 1));
         Result->SetNumberField(TEXT("valueCount"), Names.Num());
@@ -76,14 +77,14 @@ bool HandleEnumValueActions(
             SetEnumResultFields(OutResult, false, FString::Printf(TEXT("Enum value '%s' not found."), *ValueName), TEXT("NOT_FOUND"));
             return true;
         }
-        const int32 Before = GetEnumDisplayNamePairs(Enum).Num();
+        const int32 Before = EnumValuePairs(Enum).Num();
         TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
         {
             const FMcpEnumEdit Edit(TEXT("Remove Enum Value"), Enum, Result);
             FEnumEditorUtils::RemoveEnumeratorFromUserDefinedEnum(Enum, Index);
             CommitEnum(Enum);
         }
-        Result->SetBoolField(TEXT("saved"), EnumSaveRequested(Params) && McpSafeAssetSave(Enum));
+        Result->SetBoolField(TEXT("saved"), EnumSaveRequested(Params) && McpSafeOperations::McpSafeAssetSave(Enum));
         Result->SetStringField(TEXT("valueName"), ValueName);
         Result->SetBoolField(TEXT("removed"), true);
         Result->SetNumberField(TEXT("valueCount"), Before - 1);
@@ -122,7 +123,7 @@ bool HandleEnumValueActions(
             }
             CommitEnum(Enum);
         }
-        Result->SetBoolField(TEXT("saved"), EnumSaveRequested(Params) && McpSafeAssetSave(Enum));
+        Result->SetBoolField(TEXT("saved"), EnumSaveRequested(Params) && McpSafeOperations::McpSafeAssetSave(Enum));
         Result->SetStringField(TEXT("valueName"), NewValueName);
         Result->SetStringField(TEXT("internalName"), Enum->GetNameStringByIndex(Index));
         OutResult = Result;
@@ -138,7 +139,7 @@ bool HandleEnumValueActions(
         const TArray<TSharedPtr<FJsonValue>>* OrderArr = nullptr;
         if (!Params->TryGetArrayField(TEXT("order"), OrderArr) || !OrderArr) { SetEnumResultFields(OutResult, false, TEXT("Missing required parameter: order"), TEXT("MISSING_PARAMETER")); return true; }
 
-        const TArray<TPair<FName, int64>> Current = GetEnumDisplayNamePairs(Enum);
+        const TArray<TPair<FName, int64>> Current = EnumValuePairs(Enum);
         TArray<int32> Order;
         for (const TSharedPtr<FJsonValue>& V : *OrderArr)
         {
@@ -182,13 +183,13 @@ bool HandleEnumValueActions(
             // values by name, where renumbering by hand changed what every stored value meant.
             for (int32 Target = 0; Target < NewNames.Num(); ++Target)
             {
-                const int32 From = GetEnumDisplayNamePairs(Enum).IndexOfByPredicate(
+                const int32 From = EnumValuePairs(Enum).IndexOfByPredicate(
                     [&NewNames, Target](const TPair<FName, int64>& Pair) { return Pair.Key == NewNames[Target].Key; });
                 if (From != Target) { FEnumEditorUtils::MoveEnumeratorInUserDefinedEnum(Enum, From, Target); }
             }
             CommitEnum(Enum);
         }
-        Result->SetBoolField(TEXT("saved"), EnumSaveRequested(Params) && McpSafeAssetSave(Enum));
+        Result->SetBoolField(TEXT("saved"), EnumSaveRequested(Params) && McpSafeOperations::McpSafeAssetSave(Enum));
         Result->SetBoolField(TEXT("reordered"), true);
         Result->SetBoolField(TEXT("noOp"), false);
         OutResult = Result;

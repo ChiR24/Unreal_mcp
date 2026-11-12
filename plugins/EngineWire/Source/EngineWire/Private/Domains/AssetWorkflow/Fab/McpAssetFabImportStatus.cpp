@@ -176,11 +176,7 @@ bool UEngineWireSubsystem::HandleGetFabImportStatus(
   if (bFinished && Result.AssetCount > 0) {
     Data->SetNumberField(TEXT("assetCount"), Result.AssetCount);
     Data->SetStringField(TEXT("importedRoot"), Result.RootPath);
-    TArray<TSharedPtr<FJsonValue>> Samples;
-    for (const FString &Path : Result.SamplePaths) {
-      Samples.Add(MakeShared<FJsonValueString>(Path));
-    }
-    Data->SetArrayField(TEXT("sampleAssetPaths"), Samples);
+    Data->SetArrayField(TEXT("sampleAssetPaths"), McpHandlerUtils::ToJsonStringArray(Result.SamplePaths));
   }
   if (Result.bRelocateRan) {
     Data->SetBoolField(TEXT("relocated"), Result.MovedCount > 0);
@@ -193,11 +189,7 @@ bool UEngineWireSubsystem::HandleGetFabImportStatus(
     Data->SetBoolField(TEXT("saved"), Result.UnsavedPackages.Num() == 0);
     Data->SetNumberField(TEXT("savedCount"), Result.SavedCount);
     if (Result.UnsavedPackages.Num() > 0) {
-      TArray<TSharedPtr<FJsonValue>> Unsaved;
-      for (const FString &Name : Result.UnsavedPackages) {
-        Unsaved.Add(MakeShared<FJsonValueString>(Name));
-      }
-      Data->SetArrayField(TEXT("unsavedPackages"), Unsaved);
+      Data->SetArrayField(TEXT("unsavedPackages"), McpHandlerUtils::ToJsonStringArray(Result.UnsavedPackages));
     }
   }
   if (Status.Phase == TEXT("failed")) {
@@ -205,11 +197,7 @@ bool UEngineWireSubsystem::HandleGetFabImportStatus(
     Data->SetStringField(TEXT("failure"), Result.Error);
   }
   if (Status.FabErrors.Num() > 0) {
-    TArray<TSharedPtr<FJsonValue>> Lines;
-    for (const FString &Line : Status.FabErrors) {
-      Lines.Add(MakeShared<FJsonValueString>(Line));
-    }
-    Data->SetArrayField(TEXT("fabErrors"), Lines);
+    Data->SetArrayField(TEXT("fabErrors"), McpHandlerUtils::ToJsonStringArray(Status.FabErrors));
   }
   // Nothing else in the reply showed a material instance the import left drawing the default grid.
   if (Result.ParentlessInstances.Num() > 0) {

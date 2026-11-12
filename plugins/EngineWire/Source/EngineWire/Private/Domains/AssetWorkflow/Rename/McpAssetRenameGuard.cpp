@@ -5,6 +5,7 @@
 #include "AssetRegistry/AssetRegistryModule.h"
 #include "AssetToolsModule.h"
 #include "Domains/AssetWorkflow/Rename/McpAssetRenameFollowSupport.h"
+#include "Foundation/HandlerUtils/McpHandlerUtilsJson.h"
 #include "Foundation/McpCapabilityPrincipal.h"
 #include "UObject/SoftObjectPtr.h"
 #include "UObject/UObjectIterator.h"
@@ -253,10 +254,10 @@ bool RenameWithSettingsFollow(const TArray<FAssetRenameData>& RenameData, const 
             Defaults->SaveConfig();
         }
     }
-    SetRenameReportStrings(Report, TEXT("settingsUpdated"), bRenamed ? Follow.Moved : TArray<FString>());
+    Report->SetArrayField(TEXT("settingsUpdated"), McpHandlerUtils::ToJsonStringArray(bRenamed ? Follow.Moved : TArray<FString>()));
     if (Follow.Blocking.Num() > 0)
     {
-        SetRenameReportStrings(Report, TEXT("blockingReferences"), Follow.Blocking);
+        Report->SetArrayField(TEXT("blockingReferences"), McpHandlerUtils::ToJsonStringArray(Follow.Blocking));
     }
     if (!bRenamed)
     {

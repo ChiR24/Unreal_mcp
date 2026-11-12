@@ -1,6 +1,5 @@
 // Copyright (c) 2024 EngineWire Contributors
 
-#include "Domains/AssetWorkflow/Materials/McpAssetMatHost.h"
 #include "EngineWireSubsystem.h"
 #include "Foundation/BridgeHelpers/McpHelpers.h"
 #include "Foundation/HandlerUtils/McpHandlerUtils.h"
@@ -10,7 +9,6 @@
 
 #include "Materials/MaterialInstance.h"
 #include "AssetRegistry/AssetRegistryModule.h"
-#include "EditorAssetLibrary.h"
 #include "Engine/Texture.h"
 #include "MaterialEditingLibrary.h"
 #include "Materials/Material.h"
@@ -26,21 +24,10 @@ bool UEngineWireSubsystem::HandleAddMaterialParameter(
     TSharedPtr<FMcpBridgeWebSocket> Socket) {
   FString AssetPath;
   Payload->TryGetStringField(TEXT("assetPath"), AssetPath);
-  // The published capability schema declares `parameterName`/`parameterType`
-  // with additionalProperties:false, so `name`/`type` cannot be sent through
-  // the gateway at all. Reading only `name`/`type` here left the capability
-  // uncallable by ANY input: the schema-correct call failed in the handler,
-  // the handler-correct call failed schema validation, and sending both was
-  // rejected as an undeclared parameter. Prefer the contract spelling and keep
-  // `name`/`type` as the legacy WebSocket fallback.
   FString Name;
-  if (!Payload->TryGetStringField(TEXT("parameterName"), Name) || Name.IsEmpty()) {
-    Payload->TryGetStringField(TEXT("name"), Name);
-  }
+  Payload->TryGetStringField(TEXT("parameterName"), Name);
   FString Type;
-  if (!Payload->TryGetStringField(TEXT("parameterType"), Type) || Type.IsEmpty()) {
-    Payload->TryGetStringField(TEXT("type"), Type);
-  }
+  Payload->TryGetStringField(TEXT("parameterType"), Type);
 
   if (AssetPath.IsEmpty() || Name.IsEmpty() || Type.IsEmpty()) {
     SendAutomationResponse(Socket, RequestId, false,
@@ -51,9 +38,8 @@ bool UEngineWireSubsystem::HandleAddMaterialParameter(
   if (!McpSanitizeAssetPathOrReply(this, Socket, RequestId, AssetPath))
     return true;
 
-  UMaterial *Material = nullptr;
-  UMaterialFunction *Function = nullptr;
-  LoadMaterialOrFunctionAW(AssetPath, Material, Function);
+  UMaterial *Material = LoadObject<UMaterial>(nullptr, *AssetPath);
+  UMaterialFunction *Function = Material ? nullptr : LoadObject<UMaterialFunction>(nullptr, *AssetPath);
 
   if (!Material && !Function) {
     // This action adds a parameter *expression* to a material graph, and a
@@ -90,11 +76,7 @@ bool UEngineWireSubsystem::HandleAddMaterialParameter(
     }
     UMaterialExpression* Expr = NewObject<UMaterialExpression>(HostOuter, ExprClass, NAME_None, RF_Transactional);
     if (Expr) {
-#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 1
-      Function->GetEditorOnlyData()->ExpressionCollection.AddExpression(Expr);
-#else
-      Function->FunctionExpressions.Add(Expr);
-#endif
+      MCP_GET_FUNCTION_EXPRESSIONS(Function).Add(Expr);
     }
     return Expr;
   };
@@ -126,25 +108,25 @@ bool UEngineWireSubsystem::HandleAddMaterialParameter(
       }
     }
   } else if (Type == TEXT("texture")) {
+    // The path is checked before the node is made: a refused one used to leave an unnamed parameter node in the graph.
+    FString TexPath;
+    if (Payload->TryGetStringField(TEXT("value"), TexPath) &&
+        !TexPath.IsEmpty()) {
+      const FString TexPathAsGiven = TexPath;
+      TexPath = SanitizeProjectRelativePath(TexPath);
+      if (TexPath.IsEmpty()) {
+        SendAutomationResponse(Socket, RequestId, false,
+                               McpPathRefusalMessage(TEXT("texture path"), TexPathAsGiven), nullptr,
+                               TEXT("SECURITY_VIOLATION"));
+        return true;
+      }
+    }
     NewExpression = CreateExpr(UMaterialExpressionTextureSampleParameter2D::StaticClass());
     if (UMaterialExpressionTextureSampleParameter2D *TexParam =
             Cast<UMaterialExpressionTextureSampleParameter2D>(NewExpression)) {
       TexParam->ParameterName = FName(*Name);
-      FString TexPath;
-      if (Payload->TryGetStringField(TEXT("value"), TexPath) &&
-          !TexPath.IsEmpty()) {
-        const FString TexPathAsGiven = TexPath;
-        TexPath = SanitizeProjectRelativePath(TexPath);
-        if (TexPath.IsEmpty()) {
-          SendAutomationResponse(Socket, RequestId, false,
-                                 McpPathRefusalMessage(TEXT("texture path"), TexPathAsGiven), nullptr,
-                                 TEXT("SECURITY_VIOLATION"));
-          return true;
-        }
-        UTexture *Tex = LoadObject<UTexture>(nullptr, *TexPath);
-        if (Tex) {
-          TexParam->Texture = Tex;
-        }
+      if (UTexture *Tex = TexPath.IsEmpty() ? nullptr : LoadObject<UTexture>(nullptr, *TexPath)) {
+        TexParam->Texture = Tex;
       }
     }
   } else if (Type == TEXT("staticswitch") || Type == TEXT("static_switch")) {
@@ -171,7 +153,8 @@ bool UEngineWireSubsystem::HandleAddMaterialParameter(
       UMaterialEditingLibrary::RecompileMaterial(Material);
       Material->MarkPackageDirty();
     } else {
-      FinalizeHost(nullptr, Function);
+      Function->PostEditChange();
+      Function->MarkPackageDirty();
     }
 
     TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
@@ -231,13 +214,7 @@ bool UEngineWireSubsystem::HandleListMaterialInstances(
       const FString TagPackage = FPackageName::ObjectPathToPackageName(FPackageName::ExportTextPathToObjectPath(ParentTag));
       if (TagPackage.Equals(ParentPackage, ESearchCase::IgnoreCase) &&
           McpCapabilityPrincipal::ActiveRequestPermitsPath(Asset.PackageName.ToString())) {
-#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 1
-        Instances.Add(
-            MakeShared<FJsonValueString>(Asset.GetSoftObjectPath().ToString()));
-#else
-        Instances.Add(
-            MakeShared<FJsonValueString>(Asset.ToSoftObjectPath().ToString()));
-#endif
+        Instances.Add(MakeShared<FJsonValueString>(MCP_ASSET_DATA_GET_SOFT_PATH(Asset)));
       }
     }
   }

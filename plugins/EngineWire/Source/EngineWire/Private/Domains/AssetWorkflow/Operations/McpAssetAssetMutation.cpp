@@ -251,36 +251,22 @@ bool UEngineWireSubsystem::HandleDeleteAssets(
   Resp->SetBoolField(TEXT("success"), bSuccess);
   Resp->SetNumberField(TEXT("deletedCount"), DeletedAssets);
   // The receipt's changes[] reads deleted; with only a count, a delete reported that it changed nothing.
-  TArray<TSharedPtr<FJsonValue>> DeletedArray;
-  for (const FString& P : DeletedPaths) { DeletedArray.Add(MakeShared<FJsonValueString>(P)); }
-  Resp->SetArrayField(TEXT("deleted"), DeletedArray);
+  Resp->SetArrayField(TEXT("deleted"), McpHandlerUtils::ToJsonStringArray(DeletedPaths));
   // Was a hardcoded false, so even a failed delete claimed the asset was gone.
   Resp->SetBoolField(TEXT("existsAfter"), FailedToDeletePaths.Num() > 0 || ReferencedPaths.Num() > 0);
 
   if (NotFoundPaths.Num() > 0) {
-    TArray<TSharedPtr<FJsonValue>> NotFoundArray;
-    for (const FString& P : NotFoundPaths) {
-      NotFoundArray.Add(MakeShared<FJsonValueString>(P));
-    }
-    Resp->SetArrayField(TEXT("notFoundPaths"), NotFoundArray);
+    Resp->SetArrayField(TEXT("notFoundPaths"), McpHandlerUtils::ToJsonStringArray(NotFoundPaths));
     Resp->SetNumberField(TEXT("notFoundCount"), NotFoundPaths.Num());
   }
 
   if (ReferencedPaths.Num() > 0) {
-    TArray<TSharedPtr<FJsonValue>> ReferencedArray;
-    for (const FString& P : ReferencedPaths) {
-      ReferencedArray.Add(MakeShared<FJsonValueString>(P));
-    }
-    Resp->SetArrayField(TEXT("referencedPaths"), ReferencedArray);
+    Resp->SetArrayField(TEXT("referencedPaths"), McpHandlerUtils::ToJsonStringArray(ReferencedPaths));
     Resp->SetStringField(TEXT("referencedHint"), TEXT("Still-referenced assets were kept; pass force:true to delete them anyway (their referencers break)."));
   }
 
   if (FailedToDeletePaths.Num() > 0) {
-    TArray<TSharedPtr<FJsonValue>> FailedArray;
-    for (const FString& P : FailedToDeletePaths) {
-      FailedArray.Add(MakeShared<FJsonValueString>(P));
-    }
-    Resp->SetArrayField(TEXT("failedToDeletePaths"), FailedArray);
+    Resp->SetArrayField(TEXT("failedToDeletePaths"), McpHandlerUtils::ToJsonStringArray(FailedToDeletePaths));
     Resp->SetNumberField(TEXT("failedCount"), FailedToDeletePaths.Num());
   }
 

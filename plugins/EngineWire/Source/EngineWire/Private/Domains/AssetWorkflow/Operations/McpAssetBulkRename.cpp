@@ -166,11 +166,7 @@ bool UEngineWireSubsystem::HandleBulkRenameAssets(
   Result->SetArrayField(bSuccess ? TEXT("assets") : TEXT("notRenamed"), RenamedAssets);
   // An entry that matched nothing (or wanted a taken name) is named, not dropped.
   if (MissingAssets.Num() > 0) {
-    TArray<TSharedPtr<FJsonValue>> Skipped;
-    for (const FString &Missing : MissingAssets) {
-      Skipped.Add(MakeShared<FJsonValueString>(Missing));
-    }
-    Result->SetArrayField(TEXT("skipped"), Skipped);
+    Result->SetArrayField(TEXT("skipped"), McpHandlerUtils::ToJsonStringArray(MissingAssets));
   }
 
   SendAutomationResponse(

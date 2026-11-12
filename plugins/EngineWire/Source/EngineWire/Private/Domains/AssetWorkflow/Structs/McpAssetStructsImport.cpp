@@ -60,11 +60,9 @@ bool HandleStructImportActions(UEngineWireSubsystem& Bridge, const FString& Requ
 
         if (!StructPath.IsEmpty())
         {
-            S = LoadObject<UUserDefinedStruct>(nullptr, *StructPath);
+            S = LoadStructOrReply(Bridge, RequestId, RequestingSocket, StructPath);
             if (!S)
             {
-                Bridge.SendAutomationError(RequestingSocket, RequestId,
-                    FString::Printf(TEXT("Struct not found: %s"), *StructPath), TEXT("ASSET_NOT_FOUND"));
                 return true;
             }
             PackageName = S->GetOutermost()->GetName();
@@ -109,18 +107,12 @@ bool HandleStructImportActions(UEngineWireSubsystem& Bridge, const FString& Requ
         TArray<FString> Failures;
         if (!ValidateStructMembers(*MembersArr, SelfPath, ParsedMembers, Failures))
         {
-            TArray<TSharedPtr<FJsonValue>> FailureArr;
-            FailureArr.Reserve(Failures.Num());
-            for (const FString& Failure : Failures)
-            {
-                FailureArr.Add(MakeShared<FJsonValueString>(Failure));
-            }
             TSharedPtr<FJsonObject> ValidationResult = McpHandlerUtils::CreateResultObject();
             ValidationResult->SetStringField(TEXT("assetPath"), PackageName + TEXT(".") + FinalName);
             ValidationResult->SetStringField(TEXT("structName"), FinalName);
             ValidationResult->SetNumberField(TEXT("imported"), 0);
             ValidationResult->SetNumberField(TEXT("failed"), Failures.Num());
-            ValidationResult->SetArrayField(TEXT("failures"), FailureArr);
+            ValidationResult->SetArrayField(TEXT("failures"), McpHandlerUtils::ToJsonStringArray(Failures));
             Bridge.SendAutomationResponse(RequestingSocket, RequestId, false,
                 FString::Printf(TEXT("Struct import validation failed: %d member(s) rejected"), Failures.Num()),
                 ValidationResult);
@@ -165,13 +157,7 @@ bool HandleStructImportActions(UEngineWireSubsystem& Bridge, const FString& Requ
             FailureResult->SetNumberField(TEXT("imported"), Applied);
             FailureResult->SetNumberField(TEXT("failed"), ApplyFailures.Num());
             FailureResult->SetNumberField(TEXT("restoredMembers"), Snapshot.Num());
-            TArray<TSharedPtr<FJsonValue>> FailureArr;
-            FailureArr.Reserve(ApplyFailures.Num());
-            for (const FString& Failure : ApplyFailures)
-            {
-                FailureArr.Add(MakeShared<FJsonValueString>(Failure));
-            }
-            FailureResult->SetArrayField(TEXT("failures"), FailureArr);
+            FailureResult->SetArrayField(TEXT("failures"), McpHandlerUtils::ToJsonStringArray(ApplyFailures));
             Bridge.SendAutomationResponse(RequestingSocket, RequestId, false,
                 FString::Printf(TEXT("Struct import partially failed: %d of %d member(s) applied, %d rejected (struct rolled back)"),
                     Applied, ParsedMembers.Num(), ApplyFailures.Num()),
@@ -205,23 +191,8 @@ bool HandleStructImportActions(UEngineWireSubsystem& Bridge, const FString& Requ
         Result->SetNumberField(TEXT("failed"), ApplyFailures.Num());
         Result->SetStringField(TEXT("status"), UserDefinedStructureStatusToString(S->Status));
         McpHandlerUtils::AddVerification(Result, S);
-        if (ApplyFailures.Num() > 0)
-        {
-            TArray<TSharedPtr<FJsonValue>> FailureArr;
-            FailureArr.Reserve(ApplyFailures.Num());
-            for (const FString& Failure : ApplyFailures)
-            {
-                FailureArr.Add(MakeShared<FJsonValueString>(Failure));
-            }
-            Result->SetArrayField(TEXT("failures"), FailureArr);
-            Bridge.SendAutomationResponse(RequestingSocket, RequestId, false,
-                FString::Printf(TEXT("Struct imported %d member(s) but %d failed"), Applied, ApplyFailures.Num()), Result);
-        }
-        else
-        {
-            Bridge.SendAutomationResponse(RequestingSocket, RequestId, true,
-                TEXT("Struct imported"), Result);
-        }
+        Bridge.SendAutomationResponse(RequestingSocket, RequestId, true,
+            TEXT("Struct imported"), Result);
         return true;
     }
 

@@ -16,14 +16,7 @@ TSharedPtr<FJsonObject> McpTryBuildMaterialGraphResponse(
     FAssetData AssetData;
     if (!McpAssetExists(SafeAssetPath, &AssetData)) { return nullptr; }
 
-#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 1
-    const bool bIsMaterialClass =
-        AssetData.AssetClassPath == UMaterial::StaticClass()->GetClassPathName();
-#else
-    const bool bIsMaterialClass =
-        AssetData.AssetClass == UMaterial::StaticClass()->GetFName();
-#endif
-    if (!bIsMaterialClass) { return nullptr; }
+    if (!AssetData.IsInstanceOf(UMaterial::StaticClass())) { return nullptr; }
 
     // The expression list is editor-only data the registry cannot report, so
     // the object itself is required. Only a real material pays for the load,
@@ -38,31 +31,20 @@ TSharedPtr<FJsonObject> McpTryBuildMaterialGraphResponse(
     UMaterial* Material = Cast<UMaterial>(Asset);
     if (!Material) { return nullptr; }
 
-#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 1
-    const UMaterialEditorOnlyData* EditorOnly = Material->GetEditorOnlyData();
-    const TArray<TObjectPtr<UMaterialExpression>>* Expressions =
-        EditorOnly ? &EditorOnly->ExpressionCollection.Expressions : nullptr;
-#else
-    // UE 5.0: direct member access; TArray is still TObjectPtr-backed.
-    const TArray<TObjectPtr<UMaterialExpression>>* Expressions = &Material->Expressions;
-#endif
-
     // Bounded listing: nodeCount reports what the array actually carries, so a
     // clamp is visible as a truncated flag instead of a silent cut.
     constexpr int32 MaxListedNodes = 100;
     TArray<TSharedPtr<FJsonValue>> NodeArray;
-    if (Expressions) {
-        for (UMaterialExpression* Expr : *Expressions) {
-            if (!Expr) { continue; }
-            if (NodeArray.Num() >= MaxListedNodes) {
-                bTruncated = true;
-                break;
-            }
-            TSharedPtr<FJsonObject> Node = MakeShared<FJsonObject>();
-            Node->SetStringField(TEXT("nodeId"), Expr->GetName());
-            Node->SetStringField(TEXT("nodeType"), Expr->GetClass()->GetName());
-            NodeArray.Add(MakeShared<FJsonValueObject>(Node));
+    for (UMaterialExpression* Expr : MCP_GET_MATERIAL_EXPRESSIONS(Material)) {
+        if (!Expr) { continue; }
+        if (NodeArray.Num() >= MaxListedNodes) {
+            bTruncated = true;
+            break;
         }
+        TSharedPtr<FJsonObject> Node = MakeShared<FJsonObject>();
+        Node->SetStringField(TEXT("nodeId"), Expr->GetName());
+        Node->SetStringField(TEXT("nodeType"), Expr->GetClass()->GetName());
+        NodeArray.Add(MakeShared<FJsonValueObject>(Node));
     }
 
     TSharedPtr<FJsonObject> GraphObj = MakeShared<FJsonObject>();

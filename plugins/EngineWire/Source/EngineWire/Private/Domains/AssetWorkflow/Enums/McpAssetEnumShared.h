@@ -1,14 +1,10 @@
 #pragma once
 
 #include "Core/Compatibility/McpVersionCompatibility.h"
-#include "EngineWireSubsystem.h"
 #include "Foundation/HandlerUtils/McpHandlerUtils.h"
 #include "Foundation/BridgeHelpers/Assets/McpAssetCreation.h"
 #include "Foundation/BridgeHelpers/Responses/McpJsonFields.h"
 #include "Safety/McpSafeOperationsAssetSave.h"
-// Supplies `using McpSafeOperations::McpSafeAssetSave`, which makes the
-// unqualified call below legal in any unity-build blob.
-#include "Safety/McpSafeOperations.h"
 #include "AssetRegistry/AssetRegistryModule.h"
 
 #include "Dom/JsonObject.h"
@@ -129,7 +125,7 @@ inline void CommitEnum(UUserDefinedEnum* Enum)
 inline bool FinalizeEnum(UUserDefinedEnum* Enum, bool bSave)
 {
     CommitEnum(Enum);
-    return bSave && McpSafeAssetSave(Enum);
+    return bSave && McpSafeOperations::McpSafeAssetSave(Enum);
 }
 
 // Resolve the enum from Params; on failure populate OutResult and set bHandled

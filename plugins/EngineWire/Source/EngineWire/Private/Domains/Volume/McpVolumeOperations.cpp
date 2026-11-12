@@ -110,12 +110,7 @@ bool HandleSetVolumeProperties(UEngineWireSubsystem* Subsystem, const FString& R
     TSharedPtr<FJsonObject> ResponseJson = McpHandlerUtils::CreateResultObject();
     ResponseJson->SetStringField(TEXT("volumeName"), VolumeName);
     McpHandlerUtils::AddVerification(ResponseJson, VolumeActor);
-    TArray<TSharedPtr<FJsonValue>> PropsArray;
-    for (const FString& Prop : PropertiesSet)
-    {
-        PropsArray.Add(MakeShared<FJsonValueString>(Prop));
-    }
-    ResponseJson->SetArrayField(TEXT("propertiesSet"), PropsArray);
+    ResponseJson->SetArrayField(TEXT("propertiesSet"), McpHandlerUtils::ToJsonStringArray(PropertiesSet));
 
     // Any supplied field this volume's class does not carry is reported rather than dropped: the caller
     // otherwise cannot tell a property that applied from one that was silently discarded.

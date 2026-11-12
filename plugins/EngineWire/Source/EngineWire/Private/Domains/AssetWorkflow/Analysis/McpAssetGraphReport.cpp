@@ -7,7 +7,6 @@
 #include "AssetRegistry/AssetRegistryModule.h"
 #include "AssetRegistry/IAssetRegistry.h"
 #include "Dom/JsonObject.h"
-#include "Misc/EngineVersionComparison.h"
 
 #include "EdGraph/EdGraph.h"
 #include "Engine/Blueprint.h"
@@ -128,18 +127,7 @@ bool UEngineWireSubsystem::HandleAnalyzeGraph(
     UMaterial *BaseMaterial = Material ? Material : MaterialInstance->GetBaseMaterial();
 
     // Get expressions count
-#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 1
-    const TArray<TObjectPtr<UMaterialExpression>> *Expressions = nullptr;
-    if (Material && Material->GetEditorOnlyData()) {
-      Expressions = &Material->GetEditorOnlyData()->ExpressionCollection.Expressions;
-    }
-#else
-    // UE 5.0: Direct access, but also uses TObjectPtr
-    const TArray<TObjectPtr<UMaterialExpression>> *Expressions = nullptr;
-    if (Material) {
-      Expressions = &Material->Expressions;
-    }
-#endif
+    const auto *Expressions = Material ? &MCP_GET_MATERIAL_EXPRESSIONS(Material) : nullptr;
 
     int32 NodeCount = Expressions ? Expressions->Num() : 0;
     int32 ParameterCount = 0;

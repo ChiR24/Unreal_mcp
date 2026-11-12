@@ -130,13 +130,7 @@ bool UEngineWireSubsystem::HandleGetAssetGraph(
 
   TSharedPtr<FJsonObject> GraphObj = McpHandlerUtils::CreateResultObject();
 
-  // A material's own graph is its expression list, not its package
-  // dependencies: the registry walk below reports package references only, so
-  // a material whose expressions touch no /Game assets answered with
-  // { "<materialPath>": [] } — an empty body exactly where the caller asked
-  // about the graph. When the input is a UMaterial the entry for its path
-  // becomes the expression nodes and nodeCount reports the array's length;
-  // every other asset keeps the dependency walk unchanged.
+  // A material answers with its expression nodes; every other asset keeps the dependency walk.
   TSharedPtr<FJsonObject> MaterialResp =
       McpTryBuildMaterialGraphResponse(SafeAssetPath, MaxDepth, bTruncated);
   if (MaterialResp.IsValid()) {

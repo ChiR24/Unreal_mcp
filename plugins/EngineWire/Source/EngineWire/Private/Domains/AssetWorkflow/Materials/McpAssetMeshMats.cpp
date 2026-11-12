@@ -148,8 +148,7 @@ bool HandleSetMeshMaterials(UEngineWireSubsystem* Bridge, const FString& Request
     }
     if (bAnyChange)
     {
-        if (Slots.Static) ApplyToStaticMesh(Slots.Static, Assignments);
-        else ApplyToSkeletalMesh(Slots.Skeletal, Assignments);
+        ApplyAssignments(Slots, Assignments);
         Asset->MarkPackageDirty();
     }
     TSet<int32> Changed;

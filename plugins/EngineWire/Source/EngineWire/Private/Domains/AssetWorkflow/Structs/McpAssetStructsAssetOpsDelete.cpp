@@ -4,10 +4,8 @@
 #include "Domains/AssetWorkflow/Operations/McpAssetBulkSelection.h"
 #include "Safety/McpSafeOperationsAssetDelete.h"
 
-#ifdef MCP_ASSETWORKFLOW_STRUCTS_ASSETOPS_IMPL
-
 // delete_struct
-static bool HandleStructAssetAction_Delete(UEngineWireSubsystem& Bridge, const FString& RequestId, const FString& Action, const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> RequestingSocket)
+bool HandleStructAssetAction_Delete(UEngineWireSubsystem& Bridge, const FString& RequestId, const FString& Action, const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> RequestingSocket)
 {
     const FString Lower = Action.ToLower();
 
@@ -85,5 +83,3 @@ static bool HandleStructAssetAction_Delete(UEngineWireSubsystem& Bridge, const F
 
     return false;
 }
-
-#endif // MCP_ASSETWORKFLOW_STRUCTS_ASSETOPS_IMPL

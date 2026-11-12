@@ -269,8 +269,5 @@ bool HandleDataTableAction(
     }
 
     // === Row-scoped actions ===
-    if (HandleDataTableRowActions(Lower, Params, OutResult)) { return true; }
-
-    OutResult = McpDataTableMakeError(TEXT("UNKNOWN_ACTION"), *FString::Printf(TEXT("Unknown data table action '%s'."), *Lower));
-    return true;
+    return HandleDataTableRowActions(Lower, Params, OutResult);
 }

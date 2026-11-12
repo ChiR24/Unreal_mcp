@@ -90,12 +90,8 @@ bool UEngineWireSubsystem::HandleSearchFabListings(
             }
             // tags is always present, as before; formats only when the row named some.
             const auto AddStrings = [&Row](const TCHAR *Field, const TArray<FString> &Texts, bool bAlways) {
-              TArray<TSharedPtr<FJsonValue>> Values;
-              for (const FString &Text : Texts) {
-                Values.Add(MakeShared<FJsonValueString>(Text));
-              }
-              if (bAlways || Values.Num() > 0) {
-                Row->SetArrayField(Field, Values);
+              if (bAlways || Texts.Num() > 0) {
+                Row->SetArrayField(Field, McpHandlerUtils::ToJsonStringArray(Texts));
               }
             };
             AddStrings(TEXT("formats"), Listing.Formats, false);

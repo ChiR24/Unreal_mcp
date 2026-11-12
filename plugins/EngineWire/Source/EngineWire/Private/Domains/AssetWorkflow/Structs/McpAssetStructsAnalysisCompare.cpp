@@ -14,18 +14,10 @@ bool HandleStructAnalysisCompare(UEngineWireSubsystem& Bridge, const FString& Re
         return true;
     }
 
-    UUserDefinedStruct* SA = LoadObject<UUserDefinedStruct>(nullptr, *StructPathA);
-    UUserDefinedStruct* SB = LoadObject<UUserDefinedStruct>(nullptr, *StructPathB);
-    if (!SA)
-    {
-        Bridge.SendAutomationError(RequestingSocket, RequestId,
-            FString::Printf(TEXT("Struct not found: %s"), *StructPathA), TEXT("ASSET_NOT_FOUND"));
-        return true;
-    }
+    UUserDefinedStruct* SA = LoadStructOrReply(Bridge, RequestId, RequestingSocket, StructPathA);
+    UUserDefinedStruct* SB = SA ? LoadStructOrReply(Bridge, RequestId, RequestingSocket, StructPathB) : nullptr;
     if (!SB)
     {
-        Bridge.SendAutomationError(RequestingSocket, RequestId,
-            FString::Printf(TEXT("Struct not found: %s"), *StructPathB), TEXT("ASSET_NOT_FOUND"));
         return true;
     }
 
@@ -253,11 +245,8 @@ bool HandleStructAnalysisCompare(UEngineWireSubsystem& Bridge, const FString& Re
         {
             TSharedPtr<FJsonObject> Diff = MakeShared<FJsonObject>();
             Diff->SetStringField(TEXT("type"), TEXT("order_mismatch"));
-            TArray<TSharedPtr<FJsonValue>> ArrA, ArrB;
-            for (const FString& N : NameOrderA) ArrA.Add(MakeShared<FJsonValueString>(N));
-            for (const FString& N : NameOrderB) ArrB.Add(MakeShared<FJsonValueString>(N));
-            Diff->SetArrayField(TEXT("orderA"), ArrA);
-            Diff->SetArrayField(TEXT("orderB"), ArrB);
+            Diff->SetArrayField(TEXT("orderA"), McpHandlerUtils::ToJsonStringArray(NameOrderA));
+            Diff->SetArrayField(TEXT("orderB"), McpHandlerUtils::ToJsonStringArray(NameOrderB));
             DiffArr.Add(MakeShared<FJsonValueObject>(Diff));
         }
     }

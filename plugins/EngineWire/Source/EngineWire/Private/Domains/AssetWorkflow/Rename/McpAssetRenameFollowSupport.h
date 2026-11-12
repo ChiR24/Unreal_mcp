@@ -3,8 +3,6 @@
 #pragma once
 
 #include "CoreMinimal.h"
-#include "Dom/JsonObject.h"
-#include "Dom/JsonValue.h"
 #include "UObject/SoftObjectPtr.h"
 #include "UObject/UnrealType.h"
 
@@ -29,15 +27,5 @@ inline void RekeySoftMapEntry(const FMapProperty* Map, void* Data, const FSoftOb
     Helper.AddPair(&ToKey, Value);
     ValueProp->DestroyValue(Value);
     FMemory::Free(Value);
-}
-
-inline void SetRenameReportStrings(const TSharedPtr<FJsonObject>& Report, const TCHAR* Field, const TArray<FString>& Values)
-{
-    TArray<TSharedPtr<FJsonValue>> Array;
-    for (const FString& Value : Values)
-    {
-        Array.Add(MakeShared<FJsonValueString>(Value));
-    }
-    Report->SetArrayField(Field, Array);
 }
 }

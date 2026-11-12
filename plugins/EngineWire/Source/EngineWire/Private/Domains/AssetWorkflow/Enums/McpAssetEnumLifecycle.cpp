@@ -1,8 +1,6 @@
 #include "Domains/AssetWorkflow/Enums/McpAssetEnumShared.h"
 #include "Domains/AssetWorkflow/Operations/McpAssetBulkSelection.h"
-#include "Async/Async.h"
 #include "Kismet2/EnumEditorUtils.h"
-#include "Misc/ScopedEvent.h"
 #include "ObjectTools.h"
 
 
@@ -11,19 +9,7 @@ bool HandleEnumAction(
     const TSharedPtr<FJsonObject>& Params,
     TSharedPtr<FJsonObject>& OutResult)
 {
-    const FString Lower = Action.ToLower();
-
-    if (HandleEnumLifecycleActions(Lower, Params, OutResult))
-    {
-        return true;
-    }
-    if (HandleEnumValueActions(Lower, Params, OutResult))
-    {
-        return true;
-    }
-
-    SetEnumResultFields(OutResult, false, TEXT("Unknown enum action"));
-    return false;
+    return HandleEnumLifecycleActions(Action, Params, OutResult) || HandleEnumValueActions(Action, Params, OutResult);
 }
 
 bool HandleEnumLifecycleActions(

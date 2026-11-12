@@ -51,11 +51,9 @@ bool HandleStructLifecycleActions(UEngineWireSubsystem& Bridge, const FString& R
             TArray<FString> ValidationFailures;
             if (!ValidateStructMembers(*MembersArr, SelfPath, ParsedMembers, ValidationFailures))
             {
-                TArray<TSharedPtr<FJsonValue>> FailureArr;
-                for (const FString& F : ValidationFailures) FailureArr.Add(MakeShared<FJsonValueString>(F));
                 TSharedPtr<FJsonObject> ValidationResult = McpHandlerUtils::CreateResultObject();
                 ValidationResult->SetNumberField(TEXT("failed"), ValidationFailures.Num());
-                ValidationResult->SetArrayField(TEXT("failures"), FailureArr);
+                ValidationResult->SetArrayField(TEXT("failures"), McpHandlerUtils::ToJsonStringArray(ValidationFailures));
                 Bridge.SendAutomationResponse(RequestingSocket, RequestId, false,
                     FString::Printf(TEXT("Struct creation rejected: %d member(s) failed validation"), ValidationFailures.Num()),
                     ValidationResult);
@@ -94,13 +92,11 @@ bool HandleStructLifecycleActions(UEngineWireSubsystem& Bridge, const FString& R
             int32 Applied = ApplyParsedStructMembers(S, ParsedMembers, ApplyFailures);
             if (ApplyFailures.Num() > 0)
             {
-                TArray<TSharedPtr<FJsonValue>> FailureArr;
-                for (const FString& F : ApplyFailures) FailureArr.Add(MakeShared<FJsonValueString>(F));
                 TSharedPtr<FJsonObject> ApplyResult = McpHandlerUtils::CreateResultObject();
                 ApplyResult->SetStringField(TEXT("assetPath"), PackageName + TEXT(".") + SanitizedName);
                 ApplyResult->SetNumberField(TEXT("imported"), Applied);
                 ApplyResult->SetNumberField(TEXT("failed"), ApplyFailures.Num());
-                ApplyResult->SetArrayField(TEXT("failures"), FailureArr);
+                ApplyResult->SetArrayField(TEXT("failures"), McpHandlerUtils::ToJsonStringArray(ApplyFailures));
                 Bridge.SendAutomationResponse(RequestingSocket, RequestId, false,
                     FString::Printf(TEXT("Struct created but %d member(s) failed to apply"), ApplyFailures.Num()),
                     ApplyResult);

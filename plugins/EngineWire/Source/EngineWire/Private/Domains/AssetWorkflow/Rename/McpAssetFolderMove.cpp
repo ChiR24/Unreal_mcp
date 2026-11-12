@@ -77,10 +77,7 @@ void MoveFolderContents(UEngineWireSubsystem* Bridge, const FString& RequestId, 
     {
         // The receipt's changes[] reads modifiedPaths, not the two folder fields: name both folders, however
         // many assets moved between them.
-        TArray<TSharedPtr<FJsonValue>> Folders;
-        Folders.Add(MakeShared<FJsonValueString>(SourceFolder));
-        Folders.Add(MakeShared<FJsonValueString>(DestinationFolder));
-        Result->SetArrayField(TEXT("modifiedPaths"), Folders);
+        Result->SetArrayField(TEXT("modifiedPaths"), McpHandlerUtils::ToJsonStringArray({SourceFolder, DestinationFolder}));
     }
     Result->SetNumberField(TEXT("movedCount"), bMoved ? RenameData.Num() : 0);
     Result->SetNumberField(TEXT("redirectorsFixed"), FixedBefore + RedirectorsFixed);
