@@ -5,14 +5,7 @@
 bool UEngineWireSubsystem::HandleControlEditorSetViewTarget(
     const FString &RequestId, const TSharedPtr<FJsonObject> &Payload,
     TSharedPtr<FMcpBridgeWebSocket> Socket) {
-  FString ActorName;
-  Payload->TryGetStringField(TEXT("actorName"), ActorName);
-  if (ActorName.IsEmpty()) {
-    Payload->TryGetStringField(TEXT("objectPath"), ActorName);
-  }
-  if (ActorName.IsEmpty()) {
-    Payload->TryGetStringField(TEXT("name"), ActorName);
-  }
+  const FString ActorName = McpGetFirstStringField(Payload, {TEXT("actorName"), TEXT("objectPath"), TEXT("name")});
 
   if (ActorName.IsEmpty()) {
     SendStandardErrorResponse(this, Socket, RequestId, TEXT("INVALID_ARGUMENT"),

@@ -53,7 +53,7 @@ TSharedPtr<FJsonObject> HandleBlueprintAssetActions(const FString& SubAction, co
     }
 
     // Check if an asset already exists at the target path to prevent assertion failure in Kismet2.cpp
-        FString ObjectPath = FString::Printf(TEXT("%s/%s"), *Path, *Name);
+        const FString ObjectPath = Path / Name;
         if (McpAssetExists(ObjectPath))
         {
             UObject* ExistingAsset = McpLoadAsset(ObjectPath);
@@ -88,8 +88,7 @@ TSharedPtr<FJsonObject> HandleBlueprintAssetActions(const FString& SubAction, co
         }
 
         // Create package and asset directly to avoid UI dialogs
-        FString PackagePath = Path / Name;
-        UPackage* Package = McpCreatePackageOrNull(PackagePath);
+        UPackage* Package = McpCreatePackageOrNull(ObjectPath);
         if (!Package)
         {
             ANIM_ERROR_RESPONSE(TEXT("Failed to create package"), TEXT("PACKAGE_ERROR"));
@@ -112,8 +111,7 @@ TSharedPtr<FJsonObject> HandleBlueprintAssetActions(const FString& SubAction, co
 
         const bool bSaved = SaveAnimAsset(NewAnimBP, bSave);
 
-        FString FullPath = Path / Name;
-        Response->SetStringField(TEXT("assetPath"), FullPath);
+        Response->SetStringField(TEXT("assetPath"), ObjectPath);
         Response->SetBoolField(TEXT("saved"), bSaved);
         Response->SetStringField(TEXT("parentClass"), ParentAnimClass->GetName());
         ANIM_SUCCESS_RESPONSE(FString::Printf(TEXT("Animation Blueprint '%s' created"), *Name));

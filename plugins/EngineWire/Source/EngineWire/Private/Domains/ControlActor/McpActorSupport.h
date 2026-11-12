@@ -308,7 +308,8 @@ TArray<TSharedPtr<FJsonValue>> McpMotionInputsJson(const TArray<FMcpMotionInput>
 // ended up intersecting, and whether it is sunk into or floating above the
 // surface beneath it, rather than answering a bare "success".
 namespace McpPlacement {
-void DescribePlacement(AActor *Actor, const TSharedPtr<FJsonObject> &Data);
+/** OutKind: the bucket of the warning written (overlapping, sunk, floating, unsupported); untouched when there is none. */
+void DescribePlacement(AActor *Actor, const TSharedPtr<FJsonObject> &Data, FString *OutKind = nullptr);
 /** True when a caller has marked this actor's placement deliberate. */
 bool McpPlacementAccepted(const AActor *Actor);
 /** A landscape, or a slab far wider than it is thick: what other actors stand on, judged sunk or floating against. */

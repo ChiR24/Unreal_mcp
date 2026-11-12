@@ -103,9 +103,8 @@ bool FCombatActionContext::HandleWeaponEquipment() const
 
         FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(Blueprint);
         McpSafeCompileBlueprint(Blueprint);
-        if (!McpSafeAssetSave(Blueprint))
+        if (!SaveOrReply(Blueprint))
         {
-            SendAutomationError(RequestingSocket, RequestId, FString::Printf(TEXT("%s was changed in the editor but could not be saved to disk."), *Blueprint->GetPathName()), TEXT("SAVE_FAILED"));
             return true;
         }
 

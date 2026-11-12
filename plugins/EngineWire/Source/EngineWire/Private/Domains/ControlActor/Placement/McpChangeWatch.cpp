@@ -84,7 +84,7 @@ void WatchBlueprintCopies(const UObject* Object)
 {
     const UBlueprint* Blueprint = GIsReinstancing ? nullptr : WatchBlueprintOf(Object);
     UClass* Class = Blueprint ? Blueprint->GeneratedClass.Get() : nullptr;
-    UWorld* World = GEditor ? GEditor->GetEditorWorldContext().World() : nullptr;
+    UWorld* World = McpHandlerUtils::GetEditorWorld();
     if (!Class || !World || !Class->IsChildOf(AActor::StaticClass()))
     {
         return;

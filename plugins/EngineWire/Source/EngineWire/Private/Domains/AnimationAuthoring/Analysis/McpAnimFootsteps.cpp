@@ -30,11 +30,7 @@ TArray<FFootstep> StepsOf(const McpAnimLocomotion::FFeetSample& Sample, double C
     for (int32 Foot = 0; Foot < Sample.Feet.Num(); ++Foot)
     {
         const TArray<FVector>& Path = Sample.Paths[Foot];
-        double Lowest = TNumericLimits<double>::Max();
-        for (const FVector& Point : Path)
-        {
-            Lowest = FMath::Min(Lowest, Point.Z);
-        }
+        const double Lowest = McpAnimLocomotion::LowestZ(Path);
         const auto Down = [&Path, Lowest, ContactHeight](int32 Index) { return Path[Index].Z <= Lowest + ContactHeight; };
         const bool bWraps = Path.Num() > 1 && Down(0) && Down(Path.Num() - 1);
         for (int32 Index = 0; Index < Path.Num(); ++Index)

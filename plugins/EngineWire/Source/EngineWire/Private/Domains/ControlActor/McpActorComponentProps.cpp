@@ -167,10 +167,7 @@ bool McpSendComponentPropertyShortfall(UEngineWireSubsystem &Bridge,
   if (Warnings.Num() == 0) {
     return false;
   }
-  TArray<TSharedPtr<FJsonValue>> WarnArray;
-  for (const FString &Warning : Warnings)
-    WarnArray.Add(MakeShared<FJsonValueString>(Warning));
-  Data->SetArrayField(TEXT("warnings"), WarnArray);
+  Data->SetArrayField(TEXT("warnings"), McpHandlerUtils::ToJsonStringArray(Warnings));
   // Nothing asked for could be written: that is a failure, not an update.
   if (Applied.Num() == 0) {
     Bridge.SendAutomationResponse(
@@ -213,9 +210,6 @@ bool UEngineWireSubsystem::HandleControlActorSetComponentProperties(
   } else {
     FString PropertyName;
     Payload->TryGetStringField(TEXT("propertyName"), PropertyName);
-    if (PropertyName.IsEmpty()) {
-      Payload->TryGetStringField(TEXT("propertyPath"), PropertyName);
-    }
     const TSharedPtr<FJsonValue> ValueField = Payload->TryGetField(TEXT("value"));
     if (PropertyName.IsEmpty() || !ValueField.IsValid()) {
       SendStandardErrorResponse(this, Socket, RequestId, TEXT("INVALID_ARGUMENT"),
@@ -272,10 +266,7 @@ bool UEngineWireSubsystem::HandleControlActorSetComponentProperties(
                        TargetComponent->IsRenderStateCreated());
   }
   if (AppliedProperties.Num() > 0) {
-    TArray<TSharedPtr<FJsonValue>> PropsArray;
-    for (const FString &PropName : AppliedProperties)
-      PropsArray.Add(MakeShared<FJsonValueString>(PropName));
-    Data->SetArrayField(TEXT("applied"), PropsArray);
+    Data->SetArrayField(TEXT("applied"), McpHandlerUtils::ToJsonStringArray(AppliedProperties));
   }
   Transaction.DescribeInto(Data);
   McpHandlerUtils::AddVerification(Data, Found);

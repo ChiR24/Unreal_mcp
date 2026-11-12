@@ -24,6 +24,23 @@ FString NormalizeBlueprintPath(UBlueprint *Blueprint,
   return NormalizedPath;
 }
 
+TSharedPtr<FJsonObject> BuildBlueprintResult(UBlueprint *Blueprint,
+                                             const FString &NormalizedPath) {
+  TSharedPtr<FJsonObject> ResultPayload =
+      McpHandlerUtils::CreateResultObject();
+  // `blueprintPath` is the name the capability output schema declares and marks
+  // required. McpProjectCanonicalOutput copies only fields the schema names, so
+  // emitting solely `path`/`assetPath` projected to an empty payload and turned
+  // every SUCCESSFUL create into OUTPUT_SCHEMA_VIOLATION — the caller was told
+  // the Blueprint failed while it was already saved on disk. `assetPath`, the
+  // object path, reaches the caller in details.
+  ResultPayload->SetStringField(TEXT("blueprintPath"), NormalizedPath);
+  ResultPayload->SetStringField(TEXT("assetPath"), Blueprint->GetPathName());
+  ResultPayload->SetStringField(TEXT("parentClass"), Blueprint->ParentClass ? Blueprint->ParentClass->GetPathName() : FString());
+  McpHandlerUtils::AddVerification(ResultPayload, Blueprint);
+  return ResultPayload;
+}
+
 bool RespondIfBlueprintExists(UEngineWireSubsystem *Self,
                               const FRequestContext &Context) {
   FString NormalizedPath;
@@ -111,10 +128,6 @@ bool ExecuteBlueprintCreation(UEngineWireSubsystem *Self,
 
   const FString NormalizedPath =
       NormalizeBlueprintPath(CreatedBlueprint, CreatedBlueprint->GetPathName());
-  FAssetRegistryModule &AssetRegistryModule =
-      FModuleManager::LoadModuleChecked<FAssetRegistryModule>(
-          TEXT("AssetRegistry"));
-  AssetRegistryModule.AssetCreated(CreatedBlueprint);
 
   // Saved before the reply, which answered saved: true and then saved.
   const bool bSaved = SaveLoadedAssetThrottled(CreatedBlueprint, true);

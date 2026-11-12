@@ -28,6 +28,4 @@ UFactory* CreateBlueprintFactory(const FRequestContext& Context, FString& OutErr
 void ApplyBlueprintProperties(
     UBlueprint* Blueprint, const TSharedPtr<FJsonObject>& Payload,
     TArray<FString>& OutApplied, TArray<FString>& OutFailed);
-TSharedPtr<FJsonObject> BuildBlueprintResult(
-    UBlueprint* Blueprint, const FString& NormalizedPath);
 }

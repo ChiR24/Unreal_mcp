@@ -43,7 +43,7 @@ bool HandleGetNetworkingInfo(FNetworkingActionContext& Context)
     }
     else if (!ActorName.IsEmpty())
     {
-        UWorld* World = GEditor ? GEditor->GetEditorWorldContext().World() : nullptr;
+        UWorld* World = McpHandlerUtils::GetEditorWorld();
         if (!World)
         {
             Context.Bridge.SendAutomationError(Context.RequestingSocket, Context.RequestId, TEXT("No world available"), TEXT("NO_WORLD"));

@@ -9,11 +9,8 @@ bool HandleFindNode(UEngineWireSubsystem* Bridge, const FString& RequestId, cons
 
     FString SearchType, SearchName;
     Payload->TryGetStringField(TEXT("nodeType"), SearchType);
-    // The contract declares nodeName; this read only `name`, which the gateway
-    // refuses, so a find by name was impossible. `name` stays as a fallback.
-    if (!Payload->TryGetStringField(TEXT("nodeName"), SearchName) || SearchName.IsEmpty()) {
-      Payload->TryGetStringField(TEXT("name"), SearchName);
-    }
+    // The contract declares nodeName (this used to read only `name`, which the gateway refuses).
+    Payload->TryGetStringField(TEXT("nodeName"), SearchName);
 
     if (SearchType.IsEmpty() && SearchName.IsEmpty()) {
       Bridge->SendAutomationError(Socket, RequestId,

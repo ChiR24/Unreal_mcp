@@ -86,9 +86,6 @@ bool UEngineWireSubsystem::HandleControlEditorPossess(
   }
   FString ActorName;
   Payload->TryGetStringField(TEXT("actorName"), ActorName);
-  if (ActorName.IsEmpty()) {
-    Payload->TryGetStringField(TEXT("objectPath"), ActorName);
-  }
   const bool bWasEjected = GEditor->bIsSimulatingInEditor;
   APawn *Target = nullptr;
   if (!ActorName.IsEmpty()) {

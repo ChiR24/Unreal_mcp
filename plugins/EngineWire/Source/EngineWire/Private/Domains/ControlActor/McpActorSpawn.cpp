@@ -126,7 +126,7 @@ bool UEngineWireSubsystem::HandleControlActorSpawn(
     ResolvedClass = ASkeletalMeshActor::StaticClass();
   }
 
-  if (!ResolvedClass && !bSpawnStaticMeshActor && !bSpawnSkeletalMeshActor) {
+  if (!ResolvedClass) {
     // Distinguish "nothing was asked for" from "what was asked for didn't resolve".
     // Previously an empty spawn payload produced "Class not found: ." — a message
     // that reads like a resolution failure while hiding that no class was given.
@@ -138,14 +138,11 @@ bool UEngineWireSubsystem::HandleControlActorSpawn(
                "\"actorName\": \"MyLight\", \"location\": [0, 0, 100]}"));
       return true;
     }
-    const FString ErrorMsg =
-        ClassPath.IsEmpty()
-            ? FString::Printf(TEXT("Mesh path could not be resolved: %s"), *MeshPath)
-            : FString::Printf(TEXT("Class not found: %s. Verify plugin is enabled if "
-                                   "using a plugin class."),
-                              *ClassPath);
+    // A meshPath that loaded nothing was answered MESH_NOT_FOUND above, so a class was named here.
     SendStandardErrorResponse(this, Socket, RequestId, TEXT("CLASS_NOT_FOUND"),
-                              ErrorMsg);
+                              FString::Printf(TEXT("Class not found: %s. Verify plugin is enabled if "
+                                                   "using a plugin class."),
+                                              *ClassPath));
     return true;
   }
 
@@ -174,13 +171,6 @@ bool UEngineWireSubsystem::HandleControlActorSpawn(
     TargetWorld->Modify();
   }
 
-  UClass *ClassToSpawn =
-      ResolvedClass
-          ? ResolvedClass
-          : (bSpawnStaticMeshActor ? AStaticMeshActor::StaticClass()
-                                   : (bSpawnSkeletalMeshActor
-                                          ? ASkeletalMeshActor::StaticClass()
-                                          : AActor::StaticClass()));
   // A spawn_batch item's variables are the actor's own from its first frame. In a running game SpawnActor ran
   // BeginPlay before the batch set them, so BeginPlay saw the class defaults (a projectile spawned with its launch
   // velocity never moved); construction waits for them there. The batch sets them again after, reporting each one.
@@ -188,7 +178,7 @@ bool UEngineWireSubsystem::HandleControlActorSpawn(
   SpawnParams.bDeferConstruction = GEditor->PlayWorld && Payload->TryGetObjectField(TEXT("variables"), Variables) &&
                                    Variables && Variables->IsValid() && (*Variables)->Values.Num() > 0;
   bool bSpawnStarted = false;
-  Spawned = McpSpawnActorNoting(TargetWorld, ClassToSpawn, Location, Rotation, SpawnParams, bSpawnStarted);
+  Spawned = McpSpawnActorNoting(TargetWorld, ResolvedClass, Location, Rotation, SpawnParams, bSpawnStarted);
   if (SpawnParams.bDeferConstruction && IsValid(Spawned)) {
     for (const TPair<FString, TSharedPtr<FJsonValue>> &Pair : (*Variables)->Values) {
       FString Unapplied; // reported by the batch's own pass
@@ -280,13 +270,9 @@ bool UEngineWireSubsystem::HandleControlActorSpawn(
       BaseName = ResolvedStaticMesh->GetName();
     } else if (ResolvedSkeletalMesh) {
       BaseName = ResolvedSkeletalMesh->GetName();
-    } else if (ResolvedClass) {
-      BaseName = ResolvedClass->GetName();
-      if (BaseName.EndsWith(TEXT("_C"))) {
-        BaseName.RemoveFromEnd(TEXT("_C"));
-      }
     } else {
-      BaseName = TEXT("Actor");
+      BaseName = ResolvedClass->GetName();
+      BaseName.RemoveFromEnd(TEXT("_C"));
     }
     Spawned->SetActorLabel(BaseName);
   }
@@ -297,7 +283,7 @@ bool UEngineWireSubsystem::HandleControlActorSpawn(
   TSharedPtr<FJsonObject> Data = McpHandlerUtils::CreateResultObject();
 
   // Provide the resolved class path useful for referencing
-  Data->SetStringField(TEXT("classPath"), ResolvedClass ? ResolvedClass->GetPathName() : ClassPath);
+  Data->SetStringField(TEXT("classPath"), ResolvedClass->GetPathName());
 
   if (ResolvedStaticMesh)
     Data->SetStringField(TEXT("meshPath"), ResolvedStaticMesh->GetPathName());

@@ -28,8 +28,7 @@ bool FCombatActionContext::HandleWeaponFiring() const
                 TEXT("INVALID_ARGUMENT"));
             return true;
         }
-        const bool bHasMesh = Blueprint->SimpleConstructionScript && Blueprint->SimpleConstructionScript->GetAllNodes().ContainsByPredicate(
-            [](const USCS_Node* Node) { return Node && Node->GetVariableName() == TEXT("WeaponMesh"); });
+        const bool bHasMesh = Blueprint->SimpleConstructionScript && Blueprint->SimpleConstructionScript->FindSCSNode(TEXT("WeaponMesh"));
         if (!bHasMesh)
         {
             SendAutomationError(RequestingSocket, RequestId,

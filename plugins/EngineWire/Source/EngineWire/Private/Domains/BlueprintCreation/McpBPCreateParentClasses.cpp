@@ -4,6 +4,7 @@
 
 #include "Factories/BlueprintFactory.h"
 #include "Factories/BlueprintFunctionLibraryFactory.h"
+#include "Foundation/BridgeHelpers/Reflection/McpClassResolve.h"
 #include "GameFramework/Actor.h"
 #include "GameFramework/Character.h"
 #include "GameFramework/Pawn.h"
@@ -13,51 +14,6 @@
 
 namespace McpBlueprintCreationHandlers {
 namespace {
-
-UClass *ResolveExplicitParentClass(const FString &ParentClassSpec) {
-  if (ParentClassSpec.IsEmpty()) {
-    return nullptr;
-  }
-  if (ParentClassSpec.StartsWith(TEXT("/Script/"))) {
-    return LoadClass<UObject>(nullptr, *ParentClassSpec);
-  }
-
-  UClass *ResolvedParent = FindObject<UClass>(nullptr, *ParentClassSpec);
-  const bool bLooksPathLike = ParentClassSpec.Contains(TEXT("/")) ||
-                              ParentClassSpec.Contains(TEXT("."));
-  if (!ResolvedParent && bLooksPathLike) {
-    ResolvedParent =
-        StaticLoadClass(UObject::StaticClass(), nullptr, *ParentClassSpec);
-  }
-  if (!ResolvedParent && !bLooksPathLike) {
-    const TArray<FString> PrefixGuesses = {
-        FString::Printf(TEXT("/Script/Engine.%s"), *ParentClassSpec),
-        FString::Printf(TEXT("/Script/GameFramework.%s"), *ParentClassSpec),
-        FString::Printf(TEXT("/Script/CoreUObject.%s"), *ParentClassSpec)};
-    for (const FString &Guess : PrefixGuesses) {
-      UClass *Loaded = FindObject<UClass>(nullptr, *Guess);
-      if (!Loaded) {
-        Loaded = StaticLoadClass(UObject::StaticClass(), nullptr, *Guess);
-      }
-      if (Loaded) {
-        ResolvedParent = Loaded;
-        break;
-      }
-    }
-  }
-  if (!ResolvedParent) {
-    for (TObjectIterator<UClass> It; It; ++It) {
-      UClass *Candidate = *It;
-      if (Candidate &&
-          Candidate->GetName().Equals(ParentClassSpec,
-                                      ESearchCase::IgnoreCase)) {
-        ResolvedParent = Candidate;
-        break;
-      }
-    }
-  }
-  return ResolvedParent;
-}
 
 // The loaded classes carrying the class name of Spec (the part after its last '.'), by path: the
 // way to the right module when a parent class path names the wrong one.
@@ -96,7 +52,10 @@ UFactory *CreateBlueprintFactory(const FRequestContext &Context, FString &OutErr
     return Factory;
   }
 
-  UClass *ResolvedParent = ResolveExplicitParentClass(Context.ParentClassSpec);
+  // A native class by name or path, a Blueprint by its class path, its asset path or its name. The resolver this
+  // had of its own loaded three guessed /Script paths for a short name, logging a failure for each into a reply
+  // that then succeeded, and refused a Blueprint asset path.
+  UClass *ResolvedParent = ResolveClassByName(Context.ParentClassSpec);
   if (!ResolvedParent && bFunctionLibraryByParent) {
     ResolvedParent = UBlueprintFunctionLibrary::StaticClass();
   }

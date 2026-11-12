@@ -27,11 +27,7 @@ TSharedPtr<FJsonValue> McpVectorJson(const FVector& Value)
 // One foot over the sampled frames: planted where it is within ContactHeight of its lowest point.
 TSharedPtr<FJsonObject> McpDescribeFoot(const FName Foot, const TArray<FVector>& Path, const TArray<double>& Times, double ContactHeight)
 {
-    double Lowest = TNumericLimits<double>::Max();
-    for (const FVector& Point : Path)
-    {
-        Lowest = FMath::Min(Lowest, Point.Z);
-    }
+    const double Lowest = McpAnimLocomotion::LowestZ(Path);
     TArray<TSharedPtr<FJsonValue>> Contacts;
     int32 Planted = 0;
     int32 Moves = 0;

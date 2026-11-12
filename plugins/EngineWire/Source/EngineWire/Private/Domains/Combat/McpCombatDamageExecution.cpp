@@ -62,14 +62,12 @@ bool FCombatActionContext::HandleDamageExecution() const
 {
     if (SubAction == TEXT("setup_hitbox_component"))
     {
-        if (BlueprintPath.IsEmpty())
+        UBlueprint* Blueprint = LoadBlueprintOrReply();
+        if (!Blueprint)
         {
-            SendAutomationError(RequestingSocket, RequestId, TEXT("Missing blueprintPath."), TEXT("INVALID_ARGUMENT"));
             return true;
         }
-
-        UBlueprint* Blueprint = LoadObject<UBlueprint>(nullptr, *BlueprintPath);
-        if (!Blueprint || !Blueprint->SimpleConstructionScript)
+        if (!Blueprint->SimpleConstructionScript)
         {
             SendAutomationError(RequestingSocket, RequestId, TEXT("Blueprint not found."), TEXT("NOT_FOUND"));
             return true;
@@ -173,9 +171,8 @@ bool FCombatActionContext::HandleDamageExecution() const
             }
         }
 
-        if (!McpSafeAssetSave(Blueprint))
+        if (!SaveOrReply(Blueprint))
         {
-            SendAutomationError(RequestingSocket, RequestId, FString::Printf(TEXT("%s was changed in the editor but could not be saved to disk."), *Blueprint->GetPathName()), TEXT("SAVE_FAILED"));
             return true;
         }
 
@@ -244,9 +241,8 @@ bool FCombatActionContext::HandleDamageExecution() const
             }
         }
 
-        if (!McpSafeAssetSave(Blueprint))
+        if (!SaveOrReply(Blueprint))
         {
-            SendAutomationError(RequestingSocket, RequestId, FString::Printf(TEXT("%s was changed in the editor but could not be saved to disk."), *Blueprint->GetPathName()), TEXT("SAVE_FAILED"));
             return true;
         }
 

@@ -41,104 +41,20 @@ static TSharedPtr<FJsonObject> HandleAnimationAuthoringRequest(const TSharedPtr<
         }
     }
 
-    if (TSharedPtr<FJsonObject> Result = HandleSequenceAssetActions(SubAction, Params, Response))
+    // Each handler answers the sub-actions it owns and returns null for the rest; asked in this order.
+    using FAuthoringHandler = TSharedPtr<FJsonObject> (*)(const FString&, const TSharedPtr<FJsonObject>&, TSharedPtr<FJsonObject>);
+    static const FAuthoringHandler Handlers[] = {
+        &HandleSequenceAssetActions, &HandleSequenceTrackActions, &HandleSequenceEventActions, &HandleSequenceSettingsActions,
+        &HandleMontageAssetActions, &HandleMontageNotifyBlendActions, &HandleBlendSpaceAssetActions, &HandleBlendSpaceSampleActions,
+        &HandleAimOffsetActions, &HandleBlueprintAssetActions, &HandleBlueprintStateMachineActions, &HandleBlueprintStateTransitionActions,
+        &HandleBlueprintTransitionRuleActions, &HandleBlueprintBlendNodeActions, &HandleBlueprintSlotLayerActions, &HandleBlueprintNodeValueActions,
+        &HandleControlRigActions, &HandleIKRigActions, &HandleIKRetargetActions, &HandleAnimationInfoActions};
+    for (const FAuthoringHandler Handler : Handlers)
     {
-        return Result;
-    }
-
-    if (TSharedPtr<FJsonObject> Result = HandleSequenceTrackActions(SubAction, Params, Response))
-    {
-        return Result;
-    }
-
-    if (TSharedPtr<FJsonObject> Result = HandleSequenceEventActions(SubAction, Params, Response))
-    {
-        return Result;
-    }
-
-    if (TSharedPtr<FJsonObject> Result = HandleSequenceSettingsActions(SubAction, Params, Response))
-    {
-        return Result;
-    }
-
-    if (TSharedPtr<FJsonObject> Result = HandleMontageAssetActions(SubAction, Params, Response))
-    {
-        return Result;
-    }
-
-    if (TSharedPtr<FJsonObject> Result = HandleMontageNotifyBlendActions(SubAction, Params, Response))
-    {
-        return Result;
-    }
-
-    if (TSharedPtr<FJsonObject> Result = HandleBlendSpaceAssetActions(SubAction, Params, Response))
-    {
-        return Result;
-    }
-
-    if (TSharedPtr<FJsonObject> Result = HandleBlendSpaceSampleActions(SubAction, Params, Response))
-    {
-        return Result;
-    }
-
-    if (TSharedPtr<FJsonObject> Result = HandleAimOffsetActions(SubAction, Params, Response))
-    {
-        return Result;
-    }
-
-    if (TSharedPtr<FJsonObject> Result = HandleBlueprintAssetActions(SubAction, Params, Response))
-    {
-        return Result;
-    }
-
-    if (TSharedPtr<FJsonObject> Result = HandleBlueprintStateMachineActions(SubAction, Params, Response))
-    {
-        return Result;
-    }
-
-    if (TSharedPtr<FJsonObject> Result = HandleBlueprintStateTransitionActions(SubAction, Params, Response))
-    {
-        return Result;
-    }
-
-    if (TSharedPtr<FJsonObject> Result = HandleBlueprintTransitionRuleActions(SubAction, Params, Response))
-    {
-        return Result;
-    }
-
-    if (TSharedPtr<FJsonObject> Result = HandleBlueprintBlendNodeActions(SubAction, Params, Response))
-    {
-        return Result;
-    }
-
-    if (TSharedPtr<FJsonObject> Result = HandleBlueprintSlotLayerActions(SubAction, Params, Response))
-    {
-        return Result;
-    }
-
-    if (TSharedPtr<FJsonObject> Result = HandleBlueprintNodeValueActions(SubAction, Params, Response))
-    {
-        return Result;
-    }
-
-    if (TSharedPtr<FJsonObject> Result = HandleControlRigActions(SubAction, Params, Response))
-    {
-        return Result;
-    }
-
-    if (TSharedPtr<FJsonObject> Result = HandleIKRigActions(SubAction, Params, Response))
-    {
-        return Result;
-    }
-
-    if (TSharedPtr<FJsonObject> Result = HandleIKRetargetActions(SubAction, Params, Response))
-    {
-        return Result;
-    }
-
-    if (TSharedPtr<FJsonObject> Result = HandleAnimationInfoActions(SubAction, Params, Response))
-    {
-        return Result;
+        if (TSharedPtr<FJsonObject> Result = Handler(SubAction, Params, Response))
+        {
+            return Result;
+        }
     }
 
     Response->SetBoolField(TEXT("success"), false);

@@ -14,11 +14,10 @@ bool HandleAddLandscapeLayer(UEngineWireSubsystem* Bridge, const FString& Reques
     // The layer info asset goes in `path` when given, else beside the material.
     // materialPath names the material, not a folder: it used to be taken as the
     // folder, so a material path grew a fake folder named after the material.
-    FString Path, MaterialRef;
+    FString Path;
     Payload->TryGetStringField(TEXT("path"), Path);
-    if (!Payload->TryGetStringField(TEXT("materialPath"), MaterialRef) || MaterialRef.IsEmpty()) {
-      Payload->TryGetStringField(TEXT("assetPath"), MaterialRef);
-    }
+    // assetPath: what a build_material_graph step carries (the batch sets it).
+    const FString MaterialRef = McpGetFirstStringField(Payload, {TEXT("materialPath"), TEXT("assetPath")});
     if (Path.IsEmpty() && !MaterialRef.IsEmpty()) {
       const FString SafeMaterial = SanitizeProjectRelativePath(MaterialRef);
       if (SafeMaterial.IsEmpty() || !LoadObject<UMaterialInterface>(nullptr, *SafeMaterial)) {

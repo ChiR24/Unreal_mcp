@@ -139,9 +139,6 @@ bool UEngineWireSubsystem::HandleControlActorSetMaterial(
   FString TargetName;
   Payload->TryGetStringField(TEXT("actorName"), TargetName);
   if (TargetName.IsEmpty()) {
-    Payload->TryGetStringField(TEXT("name"), TargetName);
-  }
-  if (TargetName.IsEmpty()) {
     SendStandardErrorResponse(this, Socket, RequestId, TEXT("INVALID_ARGUMENT"),
                               TEXT("actorName required"), nullptr);
     return true;
@@ -150,12 +147,6 @@ bool UEngineWireSubsystem::HandleControlActorSetMaterial(
   FString MaterialPath;
   Payload->TryGetStringField(TEXT("materialPath"), MaterialPath);
   if (MaterialPath.IsEmpty()) {
-    Payload->TryGetStringField(TEXT("assetPath"), MaterialPath);
-  }
-  if (MaterialPath.IsEmpty()) {
-    Payload->TryGetStringField(TEXT("material"), MaterialPath);
-  }
-  if (MaterialPath.IsEmpty()) {
     SendStandardErrorResponse(this, Socket, RequestId, TEXT("INVALID_ARGUMENT"),
                               TEXT("materialPath, materials or color required"), nullptr);
     return true;
@@ -163,9 +154,7 @@ bool UEngineWireSubsystem::HandleControlActorSetMaterial(
 
   double SlotNumber = 0.0;
   if (!Payload->TryGetNumberField(TEXT("materialSlot"), SlotNumber)) {
-    if (!Payload->TryGetNumberField(TEXT("materialIndex"), SlotNumber)) {
-      Payload->TryGetNumberField(TEXT("slotIndex"), SlotNumber);
-    }
+    Payload->TryGetNumberField(TEXT("materialIndex"), SlotNumber);
   }
   if (SlotNumber < 0.0) {
     SendStandardErrorResponse(this, Socket, RequestId, TEXT("INVALID_ARGUMENT"),

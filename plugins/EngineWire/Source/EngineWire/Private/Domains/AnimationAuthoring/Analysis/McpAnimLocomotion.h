@@ -28,6 +28,17 @@ struct FFeetSample
 
 FFeetSample SampleFeet(UAnimSequence* Sequence, const TSharedPtr<FJsonObject>& Params);
 
+/** The lowest Z a foot's path reaches: the foot is planted wherever it is within its contact height of this. */
+inline double LowestZ(const TArray<FVector>& Path)
+{
+    double Lowest = TNumericLimits<double>::Max();
+    for (const FVector& Point : Path)
+    {
+        Lowest = FMath::Min(Lowest, Point.Z);
+    }
+    return Lowest;
+}
+
 struct FMotion
 {
     FVector2D Velocity = FVector2D::ZeroVector; // component space, cm/s

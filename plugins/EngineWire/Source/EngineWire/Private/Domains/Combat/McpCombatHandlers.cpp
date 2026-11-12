@@ -1,5 +1,6 @@
 #include "Core/Compatibility/McpVersionCompatibility.h"
 
+#include "Core/Routing/McpConsolidatedActionRouting.h"
 #include "Domains/Combat/McpCombatPrivate.h"
 
 bool UEngineWireSubsystem::HandleManageCombatAction(
@@ -25,7 +26,7 @@ bool UEngineWireSubsystem::HandleManageCombatAction(
         Action,
         Payload,
         RequestingSocket,
-        GetJsonStringField(Payload, TEXT("subAction")),
+        McpConsolidatedActions::GetPayloadSubAction(Payload),
         GetJsonStringField(Payload, TEXT("name")),
         GetJsonStringField(Payload, TEXT("path"), TEXT("/Game")),
         GetJsonStringField(Payload, TEXT("blueprintPath"))};

@@ -6,14 +6,7 @@
 bool UEngineWireSubsystem::HandleControlActorFindByClass(
     const FString &RequestId, const TSharedPtr<FJsonObject> &Payload,
     TSharedPtr<FMcpBridgeWebSocket> Socket) {
-  FString ClassName;
-  Payload->TryGetStringField(TEXT("className"), ClassName);
-  if (ClassName.IsEmpty()) {
-    Payload->TryGetStringField(TEXT("class"), ClassName);
-  }
-  if (ClassName.IsEmpty()) {
-    Payload->TryGetStringField(TEXT("classPath"), ClassName);
-  }
+  const FString ClassName = McpGetFirstStringField(Payload, {TEXT("className"), TEXT("class"), TEXT("classPath")});
 
   if (ClassName.IsEmpty()) {
     SendStandardErrorResponse(this, Socket, RequestId, TEXT("INVALID_ARGUMENT"),

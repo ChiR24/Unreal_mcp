@@ -51,11 +51,13 @@ if (SubAction == TEXT("create_ik_rig"))
 #if MCP_HAS_IKRIG_CREATE_NEW_ASSET
     UIKRigDefinition* IKRig = MCP_IKRIG_CREATE_NEW_ASSET(Path, Name);
 #else
-    // UE 5.0-5.5: Create using NewObject since CreateNewIKRigAsset doesn't exist
-    UPackage* Package = McpCreatePackageOrNull(Path / Name);
+    // UE 5.0-5.5: Create using NewObject since CreateNewIKRigAsset doesn't exist. A name that is taken is refused:
+    // NewObject over a rig already there rebuilt that rig in place.
+    FString CreateError, CreateCode;
+    UPackage* Package = McpCreatePackageForNewAsset(Path / Name, CreateError, CreateCode);
     if (!Package)
     {
-        ANIM_ERROR_RESPONSE(TEXT("Failed to create package for IK Rig"), TEXT("PACKAGE_FAILED"));
+        ANIM_ERROR_RESPONSE(CreateError, CreateCode);
     }
     UIKRigDefinition* IKRig = NewObject<UIKRigDefinition>(Package, *Name, RF_Public | RF_Standalone);
     if (!IKRig)

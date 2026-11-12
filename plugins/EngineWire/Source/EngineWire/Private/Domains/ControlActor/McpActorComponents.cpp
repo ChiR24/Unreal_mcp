@@ -68,9 +68,7 @@ bool UEngineWireSubsystem::HandleControlActorAddComponent(
     }
   }
 
-  // Force lights to be movable to ensure they work without baking (Issue #6
-  // fix) We check for "LightComponent" class name to avoid dependency issues if
-  // header is obscure, but ULightComponent is standard.
+  // A light is made Movable, so it lights the scene without a bake.
   if (NewComponent->IsA(ULightComponent::StaticClass())) {
     if (USceneComponent *SC = Cast<USceneComponent>(NewComponent)) {
       SC->SetMobility(EComponentMobility::Movable);
@@ -115,10 +113,7 @@ bool UEngineWireSubsystem::HandleControlActorAddComponent(
   Resp->SetStringField(TEXT("componentPath"), NewComponent->GetPathName());
   Resp->SetStringField(TEXT("componentClass"), ComponentClass->GetPathName());
   if (AppliedProperties.Num() > 0) {
-    TArray<TSharedPtr<FJsonValue>> PropsArray;
-    for (const FString &PropName : AppliedProperties)
-      PropsArray.Add(MakeShared<FJsonValueString>(PropName));
-    Resp->SetArrayField(TEXT("appliedProperties"), PropsArray);
+    Resp->SetArrayField(TEXT("appliedProperties"), McpHandlerUtils::ToJsonStringArray(AppliedProperties));
   }
   // Every requested property failing came back success:true with the failures
   // in warnings; it now fails the way set_component_properties does, naming

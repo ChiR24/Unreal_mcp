@@ -176,13 +176,13 @@ bool HandleAddNode(UEngineWireSubsystem* Subsystem,
     // 5.5 and a value-or-Blackboard-key struct from 5.5, whose DefaultValue is the byte.
     if (NodeType == TEXT("Fail")) {
       UObject* Task = NewNode->NodeInstance;
-      FProperty* Result = Task->GetClass()->FindPropertyByName(TEXT("Result"));
+      FProperty* ResultProperty = Task->GetClass()->FindPropertyByName(TEXT("Result"));
       void* Container = Task;
-      if (const FStructProperty* Struct = CastField<FStructProperty>(Result)) {
+      if (const FStructProperty* Struct = CastField<FStructProperty>(ResultProperty)) {
         Container = Struct->ContainerPtrToValuePtr<void>(Task);
-        Result = Struct->Struct->FindPropertyByName(TEXT("DefaultValue"));
+        ResultProperty = Struct->Struct->FindPropertyByName(TEXT("DefaultValue"));
       }
-      if (const FByteProperty* Byte = CastField<FByteProperty>(Result)) {
+      if (const FByteProperty* Byte = CastField<FByteProperty>(ResultProperty)) {
         Byte->SetPropertyValue_InContainer(Container, static_cast<uint8>(EBTNodeResult::Failed));
       }
     }

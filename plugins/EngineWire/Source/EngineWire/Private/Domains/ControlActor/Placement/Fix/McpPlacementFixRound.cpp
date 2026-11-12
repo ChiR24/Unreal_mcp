@@ -28,15 +28,18 @@ double MoveWeight(const AActor* Actor)
 FFinding ReadFinding(AActor* Actor, const TSet<FString>& Kinds)
 {
     TSharedPtr<FJsonObject> Entry = MakeShared<FJsonObject>();
-    McpPlacement::DescribePlacement(Actor, Entry);
+    FString Kind;
+    McpPlacement::DescribePlacement(Actor, Entry, &Kind);
     FFinding Finding;
     Entry->TryGetStringField(TEXT("placementWarning"), Finding.Warning);
     double Clearance = 0.0;
     const bool bClearance = Entry->TryGetNumberField(TEXT("groundClearance"), Clearance);
-    // The audit says sunk only with a suggestedLocation, and floating in its warning; either way the clearance is the move.
+    // The check says sunk only with a suggestedLocation, and floating by the note it wrote; either way the clearance is
+    // the move. Not by the word in the warning, which opens with the actor's own name: a wall-mounted FloatingLamp that
+    // overlapped its bracket was dropped to the floor.
     // Not for one sitting on a mesh with no collision: dropped to the floor under it, it would sink into that mesh.
     const bool bSunk = Kinds.Contains(TEXT("sunk")) && Entry->HasField(TEXT("suggestedLocation"));
-    const bool bFloating = Kinds.Contains(TEXT("floating")) && Finding.Warning.Contains(TEXT("floating")) &&
+    const bool bFloating = Kinds.Contains(TEXT("floating")) && Kind == TEXT("floating") &&
                            !Finding.Warning.Contains(TEXT("which has no collision"));
     if (bClearance && (bSunk || bFloating))
     {

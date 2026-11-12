@@ -97,7 +97,7 @@ static bool ConfigurePlayerStart(FActionContext& Context)
         return true;
     }
 
-    UWorld* World = GEditor ? GEditor->GetEditorWorldContext().World() : nullptr;
+    UWorld* World = McpHandlerUtils::GetEditorWorld();
     if (!World)
     {
         Context.SendError(TEXT("No editor level is open."), TEXT("NO_WORLD"));

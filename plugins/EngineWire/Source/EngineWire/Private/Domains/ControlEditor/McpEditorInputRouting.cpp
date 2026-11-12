@@ -181,11 +181,7 @@ void SimulateKeyInputForMcp(const FString &Key, const EInputEvent InputEvent, co
 }
 
 FString NormalizeSimulatedInputTypeForMcp(const TSharedPtr<FJsonObject> &Payload) {
-  FString InputType;
-  Payload->TryGetStringField(TEXT("type"), InputType);
-  if (InputType.IsEmpty()) {
-    Payload->TryGetStringField(TEXT("inputType"), InputType);
-  }
+  FString InputType = McpGetFirstStringField(Payload, {TEXT("type"), TEXT("inputType")});
   FString InputAction;
   Payload->TryGetStringField(TEXT("inputAction"), InputAction);
   if (InputType.IsEmpty()) {

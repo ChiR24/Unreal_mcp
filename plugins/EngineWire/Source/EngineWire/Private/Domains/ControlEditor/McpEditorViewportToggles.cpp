@@ -56,7 +56,7 @@ void McpSetStatsShown(UEngineWireSubsystem &Bridge, const FString &RequestId,
                       bool bShow) {
   TArray<FString> Stats;
   FString Error;
-  UWorld *World = GEditor ? GEditor->GetEditorWorldContext().World() : nullptr;
+  UWorld *World = McpHandlerUtils::GetEditorWorld();
   if (!World || !McpHasStatViewport()) {
     Bridge.SendAutomationError(Socket, RequestId, TEXT("No viewport is open to show stats in"), TEXT("NO_VIEWPORT"));
     return;

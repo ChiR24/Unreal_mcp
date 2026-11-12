@@ -17,19 +17,15 @@ TSharedPtr<FJsonObject> HandleAimOffsetActions(const FString& SubAction, const T
         ANIM_ERROR_RESPONSE(TEXT("Name is required"), TEXT("MISSING_NAME"));
     }
 
-    USkeleton* Skeleton = nullptr;
     // The engine's factory makes nothing without a skeleton, so the call failed late with an empty package left behind.
     if (SkeletonPath.IsEmpty())
     {
         ANIM_ERROR_RESPONSE(TEXT("skeletonPath is required: an aim offset is made for one skeleton"), TEXT("MISSING_SKELETON"));
     }
-    if (!SkeletonPath.IsEmpty())
+    USkeleton* Skeleton = LoadSkeletonFromPathAnim(SkeletonPath);
+    if (!Skeleton)
     {
-        Skeleton = LoadSkeletonFromPathAnim(SkeletonPath);
-        if (!Skeleton)
-        {
-            ANIM_ERROR_RESPONSE(FString::Printf(TEXT("Could not load skeleton: %s"), *SkeletonPath), TEXT("SKELETON_NOT_FOUND"));
-        }
+        ANIM_ERROR_RESPONSE(FString::Printf(TEXT("Could not load skeleton: %s"), *SkeletonPath), TEXT("SKELETON_NOT_FOUND"));
     }
 
     // Create package and asset directly to avoid UI dialogs
@@ -66,8 +62,7 @@ TSharedPtr<FJsonObject> HandleAimOffsetActions(const FString& SubAction, const T
 
         SaveAnimAssetAndReport(NewAimOffset, bSave, Response);
 
-        FString FullPath = Path / Name;
-        Response->SetStringField(TEXT("assetPath"), FullPath);
+        Response->SetStringField(TEXT("assetPath"), PackagePath);
         ANIM_SUCCESS_RESPONSE(FString::Printf(TEXT("Aim Offset '%s' created"), *Name));
         return Response;
     }

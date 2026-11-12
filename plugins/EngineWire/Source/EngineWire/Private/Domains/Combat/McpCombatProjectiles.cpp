@@ -73,9 +73,8 @@ bool FCombatActionContext::HandleProjectileActions() const
         {
             ProjectileCdo->InitialLifeSpan = 5.0f;
         }
-        if (!McpSafeAssetSave(Blueprint))
+        if (!SaveOrReply(Blueprint))
         {
-            SendAutomationError(RequestingSocket, RequestId, FString::Printf(TEXT("%s was changed in the editor but could not be saved to disk."), *Blueprint->GetPathName()), TEXT("SAVE_FAILED"));
             return true;
         }
 
@@ -136,9 +135,8 @@ bool FCombatActionContext::HandleProjectileActions() const
         {
             ProjectileCdo->InitialLifeSpan = static_cast<float>(GetJsonNumberField(Payload, TEXT("projectileLifespan"), 5.0));
         }
-        if (!McpSafeAssetSave(Blueprint))
+        if (!SaveOrReply(Blueprint))
         {
-            SendAutomationError(RequestingSocket, RequestId, FString::Printf(TEXT("%s was changed in the editor but could not be saved to disk."), *Blueprint->GetPathName()), TEXT("SAVE_FAILED"));
             return true;
         }
 
@@ -188,9 +186,8 @@ bool FCombatActionContext::HandleProjectileActions() const
         }
 
         McpSafeCompileBlueprint(Blueprint);
-        if (!McpSafeAssetSave(Blueprint))
+        if (!SaveOrReply(Blueprint))
         {
-            SendAutomationError(RequestingSocket, RequestId, FString::Printf(TEXT("%s was changed in the editor but could not be saved to disk."), *Blueprint->GetPathName()), TEXT("SAVE_FAILED"));
             return true;
         }
 
@@ -227,9 +224,8 @@ bool FCombatActionContext::HandleProjectileActions() const
         }
 
         McpSafeCompileBlueprint(Blueprint);
-        if (!McpSafeAssetSave(Blueprint))
+        if (!SaveOrReply(Blueprint))
         {
-            SendAutomationError(RequestingSocket, RequestId, FString::Printf(TEXT("%s was changed in the editor but could not be saved to disk."), *Blueprint->GetPathName()), TEXT("SAVE_FAILED"));
             return true;
         }
 

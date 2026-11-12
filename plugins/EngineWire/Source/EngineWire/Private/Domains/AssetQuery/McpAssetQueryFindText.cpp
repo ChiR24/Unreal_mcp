@@ -284,7 +284,7 @@ bool HandleFindText(
         else if (const UDataTable* Table = Cast<UDataTable>(Asset)) { Scan.Table(Table); }
         else if (const UStringTable* Strings = Cast<UStringTable>(Asset)) { Scan.Strings(Strings); }
     }
-    UWorld* World = GEditor ? GEditor->GetEditorWorldContext().World() : nullptr;
+    UWorld* World = McpHandlerUtils::GetEditorWorld();
     if (World && FindTextIncludesLevel(Payload, Filter.PackagePaths, World))
     {
         Scan.Level(World);

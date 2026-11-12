@@ -92,6 +92,17 @@ struct FCombatActionContext
         return Blueprint;
     }
 
+    // McpSafeAssetSave, or false after the SAVE_FAILED reply naming the Blueprint that is changed but not on disk.
+    bool SaveOrReply(UBlueprint* Blueprint) const
+    {
+        if (McpSafeAssetSave(Blueprint))
+        {
+            return true;
+        }
+        SendAutomationError(RequestingSocket, RequestId, FString::Printf(TEXT("%s was changed in the editor but could not be saved to disk."), *Blueprint->GetPathName()), TEXT("SAVE_FAILED"));
+        return false;
+    }
+
     bool HandleWeaponCore() const;
     bool HandleWeaponFiring() const;
     bool HandleProjectileActions() const;

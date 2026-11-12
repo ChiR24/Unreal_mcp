@@ -19,10 +19,7 @@ bool UEngineWireSubsystem::HandleControlEditorStartRecording(
 
   FString RecordingName;
   // filename first, then name
-  Payload->TryGetStringField(TEXT("filename"), RecordingName);
-  if (RecordingName.IsEmpty()) {
-    Payload->TryGetStringField(TEXT("name"), RecordingName);
-  }
+  RecordingName = McpGetFirstStringField(Payload, {TEXT("filename"), TEXT("name")});
   if (RecordingName.IsEmpty()) {
     RecordingName = FString::Printf(TEXT("Recording_%s"),
         *FDateTime::Now().ToString(TEXT("%Y%m%d_%H%M%S")));

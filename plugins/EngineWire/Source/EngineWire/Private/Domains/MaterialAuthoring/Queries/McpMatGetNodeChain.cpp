@@ -11,11 +11,8 @@ bool HandleGetNodeChain(UEngineWireSubsystem* Bridge, const FString& RequestId, 
     // documented alias) and makes every end selector optional: with no end
     // given the chain is walked downstream until it reaches any material
     // output pin (or a FunctionOutput in a material function).
-    FString StartNodeId, EndNodeId, EndPin;
-    Payload->TryGetStringField(TEXT("startNodeId"), StartNodeId);
-    if (StartNodeId.IsEmpty()) {
-      Payload->TryGetStringField(TEXT("nodeId"), StartNodeId);
-    }
+    const FString StartNodeId = McpGetFirstStringField(Payload, {TEXT("startNodeId"), TEXT("nodeId")});
+    FString EndNodeId, EndPin;
     Payload->TryGetStringField(TEXT("endPin"), EndPin);
 
     if (StartNodeId.IsEmpty()) {

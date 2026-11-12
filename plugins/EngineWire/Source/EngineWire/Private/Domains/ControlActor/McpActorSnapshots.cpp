@@ -3,21 +3,6 @@
 #include "Foundation/HandlerUtils/McpHandlerUtilsTransforms.h"
 #include "Foundation/BridgeHelpers/Actors/McpActorMove.h"
 
-namespace {
-// Composes the Foundation vector/rotator helpers into one transform object, so the snapshot pair reports
-// captured and restored values in the same shape. A snapshot stores a transform and nothing else.
-TSharedPtr<FJsonObject> McpTransformToJson(const FTransform &Transform) {
-  TSharedPtr<FJsonObject> Obj = MakeShared<FJsonObject>();
-  Obj->SetObjectField(TEXT("location"),
-                      McpHandlerUtils::VectorToJson(Transform.GetLocation()));
-  Obj->SetObjectField(TEXT("rotation"),
-                      McpHandlerUtils::RotatorToJson(Transform.Rotator()));
-  Obj->SetObjectField(TEXT("scale"),
-                      McpHandlerUtils::VectorToJson(Transform.GetScale3D()));
-  return Obj;
-}
-}
-
 bool UEngineWireSubsystem::HandleControlActorCreateSnapshot(
     const FString &RequestId, const TSharedPtr<FJsonObject> &Payload,
     TSharedPtr<FMcpBridgeWebSocket> Socket) {
@@ -49,7 +34,7 @@ bool UEngineWireSubsystem::HandleControlActorCreateSnapshot(
   // whole-object one, and lets the caller confirm what a later restore can actually put back.
   Data->SetStringField(TEXT("capturedScope"), TEXT("transform"));
   Data->SetObjectField(TEXT("capturedTransform"),
-                       McpTransformToJson(CapturedTransform));
+                       McpHandlerUtils::TransformToJson(CapturedTransform));
   SendStandardSuccessResponse(this, Socket, RequestId, TEXT("Snapshot created"),
                               Data);
   return true;
@@ -97,9 +82,9 @@ bool UEngineWireSubsystem::HandleControlActorRestoreSnapshot(
   // actor had actually moved. Report the target, what the actor holds afterwards, and whether it changed.
   Data->SetStringField(TEXT("restoredScope"), TEXT("transform"));
   Data->SetObjectField(TEXT("restoredTransform"),
-                       McpTransformToJson(SavedTransform));
+                       McpHandlerUtils::TransformToJson(SavedTransform));
   Data->SetObjectField(TEXT("appliedTransform"),
-                       McpTransformToJson(AfterTransform));
+                       McpHandlerUtils::TransformToJson(AfterTransform));
   Data->SetBoolField(TEXT("transformChanged"),
                      !BeforeTransform.Equals(AfterTransform));
   SendStandardSuccessResponse(this, Socket, RequestId,

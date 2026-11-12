@@ -103,12 +103,6 @@ bool UEngineWireSubsystem::HandleControlActorList(
   if (GEditor->PlayWorld) {
     SourceWorld = GEditor->PlayWorld.Get();
     bUsingPieWorld = true;
-    if (!SourceWorld) {
-      SendStandardErrorResponse(this, Socket, RequestId, TEXT("WORLD_NOT_FOUND"),
-                                TEXT("PIE world unavailable"), nullptr);
-      return true;
-    }
-
     for (TActorIterator<AActor> It(SourceWorld); It; ++It) {
       AllActors.Add(*It);
     }

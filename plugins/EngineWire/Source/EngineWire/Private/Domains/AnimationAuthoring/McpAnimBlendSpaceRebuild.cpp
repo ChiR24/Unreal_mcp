@@ -77,20 +77,12 @@ TSharedPtr<FJsonObject> HandleBlendSpaceRebuild(const TSharedPtr<FJsonObject>& P
             AR.GetAssetsByPackageName(RefPkg, Assets);
             for (const FAssetData& Data : Assets)
             {
-#if ENGINE_MAJOR_VERSION > 5 || (ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 1)
-                if (Data.AssetClassPath == UAnimBlueprint::StaticClass()->GetClassPathName())
-#else
-                if (Data.AssetClass == UAnimBlueprint::StaticClass()->GetFName())
-#endif
+                if (Data.IsInstanceOf(UAnimBlueprint::StaticClass()))
                 {
                     // Capture the soft path up front so a null GetAsset()
                     // still gets reported as a load failure rather than
                     // silently skipped.
-#if ENGINE_MAJOR_VERSION > 5 || (ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 1)
-                    const FString RefPath = Data.GetObjectPathString();
-#else
-                    const FString RefPath = Data.ToSoftObjectPath().ToString();
-#endif
+                    const FString RefPath = MCP_ASSET_DATA_GET_OBJECT_PATH(Data);
                     if (UAnimBlueprint* ABP = Cast<UAnimBlueprint>(Data.GetAsset()))
                     {
                         if (McpSafeCompileBlueprint(ABP))

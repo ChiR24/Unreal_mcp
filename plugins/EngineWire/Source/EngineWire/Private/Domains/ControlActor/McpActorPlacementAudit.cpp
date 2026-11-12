@@ -40,20 +40,6 @@ double McpPlacementSeverity(const TSharedPtr<FJsonObject> &Entry) {
   return Severity;
 }
 
-/** Which bucket a warning falls in, so one call reports the shape of the level. */
-FString McpPlacementKind(const FString &Warning) {
-  if (Warning.Contains(TEXT("sunk"))) {
-    return TEXT("sunk");
-  }
-  if (Warning.Contains(TEXT("floating"))) {
-    return TEXT("floating");
-  }
-  if (Warning.Contains(TEXT("nothing below"))) {
-    return TEXT("unsupported");
-  }
-  return TEXT("overlapping");
-}
-
 /**
  * Folds each actor's coplanar faces into its finding. Two faces in one plane
  * flicker however deliberately the pieces were placed, so actors tagged
@@ -90,7 +76,7 @@ void McpMergeCoplanar(UWorld *World, const FString &NameFilter,
 bool UEngineWireSubsystem::HandleControlActorAuditPlacement(
     const FString &RequestId, const TSharedPtr<FJsonObject> &Payload,
     TSharedPtr<FMcpBridgeWebSocket> Socket) {
-  UWorld *World = GEditor ? GEditor->GetEditorWorldContext().World() : nullptr;
+  UWorld *World = McpHandlerUtils::GetEditorWorld();
   if (!World) {
     SendAutomationError(Socket, RequestId, TEXT("No editor world"),
                         TEXT("NO_WORLD"));
@@ -106,29 +92,26 @@ bool UEngineWireSubsystem::HandleControlActorAuditPlacement(
   // A platformer is full of platforms that float on purpose; kinds narrows the
   // report to what the caller is hunting, such as ["coplanar"] for z-fighting.
   TSet<FString> WantedKinds;
-  if (Payload.IsValid()) {
-    const TArray<TSharedPtr<FJsonValue>> *KindValues = nullptr;
-    if (Payload->TryGetArrayField(TEXT("kinds"), KindValues) && KindValues) {
-      for (const TSharedPtr<FJsonValue> &Value : *KindValues) {
-        WantedKinds.Add(Value->AsString().ToLower());
-      }
+  const TArray<TSharedPtr<FJsonValue>> *KindValues = nullptr;
+  if (Payload->TryGetArrayField(TEXT("kinds"), KindValues) && KindValues) {
+    for (const TSharedPtr<FJsonValue> &Value : *KindValues) {
+      WantedKinds.Add(Value->AsString().ToLower());
     }
-    Payload->TryGetStringField(TEXT("nameFilter"), NameFilter);
-    Payload->TryGetNumberField(TEXT("minSeverity"), MinSeverity);
-    if (Payload->TryGetNumberField(TEXT("maxTilt"), MaxTilt)) {
-      MaxTilt = FMath::Clamp(MaxTilt, 1.0, 90.0);
-    }
-    double LimitNum = 0.0;
-    if (Payload->TryGetNumberField(TEXT("limit"), LimitNum) && LimitNum > 0.0) {
-      Limit = FMath::Clamp(static_cast<int32>(LimitNum), 1, 200);
-    }
+  }
+  Payload->TryGetStringField(TEXT("nameFilter"), NameFilter);
+  Payload->TryGetNumberField(TEXT("minSeverity"), MinSeverity);
+  if (Payload->TryGetNumberField(TEXT("maxTilt"), MaxTilt)) {
+    MaxTilt = FMath::Clamp(MaxTilt, 1.0, 90.0);
+  }
+  double LimitNum = 0.0;
+  if (Payload->TryGetNumberField(TEXT("limit"), LimitNum) && LimitNum > 0.0) {
+    Limit = FMath::Clamp(static_cast<int32>(LimitNum), 1, 200);
   }
 
   // blueprintPath: the mesh parts of one actor Blueprint, against each other and its ground,
   // instead of the actors of the level.
   FString BlueprintPath;
-  if (Payload.IsValid() && Payload->TryGetStringField(TEXT("blueprintPath"), BlueprintPath) &&
-      !BlueprintPath.IsEmpty()) {
+  if (Payload->TryGetStringField(TEXT("blueprintPath"), BlueprintPath) && !BlueprintPath.IsEmpty()) {
     if (WantedKinds.Num() > 0 || !NameFilter.IsEmpty() || Payload->HasField(TEXT("maxTilt"))) {
       SendAutomationError(Socket, RequestId,
           TEXT("kinds, nameFilter and maxTilt filter the level's actors; with blueprintPath every part of the Blueprint is "
@@ -177,7 +160,10 @@ bool UEngineWireSubsystem::HandleControlActorAuditPlacement(
         McpPlacementTilt::OffVertical(Actor, TiltDegrees, TiltUnits) && TiltDegrees > MaxTilt;
 
     TSharedPtr<FJsonObject> Entry = MakeShared<FJsonObject>();
-    McpPlacement::DescribePlacement(Actor, Entry);
+    // The bucket comes from the check itself: read out of the warning's words, an actor labelled FloatingCrate or
+    // SunkenShip that only overlapped something was counted as floating or sunk.
+    FString Kind;
+    McpPlacement::DescribePlacement(Actor, Entry, &Kind);
     FString Warning;
     const bool bHasWarning = Entry->TryGetStringField(TEXT("placementWarning"), Warning);
     if (!bHasWarning && !bTilted) {
@@ -187,7 +173,7 @@ bool UEngineWireSubsystem::HandleControlActorAuditPlacement(
     FMcpPlacementFinding Finding;
     Finding.ActorName = McpActorRef(Actor);
     if (bHasWarning) {
-      Finding.Kind = McpPlacementKind(Warning);
+      Finding.Kind = Kind;
       Finding.Issue = Warning;
       Finding.Severity = McpPlacementSeverity(Entry);
       const TSharedPtr<FJsonObject> *Suggested = nullptr;

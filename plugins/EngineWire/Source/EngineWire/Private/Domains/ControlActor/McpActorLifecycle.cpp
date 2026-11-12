@@ -68,16 +68,9 @@ bool UEngineWireSubsystem::HandleControlActorDelete(
   TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
   Resp->SetNumberField(TEXT("deletedCount"), Deleted.Num());
 
-  TArray<TSharedPtr<FJsonValue>> DeletedArray;
-  for (const FString &Name : Deleted)
-    DeletedArray.Add(MakeShared<FJsonValueString>(Name));
-  Resp->SetArrayField(TEXT("deleted"), DeletedArray);
-
+  Resp->SetArrayField(TEXT("deleted"), McpHandlerUtils::ToJsonStringArray(Deleted));
   if (Missing.Num() > 0) {
-    TArray<TSharedPtr<FJsonValue>> MissingArray;
-    for (const FString &Name : Missing)
-      MissingArray.Add(MakeShared<FJsonValueString>(Name));
-    Resp->SetArrayField(TEXT("missing"), MissingArray);
+    Resp->SetArrayField(TEXT("missing"), McpHandlerUtils::ToJsonStringArray(Missing));
   }
 
   Transaction.DescribeInto(Resp);
@@ -130,11 +123,7 @@ bool UEngineWireSubsystem::HandleControlActorDuplicate(
 
   McpHandlerUtils::AddVerification(Data, Duplicated);
 
-  TArray<TSharedPtr<FJsonValue>> OffsetArray;
-  OffsetArray.Add(MakeShared<FJsonValueNumber>(Offset.X));
-  OffsetArray.Add(MakeShared<FJsonValueNumber>(Offset.Y));
-  OffsetArray.Add(MakeShared<FJsonValueNumber>(Offset.Z));
-  Data->SetArrayField(TEXT("offset"), OffsetArray);
+  Data->SetArrayField(TEXT("offset"), McpHandlerUtils::VectorToJsonArray(Offset));
 
 	SendStandardSuccessResponse(this, Socket, RequestId, TEXT("Actor duplicated"),
                               Data);
@@ -262,10 +251,7 @@ bool UEngineWireSubsystem::HandleControlActorDeleteByTag(
     Data->SetArrayField(TEXT("tags"), TagArray);
   }
   Data->SetNumberField(TEXT("deletedCount"), Deleted.Num());
-  TArray<TSharedPtr<FJsonValue>> DeletedArray;
-  for (const FString &Name : Deleted)
-    DeletedArray.Add(MakeShared<FJsonValueString>(Name));
-  Data->SetArrayField(TEXT("deleted"), DeletedArray);
+  Data->SetArrayField(TEXT("deleted"), McpHandlerUtils::ToJsonStringArray(Deleted));
 
   Data->SetBoolField(TEXT("existsAfter"), false);
   Data->SetStringField(TEXT("action"), TEXT("control_actor:deleted"));

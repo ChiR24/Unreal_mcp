@@ -3,6 +3,7 @@
 
 #include "EngineWireSubsystem.h"
 #include "Dom/JsonObject.h"
+#include "Foundation/BridgeHelpers/Responses/McpJsonFields.h"
 #include "Foundation/McpScopedEditorTransaction.h"
 
 #include "BehaviorTree/BehaviorTree.h"
@@ -63,11 +64,7 @@ UBehaviorTreeGraphNode_Root* FindBehaviorTreeGraphRoot(const UEdGraph* Graph);
 // The tree a request names: assetPath, else behaviorTreePath.
 inline FString ReadBehaviorTreePath(const TSharedPtr<FJsonObject>& Payload)
 {
-  FString Path;
-  if (!Payload->TryGetStringField(TEXT("assetPath"), Path) || Path.IsEmpty()) {
-    Payload->TryGetStringField(TEXT("behaviorTreePath"), Path);
-  }
-  return Path;
+  return McpGetFirstStringField(Payload, {TEXT("assetPath"), TEXT("behaviorTreePath")});
 }
 // Spawns graph nodes for asset-route composites/tasks that have none; returns the count spawned.
 int32 SyncBehaviorTreeGraphFromAsset(UBehaviorTree* BehaviorTree, UEdGraph* Graph);

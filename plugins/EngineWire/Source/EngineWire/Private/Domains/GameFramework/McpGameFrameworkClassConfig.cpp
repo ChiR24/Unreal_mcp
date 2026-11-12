@@ -23,7 +23,7 @@ static bool MakeProjectDefaultGameMode(UBlueprint* GameModeBlueprint)
 // default), so the reply says whether the class just set is the one PIE will use.
 static void ReportEffectiveGameMode(const TSharedPtr<FJsonObject>& Response, UBlueprint* GameModeBlueprint)
 {
-    UWorld* World = GEditor ? GEditor->GetEditorWorldContext().World() : nullptr;
+    UWorld* World = McpHandlerUtils::GetEditorWorld();
     TSharedPtr<FJsonObject> Info = MakeShared<FJsonObject>();
     UClass* Running = ResolveWorldGameMode(World, Info);
     Response->SetStringField(TEXT("openLevelGameMode"), Running ? Running->GetPathName() : FString());

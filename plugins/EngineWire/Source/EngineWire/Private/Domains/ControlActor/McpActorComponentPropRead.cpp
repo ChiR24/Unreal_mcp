@@ -10,14 +10,11 @@
 bool UEngineWireSubsystem::HandleControlActorGetComponentProperty(
     const FString &RequestId, const TSharedPtr<FJsonObject> &Payload,
     TSharedPtr<FMcpBridgeWebSocket> Socket) {
-  FString ActorName, BlueprintPath, ComponentName, PropertyName;
+  FString ActorName, BlueprintPath, ComponentName;
   Payload->TryGetStringField(TEXT("actorName"), ActorName);
   Payload->TryGetStringField(TEXT("blueprintPath"), BlueprintPath);
   Payload->TryGetStringField(TEXT("componentName"), ComponentName);
-  Payload->TryGetStringField(TEXT("propertyName"), PropertyName);
-  if (PropertyName.IsEmpty()) {
-    Payload->TryGetStringField(TEXT("propertyPath"), PropertyName);
-  }
+  FString PropertyName = McpGetFirstStringField(Payload, {TEXT("propertyName"), TEXT("propertyPath")});
 
   // `blueprintPath` is declared on this action -- "for CDO/component inspection
   // without spawning" -- and the sibling `details` variant honours it, but this

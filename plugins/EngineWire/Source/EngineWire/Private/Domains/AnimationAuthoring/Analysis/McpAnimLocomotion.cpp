@@ -21,11 +21,7 @@ FVector2D LocomotionSlide(const TArray<TArray<FVector>>& Paths, const TArray<dou
     int32 Steps = 0;
     for (const TArray<FVector>& Path : Paths)
     {
-        double Lowest = TNumericLimits<double>::Max();
-        for (const FVector& Point : Path)
-        {
-            Lowest = FMath::Min(Lowest, Point.Z);
-        }
+        const double Lowest = LowestZ(Path);
         for (int32 Index = 1; Index < Path.Num(); ++Index)
         {
             const double Step = Times[Index] - Times[Index - 1];

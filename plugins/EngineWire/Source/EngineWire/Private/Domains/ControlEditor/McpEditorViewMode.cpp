@@ -170,7 +170,7 @@ bool UEngineWireSubsystem::HandleControlEditorSetViewportRealtime(
 
   // Fallback: use console command
   FString Command = bRealtime ? TEXT("Viewport Realtime") : TEXT("Viewport Realtime 0");
-  UWorld* World = GEditor ? GEditor->GetEditorWorldContext().World() : nullptr;
+  UWorld* World = McpHandlerUtils::GetEditorWorld();
   GEditor->Exec(World, *Command);
 
   TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
