@@ -8,93 +8,97 @@
 
 namespace McpBlueprintGraphHandlers
 {
-const TTuple<FString, FString>* FindCommonFunctionNode(
+namespace
+{
+// A node type that names a stock function: the class that declares it and the function.
+const TTuple<UClass*, const TCHAR*>* FindCommonFunctionNode(
     const FString& NodeType)
 {
-    static const TMap<FString, TTuple<FString, FString>> FunctionNodes = {
+    static const TMap<FString, TTuple<UClass*, const TCHAR*>> FunctionNodes = {
         {TEXT("PrintString"),
-         MakeTuple(TEXT("UKismetSystemLibrary"), TEXT("PrintString"))},
+         MakeTuple(UKismetSystemLibrary::StaticClass(), TEXT("PrintString"))},
         {TEXT("Print"),
-         MakeTuple(TEXT("UKismetSystemLibrary"), TEXT("PrintString"))},
+         MakeTuple(UKismetSystemLibrary::StaticClass(), TEXT("PrintString"))},
         {TEXT("PrintText"),
-         MakeTuple(TEXT("UKismetSystemLibrary"), TEXT("PrintText"))},
+         MakeTuple(UKismetSystemLibrary::StaticClass(), TEXT("PrintText"))},
         {TEXT("SetActorLocation"),
-         MakeTuple(TEXT("AActor"), TEXT("K2_SetActorLocation"))},
+         MakeTuple(AActor::StaticClass(), TEXT("K2_SetActorLocation"))},
         {TEXT("GetActorLocation"),
-         MakeTuple(TEXT("AActor"), TEXT("K2_GetActorLocation"))},
+         MakeTuple(AActor::StaticClass(), TEXT("K2_GetActorLocation"))},
         {TEXT("SetActorRotation"),
-         MakeTuple(TEXT("AActor"), TEXT("K2_SetActorRotation"))},
+         MakeTuple(AActor::StaticClass(), TEXT("K2_SetActorRotation"))},
         {TEXT("GetActorRotation"),
-         MakeTuple(TEXT("AActor"), TEXT("K2_GetActorRotation"))},
+         MakeTuple(AActor::StaticClass(), TEXT("K2_GetActorRotation"))},
         {TEXT("SetActorTransform"),
-         MakeTuple(TEXT("AActor"), TEXT("K2_SetActorTransform"))},
+         MakeTuple(AActor::StaticClass(), TEXT("K2_SetActorTransform"))},
         {TEXT("GetActorTransform"),
-         MakeTuple(TEXT("AActor"), TEXT("K2_GetActorTransform"))},
+         MakeTuple(AActor::StaticClass(), TEXT("K2_GetActorTransform"))},
         {TEXT("AddActorLocalOffset"),
-         MakeTuple(TEXT("AActor"), TEXT("K2_AddActorLocalOffset"))},
+         MakeTuple(AActor::StaticClass(), TEXT("K2_AddActorLocalOffset"))},
         {TEXT("Delay"),
-         MakeTuple(TEXT("UKismetSystemLibrary"), TEXT("Delay"))},
+         MakeTuple(UKismetSystemLibrary::StaticClass(), TEXT("Delay"))},
         {TEXT("DestroyActor"),
-         MakeTuple(TEXT("AActor"), TEXT("K2_DestroyActor"))},
+         MakeTuple(AActor::StaticClass(), TEXT("K2_DestroyActor"))},
         {TEXT("SpawnActor"),
          MakeTuple(
-             TEXT("UGameplayStatics"),
+             UGameplayStatics::StaticClass(),
              TEXT("BeginDeferredActorSpawnFromClass"))},
         {TEXT("GetPlayerPawn"),
-         MakeTuple(TEXT("UGameplayStatics"), TEXT("GetPlayerPawn"))},
+         MakeTuple(UGameplayStatics::StaticClass(), TEXT("GetPlayerPawn"))},
         {TEXT("GetPlayerController"),
-         MakeTuple(TEXT("UGameplayStatics"), TEXT("GetPlayerController"))},
+         MakeTuple(UGameplayStatics::StaticClass(), TEXT("GetPlayerController"))},
         // Plain UFUNCTIONs whose output follows the ActorClass pin; there is no K2Node class for them.
         {TEXT("GetAllActorsOfClass"),
-         MakeTuple(TEXT("UGameplayStatics"), TEXT("GetAllActorsOfClass"))},
+         MakeTuple(UGameplayStatics::StaticClass(), TEXT("GetAllActorsOfClass"))},
         {TEXT("GetActorOfClass"),
-         MakeTuple(TEXT("UGameplayStatics"), TEXT("GetActorOfClass"))},
+         MakeTuple(UGameplayStatics::StaticClass(), TEXT("GetActorOfClass"))},
         {TEXT("PlaySound"),
-         MakeTuple(TEXT("UGameplayStatics"), TEXT("PlaySound2D"))},
+         MakeTuple(UGameplayStatics::StaticClass(), TEXT("PlaySound2D"))},
         {TEXT("PlaySound2D"),
-         MakeTuple(TEXT("UGameplayStatics"), TEXT("PlaySound2D"))},
+         MakeTuple(UGameplayStatics::StaticClass(), TEXT("PlaySound2D"))},
         {TEXT("PlaySoundAtLocation"),
-         MakeTuple(TEXT("UGameplayStatics"), TEXT("PlaySoundAtLocation"))},
+         MakeTuple(UGameplayStatics::StaticClass(), TEXT("PlaySoundAtLocation"))},
         {TEXT("GetWorldDeltaSeconds"),
-         MakeTuple(TEXT("UGameplayStatics"), TEXT("GetWorldDeltaSeconds"))},
+         MakeTuple(UGameplayStatics::StaticClass(), TEXT("GetWorldDeltaSeconds"))},
         {TEXT("SetTimerByFunctionName"),
-         MakeTuple(TEXT("UKismetSystemLibrary"), TEXT("K2_SetTimer"))},
+         MakeTuple(UKismetSystemLibrary::StaticClass(), TEXT("K2_SetTimer"))},
         {TEXT("ClearTimer"),
-         MakeTuple(TEXT("UKismetSystemLibrary"), TEXT("K2_ClearTimer"))},
+         MakeTuple(UKismetSystemLibrary::StaticClass(), TEXT("K2_ClearTimer"))},
         {TEXT("IsValid"),
-         MakeTuple(TEXT("UKismetSystemLibrary"), TEXT("IsValid"))},
+         MakeTuple(UKismetSystemLibrary::StaticClass(), TEXT("IsValid"))},
         {TEXT("IsValidClass"),
-         MakeTuple(TEXT("UKismetSystemLibrary"), TEXT("IsValidClass"))},
+         MakeTuple(UKismetSystemLibrary::StaticClass(), TEXT("IsValidClass"))},
         {TEXT("Add_IntInt"),
-         MakeTuple(TEXT("UKismetMathLibrary"), TEXT("Add_IntInt"))},
+         MakeTuple(UKismetMathLibrary::StaticClass(), TEXT("Add_IntInt"))},
         {TEXT("Subtract_IntInt"),
-         MakeTuple(TEXT("UKismetMathLibrary"), TEXT("Subtract_IntInt"))},
+         MakeTuple(UKismetMathLibrary::StaticClass(), TEXT("Subtract_IntInt"))},
         {TEXT("Multiply_IntInt"),
-         MakeTuple(TEXT("UKismetMathLibrary"), TEXT("Multiply_IntInt"))},
+         MakeTuple(UKismetMathLibrary::StaticClass(), TEXT("Multiply_IntInt"))},
         {TEXT("Divide_IntInt"),
-         MakeTuple(TEXT("UKismetMathLibrary"), TEXT("Divide_IntInt"))},
+         MakeTuple(UKismetMathLibrary::StaticClass(), TEXT("Divide_IntInt"))},
         {TEXT("Add_DoubleDouble"),
-         MakeTuple(TEXT("UKismetMathLibrary"), TEXT("Add_DoubleDouble"))},
+         MakeTuple(UKismetMathLibrary::StaticClass(), TEXT("Add_DoubleDouble"))},
         {TEXT("Subtract_DoubleDouble"),
-         MakeTuple(TEXT("UKismetMathLibrary"), TEXT("Subtract_DoubleDouble"))},
+         MakeTuple(UKismetMathLibrary::StaticClass(), TEXT("Subtract_DoubleDouble"))},
         {TEXT("Multiply_DoubleDouble"),
-         MakeTuple(TEXT("UKismetMathLibrary"), TEXT("Multiply_DoubleDouble"))},
+         MakeTuple(UKismetMathLibrary::StaticClass(), TEXT("Multiply_DoubleDouble"))},
         {TEXT("Divide_DoubleDouble"),
-         MakeTuple(TEXT("UKismetMathLibrary"), TEXT("Divide_DoubleDouble"))},
+         MakeTuple(UKismetMathLibrary::StaticClass(), TEXT("Divide_DoubleDouble"))},
         {TEXT("FTrunc"),
-         MakeTuple(TEXT("UKismetMathLibrary"), TEXT("FTrunc"))},
+         MakeTuple(UKismetMathLibrary::StaticClass(), TEXT("FTrunc"))},
         {TEXT("MakeVector"),
-         MakeTuple(TEXT("UKismetMathLibrary"), TEXT("MakeVector"))},
+         MakeTuple(UKismetMathLibrary::StaticClass(), TEXT("MakeVector"))},
         {TEXT("BreakVector"),
-         MakeTuple(TEXT("UKismetMathLibrary"), TEXT("BreakVector"))},
+         MakeTuple(UKismetMathLibrary::StaticClass(), TEXT("BreakVector"))},
         {TEXT("GetComponentByClass"),
-         MakeTuple(TEXT("AActor"), TEXT("GetComponentByClass"))},
+         MakeTuple(AActor::StaticClass(), TEXT("GetComponentByClass"))},
         {TEXT("GetWorldTimerManager"),
          MakeTuple(
-             TEXT("UKismetSystemLibrary"),
+             UKismetSystemLibrary::StaticClass(),
              TEXT("K2_GetTimerManager"))}};
     return FunctionNodes.Find(NodeType);
 }
+} // namespace
 
 bool TryCreateCommonFunctionNode(
     FActionContext& Context,
@@ -102,46 +106,23 @@ bool TryCreateCommonFunctionNode(
     float X,
     float Y)
 {
-    const TTuple<FString, FString>* FunctionInfo =
+    const TTuple<UClass*, const TCHAR*>* FunctionInfo =
         FindCommonFunctionNode(NodeType);
     if (!FunctionInfo)
     {
         return false;
     }
 
-    const FString ClassName = FunctionInfo->Get<0>();
+    UClass* Class = FunctionInfo->Get<0>();
     const FString FunctionName = FunctionInfo->Get<1>();
-    UClass* Class = nullptr;
-    if (ClassName == TEXT("UKismetSystemLibrary"))
-    {
-        Class = UKismetSystemLibrary::StaticClass();
-    }
-    else if (ClassName == TEXT("UGameplayStatics"))
-    {
-        Class = UGameplayStatics::StaticClass();
-    }
-    else if (ClassName == TEXT("AActor"))
-    {
-        Class = AActor::StaticClass();
-    }
-    else if (ClassName == TEXT("UKismetMathLibrary"))
-    {
-        Class = UKismetMathLibrary::StaticClass();
-    }
-    else
-    {
-        Class = ResolveUClass(ClassName);
-    }
-
-    UFunction* Function =
-        Class ? Class->FindFunctionByName(*FunctionName) : nullptr;
+    UFunction* Function = Class->FindFunctionByName(*FunctionName);
     if (!Function)
     {
         const FString MemberHint = SuggestMemberFix(Class, FunctionName);
         Context.SendError(
             FString::Printf(
-                TEXT("Could not find function '%s::%s' for node type '%s'.%s"),
-                *ClassName, *FunctionName, *NodeType, *MemberHint),
+                TEXT("Could not find function '%s%s::%s' for node type '%s'.%s"),
+                Class->GetPrefixCPP(), *Class->GetName(), *FunctionName, *NodeType, *MemberHint),
             TEXT("FUNCTION_NOT_FOUND"));
         return true;
     }

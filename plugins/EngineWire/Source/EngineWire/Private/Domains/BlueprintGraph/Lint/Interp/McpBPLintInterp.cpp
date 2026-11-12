@@ -18,21 +18,6 @@ constexpr int32 MaxRunFrames = 32;
 constexpr int32 MaxRunStacks = 4096;
 constexpr int32 WidenAfterUpdates = 3;
 constexpr int32 MaxExecKnots = 64;
-
-// Where a chain starts: a node with exec outputs and no exec input (an event, a function's entry, a collapsed graph's).
-bool IsChainStart(const UEdGraphNode* Node)
-{
-    bool bOutput = false;
-    for (const UEdGraphPin* Pin : Node->Pins)
-    {
-        if (IsExecPin(Pin) && Pin->Direction == EGPD_Input)
-        {
-            return false;
-        }
-        bOutput |= IsExecPin(Pin);
-    }
-    return bOutput;
-}
 } // namespace
 
 bool FRunner::Run(const UEdGraphNode* Entry, const FState& Start, FAnalysis& Out)
@@ -169,7 +154,7 @@ FAnalysis Interpret(const UEdGraph* Graph, const FMembers& Members)
     AddLocals(Graph, Start);
     for (const UEdGraphNode* Node : Graph->Nodes)
     {
-        if (Node && IsChainStart(Node))
+        if (Node && IsFlowEntry(Node))
         {
             FRunner Runner(Members);
             Analysis.Skipped += Runner.Run(Node, Start, Analysis) ? 0 : 1;

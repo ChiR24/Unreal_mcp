@@ -6,18 +6,6 @@
 #include "Foundation/HandlerUtils/McpHandlerUtils.h"
 
 namespace McpBlueprintHandlers {
-namespace {
-FString ScsFieldOrEmpty(const TSharedPtr<FJsonObject> &Object, const TCHAR *Field) {
-  FString Value;
-  return (Object.IsValid() && Object->TryGetStringField(Field, Value)) ? Value : FString();
-}
-
-FString ScsFirstOf(const TSharedPtr<FJsonObject> &Payload, const TCHAR *Snake, const TCHAR *Camel) {
-  const FString Value = ScsFieldOrEmpty(Payload, Snake);
-  return Value.IsEmpty() ? ScsFieldOrEmpty(Payload, Camel) : Value;
-}
-}  // namespace
-
 // `add_component` used to be answered here by a second, thinner implementation
 // that created the SCS node and stopped: it never read parentComponent, meshPath
 // or materialPath, ran no verification, and still reported success - so
@@ -34,18 +22,15 @@ bool HandleScsAddComponent(const FBlueprintActionContext &Context) {
 
   const FString BlueprintPath = ResolveBlueprintRequestedPath();
   const FString ComponentClass = ScsOpComponentClass(Payload);
-  const FString ComponentName = ScsFirstOf(Payload, TEXT("component_name"), TEXT("componentName"));
+  const FString ComponentName = GetJsonStringField(Payload, TEXT("componentName"));
   // `attachTo` is the spelling the contract publishes and the one the batch
   // operations[] path reads; this single-add path only ever looked for
   // parentComponent, so an `attachTo: "Mesh"` was dropped on the floor, the
   // parent came out empty, and the node landed on the root -- reported as a
-  // success naming CollisionCylinder as the parent. Accept all three.
-  FString ParentName = ScsFirstOf(Payload, TEXT("parent_component"), TEXT("parentComponent"));
-  if (ParentName.IsEmpty()) {
-    ParentName = ScsFieldOrEmpty(Payload, TEXT("attachTo"));
-  }
-  const FString MeshPath = ScsFirstOf(Payload, TEXT("mesh_path"), TEXT("meshPath"));
-  const FString MaterialPath = ScsFirstOf(Payload, TEXT("material_path"), TEXT("materialPath"));
+  // success naming CollisionCylinder as the parent.
+  const FString ParentName = McpGetFirstStringField(Payload, {TEXT("parentComponent"), TEXT("attachTo")});
+  const FString MeshPath = ScsOpMeshPath(Payload);
+  const FString MaterialPath = ScsOpMaterialPath(Payload);
 
   if (ComponentClass.IsEmpty() || ComponentName.IsEmpty()) {
     Bridge.SendAutomationResponse(
@@ -75,12 +60,12 @@ bool HandleScsAddComponent(const FBlueprintActionContext &Context) {
     if (!GetJsonBoolField(Moved, TEXT("success"))) {
       // The node exists but sits where it was created; answering success here
       // would be the silent misplacement this path was written to end.
-      const FString Code = ScsFieldOrEmpty(Moved, TEXT("errorCode"));
+      const FString Code = GetJsonStringField(Moved, TEXT("errorCode"));
       Result->SetBoolField(TEXT("success"), false);
       Result->SetStringField(
           TEXT("message"),
           FString::Printf(TEXT("Component '%s' was added but its transform was not applied: %s"),
-                          *ComponentName, *ScsFieldOrEmpty(Moved, TEXT("error"))));
+                          *ComponentName, *GetJsonStringField(Moved, TEXT("error"))));
       Result->SetStringField(TEXT("error"),
                              Code.IsEmpty() ? TEXT("SCS_TRANSFORM_FAILED") : *Code);
     } else if (Moved.IsValid() &&
@@ -141,10 +126,7 @@ bool HandleScsAddComponent(const FBlueprintActionContext &Context) {
   if (GetJsonBoolField(Result, TEXT("success"))) {
     McpPartPlacement::AppendPartWarnings(BlueprintPath, {ComponentName}, Result);
   }
-  Bridge.SendAutomationResponse(RequestingSocket, RequestId,
-                                GetJsonBoolField(Result, TEXT("success")),
-                                ScsFieldOrEmpty(Result, TEXT("message")), Result,
-                                ScsFieldOrEmpty(Result, TEXT("error")));
+  SendScsResult(Context, Result);
   return true;
 }
 }

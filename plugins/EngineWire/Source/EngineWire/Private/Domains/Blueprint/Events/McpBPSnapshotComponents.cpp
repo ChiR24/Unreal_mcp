@@ -5,6 +5,7 @@
 #include "Dom/JsonObject.h"
 #include "Dom/JsonValue.h"
 
+#include "Components/SceneComponent.h"
 #include "Engine/Blueprint.h"
 #include "Engine/SCS_Node.h"
 #include "Engine/SimpleConstructionScript.h"
@@ -45,7 +46,9 @@ void McpAppendBlueprintScsComponents(UBlueprint *Blueprint, const TSharedPtr<FJs
       Entry->SetStringField(TEXT("classPath"), Node->ComponentClass ? Node->ComponentClass->GetPathName() : TEXT(""));
       const FString *ParentName = ParentNames.Find(Node);
       Entry->SetStringField(TEXT("parent"), ParentName ? *ParentName : Node->ParentComponentOrVariableName.ToString());
-      Entry->SetBoolField(TEXT("isRoot"), SCS->GetRootNodes().Contains(Node));
+      // A movement or other non-scene component is a top-level node but no root, as get_scs answers.
+      Entry->SetBoolField(TEXT("isRoot"), Node->ComponentClass && Node->ComponentClass->IsChildOf(USceneComponent::StaticClass()) &&
+                                              SCS->GetRootNodes().Contains(Node));
       Entry->SetStringField(TEXT("source"), TEXT("SCS"));
       Components.Add(MakeShared<FJsonValueObject>(Entry));
     }

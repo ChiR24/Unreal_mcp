@@ -1,10 +1,7 @@
 #include "Domains/Blueprint/McpBPActionContext.h"
-#include "Foundation/BridgeHelpers/Assets/McpAssetSaveRegistry.h"
 #include "Foundation/BridgeHelpers/Blueprints/McpBPCompileHelpers.h"
 #include "Foundation/BridgeHelpers/Reflection/McpClassResolve.h"
-#include "Foundation/BridgeHelpers/Responses/McpJsonFields.h"
 #include "Foundation/BridgeHelpers/Blueprints/McpScsLookup.h"
-#include "Domains/Blueprint/Components/McpBPSubobjectTraits.h"
 #include "Domains/Blueprint/Components/McpBPScsOpFields.h"
 #include "Domains/Blueprint/Components/McpBPScsTemplateAssets.h"
 #include "Domains/Blueprint/Components/McpBPScsParentResolve.h"
@@ -20,6 +17,7 @@
 #include "Engine/SCS_Node.h"
 #include "Engine/SimpleConstructionScript.h"
 #include "Kismet2/BlueprintEditorUtils.h"
+#include "SubobjectDataSubsystem.h"
 #include "UObject/UnrealType.h"
 
 namespace McpBlueprintHandlers {
@@ -137,125 +135,44 @@ if (!ComponentClass) {
       TArray<FSubobjectDataHandle> ExistingHandles;
       Subsystem->K2_GatherSubobjectDataForBlueprint(LocalBP,
                                                     ExistingHandles);
-      FSubobjectDataHandle ParentHandle;
-      if (ExistingHandles.Num() > 0) {
-        bool bFoundParentByName = false;
-        if (!AttachToName.TrimStartAndEnd().IsEmpty()) {
-          const UScriptStruct *HandleStruct =
-              FSubobjectDataHandle::StaticStruct();
-          for (const FSubobjectDataHandle &H : ExistingHandles) {
-            if (!HandleStruct)
-              continue;
-            FString HText;
-            HandleStruct->ExportText(HText, &H, nullptr, nullptr,
-                                     PPF_None, nullptr);
-            if (HText.Contains(AttachToName, ESearchCase::IgnoreCase)) {
-              ParentHandle = H;
-              bFoundParentByName = true;
-              break;
-            }
-          }
-        }
-        if (!bFoundParentByName)
-          ParentHandle = ExistingHandles[0];
-      }
-
-      using namespace EngineWire;
-      constexpr bool bHasK2Add =
-          THasK2Add<USubobjectDataSubsystem>::value;
-      constexpr bool bHasAdd = THasAdd<USubobjectDataSubsystem>::value;
-      constexpr bool bHasAddTwoArg =
-          THasAddTwoArg<USubobjectDataSubsystem>::value;
-      constexpr bool bHandleHasIsValid =
-          THandleHasIsValid<FSubobjectDataHandle>::value;
-      constexpr bool bHasRename =
-          THasRename<USubobjectDataSubsystem>::value;
-
-      bool bTriedNative = false;
-      FSubobjectDataHandle NewHandle;
-      if constexpr (bHasAddTwoArg) {
-        FAddNewSubobjectParams Params;
-        Params.ParentHandle = ParentHandle;
-        Params.NewClass = ComponentClass;
-        Params.BlueprintContext = LocalBP;
-        FText FailReason;
-        NewHandle = Subsystem->AddNewSubobject(Params, FailReason);
-        bTriedNative = true;
-
-        bool bHandleValid = true;
-        if constexpr (bHandleHasIsValid) {
-          bHandleValid = NewHandle.IsValid();
-        }
-        if (bHandleValid) {
-          if constexpr (bHasRename) {
-            // Generate unique name if target already exists
-            FString UniqueName = ComponentName;
-            FName TargetVarName = FName(*UniqueName);
-
-            // Check if variable already exists in blueprint
-            if (LocalBP->GeneratedClass) {
-              // Check for existing member variable with same name
-              bool bNameExists = false;
-              for (TFieldIterator<FProperty> It(LocalBP->GeneratedClass); It; ++It) {
-                if (It->GetFName() == TargetVarName) {
-                  bNameExists = true;
-                  break;
-                }
-              }
-
-              // Also check the _GEN_VARIABLE suffix naming
-              FString GenVarName = UniqueName + TEXT("_GEN_VARIABLE");
-              FName GenVarFName = FName(*GenVarName);
-              for (TFieldIterator<FProperty> It(LocalBP->GeneratedClass); It; ++It) {
-                if (It->GetFName() == GenVarFName) {
-                  bNameExists = true;
-                  break;
-                }
-              }
-
-              if (bNameExists) {
-                // Generate unique name by appending number
-                int32 Suffix = 1;
-                while (Suffix < 1000) {
-                  UniqueName = FString::Printf(TEXT("%s_%d"), *ComponentName, Suffix);
-                  TargetVarName = FName(*UniqueName);
-
-                  bNameExists = false;
-                  for (TFieldIterator<FProperty> It(LocalBP->GeneratedClass); It; ++It) {
-                    if (It->GetFName() == TargetVarName) {
-                      bNameExists = true;
-                      break;
-                    }
-                  }
-
-                  if (!bNameExists) break;
-                  Suffix++;
-                }
-
-                OpSummary->SetStringField(TEXT("originalName"), ComponentName);
-                OpSummary->SetStringField(TEXT("renamedTo"), UniqueName);
+      // Added under the first handle, the root: a subobject handle carries no name to pick another parent by, so
+      // the attach below moves the new component under the parent the operation names.
+      FAddNewSubobjectParams Params;
+      Params.ParentHandle = ExistingHandles.Num() > 0 ? ExistingHandles[0] : FSubobjectDataHandle();
+      Params.NewClass = ComponentClass;
+      Params.BlueprintContext = LocalBP;
+      FText FailReason;
+      const FSubobjectDataHandle NewHandle = Subsystem->AddNewSubobject(Params, FailReason);
+      if (NewHandle.IsValid()) {
+        // A member of that name, or of the name with the _GEN_VARIABLE suffix, takes the first free <name>_<n>.
+        FString UniqueName = ComponentName;
+        FName TargetVarName = FName(*UniqueName);
+        if (const UClass *Class = LocalBP->GeneratedClass) {
+          if (Class->FindPropertyByName(TargetVarName) ||
+              Class->FindPropertyByName(FName(*(UniqueName + TEXT("_GEN_VARIABLE"))))) {
+            for (int32 Suffix = 1; Suffix < 1000; ++Suffix) {
+              UniqueName = FString::Printf(TEXT("%s_%d"), *ComponentName, Suffix);
+              TargetVarName = FName(*UniqueName);
+              if (!Class->FindPropertyByName(TargetVarName)) {
+                break;
               }
             }
-
-            Subsystem->RenameSubobjectMemberVariable(
-                LocalBP, NewHandle, TargetVarName);
+            OpSummary->SetStringField(TEXT("originalName"), ComponentName);
+            OpSummary->SetStringField(TEXT("renamedTo"), UniqueName);
           }
-          FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(
-              LocalBP);
-          // Compiled for the operations after it; saving is the batch's own step (save, applyAndSave): a save here
-          // wrote the Blueprint to disk under save:false while the reply said saved:false.
-          McpSafeCompileBlueprint(LocalBP);
-          bAddedViaSubsystem = true;
         }
+        Subsystem->RenameSubobjectMemberVariable(LocalBP, NewHandle, TargetVarName);
+        FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(LocalBP);
+        // Compiled for the operations after it; saving is the batch's own step (save, applyAndSave): a save here
+        // wrote the Blueprint to disk under save:false while the reply said saved:false.
+        McpSafeCompileBlueprint(LocalBP);
+        bAddedViaSubsystem = true;
       }
     }
     if (bAddedViaSubsystem) {
       OpSummary->SetBoolField(TEXT("success"), true);
       OpSummary->SetStringField(TEXT("componentName"), ComponentName);
-      // The parent search above matches AttachToName against the EXPORTED TEXT
-      // of an FSubobjectDataHandle, which is an opaque id and never contains a
-      // component name -- so it always fell through to ExistingHandles[0], the
-      // root. Re-attach by name now that the node exists, and report it.
+      // The node was added under the root: attach it by name now that it exists, and report it.
       McpScsParent::AttachAndReport(LocalBP, LocalBP->SimpleConstructionScript,
                                     ComponentName, AttachToName, OpSummary);
       if (AttachToName.TrimStartAndEnd().IsEmpty()) {

@@ -35,7 +35,7 @@ bool LoadModifyScsBlueprint(const FBlueprintActionContext &Context,
                             FModifyScsState &State, UBlueprint *&LocalBP,
                             USimpleConstructionScript *&LocalSCS) {
   MCP_BLUEPRINT_ACTION_LOCALS(Context);
-  State.CompletionResult = McpHandlerUtils::CreateResultObject();
+  const TSharedPtr<FJsonObject> Failure = McpHandlerUtils::CreateResultObject();
   FString LocalNormalized;
   FString LocalLoadError;
   LocalBP = LoadBlueprintAsset(State.NormalizedBlueprintPath, LocalNormalized, LocalLoadError);
@@ -43,9 +43,9 @@ bool LoadModifyScsBlueprint(const FBlueprintActionContext &Context,
     UE_LOG(LogEngineWireSubsystem, Error,
            TEXT("SCS application failed to load blueprint %s: %s"),
            *State.NormalizedBlueprintPath, *LocalLoadError);
-    State.CompletionResult->SetStringField(TEXT("error"), LocalLoadError);
+    Failure->SetStringField(TEXT("error"), LocalLoadError);
     Bridge.SendAutomationResponse(RequestingSocket, RequestId, false, LocalLoadError,
-                                  State.CompletionResult, TEXT("BLUEPRINT_NOT_FOUND"));
+                                  Failure, TEXT("BLUEPRINT_NOT_FOUND"));
   } else {
     LocalSCS = LocalBP->SimpleConstructionScript;
     if (LocalSCS) {
@@ -53,9 +53,9 @@ bool LoadModifyScsBlueprint(const FBlueprintActionContext &Context,
     }
     UE_LOG(LogEngineWireSubsystem, Error,
            TEXT("SCS unavailable for blueprint %s"), *State.NormalizedBlueprintPath);
-    State.CompletionResult->SetStringField(TEXT("error"), TEXT("SCS_UNAVAILABLE"));
+    Failure->SetStringField(TEXT("error"), TEXT("SCS_UNAVAILABLE"));
     Bridge.SendAutomationResponse(RequestingSocket, RequestId, false,
-                                  TEXT("SCS_UNAVAILABLE"), State.CompletionResult,
+                                  TEXT("SCS_UNAVAILABLE"), Failure,
                                   TEXT("SCS_UNAVAILABLE"));
   }
   return false;

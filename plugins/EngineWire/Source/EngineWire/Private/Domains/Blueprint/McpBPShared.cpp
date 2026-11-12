@@ -81,20 +81,6 @@ FBlueprintActionContext BuildBlueprintActionContext(
   return Context;
 }
 
-FBlueprintActionContext BuildScsActionContext(
-    UEngineWireSubsystem &Bridge, const FString &RequestId,
-    const FString &Action, const TSharedPtr<FJsonObject> &Payload,
-    TSharedPtr<FMcpBridgeWebSocket> RequestingSocket) {
-  FBlueprintActionContext Context{Bridge, RequestId, Action};
-  Context.RequestingSocket = RequestingSocket;
-  Context.LocalPayload = Payload;
-  Context.CleanAction = Action;
-  Context.CleanAction.TrimStartAndEndInline();
-  Context.Lower = Context.CleanAction.ToLower();
-  Context.AlphaNumLower = CompactActionKey(Context.CleanAction);
-  return Context;
-}
-
 bool ActionMatchesPattern(const FBlueprintActionContext &Context,
                           const TCHAR *Pattern) {
   const FString PatternStr = FString(Pattern).ToLower();

@@ -4,10 +4,6 @@ FBlueprintActionContext BuildBlueprintActionContext(
     UEngineWireSubsystem &Bridge, const FString &RequestId,
     const FString &Action, const TSharedPtr<FJsonObject> &Payload,
     TSharedPtr<FMcpBridgeWebSocket> RequestingSocket);
-FBlueprintActionContext BuildScsActionContext(
-    UEngineWireSubsystem &Bridge, const FString &RequestId,
-    const FString &Action, const TSharedPtr<FJsonObject> &Payload,
-    TSharedPtr<FMcpBridgeWebSocket> RequestingSocket);
 bool ActionMatchesPattern(const FBlueprintActionContext &Context,
                           const TCHAR *Pattern);
 FString ResolveBlueprintRequestedPath(
@@ -55,15 +51,11 @@ TSharedPtr<FJsonObject> FEngineWire_FindNamedEntry(
 
 struct FModifyScsState {
   FString BlueprintPath;
-  TArray<FString> CandidatePaths;
   const TArray<TSharedPtr<FJsonValue>> *OperationsArray = nullptr;
   bool bCompile = false;
   bool bSave = false;
   FString NormalizedBlueprintPath;
-  FString LoadError;
-  TArray<FString> TriedCandidates;
   TArray<TSharedPtr<FJsonValue>> DeferredOps;
-  TSharedPtr<FJsonObject> CompletionResult;
   TArray<FString> LocalWarnings;
   TArray<TSharedPtr<FJsonValue>> FinalSummaries;
   bool bOk = false;
@@ -195,5 +187,7 @@ bool HandleBlueprintAddNode(const FBlueprintActionContext &Context);
 bool HandleBlueprintEnsureProbe(const FBlueprintActionContext &Context);
 bool HandleBlueprintSetMetadata(const FBlueprintActionContext &Context);
 bool HandleBlueprintStructMakeBreakNodes(const FBlueprintActionContext &Context);
+// Sends an FSCSHandlers result as the reply: its success, message and error fields are the reply's.
+void SendScsResult(const FBlueprintActionContext &Context, const TSharedPtr<FJsonObject> &Result);
 bool HandleScsAddComponent(const FBlueprintActionContext &Context);
 bool HandleScsGet(const FBlueprintActionContext &Context);

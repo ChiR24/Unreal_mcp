@@ -36,6 +36,16 @@ FSExpr::EType NumberType(const FString& Atom)
     return bDot || bExponent ? FSExpr::EType::Float : FSExpr::EType::Int;
 }
 
+bool IsNodeTag(const FString& Word)
+{
+    bool bHex = Word.Len() >= 7 && Word[0] == TEXT('n');
+    for (int32 At = 1; bHex && At < Word.Len(); ++At)
+    {
+        bHex = FChar::IsHexDigit(Word[At]);
+    }
+    return bHex;
+}
+
 namespace ParseParts
 {
 // Reading, checking and running all recurse once per list level: a bound, so no text can overflow the game thread's stack.
@@ -67,17 +77,6 @@ FString Unescape(const FString& Raw)
 bool IsBreak(TCHAR Ch)
 {
     return Ch == TEXT(' ') || Ch == TEXT('\t') || Ch == TEXT('\n') || Ch == TEXT('\r') || Ch == TEXT(';') || Ch == TEXT('"') || Ch == TEXT(')');
-}
-
-// A read_graph_as_code tag: n and 6 or more hex digits.
-bool IsNodeTag(const FString& Word)
-{
-    bool bHex = Word.Len() >= 7 && Word[0] == TEXT('n');
-    for (int32 At = 1; bHex && At < Word.Len(); ++At)
-    {
-        bHex = FChar::IsHexDigit(Word[At]);
-    }
-    return bHex;
 }
 
 bool Tokenize(const FString& Text, TArray<FToken>& Out, TMap<int32, FString>& Tags, FString& OutError)

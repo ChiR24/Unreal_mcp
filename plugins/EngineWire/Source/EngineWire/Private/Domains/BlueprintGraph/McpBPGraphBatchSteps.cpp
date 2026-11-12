@@ -28,7 +28,7 @@ void CopyStepFields(const FMcpCapturedResponse& Reply, const TSharedPtr<FJsonObj
 TSharedPtr<FJsonObject> NodeStepPayload(const TSharedPtr<FJsonObject>& StepPayload, const FString& Guid)
 {
     TSharedPtr<FJsonObject> Payload = MakeShared<FJsonObject>();
-    for (const TCHAR* Key : {TEXT("blueprintPath"), TEXT("assetPath"), TEXT("graphName")})
+    for (const TCHAR* Key : {TEXT("blueprintPath"), TEXT("graphName")})
     {
         FString Value;
         if (StepPayload->TryGetStringField(Key, Value)) Payload->SetStringField(Key, Value);

@@ -327,6 +327,8 @@ void CreateDynamicNode(
     Result->SetStringField(TEXT("nodeId"), NewNode->NodeGuid.ToString());
     Result->SetStringField(TEXT("nodeName"), NewNode->GetName());
     Result->SetStringField(TEXT("nodeClass"), NodeClass->GetName());
+    // Where the node landed and how big it is, as every other create gives, so consecutive creates do not stack.
+    McpGraphLayout::AddNodePlacementFields(Result, *NewNode);
     McpBlueprintHandlers::McpDescribeTimelineNode(NewNode, Result);
     Context.SendResponse(TEXT("Node created."), Result);
 }

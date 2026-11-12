@@ -51,20 +51,12 @@ bool McpBlueprintAddEventCustom(
     // them — the custom event ended up with two OutputDelegate/then pins.
     // Finalize is enough.
     NodeCreator.Finalize();
-  } else {
-    CustomEventNode->NodePosX = EventPosX;
-    CustomEventNode->NodePosY = EventPosY;
   }
 
-  // Handle parameters for custom events.
+  // Handle parameters for custom events. A parameter the node already has is skipped: an event
+  // added again gained each one a second time under a suffixed name.
   if (CustomEventNode && Params.Num() > 0) {
     CustomEventNode->Modify();
-    // Clear existing user pins first? Or append? Assuming fresh definition.
-    // For custom events, we usually manage UserDefinedPins.
-    // We will just add them if they don't exist, or recreation.
-    // Ideally we shouldn't wipe outputs like 'Then'.
-    // Implementation: AddUserDefinedPin helper.
-
     for (const TSharedPtr<FJsonValue> &ParamVal : Params) {
       if (!ParamVal.IsValid() || ParamVal->Type != EJson::Object)
         continue;
@@ -75,6 +67,11 @@ bool McpBlueprintAddEventCustom(
       ParamObj->TryGetStringField(TEXT("name"), ParamName);
       FString ParamType;
       ParamObj->TryGetStringField(TEXT("type"), ParamType);
+      const FName PinName(*ParamName.TrimStartAndEnd());
+      if (CustomEventNode->UserDefinedPins.ContainsByPredicate(
+              [&PinName](const TSharedPtr<FUserPinInfo> &Pin) { return Pin.IsValid() && Pin->PinName == PinName; })) {
+        continue;
+      }
       // Default to Output for CustomEvent parameters (they appear as output
       // pins on the node).
       FEngineWire_AddUserDefinedPin(CustomEventNode, ParamName,

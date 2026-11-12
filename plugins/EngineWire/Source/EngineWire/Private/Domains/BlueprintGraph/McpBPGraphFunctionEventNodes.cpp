@@ -187,6 +187,12 @@ static bool TryCreateEventNode(
         Candidates.Add(TEXT("Receive") + EventName);
     }
 
+    // Only an event a Blueprint can implement: a function of that name that is no event (K2_DestroyActor) made an
+    // override node the compiler refuses.
+    const auto Overridable = [](UFunction* Function) -> UFunction*
+    {
+        return Function && Function->HasAnyFunctionFlags(FUNC_BlueprintEvent) && !Function->GetReturnProperty() ? Function : nullptr;
+    };
     UClass* TargetClass = nullptr;
     UFunction* EventFunction = nullptr;
     for (const FString& Candidate : Candidates)
@@ -201,7 +207,7 @@ static bool TryCreateEventNode(
             }
             if (TargetClass)
             {
-                EventFunction = TargetClass->FindFunctionByName(*Candidate);
+                EventFunction = Overridable(TargetClass->FindFunctionByName(*Candidate));
             }
         }
         else
@@ -210,9 +216,9 @@ static bool TryCreateEventNode(
                  Class && !EventFunction;
                  Class = Class->GetSuperClass())
             {
-                EventFunction = Class->FindFunctionByName(
+                EventFunction = Overridable(Class->FindFunctionByName(
                     *Candidate,
-                    EIncludeSuperFlag::ExcludeSuper);
+                    EIncludeSuperFlag::ExcludeSuper));
                 if (EventFunction)
                 {
                     TargetClass = Class;
@@ -255,18 +261,11 @@ static bool TryCreateEventNode(
     // same name", which disables the WHOLE graph - so a caller that wired new
     // logic onto its own fresh BeginPlay silently got a Blueprint that no longer
     // ran anything. Asking for an event that already exists means that event, so
-    // hand the existing node back instead of creating a duplicate.
-    for (UEdGraphNode* ExistingNode : Context.TargetGraph->Nodes)
+    // hand the existing node back instead of creating a duplicate. Every page is
+    // searched: one on another event graph page broke the Blueprint the same way.
+    if (UK2Node_Event* ExistingEvent = FBlueprintEditorUtils::FindOverrideForFunction(
+            Context.Blueprint, EventFunction->GetOwnerClass(), EventFunction->GetFName()))
     {
-        UK2Node_Event* ExistingEvent = Cast<UK2Node_Event>(ExistingNode);
-        if (!ExistingEvent || !ExistingEvent->bOverrideFunction)
-        {
-            continue;
-        }
-        if (ExistingEvent->EventReference.GetMemberName() != EventFunction->GetFName())
-        {
-            continue;
-        }
         TSharedPtr<FJsonObject> Existing = McpHandlerUtils::CreateResultObject();
         const FString ExistingGuid = ExistingEvent->NodeGuid.ToString();
         Existing->SetStringField(TEXT("nodeGuid"), ExistingGuid);
@@ -277,8 +276,8 @@ static bool TryCreateEventNode(
         McpHandlerUtils::AddVerification(Existing, Context.Blueprint);
         Context.SendResponse(
             FString::Printf(
-                TEXT("Event '%s' is already implemented in this graph; returned the existing node."),
-                *EventName),
+                TEXT("Event '%s' is already implemented in graph '%s'; returned the existing node."),
+                *EventName, *ExistingEvent->GetGraph()->GetName()),
             Existing);
         return true;
     }

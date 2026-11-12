@@ -22,7 +22,8 @@ void FActionContext::SendNodeNotFound(const FString& Id) const
     // one was duplicated from; a duplicate gets new GUIDs but keeps every node name.
     SendError(
         FString::Printf(TEXT("Could not find node '%s' in graph %s (%d nodes). Use a node's nodeGuid (an "
-                             "unambiguous prefix of 8+ hex characters also works) or its node name such as "
+                             "unambiguous prefix of 8+ hex characters also works, and so does the id "
+                             "read_graph_as_code prints) or its node name such as "
                              "K2Node_IfThenElse_0; a duplicated Blueprint gets new GUIDs but keeps the names. "
                              "inspect_graph info \"graph\" lists them."),
                         *Id, TargetGraph ? *TargetGraph->GetName() : TEXT("?"),
@@ -114,17 +115,6 @@ void FActionContext::SendResponse(
 
 bool ValidateProvidedPaths(const FActionContext& Context)
 {
-    FString AssetPath;
-    if (Context.Payload->TryGetStringField(TEXT("assetPath"), AssetPath) &&
-        !AssetPath.IsEmpty())
-    {
-        if (SanitizeProjectRelativePath(AssetPath).IsEmpty())
-        {
-            Context.SendError(McpPathRefusalMessage(TEXT("assetPath"), AssetPath), TEXT("INVALID_PATH"));
-            return false;
-        }
-    }
-
     FString BlueprintPath;
     if (Context.Payload->TryGetStringField(TEXT("blueprintPath"), BlueprintPath) &&
         !BlueprintPath.IsEmpty())

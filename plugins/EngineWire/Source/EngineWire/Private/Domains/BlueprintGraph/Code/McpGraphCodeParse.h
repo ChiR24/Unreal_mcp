@@ -34,6 +34,9 @@ struct FSExpr
  *  question, so a default it leaves unquoted reads back as a number. */
 FSExpr::EType NumberType(const FString& Atom);
 
+/** A node id as read_graph_as_code prints it: n and 6 or more hex digits. */
+bool IsNodeTag(const FString& Word);
+
 /** The top-level forms of Text; false with OutError (and the line) on an unterminated string or unbalanced parens. */
 bool ParseSExpr(const FString& Text, TArray<FSExpr>& OutForms, FString& OutError);
 } // namespace McpGraphCode

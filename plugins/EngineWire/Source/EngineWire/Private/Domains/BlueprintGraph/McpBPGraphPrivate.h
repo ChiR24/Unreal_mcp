@@ -189,7 +189,6 @@ void ApplyOutputClass(UK2Node_CallFunction& Node, const UFunction& Function, UCl
 // Why a CallFunction name did not resolve: an unresolved memberClass, else the member hint.
 FString DescribeMissingFunction(UBlueprint* Blueprint, const FString& MemberName,
                                 const FString& MemberClass, UClass* ResolvedClass);
-const TTuple<FString, FString>* FindCommonFunctionNode(const FString& NodeType);
 UClass* FindNodeClassByName(const FString& NodeType);
 // Empty when a node of NodeClass can go in Graph; else why not, for a NODE_NOT_ALLOWED_IN_GRAPH refusal.
 FString DescribeGraphMismatch(UClass* NodeClass, const UEdGraph* Graph);
@@ -200,15 +199,10 @@ const FString* StandardMacroGraphName(const FString& NodeType);
 // with a class pin accepts the same input formats — including /Game/ Blueprint
 // paths, which the name-oriented ResolveUClass() cannot load.
 UClass* ResolveTargetClassFromString(const FString& InClassString);
-FEdGraphPinType ResolveCustomEventPinType(const FString& TypeName);
 // pinSubType, container and a map's valueType on a pin descriptor (McpBPGraphQueries.cpp).
 void AddPinTypeFields(const TSharedPtr<FJsonObject>& PinObject, const FEdGraphPinType& PinType);
 // defaultValue / defaultTextValue / defaultObjectPath, only on a visible input nothing is wired to.
 void AddPinDefaultFields(const TSharedPtr<FJsonObject>& PinObject, const UEdGraphPin& Pin);
-FProperty* CreateCustomEventParameter(
-    UFunction* Function,
-    const FString& ParameterName,
-    const FString& ParameterType);
 
 bool TryCreateCommonFunctionNode(
     FActionContext& Context,

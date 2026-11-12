@@ -38,6 +38,16 @@ bool HandleBlueprintAddConstructionScript(const FBlueprintActionContext &Context
                              Result, TEXT("BLUEPRINT_NOT_FOUND"));
       return true;
     }
+    // A function library or an Object, component or level script Blueprint was given a graph it never runs.
+    if (!FBlueprintEditorUtils::SupportsConstructionScript(BP)) {
+      Bridge.SendAutomationResponse(
+          RequestingSocket, RequestId, false,
+          FString::Printf(TEXT("No construction script on %s: only an Actor Blueprint runs one (a level script, an "
+                               "interface, or a function or macro library does not)."),
+                          *Path),
+          nullptr, TEXT("CONSTRUCTION_SCRIPT_UNSUPPORTED"));
+      return true;
+    }
 
     UEdGraph *ConstructionGraph = nullptr;
     for (UEdGraph *Graph : BP->FunctionGraphs) {
@@ -58,17 +68,19 @@ bool HandleBlueprintAddConstructionScript(const FBlueprintActionContext &Context
           UEdGraph::StaticClass(), UEdGraphSchema_K2::StaticClass());
       FBlueprintEditorUtils::AddFunctionGraph<UClass>(
           BP, ConstructionGraph, /*bIsUserCreated=*/false, nullptr);
+      // Only a graph made here changes the Blueprint: every Actor Blueprint already has one, and
+      // marking it on each "add or open" left it dirty and needing a compile.
+      FBlueprintEditorUtils::MarkBlueprintAsModified(BP);
     }
 
     if (ConstructionGraph) {
-      FBlueprintEditorUtils::MarkBlueprintAsModified(BP);
       Result->SetBoolField(TEXT("success"), true);
       Result->SetStringField(TEXT("blueprintPath"), Path);
       Result->SetStringField(TEXT("graphName"), ConstructionGraph->GetName());
       Result->SetStringField(
           TEXT("note"),
-          TEXT("Construction script graph ensured. Use blueprint_add_node with "
-               "graphName='UserConstructionScript' to add nodes."));
+          TEXT("Construction script graph ensured. Add nodes with manage_blueprint "
+               "edit_graph add_node, graphName 'UserConstructionScript'."));
       UE_LOG(LogEngineWireSubsystem, Log,
              TEXT("HandleBlueprintAction: construction script graph ready '%s' "
                   "graph='%s'"),

@@ -1,5 +1,6 @@
 #include "Domains/BlueprintGraph/McpBPGraphPrivate.h"
 #include "Domains/BlueprintGraph/McpBPGraphCompatibility.h"
+#include "Domains/BlueprintGraph/Code/McpGraphCodeParse.h"
 #include "Foundation/BridgeHelpers/Responses/McpJsonFields.h"
 
 namespace McpBlueprintGraphHandlers
@@ -26,10 +27,12 @@ UEdGraphNode* FActionContext::FindNode(const FString& Id) const
     // GUID-prefix of at least 8 hex chars; anything ambiguous stays
     // not-found (the full 32-hex id is always available via
     // get_graph_details). Non-hex ids keep exact-name-only semantics.
-    if (Id.Len() >= 8 && Id.Len() < 32)
+    // The id read_graph_as_code prints (n and 6 or more hex digits of the GUID) is taken the same way.
+    const FString Prefix = McpGraphCode::IsNodeTag(Id) ? Id.Mid(1) : Id;
+    if ((Prefix.Len() >= 8 || Prefix.Len() < Id.Len()) && Prefix.Len() < 32)
     {
         bool bHexLike = true;
-        for (const TCHAR C : Id)
+        for (const TCHAR C : Prefix)
         {
             if (!FChar::IsHexDigit(C))
             {
@@ -42,7 +45,7 @@ UEdGraphNode* FActionContext::FindNode(const FString& Id) const
             UEdGraphNode* UniqueMatch = nullptr;
             for (UEdGraphNode* Node : TargetGraph->Nodes)
             {
-                if (Node && Node->NodeGuid.ToString().StartsWith(Id, ESearchCase::IgnoreCase))
+                if (Node && Node->NodeGuid.ToString().StartsWith(Prefix, ESearchCase::IgnoreCase))
                 {
                     if (UniqueMatch)
                     {
@@ -121,7 +124,7 @@ UEdGraphPin* FActionContext::FindPin(
         for (UEdGraphPin* Pin : Node->Pins)
         {
             if (Pin && Pin->Direction == EGPD_Input &&
-                Pin->PinType.PinCategory == FName(TEXT("exec")))
+                Pin->PinType.PinCategory == UEdGraphSchema_K2::PC_Exec)
             {
                 return Pin;
             }
@@ -207,8 +210,7 @@ static FString DescribeMissingGraph(UBlueprint* Blueprint, const FString& GraphN
 
 bool PrepareBlueprintAndGraph(FActionContext& Context, bool bRequireGraph)
 {
-    // blueprintPath is the declared name, so it wins over the legacy assetPath.
-    FString AssetPath = McpGetFirstStringField(Context.Payload, {TEXT("blueprintPath"), TEXT("assetPath")});
+    FString AssetPath = GetJsonStringField(Context.Payload, TEXT("blueprintPath"));
 
     const FString AssetPathAsGiven = AssetPath;
     AssetPath = SanitizeProjectRelativePath(AssetPath);

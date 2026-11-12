@@ -243,6 +243,8 @@ bool TryCreateEnhancedInputNode(
     Result->SetStringField(TEXT("nodeName"), NewNode->GetName());
     Result->SetStringField(TEXT("nodeClass"), NodeClass->GetName());
     Result->SetStringField(TEXT("inputActionPath"), CleanActionPath);
+    // Where the node landed and how big it is, as every other create gives, so consecutive creates do not stack.
+    McpGraphLayout::AddNodePlacementFields(Result, *NewNode);
     McpHandlerUtils::AddVerification(Result, Context.Blueprint);
     Context.SendResponse(TEXT("Enhanced Input node created."), Result);
     return true;

@@ -25,6 +25,7 @@ void ExpandEndpoint(const TSharedPtr<FJsonObject>& Payload, const TCHAR* Key,
     }
 }
 
+// The fields of a step that name a node: a run resolves a "$id" in them, a dry run also checks a guid in them.
 const TCHAR* const NodeRefFields[] = {TEXT("fromNodeId"), TEXT("toNodeId"), TEXT("nodeId"),
                                      TEXT("nodeGuid"), TEXT("sourceNode"), TEXT("targetNode")};
 
@@ -72,7 +73,7 @@ TSharedPtr<FJsonObject> BuildStepPayload(const TSharedPtr<FJsonObject>& Batch,
         // batch's, so a step naming another would edit it and never save it.
         // requestedPath and the candidate lists name one too, and requestedPath
         // even wins over blueprintPath in ResolveBlueprintRequestedPath.
-        if (Pair.Key != TEXT("blueprintPath") && Pair.Key != TEXT("assetPath") && Pair.Key != TEXT("requestedPath") &&
+        if (Pair.Key != TEXT("blueprintPath") && Pair.Key != TEXT("requestedPath") &&
             Pair.Key != TEXT("blueprintCandidates") && Pair.Key != TEXT("candidates"))
         {
             Out->SetField(Pair.Key, Pair.Value);
@@ -88,10 +89,7 @@ TSharedPtr<FJsonObject> BuildStepPayload(const TSharedPtr<FJsonObject>& Batch,
 bool ResolveStepAliases(const FBatchState& State, const TSharedPtr<FJsonObject>& Payload,
                         FString& OutError)
 {
-    static const TCHAR* const RefFields[] = {
-        TEXT("fromNodeId"), TEXT("toNodeId"), TEXT("nodeId"),
-        TEXT("nodeGuid"), TEXT("sourceNode"), TEXT("targetNode")};
-    for (const TCHAR* Field : RefFields)
+    for (const TCHAR* Field : NodeRefFields)
     {
         FString Ref;
         if (!Payload->TryGetStringField(Field, Ref) || !Ref.StartsWith(TEXT("$")))

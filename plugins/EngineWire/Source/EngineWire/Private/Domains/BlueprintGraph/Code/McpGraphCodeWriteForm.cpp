@@ -160,7 +160,8 @@ UEdGraphNode* FTranspiler::Reuse(const FString& TypeId)
 }
 
 // A goto names a statement of this code, else a node the graph keeps (an event the code does not rewrite); an old-body
-// node about to go is no target.
+// node about to go is no target. The graph is searched only by an id of the reader's shape: "(goto a)" left an empty
+// prefix, which every GUID starts with, and went to the first node of the graph.
 bool FTranspiler::ResolveGotos()
 {
     for (const FGoto& Goto : Gotos)
@@ -168,11 +169,18 @@ bool FTranspiler::ResolveGotos()
         Line = Goto.Line;
         UEdGraphNode* const* Claimed = Tagged.Find(Goto.Tag);
         UEdGraphNode* Target = Claimed ? *Claimed : nullptr;
-        for (int32 At = 0; !Target && At < Graph->Nodes.Num(); ++At)
+        int32 Sharing = 0;
+        for (UEdGraphNode* Node : Graph->Nodes)
         {
-            UEdGraphNode* Node = Graph->Nodes[At];
-            const bool bStays = Node && !Reusable.Contains(Node);
-            Target = bStays && Node->NodeGuid.ToString().ToLower().StartsWith(Goto.Tag.Mid(1).ToLower()) ? Node : nullptr;
+            if (!Claimed && IsNodeTag(Goto.Tag) && Node && !Reusable.Contains(Node) &&
+                Node->NodeGuid.ToString().ToLower().StartsWith(Goto.Tag.Mid(1).ToLower()))
+            {
+                Target = ++Sharing == 1 ? Node : nullptr;
+            }
+        }
+        if (Sharing > 1)
+        {
+            return Fail(FString::Printf(TEXT("(goto %s): %d nodes of the graph share that id; write more of its digits."), *Goto.Tag, Sharing));
         }
         UEdGraphPin* In = Target ? ExecPin(Target, true, Goto.Pin) : nullptr;
         if (!In)

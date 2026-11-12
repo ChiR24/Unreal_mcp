@@ -1,5 +1,7 @@
 #include "Domains/BlueprintGraph/Lint/McpBPLintRules.h"
 
+#include "Domains/BlueprintGraph/Lint/Interp/McpBPLintEval.h"
+#include "Domains/BlueprintGraph/Lint/McpBPLintFlow.h"
 #include "EdGraph/EdGraph.h"
 #include "EdGraphSchema_K2.h"
 #include "Engine/Blueprint.h"
@@ -14,14 +16,9 @@ namespace McpBPLint
 {
 namespace
 {
-bool IsExec(const UEdGraphPin* Pin)
-{
-    return Pin && Pin->PinType.PinCategory == UEdGraphSchema_K2::PC_Exec;
-}
-
 bool HasExec(const UEdGraphNode* Node, EEdGraphPinDirection Direction)
 {
-    return Node->Pins.ContainsByPredicate([Direction](const UEdGraphPin* Pin) { return IsExec(Pin) && Pin->Direction == Direction; });
+    return Node->Pins.ContainsByPredicate([Direction](const UEdGraphPin* Pin) { return IsExecPin(Pin) && Pin->Direction == Direction; });
 }
 
 // Every node the exec flow reaches from Starts, Starts included.
@@ -38,7 +35,7 @@ TSet<const UEdGraphNode*> Flood(const TArray<const UEdGraphNode*>& Starts)
         const UEdGraphNode* Node = Open.Pop();
         for (const UEdGraphPin* Pin : Node->Pins)
         {
-            if (!IsExec(Pin) || Pin->Direction != EGPD_Output)
+            if (!IsExecPin(Pin) || Pin->Direction != EGPD_Output)
             {
                 continue;
             }
@@ -54,12 +51,6 @@ TSet<const UEdGraphNode*> Flood(const TArray<const UEdGraphNode*>& Starts)
         }
     }
     return Seen;
-}
-
-FName FunctionName(const UEdGraphNode* Node)
-{
-    const UK2Node_CallFunction* Call = Cast<UK2Node_CallFunction>(Node);
-    return Call && Call->GetTargetFunction() ? Call->GetTargetFunction()->GetFName() : NAME_None;
 }
 } // namespace
 
@@ -83,7 +74,7 @@ void TickHeavy(const UEdGraph* Graph, TArray<FFinding>& Out)
         {
             for (const UEdGraphPin* Pin : Ran->Pins)
             {
-                if (IsExec(Pin) || Pin->Direction != EGPD_Input)
+                if (IsExecPin(Pin) || Pin->Direction != EGPD_Input)
                 {
                     continue;
                 }
@@ -95,9 +86,10 @@ void TickHeavy(const UEdGraph* Graph, TArray<FFinding>& Out)
         }
         for (const UEdGraphNode* Ran : Runs)
         {
-            if (Heavy.Contains(FunctionName(Ran)))
+            const FName Called = FunctionName(Cast<UK2Node_CallFunction>(Ran));
+            if (Heavy.Contains(Called))
             {
-                Out.Add({TEXT("tick_heavy"), TEXT("warning"), Ran, FString::Printf(TEXT("Event Tick runs %s every frame, which searches the level; find it once (BeginPlay) and keep it in a variable."), *FunctionName(Ran).ToString())});
+                Out.Add({TEXT("tick_heavy"), TEXT("warning"), Ran, FString::Printf(TEXT("Event Tick runs %s every frame, which searches the level; find it once (BeginPlay) and keep it in a variable."), *Called.ToString())});
             }
             else if (Cast<UK2Node_SpawnActorFromClass>(Ran))
             {
@@ -115,7 +107,7 @@ void Unreachable(const UEdGraph* Graph, TArray<FFinding>& Out)
     TArray<const UEdGraphNode*> Entries;
     for (const UEdGraphNode* Node : Graph->Nodes)
     {
-        if (Node && HasExec(Node, EGPD_Output) && !HasExec(Node, EGPD_Input))
+        if (Node && IsFlowEntry(Node))
         {
             Entries.Add(Node);
         }
@@ -129,7 +121,7 @@ void Unreachable(const UEdGraph* Graph, TArray<FFinding>& Out)
         }
         const bool bHasCaller = Node->Pins.ContainsByPredicate([](const UEdGraphPin* Pin)
         {
-            return IsExec(Pin) && Pin->Direction == EGPD_Input && Pin->LinkedTo.Num() > 0;
+            return IsExecPin(Pin) && Pin->Direction == EGPD_Input && Pin->LinkedTo.Num() > 0;
         });
         if (!bHasCaller)
         {

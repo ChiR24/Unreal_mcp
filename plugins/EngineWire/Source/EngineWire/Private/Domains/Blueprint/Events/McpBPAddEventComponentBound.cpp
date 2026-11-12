@@ -3,7 +3,6 @@
 #include "Foundation/BridgeHelpers/Assets/McpAssetSaveRegistry.h"
 #include "Foundation/BridgeHelpers/Blueprints/McpBPActorBinding.h"
 #include "Foundation/BridgeHelpers/Blueprints/McpBPCompileHelpers.h"
-#include "Foundation/HandlerUtils/McpHandlerUtils.h"
 
 #include "Engine/Blueprint.h"
 #include "Components/ActorComponent.h"
@@ -22,14 +21,7 @@ bool McpBlueprintAddEventComponentBound(
   const FString &RequestId = Context.RequestId;
   TSharedPtr<FMcpBridgeWebSocket> RequestingSocket = Context.RequestingSocket;
 
-  // Component-bound events fire when a component's multicast delegate (e.g.
-  // OnComponentBeginOverlap on a SphereComponent) broadcasts. Previously
-  // callers asking for K2Node_ComponentBoundEvent fell through to the custom
-  // branch and got a generic Event_<guid> with no delegate binding, so the
-  // event was effectively dead. Detect the request explicitly: any caller
-  // that passes a componentName plus a delegate eventName (or explicitly
-  // sets nodeType / eventType to K2Node_ComponentBoundEvent /
-  // ComponentBoundEvent) goes through this dedicated branch.
+  // McpBPAddEvent.cpp says which requests come here.
   if (ComponentName.IsEmpty()) {
     Bridge.SendAutomationError(
         RequestingSocket, RequestId,
@@ -147,9 +139,6 @@ bool McpBlueprintAddEventComponentBound(
     BoundEventNode->NodePosX = EventPosX;
     BoundEventNode->NodePosY = EventPosY;
     NodeCreator.Finalize();
-  } else {
-    BoundEventNode->NodePosX = EventPosX;
-    BoundEventNode->NodePosY = EventPosY;
   }
 
   FName EventName = BoundEventNode->CustomFunctionName;

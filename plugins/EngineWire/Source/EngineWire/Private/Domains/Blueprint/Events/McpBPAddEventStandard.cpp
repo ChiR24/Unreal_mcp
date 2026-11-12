@@ -2,7 +2,6 @@
 #include "Domains/BlueprintGraph/McpBPGraphCompatibility.h"
 #include "Foundation/BridgeHelpers/Assets/McpAssetSaveRegistry.h"
 #include "Foundation/BridgeHelpers/Blueprints/McpBPCompileHelpers.h"
-#include "Foundation/HandlerUtils/McpHandlerUtils.h"
 
 #include "EdGraphSchema_K2.h"
 #include "Engine/Blueprint.h"
@@ -48,24 +47,10 @@ bool McpBlueprintAddEventStandard(
 
   FName EventName = FName(*TargetEventName);
 
-  UClass *TargetClass = nullptr;
-  UFunction *EventFunc = nullptr;
-
-  UClass *SearchClass = BP->ParentClass;
-  while (SearchClass && !EventFunc) {
-    EventFunc = SearchClass->FindFunctionByName(*TargetEventName,
-                                                EIncludeSuperFlag::ExcludeSuper);
-    if (EventFunc) {
-      TargetClass = SearchClass;
-      break;
-    }
-    SearchClass = SearchClass->GetSuperClass();
-  }
-  // An interface the Blueprint implements declares its own events (Interact on BPI_Interactable).
-  if (!EventFunc) {
-    EventFunc = McpFindOverridableEvent(BP, TargetEventName);
-  }
-
+  // An event of the parent class chain or of an interface the Blueprint implements (Interact on
+  // BPI_Interactable). A parent function of that name that is no event (K2_DestroyActor) is not one:
+  // an override node built for it fails to compile.
+  UFunction *EventFunc = McpFindOverridableEvent(BP, TargetEventName);
   if (!EventFunc) {
     Bridge.SendAutomationError(
         RequestingSocket, RequestId,

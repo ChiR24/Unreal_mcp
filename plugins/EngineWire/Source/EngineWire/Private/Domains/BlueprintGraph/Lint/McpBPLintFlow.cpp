@@ -164,6 +164,20 @@ bool HasExecPin(const UEdGraphNode* Node)
     return Node->Pins.ContainsByPredicate([](const UEdGraphPin* Pin) { return IsExecPin(Pin); });
 }
 
+bool IsFlowEntry(const UEdGraphNode* Node)
+{
+    bool bOutput = false;
+    for (const UEdGraphPin* Pin : Node->Pins)
+    {
+        if (IsExecPin(Pin) && Pin->Direction == EGPD_Input)
+        {
+            return false;
+        }
+        bOutput |= IsExecPin(Pin);
+    }
+    return bOutput;
+}
+
 const UEdGraphPin* SourceOf(const UEdGraphPin* Input)
 {
     const UEdGraphPin* Source = Input && Input->LinkedTo.Num() == 1 ? Input->LinkedTo[0] : nullptr;

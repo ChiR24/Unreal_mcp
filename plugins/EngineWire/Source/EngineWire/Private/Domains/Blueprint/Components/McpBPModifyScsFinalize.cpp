@@ -28,10 +28,7 @@ void FinalizeModifyScsResponse(const FBlueprintActionContext &Context,
       continue;
     }
     ++Failed;
-    FString Reason = GetJsonStringField(*Op, TEXT("warning"));
-    if (Reason.IsEmpty()) {
-      Reason = GetJsonStringField(*Op, TEXT("error"));
-    }
+    const FString Reason = GetJsonStringField(*Op, TEXT("warning"));
     State.LocalWarnings.Add(FString::Printf(
         TEXT("operation %d (%s) failed: %s"),
         static_cast<int32>((*Op)->GetNumberField(TEXT("index"))),
@@ -63,17 +60,14 @@ void FinalizeModifyScsResponse(const FBlueprintActionContext &Context,
     }
   }
   State.bOk = State.FinalSummaries.Num() > Failed;
-  State.CompletionResult->SetArrayField(TEXT("operations"), State.FinalSummaries);
   // `compiled` used to echo the REQUEST flag, so a batch that left the
   // blueprint broken still answered compiled:true and the breakage stayed
   // invisible until play. Compile first, report what the compiler said, and do
   // not write a blueprint to disk that just failed to compile.
   bool bCompileOk = false;
   TSharedPtr<FJsonObject> CompileInfo = McpHandlerUtils::CreateResultObject();
-  if (LocalBP) {
-    McpSCSHandlers::EnableLoadOverlapsForBuoyancy(LocalBP);
-  }
-  if (State.bCompile && LocalBP) {
+  McpSCSHandlers::EnableLoadOverlapsForBuoyancy(LocalBP);
+  if (State.bCompile) {
     FString CompileError;
     bCompileOk =
         McpCompileBlueprintWithDiagnostics(LocalBP, CompileInfo, CompileError, 6);
@@ -85,16 +79,13 @@ void FinalizeModifyScsResponse(const FBlueprintActionContext &Context,
   }
   TArray<FString> RepropagateMissed;
   const int32 Repropagated = McpScsPropagate::RepropagatePending(&RepropagateMissed);
-  if (Repropagated > 0) {
-    State.CompletionResult->SetNumberField(TEXT("instancesRepropagated"), Repropagated);
-  }
   // The final say on every placed instance: one still holding the old value
   // after this last push is named, never counted as updated.
   for (const FString &Missed : RepropagateMissed) {
     State.LocalWarnings.Add(FString::Printf(
         TEXT("placed instance kept its old value: %s"), *Missed));
   }
-  if (State.bSave && LocalBP && !(State.bCompile && !bCompileOk)) {
+  if (State.bSave && !(State.bCompile && !bCompileOk)) {
     State.bSaveResult = SaveLoadedAssetThrottled(LocalBP);
     if (!State.bSaveResult) {
       State.LocalWarnings.Add(TEXT("Blueprint failed to save during apply; check output log."));
@@ -112,7 +103,7 @@ void FinalizeModifyScsResponse(const FBlueprintActionContext &Context,
   }
   Touched.Remove(FString());
   TArray<TSharedPtr<FJsonValue>> PartWarnings;
-  if (Touched.Num() > 0 && LocalBP) {
+  if (Touched.Num() > 0) {
     const McpPartPlacement::FPartAudit Parts = McpPartPlacement::AuditBlueprintParts(LocalBP, Touched);
     for (int32 Index = 0; Index < Parts.Issues.Num() && Index < 8; ++Index) {
       PartWarnings.Add(MakeShared<FJsonValueObject>(McpPartPlacement::IssueToJson(Parts.Issues[Index])));
@@ -120,23 +111,15 @@ void FinalizeModifyScsResponse(const FBlueprintActionContext &Context,
     }
     State.LocalWarnings.Append(Parts.Notes);
   }
-  State.CompletionResult->SetStringField(TEXT("blueprintPath"), State.NormalizedBlueprintPath);
-  State.CompletionResult->SetBoolField(TEXT("compiled"), bCompileOk);
-  State.CompletionResult->SetBoolField(TEXT("saved"), State.bSave && State.bSaveResult);
   TArray<TSharedPtr<FJsonValue>> WarningValues;
   for (const FString &Warning : State.LocalWarnings) {
     WarningValues.Add(MakeShared<FJsonValueString>(Warning));
-  }
-  if (WarningValues.Num() > 0) {
-    State.CompletionResult->SetArrayField(TEXT("warnings"), WarningValues);
   }
   TSharedPtr<FJsonObject> ResultPayload = McpHandlerUtils::CreateResultObject();
   ResultPayload->SetStringField(TEXT("blueprintPath"), State.NormalizedBlueprintPath);
   ResultPayload->SetArrayField(TEXT("operations"), State.FinalSummaries);
   ResultPayload->SetBoolField(TEXT("compiled"), bCompileOk);
-  ResultPayload->SetStringField(
-      TEXT("compilerStatus"),
-      LocalBP ? McpBlueprintStatusName(LocalBP->Status) : FString(TEXT("Unknown")));
+  ResultPayload->SetStringField(TEXT("compilerStatus"), McpBlueprintStatusName(LocalBP->Status));
   const TArray<TSharedPtr<FJsonValue>> *ScsDiagnostics = nullptr;
   if (CompileInfo->TryGetArrayField(TEXT("diagnostics"), ScsDiagnostics)) {
     ResultPayload->SetArrayField(TEXT("diagnostics"), *ScsDiagnostics);
@@ -162,9 +145,6 @@ void FinalizeModifyScsResponse(const FBlueprintActionContext &Context,
                         State.FinalSummaries.Num(), Failed)
       : FString::Printf(TEXT("Processed %d SCS operation(s)."), State.FinalSummaries.Num());
   Bridge.SendAutomationResponse(RequestingSocket, RequestId, State.bOk, Message,
-      ResultPayload, State.bOk ? FString() :
-          (State.CompletionResult->HasField(TEXT("error")) ?
-               GetJsonStringField(State.CompletionResult, TEXT("error")) :
-               TEXT("SCS_OPERATION_FAILED")));
+      ResultPayload, State.bOk ? FString() : FString(TEXT("SCS_OPERATION_FAILED")));
 }
 } // namespace McpBlueprintHandlers

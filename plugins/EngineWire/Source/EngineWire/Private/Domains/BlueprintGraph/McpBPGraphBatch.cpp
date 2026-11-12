@@ -1,5 +1,6 @@
 #include "Domains/BlueprintGraph/McpBPGraphPrivate.h"
 
+#include "Algo/Find.h"
 #include "Domains/Blueprint/McpBPActionContext.h"
 #include "Domains/BlueprintGraph/Behaviour/McpBPBehaviour.h"
 #include "Domains/BlueprintGraph/Behaviour/McpBPBehaviourNodes.h"
@@ -27,6 +28,26 @@ bool IsCallFunctionType(const FString& NodeType)
 
 namespace GraphBatch
 {
+namespace
+{
+// The member steps, each run by the Blueprint domain's own handler.
+struct FBatchMemberStep
+{
+    const TCHAR* Edit;
+    bool (*Handler)(const McpBlueprintHandlers::FBlueprintActionContext&);
+};
+const FBatchMemberStep MemberSteps[] = {
+    {TEXT("add_variable"), &McpBlueprintHandlers::HandleBlueprintAddVariable},
+    {TEXT("add_function"), &McpBlueprintHandlers::HandleBlueprintAddFunction},
+    {TEXT("add_event"), &McpBlueprintHandlers::HandleBlueprintAddEvent},
+    {TEXT("add_event_dispatcher"), &McpBlueprintHandlers::HandleBlueprintAddEventDispatcher}};
+
+const FBatchMemberStep* FindMemberStep(const FString& Edit)
+{
+    return Algo::FindByPredicate(MemberSteps, [&Edit](const FBatchMemberStep& Member) { return Edit == Member.Edit; });
+}
+} // namespace
+
 // delete_node / break_pin_links stay single calls so each keeps its own consent
 // gate. The member steps let one batch declare what its own nodes use: a new
 // Blueprint used to cost a call per variable or function before the graph could be built.
@@ -34,33 +55,19 @@ bool IsBatchableEdit(const FString& Edit)
 {
     return Edit == TEXT("create_node") || Edit == TEXT("connect_pins") ||
            Edit == TEXT("set_pin_default_value") || Edit == TEXT("set_node_property") ||
-           Edit == TEXT("create_reroute_node") || Edit == TEXT("add_variable") || Edit == TEXT("add_function") ||
-           Edit == TEXT("add_event") || Edit == TEXT("add_event_dispatcher");
+           Edit == TEXT("create_reroute_node") || FindMemberStep(Edit) != nullptr;
 }
 
 bool RunBlueprintMemberStep(const FActionContext& Parent, const FString& Edit, const FString& StepId,
                             const TSharedPtr<FJsonObject>& Payload)
 {
-    struct FBatchMemberStep
+    const FBatchMemberStep* Member = FindMemberStep(Edit);
+    if (Member)
     {
-        const TCHAR* Edit;
-        bool (*Handler)(const McpBlueprintHandlers::FBlueprintActionContext&);
-    };
-    static const FBatchMemberStep Members[] = {
-        {TEXT("add_variable"), &McpBlueprintHandlers::HandleBlueprintAddVariable},
-        {TEXT("add_function"), &McpBlueprintHandlers::HandleBlueprintAddFunction},
-        {TEXT("add_event"), &McpBlueprintHandlers::HandleBlueprintAddEvent},
-        {TEXT("add_event_dispatcher"), &McpBlueprintHandlers::HandleBlueprintAddEventDispatcher}};
-    for (const FBatchMemberStep& Member : Members)
-    {
-        if (Edit == Member.Edit)
-        {
-            Member.Handler(McpBlueprintHandlers::BuildBlueprintActionContext(*Parent.Subsystem, StepId, Edit, Payload,
-                                                                            Parent.RequestingSocket));
-            return true;
-        }
+        Member->Handler(McpBlueprintHandlers::BuildBlueprintActionContext(*Parent.Subsystem, StepId, Edit, Payload,
+                                                                         Parent.RequestingSocket));
     }
-    return false;
+    return Member != nullptr;
 }
 
 UEdGraphNode* FindBatchNode(UBlueprint* Blueprint, const FString& Guid)
@@ -102,8 +109,7 @@ FString PrecheckSteps(const FActionContext& Context, const TArray<TSharedPtr<FJs
         {
             (*Step)->TryGetStringField(TEXT("targetClass"), MemberClass);
         }
-        if (Edit == TEXT("add_variable") || Edit == TEXT("add_function") || Edit == TEXT("add_event") ||
-            Edit == TEXT("add_event_dispatcher"))
+        if (FindMemberStep(Edit))
         {
             if ((*Step)->HasField(TEXT("pinDefaults")))
             {

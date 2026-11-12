@@ -131,11 +131,9 @@ bool HandleScsGet(const FBlueprintActionContext &Context) {
     FString Folder;
     FString Filter;
     FString RequestedBlueprint;
-    if (Payload.IsValid()) {
-      Payload->TryGetStringField(TEXT("path"), Folder);
-      Payload->TryGetStringField(TEXT("componentClass"), Filter);
-      Payload->TryGetStringField(TEXT("blueprintPath"), RequestedBlueprint);
-    }
+    Payload->TryGetStringField(TEXT("path"), Folder);
+    Payload->TryGetStringField(TEXT("componentClass"), Filter);
+    Payload->TryGetStringField(TEXT("blueprintPath"), RequestedBlueprint);
     if (!Folder.IsEmpty() && RequestedBlueprint.IsEmpty()) {
       return SendScsFolderScan(Bridge, RequestId, RequestingSocket, Folder, Filter);
     }
@@ -185,32 +183,10 @@ bool HandleScsGet(const FBlueprintActionContext &Context) {
             ComponentObj->SetBoolField(TEXT("parentIsInherited"), true);
           }
 
-          // The template's relative transform.
-          FTransform Transform;
-          if (UActorComponent *ComponentTemplate = Node->ComponentTemplate) {
-            if (USceneComponent *SceneTemplate =
-                    Cast<USceneComponent>(ComponentTemplate)) {
-              Transform = SceneTemplate->GetRelativeTransform();
-            }
-          } else {
-            Transform = FTransform::Identity;
-          }
-          TSharedPtr<FJsonObject> TransformObj = McpHandlerUtils::CreateResultObject();
-
-          TransformObj->SetObjectField(TEXT("location"), McpHandlerUtils::VectorToJson(Transform.GetLocation()));
-
-          TSharedPtr<FJsonObject> RotationObj = McpHandlerUtils::CreateResultObject();
-          RotationObj->SetNumberField(TEXT("pitch"),
-                                      Transform.GetRotation().Rotator().Pitch);
-          RotationObj->SetNumberField(TEXT("yaw"),
-                                      Transform.GetRotation().Rotator().Yaw);
-          RotationObj->SetNumberField(TEXT("roll"),
-                                      Transform.GetRotation().Rotator().Roll);
-          TransformObj->SetObjectField(TEXT("rotation"), RotationObj);
-
-          TransformObj->SetObjectField(TEXT("scale"), McpHandlerUtils::VectorToJson(Transform.GetScale3D()));
-
-          ComponentObj->SetObjectField(TEXT("transform"), TransformObj);
+          // The template's relative transform; identity for a part that is no scene component.
+          const USceneComponent *SceneTemplate = Cast<USceneComponent>(Node->ComponentTemplate);
+          ComponentObj->SetObjectField(TEXT("transform"), McpHandlerUtils::TransformToJson(
+              SceneTemplate ? SceneTemplate->GetRelativeTransform() : FTransform::Identity));
           ComponentsArray.Add(MakeShared<FJsonValueObject>(ComponentObj));
         }
       }

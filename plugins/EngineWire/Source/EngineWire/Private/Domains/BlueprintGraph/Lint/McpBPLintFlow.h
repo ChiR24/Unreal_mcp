@@ -26,6 +26,8 @@ struct FFlow
 bool IsExecPin(const UEdGraphPin* Pin);
 /** Whether Node takes part in the exec flow: it has an exec pin, so it is not a pure node. */
 bool HasExecPin(const UEdGraphNode* Node);
+/** Where a chain starts: exec outputs and no exec input (an event, a function's entry, a collapsed graph's). */
+bool IsFlowEntry(const UEdGraphNode* Node);
 /** The output an input's value comes from, past any reroute knots. */
 const UEdGraphPin* SourceOf(const UEdGraphPin* Input);
 /** Graph's exec flow with its immediate dominators. */

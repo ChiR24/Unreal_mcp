@@ -48,6 +48,8 @@ bool UEngineWireSubsystem::HandleBlueprintAction(
       McpBlueprintHandlers::HandleBlueprintEnsureProbe,
       McpBlueprintHandlers::HandleBlueprintSetMetadata,
       McpBlueprintHandlers::HandleBlueprintStructMakeBreakNodes,
+      McpBlueprintHandlers::HandleScsAddComponent,
+      McpBlueprintHandlers::HandleScsGet,
   };
 
   for (FBlueprintRoute Route : Routes) {
@@ -56,17 +58,9 @@ bool UEngineWireSubsystem::HandleBlueprintAction(
     }
   }
 
-  UE_LOG(LogEngineWireSubsystem, Verbose,
-         TEXT("HandleBlueprintAction: checking HandleSCSAction for action='%s' (clean='%s')"),
-         *Action, *Context.CleanAction);
-  if (HandleSCSAction(RequestId, Context.CleanAction, Payload, RequestingSocket)) {
-    UE_LOG(LogEngineWireSubsystem, Verbose,
-           TEXT("HandleSCSAction consumed request"));
-    return true;
-  }
-
-  UE_LOG(LogEngineWireSubsystem, Verbose,
-         TEXT("HandleBlueprintAction: Action '%s' not recognized, returning false to continue dispatch."),
-         *Action);
-  return false;
+  SendAutomationError(
+      RequestingSocket, RequestId,
+      FString::Printf(TEXT("Unknown blueprint action: %s"), *Context.CleanAction),
+      TEXT("UNKNOWN_ACTION"));
+  return true;
 }

@@ -1,14 +1,9 @@
 #include "Domains/Blueprint/McpBPActionContext.h"
 #include "Domains/BlueprintGraph/McpBPGraphCompatibility.h"
-#include "Foundation/BridgeHelpers/Assets/McpAssetSaveRegistry.h"
 #include "Foundation/BridgeHelpers/Blueprints/McpBPAssetLoad.h"
-#include "Foundation/BridgeHelpers/Blueprints/McpBPCompileHelpers.h"
 #include "Foundation/HandlerUtils/McpHandlerUtils.h"
-#include "Misc/ScopeExit.h"
 
 #include "Engine/Blueprint.h"
-#include "Engine/SCS_Node.h"
-#include "Engine/SimpleConstructionScript.h"
 #include "Kismet2/BlueprintEditorUtils.h"
 
 namespace McpBlueprintHandlers {

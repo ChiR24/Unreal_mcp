@@ -1,7 +1,6 @@
 #include "Domains/Blueprint/McpBPActionContext.h"
 #include "Foundation/HandlerUtils/McpHandlerUtils.h"
 #include "HAL/PlatformTime.h"
-#include "Misc/ScopeExit.h"
 
 #include "Domains/Blueprint/Components/McpBPScsPropagate.h"
 #include "Engine/Blueprint.h"
@@ -35,11 +34,8 @@ bool HandleBlueprintModifyScs(const FBlueprintActionContext &Context) {
   LocalSCS->Modify();
   McpScsPropagate::Pending().Reset();
   for (int32 Index = 0; Index < State.DeferredOps.Num(); ++Index) {
-    const TSharedPtr<FJsonValue> &Value = State.DeferredOps[Index];
-    if (!Value.IsValid() || Value->Type != EJson::Object) {
-      continue;
-    }
-    const TSharedPtr<FJsonObject> Op = Value->AsObject();
+    // Every entry is an object with a type: ValidateModifyScsOperations refused the batch otherwise.
+    const TSharedPtr<FJsonObject> Op = State.DeferredOps[Index]->AsObject();
     FString OpType;
     Op->TryGetStringField(TEXT("type"), OpType);
     const FString NormalizedType = OpType.ToLower();

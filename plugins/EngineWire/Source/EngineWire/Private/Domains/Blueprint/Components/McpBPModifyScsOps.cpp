@@ -1,10 +1,7 @@
 #include "Domains/Blueprint/McpBPActionContext.h"
-#include "Foundation/BridgeHelpers/Blueprints/McpScsLookup.h"
 #include "Domains/Blueprint/Components/McpBPScsParentResolve.h"
 
 #include "Engine/Blueprint.h"
-#include "Engine/Engine.h"
-#include "Engine/SCS_Node.h"
 #include "Engine/SimpleConstructionScript.h"
 
 namespace McpBlueprintHandlers {
