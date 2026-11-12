@@ -20,7 +20,7 @@ bool HandleConfigureKillcamDuration(UEngineWireSubsystem* Subsystem, const FStri
 {
     double Duration = GMcpReplaySettings.KillcamDurationSeconds;
     // ValidateReplayRequest already bounded durationSeconds when present.
-    if (!Payload.IsValid() || !Payload->TryGetNumberField(TEXT("durationSeconds"), Duration))
+    if (!Payload->TryGetNumberField(TEXT("durationSeconds"), Duration))
     {
         Subsystem->SendAutomationError(RequestingSocket, RequestId, TEXT("durationSeconds is required"), TEXT("INVALID_ARGUMENT"));
         return true;
@@ -69,10 +69,7 @@ bool PlayDemo(UEngineWireSubsystem* Subsystem, const FString& RequestId, const T
         Subsystem->SendAutomationError(Socket, RequestId, TEXT("Replay subsystem failed to start demo playback"), TEXT("PLAYBACK_FAILED"));
         return true;
     }
-    if (AWorldSettings* Settings = World->GetWorldSettings())
-    {
-        Settings->DemoPlayTimeDilation = GMcpReplaySettings.PlaybackSpeed;
-    }
+    World->GetWorldSettings()->DemoPlayTimeDilation = GMcpReplaySettings.PlaybackSpeed;
     Subsystem->SendAutomationResponse(Socket, RequestId, true, TEXT("Demo playback started"), MakeReplayState(World, Replay));
     return true;
 }
@@ -92,13 +89,10 @@ bool EnsureKillcamReplay(UEngineWireSubsystem* Subsystem, const FString& Request
 bool PauseDemo(UEngineWireSubsystem* Subsystem, const FString& RequestId, const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> Socket, UWorld* World, UReplaySubsystem* Replay, UDemoNetDriver* Driver)
 {
     bool bPause = !Driver->GetChannelsArePaused();
-    if (Payload.IsValid()) Payload->TryGetBoolField(TEXT("paused"), bPause);
+    Payload->TryGetBoolField(TEXT("paused"), bPause);
     Driver->PauseChannels(bPause);
-    if (AWorldSettings* Settings = World->GetWorldSettings())
-    {
-        APlayerController* PC = Driver->GetSpectatorController();
-        Settings->SetPauserPlayerState(bPause && PC ? PC->PlayerState : nullptr);
-    }
+    APlayerController* PC = Driver->GetSpectatorController();
+    World->GetWorldSettings()->SetPauserPlayerState(bPause && PC ? PC->PlayerState : nullptr);
     Subsystem->SendAutomationResponse(Socket, RequestId, true, bPause ? TEXT("Demo playback paused") : TEXT("Demo playback resumed"), MakeReplayState(World, Replay));
     return true;
 }
@@ -107,7 +101,7 @@ bool SetDemoSpeed(UEngineWireSubsystem* Subsystem, const FString& RequestId, con
 {
     double Speed = 0.0;
     // ValidateReplayRequest already bounded speed/playbackSpeed when present.
-    if (!Payload.IsValid() || (!Payload->TryGetNumberField(TEXT("speed"), Speed) && !Payload->TryGetNumberField(TEXT("playbackSpeed"), Speed)))
+    if (!Payload->TryGetNumberField(TEXT("speed"), Speed) && !Payload->TryGetNumberField(TEXT("playbackSpeed"), Speed))
     {
         Subsystem->SendAutomationError(Socket, RequestId, TEXT("speed (or playbackSpeed) is required"), TEXT("INVALID_ARGUMENT"));
         return true;
@@ -124,12 +118,12 @@ bool SeekDemo(UEngineWireSubsystem* Subsystem, const FString& RequestId, const F
     if (Action == TEXT("start_killcam"))
     {
         double Duration = GMcpReplaySettings.KillcamDurationSeconds;
-        if (Payload.IsValid()) Payload->TryGetNumberField(TEXT("durationSeconds"), Duration);
+        Payload->TryGetNumberField(TEXT("durationSeconds"), Duration);
         const double TotalTime = Driver->GetDemoTotalTime();
         const double CurrentTime = Driver->GetDemoCurrentTime();
         TimeSeconds = FMath::Max(0.0, (TotalTime > 0.0 ? TotalTime : CurrentTime) - Duration);
     }
-    else if (!Payload.IsValid() || (!Payload->TryGetNumberField(TEXT("timeSeconds"), TimeSeconds) && !Payload->TryGetNumberField(TEXT("seconds"), TimeSeconds)) ||
+    else if ((!Payload->TryGetNumberField(TEXT("timeSeconds"), TimeSeconds) && !Payload->TryGetNumberField(TEXT("seconds"), TimeSeconds)) ||
              !FMath::IsFinite(TimeSeconds) || TimeSeconds < 0.0)
     {
         Subsystem->SendAutomationError(Socket, RequestId, TEXT("timeSeconds must be zero or greater"), TEXT("INVALID_ARGUMENT"));

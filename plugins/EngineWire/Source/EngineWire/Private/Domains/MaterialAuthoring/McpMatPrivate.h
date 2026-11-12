@@ -150,6 +150,10 @@ UMaterialExpression* FindExpressionByIdOrName(UMaterial* Material, const FString
 UMaterialExpression* FindExpressionByIdOrNameInFunction(UMaterialFunction* Function, const FString& NodeIdOrName);
 UObject* LoadMaterialOrFunction(const FString& AssetPath, UMaterial*& OutMaterial, UMaterialFunction*& OutFunction);
 void AddExpressionToContainer(UMaterial* Material, UMaterialFunction* Function, UMaterialExpression* Expr);
+// Expr placed at X, Y in the loaded host, the edit finished (McpFinishMaterialEdit) and the reply begun: the host, nodeId
+// and the placement fields. OutPlacementWarning, when given, gets the overlap warning (empty when the place is clear).
+TSharedPtr<FJsonObject> PlaceMaterialExpression(const FString& RequestId, UMaterial* Material, UMaterialFunction* Function,
+                                                UMaterialExpression* Expr, float X, float Y, FString* OutPlacementWarning = nullptr);
 FString FunctionInputTypeToString(EFunctionInputType InType);
 void AppendMaterialInfoConnections(UMaterial* Material, UMaterialFunction* Function, const TSharedPtr<FJsonObject>& Payload, const TSharedPtr<FJsonObject>& Result);
 bool HandleCreateMaterial(UEngineWireSubsystem* Bridge, const FString& RequestId, const FString& SubAction, const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> Socket);

@@ -15,8 +15,6 @@
 #include "MovieSceneTrack.h"
 #include "UObject/UObjectIterator.h"
 
-#define MCP_GET_BINDING_TRACKS(Binding) (Binding).GetTracks()
-
 #include "Editor.h"
 #include "EditorAssetLibrary.h"
 #include "Subsystems/EditorActorSubsystem.h"
@@ -121,7 +119,7 @@ inline UMovieSceneTrack *FindTrackByName(UMovieScene *MovieScene, const FString 
   Tracks.Add(MovieScene->GetCameraCutTrack());
   for (const FMovieSceneBinding &Binding : const_cast<const UMovieScene *>(MovieScene)->GetBindings()) {
     if (BindingFilter.IsEmpty() || GetBindingName(MovieScene, Binding.GetObjectGuid()).Contains(BindingFilter)) {
-      Tracks.Append(MCP_GET_BINDING_TRACKS(Binding));
+      Tracks.Append(Binding.GetTracks());
     }
   }
   for (int32 Step = 0; Step < 3; ++Step) {
@@ -185,7 +183,7 @@ inline void CollectTracksByName(UMovieScene *MovieScene, const FString &TrackNam
     if (bHasBinding && Binding.GetObjectGuid() != WantedBinding) {
       continue;
     }
-    for (UMovieSceneTrack *Track : MCP_GET_BINDING_TRACKS(Binding)) {
+    for (UMovieSceneTrack *Track : Binding.GetTracks()) {
       if (Matches(Track)) {
         Out.Add(Track);
       }

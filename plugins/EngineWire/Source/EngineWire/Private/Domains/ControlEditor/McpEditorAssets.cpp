@@ -167,15 +167,6 @@ bool UEngineWireSubsystem::HandleControlEditorSaveAll(
   // Named, so a caller can tell its own unsaved work from someone else's without saving everything to find out.
   TArray<FString> LeftDirtyPackages;
 
-  auto ShouldSkipPackage = [](UPackage* Package) -> bool {
-    if (!Package || Package->HasAnyFlags(RF_Transient)) {
-      return true;
-    }
-    const FString PackagePath = Package->GetPathName();
-    return PackagePath.StartsWith(TEXT("/Temp/")) ||
-           PackagePath.StartsWith(TEXT("/Transient/")) ||
-           PackagePath.StartsWith(TEXT("/Engine/Transient"));
-  };
 
   auto ProcessPackage = [&](UPackage* Package) {
     if (!Package || ProcessedPackages.Contains(Package)) {
@@ -192,7 +183,7 @@ bool UEngineWireSubsystem::HandleControlEditorSaveAll(
     TotalDirty++;
 
     FString PackagePath = Package->GetPathName();
-    if (ShouldSkipPackage(Package)) {
+    if (McpIsScratchPackage(Package)) {
       SkippedCount++;
       SkippedPackages.Add(PackagePath);
       Receipt.NoteSkipped(FString::Printf(TEXT("save:%s"), *PackagePath),

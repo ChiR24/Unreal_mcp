@@ -125,24 +125,15 @@ bool UEngineWireSubsystem::HandleControlEditorOpenLevel(
     TArray<UPackage*> DirtyContentPackages;
     FEditorFileUtils::GetDirtyWorldPackages(DirtyWorldPackages);
     FEditorFileUtils::GetDirtyContentPackages(DirtyContentPackages);
-    auto IsBlockingDirtyPackage = [](UPackage* Package) -> bool {
-      if (!Package || Package->HasAnyFlags(RF_Transient)) {
-        return false;
-      }
-      const FString PackagePath = Package->GetPathName();
-      return !PackagePath.StartsWith(TEXT("/Temp/")) &&
-             !PackagePath.StartsWith(TEXT("/Transient/")) &&
-             !PackagePath.StartsWith(TEXT("/Engine/Transient"));
-    };
     int32 BlockingWorldPackages = 0;
     int32 BlockingContentPackages = 0;
     for (UPackage* Package : DirtyWorldPackages) {
-      if (IsBlockingDirtyPackage(Package)) {
+      if (!McpIsScratchPackage(Package)) {
         BlockingWorldPackages++;
       }
     }
     for (UPackage* Package : DirtyContentPackages) {
-      if (IsBlockingDirtyPackage(Package)) {
+      if (!McpIsScratchPackage(Package)) {
         BlockingContentPackages++;
       }
     }

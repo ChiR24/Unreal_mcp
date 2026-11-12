@@ -13,11 +13,7 @@
 
 namespace McpLevelHandlers {
 bool HandleAddSublevelAction(UEngineWireSubsystem& Subsystem, const FString& RequestId, const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> RequestingSocket) {
-    FString SubLevelPath;
-    if (Payload.IsValid())
-      Payload->TryGetStringField(TEXT("subLevelPath"), SubLevelPath);
-    if (SubLevelPath.IsEmpty() && Payload.IsValid())
-      Payload->TryGetStringField(TEXT("levelPath"), SubLevelPath);
+    FString SubLevelPath = McpGetFirstStringField(Payload, {TEXT("subLevelPath"), TEXT("levelPath")});
 
     if (SubLevelPath.IsEmpty()) {
       Subsystem.SendAutomationError(RequestingSocket, RequestId,
@@ -28,7 +24,7 @@ bool HandleAddSublevelAction(UEngineWireSubsystem& Subsystem, const FString& Req
 
     const FString SubLevelPathAsGiven = SubLevelPath;
     // An object path (/Game/Maps/Sub.Sub) or a .umap name reads as its package: it was refused as a missing file.
-    SubLevelPath = NormalizeLevelPackagePath(SanitizeProjectRelativePath(SubLevelPath));
+    SubLevelPath = FPackageName::ObjectPathToPackageName(SanitizeProjectRelativePath(SubLevelPath));
     if (SubLevelPath.IsEmpty()) {
       Subsystem.SendAutomationError(RequestingSocket, RequestId,
                           McpPathRefusalMessage(TEXT("subLevelPath"), SubLevelPathAsGiven),
@@ -38,8 +34,7 @@ bool HandleAddSublevelAction(UEngineWireSubsystem& Subsystem, const FString& Req
 
     // Any other method used to become Blueprint while the reply echoed what was asked.
     FString StreamingMethod = TEXT("Blueprint");
-    if (Payload.IsValid())
-      Payload->TryGetStringField(TEXT("streamingMethod"), StreamingMethod);
+    Payload->TryGetStringField(TEXT("streamingMethod"), StreamingMethod);
     const bool bAlwaysLoaded = StreamingMethod.Equals(TEXT("AlwaysLoaded"), ESearchCase::IgnoreCase);
     if (!bAlwaysLoaded && !StreamingMethod.Equals(TEXT("Blueprint"), ESearchCase::IgnoreCase)) {
       Subsystem.SendAutomationError(RequestingSocket, RequestId,
@@ -49,10 +44,8 @@ bool HandleAddSublevelAction(UEngineWireSubsystem& Subsystem, const FString& Req
     }
     StreamingMethod = bAlwaysLoaded ? TEXT("AlwaysLoaded") : TEXT("Blueprint");
 
-    // Robustness: Cleanup before adding
-    if (GEditor) {
-      GEditor->ForceGarbageCollection(true);
-    }
+    // Garbage is collected before the sublevel is added.
+    GEditor->ForceGarbageCollection(true);
 
     // Verify file existence (more robust than DoesPackageExist for new files)
     FString Filename;
@@ -65,10 +58,6 @@ bool HandleAddSublevelAction(UEngineWireSubsystem& Subsystem, const FString& Req
       }
     }
 
-    // Fallback: Check without conversion if it's already a file path?
-    if (!bFileFound && IFileManager::Get().FileExists(*SubLevelPath)) {
-      bFileFound = true;
-    }
 
     if (!bFileFound) {
       // Try checking DoesPackageExist as last resort
@@ -81,14 +70,7 @@ bool HandleAddSublevelAction(UEngineWireSubsystem& Subsystem, const FString& Req
       }
     }
 
-    if (!GEditor) {
-      Subsystem.SendAutomationResponse(RequestingSocket, RequestId, false,
-                             TEXT("Editor unavailable"), nullptr,
-                             TEXT("NO_EDITOR"));
-      return true;
-    }
-
-    UWorld *World = GEditor->GetEditorWorldContext().World();
+    UWorld *World = McpHandlerUtils::GetEditorWorld();
     if (!World) {
       Subsystem.SendAutomationResponse(RequestingSocket, RequestId, false,
                              TEXT("No world loaded"), nullptr,
@@ -106,7 +88,7 @@ bool HandleAddSublevelAction(UEngineWireSubsystem& Subsystem, const FString& Req
     // than silently adding the sub-level to whatever happens to be loaded.
     FString ParentLevel;
     Payload->TryGetStringField(TEXT("parentLevel"), ParentLevel);
-    ParentLevel = NormalizeLevelPackagePath(ParentLevel);
+    ParentLevel = FPackageName::ObjectPathToPackageName(ParentLevel);
     const FString OpenLevel = World->GetOutermost()->GetName();
     if (!ParentLevel.IsEmpty() && !ParentLevel.Equals(OpenLevel, ESearchCase::IgnoreCase)) {
       Subsystem.SendAutomationResponse(
@@ -117,7 +99,7 @@ bool HandleAddSublevelAction(UEngineWireSubsystem& Subsystem, const FString& Req
       return true;
     }
 
-    // CRITICAL FIX: Check if sublevel is already in the world BEFORE trying to add it
+    // Check if the sublevel is already in the world BEFORE trying to add it
     // This prevents "A level with that name already exists in the world" modal dialog
     // which blocks execution and causes test timeouts
     // BUT: Also check if the existing level is actually loaded/valid

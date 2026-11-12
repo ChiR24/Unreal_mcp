@@ -8,10 +8,6 @@ bool HandleCreateTorus(UEngineWireSubsystem* Self, const FString& RequestId,
                               const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> Socket, bool bArch)
 {
     // An arch is a torus revolved part of the way round.
-    FString Name = GetJsonStringField(Payload, TEXT("name"));
-    if (Name.IsEmpty()) Name = bArch ? TEXT("GeneratedArch") : TEXT("GeneratedTorus");
-
-    FTransform Transform = ReadTransformFromPayload(Payload);
     const double MajorRadius = GetJsonNumberField(Payload, TEXT("radius"), bArch ? 100.0 : 50.0);
     const double MinorRadius = GetJsonNumberField(Payload, TEXT("innerRadius"), bArch ? 25.0 : 20.0);
     const int32 MajorSegments = DeclaredSegments(Payload, {TEXT("numRings"), TEXT("radialSegments")}, 16);
@@ -26,7 +22,7 @@ bool HandleCreateTorus(UEngineWireSubsystem* Self, const FString& RequestId,
         EGeometryScriptPrimitiveOriginMode::Center, nullptr);
 
     TSharedPtr<FJsonObject> Result;
-    if (!SpawnPrimitiveOrReply(Self, RequestId, Socket, Transform, Name, DynMesh, Result)) return true;
+    if (!SpawnPrimitiveOrReply(Self, RequestId, Socket, ReadTransformFromPayload(Payload), GetJsonStringField(Payload, TEXT("name")), bArch ? TEXT("GeneratedArch") : TEXT("GeneratedTorus"), DynMesh, Result)) return true;
     Result->SetNumberField(TEXT("majorRadius"), MajorRadius);
     Result->SetNumberField(TEXT("angle"), RevolveOptions.RevolveDegrees);
     Self->SendAutomationResponse(Socket, RequestId, true, bArch ? TEXT("Arch created") : TEXT("Torus mesh created"), Result);
@@ -36,10 +32,6 @@ bool HandleCreateTorus(UEngineWireSubsystem* Self, const FString& RequestId,
 bool HandleCreatePlane(UEngineWireSubsystem* Self, const FString& RequestId,
                               const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> Socket)
 {
-    FString Name = GetJsonStringField(Payload, TEXT("name"));
-    if (Name.IsEmpty()) Name = TEXT("GeneratedPlane");
-
-    FTransform Transform = ReadTransformFromPayload(Payload);
     double Width = ClampDimension(GetJsonNumberField(Payload, TEXT("width"), 100.0));
     double Height = ClampDimension(GetJsonNumberField(Payload, TEXT("depth"), GetJsonNumberField(Payload, TEXT("height"), 100.0)));
     int32 WidthSubdivisions = ClampSegments(GetJsonIntField(Payload, TEXT("widthSegments"), 1));
@@ -58,7 +50,7 @@ bool HandleCreatePlane(UEngineWireSubsystem* Self, const FString& RequestId,
     );
 
     TSharedPtr<FJsonObject> Result;
-    AActor* NewActor = SpawnPrimitiveOrReply(Self, RequestId, Socket, Transform, Name, DynMesh, Result);
+    AActor* NewActor = SpawnPrimitiveOrReply(Self, RequestId, Socket, ReadTransformFromPayload(Payload), GetJsonStringField(Payload, TEXT("name")), TEXT("GeneratedPlane"), DynMesh, Result);
     if (!NewActor)
     {
         return true;
@@ -78,10 +70,6 @@ bool HandleCreateDisc(UEngineWireSubsystem* Self, const FString& RequestId,
                              const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> Socket, bool bRing)
 {
     // A ring is a disc with a hole.
-    FString Name = GetJsonStringField(Payload, TEXT("name"));
-    if (Name.IsEmpty()) Name = bRing ? TEXT("GeneratedRing") : TEXT("GeneratedDisc");
-
-    FTransform Transform = ReadTransformFromPayload(Payload);
     // The declared name wins: outerRadius for a ring, radius for a disc.
     const TCHAR* const RadiusField = bRing ? TEXT("outerRadius") : TEXT("radius");
     const double Radius = GetJsonNumberField(Payload, RadiusField, GetJsonNumberField(Payload, bRing ? TEXT("radius") : TEXT("outerRadius"), 50.0));
@@ -94,7 +82,7 @@ bool HandleCreateDisc(UEngineWireSubsystem* Self, const FString& RequestId,
         DynMesh, FGeometryScriptPrimitiveOptions(), FTransform::Identity, Radius, Segments, 1, 0.0f, 360.0f, HoleRadius, nullptr);
 
     TSharedPtr<FJsonObject> Result;
-    AActor* NewActor = SpawnPrimitiveOrReply(Self, RequestId, Socket, Transform, Name, DynMesh, Result);
+    AActor* NewActor = SpawnPrimitiveOrReply(Self, RequestId, Socket, ReadTransformFromPayload(Payload), GetJsonStringField(Payload, TEXT("name")), bRing ? TEXT("GeneratedRing") : TEXT("GeneratedDisc"), DynMesh, Result);
     if (!NewActor) return true;
     Result->SetNumberField(TEXT("outerRadius"), Radius);
     Result->SetNumberField(TEXT("innerRadius"), HoleRadius);
@@ -114,10 +102,6 @@ static bool GuardStairBudget(UEngineWireSubsystem* Self, const FString& RequestI
 bool HandleCreateStairs(UEngineWireSubsystem* Self, const FString& RequestId,
                                const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> Socket)
 {
-    FString Name = GetJsonStringField(Payload, TEXT("name"));
-    if (Name.IsEmpty()) Name = TEXT("GeneratedStairs");
-
-    FTransform Transform = ReadTransformFromPayload(Payload);
     float StepWidth = GetJsonNumberField(Payload, TEXT("stepWidth"), 100.0f);
     float StepHeight = GetJsonNumberField(Payload, TEXT("stepHeight"), 20.0f);
     float StepDepth = GetJsonNumberField(Payload, TEXT("stepDepth"), 30.0f);
@@ -133,7 +117,7 @@ bool HandleCreateStairs(UEngineWireSubsystem* Self, const FString& RequestId,
         DynMesh, Options, FTransform::Identity, StepWidth, StepHeight, StepDepth, NumSteps, bFloating, nullptr);
 
     TSharedPtr<FJsonObject> Result;
-    AActor* NewActor = SpawnPrimitiveOrReply(Self, RequestId, Socket, Transform, Name, DynMesh, Result);
+    AActor* NewActor = SpawnPrimitiveOrReply(Self, RequestId, Socket, ReadTransformFromPayload(Payload), GetJsonStringField(Payload, TEXT("name")), TEXT("GeneratedStairs"), DynMesh, Result);
     if (!NewActor)
     {
         return true;
@@ -149,10 +133,6 @@ bool HandleCreateStairs(UEngineWireSubsystem* Self, const FString& RequestId,
 bool HandleCreateSpiralStairs(UEngineWireSubsystem* Self, const FString& RequestId,
                                      const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> Socket)
 {
-    FString Name = GetJsonStringField(Payload, TEXT("name"));
-    if (Name.IsEmpty()) Name = TEXT("GeneratedSpiralStairs");
-
-    FTransform Transform = ReadTransformFromPayload(Payload);
     float StepWidth = GetJsonNumberField(Payload, TEXT("stepWidth"), 100.0f);
     float StepHeight = GetJsonNumberField(Payload, TEXT("stepHeight"), 20.0f);
     float InnerRadius = GetJsonNumberField(Payload, TEXT("innerRadius"), GetJsonNumberField(Payload, TEXT("radius"), 150.0));
@@ -171,7 +151,7 @@ bool HandleCreateSpiralStairs(UEngineWireSubsystem* Self, const FString& Request
         DynMesh, Options, FTransform::Identity, StepWidth, StepHeight, InnerRadius, CurveAngle, NumSteps, bFloating, nullptr);
 
     TSharedPtr<FJsonObject> Result;
-    AActor* NewActor = SpawnPrimitiveOrReply(Self, RequestId, Socket, Transform, Name, DynMesh, Result);
+    AActor* NewActor = SpawnPrimitiveOrReply(Self, RequestId, Socket, ReadTransformFromPayload(Payload), GetJsonStringField(Payload, TEXT("name")), TEXT("GeneratedSpiralStairs"), DynMesh, Result);
     if (!NewActor)
     {
         return true;

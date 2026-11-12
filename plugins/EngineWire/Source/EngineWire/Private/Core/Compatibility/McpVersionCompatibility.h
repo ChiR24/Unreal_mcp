@@ -376,7 +376,7 @@
 // UE 5.0: ObjectPath member (FName), no GetObjectPathString()
 // UE 5.1+: GetObjectPathString() method
 
-#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 1
+#if ENGINE_MAJOR_VERSION > 5 || ENGINE_MINOR_VERSION >= 1
 #define MCP_ASSET_DATA_GET_OBJECT_PATH(AssetData) (AssetData).GetObjectPathString()
 #else
 #define MCP_ASSET_DATA_GET_OBJECT_PATH(AssetData) (AssetData).ObjectPath.ToString()

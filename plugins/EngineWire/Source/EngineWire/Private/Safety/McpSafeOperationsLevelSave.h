@@ -15,7 +15,12 @@
 
 namespace McpSafeOperations
 {
-
+// A level the editor holds only in memory: an unsaved map (/Temp/Untitled_N) or a transient world. A saved
+// level's own name may contain "Untitled".
+inline bool McpIsUnsavedLevelPath(const FString& PackagePath)
+{
+    return PackagePath.StartsWith(TEXT("/Temp/")) || PackagePath.StartsWith(TEXT("/Engine/Transient"));
+}
 
 inline bool McpSafeLevelSave(ULevel* Level, const FString& FullPath, int32 MaxRetries = 5)
 {
@@ -25,9 +30,7 @@ inline bool McpSafeLevelSave(ULevel* Level, const FString& FullPath, int32 MaxRe
         return false;
     }
 
-    if (FullPath.StartsWith(TEXT("/Temp/")) ||
-        FullPath.StartsWith(TEXT("/Engine/Transient")) ||
-        FullPath.Contains(TEXT("Untitled")))
+    if (McpIsUnsavedLevelPath(FullPath))
     {
         UE_LOG(LogMcpSafeOperations, Error,
             TEXT("McpSafeLevelSave: Cannot save transient level: %s. Use save_as with a valid path."),

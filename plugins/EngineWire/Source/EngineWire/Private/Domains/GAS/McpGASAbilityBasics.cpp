@@ -47,9 +47,8 @@ bool HandleGASAbilityBasics(const FGASRequestContext& Context, const FString& Su
         const TCHAR* PathKey = bCost ? TEXT("costEffectPath") : TEXT("cooldownEffectPath");
         const TCHAR* AssignedKey = bCost ? TEXT("costEffectAssigned") : TEXT("cooldownEffectAssigned");
         const TCHAR* Noun = bCost ? TEXT("Cost") : TEXT("Cooldown");
-        if (BlueprintPath.IsEmpty())
+        if (!RequireGASBlueprintPath(Context))
         {
-            Bridge->SendAutomationError(RequestingSocket, RequestId, TEXT("Missing blueprintPath."), TEXT("INVALID_ARGUMENT"));
             return true;
         }
         const FString EffectPath = GetJsonStringField(Payload, PathKey);

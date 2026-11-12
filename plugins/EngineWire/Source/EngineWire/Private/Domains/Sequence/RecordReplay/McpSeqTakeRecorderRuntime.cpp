@@ -108,8 +108,7 @@ bool ConfigurePanel(
         OutError = TEXT("Take Recorder panel is not open");
         return false;
     }
-    const bool bHasFrameRate =
-        Payload.IsValid() && Payload->HasField(TEXT("frameRate"));
+    const bool bHasFrameRate = Payload->HasField(TEXT("frameRate"));
     FFrameRate FrameRate;
     if (bHasFrameRate &&
         !McpSequenceFrameRate::TryParse(
@@ -119,7 +118,7 @@ bool ConfigurePanel(
         return false;
     }
     bool bRecordInto = false;
-    if (Payload.IsValid() && Payload->HasField(TEXT("recordInto")) &&
+    if (Payload->HasField(TEXT("recordInto")) &&
         !Payload->TryGetBoolField(TEXT("recordInto"), bRecordInto))
     {
         OutErrorCode = TEXT("INVALID_ARGUMENT");

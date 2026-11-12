@@ -1,7 +1,10 @@
 #include "Domains/Level/World/McpLevelWorldAccess.h"
 
+#include "Engine/Level.h"
 #include "Engine/LevelStreaming.h"
 #include "Engine/World.h"
+#include "Foundation/HandlerUtils/McpHandlerUtils.h"
+#include "UObject/Package.h"
 
 namespace McpLevelHandlers {
 TArray<ULevel*> GetAllLevelsFromWorld(UWorld* World) {
@@ -42,5 +45,24 @@ TArray<ULevelStreaming*> FindStreamingLevels(UWorld* World, const FString& Name)
 
 bool IsUserSublevel(const ULevelStreaming* Streaming) {
   return !Streaming->HasAnyFlags(RF_Transient) && !Streaming->GetClass()->HasAnyClassFlags(CLASS_Transient);
+}
+
+ULevelStreaming* FindOneStreamingLevel(UWorld* World, const FString& Wanted, const FString& OpenLevel,
+                                       TSharedPtr<FJsonObject>& OutLevels, FString& OutRefusal, const TCHAR*& OutCode) {
+  const TArray<ULevelStreaming*> Matches = FindStreamingLevels(World, Wanted);
+  TArray<FString> Loaded;
+  for (const ULevel* Level : GetAllLevelsFromWorld(World)) {
+    Loaded.Add(Level->GetOutermost()->GetName());
+  }
+  OutLevels = McpHandlerUtils::CreateResultObject();
+  OutLevels->SetArrayField(TEXT("levels"), McpHandlerUtils::ToJsonStringArray(Loaded));
+  if (Matches.Num() == 1) {
+    return Matches[0];
+  }
+  OutRefusal = FString::Printf(TEXT("%s is %s of the open level %s (its loaded levels: %s)."), *Wanted,
+                               Matches.Num() > 1 ? TEXT("more than one sublevel") : TEXT("not a sublevel"), *OpenLevel,
+                               *FString::Join(Loaded, TEXT(", ")));
+  OutCode = Matches.Num() > 1 ? TEXT("AMBIGUOUS_LEVEL") : TEXT("SUBLEVEL_NOT_FOUND");
+  return nullptr;
 }
 } // namespace McpLevelHandlers

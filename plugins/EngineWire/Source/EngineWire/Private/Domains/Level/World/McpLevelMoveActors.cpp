@@ -40,27 +40,21 @@ bool HandleMoveActorsToLevelAction(UEngineWireSubsystem& Subsystem, const FStrin
   }
   const FString Given = GetJsonStringField(Payload, TEXT("levelPath")).TrimStartAndEnd();
   const FString OpenLevel = LevelPackage(World->PersistentLevel);
-  const FString Wanted = NormalizeLevelPackagePath(Given);
+  const FString Wanted = FPackageName::ObjectPathToPackageName(Given);
   TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
   ULevel* Destination = nullptr;
   if (Wanted.Equals(OpenLevel, ESearchCase::IgnoreCase) || Given.Equals(TEXT("persistent"), ESearchCase::IgnoreCase)) {
     Destination = World->PersistentLevel;
   } else {
-    const TArray<ULevelStreaming*> Matches = FindStreamingLevels(World, Wanted);
-    TArray<FString> Loaded;
-    for (const ULevel* Level : GetAllLevelsFromWorld(World)) {
-      Loaded.Add(LevelPackage(Level));
-    }
     // The loaded levels go with a refusal only: they name what levelPath can be.
-    TSharedPtr<FJsonObject> Levels = McpHandlerUtils::CreateResultObject();
-    Levels->SetArrayField(TEXT("levels"), McpHandlerUtils::ToJsonStringArray(Loaded));
-    if (Matches.Num() != 1) {
-      return Refuse(FString::Printf(TEXT("%s is %s of the open level %s (its loaded levels: %s)."), *Wanted,
-                                    Matches.Num() > 1 ? TEXT("more than one sublevel") : TEXT("not a sublevel"), *OpenLevel,
-                                    *FString::Join(Loaded, TEXT(", "))),
-                    Levels, Matches.Num() > 1 ? TEXT("AMBIGUOUS_LEVEL") : TEXT("SUBLEVEL_NOT_FOUND"));
+    TSharedPtr<FJsonObject> Levels;
+    FString Refusal;
+    const TCHAR* Code = nullptr;
+    ULevelStreaming* Match = FindOneStreamingLevel(World, Wanted, OpenLevel, Levels, Refusal, Code);
+    if (!Match) {
+      return Refuse(Refusal, Levels, Code);
     }
-    Destination = Matches[0]->GetLoadedLevel();
+    Destination = Match->GetLoadedLevel();
     if (!Destination) {
       return Refuse(FString::Printf(TEXT("%s is not loaded; stream it in first (manage_level stream)."), *Wanted), Levels,
                     TEXT("LEVEL_NOT_LOADED"));

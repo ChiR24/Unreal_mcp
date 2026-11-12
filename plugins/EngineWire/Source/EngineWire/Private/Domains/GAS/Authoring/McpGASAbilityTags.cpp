@@ -24,9 +24,8 @@ bool HandleGASAbilityTags(const FGASRequestContext& Context, const FString& SubA
     const TSharedPtr<FJsonObject>& Payload = Context.Payload;
     const FString& BlueprintPath = Context.BlueprintPath;
 
-    if (BlueprintPath.IsEmpty())
+    if (!RequireGASBlueprintPath(Context))
     {
-        Bridge->SendAutomationError(RequestingSocket, RequestId, TEXT("Missing blueprintPath."), TEXT("INVALID_ARGUMENT"));
         return true;
     }
 

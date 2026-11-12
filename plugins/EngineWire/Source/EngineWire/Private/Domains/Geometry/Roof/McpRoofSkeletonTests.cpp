@@ -60,7 +60,7 @@ bool RoofCovers(const McpRoofSkeleton::FResult& Roof)
         double Sum = 0.0;
         for (int32 K = 0; K < Points.Num(); ++K)
         {
-            Sum += Points[K].X * Points[(K + 1) % Points.Num()].Y - Points[K].Y * Points[(K + 1) % Points.Num()].X;
+            Sum += FVector2D::CrossProduct(Points[K], Points[(K + 1) % Points.Num()]);
         }
         return Sum / 2.0;
     };

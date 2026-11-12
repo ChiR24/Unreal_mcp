@@ -12,7 +12,7 @@ bool ReadTakeRecorderStringArray(
     TArray<FString>& OutValues,
     FString& OutError)
 {
-    if (!Payload.IsValid() || !Payload->HasField(FieldName)) return true;
+    if (!Payload->HasField(FieldName)) return true;
     const TArray<TSharedPtr<FJsonValue>>* Values = nullptr;
     if (!Payload->TryGetArrayField(FieldName, Values) || !Values)
     {
@@ -51,7 +51,7 @@ bool ReadTakeRecorderName(
     TArray<FString>& OutValues,
     FString& OutError)
 {
-    if (!Payload.IsValid() || !Payload->HasField(FieldName)) return true;
+    if (!Payload->HasField(FieldName)) return true;
     FString Text;
     const int32 MaxStringLength = FMath::Max(1, GetDefault<UEngineWireSettings>()->MaxTakeRecorderStringLength);
     if (!Payload->TryGetStringField(FieldName, Text) || Text.TrimStartAndEnd().IsEmpty() ||

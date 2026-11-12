@@ -20,19 +20,7 @@ bool HandleAddTextureCoordinate(UEngineWireSubsystem* Bridge, const FString& Req
     TexCoord->CoordinateIndex = CoordIndex;
     TexCoord->UTiling = UTiling;
     TexCoord->VTiling = VTiling;
-    TexCoord->MaterialExpressionEditorX = (int32)X;
-    TexCoord->MaterialExpressionEditorY = (int32)Y;
-
-    AddExpressionToContainer(Material, Function, TexCoord);
-    FINALIZE_HOST();
-
-    TSharedPtr<FJsonObject> Result = McpMaterialHostResult(HostOuter);
-    Result->SetStringField(TEXT("nodeId"),
-                           MCP_NODE_ID(TexCoord));
-    // Placement telemetry used to come only from the parameter-adding variants,
-    // so the documented overlappingNodes / placementWarning detection could never
-    // fire for the node kinds a caller stacks in a loop.
-    AddMaterialNodePlacementFields(Result, Material, TexCoord);
+    TSharedPtr<FJsonObject> Result = PlaceMaterialExpression(RequestId, Material, Function, TexCoord, X, Y);
     Bridge->SendAutomationResponse(Socket, RequestId, true,
                            TEXT("Texture coordinate added."), Result);
     return true;

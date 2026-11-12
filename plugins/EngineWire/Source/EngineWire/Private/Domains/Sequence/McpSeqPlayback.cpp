@@ -16,8 +16,7 @@
 namespace {
 // The Sequencer editing SequenceAsset, when its asset editor is open.
 TSharedPtr<ISequencer> McpFindOpenSequencer(UObject *SequenceAsset) {
-  UAssetEditorSubsystem *AssetEditors =
-      GEditor ? GEditor->GetEditorSubsystem<UAssetEditorSubsystem>() : nullptr;
+  UAssetEditorSubsystem *AssetEditors = GEditor->GetEditorSubsystem<UAssetEditorSubsystem>();
   IAssetEditorInstance *Editor =
       AssetEditors && SequenceAsset
           ? AssetEditors->FindEditorForAsset(SequenceAsset, false)
@@ -79,7 +78,7 @@ FString McpCameraCutLabel(const TSharedPtr<ISequencer> &Sequencer, ULevelSequenc
       const UMovieSceneCameraCutSection *Cut = Cast<UMovieSceneCameraCutSection>(Section);
       TArray<UObject *, TInlineAllocator<1>> Bound;
       if (Cut && Cut->IsActive() && Cut->GetRange().Contains(At)) {
-        McpSequenceCinematics::LocateBindingObjects(Sequence, Cut->GetCameraBindingID().GetGuid(), GEditor->GetEditorWorldContext().World(), Bound);
+        McpSequenceCinematics::LocateBindingObjects(Sequence, Cut->GetCameraBindingID().GetGuid(), McpHandlerUtils::GetEditorWorld(), Bound);
       }
       for (const UObject *Object : Bound) {
         if (const AActor *Camera = Cast<AActor>(Object)) {
@@ -95,18 +94,16 @@ FString McpCameraCutLabel(const TSharedPtr<ISequencer> &Sequencer, ULevelSequenc
 bool UEngineWireSubsystem::HandleSequencePlay(
     const FString &RequestId, const TSharedPtr<FJsonObject> &Payload,
     TSharedPtr<FMcpBridgeWebSocket> Socket) {
-  TSharedPtr<FJsonObject> LocalPayload =
-      Payload.IsValid() ? Payload : McpHandlerUtils::CreateResultObject();
   UMovieScene *MovieScene = nullptr;
-  ULevelSequence *LevelSeq = McpSequence::LoadOrReply(this, RequestId, Socket, LocalPayload, TEXT("play"), MovieScene);
+  ULevelSequence *LevelSeq = McpSequence::LoadOrReply(this, RequestId, Socket, Payload, TEXT("play"), MovieScene);
   if (!LevelSeq) {
     return true;
   }
   FString LoopMode;
-  LocalPayload->TryGetStringField(TEXT("loopMode"), LoopMode);
+  Payload->TryGetStringField(TEXT("loopMode"), LoopMode);
   LoopMode = LoopMode.ToLower();
   double StartTime = 0.0;
-  const bool bHasStartTime = LocalPayload->TryGetNumberField(TEXT("startTime"), StartTime);
+  const bool bHasStartTime = Payload->TryGetNumberField(TEXT("startTime"), StartTime);
   FString TimeError;
   if (!LoopMode.IsEmpty() && LoopMode != TEXT("once") && LoopMode != TEXT("loop")) {
     TimeError = TEXT("loopMode must be once or loop (Sequencer has no ping-pong playback)");
@@ -165,10 +162,8 @@ bool UEngineWireSubsystem::HandleSequencePlay(
 bool UEngineWireSubsystem::HandleSequenceSetPlaybackSpeed(
     const FString &RequestId, const TSharedPtr<FJsonObject> &Payload,
     TSharedPtr<FMcpBridgeWebSocket> Socket) {
-  TSharedPtr<FJsonObject> LocalPayload =
-      Payload.IsValid() ? Payload : McpHandlerUtils::CreateResultObject();
   double Speed = 1.0;
-  LocalPayload->TryGetNumberField(TEXT("speed"), Speed);
+  Payload->TryGetNumberField(TEXT("speed"), Speed);
   if (!FMath::IsFinite(Speed) || Speed <= 0.0) {
     SendAutomationResponse(Socket, RequestId, false,
                            TEXT("Invalid speed (must be > 0)"), nullptr,
@@ -176,7 +171,7 @@ bool UEngineWireSubsystem::HandleSequenceSetPlaybackSpeed(
     return true;
   }
   UMovieScene *MovieScene = nullptr;
-  ULevelSequence *SeqObj = McpSequence::LoadOrReply(this, RequestId, Socket, LocalPayload, TEXT("set_playback_speed"), MovieScene);
+  ULevelSequence *SeqObj = McpSequence::LoadOrReply(this, RequestId, Socket, Payload, TEXT("set_playback_speed"), MovieScene);
   if (!SeqObj) {
     return true;
   }
@@ -234,15 +229,13 @@ bool UEngineWireSubsystem::HandleSequenceSetPlaybackSpeed(
 bool UEngineWireSubsystem::HandleSequencePause(
     const FString &RequestId, const TSharedPtr<FJsonObject> &Payload,
     TSharedPtr<FMcpBridgeWebSocket> Socket) {
-  TSharedPtr<FJsonObject> LocalPayload =
-      Payload.IsValid() ? Payload : McpHandlerUtils::CreateResultObject();
   UMovieScene *MovieScene = nullptr;
-  ULevelSequence *LevelSeq = McpSequence::LoadOrReply(this, RequestId, Socket, LocalPayload, TEXT("pause"), MovieScene);
+  ULevelSequence *LevelSeq = McpSequence::LoadOrReply(this, RequestId, Socket, Payload, TEXT("pause"), MovieScene);
   if (!LevelSeq) {
     return true;
   }
   double HoldAt = 0.0;
-  const bool bHold = LocalPayload->TryGetNumberField(TEXT("startTime"), HoldAt);
+  const bool bHold = Payload->TryGetNumberField(TEXT("startTime"), HoldAt);
   FString TimeError;
   if (bHold && !McpSequenceFrameMath::CheckPlaybackTime(MovieScene, HoldAt, TimeError)) {
     SendAutomationResponse(Socket, RequestId, false, TimeError, nullptr, TEXT("INVALID_ARGUMENT"));
@@ -276,10 +269,8 @@ bool UEngineWireSubsystem::HandleSequencePause(
 bool UEngineWireSubsystem::HandleSequenceStop(
     const FString &RequestId, const TSharedPtr<FJsonObject> &Payload,
     TSharedPtr<FMcpBridgeWebSocket> Socket) {
-  TSharedPtr<FJsonObject> LocalPayload =
-      Payload.IsValid() ? Payload : McpHandlerUtils::CreateResultObject();
   UMovieScene *MovieScene = nullptr;
-  ULevelSequence *LevelSeq = McpSequence::LoadOrReply(this, RequestId, Socket, LocalPayload, TEXT("stop"), MovieScene);
+  ULevelSequence *LevelSeq = McpSequence::LoadOrReply(this, RequestId, Socket, Payload, TEXT("stop"), MovieScene);
   if (!LevelSeq) {
     return true;
   }

@@ -65,15 +65,6 @@ bool InitializeLevelCopyContext(const FString& SourcePackagePath,
     FPaths::NormalizeFilename(Context.DestinationBuiltDataFilename);
     Context.bSourceBuiltDataExists = FileManager.FileExists(*Context.SourceBuiltDataFilename);
     Context.bDestinationBuiltDataExists = FileManager.FileExists(*Context.DestinationBuiltDataFilename);
-    if (Context.bSourceBuiltDataExists &&
-        Context.SourceBuiltDataFilename.Equals(Context.DestinationBuiltDataFilename,
-                                               ESearchCase::IgnoreCase)) {
-      ErrorMessage = FString::Printf(
-          TEXT("Source and destination built data are identical: %s"),
-          *Context.SourceBuiltDataPackagePath);
-      ErrorCode = TEXT("SAME_PATH");
-      return false;
-    }
     if (Context.bDestinationBuiltDataExists && !bOverwrite) {
       ErrorMessage = FString::Printf(
           TEXT("Destination built data already exists: %s"),

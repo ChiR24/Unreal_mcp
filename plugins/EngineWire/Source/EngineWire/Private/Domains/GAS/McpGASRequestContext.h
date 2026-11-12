@@ -28,6 +28,17 @@ struct FGASRequestContext
     FString AssetPath;
 };
 
+// False after replying INVALID_ARGUMENT "Missing blueprintPath." when the request named no Blueprint.
+inline bool RequireGASBlueprintPath(const FGASRequestContext& Context)
+{
+    if (!Context.BlueprintPath.IsEmpty())
+    {
+        return true;
+    }
+    Context.Subsystem->SendAutomationError(Context.RequestingSocket, Context.RequestId, TEXT("Missing blueprintPath."), TEXT("INVALID_ARGUMENT"));
+    return false;
+}
+
 // blueprintPath's Blueprint and its CDO as T; replies NOT_FOUND or INVALID_TYPE ("Not a <TypeLabel>
 // blueprint") itself and returns null on either.
 template <typename T>

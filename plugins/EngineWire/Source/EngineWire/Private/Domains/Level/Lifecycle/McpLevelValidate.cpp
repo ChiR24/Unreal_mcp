@@ -15,7 +15,7 @@ bool HandleValidateLevelAction(UEngineWireSubsystem& Subsystem, const FString& R
                              TEXT("INVALID_ARGUMENT"));
       return true;
     }
-    LevelPath = NormalizeLevelPackagePath(LevelPath);
+    LevelPath = FPackageName::ObjectPathToPackageName(LevelPath);
     const FString LevelPathAsGiven = LevelPath;
     LevelPath = SanitizeProjectRelativePath(LevelPath);
     if (LevelPath.IsEmpty()) {

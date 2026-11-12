@@ -1,6 +1,7 @@
 #include "Domains/Level/Lifecycle/McpLevelDeletion.h"
 #include "Domains/Level/Copy/McpLevelCopyOperations.h"
 #include "Domains/Level/Lifecycle/McpLevelPathSafety.h"
+#include "Foundation/HandlerUtils/McpHandlerUtilsActionsPaths.h"
 #include "PackageTools.h"
 
 #include "AssetRegistry/AssetRegistryModule.h"
@@ -18,9 +19,7 @@ namespace McpLevelHandlers {
 namespace {
 void FlushDeleteGarbage() {
   FlushRenderingCommands();
-  if (GEditor) {
-    GEditor->ForceGarbageCollection(true);
-  }
+  GEditor->ForceGarbageCollection(true);
   CollectGarbage(GARBAGE_COLLECTION_KEEPFLAGS);
   FlushRenderingCommands();
 }
@@ -31,17 +30,12 @@ int32 RemoveStreamingReferencesForLevelDelete(const FString& LongPackageName,
                                               bool& bCurrentWorldMatchesTarget) {
   int32 RemovedStreamingRefs = 0;
   bCurrentWorldMatchesTarget = false;
-  if (!GEditor) {
-    return RemovedStreamingRefs;
-  }
-
-  UWorld* EditorWorld = GEditor->GetEditorWorldContext().World();
+  UWorld* EditorWorld = McpHandlerUtils::GetEditorWorld();
   if (!EditorWorld) {
     return RemovedStreamingRefs;
   }
 
-  bCurrentWorldMatchesTarget = EditorWorld->GetOutermost() &&
-                               EditorWorld->GetOutermost()->GetName() == LongPackageName;
+  bCurrentWorldMatchesTarget = IsCurrentEditorWorldPackage(LongPackageName);
   if (bCurrentWorldMatchesTarget) {
     return RemovedStreamingRefs;
   }

@@ -7,17 +7,18 @@
 namespace McpGeometryHandlers
 {
 AActor* SpawnPrimitiveOrReply(UEngineWireSubsystem* Self, const FString& RequestId, TSharedPtr<FMcpBridgeWebSocket> Socket,
-                              const FTransform& Transform, const FString& Name, UDynamicMesh* DynMesh, TSharedPtr<FJsonObject>& OutResult)
+                              const FTransform& Transform, const FString& GivenName, const TCHAR* DefaultName, UDynamicMesh* DynMesh,
+                              TSharedPtr<FJsonObject>& OutResult)
 {
+    const FString Name = GivenName.IsEmpty() ? FString(DefaultName) : GivenName;
     // One undo step: control_editor undo takes the new actor back out of the level.
     const FMcpScopedEditorTransaction Transaction(FText::Format(NSLOCTEXT("McpGeometry", "CreatePrimitive", "Create {0}"), FText::FromString(Name)),
                                                   EMcpMutationDurability::EditorStateOnly, TArray<UObject*>());
-    FString SpawnError;
-    AActor* NewActor = SpawnDynamicMeshActorWithMesh(Transform, Name, DynMesh, SpawnError);
+    AActor* NewActor = SpawnDynamicMeshActorWithMesh(Transform, Name, DynMesh);
     if (!NewActor)
     {
         DynMesh->MarkAsGarbage();
-        Self->SendAutomationError(Socket, RequestId, SpawnError.IsEmpty() ? TEXT("Failed to spawn DynamicMeshActor") : SpawnError, TEXT("SPAWN_FAILED"));
+        Self->SendAutomationError(Socket, RequestId, TEXT("Failed to spawn DynamicMeshActor"), TEXT("SPAWN_FAILED"));
         return nullptr;
     }
     OutResult = McpHandlerUtils::CreateResultObject();
@@ -38,75 +39,40 @@ AActor* SpawnPrimitiveOrReply(UEngineWireSubsystem* Self, const FString& Request
 AActor* SpawnDynamicMeshActorWithMesh(
     const FTransform& Transform,
     const FString& Name,
-    UDynamicMesh* DynMesh,
-    FString& OutError)
+    UDynamicMesh* DynMesh)
 {
-    UWorld* World = McpHandlerUtils::GetPlayOrEditorWorld();
-
-    if (!World)
-    {
-        OutError = TEXT("Editor world unavailable");
-        return nullptr;
-    }
-
-    FActorSpawnParameters SpawnParams;
-    SpawnParams.SpawnCollisionHandlingOverride =
-        ESpawnActorCollisionHandlingMethod::AdjustIfPossibleButAlwaysSpawn;
-    SpawnParams.ObjectFlags |= RF_Transactional;
-    if (!GEditor->PlayWorld)
-    {
-        SpawnParams.OverrideLevel = World->GetCurrentLevel();
-        World->Modify();
-    }
-
-    const FVector SpawnLocation = Transform.GetLocation();
-    const FRotator SpawnRotation = Transform.Rotator();
-    AActor* NewActor = World->SpawnActor(
-        ADynamicMeshActor::StaticClass(),
-        &SpawnLocation,
-        &SpawnRotation,
-        SpawnParams);
-
+    ADynamicMeshActor* NewActor = SpawnActorInActiveWorld<ADynamicMeshActor>(
+        ADynamicMeshActor::StaticClass(), Transform.GetLocation(), Transform.Rotator(), Name);
     if (!NewActor)
     {
-        OutError = TEXT("Failed to spawn DynamicMeshActor");
         return nullptr;
     }
-
-    NewActor->Modify();
-    NewActor->SetActorLocationAndRotation(SpawnLocation,
-                                          SpawnRotation, false, nullptr,
-                                          ETeleportType::TeleportPhysics);
     // Apply the FULL requested transform. Location+rotation were set above but
     // scale was silently dropped, so a scaled primitive request produced a
     // unit-scale actor with no warning. With meshes now built in local space
     // (see the primitive handlers), the actor transform is the single source
     // of placement, rotation AND scale.
     NewActor->SetActorScale3D(Transform.GetScale3D());
-    NewActor->SetActorLabel(Name);
 
-    if (ADynamicMeshActor* DMActor = Cast<ADynamicMeshActor>(NewActor))
+    if (UDynamicMeshComponent* DMComp = NewActor->GetDynamicMeshComponent())
     {
-        if (UDynamicMeshComponent* DMComp = DMActor->GetDynamicMeshComponent())
+        DMComp->SetDynamicMesh(DynMesh);
+        // ADynamicMeshActor's template component is created inactive, so a
+        // freshly spawned primitive rendered nothing and carried no physics
+        // body until the caller manually activated it (pawns fell straight
+        // through generated geometry in PIE). Activate + register so the
+        // mesh renders and collides immediately, matching a mesh the editor
+        // user would see after the ToolIsActive workflow.
+        if (!DMComp->IsRegistered())
         {
-            DMComp->SetDynamicMesh(DynMesh);
-            // ADynamicMeshActor's template component is created inactive, so a
-            // freshly spawned primitive rendered nothing and carried no physics
-            // body until the caller manually activated it (pawns fell straight
-            // through generated geometry in PIE). Activate + register so the
-            // mesh renders and collides immediately, matching a mesh the editor
-            // user would see after the ToolIsActive workflow.
-            if (!DMComp->IsRegistered())
-            {
-                DMComp->RegisterComponent();
-            }
-            if (!DMComp->IsActive())
-            {
-                DMComp->SetActive(true);
-            }
-            DMComp->SetMobility(EComponentMobility::Movable);
-            DMComp->MarkRenderStateDirty();
+            DMComp->RegisterComponent();
         }
+        if (!DMComp->IsActive())
+        {
+            DMComp->SetActive(true);
+        }
+        DMComp->SetMobility(EComponentMobility::Movable);
+        DMComp->MarkRenderStateDirty();
     }
 
     return NewActor;

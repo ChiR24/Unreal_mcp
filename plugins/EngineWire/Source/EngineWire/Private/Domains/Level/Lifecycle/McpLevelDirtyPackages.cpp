@@ -14,17 +14,6 @@ using McpSafeOperations::McpSafeAssetSave;
 using McpSafeOperations::McpSafeLevelSave;
 
 namespace McpLevelHandlers {
-bool IsBlockingDirtyPackageForLevelLoad(UPackage* Package) {
-  if (!Package || Package->HasAnyFlags(RF_Transient)) {
-    return false;
-  }
-
-  const FString PackagePath = Package->GetPathName();
-  return !PackagePath.StartsWith(TEXT("/Temp/")) &&
-         !PackagePath.StartsWith(TEXT("/Transient/")) &&
-         !PackagePath.StartsWith(TEXT("/Engine/Transient"));
-}
-
 namespace {
 // The dirty packages that block a level load, each once: world packages first, OutWorldCount of them.
 TArray<UPackage*> CollectBlockingDirtyPackages(int32& OutWorldCount) {
@@ -34,13 +23,13 @@ TArray<UPackage*> CollectBlockingDirtyPackages(int32& OutWorldCount) {
   FEditorFileUtils::GetDirtyContentPackages(ContentPackages);
   TArray<UPackage*> Blocking;
   for (UPackage* Package : WorldPackages) {
-    if (IsBlockingDirtyPackageForLevelLoad(Package)) {
+    if (!McpSafeOperations::McpIsScratchPackage(Package)) {
       Blocking.AddUnique(Package);
     }
   }
   OutWorldCount = Blocking.Num();
   for (UPackage* Package : ContentPackages) {
-    if (IsBlockingDirtyPackageForLevelLoad(Package)) {
+    if (!McpSafeOperations::McpIsScratchPackage(Package)) {
       Blocking.AddUnique(Package);
     }
   }

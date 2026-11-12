@@ -5,7 +5,6 @@
 class FJsonObject;
 
 namespace McpLevelHandlers {
-FString NormalizeLevelPackagePath(const FString& InPath);
 bool TryGetAbsoluteMapFilename(const FString& PackagePath, FString& OutFilename);
 bool IsGameLevelPackagePath(const FString& PackagePath);
 bool IsUnderProjectContentDir(const FString& AbsolutePath);

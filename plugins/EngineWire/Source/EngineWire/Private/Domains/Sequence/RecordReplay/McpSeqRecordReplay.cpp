@@ -9,12 +9,8 @@ bool TryHandle(
     const TSharedPtr<FJsonObject>& Payload,
     TSharedPtr<FMcpBridgeWebSocket> RequestingSocket)
 {
-    if (!Subsystem)
-    {
-        return false;
-    }
-
-    FString NormalizedAction = Action.ToLower();
+    // The sequence dispatcher passes a lower-case action.
+    FString NormalizedAction = Action;
     NormalizedAction.RemoveFromStart(TEXT("sequence_"));
 
     if (HandleTakeRecorderAction(

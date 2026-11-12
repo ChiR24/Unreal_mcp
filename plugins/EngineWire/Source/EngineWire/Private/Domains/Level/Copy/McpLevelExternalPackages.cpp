@@ -40,14 +40,6 @@ bool BuildExternalPackageDirectoryCopyPlan(
   IFileManager& FileManager = IFileManager::Get();
   Plan.bSourceExists = FileManager.DirectoryExists(*Plan.SourceDirectory);
   Plan.bDestinationExists = FileManager.DirectoryExists(*Plan.DestinationDirectory);
-  if (Plan.SourceDirectory.Equals(Plan.DestinationDirectory,
-                                  ESearchCase::IgnoreCase)) {
-    ErrorMessage = FString::Printf(
-        TEXT("Source and destination external package directories are identical: %s"),
-        *Plan.SourceDirectory);
-    ErrorCode = TEXT("SAME_PATH");
-    return false;
-  }
 
   if (Plan.bDestinationExists && !bOverwrite) {
     ErrorMessage = FString::Printf(

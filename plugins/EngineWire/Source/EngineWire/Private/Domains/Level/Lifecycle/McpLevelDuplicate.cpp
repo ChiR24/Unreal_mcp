@@ -5,11 +5,7 @@
 
 namespace McpLevelHandlers {
 bool HandleDuplicateLevelAction(UEngineWireSubsystem& Subsystem, const FString& RequestId, const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> RequestingSocket) {
-    FString SourcePath;
-    if (Payload.IsValid())
-      Payload->TryGetStringField(TEXT("sourcePath"), SourcePath);
-    if (SourcePath.IsEmpty() && Payload.IsValid())
-      Payload->TryGetStringField(TEXT("levelPath"), SourcePath);
+    FString SourcePath = McpGetFirstStringField(Payload, {TEXT("sourcePath"), TEXT("levelPath")});
 
     FString DestinationPath = McpGetFirstStringField(Payload, {TEXT("destinationPath")});
 
@@ -26,28 +22,12 @@ bool HandleDuplicateLevelAction(UEngineWireSubsystem& Subsystem, const FString& 
       return true;
     }
 
-    // Issue #8: Sanitize paths to prevent traversal attacks
-    FString SanitizedSource = SanitizeProjectRelativePath(SourcePath);
-    if (SanitizedSource.IsEmpty()) {
-      Subsystem.SendAutomationResponse(RequestingSocket, RequestId, false,
-                             McpPathRefusalMessage(TEXT("source path"), SourcePath),
-                             nullptr, TEXT("SECURITY_VIOLATION"));
+    if (!SanitizeLevelPathPairOrReply(Subsystem, RequestingSocket, RequestId, SourcePath, DestinationPath,
+                                      TEXT("source path"), TEXT("destination path"))) {
       return true;
     }
-    FString SanitizedDest = SanitizeProjectRelativePath(DestinationPath);
-    if (SanitizedDest.IsEmpty()) {
-      Subsystem.SendAutomationResponse(RequestingSocket, RequestId, false,
-                             McpPathRefusalMessage(TEXT("destination path"), DestinationPath),
-                             nullptr, TEXT("SECURITY_VIOLATION"));
-      return true;
-    }
-    SourcePath = NormalizeLevelPackagePath(SanitizedSource);
-    DestinationPath = NormalizeLevelPackagePath(SanitizedDest);
 
-    bool bOverwrite = false;
-    if (Payload.IsValid()) {
-      Payload->TryGetBoolField(TEXT("overwrite"), bOverwrite);
-    }
+    const bool bOverwrite = GetJsonBoolField(Payload, TEXT("overwrite"), false);
 
     TSharedPtr<FJsonObject> Result;
     FString ErrorMessage;

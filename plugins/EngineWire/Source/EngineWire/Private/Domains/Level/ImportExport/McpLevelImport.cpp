@@ -9,12 +9,7 @@
 namespace McpLevelHandlers {
 bool HandleImportLevelAction(UEngineWireSubsystem& Subsystem, const FString& RequestId, const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> RequestingSocket) {
     FString DestinationPath = McpGetFirstStringField(Payload, {TEXT("destinationPath"), TEXT("targetPath")});
-    FString SourcePath;
-    if (Payload.IsValid())
-      Payload->TryGetStringField(TEXT("sourcePath"), SourcePath);
-    if (SourcePath.IsEmpty())
-      if (Payload.IsValid())
-        Payload->TryGetStringField(TEXT("packagePath"), SourcePath); // Mapping
+    FString SourcePath = McpGetFirstStringField(Payload, {TEXT("sourcePath"), TEXT("packagePath")});
 
     if (SourcePath.IsEmpty()) {
       Subsystem.SendAutomationResponse(RequestingSocket, RequestId, false,
@@ -32,22 +27,11 @@ bool HandleImportLevelAction(UEngineWireSubsystem& Subsystem, const FString& Req
         return true;
       }
 
-      const FString SourcePathAsGiven = SourcePath;
-      const FString DestinationPathAsGiven = DestinationPath;
-      SourcePath = NormalizeLevelPackagePath(SanitizeProjectRelativePath(SourcePath));
-      DestinationPath = NormalizeLevelPackagePath(SanitizeProjectRelativePath(DestinationPath));
-      if (SourcePath.IsEmpty() || DestinationPath.IsEmpty()) {
-        Subsystem.SendAutomationResponse(RequestingSocket, RequestId, false,
-                               SourcePath.IsEmpty() ? McpPathRefusalMessage(TEXT("sourcePath"), SourcePathAsGiven)
-                                                    : McpPathRefusalMessage(TEXT("destinationPath"), DestinationPathAsGiven),
-                               nullptr, TEXT("SECURITY_VIOLATION"));
+      if (!SanitizeLevelPathPairOrReply(Subsystem, RequestingSocket, RequestId, SourcePath, DestinationPath,
+                                        TEXT("sourcePath"), TEXT("destinationPath"))) {
         return true;
       }
-
-      bool bOverwrite = false;
-      if (Payload.IsValid()) {
-        Payload->TryGetBoolField(TEXT("overwrite"), bOverwrite);
-      }
+      const bool bOverwrite = GetJsonBoolField(Payload, TEXT("overwrite"), false);
 
       FString DestinationFilename;
       const bool bDestinationFileExists =

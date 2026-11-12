@@ -54,15 +54,11 @@
 #include "GeometryScript/MeshNormalsFunctions.h"
 #include "GeometryScript/MeshPrimitiveFunctions.h"
 #include "GeometryScript/MeshQueryFunctions.h"
-#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 1
 #include "GeometryScript/MeshRemeshFunctions.h"
-#endif
 #include "GeometryScript/MeshRepairFunctions.h"
 #include "GeometryScript/MeshSimplifyFunctions.h"
 #include "GeometryScript/MeshSubdivideFunctions.h"
-#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 1
 #include "GeometryScript/MeshTransformFunctions.h"
-#endif
 #include "GeometryScript/MeshUVFunctions.h"
 
 // The asset functions' Outcome out-parameter is a TEnumAsByte in UE 5.1 and the plain enum from 5.2.
@@ -91,11 +87,13 @@ inline constexpr int32 MAX_MATERIAL_ID = 255;
 inline constexpr float MEMORY_PRESSURE_CRITICAL = 0.90f;
 
 FTransform ReadTransformFromPayload(const TSharedPtr<FJsonObject>& Payload);
-AActor* SpawnDynamicMeshActorWithMesh(const FTransform& Transform, const FString& Name, UDynamicMesh* DynMesh, FString& OutError);
-// Spawn DynMesh as a DynamicMeshActor; on failure frees DynMesh, sends SPAWN_FAILED
-// and returns nullptr. On success OutResult carries {name, class}.
+// A DynamicMeshActor holding DynMesh, placed, scaled and labelled, its component active; null when the spawn fails.
+AActor* SpawnDynamicMeshActorWithMesh(const FTransform& Transform, const FString& Name, UDynamicMesh* DynMesh);
+// Spawn DynMesh as a DynamicMeshActor named Name (DefaultName when Name is empty); on failure frees DynMesh, sends
+// SPAWN_FAILED and returns nullptr. On success OutResult carries {name, class}.
 AActor* SpawnPrimitiveOrReply(UEngineWireSubsystem* Self, const FString& RequestId, TSharedPtr<FMcpBridgeWebSocket> Socket,
-                              const FTransform& Transform, const FString& Name, UDynamicMesh* DynMesh, TSharedPtr<FJsonObject>& OutResult);
+                              const FTransform& Transform, const FString& Name, const TCHAR* DefaultName, UDynamicMesh* DynMesh,
+                              TSharedPtr<FJsonObject>& OutResult);
 // Replies with the error and returns false when memory is short or the op would exceed the triangle cap.
 bool GuardMeshBudget(UEngineWireSubsystem* Self, const FString& RequestId, TSharedPtr<FMcpBridgeWebSocket> Socket, int64 EstimatedTriangles, const TCHAR* OpName);
 // The mesh's UV overlay for Channel, with attributes enabled and layers added up to it. A channel outside 0 to 7 is

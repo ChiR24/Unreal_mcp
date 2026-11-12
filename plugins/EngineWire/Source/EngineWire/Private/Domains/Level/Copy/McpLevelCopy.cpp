@@ -1,5 +1,6 @@
 #include "Domains/Level/Copy/McpLevelCopyOperations.h"
 #include "Domains/Level/Lifecycle/McpLevelPathSafety.h"
+#include "Domains/Level/McpLevelActions.h"
 
 #include "HAL/FileManager.h"
 #include "Misc/PackageName.h"
@@ -7,7 +8,9 @@
 #include "Foundation/HandlerUtils/McpHandlerUtils.h"
 
 namespace McpLevelHandlers {
-void PopulateLevelCopyResult(FLevelCopyContext& Context,
+namespace {
+// The copy's reply fields; true when the destination file exists.
+bool PopulateLevelCopyResult(FLevelCopyContext& Context,
                              TSharedPtr<FJsonObject>& Result) {
   Result = McpHandlerUtils::CreateResultObject();
   ScanLevelPackagePath(Context.DestinationPackagePath, Context.DestinationFilename);
@@ -36,6 +39,24 @@ void PopulateLevelCopyResult(FLevelCopyContext& Context,
   Result->SetBoolField(TEXT("copiedExternalObjects"), Context.ExternalObjectsPlan.bCopied);
   Result->SetBoolField(TEXT("destinationFileExists"), bDestinationFileExists);
   Result->SetBoolField(TEXT("destinationPackageExists"), bDestinationPackageExists);
+  return bDestinationFileExists;
+}
+} // namespace
+
+bool SanitizeLevelPathPairOrReply(UEngineWireSubsystem& Subsystem, TSharedPtr<FMcpBridgeWebSocket> Socket, const FString& RequestId,
+                                  FString& Source, FString& Destination, const TCHAR* SourceField, const TCHAR* DestinationField) {
+  const FString SanitizedSource = SanitizeProjectRelativePath(Source);
+  const FString SanitizedDestination = SanitizedSource.IsEmpty() ? FString() : SanitizeProjectRelativePath(Destination);
+  if (SanitizedDestination.IsEmpty()) {
+    Subsystem.SendAutomationResponse(Socket, RequestId, false,
+                                     SanitizedSource.IsEmpty() ? McpPathRefusalMessage(SourceField, Source)
+                                                               : McpPathRefusalMessage(DestinationField, Destination),
+                                     nullptr, TEXT("SECURITY_VIOLATION"));
+    return false;
+  }
+  Source = FPackageName::ObjectPathToPackageName(SanitizedSource);
+  Destination = FPackageName::ObjectPathToPackageName(SanitizedDestination);
+  return true;
 }
 
 bool CopyLevelMapPackageFile(const FString& SourcePackagePath,
@@ -52,9 +73,7 @@ bool CopyLevelMapPackageFile(const FString& SourcePackagePath,
     return false;
   }
 
-  PopulateLevelCopyResult(Context, Result);
-  const bool bDestinationFileExists =
-      Result->GetBoolField(TEXT("destinationFileExists"));
+  const bool bDestinationFileExists = PopulateLevelCopyResult(Context, Result);
   if (!Context.bCopiedMap || !bDestinationFileExists) {
     ErrorMessage = FString::Printf(TEXT("Failed to copy level file from %s to %s"),
                                    *SourcePackagePath, *DestinationPackagePath);

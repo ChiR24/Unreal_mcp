@@ -20,9 +20,8 @@ bool HandleGASAbilityPolicies(const FGASRequestContext& Context, const FString& 
 
     if (SubAction == TEXT("set_activation_policy"))
     {
-        if (BlueprintPath.IsEmpty())
+        if (!RequireGASBlueprintPath(Context))
         {
-            Bridge->SendAutomationError(RequestingSocket, RequestId, TEXT("Missing blueprintPath."), TEXT("INVALID_ARGUMENT"));
             return true;
         }
 
@@ -74,9 +73,8 @@ bool HandleGASAbilityPolicies(const FGASRequestContext& Context, const FString& 
 
     if (SubAction == TEXT("set_instancing_policy"))
     {
-        if (BlueprintPath.IsEmpty())
+        if (!RequireGASBlueprintPath(Context))
         {
-            Bridge->SendAutomationError(RequestingSocket, RequestId, TEXT("Missing blueprintPath."), TEXT("INVALID_ARGUMENT"));
             return true;
         }
 

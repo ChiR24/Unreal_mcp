@@ -15,15 +15,11 @@ namespace McpLevelHandlers {
 bool HandleSaveLevelAsAction(UEngineWireSubsystem& Subsystem, const FString& RequestId, const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> RequestingSocket) {
     // Force cleanup to prevent potential deadlocks with HLODs/WorldPartition
     // during save
-    if (GEditor) {
-      FlushRenderingCommands();
-      GEditor->ForceGarbageCollection(true);
-      FlushRenderingCommands();
-    }
+    FlushRenderingCommands();
+    GEditor->ForceGarbageCollection(true);
+    FlushRenderingCommands();
 
-    FString SavePath;
-    if (Payload.IsValid())
-      Payload->TryGetStringField(TEXT("savePath"), SavePath);
+    FString SavePath = GetJsonStringField(Payload, TEXT("savePath"));
     if (SavePath.IsEmpty()) {
       Subsystem.SendAutomationResponse(RequestingSocket, RequestId, false,
                              TEXT("savePath required for save_level_as"),
@@ -48,16 +44,14 @@ bool HandleSaveLevelAsAction(UEngineWireSubsystem& Subsystem, const FString& Req
     // McpSafeLevelSave never overwrites another package, but its refusal reached only the log and the reply
     // said "check Output Log for details". Name it here.
     const FString SavePackage = FPackageName::ObjectPathToPackageName(SavePath);
-    const UWorld *OpenWorld = McpHandlerUtils::GetEditorWorld();
-    if (FPackageName::DoesPackageExist(SavePackage) &&
-        !(OpenWorld && OpenWorld->GetOutermost()->GetName().Equals(SavePackage, ESearchCase::IgnoreCase))) {
+    if (FPackageName::DoesPackageExist(SavePackage) && !IsCurrentEditorWorldPackage(SavePackage)) {
       Subsystem.SendAutomationResponse(RequestingSocket, RequestId, false,
           FString::Printf(TEXT("Something already exists at %s, and save_as never overwrites it: pick another savePath."), *SavePackage),
           nullptr, TEXT("ASSET_ALREADY_EXISTS"));
       return true;
     }
 
-    // CRITICAL: Validate path length BEFORE attempting save to prevent silent hangs
+    // Validate path length BEFORE attempting save to prevent silent hangs
     // McpSafeLevelSave validates internally but may not send error response in all code paths
     {
       FString AbsoluteFilePath;
@@ -82,14 +76,8 @@ bool HandleSaveLevelAsAction(UEngineWireSubsystem& Subsystem, const FString& Req
       }
     }
 
-    if (!GEditor) {
-      Subsystem.SendAutomationResponse(RequestingSocket, RequestId, false,
-                             TEXT("Editor not available"), nullptr,
-                             TEXT("EDITOR_NOT_AVAILABLE"));
-      return true;
-    }
     bool bSaved = false;
-    if (UWorld *World = GEditor->GetEditorWorldContext().World()) {
+    if (UWorld *World = McpHandlerUtils::GetEditorWorld()) {
       if (World->GetWorldPartition() && World->GetOutermost()->GetName().StartsWith(TEXT("/Temp/"))) {
         // Saving the unsaved Open World template as a new package fails on its
         // private template references and then asserts in the world partition
@@ -122,7 +110,7 @@ bool HandleSaveLevelAsAction(UEngineWireSubsystem& Subsystem, const FString& Req
           FString::Printf(TEXT("Level saved as %s"), *SavePath), Resp,
           FString());
     } else {
-      // CRITICAL FIX: Send error response when save fails (was missing before, causing silent hangs)
+      // A failed save is answered (it used to send nothing, so the caller hung)
       TSharedPtr<FJsonObject> ErrorDetail = McpHandlerUtils::CreateResultObject();
       ErrorDetail->SetStringField(TEXT("attemptedPath"), SavePath);
       ErrorDetail->SetStringField(TEXT("reason"), TEXT("Save operation failed - check Output Log for details"));

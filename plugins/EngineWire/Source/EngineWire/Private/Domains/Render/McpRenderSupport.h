@@ -134,30 +134,20 @@ inline bool ApplyDeclaredExposureFields(FPostProcessSettings& Target, const TSha
         ApplyPostProcessSettings(Target, Fields, Applied, Unsupported, Error);
 }
 
+// The volume actorName names, else the level's one unbound volume, else a new unbound one under the asked name (a
+// level without one gets one); null after replying with the resolver's refusal, which always names its reason.
 inline APostProcessVolume* RequirePostProcessVolume(
     UEngineWireSubsystem* Subsystem,
     const FString& RequestId,
     const TSharedPtr<FJsonObject>& Payload,
     TSharedPtr<FMcpBridgeWebSocket> Socket)
 {
-    FString Reference;
-    ReadActorReference(Payload, Reference);
-    APostProcessVolume* Volume = Cast<APostProcessVolume>(FindRenderActor(Reference));
+    FString ResolveError;
+    FString ResolveErrorCode;
+    APostProcessVolume* Volume = McpResolvePostProcessVolume(GetRenderWorld(), Payload, true, ResolveError, ResolveErrorCode);
     if (!Volume)
     {
-        // No volume by that name, or no name: the same deterministic resolver as the lens/exposure
-        // handlers (the level's one unbound volume, else a new one under the asked name). A name that
-        // matched nothing used to fail, so a level without a volume could never get one by name.
-        FString ResolveError;
-        FString ResolveErrorCode;
-        Volume = McpResolvePostProcessVolume(GetRenderWorld(), Payload, true, ResolveError, ResolveErrorCode);
-        if (!Volume)
-        {
-            Subsystem->SendAutomationError(
-                Socket, RequestId,
-                ResolveError.IsEmpty() ? FString(TEXT("PostProcessVolume not found.")) : ResolveError,
-                ResolveErrorCode.IsEmpty() ? FString(TEXT("ACTOR_NOT_FOUND")) : ResolveErrorCode);
-        }
+        Subsystem->SendAutomationError(Socket, RequestId, ResolveError, ResolveErrorCode);
     }
     // Callers apply the blend fields through CommitPostProcessVolume, inside its undo step and into their reply.
     return Volume;

@@ -186,8 +186,6 @@ bool HandleCreateSdf(UEngineWireSubsystem* Self, const FString& RequestId,
         Self->SendAutomationError(Socket, RequestId, ShapeError, TEXT("INVALID_ARGUMENT"));
         return true;
     }
-    FString Name = GetJsonStringField(Payload, TEXT("name"));
-    if (Name.IsEmpty()) Name = TEXT("GeneratedSdf");
     const int32 Resolution = FMath::Clamp(GetJsonIntField(Payload, TEXT("resolution"), 128), 16, 256);
     // Memory now; the triangle count is only known once the surface is meshed.
     if (!GuardMeshBudget(Self, RequestId, Socket, 0, TEXT("SDF meshing"))) return true;
@@ -241,7 +239,7 @@ bool HandleCreateSdf(UEngineWireSubsystem* Self, const FString& RequestId,
     UGeometryScriptLibrary_MeshNormalsFunctions::SetPerVertexNormals(DynMesh, nullptr);
 
     TSharedPtr<FJsonObject> Result;
-    AActor* NewActor = SpawnPrimitiveOrReply(Self, RequestId, Socket, ReadTransformFromPayload(Payload), Name, DynMesh, Result);
+    AActor* NewActor = SpawnPrimitiveOrReply(Self, RequestId, Socket, ReadTransformFromPayload(Payload), GetJsonStringField(Payload, TEXT("name")), TEXT("GeneratedSdf"), DynMesh, Result);
     if (!NewActor) return true;
     TArray<TSharedPtr<FJsonValue>> Parts;
     TArray<int32> CopyCounts;

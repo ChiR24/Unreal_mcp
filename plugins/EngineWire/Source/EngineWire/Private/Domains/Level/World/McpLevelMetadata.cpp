@@ -7,12 +7,10 @@ namespace McpLevelHandlers {
 bool HandleSetMetadataAction(UEngineWireSubsystem& Subsystem, const FString& RequestId, const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> RequestingSocket) {
     TSharedPtr<FJsonObject> AssetPayload = MakeShared<FJsonObject>();
     FString AssetPath;
-    if (Payload.IsValid()) {
-      AssetPayload->Values = Payload->Values;
-      Payload->TryGetStringField(TEXT("levelPath"), AssetPath);
-    }
+    AssetPayload->Values = Payload->Values;
+    Payload->TryGetStringField(TEXT("levelPath"), AssetPath);
 
-    AssetPath = NormalizeLevelPackagePath(AssetPath);
+    AssetPath = FPackageName::ObjectPathToPackageName(AssetPath);
     FString MapFilename;
     FString ErrorMessage;
     FString ErrorCode;
@@ -38,7 +36,7 @@ bool HandleSetMetadataAction(UEngineWireSubsystem& Subsystem, const FString& Req
     // The shared metadata writer answers a missing or empty bag with a
     // success that wrote nothing; a level metadata call must write something.
     const TSharedPtr<FJsonObject>* Metadata = nullptr;
-    if (!Payload.IsValid() || !Payload->TryGetObjectField(TEXT("metadata"), Metadata) ||
+    if (!Payload->TryGetObjectField(TEXT("metadata"), Metadata) ||
         !Metadata || !(*Metadata).IsValid() || (*Metadata)->Values.Num() == 0) {
       Subsystem.SendAutomationResponse(RequestingSocket, RequestId, false,
                              TEXT("metadata must be an object with at least one key to write, e.g. {\"author\": \"MCP\"}"),

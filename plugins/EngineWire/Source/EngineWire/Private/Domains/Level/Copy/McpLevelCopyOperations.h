@@ -3,6 +3,9 @@
 #include "CoreMinimal.h"
 #include "Dom/JsonObject.h"
 
+class FMcpBridgeWebSocket;
+class UEngineWireSubsystem;
+
 namespace McpLevelHandlers {
 struct FExternalPackageDirectoryCopyPlan {
   FString SourceDirectory;
@@ -43,6 +46,8 @@ bool BuildExternalPackageDirectoryCopyPlan(const FString& SourcePackagePath, con
 bool DeleteExternalPackageDirectory(const FString& PackagePath, const FString& RootDirectoryName, bool& bSourceExists, bool& bDeleted, FString& ErrorMessage, FString& ErrorCode);
 // A file (bDirectory false) or directory tree removed from disk.
 bool DeleteLevelPath(const FString& Path, bool bDirectory);
+// From copied to To (a file, or a directory tree when bDirectory), To's parent folder made first.
+bool CopyPath(const FString& To, const FString& From, bool bDirectory);
 // Moves an existing Path aside to BackupPath (empty when Path did not exist) so a copy can overwrite it.
 bool BackupForOverwrite(const FString& Path, bool bDirectory, const TCHAR* Label, bool& bExisted, FString& BackupPath, FString& ErrorMessage, FString& ErrorCode);
 // Puts BackupPath back at Path; true when there was nothing to restore.
@@ -53,5 +58,8 @@ bool BackupLevelCopyDestinations(FLevelCopyContext& Context, TSharedPtr<FJsonObj
 bool RollbackCopiedDestinationArtifacts(FLevelCopyContext& Context, TSharedPtr<FJsonObject>& Result, FString& RollbackError);
 void DeleteLevelCopyDestinationBackups(FLevelCopyContext& Context);
 bool CopyLevelMapAndArtifacts(FLevelCopyContext& Context, TSharedPtr<FJsonObject>& Result, FString& ErrorMessage, FString& ErrorCode);
-void PopulateLevelCopyResult(FLevelCopyContext& Context, TSharedPtr<FJsonObject>& Result);
+// Source and Destination through the project sanitizer, then as level package paths. A path the sanitizer refuses
+// (the source is judged first) is answered SECURITY_VIOLATION worded with its field text, and false returned.
+bool SanitizeLevelPathPairOrReply(UEngineWireSubsystem& Subsystem, TSharedPtr<FMcpBridgeWebSocket> Socket, const FString& RequestId,
+                                  FString& Source, FString& Destination, const TCHAR* SourceField, const TCHAR* DestinationField);
 } // namespace McpLevelHandlers

@@ -24,9 +24,8 @@ bool HandleGASAttributeValues(const FGASRequestContext& Context, const FString& 
     // set_attribute_base_value: the attribute's base value, set by reflection
     if (SubAction == TEXT("set_attribute_base_value"))
     {
-        if (BlueprintPath.IsEmpty())
+        if (!RequireGASBlueprintPath(Context))
         {
-            Bridge->SendAutomationError(RequestingSocket, RequestId, TEXT("Missing blueprintPath."), TEXT("INVALID_ARGUMENT"));
             return true;
         }
 

@@ -2,7 +2,6 @@
 #include "Domains/Render/McpRenderSupport.h"
 #include "Domains/Render/McpRenderSupportEnums.h"
 #include "Domains/Render/McpRenderSupportSettings.h"
-#include "Foundation/Render/McpPostProcessVolumeResolution.h"
 
 #include "EngineWireSubsystem.h"
 
@@ -58,18 +57,9 @@ bool HandleRenderPostProcessLensAction(
         return false;
     }
 
-    FString ResolveError;
-    FString ResolveErrorCode;
-    // A level without an unbound volume gets one, as the bloom, color and lighting variants already did: these
-    // answered ACTOR_NOT_FOUND there.
-    APostProcessVolume* Volume = McpResolvePostProcessVolume(
-        GetRenderWorld(), Payload, true, ResolveError, ResolveErrorCode);
+    APostProcessVolume* Volume = RequirePostProcessVolume(Subsystem, RequestId, Payload, RequestingSocket);
     if (!Volume)
     {
-        if (!ResolveError.IsEmpty())
-        {
-            Subsystem->SendAutomationError(RequestingSocket, RequestId, ResolveError, ResolveErrorCode);
-        }
         return true;
     }
     // Every value goes to a copy first: the volume changes, in one undo step, only once all of them are taken.

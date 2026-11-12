@@ -67,7 +67,7 @@ bool HandleListTracks(UEngineWireSubsystem *Subsystem,
   AddTrack(MovieScene->GetCameraCutTrack(), nullptr);
   for (const FMovieSceneBinding &Binding :
        const_cast<const UMovieScene *>(MovieScene)->GetBindings()) {
-    for (UMovieSceneTrack *Track : MCP_GET_BINDING_TRACKS(Binding))
+    for (UMovieSceneTrack *Track : Binding.GetTracks())
       AddTrack(Track, &Binding);
   }
 

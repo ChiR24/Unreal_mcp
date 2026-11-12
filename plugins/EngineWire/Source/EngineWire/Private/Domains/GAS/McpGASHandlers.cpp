@@ -63,8 +63,7 @@ bool UEngineWireSubsystem::HandleManageGASAction(
         McpGASHandlers::HandleGASEffectsStackingTags(Context, SubAction) ||
         McpGASHandlers::HandleGASCueNotify(Context, SubAction) ||
         McpGASHandlers::HandleGASInfo(Context, SubAction) ||
-        McpGASHandlers::HandleGASAbilitySets(Context, SubAction) ||
-        McpGASHandlers::HandleGASExecutionCalculation(Context, SubAction))
+        McpGASHandlers::HandleGASAbilitySets(Context, SubAction))
     {
         return true;
     }

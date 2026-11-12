@@ -46,12 +46,11 @@ bool HandleCreateProceduralMesh(UEngineWireSubsystem* Self, const FString& Reque
     }
     const FMcpScopedEditorTransaction Transaction(FText::Format(NSLOCTEXT("McpGeometry", "CreateProceduralMesh", "Create {0}"), FText::FromString(Name)),
                                                   EMcpMutationDurability::EditorStateOnly, TArray<UObject*>());
-    FString SpawnError;
-    AActor* NewActor = SpawnDynamicMeshActorWithMesh(Transform, Name, DynMesh, SpawnError);
+    AActor* NewActor = SpawnDynamicMeshActorWithMesh(Transform, Name, DynMesh);
     if (!NewActor)
     {
         DynMesh->MarkAsGarbage();
-        Self->SendAutomationError(Socket, RequestId, SpawnError.IsEmpty() ? TEXT("Failed to spawn DynamicMeshActor") : SpawnError, TEXT("SPAWN_FAILED"));
+        Self->SendAutomationError(Socket, RequestId, TEXT("Failed to spawn DynamicMeshActor"), TEXT("SPAWN_FAILED"));
         return true;
     }
 

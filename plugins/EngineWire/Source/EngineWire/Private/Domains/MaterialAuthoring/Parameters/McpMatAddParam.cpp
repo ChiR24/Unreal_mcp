@@ -31,15 +31,8 @@ bool AddParameterExpression(UEngineWireSubsystem* Bridge, const FString& Request
   if (!Group.IsEmpty()) {
     Param->Group = FName(*Group);
   }
-  Param->MaterialExpressionEditorX = (int32)X;
-  Param->MaterialExpressionEditorY = (int32)Y;
-
-  AddExpressionToContainer(Material, Function, Param);
-  FINALIZE_HOST();
-
-  TSharedPtr<FJsonObject> Result = McpMaterialHostResult(HostOuter);
-  Result->SetStringField(TEXT("nodeId"), MCP_NODE_ID(Param));
-  const FString PlacementWarning = AddMaterialNodePlacementFields(Result, Material, Param);
+  FString PlacementWarning;
+  TSharedPtr<FJsonObject> Result = PlaceMaterialExpression(RequestId, Material, Function, Param, X, Y, &PlacementWarning);
   Bridge->SendAutomationResponse(Socket, RequestId, true,
       PlacementWarning.IsEmpty()
           ? FString::Printf(TEXT("%s '%s' added."), Label, *ParamName)

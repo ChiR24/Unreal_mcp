@@ -20,6 +20,19 @@
 
 namespace McpSafeOperations
 {
+// A package nobody keeps as work: none, transient, or under /Temp/, /Transient/ or /Engine/Transient. Saves skip it
+// and a level load does not count it as unsaved.
+inline bool McpIsScratchPackage(const UPackage* Package)
+{
+    if (!Package || Package->HasAnyFlags(RF_Transient))
+    {
+        return true;
+    }
+    const FString PackagePath = Package->GetPathName();
+    return PackagePath.StartsWith(TEXT("/Temp/")) || PackagePath.StartsWith(TEXT("/Transient/")) ||
+           PackagePath.StartsWith(TEXT("/Engine/Transient"));
+}
+
 // Refreshes the Asset Registry for one package or folder path right away.
 inline void ScanPathSynchronous(const FString& InPath, bool bRecursive = true)
 {

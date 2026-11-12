@@ -20,10 +20,7 @@ bool HandleGASEffectsMagnitude(const FGASRequestContext& Context, const FString&
     const FString& RequestId = Context.RequestId;
     TSharedPtr<FMcpBridgeWebSocket> RequestingSocket = Context.RequestingSocket;
     const TSharedPtr<FJsonObject>& Payload = Context.Payload;
-    const FString& Name = Context.Name;
-    const FString& Path = Context.Path;
     const FString& BlueprintPath = Context.BlueprintPath;
-    const FString& AssetPath = Context.AssetPath;
 
     if (SubAction == TEXT("create_gameplay_effect"))
     {
@@ -82,9 +79,8 @@ bool HandleGASEffectsMagnitude(const FGASRequestContext& Context, const FString&
     // set_effect_duration
     if (SubAction == TEXT("set_effect_duration"))
     {
-        if (BlueprintPath.IsEmpty())
+        if (!RequireGASBlueprintPath(Context))
         {
-            Bridge->SendAutomationError(RequestingSocket, RequestId, TEXT("Missing blueprintPath."), TEXT("INVALID_ARGUMENT"));
             return true;
         }
 
@@ -123,7 +119,7 @@ bool HandleGASEffectsMagnitude(const FGASRequestContext& Context, const FString&
         // authored through these tools therefore had Period 0 and never ticked -- it applied once and
         // stopped, which is a different effect from the one the caller asked for. Only meaningful for a
         // non-Instant policy, so it is applied but not invented for Instant.
-        const bool bHasPeriod = Payload.IsValid() && Payload->HasField(TEXT("period"));
+        const bool bHasPeriod = Payload->HasField(TEXT("period"));
         float Period = static_cast<float>(GetJsonNumberField(Payload, TEXT("period"), 0.0));
         if (bHasPeriod && ExpectedPolicyValue != EGameplayEffectDurationType::Instant)
         {
@@ -161,16 +157,13 @@ bool HandleGASEffectsMagnitude(const FGASRequestContext& Context, const FString&
         {
             Bridge->SendAutomationError(RequestingSocket, RequestId,
                 FString::Printf(TEXT("Duration/period could not be verified on the compiled class%s. The asset was NOT saved."),
-                    bCompiled ? TEXT("") : TEXT(" (the Blueprint failed to compile - it may have unrelated graph errors)")),
+                    GASCompileFailureNote(bCompiled)),
                 TEXT("DURATION_NOT_APPLIED"));
             return true;
         }
 
-        if (!McpSafeAssetSave(Blueprint))
+        if (!SaveVerifiedGASBlueprint(Context, Blueprint, TEXT("Duration")))
         {
-            Bridge->SendAutomationError(RequestingSocket, RequestId,
-                TEXT("Duration verified on the compiled class but the asset could NOT be written to disk (file may be read-only or held by source control). The change exists only in this editor session."),
-                TEXT("SAVE_FAILED"));
             return true;
         }
 

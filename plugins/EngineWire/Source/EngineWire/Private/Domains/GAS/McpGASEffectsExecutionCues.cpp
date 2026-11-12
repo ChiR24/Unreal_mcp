@@ -1,4 +1,5 @@
 #include "Domains/GAS/McpGASAbilityReflect.h"
+#include "Domains/GAS/McpGASBPCreation.h"
 #include "Domains/GAS/McpGASEffectClassResolve.h"
 #include "Domains/GAS/McpGASPayloadFields.h"
 #include "Domains/GAS/McpGASRequestContext.h"
@@ -19,16 +20,29 @@ bool HandleGASEffectsExecutionCues(const FGASRequestContext& Context, const FStr
     const FString& RequestId = Context.RequestId;
     TSharedPtr<FMcpBridgeWebSocket> RequestingSocket = Context.RequestingSocket;
     const TSharedPtr<FJsonObject>& Payload = Context.Payload;
-    const FString& Name = Context.Name;
-    const FString& Path = Context.Path;
     const FString& BlueprintPath = Context.BlueprintPath;
-    const FString& AssetPath = Context.AssetPath;
+
+    if (SubAction == TEXT("create_execution_calculation"))
+    {
+        bool bReusedExisting = false;
+        const TSharedPtr<FJsonObject> Result = CreateGASAsset(Context, UGameplayEffectExecutionCalculation::StaticClass(),
+            TEXT("GameplayEffectExecutionCalculation"), bReusedExisting,
+            [](UBlueprint* Blueprint) { McpSafeCompileBlueprint(Blueprint); });
+        if (!Result)
+        {
+            return true;
+        }
+        Result->SetStringField(TEXT("note"), TEXT("Override Execute_Implementation in Blueprint to implement custom calculation logic."));
+
+        Bridge->SendAutomationResponse(RequestingSocket, RequestId, true,
+            bReusedExisting ? TEXT("Execution calculation already exists") : TEXT("Execution calculation created"), Result);
+        return true;
+    }
 
     if (SubAction == TEXT("add_effect_execution_calculation"))
     {
-        if (BlueprintPath.IsEmpty())
+        if (!RequireGASBlueprintPath(Context))
         {
-            Bridge->SendAutomationError(RequestingSocket, RequestId, TEXT("Missing blueprintPath."), TEXT("INVALID_ARGUMENT"));
             return true;
         }
 
@@ -88,9 +102,8 @@ bool HandleGASEffectsExecutionCues(const FGASRequestContext& Context, const FStr
     // add_effect_cue
     if (SubAction == TEXT("add_effect_cue"))
     {
-        if (BlueprintPath.IsEmpty())
+        if (!RequireGASBlueprintPath(Context))
         {
-            Bridge->SendAutomationError(RequestingSocket, RequestId, TEXT("Missing blueprintPath."), TEXT("INVALID_ARGUMENT"));
             return true;
         }
 

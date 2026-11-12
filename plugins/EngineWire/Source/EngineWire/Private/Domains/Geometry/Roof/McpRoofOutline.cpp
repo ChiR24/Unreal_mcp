@@ -10,17 +10,12 @@ namespace
 {
 constexpr double OutlineMerge = 0.5; // cm: corners this close are one
 
-double OutlineCross(const FVector2D& A, const FVector2D& B)
-{
-    return A.X * B.Y - A.Y * B.X;
-}
-
 double OutlineArea(const TArray<FVector2D>& Outline)
 {
     double Area = 0.0;
     for (int32 I = 0; I < Outline.Num(); ++I)
     {
-        Area += OutlineCross(Outline[I], Outline[(I + 1) % Outline.Num()]);
+        Area += FVector2D::CrossProduct(Outline[I], Outline[(I + 1) % Outline.Num()]);
     }
     return Area / 2.0;
 }
@@ -34,8 +29,8 @@ bool OutlineOnSegment(const FVector2D& A, const FVector2D& B, const FVector2D& C
 // Whether segments PQ and RS share a point.
 bool OutlineSegmentsMeet(const FVector2D& P, const FVector2D& Q, const FVector2D& R, const FVector2D& S)
 {
-    const double D1 = OutlineCross(Q - P, R - P), D2 = OutlineCross(Q - P, S - P);
-    const double D3 = OutlineCross(S - R, P - R), D4 = OutlineCross(S - R, Q - R);
+    const double D1 = FVector2D::CrossProduct(Q - P, R - P), D2 = FVector2D::CrossProduct(Q - P, S - P);
+    const double D3 = FVector2D::CrossProduct(S - R, P - R), D4 = FVector2D::CrossProduct(S - R, Q - R);
     if (((D1 > 0.0 && D2 < 0.0) || (D1 < 0.0 && D2 > 0.0)) && ((D3 > 0.0 && D4 < 0.0) || (D3 < 0.0 && D4 > 0.0)))
     {
         return true;
@@ -78,7 +73,7 @@ TArray<FVector2D> Clean(const TArray<FVector2D>& Outline)
         // A corner in a straight line with its neighbours (or folding back on itself) is no corner.
         const FVector2D In = Merged[I] - Merged[(I + Merged.Num() - 1) % Merged.Num()];
         const FVector2D Next = Merged[(I + 1) % Merged.Num()] - Merged[I];
-        if (FMath::Abs(OutlineCross(In, Next)) > 1e-9 * In.Size() * Next.Size())
+        if (FMath::Abs(FVector2D::CrossProduct(In, Next)) > 1e-9 * In.Size() * Next.Size())
         {
             Out.Add(Merged[I]);
         }
@@ -101,7 +96,7 @@ TArray<FVector2D> Offset(const TArray<FVector2D>& Outline, double Distance)
     for (int32 I = 0; I < N; ++I)
     {
         const int32 P = (I + N - 1) % N;
-        const double Det = Normal[P].X * Normal[I].Y - Normal[P].Y * Normal[I].X;
+        const double Det = FVector2D::CrossProduct(Normal[P], Normal[I]);
         Out.Add(FMath::Abs(Det) < 1e-12 ? Outline[I] - Normal[I] * Distance
                                         : FVector2D((Line[P] * Normal[I].Y - Normal[P].Y * Line[I]) / Det, (Normal[P].X * Line[I] - Line[P] * Normal[I].X) / Det));
     }

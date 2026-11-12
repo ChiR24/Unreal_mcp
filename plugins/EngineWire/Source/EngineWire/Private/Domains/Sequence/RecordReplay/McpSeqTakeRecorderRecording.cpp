@@ -134,7 +134,7 @@ bool HandleStartTakeRecording(UEngineWireSubsystem* Subsystem, const FString& Re
         return true;
     }
     double DurationSeconds = 0.0;
-    const bool bHasDuration = Payload.IsValid() && Payload->HasField(TEXT("duration"));
+    const bool bHasDuration = Payload->HasField(TEXT("duration"));
     if (bHasDuration && (!Payload->TryGetNumberField(TEXT("duration"), DurationSeconds) ||
                          !FMath::IsFinite(DurationSeconds) || DurationSeconds <= 0.0 || DurationSeconds > 86400.0))
     {

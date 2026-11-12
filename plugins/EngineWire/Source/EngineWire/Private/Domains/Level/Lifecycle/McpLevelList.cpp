@@ -59,14 +59,7 @@ bool HandleListLevelsAction(UEngineWireSubsystem& Subsystem, const FString& Requ
       TSharedPtr<FJsonObject> MapEntry = McpHandlerUtils::CreateResultObject();
       MapEntry->SetStringField(TEXT("name"), MapAsset.AssetName.ToString());
       MapEntry->SetStringField(TEXT("path"), MapAsset.PackageName.ToString());
-#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 1
-      MapEntry->SetStringField(TEXT("objectPath"),
-                               MapAsset.GetObjectPathString());
-#else
-      // UE 5.0: Construct object path from package and asset name
-      MapEntry->SetStringField(TEXT("objectPath"),
-                               FString::Printf(TEXT("%s.%s"), *MapAsset.PackageName.ToString(), *MapAsset.AssetName.ToString()));
-#endif
+      MapEntry->SetStringField(TEXT("objectPath"), MCP_ASSET_DATA_GET_OBJECT_PATH(MapAsset));
       AllMapsArray.Add(MakeShared<FJsonValueObject>(MapEntry));
     }
 

@@ -100,20 +100,7 @@ bool HandleAddCustomExpression(UEngineWireSubsystem* Bridge, const FString& Requ
 
     ApplyCustomAdditionalOutputs(CustomExpr, Payload);
 
-    CustomExpr->MaterialExpressionEditorX = (int32)X;
-    CustomExpr->MaterialExpressionEditorY = (int32)Y;
-
-    AddExpressionToContainer(Material, Function, CustomExpr);
-
-    FINALIZE_HOST();
-
-    TSharedPtr<FJsonObject> Result = McpMaterialHostResult(HostOuter);
-    Result->SetStringField(TEXT("nodeId"),
-                           MCP_NODE_ID(CustomExpr));
-    // Placement telemetry used to come only from the parameter-adding variants,
-    // so the documented overlappingNodes / placementWarning detection could never
-    // fire for the node kinds a caller stacks in a loop.
-    AddMaterialNodePlacementFields(Result, Material, CustomExpr);
+    TSharedPtr<FJsonObject> Result = PlaceMaterialExpression(RequestId, Material, Function, CustomExpr, X, Y);
     Result->SetNumberField(TEXT("inputCount"), CustomExpr->Inputs.Num());
     Result->SetNumberField(TEXT("additionalOutputCount"), CustomExpr->AdditionalOutputs.Num());
     Bridge->SendAutomationResponse(Socket, RequestId, true,

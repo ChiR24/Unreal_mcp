@@ -48,18 +48,7 @@ bool HandleAddTextureSample(UEngineWireSubsystem* Bridge, const FString& Request
       CreatedExpr->Texture = ResolvedTexture;
       CreatedExpr->AutoSetSampleType();
     }
-    CreatedExpr->MaterialExpressionEditorX = (int32)X;
-    CreatedExpr->MaterialExpressionEditorY = (int32)Y;
-
-    AddExpressionToContainer(Material, Function, CreatedExpr);
-    FINALIZE_HOST();
-
-    TSharedPtr<FJsonObject> Result = McpMaterialHostResult(HostOuter);
-    Result->SetStringField(TEXT("nodeId"), MCP_NODE_ID(CreatedExpr));
-    // Placement telemetry used to come only from the parameter-adding variants,
-    // so the documented overlappingNodes / placementWarning detection could never
-    // fire for the node kinds a caller stacks in a loop.
-    AddMaterialNodePlacementFields(Result, Material, CreatedExpr);
+    TSharedPtr<FJsonObject> Result = PlaceMaterialExpression(RequestId, Material, Function, CreatedExpr, X, Y);
     Bridge->SendAutomationResponse(Socket, RequestId, true, TEXT("Texture sample added."), Result);
     return true;
   }

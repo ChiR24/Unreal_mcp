@@ -13,11 +13,11 @@
 namespace McpLevelHandlers {
 bool HandleStreamLevelAction(UEngineWireSubsystem& Subsystem, const FString& RequestId, const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> RequestingSocket, bool bForceStreamUnload) {
     // An object path or a .umap name reads as its package, as open_level and add_sublevel take it.
-    const FString LevelName = NormalizeLevelPackagePath(
+    const FString LevelName = FPackageName::ObjectPathToPackageName(
         McpGetFirstStringField(Payload, {TEXT("levelName"), TEXT("levelPath")}).TrimStartAndEnd());
     bool bLoad = !bForceStreamUnload;
     bool bVisible = !bForceStreamUnload;
-    if (Payload.IsValid() && !bForceStreamUnload) {
+    if (!bForceStreamUnload) {
       Payload->TryGetBoolField(TEXT("shouldBeLoaded"), bLoad);
       Payload->TryGetBoolField(TEXT("shouldBeVisible"), bVisible);
     }
@@ -27,12 +27,6 @@ bool HandleStreamLevelAction(UEngineWireSubsystem& Subsystem, const FString& Req
           RequestingSocket, RequestId, false,
           TEXT("stream_level requires levelName or levelPath"), nullptr,
           TEXT("INVALID_ARGUMENT"));
-      return true;
-    }
-    if (!GEditor) {
-      Subsystem.SendAutomationResponse(RequestingSocket, RequestId, false,
-                             TEXT("Editor not available"), nullptr,
-                             TEXT("EDITOR_NOT_AVAILABLE"));
       return true;
     }
 

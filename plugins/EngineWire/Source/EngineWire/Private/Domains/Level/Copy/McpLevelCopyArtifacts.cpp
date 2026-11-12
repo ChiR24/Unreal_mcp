@@ -1,11 +1,18 @@
 #include "Domains/Level/Copy/McpLevelCopyOperations.h"
 
-#include "HAL/FileManager.h"
-#include "HAL/PlatformFileManager.h"
-#include "Misc/Paths.h"
-
 namespace McpLevelHandlers {
 namespace {
+// After a copy step failed with ErrorMessage: rolls the copy back and says if that failed too. Always false.
+bool FailLevelCopy(FLevelCopyContext& Context, TSharedPtr<FJsonObject>& Result, FString& ErrorMessage, FString& ErrorCode) {
+  FString RollbackError;
+  const bool bRollbackSucceeded = RollbackCopiedDestinationArtifacts(Context, Result, RollbackError);
+  if (!bRollbackSucceeded) {
+    ErrorMessage += FString::Printf(TEXT(" Rollback failed: %s"), *RollbackError);
+  }
+  ErrorCode = bRollbackSucceeded ? TEXT("COPY_FAILED") : TEXT("ROLLBACK_FAILED");
+  return false;
+}
+
 bool CopyBuiltDataIfPresent(FLevelCopyContext& Context,
                             TSharedPtr<FJsonObject>& Result,
                             FString& ErrorMessage,
@@ -13,24 +20,15 @@ bool CopyBuiltDataIfPresent(FLevelCopyContext& Context,
   if (!Context.bSourceBuiltDataExists) {
     return true;
   }
-  IPlatformFile& PlatformFile = FPlatformFileManager::Get().GetPlatformFile();
-  IFileManager::Get().MakeDirectory(*FPaths::GetPath(Context.DestinationBuiltDataFilename), true);
-  Context.bCopiedBuiltData = PlatformFile.CopyFile(
-      *Context.DestinationBuiltDataFilename, *Context.SourceBuiltDataFilename);
+  Context.bCopiedBuiltData = CopyPath(Context.DestinationBuiltDataFilename, Context.SourceBuiltDataFilename, false);
   if (Context.bCopiedBuiltData) {
     return true;
   }
 
-  FString RollbackError;
-  const bool bRollbackSucceeded = RollbackCopiedDestinationArtifacts(Context, Result, RollbackError);
   ErrorMessage = FString::Printf(
       TEXT("Failed to copy built data from %s to %s"),
       *Context.SourceBuiltDataPackagePath, *Context.DestinationBuiltDataPackagePath);
-  if (!bRollbackSucceeded) {
-    ErrorMessage += FString::Printf(TEXT(" Rollback failed: %s"), *RollbackError);
-  }
-  ErrorCode = bRollbackSucceeded ? TEXT("COPY_FAILED") : TEXT("ROLLBACK_FAILED");
-  return false;
+  return FailLevelCopy(Context, Result, ErrorMessage, ErrorCode);
 }
 
 bool CopyExternalDirectoryIfPresent(FExternalPackageDirectoryCopyPlan& Plan,
@@ -42,23 +40,14 @@ bool CopyExternalDirectoryIfPresent(FExternalPackageDirectoryCopyPlan& Plan,
   if (!Plan.bSourceExists) {
     return true;
   }
-  IFileManager::Get().MakeDirectory(*FPaths::GetPath(Plan.DestinationDirectory), true);
-  IPlatformFile& PlatformFile = FPlatformFileManager::Get().GetPlatformFile();
-  Plan.bCopied = PlatformFile.CopyDirectoryTree(
-      *Plan.DestinationDirectory, *Plan.SourceDirectory, false);
+  Plan.bCopied = CopyPath(Plan.DestinationDirectory, Plan.SourceDirectory, true);
   if (Plan.bCopied) {
     return true;
   }
 
-  FString RollbackError;
-  const bool bRollbackSucceeded = RollbackCopiedDestinationArtifacts(Context, Result, RollbackError);
   ErrorMessage = FString::Printf(TEXT("Failed to copy %s from %s to %s"), Label,
                                  *Plan.SourceDirectory, *Plan.DestinationDirectory);
-  if (!bRollbackSucceeded) {
-    ErrorMessage += FString::Printf(TEXT(" Rollback failed: %s"), *RollbackError);
-  }
-  ErrorCode = bRollbackSucceeded ? TEXT("COPY_FAILED") : TEXT("ROLLBACK_FAILED");
-  return false;
+  return FailLevelCopy(Context, Result, ErrorMessage, ErrorCode);
 }
 } // namespace
 
@@ -66,26 +55,12 @@ bool CopyLevelMapAndArtifacts(FLevelCopyContext& Context,
                               TSharedPtr<FJsonObject>& Result,
                               FString& ErrorMessage,
                               FString& ErrorCode) {
-  IFileManager& FileManager = IFileManager::Get();
-  const FString DestinationDir = FPaths::GetPath(Context.DestinationFilename);
-  if (!DestinationDir.IsEmpty()) {
-    FileManager.MakeDirectory(*DestinationDir, true);
-  }
-
-  IPlatformFile& PlatformFile = FPlatformFileManager::Get().GetPlatformFile();
-  Context.bCopiedMap = PlatformFile.CopyFile(*Context.DestinationFilename,
-                                             *Context.SourceFilename);
+  Context.bCopiedMap = CopyPath(Context.DestinationFilename, Context.SourceFilename, false);
   if (!Context.bCopiedMap) {
-    FString RollbackError;
-    const bool bRollbackSucceeded = RollbackCopiedDestinationArtifacts(Context, Result, RollbackError);
     ErrorMessage = FString::Printf(TEXT("Failed to copy level file from %s to %s"),
                                    *Context.SourcePackagePath,
                                    *Context.DestinationPackagePath);
-    if (!bRollbackSucceeded) {
-      ErrorMessage += FString::Printf(TEXT(" Rollback failed: %s"), *RollbackError);
-    }
-    ErrorCode = bRollbackSucceeded ? TEXT("COPY_FAILED") : TEXT("ROLLBACK_FAILED");
-    return false;
+    return FailLevelCopy(Context, Result, ErrorMessage, ErrorCode);
   }
 
   if (!CopyBuiltDataIfPresent(Context, Result, ErrorMessage, ErrorCode) ||

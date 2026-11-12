@@ -11,9 +11,7 @@ using McpSafeOperations::McpSafeLoadMap;
 
 namespace McpLevelHandlers {
 bool HandleCreateNewLevelAction(UEngineWireSubsystem& Subsystem, const FString& RequestId, const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> RequestingSocket) {
-    FString LevelName;
-    if (Payload.IsValid())
-      Payload->TryGetStringField(TEXT("levelName"), LevelName);
+    FString LevelName = McpGetFirstStringField(Payload, {TEXT("levelName")});
 
     // SECURITY: Sanitize LevelName to prevent path injection
     // Remove any path separators (only allow the final name component)
@@ -43,10 +41,7 @@ bool HandleCreateNewLevelAction(UEngineWireSubsystem& Subsystem, const FString& 
 
     // Parse useWorldPartition - default to false for faster level creation
     // World Partition levels take 20+ seconds to unload in UE 5.7
-    bool bUseWorldPartition = false;
-    if (Payload.IsValid()) {
-      Payload->TryGetBoolField(TEXT("useWorldPartition"), bUseWorldPartition);
-    }
+    const bool bUseWorldPartition = GetJsonBoolField(Payload, TEXT("useWorldPartition"), false);
 
     // SECURITY: Sanitize LevelPath to prevent path traversal attacks
     // Rejects paths containing "..", double slashes, or invalid characters
@@ -60,10 +55,8 @@ bool HandleCreateNewLevelAction(UEngineWireSubsystem& Subsystem, const FString& 
       return true;
     }
 
-    // CRITICAL FIX: Properly combine levelPath (parent directory) and levelName
-    // If both are provided, levelPath is the parent directory and levelName is the level name
-    // If only levelName is provided and it starts with '/', it's treated as a full path
-    // If only levelPath is provided, it's treated as a full path (backwards compatibility)
+    // levelPath is the level's folder and levelName its name; levelPath alone is the full path, levelName alone a level
+    // under /Game/Maps.
     FString SavePath;
 
     if (!SanitizedLevelPath.IsEmpty() && !LevelName.IsEmpty() &&
@@ -71,24 +64,10 @@ bool HandleCreateNewLevelAction(UEngineWireSubsystem& Subsystem, const FString& 
       // The folder already ends in the level name: it is the full path.
       SavePath = SanitizedLevelPath;
     } else if (!SanitizedLevelPath.IsEmpty() && !LevelName.IsEmpty()) {
-      // Both provided: levelPath is parent directory, levelName is the level name
-      // Combine them: /Game/MCPTest + TestLevel = /Game/MCPTest/TestLevel
-      SavePath = SanitizedLevelPath;
-      if (!SavePath.EndsWith(TEXT("/"))) {
-        SavePath += TEXT("/");
-      }
-      SavePath += LevelName;
+      SavePath = SanitizedLevelPath / LevelName;
     } else if (!LevelName.IsEmpty()) {
-      // Only levelName provided
-      if (LevelName.StartsWith(TEXT("/"))) {
-        // levelName is actually a full path
-        SavePath = LevelName;
-      } else {
-        // Just the name - save to default location
-        SavePath = FString::Printf(TEXT("/Game/Maps/%s"), *LevelName);
-      }
+      SavePath = FString::Printf(TEXT("/Game/Maps/%s"), *LevelName);
     } else if (!SanitizedLevelPath.IsEmpty()) {
-      // Only levelPath provided - treat as full path (backwards compatibility)
       SavePath = SanitizedLevelPath;
     }
 
@@ -102,8 +81,7 @@ bool HandleCreateNewLevelAction(UEngineWireSubsystem& Subsystem, const FString& 
 
     // create_level ends by loading the level, which replaces the open one:
     // saveDirtyPackages saves unsaved work first instead of dropping it.
-    bool bSaveDirtyPackages = false;
-    Payload->TryGetBoolField(TEXT("saveDirtyPackages"), bSaveDirtyPackages);
+    const bool bSaveDirtyPackages = GetJsonBoolField(Payload, TEXT("saveDirtyPackages"), false);
     if (bSaveDirtyPackages) {
       int32 WorldBefore = 0, ContentBefore = 0, WorldAfter = 0, ContentAfter = 0, Failed = 0;
       if (!SaveBlockingDirtyPackagesForLevelLoad(WorldBefore, ContentBefore, WorldAfter, ContentAfter, Failed)) {
@@ -132,11 +110,9 @@ bool HandleCreateNewLevelAction(UEngineWireSubsystem& Subsystem, const FString& 
       Resp->SetBoolField(TEXT("alreadyExists"), true);
       const bool bLoaded = McpSafeLoadMap(SavePath, true);
       Resp->SetBoolField(TEXT("loaded"), bLoaded);
-      if (bLoaded && GEditor && GEditor->GetEditorWorldContext().World()) {
-        UWorld* LoadedWorld = GEditor->GetEditorWorldContext().World();
-        if (LoadedWorld && LoadedWorld->GetOutermost()) {
-          Resp->SetStringField(TEXT("currentLevelPath"), LoadedWorld->GetOutermost()->GetName());
-        }
+      UWorld* LoadedWorld = McpHandlerUtils::GetEditorWorld();
+      if (bLoaded && LoadedWorld) {
+        Resp->SetStringField(TEXT("currentLevelPath"), LoadedWorld->GetOutermost()->GetName());
       }
       Subsystem.SendAutomationResponse(
           RequestingSocket, RequestId, bLoaded,

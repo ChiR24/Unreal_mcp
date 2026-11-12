@@ -24,9 +24,8 @@ bool HandleGASEffectModifiers(const FGASRequestContext& Context, const FString& 
     // add_effect_modifier
     if (SubAction == TEXT("add_effect_modifier"))
     {
-        if (BlueprintPath.IsEmpty())
+        if (!RequireGASBlueprintPath(Context))
         {
-            Bridge->SendAutomationError(RequestingSocket, RequestId, TEXT("Missing blueprintPath."), TEXT("INVALID_ARGUMENT"));
             return true;
         }
 

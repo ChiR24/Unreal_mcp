@@ -21,14 +21,7 @@ bool AddPlacedExpression(UEngineWireSubsystem* Bridge, const FString& RequestId,
   }
   UMaterialExpression *NewExpr = NewObject<UMaterialExpression>(HostOuter, Class, NAME_None, RF_Transactional);
   Configure(NewExpr);
-  NewExpr->MaterialExpressionEditorX = (int32)X;
-  NewExpr->MaterialExpressionEditorY = (int32)Y;
-  AddExpressionToContainer(Material, Function, NewExpr);
-  FINALIZE_HOST();
-
-  TSharedPtr<FJsonObject> Result = McpMaterialHostResult(HostOuter);
-  Result->SetStringField(TEXT("nodeId"), MCP_NODE_ID(NewExpr));
-  AddMaterialNodePlacementFields(Result, Material, NewExpr);
+  TSharedPtr<FJsonObject> Result = PlaceMaterialExpression(RequestId, Material, Function, NewExpr, X, Y);
   Bridge->SendAutomationResponse(Socket, RequestId, true, Message, Result);
   return true;
 }

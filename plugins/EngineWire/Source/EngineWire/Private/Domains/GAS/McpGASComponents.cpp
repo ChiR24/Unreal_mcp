@@ -28,9 +28,8 @@ bool HandleGASComponents(const FGASRequestContext& Context, const FString& SubAc
 
     if (SubAction == TEXT("add_ability_system_component"))
     {
-        if (BlueprintPath.IsEmpty())
+        if (!RequireGASBlueprintPath(Context))
         {
-            Bridge->SendAutomationError(RequestingSocket, RequestId, TEXT("Missing blueprintPath."), TEXT("INVALID_ARGUMENT"));
             return true;
         }
 
@@ -118,9 +117,8 @@ bool HandleGASComponents(const FGASRequestContext& Context, const FString& SubAc
     // configure_asc
     if (SubAction == TEXT("configure_asc"))
     {
-        if (BlueprintPath.IsEmpty())
+        if (!RequireGASBlueprintPath(Context))
         {
-            Bridge->SendAutomationError(RequestingSocket, RequestId, TEXT("Missing blueprintPath."), TEXT("INVALID_ARGUMENT"));
             return true;
         }
 

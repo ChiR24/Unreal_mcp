@@ -23,9 +23,8 @@ bool HandleGASModifierMagnitude(const FGASRequestContext& Context, const FString
     // set_modifier_magnitude
     if (SubAction == TEXT("set_modifier_magnitude"))
     {
-        if (BlueprintPath.IsEmpty())
+        if (!RequireGASBlueprintPath(Context))
         {
-            Bridge->SendAutomationError(RequestingSocket, RequestId, TEXT("Missing blueprintPath."), TEXT("INVALID_ARGUMENT"));
             return true;
         }
 

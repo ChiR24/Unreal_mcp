@@ -7,11 +7,6 @@ namespace McpGeometryHandlers
 bool HandleCreateBox(UEngineWireSubsystem* Self, const FString& RequestId,
                             const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> Socket)
 {
-    FString Name = GetJsonStringField(Payload, TEXT("name"));
-    if (Name.IsEmpty()) Name = TEXT("GeneratedBox");
-
-    FTransform Transform = ReadTransformFromPayload(Payload);
-
     double Width = GetJsonNumberField(Payload, TEXT("width"), 100.0);
     double Height = GetJsonNumberField(Payload, TEXT("height"), 100.0);
     double Depth = GetJsonNumberField(Payload, TEXT("depth"), 100.0);
@@ -83,7 +78,7 @@ bool HandleCreateBox(UEngineWireSubsystem* Self, const FString& RequestId,
     // Spawn actor with dynamic mesh component. Use direct world spawning so
     // headless/NullRHI automation does not enter viewport hit-proxy placement.
     TSharedPtr<FJsonObject> Result;
-    AActor* NewActor = SpawnPrimitiveOrReply(Self, RequestId, Socket, Transform, Name, DynMesh, Result);
+    AActor* NewActor = SpawnPrimitiveOrReply(Self, RequestId, Socket, ReadTransformFromPayload(Payload), GetJsonStringField(Payload, TEXT("name")), TEXT("GeneratedBox"), DynMesh, Result);
     if (!NewActor)
     {
         return true;
@@ -103,10 +98,6 @@ bool HandleCreateBox(UEngineWireSubsystem* Self, const FString& RequestId,
 bool HandleCreateSphere(UEngineWireSubsystem* Self, const FString& RequestId,
                                const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> Socket)
 {
-    FString Name = GetJsonStringField(Payload, TEXT("name"));
-    if (Name.IsEmpty()) Name = TEXT("GeneratedSphere");
-
-    FTransform Transform = ReadTransformFromPayload(Payload);
     double Radius = GetJsonNumberField(Payload, TEXT("radius"), 50.0);
     int32 Subdivisions = DeclaredSegments(Payload, {TEXT("numRings"), TEXT("radialSegments")}, 16);
 
@@ -124,7 +115,7 @@ bool HandleCreateSphere(UEngineWireSubsystem* Self, const FString& RequestId,
     );
 
     TSharedPtr<FJsonObject> Result;
-    AActor* NewActor = SpawnPrimitiveOrReply(Self, RequestId, Socket, Transform, Name, DynMesh, Result);
+    AActor* NewActor = SpawnPrimitiveOrReply(Self, RequestId, Socket, ReadTransformFromPayload(Payload), GetJsonStringField(Payload, TEXT("name")), TEXT("GeneratedSphere"), DynMesh, Result);
     if (!NewActor)
     {
         return true;
@@ -140,10 +131,6 @@ bool HandleCreateSphere(UEngineWireSubsystem* Self, const FString& RequestId,
 bool HandleCreateCylinder(UEngineWireSubsystem* Self, const FString& RequestId,
                                  const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> Socket)
 {
-    FString Name = GetJsonStringField(Payload, TEXT("name"));
-    if (Name.IsEmpty()) Name = TEXT("GeneratedCylinder");
-
-    FTransform Transform = ReadTransformFromPayload(Payload);
     double Radius = GetJsonNumberField(Payload, TEXT("radius"), 50.0);
     double Height = GetJsonNumberField(Payload, TEXT("height"), 100.0);
     int32 Segments = DeclaredSegments(Payload, {TEXT("numSides"), TEXT("radialSegments")}, 16);
@@ -163,7 +150,7 @@ bool HandleCreateCylinder(UEngineWireSubsystem* Self, const FString& RequestId,
     );
 
     TSharedPtr<FJsonObject> Result;
-    AActor* NewActor = SpawnPrimitiveOrReply(Self, RequestId, Socket, Transform, Name, DynMesh, Result);
+    AActor* NewActor = SpawnPrimitiveOrReply(Self, RequestId, Socket, ReadTransformFromPayload(Payload), GetJsonStringField(Payload, TEXT("name")), TEXT("GeneratedCylinder"), DynMesh, Result);
     if (!NewActor)
     {
         return true;
@@ -178,10 +165,6 @@ bool HandleCreateCylinder(UEngineWireSubsystem* Self, const FString& RequestId,
 bool HandleCreateCone(UEngineWireSubsystem* Self, const FString& RequestId,
                              const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> Socket)
 {
-    FString Name = GetJsonStringField(Payload, TEXT("name"));
-    if (Name.IsEmpty()) Name = TEXT("GeneratedCone");
-
-    FTransform Transform = ReadTransformFromPayload(Payload);
     // `radius` is the spelling every other round primitive here uses (and the
     // one callers reach for); reading only `baseRadius` meant a `radius` on a
     // cone was accepted and silently discarded, leaving the 50-unit default.
@@ -208,7 +191,7 @@ bool HandleCreateCone(UEngineWireSubsystem* Self, const FString& RequestId,
     );
 
     TSharedPtr<FJsonObject> Result;
-    AActor* NewActor = SpawnPrimitiveOrReply(Self, RequestId, Socket, Transform, Name, DynMesh, Result);
+    AActor* NewActor = SpawnPrimitiveOrReply(Self, RequestId, Socket, ReadTransformFromPayload(Payload), GetJsonStringField(Payload, TEXT("name")), TEXT("GeneratedCone"), DynMesh, Result);
     if (!NewActor)
     {
         return true;
@@ -223,10 +206,6 @@ bool HandleCreateCone(UEngineWireSubsystem* Self, const FString& RequestId,
 bool HandleCreateCapsule(UEngineWireSubsystem* Self, const FString& RequestId,
                                 const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> Socket)
 {
-    FString Name = GetJsonStringField(Payload, TEXT("name"));
-    if (Name.IsEmpty()) Name = TEXT("GeneratedCapsule");
-
-    FTransform Transform = ReadTransformFromPayload(Payload);
     double Radius = GetJsonNumberField(Payload, TEXT("radius"), 50.0);
     double Length = GetJsonNumberField(Payload, TEXT("length"), GetJsonNumberField(Payload, TEXT("height"), 100.0));
     int32 HemisphereSteps = DeclaredSegments(Payload, {TEXT("numRings")}, 4);
@@ -250,7 +229,7 @@ bool HandleCreateCapsule(UEngineWireSubsystem* Self, const FString& RequestId,
     );
 
     TSharedPtr<FJsonObject> Result;
-    AActor* NewActor = SpawnPrimitiveOrReply(Self, RequestId, Socket, Transform, Name, DynMesh, Result);
+    AActor* NewActor = SpawnPrimitiveOrReply(Self, RequestId, Socket, ReadTransformFromPayload(Payload), GetJsonStringField(Payload, TEXT("name")), TEXT("GeneratedCapsule"), DynMesh, Result);
     if (!NewActor)
     {
         return true;

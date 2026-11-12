@@ -152,7 +152,7 @@ bool HandleSetLODSettings(UEngineWireSubsystem* Self, const FString& RequestId,
 bool HandleSetLODScreenSizes(UEngineWireSubsystem* Self, const FString& RequestId,
                                     const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> Socket)
 {
-    // Parse screen sizes (can be array or object)
+    // Screen sizes, one per LOD, as an array
     TArray<float> ScreenSizes;
     const TArray<TSharedPtr<FJsonValue>>* SizeArray = nullptr;
     if (Payload->TryGetArrayField(TEXT("screenSizes"), SizeArray))

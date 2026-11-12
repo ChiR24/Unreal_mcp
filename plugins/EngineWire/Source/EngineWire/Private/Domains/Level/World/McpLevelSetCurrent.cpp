@@ -35,31 +35,25 @@ bool HandleSetCurrentLevelAction(UEngineWireSubsystem& Subsystem, const FString&
     return Refuse(TEXT("Play In Editor is running: stop it first."), nullptr, TEXT("PIE_ACTIVE"));
   }
   const FString Given = GetJsonStringField(Payload, TEXT("levelPath")).TrimStartAndEnd();
-  const FString Wanted = NormalizeLevelPackagePath(Given);
+  const FString Wanted = FPackageName::ObjectPathToPackageName(Given);
   const FString OpenLevel = World->PersistentLevel->GetOutermost()->GetName();
   ULevel* Level = World->PersistentLevel;
   if (!Wanted.Equals(OpenLevel, ESearchCase::IgnoreCase) && !Given.Equals(TEXT("persistent"), ESearchCase::IgnoreCase)) {
     // A sublevel is named as add_sublevel, stream and remove_sublevel name it; a refusal lists the loaded levels.
-    const TArray<ULevelStreaming*> Matches = FindStreamingLevels(World, Wanted);
-    TArray<FString> Loaded;
-    for (const ULevel* Each : GetAllLevelsFromWorld(World)) {
-      Loaded.Add(Each->GetOutermost()->GetName());
-    }
-    TSharedPtr<FJsonObject> Levels = McpHandlerUtils::CreateResultObject();
-    Levels->SetArrayField(TEXT("levels"), McpHandlerUtils::ToJsonStringArray(Loaded));
-    if (Matches.Num() != 1) {
-      return Refuse(FString::Printf(TEXT("%s is %s of the open level %s (its loaded levels: %s)."), *Wanted,
-                                    Matches.Num() > 1 ? TEXT("more than one sublevel") : TEXT("not a sublevel"), *OpenLevel,
-                                    *FString::Join(Loaded, TEXT(", "))),
-                    Levels, Matches.Num() > 1 ? TEXT("AMBIGUOUS_LEVEL") : TEXT("SUBLEVEL_NOT_FOUND"));
+    TSharedPtr<FJsonObject> Levels;
+    FString Refusal;
+    const TCHAR* Code = nullptr;
+    ULevelStreaming* Match = FindOneStreamingLevel(World, Wanted, OpenLevel, Levels, Refusal, Code);
+    if (!Match) {
+      return Refuse(Refusal, Levels, Code);
     }
     // Actors spawned into a Level Instance's level outside its edit session are never saved.
-    if (!IsUserSublevel(Matches[0])) {
+    if (!IsUserSublevel(Match)) {
       return Refuse(FString::Printf(TEXT("%s is a Level Instance's level (or one streamed in at run time), not a sublevel of %s: "
                                          "edit its Level Instance to add actors to it."), *Wanted, *OpenLevel),
                     Levels, TEXT("NOT_A_SUBLEVEL"));
     }
-    Level = Matches[0]->GetLoadedLevel();
+    Level = Match->GetLoadedLevel();
     if (!Level) {
       return Refuse(FString::Printf(TEXT("%s is in the open level's streaming list but did not load in the editor (its map "
                                          "file may be missing or broken)."), *Wanted),

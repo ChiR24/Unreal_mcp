@@ -47,7 +47,7 @@ bool HandleLoadLevelAction(UEngineWireSubsystem& Subsystem, const FString& Reque
         return true;
       }
       // An object path (/Game/Maps/Demo.Demo) or a .umap name reads as its package; it answered FILE_NOT_FOUND.
-      LevelPath = NormalizeLevelPackagePath(SanitizedLevelPath);
+      LevelPath = FPackageName::ObjectPathToPackageName(SanitizedLevelPath);
 
       if (!LevelPath.StartsWith(TEXT("/")) && !FPaths::FileExists(LevelPath)) {
         FString TryPath = FString::Printf(TEXT("/Game/Maps/%s"), *LevelPath);

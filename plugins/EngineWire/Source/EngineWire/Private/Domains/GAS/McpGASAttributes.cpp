@@ -42,9 +42,8 @@ bool HandleGASAttributes(const FGASRequestContext& Context, const FString& SubAc
     // add_attribute
     if (SubAction == TEXT("add_attribute"))
     {
-        if (BlueprintPath.IsEmpty())
+        if (!RequireGASBlueprintPath(Context))
         {
-            Bridge->SendAutomationError(RequestingSocket, RequestId, TEXT("Missing blueprintPath."), TEXT("INVALID_ARGUMENT"));
             return true;
         }
 

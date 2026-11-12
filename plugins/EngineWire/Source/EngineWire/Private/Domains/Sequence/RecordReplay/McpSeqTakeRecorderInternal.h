@@ -7,9 +7,6 @@
 #include "EngineWireSubsystem.h"
 #include "UObject/StrongObjectPtr.h"
 
-#ifndef MCP_HAS_TAKE_RECORDER
-#define MCP_HAS_TAKE_RECORDER 0
-#endif
 
 #if MCP_HAS_TAKE_RECORDER && \
     __has_include("Recorder/TakeRecorderBlueprintLibrary.h") && \

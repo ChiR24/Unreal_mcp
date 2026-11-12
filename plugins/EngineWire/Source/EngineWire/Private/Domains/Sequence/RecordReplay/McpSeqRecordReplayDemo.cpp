@@ -26,16 +26,13 @@ bool HandleDemoReplayAction(
         TEXT("NOT_AVAILABLE"));
     return true;
 #else
-    if (Payload.IsValid())
+    FString ValidationError;
+    if (!ValidateReplayRequest(Payload, ValidationError))
     {
-        FString ValidationError;
-        if (!ValidateReplayRequest(Payload, ValidationError))
-        {
-            Subsystem->SendAutomationError(
-                RequestingSocket, RequestId, ValidationError,
-                TEXT("INVALID_ARGUMENT"));
-            return true;
-        }
+        Subsystem->SendAutomationError(
+            RequestingSocket, RequestId, ValidationError,
+            TEXT("INVALID_ARGUMENT"));
+        return true;
     }
 
     if (Action == TEXT("configure_killcam_duration"))

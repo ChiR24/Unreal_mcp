@@ -18,7 +18,7 @@ FAssetData FindLevelAssetData(const FString& Path) {
   IAssetRegistry& AssetRegistry = FAssetRegistryModule::GetRegistry();
   const FString ShortName = FPackageName::GetShortName(Path);
   if (!ShortName.IsEmpty() && !Path.Contains(TEXT("."))) {
-    const FAssetData MapData = AssetRegistry.GetAssetByObjectPath(MCP_ASSET_REGISTRY_OBJECT_PATH(Path + TEXT(".") + ShortName));
+    const FAssetData MapData = AssetRegistry.GetAssetByObjectPath(MCP_ASSET_REGISTRY_OBJECT_PATH(McpToObjectPath(Path)));
     if (MapData.IsValid()) {
       return MapData;
     }
@@ -41,9 +41,7 @@ TSharedPtr<FJsonObject> TagsWithoutFiBData(const FAssetData& Data) {
 
 bool HandleGetLevelInfoAction(UEngineWireSubsystem& Subsystem, const FString& RequestId, const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> RequestingSocket) {
     FString LevelPath;
-    if (Payload.IsValid()) {
-      Payload->TryGetStringField(TEXT("levelPath"), LevelPath);
-    }
+    Payload->TryGetStringField(TEXT("levelPath"), LevelPath);
 
     UWorld* World = McpHandlerUtils::GetEditorWorld();
     if (!World) {
@@ -65,7 +63,7 @@ bool HandleGetLevelInfoAction(UEngineWireSubsystem& Subsystem, const FString& Re
 
       TArray<ULevel*> Levels = GetAllLevelsFromWorld(World);
       for (ULevel* Level : Levels) {
-        if (Level && Level->GetOutermost() && Level->GetOutermost()->GetName() == LevelPath) {
+        if (Level->GetOutermost()->GetName() == LevelPath) {
           TargetLevel = Level;
           break;
         }
@@ -77,8 +75,7 @@ bool HandleGetLevelInfoAction(UEngineWireSubsystem& Subsystem, const FString& Re
     if (TargetLevel) {
       // Loaded path: preserve existing JSON shape, only ADD `loaded: true`.
       TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
-      const FString PackageName =
-          TargetLevel->GetOutermost() ? TargetLevel->GetOutermost()->GetName() : TEXT("");
+      const FString PackageName = TargetLevel->GetOutermost()->GetName();
       const FString AssetName = FPackageName::GetShortName(PackageName);
       Result->SetStringField(TEXT("levelPath"), PackageName);
       Result->SetStringField(TEXT("levelName"), AssetName);
@@ -90,16 +87,14 @@ bool HandleGetLevelInfoAction(UEngineWireSubsystem& Subsystem, const FString& Re
       // A loaded level must be identifiable as a map asset without a
       // follow-up list_levels call. The record already declares these fields;
       // the unloaded branch emits them, so mirror that identity here.
-      if (!PackageName.IsEmpty()) {
-        Result->SetStringField(TEXT("packageName"), PackageName);
-        Result->SetStringField(TEXT("assetName"), AssetName);
-        Result->SetStringField(TEXT("objectPath"), PackageName + TEXT(".") + AssetName);
-        const FAssetData LevelAssetData = FindLevelAssetData(PackageName);
-        if (LevelAssetData.IsValid()) {
-          Result->SetStringField(TEXT("assetClass"),
-                                 MCP_ASSET_DATA_GET_CLASS_PATH(LevelAssetData));
-          Result->SetObjectField(TEXT("tagsAndValues"), TagsWithoutFiBData(LevelAssetData));
-        }
+      Result->SetStringField(TEXT("packageName"), PackageName);
+      Result->SetStringField(TEXT("assetName"), AssetName);
+      Result->SetStringField(TEXT("objectPath"), McpToObjectPath(PackageName));
+      const FAssetData LevelAssetData = FindLevelAssetData(PackageName);
+      if (LevelAssetData.IsValid()) {
+        Result->SetStringField(TEXT("assetClass"),
+                               MCP_ASSET_DATA_GET_CLASS_PATH(LevelAssetData));
+        Result->SetObjectField(TEXT("tagsAndValues"), TagsWithoutFiBData(LevelAssetData));
       }
 
       Subsystem.SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Level info retrieved"), Result);

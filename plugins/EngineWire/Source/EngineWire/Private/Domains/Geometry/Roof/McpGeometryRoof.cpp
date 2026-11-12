@@ -84,11 +84,6 @@ void RoofFaceElements(UE::Geometry::FDynamicMesh3& Mesh, const TArray<FVector2D>
 
 bool HandleCreateRoof(UEngineWireSubsystem* Self, const FString& RequestId, const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> Socket)
 {
-    FString Name = GetJsonStringField(Payload, TEXT("name"));
-    if (Name.IsEmpty())
-    {
-        Name = TEXT("GeneratedRoof");
-    }
     TArray<FVector2D> Footprint;
     if (!RoofReadFootprint(Payload, Footprint))
     {
@@ -156,15 +151,15 @@ bool HandleCreateRoof(UEngineWireSubsystem* Self, const FString& RequestId, cons
     DynMesh->ProcessMesh([&bClosed](const UE::Geometry::FDynamicMesh3& Mesh) { bClosed = Mesh.IsClosed(); });
 
     TSharedPtr<FJsonObject> Result;
-    AActor* NewActor = SpawnPrimitiveOrReply(Self, RequestId, Socket, ReadTransformFromPayload(Payload), Name, DynMesh, Result);
+    AActor* NewActor = SpawnPrimitiveOrReply(Self, RequestId, Socket, ReadTransformFromPayload(Payload), GetJsonStringField(Payload, TEXT("name")), TEXT("GeneratedRoof"), DynMesh, Result);
     if (!NewActor)
     {
         return true;
     }
     Result->SetNumberField(TEXT("faces"), Roof.Faces.Num());
     Result->SetNumberField(TEXT("triangles"), Input.Triangles.Num());
-    Result->SetNumberField(TEXT("ridgeHeight"), FMath::RoundToDouble(Ridge * 10.0) / 10.0);
-    Result->SetNumberField(TEXT("eaveHeight"), FMath::RoundToDouble(-Overhang * Rise * 10.0) / 10.0);
+    Result->SetNumberField(TEXT("ridgeHeight"), McpRoundTo(Ridge, 10.0));
+    Result->SetNumberField(TEXT("eaveHeight"), McpRoundTo(-Overhang * Rise, 10.0));
     Result->SetBoolField(TEXT("watertight"), bClosed);
     McpHandlerUtils::AddVerification(Result, NewActor);
     Self->SendAutomationResponse(Socket, RequestId, true,

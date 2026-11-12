@@ -11,15 +11,6 @@
 #include "Modules/ModuleManager.h"
 
 namespace McpLevelHandlers {
-FString NormalizeLevelPackagePath(const FString& InPath) {
-  FString PackagePath = InPath;
-  int32 ObjectDelimiter = INDEX_NONE;
-  if (PackagePath.FindChar(TEXT('.'), ObjectDelimiter)) {
-    PackagePath = PackagePath.Left(ObjectDelimiter);
-  }
-  return PackagePath;
-}
-
 bool TryGetAbsoluteMapFilename(const FString& PackagePath, FString& OutFilename) {
   FString RelativeFilename;
   if (!FPackageName::TryConvertLongPackageNameToFilename(
@@ -101,20 +92,16 @@ void ScanLevelPackagePath(const FString& PackagePath, const FString& AbsoluteMap
 }
 
 bool IsCurrentEditorWorldPackage(const FString& PackagePath) {
-  if (!GEditor) {
-    return false;
-  }
-  UWorld* EditorWorld = GEditor->GetEditorWorldContext().World();
-  return EditorWorld && EditorWorld->GetOutermost() &&
-         EditorWorld->GetOutermost()->GetName() == PackagePath;
+  const UWorld* EditorWorld = McpHandlerUtils::GetEditorWorld();
+  return EditorWorld && EditorWorld->GetOutermost()->GetName() == PackagePath;
 }
 
 FString CheckLevelPathIsOpenLevel(const TSharedPtr<FJsonObject>& Payload) {
   FString LevelPath;
-  if (!Payload.IsValid() || !Payload->TryGetStringField(TEXT("levelPath"), LevelPath) || LevelPath.IsEmpty()) {
+  if (!Payload->TryGetStringField(TEXT("levelPath"), LevelPath) || LevelPath.IsEmpty()) {
     return FString();
   }
-  LevelPath = NormalizeLevelPackagePath(LevelPath);
+  LevelPath = FPackageName::ObjectPathToPackageName(LevelPath);
   UWorld* World = McpHandlerUtils::GetEditorWorld();
   const FString OpenLevel = World ? World->GetOutermost()->GetName() : FString();
   if (LevelPath.Equals(OpenLevel, ESearchCase::IgnoreCase)) {

@@ -12,15 +12,8 @@ using McpSafeOperations::McpSafeLevelSave;
 
 namespace McpLevelHandlers {
 bool HandleExportLevelAction(UEngineWireSubsystem& Subsystem, const FString& RequestId, const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> RequestingSocket) {
-    FString LevelPath;
-    if (Payload.IsValid())
-      Payload->TryGetStringField(TEXT("levelPath"), LevelPath);
-    FString ExportPath;
-    if (Payload.IsValid())
-      Payload->TryGetStringField(TEXT("exportPath"), ExportPath);
-    if (ExportPath.IsEmpty())
-      if (Payload.IsValid())
-        Payload->TryGetStringField(TEXT("destinationPath"), ExportPath);
+    FString LevelPath = GetJsonStringField(Payload, TEXT("levelPath"));
+    FString ExportPath = McpGetFirstStringField(Payload, {TEXT("exportPath"), TEXT("destinationPath")});
 
     if (ExportPath.IsEmpty()) {
       Subsystem.SendAutomationResponse(RequestingSocket, RequestId, false,
@@ -29,16 +22,10 @@ bool HandleExportLevelAction(UEngineWireSubsystem& Subsystem, const FString& Req
       return true;
     }
 
-    if (!GEditor) {
-      Subsystem.SendAutomationResponse(RequestingSocket, RequestId, false,
-                             TEXT("Editor not available"), nullptr,
-                             TEXT("EDITOR_NOT_AVAILABLE"));
-      return true;
-    }
 
     UWorld *WorldToExport = nullptr;
     if (!LevelPath.IsEmpty()) {
-      // CRITICAL FIX: Validate source level exists before export
+      // The source level must exist before it is exported
       if (!FPackageName::DoesPackageExist(LevelPath)) {
         // Also check file on disk as fallback
         FString Filename;
@@ -55,8 +42,8 @@ bool HandleExportLevelAction(UEngineWireSubsystem& Subsystem, const FString& Req
           return true;
         }
       }
-      UWorld *Current = GEditor->GetEditorWorldContext().World();
-      if (Current && (Current->GetOutermost()->GetName() == LevelPath ||
+      UWorld *Current = McpHandlerUtils::GetEditorWorld();
+      if (Current && (IsCurrentEditorWorldPackage(LevelPath) ||
                       Current->GetPathName() == LevelPath)) {
         WorldToExport = Current;
       } else {
@@ -70,7 +57,7 @@ bool HandleExportLevelAction(UEngineWireSubsystem& Subsystem, const FString& Req
       }
     }
     if (!WorldToExport)
-      WorldToExport = GEditor->GetEditorWorldContext().World();
+      WorldToExport = McpHandlerUtils::GetEditorWorld();
 
     if (!WorldToExport) {
       Subsystem.SendAutomationResponse(RequestingSocket, RequestId, false,
@@ -106,7 +93,7 @@ bool HandleExportLevelAction(UEngineWireSubsystem& Subsystem, const FString& Req
       return true;
     }
     // SECURITY: Sanitize export path as an asset path
-    FString SafeExportPath = NormalizeLevelPackagePath(SanitizeProjectRelativePath(ExportPath));
+    FString SafeExportPath = FPackageName::ObjectPathToPackageName(SanitizeProjectRelativePath(ExportPath));
     if (SafeExportPath.IsEmpty()) {
       Subsystem.SendAutomationResponse(RequestingSocket, RequestId, false,
                              McpPathRefusalMessage(TEXT("exportPath"), ExportPath) +

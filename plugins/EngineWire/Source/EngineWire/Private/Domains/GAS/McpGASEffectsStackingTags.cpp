@@ -17,16 +17,12 @@ bool HandleGASEffectsStackingTags(const FGASRequestContext& Context, const FStri
     const FString& RequestId = Context.RequestId;
     TSharedPtr<FMcpBridgeWebSocket> RequestingSocket = Context.RequestingSocket;
     const TSharedPtr<FJsonObject>& Payload = Context.Payload;
-    const FString& Name = Context.Name;
-    const FString& Path = Context.Path;
     const FString& BlueprintPath = Context.BlueprintPath;
-    const FString& AssetPath = Context.AssetPath;
 
     if (SubAction == TEXT("set_effect_stacking"))
     {
-        if (BlueprintPath.IsEmpty())
+        if (!RequireGASBlueprintPath(Context))
         {
-            Bridge->SendAutomationError(RequestingSocket, RequestId, TEXT("Missing blueprintPath."), TEXT("INVALID_ARGUMENT"));
             return true;
         }
 
@@ -94,9 +90,8 @@ bool HandleGASEffectsStackingTags(const FGASRequestContext& Context, const FStri
     // set_effect_tags
     if (SubAction == TEXT("set_effect_tags"))
     {
-        if (BlueprintPath.IsEmpty())
+        if (!RequireGASBlueprintPath(Context))
         {
-            Bridge->SendAutomationError(RequestingSocket, RequestId, TEXT("Missing blueprintPath."), TEXT("INVALID_ARGUMENT"));
             return true;
         }
 

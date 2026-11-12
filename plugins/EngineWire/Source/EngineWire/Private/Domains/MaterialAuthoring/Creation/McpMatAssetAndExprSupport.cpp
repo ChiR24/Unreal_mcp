@@ -211,6 +211,23 @@ void AddExpressionToContainer(UMaterial *Material,
   }
 }
 
+TSharedPtr<FJsonObject> PlaceMaterialExpression(const FString& RequestId, UMaterial* Material, UMaterialFunction* Function,
+                                                UMaterialExpression* Expr, float X, float Y, FString* OutPlacementWarning) {
+  Expr->MaterialExpressionEditorX = (int32)X;
+  Expr->MaterialExpressionEditorY = (int32)Y;
+  AddExpressionToContainer(Material, Function, Expr);
+  UObject* Host = Material ? static_cast<UObject*>(Material) : static_cast<UObject*>(Function);
+  McpFinishMaterialEdit(RequestId, Host);
+  TSharedPtr<FJsonObject> Result = McpMaterialHostResult(Host);
+  Result->SetStringField(TEXT("nodeId"), MCP_NODE_ID(Expr));
+  // Every adder answers its placement, so overlappingNodes / placementWarning fire for the kinds a caller stacks in a loop.
+  const FString Warning = AddMaterialNodePlacementFields(Result, Material, Expr);
+  if (OutPlacementWarning) {
+    *OutPlacementWarning = Warning;
+  }
+  return Result;
+}
+
 FString FunctionInputTypeToString(EFunctionInputType InType) {
   const FString Name = StaticEnum<EFunctionInputType>()->GetNameStringByValue(InType);
   return Name.IsEmpty() ? FString(TEXT("Unknown")) : Name.RightChop(14); // "FunctionInput_"

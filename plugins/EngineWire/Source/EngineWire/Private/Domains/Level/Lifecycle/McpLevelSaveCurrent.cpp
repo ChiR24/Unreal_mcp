@@ -15,8 +15,7 @@ namespace McpLevelHandlers {
 bool HandleSaveCurrentLevelAction(UEngineWireSubsystem& Subsystem, const FString& RequestId, const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> RequestingSocket) {
     // "Save, optionally to a target path": a savePath is a save-as. It used to
     // be ignored, saving the open level in place under its old name.
-    FString SavePath;
-    if (Payload.IsValid() && Payload->TryGetStringField(TEXT("savePath"), SavePath) && !SavePath.IsEmpty()) {
+    if (!GetJsonStringField(Payload, TEXT("savePath")).IsEmpty()) {
       return HandleSaveLevelAsAction(Subsystem, RequestId, Payload, RequestingSocket);
     }
     const FString LevelPathError = CheckLevelPathIsOpenLevel(Payload);
@@ -24,14 +23,8 @@ bool HandleSaveCurrentLevelAction(UEngineWireSubsystem& Subsystem, const FString
       Subsystem.SendAutomationResponse(RequestingSocket, RequestId, false, LevelPathError, nullptr, TEXT("LEVEL_NOT_LOADED"));
       return true;
     }
-    if (!GEditor) {
-      Subsystem.SendAutomationResponse(RequestingSocket, RequestId, false,
-                             TEXT("Editor not available"), nullptr,
-                             TEXT("EDITOR_NOT_AVAILABLE"));
-      return true;
-    }
 
-    UWorld *World = GEditor->GetEditorWorldContext().World();
+    UWorld *World = McpHandlerUtils::GetEditorWorld();
     if (!World) {
       Subsystem.SendAutomationResponse(RequestingSocket, RequestId, false,
                              TEXT("No world loaded"), nullptr,
@@ -39,14 +32,12 @@ bool HandleSaveCurrentLevelAction(UEngineWireSubsystem& Subsystem, const FString
       return true;
     }
 
-    // CRITICAL: Check if the current level is transient (unsaved/Untitled)
+    // A transient level (unsaved/Untitled) is refused:
     // Saving a transient level causes fatal error: "Attempted to create a package
     // with name containing double slashes" when HLOD/Instancing generates paths
     // like /Game//Temp/Untitled_1_HLOD0_Instancing
     FString PackageName = World->GetOutermost()->GetName();
-    bool bIsTransient = PackageName.StartsWith(TEXT("/Temp/")) ||
-                        PackageName.StartsWith(TEXT("/Engine/Transient")) ||
-                        PackageName.Contains(TEXT("Untitled"));
+    const bool bIsTransient = McpSafeOperations::McpIsUnsavedLevelPath(PackageName);
 
     if (bIsTransient) {
       TSharedPtr<FJsonObject> ErrorDetail = McpHandlerUtils::CreateResultObject();

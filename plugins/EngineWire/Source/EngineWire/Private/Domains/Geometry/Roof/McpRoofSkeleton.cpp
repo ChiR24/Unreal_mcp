@@ -25,15 +25,6 @@ struct FRoofWave
     int32 Node = 0;
 };
 
-// A path a wavefront vertex traced, between the faces of its two edges.
-struct FRoofArc
-{
-    int32 A = 0;
-    int32 B = 0;
-    int32 EdgeIn = 0;
-    int32 EdgeOut = 0;
-};
-
 struct FRoofEvent
 {
     double T = TNumericLimits<double>::Max();
@@ -49,13 +40,13 @@ struct FRoofSim
     TArray<FVector2D> Normal; // inward
     TArray<double> Line;      // edge i at time t: Normal[i] . x = Line[i] + t
     TArray<FNode> Nodes;
-    TArray<FRoofArc> Arcs;
+    TArray<McpRoofOutline::FArc> Arcs; // the paths wavefront vertices traced, between the faces of their two edges
     TArray<TArray<FRoofWave>> Lavs;
     double Now = 0.0;
 
     FVector2D At(const FRoofWave& W, double T) const { return W.P0 + W.V * (T - W.T0); }
     int32 AddNode(const FVector2D& P, double T) { return Nodes.Add({P, T}); }
-    bool Reflex(const FRoofWave& W) const { return Dir[W.In].X * Dir[W.Out].Y - Dir[W.In].Y * Dir[W.Out].X < -1e-12; }
+    bool Reflex(const FRoofWave& W) const { return FVector2D::CrossProduct(Dir[W.In], Dir[W.Out]) < -1e-12; }
 
     FRoofWave Make(const FVector2D& P, double T, int32 In, int32 Out, int32 Node) const
     {
@@ -65,7 +56,7 @@ struct FRoofSim
         W.In = In;
         W.Out = Out;
         W.Node = Node;
-        const double Det = Normal[In].X * Normal[Out].Y - Normal[In].Y * Normal[Out].X;
+        const double Det = FVector2D::CrossProduct(Normal[In], Normal[Out]);
         W.bMoves = FMath::Abs(Det) > 1e-12;
         W.V = W.bMoves ? FVector2D((Normal[Out].Y - Normal[In].Y) / Det, (Normal[In].X - Normal[Out].X) / Det) : FVector2D::ZeroVector;
         return W;
@@ -216,12 +207,7 @@ FResult Build(const TArray<FVector2D>& Outline)
         Event.bSplit ? Sim.ApplySplit(Event) : Sim.ApplyEdge(Event);
         Sim.CloseTiny();
     }
-    TArray<McpRoofOutline::FArc> Arcs;
-    for (const FRoofArc& Arc : Sim.Arcs)
-    {
-        Arcs.Add({Arc.A, Arc.B, Arc.EdgeIn, Arc.EdgeOut});
-    }
-    if (Sim.Lavs.Num() > 0 || !McpRoofOutline::Faces(Sim.Nodes, Arcs, N, RoofWeld, Result.Nodes, Result.Faces))
+    if (Sim.Lavs.Num() > 0 || !McpRoofOutline::Faces(Sim.Nodes, Sim.Arcs, N, RoofWeld, Result.Nodes, Result.Faces))
     {
         Result.Error = TEXT("the roof could not be resolved for this footprint");
     }

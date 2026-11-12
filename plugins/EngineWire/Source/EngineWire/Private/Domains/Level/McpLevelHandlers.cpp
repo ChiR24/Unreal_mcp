@@ -1,134 +1,74 @@
 #include "Domains/Level/McpLevelActions.h"
+#include "Domains/Lighting/McpLightingPrivate.h"
 
 bool UEngineWireSubsystem::HandleLevelAction(
     const FString &RequestId, const FString &Action,
     const TSharedPtr<FJsonObject> &Payload,
     TSharedPtr<FMcpBridgeWebSocket> RequestingSocket) {
-  const FString Lower = Action.ToLower();
-  if (Lower != TEXT("manage_level")) {
-    return false;
+  // The table's manage_level entry is the one caller; a WebSocket request can still come without a payload.
+  if (!Payload.IsValid()) {
+    SendAutomationError(RequestingSocket, RequestId,
+                        TEXT("manage_level payload missing"),
+                        TEXT("INVALID_PAYLOAD"));
+    return true;
   }
 
-  FString EffectiveAction = Lower;
-  bool bForceStreamUnload = false;
-  if (Lower == TEXT("manage_level")) {
-    if (!Payload.IsValid()) {
-      SendAutomationError(RequestingSocket, RequestId,
-                          TEXT("manage_level payload missing"),
-                          TEXT("INVALID_PAYLOAD"));
-      return true;
-    }
-
-    FString SubAction;
-    if (!Payload->TryGetStringField(TEXT("subAction"), SubAction) || SubAction.IsEmpty()) {
-      Payload->TryGetStringField(TEXT("action"), SubAction);
-    }
-    const FString LowerSub = SubAction.ToLower();
-    if (LowerSub == TEXT("load") || LowerSub == TEXT("load_level")) {
-      return McpLevelHandlers::HandleLoadLevelAction(*this, RequestId, Payload,
-                                                     RequestingSocket);
-    }
-
-    if (LowerSub == TEXT("save") || LowerSub == TEXT("save_level")) {
-      EffectiveAction = TEXT("save_current_level");
-    } else if (LowerSub == TEXT("save_as") || LowerSub == TEXT("save_level_as")) {
-      EffectiveAction = TEXT("save_level_as");
-    } else if (LowerSub == TEXT("create_level")) {
-      EffectiveAction = TEXT("create_new_level");
-    } else if (LowerSub == TEXT("stream")) {
-      EffectiveAction = TEXT("stream_level");
-    } else if (LowerSub == TEXT("create_light")) {
-      EffectiveAction = TEXT("spawn_light");
-    } else if (LowerSub == TEXT("build_lighting")) {
-      EffectiveAction = TEXT("build_lighting");
-    } else if (LowerSub == TEXT("set_metadata")) {
-      EffectiveAction = TEXT("set_metadata");
-    } else if (LowerSub == TEXT("set_world_settings") ||
-               LowerSub == TEXT("set_level_world_settings")) {
-      // Published as manage_level.set_world_settings; the gateway forwards the
-      // canonical action name rather than the record's dispatchAction, so the
-      // normalizer has to accept it alongside the native spelling.
-      EffectiveAction = TEXT("set_level_world_settings");
-    } else if (LowerSub == TEXT("validate_level")) {
-      EffectiveAction = TEXT("validate_level");
-    } else if (LowerSub == TEXT("run_map_check")) {
-      EffectiveAction = TEXT("run_map_check");
-    } else if (LowerSub == TEXT("list") || LowerSub == TEXT("list_levels")) {
-      EffectiveAction = TEXT("list_levels");
-    } else if (LowerSub == TEXT("get_current_level")) {
-      EffectiveAction = TEXT("get_current_level");
-    } else if (LowerSub == TEXT("export_level")) {
-      EffectiveAction = TEXT("export_level");
-    } else if (LowerSub == TEXT("import_level")) {
-      EffectiveAction = TEXT("import_level");
-    } else if (LowerSub == TEXT("add_sublevel")) {
-      EffectiveAction = TEXT("add_sublevel");
-    } else if (LowerSub == TEXT("remove_sublevel")) {
-      EffectiveAction = TEXT("remove_sublevel");
-    } else if (LowerSub == TEXT("move_actors_to_level")) {
-      EffectiveAction = TEXT("move_actors_to_level");
-    } else if (LowerSub == TEXT("set_current_level")) {
-      EffectiveAction = TEXT("set_current_level");
-    } else if (LowerSub == TEXT("delete") || LowerSub == TEXT("delete_level")) {
-      EffectiveAction = TEXT("delete_level");
-    } else if (LowerSub == TEXT("rename") || LowerSub == TEXT("rename_level")) {
-      EffectiveAction = TEXT("rename_level");
-    } else if (LowerSub == TEXT("duplicate") || LowerSub == TEXT("duplicate_level")) {
-      EffectiveAction = TEXT("duplicate_level");
-    } else if (LowerSub == TEXT("get_summary")) {
-      EffectiveAction = TEXT("get_level_info");
-    } else if (LowerSub == TEXT("unload") || LowerSub == TEXT("unload_level")) {
-      EffectiveAction = TEXT("stream_level");
-      bForceStreamUnload = true;
-    } else {
-      SendAutomationError(
-          RequestingSocket, RequestId,
-          FString::Printf(TEXT("Unknown manage_level action: %s"), *SubAction),
-          TEXT("UNKNOWN_ACTION"));
-      return true;
-    }
-  }
-
+  using FLevelHandler = bool (*)(UEngineWireSubsystem&, const FString&, const TSharedPtr<FJsonObject>&, TSharedPtr<FMcpBridgeWebSocket>);
+  static const FLevelHandler Stream = [](UEngineWireSubsystem& Subsystem, const FString& Id, const TSharedPtr<FJsonObject>& Body,
+                                         TSharedPtr<FMcpBridgeWebSocket> Socket) {
+    return McpLevelHandlers::HandleStreamLevelAction(Subsystem, Id, Body, Socket, false);
+  };
+  static const FLevelHandler Unload = [](UEngineWireSubsystem& Subsystem, const FString& Id, const TSharedPtr<FJsonObject>& Body,
+                                         TSharedPtr<FMcpBridgeWebSocket> Socket) {
+    return McpLevelHandlers::HandleStreamLevelAction(Subsystem, Id, Body, Socket, true);
+  };
   struct FLevelRoute {
     const TCHAR* Name;
-    bool (*Handler)(UEngineWireSubsystem&, const FString&, const TSharedPtr<FJsonObject>&, TSharedPtr<FMcpBridgeWebSocket>);
+    FLevelHandler Handler;
   };
+  using namespace McpLevelHandlers;
   static const FLevelRoute Routes[] = {
-      {TEXT("get_current_level"), McpLevelHandlers::HandleGetCurrentLevelAction},
-      {TEXT("save_current_level"), McpLevelHandlers::HandleSaveCurrentLevelAction},
-      {TEXT("save_level_as"), McpLevelHandlers::HandleSaveLevelAsAction},
-      {TEXT("set_metadata"), McpLevelHandlers::HandleSetMetadataAction},
-      {TEXT("validate_level"), McpLevelHandlers::HandleValidateLevelAction},
-      {TEXT("run_map_check"), McpLevelHandlers::HandleRunMapCheckAction},
-      {TEXT("create_new_level"), McpLevelHandlers::HandleCreateNewLevelAction},
-      {TEXT("spawn_light"), McpLevelHandlers::HandleSpawnLightAction},
-      {TEXT("list_levels"), McpLevelHandlers::HandleListLevelsAction},
-      {TEXT("export_level"), McpLevelHandlers::HandleExportLevelAction},
-      {TEXT("import_level"), McpLevelHandlers::HandleImportLevelAction},
-      {TEXT("add_sublevel"), McpLevelHandlers::HandleAddSublevelAction},
-      {TEXT("remove_sublevel"), McpLevelHandlers::HandleRemoveSublevelAction},
-      {TEXT("move_actors_to_level"), McpLevelHandlers::HandleMoveActorsToLevelAction},
-      {TEXT("set_current_level"), McpLevelHandlers::HandleSetCurrentLevelAction},
-      {TEXT("delete_level"), McpLevelHandlers::HandleDeleteLevelAction},
-      {TEXT("rename_level"), McpLevelHandlers::HandleRenameLevelAction},
-      {TEXT("duplicate_level"), McpLevelHandlers::HandleDuplicateLevelAction},
-      {TEXT("get_level_info"), McpLevelHandlers::HandleGetLevelInfoAction},
-      {TEXT("set_level_world_settings"), McpLevelHandlers::HandleSetLevelWorldSettingsAction},
+      {TEXT("load"), HandleLoadLevelAction},
+      {TEXT("load_level"), HandleLoadLevelAction},
+      {TEXT("save"), HandleSaveCurrentLevelAction},
+      {TEXT("save_level"), HandleSaveCurrentLevelAction},
+      {TEXT("save_as"), HandleSaveLevelAsAction},
+      {TEXT("save_level_as"), HandleSaveLevelAsAction},
+      {TEXT("create_level"), HandleCreateNewLevelAction},
+      {TEXT("stream"), Stream},
+      {TEXT("unload"), Unload},
+      {TEXT("unload_level"), Unload},
+      {TEXT("create_light"), McpLightingHandlers::HandleSpawnLight},
+      {TEXT("build_lighting"), McpLightingHandlers::HandleBuildLighting},
+      {TEXT("set_metadata"), HandleSetMetadataAction},
+      {TEXT("set_world_settings"), HandleSetLevelWorldSettingsAction},
+      {TEXT("validate_level"), HandleValidateLevelAction},
+      {TEXT("run_map_check"), HandleRunMapCheckAction},
+      {TEXT("list_levels"), HandleListLevelsAction},
+      {TEXT("get_current_level"), HandleGetCurrentLevelAction},
+      {TEXT("export_level"), HandleExportLevelAction},
+      {TEXT("import_level"), HandleImportLevelAction},
+      {TEXT("add_sublevel"), HandleAddSublevelAction},
+      {TEXT("remove_sublevel"), HandleRemoveSublevelAction},
+      {TEXT("move_actors_to_level"), HandleMoveActorsToLevelAction},
+      {TEXT("set_current_level"), HandleSetCurrentLevelAction},
+      {TEXT("delete"), HandleDeleteLevelAction},
+      {TEXT("delete_level"), HandleDeleteLevelAction},
+      {TEXT("rename_level"), HandleRenameLevelAction},
+      {TEXT("duplicate_level"), HandleDuplicateLevelAction},
+      {TEXT("get_summary"), HandleGetLevelInfoAction},
   };
 
-  if (EffectiveAction == TEXT("stream_level")) {
-    return McpLevelHandlers::HandleStreamLevelAction(*this, RequestId, Payload,
-                                                     RequestingSocket,
-                                                     bForceStreamUnload);
-  }
-  if (EffectiveAction == TEXT("build_lighting")) {
-    return McpLevelHandlers::HandleBuildLightingAction(*this, RequestId, Payload,
-                                                       RequestingSocket);
-  }
+  const FString SubAction = McpGetFirstStringField(Payload, {TEXT("subAction"), TEXT("action")});
+  const FString LowerSub = SubAction.ToLower();
   for (const FLevelRoute& Route : Routes) {
-    if (EffectiveAction == Route.Name) {
+    if (LowerSub == Route.Name) {
       return Route.Handler(*this, RequestId, Payload, RequestingSocket);
     }
   }
-  return false;
+  SendAutomationError(
+      RequestingSocket, RequestId,
+      FString::Printf(TEXT("Unknown manage_level action: %s"), *SubAction),
+      TEXT("UNKNOWN_ACTION"));
+  return true;
 }

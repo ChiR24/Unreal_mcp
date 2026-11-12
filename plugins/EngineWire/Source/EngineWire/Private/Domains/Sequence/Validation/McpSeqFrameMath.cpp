@@ -4,33 +4,19 @@
 
 namespace McpSequenceFrameMath {
 namespace {
-bool TryRoundedInt32(double Value, int32 &OutValue, FString &OutError) {
+// Value as an int32 frame: rounded to the nearest, or down with bFloor.
+bool TryInt32Frame(double Value, bool bFloor, int32 &OutValue, FString &OutError) {
   if (!FMath::IsFinite(Value)) {
     OutError = TEXT("Frame value must be finite.");
     return false;
   }
-  const double Rounded = FMath::RoundToDouble(Value);
-  if (Rounded < static_cast<double>(MIN_int32) ||
-      Rounded > static_cast<double>(MAX_int32)) {
+  const double Whole = bFloor ? FMath::FloorToDouble(Value) : FMath::RoundToDouble(Value);
+  if (Whole < static_cast<double>(MIN_int32) ||
+      Whole > static_cast<double>(MAX_int32)) {
     OutError = TEXT("Frame value exceeds the supported int32 range.");
     return false;
   }
-  OutValue = static_cast<int32>(Rounded);
-  return true;
-}
-
-bool TryFlooredInt32(double Value, int32 &OutValue, FString &OutError) {
-  if (!FMath::IsFinite(Value)) {
-    OutError = TEXT("Frame value must be finite.");
-    return false;
-  }
-  const double Floored = FMath::FloorToDouble(Value);
-  if (Floored < static_cast<double>(MIN_int32) ||
-      Floored > static_cast<double>(MAX_int32)) {
-    OutError = TEXT("Frame value exceeds the supported int32 range.");
-    return false;
-  }
-  OutValue = static_cast<int32>(Floored);
+  OutValue = static_cast<int32>(Whole);
   return true;
 }
 
@@ -41,11 +27,34 @@ bool ValidateRate(const FFrameRate &Rate, FString &OutError) {
   }
   return true;
 }
+
+// Value (a frame at SourceRate, rounded) at DestinationRate: rounded to the nearest frame, or down with bFloor.
+bool TryScaleFrame(double Value, const FFrameRate &SourceRate, const FFrameRate &DestinationRate, bool bFloor,
+                   FFrameNumber &OutFrame, FString &OutError) {
+  FFrameNumber SourceFrame;
+  if (!TryFrameNumber(Value, SourceFrame, OutError) ||
+      !ValidateRate(SourceRate, OutError) ||
+      !ValidateRate(DestinationRate, OutError)) {
+    return false;
+  }
+  const long double Scaled =
+      static_cast<long double>(SourceFrame.Value) *
+      static_cast<long double>(DestinationRate.Numerator) *
+      static_cast<long double>(SourceRate.Denominator) /
+      static_cast<long double>(SourceRate.Numerator) /
+      static_cast<long double>(DestinationRate.Denominator);
+  int32 Whole = 0;
+  if (!TryInt32Frame(static_cast<double>(Scaled), bFloor, Whole, OutError)) {
+    return false;
+  }
+  OutFrame = FFrameNumber(Whole);
+  return true;
+}
 }
 
 bool TryFrameNumber(double Value, FFrameNumber &OutFrame, FString &OutError) {
   int32 Rounded = 0;
-  if (!TryRoundedInt32(Value, Rounded, OutError)) {
+  if (!TryInt32Frame(Value, false, Rounded, OutError)) {
     return false;
   }
   OutFrame = FFrameNumber(Rounded);
@@ -55,47 +64,13 @@ bool TryFrameNumber(double Value, FFrameNumber &OutFrame, FString &OutError) {
 bool TryTransformFrame(double Value, const FFrameRate &SourceRate,
                        const FFrameRate &DestinationRate,
                        FFrameNumber &OutFrame, FString &OutError) {
-  FFrameNumber SourceFrame;
-  if (!TryFrameNumber(Value, SourceFrame, OutError) ||
-      !ValidateRate(SourceRate, OutError) ||
-      !ValidateRate(DestinationRate, OutError)) {
-    return false;
-  }
-  const long double Scaled =
-      static_cast<long double>(SourceFrame.Value) *
-      static_cast<long double>(DestinationRate.Numerator) *
-      static_cast<long double>(SourceRate.Denominator) /
-      static_cast<long double>(SourceRate.Numerator) /
-      static_cast<long double>(DestinationRate.Denominator);
-  const double ScaledValue = static_cast<double>(Scaled);
-  if (!FMath::IsFinite(ScaledValue)) {
-    OutError = TEXT("Transformed frame value must be finite.");
-    return false;
-  }
-  return TryFrameNumber(ScaledValue, OutFrame, OutError);
+  return TryScaleFrame(Value, SourceRate, DestinationRate, false, OutFrame, OutError);
 }
 
 bool TryTransformFrameFloor(double Value, const FFrameRate &SourceRate,
                             const FFrameRate &DestinationRate,
                             FFrameNumber &OutFrame, FString &OutError) {
-  FFrameNumber SourceFrame;
-  if (!TryFrameNumber(Value, SourceFrame, OutError) ||
-      !ValidateRate(SourceRate, OutError) ||
-      !ValidateRate(DestinationRate, OutError)) {
-    return false;
-  }
-  const long double Scaled =
-      static_cast<long double>(SourceFrame.Value) *
-      static_cast<long double>(DestinationRate.Numerator) *
-      static_cast<long double>(SourceRate.Denominator) /
-      static_cast<long double>(SourceRate.Numerator) /
-      static_cast<long double>(DestinationRate.Denominator);
-  int32 Floored = 0;
-  if (!TryFlooredInt32(static_cast<double>(Scaled), Floored, OutError)) {
-    return false;
-  }
-  OutFrame = FFrameNumber(Floored);
-  return true;
+  return TryScaleFrame(Value, SourceRate, DestinationRate, true, OutFrame, OutError);
 }
 
 bool TryAddFrames(int32 Left, int32 Right, int32 &OutValue,
@@ -177,9 +152,7 @@ bool ValidateCinematicFrameRequest(
     return false;
   }
   double StartValue = 0.0;
-  if (Payload.IsValid()) {
-    Payload->TryGetNumberField(TEXT("startFrame"), StartValue);
-  }
+  Payload->TryGetNumberField(TEXT("startFrame"), StartValue);
   FFrameNumber StartTick;
   if (!TryTransformFrame(StartValue, MovieScene->GetDisplayRate(),
                          MovieScene->GetTickResolution(), StartTick,
@@ -189,8 +162,7 @@ bool ValidateCinematicFrameRequest(
 
   int32 DurationDisplay = DefaultDuration;
   double DurationValue = 0.0;
-  if (Payload.IsValid() &&
-      Payload->TryGetNumberField(TEXT("durationFrames"), DurationValue)) {
+  if (Payload->TryGetNumberField(TEXT("durationFrames"), DurationValue)) {
     FFrameNumber DurationFrame;
     if (!TryFrameNumber(DurationValue, DurationFrame, OutError)) {
       return false;
@@ -198,8 +170,7 @@ bool ValidateCinematicFrameRequest(
     DurationDisplay = DurationFrame.Value;
   } else {
     double EndValue = 0.0;
-    if (Payload.IsValid() &&
-        Payload->TryGetNumberField(TEXT("endFrame"), EndValue)) {
+    if (Payload->TryGetNumberField(TEXT("endFrame"), EndValue)) {
       FFrameNumber EndFrame;
       FFrameNumber StartFrame;
       if (!TryFrameNumber(EndValue, EndFrame, OutError) ||

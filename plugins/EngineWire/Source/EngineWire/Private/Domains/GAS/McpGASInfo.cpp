@@ -17,10 +17,6 @@ bool HandleGASInfo(const FGASRequestContext& Context, const FString& SubAction)
     UEngineWireSubsystem* Bridge = Context.Subsystem;
     const FString& RequestId = Context.RequestId;
     TSharedPtr<FMcpBridgeWebSocket> RequestingSocket = Context.RequestingSocket;
-    const TSharedPtr<FJsonObject>& Payload = Context.Payload;
-    const FString& Name = Context.Name;
-    const FString& Path = Context.Path;
-    const FString& BlueprintPath = Context.BlueprintPath;
     const FString& AssetPath = Context.AssetPath;
 
     if (SubAction == TEXT("get_gas_info"))

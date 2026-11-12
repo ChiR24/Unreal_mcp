@@ -12,15 +12,13 @@ bool PathExists(const FString& Path, bool bDirectory) {
                     : IFileManager::Get().FileExists(*Path);
 }
 
-bool CopyPath(const FString& To, const FString& From, bool bDirectory) {
-  IPlatformFile& PlatformFile = FPlatformFileManager::Get().GetPlatformFile();
-  if (!bDirectory) {
-    return PlatformFile.CopyFile(*To, *From);
-  }
-  IFileManager::Get().MakeDirectory(*FPaths::GetPath(To), true);
-  return PlatformFile.CopyDirectoryTree(*To, *From, false);
-}
 } // namespace
+
+bool CopyPath(const FString& To, const FString& From, bool bDirectory) {
+  IFileManager::Get().MakeDirectory(*FPaths::GetPath(To), true);
+  IPlatformFile& PlatformFile = FPlatformFileManager::Get().GetPlatformFile();
+  return bDirectory ? PlatformFile.CopyDirectoryTree(*To, *From, false) : PlatformFile.CopyFile(*To, *From);
+}
 
 bool DeleteLevelPath(const FString& Path, bool bDirectory) {
   return bDirectory ? IFileManager::Get().DeleteDirectory(*Path, false, true)

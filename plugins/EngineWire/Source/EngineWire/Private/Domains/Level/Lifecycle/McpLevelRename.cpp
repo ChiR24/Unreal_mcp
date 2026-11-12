@@ -10,21 +10,11 @@
 
 namespace McpLevelHandlers {
 bool HandleRenameLevelAction(UEngineWireSubsystem& Subsystem, const FString& RequestId, const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> RequestingSocket) {
-    FString SourcePath;
-    if (Payload.IsValid())
-      Payload->TryGetStringField(TEXT("levelPath"), SourcePath);
-    if (SourcePath.IsEmpty() && Payload.IsValid())
-      Payload->TryGetStringField(TEXT("sourcePath"), SourcePath);
-
-    FString DestinationPath;
-    if (Payload.IsValid())
-      Payload->TryGetStringField(TEXT("destinationPath"), DestinationPath);
-    if (DestinationPath.IsEmpty() && Payload.IsValid()) {
-      FString NewName;
-      Payload->TryGetStringField(TEXT("newName"), NewName);
-      if (!NewName.IsEmpty()) {
-        DestinationPath = FPaths::GetPath(NormalizeLevelPackagePath(SourcePath)) / NewName;
-      }
+    FString SourcePath = McpGetFirstStringField(Payload, {TEXT("levelPath"), TEXT("sourcePath")});
+    FString DestinationPath = McpGetFirstStringField(Payload, {TEXT("destinationPath")});
+    const FString NewName = McpGetFirstStringField(Payload, {TEXT("newName")});
+    if (DestinationPath.IsEmpty() && !NewName.IsEmpty()) {
+      DestinationPath = FPaths::GetPath(FPackageName::ObjectPathToPackageName(SourcePath)) / NewName;
     }
 
     if (SourcePath.IsEmpty()) {
@@ -39,56 +29,29 @@ bool HandleRenameLevelAction(UEngineWireSubsystem& Subsystem, const FString& Req
                              nullptr, TEXT("INVALID_ARGUMENT"));
       return true;
     }
-    // A level that is open in the editor (current world or a streaming
-    // sub-level) cannot have its source deleted after the copy, which used to
-    // leave both files behind and report SOURCE_DELETE_FAILED.
-    if (GEditor) {
-      if (UWorld* EditorWorld = GEditor->GetEditorWorldContext().World()) {
-        const FString SourcePackage = NormalizeLevelPackagePath(SourcePath);
-        bool bInUse = EditorWorld->GetOutermost()->GetName().Equals(SourcePackage, ESearchCase::IgnoreCase);
-        for (ULevelStreaming* Streaming : EditorWorld->GetStreamingLevels()) {
-          if (Streaming && Streaming->GetWorldAssetPackageName().Equals(SourcePackage, ESearchCase::IgnoreCase)) {
-            bInUse = true;
-          }
+    if (!SanitizeLevelPathPairOrReply(Subsystem, RequestingSocket, RequestId, SourcePath, DestinationPath,
+                                      TEXT("source path"), TEXT("destination path"))) {
+      return true;
+    }
+    // A level that is open in the editor (current world or a streaming sub-level) cannot have its source deleted after
+    // the copy, which used to leave both files behind and report SOURCE_DELETE_FAILED. Judged on the sanitized path: one
+    // the sanitizer rewrites (no leading slash) passed the test as given and was copied before it failed so.
+    if (UWorld* EditorWorld = McpHandlerUtils::GetEditorWorld()) {
+      bool bInUse = EditorWorld->GetOutermost()->GetName().Equals(SourcePath, ESearchCase::IgnoreCase);
+      for (ULevelStreaming* Streaming : EditorWorld->GetStreamingLevels()) {
+        if (Streaming && Streaming->GetWorldAssetPackageName().Equals(SourcePath, ESearchCase::IgnoreCase)) {
+          bInUse = true;
         }
-        if (bInUse) {
-          Subsystem.SendAutomationResponse(RequestingSocket, RequestId, false,
-                                 FString::Printf(TEXT("Level %s is loaded in the editor (current level or streaming sub-level); unload it before renaming"), *SourcePackage),
-                                 nullptr, TEXT("LEVEL_IN_USE"));
-          return true;
-        }
+      }
+      if (bInUse) {
+        Subsystem.SendAutomationResponse(RequestingSocket, RequestId, false,
+                               FString::Printf(TEXT("Level %s is loaded in the editor (current level or streaming sub-level); unload it before renaming"), *SourcePath),
+                               nullptr, TEXT("LEVEL_IN_USE"));
+        return true;
       }
     }
 
-    // Issue #8: Sanitize paths to prevent traversal attacks
-    FString SanitizedSource = SanitizeProjectRelativePath(SourcePath);
-    if (SanitizedSource.IsEmpty()) {
-      Subsystem.SendAutomationResponse(RequestingSocket, RequestId, false,
-                             McpPathRefusalMessage(TEXT("source path"), SourcePath),
-                             nullptr, TEXT("SECURITY_VIOLATION"));
-      return true;
-    }
-    FString SanitizedDest = SanitizeProjectRelativePath(DestinationPath);
-    if (SanitizedDest.IsEmpty()) {
-      Subsystem.SendAutomationResponse(RequestingSocket, RequestId, false,
-                             McpPathRefusalMessage(TEXT("destination path"), DestinationPath),
-                             nullptr, TEXT("SECURITY_VIOLATION"));
-      return true;
-    }
-    SourcePath = NormalizeLevelPackagePath(SanitizedSource);
-    DestinationPath = NormalizeLevelPackagePath(SanitizedDest);
-
-    if (IsCurrentEditorWorldPackage(SourcePath)) {
-      Subsystem.SendAutomationResponse(RequestingSocket, RequestId, false,
-                             FString::Printf(TEXT("Cannot rename the current loaded level: %s"), *SourcePath),
-                             nullptr, TEXT("LEVEL_LOADED"));
-      return true;
-    }
-
-    bool bOverwrite = false;
-    if (Payload.IsValid()) {
-      Payload->TryGetBoolField(TEXT("overwrite"), bOverwrite);
-    }
+    const bool bOverwrite = GetJsonBoolField(Payload, TEXT("overwrite"), false);
 
     TSharedPtr<FJsonObject> Result;
     FString ErrorMessage;
@@ -114,11 +77,8 @@ bool HandleRenameLevelAction(UEngineWireSubsystem& Subsystem, const FString& Req
     const bool bRenamed = Deletion.bDeletedMap && !bSourceFileExistsAfter && Deletion.SidecarsRemoved();
     Result->SetBoolField(TEXT("renamed"), bRenamed);
     Result->SetBoolField(TEXT("deletedSourceFile"), Deletion.bDeletedMap);
-    Result->SetBoolField(TEXT("sourceBuiltDataExists"), Deletion.bBuiltDataExists);
     Result->SetBoolField(TEXT("deletedSourceBuiltData"), Deletion.bDeletedBuiltData);
-    Result->SetBoolField(TEXT("sourceExternalActorsExists"), Deletion.bExternalActorsExists);
     Result->SetBoolField(TEXT("deletedSourceExternalActors"), Deletion.bDeletedExternalActors);
-    Result->SetBoolField(TEXT("sourceExternalObjectsExists"), Deletion.bExternalObjectsExists);
     Result->SetBoolField(TEXT("deletedSourceExternalObjects"), Deletion.bDeletedExternalObjects);
     Result->SetBoolField(TEXT("sourceFileExistsAfter"), bSourceFileExistsAfter);
 
