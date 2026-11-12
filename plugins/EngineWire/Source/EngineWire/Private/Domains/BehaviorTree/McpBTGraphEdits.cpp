@@ -28,14 +28,30 @@ bool HandleUnlinkNode(UEngineWireSubsystem* Subsystem,
                                    TEXT("NODE_NOT_FOUND"));
     return true;
   }
+  // The editor's own gate: the Root node (without it the rebuild makes an empty tree and nothing can be linked again)
+  // and the read-only nodes of an injected subtree.
+  if (bRemove && !TargetNode->CanUserDeleteNode()) {
+    Subsystem->SendAutomationError(Context.RequestingSocket, Context.RequestId,
+                                   FString::Printf(TEXT("Nothing was removed: %s cannot be deleted (the editor manages the graph's Root node and read-only nodes)."),
+                                                   *TargetNode->GetName()),
+                                   TEXT("PROTECTED_NODE"));
+    return true;
+  }
+
+  // A decorator or service is not in the graph's node list: it hangs on a parent node and leaves through it, as the
+  // editor removes one (UAIGraphNode::DestroyNode). RemoveNode on the graph found nothing and the reply said removed.
+  UAIGraphNode* Subnode = bRemove ? Cast<UAIGraphNode>(TargetNode) : nullptr;
+  UAIGraphNode* SubnodeParent = Subnode ? Subnode->ParentNode.Get() : nullptr;
 
   // One undo step: breaking a link modifies the nodes on both ends, which the engine records inside the step.
   TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
   {
     const FMcpAssetEdit Edit(bRemove ? TEXT("Remove Behavior Tree Node") : TEXT("Break Behavior Tree Node Links"),
-                             BehaviorTreeEditObjects(GraphContext, {TargetNode}), Result);
+                             BehaviorTreeEditObjects(GraphContext, {TargetNode, SubnodeParent}), Result);
     GraphContext.Graph->GetSchema()->BreakNodeLinks(*TargetNode);
-    if (bRemove) {
+    if (SubnodeParent) {
+      SubnodeParent->RemoveSubNode(Subnode);
+    } else if (bRemove) {
       GraphContext.Graph->RemoveNode(TargetNode);
     }
     UpdateBehaviorTreeAsset(GraphContext);

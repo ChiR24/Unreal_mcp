@@ -88,6 +88,23 @@ static FString GetNodeTypeString(UBTNode* Node)
     return TEXT("unknown");
 }
 
+// The decorators or services hung on a node, each serialized at Depth; a null entry is left out.
+template <typename AuxT>
+static TArray<TSharedPtr<FJsonValue>> SerializeAuxNodes(const TArray<TObjectPtr<AuxT>>& Nodes, int32 Depth,
+    TSet<const UBTNode*>& Visited, int32& InOutNodeCount, int32& InOutExecutionNodeCount)
+{
+    TArray<TSharedPtr<FJsonValue>> Out;
+    for (const TObjectPtr<AuxT>& Aux : Nodes)
+    {
+        if (Aux)
+        {
+            Out.Add(MakeShared<FJsonValueObject>(
+                SerializeBTNode(Aux.Get(), nullptr, nullptr, Depth, Visited, InOutNodeCount, InOutExecutionNodeCount).ToSharedRef()));
+        }
+    }
+    return Out;
+}
+
 TSharedPtr<FJsonObject> SerializeBTNode(
     UBTNode* Node,
     const TArray<TObjectPtr<UBTDecorator>>* EntryDecorators,
@@ -148,17 +165,7 @@ TSharedPtr<FJsonObject> SerializeBTNode(
         ++InOutExecutionNodeCount;
         UBTCompositeNode* Comp = Cast<UBTCompositeNode>(Node);
 
-        TArray<TSharedPtr<FJsonValue>> Services;
-        for (UBTService* Svc : Comp->Services)
-        {
-            if (Svc)
-            {
-                Services.Add(MakeShared<FJsonValueObject>(
-                    SerializeBTNode(Svc, nullptr, nullptr, Depth + 1, Visited,
-                                    InOutNodeCount, InOutExecutionNodeCount).ToSharedRef()));
-            }
-        }
-        Obj->SetArrayField(TEXT("services"), Services);
+        Obj->SetArrayField(TEXT("services"), SerializeAuxNodes(Comp->Services, Depth + 1, Visited, InOutNodeCount, InOutExecutionNodeCount));
 
         TArray<TSharedPtr<FJsonValue>> Children;
         for (const FBTCompositeChild& Child : Comp->Children)
@@ -179,17 +186,7 @@ TSharedPtr<FJsonObject> SerializeBTNode(
         ++InOutExecutionNodeCount;
         UBTTaskNode* Task = Cast<UBTTaskNode>(Node);
 
-        TArray<TSharedPtr<FJsonValue>> Services;
-        for (UBTService* Svc : Task->Services)
-        {
-            if (Svc)
-            {
-                Services.Add(MakeShared<FJsonValueObject>(
-                    SerializeBTNode(Svc, nullptr, nullptr, Depth + 1, Visited,
-                                    InOutNodeCount, InOutExecutionNodeCount).ToSharedRef()));
-            }
-        }
-        Obj->SetArrayField(TEXT("services"), Services);
+        Obj->SetArrayField(TEXT("services"), SerializeAuxNodes(Task->Services, Depth + 1, Visited, InOutNodeCount, InOutExecutionNodeCount));
 
         // RunBehavior / RunBehaviorDynamic: terminal subtree reference (do NOT recurse).
         if (UBTTask_RunBehavior* RunBT = Cast<UBTTask_RunBehavior>(Task))
@@ -218,17 +215,7 @@ TSharedPtr<FJsonObject> SerializeBTNode(
     // Decorators on the edge INTO this node (from the parent's FBTCompositeChild).
     if (EntryDecorators && EntryDecorators->Num() > 0)
     {
-        TArray<TSharedPtr<FJsonValue>> EntryDecs;
-        for (const TObjectPtr<UBTDecorator>& DecPtr : *EntryDecorators)
-        {
-            if (UBTDecorator* Dec = DecPtr)
-            {
-                EntryDecs.Add(MakeShared<FJsonValueObject>(
-                    SerializeBTNode(Dec, nullptr, nullptr, Depth + 1, Visited,
-                                    InOutNodeCount, InOutExecutionNodeCount).ToSharedRef()));
-            }
-        }
-        Obj->SetArrayField(TEXT("entryDecorators"), EntryDecs);
+        Obj->SetArrayField(TEXT("entryDecorators"), SerializeAuxNodes(*EntryDecorators, Depth + 1, Visited, InOutNodeCount, InOutExecutionNodeCount));
         if (EntryDecoratorOps)
         {
             Obj->SetArrayField(TEXT("entryDecoratorOpsRaw"), SerializeDecoratorOpsRaw(*EntryDecoratorOps));
@@ -269,16 +256,7 @@ void SerializeBehaviorTree(UBehaviorTree* BT, const TSharedRef<FJsonObject>& Out
     TSet<const UBTNode*> Visited;
 
     // Top-level (subtree) root decorators + their logic ops.
-    TArray<TSharedPtr<FJsonValue>> RootDecs;
-    for (const TObjectPtr<UBTDecorator>& DecPtr : BT->RootDecorators)
-    {
-        if (UBTDecorator* Dec = DecPtr)
-        {
-            RootDecs.Add(MakeShared<FJsonValueObject>(
-                SerializeBTNode(Dec, nullptr, nullptr, 0, Visited, NodeCount, ExecNodeCount).ToSharedRef()));
-        }
-    }
-    Out->SetArrayField(TEXT("rootDecorators"), RootDecs);
+    Out->SetArrayField(TEXT("rootDecorators"), SerializeAuxNodes(BT->RootDecorators, 0, Visited, NodeCount, ExecNodeCount));
     Out->SetArrayField(TEXT("rootDecoratorOpsRaw"), SerializeDecoratorOpsRaw(BT->RootDecoratorOps));
 
     if (Root)

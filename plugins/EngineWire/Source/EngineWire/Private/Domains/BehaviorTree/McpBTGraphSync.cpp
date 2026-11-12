@@ -26,11 +26,6 @@ namespace McpBehaviorTreeHandlers
 #if MCP_HAS_BEHAVIOR_TREE_GRAPH
 namespace
 {
-UClass* GraphNodeClass(const TCHAR* Name)
-{
-  return FindObject<UClass>(nullptr, *FString::Printf(TEXT("/Script/BehaviorTreeEditor.%s"), Name));
-}
-
 UAIGraphNode* NewGraphNode(UEdGraph* Graph, const TCHAR* ClassName)
 {
   UClass* Class = GraphNodeClass(ClassName);

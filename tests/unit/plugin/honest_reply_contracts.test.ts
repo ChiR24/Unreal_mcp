@@ -3893,7 +3893,8 @@ describe('animation and character creators say what they did', () => {
   // The editor-world actor does not tick, so a montage "playing" there stood still.
   it('play_montage outside play reports that nothing moves', () => {
     const montage = code('Animation', 'Montages', 'McpAnimPlayAnimMontage.cpp');
-    expect(montage).toContain('Resp->SetBoolField(TEXT("playing"), PieWorld != nullptr);');
+    expect(montage).toContain('Resp->SetBoolField(TEXT("playing"), bPlaying);');
+    expect(code('Animation', 'Physics', 'McpAnimSetupRagdoll.cpp')).toContain('bOutPlaying = PieWorld != nullptr;');
   });
 
   // A failed save answered like a saved asset, and the new package was not even dirty for save_all.

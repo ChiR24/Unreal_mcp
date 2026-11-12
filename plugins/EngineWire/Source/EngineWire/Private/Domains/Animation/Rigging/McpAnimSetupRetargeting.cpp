@@ -23,13 +23,6 @@
 namespace McpAnimationHandlers {
 
 namespace {
-void Fail(FActionContext &Context, const FString &Text, const TCHAR *Code) {
-  Context.bSuccess = false;
-  Context.Message = Text;
-  Context.ErrorCode = Code;
-  Context.Resp->SetStringField(TEXT("error"), Text);
-}
-
 #if MCP_HAS_IKRIG_BATCH_RETARGET
 // LoadObject accepts a bare package path; the asset registry does not, and a
 // caller naming /Game/Anims/A_Run the way every other action accepts it would
@@ -56,10 +49,9 @@ USkeletalMesh *ResolveMesh(const TSharedPtr<FJsonObject> &Payload,
 bool HandleAnimationSetupRetargetingAction(FActionContext &Context,
                const TSharedPtr<FJsonObject> &Payload) {
 #if !MCP_HAS_IKRIG_BATCH_RETARGET
-  Fail(Context,
-       TEXT("Retargeting needs UE 5.8 or later with the IKRig and IKRigEditor "
-            "modules (the batch retarget API is 5.8+)"),
-       TEXT("NOT_SUPPORTED"));
+  Context.Fail(TEXT("NOT_SUPPORTED"),
+               TEXT("Retargeting needs UE 5.8 or later with the IKRig and IKRigEditor "
+                    "modules (the batch retarget API is 5.8+)"));
   return false;
 #else
   FString SourceSkeletonPath;
@@ -71,16 +63,14 @@ bool HandleAnimationSetupRetargetingAction(FActionContext &Context,
   USkeleton *TargetSkeleton =
       LoadObject<USkeleton>(nullptr, *TargetSkeletonPath);
   if (SourceSkeleton == nullptr || TargetSkeleton == nullptr) {
-    Fail(Context, TEXT("Retargeting failed - source or target skeleton not found"),
-         TEXT("ASSET_NOT_FOUND"));
+    Context.Fail(TEXT("ASSET_NOT_FOUND"), TEXT("Retargeting failed - source or target skeleton not found"));
     return false;
   }
 
   const TArray<TSharedPtr<FJsonValue>> *AssetsArray = nullptr;
   Payload->TryGetArrayField(TEXT("assets"), AssetsArray);
   if (AssetsArray == nullptr || AssetsArray->Num() == 0) {
-    Fail(Context, TEXT("setup_retargeting requires at least one animation asset to retarget"),
-         TEXT("MISSING_RETARGET_ASSETS"));
+    Context.Fail(TEXT("MISSING_RETARGET_ASSETS"), TEXT("setup_retargeting requires at least one animation asset to retarget"));
     return false;
   }
 
@@ -91,11 +81,10 @@ bool HandleAnimationSetupRetargetingAction(FActionContext &Context,
   USkeletalMesh *TargetMesh =
       ResolveMesh(Payload, TEXT("targetMesh"), TargetSkeleton);
   if (SourceMesh == nullptr || TargetMesh == nullptr) {
-    Fail(Context, FString::Printf(
+    Context.Fail(TEXT("MESH_NOT_FOUND"), FString::Printf(
              TEXT("No SkeletalMesh found for the %s skeleton; pass %s"),
              SourceMesh == nullptr ? TEXT("source") : TEXT("target"),
-             SourceMesh == nullptr ? TEXT("sourceMesh") : TEXT("targetMesh")),
-         TEXT("MESH_NOT_FOUND"));
+             SourceMesh == nullptr ? TEXT("sourceMesh") : TEXT("targetMesh")));
     return false;
   }
 
@@ -124,8 +113,7 @@ bool HandleAnimationSetupRetargetingAction(FActionContext &Context,
   const FString SavePathAsGiven = SavePath;
   SavePath = SanitizeProjectRelativePath(SavePath);
   if (SavePath.IsEmpty()) {
-    Fail(Context, McpPathRefusalMessage(TEXT("savePath"), SavePathAsGiven),
-         TEXT("INVALID_PATH"));
+    Context.Fail(TEXT("INVALID_PATH"), McpPathRefusalMessage(TEXT("savePath"), SavePathAsGiven));
     return false;
   }
   if (!UEditorAssetLibrary::DoesDirectoryExist(SavePath)) {
@@ -169,10 +157,8 @@ bool HandleAnimationSetupRetargetingAction(FActionContext &Context,
     }
   }
   if (Retargeter == nullptr) {
-    Fail(Context,
-         BuildError.IsEmpty() ? TEXT("Could not build an IK Retargeter")
-                              : BuildError,
-         TEXT("RETARGETER_BUILD_FAILED"));
+    Context.Fail(TEXT("RETARGETER_BUILD_FAILED"),
+                 BuildError.IsEmpty() ? TEXT("Could not build an IK Retargeter") : BuildError);
     return false;
   }
 
@@ -196,8 +182,7 @@ bool HandleAnimationSetupRetargetingAction(FActionContext &Context,
     Inputs.AssetsToRetarget.Add(Data);
   }
   if (Inputs.AssetsToRetarget.Num() == 0) {
-    Fail(Context, TEXT("None of the named animation assets exist"),
-         TEXT("ASSET_NOT_FOUND"));
+    Context.Fail(TEXT("ASSET_NOT_FOUND"), TEXT("None of the named animation assets exist"));
     return false;
   }
 

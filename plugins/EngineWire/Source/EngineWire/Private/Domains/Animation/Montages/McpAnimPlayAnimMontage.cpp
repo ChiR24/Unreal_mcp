@@ -1,13 +1,10 @@
 #include "EngineWireSubsystem.h"
+#include "Domains/Animation/McpAnimActionDecls.h"
 #include "Foundation/HandlerUtils/McpHandlerUtils.h"
 
 #include "Animation/AnimMontage.h"
 #include "Animation/AnimInstance.h"
 #include "Components/SkeletalMeshComponent.h"
-#include "Editor.h"
-#include "EngineUtils.h"
-#include "GameFramework/Actor.h"
-#include "Subsystems/EditorActorSubsystem.h"
 
 bool UEngineWireSubsystem::HandlePlayAnimMontage(
     const FString &RequestId, const FString &Action,
@@ -40,49 +37,19 @@ bool UEngineWireSubsystem::HandlePlayAnimMontage(
   double PlayRate = 1.0;
   Payload->TryGetNumberField(TEXT("playRate"), PlayRate);
 
-  if (!GEditor || !GEditor->GetEditorWorldContext().World()) {
-    SendAutomationError(RequestingSocket, RequestId,
-                        TEXT("Editor world not available"),
-                        TEXT("EDITOR_NOT_AVAILABLE"));
-    return true;
-  }
-
-  // During PIE the play world holds the live actors; the editor world otherwise.
-  UWorld *PieWorld = GEditor->PlayWorld;
-  AActor *TargetActor = FindActorByNameInWorldForMcp(
-      PieWorld ? PieWorld : GEditor->GetEditorWorldContext().World(), ActorName, true);
-
-  if (!TargetActor) {
-    TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
-    Resp->SetStringField(
-        TEXT("error"),
-        FString::Printf(TEXT("Actor not found: %s"), *ActorName));
-    Resp->SetStringField(TEXT("actorName"), ActorName);
-    Resp->SetStringField(TEXT("montagePath"), MontagePath);
-    Resp->SetNumberField(TEXT("playRate"), PlayRate);
-
-    SendAutomationResponse(RequestingSocket, RequestId, false,
-                           TEXT("Actor not found"), Resp,
-                           TEXT("ACTOR_NOT_FOUND"));
-    return true;
-  }
-
-  USkeletalMeshComponent *SkelMeshComp =
-      TargetActor->FindComponentByClass<USkeletalMeshComponent>();
+  bool bPlaying = false;
+  USkeletalMeshComponent *SkelMeshComp = McpAnimationHandlers::FindSkeletalMeshOrReply(
+      *this, RequestId, RequestingSocket, ActorName, bPlaying, [&](FJsonObject &NotFound) {
+        NotFound.SetStringField(TEXT("montagePath"), MontagePath);
+        NotFound.SetNumberField(TEXT("playRate"), PlayRate);
+      });
   if (!SkelMeshComp) {
-    SendAutomationError(RequestingSocket, RequestId,
-                        TEXT("Skeletal mesh component not found"),
-                        TEXT("COMPONENT_NOT_FOUND"));
     return true;
   }
 
   // Resolve the montage by loading it (package path or object path); DoesAssetExist rejected valid
   // /Game package paths for freshly authored montages.
   UAnimMontage *Montage = LoadObject<UAnimMontage>(nullptr, *MontagePath);
-  if (!Montage && !MontagePath.Contains(TEXT("."))) {
-    Montage = LoadObject<UAnimMontage>(
-        nullptr, *(MontagePath + TEXT(".") + FPackageName::GetShortName(MontagePath)));
-  }
   if (!Montage) {
     TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
     Resp->SetStringField(
@@ -123,8 +90,8 @@ bool UEngineWireSubsystem::HandlePlayAnimMontage(
   Resp->SetNumberField(TEXT("playRate"), PlayRate);
   Resp->SetNumberField(TEXT("montageLength"), MontageLength);
   // Outside Play In Editor the actor does not tick, so the montage was started and stands still; "playing" said otherwise.
-  Resp->SetBoolField(TEXT("playing"), PieWorld != nullptr);
-  if (!PieWorld) {
+  Resp->SetBoolField(TEXT("playing"), bPlaying);
+  if (!bPlaying) {
     TArray<TSharedPtr<FJsonValue>> Warnings;
     Warnings.Add(MakeShared<FJsonValueString>(TEXT("Started on the editor-world actor, which does not tick: nothing moves "
         "until Play In Editor runs. Start play (control_editor play) and play it on the playing actor to see it.")));

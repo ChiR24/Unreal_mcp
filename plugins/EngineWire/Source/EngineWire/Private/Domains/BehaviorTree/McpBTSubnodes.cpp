@@ -15,15 +15,6 @@
 
 namespace {
 
-UBehaviorTreeGraphNode* AsBehaviorTreeGraphNode(UEdGraphNode* GraphNode,
-                                                UClass* BTNodeBaseClass)
-{
-  return GraphNode && BTNodeBaseClass &&
-                 GraphNode->GetClass()->IsChildOf(BTNodeBaseClass)
-             ? static_cast<UBehaviorTreeGraphNode*>(GraphNode)
-             : nullptr;
-}
-
 bool IsGraphNodeOfClass(UEdGraphNode* GraphNode, UClass* GraphClass)
 {
   return GraphNode && GraphClass && GraphNode->GetClass()->IsChildOf(GraphClass);
@@ -56,15 +47,10 @@ bool HandleAddSubnode(UEngineWireSubsystem* Subsystem,
     return true;
   }
 
-  UClass* BTNodeBaseClass =
-      FindObject<UClass>(nullptr, TEXT("/Script/BehaviorTreeEditor.BehaviorTreeGraphNode"));
-  UClass* BTRootNodeClass =
-      FindObject<UClass>(nullptr, TEXT("/Script/BehaviorTreeEditor.BehaviorTreeGraphNode_Root"));
-  UClass* BTDecoratorNodeClass =
-      FindObject<UClass>(nullptr, TEXT("/Script/BehaviorTreeEditor.BehaviorTreeGraphNode_Decorator"));
-  UClass* BTServiceNodeClass =
-      FindObject<UClass>(nullptr, TEXT("/Script/BehaviorTreeEditor.BehaviorTreeGraphNode_Service"));
-  if (!BTNodeBaseClass || !BTRootNodeClass || !BTDecoratorNodeClass ||
+  UClass* BTRootNodeClass = GraphNodeClass(TEXT("BehaviorTreeGraphNode_Root"));
+  UClass* BTDecoratorNodeClass = GraphNodeClass(TEXT("BehaviorTreeGraphNode_Decorator"));
+  UClass* BTServiceNodeClass = GraphNodeClass(TEXT("BehaviorTreeGraphNode_Service"));
+  if (!GraphNodeClass(TEXT("BehaviorTreeGraphNode")) || !BTRootNodeClass || !BTDecoratorNodeClass ||
       !BTServiceNodeClass) {
     Subsystem->SendAutomationError(Context.RequestingSocket, Context.RequestId,
                                    TEXT("BehaviorTreeEditor graph node classes are not loaded."),
@@ -74,15 +60,12 @@ bool HandleAddSubnode(UEngineWireSubsystem* Subsystem,
 
   UBehaviorTreeGraphNode* ParentNode = nullptr;
   bool bRootSentinelParent = false;
-  if (ParentNodeIdStr.Equals(TEXT("root"), ESearchCase::IgnoreCase)) {
+  // 'root' and the Root node's own id (BehaviorTreeGraphNode_Root_0) both mean the node linked under the Root: the
+  // tree build reads root decorators from that node and never from the Root node itself.
+  UEdGraphNode* Resolved = FindGraphNodeByIdOrName(GraphContext.Graph, ParentNodeIdStr);
+  if (ParentNodeIdStr.Equals(TEXT("root"), ESearchCase::IgnoreCase) || IsGraphNodeOfClass(Resolved, BTRootNodeClass)) {
     bRootSentinelParent = true;
-    UBehaviorTreeGraphNode* RootNode = nullptr;
-    for (UEdGraphNode* GraphNode : GraphContext.Graph->Nodes) {
-      if (IsGraphNodeOfClass(GraphNode, BTRootNodeClass)) {
-        RootNode = AsBehaviorTreeGraphNode(GraphNode, BTNodeBaseClass);
-        break;
-      }
-    }
+    UBehaviorTreeGraphNode* RootNode = FindBehaviorTreeGraphRoot(GraphContext.Graph);
     if (!RootNode) {
       Subsystem->SendAutomationError(Context.RequestingSocket,
                                      Context.RequestId,
@@ -101,10 +84,7 @@ bool HandleAddSubnode(UEngineWireSubsystem* Subsystem,
       return true;
     }
     UEdGraphPin* LinkedPin = RootNode->Pins[0]->LinkedTo[0];
-    ParentNode = LinkedPin
-                     ? AsBehaviorTreeGraphNode(LinkedPin->GetOwningNode(),
-                                               BTNodeBaseClass)
-                     : nullptr;
+    ParentNode = LinkedPin ? AsBehaviorTreeGraphNode(LinkedPin->GetOwningNode()) : nullptr;
     if (!ParentNode) {
       Subsystem->SendAutomationError(Context.RequestingSocket,
                                      Context.RequestId,
@@ -118,7 +98,6 @@ bool HandleAddSubnode(UEngineWireSubsystem* Subsystem,
     // rejected exactly those before FindGraphNodeByIdOrName - which resolves
     // them - was ever consulted, and no capability returns the GUID it asked
     // for, so attaching a subnode to a named node was unreachable.
-    UEdGraphNode* Resolved = FindGraphNodeByIdOrName(GraphContext.Graph, ParentNodeIdStr);
     FGuid ParentGuid;
     if (!Resolved && !FGuid::Parse(ParentNodeIdStr, ParentGuid)) {
       Subsystem->SendAutomationError(
@@ -140,7 +119,7 @@ bool HandleAddSubnode(UEngineWireSubsystem* Subsystem,
             TEXT("INVALID_PARENT_FOR_SUBNODE"));
         return true;
       }
-      ParentNode = AsBehaviorTreeGraphNode(Found, BTNodeBaseClass);
+      ParentNode = AsBehaviorTreeGraphNode(Found);
     }
   }
 
@@ -153,15 +132,30 @@ bool HandleAddSubnode(UEngineWireSubsystem* Subsystem,
     return true;
   }
 
+  // nodeClass: a class name or path, or the editor's own name for a stock node (Cooldown, Blackboard, DefaultFocus),
+  // which is BTDecorator_<name> or BTService_<name> in AIModule. Only a path is loaded: on a bare name LoadObject finds
+  // nothing and logs a warning into the reply.
   UClass* NodeInstanceClass = McpFindTypeQuiet(NodeClass);
   if (!NodeInstanceClass) {
-    NodeInstanceClass = LoadObject<UClass>(nullptr, *NodeClass);
+    NodeInstanceClass = NodeClass.Contains(TEXT("/"))
+        ? LoadObject<UClass>(nullptr, *NodeClass)
+        : FindObject<UClass>(nullptr, *FString::Printf(TEXT("/Script/AIModule.BT%s_%s"),
+              SubnodeType.Equals(TEXT("Service"), ESearchCase::IgnoreCase) ? TEXT("Service") : TEXT("Decorator"), *NodeClass));
   }
   if (!NodeInstanceClass) {
     Subsystem->SendAutomationError(
         Context.RequestingSocket,
         Context.RequestId,
         FString::Printf(TEXT("Subnode class not found: %s"), *NodeClass),
+        TEXT("INVALID_CLASS"));
+    return true;
+  }
+  // An abstract class (BTDecorator_BlackboardBase) cannot be a node: NewObject ensures and the editor nulls it on save.
+  if (NodeInstanceClass->HasAnyClassFlags(CLASS_Abstract)) {
+    Subsystem->SendAutomationError(
+        Context.RequestingSocket,
+        Context.RequestId,
+        FString::Printf(TEXT("Class %s is abstract and cannot be a node; name one of its subclasses."), *NodeInstanceClass->GetName()),
         TEXT("INVALID_CLASS"));
     return true;
   }
@@ -208,13 +202,8 @@ bool HandleAddSubnode(UEngineWireSubsystem* Subsystem,
     return true;
   }
 
-  UObject* NewSubnodeObj =
-      NewObject<UObject>(GraphContext.Graph, SubnodeGraphClass, NAME_None,
-                         RF_Transactional);
-  UBehaviorTreeGraphNode* NewSubnode =
-      NewSubnodeObj && NewSubnodeObj->GetClass()->IsChildOf(BTNodeBaseClass)
-          ? static_cast<UBehaviorTreeGraphNode*>(NewSubnodeObj)
-          : nullptr;
+  UBehaviorTreeGraphNode* NewSubnode = AsBehaviorTreeGraphNode(
+      NewObject<UObject>(GraphContext.Graph, SubnodeGraphClass, NAME_None, RF_Transactional));
   if (!NewSubnode) {
     Subsystem->SendAutomationError(Context.RequestingSocket, Context.RequestId,
                                    TEXT("Failed to create Behavior Tree graph subnode."),
@@ -229,12 +218,7 @@ bool HandleAddSubnode(UEngineWireSubsystem* Subsystem,
                              BehaviorTreeEditObjects(GraphContext, {ParentNode, NewSubnode}), Result);
     NewSubnode->ClassData = FGraphNodeClassData(NodeInstanceClass, FString());
     NewSubnode->NodeInstance = NewObject<UBTNode>(NewSubnode, NodeInstanceClass);
-    NewSubnode->CreateNewGuid();
-    // Allocate pins BEFORE PostPlacedNewNode(): checked pin accessors inside
-    // PostPlacedNewNode() assert when the pin list is still empty (same root cause
-    // as the level-blueprint node path — EdGraphNode.h:586).
-    if (NewSubnode->Pins.Num() == 0) { NewSubnode->AllocateDefaultPins(); }
-    NewSubnode->PostPlacedNewNode();
+    // AddSubNode gives the subnode its guid, places it and allocates its pins (a decorator or service has none).
     ParentNode->AddSubNode(NewSubnode, GraphContext.Graph);
     UpdateBehaviorTreeAsset(GraphContext);
   }

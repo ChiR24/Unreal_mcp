@@ -123,12 +123,7 @@ bool HandleSetNodeProperties(UEngineWireSubsystem* Subsystem,
     return true;
   }
 
-  UBehaviorTreeGraphNode* BTNode = nullptr;
-  UClass* BTNodeClass =
-      FindObject<UClass>(nullptr, TEXT("/Script/BehaviorTreeEditor.BehaviorTreeGraphNode"));
-  if (BTNodeClass && TargetNode->GetClass()->IsChildOf(BTNodeClass)) {
-    BTNode = static_cast<UBehaviorTreeGraphNode*>(TargetNode);
-  }
+  UBehaviorTreeGraphNode* BTNode = AsBehaviorTreeGraphNode(TargetNode);
   UObject* Instance = nullptr;
   if (BTNode) {
     Instance = BTNode->NodeInstance;

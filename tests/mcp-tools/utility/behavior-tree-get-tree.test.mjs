@@ -220,6 +220,56 @@ const testCases = [
         label: 'root-sentinel decorator surfaced in rootDecorators' }
     ] },
 
+  // A decorator or service hangs on its parent node, not in the graph's node list: remove_node answered "Node removed."
+  // and left it there.
+  { scenario: 'remove_node takes a service subnode off its parent', toolName: 'manage_ai',
+    arguments: { action: 'remove_node', assetPath: '${captured:btPath}', nodeId: '${captured:serviceId}' },
+    expected: 'success',
+    assertions: [
+      { path: 'structuredContent.result.undo.undoable', equals: true, label: 'one undo step' }
+    ] },
+
+  { scenario: 'get_tree after the removal: the Selector has no service', toolName: 'manage_ai',
+    arguments: { action: 'get_tree', assetPath: '${captured:btPath}' },
+    expected: 'success',
+    assertions: [
+      { path: 'structuredContent.result.tree.rootNode.services', length: 0, label: 'the service is gone from the tree' }
+    ] },
+
+  // The Root node's own id means what 'root' means: a decorator hung on the Root node itself is never read by the tree.
+  { scenario: "Decorator under the Root node's own id lands in the root decorators", toolName: 'manage_ai',
+    arguments: { action: 'add_subnode', assetPath: '${captured:btPath}',
+                 parentNodeId: 'BehaviorTreeGraphNode_Root_0', subnodeType: 'Decorator', nodeClass: 'BTDecorator_Loop' },
+    expected: 'success' },
+
+  { scenario: 'get_tree: the Loop decorator is a root decorator', toolName: 'manage_ai',
+    arguments: { action: 'get_tree', assetPath: '${captured:btPath}' },
+    expected: 'success',
+    assertions: [
+      { path: 'structuredContent.result.tree.rootDecorators', includesObject: { nodeClass: 'BTDecorator_Loop' },
+        label: 'the decorator reached UBehaviorTree::RootDecorators' }
+    ] },
+
+  // The editor forbids deleting the Root node: without it the rebuild makes an empty tree and nothing links again.
+  { scenario: 'Negative: remove_node refuses the Root node', toolName: 'manage_ai',
+    arguments: { action: 'remove_node', assetPath: '${captured:btPath}', nodeId: 'BehaviorTreeGraphNode_Root_0' },
+    expected: 'error|PROTECTED_NODE' },
+
+  // And it has one Root node: a second one was added, where the tree is built from the first.
+  { scenario: 'Negative: add_node refuses a second Root node', toolName: 'manage_ai',
+    arguments: { action: 'add_node', assetPath: '${captured:btPath}', nodeType: 'Root' },
+    expected: 'error|ALREADY_EXISTS' },
+
+  // An abstract node class cannot be instanced: the engine ensures and the editor nulls the node out on save.
+  { scenario: 'Negative: add_node refuses an abstract task class', toolName: 'manage_ai',
+    arguments: { action: 'add_node', assetPath: '${captured:btPath}', nodeType: 'BTTask_BlackboardBase' },
+    expected: 'error|INVALID_CLASS|abstract' },
+
+  { scenario: 'Negative: add_subnode refuses an abstract decorator class', toolName: 'manage_ai',
+    arguments: { action: 'add_subnode', assetPath: '${captured:btPath}',
+                 parentNodeId: '${captured:sequenceId}', subnodeType: 'Decorator', nodeClass: 'BTDecorator_BlackboardBase' },
+    expected: 'error|INVALID_CLASS|abstract' },
+
   // === get_ai_info BB enrichment (PR1a adds inherited/sourceBlackboard via shared serializer) ===
   // We assert the deterministic `inherited:false` enrichment field, NOT `baseClass`: the
   // add_blackboard_key authoring action does not set UBlackboardKeyType_Object::BaseClass

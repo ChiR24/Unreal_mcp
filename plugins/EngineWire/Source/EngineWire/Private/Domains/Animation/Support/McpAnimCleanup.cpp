@@ -1,5 +1,6 @@
 #include "Domains/Animation/McpAnimActionContext.h"
 #include "Foundation/BridgeHelpers/Blueprints/McpBPPaths.h"
+#include "Safety/McpSafeOperations.h"
 
 #include "Editor.h"
 #include "EditorAssetLibrary.h"
@@ -54,7 +55,7 @@ bool HandleAnimationCleanupAction(FActionContext &Context,
             FlushRenderingCommands();
           }
 
-          if (UEditorAssetLibrary::DeleteAsset(ArtifactPath)) {
+          if (McpSafeOperations::McpDeleteAssetAndFile(ArtifactPath)) {
             Cleaned.Add(ArtifactPath);
           } else {
             Failed.Add(ArtifactPath);

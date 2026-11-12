@@ -28,28 +28,15 @@ bool UEngineWireSubsystem::HandleControlActorSpawnBlueprint(
   // so that short names and package paths behave consistently.
   FString NormalizedPath;
   FString LoadError;
-  if (!BlueprintPath.IsEmpty()) {
-    UBlueprint *BlueprintAsset =
-        LoadBlueprintAsset(BlueprintPath, NormalizedPath, LoadError);
-    if (BlueprintAsset && BlueprintAsset->GeneratedClass) {
-      ResolvedClass = BlueprintAsset->GeneratedClass;
-    }
+  if (UBlueprint *BlueprintAsset = LoadBlueprintAsset(BlueprintPath, NormalizedPath, LoadError)) {
+    ResolvedClass = BlueprintAsset->GeneratedClass;
   }
-
-  if (!ResolvedClass && (BlueprintPath.StartsWith(TEXT("/")) ||
-                         BlueprintPath.Contains(TEXT("/")))) {
-    const FString SafeBlueprintPath = SanitizeProjectRelativePath(BlueprintPath);
-    if (!SafeBlueprintPath.IsEmpty()) {
-      if (UObject *Loaded = McpLoadAsset(SafeBlueprintPath)) {
-        if (UBlueprint *BP = Cast<UBlueprint>(Loaded))
-          ResolvedClass = BP->GeneratedClass;
-        else if (UClass *C = Cast<UClass>(Loaded))
-          ResolvedClass = C;
-      }
-    }
+  if (!ResolvedClass) {
+    // A class path or name. A path is read in its canonical form first (the /Content alias, a missing leading slash).
+    const FString SafeBlueprintPath =
+        BlueprintPath.Contains(TEXT("/")) ? SanitizeProjectRelativePath(BlueprintPath) : FString();
+    ResolvedClass = ResolveClassByName(SafeBlueprintPath.IsEmpty() ? BlueprintPath : SafeBlueprintPath);
   }
-  if (!ResolvedClass)
-    ResolvedClass = ResolveClassByName(BlueprintPath);
 
   if (!ResolvedClass) {
     SendStandardErrorResponse(this, Socket, RequestId, TEXT("CLASS_NOT_FOUND"),

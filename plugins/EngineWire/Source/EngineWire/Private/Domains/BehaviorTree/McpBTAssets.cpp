@@ -6,12 +6,6 @@
 #include "Foundation/HandlerUtils/McpHandlerUtils.h"
 #include "AssetRegistry/AssetRegistryModule.h"
 #include "BehaviorTree/BehaviorTree.h"
-#include "EditorAssetLibrary.h"
-
-#if MCP_HAS_BEHAVIOR_TREE_GRAPH
-#include "BehaviorTreeGraph.h"
-#include "EdGraphSchema_BehaviorTree.h"
-#endif
 
 namespace McpBehaviorTreeHandlers {
 

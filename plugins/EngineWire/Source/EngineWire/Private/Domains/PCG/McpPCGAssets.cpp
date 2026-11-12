@@ -76,11 +76,6 @@ bool TryGetPCGAssetPath(const TSharedPtr<FJsonObject>& Payload, std::initializer
     return true;
 }
 
-FString ToObjectPath(const FString& PackagePath)
-{
-    return FString::Printf(TEXT("%s.%s"), *PackagePath, *FPackageName::GetShortName(PackagePath));
-}
-
 UPCGGraph* CreateOrReusePCGGraph(const FString& GraphPath, bool bOverwrite, bool bSave, bool& bOutCreated, bool& bOutSaved, FString& OutError)
 {
     bOutCreated = false;

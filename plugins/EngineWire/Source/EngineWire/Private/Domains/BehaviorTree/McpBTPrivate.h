@@ -42,7 +42,19 @@ bool LoadBehaviorTreeForGraph(UEngineWireSubsystem* Subsystem,
                               const FRequestContext& Context,
                               FGraphContext& OutContext);
 bool EnsureBehaviorTreeGraph(UBehaviorTree*& BehaviorTree, UEdGraph*& OutGraph);
+// A BehaviorTreeEditor graph-node class by its name (BehaviorTreeGraphNode_Task). The module exports these classes
+// only from 5.4, so a Cast<>, NewObject<> or StaticClass() on one does not link on 5.3: they are found by path.
+inline UClass* GraphNodeClass(const TCHAR* Name)
+{
+  return FindObject<UClass>(nullptr, *FString::Printf(TEXT("/Script/BehaviorTreeEditor.%s"), Name));
+}
 #if MCP_HAS_BEHAVIOR_TREE_GRAPH
+// Object as a Behavior Tree graph node, or null: a class test and a static_cast, for the same reason.
+inline UBehaviorTreeGraphNode* AsBehaviorTreeGraphNode(UObject* Object)
+{
+  UClass* Base = GraphNodeClass(TEXT("BehaviorTreeGraphNode"));
+  return Object && Base && Object->GetClass()->IsChildOf(Base) ? static_cast<UBehaviorTreeGraphNode*>(Object) : nullptr;
+}
 // A new BTGraph on BehaviorTree with the schema's default (root) node.
 UEdGraph* CreateBehaviorTreeGraph(UBehaviorTree* BehaviorTree);
 // The graph's Root node (the entry node, which names the tree's Blackboard), or null.

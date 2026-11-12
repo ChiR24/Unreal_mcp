@@ -48,7 +48,6 @@ namespace McpPCGHandlers
 const TCHAR* FindPCGSettingsAlias(const FString& RawAlias);
 bool IsPCGNodeCreationAction(const FString& SubAction);
 bool TryGetPCGAssetPath(const TSharedPtr<FJsonObject>& Payload, std::initializer_list<const TCHAR*> DirectFields, FString& OutPath, FString& OutError);
-FString ToObjectPath(const FString& PackagePath);
 // The TAsset at RawPath (normalized into OutPath); OutError names it as Label when it is missing or another type.
 template <typename TAsset>
 TAsset* LoadPCGAsset(const FString& RawPath, const TCHAR* Label, FString& OutPath, FString& OutError)
@@ -61,7 +60,7 @@ TAsset* LoadPCGAsset(const FString& RawPath, const TCHAR* Label, FString& OutPat
     }
     OutPath = Normalized.Path;
     UObject* Loaded = McpLoadAsset(OutPath);
-    TAsset* Asset = Cast<TAsset>(Loaded ? Loaded : StaticLoadObject(TAsset::StaticClass(), nullptr, *ToObjectPath(OutPath)));
+    TAsset* Asset = Cast<TAsset>(Loaded ? Loaded : StaticLoadObject(TAsset::StaticClass(), nullptr, *OutPath));
     if (!Asset)
     {
         OutError = FString::Printf(TEXT("Could not load %s at '%s'."), Label, *OutPath);

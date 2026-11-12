@@ -1,4 +1,5 @@
 #include "EngineWireSubsystem.h"
+#include "Domains/Animation/McpAnimActionDecls.h"
 #include "Foundation/BridgeHelpers/McpHelpers.h"
 #include "Foundation/HandlerUtils/McpHandlerUtils.h"
 
@@ -9,6 +10,45 @@
 #include "GameFramework/Actor.h"
 #include "PhysicsEngine/PhysicsAsset.h"
 #include "Subsystems/EditorActorSubsystem.h"
+
+namespace McpAnimationHandlers {
+USkeletalMeshComponent *FindSkeletalMeshOrReply(
+    UEngineWireSubsystem &Bridge, const FString &RequestId,
+    TSharedPtr<FMcpBridgeWebSocket> RequestingSocket, const FString &ActorName,
+    bool &bOutPlaying, TFunctionRef<void(FJsonObject &)> AddNotFoundFields) {
+  if (!GEditor || !GEditor->GetEditorWorldContext().World()) {
+    Bridge.SendAutomationError(RequestingSocket, RequestId,
+                               TEXT("Editor world not available"),
+                               TEXT("EDITOR_NOT_AVAILABLE"));
+    return nullptr;
+  }
+
+  // During PIE the play world holds the live actors; the editor world otherwise.
+  UWorld *PieWorld = GEditor->PlayWorld;
+  bOutPlaying = PieWorld != nullptr;
+  AActor *TargetActor = FindActorByNameInWorldForMcp(
+      PieWorld ? PieWorld : GEditor->GetEditorWorldContext().World(), ActorName, true);
+  if (!TargetActor) {
+    TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
+    Resp->SetStringField(TEXT("error"), FString::Printf(TEXT("Actor not found: %s"), *ActorName));
+    Resp->SetStringField(TEXT("actorName"), ActorName);
+    AddNotFoundFields(*Resp);
+    Bridge.SendAutomationResponse(RequestingSocket, RequestId, false,
+                                  TEXT("Actor not found"), Resp,
+                                  TEXT("ACTOR_NOT_FOUND"));
+    return nullptr;
+  }
+
+  USkeletalMeshComponent *SkelMeshComp =
+      TargetActor->FindComponentByClass<USkeletalMeshComponent>();
+  if (!SkelMeshComp) {
+    Bridge.SendAutomationError(RequestingSocket, RequestId,
+                               TEXT("Skeletal mesh component not found"),
+                               TEXT("COMPONENT_NOT_FOUND"));
+  }
+  return SkelMeshComp;
+}
+} // namespace McpAnimationHandlers
 
 // setup_ragdoll (optionally assigning physicsAssetPath) and activate_ragdoll (activate, default true) both switch the
 // actor's skeletal mesh into or out of physics simulation; the parent animation_physics route calls this for both.
@@ -24,33 +64,10 @@ bool UEngineWireSubsystem::HandleSetupRagdoll(
                         TEXT("INVALID_ARGUMENT"));
     return true;
   }
-  if (!GEditor || !GEditor->GetEditorWorldContext().World()) {
-    SendAutomationError(RequestingSocket, RequestId,
-                        TEXT("Editor world not available"),
-                        TEXT("EDITOR_NOT_AVAILABLE"));
-    return true;
-  }
-
-  // During PIE the play world holds the live actors; the editor world otherwise.
-  UWorld *PieWorld = GEditor->PlayWorld;
-  AActor *TargetActor = FindActorByNameInWorldForMcp(
-      PieWorld ? PieWorld : GEditor->GetEditorWorldContext().World(), ActorName, true);
-  if (!TargetActor) {
-    TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
-    Resp->SetStringField(TEXT("error"), FString::Printf(TEXT("Actor not found: %s"), *ActorName));
-    Resp->SetStringField(TEXT("actorName"), ActorName);
-    SendAutomationResponse(RequestingSocket, RequestId, false,
-                           TEXT("Actor not found"), Resp,
-                           TEXT("ACTOR_NOT_FOUND"));
-    return true;
-  }
-
-  USkeletalMeshComponent *SkelMeshComp =
-      TargetActor->FindComponentByClass<USkeletalMeshComponent>();
+  bool bPlaying = false;
+  USkeletalMeshComponent *SkelMeshComp = McpAnimationHandlers::FindSkeletalMeshOrReply(
+      *this, RequestId, RequestingSocket, ActorName, bPlaying);
   if (!SkelMeshComp) {
-    SendAutomationError(RequestingSocket, RequestId,
-                        TEXT("Skeletal mesh component not found"),
-                        TEXT("COMPONENT_NOT_FOUND"));
     return true;
   }
 
@@ -64,7 +81,7 @@ bool UEngineWireSubsystem::HandleSetupRagdoll(
                           TEXT("ASSET_NOT_FOUND"));
       return true;
     }
-    if (!PieWorld) {
+    if (!bPlaying) {
       SkelMeshComp->Modify();
     }
     SkelMeshComp->SetPhysicsAsset(RagdollAsset, true);
@@ -77,7 +94,7 @@ bool UEngineWireSubsystem::HandleSetupRagdoll(
     return true;
   }
   // In the editor this is the placed actor's own setting: it starts the game simulating (limp from the first frame).
-  if (!PieWorld) {
+  if (!bPlaying) {
     SkelMeshComp->Modify();
   }
   if (bActivate) {

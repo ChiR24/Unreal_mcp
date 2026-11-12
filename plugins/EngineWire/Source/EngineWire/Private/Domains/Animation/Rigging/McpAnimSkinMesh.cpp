@@ -37,20 +37,11 @@ namespace McpAnimationHandlers {
 bool HandleAnimationSkinMeshToSkeletonAction(FActionContext &Context,
                const TSharedPtr<FJsonObject> &Payload) {
 #if !MCP_HAS_GEOMETRY_SCRIPT
-  Context.bSuccess = false;
-  Context.Message = TEXT("Skinning needs the GeometryScripting plugin on UE 5.5 or later");
-  Context.ErrorCode = TEXT("NOT_SUPPORTED");
-  Context.Resp->SetStringField(TEXT("error"), Context.Message);
+  Context.Fail(TEXT("NOT_SUPPORTED"), TEXT("Skinning needs the GeometryScripting plugin on UE 5.5 or later"));
   return false;
 #else
-  const auto Fail = [&Context](const FString &Text, const TCHAR *Code) {
-    Context.bSuccess = false;
-    Context.Message = Text;
-    Context.ErrorCode = Code;
-    Context.Resp->SetStringField(TEXT("error"), Text);
-  };
   if (!McpGeometryScriptReady()) {
-    Fail(McpGeometryScriptMissing, McpGeometryScriptMissingCode);
+    Context.Fail(McpGeometryScriptMissingCode, McpGeometryScriptMissing);
     return false;
   }
 
@@ -77,8 +68,7 @@ bool HandleAnimationSkinMeshToSkeletonAction(FActionContext &Context,
   USkeleton *Skeleton = LoadObject<USkeleton>(nullptr, *SkeletonPath);
   if ((Garment == nullptr && Donor == nullptr) || Skeleton == nullptr ||
       OutputPath.IsEmpty()) {
-    Fail(TEXT("staticMeshPath or skeletalMeshPath, plus skeletonPath and outputPath, are required"),
-         TEXT("INVALID_ARGUMENT"));
+    Context.Fail(TEXT("INVALID_ARGUMENT"), TEXT("staticMeshPath or skeletalMeshPath, plus skeletonPath and outputPath, are required"));
     return false;
   }
   // The same canonicalizer every other write path uses; without it an
@@ -87,8 +77,7 @@ bool HandleAnimationSkinMeshToSkeletonAction(FActionContext &Context,
   const FString OutputPathAsGiven = OutputPath.TrimStartAndEnd();
   OutputPath = SanitizeProjectRelativePath(OutputPath.TrimStartAndEnd());
   if (OutputPath.IsEmpty()) {
-    Fail(McpPathRefusalMessage(TEXT("outputPath"), OutputPathAsGiven),
-         TEXT("INVALID_PATH"));
+    Context.Fail(TEXT("INVALID_PATH"), McpPathRefusalMessage(TEXT("outputPath"), OutputPathAsGiven));
     return false;
   }
 
@@ -104,9 +93,8 @@ bool HandleAnimationSkinMeshToSkeletonAction(FActionContext &Context,
         FGeometryScriptMeshReadLOD(), Outcome);
   }
   if (Outcome != EGeometryScriptOutcomePins::Success) {
-    Fail(FString::Printf(TEXT("Could not read geometry from %s"),
-                         Donor != nullptr ? *SourceSkeletalPath : *StaticMeshPath),
-         TEXT("MESH_READ_FAILED"));
+    Context.Fail(TEXT("MESH_READ_FAILED"), FString::Printf(TEXT("Could not read geometry from %s"),
+                 Donor != nullptr ? *SourceSkeletalPath : *StaticMeshPath));
     return false;
   }
 
@@ -135,7 +123,7 @@ bool HandleAnimationSkinMeshToSkeletonAction(FActionContext &Context,
   FString CreateError, CreateCode;
   UPackage* Package = McpCreatePackageForNewAsset(OutputPath, CreateError, CreateCode);
   if (!Package) {
-    Fail(CreateError, *CreateCode);
+    Context.Fail(*CreateCode, CreateError);
     return false;
   }
   const FString AssetName = FPackageName::GetShortName(OutputPath);
@@ -161,9 +149,7 @@ bool HandleAnimationSkinMeshToSkeletonAction(FActionContext &Context,
   UGeometryScriptLibrary_StaticMeshFunctions::CopyMeshToSkeletalMesh(
       Mesh, Skinned, WriteOptions, FGeometryScriptMeshWriteLOD(), WriteOutcome);
   if (WriteOutcome != EGeometryScriptOutcomePins::Success) {
-    Fail(FString::Printf(TEXT("Could not write the skinned mesh to %s"),
-                         *OutputPath),
-         TEXT("MESH_WRITE_FAILED"));
+    Context.Fail(TEXT("MESH_WRITE_FAILED"), FString::Printf(TEXT("Could not write the skinned mesh to %s"), *OutputPath));
     return false;
   }
 
