@@ -176,12 +176,7 @@ bool CreateInputAssets(UEngineWireSubsystem& Bridge, const FString& RequestId, c
     if (Plan.Input.IsValid())
     {
         // Listed even when the second one failed: created assets are kept, never rolled back.
-        TArray<TSharedPtr<FJsonValue>> Paths;
-        for (const FString& Path : Created)
-        {
-            Paths.Add(MakeShared<FJsonValueString>(Path));
-        }
-        Plan.Input->SetArrayField(TEXT("createdAssets"), Paths);
+        Plan.Input->SetArrayField(TEXT("createdAssets"), McpHandlerUtils::ToJsonStringArray(Created));
     }
     return bCreated;
 }

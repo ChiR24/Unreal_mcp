@@ -14,7 +14,7 @@ authored, and never add a second mechanism for something this folder does (hooks
 
 Read this whole file before writing a recipe. Source of truth when in doubt: the code in this folder.
 
-## FILES (13 of 25; each <= 250 pure lines)
+## FILES (14 of 25; each <= 250 pure lines)
 
 | File | Holds |
 |------|-------|
@@ -30,6 +30,7 @@ Read this whole file before writing a recipe. Source of truth when in doubt: the
 | `...Snapshot.cpp` | `TakeSnapshot`, `Restore` |
 | `...Ownership.cpp` | owner tags, `FindOwned`, `RemoveOwned`, `CheckRemovable`, `TagNew` |
 | `...Nodes.h/.cpp` | create_node kinds CallDelegate, Message, AsyncTask (also reached by direct create_node and build_graph) |
+| `...BindNodes.cpp` | create_node kind BindEvent: the Bind Event node and the custom event it binds |
 
 Recipes: `plugins/EngineWire/Resources/Recipes/<Domain>/<Name>.json`.
 Recipe checks: `tests/unit/plugin/behaviour_recipes.test.ts`.
@@ -73,8 +74,13 @@ struct FAuthorResult
 };
 
 FSnapshot TakeSnapshot(UBlueprint* Blueprint);          // compiles first when Dirty or Unknown
-TArray<UEdGraphNode*> FindOwned(UBlueprint*, const FString& Tag);  // Num() > 0: installed
+TArray<UEdGraphNode*> FindOwned(const UBlueprint*, const FString& Tag);  // Num() > 0: installed
 FString OwnerTag(const FString& Tag, const UEdGraphNode& Node);    // "MCP behaviour: <Tag> #<guid>"
+
+// The variableType ("Class:<path>") for a recipe's class variable Name that will hold Value: the class the
+// Blueprint's Name already holds when Value derives from it, else Base. A recipe never retypes a variable, so
+// typing it to the first value's own class would refuse a later run with an unrelated one.
+FString ClassVariableType(const UBlueprint* Blueprint, const TCHAR* Name, const UClass* Value, const UClass* Base);
 
 constexpr int32 MaxAuthorSteps = 1000;                            // public build_graph keeps 200
 constexpr const TCHAR* HubTag = TEXT("MCP event hub");            // shared nodes, never removed
@@ -250,6 +256,7 @@ a VariableGet's output is the variable's name.
 | `SpawnActorFromClass` | `targetClass` | Exposed-on-spawn variables become pins |
 | `K2Node_EnhancedInputAction` | `inputActionPath` | Normally made by the `input` section |
 | `CallDelegate` | `memberName`, `memberClass` | Calls (broadcasts) a dispatcher of this Blueprint, or of memberClass (then feed `self`). Pins: exec, `self`, one per parameter. The build_graph pre-check refuses an undeclared one (`DISPATCHER_NOT_FOUND`) |
+| `BindEvent` (also `AddDelegate`, `K2Node_AddDelegate`) | `memberName`, `memberClass`, `eventName` | A "Bind Event to <dispatcher>" node and a custom event with the dispatcher's inputs, wired to its Event pin. The dispatcher is this Blueprint's, or memberClass's (then connect the object to bind to the node's Target pin). `"$id"` is the bind node and `"$id_event"` the custom event, whose `then` runs when the dispatcher fires. eventName defaults to `<Dispatcher>_Event`; a name in use takes the next free one. Event graphs only (`EVENT_NOT_ALLOWED_IN_GRAPH`); an undeclared dispatcher is `DISPATCHER_NOT_FOUND` |
 | `Message` | `memberClass`, `memberName` | Interface message: memberClass an interface (Blueprint Interface asset path or native), memberName its function. Target any object; no-op when it does not implement it |
 | `AsyncTask` (also `AsyncAction`, `K2Node_AsyncAction`, `K2Node_LatentAbilityCall`, `K2Node_LatentGameplayTaskCall`) | `memberClass`, `memberName` | The editor's own latent node for a static factory (`AsyncActionHandleSaveGame.AsyncLoadGameFromSlot`, `AbilityTask_WaitDelay.WaitDelay`): `then` fires at once, one exec pin per delegate (`Completed`, `OnFinish`) with its data pins. Event graphs only (`LATENT_NODE_IN_FUNCTION`); `ASYNC_NODE_NOT_AVAILABLE` when the module providing the node class is not loaded |
 | `FunctionResult` | graphName = a function | Another return node; its pins mirror the first one's and take `pinDefaults` (a "fail" return) |

@@ -7,16 +7,11 @@ namespace McpGraphCode
 {
 namespace Write
 {
-namespace WriteStmtParts
-{
-bool Head(const FSExpr& Form, const TCHAR* Word)
+bool IsHead(const FSExpr& Form, const TCHAR* Word)
 {
     return Form.Type == FSExpr::EType::List && Form.Items.Num() > 0 && Form.Items[0].Type == FSExpr::EType::Symbol &&
            Form.Items[0].Text.Equals(Word, ESearchCase::CaseSensitive);
 }
-} // namespace WriteStmtParts
-
-using namespace WriteStmtParts;
 
 // Epic's _process_stmts: statement by statement, each wired from where the last left the flow; code after a statement
 // that ends the flow (a return, a switch, a call with continuations) is refused.
@@ -50,31 +45,31 @@ bool FTranspiler::Stmts(const TArray<FSExpr>& Body, int32 From, FBindings Bindin
 
 bool FTranspiler::Stmt(const FSExpr& Statement, FBindings& Bindings, FFlow& Flow)
 {
-    if (Head(Statement, TEXT("bind")))
+    if (IsHead(Statement, TEXT("bind")))
     {
         return Bind(Statement, Bindings, Flow);
     }
-    if (Head(Statement, TEXT("return")))
+    if (IsHead(Statement, TEXT("return")))
     {
         return Return(Statement, Bindings, Flow);
     }
-    if (Head(Statement, TEXT("if")))
+    if (IsHead(Statement, TEXT("if")))
     {
         return If(Statement, Bindings, Flow);
     }
-    if (Head(Statement, TEXT("for")))
+    if (IsHead(Statement, TEXT("for")))
     {
         return For(Statement, Bindings, Flow);
     }
-    if (Head(Statement, TEXT("while")))
+    if (IsHead(Statement, TEXT("while")))
     {
         return While(Statement, Bindings, Flow);
     }
-    if (Head(Statement, TEXT("switch")))
+    if (IsHead(Statement, TEXT("switch")))
     {
         return Switch(Statement, Bindings, Flow);
     }
-    if (Head(Statement, TEXT("break")))
+    if (IsHead(Statement, TEXT("break")))
     {
         if (!Flow.BreakPin)
         {
@@ -90,7 +85,7 @@ bool FTranspiler::Stmt(const FSExpr& Statement, FBindings& Bindings, FFlow& Flow
         Flow.Pending.Reset();
         return true;
     }
-    if (Head(Statement, TEXT("goto")))
+    if (IsHead(Statement, TEXT("goto")))
     {
         // Wired once every form ran: the statement it names may come later in the text.
         if (Statement.Items.Num() < 2)
@@ -101,7 +96,7 @@ bool FTranspiler::Stmt(const FSExpr& Statement, FBindings& Bindings, FFlow& Flow
         Flow.Pending.Reset();
         return true;
     }
-    if (Head(Statement, TEXT("elif")) || Head(Statement, TEXT("else")))
+    if (IsHead(Statement, TEXT("elif")) || IsHead(Statement, TEXT("else")))
     {
         return Fail(TEXT("(elif ...) and (else ...) go last inside an (if) or (elif), as its other branch."));
     }

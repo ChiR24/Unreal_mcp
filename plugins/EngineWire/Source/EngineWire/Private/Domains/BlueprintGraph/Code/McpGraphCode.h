@@ -96,11 +96,8 @@ void ExpandTypeIds(UBlueprint* Blueprint, const TArray<UEdGraph*>& Graphs, TArra
 /** The graph as text; OutPlaced gets the index of every node the text names, OutWarnings what could not be said. */
 FString Decompile(const FGraph& Graph, TSet<int32>& OutPlaced, TArray<FString>& OutWarnings);
 
-namespace Write::WritePlanParts
-{
 /** What runs from Start, and every value that flow reads, as node indexes of Read (McpGraphCodeWritePlan.cpp). */
 TSet<int32> Reach(const FGraph& Read, int32 Start);
-}
 
 /** Epic's node type id: menu category and list title, whitespace removed (a custom event: AddEvent|Custom|Name). */
 FString TypeIdOf(const UK2Node* Node);

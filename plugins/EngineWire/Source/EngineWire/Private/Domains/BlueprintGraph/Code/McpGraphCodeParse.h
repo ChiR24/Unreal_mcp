@@ -29,6 +29,11 @@ struct FSExpr
     FString Tag;
 };
 
+/** Int or Float for an atom Python's int() and then float() accept, as Epic's tokenizer tries them (a sign, inf, infinity
+ *  or nan, digits with one dot, an exponent that needs digits); Symbol for anything else. The formatter asks the same
+ *  question, so a default it leaves unquoted reads back as a number. */
+FSExpr::EType NumberType(const FString& Atom);
+
 /** The top-level forms of Text; false with OutError (and the line) on an unterminated string or unbalanced parens. */
 bool ParseSExpr(const FString& Text, TArray<FSExpr>& OutForms, FString& OutError);
 } // namespace McpGraphCode

@@ -8,12 +8,6 @@ namespace Write
 {
 namespace WriteFlowParts
 {
-bool IsHead(const FSExpr& Form, const TCHAR* Word)
-{
-    return Form.Type == FSExpr::EType::List && Form.Items.Num() > 0 && Form.Items[0].Type == FSExpr::EType::Symbol &&
-           Form.Items[0].Text.Equals(Word, ESearchCase::CaseSensitive);
-}
-
 // A (break) inside these statements that is not inside a nested loop: the loop then needs its Break input.
 bool HasBreak(const TArray<FSExpr>& Forms, int32 From)
 {
@@ -58,11 +52,7 @@ bool FTranspiler::If(const FSExpr& Statement, const FBindings& Bindings, FFlow& 
         return false;
     }
     UEdGraphNode* Branch = Create(TEXT("Utilities|FlowControl|Branch"));
-    UEdGraphPin* Condition = nullptr;
-    for (UEdGraphPin* Pin : DataPins(Branch, true))
-    {
-        Condition = Pin->PinName == TEXT("Condition") ? Pin : Condition;
-    }
+    UEdGraphPin* Condition = DataPin(Branch, true, TEXT("Condition"));
     if (!Branch)
     {
         return false;
@@ -248,11 +238,7 @@ bool FTranspiler::Switch(const FSExpr& Statement, const FBindings& Bindings, FFl
             return Fail(TEXT("A (switch) case is (:Case stmts...)."));
         }
         const FString PinName = Case.Items[0].Text.Mid(1);
-        UEdGraphPin* Exec = ExecPin(Node, false, PinName);
-        for (int32 Grown = 0; !Exec && Grown < 64 && AddPin(Node, PinName); ++Grown)
-        {
-            Exec = ExecPin(Node, false, PinName);
-        }
+        UEdGraphPin* Exec = GrownExecPin(Node, PinName);
         if (!Exec)
         {
             return Fail(FString::Printf(TEXT("%s has no case %s."), *TypeId, *PinName));

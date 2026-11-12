@@ -125,7 +125,7 @@ int32 ReadAsCode(UBlueprint* Blueprint, const TArray<UEdGraph*>& Graphs, const T
             }
             else if (Heads.Contains(Read.Nodes[At].Id))
             {
-                Shown.Append(Write::WritePlanParts::Reach(Read, At));
+                Shown.Append(Reach(Read, At));
             }
         }
         if (Entries.Num() > 0 && Shown.Num() == 0)
@@ -198,12 +198,7 @@ int32 ReadAsCode(UBlueprint* Blueprint, const TArray<UEdGraph*>& Graphs, const T
     }
     if (Warnings.Num() > 0)
     {
-        TArray<TSharedPtr<FJsonValue>> Rows;
-        for (const FString& Warning : Warnings)
-        {
-            Rows.Add(MakeShared<FJsonValueString>(Warning));
-        }
-        Result.SetArrayField(TEXT("warnings"), Rows);
+        Result.SetArrayField(TEXT("warnings"), McpHandlerUtils::ToJsonStringArray(Warnings));
     }
     return NotInCode;
 }

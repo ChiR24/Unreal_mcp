@@ -245,9 +245,7 @@ void ExpandTypeIds(UBlueprint* Blueprint, const TArray<UEdGraph*>& Graphs, TArra
         for (int32 At = 0; At < Read.Nodes.Num(); ++At)
         {
             const FNode& Node = Read.Nodes[At];
-            const bool bEntry = !Node.Ins.ContainsByPredicate([](const FPin& Pin) { return Pin.bExec; }) &&
-                                Node.Outs.ContainsByPredicate([](const FPin& Pin) { return Pin.bExec; });
-            if (Node.Kind == EKind::Call && !bEntry)
+            if (Node.Kind == EKind::Call && !IsEntry(Node))
             {
                 Names.FindOrAdd(MenuTitleKey(Node.TypeId)).Add(At);
                 Titles.Add(MenuTitleKey(Node.TypeId));

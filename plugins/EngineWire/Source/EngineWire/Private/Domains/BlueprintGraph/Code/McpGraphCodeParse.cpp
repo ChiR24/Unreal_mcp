@@ -2,50 +2,6 @@
 
 namespace McpGraphCode
 {
-namespace ParseParts
-{
-// Reading, checking and running all recurse once per list level: a bound, so no text can overflow the game thread's stack.
-constexpr int32 MaxDepth = 128;
-
-struct FToken
-{
-    // ( or ), in Atom.Text.
-    bool bParen = false;
-    FSExpr Atom;
-};
-
-int32 LineAt(const FString& Text, int32 At)
-{
-    int32 Line = 1;
-    for (int32 Each = 0; Each < At && Each < Text.Len(); ++Each)
-    {
-        Line += Text[Each] == TEXT('\n') ? 1 : 0;
-    }
-    return Line;
-}
-
-// The closing quote of the string opened at Open, or past the end when it never closes; a backslash skips one character.
-int32 StringEnd(const FString& Text, int32 Open)
-{
-    int32 At = Open + 1;
-    while (At < Text.Len() && Text[At] != TEXT('"'))
-    {
-        At += Text[At] == TEXT('\\') ? 2 : 1;
-    }
-    return At;
-}
-
-FString Unescape(const FString& Raw)
-{
-    return Raw.Replace(TEXT("\\\""), TEXT("\"")).Replace(TEXT("\\\\"), TEXT("\\"));
-}
-
-bool IsBreak(TCHAR Ch)
-{
-    return Ch == TEXT(' ') || Ch == TEXT('\t') || Ch == TEXT('\n') || Ch == TEXT('\r') || Ch == TEXT(';') || Ch == TEXT('"') || Ch == TEXT(')');
-}
-
-// What Python's int() and then float() accept, as Epic's tokenizer tries them.
 FSExpr::EType NumberType(const FString& Atom)
 {
     int32 At = Atom.Len() > 0 && (Atom[0] == TEXT('+') || Atom[0] == TEXT('-')) ? 1 : 0;
@@ -78,6 +34,39 @@ FSExpr::EType NumberType(const FString& Atom)
         return FSExpr::EType::Symbol;
     }
     return bDot || bExponent ? FSExpr::EType::Float : FSExpr::EType::Int;
+}
+
+namespace ParseParts
+{
+// Reading, checking and running all recurse once per list level: a bound, so no text can overflow the game thread's stack.
+constexpr int32 MaxDepth = 128;
+
+struct FToken
+{
+    // ( or ), in Atom.Text.
+    bool bParen = false;
+    FSExpr Atom;
+};
+
+// The closing quote of the string opened at Open, or past the end when it never closes; a backslash skips one character.
+int32 StringEnd(const FString& Text, int32 Open)
+{
+    int32 At = Open + 1;
+    while (At < Text.Len() && Text[At] != TEXT('"'))
+    {
+        At += Text[At] == TEXT('\\') ? 2 : 1;
+    }
+    return At;
+}
+
+FString Unescape(const FString& Raw)
+{
+    return Raw.Replace(TEXT("\\\""), TEXT("\"")).Replace(TEXT("\\\\"), TEXT("\\"));
+}
+
+bool IsBreak(TCHAR Ch)
+{
+    return Ch == TEXT(' ') || Ch == TEXT('\t') || Ch == TEXT('\n') || Ch == TEXT('\r') || Ch == TEXT(';') || Ch == TEXT('"') || Ch == TEXT(')');
 }
 
 // A read_graph_as_code tag: n and 6 or more hex digits.
@@ -166,7 +155,8 @@ bool Tokenize(const FString& Text, TArray<FToken>& Out, TMap<int32, FString>& Ta
                 const int32 Close = StringEnd(Text, Open);
                 if (Close >= Text.Len())
                 {
-                    OutError = FString::Printf(TEXT("Line %d: unterminated string%s"), LineAt(Text, Open), bString ? TEXT(" literal") : TEXT(" in quoted keyword"));
+                    // The quote is on the token's own line: the token starts with it, or with the colon just before it.
+                    OutError = FString::Printf(TEXT("Line %d: unterminated string%s"), Line, bString ? TEXT(" literal") : TEXT(" in quoted keyword"));
                     return false;
                 }
                 Token.Atom.Type = bString ? FSExpr::EType::String : FSExpr::EType::Symbol;

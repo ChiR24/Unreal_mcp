@@ -183,9 +183,10 @@ void AddOp(FPlan& Plan, const TSharedPtr<FJsonObject>& Step, const FString& Labe
 bool BuildPlan(UEngineWireSubsystem& Bridge, const FString& RequestId, UBlueprint* Blueprint,
                const TSharedPtr<FJsonObject>& Recipe, FPlan& Plan, const TSharedPtr<FJsonObject>& Report,
                FString& OutError, FString& OutCode);
-// Members.cpp: variables, dispatchers, custom events and functions (checked, then flattened).
+// Dispatchers.cpp
 // Empty when the Blueprint's existing dispatcher Name has the recipe's parameters, else what differs.
 FString DispatcherSignatureMismatch(UBlueprint* Blueprint, const FString& Name, const TSharedPtr<FJsonObject>& Declared);
+// Members.cpp: variables, dispatchers, custom events and functions (checked, then flattened).
 bool PlanMembers(UBlueprint* Blueprint, const TSharedPtr<FJsonObject>& Recipe, FPlan& Plan, FString& OutError,
                  FString& OutCode);
 bool CommitVariables(UBlueprint* Blueprint, const FPlan& Plan, const FSnapshot& Before,

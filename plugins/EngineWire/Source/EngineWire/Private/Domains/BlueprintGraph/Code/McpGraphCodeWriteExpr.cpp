@@ -96,6 +96,16 @@ bool AddPin(UEdGraphNode* Node, const FString& Name)
     return false;
 }
 
+UEdGraphPin* GrownExecPin(UEdGraphNode* Node, const FString& Name)
+{
+    UEdGraphPin* Exec = ExecPin(Node, false, Name);
+    for (int32 Grown = 0; !Exec && Grown < 64 && AddPin(Node, Name); ++Grown)
+    {
+        Exec = ExecPin(Node, false, Name);
+    }
+    return Exec;
+}
+
 bool FTranspiler::Expr(const FSExpr& Value, const FBindings& Bindings, FFlow& Flow, UEdGraphPin*& Out)
 {
     Out = nullptr;
@@ -231,11 +241,7 @@ UEdGraphNode* FTranspiler::CallNode(const FSExpr& Call, const FBindings& Binding
     for (const FSExpr* Branch : Continuations)
     {
         const FString PinName = Branch->Items[0].Text.Mid(1);
-        UEdGraphPin* Exec = ExecPin(Node, false, PinName);
-        for (int32 Grown = 0; !Exec && Grown < 64 && AddPin(Node, PinName); ++Grown)
-        {
-            Exec = ExecPin(Node, false, PinName);
-        }
+        UEdGraphPin* Exec = GrownExecPin(Node, PinName);
         if (!Exec)
         {
             Fail(FString::Printf(TEXT("%s has no exec output %s."), *TypeId, *PinName));

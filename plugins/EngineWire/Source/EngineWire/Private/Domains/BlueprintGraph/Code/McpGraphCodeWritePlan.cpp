@@ -6,6 +6,46 @@
 
 namespace McpGraphCode
 {
+TSet<int32> Reach(const FGraph& Read, int32 Start)
+{
+    TMap<int32, bool> Seen; // true: the node runs, false: only its outputs are read
+    TArray<TPair<int32, bool>> Queue = {TPair<int32, bool>(Start, true)};
+    for (int32 Head = 0; Head < Queue.Num(); ++Head)
+    {
+        const TPair<int32, bool> Top = Queue[Head];
+        const bool* Had = Seen.Find(Top.Key);
+        if (Had && (*Had || !Top.Value))
+        {
+            continue;
+        }
+        Seen.Add(Top.Key, Top.Value);
+        const FNode& Node = Read.Nodes[Top.Key];
+        for (const FPin& Pin : Node.Outs)
+        {
+            for (const FPinRef& To : Pin.Links)
+            {
+                if (Top.Value && Pin.bExec)
+                {
+                    Queue.Emplace(To.Node, true);
+                }
+            }
+        }
+        for (const FPin& Pin : Node.Ins)
+        {
+            for (const FPinRef& From : Pin.Links)
+            {
+                if (!Pin.bExec)
+                {
+                    Queue.Emplace(From.Node, false);
+                }
+            }
+        }
+    }
+    TSet<int32> Out;
+    Seen.GetKeys(Out);
+    return Out;
+}
+
 namespace Write
 {
 namespace WritePlanParts
@@ -64,46 +104,6 @@ void AddTitles(const FSExpr& Item, TSet<FString>& Titles)
     }
 }
 
-// What runs from Start, and every value that flow reads, as the node indexes of the snapshot.
-TSet<int32> Reach(const FGraph& Read, int32 Start)
-{
-    TMap<int32, bool> Seen; // true: the node runs, false: only its outputs are read
-    TArray<TPair<int32, bool>> Queue = {TPair<int32, bool>(Start, true)};
-    for (int32 Head = 0; Head < Queue.Num(); ++Head)
-    {
-        const TPair<int32, bool> Top = Queue[Head];
-        const bool* Had = Seen.Find(Top.Key);
-        if (Had && (*Had || !Top.Value))
-        {
-            continue;
-        }
-        Seen.Add(Top.Key, Top.Value);
-        const FNode& Node = Read.Nodes[Top.Key];
-        for (const FPin& Pin : Node.Outs)
-        {
-            for (const FPinRef& To : Pin.Links)
-            {
-                if (Top.Value && Pin.bExec)
-                {
-                    Queue.Emplace(To.Node, true);
-                }
-            }
-        }
-        for (const FPin& Pin : Node.Ins)
-        {
-            for (const FPinRef& From : Pin.Links)
-            {
-                if (!Pin.bExec)
-                {
-                    Queue.Emplace(From.Node, false);
-                }
-            }
-        }
-    }
-    TSet<int32> Out;
-    Seen.GetKeys(Out);
-    return Out;
-}
 } // namespace WritePlanParts
 
 using namespace WritePlanParts;

@@ -121,6 +121,8 @@ TArray<UEdGraphPin*> DataPins(UEdGraphNode* Node, bool bInputs);
 UEdGraphPin* DataPin(UEdGraphNode* Node, bool bInput, const TCHAR* Name);
 /** A node's exec output by name, or its first exec input when Name is empty. */
 UEdGraphPin* ExecPin(UEdGraphNode* Node, bool bInput, const FString& Name);
+/** A list headed by the symbol Word (McpGraphCodeWriteStmts.cpp). */
+bool IsHead(const FSExpr& Form, const TCHAR* Word);
 /** The node type id of an operator symbol (+, ==, and...), or null (McpGraphCodeWriteExpr.cpp). */
 const TCHAR* OperatorTypeId(const FString& Symbol);
 // ---- McpGraphCodeWriteValues.cpp ----
@@ -134,6 +136,8 @@ FString TypedOperator(const FString& Op, FName A, FName B);
 /** One more exec output: the case Name on a switch on string or name, the next case on another switch, the next output
  *  on a sequence; false when the node takes none. */
 bool AddPin(UEdGraphNode* Node, const FString& Name);
+/** Node's exec output Name, the node grown (AddPin, 64 times at most) until it has one; null when it never does. */
+UEdGraphPin* GrownExecPin(UEdGraphNode* Node, const FString& Name);
 
 // ---- McpGraphCodeWritePlan.cpp ----
 /** Empty when Form is (event Name ...) or (fn Name (params) ...), else why not with its line; the rest take checked forms. */

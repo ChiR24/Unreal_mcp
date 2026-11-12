@@ -1,4 +1,5 @@
 #include "Domains/BlueprintGraph/Code/McpGraphCodeEmit.h"
+#include "Domains/BlueprintGraph/Code/McpGraphCodeParse.h"
 
 namespace McpGraphCode
 {
@@ -53,34 +54,10 @@ const FComponent Components[] = {
     {TEXT("Math|Transform|BreakTransform"), TEXT("Rotation"), TEXT("rotation")},
     {TEXT("Math|Transform|BreakTransform"), TEXT("Scale"), TEXT("scale")}};
 
-// What Python's int() or float() reads, as Epic's _format_pin_default asks: [sign] digits [.digits] [e[sign]digits].
+// What Python's int() or float() reads, as Epic's _format_pin_default asks: the reader's own test.
 bool IsNumeric(const FString& Value)
 {
-    const FString Text = Value.TrimStartAndEnd();
-    int32 At = Text.Len() > 0 && (Text[0] == TEXT('+') || Text[0] == TEXT('-')) ? 1 : 0;
-    const FString Word = Text.Mid(At).ToLower();
-    if (Word == TEXT("inf") || Word == TEXT("infinity") || Word == TEXT("nan"))
-    {
-        return true;
-    }
-    bool bDigits = false;
-    bool bDot = false;
-    for (; At < Text.Len() && (FChar::IsDigit(Text[At]) || (Text[At] == TEXT('.') && !bDot)); ++At)
-    {
-        bDigits |= FChar::IsDigit(Text[At]);
-        bDot |= Text[At] == TEXT('.');
-    }
-    if (bDigits && At < Text.Len() && (Text[At] == TEXT('e') || Text[At] == TEXT('E')))
-    {
-        At += At + 1 < Text.Len() && (Text[At + 1] == TEXT('+') || Text[At + 1] == TEXT('-')) ? 2 : 1;
-        const int32 Start = At;
-        while (At < Text.Len() && FChar::IsDigit(Text[At]))
-        {
-            ++At;
-        }
-        bDigits = At > Start;
-    }
-    return bDigits && At == Text.Len();
+    return NumberType(Value.TrimStartAndEnd()) != FSExpr::EType::Symbol;
 }
 
 // Backslashes are escaped as well as quotes, so Epic's tokenizer reads the value back as it was.

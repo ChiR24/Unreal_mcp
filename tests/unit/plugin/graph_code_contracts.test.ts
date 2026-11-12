@@ -50,7 +50,7 @@ describe('read_graph_as_code', () => {
   it('with entry, keeps that form alone and lists only what it runs and the values those read', () => {
     const read = code(join(CODE, 'McpGraphCodeRead.cpp'));
     expect(read).toMatch(/Text = KeepEntry\(Text, Entries, Heads, OutNames\);\s*if \(Text\.IsEmpty\(\)\)\s*\{\s*return INDEX_NONE;/u);
-    expect(read).toMatch(/Heads\.Contains\(Read\.Nodes\[At\]\.Id\)\)\s*\{\s*Shown\.Append\(Write::WritePlanParts::Reach\(Read, At\)\);/u);
+    expect(read).toMatch(/Heads\.Contains\(Read\.Nodes\[At\]\.Id\)\)\s*\{\s*Shown\.Append\(Reach\(Read, At\)\);/u);
     expect(read).toMatch(/TryGetStringField\(TEXT\("entry"\), Entry\)[\s\S]*ReadAsCode\(Blueprint, Graphs, Entries, bCodeOnly, \*Result, Names\);[\s\S]*TEXT\("ENTRY_NOT_FOUND"\)/u);
   });
 
