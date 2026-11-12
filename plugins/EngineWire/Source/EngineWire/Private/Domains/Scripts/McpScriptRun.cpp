@@ -1,7 +1,7 @@
 #include "Domains/Scripts/McpScript.h"
 
 #include "Domains/Debug/Contracts/McpContracts.h"
-#include "Editor.h"
+#include "Foundation/HandlerUtils/McpHandlerUtilsActionsPaths.h"
 #include "Foundation/Solvers/McpPratt.h"
 #include "HAL/PlatformTime.h"
 
@@ -13,11 +13,6 @@ namespace ScriptRunParts
 {
 constexpr int32 MaxRange = 1000;
 constexpr int32 MaxValueNodes = 1000000;
-
-UWorld* JudgedWorld()
-{
-    return GEditor ? (GEditor->PlayWorld ? GEditor->PlayWorld.Get() : GEditor->GetEditorWorldContext().World()) : nullptr;
-}
 } // namespace ScriptRunParts
 
 using namespace ScriptRunParts;
@@ -157,7 +152,7 @@ bool FRunner::Stmt(const FSExpr& Form, FNames& Names)
         {
             return true;
         }
-        const McpContracts::FVerdict Verdict = McpContracts::Judge(Root, JudgedWorld(), nullptr);
+        const McpContracts::FVerdict Verdict = McpContracts::Judge(Root, McpHandlerUtils::GetPlayOrEditorWorld(), nullptr);
         return Verdict.Verdict == TEXT("ok") ? Remember(nullptr) :
                Fail(Form.Line, TEXT("EXPECTATION_FAILED"), FString::Printf(TEXT("expected '%s': %s (%s)."), *Assertion, *Verdict.Verdict, *Verdict.Actual));
     }

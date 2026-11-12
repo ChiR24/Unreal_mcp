@@ -10,7 +10,7 @@ bool HandleInspectRuntimeReportAction(
 {
         if (LowerSubAction.Equals(TEXT("runtime_report")) || LowerSubAction.Equals(TEXT("pie_report")))
         {
-            UWorld *World = McpGetRuntimeInspectionWorld();
+            UWorld *World = McpHandlerUtils::GetPlayOrEditorWorld();
             if (!World)
             {
                 Bridge.SendAutomationError(RequestingSocket, RequestId,
@@ -21,12 +21,7 @@ bool HandleInspectRuntimeReportAction(
 
             FString Filter;
             Payload->TryGetStringField(TEXT("filter"), Filter);
-            FString ActorName;
-            Payload->TryGetStringField(TEXT("actorName"), ActorName);
-            if (ActorName.IsEmpty())
-            {
-                Payload->TryGetStringField(TEXT("name"), ActorName);
-            }
+            const FString ActorName = McpGetFirstStringField(Payload, {TEXT("actorName"), TEXT("name")});
 
             TArray<FString> ComponentNames;
             FString ComponentName;

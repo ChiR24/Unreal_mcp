@@ -3,10 +3,17 @@
 #include "CoreMinimal.h"
 #include "Dom/JsonObject.h"
 #include "Dom/JsonValue.h"
+#include "Runtime/Launch/Resources/Version.h"
 #include "Spatial/PointHashGrid3.h"
 
 class USkeletalMesh;
 struct FReferenceSkeleton;
+
+#if ENGINE_MINOR_VERSION >= 4
+#define MCP_SKIN_SOURCE_IS_MESH_DESCRIPTION 1
+#else
+#define MCP_SKIN_SOURCE_IS_MESH_DESCRIPTION 0
+#endif
 
 // A skeletal mesh's SOURCE data for one LOD: FSkeletalMeshImportData before UE 5.4, the mesh description
 // from 5.4. Build() regenerates render data from it, so an edit made only to render data is lost on the

@@ -151,7 +151,7 @@ bool UEngineWireSubsystem::HandleControlActorSpawn(
   // Use direct world spawning for both PIE and editor worlds. EditorActorSubsystem
   // routes through viewport placement and hit-proxy rendering, which crashes
   // under NullRHI even when automation provides an explicit transform.
-  UWorld *TargetWorld = GEditor->PlayWorld ? GEditor->PlayWorld.Get() : GEditor->GetEditorWorldContext().World();
+  UWorld *TargetWorld = McpHandlerUtils::GetPlayOrEditorWorld();
 
   if (!TargetWorld) {
     SendStandardErrorResponse(this, Socket, RequestId, TEXT("WORLD_NOT_FOUND"),

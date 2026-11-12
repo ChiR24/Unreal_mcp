@@ -19,7 +19,7 @@ bool HandleInspectSearchAction(
             Payload->TryGetStringField(TEXT("filter"), Filter);
             const int32 Limit = FMath::Max(1, GetJsonIntField(Payload, TEXT("limit"), 100));
             const int32 Offset = FMath::Max(0, GetJsonIntField(Payload, TEXT("offset"), 0));
-            UWorld* World = McpGetRuntimeInspectionWorld();
+            UWorld* World = McpHandlerUtils::GetPlayOrEditorWorld();
             TArray<TSharedPtr<FJsonValue>> ObjectsArray;
             int32 TotalCount = 0;
             int32 MatchedCount = 0;
@@ -92,7 +92,7 @@ bool HandleInspectSearchAction(
 
             // The PIE world while a session runs, like list_objects: the editor
             // world has no pawn or GameMode, so a runtime class read as 0 found.
-            UWorld* World = McpGetRuntimeInspectionWorld();
+            UWorld* World = McpHandlerUtils::GetPlayOrEditorWorld();
             if (World && !ClassName.IsEmpty())
             {
                 for (TActorIterator<AActor> It(World); It; ++It)
@@ -122,7 +122,7 @@ bool HandleInspectSearchAction(
             Payload->TryGetStringField(TEXT("tag"), Tag);
             TArray<TSharedPtr<FJsonValue>> ObjectsArray;
 
-            UWorld* World = McpGetRuntimeInspectionWorld();
+            UWorld* World = McpHandlerUtils::GetPlayOrEditorWorld();
             if (World && !Tag.IsEmpty())
             {
                 for (TActorIterator<AActor> It(World); It; ++It)

@@ -41,7 +41,7 @@ bool HandleStreamLevelAction(UEngineWireSubsystem& Subsystem, const FString& Req
     // the reply said the level was updated. During Play the level streams in the running game (the Load and
     // Unload Stream Level nodes); otherwise it is shown or hidden in the editor, as the Levels panel does.
     UWorld* PlayWorld = GEditor->PlayWorld;
-    UWorld* World = PlayWorld ? PlayWorld : GEditor->GetEditorWorldContext().World();
+    UWorld* World = McpHandlerUtils::GetPlayOrEditorWorld();
     if (!World) {
       Subsystem.SendAutomationResponse(RequestingSocket, RequestId, false,
                              TEXT("No world loaded"), nullptr,

@@ -58,9 +58,7 @@ bool UEngineWireSubsystem::HandleControlActorFindByName(
   // a caller verifying its own play session was told its pawn was not there.
   // Iterate the world directly, preferring the PIE world exactly as
   // find_by_class, list, spawn and the lookup helpers already do.
-  UWorld *QueryWorld = GEditor->PlayWorld
-                           ? GEditor->PlayWorld.Get()
-                           : GEditor->GetEditorWorldContext().World();
+  UWorld *QueryWorld = McpHandlerUtils::GetPlayOrEditorWorld();
   TArray<AActor *> AllActors;
   if (QueryWorld) {
     for (TActorIterator<AActor> It(QueryWorld); It; ++It) {

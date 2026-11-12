@@ -28,7 +28,7 @@ static UNiagaraComponent* FindLifecycleComponent(AActor* Actor, const FString& A
     {
         Candidates.Add(Actor);
     }
-    else if (UWorld* World = AssetPath.IsEmpty() ? nullptr : (GEditor && GEditor->PlayWorld ? GEditor->PlayWorld.Get() : GetEditorWorld()))
+    else if (UWorld* World = AssetPath.IsEmpty() ? nullptr : McpHandlerUtils::GetPlayOrEditorWorld())
     {
         for (TActorIterator<AActor> It(World); It; ++It)
         {

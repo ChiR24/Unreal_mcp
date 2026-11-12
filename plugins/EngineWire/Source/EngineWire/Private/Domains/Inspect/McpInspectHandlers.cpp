@@ -5,12 +5,6 @@
 #include "Domains/Debug/Logpoints/McpLogpoints.h"
 #include "Domains/Perception/McpPerception.h"
 
-// inspect_struct handler shard forward declaration.
-namespace McpInspectStruct
-{
-    bool HandleInspectStructAction(FString Action, const TSharedPtr<FJsonObject>& Params, TSharedPtr<FJsonObject>& OutResult);
-}
-
 using namespace McpInspectHandlers;
 
 bool UEngineWireSubsystem::HandleInspectAction(
@@ -18,12 +12,6 @@ bool UEngineWireSubsystem::HandleInspectAction(
     const TSharedPtr<FJsonObject> &Payload,
     TSharedPtr<FMcpBridgeWebSocket> RequestingSocket)
 {
-    const FString Lower = Action.ToLower();
-    if (!Lower.Equals(TEXT("inspect"), ESearchCase::IgnoreCase))
-    {
-        return false;
-    }
-
     if (!Payload.IsValid())
     {
         SendAutomationError(RequestingSocket, RequestId,
@@ -49,7 +37,6 @@ bool UEngineWireSubsystem::HandleInspectAction(
         LowerSubAction.Equals(TEXT("find_by_class")) ||
         LowerSubAction.Equals(TEXT("find_by_tag")) ||
         LowerSubAction.Equals(TEXT("inspect_class")) ||
-        LowerSubAction.Equals(TEXT("inspect_cdo")) ||
         LowerSubAction.Equals(TEXT("runtime_report")) ||
         LowerSubAction.Equals(TEXT("pie_report"));
 
@@ -72,8 +59,7 @@ bool UEngineWireSubsystem::HandleInspectAction(
     {
         return HandleInspectLevelDetailsAction(*this, RequestId, RequestingSocket);
     }
-    if (LowerSubAction.Equals(TEXT("get_blueprint_details")) ||
-        LowerSubAction.Equals(TEXT("blueprint_get")))
+    if (LowerSubAction.Equals(TEXT("get_blueprint_details")))
     {
         return HandleInspectBlueprintDetailsAction(*this, RequestId, Payload, RequestingSocket);
     }
@@ -148,7 +134,7 @@ bool UEngineWireSubsystem::HandleInspectAction(
         // A Blueprint target (blueprintPath, or an objectPath that loads as a
         // Blueprint asset) is answered from the SCS + CDO; world actors keep
         // the control_actor route below.
-        FString BlueprintPath = McpGetFirstStringField(Payload, {TEXT("blueprintPath"), TEXT("assetPath")});
+        FString BlueprintPath = GetJsonStringField(Payload, TEXT("blueprintPath"));
         const FString ActorAlias = McpGetFirstStringField(Payload, {TEXT("actorName"), TEXT("name"), TEXT("objectPath")});
         if (BlueprintPath.IsEmpty() && ActorAlias.StartsWith(TEXT("/")))
         {
@@ -207,29 +193,9 @@ bool UEngineWireSubsystem::HandleInspectAction(
         return HandleInspectCdoAction(RequestId, Payload, RequestingSocket);
     }
 
-    // Read-only struct layout introspection
     if (LowerSubAction.Equals(TEXT("inspect_struct")))
     {
-        TSharedPtr<FJsonObject> Result;
-        if (McpInspectStruct::HandleInspectStructAction(LowerSubAction, Payload, Result) && Result.IsValid())
-        {
-            if (Result->GetBoolField(TEXT("success")))
-            {
-                SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Struct inspected"), Result);
-            }
-            else
-            {
-                // Handled failure (e.g. MISSING_PARAMETER / ASSET_NOT_FOUND): forward the
-                // shard's specific diagnostic instead of falling through to UNKNOWN_ACTION.
-                FString ErrorCode = TEXT("INTERNAL_ERROR");
-                FString Message = TEXT("inspect_struct failed");
-                Result->TryGetStringField(TEXT("error"), ErrorCode);
-                Result->TryGetStringField(TEXT("message"), Message);
-                SendAutomationError(RequestingSocket, RequestId, Message, ErrorCode);
-            }
-            return true;
-        }
-        return false;
+        return HandleInspectStructAction(*this, RequestId, Payload, RequestingSocket);
     }
 
     if (bIsGlobalAction)
@@ -239,8 +205,7 @@ bool UEngineWireSubsystem::HandleInspectAction(
     }
 
     const FString ObjectPath = McpGetFirstStringField(
-        Payload, {TEXT("objectPath"), TEXT("actorName"), TEXT("name"),
-                  TEXT("blueprintPath"), TEXT("assetPath"), TEXT("path")});
+        Payload, {TEXT("objectPath"), TEXT("actorName"), TEXT("name"), TEXT("blueprintPath")});
     if (ObjectPath.IsEmpty())
     {
         SendAutomationError(RequestingSocket, RequestId,

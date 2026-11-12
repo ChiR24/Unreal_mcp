@@ -2,21 +2,6 @@
 
 namespace McpInspectHandlers {
 
-UWorld *McpGetRuntimeInspectionWorld()
-{
-    // A running PIE or standalone game world when there is one, else the editor world.
-    if (GEngine)
-    {
-        for (const FWorldContext &Context : GEngine->GetWorldContexts())
-        {
-            if ((Context.WorldType == EWorldType::PIE || Context.WorldType == EWorldType::Game) && Context.World())
-            {
-                return Context.World();
-            }
-        }
-    }
-    return McpHandlerUtils::GetEditorWorld();
-}
 FString McpGetWorldTypeName(UWorld *World)
 {
     return World ? LexToString(World->WorldType) : TEXT("None");
@@ -76,8 +61,8 @@ TSharedPtr<FJsonObject> McpDescribeRuntimeComponent(UActorComponent *Component, 
 
     Obj->SetStringField(TEXT("name"), Component->GetName());
     Obj->SetStringField(TEXT("path"), Component->GetPathName());
-    Obj->SetStringField(TEXT("class"), Component->GetClass() ? Component->GetClass()->GetName() : TEXT(""));
-    Obj->SetStringField(TEXT("classPath"), Component->GetClass() ? Component->GetClass()->GetPathName() : TEXT(""));
+    Obj->SetStringField(TEXT("class"), Component->GetClass()->GetName());
+    Obj->SetStringField(TEXT("classPath"), Component->GetClass()->GetPathName());
     Obj->SetBoolField(TEXT("isActive"), Component->IsActive());
 
     if (USceneComponent *SceneComp = Cast<USceneComponent>(Component))
@@ -92,7 +77,6 @@ TSharedPtr<FJsonObject> McpDescribeRuntimeComponent(UActorComponent *Component, 
     {
         Obj->SetBoolField(TEXT("isCamera"), true);
         Obj->SetNumberField(TEXT("fieldOfView"), CameraComp->FieldOfView);
-        Obj->SetBoolField(TEXT("isActive"), CameraComp->IsActive());
     }
 
     if (USpringArmComponent *SpringArm = Cast<USpringArmComponent>(Component))
@@ -122,8 +106,8 @@ TSharedPtr<FJsonObject> McpDescribeRuntimeActor(AActor *Actor, const TArray<FStr
     Obj->SetStringField(TEXT("name"), Actor->GetName());
     Obj->SetStringField(TEXT("label"), Actor->GetActorLabel());
     Obj->SetStringField(TEXT("path"), Actor->GetPathName());
-    Obj->SetStringField(TEXT("class"), Actor->GetClass() ? Actor->GetClass()->GetName() : TEXT(""));
-    Obj->SetStringField(TEXT("classPath"), Actor->GetClass() ? Actor->GetClass()->GetPathName() : TEXT(""));
+    Obj->SetStringField(TEXT("class"), Actor->GetClass()->GetName());
+    Obj->SetStringField(TEXT("classPath"), Actor->GetClass()->GetPathName());
     Obj->SetObjectField(TEXT("transform"), McpHandlerUtils::TransformToJson(Actor->GetActorTransform()));
     McpAddActorTags(Obj, Actor);
 

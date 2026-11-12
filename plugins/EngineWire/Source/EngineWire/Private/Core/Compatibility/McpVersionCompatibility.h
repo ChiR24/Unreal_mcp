@@ -441,3 +441,17 @@
 
 // UE 5.0's non-const UNiagaraSystem::GetEmitterHandles() returns a const array; 5.1+ returns a mutable one.
 #define MCP_MUTABLE_EMITTER_HANDLES(System) const_cast<TArray<FNiagaraEmitterHandle>&>((System)->GetEmitterHandles())
+
+// A skeletal mesh component's mesh: GetSkeletalMeshAsset arrives in 5.1; 5.0 reads the SkeletalMesh member.
+#if ENGINE_MAJOR_VERSION > 5 || ENGINE_MINOR_VERSION >= 1
+#define MCP_SKELETAL_MESH_ASSET(Component) (Component)->GetSkeletalMeshAsset()
+#else
+#define MCP_SKELETAL_MESH_ASSET(Component) (Component)->SkeletalMesh
+#endif
+
+// USkeleton::IsCompatible is IsCompatibleForEditor from 5.2 (deprecated there, gone by 5.8).
+#if ENGINE_MAJOR_VERSION > 5 || ENGINE_MINOR_VERSION >= 2
+#define MCP_SKELETON_COMPATIBLE(Skeleton, Other) (Skeleton)->IsCompatibleForEditor(Other)
+#else
+#define MCP_SKELETON_COMPATIBLE(Skeleton, Other) (Skeleton)->IsCompatible(Other)
+#endif

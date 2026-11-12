@@ -22,13 +22,7 @@ namespace McpRenderHandlers
 {
 inline UWorld* GetRenderWorld()
 {
-    if (!GEditor)
-    {
-        return nullptr;
-    }
-    return GEditor->PlayWorld
-        ? GEditor->PlayWorld.Get()
-        : GEditor->GetEditorWorldContext().World();
+    return McpHandlerUtils::GetPlayOrEditorWorld();
 }
 
 // The render world actor a reference names by label, name or path; a path-restricted caller finds only those in a

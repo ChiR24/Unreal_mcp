@@ -93,8 +93,7 @@ bool CommitTransferredWeights(UEngineWireSubsystem* Subsystem, const FString& Re
     Counts->SetObjectField(TEXT("after"), McpSkinSource::BoneVertexCounts(Written));
     Result->SetObjectField(TEXT("boneVertexCounts"), Counts);
     Result->SetStringField(TEXT("skeletalMeshPath"), Mesh->GetPathName());
-    Result->SetBoolField(TEXT("saved"), GetJsonBoolField(Payload, TEXT("save"), true) && SaveIfRequested(Mesh, Payload));
-    McpHandlerUtils::AddVerification(Result, Mesh);
+    SaveAndReport(Mesh, Payload, Result);
     Subsystem->SendAutomationResponse(Socket, RequestId, true, Message, Result);
     return true;
 }

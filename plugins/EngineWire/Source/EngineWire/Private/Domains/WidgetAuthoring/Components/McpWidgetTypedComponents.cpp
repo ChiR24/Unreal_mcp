@@ -1,5 +1,7 @@
 #include "Domains/WidgetAuthoring/McpWidgetActions.h"
 #include "Domains/WidgetAuthoring/McpWidgetPayload.h"
+#include "Domains/WidgetAuthoring/Styling/McpWidgetStyleText.h"
+#include "Domains/WidgetAuthoring/Templates/McpWidgetSpec.h"
 
 #include "Components/Button.h"
 #include "Components/CheckBox.h"
@@ -84,11 +86,7 @@ bool HandleWidgetAuthoringTypedComponents(
             TextBlock->SetText(FText::FromString(GetJsonStringField(Payload, TEXT("text"), TEXT("Text"))));
             if (Payload->HasField(TEXT("fontSize")))
             {
-#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 1
-                FSlateFontInfo FontInfo = TextBlock->GetFont();
-#else
-                FSlateFontInfo FontInfo = TextBlock->Font;
-#endif
+                FSlateFontInfo FontInfo = McpTextBlockFont(TextBlock);
                 FontInfo.Size = static_cast<int32>(GetJsonNumberField(Payload, TEXT("fontSize"), 12.0));
                 TextBlock->SetFont(FontInfo);
             }
@@ -102,8 +100,7 @@ bool HandleWidgetAuthoringTypedComponents(
     if (SubAction.Equals(TEXT("add_image"), ESearchCase::IgnoreCase))
     {
         const FString TexturePath = GetJsonStringField(Payload, TEXT("texturePath"));
-        UTexture2D* Texture = TexturePath.IsEmpty() ? nullptr
-            : Cast<UTexture2D>(StaticLoadObject(UTexture2D::StaticClass(), nullptr, *TexturePath));
+        UTexture2D* Texture = McpLoadSpecTexture(TexturePath);
         if (!TexturePath.IsEmpty() && !Texture)
         {
             // A bad path used to add a white image and report success.

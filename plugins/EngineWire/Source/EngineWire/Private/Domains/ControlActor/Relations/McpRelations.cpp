@@ -126,7 +126,7 @@ TArray<TSharedPtr<FJsonValue>> Asked(const TArray<TSharedPtr<FJsonValue>>& Patte
 bool HandleDescribeRelations(UEngineWireSubsystem* Bridge, const FString& RequestId, const TSharedPtr<FJsonObject>& Payload,
                              TSharedPtr<FMcpBridgeWebSocket> Socket, TFunctionRef<AActor*(const FString&)> Find)
 {
-    UWorld* World = GEditor ? (GEditor->PlayWorld ? GEditor->PlayWorld.Get() : GEditor->GetEditorWorldContext().World()) : nullptr;
+    UWorld* World = McpHandlerUtils::GetPlayOrEditorWorld();
     if (!World)
     {
         Bridge->SendAutomationError(Socket, RequestId, TEXT("No editor world is open."), TEXT("NO_WORLD"));

@@ -98,15 +98,7 @@ bool HandleInspectStatsAction(
             // difference is visible instead of contradictory.
             int32 ActorCount = 0;
             int32 TotalWorldActors = 0;
-            UWorld* World = nullptr;
-            if (GEditor && GEditor->PlayWorld)
-            {
-                World = GEditor->PlayWorld.Get();
-            }
-            else if (GEditor)
-            {
-                World = GEditor->GetEditorWorldContext().World();
-            }
+            UWorld* World = McpHandlerUtils::GetPlayOrEditorWorld();
             if (World)
             {
                 if (GEditor->PlayWorld.Get() == World)
@@ -154,7 +146,7 @@ bool HandleInspectStatsAction(
         }
         else if (LowerSubAction.Equals(TEXT("get_performance_stats")))
         {
-            // BUG-e85282: when a PIE/play session is active, measure THAT world (actor count + frame delta), not
+            // When a PIE/play session is active, measure THAT world (actor count + frame delta), not
             // the editor world. GEditor->PlayWorld is the active PIE world (nullptr outside PIE). The thread
             // timers below are process-global (they reflect whatever the engine is ticking) — flagged as such.
             double DeltaSeconds = FApp::GetDeltaTime();

@@ -7,17 +7,11 @@
 #include "Kismet2/StructureEditorUtils.h"
 #include "UserDefinedStructure/UserDefinedStructEditorData.h"
 
-// =============================================================================
-// inspect_struct handler shard
-// -----------------------------------------------------------------------------
-// Read-only struct layout introspection. Given a struct asset path, struct
-// path, or plain struct name, enumerate its fields (name, type, default,
-// tooltip) plus the parent struct and row-struct / instanced-struct
-// compatibility. This shard performs reflection only and never mutates or
-// persists any asset.
-// =============================================================================
+// inspect_struct: read-only struct layout introspection. Given a struct asset path, struct path, or plain struct
+// name, enumerate its fields (name, type, default, tooltip) plus the parent struct and row-struct / instanced-struct
+// compatibility. Reflection only: nothing is changed or saved.
 
-namespace McpInspectStruct
+namespace McpInspectHandlers
 {
 
 // Resolve a UScriptStruct by object path, asset path, or bare struct name.
@@ -38,32 +32,24 @@ static UScriptStruct* ResolveStruct(const FString& Identifier)
 }
 
 bool HandleInspectStructAction(
-    FString Action,
-    const TSharedPtr<FJsonObject>& Params,
-    TSharedPtr<FJsonObject>& OutResult)
+    UEngineWireSubsystem &Bridge, const FString &RequestId,
+    const TSharedPtr<FJsonObject> &Payload,
+    TSharedPtr<FMcpBridgeWebSocket> RequestingSocket)
 {
-    OutResult = MakeShared<FJsonObject>();
-
-    const FString StructPath =
-        McpGetFirstStringField(Params, {TEXT("structPath"), TEXT("structName"), TEXT("struct")}).TrimStartAndEnd();
-
+    const FString StructPath = McpGetFirstStringField(Payload, {TEXT("structPath")}).TrimStartAndEnd();
     if (StructPath.IsEmpty())
     {
-        OutResult->SetBoolField(TEXT("success"), false);
-        OutResult->SetStringField(TEXT("error"), TEXT("MISSING_PARAMETER"));
-        OutResult->SetStringField(TEXT("message"), TEXT("inspect_struct requires structPath"));
+        Bridge.SendAutomationError(RequestingSocket, RequestId, TEXT("inspect_struct requires structPath"), TEXT("MISSING_PARAMETER"));
         return true;
     }
 
     UScriptStruct* Struct = ResolveStruct(StructPath);
     if (!Struct)
     {
-        OutResult->SetBoolField(TEXT("success"), false);
-        OutResult->SetStringField(TEXT("error"), TEXT("ASSET_NOT_FOUND"));
-        OutResult->SetStringField(TEXT("message"),
-            FString::Printf(TEXT("Struct not found: %s"), *StructPath));
+        Bridge.SendAutomationError(RequestingSocket, RequestId, FString::Printf(TEXT("Struct not found: %s"), *StructPath), TEXT("ASSET_NOT_FOUND"));
         return true;
     }
+    UUserDefinedStruct* UserStruct = Cast<UUserDefinedStruct>(Struct);
 
     TSharedPtr<FJsonObject> Result = MakeShared<FJsonObject>();
     Result->SetStringField(TEXT("structName"), Struct->GetName());
@@ -83,16 +69,16 @@ bool HandleInspectStructAction(
 
     const bool bIsRowStruct = Struct->IsChildOf(FTableRowBase::StaticStruct());
     Result->SetBoolField(TEXT("isRowStruct"), bIsRowStruct);
-    Result->SetBoolField(TEXT("isUserDefined"), Struct->IsA<UUserDefinedStruct>());
+    Result->SetBoolField(TEXT("isUserDefined"), UserStruct != nullptr);
 
     // Enumerate members via reflection. UScriptStruct no longer exposes a public
     // GetDefaultInstance() in UE 5.7; UUserDefinedStruct keeps one, while native
     // script structs fall back to an owned default-initialized instance.
     const uint8* DefaultInstance = nullptr;
     TArray<uint8> OwnedDefaultMemory;
-    if (UUserDefinedStruct* UDS = Cast<UUserDefinedStruct>(Struct))
+    if (UserStruct)
     {
-        DefaultInstance = UDS->GetDefaultInstance();
+        DefaultInstance = UserStruct->GetDefaultInstance();
     }
     else
     {
@@ -106,9 +92,9 @@ bool HandleInspectStructAction(
     // the stable GUID and the full metadata map per member (reflection-only
     // FProperty lacks both).
     TMap<FName, const FStructVariableDescription*> UDSVarMap;
-    if (Struct->IsA<UUserDefinedStruct>())
+    if (UserStruct)
     {
-        for (const FStructVariableDescription& Var : FStructureEditorUtils::GetVarDesc(Cast<UUserDefinedStruct>(Struct)))
+        for (const FStructVariableDescription& Var : FStructureEditorUtils::GetVarDesc(UserStruct))
         {
             UDSVarMap.Add(FName(*Var.FriendlyName), &Var);
         }
@@ -179,10 +165,11 @@ bool HandleInspectStructAction(
     Result->SetArrayField(TEXT("members"), Members);
     Result->SetNumberField(TEXT("memberCount"), Members.Num());
 
-    OutResult->SetBoolField(TEXT("success"), true);
-    OutResult->SetObjectField(TEXT("result"), Result);
+    TSharedPtr<FJsonObject> Reply = MakeShared<FJsonObject>();
+    Reply->SetBoolField(TEXT("success"), true);
+    Reply->SetObjectField(TEXT("result"), Result);
+    Bridge.SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Struct inspected"), Reply);
     return true;
-
 }
 
-} // namespace McpInspectStruct
+} // namespace McpInspectHandlers

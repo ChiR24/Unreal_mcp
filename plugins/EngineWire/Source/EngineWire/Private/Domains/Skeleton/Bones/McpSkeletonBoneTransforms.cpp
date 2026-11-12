@@ -3,7 +3,6 @@
 
 #include "Animation/Skeleton.h"
 #include "Engine/SkeletalMesh.h"
-#include "Safety/McpSafeOperations.h"
 #include "EngineWireSubsystem.h"
 #include "Transport/WebSocket/McpBridgeWebSocket.h"
 #include "Foundation/HandlerUtils/McpHandlerUtils.h"

@@ -48,6 +48,8 @@ inline FString ExtractAssetName(const FString& Path)
 
 // The editor world (not PIE); null without an editor.
 ENGINEWIRE_API UWorld* GetEditorWorld();
+// The Play In Editor world while a session runs, else the editor world; null without an editor.
+ENGINEWIRE_API UWorld* GetPlayOrEditorWorld();
 // Label, name or path (case-insensitive) in the PIE world, else the editor world; while PIE runs, also a role
 // ResolveRuntimeRole names (PlayerPawn, PlayerController, GameMode ...).
 ENGINEWIRE_API AActor* FindActorByName(const FString& ActorName);

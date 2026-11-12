@@ -141,7 +141,7 @@ bool HandlePruneWeightsAction(UEngineWireSubsystem* Subsystem, const FString& Re
             Subsystem->SendAutomationError(Socket, RequestId, Error, TEXT("WRITE_FAILED"));
             return true;
         }
-        bSaved = GetJsonBoolField(Payload, TEXT("save"), true) && SaveIfRequested(Mesh, Payload);
+        bSaved = GetJsonBoolField(Payload, TEXT("save"), true) && McpSafeAssetSave(Mesh);
     }
     Result->SetBoolField(TEXT("saved"), bSaved);
     McpHandlerUtils::AddVerification(Result, Mesh);

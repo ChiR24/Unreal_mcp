@@ -84,18 +84,10 @@ bool HandleConfigureMeshComponent(UEngineWireSubsystem* Self, const FString& Req
     // An Animation Blueprint made for another skeleton animates nothing: its clips evaluate to the mesh's rest pose,
     // without a warning. A template Animation Blueprint has no skeleton and fits any mesh.
     const USkeletalMesh* TargetMesh = RequestedMesh;
-#if ENGINE_MAJOR_VERSION > 5 || ENGINE_MINOR_VERSION >= 1
-    if (!TargetMesh && CharCDO && CharCDO->GetMesh()) TargetMesh = CharCDO->GetMesh()->GetSkeletalMeshAsset();
-#else
-    if (!TargetMesh && CharCDO && CharCDO->GetMesh()) TargetMesh = CharCDO->GetMesh()->SkeletalMesh;
-#endif
+    if (!TargetMesh && CharCDO && CharCDO->GetMesh()) TargetMesh = MCP_SKELETAL_MESH_ASSET(CharCDO->GetMesh());
     const USkeleton* MeshSkeleton = TargetMesh ? TargetMesh->GetSkeleton() : nullptr;
     const USkeleton* AnimSkeleton = RequestedAnimBP ? RequestedAnimBP->TargetSkeleton.Get() : nullptr;
-#if ENGINE_MAJOR_VERSION > 5 || ENGINE_MINOR_VERSION >= 2
-    const bool bAnimFits = !MeshSkeleton || !AnimSkeleton || MeshSkeleton->IsCompatibleForEditor(AnimSkeleton);
-#else
-    const bool bAnimFits = !MeshSkeleton || !AnimSkeleton || MeshSkeleton->IsCompatible(AnimSkeleton);
-#endif
+    const bool bAnimFits = !MeshSkeleton || !AnimSkeleton || MCP_SKELETON_COMPATIBLE(MeshSkeleton, AnimSkeleton);
     if (!bAnimFits)
     {
         Self->SendAutomationError(Socket, RequestId, FString::Printf(TEXT("%s animates skeleton %s, which the mesh's skeleton %s "

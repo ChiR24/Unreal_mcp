@@ -68,8 +68,7 @@ UWorld* McpAudioEditorWorldOrReply(UEngineWireSubsystem* Self, TSharedPtr<FMcpBr
 // editor world's is muted), else the editor's.
 inline UWorld* McpAudibleWorld()
 {
-    UWorld* PlayWorld = GEditor ? GEditor->PlayWorld.Get() : nullptr;
-    return PlayWorld ? PlayWorld : McpHandlerUtils::GetEditorWorld();
+    return McpHandlerUtils::GetPlayOrEditorWorld();
 }
 
 using FAudioActionHandler = bool (*)(

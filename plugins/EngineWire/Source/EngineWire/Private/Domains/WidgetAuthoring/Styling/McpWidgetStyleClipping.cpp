@@ -60,28 +60,10 @@ bool HandleWidgetAuthoringStyleClipping(
         if (SubAction.Equals(TEXT("set_clipping"), ESearchCase::IgnoreCase))
         {
             FString ClippingStr = GetJsonStringField(Payload, TEXT("clipping"), TEXT("Inherit"));
-            EWidgetClipping Clipping = EWidgetClipping::Inherit;
-            if (ClippingStr.Equals(TEXT("Inherit"), ESearchCase::IgnoreCase))
-            {
-                Clipping = EWidgetClipping::Inherit;
-            }
-            else if (ClippingStr.Equals(TEXT("ClipToBounds"), ESearchCase::IgnoreCase))
-            {
-                Clipping = EWidgetClipping::ClipToBounds;
-            }
-            else if (ClippingStr.Equals(TEXT("ClipToBoundsWithoutIntersecting"), ESearchCase::IgnoreCase))
-            {
-                Clipping = EWidgetClipping::ClipToBoundsWithoutIntersecting;
-            }
-            else if (ClippingStr.Equals(TEXT("ClipToBoundsAlways"), ESearchCase::IgnoreCase))
-            {
-                Clipping = EWidgetClipping::ClipToBoundsAlways;
-            }
-            else if (ClippingStr.Equals(TEXT("OnDemand"), ESearchCase::IgnoreCase))
-            {
-                Clipping = EWidgetClipping::OnDemand;
-            }
-            else
+            // The enum's own names, case ignored; its hidden _MAX entry is no clipping mode.
+            const UEnum* ClippingEnum = StaticEnum<EWidgetClipping>();
+            const int64 ClippingValue = ClippingEnum->GetValueByNameString(ClippingStr);
+            if (ClippingValue == INDEX_NONE || ClippingValue >= ClippingEnum->GetMaxEnumValue())
             {
                 // An unknown name used to reset clipping to Inherit and report success.
                 Subsystem.SendAutomationError(RequestingSocket, RequestId, FString::Printf(
@@ -89,7 +71,7 @@ bool HandleWidgetAuthoringStyleClipping(
                     *ClippingStr), TEXT("INVALID_ARGUMENT"));
                 return true;
             }
-            Widget->SetClipping(Clipping);
+            Widget->SetClipping(static_cast<EWidgetClipping>(ClippingValue));
             WidgetBP->MarkPackageDirty();
             const bool bSaveSucceeded = McpSafeAssetSave(WidgetBP);
 

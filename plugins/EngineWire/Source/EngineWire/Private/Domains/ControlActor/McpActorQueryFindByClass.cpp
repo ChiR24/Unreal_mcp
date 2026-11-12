@@ -46,9 +46,7 @@ bool UEngineWireSubsystem::HandleControlActorFindByClass(
   // returned UEDPIE_0 ones — two queries disagreeing about which world they
   // describe, with nothing on either response to say which. Any mutation driven
   // off these paths hit the editor originals instead of the live instances.
-  UWorld* QueryWorld = GEditor->PlayWorld
-                           ? GEditor->PlayWorld.Get()
-                           : GEditor->GetEditorWorldContext().World();
+  UWorld* QueryWorld = McpHandlerUtils::GetPlayOrEditorWorld();
   if (UWorld* World = QueryWorld) {
     UClass* ClassToFind = nullptr;
 

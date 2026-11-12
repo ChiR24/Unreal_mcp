@@ -157,11 +157,7 @@ TSharedPtr<FJsonObject> HandleMontageAssetActions(const FString& SubAction, cons
         }
         // Another skeleton's animation plays nothing here (the montage factory asserts on such a mismatch).
         const USkeleton* MontageSkeleton = Montage->GetSkeleton();
-#if ENGINE_MAJOR_VERSION > 5 || ENGINE_MINOR_VERSION >= 2
-        const bool bCompatible = MontageSkeleton && MontageSkeleton->IsCompatibleForEditor(Animation->GetSkeleton());
-#else
-        const bool bCompatible = MontageSkeleton && MontageSkeleton->IsCompatible(Animation->GetSkeleton());
-#endif
+        const bool bCompatible = MontageSkeleton && MCP_SKELETON_COMPATIBLE(MontageSkeleton, Animation->GetSkeleton());
         if (!bCompatible || StartTime < 0.0f)
         {
             ANIM_ERROR_RESPONSE(bCompatible ? FString(TEXT("startTime must be 0 or more; nothing was added."))

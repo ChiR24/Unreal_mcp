@@ -42,6 +42,8 @@ TSharedPtr<FJsonValue> ReadValueField(const TSharedPtr<FJsonObject>& Payload);
 // Why McpAuthorWidgetAnimationKey would refuse a key of this kind (the trackType lowercased) and
 // value, or empty when it can write it; nothing is touched.
 FString KeyValueError(const FString& Kind, const FString& TrackType, const TSharedPtr<FJsonValue>& Value);
+// The track a key writes: trackType, else propertyName, else opacity.
+FString McpWidgetKeyTrackType(const TSharedPtr<FJsonObject>& Key);
 }
 
 namespace WidgetAuthoringHandlers

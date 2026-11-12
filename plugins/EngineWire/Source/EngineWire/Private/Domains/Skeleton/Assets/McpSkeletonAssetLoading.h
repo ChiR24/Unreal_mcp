@@ -20,11 +20,6 @@ USkeleton* LoadPayloadSkeletonOrReply(UEngineWireSubsystem& Bridge, const FStrin
                                       TSharedPtr<FMcpBridgeWebSocket> Socket, const TSharedPtr<FJsonObject>& Payload);
 UPhysicsAsset* LoadPhysicsAssetFromPath(const FString& PhysicsPath, FString& OutError);
 
-// The skeletal mesh a skeleton-addressed request can read or write: the
-// skeleton's preview mesh, else the first compatible mesh the asset registry
-// knows. Null when no mesh uses the skeleton.
-USkeletalMesh* FindSkeletalMeshForSkeleton(USkeleton* Skeleton);
-
 // The mesh/skeleton pair a bone request addresses. Mesh may be null when only
 // a skeleton without any mesh was named; Error/ErrorCode are set when nothing
 // loaded at all.

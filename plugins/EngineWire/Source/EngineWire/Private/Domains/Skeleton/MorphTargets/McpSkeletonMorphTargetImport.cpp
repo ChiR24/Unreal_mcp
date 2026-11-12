@@ -127,9 +127,7 @@ bool HandleImportMorphTargetsAction(UEngineWireSubsystem* Subsystem, const FStri
     TArray<FString> NotBuilt;
     for (const FName& Name : Wanted)
     {
-        bool bBuilt = false;
-        for (const UMorphTarget* Morph : TargetMesh->GetMorphTargets()) bBuilt |= Morph && Morph->GetFName() == Name;
-        if (bBuilt) Built.Add(MakeShared<FJsonValueString>(Name.ToString()));
+        if (TargetMesh->FindMorphTarget(Name)) Built.Add(MakeShared<FJsonValueString>(Name.ToString()));
         else NotBuilt.Add(Name.ToString());
     }
     Result->SetArrayField(TEXT("imported"), Imported);
@@ -137,8 +135,7 @@ bool HandleImportMorphTargetsAction(UEngineWireSubsystem* Subsystem, const FStri
     Result->SetArrayField(TEXT("builtMorphTargets"), Built);
     Result->SetNumberField(TEXT("unmatchedVertices"), Unmatched);
     Result->SetStringField(TEXT("skeletalMeshPath"), TargetMesh->GetPathName());
-    Result->SetBoolField(TEXT("saved"), GetJsonBoolField(Payload, TEXT("save"), true) && SaveIfRequested(TargetMesh, Payload));
-    McpHandlerUtils::AddVerification(Result, TargetMesh);
+    SaveAndReport(TargetMesh, Payload, Result);
     if (NotBuilt.Num() > 0)
     {
         Subsystem->SendAutomationResponse(Socket, RequestId, false, FString::Printf(

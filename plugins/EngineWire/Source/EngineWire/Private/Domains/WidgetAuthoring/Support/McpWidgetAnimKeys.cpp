@@ -2,9 +2,10 @@
 //
 // add_animation_keyframe used to refuse with NOT_SUPPORTED. It now finds or creates the
 // widget binding + property track, adds a section, and writes real channel keys for RenderOpacity,
-// ColorAndOpacity and (in AnimationKeysTransform.cpp) the RenderTransform.
+// ColorAndOpacity and (in McpWidgetAnimKeysTransform.cpp) the RenderTransform.
 #include "Domains/WidgetAuthoring/Support/McpWidgetAnimKeys.h"
 #include "Domains/WidgetAuthoring/Support/McpWidgetAnimKeysInternal.h"
+#include "Foundation/BridgeHelpers/Responses/McpJsonFields.h"
 
 #include "Animation/WidgetAnimation.h"
 #include "Animation/WidgetAnimationBinding.h"
@@ -105,6 +106,13 @@ FString KeyValueError(const FString& Kind, const FString& TrackType, const TShar
                                          "{translation,scale,angle,shear})"), *TrackType);
 }
 
+FString McpWidgetKeyTrackType(const TSharedPtr<FJsonObject>& Key)
+{
+    FString TrackType = GetJsonStringField(Key, TEXT("trackType"));
+    TrackType = TrackType.IsEmpty() ? GetJsonStringField(Key, TEXT("propertyName")) : TrackType;
+    return TrackType.IsEmpty() ? FString(TEXT("opacity")) : TrackType;
+}
+
 bool McpAuthorWidgetAnimationKey(UWidgetBlueprint* WidgetBP, UWidgetAnimation* Animation, UWidget* Target,
                                  const TSharedPtr<FJsonObject>& Payload, FMcpWidgetKeyResult& Out,
                                  FString& OutError, FString& OutErrorCode)
@@ -116,16 +124,7 @@ bool McpAuthorWidgetAnimationKey(UWidgetBlueprint* WidgetBP, UWidgetAnimation* A
         OutErrorCode = TEXT("ANIMATION_ERROR");
         return false;
     }
-    FString TrackType;
-    Payload->TryGetStringField(TEXT("trackType"), TrackType);
-    if (TrackType.IsEmpty())
-    {
-        Payload->TryGetStringField(TEXT("propertyName"), TrackType);
-    }
-    if (TrackType.IsEmpty())
-    {
-        TrackType = TEXT("opacity");
-    }
+    const FString TrackType = McpWidgetKeyTrackType(Payload);
     double Time = 0.0;
     Payload->TryGetNumberField(TEXT("time"), Time);
     FString Interp = TEXT("auto");
@@ -148,13 +147,9 @@ bool McpAuthorWidgetAnimationKey(UWidgetBlueprint* WidgetBP, UWidgetAnimation* A
     UMovieSceneSection* Section = nullptr;
     if (Kind == TEXT("opacity") || Kind == TEXT("renderopacity") || Kind == TEXT("float"))
     {
+        // KeyValueError has seen the number and every value the other kinds take, so nothing below refuses one.
         double Value = 1.0;
-        if (!ValueField.IsValid() || !ValueField->TryGetNumber(Value))
-        {
-            OutError = TEXT("opacity keys need a numeric value (0..1) in propertyValue or value");
-            OutErrorCode = TEXT("INVALID_ARGUMENT");
-            return false;
-        }
+        ValueField->TryGetNumber(Value);
         UMovieSceneFloatTrack* Track =
             FindOrAddPropertyTrack<UMovieSceneFloatTrack>(MovieScene, Guid, TEXT("RenderOpacity"), Out.bCreatedTrack);
         Section = FindOrAddSection(Track);
@@ -182,12 +177,6 @@ bool McpAuthorWidgetAnimationKey(UWidgetBlueprint* WidgetBP, UWidgetAnimation* A
                 Channels[Index] = (*ColorArray)[Index]->AsNumber();
             }
         }
-        else
-        {
-            OutError = TEXT("color keys need a {r,g,b,a} object or [r,g,b,a] array in propertyValue");
-            OutErrorCode = TEXT("INVALID_ARGUMENT");
-            return false;
-        }
         UMovieSceneColorTrack* Track =
             FindOrAddPropertyTrack<UMovieSceneColorTrack>(MovieScene, Guid, TEXT("ColorAndOpacity"), Out.bCreatedTrack);
         Section = FindOrAddSection(Track);
@@ -198,20 +187,13 @@ bool McpAuthorWidgetAnimationKey(UWidgetBlueprint* WidgetBP, UWidgetAnimation* A
         Out.PropertyName = TEXT("ColorAndOpacity");
         Out.ChannelCount = 4;
     }
-    else if (IsTransformKind(Kind))
+    else
     {
         if (!McpAuthorTransformKeys(MovieScene, Guid, Frame, Kind, TrackType, Interp, ValueField, Out, Section, OutError,
                                     OutErrorCode))
         {
             return false;
         }
-    }
-    else
-    {
-        OutError = FString::Printf(
-            TEXT("Unsupported trackType '%s'; supported: opacity, color, translation, scale, angle, shear, transform"), *TrackType);
-        OutErrorCode = TEXT("INVALID_ARGUMENT");
-        return false;
     }
     if (!Section)
     {

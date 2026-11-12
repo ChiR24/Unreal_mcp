@@ -18,12 +18,7 @@ inline void AddStringArray(
     const FString& FieldName,
     const TArray<FString>& Values)
 {
-    TArray<TSharedPtr<FJsonValue>> JsonValues;
-    for (const FString& Value : Values)
-    {
-        JsonValues.Add(MakeShared<FJsonValueString>(Value));
-    }
-    Result->SetArrayField(FieldName, JsonValues);
+    Result->SetArrayField(FieldName, McpHandlerUtils::ToJsonStringArray(Values));
 }
 
 inline void AddNumberArray(
@@ -119,28 +114,6 @@ inline bool ApplyJsonSettings(
             *(Near.Num() > 0 ? TEXT(", e.g. ") + FString::Join(Near, TEXT(", ")) : FString()));
         return false;
     }
-    return true;
-}
-
-inline bool SetConsoleVariable(
-    const FString& Name,
-    const FString& Value,
-    TArray<FString>& OutApplied,
-    TArray<FString>& OutUnsupported)
-{
-    IConsoleVariable* Variable = IConsoleManager::Get().FindConsoleVariable(*Name);
-    if (!Variable)
-    {
-        OutUnsupported.Add(Name + TEXT(" (not in this engine version)"));
-        return false;
-    }
-    const FString NotTaken = McpSetConsoleVariable(*Variable, Value);
-    if (!NotTaken.IsEmpty())
-    {
-        OutUnsupported.Add(FString::Printf(TEXT("%s (%s)"), *Name, *NotTaken));
-        return false;
-    }
-    OutApplied.Add(Name);
     return true;
 }
 
@@ -244,15 +217,8 @@ inline bool ReadActorReference(
     const TSharedPtr<FJsonObject>& Payload,
     FString& OutReference)
 {
-    OutReference = GetJsonStringField(Payload, TEXT("actorName"));
-    if (OutReference.IsEmpty())
-    {
-        OutReference = GetJsonStringField(Payload, TEXT("targetActor"));
-    }
-    if (OutReference.IsEmpty())
-    {
-        OutReference = GetJsonStringField(Payload, TEXT("actorPath"));
-    }
+    // actorName, else set_actor_light_channel's targetActor: the two names a render record declares for an actor.
+    OutReference = McpGetFirstStringField(Payload, {TEXT("actorName"), TEXT("targetActor")});
     return !OutReference.IsEmpty();
 }
 }

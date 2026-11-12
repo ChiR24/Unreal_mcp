@@ -45,12 +45,7 @@ bool UEngineWireSubsystem::HandleControlActorSpawnBlueprint(
   }
 
   AActor *Spawned = nullptr;
-  UWorld *TargetWorld = nullptr;
-  if (GEditor->PlayWorld) {
-    TargetWorld = GEditor->PlayWorld.Get();
-  } else {
-    TargetWorld = GEditor->GetEditorWorldContext().World();
-  }
+  UWorld *TargetWorld = McpHandlerUtils::GetPlayOrEditorWorld();
 
   if (!TargetWorld) {
     SendStandardErrorResponse(this, Socket, RequestId, TEXT("WORLD_NOT_FOUND"),

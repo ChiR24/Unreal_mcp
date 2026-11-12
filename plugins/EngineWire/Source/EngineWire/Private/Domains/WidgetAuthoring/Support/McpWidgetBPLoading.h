@@ -21,11 +21,17 @@ UWidgetBlueprint* LoadWidgetBlueprint(const FString& WidgetPath);
 // OutPixels are the raw pixels (alpha 0 where nothing drew); Inspect sees the laid-out widget before it is dropped.
 bool McpDrawWidget(UWidgetBlueprint* WidgetBP, FIntPoint Size, TArray<FColor>& OutPixels, FString& OutError,
                    TFunctionRef<void(UUserWidget& Widget, float Scale)> Inspect);
+// A pixel of that picture over the preview's dark backdrop (24, 24, 28), by its alpha: white text on nothing still reads.
+inline FColor McpOverPreviewBackdrop(const FColor& Pixel)
+{
+    const float Alpha = Pixel.A / 255.f;
+    return FColor(FMath::RoundToInt(Pixel.R * Alpha + 24 * (1.f - Alpha)), FMath::RoundToInt(Pixel.G * Alpha + 24 * (1.f - Alpha)),
+                  FMath::RoundToInt(Pixel.B * Alpha + 28 * (1.f - Alpha)), 255);
+}
 // The canonical /Game package path of a Widget Blueprint (/Game/UI/WBP_Menu), which is what every
 // widgetPath a reply carries must name. UObject::GetPathName() answers the object path
 // (/Game/UI/WBP_Menu.WBP_Menu), so a receipt listed the same asset twice beside assetPath.
 FString WidgetBlueprintPackagePath(const UWidgetBlueprint* WidgetBP);
-// Loads the widget blueprint, creating an empty UUserWidget-based asset at the path when missing.
 // Marks the Widget Blueprint structurally modified and saves it through the safe wrapper, so
 // authoring edits survive an editor restart (widgets added via MCP vanished).
 // Returns whether the save landed.
@@ -37,9 +43,8 @@ bool MarkWidgetBlueprintModifiedAndSave(UWidgetBlueprint* WidgetBP);
 // unrelated compile error must not fail a widget add); the return says whether it compiled clean.
 bool RefreshWidgetBlueprintClass(UWidgetBlueprint* WidgetBP);
 
-// Case-insensitive lookups shared by the animation and layout handlers; nullptr when absent.
+// The animation of that name, case ignored; nullptr when absent. A widget by name is UWidgetTree::FindWidget(FName).
 UWidgetAnimation* FindWidgetAnimation(UWidgetBlueprint* WidgetBP, const FString& AnimationName);
-UWidget* FindWidgetByName(UWidgetTree* Tree, const FString& WidgetName);
 
 // widgetPath + animationName from the payload -> the blueprint and its animation. On any miss the
 // refusal (MISSING_PARAMETER / NOT_FOUND / ANIMATION_NOT_FOUND) is already sent and null returned.

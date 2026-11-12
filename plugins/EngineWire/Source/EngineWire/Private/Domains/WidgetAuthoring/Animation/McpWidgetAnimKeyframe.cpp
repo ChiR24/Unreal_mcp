@@ -36,12 +36,10 @@ TSharedPtr<FJsonObject> MergeKey(const TSharedPtr<FJsonObject>& Payload, const T
     return Merged;
 }
 
-// Why the key's track or value would be refused (McpAuthorWidgetAnimationKey reads them the same way).
+// Why the key's track or value would be refused, read as McpAuthorWidgetAnimationKey reads them.
 FString KeyRefusal(const TSharedPtr<FJsonObject>& Key)
 {
-    FString TrackType = GetJsonStringField(Key, TEXT("trackType"));
-    TrackType = TrackType.IsEmpty() ? GetJsonStringField(Key, TEXT("propertyName")) : TrackType;
-    TrackType = TrackType.IsEmpty() ? FString(TEXT("opacity")) : TrackType;
+    const FString TrackType = McpWidgetKeyTrackType(Key);
     return KeyValueError(TrackType.ToLower(), TrackType, ReadValueField(Key));
 }
 } // namespace
@@ -87,7 +85,7 @@ bool HandleWidgetAuthoringAnimationKeyframe(UEngineWireSubsystem& Subsystem, con
         {
             SlotName = Animation->AnimationBindings[0].WidgetName.ToString();
         }
-        UWidget* Target = WidgetBP->WidgetTree && !SlotName.IsEmpty() ? FindWidgetByName(WidgetBP->WidgetTree, SlotName) : nullptr;
+        UWidget* Target = WidgetBP->WidgetTree && !SlotName.IsEmpty() ? WidgetBP->WidgetTree->FindWidget(FName(*SlotName)) : nullptr;
         const FString Refusal = !Keys[Index].IsValid() ? FString(TEXT("each key is an object such as {time, propertyValue}"))
             : !Target ? FString::Printf(TEXT("Widget '%s' not found in the tree; pass slotName (the widget to animate)"), *SlotName)
             : KeyRefusal(Keys[Index]);

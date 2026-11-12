@@ -9,7 +9,7 @@ namespace WidgetAuthoringHelpers
 {
 void UnregisterWidgetAndChildren(UWidgetBlueprint* WidgetBlueprint, UWidget* Widget);
 
-// Reads parentSlot, falling back to the parentName spelling the contract also advertises.
+// The parent panel a call names (parentSlot); empty when none.
 FString ResolveParentSlotName(const TSharedPtr<FJsonObject>& Payload);
 
 // Applies positionX/positionY/sizeX/sizeY to a widget already seated in a canvas slot.

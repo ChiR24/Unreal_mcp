@@ -59,11 +59,7 @@ UObject *McpMeshDrawnBy(UObject *Object, FString &OutSeveral)
         }
         else if (USkeletalMeshComponent *Skeletal = Cast<USkeletalMeshComponent>(Each))
         {
-#if ENGINE_MINOR_VERSION >= 1
-            EachMesh = Skeletal->GetSkeletalMeshAsset();
-#else
-            EachMesh = Skeletal->SkeletalMesh;
-#endif
+            EachMesh = MCP_SKELETAL_MESH_ASSET(Skeletal);
         }
         if (EachMesh)
         {
@@ -260,7 +256,7 @@ bool HandleInspectObjectAction(
         DumpTarget = Named;
     }
     // detailed / propertyNames: UPROPERTY values as text, capped at 200 entries.
-    const TArray<FString> PropertyNames = McpReadStringListField(Payload, TEXT("propertyNames"), TEXT("propertyName"));
+    const TArray<FString> PropertyNames = McpReadStringListField(Payload, TEXT("propertyNames"), nullptr);
     if (PropertyNames.Num() > 0 || GetJsonBoolField(Payload, TEXT("detailed"), false))
     {
         // The boundary get_property reads through: a /Script settings CDO (/Script/EngineWire.Default__EngineWire

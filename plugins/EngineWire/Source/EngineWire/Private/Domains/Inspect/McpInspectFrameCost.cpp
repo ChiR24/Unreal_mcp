@@ -197,7 +197,7 @@ bool HandleInspectFrameCostAction(
     TSharedPtr<FMcpBridgeWebSocket> RequestingSocket)
 {
     const bool bPie = GEditor && GEditor->PlayWorld;
-    UWorld* World = bPie ? GEditor->PlayWorld.Get() : McpHandlerUtils::GetEditorWorld();
+    UWorld* World = McpHandlerUtils::GetPlayOrEditorWorld();
     const double PieDelta = bPie && World ? World->GetDeltaSeconds() : 0.0;
     const FFrameCostTimes T{FPlatformTime::ToMilliseconds(GGameThreadTime), FPlatformTime::ToMilliseconds(GRenderThreadTime),
         FPlatformTime::ToMilliseconds(GRHIThreadTime), FPlatformTime::ToMilliseconds(RHIGetGPUFrameCycles()),
@@ -268,23 +268,21 @@ bool HandleInspectFrameCostAction(
 
     // A minimized editor draws no frame: nothing reads as in view and the times are the last drawn frame's.
     const TSharedPtr<SWindow> Root = FGlobalTabmanager::Get()->GetRootWindow();
-    TArray<TSharedPtr<FJsonValue>> Warnings;
     if (Root.IsValid() && Root->IsWindowMinimized())
     {
         Resp->SetBoolField(TEXT("windowMinimized"), true);
-        Warnings.Add(MakeShared<FJsonValueString>(TEXT(
+        McpHandlerUtils::AppendWarning(Resp, TEXT(
             "The editor window is minimized, so no frame is drawn: nothing reads as in view and the thread times are "
-            "left from the last drawn frame. Restore it (control_editor configure_editor setting window) before measuring.")));
+            "left from the last drawn frame. Restore it (control_editor configure_editor setting window) before measuring."));
     }
     else if (World && Scan.Primitives == 0)
     {
-        Warnings.Add(MakeShared<FJsonValueString>(TEXT(
+        McpHandlerUtils::AppendWarning(Resp, TEXT(
             "Nothing was drawn in the last half second, so the in-view lists are empty: no viewport redraws this world "
             "(the editor is in the background and throttled, realtime is off, or its tab is hidden). control_editor "
             "configure_editor setting window restores it and lifts the throttle; then start Play or turn realtime on "
-            "(control_editor configure_viewport) and read again.")));
+            "(control_editor configure_viewport) and read again."));
     }
-    if (Warnings.Num() > 0) Resp->SetArrayField(TEXT("warnings"), Warnings);
     Bridge.SendAutomationResponse(RequestingSocket, RequestId, true,
         FrameCostVerdict(Thread, BusiestMs, T), Resp, FString());
     return true;

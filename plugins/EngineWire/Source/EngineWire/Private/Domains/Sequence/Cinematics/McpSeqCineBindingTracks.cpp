@@ -36,22 +36,14 @@ USkeletalMeshComponent *PickAnimatedMesh(AActor *Actor, const FString &Component
 }
 
 const USkeleton *MeshSkeleton(const USkeletalMeshComponent *Mesh) {
-#if ENGINE_MINOR_VERSION >= 1
-  const USkeletalMesh *Asset = Mesh->GetSkeletalMeshAsset();
-#else
-  const USkeletalMesh *Asset = Mesh->SkeletalMesh;
-#endif
+  const USkeletalMesh *Asset = MCP_SKELETAL_MESH_ASSET(Mesh);
   return Asset ? Asset->GetSkeleton() : nullptr;
 }
 
 // A clip on a skeleton the mesh cannot play evaluates to the mesh's rest pose, without a warning.
 bool CanPlayOn(const USkeleton *Skeleton, const UAnimSequence *Anim) {
   if (!Skeleton || Skeleton == Anim->GetSkeleton()) return Skeleton != nullptr;
-#if ENGINE_MINOR_VERSION >= 2
-  return Skeleton->IsCompatibleForEditor(Anim->GetSkeleton());
-#else
-  return Skeleton->IsCompatible(Anim->GetSkeleton());
-#endif
+  return MCP_SKELETON_COMPATIBLE(Skeleton, Anim->GetSkeleton());
 }
 
 // The mesh's own binding under the actor's, as Sequencer's "add component" makes it; reused when it exists.

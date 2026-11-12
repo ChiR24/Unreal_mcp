@@ -41,15 +41,7 @@ AActor* SpawnDynamicMeshActorWithMesh(
     UDynamicMesh* DynMesh,
     FString& OutError)
 {
-    UWorld* World = nullptr;
-    if (GEditor && GEditor->PlayWorld)
-    {
-        World = GEditor->PlayWorld.Get();
-    }
-    else if (GEditor)
-    {
-        World = GEditor->GetEditorWorldContext().World();
-    }
+    UWorld* World = McpHandlerUtils::GetPlayOrEditorWorld();
 
     if (!World)
     {

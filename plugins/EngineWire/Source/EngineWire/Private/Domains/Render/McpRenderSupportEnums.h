@@ -49,14 +49,9 @@ inline bool ResolveEnumAlias(
     }
     TArray<FString> Allowed;
     Map.GetKeys(Allowed);
-    FString AllowedList;
-    for (int32 i = 0; i < Allowed.Num(); ++i)
-    {
-        AllowedList += (i == 0 ? FString() : FString(TEXT(", "))) + Allowed[i];
-    }
     OutError = FString::Printf(
         TEXT("Unknown method '%s'. Allowed values: %s"),
-        *Input, *AllowedList);
+        *Input, *FString::Join(Allowed, TEXT(", ")));
     return false;
 }
 }

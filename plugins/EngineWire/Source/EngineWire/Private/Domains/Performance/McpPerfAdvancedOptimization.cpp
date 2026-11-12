@@ -84,8 +84,8 @@ bool HandleAdvancedOptimizationAction(const FPerformanceActionContext& Context)
         }
         bool bInstancing = true;
         Context.Payload->TryGetBoolField(TEXT("enableInstancing"), bInstancing);
-        SetPerfCVar(TEXT("r.MeshDrawCommands.DynamicInstancing"), bInstancing ? TEXT("1") : TEXT("0"), Applied, NotSet);
-        SetPerfCVar(TEXT("r.MeshDrawCommands.UseCachedCommands"), bEnabled ? TEXT("1") : TEXT("0"), Applied, NotSet);
+        McpSetConsoleVariableNamed(TEXT("r.MeshDrawCommands.DynamicInstancing"), bInstancing ? TEXT("1") : TEXT("0"), Applied, NotSet);
+        McpSetConsoleVariableNamed(TEXT("r.MeshDrawCommands.UseCachedCommands"), bEnabled ? TEXT("1") : TEXT("0"), Applied, NotSet);
 
         TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
         Resp->SetBoolField(TEXT("optimized"), bEnabled);
@@ -100,7 +100,7 @@ bool HandleAdvancedOptimizationAction(const FPerformanceActionContext& Context)
         Context.Payload->TryGetBoolField(TEXT("enabled"), bEnabled);
         // slop and minScreenRadius wrote r.OcclusionSlop and r.OcclusionCullMinScreenRadius, which no 5.x engine has
         // (the slop is a renderer constant), and answered success.
-        SetPerfCVar(TEXT("r.AllowOcclusionQueries"), bEnabled ? TEXT("1") : TEXT("0"), Applied, NotSet);
+        McpSetConsoleVariableNamed(TEXT("r.AllowOcclusionQueries"), bEnabled ? TEXT("1") : TEXT("0"), Applied, NotSet);
         TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
         Resp->SetBoolField(TEXT("enabled"), bEnabled);
         SendPerfCVarResult(Context, bEnabled ? TEXT("Occlusion culling on") : TEXT("Occlusion culling off"), Applied, NotSet, Resp);

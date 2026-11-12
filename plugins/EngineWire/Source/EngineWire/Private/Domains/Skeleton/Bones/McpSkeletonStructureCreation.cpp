@@ -101,18 +101,12 @@ bool HandleCreateSkeletonAction(UEngineWireSubsystem* Subsystem, const FString& 
             RootBone.Name = FName(*RootBoneName);
             RootBone.ParentIndex = INDEX_NONE;
             RootBone.ExportName = RootBoneName;
-#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 3
-            Modifier.Add(RootBone, FTransform::Identity, true); // bAllowMultipleRoots = true for first bone
-#else
-            // UE 5.0-5.2: Add() only takes 2 parameters
             Modifier.Add(RootBone, FTransform::Identity);
-#endif
         }
         McpSkeletonBoneEdits::FitBoneTree(NewSkeleton);
 
-        bool bSave = true;
-        Payload->TryGetBoolField(TEXT("save"), bSave);
-        const bool bSaveOk = SaveIfRequested(NewSkeleton, Payload);
+        const bool bSave = GetJsonBoolField(Payload, TEXT("save"), true);
+        const bool bSaveOk = !bSave || McpSafeAssetSave(NewSkeleton);
         if (!bSave || !bSaveOk)
         {
             NewSkeleton->MarkPackageDirty(); // unsaved, so save_all saves it
@@ -204,14 +198,8 @@ bool HandleAddBoneAction(UEngineWireSubsystem* Subsystem, const FString& Request
             NewBone.ParentIndex = ParentIndex;
             NewBone.ExportName = BoneName;
 
-            // Allow multiple roots only if no parent is specified and this is the first bone
-            bool bAllowMultipleRoots = ParentIndex == INDEX_NONE && RefSkeleton.GetRawBoneNum() == 0;
-#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 3
-            Modifier.Add(NewBone, BoneTransform, bAllowMultipleRoots);
-#else
-            // UE 5.0-5.2: Add() only takes 2 parameters
+            // One root per skeleton holds: a parentless bone only goes into an empty one (PARENT_REQUIRED above).
             Modifier.Add(NewBone, BoneTransform);
-#endif
             McpSkeletonBoneEdits::FitBoneTree(Skeleton);
             Transaction.DescribeInto(Result);
         }

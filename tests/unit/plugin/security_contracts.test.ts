@@ -242,8 +242,8 @@ describe('plugin security contracts', () => {
     );
     const renderTargetSource = privateSource(
       'Domains',
-      'Render',
-      'McpRenderTargets.cpp',
+      'Texture',
+      'McpTextureRenderTarget.cpp',
     );
 
     expect(consoleSource).toContain('ReadBoundedNumberSetting');
@@ -263,7 +263,7 @@ describe('plugin security contracts', () => {
     expect(consoleSource).not.toContain('void AddNumberSetting');
 
     expect(renderTargetSource).toContain('MaxAllocationBytes = 512ll * 1024ll * 1024ll');
-    expect(renderTargetSource).toContain('WidthValue > 8192.0');
+    expect(renderTargetSource).toContain('MaxRenderTargetDimension = 8192');
     expect(renderTargetSource).not.toContain('Width > 16384');
   });
 

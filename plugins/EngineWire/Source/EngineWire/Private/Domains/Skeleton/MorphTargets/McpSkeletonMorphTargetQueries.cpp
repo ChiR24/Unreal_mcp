@@ -3,17 +3,13 @@
 
 #include "Animation/MorphTarget.h"
 #include "Components/SkeletalMeshComponent.h"
-#include "Editor.h"
 #include "Engine/SkeletalMesh.h"
-#include "Engine/World.h"
 #include "Foundation/HandlerUtils/McpHandlerUtilsActionsPaths.h"
-#include "EngineUtils.h"
 #include "GameFramework/Actor.h"
 #include "Safety/McpSafeOperations.h"
 #include "EngineWireSubsystem.h"
 #include "Transport/WebSocket/McpBridgeWebSocket.h"
 #include "Foundation/HandlerUtils/McpHandlerUtils.h"
-#include "Misc/Paths.h"
 
 using namespace McpSkeletonHandlers;
 bool UEngineWireSubsystem::HandleSetMorphTargetValue(
@@ -34,15 +30,8 @@ bool UEngineWireSubsystem::HandleSetMorphTargetValue(
 
     Value = FMath::Clamp(Value, 0.0, 1.0);
 
-    UWorld* World = GEditor->GetEditorWorldContext().World();
-    if (!World)
-    {
-        SendAutomationError(RequestingSocket, RequestId, TEXT("No world available"), TEXT("NO_WORLD"));
-        return true;
-    }
-
     // A path-restricted caller finds only actors in a level inside its prefixes.
-    AActor* FoundActor = FindActorByNameInWorldForMcp(World, ActorName, true);
+    AActor* FoundActor = FindActorByNameInWorldForMcp(McpHandlerUtils::GetEditorWorld(), ActorName, true);
 
     if (!FoundActor)
     {
@@ -59,12 +48,7 @@ bool UEngineWireSubsystem::HandleSetMorphTargetValue(
         return true;
     }
 
-#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 1
-    USkeletalMesh* SkelMesh = SkelMeshComp->GetSkeletalMeshAsset();
-#else
-    // UE 5.0: Use SkeletalMesh property directly
-    USkeletalMesh* SkelMesh = SkelMeshComp->SkeletalMesh;
-#endif
+    USkeletalMesh* SkelMesh = MCP_SKELETAL_MESH_ASSET(SkelMeshComp);
     // A weight for a morph the mesh lacks shows nothing; addMissing set one anyway and answered that it was set.
     if (!SkelMesh || !SkelMesh->FindMorphTarget(FName(*MorphTargetName)))
     {

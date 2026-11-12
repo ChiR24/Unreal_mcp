@@ -81,20 +81,6 @@ namespace WidgetAuthoringHandlers
 {
 using namespace WidgetAuthoringHelpers;
 
-namespace
-{
-// Over dark grey, so white HUD text on nothing still reads.
-void McpOverDarkGrey(TArray<FColor>& Pixels)
-{
-    for (FColor& Pixel : Pixels)
-    {
-        const float Alpha = Pixel.A / 255.f;
-        Pixel = FColor(FMath::RoundToInt(Pixel.R * Alpha + 24 * (1.f - Alpha)), FMath::RoundToInt(Pixel.G * Alpha + 24 * (1.f - Alpha)),
-                       FMath::RoundToInt(Pixel.B * Alpha + 28 * (1.f - Alpha)), 255);
-    }
-}
-}
-
 bool HandleWidgetAuthoringPreview(
     UEngineWireSubsystem& Subsystem,
     const FString& RequestId,
@@ -131,7 +117,10 @@ bool HandleWidgetAuthoringPreview(
         Subsystem.SendAutomationError(RequestingSocket, RequestId, Error, TEXT("PREVIEW_FAILED"));
         return true;
     }
-    McpOverDarkGrey(Pixels);
+    for (FColor& Pixel : Pixels)
+    {
+        Pixel = McpOverPreviewBackdrop(Pixel);
+    }
     // The editor compiles a material's Slate shaders when it is first drawn, so the first preview after the editor
     // starts (or after a material edit) drew panels and button faces blank. waitForShaders waits for that compile and
     // draws again; without it the reply says shaders were compiling.

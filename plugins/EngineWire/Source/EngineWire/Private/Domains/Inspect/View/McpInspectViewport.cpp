@@ -1,4 +1,5 @@
 #include "Domains/Inspect/McpInspectShared.h"
+#include "Foundation/BridgeHelpers/Reflection/McpEnumName.h"
 
 #include "EditorViewportClient.h"
 #include "Engine/EngineBaseTypes.h"
@@ -16,7 +17,7 @@ void McpAppendViewportInfo(TSharedPtr<FJsonObject> Resp)
     {
         return;
     }
-    FViewport *ActiveViewport = GEditor ? GEditor->GetActiveViewport() : nullptr;
+    FViewport *ActiveViewport = GEditor->GetActiveViewport();
     Resp->SetBoolField(TEXT("hasActiveViewport"), ActiveViewport != nullptr);
     if (ActiveViewport)
     {
@@ -33,21 +34,16 @@ void McpAppendViewportInfo(TSharedPtr<FJsonObject> Resp)
     // interacted with; fall back to the first registered level viewport so a
     // freshly opened editor still reports its camera.
     FLevelEditorViewportClient *Client = GCurrentLevelEditingViewportClient;
-    int32 LevelViewportCount = 0;
-    if (GEditor)
+    const TArray<FLevelEditorViewportClient *> &Clients = GEditor->GetLevelViewportClients();
+    for (FLevelEditorViewportClient *Candidate : Clients)
     {
-        const TArray<FLevelEditorViewportClient *> &Clients = GEditor->GetLevelViewportClients();
-        LevelViewportCount = Clients.Num();
-        for (FLevelEditorViewportClient *Candidate : Clients)
+        if (Client)
         {
-            if (Client)
-            {
-                break;
-            }
-            Client = Candidate;
+            break;
         }
+        Client = Candidate;
     }
-    Resp->SetNumberField(TEXT("levelViewportCount"), LevelViewportCount);
+    Resp->SetNumberField(TEXT("levelViewportCount"), Clients.Num());
     Resp->SetBoolField(TEXT("hasLevelViewportClient"), Client != nullptr);
     if (Client)
     {
@@ -57,7 +53,7 @@ void McpAppendViewportInfo(TSharedPtr<FJsonObject> Resp)
         Resp->SetObjectField(TEXT("cameraRotation"), McpHandlerUtils::RotatorToJson(Client->GetViewRotation()));
         Resp->SetNumberField(TEXT("cameraFov"), Client->ViewFOV);
         Resp->SetNumberField(TEXT("orthoZoom"), Client->GetOrthoZoom());
-        FString ViewMode = StaticEnum<EViewModeIndex>()->GetNameStringByValue(static_cast<int64>(Client->GetViewMode()));
+        FString ViewMode = McpEnumName(Client->GetViewMode());
         ViewMode.RemoveFromStart(TEXT("VMI_"));
         Resp->SetStringField(TEXT("viewMode"), ViewMode);
         Resp->SetBoolField(TEXT("isRealtime"), Client->IsRealtime());
@@ -67,10 +63,10 @@ void McpAppendViewportInfo(TSharedPtr<FJsonObject> Resp)
         Resp->SetStringField(TEXT("viewportWorld"), ClientWorld ? ClientWorld->GetName() : TEXT(""));
     }
 
-    UWorld *World = McpGetRuntimeInspectionWorld();
+    UWorld *World = McpHandlerUtils::GetPlayOrEditorWorld();
     Resp->SetStringField(TEXT("worldType"), McpGetWorldTypeName(World));
     Resp->SetStringField(TEXT("worldName"), World ? World->GetName() : TEXT(""));
-    const bool bPie = GEditor && GEditor->PlayWorld != nullptr;
+    const bool bPie = GEditor->PlayWorld != nullptr;
     Resp->SetBoolField(TEXT("isPIE"), bPie);
     APlayerController *PlayerController = bPie ? GEditor->PlayWorld->GetFirstPlayerController() : nullptr;
     if (!PlayerController)

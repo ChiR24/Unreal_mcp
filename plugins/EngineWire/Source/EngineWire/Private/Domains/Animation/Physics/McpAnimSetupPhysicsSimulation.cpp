@@ -61,11 +61,7 @@ bool HandleAnimationSetupPhysicsSimulationAction(FActionContext &Context,
 			// Try to get skeletal mesh component
         if (USkeletalMeshComponent *SkelComp =
                 FoundActor->FindComponentByClass<USkeletalMeshComponent>()) {
-#if ENGINE_MINOR_VERSION >= 1
-          TargetMesh = SkelComp->GetSkeletalMeshAsset();
-#else
-          TargetMesh = SkelComp->SkeletalMesh;
-#endif
+          TargetMesh = MCP_SKELETAL_MESH_ASSET(SkelComp);
 			if (!TargetMesh) {
             Message =
                 FString::Printf(TEXT("Actor '%s' has a SkeletalMeshComponent "

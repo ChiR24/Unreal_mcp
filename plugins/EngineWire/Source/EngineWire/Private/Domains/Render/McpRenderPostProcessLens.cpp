@@ -30,7 +30,7 @@ bool HandleRenderPostProcessLensAction(
         }
         TArray<FString> Applied;
         TArray<FString> Unsupported;
-        SetConsoleVariable(
+        McpSetConsoleVariableNamed(
             TEXT("r.ScreenPercentage"),
             FString::SanitizeFloat(ScreenPercentage),
             Applied,

@@ -90,9 +90,7 @@ void AuditPicture(TArray<FColor>& Pixels, FIntPoint Size, const TArray<McpWidget
 {
     for (FColor& Pixel : Pixels)
     {
-        const float Alpha = Pixel.A / 255.f;
-        Pixel = FColor(FMath::RoundToInt(Pixel.R * Alpha + 24 * (1.f - Alpha)), FMath::RoundToInt(Pixel.G * Alpha + 24 * (1.f - Alpha)),
-                       FMath::RoundToInt(Pixel.B * Alpha + 28 * (1.f - Alpha)), 255);
+        Pixel = McpOverPreviewBackdrop(Pixel);
     }
     static const FColor Marks[4] = {FColor(160, 160, 160), FColor(255, 220, 0), FColor(255, 140, 0), FColor(255, 40, 40)};
     for (const McpWidgetAudit::FFinding& Finding : Findings)

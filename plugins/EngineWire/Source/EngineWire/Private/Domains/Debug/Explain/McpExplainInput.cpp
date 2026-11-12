@@ -195,7 +195,7 @@ bool ExplainInput(UEngineWireSubsystem& Self, const FString& RequestId, const TS
         Self.SendAutomationError(Socket, RequestId, FString::Printf(TEXT("No Input Action at '%s': actionPath names the action the key should fire."), *ActionPath), TEXT("ACTION_NOT_FOUND"));
         return true;
     }
-    UWorld* World = GEditor && GEditor->PlayWorld ? GEditor->PlayWorld.Get() : McpHandlerUtils::GetEditorWorld();
+    UWorld* World = McpHandlerUtils::GetPlayOrEditorWorld();
     FTree Tree;
     const TArray<UInputMappingContext*> Contexts = ContextsMapping(Action, Key);
     const TArray<UBlueprint*> Blueprints = PlayerBlueprints(World);

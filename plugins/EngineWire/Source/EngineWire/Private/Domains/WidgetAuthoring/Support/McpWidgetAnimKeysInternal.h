@@ -1,5 +1,5 @@
 // McpWidgetAnimKeysInternal.h — shared MovieScene helpers for the
-// widget animation key authors (AnimationKeys.cpp and AnimationKeysTransform.cpp).
+// widget animation key authors (McpWidgetAnimKeys.cpp and McpWidgetAnimKeysTransform.cpp).
 #pragma once
 
 #include "CoreMinimal.h"

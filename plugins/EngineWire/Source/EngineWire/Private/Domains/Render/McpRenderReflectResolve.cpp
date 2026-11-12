@@ -89,7 +89,7 @@ bool HandleRenderReflectionResolutionAction(
 
     TArray<FString> Applied;
     TArray<FString> Unsupported;
-    SetConsoleVariable(
+    McpSetConsoleVariableNamed(
         TEXT("r.ReflectionCaptureResolution"),
         FString::FromInt(Resolution),
         Applied,

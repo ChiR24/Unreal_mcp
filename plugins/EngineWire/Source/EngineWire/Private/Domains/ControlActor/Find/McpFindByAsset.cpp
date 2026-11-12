@@ -40,7 +40,7 @@ bool Scan(UEngineWireSubsystem* Bridge, const FString& RequestId, const TSharedP
         ? FMath::Clamp(static_cast<int32>(Requested), 1, MaxLimit) : DefaultLimit;
     // The Play In Editor world while a session runs, as find_by_class and list do: the editor world holds the originals,
     // not the actors that are playing.
-    UWorld* World = GEditor->PlayWorld ? GEditor->PlayWorld.Get() : GEditor->GetEditorWorldContext().World();
+    UWorld* World = McpHandlerUtils::GetPlayOrEditorWorld();
     TArray<TSharedPtr<FJsonValue>> Actors;
     int32 Total = 0;
     if (World)

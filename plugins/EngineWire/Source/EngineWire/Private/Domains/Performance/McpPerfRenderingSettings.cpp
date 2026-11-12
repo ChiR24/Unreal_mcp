@@ -89,10 +89,10 @@ bool HandleRenderingSettingsAction(const FPerformanceActionContext& Context)
                 TEXT("scale is required: the render resolution in percent (100 is full resolution), or 0 for the engine default"), TEXT("INVALID_ARGUMENT"));
             return true;
         }
-        SetPerfCVar(TEXT("r.ScreenPercentage"), FString::SanitizeFloat(Scale), Applied, NotSet);
+        McpSetConsoleVariableNamed(TEXT("r.ScreenPercentage"), FString::SanitizeFloat(Scale), Applied, NotSet);
 #if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION < 3
         // Before 5.3 Play In Editor takes the level viewport's screen percentage over r.ScreenPercentage while this is on.
-        SetPerfCVar(TEXT("r.Editor.Viewport.OverridePIEScreenPercentage"), TEXT("0"), Applied, NotSet);
+        McpSetConsoleVariableNamed(TEXT("r.Editor.Viewport.OverridePIEScreenPercentage"), TEXT("0"), Applied, NotSet);
 #endif
         SendPerfCVarResult(Context, Scale > 0.0 ? FString::Printf(TEXT("Game views render at %g%% resolution"), Scale)
                                                 : FString(TEXT("Game views back to the engine default resolution")), Applied, NotSet);
@@ -105,8 +105,8 @@ bool HandleRenderingSettingsAction(const FPerformanceActionContext& Context)
         Context.Payload->TryGetBoolField(TEXT("enabled"), bEnabled);
         // The editor's windows, Play In Editor included, present by r.VSyncEditor and never read r.VSync, so setting
         // only r.VSync changed nothing on screen.
-        SetPerfCVar(TEXT("r.VSyncEditor"), McpCVarSwitch(bEnabled), Applied, NotSet);
-        SetPerfCVar(TEXT("r.VSync"), McpCVarSwitch(bEnabled), Applied, NotSet);
+        McpSetConsoleVariableNamed(TEXT("r.VSyncEditor"), McpCVarSwitch(bEnabled), Applied, NotSet);
+        McpSetConsoleVariableNamed(TEXT("r.VSync"), McpCVarSwitch(bEnabled), Applied, NotSet);
         SendPerfCVarResult(Context, bEnabled ? TEXT("VSync on") : TEXT("VSync off"), Applied, NotSet);
         return true;
     }
@@ -120,7 +120,7 @@ bool HandleRenderingSettingsAction(const FPerformanceActionContext& Context)
                 TEXT("maxFPS is required: frames per second, 0 for no cap"), TEXT("INVALID_ARGUMENT"));
             return true;
         }
-        SetPerfCVar(TEXT("t.MaxFPS"), FString::SanitizeFloat(Limit), Applied, NotSet);
+        McpSetConsoleVariableNamed(TEXT("t.MaxFPS"), FString::SanitizeFloat(Limit), Applied, NotSet);
         SendPerfCVarResult(Context, Limit > 0.0 ? FString::Printf(TEXT("Frame rate capped at %g"), Limit)
                                                 : FString(TEXT("Frame rate cap removed")), Applied, NotSet);
         return true;
@@ -130,7 +130,7 @@ bool HandleRenderingSettingsAction(const FPerformanceActionContext& Context)
     {
         bool bEnabled = true;
         Context.Payload->TryGetBoolField(TEXT("enabled"), bEnabled);
-        SetPerfCVar(TEXT("r.Nanite"), McpCVarSwitch(bEnabled), Applied, NotSet);
+        McpSetConsoleVariableNamed(TEXT("r.Nanite"), McpCVarSwitch(bEnabled), Applied, NotSet);
         SendPerfCVarResult(Context, bEnabled ? TEXT("Nanite meshes render with Nanite")
                                              : TEXT("Nanite meshes render their fallback meshes"), Applied, NotSet);
         return true;
@@ -150,11 +150,11 @@ bool HandleRenderingSettingsAction(const FPerformanceActionContext& Context)
         }
         if (bHasBias)
         {
-            SetPerfCVar(TEXT("r.MipMapLODBias"), FString::SanitizeFloat(LODBias), Applied, NotSet);
+            McpSetConsoleVariableNamed(TEXT("r.MipMapLODBias"), FString::SanitizeFloat(LODBias), Applied, NotSet);
         }
         if (bHasForce)
         {
-            SetPerfCVar(TEXT("r.ForceLOD"), FString::FromInt(FMath::RoundToInt(ForceLOD)), Applied, NotSet);
+            McpSetConsoleVariableNamed(TEXT("r.ForceLOD"), FString::FromInt(FMath::RoundToInt(ForceLOD)), Applied, NotSet);
         }
         SendPerfCVarResult(Context, TEXT("LOD settings set"), Applied, NotSet);
         return true;
@@ -181,11 +181,11 @@ bool HandleRenderingSettingsAction(const FPerformanceActionContext& Context)
         }
         if (bHasEnabled)
         {
-            SetPerfCVar(TEXT("r.TextureStreaming"), McpCVarSwitch(bEnabled), Applied, NotSet);
+            McpSetConsoleVariableNamed(TEXT("r.TextureStreaming"), McpCVarSwitch(bEnabled), Applied, NotSet);
         }
         if (bHasPool)
         {
-            SetPerfCVar(TEXT("r.Streaming.PoolSize"), FString::FromInt(FMath::RoundToInt(PoolSize)), Applied, NotSet);
+            McpSetConsoleVariableNamed(TEXT("r.Streaming.PoolSize"), FString::FromInt(FMath::RoundToInt(PoolSize)), Applied, NotSet);
         }
         SendPerfCVarResult(Context, TEXT("Texture streaming set"), Applied, NotSet);
         return true;

@@ -52,7 +52,7 @@ inline const TArray<FString>& Skeleton()
 		TEXT("set_morph_target_deltas"),
 		TEXT("get_skeleton_info"), TEXT("list_bones"), TEXT("list_sockets"),
 		TEXT("list_physics_bodies"),
-		TEXT("add_socket"), TEXT("modify_socket"), TEXT("delete_socket"),
+		TEXT("add_socket"), TEXT("modify_socket"),
 		TEXT("remove_socket"), TEXT("set_physics_asset"),
 		TEXT("modify_physics_body"), TEXT("remove_physics_body"),
 		TEXT("set_physics_constraint"), TEXT("get_physics_asset_info"),

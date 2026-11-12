@@ -1,4 +1,5 @@
 #include "Core/Compatibility/McpVersionCompatibility.h"
+#include "Core/Routing/McpConsolidatedActionRouting.h"
 
 #include "Domains/Render/McpRenderPrivate.h"
 #include "Foundation/BridgeHelpers/McpHelpers.h"
@@ -9,41 +10,10 @@ bool UEngineWireSubsystem::HandleRenderAction(
     const TSharedPtr<FJsonObject>& Payload,
     TSharedPtr<FMcpBridgeWebSocket> RequestingSocket)
 {
-    if (!Action.Equals(TEXT("manage_render"), ESearchCase::IgnoreCase))
-    {
-        return false;
-    }
-
-    if (!Payload.IsValid())
-    {
-        SendAutomationError(
-            RequestingSocket, RequestId, TEXT("Missing payload."), TEXT("INVALID_PAYLOAD"));
-        return true;
-    }
-
-    FString SubAction = GetJsonStringField(Payload, TEXT("subAction"));
-    if (SubAction.IsEmpty())
-    {
-        SubAction = GetJsonStringField(Payload, TEXT("action"));
-    }
-    SubAction = SubAction.ToLower();
-    SubAction.ReplaceInline(TEXT("-"), TEXT("_"));
-    SubAction.ReplaceInline(TEXT(" "), TEXT("_"));
+    // build_environment's route calls this with manage_render and a payload whose sub-action it claimed.
+    const FString SubAction = McpConsolidatedActions::GetPayloadSubAction(Payload);
 
     using namespace McpRenderHandlers;
-    if (SubAction == TEXT("create_render_target"))
-    {
-        return HandleCreateRenderTarget(this, RequestId, Payload, RequestingSocket);
-    }
-    if (SubAction == TEXT("nanite_rebuild_mesh"))
-    {
-        // One implementation for both routes: manage_asset reaches the same handler.
-        return HandleNaniteRebuildMesh(RequestId, SubAction, Payload, RequestingSocket);
-    }
-    if (SubAction == TEXT("lumen_update_scene"))
-    {
-        return HandleLumenUpdateScene(this, RequestId, RequestingSocket);
-    }
     if (HandleRenderConsoleAction(this, RequestId, SubAction, Payload, RequestingSocket) ||
         HandleRenderLightingAction(this, RequestId, SubAction, Payload, RequestingSocket) ||
         HandleRenderReflectionResolutionAction(this, RequestId, SubAction, Payload, RequestingSocket) ||

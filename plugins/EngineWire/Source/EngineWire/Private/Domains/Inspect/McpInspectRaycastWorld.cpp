@@ -8,8 +8,7 @@
 
 namespace McpInspectHandlers {
 namespace {
-// A channel by its enum name (ECC_Visibility or Visibility) or its display name, which for a project trace
-// channel is the name the collision settings gave it.
+// A channel as Project Settings names it (Visibility, Pawn, a project trace channel's own name), ECC_ prefix or not.
 bool McpResolveTraceChannel(const FString &Name, ECollisionChannel &OutChannel)
 {
     if (Name.IsEmpty())
@@ -17,14 +16,12 @@ bool McpResolveTraceChannel(const FString &Name, ECollisionChannel &OutChannel)
         OutChannel = ECC_Visibility;
         return true;
     }
-    const UEnum *Channels = StaticEnum<ECollisionChannel>();
-    for (int32 Index = 0; Channels && Index < Channels->NumEnums() - 1; ++Index)
+    const FString Wanted = Name.StartsWith(TEXT("ECC_")) ? Name.RightChop(4) : Name;
+    for (const TPair<FString, ECollisionChannel> &Channel : McpCollisionChannels())
     {
-        const FString EnumName = Channels->GetNameStringByIndex(Index);
-        if (Name.Equals(EnumName, ESearchCase::IgnoreCase) || Name.Equals(EnumName.RightChop(4), ESearchCase::IgnoreCase) ||
-            Name.Equals(Channels->GetDisplayNameTextByIndex(Index).ToString(), ESearchCase::IgnoreCase))
+        if (Channel.Key.Equals(Wanted, ESearchCase::IgnoreCase))
         {
-            OutChannel = static_cast<ECollisionChannel>(Channels->GetValueByIndex(Index));
+            OutChannel = Channel.Value;
             return true;
         }
     }
@@ -40,7 +37,7 @@ bool HandleInspectRaycastWorldAction(
     const TSharedPtr<FJsonObject> &Payload,
     TSharedPtr<FMcpBridgeWebSocket> RequestingSocket)
 {
-    UWorld *World = GEditor ? (GEditor->PlayWorld ? GEditor->PlayWorld.Get() : GEditor->GetEditorWorldContext().World()) : nullptr;
+    UWorld *World = McpHandlerUtils::GetPlayOrEditorWorld();
     const TArray<TSharedPtr<FJsonValue>> *Rays = nullptr;
     if (!Payload->TryGetArrayField(TEXT("rays"), Rays) || !Rays || Rays->Num() == 0 || Rays->Num() > 256)
     {

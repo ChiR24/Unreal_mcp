@@ -56,11 +56,7 @@ FString ApplyTextProps(UTextBlock* Text, const TSharedPtr<FJsonObject>& Node)
     double FontSize = 0.0;
     if (Node->TryGetNumberField(TEXT("fontSize"), FontSize))
     {
-#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 1
-        FSlateFontInfo Font = Text->GetFont();
-#else
-        FSlateFontInfo Font = Text->Font;
-#endif
+        FSlateFontInfo Font = McpTextBlockFont(Text);
         Font.Size = static_cast<int32>(FontSize);
         Text->SetFont(Font);
     }

@@ -11,7 +11,6 @@
 #include "Foundation/HandlerUtils/McpHandlerUtils.h"
 #include "Rendering/SkeletalMeshLODModel.h"
 #include "Rendering/SkeletalMeshModel.h"
-#include "Runtime/Launch/Resources/Version.h"
 #include "Transport/WebSocket/McpBridgeWebSocket.h"
 #if __has_include("Animation/SkinWeightProfile.h")
 #include "Animation/SkinWeightProfile.h"
@@ -84,7 +83,7 @@ bool ParseProfileWeights(const TSharedPtr<FJsonObject>& Payload, const USkeletal
     return true;
 }
 
-#if ENGINE_MINOR_VERSION >= 4
+#if MCP_SKIN_SOURCE_IS_MESH_DESCRIPTION
 // Every source vertex at a given render vertex's place takes its weights; every other vertex keeps the profile's (a new
 // profile starts from the default weights). The source data's build normalizes them.
 bool WriteProfile(USkeletalMesh* Mesh, int32 LOD, FName Profile, const TArray<FProfileVertex>& Weights, bool bAllowDrop,

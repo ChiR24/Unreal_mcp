@@ -18,8 +18,7 @@
 #include "WidgetBlueprint.h"
 
 // bind_text, bind_visibility, bind_color, bind_enabled, bind_percent: a real UMG property binding, the
-// same thing the Designer's "Bind" dropdown writes. These four were published with no
-// handler at all, so every call died as UNKNOWN_ACTION.
+// same thing the Designer's "Bind" dropdown writes.
 namespace WidgetAuthoringHandlers
 {
 using namespace WidgetAuthoringHelpers;

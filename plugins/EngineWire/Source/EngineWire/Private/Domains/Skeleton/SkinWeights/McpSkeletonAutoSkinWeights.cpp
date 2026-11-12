@@ -2,15 +2,11 @@
 #include "Domains/Skeleton/Assets/McpSkeletonPayload.h"
 
 #include "Engine/SkeletalMesh.h"
-#include "Safety/McpSafeOperations.h"
 #include "EngineWireSubsystem.h"
 #include "Transport/WebSocket/McpBridgeWebSocket.h"
 #include "Foundation/HandlerUtils/McpHandlerUtils.h"
 #include "Rendering/SkeletalMeshLODModel.h"
 #include "Rendering/SkeletalMeshModel.h"
-#if __has_include("Animation/SkinWeightProfile.h")
-#include "Animation/SkinWeightProfile.h"
-#endif
 // Smooth binding comes from GeometryScripting; the calls below all exist from
 // UE 5.5 on (the same gate skin_mesh_to_skeleton uses).
 #if __has_include("GeometryScript/MeshAssetFunctions.h") && \

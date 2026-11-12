@@ -101,11 +101,7 @@ bool HandleInfoAction(FActionContext& Context)
     }
     else
     {
-        UWorld* World = GEditor ? GEditor->PlayWorld : nullptr;
-        if (!World && GEditor)
-        {
-            World = GEditor->GetEditorWorldContext().World();
-        }
+        UWorld* World = McpHandlerUtils::GetPlayOrEditorWorld();
 
         UClass* ResolvedGameModeClass = ResolveWorldGameMode(World, InfoObj);
         if (ResolvedGameModeClass)

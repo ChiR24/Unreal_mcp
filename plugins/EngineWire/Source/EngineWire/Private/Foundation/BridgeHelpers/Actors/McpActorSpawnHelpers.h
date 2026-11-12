@@ -5,6 +5,7 @@
 #include <type_traits>
 
 #include "Editor.h"
+#include "Foundation/HandlerUtils/McpHandlerUtilsActionsPaths.h"
 #include "GameFramework/Actor.h"
 
 // Spawn directly into the active PIE/editor world to avoid viewport placement
@@ -20,9 +21,7 @@ SpawnActorInActiveWorld(UClass *ActorClass, const FVector &Location,
   if (!GEditor || !ActorClass)
     return nullptr;
 
-  UWorld *TargetWorld = GEditor->PlayWorld
-                            ? GEditor->PlayWorld.Get()
-                            : GEditor->GetEditorWorldContext().World();
+  UWorld *TargetWorld = McpHandlerUtils::GetPlayOrEditorWorld();
   if (!TargetWorld)
     return nullptr;
 

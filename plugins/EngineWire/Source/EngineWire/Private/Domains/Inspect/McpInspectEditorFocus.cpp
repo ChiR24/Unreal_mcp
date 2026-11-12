@@ -38,7 +38,7 @@ TArray<TSharedPtr<FJsonValue>> McpNewestFirst(FMcpRecentRows &Rows)
 bool HandleInspectEditorFocusAction(UEngineWireSubsystem &Bridge, const FString &RequestId,
                                     TSharedPtr<FMcpBridgeWebSocket> RequestingSocket)
 {
-    UAssetEditorSubsystem *Editors = GEditor ? GEditor->GetEditorSubsystem<UAssetEditorSubsystem>() : nullptr;
+    UAssetEditorSubsystem *Editors = GEditor->GetEditorSubsystem<UAssetEditorSubsystem>();
     FMcpRecentRows Open;
     TMap<const UObject *, double> Activated;
     for (UObject *Asset : Editors ? Editors->GetAllEditedAssets() : TArray<UObject *>())
@@ -105,7 +105,7 @@ bool HandleInspectEditorFocusAction(UEngineWireSubsystem &Bridge, const FString 
     }
 
     TArray<TSharedPtr<FJsonValue>> Actors;
-    if (GEditor && GEditor->GetSelectedActors())
+    if (GEditor->GetSelectedActors())
     {
         TArray<AActor *> Selected;
         GEditor->GetSelectedActors()->GetSelectedObjects(Selected);

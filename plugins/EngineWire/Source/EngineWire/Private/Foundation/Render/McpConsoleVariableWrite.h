@@ -24,3 +24,19 @@ inline FString McpSetConsoleVariable(IConsoleVariable& Variable, const FString& 
         : Variable.GetString().Equals(Value, ESearchCase::IgnoreCase);
     return bTook ? FString() : FString::Printf(TEXT("stays %s: held by a higher-priority source"), *Variable.GetString());
 }
+
+// McpSetConsoleVariable on the variable called Name, filed for a reply: Name under OutApplied, or "Name (why not)" under
+// OutNotSet ("not in this engine version" when the variable is missing). True when the value took.
+inline bool McpSetConsoleVariableNamed(const FString& Name, const FString& Value, TArray<FString>& OutApplied,
+                                       TArray<FString>& OutNotSet)
+{
+    IConsoleVariable* Variable = IConsoleManager::Get().FindConsoleVariable(*Name);
+    const FString NotTaken = Variable ? McpSetConsoleVariable(*Variable, Value) : FString(TEXT("not in this engine version"));
+    if (!NotTaken.IsEmpty())
+    {
+        OutNotSet.Add(FString::Printf(TEXT("%s (%s)"), *Name, *NotTaken));
+        return false;
+    }
+    OutApplied.Add(Name);
+    return true;
+}

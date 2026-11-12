@@ -46,35 +46,21 @@ void WriteTransformToJson(const FTransform& Transform, const TSharedPtr<FJsonObj
     {
         return;
     }
-
-    const FVector Location = Transform.GetLocation();
-    Target->SetObjectField(TEXT("location"), McpHandlerUtils::VectorToJson(Location));
-
-    const FRotator Rotation = Transform.Rotator();
-    Target->SetObjectField(TEXT("rotation"), McpHandlerUtils::RotatorToJson(Rotation));
-
-    const FVector Scale = Transform.GetScale3D();
-    Target->SetObjectField(TEXT("scale"), McpHandlerUtils::VectorToJson(Scale));
+    const TSharedPtr<FJsonObject> Fields = McpHandlerUtils::TransformToJson(Transform);
+    for (const auto& Field : Fields->Values)
+    {
+        Target->SetField(Field.Key, Field.Value);
+    }
 }
 
 bool SaveIfRequested(UObject* Asset, const TSharedPtr<FJsonObject>& Payload)
 {
-    bool bSave = true;
-    if (Payload.IsValid())
-    {
-        Payload->TryGetBoolField(TEXT("save"), bSave);
-    }
-    return !bSave || McpSafeAssetSave(Asset);
+    return !GetJsonBoolField(Payload, TEXT("save"), true) || McpSafeAssetSave(Asset);
 }
 
 void SaveAndReport(UObject* Asset, const TSharedPtr<FJsonObject>& Payload, const TSharedPtr<FJsonObject>& Result)
 {
-    bool bSave = true;
-    if (Payload.IsValid())
-    {
-        Payload->TryGetBoolField(TEXT("save"), bSave);
-    }
-    Result->SetBoolField(TEXT("saved"), bSave && McpSafeAssetSave(Asset));
+    Result->SetBoolField(TEXT("saved"), GetJsonBoolField(Payload, TEXT("save"), true) && McpSafeAssetSave(Asset));
     TSharedPtr<FJsonObject> Target = Result;
     McpHandlerUtils::AddVerification(Target, Asset);
 }

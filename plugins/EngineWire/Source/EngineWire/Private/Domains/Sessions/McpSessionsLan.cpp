@@ -66,15 +66,7 @@ bool HandleHostLanServer(
 
     if (bExecuteTravel)
     {
-        UWorld* World = nullptr;
-        if (GEditor && GEditor->PlayWorld)
-        {
-            World = GEditor->PlayWorld;
-        }
-        else if (GEditor)
-        {
-            World = GEditor->GetEditorWorldContext().World();
-        }
+        UWorld* World = McpHandlerUtils::GetPlayOrEditorWorld();
 
         if (World)
         {

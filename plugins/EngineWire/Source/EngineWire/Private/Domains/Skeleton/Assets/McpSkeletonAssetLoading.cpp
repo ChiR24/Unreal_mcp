@@ -11,66 +11,57 @@
 
 namespace McpSkeletonHandlers
 {
-USkeleton* LoadSkeletonFromPathSkel(const FString& SkeletonPath, FString& OutError)
+namespace
+{
+// The asset of class T at Path ("<Cap> path is required" when there is none, the project's refusal when the path is
+// outside it, "Failed to load <noun>" when nothing of that class is there: StaticLoadObject with a class finds only one).
+template <typename T>
+T* LoadSkeletonDomainAsset(const FString& Path, const TCHAR* Cap, const TCHAR* Noun, FString& OutError)
 {
     OutError.Reset();
-    if (SkeletonPath.IsEmpty())
+    if (Path.IsEmpty())
     {
-        OutError = TEXT("Skeleton path is required");
+        OutError = FString::Printf(TEXT("%s path is required"), Cap);
         return nullptr;
     }
-
-    const FString SanitizedPath = SanitizeProjectRelativePath(SkeletonPath);
+    const FString SanitizedPath = SanitizeProjectRelativePath(Path);
     if (SanitizedPath.IsEmpty())
     {
-        OutError = McpPathRefusalMessage(TEXT("skeleton path"), SkeletonPath);
+        OutError = McpPathRefusalMessage(*FString::Printf(TEXT("%s path"), Noun), Path);
         return nullptr;
     }
-
-    UObject* Asset = StaticLoadObject(USkeleton::StaticClass(), nullptr, *SanitizedPath);
+    T* Asset = Cast<T>(StaticLoadObject(T::StaticClass(), nullptr, *SanitizedPath));
     if (!Asset)
     {
-        OutError = FString::Printf(TEXT("Failed to load skeleton: %s"), *SkeletonPath);
-        return nullptr;
+        OutError = FString::Printf(TEXT("Failed to load %s: %s"), Noun, *Path);
     }
+    return Asset;
+}
 
-    USkeleton* Skeleton = Cast<USkeleton>(Asset);
+// The skeletal mesh a skeleton-addressed request can read or write: the skeleton's preview mesh, else the first
+// compatible mesh the asset registry knows. Null when no mesh uses the skeleton.
+USkeletalMesh* FindSkeletalMeshForSkeleton(USkeleton* Skeleton)
+{
     if (!Skeleton)
     {
-        OutError = FString::Printf(TEXT("Asset is not a skeleton: %s"), *SkeletonPath);
+        return nullptr;
     }
-    return Skeleton;
+    if (USkeletalMesh* PreviewMesh = Skeleton->GetPreviewMesh(false))
+    {
+        return PreviewMesh;
+    }
+    return Skeleton->FindCompatibleMesh();
+}
+}
+
+USkeleton* LoadSkeletonFromPathSkel(const FString& SkeletonPath, FString& OutError)
+{
+    return LoadSkeletonDomainAsset<USkeleton>(SkeletonPath, TEXT("Skeleton"), TEXT("skeleton"), OutError);
 }
 
 USkeletalMesh* LoadSkeletalMeshFromPathSkel(const FString& MeshPath, FString& OutError)
 {
-    OutError.Reset();
-    if (MeshPath.IsEmpty())
-    {
-        OutError = TEXT("Skeletal mesh path is required");
-        return nullptr;
-    }
-
-    const FString SanitizedPath = SanitizeProjectRelativePath(MeshPath);
-    if (SanitizedPath.IsEmpty())
-    {
-        OutError = McpPathRefusalMessage(TEXT("skeletal mesh path"), MeshPath);
-        return nullptr;
-    }
-
-    UObject* Asset = StaticLoadObject(USkeletalMesh::StaticClass(), nullptr, *SanitizedPath);
-    if (!Asset)
-    {
-        OutError = FString::Printf(TEXT("Failed to load skeletal mesh: %s"), *MeshPath);
-        return nullptr;
-    }
-
-    USkeletalMesh* Mesh = Cast<USkeletalMesh>(Asset);
-    if (!Mesh)
-    {
-        OutError = FString::Printf(TEXT("Asset is not a skeletal mesh: %s"), *MeshPath);
-    }
-    return Mesh;
+    return LoadSkeletonDomainAsset<USkeletalMesh>(MeshPath, TEXT("Skeletal mesh"), TEXT("skeletal mesh"), OutError);
 }
 
 USkeleton* LoadSkeletonOrMeshSkeleton(const FString& Path, FString& OutError)
@@ -103,46 +94,7 @@ USkeleton* LoadPayloadSkeletonOrReply(UEngineWireSubsystem& Bridge, const FStrin
 
 UPhysicsAsset* LoadPhysicsAssetFromPath(const FString& PhysicsPath, FString& OutError)
 {
-    OutError.Reset();
-    if (PhysicsPath.IsEmpty())
-    {
-        OutError = TEXT("Physics asset path is required");
-        return nullptr;
-    }
-
-    const FString SanitizedPath = SanitizeProjectRelativePath(PhysicsPath);
-    if (SanitizedPath.IsEmpty())
-    {
-        OutError = McpPathRefusalMessage(TEXT("physics asset path"), PhysicsPath);
-        return nullptr;
-    }
-
-    UObject* Asset = StaticLoadObject(UPhysicsAsset::StaticClass(), nullptr, *SanitizedPath);
-    if (!Asset)
-    {
-        OutError = FString::Printf(TEXT("Failed to load physics asset: %s"), *PhysicsPath);
-        return nullptr;
-    }
-
-    UPhysicsAsset* PhysicsAsset = Cast<UPhysicsAsset>(Asset);
-    if (!PhysicsAsset)
-    {
-        OutError = FString::Printf(TEXT("Asset is not a physics asset: %s"), *PhysicsPath);
-    }
-    return PhysicsAsset;
-}
-
-USkeletalMesh* FindSkeletalMeshForSkeleton(USkeleton* Skeleton)
-{
-    if (!Skeleton)
-    {
-        return nullptr;
-    }
-    if (USkeletalMesh* PreviewMesh = Skeleton->GetPreviewMesh(false))
-    {
-        return PreviewMesh;
-    }
-    return Skeleton->FindCompatibleMesh();
+    return LoadSkeletonDomainAsset<UPhysicsAsset>(PhysicsPath, TEXT("Physics asset"), TEXT("physics asset"), OutError);
 }
 
 FSkeletonMeshTarget ResolveSkeletonMeshTarget(const TSharedPtr<FJsonObject>& Payload)

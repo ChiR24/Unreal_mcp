@@ -2,15 +2,12 @@
 
 #include "AssetCompilingManager.h"
 #include "Engine/SkeletalMesh.h"
-#include "Runtime/Launch/Resources/Version.h"
 
-#if ENGINE_MINOR_VERSION >= 4
-#define MCP_SKIN_SOURCE_IS_MESH_DESCRIPTION 1
+#if MCP_SKIN_SOURCE_IS_MESH_DESCRIPTION
 #include "BoneWeights.h"
 #include "MeshDescription.h"
 #include "SkeletalMeshAttributes.h"
 #else
-#define MCP_SKIN_SOURCE_IS_MESH_DESCRIPTION 0
 #include "ImportUtils/SkeletalMeshImportUtils.h"
 #include "Rendering/SkeletalMeshLODImporterData.h"
 #endif

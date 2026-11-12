@@ -46,11 +46,7 @@ TSharedPtr<FJsonObject> BuildComponentSummary(
 
     if (USkeletalMeshComponent* SkelComp = Cast<USkeletalMeshComponent>(Template))
     {
-#if ENGINE_MINOR_VERSION >= 1
-        USkeletalMesh* Mesh = SkelComp->GetSkeletalMeshAsset();
-#else
-        USkeletalMesh* Mesh = SkelComp->SkeletalMesh;
-#endif
+        USkeletalMesh* Mesh = MCP_SKELETAL_MESH_ASSET(SkelComp);
         CompObj->SetStringField(TEXT("skeletalMesh"),
             Mesh ? Mesh->GetPathName() : TEXT("None"));
         CompObj->SetStringField(TEXT("animClass"),

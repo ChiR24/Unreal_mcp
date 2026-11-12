@@ -3,8 +3,6 @@
 
 #include "Animation/Skeleton.h"
 #include "Engine/SkeletalMesh.h"
-#include "Foundation/BridgeHelpers/Security/McpProjectPaths.h"
-#include "Safety/McpSafeOperations.h"
 #include "EngineWireSubsystem.h"
 #include "Transport/WebSocket/McpBridgeWebSocket.h"
 #include "Foundation/HandlerUtils/McpHandlerUtils.h"
@@ -12,10 +10,8 @@
 #include "PhysicsEngine/BodySetup.h"
 #include "PhysicsEngine/PhysicsAsset.h"
 #include "ReferenceSkeleton.h"
-#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 5
 #if __has_include("PhysicsEngine/SkeletalBodySetup.h")
 #include "PhysicsEngine/SkeletalBodySetup.h"
-#endif
 #endif
 
 using namespace McpSkeletonHandlers;

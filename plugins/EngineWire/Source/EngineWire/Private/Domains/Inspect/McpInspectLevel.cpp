@@ -103,7 +103,7 @@ bool HandleInspectLevelDetailsAction(
     UEngineWireSubsystem &Bridge, const FString &RequestId,
     TSharedPtr<FMcpBridgeWebSocket> RequestingSocket)
 {
-    UWorld *World = McpGetRuntimeInspectionWorld();
+    UWorld *World = McpHandlerUtils::GetPlayOrEditorWorld();
     if (!World)
     {
         Bridge.SendAutomationError(RequestingSocket, RequestId,

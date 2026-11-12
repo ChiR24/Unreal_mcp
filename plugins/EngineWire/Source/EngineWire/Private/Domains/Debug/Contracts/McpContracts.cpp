@@ -27,18 +27,13 @@ struct FHeld
 FCriticalSection GMutex;
 TMap<FString, FHeld> GHeld;
 
-UWorld* JudgedWorld()
-{
-    return GEditor ? (GEditor->PlayWorld ? GEditor->PlayWorld.Get() : GEditor->GetEditorWorldContext().World()) : nullptr;
-}
-
 // Each assertion as a row {assertion, verdict, actual, nextCall}; OutFailed names the failed ones, and with bStrict the
 // unknown ones too (a requirement that cannot be observed is not met).
 TArray<TSharedPtr<FJsonValue>> JudgeAll(const TArray<FString>& Texts, const TArray<FString>* Warnings, bool bStrict,
                                         TArray<FString>& OutFailed)
 {
     TArray<TSharedPtr<FJsonValue>> Rows;
-    UWorld* World = JudgedWorld();
+    UWorld* World = McpHandlerUtils::GetPlayOrEditorWorld();
     for (const FString& Text : Texts)
     {
         TSharedPtr<McpPratt::FNode> Root;

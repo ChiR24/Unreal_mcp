@@ -136,7 +136,7 @@ bool HandleWidgetAuthoringAnimationCore(
             return true;
         }
 
-        UWidget* TargetWidget = WidgetBP->WidgetTree ? FindWidgetByName(WidgetBP->WidgetTree, SlotName) : nullptr;
+        UWidget* TargetWidget = WidgetBP->WidgetTree ? WidgetBP->WidgetTree->FindWidget(FName(*SlotName)) : nullptr;
         if (!TargetWidget)
         {
             Subsystem.SendAutomationError(RequestingSocket, RequestId, FString::Printf(TEXT("Widget '%s' not found in tree"), *SlotName), TEXT("WIDGET_NOT_FOUND"));

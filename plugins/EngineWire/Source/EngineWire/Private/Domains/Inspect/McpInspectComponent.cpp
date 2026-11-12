@@ -1,4 +1,5 @@
 #include "Domains/Inspect/McpInspectShared.h"
+#include "Foundation/BridgeHelpers/Reflection/McpEnumName.h"
 
 #include "Components/PrimitiveComponent.h"
 #include "Components/SceneComponent.h"
@@ -7,23 +8,6 @@
 #include "Engine/Blueprint.h"
 
 namespace McpInspectHandlers {
-
-namespace {
-const TCHAR *McpMobilityName(EComponentMobility::Type Mobility)
-{
-    switch (Mobility)
-    {
-    case EComponentMobility::Static:
-        return TEXT("Static");
-    case EComponentMobility::Stationary:
-        return TEXT("Stationary");
-    case EComponentMobility::Movable:
-        return TEXT("Movable");
-    default:
-        return TEXT("Unknown");
-    }
-}
-} // namespace
 
 // Component identity, transforms (relative + world), mobility, attachment and
 // primitive/mesh facts. The property dump is appended by the caller so
@@ -54,7 +38,7 @@ void McpDescribeComponent(UActorComponent *Component, TSharedPtr<FJsonObject> Re
     }
     Resp->SetObjectField(TEXT("relativeTransform"), McpHandlerUtils::TransformToJson(Scene->GetRelativeTransform()));
     Resp->SetObjectField(TEXT("worldTransform"), McpHandlerUtils::TransformToJson(Scene->GetComponentTransform()));
-    Resp->SetStringField(TEXT("mobility"), McpMobilityName(Scene->Mobility));
+    Resp->SetStringField(TEXT("mobility"), McpEnumName(Scene->Mobility.GetValue()));
     Resp->SetBoolField(TEXT("isVisible"), Scene->IsVisible());
     Resp->SetBoolField(TEXT("hiddenInGame"), Scene->bHiddenInGame != 0);
     if (USceneComponent *Parent = Scene->GetAttachParent())
@@ -91,8 +75,8 @@ bool HandleInspectComponentDetailsAction(
         return true;
     };
     const FString ComponentName = McpGetFirstStringField(Payload, {TEXT("componentName")});
-    const FString ActorRef = McpGetFirstStringField(Payload, {TEXT("actorName"), TEXT("objectPath"), TEXT("name"), TEXT("actorPath")});
-    FString BlueprintPath = McpGetFirstStringField(Payload, {TEXT("blueprintPath"), TEXT("assetPath")});
+    const FString ActorRef = McpGetFirstStringField(Payload, {TEXT("actorName"), TEXT("objectPath"), TEXT("name")});
+    FString BlueprintPath = GetJsonStringField(Payload, TEXT("blueprintPath"));
     TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
     UActorComponent *Component = nullptr;
     UObject *Target = ActorRef.IsEmpty() ? nullptr : McpHandlerUtils::ResolveObjectFromPath(ActorRef);
@@ -154,7 +138,7 @@ bool HandleInspectComponentDetailsAction(
     McpDescribeComponent(Component, Resp);
     // Property values only when asked for, as inspect_object gives them: by name, or every one with detailed. Every
     // property a Niagara component declares (195) was most of a 30 KB reply that wanted its transform and state.
-    const TArray<FString> PropertyNames = McpReadStringListField(Payload, TEXT("propertyNames"), TEXT("propertyName"));
+    const TArray<FString> PropertyNames = McpReadStringListField(Payload, TEXT("propertyNames"), nullptr);
     if (PropertyNames.Num() > 0 || GetJsonBoolField(Payload, TEXT("detailed"), false))
     {
         McpAppendPropertyDump(Component, PropertyNames, Resp);

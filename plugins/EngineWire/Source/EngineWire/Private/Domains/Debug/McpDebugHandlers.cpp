@@ -166,15 +166,7 @@ bool UEngineWireSubsystem::HandleDebugAction(
         }
 #endif
 
-        UWorld* World = nullptr;
-        if (GEditor)
-        {
-            World = GEditor->PlayWorld.Get();
-            if (!World)
-            {
-                World = GEditor->GetEditorWorldContext().World();
-            }
-        }
+        UWorld* World = McpHandlerUtils::GetPlayOrEditorWorld();
         if (!World)
         {
             World = GetWorld();

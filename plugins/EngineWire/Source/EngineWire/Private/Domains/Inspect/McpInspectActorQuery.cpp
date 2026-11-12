@@ -14,8 +14,7 @@ namespace McpInspectHandlers {
 namespace {
 UObject *McpResolveQueryTarget(const TSharedPtr<FJsonObject> &Payload, FString &OutRequested)
 {
-    OutRequested = McpGetFirstStringField(Payload, {TEXT("actorName"), TEXT("objectPath"), TEXT("name"),
-                                                    TEXT("assetPath"), TEXT("path")});
+    OutRequested = McpGetFirstStringField(Payload, {TEXT("actorName"), TEXT("objectPath"), TEXT("name")});
     return OutRequested.IsEmpty() ? nullptr : McpHandlerUtils::ResolveObjectFromPath(OutRequested);
 }
 
@@ -169,7 +168,7 @@ bool HandleInspectActorQueryAction(
         Resp->SetNumberField(TEXT("exportedLength"), Text.Len());
         Resp->SetBoolField(TEXT("exportedTextTruncated"), Text.Len() > MaxInlineChars);
         Resp->SetStringField(TEXT("exportedText"), Text.Len() > MaxInlineChars ? Text.Left(MaxInlineChars) : Text);
-        const FString OutputPath = McpGetFirstStringField(Payload, {TEXT("outputPath"), TEXT("filePath"), TEXT("exportPath")});
+        const FString OutputPath = McpGetFirstStringField(Payload, {TEXT("outputPath")});
         if (!OutputPath.IsEmpty())
         {
             FString AbsolutePath, SafePath, PathError;

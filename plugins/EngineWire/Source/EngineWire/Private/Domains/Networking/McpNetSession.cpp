@@ -43,7 +43,7 @@ bool HandleConfigureNetDriver(FNetworkingActionContext& Context)
     // The editor world normally has no net driver, so the old reply ("Net driver configured") changed
     // nothing there. The values are the driver class's config properties: write them to its defaults
     // and the project's DefaultEngine.ini, and to a running driver when there is one.
-    UWorld* World = GEditor ? (GEditor->PlayWorld ? GEditor->PlayWorld.Get() : GEditor->GetEditorWorldContext().World()) : nullptr;
+    UWorld* World = McpHandlerUtils::GetPlayOrEditorWorld();
     UNetDriver* ActiveDriver = World ? World->GetNetDriver() : nullptr;
     // Every value is checked before any is written: a bad second value used to leave the first on disk.
     TArray<TPair<FIntProperty*, int32>> Pending;

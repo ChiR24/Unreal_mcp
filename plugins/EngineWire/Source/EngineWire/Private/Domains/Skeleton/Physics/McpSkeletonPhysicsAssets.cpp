@@ -5,7 +5,6 @@
 #include "Engine/SkeletalMesh.h"
 #include "Foundation/BridgeHelpers/Security/McpProjectPaths.h"
 #include "Foundation/BridgeHelpers/Assets/McpAssetCreation.h"
-#include "Safety/McpSafeOperations.h"
 #include "EngineWireSubsystem.h"
 #include "Transport/WebSocket/McpBridgeWebSocket.h"
 #include "Foundation/HandlerUtils/McpHandlerUtils.h"
@@ -154,7 +153,12 @@ bool UEngineWireSubsystem::HandleCreatePhysicsAsset(
     // Asset dialog does; an empty asset satisfied nothing.
     const bool bAssignToMesh = GetJsonBoolField(Payload, TEXT("assignToMesh"), false);
     FText CreateError;
+    // No progress window in the middle of the call: bShowProgress arrives in 5.4, and earlier engines always show it.
+#if ENGINE_MAJOR_VERSION > 5 || ENGINE_MINOR_VERSION >= 4
+    const bool bGenerated = FPhysicsAssetUtils::CreateFromSkeletalMesh(PhysicsAsset, SkeletalMesh, Params, CreateError, bAssignToMesh, false);
+#else
     const bool bGenerated = FPhysicsAssetUtils::CreateFromSkeletalMesh(PhysicsAsset, SkeletalMesh, Params, CreateError, bAssignToMesh);
+#endif
     if (!bGenerated || PhysicsAsset->SkeletalBodySetups.Num() == 0)
     {
         // Never leave an empty asset behind as if it were the deliverable.

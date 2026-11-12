@@ -131,7 +131,7 @@ bool HandleWidgetAuthoringArrange(UEngineWireSubsystem& Subsystem, const FString
     UCanvasPanel* Canvas = nullptr;
     for (const FString& Name : Names)
     {
-        UWidget* Widget = FindWidgetByName(WidgetBP->WidgetTree, Name);
+        UWidget* Widget = WidgetBP->WidgetTree->FindWidget(FName(*Name));
         UCanvasPanelSlot* Slot = Widget ? Cast<UCanvasPanelSlot>(Widget->Slot) : nullptr;
         if (!Widget)
         {

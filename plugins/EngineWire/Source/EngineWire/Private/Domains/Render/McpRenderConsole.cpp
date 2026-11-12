@@ -21,7 +21,7 @@ bool AddEnabledCVar(
     TArray<FString>& Applied,
     TArray<FString>& Unsupported)
 {
-    return SetConsoleVariable(
+    return McpSetConsoleVariableNamed(
         CVar,
         GetJsonBoolField(Payload, TEXT("enabled"), true) ? TEXT("1") : TEXT("0"),
         Applied,
@@ -80,7 +80,7 @@ void ApplyNumberSetting(
 {
     if (Setting.bPresent)
     {
-        SetConsoleVariable(CVar, FString::SanitizeFloat(Setting.Value), Applied, Unsupported);
+        McpSetConsoleVariableNamed(CVar, FString::SanitizeFloat(Setting.Value), Applied, Unsupported);
     }
 }
 
@@ -252,7 +252,7 @@ bool HandleRenderConsoleAction(
     }
     if (!DenoiserName.IsEmpty())
     {
-        SetConsoleVariable(TEXT("r.PathTracing.Denoiser.Name"), DenoiserName, Applied, Unsupported);
+        McpSetConsoleVariableNamed(TEXT("r.PathTracing.Denoiser.Name"), DenoiserName, Applied, Unsupported);
     }
     SendConsoleResult(Subsystem, RequestId, SubAction, Applied, Unsupported, RequestingSocket, bPathTracing ? &Denoisers : nullptr);
     return true;

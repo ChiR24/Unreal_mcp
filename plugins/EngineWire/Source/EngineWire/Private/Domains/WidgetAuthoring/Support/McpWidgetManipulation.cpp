@@ -257,17 +257,7 @@ bool HandleWidgetAuthoringManipulation(
         // actually writes and that the designer shows, and derive isVisible
         // from it so the boolean means what a reader assumes.
         const ESlateVisibility SlotVisibility = TargetWidget->GetVisibility();
-        auto VisibilityName = [SlotVisibility]() -> const TCHAR * {
-            switch (SlotVisibility)
-            {
-            case ESlateVisibility::Collapsed: return TEXT("Collapsed");
-            case ESlateVisibility::Hidden: return TEXT("Hidden");
-            case ESlateVisibility::HitTestInvisible: return TEXT("HitTestInvisible");
-            case ESlateVisibility::SelfHitTestInvisible: return TEXT("SelfHitTestInvisible");
-            default: return TEXT("Visible");
-            }
-        };
-        ResultJson->SetStringField(TEXT("visibility"), VisibilityName());
+        ResultJson->SetStringField(TEXT("visibility"), McpVisibilityName(SlotVisibility));
         ResultJson->SetBoolField(TEXT("isVisible"),
                                  SlotVisibility != ESlateVisibility::Collapsed &&
                                      SlotVisibility != ESlateVisibility::Hidden);

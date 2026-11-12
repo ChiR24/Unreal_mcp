@@ -52,9 +52,14 @@ UWorld* GetEditorWorld()
     return GEditor ? GEditor->GetEditorWorldContext().World() : nullptr;
 }
 
+UWorld* GetPlayOrEditorWorld()
+{
+    return GEditor && GEditor->PlayWorld ? GEditor->PlayWorld.Get() : GetEditorWorld();
+}
+
 AActor* FindActorByName(const FString& ActorName)
 {
-    UWorld* World = GEditor ? (GEditor->PlayWorld ? GEditor->PlayWorld.Get() : GEditor->GetEditorWorldContext().World()) : nullptr;
+    UWorld* World = GetPlayOrEditorWorld();
     if (AActor* Actor = FindActorByNameInWorldForMcp(World, ActorName, true))
     {
         return Actor;

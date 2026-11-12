@@ -94,9 +94,11 @@ bool HandleInspectActorQueryAction(
     UEngineWireSubsystem &Bridge, const FString &RequestId,
     const FString &LowerSubAction, const TSharedPtr<FJsonObject> &Payload,
     TSharedPtr<FMcpBridgeWebSocket> RequestingSocket);
-// The world a runtime report reads (a running game's, else the editor's) and its actors described
-// (McpInspectRuntimeDescribe.cpp).
-UWorld *McpGetRuntimeInspectionWorld();
+bool HandleInspectStructAction(
+    UEngineWireSubsystem &Bridge, const FString &RequestId,
+    const TSharedPtr<FJsonObject> &Payload,
+    TSharedPtr<FMcpBridgeWebSocket> RequestingSocket);
+// A runtime report's world type and actors described (McpInspectRuntimeDescribe.cpp).
 FString McpGetWorldTypeName(UWorld *World);
 void McpAddActorTags(TSharedPtr<FJsonObject> Obj, const AActor *Actor);
 TSharedPtr<FJsonObject> McpDescribeRuntimeComponent(UActorComponent *Component, const TArray<FString> &PropertyNames,

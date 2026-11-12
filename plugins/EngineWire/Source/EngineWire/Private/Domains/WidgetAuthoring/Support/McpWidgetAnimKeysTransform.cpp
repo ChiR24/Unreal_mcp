@@ -64,14 +64,6 @@ bool McpAuthorTransformKeys(UMovieScene* MovieScene, const FGuid& Guid, FFrameNu
             }
         }
     }
-    if (Written == 0)
-    {
-        OutError = FString::Printf(
-            TEXT("%s keys need an {x,y} pair in propertyValue (angle: a number; transform: {translation,scale,angle,shear})"),
-            *TrackType);
-        OutErrorCode = TEXT("INVALID_ARGUMENT");
-        return false;
-    }
     Out.PropertyName = TEXT("RenderTransform");
     Out.ChannelCount = Written;
     return true;

@@ -66,7 +66,7 @@ bool HandleInspectSettingsAction(
         }
         else if (LowerSubAction.Equals(TEXT("get_world_settings")))
         {
-            UWorld* World = McpGetRuntimeInspectionWorld();
+            UWorld* World = McpHandlerUtils::GetPlayOrEditorWorld();
 
             if (World)
             {

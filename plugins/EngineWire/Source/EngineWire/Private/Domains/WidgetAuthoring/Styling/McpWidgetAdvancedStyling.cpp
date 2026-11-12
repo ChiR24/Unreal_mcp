@@ -1,5 +1,6 @@
 #include "Domains/WidgetAuthoring/McpWidgetActions.h"
 #include "Domains/WidgetAuthoring/Support/McpWidgetBPLoading.h"
+#include "Domains/WidgetAuthoring/Styling/McpWidgetStyleText.h"
 
 #include "Blueprint/WidgetTree.h"
 #include "Components/Border.h"
@@ -119,19 +120,9 @@ bool HandleWidgetAuthoringAdvancedStyling(
         bool bFontApplied = false;
         if (UTextBlock* TextWidget = Cast<UTextBlock>(TargetWidget))
         {
-#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 1
-            FSlateFontInfo FontInfo = TextWidget->GetFont();
-#else
-            // UE 5.0: Font property is directly accessible
-            FSlateFontInfo FontInfo = TextWidget->Font;
-#endif
+            FSlateFontInfo FontInfo = McpTextBlockFont(TextWidget);
             ApplyFont(FontInfo);
-#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 1
             TextWidget->SetFont(FontInfo);
-#else
-            // UE 5.0: Font property is directly accessible
-            TextWidget->Font = FontInfo;
-#endif
             bFontApplied = true;
         }
         else if (UEditableTextBox* TextBox = Cast<UEditableTextBox>(TargetWidget))

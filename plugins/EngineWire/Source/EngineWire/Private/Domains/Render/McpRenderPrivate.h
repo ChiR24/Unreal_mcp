@@ -5,11 +5,6 @@
 
 namespace McpRenderHandlers
 {
-bool HandleCreateRenderTarget(
-    UEngineWireSubsystem* Subsystem,
-    const FString& RequestId,
-    const TSharedPtr<FJsonObject>& Payload,
-    TSharedPtr<FMcpBridgeWebSocket> RequestingSocket);
 
 bool HandleLumenUpdateScene(
     UEngineWireSubsystem* Subsystem,

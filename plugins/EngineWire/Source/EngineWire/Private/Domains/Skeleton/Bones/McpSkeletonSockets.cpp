@@ -2,9 +2,7 @@
 #include "Domains/Skeleton/Assets/McpSkeletonPayload.h"
 
 #include "Animation/Skeleton.h"
-#include "Engine/SkeletalMesh.h"
 #include "Engine/SkeletalMeshSocket.h"
-#include "Safety/McpSafeOperations.h"
 #include "EngineWireSubsystem.h"
 #include "Transport/WebSocket/McpBridgeWebSocket.h"
 #include "Foundation/HandlerUtils/McpHandlerUtils.h"
@@ -85,15 +83,12 @@ bool UEngineWireSubsystem::HandleCreateSocket(
             TEXT("BONE_NOT_FOUND"));
         return true;
     }
-    for (USkeletalMeshSocket* ExistingSocket : Skeleton->Sockets)
+    if (Skeleton->FindSocket(FName(*SocketName)))
     {
-        if (ExistingSocket && ExistingSocket->SocketName == FName(*SocketName))
-        {
-            SendAutomationError(RequestingSocket, RequestId,
-                FString::Printf(TEXT("Socket '%s' already exists"), *SocketName),
-                TEXT("SOCKET_EXISTS"));
-            return true;
-        }
+        SendAutomationError(RequestingSocket, RequestId,
+            FString::Printf(TEXT("Socket '%s' already exists"), *SocketName),
+            TEXT("SOCKET_EXISTS"));
+        return true;
     }
 
     USkeletalMeshSocket* NewSocket = NewObject<USkeletalMeshSocket>(Skeleton, NAME_None, RF_Transactional);
@@ -201,6 +196,46 @@ bool UEngineWireSubsystem::HandleConfigureSocket(
     SaveAndReport(Skeleton, Payload, Result);
     SendAutomationResponse(RequestingSocket, RequestId, true,
         FString::Printf(TEXT("Socket '%s' configured"), *SocketName), Result);
+    return true;
+}
+
+bool UEngineWireSubsystem::HandleDeleteSocket(
+    const FString& RequestId,
+    const TSharedPtr<FJsonObject>& Payload,
+    TSharedPtr<FMcpBridgeWebSocket> RequestingSocket)
+{
+    FString SocketName = GetJsonStringField(Payload, TEXT("socketName"));
+    if (SocketName.IsEmpty())
+    {
+        SendAutomationError(RequestingSocket, RequestId, TEXT("socketName is required"), TEXT("MISSING_PARAM"));
+        return true;
+    }
+
+    USkeleton* Skeleton = LoadPayloadSkeletonOrReply(*this, RequestId, RequestingSocket, Payload);
+    if (!Skeleton)
+    {
+        return true;
+    }
+    int32 SocketIndex = INDEX_NONE;
+    if (!Skeleton->FindSocketAndIndex(FName(*SocketName), SocketIndex))
+    {
+        SendAutomationError(RequestingSocket, RequestId,
+            FString::Printf(TEXT("Socket '%s' not found"), *SocketName), TEXT("SOCKET_NOT_FOUND"));
+        return true;
+    }
+
+    TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
+    {
+        const FMcpAssetEdit Edit(TEXT("Delete Socket"), {Skeleton}, Result);
+        Skeleton->Sockets.RemoveAt(SocketIndex);
+    }
+    Result->SetStringField(TEXT("socketName"), SocketName);
+    Result->SetStringField(TEXT("skeletonPath"), Skeleton->GetPathName());
+    Result->SetNumberField(TEXT("remainingSockets"), Skeleton->Sockets.Num());
+    SaveAndReport(Skeleton, Payload, Result);
+
+    SendAutomationResponse(RequestingSocket, RequestId, true,
+        FString::Printf(TEXT("Socket '%s' deleted"), *SocketName), Result);
     return true;
 }
 

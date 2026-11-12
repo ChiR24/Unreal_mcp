@@ -75,7 +75,7 @@ UObject* LoadEffectAsset(const FString& AssetPath)
 
 AActor* FindActorByLabel(const FString& ActorName)
 {
-    UWorld* World = GEditor && GEditor->PlayWorld ? GEditor->PlayWorld.Get() : GetEditorWorld();
+    UWorld* World = McpHandlerUtils::GetPlayOrEditorWorld();
     return FindActorByNameInWorldForMcp(World, ActorName, true);
 }
 

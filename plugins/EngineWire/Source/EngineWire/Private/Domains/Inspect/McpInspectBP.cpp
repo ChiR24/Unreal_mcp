@@ -59,8 +59,7 @@ TSharedPtr<FJsonObject> McpMakeComponentEntry(const FString &Name, const UClass 
 UBlueprint *McpResolveBlueprintFromPayload(const TSharedPtr<FJsonObject> &Payload, FString &OutRequested,
                                            FString &OutNormalized, FString &OutError)
 {
-    OutRequested = McpGetFirstStringField(Payload, {TEXT("blueprintPath"), TEXT("assetPath"), TEXT("objectPath"),
-                                                    TEXT("path"), TEXT("name"), TEXT("actorName")});
+    OutRequested = McpGetFirstStringField(Payload, {TEXT("blueprintPath"), TEXT("objectPath")});
     return OutRequested.IsEmpty() ? nullptr : LoadBlueprintAsset(OutRequested, OutNormalized, OutError);
 }
 } // namespace
@@ -183,7 +182,7 @@ TArray<TSharedPtr<FJsonValue>> McpCollectBlueprintVariables(UBlueprint *Blueprin
     return Variables;
 }
 
-// get_blueprint_details: accepts blueprintPath / assetPath / objectPath, returns
+// get_blueprint_details: accepts blueprintPath / objectPath, returns
 // the blueprint_get snapshot (variables, functions, events, defaults) plus the
 // class hierarchy and the SCS + native component list.
 bool HandleInspectBlueprintDetailsAction(

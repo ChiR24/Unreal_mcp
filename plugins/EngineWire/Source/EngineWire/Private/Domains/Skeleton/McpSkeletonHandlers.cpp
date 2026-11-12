@@ -1,4 +1,5 @@
 #include "Domains/Skeleton/McpSkeletonActions.h"
+#include "Core/Routing/McpConsolidatedActionRouting.h"
 
 #include "Dom/JsonObject.h"
 #include "EngineWireSubsystem.h"
@@ -63,27 +64,8 @@ bool UEngineWireSubsystem::HandleManageSkeleton(
     const TSharedPtr<FJsonObject>& Payload,
     TSharedPtr<FMcpBridgeWebSocket> RequestingSocket)
 {
-    // `true` means "this handler consumed the request" — so returning it for an
-    // action this handler does NOT own claimed every foreign action reaching
-    // this step of the fallback chain and returned without sending anything.
-    // The caller then saw a consumed request, skipped both the "No handler
-    // consumed" warning and the UNKNOWN_ACTION reply, and left the client
-    // waiting for a response that could never come: a silent 300 s transport
-    // timeout with no log line naming a cause. It also made every handler
-    // ordered after this one unreachable. Declining must be `false`.
-    if (Action != TEXT("manage_skeleton"))
-    {
-        return false;
-    }
-
-    FString SubAction;
-    if (!Payload.IsValid() || !Payload->TryGetStringField(TEXT("subAction"), SubAction) || SubAction.IsEmpty())
-    {
-        SendAutomationError(RequestingSocket, RequestId, TEXT("Skeleton action (subAction) is required"), TEXT("MISSING_ACTION"));
-        return true;
-    }
-
-    UE_LOG(LogEngineWireSubsystem, Verbose, TEXT("HandleManageSkeleton: %s"), *SubAction);
+    // animation_physics's route calls this with manage_skeleton and a payload whose sub-action it claimed.
+    const FString SubAction = McpConsolidatedActions::GetPayloadSubAction(Payload);
 
     static const McpSkeletonHandlers::FSkeletonMemberRoute MemberRoutes[] = {
         {TEXT("get_skeleton_info"), &UEngineWireSubsystem::HandleGetSkeletonInfo},
@@ -111,7 +93,6 @@ bool UEngineWireSubsystem::HandleManageSkeleton(
         {TEXT("set_morph_target_value"), &UEngineWireSubsystem::HandleSetMorphTargetValue},
         {TEXT("list_morph_targets"), &UEngineWireSubsystem::HandleListMorphTargets},
         {TEXT("delete_morph_target"), &UEngineWireSubsystem::HandleDeleteMorphTarget},
-        {TEXT("delete_socket"), &UEngineWireSubsystem::HandleDeleteSocket},
         {TEXT("remove_socket"), &UEngineWireSubsystem::HandleDeleteSocket},
         {TEXT("get_bone_transform"), &UEngineWireSubsystem::HandleGetBoneTransform},
         {TEXT("list_virtual_bones"), &UEngineWireSubsystem::HandleListVirtualBones},

@@ -21,8 +21,7 @@ bool UEngineWireSubsystem::HandleControlActorFindByTag(
   // The PIE world while a play session runs, as find_by_name and find_by_class
   // do: UEditorActorSubsystem::GetAllLevelActors() refuses during PIE, so this
   // answered "0 found" for tagged actors that were right there.
-  UWorld *QueryWorld = GEditor->PlayWorld ? GEditor->PlayWorld.Get()
-                                          : GEditor->GetEditorWorldContext().World();
+  UWorld *QueryWorld = McpHandlerUtils::GetPlayOrEditorWorld();
   if (!QueryWorld) {
     SendStandardErrorResponse(this, Socket, RequestId, TEXT("NO_WORLD"),
                               TEXT("No editor or play world is loaded"), nullptr);

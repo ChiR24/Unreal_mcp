@@ -1,6 +1,7 @@
 // low_contrast findings of audit_widget (see McpWidgetAudit.h): the WCAG 2.x contrast of each text against what is
 // drawn behind it.
 #include "Domains/WidgetAuthoring/Audit/McpWidgetAudit.h"
+#include "Domains/WidgetAuthoring/Support/McpWidgetBPLoading.h"
 
 #include "Foundation/Solvers/McpKMeans.h"
 
@@ -11,7 +12,6 @@ namespace
 constexpr double AuditLargeText = 18.0;     // points: from here (14 when bold) WCAG asks 3:1, below that 4.5:1
 constexpr double AuditLargeBoldText = 14.0;
 constexpr int32 AuditMaxSamples = 4096;     // pixels clustered per text
-const FColor AuditStandIn(24, 24, 28);      // the preview's backdrop where nothing drew: the game behind is not known here
 
 double AuditLuminance(const FColor& Color)
 {
@@ -64,7 +64,8 @@ void CheckContrast(const TArray<FItem>& Items, const TArray<FColor>& Pixels, FIn
         {
             for (int32 X = X0; X < X1; X += Step)
             {
-                const FColor Pixel = AuditOver(Pixels[Y * Size.X + X], AuditStandIn);
+                // The game behind is not known here: the preview's backdrop stands in where nothing drew.
+                const FColor Pixel = WidgetAuthoringHelpers::McpOverPreviewBackdrop(Pixels[Y * Size.X + X]);
                 Samples.Add(FVector3f(Pixel.R, Pixel.G, Pixel.B));
             }
         }

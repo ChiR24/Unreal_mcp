@@ -15,24 +15,8 @@ const TArray<TSharedPtr<FJsonValue>>* GetArrayField(const TSharedPtr<FJsonObject
 
 FString GetSlotName(const TSharedPtr<FJsonObject>& Payload)
 {
-    if (!Payload.IsValid())
-    {
-        return FString();
-    }
-    // bind_widget publishes `targetWidget` as well and it reads as the obvious
-    // way to name the button being bound, but only slotName/widgetName were
-    // read - a contract-following call was refused for a parameter it had
-    // supplied. `componentName` is the spelling the sibling add_* actions use.
-    for (const TCHAR* Key : {TEXT("slotName"), TEXT("widgetName"),
-                             TEXT("targetWidget"), TEXT("componentName")})
-    {
-        const FString Candidate = GetJsonStringField(Payload, Key);
-        if (!Candidate.IsEmpty())
-        {
-            return Candidate;
-        }
-    }
-    return FString();
+    // slotName: the one spelling the records routed here declare.
+    return Payload.IsValid() ? GetJsonStringField(Payload, TEXT("slotName")) : FString();
 }
 
 bool TryParseVisibility(const FString& Name, ESlateVisibility& Out)
