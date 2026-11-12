@@ -11,10 +11,10 @@ TSharedPtr<FJsonObject> HandleBlendSpaceSampleActions(const FString& SubAction, 
         FString AnimationPath = NormalizeAnimPath(GetJsonStringField(Params, TEXT("animationPath"), TEXT("")));
         bool bSave = GetJsonBoolField(Params, TEXT("save"), true);
 
-        UBlendSpace* BlendSpace = Cast<UBlendSpace>(StaticLoadObject(UBlendSpace::StaticClass(), nullptr, *AssetPath));
+        UBlendSpace* BlendSpace = LoadBlendSpaceOrFail(AssetPath, Response);
         if (!BlendSpace)
         {
-            ANIM_ERROR_RESPONSE(FString::Printf(TEXT("Could not load blend space: %s"), *AssetPath), TEXT("BLENDSPACE_NOT_FOUND"));
+            return Response;
         }
 
         UAnimSequence* Animation = LoadAnimSequenceFromPath(AnimationPath);
@@ -84,10 +84,10 @@ TSharedPtr<FJsonObject> HandleBlendSpaceSampleActions(const FString& SubAction, 
         FString Axis = GetJsonStringField(Params, TEXT("axis"), TEXT("Horizontal"));
         bool bSave = GetJsonBoolField(Params, TEXT("save"), true);
 
-        UBlendSpace* BlendSpace = Cast<UBlendSpace>(StaticLoadObject(UBlendSpace::StaticClass(), nullptr, *AssetPath));
+        UBlendSpace* BlendSpace = LoadBlendSpaceOrFail(AssetPath, Response);
         if (!BlendSpace)
         {
-            ANIM_ERROR_RESPONSE(FString::Printf(TEXT("Could not load blend space: %s"), *AssetPath), TEXT("BLENDSPACE_NOT_FOUND"));
+            return Response;
         }
 
         // Any axis name but these used to mean Horizontal, a 1D blend space took Vertical into a slot it never reads,
@@ -141,10 +141,10 @@ TSharedPtr<FJsonObject> HandleBlendSpaceSampleActions(const FString& SubAction, 
         FString AssetPath = NormalizeAnimPath(GetJsonStringField(Params, TEXT("assetPath"), TEXT("")));
         bool bSave = GetJsonBoolField(Params, TEXT("save"), true);
 
-        UBlendSpace* BlendSpace = Cast<UBlendSpace>(StaticLoadObject(UBlendSpace::StaticClass(), nullptr, *AssetPath));
+        UBlendSpace* BlendSpace = LoadBlendSpaceOrFail(AssetPath, Response);
         if (!BlendSpace)
         {
-            ANIM_ERROR_RESPONSE(FString::Printf(TEXT("Could not load blend space: %s"), *AssetPath), TEXT("BLENDSPACE_NOT_FOUND"));
+            return Response;
         }
 
         // interpolationType was read and never applied, and the weight speed was

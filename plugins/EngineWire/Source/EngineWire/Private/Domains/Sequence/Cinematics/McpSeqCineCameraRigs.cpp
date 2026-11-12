@@ -71,10 +71,7 @@ bool ConfigureRig(const TSharedPtr<FJsonObject> &Params, const TCHAR *Action,
   Transaction.DescribeInto(OutResult);
   OutResult->SetStringField(TEXT("actorName"), McpActorRef(Actor));
   OutResult->SetStringField(TEXT("actorPath"), Actor->GetPathName());
-  TArray<TSharedPtr<FJsonValue>> AppliedValues;
-  for (const FString &Property : Applied)
-    AppliedValues.Add(MakeShared<FJsonValueString>(Property));
-  OutResult->SetArrayField(TEXT("appliedProperties"), AppliedValues);
+  OutResult->SetArrayField(TEXT("appliedProperties"), McpHandlerUtils::ToJsonStringArray(Applied));
   McpHandlerUtils::AddVerification(OutResult, Actor);
   return true;
 }

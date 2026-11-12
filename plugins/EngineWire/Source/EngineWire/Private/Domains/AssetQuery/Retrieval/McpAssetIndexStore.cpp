@@ -180,4 +180,9 @@ bool SaveCaptions(const TMap<FString, FCaption>& Captions)
     Root->SetObjectField(TEXT("captions"), Rows);
     return StoreWrite(TEXT("AssetCaptions.json"), Root, CaptionVersion);
 }
+
+FString CaptionsFilePath()
+{
+    return FPaths::ConvertRelativePathToFull(StorePath(TEXT("AssetCaptions.json")));
+}
 } // namespace McpAssetRetrieval

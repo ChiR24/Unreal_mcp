@@ -45,12 +45,7 @@ TSharedPtr<FJsonObject> DescribeStoredSettings()
     TSharedPtr<FJsonObject> Stored = McpHandlerUtils::CreateResultObject();
     Stored->SetStringField(TEXT("replayName"), GMcpReplaySettings.DefaultReplayName);
     Stored->SetStringField(TEXT("friendlyName"), GMcpReplaySettings.FriendlyName);
-    TArray<TSharedPtr<FJsonValue>> Options;
-    for (const FString& Option : GMcpReplaySettings.AdditionalOptions)
-    {
-        Options.Add(MakeShared<FJsonValueString>(Option));
-    }
-    Stored->SetArrayField(TEXT("additionalOptions"), Options);
+    Stored->SetArrayField(TEXT("additionalOptions"), McpHandlerUtils::ToJsonStringArray(GMcpReplaySettings.AdditionalOptions));
     Stored->SetNumberField(TEXT("checkpointSaveMaxMSPerFrame"), GMcpReplaySettings.CheckpointSaveMaxMSPerFrame);
     Stored->SetNumberField(TEXT("maxRecordTimeSeconds"), GMcpReplaySettings.MaxRecordTimeSeconds);
     Stored->SetNumberField(TEXT("playbackSpeed"), GMcpReplaySettings.PlaybackSpeed);

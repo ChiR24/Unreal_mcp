@@ -12,8 +12,6 @@
 #include "BehaviorTree/BTTaskNode.h"
 #include "Engine/Blueprint.h"
 #include "EnvironmentQuery/EnvQuery.h"
-
-void McpSerializeEnvQueryInfo(UEnvQuery* Query, const TSharedPtr<FJsonObject>& Out); // Runtime/McpAIEnvQueryInfo.cpp
 #include "Domains/BehaviorTree/McpBTSerializers.h"
 #include "UObject/UnrealType.h"
 
@@ -244,7 +242,7 @@ bool HandleGetAIInfo(UEngineWireSubsystem* Self, const FString& RequestId, const
         UEnvQuery* Query = LoadObject<UEnvQuery>(nullptr, *QueryPath);
         if (Query)
         {
-            McpSerializeEnvQueryInfo(Query, AIInfo); // options, generators, tests
+            DescribeAIEnvQuery(Query, AIInfo); // options, generators, tests
         }
     }
 

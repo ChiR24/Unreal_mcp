@@ -111,15 +111,7 @@ TSharedPtr<FJsonObject> HandleSequenceNotifyStateAction(const TSharedPtr<FJsonOb
         ANIM_ERROR_RESPONSE(FString::Printf(TEXT("Could not load animation asset: %s"), *AssetPath), TEXT("ASSET_NOT_FOUND"));
     }
 
-    float FrameRate = 30.0f;
-    if (UAnimSequence* Seq = Cast<UAnimSequence>(AnimAsset))
-    {
-        FrameRate = Seq->GetSamplingFrameRate().AsDecimal();
-    }
-    if (FrameRate <= KINDA_SMALL_NUMBER)
-    {
-        FrameRate = 30.0f;
-    }
+    const float FrameRate = static_cast<float>(AnimSamplingRate(AnimAsset));
     float StartTime = static_cast<float>(StartFrame) / FrameRate;
     float EndTime = static_cast<float>(EndFrame) / FrameRate;
     float Duration = EndTime - StartTime;

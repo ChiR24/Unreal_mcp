@@ -63,19 +63,8 @@ bool HandleAddAIPerceptionComponent(UEngineWireSubsystem* Self, const FString& R
 bool HandleConfigureSightConfig(UEngineWireSubsystem* Self, const FString& RequestId, const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> RequestingSocket)
 {
     TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
-    FString BlueprintPath = GetJsonStringField(Payload, TEXT("blueprintPath"));
-
-    UBlueprint* Blueprint = LoadObject<UBlueprint>(nullptr, *BlueprintPath);
-    if (!Blueprint)
-    {
-        Self->SendAutomationError(RequestingSocket, RequestId,
-                            FString::Printf(TEXT("Blueprint not found: %s"), *BlueprintPath),
-                            TEXT("NOT_FOUND"));
-        return true;
-    }
-
-    UAIPerceptionComponent* PerceptionComp = FindOrCreatePerceptionComponent(
-        Self, RequestId, RequestingSocket, Blueprint, nullptr);
+    UBlueprint* Blueprint = nullptr;
+    UAIPerceptionComponent* PerceptionComp = LoadPerceptionOrReply(Self, RequestId, Payload, RequestingSocket, Blueprint);
     if (!PerceptionComp)
     {
         return true;
@@ -83,7 +72,6 @@ bool HandleConfigureSightConfig(UEngineWireSubsystem* Self, const FString& Reque
 
     // Only the sightConfig radii and angle were read; its offsets, maxAge and affiliation were dropped.
     bool bCreated = false;
-    PerceptionComp->Modify();
     UAISenseConfig_Sight* SightConfig = FindOrAddSenseConfig<UAISenseConfig_Sight>(PerceptionComp, bCreated);
     ApplySightSettings(SightConfig, MergedSenseSettings(Payload, TEXT("sightConfig")), bCreated);
     PerceptionComp->ConfigureSense(*SightConfig);

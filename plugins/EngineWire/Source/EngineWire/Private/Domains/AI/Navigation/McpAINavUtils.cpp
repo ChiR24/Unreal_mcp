@@ -74,6 +74,21 @@ bool SpawnNavModifierVolume(UEngineWireSubsystem* Self, const FString& RequestId
 
 namespace McpAIHandlers
 {
+bool RefuseTakenComponentName(UEngineWireSubsystem* Self, const FString& RequestId, TSharedPtr<FMcpBridgeWebSocket> RequestingSocket,
+                              const UBlueprint* Blueprint, const FString& ComponentName)
+{
+    for (const USCS_Node* Node : Blueprint->SimpleConstructionScript->GetAllNodes())
+    {
+        if (Node && Node->GetVariableName().ToString().Equals(ComponentName, ESearchCase::IgnoreCase))
+        {
+            Self->SendAutomationError(RequestingSocket, RequestId, FString::Printf(TEXT("Component '%s' already exists on %s; pick another "
+                "componentName. Nothing was added."), *ComponentName, *Blueprint->GetName()), TEXT("ALREADY_EXISTS"));
+            return true;
+        }
+    }
+    return false;
+}
+
 // Implements the "create_nav_modifier" action.
 bool HandleCreateNavModifier(UEngineWireSubsystem* Self, const FString& RequestId, const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> RequestingSocket)
 {
@@ -118,15 +133,9 @@ bool HandleCreateNavModifier(UEngineWireSubsystem* Self, const FString& RequestI
     {
         ComponentName = TEXT("NavModifierComponent");
     }
-    // A taken name made CreateNode pick another, while the reply named the one asked for.
-    for (const USCS_Node* Node : Blueprint->SimpleConstructionScript->GetAllNodes())
+    if (RefuseTakenComponentName(Self, RequestId, RequestingSocket, Blueprint, ComponentName))
     {
-        if (Node && Node->GetVariableName().ToString().Equals(ComponentName, ESearchCase::IgnoreCase))
-        {
-            Self->SendAutomationError(RequestingSocket, RequestId, FString::Printf(TEXT("Component '%s' already exists on %s; pick another "
-                "componentName. Nothing was added."), *ComponentName, *Blueprint->GetName()), TEXT("ALREADY_EXISTS"));
-            return true;
-        }
+        return true;
     }
 
     // Create nav modifier component

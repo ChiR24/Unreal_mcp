@@ -66,11 +66,7 @@ TSharedPtr<FJsonObject> FSCSHandlers::SetSCSComponentProperty(
     }
     const TArray<FString> Available =
         McpPropertyCdoComponents::CollectResolvableComponentNames(Blueprint, CDO);
-    TArray<TSharedPtr<FJsonValue>> AvailableJson;
-    for (const FString &Name : Available) {
-      AvailableJson.Add(MakeShared<FJsonValueString>(Name));
-    }
-    Result->SetArrayField(TEXT("availableComponents"), AvailableJson);
+    Result->SetArrayField(TEXT("availableComponents"), McpHandlerUtils::ToJsonStringArray(Available));
     Result->SetStringField(
         TEXT("error"),
         FString::Printf(

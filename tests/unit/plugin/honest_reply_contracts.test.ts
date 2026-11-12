@@ -4361,7 +4361,8 @@ describe('AI and navigation writes say what they did', () => {
   it('Smart Object, Mass and EQS writes refuse what they cannot do', () => {
     expect(code('AI', 'SmartObjects', 'McpAISmartObjectsDefs.cpp')).toContain('CreateAIAssetOfClass(DefinitionClass, ');
     const components = code('AI', 'SmartObjects', 'McpAISmartObjectsComponents.cpp');
-    expect(components).toContain('TEXT("ALREADY_EXISTS")');
+    expect(components).toContain('RefuseTakenComponentName(Self, RequestId, RequestingSocket, Blueprint, ComponentName)');
+    expect(code('AI', 'Navigation', 'McpAINavUtils.cpp')).toContain('TEXT("ALREADY_EXISTS")');
     expect(components).toContain('Nothing to set: send activityTags or enabled.');
     const mass = code('AI', 'Runtime', 'McpAIMass.cpp');
     expect(mass).toContain('CreateAIAssetInPackage<UMassEntityConfigAsset>(');

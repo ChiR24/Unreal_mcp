@@ -36,17 +36,11 @@ TSharedPtr<FJsonObject> HandleBlueprintBlendNodeActions(const FString& SubAction
         int32 NodePosY = static_cast<int32>(GetJsonNumberField(Params, TEXT("positionY"), 0));
         bool bSave = GetJsonBoolField(Params, TEXT("save"), true);
 
-        UAnimBlueprint* AnimBP = Cast<UAnimBlueprint>(StaticLoadObject(UAnimBlueprint::StaticClass(), nullptr, *BlueprintPath));
+        UEdGraph* AnimGraph = nullptr;
+        UAnimBlueprint* AnimBP = LoadAnimBlueprintOrFail(BlueprintPath, Response, &AnimGraph);
         if (!AnimBP)
         {
-            ANIM_ERROR_RESPONSE(FString::Printf(TEXT("Could not load animation blueprint: %s"), *BlueprintPath), TEXT("ANIM_BP_NOT_FOUND"));
-        }
-
-        // Get the main AnimGraph
-        UEdGraph* AnimGraph = GetAnimGraphFromBlueprint(AnimBP);
-        if (!AnimGraph)
-        {
-            ANIM_ERROR_RESPONSE(TEXT("Could not find AnimGraph in blueprint"), TEXT("GRAPH_NOT_FOUND"));
+            return Response;
         }
 
         // BlendListByBool and BlendListByInt are documented types, yet anything
@@ -102,17 +96,11 @@ TSharedPtr<FJsonObject> HandleBlueprintBlendNodeActions(const FString& SubAction
             ANIM_ERROR_RESPONSE(TEXT("cacheName is required"), TEXT("MISSING_CACHE_NAME"));
         }
 
-        UAnimBlueprint* AnimBP = Cast<UAnimBlueprint>(StaticLoadObject(UAnimBlueprint::StaticClass(), nullptr, *BlueprintPath));
+        UEdGraph* AnimGraph = nullptr;
+        UAnimBlueprint* AnimBP = LoadAnimBlueprintOrFail(BlueprintPath, Response, &AnimGraph);
         if (!AnimBP)
         {
-            ANIM_ERROR_RESPONSE(FString::Printf(TEXT("Could not load animation blueprint: %s"), *BlueprintPath), TEXT("ANIM_BP_NOT_FOUND"));
-        }
-
-        // Get the main AnimGraph
-        UEdGraph* AnimGraph = GetAnimGraphFromBlueprint(AnimBP);
-        if (!AnimGraph)
-        {
-            ANIM_ERROR_RESPONSE(TEXT("Could not find AnimGraph in blueprint"), TEXT("GRAPH_NOT_FOUND"));
+            return Response;
         }
 
         // Two caches under one name make the Blueprint ambiguous to use; the engine renames a pasted duplicate, so a

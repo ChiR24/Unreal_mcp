@@ -55,16 +55,6 @@ int32 ApplyStateTreeTaskProperties(FStateTreeEditorNode& Task, const TSharedPtr<
     }
     return Count;
 }
-
-TArray<TSharedPtr<FJsonValue>> ToJsonStringArray(const TArray<FString>& Values)
-{
-    TArray<TSharedPtr<FJsonValue>> Out;
-    for (const FString& Value : Values)
-    {
-        Out.Add(MakeShared<FJsonValueString>(Value));
-    }
-    return Out;
-}
 }
 #endif
 
@@ -176,15 +166,13 @@ bool HandleConfigureStateTreeTask(UEngineWireSubsystem* Self, const FString& Req
     Result->SetStringField(TEXT("packagePath"), StateTree->GetOutermost()->GetName());
     Result->SetStringField(TEXT("stateName"), StateName);
     Result->SetNumberField(TEXT("taskCount"), TaskCount);
-    Result->SetArrayField(TEXT("applied"), ToJsonStringArray(Applied));
-    Result->SetArrayField(TEXT("failed"), ToJsonStringArray(Failed));
+    Result->SetArrayField(TEXT("applied"), McpHandlerUtils::ToJsonStringArray(Applied));
+    Result->SetArrayField(TEXT("failed"), McpHandlerUtils::ToJsonStringArray(Failed));
     Result->SetBoolField(TEXT("saved"), bSaved);
     Result->SetStringField(TEXT("message"), FString::Printf(TEXT("State task updated: %d field(s) applied"), Applied.Num()));
     Self->SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("State task updated"), Result);
 #else
-    Self->SendAutomationError(RequestingSocket, RequestId,
-        TEXT("StateTree is unavailable in this build; enable the StateTree plugin (UE 5.3+)"),
-        TEXT("STATE_TREE_NOT_AVAILABLE"));
+    McpSendStateTreeUnavailable(Self, RequestingSocket, RequestId);
 #endif
     return true;
 }

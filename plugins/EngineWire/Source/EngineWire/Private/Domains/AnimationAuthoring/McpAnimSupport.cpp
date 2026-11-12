@@ -15,37 +15,53 @@ FString NormalizeAnimPath(const FString& Path)
     return McpCanonicalizeContentPath(Path, /*bAssumeGameRoot=*/true);
 }
 
-// Helper to load skeleton from path
-USkeleton* LoadSkeletonFromPathAnim(const FString& SkeletonPath)
+namespace
 {
-    const FString NormalizedPath = NormalizeAnimPath(SkeletonPath);
-    if (NormalizedPath.IsEmpty())
-    {
-        return nullptr;
-    }
-    return Cast<USkeleton>(StaticLoadObject(USkeleton::StaticClass(), nullptr, *NormalizedPath));
+// The T at Path, canonicalized first: null for a path the canonicalizer refuses or one that holds no T.
+template <typename T>
+T* LoadAnimAssetAt(const FString& Path)
+{
+    const FString NormalizedPath = NormalizeAnimPath(Path);
+    return NormalizedPath.IsEmpty() ? nullptr : Cast<T>(StaticLoadObject(T::StaticClass(), nullptr, *NormalizedPath));
+}
 }
 
-// Helper to load skeletal mesh from path
-USkeletalMesh* LoadSkeletalMeshFromPathAnim(const FString& MeshPath)
+USkeleton* LoadSkeletonFromPathAnim(const FString& SkeletonPath) { return LoadAnimAssetAt<USkeleton>(SkeletonPath); }
+USkeletalMesh* LoadSkeletalMeshFromPathAnim(const FString& MeshPath) { return LoadAnimAssetAt<USkeletalMesh>(MeshPath); }
+UAnimSequence* LoadAnimSequenceFromPath(const FString& AnimPath) { return LoadAnimAssetAt<UAnimSequence>(AnimPath); }
+
+UAnimSequence* LoadAnimSequenceOrFail(const FString& Path, const TSharedPtr<FJsonObject>& Response)
 {
-    const FString NormalizedPath = NormalizeAnimPath(MeshPath);
-    if (NormalizedPath.IsEmpty())
+    UAnimSequence* Sequence = LoadAnimSequenceFromPath(Path);
+    if (!Sequence)
     {
-        return nullptr;
+        SetAnimError(Response, FString::Printf(TEXT("Could not load animation sequence: %s"), *Path), TEXT("SEQUENCE_NOT_FOUND"));
     }
-    return Cast<USkeletalMesh>(StaticLoadObject(USkeletalMesh::StaticClass(), nullptr, *NormalizedPath));
+    return Sequence;
 }
 
-// Helper to load animation sequence from path
-UAnimSequence* LoadAnimSequenceFromPath(const FString& AnimPath)
+UAnimBlueprint* LoadAnimBlueprintOrFail(const FString& Path, const TSharedPtr<FJsonObject>& Response, UEdGraph** OutAnimGraph)
 {
-    const FString NormalizedPath = NormalizeAnimPath(AnimPath);
-    if (NormalizedPath.IsEmpty())
+    UAnimBlueprint* AnimBP = FindObject<UAnimBlueprint>(nullptr, *Path);
+    if (!AnimBP)
     {
+        AnimBP = Cast<UAnimBlueprint>(StaticLoadObject(UAnimBlueprint::StaticClass(), nullptr, *Path));
+    }
+    if (!AnimBP)
+    {
+        SetAnimError(Response, FString::Printf(TEXT("Could not load animation blueprint: %s"), *Path), TEXT("ANIM_BP_NOT_FOUND"));
         return nullptr;
     }
-    return Cast<UAnimSequence>(StaticLoadObject(UAnimSequence::StaticClass(), nullptr, *NormalizedPath));
+    if (OutAnimGraph)
+    {
+        *OutAnimGraph = GetAnimGraphFromBlueprint(AnimBP);
+        if (!*OutAnimGraph)
+        {
+            SetAnimError(Response, TEXT("Could not find AnimGraph in blueprint"), TEXT("GRAPH_NOT_FOUND"));
+            return nullptr;
+        }
+    }
+    return AnimBP;
 }
 
 // Helper to save asset through the repo's loaded-asset safe save path.
@@ -179,15 +195,7 @@ UAnimStateNode* FindStateNode(UAnimationStateMachineGraph* SMGraph, const FStrin
     {
         if (UAnimStateNode* StateNode = Cast<UAnimStateNode>(Node))
         {
-            // Use GetStateName for more accurate matching
-            // Also try case-insensitive matching for robustness
-            FString StateName = StateNode->GetStateName();
-            if (StateName == Name)
-            {
-                return StateNode;
-            }
-            // Case-insensitive fallback
-            if (StateName.Equals(Name, ESearchCase::IgnoreCase))
+            if (StateNode->GetStateName().Equals(Name, ESearchCase::IgnoreCase))
             {
                 return StateNode;
             }

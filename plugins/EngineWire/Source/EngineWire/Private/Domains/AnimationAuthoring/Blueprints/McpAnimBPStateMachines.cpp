@@ -23,23 +23,11 @@ TSharedPtr<FJsonObject> HandleBlueprintStateMachineActions(const FString& SubAct
             ANIM_ERROR_RESPONSE(TEXT("stateMachineName is required"), TEXT("MISSING_STATE_MACHINE_NAME"));
         }
 
-        // Try to find in-memory version first (may have unsaved changes from create_anim_blueprint)
-        UAnimBlueprint* AnimBP = FindObject<UAnimBlueprint>(nullptr, *BlueprintPath);
+        UEdGraph* AnimGraph = nullptr;
+        UAnimBlueprint* AnimBP = LoadAnimBlueprintOrFail(BlueprintPath, Response, &AnimGraph);
         if (!AnimBP)
         {
-            // Fall back to loading from disk
-            AnimBP = Cast<UAnimBlueprint>(StaticLoadObject(UAnimBlueprint::StaticClass(), nullptr, *BlueprintPath));
-        }
-        if (!AnimBP)
-        {
-            ANIM_ERROR_RESPONSE(FString::Printf(TEXT("Could not load animation blueprint: %s"), *BlueprintPath), TEXT("ANIM_BP_NOT_FOUND"));
-        }
-
-        // Get the main AnimGraph
-        UEdGraph* AnimGraph = GetAnimGraphFromBlueprint(AnimBP);
-        if (!AnimGraph)
-        {
-            ANIM_ERROR_RESPONSE(TEXT("Could not find AnimGraph in blueprint"), TEXT("GRAPH_NOT_FOUND"));
+            return Response;
         }
 
         if (UAnimGraphNode_StateMachine* ExistingSMNode = FindStateMachineNode(AnimGraph, StateMachineName))

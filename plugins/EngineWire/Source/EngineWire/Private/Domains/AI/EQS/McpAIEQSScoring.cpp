@@ -1,7 +1,6 @@
 #include "Domains/AI/McpAIContext.h"
 
 #include "EnvironmentQuery/EnvQuery.h"
-#include "EnvironmentQuery/EnvQueryOption.h"
 #include "EnvironmentQuery/EnvQueryTest.h"
 
 namespace McpAIHandlers
@@ -26,14 +25,11 @@ static bool ParseEQSScoringEquationAI(const FString& Value, EEnvTestScoreEquatio
 
 static bool ParseEQSFilterTypeAI(const FString& Value, EEnvTestFilterType::Type& Out)
 {
-    static const TPair<const TCHAR*, EEnvTestFilterType::Type> Names[] = {
-        {TEXT("Minimum"), EEnvTestFilterType::Minimum}, {TEXT("Maximum"), EEnvTestFilterType::Maximum},
-        {TEXT("Range"), EEnvTestFilterType::Range}, {TEXT("Match"), EEnvTestFilterType::Match}};
-    for (const auto& Name : Names)
+    for (int32 Index = 0; Index < UE_ARRAY_COUNT(EQSFilterTypeNames); ++Index)
     {
-        if (Value.Equals(Name.Key, ESearchCase::IgnoreCase))
+        if (Value.Equals(EQSFilterTypeNames[Index], ESearchCase::IgnoreCase))
         {
-            Out = Name.Value;
+            Out = static_cast<EEnvTestFilterType::Type>(Index);
             return true;
         }
     }
@@ -56,52 +52,15 @@ bool HandleConfigureEQSTestScoring(UEngineWireSubsystem* Self, const FString& Re
         return true;
     }
 
-    UEnvQuery* Query = LoadObject<UEnvQuery>(nullptr, *QueryPath);
+    UEnvQuery* Query = LoadEnvQueryOrReply(Self, RequestId, RequestingSocket, QueryPath);
     if (!Query)
     {
-        Self->SendAutomationError(RequestingSocket, RequestId,
-                            FString::Printf(TEXT("EQS Query not found: %s"), *QueryPath),
-                            TEXT("NOT_FOUND"));
         return true;
     }
 
-    UEnvQueryTest* TargetTest = nullptr;
     int32 ResolvedOptionIndex = INDEX_NONE;
     int32 ResolvedTestIndex = INDEX_NONE;
-    int32 FlatIndex = 0;
-    auto& Options = Query->GetOptionsMutable();
-    for (int32 OptionIndex = 0; OptionIndex < Options.Num(); ++OptionIndex)
-    {
-        UEnvQueryOption* Option = Options[OptionIndex];
-        if (!Option)
-        {
-            continue;
-        }
-
-        for (int32 OptionTestIndex = 0; OptionTestIndex < Option->Tests.Num(); ++OptionTestIndex)
-        {
-            UEnvQueryTest* Test = Option->Tests[OptionTestIndex];
-            if (!Test)
-            {
-                continue;
-            }
-
-            if (FlatIndex == TestIndex)
-            {
-                TargetTest = Test;
-                ResolvedOptionIndex = OptionIndex;
-                ResolvedTestIndex = OptionTestIndex;
-                break;
-            }
-            ++FlatIndex;
-        }
-
-        if (TargetTest)
-        {
-            break;
-        }
-    }
-
+    UEnvQueryTest* TargetTest = FindEQSTest(Query, TestIndex, &ResolvedOptionIndex, &ResolvedTestIndex);
     if (!TargetTest)
     {
         Self->SendAutomationError(RequestingSocket, RequestId,

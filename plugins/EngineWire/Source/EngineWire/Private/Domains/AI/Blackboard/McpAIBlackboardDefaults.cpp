@@ -100,7 +100,7 @@ bool ReadEnumValue(const UEnum* Enum, const TSharedPtr<FJsonValue>& Value, uint8
 
 namespace McpAIHandlers
 {
-UBlackboardData* LoadEditableBlackboard(const TSharedPtr<FJsonObject>& Payload, FString& OutError, FString& OutCode)
+UBlackboardData* LoadBlackboard(const TSharedPtr<FJsonObject>& Payload, bool bForEdit, FString& OutError, FString& OutCode)
 {
     const FString Path = GetJsonStringField(Payload, TEXT("blackboardPath"));
     UBlackboardData* Blackboard = Path.IsEmpty() ? nullptr : LoadObject<UBlackboardData>(nullptr, *Path);
@@ -110,12 +110,17 @@ UBlackboardData* LoadEditableBlackboard(const TSharedPtr<FJsonObject>& Payload, 
             : FString::Printf(TEXT("Blackboard not found: %s"), *Path), Path.IsEmpty() ? TEXT("INVALID_ARGUMENT") : TEXT("NOT_FOUND"));
         return nullptr;
     }
-    if (McpSafeOperations::IsEngineContentPackage(Blackboard->GetOutermost()->GetName()))
+    if (bForEdit && McpSafeOperations::IsEngineContentPackage(Blackboard->GetOutermost()->GetName()))
     {
         Refuse(OutError, OutCode, TEXT("Engine content is not changed: duplicate the Blackboard into /Game and edit the copy."), TEXT("ENGINE_CONTENT"));
         return nullptr;
     }
     return Blackboard;
+}
+
+FString BlackboardKeyTypeName(const UClass* KeyClass)
+{
+    return KeyClass->GetName().Replace(TEXT("BlackboardKeyType_"), TEXT(""));
 }
 
 FBlackboardEntry* FindOwnBlackboardKey(UBlackboardData* Blackboard, const FString& KeyName, FString& OutError, FString& OutCode)
@@ -156,7 +161,7 @@ void NotifyBlackboardKeysChanged(UBlackboardData* Blackboard)
 
 bool WriteBlackboardKeyDefault(UBlackboardKeyType* KeyType, const TSharedPtr<FJsonValue>& Value, FString& OutError, FString& OutCode)
 {
-    const FString Type = KeyType->GetClass()->GetName().Replace(TEXT("BlackboardKeyType_"), TEXT(""));
+    const FString Type = BlackboardKeyTypeName(KeyType->GetClass());
 #if ENGINE_MAJOR_VERSION > 5 || (ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 4)
     const FString Bad = FString::Printf(TEXT("value does not fit a %s key: "), *Type);
     FString Text;

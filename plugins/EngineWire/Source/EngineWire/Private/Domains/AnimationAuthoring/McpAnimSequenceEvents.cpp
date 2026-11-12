@@ -19,10 +19,10 @@ TSharedPtr<FJsonObject> HandleSequenceEventActions(const FString& SubAction, con
             ANIM_ERROR_RESPONSE(TEXT("curveName is required"), TEXT("MISSING_CURVE_NAME"));
         }
 
-        UAnimSequence* Sequence = LoadAnimSequenceFromPath(AssetPath);
+        UAnimSequence* Sequence = LoadAnimSequenceOrFail(AssetPath, Response);
         if (!Sequence)
         {
-            ANIM_ERROR_RESPONSE(FString::Printf(TEXT("Could not load animation sequence: %s"), *AssetPath), TEXT("SEQUENCE_NOT_FOUND"));
+            return Response;
         }
 
 #if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 3
@@ -118,17 +118,7 @@ TSharedPtr<FJsonObject> HandleSequenceEventActions(const FString& SubAction, con
         }
 
         // Calculate time from frame
-        float FrameRate = 30.0f;
-        if (UAnimSequence* Seq = Cast<UAnimSequence>(AnimAsset))
-        {
-            FrameRate = Seq->GetSamplingFrameRate().AsDecimal();
-        }
-        if (FrameRate <= KINDA_SMALL_NUMBER)
-        {
-            // A sequence without sampled frames reports a 0 rate; fall back to 30 fps
-            // instead of dividing by zero (notify time read back as 0).
-            FrameRate = 30.0f;
-        }
+        const float FrameRate = static_cast<float>(AnimSamplingRate(AnimAsset));
         float TriggerTime = static_cast<float>(Frame) / FrameRate;
         if (!Params->HasField(TEXT("frame")) && Params->HasField(TEXT("time")))
         {

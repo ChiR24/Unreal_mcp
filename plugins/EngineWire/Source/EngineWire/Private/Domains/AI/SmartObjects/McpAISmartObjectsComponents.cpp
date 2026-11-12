@@ -10,9 +10,6 @@
 
 namespace McpAIHandlers
 {
-static const TCHAR* const SmartObjectsDisabledMessage =
-    TEXT("SmartObjects plugin is not enabled in this project. Enable the SmartObjects plugin to use Smart Object features.");
-
 // Points a Smart Object component at Definition. From 5.4 SetDefinition is a UFUNCTION that also syncs the
 // definition's parameters into DefinitionRef; before, it was an inline setter of the DefinitionAsset property.
 // Answers whether the component now holds Definition, read back from where this engine stores it.
@@ -51,17 +48,9 @@ bool HandleConfigureSmartObjectSlotBehavior(UEngineWireSubsystem* Self, const FS
         return true;
     }
 
-    UClass* DefinitionClass = FindSmartObjectClass(TEXT("SmartObjectDefinition"));
-    if (!DefinitionClass)
+    UObject* Definition = LoadSmartObjectDefinitionOrReply(Self, RequestId, RequestingSocket, DefinitionPath);
+    if (!Definition)
     {
-        Self->SendAutomationError(RequestingSocket, RequestId, SmartObjectsDisabledMessage, TEXT("SMARTOBJECTS_PLUGIN_NOT_ENABLED"));
-        return true;
-    }
-    UObject* Definition = LoadObject<UObject>(nullptr, *DefinitionPath);
-    if (!Definition || !Definition->IsA(DefinitionClass))
-    {
-        Self->SendAutomationError(RequestingSocket, RequestId,
-            FString::Printf(TEXT("SmartObjectDefinition not found: %s"), *DefinitionPath), TEXT("NOT_FOUND"));
         return true;
     }
 
@@ -190,15 +179,9 @@ bool HandleAddSmartObjectComponent(UEngineWireSubsystem* Self, const FString& Re
         Self->SendAutomationError(RequestingSocket, RequestId, TEXT("Blueprint has no SimpleConstructionScript"), TEXT("INVALID_STATE"));
         return true;
     }
-    // A taken name made CreateNode pick another while the reply named the one asked for.
-    for (const USCS_Node* Node : SCS->GetAllNodes())
+    if (RefuseTakenComponentName(Self, RequestId, RequestingSocket, Blueprint, ComponentName))
     {
-        if (Node && Node->GetVariableName().ToString().Equals(ComponentName, ESearchCase::IgnoreCase))
-        {
-            Self->SendAutomationError(RequestingSocket, RequestId, FString::Printf(TEXT("Component '%s' already exists on %s; pick another "
-                "componentName. Nothing was added."), *ComponentName, *Blueprint->GetName()), TEXT("ALREADY_EXISTS"));
-            return true;
-        }
+        return true;
     }
 
     // Create the component node using proper UE 5.7 SCS pattern

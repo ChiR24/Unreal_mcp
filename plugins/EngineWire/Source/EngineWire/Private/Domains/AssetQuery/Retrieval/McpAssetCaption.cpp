@@ -7,7 +7,6 @@
 #include "Domains/AssetQuery/Retrieval/McpAssetIndex.h"
 #include "Foundation/BridgeHelpers/Responses/McpResponses.h"
 #include "Foundation/McpCapabilityPrincipal.h"
-#include "Misc/Paths.h"
 
 namespace McpAssetQueryHandlers
 {
@@ -73,7 +72,7 @@ bool HandleCaptionAssets(UEngineWireSubsystem* Bridge, const FString& RequestId,
         Next.Add(Pair.Key, MoveTemp(Pair.Value));
         ++Captioned;
     }
-    const FString File = FPaths::ConvertRelativePathToFull(FPaths::ProjectSavedDir() / TEXT("EngineWire/AssetCaptions.json"));
+    const FString File = McpAssetRetrieval::CaptionsFilePath();
     if (!McpAssetRetrieval::SaveCaptions(Next))
     {
         Bridge->SendAutomationError(Socket, RequestId, FString::Printf(TEXT("Could not write %s; no caption kept."), *File), TEXT("WRITE_FAILED"));

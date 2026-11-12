@@ -24,18 +24,14 @@ FString McpTestPurposeName(int32 Purpose)
 
 FString McpTestFilterTypeName(int32 FilterType)
 {
-    switch (FilterType)
-    {
-    case 0: return TEXT("Minimum");
-    case 1: return TEXT("Maximum");
-    case 2: return TEXT("Range");
-    case 3: return TEXT("Match");
-    default: return FString::FromInt(FilterType);
-    }
+    return FilterType >= 0 && FilterType < UE_ARRAY_COUNT(McpAIHandlers::EQSFilterTypeNames)
+        ? FString(McpAIHandlers::EQSFilterTypeNames[FilterType]) : FString::FromInt(FilterType);
 }
 } // namespace
 
-void McpSerializeEnvQueryInfo(UEnvQuery* Query, const TSharedPtr<FJsonObject>& Out)
+namespace McpAIHandlers
+{
+void DescribeAIEnvQuery(UEnvQuery* Query, const TSharedPtr<FJsonObject>& Out)
 {
     if (!Query || !Out.IsValid())
     {
@@ -82,4 +78,5 @@ void McpSerializeEnvQueryInfo(UEnvQuery* Query, const TSharedPtr<FJsonObject>& O
     Out->SetNumberField(TEXT("optionCount"), Options.Num());
     Out->SetNumberField(TEXT("testCount"), TotalTests);
     Out->SetArrayField(TEXT("options"), Options);
+}
 }

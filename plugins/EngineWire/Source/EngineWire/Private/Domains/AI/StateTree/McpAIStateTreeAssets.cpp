@@ -72,9 +72,7 @@ bool HandleCreateStateTree(UEngineWireSubsystem* Self, const FString& RequestId,
     McpHandlerUtils::AddVerification(Result, StateTree);
     Self->SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("State Tree created"), Result);
 #else
-    Self->SendAutomationError(RequestingSocket, RequestId,
-        TEXT("StateTree is unavailable in this build; enable the StateTree plugin (UE 5.3+)"),
-        TEXT("STATE_TREE_NOT_AVAILABLE"));
+    McpSendStateTreeUnavailable(Self, RequestingSocket, RequestId);
 #endif
     return true;
 }
@@ -145,9 +143,7 @@ bool HandleAddStateTreeState(UEngineWireSubsystem* Self, const FString& RequestI
     McpHandlerUtils::AddVerification(Result, StateTree);
     Self->SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("State added"), Result);
 #else
-    Self->SendAutomationError(RequestingSocket, RequestId,
-        TEXT("StateTree is unavailable in this build; enable the StateTree plugin (UE 5.3+)"),
-        TEXT("STATE_TREE_NOT_AVAILABLE"));
+    McpSendStateTreeUnavailable(Self, RequestingSocket, RequestId);
 #endif
     return true;
 }

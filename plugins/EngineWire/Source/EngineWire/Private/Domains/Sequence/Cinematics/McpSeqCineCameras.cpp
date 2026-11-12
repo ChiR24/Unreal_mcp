@@ -84,9 +84,7 @@ int32 ApplyCameraSettings(AActor *Actor, const TSharedPtr<FJsonObject> &Params,
   ApplyNumberAliases(Camera, Params, TEXT("manualFocusDistance"),
                      TEXT("focusDistance"), TEXT("focus"),
                      TEXT("FocusSettings.ManualFocusDistance"), Applied);
-  TArray<TSharedPtr<FJsonValue>> Values;
-  for (const FString &Name : Applied) Values.Add(MakeShared<FJsonValueString>(Name));
-  Result->SetArrayField(TEXT("appliedProperties"), Values);
+  Result->SetArrayField(TEXT("appliedProperties"), McpHandlerUtils::ToJsonStringArray(Applied));
   if (Applied.Num() > 0) {
     // As the details panel does: the lens re-derives its field of view and clamps to the lens and filmback limits,
     // so the reply reads back what the camera kept (a focal length past the lens's range came back as asked).

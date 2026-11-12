@@ -21,10 +21,10 @@ TSharedPtr<FJsonObject> HandleBlueprintNodeValueActions(const FString& SubAction
             ANIM_ERROR_RESPONSE(TEXT("nodeName (or nodeId) and propertyName are required"), TEXT("MISSING_PARAMETERS"));
         }
 
-        UAnimBlueprint* AnimBP = Cast<UAnimBlueprint>(StaticLoadObject(UAnimBlueprint::StaticClass(), nullptr, *BlueprintPath));
+        UAnimBlueprint* AnimBP = LoadAnimBlueprintOrFail(BlueprintPath, Response);
         if (!AnimBP)
         {
-            ANIM_ERROR_RESPONSE(FString::Printf(TEXT("Could not load animation blueprint: %s"), *BlueprintPath), TEXT("ANIM_BP_NOT_FOUND"));
+            return Response;
         }
 
         // The AnimGraph and the graphs under it (a state's graph is where its Sequence Player is), by object name or

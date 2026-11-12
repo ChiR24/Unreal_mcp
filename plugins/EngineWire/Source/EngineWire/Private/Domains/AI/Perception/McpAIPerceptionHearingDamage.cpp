@@ -12,28 +12,6 @@
 
 namespace McpAIHandlers
 {
-namespace
-{
-// The Blueprint at blueprintPath with its perception component (added when missing), or null once a refusal went out.
-UAIPerceptionComponent* LoadPerceptionOrReply(UEngineWireSubsystem* Self, const FString& RequestId, const TSharedPtr<FJsonObject>& Payload,
-    TSharedPtr<FMcpBridgeWebSocket> RequestingSocket, UBlueprint*& OutBlueprint)
-{
-    const FString BlueprintPath = GetJsonStringField(Payload, TEXT("blueprintPath"));
-    OutBlueprint = LoadObject<UBlueprint>(nullptr, *BlueprintPath);
-    if (!OutBlueprint)
-    {
-        Self->SendAutomationError(RequestingSocket, RequestId, FString::Printf(TEXT("Blueprint not found: %s"), *BlueprintPath), TEXT("NOT_FOUND"));
-        return nullptr;
-    }
-    UAIPerceptionComponent* Perception = FindOrCreatePerceptionComponent(Self, RequestId, RequestingSocket, OutBlueprint, nullptr);
-    if (Perception)
-    {
-        Perception->Modify();
-    }
-    return Perception;
-}
-}
-
 // Implements the "configure_hearing_config" action. Each call used to build a new config, resetting the affiliation
 // and max age it was not sent, and read only hearingRange.
 bool HandleConfigureHearingConfig(UEngineWireSubsystem* Self, const FString& RequestId, const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> RequestingSocket)

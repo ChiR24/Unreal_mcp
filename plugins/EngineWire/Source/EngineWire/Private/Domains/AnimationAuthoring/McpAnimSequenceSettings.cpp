@@ -18,16 +18,15 @@ TSharedPtr<FJsonObject> HandleSequenceSettingsActions(const FString& SubAction, 
             ANIM_ERROR_RESPONSE(TEXT("markerName is required"), TEXT("MISSING_MARKER_NAME"));
         }
 
-        UAnimSequence* Sequence = LoadAnimSequenceFromPath(AssetPath);
+        UAnimSequence* Sequence = LoadAnimSequenceOrFail(AssetPath, Response);
         if (!Sequence)
         {
-            ANIM_ERROR_RESPONSE(FString::Printf(TEXT("Could not load animation sequence: %s"), *AssetPath), TEXT("SEQUENCE_NOT_FOUND"));
+            return Response;
         }
 
         // A sequence with no sampled frames reports a 0 rate (the time was divided by zero), and a marker past the end
         // never syncs.
-        const double Rate = Sequence->GetSamplingFrameRate().AsDecimal();
-        const double FrameRate = Rate > KINDA_SMALL_NUMBER ? Rate : 30.0;
+        const double FrameRate = AnimSamplingRate(Sequence);
         const float Time = static_cast<float>(Frame / FrameRate);
         if (Frame < 0 || Time > Sequence->GetPlayLength() + KINDA_SMALL_NUMBER)
         {
@@ -57,10 +56,10 @@ TSharedPtr<FJsonObject> HandleSequenceSettingsActions(const FString& SubAction, 
         bool bForceRootLock = GetJsonBoolField(Params, TEXT("forceRootLock"), false);
         bool bSave = GetJsonBoolField(Params, TEXT("save"), true);
 
-        UAnimSequence* Sequence = LoadAnimSequenceFromPath(AssetPath);
+        UAnimSequence* Sequence = LoadAnimSequenceOrFail(AssetPath, Response);
         if (!Sequence)
         {
-            ANIM_ERROR_RESPONSE(FString::Printf(TEXT("Could not load animation sequence: %s"), *AssetPath), TEXT("SEQUENCE_NOT_FOUND"));
+            return Response;
         }
 
         {
@@ -86,10 +85,10 @@ TSharedPtr<FJsonObject> HandleSequenceSettingsActions(const FString& SubAction, 
         int32 BasePoseFrame = static_cast<int32>(GetJsonNumberField(Params, TEXT("basePoseFrame"), 0));
         bool bSave = GetJsonBoolField(Params, TEXT("save"), true);
 
-        UAnimSequence* Sequence = LoadAnimSequenceFromPath(AssetPath);
+        UAnimSequence* Sequence = LoadAnimSequenceOrFail(AssetPath, Response);
         if (!Sequence)
         {
-            ANIM_ERROR_RESPONSE(FString::Printf(TEXT("Could not load animation sequence: %s"), *AssetPath), TEXT("SEQUENCE_NOT_FOUND"));
+            return Response;
         }
         // A base pose animation that does not load was skipped and the call
         // still reported success; refuse it before anything changes.
@@ -146,10 +145,10 @@ TSharedPtr<FJsonObject> HandleSequenceSettingsActions(const FString& SubAction, 
         {
             ANIM_ERROR_RESPONSE(TEXT("rateScale is how fast the clip plays: 2 twice as fast, 0.5 half as fast, -1 backwards (not 0, at most 10 either way)"), TEXT("INVALID_ARGUMENT"));
         }
-        UAnimSequence* Sequence = LoadAnimSequenceFromPath(AssetPath);
+        UAnimSequence* Sequence = LoadAnimSequenceOrFail(AssetPath, Response);
         if (!Sequence)
         {
-            ANIM_ERROR_RESPONSE(FString::Printf(TEXT("Could not load animation sequence: %s"), *AssetPath), TEXT("SEQUENCE_NOT_FOUND"));
+            return Response;
         }
         const float Before = Sequence->RateScale;
         {

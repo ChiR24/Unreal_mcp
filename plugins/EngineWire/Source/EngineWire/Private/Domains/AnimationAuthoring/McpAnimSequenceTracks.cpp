@@ -51,10 +51,10 @@ TSharedPtr<FJsonObject> HandleSequenceTrackActions(const FString& SubAction, con
             ANIM_ERROR_RESPONSE(TEXT("boneName is required"), TEXT("MISSING_BONE_NAME"));
         }
 
-        UAnimSequence* Sequence = LoadAnimSequenceFromPath(AssetPath);
+        UAnimSequence* Sequence = LoadAnimSequenceOrFail(AssetPath, Response);
         if (!Sequence)
         {
-            ANIM_ERROR_RESPONSE(FString::Printf(TEXT("Could not load animation sequence: %s"), *AssetPath), TEXT("SEQUENCE_NOT_FOUND"));
+            return Response;
         }
 
         // Validate that the bone exists in the skeleton before trying to add a track
@@ -191,10 +191,10 @@ TSharedPtr<FJsonObject> HandleSequenceTrackActions(const FString& SubAction, con
             ANIM_ERROR_RESPONSE(TEXT("boneName is required"), TEXT("MISSING_BONE_NAME"));
         }
 
-        UAnimSequence* Sequence = LoadAnimSequenceFromPath(AssetPath);
+        UAnimSequence* Sequence = LoadAnimSequenceOrFail(AssetPath, Response);
         if (!Sequence)
         {
-            ANIM_ERROR_RESPONSE(FString::Printf(TEXT("Could not load animation sequence: %s"), *AssetPath), TEXT("SEQUENCE_NOT_FOUND"));
+            return Response;
         }
 
         // A sequence of N frames has N + 1 keys, 0 to N: the last key (N) used to be refused, so no clip could be keyed

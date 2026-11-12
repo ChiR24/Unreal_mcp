@@ -38,11 +38,7 @@ bool HandleFindByMetadataTag(
 
     for (const FAssetData& Data : AssetDataList)
     {
-#if ENGINE_MINOR_VERSION >= 1
-        const FString AssetPath = Data.GetSoftObjectPath().ToString();
-#else
-        const FString AssetPath = Data.ToSoftObjectPath().ToString();
-#endif
+        const FString AssetPath = MCP_ASSET_DATA_GET_SOFT_PATH(Data);
 
         FString MetadataValue;
         const bool bHasTag = Data.GetTagValue(TagFName, MetadataValue);
@@ -57,11 +53,7 @@ bool HandleFindByMetadataTag(
             TSharedPtr<FJsonObject> AssetObj = McpHandlerUtils::CreateResultObject();
             AssetObj->SetStringField(TEXT("assetName"), Data.AssetName.ToString());
             AssetObj->SetStringField(TEXT("assetPath"), AssetPath);
-#if ENGINE_MINOR_VERSION >= 1
-            AssetObj->SetStringField(TEXT("classPath"), Data.AssetClassPath.ToString());
-#else
-            AssetObj->SetStringField(TEXT("classPath"), Data.AssetClass.ToString());
-#endif
+            AssetObj->SetStringField(TEXT("classPath"), MCP_ASSET_DATA_GET_CLASS_PATH(Data));
             AssetObj->SetStringField(TEXT("tagValue"), MetadataValue);
             AssetsArray.Add(MakeShared<FJsonValueObject>(AssetObj));
         }

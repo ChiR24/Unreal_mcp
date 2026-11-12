@@ -27,23 +27,11 @@ TSharedPtr<FJsonObject> HandleBlueprintStateTransitionActions(const FString& Sub
             ANIM_ERROR_RESPONSE(TEXT("stateName is required"), TEXT("MISSING_STATE_NAME"));
         }
 
-        // Try to find in-memory version first (may have unsaved changes from add_state_machine)
-        UAnimBlueprint* AnimBP = FindObject<UAnimBlueprint>(nullptr, *BlueprintPath);
+        UEdGraph* AnimGraph = nullptr;
+        UAnimBlueprint* AnimBP = LoadAnimBlueprintOrFail(BlueprintPath, Response, &AnimGraph);
         if (!AnimBP)
         {
-            // Fall back to loading from disk
-            AnimBP = Cast<UAnimBlueprint>(StaticLoadObject(UAnimBlueprint::StaticClass(), nullptr, *BlueprintPath));
-        }
-        if (!AnimBP)
-        {
-            ANIM_ERROR_RESPONSE(FString::Printf(TEXT("Could not load animation blueprint: %s"), *BlueprintPath), TEXT("ANIM_BP_NOT_FOUND"));
-        }
-
-        // Get the main AnimGraph
-        UEdGraph* AnimGraph = GetAnimGraphFromBlueprint(AnimBP);
-        if (!AnimGraph)
-        {
-            ANIM_ERROR_RESPONSE(TEXT("Could not find AnimGraph in blueprint"), TEXT("GRAPH_NOT_FOUND"));
+            return Response;
         }
 
         TArray<UAnimGraphNode_StateMachine*> MatchingStateMachines = FindStateMachineNodes(AnimGraph, StateMachineName);
@@ -99,45 +87,8 @@ TSharedPtr<FJsonObject> HandleBlueprintStateTransitionActions(const FString& Sub
         StateNode->NodePosY = NodePosY;
         StateCreator.Finalize();
 
-        // IMPORTANT: FGraphNodeCreator does NOT call PostPlacedNewNode(), which is where
-        // the BoundGraph is normally created. We must create it manually here.
-        // This mirrors UAnimStateNode::PostPlacedNewNode() logic exactly.
-        if (!StateNode->BoundGraph)
-        {
-            // Create the animation state graph (BoundGraph) with NAME_None first
-            // This matches UE's PostPlacedNewNode() behavior
-            StateNode->BoundGraph = FBlueprintEditorUtils::CreateNewGraph(
-                StateNode,
-                NAME_None,
-                UAnimationStateGraph::StaticClass(),
-                UAnimationStateGraphSchema::StaticClass()
-            );
-
-            if (StateNode->BoundGraph)
-            {
-                // Use RenameGraphWithSuggestion for proper name validation (matches UE behavior)
-                TSharedPtr<INameValidatorInterface> NameValidator = FNameValidatorFactory::MakeValidator(StateNode);
-                FBlueprintEditorUtils::RenameGraphWithSuggestion(StateNode->BoundGraph, NameValidator, *StateName);
-
-                // Initialize the state graph with default nodes (result node, etc.)
-                const UEdGraphSchema* StateSchema = StateNode->BoundGraph->GetSchema();
-                if (StateSchema)
-                {
-                    StateSchema->CreateDefaultNodesForGraph(*StateNode->BoundGraph);
-                }
-
-                // Add the new graph as a child of the state machine graph
-                if (SMGraph->SubGraphs.Find(StateNode->BoundGraph) == INDEX_NONE)
-                {
-                    SMGraph->SubGraphs.Add(StateNode->BoundGraph);
-                }
-            }
-        }
-        else
-        {
-            // BoundGraph already exists (shouldn't happen with FGraphNodeCreator), rename it
-            FBlueprintEditorUtils::RenameGraph(StateNode->BoundGraph, *StateName);
-        }
+        // Finalize ran PostPlacedNewNode, which made the state's graph under the name "State": give it the name asked for.
+        FBlueprintEditorUtils::RenameGraph(StateNode->BoundGraph, *StateName);
 
         // Get the actual state name that was assigned (may differ from requested due to validation)
         FString ActualStateName = StateNode->GetStateName();
@@ -171,23 +122,11 @@ TSharedPtr<FJsonObject> HandleBlueprintStateTransitionActions(const FString& Sub
             ANIM_ERROR_RESPONSE(TEXT("fromState and toState are required"), TEXT("MISSING_STATES"));
         }
 
-        // Try to find in-memory version first (may have unsaved changes from add_state)
-        UAnimBlueprint* AnimBP = FindObject<UAnimBlueprint>(nullptr, *BlueprintPath);
+        UEdGraph* AnimGraph = nullptr;
+        UAnimBlueprint* AnimBP = LoadAnimBlueprintOrFail(BlueprintPath, Response, &AnimGraph);
         if (!AnimBP)
         {
-            // Fall back to loading from disk
-            AnimBP = Cast<UAnimBlueprint>(StaticLoadObject(UAnimBlueprint::StaticClass(), nullptr, *BlueprintPath));
-        }
-        if (!AnimBP)
-        {
-            ANIM_ERROR_RESPONSE(FString::Printf(TEXT("Could not load animation blueprint: %s"), *BlueprintPath), TEXT("ANIM_BP_NOT_FOUND"));
-        }
-
-        // Get the main AnimGraph
-        UEdGraph* AnimGraph = GetAnimGraphFromBlueprint(AnimBP);
-        if (!AnimGraph)
-        {
-            ANIM_ERROR_RESPONSE(TEXT("Could not find AnimGraph in blueprint"), TEXT("GRAPH_NOT_FOUND"));
+            return Response;
         }
 
         TArray<UAnimGraphNode_StateMachine*> MatchingStateMachines = FindStateMachineNodes(AnimGraph, StateMachineName);

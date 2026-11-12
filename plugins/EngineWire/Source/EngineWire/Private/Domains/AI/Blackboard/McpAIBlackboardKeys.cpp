@@ -50,7 +50,7 @@ bool HandleAddBlackboardKey(UEngineWireSubsystem* Self, const FString& RequestId
     };
     FString Error;
     FString Code;
-    UBlackboardData* Blackboard = LoadEditableBlackboard(Payload, Error, Code);
+    UBlackboardData* Blackboard = LoadBlackboard(Payload, true, Error, Code);
     if (!Blackboard)
     {
         return Fail(Error, *Code);
@@ -136,7 +136,7 @@ bool HandleAddBlackboardKey(UEngineWireSubsystem* Self, const FString& RequestId
 
     Result->SetNumberField(TEXT("keyIndex"), KeyIndex);
     Result->SetStringField(TEXT("keyName"), KeyName);
-    Result->SetStringField(TEXT("keyType"), KeyClass->GetName().Replace(TEXT("BlackboardKeyType_"), TEXT("")));
+    Result->SetStringField(TEXT("keyType"), BlackboardKeyTypeName(KeyClass));
     if (KeptBaseClass)
     {
         Result->SetStringField(TEXT("baseClass"), KeptBaseClass->GetPathName());
@@ -157,7 +157,7 @@ bool HandleSetKeyInstanceSynced(UEngineWireSubsystem* Self, const FString& Reque
 {
     FString Error;
     FString Code;
-    UBlackboardData* Blackboard = LoadEditableBlackboard(Payload, Error, Code);
+    UBlackboardData* Blackboard = LoadBlackboard(Payload, true, Error, Code);
     FBlackboardEntry* Key = Blackboard ? FindOwnBlackboardKey(Blackboard, GetJsonStringField(Payload, TEXT("keyName")), Error, Code) : nullptr;
     if (!Key)
     {

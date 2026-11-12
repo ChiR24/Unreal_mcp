@@ -40,6 +40,8 @@ FIndex& TheIndex();
 void SaveIndex(FIndex& Index);
 /** Writes the captions given; false when the file could not be written. */
 bool SaveCaptions(const TMap<FString, FCaption>& Captions);
+/** The caption file's full path, as a reply names it. */
+FString CaptionsFilePath();
 
 /** The registry's assets under Folder (Class, when given, by class name), redirectors left out, in package path order. */
 TArray<FAssetData> AssetsUnder(const FString& Folder, const FString& Class);

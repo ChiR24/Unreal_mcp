@@ -228,18 +228,8 @@ bool HandleConfigureMassEntity(UEngineWireSubsystem* Self, const FString& Reques
         TraitsJson.Add(MakeShared<FJsonValueString>(Trait ? Trait->GetClass()->GetName() : TEXT("None")));
     }
     Result->SetArrayField(TEXT("traits"), TraitsJson);
-    TArray<TSharedPtr<FJsonValue>> AppliedJson;
-    for (const FString& Name : Applied)
-    {
-        AppliedJson.Add(MakeShared<FJsonValueString>(Name));
-    }
-    Result->SetArrayField(TEXT("applied"), AppliedJson);
-    TArray<TSharedPtr<FJsonValue>> FailedJson;
-    for (const FString& Entry : Failed)
-    {
-        FailedJson.Add(MakeShared<FJsonValueString>(Entry));
-    }
-    Result->SetArrayField(TEXT("failed"), FailedJson);
+    Result->SetArrayField(TEXT("applied"), McpHandlerUtils::ToJsonStringArray(Applied));
+    Result->SetArrayField(TEXT("failed"), McpHandlerUtils::ToJsonStringArray(Failed));
     if (!TraitName.IsEmpty())
     {
         Result->SetStringField(TEXT("trait"), TraitName);

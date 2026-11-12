@@ -97,10 +97,10 @@ if (SubAction == TEXT("add_montage_notify"))
         }
     }
 
-    UAnimMontage* Montage = Cast<UAnimMontage>(StaticLoadObject(UAnimMontage::StaticClass(), nullptr, *AssetPath));
+    UAnimMontage* Montage = LoadMontageOrFail(AssetPath, Response);
     if (!Montage)
     {
-        ANIM_ERROR_RESPONSE(FString::Printf(TEXT("Could not load montage: %s"), *AssetPath), TEXT("MONTAGE_NOT_FOUND"));
+        return Response;
     }
     // A notify past the end never fired, and one on a negative track sat on no track at all.
     if (Time < 0.0f || Time > Montage->GetPlayLength() + KINDA_SMALL_NUMBER || TrackIndex < 0)
@@ -143,10 +143,10 @@ if (SubAction == TEXT("add_montage_notify"))
         FString AssetPath = NormalizeAnimPath(GetJsonStringField(Params, TEXT("assetPath"), TEXT("")));
         bool bSave = GetJsonBoolField(Params, TEXT("save"), true);
 
-        UAnimMontage* Montage = Cast<UAnimMontage>(StaticLoadObject(UAnimMontage::StaticClass(), nullptr, *AssetPath));
+        UAnimMontage* Montage = LoadMontageOrFail(AssetPath, Response);
         if (!Montage)
         {
-            ANIM_ERROR_RESPONSE(FString::Printf(TEXT("Could not load montage: %s"), *AssetPath), TEXT("MONTAGE_NOT_FOUND"));
+            return Response;
         }
 
         // Worked out on a copy, so a refusal leaves the montage as it was.
@@ -173,10 +173,10 @@ if (SubAction == TEXT("add_montage_notify"))
         FString AssetPath = NormalizeAnimPath(GetJsonStringField(Params, TEXT("assetPath"), TEXT("")));
         bool bSave = GetJsonBoolField(Params, TEXT("save"), true);
 
-        UAnimMontage* Montage = Cast<UAnimMontage>(StaticLoadObject(UAnimMontage::StaticClass(), nullptr, *AssetPath));
+        UAnimMontage* Montage = LoadMontageOrFail(AssetPath, Response);
         if (!Montage)
         {
-            ANIM_ERROR_RESPONSE(FString::Printf(TEXT("Could not load montage: %s"), *AssetPath), TEXT("MONTAGE_NOT_FOUND"));
+            return Response;
         }
 
         FAlphaBlend Blend = Montage->BlendOut;
@@ -209,10 +209,10 @@ if (SubAction == TEXT("add_montage_notify"))
             ANIM_ERROR_RESPONSE(TEXT("fromSection and toSection are required"), TEXT("MISSING_SECTIONS"));
         }
 
-        UAnimMontage* Montage = Cast<UAnimMontage>(StaticLoadObject(UAnimMontage::StaticClass(), nullptr, *AssetPath));
+        UAnimMontage* Montage = LoadMontageOrFail(AssetPath, Response);
         if (!Montage)
         {
-            ANIM_ERROR_RESPONSE(FString::Printf(TEXT("Could not load montage: %s"), *AssetPath), TEXT("MONTAGE_NOT_FOUND"));
+            return Response;
         }
 
         // A section the montage lacks used to be skipped behind "Linked".

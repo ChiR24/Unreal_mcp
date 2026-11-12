@@ -24,6 +24,16 @@ static UEnvQuery* CreateEQSQueryAsset(const FString& Path, const FString& Name, 
     return Query;
 }
 
+UEnvQuery* LoadEnvQueryOrReply(UEngineWireSubsystem* Self, const FString& RequestId, TSharedPtr<FMcpBridgeWebSocket> RequestingSocket, const FString& QueryPath)
+{
+    UEnvQuery* Query = LoadObject<UEnvQuery>(nullptr, *QueryPath);
+    if (!Query)
+    {
+        Self->SendAutomationError(RequestingSocket, RequestId, FString::Printf(TEXT("EQS Query not found: %s"), *QueryPath), TEXT("NOT_FOUND"));
+    }
+    return Query;
+}
+
 // Implements the "create_eqs_query" action.
 bool HandleCreateEQSQuery(UEngineWireSubsystem* Self, const FString& RequestId, const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> RequestingSocket)
 {
@@ -114,10 +124,10 @@ bool HandleAddEQSGenerator(UEngineWireSubsystem* Self, const FString& RequestId,
     const FString QueryPath = GetJsonStringField(Payload, TEXT("queryPath"));
     FString GeneratorType = GetJsonStringField(Payload, TEXT("generatorType"));
     GeneratorType.RemoveFromStart(TEXT("EnvQueryGenerator_"));
-    UEnvQuery* Query = LoadObject<UEnvQuery>(nullptr, *QueryPath);
+    UEnvQuery* Query = LoadEnvQueryOrReply(Self, RequestId, RequestingSocket, QueryPath);
     if (!Query)
     {
-        return Fail(FString::Printf(TEXT("EQS Query not found: %s"), *QueryPath), TEXT("NOT_FOUND"));
+        return true;
     }
     UClass* GeneratorClass = FindObject<UClass>(nullptr, *FString::Printf(TEXT("/Script/AIModule.EnvQueryGenerator_%s"), *GeneratorType));
     if (!GeneratorClass || !GeneratorClass->IsChildOf(UEnvQueryGenerator::StaticClass()) || GeneratorClass->HasAnyClassFlags(CLASS_Abstract))

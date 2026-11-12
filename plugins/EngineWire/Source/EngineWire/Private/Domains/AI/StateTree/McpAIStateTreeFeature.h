@@ -3,6 +3,7 @@
 #include "Core/Compatibility/McpVersionCompatibility.h"
 #include "EngineWireSubsystem.h"
 #include "Foundation/BridgeHelpers/Reflection/McpClassResolve.h"
+#include "Foundation/HandlerUtils/McpHandlerUtilsJson.h"
 
 #include "Modules/ModuleManager.h"
 
@@ -31,6 +32,14 @@
 #define MCP_HAS_STATE_TREE 0
 #define MCP_STATE_TREE_HEADERS_AVAILABLE 0
 #endif
+
+// What every State Tree action answers on an engine without State Trees (before UE 5.3, or the plugin's headers absent).
+inline void McpSendStateTreeUnavailable(UEngineWireSubsystem* Self, TSharedPtr<FMcpBridgeWebSocket> Socket, const FString& RequestId)
+{
+    Self->SendAutomationError(Socket, RequestId,
+        TEXT("StateTree is unavailable in this build; enable the StateTree plugin (UE 5.3+)"),
+        TEXT("STATE_TREE_NOT_AVAILABLE"));
+}
 
 #if MCP_HAS_STATE_TREE && MCP_STATE_TREE_HEADERS_AVAILABLE
 // The first state named Name (case ignored) at or under State; null when none.
@@ -209,12 +218,7 @@ inline void McpCompileStateTreeInto(UStateTree* Tree, const TSharedPtr<FJsonObje
     Result->SetBoolField(TEXT("compiled"), McpCompileStateTree(Tree, Messages));
     if (Messages.Num() > 0)
     {
-        TArray<TSharedPtr<FJsonValue>> Values;
-        for (const FString& Message : Messages)
-        {
-            Values.Add(MakeShared<FJsonValueString>(Message));
-        }
-        Result->SetArrayField(TEXT("compileMessages"), Values);
+        Result->SetArrayField(TEXT("compileMessages"), McpHandlerUtils::ToJsonStringArray(Messages));
     }
 }
 #endif

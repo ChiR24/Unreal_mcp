@@ -163,9 +163,7 @@ bool HandleConfigureRecordedTracks(UEngineWireSubsystem* Subsystem,
         if (!ExistingActors.Contains(Actor)) MissingActors.Add(Actor->GetName());
     if (MissingActors.Num() > 0) {
         TSharedPtr<FJsonObject> AddPayload = MakeShared<FJsonObject>();
-        TArray<TSharedPtr<FJsonValue>> Values;
-        for (const FString& Name : MissingActors) Values.Add(MakeShared<FJsonValueString>(Name));
-        AddPayload->SetArrayField(TEXT("actorNames"), Values);
+        AddPayload->SetArrayField(TEXT("actorNames"), McpHandlerUtils::ToJsonStringArray(MissingActors));
         for (const TCHAR* Field : {
             TEXT("reduceKeys"), TEXT("recordParentHierarchy"), TEXT("recordType")})
             if (const TSharedPtr<FJsonValue>* Value = Payload->Values.Find(Field))

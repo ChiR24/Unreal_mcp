@@ -107,10 +107,10 @@ TSharedPtr<FJsonObject> HandleMontageAssetActions(const FString& SubAction, cons
             ANIM_ERROR_RESPONSE(TEXT("sectionName is required"), TEXT("MISSING_SECTION_NAME"));
         }
 
-        UAnimMontage* Montage = Cast<UAnimMontage>(StaticLoadObject(UAnimMontage::StaticClass(), nullptr, *AssetPath));
+        UAnimMontage* Montage = LoadMontageOrFail(AssetPath, Response);
         if (!Montage)
         {
-            ANIM_ERROR_RESPONSE(FString::Printf(TEXT("Could not load montage: %s"), *AssetPath), TEXT("MONTAGE_NOT_FOUND"));
+            return Response;
         }
 
         // The engine answers INDEX_NONE for a name already there, which was reported as "added at index -1".
@@ -144,10 +144,10 @@ TSharedPtr<FJsonObject> HandleMontageAssetActions(const FString& SubAction, cons
         float StartTime = static_cast<float>(GetJsonNumberField(Params, TEXT("startTime"), 0.0));
         bool bSave = GetJsonBoolField(Params, TEXT("save"), true);
 
-        UAnimMontage* Montage = Cast<UAnimMontage>(StaticLoadObject(UAnimMontage::StaticClass(), nullptr, *AssetPath));
+        UAnimMontage* Montage = LoadMontageOrFail(AssetPath, Response);
         if (!Montage)
         {
-            ANIM_ERROR_RESPONSE(FString::Printf(TEXT("Could not load montage: %s"), *AssetPath), TEXT("MONTAGE_NOT_FOUND"));
+            return Response;
         }
 
         UAnimSequence* Animation = LoadAnimSequenceFromPath(AnimationPath);
@@ -244,10 +244,10 @@ TSharedPtr<FJsonObject> HandleMontageAssetActions(const FString& SubAction, cons
             ANIM_ERROR_RESPONSE(TEXT("startTime (the time the section moves to) is required; nothing was moved."), TEXT("INVALID_ARGUMENT"));
         }
 
-        UAnimMontage* Montage = Cast<UAnimMontage>(StaticLoadObject(UAnimMontage::StaticClass(), nullptr, *AssetPath));
+        UAnimMontage* Montage = LoadMontageOrFail(AssetPath, Response);
         if (!Montage)
         {
-            ANIM_ERROR_RESPONSE(FString::Printf(TEXT("Could not load montage: %s"), *AssetPath), TEXT("MONTAGE_NOT_FOUND"));
+            return Response;
         }
 
         const int32 SectionIndex = Montage->GetSectionIndex(FName(*SectionName));

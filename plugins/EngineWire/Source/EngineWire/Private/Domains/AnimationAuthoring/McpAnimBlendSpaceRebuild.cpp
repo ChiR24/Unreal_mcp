@@ -15,10 +15,10 @@ TSharedPtr<FJsonObject> HandleBlendSpaceRebuild(const TSharedPtr<FJsonObject>& P
     bool bCompileReferencers = GetJsonBoolField(Params, TEXT("compileReferencers"), true);
     bool bSave = GetJsonBoolField(Params, TEXT("save"), true);
 
-    UBlendSpace* BlendSpace = Cast<UBlendSpace>(StaticLoadObject(UBlendSpace::StaticClass(), nullptr, *AssetPath));
+    UBlendSpace* BlendSpace = LoadBlendSpaceOrFail(AssetPath, Response);
     if (!BlendSpace)
     {
-        ANIM_ERROR_RESPONSE(FString::Printf(TEXT("Could not load blend space: %s"), *AssetPath), TEXT("BLENDSPACE_NOT_FOUND"));
+        return Response;
     }
 
     // Step 1: drop invalid / out-of-range samples first

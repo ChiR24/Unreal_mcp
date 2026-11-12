@@ -291,14 +291,9 @@ bool UEngineWireSubsystem::HandleLogAction(
             ? FMcpLogHistory::ReadFileTail(FilePath, MaxLines, Filter, Matched)
             : FMcpLogHistory::Get().Read(MaxLines, Filter, GetJsonStringField(Payload, TEXT("category")), MinVerbosity,
                                          Matched);
-        TArray<TSharedPtr<FJsonValue>> LineValues;
-        for (const FString& Line : Lines)
-        {
-            LineValues.Add(MakeShared<FJsonValueString>(Line));
-        }
         TSharedRef<FJsonObject> Result = MakeShared<FJsonObject>();
         Result->SetBoolField(TEXT("success"), true);
-        Result->SetArrayField(TEXT("lines"), LineValues);
+        Result->SetArrayField(TEXT("lines"), McpHandlerUtils::ToJsonStringArray(Lines));
         Result->SetNumberField(TEXT("returned"), Lines.Num());
         Result->SetNumberField(TEXT("matched"), Matched);
         if (!FilePath.IsEmpty())

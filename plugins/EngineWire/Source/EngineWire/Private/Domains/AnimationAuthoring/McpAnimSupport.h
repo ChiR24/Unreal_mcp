@@ -204,6 +204,45 @@ inline void SaveAnimAssetAndReport(UObject* Asset, bool bSave, const TSharedPtr<
     const bool bSaved = SaveAnimAsset(Asset, bSave) && bSave;
     Response->SetBoolField(TEXT("saved"), bSaved);
 }
+// Response as ANIM_ERROR_RESPONSE leaves it, for a helper that reports a refusal and lets its caller return.
+inline void SetAnimError(const TSharedPtr<FJsonObject>& Response, const FString& Message, const TCHAR* Code)
+{
+    Response->SetBoolField(TEXT("success"), false);
+    Response->SetStringField(TEXT("error"), Message);
+    Response->SetStringField(TEXT("errorCode"), Code);
+}
+// The T at Path, or null once Response holds "<What>: <Path>" under Code; the caller returns Response.
+template <typename T>
+T* LoadAnimAssetOrFail(const FString& Path, const TCHAR* What, const TCHAR* Code, const TSharedPtr<FJsonObject>& Response)
+{
+    T* Asset = Cast<T>(StaticLoadObject(T::StaticClass(), nullptr, *Path));
+    if (!Asset)
+    {
+        SetAnimError(Response, FString::Printf(TEXT("%s: %s"), What, *Path), Code);
+    }
+    return Asset;
+}
+inline UBlendSpace* LoadBlendSpaceOrFail(const FString& Path, const TSharedPtr<FJsonObject>& Response)
+{
+    return LoadAnimAssetOrFail<UBlendSpace>(Path, TEXT("Could not load blend space"), TEXT("BLENDSPACE_NOT_FOUND"), Response);
+}
+inline UAnimMontage* LoadMontageOrFail(const FString& Path, const TSharedPtr<FJsonObject>& Response)
+{
+    return LoadAnimAssetOrFail<UAnimMontage>(Path, TEXT("Could not load montage"), TEXT("MONTAGE_NOT_FOUND"), Response);
+}
+// As LoadAnimSequenceFromPath loads (the path canonicalized first), or null once Response holds SEQUENCE_NOT_FOUND.
+UAnimSequence* LoadAnimSequenceOrFail(const FString& Path, const TSharedPtr<FJsonObject>& Response);
+// The Animation Blueprint at Path, the one in memory first (an earlier call may have left it unsaved), or null once
+// Response holds ANIM_BP_NOT_FOUND. With OutAnimGraph, its AnimGraph too, or null once Response holds GRAPH_NOT_FOUND.
+UAnimBlueprint* LoadAnimBlueprintOrFail(const FString& Path, const TSharedPtr<FJsonObject>& Response, UEdGraph** OutAnimGraph = nullptr);
+// An asset's sampling rate in frames a second: 30 for one that is no sequence, or a sequence that reports none (it has
+// no sampled frames yet).
+inline double AnimSamplingRate(UAnimSequenceBase* Asset)
+{
+    UAnimSequence* Sequence = Cast<UAnimSequence>(Asset);
+    const double Rate = Sequence ? Sequence->GetSamplingFrameRate().AsDecimal() : 0.0;
+    return Rate > KINDA_SMALL_NUMBER ? Rate : 30.0;
+}
 // Axis Index (0 horizontal, 1 vertical) of a blend space; BlendParameters is protected, so through reflection.
 inline bool McpSetBlendSpaceAxis(UBlendSpace* BlendSpace, int32 Index, const FString& Name, float Min, float Max)
 {

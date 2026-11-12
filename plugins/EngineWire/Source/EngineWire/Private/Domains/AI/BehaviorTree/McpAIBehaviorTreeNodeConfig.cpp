@@ -263,17 +263,10 @@ bool HandleConfigureBehaviorTreeNode(UEngineWireSubsystem* Self, const FString& 
     Result->SetNumberField(TEXT("configuredPropertyCount"), ConfiguredPropertyCount);
     Result->SetBoolField(TEXT("saveAttempted"), bSaveAttempted);
     Result->SetBoolField(TEXT("saved"), bSaved);
-    TArray<TSharedPtr<FJsonValue>> ConfiguredPropertyValues;
-    for (const FString& PropertyName : ConfiguredProperties)
-    {
-        ConfiguredPropertyValues.Add(MakeShared<FJsonValueString>(PropertyName));
-    }
-    Result->SetArrayField(TEXT("configuredProperties"), ConfiguredPropertyValues);
+    Result->SetArrayField(TEXT("configuredProperties"), McpHandlerUtils::ToJsonStringArray(ConfiguredProperties));
     if (SkippedReasons.Num() > 0)
     {
-        TArray<TSharedPtr<FJsonValue>> SkippedValues;
-        for (const FString& Reason : SkippedReasons) { SkippedValues.Add(MakeShared<FJsonValueString>(Reason)); }
-        Result->SetArrayField(TEXT("skippedProperties"), SkippedValues);
+        Result->SetArrayField(TEXT("skippedProperties"), McpHandlerUtils::ToJsonStringArray(SkippedReasons));
     }
     TArray<FString> Skipped = SuppliedProperties.FilterByPredicate([&ConfiguredProperties](const FString& Name) { return !ConfiguredProperties.Contains(Name); });
     if (Skipped.Num() > 0 && ConfiguredPropertyCount == 0)

@@ -151,12 +151,7 @@ bool HandleSetAIMovement(UEngineWireSubsystem* Self, const FString& RequestId, c
     MovementResult->SetBoolField(TEXT("saved"), McpSafeAssetSave(Blueprint));
     McpHandlerUtils::AddVerification(MovementResult, Blueprint);
 
-    TArray<TSharedPtr<FJsonValue>> PropsArray;
-    for (const FString& Prop : PropertiesSet)
-    {
-        PropsArray.Add(MakeShared<FJsonValueString>(Prop));
-    }
-    MovementResult->SetArrayField(TEXT("propertiesSet"), PropsArray);
+    MovementResult->SetArrayField(TEXT("propertiesSet"), McpHandlerUtils::ToJsonStringArray(PropertiesSet));
     MovementResult->SetNumberField(TEXT("propertyCount"), PropertiesSet.Num());
 
     // Include current values

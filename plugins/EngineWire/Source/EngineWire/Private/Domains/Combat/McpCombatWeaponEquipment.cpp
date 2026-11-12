@@ -115,12 +115,7 @@ bool FCombatActionContext::HandleWeaponEquipment() const
         // bare strings failed the output schema after the Blueprint had been changed.
         Result->SetArrayField(TEXT("attachmentSlots"), SlotObjects);
 
-        TArray<TSharedPtr<FJsonValue>> ComponentsJsonArray;
-        for (const FString& Comp : CreatedComponents)
-        {
-            ComponentsJsonArray.Add(MakeShared<FJsonValueString>(Comp));
-        }
-        Result->SetArrayField(TEXT("componentsCreated"), ComponentsJsonArray);
+        Result->SetArrayField(TEXT("componentsCreated"), McpHandlerUtils::ToJsonStringArray(CreatedComponents));
 
         McpHandlerUtils::AddVerification(Result, Blueprint);
         SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Attachment system configured with SceneComponent attach points."), Result);

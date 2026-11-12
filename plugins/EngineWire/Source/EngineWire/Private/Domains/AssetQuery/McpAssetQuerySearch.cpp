@@ -210,11 +210,7 @@ bool HandleSearchAssets(
 
     AssetDataList.Sort([](const FAssetData& A, const FAssetData& B)
     {
-#if ENGINE_MINOR_VERSION >= 1
-        return A.GetSoftObjectPath().ToString() < B.GetSoftObjectPath().ToString();
-#else
-        return A.ToSoftObjectPath().ToString() < B.ToSoftObjectPath().ToString();
-#endif
+        return MCP_ASSET_DATA_GET_SOFT_PATH(A) < MCP_ASSET_DATA_GET_SOFT_PATH(B);
     });
 
     const int32 TotalCount = AssetDataList.Num();
@@ -257,13 +253,8 @@ bool HandleSearchAssets(
     {
         TSharedPtr<FJsonObject> AssetObj = McpHandlerUtils::CreateResultObject();
         AssetObj->SetStringField(TEXT("assetName"), Data.AssetName.ToString());
-#if ENGINE_MINOR_VERSION >= 1
-        AssetObj->SetStringField(TEXT("assetPath"), Data.GetSoftObjectPath().ToString());
-        AssetObj->SetStringField(TEXT("classPath"), Data.AssetClassPath.ToString());
-#else
-        AssetObj->SetStringField(TEXT("assetPath"), Data.ToSoftObjectPath().ToString());
-        AssetObj->SetStringField(TEXT("classPath"), Data.AssetClass.ToString());
-#endif
+        AssetObj->SetStringField(TEXT("assetPath"), MCP_ASSET_DATA_GET_SOFT_PATH(Data));
+        AssetObj->SetStringField(TEXT("classPath"), MCP_ASSET_DATA_GET_CLASS_PATH(Data));
         AssetsArray.Add(MakeShared<FJsonValueObject>(AssetObj));
     }
 

@@ -4,6 +4,7 @@
 
 #include "Domains/Sequence/MovieRender/McpSeqMRQCompletion.h"
 #include "Domains/Sequence/MovieRender/McpSeqMRQInternal.h"
+#include "Foundation/HandlerUtils/McpHandlerUtilsJson.h"
 
 #include "HAL/FileManager.h"
 #include "EngineWireSettings.h"
@@ -220,10 +221,7 @@ int32 AppendRenderOutputProof(UMoviePipelineExecutorJob *Job,
   Result->SetArrayField(TEXT("outputFiles"), FileValues);
   TArray<FString> SortedPasses = State.ReportedRenderPasses.Array();
   SortedPasses.Sort();
-  TArray<TSharedPtr<FJsonValue>> PassValues;
-  for (const FString &PassName : SortedPasses)
-    PassValues.Add(MakeShared<FJsonValueString>(PassName));
-  Result->SetArrayField(TEXT("renderPasses"), PassValues);
+  Result->SetArrayField(TEXT("renderPasses"), McpHandlerUtils::ToJsonStringArray(SortedPasses));
   if (Files.Num() > MaxFiles)
     Result->SetBoolField(TEXT("outputFilesTruncated"), true);
   return Files.Num();

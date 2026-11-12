@@ -9,26 +9,6 @@
 
 namespace
 {
-// The query's test at a flat index counted across its options, as configure_test_scoring counts them.
-UEnvQueryTest* FindEQSTest(UEnvQuery* Query, int32 FlatIndex)
-{
-    for (UEnvQueryOption* Option : Query->GetOptionsMutable())
-    {
-        if (!Option)
-        {
-            continue;
-        }
-        for (UEnvQueryTest* Test : Option->Tests)
-        {
-            if (Test && FlatIndex-- == 0)
-            {
-                return Test;
-            }
-        }
-    }
-    return nullptr;
-}
-
 // A class found by its AIModule name (EnvQueryContext_Querier) or by path, when it derives from BaseName.
 // StaticClass() is not exported for these AIModule classes, so they are looked up.
 UClass* FindAIModuleClass(const FString& Name, const TCHAR* BaseName)
@@ -42,6 +22,26 @@ UClass* FindAIModuleClass(const FString& Name, const TCHAR* BaseName)
 
 namespace McpAIHandlers
 {
+UEnvQueryTest* FindEQSTest(UEnvQuery* Query, int32 FlatIndex, int32* OutOptionIndex, int32* OutIndexInOption)
+{
+    auto& Options = Query->GetOptionsMutable();
+    for (int32 OptionIndex = 0; OptionIndex < Options.Num(); ++OptionIndex)
+    {
+        UEnvQueryOption* Option = Options[OptionIndex];
+        for (int32 Index = 0; Option && Index < Option->Tests.Num(); ++Index)
+        {
+            UEnvQueryTest* Test = Option->Tests[Index];
+            if (Test && FlatIndex-- == 0)
+            {
+                if (OutOptionIndex) { *OutOptionIndex = OptionIndex; }
+                if (OutIndexInOption) { *OutIndexInOption = Index; }
+                return Test;
+            }
+        }
+    }
+    return nullptr;
+}
+
 // Implements the "add_eqs_context" action: a context reaches a query through the generator or test that reads it (the
 // center of a grid, what a distance is measured to), so this sets that property. It used to mark the query dirty and
 // answer "Context added".
@@ -55,10 +55,10 @@ bool HandleAddEQSContext(UEngineWireSubsystem* Self, const FString& RequestId, c
     const FString QueryPath = GetJsonStringField(Payload, TEXT("queryPath"));
     const FString ContextType = GetJsonStringField(Payload, TEXT("contextType"));
     const FString PropertyName = GetJsonStringField(Payload, TEXT("contextProperty"));
-    UEnvQuery* Query = LoadObject<UEnvQuery>(nullptr, *QueryPath);
+    UEnvQuery* Query = LoadEnvQueryOrReply(Self, RequestId, RequestingSocket, QueryPath);
     if (!Query)
     {
-        return Fail(FString::Printf(TEXT("EQS Query not found: %s"), *QueryPath), TEXT("NOT_FOUND"));
+        return true;
     }
 
     const bool bCustom = !ContextType.Equals(TEXT("Querier"), ESearchCase::IgnoreCase) && !ContextType.Equals(TEXT("Item"), ESearchCase::IgnoreCase);
@@ -137,10 +137,9 @@ bool HandleAddEQSTest(UEngineWireSubsystem* Self, const FString& RequestId, cons
 {
     const FString QueryPath = GetJsonStringField(Payload, TEXT("queryPath"));
     const FString TestType = GetJsonStringField(Payload, TEXT("testType"));
-    UEnvQuery* Query = LoadObject<UEnvQuery>(nullptr, *QueryPath);
+    UEnvQuery* Query = LoadEnvQueryOrReply(Self, RequestId, RequestingSocket, QueryPath);
     if (!Query)
     {
-        Self->SendAutomationError(RequestingSocket, RequestId, FString::Printf(TEXT("EQS Query not found: %s"), *QueryPath), TEXT("NOT_FOUND"));
         return true;
     }
     UClass* TestClass = FindAIModuleClass(TEXT("EnvQueryTest_") + TestType, TEXT("EnvQueryTest"));

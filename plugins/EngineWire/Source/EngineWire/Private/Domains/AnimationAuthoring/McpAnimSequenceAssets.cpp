@@ -68,10 +68,10 @@ TSharedPtr<FJsonObject> HandleSequenceAssetActions(const FString& SubAction, con
         FString AssetPath = NormalizeAnimPath(GetJsonStringField(Params, TEXT("assetPath"), TEXT("")));
         bool bSave = GetJsonBoolField(Params, TEXT("save"), true);
 
-        UAnimSequence* Sequence = LoadAnimSequenceFromPath(AssetPath);
+        UAnimSequence* Sequence = LoadAnimSequenceOrFail(AssetPath, Response);
         if (!Sequence)
         {
-            ANIM_ERROR_RESPONSE(FString::Printf(TEXT("Could not load animation sequence: %s"), *AssetPath), TEXT("SEQUENCE_NOT_FOUND"));
+            return Response;
         }
 
         // The rate stays what the sequence has unless frameRate is sent; it

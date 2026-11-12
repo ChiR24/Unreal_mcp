@@ -76,9 +76,7 @@ bool HandleAddStateTreeTransition(UEngineWireSubsystem* Self, const FString& Req
     McpHandlerUtils::AddVerification(Result, StateTree);
     Self->SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Transition added"), Result);
 #else
-    Self->SendAutomationError(RequestingSocket, RequestId,
-        TEXT("StateTree is unavailable in this build; enable the StateTree plugin (UE 5.3+)"),
-        TEXT("STATE_TREE_NOT_AVAILABLE"));
+    McpSendStateTreeUnavailable(Self, RequestingSocket, RequestId);
 #endif
     return true;
 }

@@ -12,7 +12,7 @@ bool HandleSetBlackboardValue(UEngineWireSubsystem* Self, const FString& Request
 {
     FString Error;
     FString Code;
-    UBlackboardData* Blackboard = LoadEditableBlackboard(Payload, Error, Code);
+    UBlackboardData* Blackboard = LoadBlackboard(Payload, true, Error, Code);
     FBlackboardEntry* Key = Blackboard ? FindOwnBlackboardKey(Blackboard, GetJsonStringField(Payload, TEXT("keyName")), Error, Code) : nullptr;
     const TSharedPtr<FJsonValue> Value = Payload->TryGetField(TEXT("value"));
     if (Key && !Key->KeyType)
@@ -51,7 +51,7 @@ bool HandleSetBlackboardValue(UEngineWireSubsystem* Self, const FString& Request
     ReadBlackboardKeyDefault(Key->KeyType, Stored);
     Result->SetStringField(TEXT("blackboardPath"), Blackboard->GetPathName());
     Result->SetStringField(TEXT("keyName"), Key->EntryName.ToString());
-    Result->SetStringField(TEXT("keyType"), Key->KeyType->GetClass()->GetName().Replace(TEXT("BlackboardKeyType_"), TEXT("")));
+    Result->SetStringField(TEXT("keyType"), BlackboardKeyTypeName(Key->KeyType->GetClass()));
     Result->SetStringField(TEXT("value"), Stored);
     Result->SetBoolField(TEXT("saved"), McpSafeAssetSave(Blackboard));
     McpHandlerUtils::AddVerification(Result, Blackboard);
@@ -63,9 +63,9 @@ bool HandleSetBlackboardValue(UEngineWireSubsystem* Self, const FString& Request
 bool HandleGetBlackboardValue(UEngineWireSubsystem* Self, const FString& RequestId, const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> RequestingSocket)
 {
     const FString BBPath = GetJsonStringField(Payload, TEXT("blackboardPath"));
-    UBlackboardData* BBData = BBPath.IsEmpty() ? nullptr : LoadObject<UBlackboardData>(nullptr, *BBPath);
-    FString Error = BBPath.IsEmpty() ? FString(TEXT("blackboardPath is required")) : FString::Printf(TEXT("Blackboard not found: %s"), *BBPath);
-    FString Code = BBPath.IsEmpty() ? TEXT("INVALID_ARGUMENT") : TEXT("NOT_FOUND");
+    FString Error;
+    FString Code;
+    UBlackboardData* BBData = LoadBlackboard(Payload, false, Error, Code);
     const FBlackboardEntry* Key = BBData ? FindOwnBlackboardKey(BBData, GetJsonStringField(Payload, TEXT("keyName")), Error, Code) : nullptr;
     if (!Key)
     {

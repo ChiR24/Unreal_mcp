@@ -16,6 +16,8 @@ DECLARE_LOG_CATEGORY_EXTERN(LogMcpAIHandlers, Log, All);
 // and shadows the engine type for every file that includes this header.
 class UAIPerceptionComponent;
 class UBlueprint;
+class UEnvQuery;
+class UEnvQueryTest;
 
 namespace McpAIHandlers
 {
@@ -86,11 +88,32 @@ T* CreateAIAssetInPackage(const FString& Path, const FString& Name, const TCHAR*
 }
 
 
+// The EQS query at QueryPath, or null once NOT_FOUND is sent (EQS/McpAIEQSAssets.cpp).
+UEnvQuery* LoadEnvQueryOrReply(UEngineWireSubsystem* Self, const FString& RequestId, TSharedPtr<FMcpBridgeWebSocket> RequestingSocket, const FString& QueryPath);
+
+// The query's test at a flat index counted across its options (empty options and tests are not counted), with the option
+// it sits in and its index there when asked; null past the last test (EQS/McpAIEQSContextTests.cpp).
+UEnvQueryTest* FindEQSTest(UEnvQuery* Query, int32 FlatIndex, int32* OutOptionIndex = nullptr, int32* OutIndexInOption = nullptr);
+
+// EEnvTestFilterType by value: the names configure_test_scoring reads and get_ai_info writes.
+inline constexpr const TCHAR* EQSFilterTypeNames[] = {TEXT("Minimum"), TEXT("Maximum"), TEXT("Range"), TEXT("Match")};
+
 // Shared by the six perception actions; see Perception/McpAIPerceptionSetup.cpp.
 UAIPerceptionComponent* FindOrCreatePerceptionComponent(
     UEngineWireSubsystem* Self, const FString& RequestId,
     TSharedPtr<FMcpBridgeWebSocket> RequestingSocket,
     UBlueprint* Blueprint, bool* OutCreated);
+
+// The Blueprint at blueprintPath with its perception component (added when missing) opened for an edit, or null once a
+// refusal went out: configure_sight_config, configure_hearing_config and configure_damage_sense_config.
+UAIPerceptionComponent* LoadPerceptionOrReply(
+    UEngineWireSubsystem* Self, const FString& RequestId, const TSharedPtr<FJsonObject>& Payload,
+    TSharedPtr<FMcpBridgeWebSocket> RequestingSocket, UBlueprint*& OutBlueprint);
+
+// True once ALREADY_EXISTS is sent: ComponentName is taken in the Blueprint's construction script, where CreateNode
+// would pick another name while the reply named the one asked for (Navigation/McpAINavUtils.cpp).
+bool RefuseTakenComponentName(UEngineWireSubsystem* Self, const FString& RequestId, TSharedPtr<FMcpBridgeWebSocket> RequestingSocket,
+    const UBlueprint* Blueprint, const FString& ComponentName);
 
 #define MCP_AI_HANDLER_DECL(Name) bool Name(UEngineWireSubsystem* Self, const FString& RequestId, const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> RequestingSocket)
 MCP_AI_HANDLER_DECL(HandleCreateAIController);
@@ -140,11 +163,12 @@ MCP_AI_HANDLER_DECL(HandleRunBehaviorTree);
 MCP_AI_HANDLER_DECL(HandleStopBehaviorTree);
 #undef MCP_AI_HANDLER_DECL
 
-// get_ai_info summaries (Runtime/McpAIInfoBP.cpp
-// and Runtime/McpAIInfoAssets.cpp).
+// get_ai_info summaries (Runtime/McpAIInfoBP.cpp, Runtime/McpAIInfoAssets.cpp
+// and Runtime/McpAIEnvQueryInfo.cpp).
 void DescribeAIBlueprint(class UBlueprint* Blueprint, const TSharedPtr<FJsonObject>& AIInfo, const TSharedPtr<FJsonObject>& Result);
 bool DescribeAIStateTree(const FString& StateTreePath, const TSharedPtr<FJsonObject>& Result, FString& OutError);
 void AddAIAssetInventory(const TSharedPtr<FJsonObject>& Result);
+void DescribeAIEnvQuery(UEnvQuery* Query, const TSharedPtr<FJsonObject>& Out);
 
 // Reflection import shared by configure_state_tree_task and configure_mass_entity
 // (Runtime/McpAIReflect.cpp).

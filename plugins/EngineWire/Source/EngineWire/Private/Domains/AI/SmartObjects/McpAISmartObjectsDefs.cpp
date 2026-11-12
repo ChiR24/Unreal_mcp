@@ -29,9 +29,7 @@ bool HandleCreateSmartObjectDefinition(UEngineWireSubsystem* Self, const FString
     UClass* DefinitionClass = FindSmartObjectClass(TEXT("SmartObjectDefinition"));
     if (!DefinitionClass)
     {
-        Self->SendAutomationError(RequestingSocket, RequestId,
-            TEXT("SmartObjects plugin is not enabled in this project. Enable the SmartObjects plugin to use Smart Object features."),
-            TEXT("SMARTOBJECTS_PLUGIN_NOT_ENABLED"));
+        Self->SendAutomationError(RequestingSocket, RequestId, SmartObjectsDisabledMessage, TEXT("SMARTOBJECTS_PLUGIN_NOT_ENABLED"));
         return true;
     }
 
@@ -77,19 +75,9 @@ bool HandleAddSmartObjectSlot(UEngineWireSubsystem* Self, const FString& Request
         return true;
     }
 
-    UClass* DefinitionClass = FindSmartObjectClass(TEXT("SmartObjectDefinition"));
-    if (!DefinitionClass)
+    UObject* Definition = LoadSmartObjectDefinitionOrReply(Self, RequestId, RequestingSocket, DefinitionPath);
+    if (!Definition)
     {
-        Self->SendAutomationError(RequestingSocket, RequestId,
-            TEXT("SmartObjects plugin is not enabled in this project. Enable the SmartObjects plugin to use Smart Object features."),
-            TEXT("SMARTOBJECTS_PLUGIN_NOT_ENABLED"));
-        return true;
-    }
-    UObject* Definition = LoadObject<UObject>(nullptr, *DefinitionPath);
-    if (!Definition || !Definition->IsA(DefinitionClass))
-    {
-        Self->SendAutomationError(RequestingSocket, RequestId,
-            FString::Printf(TEXT("SmartObjectDefinition not found: %s"), *DefinitionPath), TEXT("NOT_FOUND"));
         return true;
     }
 

@@ -1,6 +1,7 @@
 #pragma once
 
 #include "Core/Compatibility/McpVersionCompatibility.h"
+#include "EngineWireSubsystem.h"
 #include "Foundation/BridgeHelpers/Reflection/McpClassResolve.h"
 #include "GameplayTagContainer.h"
 #include "Modules/ModuleManager.h"
@@ -22,6 +23,30 @@ inline UClass* FindSmartObjectClass(const TCHAR* ClassName)
         return nullptr;
     }
     return McpFindTypeQuiet(FString(TEXT("/Script/SmartObjectsModule.")) + ClassName);
+}
+
+inline constexpr const TCHAR* SmartObjectsDisabledMessage =
+    TEXT("SmartObjects plugin is not enabled in this project. Enable the SmartObjects plugin to use Smart Object features.");
+
+// The Smart Object definition at DefinitionPath, or null once the refusal is sent: the plugin is off, or nothing of its
+// definition class loads from the path.
+inline UObject* LoadSmartObjectDefinitionOrReply(UEngineWireSubsystem* Self, const FString& RequestId,
+                                                 TSharedPtr<FMcpBridgeWebSocket> RequestingSocket, const FString& DefinitionPath)
+{
+    UClass* DefinitionClass = FindSmartObjectClass(TEXT("SmartObjectDefinition"));
+    if (!DefinitionClass)
+    {
+        Self->SendAutomationError(RequestingSocket, RequestId, SmartObjectsDisabledMessage, TEXT("SMARTOBJECTS_PLUGIN_NOT_ENABLED"));
+        return nullptr;
+    }
+    UObject* Definition = LoadObject<UObject>(nullptr, *DefinitionPath);
+    if (!Definition || !Definition->IsA(DefinitionClass))
+    {
+        Self->SendAutomationError(RequestingSocket, RequestId,
+            FString::Printf(TEXT("SmartObjectDefinition not found: %s"), *DefinitionPath), TEXT("NOT_FOUND"));
+        return nullptr;
+    }
+    return Definition;
 }
 
 // A Smart Object definition's Slots array, with the property of one slot in OutSlot; nullptr when it has none.

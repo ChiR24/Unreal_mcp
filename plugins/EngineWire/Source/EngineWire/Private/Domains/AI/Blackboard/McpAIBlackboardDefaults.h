@@ -6,12 +6,17 @@ class FJsonObject;
 class FJsonValue;
 class UBlackboardData;
 class UBlackboardKeyType;
+class UClass;
 struct FBlackboardEntry;
 
 namespace McpAIHandlers
 {
-// The Blackboard at blackboardPath for an edit, or null with OutError and OutCode (INVALID_ARGUMENT, NOT_FOUND, ENGINE_CONTENT).
-UBlackboardData* LoadEditableBlackboard(const TSharedPtr<FJsonObject>& Payload, FString& OutError, FString& OutCode);
+// The Blackboard at blackboardPath, or null with OutError and OutCode: INVALID_ARGUMENT, NOT_FOUND, and for an edit
+// ENGINE_CONTENT (engine content is read, never changed).
+UBlackboardData* LoadBlackboard(const TSharedPtr<FJsonObject>& Payload, bool bForEdit, FString& OutError, FString& OutCode);
+
+// A key type's class as the Blackboard editor names the type: Bool, Int, Object.
+FString BlackboardKeyTypeName(const UClass* KeyClass);
 
 // The key named KeyName among Blackboard's own keys, or null with OutError naming the keys it has, or the parent that holds it.
 FBlackboardEntry* FindOwnBlackboardKey(UBlackboardData* Blackboard, const FString& KeyName, FString& OutError, FString& OutCode);

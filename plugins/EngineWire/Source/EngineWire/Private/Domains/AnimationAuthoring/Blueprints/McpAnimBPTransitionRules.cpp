@@ -6,18 +6,6 @@
 namespace McpAnimationAuthoring {
 
 namespace {
-// An Animation Blueprint edited earlier in the same session is only correct in
-// memory, so prefer that over whatever is still on disk.
-UAnimBlueprint *LoadAnimBlueprintForMcp(const FString &BlueprintPath) {
-  if (UAnimBlueprint *InMemory = FindObject<UAnimBlueprint>(nullptr, *BlueprintPath)) {
-    return InMemory;
-  }
-  return Cast<UAnimBlueprint>(
-      StaticLoadObject(UAnimBlueprint::StaticClass(), nullptr, *BlueprintPath));
-}
-} // namespace
-
-namespace {
 // A transition whose rule graph leaves bCanEnterTransition unconnected is
 // permanently false, so a state machine authored over MCP could be built
 // correctly and still never leave its entry state -- reported as success the
@@ -198,16 +186,11 @@ TSharedPtr<FJsonObject> HandleBlueprintTransitionRuleActions(const FString& SubA
     FString ToState = GetJsonStringField(Params, TEXT("toState"), TEXT(""));
     bool bSave = GetJsonBoolField(Params, TEXT("save"), true);
 
-    UAnimBlueprint* AnimBP = LoadAnimBlueprintForMcp(BlueprintPath);
+    UEdGraph* AnimGraph = nullptr;
+    UAnimBlueprint* AnimBP = LoadAnimBlueprintOrFail(BlueprintPath, Response, &AnimGraph);
     if (!AnimBP)
     {
-        ANIM_ERROR_RESPONSE(FString::Printf(TEXT("Could not load animation blueprint: %s"), *BlueprintPath), TEXT("ANIM_BP_NOT_FOUND"));
-    }
-
-    UEdGraph* AnimGraph = GetAnimGraphFromBlueprint(AnimBP);
-    if (!AnimGraph)
-    {
-        ANIM_ERROR_RESPONSE(TEXT("Could not find AnimGraph in blueprint"), TEXT("GRAPH_NOT_FOUND"));
+        return Response;
     }
 
     if (FindStateMachineNodes(AnimGraph, StateMachineName).Num() == 0)
