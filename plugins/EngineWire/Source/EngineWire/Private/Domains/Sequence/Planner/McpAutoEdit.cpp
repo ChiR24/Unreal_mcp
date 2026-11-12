@@ -104,7 +104,7 @@ bool Handle(UEngineWireSubsystem& Bridge, const FString& RequestId, const TShare
         Error = Error.IsEmpty() && !Camera->FindComponentByClass<UCameraComponent>() ? FString::Printf(TEXT("'%s' is no camera."), *Camera->GetActorLabel()) : Error;
     }
     FEditPlan Plan;
-    Error = Error.IsEmpty() ? ReadTiming(Payload, *Sequence, Plan) : Error;
+    Error = Error.IsEmpty() ? ReadTiming(Payload, *Sequence, Cameras.Num(), Plan) : Error;
     if (!Error.IsEmpty())
     {
         Bridge.SendAutomationError(Socket, RequestId, Error, TEXT("INVALID_ARGUMENT"));

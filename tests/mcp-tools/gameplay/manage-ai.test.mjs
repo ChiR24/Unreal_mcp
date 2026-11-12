@@ -82,6 +82,8 @@ const testCases = [
   { scenario: 'ADD: add_composite_node named', toolName: 'manage_ai', arguments: { action: 'add_composite_node', behaviorTreePath: '${captured:behaviorTreePath}', compositeType: 'Selector', nodeName: 'RootSelector' }, expected: 'success' },
   { scenario: 'ADD: add_composite_node SimpleParallel', toolName: 'manage_ai', arguments: { action: 'add_composite_node', behaviorTreePath: '${captured:behaviorTreePath}', compositeType: 'SimpleParallel', parentNodeId: 'RootSelector' }, expected: 'success' },
   { scenario: 'ADD: add_task_node', toolName: 'manage_ai', arguments: { action: 'add_task_node', behaviorTreePath: '${captured:behaviorTreePath}', taskType: 'Wait' }, expected: 'success', assertions: [{ path: 'structuredContent.result.undo.undoable', equals: true, label: 'one undo step' }] },
+  { scenario: 'ADD: add_task_node of a task found by its class name', toolName: 'manage_ai', arguments: { action: 'add_task_node', behaviorTreePath: '${captured:behaviorTreePath}', taskType: 'SetTagCooldown' }, expected: 'success' },
+  { scenario: 'ADD: add_decorator of a decorator found by its class name', toolName: 'manage_ai', arguments: { action: 'add_decorator', behaviorTreePath: '${captured:behaviorTreePath}', decoratorType: 'CheckGameplayTagsOnActor' }, expected: 'success' },
   { scenario: 'ADD: add_decorator', toolName: 'manage_ai', arguments: { action: 'add_decorator', behaviorTreePath: '${captured:behaviorTreePath}', decoratorType: 'Blackboard' }, expected: 'success', assertions: [{ path: 'structuredContent.result.undo.undoable', equals: true, label: 'one undo step' }] },
   { scenario: 'ADD: add_decorator on a named node', toolName: 'manage_ai', arguments: { action: 'add_decorator', behaviorTreePath: '${captured:behaviorTreePath}', decoratorType: 'Cooldown', parentNodeId: 'RootSelector' }, expected: 'success', assertions: [{ path: 'structuredContent.result.attachedTo', equals: 'RootSelector' }, { path: 'structuredContent.result.undo.undoable', equals: true, label: 'one undo step' }] },
   { scenario: 'ADD: add_task_node MoveTo', toolName: 'manage_ai', arguments: { action: 'add_task_node', behaviorTreePath: '${captured:behaviorTreePath}', taskType: 'MoveTo' }, expected: 'success', captureResult: { key: 'moveToNodeId', fromField: 'result.nodeId' } },
@@ -383,6 +385,8 @@ const testCases = [
     // === CONFIG ===
     { scenario: 'CONFIG: configure_nav_mesh_settings', toolName: 'manage_ai', arguments: {"action": "configure_nav_mesh_settings", "cellSize": 19, "cellHeight": 10, "tileSizeUU": 1000, "minRegionArea": 0, "mergeRegionSize": 400, "maxSimplificationError": 1.3}, expected: 'success' },
     { scenario: 'CONFIG: set_nav_agent_properties', toolName: 'manage_ai', arguments: {"action": "set_nav_agent_properties", "agentRadius": 35, "agentHeight": 144, "agentStepHeight": 35, "agentMaxSlope": 44}, expected: 'success' },
+    { scenario: 'ERROR: configure_nav_mesh_settings refuses a cell size the engine does not take', toolName: 'manage_ai', arguments: {"action": "configure_nav_mesh_settings", "cellSize": 0}, expected: 'error' },
+    { scenario: 'ERROR: set_nav_agent_properties refuses a slope past 89 degrees', toolName: 'manage_ai', arguments: {"action": "set_nav_agent_properties", "agentMaxSlope": 95}, expected: 'error' },
     // === ACTION ===
     { scenario: 'ACTION: rebuild_navigation', toolName: 'manage_ai', arguments: {"action": "rebuild_navigation"}, expected: 'success' },
     // === CREATE ===

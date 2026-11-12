@@ -2,6 +2,7 @@
 
 #include "Foundation/BridgeHelpers/McpHelpers.h"
 #include "Foundation/HandlerUtils/McpHandlerUtils.h"
+#include "Foundation/Reflection/McpPropertyReflection.h"
 #include "Foundation/Render/McpConsoleVariableWrite.h"
 
 #include "HAL/IConsoleManager.h"
@@ -58,18 +59,9 @@ inline bool ApplyJsonSettings(
         FProperty* Property = StructType->FindPropertyByName(FName(*Pair.Key));
         double Number = 0.0;
         if (Property && Property->IsA<FNumericProperty>() && Pair.Value.IsValid() && Pair.Value->Type == EJson::Number &&
-            Pair.Value->TryGetNumber(Number))
+            Pair.Value->TryGetNumber(Number) && !McpPropertyReflection::CheckRange(Property, Number, FString(*Pair.Key), OutError))
         {
-            const FString Min = Property->GetMetaData(TEXT("ClampMin"));
-            const FString Max = Property->GetMetaData(TEXT("ClampMax"));
-            if ((!Min.IsEmpty() && Number < FCString::Atod(*Min)) || (!Max.IsEmpty() && Number > FCString::Atod(*Max)))
-            {
-                const FString Range = Min.IsEmpty() ? TEXT("at most ") + Max
-                                    : Max.IsEmpty() ? TEXT("at least ") + Min
-                                                    : FString::Printf(TEXT("between %s and %s"), *Min, *Max);
-                OutError = FString::Printf(TEXT("%s must be %s, the engine's limit; got %g"), *Pair.Key, *Range, Number);
-                return false;
-            }
+            return false;
         }
     }
     const int32 AppliedBefore = OutApplied.Num();

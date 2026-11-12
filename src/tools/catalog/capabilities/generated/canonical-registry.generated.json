@@ -1,5 +1,5 @@
 {
-  "catalogRevision": "1a484759eaebe96f",
+  "catalogRevision": "18ca43cfd728aca6",
   "recordCount": 489,
   "records": [
     {
@@ -18357,7 +18357,8 @@
                       "type": "string"
                     },
                     "minItems": 2,
-                    "description": "align and same types: the widgets lined up or sized alike."
+                    "maxItems": 64,
+                    "description": "align and same types: the widgets lined up or sized alike (at most 64)."
                   },
                   "gap": {
                     "type": "number",
@@ -18605,8 +18606,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "49870b62b30349d8a0f24f3a4fbdf5785afb49adbc225cac7d58cafe57b038c7",
-        "content": "f4ee02ccee565201e5fc9a6c8abb69b1d101fcf10b4c08fbb6da712a0b8bb172"
+        "schema": "177970bfabe2b02d20d9b21cd0d2361a43da540050fff2adeb6d0d98d5cb83ed",
+        "content": "e7623f6b4b4602f5c1aa3e5fe80d211c2bc291169da027f64cde4f32e45ef376"
       }
     },
     {
@@ -34080,11 +34081,11 @@
             },
             "sizeX": {
               "type": "number",
-              "description": "Landscape size along X, in vertices like the editor Overall Resolution (1009 is 16 components of 63 quads) or in quads; it becomes the fewest whole components that cover it."
+              "description": "Landscape size along X, in vertices like the editor Overall Resolution (1009 is 16 components of 63 quads) or in quads; it becomes the fewest whole components that cover it (at most 8191 quads, as componentCount)."
             },
             "sizeY": {
               "type": "number",
-              "description": "Landscape size along Y, in vertices like the editor Overall Resolution (1009 is 16 components of 63 quads) or in quads; it becomes the fewest whole components that cover it."
+              "description": "Landscape size along Y, in vertices like the editor Overall Resolution (1009 is 16 components of 63 quads) or in quads; it becomes the fewest whole components that cover it (at most 8191 quads, as componentCount)."
             },
             "quadsPerSection": {
               "type": "number",
@@ -34100,7 +34101,7 @@
             },
             "componentCount": {
               "type": "object",
-              "description": "Component count {x, y}.",
+              "description": "Component count {x, y}: per axis at most 256 components and 8191 quads (130 components of 63 quads), the editor limit.",
               "properties": {
                 "x": {
                   "type": "number",
@@ -34272,8 +34273,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "c585a1300c02ae959c5c7e7210855fdb01e77b209d8f471024edcd0e91d1c8f2",
-        "content": "f2c873167c22458e1c182d7996e036c8723f9d5ab72dda40cd313d6048a39e34"
+        "schema": "b7a3061f97f0d5f2d9a713cf11ae264b6b1f9f8ab38155eb9a132b5946bbcaea",
+        "content": "11051ed9805c0df3ab280d30a603c766a6ef3ca6a2a70d86ac195ab33c4a42bb"
       }
     },
     {
@@ -35063,11 +35064,11 @@
             },
             "sizeX": {
               "type": "number",
-              "description": "Landscape size along X, in vertices like the editor Overall Resolution (1009 is 16 components of 63 quads) or in quads; it becomes the fewest whole components that cover it."
+              "description": "Grid cells along X (default 100), each spacing units wide."
             },
             "sizeY": {
               "type": "number",
-              "description": "Landscape size along Y, in vertices like the editor Overall Resolution (1009 is 16 components of 63 quads) or in quads; it becomes the fewest whole components that cover it."
+              "description": "Grid cells along Y (default 100), each spacing units wide."
             },
             "heightScale": {
               "type": "number",
@@ -35175,8 +35176,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "a9b6dcfdd8395d32930921e12f2c0e7098dc08cc0795813421cce3553e7cc9e8",
-        "content": "5cf609c272235ce642dfba0d709846b43d669302ff9577585922ea873444b2ae"
+        "schema": "83d0ec56a588674878bd2946d7b8e9474089ff89b1e388ecfcaae1fb90062a55",
+        "content": "75f81556c1d8d68261a99806a106440c341746c8c9c8b36e7a9141e0bdec4b16"
       }
     },
     {
@@ -62660,43 +62661,43 @@
           "properties": {
             "cellSize": {
               "type": "number",
-              "description": "NavMesh cell size (default: 19)."
+              "description": "NavMesh cell size, 1 to 1024 (default: 19)."
             },
             "cellHeight": {
               "type": "number",
-              "description": "NavMesh cell height (default: 10)."
+              "description": "NavMesh cell height, 1 to 1024 (default: 10)."
             },
             "tileSizeUU": {
               "type": "number",
-              "description": "NavMesh tile size in Unreal units (default: 1000)."
+              "description": "NavMesh tile size in Unreal units, 300 or more (default: 1000)."
             },
             "minRegionArea": {
               "type": "number",
-              "description": "Minimum region area to keep."
+              "description": "Minimum region area to keep, 0 or more."
             },
             "mergeRegionSize": {
               "type": "number",
-              "description": "Region merge threshold."
+              "description": "Region merge threshold, 0 or more."
             },
             "maxSimplificationError": {
               "type": "number",
-              "description": "Edge simplification error."
+              "description": "Edge simplification error, 0 or more."
             },
             "agentStepHeight": {
               "type": "number",
-              "description": "Maximum step height the agent can climb (default: 35)."
+              "description": "Maximum step height the agent can climb, 0 or more (default: 35)."
             },
             "agentRadius": {
               "type": "number",
-              "description": "Navigation agent radius (default: 35)."
+              "description": "Navigation agent radius, 0 to 100000 (default: 35)."
             },
             "agentHeight": {
               "type": "number",
-              "description": "Navigation agent height (default: 144)."
+              "description": "Navigation agent height, 0 to 100000 (default: 144)."
             },
             "agentMaxSlope": {
               "type": "number",
-              "description": "Maximum slope angle in degrees (default: 44)."
+              "description": "Maximum slope angle in degrees, 0 to 89 (default: 44)."
             },
             "areaClass": {
               "type": "string",
@@ -63058,8 +63059,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "cbb74e1e3f085f76d7eacfb8813c73760a8ca9d354571eea2fbf2cfdc948735a",
-        "content": "3c87419c4b2414758024ff9a59b892b2f79eae7d21218d78ca604de0a57806be"
+        "schema": "59b2a2e89af1085036ee346124e0884265f0c6fc61ebc6467c637ebb9a47f9f8",
+        "content": "dfc26abfec5870cd32de9d939f961a31b430de2049676b735bff87b5424bfb7b"
       }
     },
     {
@@ -63925,21 +63926,20 @@
                 "PlayAnimation",
                 "PlaySound",
                 "RunEQSQuery",
+                "RunBehavior",
                 "RunBehaviorDynamic",
-                "SetBlackboardValue",
                 "PushPawnAction",
                 "FinishWithResult",
                 "MakeNoise",
-                "GameplayTaskBase",
-                "Custom"
+                "SetTagCooldown"
               ],
-              "description": "Task node type."
+              "description": "Task node type (PushPawnAction exists only up to UE 5.5)."
             },
             "decoratorType": {
               "type": "string",
               "enum": [
                 "Blackboard",
-                "BlackboardBased",
+                "CheckGameplayTagsOnActor",
                 "CompareBBEntries",
                 "Cooldown",
                 "ConeCheck",
@@ -63952,8 +63952,7 @@
                 "TagCooldown",
                 "TimeLimit",
                 "ForceSuccess",
-                "ConditionalLoop",
-                "Custom"
+                "ConditionalLoop"
               ],
               "description": "Decorator node type."
             },
@@ -63961,8 +63960,7 @@
               "type": "string",
               "enum": [
                 "DefaultFocus",
-                "RunEQS",
-                "Custom"
+                "RunEQS"
               ],
               "description": "Service node type."
             },
@@ -64275,8 +64273,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "77fc445500d42de7985b6775fe56cd42808ed174758b1f1d22d0cf823ee1d520",
-        "content": "6c48ed97dd2fcfc2d772fcef2dbe2cd1e673602bc347f98ff5a3731c8dfa1c0d"
+        "schema": "bb5d99c59361c8ca780e2d48dce0e2e5ce5dc1f63777fc612e76c9d30c034229",
+        "content": "679be0b7d2b848e11d8c6a704b6c331713e03600cf712d745b38b6dd0db4f360"
       }
     },
     {
@@ -66055,31 +66053,31 @@
               "properties": {
                 "agentRadius": {
                   "type": "number",
-                  "description": "Navigation agent radius (default: 35)."
+                  "description": "Navigation agent radius, 0 to 100000 (default: 35)."
                 },
                 "agentHeight": {
                   "type": "number",
-                  "description": "Navigation agent height (default: 144)."
+                  "description": "Navigation agent height, 0 to 100000 (default: 144)."
                 },
                 "agentMaxSlope": {
                   "type": "number",
-                  "description": "Maximum slope angle in degrees (default: 44)."
+                  "description": "Maximum slope angle in degrees, 0 to 89 (default: 44)."
                 },
                 "tileSizeUU": {
                   "type": "number",
-                  "description": "NavMesh tile size in Unreal units (default: 1000)."
+                  "description": "NavMesh tile size in Unreal units, 300 or more (default: 1000)."
                 },
                 "cellSize": {
                   "type": "number",
-                  "description": "NavMesh cell size (default: 19)."
+                  "description": "NavMesh cell size, 1 to 1024 (default: 19)."
                 },
                 "cellHeight": {
                   "type": "number",
-                  "description": "NavMesh cell height (default: 10)."
+                  "description": "NavMesh cell height, 1 to 1024 (default: 10)."
                 },
                 "agentStepHeight": {
                   "type": "number",
-                  "description": "Maximum step height the agent can climb (default: 35)."
+                  "description": "Maximum step height the agent can climb, 0 or more (default: 35)."
                 },
                 "navLinkCount": {
                   "type": "number",
@@ -66241,8 +66239,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "74deb8b63f78af325b3eb53eebebb508d8d74c8feaff6f8dcedea6c616a02225",
-        "content": "fda82636a8ed03bdf50800a89f543f583be25ea55d880fc3a8d6543618857d23"
+        "schema": "3bab2af84a494e1dff35d85121d8ddd091afe90bb60591831a5079264774cc52",
+        "content": "b980cdc1b020bca46ef288b70efe2b10ea09c0cff5e6451e8c0760327cff6932"
       }
     },
     {
@@ -85011,6 +85009,8 @@
             },
             "uvChannel": {
               "type": "integer",
+              "minimum": 0,
+              "maximum": 7,
               "description": "UV channel index (0-7)."
             },
             "splitAngle": {
@@ -85284,6 +85284,8 @@
             },
             "uvChannel": {
               "type": "integer",
+              "minimum": 0,
+              "maximum": 7,
               "description": "UV channel index (0-7)."
             },
             "elementsModified": {
@@ -85645,8 +85647,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "49832f0a4189980126229e26f42e14df94f44bfcf5f5e0cdab49467a3811cd8b",
-        "content": "1de8284c583f25b99910bd240f87367a27d4303ad8c451329d60bcd95cf5f79e"
+        "schema": "d0350f4e15689fa6fe304a2e54235d72ccd0171e78873079c3a05be583acf12b",
+        "content": "4ad5df72e9da13b8c868b908dd6bd686e7e8664b6a560417fbed36f479373297"
       }
     },
     {
@@ -85739,6 +85741,8 @@
             },
             "uvChannel": {
               "type": "integer",
+              "minimum": 0,
+              "maximum": 7,
               "description": "UV channel index (0-7)."
             },
             "tileSize": {
@@ -85894,8 +85898,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "57be2f1b9b0fe5fad2cda079664cf8dd0045a8a8d488313a92acaf601eaacdd8",
-        "content": "b69f58638e29a018e6af041a5fdb79adbb4a7636b2915d45dc0f3811ce0f407f"
+        "schema": "40bd617567fd178be546a9e7d41553b959661678dc5e107cb7f3fcbddce8b2b6",
+        "content": "5d067ce86784fcc6f5c06300115ce424b495f99940e0b55614a400f01a818e9f"
       }
     },
     {
@@ -123367,7 +123371,7 @@
             },
             "samples": {
               "type": "number",
-              "description": "Occlusion rays per texel, 1-1024 (default 64); more is smoother and slower."
+              "description": "Occlusion rays per texel, 1-1024 (default 64); more is smoother and slower. The bake holds the editor while it traces width x height x samples rays, at most 134 million: 1024 x 1024 takes up to 128 samples, 2048 x 2048 up to 32."
             },
             "rayDistance": {
               "type": "number",
@@ -123852,8 +123856,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "35e23ae0e74034c896d940d6f2569cc01fdc2d1c705c94ef9f9d2189301bdace",
-        "content": "841aba493de76a9d7997da4f78b609d69b0aee42d02fc7fc503fd6b1cf0139df"
+        "schema": "993fdc276aee4b3d34694dbcbc837aafeb35dcfe4bea47db62c3060560d6e952",
+        "content": "1b6cd0517840ec1e3dc58bf7542f247a135973fdda408a2dbf3b3fa5955706be"
       }
     },
     {

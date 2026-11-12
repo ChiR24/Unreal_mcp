@@ -18,25 +18,9 @@ bool HandleSetUVs(UEngineWireSubsystem* Self, const FString& RequestId,
     auto [TargetActor, DMC, Mesh] = *Target;
     UE::Geometry::FDynamicMesh3& EditMesh = Mesh->GetMeshRef();
 
-    UE::Geometry::FDynamicMeshAttributeSet* Attributes = EditMesh.Attributes();
-    if (!Attributes)
-    {
-        EditMesh.EnableAttributes();
-        Attributes = EditMesh.Attributes();
-    }
-
-    if (UVChannel >= Attributes->NumUVLayers())
-    {
-        for (int32 i = Attributes->NumUVLayers(); i <= UVChannel; ++i)
-        {
-            Attributes->SetNumUVLayers(i + 1);
-        }
-    }
-
-    UE::Geometry::FDynamicMeshUVOverlay* UVOverlay = Attributes->GetUVLayer(UVChannel);
+    UE::Geometry::FDynamicMeshUVOverlay* UVOverlay = EnsureUvLayerOrReply(Self, RequestId, Socket, Mesh, UVChannel);
     if (!UVOverlay)
     {
-        Self->SendAutomationError(Socket, RequestId, TEXT("Failed to access UV layer"), TEXT("UV_LAYER_ERROR"));
         return true;
     }
 

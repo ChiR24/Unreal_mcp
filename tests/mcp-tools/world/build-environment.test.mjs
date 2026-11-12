@@ -43,6 +43,7 @@ const testCases = [
   { scenario: 'ERROR: create_landscape refuses a material that does not load', toolName: 'build_environment', arguments: { action: 'create_landscape', name: `NoMaterialLandscape_${ts}`, materialPath: '/Game/MCPTest/NoSuchLandscapeMaterial' }, expected: 'error|ASSET_NOT_FOUND' },
   // Zero sections per component used to divide by zero in the creation task.
   { scenario: 'ERROR: create_landscape rejects zero sections per component', toolName: 'build_environment', arguments: { action: 'create_landscape', name: `BadLandscape_${ts}`, quadsPerSection: 7, sectionsPerComponent: 0 }, expected: 'error' },
+  { scenario: 'ERROR: create_landscape refuses more components than the editor allows', toolName: 'build_environment', arguments: { action: 'create_landscape', name: `TooWideLandscape_${ts}`, quadsPerSection: 7, sectionsPerComponent: 1, componentCount: { x: 300, y: 1 } }, expected: 'error' },
   // === ACTION ===
   { scenario: 'ACTION: sculpt', toolName: 'build_environment', arguments: {"action": "sculpt", "landscapeName": LANDSCAPE_NAME, "tool": "Raise", "location": {"x": 0, "y": 0, "z": 0}, "radius": 128, "falloff": 0.25, "strength": 0.1, "skipFlush": true}, expected: 'success' },
   { scenario: 'ACTION: sculpt_landscape', toolName: 'build_environment', arguments: {"action": "sculpt_landscape", "landscapeName": LANDSCAPE_NAME, "location": {"x": 64, "y": 64, "z": 0}, "radius": 128, "strength": 0.1, "skipFlush": true}, expected: 'success' },
@@ -302,8 +303,10 @@ const testCases = [
     { scenario: 'CONFIG: configure_spline_mesh_axis', toolName: 'build_environment', arguments: { action: 'configure_spline_mesh_axis', actorName: SPLINE_MESH_ACTOR, componentName: SPLINE_MESH_COMPONENT, forwardAxis: 'Y' }, expected: 'success' },
     { scenario: 'ERROR: configure_spline_mesh_axis refuses a name that is no axis', toolName: 'build_environment', arguments: { action: 'configure_spline_mesh_axis', actorName: SPLINE_MESH_ACTOR, componentName: SPLINE_MESH_COMPONENT, forwardAxis: 'W' }, expected: 'error|not a spline mesh axis' },
     { scenario: 'CONFIG: set_spline_mesh_material', toolName: 'build_environment', arguments: { action: 'set_spline_mesh_material', actorName: SPLINE_MESH_ACTOR, componentName: SPLINE_MESH_COMPONENT, materialPath: TEST_MATERIAL_OBJECT, materialIndex: 0 }, expected: 'success' },
+    { scenario: 'ERROR: set_spline_mesh_material refuses a slot the mesh does not have', toolName: 'build_environment', arguments: { action: 'set_spline_mesh_material', actorName: SPLINE_MESH_ACTOR, componentName: SPLINE_MESH_COMPONENT, materialPath: TEST_MATERIAL_OBJECT, materialIndex: 99 }, expected: 'error' },
     // === ACTION ===
     { scenario: 'ACTION: scatter_meshes_along_spline', toolName: 'build_environment', arguments: { action: 'scatter_meshes_along_spline', actorName: SPLINE_ACTOR, meshPath: TEST_MESH_OBJECT, spacing: 100, alignToSpline: true }, expected: 'success' },
+    { scenario: 'ERROR: scatter_meshes_along_spline refuses a spacing that asks for thousands of meshes', toolName: 'build_environment', arguments: { action: 'scatter_meshes_along_spline', actorName: SPLINE_ACTOR, meshPath: TEST_MESH_OBJECT, spacing: 0.05 }, expected: 'error' },
     // === CONFIG ===
     { scenario: 'CONFIG: configure_mesh_spacing', toolName: 'build_environment', arguments: { action: 'configure_mesh_spacing', spacing: 125, useRandomOffset: true, randomOffsetRange: 10 }, expected: 'success' },
     { scenario: 'ERROR: configure_mesh_spacing refuses a call that stores nothing', toolName: 'build_environment', arguments: { action: 'configure_mesh_spacing' }, expected: 'error|Pass spacing' },

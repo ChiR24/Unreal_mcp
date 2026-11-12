@@ -10,18 +10,18 @@ const pick = (description: string, values: readonly string[]): JsonObject =>
 
 export const NAV = {
   // --- agent properties (set_nav_agent_properties) ---
-  agentRadius: num('Navigation agent radius (default: 35).'),
-  agentHeight: num('Navigation agent height (default: 144).'),
-  agentStepHeight: num('Maximum step height the agent can climb (default: 35).'),
-  agentMaxSlope: num('Maximum slope angle in degrees (default: 44).'),
+  agentRadius: num('Navigation agent radius, 0 to 100000 (default: 35).'),
+  agentHeight: num('Navigation agent height, 0 to 100000 (default: 144).'),
+  agentStepHeight: num('Maximum step height the agent can climb, 0 or more (default: 35).'),
+  agentMaxSlope: num('Maximum slope angle in degrees, 0 to 89 (default: 44).'),
 
   // --- navmesh generation (configure_nav_mesh_settings) ---
-  cellSize: num('NavMesh cell size (default: 19).'),
-  cellHeight: num('NavMesh cell height (default: 10).'),
-  tileSizeUU: num('NavMesh tile size in Unreal units (default: 1000).'),
-  minRegionArea: num('Minimum region area to keep.'),
-  mergeRegionSize: num('Region merge threshold.'),
-  maxSimplificationError: num('Edge simplification error.'),
+  cellSize: num('NavMesh cell size, 1 to 1024 (default: 19).'),
+  cellHeight: num('NavMesh cell height, 1 to 1024 (default: 10).'),
+  tileSizeUU: num('NavMesh tile size in Unreal units, 300 or more (default: 1000).'),
+  minRegionArea: num('Minimum region area to keep, 0 or more.'),
+  mergeRegionSize: num('Region merge threshold, 0 or more.'),
+  maxSimplificationError: num('Edge simplification error, 0 or more.'),
 
   // --- nav areas / modifiers ---
   areaClass: str('Navigation area class path.'),

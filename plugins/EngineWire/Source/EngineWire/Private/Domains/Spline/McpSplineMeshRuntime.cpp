@@ -52,6 +52,17 @@ bool HandleSetSplineMeshMaterial(
         return true;
     }
 
+    // SetMaterial grows the override list up to the index it is given, so an index past the component's slots is
+    // refused: 2147483647 overflowed into the array's invalid-size fatal, and a few hundred million took gigabytes.
+    if (MaterialIndex < 0 || MaterialIndex >= TargetComp->GetNumMaterials())
+    {
+        Self->SendAutomationResponse(Socket, RequestId, false,
+            FString::Printf(TEXT("materialIndex %d is not a material slot of %s, which has %d: a spline mesh takes its slots from its mesh, so set "
+                "the mesh first. Nothing was changed."), MaterialIndex, *TargetComp->GetName(), TargetComp->GetNumMaterials()),
+            nullptr, TEXT("MATERIAL_SLOT_NOT_FOUND"));
+        return true;
+    }
+
     FMcpScopedEditorTransaction Transaction(FText::FromString(TEXT("Set Spline Mesh Material")), EMcpMutationDurability::EditorStateOnly,
                                             {TargetComp});
     TargetComp->SetMaterial(MaterialIndex, Material);

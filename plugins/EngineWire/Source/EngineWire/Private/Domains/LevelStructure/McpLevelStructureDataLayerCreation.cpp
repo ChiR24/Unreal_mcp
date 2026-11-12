@@ -1,5 +1,6 @@
 #include "Domains/LevelStructure/McpLevelStructureActions.h"
 #include "Domains/LevelStructure/McpLevelStructureEditorWorld.h"
+#include "Domains/Environment/Runtime/McpEnvAssetValidate.h"
 
 #include "AssetRegistry/AssetRegistryModule.h"
 #include "AssetToolsModule.h"
@@ -72,10 +73,7 @@ bool HandleCreateDataLayer(
 
     // CRITICAL: dataLayerName is required - no default fallback
     FString DataLayerName;
-    if (Payload.IsValid())
-    {
-        Payload->TryGetStringField(TEXT("dataLayerName"), DataLayerName);
-    }
+    Payload->TryGetStringField(TEXT("dataLayerName"), DataLayerName);
 
     if (DataLayerName.IsEmpty())
     {
@@ -124,11 +122,20 @@ bool HandleCreateDataLayer(
     }
     DataLayerAssetPath = SafeAssetPath;
 
-    // Step 1: Create a UDataLayerAsset (the asset that backs the data layer instance)
-    FString FullAssetPath = DataLayerAssetPath / DataLayerName;
-    if (!FullAssetPath.StartsWith(TEXT("/Game/")))
+    // Step 1: Create a UDataLayerAsset (the asset that backs the data layer instance). The name is joined to the
+    // folder only when it is one an asset can take, and engine content is refused: '/Game/' used to be put in front of
+    // any other root, which made '/Game//Engine/...' of an engine folder, a name CreatePackage is a Fatal log for.
+    FString FullAssetPath, PathError, PathCode;
+    if (!McpEnvironmentHandlers::McpBuildValidatedEnvironmentAssetPath(DataLayerAssetPath, DataLayerName, TEXT("data layer"), FullAssetPath, PathError, PathCode))
     {
-        FullAssetPath = TEXT("/Game/") + FullAssetPath;
+        Subsystem->SendAutomationResponse(Socket, RequestId, false, PathError, nullptr, PathCode);
+        return true;
+    }
+    if (McpSafeOperations::IsEngineContentPackage(FullAssetPath))
+    {
+        Subsystem->SendAutomationResponse(Socket, RequestId, false, FString::Printf(TEXT("%s is engine content: a data layer asset is made under "
+            "/Game or a project plugin's content. Nothing was created."), *FullAssetPath), nullptr, TEXT("ENGINE_CONTENT"));
+        return true;
     }
 
     FString CreateError, CreateCode;
@@ -141,19 +148,14 @@ bool HandleCreateDataLayer(
     }
 
     UDataLayerAsset* NewDataLayerAsset = NewObject<UDataLayerAsset>(AssetPackage, *DataLayerName, RF_Public | RF_Standalone);
-    if (!NewDataLayerAsset)
-    {
-        Subsystem->SendAutomationResponse(Socket, RequestId, false,
-            TEXT("Failed to create UDataLayerAsset object"), nullptr, TEXT("ASSET_CREATION_FAILED"));
-        return true;
-    }
 
     NewDataLayerAsset->SetType(bRuntime ? EDataLayerType::Runtime : EDataLayerType::Editor);
 
     AssetPackage->MarkPackageDirty();
     FAssetRegistryModule::AssetCreated(NewDataLayerAsset);
 
-    McpSafeAssetSave(NewDataLayerAsset);
+    // A save that failed used to go unsaid: the reply says whether the asset reached disk.
+    const bool bAssetSaved = McpSafeAssetSave(NewDataLayerAsset);
 
     // Step 2: Create a UDataLayerInstance using the asset
 #if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION == 1
@@ -201,6 +203,7 @@ bool HandleCreateDataLayer(
     ResponseJson->SetBoolField(TEXT("initiallyVisible"), bIsInitiallyVisible);
     ResponseJson->SetBoolField(TEXT("initiallyLoaded"), bIsInitiallyLoaded);
     ResponseJson->SetBoolField(TEXT("isPrivate"), bIsPrivate);
+    ResponseJson->SetBoolField(TEXT("saved"), bAssetSaved);
 
     FString Message = FString::Printf(TEXT("Created data layer '%s' with asset at '%s'"),
         *DataLayerName, *FullAssetPath);

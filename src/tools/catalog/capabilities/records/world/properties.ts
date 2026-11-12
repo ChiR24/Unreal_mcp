@@ -151,7 +151,7 @@ export const P = {
   targetTriangleCount: num('Target triangle count for simplification.'),
   targetEdgeLength: num('Target edge length for remeshing.'),
   weldDistance: num('Distance threshold for vertex welding.'),
-  uvChannel: int('UV channel index (0-7).'),
+  uvChannel: { type: 'integer', minimum: 0, maximum: 7, description: 'UV channel index (0-7).' },
   uvScale: { type: 'object', description: 'UV scale {u, v}.', properties: { u: num('U'), v: num('V') }, additionalProperties: false } as JsonObject,
   uvOffset: { type: 'object', description: 'UV offset {u, v}.', properties: { u: num('U'), v: num('V') }, additionalProperties: false } as JsonObject,
   hardEdgeAngle: num('Angle threshold for hard edges (degrees).'),

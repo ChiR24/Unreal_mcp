@@ -2692,7 +2692,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "componentCount": {
           "type": "object",
-          "description": "Component count {x, y}.",
+          "description": "Component count {x, y}: per axis at most 256 components and 8191 quads (130 components of 63 quads), the editor limit.",
           "properties": {
             "x": {
               "type": "number",
@@ -4304,11 +4304,11 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "sizeX": {
           "type": "number",
-          "description": "Landscape size along X, in vertices like the editor Overall Resolution (1009 is 16 components of 63 quads) or in quads; it becomes the fewest whole components that cover it."
+          "description": "Grid cells along X (default 100), each spacing units wide."
         },
         "sizeY": {
           "type": "number",
-          "description": "Landscape size along Y, in vertices like the editor Overall Resolution (1009 is 16 components of 63 quads) or in quads; it becomes the fewest whole components that cover it."
+          "description": "Grid cells along Y (default 100), each spacing units wide."
         },
         "skipFlush": {
           "type": "boolean",
@@ -10719,19 +10719,19 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "agentHeight": {
           "type": "number",
-          "description": "Navigation agent height (default: 144)."
+          "description": "Navigation agent height, 0 to 100000 (default: 144)."
         },
         "agentMaxSlope": {
           "type": "number",
-          "description": "Maximum slope angle in degrees (default: 44)."
+          "description": "Maximum slope angle in degrees, 0 to 89 (default: 44)."
         },
         "agentRadius": {
           "type": "number",
-          "description": "Navigation agent radius (default: 35)."
+          "description": "Navigation agent radius, 0 to 100000 (default: 35)."
         },
         "agentStepHeight": {
           "type": "number",
-          "description": "Maximum step height the agent can climb (default: 35)."
+          "description": "Maximum step height the agent can climb, 0 or more (default: 35)."
         },
         "areaClass": {
           "type": "string",
@@ -10789,11 +10789,11 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "cellHeight": {
           "type": "number",
-          "description": "NavMesh cell height (default: 10)."
+          "description": "NavMesh cell height, 1 to 1024 (default: 10)."
         },
         "cellSize": {
           "type": "number",
-          "description": "NavMesh cell size (default: 19)."
+          "description": "NavMesh cell size, 1 to 1024 (default: 19)."
         },
         "center": {
           "type": "object",
@@ -10884,7 +10884,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "string",
           "enum": [
             "Blackboard",
-            "BlackboardBased",
+            "CheckGameplayTagsOnActor",
             "CompareBBEntries",
             "Cooldown",
             "ConeCheck",
@@ -10897,8 +10897,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             "TagCooldown",
             "TimeLimit",
             "ForceSuccess",
-            "ConditionalLoop",
-            "Custom"
+            "ConditionalLoop"
           ],
           "description": "Decorator node type."
         },
@@ -11310,7 +11309,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "maxSimplificationError": {
           "type": "number",
-          "description": "Edge simplification error."
+          "description": "Edge simplification error, 0 or more."
         },
         "maxWalkSpeed": {
           "type": "number",
@@ -11318,11 +11317,11 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "mergeRegionSize": {
           "type": "number",
-          "description": "Region merge threshold."
+          "description": "Region merge threshold, 0 or more."
         },
         "minRegionArea": {
           "type": "number",
-          "description": "Minimum region area to keep."
+          "description": "Minimum region area to keep, 0 or more."
         },
         "name": {
           "type": "string",
@@ -11511,8 +11510,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "string",
           "enum": [
             "DefaultFocus",
-            "RunEQS",
-            "Custom"
+            "RunEQS"
           ],
           "description": "Service node type."
         },
@@ -11656,15 +11654,14 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             "PlayAnimation",
             "PlaySound",
             "RunEQSQuery",
+            "RunBehavior",
             "RunBehaviorDynamic",
-            "SetBlackboardValue",
             "PushPawnAction",
             "FinishWithResult",
             "MakeNoise",
-            "GameplayTaskBase",
-            "Custom"
+            "SetTagCooldown"
           ],
-          "description": "Task node type."
+          "description": "Task node type (PushPawnAction exists only up to UE 5.5)."
         },
         "teamId": {
           "type": "number",
@@ -11729,7 +11726,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "tileSizeUU": {
           "type": "number",
-          "description": "NavMesh tile size in Unreal units (default: 1000)."
+          "description": "NavMesh tile size in Unreal units, 300 or more (default: 1000)."
         },
         "to": {
           "type": "object",
@@ -12106,31 +12103,31 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "properties": {
             "agentRadius": {
               "type": "number",
-              "description": "Navigation agent radius (default: 35)."
+              "description": "Navigation agent radius, 0 to 100000 (default: 35)."
             },
             "agentHeight": {
               "type": "number",
-              "description": "Navigation agent height (default: 144)."
+              "description": "Navigation agent height, 0 to 100000 (default: 144)."
             },
             "agentMaxSlope": {
               "type": "number",
-              "description": "Maximum slope angle in degrees (default: 44)."
+              "description": "Maximum slope angle in degrees, 0 to 89 (default: 44)."
             },
             "tileSizeUU": {
               "type": "number",
-              "description": "NavMesh tile size in Unreal units (default: 1000)."
+              "description": "NavMesh tile size in Unreal units, 300 or more (default: 1000)."
             },
             "cellSize": {
               "type": "number",
-              "description": "NavMesh cell size (default: 19)."
+              "description": "NavMesh cell size, 1 to 1024 (default: 19)."
             },
             "cellHeight": {
               "type": "number",
-              "description": "NavMesh cell height (default: 10)."
+              "description": "NavMesh cell height, 1 to 1024 (default: 10)."
             },
             "agentStepHeight": {
               "type": "number",
-              "description": "Maximum step height the agent can climb (default: 35)."
+              "description": "Maximum step height the agent can climb, 0 or more (default: 35)."
             },
             "navLinkCount": {
               "type": "number",
@@ -13923,7 +13920,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "samples": {
           "type": "number",
-          "description": "Occlusion rays per texel, 1-1024 (default 64); more is smoother and slower."
+          "description": "Occlusion rays per texel, 1-1024 (default 64); more is smoother and slower. The bake holds the editor while it traces width x height x samples rays, at most 134 million: 1024 x 1024 takes up to 128 samples, 2048 x 2048 up to 32."
         },
         "save": {
           "type": "boolean",
@@ -18560,7 +18557,8 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
                   "type": "string"
                 },
                 "minItems": 2,
-                "description": "align and same types: the widgets lined up or sized alike."
+                "maxItems": 64,
+                "description": "align and same types: the widgets lined up or sized alike (at most 64)."
               },
               "gap": {
                 "type": "number",
@@ -25088,6 +25086,8 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "uvChannel": {
           "type": "integer",
+          "minimum": 0,
+          "maximum": 7,
           "description": "UV channel index (0-7)."
         },
         "uvOffset": {
@@ -25670,6 +25670,8 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "uvChannel": {
           "type": "integer",
+          "minimum": 0,
+          "maximum": 7,
           "description": "UV channel index (0-7)."
         },
         "v": {

@@ -66,8 +66,10 @@ bool UEngineWireSubsystem::HandleSculptLandscape(
 
   FVector LocalPos = Landscape->GetActorTransform()
                          .InverseTransformPosition(TargetLocation);
-  int32 CenterX = FMath::RoundToInt(LocalPos.X);
-  int32 CenterY = FMath::RoundToInt(LocalPos.Y);
+  // Centre and radius are held to sizes no landscape reaches, so the brush box stays inside an int32 for any
+  // location or radius sent.
+  int32 CenterX = FMath::RoundToInt(FMath::Clamp(LocalPos.X, -1.0e8, 1.0e8));
+  int32 CenterY = FMath::RoundToInt(FMath::Clamp(LocalPos.Y, -1.0e8, 1.0e8));
   const FVector LandscapeScale = Landscape->GetActorScale3D();
   const float ScaleX = LandscapeScale.X;
   const float ScaleZ = LandscapeScale.Z;
@@ -81,20 +83,23 @@ bool UEngineWireSubsystem::HandleSculptLandscape(
   }
 
   int32 RadiusVerts =
-      FMath::Max(1, FMath::RoundToInt(BrushRadius / ScaleX));
+      FMath::Max(1, FMath::RoundToInt(FMath::Min(BrushRadius / ScaleX, 1.0e6)));
   int32 FalloffVerts = FMath::RoundToInt(RadiusVerts * BrushFalloff);
   int32 MinX = CenterX - RadiusVerts;
   int32 MaxX = CenterX + RadiusVerts;
   int32 MinY = CenterY - RadiusVerts;
   int32 MaxY = CenterY + RadiusVerts;
   int32 LMinX, LMinY, LMaxX, LMaxY;
-  if (LandscapeInfo->GetLandscapeExtent(LMinX, LMinY, LMaxX,
-                                        LMaxY)) {
-    MinX = FMath::Max(MinX, LMinX);
-    MinY = FMath::Max(MinY, LMinY);
-    MaxX = FMath::Min(MaxX, LMaxX);
-    MaxY = FMath::Min(MaxY, LMaxY);
+  // No extent (a World Partition landscape with nothing loaded) left the box sized from the radius alone, and the
+  // height buffer below from that. Refused as the heightmap and erosion edits refuse it.
+  if (!LandscapeInfo->GetLandscapeExtent(LMinX, LMinY, LMaxX, LMaxY)) {
+    SendAutomationError(RequestingSocket, RequestId, TEXT("Failed to get landscape extent"), TEXT("INVALID_LANDSCAPE"));
+    return true;
   }
+  MinX = FMath::Max(MinX, LMinX);
+  MinY = FMath::Max(MinY, LMinY);
+  MaxX = FMath::Min(MaxX, LMaxX);
+  MaxY = FMath::Min(MaxY, LMaxY);
   if (MinX > MaxX || MinY > MaxY) {
     SendAutomationResponse(
         RequestingSocket, RequestId, false,

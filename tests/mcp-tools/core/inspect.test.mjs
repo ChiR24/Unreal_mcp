@@ -28,6 +28,7 @@ const testCases = [
   { scenario: 'Setup: spawn inspect actor', toolName: 'control_actor', arguments: { action: 'spawn', classPath: '/Engine/BasicShapes/Cube', actorName: ACTOR, location: { x: 0, y: 0, z: 120 } }, expected: 'success|already exists' },
   { scenario: 'Setup: spawn delete actor', toolName: 'control_actor', arguments: { action: 'spawn', classPath: '/Engine/BasicShapes/Sphere', actorName: DELETE_ACTOR, location: { x: 180, y: 0, z: 120 } }, expected: 'success|already exists' },
   { scenario: 'Setup: add inspect component', toolName: 'control_actor', arguments: { action: 'add_component', actorName: ACTOR, componentType: '/Script/Engine.PointLightComponent', componentName: COMPONENT, properties: { Intensity: 900 } }, expected: 'success|already exists' },
+  { scenario: 'ERROR: add_component refuses a name the actor already uses', toolName: 'control_actor', arguments: { action: 'add_component', actorName: ACTOR, componentType: '/Script/Engine.SpotLightComponent', componentName: COMPONENT }, expected: 'error' },
 
   // === OBJECT / ASSET INSPECTION ===
   { scenario: 'INFO: inspect_object actor', toolName: 'inspect', arguments: inspectActor('inspect_object'), expected: 'success' },

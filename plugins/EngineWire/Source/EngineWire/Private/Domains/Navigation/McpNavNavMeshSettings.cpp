@@ -1,4 +1,5 @@
 #include "Domains/Navigation/McpNavPrivate.h"
+#include "Foundation/Reflection/McpPropertyReflection.h"
 
 namespace McpNavigationHandlers
 {
@@ -24,48 +25,84 @@ bool ConfigureNavMesh(
         return true;
     }
 
+    // Two passes over the fields sent. Every value is first checked against the ClampMin and ClampMax of its property,
+    // which the engine holds it to in the Details panel only: a cellSize of 0 divides by zero in the generator, and
+    // 0.01 asks for a hundred thousand cells along each side of a tile. Only then is anything written.
     bool bModified = false;
-    const auto Apply = [&](const TCHAR* Field, auto& Target)
+    bool bCheckOnly = true;
+    FString RangeError;
+    const auto Apply = [&](const TCHAR* Field, const UStruct* Owner, const FName PropertyName, auto& Target)
     {
         double Value = 0.0;
-        if (Payload->TryGetNumberField(Field, Value))
+        if (!Payload->TryGetNumberField(Field, Value))
         {
-            Target = static_cast<std::remove_reference_t<decltype(Target)>>(Value);
-            bModified = true;
+            return;
         }
+        if (bCheckOnly)
+        {
+            const FProperty* Property = Owner->FindPropertyByName(PropertyName);
+            if (Property && RangeError.IsEmpty())
+            {
+                McpPropertyReflection::CheckRange(Property, Value, Field, RangeError);
+            }
+            return;
+        }
+        Target = static_cast<std::remove_reference_t<decltype(Target)>>(Value);
+        bModified = true;
     };
+    const UStruct* MeshType = ARecastNavMesh::StaticClass();
 #if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 2
     FNavMeshResolutionParam& DefaultParams = NavMesh->NavMeshResolutionParams[(uint8)ENavigationDataResolution::Default];
+    const UStruct* ParamType = FNavMeshResolutionParam::StaticStruct();
 #endif
-    PRAGMA_DISABLE_DEPRECATION_WARNINGS
+    const auto ApplyFields = [&]()
+    {
+        PRAGMA_DISABLE_DEPRECATION_WARNINGS
 #if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 3
-    Apply(TEXT("agentStepHeight"), DefaultParams.AgentMaxStepHeight);
+        Apply(TEXT("agentStepHeight"), ParamType, TEXT("AgentMaxStepHeight"), DefaultParams.AgentMaxStepHeight);
 #else
-    Apply(TEXT("agentStepHeight"), NavMesh->AgentMaxStepHeight);
+        Apply(TEXT("agentStepHeight"), MeshType, TEXT("AgentMaxStepHeight"), NavMesh->AgentMaxStepHeight);
 #endif
-    if (bAgentProperties)
-    {
-        Apply(TEXT("agentRadius"), NavMesh->AgentRadius);
-        Apply(TEXT("agentHeight"), NavMesh->AgentHeight);
-        Apply(TEXT("agentMaxSlope"), NavMesh->AgentMaxSlope);
-    }
-    else
-    {
-        Apply(TEXT("tileSizeUU"), NavMesh->TileSizeUU);
-        Apply(TEXT("minRegionArea"), NavMesh->MinRegionArea);
-        Apply(TEXT("mergeRegionSize"), NavMesh->MergeRegionSize);
-        Apply(TEXT("maxSimplificationError"), NavMesh->MaxSimplificationError);
+        if (bAgentProperties)
+        {
+            Apply(TEXT("agentRadius"), MeshType, TEXT("AgentRadius"), NavMesh->AgentRadius);
+            Apply(TEXT("agentHeight"), MeshType, TEXT("AgentHeight"), NavMesh->AgentHeight);
+            Apply(TEXT("agentMaxSlope"), MeshType, TEXT("AgentMaxSlope"), NavMesh->AgentMaxSlope);
+        }
+        else
+        {
+            Apply(TEXT("tileSizeUU"), MeshType, TEXT("TileSizeUU"), NavMesh->TileSizeUU);
+            Apply(TEXT("minRegionArea"), MeshType, TEXT("MinRegionArea"), NavMesh->MinRegionArea);
+            Apply(TEXT("mergeRegionSize"), MeshType, TEXT("MergeRegionSize"), NavMesh->MergeRegionSize);
+            Apply(TEXT("maxSimplificationError"), MeshType, TEXT("MaxSimplificationError"), NavMesh->MaxSimplificationError);
 #if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 2
-        Apply(TEXT("cellSize"), DefaultParams.CellSize);
-        Apply(TEXT("cellHeight"), DefaultParams.CellHeight);
+            Apply(TEXT("cellSize"), ParamType, TEXT("CellSize"), DefaultParams.CellSize);
+            Apply(TEXT("cellHeight"), ParamType, TEXT("CellHeight"), DefaultParams.CellHeight);
 #else
-        Apply(TEXT("cellSize"), NavMesh->CellSize);
-        Apply(TEXT("cellHeight"), NavMesh->CellHeight);
+            Apply(TEXT("cellSize"), MeshType, TEXT("CellSize"), NavMesh->CellSize);
+            Apply(TEXT("cellHeight"), MeshType, TEXT("CellHeight"), NavMesh->CellHeight);
 #endif
+        }
+        PRAGMA_ENABLE_DEPRECATION_WARNINGS
+    };
+    ApplyFields();
+    if (!RangeError.IsEmpty())
+    {
+        Self->SendAutomationError(Socket, RequestId, RangeError + TEXT(". Nothing was changed."), TEXT("INVALID_ARGUMENT"));
+        return true;
     }
-    PRAGMA_ENABLE_DEPRECATION_WARNINGS
+    bCheckOnly = false;
+    ApplyFields();
     if (bModified)
     {
+        // What the editor does on its own edit of a generation property: the cell sizes are matched to the tile, the
+        // nav data config is refilled, and the mesh rebuilds when auto-update is on. Without it the stored numbers and
+        // the built mesh disagreed until someone rebuilt.
+        if (!bAgentProperties)
+        {
+            FPropertyChangedEvent Changed(MeshType->FindPropertyByName(GET_MEMBER_NAME_CHECKED(ARecastNavMesh, TileSizeUU)), EPropertyChangeType::ValueSet);
+            NavMesh->PostEditChangeProperty(Changed);
+        }
         NavMesh->MarkPackageDirty();
     }
 

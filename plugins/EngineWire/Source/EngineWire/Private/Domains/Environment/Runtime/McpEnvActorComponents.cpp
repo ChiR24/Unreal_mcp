@@ -93,8 +93,13 @@ UActorComponent *McpFindOrAddComponent(AActor *Actor, UClass *ComponentClass, co
         return Existing;
     }
 
-    UActorComponent *Component = NewObject<UActorComponent>(Actor, ComponentClass,
-        FName(*(ComponentName.IsEmpty() ? ComponentClass->GetName() : ComponentName)), RF_Transactional);
+    // A name another object under the actor holds gets a free one: NewObject over it is a Fatal log for another class.
+    FName Name(*(ComponentName.IsEmpty() ? ComponentClass->GetName() : ComponentName));
+    if (FindObject<UObject>(Actor, *Name.ToString()))
+    {
+        Name = MakeUniqueObjectName(Actor, ComponentClass, Name);
+    }
+    UActorComponent *Component = NewObject<UActorComponent>(Actor, ComponentClass, Name, RF_Transactional);
     if (!Component)
     {
         return nullptr;

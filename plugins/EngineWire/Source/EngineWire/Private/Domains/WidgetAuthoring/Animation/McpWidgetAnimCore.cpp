@@ -10,6 +10,7 @@
 #include "Blueprint/WidgetTree.h"
 #include "Components/Widget.h"
 #include "Kismet2/BlueprintEditorUtils.h"
+#include "Kismet2/Kismet2NameValidators.h"
 #include "Foundation/BridgeHelpers/McpHelpers.h"
 #include "EngineWireSubsystem.h"
 #include "Transport/WebSocket/McpBridgeWebSocket.h"
@@ -52,6 +53,21 @@ bool HandleWidgetAuthoringAnimationCore(
             Subsystem.SendAutomationError(RequestingSocket, RequestId,
                 FString::Printf(TEXT("Animation '%s' already exists"), *AnimationName),
                 TEXT("ALREADY_EXISTS"));
+            return true;
+        }
+
+        // The editor's own check of a new member name (an empty one, characters a member cannot hold, a name a variable
+        // or function has), then any object the Blueprint holds under it (EventGraph, WidgetTree, a function graph):
+        // NewObject over one of another class is a Fatal log.
+        FKismetNameValidator Validator(WidgetBP);
+        const auto Validity = Validator.IsValid(AnimationName);
+        const bool bHeld = Validity == EValidatorResult::AlreadyInUse || FindObject<UObject>(WidgetBP, *AnimationName) != nullptr;
+        if (bHeld || Validity != EValidatorResult::Ok)
+        {
+            Subsystem.SendAutomationError(RequestingSocket, RequestId,
+                bHeld ? FString::Printf(TEXT("'%s' already names a member of this widget; pick another animationName. Nothing was created."), *AnimationName)
+                      : FString::Printf(TEXT("'%s' cannot name an animation: %s"), *AnimationName, *INameValidatorInterface::GetErrorString(AnimationName, Validity)),
+                bHeld ? TEXT("ALREADY_EXISTS") : TEXT("INVALID_ARGUMENT"));
             return true;
         }
 

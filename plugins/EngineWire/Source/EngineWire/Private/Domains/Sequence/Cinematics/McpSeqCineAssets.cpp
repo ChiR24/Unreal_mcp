@@ -134,6 +134,18 @@ bool HandleCreateMasterSequence(const TSharedPtr<FJsonObject> &Params,
   return true;
 }
 
+// Whether playing Inner inside Outer would make Outer play itself: Inner is Outer, or its own sub track or shot track
+// already holds Outer. The engine compiles each sub section into its sequence with no test for one it is already
+// inside, so such a sequence recurses until the stack is gone when it is next compiled; Sequencer refuses both before
+// it adds (FSubTrackEditorUtil::CanAddSubSequence). The engine's check, and so this one, looks two levels down.
+static bool WouldPlayItself(ULevelSequence *Outer, ULevelSequence *Inner) {
+  if (Outer == Inner) return true;
+  UMovieScene *InnerScene = Inner->GetMovieScene();
+  const UMovieSceneSubTrack *Subs = InnerScene ? MCP_FIND_MOVIESCENE_TRACK(InnerScene, UMovieSceneSubTrack) : nullptr;
+  const UMovieSceneSubTrack *Shots = InnerScene ? MCP_FIND_MOVIESCENE_TRACK(InnerScene, UMovieSceneCinematicShotTrack) : nullptr;
+  return (Subs && Subs->ContainsSequence(*Outer, true)) || (Shots && Shots->ContainsSequence(*Outer, true));
+}
+
 bool HandleAddSubsequence(const TSharedPtr<FJsonObject> &Params,
                           TSharedPtr<FJsonObject> &OutResult) {
   // Keep LoadSequence's own refusal (SEQUENCE_PATH_NOT_WRITABLE,
@@ -148,6 +160,12 @@ bool HandleAddSubsequence(const TSharedPtr<FJsonObject> &Params,
     OutResult = MakeResult(false, TEXT("add_subsequence"),
                            TEXT("A valid subsequencePath is required"),
                            TEXT("INVALID_SEQUENCE"));
+    return true;
+  }
+  if (WouldPlayItself(Master, Sub)) {
+    OutResult = MakeResult(false, TEXT("add_subsequence"),
+                           TEXT("The subsequence is this sequence or already plays it: a sequence cannot play itself. Nothing was added."),
+                           TEXT("CYCLE_DETECTED"));
     return true;
   }
   UMovieScene *MovieScene = Master->GetMovieScene();
@@ -192,6 +210,12 @@ bool HandleAddShotTrack(const TSharedPtr<FJsonObject> &Params,
     OutResult = MakeResult(false, TEXT("add_shot_track"),
                            TEXT("A valid shotSequencePath is required"),
                            TEXT("INVALID_SEQUENCE"));
+    return true;
+  }
+  if (WouldPlayItself(Master, ShotSeq)) {
+    OutResult = MakeResult(false, TEXT("add_shot_track"),
+                           TEXT("The shot is this sequence or already plays it: a sequence cannot play itself. Nothing was added."),
+                           TEXT("CYCLE_DETECTED"));
     return true;
   }
   UMovieScene *MovieScene = Master->GetMovieScene();

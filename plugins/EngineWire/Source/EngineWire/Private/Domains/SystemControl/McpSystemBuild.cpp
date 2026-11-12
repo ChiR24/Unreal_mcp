@@ -1,5 +1,6 @@
 #include "Domains/SystemControl/McpSystemPrivate.h"
 
+#include "Containers/Ticker.h"
 #include "Dom/JsonObject.h"
 #include "HAL/PlatformProcess.h"
 #include "HAL/PlatformTime.h"
@@ -126,8 +127,6 @@ bool HandleRunUbt(UEngineWireSubsystem* Self, const FString& RequestId,
     Arguments += AdditionalArgs;
   }
 
-  int32 ReturnCode = -1;
-  FString StdOut;
   void* ReadPipe = nullptr;
   void* WritePipe = nullptr;
   FPlatformProcess::CreatePipe(ReadPipe, WritePipe);
@@ -143,56 +142,68 @@ bool HandleRunUbt(UEngineWireSubsystem* Self, const FString& RequestId,
     return true;
   }
 
-  const double TimeoutSeconds = 300.0;
-  const double StartTime = FPlatformTime::Seconds();
-
-  while (FPlatformProcess::IsProcRunning(ProcessHandle)) {
-    FString NewOutput = FPlatformProcess::ReadPipe(ReadPipe);
-    if (!NewOutput.IsEmpty()) {
-      StdOut += NewOutput;
-    }
-
-    if (FPlatformTime::Seconds() - StartTime > TimeoutSeconds) {
-      FPlatformProcess::TerminateProc(ProcessHandle, true);
-      FPlatformProcess::ClosePipe(ReadPipe, WritePipe);
-
-      TSharedPtr<FJsonObject> Result = MakeShared<FJsonObject>();
-      Result->SetStringField(TEXT("output"), StdOut);
-      Result->SetBoolField(TEXT("timedOut"), true);
-
-      Self->SendAutomationResponse(RequestingSocket, RequestId, false,
-                                   TEXT("UBT process timed out"), Result,
-                                   TEXT("TIMEOUT"));
+  // The build is polled from the core ticker and answered when it ends: waiting for it here, on the game thread, stopped
+  // the editor ticking, painting and draining its request queue for the whole build.
+  struct FUbtRun {
+    TWeakObjectPtr<UEngineWireSubsystem> Self;
+    FString RequestId, UBTPath, Arguments, StdOut;
+    FSystemControlSocket Socket;
+    FProcHandle Proc;
+    void* ReadPipe = nullptr;
+    void* WritePipe = nullptr;
+    double StartTime = 0.0;
+  };
+  const TSharedRef<FUbtRun> Run = MakeShared<FUbtRun>();
+  Run->Self = Self;
+  Run->RequestId = RequestId;
+  Run->UBTPath = UBTPath;
+  Run->Arguments = Arguments;
+  Run->Socket = RequestingSocket;
+  Run->Proc = ProcessHandle;
+  Run->ReadPipe = ReadPipe;
+  Run->WritePipe = WritePipe;
+  Run->StartTime = FPlatformTime::Seconds();
+  FTSTicker::GetCoreTicker().AddTicker(FTickerDelegate::CreateLambda([Run](float) {
+    constexpr double TimeoutSeconds = 300.0;
+    Run->StdOut += FPlatformProcess::ReadPipe(Run->ReadPipe);
+    const bool bRunning = FPlatformProcess::IsProcRunning(Run->Proc);
+    const bool bTimedOut = bRunning && FPlatformTime::Seconds() - Run->StartTime > TimeoutSeconds;
+    if (bRunning && !bTimedOut) {
       return true;
     }
-
-    FPlatformProcess::Sleep(0.1f);
-  }
-
-  FString FinalOutput = FPlatformProcess::ReadPipe(ReadPipe);
-  if (!FinalOutput.IsEmpty()) {
-    StdOut += FinalOutput;
-  }
-
-  FPlatformProcess::GetProcReturnCode(ProcessHandle, &ReturnCode);
-  FPlatformProcess::CloseProc(ProcessHandle);
-  FPlatformProcess::ClosePipe(ReadPipe, WritePipe);
-
-  TSharedPtr<FJsonObject> Result = MakeShared<FJsonObject>();
-  Result->SetStringField(TEXT("output"), StdOut);
-  Result->SetNumberField(TEXT("returnCode"), ReturnCode);
-  Result->SetStringField(TEXT("ubtPath"), UBTPath);
-  Result->SetStringField(TEXT("arguments"), Arguments);
-
-  if (ReturnCode == 0) {
-    Self->SendAutomationResponse(RequestingSocket, RequestId, true,
-                                 TEXT("UBT completed successfully"), Result);
-  } else {
-    Self->SendAutomationResponse(
-        RequestingSocket, RequestId, false,
-        FString::Printf(TEXT("UBT failed with code %d"), ReturnCode), Result,
-        TEXT("UBT_FAILED"));
-  }
+    int32 ReturnCode = -1;
+    if (bTimedOut) {
+      FPlatformProcess::TerminateProc(Run->Proc, true);
+    } else {
+      Run->StdOut += FPlatformProcess::ReadPipe(Run->ReadPipe);
+      FPlatformProcess::GetProcReturnCode(Run->Proc, &ReturnCode);
+    }
+    FPlatformProcess::CloseProc(Run->Proc);
+    FPlatformProcess::ClosePipe(Run->ReadPipe, Run->WritePipe);
+    UEngineWireSubsystem* Subsystem = Run->Self.Get();
+    if (!Subsystem) {
+      return false;
+    }
+    Subsystem->RunLatentReply(Run->RequestId, TEXT("system_control"), [&]() {
+      TSharedPtr<FJsonObject> Result = MakeShared<FJsonObject>();
+      Result->SetStringField(TEXT("output"), Run->StdOut);
+      if (bTimedOut) {
+        Result->SetBoolField(TEXT("timedOut"), true);
+        Subsystem->SendAutomationResponse(Run->Socket, Run->RequestId, false, TEXT("UBT process timed out"), Result, TEXT("TIMEOUT"));
+        return;
+      }
+      Result->SetNumberField(TEXT("returnCode"), ReturnCode);
+      Result->SetStringField(TEXT("ubtPath"), Run->UBTPath);
+      Result->SetStringField(TEXT("arguments"), Run->Arguments);
+      if (ReturnCode == 0) {
+        Subsystem->SendAutomationResponse(Run->Socket, Run->RequestId, true, TEXT("UBT completed successfully"), Result);
+      } else {
+        Subsystem->SendAutomationResponse(Run->Socket, Run->RequestId, false,
+                                          FString::Printf(TEXT("UBT failed with code %d"), ReturnCode), Result, TEXT("UBT_FAILED"));
+      }
+    });
+    return false;
+  }), 0.1f);
   return true;
 }
 

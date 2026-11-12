@@ -36,7 +36,7 @@ struct FEditPlan
 };
 
 /** segmentSeconds, minShotSeconds and maxShotSeconds over the playback range; an error to refuse with, else empty. */
-FString ReadTiming(const TSharedPtr<FJsonObject>& Payload, ULevelSequence& Sequence, FEditPlan& Plan);
+FString ReadTiming(const TSharedPtr<FJsonObject>& Payload, ULevelSequence& Sequence, int32 Cameras, FEditPlan& Plan);
 
 void ScoreSegments(const UWorld& World, ULevelSequence& Sequence, const TArray<AActor*>& Cameras, const TArray<AActor*>& Subjects,
                    TFunctionRef<McpFrameShot::FLens(AActor&)> LensOf, FEditPlan& Plan);

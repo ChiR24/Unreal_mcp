@@ -103,6 +103,14 @@ bool HandleCreateDisc(UEngineWireSubsystem* Self, const FString& RequestId,
     return true;
 }
 
+// What the engine's stair generator makes for a step count: a solid staircase fills its two sides step by step
+// (2N*N + 10N triangles), a floating one is 16N - 4. numSteps has no bound of its own, and 10000 solid steps are 200
+// million triangles, so the count is checked against the mesh budget before the append.
+static bool GuardStairBudget(UEngineWireSubsystem* Self, const FString& RequestId, TSharedPtr<FMcpBridgeWebSocket> Socket, int64 Steps, bool bFloating)
+{
+    return GuardMeshBudget(Self, RequestId, Socket, bFloating ? 16 * Steps - 4 : 2 * Steps * Steps + 10 * Steps, TEXT("Stairs"));
+}
+
 bool HandleCreateStairs(UEngineWireSubsystem* Self, const FString& RequestId,
                                const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> Socket)
 {
@@ -113,8 +121,10 @@ bool HandleCreateStairs(UEngineWireSubsystem* Self, const FString& RequestId,
     float StepWidth = GetJsonNumberField(Payload, TEXT("stepWidth"), 100.0f);
     float StepHeight = GetJsonNumberField(Payload, TEXT("stepHeight"), 20.0f);
     float StepDepth = GetJsonNumberField(Payload, TEXT("stepDepth"), 30.0f);
-    int32 NumSteps = GetJsonIntField(Payload, TEXT("numSteps"), GetJsonIntField(Payload, TEXT("steps"), 8));
+    // The engine builds at least one step: the count it uses is the one checked and answered.
+    const int32 NumSteps = FMath::Max(1, GetJsonIntField(Payload, TEXT("numSteps"), GetJsonIntField(Payload, TEXT("steps"), 8)));
     bool bFloating = GetJsonBoolField(Payload, TEXT("floating"), false);
+    if (!GuardStairBudget(Self, RequestId, Socket, NumSteps, bFloating)) return true;
 
     UDynamicMesh* DynMesh = NewObject<UDynamicMesh>(GetTransientPackage());
     FGeometryScriptPrimitiveOptions Options;
@@ -149,8 +159,10 @@ bool HandleCreateSpiralStairs(UEngineWireSubsystem* Self, const FString& Request
     // numTurns is the declared spelling; no turns = a quarter turn.
     const float NumTurns = GetJsonNumberField(Payload, TEXT("numTurns"), 0.0f);
     const float CurveAngle = NumTurns > 0.0f ? NumTurns * 360.0f : 90.0f;
-    int32 NumSteps = GetJsonIntField(Payload, TEXT("numSteps"), GetJsonIntField(Payload, TEXT("steps"), 8));
+    // The engine builds at least one step: the count it uses is the one checked and answered.
+    const int32 NumSteps = FMath::Max(1, GetJsonIntField(Payload, TEXT("numSteps"), GetJsonIntField(Payload, TEXT("steps"), 8)));
     bool bFloating = GetJsonBoolField(Payload, TEXT("floating"), false);
+    if (!GuardStairBudget(Self, RequestId, Socket, NumSteps, bFloating)) return true;
 
     UDynamicMesh* DynMesh = NewObject<UDynamicMesh>(GetTransientPackage());
     FGeometryScriptPrimitiveOptions Options;

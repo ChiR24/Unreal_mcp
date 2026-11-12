@@ -4,6 +4,7 @@
 #include "Domains/SCS/McpSCSHandlers.h"
 #include "Domains/SCS/McpSCSSupport.h"
 
+#include "Foundation/BridgeHelpers/Blueprints/McpScsLookup.h"
 #include "Foundation/BridgeHelpers/McpHelpers.h"
 #include "Foundation/HandlerUtils/McpHandlerUtils.h"
 
@@ -118,11 +119,9 @@ TSharedPtr<FJsonObject> FSCSHandlers::AddSCSComponent(
     return Result;
   }
 
-  if (!CompClass->IsChildOf(UActorComponent::StaticClass())) {
+  if (const FString Refusal = McpScsComponentClassRefusal(CompClass, ComponentClass); !Refusal.IsEmpty()) {
     Result->SetBoolField(TEXT("success"), false);
-    Result->SetStringField(
-        TEXT("error"),
-        FString::Printf(TEXT("Class is not a component: %s"), *ComponentClass));
+    Result->SetStringField(TEXT("error"), Refusal);
     return Result;
   }
 

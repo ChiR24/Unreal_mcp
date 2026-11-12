@@ -171,7 +171,9 @@ bool HandleAddBoneAction(UEngineWireSubsystem* Subsystem, const FString& Request
         int32 ParentIndex = INDEX_NONE;
         if (!ParentName.IsEmpty())
         {
-            ParentIndex = RefSkeleton.FindBoneIndex(FName(*ParentName));
+            // A raw bone only: FindBoneIndex also finds the skeleton's virtual bones, which sit after the raw ones, and a
+            // parent index that is not before the new bone's fails a check in FReferenceSkeleton::Add.
+            ParentIndex = RefSkeleton.FindRawBoneIndex(FName(*ParentName));
             if (ParentIndex == INDEX_NONE)
             {
                 Subsystem->SendAutomationError(RequestingSocket, RequestId,

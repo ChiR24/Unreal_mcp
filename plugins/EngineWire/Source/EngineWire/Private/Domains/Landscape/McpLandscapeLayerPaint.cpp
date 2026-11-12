@@ -134,24 +134,27 @@ bool UEngineWireSubsystem::HandlePaintLandscapeLayer(
     PaintMaxY = FMath::CeilToInt(BrushCenter.Y + BrushRadiusQuads);
   }
   int32 LMinX, LMinY, LMaxX, LMaxY;
-  if (LandscapeInfo->GetLandscapeExtent(LMinX, LMinY, LMaxX,
-                                        LMaxY)) {
-    if (!bBrush && !bHasRegion) {
-      PaintMinX = LMinX;
-      PaintMinY = LMinY;
-      PaintMaxX = LMaxX;
-      PaintMaxY = LMaxY;
-    }
-    if (bBrush && (PaintMaxX < LMinX || PaintMinX > LMaxX || PaintMaxY < LMinY || PaintMinY > LMaxY)) {
-      SendAutomationError(RequestingSocket, RequestId, TEXT("Brush lies outside the landscape"),
-                          TEXT("OUT_OF_BOUNDS"));
-      return true;
-    }
-    PaintMinX = FMath::Clamp(PaintMinX, LMinX, LMaxX);
-    PaintMinY = FMath::Clamp(PaintMinY, LMinY, LMaxY);
-    PaintMaxX = FMath::Clamp(PaintMaxX, LMinX, LMaxX);
-    PaintMaxY = FMath::Clamp(PaintMaxY, LMinY, LMaxY);
+  // No extent (a World Partition landscape with nothing loaded) left the region as sent: unclamped, its pixel count
+  // overflows the size test below. Refused as the heightmap and erosion edits refuse it.
+  if (!LandscapeInfo->GetLandscapeExtent(LMinX, LMinY, LMaxX, LMaxY)) {
+    SendAutomationError(RequestingSocket, RequestId, TEXT("Failed to get landscape extent"), TEXT("INVALID_LANDSCAPE"));
+    return true;
   }
+  if (!bBrush && !bHasRegion) {
+    PaintMinX = LMinX;
+    PaintMinY = LMinY;
+    PaintMaxX = LMaxX;
+    PaintMaxY = LMaxY;
+  }
+  if (bBrush && (PaintMaxX < LMinX || PaintMinX > LMaxX || PaintMaxY < LMinY || PaintMinY > LMaxY)) {
+    SendAutomationError(RequestingSocket, RequestId, TEXT("Brush lies outside the landscape"),
+                        TEXT("OUT_OF_BOUNDS"));
+    return true;
+  }
+  PaintMinX = FMath::Clamp(PaintMinX, LMinX, LMaxX);
+  PaintMinY = FMath::Clamp(PaintMinY, LMinY, LMaxY);
+  PaintMaxX = FMath::Clamp(PaintMaxX, LMinX, LMaxX);
+  PaintMaxY = FMath::Clamp(PaintMaxY, LMinY, LMaxY);
   if (PaintMinX > PaintMaxX || PaintMinY > PaintMaxY) {
     SendAutomationError(
         RequestingSocket, RequestId,

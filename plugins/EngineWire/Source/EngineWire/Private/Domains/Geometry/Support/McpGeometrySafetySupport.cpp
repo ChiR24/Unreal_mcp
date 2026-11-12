@@ -4,6 +4,27 @@
 
 namespace McpGeometryHandlers
 {
+UE::Geometry::FDynamicMeshUVOverlay* EnsureUvLayerOrReply(UEngineWireSubsystem* Self, const FString& RequestId, TSharedPtr<FMcpBridgeWebSocket> Socket,
+                                                          UDynamicMesh* Mesh, int32 Channel)
+{
+    if (Channel < 0 || Channel > 7)
+    {
+        Self->SendAutomationError(Socket, RequestId,
+            FString::Printf(TEXT("uvChannel must be 0 to 7; got %d. Nothing was changed."), Channel), TEXT("INVALID_ARGUMENT"));
+        return nullptr;
+    }
+    UE::Geometry::FDynamicMesh3& EditMesh = Mesh->GetMeshRef();
+    if (!EditMesh.HasAttributes())
+    {
+        EditMesh.EnableAttributes();
+    }
+    if (EditMesh.Attributes()->NumUVLayers() <= Channel)
+    {
+        EditMesh.Attributes()->SetNumUVLayers(Channel + 1);
+    }
+    return EditMesh.Attributes()->GetUVLayer(Channel);
+}
+
 bool GuardMeshBudget(UEngineWireSubsystem* Self, const FString& RequestId, TSharedPtr<FMcpBridgeWebSocket> Socket,
                      int64 EstimatedTriangles, const TCHAR* OpName)
 {

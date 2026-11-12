@@ -38,15 +38,29 @@ bool UEngineWireSubsystem::HandleCreateLandscape(
   const auto Components = [&](const TCHAR *Axis, const TCHAR *SizeField, int32 &Out) {
     double Value = 0.0;
     if (bHasCount && (*ComponentCount)->TryGetNumberField(Axis, Value)) {
-      Out = FMath::Max(1, static_cast<int32>(Value));
+      Out = FMath::Max(1, static_cast<int32>(FMath::Min(Value, 1.0e9)));
     } else if (Payload->TryGetNumberField(SizeField, Value) && Value > 0) {
       // A size in vertices like the editor's Overall Resolution (1009 is 16 components of 63 quads) or in quads: the
       // vertex past the last quad needs no extra component, where 1009 used to build 17.
-      Out = FMath::Max(1, FMath::DivideAndRoundUp(static_cast<int32>(Value) - 1, Request.QuadsPerComponent));
+      Out = FMath::Max(1, FMath::DivideAndRoundUp(static_cast<int32>(FMath::Min(Value, 1.0e9)) - 1, Request.QuadsPerComponent));
     }
   };
   Components(TEXT("x"), TEXT("sizeX"), Request.ComponentsX);
   Components(TEXT("y"), TEXT("sizeY"), Request.ComponentsY);
+  // The editor's New Landscape holds each axis to whole components under 8192 vertices and to 256 components
+  // (ULandscapeEditorObject::ClampLandscapeSize). Past that the height array's size overflows and the import is handed
+  // millions of components: a size given in centimetres (sizeX 100000) took the editor down.
+  const int32 MaxComponents = FMath::Min(256, 8191 / Request.QuadsPerComponent);
+  if (Request.ComponentsX > MaxComponents || Request.ComponentsY > MaxComponents) {
+    SendAutomationError(RequestingSocket, RequestId,
+                        FString::Printf(TEXT("A landscape of %d quads per component takes at most %d components per axis (%d vertices), the "
+                                             "editor's limit; this asks for %d x %d. sizeX and sizeY count vertices or quads, not centimetres. "
+                                             "Nothing was created."),
+                                        Request.QuadsPerComponent, MaxComponents, MaxComponents * Request.QuadsPerComponent + 1,
+                                        Request.ComponentsX, Request.ComponentsY),
+                        TEXT("INVALID_ARGUMENT"));
+    return true;
+  }
 
   Request.MaterialPath = GetJsonStringField(Payload, TEXT("materialPath"));
   if (Request.MaterialPath.IsEmpty()) {

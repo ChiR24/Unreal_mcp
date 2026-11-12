@@ -159,6 +159,9 @@ const testCases = [
   { scenario: 'CINEMATICS: add_subsequence optional', toolName: 'manage_sequence', arguments: { action: 'add_subsequence', path: MASTER_PATH, subsequencePath: SUB_PATH_2, rowIndex: 0, startFrame: 10, endFrame: 70, save: true }, expected: 'success|already exists' },
   // add_shot_track
   { scenario: 'CINEMATICS: add_shot_track', toolName: 'manage_sequence', arguments: { action: 'add_shot_track', path: SEQUENCE_PATH, shotSequencePath: MASTER_PATH, displayName: 'Shot_01' }, expected: 'success|already exists' },
+  { scenario: 'ERROR: add_subsequence refuses the sequence itself', toolName: 'manage_sequence', arguments: { action: 'add_subsequence', path: SEQUENCE_PATH, subsequencePath: SEQUENCE_PATH }, expected: 'error' },
+  { scenario: 'ERROR: add_subsequence refuses a sequence that already plays this one', toolName: 'manage_sequence', arguments: { action: 'add_subsequence', path: MASTER_PATH, subsequencePath: SEQUENCE_PATH }, expected: 'error' },
+  { scenario: 'ERROR: add_shot_track refuses a shot that already plays this sequence', toolName: 'manage_sequence', arguments: { action: 'add_shot_track', path: SUB_PATH, shotSequencePath: SEQUENCE_PATH }, expected: 'error' },
   { scenario: 'CINEMATICS: add_shot_track optional', toolName: 'manage_sequence', arguments: { action: 'add_shot_track', path: SEQUENCE_PATH, shotSequencePath: MASTER_PATH_2, displayName: 'ShotTwo', startFrame: 100, durationFrames: 100, endFrame: 200, rowIndex: 1, save: true }, expected: 'success|already exists' },
   // configure_shot_settings
   { scenario: 'CINEMATICS: configure_shot_settings', toolName: 'manage_sequence', arguments: { action: 'configure_shot_settings', path: SEQUENCE_PATH, shotName: 'Shot_01', displayName: 'ShotOne', sectionIndex: 0, durationFrames: 120, save: true }, expected: 'success' },

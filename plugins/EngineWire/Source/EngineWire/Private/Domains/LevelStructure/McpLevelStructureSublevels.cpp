@@ -1,7 +1,6 @@
 #include "Domains/LevelStructure/McpLevelStructureActions.h"
 #include "Domains/LevelStructure/McpLevelStructureEditorWorld.h"
 
-#include "AssetRegistry/AssetRegistryModule.h"
 #include "Components/ActorComponent.h"
 #include "EditorLevelUtils.h"
 #include "Engine/LevelStreaming.h"
@@ -120,9 +119,14 @@ bool HandleCreateSublevel(
         }
     }
 
-    if (!FullSublevelPath.StartsWith(TEXT("/Game/")))
+    // The safe level save takes /Game alone, so a sublevel elsewhere is refused before anything is made. '/Game/' used to
+    // be put in front of any other root, which made '/Game//Engine/...' of a path under /Engine or a plugin mount: a
+    // name CreatePackage is a Fatal log for, as it is for a sublevelName holding two slashes.
+    if (!FullSublevelPath.StartsWith(TEXT("/Game/")) || !FPackageName::IsValidLongPackageName(FullSublevelPath))
     {
-        FullSublevelPath = TEXT("/Game/") + FullSublevelPath;
+        Subsystem->SendAutomationResponse(Socket, RequestId, false, FString::Printf(TEXT("A sublevel is created under /Game: %s is not a level "
+            "path there. Nothing was created."), *FullSublevelPath), nullptr, TEXT("INVALID_ARGUMENT"));
+        return true;
     }
 
     // IDEMPOTENT: Check if sublevel already exists
@@ -157,25 +161,15 @@ bool HandleCreateSublevel(
 
     FString SublevelPackageName = FullSublevelPath;
 
-    UPackage* SublevelPackage = CreatePackage(*SublevelPackageName);
-    if (!SublevelPackage)
-    {
-        Subsystem->SendAutomationResponse(Socket, RequestId, false,
-            FString::Printf(TEXT("Failed to create package for sublevel: %s"), *SublevelPackageName), nullptr, TEXT("PACKAGE_CREATION_FAILED"));
-        return true;
-    }
-
-    UWorld* NewSublevelWorld = UWorld::CreateWorld(EWorldType::Inactive, false, FName(*SublevelName), SublevelPackage);
+    UPackage* SublevelPackage = nullptr;
+    UWorld* NewSublevelWorld = CreateLevelWorld(SublevelPackageName, SublevelName, SublevelPackage);
     if (!NewSublevelWorld)
     {
         Subsystem->SendAutomationResponse(Socket, RequestId, false,
-            FString::Printf(TEXT("Failed to create world for sublevel: %s"), *SublevelName), nullptr, TEXT("WORLD_CREATION_FAILED"));
+            SublevelPackage ? FString::Printf(TEXT("Failed to create world for sublevel: %s"), *SublevelName)
+                            : FString::Printf(TEXT("Failed to create package for sublevel: %s"), *SublevelPackageName),
+            nullptr, SublevelPackage ? TEXT("WORLD_CREATION_FAILED") : TEXT("PACKAGE_CREATION_FAILED"));
         return true;
-    }
-
-    if (!NewSublevelWorld->bIsWorldInitialized)
-    {
-        NewSublevelWorld->InitWorld();
     }
 
     SublevelPackage->MarkPackageDirty();
@@ -183,20 +177,7 @@ bool HandleCreateSublevel(
     bool bSaveSucceeded = true;
     if (bSave)
     {
-        bSaveSucceeded = McpSafeLevelSave(NewSublevelWorld->PersistentLevel, SublevelPackageName);
-
-        if (bSaveSucceeded)
-        {
-            // Flush asset registry so the new level is immediately discoverable
-            IAssetRegistry& AssetRegistry = FModuleManager::LoadModuleChecked<FAssetRegistryModule>("AssetRegistry").Get();
-            FString LevelFilename;
-            if (FPackageName::TryConvertLongPackageNameToFilename(SublevelPackageName, LevelFilename, FPackageName::GetMapPackageExtension()))
-            {
-                TArray<FString> FilesToScan;
-                FilesToScan.Add(LevelFilename);
-                AssetRegistry.ScanFilesSynchronous(FilesToScan, true);
-            }
-        }
+        bSaveSucceeded = SaveLevelWorld(NewSublevelWorld, SublevelPackageName);
     }
 
     ULevelStreaming* StreamingLevel = NewObject<ULevelStreaming>(World, StreamingClass);

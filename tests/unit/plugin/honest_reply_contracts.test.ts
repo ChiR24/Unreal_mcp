@@ -752,6 +752,7 @@ describe('opening another level over unsaved level changes', () => {
     [['Level', 'Lifecycle', 'McpLevelCreate.cpp'], 'McpSafeLoadMap(SavePath, true)'],
     [['ControlEditor', 'McpEditorLevel.cpp'], 'McpSafeLoadMap(MapPathToLoad)'],
     [['LevelStructure', 'McpLevelStructureLevelCreation.cpp'], 'LoadIfRequested(Result,'],
+    [['Lighting', 'McpLightingLevelBootstrap.cpp'], 'McpSafeOperations::McpSafeLoadMap(Path, true)'],
   ];
 
   it('is refused in every mode by one shared check, which lists what would be lost', () => {
@@ -4326,7 +4327,7 @@ describe('AI and navigation writes say what they did', () => {
     const create = code('Landscape', 'McpLandscapeCreation.cpp');
     expect(create).toContain('TEXT("NAME_TAKEN")');
     expect(create).toContain('TEXT("ASSET_NOT_FOUND")');
-    expect(create).toContain('static_cast<int32>(Value) - 1');
+    expect(create).toContain('static_cast<int32>(FMath::Min(Value, 1.0e9)) - 1');
     // A spawned Landscape keeps the engine's old 128 x 128 x 256; the editor builds at 100.
     expect(code('Landscape', 'McpLandscapeCreationTask.cpp')).toContain('Landscape->SetActorRelativeScale3D(FVector(100.0f, 100.0f, 100.0f));');
   });
@@ -4454,8 +4455,15 @@ describe('widget renames and reparents keep what depends on them', () => {
 describe('lighting setup does not destroy work and builds what it names', () => {
   it('a lit level refuses to replace unsaved levels and lights its sky', () => {
     const level = code('Lighting', 'McpLightingLevelBootstrap.cpp');
-    expect(level.indexOf('McpRefuseLoadOverUnsavedLevels(')).toBeLessThan(level.indexOf('GEditor->NewMap();'));
-    expect(level.indexOf('TEXT("PIE_ACTIVE")')).toBeLessThan(level.indexOf('GEditor->NewMap();'));
+    // The level is created, saved and released, then opened by the safe map load: NewMap can assert on UE 5.7 while it
+    // destroys the open world.
+    const made = level.indexOf('McpLevelStructure::CreateLevelWorld(');
+    expect(made).toBeGreaterThan(-1);
+    expect(level).not.toContain('NewMap(');
+    expect(level.indexOf('McpRefuseLoadOverUnsavedLevels(')).toBeLessThan(made);
+    expect(level.indexOf('TEXT("PIE_ACTIVE")')).toBeLessThan(made);
+    expect(made).toBeLessThan(level.indexOf('McpSafeOperations::McpSafeLoadMap(Path, true)'));
+    expect(level.indexOf('McpSafeOperations::McpSafeLoadMap(Path, true)')).toBeLessThan(level.indexOf('SpawnActorInActiveWorld<ADirectionalLight>'));
     expect(level).toContain('/Script/Engine.SkyAtmosphere');
     expect(level).toContain('bRealTimeCapture = true;');
   });
@@ -5000,9 +5008,11 @@ describe('render console settings say what took', () => {
   // names wrote values no engine has; bMobileHQGaussian's override (bOverride_MobileHQGaussian) was never turned on.
   it('values are held to the engine limits and to names the engine has', () => {
     const settings = code('Render', 'McpRenderSupportSettings.h');
-    expect(settings).toContain('Property->GetMetaData(TEXT("ClampMin"))');
-    expect(settings).toContain('Property->GetMetaData(TEXT("ClampMax"))');
-    expect(settings).toMatch(/TEXT\("bOverride_"\) \+ [^;]*\.Mid\(1\)/u);
+    expect(settings).toContain('McpPropertyReflection::CheckRange(Property, Number, Pair.Key, OutError)');
+    const range = code('..', 'Foundation', 'Reflection', 'McpPropertyReflection.h');
+    expect(range).toContain('Property->GetMetaData(TEXT("ClampMin"))');
+    expect(range).toContain('Property->GetMetaData(TEXT("ClampMax"))');
+    expect(settings).toMatch(/TEXT("bOverride_") + [^;]*.Mid(1)/u);
     const enums = code('Render', 'McpRenderSupportEnums.h');
     expect(enums).not.toContain('AEM_Recovery');
     expect(enums).not.toContain('DOFM_');

@@ -81,6 +81,21 @@ inline FString ListMainMaterialInputs(UMaterial* Material)
   return FString::Join(Names, TEXT(", ")) + TEXT(" (also Cloth and CustomData0 = ClearCoat, CustomData1 = ClearCoatRoughness, FuzzColor = SubsurfaceColor)");
 }
 
+// How many inputs Expr has, from the engine's own list. A walk that calls GetInput(Index) until it returns null does
+// not end before UE 5.5: seven engine overrides never return null there (SetMaterialAttributes indexes past its
+// array, the custom-output and vertex-interpolator nodes return their one input for every index, and to 5.2 the
+// quality, feature-level and shading-path switches index a C array), so every walk counts to this.
+inline int32 McpCountMaterialInputs(UMaterialExpression* Expr)
+{
+#if ENGINE_MAJOR_VERSION > 5 || (ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 5)
+  return Expr->CountInputs();
+#elif ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 3
+  return Expr->GetInputsView().Num();
+#else
+  return Expr->GetInputs().Num();
+#endif
+}
+
 // Visits every input of Expr as (FExpressionInput&, PinName): the reflected
 // ExpressionInput properties by property name, then a Custom node's named
 // inputs and a function call's inputs by their declared names.
@@ -98,7 +113,7 @@ inline void ForEachExpressionInput(UMaterialExpression* Expr, TVisitor&& Visit)
   }
   if (UMaterialExpressionMaterialFunctionCall* Call = Cast<UMaterialExpressionMaterialFunctionCall>(Expr)) {
     for (FFunctionExpressionInput& Input : Call->FunctionInputs) {
-      Visit(Input.Input, Input.ExpressionInput ? Input.ExpressionInput->InputName.ToString() : FString());
+      Visit(Input.Input, Input.Input.InputName.ToString());
     }
   }
 }
@@ -109,10 +124,9 @@ inline FExpressionInput* FindMaterialInputProperty(UMaterialExpression* Expressi
 {
   const FStructProperty* Prop = CastField<FStructProperty>(Expression->GetClass()->FindPropertyByName(FName(*Name)));
   FExpressionInput* Storage = Prop ? Prop->ContainerPtrToValuePtr<FExpressionInput>(Expression) : nullptr;
-  for (int32 Index = 0; Storage; ++Index) {
-    FExpressionInput* Input = Expression->GetInput(Index);
-    if (!Input || Input == Storage) {
-      return Input;
+  for (int32 Index = 0, Count = Storage ? McpCountMaterialInputs(Expression) : 0; Index < Count; ++Index) {
+    if (Expression->GetInput(Index) == Storage) {
+      return Storage;
     }
   }
   return nullptr;

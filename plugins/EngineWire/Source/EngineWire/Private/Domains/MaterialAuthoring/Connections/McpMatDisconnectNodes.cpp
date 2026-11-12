@@ -62,7 +62,7 @@ bool HandleDisconnectNodes(UEngineWireSubsystem* Bridge, const FString& RequestI
     // function call's inputs ("OB", "UVs (Vector2)") are not properties, so they never unplugged.
     FExpressionInput *Target = FindMaterialInputProperty(TargetExpr, PinName);
     FString Available;
-    for (int32 InputIndex = 0; !Target && TargetExpr->GetInput(InputIndex); ++InputIndex) {
+    for (int32 InputIndex = 0, InputCount = McpCountMaterialInputs(TargetExpr); !Target && InputIndex < InputCount && TargetExpr->GetInput(InputIndex); ++InputIndex) {
       const FString Label = TargetExpr->GetInputName(InputIndex).ToString();
       if (!PinName.IsEmpty() && McpMaterialInputNamed(Label, PinName)) {
         Target = TargetExpr->GetInput(InputIndex);

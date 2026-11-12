@@ -19,24 +19,18 @@ bool HandleAutoUV(UEngineWireSubsystem* Self, const FString& RequestId,
 
     // XAtlas silently refuses a non-compact mesh or a missing UV layer (its Debug sink
     // was null), which is how auto_uv reported success while writing nothing (dogfood
-    // #133). Compact first, make sure the layer exists, and fall back to a bounds-sized
-    // box projection so the channel is never left empty.
+    // #133). Make sure the layer exists (a channel out of range is refused before anything
+    // changes), compact, and fall back to a bounds-sized box projection so the channel is
+    // never left empty.
+    if (!EnsureUvLayerOrReply(Self, RequestId, Socket, Mesh, UVChannel))
+    {
+        return true;
+    }
     bool bCompacted = false;
     if (!Mesh->GetMeshRef().IsCompact())
     {
         UGeometryScriptLibrary_MeshRepairFunctions::CompactMesh(Mesh, nullptr);
         bCompacted = true;
-    }
-    {
-        UE::Geometry::FDynamicMesh3& EditMesh = Mesh->GetMeshRef();
-        if (!EditMesh.HasAttributes())
-        {
-            EditMesh.EnableAttributes();
-        }
-        if (EditMesh.Attributes()->NumUVLayers() <= UVChannel)
-        {
-            EditMesh.Attributes()->SetNumUVLayers(UVChannel + 1);
-        }
     }
     auto CountUVElements = [Mesh, UVChannel]() -> int32
     {
@@ -115,17 +109,10 @@ bool HandleProjectUV(UEngineWireSubsystem* Self, const FString& RequestId,
     if (!Target) return true;
     auto [TargetActor, DMC, Mesh] = *Target;
     UVChannel = FMath::Max(0, UVChannel);
+    // A channel the mesh lacked was left unwritten while the reply said applied.
+    if (!EnsureUvLayerOrReply(Self, RequestId, Socket, Mesh, UVChannel))
     {
-        // A channel the mesh lacked was left unwritten while the reply said applied.
-        UE::Geometry::FDynamicMesh3& EditMesh = Mesh->GetMeshRef();
-        if (!EditMesh.HasAttributes())
-        {
-            EditMesh.EnableAttributes();
-        }
-        if (EditMesh.Attributes()->NumUVLayers() <= UVChannel)
-        {
-            EditMesh.Attributes()->SetNumUVLayers(UVChannel + 1);
-        }
+        return true;
     }
 
     // An identity box laid one texture repeat on every centimetre, so any texture read as noise. tileSize is the size one

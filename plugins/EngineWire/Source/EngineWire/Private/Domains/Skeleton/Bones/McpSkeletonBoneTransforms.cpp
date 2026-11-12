@@ -44,11 +44,16 @@ bool UEngineWireSubsystem::HandleSetBoneTransform(
     }
 
     FReferenceSkeleton& RefSkeleton = Mesh->GetRefSkeleton();
-    const int32 BoneIndex = RefSkeleton.FindBoneIndex(FName(*BoneName));
+    const int32 BoneIndex = RefSkeleton.FindRawBoneIndex(FName(*BoneName));
     if (BoneIndex == INDEX_NONE)
     {
+        // A virtual bone sits past the raw bones and has no reference pose of its own: its index is out of range for
+        // the raw poses UpdateRefPoseTransform writes, which asserted.
+        const bool bVirtual = RefSkeleton.FindBoneIndex(FName(*BoneName)) != INDEX_NONE;
         SendAutomationError(RequestingSocket, RequestId,
-            FString::Printf(TEXT("Bone '%s' not found on %s"), *BoneName, *Mesh->GetPathName()), TEXT("BONE_NOT_FOUND"));
+            bVirtual ? FString::Printf(TEXT("'%s' is a virtual bone: it follows its source and target bones and has no reference pose of its own to set"), *BoneName)
+                     : FString::Printf(TEXT("Bone '%s' not found on %s"), *BoneName, *Mesh->GetPathName()),
+            bVirtual ? TEXT("VIRTUAL_BONE") : TEXT("BONE_NOT_FOUND"));
         return true;
     }
 

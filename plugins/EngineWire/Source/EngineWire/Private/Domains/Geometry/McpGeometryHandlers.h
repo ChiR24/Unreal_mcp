@@ -99,6 +99,11 @@ AActor* SpawnPrimitiveOrReply(UEngineWireSubsystem* Self, const FString& Request
                               const FTransform& Transform, const FString& Name, UDynamicMesh* DynMesh, TSharedPtr<FJsonObject>& OutResult);
 // Replies with the error and returns false when memory is short or the op would exceed the triangle cap.
 bool GuardMeshBudget(UEngineWireSubsystem* Self, const FString& RequestId, TSharedPtr<FMcpBridgeWebSocket> Socket, int64 EstimatedTriangles, const TCHAR* OpName);
+// The mesh's UV overlay for Channel, with attributes enabled and layers added up to it. A channel outside 0 to 7 is
+// answered INVALID_ARGUMENT and returns null: each layer is an overlay sized to the mesh, so a six-digit channel ran
+// the editor out of memory.
+UE::Geometry::FDynamicMeshUVOverlay* EnsureUvLayerOrReply(UEngineWireSubsystem* Self, const FString& RequestId, TSharedPtr<FMcpBridgeWebSocket> Socket,
+                                                          UDynamicMesh* Mesh, int32 Channel);
 // Moves every vertex to Move(position) in one mesh edit; returns how many moved.
 int32 DeformVertices(UDynamicMesh* Mesh, TFunctionRef<FVector(const FVector&)> Move);
 void RecomputeMeshNormals(UDynamicMesh* Mesh, const FGeometryScriptCalculateNormalsOptions& Options = FGeometryScriptCalculateNormalsOptions());

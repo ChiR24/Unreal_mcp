@@ -17,6 +17,10 @@ namespace McpAutoEdit
 namespace
 {
 constexpr int32 EditMostSegments = 2400;
+// The cut keeps a cost and a back-pointer per segment, camera and shot length, on the game thread: 4 million cells are
+// 48 MB, and the defaults over the longest range are half a million (2400 x 12 x 17). Fine segments with a ten-minute
+// longest shot asked for 173 million and two billion inner steps.
+constexpr int64 EditMostCells = 4000000;
 } // namespace
 
 double FEditPlan::CutCost(int32 Segment, int32 From, int32 To) const
@@ -39,7 +43,7 @@ FFrameNumber FEditPlan::SegmentStart(int32 Segment) const
     return Start + Ticks.AsFrameNumber(Segment * SegmentSeconds);
 }
 
-FString ReadTiming(const TSharedPtr<FJsonObject>& Payload, ULevelSequence& Sequence, FEditPlan& Plan)
+FString ReadTiming(const TSharedPtr<FJsonObject>& Payload, ULevelSequence& Sequence, int32 Cameras, FEditPlan& Plan)
 {
     double Shortest = 1.5;
     double Longest = 8.0;
@@ -57,9 +61,20 @@ FString ReadTiming(const TSharedPtr<FJsonObject>& Payload, ULevelSequence& Seque
     Plan.End = MovieScene->GetPlaybackRange().GetUpperBoundValue();
     const double Seconds = Plan.Ticks.AsSeconds(FFrameTime(Plan.End - Plan.Start));
     Plan.Segments = FMath::Min(FMath::CeilToInt(Seconds / Plan.SegmentSeconds), EditMostSegments);
-    Plan.MinRun = FMath::Max(1, FMath::CeilToInt(Shortest / Plan.SegmentSeconds - 1e-6));
-    Plan.MaxRun = FMath::Max(Plan.MinRun, FMath::FloorToInt(Longest / Plan.SegmentSeconds + 1e-6));
-    return Plan.Segments < 1 ? FString(TEXT("The sequence's playback range is empty.")) : FString();
+    if (Plan.Segments < 1)
+    {
+        return TEXT("The sequence's playback range is empty.");
+    }
+    // No shot is longer than the range, so a shortest or longest shot past it is the range: the edit is the same.
+    const double Whole = Plan.Segments;
+    Plan.MinRun = FMath::Max(1, FMath::CeilToInt(FMath::Min(Shortest / Plan.SegmentSeconds - 1e-6, Whole)));
+    Plan.MaxRun = FMath::Max(Plan.MinRun, FMath::FloorToInt(FMath::Min(Longest / Plan.SegmentSeconds + 1e-6, Whole)));
+    const int64 Cells = static_cast<int64>(Plan.Segments) * Cameras * (static_cast<int64>(Plan.MaxRun) + 1);
+    return Cells > EditMostCells
+        ? FString::Printf(TEXT("segmentSeconds %g with maxShotSeconds %g over this range asks for %lld steps of the cut; it takes at most "
+                               "%lld. Use a longer segmentSeconds or a shorter maxShotSeconds. Nothing changed."),
+                          Plan.SegmentSeconds, Longest, Cells, EditMostCells)
+        : FString();
 }
 
 void ScoreSegments(const UWorld& World, ULevelSequence& Sequence, const TArray<AActor*>& Cameras, const TArray<AActor*>& Subjects,

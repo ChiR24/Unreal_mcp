@@ -56,6 +56,9 @@ UTexture2D* CreateEmptyTexture(const FString& PackagePath, const FString& Textur
         return nullptr;
     }
     NewTexture->SetFlags(RF_Public | RF_Standalone);
+    // A texture loaded to be refilled may still be building from the call that made it: PreEditChange waits for that
+    // build, as the engine asks before any change to a texture.
+    NewTexture->PreEditChange(nullptr);
 
     if (!NewTexture->GetPlatformData())
     {
@@ -88,6 +91,11 @@ UTexture2D* CreateEmptyTexture(const FString& PackagePath, const FString& Textur
     NewTexture->LODGroup = TEXTUREGROUP_World;
     NewTexture->UpdateResource();
     NewTexture->PostEditChange();
+    // PostEditChange starts this texture's build on a worker thread, and the caller goes on to set its colour space
+    // and pixels. A colour space changed under that build fails a check in the engine's texture build task and takes the
+    // editor down (an occlusion bake of 512 x 512 did), so the build is waited for here; the caller's pixel write or save
+    // ends the edit with its own PostEditChange.
+    NewTexture->PreEditChange(nullptr);
     Package->MarkPackageDirty();
     return NewTexture;
 }

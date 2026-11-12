@@ -92,8 +92,19 @@ bool HandleScatterMeshesAlongSpline(
         return true;
     }
 
+    // One static mesh component per step, created and registered on the game thread in one transaction. spacing was
+    // only held above 0: 0.01 along a 10 m spline is 100001 components, and a quotient past an int32 is undefined.
+    constexpr int32 MaxScatteredMeshes = 1000;
     float SplineLength = SplineComp->GetSplineLength();
-    int32 MeshCount = FMath::FloorToInt(SplineLength / Spacing);
+    const double Steps = FMath::FloorToDouble(static_cast<double>(SplineLength) / Spacing);
+    if (Steps + 1.0 > MaxScatteredMeshes)
+    {
+        Self->SendAutomationResponse(Socket, RequestId, false,
+            FString::Printf(TEXT("spacing %g along this spline of %.0f cm would scatter %.0f meshes; one call adds at most %d. Use a larger "
+                "spacing. Nothing was added."), Spacing, SplineLength, Steps + 1.0, MaxScatteredMeshes), nullptr, TEXT("INVALID_PARAM"));
+        return true;
+    }
+    int32 MeshCount = static_cast<int32>(Steps);
     TArray<FString> CreatedMeshes;
     // The scattered parts were added outside any transaction: undo left them in the level, and the reply's placement
     // checks, which watch what a call modifies, never saw them.

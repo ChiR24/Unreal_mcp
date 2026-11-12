@@ -54,6 +54,12 @@ bool HandleConnectLevelBlueprintNodes(UEngineWireSubsystem* Subsystem, const FSt
 bool HandleSetLevelBlueprintPinDefault(UEngineWireSubsystem* Subsystem, const FString& RequestId, const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> Socket);
 bool HandleGetLevelStructureInfo(UEngineWireSubsystem* Subsystem, const FString& RequestId, const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> Socket);
 void CleanupCreatedLevelWorldAfterSave(UWorld* NewWorld, UPackage* Package, const FString& FullPath);
+// A new level's package and its inactive, initialized world named LevelName. Null when either could not be made;
+// OutPackage is null when it was the package.
+UWorld* CreateLevelWorld(const FString& PackagePath, const FString& LevelName, UPackage*& OutPackage);
+// Saves World's level to PackagePath with the safe level save and scans the file into the asset registry, so the new
+// level is found at once. False when the save failed.
+bool SaveLevelWorld(UWorld* World, const FString& PackagePath);
 
 #if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 3
 bool HandleConfigureRuntimeHashSetGrid(

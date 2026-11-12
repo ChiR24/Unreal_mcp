@@ -63,6 +63,17 @@ TSharedPtr<FJsonObject> HandleCreateAoFromMesh(const TSharedPtr<FJsonObject>& Pa
     {
         return AoBakeError(TEXT("INVALID_ARGUMENT"), Error);
     }
+    // The bake traces width x height x samples rays in one pass that holds the game thread: the default (1024 x 1024 x 64,
+    // 67 million rays) measured 13 seconds on UE 5.8 and 2048 x 2048 x 64 about 50, so the largest request the
+    // parameters allowed (4.3 billion) froze the editor for a quarter of an hour. A request past this is refused.
+    constexpr int64 MaxAoBakeRays = 128ll * 1024 * 1024;
+    const int64 Rays = static_cast<int64>(Width) * Height * Samples;
+    if (Rays > MaxAoBakeRays)
+    {
+        return AoBakeError(TEXT("INVALID_ARGUMENT"), FString::Printf(
+            TEXT("%d x %d texels at %d samples is %lld rays, traced in one pass that holds the editor; a bake takes at most %lld. Lower samples, width or height."),
+            Width, Height, Samples, Rays, MaxAoBakeRays));
+    }
     const double RayDistance = GetJsonNumberField(Params, TEXT("rayDistance"), 0.0);
     const int32 UVChannel = static_cast<int32>(GetJsonNumberField(Params, TEXT("uvChannel"), 0.0));
     if (!FMath::IsFinite(RayDistance) || RayDistance < 0.0)

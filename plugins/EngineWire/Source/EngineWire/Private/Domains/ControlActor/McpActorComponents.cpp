@@ -25,16 +25,25 @@ bool UEngineWireSubsystem::HandleControlActorAddComponent(
   }
 
   UClass *ComponentClass = ResolveClassByName(ComponentType);
-  if (!ComponentClass ||
-      !ComponentClass->IsChildOf(UActorComponent::StaticClass())) {
+  // An abstract class (PrimitiveComponent, MeshComponent) makes a component the editor warns about and nulls on save.
+  const bool bAbstract = ComponentClass && ComponentClass->HasAnyClassFlags(CLASS_Abstract);
+  if (!ComponentClass || !ComponentClass->IsChildOf(UActorComponent::StaticClass()) || bAbstract) {
     SendStandardErrorResponse(this, Socket, RequestId, TEXT("CLASS_NOT_FOUND"),
-                              TEXT("Component class not found"), nullptr);
+        bAbstract ? TEXT("Component class is abstract and cannot be added") : TEXT("Component class not found"), nullptr);
     return true;
   }
 
+  // A free name from the engine when none is given: the random suffix used before could land on a taken one.
   if (ComponentName.TrimStartAndEnd().IsEmpty())
-    ComponentName = FString::Printf(TEXT("%s_%d"), *ComponentClass->GetName(),
-                                    FMath::Rand());
+    ComponentName = MakeUniqueObjectName(Found, ComponentClass, ComponentClass->GetFName()).ToString();
+  // NewObject over a subobject of that name is a Fatal log when it is of another class, and for one of the same class
+  // rebuilt the actor's own component in place (an engine ensure) while the reply called it added.
+  if (const UObject *Holder = FindObject<UObject>(Found, *ComponentName)) {
+    SendStandardErrorResponse(this, Socket, RequestId, TEXT("ALREADY_EXISTS"),
+        FString::Printf(TEXT("Component '%s' already exists on %s as a %s; pick another componentName. Nothing was added."),
+                        *ComponentName, *TargetName, *Holder->GetClass()->GetName()), nullptr);
+    return true;
+  }
 
   // One undo step, as remove_component and the property edits are: Modify alone left nothing to take back.
   FMcpScopedEditorTransaction Transaction(FText::FromString(TEXT("Add Component")), EMcpMutationDurability::EditorStateOnly,

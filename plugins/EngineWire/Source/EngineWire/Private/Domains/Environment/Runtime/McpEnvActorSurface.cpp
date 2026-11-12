@@ -93,7 +93,9 @@ int32 McpSetMaterialOnActor(AActor *Actor, const TSharedPtr<FJsonObject> &Payloa
     Actor->GetComponents(Components);
     for (UPrimitiveComponent *Component : Components)
     {
-        if (Component)
+        // SetMaterial grows the override list up to the index it is given: a component without that slot is skipped,
+        // where it took a junk override and an index of millions took gigabytes on each.
+        if (Component && MaterialIndex >= 0 && MaterialIndex < Component->GetNumMaterials())
         {
             Component->Modify();
             Component->SetMaterial(MaterialIndex, Material);
@@ -106,6 +108,10 @@ int32 McpSetMaterialOnActor(AActor *Actor, const TSharedPtr<FJsonObject> &Payloa
         Actor->MarkPackageDirty();
         Resp->SetStringField(TEXT("materialPath"), MaterialPath);
         Resp->SetNumberField(TEXT("materialComponentCount"), AppliedCount);
+    }
+    else
+    {
+        Resp->SetStringField(TEXT("materialError"), FString::Printf(TEXT("No component of the actor has a material slot %d."), MaterialIndex));
     }
     return AppliedCount;
 }

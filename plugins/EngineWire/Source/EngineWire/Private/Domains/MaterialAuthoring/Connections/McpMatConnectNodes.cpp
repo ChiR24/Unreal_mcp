@@ -60,8 +60,7 @@ bool HandleConnectNodes(UEngineWireSubsystem* Bridge, const FString& RequestId, 
         bool bResolvedOutputName = false;
         for (int32 OutputIdx = 0; OutputIdx < MFCallSource->FunctionOutputs.Num(); ++OutputIdx) {
           const FFunctionExpressionOutput& FunctionOutput = MFCallSource->FunctionOutputs[OutputIdx];
-          if (FunctionOutput.ExpressionOutput &&
-              FunctionOutput.ExpressionOutput->OutputName.ToString().Equals(SourcePin, ESearchCase::IgnoreCase)) {
+          if (FunctionOutput.Output.OutputName.ToString().Equals(SourcePin, ESearchCase::IgnoreCase)) {
             SourceOutputIndex = OutputIdx;
             bResolvedOutputName = true;
             break;
@@ -229,7 +228,11 @@ bool HandleConnectNodes(UEngineWireSubsystem* Bridge, const FString& RequestId, 
     // every input by its label (a function call labels them "Name (Type)") or the
     // short name the graph shows, and list the labels on a miss.
     FString Available;
-    for (int32 InputIndex = 0; FExpressionInput *Input = TargetExpr->GetInput(InputIndex); ++InputIndex) {
+    for (int32 InputIndex = 0, InputCount = McpCountMaterialInputs(TargetExpr); InputIndex < InputCount; ++InputIndex) {
+      FExpressionInput *Input = TargetExpr->GetInput(InputIndex);
+      if (!Input) {
+        break;
+      }
       const FString Label = TargetExpr->GetInputName(InputIndex).ToString();
       if (McpMaterialInputNamed(Label, InputName)) {
         Wire(*Input);

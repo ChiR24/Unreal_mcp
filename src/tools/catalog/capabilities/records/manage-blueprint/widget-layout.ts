@@ -102,7 +102,7 @@ export const WIDGET_LAYOUT_RECORDS: readonly CapabilityRecordSource[] = [
         type: { type: 'string', enum: ['leftOf', 'rightOf', 'above', 'below', 'alignLeft', 'alignRight', 'alignTop', 'alignBottom', 'alignCenterX', 'alignCenterY', 'sameWidth', 'sameHeight', 'width', 'height', 'inset', 'center'] },
         widget: { type: 'string', description: 'The widget the relation is about (every type but the align and same ones).' },
         of: { type: 'string', description: 'leftOf, rightOf, above, below: the widget it is placed against (widget leftOf of).' },
-        widgets: { type: 'array', items: { type: 'string' }, minItems: 2, description: 'align and same types: the widgets lined up or sized alike.' },
+        widgets: { type: 'array', items: { type: 'string' }, minItems: 2, maxItems: 64, description: 'align and same types: the widgets lined up or sized alike (at most 64).' },
         gap: { type: 'number', description: 'leftOf, rightOf, above, below: exactly this far apart, in Slate units (left out: at least 0 apart).' },
         value: { type: 'number', minimum: 0, description: 'width, height: the size; inset: the distance from the edge; in Slate units.' },
         edge: { type: 'string', enum: ['left', 'right', 'top', 'bottom'], description: 'inset: the edge of the panel.' },

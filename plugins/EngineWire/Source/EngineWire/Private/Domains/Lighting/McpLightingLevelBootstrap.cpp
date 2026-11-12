@@ -1,11 +1,11 @@
 #include "Core/Compatibility/McpVersionCompatibility.h"
 
 #include "Domains/Lighting/McpLightingPrivate.h"
+#include "Domains/LevelStructure/McpLevelStructureActions.h"
 
 #include "Foundation/BridgeHelpers/McpHelpers.h"
 #include "EngineWireSubsystem.h"
 #include "Foundation/HandlerUtils/McpHandlerUtils.h"
-#include "AssetRegistry/AssetRegistryModule.h"
 #include "Dom/JsonObject.h"
 #include "Components/DirectionalLightComponent.h"
 #include "Components/SkyLightComponent.h"
@@ -93,7 +93,7 @@ bool HandleCreateLightingEnabledLevel(
         Subsystem.SendAutomationError(RequestingSocket, RequestId, TEXT("Play In Editor is running; stop it first. Nothing was created."), TEXT("PIE_ACTIVE"));
         return true;
     }
-    // NewMap replaces the open level like a load does, and dropped its unsaved changes without a word.
+    // The new level is opened below, which replaces the open level and dropped its unsaved changes without a word.
     TSharedPtr<FJsonObject> LossDetails;
     const FString Loss = McpSafeOperations::McpRefuseLoadOverUnsavedLevels(Path, TEXT("Save them with manage_level save first."), LossDetails);
     if (!Loss.IsEmpty())
@@ -106,9 +106,26 @@ bool HandleCreateLightingEnabledLevel(
         IFileManager::Get().MakeDirectory(*FPaths::GetPath(LevelFilename), true);
     }
 
+    // The level is made as manage_level's create_level makes one: its package and an inactive world are created, saved
+    // and released, and the saved level is opened through the safe map load. GEditor->NewMap() can assert on UE 5.7
+    // while it destroys the open world.
+    UPackage* LevelPackage = nullptr;
+    UWorld* NewWorld = McpLevelStructure::CreateLevelWorld(Path, FPaths::GetBaseFilename(Path), LevelPackage);
+    if (!NewWorld || !McpLevelStructure::SaveLevelWorld(NewWorld, Path))
+    {
+        Subsystem.SendAutomationError(RequestingSocket, RequestId, TEXT("Failed to save level"), TEXT("SAVE_FAILED"));
+        return true;
+    }
+    McpLevelStructure::CleanupCreatedLevelWorldAfterSave(NewWorld, LevelPackage, Path);
+    if (!McpSafeOperations::McpSafeLoadMap(Path, true))
+    {
+        Subsystem.SendAutomationError(RequestingSocket, RequestId,
+            FString::Printf(TEXT("The level was created at %s but could not be opened, so its lights were not added."), *Path), TEXT("LOAD_FAILED"));
+        return true;
+    }
+
     // A sun driving a sky atmosphere, and a sky light capturing that sky in real time: a sky light alone captured an
     // empty scene and lit nothing.
-    GEditor->NewMap();
     if (ADirectionalLight* Sun = SpawnActorInActiveWorld<ADirectionalLight>(
             ADirectionalLight::StaticClass(), FVector(0, 0, 500), FRotator(-45, 0, 0), TEXT("Sun")))
     {
@@ -131,15 +148,6 @@ bool HandleCreateLightingEnabledLevel(
     {
         Subsystem.SendAutomationError(RequestingSocket, RequestId, TEXT("Failed to save level"), TEXT("SAVE_FAILED"));
         return true;
-    }
-
-    if (bHasLevelFilename)
-    {
-        IAssetRegistry& AssetRegistry =
-            FModuleManager::LoadModuleChecked<FAssetRegistryModule>("AssetRegistry").Get();
-        TArray<FString> FilesToScan;
-        FilesToScan.Add(LevelFilename);
-        AssetRegistry.ScanFilesSynchronous(FilesToScan, true);
     }
 
     TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();

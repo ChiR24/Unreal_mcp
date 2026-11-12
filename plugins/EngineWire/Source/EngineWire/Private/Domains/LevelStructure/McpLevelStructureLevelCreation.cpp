@@ -1,7 +1,6 @@
 #include "Domains/LevelStructure/McpLevelStructureActions.h"
 #include "Domains/LevelStructure/McpLevelStructureEditorWorld.h"
 
-#include "AssetRegistry/AssetRegistryModule.h"
 #include "Editor.h"
 #include "Engine/World.h"
 #include "FileHelpers.h"
@@ -149,26 +148,14 @@ bool HandleCreateLevel(
         return true;
     }
 
-    UPackage* Package = CreatePackage(*FullPath);
-    if (!Package)
-    {
-        Subsystem->SendAutomationResponse(Socket, RequestId, false,
-            FString::Printf(TEXT("Failed to create package for level: %s"), *FullPath), nullptr);
-        return true;
-    }
-
-    UWorld* NewWorld = UWorld::CreateWorld(EWorldType::Inactive, false, FName(*LevelName), Package);
+    UPackage* Package = nullptr;
+    UWorld* NewWorld = CreateLevelWorld(FullPath, LevelName, Package);
     if (!NewWorld)
     {
         Subsystem->SendAutomationResponse(Socket, RequestId, false,
-            FString::Printf(TEXT("Failed to create world for level: %s"), *FullPath), nullptr);
+            Package ? FString::Printf(TEXT("Failed to create world for level: %s"), *FullPath)
+                    : FString::Printf(TEXT("Failed to create package for level: %s"), *FullPath), nullptr);
         return true;
-    }
-
-    // CreateWorld may already initialize it in some UE versions
-    if (!NewWorld->bIsWorldInitialized)
-    {
-        NewWorld->InitWorld();
     }
 
     bool bWorldPartitionActuallyEnabled = false;
@@ -213,27 +200,8 @@ bool HandleCreateLevel(
     bool bSaveSucceeded = true;
     if (bSave)
     {
-        // CRITICAL: Use McpSafeLevelSave to avoid Intel GPU driver crashes.
-        // FEditorFileUtils::SaveLevel() directly can trigger MONZA DdiThreadingContext
-        // exceptions on Intel GPUs due to render thread race conditions.
-        // The safe wrapper suspends rendering during save and implements retry logic.
-        // Explicitly use 5 retries for Intel GPU resilience (max 7.75s total retry time).
-        bSaveSucceeded = McpSafeLevelSave(NewWorld->PersistentLevel, FullPath);
-
-        if (bSaveSucceeded)
-        {
-            // Flush asset registry so the new level is immediately discoverable
-            IAssetRegistry& AssetRegistry = FModuleManager::LoadModuleChecked<FAssetRegistryModule>("AssetRegistry").Get();
-
-            FString LevelFilename;
-            if (FPackageName::TryConvertLongPackageNameToFilename(FullPath, LevelFilename, FPackageName::GetMapPackageExtension()))
-            {
-                TArray<FString> FilesToScan;
-                FilesToScan.Add(LevelFilename);
-                AssetRegistry.ScanFilesSynchronous(FilesToScan, true);
-            }
-        }
-        else
+        bSaveSucceeded = SaveLevelWorld(NewWorld, FullPath);
+        if (!bSaveSucceeded)
         {
             UE_LOG(LogMcpLevelStructureHandlers, Error, TEXT("McpSafeLevelSave failed for: %s"), *FullPath);
         }

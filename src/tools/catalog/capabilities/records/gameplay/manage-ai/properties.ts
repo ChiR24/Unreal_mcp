@@ -17,16 +17,18 @@ const S: JsonObject = { type: 'string' };
 /** Vector carried as an object with x/y/z, per the native AI accessors. */
 export const xyz = (description: string): JsonObject => closed(description, { x: N, y: N, z: N });
 
+// The AIModule BTTask_<type>, BTDecorator_<type> and BTService_<type> classes the engine can instance on UE 5.0 to 5.8
+// (PushPawnAction only up to 5.5). An abstract base or a name with no class behind it is not listed: it can only fail.
 const TASK_TYPES = [
   'MoveTo', 'MoveDirectlyToward', 'RotateToFaceBBEntry', 'Wait', 'WaitBlackboardTime',
-  'PlayAnimation', 'PlaySound', 'RunEQSQuery', 'RunBehaviorDynamic', 'SetBlackboardValue',
-  'PushPawnAction', 'FinishWithResult', 'MakeNoise', 'GameplayTaskBase', 'Custom',
+  'PlayAnimation', 'PlaySound', 'RunEQSQuery', 'RunBehavior', 'RunBehaviorDynamic',
+  'PushPawnAction', 'FinishWithResult', 'MakeNoise', 'SetTagCooldown',
 ] as const;
 
 const DECORATOR_TYPES = [
-  'Blackboard', 'BlackboardBased', 'CompareBBEntries', 'Cooldown', 'ConeCheck',
+  'Blackboard', 'CheckGameplayTagsOnActor', 'CompareBBEntries', 'Cooldown', 'ConeCheck',
   'DoesPathExist', 'IsAtLocation', 'IsBBEntryOfClass', 'KeepInCone', 'Loop',
-  'SetTagCooldown', 'TagCooldown', 'TimeLimit', 'ForceSuccess', 'ConditionalLoop', 'Custom',
+  'SetTagCooldown', 'TagCooldown', 'TimeLimit', 'ForceSuccess', 'ConditionalLoop',
 ] as const;
 
 const EQS_GENERATOR_TYPES = [
@@ -74,9 +76,9 @@ export const AI = {
 
   // --- behavior tree nodes ---
   compositeType: pick('Composite node type: Selector, Sequence, or SimpleParallel (Parallel is the same).', ['Selector', 'Sequence', 'Parallel', 'SimpleParallel']),
-  taskType: pick('Task node type.', TASK_TYPES),
+  taskType: pick('Task node type (PushPawnAction exists only up to UE 5.5).', TASK_TYPES),
   decoratorType: pick('Decorator node type.', DECORATOR_TYPES),
-  serviceType: pick('Service node type.', ['DefaultFocus', 'RunEQS', 'Custom']),
+  serviceType: pick('Service node type.', ['DefaultFocus', 'RunEQS']),
   subnodeType: pick('Behavior Tree subnode kind for add_subnode.', ['Decorator', 'Service']),
   nodeClass: str('Node class path.'),
   nodeId: str('ID of the node.'),

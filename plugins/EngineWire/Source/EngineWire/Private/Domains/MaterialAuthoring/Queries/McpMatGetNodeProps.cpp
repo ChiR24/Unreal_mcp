@@ -72,17 +72,19 @@ bool HandleGetNodeProperties(UEngineWireSubsystem* Bridge, const FString& Reques
       if (MFC->MaterialFunction) {
         Result->SetStringField(TEXT("functionPath"), MFC->MaterialFunction->GetPathName());
       }
+      // The names saved on the call (UMaterialFunction::GetInputsAndOutputs writes them): the ExpressionInput and
+      // ExpressionOutput pointers beside them are transient, and null for a call whose function went away under it.
       TArray<TSharedPtr<FJsonValue>> FInputsArr;
       for (const FFunctionExpressionInput &FI : MFC->FunctionInputs) {
         TSharedPtr<FJsonObject> IO = MakeShared<FJsonObject>();
-        IO->SetStringField(TEXT("name"), FI.ExpressionInput->InputName.ToString());
+        IO->SetStringField(TEXT("name"), FI.Input.InputName.ToString());
         FInputsArr.Add(MakeShared<FJsonValueObject>(IO));
       }
       Result->SetArrayField(TEXT("inputPins"), FInputsArr);
       TArray<TSharedPtr<FJsonValue>> FOutputsArr;
       for (const FFunctionExpressionOutput &FO : MFC->FunctionOutputs) {
         TSharedPtr<FJsonObject> OO = MakeShared<FJsonObject>();
-        OO->SetStringField(TEXT("name"), FO.ExpressionOutput->OutputName.ToString());
+        OO->SetStringField(TEXT("name"), FO.Output.OutputName.ToString());
         FOutputsArr.Add(MakeShared<FJsonValueObject>(OO));
       }
       Result->SetArrayField(TEXT("outputPins"), FOutputsArr);

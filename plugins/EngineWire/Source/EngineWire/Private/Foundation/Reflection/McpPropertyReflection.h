@@ -31,6 +31,24 @@ ENGINEWIRE_API FString GetPropertyTypeName(FProperty* Property);
 ENGINEWIRE_API FString GetPropertyValueAsString(UObject* Object, FProperty* Property);
 ENGINEWIRE_API TArray<TSharedPtr<FJsonValue>> ExportArrayToJson(void* Container, FArrayProperty* ArrayProp);
 
+// False with OutError ("<Label> must be between 1 and 1024, the engine's limit; got 0") when Number is outside the
+// ClampMin and ClampMax the Details panel holds Property to; a property with neither takes any value. The engine
+// checks them nowhere else, so a value written past them is stored as sent.
+inline bool CheckRange(const FProperty* Property, double Number, const FString& Label, FString& OutError)
+{
+    const FString Min = Property->GetMetaData(TEXT("ClampMin"));
+    const FString Max = Property->GetMetaData(TEXT("ClampMax"));
+    if ((Min.IsEmpty() || Number >= FCString::Atod(*Min)) && (Max.IsEmpty() || Number <= FCString::Atod(*Max)))
+    {
+        return true;
+    }
+    const FString Range = Min.IsEmpty() ? TEXT("at most ") + Max
+                        : Max.IsEmpty() ? TEXT("at least ") + Min
+                                        : FString::Printf(TEXT("between %s and %s"), *Min, *Max);
+    OutError = FString::Printf(TEXT("%s must be %s, the engine's limit; got %g"), *Label, *Range, Number);
+    return false;
+}
+
 inline FProperty* FindPropertyByName(UObject* Object, const FName& PropertyName)
 {
     UClass* Class = Object ? Object->GetClass() : nullptr;

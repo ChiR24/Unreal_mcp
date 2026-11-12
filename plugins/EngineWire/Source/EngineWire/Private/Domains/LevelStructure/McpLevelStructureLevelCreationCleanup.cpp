@@ -1,14 +1,47 @@
 #include "Domains/LevelStructure/McpLevelStructureActions.h"
 
+#include "AssetRegistry/AssetRegistryModule.h"
 #include "Components/ActorComponent.h"
 #include "Engine/World.h"
 #include "GameFramework/Actor.h"
+#include "Misc/PackageName.h"
+#include "Modules/ModuleManager.h"
 #include "RenderingThread.h"
+#include "Safety/McpSafeOperations.h"
 #include "UObject/Package.h"
 #include "UObject/UObjectHash.h"
 
 namespace McpLevelStructure
 {
+
+UWorld* CreateLevelWorld(const FString& PackagePath, const FString& LevelName, UPackage*& OutPackage)
+{
+    OutPackage = CreatePackage(*PackagePath);
+    UWorld* World = OutPackage ? UWorld::CreateWorld(EWorldType::Inactive, false, FName(*LevelName), OutPackage) : nullptr;
+    // CreateWorld may already initialize it in some UE versions
+    if (World && !World->bIsWorldInitialized)
+    {
+        World->InitWorld();
+    }
+    return World;
+}
+
+bool SaveLevelWorld(UWorld* World, const FString& PackagePath)
+{
+    // McpSafeLevelSave, not FEditorFileUtils::SaveLevel: saving directly can raise driver exceptions on Intel GPUs from
+    // a render thread race, and the safe wrapper suspends rendering during the save and retries.
+    if (!McpSafeOperations::McpSafeLevelSave(World->PersistentLevel, PackagePath))
+    {
+        return false;
+    }
+    // Scanned into the asset registry so the new level is found at once.
+    FString LevelFilename;
+    if (FPackageName::TryConvertLongPackageNameToFilename(PackagePath, LevelFilename, FPackageName::GetMapPackageExtension()))
+    {
+        FModuleManager::LoadModuleChecked<FAssetRegistryModule>("AssetRegistry").Get().ScanFilesSynchronous({LevelFilename}, true);
+    }
+    return true;
+}
 
 void CleanupCreatedLevelWorldAfterSave(UWorld* NewWorld, UPackage* Package, const FString& FullPath)
 {

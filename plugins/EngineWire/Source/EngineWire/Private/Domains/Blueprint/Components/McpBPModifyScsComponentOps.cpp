@@ -109,6 +109,11 @@ if (!ComponentClass) {
   OpSummary->SetStringField(TEXT("warning"), ComponentClassPath.IsEmpty()
       ? FString(TEXT("add_component needs a componentClass (or componentType)"))
       : FString::Printf(TEXT("Component class not found: '%s'"), *ComponentClassPath));
+// The test the single add makes, before either way of adding: the fallback below is a check() for a class that is
+// no component, which took the editor down for componentClass "Actor".
+} else if (const FString ClassRefusal = McpScsComponentClassRefusal(ComponentClass, ComponentClassPath); !ClassRefusal.IsEmpty()) {
+  OpSummary->SetBoolField(TEXT("success"), false);
+  OpSummary->SetStringField(TEXT("warning"), ClassRefusal);
 } else {
   USCS_Node *ExistingNode = FindScsNodeByName(LocalSCS, ComponentName);
   if (ExistingNode) {

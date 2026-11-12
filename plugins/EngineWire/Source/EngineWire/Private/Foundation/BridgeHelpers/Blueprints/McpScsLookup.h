@@ -1,6 +1,7 @@
 #pragma once
 
 #include "CoreMinimal.h"
+#include "Components/ActorComponent.h"
 #include "Engine/SCS_Node.h"
 #include "Engine/SimpleConstructionScript.h"
 #include "UObject/UnrealType.h"
@@ -22,4 +23,15 @@ static inline USCS_Node *FindScsNodeByName(USimpleConstructionScript *SCS,
       return Node;
   }
   return nullptr;
+}
+
+// Why Class cannot be added to a Blueprint as a component, or empty when it can. USimpleConstructionScript::CreateNode
+// is a check() for a class that is no component (the editor is gone), and an abstract one (PrimitiveComponent,
+// MeshComponent) makes a template the editor warns about and nulls out on save.
+static inline FString McpScsComponentClassRefusal(const UClass *Class, const FString &Named) {
+  if (!Class->IsChildOf(UActorComponent::StaticClass()))
+    return FString::Printf(TEXT("Class is not a component: %s"), *Named);
+  if (Class->HasAnyClassFlags(CLASS_Abstract))
+    return FString::Printf(TEXT("Class is abstract and cannot be added as a component: %s"), *Named);
+  return FString();
 }

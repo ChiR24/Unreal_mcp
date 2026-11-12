@@ -96,6 +96,8 @@ const testCases = [
 
   // === CONFIG: modify_scs (blueprintPath + operations) ===
   { scenario: 'CONFIG: modify_scs', toolName: 'manage_blueprint', arguments: { action: 'modify_scs', blueprintPath: BP_PATH, operations: [{ type: 'add_component', componentName: 'TestModSCSComp', componentClass: 'SceneComponent' }], applyAndSave: true }, expected: 'success|already exists' },
+  { scenario: 'ERROR: modify_scs refuses a class that is no component', toolName: 'manage_blueprint', arguments: { action: 'modify_scs', blueprintPath: BP_PATH, operations: [{ type: 'add_component', componentName: 'TestNotAComponent', componentClass: 'Actor' }], applyAndSave: false }, expected: 'error' },
+  { scenario: 'ERROR: add_component refuses an abstract component class', toolName: 'manage_blueprint', arguments: { action: 'add_component', blueprintPath: BP_PATH, componentType: 'PrimitiveComponent', componentName: 'TestAbstractComp' }, expected: 'error' },
   { scenario: 'CONFIG: modify_scs one component at the top level', toolName: 'manage_blueprint', arguments: { action: 'modify_scs', blueprintPath: BP_PATH, componentName: 'TestPlacedMesh', location: { x: 0, y: 0, z: 120 }, rotation: { pitch: 0, yaw: 45, roll: 0 }, scale: { x: 1, y: 1, z: 1 }, meshPath: ENGINE_CUBE_MESH, materialPath: ENGINE_BASIC_MATERIAL, properties: { bCastShadow: false }, compile: true, save: true }, expected: 'success' },
 
   // location, rotation and scale sit on an operation itself as well as inside `transform`: the rotation given
@@ -1163,6 +1165,8 @@ const testCases = [
 
     // === ANIMATION ===
     { scenario: 'CREATE: create_widget_animation', toolName: 'manage_blueprint', arguments: widgetArgs('create_widget_animation', { animationName: ANIMATION_NAME, duration: 1.25 }), expected: 'success|already exists' },
+    { scenario: 'ERROR: create_widget_animation refuses a name the Blueprint already holds', toolName: 'manage_blueprint', arguments: widgetArgs('create_widget_animation', { animationName: 'EventGraph' }), expected: 'error' },
+    { scenario: 'ERROR: create_widget_animation refuses a name longer than a member name', toolName: 'manage_blueprint', arguments: widgetArgs('create_widget_animation', { animationName: 'A'.repeat(120) }), expected: 'error' },
     { scenario: 'ADD: add_animation_track', toolName: 'manage_blueprint', arguments: widgetArgs('add_animation_track', { animationName: ANIMATION_NAME, slotName: 'TitleText', trackType: 'opacity' }), expected: 'success|already exists' },
     { scenario: 'ADD: add_animation_keyframe', toolName: 'manage_blueprint', arguments: widgetArgs('add_animation_keyframe', { animationName: ANIMATION_NAME, slotName: 'TitleText', time: 0.25, value: 0.5, interpolation: 'linear' }), expected: 'success' },
     { scenario: 'ERROR: a scale key without an {x,y} pair adds nothing', toolName: 'manage_blueprint', arguments: widgetArgs('add_animation_keyframe', { animationName: ANIMATION_NAME, slotName: 'PlayButton', trackType: 'scale', time: 0, value: 1 }), expected: 'error|INVALID_ARGUMENT' },
