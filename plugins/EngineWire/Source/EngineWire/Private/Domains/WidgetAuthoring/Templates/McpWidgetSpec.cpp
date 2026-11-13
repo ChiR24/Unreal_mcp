@@ -32,7 +32,8 @@ UWidget* BuildNode(UWidgetBlueprint* WidgetBP, const TSharedPtr<FJsonObject>& No
 {
     const FString Type = GetJsonStringField(Node, TEXT("type"));
     UClass* Class = FindObject<UClass>(nullptr, *(TEXT("/Script/UMG.") + Type));
-    if (!Class || !Class->IsChildOf(UWidget::StaticClass()))
+    // An abstract class fired the editor's ensure in NewObject before it came back null.
+    if (!Class || !Class->IsChildOf(UWidget::StaticClass()) || Class->HasAnyClassFlags(CLASS_Abstract))
     {
         OutError = FString::Printf(TEXT("widget spec names an unknown UMG type '%s'"), *Type);
         return nullptr;

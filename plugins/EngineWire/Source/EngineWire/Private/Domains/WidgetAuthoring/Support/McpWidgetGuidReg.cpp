@@ -75,6 +75,22 @@ void RegisterAnimationGuid(UWidgetBlueprint* WidgetBP, UWidgetAnimation* Animati
     }
 }
 
+void RemoveWidgetAnimation(UWidgetBlueprint* WidgetBP, UWidgetAnimation* Animation)
+{
+    if (!WidgetBP || !Animation)
+    {
+        return;
+    }
+    const FName AnimFName = Animation->GetFName();
+    WidgetBP->Animations.Remove(Animation);
+    // Left under the Blueprint, it held its name until a garbage collection, and the same name made again replaced it
+    // in place.
+    Animation->Rename(nullptr, GetTransientPackage(), REN_DontCreateRedirectors | REN_NonTransactional);
+#if MCP_HAS_WIDGET_VARIABLE_GUID_MAP
+    WidgetBP->OnVariableRemoved(AnimFName);
+#endif
+}
+
 void RegisterAllWidgetGuids(UWidgetBlueprint* WidgetBP)
 {
     if (!WidgetBP || !WidgetBP->WidgetTree)

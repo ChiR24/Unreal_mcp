@@ -19,6 +19,7 @@
 #include "Components/TreeView.h"
 #include "Domains/WidgetAuthoring/Styling/McpWidgetImageSize.h"
 #include "Domains/WidgetAuthoring/Support/McpWidgetTreeMutation.h"
+#include "Domains/WidgetAuthoring/Support/McpWidgetValidate.h"
 #include "Styling/CoreStyle.h"
 #include "WidgetBlueprint.h"
 #include "Engine/Texture2D.h"
@@ -131,9 +132,16 @@ bool HandleWidgetAuthoringTypedComponents(
             if (Payload->TryGetStringField(TEXT("text"), Label))
             {
                 // The default button face is light and a new text block white, so the label is dark.
-                const FString LabelName = GetJsonStringField(Payload, TEXT("slotName"), TEXT("Button")) + TEXT("_Text");
+                // Named after the button made (a second unnamed one is Button_1), freed when taken: named after the
+                // request, the label was the first button's, made again over it in place.
                 UWidgetTree* Tree = Cast<UWidgetTree>(Widget->GetOuter());
-                UTextBlock* Text = CreateAndRegisterWidget<UTextBlock>(Tree ? Cast<UWidgetBlueprint>(Tree->GetOuter()) : nullptr, Tree, FName(*LabelName));
+                UWidgetBlueprint* WidgetBP = Tree ? Cast<UWidgetBlueprint>(Tree->GetOuter()) : nullptr;
+                const FName Wanted(*(Widget->GetName() + TEXT("_Text")));
+                const bool bTaken = WidgetBP && (Tree->FindWidget(Wanted) ||
+                    !WidgetAuthoringHelpers::McpWidgetNameConflict(WidgetBP, Wanted, UTextBlock::StaticClass()).IsEmpty());
+                const FString LabelName = bTaken
+                    ? WidgetAuthoringHelpers::McpFreeWidgetName(WidgetBP, Wanted, UTextBlock::StaticClass()) : Wanted.ToString();
+                UTextBlock* Text = CreateAndRegisterWidget<UTextBlock>(WidgetBP, Tree, FName(*LabelName));
                 if (!Text)
                 {
                     return;

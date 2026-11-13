@@ -194,7 +194,7 @@ export const P = {
   selectedOption: S('Selected combo box option.'),
   orientation: { type: 'string', enum: ['Horizontal', 'Vertical'], description: 'Widget orientation.' },
   // Widget panels
-  scrollBarVisibility: { type: 'string', enum: ['Visible', 'Collapsed', 'Auto'], description: 'Scroll bar visibility.' },
+  scrollBarVisibility: { type: 'string', enum: ['Visible', 'Collapsed', 'Hidden'], description: 'Scroll bar visibility: Visible shows the bar while the content overflows (always with alwaysShowScrollbar); Collapsed and Hidden show none, Hidden keeping its space.' },
   alwaysShowScrollbar: B('Always show scrollbar.'),
   columnCount: N('Number of columns in a uniform/grid panel.'),
   rowCount: N('Number of rows in a uniform/grid panel.'),

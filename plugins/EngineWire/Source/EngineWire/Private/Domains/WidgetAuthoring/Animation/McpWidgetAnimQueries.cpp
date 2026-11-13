@@ -1,6 +1,7 @@
 #include "Domains/WidgetAuthoring/McpWidgetActions.h"
 #include "Foundation/HandlerUtils/McpHandlerUtilsTransforms.h"
 #include "Domains/WidgetAuthoring/Support/McpWidgetBPLoading.h"
+#include "Domains/WidgetAuthoring/Support/McpWidgetGuidRegistry.h"
 
 #include "Animation/MovieScene2DTransformTrack.h"
 #include "Animation/WidgetAnimation.h"
@@ -221,7 +222,7 @@ bool HandleWidgetAuthoringAnimationQueries(
             return true;
         }
 
-        WidgetBP->Animations.Remove(Animation);
+        WidgetAuthoringHelpers::RemoveWidgetAnimation(WidgetBP, Animation);
         const bool bSaved = WidgetAuthoringHelpers::MarkWidgetBlueprintModifiedAndSave(WidgetBP);
 
         ResultJson->SetBoolField(TEXT("success"), true);

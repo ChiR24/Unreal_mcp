@@ -84,10 +84,15 @@ bool HandleWidgetAuthoringGenericComponent(
             WidgetClass = ResolveClassByName(TypeName.Mid(1));
         }
 
-        if (!WidgetClass || !WidgetClass->IsChildOf(UWidget::StaticClass()))
+        // An abstract class (Widget, PanelWidget, UserWidget) fired the editor's ensure in NewObject before it came
+        // back null; the Designer's palette lists none.
+        const bool bAbstract = WidgetClass && WidgetClass->HasAnyClassFlags(CLASS_Abstract);
+        if (!WidgetClass || !WidgetClass->IsChildOf(UWidget::StaticClass()) || bAbstract)
         {
             Subsystem.SendAutomationError(RequestingSocket, RequestId,
-                FString::Printf(TEXT("Unknown widget type: %s"), *ComponentType), TEXT("UNKNOWN_TYPE"));
+                FString::Printf(TEXT("Unknown widget type: %s%s"), *ComponentType,
+                    bAbstract ? TEXT(" (an abstract class: no widget is made of it)") : TEXT("")),
+                TEXT("UNKNOWN_TYPE"));
             return true;
         }
 

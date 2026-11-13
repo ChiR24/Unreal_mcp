@@ -73,6 +73,32 @@ inline bool ResolveAlignmentValue(const TSharedPtr<FJsonValue> &Value,
   return true;
 }
 
+// One axis of a CanvasPanel child's pivot into InOut: a number, or left/top 0, center 0.5, right/bottom 1. An axis
+// not sent keeps its value; fill is no pivot.
+inline bool ReadPivotAxis(const TSharedPtr<FJsonValue> &Value, double &InOut, FString &OutError) {
+  if (!Value.IsValid()) {
+    return true;
+  }
+  if (Value->Type == EJson::Number) {
+    InOut = Value->AsNumber();
+    return true;
+  }
+  FString Text;
+  Value->TryGetString(Text);
+  Text = Text.TrimStartAndEnd().ToLower();
+  const double Word = Text == TEXT("left") || Text == TEXT("top")        ? 0.0
+                      : Text == TEXT("center") || Text == TEXT("centre") ? 0.5
+                      : Text == TEXT("right") || Text == TEXT("bottom")  ? 1.0
+                                                                         : -1.0;
+  if (Word < 0.0) {
+    OutError = TEXT("A CanvasPanel child's alignment is its pivot: give a number 0-1 or left, center, right, top or "
+                    "bottom (fill is for box slots).");
+    return false;
+  }
+  InOut = Word;
+  return true;
+}
+
 inline bool WriteAlignmentProperty(UPanelSlot *Slot, const TCHAR *PropertyName,
                                    uint8 AlignValue) {
   FByteProperty *Property =
@@ -104,9 +130,17 @@ inline bool Apply(UWidget *Widget, const TSharedPtr<FJsonObject> &AlignmentObj,
   }
 
   if (UCanvasPanelSlot *CanvasSlot = Cast<UCanvasPanelSlot>(Slot)) {
-    FVector2D Alignment(0.0, 0.0);
-    AlignmentObj->TryGetNumberField(TEXT("x"), Alignment.X);
-    AlignmentObj->TryGetNumberField(TEXT("y"), Alignment.Y);
+    // From the slot's own pivot: an axis not sent was reset to 0, and a word was read as 0.
+    FVector2D Alignment = CanvasSlot->GetAlignment();
+    if (!AlignmentObj->HasField(TEXT("x")) && !AlignmentObj->HasField(TEXT("y"))) {
+      OutError = TEXT("`alignment` carried neither x nor y for a CanvasPanelSlot; give a number 0-1 or left, center, "
+                      "right, top or bottom.");
+      return false;
+    }
+    if (!ReadPivotAxis(AlignmentObj->TryGetField(TEXT("x")), Alignment.X, OutError) ||
+        !ReadPivotAxis(AlignmentObj->TryGetField(TEXT("y")), Alignment.Y, OutError)) {
+      return false;
+    }
     CanvasSlot->SetAlignment(Alignment);
     ResultJson->SetStringField(
         TEXT("appliedAlignment"),

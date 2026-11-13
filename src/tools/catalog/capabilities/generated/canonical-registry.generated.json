@@ -1,5 +1,5 @@
 {
-  "catalogRevision": "8b366503d4970ef4",
+  "catalogRevision": "1e8aa930a1afc140",
   "recordCount": 489,
   "records": [
     {
@@ -17673,9 +17673,9 @@
               "enum": [
                 "Visible",
                 "Collapsed",
-                "Auto"
+                "Hidden"
               ],
-              "description": "Scroll bar visibility."
+              "description": "Scroll bar visibility: Visible shows the bar while the content overflows (always with alwaysShowScrollbar); Collapsed and Hidden show none, Hidden keeping its space."
             },
             "alwaysShowScrollbar": {
               "type": "boolean",
@@ -18074,8 +18074,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "5a4dac7a54a1f3bd5a1938c69c2343ed23dd436981386515cc1b84d4515c858d",
-        "content": "9243ba276e8a8a5cfbb2f62c42c8d7f638f3e88c509976f74449e7c5aa6f4b47"
+        "schema": "2fbe38235e16c0a893bb91bd8bcaaf936423ee31b2ebeaaa5e460d4dd0f3a893",
+        "content": "b6017df50524091e331d6571275ceb48623d35e651d6e6088f349059048ef012"
       }
     },
     {

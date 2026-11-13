@@ -12,28 +12,29 @@
 
 namespace McpBlueprintHandlers {
 namespace {
-// The user pins of a function's entry node (its inputs) or return node (its outputs), in order.
-FString ExistingFunctionPinNames(const UEdGraph *Graph, bool bInputs) {
+// The user pins of a function's entry node (its inputs) or return node (its outputs), in order, as "name: type".
+FString ExistingFunctionPins(const UEdGraph *Graph, bool bInputs) {
   TArray<FString> Names;
   const UK2Node_EditablePinBase *Terminator =
       bInputs ? static_cast<const UK2Node_EditablePinBase *>(McpBlueprintUtils::FirstNodeOfClass<UK2Node_FunctionEntry>(Graph))
               : McpBlueprintUtils::FirstNodeOfClass<UK2Node_FunctionResult>(Graph);
   if (Terminator) {
     for (const TSharedPtr<FUserPinInfo> &Pin : Terminator->UserDefinedPins) {
-      Names.Add(Pin.IsValid() ? Pin->PinName.ToString() : FString());
+      Names.Add(Pin.IsValid() ? Pin->PinName.ToString() + TEXT(": ") + McpBlueprintUtils::DescribePinType(Pin->PinType) : FString());
     }
   }
   return FString::Join(Names, TEXT(", "));
 }
 
-FString RequestedFunctionPinNames(const TSharedPtr<FJsonObject> &Payload, const TCHAR *Field) {
+FString RequestedFunctionPins(const TSharedPtr<FJsonObject> &Payload, const TCHAR *Field) {
   TArray<FString> Names;
   const TArray<TSharedPtr<FJsonValue>> *Pins = nullptr;
   Payload->TryGetArrayField(Field, Pins);
   for (int32 Index = 0; Pins && Index < Pins->Num(); ++Index) {
     const TSharedPtr<FJsonObject> *Pin = nullptr;
     if ((*Pins)[Index].IsValid() && (*Pins)[Index]->TryGetObject(Pin)) {
-      Names.Add(GetJsonStringField(*Pin, TEXT("name")));
+      Names.Add(GetJsonStringField(*Pin, TEXT("name")) + TEXT(": ") +
+                McpBlueprintUtils::DescribePinType(McpBlueprintUtils::MakePinType(GetJsonStringField(*Pin, TEXT("type")))));
     }
   }
   return FString::Join(Names, TEXT(", "));
@@ -56,8 +57,9 @@ FString DescribeFunctionSignatureMismatch(const UEdGraph *Graph, const TSharedPt
   }
   for (const bool bInputs : {true, false}) {
     const TCHAR *Field = bInputs ? TEXT("inputs") : TEXT("outputs");
-    const FString Have = ExistingFunctionPinNames(Graph, bInputs);
-    const FString Want = RequestedFunctionPinNames(Payload, Field);
+    // Names alone: a pin of another type answered "Function already exists" as if it matched.
+    const FString Have = ExistingFunctionPins(Graph, bInputs);
+    const FString Want = RequestedFunctionPins(Payload, Field);
     if (Payload->HasField(Field) && !Have.Equals(Want, ESearchCase::IgnoreCase)) {
       return FString::Printf(TEXT("its %s are [%s], not [%s]"), Field, *Have, *Want);
     }

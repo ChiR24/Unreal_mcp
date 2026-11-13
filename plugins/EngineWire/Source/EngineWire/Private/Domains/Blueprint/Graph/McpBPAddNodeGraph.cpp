@@ -213,8 +213,15 @@ UEdGraphNode *CreateBlueprintGraphNode(
 
   if (NodeTypeLower.Contains(TEXT("callfunction")) ||
       NodeTypeLower.Contains(TEXT("function"))) {
+    // With no name the node was bound to nothing and answered "Node added"; the compile failed on a function None.
+    if (FunctionName.IsEmpty()) {
+      OutErrorResult = McpHandlerUtils::CreateResultObject();
+      OutErrorMessage = TEXT("A CallFunction node needs memberName: the function it calls.");
+      OutErrorCode = TEXT("INVALID_ARGUMENT");
+      return nullptr;
+    }
     UK2Node_CallFunction *FuncNode = NewObject<UK2Node_CallFunction>(TargetGraph);
-    if (FuncNode && !FunctionName.IsEmpty()) {
+    if (FuncNode) {
       UFunction *FoundFunc = FEngineWire_ResolveFunction(BP, FunctionName);
       // An unresolved name used to fall through and leave a bound-to-nothing
       // node in the graph: the call answered "Node added", and the only sign
@@ -250,8 +257,10 @@ UEdGraphNode *CreateBlueprintGraphNode(
 
   if (NodeTypeLower.Contains(TEXT("customevent"))) {
     UK2Node_CustomEvent *CustomEvent = NewObject<UK2Node_CustomEvent>(TargetGraph);
-    if (CustomEvent && !NodeName.IsEmpty()) {
-      CustomEvent->CustomFunctionName = FName(*NodeName);
+    if (CustomEvent) {
+      // Without a name it was left None, which does not compile: named as the editor names a new one.
+      CustomEvent->CustomFunctionName =
+          NodeName.IsEmpty() ? FBlueprintEditorUtils::FindUniqueCustomEventName(BP) : FName(*NodeName);
     }
     return CustomEvent;
   }
@@ -288,8 +297,13 @@ UEdGraphNode *CreateBlueprintGraphNode(
     // no longer fails UNSUPPORTED_NODE while create_node succeeds.
     NodeClass = McpBlueprintGraphHandlers::FindNodeClassByName(NodeType);
   }
+  // A concrete graph node class only: an abstract one (K2Node) was the editor's abstract-class ensure in NewObject and
+  // a node of no use, and another class's default object was read as a node's by the graph check.
+  if (NodeClass && (!NodeClass->IsChildOf(UEdGraphNode::StaticClass()) || NodeClass->HasAnyClassFlags(CLASS_Abstract))) {
+    NodeClass = nullptr;
+  }
   const FString Mismatch = McpBlueprintGraphHandlers::DescribeGraphMismatch(NodeClass, TargetGraph);
-  if (NodeClass && NodeClass->IsChildOf(UEdGraphNode::StaticClass()) && Mismatch.IsEmpty()) {
+  if (NodeClass && Mismatch.IsEmpty()) {
     return NewObject<UEdGraphNode>(TargetGraph, NodeClass);
   }
   if (!Mismatch.IsEmpty()) {

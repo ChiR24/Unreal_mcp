@@ -172,11 +172,14 @@ if (!ComponentClass) {
     if (bAddedViaSubsystem) {
       OpSummary->SetBoolField(TEXT("success"), true);
       OpSummary->SetStringField(TEXT("componentName"), ComponentName);
-      // The node was added under the root: attach it by name now that it exists, and report it.
+      // The node was added under the root: attach it by the name it got now that it exists, and report it. Looked
+      // up by the name asked for, a renamed node was never found and stayed on the root.
+      FString AddedName = ComponentName;
+      OpSummary->TryGetStringField(TEXT("renamedTo"), AddedName);
       McpScsParent::AttachAndReport(LocalBP, LocalBP->SimpleConstructionScript,
-                                    ComponentName, AttachToName, OpSummary);
+                                    AddedName, AttachToName, OpSummary);
       if (AttachToName.TrimStartAndEnd().IsEmpty()) {
-        McpScsParent::ReportParent(LocalBP->SimpleConstructionScript, ComponentName, OpSummary);
+        McpScsParent::ReportParent(LocalBP->SimpleConstructionScript, AddedName, OpSummary);
       }
       // The contract says add_component also takes `transform`, a `properties`
       // bag, `meshPath` and `materialPath`, but this only ever created the node:
@@ -186,9 +189,7 @@ if (!ComponentClass) {
       // on the node just added, whichever of them the operation names.
       if (ScsOpHasEdits(Op)) {
         TSharedPtr<FJsonObject> Applied = MakeShared<FJsonObject>(*Op);
-        FString RenamedTo;
-        if (OpSummary->TryGetStringField(TEXT("renamedTo"), RenamedTo))
-          Applied->SetStringField(TEXT("componentName"), RenamedTo);
+        Applied->SetStringField(TEXT("componentName"), AddedName);
         ApplyModifyScsModifyComponent(LocalBP, LocalBP->SimpleConstructionScript, Applied, OpSummary);
       }
     } else {

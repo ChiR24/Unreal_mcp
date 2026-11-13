@@ -92,8 +92,13 @@ inline bool AttachNodeToNamedParent(UBlueprint *Blueprint,
   }
 
   if (USCS_Node *ParentNode = FindScsNodeByName(SCS, Trimmed)) {
-    if (ParentNode == Child) {
-      OutError = TEXT("A component cannot be its own parent.");
+    // A parent under the node left a cycle no root reaches: its components vanished from spawned actors and
+    // GetAllNodes recursed without end. IsChildOf counts the node itself.
+    if (ParentNode->IsChildOf(Child)) {
+      OutError = ParentNode == Child
+                     ? FString(TEXT("A component cannot be its own parent."))
+                     : FString::Printf(TEXT("'%s' sits under '%s'; a component cannot be attached below itself."),
+                                       *Trimmed, *Child->GetVariableName().ToString());
       return false;
     }
     // AddChildNode and AddNode both APPEND to the SCS AllNodes array (no

@@ -18736,9 +18736,9 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "enum": [
             "Visible",
             "Collapsed",
-            "Auto"
+            "Hidden"
           ],
-          "description": "Scroll bar visibility."
+          "description": "Scroll bar visibility: Visible shows the bar while the content overflows (always with alwaysShowScrollbar); Collapsed and Hidden show none, Hidden keeping its space."
         },
         "seconds": {
           "type": "number",

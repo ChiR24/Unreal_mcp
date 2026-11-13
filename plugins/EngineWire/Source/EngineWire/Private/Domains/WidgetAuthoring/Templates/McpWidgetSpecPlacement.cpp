@@ -238,11 +238,7 @@ UWidgetAnimation* McpAddOpacityAnimation(UWidgetBlueprint* WidgetBP, const FStri
 
 void McpRemoveWidgetAnimation(UWidgetBlueprint* WidgetBP, const FString& AnimationName)
 {
-    if (UWidgetAnimation* Animation = WidgetBP ? FindWidgetAnimation(WidgetBP, AnimationName) : nullptr)
-    {
-        WidgetBP->Animations.Remove(Animation);
-        Animation->Rename(nullptr, GetTransientPackage(), REN_DontCreateRedirectors | REN_NonTransactional);
-    }
+    RemoveWidgetAnimation(WidgetBP, WidgetBP ? FindWidgetAnimation(WidgetBP, AnimationName) : nullptr);
 }
 
 void McpBindSpecSlot(const TSharedPtr<FJsonObject>& Spec, const FString& SlotName)

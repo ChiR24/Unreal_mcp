@@ -116,31 +116,6 @@ FSCSHandlers::ReparentSCSComponent(const FString &BlueprintPath,
   const FString ParentDisplayName =
       ExpectedParentName.IsEmpty() ? FString(TEXT("(root)")) : ExpectedParentName;
 
-  auto IsDescendantOf = [](USCS_Node *A, USCS_Node *B) -> bool {
-    if (!A || !B) {
-      return false;
-    }
-    TArray<USCS_Node *> Stack;
-    Stack.Add(A);
-    while (Stack.Num() > 0) {
-      USCS_Node *Cur = Stack.Pop(MCP_DISALLOW_SHRINKING);
-      if (!Cur) {
-        continue;
-      }
-      const TArray<USCS_Node *> &Kids = Cur->GetChildNodes();
-      for (USCS_Node *K : Kids) {
-        if (!K) {
-          continue;
-        }
-        if (K == B) {
-          return true;
-        }
-        Stack.Add(K);
-      }
-    }
-    return false;
-  };
-
   USCS_Node *OldParent = SCS->FindParentNode(ComponentNode);
 
   if ((NewParentNode == nullptr && OldParent == nullptr &&
@@ -155,7 +130,7 @@ FSCSHandlers::ReparentSCSComponent(const FString &BlueprintPath,
     return Result;
   }
 
-  if (NewParentNode && IsDescendantOf(ComponentNode, NewParentNode)) {
+  if (NewParentNode && NewParentNode->IsChildOf(ComponentNode)) {
     Result->SetBoolField(TEXT("success"), false);
     Result->SetStringField(
         TEXT("error"),

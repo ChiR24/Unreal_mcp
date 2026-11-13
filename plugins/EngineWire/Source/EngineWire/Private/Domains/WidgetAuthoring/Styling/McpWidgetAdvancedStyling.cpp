@@ -87,13 +87,15 @@ bool HandleWidgetAuthoringAdvancedStyling(
             return true;
         }
 
-        UObject* FontObject = FontPath.IsEmpty()
-            ? nullptr
-            : StaticLoadObject(UObject::StaticClass(), nullptr, *FontPath);
+        // FontInfo.FontObject serves only a Font asset: a texture or a material was written under a success reply.
+        UObject* Loaded = FontPath.IsEmpty() ? nullptr : StaticLoadObject(UObject::StaticClass(), nullptr, *FontPath);
+        UFont* FontObject = Cast<UFont>(Loaded);
         if (!FontPath.IsEmpty() && !FontObject)
         {
             Subsystem.SendAutomationError(RequestingSocket, RequestId, FString::Printf(
-                TEXT("font '%s' does not load; pass a Font asset path such as /Game/UI/Fonts/F_Title."), *FontPath), TEXT("ASSET_NOT_FOUND"));
+                TEXT("font '%s' %s; pass a Font asset path such as /Game/UI/Fonts/F_Title."), *FontPath,
+                Loaded ? *FString::Printf(TEXT("is a %s, not a Font"), *Loaded->GetClass()->GetName()) : TEXT("does not load")),
+                TEXT("ASSET_NOT_FOUND"));
             return true;
         }
         if (!FontObject && !bSize)

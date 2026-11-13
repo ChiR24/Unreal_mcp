@@ -34,19 +34,7 @@ bool HandleBlueprintEnsureProbe(const FBlueprintActionContext &Context) {
     }
 
     // Check if blueprint exists using lightweight check
-    FString CheckPath = Path;
-    if (!CheckPath.StartsWith(TEXT("/Game")) &&
-        !CheckPath.StartsWith(TEXT("/Engine")) &&
-        !CheckPath.StartsWith(TEXT("/Script"))) {
-      if (CheckPath.StartsWith(TEXT("/"))) {
-        CheckPath = TEXT("/Game") + CheckPath;
-      } else {
-        CheckPath = TEXT("/Game/") + CheckPath;
-      }
-    }
-    if (CheckPath.EndsWith(TEXT(".uasset"))) {
-      CheckPath = CheckPath.LeftChop(7);
-    }
+    const FString CheckPath = McpBlueprintCheckPath(Path);
 
     const bool bExists = McpAssetExists(CheckPath);
 
@@ -97,20 +85,7 @@ bool HandleBlueprintEnsureProbe(const FBlueprintActionContext &Context) {
       return true;
     }
 
-    // Normalize path
-    FString CheckPath = Path;
-    if (!CheckPath.StartsWith(TEXT("/Game")) &&
-        !CheckPath.StartsWith(TEXT("/Engine")) &&
-        !CheckPath.StartsWith(TEXT("/Script"))) {
-      if (CheckPath.StartsWith(TEXT("/"))) {
-        CheckPath = TEXT("/Game") + CheckPath;
-      } else {
-        CheckPath = TEXT("/Game/") + CheckPath;
-      }
-    }
-    if (CheckPath.EndsWith(TEXT(".uasset"))) {
-      CheckPath = CheckPath.LeftChop(7);
-    }
+    const FString CheckPath = McpBlueprintCheckPath(Path);
 
     // The class comes from the same registry entry, without loading the asset.
     // (A lookup by object path, given this package path, never found it.)

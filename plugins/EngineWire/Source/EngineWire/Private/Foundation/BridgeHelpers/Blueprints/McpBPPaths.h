@@ -39,11 +39,9 @@ static inline UObject *McpLoadAsset(const FString &Path) {
   return IsValid(Asset) ? Asset : nullptr;
 }
 
-static inline bool FindBlueprintNormalizedPath(const FString &Req,
-                                               FString &OutNormalized) {
-  OutNormalized.Empty();
-  if (Req.IsEmpty())
-    return false;
+// The package path a Blueprint request names: ".uasset" and an object-path tail (BP_X.BP_X) cut off, a path under
+// /Game/, /Engine/, /Script/ or another mounted root (a plugin's content) kept, and anything else put under /Game.
+static inline FString McpBlueprintCheckPath(const FString &Req) {
   FString CheckPath = Req;
 
   if (CheckPath.EndsWith(TEXT(".uasset"))) {
@@ -75,7 +73,15 @@ static inline bool FindBlueprintNormalizedPath(const FString &Req,
       CheckPath = TEXT("/Game/") + CheckPath;
     }
   }
+  return CheckPath;
+}
 
+static inline bool FindBlueprintNormalizedPath(const FString &Req,
+                                               FString &OutNormalized) {
+  OutNormalized.Empty();
+  if (Req.IsEmpty())
+    return false;
+  const FString CheckPath = McpBlueprintCheckPath(Req);
   if (McpAssetExists(CheckPath)) {
     OutNormalized = CheckPath;
     return true;
