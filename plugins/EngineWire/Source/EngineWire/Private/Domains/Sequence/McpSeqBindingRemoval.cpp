@@ -2,6 +2,25 @@
 #include "Foundation/BridgeHelpers/Blueprints/McpBPPaths.h"
 #include "Domains/Sequence/McpSeqEditorSupport.h"
 
+// Removes the possessable Guid names and, first, every one under it (a component binding hangs under its actor's),
+// as Sequencer's delete does: a child left behind kept its tracks under a parent that was gone. Returns how many
+// children went.
+static int32 RemovePossessableTree(ULevelSequence *Sequence, UMovieScene *MovieScene, const FGuid &Guid) {
+  TArray<FGuid> Children;
+  for (int32 Index = 0; Index < MovieScene->GetPossessableCount(); ++Index) {
+    if (MovieScene->GetPossessable(Index).GetParent() == Guid) {
+      Children.Add(MovieScene->GetPossessable(Index).GetGuid());
+    }
+  }
+  int32 Removed = 0;
+  for (const FGuid &Child : Children) {
+    Removed += 1 + RemovePossessableTree(Sequence, MovieScene, Child);
+  }
+  Sequence->UnbindPossessableObjects(Guid);
+  MovieScene->RemovePossessable(Guid);
+  return Removed;
+}
+
 bool UEngineWireSubsystem::HandleSequenceRemoveActors(
     const FString &RequestId, const TSharedPtr<FJsonObject> &Payload,
     TSharedPtr<FMcpBridgeWebSocket> Socket) {
@@ -42,11 +61,11 @@ bool UEngineWireSubsystem::HandleSequenceRemoveActors(
           // sequence_add_actors already does.
           LevelSeq->Modify();
           MovieScene->Modify();
-          LevelSeq->UnbindPossessableObjects(RemovedGuid);
-          MovieScene->RemovePossessable(RemovedGuid);
+          const int32 Children = RemovePossessableTree(LevelSeq, MovieScene, RemovedGuid);
           LevelSeq->MarkPackageDirty();
           Item->SetBoolField(TEXT("success"), true);
           Item->SetStringField(TEXT("status"), TEXT("Actor removed"));
+          Item->SetNumberField(TEXT("childBindingsRemoved"), Children);
           RemovedCount++;
         } else {
           Item->SetBoolField(TEXT("success"), false);

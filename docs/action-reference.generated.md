@@ -4,7 +4,7 @@
 
 # Action reference
 
-Catalog revision: `5d448e19b36a6c4e`
+Catalog revision: `8b366503d4970ef4`
 
 Both transports expose exactly ONE public MCP tool, `unreal`, with the four
 operations `search` / `describe` / `execute` / `configure`. The parent tools

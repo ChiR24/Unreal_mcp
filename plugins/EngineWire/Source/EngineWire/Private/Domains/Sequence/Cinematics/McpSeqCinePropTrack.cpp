@@ -18,7 +18,6 @@
 #include "UObject/UnrealType.h"
 
 namespace McpSequenceCinematics {
-namespace {
 FProperty *ResolveBoundPropertyPath(UMovieScene *MovieScene, const FGuid &Guid,
                                     FString &InOutPath, FString &OutError) {
   UObject *DefaultObject = GetBindingTemplate(MovieScene, Guid);
@@ -45,6 +44,7 @@ FProperty *ResolveBoundPropertyPath(UMovieScene *MovieScene, const FGuid &Guid,
   return RootProperty;
 }
 
+namespace {
 bool IsTransformPropertyName(const FString &Name,
                              EMovieSceneTransformChannel &OutChannels) {
   auto Is = [&Name](const TCHAR *Candidate) {
@@ -74,7 +74,7 @@ bool AddTransformPropertyTrack(ULevelSequence *Sequence, const FGuid &Guid,
                                const TSharedPtr<FJsonObject> &Params,
                                const FString &RequestedName,
                                EMovieSceneTransformChannel Channels,
-                               TSharedPtr<FJsonObject> &OutResult) {
+                               TSharedPtr<FJsonObject> &OutResult, FNewBinding &NewBinding) {
   UMovieScene *MovieScene = Sequence->GetMovieScene();
   UMovieSceneTrack *Track =
       MovieScene->FindTrack(UMovieScene3DTransformTrack::StaticClass(), Guid);
@@ -94,6 +94,7 @@ bool AddTransformPropertyTrack(ULevelSequence *Sequence, const FGuid &Guid,
   SetSectionRange(MovieScene, Section, Params, 100);
   MovieScene->Modify();
   Sequence->MarkPackageDirty();
+  NewBinding.Keep();
   if (!MaybeSaveSequence(Sequence, Params, OutResult)) return true;
   const TCHAR *MaskName =
       Channels == EMovieSceneTransformChannel::AllTransform ? TEXT("Transform")
@@ -111,6 +112,20 @@ bool AddTransformPropertyTrack(ULevelSequence *Sequence, const FGuid &Guid,
   return true;
 }
 
+// The integer properties the version's integer track writes: FIntProperty up to 5.6, whose int32 traits wrote four
+// bytes at any integer property's offset; from 5.7 a variant over the signed 8- to 64-bit types that asserts on a
+// property it cannot match. Bytes, enums and unsigned integers take none of them.
+#if ENGINE_MAJOR_VERSION > 5 || ENGINE_MINOR_VERSION >= 7
+const TCHAR *const IntegerTrackTypes = TEXT("int8, int16, int32 or int64");
+bool IsIntegerTrackProperty(const FProperty *Property) {
+  return Property && (Property->IsA<FIntProperty>() || Property->IsA<FInt64Property>() ||
+                      Property->IsA<FInt16Property>() || Property->IsA<FInt8Property>());
+}
+#else
+const TCHAR *const IntegerTrackTypes = TEXT("int32");
+bool IsIntegerTrackProperty(const FProperty *Property) { return Property && Property->IsA<FIntProperty>(); }
+#endif
+
 UClass *ResolvePropertyTrackClass(const FString &Requested,
                                   const FProperty *Property,
                                   FString &OutResolved) {
@@ -124,9 +139,7 @@ UClass *ResolvePropertyTrackClass(const FString &Requested,
   } else if (Property && Property->IsA<FFloatProperty>()) {
     OutResolved = TEXT("float");
     TrackClass = UMovieSceneFloatTrack::StaticClass();
-  } else if (const FNumericProperty *Numeric =
-                 CastField<FNumericProperty>(Property);
-             Numeric && Numeric->IsInteger()) {
+  } else if (IsIntegerTrackProperty(Property)) {
     OutResolved = TEXT("integer");
     TrackClass = UMovieSceneIntegerTrack::StaticClass();
   }
@@ -145,7 +158,8 @@ bool HandleAddPropertyTrack(const TSharedPtr<FJsonObject> &Params,
                             TSharedPtr<FJsonObject> &OutResult) {
   ULevelSequence *Sequence = nullptr;
   FGuid Guid;
-  if (!LoadSequenceAndBinding(Params, TEXT("add_property_track"), Sequence, Guid, OutResult))
+  FNewBinding NewBinding;
+  if (!LoadSequenceAndBinding(Params, TEXT("add_property_track"), Sequence, Guid, OutResult, NewBinding))
     return true;
   const FString RequestedName =
       GetString(Params, TEXT("propertyName"), TEXT("property"));
@@ -166,7 +180,7 @@ bool HandleAddPropertyTrack(const TSharedPtr<FJsonObject> &Params,
   EMovieSceneTransformChannel TransformChannels = EMovieSceneTransformChannel::None;
   if (IsTransformPropertyName(PropertyPath, TransformChannels)) {
     return AddTransformPropertyTrack(Sequence, Guid, Params, RequestedName,
-                                     TransformChannels, OutResult);
+                                     TransformChannels, OutResult, NewBinding);
   }
   FString PathError;
   FProperty *Property = ResolveBoundPropertyPath(
@@ -187,8 +201,10 @@ bool HandleAddPropertyTrack(const TSharedPtr<FJsonObject> &Params,
   if (!TrackClass) {
     OutResult = MakeResult(
         false, TEXT("add_property_track"),
-        FString::Printf(TEXT("propertyType '%s' is incompatible with '%s'"),
-                        *RequestedType, *PropertyPath),
+        ResolvedType.IsEmpty()
+            ? FString::Printf(TEXT("'%s' is a %s; a property track animates a float, double, bool or %s property"),
+                              *PropertyPath, *Property->GetCPPType(), IntegerTrackTypes)
+            : FString::Printf(TEXT("propertyType '%s' is incompatible with '%s'"), *RequestedType, *PropertyPath),
         TEXT("PROPERTY_TYPE_MISMATCH"));
     return true;
   }
@@ -211,6 +227,7 @@ bool HandleAddPropertyTrack(const TSharedPtr<FJsonObject> &Params,
   SetSectionRange(Sequence->GetMovieScene(), Section, Params, 100);
   Sequence->GetMovieScene()->Modify();
   Sequence->MarkPackageDirty();
+  NewBinding.Keep();
   if (!MaybeSaveSequence(Sequence, Params, OutResult)) return true;
   OutResult = MakeResult(true, TEXT("add_property_track"),
                          TEXT("Property track added"));

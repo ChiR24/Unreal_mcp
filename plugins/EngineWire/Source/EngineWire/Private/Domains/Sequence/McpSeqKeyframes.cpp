@@ -195,21 +195,24 @@ bool UEngineWireSubsystem::HandleSequenceAddKeyframe(
       MovieScene->MarkPackageDirty();
       bRangeExtended = true;
     }
+    FString KeyErrorCode;
     const bool bAdded =
         bTransform ? McpSequenceKeyframes::AddTransformKeyframe(MovieScene, BindingGuid, TickFrame, Keys[Index], BoundRoot)
                    : McpSequenceKeyframes::AddPropertyKeyframe(MovieScene, BindingGuid, PropertyName, TickFrame,
-                                                               Keys[Index], SuccessMessage);
+                                                               Keys[Index], SuccessMessage, KeyErrorCode);
     if (!bAdded) {
       // A transform key fails only on its value: calling that an unsupported property sent callers looking elsewhere.
       SendAutomationError(
           Socket, RequestId,
           Where + (Index > 0 ? FString::Printf(TEXT("(the %d keys before it were written) "), Index) : FString()) +
-              (bTransform ? TEXT("The value keyed nothing. ") : TEXT("Unsupported property or value. ")) +
+              (!KeyErrorCode.IsEmpty() ? SuccessMessage + TEXT(" ")
+               : FString(bTransform ? TEXT("The value keyed nothing. ") : TEXT("Unsupported property or value. "))) +
               TEXT("Transform takes value {location: {x,y,z}, rotation: {pitch,yaw,roll}, scale: {x,y,z}} (any of "
                    "them; lookAt needs location beside it), Location, Rotation and Scale that one object, Visibility "
-                   "true or false, and a float or bool property its number or bool. Example params: ") +
+                   "true or false, and a float or double property of the binding a number, a bool property true or false. "
+                   "Example params: ") +
               KeyParamsExample,
-          bTransform ? TEXT("INVALID_ARGUMENT") : TEXT("UNSUPPORTED_PROPERTY"));
+          !KeyErrorCode.IsEmpty() ? KeyErrorCode : FString(bTransform ? TEXT("INVALID_ARGUMENT") : TEXT("UNSUPPORTED_PROPERTY")));
       return true;
     }
   }

@@ -14,14 +14,8 @@ bool UEngineWireSubsystem::HandleSequenceAddSection(
   FString ActorName;
   Payload->TryGetStringField(TEXT("actorName"), ActorName);
   double StartFrame = 0.0, EndFrame = 100.0;
-  // The contract declares these as `start`/`end`; only the longer spellings
-  // were read, so a caller following the schema silently got the 0-100 default
-  // range instead of the one they asked for. Accept both.
-  if (!Payload->TryGetNumberField(TEXT("startFrame"), StartFrame)) {
-    Payload->TryGetNumberField(TEXT("start"), StartFrame);
-  }
-  const bool bHasEnd = Payload->TryGetNumberField(TEXT("endFrame"), EndFrame) ||
-                       Payload->TryGetNumberField(TEXT("end"), EndFrame);
+  Payload->TryGetNumberField(TEXT("start"), StartFrame);
+  const bool bHasEnd = Payload->TryGetNumberField(TEXT("end"), EndFrame);
   FString BindingId;
   Payload->TryGetStringField(TEXT("bindingId"), BindingId);
   FString SoundPath;
@@ -78,6 +72,14 @@ bool UEngineWireSubsystem::HandleSequenceAddSection(
              "cut has no camera and Movie Render Queue renders the default "
              "view."),
         TEXT("INVALID_ARGUMENT"));
+    return true;
+  }
+  // A cut stores any id: one the sequence has no binding for cut to no camera under a success reply.
+  if (bCameraBound && !MovieScene->FindBinding(CameraBinding)) {
+    SendAutomationError(Socket, RequestId,
+                        FString::Printf(TEXT("bindingId %s names no binding of this sequence (get_bindings lists them)."),
+                                        *BindingId),
+                        TEXT("BINDING_NOT_FOUND"));
     return true;
   }
 

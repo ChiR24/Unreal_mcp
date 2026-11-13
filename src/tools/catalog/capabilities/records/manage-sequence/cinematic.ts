@@ -165,7 +165,7 @@ export const CINEMATIC_RECORDS: readonly CapabilityRecordSource[] = [
   }),
   buildRecord({
     id: 'sequence.cinematic.add_camera_cut_track', action: 'add_camera_cut_track', family: F, domain: D,
-    summary: 'Add a camera cut track to a cinematic sequence.',
+    summary: 'Add a camera cut to a cinematic sequence at startFrame, to the camera bindingGuid or actorName names. Without durationFrames or endFrame the cut runs to the next cut or the end of playback and the cut before it ends where it starts, as Sequencer\'s own add does.',
     whenToUse: ['A camera cut track must be added for shot transitions.'],
     whenNotToUse: ['The sequence already has a camera cut track.'],
     // Native HandleAddCameraCutTrack (Cinematics/CameraTracks.cpp:44-105) reads

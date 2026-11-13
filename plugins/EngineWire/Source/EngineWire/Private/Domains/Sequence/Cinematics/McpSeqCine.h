@@ -4,6 +4,7 @@
 #include "Dom/JsonObject.h"
 
 class AActor;
+class FProperty;
 class UActorComponent;
 class FMcpBridgeWebSocket;
 class ULevelSequence;
@@ -76,13 +77,34 @@ void SetSectionRange(UMovieScene *MovieScene, UMovieSceneSection *Section,
                      const TSharedPtr<FJsonObject> &Params,
                      int32 DefaultDuration = 100);
 bool ReadBindingGuid(const TSharedPtr<FJsonObject> &Params, FGuid &OutGuid);
+// False with OutResult set (BINDING_NOT_FOUND naming it) when bindingGuid parses but names no binding of MovieScene: a
+// camera cut stores any id, and the cut bound no camera under a success reply.
+bool CheckRequestedBinding(const TSharedPtr<FJsonObject> &Params, UMovieScene *MovieScene, const TCHAR *Action,
+                           TSharedPtr<FJsonObject> &OutResult);
 // A possessable's class default object, else a spawnable's template; null when neither resolves.
 UObject *GetBindingTemplate(UMovieScene *MovieScene, const FGuid &Guid);
+// InOutPath resolved on the binding's template; a component property is re-rooted to RootComponent, the path gaining
+// "RootComponent.". Null with OutError when the binding has no such property.
+FProperty *ResolveBoundPropertyPath(UMovieScene *MovieScene, const FGuid &Guid, FString &InOutPath, FString &OutError);
 // Params[Field] (a finite number) written to Object's nested PropertyPath; recorded in Applied.
 bool ApplyNumber(UObject *Object, const TSharedPtr<FJsonObject> &Params,
                  const TCHAR *Field, const TCHAR *PropertyPath, TArray<FString> &Applied);
 AActor *ResolveActor(const TSharedPtr<FJsonObject> &Params);
 FGuid ResolveOrCreateBinding(ULevelSequence *Sequence, AActor *Actor);
+// A binding this call made for an actor the sequence did not bind yet. Unless the handler calls Keep() at its
+// success, it is taken back out (its objects unbound, the possessable and its tracks removed) when this goes out of
+// scope: every refusal after the binding was made used to leave it in the sequence.
+struct FNewBinding {
+  ULevelSequence *Sequence = nullptr;
+  FGuid Guid;
+  FNewBinding() = default;
+  FNewBinding(const FNewBinding &) = delete;
+  FNewBinding &operator=(const FNewBinding &) = delete;
+  ~FNewBinding();
+  void Keep() { Sequence = nullptr; }
+};
+// ResolveOrCreateBinding, noting in New a binding it had to make.
+FGuid BindActor(ULevelSequence *Sequence, AActor *Actor, FNewBinding &New);
 // A new possessable for Component, a child of ParentGuid's binding, bound through Context (its actor, or the template
 // it was found on). Callers look for an existing binding first.
 FGuid BindComponentUnderActor(ULevelSequence *Sequence, const FGuid &ParentGuid, UActorComponent *Component,
@@ -91,11 +113,11 @@ FGuid BindComponentUnderActor(ULevelSequence *Sequence, const FGuid &ParentGuid,
 // a sequence copied beside a copied level still binds the first level's actors. Invalid when none has that name.
 FGuid RebindPossessableByName(ULevelSequence *Sequence, AActor *Actor);
 // bindingGuid, else the actorName actor's binding (created when missing); invalid when neither resolves.
-FGuid ResolveRequestBinding(const TSharedPtr<FJsonObject> &Params, ULevelSequence *Sequence);
+FGuid ResolveRequestBinding(const TSharedPtr<FJsonObject> &Params, ULevelSequence *Sequence, FNewBinding &New);
 // LoadSequence plus ResolveRequestBinding; false with OutResult set (INVALID_ARGUMENT for a missing binding).
 bool LoadSequenceAndBinding(const TSharedPtr<FJsonObject> &Params, const TCHAR *Action,
                             ULevelSequence *&OutSequence, FGuid &OutGuid,
-                            TSharedPtr<FJsonObject> &OutResult);
+                            TSharedPtr<FJsonObject> &OutResult, FNewBinding &New);
 FGuid FindExistingBinding(ULevelSequence *Sequence, UObject *Object,
                           UObject *Context);
 void LocateBindingObjects(

@@ -99,7 +99,13 @@ bool HandleCreateMasterSequence(const TSharedPtr<FJsonObject> &Params,
       return true;
     }
   }
-  ULevelSequence *Sequence = McpSequence::CreateSequenceAsset(Name, Folder);
+  FString NameError;
+  ULevelSequence *Sequence = McpSequence::CreateSequenceAsset(Name, Folder, NameError);
+  if (!NameError.IsEmpty()) {
+    OutResult = MakeResult(false, TEXT("create_master_sequence"),
+                           FString::Printf(TEXT("Invalid sequence name '%s': %s"), *Name, *NameError), TEXT("INVALID_NAME"));
+    return true;
+  }
   if (!Sequence || !Sequence->GetMovieScene()) {
     OutResult = MakeResult(false, TEXT("create_master_sequence"),
                            TEXT("Failed to create LevelSequence asset"),

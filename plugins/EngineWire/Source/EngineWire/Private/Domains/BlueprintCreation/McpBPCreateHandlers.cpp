@@ -39,6 +39,16 @@ bool FBlueprintCreationHandlers::HandleBlueprintCreate(
     return true;
   }
 
+  // CreateAsset answers a name that is no object name, or a folder nothing may be created under, with a dialog at
+  // the user: the engine's own tests refuse it here first.
+  FString NameError;
+  if (!McpAssetToolsCanCreate(SavePath, Name, NameError)) {
+    Self->SendAutomationError(RequestingSocket, RequestId,
+                              FString::Printf(TEXT("Invalid Blueprint name '%s' in %s: %s"), *Name, *SavePath, *NameError),
+                              TEXT("INVALID_NAME"));
+    return true;
+  }
+
   FString ParentClassSpec;
   LocalPayload->TryGetStringField(TEXT("parentClass"), ParentClassSpec);
 

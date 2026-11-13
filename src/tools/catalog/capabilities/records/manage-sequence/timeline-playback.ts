@@ -82,7 +82,7 @@ export const TIMELINE_PLAYBACK_RECORDS: readonly CapabilityRecordSource[] = [
   }),
   buildRecord({
     id: 'sequence.set_properties', action: 'set_properties', family: F, domain: D,
-    summary: 'Set the display frame rate of a Level Sequence (frameRate, such as 24 or 29.97) and its playback range in display-rate frames: playbackStart, and playbackEnd or lengthInFrames (end = start + length; playbackEnd wins). Send at least one; one undo step, and the sequence is left unsaved. The reply reads the values back; a negative frame or an unreadable rate is INVALID_ARGUMENT, another asset type INVALID_SEQUENCE.',
+    summary: 'Set the display frame rate of a Level Sequence (frameRate, such as 24 or 29.97) and its playback range in display-rate frames: playbackStart, and playbackEnd or lengthInFrames (end = start + length; playbackEnd wins). Send at least one; one undo step, and the sequence is left unsaved. The reply reads the values back; a negative frame, an end before the start or an unreadable rate is INVALID_ARGUMENT, another asset type INVALID_SEQUENCE.',
     whenToUse: ['Sequence timing properties must be configured.'],
     whenNotToUse: ['Properties are being read rather than set.'],
     inputProps: { path: P.path, frameRate: P.frameRate,

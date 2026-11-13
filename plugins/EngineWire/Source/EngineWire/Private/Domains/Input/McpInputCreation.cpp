@@ -39,10 +39,13 @@ bool ValidateInputAssetNameAndPath(
         return false;
     }
 
-    if (Name.Contains(TEXT("/")) || Name.Contains(TEXT("\\")) || Name.Contains(TEXT("..")))
+    // The engine's own tests (separators and ".." among what they refuse), before CreateAsset answers them with a
+    // dialog at the user.
+    FString Reason;
+    if (!McpAssetToolsCanCreate(SanitizedPath, Name, Reason))
     {
         Bridge.SendAutomationError(RequestingSocket, RequestId,
-            FString::Printf(TEXT("Invalid asset name '%s': contains path separators or traversal sequences"), *Name),
+            FString::Printf(TEXT("Invalid asset name '%s' in %s: %s"), *Name, *SanitizedPath, *Reason),
             TEXT("INVALID_NAME"));
         return false;
     }

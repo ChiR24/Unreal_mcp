@@ -79,7 +79,8 @@ bool HandleAddMaterialParameterTrack(const TSharedPtr<FJsonObject> &Params,
                                      TSharedPtr<FJsonObject> &OutResult) {
   ULevelSequence *Sequence = nullptr;
   FGuid Guid;
-  if (!LoadSequenceAndBinding(Params, TEXT("add_material_parameter_track"), Sequence, Guid, OutResult))
+  FNewBinding NewBinding;
+  if (!LoadSequenceAndBinding(Params, TEXT("add_material_parameter_track"), Sequence, Guid, OutResult, NewBinding))
     return true;
   const FString ParameterName = GetString(Params, TEXT("parameterName"));
   if (ParameterName.IsEmpty()) {
@@ -200,6 +201,7 @@ bool HandleAddMaterialParameterTrack(const TSharedPtr<FJsonObject> &Params,
     Track->AddColorParameterKey(FName(*ParameterName), Frame, ColorValue);
   Sequence->GetMovieScene()->Modify();
   Sequence->MarkPackageDirty();
+  NewBinding.Keep();
   if (!MaybeSaveSequence(Sequence, Params, OutResult))
     return true;
   OutResult = MakeResult(true, TEXT("add_material_parameter_track"),

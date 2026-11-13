@@ -131,6 +131,20 @@ inline bool McpBuildValidatedAssetPath(const FString &RequestedPath, const FStri
   return true;
 }
 
+// The tests IAssetTools::CreateAsset makes before it creates (CanCreateAsset), which answer with a modal dialog at the
+// user for a name that is no object name (a space, a dot, a bracket) or a folder nothing may be created under: false
+// with the engine's own reason, so a caller refuses before the dialog opens.
+inline bool McpAssetToolsCanCreate(const FString &Folder, const FString &Name, FString &OutReason)
+{
+  FText Reason;
+  if (FName(*Name).IsValidObjectName(Reason) && FPackageName::IsValidLongPackageName(Folder / Name, false, &Reason))
+  {
+    return true;
+  }
+  OutReason = Reason.ToString();
+  return false;
+}
+
 // CreatePackage, except that a path the engine would stop the editor on answers null: CreatePackage is a Fatal log for
 // a name holding "//" (a folder ending in a slash joined to a name, or a name like "a//b"), and so is the FName under
 // it for one past the 1023 characters a name holds. Handlers make their packages through this, never the engine call.

@@ -10,6 +10,20 @@ FString McpNotALevelSequence(const FString &Path, const UObject *Object) {
   return Cast<ULevelSequence>(Object) ? FString::Printf(TEXT("%s has no movie scene"), *Path)
                                       : FString::Printf(TEXT("%s is a %s, not a Level Sequence"), *Path, *Object->GetClass()->GetName());
 }
+
+// What both handlers answer, read back: frameRate (the display rate, a number) and the playback range in display-rate
+// frames, the unit the contract names (it is stored in tick resolution).
+void AddPlaybackValues(const TSharedPtr<FJsonObject> &Resp, const UMovieScene *MovieScene) {
+  const FFrameRate FR = MovieScene->GetDisplayRate();
+  Resp->SetNumberField(TEXT("frameRate"), FR.AsDecimal());
+  const TRange<FFrameNumber> Range = MovieScene->GetPlaybackRange();
+  const FFrameRate TickRate = MovieScene->GetTickResolution();
+  const double Start = FFrameRate::TransformTime(FFrameTime(Range.GetLowerBoundValue()), TickRate, FR).FloorToFrame().Value;
+  const double End = FFrameRate::TransformTime(FFrameTime(Range.GetUpperBoundValue()), TickRate, FR).FloorToFrame().Value;
+  Resp->SetNumberField(TEXT("playbackStart"), Start);
+  Resp->SetNumberField(TEXT("playbackEnd"), End);
+  Resp->SetNumberField(TEXT("lengthInFrames"), End - Start);
+}
 } // namespace
 
 bool UEngineWireSubsystem::HandleSequenceSetProperties(
@@ -104,8 +118,14 @@ bool UEngineWireSubsystem::HandleSequenceSetProperties(
           }
         }
 
-        if (EndFrame < StartFrame)
-          EndFrame = StartFrame;
+        // An end before the start was turned into an empty range under a success reply.
+        if (EndFrame < StartFrame) {
+          SendAutomationError(Socket, RequestId,
+                              FString::Printf(TEXT("playbackEnd %d is before playbackStart %d. Nothing was changed."),
+                                              EndFrame.Value, StartFrame.Value),
+                              TEXT("INVALID_ARGUMENT"));
+          return true;
+        }
         NewRange = TRange<FFrameNumber>(
             FFrameRate::TransformTime(FFrameTime(StartFrame), NewRate, TickRate).FloorToFrame(),
             FFrameRate::TransformTime(FFrameTime(EndFrame), NewRate, TickRate).FloorToFrame());
@@ -122,20 +142,7 @@ bool UEngineWireSubsystem::HandleSequenceSetProperties(
       if (bRangeChanged)
         MovieScene->SetPlaybackRange(NewRange);
 
-      // A number, as get_properties gives it.
-      FFrameRate FR = MovieScene->GetDisplayRate();
-      Resp->SetNumberField(TEXT("frameRate"), FR.AsDecimal());
-
-      TRange<FFrameNumber> Range = MovieScene->GetPlaybackRange();
-      // Playback range is stored in tick resolution; publish display-rate frames
-      // (the unit the contract names) instead of raw ticks.
-      const FFrameRate TickRate = MovieScene->GetTickResolution();
-      const double Start = FFrameRate::TransformTime(FFrameTime(Range.GetLowerBoundValue()), TickRate, FR).FloorToFrame().Value;
-      const double End = FFrameRate::TransformTime(FFrameTime(Range.GetUpperBoundValue()), TickRate, FR).FloorToFrame().Value;
-      Resp->SetNumberField(TEXT("playbackStart"), Start);
-      Resp->SetNumberField(TEXT("playbackEnd"), End);
-      Resp->SetNumberField(TEXT("duration"), End - Start);
-      Resp->SetNumberField(TEXT("lengthInFrames"), End - Start);
+      AddPlaybackValues(Resp, MovieScene);
       Resp->SetBoolField(TEXT("applied"), bModified);
 
       SendAutomationResponse(Socket, RequestId, true,
@@ -164,21 +171,7 @@ bool UEngineWireSubsystem::HandleSequenceGetProperties(
 
   if (ULevelSequence *LevelSeq = Cast<ULevelSequence>(SeqObj)) {
     if (UMovieScene *MovieScene = LevelSeq->GetMovieScene()) {
-      FFrameRate FR = MovieScene->GetDisplayRate();
-      // The record declares frameRate as a number|string union, so the
-      // {numerator,denominator} object this used to emit failed output
-      // validation. get_properties only; the set_properties site is unchanged.
-      Resp->SetNumberField(TEXT("frameRate"), FR.AsDecimal());
-      TRange<FFrameNumber> Range = MovieScene->GetPlaybackRange();
-      // Playback range is stored in tick resolution; publish display-rate frames
-      // (the unit the contract names) instead of raw ticks.
-      const FFrameRate TickRate = MovieScene->GetTickResolution();
-      const double Start = FFrameRate::TransformTime(FFrameTime(Range.GetLowerBoundValue()), TickRate, FR).FloorToFrame().Value;
-      const double End = FFrameRate::TransformTime(FFrameTime(Range.GetUpperBoundValue()), TickRate, FR).FloorToFrame().Value;
-      Resp->SetNumberField(TEXT("playbackStart"), Start);
-      Resp->SetNumberField(TEXT("playbackEnd"), End);
-      Resp->SetNumberField(TEXT("duration"), End - Start);
-      Resp->SetNumberField(TEXT("lengthInFrames"), End - Start);
+      AddPlaybackValues(Resp, MovieScene);
       SendAutomationResponse(Socket, RequestId, true,
                              TEXT("properties retrieved"), Resp, FString());
       return true;

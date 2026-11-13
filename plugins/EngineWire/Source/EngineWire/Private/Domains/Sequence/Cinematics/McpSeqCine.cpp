@@ -164,20 +164,20 @@ FGuid BindComponentUnderActor(ULevelSequence *Sequence, const FGuid &ParentGuid,
   return Guid;
 }
 
-FGuid ResolveRequestBinding(const TSharedPtr<FJsonObject> &Params, ULevelSequence *Sequence) {
+FGuid ResolveRequestBinding(const TSharedPtr<FJsonObject> &Params, ULevelSequence *Sequence, FNewBinding &New) {
   FGuid Guid;
   if (!ReadBindingGuid(Params, Guid))
-    Guid = ResolveOrCreateBinding(Sequence, ResolveActor(Params));
+    Guid = BindActor(Sequence, ResolveActor(Params), New);
   return Guid;
 }
 
 bool LoadSequenceAndBinding(const TSharedPtr<FJsonObject> &Params, const TCHAR *Action,
                             ULevelSequence *&OutSequence, FGuid &OutGuid,
-                            TSharedPtr<FJsonObject> &OutResult) {
+                            TSharedPtr<FJsonObject> &OutResult, FNewBinding &New) {
   OutSequence = LoadSequence(Params, OutResult);
-  if (!OutSequence)
+  if (!OutSequence || !CheckRequestedBinding(Params, OutSequence->GetMovieScene(), Action, OutResult))
     return false;
-  OutGuid = ResolveRequestBinding(Params, OutSequence);
+  OutGuid = ResolveRequestBinding(Params, OutSequence, New);
   if (OutGuid.IsValid())
     return true;
   OutResult = MakeResult(false, Action, TEXT("actorName or bindingGuid is required"),

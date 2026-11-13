@@ -92,7 +92,10 @@ void McpSequence::ReplyTrackMiss(UEngineWireSubsystem *Subsystem, const FString 
       TEXT("AMBIGUOUS_TRACK"));
 }
 
-ULevelSequence *McpSequence::CreateSequenceAsset(const FString &Name, const FString &Folder) {
+ULevelSequence *McpSequence::CreateSequenceAsset(const FString &Name, const FString &Folder, FString &OutNameError) {
+  if (!McpAssetToolsCanCreate(Folder, Name, OutNameError)) {
+    return nullptr;
+  }
   UClass *FactoryClass = LoadClass<UFactory>(nullptr, TEXT("/Script/LevelSequenceEditor.LevelSequenceFactoryNew"));
   if (!FactoryClass) {
     return nullptr;

@@ -69,7 +69,13 @@ bool UEngineWireSubsystem::HandleSequenceCreate(
     return true;
   }
 
-  ULevelSequence *NewSequence = McpSequence::CreateSequenceAsset(Name, FPackageName::GetLongPackagePath(FullPath));
+  FString NameError;
+  ULevelSequence *NewSequence = McpSequence::CreateSequenceAsset(Name, FPackageName::GetLongPackagePath(FullPath), NameError);
+  if (!NameError.IsEmpty()) {
+    SendAutomationError(Socket, RequestId, FString::Printf(TEXT("Invalid sequence name '%s': %s"), *Name, *NameError),
+                        TEXT("INVALID_NAME"));
+    return true;
+  }
   if (!NewSequence) {
     SendAutomationError(Socket, RequestId,
         TEXT("Failed to create the sequence asset (LevelSequenceFactoryNew unavailable or AssetTools refused)"),

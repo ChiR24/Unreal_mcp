@@ -79,7 +79,9 @@ void ReplyTrackMiss(UEngineWireSubsystem *Subsystem, const FString &RequestId, T
                     const FString &TrackName, const FString &Ambiguous);
 // A new LevelSequence asset Folder/Name made by the editor's LevelSequenceFactoryNew; null when
 // the factory is unavailable or AssetTools refuses.
-ULevelSequence *CreateSequenceAsset(const FString &Name, const FString &Folder);
+// A new level sequence through the editor's factory; null on failure, with OutNameError set when the name or folder
+// failed the engine's own tests (which CreateAsset would answer with a dialog at the user).
+ULevelSequence *CreateSequenceAsset(const FString &Name, const FString &Folder, FString &OutNameError);
 }
 
 // Display name of a possessable or spawnable binding; empty when the guid is unknown.
@@ -218,7 +220,7 @@ bool AddTransformKeyframe(UMovieScene *MovieScene, const FGuid &BindingGuid,
 bool AddPropertyKeyframe(UMovieScene *MovieScene, const FGuid &BindingGuid,
                          const FString &PropertyName, FFrameNumber TickFrame,
                          const TSharedPtr<FJsonObject> &LocalPayload,
-                         FString &OutMessage);
+                         FString &OutMessage, FString &OutErrorCode);
 }
 
 namespace McpSequenceRanges {

@@ -131,8 +131,9 @@ bool HandleAddParticleTrack(const TSharedPtr<FJsonObject> &Params,
   }
   ULevelSequence *Sequence = nullptr;
   FGuid Guid;
+  FNewBinding NewBinding;
   if (!LoadSequenceAndBinding(Params, TEXT("add_particle_track"), Sequence, Guid,
-                              OutResult))
+                              OutResult, NewBinding))
     return true;
   UMovieScene *MovieScene = Sequence->GetMovieScene();
   // Evaluator-compatible bindings (AEmitter, FX components) take the track directly;
@@ -163,6 +164,7 @@ bool HandleAddParticleTrack(const TSharedPtr<FJsonObject> &Params,
       static_cast<uint8>(Key));
   MovieScene->Modify();
   Sequence->MarkPackageDirty();
+  NewBinding.Keep();
   if (!MaybeSaveSequence(Sequence, Params, OutResult)) return true;
   OutResult =
       MakeResult(true, TEXT("add_particle_track"),

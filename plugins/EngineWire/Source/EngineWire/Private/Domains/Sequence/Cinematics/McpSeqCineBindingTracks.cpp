@@ -64,8 +64,9 @@ bool HandleAddSkeletalAnimationTrack(const TSharedPtr<FJsonObject> &Params,
                                      TSharedPtr<FJsonObject> &OutResult) {
   ULevelSequence *Sequence = nullptr;
   FGuid Guid;
+  FNewBinding NewBinding;
   if (!LoadSequenceAndBinding(Params, TEXT("add_skeletal_animation_track"), Sequence,
-                              Guid, OutResult))
+                              Guid, OutResult, NewBinding))
     return true;
   FString AnimPath =
       GetString(Params, TEXT("animationSequencePath"), TEXT("animationPath"));
@@ -160,6 +161,7 @@ bool HandleAddSkeletalAnimationTrack(const TSharedPtr<FJsonObject> &Params,
   }
   Sequence->GetMovieScene()->Modify();
   Sequence->MarkPackageDirty();
+  NewBinding.Keep();
   if (!MaybeSaveSequence(Sequence, Params, OutResult)) return true;
   OutResult = MakeResult(true, TEXT("add_skeletal_animation_track"),
                          TEXT("Skeletal animation track added"));
@@ -173,8 +175,9 @@ bool HandleAddTransformTrack(const TSharedPtr<FJsonObject> &Params,
                              TSharedPtr<FJsonObject> &OutResult) {
   ULevelSequence *Sequence = nullptr;
   FGuid Guid;
+  FNewBinding NewBinding;
   if (!LoadSequenceAndBinding(Params, TEXT("add_transform_track"), Sequence, Guid,
-                              OutResult))
+                              OutResult, NewBinding))
     return true;
   UMovieSceneSection *Section =
       AddSection(Sequence, UMovieScene3DTransformTrack::StaticClass(), Guid);
@@ -187,6 +190,7 @@ bool HandleAddTransformTrack(const TSharedPtr<FJsonObject> &Params,
   SetSectionRange(Sequence->GetMovieScene(), Section, Params, 100);
   Sequence->GetMovieScene()->Modify();
   Sequence->MarkPackageDirty();
+  NewBinding.Keep();
   if (!MaybeSaveSequence(Sequence, Params, OutResult)) return true;
   OutResult = MakeResult(true, TEXT("add_transform_track"), TEXT("Transform track added"));
   OutResult->SetStringField(TEXT("bindingGuid"), Guid.ToString());
@@ -196,9 +200,11 @@ bool HandleAddTransformTrack(const TSharedPtr<FJsonObject> &Params,
 bool HandleAddEventTrack(const TSharedPtr<FJsonObject> &Params,
                          TSharedPtr<FJsonObject> &OutResult) {
   ULevelSequence *Sequence = LoadSequence(Params, OutResult);
-  if (!Sequence) return true;
+  if (!Sequence || !CheckRequestedBinding(Params, Sequence->GetMovieScene(), TEXT("add_event_track"), OutResult))
+    return true;
   // No resolvable actorName/bindingGuid still yields an unbound master track.
-  const FGuid Guid = ResolveRequestBinding(Params, Sequence);
+  FNewBinding NewBinding;
+  const FGuid Guid = ResolveRequestBinding(Params, Sequence, NewBinding);
   UMovieSceneSection *Section =
       AddSection(Sequence, UMovieSceneEventTrack::StaticClass(), Guid);
   if (!Section) {
@@ -210,6 +216,7 @@ bool HandleAddEventTrack(const TSharedPtr<FJsonObject> &Params,
   SetSectionRange(Sequence->GetMovieScene(), Section, Params, 100);
   Sequence->GetMovieScene()->Modify();
   Sequence->MarkPackageDirty();
+  NewBinding.Keep();
   if (!MaybeSaveSequence(Sequence, Params, OutResult)) return true;
   OutResult = MakeResult(true, TEXT("add_event_track"), TEXT("Event track added"));
   if (Guid.IsValid()) OutResult->SetStringField(TEXT("bindingGuid"), Guid.ToString());

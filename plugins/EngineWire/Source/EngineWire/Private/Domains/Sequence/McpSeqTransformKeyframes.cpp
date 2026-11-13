@@ -8,6 +8,31 @@ bool ReadPoint(const TSharedPtr<FJsonObject> &Object, FVector &OutPoint) {
          Object->TryGetNumberField(TEXT("z"), OutPoint.Z);
 }
 
+// Channel order: location x/y/z, rotation roll/pitch/yaw, scale x/y/z.
+const TCHAR *const Fields[9][2] = {
+    {TEXT("location"), TEXT("x")}, {TEXT("location"), TEXT("y")}, {TEXT("location"), TEXT("z")},
+    {TEXT("rotation"), TEXT("roll")}, {TEXT("rotation"), TEXT("pitch")}, {TEXT("rotation"), TEXT("yaw")},
+    {TEXT("scale"), TEXT("x")}, {TEXT("scale"), TEXT("y")}, {TEXT("scale"), TEXT("z")}};
+
+// Whether Value keys anything: one of the nine fields, and a lookAt only beside a whole location.
+bool KeysSomething(const TSharedPtr<FJsonObject> &Value) {
+  const TSharedPtr<FJsonObject> *LookAt = nullptr;
+  const TSharedPtr<FJsonObject> *Location = nullptr;
+  FVector Point;
+  if (Value->TryGetObjectField(TEXT("lookAt"), LookAt) &&
+      !(Value->TryGetObjectField(TEXT("location"), Location) && ReadPoint(*Location, Point) && ReadPoint(*LookAt, Point))) {
+    return false;
+  }
+  for (const auto &Field : Fields) {
+    const TSharedPtr<FJsonObject> *Part = nullptr;
+    double Number = 0.0;
+    if (Value->TryGetObjectField(Field[0], Part) && (*Part)->TryGetNumberField(Field[1], Number)) {
+      return true;
+    }
+  }
+  return false;
+}
+
 // value.lookAt aims the key: pitch and yaw from its location toward the point, roll as given (else 0). The yaw is
 // wound to within half a turn of the key before it, so an orbit of aimed keys turns the short way round.
 bool AimAtLookTarget(const TSharedPtr<FJsonObject> &Value, const FMovieSceneDoubleChannel &YawChannel,
@@ -49,6 +74,12 @@ bool AddTransformKeyframe(UMovieScene *MovieScene, const FGuid &BindingGuid,
                           FFrameNumber TickFrame,
                           const TSharedPtr<FJsonObject> &LocalPayload,
                           const USceneComponent *Bound) {
+  // Checked before the track and section are made: a refusal used to leave them, the empty section holding the
+  // actor where it stood for the whole playback range.
+  const TSharedPtr<FJsonObject> *ValueObj = nullptr;
+  if (!LocalPayload->TryGetObjectField(TEXT("value"), ValueObj) || !KeysSomething(*ValueObj)) {
+    return false;
+  }
   UMovieScene3DTransformTrack *Track =
       MovieScene->FindTrack<UMovieScene3DTransformTrack>(BindingGuid,
                                                          FName("Transform"));
@@ -62,7 +93,6 @@ bool AddTransformKeyframe(UMovieScene *MovieScene, const FGuid &BindingGuid,
         Cast<UMovieScene3DTransformSection>(FindOrAddKeySection(MovieScene, Track, TickFrame, &bSectionAdded));
     if (Section) {
       bool bModified = false;
-      const TSharedPtr<FJsonObject> *ValueObj = nullptr;
       FMovieSceneChannelProxy &Proxy = Section->GetChannelProxy();
       TArrayView<FMovieSceneDoubleChannel *> Channels =
           Proxy.GetChannels<FMovieSceneDoubleChannel>();
@@ -81,13 +111,7 @@ bool AddTransformKeyframe(UMovieScene *MovieScene, const FGuid &BindingGuid,
       ERichCurveInterpMode Interpolation = RCIM_Cubic;
       ReadKeyInterpolation(LocalPayload, Interpolation);
 
-      if (LocalPayload->TryGetObjectField(TEXT("value"), ValueObj) &&
-          ValueObj && Channels.Num() >= 9 && AimAtLookTarget(*ValueObj, *Channels[5], TickFrame)) {
-        // Channel order: location x/y/z, rotation roll/pitch/yaw, scale x/y/z.
-        static const TCHAR *const Fields[9][2] = {
-            {TEXT("location"), TEXT("x")}, {TEXT("location"), TEXT("y")}, {TEXT("location"), TEXT("z")},
-            {TEXT("rotation"), TEXT("roll")}, {TEXT("rotation"), TEXT("pitch")}, {TEXT("rotation"), TEXT("yaw")},
-            {TEXT("scale"), TEXT("x")}, {TEXT("scale"), TEXT("y")}, {TEXT("scale"), TEXT("z")}};
+      if (Channels.Num() >= 9 && AimAtLookTarget(*ValueObj, *Channels[5], TickFrame)) {
         for (int32 Index = 0; Index < 9; ++Index) {
           const TSharedPtr<FJsonObject> *Part = nullptr;
           double Value = 0.0;

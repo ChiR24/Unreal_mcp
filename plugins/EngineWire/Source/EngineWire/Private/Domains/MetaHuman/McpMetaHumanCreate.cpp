@@ -31,6 +31,13 @@ bool HandleCreateMetaHuman(UEngineWireSubsystem* Self, const FString& RequestId,
         return true;
     }
 
+    FString NameError;
+    if (!McpAssetToolsCanCreate(Path, Name, NameError))
+    {
+        Self->SendAutomationError(Socket, RequestId,
+            FString::Printf(TEXT("Invalid character name '%s' in %s: %s"), *Name, *Path, *NameError), TEXT("INVALID_NAME"));
+        return true;
+    }
     const FString FullPath = Path / Name;
     if (UObject* Existing = LoadMetaHumanCharacter(FullPath))
     {
@@ -41,6 +48,15 @@ bool HandleCreateMetaHuman(UEngineWireSubsystem* Self, const FString& RequestId,
         Result->SetBoolField(TEXT("created"), false);
         McpHandlerUtils::AddVerification(Result, Existing);
         Self->SendAutomationResponse(Socket, RequestId, true, TEXT("MetaHuman character already exists"), Result);
+        return true;
+    }
+    // CreateAsset asks the user whether to replace an asset of another class there, and Yes deletes it.
+    if (McpAssetExists(FullPath))
+    {
+        Self->SendAutomationError(Socket, RequestId,
+            FString::Printf(TEXT("%s already holds an asset that is no MetaHuman character; pick another name or path. Nothing was created."),
+                *FullPath),
+            TEXT("ASSET_ALREADY_EXISTS"));
         return true;
     }
 

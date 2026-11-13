@@ -47,18 +47,11 @@ UClass *LoadCameraShakeClass(const FString &RawPath) {
 bool HandleAddCameraCutTrack(const TSharedPtr<FJsonObject> &Params,
                              TSharedPtr<FJsonObject> &OutResult) {
   ULevelSequence *Sequence = LoadSequence(Params, OutResult);
-  if (!Sequence) return true;
-  FGuid Guid;
-  bool bCreatedBinding = false;
-  if (!ReadBindingGuid(Params, Guid)) {
-    AActor *Actor = ResolveActor(Params);
-    Guid = Actor ? FindExistingBinding(Sequence, Actor, Actor->GetWorld())
-                 : FGuid();
-    if (!Guid.IsValid()) {
-      Guid = ResolveOrCreateBinding(Sequence, Actor);
-      bCreatedBinding = Guid.IsValid();
-    }
-  }
+  if (!Sequence ||
+      !CheckRequestedBinding(Params, Sequence->GetMovieScene(), TEXT("add_camera_cut_track"), OutResult))
+    return true;
+  FNewBinding NewBinding;
+  const FGuid Guid = ResolveRequestBinding(Params, Sequence, NewBinding);
   if (!Guid.IsValid()) {
     OutResult = MakeResult(false, TEXT("add_camera_cut_track"),
                            TEXT("camera bindingGuid or actorName is required"),
@@ -80,18 +73,18 @@ bool HandleAddCameraCutTrack(const TSharedPtr<FJsonObject> &Params,
             : nullptr;
   if (!Section) {
     RemoveTrackAfterSectionFailure(MovieScene, Track, bCreatedTrack);
-    if (bCreatedBinding) {
-      Sequence->UnbindPossessableObjects(Guid);
-      MovieScene->RemovePossessable(Guid);
-    }
     OutResult = MakeResult(false, TEXT("add_camera_cut_track"),
                            TEXT("Failed to create camera cut section"),
                            TEXT("SECTION_CREATION_FAILED"));
     return true;
   }
-  SetSectionRange(MovieScene, Section, Params, 100);
+  // AddNewCameraCut runs the cut to the next one or the end of playback and trims the one before: a default length
+  // left gaps no camera was cut to, and overlaps where cuts were closer than it.
+  if (Params->HasField(TEXT("durationFrames")) || Params->HasField(TEXT("endFrame")))
+    SetSectionRange(MovieScene, Section, Params, 100);
   MovieScene->Modify();
   Sequence->MarkPackageDirty();
+  NewBinding.Keep();
   if (!MaybeSaveSequence(Sequence, Params, OutResult)) return true;
   OutResult =
       MakeResult(true, TEXT("add_camera_cut_track"), TEXT("Camera cut added"));
@@ -126,7 +119,7 @@ bool HandleAddCameraShakeTrack(const TSharedPtr<FJsonObject> &Params,
   // Sequencer offers the shake track only under a camera binding, which is
   // where it finds the camera to shake; cameraName puts it there.
   FGuid CameraGuid;
-  bool bCreatedBinding = false;
+  FNewBinding NewBinding;
   if (!GetString(Params, TEXT("cameraName"), TEXT("actorName")).IsEmpty()) {
     AActor *Camera = ResolveActor(Params);
     if (!Camera || !Camera->FindComponentByClass<UCameraComponent>()) {
@@ -136,11 +129,7 @@ bool HandleAddCameraShakeTrack(const TSharedPtr<FJsonObject> &Params,
                              TEXT("CAMERA_NOT_FOUND"));
       return true;
     }
-    CameraGuid = FindExistingBinding(Sequence, Camera, Camera->GetWorld());
-    if (!CameraGuid.IsValid()) {
-      CameraGuid = ResolveOrCreateBinding(Sequence, Camera);
-      bCreatedBinding = CameraGuid.IsValid();
-    }
+    CameraGuid = BindActor(Sequence, Camera, NewBinding);
     if (!CameraGuid.IsValid()) {
       OutResult = MakeResult(false, TEXT("add_camera_shake_track"),
                              TEXT("Failed to bind the camera to the sequence"),
@@ -163,10 +152,6 @@ bool HandleAddCameraShakeTrack(const TSharedPtr<FJsonObject> &Params,
             : nullptr;
   if (!Section) {
     RemoveTrackAfterSectionFailure(MovieScene, Track, bCreatedTrack);
-    if (bCreatedBinding) {
-      Sequence->UnbindPossessableObjects(CameraGuid);
-      MovieScene->RemovePossessable(CameraGuid);
-    }
     OutResult = MakeResult(false, TEXT("add_camera_shake_track"),
                            TEXT("Failed to create camera shake section"),
                            TEXT("SECTION_CREATION_FAILED"));
@@ -175,6 +160,7 @@ bool HandleAddCameraShakeTrack(const TSharedPtr<FJsonObject> &Params,
   SetSectionRange(MovieScene, Section, Params, 100);
   MovieScene->Modify();
   Sequence->MarkPackageDirty();
+  NewBinding.Keep();
   if (!MaybeSaveSequence(Sequence, Params, OutResult)) return true;
   OutResult = MakeResult(true, TEXT("add_camera_shake_track"),
                          TEXT("Camera shake track added"));
