@@ -18,10 +18,8 @@ bool HandleSetScalarParameterValue(UEngineWireSubsystem* Bridge, const FString& 
   Writer.Kind = TEXT("Scalar");
   Writer.Type = EMaterialParameterType::Scalar;
   Writer.SetDefault = [Value](UMaterial* Material, FName Name, TArray<FString>& Available) {
-    UMaterialExpressionScalarParameter* Param =
-        FindParameterExpression<UMaterialExpressionScalarParameter>(Material, Name, Available);
-    if (Param) { Param->DefaultValue = Value; }
-    return Param != nullptr;
+    return SetParameterExpressions<UMaterialExpressionScalarParameter>(Material, Name, Available,
+        [Value](UMaterialExpressionScalarParameter& Param) { Param.DefaultValue = Value; });
   };
   Writer.SetOverride = [Value](UMaterialInstanceConstant* Instance, FName Name) {
     Instance->SetScalarParameterValueEditorOnly(Name, Value);

@@ -29,9 +29,12 @@ bool HandleUseMaterialFunction(UEngineWireSubsystem* Bridge, const FString& Requ
     }
 
     // Guard against self-reference when host is itself a MF
-    if (Function && Func == Function) {
+    // Directly or through the functions it calls: the engine's own test opened a modal dialog, left the call empty,
+    // and the empty call was added anyway.
+    if (Function && Func->IsDependent(Function)) {
       Bridge->SendAutomationError(Socket, RequestId,
-                          TEXT("A material function cannot call itself."),
+                          FString::Printf(TEXT("%s calls %s, directly or through the functions it calls: a material "
+                                               "function cannot call itself."), *Func->GetName(), *Function->GetName()),
                           TEXT("INVALID_ARGUMENT"));
       return true;
     }

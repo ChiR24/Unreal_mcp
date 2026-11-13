@@ -112,6 +112,10 @@ bool HandleCreateParameterCollection(UEngineWireSubsystem* Bridge, const FString
     FAssetRegistryModule::AssetCreated(Collection);
   }
   Collection->Modify();
+  // Records the counts PostEditChange compares with: unset, it compared with whatever collection the Details panel
+  // last edited, so a default-only change recompiled every material reading this one, and a new parameter could skip
+  // the layout rebuild it needs.
+  Collection->PreEditChange(nullptr);
   Collection->ScalarParameters = MoveTemp(Scalars);
   Collection->VectorParameters = MoveTemp(Vectors);
   // Rebuilds the collection's uniform buffer and recompiles the materials that read it.

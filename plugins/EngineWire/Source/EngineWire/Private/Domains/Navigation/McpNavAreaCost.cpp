@@ -64,6 +64,10 @@ bool HandleConfigureNavAreaCost(
     {
         EnteringProp->SetPropertyValue_InContainer(AreaCDO, static_cast<float>(GetJsonNumberField(Payload, TEXT("fixedAreaEnteringCost"), 0.0)));
     }
+    // As the engine's own edit of either cost: the area re-registers, which is how the nav mesh's query filter takes
+    // the new costs. Without it the filter kept the old ones and no path changed.
+    FPropertyChangedEvent CostChanged(FindFProperty<FProperty>(UNavArea::StaticClass(), GET_MEMBER_NAME_CHECKED(UNavArea, DefaultCost)));
+    AreaCDO->PostEditChangeProperty(CostChanged);
 
     // A Blueprint NavArea keeps its defaults in its own package, so save it. A native class
     // (/Script/...) has no asset to save: the change lasts for this editor session only.

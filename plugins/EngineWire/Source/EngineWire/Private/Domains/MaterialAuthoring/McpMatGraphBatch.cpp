@@ -77,47 +77,47 @@ bool HandleBuildMaterialGraph(UEngineWireSubsystem* Bridge, const FString& Reque
     TSharedPtr<FJsonObject> Entry = McpHandlerUtils::CreateResultObject();
     Entry->SetNumberField(TEXT("index"), Index);
     Results.Add(MakeShared<FJsonValueObject>(Entry));
-    const TSharedPtr<FJsonObject>* StepPtr = nullptr;
-    FString Edit, Alias, Error, ErrorCode = TEXT("INVALID_OPERATION");
-    if (!(*Steps)[Index].IsValid() || !(*Steps)[Index]->TryGetObject(StepPtr) ||
-        !(*StepPtr)->TryGetStringField(TEXT("edit"), Edit) ||
-        !IsBatchableMaterialEdit(Edit = McpMaterialBatchStepEdit(Edit, *StepPtr))) {
-      Error = DescribeUnbatchableMaterialEdit(Edit);
-    } else {
-      Entry->SetStringField(TEXT("edit"), Edit);
-      if ((*StepPtr)->TryGetStringField(TEXT("id"), Alias)) {
-        Entry->SetStringField(TEXT("id"), Alias);
+    // CheckMaterialBatch has passed every step: an object whose edit is batchable.
+    const TSharedPtr<FJsonObject>& Step = (*Steps)[Index]->AsObject();
+    const FString Edit = McpMaterialBatchStepEdit(Step->GetStringField(TEXT("edit")), Step);
+    FString Alias, Error, ErrorCode = TEXT("INVALID_OPERATION");
+    Entry->SetStringField(TEXT("edit"), Edit);
+    if (Step->TryGetStringField(TEXT("id"), Alias)) {
+      Entry->SetStringField(TEXT("id"), Alias);
+    }
+    const TSharedPtr<FJsonObject> StepPayload = BuildStepPayload(Payload, Step, Edit);
+    const bool bAutoPlaced = CreatesNode(Edit) && !HasPosition(Step);
+    if (bAutoPlaced) {
+      const int32 Slot = AutoPlaced++;
+      CursorY = Slot % AutoRows == 0 ? -440.0 : CursorY;
+      StepPayload->SetNumberField(TEXT("x"), OriginX - (AutoColumns - 1 - Slot / AutoRows) * 400.0f);
+      StepPayload->SetNumberField(TEXT("y"), CursorY);
+    }
+    if (ResolveAliases(Aliases, StepPayload, Error)) {
+      const FString StepId = FString::Printf(TEXT("%s#step%d"), *RequestId, Index);
+      const FMcpCapturedResponse Reply = McpCaptureResponse(StepId, [&] { RunStep(StepId, StepPayload); });
+      FString NodeId, Warning;
+      if (Reply.Result.IsValid() && Reply.Result->TryGetStringField(TEXT("nodeId"), NodeId)) {
+        Entry->SetStringField(TEXT("nodeId"), NodeId);
       }
-      const TSharedPtr<FJsonObject> StepPayload = BuildStepPayload(Payload, *StepPtr, Edit);
-      const bool bAutoPlaced = CreatesNode(Edit) && !HasPosition(*StepPtr);
+      if (Reply.Result.IsValid() && Reply.Result->TryGetStringField(TEXT("placementWarning"), Warning)) {
+        Entry->SetStringField(TEXT("placementWarning"), Warning);
+      }
+      // Only a node placed here moves the cursor: a connect, a property step or a node the caller placed left a gap
+      // of 112 in the column.
       if (bAutoPlaced) {
-        const int32 Slot = AutoPlaced++;
-        CursorY = Slot % AutoRows == 0 ? -440.0 : CursorY;
-        StepPayload->SetNumberField(TEXT("x"), OriginX - (AutoColumns - 1 - Slot / AutoRows) * 400.0f);
-        StepPayload->SetNumberField(TEXT("y"), CursorY);
-      }
-      if (ResolveAliases(Aliases, StepPayload, Error)) {
-        const FString StepId = FString::Printf(TEXT("%s#step%d"), *RequestId, Index);
-        const FMcpCapturedResponse Reply = McpCaptureResponse(StepId, [&] { RunStep(StepId, StepPayload); });
-        FString NodeId, Warning;
-        if (Reply.Result.IsValid() && Reply.Result->TryGetStringField(TEXT("nodeId"), NodeId)) {
-          Entry->SetStringField(TEXT("nodeId"), NodeId);
-        }
-        if (Reply.Result.IsValid() && Reply.Result->TryGetStringField(TEXT("placementWarning"), Warning)) {
-          Entry->SetStringField(TEXT("placementWarning"), Warning);
-        }
         double Height = 0.0;
-        if (bAutoPlaced && Reply.Result.IsValid()) {
+        if (Reply.Result.IsValid()) {
           Reply.Result->TryGetNumberField(TEXT("estimatedHeight"), Height);
         }
         CursorY += FMath::Max(Height, 64.0) + 48.0;
-        if (!Reply.bSuccess) {
-          Error = Reply.bCaptured ? Reply.Message : FString(TEXT("the step sent no reply"));
-          ErrorCode = Reply.ErrorCode.IsEmpty() ? TEXT("STEP_FAILED") : Reply.ErrorCode;
-        } else if (!Alias.IsEmpty() && !NodeId.IsEmpty()) {
-          Aliases.Add(Alias, NodeId);
-          NodeIds->SetStringField(Alias, NodeId);
-        }
+      }
+      if (!Reply.bSuccess) {
+        Error = Reply.bCaptured ? Reply.Message : FString(TEXT("the step sent no reply"));
+        ErrorCode = Reply.ErrorCode.IsEmpty() ? TEXT("STEP_FAILED") : Reply.ErrorCode;
+      } else if (!Alias.IsEmpty() && !NodeId.IsEmpty()) {
+        Aliases.Add(Alias, NodeId);
+        NodeIds->SetStringField(Alias, NodeId);
       }
     }
     Entry->SetBoolField(TEXT("success"), Error.IsEmpty());
@@ -133,7 +133,7 @@ bool HandleBuildMaterialGraph(UEngineWireSubsystem* Bridge, const FString& Reque
       Error.RemoveFromEnd(TEXT("."));
       Bridge->SendAutomationResponse(Socket, RequestId, false, FString::Printf(
           TEXT("build_material_graph stopped at operations[%d] (%s): %s. %s"),
-          Index, Edit.IsEmpty() ? TEXT("no edit") : *Edit, *Error,
+          Index, *Edit, *Error,
           Index == 0 ? TEXT("Nothing was applied.")
                      : *FString::Printf(TEXT("The %d step(s) before it were applied; their node ids are in nodeIds."), Index)),
           Data, ErrorCode);

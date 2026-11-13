@@ -26,18 +26,23 @@ void SetMaterialParameterValue(UEngineWireSubsystem* Bridge, const FString& Requ
                                const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> Socket,
                                const FParameterValueWriter& Writer);
 
-// The base material's parameter expression of type T named Name; with duplicate
-// names the last wins, as in UE itself. OutAvailable lists every T's name.
-template <typename TExpression>
-TExpression* FindParameterExpression(UMaterial* Material, const FName Name, TArray<FString>& OutAvailable)
+// Set applied to every parameter expression of type T named Name in the base material: each same-named node
+// compiles with its own default (the material editor keeps them equal), so a write to the last one left the others,
+// and the parts of the graph reading them, on the old value. False when none has the name; OutAvailable lists every
+// T's name.
+template <typename TExpression, typename TSetter>
+bool SetParameterExpressions(UMaterial* Material, const FName Name, TArray<FString>& OutAvailable, TSetter Set)
 {
-  TExpression* Found = nullptr;
+  bool bFound = false;
   for (UMaterialExpression* Expr : MCP_GET_MATERIAL_EXPRESSIONS(Material)) {
     if (TExpression* Param = Cast<TExpression>(Expr)) {
       OutAvailable.Add(Param->ParameterName.ToString());
-      if (Param->ParameterName == Name) { Found = Param; }
+      if (Param->ParameterName == Name) {
+        Set(*Param);
+        bFound = true;
+      }
     }
   }
-  return Found;
+  return bFound;
 }
 }

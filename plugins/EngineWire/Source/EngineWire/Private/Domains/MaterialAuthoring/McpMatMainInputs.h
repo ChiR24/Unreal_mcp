@@ -98,22 +98,35 @@ inline int32 McpCountMaterialInputs(UMaterialExpression* Expr)
 
 // Visits every input of Expr as (FExpressionInput&, PinName): the reflected
 // ExpressionInput properties by property name, then a Custom node's named
-// inputs and a function call's inputs by their declared names.
+// inputs and a function call's inputs by their declared names, then every other
+// input in the engine's own list by the name the engine gives it.
 template <typename TVisitor>
 inline void ForEachExpressionInput(UMaterialExpression* Expr, TVisitor&& Visit)
 {
   if (!Expr) return;
+  TSet<const FExpressionInput*> Seen;
+  const auto VisitOnce = [&Seen, &Visit](FExpressionInput& Input, const FString& Name) {
+    Seen.Add(&Input);
+    Visit(Input, Name);
+  };
   for (TFieldIterator<FStructProperty> It(Expr->GetClass()); It; ++It) {
     if (It->Struct && It->Struct->GetFName() == FName(TEXT("ExpressionInput"))) {
-      Visit(*It->ContainerPtrToValuePtr<FExpressionInput>(Expr), It->GetName());
+      VisitOnce(*It->ContainerPtrToValuePtr<FExpressionInput>(Expr), It->GetName());
     }
   }
   if (UMaterialExpressionCustom* Custom = Cast<UMaterialExpressionCustom>(Expr)) {
-    for (FCustomInput& Input : Custom->Inputs) { Visit(Input.Input, Input.InputName.ToString()); }
+    for (FCustomInput& Input : Custom->Inputs) { VisitOnce(Input.Input, Input.InputName.ToString()); }
   }
   if (UMaterialExpressionMaterialFunctionCall* Call = Cast<UMaterialExpressionMaterialFunctionCall>(Expr)) {
     for (FFunctionExpressionInput& Input : Call->FunctionInputs) {
-      Visit(Input.Input, Input.Input.InputName.ToString());
+      VisitOnce(Input.Input, Input.Input.InputName.ToString());
+    }
+  }
+  // What connect_nodes wires and the walks above miss: material-attribute inputs (BlendMaterialAttributes A and B),
+  // array-held ones (SetMaterialAttributes, Switch) and the switches' inputs past the first.
+  for (int32 Index = 0, Count = McpCountMaterialInputs(Expr); Index < Count && Expr->GetInput(Index); ++Index) {
+    if (FExpressionInput* Input = Expr->GetInput(Index); !Seen.Contains(Input)) {
+      Visit(*Input, Expr->GetInputName(Index).ToString());
     }
   }
 }

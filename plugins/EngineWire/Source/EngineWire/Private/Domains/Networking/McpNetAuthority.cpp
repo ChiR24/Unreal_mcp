@@ -2,18 +2,14 @@
 
 namespace McpNetworkingHandlers
 {
-namespace
-{
-// The editor world's actor named ActorName; null after the reply (INVALID_PARAMS when the name is missing, NO_WORLD,
-// NOT_FOUND). OutWorld, when given, gets the world searched.
-AActor* FindNetActorOrReply(FNetworkingActionContext& Context, const FString& ActorName, UWorld** OutWorld = nullptr)
+AActor* FindNetActorOrReply(FNetworkingActionContext& Context, const FString& ActorName, UWorld** OutWorld)
 {
     if (ActorName.IsEmpty())
     {
         Context.Bridge.SendAutomationError(Context.RequestingSocket, Context.RequestId, TEXT("Missing actorName"), TEXT("INVALID_PARAMS"));
         return nullptr;
     }
-    UWorld* World = McpHandlerUtils::GetEditorWorld();
+    UWorld* World = McpHandlerUtils::GetPlayOrEditorWorld();
     if (!World)
     {
         Context.Bridge.SendAutomationError(Context.RequestingSocket, Context.RequestId, TEXT("No world available"), TEXT("NO_WORLD"));
@@ -30,7 +26,6 @@ AActor* FindNetActorOrReply(FNetworkingActionContext& Context, const FString& Ac
     }
     return Actor;
 }
-} // namespace
 
 bool HandleSetOwner(FNetworkingActionContext& Context)
 {

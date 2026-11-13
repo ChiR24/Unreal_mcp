@@ -42,17 +42,10 @@ bool HandleGetNetworkingInfo(FNetworkingActionContext& Context)
     }
     else if (!ActorName.IsEmpty())
     {
-        UWorld* World = McpHandlerUtils::GetEditorWorld();
-        if (!World)
-        {
-            Context.Bridge.SendAutomationError(Context.RequestingSocket, Context.RequestId, TEXT("No world available"), TEXT("NO_WORLD"));
-            return true;
-        }
-
-        AActor* Actor = FindActorByNameInWorldForMcp(World, ActorName, true);
+        // During Play, the running actor: in the editor world every actor has authority and no pawn a controller.
+        AActor* Actor = FindNetActorOrReply(Context, ActorName);
         if (!Actor)
         {
-            Context.Bridge.SendAutomationError(Context.RequestingSocket, Context.RequestId, TEXT("Actor not found"), TEXT("NOT_FOUND"));
             return true;
         }
 

@@ -17,10 +17,8 @@ bool HandleSetStaticSwitchParameterValue(UEngineWireSubsystem* Bridge, const FSt
   Writer.Kind = TEXT("Static switch");
   Writer.Type = EMaterialParameterType::StaticSwitch;
   Writer.SetDefault = [Value](UMaterial* Material, FName Name, TArray<FString>& Available) {
-    UMaterialExpressionStaticBoolParameter* Param =
-        FindParameterExpression<UMaterialExpressionStaticBoolParameter>(Material, Name, Available);
-    if (Param) { Param->DefaultValue = Value; }
-    return Param != nullptr;
+    return SetParameterExpressions<UMaterialExpressionStaticBoolParameter>(Material, Name, Available,
+        [Value](UMaterialExpressionStaticBoolParameter& Param) { Param.DefaultValue = Value; });
   };
   // A switch lives in the static parameter set, which has to be rebuilt.
   Writer.SetOverride = [Value](UMaterialInstanceConstant* Instance, FName Name) {

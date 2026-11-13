@@ -29,10 +29,13 @@ bool HandleSetTextureParameterValue(UEngineWireSubsystem* Bridge, const FString&
   Writer.Kind = TEXT("Texture");
   Writer.Type = EMaterialParameterType::Texture;
   Writer.SetDefault = [Texture](UMaterial* Material, FName Name, TArray<FString>& Available) {
-    UMaterialExpressionTextureSampleParameter* Param =
-        FindParameterExpression<UMaterialExpressionTextureSampleParameter>(Material, Name, Available);
-    if (Param) { Param->Texture = Texture; }
-    return Param != nullptr;
+    return SetParameterExpressions<UMaterialExpressionTextureSampleParameter>(Material, Name, Available,
+        [Texture](UMaterialExpressionTextureSampleParameter& Param) {
+          // As the engine's own edit of the property ends: a normal map where a colour texture was failed the compile
+          // on the sampler type the old texture had set.
+          Param.Texture = Texture;
+          Param.AutoSetSampleType();
+        });
   };
   Writer.SetOverride = [Texture](UMaterialInstanceConstant* Instance, FName Name) {
     Instance->SetTextureParameterValueEditorOnly(Name, Texture);

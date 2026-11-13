@@ -1,5 +1,7 @@
 #include "Foundation/HandlerUtils/McpHandlerUtilsJson.h"
 #include "Domains/MaterialAuthoring/McpMatPrivate.h"
+#include "Foundation/BridgeHelpers/Responses/McpJsonFields.h"
+#include "MaterialEditingLibrary.h"
 
 namespace McpMaterialAuthoringHandlers
 {
@@ -8,50 +10,21 @@ bool HandleDeleteNode(UEngineWireSubsystem* Bridge, const FString& RequestId, co
   if (SubAction == TEXT("delete_node")) {
     LOAD_MATERIAL_OR_FUNCTION_OR_RETURN();
 
-    // Accept single nodeId or array of nodeIds
-    TArray<FString> NodeIds;
-    FString SingleId;
-    if (Payload->TryGetStringField(TEXT("nodeId"), SingleId) && !SingleId.IsEmpty()) {
-      NodeIds.Add(SingleId);
-    }
-    const TArray<TSharedPtr<FJsonValue>> *IdsArr = nullptr;
-    if (Payload->TryGetArrayField(TEXT("nodeIds"), IdsArr) && IdsArr) {
-      for (const auto &Val : *IdsArr) {
-        FString Id;
-        if (McpHandlerUtils::TryGetJsonValueString(Val, Id) && !Id.IsEmpty()) NodeIds.Add(Id);
-      }
-    }
+    const TArray<FString> NodeIds = McpGetStringListField(Payload, TEXT("nodeIds"), TEXT("nodeId"));
     if (NodeIds.Num() == 0) {
       Bridge->SendAutomationError(Socket, RequestId, TEXT("Missing 'nodeId' or 'nodeIds'."), TEXT("INVALID_ARGUMENT"));
       return true;
     }
 
-    auto& AllExpr = Material
-        ? MCP_GET_MATERIAL_EXPRESSIONS(Material)
-        : MCP_GET_FUNCTION_EXPRESSIONS(Function);
-
+    // Every id resolved before any node goes: an expr_N index shifted as nodes were removed.
     TArray<FString> Removed, NotFound;
+    TArray<UMaterialExpression *> Targets;
     for (const FString &NId : NodeIds) {
       UMaterialExpression *Expr = FIND_EXPR_IN_HOST(NId);
-      if (!Expr) { NotFound.Add(NId); continue; }
-
-      // Auto-disconnect: clear all references to this node from other expressions
-      for (UMaterialExpression *Other : AllExpr) {
-        if (!Other || Other == Expr) continue;
-        ForEachExpressionInput(Other, [&](FExpressionInput &Input, const FString &) {
-          if (Input.Expression == Expr) { Input.Expression = nullptr; Input.OutputIndex = 0; }
-        });
+      (Expr ? Removed : NotFound).Add(NId);
+      if (Expr) {
+        Targets.AddUnique(Expr);
       }
-
-      // Clear Material main pin references
-      if (Material) {
-        ForEachMainMaterialInput(Material, [&](const TCHAR *, FExpressionInput &Input) {
-          if (Input.Expression == Expr) { Input.Expression = nullptr; Input.OutputIndex = 0; }
-        });
-      }
-
-      AllExpr.Remove(Expr); // what RemoveExpression does on 5.1+, the array itself on 5.0
-      Removed.Add(NId);
     }
 
     // An id that matched nothing used to vanish from the reply, so deleting a
@@ -61,6 +34,16 @@ bool HandleDeleteNode(UEngineWireSubsystem* Bridge, const FString& RequestId, co
           FString::Printf(TEXT("No node matched: %s. Read the ids with get_material_info or find_node."), *FString::Join(NotFound, TEXT(", "))),
           TEXT("NOT_FOUND"));
       return true;
+    }
+    // The engine's own delete: every input of every expression and every main pin (MaterialAttributes, the
+    // customized UVs and the shading model among them) let go of the node, its parameter entry dropped, the node
+    // marked garbage. The hand cleanup missed attribute, array-held and switch inputs and those pins.
+    for (UMaterialExpression *Expr : Targets) {
+      if (Material) {
+        UMaterialEditingLibrary::DeleteMaterialExpression(Material, Expr);
+      } else {
+        UMaterialEditingLibrary::DeleteMaterialExpressionInFunction(Function, Expr);
+      }
     }
     FINALIZE_HOST();
     // A delete used to leave the material dirty and unsaved, so an editor restart brought the

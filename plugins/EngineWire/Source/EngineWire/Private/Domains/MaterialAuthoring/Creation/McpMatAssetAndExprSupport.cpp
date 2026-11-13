@@ -1,5 +1,7 @@
 #include "Domains/MaterialAuthoring/McpMatPrivate.h"
 #include "Foundation/BridgeHelpers/Blueprints/McpBPPaths.h"
+#include "EngineWireLog.h"
+#include "Algo/AllOf.h"
 
 namespace McpMaterialAuthoringHandlers
 {
@@ -26,12 +28,6 @@ bool PrepareNewMaterialAsset(UEngineWireSubsystem* Bridge, const FString& Reques
   FString PathError;
   if (!ValidateAssetCreationPath(RequestedPath, OutName, OutPackagePath, PathError)) {
     Bridge->SendAutomationError(Socket, RequestId, PathError, TEXT("INVALID_PATH"));
-    return false;
-  }
-  if (OutPackagePath.Contains(TEXT(":"))) {
-    Bridge->SendAutomationError(Socket, RequestId,
-        FString::Printf(TEXT("Invalid path '%s': absolute Windows paths are not allowed"), *OutPackagePath),
-        TEXT("INVALID_PATH"));
     return false;
   }
   FText MountReason;
@@ -84,9 +80,10 @@ static UMaterialExpression *FindExpressionInArray(TExprArray &Expressions,
     ShortNeedle = ShortNeedle.Mid(SeparatorIndex + 1);
   }
 
-  // 1. expr_N index-based lookup
-  if (Needle.StartsWith(TEXT("expr_"))) {
-    int32 Index = FCString::Atoi(*Needle.Mid(5));
+  // 1. expr_N index-based lookup, N all digits: 'expr_tiling' read as 0 answered the graph's first node.
+  const FString IndexText = Needle.StartsWith(TEXT("expr_")) ? Needle.Mid(5) : FString();
+  if (!IndexText.IsEmpty() && Algo::AllOf(IndexText, [](TCHAR C) { return FChar::IsDigit(C); })) {
+    int32 Index = FCString::Atoi(*IndexText);
     if (Index >= 0 && Index < Expressions.Num()) {
       UMaterialExpression *Expr = static_cast<UMaterialExpression*>(Expressions[Index]);
       if (Expr) return Expr;
@@ -113,7 +110,7 @@ static UMaterialExpression *FindExpressionInArray(TExprArray &Expressions,
   }
   if (GuidMatch) {
     if (GuidMatchCount > 1) {
-      UE_LOG(LogTemp, Warning,
+      UE_LOG(LogEngineWireSubsystem, Warning,
              TEXT("MCP: GUID '%s' matches %d nodes — returning first. "
                   "Use object name '%s' for unambiguous lookup."),
              *Needle, GuidMatchCount, *GuidMatch->GetName());

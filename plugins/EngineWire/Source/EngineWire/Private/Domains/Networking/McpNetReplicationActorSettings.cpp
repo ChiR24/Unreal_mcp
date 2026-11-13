@@ -6,7 +6,13 @@ bool HandleConfigureNetPriority(FNetworkingActionContext& Context)
 {
     const TSharedPtr<FJsonObject>& Payload = Context.Payload;
     FString BlueprintPath = GetJsonStringField(Payload, TEXT("blueprintPath"));
-    double NetPriority = GetJsonNumberField(Payload, TEXT("netPriority"), 1.0);
+    // Left out, it was written as 1.0 and reported as set.
+    double NetPriority = 0.0;
+    if (!Payload->TryGetNumberField(TEXT("netPriority"), NetPriority))
+    {
+        Context.Bridge.SendAutomationError(Context.RequestingSocket, Context.RequestId, TEXT("Nothing to configure: pass netPriority."), TEXT("INVALID_PARAMS"));
+        return true;
+    }
 
     UBlueprint* Blueprint = nullptr;
     AActor* CDO = LoadActorDefaultsOrReply(Context, BlueprintPath, Blueprint);
@@ -16,7 +22,7 @@ bool HandleConfigureNetPriority(FNetworkingActionContext& Context)
     }
     CDO->NetPriority = static_cast<float>(NetPriority);
 
-    return SaveBlueprintAndReply(Context, Blueprint, FString::Printf(TEXT("Net priority set to %.2f"), NetPriority), TEXT("Net priority configured"));
+    return SaveBlueprintAndReply(Context, Blueprint, FString::Printf(TEXT("Net priority set to %.2f"), CDO->NetPriority), TEXT("Net priority configured"));
 }
 
 bool HandleSetNetDormancy(FNetworkingActionContext& Context)

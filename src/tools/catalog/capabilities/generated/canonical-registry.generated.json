@@ -1,5 +1,5 @@
 {
-  "catalogRevision": "d5e5a59116844d83",
+  "catalogRevision": "5a50f57ebd7e9684",
   "recordCount": 489,
   "records": [
     {
@@ -97652,9 +97652,9 @@
           "setting=always_relevant: Use it to set always-relevant replication behavior.",
           "setting=only_relevant_to_owner: Use it to set owner-only relevancy behavior.",
           "setting=autonomous_proxy: Use it to make every replicated variable of a Blueprint replicate to the autonomous proxy only (COND_AutonomousOnly), or undo that; fails when it has no replicated variable.",
-          "setting=priority: Use it to configure actor network bandwidth priority.",
-          "setting=update_frequency: Use it to configure actor network update frequency.",
-          "setting=cull_distance: Use it to configure network relevancy cull distance.",
+          "setting=priority: Use it to configure actor network bandwidth priority; refused without netPriority.",
+          "setting=update_frequency: Use it to configure actor network update frequency; only the fields sent are written.",
+          "setting=cull_distance: Use it to configure network relevancy cull distance and owner relevancy; only the fields sent are written.",
           "setting=push_model: Use it to turn push-model replication on or off for every replicated variable of a Blueprint; fails when it has none.",
           "setting=replicated_movement: Use it to configure replicated movement.",
           "setting=replication_graph: Use it to set an Actor Blueprint's spatially loaded (World Partition) and net load on client defaults; only the fields sent are written.",
@@ -97778,7 +97778,7 @@
                 "replication_graph",
                 "net_driver"
               ],
-              "description": "Which configure replication variant to run.\nproperty: Turn replication of a Blueprint variable on or off, optionally with its replication condition.\ncondition: Set a Blueprint property replication condition.\nrep_notify: Make a Blueprint variable RepNotify: it replicates, and clients call repNotifyFunc when its new value arrives.\nnet_role: Choose how clients see an Actor Blueprint's actors: ROLE_None turns replication off, ROLE_SimulatedProxy or ROLE_AutonomousProxy turn it on.\ndormancy: Set an Actor Blueprint's default network dormancy.\nalways_relevant: Set always-relevant replication behavior.\nonly_relevant_to_owner: Set owner-only relevancy behavior.\nautonomous_proxy: Make every replicated variable of a Blueprint replicate to the autonomous proxy only (COND_AutonomousOnly), or undo that; fails when it has no replicated variable.\npriority: Configure actor network bandwidth priority.\nupdate_frequency: Configure actor network update frequency.\ncull_distance: Configure network relevancy cull distance.\npush_model: Turn push-model replication on or off for every replicated variable of a Blueprint; fails when it has none.\nreplicated_movement: Configure replicated movement.\nreplication_graph: Set an Actor Blueprint's spatially loaded (World Partition) and net load on client defaults; only the fields sent are written.\nnet_driver: Write the game net driver's rate limits to its class defaults and DefaultEngine.ini, and to the running net driver when there is one; only the fields sent are written."
+              "description": "Which configure replication variant to run.\nproperty: Turn replication of a Blueprint variable on or off, optionally with its replication condition.\ncondition: Set a Blueprint property replication condition.\nrep_notify: Make a Blueprint variable RepNotify: it replicates, and clients call repNotifyFunc when its new value arrives.\nnet_role: Choose how clients see an Actor Blueprint's actors: ROLE_None turns replication off, ROLE_SimulatedProxy or ROLE_AutonomousProxy turn it on.\ndormancy: Set an Actor Blueprint's default network dormancy.\nalways_relevant: Set always-relevant replication behavior.\nonly_relevant_to_owner: Set owner-only relevancy behavior.\nautonomous_proxy: Make every replicated variable of a Blueprint replicate to the autonomous proxy only (COND_AutonomousOnly), or undo that; fails when it has no replicated variable.\npriority: Configure actor network bandwidth priority; refused without netPriority.\nupdate_frequency: Configure actor network update frequency; only the fields sent are written.\ncull_distance: Configure network relevancy cull distance and owner relevancy; only the fields sent are written.\npush_model: Turn push-model replication on or off for every replicated variable of a Blueprint; fails when it has none.\nreplicated_movement: Configure replicated movement.\nreplication_graph: Set an Actor Blueprint's spatially loaded (World Partition) and net load on client defaults; only the fields sent are written.\nnet_driver: Write the game net driver's rate limits to its class defaults and DefaultEngine.ini, and to the running net driver when there is one; only the fields sent are written."
             }
           },
           "required": [
@@ -98052,8 +98052,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "8e17b6ed9bcb99015ae286d59e0947ec8184ba8b6820665b2c15fa8ec0f9f021",
-        "content": "d3e2c8ff3f16322e6a39b25492d7fc77f8e144449a18c05f820a4e95c23ebb64"
+        "schema": "482d23798b208fa8c6a40430d24fbd352703f9c610495f9f7389d7ba644b8b66",
+        "content": "34815d0d1d4c9bbf28825ec6715e85bdc505acfd1621db629b26b393d0e488b1"
       }
     },
     {

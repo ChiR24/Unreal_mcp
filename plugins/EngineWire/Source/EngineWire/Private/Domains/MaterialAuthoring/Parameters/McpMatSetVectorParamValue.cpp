@@ -74,10 +74,8 @@ bool HandleSetVectorParameterValue(UEngineWireSubsystem* Bridge, const FString& 
   Writer.Kind = TEXT("Vector");
   Writer.Type = EMaterialParameterType::Vector;
   Writer.SetDefault = [Color](UMaterial* Material, FName Name, TArray<FString>& Available) {
-    UMaterialExpressionVectorParameter* Param =
-        FindParameterExpression<UMaterialExpressionVectorParameter>(Material, Name, Available);
-    if (Param) { Param->DefaultValue = Color; }
-    return Param != nullptr;
+    return SetParameterExpressions<UMaterialExpressionVectorParameter>(Material, Name, Available,
+        [Color](UMaterialExpressionVectorParameter& Param) { Param.DefaultValue = Color; });
   };
   Writer.SetOverride = [Color](UMaterialInstanceConstant* Instance, FName Name) {
     Instance->SetVectorParameterValueEditorOnly(Name, Color);

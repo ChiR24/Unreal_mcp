@@ -41,6 +41,10 @@ UBlueprint* LoadBlueprintOrReply(FNetworkingActionContext& Context, const FStrin
 // LoadBlueprintOrReply, then its class default Actor, the object an Actor setting is written to; null after the reply
 // (NOT_SUPPORTED when the class never compiled, so there are no defaults to write). OutBlueprint gets the Blueprint.
 AActor* LoadActorDefaultsOrReply(FNetworkingActionContext& Context, const FString& BlueprintPath, UBlueprint*& OutBlueprint);
+// The actor named ActorName in the Play world while a session runs, else the editor world, where every actor has
+// authority and no pawn a controller; null after the reply (INVALID_PARAMS when the name is missing, NO_WORLD,
+// NOT_FOUND). OutWorld, when given, gets the world searched.
+AActor* FindNetActorOrReply(FNetworkingActionContext& Context, const FString& ActorName, UWorld** OutWorld = nullptr);
 // Mark the edited Blueprint modified, save it (saved), and send the verified success reply.
 bool SaveBlueprintAndReply(FNetworkingActionContext& Context, UBlueprint* Blueprint, const FString& Detail, const TCHAR* Message);
 // The Blueprint's own function graph named Name (FName compare, case ignored), or null.

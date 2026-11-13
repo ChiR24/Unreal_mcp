@@ -145,8 +145,16 @@ bool HandleConfigureNetUpdateFrequency(FNetworkingActionContext& Context)
 {
     const TSharedPtr<FJsonObject>& Payload = Context.Payload;
     FString BlueprintPath = GetJsonStringField(Payload, TEXT("blueprintPath"));
-    double NetUpdateFrequency = GetJsonNumberField(Payload, TEXT("netUpdateFrequency"), 100.0);
-    double MinNetUpdateFrequency = GetJsonNumberField(Payload, TEXT("minNetUpdateFrequency"), 2.0);
+    // Only the fields sent are written: the one left out was set to 100 or 2.
+    double NetUpdateFrequency = 0.0;
+    double MinNetUpdateFrequency = 0.0;
+    const bool bHasFrequency = Payload->TryGetNumberField(TEXT("netUpdateFrequency"), NetUpdateFrequency);
+    const bool bHasMin = Payload->TryGetNumberField(TEXT("minNetUpdateFrequency"), MinNetUpdateFrequency);
+    if (!bHasFrequency && !bHasMin)
+    {
+        Context.Bridge.SendAutomationError(Context.RequestingSocket, Context.RequestId, TEXT("Nothing to configure: pass netUpdateFrequency, minNetUpdateFrequency, or both."), TEXT("INVALID_PARAMS"));
+        return true;
+    }
 
     UBlueprint* Blueprint = nullptr;
     AActor* CDO = LoadActorDefaultsOrReply(Context, BlueprintPath, Blueprint);
@@ -155,13 +163,17 @@ bool HandleConfigureNetUpdateFrequency(FNetworkingActionContext& Context)
         return true;
     }
 #if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 5
-    CDO->SetNetUpdateFrequency(static_cast<float>(NetUpdateFrequency));
-    CDO->SetMinNetUpdateFrequency(static_cast<float>(MinNetUpdateFrequency));
+    if (bHasFrequency) { CDO->SetNetUpdateFrequency(static_cast<float>(NetUpdateFrequency)); }
+    if (bHasMin) { CDO->SetMinNetUpdateFrequency(static_cast<float>(MinNetUpdateFrequency)); }
+    const float StoredFrequency = CDO->GetNetUpdateFrequency();
+    const float StoredMin = CDO->GetMinNetUpdateFrequency();
 #else
-    CDO->NetUpdateFrequency = static_cast<float>(NetUpdateFrequency);
-    CDO->MinNetUpdateFrequency = static_cast<float>(MinNetUpdateFrequency);
+    if (bHasFrequency) { CDO->NetUpdateFrequency = static_cast<float>(NetUpdateFrequency); }
+    if (bHasMin) { CDO->MinNetUpdateFrequency = static_cast<float>(MinNetUpdateFrequency); }
+    const float StoredFrequency = CDO->NetUpdateFrequency;
+    const float StoredMin = CDO->MinNetUpdateFrequency;
 #endif
 
-    return SaveBlueprintAndReply(Context, Blueprint, FString::Printf(TEXT("Net update frequency set to %.1f (min: %.1f)"), NetUpdateFrequency, MinNetUpdateFrequency), TEXT("Net update frequency configured"));
+    return SaveBlueprintAndReply(Context, Blueprint, FString::Printf(TEXT("Net update frequency %.1f (min: %.1f)"), StoredFrequency, StoredMin), TEXT("Net update frequency configured"));
 }
 }
