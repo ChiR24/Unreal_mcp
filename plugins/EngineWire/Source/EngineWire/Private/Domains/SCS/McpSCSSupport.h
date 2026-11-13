@@ -19,6 +19,10 @@ bool IsPlayInEditorActive();
 FString GetSCSNodeName(const USCS_Node *Node);
 bool IsSCSRootAlias(USimpleConstructionScript *SCS, const FString &Name);
 bool IsSCSRootNode(USimpleConstructionScript *SCS, USCS_Node *Node);
+// The node the root alias names, as the engine finds the root: the native root, else the first scene root node of
+// the Blueprint hierarchy, else the default scene root. Null when that root is not a node of this SCS (native or a
+// parent Blueprint's): a node at the top of the SCS is then its child.
+USCS_Node *SCSRootAliasNode(USimpleConstructionScript *SCS);
 TSharedPtr<FJsonObject> MakeTransformJson(const FTransform &Transform);
 void AddSCSNodeVerification(TSharedPtr<FJsonObject> Result,
                             USimpleConstructionScript *SCS, USCS_Node *Node);

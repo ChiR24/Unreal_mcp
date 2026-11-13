@@ -13,6 +13,12 @@ class ULandscapeSplineSegment;
 class ULandscapeSplinesComponent;
 
 namespace McpLandscapeHandlers {
+// A heightmap action's region in Out*, from `region` {minX, minY, maxX, maxY} or the same four at the top level, each
+// unset one at the landscape's full extent and all clamped to it. A negative vertex (a landscape grown with the Add
+// tool) is a vertex like any other.
+void McpApplyHeightmapRegionFromPayload(const TSharedPtr<FJsonObject> &Payload, int32 FullMinX, int32 FullMinY,
+                                        int32 FullMaxX, int32 FullMaxY, int32 &OutMinX, int32 &OutMinY,
+                                        int32 &OutMaxX, int32 &OutMaxY);
 bool McpExportLandscapeHeightmap(const TSharedPtr<FJsonObject> &Payload, TSharedPtr<FJsonObject> Resp,
                                  FString &OutMessage, FString &OutErrorCode);
 bool McpImportLandscapeHeightmap(const TSharedPtr<FJsonObject> &Payload, TSharedPtr<FJsonObject> Resp,

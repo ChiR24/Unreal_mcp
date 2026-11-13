@@ -240,15 +240,18 @@ bool HandleRun(UEngineWireSubsystem& Bridge, const FString& RequestId, const TSh
         }
     }
     // Marked verified when the run ends with every step holding: now, or on a later tick after a step that answers later.
-    McpScript::HandleRunScript(Bridge, RequestId, Run, Socket, [Recipe, Name](const bool bRan)
+    // Loaded again then: a save over the recipe or its removal in between was undone by storing the object loaded
+    // before the run, the older text under a verified stamp or a removed recipe back.
+    McpScript::HandleRunScript(Bridge, RequestId, Run, Socket, [Name, RanScript = GetJsonStringField(Recipe, TEXT("script"))](const bool bRan)
     {
-        if (bRan)
+        const TSharedPtr<FJsonObject> Current = bRan ? Load(Name) : nullptr;
+        if (Current.IsValid() && GetJsonStringField(Current, TEXT("script")).Equals(RanScript, ESearchCase::CaseSensitive))
         {
             TSharedPtr<FJsonObject> Verified = MakeShared<FJsonObject>();
             Verified->SetStringField(TEXT("engine"), FEngineVersion::Current().ToString(EVersionComponent::Patch));
             Verified->SetStringField(TEXT("at"), FDateTime::UtcNow().ToIso8601());
-            Recipe->SetObjectField(TEXT("verified"), Verified);
-            Store(Name, Recipe);
+            Current->SetObjectField(TEXT("verified"), Verified);
+            Store(Name, Current);
         }
     });
     return true;

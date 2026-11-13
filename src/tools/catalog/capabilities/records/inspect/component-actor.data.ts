@@ -175,10 +175,13 @@ export const COMPONENT_ACTOR_RECORDS: readonly CapabilityRecordSource[] = [
   buildCoreRecord({
     parentTool: 'inspect', action: 'find_by_class', dispatchAction: 'find_by_class', domain: D, family: 'actor',
     topics: ['all actors of a type', 'every instance'],
-    summary: 'Find the actors of a class in the level, by class name or /Script path: returns each match\'s name, path and class plus a count. Searches the PIE world while a game runs.',
+    summary: 'Find the actors of a class or any subclass of it in the level (a short native name such as PointLight, /Script/Engine.PointLight, or a Blueprint asset path): each match\'s name, path and class plus a count, the first limit (default 200) with truncated and totalCount when more match. A class that resolves to nothing is refused as CLASS_NOT_FOUND. Searches the PIE world while a game runs.',
     whenToUse: ['All actors of a specific class must be enumerated.'],
     whenNotToUse: ['Actors must be found by tag; use find_by_tag.'],
-    inputProps: { className: P.className, classPath: P.classPath },
+    inputProps: {
+      className: P.className, classPath: P.classPath,
+      limit: { type: 'number', description: 'Most actors to list (1-1000, default 200); when more match, truncated is true and totalCount counts them.' },
+    },
     required: [],
     requiredOneOf: ['className', 'classPath'],
     effect: 'read',

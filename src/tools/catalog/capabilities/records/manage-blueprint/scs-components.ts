@@ -191,7 +191,10 @@ export const SCS_COMPONENTS_RECORDS: readonly CapabilityRecordSource[] = [
     summary: 'Reparent an SCS component node to a new parent node in the SCS tree.',
     whenToUse: ['An SCS component must move under a different parent node.'],
     whenNotToUse: ['The component hierarchy does not need restructuring.'],
-    inputProps: { blueprintPath: P.blueprintPath, componentName: P.componentName, newParent: P.newParent, save: SCS_SAVE },
+    inputProps: {
+      blueprintPath: P.blueprintPath, componentName: P.componentName, save: SCS_SAVE,
+      newParent: { type: 'string', description: 'The new parent: a component of this Blueprint, of a parent Blueprint or a native part, by its property name (Mesh, CapsuleComponent); RootComponent for the root.' },
+    },
     required: ['blueprintPath', 'componentName', 'newParent'],
     outputProps: { partWarnings: PART_WARNINGS },
     effect: 'write',

@@ -354,6 +354,7 @@ const testCases = [
     arguments: {
       action: 'delete_enum',
       enumPath: '${captured:enumPath}',
+      force: true,
     },
     expected: 'success',
     assertions: [

@@ -145,23 +145,6 @@ inline bool McpActorMatchesListFilters(const AActor *Actor, const FString &Tag,
          ActorFolder.StartsWith(Folder + TEXT("/"), ESearchCase::IgnoreCase);
 }
 
-// The first `limit` rows of a find (1-1000, default 200), with truncated and totalCount when the list was cut: a class
-// or a tag most of a level shares answered every actor, hundreds of rows, while a mesh or material find stopped at 200.
-// Returns how many matched in all.
-inline int32 McpCapFindRows(const TSharedPtr<FJsonObject> &Payload, TArray<TSharedPtr<FJsonValue>> &Rows,
-                            const TSharedPtr<FJsonObject> &Data) {
-  double Requested = 0.0;
-  const int32 Limit = Payload->TryGetNumberField(TEXT("limit"), Requested)
-                          ? FMath::Clamp(static_cast<int32>(Requested), 1, 1000) : 200;
-  const int32 Total = Rows.Num();
-  if (Total > Limit) {
-    Rows.SetNum(Limit);
-    Data->SetBoolField(TEXT("truncated"), true);
-    Data->SetNumberField(TEXT("totalCount"), Total);
-  }
-  return Total;
-}
-
 // The many-actor form of an action: the actors an `actorNames` array names, each once and in order,
 // and the names that matched no actor. False, with nothing filled, when the payload has no
 // non-empty actorNames. Find is the subsystem's FindActorByName (a private member, so each handler
@@ -305,8 +288,14 @@ TArray<TSharedPtr<FJsonValue>> McpMotionInputsJson(const TArray<FMcpMotionInput>
 // ended up intersecting, and whether it is sunk into or floating above the
 // surface beneath it, rather than answering a bare "success".
 namespace McpPlacement {
-/** OutKind: the bucket of the warning written (overlapping, sunk, floating, unsupported); untouched when there is none. */
-void DescribePlacement(AActor *Actor, const TSharedPtr<FJsonObject> &Data, FString *OutKind = nullptr);
+/** What the check found, for callers that act on it: read from the warning's words, an actor labelled FloatingCrate was
+ *  taken for floating. Kind: the bucket of the warning written (overlapping, sunk, floating, unsupported), empty when
+ *  there is none; bOnBodiless: it floats on an actor with no collision, so the floor under it lies under that mesh. */
+struct FMcpPlacementVerdict {
+  FString Kind;
+  bool bOnBodiless = false;
+};
+void DescribePlacement(AActor *Actor, const TSharedPtr<FJsonObject> &Data, FMcpPlacementVerdict *OutVerdict = nullptr);
 /** True when a caller has marked this actor's placement deliberate. */
 bool McpPlacementAccepted(const AActor *Actor);
 /** A landscape, or a slab far wider than it is thick: what other actors stand on, judged sunk or floating against. */

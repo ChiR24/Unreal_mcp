@@ -103,17 +103,8 @@ TSharedPtr<FJsonObject> FSCSHandlers::AddSCSComponent(
   USCS_Node *InheritedParent = nullptr;
   if (!ParentComponentName.IsEmpty()) {
     if (IsSCSRootAlias(SCS, ParentComponentName)) {
-      const TArray<USCS_Node *> &Roots = SCS->GetRootNodes();
-      for (USCS_Node *Root : Roots) {
-        if (Root && GetSCSNodeName(Root).Equals(
-                        TEXT("DefaultSceneRoot"), ESearchCase::IgnoreCase)) {
-          ParentNode = Root;
-          break;
-        }
-      }
-      if (!ParentNode && !Roots.IsEmpty()) {
-        ParentNode = Roots[0];
-      }
+      // The engine's root; null when native or a parent Blueprint's, whose children sit at the top of the SCS.
+      ParentNode = SCSRootAliasNode(SCS);
     } else {
       ParentNode = FindScsNodeByName(SCS, ParentComponentName);
       // A parent Blueprint's part, as edit_scs attachTo takes it (this path refused it).

@@ -61,6 +61,14 @@ bool UEngineWireSubsystem::HandleCreateVirtualBone(
         }
     }
 
+    // A name another bone holds: RenameVirtualBone checks nothing, and two bones of one name left lookups finding one.
+    if (!VirtualBoneName.IsEmpty() && RefSkeleton.FindBoneIndex(FName(*VirtualBoneName)) != INDEX_NONE)
+    {
+        SendAutomationError(RequestingSocket, RequestId,
+            FString::Printf(TEXT("Bone '%s' already exists on skeleton %s (list_bones)"), *VirtualBoneName, *Skeleton->GetPathName()),
+            TEXT("BONE_EXISTS"));
+        return true;
+    }
     // AddNewVirtualBone refuses only a pair it already has; refused here, before anything changes.
     if (Skeleton->GetVirtualBones().ContainsByPredicate([&SourceBone, &TargetBone](const FVirtualBone& VB)
             { return VB.SourceBoneName == FName(*SourceBone) && VB.TargetBoneName == FName(*TargetBone); }))
@@ -121,6 +129,14 @@ bool UEngineWireSubsystem::HandleRenameBone(
     if (Skeleton->GetVirtualBones().ContainsByPredicate([&BoneFName](const FVirtualBone& VB) { return VB.VirtualBoneName == BoneFName; }))
     {
         const FString NewVirtualName = NewBoneName.StartsWith(TEXT("VB ")) ? NewBoneName : VirtualBoneNameHelpers::AddVirtualBonePrefix(NewBoneName);
+        // A name another bone holds, as on create: two bones of one name left lookups finding one.
+        if (FName(*NewVirtualName) != BoneFName && Skeleton->GetReferenceSkeleton().FindBoneIndex(FName(*NewVirtualName)) != INDEX_NONE)
+        {
+            SendAutomationError(RequestingSocket, RequestId,
+                FString::Printf(TEXT("Bone '%s' already exists on skeleton %s (list_bones)"), *NewVirtualName, *Skeleton->GetPathName()),
+                TEXT("BONE_EXISTS"));
+            return true;
+        }
         TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
         {
             const FMcpAssetEdit Edit(TEXT("Rename Virtual Bone"), {Skeleton}, Result);

@@ -13,7 +13,7 @@
     { "edit": "create_node", "id": "focusNeeded", "nodeType": "Branch" },
     { "edit": "create_node", "id": "focusTagged", "nodeType": "CallFunction", "memberName": "GetAllActorsWithTag", "memberClass": "/Script/Engine.GameplayStatics", "pinDefaults": { "Tag": "{{FocusTag}}" } },
     { "edit": "create_node", "id": "focusTarget", "nodeType": "CallFunction", "memberName": "Array_Get", "memberClass": "/Script/Engine.KismetArrayLibrary", "pinDefaults": { "Index": 0 } },
-    { "edit": "create_node", "id": "focusFound", "nodeType": "CallFunction", "memberName": "IsValid", "memberClass": "/Script/Engine.KismetSystemLibrary" },
+    { "edit": "create_node", "id": "focusFound", "nodeType": "CallFunction", "memberName": "Array_IsValidIndex", "memberClass": "/Script/Engine.KismetArrayLibrary", "pinDefaults": { "IndexToTest": 0 } },
     { "edit": "create_node", "id": "focusFoundBranch", "nodeType": "Branch" },
     { "edit": "create_node", "id": "focusSet", "nodeType": "CallFunction", "memberName": "K2_SetFocus", "memberClass": "/Script/AIModule.AIController" },
     { "edit": "connect_pins", "from": "$focusTick.then", "to": "$focusNeeded.execute" },
@@ -22,7 +22,7 @@
     { "edit": "connect_pins", "from": "$focusNeeded.else", "to": "$focusTagged.execute" },
     { "edit": "connect_pins", "from": "$focusTagged.OutActors", "to": "$focusTarget.TargetArray" },
     { "edit": "connect_pins", "from": "$focusTagged.then", "to": "$focusFoundBranch.execute" },
-    { "edit": "connect_pins", "from": "$focusTarget.Item", "to": "$focusFound.Object" },
+    { "edit": "connect_pins", "from": "$focusTagged.OutActors", "to": "$focusFound.TargetArray" },
     { "edit": "connect_pins", "from": "$focusFound.ReturnValue", "to": "$focusFoundBranch.Condition" },
     { "edit": "connect_pins", "from": "$focusFoundBranch.then", "to": "$focusSet.execute" },
     { "edit": "connect_pins", "from": "$focusTarget.Item", "to": "$focusSet.NewFocus" }

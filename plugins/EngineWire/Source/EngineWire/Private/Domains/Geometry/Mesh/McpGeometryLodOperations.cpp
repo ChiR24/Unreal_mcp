@@ -67,7 +67,7 @@ bool HandleGenerateLODsGeometry(UEngineWireSubsystem* Self, const FString& Reque
     FString TargetPath;
     FString PathError;
     FString PathCode;
-    if (!ResolveConversionAssetPath(Payload, ActorName + TEXT("_LOD"), TargetPath, PathError, PathCode))
+    if (!ResolveConversionAssetPath(Payload, Target->Actor->GetActorLabel() + TEXT("_LOD"), TargetPath, PathError, PathCode))
     {
         Self->SendAutomationError(Socket, RequestId, PathError, PathCode);
         return true;

@@ -46,6 +46,8 @@ struct FFinding
     TArray<FString> Overlaps;
     /** The kinds asked for that it shows. */
     TArray<FString> Kinds;
+    /** Floating on an actor with no collision: the floor under it lies under that mesh, so it is not dropped there. */
+    bool bOnBodiless = false;
 };
 FFinding ReadFinding(AActor* Actor, const TSet<FString>& Kinds);
 

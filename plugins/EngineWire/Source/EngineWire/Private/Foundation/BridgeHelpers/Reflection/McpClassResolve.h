@@ -201,3 +201,15 @@ static inline UClass *ResolveClassByName(const FString &ClassNameOrPath) {
   }
   return nullptr;
 }
+
+// Why ClassName names no class, as a find says it: the forms a class takes, and where an asset of that name lives
+// (a wrong folder was the usual miss). A find that answered 0 for a class that does not exist read like a level
+// with none of them.
+static inline FString McpClassNotFoundMessage(const FString &ClassName) {
+  const FString SameNamed = McpSameNamedAssetPaths(ClassName);
+  const FString Where = SameNamed.IsEmpty() ? FString() : FString::Printf(TEXT(" Assets with that name: %s."), *SameNamed);
+  return FString::Printf(TEXT("Class '%s' did not resolve to a UClass, so no actors could be matched. A Blueprint "
+                              "takes its asset name (BP_Thing) or generated-class path (/Game/Path/BP_Thing.BP_Thing_C); "
+                              "native classes take a short name (StaticMeshActor) or /Script/Engine.Actor.%s"),
+                         *ClassName, *Where);
+}

@@ -8,6 +8,24 @@
 #include "Foundation/BridgeHelpers/Security/McpAssetPathCanonical.h"
 #include "Foundation/HandlerUtils/McpHandlerUtilsJson.h"
 
+// Recompiles the loaded Blueprints among Packages, the users of an asset deleted with force, so their broken variables
+// and pins show at once.
+inline void McpRecompileLoadedBlueprints(const TArray<FString>& Packages)
+{
+    for (const FString& Package : Packages)
+    {
+        TArray<FAssetData> PackageAssets;
+        FAssetRegistryModule::GetRegistry().GetAssetsByPackageName(FName(*Package), PackageAssets);
+        for (const FAssetData& AssetData : PackageAssets)
+        {
+            if (UBlueprint* BP = AssetData.IsAssetLoaded() ? Cast<UBlueprint>(AssetData.GetAsset()) : nullptr)
+            {
+                McpCompileBlueprint(BP, nullptr, EBlueprintCompileOptions::None);
+            }
+        }
+    }
+}
+
 #include "AssetRegistry/AssetRegistryModule.h"
 
 // bulk_delete / bulk_rename act on the explicit assetPaths, else on every asset under folderPath.

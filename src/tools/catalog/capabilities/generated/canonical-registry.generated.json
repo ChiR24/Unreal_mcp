@@ -1,5 +1,5 @@
 {
-  "catalogRevision": "5a50f57ebd7e9684",
+  "catalogRevision": "5e1ab7b91c7fefe4",
   "recordCount": 489,
   "records": [
     {
@@ -10698,7 +10698,7 @@
                 "fab_download",
                 "megascans"
               ],
-              "description": "Which import marketplace asset variant to run.\nfab_listing: Start importing one Fab listing into this project through the signed-in Fab tab and return as soon as Fab accepts the download. The tab is opened when it is closed and the page is waited for up to 15 seconds (PAGE_NOT_READY after that); the account must be signed in there. The content does NOT exist yet when this replies: downloading and importing take minutes and hold the editor, far longer than a client waits, so poll asset.query_marketplace with lookup=fab_import_status and the returned operationId until phase is done or failed (marketplace=fab_cancel stops one that is queued or downloading). Never call this again to see progress: a repeat for a listing that is queued or running only hands back the same operation (alreadyRunning), and a repeat that asks for a different quality, combineMeshes, destinationPath or assetName is refused with ADD_ALREADY_RUNNING, naming that operation, since it would ignore them. One import runs at a time, so an add made while another runs is queued (phase queued, queuePosition) and starts by itself, first in first out, and the status read lists the queue; only a full queue (8 waiting) is refused with QUEUE_FULL, which names the import at its head with its phase, bytes and elapsed time and returns the status call as its nextCall. A queued add is not put to Fab until its turn, so a refusal it would have got at once (NO_IMPORTABLE_FORMAT, COMPLETE_PROJECT, LARGE_SCENE_FILE) arrives later as the status read's failureCode. It claims the listing first: Fab answers 404 for a download the account does not own, so this posts add-to-library exactly as the Fab UI does when you press Add to Project — a real change to your Fab library, free to claim and harmless to repeat on a listing you already own. It claims each free license of the listing in turn until Fab accepts one. Then it picks the format the Fab importer accepts (unreal-engine, else gltf, glb, fbx, obj or usdz) and hands over the download. An unreal-engine pack that declares no build for the running engine imports the highest build at or below it, else the lowest above it, and engineMatch (older or newer) and engineVersion say which. A complete project (COMPLETE_PROJECT) cannot be added to an existing project: it is refused after the claim, so it is in your library to create a project from, and the reply says to create it as a new project from Fab and migrate its content. A MetaHuman listing (METAHUMAN_FORMAT) is refused before anything is claimed, because Fab hands it to a workflow this add does not drive. A listing Fab will not give an address for fails with NO_DOWNLOAD_URL naming the step that refused (license: no offer to claim; claim: Fab refused the account; download-info: Fab answered no address), Fab's HTTP status and Fab's own words, so the cause is in the reply rather than the editor log; the reply names the format, the file and its quality tier, and the file size when Fab publishes one. A Megascans listing publishes one file per quality tier (raw, high, mid, low); quality takes exactly the tier named, and a tier the listing does not publish is refused with QUALITY_NOT_AVAILABLE, naming the tiers it does, before anything downloads. Without quality it takes the best game-ready tier: high, else mid, low, raw. A listing that publishes no tiers, and an unreal-engine pack, ignore quality. Supply only a listing id; the signed URL, EOS token and session cookie stay inside the page and reach no response or log. Fab chooses the destination folder (a Megascans add lands under a machine-named tree such as /Game/Fab/Megascans/3D/<name>_<id>/High/<id>_tier_1), and the status read reports importedRoot once the import is done, by which time the packages Fab left unsaved in memory have been saved, and they are saved again 15 and 60 seconds after the import ends for anything the engine marks dirty late; the status read's saved, savedCount and unsavedPackages say how it went and name a package that could not be saved, and its warnings name a material instance the import left with no parent material. destinationPath moves what the import created in its own folders to a /Game folder you name, keeping the layout beneath it (StaticMeshes, Materials, Textures), and assetName names the import's one mesh SM_<assetName> (SK_ for a skeletal mesh) with its material instance and textures following (MI_<assetName>, T_<assetName>_<suffix>); a surface has no mesh and is named by its one material instance. It runs the move and rename that asset.move runs, so references and settings follow and the redirectors left behind are fixed, and it is all or nothing: a name already taken stops it before anything moves. It never touches the shared master materials, material functions and textures in /Game/Fab/Materials, /Game/Fab/MaterialFunctions and /Game/Fab/Textures, and an unreal-engine pack, which arrives outside /Game/Fab, stays where Fab put it. The status read's relocated, movedCount and relocationNote say what happened. Fab's importer merges every mesh in a source file (fbx, obj, gltf, glb, usdz) into ONE static mesh, whatever the project's import settings say, and a file that is really a scene became a single unplaceable mesh that needed gigabytes to build while the editor stayed held for many minutes. So a single mesh file of 50 MB or more (Megascans and unreal-engine packs are not affected) is refused with LARGE_SCENE_FILE, before anything downloads, until combineMeshes says which way to import it.\nfab_cancel: Stop a Fab import that asset.import_marketplace_asset (marketplace=fab_listing) started, by its operationId. Fab gives three handles and this uses exactly those: an add still waiting in the queue is dropped and never reaches Fab; an unreal-engine pack that is downloading is stopped by pressing the Cancel button on Fab's own download notification; an import whose files Interchange is translating is told to cancel its tasks. The download of a source format (fbx, gltf, obj, usdz, Megascans) has no Cancel anywhere in Fab, so it is refused with NOT_CANCELLABLE and the reason, as is an add that is still resolving (seconds, and not interruptible) and an import past its download with no Interchange task to stop; the status read's cancellable says beforehand whether a cancel would work. A running import ends as failed with failureCode CANCELLED within a second (phase cancelling until then), with whatever had already landed listed and left unsaved and unmoved, so asset.delete removes it. A call is served only while the editor is free: while Fab builds meshes the editor is held and every call answers EDITOR_BLOCKED, so a cancel has to come before that. A finished import is refused with ALREADY_FINISHED and an unknown id with NOT_FOUND.\nfab_download: Download a Fab asset through the Fab plugin's own downloader (FFabDownloadRequest), so the transfer uses its HTTP/BuildPatchServices path rather than a parallel implementation that would miss its retry handling. IMPORTANT: the signed downloadUrl is NOT minted here — Fab issues it from its authenticated web session and no C++ entry point initiates that, so supply a URL obtained from the Fab tab's own flow. Once the pack lands, asset.migrate_assets with sourceRoot \"fabLibrary\" places it into /Game. Acquires content against the signed-in account, so it is an explicit-consent write.\nmegascans: Import a downloaded Megascans pack through the Bridge plugin's own importer, headlessly — no Bridge window, no drag, no sign-in. Calls FAssetsImportController::DataReceived, the exported entry point the Bridge desktop app drives over its local TCP socket, so quality tiers, master materials and the MSPresets setup all apply exactly as they would from the UI. This imports content ALREADY on disk, downloaded by the Bridge app. A Megascans listing that is not downloaded yet is fetched and imported by marketplace=fab_listing instead, which needs no Bridge window. Assets land under /Game/Megascans."
+              "description": "Which import marketplace asset variant to run.\nfab_listing: Start importing one Fab listing into this project through the signed-in Fab tab and return as soon as Fab accepts the download. The tab is opened when it is closed and the page is waited for up to 15 seconds (PAGE_NOT_READY after that); the account must be signed in there. The content does NOT exist yet when this replies: downloading and importing take minutes and hold the editor, far longer than a client waits, so poll asset.query_marketplace with lookup=fab_import_status and the returned operationId until phase is done or failed (marketplace=fab_cancel stops one that is queued or downloading). Never call this again to see progress: a repeat for a listing that is queued or running only hands back the same operation (alreadyRunning), and a repeat that asks for a different quality, combineMeshes, destinationPath or assetName is refused with ADD_ALREADY_RUNNING, naming that operation, since it would ignore them. One import runs at a time, so an add made while another runs is queued (phase queued, queuePosition) and starts by itself, first in first out, and the status read lists the queue; only a full queue (8 waiting) is refused with QUEUE_FULL, which names the import at its head with its phase, bytes and elapsed time and returns the status call as its nextCall. A queued add is not put to Fab until its turn, so a refusal it would have got at once (NO_IMPORTABLE_FORMAT, COMPLETE_PROJECT, LARGE_SCENE_FILE) arrives later as the status read's failureCode. It claims the listing first: Fab answers 404 for a download the account does not own, so this posts add-to-library exactly as the Fab UI does when you press Add to Project — a real change to your Fab library, free to claim and harmless to repeat on a listing you already own. It claims each free license of the listing in turn until Fab accepts one. Then it picks the format the Fab importer accepts (unreal-engine, else gltf, glb, fbx, obj or usdz) and hands over the download. An unreal-engine pack that declares no build for the running engine imports the highest build at or below it, else the lowest above it, and engineMatch (older or newer) and engineVersion say which. A complete project (COMPLETE_PROJECT) cannot be added to an existing project: it is refused after the claim, so it is in your library to create a project from, and the reply says to create it as a new project from Fab and migrate its content. A listing id Fab does not answer for with its listing (404 for an id it has none of) is refused as LISTING_UNAVAILABLE, with the status, before anything is claimed. A MetaHuman listing (METAHUMAN_FORMAT) is refused before anything is claimed, because Fab hands it to a workflow this add does not drive. A listing Fab will not give an address for fails with NO_DOWNLOAD_URL naming the step that refused (license: no offer to claim; claim: Fab refused the account; download-info: Fab answered no address), Fab's HTTP status and Fab's own words, so the cause is in the reply rather than the editor log; the reply names the format, the file and its quality tier, and the file size when Fab publishes one. A Megascans listing publishes one file per quality tier (raw, high, mid, low); quality takes exactly the tier named, and a tier the listing does not publish is refused with QUALITY_NOT_AVAILABLE, naming the tiers it does, before anything downloads. Without quality it takes the best game-ready tier: high, else mid, low, raw. A listing that publishes no tiers, and an unreal-engine pack, ignore quality. Supply only a listing id; the signed URL, EOS token and session cookie stay inside the page and reach no response or log. Fab chooses the destination folder (a Megascans add lands under a machine-named tree such as /Game/Fab/Megascans/3D/<name>_<id>/High/<id>_tier_1), and the status read reports importedRoot once the import is done, by which time the packages Fab left unsaved in memory have been saved, and they are saved again 15 and 60 seconds after the import ends for anything the engine marks dirty late; the status read's saved, savedCount and unsavedPackages say how it went and name a package that could not be saved, and its warnings name a material instance the import left with no parent material. destinationPath moves what the import created in its own folders to a /Game folder you name, keeping the layout beneath it (StaticMeshes, Materials, Textures), and assetName names the import's one mesh SM_<assetName> (SK_ for a skeletal mesh) with its material instance and textures following (MI_<assetName>, T_<assetName>_<suffix>); a surface has no mesh and is named by its one material instance. It runs the move and rename that asset.move runs, so references and settings follow and the redirectors left behind are fixed, and it is all or nothing: a name already taken stops it before anything moves. It never touches the shared master materials, material functions and textures in /Game/Fab/Materials, /Game/Fab/MaterialFunctions and /Game/Fab/Textures, and an unreal-engine pack, which arrives outside /Game/Fab, stays where Fab put it. The status read's relocated, movedCount and relocationNote say what happened. Fab's importer merges every mesh in a source file (fbx, obj, gltf, glb, usdz) into ONE static mesh, whatever the project's import settings say, and a file that is really a scene became a single unplaceable mesh that needed gigabytes to build while the editor stayed held for many minutes. So a single mesh file of 50 MB or more (Megascans and unreal-engine packs are not affected) is refused with LARGE_SCENE_FILE, before anything downloads, until combineMeshes says which way to import it.\nfab_cancel: Stop a Fab import that asset.import_marketplace_asset (marketplace=fab_listing) started, by its operationId. Fab gives three handles and this uses exactly those: an add still waiting in the queue is dropped and never reaches Fab; an unreal-engine pack that is downloading is stopped by pressing the Cancel button on Fab's own download notification; an import whose files Interchange is translating is told to cancel its tasks. The download of a source format (fbx, gltf, obj, usdz, Megascans) has no Cancel anywhere in Fab, so it is refused with NOT_CANCELLABLE and the reason, as is an add that is still resolving (seconds, and not interruptible) and an import past its download with no Interchange task to stop; the status read's cancellable says beforehand whether a cancel would work. A running import ends as failed with failureCode CANCELLED within a second (phase cancelling until then), with whatever had already landed listed and left unsaved and unmoved, so asset.delete removes it. A call is served only while the editor is free: while Fab builds meshes the editor is held and every call answers EDITOR_BLOCKED, so a cancel has to come before that. A finished import is refused with ALREADY_FINISHED and an unknown id with NOT_FOUND.\nfab_download: Download a Fab asset through the Fab plugin's own downloader (FFabDownloadRequest), so the transfer uses its HTTP/BuildPatchServices path rather than a parallel implementation that would miss its retry handling. IMPORTANT: the signed downloadUrl is NOT minted here — Fab issues it from its authenticated web session and no C++ entry point initiates that, so supply a URL obtained from the Fab tab's own flow. Once the pack lands, asset.migrate_assets with sourceRoot \"fabLibrary\" places it into /Game. Acquires content against the signed-in account, so it is an explicit-consent write.\nmegascans: Import a downloaded Megascans pack through the Bridge plugin's own importer, headlessly — no Bridge window, no drag, no sign-in. Calls FAssetsImportController::DataReceived, the exported entry point the Bridge desktop app drives over its local TCP socket, so quality tiers, master materials and the MSPresets setup all apply exactly as they would from the UI. This imports content ALREADY on disk, downloaded by the Bridge app. A Megascans listing that is not downloaded yet is fetched and imported by marketplace=fab_listing instead, which needs no Bridge window. Assets land under /Game/Megascans."
             }
           },
           "required": [
@@ -10949,8 +10949,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "e2f8b12b5a13ed799603e5521ece6251fef140cd4f06626a31b620329f39060a",
-        "content": "2748c4c9948eacb227027fd21566c47931db0d5d2f15ed2795b7c3825d774d00"
+        "schema": "1b9e2a963dccfaecf2b2d699bab6603f4f3e8be35a1d33be54ce7769f98ecef3",
+        "content": "9d0f80bce252c537700349300ededb070f4d034198f6e6aaa1d93ffc20efb9ff"
       }
     },
     {
@@ -22373,7 +22373,7 @@
             },
             "newParent": {
               "type": "string",
-              "description": "New parent SCS node name."
+              "description": "The new parent: a component of this Blueprint, of a parent Blueprint or a native part, by its property name (Mesh, CapsuleComponent); RootComponent for the root."
             },
             "propertyName": {
               "type": "string",
@@ -22652,8 +22652,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "5898084de793f7394402fb4aa522e6280924c31b6a13a7a7fb92e974d7790aae",
-        "content": "62c7e29e930a39bd605225b83b3a06647165b96bf7acbef6240368af0ed6d7f3"
+        "schema": "5e5fc9d885ef9f73d8565d124b45a01defaa166146c74fa1f49fad14a7a8f879",
+        "content": "4c31db031914b9739f28ab1a9212aa8f5f27235c9987cdfefbce8f52b9203243"
       }
     },
     {
@@ -23693,7 +23693,7 @@
             },
             "newParent": {
               "type": "string",
-              "description": "New parent SCS node name."
+              "description": "The panel widget to move the widget under, by its name in the tree."
             },
             "index": {
               "type": "integer",
@@ -23756,7 +23756,7 @@
             },
             "newParent": {
               "type": "string",
-              "description": "New parent SCS node name."
+              "description": "The panel widget to move the widget under, by its name in the tree."
             },
             "index": {
               "type": "integer",
@@ -23890,8 +23890,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "eb65c44f110b3c45836787647803da6dd081a239bb9a489fe3d3e48674d17fc0",
-        "content": "b61e5504786111b8b17616bc926ab2f1c1bf78a0d7820d2c7521e7cf2fed0330"
+        "schema": "45084a0d46b105adc47e506997aeb23e33910efd71fb6f8478c65310164ba898",
+        "content": "87a2c79e5971d72fb4fa6d63af3231423056f6045cdedac224f45dff08a4c16c"
       }
     },
     {
@@ -54798,7 +54798,7 @@
         ],
         "summary": "Delete an enum asset (deleteScope enum, the default; refused with DELETE_FAILED, naming referencedBy, while anything still uses it) or remove one of its values (value: the later values move up one while loaded Blueprints and assets holding them keep their entries, remapped by name as the enum editor does, and pins set to the removed one are reset to the first entry; one undo step). Saved unless save is false.",
         "whenToUse": [
-          "deleteScope=enum: An obsolete enum asset must be deleted from the project; while anything still uses it the delete is refused (DELETE_FAILED) and referencedBy names what does.",
+          "deleteScope=enum: An obsolete enum asset must be deleted from the project; while anything still uses it the delete is refused (DELETE_FAILED) and referencedBy names what does, unless force is true.",
           "deleteScope=value: One entry must be dropped from an enum. The entries after it move up one, as in the enum editor: loaded Blueprints and assets holding them keep their entries (remapped by name), graph pins set to the dropped entry are reset to the first one, and nodes that list the entries are rebuilt."
         ],
         "whenNotToUse": [
@@ -54816,6 +54816,10 @@
               "type": "string",
               "description": "Asset path of the UserDefinedEnum (e.g. /Game/Enums/E_MyEnum)."
             },
+            "force": {
+              "type": "boolean",
+              "description": "Delete it although other assets use it, breaking their variables and pins (default false: refused, referencedBy naming them)."
+            },
             "valueName": {
               "type": "string",
               "description": "Enum value (entry), by its internal name or the name the editor shows (get_enum lists both as name and displayName)."
@@ -54830,7 +54834,7 @@
                 "enum",
                 "value"
               ],
-              "description": "Which delete enum variant to run; omit for 'enum'.\nenum: Delete a UserDefinedEnum asset.\nvalue: Remove a value from a UserDefinedEnum.",
+              "description": "Which delete enum variant to run; omit for 'enum'.\nenum: Delete a UserDefinedEnum asset; refused while other assets use it unless force is true.\nvalue: Remove a value from a UserDefinedEnum.",
               "default": "enum"
             }
           },
@@ -54905,6 +54909,9 @@
             "value": "remove_enum_value"
           },
           "declaredBy": {
+            "force": [
+              "enum"
+            ],
             "valueName": [
               "value"
             ],
@@ -54923,8 +54930,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "74b653ca89ebe5c3a22fb6d5aa46de8f67a52f14d9aa3d89c9231ec7f9b2b9f8",
-        "content": "4e224c0f79b081d08bda913d9a3dc5d5de96b13477ec8d658327a1043be76088"
+        "schema": "a287947266167705d5eea15713fb89295dd8ad5c8963bba36985ff9e1157f0f6",
+        "content": "a207b25502dece0f4b2b473170e72a66527bbc74e625fb713007324a08a8be5a"
       }
     },
     {
@@ -58049,7 +58056,7 @@
           "all actors of a type",
           "every instance"
         ],
-        "summary": "Find the actors of a class in the level, by class name or /Script path: returns each match's name, path and class plus a count. Searches the PIE world while a game runs.",
+        "summary": "Find the actors of a class or any subclass of it in the level (a short native name such as PointLight, /Script/Engine.PointLight, or a Blueprint asset path): each match's name, path and class plus a count, the first limit (default 200) with truncated and totalCount when more match. A class that resolves to nothing is refused as CLASS_NOT_FOUND. Searches the PIE world while a game runs.",
         "whenToUse": [
           "All actors of a specific class must be enumerated."
         ],
@@ -58073,6 +58080,10 @@
             "classPath": {
               "type": "string",
               "description": "Class asset path (alias of className)."
+            },
+            "limit": {
+              "type": "number",
+              "description": "Most actors to list (1-1000, default 200); when more match, truncated is true and totalCount counts them."
             }
           },
           "required": [
@@ -58119,7 +58130,7 @@
       },
       "examples": [
         {
-          "title": "Find the actors of a class in the level, by class name or /Script path: returns each match's name, path and class plus a count. Searches the PIE world while a game runs.",
+          "title": "Find the actors of a class or any subclass of it in the level (a short native name such as PointLight, /Script/Engine.PointLight, or a Blueprint asset path): each match's name, path and class plus a count, the first limit (default 200) with truncated and totalCount when more match. A class that resolves to nothing is refused as CLASS_NOT_FOUND. Searches the PIE world while a game runs.",
           "input": {
             "action": "find_by_class",
             "className": "PointLight"
@@ -58158,8 +58169,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "3e4f28f6990d2587632d64d17e88dd490d529a95ab4c5cfc48946894b9058a8c",
-        "content": "d6df5b060bfe776276d80ab7c6efca9c9377999115a2f2feb6d8a4f1b6515ee6"
+        "schema": "50f8a4af33bc511c95fa87e9cb2a2754db5b64c6c0d51581db96aa82e81c8557",
+        "content": "3a361c1bb699f401d1c0f1c5f68d40f82f9ff84f154ee631e528f10cc958418e"
       }
     },
     {
@@ -95914,8 +95925,8 @@
         ],
         "summary": "Bind a key to a legacy (Project Settings, Input) mapping, chosen by mapping: action takes actionName (or name), key and the shift, ctrl, alt and cmd modifiers; axis takes axisName (or name), key and scale (default 1, -1 for the reverse direction). key is the engine key name (SpaceBar, W, LeftMouseButton, Gamepad_LeftX); an unknown one is INVALID_ARGUMENT. A binding already there is kept (alreadyPresent true, added false); a new one is written to the project DefaultInput.ini (defaultConfigUpdated). Projects on Enhanced Input map keys with manage_networking configure_input instead.",
         "whenToUse": [
-          "mapping=action: Use it to add a legacy action mapping.",
-          "mapping=axis: Use it to add a legacy axis mapping."
+          "mapping=action: Use it to add a legacy action mapping; one with the same name, key and modifier keys (shift, ctrl, alt, cmd) is already bound and is left alone.",
+          "mapping=axis: Use it to add a legacy axis mapping; one with the same name, key and scale is already bound and is left alone."
         ],
         "whenNotToUse": []
       },
@@ -95970,7 +95981,7 @@
                 "action",
                 "axis"
               ],
-              "description": "Which add legacy mapping variant to run.\naction: Add a legacy action mapping.\naxis: Add a legacy axis mapping."
+              "description": "Which add legacy mapping variant to run.\naction: Add a legacy action mapping; one with the same name, key and modifier keys (shift, ctrl, alt, cmd) is already bound and is left alone.\naxis: Add a legacy axis mapping; one with the same name, key and scale is already bound and is left alone."
             }
           },
           "required": [
@@ -96075,8 +96086,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "4a2d8b29bc43dae6af1b88366163d3903dde2e5b98a47d2f2b83e5453857a6c1",
-        "content": "afd03f4fd62ec64419d2fc512bbe12dd4321aba714f1bd01cae80eca069cb6ee"
+        "schema": "2757eef6f3f65359810bde614365a635c47a8138a810b9b8b5bf774abdd653c5",
+        "content": "ab97d1fc5e2435d35841072b003017adeee1a9a969897f0f00ddba1c5242f7a0"
       }
     },
     {
@@ -99905,8 +99916,8 @@
         ],
         "summary": "Remove the binding of key from a legacy action or axis mapping, chosen by mapping (actionName, axisName or name): every binding of that name and key goes (an action binding only with the same shift, ctrl, alt and cmd), removedCount says how many, and a pair that is not bound is NOT_FOUND with nothing written. The project DefaultInput.ini is written (defaultConfigUpdated).",
         "whenToUse": [
-          "mapping=action: Use it to remove a legacy action mapping.",
-          "mapping=axis: Use it to remove a legacy axis mapping."
+          "mapping=action: Use it to remove a legacy action mapping: the one with this name, key and modifier keys (shift, ctrl, alt, cmd).",
+          "mapping=axis: Use it to remove the legacy axis mappings of this name on this key, whatever their scale."
         ],
         "whenNotToUse": []
       },
@@ -99961,7 +99972,7 @@
                 "action",
                 "axis"
               ],
-              "description": "Which remove legacy mapping variant to run.\naction: Remove a legacy action mapping.\naxis: Remove a legacy axis mapping."
+              "description": "Which remove legacy mapping variant to run.\naction: Remove a legacy action mapping: the one with this name, key and modifier keys (shift, ctrl, alt, cmd).\naxis: Remove the legacy axis mappings of this name on this key, whatever their scale."
             }
           },
           "required": [
@@ -100066,8 +100077,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "2b61c175ae21a9ba8539e1f12ef94146b768cd35e119e21b12c545297bb3ada8",
-        "content": "3632a84657d8d9e85d877b2853bc43744e8a9e0057501118408075fba7d819d2"
+        "schema": "6779b89abb11539a56a1708130b58dba7791d988795d195d3bed98ee674b4de4",
+        "content": "8877c4bb2fc00180265b7760e02fdab9747c5c759236ba7475ba067b29b3041f"
       }
     },
     {

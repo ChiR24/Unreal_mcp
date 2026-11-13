@@ -11,15 +11,17 @@ namespace McpLandscapeHeightmap {
 void SendNullRhiValidatedResponse(
     UEngineWireSubsystem& Subsystem, const FString& RequestId,
     TSharedPtr<FMcpBridgeWebSocket> RequestingSocket, ALandscape* Landscape,
-    const FString& Operation, const FHeightmapRegion& Region) {
-  const int32 RequestedSizeX =
-      (Region.MinX >= 0 && Region.MaxX >= Region.MinX)
-          ? (Region.MaxX - Region.MinX + 1)
-          : 1;
-  const int32 RequestedSizeY =
-      (Region.MinY >= 0 && Region.MaxY >= Region.MinY)
-          ? (Region.MaxY - Region.MinY + 1)
-          : 1;
+    const FString& Operation, const TSharedPtr<FJsonObject>& Payload) {
+  int32 MinX = -1, MinY = -1, MaxX = -1, MaxY = -1;
+  const TSharedPtr<FJsonObject> *RegionObj = nullptr;
+  const TSharedPtr<FJsonObject> &From =
+      Payload->TryGetObjectField(TEXT("region"), RegionObj) && RegionObj ? *RegionObj : Payload;
+  From->TryGetNumberField(TEXT("minX"), MinX);
+  From->TryGetNumberField(TEXT("minY"), MinY);
+  From->TryGetNumberField(TEXT("maxX"), MaxX);
+  From->TryGetNumberField(TEXT("maxY"), MaxY);
+  const int32 RequestedSizeX = (MinX >= 0 && MaxX >= MinX) ? (MaxX - MinX + 1) : 1;
+  const int32 RequestedSizeY = (MinY >= 0 && MaxY >= MinY) ? (MaxY - MinY + 1) : 1;
 
   TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
   Resp->SetBoolField(TEXT("success"), true);

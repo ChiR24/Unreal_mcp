@@ -4,6 +4,7 @@
 #include "Templates/SharedPointer.h"
 
 class AActor;
+class APostProcessVolume;
 class FJsonObject;
 class FMcpBridgeWebSocket;
 class UEditorActorSubsystem;
@@ -11,6 +12,9 @@ class UEngineWireSubsystem;
 
 namespace McpLightingHandlers
 {
+// The payload's post-process volume in the editor world (spawned when missing); replies and returns null otherwise.
+APostProcessVolume* ResolvePostProcessOrReply(UEngineWireSubsystem& Subsystem, const FString& RequestId,
+    const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> RequestingSocket);
 bool HandleListLightTypes(
     UEngineWireSubsystem& Subsystem,
     const FString& RequestId,

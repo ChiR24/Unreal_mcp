@@ -51,6 +51,9 @@ struct FTakeRecorderActorSourceState
     bool bReduceKeys = false;
     bool bHasRecordParentHierarchy = false;
     bool bRecordParentHierarchy = false;
+    // 5.8's AttachRecordBehaviour, set with the bool; absent before.
+    bool bHasAttachRecordBehaviour = false;
+    int64 AttachRecordBehaviourValue = 0;
     bool bHasRecordType = false;
     int64 RecordTypeValue = 0;
 };
@@ -100,6 +103,10 @@ struct FTakeRecorderStartRollbackState
     bool bRollbackSucceeded = false;
 };
 bool ConfigureSources(UTakeRecorderPanel* Panel, const TSharedPtr<FJsonObject>& Payload, int32& OutAdded, int32& OutRequested, FString& OutErrorCode, FString& OutError);
+// ConfigureSources' apply half: clears when asked, adds the prepared actors (each configured from Payload's options)
+// and classes, and puts the sources back as they were on a failure.
+bool ApplyTakeRecorderSources(UTakeRecorderSources* Sources, const FPreparedTakeRecorderSources& Prepared,
+                              const TSharedPtr<FJsonObject>& Payload, int32& OutAdded, FString& OutErrorCode, FString& OutError);
 bool ConfigurePanel(UTakeRecorderPanel* Panel, const TSharedPtr<FJsonObject>& Payload, FString& OutErrorCode, FString& OutError);
 bool CaptureTakeRecorderPanelSnapshot(
     UTakeRecorderPanel* Panel,

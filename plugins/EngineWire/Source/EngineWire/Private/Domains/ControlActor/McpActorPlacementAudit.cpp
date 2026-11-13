@@ -158,8 +158,8 @@ bool UEngineWireSubsystem::HandleControlActorAuditPlacement(
     TSharedPtr<FJsonObject> Entry = MakeShared<FJsonObject>();
     // The bucket comes from the check itself: read out of the warning's words, an actor labelled FloatingCrate or
     // SunkenShip that only overlapped something was counted as floating or sunk.
-    FString Kind;
-    McpPlacement::DescribePlacement(Actor, Entry, &Kind);
+    McpPlacement::FMcpPlacementVerdict Verdict;
+    McpPlacement::DescribePlacement(Actor, Entry, &Verdict);
     FString Warning;
     const bool bHasWarning = Entry->TryGetStringField(TEXT("placementWarning"), Warning);
     if (!bHasWarning && !bTilted) {
@@ -169,7 +169,7 @@ bool UEngineWireSubsystem::HandleControlActorAuditPlacement(
     FMcpPlacementFinding Finding;
     Finding.ActorName = McpActorRef(Actor);
     if (bHasWarning) {
-      Finding.Kind = Kind;
+      Finding.Kind = Verdict.Kind;
       Finding.Issue = Warning;
       Finding.Severity = McpPlacementSeverity(Entry);
       const TSharedPtr<FJsonObject> *Suggested = nullptr;

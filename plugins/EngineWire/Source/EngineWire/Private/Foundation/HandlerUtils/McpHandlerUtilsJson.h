@@ -112,3 +112,22 @@ ENGINEWIRE_API void FilterRowsByListedNames(
     const TSharedPtr<FJsonObject>& Payload, const FString& ListField,
     TArray<TSharedPtr<FJsonValue>>& Rows, const TSharedPtr<FJsonObject>& Result, const FString& MissingField);
 }
+
+// The first `limit` rows of a find (1-1000, default 200), with truncated and totalCount when the list was cut: a class
+// or a tag most of a level shares answered every actor, hundreds of rows, while a mesh or material find stopped at 200.
+// Returns how many matched in all.
+inline int32 McpCapFindRows(const TSharedPtr<FJsonObject>& Payload, TArray<TSharedPtr<FJsonValue>>& Rows,
+                            const TSharedPtr<FJsonObject>& Data)
+{
+    double Requested = 0.0;
+    const int32 Limit = Payload->TryGetNumberField(TEXT("limit"), Requested)
+                            ? FMath::Clamp(static_cast<int32>(Requested), 1, 1000) : 200;
+    const int32 Total = Rows.Num();
+    if (Total > Limit)
+    {
+        Rows.SetNum(Limit);
+        Data->SetBoolField(TEXT("truncated"), true);
+        Data->SetNumberField(TEXT("totalCount"), Total);
+    }
+    return Total;
+}

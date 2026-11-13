@@ -72,7 +72,8 @@ bool UEngineWireSubsystem::HandleCreateLandscape(
     return true;
   }
 
-  if (!GEditor || !GEditor->GetEditorWorldContext().World()) {
+  Request.World = McpHandlerUtils::GetEditorWorld();
+  if (!Request.World) {
     SendAutomationError(RequestingSocket, RequestId,
                         TEXT("Editor world not available"),
                         TEXT("EDITOR_NOT_AVAILABLE"));
@@ -97,7 +98,7 @@ bool UEngineWireSubsystem::HandleCreateLandscape(
     return true;
   }
   // A second landscape under one label left every later sculpt or paint by that name on whichever came first.
-  if (FindActorByNameInWorldForMcp(GEditor->GetEditorWorldContext().World(), Request.Name, true)) {
+  if (FindActorByNameInWorldForMcp(Request.World, Request.Name, true)) {
     SendAutomationError(
         RequestingSocket, RequestId,
         FString::Printf(TEXT("An actor named %s is already in the level; pick another name. Nothing was created."), *Request.Name),
@@ -105,7 +106,7 @@ bool UEngineWireSubsystem::HandleCreateLandscape(
     return true;
   }
 
-  McpLandscapeCreation::CreateLandscapeOnGameThread(
+  McpLandscapeCreation::BuildLandscape(
       *this, RequestId, RequestingSocket, Request);
   return true;
 }

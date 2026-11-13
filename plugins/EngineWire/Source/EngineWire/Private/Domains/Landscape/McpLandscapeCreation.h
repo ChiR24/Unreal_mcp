@@ -6,6 +6,7 @@
 
 class FMcpBridgeWebSocket;
 class UEngineWireSubsystem;
+class UWorld;
 
 namespace McpLandscapeCreation {
 // The landscape material at a package or object path; LoadObject alone missed a package path, and the landscape
@@ -23,9 +24,11 @@ struct FLandscapeCreationRequest {
   FVector Location = FVector::ZeroVector;
   FString MaterialPath;
   FString Name;
+  UWorld *World = nullptr;
 };
 
-void CreateLandscapeOnGameThread(
+// Spawns, names and imports the landscape Request describes inside one undo step, and replies.
+void BuildLandscape(
     UEngineWireSubsystem &Subsystem, const FString &RequestId,
     TSharedPtr<FMcpBridgeWebSocket> RequestingSocket,
     const FLandscapeCreationRequest &Request);

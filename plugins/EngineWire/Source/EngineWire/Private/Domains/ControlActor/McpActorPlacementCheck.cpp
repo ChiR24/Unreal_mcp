@@ -189,9 +189,9 @@ void McpRefreshBounds(AActor *Actor) {
 // Describe where Actor actually ended up: what it interpenetrates, and whether
 // it is sunk into or floating above the surface under it. Adds placementWarning,
 // overlappingActors[] and suggestedLocation to Data when there is something to
-// say, and leaves Data untouched when the placement looks clean. OutKind gets the bucket of the warning it wrote:
+// say, and leaves Data untouched when the placement looks clean. OutVerdict gets the bucket of the warning it wrote:
 // overlapping, unless it also wrote that the actor is sunk, floating or unsupported (nothing below it).
-void DescribePlacement(AActor *Actor, const TSharedPtr<FJsonObject> &Data, FString *OutKind) {
+void DescribePlacement(AActor *Actor, const TSharedPtr<FJsonObject> &Data, FMcpPlacementVerdict *OutVerdict) {
   McpChangeWatch::NotePlacementReported(Actor); // the reply reports it: the change watch checks only what it shows
   if (!Actor || !Data.IsValid()) {
     return;
@@ -348,6 +348,7 @@ void DescribePlacement(AActor *Actor, const TSharedPtr<FJsonObject> &Data, FStri
       if (AActor *Mount = FindMount(World, Actor, SelfBox, IgnoreBelow)) {
         Data->SetStringField(TEXT("mountedOn"), McpActorRef(Mount));
       } else if (AActor *Bodiless = FindBodilessSupport(World, Actor, SelfBox, IgnoreBelow)) {
+        if (OutVerdict) { OutVerdict->bOnBodiless = true; }
         Notes.Add(FString::Printf(TEXT("floating %.0f units above the surface under it: it sits on '%s', which has no "
                                        "collision, so traces and characters pass through it"),
                                   Clearance, *McpActorRef(Bodiless)));
@@ -365,10 +366,10 @@ void DescribePlacement(AActor *Actor, const TSharedPtr<FJsonObject> &Data, FStri
   }
 
   if (Notes.Num() > 0) {
-    if (OutKind) {
+    if (OutVerdict) {
       // The ground note, when one was written, follows the overlaps' and names the bucket; else the overlaps do.
       const TCHAR *Ground = !bHasGround ? TEXT("unsupported") : bSunk ? TEXT("sunk") : TEXT("floating");
-      *OutKind = Notes.Num() > (Overlaps.Num() > 0 ? 1 : 0) ? Ground : TEXT("overlapping");
+      OutVerdict->Kind = Notes.Num() > (Overlaps.Num() > 0 ? 1 : 0) ? Ground : TEXT("overlapping");
     }
     Data->SetStringField(
         TEXT("placementWarning"),

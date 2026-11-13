@@ -5,6 +5,7 @@
 
 #include "Domains/ControlActor/Placement/McpPartPlacement.h"
 #include "Materials/MaterialInterface.h"
+#include "PackageTools.h"
 
 namespace McpGeometryHandlers
 {
@@ -37,6 +38,9 @@ bool ResolveConversionAssetPath(const TSharedPtr<FJsonObject>& Payload, const FS
         }
         OutAssetPath = Sanitized;
     }
+    // As the engine's creator names it: a space or another character a package name cannot hold went in as written,
+    // the asset came out under the sanitized name, and the load back of the written one failed.
+    OutAssetPath = UPackageTools::SanitizePackageName(OutAssetPath);
     // The engine's creator makes the mesh with NewObject at the path: a static mesh there is replaced in place (every
     // user follows), but an asset of another class there is a fatal error.
     if (McpAssetExists(OutAssetPath) && !Cast<UStaticMesh>(McpLoadAsset(OutAssetPath)))
@@ -59,7 +63,9 @@ bool HandleConvertToStaticMesh(UEngineWireSubsystem* Self, const FString& Reques
     FString AssetPath;
     FString PathError;
     FString PathCode;
-    if (!ResolveConversionAssetPath(Payload, bNanite ? ActorName + TEXT("_Nanite") : ActorName, AssetPath, PathError, PathCode))
+    // Named after the actor found, not the name as sent (an object path put that path inside the default one).
+    const FString Label = Target->Actor->GetActorLabel();
+    if (!ResolveConversionAssetPath(Payload, bNanite ? Label + TEXT("_Nanite") : Label, AssetPath, PathError, PathCode))
     {
         Self->SendAutomationError(Socket, RequestId, PathError, PathCode);
         return true;

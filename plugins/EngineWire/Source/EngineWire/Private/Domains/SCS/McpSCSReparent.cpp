@@ -17,8 +17,11 @@ using namespace McpSCSHandlers;
 TSharedPtr<FJsonObject>
 FSCSHandlers::ReparentSCSComponent(const FString &BlueprintPath,
                                    const FString &ComponentName,
-                                   const FString &NewParentName) {
+                                   const FString &NewParentNameAsSent) {
   TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
+  // Trimmed once: ' Body ' missed the finder, was attached by AttachNodeToNamedParent (which trims) as a node of this
+  // SCS, and the reply said SCS_PARENT_NOT_FOUND after the node had moved.
+  const FString NewParentName = NewParentNameAsSent.TrimStartAndEnd();
 
   UBlueprint *Blueprint = LoadScsBlueprint(BlueprintPath, Result);
   if (!Blueprint) {
@@ -38,31 +41,13 @@ FSCSHandlers::ReparentSCSComponent(const FString &BlueprintPath,
   }
 
   USCS_Node *NewParentNode = nullptr;
-  if (!NewParentName.IsEmpty()) {
-    const bool bRootSynonym = IsSCSRootAlias(SCS, NewParentName);
-    if (bRootSynonym) {
-      const TArray<USCS_Node *> &Roots = SCS->GetRootNodes();
-      for (USCS_Node *R : Roots) {
-        if (R && R != ComponentNode && R->GetVariableName().IsValid() &&
-            R->GetVariableName().ToString().Equals(TEXT("DefaultSceneRoot"),
-                                                   ESearchCase::IgnoreCase)) {
-          NewParentNode = R;
-          break;
-        }
-      }
-      if (!NewParentNode) {
-        for (USCS_Node *R : Roots) {
-          if (R && R != ComponentNode) {
-            NewParentNode = R;
-            break;
-          }
-        }
-      }
-    }
-
-    if (!NewParentNode) {
-      NewParentNode = FindScsNodeByName(SCS, NewParentName);
-    }
+  if (IsSCSRootAlias(SCS, NewParentName)) {
+    // The engine's root: null when native or a parent Blueprint's, whose children sit at the top of the SCS, and the
+    // top too when the component is that root.
+    NewParentNode = SCSRootAliasNode(SCS);
+    NewParentNode = NewParentNode == ComponentNode ? nullptr : NewParentNode;
+  } else if (!NewParentName.IsEmpty()) {
+    NewParentNode = FindScsNodeByName(SCS, NewParentName);
 
     // An inherited native component (ACharacter's Mesh, CapsuleComponent, ...)
     // has no USCS_Node, so reparenting onto one answered SCS_PARENT_NOT_FOUND
@@ -93,12 +78,7 @@ FSCSHandlers::ReparentSCSComponent(const FString &BlueprintPath,
         return Result;
       }
       Result->SetBoolField(TEXT("success"), false);
-      const FString ParentError =
-          bRootSynonym
-              ? FString::Printf(TEXT("Requested root parent alias '%s' could not be resolved to an SCS root node"),
-                                *NewParentName)
-              : AttachError;
-      Result->SetStringField(TEXT("error"), ParentError);
+      Result->SetStringField(TEXT("error"), AttachError);
       Result->SetStringField(TEXT("errorCode"), TEXT("SCS_PARENT_NOT_FOUND"));
       AddSCSNodeVerification(Result, SCS, ComponentNode);
       return Result;
@@ -118,8 +98,10 @@ FSCSHandlers::ReparentSCSComponent(const FString &BlueprintPath,
 
   USCS_Node *OldParent = SCS->FindParentNode(ComponentNode);
 
+  // A node hanging on an inherited part is in the root set too, its parent recorded on the node: sent to the root it
+  // answered no change and stayed on that part.
   if ((NewParentNode == nullptr && OldParent == nullptr &&
-       IsSCSRootNode(SCS, ComponentNode)) ||
+       IsSCSRootNode(SCS, ComponentNode) && ComponentNode->ParentComponentOrVariableName.IsNone()) ||
       (OldParent != nullptr && NewParentNode == OldParent)) {
     Result->SetBoolField(TEXT("success"), true);
     Result->SetStringField(
@@ -141,10 +123,8 @@ FSCSHandlers::ReparentSCSComponent(const FString &BlueprintPath,
   if (OldParent) {
     OldParent->RemoveChildNode(ComponentNode);
   } else {
-    const bool bReparentingToRoot = (NewParentNode == nullptr);
-    if (!bReparentingToRoot) {
-      SCS->RemoveNode(ComponentNode);
-    }
+    // Also what clears a root node's inherited-parent fields; for a node neither a root nor a child it does nothing.
+    SCS->RemoveNode(ComponentNode);
   }
 
   if (NewParentNode) {

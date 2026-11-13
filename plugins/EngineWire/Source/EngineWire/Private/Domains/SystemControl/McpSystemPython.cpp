@@ -76,9 +76,9 @@ bool HandleExecutePython(UEngineWireSubsystem* Self,
 
   FString Wrapper;
   Wrapper += TEXT("import sys\nimport traceback\n\n");
-  Wrapper += FString::Printf(TEXT("_out = open(r'%s', 'w', encoding='utf-8')\n"),
+  Wrapper += FString::Printf(TEXT("_out = open('%s', 'w', encoding='utf-8')\n"),
                              *PyOutputPath);
-  Wrapper += FString::Printf(TEXT("_err = open(r'%s', 'w', encoding='utf-8')\n"),
+  Wrapper += FString::Printf(TEXT("_err = open('%s', 'w', encoding='utf-8')\n"),
                              *PyErrorPath);
   Wrapper += TEXT("_old_out, _old_err = sys.stdout, sys.stderr\n");
   Wrapper += TEXT("sys.stdout, sys.stderr = _out, _err\n\n");
@@ -99,7 +99,7 @@ bool HandleExecutePython(UEngineWireSubsystem* Self,
     }
     FString PyCodePath = NormalizePythonPath(CodePath);
     FString PyCodeDir = NormalizePythonPath(FPaths::GetPath(CodePath));
-    Wrapper += FString::Printf(TEXT("    with open(r'%s', 'r', encoding='utf-8') as _f:\n"),
+    Wrapper += FString::Printf(TEXT("    with open('%s', 'r', encoding='utf-8') as _f:\n"),
                                *PyCodePath);
     Wrapper += TEXT("        _user_code = _f.read()\n");
     AppendPythonExec(Wrapper, PyCodePath, PyCodeDir);
@@ -148,7 +148,7 @@ bool HandleExecutePython(UEngineWireSubsystem* Self,
 
     FString PyFilePath = NormalizePythonPath(AbsoluteFilePath);
     FString PyFileDir = NormalizePythonPath(FPaths::GetPath(AbsoluteFilePath));
-    Wrapper += FString::Printf(TEXT("    with open(r'%s', 'r', encoding='utf-8') as _f:\n"),
+    Wrapper += FString::Printf(TEXT("    with open('%s', 'r', encoding='utf-8') as _f:\n"),
                                *PyFilePath);
     Wrapper += TEXT("        _user_code = _f.read()\n");
     AppendPythonExec(Wrapper, PyFilePath, PyFileDir);
@@ -163,7 +163,7 @@ bool HandleExecutePython(UEngineWireSubsystem* Self,
   Wrapper += TEXT("    sys.stdout, sys.stderr = _old_out, _old_err\n");
   Wrapper += TEXT("    _out.close()\n");
   Wrapper += TEXT("    _err.close()\n");
-  Wrapper += FString::Printf(TEXT("    with open(r'%s', 'w') as _sf:\n"),
+  Wrapper += FString::Printf(TEXT("    with open('%s', 'w') as _sf:\n"),
                              *PyStatusPath);
   Wrapper += TEXT("        _sf.write('1' if _success else '0')\n");
 

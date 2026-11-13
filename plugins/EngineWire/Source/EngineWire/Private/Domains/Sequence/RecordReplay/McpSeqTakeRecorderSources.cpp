@@ -48,7 +48,18 @@ bool ConfigureSources(
             TEXT("configure_take_sources requires actors, sourceClasses, or clearSources");
         return false;
     }
+    return ApplyTakeRecorderSources(Sources, Prepared, Payload, OutAdded, OutErrorCode, OutError);
+}
 
+bool ApplyTakeRecorderSources(
+    UTakeRecorderSources* Sources,
+    const FPreparedTakeRecorderSources& Prepared,
+    const TSharedPtr<FJsonObject>& Payload,
+    int32& OutAdded,
+    FString& OutErrorCode,
+    FString& OutError)
+{
+    OutAdded = 0;
     const TArray<UTakeRecorderSource*> OriginalSources =
         Sources->GetSourcesCopy();
     TSet<UTakeRecorderSource*> OriginalSourceSet;

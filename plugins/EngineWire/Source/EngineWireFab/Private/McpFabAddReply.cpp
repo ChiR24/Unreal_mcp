@@ -108,7 +108,16 @@ FMcpFabAddResult ParseAddReply(bool bSuccess, const FString& Payload)
 		: FString();
 	FString FileName;
 	if (bJson) { Root->TryGetStringField(TEXT("versionName"), FileName); }
-	if (Result.ErrorCode == TEXT("NO_IMPORTABLE_FORMAT"))
+	if (Result.ErrorCode == TEXT("LISTING_UNAVAILABLE"))
+	{
+		double Status = 0.0;
+		if (bJson) { Root->TryGetNumberField(TEXT("listingStatus"), Status); }
+		Result.Error = FString::Printf(
+			TEXT("Fab answered HTTP %.0f for this listing, so it was not read: %s Nothing was claimed or downloaded."), Status,
+			Status == 404.0 ? TEXT("Fab has no listing with this id (asset.query_marketplace lookup=fab_search finds listing ids).")
+			                 : TEXT("the Fab tab may be signed out, or the site did not answer."));
+	}
+	else if (Result.ErrorCode == TEXT("NO_IMPORTABLE_FORMAT"))
 	{
 		Result.Error = FString::Printf(
 			TEXT("Fab did not accept the listing.%s Fab imports unreal-engine, gltf, glb and fbx; this listing ships none of them."),

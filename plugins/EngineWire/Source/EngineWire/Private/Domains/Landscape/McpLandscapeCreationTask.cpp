@@ -6,29 +6,25 @@
 #include "Editor.h"
 #include "Engine/World.h"
 #include "Landscape.h"
-#include "LandscapeDataAccess.h"
-#include "LandscapeEdit.h"
-#include "LandscapeGrassType.h"
 #include "LandscapeInfo.h"
 #include "LandscapeProxy.h"
 #include "EngineWireSubsystem.h"
 #include "Foundation/HandlerUtils/McpHandlerUtils.h"
-#include "Materials/Material.h"
-#include "ScopedTransaction.h"
+#include "Foundation/McpScopedEditorTransaction.h"
 
 namespace McpLandscapeCreation {
-void CreateLandscapeOnGameThread(
+void BuildLandscape(
     UEngineWireSubsystem &Subsystem, const FString &RequestId,
     TSharedPtr<FMcpBridgeWebSocket> RequestingSocket,
     const FLandscapeCreationRequest &Request) {
-  UWorld *World = GEditor->GetEditorWorldContext().World();
-  if (!World)
-    return;
-
+  // Open before the spawn, as the editor's own New Landscape does: opened after it, undo reverted the import alone and
+  // left an actor with no components in the level.
+  FMcpScopedEditorTransaction Transaction(FText::FromString(TEXT("Create Landscape")),
+                                          EMcpMutationDurability::EditorStateOnly, TArray<UObject *>());
   FActorSpawnParameters SpawnParams;
   SpawnParams.SpawnCollisionHandlingOverride =
       ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
-  ALandscape *Landscape = World->SpawnActor<ALandscape>(
+  ALandscape *Landscape = Request.World->SpawnActor<ALandscape>(
       ALandscape::StaticClass(), Request.Location, FRotator::ZeroRotator,
       SpawnParams);
   if (!Landscape) {
@@ -41,11 +37,7 @@ void CreateLandscapeOnGameThread(
   // The editor's New Landscape scale. A spawned Landscape keeps the engine's old default of 128 x 128 x 256, so a quad
   // was 128 units wide and heights spanned another range than every landscape made in the editor.
   Landscape->SetActorRelativeScale3D(FVector(100.0f, 100.0f, 100.0f));
-  Landscape->SetActorLabel(Request.Name.IsEmpty()
-                               ? FString::Printf(TEXT("Landscape_%dx%d"),
-                                                 Request.ComponentsX,
-                                                 Request.ComponentsY)
-                               : Request.Name);
+  Landscape->SetActorLabel(Request.Name);
   Landscape->ComponentSizeQuads = Request.QuadsPerComponent;
   // HandleCreateLandscape guarantees 1 or 2 sections, so this never divides by zero.
   const int32 QuadsPerSection = Request.QuadsPerComponent / Request.SectionsPerComponent;
@@ -85,9 +77,6 @@ void CreateLandscapeOnGameThread(
   ImportLayerInfos.Add(FGuid(), TArray<FLandscapeImportLayerInfo>());
 
   {
-    const FScopedTransaction Transaction(
-        FText::FromString(TEXT("Create Landscape")));
-    Landscape->Modify();
 #if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 5
     // Import() is what ALLOCATES the ULandscapeComponents. SetHeightData()
     // only writes into components that already exist, so on its own it built
@@ -143,7 +132,6 @@ void CreateLandscapeOnGameThread(
   Resp->SetNumberField(TEXT("builtComponents"), BuiltComponents);
   Resp->SetStringField(TEXT("landscapePath"),
                        Landscape->GetPackage()->GetPathName());
-  Resp->SetStringField(TEXT("actorLabel"), Landscape->GetActorLabel());
   Resp->SetStringField(TEXT("landscapeName"), Landscape->GetActorLabel());
   Resp->SetNumberField(TEXT("componentsX"), Request.ComponentsX);
   Resp->SetNumberField(TEXT("componentsY"), Request.ComponentsY);
@@ -156,6 +144,7 @@ void CreateLandscapeOnGameThread(
   Resp->SetNumberField(TEXT("extentY"), BuiltBounds.GetExtent().Y);
   Resp->SetStringField(TEXT("material"), GetPathNameSafe(Landscape->LandscapeMaterial.Get()));
   McpHandlerUtils::AddVerification(Resp, Landscape);
+  Transaction.DescribeInto(Resp);
 
   Subsystem.SendAutomationResponse(RequestingSocket, RequestId, true,
                                    TEXT("Landscape created successfully"), Resp,

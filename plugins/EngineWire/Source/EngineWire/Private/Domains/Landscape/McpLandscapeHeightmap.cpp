@@ -2,6 +2,7 @@
 
 #include "Domains/Landscape/McpLandscapeLookup.h"
 #include "Domains/Landscape/McpLandscapeHeightmapNullRhi.h"
+#include "Domains/Landscape/McpLandscapeShared.h"
 
 #include "Dom/JsonObject.h"
 #include "Landscape.h"
@@ -12,7 +13,6 @@
 #include "Foundation/HandlerUtils/McpHandlerUtils.h"
 #include "Misc/CommandLine.h"
 #include "Misc/Parse.h"
-#include "Misc/ScopedSlowTask.h"
 
 bool UEngineWireSubsystem::HandleModifyHeightmap(
     const FString &RequestId, const FString &Action,
@@ -36,20 +36,6 @@ bool UEngineWireSubsystem::HandleModifyHeightmap(
     SendAutomationError(RequestingSocket, RequestId, TEXT("raise and lower need amount: the centimetres to move the region, above 0."),
                         TEXT("INVALID_ARGUMENT"));
     return true;
-  }
-
-  int32 RegionMinX = -1, RegionMinY = -1, RegionMaxX = -1, RegionMaxY = -1;
-  const TSharedPtr<FJsonObject> *RegionObj = nullptr;
-  if (Payload->TryGetObjectField(TEXT("region"), RegionObj) && RegionObj) {
-    (*RegionObj)->TryGetNumberField(TEXT("minX"), RegionMinX);
-    (*RegionObj)->TryGetNumberField(TEXT("minY"), RegionMinY);
-    (*RegionObj)->TryGetNumberField(TEXT("maxX"), RegionMaxX);
-    (*RegionObj)->TryGetNumberField(TEXT("maxY"), RegionMaxY);
-  } else {
-    Payload->TryGetNumberField(TEXT("minX"), RegionMinX);
-    Payload->TryGetNumberField(TEXT("minY"), RegionMinY);
-    Payload->TryGetNumberField(TEXT("maxX"), RegionMaxX);
-    Payload->TryGetNumberField(TEXT("maxY"), RegionMaxY);
   }
 
   const TArray<TSharedPtr<FJsonValue>> *HeightDataArray = nullptr;
@@ -89,12 +75,10 @@ bool UEngineWireSubsystem::HandleModifyHeightmap(
   if (FParse::Param(FCommandLine::Get(), TEXT("NullRHI"))) {
     McpLandscapeHeightmap::SendNullRhiValidatedResponse(
         *this, RequestId, RequestingSocket, Landscape,
-        Operation, {RegionMinX, RegionMinY, RegionMaxX, RegionMaxY});
+        Operation, Payload);
     return true;
   }
 
-  FScopedSlowTask SlowTask(
-      3.0f, FText::FromString(TEXT("Modifying heightmap...")));
   int32 FullMinX, FullMinY, FullMaxX, FullMaxY;
   if (!LandscapeInfo->GetLandscapeExtent(FullMinX, FullMinY,
                                          FullMaxX, FullMaxY)) {
@@ -105,14 +89,10 @@ bool UEngineWireSubsystem::HandleModifyHeightmap(
     return true;
   }
 
-  int32 MinX = (RegionMinX >= 0) ? RegionMinX : FullMinX;
-  int32 MinY = (RegionMinY >= 0) ? RegionMinY : FullMinY;
-  int32 MaxX = (RegionMaxX >= 0) ? RegionMaxX : FullMaxX;
-  int32 MaxY = (RegionMaxY >= 0) ? RegionMaxY : FullMaxY;
-  MinX = FMath::Clamp(MinX, FullMinX, FullMaxX);
-  MinY = FMath::Clamp(MinY, FullMinY, FullMaxY);
-  MaxX = FMath::Clamp(MaxX, FullMinX, FullMaxX);
-  MaxY = FMath::Clamp(MaxY, FullMinY, FullMaxY);
+  // Read as export and import read it: -1 for unset made every vertex left of 0 unnameable.
+  int32 MinX, MinY, MaxX, MaxY;
+  McpLandscapeHandlers::McpApplyHeightmapRegionFromPayload(Payload, FullMinX, FullMinY, FullMaxX, FullMaxY,
+                                                         MinX, MinY, MaxX, MaxY);
 
   if (MinX > MaxX || MinY > MaxY) {
     SendAutomationError(
@@ -133,9 +113,6 @@ bool UEngineWireSubsystem::HandleModifyHeightmap(
         "it or %d, one per vertex row by row. Nothing was changed."), HeightValues.Num(), SizeX, SizeY, RegionSize), TEXT("INVALID_ARGUMENT"));
     return true;
   }
-  SlowTask.EnterProgressFrame(
-      1.0f,
-      FText::FromString(TEXT("Reading current heightmap data")));
   const McpLandscapeHandlers::FMcpLandscapeEditScope Edit(Landscape, TEXT("Modify Landscape Heightmap"), bSkipFlush);
   TArray<uint16> CurrentHeights;
   CurrentHeights.SetNumZeroed(RegionSize);
@@ -179,18 +156,12 @@ bool UEngineWireSubsystem::HandleModifyHeightmap(
     ModifiedCount += OutputHeights[i] != CurrentHeights[i] ? 1 : 0;
   }
 
-  SlowTask.EnterProgressFrame(
-      1.0f,
-      FText::FromString(TEXT("Writing heightmap data")));
   // Not uploading (false) left the GPU copy, and so the drawn landscape and every layer merge, on the old heights.
   FLandscapeEditDataInterface LandscapeEditWrite(LandscapeInfo);
   LandscapeEditWrite.SetHeightData(
       MinX, MinY, MaxX, MaxY, OutputHeights.GetData(), SizeX,
       bUpdateNormals);
   if (!bSkipFlush) {
-    SlowTask.EnterProgressFrame(
-        1.0f,
-        FText::FromString(TEXT("Flushing changes to GPU")));
     LandscapeEditWrite.Flush();
   }
   Landscape->MarkPackageDirty();

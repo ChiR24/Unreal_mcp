@@ -34,7 +34,7 @@ export const P = {
   location: { type: 'object', description: 'Relative location {x, y, z} for an SCS component template.', additionalProperties: true, 'x-unreal-reflection-boundary': true },
   rotation: { type: 'object', description: 'Relative rotation {pitch, yaw, roll} for an SCS component template.', additionalProperties: true, 'x-unreal-reflection-boundary': true },
   scale: { type: 'object', description: 'Relative scale {x, y, z} for an SCS component template, or {x, y} for a widget render transform.', additionalProperties: true, 'x-unreal-reflection-boundary': true },
-  newParent: S('New parent SCS node name.'),
+  newParent: S('The panel widget to move the widget under, by its name in the tree.'),
   meshPath: S('Static/Skeletal mesh asset path for a mesh component.'),
   materialPath: S('Material asset path for a component.'),
   applyAndSave: B('Whether to save the Blueprint after applying SCS changes.'),

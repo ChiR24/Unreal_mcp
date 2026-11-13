@@ -114,16 +114,9 @@ bool UEngineWireSubsystem::HandleSourceControlSubmit(
   ISourceControlProvider &SourceControlProvider =
       ISourceControlModule::Get().GetProvider();
 
-  TArray<FString> FilePaths;
-  for (const FString &PackageName : PackageNames) {
-    FString FilePath;
-    if (FPackageName::TryConvertLongPackageNameToFilename(
-            PackageName, FilePath, FPackageName::GetAssetPackageExtension()) ||
-        FPackageName::TryConvertLongPackageNameToFilename(
-            PackageName, FilePath, FPackageName::GetMapPackageExtension())) {
-      FilePaths.Add(FilePath);
-    }
-  }
+  // The engine's resolution, which finds the package on disk first: joining the asset extension succeeded for every
+  // mounted package, so a level was submitted as Level.uasset, a file that does not exist.
+  const TArray<FString> FilePaths = SourceControlHelpers::PackageFilenames(PackageNames);
 
   TSharedRef<FCheckIn, ESPMode::ThreadSafe> CheckInOperation =
       ISourceControlOperation::Create<FCheckIn>();

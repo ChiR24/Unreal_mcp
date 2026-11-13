@@ -88,27 +88,34 @@ bool HandleInspectSearchAction(
                                            TEXT("className or classPath is required"), TEXT("INVALID_ARGUMENT"));
                 return true;
             }
+            // The class itself, as control_actor's find takes it: matched as text, a mistyped class answered 0 found,
+            // "Light" listed every actor whose class path held light, and a subclass was found only by that accident.
+            UClass* Class = ResolveClassByName(ClassName);
+            if (!Class || !Class->IsChildOf(AActor::StaticClass()))
+            {
+                Bridge.SendAutomationError(RequestingSocket, RequestId, Class
+                    ? FString::Printf(TEXT("%s is not an Actor class; find_by_class lists actors."), *Class->GetPathName())
+                    : McpClassNotFoundMessage(ClassName), Class ? TEXT("INVALID_ARGUMENT") : TEXT("CLASS_NOT_FOUND"));
+                return true;
+            }
             TArray<TSharedPtr<FJsonValue>> ObjectsArray;
 
             // The PIE world while a session runs, like list_objects: the editor
             // world has no pawn or GameMode, so a runtime class read as 0 found.
             UWorld* World = McpHandlerUtils::GetPlayOrEditorWorld();
-            if (World && !ClassName.IsEmpty())
+            if (World)
             {
-                for (TActorIterator<AActor> It(World); It; ++It)
+                for (TActorIterator<AActor> It(World, Class); It; ++It)
                 {
                     AActor* Actor = *It;
-                    if (Actor->GetClass()->GetName().Equals(ClassName, ESearchCase::IgnoreCase) ||
-                        Actor->GetClass()->GetPathName().Contains(ClassName))
-                    {
-                        TSharedPtr<FJsonObject> Obj = McpHandlerUtils::CreateResultObject();
-                        Obj->SetStringField(TEXT("name"), Actor->GetName());
-                        Obj->SetStringField(TEXT("path"), Actor->GetPathName());
-                        Obj->SetStringField(TEXT("class"), Actor->GetClass()->GetName());
-                        ObjectsArray.Add(MakeShared<FJsonValueObject>(Obj));
-                    }
+                    TSharedPtr<FJsonObject> Obj = McpHandlerUtils::CreateResultObject();
+                    Obj->SetStringField(TEXT("name"), Actor->GetName());
+                    Obj->SetStringField(TEXT("path"), Actor->GetPathName());
+                    Obj->SetStringField(TEXT("class"), Actor->GetClass()->GetName());
+                    ObjectsArray.Add(MakeShared<FJsonValueObject>(Obj));
                 }
             }
+            McpCapFindRows(Payload, ObjectsArray, Resp);
             Resp->SetArrayField(TEXT("objects"), ObjectsArray);
             Resp->SetNumberField(TEXT("count"), ObjectsArray.Num());
             Resp->SetBoolField(TEXT("success"), true);

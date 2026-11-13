@@ -73,6 +73,23 @@ UPrimitiveComponent *ResolveMaterialComponent(
   return Component;
 }
 
+// The binding's material track for slot MaterialIndex, or null.
+UMovieSceneComponentMaterialTrack *FindSlotTrack(UMovieScene *MovieScene, const FGuid &ComponentGuid,
+                                                 int32 MaterialIndex) {
+  const FMovieSceneBinding *Binding = MovieScene->FindBinding(ComponentGuid);
+  for (UMovieSceneTrack *Existing : Binding ? Binding->GetTracks() : TArray<UMovieSceneTrack *>()) {
+    UMovieSceneComponentMaterialTrack *Track = Cast<UMovieSceneComponentMaterialTrack>(Existing);
+#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 4
+    if (Track && Track->GetMaterialInfo().MaterialType == EComponentMaterialType::IndexedMaterial &&
+        Track->GetMaterialInfo().MaterialSlotIndex == MaterialIndex)
+#else
+    if (Track && Track->GetMaterialIndex() == MaterialIndex)
+#endif
+      return Track;
+  }
+  return nullptr;
+}
+
 }
 
 bool HandleAddMaterialParameterTrack(const TSharedPtr<FJsonObject> &Params,
@@ -170,10 +187,16 @@ bool HandleAddMaterialParameterTrack(const TSharedPtr<FJsonObject> &Params,
         TEXT("BINDING_CREATION_FAILED"));
     return true;
   }
+  // The slot's own track when it has one: add_keyframe does not reach a material parameter, so a second key comes
+  // here, and a track per call held one key each and never animated.
   UMovieSceneComponentMaterialTrack *Track =
-      Cast<UMovieSceneComponentMaterialTrack>(AddTrackForBinding(
-          Sequence->GetMovieScene(),
-          UMovieSceneComponentMaterialTrack::StaticClass(), ComponentGuid));
+      FindSlotTrack(Sequence->GetMovieScene(), ComponentGuid, MaterialIndex);
+  const bool bCreatedTrack = !Track;
+  if (bCreatedTrack) {
+    Track = Cast<UMovieSceneComponentMaterialTrack>(AddTrackForBinding(
+        Sequence->GetMovieScene(),
+        UMovieSceneComponentMaterialTrack::StaticClass(), ComponentGuid));
+  }
   if (!Track) {
     if (bCreatedComponentBinding) {
       Sequence->UnbindPossessableObjects(ComponentGuid);
@@ -184,14 +207,16 @@ bool HandleAddMaterialParameterTrack(const TSharedPtr<FJsonObject> &Params,
                            TEXT("TRACK_CREATION_FAILED"));
     return true;
   }
+  if (bCreatedTrack) {
 #if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 4
-  FComponentMaterialInfo Info;
-  Info.MaterialSlotIndex = MaterialIndex;
-  Info.MaterialType = EComponentMaterialType::IndexedMaterial;
-  Track->SetMaterialInfo(Info);
+    FComponentMaterialInfo Info;
+    Info.MaterialSlotIndex = MaterialIndex;
+    Info.MaterialType = EComponentMaterialType::IndexedMaterial;
+    Track->SetMaterialInfo(Info);
 #else
-  Track->SetMaterialIndex(MaterialIndex);
+    Track->SetMaterialIndex(MaterialIndex);
 #endif
+  }
   const FFrameNumber Frame =
       GetFrame(Params, Sequence->GetMovieScene(), TEXT("startFrame"));
   if (bScalar)

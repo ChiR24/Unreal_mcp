@@ -59,19 +59,7 @@ bool HandleStructAssetAction_Delete(UEngineWireSubsystem& Bridge, const FString&
             return true;
         }
 
-        // The loaded Blueprints that used it recompile now, so the broken variables and pins show at once.
-        for (const FString& User : Users)
-        {
-            TArray<FAssetData> PackageAssets;
-            FAssetRegistryModule::GetRegistry().GetAssetsByPackageName(FName(*User), PackageAssets);
-            for (const FAssetData& AssetData : PackageAssets)
-            {
-                if (UBlueprint* BP = AssetData.IsAssetLoaded() ? Cast<UBlueprint>(AssetData.GetAsset()) : nullptr)
-                {
-                    McpCompileBlueprint(BP, nullptr, EBlueprintCompileOptions::None);
-                }
-            }
-        }
+        McpRecompileLoadedBlueprints(Users);
 
         TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
         Result->SetStringField(TEXT("deletedPath"), StructPath);

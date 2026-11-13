@@ -15,9 +15,6 @@
 
 namespace McpLightingHandlers
 {
-namespace
-{
-// The payload's post-process volume in the editor world (spawned when missing); replies and returns null otherwise.
 APostProcessVolume* ResolvePostProcessOrReply(UEngineWireSubsystem& Subsystem, const FString& RequestId,
     const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> RequestingSocket)
 {
@@ -34,6 +31,8 @@ APostProcessVolume* ResolvePostProcessOrReply(UEngineWireSubsystem& Subsystem, c
     return PPV;
 }
 
+namespace
+{
 // Checked before the volume is resolved: a call that set nothing could spawn a volume and then be refused.
 bool RefuseIfNothingSet(UEngineWireSubsystem& Subsystem, const FString& RequestId, const TSharedPtr<FJsonObject>& Payload,
     TSharedPtr<FMcpBridgeWebSocket> RequestingSocket, std::initializer_list<const TCHAR*> Fields)

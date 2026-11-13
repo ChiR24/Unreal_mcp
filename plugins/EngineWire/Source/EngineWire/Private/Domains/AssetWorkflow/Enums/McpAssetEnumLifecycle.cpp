@@ -1,7 +1,7 @@
 #include "Domains/AssetWorkflow/Enums/McpAssetEnumShared.h"
 #include "Domains/AssetWorkflow/Operations/McpAssetBulkSelection.h"
 #include "Kismet2/EnumEditorUtils.h"
-#include "ObjectTools.h"
+#include "Safety/McpSafeOperationsAssetDelete.h"
 
 
 bool HandleEnumAction(
@@ -145,35 +145,26 @@ bool HandleEnumLifecycleActions(
         UUserDefinedEnum* Enum = RequireEnum(Params, OutResult, bHandled);
         if (bHandled) { return true; }
 
-        // Editor-tracked delete via ObjectTools::DeleteObjects.
-        // The previous implementation unloaded the
-        // package and deleted the .uasset/.uexp files directly, which bypassed
-        // the editor deletion flow (asset registry, source control, redirectors,
-        // loaded references) and could leave a referenced enum half-unregistered.
-        // ObjectTools::DeleteObjects performs the file deletion, redirector
-        // creation, GC and source-control bookkeeping for us and must run on the
-        // game thread. Capture the path BEFORE deletion: the pointer is dangling
+        // As delete_struct deletes: refused while other assets use it unless force says to break them, then the safe
+        // delete (the engine's DeleteObjects without its dialog deleted nothing while anything referenced the enum, so
+        // there was no way through), and the loaded users recompile. The path is captured first: the pointer dangles
         // once the delete succeeds.
         const FString EnumPath = Enum->GetPathName();
         const FString EnumPackage = Enum->GetOutermost()->GetName();
-        TArray<UObject*> ObjectsToDelete = { Enum };
-
-        // ObjectTools::DeleteObjects returns the number of objects actually removed.
-        // A cancelled or failed delete returns 0; we must NOT claim success.
-        const int32 DeletedCount = ObjectTools::DeleteObjects(ObjectsToDelete, /*bShowConfirmation=*/false);
-
-        if (DeletedCount == 0)
+        const TArray<FString> Users = McpOutsideReferencers(EnumPackage, {EnumPackage});
+        const bool bForce = GetJsonBoolField(Params, TEXT("force"), false);
+        if ((Users.Num() > 0 && !bForce) || !McpSafeOperations::McpDeleteAssetAndFile(EnumPath))
         {
-            // The engine refuses while anything references the enum; name what does, so the caller can fix it.
-            const TArray<FString> Users = McpOutsideReferencers(EnumPackage, {EnumPackage});
-            const TCHAR* Why = Users.Num() > 0 ? TEXT("assets still use it (referencedBy); change or delete them first")
-                                               : TEXT("something loaded still holds it");
-            SetEnumResultFields(OutResult, false, FString::Printf(TEXT("Enum %s was not deleted: %s."), *EnumPath, Why), TEXT("DELETE_FAILED"));
+            SetEnumResultFields(OutResult, false, Users.Num() > 0 && !bForce
+                ? FString::Printf(TEXT("Enum %s was not deleted: assets still use it (referencedBy); change or delete them first, or pass force true to delete it anyway, breaking them."), *EnumPath)
+                : FString::Printf(TEXT("Enum %s was not deleted: the asset or its file is still there."), *EnumPath),
+                TEXT("DELETE_FAILED"));
             OutResult->SetStringField(TEXT("enumPath"), EnumPath);
             OutResult->SetBoolField(TEXT("deleted"), false);
             OutResult->SetArrayField(TEXT("referencedBy"), McpHandlerUtils::ToJsonStringArray(Users));
             return true;
         }
+        McpRecompileLoadedBlueprints(Users);
 
         TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
         Result->SetStringField(TEXT("enumPath"), EnumPath);

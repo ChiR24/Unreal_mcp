@@ -5,11 +5,11 @@
 #include "Foundation/BridgeHelpers/McpHelpers.h"
 #include "EngineWireSubsystem.h"
 #include "Foundation/HandlerUtils/McpHandlerUtils.h"
+#include "Foundation/McpScopedEditorTransaction.h"
 #include "Dom/JsonObject.h"
 #include "Engine/PostProcessVolume.h"
 #include "Engine/RendererSettings.h"
 #include "Foundation/Render/McpConsoleVariableWrite.h"
-#include "Foundation/Render/McpPostProcessVolumeResolution.h"
 #include "GameFramework/WorldSettings.h"
 #include "HAL/IConsoleManager.h"
 
@@ -66,6 +66,20 @@ bool HandleSetupGlobalIllumination(
             TEXT("INVALID_ARGUMENT"));
         return true;
     }
+    // One undo step, opened before the volume is resolved (a volume spawned for it included): the volume and the World
+    // Settings were written with no transaction open. The volume is resolved before any variable is set: a call
+    // refused for it had already switched the GI method.
+    FMcpScopedEditorTransaction Transaction(FText::FromString(TEXT("Setup Global Illumination")),
+                                            EMcpMutationDurability::EditorStateOnly, TArray<UObject*>());
+    APostProcessVolume* PPV = nullptr;
+    if (Payload->HasTypedField<EJson::Number>(TEXT("indirectLightingIntensity")))
+    {
+        PPV = ResolvePostProcessOrReply(Subsystem, RequestId, Payload, RequestingSocket);
+        if (!PPV)
+        {
+            return true;
+        }
+    }
     // Set as the console does and read back: a code-priority Set lost to any console set of the same variable, and
     // the reply said "configured" either way.
     IConsoleVariable* GICVar = IConsoleManager::Get().FindConsoleVariable(TEXT("r.DynamicGlobalIlluminationMethod"));
@@ -77,20 +91,8 @@ bool HandleSetupGlobalIllumination(
             FString::Printf(TEXT("r.DynamicGlobalIlluminationMethod %s"), *GINotTaken), TEXT("GI_METHOD_NOT_APPLIED"));
         return true;
     }
-    APostProcessVolume* PPV = nullptr;
-    if (Payload->HasTypedField<EJson::Number>(TEXT("indirectLightingIntensity")))
+    if (PPV)
     {
-        FString ResolveError;
-        FString ResolveErrorCode;
-        PPV = McpResolvePostProcessVolume(
-            McpHandlerUtils::GetEditorWorld(), Payload, true, ResolveError, ResolveErrorCode);
-        if (!PPV)
-        {
-            Subsystem.SendAutomationError(RequestingSocket, RequestId,
-                ResolveError.IsEmpty() ? FString(TEXT("No post-process volume for indirectLightingIntensity")) : ResolveError,
-                ResolveErrorCode.IsEmpty() ? FString(TEXT("ACTOR_NOT_FOUND")) : ResolveErrorCode);
-            return true;
-        }
         PPV->Modify();
         PPV->Settings.bOverride_IndirectLightingIntensity = true;
         PPV->Settings.IndirectLightingIntensity = static_cast<float>(Payload->GetNumberField(TEXT("indirectLightingIntensity")));
@@ -107,7 +109,8 @@ bool HandleSetupGlobalIllumination(
         }
     }
     // Baked (Lightmass) bounces live on the World Settings.
-    AWorldSettings* WorldSettings = McpHandlerUtils::GetEditorWorld() ? McpHandlerUtils::GetEditorWorld()->GetWorldSettings() : nullptr;
+    UWorld* World = McpHandlerUtils::GetEditorWorld();
+    AWorldSettings* WorldSettings = World ? World->GetWorldSettings() : nullptr;
     if (WorldSettings && Payload->HasTypedField<EJson::Number>(TEXT("bounces")))
     {
         WorldSettings->Modify();
@@ -160,6 +163,7 @@ bool HandleSetupGlobalIllumination(
         Renderer->SaveConfig();
         Resp->SetBoolField(TEXT("savedToProject"), Renderer->TryUpdateDefaultConfigFile());
     }
+    Transaction.DescribeInto(Resp);
     Subsystem.SendAutomationResponse(
         RequestingSocket,
         RequestId,

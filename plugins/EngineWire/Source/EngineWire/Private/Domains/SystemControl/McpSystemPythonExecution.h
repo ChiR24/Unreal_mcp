@@ -17,14 +17,16 @@ struct FPythonTempFileCleanup {
   }
 };
 
+// A path as the body of a plain Python literal '...': forward slashes, its own quote escaped. A raw literal r'...'
+// cannot hold its quote, so a project under C:/Users/O'Brien ended it and no wrapper compiled.
 inline FString NormalizePythonPath(const FString& Path) {
-  return Path.Replace(TEXT("\\"), TEXT("/"));
+  return Path.Replace(TEXT("\\"), TEXT("/")).Replace(TEXT("'"), TEXT("\\'"));
 }
 
 inline void AppendPythonExec(FString& Wrapper, const FString& ScriptPath,
                              const FString& ScriptDir) {
-  Wrapper += FString::Printf(TEXT("    _script_path = r'%s'\n"), *ScriptPath);
-  Wrapper += FString::Printf(TEXT("    _script_dir = r'%s'\n"), *ScriptDir);
+  Wrapper += FString::Printf(TEXT("    _script_path = '%s'\n"), *ScriptPath);
+  Wrapper += FString::Printf(TEXT("    _script_dir = '%s'\n"), *ScriptDir);
   Wrapper += TEXT("    _exec_globals = globals()\n");
   Wrapper += TEXT("    _exec_globals['__name__'] = '__main__'\n");
   Wrapper += TEXT("    _exec_globals['__file__'] = _script_path\n");
@@ -33,7 +35,7 @@ inline void AppendPythonExec(FString& Wrapper, const FString& ScriptPath,
   Wrapper += TEXT("    if _script_dir and _script_dir not in sys.path:\n");
   Wrapper += TEXT("        sys.path.insert(0, _script_dir)\n");
   Wrapper += FString::Printf(
-      TEXT("    exec(compile(_user_code, r'%s', 'exec'), _exec_globals)\n"),
+      TEXT("    exec(compile(_user_code, '%s', 'exec'), _exec_globals)\n"),
       *ScriptPath);
 }
 }

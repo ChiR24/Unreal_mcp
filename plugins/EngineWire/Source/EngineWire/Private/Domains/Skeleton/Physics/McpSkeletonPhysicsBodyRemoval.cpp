@@ -5,6 +5,7 @@
 #include "EngineWireSubsystem.h"
 #include "Foundation/HandlerUtils/McpHandlerUtils.h"
 #include "Foundation/McpScopedEditorTransaction.h"
+#include "PhysicsAssetUtils.h"
 #include "PhysicsEngine/PhysicsAsset.h"
 #include "PhysicsEngine/PhysicsConstraintTemplate.h"
 #if __has_include("PhysicsEngine/SkeletalBodySetup.h")
@@ -51,23 +52,9 @@ bool UEngineWireSubsystem::HandleRemovePhysicsBody(
     {
         // Modify with no transaction open recorded nothing: Ctrl+Z undid the edit before this one.
         const FMcpAssetEdit Edit(TEXT("Remove Physics Body"), {PhysAsset}, Result);
-        FName BoneFName(*BoneName);
-        for (int32 i = PhysAsset->ConstraintSetup.Num() - 1; i >= 0; --i)
-        {
-            UPhysicsConstraintTemplate* Constraint = PhysAsset->ConstraintSetup[i];
-            if (Constraint)
-            {
-                FConstraintInstance& CI = Constraint->DefaultInstance;
-                if (CI.ConstraintBone1 == BoneFName || CI.ConstraintBone2 == BoneFName)
-                {
-                    PhysAsset->ConstraintSetup.RemoveAt(i);
-                }
-            }
-        }
-
-        PhysAsset->SkeletalBodySetups.RemoveAt(BodyIndex);
-        PhysAsset->UpdateBoundsBodiesArray();
-        PhysAsset->UpdateBodySetupIndexMap();
+        // The engine's own removal: the collision-disable table is keyed by body index pairs, and removed by hand every
+        // pair after the body named the wrong bodies. Its constraints, the index map and the bounds bodies go with it.
+        FPhysicsAssetUtils::DestroyBody(PhysAsset, BodyIndex);
     }
 
     Result->SetStringField(TEXT("physicsAssetPath"), PhysicsAssetPath);

@@ -89,8 +89,15 @@ FString BuildAddScript(const FString& RequestId, const FString& ListingId, const
   // tags as Unreal: the site's listing_types filter and the asset-format code
   // are not the same thing.
   fetch(base, { credentials: "include" })
-    .then(function (r) { out.listingStatus = r.status; return r.json(); })
+    .then(function (r) {
+      out.listingStatus = r.status;
+      // A listing Fab does not answer for (404 for an id it has none of, its {"detail":"Not found."} read as a listing
+      // with no formats) is refused with its status, before anything is claimed.
+      if (r.status !== 200) { out.error = "LISTING_UNAVAILABLE"; send(out); return null; }
+      return r.json();
+    })
     .then(function (listingJson) {
+      if (out.error) { return null; }
       var formats = (listingJson && listingJson.assetFormats) || [];
       out.title = String((listingJson && listingJson.title) || "").slice(0, 120);
       out.formatShape = formats.length ? shape(formats[0], 2) : "none";

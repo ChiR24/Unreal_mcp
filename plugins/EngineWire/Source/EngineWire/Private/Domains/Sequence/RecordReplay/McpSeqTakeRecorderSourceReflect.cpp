@@ -104,6 +104,25 @@ bool SetEnumValue(UObject* Object, const TCHAR* PropertyName, const FString& Nam
         Property->ContainerPtrToValuePtr<void>(Object), Value);
     return true;
 }
+
+// An enum property's raw value, to put a source back as it was; false when the class has no such property.
+bool ReadEnumRaw(const UObject* Object, const TCHAR* PropertyName, int64& OutValue)
+{
+    const FEnumProperty* Property = FindFProperty<FEnumProperty>(Object->GetClass(), PropertyName);
+    if (Property)
+    {
+        OutValue = Property->GetUnderlyingProperty()->GetSignedIntPropertyValue(Property->ContainerPtrToValuePtr<void>(Object));
+    }
+    return Property != nullptr;
+}
+
+void WriteEnumRaw(UObject* Object, const TCHAR* PropertyName, int64 Value)
+{
+    if (FEnumProperty* Property = FindFProperty<FEnumProperty>(Object->GetClass(), PropertyName))
+    {
+        Property->GetUnderlyingProperty()->SetIntPropertyValue(Property->ContainerPtrToValuePtr<void>(Object), Value);
+    }
+}
 }
 
 bool ConfigureActorSource(
@@ -129,6 +148,13 @@ bool ConfigureActorSource(
         }
         Property->SetPropertyValue_InContainer(Source, Value);
         ++OutAppliedOptions;
+    }
+    // 5.8 records by AttachRecordBehaviour; the bool, deprecated there, is read only on load. Set as the engine's own
+    // SetRecordParentHierarchy sets it.
+    bool bHierarchy = false;
+    if (Payload->TryGetBoolField(TEXT("recordParentHierarchy"), bHierarchy))
+    {
+        SetEnumValue(Source, TEXT("AttachRecordBehaviour"), bHierarchy ? TEXT("Hierarchy") : TEXT("None"));
     }
     FString RecordType;
     if (Payload->TryGetStringField(TEXT("recordType"), RecordType))
@@ -171,17 +197,12 @@ FTakeRecorderActorSourceState CaptureActorSourceOptions(
                     Source->GetClass(), TEXT("bRecordParentHierarchy")))
             State.bRecordParentHierarchy =
                 Property->GetPropertyValue_InContainer(Source);
+        State.bHasAttachRecordBehaviour =
+            ReadEnumRaw(Source, TEXT("AttachRecordBehaviour"), State.AttachRecordBehaviourValue);
     }
     if (Payload->HasField(TEXT("recordType")))
     {
-        State.bHasRecordType = true;
-        if (const FEnumProperty* Property =
-                FindFProperty<FEnumProperty>(
-                    Source->GetClass(), TEXT("RecordType")))
-            State.RecordTypeValue =
-                Property->GetUnderlyingProperty()
-                    ->GetSignedIntPropertyValue(
-                        Property->ContainerPtrToValuePtr<void>(Source));
+        State.bHasRecordType = ReadEnumRaw(Source, TEXT("RecordType"), State.RecordTypeValue);
     }
     return State;
 }
@@ -206,13 +227,10 @@ void RestoreActorSourceOptions(
                         Source->GetClass(), TEXT("bRecordParentHierarchy")))
                 Property->SetPropertyValue_InContainer(
                     Source, State.bRecordParentHierarchy);
+        if (State.bHasAttachRecordBehaviour)
+            WriteEnumRaw(Source, TEXT("AttachRecordBehaviour"), State.AttachRecordBehaviourValue);
         if (State.bHasRecordType)
-            if (FEnumProperty* Property =
-                    FindFProperty<FEnumProperty>(
-                        Source->GetClass(), TEXT("RecordType")))
-                Property->GetUnderlyingProperty()->SetIntPropertyValue(
-                    Property->ContainerPtrToValuePtr<void>(Source),
-                    State.RecordTypeValue);
+            WriteEnumRaw(Source, TEXT("RecordType"), State.RecordTypeValue);
     }
 }
 

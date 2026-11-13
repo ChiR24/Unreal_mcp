@@ -159,6 +159,16 @@ bool IsSCSRootNode(USimpleConstructionScript *SCS, USCS_Node *Node) {
   return SCS && Node && SCS->GetRootNodes().Contains(Node);
 }
 
+// The root set is not the root: on a Character every top node is the capsule's child, and a component with no
+// transform sits in the root set too, so its first node put a component under a sibling or a movement component.
+USCS_Node *SCSRootAliasNode(USimpleConstructionScript *SCS) {
+  USCS_Node *Node = nullptr;
+  if (!SCS->GetSceneRootComponentTemplate(false, &Node)) {
+    Node = SCS->GetDefaultSceneRootNode();
+  }
+  return Node && Node->GetSCS() == SCS ? Node : nullptr;
+}
+
 TSharedPtr<FJsonObject> MakeTransformJson(const FTransform &Transform) {
   TSharedPtr<FJsonObject> TransformObj = MakeShared<FJsonObject>();
   const FVector Loc = Transform.GetLocation();

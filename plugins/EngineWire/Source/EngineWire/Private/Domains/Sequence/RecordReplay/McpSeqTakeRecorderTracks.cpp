@@ -158,20 +158,16 @@ bool HandleConfigureRecordedTracks(UEngineWireSubsystem* Subsystem,
     for (UTakeRecorderSource* Source : Sources->GetSourcesCopy()) {
         Before.Add(Source);
         if (Source && Source->IsA(ActorClass)) ExistingActors.Add(GetSourceActor(Source)); }
-    TArray<FString> MissingActors;
+    // The actors resolved above, as they are: their names sent through a payload again were resolved anew, and an
+    // actor labelled with another's object name got the source.
+    FPreparedTakeRecorderSources Missing;
+    Missing.ActorSourceClass = ActorClass;
     for (AActor* Actor : RequestedActors)
-        if (!ExistingActors.Contains(Actor)) MissingActors.Add(Actor->GetName());
-    if (MissingActors.Num() > 0) {
-        TSharedPtr<FJsonObject> AddPayload = MakeShared<FJsonObject>();
-        AddPayload->SetArrayField(TEXT("actorNames"), McpHandlerUtils::ToJsonStringArray(MissingActors));
-        for (const TCHAR* Field : {
-            TEXT("reduceKeys"), TEXT("recordParentHierarchy"), TEXT("recordType")})
-            if (const TSharedPtr<FJsonValue>* Value = Payload->Values.Find(Field))
-                AddPayload->SetField(Field, *Value);
-        int32 Added = 0, Requested = 0; FString Code;
-        Sources->Modify();
-        if (!ConfigureSources(
-            Panel, AddPayload, Added, Requested, Code, Error)) {
+        if (!ExistingActors.Contains(Actor)) Missing.Actors.Add(Actor);
+    if (Missing.Actors.Num() > 0) {
+        int32 Added = 0; FString Code;
+        if (!ApplyTakeRecorderSources(
+            Sources, Missing, Payload, Added, Code, Error)) {
             RollBackAdded(Sources, Before);
             return Fail(Error, *Code); }
     }

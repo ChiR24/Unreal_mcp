@@ -10,6 +10,8 @@ bool McpGetLandscapeExtentForEnvironmentAction(ALandscape *Landscape, int32 &Out
     ULandscapeInfo *LandscapeInfo = Landscape ? Landscape->GetLandscapeInfo() : nullptr;
     return LandscapeInfo && LandscapeInfo->GetLandscapeExtent(OutMinX, OutMinY, OutMaxX, OutMaxY);
 }
+} // namespace
+
 void McpApplyHeightmapRegionFromPayload(const TSharedPtr<FJsonObject> &Payload,
                                                const int32 FullMinX, const int32 FullMinY,
                                                const int32 FullMaxX, const int32 FullMaxY,
@@ -42,8 +44,6 @@ void McpApplyHeightmapRegionFromPayload(const TSharedPtr<FJsonObject> &Payload,
     OutMaxX = FMath::Clamp(OutMaxX, FullMinX, FullMaxX);
     OutMaxY = FMath::Clamp(OutMaxY, FullMinY, FullMaxY);
 }
-
-} // namespace
 
 bool McpExportLandscapeHeightmap(const TSharedPtr<FJsonObject> &Payload, TSharedPtr<FJsonObject> Resp,
                                         FString &OutMessage, FString &OutErrorCode)
