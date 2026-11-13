@@ -1,5 +1,5 @@
 {
-  "catalogRevision": "35eb161fc4281373",
+  "catalogRevision": "57e36d4bdcc1804c",
   "recordCount": 489,
   "records": [
     {
@@ -92769,10 +92769,6 @@
               "type": "string",
               "description": "Level asset path (e.g. /Game/Maps/Demo)."
             },
-            "settingsApplied": {
-              "type": "boolean",
-              "description": "Whether any world setting was written."
-            },
             "appliedSettings": {
               "type": "array",
               "items": {
@@ -92795,6 +92791,10 @@
             "timeDilation": {
               "type": "number",
               "description": "Global time dilation multiplier for the level."
+            },
+            "enableWorldBoundsChecks": {
+              "type": "boolean",
+              "description": "Whether actors leaving the world bounds are culled."
             }
           },
           "required": [
@@ -92814,7 +92814,6 @@
             "success": true,
             "message": "World settings updated (1 applied)",
             "levelPath": "/Game/Maps/Demo",
-            "settingsApplied": true,
             "appliedSettings": [
               "gameMode"
             ],
@@ -92852,8 +92851,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "7f853e62ad3ffac34407237366b10543a05526532ab347c5db44036b0277568c",
-        "content": "5b27bec520f0f63fc40c46efe105a8f796caf7dda32690eec63224c88de90018"
+        "schema": "5990f650df47423f89db880386187f610599f4e161dd57daf4aa92c7c9c1a252",
+        "content": "ffe718de5c204b2d8a6b560da0c140d31cb1c1a410bde3285ce4b71e84e4afc6"
       }
     },
     {
@@ -120872,7 +120871,7 @@
           "if then else over results",
           "all or nothing changes"
         ],
-        "summary": "Run a script of capability calls in one request, on every UE 5.x, in the S-expression grammar of read_graph_as_code: (let name (capability.id :param value ...)) calls a capability and keeps what it returns (what a direct execute returns: its declared output fields, the rest under details), name.field.0.field reads into it; (for item list ...) goes over a list, (range n) counts 0 to n-1; (if cond ... (else ...)) runs statements, and as a value (if cond a b) picks a when cond is true, b when not, evaluating only the one picked: (let z (if (> n 0) 100 0)); (expect \"assertion\") checks the editor in execute's expect language (Crate1.location.z in 0..100, Lamp on Table; the text can be made as it runs: (expect (+ c.label \" on Floor\"))); (return value) ends the script with its result. Expressions: (not a), (and a b), (or a b), (== a b), (!= a b), (< a b), (<= a b), (> a b), (>= a b), (+ a b) (it also joins text: (+ \"Crate_\" i)), (- a b), (* a b), (/ a b), (list a b), (obj :x 1 :y 2), literals, null and names; a name is bound once in its block. The whole script is checked before anything runs: every call names a capability, with only parameters its contract declares and each one it requires, and every name is bound before use. Each call is then held to everything a direct execute is (its contract, the caller's scope and path limits, the console policy) and runs on its handler inside this one request; a call that answers later is waited for within deadlineMs, so a later call can use what it made. run_script always asks for elevated consent, and each capability the script calls that asks for consent must be named in destructive, which that one consent then covers. A failed call or expectation stops the script and rolls back what it changed, as far as editor undo reaches: a Blueprint compile or a level load clears the undo history (rollback then says what could not be undone), saved files stay saved, and assets it created are listed in cleanupCall. A script cannot call run_script, run_recipe, undo, redo or restore_point, and does not start while a restore point is open (RESTORE_POINT_OPEN). The reply: returned, and steps (one line per call: its line, capability, and ok or its error code and message).",
+        "summary": "Run a script of capability calls in one request, on every UE 5.x, in the S-expression grammar of read_graph_as_code: (let name (capability.id :param value ...)) calls a capability and keeps what it returns (what a direct execute returns: its declared output fields, the rest under details), name.field.0.field reads into it; (for item list ...) goes over a list, (range n) counts 0 to n-1; (if cond ... (else ...)) runs statements, and as a value (if cond a b) picks a when cond is true, b when not, evaluating only the one picked: (let z (if (> n 0) 100 0)); (expect \"assertion\") checks the editor in execute's expect language (Crate1.location.z in 0..100, Lamp on Table; the text can be made as it runs: (expect (+ c.label \" on Floor\"))); (return value) ends the script with its result. Expressions: (not a), (and a b), (or a b), (== a b), (!= a b), (< a b), (<= a b), (> a b), (>= a b), (+ a b) (it also joins text: (+ \"Crate_\" i), a whole number without a point and any other with at most six decimals), (- a b), (* a b), (/ a b), (list a b), (obj :x 1 :y 2), literals, null and names; a name is bound once in its block. The whole script is checked before anything runs: every call names a capability, with only parameters its contract declares and each one it requires, and every name is bound before use. Each call is then held to everything a direct execute is (its contract, the caller's scope and path limits, the console policy) and runs on its handler inside this one request; a call that answers later is waited for within deadlineMs, so a later call can use what it made. run_script always asks for elevated consent, and each capability the script calls that asks for consent must be named in destructive, which that one consent then covers. A failed call or expectation stops the script and rolls back what it changed, as far as editor undo reaches: a Blueprint compile or a level load clears the undo history (rollback then says what could not be undone), saved files stay saved, and assets it created are listed in cleanupCall. A script cannot call run_script, run_recipe, undo, redo or restore_point, and does not start while a restore point is open (RESTORE_POINT_OPEN). The reply: returned, and steps (one line per call: its line, capability, and ok or its error code and message).",
         "whenToUse": [
           "The same call must run for many actors or assets, or later calls depend on what earlier ones returned: one script instead of a round trip per call.",
           "Several changes must all happen or none: a failed call or expectation rolls back the ones before it."
@@ -120980,7 +120979,7 @@
       },
       "examples": [
         {
-          "title": "Run a script of capability calls in one request, on every UE 5.x, in the S-expression grammar of read_graph_as_code: (let name (capability.id :param value ...)) calls a capability and keeps what it returns (what a direct execute returns: its declared output fields, the rest under details), name.field.0.field reads into it; (for item list ...) goes over a list, (range n) counts 0 to n-1; (if cond ... (else ...)) runs statements, and as a value (if cond a b) picks a when cond is true, b when not, evaluating only the one picked: (let z (if (> n 0) 100 0)); (expect \"assertion\") checks the editor in execute's expect language (Crate1.location.z in 0..100, Lamp on Table; the text can be made as it runs: (expect (+ c.label \" on Floor\"))); (return value) ends the script with its result. Expressions: (not a), (and a b), (or a b), (== a b), (!= a b), (< a b), (<= a b), (> a b), (>= a b), (+ a b) (it also joins text: (+ \"Crate_\" i)), (- a b), (* a b), (/ a b), (list a b), (obj :x 1 :y 2), literals, null and names; a name is bound once in its block. The whole script is checked before anything runs: every call names a capability, with only parameters its contract declares and each one it requires, and every name is bound before use. Each call is then held to everything a direct execute is (its contract, the caller's scope and path limits, the console policy) and runs on its handler inside this one request; a call that answers later is waited for within deadlineMs, so a later call can use what it made. run_script always asks for elevated consent, and each capability the script calls that asks for consent must be named in destructive, which that one consent then covers. A failed call or expectation stops the script and rolls back what it changed, as far as editor undo reaches: a Blueprint compile or a level load clears the undo history (rollback then says what could not be undone), saved files stay saved, and assets it created are listed in cleanupCall. A script cannot call run_script, run_recipe, undo, redo or restore_point, and does not start while a restore point is open (RESTORE_POINT_OPEN). The reply: returned, and steps (one line per call: its line, capability, and ok or its error code and message).",
+          "title": "Run a script of capability calls in one request, on every UE 5.x, in the S-expression grammar of read_graph_as_code: (let name (capability.id :param value ...)) calls a capability and keeps what it returns (what a direct execute returns: its declared output fields, the rest under details), name.field.0.field reads into it; (for item list ...) goes over a list, (range n) counts 0 to n-1; (if cond ... (else ...)) runs statements, and as a value (if cond a b) picks a when cond is true, b when not, evaluating only the one picked: (let z (if (> n 0) 100 0)); (expect \"assertion\") checks the editor in execute's expect language (Crate1.location.z in 0..100, Lamp on Table; the text can be made as it runs: (expect (+ c.label \" on Floor\"))); (return value) ends the script with its result. Expressions: (not a), (and a b), (or a b), (== a b), (!= a b), (< a b), (<= a b), (> a b), (>= a b), (+ a b) (it also joins text: (+ \"Crate_\" i), a whole number without a point and any other with at most six decimals), (- a b), (* a b), (/ a b), (list a b), (obj :x 1 :y 2), literals, null and names; a name is bound once in its block. The whole script is checked before anything runs: every call names a capability, with only parameters its contract declares and each one it requires, and every name is bound before use. Each call is then held to everything a direct execute is (its contract, the caller's scope and path limits, the console policy) and runs on its handler inside this one request; a call that answers later is waited for within deadlineMs, so a later call can use what it made. run_script always asks for elevated consent, and each capability the script calls that asks for consent must be named in destructive, which that one consent then covers. A failed call or expectation stops the script and rolls back what it changed, as far as editor undo reaches: a Blueprint compile or a level load clears the undo history (rollback then says what could not be undone), saved files stay saved, and assets it created are listed in cleanupCall. A script cannot call run_script, run_recipe, undo, redo or restore_point, and does not start while a restore point is open (RESTORE_POINT_OPEN). The reply: returned, and steps (one line per call: its line, capability, and ok or its error code and message).",
           "input": {
             "action": "run_script",
             "script": "(let crates (control_actor.list :filter \"Crate\"))\n(for c crates.actors\n  (if (< c.location.z 0)\n    (control_actor.set_transform :actorName c.name :location (obj :x c.location.x :y c.location.y :z 50))))\n(expect \"Crate1.location.z in 0..100\")\n(return crates.count)"
@@ -121026,7 +121025,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "375a609faab5364a59052683abf0d40d35919cc9952d863b3afa9e5f99e12193",
-        "content": "cb5d284cd3e183e28c3ef9cdce7df3e1b39ff0338e5992d4fd78f1195f797fbe"
+        "content": "ab6b2deb1793a19092ec921902c93e3fcb94e59ba71f83a56f2acaba76b37dd3"
       }
     },
     {

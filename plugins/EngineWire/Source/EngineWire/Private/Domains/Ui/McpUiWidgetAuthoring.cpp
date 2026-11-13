@@ -61,10 +61,19 @@ bool HandleWidgetAuthoringAction(
     const FString NormalizedPath = SavePath.TrimStartAndEnd();
     const FString TargetPath =
         FString::Printf(TEXT("%s/%s"), *NormalizedPath, *WidgetName);
-    if (McpAssetExists(TargetPath)) {
+    // Sanitized before any check: a savePath ending in '/' gave '/Game/UI//WBP_X', which the registry never holds, so an
+    // existing widget was not seen and a new one was saved over it once the slashes collapsed.
+    const FString SafeTargetPath = SanitizeProjectRelativePath(TargetPath);
+    if (SafeTargetPath.IsEmpty()) {
+      Message = McpPathRefusalMessage(TEXT("savePath"), TargetPath);
+      ErrorCode = TEXT("SECURITY_VIOLATION");
+      Resp->SetStringField(TEXT("error"), Message);
+      return true;
+    }
+    if (McpAssetExists(SafeTargetPath)) {
       // An existing asset of another kind is not a widget that "already exists".
-      if (!Cast<UWidgetBlueprint>(McpLoadAsset(TargetPath))) {
-        Message = FString::Printf(TEXT("An asset that is not a Widget Blueprint already exists at %s"), *TargetPath);
+      if (!Cast<UWidgetBlueprint>(McpLoadAsset(SafeTargetPath))) {
+        Message = FString::Printf(TEXT("An asset that is not a Widget Blueprint already exists at %s"), *SafeTargetPath);
         ErrorCode = TEXT("ASSET_TYPE_MISMATCH");
         Resp->SetStringField(TEXT("error"), Message);
         return true;
@@ -72,8 +81,8 @@ bool HandleWidgetAuthoringAction(
       bSuccess = true;
       Message =
           FString::Printf(TEXT("Widget blueprint already exists at %s"),
-                          *TargetPath);
-      Resp->SetStringField(TEXT("widgetPath"), TargetPath);
+                          *SafeTargetPath);
+      Resp->SetStringField(TEXT("widgetPath"), SafeTargetPath);
       Resp->SetBoolField(TEXT("exists"), true);
       if (!WidgetType.IsEmpty()) {
         Resp->SetStringField(TEXT("widgetType"), WidgetType);
@@ -85,13 +94,6 @@ bool HandleWidgetAuthoringAction(
     // Create the Blueprint inside a real package. The factory call used to be
     // handed a null outer (the folder is not an asset), which is a fatal error
     // in StaticAllocateObject and took the editor down (crash #4).
-    const FString SafeTargetPath = SanitizeProjectRelativePath(TargetPath);
-    if (SafeTargetPath.IsEmpty()) {
-      Message = McpPathRefusalMessage(TEXT("savePath"), TargetPath);
-      ErrorCode = TEXT("SECURITY_VIOLATION");
-      Resp->SetStringField(TEXT("error"), Message);
-      return true;
-    }
     if (FindObject<UBlueprint>(nullptr, *(SafeTargetPath + TEXT(".") + WidgetName)) != nullptr) {
       Message = FString::Printf(TEXT("Widget blueprint '%s' already exists in memory"), *WidgetName);
       ErrorCode = TEXT("ALREADY_EXISTS");
@@ -113,10 +115,13 @@ bool HandleWidgetAuthoringAction(
       }
       ParentUClass = Requested;
     }
-    UPackage *Package = McpCreatePackageOrNull(SafeTargetPath);
+    // A bare CreatePackage handed back a package holding an unloaded asset, which the new Blueprint replaced.
+    FString CreateError;
+    FString CreateCode;
+    UPackage *Package = McpCreatePackageForNewAsset(SafeTargetPath, CreateError, CreateCode);
     if (!Package) {
-      Message = FString::Printf(TEXT("Failed to create package %s"), *SafeTargetPath);
-      ErrorCode = TEXT("PACKAGE_CREATE_FAILED");
+      Message = CreateError;
+      ErrorCode = CreateCode;
       Resp->SetStringField(TEXT("error"), Message);
       return true;
     }

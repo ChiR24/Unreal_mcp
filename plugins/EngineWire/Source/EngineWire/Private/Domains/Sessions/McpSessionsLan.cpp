@@ -64,7 +64,10 @@ bool HandleHostLanServer(
 
     if (bExecuteTravel)
     {
-        UWorld* World = McpHandlerUtils::GetPlayOrEditorWorld();
+        // The Play world only: the editor ticks world travel for Play worlds alone, so the editor world travelled
+        // nowhere under a success reply and kept the travel URL.
+        UWorld* World = nullptr;
+        if (GEditor) World = GEditor->PlayWorld;
 
         if (World)
         {

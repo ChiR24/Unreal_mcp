@@ -83,7 +83,7 @@ bool HandleMutePlayer(
                 IOnlineIdentityPtr IdentityInterface = OnlineSub->GetIdentityInterface();
                 if (IdentityInterface.IsValid())
                 {
-#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION < 7
+                    // The same identity and voice calls on every version: 5.7 and later answered "mute was not applied".
                     FUniqueNetIdPtr NetId = IdentityInterface->CreateUniquePlayerId(TargetPlayerId);
                     if (NetId.IsValid())
                     {
@@ -106,10 +106,6 @@ bool HandleMutePlayer(
                         bSuccess = false;
                         StatusMessage = TEXT("Unable to resolve target player net ID; mute was not applied");
                     }
-#else
-                    bSuccess = false;
-                    StatusMessage = TEXT("UE 5.7+ remote mute requires session-based player lookup; mute was not applied");
-#endif
                 }
                 else
                 {

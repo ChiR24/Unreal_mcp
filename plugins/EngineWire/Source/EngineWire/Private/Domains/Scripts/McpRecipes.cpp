@@ -67,7 +67,8 @@ FString ToScript(const TSharedPtr<FJsonValue>& Value)
     switch (Value.IsValid() ? Value->Type : EJson::Null)
     {
     case EJson::Number:
-        return FString::SanitizeFloat(Value->AsNumber());
+        // Every digit the double holds: SanitizeFloat's six decimals bound 0.0000004 as 0.
+        return FString::Printf(TEXT("%.17g"), Value->AsNumber());
     case EJson::Boolean:
         return Value->AsBool() ? TEXT("true") : TEXT("false");
     case EJson::String:

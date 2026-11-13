@@ -4,6 +4,7 @@
 #include "Domains/Ui/McpUiPrivate.h"
 #include "Domains/Render/McpRenderPrivate.h"
 #include "Foundation/HandlerUtils/McpHandlerUtils.h"
+#include "Foundation/Render/McpViewportStats.h"
 
 #include "Editor.h"
 #include "Engine/Engine.h"
@@ -169,6 +170,15 @@ bool HandleSystemExtrasAction(UEngineWireSubsystem &Bridge,
       Bridge.SendAutomationError(Socket, RequestId,
           FString::Printf(TEXT("Unknown profileType '%s' (CPU, GPU, Memory, RenderThread, GameThread, All)"), *ProfileType),
           TEXT("INVALID_ARGUMENT"));
+      return true;
+    }
+    // A stat command toggles: sent while the stat was up, it hid it under a reply that said enabled.
+    if (McpIsStatShown(Command->Mid(5))) {
+      TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
+      Result->SetStringField(TEXT("command"), *Command);
+      Result->SetBoolField(TEXT("changed"), false);
+      Bridge.SendAutomationResponse(Socket, RequestId, true,
+          FString::Printf(TEXT("'%s' is already on screen; nothing was sent"), **Command), Result);
       return true;
     }
     return RunConsole(Bridge, RequestId, *Command, Socket);

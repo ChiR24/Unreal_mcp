@@ -51,6 +51,5 @@ export const P = {
   gravityZ: num('World gravity along Z; setting it also enables the global gravity override.'),
   timeDilation: num('Global time dilation multiplier for the level.'),
   enableWorldBoundsChecks: bool('Whether actors leaving the world bounds are culled.'),
-  settingsApplied: bool('Whether any world setting was written.'),
   appliedSettings: arrStr('Names of the world settings actually written by this call.'),
 } as const;

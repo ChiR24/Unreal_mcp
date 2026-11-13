@@ -26677,6 +26677,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           },
           "description": "With discardUnsaved, the packages whose unsaved changes were dropped."
         },
+        "enableWorldBoundsChecks": {
+          "type": "boolean",
+          "description": "Whether actors leaving the world bounds are culled."
+        },
         "errorCount": {
           "type": "number",
           "description": "Error messages."
@@ -26784,10 +26788,6 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "savedDirtyPackagesBeforeLoad": {
           "type": "boolean",
           "description": "Whether saveDirtyPackages saved every dirty package before the load."
-        },
-        "settingsApplied": {
-          "type": "boolean",
-          "description": "Whether any world setting was written."
         },
         "settledSeconds": {
           "type": "number",

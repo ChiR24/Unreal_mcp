@@ -26,6 +26,12 @@ TSharedPtr<FJsonObject> HandleChannelPack(const TSharedPtr<FJsonObject>& Params)
             Width = Sources[i]->Source.GetSizeX();
             Height = Sources[i]->Source.GetSizeY();
         }
+        // Read by pixel index, another size was read row-shifted, or cut short into zeros.
+        else if (Sources[i]->Source.GetSizeX() != Width || Sources[i]->Source.GetSizeY() != Height)
+        {
+            TEXTURE_ERROR_RESPONSE(FString::Printf(TEXT("%s is %dx%d; every source must match the first one's %dx%d size"), Fields[i],
+                static_cast<int32>(Sources[i]->Source.GetSizeX()), static_cast<int32>(Sources[i]->Source.GetSizeY()), Width, Height));
+        }
     }
     if (Width == 0)
     {
@@ -53,7 +59,7 @@ TSharedPtr<FJsonObject> HandleChannelPack(const TSharedPtr<FJsonObject>& Params)
     {
         TEXTURE_ERROR_RESPONSE(TEXT("Failed to lock output texture data"));
     }
-    // A missing or smaller source leaves its channel 0 (alpha 255). A channel copies the same channel of its
+    // A missing source leaves its channel 0 (alpha 255). A channel copies the same channel of its
     // source; a G8 source is one gray channel, so its gray feeds whichever channel it is assigned, alpha included.
     for (int32 i = 0; i < 4; ++i)
     {

@@ -52,7 +52,15 @@ bool UEngineWireSubsystem::HandleCreateLandscapeGrassType(
     return true;
   }
 
-  const FString FullPackagePath = PackagePath / Name;
+  // The name as other asset creators check theirs: 'My Grass' made an asset that could not be saved, and 'Sub/Grass'
+  // an object not named as its package.
+  FString FullPackagePath;
+  FString NameMessage;
+  FString NameCode;
+  if (!McpBuildValidatedAssetPath(PackagePath, Name, TEXT("grass type"), FullPackagePath, NameMessage, NameCode)) {
+    SendAutomationError(RequestingSocket, RequestId, NameMessage, NameCode);
+    return true;
+  }
   TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
   if (ULandscapeGrassType *Existing = Cast<ULandscapeGrassType>(McpLoadAsset(FullPackagePath))) {
     Resp->SetStringField(TEXT("asset_path"), Existing->GetPathName());
@@ -75,16 +83,10 @@ bool UEngineWireSubsystem::HandleCreateLandscapeGrassType(
       NewObject<ULandscapeGrassType>(
           Package, FName(*Name),
           RF_Public | RF_Standalone);
-  if (!GrassType) {
-    SendAutomationError(
-        RequestingSocket, RequestId,
-        TEXT("Failed to create grass type asset"),
-        TEXT("CREATION_FAILED"));
-    return true;
-  }
 
-  int32 NewIndex = GrassType->GrassVarieties.AddZeroed();
-  FGrassVariety &Variety = GrassType->GrassVarieties[NewIndex];
+  // Constructed, not zeroed: a zero EndCullDistance grows nothing, and lighting channel 0 and shadows were off.
+  FGrassVariety &Variety = GrassType->GrassVarieties[GrassType->GrassVarieties.AddZeroed()];
+  FGrassVariety::StaticStruct()->InitializeStruct(&Variety);
   Variety.GrassMesh = StaticMesh;
   Variety.GrassDensity.Default = 1.0f;
   Variety.ScaleX = Variety.ScaleY = Variety.ScaleZ = FFloatInterval(0.8f, 1.2f);

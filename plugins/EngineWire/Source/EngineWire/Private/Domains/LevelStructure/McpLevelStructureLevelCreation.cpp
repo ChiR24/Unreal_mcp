@@ -145,6 +145,15 @@ bool HandleCreateLevel(
         return true;
     }
 
+    // A level made here exists only once saved: kept in memory it is the World Memory Leaks crash the cleanup below is
+    // for, and with save false that cleanup emptied it while the reply said "Created level".
+    if (!bSave)
+    {
+        Subsystem->SendAutomationError(Socket, RequestId,
+            TEXT("A new level exists only once it is saved, so save false cannot make one. Nothing was created."),
+            TEXT("INVALID_ARGUMENT"));
+        return true;
+    }
     UPackage* Package = nullptr;
     UWorld* NewWorld = CreateLevelWorld(FullPath, LevelName, Package);
     if (!NewWorld)

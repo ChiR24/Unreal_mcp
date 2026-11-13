@@ -61,9 +61,13 @@ bool UEngineWireSubsystem::HandleSetLandscapeMaterial(
 
   FMcpScopedEditorTransaction Transaction(FText::FromString(TEXT("Set Landscape Material")),
                                           EMcpMutationDurability::EditorStateOnly, TArray<UObject*>{Landscape});
-  Landscape->Modify();
+  // With the property: the material instances are rebuilt, and the streaming proxies given the material, only for an
+  // event naming LandscapeMaterial.
+  FProperty* MaterialProperty = FindFProperty<FProperty>(Landscape->GetClass(), TEXT("LandscapeMaterial"));
+  Landscape->PreEditChange(MaterialProperty);
   Landscape->LandscapeMaterial = Mat;
-  Landscape->PostEditChange();
+  FPropertyChangedEvent MaterialChanged(MaterialProperty, EPropertyChangeType::ValueSet);
+  Landscape->PostEditChangeProperty(MaterialChanged);
   TSharedPtr<FJsonObject> Resp =
       McpHandlerUtils::CreateResultObject();
   Transaction.DescribeInto(Resp);

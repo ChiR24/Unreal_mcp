@@ -25,6 +25,11 @@ bool OpenRequestedMedia(UObject *Player,
   OutOpenRequested = false;
   OutExpectedUrl.Reset();
   FString Error;
+  // Just before an open, once its target passed every check: closed first, a refused call stopped what was playing.
+  const auto CloseForOpen = [Player]() {
+    InvalidatePendingMediaPlayback(Player, true);
+    CallVoidFunction(Player, TEXT("Close"));
+  };
   const FString SourcePath =
       GetStringAny(Payload, {TEXT("mediaSourcePath"), TEXT("sourcePath")});
   if (!SourcePath.IsEmpty()) {
@@ -45,8 +50,11 @@ bool OpenRequestedMedia(UObject *Player,
               : OutErrorMessage;
       return false;
     }
-    if (!CallBoolObjectFunction(Player, TEXT("CanPlaySource"), Source) ||
-        !CallBoolObjectFunction(Player, TEXT("OpenSource"), Source)) {
+    const bool bCanPlay = CallBoolObjectFunction(Player, TEXT("CanPlaySource"), Source);
+    if (bCanPlay) {
+      CloseForOpen();
+    }
+    if (!bCanPlay || !CallBoolObjectFunction(Player, TEXT("OpenSource"), Source)) {
       OutErrorCode = TEXT("MEDIA_OPEN_FAILED");
       OutErrorMessage = TEXT("The media player rejected the supplied source");
       return false;
@@ -69,9 +77,11 @@ bool OpenRequestedMedia(UObject *Player,
     const int32 Index = FMath::Max(0, FMath::TruncToInt32(IndexValue));
     UObject *PlaylistSource =
         Playlist ? CallObjectIntFunction(Playlist, TEXT("Get"), Index) : nullptr;
-    if (!PlaylistSource ||
-        !ValidateMediaSourcePolicy(PlaylistSource, OutErrorCode,
-                                   OutErrorMessage) ||
+    const bool bPlaylistValid = PlaylistSource && ValidateMediaSourcePolicy(PlaylistSource, OutErrorCode, OutErrorMessage);
+    if (bPlaylistValid) {
+      CloseForOpen();
+    }
+    if (!bPlaylistValid ||
         !CallBoolObjectIntFunction(Player, TEXT("OpenPlaylistIndex"), Playlist,
                                    Index)) {
       if (OutErrorCode.IsEmpty())
@@ -129,6 +139,7 @@ bool OpenRequestedMedia(UObject *Player,
       OutErrorMessage = ValidationError;
       return false;
     }
+    CloseForOpen();
     if (!CallBoolStringFunction(Player, TEXT("OpenFile"), ResolvedFilePath)) {
       OutErrorCode = TEXT("MEDIA_OPEN_FAILED");
       OutErrorMessage = TEXT("The media file could not be opened");

@@ -90,10 +90,6 @@ bool HandlePlayMedia(UEngineWireSubsystem *Subsystem,
                    OpenErrorMessage, Result);
     return true;
   }
-  if (bHasOpenRequest) {
-    InvalidatePendingMediaPlayback(Player, true);
-    CallVoidFunction(Player, TEXT("Close"));
-  }
   if (!OpenRequestedMedia(Player, Payload, Result, bOpenRequested,
                           OpenErrorCode, OpenErrorMessage, ExpectedUrl)) {
     SendMediaError(Subsystem, Socket, RequestId, OpenErrorCode,

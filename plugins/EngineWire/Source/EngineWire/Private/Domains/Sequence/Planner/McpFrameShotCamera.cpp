@@ -95,7 +95,7 @@ void ReadCamera(AActor* Actor, const FString& Label, double Asked, double Defaul
     }
     const UCameraComponent* Plain = Out.Component ? Out.Component : GetDefault<UCameraComponent>();
     Out.Lens.TanHalfH = FMath::Tan(FMath::DegreesToRadians(static_cast<double>(Plain->FieldOfView)) / 2.0);
-    Out.Lens.TanHalfV = Out.Lens.TanHalfH / FMath::Max(static_cast<double>(Plain->AspectRatio), 10.0);
+    Out.Lens.TanHalfV = Out.Lens.TanHalfH / FMath::Max(static_cast<double>(Plain->AspectRatio), 0.1);
 }
 
 FShot SolveInWorld(const UWorld& World, const FProblem& Problem, const TArray<AActor*>& Subjects, const TArray<FBox>& Boxes, AActor* Camera)

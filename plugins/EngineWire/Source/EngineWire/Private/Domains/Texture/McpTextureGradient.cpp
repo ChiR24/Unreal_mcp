@@ -52,7 +52,8 @@ TSharedPtr<FJsonObject> HandleCreateGradientTexture(const TSharedPtr<FJsonObject
                 T = FMath::Clamp((FMath::Atan2(NY - CenterY, NX - CenterX) + PI) / (2.0f * PI), 0.0f, 1.0f);
             }
 
-            const FLinearColor Color = FMath::Lerp(StartColor, EndColor, T);
+            // Clamped: an HDR or negative component wrapped round the byte (1.5 gave 126).
+            const FLinearColor Color = FMath::Lerp(StartColor, EndColor, T).GetClamped();
             const int32 PixelIndex = (Y * Width + X) * 4;
             PixelData[PixelIndex + 0] = static_cast<uint8>(Color.B * 255.0f);
             PixelData[PixelIndex + 1] = static_cast<uint8>(Color.G * 255.0f);
