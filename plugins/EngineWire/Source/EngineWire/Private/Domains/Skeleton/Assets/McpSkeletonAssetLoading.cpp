@@ -63,14 +63,17 @@ USkeletalMesh* LoadSkeletalMeshFromPathSkel(const FString& MeshPath, FString& Ou
     return LoadSkeletonDomainAsset<USkeletalMesh>(MeshPath, TEXT("Skeletal mesh"), TEXT("skeletal mesh"), OutError);
 }
 
+// The asset at Path loaded once as whatever it is, without a line in the log. Probing a mesh path as a Skeleton first
+// logged "Failed to find object", which the reply then carried as an engine warning although the mesh was found.
+static UObject* LoadAssetQuietly(const FString& Path)
+{
+    const FString SanitizedPath = SanitizeProjectRelativePath(Path);
+    return SanitizedPath.IsEmpty() ? nullptr : StaticLoadObject(UObject::StaticClass(), nullptr, *SanitizedPath, nullptr, LOAD_NoWarn);
+}
+
 USkeleton* LoadSkeletonOrMeshSkeleton(const FString& Path, FString& OutError)
 {
-    // Load once as whatever the asset is. Probing a mesh path as a Skeleton first logged "Failed to find object",
-    // which the reply then carried as an engine warning although the mesh was found.
-    const FString SanitizedPath = SanitizeProjectRelativePath(Path);
-    UObject* Asset = SanitizedPath.IsEmpty() ? nullptr
-        : StaticLoadObject(UObject::StaticClass(), nullptr, *SanitizedPath, nullptr, LOAD_NoWarn);
-    if (USkeletalMesh* Mesh = Cast<USkeletalMesh>(Asset))
+    if (USkeletalMesh* Mesh = Cast<USkeletalMesh>(LoadAssetQuietly(Path)))
     {
         OutError.Reset();
         return Mesh->GetSkeleton();
@@ -127,24 +130,20 @@ FSkeletonMeshTarget ResolveSkeletonMeshTarget(const TSharedPtr<FJsonObject>& Pay
     }
 
     Target.SourcePath = SkeletonPath;
-    Target.Skeleton = LoadSkeletonFromPathSkel(SkeletonPath, Target.Error);
-    if (Target.Skeleton)
+    // Older callers pass a skeletal mesh through skeletonPath: one quiet load tells which it is.
+    if (USkeletalMesh* Mesh = Cast<USkeletalMesh>(LoadAssetQuietly(SkeletonPath)))
     {
-        Target.Mesh = FindSkeletalMeshForSkeleton(Target.Skeleton);
+        Target.Mesh = Mesh;
+        Target.Skeleton = Mesh->GetSkeleton();
         return Target;
     }
-
-    // Older callers passed a skeletal mesh through skeletonPath; honour that
-    // before reporting the skeleton as missing.
-    FString MeshError;
-    Target.Mesh = LoadSkeletalMeshFromPathSkel(SkeletonPath, MeshError);
-    if (!Target.Mesh)
+    Target.Skeleton = LoadSkeletonFromPathSkel(SkeletonPath, Target.Error);
+    if (!Target.Skeleton)
     {
         Target.ErrorCode = TEXT("SKELETON_NOT_FOUND");
         return Target;
     }
-    Target.Error.Reset();
-    Target.Skeleton = Target.Mesh->GetSkeleton();
+    Target.Mesh = FindSkeletalMeshForSkeleton(Target.Skeleton);
     return Target;
 }
 }

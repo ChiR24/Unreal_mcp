@@ -106,24 +106,40 @@ bool ConfigureNavMesh(
         NavMesh->MarkPackageDirty();
     }
 
+    // Every field the form writes, as stored.
     TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
-    Result->SetStringField(TEXT("navMeshPath"), NavMesh->GetPathName());
     Result->SetBoolField(TEXT("modified"), bModified);
+    PRAGMA_DISABLE_DEPRECATION_WARNINGS
+#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 3
+    Result->SetNumberField(TEXT("agentStepHeight"), DefaultParams.AgentMaxStepHeight);
+#else
+    Result->SetNumberField(TEXT("agentStepHeight"), NavMesh->AgentMaxStepHeight);
+#endif
     if (bAgentProperties)
     {
+        Result->SetStringField(TEXT("navMeshPath"), NavMesh->GetPathName());
         Result->SetNumberField(TEXT("agentRadius"), NavMesh->AgentRadius);
         Result->SetNumberField(TEXT("agentHeight"), NavMesh->AgentHeight);
         Result->SetNumberField(TEXT("agentMaxSlope"), NavMesh->AgentMaxSlope);
     }
     else
     {
-        Result->SetStringField(TEXT("navMeshName"), NavMesh->GetName());
-        Result->SetStringField(TEXT("navMeshClass"), NavMesh->GetClass()->GetName());
         Result->SetNumberField(TEXT("tileSizeUU"), NavMesh->TileSizeUU);
+        Result->SetNumberField(TEXT("minRegionArea"), NavMesh->MinRegionArea);
+        Result->SetNumberField(TEXT("mergeRegionSize"), NavMesh->MergeRegionSize);
+        Result->SetNumberField(TEXT("maxSimplificationError"), NavMesh->MaxSimplificationError);
+#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 2
+        Result->SetNumberField(TEXT("cellSize"), DefaultParams.CellSize);
+        Result->SetNumberField(TEXT("cellHeight"), DefaultParams.CellHeight);
+#else
+        Result->SetNumberField(TEXT("cellSize"), NavMesh->CellSize);
+        Result->SetNumberField(TEXT("cellHeight"), NavMesh->CellHeight);
+#endif
     }
+    PRAGMA_ENABLE_DEPRECATION_WARNINGS
     Self->SendAutomationResponse(Socket, RequestId, true,
-        bAgentProperties ? TEXT("Nav agent properties set")
-        : bModified ? TEXT("NavMesh settings configured") : TEXT("No settings modified"), Result);
+        !bModified ? TEXT("No settings modified") : bAgentProperties ? TEXT("Nav agent properties set") : TEXT("NavMesh settings configured"),
+        Result);
     return true;
 }
 }

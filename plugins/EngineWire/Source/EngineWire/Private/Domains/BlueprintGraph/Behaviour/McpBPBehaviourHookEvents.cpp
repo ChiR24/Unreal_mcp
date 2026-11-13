@@ -12,6 +12,7 @@
 #include "K2Node_ComponentBoundEvent.h"
 #include "K2Node_Event.h"
 #include "Kismet2/BlueprintEditorUtils.h"
+#include "Kismet2/KismetEditorUtilities.h"
 #include "UObject/UnrealType.h"
 
 namespace McpBlueprintBehaviour::Detail
@@ -29,15 +30,11 @@ bool ResolveComponentEvent(UBlueprint* Blueprint, const FString& Component, cons
     Out.Delegate = Delegate && Delegate->HasAnyPropertyFlags(CPF_BlueprintAssignable) ? Delegate : nullptr;
     OutError = FString::Printf(TEXT("no component '%s' with a Blueprint-assignable delegate '%s' on this Blueprint "
                                     "(add the component before the call)."), *Component, *Event);
-    TArray<UK2Node_ComponentBoundEvent*> Bound;
-    FBlueprintEditorUtils::GetAllNodesOfClass(Blueprint, Bound);
-    for (UK2Node_ComponentBoundEvent* Node : Bound)
+    if (Out.Delegate)
     {
-        if (Out.Delegate && Node->ComponentPropertyName == Out.Component->GetFName() &&
-            Node->DelegatePropertyName == Out.Delegate->GetFName())
-        {
-            Out.Existing = Node;
-        }
+        // The engine hands the node back const; the hook wires into it.
+        Out.Existing = const_cast<UK2Node_ComponentBoundEvent*>(FKismetEditorUtilities::FindBoundEventForComponent(
+            Blueprint, Out.Delegate->GetFName(), Out.Component->GetFName()));
     }
     return Out.Delegate != nullptr;
 }

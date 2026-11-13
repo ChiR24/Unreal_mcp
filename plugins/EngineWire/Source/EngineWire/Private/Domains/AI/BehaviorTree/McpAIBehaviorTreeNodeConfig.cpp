@@ -2,15 +2,13 @@
 
 #include "BehaviorTree/BehaviorTree.h"
 #include "BehaviorTree/BehaviorTreeTypes.h"
-#include "BehaviorTree/BlackboardData.h"
-#include "BehaviorTree/Blackboard/BlackboardKeyType.h"
 #include "BehaviorTree/BTCompositeNode.h"
 #include "BehaviorTree/BTDecorator.h"
 #include "BehaviorTree/BTNode.h"
 #include "BehaviorTree/BTService.h"
 #include "BehaviorTree/BTTaskNode.h"
+#include "Domains/BehaviorTree/McpBTPrivate.h"
 #include "Foundation/McpScopedEditorTransaction.h"
-#include "UObject/UnrealType.h"
 
 namespace McpAIHandlers
 {
@@ -157,74 +155,20 @@ bool HandleConfigureBehaviorTreeNode(UEngineWireSubsystem* Self, const FString& 
         Self->SendAutomationError(RequestingSocket, RequestId, TEXT("properties is required: the node's properties to set, by name."), TEXT("INVALID_ARGUMENT"));
         return true;
     }
-    int32 ConfiguredPropertyCount = 0;
     TArray<FString> ConfiguredProperties;
-    TArray<FString> SuppliedProperties;
     TArray<FString> SkippedReasons;
     {
         // One undo step for the properties applied; a skipped one changes nothing.
         TargetNode->SetFlags(RF_Transactional);
-        const FMcpAssetEdit Edit(TEXT("Configure Behavior Tree Node"), {BT, TargetNode}, Result);
-        for (const auto& Pair : (*PropertiesObject)->Values)
+        FMcpAssetEdit Edit(TEXT("Configure Behavior Tree Node"), {BT, TargetNode}, Result);
+        McpBehaviorTreeHandlers::ApplyNodeProperties(TargetNode, BT, **PropertiesObject, ConfiguredProperties, SkippedReasons);
+        if (ConfiguredProperties.Num() == 0)
         {
-            const FString PropertyName(*Pair.Key);
-            SuppliedProperties.Add(PropertyName);
-            FProperty* Property = TargetNode->GetClass()->FindPropertyByName(FName(*PropertyName));
-            if (!Property || !Pair.Value.IsValid())
-            {
-                SkippedReasons.Add(FString::Printf(TEXT("%s: no such property on %s"), *PropertyName, *TargetNode->GetClass()->GetName()));
-                continue;
-            }
-
-            // A Blackboard key selector is set by key name, the way the editor picks it; the generic
-            // struct import only knows JSON objects and export text, so a plain "TargetActor" failed.
-            FStructProperty* StructProp = CastField<FStructProperty>(Property);
-            if (StructProp && StructProp->Struct == FBlackboardKeySelector::StaticStruct() && Pair.Value->Type == EJson::String)
-            {
-                FBlackboardKeySelector* Selector = StructProp->ContainerPtrToValuePtr<FBlackboardKeySelector>(TargetNode);
-                const FName KeyName(*Pair.Value->AsString());
-                if (BT->BlackboardAsset)
-                {
-                    const FBlackboard::FKey KeyID = BT->BlackboardAsset->GetKeyID(KeyName);
-                    const FBlackboardEntry* Entry = BT->BlackboardAsset->GetKey(KeyID);
-                    if (!Entry || !Entry->KeyType)
-                    {
-                        SkippedReasons.Add(FString::Printf(TEXT("%s: key '%s' is not in Blackboard %s"), *PropertyName, *KeyName.ToString(), *BT->BlackboardAsset->GetPathName()));
-                        continue;
-                    }
-                    // The node's own filter (e.g. MoveTo takes only Object or Vector keys).
-                    bool bAllowed = Selector->AllowedTypes.Num() == 0;
-                    for (UBlackboardKeyType* Filter : Selector->AllowedTypes)
-                    {
-                        bAllowed |= Filter && Entry->KeyType->IsAllowedByFilter(Filter);
-                    }
-                    if (!bAllowed)
-                    {
-                        SkippedReasons.Add(FString::Printf(TEXT("%s: key '%s' is a %s, a type this selector does not accept"), *PropertyName, *KeyName.ToString(), *Entry->KeyType->GetClass()->GetName()));
-                        continue;
-                    }
-                }
-                Selector->SelectedKeyName = KeyName;
-                if (BT->BlackboardAsset)
-                {
-                    Selector->ResolveSelectedKey(*BT->BlackboardAsset);
-                }
-                ++ConfiguredPropertyCount;
-                ConfiguredProperties.Add(PropertyName);
-                continue;
-            }
-
-            // Shared reflection import (scalars, enums, structs incl. FValueOrBBKey_*, objects, arrays).
-            FString ApplyError;
-            if (!ApplyJsonValueToProperty(TargetNode, Property, Pair.Value, ApplyError))
-            {
-                SkippedReasons.Add(FString::Printf(TEXT("%s: %s"), *PropertyName, *ApplyError));
-                continue;
-            }
-            ++ConfiguredPropertyCount;
-            ConfiguredProperties.Add(PropertyName);
+            // Nothing changed, known only once tried: undo keeps no empty step.
+            Edit.Transaction.Cancel();
         }
     }
+    const int32 ConfiguredPropertyCount = ConfiguredProperties.Num();
 
     const bool bSaveAttempted = ConfiguredPropertyCount > 0;
     bool bSaved = true;
@@ -254,9 +198,13 @@ bool HandleConfigureBehaviorTreeNode(UEngineWireSubsystem* Self, const FString& 
     {
         Result->SetArrayField(TEXT("skippedProperties"), McpHandlerUtils::ToJsonStringArray(SkippedReasons));
     }
-    TArray<FString> Skipped = SuppliedProperties.FilterByPredicate([&ConfiguredProperties](const FString& Name) { return !ConfiguredProperties.Contains(Name); });
-    if (Skipped.Num() > 0 && ConfiguredPropertyCount == 0)
+    if (ConfiguredPropertyCount == 0)
     {
+        TArray<FString> Skipped;
+        for (const auto& Pair : (*PropertiesObject)->Values)
+        {
+            Skipped.Emplace(*Pair.Key);
+        }
         Self->SendAutomationError(RequestingSocket, RequestId, FString::Printf(TEXT("No supplied property could be applied to %s: %s (%s)"), *TargetNode->GetClass()->GetName(), *FString::Join(Skipped, TEXT(", ")), *FString::Join(SkippedReasons, TEXT("; "))), TEXT("PROPERTY_NOT_FOUND"));
         return true;
     }

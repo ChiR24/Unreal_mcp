@@ -10,6 +10,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## 🏷️ [Unreleased]
 
 <details>
+<summary><b>🔄 Changed</b></summary>
+
+- **Replies**: each value is answered once (a doubled key goes: `blueprintPath` beside a creator's `<kind>Path`, `shapeTypes` beside `shapes`, `mapPath` and `editorWorldPath` beside `persistentLevelPath`), echoes of the request go, writers answer `saved`, refusals that carried no code carry one, rows name actors so the name reaches them when labels repeat, and calls that move, spawn or rename actors answer `affectedActors`, so their receipts list the change.
+- **Deletes and saves**: `delete_enum` refuses an enum other assets use unless `force` is true, as `delete_struct` does, and the level-scoped PCG actions save the level only when `save` is true.
+
+</details>
+
+<details>
 <summary><b>🔧 Fixed</b></summary>
 
 - **Builds**: the plugin links on UE 5.3 and 5.4 for Windows, builds on the UE 5.9 preview, and SmartObjects loads again in a Blueprint-only UE 5.5 project.
@@ -19,7 +27,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Blueprint graphs**: menu ids (`Category|Title`) are the same whatever language the editor shows. In a Spanish editor `read_graph_as_code` printed `Utilidades|ControlDeFlujo|Sequence` and node creation offered `Entrada|ActionEvents|...`, so an English id found no node; both now use the ids an English editor shows (`Utilities|FlowControl|Sequence`, `Input|ActionEvents|...`) in every editor. A category a Blueprint gives its own variable or function stays as written, even one that reads like a translated common category (a variable in `Juego` is `Variables|Juego|...`, not `Variables|Game|...`).
 - **Blueprint graphs**: `create_node` makes an event node only for an event, once per Blueprint, takes a custom event's parameters as `add_event` does, and answers with where the node landed on every path; graph actions take the node ids `read_graph_as_code` prints; `memberClass` names a class, never a node alias, and a Blueprint's short name resolves before its class has loaded.
 - **Events**: `add_event` takes a Receive event by its short name or as "Event X", refuses a parent function that is no event, and on an existing event adds no parameter twice.
-- **Behavior Trees**: `add_node` and `add_subnode` refuse an abstract class and a second Root, and take the editor's names for stock decorators and services; `remove_node` takes a decorator or service off its parent and refuses a node the editor keeps.
+- **Behavior Trees**: `add_node` and `add_subnode` refuse an abstract class and a second Root, and take the editor's names for stock decorators and services; `remove_node` takes a decorator or service off its parent and refuses a node the editor keeps; `set_node_properties` sets properties as `configure_bt_node` does, and a Blackboard key the tree lacks is named in `skippedProperties` instead of written.
 - **Geometry**: creators and edits are held to the triangle counts and ranges the engine builds (pipe walls, torus and arch angles, bevel, smoothing, remesh, stairs, UV channels 0-7), and `displace_by_texture` reads its texture once.
 - **Sequencer**: a refused or deleted sequence leaves no file behind, refusals open no empty undo step, and a sequence is not added to a track of a sequence it already plays.
 - **Levels**: a level whose name contains "Untitled" saves, and `rename_level` judges a loaded level on its sanitized path.

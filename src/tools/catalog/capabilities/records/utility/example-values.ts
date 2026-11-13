@@ -189,10 +189,9 @@ const REFLECTED_EXAMPLES: Readonly<Record<string, JsonObject>> = {
   sessionsInfo: {
     localPlayerCount: 1,
     inPlaySession: false,
-    currentPlayers: 1,
     splitScreenEnabled: false,
     splitScreenActive: false,
-    splitScreenLayout: 'Horizontal',
+    splitScreenLayouts: ['TwoPlayer_Horizontal', 'ThreePlayer_FavorTop', 'FourPlayer_Grid'],
     pieInstances: [],
   },
 };

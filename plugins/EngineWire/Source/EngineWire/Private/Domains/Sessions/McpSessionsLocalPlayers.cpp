@@ -32,6 +32,22 @@ const FMcpSplitScreenLayout GMcpSplitScreenLayouts[] = {
 };
 }
 
+FString SessionsHelpers::SplitScreenLayoutName(int32 Players)
+{
+    const UGameMapsSettings* Settings = GetDefault<UGameMapsSettings>();
+    const uint8 Value = Players == 2 ? static_cast<uint8>(Settings->TwoPlayerSplitscreenLayout.GetValue())
+        : Players == 3 ? static_cast<uint8>(Settings->ThreePlayerSplitscreenLayout.GetValue())
+        : static_cast<uint8>(Settings->FourPlayerSplitscreenLayout);
+    for (const FMcpSplitScreenLayout& Layout : GMcpSplitScreenLayouts)
+    {
+        if (Layout.Players == Players && Layout.Value == Value)
+        {
+            return Layout.Name;
+        }
+    }
+    return FString();
+}
+
 bool HandleConfigureSplitScreen(
     UEngineWireSubsystem* Subsystem,
     const FString& RequestId,

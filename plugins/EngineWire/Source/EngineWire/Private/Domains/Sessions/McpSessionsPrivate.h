@@ -32,6 +32,8 @@ namespace SessionsHelpers
 UGameInstance* GetGameInstance();
 ULocalPlayer* GetLocalPlayerByIndex(int32 PlayerIndex);
 int32 GetLocalPlayerCount();
+// The layout Players players (2, 3 or 4) get under the project's settings, in the name configure_split_screen takes.
+FString SplitScreenLayoutName(int32 Players);
 }
 
 bool HandleConfigureSplitScreen(

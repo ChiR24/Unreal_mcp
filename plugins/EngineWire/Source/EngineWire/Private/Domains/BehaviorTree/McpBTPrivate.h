@@ -99,6 +99,12 @@ bool HandleUnlinkNode(UEngineWireSubsystem* Subsystem,
 bool HandleSetNodeProperties(UEngineWireSubsystem* Subsystem,
                              const FRequestContext& Context,
                              const FGraphContext& GraphContext);
+// Sets Properties on Node (a node instance) by name, for configure_bt_node and set_node_properties: a Blackboard key
+// selector by a key name Tree's Blackboard has and the selector's type filter accepts (by name alone, with a logged
+// warning, when the tree has no Blackboard), anything else through ApplyJsonValueToProperty. A skipped property is
+// not written. OutSet names each property set, OutSkipped says why each other one was not.
+void ApplyNodeProperties(UObject* Node, UBehaviorTree* Tree, const FJsonObject& Properties, TArray<FString>& OutSet,
+                         TArray<FString>& OutSkipped);
 bool HandleAddSubnode(UEngineWireSubsystem* Subsystem,
                       const FRequestContext& Context,
                       const FGraphContext& GraphContext);

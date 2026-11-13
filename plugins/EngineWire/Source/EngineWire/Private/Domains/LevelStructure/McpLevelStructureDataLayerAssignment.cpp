@@ -22,7 +22,7 @@ bool HandleAssignActorToDataLayer(
     const TSharedPtr<FJsonObject>& Payload,
     TSharedPtr<FMcpBridgeWebSocket> Socket)
 {
-#if ENGINE_MINOR_VERSION >= 1
+#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 1
     using namespace LevelStructureHelpers;
 
     // actorName (label or name) or actorPath (the actor's object path); FindActorByNameInWorldForMcp takes either.
@@ -155,12 +155,12 @@ bool HandleAssignActorToDataLayer(
         ResponseJson->SetStringField(TEXT("reason"), TEXT("Actor is not compatible with data layers"));
         FString Message = FString::Printf(TEXT("Failed to assign actor '%s' to data layer '%s'. Actor may not be compatible with data layers."),
             *ActorName, *DataLayerName);
-        Subsystem->SendAutomationResponse(Socket, RequestId, false, Message, ResponseJson);
+        Subsystem->SendAutomationResponse(Socket, RequestId, false, Message, ResponseJson, TEXT("ASSIGN_FAILED"));
     }
 #else
     // UE 5.0 does not support the new DataLayer API
-    Subsystem->SendAutomationResponse(Socket, RequestId, false,
-        TEXT("Data layer assignment requires Unreal Engine 5.1 or later."), nullptr);
+    Subsystem->SendAutomationError(Socket, RequestId,
+        TEXT("Data layer assignment requires Unreal Engine 5.1 or later."), TEXT("UNSUPPORTED_VERSION"));
 #endif
     return true;
 }

@@ -43,7 +43,7 @@ const OUT_STR_ARRAY = (d: string) => ({ type: 'array', items: { type: 'string' }
 
 export const AI_SET_RECORDS: readonly CapabilityRecordSource[] = [
   aiRecord({
-    action: 'rebuild_navigation', summary: 'Rebuild navigation for the loaded editor world.',
+    action: 'rebuild_navigation', summary: 'Rebuild navigation for the loaded editor world, waiting until it is built; hasNavMesh says whether a nav mesh exists after. A level with no NavMeshBoundsVolume is refused (NO_NAV_BOUNDS), and so is a build locked while levels load (NAV_BUILD_LOCKED).',
     use: 'NavMesh geometry is stale after level or settings edits.',
     avoid: 'Use configure_nav_mesh_settings to change generation parameters.',
     props: {},
@@ -138,7 +138,7 @@ export const AI_SET_RECORDS: readonly CapabilityRecordSource[] = [
     example: { actorName: 'NavLinkProxy_0', linkType: 'smart' }, result: 'Nav link type set',
   }),
   aiRecord({
-    action: 'set_node_properties', summary: 'Set a Behavior Tree graph node\'s comment and its node\'s properties (numbers, booleans, text, names, a Blackboard key selector by key name), in one undo step; a call that sets nothing is refused (PROPERTY_NOT_FOUND).',
+    action: 'set_node_properties', summary: 'Set a Behavior Tree graph node\'s comment and its node\'s properties by name, in one undo step, as configure_bt_node sets them: a Blackboard key selector takes a key name the tree\'s Blackboard has. A property that cannot be set is listed in skippedProperties; a call that sets nothing is refused (PROPERTY_NOT_FOUND).',
     use: 'A graph node needs property or comment edits.',
     avoid: 'Use configure_bt_node for the asset-level route.',
     props: {

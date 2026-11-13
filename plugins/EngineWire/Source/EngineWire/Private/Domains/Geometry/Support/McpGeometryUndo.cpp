@@ -23,6 +23,8 @@ FMcpGeometryUndoScope::FMcpGeometryUndoScope(const TSharedPtr<FJsonObject>& Payl
     {
         Before = MakeShared<UE::Geometry::FDynamicMesh3, ESPMode::ThreadSafe>(Mesh);
     });
+    Transaction = MakeUnique<FMcpScopedEditorTransaction>(FText::FromString(TEXT("Edit Dynamic Mesh")),
+                                                          EMcpMutationDurability::EditorStateOnly, TArray<UObject*>());
 }
 
 FMcpGeometryUndoScope::~FMcpGeometryUndoScope()
@@ -49,8 +51,8 @@ FMcpGeometryUndoScope::~FMcpGeometryUndoScope()
     {
         return;
     }
-    // The change holds both meshes, so it can be stored after the edit; undo applies Before through the component.
-    FMcpScopedEditorTransaction Transaction(FText::FromString(TEXT("Edit Dynamic Mesh")), EMcpMutationDurability::EditorStateOnly, TArray<UObject*>());
+    // The change holds both meshes, so it is stored after the edit, in the step opened before it; undo applies Before
+    // through the component. The step closes as the scope goes.
     if (GUndo)
     {
         GUndo->StoreUndo(Target, MakeUnique<FMeshReplacementChange>(Before, After));

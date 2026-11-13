@@ -91,7 +91,6 @@ static bool AddEventGenerator(FActionContext& Context)
     Context.Result->SetStringField(TEXT("eventType"), EventType);
     Context.Result->SetStringField(TEXT("moduleName"), NewModule->GetFunctionName());
     Context.Result->SetBoolField(TEXT("moduleAdded"), true);
-    Context.Result->SetBoolField(TEXT("eventGeneratorAdded"), true);
     if (!EventName.IsEmpty() && !Emitted.IsEmpty() && !EventName.Equals(Emitted, ESearchCase::IgnoreCase))
     {
         TArray<TSharedPtr<FJsonValue>> Warnings;
@@ -114,8 +113,6 @@ static bool AddEventReceiver(FActionContext& Context)
     }
     const bool bSpawnOnEvent = GetJsonBoolField(Context.Payload, TEXT("spawnOnEvent"), false);
     const double EventSpawnCount = GetJsonNumberField(Context.Payload, TEXT("eventSpawnCount"), 1.0);
-    bool bEventHandlerAdded = false;
-    bool bEventGraphCreated = false;
     UNiagaraEmitter* Emitter = Target.Emitter;
     UNiagaraScriptSource* ScriptSource = GetEmitterScriptSource(Target.Handle);
     if (!ScriptSource || !ScriptSource->NodeGraph)
@@ -126,35 +123,28 @@ static bool AddEventReceiver(FActionContext& Context)
     Emitter->Modify();
     FNiagaraEventScriptProperties EventProps;
     EventProps.Script = NewObject<UNiagaraScript>(Emitter, MakeUniqueObjectName(Emitter, UNiagaraScript::StaticClass(), TEXT("MCPEventScript")), RF_Transactional);
-    if (EventProps.Script)
+    EventProps.Script->SetUsage(ENiagaraScriptUsage::ParticleEventScript);
+    EventProps.Script->SetUsageId(FGuid::NewGuid());
+    EventProps.Script->SetLatestSource(ScriptSource);
+    EventProps.SourceEventName = FName(*EventName);
+    // SpawnNumber is a uint32: the count is held to what it takes.
+    EventProps.SpawnNumber = static_cast<uint32>(FMath::Clamp(EventSpawnCount, 0.0, static_cast<double>(MAX_uint32)));
+    EventProps.ExecutionMode = bSpawnOnEvent ? EScriptExecutionMode::SpawnedParticles : EScriptExecutionMode::EveryParticle;
+    if (!EnsureScriptOutputGraph(ScriptSource, ENiagaraScriptUsage::ParticleEventScript, EventProps.Script->GetUsageId()))
     {
-        EventProps.Script->SetUsage(ENiagaraScriptUsage::ParticleEventScript);
-        EventProps.Script->SetUsageId(FGuid::NewGuid());
-        EventProps.Script->SetLatestSource(ScriptSource);
-        EventProps.SourceEventName = FName(*EventName);
-        EventProps.SpawnNumber = static_cast<uint32>(FMath::Max(0.0, EventSpawnCount));
-        EventProps.ExecutionMode = bSpawnOnEvent ? EScriptExecutionMode::SpawnedParticles : EScriptExecutionMode::EveryParticle;
-        bEventGraphCreated = EnsureScriptOutputGraph(ScriptSource, ENiagaraScriptUsage::ParticleEventScript, EventProps.Script->GetUsageId());
-        if (!bEventGraphCreated)
-        {
-            Context.SendError(TEXT("Failed to create Niagara event handler graph."), TEXT("NIAGARA_GRAPH_CREATE_FAILED"));
-            return true;
-        }
-#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 1
-        Emitter->AddEventHandler(EventProps, Target.VersionedEmitter.Version);
-#else
-        Emitter->AddEventHandler(EventProps);
-#endif
-        bEventHandlerAdded = true;
+        Context.SendError(TEXT("Failed to create Niagara event handler graph."), TEXT("NIAGARA_GRAPH_CREATE_FAILED"));
+        return true;
     }
+#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 1
+    Emitter->AddEventHandler(EventProps, Target.VersionedEmitter.Version);
+#else
+    Emitter->AddEventHandler(EventProps);
+#endif
     MarkDirtyAndVerify(Context, Target.System);
     Context.Result->SetStringField(TEXT("eventName"), EventName);
-    Context.Result->SetStringField(TEXT("eventType"), TEXT("Receiver"));
     Context.Result->SetBoolField(TEXT("spawnOnEvent"), bSpawnOnEvent);
     // The engine reads SpawnNumber only for a handler that spawns particles: a count sent without spawnOnEvent did nothing.
-    Context.Result->SetNumberField(TEXT("eventSpawnCount"), bSpawnOnEvent ? FMath::Max(0.0, EventSpawnCount) : 0.0);
-    Context.Result->SetBoolField(TEXT("eventHandlerAdded"), bEventHandlerAdded);
-    Context.Result->SetBoolField(TEXT("eventGraphCreated"), bEventGraphCreated);
+    Context.Result->SetNumberField(TEXT("eventSpawnCount"), bSpawnOnEvent ? EventProps.SpawnNumber : 0);
     Context.Result->SetStringField(TEXT("message"), FString::Printf(TEXT("Added event receiver '%s'."), *EventName));
     Context.SendSuccess(true, TEXT("Event receiver added."));
     return true;

@@ -73,13 +73,14 @@ bool HandleRandomizeTransforms(UEngineWireSubsystem* Bridge, const FString& Requ
             Actor->SetActorScale3D(Actor->GetActorScale3D() * Factor);
             McpFinishEditorMove(Actor);
             TSharedPtr<FJsonObject> Row = MakeShared<FJsonObject>();
-            Row->SetStringField(TEXT("actor"), Actor->GetActorLabel());
+            Row->SetStringField(TEXT("actor"), McpActorRef(Actor));
             Row->SetArrayField(TEXT("location"), McpHandlerUtils::VectorToJsonArray(Actor->GetActorLocation()));
             Row->SetArrayField(TEXT("rotation"), McpHandlerUtils::RotatorToJsonArray(Actor->GetActorRotation()));
             Row->SetArrayField(TEXT("scale"), McpHandlerUtils::VectorToJsonArray(Actor->GetActorScale3D()));
             Rows.Add(MakeShared<FJsonValueObject>(Row));
         }
         Transaction.DescribeInto(Result);
+        McpSetAffectedActors(Result, TArray<UObject*>(Actors));
     }
     Result->SetArrayField(TEXT("actors"), Rows);
     Bridge->SendAutomationResponse(Socket, RequestId, true, FString::Printf(TEXT("Randomized %d actor(s)."), Actors.Num()), Result);

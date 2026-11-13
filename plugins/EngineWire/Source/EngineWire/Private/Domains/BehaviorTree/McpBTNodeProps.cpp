@@ -4,103 +4,67 @@
 #include "Foundation/BridgeHelpers/McpHelpers.h"
 #include "Foundation/HandlerUtils/McpHandlerUtils.h"
 #include "BehaviorTree/BlackboardData.h"
+#include "BehaviorTree/Blackboard/BlackboardKeyType.h"
 #include "BehaviorTree/BehaviorTreeTypes.h"
 #include "BehaviorTreeGraphNode.h"
 
 namespace McpBehaviorTreeHandlers {
 
-#if MCP_HAS_BEHAVIOR_TREE_GRAPH
-namespace {
-// Sets the payload's comment on the graph node and its properties on the node instance; false with OutError when a
-// Blackboard key is not in the tree's Blackboard.
-bool ApplyNodeEdits(const FRequestContext& Context, const FGraphContext& GraphContext, UEdGraphNode* TargetNode,
-                    UBehaviorTreeGraphNode* BTNode, bool& bModified, FString& OutError)
+void ApplyNodeProperties(UObject* Node, UBehaviorTree* Tree, const FJsonObject& Properties, TArray<FString>& OutSet,
+                         TArray<FString>& OutSkipped)
 {
-  FString Comment;
-  if (Context.Payload->TryGetStringField(TEXT("comment"), Comment)) {
-    TargetNode->NodeComment = Comment;
-    bModified = true;
-  }
-
-  const TSharedPtr<FJsonObject>* Props = nullptr;
-  if (BTNode && BTNode->NodeInstance &&
-      Context.Payload->TryGetObjectField(TEXT("properties"), Props)) {
-    for (const auto& Pair : (*Props)->Values) {
-      FProperty* Prop =
-          BTNode->NodeInstance->GetClass()->FindPropertyByName(*Pair.Key);
-      if (!Prop) continue;
-      if (FFloatProperty* FloatProp = CastField<FFloatProperty>(Prop)) {
-        if (Pair.Value->Type == EJson::Number) {
-          FloatProp->SetPropertyValue_InContainer(
-              BTNode->NodeInstance, (float)Pair.Value->AsNumber());
-          bModified = true;
+  UBlackboardData* Blackboard = Tree->BlackboardAsset;
+  for (const auto& Pair : Properties.Values) {
+    const FString Name(*Pair.Key);
+    FProperty* Property = Node ? Node->GetClass()->FindPropertyByName(FName(*Name)) : nullptr;
+    if (!Property || !Pair.Value.IsValid()) {
+      OutSkipped.Add(FString::Printf(TEXT("%s: no such property on %s"), *Name,
+                                     Node ? *Node->GetClass()->GetName() : TEXT("this node")));
+      continue;
+    }
+    // A Blackboard key selector is set by key name, the way the editor picks it; the generic struct import only knows
+    // JSON objects and export text, so a plain "TargetActor" failed.
+    FStructProperty* StructProp = CastField<FStructProperty>(Property);
+    if (StructProp && StructProp->Struct == FBlackboardKeySelector::StaticStruct() && Pair.Value->Type == EJson::String) {
+      FBlackboardKeySelector* Selector = StructProp->ContainerPtrToValuePtr<FBlackboardKeySelector>(Node);
+      const FName KeyName(*Pair.Value->AsString());
+      if (Blackboard) {
+        const FBlackboardEntry* Entry = Blackboard->GetKey(Blackboard->GetKeyID(KeyName));
+        if (!Entry || !Entry->KeyType) {
+          OutSkipped.Add(FString::Printf(TEXT("%s: key '%s' is not in Blackboard %s"), *Name, *KeyName.ToString(),
+                                         *Blackboard->GetPathName()));
+          continue;
         }
-      } else if (FDoubleProperty* DoubleProp =
-                     CastField<FDoubleProperty>(Prop)) {
-        if (Pair.Value->Type == EJson::Number) {
-          DoubleProp->SetPropertyValue_InContainer(BTNode->NodeInstance,
-                                                   Pair.Value->AsNumber());
-          bModified = true;
+        // The node's own filter (e.g. MoveTo takes only Object or Vector keys).
+        bool bAllowed = Selector->AllowedTypes.Num() == 0;
+        for (UBlackboardKeyType* Filter : Selector->AllowedTypes) {
+          bAllowed |= Filter && Entry->KeyType->IsAllowedByFilter(Filter);
         }
-      } else if (FIntProperty* IntProp = CastField<FIntProperty>(Prop)) {
-        if (Pair.Value->Type == EJson::Number) {
-          IntProp->SetPropertyValue_InContainer(
-              BTNode->NodeInstance, (int32)Pair.Value->AsNumber());
-          bModified = true;
-        }
-      } else if (FBoolProperty* BoolProp = CastField<FBoolProperty>(Prop)) {
-        if (Pair.Value->Type == EJson::Boolean) {
-          BoolProp->SetPropertyValue_InContainer(BTNode->NodeInstance,
-                                                 Pair.Value->AsBool());
-          bModified = true;
-        }
-      } else if (FStrProperty* StrProp = CastField<FStrProperty>(Prop)) {
-        if (Pair.Value->Type == EJson::String) {
-          StrProp->SetPropertyValue_InContainer(BTNode->NodeInstance,
-                                                Pair.Value->AsString());
-          bModified = true;
-        }
-      } else if (FNameProperty* NameProp = CastField<FNameProperty>(Prop)) {
-        if (Pair.Value->Type == EJson::String) {
-          NameProp->SetPropertyValue_InContainer(
-              BTNode->NodeInstance, FName(*Pair.Value->AsString()));
-          bModified = true;
-        }
-      } else if (FStructProperty* StructProp =
-                     CastField<FStructProperty>(Prop)) {
-        if (StructProp->Struct == FBlackboardKeySelector::StaticStruct() &&
-            Pair.Value->Type == EJson::String) {
-          void* StructPtr =
-              StructProp->ContainerPtrToValuePtr<void>(BTNode->NodeInstance);
-          FBlackboardKeySelector* Selector =
-              static_cast<FBlackboardKeySelector*>(StructPtr);
-          Selector->SelectedKeyName = FName(*Pair.Value->AsString());
-          if (UBlackboardData* Blackboard =
-                  GraphContext.BehaviorTree->BlackboardAsset) {
-            Selector->ResolveSelectedKey(*Blackboard);
-            if (!Selector->IsSet()) {
-              OutError = FString::Printf(TEXT("BlackboardKey '%s' not found in BT's assigned BB '%s' (typo or missing add_blackboard_key call?)"),
-                                         *Pair.Value->AsString(), *Blackboard->GetPathName());
-              return false;
-            }
-          } else {
-            UE_LOG(LogEngineWireSubsystem, Warning,
-                   TEXT("set_node_properties: BT '%s' has no BlackboardAsset assigned; BlackboardKey selector name set but not resolved."),
-                   *GraphContext.BehaviorTree->GetPathName());
-          }
-          bModified = true;
-        } else {
-          UE_LOG(LogEngineWireSubsystem, Verbose,
-                 TEXT("set_node_properties: unsupported struct property '%s' on node (only FBlackboardKeySelector supported)"),
-                 *Pair.Key);
+        if (!bAllowed) {
+          OutSkipped.Add(FString::Printf(TEXT("%s: key '%s' is a %s, a type this selector does not accept"), *Name,
+                                         *KeyName.ToString(), *Entry->KeyType->GetClass()->GetName()));
+          continue;
         }
       }
+      Selector->SelectedKeyName = KeyName;
+      if (Blackboard) {
+        Selector->ResolveSelectedKey(*Blackboard);
+      } else {
+        UE_LOG(LogEngineWireSubsystem, Warning, TEXT("Behavior Tree %s has no Blackboard: %s names key '%s', unresolved."),
+               *Tree->GetPathName(), *Name, *KeyName.ToString());
+      }
+      OutSet.Add(Name);
+      continue;
     }
+    // Shared reflection import (scalars, enums, structs incl. FValueOrBBKey_*, objects, arrays).
+    FString ApplyError;
+    if (!ApplyJsonValueToProperty(Node, Property, Pair.Value, ApplyError)) {
+      OutSkipped.Add(FString::Printf(TEXT("%s: %s"), *Name, *ApplyError));
+      continue;
+    }
+    OutSet.Add(Name);
   }
-  return true;
 }
-}
-#endif
 
 bool HandleSetNodeProperties(UEngineWireSubsystem* Subsystem,
                              const FRequestContext& Context,
@@ -129,27 +93,39 @@ bool HandleSetNodeProperties(UEngineWireSubsystem* Subsystem,
     Instance = BTNode->NodeInstance;
   }
 
-  bool bModified = false;
+  FString Comment;
+  const bool bComment = Context.Payload->TryGetStringField(TEXT("comment"), Comment);
+  const TSharedPtr<FJsonObject>* Props = nullptr;
+  TArray<FString> Set;
+  TArray<FString> Skipped;
   TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
   {
     // One undo step: the graph node (its comment), its node instance (the properties) and the tree the graph rebuilds.
-    const FMcpAssetEdit Edit(TEXT("Set Behavior Tree Node Properties"),
-                             BehaviorTreeEditObjects(GraphContext, {TargetNode, Instance}), Result);
-    FString Error;
-    if (!ApplyNodeEdits(Context, GraphContext, TargetNode, BTNode, bModified, Error)) {
-      Subsystem->SendAutomationError(Context.RequestingSocket, Context.RequestId, Error, TEXT("BB_KEY_NOT_FOUND"));
-      return true;
+    FMcpAssetEdit Edit(TEXT("Set Behavior Tree Node Properties"),
+                       BehaviorTreeEditObjects(GraphContext, {TargetNode, Instance}), Result);
+    if (bComment) {
+      TargetNode->NodeComment = Comment;
     }
-    if (bModified) {
+    if (Context.Payload->TryGetObjectField(TEXT("properties"), Props)) {
+      ApplyNodeProperties(Instance, GraphContext.BehaviorTree, **Props, Set, Skipped);
+    }
+    if (bComment || Set.Num() > 0) {
       UpdateBehaviorTreeAsset(GraphContext);
+    } else {
+      // Nothing changed, known only once tried: undo keeps no empty step.
+      Edit.Transaction.Cancel();
     }
   }
-  // Nothing set (no comment, and no property the node has with a value of its type) answered success.
-  if (!bModified) {
+  // Nothing set (no comment, and no property set) answered success.
+  if (!bComment && Set.Num() == 0) {
     Subsystem->SendAutomationError(Context.RequestingSocket, Context.RequestId,
-                                   TEXT("Nothing was set: pass comment, or properties the node has, each with a value of its type."),
+                                   Skipped.Num() > 0 ? TEXT("Nothing was set: ") + FString::Join(Skipped, TEXT("; "))
+                                   : FString(TEXT("Nothing was set: pass comment, or properties the node has, each with a value of its type.")),
                                    TEXT("PROPERTY_NOT_FOUND"));
     return true;
+  }
+  if (Skipped.Num() > 0) {
+    Result->SetArrayField(TEXT("skippedProperties"), McpHandlerUtils::ToJsonStringArray(Skipped));
   }
   McpSafeAssetSave(GraphContext.BehaviorTree);
   McpHandlerUtils::AddVerification(Result, GraphContext.BehaviorTree);

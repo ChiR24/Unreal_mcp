@@ -62,7 +62,10 @@ bool UEngineWireSubsystem::HandleControlActorRestoreSnapshot(
 
   const FTransform SavedTransform = CachedActorSnapshots[SnapshotKey];
   const FTransform BeforeTransform = Found->GetActorTransform();
-  Found->Modify();
+  // One undo step, as set_transform's: Modify() with no transaction open recorded nothing.
+  FMcpScopedEditorTransaction Transaction(
+      FText::FromString(TEXT("Restore Actor Snapshot")),
+      EMcpMutationDurability::EditorStateOnly, TArray<UObject*>{Found});
   Found->SetActorTransform(SavedTransform);
   McpFinishEditorMove(Found);
   Found->MarkComponentsRenderStateDirty();
@@ -72,6 +75,7 @@ bool UEngineWireSubsystem::HandleControlActorRestoreSnapshot(
   TSharedPtr<FJsonObject> Data = McpHandlerUtils::CreateResultObject();
   Data->SetStringField(TEXT("snapshotName"), SnapshotName);
   Data->SetStringField(TEXT("actorName"), McpActorRef(Found));
+  Transaction.DescribeInto(Data);
   // "Snapshot restored" alone proved nothing: the caller could not see what was restored, nor whether the
   // actor had actually moved. Report the target, what the actor holds afterwards, and whether it changed.
   Data->SetStringField(TEXT("restoredScope"), TEXT("transform"));

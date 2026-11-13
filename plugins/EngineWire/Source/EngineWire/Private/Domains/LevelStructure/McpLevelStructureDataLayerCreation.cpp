@@ -67,7 +67,7 @@ bool HandleCreateDataLayer(
     const TSharedPtr<FJsonObject>& Payload,
     TSharedPtr<FMcpBridgeWebSocket> Socket)
 {
-#if ENGINE_MINOR_VERSION >= 1
+#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 1
     using namespace LevelStructureHelpers;
 
     // CRITICAL: dataLayerName is required - no default fallback
@@ -209,8 +209,8 @@ bool HandleCreateDataLayer(
     SendLevelEditResult(Subsystem, RequestId, Socket, Payload, World->PersistentLevel, Message, ResponseJson);
 #else
     // UE 5.0 does not support the new DataLayer API
-    Subsystem->SendAutomationResponse(Socket, RequestId, false,
-        TEXT("Data layer creation requires Unreal Engine 5.1 or later."), nullptr);
+    Subsystem->SendAutomationError(Socket, RequestId,
+        TEXT("Data layer creation requires Unreal Engine 5.1 or later."), TEXT("UNSUPPORTED_VERSION"));
 #endif
     return true;
 }

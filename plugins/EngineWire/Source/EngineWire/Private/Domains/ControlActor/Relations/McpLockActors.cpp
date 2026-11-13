@@ -55,6 +55,7 @@ bool HandleLockActors(UEngineWireSubsystem* Bridge, const FString& RequestId, co
             Actor->SetLockLocation(bLock);
         }
         Transaction.DescribeInto(Result);
+        McpSetAffectedActors(Result, Changing);
         if (GCurrentLevelEditingViewportClient)
         {
             GCurrentLevelEditingViewportClient->GetElementsToManipulate(true);
@@ -74,7 +75,7 @@ bool HandleLockActors(UEngineWireSubsystem* Bridge, const FString& RequestId, co
             NotAsAsked.Add(Actors[Index]->GetActorLabel());
         }
         TSharedPtr<FJsonObject> Row = MakeShared<FJsonObject>();
-        Row->SetStringField(TEXT("actor"), Actors[Index]->GetActorLabel());
+        Row->SetStringField(TEXT("actor"), McpActorRef(Actors[Index]));
         Row->SetBoolField(TEXT("locked"), bNow);
         Row->SetBoolField(TEXT("changed"), bNow != Was[Index]);
         Rows.Add(MakeShared<FJsonValueObject>(Row));

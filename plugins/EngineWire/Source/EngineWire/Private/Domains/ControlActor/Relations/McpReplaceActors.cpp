@@ -124,6 +124,7 @@ bool HandleReplaceActors(UEngineWireSubsystem* Bridge, const FString& RequestId,
     TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
     TArray<TSharedPtr<FJsonValue>> Rows;
     TArray<FString> NotReplaced;
+    TArray<UObject*> Placed;
     {
         FMcpScopedEditorTransaction Transaction(FText::FromString(TEXT("Replace Actors")), EMcpMutationDurability::EditorStateOnly,
             TArray<UObject*>(Actors));
@@ -144,6 +145,7 @@ bool HandleReplaceActors(UEngineWireSubsystem* Bridge, const FString& RequestId,
             New->SetActorLabel(Old.Label);
             New->Tags = Old.Tags;
             New->SetFolderPath(Old.Folder);
+            Placed.Add(New);
             TSharedPtr<FJsonObject> Row = MakeShared<FJsonObject>();
             Row->SetStringField(TEXT("from"), Old.Label);
             Row->SetStringField(TEXT("actorName"), McpActorRef(New));
@@ -151,6 +153,7 @@ bool HandleReplaceActors(UEngineWireSubsystem* Bridge, const FString& RequestId,
             Rows.Add(MakeShared<FJsonValueObject>(Row));
         }
         Transaction.DescribeInto(Result);
+        McpSetAffectedActors(Result, Placed);
     }
     if (Rows.Num() == 0)
     {

@@ -252,7 +252,7 @@ export const FIELD_DESCRIPTIONS: Readonly<Record<string, string>> = {
   alwaysRelevant: 'Always relevant.',
   onlyRelevantToOwner: 'Only relevant to owner.',
   repNotifyFunc: 'Rep notify func.',
-  usePushModel: 'Use push model.',
+  usePushModel: 'false clears each replicated variable\'s PushModel entry; true is refused (push model is set for the whole project).',
   enablePrediction: 'Whether prediction applies.',
   predictionThreshold: 'Prediction threshold.',
   correctionThreshold: 'Correction threshold.',

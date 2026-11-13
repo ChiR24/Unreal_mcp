@@ -139,7 +139,7 @@ export const UTILITY_OUTPUT_FIELDS: Readonly<Record<string, JsonObject>> = Objec
   role: str('Network role of the actor, such as ROLE_Authority.'),
   sampleRate: num('Sample rate of the inspected Sound Wave for the current platform.'),
   serverName: str('Display name of the hosted LAN server.'),
-  sessionsInfo: reflected('Current play session: localPlayerCount, inPlaySession, currentPlayers, splitScreenEnabled, splitScreenActive, splitScreenLayout and pieInstances [{instance, netMode, url}]. Carries no online-subsystem, voice or hosting flags.'),
+  sessionsInfo: reflected('Current play session: localPlayerCount, inPlaySession, splitScreenEnabled (the project setting), splitScreenActive (whether the Play viewport is split now), splitScreenLayouts (the layouts for two, three and four players, in the names configure_split_screen takes) and pieInstances [{instance, netMode, url}]. Carries no online-subsystem, voice or hosting flags.'),
   spatialize: bool('Whether the inspected Sound Attenuation spatializes its source.'),
   travelURL: str('Listen-server travel URL built for the map and options.'),
   type: str('Kind of asset the bridge resolved, such as SoundCue, SoundWave or InputAction.'),

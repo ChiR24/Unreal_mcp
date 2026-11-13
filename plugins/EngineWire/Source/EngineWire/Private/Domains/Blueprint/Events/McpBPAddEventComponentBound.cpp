@@ -7,6 +7,7 @@
 #include "Components/ActorComponent.h"
 #include "Components/Widget.h"
 #include "Kismet2/BlueprintEditorUtils.h"
+#include "Kismet2/KismetEditorUtilities.h"
 // K2Node_ComponentBoundEvent wires a per-component delegate (e.g. OnComponentBeginOverlap) to an event node.
 #include "K2Node_ComponentBoundEvent.h"
 
@@ -102,31 +103,23 @@ bool McpBlueprintAddEventComponentBound(
     return true;
   }
 
-  // Reuse an existing bound-event node for the same component + delegate
-  // (idempotent: repeat calls don't pile up duplicates).
-  UK2Node_ComponentBoundEvent *BoundEventNode = nullptr;
-  for (UEdGraphNode *Node : EventGraph->Nodes) {
-    if (UK2Node_ComponentBoundEvent *Existing =
-            Cast<UK2Node_ComponentBoundEvent>(Node)) {
-      if (Existing->ComponentPropertyName == ComponentProp->GetFName() &&
-          Existing->DelegatePropertyName == DelegateProp->GetFName()) {
-        BoundEventNode = Existing;
-        break;
-      }
-    }
-  }
+  // The node already bound to this component + delegate, on any page, is reused: repeat calls don't pile up
+  // duplicates, and two nodes bound to one delegate fail the compile.
+  const UK2Node_ComponentBoundEvent *BoundEventNode =
+      FKismetEditorUtilities::FindBoundEventForComponent(BP, DelegateProp->GetFName(), ComponentProp->GetFName());
 
   if (!BoundEventNode) {
     EventGraph->Modify();
     FGraphNodeCreator<UK2Node_ComponentBoundEvent> NodeCreator(*EventGraph);
-    BoundEventNode = NodeCreator.CreateNode(false);
+    UK2Node_ComponentBoundEvent *NewNode = NodeCreator.CreateNode(false);
     // What the editor's "+" beside a component event does
     // (FKismetEditorUtilities::CreateNewBoundEventForClass), without opening
     // the Blueprint editor to focus the new node.
-    BoundEventNode->InitializeComponentBoundEventParams(ComponentProp, DelegateProp);
-    BoundEventNode->NodePosX = EventPosX;
-    BoundEventNode->NodePosY = EventPosY;
+    NewNode->InitializeComponentBoundEventParams(ComponentProp, DelegateProp);
+    NewNode->NodePosX = EventPosX;
+    NewNode->NodePosY = EventPosY;
     NodeCreator.Finalize();
+    BoundEventNode = NewNode;
   }
 
   FName EventName = BoundEventNode->CustomFunctionName;

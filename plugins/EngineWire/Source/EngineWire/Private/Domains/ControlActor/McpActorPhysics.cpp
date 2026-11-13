@@ -268,7 +268,7 @@ bool UEngineWireSubsystem::HandleControlActorSetCollision(
   Transaction.DescribeInto(Data);
   if (!bMany)
   {
-    Data->SetStringField(TEXT("actorName"), ActorName);
+    Data->SetStringField(TEXT("actorName"), McpActorRef(Actors[0]));
     McpHandlerUtils::AddVerification(Data, Actors[0]);
     SendStandardSuccessResponse(this, Socket, RequestId, TEXT("Collision setting updated"), Data);
     return true;

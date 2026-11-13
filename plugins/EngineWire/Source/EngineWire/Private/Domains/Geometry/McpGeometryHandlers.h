@@ -4,6 +4,7 @@
 #include "Dom/JsonObject.h"
 #include "Foundation/BridgeHelpers/McpHelpers.h"
 #include "Foundation/HandlerUtils/McpHandlerUtils.h"
+#include "Foundation/McpScopedEditorTransaction.h"
 #include "EngineWireSubsystem.h"
 #include "Misc/EngineVersionComparison.h"
 
@@ -214,6 +215,9 @@ public:
 private:
 	TWeakObjectPtr<UDynamicMeshComponent> Component;
 	TSharedPtr<const UE::Geometry::FDynamicMesh3, ESPMode::ThreadSafe> Before;
+	// Open from before the handler runs until the change is stored, so the reply, held while it is open, is described
+	// from the buffer. Only when there is a mesh to watch.
+	TUniquePtr<FMcpScopedEditorTransaction> Transaction;
 };
 UTexture2D* ResolveGeometryTexture(const FString& TexturePath, FString& OutResolvedPath);
 // A texture's source mip 0, read once for many luminance samples: copying the whole mip for every sample made a

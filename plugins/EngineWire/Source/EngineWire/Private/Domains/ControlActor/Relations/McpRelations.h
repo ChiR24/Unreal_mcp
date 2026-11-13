@@ -4,6 +4,8 @@
 #include "CoreMinimal.h"
 #include "Dom/JsonObject.h"
 #include "Dom/JsonValue.h"
+#include "Foundation/BridgeHelpers/Responses/McpResponseVerify.h"
+#include "Foundation/HandlerUtils/McpHandlerUtilsJson.h"
 #include "Foundation/HandlerUtils/McpHandlerUtilsTransforms.h"
 #include "Foundation/Solvers/McpBoxSat.h"
 #include "Templates/Function.h"
@@ -47,6 +49,18 @@ struct FRelation
 };
 
 /** The gap between two boxes seen from above, 0 where their footprints overlap. */
+// The actors a call changed, as affectedActors (each by McpActorRef, the name that reaches it again): the field the
+// receipt lists its changes from.
+inline void McpSetAffectedActors(const TSharedPtr<FJsonObject>& Result, const TArray<UObject*>& Changed)
+{
+    TArray<FString> Names;
+    for (const UObject* Object : Changed)
+    {
+        Names.Add(McpActorRef(CastChecked<AActor>(Object)));
+    }
+    Result->SetArrayField(TEXT("affectedActors"), McpHandlerUtils::ToJsonStringArray(Names));
+}
+
 inline double FlatGap(const FBox& A, const FBox& B)
 {
     const double X = FMath::Max3(0.0, B.Min.X - A.Max.X, A.Min.X - B.Max.X);

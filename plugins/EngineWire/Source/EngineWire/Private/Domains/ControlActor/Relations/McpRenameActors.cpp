@@ -79,6 +79,7 @@ bool HandleRenameActors(UEngineWireSubsystem* Bridge, const FString& RequestId, 
             Actors[Index]->SetActorLabel(Labels[Index]);
         }
         Transaction.DescribeInto(Result);
+        McpSetAffectedActors(Result, Changing);
     }
     TArray<TSharedPtr<FJsonValue>> Rows;
     for (int32 Index = 0; Index < Actors.Num(); ++Index)

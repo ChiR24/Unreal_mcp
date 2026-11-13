@@ -5,10 +5,11 @@
 
 namespace McpBlueprintHandlers {
 void SendScsResult(const FBlueprintActionContext &Context, const TSharedPtr<FJsonObject> &Result) {
-  Context.Bridge.SendAutomationResponse(Context.RequestingSocket, Context.RequestId,
-                                        GetJsonBoolField(Result, TEXT("success")),
-                                        GetJsonStringField(Result, TEXT("message")), Result,
-                                        GetJsonStringField(Result, TEXT("error")));
+  const bool bSuccess = GetJsonBoolField(Result, TEXT("success"));
+  const FString Error = GetJsonStringField(Result, TEXT("error"));
+  Context.Bridge.SendAutomationResponse(Context.RequestingSocket, Context.RequestId, bSuccess,
+                                        !bSuccess && !Error.IsEmpty() ? Error : GetJsonStringField(Result, TEXT("message")),
+                                        Result, bSuccess ? FString() : GetJsonStringField(Result, TEXT("errorCode")));
 }
 
 bool HandleBlueprintScsWrappers(const FBlueprintActionContext &Context) {

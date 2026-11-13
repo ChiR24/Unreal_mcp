@@ -201,6 +201,7 @@ bool HandleArrangeByRelations(UEngineWireSubsystem* Bridge, const FString& Reque
     const int32 Seed = int32(FCrc::StrCrc32(*FString::Join(Texts, TEXT("|"))) & 0x7fffffff);
     const McpArrange::FSolve Solve = McpArrange::Solve(Bodies, Goals, Seed, FMath::Clamp(4000 * Movers.Num(), 4000, 60000), ArrangeSeconds);
     TArray<TSharedPtr<FJsonValue>> Moved;
+    TArray<UObject*> Changed;
     {
         const FScopedTransaction Transaction(NSLOCTEXT("McpRelations", "ArrangeByRelations", "Arrange By Relations"), !bDryRun);
         for (const McpArrange::FBody& Body : Bodies)
@@ -218,6 +219,7 @@ bool HandleArrangeByRelations(UEngineWireSubsystem* Bridge, const FString& Reque
             Moved.Add(MakeShared<FJsonValueObject>(Row));
             if (!bDryRun)
             {
+                Changed.Add(Body.Actor);
                 FRotator Rotation = Body.Actor->GetActorRotation();
                 Rotation.Yaw = FMath::RadiansToDegrees(Body.Yaw);
                 Body.Actor->Modify();
@@ -259,6 +261,10 @@ bool HandleArrangeByRelations(UEngineWireSubsystem* Bridge, const FString& Reque
     if (bDryRun)
     {
         Result->SetBoolField(TEXT("dryRun"), true);
+    }
+    else
+    {
+        McpSetAffectedActors(Result, Changed);
     }
     Bridge->SendAutomationResponse(Socket, RequestId, true, FString::Printf(TEXT("%s %d actor(s): %d of %d relations %s."),
         bDryRun ? TEXT("Would move") : TEXT("Moved"), Moved.Num(), Asked.Num() - Unmet, Asked.Num(),

@@ -182,6 +182,11 @@ bool HandleFixCoplanar(UEngineWireSubsystem* Bridge, const FString& RequestId,
     Data->SetNumberField(TEXT("passes"), Passes);
     Data->SetBoolField(TEXT("dryRun"), bDryRun);
     Data->SetArrayField(TEXT("moved"), Moved);
+    if (!bDryRun)
+    {
+        // The receipt lists a call's changes from affectedActors; Order holds each moved actor's McpActorRef.
+        Data->SetArrayField(TEXT("affectedActors"), McpHandlerUtils::ToJsonStringArray(Order));
+    }
     Data->SetArrayField(TEXT("blueprintsFixed"), BlueprintsFixed);
     Data->SetArrayField(TEXT("skipped"), Skipped);
     Bridge->SendAutomationResponse(

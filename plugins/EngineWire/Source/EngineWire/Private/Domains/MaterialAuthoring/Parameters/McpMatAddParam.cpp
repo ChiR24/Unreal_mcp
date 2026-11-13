@@ -40,11 +40,28 @@ bool AddParameterExpression(UEngineWireSubsystem* Bridge, const FString& Request
       Result);
   return true;
 }
+
+// defaultValue, when sent, as a JSON Type: an array or an object read as 0 or false behind a success where a batch step
+// reaches the adder past the schema the gateway holds a direct call to.
+bool DefaultValueIsOrReply(UEngineWireSubsystem* Bridge, const FString& RequestId, const TSharedPtr<FJsonObject>& Payload,
+                           TSharedPtr<FMcpBridgeWebSocket> Socket, EJson Type, const TCHAR* Kind)
+{
+  const TSharedPtr<FJsonValue> Value = Payload->TryGetField(TEXT("defaultValue"));
+  if (!Value.IsValid() || Value->Type == Type) {
+    return true;
+  }
+  Bridge->SendAutomationError(Socket, RequestId, FString::Printf(TEXT("defaultValue takes %s; no node was added."), Kind),
+                              TEXT("INVALID_ARGUMENT"));
+  return false;
+}
 }
 
 bool HandleAddParameterNode(UEngineWireSubsystem* Bridge, const FString& RequestId, const FString& SubAction, const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> Socket)
 {
   if (SubAction == TEXT("add_scalar_parameter")) {
+    if (!DefaultValueIsOrReply(Bridge, RequestId, Payload, Socket, EJson::Number, TEXT("a number"))) {
+      return true;
+    }
     return AddParameterExpression<UMaterialExpressionScalarParameter>(Bridge, RequestId, Payload, Socket,
         TEXT("Scalar parameter"), [&Payload](UMaterialExpressionScalarParameter* Param) {
           Param->DefaultValue = GetJsonNumberField(Payload, TEXT("defaultValue"), 0.0);
@@ -64,6 +81,9 @@ bool HandleAddParameterNode(UEngineWireSubsystem* Bridge, const FString& Request
         });
   }
   if (SubAction == TEXT("add_static_switch_parameter")) {
+    if (!DefaultValueIsOrReply(Bridge, RequestId, Payload, Socket, EJson::Boolean, TEXT("true or false"))) {
+      return true;
+    }
     return AddParameterExpression<UMaterialExpressionStaticSwitchParameter>(Bridge, RequestId, Payload, Socket,
         TEXT("Static switch"), [&Payload](UMaterialExpressionStaticSwitchParameter* Param) {
           Param->DefaultValue = GetJsonBoolField(Payload, TEXT("defaultValue"), false);

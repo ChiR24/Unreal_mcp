@@ -87,6 +87,15 @@ bool HandleAddMaterialNode(UEngineWireSubsystem* Bridge, const FString& RequestI
       }
     }
 
+    // defaultValue is applied to a Constant or a Constant3Vector only: on any other node (a ScalarParameter or a
+    // VectorParameter included) it was dropped behind a success. Refused before the node exists.
+    if (Payload->HasField(TEXT("defaultValue")) && !ExpressionClass->IsChildOf(UMaterialExpressionConstant3Vector::StaticClass()) &&
+        !ExpressionClass->IsChildOf(UMaterialExpressionConstant::StaticClass())) {
+      Bridge->SendAutomationError(Socket, RequestId, FString::Printf(TEXT("defaultValue applies to Constant and Constant3Vector "
+          "nodes; %s is not one, so no node was added (add_scalar_parameter and add_vector_parameter take a parameter's "
+          "default)."), *NodeType), TEXT("INVALID_ARGUMENT"));
+      return true;
+    }
     // A Constant3Vector's defaultValue is a color: [1, 0.5] made it black, ["a", "b", "c"] black too, and a fifth
     // number was dropped, each answered as added. Checked before the node exists, so a refusal adds nothing.
     if (ExpressionClass->IsChildOf(UMaterialExpressionConstant3Vector::StaticClass()) && Payload->HasField(TEXT("defaultValue")) &&

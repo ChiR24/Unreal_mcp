@@ -74,7 +74,7 @@ bool HandleAlignActors(UEngineWireSubsystem* Bridge, const FString& RequestId, c
             Destinations.Add(To);
         }
         TSharedPtr<FJsonObject> Row = MakeShared<FJsonObject>();
-        Row->SetStringField(TEXT("actor"), Actor->GetActorLabel());
+        Row->SetStringField(TEXT("actor"), McpActorRef(Actor));
         Row->SetArrayField(TEXT("from"), McpHandlerUtils::VectorToJsonArray(From));
         Row->SetArrayField(TEXT("to"), McpHandlerUtils::VectorToJsonArray(To));
         Row->SetNumberField(TEXT("movedCm"), McpRoundTo(FVector::Dist(From, To), 10.0));
@@ -92,6 +92,7 @@ bool HandleAlignActors(UEngineWireSubsystem* Bridge, const FString& RequestId, c
             McpFinishEditorMove(Actor);
         }
         Transaction.DescribeInto(Result);
+        McpSetAffectedActors(Result, Moving);
     }
     Result->SetArrayField(TEXT("actors"), Rows);
     Result->SetNumberField(TEXT("line"), McpRoundTo(Line, 1000.0));

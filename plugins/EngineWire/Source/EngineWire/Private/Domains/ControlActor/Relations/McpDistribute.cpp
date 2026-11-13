@@ -89,7 +89,7 @@ bool HandleDistributeActors(UEngineWireSubsystem* Bridge, const FString& Request
             Destinations.Add(To);
         }
         TSharedPtr<FJsonObject> Row = MakeShared<FJsonObject>();
-        Row->SetStringField(TEXT("actor"), Actors[Index]->GetActorLabel());
+        Row->SetStringField(TEXT("actor"), McpActorRef(Actors[Index]));
         Row->SetArrayField(TEXT("from"), RoundedTriple(From.X, From.Y, From.Z));
         Row->SetArrayField(TEXT("to"), RoundedTriple(To.X, To.Y, To.Z));
         Row->SetNumberField(TEXT("movedCm"), McpRoundTo(FVector::Dist(From, To), 10.0));
@@ -107,6 +107,7 @@ bool HandleDistributeActors(UEngineWireSubsystem* Bridge, const FString& Request
             McpFinishEditorMove(Actor);
         }
         Transaction.DescribeInto(Result);
+        McpSetAffectedActors(Result, Moving);
     }
     static const TCHAR* const AxisNames[] = {TEXT("x"), TEXT("y"), TEXT("z")};
     Result->SetArrayField(TEXT("actors"), Rows);

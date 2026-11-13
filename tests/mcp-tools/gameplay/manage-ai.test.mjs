@@ -325,6 +325,14 @@ const testCases = [
       arguments: { action: 'set_node_properties', assetPath: '${captured:behaviorTreePath}', nodeId: '${captured:waitNodeId}', properties: { NoSuchProperty: 1 } },
       expected: 'error|PROPERTY_NOT_FOUND'
     },
+    // Properties go through the import configure_bt_node uses (WaitTime is a struct from 5.5); one the node lacks is
+    // skipped and named instead of failing the call.
+    {
+      scenario: 'CONFIG: set_node_properties sets a struct property and skips one the node lacks',
+      toolName: 'manage_ai',
+      arguments: { action: 'set_node_properties', assetPath: '${captured:behaviorTreePath}', nodeId: '${captured:waitNodeId}', properties: { WaitTime: 2.0, NoSuchProperty: 1 } },
+      expected: 'success'
+    },
     // === ACTION ===
     {
       scenario: 'ACTION: break_connections',
@@ -389,7 +397,8 @@ const testCases = [
     { scenario: 'ERROR: configure_nav_mesh_settings refuses a cell size the engine does not take', toolName: 'manage_ai', arguments: {"action": "configure_nav_mesh_settings", "cellSize": 0}, expected: 'error' },
     { scenario: 'ERROR: set_nav_agent_properties refuses a slope past 89 degrees', toolName: 'manage_ai', arguments: {"action": "set_nav_agent_properties", "agentMaxSlope": 95}, expected: 'error' },
     // === ACTION ===
-    { scenario: 'ACTION: rebuild_navigation', toolName: 'manage_ai', arguments: {"action": "rebuild_navigation"}, expected: 'success' },
+    // The level may have no nav mesh bounds here: there is nowhere to build, which is refused instead of answered.
+    { scenario: 'ACTION: rebuild_navigation', toolName: 'manage_ai', arguments: {"action": "rebuild_navigation"}, expected: 'success|NO_NAV_BOUNDS' },
     // === CREATE ===
     { scenario: 'CREATE: create_nav_modifier_component', toolName: 'manage_ai', arguments: {"action": "create_nav_modifier_component", "blueprintPath": "${captured:navBlueprintPath}", "componentName": NAV_MODIFIER, "areaClass": OBSTACLE_AREA, "failsafeExtent": {"x": 120, "y": 80, "z": 60}, "save": true}, expected: 'success' },
     { scenario: 'Setup: spawn nav test actor', toolName: 'control_actor', arguments: { action: 'spawn_blueprint', blueprintPath: '${captured:navBlueprintPath}', actorName: NAV_ACTOR, location: { x: 0, y: 0, z: 100 } }, expected: 'success' },

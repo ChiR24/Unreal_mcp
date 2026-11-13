@@ -75,7 +75,7 @@ bool HandleSnapToGrid(UEngineWireSubsystem* Bridge, const FString& RequestId, co
             Targets.Emplace(To, ToRotation);
         }
         TSharedPtr<FJsonObject> Row = MakeShared<FJsonObject>();
-        Row->SetStringField(TEXT("actor"), Actor->GetActorLabel());
+        Row->SetStringField(TEXT("actor"), McpActorRef(Actor));
         Row->SetArrayField(TEXT("from"), RoundedTriple(From.X, From.Y, From.Z));
         Row->SetArrayField(TEXT("to"), RoundedTriple(To.X, To.Y, To.Z));
         if (RotationStep > 0.0)
@@ -97,6 +97,7 @@ bool HandleSnapToGrid(UEngineWireSubsystem* Bridge, const FString& RequestId, co
             McpFinishEditorMove(Actor);
         }
         Transaction.DescribeInto(Result);
+        McpSetAffectedActors(Result, Moving);
     }
     const int32 Moved = Moving.Num();
     Result->SetArrayField(TEXT("actors"), Rows);

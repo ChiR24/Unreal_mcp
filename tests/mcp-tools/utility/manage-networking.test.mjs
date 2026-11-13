@@ -146,14 +146,15 @@ const testCases = [
     ]
   },
   { scenario: 'CONFIG: set_rpc_reliability refuses a function that is not an RPC', toolName: 'manage_networking', arguments: { action: 'set_rpc_reliability', blueprintPath: ACTOR_BP_PATH, functionName: REP_NOTIFY_FUNCTION, reliable: true }, expected: 'error|NOT_AN_RPC' },
+  { scenario: 'CONFIG: configure_push_model refuses a per-variable switch no engine code reads', toolName: 'manage_networking', arguments: { action: 'configure_push_model', blueprintPath: ACTOR_BP_PATH, usePushModel: true }, expected: 'error|NOT_SUPPORTED' },
   {
-    scenario: 'CONFIG: configure_push_model',
+    scenario: 'CONFIG: configure_push_model false clears the entries',
     toolName: 'manage_networking',
-    arguments: { action: 'configure_push_model', blueprintPath: ACTOR_BP_PATH, usePushModel: true },
+    arguments: { action: 'configure_push_model', blueprintPath: ACTOR_BP_PATH, usePushModel: false },
     expected: 'success',
     assertions: [
       ...blueprintAssertion(EXPECTED_ACTOR_BP_ASSET_PATH, 'configure_push_model'),
-      { path: 'structuredContent.result.usePushModel', equals: true, label: 'push model flag returned' }
+      { path: 'structuredContent.result.usePushModel', equals: false, label: 'push model flag returned' }
     ]
   },
 
@@ -394,7 +395,6 @@ const testCases = [
       expected: 'success',
       assertions: [
         { path: 'structuredContent.result.sessionsInfo.localPlayerCount', equals: 2, label: 'local player count read back after add' },
-        { path: 'structuredContent.result.sessionsInfo.currentPlayers', equals: 2, label: 'current player count read back after add' },
         { path: 'structuredContent.result.sessionsInfo.splitScreenEnabled', equals: true, label: 'split-screen active with two local players' }
       ]
     },
@@ -415,7 +415,6 @@ const testCases = [
       expected: 'success',
       assertions: [
         { path: 'structuredContent.result.sessionsInfo.localPlayerCount', equals: 1, label: 'local player count read back after remove' },
-        { path: 'structuredContent.result.sessionsInfo.currentPlayers', equals: 1, label: 'current player count read back after remove' },
         { path: 'structuredContent.result.sessionsInfo.splitScreenEnabled', equals: false, label: 'split-screen inactive after removing secondary player' }
       ]
     },

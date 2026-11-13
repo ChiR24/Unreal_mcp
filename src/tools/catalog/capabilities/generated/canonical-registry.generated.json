@@ -1,5 +1,5 @@
 {
-  "catalogRevision": "caa9b5d747f71b8e",
+  "catalogRevision": "6628ccfb90fc324a",
   "recordCount": 489,
   "records": [
     {
@@ -62779,7 +62779,7 @@
                 "smart_link_behavior",
                 "rebuild"
               ],
-              "description": "Which configure navigation variant to run.\nmesh_settings: Configure project NavMesh generation settings.\nagent_properties: Set project navigation agent properties.\narea_cost: Configure navigation area cost data.\narea_class: Set the navigation area class on a placed actor that already carries a NavModifierComponent (add one with create_nav_modifier first).\nnav_link: Change the link of a placed NavLinkProxy (actorName): startPoint and endPoint (relative to the actor) and direction go on its smart link when it uses one, else on its point link, and snapRadius on the point link (refused for a smart link). Only what is sent changes, and a call that sends none of them is refused. The navmesh takes the change at once; one undo step, the level left unsaved; the reply gives the link as it is now.\nlink_type: Switch a placed NavLinkProxy (actorName) between a simple link, its point link, and a smart link, its smart link alone (linkType simple or smart), carrying the endpoints and direction over. A proxy already of that type changes nothing (changed false). One undo step; the level is left unsaved.\nsmart_link_behavior: Change the smart link of a NavLinkProxy (actorName): linkEnabled switches it on or off; enabledAreaClass and disabledAreaClass are the navigation areas it marks while on and off (NavArea_Null blocks it); broadcastRadius and broadcastInterval set who hears it switch, heard only while its Notify When Enabled or Disabled is on, and the one left out keeps its value; bCreateBoxObstacle true sets its box obstacle of obstacleAreaClass (default NavArea_Null), obstacleExtent (default 100) and obstacleOffset. An area class that does not load is refused before anything changes, as is a call that sets nothing. The settings stay on a proxy that uses its point link and apply once setting=link_type makes it smart. One undo step; the level is left unsaved.\nrebuild: Rebuild navigation for the loaded editor world."
+              "description": "Which configure navigation variant to run.\nmesh_settings: Configure project NavMesh generation settings.\nagent_properties: Set project navigation agent properties.\narea_cost: Configure navigation area cost data.\narea_class: Set the navigation area class on a placed actor that already carries a NavModifierComponent (add one with create_nav_modifier first).\nnav_link: Change the link of a placed NavLinkProxy (actorName): startPoint and endPoint (relative to the actor) and direction go on its smart link when it uses one, else on its point link, and snapRadius on the point link (refused for a smart link). Only what is sent changes, and a call that sends none of them is refused. The navmesh takes the change at once; one undo step, the level left unsaved; the reply gives the link as it is now.\nlink_type: Switch a placed NavLinkProxy (actorName) between a simple link, its point link, and a smart link, its smart link alone (linkType simple or smart), carrying the endpoints and direction over. A proxy already of that type changes nothing (changed false). One undo step; the level is left unsaved.\nsmart_link_behavior: Change the smart link of a NavLinkProxy (actorName): linkEnabled switches it on or off; enabledAreaClass and disabledAreaClass are the navigation areas it marks while on and off (NavArea_Null blocks it); broadcastRadius and broadcastInterval set who hears it switch, heard only while its Notify When Enabled or Disabled is on, and the one left out keeps its value; bCreateBoxObstacle true sets its box obstacle of obstacleAreaClass (default NavArea_Null), obstacleExtent (default 100) and obstacleOffset. An area class that does not load is refused before anything changes, as is a call that sets nothing. The settings stay on a proxy that uses its point link and apply once setting=link_type makes it smart. One undo step; the level is left unsaved.\nrebuild: Rebuild navigation for the loaded editor world, waiting until it is built; hasNavMesh says whether a nav mesh exists after. A level with no NavMeshBoundsVolume is refused (NO_NAV_BOUNDS), and so is a build locked while levels load (NAV_BUILD_LOCKED)."
             }
           },
           "required": [
@@ -62994,8 +62994,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "59b2a2e89af1085036ee346124e0884265f0c6fc61ebc6467c637ebb9a47f9f8",
-        "content": "dfc26abfec5870cd32de9d939f961a31b430de2049676b735bff87b5424bfb7b"
+        "schema": "138f2ab598585d3d63cebb15e702edf744142bc157e3b97d69f8aeeecae25228",
+        "content": "eb60182d81b70ec0bb69cdef2794f0d4cb2e1b1677fd26ab85e73438b764bb86"
       }
     },
     {
@@ -63961,7 +63961,7 @@
                 "set_node_properties",
                 "remove_node"
               ],
-              "description": "Which edit behavior tree variant to run.\nadd_composite: Add a composite to a Behavior Tree and save it: compositeType Selector (runs its children until one succeeds), Sequence (until one fails) or SimpleParallel (Parallel is the same: its first child is the main task, the second runs beside it). It goes under parentNodeId (a composite by nodeId or nodeName), else under the root, and a tree with no root takes it as the root (isRoot). nodeName names it; nodeId and nodeName in the reply address it for edit=add_task, edit=add_decorator and edit=add_service. Another compositeType is refused (INVALID_ARGUMENT), as is a parent that is not found (PARENT_NOT_FOUND). One undo step.\nadd_task: Add a task node to a Behavior Tree asset, in one undo step.\nadd_decorator: Add a decorator to a Behavior Tree node, or to the root when no node is named, in one undo step.\nadd_service: Add a service to the root composite of a Behavior Tree asset, in one undo step.\nadd_node: Add a node through the Behavior Tree graph route, in one undo step. It joins the tree once edit=connect links it under a parent; on a tree with no root composite yet, link the graph's Root node (BehaviorTreeGraphNode_Root_0) to a composite to make it the root.\nadd_subnode: Add a Behavior Tree decorator or service subnode.\nconnect: Connect Behavior Tree graph nodes, in one undo step: parentNodeId BehaviorTreeGraphNode_Root_0 (the graph's Root node) makes the child composite the tree's root.\nbreak_connections: Break Behavior Tree graph connections.\nconfigure_node: Set properties of a Behavior Tree node by name and save it, in one undo step: nodeId is the node's nodeId or nodeName, Root, or the index get_tree lists; a Blackboard key selector takes a key name the tree's Blackboard has. A property that cannot be set is listed in skippedProperties; a call with no properties is refused (INVALID_ARGUMENT), and one whose properties all fail is PROPERTY_NOT_FOUND.\nset_node_properties: Set a Behavior Tree graph node's comment and its node's properties (numbers, booleans, text, names, a Blackboard key selector by key name), in one undo step; a call that sets nothing is refused (PROPERTY_NOT_FOUND).\nremove_node: Remove a Behavior Tree graph node."
+              "description": "Which edit behavior tree variant to run.\nadd_composite: Add a composite to a Behavior Tree and save it: compositeType Selector (runs its children until one succeeds), Sequence (until one fails) or SimpleParallel (Parallel is the same: its first child is the main task, the second runs beside it). It goes under parentNodeId (a composite by nodeId or nodeName), else under the root, and a tree with no root takes it as the root (isRoot). nodeName names it; nodeId and nodeName in the reply address it for edit=add_task, edit=add_decorator and edit=add_service. Another compositeType is refused (INVALID_ARGUMENT), as is a parent that is not found (PARENT_NOT_FOUND). One undo step.\nadd_task: Add a task node to a Behavior Tree asset, in one undo step.\nadd_decorator: Add a decorator to a Behavior Tree node, or to the root when no node is named, in one undo step.\nadd_service: Add a service to the root composite of a Behavior Tree asset, in one undo step.\nadd_node: Add a node through the Behavior Tree graph route, in one undo step. It joins the tree once edit=connect links it under a parent; on a tree with no root composite yet, link the graph's Root node (BehaviorTreeGraphNode_Root_0) to a composite to make it the root.\nadd_subnode: Add a Behavior Tree decorator or service subnode.\nconnect: Connect Behavior Tree graph nodes, in one undo step: parentNodeId BehaviorTreeGraphNode_Root_0 (the graph's Root node) makes the child composite the tree's root.\nbreak_connections: Break Behavior Tree graph connections.\nconfigure_node: Set properties of a Behavior Tree node by name and save it, in one undo step: nodeId is the node's nodeId or nodeName, Root, or the index get_tree lists; a Blackboard key selector takes a key name the tree's Blackboard has. A property that cannot be set is listed in skippedProperties; a call with no properties is refused (INVALID_ARGUMENT), and one whose properties all fail is PROPERTY_NOT_FOUND.\nset_node_properties: Set a Behavior Tree graph node's comment and its node's properties by name, in one undo step, as edit=configure_node sets them: a Blackboard key selector takes a key name the tree's Blackboard has. A property that cannot be set is listed in skippedProperties; a call that sets nothing is refused (PROPERTY_NOT_FOUND).\nremove_node: Remove a Behavior Tree graph node."
             }
           },
           "required": [
@@ -64208,8 +64208,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "bb5d99c59361c8ca780e2d48dce0e2e5ce5dc1f63777fc612e76c9d30c034229",
-        "content": "679be0b7d2b848e11d8c6a704b6c331713e03600cf712d745b38b6dd0db4f360"
+        "schema": "105aa3ca51bd75b43e31bc9959279f29346873e99be6787cfff022282644c222",
+        "content": "b12297cac4c08c218bb99d2ec69a22ae7d679f818d4a635b5e1b8d3199bd3f83"
       }
     },
     {
@@ -97588,7 +97588,7 @@
           "setting=priority: Use it to configure actor network bandwidth priority; refused without netPriority.",
           "setting=update_frequency: Use it to configure actor network update frequency; only the fields sent are written.",
           "setting=cull_distance: Use it to configure network relevancy cull distance and owner relevancy; only the fields sent are written.",
-          "setting=push_model: Use it to turn push-model replication on or off for every replicated variable of a Blueprint; fails when it has none.",
+          "setting=push_model: Use it to clear a stale PushModel entry from every replicated variable of a Blueprint (usePushModel false; fails when it has none). true is refused: push model is set for the whole project by Net.IsPushModelEnabled and Net.MakeBpPropertiesPushModel, not per variable.",
           "setting=replicated_movement: Use it to configure replicated movement.",
           "setting=replication_graph: Use it to set an Actor Blueprint's spatially loaded (World Partition) and net load on client defaults; only the fields sent are written.",
           "setting=net_driver: Use it to write the game net driver's rate limits to its class defaults and DefaultEngine.ini, and to the running net driver when there is one; only the fields sent are written."
@@ -97666,7 +97666,7 @@
             },
             "usePushModel": {
               "type": "boolean",
-              "description": "Use push model."
+              "description": "false clears each replicated variable's PushModel entry; true is refused (push model is set for the whole project)."
             },
             "replicateMovement": {
               "type": "boolean",
@@ -97711,7 +97711,7 @@
                 "replication_graph",
                 "net_driver"
               ],
-              "description": "Which configure replication variant to run.\nproperty: Turn replication of a Blueprint variable on or off, optionally with its replication condition.\ncondition: Set a Blueprint property replication condition.\nrep_notify: Make a Blueprint variable RepNotify: it replicates, and clients call repNotifyFunc when its new value arrives.\nnet_role: Choose how clients see an Actor Blueprint's actors: ROLE_None turns replication off, ROLE_SimulatedProxy or ROLE_AutonomousProxy turn it on.\ndormancy: Set an Actor Blueprint's default network dormancy.\nalways_relevant: Set always-relevant replication behavior.\nonly_relevant_to_owner: Set owner-only relevancy behavior.\nautonomous_proxy: Make every replicated variable of a Blueprint replicate to the autonomous proxy only (COND_AutonomousOnly), or undo that; fails when it has no replicated variable.\npriority: Configure actor network bandwidth priority; refused without netPriority.\nupdate_frequency: Configure actor network update frequency; only the fields sent are written.\ncull_distance: Configure network relevancy cull distance and owner relevancy; only the fields sent are written.\npush_model: Turn push-model replication on or off for every replicated variable of a Blueprint; fails when it has none.\nreplicated_movement: Configure replicated movement.\nreplication_graph: Set an Actor Blueprint's spatially loaded (World Partition) and net load on client defaults; only the fields sent are written.\nnet_driver: Write the game net driver's rate limits to its class defaults and DefaultEngine.ini, and to the running net driver when there is one; only the fields sent are written."
+              "description": "Which configure replication variant to run.\nproperty: Turn replication of a Blueprint variable on or off, optionally with its replication condition.\ncondition: Set a Blueprint property replication condition.\nrep_notify: Make a Blueprint variable RepNotify: it replicates, and clients call repNotifyFunc when its new value arrives.\nnet_role: Choose how clients see an Actor Blueprint's actors: ROLE_None turns replication off, ROLE_SimulatedProxy or ROLE_AutonomousProxy turn it on.\ndormancy: Set an Actor Blueprint's default network dormancy.\nalways_relevant: Set always-relevant replication behavior.\nonly_relevant_to_owner: Set owner-only relevancy behavior.\nautonomous_proxy: Make every replicated variable of a Blueprint replicate to the autonomous proxy only (COND_AutonomousOnly), or undo that; fails when it has no replicated variable.\npriority: Configure actor network bandwidth priority; refused without netPriority.\nupdate_frequency: Configure actor network update frequency; only the fields sent are written.\ncull_distance: Configure network relevancy cull distance and owner relevancy; only the fields sent are written.\npush_model: Clear a stale PushModel entry from every replicated variable of a Blueprint (usePushModel false; fails when it has none). true is refused: push model is set for the whole project by Net.IsPushModelEnabled and Net.MakeBpPropertiesPushModel, not per variable.\nreplicated_movement: Configure replicated movement.\nreplication_graph: Set an Actor Blueprint's spatially loaded (World Partition) and net load on client defaults; only the fields sent are written.\nnet_driver: Write the game net driver's rate limits to its class defaults and DefaultEngine.ini, and to the running net driver when there is one; only the fields sent are written."
             }
           },
           "required": [
@@ -97985,8 +97985,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "482d23798b208fa8c6a40430d24fbd352703f9c610495f9f7389d7ba644b8b66",
-        "content": "34815d0d1d4c9bbf28825ec6715e85bdc505acfd1621db629b26b393d0e488b1"
+        "schema": "b428b4692b8bd95c5c744228f138047e558abe763e73309a59a282ba0f4ad433",
+        "content": "e5096e7d6e7d32fbd3905dc86d5fa4069944fc82c8dcae2ae4409ebc2895100c"
       }
     },
     {
@@ -99521,7 +99521,7 @@
             },
             "sessionsInfo": {
               "type": "object",
-              "description": "Current play session: localPlayerCount, inPlaySession, currentPlayers, splitScreenEnabled, splitScreenActive, splitScreenLayout and pieInstances [{instance, netMode, url}]. Carries no online-subsystem, voice or hosting flags.",
+              "description": "Current play session: localPlayerCount, inPlaySession, splitScreenEnabled (the project setting), splitScreenActive (whether the Play viewport is split now), splitScreenLayouts (the layouts for two, three and four players, in the names configure_split_screen takes) and pieInstances [{instance, netMode, url}]. Carries no online-subsystem, voice or hosting flags.",
               "additionalProperties": true,
               "x-unreal-reflection-boundary": true
             }
@@ -99545,10 +99545,13 @@
             "sessionsInfo": {
               "localPlayerCount": 1,
               "inPlaySession": false,
-              "currentPlayers": 1,
               "splitScreenEnabled": false,
               "splitScreenActive": false,
-              "splitScreenLayout": "Horizontal",
+              "splitScreenLayouts": [
+                "TwoPlayer_Horizontal",
+                "ThreePlayer_FavorTop",
+                "FourPlayer_Grid"
+              ],
               "pieInstances": []
             }
           }
@@ -99585,8 +99588,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "bb5f05a1eda981248b1c802f963c4fc1a0fe1a20e05d72cb6494b6b3a3e4c312",
-        "content": "61375d156a2b871cec222812ff1946764be9b39666f7088d20aa9ebd60502710"
+        "schema": "f4603c335126419a54b277c626dc9f37cc8a2825bd71696cc03133df4f8694bb",
+        "content": "71987f35fbfa0270f227beddff922e01eef4d02775f75ec15b9b3e940167e38b"
       }
     },
     {
@@ -100254,9 +100257,9 @@
         "topics": [
           "set_owner"
         ],
-        "summary": "Set or clear (empty ownerActorName) the owner of a runtime actor; an owner name that matches no actor is refused.",
+        "summary": "Set or clear (empty ownerActorName) the owner of a runtime actor; an owner name that matches no actor is refused, and so is an owner the actor already owns or the actor itself (OWNER_LOOP).",
         "whenToUse": [
-          "Use it to set or clear (empty ownerActorName) the owner of a runtime actor; an owner name that matches no actor is refused."
+          "Use it to set or clear (empty ownerActorName) the owner of a runtime actor; an owner name that matches no actor is refused, and so is an owner the actor already owns or the actor itself (OWNER_LOOP)."
         ],
         "whenNotToUse": []
       },
@@ -100310,7 +100313,7 @@
       },
       "examples": [
         {
-          "title": "Set or clear (empty ownerActorName) the owner of a runtime actor; an owner name that matches no actor is refused.",
+          "title": "Set or clear (empty ownerActorName) the owner of a runtime actor; an owner name that matches no actor is refused, and so is an owner the actor already owns or the actor itself (OWNER_LOOP).",
           "input": {
             "action": "set_owner",
             "actorName": "BP_PlayerCharacter_C_0"
@@ -100350,7 +100353,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "5205a3321a1ce821d1b145a0532a2b4a08b7108d36ac337ae5f6596cc9368667",
-        "content": "eb06fea6d8a94d0652a0aa67c6cb192c90fde7d1e09663a444b938a19c8ca894"
+        "content": "bbf56d8b63d4ce8a3c84baeb8034d3a9227d097b551f0eddcdf63ce13d965b1b"
       }
     },
     {

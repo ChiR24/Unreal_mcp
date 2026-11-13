@@ -8,6 +8,7 @@
 #include "Dom/JsonValue.h"
 #include "Editor.h"
 #include "Engine/Engine.h"
+#include "Engine/GameViewportClient.h"
 #include "Engine/World.h"
 
 bool HandleGetSessionsInfo(
@@ -25,12 +26,14 @@ bool HandleGetSessionsInfo(
 
     bool bInPIE = GEditor && GEditor->PlayWorld != nullptr;
     SessionsInfo->SetBoolField(TEXT("inPlaySession"), bInPIE);
-    SessionsInfo->SetNumberField(TEXT("currentPlayers"), LocalPlayerCount);
-    const UGameMapsSettings* MapsSettings = GetDefault<UGameMapsSettings>();
-    const bool bSplitScreenConfigured = MapsSettings->bUseSplitscreen;
-    SessionsInfo->SetBoolField(TEXT("splitScreenEnabled"), bSplitScreenConfigured);
-    SessionsInfo->SetBoolField(TEXT("splitScreenActive"), LocalPlayerCount > 1);
-    SessionsInfo->SetStringField(TEXT("splitScreenLayout"), StaticEnum<ETwoPlayerSplitScreenType::Type>()->GetNameStringByValue(static_cast<int64>(MapsSettings->TwoPlayerSplitscreenLayout.GetValue())));
+    SessionsInfo->SetBoolField(TEXT("splitScreenEnabled"), GetDefault<UGameMapsSettings>()->bUseSplitscreen);
+    // Whether the Play viewport is split now: that takes the setting, two players or more and no override turning it
+    // off (UGameViewportClient::UpdateActiveSplitscreenType), so the player count alone said true with split screen off.
+    const UGameViewportClient* Viewport = bInPIE ? GEditor->PlayWorld->GetGameViewport() : nullptr;
+    SessionsInfo->SetBoolField(TEXT("splitScreenActive"), Viewport && Viewport->GetCurrentSplitscreenConfiguration() != ESplitScreenType::None);
+    // The layout for two, three and four players, each in the name configure_split_screen takes.
+    SessionsInfo->SetArrayField(TEXT("splitScreenLayouts"), McpHandlerUtils::ToJsonStringArray(TArray<FString>{
+        SessionsHelpers::SplitScreenLayoutName(2), SessionsHelpers::SplitScreenLayoutName(3), SessionsHelpers::SplitScreenLayoutName(4)}));
     // Per PIE instance net mode: the evidence that host_lan_server made a ListenServer and that
     // join_lan_server connected a Client.
     TArray<TSharedPtr<FJsonValue>> PieInstances;

@@ -89,10 +89,18 @@ bool HandleSetReplicatedUsing(FNetworkingActionContext& Context)
 
 bool HandleConfigurePushModel(FNetworkingActionContext& Context)
 {
+    // No engine code reads a variable's PushModel entry (PushModel.cpp, 5.0 to 5.8): turning it on answered "enabled"
+    // for a switch nothing reads. usePushModel false still clears the entries an earlier call left.
+    if (GetJsonBoolField(Context.Payload, TEXT("usePushModel"), true))
+    {
+        Context.Bridge.SendAutomationError(Context.RequestingSocket, Context.RequestId,
+            TEXT("Push model is not set per variable: no engine code reads a variable's PushModel entry. Whether replicated Blueprint variables use it is set for the whole project by the console variables Net.IsPushModelEnabled (off by default) and Net.MakeBpPropertiesPushModel (on by default, so Blueprint variables follow once push model is on); set them in the project's config. Nothing was changed."),
+            TEXT("NOT_SUPPORTED"));
+        return true;
+    }
     const TSharedPtr<FJsonObject>& Payload = Context.Payload;
     TSharedPtr<FJsonObject>& ResultJson = Context.ResultJson;
     FString BlueprintPath = GetJsonStringField(Payload, TEXT("blueprintPath"));
-    bool bUsePushModel = GetJsonBoolField(Payload, TEXT("usePushModel"), true);
 
     UBlueprint* Blueprint = LoadBlueprintOrReply(Context, BlueprintPath);
     if (!Blueprint)
@@ -105,16 +113,15 @@ bool HandleConfigurePushModel(FNetworkingActionContext& Context)
     {
         if ((VarDesc.PropertyFlags & CPF_Net) != 0)
         {
-            bUsePushModel ? VarDesc.SetMetaData(TEXT("PushModel"), TEXT("true")) : VarDesc.RemoveMetaData(TEXT("PushModel"));
+            VarDesc.RemoveMetaData(TEXT("PushModel"));
             ++ReplicatedCount;
         }
     }
-    // With no replicated variable there is nothing push model could apply to; the old reply
-    // claimed it was enabled "for all replicated properties" anyway.
+    // With no replicated variable there is no entry to clear.
     if (ReplicatedCount == 0)
     {
         Context.Bridge.SendAutomationError(Context.RequestingSocket, Context.RequestId,
-            TEXT("The Blueprint has no replicated variables for push model to apply to; replicate one first (set_property_replicated)."),
+            TEXT("The Blueprint has no replicated variables, so no PushModel entry to clear."),
             TEXT("NOT_FOUND"));
         return true;
     }
@@ -125,8 +132,8 @@ bool HandleConfigurePushModel(FNetworkingActionContext& Context)
     McpSafeAssetSave(Blueprint);
 
     ResultJson->SetBoolField(TEXT("success"), true);
-    ResultJson->SetBoolField(TEXT("usePushModel"), bUsePushModel);
-    ResultJson->SetStringField(TEXT("message"), FString::Printf(TEXT("Push model replication %s for %d replicated variable(s)"), bUsePushModel ? TEXT("enabled") : TEXT("disabled"), ReplicatedCount));
+    ResultJson->SetBoolField(TEXT("usePushModel"), false);
+    ResultJson->SetStringField(TEXT("message"), FString::Printf(TEXT("PushModel entries cleared from %d replicated variable(s)"), ReplicatedCount));
     McpHandlerUtils::AddVerification(ResultJson, Blueprint);
     Context.Bridge.SendAutomationResponse(Context.RequestingSocket, Context.RequestId, true, TEXT("Push model configured"), ResultJson);
     return true;
