@@ -166,6 +166,9 @@ bool HandleNodeDetailAction(FActionContext& Context);
 // build_graph: runs a list of the single-step edits above in one request.
 bool HandleGraphBatchAction(FActionContext& Context);
 
+// CallFunction, K2Node_CallFunction or FunctionCall: the nodeType node creation and the build_graph pre-check both
+// read as a function call.
+bool IsCallFunctionType(const FString& NodeType);
 // The function a CallFunction step names: on memberClass (else the one library
 // declaring it), or on the Blueprint's own class and the stock libraries. Shared
 // by node creation and the build_graph pre-check so the two cannot disagree.

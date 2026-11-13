@@ -22,42 +22,9 @@ bool CreateCaptureActor(
     const TSharedPtr<FJsonObject>& Payload,
     TSharedPtr<FMcpBridgeWebSocket> Socket)
 {
-    // The published schema names the new actor `name`; `actorName` stays
-    // accepted for callers that target an existing actor by that spelling.
-    FString Name = GetJsonStringField(Payload, TEXT("actorName"));
-    if (Name.IsEmpty())
-    {
-        Name = GetJsonStringField(Payload, TEXT("name"));
-    }
-    if (Name.IsEmpty())
-    {
-        Subsystem->SendAutomationError(Socket, RequestId, TEXT("name (or actorName) is required."), TEXT("INVALID_ARGUMENT"));
-        return true;
-    }
-    if (AActor* Existing = FindRenderActor(Name))
-    {
-        if (!Existing->IsA<TActor>())
-        {
-            Subsystem->SendAutomationError(Socket, RequestId,
-                FString::Printf(TEXT("An actor named %s already exists and is a %s, not a %s; pick another name. Nothing was created."),
-                    *Name, *Existing->GetClass()->GetName(), *TActor::StaticClass()->GetName()),
-                TEXT("NAME_TAKEN"));
-            return true;
-        }
-        TSharedPtr<FJsonObject> Result = MakeRenderResult(SubAction);
-        Result->SetBoolField(TEXT("alreadyExists"), true);
-        McpHandlerUtils::AddVerification(Result, Existing);
-        Subsystem->SendAutomationResponse(Socket, RequestId, true, TEXT("Scene capture actor already exists."), Result);
-        return true;
-    }
-    TActor* Actor = SpawnActorInActiveWorld<TActor>(
-        TActor::StaticClass(),
-        ExtractVectorField(Payload, TEXT("location"), FVector::ZeroVector),
-        ExtractRotatorField(Payload, TEXT("rotation"), FRotator::ZeroRotator),
-        Name);
+    TActor* Actor = SpawnNamedRenderActor<TActor>(Subsystem, RequestId, SubAction, Payload, Socket, TEXT("Scene capture actor"));
     if (!Actor)
     {
-        Subsystem->SendAutomationError(Socket, RequestId, TEXT("Failed to spawn scene capture actor."), TEXT("SPAWN_FAILED"));
         return true;
     }
     TSharedPtr<FJsonObject> Result = MakeRenderResult(SubAction);
@@ -134,7 +101,11 @@ bool HandleRenderSceneCaptureAction(
     {
         // actorName is optional in the published schema: fall back to the
         // level's sole scene capture actor instead of failing on an empty name.
-        Actor = FindSoleSceneCaptureActor(ResolveError, ResolveErrorCode);
+        Actor = FindSoleRenderActor(
+            [](AActor* Candidate) { return Candidate->IsA<ASceneCapture2D>() || Candidate->IsA<ASceneCaptureCube>(); },
+            TEXT("scene capture"),
+            TEXT("Scene capture actor not found: no SceneCapture2D/SceneCaptureCube in the level (create one with create_scene_capture_2d or pass actorName)."),
+            ResolveError, ResolveErrorCode);
     }
     if (!Actor)
     {

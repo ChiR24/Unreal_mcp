@@ -44,6 +44,7 @@ domain-local copy of reflection, path, JSON, or response helpers.
 | Spawn an actor | `BridgeHelpers/Actors/McpActorSpawnHelpers.h` |
 | Find an actor by name or label | `HandlerUtils/McpHandlerUtilsActionsPaths.h` `McpHandlerUtils::FindActorByName` |
 | Load / compile BP, SCS lookup, BP paths | `BridgeHelpers/Blueprints/{McpBPAssetLoad,McpBPCompileHelpers,McpScsLookup,McpBPPaths}.h` |
+| The engine's StandardMacros library (ForLoop, DoOnce, Gate...): load it, find a macro, tell one apart | `BridgeHelpers/Blueprints/McpStandardMacros.h` |
 | Read/apply a property (scalar/object/array) | `BridgeHelpers/Properties/{McpNestedPropPath,McpComponentLookup,McpPropApply*}.h` (export: `Reflection/McpPropertyReflection.h`) |
 | Refuse a number outside a property's ClampMin/ClampMax | `Reflection/McpPropertyReflection.h` `CheckRange` |
 | Resolve a UClass by name | `BridgeHelpers/Reflection/McpClassResolve.h` |

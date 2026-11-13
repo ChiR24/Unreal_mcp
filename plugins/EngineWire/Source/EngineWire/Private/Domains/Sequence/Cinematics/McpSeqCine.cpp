@@ -149,6 +149,21 @@ FGuid ResolveOrCreateBinding(ULevelSequence *Sequence, AActor *Actor) {
   return BindingGuid;
 }
 
+FGuid BindComponentUnderActor(ULevelSequence *Sequence, const FGuid &ParentGuid, UActorComponent *Component,
+                              UObject *Context) {
+  UMovieScene *MovieScene = Sequence->GetMovieScene();
+  const FGuid Guid = MovieScene->AddPossessable(Component->GetName(), Component->GetClass());
+  if (FMovieScenePossessable *Possessable = MovieScene->FindPossessable(Guid)) {
+#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 1
+    Possessable->SetParent(ParentGuid, MovieScene);
+#else
+    Possessable->SetParent(ParentGuid);
+#endif
+  }
+  Sequence->BindPossessableObject(Guid, *Component, Context);
+  return Guid;
+}
+
 FGuid ResolveRequestBinding(const TSharedPtr<FJsonObject> &Params, ULevelSequence *Sequence) {
   FGuid Guid;
   if (!ReadBindingGuid(Params, Guid))

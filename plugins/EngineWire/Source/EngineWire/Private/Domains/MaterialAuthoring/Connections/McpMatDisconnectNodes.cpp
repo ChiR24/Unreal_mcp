@@ -32,7 +32,7 @@ bool HandleDisconnectNodes(UEngineWireSubsystem* Bridge, const FString& RequestI
       bool bCleared = false;
       for (UMaterialExpression *Expr : MCP_GET_FUNCTION_EXPRESSIONS(Function)) {
         if (UMaterialExpressionFunctionOutput *Out = Cast<UMaterialExpressionFunctionOutput>(Expr)) {
-          if (PinName.IsEmpty() || Out->OutputName.ToString().Equals(PinName)) {
+          if (PinName.IsEmpty() || Out->OutputName.ToString().Equals(PinName, ESearchCase::IgnoreCase)) {
             Out->A.Expression = nullptr;
             bCleared = true;
             if (!PinName.IsEmpty()) break;
@@ -60,15 +60,8 @@ bool HandleDisconnectNodes(UEngineWireSubsystem* Bridge, const FString& RequestI
 
     // By property name first, then by label as connect_nodes matches them: a custom node's or a
     // function call's inputs ("OB", "UVs (Vector2)") are not properties, so they never unplugged.
-    FExpressionInput *Target = FindMaterialInputProperty(TargetExpr, PinName);
     FString Available;
-    for (int32 InputIndex = 0, InputCount = McpCountMaterialInputs(TargetExpr); !Target && InputIndex < InputCount && TargetExpr->GetInput(InputIndex); ++InputIndex) {
-      const FString Label = TargetExpr->GetInputName(InputIndex).ToString();
-      if (!PinName.IsEmpty() && McpMaterialInputNamed(Label, PinName)) {
-        Target = TargetExpr->GetInput(InputIndex);
-      }
-      Available += FString::Printf(TEXT("%s%s"), Available.IsEmpty() ? TEXT("") : TEXT(", "), *Label);
-    }
+    FExpressionInput *Target = FindMaterialInputByNameOrLabel(TargetExpr, PinName, Available);
     if (!Target) {
       Bridge->SendAutomationError(Socket, RequestId,
           FString::Printf(TEXT("Input pin '%s' not found on %s. Its inputs: %s."), *PinName,

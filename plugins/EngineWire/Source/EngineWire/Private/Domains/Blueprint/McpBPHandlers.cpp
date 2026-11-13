@@ -4,16 +4,9 @@ bool UEngineWireSubsystem::HandleBlueprintAction(
     const FString &RequestId, const FString &Action,
     const TSharedPtr<FJsonObject> &Payload,
     TSharedPtr<FMcpBridgeWebSocket> RequestingSocket) {
-  UE_LOG(LogEngineWireSubsystem, Verbose,
-         TEXT(">>> HandleBlueprintAction ENTRY: RequestId=%s RawAction='%s'"),
-         *RequestId, *Action);
-
   McpBlueprintHandlers::FBlueprintActionContext Context =
       McpBlueprintHandlers::BuildBlueprintActionContext(
           *this, RequestId, Action, Payload, RequestingSocket);
-  UE_LOG(LogEngineWireSubsystem, Verbose,
-         TEXT("HandleBlueprintAction sanitized: CleanAction='%s' Lower='%s'"),
-         *Context.CleanAction, *Context.Lower);
   UE_LOG(LogEngineWireSubsystem, Verbose,
          TEXT("HandleBlueprintAction invoked: RequestId=%s RawAction=%s CleanAction=%s Lower=%s"),
          *RequestId, *Action, *Context.CleanAction, *Context.Lower);

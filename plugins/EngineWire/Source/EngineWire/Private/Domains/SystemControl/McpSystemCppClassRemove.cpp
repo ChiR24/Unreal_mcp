@@ -1,4 +1,5 @@
 #include "Domains/SystemControl/McpSystemPrivate.h"
+#include "Foundation/BridgeHelpers/Reflection/McpClassResolve.h"
 #include "Foundation/HandlerUtils/McpHandlerUtilsJson.h"
 
 #include "AssetRegistry/AssetData.h"
@@ -69,8 +70,7 @@ void EngineUsers(UClass* Class, IAssetRegistry& Registry, TArray<FString>& Users
   TArray<UClass*> Derived;
   GetDerivedClasses(Class, Derived, true);
   for (const UClass* Child : Derived) {
-    const FString Name = Child->GetName();
-    if (!Child->HasAnyClassFlags(CLASS_NewerVersionExists) && !Name.StartsWith(TEXT("SKEL_")) && !Name.StartsWith(TEXT("REINST_"))) {
+    if (!McpIsCompileDebrisClass(Child)) {
       Users.AddUnique(FString::Printf(TEXT("class %s derives from it"), *Child->GetPathName()));
     }
   }

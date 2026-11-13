@@ -2,6 +2,7 @@
 // Dominance Algorithm"): a node dominates another when every path from an entry to the second passes through it.
 
 #include "Domains/BlueprintGraph/Lint/McpBPLintFlow.h"
+#include "Foundation/BridgeHelpers/Blueprints/McpStandardMacros.h"
 
 #include "EdGraph/EdGraph.h"
 #include "EdGraphSchema_K2.h"
@@ -62,8 +63,9 @@ FName CheckedVariable(const UEdGraphNode* Node, const UEdGraphPin*& OutValidExit
     }
     else if (const UK2Node_MacroInstance* Macro = Cast<UK2Node_MacroInstance>(Node))
     {
-        // The standard Is Valid macro: exits Is Valid and Is Not Valid, its object the one data input.
-        if (Macro->GetMacroGraph() && Macro->GetMacroGraph()->GetName() == TEXT("IsValid"))
+        // The engine's Is Valid macro (not a project macro of that name): exits Is Valid and Is Not Valid, its object the
+        // one data input.
+        if (McpIsStandardMacro(Macro->GetMacroGraph()) && Macro->GetMacroGraph()->GetName() == TEXT("IsValid"))
         {
             UEdGraphPin* const* Exit = Macro->Pins.FindByPredicate([](const UEdGraphPin* Pin)
             {

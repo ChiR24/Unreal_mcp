@@ -5,6 +5,7 @@
 
 #include "Algo/Find.h"
 #include "Domains/BlueprintGraph/Lint/McpBPLintFlow.h"
+#include "Foundation/BridgeHelpers/Blueprints/McpStandardMacros.h"
 #include "EdGraph/EdGraph.h"
 #include "EdGraphSchema_K2.h"
 #include "K2Node_CallFunction.h"
@@ -17,8 +18,6 @@ namespace McpBPLint
 {
 namespace
 {
-const TCHAR* const StandardMacrosPackage = TEXT("/Engine/EditorBlueprintResources/StandardMacros");
-
 bool IsLoopIndexOutput(const UEdGraphPin* Pin)
 {
     return Pin && Pin->Direction == EGPD_Output && (Pin->PinName == TEXT("Index") || Pin->PinName == TEXT("Array Index"));
@@ -73,7 +72,7 @@ FName MacroName(const UEdGraphNode* Node)
 {
     const UK2Node_MacroInstance* Macro = Cast<UK2Node_MacroInstance>(Node);
     const UEdGraph* Graph = Macro ? Macro->GetMacroGraph() : nullptr;
-    return Graph && Graph->GetOutermost()->GetName() == StandardMacrosPackage ? Graph->GetFName() : NAME_None;
+    return McpIsStandardMacro(Graph) ? Graph->GetFName() : NAME_None;
 }
 
 bool ScalarOp(const UK2Node_CallFunction* Call, FString& OutOp, bool& bOutInteger)

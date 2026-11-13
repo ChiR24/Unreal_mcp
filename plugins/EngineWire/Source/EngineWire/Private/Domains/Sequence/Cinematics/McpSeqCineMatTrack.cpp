@@ -72,31 +72,6 @@ UPrimitiveComponent *ResolveMaterialComponent(
   return Component;
 }
 
-FGuid CreateMaterialComponentBinding(ULevelSequence *Sequence,
-                                     const FGuid &ParentGuid,
-                                     UPrimitiveComponent *Component) {
-  if (!Sequence || !Sequence->GetMovieScene() || !Component ||
-      !Component->GetOwner()) {
-    return FGuid();
-  }
-  UMovieScene *MovieScene = Sequence->GetMovieScene();
-  const FGuid ComponentGuid =
-      MovieScene->AddPossessable(Component->GetName(), Component->GetClass());
-  FMovieScenePossessable *Possessable =
-      MovieScene->FindPossessable(ComponentGuid);
-  if (!Possessable) {
-    MovieScene->RemovePossessable(ComponentGuid);
-    return FGuid();
-  }
-#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 1
-  Possessable->SetParent(ParentGuid, MovieScene);
-#else
-  Possessable->SetParent(ParentGuid);
-#endif
-  Sequence->BindPossessableObject(ComponentGuid, *Component,
-                                  Component->GetOwner());
-  return ComponentGuid;
-}
 }
 
 bool HandleAddMaterialParameterTrack(const TSharedPtr<FJsonObject> &Params,
@@ -191,9 +166,8 @@ bool HandleAddMaterialParameterTrack(const TSharedPtr<FJsonObject> &Params,
     return true;
   }
   const bool bCreatedComponentBinding = !ComponentGuid.IsValid();
-  if (bCreatedComponentBinding) {
-    ComponentGuid =
-        CreateMaterialComponentBinding(Sequence, Guid, Component);
+  if (bCreatedComponentBinding && Component->GetOwner()) {
+    ComponentGuid = BindComponentUnderActor(Sequence, Guid, Component, Component->GetOwner());
   }
   if (!ComponentGuid.IsValid()) {
     OutResult = MakeResult(

@@ -242,6 +242,19 @@ void FMcpScopedEditorTransaction::DescribeInto(const TSharedPtr<FJsonObject>& Re
 	Result->SetObjectField(TEXT("undo"), Undo);
 }
 
+void FMcpScopedEditorTransaction::Cancel()
+{
+	if (!Transaction)
+	{
+		return;
+	}
+	Transaction->Cancel();
+	Transaction.Reset();
+	OpenState = EMcpTransactionState::RefusedNotUndoable;
+	OpenCode = TEXT("UNDO_CANCELLED");
+	OpenDetail = TEXT("The call was refused and changed nothing, so it left no undo step.");
+}
+
 FMcpAssetEdit::FMcpAssetEdit(const TCHAR* InTitle, const TArray<UObject*>& Objects, const TSharedPtr<FJsonObject>& InResponse)
 	: Transaction(FText::FromString(InTitle), EMcpMutationDurability::EditorStateOnly, Objects), Response(InResponse)
 {

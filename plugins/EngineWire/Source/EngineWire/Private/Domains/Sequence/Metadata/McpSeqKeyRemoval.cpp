@@ -129,20 +129,26 @@ bool HandleRemoveKeyframe(UEngineWireSubsystem *Subsystem,
     TargetTicks.Add(TargetTick);
   }
 
-  // A removal that matches no track is a caller error, not a silent no-op, so
-  // track matches are counted separately from keys removed. The shared
+  // A removal that matches no track is a caller error, not a silent no-op, and
+  // is refused before the undo step opens, so it leaves none. The shared
   // collector applies the trackName and bindingId filters the same way every
   // other track action resolves names.
   TArray<UMovieSceneTrack *> Candidates;
   CollectTracksByName(MovieScene, TrackFilter, BindingFilter, Candidates);
+  if (Candidates.Num() == 0) {
+    Subsystem->SendAutomationResponse(
+        RequestingSocket, RequestId, false,
+        TEXT("No track matched the supplied trackName/bindingId."), nullptr,
+        TEXT("TRACK_NOT_FOUND"));
+    return true;
+  }
 
   // No transaction was open, so the Modify() calls below recorded nothing and the removal had no undo.
   FMcpScopedEditorTransaction Transaction(FText::FromString(TEXT("Remove Sequence Keys")),
                                           EMcpMutationDurability::EditorStateOnly, {Sequence, MovieScene});
-  int32 MatchedTracks = 0;
+  const int32 MatchedTracks = Candidates.Num();
   int32 RemovedKeys = 0;
   for (UMovieSceneTrack *Track : Candidates) {
-    ++MatchedTracks;
     Track->Modify();
     for (UMovieSceneSection *Section : Track->GetAllSections()) {
       if (!Section) {
@@ -158,14 +164,6 @@ bool HandleRemoveKeyframe(UEngineWireSubsystem *Subsystem,
       RemovedKeys += RemoveChannelKeys<FMovieSceneIntegerChannel>(Proxy, !bHasFrame, TargetTicks);
       RemovedKeys += RemoveChannelKeys<FMovieSceneParticleChannel>(Proxy, !bHasFrame, TargetTicks);
     }
-  }
-
-  if (MatchedTracks == 0) {
-    Subsystem->SendAutomationResponse(
-        RequestingSocket, RequestId, false,
-        TEXT("No track matched the supplied trackName/bindingId."), nullptr,
-        TEXT("TRACK_NOT_FOUND"));
-    return true;
   }
 
   MovieScene->Modify();

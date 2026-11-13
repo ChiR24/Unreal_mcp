@@ -4,12 +4,17 @@
 #include "Foundation/BridgeHelpers/Blueprints/McpBPAssetLoad.h"
 #include "Foundation/BridgeHelpers/Blueprints/McpBPCallers.h"
 #include "Foundation/BridgeHelpers/Blueprints/McpBPCompileHelpers.h"
+#include "Foundation/Blueprint/McpBlueprintUtils.h"
 #include "Foundation/HandlerUtils/McpHandlerUtils.h"
 
 #include "Engine/Blueprint.h"
 #include "Kismet2/BlueprintEditorUtils.h"
 
 namespace McpBlueprintHandlers {
+UEdGraph *FindFunctionGraph(UBlueprint *Blueprint, const FString &Name) {
+  return McpBlueprintUtils::FindGraphNamed(Blueprint->FunctionGraphs, Name);
+}
+
 // Delete a user-defined Blueprint function graph. Counterpart to add_function:
 // before this, functions were create-only (the action enum had no remove path),
 // so a wrong-signature function could not be deleted or re-signed via MCP at all
@@ -66,14 +71,7 @@ bool HandleBlueprintRemoveFunction(const FBlueprintActionContext &Context) {
     // FunctionGraphs is the source of truth for user-defined functions (the
     // same list add_function appends to). Inherited/engine functions and the
     // EventGraph are not here and cannot be removed this way.
-    UEdGraph *Target = nullptr;
-    for (UEdGraph *Graph : Blueprint->FunctionGraphs) {
-      if (Graph &&
-          Graph->GetName().Equals(FuncName, ESearchCase::IgnoreCase)) {
-        Target = Graph;
-        break;
-      }
-    }
+    UEdGraph *Target = FindFunctionGraph(Blueprint, FuncName);
 
     if (!Target) {
       // Graph-authoritative, truth-telling: a function genuinely not present is
@@ -111,14 +109,7 @@ bool HandleBlueprintRemoveFunction(const FBlueprintActionContext &Context) {
 
     // Verify against the graph, not against our own assumption: rescan
     // FunctionGraphs after the remove+recompile.
-    bool bStillPresent = false;
-    for (UEdGraph *Graph : Blueprint->FunctionGraphs) {
-      if (Graph &&
-          Graph->GetName().Equals(FuncName, ESearchCase::IgnoreCase)) {
-        bStillPresent = true;
-        break;
-      }
-    }
+    const bool bStillPresent = FindFunctionGraph(Blueprint, FuncName) != nullptr;
 
     TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
     Resp->SetStringField(TEXT("functionName"), FuncName);

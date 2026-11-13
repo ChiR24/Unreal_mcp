@@ -22,21 +22,10 @@ bool HandleGetMetadata(UEngineWireSubsystem *Subsystem,
                        const FString &RequestId,
                        const TSharedPtr<FJsonObject> &Payload,
                        TSharedPtr<FMcpBridgeWebSocket> Socket) {
-  TSharedPtr<FJsonObject> LocalPayload =
-      Payload.IsValid() ? Payload : McpHandlerUtils::CreateResultObject();
-  const FString SeqPath = McpSequence::ResolvePath(LocalPayload);
-  if (SeqPath.IsEmpty()) {
-    Subsystem->SendAutomationResponse(
-        Socket, RequestId, false,
-        TEXT("sequence_get_metadata requires a sequence path"), nullptr,
-        TEXT("INVALID_SEQUENCE"));
-    return true;
-  }
-  UObject *SeqObj = McpLoadAsset(SeqPath);
+  FString SeqPath;
+  UObject *SeqObj = McpSequence::LoadAssetOrReply(Subsystem, RequestId, Socket, Payload,
+                                                  TEXT("sequence_get_metadata"), SeqPath);
   if (!SeqObj) {
-    Subsystem->SendAutomationResponse(Socket, RequestId, false,
-                                      TEXT("Sequence not found"), nullptr,
-                                      TEXT("INVALID_SEQUENCE"));
     return true;
   }
   TSharedPtr<FJsonObject> Metadata = BuildMetadataObject(SeqObj);
@@ -47,7 +36,7 @@ bool HandleGetMetadata(UEngineWireSubsystem *Subsystem,
   Resp->SetObjectField(TEXT("metadata"), Metadata);
   Resp->SetNumberField(TEXT("metadataCount"), Metadata->Values.Num());
   FString Key;
-  if (LocalPayload->TryGetStringField(TEXT("key"), Key) && !Key.IsEmpty()) {
+  if (Payload->TryGetStringField(TEXT("key"), Key) && !Key.IsEmpty()) {
     FString Value;
     const bool bFound = Metadata->TryGetStringField(Key, Value);
     Resp->SetStringField(TEXT("key"), Key);

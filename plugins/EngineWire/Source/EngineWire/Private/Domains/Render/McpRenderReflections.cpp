@@ -24,37 +24,9 @@ bool CreateReflectionActor(
     const TSharedPtr<FJsonObject>& Payload,
     TSharedPtr<FMcpBridgeWebSocket> Socket)
 {
-    // `name` labels the new actor across every create_capture_actor variant; reading only
-    // actorName refused a reflection capture created with the declared name.
-    const FString Name = McpGetFirstStringField(Payload, {TEXT("actorName"), TEXT("name")});
-    if (Name.IsEmpty())
-    {
-        Subsystem->SendAutomationError(Socket, RequestId, TEXT("name (or actorName) is required."), TEXT("INVALID_ARGUMENT"));
-        return true;
-    }
-    if (AActor* Existing = FindRenderActor(Name))
-    {
-        // An actor of another class under the name answered "already exists" as if it were the capture asked for.
-        if (!Existing->IsA<TActor>())
-        {
-            Subsystem->SendAutomationError(Socket, RequestId,
-                FString::Printf(TEXT("An actor named %s already exists and is a %s, not a %s; pick another name. Nothing was created."),
-                    *Name, *Existing->GetClass()->GetName(), *TActor::StaticClass()->GetName()),
-                TEXT("NAME_TAKEN"));
-            return true;
-        }
-        TSharedPtr<FJsonObject> Result = MakeRenderResult(SubAction);
-        Result->SetBoolField(TEXT("alreadyExists"), true);
-        McpHandlerUtils::AddVerification(Result, Existing);
-        Subsystem->SendAutomationResponse(Socket, RequestId, true, TEXT("Reflection actor already exists."), Result);
-        return true;
-    }
-    const FVector Location = ExtractVectorField(Payload, TEXT("location"), FVector::ZeroVector);
-    const FRotator Rotation = ExtractRotatorField(Payload, TEXT("rotation"), FRotator::ZeroRotator);
-    TActor* Actor = SpawnActorInActiveWorld<TActor>(TActor::StaticClass(), Location, Rotation, Name);
+    TActor* Actor = SpawnNamedRenderActor<TActor>(Subsystem, RequestId, SubAction, Payload, Socket, TEXT("Reflection actor"));
     if (!Actor)
     {
-        Subsystem->SendAutomationError(Socket, RequestId, TEXT("Failed to spawn reflection actor."), TEXT("SPAWN_FAILED"));
         return true;
     }
     TArray<FString> Applied;
@@ -64,6 +36,8 @@ bool CreateReflectionActor(
     {
         if (!ApplyJsonSettings(Component, Component->GetClass(), GetSettingsObject(Payload), false, Applied, Unsupported, Error))
         {
+            // The refused call created nothing: the actor spawned for it stayed in the level.
+            Actor->Destroy();
             Subsystem->SendAutomationError(Socket, RequestId, Error, TEXT("INVALID_SETTING"));
             return true;
         }
@@ -151,7 +125,11 @@ bool HandleRenderReflectionAction(
         // level's sole reflection capture actor.
         FString ResolveError;
         FString ResolveErrorCode;
-        Actor = FindSoleReflectionCaptureActor(ResolveError, ResolveErrorCode);
+        Actor = FindSoleRenderActor(
+            [](AActor* Candidate) { return Candidate->FindComponentByClass<UReflectionCaptureComponent>() != nullptr; },
+            TEXT("reflection capture"),
+            TEXT("Reflection capture actor not found: no reflection capture in the level (create one or pass actorName)."),
+            ResolveError, ResolveErrorCode);
         if (!Actor && ResolveErrorCode == TEXT("AMBIGUOUS"))
         {
             Subsystem->SendAutomationError(RequestingSocket, RequestId, ResolveError, ResolveErrorCode);
@@ -218,7 +196,7 @@ bool HandleRenderReflectionAction(
             return false;
         }
         Capture->MarkDirtyForRecapture();
-        if (UWorld* World = GetRenderWorld())
+        if (UWorld* World = McpHandlerUtils::GetPlayOrEditorWorld())
         {
             UReflectionCaptureComponent::UpdateReflectionCaptureContents(World, TEXT("MCP recapture"));
         }

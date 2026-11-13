@@ -14,6 +14,42 @@
 
 namespace McpBlueprintUtils
 {
+// The first node of class T in Graph, in node order (a function graph's entry or return node); null when it has none.
+template <typename T>
+T* FirstNodeOfClass(const UEdGraph* Graph)
+{
+    TArray<T*> Nodes;
+    if (Graph)
+    {
+        Graph->GetNodesOfClass(Nodes);
+    }
+    return Nodes.Num() > 0 ? Nodes[0] : nullptr;
+}
+
+// The graph of Graphs (a Blueprint's FunctionGraphs, DelegateSignatureGraphs...) named Name, in any case; null when none is.
+inline UEdGraph* FindGraphNamed(const TArray<TObjectPtr<UEdGraph>>& Graphs, const FString& Name)
+{
+    for (UEdGraph* Graph : Graphs)
+    {
+        if (Graph && Graph->GetName().Equals(Name, ESearchCase::IgnoreCase))
+        {
+            return Graph;
+        }
+    }
+    return nullptr;
+}
+
+// Whether A and B are one pin type, Float and double counted as the same: a Blueprint "Float" is a double when the
+// editor makes it and a float when ResolvePinType does.
+inline bool SamePinTypeLoosely(FEdGraphPinType A, FEdGraphPinType B)
+{
+    for (FEdGraphPinType* Type : {&A, &B})
+    {
+        Type->PinSubCategory = Type->PinCategory == UEdGraphSchema_K2::PC_Real ? FName() : Type->PinSubCategory;
+    }
+    return A == B;
+}
+
 /**
  * Structured result of a type-string resolution.  When bSuccess is false,
  * OutError contains a human-readable diagnostic that identifies which part

@@ -69,14 +69,11 @@ bool HandleFixCoplanar(UEngineWireSubsystem* Bridge, const FString& RequestId,
     FString NameFilter;
     double Distance = 1.0;
     bool bDryRun = false;
-    if (Payload.IsValid())
+    Payload->TryGetStringField(TEXT("nameFilter"), NameFilter);
+    Payload->TryGetBoolField(TEXT("dryRun"), bDryRun);
+    if (Payload->TryGetNumberField(TEXT("distance"), Distance))
     {
-        Payload->TryGetStringField(TEXT("nameFilter"), NameFilter);
-        Payload->TryGetBoolField(TEXT("dryRun"), bDryRun);
-        if (Payload->TryGetNumberField(TEXT("distance"), Distance))
-        {
-            Distance = FMath::Clamp(Distance, 0.1, 20.0);
-        }
+        Distance = FMath::Clamp(Distance, 0.1, 20.0);
     }
 
     // A pass plans every pair with each move checked against the moves before it, so the next pass normally finds

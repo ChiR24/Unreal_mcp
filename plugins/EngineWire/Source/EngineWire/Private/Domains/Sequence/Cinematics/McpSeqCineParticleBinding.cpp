@@ -88,20 +88,9 @@ FGuid ResolveParticleComponentBinding(ULevelSequence *Sequence,
   }
   if (!Component) return FGuid();
 
-  const FGuid ComponentGuid =
-      MovieScene->AddPossessable(Component->GetName(), Component->GetClass());
-  if (!ComponentGuid.IsValid()) return FGuid();
-  if (FMovieScenePossessable *ComponentPossessable =
-          MovieScene->FindPossessable(ComponentGuid)) {
-#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 1
-    ComponentPossessable->SetParent(ActorGuid, MovieScene);
-#else
-    ComponentPossessable->SetParent(ActorGuid);
-#endif
-  }
   // The reference is relative to the owning actor, so a default-subobject name
   // ("NiagaraComponent0") resolves on the placed or spawned instance as well.
-  Sequence->BindPossessableObject(ComponentGuid, *Component, Context);
+  const FGuid ComponentGuid = BindComponentUnderActor(Sequence, ActorGuid, Component, Context);
   MovieScene->Modify();
   OutDetails->SetStringField(TEXT("bindingResolvedBy"), ResolvedBy);
   OutDetails->SetStringField(TEXT("boundComponent"), Component->GetName());

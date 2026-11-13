@@ -1,4 +1,5 @@
 #include "Domains/Blueprint/McpBPActionContext.h"
+#include "Foundation/Blueprint/McpBlueprintUtils.h"
 #include "Foundation/BridgeHelpers/Responses/McpJsonFields.h"
 #include "Foundation/HandlerUtils/McpHandlerUtils.h"
 
@@ -14,13 +15,12 @@ namespace {
 // The user pins of a function's entry node (its inputs) or return node (its outputs), in order.
 FString ExistingFunctionPinNames(const UEdGraph *Graph, bool bInputs) {
   TArray<FString> Names;
-  for (const UEdGraphNode *Node : Graph->Nodes) {
-    const UK2Node_EditablePinBase *Terminator = Cast<UK2Node_EditablePinBase>(Node);
-    if (Terminator && (bInputs ? Node->IsA<UK2Node_FunctionEntry>() : Node->IsA<UK2Node_FunctionResult>())) {
-      for (const TSharedPtr<FUserPinInfo> &Pin : Terminator->UserDefinedPins) {
-        Names.Add(Pin.IsValid() ? Pin->PinName.ToString() : FString());
-      }
-      break;
+  const UK2Node_EditablePinBase *Terminator =
+      bInputs ? static_cast<const UK2Node_EditablePinBase *>(McpBlueprintUtils::FirstNodeOfClass<UK2Node_FunctionEntry>(Graph))
+              : McpBlueprintUtils::FirstNodeOfClass<UK2Node_FunctionResult>(Graph);
+  if (Terminator) {
+    for (const TSharedPtr<FUserPinInfo> &Pin : Terminator->UserDefinedPins) {
+      Names.Add(Pin.IsValid() ? Pin->PinName.ToString() : FString());
     }
   }
   return FString::Join(Names, TEXT(", "));
@@ -41,20 +41,14 @@ FString RequestedFunctionPinNames(const TSharedPtr<FJsonObject> &Payload, const 
 } // namespace
 
 FString FunctionTerminatorGuid(const UEdGraph *Graph, bool bEntry) {
-  const UClass *Wanted = bEntry ? UK2Node_FunctionEntry::StaticClass() : UK2Node_FunctionResult::StaticClass();
-  for (const UEdGraphNode *Node : Graph->Nodes) {
-    if (Node && Node->IsA(Wanted)) {
-      return Node->NodeGuid.ToString();
-    }
-  }
-  return FString();
+  const UEdGraphNode *Node =
+      bEntry ? static_cast<const UEdGraphNode *>(McpBlueprintUtils::FirstNodeOfClass<UK2Node_FunctionEntry>(Graph))
+             : McpBlueprintUtils::FirstNodeOfClass<UK2Node_FunctionResult>(Graph);
+  return Node ? Node->NodeGuid.ToString() : FString();
 }
 
 FString DescribeFunctionSignatureMismatch(const UEdGraph *Graph, const TSharedPtr<FJsonObject> &Payload) {
-  const UK2Node_FunctionEntry *Entry = nullptr;
-  for (const UEdGraphNode *Node : Graph->Nodes) {
-    Entry = Entry ? Entry : Cast<UK2Node_FunctionEntry>(Node);
-  }
+  const UK2Node_FunctionEntry *Entry = McpBlueprintUtils::FirstNodeOfClass<UK2Node_FunctionEntry>(Graph);
   bool bPure = false;
   if (Entry && Payload->TryGetBoolField(TEXT("pure"), bPure) &&
       bPure != ((Entry->GetExtraFlags() & FUNC_BlueprintPure) != 0)) {

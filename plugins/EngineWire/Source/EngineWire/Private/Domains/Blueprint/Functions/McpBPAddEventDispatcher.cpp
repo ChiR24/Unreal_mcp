@@ -18,14 +18,6 @@
 
 namespace McpBlueprintHandlers {
 namespace {
-UK2Node_FunctionEntry *DispatcherEntry(const UEdGraph *Graph) {
-  TArray<UK2Node_FunctionEntry *> Entries;
-  if (Graph) {
-    Graph->GetNodesOfClass(Entries);
-  }
-  return Entries.Num() > 0 ? Entries[0] : nullptr;
-}
-
 // A dispatcher's parameters: [{name, type}], every type resolved before anything changes.
 bool DispatcherPins(const TSharedPtr<FJsonObject> &Payload,
                     TArray<TSharedPtr<FJsonObject>> &OutPins, FString &OutError) {
@@ -100,13 +92,13 @@ bool HandleBlueprintAddEventDispatcher(const FBlueprintActionContext &Context) {
     Schema->MarkFunctionEntryAsEditable(Graph, true);
     Blueprint->DelegateSignatureGraphs.Add(Graph);
     for (const TSharedPtr<FJsonObject> &Pin : Pins) {
-      FEngineWire_AddUserDefinedPin(DispatcherEntry(Graph), GetJsonStringField(Pin, TEXT("name")),
+      FEngineWire_AddUserDefinedPin(McpBlueprintUtils::FirstNodeOfClass<UK2Node_FunctionEntry>(Graph), GetJsonStringField(Pin, TEXT("name")),
                                              GetJsonStringField(Pin, TEXT("type")), EGPD_Output);
     }
     FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(Blueprint);
     McpSafeCompileBlueprint(Blueprint);
   }
-  const UK2Node_FunctionEntry *Entry = DispatcherEntry(Graph);
+  const UK2Node_FunctionEntry *Entry = McpBlueprintUtils::FirstNodeOfClass<UK2Node_FunctionEntry>(Graph);
   TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
   Result->SetStringField(TEXT("dispatcherName"), Name);
   Result->SetBoolField(TEXT("reusedExisting"), bReused);

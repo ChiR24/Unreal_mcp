@@ -1,4 +1,5 @@
 #include "Domains/BlueprintGraph/Code/McpGraphCodeWrite.h"
+#include "Foundation/BridgeHelpers/Blueprints/McpStandardMacros.h"
 
 #include "BlueprintActionFilter.h"
 #include "BlueprintNodeSpawner.h"
@@ -17,7 +18,7 @@ namespace WriteNodeParts
 // A loop or gate the action menu does not name: the StandardMacros graph of that title.
 UEdGraphNode* StandardMacro(UEdGraph* Graph, const FString& TitleKey)
 {
-    UBlueprint* Macros = LoadObject<UBlueprint>(nullptr, TEXT("/Engine/EditorBlueprintResources/StandardMacros.StandardMacros"));
+    UBlueprint* Macros = McpStandardMacros();
     UEdGraph* Macro = nullptr;
     if (!Macros)
     {

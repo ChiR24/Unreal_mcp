@@ -40,10 +40,6 @@ bool HandleRenderReflectionResolutionAction(
     const TSharedPtr<FJsonObject>& Payload,
     TSharedPtr<FMcpBridgeWebSocket> RequestingSocket);
 
-// The level's single reflection-capture actor, or nullptr with a typed error
-// (AMBIGUOUS when several exist, ACTOR_NOT_FOUND when none).
-AActor* FindSoleReflectionCaptureActor(FString& OutError, FString& OutErrorCode);
-
 bool HandleRenderSceneCaptureAction(
     UEngineWireSubsystem* Subsystem,
     const FString& RequestId,

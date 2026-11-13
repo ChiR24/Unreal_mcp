@@ -1,7 +1,4 @@
-// Sequence metadata WRITE. Lives in its own subdirectory because both CI
-// ceilings are already met next door: McpSeqAssetLibrary.cpp
-// (which owns the matching read) sits at the 250 pure-line limit, and
-// Private/Domains/Sequence/ is at the 25-file folder limit.
+// Sequence metadata WRITE (sequence_set_metadata); McpSeqGetMetadata.cpp beside it holds the read.
 
 #include "Core/Compatibility/McpVersionCompatibility.h"
 #include "Foundation/BridgeHelpers/Blueprints/McpBPPaths.h"
@@ -13,18 +10,15 @@
 bool UEngineWireSubsystem::HandleSequenceSetMetadata(
     const FString &RequestId, const TSharedPtr<FJsonObject> &Payload,
     TSharedPtr<FMcpBridgeWebSocket> Socket) {
-  TSharedPtr<FJsonObject> LocalPayload =
-      Payload.IsValid() ? Payload : McpHandlerUtils::CreateResultObject();
-  FString SeqPath = McpSequence::ResolvePathOrReply(this, RequestId, Socket, LocalPayload, TEXT("sequence_set_metadata"));
+  FString SeqPath = McpSequence::ResolvePathOrReply(this, RequestId, Socket, Payload, TEXT("sequence_set_metadata"));
   if (SeqPath.IsEmpty()) {
     return true;
   }
-  // Accept the documented `metadata` object (or `tags`) and the single-pair
-  // `key`/`value` spelling that callers reach for first.
+  // Accept the documented `metadata` object and the single-pair `key`/`value`
+  // spelling that callers reach for first.
   TArray<TPair<FString, FString>> Pending;
   const TSharedPtr<FJsonObject> *MetadataObj = nullptr;
-  if ((LocalPayload->TryGetObjectField(TEXT("metadata"), MetadataObj) ||
-       LocalPayload->TryGetObjectField(TEXT("tags"), MetadataObj)) &&
+  if (Payload->TryGetObjectField(TEXT("metadata"), MetadataObj) &&
       MetadataObj && (*MetadataObj).IsValid()) {
     for (const auto &Pair : (*MetadataObj)->Values) {
       FString MetaValue;
@@ -37,8 +31,8 @@ bool UEngineWireSubsystem::HandleSequenceSetMetadata(
   }
   FString Key;
   FString SingleValue;
-  if (LocalPayload->TryGetStringField(TEXT("key"), Key) && !Key.IsEmpty() &&
-      McpJsonScalarToString(LocalPayload->TryGetField(TEXT("value")), SingleValue)) {
+  if (Payload->TryGetStringField(TEXT("key"), Key) && !Key.IsEmpty() &&
+      McpJsonScalarToString(Payload->TryGetField(TEXT("value")), SingleValue)) {
     Pending.Emplace(Key, SingleValue);
   }
   if (Pending.Num() == 0) {
@@ -54,18 +48,18 @@ bool UEngineWireSubsystem::HandleSequenceSetMetadata(
                            nullptr, TEXT("INVALID_SEQUENCE"));
     return true;
   }
-  TArray<TSharedPtr<FJsonValue>> WrittenKeys;
+  TArray<FString> WrittenKeys;
   for (const TPair<FString, FString> &Pair : Pending) {
     // Package metadata (UMetaData before 5.6, FMetaData after) via the
     // version-neutral editor library; get_metadata reads the same store.
     UEditorAssetLibrary::SetMetadataTag(SeqObj, FName(*Pair.Key), Pair.Value);
-    WrittenKeys.Add(MakeShared<FJsonValueString>(Pair.Key));
+    WrittenKeys.Add(Pair.Key);
   }
   SeqObj->MarkPackageDirty();
   const bool bSaved = McpSafeOperations::McpSafeAssetSave(SeqObj);
   TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
   Resp->SetStringField(TEXT("path"), SeqPath);
-  Resp->SetArrayField(TEXT("metadataSet"), WrittenKeys);
+  Resp->SetArrayField(TEXT("metadataSet"), McpHandlerUtils::ToJsonStringArray(WrittenKeys));
   Resp->SetObjectField(TEXT("metadata"),
                        McpSequenceMetadata::BuildMetadataObject(SeqObj));
   Resp->SetBoolField(TEXT("saved"), bSaved);

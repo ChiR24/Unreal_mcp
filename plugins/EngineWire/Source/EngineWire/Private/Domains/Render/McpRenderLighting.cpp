@@ -45,7 +45,7 @@ bool HandleRenderLightingAction(
 
     if (SubAction == TEXT("configure_lightmass_settings"))
     {
-        UWorld* World = GetRenderWorld();
+        UWorld* World = McpHandlerUtils::GetPlayOrEditorWorld();
         AWorldSettings* WorldSettings = World ? World->GetWorldSettings() : nullptr;
         if (!WorldSettings)
         {

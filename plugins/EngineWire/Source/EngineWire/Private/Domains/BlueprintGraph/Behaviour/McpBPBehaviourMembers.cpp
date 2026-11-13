@@ -114,12 +114,8 @@ bool PlanMembers(UBlueprint* Blueprint, const TSharedPtr<FJsonObject>& Recipe, F
         {
             return Fail(TEXT("TYPE_RESOLUTION_FAILED"), FString::Printf(TEXT("%s %s: %s"), *Where, *Name, *Type.OutError));
         }
-        // A Blueprint "Float" is a double when the editor makes it and a float when the resolver does.
-        FEdGraphPinType Have = Existing != INDEX_NONE ? Blueprint->NewVariables[Existing].VarType : Type.PinType;
-        FEdGraphPinType Want = Type.PinType;
-        Have.PinSubCategory = Have.PinCategory == UEdGraphSchema_K2::PC_Real ? FName() : Have.PinSubCategory;
-        Want.PinSubCategory = Want.PinCategory == UEdGraphSchema_K2::PC_Real ? FName() : Want.PinSubCategory;
-        if (Have != Want)
+        const FEdGraphPinType& Have = Existing != INDEX_NONE ? Blueprint->NewVariables[Existing].VarType : Type.PinType;
+        if (!McpBlueprintUtils::SamePinTypeLoosely(Have, Type.PinType))
         {
             return Fail(TEXT("VARIABLE_TYPE_CONFLICT"),
                         FString::Printf(TEXT("%s: %s already exists as %s; the recipe declares it %s."), *Where, *Name,
@@ -134,8 +130,7 @@ bool PlanMembers(UBlueprint* Blueprint, const TSharedPtr<FJsonObject>& Recipe, F
     {
         const FString Where = FString::Printf(TEXT("dispatchers[%d]"), Index);
         const FString Name = GetJsonStringField(Dispatchers[Index], TEXT("name"));
-        const bool bExists = Blueprint->DelegateSignatureGraphs.ContainsByPredicate(
-            [&Name](const TObjectPtr<UEdGraph>& Graph) { return Graph && Graph->GetFName() == FName(*Name); });
+        const bool bExists = McpBlueprintUtils::FindGraphNamed(Blueprint->DelegateSignatureGraphs, Name) != nullptr;
         if (!CheckKeys(Dispatchers[Index], {TEXT("name"), TEXT("parameters")}, Where, OutError) ||
             !Claim(Name, Where, !bExists) || !MemberTypesResolve(Dispatchers[Index], TEXT("parameters"), Where, OutError, OutCode))
         {
@@ -176,8 +171,7 @@ bool PlanMembers(UBlueprint* Blueprint, const TSharedPtr<FJsonObject>& Recipe, F
         const TSharedPtr<FJsonObject>& Function = Functions[Index];
         const FString Where = FString::Printf(TEXT("functions[%d]"), Index);
         const FString Name = GetJsonStringField(Function, TEXT("functionName"));
-        const TObjectPtr<UEdGraph>* Existing = Blueprint->FunctionGraphs.FindByPredicate(
-            [&Name](const TObjectPtr<UEdGraph>& Graph) { return Graph && Graph->GetFName() == FName(*Name); });
+        const UEdGraph* Existing = McpBlueprintUtils::FindGraphNamed(Blueprint->FunctionGraphs, Name);
         TArray<TSharedPtr<FJsonObject>> Body;
         if (!CheckKeys(Function, {TEXT("id"), TEXT("functionName"), TEXT("inputs"), TEXT("outputs"), TEXT("pure"),
                                   TEXT("isPublic"), TEXT("operations")}, Where, OutError) ||
@@ -187,7 +181,7 @@ bool PlanMembers(UBlueprint* Blueprint, const TSharedPtr<FJsonObject>& Recipe, F
         {
             return false;
         }
-        if (Existing && !(Plan.bReplace && IsFunctionOwnedBy(*Existing, Plan.Tag)))
+        if (Existing && !(Plan.bReplace && IsFunctionOwnedBy(Existing, Plan.Tag)))
         {
             return Fail(TEXT("FUNCTION_EXISTS"), FString::Printf(TEXT("%s: function %s already exists and is not this "
                                                                       "behaviour's to replace."), *Where, *Name));

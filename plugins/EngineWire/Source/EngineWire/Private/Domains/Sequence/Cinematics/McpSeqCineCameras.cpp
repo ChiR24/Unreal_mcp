@@ -180,19 +180,21 @@ bool HandleConfigureCameraSettings(const TSharedPtr<FJsonObject> &Params,
                            TEXT("camera actor not found"), TEXT("ACTOR_NOT_FOUND"));
     return true;
   }
-  OutResult = MakeResult(true, TEXT("configure_camera_settings"),
-                         TEXT("Camera settings configured"));
-  // Modify() ran after the writes with no transaction open, so undo restored nothing.
-  FMcpScopedEditorTransaction Transaction(FText::FromString(TEXT("Configure Camera Settings")),
-                                          EMcpMutationDurability::EditorStateOnly, TArray<UObject *>());
-  const int32 AppliedCount = ApplyCameraSettings(Actor, Params, OutResult);
-  if (AppliedCount == INDEX_NONE) {
+  // Refused before the undo step opens: inside it, the refusal left an empty step.
+  if (!FindComponentByClassFragment(Actor, TEXT("CineCameraComponent"))) {
     OutResult = MakeResult(false, TEXT("configure_camera_settings"),
                            TEXT("Actor has no CineCameraComponent"),
                            TEXT("CAMERA_COMPONENT_NOT_FOUND"));
     return true;
   }
-  if (AppliedCount == 0) {
+  OutResult = MakeResult(true, TEXT("configure_camera_settings"),
+                         TEXT("Camera settings configured"));
+  // Modify() ran after the writes with no transaction open, so undo restored nothing.
+  FMcpScopedEditorTransaction Transaction(FText::FromString(TEXT("Configure Camera Settings")),
+                                          EMcpMutationDurability::EditorStateOnly, TArray<UObject *>());
+  if (ApplyCameraSettings(Actor, Params, OutResult) == 0) {
+    // Known only once tried; nothing changed, so the step goes.
+    Transaction.Cancel();
     OutResult = MakeResult(false, TEXT("configure_camera_settings"),
                            TEXT("No valid camera settings were provided"),
                            TEXT("INVALID_ARGUMENT"));

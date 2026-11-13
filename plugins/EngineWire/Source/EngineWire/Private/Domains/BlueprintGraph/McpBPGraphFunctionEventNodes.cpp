@@ -51,6 +51,12 @@ void ApplyOutputClass(UK2Node_CallFunction& Node, const UFunction& Function, UCl
     }
 }
 
+bool IsCallFunctionType(const FString& NodeType)
+{
+    return NodeType == TEXT("CallFunction") || NodeType == TEXT("K2Node_CallFunction") ||
+           NodeType == TEXT("FunctionCall");
+}
+
 static bool TryCreateFunctionNode(
     FActionContext& Context,
     const FString& NodeType,
@@ -64,10 +70,7 @@ static bool TryCreateFunctionNode(
     // and bind the reflected operator function instead.
     const bool bPromotable = NodeType == TEXT("PromotableOperator") ||
                              NodeType == TEXT("K2Node_PromotableOperator");
-    if (NodeType != TEXT("CallFunction") &&
-        NodeType != TEXT("K2Node_CallFunction") &&
-        NodeType != TEXT("FunctionCall") &&
-        !bPromotable)
+    if (!IsCallFunctionType(NodeType) && !bPromotable)
     {
         return false;
     }

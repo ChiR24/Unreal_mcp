@@ -109,31 +109,12 @@ FString ResolveBlueprintRequestedPath(const TSharedPtr<FJsonObject> &LocalPayloa
   // Order matters: `blueprintPath` must win over `name`. Several actions
   // (e.g. add_event) carry a `name` field that is NOT the blueprint path
   // (it is the event/function name), so resolving `name` first would misload
-  // the blueprint. `requestedPath` is still preferred when explicitly given,
-  // with `blueprintPath` next and `name` only
-  // as a last-resort fallback.
-  const TCHAR *Keys[] = {TEXT("requestedPath"), TEXT("blueprintPath"), TEXT("name")};
+  // the blueprint. `name` is the last resort: create and ensure_exists declare it.
+  const TCHAR *Keys[] = {TEXT("blueprintPath"), TEXT("name")};
   for (const TCHAR *Key : Keys) {
     if (LocalPayload->TryGetStringField(Key, Req) && !Req.TrimStartAndEnd().IsEmpty()) {
       FString Norm;
       return FindBlueprintNormalizedPath(Req, Norm) && !Norm.TrimStartAndEnd().IsEmpty() ? Norm : Req;
-    }
-  }
-  const TArray<TSharedPtr<FJsonValue>> *CandidateArray = nullptr;
-  const TCHAR *ArrayKeys[] = {TEXT("blueprintCandidates"), TEXT("candidates")};
-  for (const TCHAR *Key : ArrayKeys) {
-    if (LocalPayload->TryGetArrayField(Key, CandidateArray) && CandidateArray && CandidateArray->Num() > 0) {
-      for (const TSharedPtr<FJsonValue> &V : *CandidateArray) {
-        if (!V.IsValid() || V->Type != EJson::String) {
-          continue;
-        }
-        FString Candidate = V->AsString();
-        if (Candidate.TrimStartAndEnd().IsEmpty()) {
-          continue;
-        }
-        FString Norm;
-        return FindBlueprintNormalizedPath(Candidate, Norm) && !Norm.TrimStartAndEnd().IsEmpty() ? Norm : Candidate;
-      }
     }
   }
   return FString();
@@ -143,23 +124,6 @@ UBlueprint *ResolveScsBlueprint(const TSharedPtr<FJsonObject> &Payload) {
   // blueprintPath wins over name for the same reason as in
   // ResolveBlueprintRequestedPath: `name` can be a component or member name.
   const FString BlueprintPath = McpGetFirstStringField(Payload, {TEXT("blueprintPath"), TEXT("name")});
-  if (!BlueprintPath.IsEmpty()) {
-    return LoadObject<UBlueprint>(nullptr, *BlueprintPath);
-  }
-  const TArray<TSharedPtr<FJsonValue>> *Candidates = nullptr;
-  if (Payload.IsValid() && Payload->TryGetArrayField(TEXT("blueprintCandidates"), Candidates) &&
-      Candidates && Candidates->Num() > 0) {
-    for (const TSharedPtr<FJsonValue> &Candidate : *Candidates) {
-      if (Candidate.IsValid() && Candidate->Type == EJson::String) {
-        FString CandidatePath = Candidate->AsString();
-        if (!CandidatePath.IsEmpty()) {
-          if (UBlueprint *BP = LoadObject<UBlueprint>(nullptr, *CandidatePath)) {
-            return BP;
-          }
-        }
-      }
-    }
-  }
-  return nullptr;
+  return BlueprintPath.IsEmpty() ? nullptr : LoadObject<UBlueprint>(nullptr, *BlueprintPath);
 }
 } // namespace McpBlueprintHandlers

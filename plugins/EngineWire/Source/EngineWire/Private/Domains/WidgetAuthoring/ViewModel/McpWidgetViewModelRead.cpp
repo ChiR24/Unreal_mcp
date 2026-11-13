@@ -8,6 +8,7 @@
 #include "Core/Compatibility/McpVersionCompatibility.h"
 #include "Dom/JsonObject.h"
 #include "Domains/WidgetAuthoring/Support/McpWidgetBPLoading.h"
+#include "Foundation/BridgeHelpers/Reflection/McpClassResolve.h"
 #include "Engine/Blueprint.h"
 #include "EngineWireSubsystem.h"
 #include "Foundation/BridgeHelpers/Assets/McpAssetResolve.h"
@@ -88,10 +89,9 @@ TSharedPtr<FJsonValue> ClassRow(const UClass* Class, const FString& AssetPath)
 
 bool IsStaleClass(const UClass* Class)
 {
-	static const TCHAR* const Prefixes[] = {TEXT("SKEL_"), TEXT("REINST_"), TEXT("TRASH_"), TEXT("HOTRELOADED_")};
 	const FString Name = Class->GetName();
-	return Class->HasAnyClassFlags(CLASS_NewerVersionExists | CLASS_Deprecated) ||
-		Algo::AnyOf(Prefixes, [&Name](const TCHAR* Prefix) { return Name.StartsWith(Prefix); });
+	return Class->HasAnyClassFlags(CLASS_Deprecated) || McpIsCompileDebrisClass(Class) || Name.StartsWith(TEXT("TRASH_")) ||
+		Name.StartsWith(TEXT("HOTRELOADED_"));
 }
 } // namespace
 

@@ -26,9 +26,9 @@ bool PrepareModifyScsPayload(const FBlueprintActionContext &Context,
         !SingleComponent.TrimStartAndEnd().IsEmpty()) {
       TSharedPtr<FJsonObject> Op = MakeShared<FJsonObject>(*LocalPayload);
       static const TCHAR *const BatchKeys[] = {
-          TEXT("blueprintPath"), TEXT("name"),   TEXT("blueprintCandidates"),
-          TEXT("compile"),       TEXT("save"),   TEXT("applyAndSave"),
-          TEXT("action"),        TEXT("edit")};
+          TEXT("blueprintPath"), TEXT("name"),   TEXT("compile"),
+          TEXT("save"),          TEXT("applyAndSave"), TEXT("action"),
+          TEXT("edit")};
       for (const TCHAR *Key : BatchKeys) {
         Op->RemoveField(Key);
       }

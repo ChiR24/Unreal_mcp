@@ -63,5 +63,6 @@ struct FBlueprintActionContext {
     return McpBlueprintHandlers::ResolveScsBlueprint(Payload);                \
   }
 
-#include "Domains/Blueprint/McpBPDecls.h"
 } // namespace McpBlueprintHandlers
+
+#include "Domains/Blueprint/McpBPDecls.h"

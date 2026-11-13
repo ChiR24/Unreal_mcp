@@ -1,4 +1,5 @@
 #include "Domains/BlueprintGraph/Code/McpGraphCode.h"
+#include "Foundation/BridgeHelpers/Blueprints/McpStandardMacros.h"
 
 #include "BlueprintActionDatabase.h"
 #include "BlueprintActionFilter.h"
@@ -51,7 +52,7 @@ EKind KindOf(const UK2Node* Node)
     }
     const UK2Node_MacroInstance* Macro = Cast<UK2Node_MacroInstance>(Node);
     const UEdGraph* MacroGraph = Macro ? Macro->GetMacroGraph() : nullptr;
-    if (MacroGraph && MacroGraph->GetPackage()->GetName() == TEXT("/Engine/EditorBlueprintResources/StandardMacros"))
+    if (McpIsStandardMacro(MacroGraph))
     {
         const TPair<const TCHAR*, EKind> Loops[] = {{TEXT("ForLoop"), EKind::ForLoop}, {TEXT("ForLoopWithBreak"), EKind::ForLoopBreak},
                                                     {TEXT("ForEachLoop"), EKind::ForEach}, {TEXT("ForEachLoopWithBreak"), EKind::ForEachBreak},

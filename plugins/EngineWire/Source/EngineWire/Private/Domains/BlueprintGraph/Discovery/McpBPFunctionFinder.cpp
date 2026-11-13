@@ -115,8 +115,7 @@ void ScoreFoundFunction(FFoundFunction& Found, const TArray<FString>& Wanted)
 bool IsFinderClass(const UClass& Class)
 {
     const FString Name = Class.GetName();
-    return !Class.HasAnyClassFlags(CLASS_CompiledFromBlueprint | CLASS_Deprecated | CLASS_NewerVersionExists | CLASS_Interface) &&
-           !Name.StartsWith(TEXT("SKEL_")) && !Name.StartsWith(TEXT("REINST_")) && !Name.StartsWith(TEXT("TRASHCLASS_")) &&
+    return !Class.HasAnyClassFlags(CLASS_CompiledFromBlueprint | CLASS_Deprecated | CLASS_Interface) && !McpIsCompileDebrisClass(&Class) &&
            !Name.StartsWith(TEXT("HOTRELOADED_")) && !Class.GetOutermost()->HasAnyPackageFlags(PKG_EditorOnly);
 }
 

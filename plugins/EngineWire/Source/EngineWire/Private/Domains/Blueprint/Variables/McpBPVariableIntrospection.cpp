@@ -27,7 +27,7 @@ void FEngineWire_AppendPinsJson(
   }
 }
 
-bool FEngineWire_CollectVariableMetadata(
+static bool FEngineWire_CollectVariableMetadata(
     const UBlueprint *Blueprint, const FBPVariableDescription &VarDesc,
     TSharedPtr<FJsonObject> &OutMetadata) {
   OutMetadata.Reset();
@@ -56,25 +56,6 @@ bool FEngineWire_CollectVariableMetadata(
   return false;
 }
 
-FString
-FEngineWire_DescribePropertyType(const FProperty *Property) {
-  if (!Property) {
-    return FString();
-  }
-
-  // Convert property to pin type for Blueprint-style type string
-  FEdGraphPinType PinType;
-  if (const UEdGraphSchema_K2 *Schema = GetDefault<UEdGraphSchema_K2>()) {
-    if (Schema->ConvertPropertyToPinType(Property, PinType)) {
-      return McpBlueprintUtils::DescribePinType(PinType);
-    }
-  }
-
-  // Fallback to C++ style if conversion fails
-  FString ExtendedType;
-  const FString BaseType = Property->GetCPPType(&ExtendedType);
-  return ExtendedType.IsEmpty() ? BaseType : BaseType + ExtendedType;
-}
 TSharedPtr<FJsonObject>
 FEngineWire_BuildVariableJson(const UBlueprint *Blueprint,
                                        const FBPVariableDescription &VarDesc) {

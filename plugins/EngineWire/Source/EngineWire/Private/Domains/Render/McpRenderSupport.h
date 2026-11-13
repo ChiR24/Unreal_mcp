@@ -20,16 +20,11 @@
 
 namespace McpRenderHandlers
 {
-inline UWorld* GetRenderWorld()
-{
-    return McpHandlerUtils::GetPlayOrEditorWorld();
-}
-
 // The render world actor a reference names by label, name or path; a path-restricted caller finds only those in a
 // level inside its prefixes.
 inline AActor* FindRenderActor(const FString& Reference)
 {
-    return FindActorByNameInWorldForMcp(GetRenderWorld(), Reference, true);
+    return FindActorByNameInWorldForMcp(McpHandlerUtils::GetPlayOrEditorWorld(), Reference, true);
 }
 
 // Writes FPostProcessSettings fields from JSON (reflection; override flags set). Handlers write a copy of the
@@ -134,6 +129,47 @@ inline bool ApplyDeclaredExposureFields(FPostProcessSettings& Target, const TSha
         ApplyPostProcessSettings(Target, Fields, Applied, Unsupported, Error);
 }
 
+// create_* of a reflection or scene capture actor. The name is actorName, else name (the schema's spelling); an actor
+// of another class under it is refused, one of TActor answered as already there, else a new one is spawned at
+// location/rotation and returned for the caller to configure and answer. Null after a reply. Noun names the kind in
+// those replies ("Reflection actor", "Scene capture actor").
+template <typename TActor>
+TActor* SpawnNamedRenderActor(UEngineWireSubsystem* Subsystem, const FString& RequestId, const FString& SubAction,
+                              const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> Socket, const FString& Noun)
+{
+    const FString Name = McpGetFirstStringField(Payload, {TEXT("actorName"), TEXT("name")});
+    if (Name.IsEmpty())
+    {
+        Subsystem->SendAutomationError(Socket, RequestId, TEXT("name (or actorName) is required."), TEXT("INVALID_ARGUMENT"));
+        return nullptr;
+    }
+    if (AActor* Existing = FindRenderActor(Name))
+    {
+        // An actor of another class under the name answered "already exists" as if it were the actor asked for.
+        if (!Existing->IsA<TActor>())
+        {
+            Subsystem->SendAutomationError(Socket, RequestId,
+                FString::Printf(TEXT("An actor named %s already exists and is a %s, not a %s; pick another name. Nothing was created."),
+                    *Name, *Existing->GetClass()->GetName(), *TActor::StaticClass()->GetName()),
+                TEXT("NAME_TAKEN"));
+            return nullptr;
+        }
+        TSharedPtr<FJsonObject> Result = MakeRenderResult(SubAction);
+        Result->SetBoolField(TEXT("alreadyExists"), true);
+        McpHandlerUtils::AddVerification(Result, Existing);
+        Subsystem->SendAutomationResponse(Socket, RequestId, true, Noun + TEXT(" already exists."), Result);
+        return nullptr;
+    }
+    TActor* Actor = SpawnActorInActiveWorld<TActor>(TActor::StaticClass(),
+        ExtractVectorField(Payload, TEXT("location"), FVector::ZeroVector),
+        ExtractRotatorField(Payload, TEXT("rotation"), FRotator::ZeroRotator), Name);
+    if (!Actor)
+    {
+        Subsystem->SendAutomationError(Socket, RequestId, FString::Printf(TEXT("Failed to spawn %s."), *Noun.ToLower()), TEXT("SPAWN_FAILED"));
+    }
+    return Actor;
+}
+
 // The volume actorName names, else the level's one unbound volume, else a new unbound one under the asked name (a
 // level without one gets one); null after replying with the resolver's refusal, which always names its reason.
 inline APostProcessVolume* RequirePostProcessVolume(
@@ -144,7 +180,7 @@ inline APostProcessVolume* RequirePostProcessVolume(
 {
     FString ResolveError;
     FString ResolveErrorCode;
-    APostProcessVolume* Volume = McpResolvePostProcessVolume(GetRenderWorld(), Payload, true, ResolveError, ResolveErrorCode);
+    APostProcessVolume* Volume = McpResolvePostProcessVolume(McpHandlerUtils::GetPlayOrEditorWorld(), Payload, true, ResolveError, ResolveErrorCode);
     if (!Volume)
     {
         Subsystem->SendAutomationError(Socket, RequestId, ResolveError, ResolveErrorCode);
@@ -153,50 +189,46 @@ inline APostProcessVolume* RequirePostProcessVolume(
     return Volume;
 }
 
-// Scene-capture actions declare an optional actorName; when it is omitted and
-// the level holds exactly one scene capture actor, that actor is the target.
-// More than one is reported as AMBIGUOUS with the candidate labels so the
-// caller can pick; none is reported as ACTOR_NOT_FOUND.
-inline AActor* FindSoleSceneCaptureActor(FString& OutError, FString& OutErrorCode)
+// For a request that names no actor: the level's one actor IsWanted accepts and the request may touch. Several answer
+// AMBIGUOUS listing each as 'Label (Name)', none ACTOR_NOT_FOUND with NotFound; Kind names them ("scene capture").
+template <typename TWanted>
+AActor* FindSoleRenderActor(TWanted IsWanted, const TCHAR* Kind, const TCHAR* NotFound, FString& OutError, FString& OutErrorCode)
 {
     OutError.Reset();
     OutErrorCode.Reset();
-    UWorld* World = GetRenderWorld();
+    UWorld* World = McpHandlerUtils::GetPlayOrEditorWorld();
     if (!World)
     {
         OutError = TEXT("No valid world available.");
         OutErrorCode = TEXT("NO_WORLD");
         return nullptr;
     }
-    TArray<AActor*> Captures;
+    TArray<AActor*> Found;
     for (TActorIterator<AActor> It(World); It; ++It)
     {
-        AActor* Actor = *It;
         // The request named no actor: a path-restricted caller chooses among those in a level inside its prefixes.
-        if (Actor && (Actor->IsA<ASceneCapture2D>() || Actor->IsA<ASceneCaptureCube>()) &&
-            McpCapabilityPrincipal::ActiveRequestPermitsObject(Actor))
+        if (*It && IsWanted(*It) && McpCapabilityPrincipal::ActiveRequestPermitsObject(*It))
         {
-            Captures.Add(Actor);
+            Found.Add(*It);
         }
     }
-    if (Captures.Num() == 1)
+    if (Found.Num() == 1)
     {
-        return Captures[0];
+        return Found[0];
     }
-    if (Captures.Num() > 1)
+    if (Found.Num() > 1)
     {
         TArray<FString> Labels;
-        for (AActor* Actor : Captures)
+        for (AActor* Actor : Found)
         {
             Labels.Add(FString::Printf(TEXT("%s (%s)"), *Actor->GetActorLabel(), *Actor->GetName()));
         }
-        OutError = FString::Printf(
-            TEXT("Multiple scene capture actors found (%d); pass actorName to pick one. Candidates: %s"),
-            Captures.Num(), *FString::Join(Labels, TEXT(", ")));
+        OutError = FString::Printf(TEXT("Multiple %s actors found (%d); pass actorName to pick one. Candidates: %s"),
+                                   Kind, Found.Num(), *FString::Join(Labels, TEXT(", ")));
         OutErrorCode = TEXT("AMBIGUOUS");
         return nullptr;
     }
-    OutError = TEXT("Scene capture actor not found: no SceneCapture2D/SceneCaptureCube in the level (create one with create_scene_capture_2d or pass actorName).");
+    OutError = NotFound;
     OutErrorCode = TEXT("ACTOR_NOT_FOUND");
     return nullptr;
 }

@@ -17,15 +17,6 @@
 // a type error at step 5 left two variables and three nodes for the caller to find.
 namespace McpBlueprintGraphHandlers
 {
-namespace
-{
-bool IsCallFunctionType(const FString& NodeType)
-{
-    return NodeType == TEXT("CallFunction") || NodeType == TEXT("K2Node_CallFunction") ||
-           NodeType == TEXT("FunctionCall");
-}
-}
-
 namespace GraphBatch
 {
 namespace

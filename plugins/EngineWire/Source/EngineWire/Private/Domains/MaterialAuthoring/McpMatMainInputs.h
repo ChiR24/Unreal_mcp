@@ -145,3 +145,21 @@ inline bool McpMaterialInputNamed(const FString& Label, const FString& Wanted)
   return Label.Equals(Wanted, ESearchCase::IgnoreCase) || Plain.Equals(Wanted, ESearchCase::IgnoreCase) ||
          (Shown != NAME_None && Shown.ToString().Equals(Wanted, ESearchCase::IgnoreCase));
 }
+
+// The input of Expression that Name names: by its property name, else by its label as McpMaterialInputNamed matches
+// it (a custom node's or a function call's inputs are no properties). Null on a miss, OutAvailable then listing the
+// labels for the refusal.
+inline FExpressionInput* FindMaterialInputByNameOrLabel(UMaterialExpression* Expression, const FString& Name, FString& OutAvailable)
+{
+  if (FExpressionInput* Input = FindMaterialInputProperty(Expression, Name)) {
+    return Input;
+  }
+  for (int32 Index = 0, Count = McpCountMaterialInputs(Expression); Index < Count && Expression->GetInput(Index); ++Index) {
+    const FString Label = Expression->GetInputName(Index).ToString();
+    if (!Name.IsEmpty() && McpMaterialInputNamed(Label, Name)) {
+      return Expression->GetInput(Index);
+    }
+    OutAvailable += FString::Printf(TEXT("%s%s"), OutAvailable.IsEmpty() ? TEXT("") : TEXT(", "), *Label);
+  }
+  return nullptr;
+}

@@ -163,7 +163,7 @@ void InfiniteWhile(const UEdGraph* Graph, TArray<FFinding>& Out)
     for (const UEdGraphNode* Node : Graph->Nodes)
     {
         const UK2Node_MacroInstance* Macro = Cast<UK2Node_MacroInstance>(Node);
-        const UEdGraphPin* Condition = Macro && Macro->GetMacroGraph() && Macro->GetMacroGraph()->GetName() == TEXT("WhileLoop")
+        const UEdGraphPin* Condition = MacroName(Node) == TEXT("WhileLoop")
             ? Macro->FindPin(TEXT("Condition"), EGPD_Input) : nullptr;
         if (Condition && Condition->LinkedTo.Num() == 0 && Condition->DefaultValue.Equals(TEXT("true"), ESearchCase::IgnoreCase))
         {

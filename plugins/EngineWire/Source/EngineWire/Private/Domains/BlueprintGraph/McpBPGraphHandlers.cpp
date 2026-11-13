@@ -20,8 +20,7 @@ static UFunction* FindUniqueLibraryFunction(const FString& Name)
     for (TObjectIterator<UClass> It; It; ++It)
     {
         if (!It->IsChildOf(UBlueprintFunctionLibrary::StaticClass()) ||
-            It->HasAnyClassFlags(CLASS_NewerVersionExists | CLASS_Deprecated) ||
-            It->GetName().StartsWith(TEXT("SKEL_")))
+            It->HasAnyClassFlags(CLASS_Deprecated) || McpIsCompileDebrisClass(*It))
         {
             continue;
         }
@@ -171,9 +170,7 @@ FString DescribeDeclaringClasses(UClass* Class, const FString& Wanted)
     TArray<UClass*> Declarers;
     for (TObjectIterator<UClass> It; It && Declarers.Num() < 4; ++It)
     {
-        const FString Name = It->GetName();
-        if (*It == Class || It->HasAnyClassFlags(CLASS_NewerVersionExists | CLASS_Deprecated) ||
-            Name.StartsWith(TEXT("SKEL_")) || Name.StartsWith(TEXT("REINST_")) || Name.StartsWith(TEXT("TRASHCLASS_")))
+        if (*It == Class || It->HasAnyClassFlags(CLASS_Deprecated) || McpIsCompileDebrisClass(*It))
         {
             continue;
         }

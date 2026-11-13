@@ -115,12 +115,4 @@ inline bool CommitGASBlueprintEdit(const FGASRequestContext& Context, UBlueprint
     return false;
 }
 
-// A class a Blueprint recompile left behind (REINST_/SKEL_/TRASHCLASS_ or superseded): it carries the
-// real class's property names but the game never loads it.
-inline bool IsCompileDebrisClass(const UClass* Class)
-{
-    const FString ClassName = Class->GetName();
-    return Class->HasAnyClassFlags(CLASS_NewerVersionExists) || ClassName.StartsWith(TEXT("REINST_")) ||
-           ClassName.StartsWith(TEXT("SKEL_")) || ClassName.StartsWith(TEXT("TRASHCLASS_"));
-}
 }

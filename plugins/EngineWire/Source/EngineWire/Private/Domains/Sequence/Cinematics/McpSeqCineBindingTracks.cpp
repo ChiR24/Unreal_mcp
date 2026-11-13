@@ -55,16 +55,7 @@ FGuid BindMeshUnderActor(ULevelSequence *Sequence, const FGuid &ActorGuid, USkel
       return Possessable.GetGuid();
     }
   }
-  const FGuid Guid = MovieScene->AddPossessable(Mesh->GetName(), Mesh->GetClass());
-  if (FMovieScenePossessable *Possessable = MovieScene->FindPossessable(Guid)) {
-#if ENGINE_MINOR_VERSION >= 1
-    Possessable->SetParent(ActorGuid, MovieScene);
-#else
-    Possessable->SetParent(ActorGuid);
-#endif
-  }
-  Sequence->BindPossessableObject(Guid, *Mesh, Mesh->GetOwner());
-  return Guid;
+  return BindComponentUnderActor(Sequence, ActorGuid, Mesh, Mesh->GetOwner());
 }
 
 }

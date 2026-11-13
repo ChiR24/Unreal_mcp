@@ -26,13 +26,8 @@ namespace McpBlueprintBehaviour::Detail
 // types; Float and double count as the same, as for variables), else what differs.
 FString DispatcherSignatureMismatch(UBlueprint* Blueprint, const FString& Name, const TSharedPtr<FJsonObject>& Declared)
 {
-    const TObjectPtr<UEdGraph>* Graph = Blueprint->DelegateSignatureGraphs.FindByPredicate(
-        [&Name](const TObjectPtr<UEdGraph>& Candidate) { return Candidate && Candidate->GetFName() == FName(*Name); });
-    const UK2Node_FunctionEntry* Entry = nullptr;
-    for (int32 Node = 0; Graph && !Entry && Node < (*Graph)->Nodes.Num(); ++Node)
-    {
-        Entry = Cast<UK2Node_FunctionEntry>((*Graph)->Nodes[Node]);
-    }
+    const UK2Node_FunctionEntry* Entry = McpBlueprintUtils::FirstNodeOfClass<UK2Node_FunctionEntry>(
+        McpBlueprintUtils::FindGraphNamed(Blueprint->DelegateSignatureGraphs, Name));
     const TArray<TSharedPtr<FJsonValue>>* Params = nullptr;
     const int32 Want = Declared->TryGetArrayField(TEXT("parameters"), Params) ? Params->Num() : 0;
     if (!Entry || Entry->UserDefinedPins.Num() != Want)
@@ -40,17 +35,12 @@ FString DispatcherSignatureMismatch(UBlueprint* Blueprint, const FString& Name, 
         return FString::Printf(TEXT("dispatcher %s already exists with %d parameter(s); the recipe declares %d."),
                                *Name, Entry ? Entry->UserDefinedPins.Num() : 0, Want);
     }
-    auto Loose = [](FEdGraphPinType Type)
-    {
-        Type.PinSubCategory = Type.PinCategory == UEdGraphSchema_K2::PC_Real ? FName() : Type.PinSubCategory;
-        return Type;
-    };
     for (int32 Index = 0; Index < Want; ++Index)
     {
         const TSharedPtr<FJsonObject> Param = (*Params)[Index]->AsObject();
         const FUserPinInfo& Have = *Entry->UserDefinedPins[Index];
         const McpBlueprintUtils::FTypeResolutionResult Type = McpBlueprintUtils::ResolvePinType(GetJsonStringField(Param, TEXT("type")));
-        if (Have.PinName != FName(*GetJsonStringField(Param, TEXT("name"))) || Loose(Have.PinType) != Loose(Type.PinType))
+        if (Have.PinName != FName(*GetJsonStringField(Param, TEXT("name"))) || !McpBlueprintUtils::SamePinTypeLoosely(Have.PinType, Type.PinType))
         {
             return FString::Printf(TEXT("dispatcher %s already exists and its parameter %d is %s %s; the recipe declares %s %s."),
                                    *Name, Index, *McpBlueprintUtils::DescribePinType(Have.PinType), *Have.PinName.ToString(),

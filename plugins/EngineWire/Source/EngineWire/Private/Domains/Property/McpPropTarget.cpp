@@ -18,9 +18,7 @@ namespace McpPropertyTarget
 bool IsSupersededTarget(const UObject* Object)
 {
   const UClass* Class = Object->GetClass();
-  const FString ClassName = Class->GetName();
-  if (Class->HasAnyClassFlags(CLASS_NewerVersionExists) || ClassName.StartsWith(TEXT("REINST_")) ||
-      ClassName.StartsWith(TEXT("SKEL_")) || ClassName.StartsWith(TEXT("TRASHCLASS_"))) {
+  if (McpIsCompileDebrisClass(Class)) {
     return true;
   }
   // A running game keeps its objects in the transient package (GameInstance, a widget); outside it, a Blueprint object

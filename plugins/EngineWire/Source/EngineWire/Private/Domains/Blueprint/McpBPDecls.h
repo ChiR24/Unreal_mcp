@@ -1,5 +1,9 @@
 #pragma once
 
+#include "Domains/Blueprint/McpBPActionContext.h"
+
+// Declarations shared by the Blueprint domain's files; McpBPActionContext.h includes this header.
+namespace McpBlueprintHandlers {
 FBlueprintActionContext BuildBlueprintActionContext(
     UEngineWireSubsystem &Bridge, const FString &RequestId,
     const FString &Action, const TSharedPtr<FJsonObject> &Payload,
@@ -18,6 +22,8 @@ void FEngineWire_AddUserDefinedPin(UK2Node *Node,
                                             const FString &PinName,
                                             const FString &PinType,
                                             EEdGraphPinDirection Direction);
+// The user-defined function graph named Name, in any case; null when the Blueprint has none.
+UEdGraph *FindFunctionGraph(UBlueprint *Blueprint, const FString &Name);
 UFunction *FEngineWire_ResolveFunction(UBlueprint *Blueprint,
                                                 const FString &FunctionName);
 FProperty *FEngineWire_FindProperty(UBlueprint *Blueprint,
@@ -33,21 +39,10 @@ FName FEngineWire_ResolveMetadataKey(const FString &RawKey);
 void FEngineWire_AppendPinsJson(
     const TArray<TSharedPtr<FUserPinInfo>> &Pins,
     TArray<TSharedPtr<FJsonValue>> &Out);
-bool FEngineWire_CollectVariableMetadata(
-    const UBlueprint *Blueprint, const FBPVariableDescription &VarDesc,
-    TSharedPtr<FJsonObject> &OutMetadata);
 TSharedPtr<FJsonObject> FEngineWire_BuildVariableJson(
     const UBlueprint *Blueprint, const FBPVariableDescription &VarDesc);
-FString FEngineWire_DescribePropertyType(const FProperty *Property);
 TSharedPtr<FJsonObject> FEngineWire_CollectBlueprintDefaults(
     UBlueprint *Blueprint, const TArray<TSharedPtr<FJsonValue>> &Variables);
-void FEngineWire_CollectEventPins(
-    UK2Node *Node, TArray<TSharedPtr<FJsonValue>> &Out);
-TArray<TSharedPtr<FJsonValue>> FEngineWire_CollectBlueprintEvents(
-    UBlueprint *Blueprint);
-TSharedPtr<FJsonObject> FEngineWire_FindNamedEntry(
-    const TArray<TSharedPtr<FJsonValue>> &Array, const FString &FieldName,
-    const FString &DesiredValue);
 
 struct FModifyScsState {
   FString BlueprintPath;
@@ -191,3 +186,4 @@ bool HandleBlueprintStructMakeBreakNodes(const FBlueprintActionContext &Context)
 void SendScsResult(const FBlueprintActionContext &Context, const TSharedPtr<FJsonObject> &Result);
 bool HandleScsAddComponent(const FBlueprintActionContext &Context);
 bool HandleScsGet(const FBlueprintActionContext &Context);
+} // namespace McpBlueprintHandlers

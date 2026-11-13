@@ -174,14 +174,11 @@ static bool GetGraphDetails(FActionContext& Context)
     FString Filter;
     int32 Offset = 0;
     int32 Limit = 0;
-    if (Context.Payload.IsValid())
-    {
-        Context.Payload->TryGetBoolField(TEXT("includePins"), bIncludePins);
-        Context.Payload->TryGetBoolField(TEXT("unusedOnly"), bUnusedOnly);
-        Context.Payload->TryGetStringField(TEXT("filter"), Filter);
-        Context.Payload->TryGetNumberField(TEXT("offset"), Offset);
-        Context.Payload->TryGetNumberField(TEXT("limit"), Limit);
-    }
+    Context.Payload->TryGetBoolField(TEXT("includePins"), bIncludePins);
+    Context.Payload->TryGetBoolField(TEXT("unusedOnly"), bUnusedOnly);
+    Context.Payload->TryGetStringField(TEXT("filter"), Filter);
+    Context.Payload->TryGetNumberField(TEXT("offset"), Offset);
+    Context.Payload->TryGetNumberField(TEXT("limit"), Limit);
 
     TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
     Result->SetStringField(

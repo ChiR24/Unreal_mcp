@@ -15,6 +15,7 @@
 #include "Domains/LevelStructure/McpLevelStructureActions.h"
 
 #include "Domains/BlueprintGraph/McpBPGraphPrivate.h"
+#include "Foundation/BridgeHelpers/Blueprints/McpStandardMacros.h"
 #include "GameFramework/Actor.h"
 #include "K2Node_CallFunction.h"
 #include "K2Node_Event.h"
@@ -168,23 +169,12 @@ bool ApplyLevelBlueprintNodeAlias(UK2Node* Node, const FString& EventName, const
             OutError = TEXT("Macro node needs a macro name (ForEachLoop, DoOnce, Gate, ...).");
             return false;
         }
-        UBlueprint* MacroLibrary = LoadObject<UBlueprint>(
-            nullptr,
-            TEXT("/Engine/EditorBlueprintResources/StandardMacros.StandardMacros"));
-        if (!MacroLibrary)
+        if (!McpStandardMacros())
         {
             OutError = TEXT("Could not load engine StandardMacros library.");
             return false;
         }
-        UEdGraph* MacroGraph = nullptr;
-        for (UEdGraph* Graph : MacroLibrary->MacroGraphs)
-        {
-            if (Graph && Graph->GetName().Equals(FunctionName, ESearchCase::IgnoreCase))
-            {
-                MacroGraph = Graph;
-                break;
-            }
-        }
+        UEdGraph* MacroGraph = McpFindStandardMacro(FunctionName);
         if (!MacroGraph)
         {
             OutError = FString::Printf(TEXT("Macro '%s' not found in StandardMacros library."), *FunctionName);

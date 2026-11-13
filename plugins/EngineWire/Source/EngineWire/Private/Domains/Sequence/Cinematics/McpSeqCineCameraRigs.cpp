@@ -29,6 +29,19 @@ bool ConfigureRig(const TSharedPtr<FJsonObject> &Params, const TCHAR *Action,
         TEXT("RIG_CLASS_MISMATCH"));
     return true;
   }
+  // Whether a setting was sent is known from the payload: a call without one is refused here, before the undo step
+  // and the spawn (it spawned a rig, destroyed it and left an empty step).
+  const auto HasNumber = [&Params](const TCHAR *Field) {
+    double Value = 0.0;
+    return Params->TryGetNumberField(Field, Value) && FMath::IsFinite(Value);
+  };
+  if (bRail ? !HasNumber(TEXT("positionOnRail"))
+            : !HasNumber(TEXT("cranePitch")) && !HasNumber(TEXT("craneYaw")) && !HasNumber(TEXT("craneArmLength"))) {
+    OutResult = MakeResult(false, Action,
+                           TEXT("No valid camera rig settings were provided"),
+                           TEXT("INVALID_ARGUMENT"));
+    return true;
+  }
   // Modify() ran after the writes with no transaction open, so undo restored nothing; the spawn and the
   // settings are one undo step now.
   FMcpScopedEditorTransaction Transaction(FText::FromString(bRail ? TEXT("Configure Camera Rail") : TEXT("Configure Camera Crane")),
@@ -42,6 +55,7 @@ bool ConfigureRig(const TSharedPtr<FJsonObject> &Params, const TCHAR *Action,
     bSpawned = Actor != nullptr;
   }
   if (!Actor) {
+    Transaction.Cancel();
     OutResult = MakeResult(false, Action,
                            TEXT("Failed to resolve or spawn rig actor"),
                            TEXT("ACTOR_CREATION_FAILED"));
@@ -59,8 +73,10 @@ bool ConfigureRig(const TSharedPtr<FJsonObject> &Params, const TCHAR *Action,
                    TEXT("CraneArmLength"), Applied);
   }
   if (Applied.IsEmpty()) {
+    // Every value sent was refused by its property (one past a float's range): known only once tried.
     if (bSpawned)
       Actor->Destroy();
+    Transaction.Cancel();
     OutResult = MakeResult(false, Action,
                            TEXT("No valid camera rig settings were provided"),
                            TEXT("INVALID_ARGUMENT"));

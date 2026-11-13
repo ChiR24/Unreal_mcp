@@ -4,8 +4,8 @@
 #include "Dom/JsonObject.h"
 
 class AActor;
+class UActorComponent;
 class ULevelSequence;
-class UEngineWireSubsystem;
 class UMovieScene;
 class UMovieSceneSection;
 class UMovieSceneTrack;
@@ -77,6 +77,10 @@ bool ApplyNumber(UObject *Object, const TSharedPtr<FJsonObject> &Params,
                  const TCHAR *Field, const TCHAR *PropertyPath, TArray<FString> &Applied);
 AActor *ResolveActor(const TSharedPtr<FJsonObject> &Params);
 FGuid ResolveOrCreateBinding(ULevelSequence *Sequence, AActor *Actor);
+// A new possessable for Component, a child of ParentGuid's binding, bound through Context (its actor, or the template
+// it was found on). Callers look for an existing binding first.
+FGuid BindComponentUnderActor(ULevelSequence *Sequence, const FGuid &ParentGuid, UActorComponent *Component,
+                              UObject *Context);
 // The possessable named like the actor's label, pointed at this actor with its tracks kept (McpSeqCineRebind.cpp):
 // a sequence copied beside a copied level still binds the first level's actors. Invalid when none has that name.
 FGuid RebindPossessableByName(ULevelSequence *Sequence, AActor *Actor);

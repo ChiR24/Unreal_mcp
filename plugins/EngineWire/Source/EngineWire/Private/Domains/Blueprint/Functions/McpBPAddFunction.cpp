@@ -96,13 +96,7 @@ bool HandleBlueprintAddFunction(const FBlueprintActionContext &Context) {
                 "RequestId=%s"),
            *RegistryKey, *RequestId);
 
-    UEdGraph *ExistingGraph = nullptr;
-    for (UEdGraph *Graph : Blueprint->FunctionGraphs) {
-      if (Graph && Graph->GetName().Equals(FuncName, ESearchCase::IgnoreCase)) {
-        ExistingGraph = Graph;
-        break;
-      }
-    }
+    UEdGraph *ExistingGraph = FindFunctionGraph(Blueprint, FuncName);
 
     // An existing function is reused only as it is: a pure, inputs or outputs it
     // does not have would otherwise be reported as applied and silently missing.
@@ -152,23 +146,8 @@ bool HandleBlueprintAddFunction(const FBlueprintActionContext &Context) {
     // creating them before it as well left a duplicate entry node behind to clean up.
     FBlueprintEditorUtils::AddFunctionGraph<UClass>(Blueprint, NewGraph, /*bIsUserCreated=*/OverrideClass == nullptr, OverrideClass);
 
-    TArray<UK2Node_FunctionEntry *> EntryNodes;
-    TArray<UK2Node_FunctionResult *> ResultNodes;
-    for (UEdGraphNode *Node : NewGraph->Nodes) {
-      if (UK2Node_FunctionEntry *AsEntry = Cast<UK2Node_FunctionEntry>(Node)) {
-        EntryNodes.Add(AsEntry);
-        continue;
-      }
-      if (UK2Node_FunctionResult *AsResult =
-              Cast<UK2Node_FunctionResult>(Node)) {
-        ResultNodes.Add(AsResult);
-      }
-    }
-
-    UK2Node_FunctionEntry *EntryNode =
-        EntryNodes.Num() > 0 ? EntryNodes[0] : nullptr;
-    UK2Node_FunctionResult *ResultNode =
-        ResultNodes.Num() > 0 ? ResultNodes[0] : nullptr;
+    UK2Node_FunctionEntry *EntryNode = McpBlueprintUtils::FirstNodeOfClass<UK2Node_FunctionEntry>(NewGraph);
+    UK2Node_FunctionResult *ResultNode = McpBlueprintUtils::FirstNodeOfClass<UK2Node_FunctionResult>(NewGraph);
 
     for (const TSharedPtr<FJsonValue> &Value : Inputs) {
       if (!Value.IsValid() || Value->Type != EJson::Object)
@@ -238,27 +217,11 @@ bool HandleBlueprintAddFunction(const FBlueprintActionContext &Context) {
     // return node is never reached, so declared outputs come back as their
     // defaults at runtime even though the Blueprint compiles.
     if (EntryNode && ResultNode) {
-      UEdGraphPin *EntryThenPin = nullptr;
-      for (UEdGraphPin *Pin : EntryNode->Pins) {
-        if (Pin && Pin->Direction == EGPD_Output &&
-            Pin->PinType.PinCategory == UEdGraphSchema_K2::PC_Exec) {
-          EntryThenPin = Pin;
-          break;
-        }
-      }
-      UEdGraphPin *ResultExecPin = nullptr;
-      for (UEdGraphPin *Pin : ResultNode->Pins) {
-        if (Pin && Pin->Direction == EGPD_Input &&
-            Pin->PinType.PinCategory == UEdGraphSchema_K2::PC_Exec) {
-          ResultExecPin = Pin;
-          break;
-        }
-      }
+      const UEdGraphSchema_K2 *K2Schema = GetDefault<UEdGraphSchema_K2>();
+      UEdGraphPin *EntryThenPin = K2Schema->FindExecutionPin(*EntryNode, EGPD_Output);
+      UEdGraphPin *ResultExecPin = K2Schema->FindExecutionPin(*ResultNode, EGPD_Input);
       if (EntryThenPin && ResultExecPin && EntryThenPin->LinkedTo.Num() == 0) {
-        const UEdGraphSchema_K2 *K2Schema = GetDefault<UEdGraphSchema_K2>();
-        if (K2Schema) {
-          K2Schema->TryCreateConnection(EntryThenPin, ResultExecPin);
-        }
+        K2Schema->TryCreateConnection(EntryThenPin, ResultExecPin);
       }
     }
 

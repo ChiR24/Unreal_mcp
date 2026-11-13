@@ -8,48 +8,6 @@
 
 namespace McpRenderHandlers
 {
-// Reflection actions declare an optional actorName; when it is omitted and the
-// level holds exactly one reflection capture actor, that actor is the target.
-// More than one is reported as AMBIGUOUS with the candidate labels; none as
-// ACTOR_NOT_FOUND.
-AActor* FindSoleReflectionCaptureActor(FString& OutError, FString& OutErrorCode)
-{
-    OutError.Reset();
-    OutErrorCode.Reset();
-    TArray<AActor*> Captures;
-    if (UWorld* World = GetRenderWorld())
-    {
-        for (TActorIterator<AActor> It(World); It; ++It)
-        {
-            // The request named no actor: a path-restricted caller chooses among those in a level inside its prefixes.
-            if (It->FindComponentByClass<UReflectionCaptureComponent>() && McpCapabilityPrincipal::ActiveRequestPermitsObject(*It))
-            {
-                Captures.Add(*It);
-            }
-        }
-    }
-    if (Captures.Num() == 1)
-    {
-        return Captures[0];
-    }
-    if (Captures.Num() > 1)
-    {
-        TArray<FString> Labels;
-        for (AActor* Capture : Captures)
-        {
-            Labels.Add(Capture->GetActorLabel());
-        }
-        OutError = FString::Printf(
-            TEXT("Multiple reflection capture actors found (%d); pass actorName to pick one. Candidates: %s"),
-            Captures.Num(), *FString::Join(Labels, TEXT(", ")));
-        OutErrorCode = TEXT("AMBIGUOUS");
-        return nullptr;
-    }
-    OutError = TEXT("Reflection capture actor not found: no reflection capture in the level (create one or pass actorName).");
-    OutErrorCode = TEXT("ACTOR_NOT_FOUND");
-    return nullptr;
-}
-
 // configure_reflection_capture_resolution: the resolution is a project-wide
 // CVar, so no actor is required. An explicit actorName marks that capture for
 // recapture, otherwise every reflection capture in the level is marked.
@@ -104,11 +62,13 @@ bool HandleRenderReflectionResolutionAction(
             ++MarkedCaptures;
         }
     }
-    else if (UWorld* World = GetRenderWorld())
+    else if (UWorld* World = McpHandlerUtils::GetPlayOrEditorWorld())
     {
         for (TActorIterator<AActor> It(World); It; ++It)
         {
-            if (UReflectionCaptureComponent* Capture = It->FindComponentByClass<UReflectionCaptureComponent>())
+            UReflectionCaptureComponent* Capture = It->FindComponentByClass<UReflectionCaptureComponent>();
+            // The request named no capture: a path-restricted caller marks only those in a level inside its prefixes.
+            if (Capture && McpCapabilityPrincipal::ActiveRequestPermitsObject(*It))
             {
                 Capture->MarkDirtyForRecaptureOrUpload();
                 ++MarkedCaptures;

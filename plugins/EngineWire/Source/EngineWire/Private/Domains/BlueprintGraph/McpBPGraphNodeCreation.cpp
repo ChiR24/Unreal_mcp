@@ -2,6 +2,7 @@
 
 #include "Domains/BlueprintGraph/Behaviour/McpBPBehaviourNodes.h"
 #include "Domains/BlueprintGraph/Code/McpGraphCode.h"
+#include "Foundation/BridgeHelpers/Blueprints/McpStandardMacros.h"
 #include "Editor.h"
 #include "K2Node_MacroInstance.h"
 #include "ScopedTransaction.h"
@@ -78,10 +79,7 @@ static bool TryCreateMacroNode(
         return false;
     }
 
-    UBlueprint* MacroLibrary = LoadObject<UBlueprint>(
-        nullptr,
-        TEXT("/Engine/EditorBlueprintResources/StandardMacros.StandardMacros"));
-    if (!MacroLibrary)
+    if (!McpStandardMacros())
     {
         Context.SendError(
             TEXT("Could not load engine StandardMacros library."),
@@ -89,16 +87,7 @@ static bool TryCreateMacroNode(
         return true;
     }
 
-    UEdGraph* MacroGraph = nullptr;
-    for (UEdGraph* Graph : MacroLibrary->MacroGraphs)
-    {
-        if (Graph &&
-            Graph->GetName().Equals(*MacroGraphName, ESearchCase::IgnoreCase))
-        {
-            MacroGraph = Graph;
-            break;
-        }
-    }
+    UEdGraph* MacroGraph = McpFindStandardMacro(*MacroGraphName);
     if (!MacroGraph)
     {
         Context.SendError(

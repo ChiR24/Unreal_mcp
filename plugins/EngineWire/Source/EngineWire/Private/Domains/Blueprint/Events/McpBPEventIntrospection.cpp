@@ -9,7 +9,7 @@
 void McpAppendBlueprintScsComponents(class UBlueprint *Blueprint, const TSharedPtr<FJsonObject> &Snapshot); // Events/McpBPSnapshotComponents.cpp
 
 namespace McpBlueprintHandlers {
-void
+static void
 FEngineWire_CollectEventPins(UK2Node *Node,
                                       TArray<TSharedPtr<FJsonValue>> &Out) {
   if (!Node) {
@@ -24,7 +24,7 @@ FEngineWire_CollectEventPins(UK2Node *Node,
   }
 }
 
-TArray<TSharedPtr<FJsonValue>>
+static TArray<TSharedPtr<FJsonValue>>
 FEngineWire_CollectBlueprintEvents(UBlueprint *Blueprint) {
   TArray<TSharedPtr<FJsonValue>> Out;
   if (!Blueprint) {
@@ -63,29 +63,6 @@ FEngineWire_CollectBlueprintEvents(UBlueprint *Blueprint) {
   }
 
   return Out;
-}
-
-TSharedPtr<FJsonObject>
-FEngineWire_FindNamedEntry(const TArray<TSharedPtr<FJsonValue>> &Array,
-                                    const FString &FieldName,
-                                    const FString &DesiredValue) {
-  for (const TSharedPtr<FJsonValue> &Value : Array) {
-    if (!Value.IsValid() || Value->Type != EJson::Object) {
-      continue;
-    }
-
-    const TSharedPtr<FJsonObject> Obj = Value->AsObject();
-    if (!Obj.IsValid()) {
-      continue;
-    }
-
-    FString FieldValue;
-    if (Obj->TryGetStringField(FieldName, FieldValue) &&
-        FieldValue.Equals(DesiredValue, ESearchCase::IgnoreCase)) {
-      return Obj;
-    }
-  }
-  return nullptr;
 }
 
 namespace {

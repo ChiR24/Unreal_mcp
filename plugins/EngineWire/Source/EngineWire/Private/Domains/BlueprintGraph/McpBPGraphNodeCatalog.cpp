@@ -221,10 +221,7 @@ bool HandleListNodeTypes(FActionContext& Context)
     }
     // filter: a class or display name containing it (case-insensitive, spaces ignored), as get_graph_details reads it.
     FString Filter;
-    if (Context.Payload.IsValid())
-    {
-        Context.Payload->TryGetStringField(TEXT("filter"), Filter);
-    }
+    Context.Payload->TryGetStringField(TEXT("filter"), Filter);
     Filter.ReplaceInline(TEXT(" "), TEXT(""));
     TArray<TSharedPtr<FJsonValue>> NodeTypes;
     for (TObjectIterator<UClass> It; It; ++It)

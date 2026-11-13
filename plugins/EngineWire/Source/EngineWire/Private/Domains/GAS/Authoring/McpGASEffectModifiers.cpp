@@ -1,6 +1,7 @@
 #include "Domains/GAS/McpGASPayloadFields.h"
 #include "Domains/GAS/McpGASRequestContext.h"
 #include "Foundation/BridgeHelpers/Blueprints/McpBPCompileHelpers.h"
+#include "Foundation/BridgeHelpers/Reflection/McpClassResolve.h"
 #include "Safety/McpSafeOperations.h"
 #include "EngineWireSubsystem.h"
 #include "Foundation/HandlerUtils/McpHandlerUtils.h"
@@ -109,7 +110,7 @@ bool HandleGASEffectModifiers(const FGASRequestContext& Context, const FString& 
             // class the game never loads. Measured: without this filter, an attribute on a freshly
             // recompiled Blueprint AttributeSet resolved to its REINST_SKEL_* debris class and the
             // handler reported success while binding to a class the game never loads.
-            if (IsCompileDebrisClass(Candidate))
+            if (McpIsCompileDebrisClass(Candidate))
             {
                 continue;
             }
@@ -198,7 +199,7 @@ bool HandleGASEffectModifiers(const FGASRequestContext& Context, const FString& 
                     // ship. Require a live owner class as well.
                     const FProperty* BoundProp = Last.Attribute.GetUProperty();
                     const UClass* BoundOwner = BoundProp ? BoundProp->GetOwner<UClass>() : nullptr;
-                    bBindingVerified = Last.Attribute.IsValid() && BoundOwner && !IsCompileDebrisClass(BoundOwner);
+                    bBindingVerified = Last.Attribute.IsValid() && BoundOwner && !McpIsCompileDebrisClass(BoundOwner);
                 }
             }
         }

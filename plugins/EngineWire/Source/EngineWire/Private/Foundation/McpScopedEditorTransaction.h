@@ -109,6 +109,12 @@ public:
 	 */
 	void DescribeInto(const TSharedPtr<FJsonObject>& Result) const;
 
+	/**
+	 * For a refusal known only once the change was tried and nothing changed: the open transaction is cancelled, so
+	 * undo keeps no empty step. Refuse before opening one where the refusal is known earlier.
+	 */
+	void Cancel();
+
 private:
 	FText Title;
 	EMcpMutationDurability Durability;

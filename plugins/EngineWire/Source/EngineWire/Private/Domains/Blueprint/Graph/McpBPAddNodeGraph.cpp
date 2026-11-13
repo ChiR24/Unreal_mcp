@@ -1,6 +1,7 @@
 #include "Domains/Blueprint/McpBPActionContext.h"
 #include "Domains/BlueprintGraph/McpBPGraphCompatibility.h"
 #include "Domains/BlueprintGraph/McpBPGraphPrivate.h"
+#include "Foundation/BridgeHelpers/Blueprints/McpStandardMacros.h"
 #include "Foundation/BridgeHelpers/Reflection/McpClassResolve.h"
 #include "Foundation/HandlerUtils/McpHandlerUtils.h"
 
@@ -270,17 +271,11 @@ UEdGraphNode *CreateBlueprintGraphNode(
   // copy once lacked DoN, whose graph is named "Do N").
   if (const FString *MacroName =
           McpBlueprintGraphHandlers::StandardMacroGraphName(NodeType)) {
-    UBlueprint *MacroLibrary = LoadObject<UBlueprint>(
-        nullptr, TEXT("/Engine/EditorBlueprintResources/StandardMacros.StandardMacros"));
-    if (MacroLibrary) {
-      for (UEdGraph *Graph : MacroLibrary->MacroGraphs) {
-        if (Graph && Graph->GetName().Equals(*MacroName, ESearchCase::IgnoreCase)) {
-          UK2Node_MacroInstance *MacroNode =
-              NewObject<UK2Node_MacroInstance>(TargetGraph);
-          MacroNode->SetMacroGraph(Graph);
-          return MacroNode;
-        }
-      }
+    if (UEdGraph *Graph = McpFindStandardMacro(*MacroName)) {
+      UK2Node_MacroInstance *MacroNode =
+          NewObject<UK2Node_MacroInstance>(TargetGraph);
+      MacroNode->SetMacroGraph(Graph);
+      return MacroNode;
     }
   }
 

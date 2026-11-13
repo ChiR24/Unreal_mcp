@@ -18,9 +18,8 @@ bool HandleBlueprintEnsureProbe(const FBlueprintActionContext &Context) {
     FString EnsureSavePath;
     LocalPayload->TryGetStringField(TEXT("name"), EnsureName);
     LocalPayload->TryGetStringField(TEXT("savePath"), EnsureSavePath);
-    const bool bNamedBySavePath = !LocalPayload->HasField(TEXT("blueprintPath")) &&
-        !LocalPayload->HasField(TEXT("requestedPath")) && !EnsureName.IsEmpty() &&
-        !EnsureName.StartsWith(TEXT("/")) && !EnsureSavePath.TrimStartAndEnd().IsEmpty();
+    const bool bNamedBySavePath = !EnsureName.IsEmpty() && !EnsureName.StartsWith(TEXT("/")) &&
+        !EnsureSavePath.TrimStartAndEnd().IsEmpty();
     FString Path = bNamedBySavePath ? EnsureSavePath / EnsureName : ResolveBlueprintRequestedPath();
     if (Path.IsEmpty()) {
       Bridge.SendAutomationResponse(
@@ -52,8 +51,7 @@ bool HandleBlueprintEnsureProbe(const FBlueprintActionContext &Context) {
       CheckPath = CheckPath.LeftChop(7);
     }
 
-    bool bExists = McpAssetExists(CheckPath);
-    bool bCreated = false;
+    const bool bExists = McpAssetExists(CheckPath);
 
     if (!bExists && bCreateIfMissing) {
       // Delegate to HandleBlueprintCreate for creation
@@ -62,10 +60,8 @@ bool HandleBlueprintEnsureProbe(const FBlueprintActionContext &Context) {
       // blueprint_create needs name + savePath; derive them from the resolved
       // path unless the caller supplied them (it used to fail "requires a
       // name" for every ensure_exists that had to create).
-      FString CreateName;
-      LocalPayload->TryGetStringField(TEXT("name"), CreateName);
-      FString CreateSavePath;
-      LocalPayload->TryGetStringField(TEXT("savePath"), CreateSavePath);
+      FString CreateName = EnsureName;
+      FString CreateSavePath = EnsureSavePath;
       if (CreateName.TrimStartAndEnd().IsEmpty()) {
         CreateName = FPaths::GetBaseFilename(CheckPath);
         int32 DotIndex = INDEX_NONE;
@@ -81,27 +77,18 @@ bool HandleBlueprintEnsureProbe(const FBlueprintActionContext &Context) {
       if (!ParentClass.IsEmpty()) {
         CreatePayload->SetStringField(TEXT("parentClass"), ParentClass);
       }
-      // Use FBlueprintCreationHandlers to create the blueprint
-      bool bCreateResult = FBlueprintCreationHandlers::HandleBlueprintCreate(
-          &Bridge, RequestId, CreatePayload, RequestingSocket);
-      // If creation handler returned true, it sent its own response
-      if (bCreateResult) {
-        return true;
-      }
-      // Check again after creation attempt
-      bExists = McpAssetExists(CheckPath);
-      bCreated = bExists;
+      // The create answers for itself, a refusal included.
+      FBlueprintCreationHandlers::HandleBlueprintCreate(&Bridge, RequestId, CreatePayload, RequestingSocket);
+      return true;
     }
 
     TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
     Resp->SetBoolField(TEXT("exists"), bExists);
-    Resp->SetBoolField(TEXT("created"), bCreated);
+    Resp->SetBoolField(TEXT("created"), false);
     Resp->SetStringField(TEXT("blueprintPath"), bExists ? CheckPath : Path);
     Bridge.SendAutomationResponse(
         RequestingSocket, RequestId, true,
-        bCreated ? TEXT("Blueprint created")
-                 : (bExists ? TEXT("Blueprint exists")
-                            : TEXT("Blueprint not found")),
+        bExists ? TEXT("Blueprint exists") : TEXT("Blueprint not found"),
         Resp, FString());
     return true;
   }

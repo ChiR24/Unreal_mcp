@@ -78,19 +78,14 @@ bool HandleConnectNodes(UEngineWireSubsystem* Bridge, const FString& RequestId, 
         // UMaterialExpressionTextureSample output construction): RGB=0, R=1, G=2, B=3, A=4, RGBA=5.
         // NOTE: RGB (index 0) is the 3-channel color (alpha bit off); RGBA (index 5) carries the
         // full 4 channels — they are NOT the same pin, so RGBA must map to 5, not 0.
-        if (SourcePin.Equals(TEXT("RGB"), ESearchCase::IgnoreCase)) {
-          SourceOutputIndex = 0;
-        } else if (SourcePin.Equals(TEXT("R"), ESearchCase::IgnoreCase)) {
-          SourceOutputIndex = 1;
-        } else if (SourcePin.Equals(TEXT("G"), ESearchCase::IgnoreCase)) {
-          SourceOutputIndex = 2;
-        } else if (SourcePin.Equals(TEXT("B"), ESearchCase::IgnoreCase)) {
-          SourceOutputIndex = 3;
-        } else if (SourcePin.Equals(TEXT("A"), ESearchCase::IgnoreCase)) {
-          SourceOutputIndex = 4;
-        } else if (SourcePin.Equals(TEXT("RGBA"), ESearchCase::IgnoreCase)) {
-          SourceOutputIndex = 5;
-        } else {
+        static const TCHAR* const TexturePins[] = {TEXT("RGB"), TEXT("R"), TEXT("G"), TEXT("B"), TEXT("A"), TEXT("RGBA")};
+        SourceOutputIndex = INDEX_NONE;
+        for (int32 PinIndex = 0; PinIndex < UE_ARRAY_COUNT(TexturePins); ++PinIndex) {
+          if (SourcePin.Equals(TexturePins[PinIndex], ESearchCase::IgnoreCase)) {
+            SourceOutputIndex = PinIndex;
+          }
+        }
+        if (SourceOutputIndex == INDEX_NONE) {
           Bridge->SendAutomationError(Socket, RequestId,
                               FString::Printf(TEXT("Invalid TextureSample output pin '%s'. Valid: RGB, R, G, B, A, RGBA."), *SourcePin),
                               TEXT("INVALID_PIN"));
@@ -183,7 +178,7 @@ bool HandleConnectNodes(UEngineWireSubsystem* Bridge, const FString& RequestId, 
         UMaterialExpressionFunctionOutput *TargetOutput = nullptr;
         for (UMaterialExpression *Expr : MCP_GET_FUNCTION_EXPRESSIONS(Function)) {
           if (UMaterialExpressionFunctionOutput *Out = Cast<UMaterialExpressionFunctionOutput>(Expr)) {
-            if (InputName.IsEmpty() || Out->OutputName.ToString().Equals(InputName)) {
+            if (InputName.IsEmpty() || Out->OutputName.ToString().Equals(InputName, ESearchCase::IgnoreCase)) {
               TargetOutput = Out;
               break;
             }
@@ -215,32 +210,15 @@ bool HandleConnectNodes(UEngineWireSubsystem* Bridge, const FString& RequestId, 
       return true;
     }
 
-    // The input by its property name.
-    if (FExpressionInput *InputPtr = FindMaterialInputProperty(TargetExpr, InputName)) {
+    // The input by its property name, else by its label (a function call labels them "Name (Type)") or the short
+    // name the graph shows; a miss lists the labels.
+    FString Available;
+    if (FExpressionInput *InputPtr = FindMaterialInputByNameOrLabel(TargetExpr, InputName, Available)) {
       Wire(*InputPtr);
       FINALIZE_HOST();
       Bridge->SendAutomationResponse(Socket, RequestId, true,
                              TEXT("Nodes connected."), McpMaterialHostResult(HostOuter));
       return true;
-    }
-
-    // A custom node's or a function call's inputs are not properties at all. Match
-    // every input by its label (a function call labels them "Name (Type)") or the
-    // short name the graph shows, and list the labels on a miss.
-    FString Available;
-    for (int32 InputIndex = 0, InputCount = McpCountMaterialInputs(TargetExpr); InputIndex < InputCount; ++InputIndex) {
-      FExpressionInput *Input = TargetExpr->GetInput(InputIndex);
-      if (!Input) {
-        break;
-      }
-      const FString Label = TargetExpr->GetInputName(InputIndex).ToString();
-      if (McpMaterialInputNamed(Label, InputName)) {
-        Wire(*Input);
-        FINALIZE_HOST();
-        Bridge->SendAutomationResponse(Socket, RequestId, true, TEXT("Nodes connected."), McpMaterialHostResult(HostOuter));
-        return true;
-      }
-      Available += FString::Printf(TEXT("%s%s"), Available.IsEmpty() ? TEXT("") : TEXT(", "), *Label);
     }
 
     Bridge->SendAutomationError(

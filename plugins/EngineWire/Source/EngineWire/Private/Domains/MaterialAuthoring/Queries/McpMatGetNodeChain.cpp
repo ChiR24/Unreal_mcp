@@ -12,14 +12,14 @@ bool HandleGetNodeChain(UEngineWireSubsystem* Bridge, const FString& RequestId, 
     // given the chain is walked downstream until it reaches any material
     // output pin (or a FunctionOutput in a material function).
     const FString StartNodeId = McpGetFirstStringField(Payload, {TEXT("startNodeId"), TEXT("nodeId")});
-    FString EndNodeId, EndPin;
+    FString EndPin;
     Payload->TryGetStringField(TEXT("endPin"), EndPin);
 
     if (StartNodeId.IsEmpty()) {
       Bridge->SendAutomationError(Socket, RequestId, TEXT("Missing 'nodeId' (or 'startNodeId')."), TEXT("INVALID_ARGUMENT"));
       return true;
     }
-    const bool bAnyMainPin = EndNodeId.IsEmpty() && EndPin.IsEmpty();
+    const bool bAnyMainPin = EndPin.IsEmpty();
 
     UMaterialExpression *StartExpr = FIND_EXPR_IN_HOST(StartNodeId);
     if (!StartExpr) {
@@ -39,16 +39,6 @@ bool HandleGetNodeChain(UEngineWireSubsystem* Bridge, const FString& RequestId, 
       });
     }
 
-    // Check if endPin refers to a Material main pin
-    UMaterialExpression *EndExpr = nullptr;
-    bool bEndIsMainPin = false;
-    if (!EndNodeId.IsEmpty() && EndNodeId != TEXT("Main")) {
-      EndExpr = FIND_EXPR_IN_HOST(EndNodeId);
-    }
-    if (!EndPin.IsEmpty() || EndNodeId == TEXT("Main") || bAnyMainPin) {
-      bEndIsMainPin = true;
-    }
-
     TMap<UMaterialExpression*, UMaterialExpression*> Parent;
     TArray<UMaterialExpression*> BFSQueue;
     BFSQueue.Add(StartExpr);
@@ -60,11 +50,10 @@ bool HandleGetNodeChain(UEngineWireSubsystem* Bridge, const FString& RequestId, 
     while (Idx < BFSQueue.Num()) {
       UMaterialExpression *Cur = BFSQueue[Idx++];
 
-      if (EndExpr && Cur == EndExpr) { bPathFound = true; PathEnd = Cur; break; }
       if (bAnyMainPin && Function && Cast<UMaterialExpressionFunctionOutput>(Cur)) {
         bPathFound = true; PathEnd = Cur; break;
       }
-      if (bEndIsMainPin && Material) {
+      if (Material) {
         bool bHit = false;
         ForEachMainMaterialInput(Material, [&](const TCHAR *PinName, const FExpressionInput &Input) {
           bHit = bHit || ((bAnyMainPin || EndPin == PinName) && Input.Expression == Cur);
@@ -102,14 +91,13 @@ bool HandleGetNodeChain(UEngineWireSubsystem* Bridge, const FString& RequestId, 
         N->SetNumberField(TEXT("step"), i);
         ChainArr.Add(MakeShared<FJsonValueObject>(N));
       }
-      if (bEndIsMainPin) {
-        TSharedPtr<FJsonObject> MainNode = MakeShared<FJsonObject>();
-        MainNode->SetStringField(TEXT("nodeId"), TEXT("Main"));
-        MainNode->SetStringField(TEXT("type"), TEXT("MaterialOutput"));
-        MainNode->SetStringField(TEXT("desc"), EndPin.IsEmpty() ? TEXT("Main") : EndPin);
-        MainNode->SetNumberField(TEXT("step"), Path.Num());
-        ChainArr.Add(MakeShared<FJsonValueObject>(MainNode));
-      }
+      // The walk ends at the material output (or a function output): the chain closes on Main.
+      TSharedPtr<FJsonObject> MainNode = MakeShared<FJsonObject>();
+      MainNode->SetStringField(TEXT("nodeId"), TEXT("Main"));
+      MainNode->SetStringField(TEXT("type"), TEXT("MaterialOutput"));
+      MainNode->SetStringField(TEXT("desc"), EndPin.IsEmpty() ? TEXT("Main") : EndPin);
+      MainNode->SetNumberField(TEXT("step"), Path.Num());
+      ChainArr.Add(MakeShared<FJsonValueObject>(MainNode));
       Result->SetBoolField(TEXT("pathFound"), true);
       Result->SetNumberField(TEXT("length"), ChainArr.Num());
       Result->SetArrayField(TEXT("chain"), ChainArr);
