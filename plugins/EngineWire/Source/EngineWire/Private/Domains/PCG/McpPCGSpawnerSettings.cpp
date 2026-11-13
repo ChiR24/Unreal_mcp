@@ -4,7 +4,7 @@
 #if MCP_HAS_PCG
 namespace McpPCGHandlers
 {
-bool ApplySpawnActorTemplateClass(UPCGSettings* Settings, const FString& ClassName, FString& OutError)
+static bool ApplySpawnActorTemplateClass(UPCGSettings* Settings, const FString& ClassName, FString& OutError)
 {
     if (ClassName.IsEmpty())
     {
@@ -18,31 +18,35 @@ bool ApplySpawnActorTemplateClass(UPCGSettings* Settings, const FString& ClassNa
         return false;
     }
 
-    UClass* ActorClass = nullptr;
-    if (!ResolveClassForProperty(SpawnActorSettings, TEXT("TemplateActorClass"), ClassName, ActorClass, OutError))
-    {
-        return false;
-    }
-
-#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 5
-    TSubclassOf<AActor> ActorSubclass = ActorClass;
-    SpawnActorSettings->Modify();
-    SpawnActorSettings->SetTemplateActorClass(ActorSubclass);
-#else
+    // TemplateActorClass is a class property on every version that has PCG: its MetaClass bounds the class.
     FClassProperty* ClassProperty = CastField<FClassProperty>(SpawnActorSettings->GetClass()->FindPropertyByName(FName(TEXT("TemplateActorClass"))));
     if (!ClassProperty)
     {
         OutError = FString::Printf(TEXT("Class property 'TemplateActorClass' was not found on '%s'."), *SpawnActorSettings->GetClass()->GetName());
         return false;
     }
+    UClass* ActorClass = ResolveClassByName(ClassName);
+    if (!ActorClass)
+    {
+        OutError = FString::Printf(TEXT("Could not resolve class '%s'."), *ClassName);
+        return false;
+    }
+    if (ClassProperty->MetaClass && !ActorClass->IsChildOf(ClassProperty->MetaClass))
+    {
+        OutError = FString::Printf(TEXT("Class '%s' is not assignable to '%s'."), *ActorClass->GetName(), *ClassProperty->MetaClass->GetName());
+        return false;
+    }
 
     SpawnActorSettings->Modify();
+#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 5
+    SpawnActorSettings->SetTemplateActorClass(TSubclassOf<AActor>(ActorClass));
+#else
     ClassProperty->SetPropertyValue_InContainer(SpawnActorSettings, ActorClass);
 #endif
     return true;
 }
 
-bool ApplyStaticMeshSpawnerMeshPath(UPCGSettings* Settings, const FString& MeshPath, FString& OutError)
+static bool ApplyStaticMeshSpawnerMeshPath(UPCGSettings* Settings, const FString& MeshPath, FString& OutError)
 {
     if (MeshPath.IsEmpty())
     {

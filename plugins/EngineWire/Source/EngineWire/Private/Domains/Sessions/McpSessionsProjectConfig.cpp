@@ -124,7 +124,7 @@ bool HandleConfigureVoiceSettings(
     for (const auto& Knob : Knobs)
     {
         double Value = 0.0;
-        if (!Payload.IsValid() || !Payload->HasField(Knob.Field))
+        if (!Payload->HasField(Knob.Field))
         {
             continue;
         }
@@ -137,7 +137,7 @@ bool HandleConfigureVoiceSettings(
         }
         Writes.Add({ConsoleVariableSection, Knob.ConsoleVariable, FString::SanitizeFloat(Value)});
     }
-    if (Payload.IsValid() && Payload->HasField(TEXT("sampleRate")))
+    if (Payload->HasField(TEXT("sampleRate")))
     {
         double Rate = 0.0;
         Payload->TryGetNumberField(TEXT("sampleRate"), Rate);
@@ -151,7 +151,7 @@ bool HandleConfigureVoiceSettings(
         Writes.Add({TEXT("/Script/Engine.AudioSettings"), TEXT("VoiPSampleRate"), Rate == 16000.0 ? TEXT("Low16000Hz") : TEXT("Normal24000Hz")});
         bRestartOnly = true;
     }
-    if (Payload.IsValid() && Payload->HasField(TEXT("voiceEnabled")))
+    if (Payload->HasField(TEXT("voiceEnabled")))
     {
         const FString Flag = GetJsonBoolField(Payload, TEXT("voiceEnabled"), true) ? TEXT("True") : TEXT("False");
         Writes.Add({TEXT("Voice"), TEXT("bEnabled"), Flag});

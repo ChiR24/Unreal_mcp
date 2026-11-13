@@ -142,7 +142,7 @@ TSharedPtr<FJsonObject> FSCSHandlers::AddSCSComponent(
         ParentNode = Roots[0];
       }
     } else {
-      ParentNode = FindSCSNodeByVariableName(SCS, ParentComponentName);
+      ParentNode = FindScsNodeByName(SCS, ParentComponentName);
       // A parent Blueprint's part, as edit_scs attachTo takes it (this path refused it).
       InheritedParent = ParentNode ? nullptr : McpScsParent::FindInheritedScsSceneNode(Blueprint, ParentComponentName);
       if (!ParentNode && !InheritedParent) {
@@ -170,7 +170,7 @@ TSharedPtr<FJsonObject> FSCSHandlers::AddSCSComponent(
     }
   }
 
-  if (FindSCSNodeByVariableName(SCS, ComponentName)) {
+  if (FindScsNodeByName(SCS, ComponentName)) {
     Result->SetBoolField(TEXT("success"), false);
     Result->SetStringField(
         TEXT("error"),
@@ -247,7 +247,7 @@ TSharedPtr<FJsonObject> FSCSHandlers::AddSCSComponent(
   bool bSaved = false;
   FinalizeBlueprintSCSChange(Blueprint, bCompiled, bSaved);
 
-  USCS_Node *VerifiedNode = FindSCSNodeByVariableName(SCS, ComponentName);
+  USCS_Node *VerifiedNode = FindScsNodeByName(SCS, ComponentName);
   const bool bVerified = VerifiedNode != nullptr;
   const bool bParentVerified =
       bVerified && SCSParentMatches(SCS, VerifiedNode, ParentComponentName);

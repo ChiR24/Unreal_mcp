@@ -14,15 +14,11 @@ void RegisterWidgetGuid(UWidgetBlueprint* WidgetBP, UWidget* Widget)
     {
         return;
     }
-    const FName WidgetFName = Widget->GetFName();
 #if MCP_HAS_WIDGET_VARIABLE_GUID_MAP
+    const FName WidgetFName = Widget->GetFName();
     if (!MCP_WIDGET_BP_GET_GUID_MAP(WidgetBP).Contains(WidgetFName))
     {
-        FGuid WidgetGuid = MCP_NEW_DETERMINISTIC_GUID(Widget->GetPathName());
-        MCP_WIDGET_BP_GET_GUID_MAP(WidgetBP).Emplace(WidgetFName, WidgetGuid);
-        UE_LOG(LogTemp, Log, TEXT("RegisterWidgetGuid: Registered widget '%s' with GUID %s on %s (map now %d entries, contains=%d)"),
-            *WidgetFName.ToString(), *WidgetGuid.ToString(), *WidgetBP->GetPathName(),
-            MCP_WIDGET_BP_GET_GUID_MAP(WidgetBP).Num(), MCP_WIDGET_BP_GET_GUID_MAP(WidgetBP).Contains(WidgetFName) ? 1 : 0);
+        MCP_WIDGET_BP_GET_GUID_MAP(WidgetBP).Emplace(WidgetFName, MCP_NEW_DETERMINISTIC_GUID(Widget->GetPathName()));
     }
 #else
     // Before UE 5.6 UWidgetBlueprint has no WidgetVariableNameToGuidMap, so there
@@ -31,10 +27,6 @@ void RegisterWidgetGuid(UWidgetBlueprint* WidgetBP, UWidget* Widget)
     // GUID in there would overwrite an engine-managed value that existing
     // bindings resolve through. This branch previously logged "registered",
     // claiming work it had not done.
-    UE_LOG(LogTemp, Verbose,
-        TEXT("RegisterWidgetGuid: no-op for '%s' - this engine has no widget GUID map; "
-             "the engine owns the variable GUID in NewVariables"),
-        *WidgetFName.ToString());
 #endif
 }
 
@@ -44,8 +36,8 @@ void UnregisterWidgetGuid(UWidgetBlueprint* WidgetBP, UWidget* Widget)
     {
         return;
     }
-    const FName WidgetFName = Widget->GetFName();
 #if MCP_HAS_WIDGET_VARIABLE_GUID_MAP
+    const FName WidgetFName = Widget->GetFName();
     if (MCP_WIDGET_BP_GET_GUID_MAP(WidgetBP).Contains(WidgetFName))
     {
         MCP_WIDGET_BP_GET_GUID_MAP(WidgetBP).Remove(WidgetFName);
@@ -54,9 +46,6 @@ void UnregisterWidgetGuid(UWidgetBlueprint* WidgetBP, UWidget* Widget)
 #else
     // No GUID map before 5.6, so nothing was ever registered to remove. Logged
     // "unregistered" before, which read as confirmation of a removal.
-    UE_LOG(LogTemp, Verbose,
-        TEXT("UnregisterWidgetGuid: no-op for '%s' - this engine has no widget GUID map"),
-        *WidgetFName.ToString());
 #endif
 }
 
@@ -66,8 +55,8 @@ void RegisterAnimationGuid(UWidgetBlueprint* WidgetBP, UWidgetAnimation* Animati
     {
         return;
     }
-    const FName AnimFName = Animation->GetFName();
 #if MCP_HAS_WIDGET_VARIABLE_GUID_MAP
+    const FName AnimFName = Animation->GetFName();
     if (!MCP_WIDGET_BP_GET_GUID_MAP(WidgetBP).Contains(AnimFName))
     {
         FGuid AnimGuid = MCP_NEW_DETERMINISTIC_GUID(Animation->GetPathName());
@@ -79,9 +68,6 @@ void RegisterAnimationGuid(UWidgetBlueprint* WidgetBP, UWidgetAnimation* Animati
     // Same as RegisterWidgetGuid: no map to write to before 5.6. The animation
     // itself is still added to WidgetBP->Animations below, which is the part
     // that actually matters on these engines.
-    UE_LOG(LogTemp, Verbose,
-        TEXT("RegisterAnimationGuid: no-op for '%s' - this engine has no widget GUID map"),
-        *AnimFName.ToString());
 #endif
     if (!WidgetBP->Animations.Contains(Animation))
     {

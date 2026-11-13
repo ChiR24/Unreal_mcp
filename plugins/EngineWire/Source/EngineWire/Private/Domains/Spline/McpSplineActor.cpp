@@ -22,12 +22,6 @@ bool HandleCreateSplineActor(
     FString SplineType = GetJsonStringField(Payload, TEXT("splineType"), TEXT("Curve"));
 
     UWorld* World = McpHandlerUtils::GetEditorWorld();
-    if (!World)
-    {
-        Self->SendAutomationResponse(Socket, RequestId, false,
-            TEXT("No editor world available"), nullptr, TEXT("NO_WORLD"));
-        return true;
-    }
 
     ESplinePointType::Type PointType;
     if (!ParseSplinePointType(SplineType, PointType))

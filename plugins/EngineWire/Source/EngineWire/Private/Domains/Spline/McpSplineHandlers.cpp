@@ -3,8 +3,6 @@
 
 #include "EngineWireSubsystem.h"
 
-DEFINE_LOG_CATEGORY(LogMcpSplineHandlers);
-
 bool UEngineWireSubsystem::HandleManageSplinesAction(
     const FString& RequestId,
     const FString& Action,
@@ -12,8 +10,6 @@ bool UEngineWireSubsystem::HandleManageSplinesAction(
     TSharedPtr<FMcpBridgeWebSocket> Socket)
 {
     FString SubAction = GetJsonStringField(Payload, TEXT("subAction"), TEXT(""));
-
-    UE_LOG(LogMcpSplineHandlers, Verbose, TEXT("HandleManageSplinesAction: SubAction=%s"), *SubAction);
 
     // Every handler reads actorName, which resolves a label, name or object path; a call that
     // named its spline only by the declared actorPath used to find nothing.

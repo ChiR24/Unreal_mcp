@@ -6,16 +6,11 @@ namespace McpEnvironmentHandlers {
 bool McpConfigureParticleEmitter(const TSharedPtr<FJsonObject> &Payload, const FString &DefaultName,
                                         TSharedPtr<FJsonObject> Resp, FString &OutMessage, FString &OutErrorCode)
 {
-    AActor *Emitter = nullptr;
-    UClass *EmitterClass = LoadClass<AActor>(nullptr, TEXT("/Script/Engine.Emitter"));
-    if (EmitterClass)
-    {
-        Emitter = McpFindOrSpawnEnvironmentActor(Payload, EmitterClass, DefaultName);
-    }
+    AActor *Emitter = McpFindOrSpawnEnvironmentActor(Payload, AEmitter::StaticClass(), DefaultName);
     if (!Emitter)
     {
         OutMessage = TEXT("Failed to create particle emitter actor");
-        OutErrorCode = EmitterClass ? TEXT("SPAWN_FAILED") : TEXT("CLASS_NOT_FOUND");
+        OutErrorCode = TEXT("SPAWN_FAILED");
         return false;
     }
 
@@ -94,7 +89,7 @@ bool McpConfigureSunPosition(const TSharedPtr<FJsonObject> &Payload, TSharedPtr<
     SunActor->Modify();
     SunActor->SetActorRotation(McpSunRotation(Elevation, Azimuth));
     McpApplyEnvironmentSettings(SunActor, Payload, Resp);
-    if (UDirectionalLightComponent *LightComponent = Cast<UDirectionalLightComponent>(SunActor->FindComponentByClass<UDirectionalLightComponent>()))
+    if (UDirectionalLightComponent *LightComponent = SunActor->FindComponentByClass<UDirectionalLightComponent>())
     {
         McpApplyEnvironmentSettings(LightComponent, Payload, Resp);
         LightComponent->MarkRenderStateDirty();

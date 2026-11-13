@@ -30,8 +30,6 @@
 #include "UObject/NoExportTypes.h"
 #include "UObject/UnrealType.h"
 
-DECLARE_LOG_CATEGORY_EXTERN(LogMcpNetworkingHandlers, Log, All);
-
 namespace McpNetworkingHandlers
 {
 struct FNetworkingActionContext

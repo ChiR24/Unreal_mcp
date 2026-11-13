@@ -1,8 +1,6 @@
 #include "Domains/Navigation/McpNavPrivate.h"
 #include "Domains/Navigation/Analytics/McpLevelLayout.h"
 
-DEFINE_LOG_CATEGORY_STATIC(LogMcpNavigationHandlers, Log, All);
-
 bool UEngineWireSubsystem::HandleManageNavigationAction(
     const FString& RequestId,
     const FString& Action,
@@ -12,8 +10,6 @@ bool UEngineWireSubsystem::HandleManageNavigationAction(
     (void)Action;
 
     const FString SubAction = GetJsonStringField(Payload, TEXT("subAction"), TEXT(""));
-
-    UE_LOG(LogMcpNavigationHandlers, Verbose, TEXT("HandleManageNavigationAction: SubAction=%s"), *SubAction);
 
     if (SubAction == TEXT("configure_nav_mesh_settings"))
         return McpNavigationHandlers::HandleConfigureNavMeshSettings(this, RequestId, Payload, Socket);

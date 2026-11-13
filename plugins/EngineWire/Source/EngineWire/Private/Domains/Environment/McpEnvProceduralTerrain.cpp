@@ -5,28 +5,6 @@ bool UEngineWireSubsystem::HandleCreateProceduralTerrain(
     const TSharedPtr<FJsonObject> &Payload,
     TSharedPtr<FMcpBridgeWebSocket> RequestingSocket)
 {
-    const FString Lower = Action.ToLower();
-    if (!Lower.Equals(TEXT("create_procedural_terrain"), ESearchCase::IgnoreCase))
-    {
-        return false;
-    }
-
-    if (!GEditor)
-    {
-        SendAutomationError(RequestingSocket, RequestId,
-                            TEXT("Editor not available"),
-                            TEXT("EDITOR_NOT_AVAILABLE"));
-        return true;
-    }
-
-    if (!Payload.IsValid())
-    {
-        SendAutomationError(RequestingSocket, RequestId,
-                            TEXT("create_procedural_terrain payload missing"),
-                            TEXT("INVALID_PAYLOAD"));
-        return true;
-    }
-
     int32 SizeX = 100;
     int32 SizeY = 100;
     double Spacing = 100.0;
@@ -80,27 +58,8 @@ bool UEngineWireSubsystem::HandleCreateProceduralTerrain(
         return true;
     }
 
-    FVector Location(0, 0, 0);
-    const TSharedPtr<FJsonObject> *LocObj = nullptr;
-    if (Payload->TryGetObjectField(TEXT("location"), LocObj) && LocObj)
-    {
-        double X = 0, Y = 0, Z = 0;
-        (*LocObj)->TryGetNumberField(TEXT("x"), X);
-        (*LocObj)->TryGetNumberField(TEXT("y"), Y);
-        (*LocObj)->TryGetNumberField(TEXT("z"), Z);
-        Location = FVector(X, Y, Z);
-    }
-
-    FRotator Rotation(0, 0, 0);
-    const TSharedPtr<FJsonObject> *RotObj = nullptr;
-    if (Payload->TryGetObjectField(TEXT("rotation"), RotObj) && RotObj)
-    {
-        double Pitch = 0, Yaw = 0, Roll = 0;
-        (*RotObj)->TryGetNumberField(TEXT("pitch"), Pitch);
-        (*RotObj)->TryGetNumberField(TEXT("yaw"), Yaw);
-        (*RotObj)->TryGetNumberField(TEXT("roll"), Roll);
-        Rotation = FRotator(Pitch, Yaw, Roll);
-    }
+    const FVector Location = ExtractVectorField(Payload, TEXT("location"), FVector::ZeroVector);
+    const FRotator Rotation = ExtractRotatorField(Payload, TEXT("rotation"), FRotator::ZeroRotator);
 
     FActorSpawnParameters SpawnParams;
     SpawnParams.Name = FName(*ActorName);

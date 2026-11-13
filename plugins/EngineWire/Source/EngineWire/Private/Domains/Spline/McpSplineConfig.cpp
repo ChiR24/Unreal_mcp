@@ -15,12 +15,6 @@ bool HandleConfigureMeshSpacing(
     TSharedPtr<FMcpBridgeWebSocket> Socket)
 {
     UWorld* World = McpHandlerUtils::GetEditorWorld();
-    if (!World)
-    {
-        Self->SendAutomationResponse(Socket, RequestId, false,
-            TEXT("No editor world available"), nullptr, TEXT("NO_WORLD"));
-        return true;
-    }
 
     const FString ActorName = GetJsonStringField(Payload, TEXT("actorName"));
     AActor* Target = ResolveSplineConfigTarget(World, ActorName);
@@ -76,12 +70,6 @@ bool HandleConfigureMeshRandomization(
     TSharedPtr<FMcpBridgeWebSocket> Socket)
 {
     UWorld* World = McpHandlerUtils::GetEditorWorld();
-    if (!World)
-    {
-        Self->SendAutomationResponse(Socket, RequestId, false,
-            TEXT("No editor world available"), nullptr, TEXT("NO_WORLD"));
-        return true;
-    }
 
     const FString ActorName = GetJsonStringField(Payload, TEXT("actorName"));
     AActor* Target = ResolveSplineConfigTarget(World, ActorName);

@@ -97,7 +97,7 @@ bool HandleCreateTriggerSphere(UEngineWireSubsystem* Subsystem, const FString& R
         Subsystem->SendAutomationResponse(Socket, RequestId, false, TEXT("Failed to spawn TriggerSphere"), nullptr);
         return true;
     }
-    if (USphereComponent* SphereComp = Volume->GetCollisionComponent() ? Cast<USphereComponent>(Volume->GetCollisionComponent()) : nullptr)
+    if (USphereComponent* SphereComp = Cast<USphereComponent>(Volume->GetCollisionComponent()))
     {
         SphereComp->SetSphereRadius(Radius);
     }
@@ -132,7 +132,7 @@ bool HandleCreateTriggerCapsule(UEngineWireSubsystem* Subsystem, const FString& 
         Subsystem->SendAutomationResponse(Socket, RequestId, false, TEXT("Failed to spawn TriggerCapsule"), nullptr);
         return true;
     }
-    if (UCapsuleComponent* CapsuleComp = Volume->GetCollisionComponent() ? Cast<UCapsuleComponent>(Volume->GetCollisionComponent()) : nullptr)
+    if (UCapsuleComponent* CapsuleComp = Cast<UCapsuleComponent>(Volume->GetCollisionComponent()))
     {
         CapsuleComp->SetCapsuleSize(Radius, HalfHeight);
     }

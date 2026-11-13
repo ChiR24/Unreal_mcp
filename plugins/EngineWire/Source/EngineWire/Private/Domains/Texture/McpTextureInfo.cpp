@@ -2,13 +2,8 @@
 
 namespace McpTextureHandlers
 {
-TSharedPtr<FJsonObject> HandleTextureInfoAction(const FString& SubAction, const TSharedPtr<FJsonObject>& Params)
+TSharedPtr<FJsonObject> HandleTextureInfoAction(const TSharedPtr<FJsonObject>& Params)
 {
-    if (SubAction != TEXT("get_texture_info"))
-    {
-        return nullptr;
-    }
-
     TSharedPtr<FJsonObject> Response = McpHandlerUtils::CreateResultObject();
     FString AssetPath = GetJsonStringField(Params, TEXT("assetPath"), TEXT(""));
     const FString SanitizedAssetPath = SanitizeProjectRelativePath(AssetPath);
@@ -17,10 +12,6 @@ TSharedPtr<FJsonObject> HandleTextureInfoAction(const FString& SubAction, const 
         TEXTURE_ERROR_RESPONSE(McpPathRefusalMessage(TEXT("assetPath"), AssetPath));
     }
     AssetPath = SanitizedAssetPath;
-    if (AssetPath.IsEmpty())
-    {
-        TEXTURE_ERROR_RESPONSE(TEXT("assetPath is required"));
-    }
 
     UTexture2D* Texture = Cast<UTexture2D>(StaticLoadObject(UTexture2D::StaticClass(), nullptr, *AssetPath));
     if (!Texture)

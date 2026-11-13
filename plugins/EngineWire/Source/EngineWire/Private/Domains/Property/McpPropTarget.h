@@ -59,6 +59,12 @@ void NotifyOwners(UObject* Edited);
 // or a save that failed.
 bool SaveAfterWrite(UObject* Target, UBlueprint* Blueprint, bool bMarkDirty, FString& OutSkipReason);
 
+// The Blueprint at BlueprintPath (OutBlueprint, and the path it loaded from) and its class default object; null after
+// refusing with BLUEPRINT_NOT_FOUND, or CDO_NOT_FOUND when it has no generated class or default object.
+UObject* LoadBlueprintDefaultsOrReply(UEngineWireSubsystem& Bridge, const FString& RequestId,
+                                      TSharedPtr<FMcpBridgeWebSocket> Socket, const FString& BlueprintPath,
+                                      UBlueprint*& OutBlueprint, FString& OutNormalizedPath);
+
 // Reads objectPath|blueprintPath and propertyName|propertyPath and resolves the
 // object: the Blueprint's current CDO, or the object at objectPath (recovering its
 // Blueprint when that object is a CDO, and the Blueprint's current CDO when it is

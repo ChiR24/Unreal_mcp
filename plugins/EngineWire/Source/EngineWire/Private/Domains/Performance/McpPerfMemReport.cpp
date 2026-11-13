@@ -15,19 +15,19 @@ namespace McpPerformanceHandlers
 {
 namespace
 {
-FString FindNewestMemReport(const FString& ReportDirectory, FDateTime& OutStamp)
+FString FindNewestMemReport(const FString& ReportDirectory)
 {
     TArray<FString> ReportFiles;
     IFileManager::Get().FindFilesRecursive(
         ReportFiles, *ReportDirectory, TEXT("*.memreport"), true, false, true);
     FString Newest;
-    OutStamp = FDateTime::MinValue();
+    FDateTime NewestStamp = FDateTime::MinValue();
     for (const FString& File : ReportFiles)
     {
         const FDateTime Stamp = IFileManager::Get().GetTimeStamp(*File);
-        if (Stamp > OutStamp)
+        if (Stamp > NewestStamp)
         {
-            OutStamp = Stamp;
+            NewestStamp = Stamp;
             Newest = File;
         }
     }
@@ -47,16 +47,10 @@ bool HandleMemoryReportAction(const FPerformanceActionContext& Context)
     }
     bool bDetailed = false;
     Context.Payload->TryGetBoolField(TEXT("detailed"), bDetailed);
-    if (!GEditor)
-    {
-        Context.Bridge.SendAutomationError(Context.RequestingSocket, Context.RequestId, TEXT("Editor not available"), TEXT("EDITOR_NOT_AVAILABLE"));
-        return true;
-    }
 
     const FString Command = bDetailed ? TEXT("memreport -full") : TEXT("memreport");
     const FString ReportDirectory = FPaths::ConvertRelativePathToFull(FPaths::ProfilingDir() / TEXT("MemReports"));
-    FDateTime BeforeStamp;
-    const FString BeforeReport = FindNewestMemReport(ReportDirectory, BeforeStamp);
+    const FString BeforeReport = FindNewestMemReport(ReportDirectory);
     GEngine->Exec(GEditor->GetEditorWorldContext().World(), *Command);
 
     TWeakObjectPtr<UEngineWireSubsystem> WeakBridge = &Context.Bridge;
@@ -66,8 +60,7 @@ bool HandleMemoryReportAction(const FPerformanceActionContext& Context)
     FTSTicker::GetCoreTicker().AddTicker(FTickerDelegate::CreateLambda(
         [WeakBridge, RequestId, Socket, ReportDirectory, BeforeReport, Attempts](float) -> bool
         {
-            FDateTime NewestStamp;
-            FString NewestReport = FindNewestMemReport(ReportDirectory, NewestStamp);
+            FString NewestReport = FindNewestMemReport(ReportDirectory);
             const bool bIsNew = !NewestReport.IsEmpty() && NewestReport != BeforeReport;
             ++(*Attempts);
             if (!bIsNew && *Attempts < 100)

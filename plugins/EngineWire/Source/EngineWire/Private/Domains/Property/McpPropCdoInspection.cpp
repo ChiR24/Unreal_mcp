@@ -2,6 +2,7 @@
 #include "Core/Compatibility/McpVersionCompatibility.h"
 
 #include "Domains/Property/McpPropCdoComponents.h"
+#include "Domains/Property/McpPropTarget.h"
 
 #include "Dom/JsonObject.h"
 #include "Foundation/BridgeHelpers/McpHelpers.h"
@@ -39,34 +40,14 @@ bool UEngineWireSubsystem::HandleInspectCdoAction(
         return true;
     }
 
-    FString NormalizedPath, LoadError;
-    UBlueprint* Blueprint = LoadBlueprintAsset(BlueprintPath, NormalizedPath, LoadError);
-    if (!Blueprint)
-    {
-        SendAutomationError(RequestingSocket, RequestId,
-                            FString::Printf(TEXT("Blueprint not found: %s (%s)"),
-                                            *BlueprintPath, *LoadError),
-                            TEXT("BLUEPRINT_NOT_FOUND"));
-        return true;
-    }
-
-    UClass* GeneratedClass = Blueprint->GeneratedClass;
-    if (!GeneratedClass)
-    {
-        SendAutomationError(RequestingSocket, RequestId,
-                            TEXT("Blueprint has no GeneratedClass (not compiled?)"),
-                            TEXT("CDO_NOT_FOUND"));
-        return true;
-    }
-
-    UObject* CDO = GeneratedClass->GetDefaultObject();
+    FString NormalizedPath;
+    UBlueprint* Blueprint = nullptr;
+    UObject* CDO = McpPropertyTarget::LoadBlueprintDefaultsOrReply(*this, RequestId, RequestingSocket, BlueprintPath, Blueprint, NormalizedPath);
     if (!CDO)
     {
-        SendAutomationError(RequestingSocket, RequestId,
-                            TEXT("Failed to get Class Default Object"),
-                            TEXT("CDO_NOT_FOUND"));
         return true;
     }
+    UClass* GeneratedClass = Blueprint->GeneratedClass;
 
     FString ComponentNameFilter;
     Payload->TryGetStringField(TEXT("componentName"), ComponentNameFilter);

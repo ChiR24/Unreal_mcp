@@ -1,7 +1,5 @@
 #include "Domains/Networking/McpNetPrivate.h"
 
-DEFINE_LOG_CATEGORY(LogMcpNetworkingHandlers);
-
 bool UEngineWireSubsystem::HandleManageNetworkingAction(
     const FString& RequestId,
     const FString& Action,
@@ -10,19 +8,7 @@ bool UEngineWireSubsystem::HandleManageNetworkingAction(
 {
     using namespace McpNetworkingHandlers;
 
-    if (Action != TEXT("manage_networking"))
-    {
-        return false;
-    }
-
-    FString SubAction = GetJsonStringField(Payload, TEXT("subAction"));
-    if (SubAction.IsEmpty())
-    {
-        SubAction = Action;
-    }
-
-    UE_LOG(LogMcpNetworkingHandlers, Log, TEXT("HandleManageNetworkingAction: %s"), *SubAction);
-
+    const FString SubAction = GetJsonStringField(Payload, TEXT("subAction"));
     TSharedPtr<FJsonObject> ResultJson = McpHandlerUtils::CreateResultObject();
     FNetworkingActionContext Context{*this, RequestId, Payload, RequestingSocket, ResultJson};
 

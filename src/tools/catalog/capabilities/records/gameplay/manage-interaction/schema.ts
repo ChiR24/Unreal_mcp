@@ -50,7 +50,7 @@ export const NP: PropertyMap = {
   canToggle: bool('Whether the switch can toggle back off.'),
   resetTime: num('Switch reset delay in seconds.'),
   chestPath: str('Canonical /Game chest actor Blueprint asset path.'),
-  triggerShape: str('Trigger volume shape (box, sphere, or capsule).'),
+  triggerShape: { type: 'string', enum: ['box', 'sphere', 'capsule'], description: 'Trigger volume shape: box (the default), sphere or capsule.' },
   triggerPath: str('Canonical /Game trigger actor Blueprint asset path.'),
 };
 

@@ -12,8 +12,6 @@ class USplineComponent;
 class USplineMeshComponent;
 class UWorld;
 
-DECLARE_LOG_CATEGORY_EXTERN(LogMcpSplineHandlers, Log, All);
-
 #include "Components/SplineComponent.h"
 #include "Components/SplineMeshComponent.h"
 

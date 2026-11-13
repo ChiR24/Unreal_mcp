@@ -11,7 +11,6 @@ bool HandleAnimationSetupIKAction(FActionContext &Context,
   TSharedPtr<FJsonObject> &Resp = Context.Resp;
   bool &bSuccess = Context.bSuccess;
   FString &Message = Context.Message;
-  FString &ErrorCode = Context.ErrorCode;
 
 
     FString IKName;

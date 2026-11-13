@@ -35,7 +35,7 @@ TSharedPtr<FJsonObject> UEngineWireSubsystem::HandleManageTextureAction(const TS
     }
     if (SubAction == TEXT("get_texture_info"))
     {
-        return McpTextureHandlers::HandleTextureInfoAction(SubAction, Params);
+        return McpTextureHandlers::HandleTextureInfoAction(Params);
     }
     if (SubAction == TEXT("resize_texture"))
     {
@@ -82,18 +82,8 @@ bool UEngineWireSubsystem::HandleManageTextureAction(
     const TSharedPtr<FJsonObject>& Payload,
     TSharedPtr<FMcpBridgeWebSocket> Socket)
 {
-    if (Action != TEXT("manage_texture"))
-    {
-        return false;
-    }
-
+    // Reached only from manage_asset's registered lambda, with this action and a payload carrying the sub-action.
     const TSharedPtr<FJsonObject> Result = HandleManageTextureAction(Payload);
-    if (!Result.IsValid())
-    {
-        SendAutomationError(
-            Socket, RequestId, TEXT("Failed to process texture action"), TEXT("PROCESSING_FAILED"));
-        return true;
-    }
 
     const bool bSuccess = GetJsonBoolField(Result, TEXT("success"));
     if (bSuccess)

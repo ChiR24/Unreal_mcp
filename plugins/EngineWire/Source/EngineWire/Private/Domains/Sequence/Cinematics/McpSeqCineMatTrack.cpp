@@ -89,21 +89,14 @@ bool HandleAddMaterialParameterTrack(const TSharedPtr<FJsonObject> &Params,
   }
   double MaterialIndexValue = 0.0;
   Params->TryGetNumberField(TEXT("materialIndex"), MaterialIndexValue);
-  if (!FMath::IsFinite(MaterialIndexValue) || MaterialIndexValue < 0.0 ||
-      MaterialIndexValue > MAX_int32) {
+  // The sequence dispatcher has refused one that is not finite, not whole or outside int32.
+  if (MaterialIndexValue < 0.0) {
     OutResult = MakeResult(false, TEXT("add_material_parameter_track"),
                            TEXT("materialIndex must be a non-negative integer"),
                            TEXT("INVALID_ARGUMENT"));
     return true;
   }
-  const int32 MaterialIndex = FMath::RoundToInt(MaterialIndexValue);
-  if (!FMath::IsNearlyEqual(MaterialIndexValue,
-                            static_cast<double>(MaterialIndex))) {
-    OutResult = MakeResult(false, TEXT("add_material_parameter_track"),
-                           TEXT("materialIndex must be a non-negative integer"),
-                           TEXT("INVALID_ARGUMENT"));
-    return true;
-  }
+  const int32 MaterialIndex = static_cast<int32>(MaterialIndexValue);
   const FString MaterialPath = GetString(Params, TEXT("materialPath"));
   UMaterialInterface *ExpectedMaterial =
       MaterialPath.IsEmpty()

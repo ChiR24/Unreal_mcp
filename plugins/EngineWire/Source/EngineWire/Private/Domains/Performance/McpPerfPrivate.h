@@ -47,10 +47,6 @@ inline void SendPerfCVarResult(const FPerformanceActionContext& Context, const F
         NotSet.Num() > 0 ? FString::Printf(TEXT("%s; not set: %s"), *Done, *FString::Join(NotSet, TEXT("; "))) : Done, Resp);
 }
 
-FString ResolvePerformanceAction(
-    const FString& RequestAction,
-    const TSharedPtr<FJsonObject>& Payload);
-bool IsPerformanceAction(const FString& RequestAction, const FString& Lower);
 bool HandleMemoryReportAction(const FPerformanceActionContext& Context);
 bool HandleProfilingAction(const FPerformanceActionContext& Context);
 bool HandleRenderingSettingsAction(const FPerformanceActionContext& Context);

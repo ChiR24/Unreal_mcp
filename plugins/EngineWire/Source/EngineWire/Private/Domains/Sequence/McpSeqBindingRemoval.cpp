@@ -20,78 +20,62 @@ bool UEngineWireSubsystem::HandleSequenceRemoveActors(
   if (!SeqObj) {
     return true;
   }
-  if (!GEditor) {
-    SendAutomationResponse(Socket, RequestId, false,
-                           TEXT("Editor not available"), nullptr,
-                           TEXT("EDITOR_NOT_AVAILABLE"));
-    return true;
-  }
+  TArray<TSharedPtr<FJsonValue>> Removed;
+  int32 RemovedCount = 0;
+  for (const TSharedPtr<FJsonValue> &V : *Arr) {
+    if (!V.IsValid() || V->Type != EJson::String)
+      continue;
+    FString Name = V->AsString();
+    TSharedPtr<FJsonObject> Item = McpHandlerUtils::CreateResultObject();
+    Item->SetStringField(TEXT("name"), Name);
 
-  if (UEditorActorSubsystem *ActorSS =
-          GEditor->GetEditorSubsystem<UEditorActorSubsystem>()) {
-    TArray<TSharedPtr<FJsonValue>> Removed;
-    int32 RemovedCount = 0;
-    for (const TSharedPtr<FJsonValue> &V : *Arr) {
-      if (!V.IsValid() || V->Type != EJson::String)
-        continue;
-      FString Name = V->AsString();
-      TSharedPtr<FJsonObject> Item = McpHandlerUtils::CreateResultObject();
-      Item->SetStringField(TEXT("name"), Name);
-
-      if (ULevelSequence *LevelSeq = Cast<ULevelSequence>(SeqObj)) {
-        UMovieScene *MovieScene = LevelSeq->GetMovieScene();
-        if (MovieScene) {
-          const FGuid RemovedGuid =
-              McpSequenceKeyframes::ResolveBindingGuid(MovieScene, FString(), Name);
-          const bool bRemoved = RemovedGuid.IsValid();
-          if (bRemoved) {
-            // The sequence's own object-binding map outlives RemovePossessable,
-            // and without MarkPackageDirty the removal never reached disk and
-            // the editor never offered to save it -- the mirror image of what
-            // sequence_add_actors already does.
-            LevelSeq->Modify();
-            MovieScene->Modify();
-            LevelSeq->UnbindPossessableObjects(RemovedGuid);
-            MovieScene->RemovePossessable(RemovedGuid);
-            LevelSeq->MarkPackageDirty();
-          }
-          if (bRemoved) {
-            Item->SetBoolField(TEXT("success"), true);
-            Item->SetStringField(TEXT("status"), TEXT("Actor removed"));
-            RemovedCount++;
-          } else {
-            Item->SetBoolField(TEXT("success"), false);
-            Item->SetStringField(TEXT("error"),
-                                 TEXT("Actor not found in sequence bindings"));
-          }
+    if (ULevelSequence *LevelSeq = Cast<ULevelSequence>(SeqObj)) {
+      UMovieScene *MovieScene = LevelSeq->GetMovieScene();
+      if (MovieScene) {
+        const FGuid RemovedGuid =
+            McpSequenceKeyframes::ResolveBindingGuid(MovieScene, FString(), Name);
+        const bool bRemoved = RemovedGuid.IsValid();
+        if (bRemoved) {
+          // The sequence's own object-binding map outlives RemovePossessable,
+          // and without MarkPackageDirty the removal never reached disk and
+          // the editor never offered to save it -- the mirror image of what
+          // sequence_add_actors already does.
+          LevelSeq->Modify();
+          MovieScene->Modify();
+          LevelSeq->UnbindPossessableObjects(RemovedGuid);
+          MovieScene->RemovePossessable(RemovedGuid);
+          LevelSeq->MarkPackageDirty();
+          Item->SetBoolField(TEXT("success"), true);
+          Item->SetStringField(TEXT("status"), TEXT("Actor removed"));
+          RemovedCount++;
         } else {
           Item->SetBoolField(TEXT("success"), false);
           Item->SetStringField(TEXT("error"),
-                               TEXT("Sequence has no MovieScene"));
+                               TEXT("Actor not found in sequence bindings"));
         }
       } else {
         Item->SetBoolField(TEXT("success"), false);
         Item->SetStringField(TEXT("error"),
-                             TEXT("Sequence object is not a LevelSequence"));
+                             TEXT("Sequence has no MovieScene"));
       }
-      Removed.Add(MakeShared<FJsonValueObject>(Item));
+    } else {
+      Item->SetBoolField(TEXT("success"), false);
+      Item->SetStringField(TEXT("error"),
+                           TEXT("Sequence object is not a LevelSequence"));
     }
-    TSharedPtr<FJsonObject> Out = McpHandlerUtils::CreateResultObject();
-    Out->SetArrayField(TEXT("removedActors"), Removed);
-    Out->SetNumberField(TEXT("bindingsProcessed"), RemovedCount);
-    Out->SetNumberField(TEXT("removed"), RemovedCount);
-    Out->SetNumberField(TEXT("total"), Arr->Num());
-    // "Actors processed for removal" read identically whether three bindings
-    // went or none did; sequence_add_actors was already given real counts.
-    const bool bAnyRemoved = RemovedCount > 0;
-    SendAutomationResponse(Socket, RequestId, bAnyRemoved,
-        FString::Printf(TEXT("%d of %d binding(s) removed from the sequence"),
-                        RemovedCount, Arr->Num()),
-        Out, bAnyRemoved ? FString() : TEXT("NO_ACTORS_REMOVED"));
-    return true;
+    Removed.Add(MakeShared<FJsonValueObject>(Item));
   }
-  SendAutomationResponse(Socket, RequestId, false,
-                         TEXT("EditorActorSubsystem not available"), nullptr,
-                         TEXT("EDITOR_ACTOR_SUBSYSTEM_MISSING"));
+  TSharedPtr<FJsonObject> Out = McpHandlerUtils::CreateResultObject();
+  Out->SetArrayField(TEXT("removedActors"), Removed);
+  Out->SetNumberField(TEXT("bindingsProcessed"), RemovedCount);
+  Out->SetNumberField(TEXT("removed"), RemovedCount);
+  Out->SetNumberField(TEXT("total"), Arr->Num());
+  // "Actors processed for removal" read identically whether three bindings
+  // went or none did; sequence_add_actors was already given real counts.
+  const bool bAnyRemoved = RemovedCount > 0;
+  SendAutomationResponse(Socket, RequestId, bAnyRemoved,
+      FString::Printf(TEXT("%d of %d binding(s) removed from the sequence"),
+                      RemovedCount, Arr->Num()),
+      Out, bAnyRemoved ? FString() : TEXT("NO_ACTORS_REMOVED"));
   return true;
 }

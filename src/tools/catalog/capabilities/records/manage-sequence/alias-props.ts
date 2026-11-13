@@ -100,7 +100,7 @@ export const A = {
   /** HandleAddPropertyTrack PropertyTrack.cpp:93. */
   propertyPath: str('Nested property path to animate.'),
   /** HandleAddPropertyTrack PropertyTrack.cpp:112. */
-  propertyType: str('Property value type hint (alias of type).'),
+  propertyType: str('Property value type hint.'),
   /** ReadBindingGuid Cinematics.cpp:113. */
   bindingGuid: str('Sequencer binding GUID.'),
 

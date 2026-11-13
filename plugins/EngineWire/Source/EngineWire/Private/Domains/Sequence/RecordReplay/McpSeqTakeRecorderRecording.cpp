@@ -15,11 +15,9 @@ constexpr double TakeRecorderStartGraceSeconds = 10.0;
 bool HasSourceConfigurationRequest(
     const TSharedPtr<FJsonObject>& Payload)
 {
-    if (!Payload.IsValid()) return false;
     static const TCHAR* Fields[] = {
         TEXT("actorName"),
         TEXT("actorNames"),
-        TEXT("actors"),
         TEXT("sourceActors"),
         TEXT("sourceClasses"),
         TEXT("clearSources")

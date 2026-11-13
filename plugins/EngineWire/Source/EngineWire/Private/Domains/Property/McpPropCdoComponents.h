@@ -30,8 +30,7 @@ void ForEachScsNode(UBlueprint* Blueprint, TVisitor&& Visit)
                 }
             }
         }
-        UClass* ParentClass = Bp->ParentClass;
-        Bp = ParentClass ? Cast<UBlueprint>(ParentClass->ClassGeneratedBy) : nullptr;
+        Bp = UBlueprint::GetBlueprintFromClass(Bp->ParentClass);
     }
 }
 
@@ -59,8 +58,7 @@ inline UActorComponent* EffectiveTemplate(UBlueprint* Blueprint, USCS_Node* Node
             }
             return Override;
         }
-        UClass* ParentClass = Bp->ParentClass;
-        Bp = ParentClass ? Cast<UBlueprint>(ParentClass->ClassGeneratedBy) : nullptr;
+        Bp = UBlueprint::GetBlueprintFromClass(Bp->ParentClass);
     }
     return Node ? Node->ComponentTemplate : nullptr;
 }
@@ -105,7 +103,6 @@ UActorComponent* FindCdoComponent(
     UObject* CDO,
     const FString& ComponentName,
     bool bCreateInheritedOverride,
-    UInheritableComponentHandler** OutCreatedInheritedOverrideHandler = nullptr,
-    FComponentKey* OutCreatedInheritedOverrideKey = nullptr,
+    FCreatedInheritedOverride* OutCreated = nullptr,
     bool* bOutFoundComponent = nullptr);
 }

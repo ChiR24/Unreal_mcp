@@ -34,7 +34,7 @@ FSCSHandlers::RemoveSCSComponent(const FString &BlueprintPath,
 
   USimpleConstructionScript *SCS = Blueprint->SimpleConstructionScript;
 
-  USCS_Node *NodeToRemove = FindSCSNodeByVariableName(SCS, ComponentName);
+  USCS_Node *NodeToRemove = FindScsNodeByName(SCS, ComponentName);
 
   if (!NodeToRemove) {
     return SCSFail(Result, FString::Printf(TEXT("Component not found: %s"), *ComponentName), TEXT("SCS_COMPONENT_NOT_FOUND"));
@@ -60,7 +60,7 @@ FSCSHandlers::RemoveSCSComponent(const FString &BlueprintPath,
   bool bCompiled = false;
   bool bSaved = false;
   FinalizeBlueprintSCSChange(Blueprint, bCompiled, bSaved);
-  if (FindSCSNodeByVariableName(SCS, ComponentName)) {
+  if (FindScsNodeByName(SCS, ComponentName)) {
     return SCSFail(Result, FString::Printf(TEXT("Component '%s' is still in the Blueprint after the compile"), *ComponentName),
                    TEXT("SCS_REMOVE_REVERTED"));
   }
@@ -97,7 +97,7 @@ FSCSHandlers::RemoveSCSComponents(const FString &BlueprintPath,
   TArray<TSharedPtr<FJsonValue>> Results;
   TArray<FString> Missing;
   for (const FString &Name : ComponentNames) {
-    USCS_Node *Node = FindSCSNodeByVariableName(SCS, Name);
+    USCS_Node *Node = FindScsNodeByName(SCS, Name);
     TSharedPtr<FJsonObject> One = McpHandlerUtils::CreateResultObject();
     One->SetStringField(TEXT("componentName"), Name);
     One->SetBoolField(TEXT("success"), Node != nullptr);

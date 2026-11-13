@@ -105,37 +105,5 @@ bool ApplyStringSetting(UPCGSettings* Settings, const TCHAR* PropertyName, const
 
     return ApplyJsonValueToProperty(Settings, Property, MakeShared<FJsonValueString>(Value), OutError);
 }
-
-bool ResolveClassForProperty(UObject* Target, const TCHAR* PropertyName, const FString& ClassName, UClass*& OutClass, FString& OutError)
-{
-    OutClass = nullptr;
-    if (!Target || ClassName.IsEmpty())
-    {
-        return true;
-    }
-
-    FProperty* Property = Target->GetClass()->FindPropertyByName(FName(PropertyName));
-    FClassProperty* ClassProperty = CastField<FClassProperty>(Property);
-    if (!ClassProperty)
-    {
-        OutError = FString::Printf(TEXT("Class property '%s' was not found on '%s'."), PropertyName, *Target->GetClass()->GetName());
-        return false;
-    }
-
-    UClass* Class = ResolveClassByName(ClassName);
-    if (!Class)
-    {
-        OutError = FString::Printf(TEXT("Could not resolve class '%s'."), *ClassName);
-        return false;
-    }
-    if (ClassProperty->MetaClass && !Class->IsChildOf(ClassProperty->MetaClass))
-    {
-        OutError = FString::Printf(TEXT("Class '%s' is not assignable to '%s'."), *Class->GetName(), *ClassProperty->MetaClass->GetName());
-        return false;
-    }
-
-    OutClass = Class;
-    return true;
-}
 }
 #endif

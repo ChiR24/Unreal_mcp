@@ -63,7 +63,7 @@ TSharedPtr<FJsonObject> HandleCreateTextTexture(const TSharedPtr<FJsonObject>& P
 TSharedPtr<FJsonObject> HandleCreateNormalFromHeight(const TSharedPtr<FJsonObject>& Params);
 TSharedPtr<FJsonObject> HandleCreateAoFromMesh(const TSharedPtr<FJsonObject>& Params);
 TSharedPtr<FJsonObject> HandleTextureSettingsAction(const FString& SubAction, const TSharedPtr<FJsonObject>& Params);
-TSharedPtr<FJsonObject> HandleTextureInfoAction(const FString& SubAction, const TSharedPtr<FJsonObject>& Params);
+TSharedPtr<FJsonObject> HandleTextureInfoAction(const TSharedPtr<FJsonObject>& Params);
 TSharedPtr<FJsonObject> HandleResizeTexture(const TSharedPtr<FJsonObject>& Params);
 TSharedPtr<FJsonObject> HandleTextureColorAction(const FString& SubAction, const TSharedPtr<FJsonObject>& Params);
 TSharedPtr<FJsonObject> HandleTextureFilterAction(const FString& SubAction, const TSharedPtr<FJsonObject>& Params);

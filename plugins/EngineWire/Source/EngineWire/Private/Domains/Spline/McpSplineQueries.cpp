@@ -20,12 +20,6 @@ bool HandleGetSplinesInfo(
     FString ActorName = GetJsonStringField(Payload, TEXT("actorName"));
 
     UWorld* World = McpHandlerUtils::GetEditorWorld();
-    if (!World)
-    {
-        Self->SendAutomationResponse(Socket, RequestId, false,
-            TEXT("No editor world available"), nullptr, TEXT("NO_WORLD"));
-        return true;
-    }
 
     TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
 

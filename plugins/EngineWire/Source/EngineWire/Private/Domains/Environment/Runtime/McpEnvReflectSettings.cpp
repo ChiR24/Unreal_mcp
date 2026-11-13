@@ -108,10 +108,10 @@ int32 McpApplyPayloadSettings(UObject *Target, const TSharedPtr<FJsonObject> &Pa
     }
 
     // The canonical payload key skyLightIntensity does not match the
-    // USkyLightComponent property name "Intensity" (McpApplyPayloadSettings
-    // below does a case-insensitive exact-name match only), so translate it
-    // explicitly before the generic pass. Mirrors spawn_sky_light's top-level
-    // intensity handling (LightingHandlersSky.cpp).
+    // USkyLightComponent property name "Intensity" (the generic pass below
+    // matches names case-insensitively and exactly), so translate it
+    // explicitly before that pass. Mirrors spawn_sky_light's top-level
+    // intensity handling (McpLightingSky.cpp).
     // Live-discovered: configure_sky_light passes the ASkyLight actor
     // (not the component) to McpApplyEnvironmentSettings, so resolve the
     // component from the actor when the direct Cast fails.

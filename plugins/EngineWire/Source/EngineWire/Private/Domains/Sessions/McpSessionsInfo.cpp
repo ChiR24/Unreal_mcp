@@ -28,10 +28,10 @@ bool HandleGetSessionsInfo(
     SessionsInfo->SetBoolField(TEXT("inPlaySession"), bInPIE);
     SessionsInfo->SetNumberField(TEXT("currentPlayers"), LocalPlayerCount);
     const UGameMapsSettings* MapsSettings = GetDefault<UGameMapsSettings>();
-    const bool bSplitScreenConfigured = MapsSettings && MapsSettings->bUseSplitscreen;
+    const bool bSplitScreenConfigured = MapsSettings->bUseSplitscreen;
     SessionsInfo->SetBoolField(TEXT("splitScreenEnabled"), bSplitScreenConfigured);
     SessionsInfo->SetBoolField(TEXT("splitScreenActive"), LocalPlayerCount > 1);
-    SessionsInfo->SetStringField(TEXT("splitScreenLayout"), MapsSettings ? StaticEnum<ETwoPlayerSplitScreenType::Type>()->GetNameStringByValue(static_cast<int64>(MapsSettings->TwoPlayerSplitscreenLayout.GetValue())) : TEXT("Unknown"));
+    SessionsInfo->SetStringField(TEXT("splitScreenLayout"), StaticEnum<ETwoPlayerSplitScreenType::Type>()->GetNameStringByValue(static_cast<int64>(MapsSettings->TwoPlayerSplitscreenLayout.GetValue())));
     // Per PIE instance net mode: the evidence that host_lan_server made a ListenServer and that
     // join_lan_server connected a Client.
     TArray<TSharedPtr<FJsonValue>> PieInstances;

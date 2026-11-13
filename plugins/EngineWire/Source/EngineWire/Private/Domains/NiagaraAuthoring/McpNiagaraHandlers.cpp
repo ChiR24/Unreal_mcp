@@ -6,11 +6,8 @@ bool UEngineWireSubsystem::HandleManageNiagaraAuthoringAction(
     const TSharedPtr<FJsonObject>& Payload,
     TSharedPtr<FMcpBridgeWebSocket> RequestingSocket)
 {
-    if (Action != TEXT("manage_niagara_authoring"))
-    {
-        return false;
-    }
-
+    // Reached only from manage_effect (McpEffectHandlers.cpp), which passes this action and a payload carrying the
+    // sub-action.
     if (!FModuleManager::Get().IsModuleLoaded(TEXT("NiagaraEditor")))
     {
         if (!FModuleManager::Get().ModuleExists(TEXT("NiagaraEditor")) ||
@@ -25,18 +22,7 @@ bool UEngineWireSubsystem::HandleManageNiagaraAuthoringAction(
         }
     }
 
-    if (!Payload.IsValid())
-    {
-        SendAutomationError(RequestingSocket, RequestId, TEXT("Missing payload."), TEXT("INVALID_PAYLOAD"));
-        return true;
-    }
-
     const FString SubAction = GetJsonStringField(Payload, TEXT("subAction"));
-    if (SubAction.IsEmpty())
-    {
-        SendAutomationError(RequestingSocket, RequestId, TEXT("Missing 'subAction' in payload."), TEXT("INVALID_ARGUMENT"));
-        return true;
-    }
 
     McpNiagaraAuthoringHandlers::FActionContext Context =
         McpNiagaraAuthoringHandlers::MakeActionContext(this, RequestId, Payload, RequestingSocket);

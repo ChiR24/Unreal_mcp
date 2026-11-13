@@ -20,10 +20,6 @@ bool HandleGASCueNotify(const FGASRequestContext& Context, const FString& SubAct
     const FString& RequestId = Context.RequestId;
     TSharedPtr<FMcpBridgeWebSocket> RequestingSocket = Context.RequestingSocket;
     const TSharedPtr<FJsonObject>& Payload = Context.Payload;
-    const FString& Name = Context.Name;
-    const FString& Path = Context.Path;
-    const FString& BlueprintPath = Context.BlueprintPath;
-    const FString& AssetPath = Context.AssetPath;
 
     if (SubAction == TEXT("create_gameplay_cue_notify"))
     {

@@ -1,5 +1,5 @@
 {
-  "catalogRevision": "f43ac4778441e2b4",
+  "catalogRevision": "887cbbac05db1a95",
   "recordCount": 489,
   "records": [
     {
@@ -88308,7 +88308,12 @@
             },
             "triggerShape": {
               "type": "string",
-              "description": "Trigger volume shape (box, sphere, or capsule)."
+              "enum": [
+                "box",
+                "sphere",
+                "capsule"
+              ],
+              "description": "Trigger volume shape: box (the default), sphere or capsule."
             },
             "blueprintPath": {
               "type": "string",
@@ -88518,8 +88523,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "dc114a31e6d890f61f96f54461d90d34d4e0aa238187be1214db35ee00e407d6",
-        "content": "b51555617293a966fecae97438fcb9f96091704fbe9b9e3b91e841c2949e7fe7"
+        "schema": "b6af3d695a57ff0744878a691867a3e3abf2ec607289d8018eec184b0ed531c7",
+        "content": "8fa2681505adac15ecfb90f6de4509ada2d58ee30c035b2c6e664595bda74957"
       }
     },
     {
@@ -106706,7 +106711,7 @@
             },
             "propertyType": {
               "type": "string",
-              "description": "Property value type hint (alias of type)."
+              "description": "Property value type hint."
             },
             "animationSequencePath": {
               "type": "string",
@@ -107095,8 +107100,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "a72006ae09f51455a90d4c7742814a21c14b39940285a8d99c4cec42b743e9d9",
-        "content": "e6920888e8479f6a44c72c61cbc98c50610d253cf154b878612ba6bd4d198014"
+        "schema": "13d35383f1df9e529acc41b14f412136a109600d0a4ae52fbabd6c0705b2b62b",
+        "content": "09e5e22027382be82909bd54a21b4add4e013a83b466cd57b77df4a63eed473c"
       }
     },
     {

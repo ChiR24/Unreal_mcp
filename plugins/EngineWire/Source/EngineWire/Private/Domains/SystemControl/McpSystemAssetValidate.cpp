@@ -91,7 +91,7 @@ bool HandleValidateAssets(UEngineWireSubsystem* Self,
                               TEXT("DATAVALIDATION_PLUGIN_NOT_ENABLED"));
     return true;
   }
-  UEditorValidatorSubsystem* Validator = bDataValidation && GEditor
+  UEditorValidatorSubsystem* Validator = bDataValidation
       ? GEditor->GetEditorSubsystem<UEditorValidatorSubsystem>()
       : nullptr;
   const bool bUsage = GetJsonBoolField(Payload, TEXT("materialUsage"));

@@ -27,7 +27,7 @@ FSCSHandlers::ReparentSCSComponent(const FString &BlueprintPath,
 
   USimpleConstructionScript *SCS = Blueprint->SimpleConstructionScript;
 
-  USCS_Node *ComponentNode = FindSCSNodeByVariableName(SCS, ComponentName);
+  USCS_Node *ComponentNode = FindScsNodeByName(SCS, ComponentName);
 
   if (!ComponentNode) {
     Result->SetBoolField(TEXT("success"), false);
@@ -61,7 +61,7 @@ FSCSHandlers::ReparentSCSComponent(const FString &BlueprintPath,
     }
 
     if (!NewParentNode) {
-      NewParentNode = FindSCSNodeByVariableName(SCS, NewParentName);
+      NewParentNode = FindScsNodeByName(SCS, NewParentName);
     }
 
     // An inherited native component (ACharacter's Mesh, CapsuleComponent, ...)
@@ -144,7 +144,7 @@ FSCSHandlers::ReparentSCSComponent(const FString &BlueprintPath,
     return false;
   };
 
-  USCS_Node *OldParent = FindSCSParentNode(SCS, ComponentNode);
+  USCS_Node *OldParent = SCS->FindParentNode(ComponentNode);
 
   if ((NewParentNode == nullptr && OldParent == nullptr &&
        IsSCSRootNode(SCS, ComponentNode)) ||
@@ -186,7 +186,7 @@ FSCSHandlers::ReparentSCSComponent(const FString &BlueprintPath,
   bool bSaved = false;
   FinalizeBlueprintSCSChange(Blueprint, bCompiled, bSaved);
 
-  USCS_Node *VerifiedNode = FindSCSNodeByVariableName(SCS, ComponentName);
+  USCS_Node *VerifiedNode = FindScsNodeByName(SCS, ComponentName);
   if (!VerifiedNode ||
       !SCSParentMatches(SCS, VerifiedNode, ExpectedParentName)) {
     Result->SetBoolField(TEXT("success"), false);

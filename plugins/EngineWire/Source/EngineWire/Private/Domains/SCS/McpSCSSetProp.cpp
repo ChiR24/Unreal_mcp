@@ -46,7 +46,7 @@ TSharedPtr<FJsonObject> FSCSHandlers::SetSCSComponentProperty(
   McpPropertyCdoComponents::FCreatedInheritedOverride CreatedOverride;
   UObject *ComponentTemplate = McpPropertyCdoComponents::FindCdoComponent(
       Blueprint, CDO, ComponentName, /*bCreateInheritedOverride=*/true,
-      &CreatedOverride.Handler, &CreatedOverride.Key,
+      &CreatedOverride,
       &bFoundComponent);
 
   if (!ComponentTemplate) {
@@ -97,8 +97,6 @@ TSharedPtr<FJsonObject> FSCSHandlers::SetSCSComponentProperty(
     FString ResolveError;
     FString ResolvedPath;
     FString FailureMessage;
-    FString FailureCode;
-    bool bAppliedValue = false;
     // The shared resolver: dotted struct paths at any depth, and a bare name
     // that lives in exactly one struct member.
     FProperty *TargetProp = McpResolvePropertyPath(
@@ -117,22 +115,14 @@ TSharedPtr<FJsonObject> FSCSHandlers::SetSCSComponentProperty(
     }
 
     Defaults.Capture(ResolvedPath);
-    if (ApplyJsonValueToProperty(ContainerPtr, TargetProp, PropertyValue,
-                                 FailureMessage)) {
-      bAppliedValue = true;
-    } else {
-      FailureCode = TEXT("SCS_PROPERTY_APPLY_FAILED");
-    }
-
-    if (!bAppliedValue) {
+    if (!ApplyJsonValueToProperty(ContainerPtr, TargetProp, PropertyValue,
+                                  FailureMessage)) {
       Result->SetBoolField(TEXT("success"), false);
       Result->SetStringField(TEXT("error"),
                              FailureMessage.IsEmpty()
                                  ? TEXT("Failed to apply property value")
                                  : FailureMessage);
-      if (!FailureCode.IsEmpty()) {
-        Result->SetStringField(TEXT("errorCode"), FailureCode);
-      }
+      Result->SetStringField(TEXT("errorCode"), TEXT("SCS_PROPERTY_APPLY_FAILED"));
       CreatedOverride.Rollback();
       return Result;
     }
@@ -164,7 +154,7 @@ TSharedPtr<FJsonObject> FSCSHandlers::SetSCSComponentProperty(
   // Re-resolve through the same resolver: an inherited or native component has no SCS node on this
   // Blueprint, so looking one up here would fail verification for exactly the cases the fix above
   // just enabled. The node lookup is kept only to enrich the response when one happens to exist.
-  USCS_Node *VerifiedNode = FindSCSNodeByVariableName(SCS, ComponentName);
+  USCS_Node *VerifiedNode = FindScsNodeByName(SCS, ComponentName);
   UObject *VerifiedTemplate = McpPropertyCdoComponents::FindCdoComponent(
       Blueprint,
       Blueprint->GeneratedClass ? Blueprint->GeneratedClass->GetDefaultObject()

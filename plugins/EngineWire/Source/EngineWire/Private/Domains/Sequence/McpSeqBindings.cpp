@@ -147,88 +147,65 @@ bool UEngineWireSubsystem::HandleSequenceAddActors(
                                       TEXT("INVALID_SEQUENCE"));
     return true;
   }
-  if (!GEditor) {
-    SendAutomationResponse(Socket, RequestId, false,
-                                      TEXT("Editor not available"), nullptr,
-                                      TEXT("EDITOR_NOT_AVAILABLE"));
-    return true;
-  }
+  TArray<TSharedPtr<FJsonValue>> Results;
+  Results.Reserve(Names.Num());
+  int32 Successful = 0;
+  for (const FString &Name : Names) {
+    TSharedPtr<FJsonObject> Item = McpHandlerUtils::CreateResultObject();
+    Item->SetStringField(TEXT("name"), Name);
+    AActor *Found = FindActorByName(Name);
 
-  if (UEditorActorSubsystem *ActorSS =
-          GEditor->GetEditorSubsystem<UEditorActorSubsystem>()) {
-    TArray<TSharedPtr<FJsonValue>> Results;
-    Results.Reserve(Names.Num());
-    for (const FString &Name : Names) {
-      TSharedPtr<FJsonObject> Item = McpHandlerUtils::CreateResultObject();
-      Item->SetStringField(TEXT("name"), Name);
-      AActor *Found = FindActorByName(Name);
-
-      if (!Found) {
-        Item->SetBoolField(TEXT("success"), false);
-        Item->SetStringField(TEXT("error"), TEXT("Actor not found"));
-      } else {
-        if (ULevelSequence *LevelSeq = Cast<ULevelSequence>(SeqObj)) {
-          UMovieScene *MovieScene = LevelSeq->GetMovieScene();
-          if (MovieScene) {
-            LevelSeq->Modify();
-            MovieScene->Modify();
-            // Reuses an existing binding of the actor instead of adding a duplicate possessable; rebind first points
-            // the possessable of the actor's name at it (a sequence copied with its level).
-            const FGuid Rebound = bRebind ? McpSequenceCinematics::RebindPossessableByName(LevelSeq, Found) : FGuid();
-            const FGuid BindingGuid = Rebound.IsValid() ? Rebound : McpSequenceCinematics::ResolveOrCreateBinding(LevelSeq, Found);
-            if (BindingGuid.IsValid()) {
-              LevelSeq->MarkPackageDirty();
-              Item->SetBoolField(TEXT("rebound"), Rebound.IsValid());
-              Item->SetBoolField(TEXT("success"), true);
-              Item->SetStringField(TEXT("bindingGuid"), BindingGuid.ToString());
-            } else {
-              Item->SetBoolField(TEXT("success"), false);
-              Item->SetStringField(
-                  TEXT("error"), TEXT("Failed to create possessable binding"));
-            }
+    if (!Found) {
+      Item->SetBoolField(TEXT("success"), false);
+      Item->SetStringField(TEXT("error"), TEXT("Actor not found"));
+    } else {
+      if (ULevelSequence *LevelSeq = Cast<ULevelSequence>(SeqObj)) {
+        UMovieScene *MovieScene = LevelSeq->GetMovieScene();
+        if (MovieScene) {
+          LevelSeq->Modify();
+          MovieScene->Modify();
+          // Reuses an existing binding of the actor instead of adding a duplicate possessable; rebind first points
+          // the possessable of the actor's name at it (a sequence copied with its level).
+          const FGuid Rebound = bRebind ? McpSequenceCinematics::RebindPossessableByName(LevelSeq, Found) : FGuid();
+          const FGuid BindingGuid = Rebound.IsValid() ? Rebound : McpSequenceCinematics::ResolveOrCreateBinding(LevelSeq, Found);
+          if (BindingGuid.IsValid()) {
+            LevelSeq->MarkPackageDirty();
+            Item->SetBoolField(TEXT("rebound"), Rebound.IsValid());
+            Item->SetBoolField(TEXT("success"), true);
+            ++Successful;
+            Item->SetStringField(TEXT("bindingGuid"), BindingGuid.ToString());
           } else {
             Item->SetBoolField(TEXT("success"), false);
-            Item->SetStringField(TEXT("error"),
-                                 TEXT("Sequence has no MovieScene"));
+            Item->SetStringField(
+                TEXT("error"), TEXT("Failed to create possessable binding"));
           }
         } else {
           Item->SetBoolField(TEXT("success"), false);
           Item->SetStringField(TEXT("error"),
-                               TEXT("Sequence object is not a LevelSequence"));
+                               TEXT("Sequence has no MovieScene"));
         }
-      }
-      Results.Add(MakeShared<FJsonValueObject>(Item));
-    }
-    TSharedPtr<FJsonObject> Out = McpHandlerUtils::CreateResultObject();
-    Out->SetArrayField(TEXT("results"), Results);
-    int32 Successful = 0;
-    int32 Failed = 0;
-    for (const TSharedPtr<FJsonValue> &Val : Results) {
-      if (Val.IsValid() && Val->Type == EJson::Object) {
-        bool bSuccess = false;
-        Val->AsObject()->TryGetBoolField(TEXT("success"), bSuccess);
-        if (bSuccess)
-          Successful++;
-        else
-          Failed++;
+      } else {
+        Item->SetBoolField(TEXT("success"), false);
+        Item->SetStringField(TEXT("error"),
+                             TEXT("Sequence object is not a LevelSequence"));
       }
     }
-    Out->SetNumberField(TEXT("total"), Names.Num());
-    Out->SetNumberField(TEXT("successful"), Successful);
-    Out->SetNumberField(TEXT("failed"), Failed);
-    // "Actors processed" was as true of three bindings as of none - two calls,
-    // one real and one naming actors that do not exist, produced byte-identical
-    // receipts. Say how many bound, and refuse when nothing did.
-    const bool bAnyBound = Successful > 0;
-    SendAutomationResponse(Socket, RequestId, bAnyBound,
-        FString::Printf(TEXT("%d of %d actor(s) bound to the sequence%s"),
-                        Successful, Names.Num(),
-                        Failed > 0 ? *FString::Printf(TEXT("; %d failed"), Failed) : TEXT("")),
-        Out, bAnyBound ? FString() : TEXT("NO_ACTORS_BOUND"));
-    return true;
+    Results.Add(MakeShared<FJsonValueObject>(Item));
   }
-  SendAutomationResponse(
-      Socket, RequestId, false, TEXT("EditorActorSubsystem not available"),
-      nullptr, TEXT("EDITOR_ACTOR_SUBSYSTEM_MISSING"));
+  TSharedPtr<FJsonObject> Out = McpHandlerUtils::CreateResultObject();
+  Out->SetArrayField(TEXT("results"), Results);
+  const int32 Failed = Results.Num() - Successful;
+  Out->SetNumberField(TEXT("total"), Names.Num());
+  Out->SetNumberField(TEXT("successful"), Successful);
+  Out->SetNumberField(TEXT("failed"), Failed);
+  // "Actors processed" was as true of three bindings as of none - two calls,
+  // one real and one naming actors that do not exist, produced byte-identical
+  // receipts. Say how many bound, and refuse when nothing did.
+  const bool bAnyBound = Successful > 0;
+  SendAutomationResponse(Socket, RequestId, bAnyBound,
+      FString::Printf(TEXT("%d of %d actor(s) bound to the sequence%s"),
+                      Successful, Names.Num(),
+                      Failed > 0 ? *FString::Printf(TEXT("; %d failed"), Failed) : TEXT("")),
+      Out, bAnyBound ? FString() : TEXT("NO_ACTORS_BOUND"));
   return true;
 }

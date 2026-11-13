@@ -29,30 +29,26 @@ bool TryParseLightingQuality(
     ELightingBuildQuality& OutQuality,
     FString& OutQualityName)
 {
-    const FString LowerQuality = Quality.IsEmpty() ? TEXT("production") : Quality.ToLower();
-    if (LowerQuality == TEXT("preview") || LowerQuality == TEXT("0"))
+    // Each quality by name (any case) or by number; no quality is Production.
+    static const struct
     {
-        OutQuality = ELightingBuildQuality::Quality_Preview;
-        OutQualityName = TEXT("Preview");
-        return true;
-    }
-    if (LowerQuality == TEXT("medium") || LowerQuality == TEXT("1"))
+        const TCHAR* Name;
+        const TCHAR* Number;
+        ELightingBuildQuality Value;
+    } Rows[] = {
+        {TEXT("Preview"), TEXT("0"), ELightingBuildQuality::Quality_Preview},
+        {TEXT("Medium"), TEXT("1"), ELightingBuildQuality::Quality_Medium},
+        {TEXT("High"), TEXT("2"), ELightingBuildQuality::Quality_High},
+        {TEXT("Production"), TEXT("3"), ELightingBuildQuality::Quality_Production}};
+    const FString Wanted = Quality.IsEmpty() ? FString(TEXT("Production")) : Quality;
+    for (const auto& Row : Rows)
     {
-        OutQuality = ELightingBuildQuality::Quality_Medium;
-        OutQualityName = TEXT("Medium");
-        return true;
-    }
-    if (LowerQuality == TEXT("high") || LowerQuality == TEXT("2"))
-    {
-        OutQuality = ELightingBuildQuality::Quality_High;
-        OutQualityName = TEXT("High");
-        return true;
-    }
-    if (LowerQuality == TEXT("production") || LowerQuality == TEXT("3"))
-    {
-        OutQuality = ELightingBuildQuality::Quality_Production;
-        OutQualityName = TEXT("Production");
-        return true;
+        if (Wanted == Row.Name || Wanted == Row.Number)
+        {
+            OutQuality = Row.Value;
+            OutQualityName = Row.Name;
+            return true;
+        }
     }
     return false;
 }
@@ -65,19 +61,16 @@ bool HandleBuildLighting(
     const TSharedPtr<FJsonObject>& Payload,
     TSharedPtr<FMcpBridgeWebSocket> RequestingSocket)
 {
-    if (!GEditor || !GEditor->GetEditorWorldContext().World())
+    UWorld* World = McpHandlerUtils::GetEditorWorld();
+    if (!World)
     {
         Subsystem.SendAutomationError(
             RequestingSocket, RequestId, TEXT("Editor world not available"), TEXT("EDITOR_WORLD_NOT_AVAILABLE"));
         return true;
     }
 
-    UWorld* World = GEditor->GetEditorWorldContext().World();
     FString Quality;
-    if (Payload.IsValid())
-    {
-        Payload->TryGetStringField(TEXT("quality"), Quality);
-    }
+    Payload->TryGetStringField(TEXT("quality"), Quality);
 
     ELightingBuildQuality QualityEnum = ELightingBuildQuality::Quality_Production;
     FString QualityName;
@@ -129,10 +122,10 @@ bool HandleBuildLighting(
     if (!bBuildSucceeded)
     {
         // Say why a build can fail instead of a bare BUILD_FAILED.
-        TArray<TSharedPtr<FJsonValue>> Reasons;
+        TArray<FString> Reasons;
         if (!GetDefault<URendererSettings>()->bAllowStaticLighting)
         {
-            Reasons.Add(MakeShared<FJsonValueString>(TEXT("Project setting r.AllowStaticLighting is disabled (Rendering > Lighting)")));
+            Reasons.Add(TEXT("Project setting r.AllowStaticLighting is disabled (Rendering > Lighting)"));
         }
         int32 StaticLights = 0;
         int32 ImportanceVolumes = 0;
@@ -152,25 +145,22 @@ bool HandleBuildLighting(
         }
         if (StaticLights == 0)
         {
-            Reasons.Add(MakeShared<FJsonValueString>(TEXT("No static or stationary lights in the level; nothing to bake")));
+            Reasons.Add(TEXT("No static or stationary lights in the level; nothing to bake"));
         }
         if (ImportanceVolumes == 0)
         {
-            Reasons.Add(MakeShared<FJsonValueString>(TEXT("No LightmassImportanceVolume (create_lightmass_volume) - builds without one are slow or refused")));
+            Reasons.Add(TEXT("No LightmassImportanceVolume (create_lightmass_volume) - builds without one are slow or refused"));
         }
         if (GEditor->IsLightingBuildCurrentlyRunning())
         {
-            Reasons.Add(MakeShared<FJsonValueString>(TEXT("A lighting build is already running")));
+            Reasons.Add(TEXT("A lighting build is already running"));
         }
         if (Reasons.Num() == 0)
         {
-            Reasons.Add(MakeShared<FJsonValueString>(TEXT("Lightmass/Swarm reported failure; see the editor log (LogLightmassSolver, LogSwarm) for details")));
+            Reasons.Add(TEXT("Lightmass/Swarm reported failure; see the editor log (LogLightmassSolver, LogSwarm) for details"));
         }
-        Resp->SetArrayField(TEXT("reasons"), Reasons);
-        for (const TSharedPtr<FJsonValue>& Reason : Reasons)
-        {
-            ReasonText += (ReasonText.IsEmpty() ? TEXT("") : TEXT("; ")) + Reason->AsString();
-        }
+        Resp->SetArrayField(TEXT("reasons"), McpHandlerUtils::ToJsonStringArray(Reasons));
+        ReasonText = FString::Join(Reasons, TEXT("; "));
         Resp->SetNumberField(TEXT("staticLightCount"), StaticLights);
         Resp->SetNumberField(TEXT("lightmassImportanceVolumeCount"), ImportanceVolumes);
     }

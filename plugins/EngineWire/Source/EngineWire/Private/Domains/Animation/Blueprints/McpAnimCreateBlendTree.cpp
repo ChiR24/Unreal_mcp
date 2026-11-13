@@ -34,7 +34,6 @@ bool HandleAnimationCreateBlendTreeAction(FActionContext &Context,
   TSharedPtr<FJsonObject> &Resp = Context.Resp;
   bool &bSuccess = Context.bSuccess;
   FString &Message = Context.Message;
-  FString &ErrorCode = Context.ErrorCode;
   FString BlueprintPath;
   Payload->TryGetStringField(TEXT("blueprintPath"), BlueprintPath);
   if (BlueprintPath.IsEmpty()) {

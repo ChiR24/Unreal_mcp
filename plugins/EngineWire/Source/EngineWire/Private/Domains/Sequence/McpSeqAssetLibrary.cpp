@@ -2,7 +2,7 @@
 #include "Foundation/BridgeHelpers/Blueprints/McpBPPaths.h"
 #include "Domains/Sequence/McpSeqEditorSupport.h"
 #include "Domains/Sequence/Metadata/McpSeqMetadata.h"
-#include "Domains/AssetWorkflow/Operations/McpAssetBulkSelection.h"
+#include "Foundation/BridgeHelpers/Assets/McpAssetReferencers.h"
 #include "Domains/Sequence/McpSeqPathSecurity.h"
 
 // The level sequence a duplicate or rename moves, to DestinationPath under /Game. Anything else is refused here: an

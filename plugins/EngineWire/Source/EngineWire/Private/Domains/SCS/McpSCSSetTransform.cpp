@@ -37,7 +37,7 @@ TSharedPtr<FJsonObject> FSCSHandlers::SetSCSComponentTransform(
   McpPropertyCdoComponents::FCreatedInheritedOverride CreatedOverride;
   UObject *ComponentTemplate = McpPropertyCdoComponents::FindCdoComponent(
       Blueprint, CDO, ComponentName, /*bCreateInheritedOverride=*/true,
-      &CreatedOverride.Handler, &CreatedOverride.Key,
+      &CreatedOverride,
       &bFoundComponent);
 
   if (!ComponentTemplate) {
@@ -107,7 +107,7 @@ TSharedPtr<FJsonObject> FSCSHandlers::SetSCSComponentTransform(
     // through the node lookup would report failure for a write that landed. Read
     // the template back instead, and attach node verification when there is one.
     USimpleConstructionScript *SCS = Blueprint->SimpleConstructionScript;
-    USCS_Node *VerifiedNode = FindSCSNodeByVariableName(SCS, ComponentName);
+    USCS_Node *VerifiedNode = FindScsNodeByName(SCS, ComponentName);
     USceneComponent *VerifiedSceneComp =
         VerifiedNode ? Cast<USceneComponent>(VerifiedNode->ComponentTemplate)
                      : SceneComp;

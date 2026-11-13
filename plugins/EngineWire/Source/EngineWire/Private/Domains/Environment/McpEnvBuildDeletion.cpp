@@ -80,11 +80,7 @@ void SetDeleteResult(
         DeletedTargets.Num() + MissingTargets.Num() + AmbiguousTargets.Num() + FailedTargets.Num());
     Context.Resp->SetNumberField(TEXT("deletedCount"), DeletedTargets.Num());
 
-    const int32 ErrorCategoryCount =
-        (MissingTargets.IsEmpty() ? 0 : 1) +
-        (AmbiguousTargets.IsEmpty() ? 0 : 1) +
-        (FailedTargets.IsEmpty() ? 0 : 1);
-    if (ErrorCategoryCount == 0)
+    if (MissingTargets.IsEmpty() && AmbiguousTargets.IsEmpty() && FailedTargets.IsEmpty())
     {
         Context.bSuccess = true;
         Context.Message = FString::Printf(TEXT("Deleted %d environment actor(s)"), DeletedTargets.Num());
@@ -96,11 +92,8 @@ void SetDeleteResult(
     Context.Message = FString::Printf(
         TEXT("Deleted %d actor(s); %d missing, %d ambiguous, %d failed"),
         DeletedTargets.Num(), MissingTargets.Num(), AmbiguousTargets.Num(), FailedTargets.Num());
-    if (!DeletedTargets.IsEmpty())
-    {
-        Context.ErrorCode = TEXT("DELETE_PARTIAL");
-    }
-    else if (!AmbiguousTargets.IsEmpty())
+    // Nothing is deleted when a target fails: the refusals come before the destroy, and a failed destroy is undone.
+    if (!AmbiguousTargets.IsEmpty())
     {
         Context.ErrorCode = TEXT("AMBIGUOUS_ACTOR");
     }

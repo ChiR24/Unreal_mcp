@@ -1,5 +1,6 @@
 #pragma once
 
+#include "Foundation/BridgeHelpers/Blueprints/McpScsLookup.h"
 #include "CoreMinimal.h"
 #include "Dom/JsonObject.h"
 
@@ -17,10 +18,6 @@ UBlueprint *LoadScsBlueprint(const FString &BlueprintPath, const TSharedPtr<FJso
 bool IsPlayInEditorActive();
 TSharedPtr<FJsonObject> PIEActiveError();
 FString GetSCSNodeName(const USCS_Node *Node);
-USCS_Node *FindSCSNodeByVariableName(USimpleConstructionScript *SCS,
-                                     const FString &Name);
-USCS_Node *FindSCSParentNode(USimpleConstructionScript *SCS,
-                             USCS_Node *ChildNode);
 bool IsSCSRootAlias(USimpleConstructionScript *SCS, const FString &Name);
 bool IsSCSRootNode(USimpleConstructionScript *SCS, USCS_Node *Node);
 TSharedPtr<FJsonObject> MakeTransformJson(const FTransform &Transform);

@@ -180,7 +180,7 @@ bool HandleAddPropertyTrack(const TSharedPtr<FJsonObject> &Params,
     return true;
   }
   const FString RequestedType =
-      GetString(Params, TEXT("propertyType"), TEXT("type"));
+      GetString(Params, TEXT("propertyType"));
   FString ResolvedType;
   UClass *TrackClass =
       ResolvePropertyTrackClass(RequestedType, Property, ResolvedType);

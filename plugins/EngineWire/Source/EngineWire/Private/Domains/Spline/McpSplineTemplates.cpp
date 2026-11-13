@@ -107,12 +107,6 @@ static bool HandleCreateTemplateSpline(
     }
 
     UWorld* World = McpHandlerUtils::GetEditorWorld();
-    if (!World)
-    {
-        Self->SendAutomationResponse(Socket, RequestId, false,
-            TEXT("No editor world available"), nullptr, TEXT("NO_WORLD"));
-        return true;
-    }
 
     USplineComponent* SplineComp = SpawnSplineActor(World, ActorName, Location, FRotator::ZeroRotator);
     if (!SplineComp)

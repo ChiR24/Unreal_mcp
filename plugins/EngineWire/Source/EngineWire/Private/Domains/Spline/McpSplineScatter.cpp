@@ -36,14 +36,14 @@ bool HandleScatterMeshesAlongSpline(
     }
     UWorld* World = Actor->GetWorld();
 
-    const bool bHasSpacing = Payload.IsValid() && Payload->HasField(TEXT("spacing"));
-    const bool bHasUseRandomOffset = Payload.IsValid() && Payload->HasField(TEXT("useRandomOffset"));
-    const bool bHasRandomOffsetRange = Payload.IsValid() && Payload->HasField(TEXT("randomOffsetRange"));
-    const bool bHasRandomizeScale = Payload.IsValid() && Payload->HasField(TEXT("randomizeScale"));
-    const bool bHasMinScale = Payload.IsValid() && Payload->HasField(TEXT("minScale"));
-    const bool bHasMaxScale = Payload.IsValid() && Payload->HasField(TEXT("maxScale"));
-    const bool bHasRandomizeRotation = Payload.IsValid() && Payload->HasField(TEXT("randomizeRotation"));
-    const bool bHasRotationRange = Payload.IsValid() && Payload->HasField(TEXT("rotationRange"));
+    const bool bHasSpacing = Payload->HasField(TEXT("spacing"));
+    const bool bHasUseRandomOffset = Payload->HasField(TEXT("useRandomOffset"));
+    const bool bHasRandomOffsetRange = Payload->HasField(TEXT("randomOffsetRange"));
+    const bool bHasRandomizeScale = Payload->HasField(TEXT("randomizeScale"));
+    const bool bHasMinScale = Payload->HasField(TEXT("minScale"));
+    const bool bHasMaxScale = Payload->HasField(TEXT("maxScale"));
+    const bool bHasRandomizeRotation = Payload->HasField(TEXT("randomizeRotation"));
+    const bool bHasRotationRange = Payload->HasField(TEXT("rotationRange"));
 
     double Spacing = bHasSpacing
         ? GetJsonNumberField(Payload, TEXT("spacing"), 100.0)

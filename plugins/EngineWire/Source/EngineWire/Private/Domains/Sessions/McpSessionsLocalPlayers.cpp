@@ -39,8 +39,8 @@ bool HandleConfigureSplitScreen(
     const TSharedPtr<FJsonObject>& Payload,
     TSharedPtr<FMcpBridgeWebSocket> Socket)
 {
-    const bool bHasEnabled = Payload.IsValid() && Payload->HasField(TEXT("enabled"));
-    const bool bHasType = Payload.IsValid() && Payload->HasField(TEXT("splitScreenType"));
+    const bool bHasEnabled = Payload->HasField(TEXT("enabled"));
+    const bool bHasType = Payload->HasField(TEXT("splitScreenType"));
     if (!bHasEnabled && !bHasType)
     {
         Subsystem->SendAutomationError(Socket, RequestId,
@@ -137,7 +137,7 @@ bool HandleAddLocalPlayer(
 {
     using namespace SessionsHelpers;
 
-    if (!Payload.IsValid() || !Payload->HasField(TEXT("controllerId")))
+    if (!Payload->HasField(TEXT("controllerId")))
     {
         Subsystem->SendAutomationResponse(Socket, RequestId, false,
             TEXT("controllerId is required to add a local player"), nullptr, TEXT("INVALID_ARGUMENT"));
@@ -182,7 +182,7 @@ bool HandleRemoveLocalPlayer(
 {
     using namespace SessionsHelpers;
 
-    if (!Payload.IsValid() || !Payload->HasField(TEXT("playerIndex")))
+    if (!Payload->HasField(TEXT("playerIndex")))
     {
         Subsystem->SendAutomationResponse(Socket, RequestId, false,
             TEXT("playerIndex is required to remove a local player"), nullptr, TEXT("INVALID_ARGUMENT"));

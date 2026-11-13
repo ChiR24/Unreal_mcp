@@ -5,11 +5,6 @@ bool UEngineWireSubsystem::HandleManagePCGAction(
     const TSharedPtr<FJsonObject>& Payload,
     TSharedPtr<FMcpBridgeWebSocket> Socket)
 {
-    if (Action != TEXT("manage_pcg"))
-    {
-        return false;
-    }
-
 #if !MCP_HAS_PCG
     SendAutomationError(Socket, RequestId, TEXT("PCG plugin support is not available in this build. It needs UE 5.2 or later: enable the 'Procedural Content Generation Framework (PCG)' plugin (Edit > Plugins), restart the editor, then rebuild this automation plugin so PCG support is compiled in."), TEXT("PCG_PLUGIN_NOT_AVAILABLE"));
     return true;
@@ -28,11 +23,6 @@ bool UEngineWireSubsystem::HandleManagePCGAction(
     }
 
     const FString SubAction = McpConsolidatedActions::GetPayloadSubAction(Payload);
-    if (SubAction.IsEmpty() || !McpConsolidatedActions::PCG().Contains(SubAction))
-    {
-        SendAutomationError(Socket, RequestId, FString::Printf(TEXT("Unknown PCG subAction: %s"), *SubAction), TEXT("INVALID_SUBACTION"));
-        return true;
-    }
 
     const bool bSave = GetJsonBoolField(Payload, TEXT("save"), true);
 

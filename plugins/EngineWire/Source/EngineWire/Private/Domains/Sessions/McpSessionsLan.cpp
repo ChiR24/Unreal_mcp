@@ -19,7 +19,7 @@ namespace
 bool McpReadLanPort(const TSharedPtr<FJsonObject>& Payload, int32 Min, int32& OutPort)
 {
     double Value = 0.0;
-    if (!Payload.IsValid() || !Payload->TryGetNumberField(TEXT("serverPort"), Value) ||
+    if (!Payload->TryGetNumberField(TEXT("serverPort"), Value) ||
         Value != FMath::FloorToDouble(Value) || Value < Min || Value > 65535.0)
     {
         return false;

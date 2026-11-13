@@ -40,6 +40,7 @@ domain-local copy of reflection, path, JSON, or response helpers.
 | Resolve / validate `/Game` asset path | `BridgeHelpers/Assets/McpAssetResolve.h` |
 | Load a material the caller named, no fallback | `BridgeHelpers/Assets/McpAssetResolve.h` `LoadMaterialForMcp` |
 | Create assets / dirs / save registry | `BridgeHelpers/Assets/{McpAssetCreation,McpAssetDirs,McpAssetSaveRegistry}.h` |
+| Which packages outside a delete still use an asset (delete safety) | `BridgeHelpers/Assets/McpAssetReferencers.h` |
 | Make the package of a new asset | `BridgeHelpers/Assets/McpAssetCreation.h` `McpCreatePackageForNewAsset` (refuses an occupied path and a name the engine does not take) or `McpCreatePackageOrNull` (null where the engine's `CreatePackage` is a Fatal log: a name holding `//`); never the engine call (contract test) |
 | Spawn an actor | `BridgeHelpers/Actors/McpActorSpawnHelpers.h` |
 | Find an actor by name or label | `HandlerUtils/McpHandlerUtilsActionsPaths.h` `McpHandlerUtils::FindActorByName` |

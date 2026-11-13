@@ -12,37 +12,11 @@ bool UEngineWireSubsystem::HandleManageWidgetAuthoringAction(
     const TSharedPtr<FJsonObject>& Payload,
     TSharedPtr<FMcpBridgeWebSocket> RequestingSocket)
 {
-    if (Action != TEXT("manage_widget_authoring"))
-    {
-        return false;
-    }
-
-    FString SubAction = GetJsonStringField(Payload, TEXT("subAction"));
-    if (SubAction.IsEmpty())
-    {
-        SubAction = GetJsonStringField(Payload, TEXT("action"));
-    }
-
-    // Normalize parameter aliases once at the dispatch boundary.
-    //
-    // The add_content_widget family documents `componentName` ("Name for the SCS
-    // component node"), but every widget-template/panel/visual handler reads
-    // `slotName` and silently fell back to its generic default (TextBlock, Image,
-    // Button, ...) when only componentName was supplied — so a caller asking for
-    // "ScoreText" got a slot literally named "TextBlock". Aliasing the field here
-    // keeps all 80+ downstream readers working without touching each one.
-    if (Payload.IsValid() && !Payload->HasField(TEXT("slotName")))
-    {
-        FString ComponentNameAlias;
-        if (Payload->TryGetStringField(TEXT("componentName"), ComponentNameAlias) &&
-            !ComponentNameAlias.IsEmpty())
-        {
-            Payload->SetStringField(TEXT("slotName"), ComponentNameAlias);
-        }
-    }
+    // The handler table routes manage_widget_authoring here with the sub-action in its payload.
+    const FString SubAction = GetJsonStringField(Payload, TEXT("subAction"));
 
     // Accept `name` + `path`/`folder` wherever a handler expects `widgetPath`.
-    if (Payload.IsValid() && !Payload->HasField(TEXT("widgetPath")))
+    if (!Payload->HasField(TEXT("widgetPath")))
     {
         FString TemplateName;
         if (Payload->TryGetStringField(TEXT("name"), TemplateName) &&

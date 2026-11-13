@@ -17,6 +17,13 @@ bool HandleTriggerAction(
     const FString TriggerShape = GetJsonStringField(Payload, TEXT("triggerShape"), TEXT("box"));
     const bool bSphere = TriggerShape == TEXT("sphere");
     const bool bCapsule = TriggerShape == TEXT("capsule");
+    // Any other name made a box and was answered as given.
+    if (!bSphere && !bCapsule && TriggerShape != TEXT("box"))
+    {
+        Subsystem->SendAutomationError(RequestingSocket, RequestId, FString::Printf(TEXT("triggerShape must be box, sphere or "
+            "capsule, got '%s'. Nothing was changed."), *TriggerShape), TEXT("INVALID_ARGUMENT"));
+        return true;
+    }
     UClass* ShapeClass = bSphere    ? USphereComponent::StaticClass()
                          : bCapsule ? UCapsuleComponent::StaticClass()
                                     : UBoxComponent::StaticClass();

@@ -7,8 +7,6 @@
 #include "EngineWireSubsystem.h"
 #include "Transport/WebSocket/McpBridgeWebSocket.h"
 
-DEFINE_LOG_CATEGORY_STATIC(LogMcpVolumeHandlers, Log, All);
-
 namespace
 {
 // create_volume declares one parameter union for every class; each class honours only its own share. A
@@ -47,7 +45,7 @@ const TMap<FString, FString>& McpVolumeParamsByClass()
 FString McpFindInapplicableVolumeParam(const FString& ClassKey, const TSharedPtr<FJsonObject>& Payload, FString& OutAllowed)
 {
     const FString* Allowed = McpVolumeParamsByClass().Find(ClassKey);
-    if (!Allowed || !Payload.IsValid())
+    if (!Allowed)
     {
         return FString();
     }
@@ -73,7 +71,6 @@ bool UEngineWireSubsystem::HandleManageVolumesAction(
 {
     TSharedPtr<FJsonObject> Payload = InPayload;
     FString SubAction = GetJsonStringField(Payload, TEXT("subAction"), TEXT(""));
-    UE_LOG(LogMcpVolumeHandlers, Verbose, TEXT("HandleManageVolumesAction: SubAction=%s"), *SubAction);
     using namespace McpVolumeHandlers;
 
     const FString ClassKey = SubAction.StartsWith(TEXT("create_")) ? SubAction.Mid(7)
@@ -88,12 +85,12 @@ bool UEngineWireSubsystem::HandleManageVolumesAction(
         return true;
     }
     // actorPath attaches the volume; a create_ name with actorPath takes the add_ route that honours it.
-    if (SubAction.StartsWith(TEXT("create_")) && Payload.IsValid() && Payload->HasField(TEXT("actorPath")))
+    if (SubAction.StartsWith(TEXT("create_")) && Payload->HasField(TEXT("actorPath")))
     {
         SubAction = TEXT("add_") + ClassKey;
     }
     // killZHeight is the kill plane: on the standalone create route it sets the volume's Z.
-    if (ClassKey == TEXT("kill_z_volume") && Payload.IsValid() && Payload->HasField(TEXT("killZHeight")) && !Payload->HasField(TEXT("actorPath")))
+    if (ClassKey == TEXT("kill_z_volume") && Payload->HasField(TEXT("killZHeight")) && !Payload->HasField(TEXT("actorPath")))
     {
         Payload = MakeShared<FJsonObject>(*InPayload);
         FVector Location = ExtractVectorField(InPayload, TEXT("location"), FVector::ZeroVector);

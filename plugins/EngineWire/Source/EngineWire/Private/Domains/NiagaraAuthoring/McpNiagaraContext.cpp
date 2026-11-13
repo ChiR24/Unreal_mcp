@@ -247,11 +247,6 @@ FNiagaraEmitterHandle* ResolveEmitterHandle(FActionContext& Context, UNiagaraSys
 
 bool LoadSystemAndEmitter(FActionContext& Context, UNiagaraSystem*& System, FNiagaraEmitterHandle*& Handle)
 {
-    if (Context.SystemPath.IsEmpty())
-    {
-        Context.SendError(TEXT("Missing 'systemPath' (or 'assetPath'): the Niagara System."), TEXT("INVALID_ARGUMENT"));
-        return false;
-    }
     System = LoadSystemOrError(Context);
     Handle = System ? ResolveEmitterHandle(Context, System) : nullptr;
     return Handle != nullptr;

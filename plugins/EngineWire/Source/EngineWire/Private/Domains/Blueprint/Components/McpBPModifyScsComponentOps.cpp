@@ -45,7 +45,7 @@ if (!Template) { Template = McpScsParent::FindInheritedComponent(LocalBP, Compon
 // listed it as inherited while every edit here called it unknown. An override nothing landed on is undone below.
 McpPropertyCdoComponents::FCreatedInheritedOverride Created;
 if (!Template && LocalBP && LocalBP->GeneratedClass) {
-  Template = McpPropertyCdoComponents::FindCdoComponent(LocalBP, LocalBP->GeneratedClass->GetDefaultObject(), ComponentName, true, &Created.Handler, &Created.Key);
+  Template = McpPropertyCdoComponents::FindCdoComponent(LocalBP, LocalBP->GeneratedClass->GetDefaultObject(), ComponentName, true, &Created);
 }
 if (!Template) {
   OpSummary->SetBoolField(TEXT("success"), false);

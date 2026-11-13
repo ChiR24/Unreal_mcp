@@ -27,11 +27,6 @@ bool UEngineWireSubsystem::HandleSetObjectProperty(
     const FString &RequestId, const FString &Action,
     const TSharedPtr<FJsonObject> &Payload,
     TSharedPtr<FMcpBridgeWebSocket> RequestingSocket) {
-  const FString LowerAction = Action.ToLower();
-  if (!Action.Equals(TEXT("set_object_property"), ESearchCase::IgnoreCase) &&
-      !LowerAction.Contains(TEXT("set_object_property")))
-    return false;
-
   // properties (several values on one target) and objectPaths (the same write on several targets) run every write
   // through this handler again under a captured id, so each one keeps its own checks.
   McpPropertyTarget::FSetBatchReply Batch;
@@ -104,7 +99,7 @@ bool UEngineWireSubsystem::HandleSetObjectProperty(
       PropertyName.Split(TEXT("."), &ComponentSegment, &RemainingPath);
       if (UActorComponent* CompTemplate = McpPropertyCdoComponents::FindCdoComponent(
           ResolvedBlueprint, RootObject, ComponentSegment, true,
-          &CreatedOverride.Handler, &CreatedOverride.Key,
+          &CreatedOverride,
           &bFoundCdoComponent))
       {
           RootObject = CompTemplate;

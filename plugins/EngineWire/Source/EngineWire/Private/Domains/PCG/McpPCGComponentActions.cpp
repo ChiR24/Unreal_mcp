@@ -171,20 +171,10 @@ bool HandleSetWorldGridSize(UEngineWireSubsystem* Bridge, const FString& Request
     const uint32 PreviousGridSize = PCGWorldActor->PartitionGridSize;
     FProperty* PartitionGridSizeProperty = FindFProperty<FProperty>(APCGWorldActor::StaticClass(), GET_MEMBER_NAME_CHECKED(APCGWorldActor, PartitionGridSize));
     PCGWorldActor->Modify();
-    if (PartitionGridSizeProperty)
-    {
-        PCGWorldActor->PreEditChange(PartitionGridSizeProperty);
-    }
+    PCGWorldActor->PreEditChange(PartitionGridSizeProperty);
     PCGWorldActor->PartitionGridSize = static_cast<uint32>(GridSize);
-    if (PartitionGridSizeProperty)
-    {
-        FPropertyChangedEvent PropertyChangedEvent(PartitionGridSizeProperty, EPropertyChangeType::ValueSet);
-        PCGWorldActor->PostEditChangeProperty(PropertyChangedEvent);
-    }
-    else
-    {
-        PCGWorldActor->PostEditChange();
-    }
+    FPropertyChangedEvent PropertyChangedEvent(PartitionGridSizeProperty, EPropertyChangeType::ValueSet);
+    PCGWorldActor->PostEditChangeProperty(PropertyChangedEvent);
 
     FString Error;
     bool bLevelSaved = false;
@@ -221,7 +211,7 @@ bool HandleSetPCGPartitionGridSize(UEngineWireSubsystem* Bridge, const FString& 
     }
 
     FString Scope = TEXT("world");
-    if (Payload.IsValid() && Payload->HasField(TEXT("scope")) && !Payload->TryGetStringField(TEXT("scope"), Scope))
+    if (Payload->HasField(TEXT("scope")) && !Payload->TryGetStringField(TEXT("scope"), Scope))
     {
         Bridge->SendAutomationError(Socket, RequestId, TEXT("set_pcg_partition_grid_size scope must be a string: 'world' or 'component'."), TEXT("INVALID_ARGUMENT"));
         return true;

@@ -1,4 +1,5 @@
 #include "Core/Compatibility/McpVersionCompatibility.h"
+#include "Core/Routing/McpConsolidatedActionRouting.h"
 #include "Domains/Sequence/McpSeqEditorSupport.h"
 #include "Domains/Sequence/Validation/McpSeqIntegerValidate.h"
 #include "Domains/Sequence/Cinematics/McpSeqCine.h"
@@ -14,25 +15,13 @@ bool UEngineWireSubsystem::HandleSequenceAction(
     const FString &RequestId, const FString &Action,
     const TSharedPtr<FJsonObject> &Payload,
     TSharedPtr<FMcpBridgeWebSocket> RequestingSocket) {
-  const FString Lower = Action.ToLower();
-  if (!Lower.StartsWith(TEXT("sequence_")) &&
-      !Lower.Equals(TEXT("manage_sequence")))
-    return false;
-
   TSharedPtr<FJsonObject> LocalPayload =
       Payload.IsValid() ? Payload : McpHandlerUtils::CreateResultObject();
-  FString EffectiveAction = Lower;
-
-  if (Lower.Equals(TEXT("manage_sequence"))) {
-    FString Sub;
-    if (LocalPayload->TryGetStringField(TEXT("subAction"), Sub) &&
-        !Sub.IsEmpty()) {
-      EffectiveAction = Sub.ToLower();
-      if (EffectiveAction == TEXT("create"))
-        EffectiveAction = TEXT("sequence_create");
-      else if (!EffectiveAction.StartsWith(TEXT("sequence_")))
-        EffectiveAction = TEXT("sequence_") + EffectiveAction;
-    }
+  // The handler table's manage_sequence row: the sub-action names the handler below as sequence_<sub-action>.
+  const FString SubAction = McpConsolidatedActions::GetPayloadSubAction(LocalPayload);
+  FString EffectiveAction = SubAction;
+  if (!EffectiveAction.StartsWith(TEXT("sequence_"))) {
+    EffectiveAction = TEXT("sequence_") + EffectiveAction;
   }
 
   FString IntegerError;
@@ -175,7 +164,7 @@ bool UEngineWireSubsystem::HandleSequenceAction(
   SendAutomationResponse(
       RequestingSocket, RequestId, false,
       FString::Printf(TEXT("Sequence action not implemented by plugin: %s"),
-                      *Action),
+                      *SubAction),
       nullptr, TEXT("NOT_IMPLEMENTED"));
   return true;
 }

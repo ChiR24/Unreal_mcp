@@ -21,11 +21,6 @@ bool UEngineWireSubsystem::HandleGetObjectProperty(
     const FString &RequestId, const FString &Action,
     const TSharedPtr<FJsonObject> &Payload,
     TSharedPtr<FMcpBridgeWebSocket> RequestingSocket) {
-  const FString LowerAction = Action.ToLower();
-  if (!Action.Equals(TEXT("get_object_property"), ESearchCase::IgnoreCase) &&
-      !LowerAction.Contains(TEXT("get_object_property")))
-    return false;
-
   // objectPaths: the same read on several targets in one call, as set_property writes them (eight platforms' state
   // took eight calls, or a list filtered by a shared name). Each runs through this handler, propertyNames included.
   const TArray<TSharedPtr<FJsonValue>> *Paths = nullptr;
@@ -117,8 +112,6 @@ bool UEngineWireSubsystem::HandleGetObjectProperty(
   }
   UObject* RootObject = Target.RootObject;
   UBlueprint* ResolvedBlueprint = Target.Blueprint;
-  FString ObjectPath = Target.ObjectPath;
-  const FString& BlueprintPath = Target.BlueprintPath;
   const FString& PropertyName = Target.PropertyName;
 
   const bool bIsCDO = RootObject->HasAnyFlags(RF_ClassDefaultObject);

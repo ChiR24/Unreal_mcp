@@ -99,17 +99,12 @@ UActorComponent* FindCdoComponent(
     UObject* CDO,
     const FString& ComponentName,
     bool bCreateInheritedOverride,
-    UInheritableComponentHandler** OutCreatedInheritedOverrideHandler,
-    FComponentKey* OutCreatedInheritedOverrideKey,
+    FCreatedInheritedOverride* OutCreated,
     bool* bOutFoundComponent)
 {
-    if (OutCreatedInheritedOverrideHandler)
+    if (OutCreated)
     {
-        *OutCreatedInheritedOverrideHandler = nullptr;
-    }
-    if (OutCreatedInheritedOverrideKey)
-    {
-        *OutCreatedInheritedOverrideKey = FComponentKey();
+        *OutCreated = FCreatedInheritedOverride();
     }
     if (bOutFoundComponent)
     {
@@ -205,13 +200,10 @@ UActorComponent* FindCdoComponent(
             Blueprint->Modify();
             InheritableComponentHandler->Modify();
             Found = InheritableComponentHandler->CreateOverridenComponentTemplate(Key);
-            if (Found && OutCreatedInheritedOverrideHandler)
+            if (Found && OutCreated)
             {
-                *OutCreatedInheritedOverrideHandler = InheritableComponentHandler;
-            }
-            if (Found && OutCreatedInheritedOverrideKey)
-            {
-                *OutCreatedInheritedOverrideKey = Key;
+                OutCreated->Handler = InheritableComponentHandler;
+                OutCreated->Key = Key;
             }
         }
         return false;

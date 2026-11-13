@@ -61,6 +61,28 @@ bool FindOnCurrentDefault(UBlueprint* Blueprint, const FString& PropertyPath, UO
   return true;
 }
 
+UObject* LoadBlueprintDefaultsOrReply(UEngineWireSubsystem& Bridge, const FString& RequestId,
+                                      TSharedPtr<FMcpBridgeWebSocket> Socket, const FString& BlueprintPath,
+                                      UBlueprint*& OutBlueprint, FString& OutNormalizedPath)
+{
+  FString LoadError;
+  OutBlueprint = LoadBlueprintAsset(BlueprintPath, OutNormalizedPath, LoadError);
+  if (!OutBlueprint) {
+    Bridge.SendAutomationError(Socket, RequestId,
+        FString::Printf(TEXT("Blueprint not found: %s (%s)"), *BlueprintPath, *LoadError),
+        TEXT("BLUEPRINT_NOT_FOUND"));
+    return nullptr;
+  }
+  UClass* GeneratedClass = OutBlueprint->GeneratedClass;
+  UObject* Defaults = GeneratedClass ? GeneratedClass->GetDefaultObject() : nullptr;
+  if (!Defaults) {
+    Bridge.SendAutomationError(Socket, RequestId,
+        GeneratedClass ? TEXT("Failed to get Class Default Object") : TEXT("Blueprint has no GeneratedClass (not compiled?)"),
+        TEXT("CDO_NOT_FOUND"));
+  }
+  return Defaults;
+}
+
 bool ResolvePropertyTarget(UEngineWireSubsystem& Bridge, const FString& RequestId,
                            const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> Socket,
                            FPropertyTarget& Out)
@@ -92,20 +114,9 @@ bool ResolvePropertyTarget(UEngineWireSubsystem& Bridge, const FString& RequestI
   }
 
   if (!Out.BlueprintPath.IsEmpty()) {
-    FString NormalizedPath, LoadError;
-    Out.Blueprint = LoadBlueprintAsset(Out.BlueprintPath, NormalizedPath, LoadError);
-    if (!Out.Blueprint) {
-      Bridge.SendAutomationError(Socket, RequestId,
-          FString::Printf(TEXT("Blueprint not found: %s (%s)"), *Out.BlueprintPath, *LoadError),
-          TEXT("BLUEPRINT_NOT_FOUND"));
-      return false;
-    }
-    UClass* GeneratedClass = Out.Blueprint->GeneratedClass;
-    Out.RootObject = GeneratedClass ? GeneratedClass->GetDefaultObject() : nullptr;
+    FString NormalizedPath;
+    Out.RootObject = LoadBlueprintDefaultsOrReply(Bridge, RequestId, Socket, Out.BlueprintPath, Out.Blueprint, NormalizedPath);
     if (!Out.RootObject) {
-      Bridge.SendAutomationError(Socket, RequestId,
-          GeneratedClass ? TEXT("Failed to get Class Default Object") : TEXT("Blueprint has no GeneratedClass (not compiled?)"),
-          TEXT("CDO_NOT_FOUND"));
       return false;
     }
     Out.ObjectPath = Out.RootObject->GetPathName();

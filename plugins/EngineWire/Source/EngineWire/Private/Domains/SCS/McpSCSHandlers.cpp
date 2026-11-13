@@ -129,41 +129,13 @@ FString GetSCSNodeName(const USCS_Node *Node) {
   return Node->GetVariableName().ToString();
 }
 
-USCS_Node *FindSCSNodeByVariableName(USimpleConstructionScript *SCS,
-                                     const FString &Name) {
-  if (!SCS || Name.IsEmpty()) {
-    return nullptr;
-  }
-  for (USCS_Node *Node : SCS->GetAllNodes()) {
-    if (Node && Node->GetVariableName().IsValid() &&
-        Node->GetVariableName().ToString().Equals(Name,
-                                                  ESearchCase::IgnoreCase)) {
-      return Node;
-    }
-  }
-  return nullptr;
-}
-
-USCS_Node *FindSCSParentNode(USimpleConstructionScript *SCS,
-                             USCS_Node *ChildNode) {
-  if (!SCS || !ChildNode) {
-    return nullptr;
-  }
-  for (USCS_Node *Candidate : SCS->GetAllNodes()) {
-    if (Candidate && Candidate->GetChildNodes().Contains(ChildNode)) {
-      return Candidate;
-    }
-  }
-  return nullptr;
-}
-
 // A component of that exact name wins over the alias: the interaction tools name their scene root "Root", and
 // attachTo "Root" landed on the DefaultSceneRoot above it.
 bool IsSCSRootAlias(USimpleConstructionScript *SCS, const FString &Name) {
   return (Name.Equals(TEXT("RootComponent"), ESearchCase::IgnoreCase) ||
           Name.Equals(TEXT("DefaultSceneRoot"), ESearchCase::IgnoreCase) ||
           Name.Equals(TEXT("Root"), ESearchCase::IgnoreCase)) &&
-         !FindSCSNodeByVariableName(SCS, Name);
+         !FindScsNodeByName(SCS, Name);
 }
 
 bool IsSCSRootNode(USimpleConstructionScript *SCS, USCS_Node *Node) {
@@ -207,7 +179,7 @@ void AddSCSNodeVerification(TSharedPtr<FJsonObject> Result,
   TSharedPtr<FJsonObject> Verification = MakeShared<FJsonObject>();
   Verification->SetStringField(TEXT("componentName"), NodeName);
   Verification->SetBoolField(
-      TEXT("existsInSCS"), FindSCSNodeByVariableName(SCS, NodeName) == Node);
+      TEXT("existsInSCS"), FindScsNodeByName(SCS, NodeName) == Node);
   Verification->SetNumberField(TEXT("childCount"), Node->GetChildNodes().Num());
   if (Node->ComponentClass) {
     Verification->SetStringField(TEXT("componentClass"),
@@ -218,7 +190,7 @@ void AddSCSNodeVerification(TSharedPtr<FJsonObject> Result,
   // to an inherited native component, or be a non-scene component sitting at the
   // top of the tree. Reporting "(root)" and isRoot:true for both was how a
   // RotatingMovementComponent came back looking like the Blueprint's root.
-  USCS_Node *ParentNode = FindSCSParentNode(SCS, Node);
+  USCS_Node *ParentNode = SCS->FindParentNode(Node);
   // Native or a parent Blueprint's part: either is recorded on the node by name (SetParent).
   const bool bNativeParent = !ParentNode && !Node->ParentComponentOrVariableName.IsNone();
   const bool bSceneComponent =
@@ -257,7 +229,7 @@ bool SCSParentMatches(USimpleConstructionScript *SCS, USCS_Node *Node,
   if (!SCS || !Node) {
     return false;
   }
-  USCS_Node *ActualParent = FindSCSParentNode(SCS, Node);
+  USCS_Node *ActualParent = SCS->FindParentNode(Node);
   if (ExpectedParentName.IsEmpty()) {
     // No specific parent requested: accept the engine's default placements — the node is
     // root, is not yet parented, or was auto-attached as a child of the root (the default

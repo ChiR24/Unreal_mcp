@@ -21,10 +21,7 @@ bool HandleGASComponents(const FGASRequestContext& Context, const FString& SubAc
     const FString& RequestId = Context.RequestId;
     TSharedPtr<FMcpBridgeWebSocket> RequestingSocket = Context.RequestingSocket;
     const TSharedPtr<FJsonObject>& Payload = Context.Payload;
-    const FString& Name = Context.Name;
-    const FString& Path = Context.Path;
     const FString& BlueprintPath = Context.BlueprintPath;
-    const FString& AssetPath = Context.AssetPath;
 
     if (SubAction == TEXT("add_ability_system_component"))
     {

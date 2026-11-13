@@ -28,18 +28,6 @@ bool UEngineWireSubsystem::HandleNiagaraGraphAction(
     const TSharedPtr<FJsonObject>& Payload,
     TSharedPtr<FMcpBridgeWebSocket> RequestingSocket)
 {
-    if (Action != TEXT("manage_niagara_graph"))
-    {
-        return false;
-    }
-
-    if (!Payload.IsValid())
-    {
-        SendAutomationError(RequestingSocket, RequestId,
-            TEXT("Missing payload."), TEXT("INVALID_PAYLOAD"));
-        return true;
-    }
-
     // The authoring folder's own context: systemPath (else system, else assetPath) and every path through the shared
     // canonicalizer, systemPath and assetPath naming two systems refused, the system loaded and made transactional.
     McpNiagaraAuthoringHandlers::FActionContext Context =
@@ -249,71 +237,6 @@ bool UEngineWireSubsystem::HandleNiagaraGraphAction(
             SendAutomationError(RequestingSocket, RequestId,
                 TEXT("Node not found."), TEXT("NODE_NOT_FOUND"));
         }
-        return true;
-    }
-
-    // -------------------------------------------------------------------------
-    // set_parameter: Set exposed parameter value (Float/Bool only)
-    // -------------------------------------------------------------------------
-    if (SubAction == TEXT("set_parameter"))
-    {
-        FString ParamName;
-        Payload->TryGetStringField(TEXT("parameterName"), ParamName);
-
-        FNiagaraUserRedirectionParameterStore& UserStore = System->GetExposedParameters();
-
-        float FloatValue = 0.0f;
-        bool BoolValue = false;
-
-        double NumericValue = 0.0;
-        if (Payload->TryGetNumberField(TEXT("value"), NumericValue))
-        {
-            FloatValue = static_cast<float>(NumericValue);
-            BoolValue = (NumericValue != 0.0);
-        }
-
-        bool bBoolField = false;
-        if (Payload->TryGetBoolField(TEXT("value"), bBoolField))
-        {
-            BoolValue = bBoolField;
-            FloatValue = bBoolField ? 1.0f : 0.0f;
-        }
-
-        if (UserStore.FindParameterVariable(
-            FNiagaraVariable(FNiagaraTypeDefinition::GetFloatDef(), FName(*ParamName))))
-        {
-            UserStore.SetParameterValue(FloatValue,
-                FNiagaraVariable(FNiagaraTypeDefinition::GetFloatDef(), FName(*ParamName)));
-
-            TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
-            McpHandlerUtils::AddVerification(Result, System);
-            Result->SetStringField(TEXT("parameterName"), ParamName);
-            Result->SetNumberField(TEXT("value"), FloatValue);
-
-            SendAutomationResponse(RequestingSocket, RequestId, true,
-                TEXT("Float parameter set."), Result);
-            return true;
-        }
-
-        if (UserStore.FindParameterVariable(
-            FNiagaraVariable(FNiagaraTypeDefinition::GetBoolDef(), FName(*ParamName))))
-        {
-            UserStore.SetParameterValue(BoolValue,
-                FNiagaraVariable(FNiagaraTypeDefinition::GetBoolDef(), FName(*ParamName)));
-
-            TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
-            McpHandlerUtils::AddVerification(Result, System);
-            Result->SetStringField(TEXT("parameterName"), ParamName);
-            Result->SetBoolField(TEXT("value"), BoolValue);
-
-            SendAutomationResponse(RequestingSocket, RequestId, true,
-                TEXT("Bool parameter set."), Result);
-            return true;
-        }
-
-        SendAutomationError(RequestingSocket, RequestId,
-            TEXT("Parameter not found or type not supported (Float/Bool only)."),
-            TEXT("PARAM_FAILED"));
         return true;
     }
 

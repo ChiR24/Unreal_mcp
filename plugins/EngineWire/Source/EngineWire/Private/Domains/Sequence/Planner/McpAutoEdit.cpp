@@ -26,7 +26,6 @@ namespace
 {
 constexpr int32 EditMaxCameras = 12;
 constexpr int32 EditMaxSubjects = 4;
-constexpr int32 EditMaxSegments = 2400;
 
 bool EditReadActors(const TSharedPtr<FJsonObject>& Payload, const TCHAR* Field, int32 Most, TFunctionRef<AActor*(const FString&)> Find,
                     TArray<AActor*>& Out, TArray<FString>& OutMissing)

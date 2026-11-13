@@ -43,12 +43,6 @@ AActor* ResolveSplineActor(UEngineWireSubsystem* Self, const FString& RequestId,
         return nullptr;
     }
     UWorld* World = McpHandlerUtils::GetEditorWorld();
-    if (!World)
-    {
-        Self->SendAutomationResponse(Socket, RequestId, false,
-            TEXT("No editor world available"), nullptr, TEXT("NO_WORLD"));
-        return nullptr;
-    }
     AActor* Actor = FindActorByNameInWorldForMcp(World, ActorName, true);
     if (!Actor)
     {

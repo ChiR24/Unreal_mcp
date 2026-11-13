@@ -25853,7 +25853,12 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "triggerShape": {
           "type": "string",
-          "description": "Trigger volume shape (box, sphere, or capsule)."
+          "enum": [
+            "box",
+            "sphere",
+            "capsule"
+          ],
+          "description": "Trigger volume shape: box (the default), sphere or capsule."
         },
         "action": {
           "type": "string",
@@ -29441,7 +29446,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "propertyType": {
           "type": "string",
-          "description": "Property value type hint (alias of type)."
+          "description": "Property value type hint."
         },
         "rebind": {
           "type": "boolean",

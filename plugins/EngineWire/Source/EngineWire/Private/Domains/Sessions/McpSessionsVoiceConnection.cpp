@@ -12,7 +12,7 @@ bool HandleEnableVoiceChat(
     const TSharedPtr<FJsonObject>& Payload,
     TSharedPtr<FMcpBridgeWebSocket> Socket)
 {
-    if (!Payload.IsValid() || !Payload->HasField(TEXT("voiceEnabled")))
+    if (!Payload->HasField(TEXT("voiceEnabled")))
     {
         Subsystem->SendAutomationResponse(Socket, RequestId, false,
             TEXT("voiceEnabled is required (true to enable, false to disable)"), nullptr);
